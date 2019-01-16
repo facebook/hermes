@@ -1,0 +1,21 @@
+#ifndef HERMES_FLOWPARSER_FLOWPARSER_FLOWPARSER_H
+#define HERMES_FLOWPARSER_FLOWPARSER_FLOWPARSER_H
+
+#include "hermes/AST/Context.h"
+#include "hermes/AST/ESTree.h"
+
+#ifdef HERMES_USE_FLOWPARSER
+
+namespace hermes {
+namespace parser {
+
+llvm::Optional<ESTree::FileNode *> parseFlowParser(
+    Context &context,
+    uint32_t bufferId);
+
+} // namespace parser
+} // namespace hermes
+
+#endif // HERMES_USE_FLOWPARSER
+
+#endif // HERMES_FLOWPARSER_FLOWPARSER_FLOWPARSER_H

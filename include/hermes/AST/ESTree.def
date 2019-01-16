@@ -1,0 +1,159 @@
+/// This file defines the ESTree nodes, which are documented in:
+/// https://github.com/estree/estree/blob/master/spec.md
+///
+/// Each parameter is described by three tokens: Type, Name and Optional.
+
+ESTREE_NODE_0_ARGS(Empty)
+ESTREE_NODE_0_ARGS(ThisExpression)
+ESTREE_NODE_0_ARGS(DebuggerStatement)
+ESTREE_NODE_0_ARGS(EmptyStatement)
+ESTREE_NODE_0_ARGS(Metadata)
+ESTREE_NODE_0_ARGS(NullLiteral)
+
+
+ESTREE_NODE_0_ARGS(StringTypeAnnotation)
+ESTREE_NODE_0_ARGS(NumberTypeAnnotation)
+ESTREE_NODE_0_ARGS(GenericTypeAnnotation)
+ESTREE_NODE_0_ARGS(BooleanTypeAnnotation)
+ESTREE_NODE_0_ARGS(NullLiteralTypeAnnotation)
+ESTREE_NODE_0_ARGS(AnyTypeAnnotation)
+
+
+ESTREE_NODE_1_ARGS(TypeAnnotation, NodePtr, typeAnnotation, false)
+
+ESTREE_NODE_1_ARGS(Directive, NodePtr, value, false)
+ESTREE_NODE_1_ARGS(DirectiveLiteral, NodeLabel, value, false)
+ESTREE_NODE_1_ARGS(SequenceExpression, NodeList, expressions, false)
+ESTREE_NODE_1_ARGS(BlockStatement, NodeList, body, false)
+ESTREE_NODE_1_ARGS(BreakStatement, NodePtr, label, true)
+ESTREE_NODE_1_ARGS(ThrowStatement, NodePtr, argument, false)
+ESTREE_NODE_1_ARGS(ObjectExpression, NodeList, properties, false)
+ESTREE_NODE_1_ARGS(ContinueStatement, NodePtr, label, true)
+ESTREE_NODE_1_ARGS(Program, NodeList, body, false)
+ESTREE_NODE_1_ARGS(File, NodePtr, program, false)
+ESTREE_NODE_1_ARGS(BooleanLiteral, NodeBoolean, value, false)
+ESTREE_NODE_1_ARGS(StringLiteral, NodeLabel, value, false)
+ESTREE_NODE_1_ARGS(NumericLiteral, NodeNumber, value, false)
+ESTREE_NODE_1_ARGS(ReturnStatement, NodePtr, argument, true)
+ESTREE_NODE_1_ARGS(ArrayExpression, NodeList, elements, false)
+
+
+ESTREE_NODE_2_ARGS(Identifier, NodeLabel, name, false,
+                               NodePtr, typeAnnotation, true)
+
+ESTREE_NODE_2_ARGS(ObjectProperty, NodePtr, key, false,
+                                   NodePtr, value, false)
+
+ESTREE_NODE_2_ARGS(WithStatement, NodePtr, object, false,
+                                  NodePtr, body, false)
+
+ESTREE_NODE_2_ARGS(WhileStatement, NodePtr, body, false,
+                                   NodePtr, test , false)
+
+ESTREE_NODE_2_ARGS(SwitchStatement, NodePtr, discriminant, false,
+                                    NodeList, cases, false)
+
+ESTREE_NODE_2_ARGS(SwitchCase, NodePtr, test, true,
+                               NodeList, consequent, false)
+
+
+ESTREE_NODE_2_ARGS(NewExpression, NodePtr, callee, false,
+                                  NodeList, arguments, false)
+
+ESTREE_NODE_2_ARGS(CallExpression, NodePtr, callee, false,
+                                   NodeList, arguments, false)
+
+ESTREE_NODE_2_ARGS(DoWhileStatement, NodePtr, body, false,
+                                     NodePtr, test, false)
+
+ESTREE_NODE_2_ARGS(RegExpLiteral, NodeLabel, pattern, false,
+                                  NodeLabel, flags, false)
+
+ESTREE_NODE_2_ARGS(CatchClause, NodePtr, param, false,
+                                NodePtr, body, false)
+
+ESTREE_NODE_2_ARGS(VariableDeclarator, NodePtr, init, true,
+                                       NodePtr, id, false)
+
+ESTREE_NODE_2_ARGS(VariableDeclaration, NodeLabel, kind, false,
+                                        NodeList, declarations, false)
+
+ESTREE_NODE_2_ARGS(LabeledStatement, NodePtr, label, false,
+                                     NodePtr, body, false)
+
+ESTREE_NODE_2_ARGS(ExpressionStatement, NodePtr, expression, false,
+                                        NodeLabel, directive, true)
+
+
+ESTREE_NODE_3_ARGS(AssignmentExpression, NodeLabel, operator, false,
+                                         NodePtr, left, true,
+                                         NodePtr, right, true)
+
+
+ESTREE_NODE_3_ARGS(UnaryExpression, NodeLabel, operator, false,
+                                        NodePtr, argument, false,
+                                        NodeBoolean, prefix, false)
+
+ESTREE_NODE_3_ARGS(UpdateExpression, NodeLabel, operator, false,
+                                         NodePtr, argument, false,
+                                         NodeBoolean, prefix, false)
+
+ESTREE_NODE_3_ARGS(Property, NodePtr, key, false,
+                                 NodePtr, value, false,
+                                 NodeLabel, kind, false)
+
+ESTREE_NODE_3_ARGS(TryStatement, NodePtr, block, false,
+                                     NodePtr, handler, true,
+                                     NodePtr, finalizer, true)
+
+
+ESTREE_NODE_3_ARGS(MemberExpression, NodePtr, object, false,
+                                         NodePtr, property, false,
+                                         NodeBoolean, computed, false)
+
+
+ESTREE_NODE_3_ARGS(IfStatement, NodePtr, test, false,
+                                    NodePtr, consequent, false,
+                                    NodePtr, alternate, true)
+
+
+ESTREE_NODE_3_ARGS(LogicalExpression, NodePtr, left, false,
+                                      NodePtr, right, false,
+                                      NodeLabel, operator, false)
+
+ESTREE_NODE_3_ARGS(FunctionExpression, NodePtr, id, true,
+                                           NodeList, params, false,
+                                           NodePtr, body, false)
+
+ESTREE_NODE_3_ARGS(ForInStatement, NodePtr, left, false,
+                                       NodePtr, right, false,
+                                       NodePtr, body, false)
+
+ESTREE_NODE_3_ARGS(ConditionalExpression, NodePtr, test, false,
+                                          NodePtr, alternate, false,
+                                          NodePtr, consequent, false)
+
+ESTREE_NODE_3_ARGS(BinaryExpression, NodePtr, left, false,
+                                         NodePtr, right, false,
+                                         NodeLabel, operator, false)
+
+ESTREE_NODE_4_ARGS(ForStatement, NodePtr, init, true,
+                                     NodePtr, test, true,
+                                     NodePtr, update, true,
+                                     NodePtr, body, true)
+
+ESTREE_NODE_4_ARGS(ObjectMethod, NodeLabel, kind, false,
+                                 NodePtr, key, false,
+                                 NodeList, params, false,
+                                 NodePtr, body, false)
+
+ESTREE_NODE_4_ARGS(FunctionDeclaration, NodePtr, id, false,
+                                NodePtr, body, false,
+                                NodeList, params, false,
+                                NodePtr, returnType, true)
+
+#undef ESTREE_NODE_0_ARGS
+#undef ESTREE_NODE_1_ARGS
+#undef ESTREE_NODE_2_ARGS
+#undef ESTREE_NODE_3_ARGS
+#undef ESTREE_NODE_4_ARGS

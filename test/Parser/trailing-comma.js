@@ -1,0 +1,10 @@
+// RUN: %hermes -hermes-parser %s
+// Make sure we parse trailing commas
+
+var a1 = [1,];
+var a2 = [,];
+var a3 = [1,,2,];
+var a4 = [];
+
+var b1 = {x:0,}
+var b2 = {}

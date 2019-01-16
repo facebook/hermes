@@ -1,0 +1,40 @@
+set(LLVM_OPTIONAL_SOURCES
+  hermes.cpp
+  DebuggerAPI.cpp
+  SynthTrace.cpp
+  TraceInterpreter.cpp
+  CompileJS.cpp
+  )
+
+set(api_sources
+  hermes.cpp
+  DebuggerAPI.cpp
+  )
+
+if (HERMESVM_SYNTH_REPLAY)
+  list(APPEND api_sources
+    SynthTrace.cpp
+    TraceInterpreter.cpp
+  )
+endif()
+
+add_llvm_library(hermesapi
+        ${api_sources}
+        LINK_LIBS jsi hermesVMRuntime)
+
+set_target_properties(hermesapi PROPERTIES
+  CXX_STANDARD 14
+  COMPILE_FLAGS "-Wno-non-virtual-dtor -Wno-covered-switch-default"
+  )
+
+set(LLVM_LINK_COMPONENTS
+  Core
+  Support
+  )
+
+add_llvm_library(compileJS STATIC CompileJS.cpp)
+
+set_target_properties(compileJS PROPERTIES
+  COMPILE_FLAGS "-fno-rtti"
+  )
+

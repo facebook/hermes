@@ -1,0 +1,17 @@
+This directory contains code derived from the LLVM project. See LICENSE.txt for
+the LLVM Release License.
+
+This is meant for LLVM code that has to be modified to compile with Hermes. It
+is kept separate from Hermes source to avoid confusing its origin. If
+modifications are not necessary, use fbsource/xplat/third-party/llvm instead of
+copying files here.
+
+The commit hashes below refer to the LLVM repository at
+https://git.llvm.org/git/llvm.
+
+Files                  Comment
+-----                  -------
+SuffixTree.{h, cpp},   Derived from include/llvm/CodeGen/MachineOutliner.h
+Outliner.{h, cpp}      and lib/CodeGen/MachineOutliner.cpp
+                       in commit 0649ebe3a182fe52174f88a047eb1d69ebe2cb46
+                       (committed Mon Oct 8 16:24:43 2018 +0000)

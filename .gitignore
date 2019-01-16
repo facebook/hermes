@@ -1,0 +1,15 @@
+*~
+*#
+TAGS
+
+# Howtoeven
+.howtoeven
+
+# in-tree llvm for buck
+third-party/llvm/llvm
+third-party/llvm/llvm_build*
+
+# buck
+buck-out
+.buckd
+.buckconfig.local

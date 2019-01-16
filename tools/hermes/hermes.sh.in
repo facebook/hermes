@@ -1,0 +1,2 @@
+#!/bin/sh
+exec "${HERMES_BINARY_DIR}/bin/hermes" "$@"

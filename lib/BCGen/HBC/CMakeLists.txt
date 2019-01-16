@@ -1,0 +1,28 @@
+add_llvm_library(hermesHBCBackend
+  STATIC
+  BackendContext.cpp
+  HBC.cpp
+  HBCOptimizations.cpp
+  ISel.cpp
+  Bytecode.cpp
+  BytecodeStream.cpp
+  BytecodeGenerator.cpp
+  BytecodeDataProvider.cpp
+  BytecodeProviderFromSrc.cpp
+  BytecodeDisassembler.cpp
+  BytecodeFormConverter.cpp
+  ConsecutiveStringStorage.cpp
+  DebugInfo.cpp
+  Passes.cpp
+  SerializedLiteralGenerator.cpp
+  SerializedLiteralParserBase.cpp
+  SimpleBytecodeBuilder.cpp
+  Passes/InsertProfilePoint.cpp
+  Passes/LowerBuiltinCalls.cpp
+  Passes/OptEnvironmentInit.cpp
+  LINK_LIBS
+  hermesBackend
+  hermesInst
+  hermesSourceMap
+  hermesAST
+)

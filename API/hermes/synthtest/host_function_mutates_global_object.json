@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "globalObjID": 1,
+  "env": {
+    "mathRandomSeed": 0,
+    "callsToDateNow": [],
+    "callsToNewDate": [],
+    "callsToDateAsFunction": []
+  },
+  "trace": [
+    {
+      "type": "CreateHostFunctionRecord",
+      "time": 0,
+      "objID": 10
+    },
+    {
+      "type": "SetPropertyRecord",
+      "time": 0,
+      "objID": 1,
+      "propName": "foo",
+      "value": "object:10"
+    },
+    {
+      "type": "BeginExecJSRecord",
+      "time": 0
+    },
+    {
+      "type": "CallToNativeRecord",
+      "time": 0,
+      "functionID": 10,
+      "thisArg": "undefined:",
+      "args": []
+    },
+    {
+      "type": "GetPropertyRecord",
+      "time": 0,
+      "objID": 1,
+      "propName": "o",
+      "value": "object:11"
+    },
+    {
+      "type": "SetPropertyRecord",
+      "time": 0,
+      "objID": 11,
+      "propName": "a",
+      "value": "string:hello"
+    },
+    {
+      "type": "SetPropertyRecord",
+      "time": 0,
+      "objID": 11,
+      "propName": "b",
+      "value": "bool:true"
+    },
+    {
+      "type": "ReturnFromNativeRecord",
+      "time": 0,
+      "retval": "undefined:"
+    },
+    {
+      "type": "CallToNativeRecord",
+      "time": 0,
+      "functionID": 10,
+      "thisArg": "undefined:",
+      "args": []
+    },
+    {
+      "type": "GetPropertyRecord",
+      "time": 0,
+      "objID": 1,
+      "propName": "o",
+      "value": "object:11"
+    },
+    {
+      "type": "SetPropertyRecord",
+      "time": 0,
+      "objID": 11,
+      "propName": "a",
+      "value": "string:bar"
+    },
+    {
+      "type": "SetPropertyRecord",
+      "time": 0,
+      "objID": 11,
+      "propName": "c",
+      "value": "null:"
+    },
+    {
+      "type": "ReturnFromNativeRecord",
+      "time": 0,
+      "retval": "undefined:"
+    },
+    {
+      "type": "EndExecJSRecord",
+      "time": 0
+    }
+  ]
+}

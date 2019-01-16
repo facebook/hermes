@@ -1,0 +1,8 @@
+# Zip Library
+https://github.com/kuba--/zip
+Version: df34e4609aa7dee4601b8d3d4bb29b15d2a32a78
+
+Delete the line in `zip.c`:
+```
+int symlink(const char *target, const char *linkpath); // needed on Linux
+```

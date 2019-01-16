@@ -1,0 +1,20 @@
+#ifndef HERMES_OPTIMIZER_SCALAR_INLINING_H
+#define HERMES_OPTIMIZER_SCALAR_INLINING_H
+
+#include "hermes/IR/IR.h"
+#include "hermes/Optimizer/PassManager/Pass.h"
+
+namespace hermes {
+
+/// Inline single use functions.
+class Inlining : public ModulePass {
+ public:
+  explicit Inlining() : hermes::ModulePass("Inlining") {}
+  ~Inlining() override = default;
+
+  bool runOnModule(Module *M) override;
+};
+
+} // namespace hermes
+
+#endif // HERMES_OPTIMIZER_SCALAR_INLINING_H

@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+
+import os
+import shutil
+import stat
+import sys
+import tempfile
+
+import pkg_resources
+from testsuite.testsuite import get_arg_parser, run
+
+
+def main():
+    parser = get_arg_parser()
+    args = parser.parse_args()
+    with tempfile.TemporaryDirectory() as binary_dir:
+        # Copy binaries from pkg_resources into the temporary directory.
+        resources = [
+            ("hermes", "hermes"),
+            (args.hvm_filename, args.hvm_filename),
+            ("icudt55l.dat", "icudt55l.dat"),
+        ]
+        for rsc, out_name in resources:
+            with open(os.path.join(binary_dir, out_name), "w+b") as f:
+                shutil.copyfileobj(pkg_resources.resource_stream("testsuite", rsc), f)
+                st = os.stat(f.name)
+                os.chmod(f.name, st.st_mode | stat.S_IEXEC)
+        return run(
+            args.paths,
+            args.chunk,
+            args.fail_fast,
+            binary_dir,
+            args.hvm_filename,
+            args.jobs,
+            args.verbose,
+            args.match,
+            args.source,
+            args.keep_tmp,
+            args.show_all,
+        )
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,22 @@
+#ifndef MARK_ROOTS_PHASE
+#define MARK_ROOTS_PHASE(name)
+#endif
+
+MARK_ROOTS_PHASE(Registers)
+MARK_ROOTS_PHASE(RuntimeInstanceVars)
+MARK_ROOTS_PHASE(RuntimeModules)
+#ifdef HERMESVM_CPP_RUNTIME
+MARK_ROOTS_PHASE(CppPropertyCache)
+#endif
+MARK_ROOTS_PHASE(CharStrings)
+MARK_ROOTS_PHASE(Builtins)
+MARK_ROOTS_PHASE(Prototypes)
+// We don't need DebugEnvironment anymore, but keep it for MobileLab.
+MARK_ROOTS_PHASE(DebugEnvironment)
+MARK_ROOTS_PHASE(IdentifierTable)
+MARK_ROOTS_PHASE(GCScopes)
+MARK_ROOTS_PHASE(WeakRefs)
+MARK_ROOTS_PHASE(SymbolRegistry)
+MARK_ROOTS_PHASE(Custom)
+
+#undef MARK_ROOTS_PHASE

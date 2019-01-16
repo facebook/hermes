@@ -1,0 +1,12 @@
+// This file is processed by CMake.
+// See https://cmake.org/cmake/help/v3.0/command/configure_file.html.
+
+#ifndef REPLCONFIG_H
+#define REPLCONFIG_H
+
+/*
+ * These values are automatically set according to their cmake variables.
+ */
+#cmakedefine HAVE_LIBREADLINE 1
+
+#endif // REPLCONFIG_H

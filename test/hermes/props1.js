@@ -1,0 +1,11 @@
+// RUN: %hermes -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
+
+// Read-only properties in the prototype cannot be overridden in the child.
+x = {}
+p = x.__proto__;
+Object.defineProperty(p, "a", {writable:false, value:10});
+print(x.a);
+//CHECK: 10
+x.a = 20;
+print(x.a);
+//CHECK-NEXT: 10

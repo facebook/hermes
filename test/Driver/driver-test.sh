@@ -1,0 +1,37 @@
+# RUN: sh %s %S %T %hermes
+# RUN: sh %s %S %T %hermesc
+# shellcheck disable=SC2148
+
+SRCDIR=$1
+TMPDIR=$2
+HERMES=$3
+
+# Return values from hermes and hermesc.
+Success=0
+InvalidFlags=1
+ParsingFailed=2
+LoadGlobalsFailed=3
+InputFileError=4
+OutputFileError=5
+
+set -x
+
+expect() {
+  EXPECTED=$1
+  shift
+  eval "$@" 2>/dev/null
+  if [[ $? != "$EXPECTED" ]]; then
+    echo "Command '$CMD' produced wrong exit status" >&2
+    exit 1
+  fi
+  true
+}
+
+cd "${SRCDIR}" || exit 1
+expect "${Success}" "${HERMES}" test.js.in -target=HBC -emit-binary -out /dev/null
+expect "${InvalidFlags}" "${HERMES}" -lazy -commonjs test.js.in
+expect "${InvalidFlags}" "${HERMES}" -nonsenseflag test.js.in
+expect "${ParsingFailed}" "${HERMES}" bogus.js.in -target=HBC -emit-binary -out /dev/null
+expect "${LoadGlobalsFailed}" "${HERMES}" test.js.in -include-globals bogus.js.in -emit-binary -target=HBC -out /dev/null
+expect "${InputFileError}" "${HERMES}" ./not/a/valid/path.js -target=HBC -emit-binary -out /dev/null
+expect "${OutputFileError}" "${HERMES}" test.js.in -target=HBC -emit-binary -out ./not/a/valid/path.hbc

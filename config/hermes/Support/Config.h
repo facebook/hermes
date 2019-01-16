@@ -1,0 +1,6 @@
+#ifndef HERMES_SUPPORT_CONFIG_H
+#define HERMES_SUPPORT_CONFIG_H
+
+// Empty placeholder
+
+#endif // HERMES_SUPPORT_CONFIG_H

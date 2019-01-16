@@ -1,0 +1,25 @@
+// RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+
+var nonStrict = function() { return 1; };
+
+var strict = function() {
+  "use strict";
+  return 1;
+};
+
+print('function properties');
+// CHECK-LABEL: function properties
+print(typeof strict, typeof nonStrict);
+// CHECK-NEXT: function function
+print(nonStrict.caller, nonStrict.arguments);
+// CHECK-NEXT: undefined undefined
+try { print(strict.caller); } catch(e) { print('caught', e.name); }
+// CHECK-NEXT: caught TypeError
+try { print(strict.arguments); } catch(e) { print('caught', e.name); }
+// CHECK-NEXT: caught TypeError
+
+var bound = nonStrict.bind(42);
+try { print(bound.caller); } catch(e) { print('caught', e.name); }
+// CHECK-NEXT: caught TypeError
+try { print(bound.arguments); } catch(e) { print('caught', e.name); }
+// CHECK-NEXT: caught TypeError

@@ -1,0 +1,18 @@
+#ifndef HERMES_OPTIMIZER_SCALAR_RESOLVESTATICREQUIRE_H
+#define HERMES_OPTIMIZER_SCALAR_RESOLVESTATICREQUIRE_H
+
+#include "hermes/Optimizer/PassManager/Pass.h"
+
+namespace hermes {
+
+/// Ensure that all CommonJS require() calls are statically resolvable.
+class ResolveStaticRequire : public ModulePass {
+ public:
+  explicit ResolveStaticRequire() : ModulePass("ResolveStaticRequire") {}
+
+  bool runOnModule(Module *M) override;
+};
+
+} // namespace hermes
+
+#endif // HERMES_OPTIMIZER_SCALAR_RESOLVESTATICREQUIRE_H

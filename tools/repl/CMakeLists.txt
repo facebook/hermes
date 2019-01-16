@@ -1,0 +1,39 @@
+find_library(LIBREADLINE_FOUND readline)
+
+if(LIBREADLINE_FOUND)
+  set(HAVE_LIBREADLINE 1)
+  set(LIBREADLINE ${LIBREADLINE_FOUND})
+endif()
+
+configure_file(ReplConfig.h.in ${CMAKE_CURRENT_BINARY_DIR}/ReplConfig.h
+  ESCAPE_QUOTES)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+set(LLVM_LINK_COMPONENTS
+  Analysis
+  Core
+  Support
+  )
+
+add_llvm_tool(hermes-repl
+  repl.cpp
+  ${ALL_HEADER_FILES}
+  )
+
+target_link_libraries(hermes-repl
+  hermesVMRuntime
+  hermesConsoleHost
+  hermesAST
+  hermesHBCBackend
+  hermesBackend
+  hermesOptimizer
+  hermesFrontend
+  hermesParser
+  hermesSupport
+  dtoa
+  ${CORE_FOUNDATION}
+  ${LIBREADLINE}
+)
+
+hermes_link_icu(hermes-repl)

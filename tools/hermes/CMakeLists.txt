@@ -1,0 +1,30 @@
+set(LLVM_LINK_COMPONENTS
+  Analysis
+  Core
+  Support
+  )
+
+add_llvm_tool(hermes
+  hermes.cpp
+  ${ALL_HEADER_FILES}
+  )
+
+target_link_libraries(hermes
+  hermesVMRuntime
+  hermesCompilerDriver
+  hermesConsoleHost
+  hermesAST
+  hermesCPPBackend
+  hermesHBCBackend
+  hermesBackend
+  hermesOptimizer
+  hermesFrontend
+  hermesParser
+  hermesSourceMap
+  hermesSupport
+  dtoa
+  hermesInstrumentation
+  ${CORE_FOUNDATION}
+)
+
+hermes_link_icu(hermes)

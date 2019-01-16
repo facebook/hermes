@@ -1,0 +1,10 @@
+add_llvm_library(hermesAST
+    ASTBuilder.cpp
+    ESTree.cpp
+    ESTreeDumper.cpp
+    RecursiveVisitor.h
+    SemanticValidator.cpp
+    CommonJS.cpp
+    LINK_LIBS
+    hermesSupport
+)

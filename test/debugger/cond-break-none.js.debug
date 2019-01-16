@@ -1,0 +1,4 @@
+break 8 if throw new Error()
+break 9 if 1 +
+break 10 if undefined
+continue

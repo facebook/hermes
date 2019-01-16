@@ -1,0 +1,23 @@
+// RUN: %hermes -Wno-undefined-variable -O -dump-bytecode %s | %FileCheck --match-full-lines %s
+// Test that we are correctly disassembling string operands.
+"use strict";
+
+var glob = {prop: bar()};
+var re = /foo/i;
+glob.baz;
+bazz = "const-string";
+delete glob.baz;
+
+//CHECK:    DeclareGlobalVar  "glob"
+//CHECK:    DeclareGlobalVar  "re"
+//CHECK:    TryGetById        {{r[0-9]+}}, {{r[0-9]+}}, 1, "bar"
+//CHECK:    PutOwnByIdShort   {{r[0-9]+}}, {{r[0-9]+}}, "prop"
+//CHECK:    PutById           {{r[0-9]+}}, {{r[0-9]+}}, 1, "glob"
+//CHECK:    CreateRegExp      {{r[0-9]+}}, "foo", "i", 0
+//CHECK:    PutById           {{r[0-9]+}}, {{r[0-9]+}}, 2, "re"
+//CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 2, "glob"
+//CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 3, "baz"
+//CHECK:    LoadConstString   {{r[0-9]+}}, "const-string"
+//CHECK:    TryPutById        {{r[0-9]+}}, {{r[0-9]+}}, 3, "bazz"
+//CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 4, "glob"
+//CHECK:    DelById           {{r[0-9]+}}, {{r[0-9]+}}, "baz"

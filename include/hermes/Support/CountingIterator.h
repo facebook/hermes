@@ -1,0 +1,47 @@
+#ifndef HERMES_SUPPORT_COUNTINGITERATOR_H
+#define HERMES_SUPPORT_COUNTINGITERATOR_H
+
+#include <iterator>
+
+namespace hermes {
+
+// Iterator that counts number of operator++ invocations
+template <typename T>
+class CountingIterator : public std::iterator<std::input_iterator_tag, T> {
+ public:
+  CountingIterator() = default;
+  CountingIterator(const CountingIterator &cit) : count_(cit.count_) {}
+
+  CountingIterator &operator++() {
+    ++count_;
+    return *this;
+  }
+
+  CountingIterator operator++(int) {
+    CountingIterator tmp(*this);
+    operator++();
+    return tmp;
+  }
+
+  T &operator*() {
+    return dummy_;
+  }
+  int count() const {
+    return count_;
+  }
+
+  bool operator==(const CountingIterator &rhs) const {
+    return false;
+  }
+  bool operator!=(const CountingIterator &rhs) const {
+    return true;
+  }
+
+ private:
+  int count_{0};
+  T dummy_{};
+};
+
+} // namespace hermes
+
+#endif // HERMES_SUPPORT_COUNTINGITERATOR_H

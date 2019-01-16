@@ -1,0 +1,27 @@
+add_custom_target(HermesUnitTests)
+set_target_properties(HermesUnitTests PROPERTIES FOLDER "Tests")
+
+function(add_hermes_unittest test_dirname)
+  add_unittest(HermesUnitTests ${test_dirname} ${ARGN})
+  # gtest uses LLVMSupport, so LLVMSupport needs to be listed after gtest on
+  # the link line.
+  target_link_libraries(${test_dirname} LLVMSupport)
+  target_compile_definitions(${test_dirname} PUBLIC UNIT_TEST)
+endfunction()
+
+# without this, because we build -Wextra, gtest warns when comparing
+# against integer constants
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
+
+add_subdirectory(AST)
+add_subdirectory(IR)
+add_subdirectory(BCGen)
+add_subdirectory(Parser)
+add_subdirectory(VMRuntime)
+add_subdirectory(Support)
+add_subdirectory(dtoa)
+add_subdirectory(llvm_extra)
+add_subdirectory(PlatformUnicode)
+add_subdirectory(API)
+add_subdirectory(ADT)
+add_subdirectory(Optimizer)

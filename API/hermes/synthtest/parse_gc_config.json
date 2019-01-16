@@ -1,0 +1,7 @@
+{
+  "globalObjID": 0,
+  "gcConfig": {
+    "initHeapSize": 100,
+    "maxHeapSize": 200
+  }
+}

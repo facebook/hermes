@@ -1,0 +1,18 @@
+#ifndef HERMES_OPTIMIZER_SCALAR_SIMPLIFYCFG_H
+#define HERMES_OPTIMIZER_SCALAR_SIMPLIFYCFG_H
+
+#include "hermes/IR/IR.h"
+#include "hermes/Optimizer/PassManager/Pass.h"
+
+namespace hermes {
+
+class SimplifyCFG : public FunctionPass {
+ public:
+  explicit SimplifyCFG() : FunctionPass("SimplifyCFG") {}
+  ~SimplifyCFG() override = default;
+
+  bool runOnFunction(Function *F) override;
+};
+} // namespace hermes
+
+#endif // HERMES_OPTIMIZER_SCALAR_SIMPLIFYCFG_H

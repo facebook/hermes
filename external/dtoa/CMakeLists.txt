@@ -1,0 +1,14 @@
+add_definitions(-DIEEE_8087 -DLong=int)
+add_definitions(-DNO_HEX_FP)
+add_definitions(-DNO_INFNAN_CHECK)
+add_definitions(-DMULTIPLE_THREADS)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+set(CMAKE_C_FLAGS
+        "${CMAKE_C_FLAGS} -Wno-parentheses -Wno-unused-label -Wno-sign-compare -Wno-implicit-fallthrough")
+
+add_llvm_library(dtoa STATIC
+        dtoa.c
+        dtoa_fixedpoint.c
+        g_fmt.c
+        locks.cpp)

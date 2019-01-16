@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "globalObjID": 1,
+  "env": {
+    "mathRandomSeed": 0,
+    "callsToDateNow": [],
+    "callsToNewDate": [],
+    "callsToDateAsFunction": []
+  },
+  "trace": [
+    {
+      "type": "CreateHostFunctionRecord",
+      "time": 0,
+      "objID": 10
+    },
+    {
+      "type": "SetPropertyRecord",
+      "time": 0,
+      "objID": 1,
+      "propName": "foo",
+      "value": "object:10"
+    },
+    {
+      "type": "BeginExecJSRecord",
+      "time": 0
+    },
+    {
+      "type": "CallToNativeRecord",
+      "time": 0,
+      "functionID": 10,
+      "thisArg": "undefined:",
+      "args": ["object:11"]
+    },
+    {
+      "type": "GetPropertyRecord",
+      "time": 0,
+      "objID": 1,
+      "propName": "f",
+      "value": "object:12"
+    },
+    {
+      "type": "CallFromNativeRecord",
+      "time": 0,
+      "functionID": 12,
+      "thisArg": "undefined:",
+      "args": ["object:11"]
+    },
+    {
+      "type": "ReturnToNativeRecord",
+      "time": 0,
+      "retval": "object:11"
+    },
+    {
+      "type": "ReturnFromNativeRecord",
+      "time": 0,
+      "retval": "object:11"
+    },
+    {
+      "type": "EndExecJSRecord",
+      "time": 0
+    }
+  ]
+}

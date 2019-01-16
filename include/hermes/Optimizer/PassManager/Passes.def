@@ -1,0 +1,35 @@
+//===----------------------------------------------------------------------===//
+//
+// This file defines macros used for macro-metaprogramming with Hermes Passes.
+//
+//===----------------------------------------------------------------------===//
+
+/// PASS(Id, Name, Description)
+///   There exists a global function hermes::create##Id().
+///
+///   This macro must be defined by the includer.
+#ifndef PASS
+#error "Macro must be defined by includer"
+#endif
+
+PASS(DCE, "dce", "Eliminate dead code")
+PASS(FuncSigOpts, "funcsigopts", "Function Signature Optimizations")
+PASS(CSE, "cse", "Common subexpression elimination")
+PASS(CodeMotion, "codemotion", "Code Motion")
+PASS(Mem2Reg, "mem2reg", "Construct SSA")
+PASS(InstSimplify, "instsimplify", "Simplify instructions")
+PASS(SimplifyCFG, "simplifycfg", "Simplify CFG")
+PASS(StackPromotion, "stackpromotion", "Stack promotion")
+PASS(TypeInference, "typeinference", "Type inference")
+PASS(TypeInferenceWithCLA, "typeinference", "Type inference with CLA")
+PASS(
+    ConstantPropertyOpts,
+    "constantpropertyopts",
+    "Constant Property Optimizations")
+PASS(UncalledMethodOpts, "uncalledmethodopts", "Uncalled Method Optimizations")
+PASS(Inlining, "inlining", "Inlining")
+PASS(Outlining, "outlining", "Outlining")
+PASS(ResolveStaticRequire, "staticrequire", "Resolve static require")
+PASS(Auditor, "auditor", "Auditor")
+
+#undef PASS

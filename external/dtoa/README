@@ -1,0 +1,5 @@
+dtoa.c, g_fmt.c and changes were downloaded from
+http://www.netlib.org/fp/ on 2016-01-18.
+
+If any of the downloaded files have been modified, the original is
+preserved with an extension .original.
