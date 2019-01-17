@@ -29,9 +29,6 @@
 #ifndef DEFINE_JUMP_LONG_VARIANT
 #define DEFINE_JUMP_LONG_VARIANT(...)
 #endif
-#ifndef DEFINE_RET_TARGET
-#define DEFINE_RET_TARGET(...)
-#endif
 #ifndef ASSERT_EQUAL_LAYOUT1
 #define ASSERT_EQUAL_LAYOUT1(a, b)
 #endif
@@ -306,8 +303,6 @@ DEFINE_OPCODE_5(GetNextPName, Reg8, Reg8, Reg8, Reg8, Reg8)
 ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 /// NOTE: the ordering of Call, Construct, CallLong, ConstructLong is important.
 /// The "long" versions are defined after the "short" versions.
-/// It is important for efficiency that all Calls have contiguous opcodes, with
-/// wider instructions appearing after narrower ones.
 
 /// Call a function.
 /// Arg1 is the destination of the return value.
@@ -315,7 +310,6 @@ DEFINE_OPCODE_5(GetNextPName, Reg8, Reg8, Reg8, Reg8, Reg8)
 /// Arg3 is the number of arguments, assumed to be found in reverse order
 ///      from the end of the current frame.
 DEFINE_OPCODE_3(Call, Reg8, Reg8, UInt8)
-DEFINE_RET_TARGET(Call)
 
 /// Call a constructor, with semantics identical to Call.
 /// Arg1 is the destination of the return value.
@@ -324,7 +318,6 @@ DEFINE_RET_TARGET(Call)
 ///      from the end of the current frame. The first argument 'this'
 ///      is assumed to be created with CreateThis.
 DEFINE_OPCODE_3(Construct, Reg8, Reg8, UInt8)
-DEFINE_RET_TARGET(Construct)
 
 /// Call a function directly without a closure.
 /// Arg1 is the destination of the return value.
@@ -334,23 +327,17 @@ DEFINE_RET_TARGET(Construct)
 /// Arg3 is index in the function table.
 /// Note that we expect the variable-sized argument to be last.
 DEFINE_OPCODE_3(CallDirect, Reg8, UInt8, UInt16)
-DEFINE_RET_TARGET(CallDirect)
 
 /// Identical to Call, but allowing more arguments.
 DEFINE_OPCODE_3(CallLong, Reg8, Reg8, UInt32)
-DEFINE_RET_TARGET(CallLong)
 
 /// Identical to Construct, but allowing more arguments.
 DEFINE_OPCODE_3(ConstructLong, Reg8, Reg8, UInt32)
-DEFINE_RET_TARGET(ConstructLong)
 
 /// Identical to CallDirect, but the function index is 32-bit.
 DEFINE_OPCODE_3(CallDirectLongIndex, Reg8, UInt8, UInt32)
-DEFINE_RET_TARGET(CallDirectLongIndex)
 
 /// Call a builtin function.
-/// Note this is NOT marked as a Ret target, because the callee is native
-/// and therefore never JS.
 /// Arg1 is the destination of the return value.
 /// Arg2 is the builtin number.
 /// Arg3 is the number of arguments, assumed to be found in reverse order
@@ -601,7 +588,6 @@ ASSERT_EQUAL_LAYOUT2(Construct, ConstructLong)
 #undef DEFINE_OPCODE_6
 #undef DEFINE_OPCODE
 #undef DEFINE_JUMP_LONG_VARIANT
-#undef DEFINE_RET_TARGET
 #undef ASSERT_EQUAL_LAYOUT1
 #undef ASSERT_EQUAL_LAYOUT2
 #undef ASSERT_EQUAL_LAYOUT3
