@@ -304,8 +304,8 @@ DEFINE_OPCODE_4(GetPNameList, Reg8, Reg8, Reg8, Reg8)
 DEFINE_OPCODE_5(GetNextPName, Reg8, Reg8, Reg8, Reg8, Reg8)
 
 ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-/// NOTE: the ordering of Call, CallN, Construct, CallLong, ConstructLong is
-/// important. The "long" versions are defined after the "short" versions.
+/// NOTE: the ordering of Call, Construct, CallLong, ConstructLong is important.
+/// The "long" versions are defined after the "short" versions.
 /// It is important for efficiency that all Calls have contiguous opcodes, with
 /// wider instructions appearing after narrower ones.
 
@@ -326,13 +326,6 @@ DEFINE_RET_TARGET(Call)
 DEFINE_OPCODE_3(Construct, Reg8, Reg8, UInt8)
 DEFINE_RET_TARGET(Construct)
 
-/// Call a function with one arg.
-/// Arg1 is the destination of the return value.
-/// Arg2 is the closure to invoke.
-/// Arg3 is the first argument.
-DEFINE_OPCODE_3(Call1, Reg8, Reg8, Reg8)
-DEFINE_RET_TARGET(Call1)
-
 /// Call a function directly without a closure.
 /// Arg1 is the destination of the return value.
 /// Arg2 is the number of arguments, assumed to be found in reverse order
@@ -342,33 +335,6 @@ DEFINE_RET_TARGET(Call1)
 /// Note that we expect the variable-sized argument to be last.
 DEFINE_OPCODE_3(CallDirect, Reg8, UInt8, UInt16)
 DEFINE_RET_TARGET(CallDirect)
-
-/// Call a function with two args.
-/// Arg1 is the destination of the return value.
-/// Arg2 is the closure to invoke.
-/// Arg3 is the first argument.
-/// Arg4 is the second argument.
-DEFINE_OPCODE_4(Call2, Reg8, Reg8, Reg8, Reg8)
-DEFINE_RET_TARGET(Call2)
-
-/// Call a function with three args.
-/// Arg1 is the destination of the return value.
-/// Arg2 is the closure to invoke.
-/// Arg3 is the first argument.
-/// Arg4 is the second argument.
-/// Arg5 is the third argument.
-DEFINE_OPCODE_5(Call3, Reg8, Reg8, Reg8, Reg8, Reg8)
-DEFINE_RET_TARGET(Call3)
-
-/// Call a function with four args.
-/// Arg1 is the destination of the return value.
-/// Arg2 is the closure to invoke.
-/// Arg3 is the first argument.
-/// Arg4 is the second argument.
-/// Arg5 is the third argument.
-/// Arg6 is the fourth argument.
-DEFINE_OPCODE_6(Call4, Reg8, Reg8, Reg8, Reg8, Reg8, Reg8)
-DEFINE_RET_TARGET(Call4)
 
 /// Identical to Call, but allowing more arguments.
 DEFINE_OPCODE_3(CallLong, Reg8, Reg8, UInt32)

@@ -1,5 +1,4 @@
 // RUN: %hermes -O -dump-lra -enable-calln %s | %FileCheck --check-prefix=LRA --match-full-lines %s
-// RUN: %hermes -O -dump-bytecode -enable-calln %s | %FileCheck --check-prefix=BCGEN --match-full-lines %s
 
 // Variants that should produce a HBCCallNInst instruction.
 
@@ -14,14 +13,6 @@ function foo1(f) { f(); }
 // LRA-NEXT:   $Reg0 @3 [empty]	%4 = ReturnInst %1 : undefined
 // LRA-NEXT: function_end
 
-// BCGEN: Function<foo1>{{.*}}
-// BCGEN-NEXT: Offset in debug table: {{.*}}
-// BCGEN-NEXT:     LoadParam         r1, 1
-// BCGEN-NEXT:     LoadConstUndefined r0
-// BCGEN-NEXT:     Call1             r1, r1, r0
-// BCGEN-NEXT:     Ret               r0
-
-
 function foo2(f) { f(1); }
 // LRA: function foo2(f) : undefined
 // LRA-NEXT: frame = []
@@ -34,14 +25,6 @@ function foo2(f) { f(1); }
 // LRA-NEXT:   $Reg1 @3 [empty]	%5 = HBCCallNInst %0, %1 : undefined, %2 : number
 // LRA-NEXT:   $Reg0 @4 [empty]	%6 = ReturnInst %1 : undefined
 // LRA-NEXT: function_end
-
-// BCGEN: Function<foo2>{{.*}}
-// BCGEN-NEXT: Offset in debug table: {{.*}}
-// BCGEN-NEXT:     LoadParam         r2, 1
-// BCGEN-NEXT:     LoadConstUndefined r0
-// BCGEN-NEXT:     LoadConstUInt8    r1, 1
-// BCGEN-NEXT:     Call2             r1, r2, r0, r1
-// BCGEN-NEXT:     Ret               r0
 
 
 function foo3(f) { f(1, 2); }
@@ -58,16 +41,6 @@ function foo3(f) { f(1, 2); }
 // LRA-NEXT:   $Reg1 @4 [empty]	%7 = HBCCallNInst %0, %1 : undefined, %2 : number, %3 : number
 // LRA-NEXT:   $Reg0 @5 [empty]	%8 = ReturnInst %1 : undefined
 // LRA-NEXT: function_end
-
-// BCGEN: Function<foo3>{{.*}}
-// BCGEN-NEXT: Offset in debug table: {{.*}}
-// BCGEN-NEXT:     LoadParam         r3, 1
-// BCGEN-NEXT:     LoadConstUndefined r0
-// BCGEN-NEXT:     LoadConstUInt8    r2, 1
-// BCGEN-NEXT:     LoadConstUInt8    r1, 2
-// BCGEN-NEXT:     Call3             r1, r3, r0, r2, r1
-// BCGEN-NEXT:     Ret               r0
-
 
 
 function foo4(f) { f(1, 2, 3); }
@@ -87,17 +60,6 @@ function foo4(f) { f(1, 2, 3); }
 // LRA-NEXT:   $Reg0 @6 [empty]	%10 = ReturnInst %1 : undefined
 // LRA-NEXT: function_end
 
-// BCGEN: Function<foo4>{{.*}}
-// BCGEN-NEXT: Offset in debug table: {{.*}}
-// BCGEN-NEXT:     LoadParam         r4, 1
-// BCGEN-NEXT:     LoadConstUndefined r0
-// BCGEN-NEXT:     LoadConstUInt8    r3, 1
-// BCGEN-NEXT:     LoadConstUInt8    r2, 2
-// BCGEN-NEXT:     LoadConstUInt8    r1, 3
-// BCGEN-NEXT:     Call4             r1, r4, r0, r3, r2, r1
-// BCGEN-NEXT:     Ret               r0
-
-
 // This has too many parameters and so will be an ordinary Call instruction, not HBCCallNInst.
 
 function foo5(f) { f(1, 2, 3, 4); }
@@ -114,15 +76,3 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:   $Reg1 @6 [empty]	%7 = CallInst %0, %6 : undefined, %2 : number, %3 : number, %4 : number, %5 : number
 // LRA-NEXT:   $Reg0 @7 [empty]	%8 = ReturnInst %1 : undefined
 // LRA-NEXT: function_end
-
-// BCGEN: Function<foo5>{{.*}}
-// BCGEN-NEXT: Offset in debug table: {{.*}}
-// BCGEN-NEXT:     LoadParam         r5, 1
-// BCGEN-NEXT:     LoadConstUndefined r0
-// BCGEN-NEXT:     LoadConstUInt8    r9, 1
-// BCGEN-NEXT:     LoadConstUInt8    r8, 2
-// BCGEN-NEXT:     LoadConstUInt8    r7, 3
-// BCGEN-NEXT:     LoadConstUInt8    r6, 4
-// BCGEN-NEXT:     LoadConstUndefined r10
-// BCGEN-NEXT:     Call              r1, r5, 5
-// BCGEN-NEXT:     Ret               r0
