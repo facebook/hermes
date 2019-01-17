@@ -1038,7 +1038,45 @@ void HBCISel::generateCallInst(CallInst *Inst, BasicBlock *next) {
 }
 
 void HBCISel::generateHBCCallNInst(HBCCallNInst *Inst, BasicBlock *next) {
-  // ISel for CallNInst not yet implemented.
+  auto output = encodeValue(Inst);
+  auto function = encodeValue(Inst->getCallee());
+  verifyCall(Inst);
+
+  static_assert(
+      HBCCallNInst::kMinArgs == 1 && HBCCallNInst::kMaxArgs == 4,
+      "Update generateHBCCallNInst to reflect min/max arg range");
+
+  switch (Inst->getNumArguments()) {
+    case 1:
+      BCFGen_->emitCall1(output, function, encodeValue(Inst->getArgument(0)));
+      break;
+    case 2:
+      BCFGen_->emitCall2(
+          output,
+          function,
+          encodeValue(Inst->getArgument(0)),
+          encodeValue(Inst->getArgument(1)));
+      break;
+    case 3:
+      BCFGen_->emitCall3(
+          output,
+          function,
+          encodeValue(Inst->getArgument(0)),
+          encodeValue(Inst->getArgument(1)),
+          encodeValue(Inst->getArgument(2)));
+      break;
+    case 4:
+      BCFGen_->emitCall4(
+          output,
+          function,
+          encodeValue(Inst->getArgument(0)),
+          encodeValue(Inst->getArgument(1)),
+          encodeValue(Inst->getArgument(2)),
+          encodeValue(Inst->getArgument(3)));
+      break;
+    default:
+      llvm_unreachable("Unexpected argument count");
+  }
 }
 
 void HBCISel::generateConstructInst(ConstructInst *Inst, BasicBlock *next) {
