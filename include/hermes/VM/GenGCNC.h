@@ -889,6 +889,12 @@ inline size_t GenGC::numFullGCs() const {
   return fullCollectionCumStats_.numCollections;
 }
 
+#ifdef UNIT_TEST
+const GCSegmentAddressIndex &GenGC::segmentIndex() const {
+  return segmentIndex_;
+}
+#endif // UNIT_TEST
+
 inline void GenGC::writeBarrierImpl(void *loc, void *value, bool hv) {
   HERMES_SLOW_ASSERT(dbgContains(loc));
 
@@ -908,12 +914,6 @@ inline void GenGC::writeBarrierImpl(void *loc, void *value, bool hv) {
     AlignedHeapSegment::cardTableCovering(locPtr)->dirtyCardForAddress(locPtr);
   }
 }
-
-#ifdef UNIT_TEST
-const GCSegmentAddressIndex &GenGC::segmentIndex() const {
-  return segmentIndex_;
-}
-#endif // UNIT_TEST
 
 inline bool GenGC::allocContextClaimed() const {
   return !!allocContext_;
