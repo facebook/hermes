@@ -229,11 +229,12 @@ void GCBase::oomDetail() {
   HeapInfo heapInfo;
   getHeapInfo(heapInfo);
   // Could use a stringstream here, but want to avoid dynamic allocation.
-  char detailBuffer[100];
+  char detailBuffer[200];
   snprintf(
       detailBuffer,
       sizeof(detailBuffer),
-      "numCollections = %d, heapSize = %d, allocated = %d, va = %" PRIu64,
+      "[%.20s] numCollections = %d, heapSize = %d, allocated = %d, va = %" PRIu64,
+      name_.c_str(),
       heapInfo.numCollections,
       heapInfo.heapSize,
       heapInfo.allocatedBytes,
