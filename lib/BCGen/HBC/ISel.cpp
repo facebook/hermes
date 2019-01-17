@@ -347,22 +347,33 @@ void HBCISel::emitUnreachableIfDebug() {
 
 void HBCISel::verifyCall(CallInst *Inst) {
 #ifndef NDEBUG
-  auto reg = RA_.getLastRegister().getIndex() -
+  const auto lastArgReg = RA_.getLastRegister().getIndex() -
       HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
 
   const bool isBuiltin = isa<HBCCallBuiltinInst>(Inst);
+  const bool isCallN = isa<HBCCallNInst>(Inst);
 
-  for (unsigned i = 0, max = Inst->getNumArguments(); i < max; i++, --reg) {
+  for (unsigned i = 0, max = Inst->getNumArguments(); i < max; i++) {
+    Value *argument = Inst->getArgument(i);
     // The first argument (thisArg) of CallBuiltin must be LiteralUndefined.
     if (isBuiltin && i == 0) {
       assert(
-          isa<LiteralUndefined>(Inst->getArgument(i)) &&
-          !RA_.isAllocated(Inst->getArgument(i)) &&
+          isa<LiteralUndefined>(argument) && !RA_.isAllocated(argument) &&
           "Register for 'this' argument is misallocated");
-    } else {
+    } else if (isCallN) {
+      // CallN may take arguments from anywhere except for the last N registers
+      // of the frame, because the bytecode instruction overwrites those
+      // registers. Note that <= is correct because lastArgReg is the index of
+      // the last register, not the count of registers.
       assert(
-          isa<Instruction>(Inst->getArgument(i)) &&
-          reg == RA_.getRegister(Inst->getArgument(i)).getIndex() &&
+          isa<Instruction>(argument) &&
+          RA_.getRegister(argument).getIndex() <= lastArgReg - max);
+    } else {
+      // Calls require that the arguments be at the end of the frame, in reverse
+      // order.
+      assert(
+          isa<Instruction>(argument) &&
+          RA_.getRegister(argument).getIndex() == lastArgReg - i &&
           "Register is misallocated");
     }
   }
@@ -1025,9 +1036,15 @@ void HBCISel::generateCallInst(CallInst *Inst, BasicBlock *next) {
     BCFGen_->emitCallLong(output, function, Inst->getNumArguments());
   }
 }
+
+void HBCISel::generateHBCCallNInst(HBCCallNInst *Inst, BasicBlock *next) {
+  // ISel for CallNInst not yet implemented.
+}
+
 void HBCISel::generateConstructInst(ConstructInst *Inst, BasicBlock *next) {
   llvm_unreachable("ConstructInst should have been lowered");
 }
+
 void HBCISel::generateHBCCallBuiltinInst(
     HBCCallBuiltinInst *Inst,
     BasicBlock *next) {

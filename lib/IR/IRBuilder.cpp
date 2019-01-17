@@ -262,6 +262,15 @@ CallInst *IRBuilder::createCallInst(
   return CI;
 }
 
+HBCCallNInst *IRBuilder::createHBCCallNInst(
+    Value *callee,
+    Value *thisValue,
+    ArrayRef<Value *> args) {
+  auto CI = new HBCCallNInst(callee, thisValue, args);
+  insert(CI);
+  return CI;
+}
+
 ConstructInst *IRBuilder::createConstructInst(
     Value *constructor,
     ArrayRef<Value *> args) {

@@ -598,3 +598,15 @@ Example | %0 = HBCCallBuiltinInst %builtinNumber, %undefined, %arg0, %arg1, %arg
 Arguments | %builtinNumber is the builtin to execute. Arguments %arg0 ... %argN are the arguments passed to the function.
 Semantics | The instruction passes the control to the builtin in a VM-specific way. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.
+
+
+### HBCCallNInst
+
+HBCCallNInst | _
+--- | --- |
+Description | Calls a function with a fixed number of arguments (from 1 to 4, inclusive).
+Example | %0 = HBCCallNInst %callee, %this, %arg0, %arg1, %arg2
+Arguments | %callee is the function to execute. %this is a reference to the 'this' value. Arguments %arg0 ... %argN are the arguments passed to the function.
+Semantics | The instruction copies its arguments (starting from this) into the parameter-passing registers at the end of the frame, and passes the control to the callee, which must be of closure type.
+The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
+Effects | May read and write memory.

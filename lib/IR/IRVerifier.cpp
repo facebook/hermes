@@ -407,6 +407,14 @@ void Verifier::visitCreateFunctionInst(const CreateFunctionInst &Inst) {
 void Verifier::visitCallInst(const CallInst &Inst) {
   // Nothing to verify at this point.
 }
+
+void Verifier::visitHBCCallNInst(const HBCCallNInst &Inst) {
+  Assert(
+      HBCCallNInst::kMinArgs <= Inst.getNumArguments() &&
+          Inst.getNumArguments() <= HBCCallNInst::kMaxArgs,
+      "CallNInst has too many args");
+}
+
 void Verifier::visitHBCCallBuiltinInst(HBCCallBuiltinInst const &Inst) {
   Assert(
       Inst.getNumArguments() <= HBCCallBuiltinInst::MAX_ARGUMENTS,
