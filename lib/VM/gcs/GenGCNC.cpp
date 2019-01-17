@@ -1895,8 +1895,9 @@ void GenGC::oomDetail() {
   snprintf(
       detailBuffer,
       sizeof(detailBuffer),
-      "#segments = %zd, maxHeapSize = %zd",
+      "#segments = %zd, !materialize = %zd, maxHeapSize = %zd",
       segmentIndex_.size(),
+      numFailedSegmentMaterializations(),
       maxSize());
   hermesLog("HermesGC", "NCGen OOM: %s", detailBuffer);
   oomDetailFB(detailBuffer);
