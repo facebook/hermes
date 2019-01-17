@@ -513,6 +513,16 @@ Arguments | Any value.
 Semantics | The Mov instruction is only valid after Register Allocation in bytecode as we move away from SSA form.
 Effects | Does not read or write memory.
 
+### ImplicitMovInst
+
+ImplicitMovInst | _
+Description | The ImplicitMov inst represents moving one register to another, except the mov will be performed implicitly by an immediately-subsequent instruction. This is used to express to the optimizer instructions which modify registers other than their destination.
+Example |  %0 = ImplicitMovInst %value0
+Arguments | Any value.
+Semantics | The ImplicitMov instruction is only valid after Register Allocation in bytecode as we move away from SSA form.
+Effects | Does not read or write memory.
+
+
 ### DebuggerInst
 
 DebuggerInst | _

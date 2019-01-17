@@ -2152,6 +2152,39 @@ class MovInst : public SingleOperandInst {
   }
 };
 
+/// ImplicitMovInst may be emitted as part of lowering to express instructions
+/// which perform a Mov as part of their implementation, to registers not
+/// explicitly marked as a destination. They serve as IR optimization barriers
+/// but emit no bytecode.
+class ImplicitMovInst : public SingleOperandInst {
+ public:
+  explicit ImplicitMovInst(Value *input)
+      : SingleOperandInst(ValueKind::ImplicitMovInstKind, input) {
+    setType(input->getType());
+  }
+
+  explicit ImplicitMovInst(
+      const ImplicitMovInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : SingleOperandInst(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
+    return llvm::SmallVector<Value *, 1>{};
+  }
+
+  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
+    return index == SingleOperandIdx;
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::ImplicitMovInstKind);
+  }
+};
+
 class CoerceThisNSInst : public SingleOperandInst {
   CoerceThisNSInst(const MovInst &) = delete;
   void operator=(const CoerceThisNSInst &) = delete;
