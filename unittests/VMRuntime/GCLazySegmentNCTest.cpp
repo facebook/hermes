@@ -115,7 +115,7 @@ TEST_F(GCLazySegmentNCTest, YoungGenNoMaterialize) {
 }
 
 /// Regression (T36931579):  At one time, when the OldGen ran out of space, it
-/// would materialize all the segments up to its max size before trigerring a
+/// would materialize all the segments up to its max size before triggering a
 /// full collection and cleaning them up.  This test ensures we don't
 /// materialize segments redundantly like that.
 TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
