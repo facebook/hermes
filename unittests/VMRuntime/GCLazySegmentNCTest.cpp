@@ -170,6 +170,37 @@ TEST_F(GCLazySegmentNCDeathTest, FailToMaterialize) {
   EXPECT_DEATH({ SegmentCell::create(rt); }, "OOM");
 }
 
+TEST_F(GCLazySegmentNCDeathTest, FailToMaterializeContinue) {
+  auto provider = llvm::make_unique<LimitedStorageProvider>(
+      StorageProvider::defaultProvider(kGCConfig), kHeapVALimited);
+  auto runtime =
+      DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
+  DummyRuntime &rt = *runtime;
+
+  std::deque<GCCell *> roots;
+
+  auto N = kHeapSizeHint / SegmentCell::size() / 2;
+  for (size_t i = 0; i < N; ++i) {
+    roots.push_back(SegmentCell::create(rt));
+    rt.pointerRoots.push_back(&roots.back());
+  }
+
+  // Discard one allocated cell.
+  rt.pointerRoots.pop_back();
+  roots.pop_back();
+
+  ASSERT_EQ(0, rt.gc.numFailedSegmentMaterializations());
+  ASSERT_EQ(0, rt.gc.numFullGCs());
+
+  SegmentCell::create(rt);
+
+  // Allocating a cell caused us to attempt to materialize a segment which
+  // should fail.  We should however still be able to continue by making room
+  // through a full collection.
+  EXPECT_EQ(1, rt.gc.numFailedSegmentMaterializations());
+  EXPECT_EQ(1, rt.gc.numFullGCs());
+}
+
 } // namespace
 
 #endif

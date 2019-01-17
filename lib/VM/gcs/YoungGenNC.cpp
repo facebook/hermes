@@ -42,7 +42,8 @@ YoungGen::YoungGen(GenGC *gc, size_t minSize, size_t maxSize, OldGen *nextGen)
           AlignedHeapSegment::maxSize())),
       nextGen_(nextGen) {
   exchangeActiveSegment(
-      {AlignedStorage{gc_->storageProvider_, "hermes-younggen-segment"}, this});
+      {AlignedStorage{&gc_->storageProvider_, "hermes-younggen-segment"},
+       this});
   if (!activeSegment())
     gc_->oom();
   resetTrueAllocContext();

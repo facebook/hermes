@@ -17,6 +17,7 @@
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/GCSegmentAddressIndex.h"
 #include "hermes/VM/HermesValue.h"
+#include "hermes/VM/LogFailStorageProvider.h"
 #include "hermes/VM/OldGenNC.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/YoungGenNC.h"
@@ -370,6 +371,8 @@ class GenGC final : public GCBase {
   /// Reset the number of finalized objects in each generation to zero.
   void resetNumFinalizedObjectsInGens();
 
+  inline size_t numFailedSegmentMaterializations() const;
+
   /// Mark a symbol id as being used.
   void markSymbol(SymbolID symbolID);
 
@@ -697,7 +700,7 @@ class GenGC final : public GCBase {
   friend class WeakRef;
 
   /// The storage provider is a way to access storage for new segments.
-  StorageProvider *storageProvider_;
+  LogFailStorageProvider storageProvider_;
 
   /// Whether GC is in progress.
   bool inGC_ = false;
@@ -887,6 +890,10 @@ inline size_t GenGC::numYoungGCs() const {
 
 inline size_t GenGC::numFullGCs() const {
   return fullCollectionCumStats_.numCollections;
+}
+
+inline size_t GenGC::numFailedSegmentMaterializations() const {
+  return storageProvider_.numFailedAllocs();
 }
 
 #ifdef UNIT_TEST

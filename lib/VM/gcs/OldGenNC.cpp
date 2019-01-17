@@ -46,7 +46,7 @@ OldGen::OldGen(GenGC *gc, size_t minSize, size_t maxSize, bool releaseUnused)
           std::numeric_limits<size_t>::max())),
       releaseUnused_(releaseUnused) {
   exchangeActiveSegment(
-      {AlignedStorage{gc_->storageProvider_, kSegmentName}, this});
+      {AlignedStorage{&gc_->storageProvider_, kSegmentName}, this});
   if (!activeSegment())
     gc_->oom();
 
@@ -573,7 +573,7 @@ bool OldGen::seedSegmentCacheForSize(size_t size) {
   // Try and seed the segment cache with enough segments to fit the request.
   for (; segAlloc < segReq; ++segAlloc) {
     segmentCache_.emplace_back(
-        AlignedStorage{gc_->storageProvider_, kSegmentName}, this);
+        AlignedStorage{&gc_->storageProvider_, kSegmentName}, this);
 
     if (!initSegmentForMaterialization(segmentCache_.back())) {
       // We could not allocate all the segments we needed, so give back the ones
@@ -608,7 +608,7 @@ bool OldGen::materializeNextSegment() {
     segmentCache_.pop_back();
   } else {
     exchangeActiveSegment(
-        {AlignedStorage{gc_->storageProvider_, kSegmentName}, this},
+        {AlignedStorage{&gc_->storageProvider_, kSegmentName}, this},
         filledSegSlot);
     bool initSuccess = initSegmentForMaterialization(activeSegmentRaw());
     if (LLVM_UNLIKELY(!initSuccess)) {
