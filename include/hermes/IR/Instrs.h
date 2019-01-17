@@ -729,34 +729,6 @@ class ConstructInst : public CallInst {
   }
 };
 
-class HBCCallNInst : public CallInst {
- public:
-  /// The minimum number of args supported by a CallN instruction, including
-  /// 'this'.
-  static constexpr uint32_t kMinArgs = 1;
-
-  /// The maximum (inclusive) number of args supported by a CallN instruction,
-  /// including 'this'.
-  static constexpr uint32_t kMaxArgs = 4;
-
-  explicit HBCCallNInst(Value *callee, Value *thisValue, ArrayRef<Value *> args)
-      : CallInst(ValueKind::HBCCallNInstKind, callee, thisValue, args) {
-    // +1 for 'this'.
-    assert(
-        kMinArgs <= args.size() + 1 && args.size() + 1 <= kMaxArgs &&
-        "Invalid arg count for HBCCallNInst");
-  }
-
-  explicit HBCCallNInst(
-      const HBCCallNInst *src,
-      llvm::ArrayRef<Value *> operands)
-      : CallInst(src, operands) {}
-
-  static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::HBCCallNInstKind;
-  }
-};
-
 class HBCGetGlobalObjectInst : public Instruction {
   HBCGetGlobalObjectInst(const HBCGetGlobalObjectInst &) = delete;
   void operator=(const HBCGetGlobalObjectInst &) = delete;

@@ -331,9 +331,6 @@ static CLFlag UndefinedVariableWarning(
     true,
     "Do not warn when an undefined variable is referenced.");
 
-static opt<bool>
-    EnableCallN("enable-calln", desc("Optimize Call to CallN"), init(false));
-
 static CLFlag Inline('f', "inline", true, "inlining of functions");
 
 static CLFlag
@@ -661,8 +658,6 @@ std::shared_ptr<Context> createContext(
   optimizationOpts.outliningSettings.minLength = cl::OutliningMinLength;
   optimizationOpts.outliningSettings.minParameters = cl::OutliningMinParameters;
   optimizationOpts.outliningSettings.maxParameters = cl::OutliningMaxParameters;
-
-  optimizationOpts.callN = cl::EnableCallN;
 
   optimizationOpts.staticBuiltins = cl::StaticBuiltins;
   optimizationOpts.staticRequire = cl::StaticRequire;

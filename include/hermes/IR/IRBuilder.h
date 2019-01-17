@@ -226,9 +226,6 @@ class IRBuilder {
   CallInst *
   createCallInst(Value *callee, Value *thisValue, ArrayRef<Value *> args);
 
-  HBCCallNInst *
-  createHBCCallNInst(Value *callee, Value *thisValue, ArrayRef<Value *> args);
-
   ConstructInst *createConstructInst(
       Value *constructor,
       ArrayRef<Value *> args);

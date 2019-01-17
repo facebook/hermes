@@ -74,9 +74,6 @@ struct OptimizationSettings {
   /// Specific settings for the outliner.
   OutliningSettings outliningSettings;
 
-  /// Support transforming Call to CallN.
-  bool callN{false};
-
   /// Recognize calls to global functions like Object.keys() and turn them
   /// into builtin calls.
   bool staticBuiltins{false};

@@ -6,7 +6,6 @@
 #include "hermes/BCGen/HBC/HBCOptimizations.h"
 #include "hermes/BCGen/HBC/ISel.h"
 #include "hermes/BCGen/HBC/Passes.h"
-#include "hermes/BCGen/HBC/Passes/FuncCallNOpts.h"
 #include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
 #include "hermes/BCGen/HBC/Passes/LowerBuiltinCalls.h"
 #include "hermes/BCGen/HBC/Passes/OptEnvironmentInit.h"
@@ -47,7 +46,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
     // OptEnvironmentInit needs to run before LowerConstants.
     PM.addPass(new OptEnvironmentInit());
   }
-  /// LowerBuiltinCalls needs to run before the rest of the lowering.
+  /// LowetBuiltinCalls needs to run before the rest of the lowering.
   PM.addPass(new LowerBuiltinCalls());
   // It is important to run LowerNumericProperties before LoadConstants
   // as LowerNumericProperties could generate new constants.
@@ -66,8 +65,6 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
     PM.addPass(new LowerAllocObject(UINT16_MAX));
     // Reduce comparison and conditional jump to single comparison jump
     PM.addPass(new LowerCondBranch());
-    // Turn Calls into CallNs.
-    PM.addPass(new FuncCallNOpts());
     // Move loads to child blocks if possible.
     PM.addCodeMotion();
     // Eliminate common HBCLoadConstInsts.
