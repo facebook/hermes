@@ -28,6 +28,7 @@ set(source_files
   JSTypedArray.cpp
   JSWeakMapImpl.cpp
   LimitedStorageProvider.cpp
+  LogFailStorageProvider.cpp
   HostModel.cpp
   OOMException.cpp
   Operations.cpp

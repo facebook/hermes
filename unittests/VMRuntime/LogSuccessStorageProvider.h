@@ -1,5 +1,5 @@
-#ifndef HERMES_UNITTESTS_VMRUNTIME_COUNTINGSTORAGEPROVIDER_H
-#define HERMES_UNITTESTS_VMRUNTIME_COUNTINGSTORAGEPROVIDER_H
+#ifndef HERMES_UNITTESTS_VMRUNTIME_LOGSUCCESSSTORAGEPROVIDER_H
+#define HERMES_UNITTESTS_VMRUNTIME_LOGSUCCESSSTORAGEPROVIDER_H
 
 #include "hermes/VM/StorageProvider.h"
 
@@ -10,8 +10,8 @@ namespace vm {
 
 /// Test StorageProvider adapter which keeps track of the counts of storages it
 /// has allocated and deleted.
-struct CountingStorageProvider final : public StorageProvider {
-  CountingStorageProvider(std::unique_ptr<StorageProvider> delegate);
+struct LogSuccessStorageProvider final : public StorageProvider {
+  LogSuccessStorageProvider(std::unique_ptr<StorageProvider> delegate);
 
   void *newStorage(const char *name) override;
   void deleteStorage(void *storage) override;
@@ -36,4 +36,4 @@ struct CountingStorageProvider final : public StorageProvider {
 } // namespace vm
 } // namespace hermes
 
-#endif // HERMES_UNITTESTS_VMRUNTIME_COUNTINGSTORAGEPROVIDER_H
+#endif // HERMES_UNITTESTS_VMRUNTIME_LOGSUCCESSSTORAGEPROVIDER_H

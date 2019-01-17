@@ -14,7 +14,6 @@ set(RTSources
   CardObjectBoundaryNCTest.cpp
   CardTableNCTest.cpp
   CastingTest.cpp
-  CountingStorageProvider.cpp
   DateUtilTest.cpp
   DependentMemoryRegionTest.cpp
   DictPropertyMapTest.cpp
@@ -42,6 +41,7 @@ set(RTSources
   InstrumentationAPITest.cpp
   InterpreterTest.cpp
   JSLibTest.cpp
+  LogSuccessStorageProvider.cpp
   NativeFrameTest.cpp
   MarkBitArrayNCTest.cpp
   ObjectBufferTest.cpp

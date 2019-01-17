@@ -3,7 +3,7 @@
 
 #include "gtest/gtest.h"
 
-#include "CountingStorageProvider.h"
+#include "LogSuccessStorageProvider.h"
 #include "EmptyCell.h"
 #include "TestHelpers.h"
 #include "hermes/Support/OSCompat.h"
@@ -123,7 +123,7 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
                         .withInitHeapSize(kHeapSizeHint)
                         .withMaxHeapSize(kHeapSizeHint * 2)
                         .build();
-  auto provider = llvm::make_unique<CountingStorageProvider>(
+  auto provider = llvm::make_unique<LogSuccessStorageProvider>(
       StorageProvider::defaultProvider(config));
   auto &counter = *provider;
   auto runtime =

@@ -1,20 +1,20 @@
-#include "CountingStorageProvider.h"
+#include "LogSuccessStorageProvider.h"
 
 #include <cassert>
 
 namespace hermes {
 namespace vm {
 
-CountingStorageProvider::CountingStorageProvider(
+LogSuccessStorageProvider::LogSuccessStorageProvider(
     std::unique_ptr<StorageProvider> delegate)
     : delegate_(std::move(delegate)) {}
 
-void *CountingStorageProvider::newStorage(const char *name) {
+void *LogSuccessStorageProvider::newStorage(const char *name) {
   numAllocated_++;
   return delegate_->newStorage(name);
 }
 
-void CountingStorageProvider::deleteStorage(void *storage) {
+void LogSuccessStorageProvider::deleteStorage(void *storage) {
   delegate_->deleteStorage(storage);
   if (!storage) {
     return;
@@ -24,15 +24,15 @@ void CountingStorageProvider::deleteStorage(void *storage) {
   assert(numAllocated_ >= numDeleted_);
 }
 
-size_t CountingStorageProvider::numAllocated() const {
+size_t LogSuccessStorageProvider::numAllocated() const {
   return numAllocated_;
 }
 
-size_t CountingStorageProvider::numDeleted() const {
+size_t LogSuccessStorageProvider::numDeleted() const {
   return numDeleted_;
 }
 
-size_t CountingStorageProvider::numLive() const {
+size_t LogSuccessStorageProvider::numLive() const {
   return numAllocated_ - numDeleted_;
 }
 
