@@ -1,5 +1,7 @@
 #include "LogSuccessStorageProvider.h"
 
+#include "llvm/Support/Compiler.h"
+
 #include <cassert>
 
 namespace hermes {
@@ -10,8 +12,13 @@ LogSuccessStorageProvider::LogSuccessStorageProvider(
     : delegate_(std::move(delegate)) {}
 
 void *LogSuccessStorageProvider::newStorage(const char *name) {
-  numAllocated_++;
-  return delegate_->newStorage(name);
+  auto res = delegate_->newStorage(name);
+
+  if (LLVM_LIKELY(res)) {
+    numAllocated_++;
+  }
+
+  return res;
 }
 
 void LogSuccessStorageProvider::deleteStorage(void *storage) {

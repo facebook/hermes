@@ -51,6 +51,7 @@ set(RTSources
   SegmentedArrayTest.cpp
   SmallXStringTest.cpp
   StaticBuiltinsTest.cpp
+  StorageProviderTest.cpp
   StringBuilderTest.cpp
   StringPrimitiveTest.cpp
   StringViewTest.cpp
