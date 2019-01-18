@@ -527,9 +527,20 @@ bool LowerCalls::runOnFunction(Function *F) {
         // explicitly. It is always undefined.
         if (i == 0 && isa<HBCCallBuiltinInst>(call))
           continue;
-        auto *mov = builder.createMovInst(call->getArgument(i));
-        call->setArgument(mov, i);
-        RA_.updateRegister(mov, Register(reg));
+
+        // If this is a Call instruction, emit explicit Movs to the argument
+        // registers. If this is a CallN instruction, emit ImplicitMovs
+        // instead, to express that these registers get written to by the CallN,
+        // even though they are not the destination.
+        Value *arg = call->getArgument(i);
+        if (isa<HBCCallNInst>(call)) {
+          auto *imov = builder.createImplicitMovInst(arg);
+          RA_.updateRegister(imov, Register(reg));
+        } else {
+          auto *mov = builder.createMovInst(arg);
+          RA_.updateRegister(mov, Register(reg));
+          call->setArgument(mov, i);
+        }
       }
     }
   }

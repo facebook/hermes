@@ -100,6 +100,7 @@ DEF_VALUE(ConstructInst, CallInst)
 DEF_VALUE(HBCConstructInst, CallInst)
 DEF_VALUE(HBCCallBuiltinInst, CallInst)
 DEF_VALUE(HBCCallDirectInst, CallInst)
+DEF_VALUE(HBCCallNInst, CallInst)
 #endif
 MARK_LAST(CallInst)
 
