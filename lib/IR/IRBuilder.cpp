@@ -559,6 +559,12 @@ MovInst *IRBuilder::createMovInst(Value *input) {
   return MI;
 }
 
+ImplicitMovInst *IRBuilder::createImplicitMovInst(Value *input) {
+  auto IMI = new ImplicitMovInst(input);
+  insert(IMI);
+  return IMI;
+}
+
 CoerceThisNSInst *IRBuilder::createCoerceThisNSInst(Value *input) {
   auto *inst = new CoerceThisNSInst(input);
   insert(inst);

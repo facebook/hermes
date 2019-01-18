@@ -560,6 +560,10 @@ void Verifier::visitMovInst(const hermes::MovInst &Inst) {
   // Nothing to verify at this point.
 }
 
+void Verifier::visitImplicitMovInst(const hermes::ImplicitMovInst &Inst) {
+  // Nothing to verify at this point.
+}
+
 void Verifier::visitCoerceThisNSInst(CoerceThisNSInst const &Inst) {
   // Nothing to verify at this point.
 }

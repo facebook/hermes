@@ -375,6 +375,8 @@ class IRBuilder {
 
   MovInst *createMovInst(Value *input);
 
+  ImplicitMovInst *createImplicitMovInst(Value *input);
+
   CoerceThisNSInst *createCoerceThisNSInst(Value *input);
 
   DebuggerInst *createDebuggerInst();

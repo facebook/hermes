@@ -385,6 +385,12 @@ void HBCISel::generateMovInst(MovInst *Inst, BasicBlock *next) {
   auto src = encodeValue(Inst->getSingleOperand());
   emitMovIfNeeded(dst, src);
 }
+
+void HBCISel::generateImplicitMovInst(ImplicitMovInst *Inst, BasicBlock *next) {
+  // ImplicitMovs produce no bytecode, they only express that a subsequent
+  // instruction will perform the equivalent of a 'Mov'.
+}
+
 void HBCISel::generateUnaryOperatorInst(
     UnaryOperatorInst *Inst,
     BasicBlock *next) {
