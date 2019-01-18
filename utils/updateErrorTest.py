@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+# Copyright (c) 2019-present, Facebook, Inc.
+#
+# This source code is licensed under the MIT license found in the LICENSE
+# file in the root directory of this source tree.
 
 from __future__ import print_function
 
@@ -101,7 +105,7 @@ def generateOutput(f):
         lineNo += 1
 
         # Output the source lines.
-        for i in xrange(fromLine, toLine + 1):
+        for i in range(fromLine, toLine + 1):
             print(sourceLines.get(i, ""), file=f)
             lineNo += 1
         newErrorLine = lineNo
@@ -126,7 +130,7 @@ def generateOutput(f):
     if fromLine <= lastSourceLine:
         print("", file=f)
         lineNo += 1
-    for i in xrange(fromLine, lastSourceLine + 1):
+    for i in range(fromLine, lastSourceLine + 1):
         print(sourceLines.get(i, ""), file=f)
         lineNo += 1
 
