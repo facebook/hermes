@@ -744,7 +744,69 @@ static void printDebugInfo(
 
   dbgs() << "\n";
 }
+
+/// \return whether \p opcode is a call opcode (Call, CallDirect, Construct,
+/// CallLongIndex, etc). Note CallBuiltin is not really a Call.
+LLVM_ATTRIBUTE_UNUSED
+static bool isCallType(OpCode opcode) {
+  switch (opcode) {
+#define DEFINE_RET_TARGET(name) \
+  case OpCode::name:            \
+    return true;
+#include "hermes/BCGen/HBC/BytecodeList.def"
+    default:
+      return false;
+  }
+}
+
 #endif
+
+/// \return true if the sequence v1, v2, v3... is monotone increasing, that is,
+/// satifies v1 <= v2 <= v3...
+static constexpr bool monotoneIncreasing(size_t v1, size_t v2) {
+  return v1 <= v2;
+}
+
+template <typename... Args>
+static constexpr bool monotoneIncreasing(size_t v1, size_t v2, Args... rest) {
+  return v1 <= v2 && monotoneIncreasing(v2, rest...);
+}
+
+/// \return the address of the next instruction after \p ip, which must be a
+/// call-type instruction.
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+static inline const Inst *nextInstCall(const Inst *ip) {
+  HERMES_SLOW_ASSERT(isCallType(ip->opCode) && "ip is not of call type");
+
+  // The following is written to elicit compares instead of table lookup.
+  // The idea is to present code like so:
+  //   if (opcode <= 70) return ip + 4;
+  //   if (opcode <= 71) return ip + 4;
+  //   if (opcode <= 72) return ip + 4;
+  //   if (opcode <= 73) return ip + 5;
+  //   if (opcode <= 74) return ip + 5;
+  //   ...
+  // and the compiler will retain only compares where the result changes (here,
+  // 72 and 74). This allows us to compute the next instruction using three
+  // compares, instead of a naive compare-per-call type (or lookup table).
+  //
+  // Statically verify that increasing call opcodes correspond to monotone
+  // instruction sizes; this enables the compiler to do a better job optimizing.
+  constexpr bool callSizesMonotoneIncreasing = monotoneIncreasing(
+#define DEFINE_RET_TARGET(name) sizeof(inst::name##Inst),
+#include "hermes/BCGen/HBC/BytecodeList.def"
+      SIZE_MAX // sentinel avoiding a trailing comma.
+  );
+  static_assert(
+      callSizesMonotoneIncreasing,
+      "Call instruction sizes are not monotone increasing");
+
+#define DEFINE_RET_TARGET(name)   \
+  if (ip->opCode <= OpCode::name) \
+    return NEXTINST(name);
+#include "hermes/BCGen/HBC/BytecodeList.def"
+  llvm_unreachable("Not a call type");
+}
 
 CallResult<HermesValue> Runtime::interpretFunctionImpl(
     CodeBlock *newCodeBlock) {
@@ -1512,31 +1574,8 @@ tailCall:
 #endif
 
         INIT_STATE_FOR_CODEBLOCK(curCodeBlock);
-
-        assert(
-            (ip->opCode == OpCode::Call || ip->opCode == OpCode::Construct ||
-             ip->opCode == OpCode::CallLong ||
-             ip->opCode == OpCode::ConstructLong ||
-             ip->opCode == OpCode::CallDirect ||
-             ip->opCode == OpCode::CallDirectLongIndex) &&
-            "return address is not Call/Construct[Long] instruction");
-        static_assert(
-            OpCode::Call < OpCode::Construct &&
-                OpCode::Construct < OpCode::CallDirect &&
-                OpCode::CallDirect < OpCode::CallLong &&
-                OpCode::CallLong < OpCode::ConstructLong &&
-                OpCode::ConstructLong < OpCode::CallDirectLongIndex,
-            "Call, Construct, CallLong, ConstructLong are not in the "
-            "specified order");
         O1REG(Call) = res.getValue();
-        // Is this a short instruction?
-        if (LLVM_LIKELY(ip->opCode <= OpCode::Construct)) {
-          ip = NEXTINST(Call);
-        } else if (ip->opCode <= OpCode::CallDirect) {
-          ip = NEXTINST(CallDirect);
-        } else {
-          ip = NEXTINST(CallLong);
-        }
+        ip = nextInstCall(ip);
         DISPATCH;
       }
 
@@ -3021,10 +3060,8 @@ tailCall:
       }
 
       assert(
-          (ip->opCode == OpCode::Call || ip->opCode == OpCode::Construct ||
-           ip->opCode == OpCode::CallLong ||
-           ip->opCode == OpCode::ConstructLong) &&
-          "return address is not Call/Construct[Long] instruction");
+          isCallType(ip->opCode) &&
+          "return address is not Call-type instruction");
 
 // Return because of recursive calling structure
 #ifdef HERMESVM_PROFILER_EXTERN
