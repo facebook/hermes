@@ -207,8 +207,6 @@ class StackFramePtrT {
   /// Same as \c getArgRef() but allows to obtain a reference to one past the
   /// last argument.
   QualifiedHV &getArgRefUnsafe(int32_t n) const {
-    assert(
-        (n == -1 || (uint32_t)n <= getArgCount()) && "invalid argument index");
     return frame_[StackFrameLayout::argOffset(n)];
   }
 

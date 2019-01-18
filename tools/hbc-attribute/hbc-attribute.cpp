@@ -65,7 +65,7 @@ namespace endian = llvm::support::endian;
  * If you have added or modified sections, make sure they're counted properly.
  */
 static_assert(
-    BYTECODE_VERSION == 40,
+    BYTECODE_VERSION == 41,
     "Bytecode version changed. Please verify that hbc-attribute counts correctly..");
 
 static llvm::cl::opt<std::string> InputFilename(
