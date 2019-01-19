@@ -84,9 +84,13 @@ uint64_t peak_rss();
 /// \return OS thread id of current thread.
 uint64_t thread_id();
 
-/// Return the duration in microseconds the CPU has spent executing this thread
+/// \return the duration in microseconds the CPU has spent executing this thread
 /// upon success, or `std::chrono::microseconds::max()` on failure.
 std::chrono::microseconds thread_cpu_time();
+
+/// Get by reference the minor and major page fault counts for the current
+/// thread. \return true if successful, false on error.
+bool thread_page_fault_count(int64_t *outMinorFaults, int64_t *outMajorFaults);
 
 /// \return name of current thread.
 std::string thread_name();

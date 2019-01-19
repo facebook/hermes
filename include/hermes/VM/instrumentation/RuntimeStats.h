@@ -18,11 +18,19 @@ class RAIITimer;
 /// RuntimeStats contains statistics which may be manipulated by users of
 /// Runtime.
 struct RuntimeStats {
-  /// A Statistic tracks duration in wall and CPU time, and a count.
-  /// All times are in seconds.
+  /// The following properties are tracked on a sampling basis due to the kernel
+  /// calls necessary to fetch them.
+  struct Sampled {
+    int64_t threadMinorFaults{0};
+    int64_t threadMajorFaults{0};
+  };
+
+  /// A Statistic tracks duration in wall and CPU time, (optionally) the number
+  /// of minor and major faults, and a count.  All times are in seconds.
   struct Statistic {
     double wallDuration{0};
     double cpuDuration{0};
+    Sampled sampled{};
     uint64_t count{0};
   };
 
@@ -70,13 +78,32 @@ class RAIITimer {
   /// The initial value of the CPU time.
   std::chrono::microseconds cpuTimeStart_;
 
+  /// Initial values of sampled statistics, or default values if sampling is
+  /// disabled.
+  RuntimeStats::Sampled sampledStart_{};
+
+  /// If sampling is enabled, collect the sampled stats and return them.
+  /// If sampling is not enabled, or on error, returns default stats.
+  /// \return the sampled or default results.
+  RuntimeStats::Sampled trySampling() const {
+    if (!runtimeStats_.shouldSample)
+      return {};
+
+    RuntimeStats::Sampled result{};
+    if (!oscompat::thread_page_fault_count(
+            &result.threadMinorFaults, &result.threadMajorFaults))
+      return {};
+    return result;
+  }
+
  public:
   explicit RAIITimer(RuntimeStats &runtimeStats, RuntimeStats::Statistic &stat)
       : runtimeStats_(runtimeStats),
         stat_(stat),
         parent_(runtimeStats.timerStack),
         wallTimeStart_(std::chrono::steady_clock::now()),
-        cpuTimeStart_(oscompat::thread_cpu_time()) {
+        cpuTimeStart_(oscompat::thread_cpu_time()),
+        sampledStart_(trySampling()) {
     runtimeStats.timerStack = this;
     stat_.count += 1;
   }
@@ -88,12 +115,18 @@ class RAIITimer {
   void flush() {
     auto currentCPUTime = oscompat::thread_cpu_time();
     auto currentWallTime = std::chrono::steady_clock::now();
+    auto currentSampled = trySampling();
     stat_.wallDuration +=
         std::chrono::duration<double>(currentWallTime - wallTimeStart_).count();
     stat_.cpuDuration +=
         std::chrono::duration<double>(currentCPUTime - cpuTimeStart_).count();
+    stat_.sampled.threadMinorFaults +=
+        currentSampled.threadMinorFaults - sampledStart_.threadMinorFaults;
+    stat_.sampled.threadMajorFaults +=
+        currentSampled.threadMajorFaults - sampledStart_.threadMajorFaults;
     wallTimeStart_ = currentWallTime;
     cpuTimeStart_ = currentCPUTime;
+    sampledStart_ = currentSampled;
   }
 
   ~RAIITimer() {

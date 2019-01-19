@@ -10,6 +10,11 @@
 
 #include <sys/mman.h>
 #include <sys/resource.h>
+
+#if !defined(RUSAGE_THREAD)
+#define RUSAGE_THREAD 1
+#endif
+
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -292,6 +297,38 @@ std::chrono::microseconds thread_cpu_time() {
 #else // !(__APPLE__ && __MACH__), !__linux__
 #error "Thread CPU Time not supported on this platform"
 #endif // thread_cpu_time: (__APPLE__ && __MACH__), __linux__
+
+// Platform-specific implementations of thread_page_fault_count
+
+#if defined(__APPLE__) && defined(__MACH__)
+
+bool thread_page_fault_count(int64_t *outMinorFaults, int64_t *outMajorFaults) {
+  task_events_info eventsInfo;
+  mach_msg_type_number_t count = TASK_EVENTS_INFO_COUNT;
+  kern_return_t kr = task_info(
+      mach_task_self(), TASK_EVENTS_INFO, (task_info_t)&eventsInfo, &count);
+  if (kr == KERN_SUCCESS) {
+    *outMinorFaults = eventsInfo.faults;
+    *outMajorFaults = eventsInfo.pageins;
+  }
+  return kr == KERN_SUCCESS;
+}
+
+#elif defined(__linux__) // !(__APPLE__ && __MACH__)
+
+bool thread_page_fault_count(int64_t *outMinorFaults, int64_t *outMajorFaults) {
+  struct rusage stats = {};
+  int ret = getrusage(RUSAGE_THREAD, &stats);
+  if (ret == 0) {
+    *outMinorFaults = stats.ru_minflt;
+    *outMajorFaults = stats.ru_majflt;
+  }
+  return ret == 0;
+}
+
+#else // !(__APPLE__ && __MACH__), !__linux__
+#error "Thread page fault count not supported on this platform"
+#endif // thread_page_fault_count: (__APPLE__ && __MACH__), __linux__
 
 std::string thread_name() {
   constexpr int kMaxThreadNameSize = 100;

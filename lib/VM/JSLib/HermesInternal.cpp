@@ -153,6 +153,21 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
           stats.evaluateJS.cpuDuration,
           stats.incomingFunction.cpuDuration));
 
+  if (stats.shouldSample) {
+    SET_PROP(
+        P::js_hermesThreadMinorFaults,
+        makeHermesTime(
+            stats.hostFunction.sampled.threadMinorFaults,
+            stats.evaluateJS.sampled.threadMinorFaults,
+            stats.incomingFunction.sampled.threadMinorFaults));
+    SET_PROP(
+        P::js_hermesThreadMajorFaults,
+        makeHermesTime(
+            stats.hostFunction.sampled.threadMajorFaults,
+            stats.evaluateJS.sampled.threadMajorFaults,
+            stats.incomingFunction.sampled.threadMajorFaults));
+  }
+
   const auto &heap = runtime->getHeap();
   SET_PROP(P::js_numGCs, heap.getNumGCs());
   SET_PROP(P::js_gcCPUTime, heap.getGCCPUTime());
