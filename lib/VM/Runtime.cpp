@@ -130,6 +130,7 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       hasES6Symbol_(runtimeConfig.getES6Symbol()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
+      runtimeStats_(runtimeConfig.getEnableSampledStats()),
       commonStorage_(createRuntimeCommonStorage()),
       stackPointer_() {
   assert(

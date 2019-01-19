@@ -841,7 +841,7 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   SymbolRegistry symbolRegistry_{};
 
   /// Set of runtime statistics.
-  instrumentation::RuntimeStats runtimeStats_{};
+  instrumentation::RuntimeStats runtimeStats_;
 
   /// Shared location to place native objects required by JSLib
   std::shared_ptr<RuntimeCommonStorage> commonStorage_;

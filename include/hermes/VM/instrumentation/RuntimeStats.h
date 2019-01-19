@@ -25,6 +25,9 @@ struct RuntimeStats {
     double cpuDuration{0};
     uint64_t count{0};
   };
+
+  RuntimeStats(bool shouldSample) : shouldSample(shouldSample) {}
+
   /// Measure of host function callouts (outgoing from VM).
   Statistic hostFunction;
 
@@ -36,6 +39,11 @@ struct RuntimeStats {
 
   /// The topmost RAIITimer in the stack.
   RAIITimer *timerStack{nullptr};
+
+  /// Whether to collect sampled statistics. This should be set at runtime
+  /// initialization. It is const to enforce that fact that it cannot be toggled
+  /// later (if it were so toggled, the results would be missing some data).
+  const bool shouldSample{false};
 
   /// Flush all timers pending in our timer stack.
   inline void flushPendingTimers();
