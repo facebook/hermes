@@ -35,19 +35,19 @@ build the compiler driver.
 
 ## Testing and running Hermes
 
-After compiling the project, the vm driver binary will be located in the '/bin'
-directory under the name './bin/hermes'.  Run './bin/hermes --help' to learn
+After compiling the project, the vm driver binary will be located in the `/bin`
+directory under the name `./bin/hermes`.  Run `./bin/hermes --help` to learn
 more about using the vm test driver.
 
-To run the tests run the 'check-hermes' target. If you are using the default
-build system, ninja, then the command to run the tests is 'ninja check-hermes'.
+To run the tests run the `check-hermes` target. If you are using the default
+build system, ninja, then the command to run the tests is `ninja check-hermes`.
 
-The default compilation mode is 'Debug'. This means that the compiler itself is
+The default compilation mode is "Debug". This means that the compiler itself is
 easy to debug because it has debug info, lots of assertions, and the
 optimizations are disabled. If you wish to benchmark the compiler or release it
 then you should compile the compiler in Release mode.
 
-When configuring the project add the flag "-DCMAKE_BUILD_TYPE=Release". Refer to
+When configuring the project add the flag `-DCMAKE_BUILD_TYPE=Release`. Refer to
 the LLVM build instructions for more details:
 
     http://llvm.org/docs/GettingStarted.html
