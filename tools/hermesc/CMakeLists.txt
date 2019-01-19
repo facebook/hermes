@@ -12,7 +12,6 @@ add_llvm_tool(hermesc
 target_link_libraries(hermesc
   hermesCompilerDriver
   hermesAST
-  hermesCPPBackend
   hermesHBCBackend
   hermesBackend
   hermesInst

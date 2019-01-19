@@ -7,5 +7,4 @@ add_llvm_library(hermesBackend
   LINK_LIBS hermesFrontend hermesOptimizer
 )
 
-add_subdirectory(CPP)
 add_subdirectory(HBC)

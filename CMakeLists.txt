@@ -72,9 +72,6 @@ set(HERMESVM_JIT OFF CACHE BOOL
 set(HERMESVM_JIT_DISASSEMBLER OFF CACHE BOOL
   "Enable the JIT disassembler")
 
-set(HERMES_CPP_BACKEND OFF CACHE BOOL
-  "Enable the C++ backend")
-
 set(HERMESVM_SYNTH_REPLAY OFF CACHE BOOL
   "Enable native JSI function recording")
 
@@ -308,7 +305,6 @@ set(HERMES_TEST_PARAMS
   use_flowparser=${HERMES_USE_FLOWPARSER}
   jit_enabled=${HERMESVM_JIT}
   jit_disassembler_enabled=${HERMESVM_JIT_DISASSEMBLER}
-  cpp_enabled=${HERMES_CPP_BACKEND}
   hbc_deltaprep=${HERMES_BINARY_DIR}/bin/hbc-deltaprep
   FileCheck=${LLVM_BUILD_DIR}/bin/FileCheck
   hermes=${HERMES_BINARY_DIR}/bin/hermes

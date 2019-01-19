@@ -303,17 +303,6 @@ void Runtime::markRoots(
     }
   }
 
-#ifdef HERMESVM_CPP_RUNTIME
-  {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::CppPropertyCache);
-    for (auto &prop : cppPropertyCache_) {
-      if (prop.clazz) {
-        acceptor.accept(reinterpret_cast<void *&>(prop.clazz));
-      }
-    }
-  }
-#endif
-
   {
     MarkRootsPhaseTimer timer(this, MarkRootsPhase::CharStrings);
     if (markLongLived) {

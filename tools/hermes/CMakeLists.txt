@@ -14,7 +14,6 @@ target_link_libraries(hermes
   hermesCompilerDriver
   hermesConsoleHost
   hermesAST
-  hermesCPPBackend
   hermesHBCBackend
   hermesBackend
   hermesOptimizer

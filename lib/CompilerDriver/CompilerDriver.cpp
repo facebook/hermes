@@ -10,7 +10,6 @@
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTreeDumper.h"
 #include "hermes/AST/SemanticValidator.h"
-#include "hermes/BCGen/CPP/CPP.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/RegAlloc.h"
@@ -226,9 +225,6 @@ static list<std::string> IncludeGlobals(
 
 enum BytecodeFormatKind {
   HBC,
-#ifdef HERMES_CPP_BACKEND
-  CPP,
-#endif
 };
 
 // Enable Debug Options to be specified on the command line
@@ -238,10 +234,6 @@ static opt<BytecodeFormatKind> BytecodeFormat(
     desc("Set the bytecode format:"),
     values(
         clEnumVal(HBC, "Emit HBC bytecode (default)")
-#ifdef HERMES_CPP_BACKEND
-            ,
-        clEnumValN(CPP, "c++", "Emit HermesVM C++ source")
-#endif
             ));
 
 static opt<std::string> BytecodeOutputFilename("out", desc("Output file name"));
@@ -1043,11 +1035,6 @@ CompileResult generateBytecodeForSerialization(
       disassembleBytecode(hbc::BCProviderFromSrc::createBCProviderFromSrc(
           std::move(bytecodeModule)));
     }
-#ifdef HERMES_CPP_BACKEND
-  } else if (cl::BytecodeFormat == cl::BytecodeFormatKind::CPP) {
-    assert(!sourceMapGenOrNull && "Source maps not supported with CPP");
-    cpp::generateCpp(&M, OS, cl::StandaloneCpp, genOptions);
-#endif
   } else {
     llvm_unreachable("Invalid bytecode kind");
   }
@@ -1097,11 +1084,6 @@ CompileResult processSourceFiles(
     case cl::BytecodeFormatKind::HBC:
       libBuffer = llvm::MemoryBuffer::getMemBuffer(libhermes);
       break;
-#ifdef HERMES_CPP_BACKEND
-    case cl::BytecodeFormatKind::CPP:
-      libBuffer = llvm::MemoryBuffer::getMemBuffer(libhermes);
-      break;
-#endif
   }
   if (!loadGlobalDefinition(*context, std::move(libBuffer), declFileList)) {
     return LoadGlobalsFailed;
