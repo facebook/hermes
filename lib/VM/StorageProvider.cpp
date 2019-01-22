@@ -125,13 +125,20 @@ void MallocStorageProvider::deleteStorage(void *storage) {
 
 PreAllocatedStorageProvider::PreAllocatedStorageProvider(size_t totalAmount)
     : maxBytes_(totalAmount),
-      start_(static_cast<char *>(
-          oscompat::vm_allocate_aligned(maxBytes_, AlignedStorage::size()))),
-      end_(start_ + maxBytes_),
-      level_(start_) {}
+      start_(
+          maxBytes_ ? static_cast<char *>(oscompat::vm_allocate_aligned(
+                          maxBytes_,
+                          AlignedStorage::size()))
+                    : nullptr),
+      end_(start_ ? start_ + maxBytes_ : nullptr),
+      level_(start_) {
+  assert(maxBytes_ % AlignedStorage::size() == 0 && "Un-aligned maxBytes");
+}
 
 PreAllocatedStorageProvider::~PreAllocatedStorageProvider() {
-  oscompat::vm_free(start_, maxBytes_);
+  if (start_) {
+    oscompat::vm_free(start_, maxBytes_);
+  }
 }
 
 void *PreAllocatedStorageProvider::newStorage(const char *name) {
