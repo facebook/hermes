@@ -175,7 +175,7 @@ class JSONNumber : public JSONScalar, public llvm::FoldingSetNode {
 /// an array of values and a pointer to this descriptor.
 class JSONHiddenClass {
   size_t size_;
-  JSONString *keys_[1];
+  JSONString *keys_[];
 
   struct NameComparator {
     bool operator()(StringRef a, JSONString *b) const {
@@ -197,7 +197,7 @@ class JSONHiddenClass {
   // Allocator
   //
   template <class Allocator>
-  void *operator new(size_t size, Allocator &alloc, size_t count) {
+  static void *operator new(size_t size, Allocator &alloc, size_t count) {
     return alloc.Allocate(
         offsetof(JSONHiddenClass, keys_) + sizeof(keys_[0]) * count,
         alignof(JSONHiddenClass));
