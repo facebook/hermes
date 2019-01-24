@@ -162,10 +162,6 @@ class GenGC;
 /// region (bytes in the generation at offset).
 ///   SegTraits<Gen>::Range allSegments();
 ///
-/// The sequence of segments that hold the first min(size(), used() + 1) bytes
-/// of the generation.
-///   SegTraits<Gen>::Range usedSegments();
-///
 /// @}
 ///
 /// @name Sweeping and Referencing

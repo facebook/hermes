@@ -109,7 +109,6 @@ class OldGen : public GCGeneration {
   void shrinkTo(size_t desired);
   bool growToFit(size_t amount);
   inline SegTraits<OldGen>::Range allSegments();
-  inline SegTraits<OldGen>::Range usedSegments() const;
   gcheapsize_t bytesAllocatedSinceLastGC() const;
   template <typename F>
   inline void forUsedSegments(F callback);
@@ -292,16 +291,16 @@ class OldGen : public GCGeneration {
   /// initialisation was successful.
   bool initSegmentForMaterialization(AlignedHeapSegment &segment);
 
-  /// Indicate that the segments in usedSegments()[from, active] are no longer
-  /// in use, where active is the index of the currently active segment in the
-  /// logical ordering.
+  /// Indicate that the materialised segments at index \p from onwards, in the
+  /// order they were allocated into, are no longer in use.
   ///
   /// \pre from > 0, because it is not possible to release every segment.
   ///
-  /// \post The segments in usedSegments()[from, active] have been removed from
+  /// \post The segments at indices \p from and above have been removed from
   ///     the global segment index.
   ///
-  /// \post usedSegments() no longer contains those segments.
+  /// \post A subsequent call to \c forUsedSegments will not iterate over the
+  ///     segments previously at index \p from onwards.
   void releaseSegments(size_t from);
 
   /// Synchronise \c cardBoundary_ with the boundary that follows the active
@@ -443,14 +442,6 @@ size_t OldGen::adjustSizeWithBounds(size_t desired, size_t min, size_t max)
 
 SegTraits<OldGen>::Range OldGen::allSegments() {
   return llvm::make_range(segmentIt(0), segmentIt(segmentsForSize(size())));
-}
-
-SegTraits<OldGen>::Range OldGen::usedSegments() const {
-  // This cast is safe because the iterator only uses non-const instances to
-  // materialize segments, but used segments do not need materialising.
-  auto _this = const_cast<OldGen *>(this);
-  return llvm::make_range(
-      _this->segmentIt(0), _this->segmentIt(filledSegments_.size() + 1));
 }
 
 template <typename F>

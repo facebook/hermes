@@ -56,7 +56,6 @@ class YoungGen : public GCGeneration {
   inline void shrinkTo(size_t desired);
   inline bool growToFit(size_t amount);
   inline SegTraits<YoungGen>::Range allSegments();
-  inline SegTraits<YoungGen>::Range usedSegments();
   gcheapsize_t bytesAllocatedSinceLastGC() const;
   template <typename F>
   inline void forUsedSegments(F callback);
@@ -323,11 +322,6 @@ bool YoungGen::growToFit(size_t amount) {
 }
 
 SegTraits<YoungGen>::Range YoungGen::allSegments() {
-  assert(ownsAllocContext());
-  return llvm::make_range(&activeSegment(), &activeSegment() + 1);
-}
-
-SegTraits<YoungGen>::Range YoungGen::usedSegments() {
   assert(ownsAllocContext());
   return llvm::make_range(&activeSegment(), &activeSegment() + 1);
 }
