@@ -6,8 +6,8 @@ TAGS
 .howtoeven
 
 # in-tree llvm for buck
-third-party/llvm/llvm
-third-party/llvm/llvm_build*
+hermes/facebook/llvm/llvm
+hermes/facebook/llvm/llvm_build*
 
 # buck
 buck-out
