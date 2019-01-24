@@ -58,6 +58,14 @@ class YoungGen : public GCGeneration {
   inline SegTraits<YoungGen>::Range allSegments();
   inline SegTraits<YoungGen>::Range usedSegments();
   gcheapsize_t bytesAllocatedSinceLastGC() const;
+  template <typename F>
+  inline void forUsedSegments(F callback);
+  template <typename F>
+  inline void forUsedSegments(F callback) const;
+  template <typename F>
+  inline bool whileUsedSegments(F callback);
+  template <typename F>
+  inline bool whileUsedSegments(F callback) const;
   void forAllObjs(const std::function<void(GCCell *)> &callback);
   void creditExternalMemory(uint32_t size);
   void debitExternalMemory(uint32_t size);
@@ -322,6 +330,30 @@ SegTraits<YoungGen>::Range YoungGen::allSegments() {
 SegTraits<YoungGen>::Range YoungGen::usedSegments() {
   assert(ownsAllocContext());
   return llvm::make_range(&activeSegment(), &activeSegment() + 1);
+}
+
+template <typename F>
+inline void YoungGen::forUsedSegments(F callback) {
+  assert(ownsAllocContext());
+  callback(activeSegment());
+}
+
+template <typename F>
+inline void YoungGen::forUsedSegments(F callback) const {
+  assert(ownsAllocContext());
+  callback(activeSegment());
+}
+
+template <typename F>
+inline bool YoungGen::whileUsedSegments(F callback) {
+  assert(ownsAllocContext());
+  return callback(activeSegment());
+}
+
+template <typename F>
+inline bool YoungGen::whileUsedSegments(F callback) const {
+  assert(ownsAllocContext());
+  return callback(activeSegment());
 }
 
 #ifndef NDEBUG

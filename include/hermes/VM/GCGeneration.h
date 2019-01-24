@@ -140,6 +140,21 @@ class GenGC;
 /// @name Segment Iteration
 /// @{
 ///
+/// Call \p callback on the segments that hold the first min(size(), used() + 1)
+/// bytes of the generation, in the order they were allocated into (That is, the
+/// filled segments followed by the active segment).  Template parameter \p F
+/// is a callable with void return type, accepting a reference to an \c
+/// AlignedHeapSegment.  The const variant accepts a const reference.
+///   template <typename F> inline void forUsedSegments(F callback);
+///   template <typename F> inline void forUsedSegments(F callback) const;
+///
+/// Like \c forUsedSegments, but supporting early termination.  The callback
+/// returns a bool, which indicates whether iteration should continue.  The
+/// function returns true if and only if every invocation of the callback
+/// returned true.
+///   template <typename F> inline bool whileUsedSegments(F callback);
+///   template <typename F> inline bool whileUsedSegments(F callback) const;
+///
 /// A sub-class, Gen, must have an associated template specialisation of
 /// SegTraits.
 ///

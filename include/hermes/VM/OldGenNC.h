@@ -111,6 +111,14 @@ class OldGen : public GCGeneration {
   inline SegTraits<OldGen>::Range allSegments();
   inline SegTraits<OldGen>::Range usedSegments() const;
   gcheapsize_t bytesAllocatedSinceLastGC() const;
+  template <typename F>
+  inline void forUsedSegments(F callback);
+  template <typename F>
+  inline void forUsedSegments(F callback) const;
+  template <typename F>
+  inline bool whileUsedSegments(F callback);
+  template <typename F>
+  inline bool whileUsedSegments(F callback) const;
   void forAllObjs(const std::function<void(GCCell *)> &callback);
   void creditExternalMemory(uint32_t size);
   void debitExternalMemory(uint32_t size);
@@ -443,6 +451,58 @@ SegTraits<OldGen>::Range OldGen::usedSegments() const {
   auto _this = const_cast<OldGen *>(this);
   return llvm::make_range(
       _this->segmentIt(0), _this->segmentIt(filledSegments_.size() + 1));
+}
+
+template <typename F>
+inline void OldGen::forUsedSegments(F callback) {
+  assert(ownsAllocContext());
+
+  for (auto &filled : filledSegments_) {
+    callback(filled);
+  }
+
+  callback(activeSegment());
+}
+
+template <typename F>
+inline void OldGen::forUsedSegments(F callback) const {
+  assert(ownsAllocContext());
+
+  for (const auto &filled : filledSegments_) {
+    callback(filled);
+  }
+
+  callback(activeSegment());
+}
+
+template <typename F>
+inline bool OldGen::whileUsedSegments(F callback) {
+  assert(ownsAllocContext());
+
+  for (auto &filled : filledSegments_) {
+    if (LLVM_UNLIKELY(!callback(filled)))
+      return false;
+  }
+
+  if (LLVM_UNLIKELY(!callback(activeSegment())))
+    return false;
+
+  return true;
+}
+
+template <typename F>
+inline bool OldGen::whileUsedSegments(F callback) const {
+  assert(ownsAllocContext());
+
+  for (const auto &filled : filledSegments_) {
+    if (!LLVM_UNLIKELY(callback(filled)))
+      return false;
+  }
+
+  if (!LLVM_UNLIKELY(callback(activeSegment())))
+    return false;
+
+  return true;
 }
 
 OldGen::Location OldGen::level() const {
