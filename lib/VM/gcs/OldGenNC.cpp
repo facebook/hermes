@@ -481,31 +481,31 @@ void OldGen::updateReferences(GC *gc, SweepResult::VTablesRemaining &vTables) {
 
 void OldGen::recordLevelAfterCompaction(
     CompactionResult::ChunksRemaining &chunks) {
-  auto segs = usedSegments();
-  auto segIt = segs.begin();
-
-  using std::distance;
-  const size_t nSegs = distance(segIt, segs.end());
   const size_t nChunks = chunks.size();
-  const auto segEnd = segIt + std::min(nSegs, nChunks);
-
-  assert(nSegs > 0 && "Segment list cannot be empty");
 
   usedInFilledSegments_ = 0;
   size_t usedInPrev = 0;
+  size_t usedSegs = 0;
 
   // Some prefix of the used chunks correspond to segments in this generation.
   // The corresponding segments are the used segments after compaction.
-  for (; segIt != segEnd && this == chunks.peek().generation(); ++segIt) {
-    if (releaseUnused_)
-      chunks.next().recordLevel<AdviseUnused::Yes>(&*segIt);
-    else
-      chunks.next().recordLevel<AdviseUnused::No>(&*segIt);
-    usedInFilledSegments_ += usedInPrev;
-    usedInPrev = segIt->used();
-  }
+  whileUsedSegments([&](AlignedHeapSegment &segment) {
+    if (usedSegs >= nChunks || this != chunks.peek().generation()) {
+      return false;
+    }
 
-  auto usedSegs = distance(segs.begin(), segIt);
+    if (releaseUnused_)
+      chunks.next().recordLevel<AdviseUnused::Yes>(&segment);
+    else
+      chunks.next().recordLevel<AdviseUnused::No>(&segment);
+
+    usedInFilledSegments_ += usedInPrev;
+    usedInPrev = segment.used();
+    usedSegs++;
+
+    return true;
+  });
+
   releaseSegments(usedSegs == 0 ? 1 : usedSegs);
   updateCardTableBoundary();
 }
