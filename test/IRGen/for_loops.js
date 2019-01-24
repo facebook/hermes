@@ -73,7 +73,7 @@ function simple_for_loop_break() {
 //CHECK-NEXT:  %BB2:
 //CHECK-NEXT:    %3 = ReturnInst undefined : undefined
 //CHECK-NEXT:  %BB3:
-//CHECK-NEXT:    %4 = BranchInst %BB2
+//CHECK-NEXT:    %4 = BranchInst %BB4
 //CHECK-NEXT:  %BB4:
 //CHECK-NEXT:    %5 = BranchInst %BB2
 //CHECK-NEXT:  %BB1:

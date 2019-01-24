@@ -96,7 +96,7 @@ function for_in_loop_with_break_continue(obj) {
 //CHECK-NEXT:    %16 = LoadPropertyInst globalObject : object, "sink" : string
 //CHECK-NEXT:    %17 = LoadFrameInst [prop]
 //CHECK-NEXT:    %18 = CallInst %16, undefined : undefined, %17
-//CHECK-NEXT:    %19 = BranchInst %BB3
+//CHECK-NEXT:    %19 = BranchInst %BB1
 //CHECK-NEXT:  %BB5:
 //CHECK-NEXT:    %20 = BranchInst %BB2
 //CHECK-NEXT:function_end

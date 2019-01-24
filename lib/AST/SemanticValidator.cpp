@@ -17,6 +17,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 
 using llvm::cast;
+using llvm::cast_or_null;
 using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
 using llvm::isa;
@@ -41,12 +42,12 @@ class SemanticValidator {
   const unsigned initialErrorCount_;
 
   struct Label {
-    enum Kind { BLOCK_LABEL, LOOP_LABEL };
-
-    /// Is this a block or a loop label.
-    Kind kind;
     /// Where it was declared.
-    IdentifierNode *node;
+    IdentifierNode *declarationNode;
+
+    /// Statement targeted by the label. It is either a LoopStatement or a
+    /// LabeledStatement.
+    StatementNode *targetStatement;
   };
 
   class FunctionContext; // Forward declaration.
@@ -81,10 +82,12 @@ class SemanticValidator {
     /// The associated seminfo object
     sem::FunctionInfo *const semInfo;
 
-    /// Are we inside a loop.
-    bool inLoop = false;
-    /// Are we inside a switch.
-    bool inSwitch = false;
+    /// The most nested active try statement.
+    TryStatementNode *activeTry = nullptr;
+    /// The most nested active loop statement.
+    LoopStatementNode *activeLoop = nullptr;
+    /// The most nested active loop or switch statement.
+    StatementNode *activeSwitchOrLoop = nullptr;
     /// Is this function in strict mode.
     bool strictMode = false;
 
@@ -108,6 +111,11 @@ class SemanticValidator {
     /// words not a real function.
     bool isGlobalScope() const {
       return !oldContextValue_;
+    }
+
+    /// Allocate a new label in the current context.
+    unsigned allocateLabel() {
+      return semInfo->allocateLabel(activeTry);
     }
   };
 
@@ -137,9 +145,6 @@ class SemanticValidator {
     visitESTreeNode(*this, function);
     return sm_.getErrorCount() == initialErrorCount_;
   }
-
-  /// If we're only checking a subtree, initialize with a context.
-  void initializeWithContext(Node *function) {}
 
   /// Handle the default case for all nodes which we ignore, but we still want
   /// to visit their children.
@@ -200,7 +205,12 @@ class SemanticValidator {
 
   /// Ensure that the left side of for-in is an l-value.
   void visit(ForInStatementNode *forIn) {
-    SaveAndRestore<bool> saveInLoop(curFunction()->inLoop, true);
+    forIn->setLabelIndex(curFunction()->allocateLabel());
+
+    SaveAndRestore<LoopStatementNode *> saveLoop(
+        curFunction()->activeLoop, forIn);
+    SaveAndRestore<StatementNode *> saveSwitch(
+        curFunction()->activeSwitchOrLoop, forIn);
 
     if (!isa<VariableDeclarationNode>(forIn->_left))
       if (!isLValue(forIn->_left))
@@ -232,17 +242,18 @@ class SemanticValidator {
 
   /// Declare named labels, checking for duplicates, etc.
   void visit(LabeledStatementNode *labelStmt) {
-    auto id = dyn_cast<IdentifierNode>(labelStmt->_label);
-    assert(id && "Malformed AST: label is not an Identifier");
+    auto id = cast<IdentifierNode>(labelStmt->_label);
 
-    // Determine if this is a loop label by checking if it directly encloses
+    labelStmt->setLabelIndex(curFunction()->allocateLabel());
+
+    // Determine the target statement. We need to check if it directly encloses
     // a loop or another label enclosing a loop.
-    Label::Kind labelKind = Label::BLOCK_LABEL;
+    StatementNode *targetStmt = labelStmt;
     {
       LabeledStatementNode *curStmt = labelStmt;
       do {
-        if (isa<LoopStatementNode>(curStmt->_body)) {
-          labelKind = Label::LOOP_LABEL;
+        if (auto *LS = dyn_cast<LoopStatementNode>(curStmt->_body)) {
+          targetStmt = LS;
           break;
         }
       } while ((curStmt = dyn_cast<LabeledStatementNode>(curStmt->_body)));
@@ -250,13 +261,13 @@ class SemanticValidator {
 
     // Define the new label, checking for a previous definition.
     auto insertRes =
-        curFunction()->labelMap.insert({id->_name, {labelKind, id}});
+        curFunction()->labelMap.insert({id->_name, {id, targetStmt}});
     if (!insertRes.second) {
       sm_.error(
           id->getSourceRange(),
           llvm::Twine("label '") + id->_name->str() + "' is already defined");
       sm_.note(
-          insertRes.first->second.node->getSourceRange(),
+          insertRes.first->second.declarationNode->getSourceRange(),
           "previous definition");
     }
     // Auto-erase the label on exit, if we inserted it.
@@ -281,34 +292,89 @@ class SemanticValidator {
     visitESTreeChildren(*this, regexp);
   }
 
+  void visit(TryStatementNode *tryStatement) {
+    tryStatement->surroundingTry = curFunction()->activeTry;
+
+    // A try statement with both catch and finally handlers is compiled with a
+    // nested try inside the catch handler.
+    bool catchAndFinally = tryStatement->_handler && tryStatement->_finalizer;
+    {
+      SaveAndRestore<TryStatementNode *> saveTry(
+          curFunction()->activeTry, tryStatement);
+
+      visitESTreeNode(*this, tryStatement->_block);
+      if (catchAndFinally)
+        visitESTreeNode(*this, tryStatement->_handler);
+    }
+    if (!catchAndFinally)
+      visitESTreeNode(*this, tryStatement->_handler);
+    visitESTreeNode(*this, tryStatement->_finalizer);
+  }
+
   void visit(DoWhileStatementNode *loop) {
-    SaveAndRestore<bool> saveInLoop(curFunction()->inLoop, true);
+    loop->setLabelIndex(curFunction()->allocateLabel());
+
+    SaveAndRestore<LoopStatementNode *> saveLoop(
+        curFunction()->activeLoop, loop);
+    SaveAndRestore<StatementNode *> saveSwitch(
+        curFunction()->activeSwitchOrLoop, loop);
+
     visitESTreeChildren(*this, loop);
   }
   void visit(ForStatementNode *loop) {
-    SaveAndRestore<bool> saveInLoop(curFunction()->inLoop, true);
+    loop->setLabelIndex(curFunction()->allocateLabel());
+
+    SaveAndRestore<LoopStatementNode *> saveLoop(
+        curFunction()->activeLoop, loop);
+    SaveAndRestore<StatementNode *> saveSwitch(
+        curFunction()->activeSwitchOrLoop, loop);
+
     visitESTreeChildren(*this, loop);
   }
   void visit(WhileStatementNode *loop) {
-    SaveAndRestore<bool> saveInLoop(curFunction()->inLoop, true);
+    loop->setLabelIndex(curFunction()->allocateLabel());
+
+    SaveAndRestore<LoopStatementNode *> saveLoop(
+        curFunction()->activeLoop, loop);
+    SaveAndRestore<StatementNode *> saveSwitch(
+        curFunction()->activeSwitchOrLoop, loop);
+
     visitESTreeChildren(*this, loop);
   }
   void visit(SwitchStatementNode *switchStmt) {
-    SaveAndRestore<bool> saveInSwitch(curFunction()->inSwitch, true);
+    switchStmt->setLabelIndex(curFunction()->allocateLabel());
+
+    SaveAndRestore<StatementNode *> saveSwitch(
+        curFunction()->activeSwitchOrLoop, switchStmt);
+
     visitESTreeChildren(*this, switchStmt);
   }
 
   void visit(BreakStatementNode *breakStmt) {
-    if (auto id = dyn_cast_or_null<IdentifierNode>(breakStmt->_label)) {
+    breakStmt->surroundingTry = curFunction()->activeTry;
+
+    if (auto id = cast_or_null<IdentifierNode>(breakStmt->_label)) {
       // A labeled break.
-      if (!curFunction()->labelMap.count(id->_name)) {
+      // Find the label in the label map.
+      auto labelIt = curFunction()->labelMap.find(id->_name);
+      if (labelIt != curFunction()->labelMap.end()) {
+        auto labelIndex =
+            getLabelDecorationBase(labelIt->second.targetStatement)
+                ->getLabelIndex();
+        breakStmt->setLabelIndex(labelIndex);
+      } else {
         sm_.error(
             id->getSourceRange(),
             Twine("label '") + id->_name->str() + "' is not defined");
       }
     } else {
       // Anonymous break.
-      if (!curFunction()->inLoop && !curFunction()->inSwitch) {
+      if (curFunction()->activeSwitchOrLoop) {
+        auto labelIndex =
+            getLabelDecorationBase(curFunction()->activeSwitchOrLoop)
+                ->getLabelIndex();
+        breakStmt->setLabelIndex(labelIndex);
+      } else {
         sm_.error(
             breakStmt->getSourceRange(),
             "'break' not within a loop or a switch");
@@ -319,23 +385,38 @@ class SemanticValidator {
   }
 
   void visit(ContinueStatementNode *continueStmt) {
-    if (auto id = dyn_cast_or_null<IdentifierNode>(continueStmt->_label)) {
+    continueStmt->surroundingTry = curFunction()->activeTry;
+
+    if (auto id = cast_or_null<IdentifierNode>(continueStmt->_label)) {
       // A labeled continue.
+      // Find the label in the label map.
       auto labelIt = curFunction()->labelMap.find(id->_name);
-      if (labelIt == curFunction()->labelMap.end()) {
+      if (labelIt != curFunction()->labelMap.end()) {
+        if (isa<LoopStatementNode>(labelIt->second.targetStatement)) {
+          auto labelIndex =
+              getLabelDecorationBase(labelIt->second.targetStatement)
+                  ->getLabelIndex();
+          continueStmt->setLabelIndex(labelIndex);
+        } else {
+          sm_.error(
+              id->getSourceRange(),
+              llvm::Twine("continue label '") + id->_name->str() +
+                  "' is not a loop label");
+          sm_.note(
+              labelIt->second.declarationNode->getSourceRange(),
+              "label defined here");
+        }
+      } else {
         sm_.error(
             id->getSourceRange(),
             Twine("label '") + id->_name->str() + "' is not defined");
-      } else if (labelIt->second.kind != Label::LOOP_LABEL) {
-        sm_.error(
-            id->getSourceRange(),
-            llvm::Twine("continue label '") + id->_name->str() +
-                "' is not a loop label");
-        sm_.note(labelIt->second.node->getSourceRange(), "label defined here");
       }
     } else {
       // Anonymous continue.
-      if (!curFunction()->inLoop) {
+      if (curFunction()->activeLoop) {
+        auto labelIndex = curFunction()->activeLoop->getLabelIndex();
+        continueStmt->setLabelIndex(labelIndex);
+      } else {
         sm_.error(
             continueStmt->getSourceRange(), "'continue' not within a loop");
       }
@@ -344,6 +425,8 @@ class SemanticValidator {
   }
 
   void visit(ReturnStatementNode *returnStmt) {
+    returnStmt->surroundingTry = curFunction()->activeTry;
+
     if (curFunction()->isGlobalScope())
       sm_.error(returnStmt->getSourceRange(), "'return' not in a function");
     visitESTreeChildren(*this, returnStmt);
@@ -501,6 +584,22 @@ class SemanticValidator {
         (!strictnessIsPreset_ || *nodeStrictness == strictness) &&
         "Preset strictness is different from detected strictness");
     *nodeStrictness = strictness;
+  }
+
+  /// Get the LabelDecorationBase depending on the node type.
+  static LabelDecorationBase *getLabelDecorationBase(StatementNode *node) {
+    if (auto *LS = dyn_cast<LoopStatementNode>(node))
+      return LS;
+    if (auto *SS = dyn_cast<SwitchStatementNode>(node))
+      return SS;
+    if (auto *BS = dyn_cast<BreakStatementNode>(node))
+      return BS;
+    if (auto *CS = dyn_cast<ContinueStatementNode>(node))
+      return CS;
+    if (auto *LabS = dyn_cast<LabeledStatementNode>(node))
+      return LabS;
+    llvm_unreachable("invalid node type");
+    return nullptr;
   }
 };
 

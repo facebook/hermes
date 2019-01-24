@@ -57,7 +57,7 @@ function break_test(cond) {
 //CHECK:   %BB2:
 //CHECK:     %2 = ReturnInst undefined : undefined
 //CHECK:   %BB3:
-//CHECK:     %3 = BranchInst %BB2
+//CHECK:     %3 = BranchInst %BB4
 //CHECK:   %BB4:
 //CHECK:     %4 = BranchInst %BB2
 //CHECK:   %BB1:

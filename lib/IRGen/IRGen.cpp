@@ -80,25 +80,6 @@ emitStore(IRBuilder &builder, Value *storedValue, Value *ptr) {
   }
 }
 
-// These are the names of the auto-generated anonymous break/continue labels
-// that every loop has. Notice that this is not a legal JS name, so we don't
-// collide with legal label names.
-static const char *AnonymousStatementLabelName = " anonymous label ";
-
-/// Class that holds the target basic block for a break/continue label,
-/// as well as the depth of the nested tries where this label is defined.
-/// The tryDepth information will be needed to decide whether a goto
-/// is jumping out of a try scope.
-class GotoLabelInfo {
- public:
-  BasicBlock *target{nullptr};
-  unsigned tryDepth{0};
-
-  explicit GotoLabelInfo(BasicBlock *target, unsigned depth)
-      : target(target), tryDepth(depth) {}
-  explicit GotoLabelInfo() = default;
-};
-
 /// Performs lowering of the JSON ESTree down to Hermes IR.
 class ESTreeIRGen {
  public:
@@ -106,51 +87,14 @@ class ESTreeIRGen {
   using NameTableTy = hermes::ScopedHashTable<Identifier, Value *>;
   using NameTableScopeTy = hermes::ScopedHashTableScope<Identifier, Value *>;
 
-  /// Scoped hash table to represent the goto/break/continue label target.
-  using GotoTableTy = llvm::ScopedHashTable<Identifier, GotoLabelInfo>;
-  using GotoTableScopeTy =
-      llvm::ScopedHashTableScope<Identifier, GotoLabelInfo>;
-
   using BasicBlockListType = llvm::SmallVector<BasicBlock *, 4>;
 
-  /// TryData holds the current stack of nested Try/Catch information.
-  class TryData {
-    TryData(const TryData &) = delete;
-    void operator=(const TryData &) = delete;
-
-    /// The finally ESTree node, used for inlining when we jump outside
-    /// of the try scope.
-    ESTree::NodePtr finalizer;
-
-    // Depth of nested tries.
-    unsigned depth;
-
-    /// Whethere we are currently inlining the finally block for this try.
-    bool inliningFinally{false};
-
-   public:
-    explicit TryData(ESTree::NodePtr finalizer, unsigned depth)
-        : finalizer(finalizer), depth(depth) {}
-
-    /// Setters and getters.
-    void startInliningFinally() {
-      inliningFinally = true;
-    }
-    void endInliningFinally() {
-      inliningFinally = false;
-    }
-    bool isInliningFinally() const {
-      return inliningFinally;
-    }
-    ESTree::NodePtr getFinalizer() const {
-      return finalizer;
-    }
-    unsigned getDepth() const {
-      return depth;
-    }
+  /// Holds the target basic block for a break and continue label.
+  /// It has a 1-to-1 correspondence to SemInfoFunction::GotoLabel.
+  struct GotoLabel {
+    BasicBlock *breakTarget = nullptr;
+    BasicBlock *continueTarget = nullptr;
   };
-
-  using TryDataStackType = llvm::SmallVector<TryData *, 8>;
 
   /// Holds per-function state, specifically label tables. Should be constructed
   /// on the stack. Upon destruction it automatically restores the previous
@@ -169,20 +113,13 @@ class ESTreeIRGen {
     /// here. It is automatically restored once we are done with the function.
     IRBuilder::SaveRestore builderSaveState_;
 
-    /// Stack to store information for nested tries.
-    TryDataStackType tryDataStack_{};
-
-    /// Iterator to iterate the try stack starting from top of stack.
-    TryDataStackType::reverse_iterator tryReverseIterator_;
-
    public:
     /// This is the actual function associated with this context.
     Function *const function;
 
-    /// This is the scoped hash table that saves the mapping between the
-    /// declared break/continue label names and the basic blocks which are
-    /// the jump destination.
-    GotoTableTy labelTable{};
+    /// A vector of labels corresponding 1-to-1 to the labels defined in
+    /// \c semInfo_.
+    llvm::SmallVector<GotoLabel, 2> labels;
 
     /// A new variable scope that is used throughout the body of the function.
     NameTableScopeTy scope;
@@ -222,22 +159,6 @@ class ESTreeIRGen {
       assert(semInfo_ && "semInfo is not set");
       return semInfo_;
     }
-
-    /// Start a try block, push the try data into try stack.
-    void pushTryData(TryData *tryData);
-
-    /// End a try block, pop the try data.
-    void popTry();
-
-    /// Initializing the reverse iterator for the try stack, to be able to
-    /// traverse backwards from the top of the stack.
-    void startWalkingDownStack();
-
-    /// Return the next try data on the reverse iterator, nullptr if ends.
-    TryData *nextTryData();
-
-    /// Return the current size of the try data stack.
-    unsigned getCurrentTryDepth() const;
 
     /// Generate a unique string that represents a temporary value. The string
     /// \p
@@ -320,10 +241,6 @@ class ESTreeIRGen {
   /// hint appears in the name.
   Identifier genAnonymousLabelName(StringRef hint);
 
-  Identifier genBreakLabelName(StringRef hint = AnonymousStatementLabelName);
-
-  Identifier genContinueLabelName(StringRef hint = AnonymousStatementLabelName);
-
  private:
   Identifier genGotoLabelName(StringRef hint, StringRef suffix);
 
@@ -353,14 +270,6 @@ class ESTreeIRGen {
       int depth);
 
  public:
-  /// A chain of these entries constructed on the stack is passed down to
-  /// loop statements, so they can assign their continue target to all directly
-  /// enclosing labeled statements.
-  struct EnclosingLabel {
-    const EnclosingLabel *parent;
-    Identifier name;
-  };
-
   explicit ESTreeIRGen(
       ESTree::Node *root,
       const DeclarationFileListTy &declFileList,
@@ -452,11 +361,7 @@ class ESTreeIRGen {
   void genIfStatement(ESTree::IfStatementNode *IfStmt);
 
   /// Generate IR for ForIn statements.
-  /// /p enclosingLabel is a potentially empty list of labeled statements that
-  ///     directly encose the current statement.
-  void genForInStatement(
-      ESTree::ForInStatementNode *ForInStmt,
-      const EnclosingLabel *enclosingLabel);
+  void genForInStatement(ESTree::ForInStatementNode *ForInStmt);
 
   /// Generate IR for the return statement.
   /// https://github.com/estree/estree/blob/master/spec.md#returnstatement
@@ -488,31 +393,26 @@ class ESTreeIRGen {
       BasicBlock *onFalse);
 
   /// Generate IR for for/while/do..while statements.
+  /// \p loop the loop statement node
   /// \p init optional init statement for 'for' loops.
   /// \p preTest the expression that guards the loop entrance.
   /// \p postTest the expression that guards the loop.
   /// \p update optional statement for the update phase of 'for' loops.
   /// \o body the body of the loop.
-  /// /p enclosingLabel is a potentially empty list of labeled statements that
-  ///     directly encose the current statement.
   void genForWhileLoops(
+      ESTree::LoopStatementNode *loop,
       ESTree::Node *init,
       ESTree::Node *preTest,
       ESTree::Node *postTest,
       ESTree::Node *update,
-      ESTree::Node *body,
-      const EnclosingLabel *enclosingLabel);
+      ESTree::Node *body);
 
   /// Generate IR for the UpdateExpression node.
   /// https://github.com/estree/estree/blob/master/spec.md#updateexpression
   Value *genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr);
 
-  /// Generate code for the statement \p Stmt. /p enclosingLabel is a
-  /// potentially empty list of labeled statements that directly encose the
-  /// current statement.
-  void genStatement(
-      ESTree::Node *Stmt,
-      const EnclosingLabel *enclosingLabel = nullptr);
+  /// Generate code for the statement \p Stmt.
+  void genStatement(ESTree::Node *Stmt);
 
   /// Generate the IR for the property field of the MemberExpressionNode.
   /// The property field may be a string literal or some computed expression.
@@ -601,9 +501,12 @@ class ESTreeIRGen {
   /// When we see a control change such as return, break, continue,
   /// we need to make sure to generate code for finally block if
   /// we are under a try/catch.
-  /// \p labelDepth indicates the try depth of the label, which is
-  /// used to determines which finally needs to be inlined.
-  void genFinallyBeforeControlChange(unsigned labelDepth);
+  /// \param sourceTry  the try statement surrounding the AST node performing
+  ///   the goto (break, continue, return)
+  /// \param targetTry  the try statement surrounding the AST node of the label.
+  void genFinallyBeforeControlChange(
+      ESTree::TryStatementNode *sourceTry,
+      ESTree::TryStatementNode *targetTry);
 
   /// Declare a new ambient global property, if not already declared.
   GlobalObjectProperty *declareAmbientGlobalProperty(Identifier name);
@@ -624,9 +527,6 @@ class ESTreeIRGen {
   /// that can be translated to lref.
   LReference createLRef(ESTree::Node *node);
 
-  /// Construct a GotoLabelInfo object, using the current try depth.
-  GotoLabelInfo constructLabelInfo(BasicBlock *target);
-
   /// Save all variables currently in scope, for lazy compilation.
   std::shared_ptr<SerializedScope> saveCurrentScope();
 };
@@ -642,34 +542,18 @@ ESTreeIRGen::FunctionContext::FunctionContext(
       function(function),
       scope(irGen->nameTable_) {
   irGen->functionContext = this;
+
+  if (semInfo_) {
+    // Allocate the label table. Each label definition will be encountered in
+    // the AST before it is referenced (because of the nature of JavaScript), at
+    // which point we will initialize the GotoLabel structure with basic blocks
+    // targets.
+    labels.resize(semInfo_->labels.size());
+  }
 }
 
 ESTreeIRGen::FunctionContext::~FunctionContext() {
   irGen_->functionContext = oldContext_;
-}
-
-void ESTreeIRGen::FunctionContext::pushTryData(TryData *tryData) {
-  tryDataStack_.push_back(tryData);
-}
-
-unsigned ESTreeIRGen::FunctionContext::getCurrentTryDepth() const {
-  return tryDataStack_.size();
-}
-
-void ESTreeIRGen::FunctionContext::popTry() {
-  tryDataStack_.pop_back();
-}
-
-void ESTreeIRGen::FunctionContext::startWalkingDownStack() {
-  tryReverseIterator_ = tryDataStack_.rbegin();
-}
-
-ESTreeIRGen::TryData *ESTreeIRGen::FunctionContext::nextTryData() {
-  if (tryReverseIterator_ == tryDataStack_.rend()) {
-    return nullptr;
-  }
-  // Return the content in tryReverseIterator, and move tryReverseIterator.
-  return *tryReverseIterator_++;
 }
 
 Identifier ESTreeIRGen::FunctionContext::genAnonymousLabelName(StringRef hint) {
@@ -688,14 +572,6 @@ Identifier ESTreeIRGen::genGotoLabelName(StringRef hint, StringRef suffix) {
   str.append(hint);
   str.append(suffix);
   return Builder.createIdentifier(str);
-}
-
-Identifier ESTreeIRGen::genBreakLabelName(StringRef hint) {
-  return genGotoLabelName(hint, "#break");
-}
-
-Identifier ESTreeIRGen::genContinueLabelName(StringRef hint) {
-  return genGotoLabelName(hint, "#continue");
 }
 
 void ESTreeIRGen::materializeScopesInChain(
@@ -1210,9 +1086,7 @@ void ESTreeIRGen::genIfStatement(ESTree::IfStatementNode *IfStmt) {
   Builder.setInsertionBlock(ContinueBlock);
 }
 
-void ESTreeIRGen::genForInStatement(
-    ESTree::ForInStatementNode *ForInStmt,
-    const EnclosingLabel *enclosingLabel) {
+void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   // The state of the enumerator. Notice that the instruction writes to the
   // storage
   // variables just like Load/Store instructions write to stack allocations.
@@ -1258,20 +1132,10 @@ void ESTreeIRGen::genForInStatement(
   auto *getNextBlock = Builder.createBasicBlock(parent);
   auto *bodyBlock = Builder.createBasicBlock(parent);
 
-  // To support unlabled break and continue statement we register a
-  // label as if we encountered one.
-  GotoTableScopeTy labelScope(functionContext->labelTable);
-  functionContext->labelTable.insert(
-      genBreakLabelName(), constructLabelInfo(exitBlock));
-  functionContext->labelTable.insert(
-      genContinueLabelName(), constructLabelInfo(getNextBlock));
-
-  // To support named continue, we register all enclosing labels as continue
-  // targets.
-  for (; enclosingLabel; enclosingLabel = enclosingLabel->parent)
-    functionContext->labelTable.insert(
-        genContinueLabelName(enclosingLabel->name.str()),
-        constructLabelInfo(getNextBlock));
+  // Initialize the goto labels.
+  auto &label = functionContext->labels[ForInStmt->getLabelIndex()];
+  label.breakTarget = exitBlock;
+  label.continueTarget = getNextBlock;
 
   // Create the enumerator:
   Builder.createGetPNamesInst(
@@ -1329,7 +1193,7 @@ void ESTreeIRGen::genReturnStatement(ESTree::ReturnStatementNode *RetStmt) {
     Value = Builder.getLiteralUndefined();
   }
 
-  genFinallyBeforeControlChange(0);
+  genFinallyBeforeControlChange(RetStmt->surroundingTry, nullptr);
   Builder.createReturnInst(Value);
 
   // Code that comes after 'return' is dead code. Let's create a new un-linked
@@ -1423,27 +1287,32 @@ void ESTreeIRGen::genTryBody(
     BasicBlock *catchBlock,
     BasicBlock *continueBlock,
     ESTree::NodePtr finalizer) {
-  auto parent = Builder.getInsertionBlock()->getParent();
+  auto *parent = Builder.getInsertionBlock()->getParent();
 
   // Start with a TryStartInst, and transition to try body.
-  auto tryBodyBlock = Builder.createBasicBlock(parent);
+  auto *tryBodyBlock = Builder.createBasicBlock(parent);
   Builder.createTryStartInst(tryBodyBlock, catchBlock);
   Builder.setInsertionBlock(tryBodyBlock);
-
-  // Push the current try data into the try stack.
-  TryData tryData(finalizer, functionContext->getCurrentTryDepth());
-  functionContext->pushTryData(&tryData);
 
   // Generate IR for the body of Try
   genStatement(body);
 
-  // Inline the body of finally after the try body.
-  // Pass in tryData.getDepth() because we only want to inline finally for the
-  // current try.
-  genFinallyBeforeControlChange(tryData.getDepth());
+  // Emit TryEnd in a new block.
+  auto *tryEndBlock = Builder.createBasicBlock(parent);
+  Builder.createBranchInst(tryEndBlock);
+  Builder.setInsertionBlock(tryEndBlock);
+  // Make sure we use the correct debug location for tryEndInst.
+  if (finalizer) {
+    hermes::IRBuilder::ScopedLocationChange slc(
+        Builder, finalizer->getDebugLoc());
+    Builder.createTryEndInst();
+  } else {
+    Builder.createTryEndInst();
+  }
 
-  // Pop try data from the stack.
-  functionContext->popTry();
+  // Inline the body of finally after the try body.
+  if (finalizer)
+    genStatement(finalizer);
 
   // Jump to continue block.
   Builder.createBranchInst(continueBlock);
@@ -1595,12 +1464,12 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
 }
 
 void ESTreeIRGen::genForWhileLoops(
+    ESTree::LoopStatementNode *loop,
     ESTree::Node *init,
     ESTree::Node *preTest,
     ESTree::Node *postTest,
     ESTree::Node *update,
-    ESTree::Node *body,
-    const EnclosingLabel *enclosingLabel) {
+    ESTree::Node *body) {
   /* In this section we generate a sequence of basic blocks that implement
    the for, while and do..while statements. Loop inversion is applied.
    For loops are syntactic-sugar for while
@@ -1627,20 +1496,10 @@ void ESTreeIRGen::genForWhileLoops(
   BasicBlock *postTestBlock = Builder.createBasicBlock(function);
   BasicBlock *updateBlock = Builder.createBasicBlock(function);
 
-  // To support unlabled break and continue statement we register a
-  // label as if we encountered one.
-  GotoTableScopeTy labelScope(functionContext->labelTable);
-  functionContext->labelTable.insert(
-      genBreakLabelName(), constructLabelInfo(exitBlock));
-  functionContext->labelTable.insert(
-      genContinueLabelName(), constructLabelInfo(updateBlock));
-
-  // To support named continue, we register all enclosing labels as continue
-  // targets.
-  for (; enclosingLabel; enclosingLabel = enclosingLabel->parent)
-    functionContext->labelTable.insert(
-        genContinueLabelName(enclosingLabel->name.str()),
-        constructLabelInfo(updateBlock));
+  // Initialize the goto labels.
+  auto &label = functionContext->labels[loop->getLabelIndex()];
+  label.breakTarget = exitBlock;
+  label.continueTarget = updateBlock;
 
   // Generate IR for the loop initialization.
   // The init field can be a variable declaration or any expression.
@@ -1690,9 +1549,7 @@ void ESTreeIRGen::genForWhileLoops(
   Builder.setInsertionBlock(exitBlock);
 }
 
-void ESTreeIRGen::genStatement(
-    ESTree::Node *Stmt,
-    const EnclosingLabel *enclosingLabel) {
+void ESTreeIRGen::genStatement(ESTree::Node *Stmt) {
   DEBUG(dbgs() << "IRGen statement of type " << Stmt->getNodeName() << "\n");
   IRBuilder::ScopedLocationChange slc(Builder, Stmt->getDebugLoc());
 
@@ -1713,7 +1570,7 @@ void ESTreeIRGen::genStatement(
 
   // IRGen for-in statement.
   if (auto *FIS = dyn_cast<ESTree::ForInStatementNode>(Stmt)) {
-    return genForInStatement(FIS, enclosingLabel);
+    return genForInStatement(FIS);
   }
 
   // IRGen return statement.
@@ -1767,25 +1624,15 @@ void ESTreeIRGen::genStatement(
   }
 
   if (auto *Label = dyn_cast<ESTree::LabeledStatementNode>(Stmt)) {
-    Identifier LabelName = getNameFieldFromID(Label->_label);
-    DEBUG(dbgs() << "IRGen label " << LabelName << "\n");
-
-    GotoTableScopeTy labelScope(functionContext->labelTable);
-
     // Create a new basic block which is the continuation of the current block
     // and the jump target of the label.
-    Function *function = Builder.getInsertionBlock()->getParent();
-    BasicBlock *next = Builder.createBasicBlock(function);
+    BasicBlock *next = Builder.createBasicBlock(functionContext->function);
 
     // Set the jump point for the label to the new block.
-    functionContext->labelTable.insert(
-        genBreakLabelName(LabelName.str()), constructLabelInfo(next));
-
-    // This will inform our body that we are enclosing it.
-    EnclosingLabel thisLabel{enclosingLabel, LabelName};
+    functionContext->labels[Label->getLabelIndex()].breakTarget = next;
 
     // Now, generate the IR for the statement that the label is annotating.
-    genStatement(Label->_body, &thisLabel);
+    genStatement(Label->_body);
 
     // End the current basic block with a jump to the new basic block.
     Builder.createBranchInst(next);
@@ -1802,65 +1649,56 @@ void ESTreeIRGen::genStatement(
 
   if (auto *W = dyn_cast<ESTree::WhileStatementNode>(Stmt)) {
     DEBUG(dbgs() << "IRGen 'while' statement\n");
-    genForWhileLoops(
-        nullptr, W->_test, W->_test, nullptr, W->_body, enclosingLabel);
+    genForWhileLoops(W, nullptr, W->_test, W->_test, nullptr, W->_body);
     return;
   }
 
   if (auto *F = dyn_cast<ESTree::ForStatementNode>(Stmt)) {
     DEBUG(dbgs() << "IRGen 'for' statement\n");
-    genForWhileLoops(
-        F->_init, F->_test, F->_test, F->_update, F->_body, enclosingLabel);
+    genForWhileLoops(F, F->_init, F->_test, F->_test, F->_update, F->_body);
     return;
   }
 
   if (auto *D = dyn_cast<ESTree::DoWhileStatementNode>(Stmt)) {
     DEBUG(dbgs() << "IRGen 'do..while' statement\n");
-    genForWhileLoops(
-        nullptr, nullptr, D->_test, nullptr, D->_body, enclosingLabel);
+    genForWhileLoops(D, nullptr, nullptr, D->_test, nullptr, D->_body);
     return;
   }
 
-  if (auto *Break = dyn_cast<ESTree::BreakStatementNode>(Stmt)) {
+  if (auto *breakStmt = dyn_cast<ESTree::BreakStatementNode>(Stmt)) {
     DEBUG(dbgs() << "IRGen 'break' statement\n");
 
-    auto targetName = genBreakLabelName();
+    auto labelIndex = breakStmt->getLabelIndex();
+    auto &label = functionContext->labels[labelIndex];
+    assert(label.breakTarget && "breakTarget not set");
 
-    if (auto L = dyn_cast_or_null<ESTree::IdentifierNode>(Break->_label)) {
-      targetName = genBreakLabelName(getNameFieldFromID(L).str());
-    }
-
-    auto labelInfo = functionContext->labelTable.lookup(targetName);
-    BasicBlock *target = labelInfo.target;
-    assert(target && "break not within a loop or labeled statement");
-    genFinallyBeforeControlChange(labelInfo.tryDepth);
-    Builder.createBranchInst(target);
+    genFinallyBeforeControlChange(
+        breakStmt->surroundingTry,
+        functionContext->getSemInfo()->labels[labelIndex].surroundingTry);
+    Builder.createBranchInst(label.breakTarget);
 
     // Continue code generation for stuff that comes after the break statement
     // in a new dead block.
-    auto newBlock = Builder.createBasicBlock(target->getParent());
+    auto newBlock = Builder.createBasicBlock(functionContext->function);
     Builder.setInsertionBlock(newBlock);
     return;
   }
 
-  if (auto *Continue = dyn_cast<ESTree::ContinueStatementNode>(Stmt)) {
+  if (auto *continueStmt = dyn_cast<ESTree::ContinueStatementNode>(Stmt)) {
     DEBUG(dbgs() << "IRGen 'continue' statement\n");
 
-    auto targetName = genContinueLabelName();
+    auto labelIndex = continueStmt->getLabelIndex();
+    auto &label = functionContext->labels[labelIndex];
+    assert(label.continueTarget && "continueTarget not set");
 
-    if (auto L = dyn_cast_or_null<ESTree::IdentifierNode>(Continue->_label)) {
-      targetName = genContinueLabelName(getNameFieldFromID(L).str());
-    }
-
-    auto labelInfo = functionContext->labelTable.lookup(targetName);
-    BasicBlock *target = labelInfo.target;
-    assert(target && "continue not within a loop");
-    genFinallyBeforeControlChange(labelInfo.tryDepth);
-    Builder.createBranchInst(target);
+    genFinallyBeforeControlChange(
+        continueStmt->surroundingTry,
+        functionContext->getSemInfo()->labels[labelIndex].surroundingTry);
+    Builder.createBranchInst(label.continueTarget);
 
     // Continue code generation for stuff that comes after the break statement
     // in a new dead block.
-    auto newBlock = Builder.createBasicBlock(target->getParent());
+    auto newBlock = Builder.createBasicBlock(functionContext->function);
     Builder.setInsertionBlock(newBlock);
     return;
   }
@@ -2315,11 +2153,9 @@ void ESTreeIRGen::genSwitchStmt(ESTree::SwitchStatementNode *switchStmt) {
   // A BB for each case in the switch statement.
   llvm::SmallVector<BasicBlock *, 8> caseBlocks;
 
-  // Break statements take us to the exit block. We use the same mechanism
-  // that's used in for and while loops.
-  GotoTableScopeTy labelScope(functionContext->labelTable);
-  functionContext->labelTable.insert(
-      genBreakLabelName(), constructLabelInfo(exitBlock));
+  // Initialize the goto labels.
+  auto &label = functionContext->labels[switchStmt->getLabelIndex()];
+  label.breakTarget = exitBlock;
 
   // The discriminator expression.
   Value *discr = genExpression(switchStmt->_discriminant);
@@ -2381,11 +2217,8 @@ void ESTreeIRGen::genConstSwitchStmt(
   // Unless a default is specified the default case brings us to the exit block.
   BasicBlock *defaultBlock = exitBlock;
 
-  // Break statements take us to the exit block. We use the same mechanism
-  // that's used in for and while loops.
-  GotoTableScopeTy labelScope(functionContext->labelTable);
-  functionContext->labelTable.insert(
-      genBreakLabelName(), constructLabelInfo(exitBlock));
+  auto &label = functionContext->labels[switchStmt->getLabelIndex()];
+  label.breakTarget = exitBlock;
 
   // The discriminator expression.
   Value *discr = genExpression(switchStmt->_discriminant);
@@ -2858,57 +2691,30 @@ void ESTreeIRGen::genExpressionBranch(
   Builder.createCondBranchInst(condVal, onTrue, onFalse);
 }
 
-void ESTreeIRGen::genFinallyBeforeControlChange(unsigned labelDepth) {
-  // If we are under try/catch and there is a finally block, we need to
-  // generate the code for finally before a major control change.
-  // The code structure will look like the following:
-  //          [ Current Block ]
-  //          [ Finally Block ]
-  //             [TryEndInst]
-  //          [ Finally Body  ]
-  //          [ Continue Block]
-  auto parent = Builder.getInsertionBlock()->getParent();
-  // The order of inlining should happen starting from the top of try stack.
-  functionContext->startWalkingDownStack();
-  TryDataStackType inlinedTries;
-  TryData *tryData;
-  while ((tryData = functionContext->nextTryData())) {
-    // We want to inline the finally block if both following conditions meet:
-    // 1) We are not already inlining the finally block
-    // 2) We are jumping outside of the current scope of try/catch
-    // We need to do this for every try/catch on the stack.
-    if (tryData->isInliningFinally())
-      continue;
-    if (labelDepth > tryData->getDepth()) {
-      continue;
-    }
+void ESTreeIRGen::genFinallyBeforeControlChange(
+    ESTree::TryStatementNode *sourceTry,
+    ESTree::TryStatementNode *targetTry) {
+  // We walk the nested try statements starting from the source, until we reach
+  // the target, generating the finally statements on the way.
+  for (; sourceTry != targetTry; sourceTry = sourceTry->surroundingTry) {
+    assert(sourceTry && "invalid try chain");
 
-    // Before we start generating the finally block, we first end the try.
-    auto finallyBlock = Builder.createBasicBlock(parent);
-    Builder.createBranchInst(finallyBlock);
-    Builder.setInsertionBlock(finallyBlock);
-    if (tryData->getFinalizer()) {
+    // Emit an end of the try statement.
+    auto *tryEndBlock = Builder.createBasicBlock(functionContext->function);
+    Builder.createBranchInst(tryEndBlock);
+    Builder.setInsertionBlock(tryEndBlock);
+
+    // Make sure we use the correct debug location for tryEndInst.
+    if (sourceTry->_finalizer) {
       hermes::IRBuilder::ScopedLocationChange slc(
-          Builder, tryData->getFinalizer()->getDebugLoc());
+          Builder, sourceTry->_finalizer->getDebugLoc());
       Builder.createTryEndInst();
     } else {
       Builder.createTryEndInst();
     }
 
-    inlinedTries.push_back(tryData);
-    tryData->startInliningFinally();
-
-    // If the finally block is not present, nothing to inline.
-    if (!tryData->getFinalizer())
-      continue;
-
-    genStatement(tryData->getFinalizer());
-  }
-  // We could not mark the finish of inlining finally earlier to avoid
-  // recursive calls. After we finished inlining every finally block,
-  // now it's safe to mark the end for all of them.
-  for (auto &inlinedTrie : inlinedTries) {
-    inlinedTrie->endInliningFinally();
+    if (sourceTry->_finalizer)
+      genStatement(sourceTry->_finalizer);
   }
 }
 
@@ -3015,11 +2821,6 @@ Value *ESTreeIRGen::ensureVariableExists(ESTree::IdentifierNode *id) {
 
   // Undeclared variable is an ambient global property.
   return declareAmbientGlobalProperty(name);
-}
-
-GotoLabelInfo ESTreeIRGen::constructLabelInfo(BasicBlock *target) {
-  unsigned tryDepth = functionContext->getCurrentTryDepth();
-  return GotoLabelInfo(target, tryDepth);
 }
 
 ESTreeIRGen::LReference ESTreeIRGen::createLRef(ESTree::Node *node) {

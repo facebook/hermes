@@ -219,6 +219,104 @@ inline Strictness makeStrictness(bool strictMode) {
   return strictMode ? Strictness::StrictMode : Strictness::NonStrictMode;
 }
 
+/// Decoration for all function-like nodes.
+class FunctionLikeDecoration {
+  sem::FunctionInfo *semInfo_{};
+
+ public:
+  Strictness strictness{Strictness::NotSet};
+
+  void setSemInfo(sem::FunctionInfo *semInfo) {
+    assert(semInfo && "setting semInfo to null");
+    assert(!semInfo_ && "semInfo is already set");
+    semInfo_ = semInfo;
+  }
+
+  sem::FunctionInfo *getSemInfo() const {
+    assert(semInfo_ && "semInfo is not set!");
+    return semInfo_;
+  }
+};
+
+/// A decoration describing a label.
+class LabelDecorationBase {
+  static constexpr unsigned INVALID_LABEL = ~0u;
+  unsigned labelIndex_ = INVALID_LABEL;
+
+ public:
+  bool isLabelIndexSet() const {
+    return labelIndex_ != INVALID_LABEL;
+  }
+
+  unsigned getLabelIndex() const {
+    assert(isLabelIndexSet() && "labelIndex is not set");
+    return labelIndex_;
+  }
+
+  void setLabelIndex(unsigned labelIndex) {
+    assert(labelIndex != INVALID_LABEL && "setting labelIndex to invalid");
+    assert(!isLabelIndexSet() && "labelIndex is already set");
+    labelIndex_ = labelIndex;
+  }
+};
+
+/// A decoration for a break/continue statement.
+class GotoDecorationBase : public LabelDecorationBase {
+ public:
+  /// The closest surrounding try statement.
+  TryStatementNode *surroundingTry = nullptr;
+};
+
+/// Decoration for all statements.
+/// NOTE: This decoration is required by the Statement base node, so we need to
+/// provide it even if it is empty.
+class StatementDecoration {};
+
+/// Decoration for all loop statements.
+/// NOTE: This decoration is required by the LoopStatement base node, so we need
+/// to  provide it even if it is empty.
+/// It contains an optional label, if it has been referenced by a contained
+/// break/continue.
+class LoopStatementDecoration : public LabelDecorationBase {};
+
+class SwitchStatementDecoration : public LabelDecorationBase {};
+
+class BreakStatementDecoration : public GotoDecorationBase {};
+class ContinueStatementDecoration : public GotoDecorationBase {};
+
+class ReturnStatementDecoration {
+ public:
+  /// The closest surrounding try statement.
+  TryStatementNode *surroundingTry = nullptr;
+};
+
+class LabeledStatementDecoration : public LabelDecorationBase {};
+
+class TryStatementDecoration {
+ public:
+  /// The closest surrounding try statement.
+  TryStatementNode *surroundingTry = nullptr;
+};
+
+class BlockStatementDecoration {
+ public:
+  /// True if this is a function body that was pruned while pre-parsing.
+  bool isLazyFunctionBody{false};
+  /// The source buffer id in which this block was found (see \p SourceMgr ).
+  uint32_t bufferId;
+};
+
+class StringLiteralDecoration {
+ public:
+  /// Indicates whether the string literal originally contained any escapes
+  /// or new line continuations. We need this in order to detect directives
+  /// (ES5.1. 14.1).
+  bool potentialDirective = false;
+
+  /// Was this recognised as a directive.
+  bool directive = false;
+};
+
 namespace detail {
 /// We need to to be able customize some ESTree types when passing them through
 /// a constructor, so we create a simple template type mapper. Specifically, a
@@ -246,54 +344,6 @@ struct DecoratorTrait {
   using Type = EmptyDecoration;
 };
 
-/// Decoration for all function-like nodes.
-class FunctionLikeDecoration {
-  sem::FunctionInfo *semInfo_{};
-
- public:
-  Strictness strictness{Strictness::NotSet};
-
-  void setSemInfo(sem::FunctionInfo *semInfo) {
-    assert(semInfo && "setting semInfo to null");
-    assert(!semInfo_ && "semInfo is already set");
-    semInfo_ = semInfo;
-  }
-
-  sem::FunctionInfo *getSemInfo() const {
-    assert(semInfo_ && "semInfo is not set!");
-    return semInfo_;
-  }
-};
-
-/// Decoration for all statements.
-/// NOTE: This decoration is required by the Statement base node, so we need to
-/// provide it even if it is empty.
-class StatementDecoration {};
-
-/// Decoration for all loop statements.
-/// NOTE: This decoration is required by the LoopStatement base node, so we need
-/// to  provide it even if it is empty.
-class LoopStatementDecoration {};
-
-class BlockStatementDecoration {
- public:
-  /// True if this is a function body that was pruned while pre-parsing.
-  bool isLazyFunctionBody{false};
-  /// The source buffer id in which this block was found (see \p SourceMgr ).
-  uint32_t bufferId;
-};
-
-class StringLiteralDecoration {
- public:
-  /// Indicates whether the string literal originally contained any escapes
-  /// or new line continuations. We need this in order to detect directives
-  /// (ES5.1. 14.1).
-  bool potentialDirective = false;
-
-  /// Was this recognised as a directive.
-  bool directive = false;
-};
-
 template <>
 struct DecoratorTrait<StringLiteralNode> {
   using Type = StringLiteralDecoration;
@@ -302,21 +352,45 @@ template <>
 struct DecoratorTrait<BlockStatementNode> {
   using Type = BlockStatementDecoration;
 };
+template <>
+struct DecoratorTrait<BreakStatementNode> {
+  using Type = BreakStatementDecoration;
+};
+template <>
+struct DecoratorTrait<ContinueStatementNode> {
+  using Type = ContinueStatementDecoration;
+};
+template <>
+struct DecoratorTrait<ReturnStatementNode> {
+  using Type = ReturnStatementDecoration;
+};
+template <>
+struct DecoratorTrait<SwitchStatementNode> {
+  using Type = SwitchStatementDecoration;
+};
+template <>
+struct DecoratorTrait<LabeledStatementNode> {
+  using Type = LabeledStatementDecoration;
+};
+template <>
+struct DecoratorTrait<TryStatementNode> {
+  using Type = TryStatementDecoration;
+};
 
 } // namespace detail
 
 /// A convenince alias for the base node.
 using BaseNode = Node;
 
-#define ESTREE_FIRST(NAME, BASE)                                          \
-  class NAME##Node : public BASE##Node, public detail::NAME##Decoration { \
-   public:                                                                \
-    explicit NAME##Node(NodeKind kind) : BASE##Node(kind) {}              \
-    static bool classof(const Node *V) {                                  \
-      auto kind = V->getKind();                                           \
-      return NodeKind::_##NAME##_First < kind &&                          \
-          kind < NodeKind::_##NAME##_Last;                                \
-    }                                                                     \
+#define ESTREE_FIRST(NAME, BASE)                                  \
+  class NAME##Node : public BASE##Node, public NAME##Decoration { \
+   public:                                                        \
+    explicit NAME##Node(NodeKind kind) : BASE##Node(kind) {}      \
+    static bool classof(const Node *V) {                          \
+      auto kind = V->getKind();                                   \
+      return NodeKind::_##NAME##_First < kind &&                  \
+          kind < NodeKind::_##NAME##_Last;                        \
+    }                                                             \
   };
 
 #define ESTREE_NODE_0_ARGS(NAME, BASE)                                 \

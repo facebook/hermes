@@ -25,6 +25,29 @@ class FunctionInfo {
   /// A list of functions that need to be hoisted and materialized before we
   /// can generate the rest of the function.
   llvm::SmallVector<ESTree::FunctionDeclarationNode *, 2> closures{};
+
+  /// Class that holds the target for a break/continue label, as well as the
+  /// depth of the nested try/catch/finally blocks where this label is defined.
+  class GotoLabel {
+   public:
+    /// The closest surrounding try statement.
+    ESTree::TryStatementNode *const surroundingTry;
+
+    explicit GotoLabel(ESTree::TryStatementNode *aSurroundingTry)
+        : surroundingTry(aSurroundingTry) {}
+  };
+
+  /// An array of labels defined in the function. The AST nodes (LoopStatement
+  /// and LabeledStatement) defining each label are decorated with
+  /// LabelDecorationBase refering to the label index in this array.
+  /// Break/continue AST nodes contain the index of the target label.
+  llvm::SmallVector<GotoLabel, 2> labels{};
+
+  /// Allocate a new label and return its index.
+  unsigned allocateLabel(ESTree::TryStatementNode *surroundingTry) {
+    labels.emplace_back(surroundingTry);
+    return (unsigned)(labels.size() - 1);
+  }
 };
 
 /// Identifier and label tables, populated by the semantic validator. They need
