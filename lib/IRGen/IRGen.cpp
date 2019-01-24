@@ -424,7 +424,8 @@ class ESTreeIRGen {
   /// Generate IR for function declarations;
   void genFunctionDeclaration(ESTree::FunctionDeclarationNode *func);
 
-  /// Generate IR for function declarations and expressions.
+  /// Generate IR for function-like nodes (function declaration, expression,
+  /// method, etc).
   /// \param originalName is the original non-unique name specified by the user
   ///   or inferred according to the rules of ES6.
   /// \param lazyClosureAlias an optional variable in the parent that will
@@ -434,33 +435,32 @@ class ESTreeIRGen {
   /// \param params are the formal parameters and \p body is the body of the
   ///   closure.
   /// \param functionNode is the ESTree function node (declaration, expression,
-  ///   object method). It is used for lazy compilation.
+  ///   object method).
   /// \param lazy Whether or not to compile it lazily.
   /// \returns a new Function.
-  Function *genClosure(
+  Function *genFunctionLike(
       Identifier originalName,
       Variable *lazyClosureAlias,
       bool strictMode,
       const ESTree::NodeList &params,
       ESTree::Node *body,
-      ESTree::Node *functionNode,
+      ESTree::FunctionLikeNode *functionNode,
       bool lazy);
 
-  /// A lower level version of `genClosure` which assumes that a function and
-  /// a function context have been created. It passes the generation of the
-  /// actual body to a callback. The additional flexibiloty is necessary in
-  /// order to accomodate generating a closure for the top level function.
-  /// \param NewFunc the new Function
+  /// A lower level version of `genFunctionLike` which takes an already created
+  /// Function and a function context. It offloads the generation of the
+  /// actual body to a callback, which gives it additional flexibility to
+  /// accomodate generating a closure for the top level function.
+  ///
+  /// \param NewFunc the just created new Function in a new FunctionContext.
   /// \param params the parameter list
   /// \param body the body ESTree element
-  /// \param genBody a callback to generate the body
-  /// \returns a new Function.
-  template <class BodyTy, class GenBodyFn>
-  Function *genClosure(
+  /// \param genBodyCB a callback to generate IR for the body
+  void doGenFunctionLike(
       Function *NewFunc,
       const ESTree::NodeList &params,
-      BodyTy *body,
-      GenBodyFn genBody);
+      ESTree::Node *body,
+      const std::function<void(ESTree::Node *body)> &genBodyCB);
 
   /// Declare a variable or a global propery depending in function \p inFunc,
   /// depending on whether it is the global scope. Do nothing if the variable
@@ -839,11 +839,11 @@ void ESTreeIRGen::doIt() {
     }
   }
 
-  genClosure(
+  doGenFunctionLike(
       functionContext->function,
       ESTree::NodeList{},
       Program,
-      [this](ESTree::ProgramNode *program) {
+      [this](ESTree::Node *body) {
         // Allocate the return register, initialize it to undefined.
         functionContext->globalReturnRegister =
             Builder.createAllocStackInst(genAnonymousLabelName("ret"));
@@ -851,7 +851,7 @@ void ESTreeIRGen::doIt() {
             Builder.getLiteralUndefined(),
             functionContext->globalReturnRegister);
 
-        genBody(program->_body);
+        genBody(cast<ESTree::ProgramNode>(body)->_body);
 
         // Terminate the top-level scope with a return statement.
         auto ret_val =
@@ -872,7 +872,7 @@ void ESTreeIRGen::doCJSModule(
       topLevelContext, &topLevelFunctionContext);
 
   Identifier functionName = Builder.createIdentifier("cjs_module");
-  Function *newFunc = genClosure(
+  Function *newFunc = genFunctionLike(
       functionName,
       nullptr,
       ESTree::isStrict(func->strictness),
@@ -898,7 +898,7 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
   llvm::SaveAndRestore<FunctionContext *> saveTopLevelContext(
       topLevelContext, &topLevelFunctionContext);
 
-  auto *node = Root;
+  auto *node = cast<ESTree::FunctionLikeNode>(Root);
 
   // Restore the previously saved parent scopes.
   lexicalScopeChain = lazyData->parentScope;
@@ -937,7 +937,7 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
     llvm_unreachable("invalid lazy function AST node");
   }
 
-  return genClosure(
+  return genFunctionLike(
       lazyData->originalName,
       parentVar,
       lazyData->strictMode,
@@ -977,7 +977,7 @@ void ESTreeIRGen::genFunctionDeclaration(
   assert(
       funcStorage && "function declaration variable should have been hoisted");
 
-  Function *newFunc = genClosure(
+  Function *newFunc = genFunctionLike(
       functionName,
       nullptr,
       ESTree::isStrict(func->strictness),
@@ -1018,13 +1018,13 @@ std::shared_ptr<SerializedScope> ESTreeIRGen::saveCurrentScope() {
   return scope;
 }
 
-Function *ESTreeIRGen::genClosure(
+Function *ESTreeIRGen::genFunctionLike(
     Identifier originalName,
     Variable *lazyClosureAlias,
     bool strictMode,
     const ESTree::NodeList &params,
     ESTree::Node *body,
-    ESTree::Node *functionNode,
+    ESTree::FunctionLikeNode *functionNode,
     bool lazy) {
   assert(functionNode && "Function AST cannot be null");
 
@@ -1054,7 +1054,7 @@ Function *ESTreeIRGen::genClosure(
 
   FunctionContext newFunctionContext{this, newFunction};
 
-  return genClosure(
+  doGenFunctionLike(
       newFunctionContext.function, params, body, [this](ESTree::Node *body) {
         DEBUG(dbgs() << "IRGen function body.\n");
         // irgen the rest of the body.
@@ -1063,6 +1063,8 @@ Function *ESTreeIRGen::genClosure(
         Builder.setLocation(Builder.getFunction()->getSourceRange().End);
         Builder.createReturnInst(Builder.getLiteralUndefined());
       });
+
+  return newFunctionContext.function;
 }
 #endif
 
@@ -1099,12 +1101,11 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
   return {var, true};
 }
 
-template <class BodyTy, class GenBodyFn>
-Function *ESTreeIRGen::genClosure(
+void ESTreeIRGen::doGenFunctionLike(
     Function *NewFunc,
     const ESTree::NodeList &params,
-    BodyTy *body,
-    GenBodyFn genBody) {
+    ESTree::Node *body,
+    const std::function<void(ESTree::Node *body)> &genBodyCB) {
   DeclHoisting DH;
   body->visit(DH);
   DEBUG(
@@ -1170,7 +1171,7 @@ Function *ESTreeIRGen::genClosure(
     functionContext->entryTerminator = Builder.createBranchInst(nextBlock);
     Builder.setInsertionBlock(nextBlock);
 
-    genBody(body);
+    genBodyCB(body);
 
     // If Entry is the only user of nextBlock, merge Entry and nextBlock, to
     // create less "noise" when optimization is disabled.
@@ -1195,7 +1196,6 @@ Function *ESTreeIRGen::genClosure(
   }
 
   NewFunc->clearStatementCount();
-  return NewFunc;
 }
 
 void ESTreeIRGen::genIfStatement(ESTree::IfStatementNode *IfStmt) {
@@ -2092,7 +2092,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       Value *setter = Builder.getLiteralUndefined();
 
       if (propValue->getterNode) {
-        Function *newFunc = genClosure(
+        Function *newFunc = genFunctionLike(
             Builder.createIdentifier("get " + keyStr.str()),
             nullptr,
             ESTree::isStrict(propValue->getterNode->strictness),
@@ -2105,7 +2105,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       }
 
       if (propValue->setterNode) {
-        Function *newFunc = genClosure(
+        Function *newFunc = genFunctionLike(
             Builder.createIdentifier("set " + keyStr.str()),
             nullptr,
             ESTree::isStrict(propValue->setterNode->strictness),
@@ -2795,7 +2795,7 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *Expr, Identifier nameHint) {
       nameTable_.insert(originalNameIden, tempClosureVar);
     }
 
-    Function *newFunc = genClosure(
+    Function *newFunc = genFunctionLike(
         originalNameIden,
         tempClosureVar,
         ESTree::isStrict(FE->strictness),
