@@ -99,10 +99,8 @@ static opt<std::string> ProfilerSymbolsFile(
     init("symbol_dump.map"));
 #endif
 
-static opt<bool> ES6Symbol(
-    "Xes6-symbol",
-    desc("Enable support for ES6 Symbol"),
-    init(false));
+static opt<bool>
+    ES6Symbol("Xes6-symbol", desc("Enable support for ES6 Symbol"), init(true));
 
 } // namespace cl
 

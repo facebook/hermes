@@ -33,7 +33,7 @@ class PinnedHermesValue;
   F(bool, EnableEval, true)                       \
                                                   \
   /* Support for ES6 Symbol. */                   \
-  F(bool, ES6Symbol, false)                       \
+  F(bool, ES6Symbol, true)                        \
                                                   \
   /* Enable sampling certain statistics. */       \
   F(bool, EnableSampledStats, false)              \
