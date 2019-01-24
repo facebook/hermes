@@ -66,6 +66,14 @@ class JSParser {
     return context_;
   }
 
+  bool isStrictMode() const {
+    return lexer_.isStrictMode();
+  }
+
+  void setStrictMode(bool mode) {
+    lexer_.setStrictMode(mode);
+  }
+
   Optional<ESTree::FileNode *> parse();
 
   void seek(SMLoc startPos) {
@@ -428,14 +436,6 @@ class JSParser {
           left,
           right,
           new (context_) ESTree::BinaryExpressionNode(left, right, opIdent));
-  }
-
-  bool isStrictMode() const {
-    return lexer_.isStrictMode();
-  }
-
-  void setStrictMode(bool mode) {
-    lexer_.setStrictMode(mode);
   }
 
   /// RAII to save and restore the current setting of "strict mode".
