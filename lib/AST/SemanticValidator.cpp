@@ -25,6 +25,7 @@ using llvm::SaveAndRestore;
 using namespace hermes::ESTree;
 
 namespace hermes {
+namespace sem {
 
 namespace {
 
@@ -32,6 +33,9 @@ class SemanticValidator {
   Context &astContext_;
   /// A copy of Context::getSM() for easier access.
   SourceErrorManager &sm_;
+
+  /// All semantic tables are persisted here.
+  SemContext &semCtx_;
 
   /// Save the initial error count so we know whether we generated any errors.
   const unsigned initialErrorCount_;
@@ -74,6 +78,9 @@ class SemanticValidator {
     FunctionContext *oldContextValue_;
 
    public:
+    /// The associated seminfo object
+    sem::FunctionInfo *const semInfo;
+
     /// Are we inside a loop.
     bool inLoop = false;
     /// Are we inside a switch.
@@ -85,7 +92,9 @@ class SemanticValidator {
     llvm::DenseMap<NodeLabel, Label> labelMap;
 
     explicit FunctionContext(SemanticValidator *validator)
-        : validator_(validator), oldContextValue_(validator->funcCtx_) {
+        : validator_(validator),
+          oldContextValue_(validator->funcCtx_),
+          semInfo(validator->semCtx_.createFunction()) {
       if (validator->funcCtx_) {
         strictMode = validator->funcCtx_->strictMode;
       }
@@ -103,9 +112,10 @@ class SemanticValidator {
   };
 
  public:
-  explicit SemanticValidator(Context &astContext)
+  explicit SemanticValidator(Context &astContext, sem::SemContext &semCtx)
       : astContext_(astContext),
         sm_(astContext.getSourceErrorManager()),
+        semCtx_(semCtx),
         initialErrorCount_(sm_.getErrorCount()),
         identArguments_(
             astContext.getIdentifier("arguments").getUnderlyingPointer()),
@@ -146,6 +156,8 @@ class SemanticValidator {
     scanDirectivePrologue(node->_body);
     setNodeStrictness(&node->strictness, newFuncCtx.strictMode);
     visitESTreeChildren(*this, node);
+
+    node->setSemInfo(newFuncCtx.semInfo);
   }
 
   void visit(VariableDeclaratorNode *varDecl) {
@@ -365,12 +377,13 @@ class SemanticValidator {
   /// \param blockStatement the body
   /// \param[out] strictness set *strictness to the strictness.
   void visitFunction(
-      Node *node,
+      FunctionLikeNode *node,
       const Node *id,
       NodeList &params,
       Node *blockStatement,
       Strictness *strictness) {
     FunctionContext newFuncCtx{this};
+    node->setSemInfo(newFuncCtx.semInfo);
 
     if (id)
       validateDeclarationName(id);
@@ -490,17 +503,22 @@ class SemanticValidator {
 
 } // anonymous namespace
 
-bool validateAST(Context &astContext, Node *root) {
+bool validateAST(Context &astContext, SemContext &semCtx, Node *root) {
   PerfSection validation("Validating JavaScript function AST");
   // Validate the entire AST.
-  SemanticValidator validator{astContext};
+  SemanticValidator validator{astContext, semCtx};
   return validator.doIt(root);
 }
 
-bool validateFunctionAST(Context &astContext, Node *function, bool strict) {
+bool validateFunctionAST(
+    Context &astContext,
+    SemContext &semCtx,
+    Node *function,
+    bool strict) {
   PerfSection validation("Validating JavaScript function AST: Deep");
-  SemanticValidator validator{astContext};
+  SemanticValidator validator{astContext, semCtx};
   return validator.doFunction(function, strict);
 }
 
+} // namespace sem
 } // namespace hermes

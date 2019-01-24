@@ -34,7 +34,8 @@ TEST(IRScopeChainTest, BasicScopeChainTest) {
       *context, "print(alpha, beta, gamma, delta);");
   auto parsed = jsParser.parse();
   ASSERT_TRUE(parsed);
-  auto validated = validateAST(*context, *parsed);
+  sem::SemContext semCtx{};
+  auto validated = validateAST(*context, semCtx, *parsed);
   ASSERT_TRUE(validated);
 
   auto *ast = parsed.getValue();

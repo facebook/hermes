@@ -24,6 +24,10 @@ namespace hermes {
 using llvm::ArrayRef;
 using llvm::StringRef;
 
+namespace sem {
+class FunctionInfo;
+} // namespace sem
+
 namespace ESTree {
 
 using llvm::cast;
@@ -244,8 +248,21 @@ struct DecoratorTrait {
 
 /// Decoration for all function-like nodes.
 class FunctionLikeDecoration {
+  sem::FunctionInfo *semInfo_{};
+
  public:
   Strictness strictness{Strictness::NotSet};
+
+  void setSemInfo(sem::FunctionInfo *semInfo) {
+    assert(semInfo && "setting semInfo to null");
+    assert(!semInfo_ && "semInfo is already set");
+    semInfo_ = semInfo;
+  }
+
+  sem::FunctionInfo *getSemInfo() const {
+    assert(semInfo_ && "semInfo is not set!");
+    return semInfo_;
+  }
 };
 
 /// Decoration for all statements.

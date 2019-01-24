@@ -26,10 +26,11 @@ bool compileJS(const std::string &str, std::string &bytecode, bool optimize) {
   optimizationOpts.inlining = optimize;
   auto context = std::make_shared<::hermes::Context>(
       codeGenOpts, typeCheckerOpts, optimizationOpts);
+  sem::SemContext semCtx{};
   ::hermes::parser::JSParser jsParser(
       *context, llvm::MemoryBuffer::getMemBuffer(str));
   auto parsedJs = jsParser.parse();
-  if (!parsedJs || !validateAST(*context, *parsedJs)) {
+  if (!parsedJs || !validateAST(*context, semCtx, *parsedJs)) {
     return false;
   }
   ::hermes::ESTree::NodePtr ast = parsedJs.getValue();

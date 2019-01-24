@@ -83,9 +83,10 @@ CallResult<HermesValue> evalInEnvironment(
 #else
   context->setDebugInfoSetting(DebugInfoSetting::THROWING);
 #endif
+  sem::SemContext semCtx{};
   hermes::parser::JSParser jsParser(*context, utf8code);
   auto parsed = jsParser.parse();
-  if (!parsed || !validateAST(*context, *parsed)) {
+  if (!parsed || !validateAST(*context, semCtx, *parsed)) {
     auto msg = evalOutputManager.getFirstMessage();
     return runtime->raiseSyntaxError(
         TwineChar16(msg.getLineNo()) + ":" + msg.getColumnNo() + ":" +

@@ -481,6 +481,7 @@ SourceErrorOutputOptions guessErrorOutputOptions() {
 /// If using CJS modules, return a FunctionExpressionNode, else a FileNode.
 ESTree::NodePtr parseJS(
     std::shared_ptr<Context> &context,
+    sem::SemContext &semCtx,
     std::unique_ptr<llvm::MemoryBuffer> fileBuf,
     bool wrapCJSModule = false) {
   assert(fileBuf && "Need a file to compile");
@@ -505,7 +506,6 @@ ESTree::NodePtr parseJS(
   } else
 #endif
   {
-    // Only validate if we're not planning on wrapping the function in a module.
     parser::JSParser jsParser(*context, fileBufId, mode);
     parsedJs = jsParser.parse();
   }
@@ -525,7 +525,7 @@ ESTree::NodePtr parseJS(
     hermes::dumpESTree(llvm::outs(), parsedAST);
   }
 
-  if (!hermes::validateAST(*context, parsedAST)) {
+  if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
     return nullptr;
   }
 
@@ -870,6 +870,7 @@ SourceMapGenerator createSourceMapGenerator(std::shared_ptr<Context> context) {
 /// printed.
 bool generateIRForSourcesAsCJSModules(
     Module &M,
+    sem::SemContext &semCtx,
     const DeclarationFileListTy &declFileList,
     std::vector<std::unique_ptr<llvm::MemoryBuffer>> fileBufs) {
   auto context = M.shareContext();
@@ -884,13 +885,13 @@ bool generateIRForSourcesAsCJSModules(
   auto globalMemBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(requireString, "<global>");
 
-  auto *globalAST = parseJS(context, std::move(globalMemBuffer));
+  auto *globalAST = parseJS(context, semCtx, std::move(globalMemBuffer));
   generateIRFromESTree(globalAST, &M, declFileList, {});
   Function *topLevelFunction = M.getTopLevelFunction();
   for (auto &fileBuf : fileBufs) {
     llvm::SmallString<64> filename{fileBuf->getBufferIdentifier()};
     llvm::sys::path::replace_path_prefix(filename, rootPath, "./");
-    auto *ast = parseJS(context, std::move(fileBuf), true);
+    auto *ast = parseJS(context, semCtx, std::move(fileBuf), true);
     if (!ast) {
       return false;
     }
@@ -1111,14 +1112,15 @@ CompileResult processSourceFiles(
   }
 
   Module M(context);
+  sem::SemContext semCtx{};
 
   if (context->getUseCJSModules()) {
     if (!generateIRForSourcesAsCJSModules(
-            M, declFileList, std::move(fileBufs))) {
+            M, semCtx, declFileList, std::move(fileBufs))) {
       return ParsingFailed;
     }
   } else {
-    ESTree::NodePtr ast = parseJS(context, std::move(fileBufs[0]));
+    ESTree::NodePtr ast = parseJS(context, semCtx, std::move(fileBufs[0]));
     if (!ast) {
       return ParsingFailed;
     }

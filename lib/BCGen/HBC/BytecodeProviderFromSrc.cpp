@@ -98,9 +98,10 @@ BCProviderFromSrc::createBCProviderFromSrc(
     parserMode = parser::LazyParse;
   }
 
+  sem::SemContext semCtx{};
   parser::JSParser parser(*context, fileBufId, parserMode);
   auto parsed = parser.parse();
-  if (!parsed || !hermes::validateAST(*context, *parsed)) {
+  if (!parsed || !hermes::sem::validateAST(*context, semCtx, *parsed)) {
     return {nullptr, outputManager.getErrorString()};
   }
 

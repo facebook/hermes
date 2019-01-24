@@ -3088,18 +3088,23 @@ Function *hermes::generateLazyFunctionIR(
   SimpleDiagHandlerRAII diagHandler{
       context.getSourceErrorManager().getSourceMgr()};
 
+  AllocationScope alloc(context.getAllocator());
+  sem::SemContext semCtx{};
+  hermes::parser::JSParser parser(
+      context, lazyData->bufferId, parser::LazyParse);
+
   // Note: we don't know the parent's strictness, which we need to pass, but
   // we can just use the child's strictness, which is always stricter or equal
   // to the parent's.
+  parser.setStrictMode(lazyData->strictMode);
 
-  AllocationScope alloc(context.getAllocator());
-  hermes::parser::JSParser parser(
-      context, lazyData->bufferId, parser::LazyParse);
   auto parsed = parser.parseLazyFunction(
       (ESTree::NodeKind)lazyData->nodeKind, lazyData->span.Start);
 
   // In case of error, generate a function just throws a SyntaxError.
-  if (!parsed || !validateFunctionAST(context, *parsed, lazyData->strictMode)) {
+  if (!parsed ||
+      !sem::validateFunctionAST(
+          context, semCtx, *parsed, lazyData->strictMode)) {
     DEBUG(
         llvm::dbgs() << "Lazy AST parsing/validation failed with error: "
                      << diagHandler.getErrorString());
