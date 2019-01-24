@@ -22,6 +22,7 @@ add_llvm_library(hermesSupport
         SimpleDiagHandler.cpp
         StringTable.cpp
         UTF8.cpp
+        LEB128.cpp
         LINK_LIBS ${link_libs}
 )
 

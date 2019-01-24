@@ -12,7 +12,7 @@
 //CHECK-NEXT:    Ret               r0
 
 //CHECK-LABEL:Function<test1>(1 params, 16 registers, 0 symbols):
-//CHECK-NEXT:Offset in debug table: {{.*}}
+//CHECK-NEXT:Offset in debug table: src 0xe, vars 0x2
 //CHECK-NEXT:    GetGlobalObject   r0
 //CHECK-NEXT:    LoadConstUInt8    r5, 3
 //CHECK-NEXT:    LoadConstUInt8    r4, 1

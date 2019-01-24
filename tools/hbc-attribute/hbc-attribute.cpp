@@ -17,6 +17,7 @@
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/Public/Buffer.h"
 #include "hermes/Support/JSONEmitter.h"
+#include "hermes/Support/LEB128.h"
 #include "hermes/Support/MemoryBuffer.h"
 
 #include <iostream>
@@ -51,11 +52,7 @@ using namespace hermes::inst;
 
 using llvm::MutableArrayRef;
 using llvm::raw_fd_ostream;
-using llvm::support::endianness;
-using llvm::support::unaligned;
 using SLG = hermes::hbc::SerializedLiteralGenerator;
-
-namespace endian = llvm::support::endian;
 
 /* This tool is highly dependent upon the current bytecode format.
  *
@@ -65,7 +62,7 @@ namespace endian = llvm::support::endian;
  * If you have added or modified sections, make sure they're counted properly.
  */
 static_assert(
-    BYTECODE_VERSION == 41,
+    BYTECODE_VERSION == 42,
     "Bytecode version changed. Please verify that hbc-attribute counts correctly..");
 
 static llvm::cl::opt<std::string> InputFilename(
@@ -80,24 +77,6 @@ namespace {
 template <typename T>
 unsigned byteSize(ArrayRef<T> ref) {
   return ref.size() * sizeof(T);
-}
-
-uint32_t nextU32(llvm::ArrayRef<uint8_t> data, uint32_t *offset) {
-  assert(data.size() >= *offset + sizeof(uint32_t) && "offset out of range");
-  uint32_t result =
-      endian::read<uint32_t, endian::system_endianness(), unaligned>(
-          &data[*offset]);
-  *offset += sizeof(uint32_t);
-  return result;
-}
-
-int32_t nextI32(llvm::ArrayRef<uint8_t> data, uint32_t *offset) {
-  assert(data.size() >= *offset + sizeof(uint32_t) && "offset out of range");
-  int32_t result =
-      endian::read<int32_t, endian::system_endianness(), unaligned>(
-          &data[*offset]);
-  *offset += sizeof(int32_t);
-  return result;
 }
 
 /// Walks the bytecode and outputs usage info.
@@ -191,23 +170,18 @@ class UsageCounter : public BytecodeVisitor {
     if (offsets->sourceLocations != DebugOffsets::NO_OFFSET) {
       auto data = bcProvider_->getDebugInfo()->viewData().getData();
       auto offset = offsets->sourceLocations;
-      // Read address/functionIndex, line, column
-      offset += 3 * sizeof(uint32_t);
+      int64_t n, trash;
+      for (int i = 0; i < 3; i++) {
+        offset += readSignedLEB128(data, offset, &n);
+      }
       do {
-        // Read address delta
-        int32_t adelta = nextI32(data, &offset);
-        if (adelta == -1)
+        offset += readSignedLEB128(data, offset, &n);
+        if (n == -1)
           break;
-        // Read line delta
-        // ldelta encoding: bits 1..32 contain the line delta.
-        // Bit 0 indicates the presence of statement delta.
-        int32_t ldelta = nextI32(data, &offset);
-        // Read column delta
-        offset += sizeof(int32_t);
-        if (ldelta & 1) {
-          // Read statement delta
-          offset += sizeof(int32_t);
-        }
+        offset += readSignedLEB128(data, offset, &n);
+        if (n & 1)
+          offset += readSignedLEB128(data, offset, &n);
+        offset += readSignedLEB128(data, offset, &trash);
       } while (true);
       appendRecord(
           "debuginfo:sourcelocations",
@@ -221,15 +195,18 @@ class UsageCounter : public BytecodeVisitor {
       unsigned start = offsets->lexicalData +
           bcProvider_->getDebugInfo()->lexicalDataOffset();
       unsigned offset = start;
+      int64_t trash;
 
       // Read parent id
-      offset += sizeof(uint32_t);
+      offset += readSignedLEB128(data, offset, &trash);
 
       // Read variable count
-      int32_t count = nextU32(data, &offset);
+      int64_t count;
+      offset += readSignedLEB128(data, offset, &count);
       // Read variables
       for (int64_t i = 0; i < count; i++) {
-        int64_t stringLength = nextU32(data, &offset);
+        int64_t stringLength;
+        offset += readSignedLEB128(data, offset, &stringLength);
         offset += stringLength;
       }
       appendRecord(
@@ -326,21 +303,22 @@ class UsageCounter : public BytecodeVisitor {
     unsigned bundleOffset = (uintptr_t)(*ind + buff - bundleStart_);
     switch (tag) {
       case SLG::ByteStringTag: {
-        uint8_t val = endian::read<uint8_t, 1>(buff + *ind, endianness::little);
+        uint8_t val = llvm::support::endian::read<uint8_t, 1>(
+            buff + *ind, llvm::support::endianness::little);
         appendRecord("data:literalbuffer:bytestring", bundleOffset, 1);
         countStringLiteral(val);
         *ind += 1;
       } break;
       case SLG::ShortStringTag: {
-        uint16_t val =
-            endian::read<uint16_t, 1>(buff + *ind, endianness::little);
+        uint16_t val = llvm::support::endian::read<uint16_t, 1>(
+            buff + *ind, llvm::support::endianness::little);
         appendRecord("data:literalbuffer:shortstring", bundleOffset, 2);
         countStringLiteral(val);
         *ind += 2;
       } break;
       case SLG::LongStringTag: {
-        uint32_t val =
-            endian::read<uint32_t, 1>(buff + *ind, endianness::little);
+        uint32_t val = llvm::support::endian::read<uint32_t, 1>(
+            buff + *ind, llvm::support::endianness::little);
         appendRecord("data:literalbuffer:longstring", bundleOffset, 4);
         countStringLiteral(val);
         *ind += 4;

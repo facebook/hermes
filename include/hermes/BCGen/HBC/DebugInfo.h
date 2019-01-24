@@ -11,6 +11,7 @@
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/BCGen/HBC/StreamVector.h"
 #include "hermes/Public/DebuggerTypes.h"
+#include "hermes/Support/LEB128.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringTable.h"
 #include "hermes/Support/UTF8.h"
@@ -118,9 +119,6 @@ struct DebugSearchResult {
 /// A data structure for storing debug info.
 class DebugInfo {
  public:
-  /// Sentinel value indicating the lexical data doesn't have a parent.
-  static constexpr uint32_t NO_PARENT = UINT32_MAX;
-
   using DebugFileRegionList = llvm::SmallVector<DebugFileRegion, 1>;
 
  private:
@@ -282,22 +280,10 @@ class DebugInfoGenerator {
     return (int32_t)diff;
   }
 
-  /// Appends a number (integer or floating point) \p value to the given
-  /// \p data, in host endianness.
-  template <typename T>
-  static void appendNumber(std::vector<uint8_t> &data, T value) {
-    const uint8_t *chars = reinterpret_cast<const uint8_t *>(&value);
-    data.insert(data.end(), chars, chars + sizeof(T));
-  }
-
   /// Appends a string \p str to the given \p data.
-  /// This first appends the string's length, taking up 4 bytes in host
-  /// endianness, followed by the string bytes.
+  /// This first appends the string's length, followed by the string bytes.
   static void appendString(std::vector<uint8_t> &data, llvm::StringRef str) {
-    assert(
-        str.size() <= UINT32_MAX &&
-        "string size too large when encoding debug info");
-    appendNumber<uint32_t>(data, str.size());
+    appendSignedLEB128(data, int64_t(str.size()));
     data.insert(data.end(), str.begin(), str.end());
   }
 

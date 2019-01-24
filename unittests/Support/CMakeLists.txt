@@ -6,6 +6,7 @@ set(SupportSources
   CtorConfigTest.cpp
   HashStringTest.cpp
   JSONEmitterTest.cpp
+  LEB128Test.cpp
   PlatformLoggingTest.cpp
   RegexTest.cpp
   SNPrintfBufTest.cpp

@@ -8,26 +8,11 @@
 
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/SourceMap/SourceMap.h"
-#include "llvm/Support/Endian.h"
 
 using namespace hermes;
 using namespace hbc;
 
-using llvm::support::unaligned;
-
-namespace endian = llvm::support::endian;
-
 namespace {
-
-/// \return the next number (integer or floating point), advancing the offset
-template <typename T>
-T nextNumber(llvm::ArrayRef<uint8_t> data, uint32_t *offset) {
-  assert(data.size() >= *offset + sizeof(T) && "offset out of range");
-  T result =
-      endian::read<T, endian::system_endianness(), unaligned>(&data[*offset]);
-  *offset += sizeof(T);
-  return result;
-}
 
 /// A type used to iteratively deserialize function debug info.
 struct FunctionDebugInfoDeserializer {
@@ -37,23 +22,23 @@ struct FunctionDebugInfoDeserializer {
   /// the next section can be obtained via getOffset().
   FunctionDebugInfoDeserializer(llvm::ArrayRef<uint8_t> data, uint32_t offset)
       : data_(data), offset_(offset) {
-    functionIndex_ = decodeNumber<uint32_t>();
-    current_.line = decodeNumber<uint32_t>();
-    current_.column = decodeNumber<uint32_t>();
+    functionIndex_ = decode1Int();
+    current_.line = decode1Int();
+    current_.column = decode1Int();
   }
 
   /// \return the next debug location, or None if we reach the end.
   /// Sample usage: while (auto loc = fdid.next()) {...}
   OptValue<DebugSourceLocation> next() {
-    auto addressDelta = decodeNumber<int32_t>();
+    auto addressDelta = decode1Int();
     if (addressDelta == -1)
       return llvm::None;
     // Presence of the statement delta is LSB of line delta.
-    int64_t lineDelta = decodeNumber<int32_t>();
-    int64_t columnDelta = decodeNumber<int32_t>();
+    int64_t lineDelta = decode1Int();
+    int64_t columnDelta = decode1Int();
     int64_t statementDelta = 0;
     if (lineDelta & 1)
-      statementDelta = decodeNumber<int32_t>();
+      statementDelta = decode1Int();
     lineDelta >>= 1;
 
     current_.address += addressDelta;
@@ -79,10 +64,11 @@ struct FunctionDebugInfoDeserializer {
   }
 
  private:
-  /// \return the next number (integer or floating point), advancing the offset.
-  template <typename T>
-  T decodeNumber() {
-    return nextNumber<T>(data_, &offset_);
+  /// LEB-decode the next int.
+  int64_t decode1Int() {
+    int64_t result;
+    offset_ += readSignedLEB128(data_, offset_, &result);
+    return result;
   }
 
   llvm::ArrayRef<uint8_t> data_;
@@ -101,10 +87,13 @@ static StringRef decodeString(
   // The string is represented as its LEB-encoded length, followed by
   // the bytes. This format matches DebugInfoGenerator::appendString().
   uint32_t offset = *inoutOffset;
-  uint32_t strSize = nextNumber<uint32_t>(data, &offset);
+  int64_t strSize;
+  offset += readSignedLEB128(data, offset, &strSize);
   assert(
-      strSize + offset >= offset && // sum can't overflow
-      strSize + offset <= data.size() && // validate range
+      strSize >= 0 && // can't be negative
+      strSize <= UINT_MAX && // can't overflow uint32
+      uint32_t(strSize) + offset >= offset && // sum can't overflow
+      uint32_t(strSize) + offset <= data.size() && // validate range
       "Invalid string size");
   const unsigned char *ptr = data.data() + offset;
   offset += strSize;
@@ -203,9 +192,13 @@ llvm::SmallVector<StringRef, 4> DebugInfo::getVariableNames(
     uint32_t offset) const {
   // Incoming offset is given relative to our lexical region.
   llvm::ArrayRef<uint8_t> data = lexicalData();
-  uint32_t parentId = nextNumber<uint32_t>(data, &offset);
+  int64_t parentId;
+  int64_t signedCount;
+  offset += readSignedLEB128(data, offset, &parentId);
+  offset += readSignedLEB128(data, offset, &signedCount);
   (void)parentId;
-  size_t count = size_t(nextNumber<uint32_t>(data, &offset));
+  assert(signedCount >= 0 && "Invalid variable name count");
+  size_t count = size_t(signedCount);
 
   llvm::SmallVector<StringRef, 4> result;
   result.reserve(count);
@@ -217,11 +210,11 @@ llvm::SmallVector<StringRef, 4> DebugInfo::getVariableNames(
 OptValue<uint32_t> DebugInfo::getParentFunctionId(uint32_t offset) const {
   // Incoming offset is given relative to our lexical region.
   llvm::ArrayRef<uint8_t> data = lexicalData();
-  uint32_t parentId =
-      endian::read<uint32_t, endian::system_endianness(), unaligned>(
-          &data[offset]);
-  if (parentId == NO_PARENT)
+  int64_t parentId;
+  readSignedLEB128(data, offset, &parentId);
+  if (parentId < 0)
     return llvm::None;
+  assert(parentId <= UINT32_MAX && "Parent ID out of bounds");
   return uint32_t(parentId);
 }
 
@@ -272,13 +265,17 @@ void DebugInfo::disassembleLexicalData(llvm::raw_ostream &OS) const {
   llvm::ArrayRef<uint8_t> lexData = lexicalData();
 
   OS << "Debug variables table:\n";
-  auto next = [&]() { return nextNumber<uint32_t>(lexData, &offset); };
+  auto next = [&]() {
+    int64_t result;
+    offset += readSignedLEB128(lexData, offset, &result);
+    return (int32_t)result;
+  };
   while (offset < lexData.size()) {
     OS << "  Offset: " << llvm::format_hex(offset, 2);
-    uint32_t parentId = next();
-    uint32_t varNamesCount = next();
+    int64_t parentId = next();
+    int64_t varNamesCount = next();
     OS << ", vars count: " << varNamesCount << ", lexical parent: ";
-    if (parentId == NO_PARENT) {
+    if (parentId < 0) {
       OS << "none";
     } else {
       OS << parentId;
@@ -349,9 +346,9 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
         startOffset, start.filenameId, start.sourceMappingUrlId});
   }
 
-  appendNumber<uint32_t>(sourcesData_, functionIndex);
-  appendNumber<uint32_t>(sourcesData_, start.line);
-  appendNumber<uint32_t>(sourcesData_, start.column);
+  appendSignedLEB128(sourcesData_, functionIndex);
+  appendSignedLEB128(sourcesData_, start.line);
+  appendSignedLEB128(sourcesData_, start.column);
   const DebugSourceLocation *previous = &start;
 
   for (auto &next : offsets) {
@@ -373,17 +370,14 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
     // presence of statementNo.
     ldelta = (ldelta * 2) + (sdelta != 0);
 
-    appendNumber<int32_t>(sourcesData_, adelta);
-    assert(
-        ldelta <= INT32_MAX && ldelta >= INT32_MIN &&
-        "ldelta is out of bounds");
-    appendNumber<int32_t>(sourcesData_, static_cast<int32_t>(ldelta));
-    appendNumber<int32_t>(sourcesData_, cdelta);
+    appendSignedLEB128(sourcesData_, adelta);
+    appendSignedLEB128(sourcesData_, ldelta);
+    appendSignedLEB128(sourcesData_, cdelta);
     if (sdelta)
-      appendNumber<int32_t>(sourcesData_, sdelta);
+      appendSignedLEB128(sourcesData_, sdelta);
     previous = &next;
   }
-  appendNumber<int32_t>(sourcesData_, -1);
+  appendSignedLEB128(sourcesData_, -1);
 
   return startOffset;
 }
@@ -394,8 +388,8 @@ DebugInfoGenerator::DebugInfoGenerator(UniquingStringTable &&filenameTable)
   assert(
       lexicalData_.size() == kEmptyLexicalDataOffset &&
       "Lexical data should initially be kEmptyLexicalDataOffset");
-  appendNumber<uint32_t>(lexicalData_, DebugInfo::NO_PARENT); // parent function
-  appendNumber<uint32_t>(lexicalData_, 0); // name count
+  appendSignedLEB128(lexicalData_, -1); // parent function
+  appendSignedLEB128(lexicalData_, 0); // name count
 }
 
 uint32_t DebugInfoGenerator::appendLexicalData(
@@ -406,10 +400,8 @@ uint32_t DebugInfoGenerator::appendLexicalData(
     return kEmptyLexicalDataOffset;
   }
   const uint32_t startOffset = lexicalData_.size();
-  appendNumber<uint32_t>(
-      lexicalData_, parentFunc ? *parentFunc : DebugInfo::NO_PARENT);
-  assert(names.size() <= UINT32_MAX && "Name count would overflow");
-  appendNumber<uint32_t>(lexicalData_, uint32_t(names.size()));
+  appendSignedLEB128(lexicalData_, parentFunc ? *parentFunc : int64_t(-1));
+  appendSignedLEB128(lexicalData_, names.size());
   for (Identifier name : names)
     appendString(lexicalData_, name.str());
   return startOffset;

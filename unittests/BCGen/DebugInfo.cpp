@@ -100,7 +100,7 @@ TEST(DebugInfo, TestMultipleFiles) {
 }
 
 TEST(DebugInfo, TestLargeDeltas) {
-  for (uint32_t i = 0; i < (INT32_MAX - 1) / 2; i += 123457) {
+  for (uint32_t i = 0; i < INT32_MAX; i += 123457) {
     auto dbg = makeGenerator();
     auto offset = dbg.appendSourceLocations(
         Loc{0, 1, 1, 1, 0}, 0, {Loc{2, i, i, i, 1}, Loc{4, 1, 2, 2, 1}});

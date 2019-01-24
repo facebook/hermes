@@ -56,16 +56,16 @@ function Fc() {
 // CHECK-NEXT:   Debug table ends at debugOffset {{.*}}
 // CHECK-NEXT: Debug variables table:
 // CHECK-NEXT:   Offset: 0x0, vars count: 0, lexical parent: none
-// CHECK-NEXT:   Offset: 0x8, vars count: 2, lexical parent: 0
-// CHECK-NEXT:     0x0010: "v1a"
-// CHECK-NEXT:     0x0017: "v2a"
-// CHECK-NEXT:   Offset: 0x1e, vars count: 1, lexical parent: 0
-// CHECK-NEXT:     0x0026: "v1b"
-// CHECK-NEXT:   Offset: 0x2d, vars count: 2, lexical parent: 0
-// CHECK-NEXT:     0x0035: "v1c"
-// CHECK-NEXT:     0x003c: "Fcc"
-// CHECK-NEXT:   Offset: 0x43, vars count: 1, lexical parent: 3
-// CHECK-NEXT:     0x004b: "v1cc"
+// CHECK-NEXT:   Offset: 0x2, vars count: 2, lexical parent: 0
+// CHECK-NEXT:     0x0004: "v1a"
+// CHECK-NEXT:     0x0008: "v2a"
+// CHECK-NEXT:   Offset: 0xc, vars count: 1, lexical parent: 0
+// CHECK-NEXT:     0x000e: "v1b"
+// CHECK-NEXT:   Offset: 0x12, vars count: 2, lexical parent: 0
+// CHECK-NEXT:     0x0014: "v1c"
+// CHECK-NEXT:     0x0018: "Fcc"
+// CHECK-NEXT:   Offset: 0x1c, vars count: 1, lexical parent: 3
+// CHECK-NEXT:     0x001e: "v1cc"
 
 // UNICODE:      Debug data table:
 // UNICODE-NEXT:   DebugOffset {{.*}}
@@ -76,13 +76,13 @@ function Fc() {
 // UNICODE-NEXT:   Debug table ends at debugOffset {{.*}}
 // UNICODE-NEXT: Debug variables table:
 // UNICODE-NEXT:   Offset: 0x0, vars count: 0, lexical parent: none
-// UNICODE-NEXT:   Offset: 0x8, vars count: 2, lexical parent: 0
-// UNICODE-NEXT:     0x0010: "v1a"
-// UNICODE-NEXT:     0x0017: "v2a"
-// UNICODE-NEXT:   Offset: 0x1e, vars count: 1, lexical parent: 0
-// UNICODE-NEXT:     0x0026: "v1b"
-// UNICODE-NEXT:   Offset: 0x2d, vars count: 2, lexical parent: 0
-// UNICODE-NEXT:     0x0035: "v1c"
-// UNICODE-NEXT:     0x003c: "Fcc"
-// UNICODE-NEXT:   Offset: 0x43, vars count: 1, lexical parent: 3
-// UNICODE-NEXT:     0x004b: "v1cc"
+// UNICODE-NEXT:   Offset: 0x2, vars count: 2, lexical parent: 0
+// UNICODE-NEXT:     0x0004: "v1a"
+// UNICODE-NEXT:     0x0008: "v2a"
+// UNICODE-NEXT:   Offset: 0xc, vars count: 1, lexical parent: 0
+// UNICODE-NEXT:     0x000e: "v1b"
+// UNICODE-NEXT:   Offset: 0x12, vars count: 2, lexical parent: 0
+// UNICODE-NEXT:     0x0014: "v1c"
+// UNICODE-NEXT:     0x0018: "Fcc"
+// UNICODE-NEXT:   Offset: 0x1c, vars count: 1, lexical parent: 3
+// UNICODE-NEXT:     0x001e: "v1cc"
