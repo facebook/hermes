@@ -85,50 +85,6 @@ emitStore(IRBuilder &builder, Value *storedValue, Value *ptr) {
 // collide with legal label names.
 static const char *AnonymousStatementLabelName = " anonymous label ";
 
-/// This visitor structs collects decleration within a single closure without
-/// descending into child closures.
-/// Details: http://www.w3schools.com/js/js_hoisting.asp
-struct DeclHoisting {
-  /// The list of collected identifiers (variables and functions).
-  llvm::SmallVector<ESTree::VariableDeclaratorNode *, 8> decls{};
-
-  /// A list of functions that need to be hoisted and materialized before we
-  /// can generate the rest of the function.
-  llvm::SmallVector<ESTree::FunctionDeclarationNode *, 8> closures;
-
-  explicit DeclHoisting() = default;
-  ~DeclHoisting() = default;
-
-  /// Extract the variable name from the nodes that can define new variables.
-  /// The nodes that can define a new variable in the scope are:
-  /// VariableDeclarator and FunctionDeclaration>
-  void collectDecls(ESTree::Node *V) {
-    if (auto VD = dyn_cast<ESTree::VariableDeclaratorNode>(V)) {
-      return decls.push_back(VD);
-    }
-
-    if (auto FD = dyn_cast<ESTree::FunctionDeclarationNode>(V)) {
-      return closures.push_back(FD);
-    }
-  }
-
-  bool shouldVisit(ESTree::Node *V) {
-    // Collect declared names, even if we don't descend into children nodes.
-    collectDecls(V);
-
-    // Do not descend to child closures because the variables they define are
-    // not exposed to the outside function.
-    if (isa<ESTree::FunctionDeclarationNode>(V) ||
-        isa<ESTree::FunctionExpressionNode>(V) ||
-        isa<ESTree::ObjectMethodNode>(V))
-      return false;
-    return true;
-  }
-
-  void enter(ESTree::Node *V) {}
-  void leave(ESTree::Node *V) {}
-};
-
 /// Class that holds the target basic block for a break/continue label,
 /// as well as the depth of the nested tries where this label is defined.
 /// The tryDepth information will be needed to decide whether a goto
@@ -203,6 +159,9 @@ class ESTreeIRGen {
     /// Pointer to the "outer" object this is associated with.
     ESTreeIRGen *const irGen_;
 
+    /// Semantic info of the funciton we are emitting.
+    sem::FunctionInfo *const semInfo_;
+
     /// The old value which we save and will restore on destruction.
     FunctionContext *oldContext_;
 
@@ -245,13 +204,23 @@ class ESTreeIRGen {
 
     /// Initialize a new function context, while preserving the previous one.
     /// \param irGen the associated ESTreeIRGen object.
-    FunctionContext(ESTreeIRGen *irGen, Function *function);
+    FunctionContext(
+        ESTreeIRGen *irGen,
+        Function *function,
+        sem::FunctionInfo *semInfo);
 
     ~FunctionContext();
 
     /// The previous (outer) function context on the stack.
     FunctionContext *getPreviousContext() const {
       return oldContext_;
+    }
+
+    /// \return the associated semantic information, asserting that it is
+    /// present.
+    sem::FunctionInfo *getSemInfo() {
+      assert(semInfo_ && "semInfo is not set");
+      return semInfo_;
     }
 
     /// Start a try block, push the try data into try stack.
@@ -408,7 +377,10 @@ class ESTreeIRGen {
   void doIt();
 
   /// Perform IR generation for a given CJS module.
-  void doCJSModule(Function *topLevelFunction, llvm::StringRef filename);
+  void doCJSModule(
+      Function *topLevelFunction,
+      sem::FunctionInfo *semInfo,
+      llvm::StringRef filename);
 
   /// Perform IR generation for a lazy function.
   /// \return the newly allocated generated Function IR.
@@ -443,9 +415,9 @@ class ESTreeIRGen {
       Identifier originalName,
       Variable *lazyClosureAlias,
       bool strictMode,
+      ESTree::FunctionLikeNode *functionNode,
       const ESTree::NodeList &params,
       ESTree::Node *body,
-      ESTree::FunctionLikeNode *functionNode,
       bool lazy);
 
   /// A lower level version of `genFunctionLike` which takes an already created
@@ -461,6 +433,7 @@ class ESTreeIRGen {
   /// \param genBodyCB a callback to generate IR for the body
   void doGenFunctionLike(
       Function *NewFunc,
+      ESTree::FunctionLikeNode *functionNode,
       const ESTree::NodeList &params,
       ESTree::Node *body,
       const std::function<void(ESTree::Node *body)> &genBodyCB);
@@ -660,8 +633,10 @@ class ESTreeIRGen {
 
 ESTreeIRGen::FunctionContext::FunctionContext(
     ESTreeIRGen *irGen,
-    Function *function)
+    Function *function,
+    sem::FunctionInfo *semInfo)
     : irGen_(irGen),
+      semInfo_(semInfo),
       oldContext_(irGen->functionContext),
       builderSaveState_(irGen->Builder),
       function(function),
@@ -803,7 +778,7 @@ void ESTreeIRGen::doIt() {
         true);
 
     // Initialize the wrapper context.
-    wrapperFunctionContext.emplace(this, wrapperFunction);
+    wrapperFunctionContext.emplace(this, wrapperFunction, nullptr);
 
     // Populate it with dummy code so it doesn't crash the back-end.
     genDummyFunction(wrapperFunction);
@@ -822,7 +797,8 @@ void ESTreeIRGen::doIt() {
   Mod->setTopLelevFunction(topLevelFunction);
 
   // Function context for topLevelFunction.
-  FunctionContext topLevelFunctionContext{this, topLevelFunction};
+  FunctionContext topLevelFunctionContext{
+      this, topLevelFunction, Program->getSemInfo()};
 
   // IRGen needs a pointer to the outer-most context, which is either
   // topLevelContext or wrapperFunctionContext, depending on whether the latter
@@ -844,6 +820,7 @@ void ESTreeIRGen::doIt() {
 
   doGenFunctionLike(
       functionContext->function,
+      Program,
       ESTree::NodeList{},
       Program,
       [this](ESTree::Node *body) {
@@ -865,12 +842,13 @@ void ESTreeIRGen::doIt() {
 
 void ESTreeIRGen::doCJSModule(
     Function *topLevelFunction,
+    sem::FunctionInfo *semInfo,
     llvm::StringRef filename) {
   assert(Root && "no root in ESTreeIRGen");
   auto *func = cast<ESTree::FunctionExpressionNode>(Root);
   assert(func && "doCJSModule without a module");
 
-  FunctionContext topLevelFunctionContext{this, topLevelFunction};
+  FunctionContext topLevelFunctionContext{this, topLevelFunction, semInfo};
   llvm::SaveAndRestore<FunctionContext *> saveTopLevelContext(
       topLevelContext, &topLevelFunctionContext);
 
@@ -879,9 +857,9 @@ void ESTreeIRGen::doCJSModule(
       functionName,
       nullptr,
       ESTree::isStrict(func->strictness),
+      func,
       func->_params,
       func->_body,
-      func,
       Mod->getContext().isLazyCompilation());
 
   Builder.getModule()->addCJSModule(
@@ -894,7 +872,7 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
   Function *topLevel = Builder.createTopLevelFunction(lazyData->strictMode, {});
   genDummyFunction(topLevel);
 
-  FunctionContext topLevelFunctionContext{this, topLevel};
+  FunctionContext topLevelFunctionContext{this, topLevel, nullptr};
 
   // Save the top-level context, but ensure it doesn't outlive what it is
   // pointing to.
@@ -944,9 +922,9 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
       lazyData->originalName,
       parentVar,
       lazyData->strictMode,
+      node,
       *params,
       body,
-      node,
       false);
 }
 
@@ -984,9 +962,9 @@ void ESTreeIRGen::genFunctionDeclaration(
       functionName,
       nullptr,
       ESTree::isStrict(func->strictness),
+      func,
       func->_params,
       func->_body,
-      func,
       Mod->getContext().isLazyCompilation());
 
   // Store the newly created closure into a frame variable with the same name.
@@ -1025,9 +1003,9 @@ Function *ESTreeIRGen::genFunctionLike(
     Identifier originalName,
     Variable *lazyClosureAlias,
     bool strictMode,
+    ESTree::FunctionLikeNode *functionNode,
     const ESTree::NodeList &params,
     ESTree::Node *body,
-    ESTree::FunctionLikeNode *functionNode,
     bool lazy) {
   assert(functionNode && "Function AST cannot be null");
 
@@ -1055,10 +1033,15 @@ Function *ESTreeIRGen::genFunctionLike(
     return newFunction;
   }
 
-  FunctionContext newFunctionContext{this, newFunction};
+  FunctionContext newFunctionContext{
+      this, newFunction, functionNode->getSemInfo()};
 
   doGenFunctionLike(
-      newFunctionContext.function, params, body, [this](ESTree::Node *body) {
+      newFunctionContext.function,
+      functionNode,
+      params,
+      body,
+      [this](ESTree::Node *body) {
         DEBUG(dbgs() << "IRGen function body.\n");
         // irgen the rest of the body.
         genStatement(body);
@@ -1106,13 +1089,14 @@ std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
 
 void ESTreeIRGen::doGenFunctionLike(
     Function *NewFunc,
+    ESTree::FunctionLikeNode *functionNode,
     const ESTree::NodeList &params,
     ESTree::Node *body,
     const std::function<void(ESTree::Node *body)> &genBodyCB) {
-  DeclHoisting DH;
-  body->visit(DH);
+  auto *semInfo = functionContext->getSemInfo();
   DEBUG(
-      dbgs() << "Hoisting " << (DH.decls.size() + DH.closures.size())
+      dbgs() << "Hoisting "
+             << (semInfo->decls.size() + semInfo->closures.size())
              << " variable decls.\n");
 
   Builder.setLocation(NewFunc->getSourceRange().Start);
@@ -1127,7 +1111,7 @@ void ESTreeIRGen::doGenFunctionLike(
 
     // Create variable declarations for each of the hoisted variables and
     // functions. Initialize only the variables to undefined.
-    for (auto *vd : DH.decls) {
+    for (auto *vd : semInfo->decls) {
       auto res =
           declareVariableOrGlobalProperty(NewFunc, getNameFieldFromID(vd->_id));
       // If this is not a frame variable or it was already declared, skip.
@@ -1138,7 +1122,7 @@ void ESTreeIRGen::doGenFunctionLike(
       // Otherwise, initialize it to undefined.
       Builder.createStoreFrameInst(Builder.getLiteralUndefined(), var);
     }
-    for (auto *fd : DH.closures)
+    for (auto *fd : semInfo->closures)
       declareVariableOrGlobalProperty(NewFunc, getNameFieldFromID(fd->_id));
 
     // Construct the parameter list. Create function parameters and register
@@ -1164,7 +1148,7 @@ void ESTreeIRGen::doGenFunctionLike(
 
     // Generate and initialize the code for the hoisted function declarations
     // before generating the rest of the body.
-    for (auto funcDecl : DH.closures) {
+    for (auto funcDecl : semInfo->closures) {
       genFunctionDeclaration(funcDecl);
     }
 
@@ -2099,9 +2083,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             Builder.createIdentifier("get " + keyStr.str()),
             nullptr,
             ESTree::isStrict(propValue->getterNode->strictness),
+            propValue->getterNode,
             propValue->getterNode->_params,
             propValue->getterNode->_body,
-            propValue->getterNode,
             Mod->getContext().isLazyCompilation());
 
         getter = Builder.createCreateFunctionInst(newFunc);
@@ -2112,9 +2096,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             Builder.createIdentifier("set " + keyStr.str()),
             nullptr,
             ESTree::isStrict(propValue->setterNode->strictness),
+            propValue->setterNode,
             propValue->setterNode->_params,
             propValue->setterNode->_body,
-            propValue->setterNode,
             Mod->getContext().isLazyCompilation());
 
         setter = Builder.createCreateFunctionInst(newFunc);
@@ -2802,9 +2786,9 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *Expr, Identifier nameHint) {
         originalNameIden,
         tempClosureVar,
         ESTree::isStrict(FE->strictness),
+        FE,
         FE->_params,
         FE->_body,
-        FE,
         Mod->getContext().isLazyCompilation());
 
     Value *func = Builder.createCreateFunctionInst(newFunc);
@@ -2944,6 +2928,52 @@ GlobalObjectProperty *ESTreeIRGen::declareAmbientGlobalProperty(
   return prop;
 }
 
+namespace {
+/// This visitor structs collects declarations within a single closure without
+/// descending into child closures.
+struct DeclHoisting {
+  /// The list of collected identifiers (variables and functions).
+  llvm::SmallVector<ESTree::VariableDeclaratorNode *, 8> decls{};
+
+  /// A list of functions that need to be hoisted and materialized before we
+  /// can generate the rest of the function.
+  llvm::SmallVector<ESTree::FunctionDeclarationNode *, 8> closures;
+
+  explicit DeclHoisting() = default;
+  ~DeclHoisting() = default;
+
+  /// Extract the variable name from the nodes that can define new variables.
+  /// The nodes that can define a new variable in the scope are:
+  /// VariableDeclarator and FunctionDeclaration>
+  void collectDecls(ESTree::Node *V) {
+    if (auto VD = dyn_cast<ESTree::VariableDeclaratorNode>(V)) {
+      return decls.push_back(VD);
+    }
+
+    if (auto FD = dyn_cast<ESTree::FunctionDeclarationNode>(V)) {
+      return closures.push_back(FD);
+    }
+  }
+
+  bool shouldVisit(ESTree::Node *V) {
+    // Collect declared names, even if we don't descend into children nodes.
+    collectDecls(V);
+
+    // Do not descend to child closures because the variables they define are
+    // not exposed to the outside function.
+    if (isa<ESTree::FunctionDeclarationNode>(V) ||
+        isa<ESTree::FunctionExpressionNode>(V) ||
+        isa<ESTree::ObjectMethodNode>(V))
+      return false;
+    return true;
+  }
+
+  void enter(ESTree::Node *V) {}
+  void leave(ESTree::Node *V) {}
+};
+
+} // anonymous namespace.
+
 void ESTreeIRGen::processDeclarationFile(ESTree::FileNode *fileNode) {
   auto File = dyn_cast_or_null<ESTree::FileNode>(fileNode);
   if (!File)
@@ -3053,7 +3083,7 @@ void hermes::generateIRForCJSModule(
     const DeclarationFileListTy &declFileList) {
   // Generate IR into the module M.
   ESTreeIRGen generator(node, declFileList, M, {});
-  return generator.doCJSModule(topLevelFunction, filename);
+  return generator.doCJSModule(topLevelFunction, node->getSemInfo(), filename);
 }
 
 /// Generate a function which immediately throws the specified SyntaxError

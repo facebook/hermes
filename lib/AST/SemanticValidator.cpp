@@ -162,6 +162,7 @@ class SemanticValidator {
 
   void visit(VariableDeclaratorNode *varDecl) {
     validateDeclarationName(varDecl->_id);
+    curFunction()->semInfo->decls.push_back(varDecl);
     visitESTreeChildren(*this, varDecl);
   }
 
@@ -172,6 +173,8 @@ class SemanticValidator {
 
   /// Process a function declaration by creating a new FunctionContext.
   void visit(FunctionDeclarationNode *funcDecl) {
+    if (funcCtx_)
+      curFunction()->semInfo->closures.push_back(funcDecl);
     visitFunction(
         funcDecl,
         funcDecl->_id,
