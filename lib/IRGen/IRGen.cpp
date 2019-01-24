@@ -201,20 +201,20 @@ class ESTreeIRGen {
   /// function context.
   class FunctionContext {
     /// Pointer to the "outer" object this is associated with.
-    ESTreeIRGen *irGen;
+    ESTreeIRGen *const irGen_;
 
     /// The old value which we save and will restore on destruction.
-    FunctionContext *oldContext;
+    FunctionContext *oldContext_;
 
     /// As we descend into a new function, we save the state of the builder
     /// here. It is automatically restored once we are done with the function.
-    IRBuilder::SaveRestore builderSaveState;
+    IRBuilder::SaveRestore builderSaveState_;
 
     /// Stack to store information for nested tries.
-    TryDataStackType tryDataStack{};
+    TryDataStackType tryDataStack_{};
 
     /// Iterator to iterate the try stack starting from top of stack.
-    TryDataStackType::reverse_iterator tryReverseIterator;
+    TryDataStackType::reverse_iterator tryReverseIterator_;
 
    public:
     /// This is the actual function associated with this context.
@@ -243,6 +243,17 @@ class ESTreeIRGen {
     /// time we encounter usage of 'arguments'.
     CreateArgumentsInst *createdArguments{};
 
+    /// Initialize a new function context, while preserving the previous one.
+    /// \param irGen the associated ESTreeIRGen object.
+    FunctionContext(ESTreeIRGen *irGen, Function *function);
+
+    ~FunctionContext();
+
+    /// The previous (outer) function context on the stack.
+    FunctionContext *getPreviousContext() const {
+      return oldContext_;
+    }
+
     /// Start a try block, push the try data into try stack.
     void pushTryData(TryData *tryData);
 
@@ -263,16 +274,6 @@ class ESTreeIRGen {
     /// \p
     /// hint appears in the name.
     Identifier genAnonymousLabelName(StringRef const hint);
-
-    /// The previous (outer) function context on the stack.
-    FunctionContext *getPreviousContext() const {
-      return oldContext;
-    }
-
-    /// Initialize a new function context, while preserving the previous one.
-    /// \param irGen the associated ESTreeIRGen object.
-    FunctionContext(ESTreeIRGen *irGen, Function *function);
-    ~FunctionContext();
   };
 
   /// This is a utility class that's related to the ES5 Reference type without
@@ -432,10 +433,10 @@ class ESTreeIRGen {
   ///   contain the closure being created. It is non-null only if an alias
   ///   binding from  \c originalName to the variable was created and is
   ///   available inside the closure. Used only by lazy compilation.
-  /// \param params are the formal parameters and \p body is the body of the
-  ///   closure.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
+  /// \param params are the formal parameters and \p body is the body of the
+  ///   closure.
   /// \param lazy Whether or not to compile it lazily.
   /// \returns a new Function.
   Function *genFunctionLike(
@@ -453,6 +454,8 @@ class ESTreeIRGen {
   /// accomodate generating a closure for the top level function.
   ///
   /// \param NewFunc the just created new Function in a new FunctionContext.
+  /// \param functionNode is the ESTree function node (declaration, expression,
+  ///   object method).
   /// \param params the parameter list
   /// \param body the body ESTree element
   /// \param genBodyCB a callback to generate IR for the body
@@ -658,40 +661,40 @@ class ESTreeIRGen {
 ESTreeIRGen::FunctionContext::FunctionContext(
     ESTreeIRGen *irGen,
     Function *function)
-    : irGen(irGen),
-      oldContext(irGen->functionContext),
-      builderSaveState(irGen->Builder),
+    : irGen_(irGen),
+      oldContext_(irGen->functionContext),
+      builderSaveState_(irGen->Builder),
       function(function),
       scope(irGen->nameTable_) {
   irGen->functionContext = this;
 }
 
 ESTreeIRGen::FunctionContext::~FunctionContext() {
-  irGen->functionContext = oldContext;
+  irGen_->functionContext = oldContext_;
 }
 
 void ESTreeIRGen::FunctionContext::pushTryData(TryData *tryData) {
-  tryDataStack.push_back(tryData);
+  tryDataStack_.push_back(tryData);
 }
 
 unsigned ESTreeIRGen::FunctionContext::getCurrentTryDepth() const {
-  return tryDataStack.size();
+  return tryDataStack_.size();
 }
 
 void ESTreeIRGen::FunctionContext::popTry() {
-  tryDataStack.pop_back();
+  tryDataStack_.pop_back();
 }
 
 void ESTreeIRGen::FunctionContext::startWalkingDownStack() {
-  tryReverseIterator = tryDataStack.rbegin();
+  tryReverseIterator_ = tryDataStack_.rbegin();
 }
 
 ESTreeIRGen::TryData *ESTreeIRGen::FunctionContext::nextTryData() {
-  if (tryReverseIterator == tryDataStack.rend()) {
+  if (tryReverseIterator_ == tryDataStack_.rend()) {
     return nullptr;
   }
   // Return the content in tryReverseIterator, and move tryReverseIterator.
-  return *tryReverseIterator++;
+  return *tryReverseIterator_++;
 }
 
 Identifier ESTreeIRGen::FunctionContext::genAnonymousLabelName(StringRef hint) {
