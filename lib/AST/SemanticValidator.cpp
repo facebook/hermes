@@ -185,7 +185,7 @@ class SemanticValidator {
 
   /// Ensure that the left side of for-in is an l-value.
   void visit(ForInStatementNode *forIn) {
-    SaveAndRestore<bool> saveInLoop(funcCtx_->inLoop, true);
+    SaveAndRestore<bool> saveInLoop(curFunction()->inLoop, true);
 
     if (!isa<VariableDeclarationNode>(forIn->_left))
       if (!isLValue(forIn->_left))
@@ -234,7 +234,8 @@ class SemanticValidator {
     }
 
     // Define the new label, checking for a previous definition.
-    auto insertRes = funcCtx_->labelMap.insert({id->_name, {labelKind, id}});
+    auto insertRes =
+        curFunction()->labelMap.insert({id->_name, {labelKind, id}});
     if (!insertRes.second) {
       sm_.error(
           id->getSourceRange(),
@@ -246,7 +247,7 @@ class SemanticValidator {
     // Auto-erase the label on exit, if we inserted it.
     const auto &deleter = llvm::make_scope_exit([=]() {
       if (insertRes.second)
-        funcCtx_->labelMap.erase(id->_name);
+        curFunction()->labelMap.erase(id->_name);
     });
     (void)deleter;
 
@@ -266,33 +267,33 @@ class SemanticValidator {
   }
 
   void visit(DoWhileStatementNode *loop) {
-    SaveAndRestore<bool> saveInLoop(funcCtx_->inLoop, true);
+    SaveAndRestore<bool> saveInLoop(curFunction()->inLoop, true);
     visitESTreeChildren(*this, loop);
   }
   void visit(ForStatementNode *loop) {
-    SaveAndRestore<bool> saveInLoop(funcCtx_->inLoop, true);
+    SaveAndRestore<bool> saveInLoop(curFunction()->inLoop, true);
     visitESTreeChildren(*this, loop);
   }
   void visit(WhileStatementNode *loop) {
-    SaveAndRestore<bool> saveInLoop(funcCtx_->inLoop, true);
+    SaveAndRestore<bool> saveInLoop(curFunction()->inLoop, true);
     visitESTreeChildren(*this, loop);
   }
   void visit(SwitchStatementNode *switchStmt) {
-    SaveAndRestore<bool> saveInSwitch(funcCtx_->inSwitch, true);
+    SaveAndRestore<bool> saveInSwitch(curFunction()->inSwitch, true);
     visitESTreeChildren(*this, switchStmt);
   }
 
   void visit(BreakStatementNode *breakStmt) {
     if (auto id = dyn_cast_or_null<IdentifierNode>(breakStmt->_label)) {
       // A labeled break.
-      if (!funcCtx_->labelMap.count(id->_name)) {
+      if (!curFunction()->labelMap.count(id->_name)) {
         sm_.error(
             id->getSourceRange(),
             Twine("label '") + id->_name->str() + "' is not defined");
       }
     } else {
       // Anonymous break.
-      if (!funcCtx_->inLoop && !funcCtx_->inSwitch) {
+      if (!curFunction()->inLoop && !curFunction()->inSwitch) {
         sm_.error(
             breakStmt->getSourceRange(),
             "'break' not within a loop or a switch");
@@ -305,8 +306,8 @@ class SemanticValidator {
   void visit(ContinueStatementNode *continueStmt) {
     if (auto id = dyn_cast_or_null<IdentifierNode>(continueStmt->_label)) {
       // A labeled continue.
-      auto labelIt = funcCtx_->labelMap.find(id->_name);
-      if (labelIt == funcCtx_->labelMap.end()) {
+      auto labelIt = curFunction()->labelMap.find(id->_name);
+      if (labelIt == curFunction()->labelMap.end()) {
         sm_.error(
             id->getSourceRange(),
             Twine("label '") + id->_name->str() + "' is not defined");
@@ -319,7 +320,7 @@ class SemanticValidator {
       }
     } else {
       // Anonymous continue.
-      if (!funcCtx_->inLoop) {
+      if (!curFunction()->inLoop) {
         sm_.error(
             continueStmt->getSourceRange(), "'continue' not within a loop");
       }
@@ -328,7 +329,7 @@ class SemanticValidator {
   }
 
   void visit(ReturnStatementNode *returnStmt) {
-    if (funcCtx_->isGlobalScope())
+    if (curFunction()->isGlobalScope())
       sm_.error(returnStmt->getSourceRange(), "'return' not in a function");
     visitESTreeChildren(*this, returnStmt);
   }
@@ -336,7 +337,8 @@ class SemanticValidator {
   void visit(UnaryExpressionNode *unaryExpr) {
     // Check for unqualified delete in strict mode.
     if (unaryExpr->_operator == identDelete_) {
-      if (funcCtx_->strictMode && isa<IdentifierNode>(unaryExpr->_argument)) {
+      if (curFunction()->strictMode &&
+          isa<IdentifierNode>(unaryExpr->_argument)) {
         sm_.error(
             unaryExpr->getSourceRange(),
             "'delete' of a variable is not allowed in strict mode");
@@ -346,6 +348,15 @@ class SemanticValidator {
   }
 
  private:
+  inline FunctionContext *curFunction() {
+    assert(funcCtx_ && "No active function context");
+    return funcCtx_;
+  }
+  inline const FunctionContext *curFunction() const {
+    assert(funcCtx_ && "No active function context");
+    return funcCtx_;
+  }
+
   /// Process a function declaration by creating a new FunctionContext. Update
   /// the context with the strictness of the function.
   /// \param node the current node
@@ -408,7 +419,7 @@ class SemanticValidator {
         break;
 
       if (*directive == identUseStrict_)
-        funcCtx_->strictMode = true;
+        curFunction()->strictMode = true;
     }
   }
 
@@ -430,7 +441,7 @@ class SemanticValidator {
 
     // 'eval' cannot be used as a variable in strict mode. If it is disabled we
     // we don't report an error because it will be reported separately.
-    if (idNode->_name == identEval_ && funcCtx_->strictMode &&
+    if (idNode->_name == identEval_ && curFunction()->strictMode &&
         astContext_.getEnableEval())
       return false;
 
@@ -446,12 +457,12 @@ class SemanticValidator {
     auto *idNode = cast<IdentifierNode>(node);
 
     // 'arguments' cannot be redeclared in strict mode.
-    if (idNode->_name == identArguments_ && funcCtx_->strictMode)
+    if (idNode->_name == identArguments_ && curFunction()->strictMode)
       return false;
 
     // 'eval' cannot be redeclared in strict mode. If it is disabled we
     // we don't report an error because it will be reported separately.
-    if (idNode->_name == identEval_ && funcCtx_->strictMode &&
+    if (idNode->_name == identEval_ && curFunction()->strictMode &&
         astContext_.getEnableEval())
       return false;
 
