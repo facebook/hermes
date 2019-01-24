@@ -594,12 +594,12 @@ void GenGC::compact(const SweepResult &sweepResult) {
   // preserve this order here, so that we re-associate the correct VTable
   // pointers, and match up the chunks we used with the segments they were
   // created from.
-  auto usedSegments =
-      CompactionResult::range(oldGen_.usedSegments(), youngGen_.usedSegments());
-
-  for (auto &segment : usedSegments) {
+  auto doCompaction = [&vTables](AlignedHeapSegment &segment) {
     segment.compact(vTables);
-  }
+  };
+
+  oldGen_.forUsedSegments(doCompaction);
+  youngGen_.forUsedSegments(doCompaction);
 
   oldGen_.recordLevelAfterCompaction(chunks);
   youngGen_.recordLevelAfterCompaction(chunks);
@@ -1163,8 +1163,8 @@ void GenGC::claimAllocContext() {
 }
 
 void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
-  // We need to yield/claim at outer scope, to cover the
-  // youngGen_.usedSegments() call below.
+  // We need to yield/claim at outer scope, to cover the calls to
+  // forUsedSegments below.
   AllocContextYieldThenClaim yielder(this);
 #ifndef NDEBUG
   // We'll say we're in GC even though we're not, to avoid assertion failures.
@@ -1177,12 +1177,13 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   std::unordered_map<const void *, uint64_t> segmentAddressToIndex;
   {
     uint64_t segmentNum = 0;
-    for (const auto &seg : youngGen_.usedSegments()) {
+    auto registerSegment = [&segmentAddressToIndex,
+                            &segmentNum](AlignedHeapSegment &seg) {
       segmentAddressToIndex[seg.lowLim()] = segmentNum++;
-    }
-    for (const auto &seg : oldGen_.usedSegments()) {
-      segmentAddressToIndex[seg.lowLim()] = segmentNum++;
-    }
+    };
+
+    youngGen_.forUsedSegments(registerSegment);
+    oldGen_.forUsedSegments(registerSegment);
   }
   HeapInfo info;
   getHeapInfo(info);

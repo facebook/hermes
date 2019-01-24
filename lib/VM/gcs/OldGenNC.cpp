@@ -154,9 +154,9 @@ gcheapsize_t OldGen::bytesAllocatedSinceLastGC() const {
 }
 
 void OldGen::forAllObjs(const std::function<void(GCCell *)> &callback) {
-  for (auto &segment : usedSegments()) {
+  forUsedSegments([&callback](AlignedHeapSegment &segment) {
     segment.forAllObjs(callback);
-  }
+  });
 }
 
 #ifndef NDEBUG
@@ -301,11 +301,9 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
   if (kVerifyCardTable) {
     VerifyCardDirtyAcceptor acceptor(*gc_);
     GenGC *gc = gc_;
-    for (auto &segment : usedSegments()) {
-      segment.forAllObjs([gc, &acceptor](GCCell *cell) {
-        GCBase::markCell(cell, gc, acceptor);
-      });
-    }
+    forAllObjs([gc, &acceptor](GCCell *cell) {
+      GCBase::markCell(cell, gc, acceptor);
+    });
   }
 
   verifyCardTableBoundaries();
@@ -458,9 +456,9 @@ void OldGen::youngGenTransitiveClosure(
 #ifdef HERMES_SLOW_DEBUG
 void OldGen::verifyCardTableBoundaries() const {
   if (kVerifyCardTableBoundaries) {
-    for (const auto &segment : usedSegments()) {
+    forUsedSegments([](const AlignedHeapSegment &segment) {
       segment.cardTable().verifyBoundaries(segment.start(), segment.level());
-    }
+    });
   }
 }
 #endif
@@ -468,16 +466,16 @@ void OldGen::verifyCardTableBoundaries() const {
 void OldGen::sweepAndInstallForwardingPointers(
     GC *gc,
     SweepResult *sweepResult) {
-  for (auto &segment : usedSegments()) {
+  forUsedSegments([gc, sweepResult](AlignedHeapSegment &segment) {
     segment.sweepAndInstallForwardingPointers(gc, sweepResult);
-  }
+  });
 }
 
 void OldGen::updateReferences(GC *gc, SweepResult::VTablesRemaining &vTables) {
   auto acceptor = getFullMSCUpdateAcceptor(*gc);
-  for (auto &segment : usedSegments()) {
+  forUsedSegments([&acceptor, gc, &vTables](AlignedHeapSegment &segment) {
     segment.updateReferences(gc, acceptor.get(), vTables);
-  }
+  });
   updateFinalizableCellListReferences();
 }
 
@@ -537,13 +535,13 @@ void OldGen::moveHeap(GC *gc, ptrdiff_t moveHeapDelta) {
 }
 
 void OldGen::updateCardTablesAfterCompaction(bool youngIsEmpty) {
-  for (auto &segment : usedSegments()) {
+  forUsedSegments([youngIsEmpty](AlignedHeapSegment &segment) {
     if (youngIsEmpty) {
       segment.cardTable().clear();
     } else {
       segment.cardTable().updateAfterCompaction(segment.level());
     }
-  }
+  });
 
 #ifdef HERMES_SLOW_DEBUG
   verifyCardTableBoundaries();
@@ -551,9 +549,9 @@ void OldGen::updateCardTablesAfterCompaction(bool youngIsEmpty) {
 }
 
 void OldGen::recreateCardTableBoundaries() {
-  for (auto &segment : usedSegments()) {
+  forUsedSegments([](AlignedHeapSegment &segment) {
     segment.recreateCardTableBoundaries();
-  }
+  });
 
   updateCardTableBoundary();
 #ifdef HERMES_SLOW_DEBUG
@@ -728,11 +726,13 @@ AllocResult OldGen::allocRawSlow(uint32_t size, HasFinalizer hasFinalizer) {
 #ifdef HERMES_SLOW_DEBUG
 void OldGen::checkWellFormed(const GC *gc) const {
   uint64_t totalExtSize = 0;
-  for (auto &segment : usedSegments()) {
+
+  forUsedSegments([&totalExtSize, gc](const AlignedHeapSegment &segment) {
     uint64_t extSize = 0;
     segment.checkWellFormed(gc, &extSize);
     totalExtSize += extSize;
-  }
+  });
+
   assert(totalExtSize == externalMemory());
   checkFinalizableObjectsListWellFormed();
 }
