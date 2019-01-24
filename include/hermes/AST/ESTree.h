@@ -38,82 +38,14 @@ using NodePtr = Node *;
 using NodeList = llvm::simple_ilist<Node>;
 
 enum class NodeKind {
-  /// The base of the node hierarchy.
-  Node,
-
-  /// We use this in cases when a node should be missing.
-  Empty,
-
-  /// The top-level file scope.
-  File,
-
-  /// Metadata nodes that we are currently not handling, like debug log.
-  Metadata,
-
-  /// The rest of the nodes, as defined in:
-  /// https://github.com/estree/estree/blob/master/spec.md
-
-  StringLiteral,
-  NumericLiteral,
-  BooleanLiteral,
-  NullLiteral,
-  DirectiveLiteral,
-  Directive,
-
-  ArrayExpression,
-  AssignmentExpression,
-  BinaryExpression,
-  BlockStatement,
-  BreakStatement,
-  CallExpression,
-  CatchClause,
-  ConditionalExpression,
-  ContinueStatement,
-  DebuggerStatement,
-  Declaration,
-  DoWhileStatement,
-  EmptyStatement,
-  Expression,
-  ExpressionStatement,
-  ForInStatement,
-  ForStatement,
-  FunctionDeclaration,
-  FunctionExpression,
-  Function,
-  Identifier,
-  IfStatement,
-  LabeledStatement,
-  Literal,
-  LogicalExpression,
-  MemberExpression,
-  NewExpression,
-  ObjectExpression,
-  Program,
-  Property,
-  RegExpLiteral,
-  ReturnStatement,
-  SequenceExpression,
-  Statement,
-  SwitchCase,
-  SwitchStatement,
-  ThisExpression,
-  ThrowStatement,
-  TryStatement,
-  UnaryExpression,
-  UpdateExpression,
-  VariableDeclaration,
-  VariableDeclarator,
-  WhileStatement,
-  WithStatement,
-  ObjectProperty,
-  ObjectMethod,
-  TypeAnnotation,
-  StringTypeAnnotation,
-  NumberTypeAnnotation,
-  GenericTypeAnnotation,
-  BooleanTypeAnnotation,
-  NullLiteralTypeAnnotation,
-  AnyTypeAnnotation
+#define ESTREE_FIRST(NAME, ...) _##NAME##_First,
+#define ESTREE_LAST(NAME) _##NAME##_Last,
+#define ESTREE_NODE_0_ARGS(NAME, ...) NAME,
+#define ESTREE_NODE_1_ARGS(NAME, ...) NAME,
+#define ESTREE_NODE_2_ARGS(NAME, ...) NAME,
+#define ESTREE_NODE_3_ARGS(NAME, ...) NAME,
+#define ESTREE_NODE_4_ARGS(NAME, ...) NAME,
+#include "ESTree.def"
 };
 
 /// This is the base class of all ESTree nodes.
@@ -125,9 +57,7 @@ class Node : public llvm::ilist_node<Node> {
   SMLoc debugLoc_{};
 
  public:
-  explicit Node(NodeKind kind) : kind_(kind) {
-    assert(kind != NodeKind::Node && "Node type must be concrete");
-  }
+  explicit Node(NodeKind kind) : kind_(kind) {}
 
   void setSourceRange(SMRange rng) {
     sourceRange_ = rng;
@@ -160,8 +90,8 @@ class Node : public llvm::ilist_node<Node> {
       default:
         llvm_unreachable("invalid node kind");
 
-#define ESTREE_NODE_0_ARGS(NAME) \
-  case NodeKind::NAME:           \
+#define ESTREE_NODE_0_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
     return #NAME;
 #define ESTREE_NODE_1_ARGS(NAME, ...) \
   case NodeKind::NAME:                \
@@ -255,11 +185,12 @@ void ESTreeVisit(Visitor &V, NodeList &Lst) {
 }
 
 // Forward declarations of all nodes.
-#define ESTREE_NODE_0_ARGS(NAME) struct NAME##Node;
-#define ESTREE_NODE_1_ARGS(NAME, ...) struct NAME##Node;
-#define ESTREE_NODE_2_ARGS(NAME, ...) struct NAME##Node;
-#define ESTREE_NODE_3_ARGS(NAME, ...) struct NAME##Node;
-#define ESTREE_NODE_4_ARGS(NAME, ...) struct NAME##Node;
+#define ESTREE_FIRST(NAME, ...) class NAME##Node;
+#define ESTREE_NODE_0_ARGS(NAME, ...) class NAME##Node;
+#define ESTREE_NODE_1_ARGS(NAME, ...) class NAME##Node;
+#define ESTREE_NODE_2_ARGS(NAME, ...) class NAME##Node;
+#define ESTREE_NODE_3_ARGS(NAME, ...) class NAME##Node;
+#define ESTREE_NODE_4_ARGS(NAME, ...) class NAME##Node;
 
 #include "ESTree.def"
 
@@ -311,28 +242,32 @@ struct DecoratorTrait {
   using Type = EmptyDecoration;
 };
 
-struct FunctionDeclarationDecoration {
-  Strictness strictness{Strictness::NotSet};
-};
-struct VariableDeclaratorDecoration {};
-struct ProgramDeclarationDecoration {
-  Strictness strictness{Strictness::NotSet};
-};
-struct ObjectMethodDecoration {
-  Strictness strictness{Strictness::NotSet};
-};
-struct FunctionExpressionDecoration {
+/// Decoration for all function-like nodes.
+class FunctionLikeDecoration {
+ public:
   Strictness strictness{Strictness::NotSet};
 };
 
-struct BlockStatementDecoration {
+/// Decoration for all statements.
+/// NOTE: This decoration is required by the Statement base node, so we need to
+/// provide it even if it is empty.
+class StatementDecoration {};
+
+/// Decoration for all loop statements.
+/// NOTE: This decoration is required by the LoopStatement base node, so we need
+/// to  provide it even if it is empty.
+class LoopStatementDecoration {};
+
+class BlockStatementDecoration {
+ public:
   /// True if this is a function body that was pruned while pre-parsing.
   bool isLazyFunctionBody{false};
   /// The source buffer id in which this block was found (see \p SourceMgr ).
   uint32_t bufferId;
 };
 
-struct StringLiteralDecoration {
+class StringLiteralDecoration {
+ public:
   /// Indicates whether the string literal originally contained any escapes
   /// or new line continuations. We need this in order to detect directives
   /// (ES5.1. 14.1).
@@ -342,26 +277,6 @@ struct StringLiteralDecoration {
   bool directive = false;
 };
 
-template <>
-struct DecoratorTrait<FunctionDeclarationNode> {
-  using Type = FunctionDeclarationDecoration;
-};
-template <>
-struct DecoratorTrait<VariableDeclaratorNode> {
-  using Type = VariableDeclaratorDecoration;
-};
-template <>
-struct DecoratorTrait<ProgramNode> {
-  using Type = ProgramDeclarationDecoration;
-};
-template <>
-struct DecoratorTrait<ObjectMethodNode> {
-  using Type = ObjectMethodDecoration;
-};
-template <>
-struct DecoratorTrait<FunctionExpressionNode> {
-  using Type = FunctionExpressionDecoration;
-};
 template <>
 struct DecoratorTrait<StringLiteralNode> {
   using Type = StringLiteralDecoration;
@@ -373,156 +288,177 @@ struct DecoratorTrait<BlockStatementNode> {
 
 } // namespace detail
 
-#define ESTREE_NODE_0_ARGS(NAME)                                        \
-  struct NAME##Node : public Node,                                      \
-                      public detail::DecoratorTrait<NAME##Node>::Type { \
-    explicit NAME##Node() : Node(NodeKind::NAME) {}                     \
-    static bool classof(const Node *V) {                                \
-      return V->getKind() == NodeKind::NAME;                            \
-    }                                                                   \
-    template <class Visitor>                                            \
-    void visit(Visitor &V) {                                            \
-      if (!V.shouldVisit(this)) {                                       \
-        return;                                                         \
-      }                                                                 \
-      V.enter(this);                                                    \
-      V.leave(this);                                                    \
-    }                                                                   \
+/// A convenince alias for the base node.
+using BaseNode = Node;
+
+#define ESTREE_FIRST(NAME, BASE)                                          \
+  class NAME##Node : public BASE##Node, public detail::NAME##Decoration { \
+   public:                                                                \
+    explicit NAME##Node(NodeKind kind) : BASE##Node(kind) {}              \
+    static bool classof(const Node *V) {                                  \
+      auto kind = V->getKind();                                           \
+      return NodeKind::_##NAME##_First < kind &&                          \
+          kind < NodeKind::_##NAME##_Last;                                \
+    }                                                                     \
   };
 
-#define ESTREE_NODE_1_ARGS(NAME, ARG0TY, ARG0NM, ARG0OPT)               \
-  struct NAME##Node : public Node,                                      \
-                      public detail::DecoratorTrait<NAME##Node>::Type { \
-    ARG0TY _##ARG0NM;                                                   \
-    explicit NAME##Node(detail::ParamTrait<ARG0TY>::Type ARG0NM_)       \
-        : Node(NodeKind::NAME), _##ARG0NM(std::move(ARG0NM_)) {}        \
-    template <class Visitor>                                            \
-    void visit(Visitor &V) {                                            \
-      if (!V.shouldVisit(this)) {                                       \
-        return;                                                         \
-      }                                                                 \
-      V.enter(this);                                                    \
-      ESTreeVisit(V, _##ARG0NM);                                        \
-      V.leave(this);                                                    \
-    }                                                                   \
-    static bool classof(const Node *V) {                                \
-      return V->getKind() == NodeKind::NAME;                            \
-    }                                                                   \
+#define ESTREE_NODE_0_ARGS(NAME, BASE)                                 \
+  class NAME##Node : public BASE##Node,                                \
+                     public detail::DecoratorTrait<NAME##Node>::Type { \
+   public:                                                             \
+    explicit NAME##Node() : BASE##Node(NodeKind::NAME) {}              \
+    static bool classof(const Node *V) {                               \
+      return V->getKind() == NodeKind::NAME;                           \
+    }                                                                  \
+    template <class Visitor>                                           \
+    void visit(Visitor &V) {                                           \
+      if (!V.shouldVisit(this)) {                                      \
+        return;                                                        \
+      }                                                                \
+      V.enter(this);                                                   \
+      V.leave(this);                                                   \
+    }                                                                  \
   };
 
-#define ESTREE_NODE_2_ARGS(                                             \
-    NAME, ARG0TY, ARG0NM, ARG0OPT, ARG1TY, ARG1NM, ARG1OPT)             \
-  struct NAME##Node : public Node,                                      \
-                      public detail::DecoratorTrait<NAME##Node>::Type { \
-    ARG0TY _##ARG0NM;                                                   \
-    ARG1TY _##ARG1NM;                                                   \
-    explicit NAME##Node(                                                \
-        ARG0TY ARG0NM_,                                                 \
-        detail::ParamTrait<ARG1TY>::Type ARG1NM_)                       \
-        : Node(NodeKind::NAME),                                         \
-          _##ARG0NM(ARG0NM_),                                           \
-          _##ARG1NM(std::move(ARG1NM_)) {}                              \
-    template <class Visitor>                                            \
-    void visit(Visitor &V) {                                            \
-      if (!V.shouldVisit(this)) {                                       \
-        return;                                                         \
-      }                                                                 \
-      V.enter(this);                                                    \
-      ESTreeVisit(V, _##ARG0NM);                                        \
-      ESTreeVisit(V, _##ARG1NM);                                        \
-      V.leave(this);                                                    \
-    }                                                                   \
-    static bool classof(const Node *V) {                                \
-      return V->getKind() == NodeKind::NAME;                            \
-    }                                                                   \
+#define ESTREE_NODE_1_ARGS(NAME, BASE, ARG0TY, ARG0NM, ARG0OPT)        \
+  class NAME##Node : public BASE##Node,                                \
+                     public detail::DecoratorTrait<NAME##Node>::Type { \
+   public:                                                             \
+    ARG0TY _##ARG0NM;                                                  \
+    explicit NAME##Node(detail::ParamTrait<ARG0TY>::Type ARG0NM_)      \
+        : BASE##Node(NodeKind::NAME), _##ARG0NM(std::move(ARG0NM_)) {} \
+    template <class Visitor>                                           \
+    void visit(Visitor &V) {                                           \
+      if (!V.shouldVisit(this)) {                                      \
+        return;                                                        \
+      }                                                                \
+      V.enter(this);                                                   \
+      ESTreeVisit(V, _##ARG0NM);                                       \
+      V.leave(this);                                                   \
+    }                                                                  \
+    static bool classof(const Node *V) {                               \
+      return V->getKind() == NodeKind::NAME;                           \
+    }                                                                  \
   };
 
-#define ESTREE_NODE_3_ARGS(                                             \
-    NAME,                                                               \
-    ARG0TY,                                                             \
-    ARG0NM,                                                             \
-    ARG0OPT,                                                            \
-    ARG1TY,                                                             \
-    ARG1NM,                                                             \
-    ARG1OPT,                                                            \
-    ARG2TY,                                                             \
-    ARG2NM,                                                             \
-    ARG2OPT)                                                            \
-  struct NAME##Node : public Node,                                      \
-                      public detail::DecoratorTrait<NAME##Node>::Type { \
-    ARG0TY _##ARG0NM;                                                   \
-    ARG1TY _##ARG1NM;                                                   \
-    ARG2TY _##ARG2NM;                                                   \
-    explicit NAME##Node(                                                \
-        ARG0TY ARG0NM_,                                                 \
-        detail::ParamTrait<ARG1TY>::Type ARG1NM_,                       \
-        ARG2TY ARG2NM_)                                                 \
-        : Node(NodeKind::NAME),                                         \
-          _##ARG0NM(ARG0NM_),                                           \
-          _##ARG1NM(std::move(ARG1NM_)),                                \
-          _##ARG2NM(ARG2NM_) {}                                         \
-    template <class Visitor>                                            \
-    void visit(Visitor &V) {                                            \
-      if (!V.shouldVisit(this)) {                                       \
-        return;                                                         \
-      }                                                                 \
-      V.enter(this);                                                    \
-      ESTreeVisit(V, _##ARG0NM);                                        \
-      ESTreeVisit(V, _##ARG1NM);                                        \
-      ESTreeVisit(V, _##ARG2NM);                                        \
-      V.leave(this);                                                    \
-    }                                                                   \
-    static bool classof(const Node *V) {                                \
-      return V->getKind() == NodeKind::NAME;                            \
-    }                                                                   \
+#define ESTREE_NODE_2_ARGS(                                            \
+    NAME, BASE, ARG0TY, ARG0NM, ARG0OPT, ARG1TY, ARG1NM, ARG1OPT)      \
+  class NAME##Node : public BASE##Node,                                \
+                     public detail::DecoratorTrait<NAME##Node>::Type { \
+   public:                                                             \
+    ARG0TY _##ARG0NM;                                                  \
+    ARG1TY _##ARG1NM;                                                  \
+    explicit NAME##Node(                                               \
+        ARG0TY ARG0NM_,                                                \
+        detail::ParamTrait<ARG1TY>::Type ARG1NM_)                      \
+        : BASE##Node(NodeKind::NAME),                                  \
+          _##ARG0NM(ARG0NM_),                                          \
+          _##ARG1NM(std::move(ARG1NM_)) {}                             \
+    template <class Visitor>                                           \
+    void visit(Visitor &V) {                                           \
+      if (!V.shouldVisit(this)) {                                      \
+        return;                                                        \
+      }                                                                \
+      V.enter(this);                                                   \
+      ESTreeVisit(V, _##ARG0NM);                                       \
+      ESTreeVisit(V, _##ARG1NM);                                       \
+      V.leave(this);                                                   \
+    }                                                                  \
+    static bool classof(const Node *V) {                               \
+      return V->getKind() == NodeKind::NAME;                           \
+    }                                                                  \
   };
 
-#define ESTREE_NODE_4_ARGS(                                             \
-    NAME,                                                               \
-    ARG0TY,                                                             \
-    ARG0NM,                                                             \
-    ARG0OPT,                                                            \
-    ARG1TY,                                                             \
-    ARG1NM,                                                             \
-    ARG1OPT,                                                            \
-    ARG2TY,                                                             \
-    ARG2NM,                                                             \
-    ARG2OPT,                                                            \
-    ARG3TY,                                                             \
-    ARG3NM,                                                             \
-    ARG3OPT)                                                            \
-  struct NAME##Node : public Node,                                      \
-                      public detail::DecoratorTrait<NAME##Node>::Type { \
-    ARG0TY _##ARG0NM;                                                   \
-    ARG1TY _##ARG1NM;                                                   \
-    ARG2TY _##ARG2NM;                                                   \
-    ARG3TY _##ARG3NM;                                                   \
-    explicit NAME##Node(                                                \
-        ARG0TY ARG0NM_,                                                 \
-        ARG1TY ARG1NM_,                                                 \
-        detail::ParamTrait<ARG2TY>::Type ARG2NM_,                       \
-        ARG3TY ARG3NM_)                                                 \
-        : Node(NodeKind::NAME),                                         \
-          _##ARG0NM(ARG0NM_),                                           \
-          _##ARG1NM(ARG1NM_),                                           \
-          _##ARG2NM(std::move(ARG2NM_)),                                \
-          _##ARG3NM(ARG3NM_) {}                                         \
-    template <class Visitor>                                            \
-    void visit(Visitor &V) {                                            \
-      if (!V.shouldVisit(this)) {                                       \
-        return;                                                         \
-      }                                                                 \
-      V.enter(this);                                                    \
-      ESTreeVisit(V, _##ARG0NM);                                        \
-      ESTreeVisit(V, _##ARG1NM);                                        \
-      ESTreeVisit(V, _##ARG2NM);                                        \
-      ESTreeVisit(V, _##ARG3NM);                                        \
-      V.leave(this);                                                    \
-    }                                                                   \
-                                                                        \
-    static bool classof(const Node *V) {                                \
-      return V->getKind() == NodeKind::NAME;                            \
-    }                                                                   \
+#define ESTREE_NODE_3_ARGS(                                            \
+    NAME,                                                              \
+    BASE,                                                              \
+    ARG0TY,                                                            \
+    ARG0NM,                                                            \
+    ARG0OPT,                                                           \
+    ARG1TY,                                                            \
+    ARG1NM,                                                            \
+    ARG1OPT,                                                           \
+    ARG2TY,                                                            \
+    ARG2NM,                                                            \
+    ARG2OPT)                                                           \
+  class NAME##Node : public BASE##Node,                                \
+                     public detail::DecoratorTrait<NAME##Node>::Type { \
+   public:                                                             \
+    ARG0TY _##ARG0NM;                                                  \
+    ARG1TY _##ARG1NM;                                                  \
+    ARG2TY _##ARG2NM;                                                  \
+    explicit NAME##Node(                                               \
+        ARG0TY ARG0NM_,                                                \
+        detail::ParamTrait<ARG1TY>::Type ARG1NM_,                      \
+        ARG2TY ARG2NM_)                                                \
+        : BASE##Node(NodeKind::NAME),                                  \
+          _##ARG0NM(ARG0NM_),                                          \
+          _##ARG1NM(std::move(ARG1NM_)),                               \
+          _##ARG2NM(ARG2NM_) {}                                        \
+    template <class Visitor>                                           \
+    void visit(Visitor &V) {                                           \
+      if (!V.shouldVisit(this)) {                                      \
+        return;                                                        \
+      }                                                                \
+      V.enter(this);                                                   \
+      ESTreeVisit(V, _##ARG0NM);                                       \
+      ESTreeVisit(V, _##ARG1NM);                                       \
+      ESTreeVisit(V, _##ARG2NM);                                       \
+      V.leave(this);                                                   \
+    }                                                                  \
+    static bool classof(const Node *V) {                               \
+      return V->getKind() == NodeKind::NAME;                           \
+    }                                                                  \
+  };
+
+#define ESTREE_NODE_4_ARGS(                                            \
+    NAME,                                                              \
+    BASE,                                                              \
+    ARG0TY,                                                            \
+    ARG0NM,                                                            \
+    ARG0OPT,                                                           \
+    ARG1TY,                                                            \
+    ARG1NM,                                                            \
+    ARG1OPT,                                                           \
+    ARG2TY,                                                            \
+    ARG2NM,                                                            \
+    ARG2OPT,                                                           \
+    ARG3TY,                                                            \
+    ARG3NM,                                                            \
+    ARG3OPT)                                                           \
+  class NAME##Node : public BASE##Node,                                \
+                     public detail::DecoratorTrait<NAME##Node>::Type { \
+   public:                                                             \
+    ARG0TY _##ARG0NM;                                                  \
+    ARG1TY _##ARG1NM;                                                  \
+    ARG2TY _##ARG2NM;                                                  \
+    ARG3TY _##ARG3NM;                                                  \
+    explicit NAME##Node(                                               \
+        ARG0TY ARG0NM_,                                                \
+        ARG1TY ARG1NM_,                                                \
+        detail::ParamTrait<ARG2TY>::Type ARG2NM_,                      \
+        ARG3TY ARG3NM_)                                                \
+        : BASE##Node(NodeKind::NAME),                                  \
+          _##ARG0NM(ARG0NM_),                                          \
+          _##ARG1NM(ARG1NM_),                                          \
+          _##ARG2NM(std::move(ARG2NM_)),                               \
+          _##ARG3NM(ARG3NM_) {}                                        \
+    template <class Visitor>                                           \
+    void visit(Visitor &V) {                                           \
+      if (!V.shouldVisit(this)) {                                      \
+        return;                                                        \
+      }                                                                \
+      V.enter(this);                                                   \
+      ESTreeVisit(V, _##ARG0NM);                                       \
+      ESTreeVisit(V, _##ARG1NM);                                       \
+      ESTreeVisit(V, _##ARG2NM);                                       \
+      ESTreeVisit(V, _##ARG3NM);                                       \
+      V.leave(this);                                                   \
+    }                                                                  \
+                                                                       \
+    static bool classof(const Node *V) {                               \
+      return V->getKind() == NodeKind::NAME;                           \
+    }                                                                  \
   };
 
 #include "ESTree.def"
@@ -538,8 +474,8 @@ void ESTreeVisit(Visitor &V, NodePtr Node) {
     default:
       llvm_unreachable("invalid node kind");
 
-#define ESTREE_NODE_0_ARGS(NAME) \
-  case NodeKind::NAME:           \
+#define ESTREE_NODE_0_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
     return cast<NAME##Node>(Node)->visit(V);
 #define ESTREE_NODE_1_ARGS(NAME, ...) \
   case NodeKind::NAME:                \

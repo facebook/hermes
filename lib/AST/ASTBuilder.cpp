@@ -287,12 +287,12 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
       return None;
     result = *lit;
   } else
-#define ESTREE_NODE_0_ARGS(NAME)          \
+#define ESTREE_NODE_0_ARGS(NAME, BASE)    \
   if (Typename == #NAME) {                \
     result = new (context_) NAME##Node(); \
   } else
 
-#define ESTREE_NODE_1_ARGS(NAME, ARG0TY, ARG0NM, ARG0OPT)          \
+#define ESTREE_NODE_1_ARGS(NAME, BASE, ARG0TY, ARG0NM, ARG0OPT)    \
   if (Typename == #NAME) {                                         \
     ARG0TY arg0{};                                                 \
     if (!extract##ARG0TY(jsObj, #ARG0NM, arg0) && !(ARG0OPT)) {    \
@@ -303,7 +303,7 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
   } else
 
 #define ESTREE_NODE_2_ARGS(                                               \
-    NAME, ARG0TY, ARG0NM, ARG0OPT, ARG1TY, ARG1NM, ARG1OPT)               \
+    NAME, BASE, ARG0TY, ARG0NM, ARG0OPT, ARG1TY, ARG1NM, ARG1OPT)         \
   if (Typename == #NAME) {                                                \
     ARG0TY arg0{};                                                        \
     ARG1TY arg1{};                                                        \
@@ -320,6 +320,7 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
 
 #define ESTREE_NODE_3_ARGS(                                            \
     NAME,                                                              \
+    BASE,                                                              \
     ARG0TY,                                                            \
     ARG0NM,                                                            \
     ARG0OPT,                                                           \
@@ -351,6 +352,7 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
 
 #define ESTREE_NODE_4_ARGS(                                                  \
     NAME,                                                                    \
+    BASE,                                                                    \
     ARG0TY,                                                                  \
     ARG0NM,                                                                  \
     ARG0OPT,                                                                 \

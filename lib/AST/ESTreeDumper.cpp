@@ -40,20 +40,20 @@ class ESTreeDumper {
     visitESTreeNode(*this, rootNode);
   }
 
-#define ESTREE_NODE_0_ARGS(NAME)               \
+#define ESTREE_NODE_0_ARGS(NAME, BASE)         \
   void visit(NAME##Node *node) {               \
     os_.indent(indentation_) << #NAME << '\n'; \
     dumpChildren(node);                        \
   }
 
-#define ESTREE_NODE_1_ARGS(NAME, ARG0TY, ARG0NM, ARG0OPT)                \
+#define ESTREE_NODE_1_ARGS(NAME, BASE, ARG0TY, ARG0NM, ARG0OPT)          \
   void visit(NAME##Node *node) {                                         \
     os_.indent(indentation_) << #NAME << " " << node->_##ARG0NM << '\n'; \
     dumpChildren(node);                                                  \
   }
 
 #define ESTREE_NODE_2_ARGS(                                                   \
-    NAME, ARG0TY, ARG0NM, ARG0OPT, ARG1TY, ARG1NM, ARG1OPT)                   \
+    NAME, BASE, ARG0TY, ARG0NM, ARG0OPT, ARG1TY, ARG1NM, ARG1OPT)             \
   void visit(NAME##Node *node) {                                              \
     os_.indent(indentation_)                                                  \
         << #NAME << " " << node->_##ARG0NM << " " << node->_##ARG1NM << '\n'; \
@@ -62,6 +62,7 @@ class ESTreeDumper {
 
 #define ESTREE_NODE_3_ARGS(                                                 \
     NAME,                                                                   \
+    BASE,                                                                   \
     ARG0TY,                                                                 \
     ARG0NM,                                                                 \
     ARG0OPT,                                                                \
@@ -80,6 +81,7 @@ class ESTreeDumper {
 
 #define ESTREE_NODE_4_ARGS(                                                 \
     NAME,                                                                   \
+    BASE,                                                                   \
     ARG0TY,                                                                 \
     ARG0NM,                                                                 \
     ARG0OPT,                                                                \

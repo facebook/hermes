@@ -45,7 +45,7 @@ struct RecursiveVisitorDispatch {
   case NodeKind::NAME: \
     return v.visit(cast<NAME##Node>(node));
 
-#define ESTREE_NODE_0_ARGS(NAME) VISIT(NAME)
+#define ESTREE_NODE_0_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_1_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_2_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_3_ARGS(NAME, ...) VISIT(NAME)
@@ -79,7 +79,7 @@ struct RecursiveVisitorDispatch {
   case NodeKind::NAME: \
     return visitChildren(v, cast<NAME##Node>(node));
 
-#define ESTREE_NODE_0_ARGS(NAME) VISIT(NAME)
+#define ESTREE_NODE_0_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_1_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_2_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_3_ARGS(NAME, ...) VISIT(NAME)
@@ -92,23 +92,24 @@ struct RecursiveVisitorDispatch {
   }
 
 /// Declare helper functions to recursively visit the children of a node.
-#define ESTREE_NODE_0_ARGS(NAME) \
+#define ESTREE_NODE_0_ARGS(NAME, BASE) \
   static void visitChildren(Visitor &v, NAME##Node *) {}
 
-#define ESTREE_NODE_1_ARGS(NAME, ARG0TY, ARG0NM, ARG0OPT)   \
-  static void visitChildren(Visitor &v, NAME##Node *node) { \
-    visit(v, node->_##ARG0NM);                              \
+#define ESTREE_NODE_1_ARGS(NAME, BASE, ARG0TY, ARG0NM, ARG0OPT) \
+  static void visitChildren(Visitor &v, NAME##Node *node) {     \
+    visit(v, node->_##ARG0NM);                                  \
   }
 
-#define ESTREE_NODE_2_ARGS(                                 \
-    NAME, ARG0TY, ARG0NM, ARG0OPT, ARG1TY, ARG1NM, ARG1OPT) \
-  static void visitChildren(Visitor &v, NAME##Node *node) { \
-    visit(v, node->_##ARG0NM);                              \
-    visit(v, node->_##ARG1NM);                              \
+#define ESTREE_NODE_2_ARGS(                                       \
+    NAME, BASE, ARG0TY, ARG0NM, ARG0OPT, ARG1TY, ARG1NM, ARG1OPT) \
+  static void visitChildren(Visitor &v, NAME##Node *node) {       \
+    visit(v, node->_##ARG0NM);                                    \
+    visit(v, node->_##ARG1NM);                                    \
   }
 
 #define ESTREE_NODE_3_ARGS(                                 \
     NAME,                                                   \
+    BASE,                                                   \
     ARG0TY,                                                 \
     ARG0NM,                                                 \
     ARG0OPT,                                                \
@@ -126,6 +127,7 @@ struct RecursiveVisitorDispatch {
 
 #define ESTREE_NODE_4_ARGS(                                 \
     NAME,                                                   \
+    BASE,                                                   \
     ARG0TY,                                                 \
     ARG0NM,                                                 \
     ARG0OPT,                                                \

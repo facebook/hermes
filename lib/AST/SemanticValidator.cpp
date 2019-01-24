@@ -226,10 +226,7 @@ class SemanticValidator {
     {
       LabeledStatementNode *curStmt = labelStmt;
       do {
-        if (isa<DoWhileStatementNode>(curStmt->_body) ||
-            isa<ForInStatementNode>(curStmt->_body) ||
-            isa<ForStatementNode>(curStmt->_body) ||
-            isa<WhileStatementNode>(curStmt->_body)) {
+        if (isa<LoopStatementNode>(curStmt->_body)) {
           labelKind = Label::LOOP_LABEL;
           break;
         }
