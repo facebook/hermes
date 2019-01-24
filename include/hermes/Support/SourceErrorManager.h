@@ -302,6 +302,10 @@ class SourceErrorManager {
       return SMRange(b, SMLoc::getFromPointer(a.getPointer() + 1));
   }
 
+  /// Extract the end location and convert it into an actual location by
+  /// subtracting one and handling corner cases.
+  static SMLoc convertEndToLocation(SMRange range);
+
   /// RAII to enable message suppression and restore the previous state of
   /// supression on destruction.
   class SaveAndSuppressMessages {

@@ -293,21 +293,51 @@ class SemanticValidator {
   }
 
   void visit(TryStatementNode *tryStatement) {
+    // A try statement with both catch and finally handlers is technically
+    // two nested try statements. Transform:
+    //
+    //    try {
+    //      tryBody;
+    //    } catch {
+    //      catchBody;
+    //    } finally {
+    //      finallyBody;
+    //    }
+    //
+    // into
+    //
+    //    try {
+    //      try {
+    //        tryBody;
+    //      } catch {
+    //        catchBody;
+    //      }
+    //    } finally {
+    //      finallyBody;
+    //    }
+    if (tryStatement->_handler && tryStatement->_finalizer) {
+      auto *nestedTry = new (astContext_) TryStatementNode(
+          tryStatement->_block, tryStatement->_handler, nullptr);
+      nestedTry->copyLocationFrom(tryStatement);
+      nestedTry->setEndLoc(nestedTry->_handler->getEndLoc());
+
+      ESTree::NodeList stmtList;
+      stmtList.push_back(*nestedTry);
+      tryStatement->_block =
+          new (astContext_) BlockStatementNode(std::move(stmtList));
+      tryStatement->_block->copyLocationFrom(nestedTry);
+      tryStatement->_handler = nullptr;
+    }
+
     tryStatement->surroundingTry = curFunction()->activeTry;
 
-    // A try statement with both catch and finally handlers is compiled with a
-    // nested try inside the catch handler.
-    bool catchAndFinally = tryStatement->_handler && tryStatement->_finalizer;
     {
       SaveAndRestore<TryStatementNode *> saveTry(
           curFunction()->activeTry, tryStatement);
 
       visitESTreeNode(*this, tryStatement->_block);
-      if (catchAndFinally)
-        visitESTreeNode(*this, tryStatement->_handler);
     }
-    if (!catchAndFinally)
-      visitESTreeNode(*this, tryStatement->_handler);
+    visitESTreeNode(*this, tryStatement->_handler);
     visitESTreeNode(*this, tryStatement->_finalizer);
   }
 

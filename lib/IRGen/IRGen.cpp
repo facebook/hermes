@@ -368,18 +368,9 @@ class ESTreeIRGen {
   void genReturnStatement(ESTree::ReturnStatementNode *RetStmt);
 
   /// Generate IR for try/catch/finally statement.
-  void genTry(ESTree::TryStatementNode *TryStmt);
+  void genTry(ESTree::TryStatementNode *tryStmt);
 
-  /// Generate IR for the body of try (we also reuse it to generate the body
-  /// of catch when there is finally.
-  void genTryBody(
-      ESTree::NodePtr body,
-      BasicBlock *catchBlock,
-      BasicBlock *continueBlock,
-      ESTree::NodePtr finalizer);
-
-  /// Generate IR only for "catch (e)". We also reuse it to setup the header
-  /// for finally.
+  /// Generate IR "catch (e)".
   CatchInst *prepareCatch(ESTree::NodePtr catchParam);
 
   /// Generate IR for the logical expression \p logical.
@@ -1203,78 +1194,72 @@ void ESTreeIRGen::genReturnStatement(ESTree::ReturnStatementNode *RetStmt) {
   Builder.setInsertionBlock(Builder.createBasicBlock(Parent));
 }
 
-void ESTreeIRGen::genTry(ESTree::TryStatementNode *TryStmt) {
-  // In this function we generate a sequence of basic blocks that implement
-  // the try/catch/finally statement. The result structure should look like:
-  //
-  //      [ current block   ]
-  //      [ Try Start Block ]
-  //         TryStartInst
-  //             |
-  //             |
-  //             v
-  //      [ Try body blocks ]  --> [Finally Block] -> [ Continue Block]
-  //                                                 ^
-  //        (no input edge)                          |
-  //       [ Catch Block ]                           |
-  //       [  CatchInst  ]                           |
-  //     [ Catch body blocks ] --> [Finally Block] -/
-  //
-  //       (no input edge)
-  //       [Finally Block]
-  //       [  CatchInst  ]
-  //     [ Finally body blocks ]
-  //       [  ThrowInst  ]
-  //
-
+void ESTreeIRGen::genTry(ESTree::TryStatementNode *tryStmt) {
   DEBUG(dbgs() << "IRGen 'try' statement\n");
-  auto parent = Builder.getInsertionBlock()->getParent();
+  auto *parent = Builder.getInsertionBlock()->getParent();
 
-  auto catchBlock = Builder.createBasicBlock(parent);
-  auto continueBlock = Builder.createBasicBlock(parent);
-  auto finallyBlock = TryStmt->_handler && TryStmt->_finalizer
-      ? Builder.createBasicBlock(parent)
-      : catchBlock;
+  // try-catch-finally statements must have been transformed by the validator
+  // into two nested try statements with only "catch" or "finally" each.
+  assert(
+      (!tryStmt->_handler || !tryStmt->_finalizer) &&
+      "Try statement can't have both catch and finally");
 
-  // Generate IR for the body of Try.
-  genTryBody(TryStmt->_block, catchBlock, continueBlock, TryStmt->_finalizer);
+  auto *catchBlock = Builder.createBasicBlock(parent);
+  auto *continueBlock = Builder.createBasicBlock(parent);
+  auto *tryBodyBlock = Builder.createBasicBlock(parent);
 
-  // Check if the catch {} block exists.
-  if (TryStmt->_handler) {
-    Builder.setInsertionBlock(catchBlock);
-    // catch takes a exception variable, hence we need to create a new
-    // scope for it.
-    NameTableScopeTy newScope(nameTable_);
-    auto catchClauseNode = dyn_cast<ESTree::CatchClauseNode>(TryStmt->_handler);
-    {
-      IRBuilder::ScopedLocationChange catchSlc(
-          Builder, TryStmt->_handler->getDebugLoc());
-      prepareCatch(catchClauseNode->_param);
-    }
+  // Start with a TryStartInst, and transition to try body.
+  Builder.createTryStartInst(tryBodyBlock, catchBlock);
+  Builder.setInsertionBlock(tryBodyBlock);
 
-    if (TryStmt->_finalizer) {
-      // There is finally block, which serves like a catch for the catch block.
-      // The catch blocks serves as both catch for the try block as well as
-      // try to the finally block.
-      genTryBody(
-          catchClauseNode->_body,
-          finallyBlock,
-          continueBlock,
-          TryStmt->_finalizer);
-    } else {
-      genStatement(catchClauseNode->_body);
-      Builder.createBranchInst(continueBlock);
-    }
+  // Generate IR for the body of Try
+  genStatement(tryStmt->_block);
+
+  // Emit TryEnd in a new block.
+  Builder.setLocation(SourceErrorManager::convertEndToLocation(
+      tryStmt->_block->getSourceRange()));
+  auto *tryEndBlock = Builder.createBasicBlock(parent);
+  Builder.createBranchInst(tryEndBlock);
+  Builder.setInsertionBlock(tryEndBlock);
+  Builder.createTryEndInst();
+
+  if (tryStmt->_finalizer) {
+    genStatement(tryStmt->_finalizer);
+    Builder.setLocation(SourceErrorManager::convertEndToLocation(
+        tryStmt->_finalizer->getSourceRange()));
   }
 
-  if (TryStmt->_finalizer) {
-    // Generate IR for the finally block. It starts with a catch without an
-    // exception variable, and ends with a throw instruction.
-    Builder.setInsertionBlock(finallyBlock);
-    auto catchReg = prepareCatch(nullptr);
-    genStatement(TryStmt->_finalizer);
+  Builder.createBranchInst(continueBlock);
 
-    // Finally needs to re-throw the exception since it does not handle it.
+  // Generate the catch/finally block.
+  Builder.setInsertionBlock(catchBlock);
+
+  // If we have a catch block.
+  if (tryStmt->_handler) {
+    auto *catchClauseNode =
+        dyn_cast<ESTree::CatchClauseNode>(tryStmt->_handler);
+
+    // Catch takes a exception variable, hence we need to create a new
+    // scope for it.
+    NameTableScopeTy newScope(nameTable_);
+
+    Builder.setLocation(tryStmt->_handler->getDebugLoc());
+    prepareCatch(catchClauseNode->_param);
+
+    genStatement(catchClauseNode->_body);
+
+    Builder.setLocation(SourceErrorManager::convertEndToLocation(
+        tryStmt->_handler->getSourceRange()));
+    Builder.createBranchInst(continueBlock);
+  } else {
+    // A finally block catches the exception and rethrows is.
+    Builder.setLocation(tryStmt->_finalizer->getDebugLoc());
+    auto *catchReg = Builder.createCatchInst();
+
+    genStatement(tryStmt->_finalizer);
+
+    Builder.setLocation(SourceErrorManager::convertEndToLocation(
+        tryStmt->_finalizer->getSourceRange()));
     Builder.createThrowInst(catchReg);
   }
 
@@ -1282,48 +1267,8 @@ void ESTreeIRGen::genTry(ESTree::TryStatementNode *TryStmt) {
   Builder.setInsertionBlock(continueBlock);
 }
 
-void ESTreeIRGen::genTryBody(
-    ESTree::NodePtr body,
-    BasicBlock *catchBlock,
-    BasicBlock *continueBlock,
-    ESTree::NodePtr finalizer) {
-  auto *parent = Builder.getInsertionBlock()->getParent();
-
-  // Start with a TryStartInst, and transition to try body.
-  auto *tryBodyBlock = Builder.createBasicBlock(parent);
-  Builder.createTryStartInst(tryBodyBlock, catchBlock);
-  Builder.setInsertionBlock(tryBodyBlock);
-
-  // Generate IR for the body of Try
-  genStatement(body);
-
-  // Emit TryEnd in a new block.
-  auto *tryEndBlock = Builder.createBasicBlock(parent);
-  Builder.createBranchInst(tryEndBlock);
-  Builder.setInsertionBlock(tryEndBlock);
-  // Make sure we use the correct debug location for tryEndInst.
-  if (finalizer) {
-    hermes::IRBuilder::ScopedLocationChange slc(
-        Builder, finalizer->getDebugLoc());
-    Builder.createTryEndInst();
-  } else {
-    Builder.createTryEndInst();
-  }
-
-  // Inline the body of finally after the try body.
-  if (finalizer)
-    genStatement(finalizer);
-
-  // Jump to continue block.
-  Builder.createBranchInst(continueBlock);
-}
-
 CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
   auto catchInst = Builder.createCatchInst();
-
-  if (!catchParam) {
-    return catchInst;
-  }
 
   auto catchVariableName =
       getNameFieldFromID(dyn_cast<ESTree::IdentifierNode>(catchParam));

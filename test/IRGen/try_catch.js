@@ -76,48 +76,47 @@ function simple_try_catch_test() {
 
 //CHECK-LABEL:function simple_try_catch_finally_test()
 //CHECK-NEXT:frame = [i, ?anon_0_e]
-//CHECK-NEXT:  %BB0:
-//CHECK-NEXT:    %0 = StoreFrameInst undefined : undefined, [i]
-//CHECK-NEXT:    %1 = StoreFrameInst 0 : number, [i]
-//CHECK-NEXT:    %2 = TryStartInst %BB1, %BB2
-//CHECK-NEXT:  %BB1:
-//CHECK-NEXT:    %3 = CatchInst
-//CHECK-NEXT:    %4 = StoreFrameInst %3, [?anon_0_e]
-//CHECK-NEXT:    %5 = TryStartInst %BB3, %BB4
-//CHECK-NEXT:  %BB5:
-//CHECK-NEXT:    %6 = LoadFrameInst [i]
-//CHECK-NEXT:    %7 = BinaryOperatorInst '+', %6, 4 : number
-//CHECK-NEXT:    %8 = StoreFrameInst %7, [i]
-//CHECK-NEXT:    %9 = ReturnInst undefined : undefined
-//CHECK-NEXT:  %BB3:
-//CHECK-NEXT:    %10 = CatchInst
-//CHECK-NEXT:    %11 = LoadFrameInst [i]
-//CHECK-NEXT:    %12 = BinaryOperatorInst '+', %11, 3 : number
-//CHECK-NEXT:    %13 = StoreFrameInst %12, [i]
-//CHECK-NEXT:    %14 = ThrowInst %10
-//CHECK-NEXT:  %BB2:
-//CHECK-NEXT:    %15 = LoadFrameInst [i]
-//CHECK-NEXT:    %16 = AsNumberInst %15
-//CHECK-NEXT:    %17 = BinaryOperatorInst '+', %16 : number, 1 : number
-//CHECK-NEXT:    %18 = StoreFrameInst %17, [i]
-//CHECK-NEXT:    %19 = BranchInst %BB6
-//CHECK-NEXT:  %BB6:
-//CHECK-NEXT:    %20 = TryEndInst
-//CHECK-NEXT:    %21 = LoadFrameInst [i]
-//CHECK-NEXT:    %22 = BinaryOperatorInst '+', %21, 3 : number
-//CHECK-NEXT:    %23 = StoreFrameInst %22, [i]
-//CHECK-NEXT:    %24 = BranchInst %BB5
-//CHECK-NEXT:  %BB4:
-//CHECK-NEXT:    %25 = LoadFrameInst [i]
-//CHECK-NEXT:    %26 = BinaryOperatorInst '+', %25, 2 : number
-//CHECK-NEXT:    %27 = StoreFrameInst %26, [i]
-//CHECK-NEXT:    %28 = BranchInst %BB7
-//CHECK-NEXT:  %BB7:
-//CHECK-NEXT:    %29 = TryEndInst
-//CHECK-NEXT:    %30 = LoadFrameInst [i]
-//CHECK-NEXT:    %31 = BinaryOperatorInst '+', %30, 3 : number
-//CHECK-NEXT:    %32 = StoreFrameInst %31, [i]
-//CHECK-NEXT:    %33 = BranchInst %BB5
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
+//CHECK-NEXT:  %1 = StoreFrameInst 0 : number, [i]
+//CHECK-NEXT:  %2 = TryStartInst %BB1, %BB2
+//CHECK-NEXT:%BB1:
+//CHECK-NEXT:  %3 = CatchInst
+//CHECK-NEXT:  %4 = LoadFrameInst [i]
+//CHECK-NEXT:  %5 = BinaryOperatorInst '+', %4, 3 : number
+//CHECK-NEXT:  %6 = StoreFrameInst %5, [i]
+//CHECK-NEXT:  %7 = ThrowInst %3
+//CHECK-NEXT:%BB3:
+//CHECK-NEXT:  %8 = LoadFrameInst [i]
+//CHECK-NEXT:  %9 = BinaryOperatorInst '+', %8, 4 : number
+//CHECK-NEXT:  %10 = StoreFrameInst %9, [i]
+//CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+//CHECK-NEXT:%BB2:
+//CHECK-NEXT:  %12 = TryStartInst %BB4, %BB5
+//CHECK-NEXT:%BB4:
+//CHECK-NEXT:  %13 = CatchInst
+//CHECK-NEXT:  %14 = StoreFrameInst %13, [?anon_0_e]
+//CHECK-NEXT:  %15 = LoadFrameInst [i]
+//CHECK-NEXT:  %16 = BinaryOperatorInst '+', %15, 2 : number
+//CHECK-NEXT:  %17 = StoreFrameInst %16, [i]
+//CHECK-NEXT:  %18 = BranchInst %BB6
+//CHECK-NEXT:%BB6:
+//CHECK-NEXT:  %19 = BranchInst %BB7
+//CHECK-NEXT:%BB5:
+//CHECK-NEXT:  %20 = LoadFrameInst [i]
+//CHECK-NEXT:  %21 = AsNumberInst %20
+//CHECK-NEXT:  %22 = BinaryOperatorInst '+', %21 : number, 1 : number
+//CHECK-NEXT:  %23 = StoreFrameInst %22, [i]
+//CHECK-NEXT:  %24 = BranchInst %BB8
+//CHECK-NEXT:%BB8:
+//CHECK-NEXT:  %25 = TryEndInst
+//CHECK-NEXT:  %26 = BranchInst %BB6
+//CHECK-NEXT:%BB7:
+//CHECK-NEXT:  %27 = TryEndInst
+//CHECK-NEXT:  %28 = LoadFrameInst [i]
+//CHECK-NEXT:  %29 = BinaryOperatorInst '+', %28, 3 : number
+//CHECK-NEXT:  %30 = StoreFrameInst %29, [i]
+//CHECK-NEXT:  %31 = BranchInst %BB3
 //CHECK-NEXT:function_end
 function simple_try_catch_finally_test() {
   var i = 0;
@@ -179,76 +178,76 @@ function simple_try_finally_test() {
 
 //CHECK-LABEL:function try_catch_finally_with_return_test()
 //CHECK-NEXT:frame = [i, ?anon_0_e]
-//CHECK-NEXT:  %BB0:
-//CHECK-NEXT:    %0 = StoreFrameInst undefined : undefined, [i]
-//CHECK-NEXT:    %1 = StoreFrameInst 0 : number, [i]
-//CHECK-NEXT:    %2 = TryStartInst %BB1, %BB2
-//CHECK-NEXT:  %BB1:
-//CHECK-NEXT:    %3 = CatchInst
-//CHECK-NEXT:    %4 = StoreFrameInst %3, [?anon_0_e]
-//CHECK-NEXT:    %5 = TryStartInst %BB3, %BB4
-//CHECK-NEXT:  %BB5:
-//CHECK-NEXT:    %6 = LoadFrameInst [i]
-//CHECK-NEXT:    %7 = BinaryOperatorInst '+', %6, 4 : number
-//CHECK-NEXT:    %8 = StoreFrameInst %7, [i]
-//CHECK-NEXT:    %9 = ReturnInst "d" : string
-//CHECK-NEXT:  %BB3:
-//CHECK-NEXT:    %10 = CatchInst
-//CHECK-NEXT:    %11 = LoadFrameInst [i]
-//CHECK-NEXT:    %12 = BinaryOperatorInst '+', %11, 3 : number
-//CHECK-NEXT:    %13 = StoreFrameInst %12, [i]
-//CHECK-NEXT:    %14 = ReturnInst "c" : string
-//CHECK-NEXT:  %BB2:
-//CHECK-NEXT:    %15 = LoadFrameInst [i]
-//CHECK-NEXT:    %16 = AsNumberInst %15
-//CHECK-NEXT:    %17 = BinaryOperatorInst '+', %16 : number, 1 : number
-//CHECK-NEXT:    %18 = StoreFrameInst %17, [i]
-//CHECK-NEXT:    %19 = BranchInst %BB6
-//CHECK-NEXT:  %BB6:
-//CHECK-NEXT:    %20 = TryEndInst
-//CHECK-NEXT:    %21 = LoadFrameInst [i]
-//CHECK-NEXT:    %22 = BinaryOperatorInst '+', %21, 3 : number
-//CHECK-NEXT:    %23 = StoreFrameInst %22, [i]
-//CHECK-NEXT:    %24 = ReturnInst "c" : string
-//CHECK-NEXT:  %BB7:
-//CHECK-NEXT:    %25 = ReturnInst "a" : string
-//CHECK-NEXT:  %BB8:
-//CHECK-NEXT:    %26 = BranchInst %BB9
-//CHECK-NEXT:  %BB9:
-//CHECK-NEXT:    %27 = TryEndInst
-//CHECK-NEXT:    %28 = LoadFrameInst [i]
-//CHECK-NEXT:    %29 = BinaryOperatorInst '+', %28, 3 : number
-//CHECK-NEXT:    %30 = StoreFrameInst %29, [i]
-//CHECK-NEXT:    %31 = ReturnInst "c" : string
-//CHECK-NEXT:  %BB10:
-//CHECK-NEXT:    %32 = BranchInst %BB5
-//CHECK-NEXT:  %BB4:
-//CHECK-NEXT:    %33 = LoadFrameInst [i]
-//CHECK-NEXT:    %34 = BinaryOperatorInst '+', %33, 2 : number
-//CHECK-NEXT:    %35 = StoreFrameInst %34, [i]
-//CHECK-NEXT:    %36 = BranchInst %BB11
-//CHECK-NEXT:  %BB11:
-//CHECK-NEXT:    %37 = TryEndInst
-//CHECK-NEXT:    %38 = LoadFrameInst [i]
-//CHECK-NEXT:    %39 = BinaryOperatorInst '+', %38, 3 : number
-//CHECK-NEXT:    %40 = StoreFrameInst %39, [i]
-//CHECK-NEXT:    %41 = ReturnInst "c" : string
-//CHECK-NEXT:  %BB12:
-//CHECK-NEXT:    %42 = ReturnInst "b" : string
-//CHECK-NEXT:  %BB13:
-//CHECK-NEXT:    %43 = BranchInst %BB14
-//CHECK-NEXT:  %BB14:
-//CHECK-NEXT:    %44 = TryEndInst
-//CHECK-NEXT:    %45 = LoadFrameInst [i]
-//CHECK-NEXT:    %46 = BinaryOperatorInst '+', %45, 3 : number
-//CHECK-NEXT:    %47 = StoreFrameInst %46, [i]
-//CHECK-NEXT:    %48 = ReturnInst "c" : string
-//CHECK-NEXT:  %BB15:
-//CHECK-NEXT:    %49 = BranchInst %BB5
-//CHECK-NEXT:  %BB16:
-//CHECK-NEXT:    %50 = ThrowInst %10
-//CHECK-NEXT:  %BB17:
-//CHECK-NEXT:    %51 = ReturnInst undefined : undefined
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
+//CHECK-NEXT:  %1 = StoreFrameInst 0 : number, [i]
+//CHECK-NEXT:  %2 = TryStartInst %BB1, %BB2
+//CHECK-NEXT:%BB1:
+//CHECK-NEXT:  %3 = CatchInst
+//CHECK-NEXT:  %4 = LoadFrameInst [i]
+//CHECK-NEXT:  %5 = BinaryOperatorInst '+', %4, 3 : number
+//CHECK-NEXT:  %6 = StoreFrameInst %5, [i]
+//CHECK-NEXT:  %7 = ReturnInst "c" : string
+//CHECK-NEXT:%BB3:
+//CHECK-NEXT:  %8 = LoadFrameInst [i]
+//CHECK-NEXT:  %9 = BinaryOperatorInst '+', %8, 4 : number
+//CHECK-NEXT:  %10 = StoreFrameInst %9, [i]
+//CHECK-NEXT:  %11 = ReturnInst "d" : string
+//CHECK-NEXT:%BB2:
+//CHECK-NEXT:  %12 = TryStartInst %BB4, %BB5
+//CHECK-NEXT:%BB4:
+//CHECK-NEXT:  %13 = CatchInst
+//CHECK-NEXT:  %14 = StoreFrameInst %13, [?anon_0_e]
+//CHECK-NEXT:  %15 = LoadFrameInst [i]
+//CHECK-NEXT:  %16 = BinaryOperatorInst '+', %15, 2 : number
+//CHECK-NEXT:  %17 = StoreFrameInst %16, [i]
+//CHECK-NEXT:  %18 = BranchInst %BB6
+//CHECK-NEXT:%BB7:
+//CHECK-NEXT:  %19 = BranchInst %BB8
+//CHECK-NEXT:%BB5:
+//CHECK-NEXT:  %20 = LoadFrameInst [i]
+//CHECK-NEXT:  %21 = AsNumberInst %20
+//CHECK-NEXT:  %22 = BinaryOperatorInst '+', %21 : number, 1 : number
+//CHECK-NEXT:  %23 = StoreFrameInst %22, [i]
+//CHECK-NEXT:  %24 = BranchInst %BB9
+//CHECK-NEXT:%BB9:
+//CHECK-NEXT:  %25 = TryEndInst
+//CHECK-NEXT:  %26 = BranchInst %BB10
+//CHECK-NEXT:%BB10:
+//CHECK-NEXT:  %27 = TryEndInst
+//CHECK-NEXT:  %28 = LoadFrameInst [i]
+//CHECK-NEXT:  %29 = BinaryOperatorInst '+', %28, 3 : number
+//CHECK-NEXT:  %30 = StoreFrameInst %29, [i]
+//CHECK-NEXT:  %31 = ReturnInst "c" : string
+//CHECK-NEXT:%BB11:
+//CHECK-NEXT:  %32 = ReturnInst "a" : string
+//CHECK-NEXT:%BB12:
+//CHECK-NEXT:  %33 = BranchInst %BB13
+//CHECK-NEXT:%BB13:
+//CHECK-NEXT:  %34 = TryEndInst
+//CHECK-NEXT:  %35 = BranchInst %BB7
+//CHECK-NEXT:%BB6:
+//CHECK-NEXT:  %36 = TryEndInst
+//CHECK-NEXT:  %37 = LoadFrameInst [i]
+//CHECK-NEXT:  %38 = BinaryOperatorInst '+', %37, 3 : number
+//CHECK-NEXT:  %39 = StoreFrameInst %38, [i]
+//CHECK-NEXT:  %40 = ReturnInst "c" : string
+//CHECK-NEXT:%BB14:
+//CHECK-NEXT:  %41 = ReturnInst "b" : string
+//CHECK-NEXT:%BB15:
+//CHECK-NEXT:  %42 = BranchInst %BB7
+//CHECK-NEXT:%BB8:
+//CHECK-NEXT:  %43 = TryEndInst
+//CHECK-NEXT:  %44 = LoadFrameInst [i]
+//CHECK-NEXT:  %45 = BinaryOperatorInst '+', %44, 3 : number
+//CHECK-NEXT:  %46 = StoreFrameInst %45, [i]
+//CHECK-NEXT:  %47 = ReturnInst "c" : string
+//CHECK-NEXT:%BB16:
+//CHECK-NEXT:  %48 = BranchInst %BB3
+//CHECK-NEXT:%BB17:
+//CHECK-NEXT:  %49 = ThrowInst %3
+//CHECK-NEXT:%BB18:
+//CHECK-NEXT:  %50 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
 
 function try_catch_finally_with_return_test() {
@@ -269,138 +268,145 @@ function try_catch_finally_with_return_test() {
   return "d";
 }
 
+
 //CHECK-LABEL:function nested_try_test()
 //CHECK-NEXT:frame = [i, ?anon_0_e, ?anon_1_e, ?anon_2_e]
-//CHECK-NEXT:  %BB0:
-//CHECK-NEXT:    %0 = StoreFrameInst undefined : undefined, [i]
-//CHECK-NEXT:    %1 = StoreFrameInst 0 : number, [i]
-//CHECK-NEXT:    %2 = TryStartInst %BB1, %BB2
-//CHECK-NEXT:  %BB1:
-//CHECK-NEXT:    %3 = CatchInst
-//CHECK-NEXT:    %4 = StoreFrameInst %3, [?anon_2_e]
-//CHECK-NEXT:    %5 = TryStartInst %BB3, %BB4
-//CHECK-NEXT:  %BB5:
-//CHECK-NEXT:    %6 = LoadFrameInst [i]
-//CHECK-NEXT:    %7 = BinaryOperatorInst '+', %6, 4 : number
-//CHECK-NEXT:    %8 = StoreFrameInst %7, [i]
-//CHECK-NEXT:    %9 = ReturnInst undefined : undefined
-//CHECK-NEXT:  %BB3:
-//CHECK-NEXT:    %10 = CatchInst
-//CHECK-NEXT:    %11 = LoadFrameInst [i]
-//CHECK-NEXT:    %12 = BinaryOperatorInst '+', %11, 3 : number
-//CHECK-NEXT:    %13 = StoreFrameInst %12, [i]
-//CHECK-NEXT:    %14 = ThrowInst %10
-//CHECK-NEXT:  %BB2:
-//CHECK-NEXT:    %15 = LoadFrameInst [i]
-//CHECK-NEXT:    %16 = AsNumberInst %15
-//CHECK-NEXT:    %17 = BinaryOperatorInst '+', %16 : number, 1 : number
-//CHECK-NEXT:    %18 = StoreFrameInst %17, [i]
-//CHECK-NEXT:    %19 = TryStartInst %BB6, %BB7
-//CHECK-NEXT:  %BB6:
-//CHECK-NEXT:    %20 = CatchInst
-//CHECK-NEXT:    %21 = StoreFrameInst %20, [?anon_1_e]
-//CHECK-NEXT:    %22 = TryStartInst %BB8, %BB9
-//CHECK-NEXT:  %BB10:
-//CHECK-NEXT:    %23 = BranchInst %BB11
-//CHECK-NEXT:  %BB8:
-//CHECK-NEXT:    %24 = CatchInst
-//CHECK-NEXT:    %25 = LoadFrameInst [i]
-//CHECK-NEXT:    %26 = BinaryOperatorInst '+', %25, 7 : number
-//CHECK-NEXT:    %27 = StoreFrameInst %26, [i]
-//CHECK-NEXT:    %28 = ThrowInst %24
-//CHECK-NEXT:  %BB7:
-//CHECK-NEXT:    %29 = LoadFrameInst [i]
-//CHECK-NEXT:    %30 = BinaryOperatorInst '+', %29, 5 : number
-//CHECK-NEXT:    %31 = StoreFrameInst %30, [i]
-//CHECK-NEXT:    %32 = TryStartInst %BB12, %BB13
-//CHECK-NEXT:  %BB12:
-//CHECK-NEXT:    %33 = CatchInst
-//CHECK-NEXT:    %34 = StoreFrameInst %33, [?anon_0_e]
-//CHECK-NEXT:    %35 = TryStartInst %BB14, %BB15
-//CHECK-NEXT:  %BB16:
-//CHECK-NEXT:    %36 = BranchInst %BB17
-//CHECK-NEXT:  %BB14:
-//CHECK-NEXT:    %37 = CatchInst
-//CHECK-NEXT:    %38 = LoadFrameInst [i]
-//CHECK-NEXT:    %39 = BinaryOperatorInst '+', %38, 10 : number
-//CHECK-NEXT:    %40 = StoreFrameInst %39, [i]
-//CHECK-NEXT:    %41 = ThrowInst %37
-//CHECK-NEXT:  %BB13:
-//CHECK-NEXT:    %42 = LoadFrameInst [i]
-//CHECK-NEXT:    %43 = BinaryOperatorInst '+', %42, 8 : number
-//CHECK-NEXT:    %44 = StoreFrameInst %43, [i]
-//CHECK-NEXT:    %45 = BranchInst %BB18
-//CHECK-NEXT:  %BB18:
-//CHECK-NEXT:    %46 = TryEndInst
-//CHECK-NEXT:    %47 = LoadFrameInst [i]
-//CHECK-NEXT:    %48 = BinaryOperatorInst '+', %47, 10 : number
-//CHECK-NEXT:    %49 = StoreFrameInst %48, [i]
-//CHECK-NEXT:    %50 = BranchInst %BB19
-//CHECK-NEXT:  %BB19:
-//CHECK-NEXT:    %51 = TryEndInst
-//CHECK-NEXT:    %52 = LoadFrameInst [i]
-//CHECK-NEXT:    %53 = BinaryOperatorInst '+', %52, 7 : number
-//CHECK-NEXT:    %54 = StoreFrameInst %53, [i]
-//CHECK-NEXT:    %55 = BranchInst %BB20
-//CHECK-NEXT:  %BB20:
-//CHECK-NEXT:    %56 = TryEndInst
-//CHECK-NEXT:    %57 = LoadFrameInst [i]
-//CHECK-NEXT:    %58 = BinaryOperatorInst '+', %57, 3 : number
-//CHECK-NEXT:    %59 = StoreFrameInst %58, [i]
-//CHECK-NEXT:    %60 = ReturnInst "a" : string
-//CHECK-NEXT:  %BB21:
-//CHECK-NEXT:    %61 = BranchInst %BB22
-//CHECK-NEXT:  %BB22:
-//CHECK-NEXT:    %62 = TryEndInst
-//CHECK-NEXT:    %63 = LoadFrameInst [i]
-//CHECK-NEXT:    %64 = BinaryOperatorInst '+', %63, 10 : number
-//CHECK-NEXT:    %65 = StoreFrameInst %64, [i]
-//CHECK-NEXT:    %66 = BranchInst %BB16
-//CHECK-NEXT:  %BB15:
-//CHECK-NEXT:    %67 = LoadFrameInst [i]
-//CHECK-NEXT:    %68 = BinaryOperatorInst '+', %67, 9 : number
-//CHECK-NEXT:    %69 = StoreFrameInst %68, [i]
-//CHECK-NEXT:    %70 = BranchInst %BB23
-//CHECK-NEXT:  %BB23:
-//CHECK-NEXT:    %71 = TryEndInst
-//CHECK-NEXT:    %72 = LoadFrameInst [i]
-//CHECK-NEXT:    %73 = BinaryOperatorInst '+', %72, 10 : number
-//CHECK-NEXT:    %74 = StoreFrameInst %73, [i]
-//CHECK-NEXT:    %75 = BranchInst %BB16
-//CHECK-NEXT:  %BB17:
-//CHECK-NEXT:    %76 = TryEndInst
-//CHECK-NEXT:    %77 = LoadFrameInst [i]
-//CHECK-NEXT:    %78 = BinaryOperatorInst '+', %77, 7 : number
-//CHECK-NEXT:    %79 = StoreFrameInst %78, [i]
-//CHECK-NEXT:    %80 = BranchInst %BB10
-//CHECK-NEXT:  %BB9:
-//CHECK-NEXT:    %81 = LoadFrameInst [i]
-//CHECK-NEXT:    %82 = BinaryOperatorInst '+', %81, 6 : number
-//CHECK-NEXT:    %83 = StoreFrameInst %82, [i]
-//CHECK-NEXT:    %84 = BranchInst %BB24
-//CHECK-NEXT:  %BB24:
-//CHECK-NEXT:    %85 = TryEndInst
-//CHECK-NEXT:    %86 = LoadFrameInst [i]
-//CHECK-NEXT:    %87 = BinaryOperatorInst '+', %86, 7 : number
-//CHECK-NEXT:    %88 = StoreFrameInst %87, [i]
-//CHECK-NEXT:    %89 = BranchInst %BB10
-//CHECK-NEXT:  %BB11:
-//CHECK-NEXT:    %90 = TryEndInst
-//CHECK-NEXT:    %91 = LoadFrameInst [i]
-//CHECK-NEXT:    %92 = BinaryOperatorInst '+', %91, 3 : number
-//CHECK-NEXT:    %93 = StoreFrameInst %92, [i]
-//CHECK-NEXT:    %94 = BranchInst %BB5
-//CHECK-NEXT:  %BB4:
-//CHECK-NEXT:    %95 = LoadFrameInst [i]
-//CHECK-NEXT:    %96 = BinaryOperatorInst '+', %95, 2 : number
-//CHECK-NEXT:    %97 = StoreFrameInst %96, [i]
-//CHECK-NEXT:    %98 = BranchInst %BB25
-//CHECK-NEXT:  %BB25:
-//CHECK-NEXT:    %99 = TryEndInst
-//CHECK-NEXT:    %100 = LoadFrameInst [i]
-//CHECK-NEXT:    %101 = BinaryOperatorInst '+', %100, 3 : number
-//CHECK-NEXT:    %102 = StoreFrameInst %101, [i]
-//CHECK-NEXT:    %103 = BranchInst %BB5
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
+//CHECK-NEXT:  %1 = StoreFrameInst 0 : number, [i]
+//CHECK-NEXT:  %2 = TryStartInst %BB1, %BB2
+//CHECK-NEXT:%BB1:
+//CHECK-NEXT:  %3 = CatchInst
+//CHECK-NEXT:  %4 = LoadFrameInst [i]
+//CHECK-NEXT:  %5 = BinaryOperatorInst '+', %4, 3 : number
+//CHECK-NEXT:  %6 = StoreFrameInst %5, [i]
+//CHECK-NEXT:  %7 = ThrowInst %3
+//CHECK-NEXT:%BB3:
+//CHECK-NEXT:  %8 = LoadFrameInst [i]
+//CHECK-NEXT:  %9 = BinaryOperatorInst '+', %8, 4 : number
+//CHECK-NEXT:  %10 = StoreFrameInst %9, [i]
+//CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+//CHECK-NEXT:%BB2:
+//CHECK-NEXT:  %12 = TryStartInst %BB4, %BB5
+//CHECK-NEXT:%BB4:
+//CHECK-NEXT:  %13 = CatchInst
+//CHECK-NEXT:  %14 = StoreFrameInst %13, [?anon_2_e]
+//CHECK-NEXT:  %15 = LoadFrameInst [i]
+//CHECK-NEXT:  %16 = BinaryOperatorInst '+', %15, 2 : number
+//CHECK-NEXT:  %17 = StoreFrameInst %16, [i]
+//CHECK-NEXT:  %18 = BranchInst %BB6
+//CHECK-NEXT:%BB6:
+//CHECK-NEXT:  %19 = BranchInst %BB7
+//CHECK-NEXT:%BB5:
+//CHECK-NEXT:  %20 = LoadFrameInst [i]
+//CHECK-NEXT:  %21 = AsNumberInst %20
+//CHECK-NEXT:  %22 = BinaryOperatorInst '+', %21 : number, 1 : number
+//CHECK-NEXT:  %23 = StoreFrameInst %22, [i]
+//CHECK-NEXT:  %24 = TryStartInst %BB8, %BB9
+//CHECK-NEXT:%BB8:
+//CHECK-NEXT:  %25 = CatchInst
+//CHECK-NEXT:  %26 = LoadFrameInst [i]
+//CHECK-NEXT:  %27 = BinaryOperatorInst '+', %26, 7 : number
+//CHECK-NEXT:  %28 = StoreFrameInst %27, [i]
+//CHECK-NEXT:  %29 = ThrowInst %25
+//CHECK-NEXT:%BB10:
+//CHECK-NEXT:  %30 = BranchInst %BB11
+//CHECK-NEXT:%BB9:
+//CHECK-NEXT:  %31 = TryStartInst %BB12, %BB13
+//CHECK-NEXT:%BB12:
+//CHECK-NEXT:  %32 = CatchInst
+//CHECK-NEXT:  %33 = StoreFrameInst %32, [?anon_1_e]
+//CHECK-NEXT:  %34 = LoadFrameInst [i]
+//CHECK-NEXT:  %35 = BinaryOperatorInst '+', %34, 6 : number
+//CHECK-NEXT:  %36 = StoreFrameInst %35, [i]
+//CHECK-NEXT:  %37 = BranchInst %BB14
+//CHECK-NEXT:%BB14:
+//CHECK-NEXT:  %38 = BranchInst %BB15
+//CHECK-NEXT:%BB13:
+//CHECK-NEXT:  %39 = LoadFrameInst [i]
+//CHECK-NEXT:  %40 = BinaryOperatorInst '+', %39, 5 : number
+//CHECK-NEXT:  %41 = StoreFrameInst %40, [i]
+//CHECK-NEXT:  %42 = TryStartInst %BB16, %BB17
+//CHECK-NEXT:%BB16:
+//CHECK-NEXT:  %43 = CatchInst
+//CHECK-NEXT:  %44 = LoadFrameInst [i]
+//CHECK-NEXT:  %45 = BinaryOperatorInst '+', %44, 10 : number
+//CHECK-NEXT:  %46 = StoreFrameInst %45, [i]
+//CHECK-NEXT:  %47 = ThrowInst %43
+//CHECK-NEXT:%BB18:
+//CHECK-NEXT:  %48 = BranchInst %BB19
+//CHECK-NEXT:%BB17:
+//CHECK-NEXT:  %49 = TryStartInst %BB20, %BB21
+//CHECK-NEXT:%BB20:
+//CHECK-NEXT:  %50 = CatchInst
+//CHECK-NEXT:  %51 = StoreFrameInst %50, [?anon_0_e]
+//CHECK-NEXT:  %52 = LoadFrameInst [i]
+//CHECK-NEXT:  %53 = BinaryOperatorInst '+', %52, 9 : number
+//CHECK-NEXT:  %54 = StoreFrameInst %53, [i]
+//CHECK-NEXT:  %55 = BranchInst %BB22
+//CHECK-NEXT:%BB22:
+//CHECK-NEXT:  %56 = BranchInst %BB23
+//CHECK-NEXT:%BB21:
+//CHECK-NEXT:  %57 = LoadFrameInst [i]
+//CHECK-NEXT:  %58 = BinaryOperatorInst '+', %57, 8 : number
+//CHECK-NEXT:  %59 = StoreFrameInst %58, [i]
+//CHECK-NEXT:  %60 = BranchInst %BB24
+//CHECK-NEXT:%BB24:
+//CHECK-NEXT:  %61 = TryEndInst
+//CHECK-NEXT:  %62 = BranchInst %BB25
+//CHECK-NEXT:%BB25:
+//CHECK-NEXT:  %63 = TryEndInst
+//CHECK-NEXT:  %64 = LoadFrameInst [i]
+//CHECK-NEXT:  %65 = BinaryOperatorInst '+', %64, 10 : number
+//CHECK-NEXT:  %66 = StoreFrameInst %65, [i]
+//CHECK-NEXT:  %67 = BranchInst %BB26
+//CHECK-NEXT:%BB26:
+//CHECK-NEXT:  %68 = TryEndInst
+//CHECK-NEXT:  %69 = BranchInst %BB27
+//CHECK-NEXT:%BB27:
+//CHECK-NEXT:  %70 = TryEndInst
+//CHECK-NEXT:  %71 = LoadFrameInst [i]
+//CHECK-NEXT:  %72 = BinaryOperatorInst '+', %71, 7 : number
+//CHECK-NEXT:  %73 = StoreFrameInst %72, [i]
+//CHECK-NEXT:  %74 = BranchInst %BB28
+//CHECK-NEXT:%BB28:
+//CHECK-NEXT:  %75 = TryEndInst
+//CHECK-NEXT:  %76 = BranchInst %BB29
+//CHECK-NEXT:%BB29:
+//CHECK-NEXT:  %77 = TryEndInst
+//CHECK-NEXT:  %78 = LoadFrameInst [i]
+//CHECK-NEXT:  %79 = BinaryOperatorInst '+', %78, 3 : number
+//CHECK-NEXT:  %80 = StoreFrameInst %79, [i]
+//CHECK-NEXT:  %81 = ReturnInst "a" : string
+//CHECK-NEXT:%BB30:
+//CHECK-NEXT:  %82 = BranchInst %BB31
+//CHECK-NEXT:%BB31:
+//CHECK-NEXT:  %83 = TryEndInst
+//CHECK-NEXT:  %84 = BranchInst %BB22
+//CHECK-NEXT:%BB23:
+//CHECK-NEXT:  %85 = TryEndInst
+//CHECK-NEXT:  %86 = LoadFrameInst [i]
+//CHECK-NEXT:  %87 = BinaryOperatorInst '+', %86, 10 : number
+//CHECK-NEXT:  %88 = StoreFrameInst %87, [i]
+//CHECK-NEXT:  %89 = BranchInst %BB18
+//CHECK-NEXT:%BB19:
+//CHECK-NEXT:  %90 = TryEndInst
+//CHECK-NEXT:  %91 = BranchInst %BB14
+//CHECK-NEXT:%BB15:
+//CHECK-NEXT:  %92 = TryEndInst
+//CHECK-NEXT:  %93 = LoadFrameInst [i]
+//CHECK-NEXT:  %94 = BinaryOperatorInst '+', %93, 7 : number
+//CHECK-NEXT:  %95 = StoreFrameInst %94, [i]
+//CHECK-NEXT:  %96 = BranchInst %BB10
+//CHECK-NEXT:%BB11:
+//CHECK-NEXT:  %97 = TryEndInst
+//CHECK-NEXT:  %98 = BranchInst %BB6
+//CHECK-NEXT:%BB7:
+//CHECK-NEXT:  %99 = TryEndInst
+//CHECK-NEXT:  %100 = LoadFrameInst [i]
+//CHECK-NEXT:  %101 = BinaryOperatorInst '+', %100, 3 : number
+//CHECK-NEXT:  %102 = StoreFrameInst %101, [i]
+//CHECK-NEXT:  %103 = BranchInst %BB3
 //CHECK-NEXT:function_end
 
 function nested_try_test() {
@@ -436,186 +442,149 @@ function nested_try_test() {
   i += 4;
 }
 
+
 //CHECK-LABEL:function nested_catch_test()
-//CHECK-NEXT:frame = [i, ?anon_0_e, ?anon_1_e, ?anon_2_e, ?anon_3_e, ?anon_4_e]
-//CHECK-NEXT:  %BB0:
-//CHECK-NEXT:    %0 = StoreFrameInst undefined : undefined, [i]
-//CHECK-NEXT:    %1 = StoreFrameInst 0 : number, [i]
-//CHECK-NEXT:    %2 = TryStartInst %BB1, %BB2
-//CHECK-NEXT:  %BB1:
-//CHECK-NEXT:    %3 = CatchInst
-//CHECK-NEXT:    %4 = StoreFrameInst %3, [?anon_0_e]
-//CHECK-NEXT:    %5 = TryStartInst %BB3, %BB4
-//CHECK-NEXT:  %BB5:
-//CHECK-NEXT:    %6 = LoadFrameInst [i]
-//CHECK-NEXT:    %7 = BinaryOperatorInst '+', %6, 10 : number
-//CHECK-NEXT:    %8 = StoreFrameInst %7, [i]
-//CHECK-NEXT:    %9 = ReturnInst undefined : undefined
-//CHECK-NEXT:  %BB3:
-//CHECK-NEXT:    %10 = CatchInst
-//CHECK-NEXT:    %11 = LoadFrameInst [i]
-//CHECK-NEXT:    %12 = BinaryOperatorInst '+', %11, 8 : number
-//CHECK-NEXT:    %13 = StoreFrameInst %12, [i]
-//CHECK-NEXT:    %14 = ThrowInst %10
-//CHECK-NEXT:  %BB2:
-//CHECK-NEXT:    %15 = LoadFrameInst [i]
-//CHECK-NEXT:    %16 = AsNumberInst %15
-//CHECK-NEXT:    %17 = BinaryOperatorInst '+', %16 : number, 1 : number
-//CHECK-NEXT:    %18 = StoreFrameInst %17, [i]
-//CHECK-NEXT:    %19 = BranchInst %BB6
-//CHECK-NEXT:  %BB6:
-//CHECK-NEXT:    %20 = TryEndInst
-//CHECK-NEXT:    %21 = LoadFrameInst [i]
-//CHECK-NEXT:    %22 = BinaryOperatorInst '+', %21, 8 : number
-//CHECK-NEXT:    %23 = StoreFrameInst %22, [i]
-//CHECK-NEXT:    %24 = BranchInst %BB5
-//CHECK-NEXT:  %BB4:
-//CHECK-NEXT:    %25 = LoadFrameInst [i]
-//CHECK-NEXT:    %26 = BinaryOperatorInst '+', %25, 9 : number
-//CHECK-NEXT:    %27 = StoreFrameInst %26, [i]
-//CHECK-NEXT:    %28 = TryStartInst %BB7, %BB8
-//CHECK-NEXT:  %BB7:
-//CHECK-NEXT:    %29 = CatchInst
-//CHECK-NEXT:    %30 = StoreFrameInst %29, [?anon_2_e]
-//CHECK-NEXT:    %31 = TryStartInst %BB9, %BB10
-//CHECK-NEXT:  %BB11:
-//CHECK-NEXT:    %32 = BranchInst %BB12
-//CHECK-NEXT:  %BB9:
-//CHECK-NEXT:    %33 = CatchInst
-//CHECK-NEXT:    %34 = LoadFrameInst [i]
-//CHECK-NEXT:    %35 = BinaryOperatorInst '+', %34, 4 : number
-//CHECK-NEXT:    %36 = StoreFrameInst %35, [i]
-//CHECK-NEXT:    %37 = TryStartInst %BB13, %BB14
-//CHECK-NEXT:  %BB8:
-//CHECK-NEXT:    %38 = LoadFrameInst [i]
-//CHECK-NEXT:    %39 = BinaryOperatorInst '+', %38, 2 : number
-//CHECK-NEXT:    %40 = StoreFrameInst %39, [i]
-//CHECK-NEXT:    %41 = BranchInst %BB15
-//CHECK-NEXT:  %BB15:
-//CHECK-NEXT:    %42 = TryEndInst
-//CHECK-NEXT:    %43 = LoadFrameInst [i]
-//CHECK-NEXT:    %44 = BinaryOperatorInst '+', %43, 4 : number
-//CHECK-NEXT:    %45 = StoreFrameInst %44, [i]
-//CHECK-NEXT:    %46 = TryStartInst %BB16, %BB17
-//CHECK-NEXT:  %BB16:
-//CHECK-NEXT:    %47 = CatchInst
-//CHECK-NEXT:    %48 = StoreFrameInst %47, [?anon_1_e]
-//CHECK-NEXT:    %49 = TryStartInst %BB18, %BB19
-//CHECK-NEXT:  %BB20:
-//CHECK-NEXT:    %50 = BranchInst %BB11
-//CHECK-NEXT:  %BB18:
-//CHECK-NEXT:    %51 = CatchInst
-//CHECK-NEXT:    %52 = LoadFrameInst [i]
-//CHECK-NEXT:    %53 = BinaryOperatorInst '+', %52, 7 : number
-//CHECK-NEXT:    %54 = StoreFrameInst %53, [i]
-//CHECK-NEXT:    %55 = ThrowInst %51
-//CHECK-NEXT:  %BB17:
-//CHECK-NEXT:    %56 = LoadFrameInst [i]
-//CHECK-NEXT:    %57 = BinaryOperatorInst '+', %56, 5 : number
-//CHECK-NEXT:    %58 = StoreFrameInst %57, [i]
-//CHECK-NEXT:    %59 = BranchInst %BB21
-//CHECK-NEXT:  %BB21:
-//CHECK-NEXT:    %60 = TryEndInst
-//CHECK-NEXT:    %61 = LoadFrameInst [i]
-//CHECK-NEXT:    %62 = BinaryOperatorInst '+', %61, 7 : number
-//CHECK-NEXT:    %63 = StoreFrameInst %62, [i]
-//CHECK-NEXT:    %64 = BranchInst %BB20
-//CHECK-NEXT:  %BB19:
-//CHECK-NEXT:    %65 = LoadFrameInst [i]
-//CHECK-NEXT:    %66 = BinaryOperatorInst '+', %65, 6 : number
-//CHECK-NEXT:    %67 = StoreFrameInst %66, [i]
-//CHECK-NEXT:    %68 = BranchInst %BB22
-//CHECK-NEXT:  %BB22:
-//CHECK-NEXT:    %69 = TryEndInst
-//CHECK-NEXT:    %70 = LoadFrameInst [i]
-//CHECK-NEXT:    %71 = BinaryOperatorInst '+', %70, 7 : number
-//CHECK-NEXT:    %72 = StoreFrameInst %71, [i]
-//CHECK-NEXT:    %73 = BranchInst %BB20
-//CHECK-NEXT:  %BB10:
-//CHECK-NEXT:    %74 = LoadFrameInst [i]
-//CHECK-NEXT:    %75 = BinaryOperatorInst '+', %74, 3 : number
-//CHECK-NEXT:    %76 = StoreFrameInst %75, [i]
-//CHECK-NEXT:    %77 = BranchInst %BB23
-//CHECK-NEXT:  %BB23:
-//CHECK-NEXT:    %78 = TryEndInst
-//CHECK-NEXT:    %79 = LoadFrameInst [i]
-//CHECK-NEXT:    %80 = BinaryOperatorInst '+', %79, 4 : number
-//CHECK-NEXT:    %81 = StoreFrameInst %80, [i]
-//CHECK-NEXT:    %82 = TryStartInst %BB24, %BB25
-//CHECK-NEXT:  %BB24:
-//CHECK-NEXT:    %83 = CatchInst
-//CHECK-NEXT:    %84 = StoreFrameInst %83, [?anon_3_e]
-//CHECK-NEXT:    %85 = TryStartInst %BB26, %BB27
-//CHECK-NEXT:  %BB28:
-//CHECK-NEXT:    %86 = BranchInst %BB11
-//CHECK-NEXT:  %BB26:
-//CHECK-NEXT:    %87 = CatchInst
-//CHECK-NEXT:    %88 = LoadFrameInst [i]
-//CHECK-NEXT:    %89 = BinaryOperatorInst '+', %88, 7 : number
-//CHECK-NEXT:    %90 = StoreFrameInst %89, [i]
-//CHECK-NEXT:    %91 = ThrowInst %87
-//CHECK-NEXT:  %BB25:
-//CHECK-NEXT:    %92 = LoadFrameInst [i]
-//CHECK-NEXT:    %93 = BinaryOperatorInst '+', %92, 5 : number
-//CHECK-NEXT:    %94 = StoreFrameInst %93, [i]
-//CHECK-NEXT:    %95 = BranchInst %BB29
-//CHECK-NEXT:  %BB29:
-//CHECK-NEXT:    %96 = TryEndInst
-//CHECK-NEXT:    %97 = LoadFrameInst [i]
-//CHECK-NEXT:    %98 = BinaryOperatorInst '+', %97, 7 : number
-//CHECK-NEXT:    %99 = StoreFrameInst %98, [i]
-//CHECK-NEXT:    %100 = BranchInst %BB28
-//CHECK-NEXT:  %BB27:
-//CHECK-NEXT:    %101 = LoadFrameInst [i]
-//CHECK-NEXT:    %102 = BinaryOperatorInst '+', %101, 6 : number
-//CHECK-NEXT:    %103 = StoreFrameInst %102, [i]
-//CHECK-NEXT:    %104 = BranchInst %BB30
-//CHECK-NEXT:  %BB30:
-//CHECK-NEXT:    %105 = TryEndInst
-//CHECK-NEXT:    %106 = LoadFrameInst [i]
-//CHECK-NEXT:    %107 = BinaryOperatorInst '+', %106, 7 : number
-//CHECK-NEXT:    %108 = StoreFrameInst %107, [i]
-//CHECK-NEXT:    %109 = BranchInst %BB28
-//CHECK-NEXT:  %BB13:
-//CHECK-NEXT:    %110 = CatchInst
-//CHECK-NEXT:    %111 = StoreFrameInst %110, [?anon_4_e]
-//CHECK-NEXT:    %112 = TryStartInst %BB31, %BB32
-//CHECK-NEXT:  %BB33:
-//CHECK-NEXT:    %113 = ThrowInst %33
-//CHECK-NEXT:  %BB31:
-//CHECK-NEXT:    %114 = CatchInst
-//CHECK-NEXT:    %115 = LoadFrameInst [i]
-//CHECK-NEXT:    %116 = BinaryOperatorInst '+', %115, 7 : number
-//CHECK-NEXT:    %117 = StoreFrameInst %116, [i]
-//CHECK-NEXT:    %118 = ThrowInst %114
-//CHECK-NEXT:  %BB14:
-//CHECK-NEXT:    %119 = LoadFrameInst [i]
-//CHECK-NEXT:    %120 = BinaryOperatorInst '+', %119, 5 : number
-//CHECK-NEXT:    %121 = StoreFrameInst %120, [i]
-//CHECK-NEXT:    %122 = BranchInst %BB34
-//CHECK-NEXT:  %BB34:
-//CHECK-NEXT:    %123 = TryEndInst
-//CHECK-NEXT:    %124 = LoadFrameInst [i]
-//CHECK-NEXT:    %125 = BinaryOperatorInst '+', %124, 7 : number
-//CHECK-NEXT:    %126 = StoreFrameInst %125, [i]
-//CHECK-NEXT:    %127 = BranchInst %BB33
-//CHECK-NEXT:  %BB32:
-//CHECK-NEXT:    %128 = LoadFrameInst [i]
-//CHECK-NEXT:    %129 = BinaryOperatorInst '+', %128, 6 : number
-//CHECK-NEXT:    %130 = StoreFrameInst %129, [i]
-//CHECK-NEXT:    %131 = BranchInst %BB35
-//CHECK-NEXT:  %BB35:
-//CHECK-NEXT:    %132 = TryEndInst
-//CHECK-NEXT:    %133 = LoadFrameInst [i]
-//CHECK-NEXT:    %134 = BinaryOperatorInst '+', %133, 7 : number
-//CHECK-NEXT:    %135 = StoreFrameInst %134, [i]
-//CHECK-NEXT:    %136 = BranchInst %BB33
-//CHECK-NEXT:  %BB12:
-//CHECK-NEXT:    %137 = TryEndInst
-//CHECK-NEXT:    %138 = LoadFrameInst [i]
-//CHECK-NEXT:    %139 = BinaryOperatorInst '+', %138, 8 : number
-//CHECK-NEXT:    %140 = StoreFrameInst %139, [i]
-//CHECK-NEXT:    %141 = BranchInst %BB5
+//CHECK-NEXT:frame = [i, ?anon_0_e, ?anon_1_e, ?anon_2_e, ?anon_3_e]
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
+//CHECK-NEXT:  %1 = StoreFrameInst 0 : number, [i]
+//CHECK-NEXT:  %2 = TryStartInst %BB1, %BB2
+//CHECK-NEXT:%BB1:
+//CHECK-NEXT:  %3 = CatchInst
+//CHECK-NEXT:  %4 = LoadFrameInst [i]
+//CHECK-NEXT:  %5 = BinaryOperatorInst '+', %4, 8 : number
+//CHECK-NEXT:  %6 = StoreFrameInst %5, [i]
+//CHECK-NEXT:  %7 = ThrowInst %3
+//CHECK-NEXT:%BB3:
+//CHECK-NEXT:  %8 = LoadFrameInst [i]
+//CHECK-NEXT:  %9 = BinaryOperatorInst '+', %8, 10 : number
+//CHECK-NEXT:  %10 = StoreFrameInst %9, [i]
+//CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+//CHECK-NEXT:%BB2:
+//CHECK-NEXT:  %12 = TryStartInst %BB4, %BB5
+//CHECK-NEXT:%BB4:
+//CHECK-NEXT:  %13 = CatchInst
+//CHECK-NEXT:  %14 = StoreFrameInst %13, [?anon_0_e]
+//CHECK-NEXT:  %15 = LoadFrameInst [i]
+//CHECK-NEXT:  %16 = BinaryOperatorInst '+', %15, 9 : number
+//CHECK-NEXT:  %17 = StoreFrameInst %16, [i]
+//CHECK-NEXT:  %18 = TryStartInst %BB6, %BB7
+//CHECK-NEXT:%BB8:
+//CHECK-NEXT:  %19 = BranchInst %BB9
+//CHECK-NEXT:%BB5:
+//CHECK-NEXT:  %20 = LoadFrameInst [i]
+//CHECK-NEXT:  %21 = AsNumberInst %20
+//CHECK-NEXT:  %22 = BinaryOperatorInst '+', %21 : number, 1 : number
+//CHECK-NEXT:  %23 = StoreFrameInst %22, [i]
+//CHECK-NEXT:  %24 = BranchInst %BB10
+//CHECK-NEXT:%BB10:
+//CHECK-NEXT:  %25 = TryEndInst
+//CHECK-NEXT:  %26 = BranchInst %BB8
+//CHECK-NEXT:%BB6:
+//CHECK-NEXT:  %27 = CatchInst
+//CHECK-NEXT:  %28 = LoadFrameInst [i]
+//CHECK-NEXT:  %29 = BinaryOperatorInst '+', %28, 4 : number
+//CHECK-NEXT:  %30 = StoreFrameInst %29, [i]
+//CHECK-NEXT:  %31 = TryStartInst %BB11, %BB12
+//CHECK-NEXT:%BB13:
+//CHECK-NEXT:  %32 = BranchInst %BB8
+//CHECK-NEXT:%BB7:
+//CHECK-NEXT:  %33 = TryStartInst %BB14, %BB15
+//CHECK-NEXT:%BB14:
+//CHECK-NEXT:  %34 = CatchInst
+//CHECK-NEXT:  %35 = StoreFrameInst %34, [?anon_1_e]
+//CHECK-NEXT:  %36 = LoadFrameInst [i]
+//CHECK-NEXT:  %37 = BinaryOperatorInst '+', %36, 3 : number
+//CHECK-NEXT:  %38 = StoreFrameInst %37, [i]
+//CHECK-NEXT:  %39 = BranchInst %BB16
+//CHECK-NEXT:%BB16:
+//CHECK-NEXT:  %40 = BranchInst %BB17
+//CHECK-NEXT:%BB15:
+//CHECK-NEXT:  %41 = LoadFrameInst [i]
+//CHECK-NEXT:  %42 = BinaryOperatorInst '+', %41, 2 : number
+//CHECK-NEXT:  %43 = StoreFrameInst %42, [i]
+//CHECK-NEXT:  %44 = BranchInst %BB18
+//CHECK-NEXT:%BB18:
+//CHECK-NEXT:  %45 = TryEndInst
+//CHECK-NEXT:  %46 = BranchInst %BB16
+//CHECK-NEXT:%BB17:
+//CHECK-NEXT:  %47 = TryEndInst
+//CHECK-NEXT:  %48 = LoadFrameInst [i]
+//CHECK-NEXT:  %49 = BinaryOperatorInst '+', %48, 4 : number
+//CHECK-NEXT:  %50 = StoreFrameInst %49, [i]
+//CHECK-NEXT:  %51 = TryStartInst %BB19, %BB20
+//CHECK-NEXT:%BB19:
+//CHECK-NEXT:  %52 = CatchInst
+//CHECK-NEXT:  %53 = LoadFrameInst [i]
+//CHECK-NEXT:  %54 = BinaryOperatorInst '+', %53, 7 : number
+//CHECK-NEXT:  %55 = StoreFrameInst %54, [i]
+//CHECK-NEXT:  %56 = ThrowInst %52
+//CHECK-NEXT:%BB21:
+//CHECK-NEXT:  %57 = BranchInst %BB13
+//CHECK-NEXT:%BB20:
+//CHECK-NEXT:  %58 = TryStartInst %BB22, %BB23
+//CHECK-NEXT:%BB22:
+//CHECK-NEXT:  %59 = CatchInst
+//CHECK-NEXT:  %60 = StoreFrameInst %59, [?anon_2_e]
+//CHECK-NEXT:  %61 = LoadFrameInst [i]
+//CHECK-NEXT:  %62 = BinaryOperatorInst '+', %61, 6 : number
+//CHECK-NEXT:  %63 = StoreFrameInst %62, [i]
+//CHECK-NEXT:  %64 = BranchInst %BB24
+//CHECK-NEXT:%BB24:
+//CHECK-NEXT:  %65 = BranchInst %BB25
+//CHECK-NEXT:%BB23:
+//CHECK-NEXT:  %66 = LoadFrameInst [i]
+//CHECK-NEXT:  %67 = BinaryOperatorInst '+', %66, 5 : number
+//CHECK-NEXT:  %68 = StoreFrameInst %67, [i]
+//CHECK-NEXT:  %69 = BranchInst %BB26
+//CHECK-NEXT:%BB26:
+//CHECK-NEXT:  %70 = TryEndInst
+//CHECK-NEXT:  %71 = BranchInst %BB24
+//CHECK-NEXT:%BB25:
+//CHECK-NEXT:  %72 = TryEndInst
+//CHECK-NEXT:  %73 = LoadFrameInst [i]
+//CHECK-NEXT:  %74 = BinaryOperatorInst '+', %73, 7 : number
+//CHECK-NEXT:  %75 = StoreFrameInst %74, [i]
+//CHECK-NEXT:  %76 = BranchInst %BB21
+//CHECK-NEXT:%BB11:
+//CHECK-NEXT:  %77 = CatchInst
+//CHECK-NEXT:  %78 = LoadFrameInst [i]
+//CHECK-NEXT:  %79 = BinaryOperatorInst '+', %78, 7 : number
+//CHECK-NEXT:  %80 = StoreFrameInst %79, [i]
+//CHECK-NEXT:  %81 = ThrowInst %77
+//CHECK-NEXT:%BB27:
+//CHECK-NEXT:  %82 = ThrowInst %27
+//CHECK-NEXT:%BB12:
+//CHECK-NEXT:  %83 = TryStartInst %BB28, %BB29
+//CHECK-NEXT:%BB28:
+//CHECK-NEXT:  %84 = CatchInst
+//CHECK-NEXT:  %85 = StoreFrameInst %84, [?anon_3_e]
+//CHECK-NEXT:  %86 = LoadFrameInst [i]
+//CHECK-NEXT:  %87 = BinaryOperatorInst '+', %86, 6 : number
+//CHECK-NEXT:  %88 = StoreFrameInst %87, [i]
+//CHECK-NEXT:  %89 = BranchInst %BB30
+//CHECK-NEXT:%BB30:
+//CHECK-NEXT:  %90 = BranchInst %BB31
+//CHECK-NEXT:%BB29:
+//CHECK-NEXT:  %91 = LoadFrameInst [i]
+//CHECK-NEXT:  %92 = BinaryOperatorInst '+', %91, 5 : number
+//CHECK-NEXT:  %93 = StoreFrameInst %92, [i]
+//CHECK-NEXT:  %94 = BranchInst %BB32
+//CHECK-NEXT:%BB32:
+//CHECK-NEXT:  %95 = TryEndInst
+//CHECK-NEXT:  %96 = BranchInst %BB30
+//CHECK-NEXT:%BB31:
+//CHECK-NEXT:  %97 = TryEndInst
+//CHECK-NEXT:  %98 = LoadFrameInst [i]
+//CHECK-NEXT:  %99 = BinaryOperatorInst '+', %98, 7 : number
+//CHECK-NEXT:  %100 = StoreFrameInst %99, [i]
+//CHECK-NEXT:  %101 = BranchInst %BB27
+//CHECK-NEXT:%BB9:
+//CHECK-NEXT:  %102 = TryEndInst
+//CHECK-NEXT:  %103 = LoadFrameInst [i]
+//CHECK-NEXT:  %104 = BinaryOperatorInst '+', %103, 8 : number
+//CHECK-NEXT:  %105 = StoreFrameInst %104, [i]
+//CHECK-NEXT:  %106 = BranchInst %BB3
 //CHECK-NEXT:function_end
 
 function nested_catch_test() {
@@ -653,98 +622,100 @@ function nested_catch_test() {
 
 //CHECK-LABEL:function finally_with_break_continue_test()
 //CHECK-NEXT:frame = [i, ?anon_0_e]
-//CHECK-NEXT:  %BB0:
-//CHECK-NEXT:    %0 = StoreFrameInst undefined : undefined, [i]
-//CHECK-NEXT:    %1 = StoreFrameInst 0 : number, [i]
-//CHECK-NEXT:    %2 = BranchInst %BB1
-//CHECK-NEXT:  %BB2:
-//CHECK-NEXT:    %3 = TryStartInst %BB3, %BB4
-//CHECK-NEXT:  %BB5:
-//CHECK-NEXT:    %4 = LoadFrameInst [i]
-//CHECK-NEXT:    %5 = BinaryOperatorInst '+', %4, 4 : number
-//CHECK-NEXT:    %6 = StoreFrameInst %5, [i]
-//CHECK-NEXT:    %7 = ReturnInst undefined : undefined
-//CHECK-NEXT:  %BB1:
-//CHECK-NEXT:    %8 = LoadFrameInst [i]
-//CHECK-NEXT:    %9 = BinaryOperatorInst '<', %8, 10 : number
-//CHECK-NEXT:    %10 = CondBranchInst %9, %BB2, %BB5
-//CHECK-NEXT:  %BB6:
-//CHECK-NEXT:    %11 = LoadFrameInst [i]
-//CHECK-NEXT:    %12 = BinaryOperatorInst '<', %11, 10 : number
-//CHECK-NEXT:    %13 = CondBranchInst %12, %BB2, %BB5
-//CHECK-NEXT:  %BB7:
-//CHECK-NEXT:    %14 = LoadFrameInst [i]
-//CHECK-NEXT:    %15 = AsNumberInst %14
-//CHECK-NEXT:    %16 = BinaryOperatorInst '+', %15 : number, 1 : number
-//CHECK-NEXT:    %17 = StoreFrameInst %16, [i]
-//CHECK-NEXT:    %18 = BranchInst %BB6
-//CHECK-NEXT:  %BB3:
-//CHECK-NEXT:    %19 = CatchInst
-//CHECK-NEXT:    %20 = StoreFrameInst %19, [?anon_0_e]
-//CHECK-NEXT:    %21 = TryStartInst %BB8, %BB9
-//CHECK-NEXT:  %BB10:
-//CHECK-NEXT:    %22 = BranchInst %BB7
-//CHECK-NEXT:  %BB8:
-//CHECK-NEXT:    %23 = CatchInst
-//CHECK-NEXT:    %24 = LoadFrameInst [i]
-//CHECK-NEXT:    %25 = BinaryOperatorInst '+', %24, 3 : number
-//CHECK-NEXT:    %26 = StoreFrameInst %25, [i]
-//CHECK-NEXT:    %27 = ThrowInst %23
-//CHECK-NEXT:  %BB4:
-//CHECK-NEXT:    %28 = LoadFrameInst [i]
-//CHECK-NEXT:    %29 = AsNumberInst %28
-//CHECK-NEXT:    %30 = BinaryOperatorInst '+', %29 : number, 1 : number
-//CHECK-NEXT:    %31 = StoreFrameInst %30, [i]
-//CHECK-NEXT:    %32 = BranchInst %BB11
-//CHECK-NEXT:  %BB11:
-//CHECK-NEXT:    %33 = TryEndInst
-//CHECK-NEXT:    %34 = LoadFrameInst [i]
-//CHECK-NEXT:    %35 = BinaryOperatorInst '+', %34, 3 : number
-//CHECK-NEXT:    %36 = StoreFrameInst %35, [i]
-//CHECK-NEXT:    %37 = BranchInst %BB5
-//CHECK-NEXT:  %BB12:
-//CHECK-NEXT:    %38 = BranchInst %BB13
-//CHECK-NEXT:  %BB13:
-//CHECK-NEXT:    %39 = TryEndInst
-//CHECK-NEXT:    %40 = LoadFrameInst [i]
-//CHECK-NEXT:    %41 = BinaryOperatorInst '+', %40, 3 : number
-//CHECK-NEXT:    %42 = StoreFrameInst %41, [i]
-//CHECK-NEXT:    %43 = BranchInst %BB10
-//CHECK-NEXT:  %BB9:
-//CHECK-NEXT:    %44 = LoadFrameInst [i]
-//CHECK-NEXT:    %45 = BinaryOperatorInst '+', %44, 2 : number
-//CHECK-NEXT:    %46 = StoreFrameInst %45, [i]
-//CHECK-NEXT:    %47 = LoadFrameInst [i]
-//CHECK-NEXT:    %48 = BinaryOperatorInst '==', %47, 3 : number
-//CHECK-NEXT:    %49 = CondBranchInst %48, %BB14, %BB15
-//CHECK-NEXT:  %BB14:
-//CHECK-NEXT:    %50 = BranchInst %BB16
-//CHECK-NEXT:  %BB15:
-//CHECK-NEXT:    %51 = BranchInst %BB17
-//CHECK-NEXT:  %BB17:
-//CHECK-NEXT:    %52 = BranchInst %BB18
-//CHECK-NEXT:  %BB16:
-//CHECK-NEXT:    %53 = TryEndInst
-//CHECK-NEXT:    %54 = LoadFrameInst [i]
-//CHECK-NEXT:    %55 = BinaryOperatorInst '+', %54, 3 : number
-//CHECK-NEXT:    %56 = StoreFrameInst %55, [i]
-//CHECK-NEXT:    %57 = ReturnInst undefined : undefined
-//CHECK-NEXT:  %BB19:
-//CHECK-NEXT:    %58 = BranchInst %BB17
-//CHECK-NEXT:  %BB18:
-//CHECK-NEXT:    %59 = TryEndInst
-//CHECK-NEXT:    %60 = LoadFrameInst [i]
-//CHECK-NEXT:    %61 = BinaryOperatorInst '+', %60, 3 : number
-//CHECK-NEXT:    %62 = StoreFrameInst %61, [i]
-//CHECK-NEXT:    %63 = BranchInst %BB7
-//CHECK-NEXT:  %BB20:
-//CHECK-NEXT:    %64 = BranchInst %BB21
-//CHECK-NEXT:  %BB21:
-//CHECK-NEXT:    %65 = TryEndInst
-//CHECK-NEXT:    %66 = LoadFrameInst [i]
-//CHECK-NEXT:    %67 = BinaryOperatorInst '+', %66, 3 : number
-//CHECK-NEXT:    %68 = StoreFrameInst %67, [i]
-//CHECK-NEXT:    %69 = BranchInst %BB10
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
+//CHECK-NEXT:  %1 = StoreFrameInst 0 : number, [i]
+//CHECK-NEXT:  %2 = BranchInst %BB1
+//CHECK-NEXT:%BB2:
+//CHECK-NEXT:  %3 = TryStartInst %BB3, %BB4
+//CHECK-NEXT:%BB5:
+//CHECK-NEXT:  %4 = LoadFrameInst [i]
+//CHECK-NEXT:  %5 = BinaryOperatorInst '+', %4, 4 : number
+//CHECK-NEXT:  %6 = StoreFrameInst %5, [i]
+//CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+//CHECK-NEXT:%BB1:
+//CHECK-NEXT:  %8 = LoadFrameInst [i]
+//CHECK-NEXT:  %9 = BinaryOperatorInst '<', %8, 10 : number
+//CHECK-NEXT:  %10 = CondBranchInst %9, %BB2, %BB5
+//CHECK-NEXT:%BB6:
+//CHECK-NEXT:  %11 = LoadFrameInst [i]
+//CHECK-NEXT:  %12 = BinaryOperatorInst '<', %11, 10 : number
+//CHECK-NEXT:  %13 = CondBranchInst %12, %BB2, %BB5
+//CHECK-NEXT:%BB7:
+//CHECK-NEXT:  %14 = LoadFrameInst [i]
+//CHECK-NEXT:  %15 = AsNumberInst %14
+//CHECK-NEXT:  %16 = BinaryOperatorInst '+', %15 : number, 1 : number
+//CHECK-NEXT:  %17 = StoreFrameInst %16, [i]
+//CHECK-NEXT:  %18 = BranchInst %BB6
+//CHECK-NEXT:%BB3:
+//CHECK-NEXT:  %19 = CatchInst
+//CHECK-NEXT:  %20 = LoadFrameInst [i]
+//CHECK-NEXT:  %21 = BinaryOperatorInst '+', %20, 3 : number
+//CHECK-NEXT:  %22 = StoreFrameInst %21, [i]
+//CHECK-NEXT:  %23 = ThrowInst %19
+//CHECK-NEXT:%BB8:
+//CHECK-NEXT:  %24 = BranchInst %BB7
+//CHECK-NEXT:%BB4:
+//CHECK-NEXT:  %25 = TryStartInst %BB9, %BB10
+//CHECK-NEXT:%BB9:
+//CHECK-NEXT:  %26 = CatchInst
+//CHECK-NEXT:  %27 = StoreFrameInst %26, [?anon_0_e]
+//CHECK-NEXT:  %28 = LoadFrameInst [i]
+//CHECK-NEXT:  %29 = BinaryOperatorInst '+', %28, 2 : number
+//CHECK-NEXT:  %30 = StoreFrameInst %29, [i]
+//CHECK-NEXT:  %31 = LoadFrameInst [i]
+//CHECK-NEXT:  %32 = BinaryOperatorInst '==', %31, 3 : number
+//CHECK-NEXT:  %33 = CondBranchInst %32, %BB11, %BB12
+//CHECK-NEXT:%BB13:
+//CHECK-NEXT:  %34 = BranchInst %BB14
+//CHECK-NEXT:%BB10:
+//CHECK-NEXT:  %35 = LoadFrameInst [i]
+//CHECK-NEXT:  %36 = AsNumberInst %35
+//CHECK-NEXT:  %37 = BinaryOperatorInst '+', %36 : number, 1 : number
+//CHECK-NEXT:  %38 = StoreFrameInst %37, [i]
+//CHECK-NEXT:  %39 = BranchInst %BB15
+//CHECK-NEXT:%BB15:
+//CHECK-NEXT:  %40 = TryEndInst
+//CHECK-NEXT:  %41 = BranchInst %BB16
+//CHECK-NEXT:%BB16:
+//CHECK-NEXT:  %42 = TryEndInst
+//CHECK-NEXT:  %43 = LoadFrameInst [i]
+//CHECK-NEXT:  %44 = BinaryOperatorInst '+', %43, 3 : number
+//CHECK-NEXT:  %45 = StoreFrameInst %44, [i]
+//CHECK-NEXT:  %46 = BranchInst %BB5
+//CHECK-NEXT:%BB17:
+//CHECK-NEXT:  %47 = BranchInst %BB18
+//CHECK-NEXT:%BB18:
+//CHECK-NEXT:  %48 = TryEndInst
+//CHECK-NEXT:  %49 = BranchInst %BB13
+//CHECK-NEXT:%BB11:
+//CHECK-NEXT:  %50 = BranchInst %BB19
+//CHECK-NEXT:%BB12:
+//CHECK-NEXT:  %51 = BranchInst %BB20
+//CHECK-NEXT:%BB20:
+//CHECK-NEXT:  %52 = BranchInst %BB21
+//CHECK-NEXT:%BB19:
+//CHECK-NEXT:  %53 = TryEndInst
+//CHECK-NEXT:  %54 = LoadFrameInst [i]
+//CHECK-NEXT:  %55 = BinaryOperatorInst '+', %54, 3 : number
+//CHECK-NEXT:  %56 = StoreFrameInst %55, [i]
+//CHECK-NEXT:  %57 = ReturnInst undefined : undefined
+//CHECK-NEXT:%BB22:
+//CHECK-NEXT:  %58 = BranchInst %BB20
+//CHECK-NEXT:%BB21:
+//CHECK-NEXT:  %59 = TryEndInst
+//CHECK-NEXT:  %60 = LoadFrameInst [i]
+//CHECK-NEXT:  %61 = BinaryOperatorInst '+', %60, 3 : number
+//CHECK-NEXT:  %62 = StoreFrameInst %61, [i]
+//CHECK-NEXT:  %63 = BranchInst %BB7
+//CHECK-NEXT:%BB23:
+//CHECK-NEXT:  %64 = BranchInst %BB13
+//CHECK-NEXT:%BB14:
+//CHECK-NEXT:  %65 = TryEndInst
+//CHECK-NEXT:  %66 = LoadFrameInst [i]
+//CHECK-NEXT:  %67 = BinaryOperatorInst '+', %66, 3 : number
+//CHECK-NEXT:  %68 = StoreFrameInst %67, [i]
+//CHECK-NEXT:  %69 = BranchInst %BB8
 //CHECK-NEXT:function_end
 
 function finally_with_break_continue_test() {

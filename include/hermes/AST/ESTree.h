@@ -88,6 +88,12 @@ class Node : public llvm::ilist_node<Node> {
     return debugLoc_;
   }
 
+  /// Copy all location data from a different node.
+  void copyLocationFrom(const Node *src) {
+    setSourceRange(src->getSourceRange());
+    setDebugLoc(src->getDebugLoc());
+  }
+
   /// \returns the textual name of the node.
   StringRef getNodeName() {
     switch (getKind()) {

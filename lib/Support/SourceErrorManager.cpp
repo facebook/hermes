@@ -593,4 +593,12 @@ void SourceErrorManager::printDiagnostic(
   }
 }
 
+SMLoc SourceErrorManager::convertEndToLocation(SMRange range) {
+  // If the range is empty, return the starting point.
+  if (range.Start == range.End)
+    return range.Start;
+
+  return SMLoc::getFromPointer(range.End.getPointer() - 1);
+}
+
 } // namespace hermes
