@@ -32,6 +32,13 @@ PerfSection::PerfSection(const char *name, const char *category)
       category_(category),
 #endif
       argValues_(0) {
+#ifdef HERMESVM_PLATFORM_LOGGING
+  if (category_) {
+    hermesLog("Hermes", "%s[%s] BEGIN.", name_, category_);
+  } else {
+    hermesLog("Hermes", "%s BEGIN.", name_);
+  }
+#endif
 #ifdef HERMES_FACEBOOK_BUILD
   fbsystrace_begin_section(TRACE_TAG_JS_VM, name);
 #endif
@@ -76,6 +83,13 @@ PerfSection::~PerfSection() {
   if (argValues_.empty()) {
 #ifdef HERMES_FACEBOOK_BUILD
     fbsystrace_end_section(TRACE_TAG_JS_VM);
+#endif
+#ifdef HERMESVM_PLATFORM_LOGGING
+    if (category_) {
+      hermesLog("Hermes", "%s[%s] END.", name_, category_);
+    } else {
+      hermesLog("Hermes", "%s END.", name_);
+    }
 #endif
     return;
   }
@@ -141,12 +155,12 @@ PerfSection::~PerfSection() {
     }
     buf.printf("%s: %s", kvPair.first.c_str(), kvPair.second.c_str());
   }
-  hermesLog(
-      "Hermes",
-      "%s[%s]: %s.",
-      name_,
-      (category_ ? category_ : ""),
-      buf.c_str());
+
+  if (category_) {
+    hermesLog("Hermes", "%s[%s] END: %s.", name_, category_, buf.c_str());
+  } else {
+    hermesLog("Hermes", "%s END: %s.", name_, buf.c_str());
+  }
 #endif
   for (auto &arg : argValues_) {
     arg.second.freeDependencies();
