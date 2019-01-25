@@ -131,7 +131,13 @@ Literal *hermes::evalBinaryOperator(
     BinaryOperatorInst::OpKind kind,
     IRBuilder &builder,
     Literal *lhs,
-    Literal *rhs) LLVM_NO_SANITIZE("float-divide-by-zero") {
+    Literal *rhs) LLVM_NO_SANITIZE("float-divide-by-zero");
+
+Literal *hermes::evalBinaryOperator(
+    BinaryOperatorInst::OpKind kind,
+    IRBuilder &builder,
+    Literal *lhs,
+    Literal *rhs) {
   Type leftTy = lhs->getType();
   Type rightTy = rhs->getType();
 

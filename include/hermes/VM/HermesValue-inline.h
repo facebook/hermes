@@ -76,7 +76,10 @@ inline GCHermesValue *GCHermesValue::copy(
   // contents not to contain pointers.  The range write barrier
   // after the the copies ensure that sufficient barriers are
   // performed.
-  std::memmove(result, first, (last - first) * sizeof(GCHermesValue));
+  std::memmove(
+      reinterpret_cast<void *>(result),
+      first,
+      (last - first) * sizeof(GCHermesValue));
   gc->writeBarrierRange(result, last - first);
   return result + (last - first);
 }
