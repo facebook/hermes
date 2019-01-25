@@ -6,6 +6,7 @@
  */
 #include "hermes/VM/RuntimeModule.h"
 
+#include "hermes/Support/PerfSection.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/Runtime.h"
@@ -189,6 +190,7 @@ void RuntimeModule::initializeLazy(std::unique_ptr<hbc::BCProvider> bytecode) {
 
 void RuntimeModule::importStringIDMap() {
   assert(bcProvider_ && "Uninitialized RuntimeModule");
+  PerfSection perf("Import String ID Map");
   GCScope scope(runtime_);
 
   auto strTableSize = bcProvider_->getStringCount();
