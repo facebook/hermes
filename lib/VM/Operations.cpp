@@ -300,7 +300,11 @@ bool toBoolean(HermesValue value) {
 /// ES5.1 9.8.1
 static CallResult<PseudoHandle<StringPrimitive>> numberToString(
     Runtime *runtime,
-    double m) LLVM_NO_SANITIZE("float-cast-overflow") {
+    double m) LLVM_NO_SANITIZE("float-cast-overflow");
+
+static CallResult<PseudoHandle<StringPrimitive>> numberToString(
+    Runtime *runtime,
+    double m) {
   char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
 
   // Optimization: Fast-case for positive integers < 2^31

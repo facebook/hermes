@@ -141,7 +141,8 @@ class CallResult<T, detail::CallResultSpecialize::Trivial> {
   CallResult(const CallResult &cr) = default;
   CallResult &operator=(const CallResult &cr) {
     status_ = cr.status_;
-    std::memcpy(&storage_, &cr.storage_, sizeof(T));
+    // GCC8 requires this no-op cast to avoid its -Wclass-memaccess warning.
+    std::memcpy(reinterpret_cast<void *>(&storage_), &cr.storage_, sizeof(T));
     return *this;
   }
   ~CallResult() = default;

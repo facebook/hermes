@@ -68,8 +68,8 @@ int32_t truncateToInt32SlowPath(double d);
 /// NaN and Infinity are always converted to 0. The rest of the numbers are
 /// converted to a (conceptually) infinite-width integer and the low 32 bits of
 /// the integer are then returned.
-inline int32_t truncateToInt32(double d)
-    LLVM_NO_SANITIZE("float-cast-overflow") {
+int32_t truncateToInt32(double d) LLVM_NO_SANITIZE("float-cast-overflow");
+inline int32_t truncateToInt32(double d) {
   // Check of the value can be converted to integer without loss. We want to
   // use the widest available integer because this conversion will be much
   // faster than the bit-twiddling slow path.
