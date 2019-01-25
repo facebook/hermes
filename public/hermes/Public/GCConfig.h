@@ -28,7 +28,8 @@ namespace vm {
 using gcheapsize_t = uint32_t;
 
 /// Parameters to control a tripwire function called when the live set size
-/// surpasses a given threshold after collections.
+/// surpasses a given threshold after collections.  Check documentation in
+/// README.md
 #define GC_TRIPWIRE_FIELDS(F)                                                  \
   /* Minimum time to wait between tripwire trigger events. */                  \
   F(std::chrono::hours, Cooldown, 24)                                          \
@@ -45,7 +46,7 @@ _HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, GC_TRIPWIRE_FIELDS, {});
 
 #undef HEAP_TRIPWIRE_FIELDS
 
-/// Parameters for GC Initialisation.
+/// Parameters for GC Initialisation.  Check documentation in README.md
 #define GC_FIELDS(F)                                                       \
   /* Minimum heap size hint. */                                            \
   F(gcheapsize_t, MinHeapSize, 0)                                          \

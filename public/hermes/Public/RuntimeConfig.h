@@ -15,7 +15,7 @@ namespace vm {
 
 class PinnedHermesValue;
 
-// Parameters for Runtime initialisation
+// Parameters for Runtime initialisation.  Check documentation in README.md
 #define RUNTIME_FIELDS(F)                         \
   /* Parameters to be passed on to the GC. */     \
   F(vm::GCConfig, GCConfig)                       \
