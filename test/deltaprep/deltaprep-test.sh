@@ -1,5 +1,5 @@
-# RUN: sh %s %S %T %hbc-deltaprep %hermes
-# shellcheck disable=SC2148
+# RUN: bash %s %S %T %hbc-deltaprep %hermes
+# shellcheck shell=bash
 
 # Exit on any failure.
 set -e

@@ -1,6 +1,5 @@
-# RUN: sh %s %S %T %hermes
-# shellcheck disable=SC2086
-# shellcheck disable=SC2148
+# RUN: bash %s %S %T %hermes
+# shellcheck shell=bash disable=SC2086
 
 # This test is an end-to-end source-map symbolication test. First it runs a
 # file thrower.js which throws an exception, and records the backtrace (which
