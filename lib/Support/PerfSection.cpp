@@ -142,7 +142,7 @@ PerfSection::~PerfSection() {
     buf.printf("%s: %s", kvPair.first.c_str(), kvPair.second.c_str());
   }
   hermesLog(
-      "HermesGC",
+      "Hermes",
       "%s[%s]: %s.",
       name_,
       (category_ ? category_ : ""),
