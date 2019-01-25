@@ -339,7 +339,7 @@ throws1();
     bool caught = false;
     try {
       rt->evaluateJavaScript(std::make_unique<StringBuffer>(code), sourceURL);
-    } catch (facebook::jsi::JSError err) {
+    } catch (facebook::jsi::JSError &err) {
       caught = true;
       EXPECT_TRUE(err.getStack().find(sourceURL) != std::string::npos)
           << "Backtrace should contain source URL";
