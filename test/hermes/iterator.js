@@ -1,4 +1,4 @@
-// RUN: %hermes -O -Xes6-symbol %s | %FileCheck --match-full-lines %s
+// RUN: LC_ALL=C.UTF-8 %hermes -O -Xes6-symbol %s | %FileCheck --match-full-lines %s
 "use strict";
 
 // Runs an iterator until it is done.
