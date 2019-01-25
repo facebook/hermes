@@ -15,6 +15,6 @@ set(LLVM_ENABLE_RTTI ON)
 add_hermes_unittest(APITests APITest.cpp APITestFactory.cpp APILeanTest.cpp DebuggerTest.cpp SynthTraceTest.cpp)
 
 include_directories(${HERMES_SOURCE_DIR}/API)
-include_directories(${HERMES_SOURCE_DIR}/../jsi)
+include_directories(${HERMES_JSI_DIR})
 target_link_libraries(APITests hermesapi compileJS)
 

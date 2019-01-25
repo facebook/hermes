@@ -269,6 +269,12 @@ set(HERMES_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
 
+if(EXISTS ${HERMES_SOURCE_DIR}/API/jsi)
+  set(HERMES_JSI_DIR ${HERMES_SOURCE_DIR}/API/jsi)
+else()
+  set(HERMES_JSI_DIR ${HERMES_SOURCE_DIR}/../jsi)
+endif()
+
 include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -282,7 +288,7 @@ add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(external)
 add_subdirectory(unittests)
-add_subdirectory(../jsi/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
+add_subdirectory(${HERMES_JSI_DIR}/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
 add_subdirectory(API)
 
 # Configure the test suites
