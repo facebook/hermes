@@ -3,7 +3,7 @@ RUN: %hermes -O -dump-bytecode %s \
 RUN:     | %FileCheck --match-full-lines -check-prefix HBC %s
 RUN: %hermes -O -dump-jitcode %s \
 RUN:     | %FileCheck --match-full-lines -check-prefix JIT %s
-REQUIRES: jit_dis
+REQUIRES: jit, jit_dis
 */
 
 var logger = typeof print === "undefined"
