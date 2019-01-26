@@ -39,7 +39,10 @@ class InstructionEscapeAnalysisTest : public ::testing::Test {
       : context_(std::make_shared<Context>()),
         module_(context_),
         builder_(&module_),
-        function_(builder_.createFunction("main", true)),
+        function_(builder_.createFunction(
+            "main",
+            Function::DefinitionKind::ES5Function,
+            true)),
         block_(builder_.createBasicBlock(function_)) {
     builder_.setInsertionBlock(block_);
   }

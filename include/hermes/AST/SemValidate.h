@@ -26,6 +26,9 @@ class FunctionInfo {
   /// can generate the rest of the function.
   llvm::SmallVector<ESTree::FunctionDeclarationNode *, 2> closures{};
 
+  /// Whether this function contains arrow functions.
+  bool containsArrowFunctions = false;
+
   /// Class that holds the target for a break/continue label, as well as the
   /// depth of the nested try/catch/finally blocks where this label is defined.
   class GotoLabel {

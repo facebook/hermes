@@ -46,9 +46,8 @@ bool isSingleFunctionExpression(ESTree::NodePtr ast) {
   if (!exprStatement) {
     return false;
   }
-  auto *expr =
-      dyn_cast<ESTree::FunctionExpressionNode>(exprStatement->_expression);
-  return expr != nullptr;
+  return isa<ESTree::FunctionExpressionNode>(exprStatement->_expression) ||
+      isa<ESTree::ArrowFunctionExpressionNode>(exprStatement->_expression);
 }
 #endif
 } // namespace

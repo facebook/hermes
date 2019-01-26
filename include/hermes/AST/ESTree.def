@@ -37,6 +37,21 @@ ESTREE_NODE_3_ARGS(
     body,
     false)
 ESTREE_NODE_4_ARGS(
+    ArrowFunctionExpression,
+    FunctionLike,
+    NodePtr,
+    id,
+    true,
+    NodePtr,
+    body,
+    false,
+    NodeList,
+    params,
+    false,
+    NodeBoolean,
+    expression,
+    false)
+ESTREE_NODE_4_ARGS(
     FunctionDeclaration,
     FunctionLike,
     NodePtr,

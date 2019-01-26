@@ -26,7 +26,8 @@ TEST(IRVerifierTest, BasicBlockTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("forEach", true);
+  auto F = Builder.createFunction(
+      "forEach", Function::DefinitionKind::ES5Function, true);
   auto Arg1 = Builder.createParameter(F, "num");
   auto Arg2 = Builder.createParameter(F, "value");
 
@@ -62,7 +63,8 @@ TEST(IRVerifierTest, ReturnInstTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("testReturn", true);
+  auto F = Builder.createFunction(
+      "testReturn", Function::DefinitionKind::ES5Function, true);
   auto Arg1 = Builder.createParameter(F, "num");
   Arg1->setType(Type::createNumber());
 
@@ -84,7 +86,8 @@ TEST(IRVerifierTest, BranchInstTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("testBranch", true);
+  auto F = Builder.createFunction(
+      "testBranch", Function::DefinitionKind::ES5Function, true);
 
   auto BB1 = Builder.createBasicBlock(F);
   auto BB2 = Builder.createBasicBlock(F);
@@ -108,7 +111,8 @@ TEST(IRVerifierTest, DominanceTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("testBranch", true);
+  auto F = Builder.createFunction(
+      "testBranch", Function::DefinitionKind::ES5Function, true);
   auto Arg1 = Builder.createParameter(F, "num");
 
   auto Body = Builder.createBasicBlock(F);

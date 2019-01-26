@@ -57,7 +57,8 @@ TEST(HBCBytecodeGen, IntegrationTest) {
   BMG.setEntryPointIndex(BMG.addFunction(globalFunction));
   BMG.setFunctionGenerator(globalFunction, std::move(BFG1));
 
-  Function *f1 = Builder.createFunction("f1", true);
+  Function *f1 =
+      Builder.createFunction("f1", Function::DefinitionKind::ES5Function, true);
   auto BFG2 = BytecodeFunctionGenerator::create(BMG, 10);
   const DebugSourceLocation debugSourceLoc(0, 1, 20, 300, 0);
   BFG2->addDebugSourceLocation(debugSourceLoc);

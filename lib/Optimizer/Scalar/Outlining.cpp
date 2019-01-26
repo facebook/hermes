@@ -479,7 +479,12 @@ static Function *buildOutlinedFunction(
   const bool strictMode = candidateFunction->isStrictMode();
   auto *insertBefore = settings.placeNearCaller ? candidateFunction : nullptr;
   auto *function = builder.createFunction(
-      functionName, strictMode, SMRange{}, false, insertBefore);
+      functionName,
+      Function::DefinitionKind::ES5Function,
+      strictMode,
+      SMRange{},
+      false,
+      insertBefore);
   auto *block = builder.createBasicBlock(function);
   builder.setInsertionBlock(block);
 

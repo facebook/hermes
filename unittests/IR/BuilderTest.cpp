@@ -26,7 +26,8 @@ TEST(BuilderTest, SimpleSmokeTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BB = Builder.createBasicBlock(F);
   Builder.createParameter(F, "argc");
   Builder.createParameter(F, "argv");
@@ -48,7 +49,8 @@ TEST(BuilderTest, BuildCFG) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("forEach", true);
+  auto F = Builder.createFunction(
+      "forEach", Function::DefinitionKind::ES5Function, true);
   auto Arg1 = Builder.createParameter(F, "num");
   auto Arg2 = Builder.createParameter(F, "value");
 
@@ -74,7 +76,8 @@ TEST(BuilderTest, ReplaceAllUsesWith) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("testRAUW", true);
+  auto F = Builder.createFunction(
+      "testRAUW", Function::DefinitionKind::ES5Function, true);
   auto Cond = Builder.createParameter(F, "cond");
   auto Arg2 = Builder.createParameter(F, "two");
   auto Arg3 = Builder.createParameter(F, "three");
@@ -156,7 +159,8 @@ TEST(BuilderTest, TestValueTypes) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("a_function_with_tests", true);
+  auto F = Builder.createFunction(
+      "a_function_with_tests", Function::DefinitionKind::ES5Function, true);
 
   auto Cond = Builder.createParameter(F, "cond");
   Cond->setType(Type::createBoolean());
@@ -233,7 +237,8 @@ TEST(BuilderTest, CreateAndManipulateFrameTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("a_function_with_a_scope", true);
+  auto F = Builder.createFunction(
+      "a_function_with_a_scope", Function::DefinitionKind::ES5Function, true);
 
   Builder.createParameter(F, "cond");
 
@@ -259,8 +264,10 @@ TEST(BuilderTest, NestedFunctionFrameTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
-  auto Caller = Builder.createFunction("caller", true);
-  auto Callee = Builder.createFunction("callee", true);
+  auto Caller = Builder.createFunction(
+      "caller", Function::DefinitionKind::ES5Function, true);
+  auto Callee = Builder.createFunction(
+      "callee", Function::DefinitionKind::ES5Function, true);
 
   Builder.setInsertionBlock(Builder.createBasicBlock(Caller));
   auto A0 = Builder.createAllocStackInst("one");
@@ -283,7 +290,8 @@ TEST(BuilderTest, LiteralsTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("testRAUW", true);
+  auto F = Builder.createFunction(
+      "testRAUW", Function::DefinitionKind::ES5Function, true);
   Builder.createParameter(F, "cond");
   Builder.createParameter(F, "two");
   Builder.createParameter(F, "three");
@@ -355,7 +363,8 @@ TEST(BuilderTest, PropertyTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
 
-  auto *F = Builder.createFunction("testProperties", true);
+  auto *F = Builder.createFunction(
+      "testProperties", Function::DefinitionKind::ES5Function, true);
   auto *O = Builder.createParameter(F, "object");
   auto *P = Builder.createParameter(F, "property");
 

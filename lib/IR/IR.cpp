@@ -159,6 +159,7 @@ ExternalScope::ExternalScope(Function *function, int32_t depth)
 Function::Function(
     Module *parent,
     Identifier originalName,
+    DefinitionKind definitionKind,
     bool strictMode,
     bool isGlobal,
     SMRange sourceRange,
@@ -169,6 +170,7 @@ Function::Function(
       externalScopes_(),
       functionScope_(this),
       originalOrInferredName_(originalName),
+      definitionKind_(definitionKind),
       strictMode_(strictMode),
       SourceRange(sourceRange),
       internalName_(parent->deriveUniqueInternalName(originalName)) {

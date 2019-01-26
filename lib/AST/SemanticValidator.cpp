@@ -95,6 +95,26 @@ void SemanticValidator::visit(FunctionExpressionNode *funcExpr) {
   visitFunction(funcExpr, funcExpr->_id, funcExpr->_params, funcExpr->_body);
 }
 
+void SemanticValidator::visit(ArrowFunctionExpressionNode *arrowFunc) {
+  // Convert expression functions to a full-body to simplify IRGen.
+  if (arrowFunc->_expression) {
+    auto *retStmt = new (astContext_) ReturnStatementNode(arrowFunc->_body);
+    retStmt->copyLocationFrom(arrowFunc->_body);
+
+    ESTree::NodeList stmtList;
+    stmtList.push_back(*retStmt);
+
+    auto *blockStmt = new (astContext_) BlockStatementNode(std::move(stmtList));
+    blockStmt->copyLocationFrom(arrowFunc->_body);
+
+    arrowFunc->_body = blockStmt;
+    arrowFunc->_expression = false;
+  }
+
+  curFunction()->semInfo->containsArrowFunctions = true;
+  visitFunction(arrowFunc, nullptr, arrowFunc->_params, arrowFunc->_body);
+}
+
 /// Ensure that the left side of for-in is an l-value.
 void SemanticValidator::visit(ForInStatementNode *forIn) {
   forIn->setLabelIndex(curFunction()->allocateLabel());
@@ -369,10 +389,8 @@ void SemanticValidator::visitFunction(
   FunctionContext newFuncCtx{
       this, haveActiveContext() && curFunction()->strictMode, node};
 
-  assert(
-      (isa<ESTree::BlockStatementNode>(body) || isa<ESTree::EmptyNode>(body)) &&
-      "Function body is neither block nor empty lazy stub");
-
+  // Note that body might me empty (for lazy functions) or an expression (for
+  // arrow functions).
   if (isa<ESTree::BlockStatementNode>(body)) {
     scanDirectivePrologue(cast<ESTree::BlockStatementNode>(body)->_body);
     updateNodeStrictness(node);

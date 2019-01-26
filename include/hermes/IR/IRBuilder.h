@@ -58,6 +58,7 @@ class IRBuilder {
   ///   should be inserted before. If null, appends to the end of the module.
   Function *createFunction(
       Identifier OriginalName,
+      Function::DefinitionKind definitionKind,
       bool strictMode,
       SMRange sourceRange = SMRange{},
       bool isGlobal = false,
@@ -66,6 +67,7 @@ class IRBuilder {
   /// Create a new Function and add it to the Module.
   Function *createFunction(
       StringRef OriginalName,
+      Function::DefinitionKind definitionKind,
       bool strictMode,
       SMRange sourceRange = SMRange{},
       bool isGlobal = false,

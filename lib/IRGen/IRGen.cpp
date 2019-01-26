@@ -139,8 +139,16 @@ class ESTreeIRGen {
     /// time we encounter usage of 'arguments'.
     CreateArgumentsInst *createdArguments{};
 
+    /// Parents of arrow functions need to capture their "this" parameter so the
+    /// arrow function can use it. Normal functions and constructors store their
+    /// "this" in a variable and record it here, if they contain at least one
+    /// arrow function. Arrow functions always copy their parent's value.
+    Variable *capturedThis{};
+
     /// Initialize a new function context, while preserving the previous one.
     /// \param irGen the associated ESTreeIRGen object.
+    /// \param function the newly created Function IR node.
+    /// \param semInfo semantic info obtained from the AST node.
     FunctionContext(
         ESTreeIRGen *irGen,
         Function *function,
@@ -161,8 +169,7 @@ class ESTreeIRGen {
     }
 
     /// Generate a unique string that represents a temporary value. The string
-    /// \p
-    /// hint appears in the name.
+    /// \p hint appears in the name.
     Identifier genAnonymousLabelName(StringRef const hint);
   };
 
@@ -316,6 +323,9 @@ class ESTreeIRGen {
   ///   available inside the closure. Used only by lazy compilation.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
+  /// \param definitionKind the kind of function we are compiling: constructor,
+  /// method,
+  ///   etc.
   /// \param params are the formal parameters and \p body is the body of the
   ///   closure.
   /// \param lazy Whether or not to compile it lazily.
@@ -323,6 +333,7 @@ class ESTreeIRGen {
   Function *genFunctionLike(
       Identifier originalName,
       Variable *lazyClosureAlias,
+      Function::DefinitionKind definitionKind,
       bool strictMode,
       ESTree::FunctionLikeNode *functionNode,
       const ESTree::NodeList &params,
@@ -415,6 +426,16 @@ class ESTreeIRGen {
   /// or functions that are assigned to an object key. These are a subset of
   /// ES6, but not all of it.
   Value *genExpression(ESTree::Node *Expr, Identifier nameHint = Identifier{});
+
+  /// Generate IR for FunctionExpression.
+  Value *genFunctionExpression(
+      ESTree::FunctionExpressionNode *FE,
+      Identifier nameHint);
+
+  /// Generate IR for ArrowFunctionExpression.
+  Value *genArrowFunctionExpression(
+      ESTree::ArrowFunctionExpressionNode *AF,
+      Identifier nameHint);
 
   /// Generate an expression and perform a conditional branch depending on
   /// whether the expression evaluates to true or false.
@@ -640,6 +661,7 @@ void ESTreeIRGen::doIt() {
 
     Function *wrapperFunction = Builder.createFunction(
         "",
+        Function::DefinitionKind::ES5Function,
         ESTree::isStrict(Program->strictness),
         Program->getSourceRange(),
         true);
@@ -656,6 +678,7 @@ void ESTreeIRGen::doIt() {
     // Finally create the function which will actually be executed.
     topLevelFunction = Builder.createFunction(
         "eval",
+        Function::DefinitionKind::ES5Function,
         ESTree::isStrict(Program->strictness),
         Program->getSourceRange(),
         false);
@@ -723,6 +746,7 @@ void ESTreeIRGen::doCJSModule(
   Function *newFunc = genFunctionLike(
       functionName,
       nullptr,
+      Function::DefinitionKind::ES5Function,
       ESTree::isStrict(func->strictness),
       func,
       func->_params,
@@ -771,6 +795,8 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
 
   ESTree::NodeList const *params;
   ESTree::NodePtr body;
+  Function::DefinitionKind definitionKind =
+      Function::DefinitionKind::ES5Function;
 
   if (auto *FE = dyn_cast<ESTree::FunctionExpressionNode>(node)) {
     params = &FE->_params;
@@ -778,6 +804,13 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
   } else if (auto *FD = dyn_cast<ESTree::FunctionDeclarationNode>(node)) {
     params = &FD->_params;
     body = FD->_body;
+  } else if (auto *AF = dyn_cast<ESTree::ArrowFunctionExpressionNode>(node)) {
+    // FIXME: Arrow functions are broken with lazy compilation because of the
+    //`this` binding.
+    assert(false && "Lazy compilation not supported in ES6");
+    params = &FD->_params;
+    body = FD->_body;
+    definitionKind = Function::DefinitionKind::ES6Arrow;
   } else {
     llvm_unreachable("invalid lazy function AST node");
   }
@@ -785,6 +818,7 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
   return genFunctionLike(
       lazyData->originalName,
       parentVar,
+      definitionKind,
       lazyData->strictMode,
       node,
       *params,
@@ -825,6 +859,7 @@ void ESTreeIRGen::genFunctionDeclaration(
   Function *newFunc = genFunctionLike(
       functionName,
       nullptr,
+      Function::DefinitionKind::ES5Function,
       ESTree::isStrict(func->strictness),
       func,
       func->_params,
@@ -866,6 +901,7 @@ std::shared_ptr<SerializedScope> ESTreeIRGen::saveCurrentScope() {
 Function *ESTreeIRGen::genFunctionLike(
     Identifier originalName,
     Variable *lazyClosureAlias,
+    Function::DefinitionKind definitionKind,
     bool strictMode,
     ESTree::FunctionLikeNode *functionNode,
     const ESTree::NodeList &params,
@@ -873,28 +909,29 @@ Function *ESTreeIRGen::genFunctionLike(
     bool lazy) {
   assert(functionNode && "Function AST cannot be null");
 
-  auto *newFunction =
-      Builder.createFunction(originalName, strictMode, body->getSourceRange());
+  auto *newFunction = Builder.createFunction(
+      originalName, definitionKind, strictMode, body->getSourceRange());
   newFunction->setLazyClosureAlias(lazyClosureAlias);
 
-  auto *bodyBlock = cast<ESTree::BlockStatementNode>(body);
-  if (bodyBlock->isLazyFunctionBody) {
-    // Set the AST position and variable context so we can continue later.
-    newFunction->setLazyScope(saveCurrentScope());
-    auto &lazySource = newFunction->getLazySource();
-    lazySource.bufferId = bodyBlock->bufferId;
-    lazySource.nodeKind = functionNode->getKind();
-    lazySource.functionRange = functionNode->getSourceRange();
+  if (auto *bodyBlock = dyn_cast<ESTree::BlockStatementNode>(body)) {
+    if (bodyBlock->isLazyFunctionBody) {
+      // Set the AST position and variable context so we can continue later.
+      newFunction->setLazyScope(saveCurrentScope());
+      auto &lazySource = newFunction->getLazySource();
+      lazySource.bufferId = bodyBlock->bufferId;
+      lazySource.nodeKind = functionNode->getKind();
+      lazySource.functionRange = functionNode->getSourceRange();
 
-    // Give the stub parameters so that we'll know the function's .length .
-    Builder.createParameter(newFunction, "this");
-    for (auto &param : params) {
-      auto idenNode = cast<ESTree::IdentifierNode>(&param);
-      Identifier paramName = getNameFieldFromID(idenNode);
-      Builder.createParameter(newFunction, paramName);
+      // Give the stub parameters so that we'll know the function's .length .
+      Builder.createParameter(newFunction, "this");
+      for (auto &param : params) {
+        auto idenNode = cast<ESTree::IdentifierNode>(&param);
+        Identifier paramName = getNameFieldFromID(idenNode);
+        Builder.createParameter(newFunction, paramName);
+      }
+
+      return newFunction;
     }
-
-    return newFunction;
   }
 
   FunctionContext newFunctionContext{
@@ -1008,6 +1045,38 @@ void ESTreeIRGen::doGenFunctionLike(
 
       // Store the parameter into the local scope.
       emitStore(Builder, P, ParamStorage);
+    }
+
+    // If we are not in an arrow function, and contain arrow functions,
+    // capture our "this" into a new variable.
+    if (functionContext->function->getDefinitionKind() !=
+            Function::DefinitionKind::ES6Arrow &&
+        functionContext->getSemInfo()->containsArrowFunctions) {
+      // Capture the current "this" into a new variable. Note that if the
+      // variable is never accessed it will be eliminated by the optimizer.
+      DEBUG(
+          dbgs() << "Capturing `this` of "
+                 << functionContext->function->getInternalName() << "\n");
+
+      auto *captureVar = Builder.createVariable(
+          functionContext->function->getFunctionScope(),
+          genAnonymousLabelName("this"));
+
+      Builder.createStoreFrameInst(
+          functionContext->function->getThisParameter(), captureVar);
+
+      functionContext->capturedThis = captureVar;
+    } else if (
+        functionContext->function->getDefinitionKind() ==
+        Function::DefinitionKind::ES6Arrow) {
+      assert(
+          functionContext->getPreviousContext() &&
+          "arrow function must have a previous context");
+      assert(
+          functionContext->getPreviousContext()->capturedThis &&
+          "arrow function parent must have a captured this");
+      functionContext->capturedThis =
+          functionContext->getPreviousContext()->capturedThis;
     }
 
     // Generate and initialize the code for the hoisted function declarations
@@ -2375,8 +2444,6 @@ Value *ESTreeIRGen::genIdentifierExpression(
       Builder.setInsertionPoint(functionContext->entryTerminator);
       Builder.setLocation(Builder.getFunction()->getSourceRange().Start);
       functionContext->createdArguments = Builder.createCreateArgumentsInst();
-      functionContext->createdArguments->moveBefore(
-          functionContext->entryTerminator);
     }
 
     return functionContext->createdArguments;
@@ -2507,50 +2574,23 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *Expr, Identifier nameHint) {
 
   // Handle the 'this' keyword.
   if (isa<ESTree::ThisExpressionNode>(Expr)) {
-    return Builder.getInsertionBlock()->getParent()->getThisParameter();
+    if (functionContext->function->getDefinitionKind() ==
+        Function::DefinitionKind::ES6Arrow) {
+      assert(
+          functionContext->capturedThis &&
+          "arrow function must have a captured this");
+      return Builder.createLoadFrameInst(functionContext->capturedThis);
+    }
+    return functionContext->function->getThisParameter();
   }
 
   // Handle function expressions.
   if (auto *FE = dyn_cast<ESTree::FunctionExpressionNode>(Expr)) {
-    DEBUG(
-        dbgs() << "Creating anonymous closure. "
-               << Builder.getInsertionBlock()->getParent()->getInternalName()
-               << ".\n");
+    return genFunctionExpression(FE, nameHint);
+  }
 
-    NameTableScopeTy newScope(nameTable_);
-    Variable *tempClosureVar = nullptr;
-
-    Identifier originalNameIden = nameHint;
-    if (FE->_id) {
-      auto closureName = genAnonymousLabelName("closure");
-      tempClosureVar = Builder.createVariable(
-          functionContext->function->getFunctionScope(), closureName);
-
-      // Insert the synthesized variable into the name table, so it can be
-      // looked up internally as well.
-      nameTable_.insertIntoScope(
-          &functionContext->scope, tempClosureVar->getName(), tempClosureVar);
-
-      // Alias the lexical name to the synthesized variable.
-      originalNameIden = getNameFieldFromID(FE->_id);
-      nameTable_.insert(originalNameIden, tempClosureVar);
-    }
-
-    Function *newFunc = genFunctionLike(
-        originalNameIden,
-        tempClosureVar,
-        ESTree::isStrict(FE->strictness),
-        FE,
-        FE->_params,
-        FE->_body,
-        Mod->getContext().isLazyCompilation());
-
-    Value *func = Builder.createCreateFunctionInst(newFunc);
-
-    if (tempClosureVar)
-      emitStore(Builder, func, tempClosureVar);
-
-    return func;
+  if (auto *AF = dyn_cast<ESTree::ArrowFunctionExpressionNode>(Expr)) {
+    return genArrowFunctionExpression(AF, nameHint);
   }
 
   if (auto *U = dyn_cast<ESTree::UpdateExpressionNode>(Expr)) {
@@ -2567,6 +2607,72 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *Expr, Identifier nameHint) {
 
   assert(false && "Don't know this kind of expression");
   return nullptr;
+}
+
+Value *ESTreeIRGen::genFunctionExpression(
+    ESTree::FunctionExpressionNode *FE,
+    Identifier nameHint) {
+  DEBUG(
+      dbgs() << "Creating anonymous closure. "
+             << Builder.getInsertionBlock()->getParent()->getInternalName()
+             << ".\n");
+
+  NameTableScopeTy newScope(nameTable_);
+  Variable *tempClosureVar = nullptr;
+
+  Identifier originalNameIden = nameHint;
+  if (FE->_id) {
+    auto closureName = genAnonymousLabelName("closure");
+    tempClosureVar = Builder.createVariable(
+        functionContext->function->getFunctionScope(), closureName);
+
+    // Insert the synthesized variable into the name table, so it can be
+    // looked up internally as well.
+    nameTable_.insertIntoScope(
+        &functionContext->scope, tempClosureVar->getName(), tempClosureVar);
+
+    // Alias the lexical name to the synthesized variable.
+    originalNameIden = getNameFieldFromID(FE->_id);
+    nameTable_.insert(originalNameIden, tempClosureVar);
+  }
+
+  Function *newFunc = genFunctionLike(
+      originalNameIden,
+      tempClosureVar,
+      Function::DefinitionKind::ES5Function,
+      ESTree::isStrict(FE->strictness),
+      FE,
+      FE->_params,
+      FE->_body,
+      Mod->getContext().isLazyCompilation());
+
+  Value *closure = Builder.createCreateFunctionInst(newFunc);
+
+  if (tempClosureVar)
+    emitStore(Builder, closure, tempClosureVar);
+
+  return closure;
+}
+
+Value *ESTreeIRGen::genArrowFunctionExpression(
+    ESTree::ArrowFunctionExpressionNode *AF,
+    Identifier nameHint) {
+  DEBUG(
+      dbgs() << "Creating arrow function. "
+             << Builder.getInsertionBlock()->getParent()->getInternalName()
+             << ".\n");
+
+  Function *newFunc = genFunctionLike(
+      nameHint,
+      nullptr,
+      Function::DefinitionKind::ES6Arrow,
+      ESTree::isStrict(AF->strictness),
+      AF,
+      AF->_params,
+      AF->_body,
+      Mod->getContext().isLazyCompilation());
+
+  return Builder.createCreateFunctionInst(newFunc);
 }
 
 void ESTreeIRGen::genExpressionBranch(
@@ -2689,7 +2795,8 @@ struct DeclHoisting {
     // Do not descend to child closures because the variables they define are
     // not exposed to the outside function.
     if (isa<ESTree::FunctionDeclarationNode>(V) ||
-        isa<ESTree::FunctionExpressionNode>(V))
+        isa<ESTree::FunctionExpressionNode>(V) ||
+        isa<ESTree::ArrowFunctionExpressionNode>(V))
       return false;
     return true;
   }
@@ -2816,8 +2923,12 @@ static Function *genSyntaxErrorFunction(
     StringRef error) {
   IRBuilder builder{M};
 
-  Function *function =
-      builder.createFunction(originalName, true, sourceRange, false);
+  Function *function = builder.createFunction(
+      originalName,
+      Function::DefinitionKind::ES5Function,
+      true,
+      sourceRange,
+      false);
 
   builder.createParameter(function, "this");
   BasicBlock *firstBlock = builder.createBasicBlock(function);

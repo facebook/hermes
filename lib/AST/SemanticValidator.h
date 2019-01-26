@@ -88,6 +88,7 @@ class SemanticValidator {
   void visit(ProgramNode *node);
   void visit(FunctionDeclarationNode *funcDecl);
   void visit(FunctionExpressionNode *funcExpr);
+  void visit(ArrowFunctionExpressionNode *arrowFunc);
 
   void visit(VariableDeclaratorNode *varDecl);
 
@@ -134,7 +135,8 @@ class SemanticValidator {
   /// \param node the current node
   /// \param id if not null, the associated name (for validation)
   /// \param params the parameter list
-  /// \param body the body
+  /// \param body the body. It may be a BlockStatementNode, an EmptyNode (for
+  ///     lazy functions), or an expression (for simple arrow functions).
   void visitFunction(
       FunctionLikeNode *node,
       const Node *id,

@@ -160,7 +160,25 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
 void IRPrinter::printFunctionHeader(Function *F) {
   bool first = true;
   auto &Ctx = F->getContext();
-  os << "function " << quoteStr(Ctx.toString(F->getInternalName())) << "(";
+
+  StringRef defKindStr{};
+  switch (F->getDefinitionKind()) {
+    case Function::DefinitionKind::ES6Constructor:
+      defKindStr = "constructor";
+      break;
+    case Function::DefinitionKind::ES6Arrow:
+      defKindStr = "arrow";
+      break;
+    case Function::DefinitionKind::ES6Method:
+      defKindStr = "method";
+      break;
+    default:
+      defKindStr = "function";
+      break;
+  }
+
+  os << defKindStr << " " << quoteStr(Ctx.toString(F->getInternalName()))
+     << "(";
   for (auto P : F->getParameters()) {
     if (!first) {
       os << ", ";

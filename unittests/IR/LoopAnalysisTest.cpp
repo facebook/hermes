@@ -33,7 +33,8 @@ TEST(IRVerifierTest, LoopAnalysisTestSimple) {
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBLoop = Builder.createBasicBlock(F);
   auto BBReturn = Builder.createBasicBlock(F);
@@ -85,7 +86,8 @@ TEST(IRVerifierTest, LoopAnalysisTestBranch) {
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBFirstIfT = Builder.createBasicBlock(F);
   auto BBFirstIfF = Builder.createBasicBlock(F);
@@ -169,7 +171,8 @@ TEST(IRVerifierTest, LoopAnalysisTestInnerLoops) {
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBLoop1 = Builder.createBasicBlock(F);
   auto BBInside = Builder.createBasicBlock(F);
@@ -219,7 +222,8 @@ TEST(IRVerifierTest, LoopAnalysisTestCompleteGraph) {
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);
@@ -284,7 +288,8 @@ TEST(IRVerifierTest, LoopAnalysisTestTwoInARow) {
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBLoop1 = Builder.createBasicBlock(F);
   auto BBInner1 = Builder.createBasicBlock(F);
@@ -366,7 +371,8 @@ TEST(IRVerifierTest, LoopAnalysisTestInterleaving) {
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);
@@ -429,7 +435,8 @@ TEST(IRVerifierTest, LoopAnalysisTestExitFromHeader) {
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBHeader = Builder.createBasicBlock(F);
   auto BBLoop = Builder.createBasicBlock(F);
@@ -482,7 +489,8 @@ TEST(IRVerifierTest, LoopAnalysisTestNoUniqueHeader) {
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);
@@ -542,7 +550,8 @@ TEST(IRVerifierTest, LoopAnalysisTestNoUniquePreheader) {
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);
@@ -605,7 +614,8 @@ TEST(IRVerifierTest, LoopAnalysisTestFinishingTime) {
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);
@@ -665,7 +675,8 @@ TEST(IRVerifierTest, LoopAnalysisTestDirectlyIntoInner) {
   auto Ctx = std::make_shared<Context>();
   Module M(Ctx);
   IRBuilder Builder(&M);
-  auto F = Builder.createFunction("main", true);
+  auto F = Builder.createFunction(
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BBMain = Builder.createBasicBlock(F);
   auto BBNode1 = Builder.createBasicBlock(F);
   auto BBNode2 = Builder.createBasicBlock(F);

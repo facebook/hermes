@@ -21,10 +21,14 @@ TEST(IRVerifierTest, ScopeAnalysisTest) {
   IRBuilder Builder(&M);
 
   auto G = Builder.createTopLevelFunction(true);
-  auto F1 = Builder.createFunction("f1", true);
-  auto F2 = Builder.createFunction("f2", true);
-  auto orphan = Builder.createFunction("orphan", true);
-  auto F11 = Builder.createFunction("f11", true);
+  auto F1 =
+      Builder.createFunction("f1", Function::DefinitionKind::ES5Function, true);
+  auto F2 =
+      Builder.createFunction("f2", Function::DefinitionKind::ES5Function, true);
+  auto orphan = Builder.createFunction(
+      "orphan", Function::DefinitionKind::ES5Function, true);
+  auto F11 = Builder.createFunction(
+      "f11", Function::DefinitionKind::ES5Function, true);
   auto ES = Builder.createExternalScope(G, -5);
 
   auto Gbb = Builder.createBasicBlock(G);

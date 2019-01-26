@@ -1207,6 +1207,13 @@ class Function : public ilist_node_with_parent<Function, Module>, public Value {
   using BasicBlockListType = iplist<BasicBlock>;
   using ParameterListType = llvm::SmallVector<Parameter *, 8>;
 
+  enum class DefinitionKind {
+    ES5Function,
+    ES6Constructor,
+    ES6Arrow,
+    ES6Method,
+  };
+
  private:
   /// The Module owning this function.
   Module *parent_;
@@ -1229,6 +1236,8 @@ class Function : public ilist_node_with_parent<Function, Module>, public Value {
   /// Currently there is no inference, and hence it will be empty string
   /// if not specified.
   Identifier originalOrInferredName_;
+  /// What kind of function is this - es5, constructor, etc.
+  DefinitionKind const definitionKind_;
   /// Whether the function is in strict mode.
   const bool strictMode_{};
   /// The source location of the function.
@@ -1285,6 +1294,7 @@ class Function : public ilist_node_with_parent<Function, Module>, public Value {
   explicit Function(
       Module *parent,
       Identifier originalName,
+      DefinitionKind definitionKind,
       bool strictMode,
       bool isGlobal,
       SMRange sourceRange,
@@ -1341,6 +1351,11 @@ class Function : public ilist_node_with_parent<Function, Module>, public Value {
 
   /// A debug utility that dumps the textual representation of the IR to stdout.
   void dump();
+
+  /// Return the kind of function: constructor, arrow, etc.
+  DefinitionKind getDefinitionKind() const {
+    return definitionKind_;
+  }
 
   /// Return whether the function is in strict mode.
   bool isStrictMode() const {

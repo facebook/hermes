@@ -26,6 +26,7 @@ BasicBlock *IRBuilder::createBasicBlock(Function *Parent) {
 
 Function *IRBuilder::createFunction(
     Identifier OriginalName,
+    Function::DefinitionKind definitionKind,
     bool strictMode,
     SMRange sourceRange,
     bool isGlobal,
@@ -36,7 +37,13 @@ Function *IRBuilder::createFunction(
     OriginalName = createIdentifier("");
   }
   return new Function(
-      M, OriginalName, strictMode, isGlobal, sourceRange, insertBefore);
+      M,
+      OriginalName,
+      definitionKind,
+      strictMode,
+      isGlobal,
+      sourceRange,
+      insertBefore);
 }
 
 ExternalScope *IRBuilder::createExternalScope(
@@ -51,11 +58,17 @@ Function *IRBuilder::createTopLevelFunction(
     SMRange sourceRange) {
   // Notice that this synthesized name is not a legal javascript name and
   // can't collide with functions in the processed program.
-  return createFunction("global", strictMode, sourceRange, true);
+  return createFunction(
+      "global",
+      Function::DefinitionKind::ES5Function,
+      strictMode,
+      sourceRange,
+      true);
 }
 
 Function *IRBuilder::createFunction(
     StringRef OriginalName,
+    Function::DefinitionKind definitionKind,
     bool strictMode,
     SMRange sourceRange,
     bool isGlobal,
@@ -63,7 +76,12 @@ Function *IRBuilder::createFunction(
   Identifier OrigIden =
       OriginalName.empty() ? Identifier{} : createIdentifier(OriginalName);
   return createFunction(
-      OrigIden, strictMode, sourceRange, isGlobal, insertBefore);
+      OrigIden,
+      definitionKind,
+      strictMode,
+      sourceRange,
+      isGlobal,
+      insertBefore);
 }
 
 GlobalObjectProperty *IRBuilder::createGlobalObjectProperty(
