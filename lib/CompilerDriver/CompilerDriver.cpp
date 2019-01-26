@@ -9,7 +9,7 @@
 #include "hermes/AST/CommonJS.h"
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTreeDumper.h"
-#include "hermes/AST/SemanticValidator.h"
+#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/RegAlloc.h"
@@ -232,9 +232,7 @@ static opt<BytecodeFormatKind> BytecodeFormat(
     "target",
     init(HBC),
     desc("Set the bytecode format:"),
-    values(
-        clEnumVal(HBC, "Emit HBC bytecode (default)")
-            ));
+    values(clEnumVal(HBC, "Emit HBC bytecode (default)")));
 
 static opt<std::string> BytecodeOutputFilename("out", desc("Output file name"));
 

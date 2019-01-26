@@ -5,7 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "../Parser/DiagContext.h"
-#include "hermes/AST/SemanticValidator.h"
+#include "hermes/AST/SemValidate.h"
 #include "hermes/Parser/JSParser.h"
 
 #include "gtest/gtest.h"

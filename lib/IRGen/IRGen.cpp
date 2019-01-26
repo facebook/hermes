@@ -8,7 +8,7 @@
 
 #include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/AST/ESTree.h"
-#include "hermes/AST/SemanticValidator.h"
+#include "hermes/AST/SemValidate.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Support/SimpleDiagHandler.h"

@@ -14,7 +14,7 @@
 #include "hermes/AST/ASTBuilder.h"
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTreeVisitors.h"
-#include "hermes/AST/SemanticValidator.h"
+#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/IR.h"

@@ -6,7 +6,7 @@
  */
 #include "JSLibInternal.h"
 
-#include "hermes/AST/SemanticValidator.h"
+#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IR/IR.h"

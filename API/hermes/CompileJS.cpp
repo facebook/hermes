@@ -7,7 +7,7 @@
 #include "CompileJS.h"
 
 #include "hermes/AST/Context.h"
-#include "hermes/AST/SemanticValidator.h"
+#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Parser/JSParser.h"

@@ -7,7 +7,7 @@
 #define DEBUG_TYPE "vm"
 #include "hermes/VM/Runtime.h"
 
-#include "hermes/AST/SemanticValidator.h"
+#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/HBC.h"

@@ -5,7 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "TestHelpers.h"
-#include "hermes/AST/SemanticValidator.h"
+#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Parser/JSParser.h"

@@ -6,7 +6,7 @@
  */
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 
-#include "hermes/AST/SemanticValidator.h"
+#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"

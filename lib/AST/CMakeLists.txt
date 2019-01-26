@@ -3,7 +3,7 @@ add_llvm_library(hermesAST
     ESTree.cpp
     ESTreeDumper.cpp
     RecursiveVisitor.h
-    SemanticValidator.cpp
+    SemValidate.cpp
     CommonJS.cpp
     LINK_LIBS
     hermesSupport
