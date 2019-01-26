@@ -25,6 +25,17 @@ namespace hermes {
 namespace sem {
 
 //===----------------------------------------------------------------------===//
+// Keywords
+
+Keywords::Keywords(Context &astContext)
+    : identArguments(
+          astContext.getIdentifier("arguments").getUnderlyingPointer()),
+      identEval(astContext.getIdentifier("eval").getUnderlyingPointer()),
+      identDelete(astContext.getIdentifier("delete").getUnderlyingPointer()),
+      identUseStrict(
+          astContext.getIdentifier("use strict").getUnderlyingPointer()) {}
+
+//===----------------------------------------------------------------------===//
 // SemanticValidator
 
 SemanticValidator::SemanticValidator(
@@ -34,12 +45,7 @@ SemanticValidator::SemanticValidator(
       sm_(astContext.getSourceErrorManager()),
       semCtx_(semCtx),
       initialErrorCount_(sm_.getErrorCount()),
-      identArguments_(
-          astContext.getIdentifier("arguments").getUnderlyingPointer()),
-      identEval_(astContext.getIdentifier("eval").getUnderlyingPointer()),
-      identDelete_(astContext.getIdentifier("delete").getUnderlyingPointer()),
-      identUseStrict_(
-          astContext.getIdentifier("use strict").getUnderlyingPointer()) {}
+      kw_(astContext) {}
 
 bool SemanticValidator::doIt(Node *rootNode) {
   visitESTreeNode(*this, rootNode);
@@ -47,8 +53,10 @@ bool SemanticValidator::doIt(Node *rootNode) {
 }
 
 bool SemanticValidator::doFunction(Node *function, bool strict) {
-  FunctionContext functionContext(this);
-  functionContext.strictMode = strict;
+  // Create a wrapper context since a function always assumes there is an
+  // existing context.
+  FunctionContext wrapperContext(this, strict, nullptr);
+
   visitESTreeNode(*this, function);
   return sm_.getErrorCount() == initialErrorCount_;
 }
@@ -57,13 +65,12 @@ void SemanticValidator::visit(ProgramNode *node) {
 #ifndef NDEBUG
   strictnessIsPreset_ = node->strictness != Strictness::NotSet;
 #endif
-  FunctionContext newFuncCtx{this};
-  newFuncCtx.strictMode = astContext_.isStrictMode();
-  scanDirectivePrologue(node->_body);
-  setNodeStrictness(&node->strictness, newFuncCtx.strictMode);
-  visitESTreeChildren(*this, node);
+  FunctionContext newFuncCtx{this, astContext_.isStrictMode(), node};
 
-  node->setSemInfo(newFuncCtx.semInfo);
+  scanDirectivePrologue(node->_body);
+  updateNodeStrictness(node);
+
+  visitESTreeChildren(*this, node);
 }
 
 void SemanticValidator::visit(VariableDeclaratorNode *varDecl) {
@@ -73,30 +80,19 @@ void SemanticValidator::visit(VariableDeclaratorNode *varDecl) {
 }
 
 void SemanticValidator::visit(IdentifierNode *identifier) {
-  if (identifier->_name == identEval_ && !astContext_.getEnableEval())
+  if (identifier->_name == kw_.identEval && !astContext_.getEnableEval())
     sm_.error(identifier->getSourceRange(), "'eval' is disabled");
 }
 
 /// Process a function declaration by creating a new FunctionContext.
 void SemanticValidator::visit(FunctionDeclarationNode *funcDecl) {
-  if (funcCtx_)
-    curFunction()->semInfo->closures.push_back(funcDecl);
-  visitFunction(
-      funcDecl,
-      funcDecl->_id,
-      funcDecl->_params,
-      funcDecl->_body,
-      &funcDecl->strictness);
+  curFunction()->semInfo->closures.push_back(funcDecl);
+  visitFunction(funcDecl, funcDecl->_id, funcDecl->_params, funcDecl->_body);
 }
 
 /// Process a function expression by creating a new FunctionContext.
 void SemanticValidator::visit(FunctionExpressionNode *funcExpr) {
-  visitFunction(
-      funcExpr,
-      funcExpr->_id,
-      funcExpr->_params,
-      funcExpr->_body,
-      &funcExpr->strictness);
+  visitFunction(funcExpr, funcExpr->_id, funcExpr->_params, funcExpr->_body);
 }
 
 /// Ensure that the left side of for-in is an l-value.
@@ -354,7 +350,7 @@ void SemanticValidator::visit(ReturnStatementNode *returnStmt) {
 
 void SemanticValidator::visit(UnaryExpressionNode *unaryExpr) {
   // Check for unqualified delete in strict mode.
-  if (unaryExpr->_operator == identDelete_) {
+  if (unaryExpr->_operator == kw_.identDelete) {
     if (curFunction()->strictMode &&
         isa<IdentifierNode>(unaryExpr->_argument)) {
       sm_.error(
@@ -369,30 +365,27 @@ void SemanticValidator::visitFunction(
     FunctionLikeNode *node,
     const Node *id,
     NodeList &params,
-    Node *blockStatement,
-    Strictness *strictness) {
-  FunctionContext newFuncCtx{this};
-  node->setSemInfo(newFuncCtx.semInfo);
+    Node *body) {
+  FunctionContext newFuncCtx{
+      this, haveActiveContext() && curFunction()->strictMode, node};
+
+  assert(
+      (isa<ESTree::BlockStatementNode>(body) || isa<ESTree::EmptyNode>(body)) &&
+      "Function body is neither block nor empty lazy stub");
+
+  if (isa<ESTree::BlockStatementNode>(body)) {
+    scanDirectivePrologue(cast<ESTree::BlockStatementNode>(body)->_body);
+    updateNodeStrictness(node);
+  }
 
   if (id)
     validateDeclarationName(id);
 
-  bool isBlock = isa<ESTree::BlockStatementNode>(blockStatement);
-  assert(
-      (isBlock || isa<ESTree::EmptyNode>(blockStatement)) &&
-      "Function body is neither block nor empty lazy stub");
-
-  if (isBlock) {
-    scanDirectivePrologue(
-        cast<ESTree::BlockStatementNode>(blockStatement)->_body);
-  }
-  setNodeStrictness(strictness, newFuncCtx.strictMode);
-
   for (auto &param : params)
     validateDeclarationName(&param);
 
-  // let's check if we have seen this parameter name before
-  if (newFuncCtx.strictMode) {
+  // Check if we have seen this parameter name before.
+  if (curFunction()->strictMode) {
     llvm::SmallSet<NodeLabel, 8> paramNameSet;
     for (auto &param : params) {
       auto &curIdNode = cast<IdentifierNode>(param);
@@ -415,7 +408,7 @@ void SemanticValidator::scanDirectivePrologue(NodeList &body) {
     if (!directive)
       break;
 
-    if (*directive == identUseStrict_)
+    if (*directive == kw_.identUseStrict)
       curFunction()->strictMode = true;
   }
 }
@@ -430,12 +423,12 @@ bool SemanticValidator::isLValue(const Node *node) const {
 
   /// 'arguments' cannot be modified in strict mode, but we also don't
   /// support modifying it in non-strict mode yet.
-  if (idNode->_name == identArguments_)
+  if (idNode->_name == kw_.identArguments)
     return false;
 
   // 'eval' cannot be used as a variable in strict mode. If it is disabled we
   // we don't report an error because it will be reported separately.
-  if (idNode->_name == identEval_ && curFunction()->strictMode &&
+  if (idNode->_name == kw_.identEval && curFunction()->strictMode &&
       astContext_.getEnableEval())
     return false;
 
@@ -450,12 +443,12 @@ bool SemanticValidator::isValidDeclarationName(const Node *node) const {
   auto *idNode = cast<IdentifierNode>(node);
 
   // 'arguments' cannot be redeclared in strict mode.
-  if (idNode->_name == identArguments_ && curFunction()->strictMode)
+  if (idNode->_name == kw_.identArguments && curFunction()->strictMode)
     return false;
 
   // 'eval' cannot be redeclared in strict mode. If it is disabled we
   // we don't report an error because it will be reported separately.
-  if (idNode->_name == identEval_ && curFunction()->strictMode &&
+  if (idNode->_name == kw_.identEval && curFunction()->strictMode &&
       astContext_.getEnableEval())
     return false;
 
@@ -470,14 +463,12 @@ void SemanticValidator::validateDeclarationName(const Node *node) {
   }
 }
 
-void SemanticValidator::setNodeStrictness(
-    ESTree::Strictness *nodeStrictness,
-    bool strictMode) {
-  auto strictness = ESTree::makeStrictness(strictMode);
+void SemanticValidator::updateNodeStrictness(FunctionLikeNode *node) {
+  auto strictness = ESTree::makeStrictness(curFunction()->strictMode);
   assert(
-      (!strictnessIsPreset_ || *nodeStrictness == strictness) &&
+      (!strictnessIsPreset_ || node->strictness == strictness) &&
       "Preset strictness is different from detected strictness");
-  *nodeStrictness = strictness;
+  node->strictness = strictness;
 }
 
 LabelDecorationBase *SemanticValidator::getLabelDecorationBase(
@@ -499,14 +490,18 @@ LabelDecorationBase *SemanticValidator::getLabelDecorationBase(
 //===----------------------------------------------------------------------===//
 // FunctionContext
 
-FunctionContext::FunctionContext(SemanticValidator *validator)
+FunctionContext::FunctionContext(
+    SemanticValidator *validator,
+    bool strictMode,
+    FunctionLikeNode *node)
     : validator_(validator),
       oldContextValue_(validator->funcCtx_),
-      semInfo(validator->semCtx_.createFunction()) {
-  if (validator->funcCtx_) {
-    strictMode = validator->funcCtx_->strictMode;
-  }
+      semInfo(validator->semCtx_.createFunction()),
+      strictMode(strictMode) {
   validator->funcCtx_ = this;
+
+  if (node)
+    node->setSemInfo(semInfo);
 }
 
 FunctionContext::~FunctionContext() {

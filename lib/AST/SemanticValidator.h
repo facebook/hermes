@@ -21,6 +21,23 @@ class FunctionContext;
 class SemanticValidator;
 
 //===----------------------------------------------------------------------===//
+// Keywords
+
+class Keywords {
+ public:
+  /// Identifier for "arguments".
+  const UniqueString *const identArguments;
+  /// Identifier for "eval".
+  const UniqueString *const identEval;
+  /// Identifier for "delete".
+  const UniqueString *const identDelete;
+  /// Identifier for "use strict".
+  const UniqueString *const identUseStrict;
+
+  Keywords(Context &astContext);
+};
+
+//===----------------------------------------------------------------------===//
 // SemanticValidator
 
 /// Class the performs all semantic validation
@@ -37,16 +54,11 @@ class SemanticValidator {
   /// Save the initial error count so we know whether we generated any errors.
   const unsigned initialErrorCount_;
 
-  FunctionContext *funcCtx_{};
+  /// Keywords we will be checking for.
+  Keywords kw_;
 
-  /// Identifier for "arguments".
-  const UniqueString *const identArguments_;
-  /// Identifier for "eval".
-  const UniqueString *const identEval_;
-  /// Identifier for "delete".
-  const UniqueString *const identDelete_;
-  /// Identifier for "use strict".
-  const UniqueString *const identUseStrict_;
+  /// The current function context.
+  FunctionContext *funcCtx_{};
 
 #ifndef NDEBUG
   /// Our parser detects strictness and initializes the flag in every node,
@@ -104,6 +116,10 @@ class SemanticValidator {
   void visit(UnaryExpressionNode *unaryExpr);
 
  private:
+  inline bool haveActiveContext() const {
+    return funcCtx_ != nullptr;
+  }
+
   inline FunctionContext *curFunction() {
     assert(funcCtx_ && "No active function context");
     return funcCtx_;
@@ -118,14 +134,12 @@ class SemanticValidator {
   /// \param node the current node
   /// \param id if not null, the associated name (for validation)
   /// \param params the parameter list
-  /// \param blockStatement the body
-  /// \param[out] strictness set *strictness to the strictness.
+  /// \param body the body
   void visitFunction(
       FunctionLikeNode *node,
       const Node *id,
       NodeList &params,
-      Node *blockStatement,
-      Strictness *strictness);
+      Node *body);
 
   /// Scan a list of directives in the beginning of a program of function
   /// (see ES5.1 4.1 - a directive is a statement consisting of a single
@@ -146,7 +160,10 @@ class SemanticValidator {
   /// declaration, report an error.
   void validateDeclarationName(const Node *node);
 
-  void setNodeStrictness(ESTree::Strictness *nodeStrictness, bool strictMode);
+  /// A debugging method to set the strictness of a function-like node to
+  /// the curent strictness, asserting that it doesn't change if it had been
+  /// preset.
+  void updateNodeStrictness(FunctionLikeNode *node);
 
   /// Get the LabelDecorationBase depending on the node type.
   static LabelDecorationBase *getLabelDecorationBase(StatementNode *node);
@@ -186,7 +203,10 @@ class FunctionContext {
   /// The currently active labels in the function.
   llvm::DenseMap<NodeLabel, Label> labelMap;
 
-  explicit FunctionContext(SemanticValidator *validator);
+  explicit FunctionContext(
+      SemanticValidator *validator,
+      bool strictMode,
+      FunctionLikeNode *node);
 
   ~FunctionContext();
 
