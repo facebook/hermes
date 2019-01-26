@@ -126,6 +126,7 @@ class JSParser {
   UniqueString *varIdent_;
   UniqueString *getIdent_;
   UniqueString *setIdent_;
+  UniqueString *initIdent_;
   UniqueString *useStrictIdent_;
   /// String representation of all tokens.
   UniqueString *tokenIdent_[NUM_JS_TOKENS];

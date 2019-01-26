@@ -75,7 +75,6 @@ class SemanticValidator {
 
   void visit(ProgramNode *node);
   void visit(FunctionDeclarationNode *funcDecl);
-  void visit(ObjectMethodNode *oe);
   void visit(FunctionExpressionNode *funcExpr);
 
   void visit(VariableDeclaratorNode *varDecl);

@@ -51,21 +51,6 @@ ESTREE_NODE_4_ARGS(
     NodePtr,
     returnType,
     true)
-ESTREE_NODE_4_ARGS(
-    ObjectMethod,
-    FunctionLike,
-    NodeLabel,
-    kind,
-    false,
-    NodePtr,
-    key,
-    false,
-    NodeList,
-    params,
-    false,
-    NodePtr,
-    body,
-    false)
 ESTREE_LAST(FunctionLike)
 
 ESTREE_FIRST(Statement, Base)
@@ -344,16 +329,6 @@ ESTREE_NODE_2_ARGS(
     NodePtr,
     typeAnnotation,
     true)
-
-ESTREE_NODE_2_ARGS(
-    ObjectProperty,
-    Base,
-    NodePtr,
-    key,
-    false,
-    NodePtr,
-    value,
-    false)
 
 ESTREE_NODE_2_ARGS(
     SwitchCase,

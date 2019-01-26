@@ -89,11 +89,6 @@ void SemanticValidator::visit(FunctionDeclarationNode *funcDecl) {
       &funcDecl->strictness);
 }
 
-void SemanticValidator::visit(ObjectMethodNode *oe) {
-  // Object methods require a new function context.
-  visitFunction(oe, nullptr, oe->_params, oe->_body, &oe->strictness);
-}
-
 /// Process a function expression by creating a new FunctionContext.
 void SemanticValidator::visit(FunctionExpressionNode *funcExpr) {
   visitFunction(

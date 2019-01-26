@@ -778,9 +778,6 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
   } else if (auto *FD = dyn_cast<ESTree::FunctionDeclarationNode>(node)) {
     params = &FD->_params;
     body = FD->_body;
-  } else if (auto *OM = dyn_cast<ESTree::ObjectMethodNode>(node)) {
-    params = &OM->_params;
-    body = OM->_body;
   } else {
     llvm_unreachable("invalid lazy function AST node");
   }
@@ -1767,9 +1764,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     /// The value, if this is a regular property
     ESTree::Node *valueNode{};
     /// Getter accessor, if this is an accessor property.
-    ESTree::ObjectMethodNode *getterNode{};
+    ESTree::FunctionExpressionNode *getterNode{};
     /// Setter accessor, if this is an accessor property.
-    ESTree::ObjectMethodNode *setterNode{};
+    ESTree::FunctionExpressionNode *setterNode{};
 
     SMRange getSourceRange() {
       if (valueNode) {
@@ -1792,7 +1789,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       valueNode = val;
       getterNode = setterNode = nullptr;
     }
-    void setGetter(ESTree::ObjectMethodNode *get) {
+    void setGetter(ESTree::FunctionExpressionNode *get) {
       if (!isAccessor) {
         valueNode = nullptr;
         setterNode = nullptr;
@@ -1800,7 +1797,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       }
       getterNode = get;
     }
-    void setSetter(ESTree::ObjectMethodNode *set) {
+    void setSetter(ESTree::FunctionExpressionNode *set) {
       if (!isAccessor) {
         valueNode = nullptr;
         getterNode = nullptr;
@@ -1821,18 +1818,16 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     // iteration.
     stringStorage.clear();
 
-    if (auto prop = dyn_cast<ESTree::ObjectPropertyNode>(&P)) {
-      propMap[propertyKeyAsString(stringStorage, prop->_key)].setValue(
-          prop->_value);
-    } else if (auto method = dyn_cast<ESTree::ObjectMethodNode>(&P)) {
-      PropertyValue *propValue =
-          &propMap[propertyKeyAsString(stringStorage, method->_key)];
-      if (method->_kind->str() == "get")
-        propValue->setGetter(method);
-      else
-        propValue->setSetter(method);
+    auto *prop = cast<ESTree::PropertyNode>(&P);
+    PropertyValue *propValue =
+        &propMap[propertyKeyAsString(stringStorage, prop->_key)];
+    if (prop->_kind->str() == "get") {
+      propValue->setGetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
+    } else if (prop->_kind->str() == "set") {
+      propValue->setSetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
     } else {
-      llvm_unreachable("invalid object property node");
+      assert(prop->_kind->str() == "init" && "invalid PropertyNode kind");
+      propValue->setValue(prop->_value);
     }
   }
 
@@ -1850,9 +1845,12 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     // iteration.
     stringStorage.clear();
 
-    if (auto method = dyn_cast<ESTree::ObjectMethodNode>(&P)) {
-      StringRef keyStr = propertyKeyAsString(stringStorage, method->_key);
-      PropertyValue *propValue = &propMap[keyStr];
+    auto *prop = cast<ESTree::PropertyNode>(&P);
+    StringRef keyStr = propertyKeyAsString(stringStorage, prop->_key);
+    PropertyValue *propValue = &propMap[keyStr];
+    auto *Key = Builder.getLiteralString(keyStr);
+
+    if (prop->_kind->str() == "get" || prop->_kind->str() == "set") {
       // If the property ended up not being a getter/setter, or if we already
       // generated it, skip.
       if (!propValue->isAccessor || propValue->accessorsGenerated)
@@ -1862,39 +1860,21 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       Value *setter = Builder.getLiteralUndefined();
 
       if (propValue->getterNode) {
-        Function *newFunc = genFunctionLike(
-            Builder.createIdentifier("get " + keyStr.str()),
-            nullptr,
-            ESTree::isStrict(propValue->getterNode->strictness),
+        getter = genExpression(
             propValue->getterNode,
-            propValue->getterNode->_params,
-            propValue->getterNode->_body,
-            Mod->getContext().isLazyCompilation());
-
-        getter = Builder.createCreateFunctionInst(newFunc);
+            Builder.createIdentifier("get " + keyStr.str()));
       }
 
       if (propValue->setterNode) {
-        Function *newFunc = genFunctionLike(
-            Builder.createIdentifier("set " + keyStr.str()),
-            nullptr,
-            ESTree::isStrict(propValue->setterNode->strictness),
+        setter = genExpression(
             propValue->setterNode,
-            propValue->setterNode->_params,
-            propValue->setterNode->_body,
-            Mod->getContext().isLazyCompilation());
-
-        setter = Builder.createCreateFunctionInst(newFunc);
+            Builder.createIdentifier("set " + keyStr.str()));
       }
 
-      // StoreGetterSetterInst requires a string literal
-      auto Key = Builder.getLiteralString(keyStr);
       Builder.createStoreGetterSetterInst(getter, setter, Obj, Key);
 
       propValue->accessorsGenerated = true;
-    } else if (auto prop = dyn_cast<ESTree::ObjectPropertyNode>(&P)) {
-      StringRef keyStr = propertyKeyAsString(stringStorage, prop->_key);
-
+    } else {
       // Always generate the values, even if we don't need it, for the side
       // effects.
       auto value =
@@ -1902,8 +1882,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
       // Only store the value if it won't be overwritten.
       if (propMap[keyStr].valueNode == prop->_value) {
-        // StoreOwnPropertyInst requires a string literal.
-        auto Key = Builder.getLiteralString(keyStr);
         Builder.createStoreOwnPropertyInst(value, Obj, Key);
       } else {
         Builder.getModule()->getContext().getSourceErrorManager().warning(
@@ -1915,8 +1893,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
         Builder.getModule()->getContext().getSourceErrorManager().note(
             prop->getSourceRange(), note);
       }
-    } else {
-      llvm_unreachable("invalid object property node");
     }
   }
 
@@ -2713,8 +2689,7 @@ struct DeclHoisting {
     // Do not descend to child closures because the variables they define are
     // not exposed to the outside function.
     if (isa<ESTree::FunctionDeclarationNode>(V) ||
-        isa<ESTree::FunctionExpressionNode>(V) ||
-        isa<ESTree::ObjectMethodNode>(V))
+        isa<ESTree::FunctionExpressionNode>(V))
       return false;
     return true;
   }

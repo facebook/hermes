@@ -60,6 +60,7 @@ void JSParser::initializeIdentifiers() {
   varIdent_ = lexer_.getIdentifier("var");
   getIdent_ = lexer_.getIdentifier("get");
   setIdent_ = lexer_.getIdentifier("set");
+  initIdent_ = lexer_.getIdentifier("init");
   useStrictIdent_ = lexer_.getIdentifier("use strict");
 
   hermesOnlyDirectAccess_ =
@@ -1429,9 +1430,13 @@ Optional<ESTree::Node *> JSParser::parsePropertyAssignment() {
       if (!block)
         return None;
 
-      auto node = new (context_) ESTree::ObjectMethodNode(
-          getIdent_, optKey.getValue(), ESTree::NodeList{}, block.getValue());
-      node->strictness = ESTree::makeStrictness(isStrictMode());
+      auto *funcExpr = new (context_) ESTree::FunctionExpressionNode(
+          nullptr, ESTree::NodeList{}, block.getValue());
+      funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
+      setLocation(startLoc, block.getValue(), funcExpr);
+
+      auto *node = new (context_)
+          ESTree::PropertyNode(optKey.getValue(), funcExpr, getIdent_);
       return setLocation(startLoc, block.getValue(), node);
     }
   } else if (checkIdentifier(setIdent_)) {
@@ -1489,9 +1494,14 @@ Optional<ESTree::Node *> JSParser::parsePropertyAssignment() {
       auto block = parseBlock(JSLexer::AllowRegExp, true);
       if (!block)
         return None;
-      auto node = new (context_) ESTree::ObjectMethodNode(
-          setIdent_, optKey.getValue(), std::move(params), block.getValue());
-      node->strictness = ESTree::makeStrictness(isStrictMode());
+
+      auto *funcExpr = new (context_) ESTree::FunctionExpressionNode(
+          nullptr, std::move(params), block.getValue());
+      funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
+      setLocation(startLoc, block.getValue(), funcExpr);
+
+      auto *node = new (context_)
+          ESTree::PropertyNode(optKey.getValue(), funcExpr, setIdent_);
       return setLocation(startLoc, block.getValue(), node);
     }
   } else {
@@ -1517,7 +1527,7 @@ Optional<ESTree::Node *> JSParser::parsePropertyAssignment() {
   return setLocation(
       startLoc,
       value.getValue(),
-      new (context_) ESTree::ObjectPropertyNode(key, value.getValue()));
+      new (context_) ESTree::PropertyNode(key, value.getValue(), initIdent_));
 }
 
 Optional<ESTree::Node *> JSParser::parsePropertyKey() {

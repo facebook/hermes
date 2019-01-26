@@ -397,28 +397,6 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
     return None;
   }
 
-  // Convert Property into ObjectProperty or ObjectMethod for compatibility
-  // between ESTree and our internal representation.
-  if (auto *prop = dyn_cast<PropertyNode>(result)) {
-    if (prop->_kind->str() == "init") {
-      result = new (context_) ObjectPropertyNode(prop->_key, prop->_value);
-    } else {
-      auto *funcExpr = dyn_cast<FunctionExpressionNode>(prop->_value);
-      if (!funcExpr) {
-        sm_.error(
-            SMLoc{},
-            Twine("Invalid field 'value' in Property(") + prop->_kind->str() +
-                ")");
-        return None;
-      }
-      result = new (context_) ObjectMethodNode(
-          prop->_kind,
-          prop->_key,
-          std::move(funcExpr->_params),
-          funcExpr->_body);
-    }
-  }
-
   result->setSourceRange(sourceRng);
   return result;
 }
