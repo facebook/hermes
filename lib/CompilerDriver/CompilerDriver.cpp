@@ -165,6 +165,10 @@ static opt<OutputFormatKind> DumpTarget(
     values(
         clEnumValN(None, "no-dump", "Parse only, no output (default)"),
         clEnumValN(DumpAST, "dump-ast", "Dump the AST as text"),
+        clEnumValN(
+            DumpTransformedAST,
+            "dump-transformed-ast",
+            "Dump the transformed AST as text after validation"),
         clEnumValN(DumpIR, "dump-ir", "Dump the IR as text"),
         clEnumValN(DumpLIR, "dump-lir", "Dump the Lowered IR as text"),
         clEnumValN(DumpRA, "dump-ra", "Dump the register-allocated IR as text"),
@@ -525,6 +529,10 @@ ESTree::NodePtr parseJS(
 
   if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
     return nullptr;
+  }
+
+  if (cl::DumpTarget == DumpTransformedAST) {
+    hermes::dumpESTree(llvm::outs(), parsedAST);
   }
 
   return parsedAST;
