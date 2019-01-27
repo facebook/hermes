@@ -833,9 +833,8 @@ ExecutionStatus Runtime::stepFunction(InterpreterState &state) {
 #endif
 
 /// \return the quotient of x divided by y.
-static double doDiv(double x, double y)
-    LLVM_NO_SANITIZE("float-divide-by-zero");
-static inline double doDiv(double x, double y) {
+static inline double doDiv(double x, double y)
+    LLVM_NO_SANITIZE("float-divide-by-zero") {
   // UBSan will complain about float divide by zero as our implementation
   // of OpCode::Div depends on IEEE 754 float divide by zero. All modern
   // compilers implement this and there is no trivial work-around without

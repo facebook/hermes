@@ -512,7 +512,7 @@ CallResult<bool> JSArray::setLength(
     Handle<JSArray> selfHandle,
     Runtime *runtime,
     Handle<> newLength,
-    PropOpFlags opFlags) {
+    PropOpFlags opFlags) LLVM_NO_SANITIZE("float-cast-overflow") {
   // Convert the value to uint32_t.
   double d;
   if (newLength->isNumber()) {
