@@ -808,8 +808,8 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
     // FIXME: Arrow functions are broken with lazy compilation because of the
     //`this` binding.
     assert(false && "Lazy compilation not supported in ES6");
-    params = &FD->_params;
-    body = FD->_body;
+    params = &AF->_params;
+    body = AF->_body;
     definitionKind = Function::DefinitionKind::ES6Arrow;
   } else {
     llvm_unreachable("invalid lazy function AST node");
