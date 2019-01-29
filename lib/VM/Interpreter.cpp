@@ -759,17 +759,6 @@ static bool isCallType(OpCode opcode) {
 
 #endif
 
-/// \return true if the sequence v1, v2, v3... is monotone increasing, that is,
-/// satifies v1 <= v2 <= v3...
-static constexpr bool monotoneIncreasing(size_t v1, size_t v2) {
-  return v1 <= v2;
-}
-
-template <typename... Args>
-static constexpr bool monotoneIncreasing(size_t v1, size_t v2, Args... rest) {
-  return v1 <= v2 && monotoneIncreasing(v2, rest...);
-}
-
 /// \return the address of the next instruction after \p ip, which must be a
 /// call-type instruction.
 LLVM_ATTRIBUTE_ALWAYS_INLINE

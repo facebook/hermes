@@ -50,6 +50,9 @@
 #ifndef ASSERT_EQUAL_LAYOUT4
 #define ASSERT_EQUAL_LAYOUT4(a, b)
 #endif
+#ifndef ASSERT_MONOTONE_INCREASING
+#define ASSERT_MONOTONE_INCREASING(first, ...)
+#endif
 #ifndef OPERAND_STRING_ID
 #define OPERAND_STRING_ID(name, operandNumber)
 #endif
@@ -392,6 +395,19 @@ DEFINE_RET_TARGET(ConstructLong)
 DEFINE_OPCODE_3(CallDirectLongIndex, Reg8, UInt8, UInt32)
 DEFINE_RET_TARGET(CallDirectLongIndex)
 
+// Enforce the order.
+ASSERT_MONOTONE_INCREASING(
+    Call,
+    Construct,
+    Call1,
+    CallDirect,
+    Call2,
+    Call3,
+    Call4,
+    CallLong,
+    ConstructLong,
+    CallDirectLongIndex)
+
 /// Call a builtin function.
 /// Note this is NOT marked as a Ret target, because the callee is native
 /// and therefore never JS.
@@ -650,4 +666,5 @@ ASSERT_EQUAL_LAYOUT2(Construct, ConstructLong)
 #undef ASSERT_EQUAL_LAYOUT2
 #undef ASSERT_EQUAL_LAYOUT3
 #undef ASSERT_EQUAL_LAYOUT4
+#undef ASSERT_MONOTONE_INCREASING
 #undef OPERAND_STRING_ID
