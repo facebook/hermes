@@ -118,6 +118,10 @@ class FunctionContext {
   /// capturedNewTarget.
   Value *capturedNewTarget{};
 
+  /// Optionally captured value of the eagerly created Arguments object. Used
+  /// when arrow functions need to access it.
+  Variable *capturedArguments{};
+
   /// Initialize a new function context, while preserving the previous one.
   /// \param irGen the associated ESTreeIRGen object.
   /// \param function the newly created Function IR node.
@@ -448,6 +452,13 @@ class ESTreeIRGen {
       const ESTree::NodeList &params,
       ESTree::Node *body,
       const std::function<void(ESTree::Node *body)> &genBodyCB);
+
+  /// In the beginning of a function, initialize the captured variables needed
+  /// by arrow functions. In non-arrow functions containing arrow functions it
+  /// means capturing the necessary values so they can be accessed by the inner
+  /// arrow functions. In arrow functions it means propagating the inherited
+  /// captured values from the parent context.
+  void initializeArrowCaptureState();
 
   /// Generate a body for a dummy function so that it doesn't crash the
   /// backend when encountered.

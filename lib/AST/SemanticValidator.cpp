@@ -96,6 +96,9 @@ void SemanticValidator::visit(MetaPropertyNode *metaProp) {
 void SemanticValidator::visit(IdentifierNode *identifier) {
   if (identifier->_name == kw_.identEval && !astContext_.getEnableEval())
     sm_.error(identifier->getSourceRange(), "'eval' is disabled");
+
+  if (identifier->_name == kw_.identArguments)
+    curFunction()->semInfo->usesArguments = true;
 }
 
 /// Process a function declaration by creating a new FunctionContext.
@@ -125,8 +128,12 @@ void SemanticValidator::visit(ArrowFunctionExpressionNode *arrowFunc) {
     arrowFunc->_expression = false;
   }
 
-  curFunction()->semInfo->containsArrowFunctions = true;
   visitFunction(arrowFunc, nullptr, arrowFunc->_params, arrowFunc->_body);
+
+  curFunction()->semInfo->containsArrowFunctions = true;
+  curFunction()->semInfo->containsArrowFunctionsUsingArguments |=
+      arrowFunc->getSemInfo()->containsArrowFunctionsUsingArguments |
+      arrowFunc->getSemInfo()->usesArguments;
 }
 
 /// Ensure that the left side of for-in is an l-value.

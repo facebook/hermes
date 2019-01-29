@@ -675,6 +675,11 @@ Value *ESTreeIRGen::genIdentifierExpression(
   // arguments keyword.
   if (Iden->_name->str() == "arguments" &&
       !nameTable_.count(getNameFieldFromID(Iden))) {
+    // If it is captured, we must use the captured value.
+    if (curFunction()->capturedArguments) {
+      return Builder.createLoadFrameInst(curFunction()->capturedArguments);
+    }
+
     // The first time we encounter 'arguments' we must initialize the
     // arguments object before the entry terminator.
     if (!curFunction()->createdArguments) {

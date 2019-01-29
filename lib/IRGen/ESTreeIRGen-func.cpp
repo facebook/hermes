@@ -261,58 +261,8 @@ void ESTreeIRGen::doGenFunctionLike(
       emitStore(Builder, P, ParamStorage);
     }
 
-    // If we are not in an arrow function, and contain arrow functions,
-    // capture our "this" into a new variable.
-    if (curFunction()->function->getDefinitionKind() !=
-            Function::DefinitionKind::ES6Arrow &&
-        curFunction()->getSemInfo()->containsArrowFunctions) {
-      // Capture the current "this" into a new variable. Note that if the
-      // variable is never accessed it will be eliminated by the optimizer.
-      DEBUG(
-          dbgs() << "Capturing `this` of "
-                 << curFunction()->function->getInternalName() << "\n");
-
-      auto *captureVar = Builder.createVariable(
-          curFunction()->function->getFunctionScope(),
-          genAnonymousLabelName("this"));
-
-      Builder.createStoreFrameInst(
-          curFunction()->function->getThisParameter(), captureVar);
-
-      curFunction()->capturedThis = captureVar;
-
-      // Capture new.target into a new variable.
-      captureVar = Builder.createVariable(
-          curFunction()->function->getFunctionScope(),
-          genAnonymousLabelName("new.target"));
-
-      Builder.createStoreFrameInst(
-          Builder.createGetNewTargetInst(), captureVar);
-
-      curFunction()->capturedNewTarget = captureVar;
-    } else if (
-        curFunction()->function->getDefinitionKind() ==
-        Function::DefinitionKind::ES6Arrow) {
-      assert(
-          curFunction()->getPreviousContext() &&
-          "arrow function must have a previous context");
-      assert(
-          curFunction()->getPreviousContext()->capturedThis &&
-          "arrow function parent must have a captured this");
-      curFunction()->capturedThis =
-          curFunction()->getPreviousContext()->capturedThis;
-
-      assert(
-          curFunction()->getPreviousContext()->capturedNewTarget &&
-          "arrow function parent must have a captured new.target");
-      curFunction()->capturedNewTarget =
-          curFunction()->getPreviousContext()->capturedNewTarget;
-    } else if (
-        curFunction()->function->getDefinitionKind() ==
-        Function::DefinitionKind::ES6Method) {
-      // new.target is always undefined in methods.
-      curFunction()->capturedNewTarget = Builder.getLiteralUndefined();
-    }
+    /// Initialize or propagate captured variable state for arrow functions.
+    initializeArrowCaptureState();
 
     // Generate and initialize the code for the hoisted function declarations
     // before generating the rest of the body.
@@ -351,6 +301,80 @@ void ESTreeIRGen::doGenFunctionLike(
   }
 
   NewFunc->clearStatementCount();
+}
+
+void ESTreeIRGen::initializeArrowCaptureState() {
+  auto const definitionKind = curFunction()->function->getDefinitionKind();
+  auto const containsArrow =
+      curFunction()->getSemInfo()->containsArrowFunctions;
+  auto *scope = curFunction()->function->getFunctionScope();
+
+  // Sanity checks.
+  //
+  if (definitionKind == Function::DefinitionKind::ES6Arrow) {
+    assert(
+        curFunction()->getPreviousContext() &&
+        "arrow function must have a previous context");
+  }
+
+  // Handle "this".
+  //
+  if (definitionKind != Function::DefinitionKind::ES6Arrow && containsArrow) {
+    // Capture the current "this" into a new variable. Note that if the
+    // variable is never accessed it will be eliminated by the optimizer.
+    curFunction()->capturedThis =
+        Builder.createVariable(scope, genAnonymousLabelName("this"));
+
+    Builder.createStoreFrameInst(
+        curFunction()->function->getThisParameter(),
+        curFunction()->capturedThis);
+  } else if (definitionKind == Function::DefinitionKind::ES6Arrow) {
+    assert(
+        curFunction()->getPreviousContext()->capturedThis &&
+        "arrow function parent must have a captured this");
+
+    curFunction()->capturedThis =
+        curFunction()->getPreviousContext()->capturedThis;
+  }
+
+  // Handle "new.target"
+  //
+  if (definitionKind == Function::DefinitionKind::ES6Method) {
+    // new.target is always undefined in methods.
+    curFunction()->capturedNewTarget = Builder.getLiteralUndefined();
+  } else if (
+      definitionKind != Function::DefinitionKind::ES6Arrow && containsArrow) {
+    // Capture new.target into a new variable.
+    auto *var =
+        Builder.createVariable(scope, genAnonymousLabelName("new.target"));
+    curFunction()->capturedNewTarget = var;
+
+    Builder.createStoreFrameInst(Builder.createGetNewTargetInst(), var);
+  } else if (definitionKind == Function::DefinitionKind::ES6Arrow) {
+    assert(
+        curFunction()->getPreviousContext()->capturedNewTarget &&
+        "arrow function parent must have a captured new.target");
+
+    curFunction()->capturedNewTarget =
+        curFunction()->getPreviousContext()->capturedNewTarget;
+  }
+
+  // Handle "arguments".
+  //
+  if (definitionKind != Function::DefinitionKind::ES6Arrow && containsArrow) {
+    // Optionally capture Arguments into a new variable.
+    if (curFunction()->getSemInfo()->containsArrowFunctionsUsingArguments) {
+      curFunction()->capturedArguments =
+          Builder.createVariable(scope, genAnonymousLabelName("arguments"));
+
+      Builder.createStoreFrameInst(
+          Builder.createCreateArgumentsInst(),
+          curFunction()->capturedArguments);
+    }
+  } else if (definitionKind == Function::DefinitionKind::ES6Arrow) {
+    curFunction()->capturedArguments =
+        curFunction()->getPreviousContext()->capturedArguments;
+  }
 }
 
 void ESTreeIRGen::genDummyFunction(Function *dummy) {

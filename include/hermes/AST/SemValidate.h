@@ -26,8 +26,22 @@ class FunctionInfo {
   /// can generate the rest of the function.
   llvm::SmallVector<ESTree::FunctionDeclarationNode *, 2> closures{};
 
+  /// Whether this function references the "arguments" identifier. This is a
+  /// conservative approximation of whether it tries to access the "arguments"
+  /// object. Why "conservative"? Because in non-strict mode it is possible to
+  /// declare a variable called "arguments" and then access it.
+  /// In the future, when we start resolving variables in the validator, we will
+  /// be able to be completely accurate, but for now this is good enough.
+  bool usesArguments = false;
+
   /// Whether this function contains arrow functions.
   bool containsArrowFunctions = false;
+
+  /// This is a logical or of the \c usesArguments flags of all contained
+  /// arrow functions. This will be used as a conservative estimate of
+  /// whether a non-arrow function needs to eagerly create and capture its
+  /// Arguments object.
+  bool containsArrowFunctionsUsingArguments = false;
 
   /// Class that holds the target for a break/continue label, as well as the
   /// depth of the nested try/catch/finally blocks where this label is defined.
