@@ -9,6 +9,8 @@
 ///
 /// Each parameter is described by three tokens: Type, Name and Optional.
 
+// clang-format off
+
 // Defines the start of range of nodes with the same base
 #ifndef ESTREE_FIRST
 #define ESTREE_FIRST(NAME, BASE)
@@ -208,6 +210,7 @@ ESTREE_NODE_2_ARGS(
     false)
 
 ESTREE_NODE_0_ARGS(ThisExpression, Base)
+ESTREE_NODE_0_ARGS(Super, Base)
 ESTREE_NODE_1_ARGS(SequenceExpression, Base, NodeList, expressions, false)
 ESTREE_NODE_1_ARGS(ObjectExpression, Base, NodeList, properties, false)
 ESTREE_NODE_1_ARGS(ArrayExpression, Base, NodeList, elements, false)
@@ -408,6 +411,30 @@ ESTREE_NODE_3_ARGS(
     kind,
     false)
 
+ESTREE_NODE_3_ARGS(
+    ClassDeclaration, Base,
+    NodePtr, id, false,
+    NodePtr, superClass, true,
+    NodePtr, body, false)
+
+ESTREE_NODE_3_ARGS(
+    ClassExpression, Base,
+    NodePtr, id, true,
+    NodePtr, superClass, true,
+    NodePtr, body, false)
+
+ESTREE_NODE_1_ARGS(
+    ClassBody, Base,
+    NodeList, body, false)
+
+ESTREE_NODE_5_ARGS(
+    MethodDefinition, Base,
+    NodePtr, key, false,
+    NodePtr, value, false,
+    NodeLabel, kind, false,
+    NodeBoolean, computed, false,
+    NodeBoolean, static, false)
+
 #undef ESTREE_FIRST
 #undef ESTREE_LAST
 #undef ESTREE_WRAP
@@ -417,3 +444,4 @@ ESTREE_NODE_3_ARGS(
 #undef ESTREE_NODE_2_ARGS
 #undef ESTREE_NODE_3_ARGS
 #undef ESTREE_NODE_4_ARGS
+#undef ESTREE_NODE_5_ARGS

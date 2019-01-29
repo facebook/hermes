@@ -97,8 +97,34 @@ class ESTreeDumper {
   void visit(NAME##Node *node) {                                            \
     os_.indent(indentation_)                                                \
         << #NAME << " " << node->_##ARG0NM << " " << node->_##ARG1NM << " " \
-        << node->_##ARG2NM << '\n';                                         \
+        << node->_##ARG2NM << " " << node->_##ARG3NM << '\n';               \
     dumpChildren(node);                                                     \
+  }
+
+#define ESTREE_NODE_5_ARGS(                                                    \
+    NAME,                                                                      \
+    BASE,                                                                      \
+    ARG0TY,                                                                    \
+    ARG0NM,                                                                    \
+    ARG0OPT,                                                                   \
+    ARG1TY,                                                                    \
+    ARG1NM,                                                                    \
+    ARG1OPT,                                                                   \
+    ARG2TY,                                                                    \
+    ARG2NM,                                                                    \
+    ARG2OPT,                                                                   \
+    ARG3TY,                                                                    \
+    ARG3NM,                                                                    \
+    ARG3OPT,                                                                   \
+    ARG4TY,                                                                    \
+    ARG4NM,                                                                    \
+    ARG4OPT)                                                                   \
+  void visit(NAME##Node *node) {                                               \
+    os_.indent(indentation_)                                                   \
+        << #NAME << " " << node->_##ARG0NM << " " << node->_##ARG1NM << " "    \
+        << node->_##ARG2NM << " " << node->_##ARG3NM << " " << node->_##ARG4NM \
+        << '\n';                                                               \
+    dumpChildren(node);                                                        \
   }
 
 #include "hermes/AST/ESTree.def"

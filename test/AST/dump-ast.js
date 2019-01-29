@@ -17,7 +17,7 @@ switch (foo()) {
 
 // CHECK: File <child>
 // CHECK-NEXT:   Program <children>
-// CHECK-NEXT:     FunctionDeclaration <child> <child> <children>
+// CHECK-NEXT:     FunctionDeclaration <child> <child> <children> <child>
 // CHECK-NEXT:       Identifier "foo" <child>
 // CHECK-NEXT:       BlockStatement <children>
 // CHECK-NEXT:         ReturnStatement <child>

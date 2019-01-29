@@ -50,6 +50,7 @@ struct RecursiveVisitorDispatch {
 #define ESTREE_NODE_2_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_3_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_4_ARGS(NAME, ...) VISIT(NAME)
+#define ESTREE_NODE_5_ARGS(NAME, ...) VISIT(NAME)
 
 #include "hermes/AST/ESTree.def"
 
@@ -84,6 +85,7 @@ struct RecursiveVisitorDispatch {
 #define ESTREE_NODE_2_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_3_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_4_ARGS(NAME, ...) VISIT(NAME)
+#define ESTREE_NODE_5_ARGS(NAME, ...) VISIT(NAME)
 
 #include "hermes/AST/ESTree.def"
 
@@ -145,6 +147,32 @@ struct RecursiveVisitorDispatch {
     visit(v, node->_##ARG1NM);                              \
     visit(v, node->_##ARG2NM);                              \
     visit(v, node->_##ARG3NM);                              \
+  }
+
+#define ESTREE_NODE_5_ARGS(                                 \
+    NAME,                                                   \
+    BASE,                                                   \
+    ARG0TY,                                                 \
+    ARG0NM,                                                 \
+    ARG0OPT,                                                \
+    ARG1TY,                                                 \
+    ARG1NM,                                                 \
+    ARG1OPT,                                                \
+    ARG2TY,                                                 \
+    ARG2NM,                                                 \
+    ARG2OPT,                                                \
+    ARG3TY,                                                 \
+    ARG3NM,                                                 \
+    ARG3OPT,                                                \
+    ARG4TY,                                                 \
+    ARG4NM,                                                 \
+    ARG4OPT)                                                \
+  static void visitChildren(Visitor &v, NAME##Node *node) { \
+    visit(v, node->_##ARG0NM);                              \
+    visit(v, node->_##ARG1NM);                              \
+    visit(v, node->_##ARG2NM);                              \
+    visit(v, node->_##ARG3NM);                              \
+    visit(v, node->_##ARG4NM);                              \
   }
 
 #include "hermes/AST/ESTree.def"
