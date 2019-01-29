@@ -121,11 +121,15 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
   if (strTableSize == 0)
     return;
 
+  unsigned idents = 0;
+  auto identHashes = bcProvider_->getIdentifierHashes();
+
   std::locale loc("C");
   OS << "Global String Table:\n";
   for (unsigned i = 0; i < strTableSize; ++i) {
-    OS << "  s" << i << "[";
     auto entry = bcProvider_->getStringTableEntry(i);
+    OS << (entry.isIdentifier() ? "  i" : "  s") << i << "[";
+
     uint32_t offset = entry.getOffset();
     uint32_t length = entry.getLength();
     if (entry.isUTF16()) {
@@ -135,7 +139,14 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
       OS << "ASCII";
     }
     int64_t end = static_cast<int64_t>(offset) + length - 1;
-    OS << ", " << offset << ".." << end << "]: ";
+    OS << ", " << offset << ".." << end << "]";
+
+    if (entry.isIdentifier()) {
+      uint32_t hash = identHashes[idents++];
+      OS << " #" << llvm::format_hex_no_prefix(hash, 8, /* Upper */ true);
+    }
+
+    OS << ": ";
     for (unsigned j = 0; j < length; ++j) {
       unsigned char c = strStorage[offset + j];
       if (!entry.isUTF16() && isprint((char)c, loc)) {

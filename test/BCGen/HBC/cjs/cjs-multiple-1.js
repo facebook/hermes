@@ -19,12 +19,12 @@ print('module 1');
 // STATIC: Global String Table:
 // STATIC-NEXT: s0[ASCII, {{.*}}]: cjs_module
 // STATIC-NEXT: s1[ASCII, {{.*}}]: module 1
-// STATIC-NEXT: s2[ASCII, {{.*}}]: print
-// STATIC-NEXT: s3[ASCII, {{.*}}]: HermesInternal
-// STATIC-NEXT: s4[ASCII, {{.*}}]: call
+// STATIC-NEXT: i2[ASCII, {{.*}}] #{{[0-9A-Z]+}}: print
+// STATIC-NEXT: i3[ASCII, {{.*}}] #{{[0-9A-Z]+}}: HermesInternal
+// STATIC-NEXT: i4[ASCII, {{.*}}] #{{[0-9A-Z]+}}: call
 // STATIC-NEXT: s5[ASCII, {{.*}}]: global
 // STATIC-NEXT: s6[ASCII, {{.*}}]: module 2
-// STATIC-NEXT: s7[ASCII, {{.*}}]: require
+// STATIC-NEXT: i7[ASCII, {{.*}}] #{{[0-9A-Z]+}}: require
 // STATIC-NOT: cjs-multiple-1
 // STATIC: CommonJS Modules (Static):
 // STATIC-NEXT:  Module index 0 -> function ID 1

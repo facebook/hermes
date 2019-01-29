@@ -6,12 +6,12 @@ var z = [{}];
 
 //CHECK-LABEL:Global String Table:
 //CHECK-NEXT:  s0[ASCII, {{[0-9]+\.\.[0-9]+}}]: foo
-//CHECK-NEXT:  s1[ASCII, {{[0-9]+\.\.[0-9]+}}]: x
-//CHECK-NEXT:  s2[ASCII, {{[0-9]+\.\.[0-9]+}}]: y
-//CHECK-NEXT:  s3[ASCII, {{[0-9]+\.\.[0-9]+}}]: z
+//CHECK-NEXT:  i1[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: x
+//CHECK-NEXT:  i2[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: y
+//CHECK-NEXT:  i3[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: z
 //CHECK-NEXT:  s4[ASCII, {{[0-9]+\.\.[0-9]+}}]: bar
 //CHECK-NEXT:  s5[ASCII, {{[0-9]+\.\.[0-9]+}}]: global
-//CHECK-NEXT:  s6[ASCII, {{[0-9]+\.\.[0-9]+}}]: length
+//CHECK-NEXT:  i6[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: length
 
 //CHECK-LABEL:Array Buffer:
 //CHECK-NEXT:true

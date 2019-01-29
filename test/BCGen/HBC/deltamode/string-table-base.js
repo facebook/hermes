@@ -15,17 +15,17 @@ var invalid_single_surrogate = '\ud800';
 var obj = {'key1': 'val1', 'key2': '你好'};
 
 //CHECK-LABEL:Global String Table:
-//CHECK-NEXT:  s0[ASCII, {{[0-9]+}}..{{[0-9]+}}]: gamma
-//CHECK-NEXT:  s1[ASCII, {{[0-9]+}}..{{[0-9]+}}]: a
-//CHECK-NEXT:  s2[ASCII, {{[0-9]+}}..{{[0-9]+}}]: obj
-//CHECK-NEXT:  s3[ASCII, {{[0-9]+}}..{{[0-9]+}}]: b
-//CHECK-NEXT:  s4[ASCII, {{[0-9]+}}..{{[0-9]+}}]: pi
-//CHECK-NEXT:  s5[ASCII, {{[0-9]+}}..{{[0-9]+}}]: invalid_single_surrogate
-//CHECK-NEXT:  s6[ASCII, {{[0-9]+}}..{{[0-9]+}}]: invalid_surrogate_pair
-//CHECK-NEXT:  s7[ASCII, {{[0-9]+}}..{{[0-9]+}}]: sigma
+//CHECK-NEXT:  i0[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: gamma
+//CHECK-NEXT:  i1[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: a
+//CHECK-NEXT:  i2[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: obj
+//CHECK-NEXT:  i3[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: b
+//CHECK-NEXT:  i4[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: pi
+//CHECK-NEXT:  i5[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: invalid_single_surrogate
+//CHECK-NEXT:  i6[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: invalid_surrogate_pair
+//CHECK-NEXT:  i7[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: sigma
 //CHECK-NEXT:  s8[ASCII, {{[0-9]+}}..{{[0-9]+}}]: global
-//CHECK-NEXT:  s9[ASCII, {{[0-9]+}}..{{[0-9]+}}]: key1
-//CHECK-NEXT:  s10[ASCII, {{[0-9]+}}..{{[0-9]+}}]: key2
+//CHECK-NEXT:  i9[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: key1
+//CHECK-NEXT:  i10[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: key2
 //CHECK-NEXT:  s11[ASCII, {{[0-9]+}}..{{[0-9]+}}]: val1
 //CHECK-NEXT:  s12[UTF-16, {{[0-9]+}}..{{[0-9]+}}]: \xC0\x03
 //CHECK-NEXT:  s13[UTF-16, {{[0-9]+}}..{{[0-9]+}}]: \x60\x4F\x7D\x59
