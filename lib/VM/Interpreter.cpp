@@ -997,6 +997,23 @@ tailCall:
       // of a GC.
       uint64_t callNewTarget;
 
+/// Handle an opcode \p name with an out-of-line implementation in a function
+///   ExecutionStatus caseName(
+///       Runtime *,
+///       PinnedHermesValue *frameRegs,
+///       Inst *ip)
+#define CASE_OUTOFLINE(name)                      \
+  CASE(name) {                                    \
+    if (LLVM_UNLIKELY(                            \
+            case##name(runtime, frameRegs, ip) == \
+            ExecutionStatus::EXCEPTION)) {        \
+      goto exception;                             \
+    }                                             \
+    gcScope.flushToSmallCount(KEEP_HANDLES);      \
+    ip = NEXTINST(name);                          \
+    DISPATCH;                                     \
+  }
+
 /// Implement a binary arithmetic instruction with a fast path where both
 /// operands are numbers.
 /// \param name the name of the instruction. The fast path case will have a
@@ -2967,15 +2984,7 @@ tailCall:
           NEXTINST(JNotEqualLong),
           IPADD(ip->iJNotEqualLong.op1));
 
-      CASE(DirectEval) {
-        if (LLVM_UNLIKELY(
-                directEval(runtime, &ip->iDirectEval) ==
-                ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-        ip = NEXTINST(DirectEval);
-        DISPATCH;
-      }
+      CASE_OUTOFLINE(DirectEval);
 
       CASE(_last) {
         llvm_unreachable("Invalid opcode _last");

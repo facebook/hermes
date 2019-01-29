@@ -174,12 +174,16 @@ class Interpreter {
   }
 #endif
 
+  //===========================================================================
+  // Out-of-line implementations of entire instructions.
+
   /// Partial implementation of ES6 18.2.1.1
   /// `PerformEval(x, evalRealm, strictCaller=true, direct=true)`.
   /// The difference is that we don't support actual lexical scope, of course.
-  static ExecutionStatus directEval(
+  static ExecutionStatus caseDirectEval(
       Runtime *runtime,
-      const hermes::inst::DirectEvalInst *inst);
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
 };
 
 } // namespace vm

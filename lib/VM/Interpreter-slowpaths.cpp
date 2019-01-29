@@ -9,14 +9,19 @@
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/StringPrimitive.h"
 
+#include "Interpreter-internal.h"
+
+using namespace hermes::inst;
+
 namespace hermes {
 namespace vm {
 
-ExecutionStatus Interpreter::directEval(
+ExecutionStatus Interpreter::caseDirectEval(
     Runtime *runtime,
-    const hermes::inst::DirectEvalInst *inst) {
-  auto *result = &runtime->getCurrentFrame()->getLocalVarRef(inst->op1);
-  auto *input = &runtime->getCurrentFrame()->getLocalVarRef(inst->op2);
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  auto *result = &O1REG(DirectEval);
+  auto *input = &O2REG(DirectEval);
 
   if (!input->isString()) {
     *result = *input;
