@@ -286,7 +286,7 @@ CallResult<Handle<Callable>> speciesConstructor(
     Handle<Callable> defaultConstructor);
 
 /// ES7 7.2.4
-bool isConstructor(HermesValue x);
+bool isConstructor(Runtime *runtime, HermesValue x);
 
 /// ES6.0 7.2.8
 /// Returns true if the object is a JSRegExp or has a Symbol.match property that

@@ -840,7 +840,21 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
 
     auto functionName =
         bcProvider_->getStringRefFromID(functionHeader.functionName());
-    OS << "Function<" << functionName << ">";
+
+    StringRef defKindStr{};
+    switch (functionHeader.flags().prohibitInvoke) {
+      case FunctionHeaderFlag::ProhibitCall:
+        defKindStr = "Constructor";
+        break;
+      case FunctionHeaderFlag::ProhibitConstruct:
+        defKindStr = "NCFunction";
+        break;
+      default:
+        defKindStr = "Function";
+        break;
+    }
+
+    OS << defKindStr << "<" << functionName << ">";
     OS << "(" << functionHeader.paramCount() << " params, "
        << functionHeader.frameSize() << " registers, "
        << static_cast<unsigned int>(functionHeader.environmentSize())

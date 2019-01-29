@@ -274,7 +274,7 @@ CallResult<HermesValue>
 typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
   auto source = args.getArgHandle(runtime, 0);
   // 1. Let C be the this value.
-  if (!isConstructor(args.getThisArg())) {
+  if (!isConstructor(runtime, args.getThisArg())) {
     // 2. If IsConstructor(C) is false, throw a TypeError exception.
     return runtime->raiseTypeError(
         "Cannot invoke when the this is not a constructor");
@@ -361,7 +361,7 @@ typedArrayOf(void *, Runtime *runtime, NativeArgs args) {
   // 2. Let items be the List of arguments passed to this function. (args is
   // items).
   // 3. Let C be the this value.
-  if (!isConstructor(args.getThisArg())) {
+  if (!isConstructor(runtime, args.getThisArg())) {
     // 4. If IsConstructor(C) is false, throw a TypeError exception.
     return runtime->raiseTypeError(
         "Cannot invoke %TypedArray%.of when %TypedArray% is not a constructor "

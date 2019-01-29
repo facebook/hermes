@@ -144,7 +144,10 @@ L1:
   emit(*BFG, 1);
 
   std::unique_ptr<BytecodeModule> BM(new BytecodeModule(1));
-  BM->setFunction(0, BFG->generateBytecodeFunction(true, 0, 0));
+  BM->setFunction(
+      0,
+      BFG->generateBytecodeFunction(
+          hermes::Function::DefinitionKind::ES5Function, true, 0, 0));
   runtimeModule->initialize(
       BCProviderFromSrc::createBCProviderFromSrc(std::move(BM)));
   auto codeBlock = CodeBlock::createCodeBlock(

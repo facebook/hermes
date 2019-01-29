@@ -55,6 +55,7 @@ class BytecodeFunction {
   /// Used during serialization. \p opcodes will be swapped after this call.
   explicit BytecodeFunction(
       std::vector<opcode_atom_t> &&opcodes,
+      Function::DefinitionKind definitionKind,
       bool strictMode,
       FunctionHeader &&header,
       std::vector<HBCExceptionHandlerInfo> &&exceptionHandlers,
@@ -63,6 +64,18 @@ class BytecodeFunction {
         header_(std::move(header)),
         exceptions_(std::move(exceptionHandlers)),
         jumpTables_(std::move(jumpTables)) {
+    switch (definitionKind) {
+      case Function::DefinitionKind::ES6Arrow:
+      case Function::DefinitionKind::ES6Method:
+        header_.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitConstruct;
+        break;
+      case Function::DefinitionKind::ES6Constructor:
+        header_.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitCall;
+        break;
+      default:
+        header_.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitNone;
+        break;
+    }
     header_.flags.strictMode = strictMode;
     header_.flags.hasExceptionHandler = exceptions_.size();
   }

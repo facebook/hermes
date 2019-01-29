@@ -957,6 +957,17 @@ tailCall:
       goto stackOverflow;
 
     ip = (Inst const *)curCodeBlock->begin();
+
+    // Check for invalid invocation.
+    if (LLVM_UNLIKELY(curCodeBlock->getHeaderFlags().isCallProhibited(
+            newFrame.isConstructorCall()))) {
+      if (!newFrame.isConstructorCall()) {
+        runtime->raiseTypeError("Class constructor invoked without new");
+      } else {
+        runtime->raiseTypeError("Function is not a constructor");
+      }
+      goto handleExceptionInParent;
+    }
   } else {
     // Point frameRegs to the first register in the frame.
     frameRegs = &runtime->getCurrentFrame().getFirstLocalRef();
@@ -3012,11 +3023,14 @@ tailCall:
   stackOverflow:
     runtime->raiseStackOverflow();
 
+  // We arrive here when we raised an exception in a callee, but we don't want
+  // the callee to be able to handle it.
+  handleExceptionInParent:
     // Restore the caller code block and IP.
     curCodeBlock = FRAME.getSavedCodeBlock();
     ip = FRAME.getSavedIP();
 
-    // Pop to the previous frame where technically the overflow happened.
+    // Pop to the previous frame where technically the error happened.
     frameRegs =
         &runtime->restoreStackAndPreviousFrame(FRAME).getFirstLocalRef();
 

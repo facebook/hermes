@@ -298,6 +298,7 @@ list(APPEND HERMES_TEST_DEPS
   hermes
   hermesc
   hvm
+  interp-dispatch-bench
   hdb
   hermes-repl
   hbc-deltaprep

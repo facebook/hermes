@@ -483,7 +483,7 @@ arrayOf(void *, Runtime *runtime, NativeArgs args) {
 
   MutableHandle<JSObject> A{runtime};
   // 4. If IsConstructor(C) is true, then
-  if (isConstructor(*C)) {
+  if (isConstructor(runtime, *C)) {
     // a. Let A be Construct(C, «len»).
     auto aRes = Callable::executeConstruct1(
         Handle<Callable>::vmcast(C),
@@ -2995,7 +2995,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   // 6. If usingIterator is not undefined, then
   if (!usingIterator->isUndefined()) {
     // a. If IsConstructor(C) is true, then
-    if (isConstructor(*C)) {
+    if (isConstructor(runtime, *C)) {
       // i. Let A be Construct(C).
       auto callRes =
           Callable::executeConstruct0(Handle<Callable>::vmcast(C), runtime);
@@ -3122,7 +3122,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   }
   uint64_t len = lengthRes->getNumberAs<uint64_t>();
   // 12. If IsConstructor(C) is true, then
-  if (isConstructor(*C)) {
+  if (isConstructor(runtime, *C)) {
     // a. Let A be Construct(C, «len»).
     auto callRes = Callable::executeConstruct1(
         Handle<Callable>::vmcast(C),

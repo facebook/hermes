@@ -141,6 +141,10 @@ class CodeBlock final {
     return runtimeModule_;
   }
 
+  hbc::FunctionHeaderFlag getHeaderFlags() const {
+    return functionHeader_.flags();
+  }
+
   bool isStrictMode() const {
     return functionHeader_.flags().strictMode;
   }

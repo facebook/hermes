@@ -280,7 +280,10 @@ inline CodeBlock *createCodeBlock(
     RuntimeModule *runtimeModule,
     hbc::BytecodeFunctionGenerator *BFG) {
   std::unique_ptr<hbc::BytecodeModule> BM(new hbc::BytecodeModule(1));
-  BM->setFunction(0, BFG->generateBytecodeFunction(true, 0, 0));
+  BM->setFunction(
+      0,
+      BFG->generateBytecodeFunction(
+          Function::DefinitionKind::ES5Function, true, 0, 0));
   runtimeModule->initialize(
       hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(BM)));
 
