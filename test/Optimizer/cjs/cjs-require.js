@@ -11,8 +11,8 @@ function bar() {
 
 exports.bar = bar;
 
-//CHKOPT-LABEL:Function<cjs_module>(4 params, 9 registers, 0 symbols):
-//CHKOPT-NEXT:Offset in debug table: src 0x10, vars 0x0
+//CHKOPT-LABEL:Function<cjs_module>(4 params, 10 registers, 0 symbols):
+//CHKOPT-NEXT:Offset in debug table: {{.*}}
 //CHKOPT-NEXT:    LoadConstUInt8    r2, 1
 //CHKOPT-NEXT:    CallBuiltin       r1, 6, 2
 //CHKOPT-NEXT:    GetByIdShort      r0, r1, 1, "foo"
@@ -25,8 +25,8 @@ exports.bar = bar;
 //CHKOPT-NEXT:    LoadConstUndefined r0
 //CHKOPT-NEXT:    Ret               r0
 
-//CHKOPT-LABEL:Function<bar>(1 params, 9 registers, 0 symbols):
-//CHKOPT-NEXT:Offset in debug table: src 0x20, vars 0x0
+//CHKOPT-LABEL:Function<bar>(1 params, 10 registers, 0 symbols):
+//CHKOPT-NEXT:Offset in debug table: {{.*}}
 //CHKOPT-NEXT:    LoadConstUInt8    r2, 2
 //CHKOPT-NEXT:    CallBuiltin       r1, 6, 2
 //CHKOPT-NEXT:    GetByIdShort      r0, r1, 1, "baz"
@@ -35,8 +35,8 @@ exports.bar = bar;
 //CHKOPT-NEXT:    LoadConstUndefined r0
 //CHKOPT-NEXT:    Ret               r0
 
-//CHKDBG-LABEL: Function<cjs_module>(4 params, 20 registers, 5 symbols):
-//CHKDBG-NEXT: Offset in debug table: src 0x10, vars 0x0
+//CHKDBG-LABEL: Function<cjs_module>(4 params, 21 registers, 5 symbols):
+//CHKDBG-NEXT: Offset in debug table: {{.*}}
 //CHKDBG-NEXT:     CreateEnvironment r0
 //CHKDBG-NEXT:     LoadParam         r1, 1
 //CHKDBG-NEXT:     LoadParam         r2, 2
@@ -62,8 +62,8 @@ exports.bar = bar;
 //CHKDBG-NEXT:     PutById           r10, r11, 1, "bar"
 //CHKDBG-NEXT:     Ret               r4
 
-//CHKDBG-LABEL: Function<bar>(1 params, 15 registers, 1 symbols):
-//CHKDBG-NEXT: Offset in debug table: src 0x20, vars 0x0
+//CHKDBG-LABEL: Function<bar>(1 params, 16 registers, 1 symbols):
+//CHKDBG-NEXT: Offset in debug table: {{.*}}
 //CHKDBG-NEXT:     CreateEnvironment r0
 //CHKDBG-NEXT:     LoadConstUndefined r1
 //CHKDBG-NEXT:     LoadConstUInt8    r2, 2

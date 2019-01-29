@@ -1556,6 +1556,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
         ScopedNativeCallFrame newFrame{runtime,
                                        static_cast<uint32_t>(replacerArgsCount),
                                        *replaceFn,
+                                       false,
                                        HermesValue::encodeUndefinedValue()};
         if (LLVM_UNLIKELY(newFrame.overflowed()))
           return runtime->raiseStackOverflow();
@@ -1573,7 +1574,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
         newFrame->getArgRef(argIdx++) = S.getHermesValue();
 
         // iv. Let replValue be Call(replaceValue, undefined, replacerArgs).
-        callRes = Callable::call(replaceFn, runtime, false);
+        callRes = Callable::call(replaceFn, runtime);
         if (callRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }

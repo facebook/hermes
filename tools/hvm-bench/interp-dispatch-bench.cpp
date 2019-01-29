@@ -154,7 +154,7 @@ L1:
       0);
 
   ScopedNativeCallFrame newFrame{
-      runtime, 2, nullptr, HermesValue::encodeUndefinedValue()};
+      runtime, 2, nullptr, false, HermesValue::encodeUndefinedValue()};
   assert(!newFrame.overflowed() && "Frame allocation should not have failed");
   newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(loopc);
   newFrame->getArgRef(1) = HermesValue::encodeDoubleValue(factc);

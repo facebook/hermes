@@ -1930,8 +1930,11 @@ jsi::Value HermesRuntimeImpl::call(
 
   auto &stats = runtime_.getRuntimeStats();
   const vm::instrumentation::RAIITimer timer{stats, stats.incomingFunction};
-  vm::ScopedNativeCallFrame newFrame{
-      &runtime_, static_cast<uint32_t>(count), *handle, hvFromValue(jsThis)};
+  vm::ScopedNativeCallFrame newFrame{&runtime_,
+                                     static_cast<uint32_t>(count),
+                                     handle.getHermesValue(),
+                                     vm::HermesValue::encodeUndefinedValue(),
+                                     hvFromValue(jsThis)};
   if (LLVM_UNLIKELY(newFrame.overflowed())) {
     checkStatus(runtime_.raiseStackOverflow());
   }
@@ -1939,7 +1942,7 @@ jsi::Value HermesRuntimeImpl::call(
   for (uint32_t i = 0; i != count; ++i) {
     newFrame->getArgRef(i) = hvFromValue(args[i]);
   }
-  auto callRes = vm::Callable::call(handle, &runtime_, false);
+  auto callRes = vm::Callable::call(handle, &runtime_);
   checkStatus(callRes.getStatus());
 
   return valueFromHermesValue(*callRes);
@@ -1996,7 +1999,8 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
 
   vm::ScopedNativeCallFrame newFrame{&runtime_,
                                      static_cast<uint32_t>(count),
-                                     *funcHandle,
+                                     funcHandle.getHermesValue(),
+                                     funcHandle.getHermesValue(),
                                      objHandle.getHermesValue()};
   if (newFrame.overflowed()) {
     checkStatus(runtime_.raiseStackOverflow());
@@ -2005,7 +2009,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
     newFrame->getArgRef(i) = hvFromValue(args[i]);
   }
   // The last parameter indicates that this call should construct an object.
-  auto callRes = vm::Callable::call(funcHandle, &runtime_, true);
+  auto callRes = vm::Callable::call(funcHandle, &runtime_);
   checkStatus(callRes.getStatus());
 
   // 13.2.2.9:

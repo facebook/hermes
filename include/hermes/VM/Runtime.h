@@ -1023,6 +1023,8 @@ class ScopedNativeCallFrame {
   /// calling \p callee with \p argCount arguments and the given \p thisArg.
   /// \p callee is either a native pointer to CodeBlock, or an object pointer to
   /// a Callable (the two cases are distinguished by the type tag).
+  /// \p newTarget is either \c undefined or the callable of the constructor
+  /// currently being invoked by new.
   /// On overflow, the overflowed() flag is set, in which case the stack frame
   /// must not be used.
   /// The arguments are initially uninitialized. The caller should initialize
@@ -1031,6 +1033,7 @@ class ScopedNativeCallFrame {
       Runtime *runtime,
       uint32_t argCount,
       HermesValue callee,
+      HermesValue newTarget,
       HermesValue thisArg)
       : runtime_(runtime), savedSP_(runtime->getStackPointer()) {
     runtime->nativeCallFrameDepth_++;
@@ -1045,7 +1048,13 @@ class ScopedNativeCallFrame {
     // frame. The ScopedNativeCallFrame will restore both.
     auto *stack = runtime->allocUninitializedStack(registersNeeded);
     frame_ = StackFramePtr::initFrame(
-        stack, runtime->currentFrame_, nullptr, nullptr, argCount, callee);
+        stack,
+        runtime->currentFrame_,
+        nullptr,
+        nullptr,
+        argCount,
+        callee,
+        newTarget);
     frame_.getThisArgRef() = thisArg;
 #if HERMES_SLOW_DEBUG
     // Poison the initial arguments to ensure the caller sets all of them before
@@ -1064,11 +1073,14 @@ class ScopedNativeCallFrame {
       Runtime *runtime,
       uint32_t argCount,
       Callable *callee,
+      bool construct,
       HermesValue thisArg)
       : ScopedNativeCallFrame(
             runtime,
             argCount,
             HermesValue::encodeObjectValue(callee),
+            construct ? HermesValue::encodeObjectValue(callee)
+                      : HermesValue::encodeUndefinedValue(),
             thisArg) {}
 
   ~ScopedNativeCallFrame() {

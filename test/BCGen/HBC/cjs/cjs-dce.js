@@ -33,8 +33,8 @@ foo();
 // CHECK-NEXT:     Call              r0, r2, 3
 // CHECK-NEXT:     Ret               r0
 
-//CHECK:Function<cjs_module>(4 params, 12 registers, 1 symbols):
-//CHECK-NEXT:Offset in debug table: src 0x10, vars 0x0
+//CHECK:Function<cjs_module>(4 params, 13 registers, 1 symbols):
+//CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:    CreateEnvironment r3
 //CHECK-NEXT:    CreateClosure     r1, r3, 2
 //CHECK-NEXT:    GetGlobalObject   r0

@@ -169,10 +169,16 @@ CallResult<HermesValue> Callable::executeCall0(
     Runtime *runtime,
     Handle<> thisArgHandle,
     bool construct) {
-  ScopedNativeCallFrame newFrame{runtime, 0, *selfHandle, *thisArgHandle};
+  ScopedNativeCallFrame newFrame{runtime,
+                                 0,
+                                 selfHandle.getHermesValue(),
+                                 construct
+                                     ? selfHandle.getHermesValue()
+                                     : HermesValue::encodeUndefinedValue(),
+                                 *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow();
-  return call(selfHandle, runtime, construct);
+  return call(selfHandle, runtime);
 }
 
 /// Execute this function with one argument. This is just a convenience
@@ -183,11 +189,17 @@ CallResult<HermesValue> Callable::executeCall1(
     Handle<> thisArgHandle,
     HermesValue param1,
     bool construct) {
-  ScopedNativeCallFrame newFrame{runtime, 1, *selfHandle, *thisArgHandle};
+  ScopedNativeCallFrame newFrame{runtime,
+                                 1,
+                                 selfHandle.getHermesValue(),
+                                 construct
+                                     ? selfHandle.getHermesValue()
+                                     : HermesValue::encodeUndefinedValue(),
+                                 *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow();
   newFrame->getArgRef(0) = param1;
-  return call(selfHandle, runtime, construct);
+  return call(selfHandle, runtime);
 }
 
 /// Execute this function with two arguments. This is just a convenience
@@ -199,12 +211,18 @@ CallResult<HermesValue> Callable::executeCall2(
     HermesValue param1,
     HermesValue param2,
     bool construct) {
-  ScopedNativeCallFrame newFrame{runtime, 2, *selfHandle, *thisArgHandle};
+  ScopedNativeCallFrame newFrame{runtime,
+                                 2,
+                                 selfHandle.getHermesValue(),
+                                 construct
+                                     ? selfHandle.getHermesValue()
+                                     : HermesValue::encodeUndefinedValue(),
+                                 *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow();
   newFrame->getArgRef(0) = param1;
   newFrame->getArgRef(1) = param2;
-  return call(selfHandle, runtime, construct);
+  return call(selfHandle, runtime);
 }
 
 /// Execute this function with three arguments. This is just a convenience
@@ -217,13 +235,19 @@ CallResult<HermesValue> Callable::executeCall3(
     HermesValue param2,
     HermesValue param3,
     bool construct) {
-  ScopedNativeCallFrame newFrame{runtime, 3, *selfHandle, *thisArgHandle};
+  ScopedNativeCallFrame newFrame{runtime,
+                                 3,
+                                 selfHandle.getHermesValue(),
+                                 construct
+                                     ? selfHandle.getHermesValue()
+                                     : HermesValue::encodeUndefinedValue(),
+                                 *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow();
   newFrame->getArgRef(0) = param1;
   newFrame->getArgRef(1) = param2;
   newFrame->getArgRef(2) = param3;
-  return call(selfHandle, runtime, construct);
+  return call(selfHandle, runtime);
 }
 
 /// Execute this function with four arguments. This is just a convenience
@@ -237,14 +261,20 @@ CallResult<HermesValue> Callable::executeCall4(
     HermesValue param3,
     HermesValue param4,
     bool construct) {
-  ScopedNativeCallFrame newFrame{runtime, 4, *selfHandle, *thisArgHandle};
+  ScopedNativeCallFrame newFrame{runtime,
+                                 4,
+                                 selfHandle.getHermesValue(),
+                                 construct
+                                     ? selfHandle.getHermesValue()
+                                     : HermesValue::encodeUndefinedValue(),
+                                 *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow();
   newFrame->getArgRef(0) = param1;
   newFrame->getArgRef(1) = param2;
   newFrame->getArgRef(2) = param3;
   newFrame->getArgRef(3) = param4;
-  return call(selfHandle, runtime, construct);
+  return call(selfHandle, runtime);
 }
 
 CallResult<HermesValue> Callable::executeConstruct0(
@@ -538,8 +568,7 @@ CallResult<HermesValue> BoundFunction::_newObjectImpl(
 
 CallResult<HermesValue> BoundFunction::_boundCall(
     BoundFunction *self,
-    Runtime *runtime,
-    bool construct) {
+    Runtime *runtime) {
   ScopedNativeDepthTracker depthTracker{runtime};
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
     return runtime->raiseStackOverflow();
@@ -547,6 +576,8 @@ CallResult<HermesValue> BoundFunction::_boundCall(
 
   CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
   StackFramePtr originalCalleeFrame = StackFramePtr(runtime->getStackPointer());
+  // Save the original newTarget since we will overwrite it.
+  HermesValue originalNewTarget = originalCalleeFrame.getNewTargetRef();
   // Save the original arg count since we will lose it.
   auto originalArgCount = originalCalleeFrame.getArgCount();
   // Keep track of the total arg count.
@@ -616,6 +647,10 @@ CallResult<HermesValue> BoundFunction::_boundCall(
     // Allocate space for "thisArg" and the frame metdata following the outgoing
     // registers. Note that we already checked earlier that we have enough
     // stack.
+    static_assert(
+        StackFrameLayout::CallerExtraRegistersAtEnd ==
+            StackFrameLayout::ThisArg,
+        "Stack frame layout changed without updating _boundCall");
     auto *stack =
         runtime->allocUninitializedStack(StackFrameLayout::ThisArg + 1);
 
@@ -626,14 +661,16 @@ CallResult<HermesValue> BoundFunction::_boundCall(
         nullptr,
         nullptr,
         totalArgCount,
-        self->getTarget());
+        HermesValue::encodeObjectValue(self->getTarget()),
+        originalNewTarget);
     // Initialize "thisArg". When constructing we must use the original 'this',
     // not the bound one.
-    newCalleeFrame.getThisArgRef() =
-        construct ? callerFrame.getScratchRef() : self->getArgsWithThis()[0];
+    newCalleeFrame.getThisArgRef() = !originalNewTarget.isUndefined()
+        ? callerFrame.getScratchRef()
+        : self->getArgsWithThis()[0];
 
-    res = Callable::call(
-        newCalleeFrame.getCalleeClosureHandleUnsafe(), runtime, construct);
+    res =
+        Callable::call(newCalleeFrame.getCalleeClosureHandleUnsafe(), runtime);
 
     assert(
         runtime->getCurrentFrame() == callerFrame &&
@@ -648,7 +685,13 @@ bail:
   // all the fields to their previous values, just the registers which are not
   // supposed to be modified by a call.
   StackFramePtr::initFrame(
-      originalCalleeFrame.ptr(), StackFramePtr{}, nullptr, nullptr, 0, nullptr);
+      originalCalleeFrame.ptr(),
+      StackFramePtr{},
+      nullptr,
+      nullptr,
+      0,
+      nullptr,
+      false);
 
   // Restore "thisArg" and clear the scratch register to avoid a leak.
   originalCalleeFrame.getThisArgRef() = callerFrame.getScratchRef();
@@ -659,10 +702,8 @@ bail:
 
 CallResult<HermesValue> BoundFunction::_callImpl(
     Handle<Callable> selfHandle,
-    Runtime *runtime,
-    bool construct) {
-  return _boundCall(
-      vmcast<BoundFunction>(selfHandle.get()), runtime, construct);
+    Runtime *runtime) {
+  return _boundCall(vmcast<BoundFunction>(selfHandle.get()), runtime);
 }
 
 //===----------------------------------------------------------------------===//
@@ -754,14 +795,12 @@ Handle<NativeFunction> NativeFunction::create(
 
 CallResult<HermesValue> NativeFunction::_callImpl(
     Handle<Callable> selfHandle,
-    Runtime *runtime,
-    bool construct) {
+    Runtime *runtime) {
   assert(
       runtime->getThrownValue().isEmpty() &&
       "pending exception when calling native function");
 
-  auto result =
-      _nativeCall(vmcast<NativeFunction>(selfHandle.get()), runtime, construct);
+  auto result = _nativeCall(vmcast<NativeFunction>(selfHandle.get()), runtime);
 
   // If there was an exception thrown during the call.
   // TODO: T30015280
@@ -803,18 +842,17 @@ void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 #ifndef NDEBUG
 CallResult<HermesValue> NativeConstructor::_callImpl(
     Handle<Callable> selfHandle,
-    Runtime *runtime,
-    bool construct) {
-  if (construct) {
+    Runtime *runtime) {
+  StackFramePtr newFrame{runtime->getStackPointer()};
+
+  if (newFrame.isConstructorCall()) {
     auto consHandle = Handle<NativeConstructor>::vmcast(selfHandle);
     assert(
         consHandle->targetKind_ ==
-            vmcast<JSObject>(
-                StackFramePtr(runtime->getStackPointer())->getThisArgRef())
-                ->getKind() &&
+            vmcast<JSObject>(newFrame.getThisArgRef())->getKind() &&
         "call(construct=true) called without the correct 'this' value");
   }
-  return NativeFunction::_callImpl(selfHandle, runtime, construct);
+  return NativeFunction::_callImpl(selfHandle, runtime);
 }
 #endif
 
@@ -866,8 +904,7 @@ void JSFunction::_finalizeImpl(GCCell *cell, GC *) {
 
 CallResult<HermesValue> JSFunction::_callImpl(
     Handle<Callable> selfHandle,
-    Runtime *runtime,
-    bool /*construct*/) {
+    Runtime *runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
   if (auto *jitPtr = self->getCodeBlock()->getJITCompiled())
     return (*jitPtr)(runtime);

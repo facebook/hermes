@@ -112,6 +112,7 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
         runtime,
         0,
         HermesValue::encodeNativePointer(codeBlock),
+        HermesValue::encodeUndefinedValue(),
         HermesValue::encodeUndefinedValue());
     result = runtime->interpretFunction(codeBlock);
 
@@ -195,7 +196,7 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
     ScopedNativeCallFrame frame(
-        runtime, 0, nullptr, HermesValue::encodeUndefinedValue());
+        runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue());
     status = runtime->interpretFunction(codeBlock);
   }
 
@@ -256,7 +257,7 @@ L2:
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
     ScopedNativeCallFrame newFrame(
-        runtime, 1, nullptr, HermesValue::encodeUndefinedValue());
+        runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
     newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
     status = runtime->interpretFunction(codeBlock);
   }
@@ -344,7 +345,7 @@ L1:
     CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
     {
       ScopedNativeCallFrame newFrame(
-          runtime, 1, nullptr, HermesValue::encodeUndefinedValue());
+          runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
       newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(2);
       status = runtime->interpretFunction(codeBlock);
     }
@@ -361,7 +362,7 @@ L1:
     CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
     {
       ScopedNativeCallFrame newFrame(
-          runtime, 1, nullptr, HermesValue::encodeUndefinedValue());
+          runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
       newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
       status = runtime->interpretFunction(codeBlock);
     }
@@ -461,7 +462,7 @@ TEST_F(InterpreterTest, FrameSizeTest) {
       getSPFn);
 
   ScopedNativeCallFrame frame(
-      runtime, 0, nullptr, HermesValue::encodeUndefinedValue());
+      runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue());
 
   // Check that inner and outer stack pointer differ by at most a set threshold.
   int dummy;
@@ -472,7 +473,7 @@ TEST_F(InterpreterTest, FrameSizeTest) {
   const auto innerStackPointer =
       reinterpret_cast<uintptr_t>(status.getValue().getNativePointer<void>());
   // Increase this only if you have a reason to grow the interpreter's frame.
-  uintptr_t kStackFrameSizeLimit = 800;
+  uintptr_t kStackFrameSizeLimit = 900;
   ASSERT_LE(outerStackPointer - innerStackPointer, kStackFrameSizeLimit);
 }
 #endif // NDEBUG

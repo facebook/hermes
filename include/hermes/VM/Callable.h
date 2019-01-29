@@ -104,7 +104,7 @@ struct CallableVTable {
 
   /// Call the callable with arguments already on the stack.
   CallResult<HermesValue> (
-      *call)(Handle<Callable> selfHandle, Runtime *runtime, bool construct);
+      *call)(Handle<Callable> selfHandle, Runtime *runtime);
 };
 
 /// The abstract base for callable entities, specifically NativeFunction and
@@ -220,10 +220,10 @@ class Callable : public JSObject {
   }
 
   /// Call the callable with arguments already on the stack.
-  /// \param construct true if this is a constructor call.
-  static CallResult<HermesValue>
-  call(Handle<Callable> selfHandle, Runtime *runtime, bool construct) {
-    return selfHandle->getVT()->call(selfHandle, runtime, construct);
+  static CallResult<HermesValue> call(
+      Handle<Callable> selfHandle,
+      Runtime *runtime) {
+    return selfHandle->getVT()->call(selfHandle, runtime);
   }
 
   /// Create a new object and construct the new object of the given type
@@ -331,8 +331,9 @@ class BoundFunction final : public Callable {
   /// Perform the actual call. This is a light-weight handler which is part of
   /// the private API - it is only used internally and by the interpreter.
   /// Other users of this class must use \c Callable::call().
-  static CallResult<HermesValue>
-  _boundCall(BoundFunction *self, Runtime *runtime, bool construct);
+  static CallResult<HermesValue> _boundCall(
+      BoundFunction *self,
+      Runtime *runtime);
 
   /// Intialize the length and name and property of a lazily created bound
   /// function.
@@ -371,8 +372,9 @@ class BoundFunction final : public Callable {
       Handle<JSObject> protoHandle);
 
   /// Call the callable with arguments already on the stack.
-  static CallResult<HermesValue>
-  _callImpl(Handle<Callable> selfHandle, Runtime *runtime, bool construct);
+  static CallResult<HermesValue> _callImpl(
+      Handle<Callable> selfHandle,
+      Runtime *runtime);
 };
 
 /// A pointer to native function.
@@ -437,9 +439,9 @@ class NativeFunction : public Callable {
   /// This is a lightweight and unsafe wrapper intended to be used only by the
   /// interpreter. Its purpose is to avoid needlessly exposing the private
   /// fields.
-  /// \param construct true if this is a constructor call.
-  static CallResult<HermesValue>
-  _nativeCall(NativeFunction *self, Runtime *runtime, bool construct) {
+  static CallResult<HermesValue> _nativeCall(
+      NativeFunction *self,
+      Runtime *runtime) {
     ScopedNativeDepthTracker depthTracker{runtime};
     if (LLVM_UNLIKELY(depthTracker.overflowed())) {
       return runtime->raiseStackOverflow();
@@ -455,8 +457,8 @@ class NativeFunction : public Callable {
     auto t1 = HERMESVM_RDTSC();
 #endif
 
-    auto res = self->functionPtr_(
-        self->context_, runtime, newFrame.getNativeArgs(construct));
+    auto res =
+        self->functionPtr_(self->context_, runtime, newFrame.getNativeArgs());
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
     self->callDuration_ = HERMESVM_RDTSC() - t1;
@@ -567,9 +569,9 @@ class NativeFunction : public Callable {
         functionPtr_(functionPtr) {}
 
   /// Call the native function with arguments already on the stack.
-  /// \param construct true if this is a constructor call.
-  static CallResult<HermesValue>
-  _callImpl(Handle<Callable> selfHandle, Runtime *runtime, bool construct);
+  static CallResult<HermesValue> _callImpl(
+      Handle<Callable> selfHandle,
+      Runtime *runtime);
 
   /// We have to override this method because NativeFunction should not be
   /// used as constructor.
@@ -704,8 +706,9 @@ class NativeConstructor final : public NativeFunction {
 #ifndef NDEBUG
   /// If construct=true, check that the constructor was called with a "this"
   /// of the correct type.
-  static CallResult<HermesValue>
-  _callImpl(Handle<Callable> selfHandle, Runtime *runtime, bool construct);
+  static CallResult<HermesValue> _callImpl(
+      Handle<Callable> selfHandle,
+      Runtime *runtime);
 #endif
 };
 
@@ -778,8 +781,9 @@ class JSFunction final : public Callable {
 
   /// Call the JavaScript function with arguments already on the stack.
   /// \param construct true if this is a constructor call.
-  static CallResult<HermesValue>
-  _callImpl(Handle<Callable> selfHandle, Runtime *runtime, bool construct);
+  static CallResult<HermesValue> _callImpl(
+      Handle<Callable> selfHandle,
+      Runtime *runtime);
 };
 
 } // namespace vm

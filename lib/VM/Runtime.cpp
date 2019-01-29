@@ -575,7 +575,8 @@ CallResult<HermesValue> Runtime::runBytecode(
   if (funcRes == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
 
-  ScopedNativeCallFrame newFrame{this, 0, vmcast<Callable>(*funcRes), *thisArg};
+  ScopedNativeCallFrame newFrame{
+      this, 0, *funcRes, HermesValue::encodeUndefinedValue(), *thisArg};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return raiseStackOverflow();
   return shouldRandomizeMemoryLayout_

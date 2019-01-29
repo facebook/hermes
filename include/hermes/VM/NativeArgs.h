@@ -20,8 +20,8 @@ class NativeArgs final {
   const PinnedHermesValue *const thisArg_;
   /// The number of JavaScript arguments excluding 'this'.
   unsigned const argCount_;
-  /// Is this a constructor call.
-  bool const constructorCall_;
+  /// The \c new.target value of the call.
+  const PinnedHermesValue *const newTarget_;
 
   /// Return a pointer to argument with index \p index, starting from 0 and
   /// excluding 'thisArg'.
@@ -36,23 +36,38 @@ class NativeArgs final {
 
   /// \param points to "this", "arg0", ... "argN").
   /// \param argCount number of JavaScript arguments excluding 'this'
+  /// \param newTarget points to the value of \c new.target in the stack.
   NativeArgs(
       const PinnedHermesValue *thisArg,
       unsigned argCount,
-      bool constructor)
-      : thisArg_(thisArg), argCount_(argCount), constructorCall_(constructor) {}
+      const PinnedHermesValue *newTarget)
+      : thisArg_(thisArg), argCount_(argCount), newTarget_(newTarget) {}
 
   template <bool isConst>
   friend class StackFramePtrT;
 
  public:
-  /// \return true if this is a constructor invocation.
-  bool isConstructorCall() const {
-    return constructorCall_;
+  /// \return the value of \c new.target. It is \c undefined if this is a
+  ///   regular function call, of the callable of the constructor invoked by
+  ///   \c new otherwise.
+  const PinnedHermesValue &getNewTarget() const {
+    return *newTarget_;
   }
+
+  /// \return the value of \c new.target. It is \c undefined if this is a
+  ///   regular function call, of the callable of the constructor invoked by
+  ///   \c new otherwise.
+  Handle<> getNewTargetHandle() const {
+    return Handle<>(newTarget_);
+  }
+
   /// \return true if this is a function call.
   bool isFunctionCall() const {
-    return !constructorCall_;
+    return newTarget_->isUndefined();
+  }
+  /// \return true if this is a constructor invocation.
+  bool isConstructorCall() const {
+    return !isFunctionCall();
   }
 
   /// \return the number of arguments passed to the function, excluding 'this'.

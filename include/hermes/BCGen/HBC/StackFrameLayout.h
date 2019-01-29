@@ -33,11 +33,12 @@ namespace hbc {
 ///    1    savedIP          : NativeValue(void*)
 ///    2    savedCodeBlock   : NativeValue(CodeBlock*)
 ///    3    argCount         : NativeValue(uint32_t)
-///    4    calleeClosureOrCB: Callable* | NativeValue(CodeBlock*)
-///    5    this             : HermesValue
-///    6    arg0             : HermesValue
+///    4    newTarget        : Callable* | undefined
+///    5    calleeClosureOrCB: Callable* | NativeValue(CodeBlock*)
+///    6    this             : HermesValue
+///    7    arg0             : HermesValue
 ///    ...
-///    6+N  argN             : HermesValue
+///    7+N  argN             : HermesValue
 ///    ...
 ///    ...
 ///         caller local 0   : HermesValue
@@ -61,7 +62,7 @@ namespace hbc {
 /// from the stack pointer. (That doesn't need to happen immediately before the
 /// call.)
 /// - The caller populates "argN..arg0" and "this".
-/// - The caller populates calleeClosureOrCB and argCount.
+/// - The caller populates calleeClosureOrCB, newTarget and argCount.
 /// - The caller saves the current CodeBlock, IP and frame offset in the
 /// corresponding fields.
 /// - "debugEnvironment" is initialized to "undefined". (It will be populated
@@ -101,15 +102,18 @@ struct StackFrameLayout {
     SavedCodeBlock = 2,
     /// Number of JavaScript arguments passed to the callee excluding "this".
     ArgCount = 3,
+    /// The value of `new.target`. If constructing, it contains the callable of
+    /// the constructor invoked by `new`, otherwise `undefined`.
+    NewTarget = 4,
     /// The JavaScript Function object representing the callee, or a CodeBlock *
     /// representing the callee when CallDirect is used. The latter is ONLY
     /// valid if it is known at compile time that the callee doesn't need to
     /// access its closure (i.e. no non-strict Arguments.callee, etc).
-    CalleeClosureOrCB = 4,
+    CalleeClosureOrCB = 5,
     /// The "this" argument.
-    ThisArg = 5,
+    ThisArg = 6,
     /// The first explicit argument.
-    FirstArg = 6,
+    FirstArg = 7,
 
     /// The number of registers the caller needs to allocate at the end of its
     /// frame in addition to its locals and the explicit argument registers. In

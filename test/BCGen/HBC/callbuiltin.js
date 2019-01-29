@@ -14,7 +14,7 @@ function foo(x) {
 //CHKRA-NEXT:{{.*}} %2 = ReturnInst %1
 //CHKRA-NEXT:function_end
 
-//CHKBC-LABEL:Function<foo>(2 params, 8 registers, 0 symbols):
+//CHKBC-LABEL:Function<foo>(2 params, 9 registers, 0 symbols):
 //CHKBC-NEXT: Offset{{.*}}
 //CHKBC-NEXT:    LoadParam         r1, 1
 //CHKBC-NEXT:    CallBuiltin       r0, 40, 2

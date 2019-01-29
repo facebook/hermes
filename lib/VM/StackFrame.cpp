@@ -30,6 +30,7 @@ void dumpStackFrame(
      << "  SavedCodeBlock  : " << format_ptr(frame.getSavedCodeBlock()) << "\n"
      << "  DebugEnvironment: " << frame.getDebugEnvironmentRef() << "\n"
      << "  ArgCount        : " << frame.getArgCount() << "\n"
+     << "  NewTarget       : " << frame.getNewTargetRef() << "\n"
      << "  CalleeClosure   : " << frame.getCalleeClosureOrCBRef() << "\n"
      << "  ThisArg         : " << frame.getThisArgRef() << "\n"
      << "  Args: ";

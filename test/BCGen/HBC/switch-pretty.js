@@ -70,7 +70,7 @@ function f(x) {
     }
 }
 
-//CHECK-LABEL:Function<f>(2 params, 9 registers, 0 symbols):
+//CHECK-LABEL:Function<f>(2 params, 10 registers, 0 symbols):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:    LoadParam         r0, 1
 //CHECK-NEXT:    SwitchImm         r0, 294, L18, 0, 16

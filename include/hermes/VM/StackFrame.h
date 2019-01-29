@@ -105,6 +105,7 @@ class StackFramePtrT {
   _HERMESVM_DEFINE_STACKFRAME_REF(SavedIP)
   _HERMESVM_DEFINE_STACKFRAME_REF(SavedCodeBlock)
   _HERMESVM_DEFINE_STACKFRAME_REF(ArgCount)
+  _HERMESVM_DEFINE_STACKFRAME_REF(NewTarget)
   _HERMESVM_DEFINE_STACKFRAME_REF(CalleeClosureOrCB)
   _HERMESVM_DEFINE_STACKFRAME_REF(ThisArg)
   _HERMESVM_DEFINE_STACKFRAME_REF(FirstArg)
@@ -195,6 +196,11 @@ class StackFramePtrT {
   ///   a JSFunction.
   QualifiedCB *getCalleeCodeBlock() const;
 
+  /// \return true if this is a constructor being invoked by \c new.
+  bool isConstructorCall() const {
+    return !getNewTargetRef().isUndefined();
+  }
+
   /// \return a reference to the register containing the N-th argument to the
   /// callee. -1 is this, 0 is the first explicit argument. It is an error to
   /// use a number greater or equal to \c getArgCount().
@@ -211,17 +217,20 @@ class StackFramePtrT {
   }
 
   /// Initialize a new frame with the supplied values.
-  /// param calleeClosure a HermesValue which may not neccessarily be of the
+  /// \param calleeClosure a HermesValue which may not neccessarily be of the
   ///   correct type. We use this occasionally when we want to initialize a
   ///   frame but delay the error checking. We never execute a frame with
   ///   the wrong type of callee though.
+  /// \param newTarget `undefined` or the callable of the constructor being
+  ///   invoked dirctly by `new`.
   static StackFramePtrT<false> initFrame(
       PinnedHermesValue *stackPointer,
       StackFramePtrT previousFrame,
       const Inst *savedIP,
       const CodeBlock *savedCodeBlock,
       uint32_t argCount,
-      HermesValue calleeClosureOrCB) {
+      HermesValue calleeClosureOrCB,
+      HermesValue newTarget) {
     stackPointer[StackFrameLayout::PreviousFrame] =
         HermesValue::encodeNativePointer(previousFrame.ptr());
     stackPointer[StackFrameLayout::SavedIP] =
@@ -232,6 +241,7 @@ class StackFramePtrT {
         HermesValue::encodeUndefinedValue();
     stackPointer[StackFrameLayout::ArgCount] =
         HermesValue::encodeNativeUInt32(argCount);
+    stackPointer[StackFrameLayout::NewTarget] = newTarget;
     stackPointer[StackFrameLayout::CalleeClosureOrCB] = calleeClosureOrCB;
 
     return StackFramePtrT<false>{stackPointer};
@@ -245,21 +255,23 @@ class StackFramePtrT {
       const Inst *savedIP,
       const CodeBlock *savedCodeBlock,
       uint32_t argCount,
-      Callable *calleeClosure) {
+      Callable *calleeClosure,
+      bool construct) {
     return initFrame(
         stackPointer,
         previousFrame,
         savedIP,
         savedCodeBlock,
         argCount,
-        HermesValue::encodeObjectValue(calleeClosure));
+        HermesValue::encodeObjectValue(calleeClosure),
+        construct ? HermesValue::encodeObjectValue(calleeClosure)
+                  : HermesValue::encodeUndefinedValue());
   }
 
   /// Create an instance of NativeArgs pointing to the arguments in this
-  /// frame. \p constructorCall indicates whether this is a constructor or
-  /// a normal call.
-  NativeArgs getNativeArgs(bool constructorCall) const {
-    return NativeArgs{&getThisArgRef(), getArgCount(), constructorCall};
+  /// frame.
+  NativeArgs getNativeArgs() const {
+    return NativeArgs{&getThisArgRef(), getArgCount(), &getNewTargetRef()};
   }
 };
 

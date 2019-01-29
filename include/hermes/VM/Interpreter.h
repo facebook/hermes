@@ -75,12 +75,10 @@ class Interpreter {
   /// This handles the rest of the cases (native function, bound funcation, and
   /// not even a function).
   /// \param callTarget the register containing the function object
-  /// \param construct is this a constructor call.
   /// \return ExecutionStatus::EXCEPTION if the call threw.
   static CallResult<HermesValue> handleCallSlowPath(
       Runtime *runtime,
-      PinnedHermesValue *callTarget,
-      bool construct);
+      PinnedHermesValue *callTarget);
 
   /// Fast path to get primitive value \p base's own properties by name \p id
   /// without boxing.

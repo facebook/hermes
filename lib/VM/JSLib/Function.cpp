@@ -347,10 +347,10 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
   }
 
   if (args.getArg(1).isNull() || args.getArg(1).isUndefined()) {
-    ScopedNativeCallFrame newFrame{runtime, 0, *func, args.getArg(0)};
+    ScopedNativeCallFrame newFrame{runtime, 0, *func, false, args.getArg(0)};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return runtime->raiseStackOverflow();
-    return Callable::call(func, runtime, false);
+    return Callable::call(func, runtime);
   }
 
   auto argObj =
@@ -371,7 +371,7 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
   }
   uint32_t n = intRes->getNumber();
 
-  ScopedNativeCallFrame newFrame{runtime, n, *func, args.getArg(0)};
+  ScopedNativeCallFrame newFrame{runtime, n, *func, false, args.getArg(0)};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow();
 
@@ -414,7 +414,7 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
   }
 
   gcScope.flushToMarker(marker);
-  return Callable::call(func, runtime, false);
+  return Callable::call(func, runtime);
 }
 
 static CallResult<HermesValue>
@@ -426,13 +426,13 @@ functionPrototypeCall(void *, Runtime *runtime, NativeArgs args) {
 
   uint32_t argCount = args.getArgCount();
   ScopedNativeCallFrame newFrame{
-      runtime, argCount ? argCount - 1 : 0, *func, args.getArg(0)};
+      runtime, argCount ? argCount - 1 : 0, *func, false, args.getArg(0)};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow();
   for (uint32_t i = 1; i < argCount; ++i) {
     newFrame->getArgRef(i - 1) = args.getArg(i);
   }
-  return Callable::call(func, runtime, false);
+  return Callable::call(func, runtime);
 }
 
 static CallResult<HermesValue>

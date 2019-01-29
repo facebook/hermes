@@ -217,8 +217,9 @@ CallResult<HermesValue> externCall(
       // otherwise it confuses the interpreter about when to exit.
       nullptr, /* SavedCodeBlock */
       argCount - 1,
-      *callable);
-  return Callable::call(Handle<Callable>::vmcast(callable), runtime, false);
+      *callable,
+      HermesValue::encodeUndefinedValue());
+  return Callable::call(Handle<Callable>::vmcast(callable), runtime);
 }
 
 CallResult<HermesValue> externConstruct(
@@ -245,8 +246,9 @@ CallResult<HermesValue> externConstruct(
       // otherwise it confuses the interpreter about when to exit.
       nullptr, /* SavedCodeBlock */
       argCount - 1,
+      *callable,
       *callable);
-  return Callable::call(Handle<Callable>::vmcast(callable), runtime, true);
+  return Callable::call(Handle<Callable>::vmcast(callable), runtime);
 }
 
 /// Implement a slow path call for a binary operator.

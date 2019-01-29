@@ -274,12 +274,10 @@ ExecutionStatus Interpreter::handleGetPNameList(
 
 CallResult<HermesValue> Interpreter::handleCallSlowPath(
     Runtime *runtime,
-    PinnedHermesValue *callTarget,
-    bool construct) {
+    PinnedHermesValue *callTarget) {
   if (auto *native = dyn_vmcast<NativeFunction>(*callTarget)) {
     // Call the native function directly
-    CallResult<HermesValue> res =
-        NativeFunction::_nativeCall(native, runtime, construct);
+    CallResult<HermesValue> res = NativeFunction::_nativeCall(native, runtime);
 
     // Check for exception.
     // TODO: T30015280
@@ -295,7 +293,7 @@ CallResult<HermesValue> Interpreter::handleCallSlowPath(
     return res;
   } else if (auto *bound = dyn_vmcast<BoundFunction>(*callTarget)) {
     // Call the bound function.
-    return BoundFunction::_boundCall(bound, runtime, construct);
+    return BoundFunction::_boundCall(bound, runtime);
 
   } else {
     return runtime->raiseTypeErrorForValue(
@@ -1023,6 +1021,11 @@ tailCall:
       uint32_t idVal;
       bool tryProp;
       uint32_t callArgCount;
+      // This is HermesValue::getRaw(), since HermesValue cannot be assigned
+      // to. It is meant to be used only for very short durations, in the
+      // dispatch of call instructions, when there is definitely no possibility
+      // of a GC.
+      uint64_t callNewTarget;
 
 /// Implement a binary arithmetic instruction with a fast path where both
 /// operands are numbers.
@@ -1348,20 +1351,29 @@ tailCall:
       DISPATCH;
     }
 
-      CASE(CallLong)
       CASE(ConstructLong) {
+        callArgCount = (uint32_t)ip->iConstructLong.op3;
+        nextIP = NEXTINST(ConstructLong);
+        callNewTarget = O2REG(ConstructLong).getRaw();
+        goto doCall;
+      }
+      CASE(CallLong) {
         callArgCount = (uint32_t)ip->iCallLong.op3;
         nextIP = NEXTINST(CallLong);
+        callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
         goto doCall;
       }
 
       // Note in Call1 through Call4, the first argument is 'this' which has
       // argument index -1.
+      // Also note that we are writing to callNewTarget last, to avoid the
+      // possibility of it being aliased by the arg writes.
       CASE(Call1) {
         callArgCount = 1;
         nextIP = NEXTINST(Call1);
         StackFramePtr fr{runtime->stackPointer_};
         fr.getArgRefUnsafe(-1) = O3REG(Call1);
+        callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
         goto doCall;
       }
 
@@ -1371,6 +1383,7 @@ tailCall:
         StackFramePtr fr{runtime->stackPointer_};
         fr.getArgRefUnsafe(-1) = O3REG(Call2);
         fr.getArgRefUnsafe(0) = O4REG(Call2);
+        callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
         goto doCall;
       }
 
@@ -1381,6 +1394,7 @@ tailCall:
         fr.getArgRefUnsafe(-1) = O3REG(Call3);
         fr.getArgRefUnsafe(0) = O4REG(Call3);
         fr.getArgRefUnsafe(1) = O5REG(Call3);
+        callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
         goto doCall;
       }
 
@@ -1392,13 +1406,20 @@ tailCall:
         fr.getArgRefUnsafe(0) = O4REG(Call4);
         fr.getArgRefUnsafe(1) = O5REG(Call4);
         fr.getArgRefUnsafe(2) = O6REG(Call4);
+        callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
         goto doCall;
       }
 
-      CASE(Construct)
+      CASE(Construct) {
+        callArgCount = (uint32_t)ip->iConstruct.op3;
+        nextIP = NEXTINST(Construct);
+        callNewTarget = O2REG(Construct).getRaw();
+        goto doCall;
+      }
       CASE(Call) {
         callArgCount = (uint32_t)ip->iCall.op3;
         nextIP = NEXTINST(Call);
+        callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
         // Fall through.
       }
 
@@ -1426,7 +1447,8 @@ tailCall:
           ip,
           curCodeBlock,
           callArgCount - 1,
-          O2REG(Call));
+          O2REG(Call),
+          HermesValue{callNewTarget});
       (void)newFrame;
 
       SLOW_DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));
@@ -1462,11 +1484,7 @@ tailCall:
         goto tailCall;
 #endif
       }
-      res = Interpreter::handleCallSlowPath(
-          runtime,
-          &O2REG(Call),
-          ip->opCode == OpCode::Construct ||
-              ip->opCode == OpCode::ConstructLong);
+      res = Interpreter::handleCallSlowPath(runtime, &O2REG(Call));
       if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
         goto exception;
       }
@@ -1508,7 +1526,8 @@ tailCall:
             ip,
             curCodeBlock,
             (uint32_t)ip->iCallDirect.op2 - 1,
-            HermesValue::encodeNativePointer(calleeBlock));
+            HermesValue::encodeNativePointer(calleeBlock),
+            HermesValue::encodeUndefinedValue());
         (void)newFrame;
 
         DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));
@@ -1555,12 +1574,13 @@ tailCall:
             ip,
             curCodeBlock,
             (uint32_t)ip->iCallBuiltin.op3 - 1,
-            nf);
+            nf,
+            false);
         (void)newFrame;
 
         SLOW_DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));
 
-        res = NativeFunction::_nativeCall(nf, runtime, false);
+        res = NativeFunction::_nativeCall(nf, runtime);
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
           goto exception;
         O1REG(CallBuiltin) = *res;

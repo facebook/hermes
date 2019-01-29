@@ -18,7 +18,7 @@ function foo() {
     return myFunc;
 }
 
-// CHECK: Function<foo>(1 params, 9 registers, 6 symbols):
+// CHECK: Function<foo>(1 params, 10 registers, 6 symbols):
 // CHECK-NEXT: Offset in debug table: {{.*}}
 // CHECK-NEXT:     CreateEnvironment r0
 // CHECK-NEXT:     LoadConstInt      r1, 1234
@@ -42,7 +42,7 @@ function foo() {
 // CHECK-NEXT:     CreateClosure     r0, r0, 2
 // CHECK-NEXT:     Ret               r0
 
-// CHECK: Function<bar>(1 params, 12 registers, 0 symbols):
+// CHECK: Function<bar>(1 params, 13 registers, 0 symbols):
 // CHECK-NEXT: Offset in debug table: {{.*}}
 // CHECK-NEXT:     GetEnvironment    r1, 0
 // CHECK-NEXT:     LoadFromEnvironment r2, r1, 0

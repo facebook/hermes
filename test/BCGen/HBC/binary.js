@@ -1,7 +1,7 @@
 // RUN: %hermes -target=HBC -dump-bytecode -O %s | %FileCheck --match-full-lines %s
 
-//CHECK-LABEL:Function<binary>(1 params, 9 registers, 0 symbols):
-//CHECK-NEXT:Offset in debug table: src 0xa, vars 0x0
+//CHECK-LABEL:Function<binary>(1 params, 10 registers, 0 symbols):
+//CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:    GetGlobalObject   r0
 //CHECK-NEXT:    GetByIdShort      r1, r0, 1, "foo"
 //CHECK-NEXT:    LoadConstUndefined r3

@@ -18,7 +18,7 @@ function foo(a) {
   }
 }
 
-//CHECK-LABEL:Function<foo>(2 params, 10 registers, 0 symbols):
+//CHECK-LABEL:Function<foo>(2 params, 11 registers, 0 symbols):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:{{.*}} LoadParam 2<Reg8>, 1<UInt8>
 //CHECK-NEXT:{{.*}} LoadConstUndefined 1<Reg8>
