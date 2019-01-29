@@ -92,6 +92,7 @@ class SemanticValidator {
 
   void visit(VariableDeclaratorNode *varDecl);
 
+  void visit(MetaPropertyNode *metaProp);
   void visit(IdentifierNode *identifier);
 
   void visit(ForInStatementNode *forIn);

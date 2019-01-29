@@ -533,6 +533,15 @@ Arguments | It takes no arguments and returns no values.
 Semantics | Its behavior is implementation-dependent.
 Effects | Does not read or write to memory.
 
+### GetNewTargetInst
+
+GetNewTargetInst | _
+Description | Obtains the value of `new.target` in the current function or constructor.
+Example |  %0 = GetNewTargetInst
+Arguments | None
+Semantics | It must only be called from a ES6 class constructor or ES5 function. If the callee was invoked from `new`, it returns the function object of the direct constructor, otherwise `undefined`.
+Effects | Does not read or write memory
+
 ### CoerceThisNS
 
 CoerceThisNS | _

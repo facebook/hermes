@@ -741,6 +741,14 @@ void Verifier::visitHBCCreateFunctionInst(const HBCCreateFunctionInst &Inst) {
 void Verifier::visitHBCSpillMovInst(const HBCSpillMovInst &Inst) {}
 void Verifier::visitUnreachableInst(const UnreachableInst &Inst) {}
 
+void Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
+  auto definitionKind = Inst.getParent()->getParent()->getDefinitionKind();
+  Assert(
+      definitionKind == Function::DefinitionKind::ES5Function ||
+          definitionKind == Function::DefinitionKind::ES6Constructor,
+      "GetNewTargetInst can only be used in ES6 constructors and ES5 functions");
+}
+
 } // namespace
 
 #endif

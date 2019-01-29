@@ -1262,6 +1262,13 @@ void HBCISel::generateHBCGetGlobalObjectInst(
   BCFGen_->emitGetGlobalObject(dstReg);
 }
 
+void HBCISel::generateGetNewTargetInst(
+    hermes::GetNewTargetInst *Inst,
+    hermes::BasicBlock *next) {
+  auto dstReg = encodeValue(Inst);
+  BCFGen_->emitGetNewTarget(dstReg);
+}
+
 void HBCISel::generateHBCGetThisNSInst(
     hermes::HBCGetThisNSInst *Inst,
     hermes::BasicBlock *next) {

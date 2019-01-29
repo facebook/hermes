@@ -483,6 +483,12 @@ CreateArgumentsInst *IRBuilder::createCreateArgumentsInst() {
   return CAI;
 }
 
+GetNewTargetInst *IRBuilder::createGetNewTargetInst() {
+  auto *inst = new GetNewTargetInst();
+  insert(inst);
+  return inst;
+}
+
 HBCGetGlobalObjectInst *IRBuilder::createHBCGetGlobalObjectInst() {
   auto inst = new HBCGetGlobalObjectInst();
   insert(inst);

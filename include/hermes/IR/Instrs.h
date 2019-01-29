@@ -2278,6 +2278,34 @@ class DebuggerInst : public Instruction {
   }
 };
 
+class GetNewTargetInst : public Instruction {
+  GetNewTargetInst(const GetNewTargetInst &) = delete;
+  void operator=(const GetNewTargetInst &) = delete;
+
+ public:
+  explicit GetNewTargetInst() : Instruction(ValueKind::GetNewTargetInstKind) {}
+  explicit GetNewTargetInst(
+      const GetNewTargetInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::None;
+  }
+
+  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
+    return llvm::SmallVector<Value *, 1>{};
+  }
+
+  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
+    return false;
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::GetNewTargetInstKind);
+  }
+};
+
 class HBCResolveEnvironment : public SingleOperandInst {
   HBCResolveEnvironment(const HBCResolveEnvironment &) = delete;
   void operator=(const HBCResolveEnvironment &) = delete;

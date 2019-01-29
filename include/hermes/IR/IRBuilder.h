@@ -334,6 +334,8 @@ class IRBuilder {
 
   CreateArgumentsInst *createCreateArgumentsInst();
 
+  GetNewTargetInst *createGetNewTargetInst();
+
   HBCGetGlobalObjectInst *createHBCGetGlobalObjectInst();
 
   CreateRegExpInst *createRegExpInst(Identifier pattern, Identifier flags);

@@ -67,8 +67,11 @@ DEF_VALUE(CatchInst, Instruction)
 DEF_VALUE(DebuggerInst, Instruction)
 DEF_VALUE(CreateRegExpInst, Instruction)
 DEF_VALUE(TryEndInst, Instruction)
+DEF_VALUE(GetNewTargetInst, Instruction)
+#ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCStoreToEnvironmentInst, Instruction)
 DEF_VALUE(HBCLoadFromEnvironmentInst, Instruction)
+#endif
 DEF_VALUE(UnreachableInst, Instruction)
 
 MARK_FIRST(CreateFunctionInst)

@@ -1880,6 +1880,12 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(GetNewTarget) {
+        O1REG(GetNewTarget) = FRAME.getNewTargetRef();
+        ip = NEXTINST(GetNewTarget);
+        DISPATCH;
+      }
+
       CASE(DeclareGlobalVar) {
         DefinePropertyFlags dpf{};
         dpf.setWritable = 1;

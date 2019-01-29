@@ -225,6 +225,7 @@ bool hermes::isSimpleSideEffectFreeInstruction(Instruction *I) {
     return false;
   }
   switch (I->getKind()) {
+    case ValueKind::GetNewTargetInstKind:
     case ValueKind::UnaryOperatorInstKind:
     case ValueKind::BinaryOperatorInstKind:
     case ValueKind::HBCResolveEnvironmentKind:

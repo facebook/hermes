@@ -346,6 +346,16 @@ ESTREE_NODE_2_ARGS(
     true)
 
 ESTREE_NODE_2_ARGS(
+    MetaProperty,
+    Base,
+    NodePtr,
+    meta,
+    false,
+    NodePtr,
+    property,
+    false)
+
+ESTREE_NODE_2_ARGS(
     SwitchCase,
     Base,
     NodePtr,

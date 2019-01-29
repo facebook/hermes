@@ -79,6 +79,20 @@ void SemanticValidator::visit(VariableDeclaratorNode *varDecl) {
   visitESTreeChildren(*this, varDecl);
 }
 
+void SemanticValidator::visit(MetaPropertyNode *metaProp) {
+  auto *meta = cast<IdentifierNode>(metaProp->_meta);
+  auto *property = cast<IdentifierNode>(metaProp->_property);
+
+  if (meta->_name->str() == "new" && property->_name->str() == "target") {
+    return;
+  }
+
+  sm_.error(
+      metaProp->getSourceRange(),
+      "invalid meta property " + meta->_name->str() + "." +
+          property->_name->str());
+}
+
 void SemanticValidator::visit(IdentifierNode *identifier) {
   if (identifier->_name == kw_.identEval && !astContext_.getEnableEval())
     sm_.error(identifier->getSourceRange(), "'eval' is disabled");

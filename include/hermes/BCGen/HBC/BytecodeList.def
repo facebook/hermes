@@ -211,6 +211,10 @@ DEFINE_OPCODE_3(LoadFromEnvironmentL, Reg8, Reg8, UInt16)
 /// Get the global object (the object in which global variables are stored).
 DEFINE_OPCODE_1(GetGlobalObject, Reg8)
 
+/// Obtain the value of NewTarget from the frame.
+/// Arg1 = NewTarget
+DEFINE_OPCODE_1(GetNewTarget, Reg8)
+
 /// Create a new environment, to store values captured by closures.
 DEFINE_OPCODE_1(CreateEnvironment, Reg8)
 

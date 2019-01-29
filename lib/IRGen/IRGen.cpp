@@ -145,6 +145,13 @@ class ESTreeIRGen {
     /// arrow function. Arrow functions always copy their parent's value.
     Variable *capturedThis{};
 
+    /// Captured value of new target. In ES5 functions and ES6 constructors it
+    /// is a Variable with the result of GetNewTargetInst executed at the start
+    /// of the function. In ES6 methods it will be initialized to
+    /// LiteralUndefined. In arrow functions it is a copy of the parent's
+    /// capturedNewTarget.
+    Value *capturedNewTarget{};
+
     /// Initialize a new function context, while preserving the previous one.
     /// \param irGen the associated ESTreeIRGen object.
     /// \param function the newly created Function IR node.
@@ -427,6 +434,9 @@ class ESTreeIRGen {
   /// ES6, but not all of it.
   Value *genExpression(ESTree::Node *Expr, Identifier nameHint = Identifier{});
 
+  /// Generate IR for MetaProperty.
+  Value *genMetaProperty(ESTree::MetaPropertyNode *MP);
+
   /// Generate IR for FunctionExpression.
   Value *genFunctionExpression(
       ESTree::FunctionExpressionNode *FE,
@@ -554,6 +564,9 @@ ESTreeIRGen::FunctionContext::FunctionContext(
       function(function),
       scope(irGen->nameTable_) {
   irGen->functionContext = this;
+
+  // Initialize it to LiteraUndefined by default to avoid corner cases.
+  this->capturedNewTarget = irGen->Builder.getLiteralUndefined();
 
   if (semInfo_) {
     // Allocate the label table. Each label definition will be encountered in
@@ -1066,6 +1079,16 @@ void ESTreeIRGen::doGenFunctionLike(
           functionContext->function->getThisParameter(), captureVar);
 
       functionContext->capturedThis = captureVar;
+
+      // Capture new.target into a new variable.
+      captureVar = Builder.createVariable(
+          functionContext->function->getFunctionScope(),
+          genAnonymousLabelName("new.target"));
+
+      Builder.createStoreFrameInst(
+          Builder.createGetNewTargetInst(), captureVar);
+
+      functionContext->capturedNewTarget = captureVar;
     } else if (
         functionContext->function->getDefinitionKind() ==
         Function::DefinitionKind::ES6Arrow) {
@@ -1077,6 +1100,17 @@ void ESTreeIRGen::doGenFunctionLike(
           "arrow function parent must have a captured this");
       functionContext->capturedThis =
           functionContext->getPreviousContext()->capturedThis;
+
+      assert(
+          functionContext->getPreviousContext()->capturedNewTarget &&
+          "arrow function parent must have a captured new.target");
+      functionContext->capturedNewTarget =
+          functionContext->getPreviousContext()->capturedNewTarget;
+    } else if (
+        functionContext->function->getDefinitionKind() ==
+        Function::DefinitionKind::ES6Method) {
+      // new.target is always undefined in methods.
+      functionContext->capturedNewTarget = Builder.getLiteralUndefined();
     }
 
     // Generate and initialize the code for the hoisted function declarations
@@ -2584,6 +2618,10 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *Expr, Identifier nameHint) {
     return functionContext->function->getThisParameter();
   }
 
+  if (auto *MP = dyn_cast<ESTree::MetaPropertyNode>(Expr)) {
+    return genMetaProperty(MP);
+  }
+
   // Handle function expressions.
   if (auto *FE = dyn_cast<ESTree::FunctionExpressionNode>(Expr)) {
     return genFunctionExpression(FE, nameHint);
@@ -2607,6 +2645,32 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *Expr, Identifier nameHint) {
 
   assert(false && "Don't know this kind of expression");
   return nullptr;
+}
+
+Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
+  // Recognize "new.target"
+  if (cast<ESTree::IdentifierNode>(MP->_meta)->_name->str() == "new") {
+    if (cast<ESTree::IdentifierNode>(MP->_property)->_name->str() == "target") {
+      Value *value;
+
+      if (functionContext->function->getDefinitionKind() ==
+              Function::DefinitionKind::ES6Arrow ||
+          functionContext->function->getDefinitionKind() ==
+              Function::DefinitionKind::ES6Method) {
+        value = functionContext->capturedNewTarget;
+      } else {
+        value = Builder.createGetNewTargetInst();
+      }
+
+      // If it is a variable, we must issue a load.
+      if (auto *V = dyn_cast<Variable>(value))
+        return Builder.createLoadFrameInst(V);
+
+      return value;
+    }
+  }
+
+  llvm_unreachable("invalid MetaProperty");
 }
 
 Value *ESTreeIRGen::genFunctionExpression(
