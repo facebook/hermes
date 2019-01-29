@@ -408,8 +408,8 @@ class ESTreeIRGen {
       ESTree::ArrowFunctionExpressionNode *AF,
       Identifier nameHint);
 
-  /// Generate IR for function-like nodes (function declaration, expression,
-  /// method, etc).
+  /// Generate IR for an ES5 function (function declaration or expression).
+  /// The body may optionally be lazy.
   /// \param originalName is the original non-unique name specified by the user
   ///   or inferred according to the rules of ES6.
   /// \param lazyClosureAlias an optional variable in the parent that will
@@ -418,47 +418,41 @@ class ESTreeIRGen {
   ///   available inside the closure. Used only by lazy compilation.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
-  /// \param definitionKind the kind of function we are compiling: constructor,
-  /// method,
-  ///   etc.
   /// \param params are the formal parameters and \p body is the body of the
   ///   closure.
-  /// \param lazy Whether or not to compile it lazily.
   /// \returns a new Function.
-  Function *genFunctionLike(
+  Function *genES5Function(
       Identifier originalName,
       Variable *lazyClosureAlias,
-      Function::DefinitionKind definitionKind,
-      bool strictMode,
       ESTree::FunctionLikeNode *functionNode,
       const ESTree::NodeList &params,
-      ESTree::Node *body,
-      bool lazy);
+      ESTree::Node *body);
 
-  /// A lower level version of `genFunctionLike` which takes an already created
-  /// Function and a function context. It offloads the generation of the
-  /// actual body to a callback, which gives it additional flexibility to
-  /// accomodate generating a closure for the top level function.
+  /// In the beginning of an ES5 function, initialize the special captured
+  /// variables needed by arrow functions, constructors and methods.
+  /// This is used only by \c genES5Function() and the global scope.
+  void initCaptureStateInES5Function();
+
+  /// Emit the function prologue for the current function, consisting of the
+  /// following things:
+  /// - an entry block and a next block, so we can append stuff to the end
+  ///   block.
+  /// - declare all hoisted es5 variables and global properties
+  /// - initialize all hoisted es5 variables to undefined
+  /// - declare all hoisted es5 functions and initialize them (recursively
+  ///   generating their functions)
+  /// - create "this" parameter
+  /// - create all explicit parameters and store them in variables
   ///
-  /// \param NewFunc the just created new Function in a new FunctionContext.
-  /// \param functionNode is the ESTree function node (declaration, expression,
-  ///   object method).
   /// \param params the parameter list
-  /// \param body the body ESTree element
-  /// \param genBodyCB a callback to generate IR for the body
-  void doGenFunctionLike(
-      Function *NewFunc,
-      ESTree::FunctionLikeNode *functionNode,
-      const ESTree::NodeList &params,
-      ESTree::Node *body,
-      const std::function<void(ESTree::Node *body)> &genBodyCB);
+  void emitFunctionPrologue(const ESTree::NodeList &params);
 
-  /// In the beginning of a function, initialize the captured variables needed
-  /// by arrow functions. In non-arrow functions containing arrow functions it
-  /// means capturing the necessary values so they can be accessed by the inner
-  /// arrow functions. In arrow functions it means propagating the inherited
-  /// captured values from the parent context.
-  void initializeArrowCaptureState();
+  /// Optionally emit a return value and perform cleanup after emission of the
+  /// current function is finished. Specifically it attempts to merge the entry
+  /// and the next block in order to create less "noise".
+  /// \param returnValue if non-nullptr, a return instruction for it is emitted
+  ///   with debug location at the end of the source range.
+  void emitFunctionEpilogue(Value *returnValue);
 
   /// Generate a body for a dummy function so that it doesn't crash the
   /// backend when encountered.

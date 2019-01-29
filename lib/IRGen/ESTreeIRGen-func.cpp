@@ -62,15 +62,8 @@ void ESTreeIRGen::genFunctionDeclaration(
   assert(
       funcStorage && "function declaration variable should have been hoisted");
 
-  Function *newFunc = genFunctionLike(
-      functionName,
-      nullptr,
-      Function::DefinitionKind::ES5Function,
-      ESTree::isStrict(func->strictness),
-      func,
-      func->_params,
-      func->_body,
-      Mod->getContext().isLazyCompilation());
+  Function *newFunc =
+      genES5Function(functionName, nullptr, func, func->_params, func->_body);
 
   // Store the newly created closure into a frame variable with the same name.
   auto *newClosure = Builder.createCreateFunctionInst(newFunc);
@@ -105,15 +98,8 @@ Value *ESTreeIRGen::genFunctionExpression(
     nameTable_.insert(originalNameIden, tempClosureVar);
   }
 
-  Function *newFunc = genFunctionLike(
-      originalNameIden,
-      tempClosureVar,
-      Function::DefinitionKind::ES5Function,
-      ESTree::isStrict(FE->strictness),
-      FE,
-      FE->_params,
-      FE->_body,
-      Mod->getContext().isLazyCompilation());
+  Function *newFunc = genES5Function(
+      originalNameIden, tempClosureVar, FE, FE->_params, FE->_body);
 
   Value *closure = Builder.createCreateFunctionInst(newFunc);
 
@@ -131,33 +117,45 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
              << Builder.getInsertionBlock()->getParent()->getInternalName()
              << ".\n");
 
-  Function *newFunc = genFunctionLike(
+  auto *newFunc = Builder.createFunction(
       nameHint,
-      nullptr,
       Function::DefinitionKind::ES6Arrow,
       ESTree::isStrict(AF->strictness),
-      AF,
-      AF->_params,
-      AF->_body,
-      Mod->getContext().isLazyCompilation());
+      AF->getSourceRange());
 
+  {
+    FunctionContext newFunctionContext{this, newFunc, AF->getSemInfo()};
+
+    emitFunctionPrologue(AF->_params);
+
+    // Propagate captured "this", "new.target" and "arguments" from parents.
+    auto *prev = curFunction()->getPreviousContext();
+    curFunction()->capturedThis = prev->capturedThis;
+    curFunction()->capturedNewTarget = prev->capturedNewTarget;
+    curFunction()->capturedArguments = prev->capturedArguments;
+
+    genStatement(AF->_body);
+    emitFunctionEpilogue(Builder.getLiteralUndefined());
+  }
+
+  // Emit CreateFunctionInst after we have restored the builder state.
   return Builder.createCreateFunctionInst(newFunc);
 }
 
 #ifndef HERMESVM_LEAN
-Function *ESTreeIRGen::genFunctionLike(
+Function *ESTreeIRGen::genES5Function(
     Identifier originalName,
     Variable *lazyClosureAlias,
-    Function::DefinitionKind definitionKind,
-    bool strictMode,
     ESTree::FunctionLikeNode *functionNode,
     const ESTree::NodeList &params,
-    ESTree::Node *body,
-    bool lazy) {
+    ESTree::Node *body) {
   assert(functionNode && "Function AST cannot be null");
 
   auto *newFunction = Builder.createFunction(
-      originalName, definitionKind, strictMode, body->getSourceRange());
+      originalName,
+      Function::DefinitionKind::ES5Function,
+      ESTree::isStrict(functionNode->strictness),
+      body->getSourceRange());
   newFunction->setLazyClosureAlias(lazyClosureAlias);
 
   if (auto *bodyBlock = dyn_cast<ESTree::BlockStatementNode>(body)) {
@@ -184,197 +182,147 @@ Function *ESTreeIRGen::genFunctionLike(
   FunctionContext newFunctionContext{
       this, newFunction, functionNode->getSemInfo()};
 
-  doGenFunctionLike(
-      newFunctionContext.function,
-      functionNode,
-      params,
-      body,
-      [this](ESTree::Node *body) {
-        DEBUG(dbgs() << "IRGen function body.\n");
-        // irgen the rest of the body.
-        genStatement(body);
+  emitFunctionPrologue(params);
+  initCaptureStateInES5Function();
+  genStatement(body);
+  emitFunctionEpilogue(Builder.getLiteralUndefined());
 
-        Builder.setLocation(Builder.getFunction()->getSourceRange().End);
-        Builder.createReturnInst(Builder.getLiteralUndefined());
-      });
-
-  return newFunctionContext.function;
+  return curFunction()->function;
 }
 #endif
 
-void ESTreeIRGen::doGenFunctionLike(
-    Function *NewFunc,
-    ESTree::FunctionLikeNode *functionNode,
-    const ESTree::NodeList &params,
-    ESTree::Node *body,
-    const std::function<void(ESTree::Node *body)> &genBodyCB) {
+void ESTreeIRGen::initCaptureStateInES5Function() {
+  // Capture "this", "new.target" and "arguments" if there are inner arrows.
+  if (!curFunction()->getSemInfo()->containsArrowFunctions)
+    return;
+
+  auto *scope = curFunction()->function->getFunctionScope();
+
+  // "this".
+  curFunction()->capturedThis =
+      Builder.createVariable(scope, genAnonymousLabelName("this"));
+  emitStore(
+      Builder,
+      Builder.getFunction()->getThisParameter(),
+      curFunction()->capturedThis);
+
+  // "new.target".
+  curFunction()->capturedNewTarget =
+      Builder.createVariable(scope, genAnonymousLabelName("new.target"));
+  emitStore(
+      Builder,
+      Builder.createGetNewTargetInst(),
+      curFunction()->capturedNewTarget);
+
+  // "arguments".
+  if (curFunction()->getSemInfo()->containsArrowFunctionsUsingArguments) {
+    curFunction()->capturedArguments =
+        Builder.createVariable(scope, genAnonymousLabelName("arguments"));
+    emitStore(
+        Builder,
+        Builder.createCreateArgumentsInst(),
+        curFunction()->capturedArguments);
+  }
+}
+
+void ESTreeIRGen::emitFunctionPrologue(const ESTree::NodeList &params) {
+  auto *newFunc = curFunction()->function;
   auto *semInfo = curFunction()->getSemInfo();
   DEBUG(
       dbgs() << "Hoisting "
              << (semInfo->decls.size() + semInfo->closures.size())
              << " variable decls.\n");
 
-  Builder.setLocation(NewFunc->getSourceRange().Start);
+  Builder.setLocation(newFunc->getSourceRange().Start);
 
-  // Generate the code for closure:
-  {
-    // Create a new function with the right name.
-    auto Entry = Builder.createBasicBlock(NewFunc);
+  // Start pumping instructions into the entry basic block.
+  auto *entry = Builder.createBasicBlock(newFunc);
+  Builder.setInsertionBlock(entry);
 
-    // Start pumping instructions into the entry basic block.
-    Builder.setInsertionBlock(Entry);
+  // Create variable declarations for each of the hoisted variables and
+  // functions. Initialize only the variables to undefined.
+  for (auto *vd : semInfo->decls) {
+    auto res =
+        declareVariableOrGlobalProperty(newFunc, getNameFieldFromID(vd->_id));
+    // If this is not a frame variable or it was already declared, skip.
+    auto *var = dyn_cast<Variable>(res.first);
+    if (!var || !res.second)
+      continue;
 
-    // Create variable declarations for each of the hoisted variables and
-    // functions. Initialize only the variables to undefined.
-    for (auto *vd : semInfo->decls) {
-      auto res =
-          declareVariableOrGlobalProperty(NewFunc, getNameFieldFromID(vd->_id));
-      // If this is not a frame variable or it was already declared, skip.
-      auto *var = dyn_cast<Variable>(res.first);
-      if (!var || !res.second)
-        continue;
+    // Otherwise, initialize it to undefined.
+    Builder.createStoreFrameInst(Builder.getLiteralUndefined(), var);
+  }
+  for (auto *fd : semInfo->closures)
+    declareVariableOrGlobalProperty(newFunc, getNameFieldFromID(fd->_id));
 
-      // Otherwise, initialize it to undefined.
-      Builder.createStoreFrameInst(Builder.getLiteralUndefined(), var);
-    }
-    for (auto *fd : semInfo->closures)
-      declareVariableOrGlobalProperty(NewFunc, getNameFieldFromID(fd->_id));
+  // Construct the parameter list. Create function parameters and register
+  // them in the scope.
+  DEBUG(dbgs() << "IRGen function parameters.\n");
+  // Always create the "this" parameter.
+  Builder.createParameter(newFunc, "this");
+  for (auto &param : params) {
+    auto idenNode = cast<ESTree::IdentifierNode>(&param);
+    Identifier paramName = getNameFieldFromID(idenNode);
+    DEBUG(dbgs() << "Adding parameter: " << paramName << "\n");
 
-    // Construct the parameter list. Create function parameters and register
-    // them in the scope.
-    DEBUG(dbgs() << "IRGen function parameters.\n");
-    // Always create the "this" parameter.
-    Builder.createParameter(NewFunc, "this");
-    for (auto &param : params) {
-      auto idenNode = cast<ESTree::IdentifierNode>(&param);
-      Identifier paramName = getNameFieldFromID(idenNode);
-      DEBUG(dbgs() << "Adding parameter: " << paramName << "\n");
+    auto *P = Builder.createParameter(newFunc, paramName);
+    auto *ParamStorage =
+        Builder.createVariable(newFunc->getFunctionScope(), paramName);
 
-      auto *P = Builder.createParameter(NewFunc, paramName);
-      auto *ParamStorage =
-          Builder.createVariable(NewFunc->getFunctionScope(), paramName);
+    // Register the storage for the parameter.
+    nameTable_.insert(paramName, ParamStorage);
 
-      // Register the storage for the parameter.
-      nameTable_.insert(paramName, ParamStorage);
-
-      // Store the parameter into the local scope.
-      emitStore(Builder, P, ParamStorage);
-    }
-
-    /// Initialize or propagate captured variable state for arrow functions.
-    initializeArrowCaptureState();
-
-    // Generate and initialize the code for the hoisted function declarations
-    // before generating the rest of the body.
-    for (auto funcDecl : semInfo->closures) {
-      genFunctionDeclaration(funcDecl);
-    }
-
-    // Separate the next block, so we can append instructions to the entry block
-    // in the future.
-    auto nextBlock = Builder.createBasicBlock(NewFunc);
-    curFunction()->entryTerminator = Builder.createBranchInst(nextBlock);
-    Builder.setInsertionBlock(nextBlock);
-
-    genBodyCB(body);
-
-    // If Entry is the only user of nextBlock, merge Entry and nextBlock, to
-    // create less "noise" when optimization is disabled.
-    if (nextBlock->getNumUsers() == 1 &&
-        nextBlock->hasUser(curFunction()->entryTerminator)) {
-      DEBUG(dbgs() << "Merging entry and nextBlock.\n");
-
-      // Move all instructions from nextBlock into Entry.
-      while (nextBlock->begin() != nextBlock->end())
-        nextBlock->begin()->moveBefore(curFunction()->entryTerminator);
-
-      // Now we can delete the original terminator;
-      curFunction()->entryTerminator->eraseFromParent();
-      curFunction()->entryTerminator = nullptr;
-
-      // Delete the now empty next block
-      nextBlock->eraseFromParent();
-      nextBlock = nullptr;
-    } else {
-      DEBUG(dbgs() << "Could not merge entry and nextBlock.\n");
-    }
+    // Store the parameter into the local scope.
+    emitStore(Builder, P, ParamStorage);
   }
 
-  NewFunc->clearStatementCount();
+  // Generate and initialize the code for the hoisted function declarations
+  // before generating the rest of the body.
+  for (auto funcDecl : semInfo->closures) {
+    genFunctionDeclaration(funcDecl);
+  }
+
+  // Separate the next block, so we can append instructions to the entry block
+  // in the future.
+  auto *nextBlock = Builder.createBasicBlock(newFunc);
+  curFunction()->entryTerminator = Builder.createBranchInst(nextBlock);
+  Builder.setInsertionBlock(nextBlock);
 }
 
-void ESTreeIRGen::initializeArrowCaptureState() {
-  auto const definitionKind = curFunction()->function->getDefinitionKind();
-  auto const containsArrow =
-      curFunction()->getSemInfo()->containsArrowFunctions;
-  auto *scope = curFunction()->function->getFunctionScope();
-
-  // Sanity checks.
-  //
-  if (definitionKind == Function::DefinitionKind::ES6Arrow) {
-    assert(
-        curFunction()->getPreviousContext() &&
-        "arrow function must have a previous context");
+void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
+  if (returnValue) {
+    Builder.setLocation(SourceErrorManager::convertEndToLocation(
+        Builder.getFunction()->getSourceRange()));
+    Builder.createReturnInst(returnValue);
   }
 
-  // Handle "this".
-  //
-  if (definitionKind != Function::DefinitionKind::ES6Arrow && containsArrow) {
-    // Capture the current "this" into a new variable. Note that if the
-    // variable is never accessed it will be eliminated by the optimizer.
-    curFunction()->capturedThis =
-        Builder.createVariable(scope, genAnonymousLabelName("this"));
+  // If Entry is the only user of nextBlock, merge Entry and nextBlock, to
+  // create less "noise" when optimization is disabled.
+  BasicBlock *nextBlock = nullptr;
 
-    Builder.createStoreFrameInst(
-        curFunction()->function->getThisParameter(),
-        curFunction()->capturedThis);
-  } else if (definitionKind == Function::DefinitionKind::ES6Arrow) {
-    assert(
-        curFunction()->getPreviousContext()->capturedThis &&
-        "arrow function parent must have a captured this");
+  if (curFunction()->entryTerminator->getNumSuccessors() == 1)
+    nextBlock = curFunction()->entryTerminator->getSuccessor(0);
 
-    curFunction()->capturedThis =
-        curFunction()->getPreviousContext()->capturedThis;
+  if (nextBlock->getNumUsers() == 1 &&
+      nextBlock->hasUser(curFunction()->entryTerminator)) {
+    DEBUG(dbgs() << "Merging entry and nextBlock.\n");
+
+    // Move all instructions from nextBlock into Entry.
+    while (nextBlock->begin() != nextBlock->end())
+      nextBlock->begin()->moveBefore(curFunction()->entryTerminator);
+
+    // Now we can delete the original terminator;
+    curFunction()->entryTerminator->eraseFromParent();
+    curFunction()->entryTerminator = nullptr;
+
+    // Delete the now empty next block
+    nextBlock->eraseFromParent();
+    nextBlock = nullptr;
+  } else {
+    DEBUG(dbgs() << "Could not merge entry and nextBlock.\n");
   }
 
-  // Handle "new.target"
-  //
-  if (definitionKind == Function::DefinitionKind::ES6Method) {
-    // new.target is always undefined in methods.
-    curFunction()->capturedNewTarget = Builder.getLiteralUndefined();
-  } else if (
-      definitionKind != Function::DefinitionKind::ES6Arrow && containsArrow) {
-    // Capture new.target into a new variable.
-    auto *var =
-        Builder.createVariable(scope, genAnonymousLabelName("new.target"));
-    curFunction()->capturedNewTarget = var;
-
-    Builder.createStoreFrameInst(Builder.createGetNewTargetInst(), var);
-  } else if (definitionKind == Function::DefinitionKind::ES6Arrow) {
-    assert(
-        curFunction()->getPreviousContext()->capturedNewTarget &&
-        "arrow function parent must have a captured new.target");
-
-    curFunction()->capturedNewTarget =
-        curFunction()->getPreviousContext()->capturedNewTarget;
-  }
-
-  // Handle "arguments".
-  //
-  if (definitionKind != Function::DefinitionKind::ES6Arrow && containsArrow) {
-    // Optionally capture Arguments into a new variable.
-    if (curFunction()->getSemInfo()->containsArrowFunctionsUsingArguments) {
-      curFunction()->capturedArguments =
-          Builder.createVariable(scope, genAnonymousLabelName("arguments"));
-
-      Builder.createStoreFrameInst(
-          Builder.createCreateArgumentsInst(),
-          curFunction()->capturedArguments);
-    }
-  } else if (definitionKind == Function::DefinitionKind::ES6Arrow) {
-    curFunction()->capturedArguments =
-        curFunction()->getPreviousContext()->capturedArguments;
-  }
+  curFunction()->function->clearStatementCount();
 }
 
 void ESTreeIRGen::genDummyFunction(Function *dummy) {

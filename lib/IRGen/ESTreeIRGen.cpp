@@ -140,25 +140,26 @@ void ESTreeIRGen::doIt() {
     }
   }
 
-  doGenFunctionLike(
-      curFunction()->function,
-      Program,
-      ESTree::NodeList{},
-      Program,
-      [this](ESTree::Node *body) {
-        // Allocate the return register, initialize it to undefined.
-        curFunction()->globalReturnRegister =
-            Builder.createAllocStackInst(genAnonymousLabelName("ret"));
-        Builder.createStoreStackInst(
-            Builder.getLiteralUndefined(), curFunction()->globalReturnRegister);
+  emitFunctionPrologue(ESTree::NodeList{});
 
-        genBody(cast<ESTree::ProgramNode>(body)->_body);
+  Value *retVal;
+  {
+    /// Initialize or propagate captured variable state for arrow functions.
+    initCaptureStateInES5Function();
 
-        // Terminate the top-level scope with a return statement.
-        auto ret_val =
-            Builder.createLoadStackInst(curFunction()->globalReturnRegister);
-        Builder.createReturnInst(ret_val);
-      });
+    // Allocate the return register, initialize it to undefined.
+    curFunction()->globalReturnRegister =
+        Builder.createAllocStackInst(genAnonymousLabelName("ret"));
+    Builder.createStoreStackInst(
+        Builder.getLiteralUndefined(), curFunction()->globalReturnRegister);
+
+    genBody(Program->_body);
+
+    // Terminate the top-level scope with a return statement.
+    retVal = Builder.createLoadStackInst(curFunction()->globalReturnRegister);
+  }
+
+  emitFunctionEpilogue(retVal);
 }
 
 void ESTreeIRGen::doCJSModule(
@@ -174,15 +175,8 @@ void ESTreeIRGen::doCJSModule(
       topLevelContext, &topLevelFunctionContext);
 
   Identifier functionName = Builder.createIdentifier("cjs_module");
-  Function *newFunc = genFunctionLike(
-      functionName,
-      nullptr,
-      Function::DefinitionKind::ES5Function,
-      ESTree::isStrict(func->strictness),
-      func,
-      func->_params,
-      func->_body,
-      Mod->getContext().isLazyCompilation());
+  Function *newFunc =
+      genES5Function(functionName, nullptr, func, func->_params, func->_body);
 
   Builder.getModule()->addCJSModule(
       Builder.createIdentifier(filename), newFunc);
@@ -226,8 +220,6 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
 
   ESTree::NodeList const *params;
   ESTree::NodePtr body;
-  Function::DefinitionKind definitionKind =
-      Function::DefinitionKind::ES5Function;
 
   if (auto *FE = dyn_cast<ESTree::FunctionExpressionNode>(node)) {
     params = &FE->_params;
@@ -237,24 +229,15 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
     body = FD->_body;
   } else if (auto *AF = dyn_cast<ESTree::ArrowFunctionExpressionNode>(node)) {
     // FIXME: Arrow functions are broken with lazy compilation because of the
-    //`this` binding.
+    // all the extra bindings.
     assert(false && "Lazy compilation not supported in ES6");
     params = &FD->_params;
     body = FD->_body;
-    definitionKind = Function::DefinitionKind::ES6Arrow;
   } else {
     llvm_unreachable("invalid lazy function AST node");
   }
 
-  return genFunctionLike(
-      lazyData->originalName,
-      parentVar,
-      definitionKind,
-      lazyData->strictMode,
-      node,
-      *params,
-      body,
-      false);
+  return genES5Function(lazyData->originalName, parentVar, node, *params, body);
 }
 
 std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(

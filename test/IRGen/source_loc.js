@@ -24,7 +24,7 @@ function foo(a,b) {
 //CHECK-NEXT:   %3 = StoreStackInst undefined : undefined, %2
 //CHECK-NEXT: ; <stdin>:3:1
 //CHECK-NEXT:   %4 = LoadStackInst %2
-//CHECK-NEXT: ; <stdin>:3:1
+//CHECK-NEXT: ; <stdin>:84:27
 //CHECK-NEXT:   %5 = ReturnInst %4
 //CHECK-NEXT: function_end
 
@@ -79,6 +79,6 @@ function foo(a,b) {
 //CHECK-NEXT: ; <stdin>:4:5
 //CHECK-NEXT:   %21 = BranchInst %BB3
 //CHECK-NEXT: %BB3:
-//CHECK-NEXT: ; <stdin>:11:2
+//CHECK-NEXT: ; <stdin>:11:1
 //CHECK-NEXT:   %22 = ReturnInst undefined : undefined
 //CHECK-NEXT: function_end
