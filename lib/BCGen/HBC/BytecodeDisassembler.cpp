@@ -648,6 +648,10 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       bcProvider->getStringStorage().begin(),
       bcProvider->getStringStorage().end());
   addSection(
+      "Identifier hashes",
+      bcProvider->getIdentifierHashes().begin(),
+      bcProvider->getIdentifierHashes().end());
+  addSection(
       "Array buffer",
       bcProvider->getArrayBuffer().begin(),
       bcProvider->getArrayBuffer().end());
