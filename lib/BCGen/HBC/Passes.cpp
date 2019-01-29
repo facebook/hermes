@@ -643,8 +643,9 @@ bool LoadConstantValueNumbering::runOnFunction(Function *F) {
         regToInstMap.erase(reg);
       }
 
-      for (auto val : I.getChangedOperands()) {
-        unsigned reg = RA_.getRegister(cast<Instruction>(val)).getIndex();
+      for (auto index : I.getChangedOperands()) {
+        auto *operand = I.getOperand(index);
+        unsigned reg = RA_.getRegister(cast<Instruction>(operand)).getIndex();
         regToInstMap.erase(reg);
       }
     }
@@ -700,15 +701,7 @@ bool SpillRegisters::requiresShortOperand(Instruction *I, int op) {
 }
 
 bool SpillRegisters::modifiesOperandRegister(Instruction *I, int op) {
-  switch (I->getKind()) {
-    case ValueKind::HBCReifyArgumentsInstKind:
-    case ValueKind::GetNextPNameInstKind:
-    case ValueKind::GetPNamesInstKind:
-      return true;
-
-    default:
-      return false;
-  }
+  return I->getChangedOperands().at((unsigned)op);
 }
 
 bool SpillRegisters::runOnFunction(Function *F) {

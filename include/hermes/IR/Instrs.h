@@ -58,7 +58,7 @@ class SingleOperandInst : public Instruction {
     llvm_unreachable("SingleOperandInst must be inherited.");
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
+  WordBitSet<> getChangedOperandsImpl() {
     llvm_unreachable("SingleOperandInst must be inherited.");
   }
 
@@ -94,7 +94,7 @@ class TerminatorInst : public Instruction {
     llvm_unreachable("TerminatorInst must be inherited.");
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
+  WordBitSet<> getChangedOperandsImpl() {
     llvm_unreachable("TerminatorInst must be inherited.");
   }
 
@@ -164,8 +164,8 @@ class BranchInst : public TerminatorInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -207,8 +207,8 @@ class AddEmptyStringInst : public SingleOperandInst {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -238,8 +238,8 @@ class AsNumberInst : public SingleOperandInst {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -267,8 +267,8 @@ class AsInt32Inst : public SingleOperandInst {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -316,8 +316,8 @@ class CondBranchInst : public TerminatorInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -373,8 +373,8 @@ class ReturnInst : public TerminatorInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -425,8 +425,8 @@ class AllocStackInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -458,8 +458,8 @@ class LoadStackInst : public SingleOperandInst {
     return SideEffectKind::MayRead;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -499,8 +499,8 @@ class StoreStackInst : public Instruction {
     return SideEffectKind::MayWrite;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -538,8 +538,8 @@ class LoadFrameInst : public SingleOperandInst {
     return SideEffectKind::MayRead;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -579,8 +579,8 @@ class StoreFrameInst : public Instruction {
     return SideEffectKind::MayWrite;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -626,8 +626,8 @@ class CreateFunctionInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -687,8 +687,8 @@ class CallInst : public Instruction {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -781,8 +781,8 @@ class HBCGetGlobalObjectInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -838,8 +838,8 @@ class StorePropertyInst : public Instruction {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -890,8 +890,8 @@ class TryStoreGlobalPropertyInst : public StorePropertyInst {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -946,8 +946,8 @@ class StoreOwnPropertyInst : public Instruction {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1008,8 +1008,8 @@ class StoreGetterSetterInst : public Instruction {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1058,8 +1058,8 @@ class DeletePropertyInst : public Instruction {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1109,8 +1109,8 @@ class LoadPropertyInst : public Instruction {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1158,8 +1158,8 @@ class TryLoadGlobalPropertyInst : public LoadPropertyInst {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1197,8 +1197,8 @@ class AllocObjectInst : public SingleOperandInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1249,8 +1249,8 @@ class HBCAllocObjectFromBufferInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1341,8 +1341,8 @@ class AllocArrayInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1372,8 +1372,8 @@ class CreateArgumentsInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1414,8 +1414,8 @@ class CreateRegExpInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1483,8 +1483,8 @@ class UnaryOperatorInst : public SingleOperandInst {
 
   SideEffectKind getSideEffect();
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1589,8 +1589,8 @@ class BinaryOperatorInst : public Instruction {
         getOperatorKind());
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1626,8 +1626,8 @@ class CatchInst : public Instruction {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1657,8 +1657,8 @@ class ThrowInst : public TerminatorInst {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1719,8 +1719,8 @@ class SwitchInst : public TerminatorInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1789,9 +1789,12 @@ class GetPNamesInst : public TerminatorInst {
     return SideEffectKind::MayWrite;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{
-        getIterator(), getBase(), getIndex(), getSize()};
+  WordBitSet<> getChangedOperandsImpl() {
+    return WordBitSet<>{}
+        .set(IteratorIdx)
+        .set(BaseIdx)
+        .set(IndexIdx)
+        .set(SizeIdx);
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1865,12 +1868,13 @@ class GetNextPNameInst : public TerminatorInst {
     return SideEffectKind::MayWrite;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{getIteratorAddr(),
-                                         getBaseAddr(),
-                                         getIndexAddr(),
-                                         getSizeAddr(),
-                                         getPropertyAddr()};
+  WordBitSet<> getChangedOperandsImpl() {
+    return WordBitSet<>{}
+        .set(IteratorIdx)
+        .set(BaseIdx)
+        .set(IndexIdx)
+        .set(SizeIdx)
+        .set(PropertyIdx);
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -1963,8 +1967,8 @@ class CheckHasInstanceInst : public TerminatorInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2050,8 +2054,8 @@ class TryStartInst : public TerminatorInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2092,8 +2096,8 @@ class TryEndInst : public Instruction {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2144,8 +2148,8 @@ class PhiInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2173,8 +2177,8 @@ class MovInst : public SingleOperandInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2206,8 +2210,8 @@ class ImplicitMovInst : public SingleOperandInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2237,8 +2241,8 @@ class CoerceThisNSInst : public SingleOperandInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2265,8 +2269,8 @@ class DebuggerInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2293,8 +2297,8 @@ class GetNewTargetInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2326,8 +2330,8 @@ class HBCResolveEnvironment : public SingleOperandInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2372,8 +2376,8 @@ class HBCStoreToEnvironmentInst : public Instruction {
     return SideEffectKind::MayWrite;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2421,8 +2425,8 @@ class HBCLoadFromEnvironmentInst : public Instruction {
     return SideEffectKind::MayRead;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2508,8 +2512,8 @@ class SwitchImmInst : public TerminatorInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2554,8 +2558,8 @@ class DirectEvalInst : public SingleOperandInst {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2583,8 +2587,8 @@ class HBCCreateEnvironmentInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2616,8 +2620,8 @@ class HBCProfilePointInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2655,8 +2659,8 @@ class HBCLoadConstInst : public SingleOperandInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2690,8 +2694,8 @@ class HBCLoadParamInst : public SingleOperandInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2722,8 +2726,8 @@ class HBCGetThisNSInst : public Instruction {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2756,8 +2760,8 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2798,8 +2802,8 @@ class HBCGetArgumentsPropByValInst : public Instruction {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2839,8 +2843,8 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
     return SideEffectKind::MayWrite;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{getSingleOperand()};
+  WordBitSet<> getChangedOperandsImpl() {
+    return WordBitSet<>{}.set(0);
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2881,8 +2885,8 @@ class HBCCreateThisInst : public Instruction {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -2954,8 +2958,8 @@ class HBCGetConstructedObjectInst : public Instruction {
     return SideEffectKind::MayRead;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -3105,8 +3109,8 @@ class HBCSpillMovInst : public SingleOperandInst {
     return SideEffectKind::None;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -3174,8 +3178,8 @@ class CompareBranchInst : public TerminatorInst {
         getOperatorKind());
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
@@ -3227,8 +3231,8 @@ class UnreachableInst : public Instruction {
     return SideEffectKind::Unknown;
   }
 
-  llvm::SmallVector<Value *, 1> getChangedOperandsImpl() {
-    return llvm::SmallVector<Value *, 1>{};
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {

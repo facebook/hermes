@@ -396,14 +396,15 @@ SideEffectKind Instruction::getDerivedSideEffect() {
   }
 }
 
-llvm::SmallVector<Value *, 1> Instruction::getChangedOperands() {
+WordBitSet<> Instruction::getChangedOperands() {
   switch (getKind()) {
     default:
       llvm_unreachable("Invalid kind");
 
-#define DEF_VALUE(XX, PARENT) \
-  case ValueKind::XX##Kind:   \
-    return cast<XX>(this)->getChangedOperandsImpl();
+#define DEF_VALUE(XX, PARENT)                        \
+  case ValueKind::XX##Kind:                          \
+    return cast<XX>(this)->getChangedOperandsImpl(); \
+    break;
 #include "hermes/IR/Instrs.def"
   }
 }

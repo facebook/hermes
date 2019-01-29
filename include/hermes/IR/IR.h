@@ -17,6 +17,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "hermes/ADT/WordBitSet.h"
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTree.h"
 #include "hermes/Support/Conversions.h"
@@ -866,8 +867,9 @@ class Instruction : public ilist_node_with_parent<Instruction, BasicBlock>,
   /// pass could change it.
   bool canSetOperand(ValueKind kind, unsigned index) const;
 
-  /// Returns a vector of all operands that the instruction writes to
-  llvm::SmallVector<Value *, 1> getChangedOperands();
+  /// Returns a vector of flags indicating which operands the instruction writes
+  /// to.
+  WordBitSet<> getChangedOperands();
 
   void setLocation(SMLoc loc) {
     location_ = loc;
