@@ -33,6 +33,11 @@ add_llvm_library(hermesOptimizer
 add_llvm_library(hermesFrontend
   STATIC
   IRGen/IRGen.cpp
+  IRGen/ESTreeIRGen.cpp IRGen/ESTreeIRGen.h
+  IRGen/ESTreeIRGen-expr.cpp
+  IRGen/ESTreeIRGen-stmt.cpp
+  IRGen/ESTreeIRGen-func.cpp
+  IRGen/ESTreeIRGen-except.cpp
   IR/IR.cpp
   IR/CFG.cpp
   IR/IRBuilder.cpp
