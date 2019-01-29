@@ -200,7 +200,8 @@ class LReference {
 
 /// Performs lowering of the JSON ESTree down to Hermes IR.
 class ESTreeIRGen {
- public:
+  friend class FunctionContext;
+
   using BasicBlockListType = llvm::SmallVector<BasicBlock *, 4>;
 
   /// The module we are constructing.
@@ -216,7 +217,7 @@ class ESTreeIRGen {
   FunctionContext *topLevelContext{};
   /// This points to the current function's context. It is saved and restored
   /// whenever we enter a nested function.
-  FunctionContext *functionContext{};
+  FunctionContext *functionContext_{};
   /// This is the scoped hash table that saves the mapping between the declared
   /// names and an instance of Varible or GlobalObjectProperty.
   NameTableTy nameTable_{};
@@ -231,7 +232,7 @@ class ESTreeIRGen {
   /// Generate a unique string that represents a temporary value. The string \p
   /// hint appears in the name.
   Identifier genAnonymousLabelName(StringRef hint) {
-    return functionContext->genAnonymousLabelName(hint);
+    return curFunction()->genAnonymousLabelName(hint);
   }
 
  public:
@@ -273,7 +274,7 @@ class ESTreeIRGen {
   /// Generate code for the statement \p Stmt.
   void genStatement(ESTree::Node *stmt);
 
-  /// Wrapper of genExpression. If functionContext->globalReturnRegister is
+  /// Wrapper of genExpression. If curFunction()->globalReturnRegister is
   /// set, stores the expression value into it.
   void genExpressionWrapper(ESTree::Node *expr);
 
@@ -455,6 +456,11 @@ class ESTreeIRGen {
   /// @}
 
  private:
+  inline FunctionContext *curFunction() {
+    assert(functionContext_ && "No active function context");
+    return functionContext_;
+  }
+
   /// Declare a variable or a global propery depending in function \p inFunc,
   /// depending on whether it is the global scope. Do nothing if the variable
   /// or property is already declared in that scope.

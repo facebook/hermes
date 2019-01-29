@@ -95,10 +95,10 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
   if (auto *Label = dyn_cast<ESTree::LabeledStatementNode>(stmt)) {
     // Create a new basic block which is the continuation of the current block
     // and the jump target of the label.
-    BasicBlock *next = Builder.createBasicBlock(functionContext->function);
+    BasicBlock *next = Builder.createBasicBlock(curFunction()->function);
 
     // Set the jump point for the label to the new block.
-    functionContext->labels[Label->getLabelIndex()].breakTarget = next;
+    curFunction()->labels[Label->getLabelIndex()].breakTarget = next;
 
     // Now, generate the IR for the statement that the label is annotating.
     genStatement(Label->_body);
@@ -138,17 +138,17 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     DEBUG(dbgs() << "IRGen 'break' statement\n");
 
     auto labelIndex = breakStmt->getLabelIndex();
-    auto &label = functionContext->labels[labelIndex];
+    auto &label = curFunction()->labels[labelIndex];
     assert(label.breakTarget && "breakTarget not set");
 
     genFinallyBeforeControlChange(
         breakStmt->surroundingTry,
-        functionContext->getSemInfo()->labels[labelIndex].surroundingTry);
+        curFunction()->getSemInfo()->labels[labelIndex].surroundingTry);
     Builder.createBranchInst(label.breakTarget);
 
     // Continue code generation for stuff that comes after the break statement
     // in a new dead block.
-    auto newBlock = Builder.createBasicBlock(functionContext->function);
+    auto newBlock = Builder.createBasicBlock(curFunction()->function);
     Builder.setInsertionBlock(newBlock);
     return;
   }
@@ -157,17 +157,17 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     DEBUG(dbgs() << "IRGen 'continue' statement\n");
 
     auto labelIndex = continueStmt->getLabelIndex();
-    auto &label = functionContext->labels[labelIndex];
+    auto &label = curFunction()->labels[labelIndex];
     assert(label.continueTarget && "continueTarget not set");
 
     genFinallyBeforeControlChange(
         continueStmt->surroundingTry,
-        functionContext->getSemInfo()->labels[labelIndex].surroundingTry);
+        curFunction()->getSemInfo()->labels[labelIndex].surroundingTry);
     Builder.createBranchInst(label.continueTarget);
 
     // Continue code generation for stuff that comes after the break statement
     // in a new dead block.
-    auto newBlock = Builder.createBasicBlock(functionContext->function);
+    auto newBlock = Builder.createBasicBlock(curFunction()->function);
     Builder.setInsertionBlock(newBlock);
     return;
   }
@@ -206,8 +206,8 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
 
 void ESTreeIRGen::genExpressionWrapper(ESTree::Node *expr) {
   Value *val = genExpression(expr);
-  if (functionContext->globalReturnRegister) {
-    Builder.createStoreStackInst(val, functionContext->globalReturnRegister);
+  if (curFunction()->globalReturnRegister) {
+    Builder.createStoreStackInst(val, curFunction()->globalReturnRegister);
   }
 }
 
@@ -270,7 +270,7 @@ void ESTreeIRGen::genForWhileLoops(
   BasicBlock *updateBlock = Builder.createBasicBlock(function);
 
   // Initialize the goto labels.
-  auto &label = functionContext->labels[loop->getLabelIndex()];
+  auto &label = curFunction()->labels[loop->getLabelIndex()];
   label.breakTarget = exitBlock;
   label.continueTarget = updateBlock;
 
@@ -369,7 +369,7 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   auto *bodyBlock = Builder.createBasicBlock(parent);
 
   // Initialize the goto labels.
-  auto &label = functionContext->labels[ForInStmt->getLabelIndex()];
+  auto &label = curFunction()->labels[ForInStmt->getLabelIndex()];
   label.breakTarget = exitBlock;
   label.continueTarget = getNextBlock;
 
@@ -502,7 +502,7 @@ void ESTreeIRGen::genSwitchStatement(ESTree::SwitchStatementNode *switchStmt) {
   llvm::SmallVector<BasicBlock *, 8> caseBlocks;
 
   // Initialize the goto labels.
-  auto &label = functionContext->labels[switchStmt->getLabelIndex()];
+  auto &label = curFunction()->labels[switchStmt->getLabelIndex()];
   label.breakTarget = exitBlock;
 
   // The discriminator expression.
@@ -565,7 +565,7 @@ void ESTreeIRGen::genConstSwitchStmt(
   // Unless a default is specified the default case brings us to the exit block.
   BasicBlock *defaultBlock = exitBlock;
 
-  auto &label = functionContext->labels[switchStmt->getLabelIndex()];
+  auto &label = curFunction()->labels[switchStmt->getLabelIndex()];
   label.breakTarget = exitBlock;
 
   // The discriminator expression.

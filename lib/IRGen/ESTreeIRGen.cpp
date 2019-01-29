@@ -141,23 +141,22 @@ void ESTreeIRGen::doIt() {
   }
 
   doGenFunctionLike(
-      functionContext->function,
+      curFunction()->function,
       Program,
       ESTree::NodeList{},
       Program,
       [this](ESTree::Node *body) {
         // Allocate the return register, initialize it to undefined.
-        functionContext->globalReturnRegister =
+        curFunction()->globalReturnRegister =
             Builder.createAllocStackInst(genAnonymousLabelName("ret"));
         Builder.createStoreStackInst(
-            Builder.getLiteralUndefined(),
-            functionContext->globalReturnRegister);
+            Builder.getLiteralUndefined(), curFunction()->globalReturnRegister);
 
         genBody(cast<ESTree::ProgramNode>(body)->_body);
 
         // Terminate the top-level scope with a return statement.
         auto ret_val =
-            Builder.createLoadStackInst(functionContext->globalReturnRegister);
+            Builder.createLoadStackInst(curFunction()->globalReturnRegister);
         Builder.createReturnInst(ret_val);
       });
 }
@@ -380,7 +379,7 @@ Value *ESTreeIRGen::ensureVariableExists(ESTree::IdentifierNode *id) {
   if (auto *var = nameTable_.lookup(name))
     return var;
 
-  if (functionContext->function->isStrictMode()) {
+  if (curFunction()->function->isStrictMode()) {
     // Report a warning in strict mode.
     auto currentFunc = Builder.getInsertionBlock()->getParent();
 
@@ -522,7 +521,7 @@ void ESTreeIRGen::materializeScopesInChain(
 
 #ifndef HERMESVM_LEAN
 std::shared_ptr<SerializedScope> ESTreeIRGen::saveCurrentScope() {
-  auto *func = functionContext->function;
+  auto *func = curFunction()->function;
   assert(func && "Missing function when saving scope");
 
   auto scope = std::make_shared<SerializedScope>();
@@ -530,9 +529,9 @@ std::shared_ptr<SerializedScope> ESTreeIRGen::saveCurrentScope() {
   // We currently only lazy compile a single level at a time. If we later start
   // compiling multiple, this method would need to walk the scopes.
   assert(
-      ((func->isGlobalScope() && !functionContext->getPreviousContext()) ||
-       (!func->isGlobalScope() && functionContext->getPreviousContext() &&
-        !functionContext->getPreviousContext()->getPreviousContext())) &&
+      ((func->isGlobalScope() && !curFunction()->getPreviousContext()) ||
+       (!func->isGlobalScope() && curFunction()->getPreviousContext() &&
+        !curFunction()->getPreviousContext()->getPreviousContext())) &&
       "Expected exactly one function on the stack.");
 
   scope->parentScope = lexicalScopeChain;

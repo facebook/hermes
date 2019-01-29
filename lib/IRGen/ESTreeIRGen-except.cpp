@@ -95,12 +95,12 @@ CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
       genAnonymousLabelName(catchVariableName.str());
 
   auto errorVar = Builder.createVariable(
-      functionContext->function->getFunctionScope(), uniquedCatchVariableName);
+      curFunction()->function->getFunctionScope(), uniquedCatchVariableName);
 
   /// Insert the synthesized variable into the function name table, so it can
   /// be looked up internally.
   nameTable_.insertIntoScope(
-      &functionContext->scope, errorVar->getName(), errorVar);
+      &curFunction()->scope, errorVar->getName(), errorVar);
 
   // Alias the lexical name to the synthesized variable.
   nameTable_.insert(catchVariableName, errorVar);
@@ -118,7 +118,7 @@ void ESTreeIRGen::genFinallyBeforeControlChange(
     assert(sourceTry && "invalid try chain");
 
     // Emit an end of the try statement.
-    auto *tryEndBlock = Builder.createBasicBlock(functionContext->function);
+    auto *tryEndBlock = Builder.createBasicBlock(curFunction()->function);
     Builder.createBranchInst(tryEndBlock);
     Builder.setInsertionBlock(tryEndBlock);
 

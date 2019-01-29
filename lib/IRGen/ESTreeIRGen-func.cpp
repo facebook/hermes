@@ -20,11 +20,11 @@ FunctionContext::FunctionContext(
     sem::FunctionInfo *semInfo)
     : irGen_(irGen),
       semInfo_(semInfo),
-      oldContext_(irGen->functionContext),
+      oldContext_(irGen->functionContext_),
       builderSaveState_(irGen->Builder),
       function(function),
       scope(irGen->nameTable_) {
-  irGen->functionContext = this;
+  irGen->functionContext_ = this;
 
   // Initialize it to LiteraUndefined by default to avoid corner cases.
   this->capturedNewTarget = irGen->Builder.getLiteralUndefined();
@@ -39,7 +39,7 @@ FunctionContext::FunctionContext(
 }
 
 FunctionContext::~FunctionContext() {
-  irGen_->functionContext = oldContext_;
+  irGen_->functionContext_ = oldContext_;
 }
 
 Identifier FunctionContext::genAnonymousLabelName(StringRef hint) {
@@ -93,12 +93,12 @@ Value *ESTreeIRGen::genFunctionExpression(
   if (FE->_id) {
     auto closureName = genAnonymousLabelName("closure");
     tempClosureVar = Builder.createVariable(
-        functionContext->function->getFunctionScope(), closureName);
+        curFunction()->function->getFunctionScope(), closureName);
 
     // Insert the synthesized variable into the name table, so it can be
     // looked up internally as well.
     nameTable_.insertIntoScope(
-        &functionContext->scope, tempClosureVar->getName(), tempClosureVar);
+        &curFunction()->scope, tempClosureVar->getName(), tempClosureVar);
 
     // Alias the lexical name to the synthesized variable.
     originalNameIden = getNameFieldFromID(FE->_id);
@@ -208,7 +208,7 @@ void ESTreeIRGen::doGenFunctionLike(
     const ESTree::NodeList &params,
     ESTree::Node *body,
     const std::function<void(ESTree::Node *body)> &genBodyCB) {
-  auto *semInfo = functionContext->getSemInfo();
+  auto *semInfo = curFunction()->getSemInfo();
   DEBUG(
       dbgs() << "Hoisting "
              << (semInfo->decls.size() + semInfo->closures.size())
@@ -263,55 +263,55 @@ void ESTreeIRGen::doGenFunctionLike(
 
     // If we are not in an arrow function, and contain arrow functions,
     // capture our "this" into a new variable.
-    if (functionContext->function->getDefinitionKind() !=
+    if (curFunction()->function->getDefinitionKind() !=
             Function::DefinitionKind::ES6Arrow &&
-        functionContext->getSemInfo()->containsArrowFunctions) {
+        curFunction()->getSemInfo()->containsArrowFunctions) {
       // Capture the current "this" into a new variable. Note that if the
       // variable is never accessed it will be eliminated by the optimizer.
       DEBUG(
           dbgs() << "Capturing `this` of "
-                 << functionContext->function->getInternalName() << "\n");
+                 << curFunction()->function->getInternalName() << "\n");
 
       auto *captureVar = Builder.createVariable(
-          functionContext->function->getFunctionScope(),
+          curFunction()->function->getFunctionScope(),
           genAnonymousLabelName("this"));
 
       Builder.createStoreFrameInst(
-          functionContext->function->getThisParameter(), captureVar);
+          curFunction()->function->getThisParameter(), captureVar);
 
-      functionContext->capturedThis = captureVar;
+      curFunction()->capturedThis = captureVar;
 
       // Capture new.target into a new variable.
       captureVar = Builder.createVariable(
-          functionContext->function->getFunctionScope(),
+          curFunction()->function->getFunctionScope(),
           genAnonymousLabelName("new.target"));
 
       Builder.createStoreFrameInst(
           Builder.createGetNewTargetInst(), captureVar);
 
-      functionContext->capturedNewTarget = captureVar;
+      curFunction()->capturedNewTarget = captureVar;
     } else if (
-        functionContext->function->getDefinitionKind() ==
+        curFunction()->function->getDefinitionKind() ==
         Function::DefinitionKind::ES6Arrow) {
       assert(
-          functionContext->getPreviousContext() &&
+          curFunction()->getPreviousContext() &&
           "arrow function must have a previous context");
       assert(
-          functionContext->getPreviousContext()->capturedThis &&
+          curFunction()->getPreviousContext()->capturedThis &&
           "arrow function parent must have a captured this");
-      functionContext->capturedThis =
-          functionContext->getPreviousContext()->capturedThis;
+      curFunction()->capturedThis =
+          curFunction()->getPreviousContext()->capturedThis;
 
       assert(
-          functionContext->getPreviousContext()->capturedNewTarget &&
+          curFunction()->getPreviousContext()->capturedNewTarget &&
           "arrow function parent must have a captured new.target");
-      functionContext->capturedNewTarget =
-          functionContext->getPreviousContext()->capturedNewTarget;
+      curFunction()->capturedNewTarget =
+          curFunction()->getPreviousContext()->capturedNewTarget;
     } else if (
-        functionContext->function->getDefinitionKind() ==
+        curFunction()->function->getDefinitionKind() ==
         Function::DefinitionKind::ES6Method) {
       // new.target is always undefined in methods.
-      functionContext->capturedNewTarget = Builder.getLiteralUndefined();
+      curFunction()->capturedNewTarget = Builder.getLiteralUndefined();
     }
 
     // Generate and initialize the code for the hoisted function declarations
@@ -323,7 +323,7 @@ void ESTreeIRGen::doGenFunctionLike(
     // Separate the next block, so we can append instructions to the entry block
     // in the future.
     auto nextBlock = Builder.createBasicBlock(NewFunc);
-    functionContext->entryTerminator = Builder.createBranchInst(nextBlock);
+    curFunction()->entryTerminator = Builder.createBranchInst(nextBlock);
     Builder.setInsertionBlock(nextBlock);
 
     genBodyCB(body);
@@ -331,16 +331,16 @@ void ESTreeIRGen::doGenFunctionLike(
     // If Entry is the only user of nextBlock, merge Entry and nextBlock, to
     // create less "noise" when optimization is disabled.
     if (nextBlock->getNumUsers() == 1 &&
-        nextBlock->hasUser(functionContext->entryTerminator)) {
+        nextBlock->hasUser(curFunction()->entryTerminator)) {
       DEBUG(dbgs() << "Merging entry and nextBlock.\n");
 
       // Move all instructions from nextBlock into Entry.
       while (nextBlock->begin() != nextBlock->end())
-        nextBlock->begin()->moveBefore(functionContext->entryTerminator);
+        nextBlock->begin()->moveBefore(curFunction()->entryTerminator);
 
       // Now we can delete the original terminator;
-      functionContext->entryTerminator->eraseFromParent();
-      functionContext->entryTerminator = nullptr;
+      curFunction()->entryTerminator->eraseFromParent();
+      curFunction()->entryTerminator = nullptr;
 
       // Delete the now empty next block
       nextBlock->eraseFromParent();

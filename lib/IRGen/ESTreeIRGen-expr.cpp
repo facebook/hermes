@@ -110,14 +110,14 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
 
   // Handle the 'this' keyword.
   if (isa<ESTree::ThisExpressionNode>(expr)) {
-    if (functionContext->function->getDefinitionKind() ==
+    if (curFunction()->function->getDefinitionKind() ==
         Function::DefinitionKind::ES6Arrow) {
       assert(
-          functionContext->capturedThis &&
+          curFunction()->capturedThis &&
           "arrow function must have a captured this");
-      return Builder.createLoadFrameInst(functionContext->capturedThis);
+      return Builder.createLoadFrameInst(curFunction()->capturedThis);
     }
-    return functionContext->function->getThisParameter();
+    return curFunction()->function->getThisParameter();
   }
 
   if (auto *MP = dyn_cast<ESTree::MetaPropertyNode>(expr)) {
@@ -519,7 +519,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
     // semantic validator. Here we are left to handle the non-strict mode case.
     if (auto *iden = dyn_cast<ESTree::IdentifierNode>(U->_argument)) {
       assert(
-          !functionContext->function->isStrictMode() &&
+          !curFunction()->function->isStrictMode() &&
           "delete identifier encountered in strict mode");
       // Check if this is a known variable.
       Identifier name = getNameFieldFromID(iden);
@@ -677,16 +677,16 @@ Value *ESTreeIRGen::genIdentifierExpression(
       !nameTable_.count(getNameFieldFromID(Iden))) {
     // The first time we encounter 'arguments' we must initialize the
     // arguments object before the entry terminator.
-    if (!functionContext->createdArguments) {
+    if (!curFunction()->createdArguments) {
       DEBUG(dbgs() << "Creating arguments object\n");
 
       IRBuilder::SaveRestore saveBuilder(Builder);
-      Builder.setInsertionPoint(functionContext->entryTerminator);
+      Builder.setInsertionPoint(curFunction()->entryTerminator);
       Builder.setLocation(Builder.getFunction()->getSourceRange().Start);
-      functionContext->createdArguments = Builder.createCreateArgumentsInst();
+      curFunction()->createdArguments = Builder.createCreateArgumentsInst();
     }
 
-    return functionContext->createdArguments;
+    return curFunction()->createdArguments;
   }
 
   // Lookup variable name.
@@ -719,11 +719,11 @@ Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
     if (cast<ESTree::IdentifierNode>(MP->_property)->_name->str() == "target") {
       Value *value;
 
-      if (functionContext->function->getDefinitionKind() ==
+      if (curFunction()->function->getDefinitionKind() ==
               Function::DefinitionKind::ES6Arrow ||
-          functionContext->function->getDefinitionKind() ==
+          curFunction()->function->getDefinitionKind() ==
               Function::DefinitionKind::ES6Method) {
-        value = functionContext->capturedNewTarget;
+        value = curFunction()->capturedNewTarget;
       } else {
         value = Builder.createGetNewTargetInst();
       }
