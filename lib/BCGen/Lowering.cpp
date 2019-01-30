@@ -168,12 +168,14 @@ static constexpr uint32_t kNonLiteralPlaceholderLimit = 3;
 uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
     AllocObjectInst *allocInst) {
   uint32_t elemCount = 0;
-  // Switching to the new instruction adds overhead.
-  // Use int64_t to prevent overflow when element count reaches maximum
-  // UINT16_MAX.
-  int64_t savingSoFar =
-      sizeof(inst::NewObjectInst) - sizeof(inst::NewObjectWithBufferLongInst);
-  int64_t maxSaving = 0;
+  // We want to track savingSoFar to avoid serializing too many place holders
+  // which ends up causing a big size regression.
+  // We set savingSoFar to be the delta of the size of two instructions to avoid
+  // serializing a literal object with only one entry, which turns out to
+  // significantly increase bytecode size.
+  int32_t savingSoFar = static_cast<int32_t>(sizeof(inst::NewObjectInst)) -
+      static_cast<int32_t>(sizeof(inst::NewObjectWithBufferInst));
+  int32_t maxSaving = 0;
   uint32_t elemNumForMaxSaving = 0;
   uint32_t nonLiteralsSoFar = 0;
   for (Instruction *u : allocInst->getUsers()) {

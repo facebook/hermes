@@ -26,3 +26,4 @@ var arr = [{a: 1}, {b: 2}, {c: 3}, {d: 4}];
 //CHECK-NEXT:  $Reg0 @19 [20...21) 	%19 = HBCLoadConstInst undefined : undefined
 //CHECK-NEXT:  $Reg0 @20 [empty]	%20 = ReturnInst %19 : undefined
 //CHECK-NEXT:function_end
+

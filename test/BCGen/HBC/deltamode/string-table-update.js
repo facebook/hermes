@@ -43,4 +43,4 @@ var ascii = 'hello how are you';
 //CHECK-NEXT:  s25[UTF-16, {{[0-9]+}}..{{[0-9]+}}]: \x38\x81\x66\x4E
 //CHECK-NEXT:  s26[ASCII, {{[0-9]+}}..{{[0-9]+}}]: hello how are you
 //CHECK-NOT: string-table-update.js
-//CHECK-LABEL: Function<global>(1 params, 3 registers, 0 symbols):
+//CHECK-LABEL: Function<global>(1 params, 2 registers, 0 symbols):
