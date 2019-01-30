@@ -307,6 +307,8 @@ class IRBuilder {
       StringRef property);
 
   LoadPropertyInst *createLoadPropertyInst(Value *object, StringRef property);
+  TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(
+      StringRef property);
 
   StorePropertyInst *createStorePropertyInst(
       Value *storedValue,

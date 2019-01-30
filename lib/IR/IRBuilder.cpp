@@ -423,6 +423,11 @@ LoadPropertyInst *IRBuilder::createLoadPropertyInst(
   return createLoadPropertyInst(object, Iden);
 }
 
+TryLoadGlobalPropertyInst *IRBuilder::createTryLoadGlobalPropertyInst(
+    StringRef property) {
+  return createTryLoadGlobalPropertyInst(createIdentifier(property));
+}
+
 StorePropertyInst *IRBuilder::createStorePropertyInst(
     Value *storedValue,
     Value *object,
