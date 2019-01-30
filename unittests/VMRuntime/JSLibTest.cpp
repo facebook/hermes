@@ -52,7 +52,7 @@ TEST_F(JSLibTest, CreateObjectTest) {
   auto newObj = runtime->makeHandle<JSObject>(*crtRes);
 
   // Make sure the prototype is correct.
-  ASSERT_EQ(prototype.get(), newObj->getProto());
+  ASSERT_EQ(prototype.get(), newObj->getParent());
 
   // Call the constructor.
   auto callRes = Callable::executeCall0(objectCons, runtime, newObj, true);
@@ -936,7 +936,7 @@ TEST_F(JSLibTest, CreateStringTest) {
   auto newStr = runtime->makeHandle<JSObject>(*crtRes);
 
   // Make sure the prototype is correct.
-  ASSERT_EQ(prototype.get(), newStr->getProto());
+  ASSERT_EQ(prototype.get(), newStr->getParent());
 
   // Call the constructor.
   ASSERT_RETURNED(

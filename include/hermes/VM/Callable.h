@@ -100,7 +100,7 @@ struct CallableVTable {
   CallResult<HermesValue> (*newObject)(
       Handle<Callable> selfHandle,
       Runtime *runtime,
-      Handle<JSObject> protoHandle);
+      Handle<JSObject> parentHandle);
 
   /// Call the callable with arguments already on the stack.
   CallResult<HermesValue> (
@@ -217,8 +217,8 @@ class Callable : public JSObject {
   static CallResult<HermesValue> newObject(
       Handle<Callable> selfHandle,
       Runtime *runtime,
-      Handle<JSObject> protoHandle) {
-    return selfHandle->getVT()->newObject(selfHandle, runtime, protoHandle);
+      Handle<JSObject> parentHandle) {
+    return selfHandle->getVT()->newObject(selfHandle, runtime, parentHandle);
   }
 
   /// Call the callable with arguments already on the stack.
@@ -260,24 +260,24 @@ class Callable : public JSObject {
   Callable(
       Runtime *runtime,
       const VTable *vt,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       Handle<Environment> env)
-      : JSObject(runtime, vt, proto, clazz),
+      : JSObject(runtime, vt, parent, clazz),
         environment_(*env, &runtime->getHeap()) {}
   Callable(
       Runtime *runtime,
       const VTable *vt,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz)
-      : JSObject(runtime, vt, proto, clazz), environment_() {}
+      : JSObject(runtime, vt, parent, clazz), environment_() {}
 
   /// Create a an instance of Object to be passed as the 'this' argument when
   /// invoking the constructor.
   static CallResult<HermesValue> _newObjectImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime,
-      Handle<JSObject> protoHandle);
+      Handle<JSObject> parentHandle);
 
  private:
   /// Create an object by calling newObject on \p selfHandle.
@@ -353,11 +353,11 @@ class BoundFunction final : public Callable {
  private:
   BoundFunction(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       Handle<Callable> target,
       Handle<ArrayStorage> argStorage)
-      : Callable(runtime, &vt.base.base, proto, clazz),
+      : Callable(runtime, &vt.base.base, parent, clazz),
         target_(*target, &runtime->getHeap()),
         argStorage_(*argStorage, &runtime->getHeap()) {}
 
@@ -371,7 +371,7 @@ class BoundFunction final : public Callable {
   static CallResult<HermesValue> _newObjectImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime,
-      Handle<JSObject> protoHandle);
+      Handle<JSObject> parentHandle);
 
   /// Call the callable with arguments already on the stack.
   static CallResult<HermesValue> _callImpl(
@@ -472,14 +472,14 @@ class NativeFunction : public Callable {
   }
 
   /// Create an instance of NativeFunction.
-  /// \param protoHandle object to use as [[Prototype]].
+  /// \param parentHandle object to use as [[Prototype]].
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
   /// \param paramCount number of parameters (excluding `this`)
   /// \param prototypeObjectHandle if non-null, set as prototype property.
   static Handle<NativeFunction> create(
       Runtime *runtime,
-      Handle<JSObject> protoHandle,
+      Handle<JSObject> parentHandle,
       void *context,
       NativeFunctionPtr functionPtr,
       SymbolID name,
@@ -487,7 +487,7 @@ class NativeFunction : public Callable {
       Handle<JSObject> prototypeObjectHandle);
 
   /// Create an instance of NativeFunction.
-  /// \param protoHandle object to use as [[Prototype]].
+  /// \param parentHandle object to use as [[Prototype]].
   /// \param parentEnvHandle the parent environment
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
@@ -495,7 +495,7 @@ class NativeFunction : public Callable {
   /// \param prototypeObjectHandle if non-null, set as prototype property.
   static Handle<NativeFunction> create(
       Runtime *runtime,
-      Handle<JSObject> protoHandle,
+      Handle<JSObject> parentHandle,
       Handle<Environment> parentEnvHandle,
       void *context,
       NativeFunctionPtr functionPtr,
@@ -505,20 +505,20 @@ class NativeFunction : public Callable {
 
   /// Create an instance of NativeFunction.
   /// The prototype property will be null.
-  /// \param protoHandle object to use as [[Prototype]].
+  /// \param parentHandle object to use as [[Prototype]].
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
   /// \param paramCount number of parameters (excluding `this`)
   static Handle<NativeFunction> createWithoutPrototype(
       Runtime *runtime,
-      Handle<JSObject> protoHandle,
+      Handle<JSObject> parentHandle,
       void *context,
       NativeFunctionPtr functionPtr,
       SymbolID name,
       unsigned paramCount) {
     return create(
         runtime,
-        protoHandle,
+        parentHandle,
         context,
         functionPtr,
         name,
@@ -551,22 +551,22 @@ class NativeFunction : public Callable {
   NativeFunction(
       Runtime *runtime,
       const VTable *vtp,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       void *context,
       NativeFunctionPtr functionPtr)
-      : Callable(runtime, vtp, proto, clazz),
+      : Callable(runtime, vtp, parent, clazz),
         context_(context),
         functionPtr_(functionPtr) {}
   NativeFunction(
       Runtime *runtime,
       const VTable *vtp,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       Handle<Environment> environment,
       void *context,
       NativeFunctionPtr functionPtr)
-      : Callable(runtime, vtp, proto, clazz, environment),
+      : Callable(runtime, vtp, parent, clazz, environment),
         context_(context),
         functionPtr_(functionPtr) {}
 
@@ -600,7 +600,7 @@ class NativeConstructor final : public NativeFunction {
   /// \param paramCount number of parameters (excluding `this`)
   static PseudoHandle<NativeConstructor> create(
       Runtime *runtime,
-      Handle<JSObject> protoHandle,
+      Handle<JSObject> parentHandle,
       void *context,
       NativeFunctionPtr functionPtr,
       unsigned paramCount,
@@ -609,8 +609,8 @@ class NativeConstructor final : public NativeFunction {
     void *mem = runtime->alloc(sizeof(NativeConstructor));
     return createPseudoHandle(new (mem) NativeConstructor(
         runtime,
-        *protoHandle,
-        runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+        *parentHandle,
+        runtime->getHiddenClassForPrototypeRaw(*parentHandle),
         context,
         functionPtr,
         creator,
@@ -618,13 +618,13 @@ class NativeConstructor final : public NativeFunction {
   }
 
   /// Create an instance of NativeConstructor.
-  /// \param protoHandle object to use as [[Prototype]].
+  /// \param parentHandle object to use as [[Prototype]].
   /// \param parentEnvHandle the parent environment
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
   static PseudoHandle<NativeConstructor> create(
       Runtime *runtime,
-      Handle<JSObject> protoHandle,
+      Handle<JSObject> parentHandle,
       Handle<Environment> parentEnvHandle,
       void *context,
       NativeFunctionPtr functionPtr,
@@ -633,8 +633,8 @@ class NativeConstructor final : public NativeFunction {
     void *mem = runtime->alloc(sizeof(NativeConstructor));
     return createPseudoHandle(new (mem) NativeConstructor(
         runtime,
-        *protoHandle,
-        runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+        *parentHandle,
+        runtime->getHiddenClassForPrototypeRaw(*parentHandle),
         parentEnvHandle,
         context,
         functionPtr,
@@ -653,7 +653,7 @@ class NativeConstructor final : public NativeFunction {
 
   NativeConstructor(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       void *context,
       NativeFunctionPtr functionPtr,
@@ -662,7 +662,7 @@ class NativeConstructor final : public NativeFunction {
       : NativeFunction(
             runtime,
             &vt.base.base,
-            proto,
+            parent,
             clazz,
             context,
             functionPtr),
@@ -674,7 +674,7 @@ class NativeConstructor final : public NativeFunction {
 
   NativeConstructor(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       Handle<Environment> parentEnvHandle,
       void *context,
@@ -684,7 +684,7 @@ class NativeConstructor final : public NativeFunction {
       : NativeFunction(
             runtime,
             &vt.base.base,
-            proto,
+            parent,
             clazz,
             parentEnvHandle,
             context,
@@ -700,9 +700,9 @@ class NativeConstructor final : public NativeFunction {
   static CallResult<HermesValue> _newObjectImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime,
-      Handle<JSObject> protoHandle) {
+      Handle<JSObject> parentHandle) {
     auto nativeConsHandle = Handle<NativeConstructor>::vmcast(selfHandle);
-    return nativeConsHandle->creator_(runtime, protoHandle);
+    return nativeConsHandle->creator_(runtime, parentHandle);
   }
 
 #ifndef NDEBUG
@@ -724,11 +724,11 @@ class JSFunction final : public Callable {
  protected:
   JSFunction(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       Handle<Environment> environment,
       CodeBlock *codeBlock)
-      : Callable(runtime, &vt.base.base, proto, clazz, environment),
+      : Callable(runtime, &vt.base.base, parent, clazz, environment),
         codeBlock_(codeBlock) {
     codeBlock->getRuntimeModule()->addUser();
   }
@@ -751,7 +751,7 @@ class JSFunction final : public Callable {
   /// Create a Function with the prototype property set to new Object().
   static CallResult<HermesValue> create(
       Runtime *runtime,
-      Handle<JSObject> protoHandle,
+      Handle<JSObject> parentHandle,
       Handle<Environment> envHandle,
       CodeBlock *codeBlock);
 
@@ -759,10 +759,10 @@ class JSFunction final : public Callable {
   /// undefined, with the prototype property auto-initialized to new Object().
   static CallResult<HermesValue> create(
       Runtime *runtime,
-      Handle<JSObject> protoHandle) {
+      Handle<JSObject> parentHandle) {
     return create(
         runtime,
-        protoHandle,
+        parentHandle,
         runtime->makeNullHandle<Environment>(),
         runtime->getEmptyCodeBlock());
   }

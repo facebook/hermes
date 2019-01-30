@@ -107,10 +107,10 @@ class JSRegExp final : public JSObject {
  private:
   JSRegExp(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage)
-      : JSObject(runtime, &vt.base, proto, clazz, propStorage) {}
+      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
 
   std::vector<uint8_t> bytecode_;
 

@@ -47,7 +47,7 @@ const ObjectVTable JSMapImpl<C>::vt{
 template <CellKind C>
 CallResult<HermesValue> JSMapImpl<C>::create(
     Runtime *runtime,
-    Handle<JSObject> protoHandle) {
+    Handle<JSObject> parentHandle) {
   auto propStorage =
       JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
   if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
@@ -57,8 +57,8 @@ CallResult<HermesValue> JSMapImpl<C>::create(
   void *mem = runtime->alloc(sizeof(JSMapImpl));
   return HermesValue::encodeObjectValue(new (mem) JSMapImpl(
       runtime,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       **propStorage));
 }
 

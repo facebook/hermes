@@ -208,7 +208,7 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
 
   // Set the prototype of the global object to the standard object prototype,
   // which has now been defined.
-  ignoreAllocationFailure(JSObject::setProto(
+  ignoreAllocationFailure(JSObject::setParent(
       vmcast<JSObject>(global_), this, vmcast<JSObject>(objectPrototype)));
 
   symbolRegistry_.init(this);

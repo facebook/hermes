@@ -65,7 +65,7 @@ void addDirectPropertyFields<0>(const GCHermesValue *, Metadata::Builder &) {}
 
 void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const JSObject *>(cell);
-  mb.addField("@__proto__", &self->proto_);
+  mb.addField("@__proto__", &self->parent_);
   mb.addField("@class", &self->clazz_);
   mb.addField("@propStorage", &self->propStorage_);
 
@@ -76,13 +76,13 @@ void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
-    Handle<JSObject> protoHandle) {
+    Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc</*fixedSize*/ true>(sizeof(JSObject));
   return createPseudoHandle(new (mem) JSObject(
       runtime,
       &vt.base,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       GCPointerBase::NoBarriers()));
 }
 
@@ -130,8 +130,8 @@ PseudoHandle<JSObject> JSObject::create(
 
 CallResult<HermesValue> JSObject::createWithException(
     Runtime *runtime,
-    Handle<JSObject> protoHandle) {
-  return JSObject::create(runtime, protoHandle).getHermesValue();
+    Handle<JSObject> parentHandle) {
+  return JSObject::create(runtime, parentHandle).getHermesValue();
 }
 
 void JSObject::initializeLazyObject(
@@ -159,16 +159,16 @@ ObjectID JSObject::getObjectID(JSObject *self, Runtime *runtime) {
 }
 
 ExecutionStatus
-JSObject::setProto(JSObject *self, Runtime *runtime, JSObject *proto) {
+JSObject::setParent(JSObject *self, Runtime *runtime, JSObject *parent) {
   if (!self->isExtensible()) {
     return runtime->raiseTypeError("JSObject is not extensible.");
   }
   // Check for a prototype cycle.
-  for (auto *cur = proto; cur; cur = cur->proto_) {
+  for (auto *cur = parent; cur; cur = cur->parent_) {
     if (cur == self)
       return runtime->raiseTypeError("Prototype cycle detected");
   }
-  self->proto_.set(proto, &runtime->getHeap());
+  self->parent_.set(parent, &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -713,8 +713,8 @@ JSObject *JSObject::getNamedDescriptor(
     if (findProperty(selfHandle, runtime, name, expectedFlags, desc))
       return *selfHandle;
   }
-  if (selfHandle->proto_) {
-    MutableHandle<JSObject> mutableSelfHandle{runtime, selfHandle->proto_};
+  if (selfHandle->parent_) {
+    MutableHandle<JSObject> mutableSelfHandle{runtime, selfHandle->parent_};
 
     do {
       if (LLVM_UNLIKELY(mutableSelfHandle->flags_.lazyObject)) {
@@ -725,7 +725,7 @@ JSObject *JSObject::getNamedDescriptor(
       if (findProperty(
               mutableSelfHandle, runtime, name, PropertyFlags::invalid(), desc))
         return *mutableSelfHandle;
-    } while ((mutableSelfHandle = mutableSelfHandle->proto_));
+    } while ((mutableSelfHandle = mutableSelfHandle->parent_));
   }
 
   return nullptr;
@@ -764,7 +764,7 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
     // Flush at the end of the loop to allow first iteration to be as fast as
     // possible.
     marker.flush();
-  } while ((propObj = propObj->proto_));
+  } while ((propObj = propObj->parent_));
   return ExecutionStatus::RETURNED;
 }
 
@@ -2211,7 +2211,7 @@ CallResult<uint32_t> appendAllPropertyNames(
       }
     }
     // Continue to follow the prototype chain.
-    head = head->getProto();
+    head = head->getParent();
     needDedup = true;
   }
   return size;
@@ -2235,7 +2235,7 @@ ExecutionStatus setProtoClasses(
     arr->clear();
     return ExecutionStatus::RETURNED;
   }
-  MutableHandle<JSObject> head(runtime, obj->getProto());
+  MutableHandle<JSObject> head(runtime, obj->getParent());
   MutableHandle<> clazz(runtime);
   GCScopeMarkerRAII marker{runtime};
   while (head.get()) {
@@ -2249,7 +2249,7 @@ ExecutionStatus setProtoClasses(
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    head = head->getProto();
+    head = head->getParent();
     marker.flush();
   }
   clazz = HermesValue::encodeNullValue();
@@ -2267,14 +2267,14 @@ uint32_t matchesProtoClasses(
     Runtime *runtime,
     Handle<JSObject> obj,
     Handle<BigStorage> arr) {
-  MutableHandle<JSObject> head(runtime, obj->getProto());
+  MutableHandle<JSObject> head(runtime, obj->getParent());
   uint32_t i = 0;
   while (head.get()) {
     HermesValue protoCls = arr->at(i++);
     if (protoCls.isNull() || protoCls.getObject() != head->getClass()) {
       return 0;
     }
-    head = head->getProto();
+    head = head->getParent();
   }
   // The chains must both end at the same point.
   if (head || !arr->at(i++).isNull()) {

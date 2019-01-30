@@ -102,7 +102,7 @@ class JSDataView final : public JSObject {
 
   JSDataView(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage);
 };

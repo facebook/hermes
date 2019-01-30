@@ -25,7 +25,7 @@ class SingleObject final : public JSObject {
   /// Create a SingleObject.
   static CallResult<HermesValue> create(
       Runtime *runtime,
-      Handle<JSObject> protoHandle) {
+      Handle<JSObject> parentHandle) {
     auto propStorage =
         JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
     if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
@@ -35,18 +35,18 @@ class SingleObject final : public JSObject {
     void *mem = runtime->alloc(sizeof(SingleObject));
     return HermesValue::encodeObjectValue(new (mem) SingleObject(
         runtime,
-        *protoHandle,
-        runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+        *parentHandle,
+        runtime->getHiddenClassForPrototypeRaw(*parentHandle),
         **propStorage));
   }
 
  protected:
   SingleObject(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage)
-      : JSObject(runtime, &vt.base, proto, clazz, propStorage) {}
+      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
 };
 
 template <CellKind kind>

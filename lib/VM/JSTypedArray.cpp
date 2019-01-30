@@ -18,10 +18,10 @@ namespace vm {
 JSTypedArrayBase::JSTypedArrayBase(
     Runtime *runtime,
     const VTable *vt,
-    JSObject *proto,
+    JSObject *parent,
     HiddenClass *clazz,
     JSObjectPropStorage *propStorage)
-    : JSObject(runtime, vt, proto, clazz, propStorage),
+    : JSObject(runtime, vt, parent, clazz, propStorage),
       buffer_(nullptr),
       length_(0),
       byteWidth_(0),
@@ -320,7 +320,7 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::_allocateSpeciesImpl(
 template <typename T, CellKind C>
 CallResult<HermesValue> JSTypedArray<T, C>::create(
     Runtime *runtime,
-    Handle<JSObject> protoHandle) {
+    Handle<JSObject> parentHandle) {
   auto propStorage =
       JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
   if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
@@ -329,8 +329,8 @@ CallResult<HermesValue> JSTypedArray<T, C>::create(
   void *mem = runtime->alloc(sizeof(JSTypedArray<T, C>));
   return HermesValue::encodeObjectValue(new (mem) JSTypedArray<T, C>(
       runtime,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       **propStorage));
 }
 
@@ -368,10 +368,10 @@ CallResult<HermesValue> JSTypedArray<T, C>::create(
 template <typename T, CellKind C>
 JSTypedArray<T, C>::JSTypedArray(
     Runtime *runtime,
-    JSObject *proto,
+    JSObject *parent,
     HiddenClass *clazz,
     JSObjectPropStorage *propStorage)
-    : JSTypedArrayBase(runtime, &vt.base.base, proto, clazz, propStorage) {
+    : JSTypedArrayBase(runtime, &vt.base.base, parent, clazz, propStorage) {
   byteWidth_ = sizeof(T);
 }
 

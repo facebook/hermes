@@ -126,12 +126,12 @@ class ArrayImpl : public JSObject {
   ArrayImpl(
       Runtime *runtime,
       const VTable *vt,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage,
       StorageType *indexedStorage,
       NeedsBarriers needsBarriers)
-      : JSObject(runtime, vt, proto, clazz, propStorage, needsBarriers),
+      : JSObject(runtime, vt, parent, clazz, propStorage, needsBarriers),
         indexedStorage_(indexedStorage, &runtime->getHeap(), needsBarriers) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
@@ -141,14 +141,14 @@ class ArrayImpl : public JSObject {
   ArrayImpl(
       Runtime *runtime,
       const VTable *vt,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage,
       StorageType *indexedStorage)
       : ArrayImpl(
             runtime,
             vt,
-            proto,
+            parent,
             clazz,
             propStorage,
             indexedStorage,
@@ -245,14 +245,14 @@ class Arguments final : public ArrayImpl {
  private:
   Arguments(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage,
       StorageType *indexedStorage)
       : ArrayImpl(
             runtime,
             &vt.base,
-            proto,
+            parent,
             clazz,
             propStorage,
             indexedStorage) {}
@@ -348,7 +348,7 @@ class JSArray final : public ArrayImpl {
   template <typename NeedsBarrier>
   JSArray(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage,
       StorageType *indexedStorage,
@@ -356,7 +356,7 @@ class JSArray final : public ArrayImpl {
       : ArrayImpl(
             runtime,
             &vt.base,
-            proto,
+            parent,
             clazz,
             propStorage,
             indexedStorage,
@@ -423,12 +423,12 @@ class JSArrayIterator : public JSObject {
  private:
   JSArrayIterator(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage,
       JSObject *iteratedObject,
       IterationKind iterationKind)
-      : JSObject(runtime, &vt.base, proto, clazz, propStorage),
+      : JSObject(runtime, &vt.base, parent, clazz, propStorage),
         iteratedObject_(iteratedObject, &runtime->getHeap()),
         iterationKind_(iterationKind) {}
 

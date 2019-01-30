@@ -204,7 +204,7 @@ class JSTypedArrayBase : public JSObject {
   explicit JSTypedArrayBase(
       Runtime *runtime,
       const VTable *vt,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage);
 
@@ -312,7 +312,7 @@ class JSTypedArray final : public JSTypedArrayBase {
  private:
   explicit JSTypedArray(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage);
 };

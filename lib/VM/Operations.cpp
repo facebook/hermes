@@ -1408,7 +1408,7 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
 
   // 7. Repeat
   // 7a. Let O be O.[[GetPrototypeOf]]().
-  while ((obj = obj->getProto()) != nullptr) {
+  while ((obj = obj->getParent()) != nullptr) {
     if (obj == ctorPrototype) {
       // 7c. If SameValue(P, O) is true, return true.
       return true;

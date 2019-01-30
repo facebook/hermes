@@ -38,7 +38,7 @@ void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 CallResult<HermesValue> JSRegExp::create(
     Runtime *runtime,
-    Handle<JSObject> protoHandle) {
+    Handle<JSObject> parentHandle) {
   auto propStorage =
       JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
   if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
@@ -49,8 +49,8 @@ CallResult<HermesValue> JSRegExp::create(
       runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(JSRegExp));
   auto selfHandle = runtime->makeHandle(new (mem) JSRegExp(
       runtime,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       **propStorage));
 
   Handle<> emptyString = runtime->makeHandle(HermesValue::encodeStringValue(

@@ -485,13 +485,13 @@ mapPrototypeValues(void *, Runtime *runtime, NativeArgs args) {
 }
 
 Handle<JSObject> createMapIteratorPrototype(Runtime *runtime) {
-  auto protoHandle = toHandle(
+  auto parentHandle = toHandle(
       runtime,
       JSObject::create(
           runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype)));
   defineMethod(
       runtime,
-      protoHandle,
+      parentHandle,
       runtime->getPredefinedSymbolID(Predefined::next),
       nullptr,
       mapIteratorPrototypeNext,
@@ -502,12 +502,12 @@ Handle<JSObject> createMapIteratorPrototype(Runtime *runtime) {
   dpf.enumerable = 0;
   defineProperty(
       runtime,
-      protoHandle,
+      parentHandle,
       runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::MapIterator),
       dpf);
 
-  return protoHandle;
+  return parentHandle;
 }
 
 static CallResult<HermesValue>

@@ -48,7 +48,7 @@ class FinalizableNativeFunction final : public NativeFunction {
  protected:
   FinalizableNativeFunction(
       Runtime *runtime,
-      Handle<JSObject> proto,
+      Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       void *context,
       NativeFunctionPtr functionPtr,
@@ -56,7 +56,7 @@ class FinalizableNativeFunction final : public NativeFunction {
       : NativeFunction(
             runtime,
             &vt.base.base,
-            *proto,
+            *parent,
             *clazz,
             context,
             functionPtr),
@@ -128,10 +128,10 @@ class HostObject final : public JSObject {
  private:
   HostObject(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       std::shared_ptr<HostObjectProxy> proxy)
-      : JSObject(runtime, &vt.base, proto, clazz), proxy_(proxy) {}
+      : JSObject(runtime, &vt.base, parent, clazz), proxy_(proxy) {}
 
   static void _finalizeImpl(GCCell *cell, GC *gc);
 

@@ -101,7 +101,7 @@ class JSArrayBuffer final : public JSObject {
 
   JSArrayBuffer(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage);
 

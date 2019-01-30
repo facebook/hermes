@@ -411,13 +411,13 @@ setPrototypeValues(void *, Runtime *runtime, NativeArgs args) {
 }
 
 Handle<JSObject> createSetIteratorPrototype(Runtime *runtime) {
-  auto protoHandle = toHandle(
+  auto parentHandle = toHandle(
       runtime,
       JSObject::create(
           runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype)));
   defineMethod(
       runtime,
-      protoHandle,
+      parentHandle,
       runtime->getPredefinedSymbolID(Predefined::next),
       nullptr,
       setIteratorPrototypeNext,
@@ -428,12 +428,12 @@ Handle<JSObject> createSetIteratorPrototype(Runtime *runtime) {
   dpf.enumerable = 0;
   defineProperty(
       runtime,
-      protoHandle,
+      parentHandle,
       runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::SetIterator),
       dpf);
 
-  return protoHandle;
+  return parentHandle;
 }
 
 static CallResult<HermesValue>

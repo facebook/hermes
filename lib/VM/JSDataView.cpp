@@ -47,10 +47,10 @@ CallResult<HermesValue> JSDataView::create(
 
 JSDataView::JSDataView(
     Runtime *runtime,
-    JSObject *proto,
+    JSObject *parent,
     HiddenClass *clazz,
     JSObjectPropStorage *propStorage)
-    : JSObject(runtime, &vt.base, proto, clazz, propStorage),
+    : JSObject(runtime, &vt.base, parent, clazz, propStorage),
       buffer_(nullptr),
       offset_(0),
       length_(0) {}

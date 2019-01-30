@@ -119,10 +119,10 @@ class JSError final : public JSObject {
  protected:
   JSError(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage)
-      : JSObject(runtime, &vt.base, proto, clazz, propStorage) {}
+      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
 
  private:
   static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =

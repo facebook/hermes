@@ -39,8 +39,8 @@ void CallableBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<HermesValue> Callable::_newObjectImpl(
     Handle<Callable> /*selfHandle*/,
     Runtime *runtime,
-    Handle<JSObject> protoHandle) {
-  return JSObject::create(runtime, protoHandle).getHermesValue();
+    Handle<JSObject> parentHandle) {
+  return JSObject::create(runtime, parentHandle).getHermesValue();
 }
 
 void Callable::defineLazyProperties(Handle<Callable> fn, Runtime *runtime) {
@@ -729,7 +729,7 @@ void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 Handle<NativeFunction> NativeFunction::create(
     Runtime *runtime,
-    Handle<JSObject> protoHandle,
+    Handle<JSObject> parentHandle,
     void *context,
     NativeFunctionPtr functionPtr,
     SymbolID name,
@@ -739,8 +739,8 @@ Handle<NativeFunction> NativeFunction::create(
   auto selfHandle = runtime->makeHandle(new (mem) NativeFunction(
       runtime,
       &vt.base.base,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       context,
       functionPtr));
 
@@ -761,7 +761,7 @@ Handle<NativeFunction> NativeFunction::create(
 
 Handle<NativeFunction> NativeFunction::create(
     Runtime *runtime,
-    Handle<JSObject> protoHandle,
+    Handle<JSObject> parentHandle,
     Handle<Environment> parentEnvHandle,
     void *context,
     NativeFunctionPtr functionPtr,
@@ -772,8 +772,8 @@ Handle<NativeFunction> NativeFunction::create(
   auto selfHandle = runtime->makeHandle(new (mem) NativeFunction(
       runtime,
       &vt.base.base,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       parentEnvHandle,
       context,
       functionPtr));
@@ -881,15 +881,15 @@ void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 CallResult<HermesValue> JSFunction::create(
     Runtime *runtime,
-    Handle<JSObject> protoHandle,
+    Handle<JSObject> parentHandle,
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
   void *mem =
       runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(JSFunction));
   auto selfHandle = runtime->makeHandle(new (mem) JSFunction(
       runtime,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       envHandle,
       codeBlock));
   selfHandle->flags_.lazyObject = 1;

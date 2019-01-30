@@ -45,10 +45,10 @@ class PrimitiveBox : public JSObject {
   PrimitiveBox(
       Runtime *runtime,
       const VTable *vt,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage)
-      : JSObject(runtime, vt, proto, clazz, propStorage) {}
+      : JSObject(runtime, vt, parent, clazz, propStorage) {}
 
   static const SlotIndex primitiveValueIndex = 0;
 };
@@ -95,10 +95,10 @@ class JSString final : public PrimitiveBox {
  protected:
   JSString(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage)
-      : PrimitiveBox(runtime, &vt.base, proto, clazz, propStorage) {
+      : PrimitiveBox(runtime, &vt.base, parent, clazz, propStorage) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
   }
@@ -179,11 +179,11 @@ class JSStringIterator : public JSObject {
  private:
   JSStringIterator(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage,
       StringPrimitive *iteratedString)
-      : JSObject(runtime, &vt.base, proto, clazz, propStorage),
+      : JSObject(runtime, &vt.base, parent, clazz, propStorage),
         iteratedString_(iteratedString, &runtime->getHeap()) {}
 
  private:
@@ -216,10 +216,10 @@ class JSNumber final : public PrimitiveBox {
  protected:
   JSNumber(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage)
-      : PrimitiveBox(runtime, &vt.base, proto, clazz, propStorage) {}
+      : PrimitiveBox(runtime, &vt.base, parent, clazz, propStorage) {}
 };
 
 /// Boolean object.
@@ -243,10 +243,10 @@ class JSBoolean final : public PrimitiveBox {
  protected:
   JSBoolean(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage)
-      : PrimitiveBox(runtime, &vt.base, proto, clazz, propStorage) {}
+      : PrimitiveBox(runtime, &vt.base, parent, clazz, propStorage) {}
 };
 
 /// Symbol object.
@@ -276,10 +276,10 @@ class JSSymbol final : public PrimitiveBox {
  protected:
   JSSymbol(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage)
-      : PrimitiveBox(runtime, &vt.base, proto, clazz, propStorage) {}
+      : PrimitiveBox(runtime, &vt.base, parent, clazz, propStorage) {}
 };
 
 } // namespace vm

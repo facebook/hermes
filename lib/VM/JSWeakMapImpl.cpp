@@ -196,7 +196,7 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
 template <CellKind C>
 CallResult<HermesValue> JSWeakMapImpl<C>::create(
     Runtime *runtime,
-    Handle<JSObject> protoHandle) {
+    Handle<JSObject> parentHandle) {
   auto propStorage =
       JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
   if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
@@ -212,8 +212,8 @@ CallResult<HermesValue> JSWeakMapImpl<C>::create(
   void *mem = runtime->alloc(sizeof(JSWeakMapImpl<C>));
   return HermesValue::encodeObjectValue(new (mem) JSWeakMapImpl<C>(
       runtime,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       **propStorage,
       *valueStorage));
 }

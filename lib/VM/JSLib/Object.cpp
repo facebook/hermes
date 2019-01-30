@@ -413,9 +413,9 @@ objectGetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
   Handle<JSObject> obj = runtime->makeHandle<JSObject>(res.getValue());
 
   // Note that we must return 'null' if there is no prototype.
-  JSObject *proto = obj->getProto();
-  return proto ? HermesValue::encodeObjectValue(proto)
-               : HermesValue::encodeNullValue();
+  JSObject *parent = obj->getParent();
+  return parent ? HermesValue::encodeObjectValue(parent)
+                : HermesValue::encodeNullValue();
 }
 
 static CallResult<HermesValue>
@@ -1153,10 +1153,10 @@ objectSetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
     return *O;
   }
   // 5. Let status be O.[[SetPrototypeOf]](proto).
-  auto status = JSObject::setProto(
+  auto status = JSObject::setParent(
       vmcast<JSObject>(*O), runtime, dyn_vmcast<JSObject>(*proto));
   // 7. If status is false, throw a TypeError exception.
-  // Note that JSObject::setProto throws instead of returning false.
+  // Note that JSObject::setParent throws instead of returning false.
   if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1329,9 +1329,9 @@ objectPrototypeIsPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto *obj = vmcast<JSObject>(res.getValue());
-  auto *proto = vmcast<JSObject>(args.getArg(0));
-  while ((proto = proto->getProto())) {
-    if (proto == obj) {
+  auto *parent = vmcast<JSObject>(args.getArg(0));
+  while ((parent = parent->getParent())) {
+    if (parent == obj) {
       return HermesValue::encodeBoolValue(true);
     }
   }
@@ -1366,9 +1366,9 @@ objectPrototypeProto_getter(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // Note that we must return 'null' if there is no prototype.
-  JSObject *proto = vmcast<JSObject>(res.getValue())->getProto();
-  return proto ? HermesValue::encodeObjectValue(proto)
-               : HermesValue::encodeNullValue();
+  JSObject *parent = vmcast<JSObject>(res.getValue())->getParent();
+  return parent ? HermesValue::encodeObjectValue(parent)
+                : HermesValue::encodeNullValue();
 }
 
 static CallResult<HermesValue>
@@ -1391,7 +1391,7 @@ objectPrototypeProto_setter(void *, Runtime *runtime, NativeArgs args) {
   else
     return HermesValue::encodeUndefinedValue();
 
-  JSObject::setProto(vmcast<JSObject>(args.getThisArg()), runtime, protoPtr);
+  JSObject::setParent(vmcast<JSObject>(args.getThisArg()), runtime, protoPtr);
   return HermesValue::encodeUndefinedValue();
 }
 

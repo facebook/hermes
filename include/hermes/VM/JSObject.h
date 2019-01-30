@@ -294,12 +294,12 @@ class JSObject : public GCCell {
   JSObject(
       Runtime *runtime,
       const VTable *vtp,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage,
       NeedsBarriers needsBarriers)
       : GCCell(&runtime->getHeap(), vtp),
-        proto_(proto, &runtime->getHeap(), needsBarriers),
+        parent_(parent, &runtime->getHeap(), needsBarriers),
         clazz_(clazz, &runtime->getHeap(), needsBarriers),
         propStorage_(
             unwrapPropStorage(propStorage),
@@ -310,11 +310,11 @@ class JSObject : public GCCell {
   JSObject(
       Runtime *runtime,
       const VTable *vtp,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       NeedsBarriers needsBarriers)
       : GCCell(&runtime->getHeap(), vtp),
-        proto_(proto, &runtime->getHeap(), needsBarriers),
+        parent_(parent, &runtime->getHeap(), needsBarriers),
         clazz_(clazz, &runtime->getHeap(), needsBarriers),
         propStorage_(nullptr, &runtime->getHeap(), needsBarriers) {}
 
@@ -324,13 +324,13 @@ class JSObject : public GCCell {
   JSObject(
       Runtime *runtime,
       const VTable *vtp,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage)
       : JSObject(
             runtime,
             vtp,
-            proto,
+            parent,
             clazz,
             propStorage,
             GCPointerBase::NoBarriers()) {}
@@ -338,9 +338,9 @@ class JSObject : public GCCell {
   JSObject(
       Runtime *runtime,
       const VTable *vtp,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz)
-      : JSObject(runtime, vtp, proto, clazz, GCPointerBase::NoBarriers()) {}
+      : JSObject(runtime, vtp, parent, clazz, GCPointerBase::NoBarriers()) {}
 
  public:
   static ObjectVTable vt;
@@ -365,7 +365,7 @@ class JSObject : public GCCell {
   /// If allocation fails, the GC declares an OOM.
   static PseudoHandle<JSObject> create(
       Runtime *runtime,
-      Handle<JSObject> protoHandle);
+      Handle<JSObject> parentHandle);
 
   /// Attempts to allocate a JSObject with the standard Object prototype.
   /// If allocation fails, the GC declares an OOM.
@@ -392,7 +392,7 @@ class JSObject : public GCCell {
   /// only used in interfaces where other creators may throw a JS exception.
   static CallResult<HermesValue> createWithException(
       Runtime *runtime,
-      Handle<JSObject> protoHandle);
+      Handle<JSObject> parentHandle);
 
   ~JSObject() = default;
 
@@ -424,8 +424,8 @@ class JSObject : public GCCell {
   }
 
   /// \return the `__proto__` internal property, which may be nullptr.
-  JSObject *getProto() const {
-    return proto_;
+  JSObject *getParent() const {
+    return parent_;
   }
 
   /// \return the hidden class of this object.
@@ -458,7 +458,7 @@ class JSObject : public GCCell {
   /// Sets the internal prototype property. Throws an exception if a cycle is
   /// detected.
   static ExecutionStatus
-  setProto(JSObject *self, Runtime *runtime, JSObject *proto);
+  setParent(JSObject *self, Runtime *runtime, JSObject *parent);
 
   /// Allocate internal properties - it reserves \p count slots, starting from
   /// index 0, which are not accessible by name. This method can be called
@@ -1093,7 +1093,7 @@ class JSObject : public GCCell {
   ObjectFlags flags_{};
 
   /// The prototype of this object.
-  GCPointer<JSObject> proto_;
+  GCPointer<JSObject> parent_;
 
   /// The dynamically derived "class" of the object, describing its fields in
   /// order.

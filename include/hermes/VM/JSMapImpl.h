@@ -32,7 +32,7 @@ class JSMapImpl final : public JSObject {
 
   static CallResult<HermesValue> create(
       Runtime *runtime,
-      Handle<JSObject> protoHandle);
+      Handle<JSObject> parentHandle);
 
   /// Allocate the internal element storage.
   static ExecutionStatus initializeStorage(
@@ -141,10 +141,10 @@ class JSMapImpl final : public JSObject {
  protected:
   JSMapImpl(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage)
-      : JSObject(runtime, &vt.base, proto, clazz, propStorage) {}
+      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
 
  private:
   /// The underlying storage.
@@ -256,10 +256,10 @@ class JSMapIteratorImpl final : public JSObject {
  protected:
   JSMapIteratorImpl(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage)
-      : JSObject(runtime, &vt.base, proto, clazz, propStorage) {}
+      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
 
  private:
   /// The internal pointer to the Map data. nullptr if the iterator has not been

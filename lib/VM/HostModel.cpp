@@ -44,14 +44,14 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
     FinalizeNativeFunctionPtr finalizePtr,
     SymbolID name,
     unsigned paramCount) {
-  auto protoHandle = Handle<JSObject>::vmcast(&runtime->functionPrototype);
+  auto parentHandle = Handle<JSObject>::vmcast(&runtime->functionPrototype);
 
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       sizeof(FinalizableNativeFunction));
   auto selfHandle = runtime->makeHandle(new (mem) FinalizableNativeFunction(
       runtime,
-      protoHandle,
-      runtime->getHiddenClassForPrototype(protoHandle),
+      parentHandle,
+      runtime->getHiddenClassForPrototype(parentHandle),
       context,
       functionPtr,
       finalizePtr));
@@ -96,14 +96,14 @@ void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<HermesValue> HostObject::createWithoutPrototype(
     Runtime *runtime,
     std::shared_ptr<HostObjectProxy> proxy) {
-  auto protoHandle = Handle<JSObject>::vmcast(&runtime->objectPrototype);
+  auto parentHandle = Handle<JSObject>::vmcast(&runtime->objectPrototype);
 
   void *mem =
       runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(HostObject));
   HostObject *hostObj = new (mem) HostObject(
       runtime,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       proxy);
 
   hostObj->flags_.hostObject = true;

@@ -99,11 +99,11 @@ class JSWeakMapImplBase : public JSObject {
   JSWeakMapImplBase(
       Runtime *runtime,
       const VTable *vtp,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage,
       BigStorage *valueStorage)
-      : JSObject(runtime, vtp, proto, clazz, propStorage),
+      : JSObject(runtime, vtp, parent, clazz, propStorage),
         valueStorage_(valueStorage, &runtime->getHeap()) {}
 
  public:
@@ -243,24 +243,24 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
     return cell->getKind() == C;
   }
 
-  /// Create a new WeakMap with prototype property \p protoHandle.
+  /// Create a new WeakMap with prototype property \p parentHandle.
   static CallResult<HermesValue> create(
       Runtime *runtime,
-      Handle<JSObject> protoHandle);
+      Handle<JSObject> parentHandle);
 
   static void WeakMapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  protected:
   JSWeakMapImpl(
       Runtime *runtime,
-      JSObject *proto,
+      JSObject *parent,
       HiddenClass *clazz,
       JSObjectPropStorage *propStorage,
       BigStorage *valueStorage)
       : JSWeakMapImplBase(
             runtime,
             &vt.base,
-            proto,
+            parent,
             clazz,
             propStorage,
             valueStorage) {}

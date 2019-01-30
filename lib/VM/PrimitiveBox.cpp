@@ -33,7 +33,7 @@ void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<HermesValue> JSString::create(
     Runtime *runtime,
     Handle<StringPrimitive> value,
-    Handle<JSObject> protoHandle) {
+    Handle<JSObject> parentHandle) {
   auto propStorage =
       JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
   if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
@@ -43,8 +43,8 @@ CallResult<HermesValue> JSString::create(
   void *mem = runtime->alloc(sizeof(JSString));
   auto selfHandle = runtime->makeHandle(new (mem) JSString(
       runtime,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       **propStorage));
 
   JSObject::addInternalProperties(selfHandle, runtime, 1, value);
@@ -286,8 +286,10 @@ void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
-CallResult<HermesValue>
-JSNumber::create(Runtime *runtime, double value, Handle<JSObject> protoHandle) {
+CallResult<HermesValue> JSNumber::create(
+    Runtime *runtime,
+    double value,
+    Handle<JSObject> parentHandle) {
   auto propStorage =
       JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
   if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
@@ -297,8 +299,8 @@ JSNumber::create(Runtime *runtime, double value, Handle<JSObject> protoHandle) {
   void *mem = runtime->alloc(sizeof(JSNumber));
   auto selfHandle = runtime->makeHandle(new (mem) JSNumber(
       runtime,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       **propStorage));
 
   JSObject::addInternalProperties(
@@ -329,7 +331,7 @@ void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 CallResult<HermesValue>
-JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> protoHandle) {
+JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
   auto propStorage =
       JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
   if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
@@ -339,8 +341,8 @@ JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> protoHandle) {
   void *mem = runtime->alloc(sizeof(JSBoolean));
   auto selfHandle = runtime->makeHandle(new (mem) JSBoolean(
       runtime,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       **propStorage));
 
   JSObject::addInternalProperties(
@@ -369,7 +371,7 @@ void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<HermesValue> JSSymbol::create(
     Runtime *runtime,
     SymbolID value,
-    Handle<JSObject> protoHandle) {
+    Handle<JSObject> parentHandle) {
   auto propStorage =
       JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
   if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
@@ -379,8 +381,8 @@ CallResult<HermesValue> JSSymbol::create(
   void *mem = runtime->alloc(sizeof(JSSymbol));
   auto selfHandle = runtime->makeHandle(new (mem) JSSymbol(
       runtime,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       **propStorage));
 
   JSObject::addInternalProperties(

@@ -30,7 +30,7 @@ void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 CallResult<HermesValue>
-JSDate::create(Runtime *runtime, double value, Handle<JSObject> protoHandle) {
+JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
   auto propStorage =
       JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
   if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
@@ -40,8 +40,8 @@ JSDate::create(Runtime *runtime, double value, Handle<JSObject> protoHandle) {
   void *mem = runtime->alloc(sizeof(JSDate));
   auto selfHandle = runtime->makeHandle(new (mem) JSDate(
       runtime,
-      *protoHandle,
-      runtime->getHiddenClassForPrototypeRaw(*protoHandle),
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       **propStorage));
   JSObject::addInternalProperties(
       selfHandle,
