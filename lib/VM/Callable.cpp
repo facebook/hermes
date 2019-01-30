@@ -58,7 +58,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime *runtime) {
         codeBlock->getName(),
         codeBlock->getParamCount() - 1,
         prototypeObjectHandle,
-        false,
+        Callable::WritablePrototype::Yes,
         codeBlock->isStrictMode());
     assert(
         cr != ExecutionStatus::EXCEPTION && "failed to define length and name");
@@ -86,7 +86,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     SymbolID name,
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
-    bool systemConstructor,
+    WritablePrototype writablePrototype,
     bool strictMode) {
   PropertyFlags pf;
   pf.clear();
@@ -145,7 +145,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     pf.clear();
     pf.enumerable = 0;
     /// System constructors have read-only prototypes.
-    pf.writable = systemConstructor ? 0 : 1;
+    pf.writable = (uint8_t)writablePrototype;
     pf.configurable = 0;
     DEFINE_PROP(selfHandle, P::prototype, prototypeObjectHandle);
 
@@ -750,7 +750,7 @@ Handle<NativeFunction> NativeFunction::create(
       name,
       paramCount,
       prototypeObjectHandle,
-      false,
+      Callable::WritablePrototype::Yes,
       false);
   (void)st;
   assert(
@@ -784,7 +784,7 @@ Handle<NativeFunction> NativeFunction::create(
       name,
       paramCount,
       prototypeObjectHandle,
-      false,
+      Callable::WritablePrototype::Yes,
       false);
   (void)st;
   assert(

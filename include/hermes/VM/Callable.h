@@ -135,6 +135,8 @@ class Callable : public JSObject {
     return environment_.get();
   }
 
+  enum class WritablePrototype : uint8_t { No = 0, Yes = 1 };
+
   /// Initialize the name, length and prototype property. This method factors
   /// out common code for initialization of callable-s.
   /// First, defines the ".name" property. It is set to the empty string if
@@ -147,8 +149,8 @@ class Callable : public JSObject {
   ///   \c INVALID_IDENTIFIER_ID.
   /// \param paramCount number of declared named parameters
   /// \param prototypeObjectHandle optional value for .prototype
-  /// \param systemConstructor if true, the prototype property will be defined
-  ///   as read-only
+  /// \param writablePrototype determines whether the prototype property will
+  ///   be created as writable or read-only.
   /// \param strictMode the function is a strict mode function; used to
   ///   populate the .arguments and .caller field correctly.
   static ExecutionStatus defineNameLengthAndPrototype(
@@ -157,7 +159,7 @@ class Callable : public JSObject {
       SymbolID name,
       unsigned paramCount,
       Handle<JSObject> prototypeObjectHandle,
-      bool systemConstructor,
+      WritablePrototype writeablePrototype,
       bool strictMode);
 
   /// Execute this function with no arguments. This is just a convenience

@@ -64,7 +64,7 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
       name,
       paramCount,
       prototypeObjectHandle,
-      false,
+      Callable::WritablePrototype::Yes,
       false);
   (void)st;
   assert(

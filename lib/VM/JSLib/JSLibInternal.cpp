@@ -39,7 +39,7 @@ Handle<NativeConstructor> defineSystemConstructor(
       name,
       paramCount,
       prototypeObjectHandle,
-      true,
+      Callable::WritablePrototype::No,
       false);
   (void)st;
   assert(
