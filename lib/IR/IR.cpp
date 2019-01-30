@@ -707,13 +707,6 @@ LiteralBool *Module::getLiteralBool(bool value) {
   return &literalFalse;
 }
 
-LiteralUndefined *Module::getLiteralUndefined() {
-  return &literalUndefined;
-}
-LiteralNull *Module::getLiteralNull() {
-  return &literalNull;
-}
-
 void Type::print(llvm::raw_ostream &OS) const {
   bool first = true;
   for (unsigned i = 0; i < (unsigned)Type::TypeKind::LAST_TYPE; i++) {

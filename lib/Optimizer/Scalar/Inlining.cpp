@@ -161,7 +161,8 @@ static Value *inlineFunction(
         newOp = operandMap[oldOp];
         assert(newOp && "operand not visited before instruction");
       } else if (
-          isa<Label>(oldOp) || isa<Literal>(oldOp) || isa<Variable>(oldOp)) {
+          isa<Label>(oldOp) || isa<Literal>(oldOp) || isa<Variable>(oldOp) ||
+          isa<EmptySentinel>(oldOp)) {
         // Labels, literals and variables are unchanged.
         newOp = oldOp;
       } else {

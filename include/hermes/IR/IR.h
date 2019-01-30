@@ -500,6 +500,19 @@ class Parameter : public Value {
   }
 };
 
+/// This represent an empty or missing value.
+class EmptySentinel : public Value {
+  EmptySentinel(const EmptySentinel &) = delete;
+  void operator=(const EmptySentinel &) = delete;
+
+ public:
+  explicit EmptySentinel() : Value(ValueKind::EmptySentinelKind) {}
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::EmptySentinelKind;
+  }
+};
+
 /// This represents a label, which is a thin wrapper around an identifier.
 class Label : public Value {
   Label(const Label &) = delete;
@@ -1559,6 +1572,7 @@ class Module : public Value {
   LiteralNull literalNull{};
   LiteralBool literalFalse{false};
   LiteralBool literalTrue{true};
+  EmptySentinel emptySentinel_{};
 
   using LiteralNumberFoldingSet = llvm::FoldingSet<LiteralNumber>;
   using LiteralStringFoldingSet = llvm::FoldingSet<LiteralString>;
@@ -1665,14 +1679,23 @@ class Module : public Value {
   LiteralBool *getLiteralBool(bool value);
 
   /// Create a new literal 'undefined'.
-  LiteralUndefined *getLiteralUndefined();
+  LiteralUndefined *getLiteralUndefined() {
+    return &literalUndefined;
+  }
 
   /// Create a new literal null.
-  LiteralNull *getLiteralNull();
+  LiteralNull *getLiteralNull() {
+    return &literalNull;
+  }
 
   /// Return the GlobalObject value.
   GlobalObject *getGlobalObject() {
     return &globalObject_;
+  }
+
+  /// Return the shared instance of EmptySentinel.
+  EmptySentinel *getEmptySentinel() {
+    return &emptySentinel_;
   }
 
   /// Add a new CJS module entry, given the function representing the module.

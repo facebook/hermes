@@ -154,6 +154,10 @@ GlobalObject *IRBuilder::getGlobalObject() {
   return M->getGlobalObject();
 }
 
+EmptySentinel *IRBuilder::getEmptySentinel() {
+  return M->getEmptySentinel();
+}
+
 Identifier IRBuilder::createIdentifier(StringRef str) {
   return M->getContext().getIdentifier(str);
 }

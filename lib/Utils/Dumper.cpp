@@ -127,6 +127,8 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     os << "undefined";
   } else if (isa<GlobalObject>(V)) {
     os << "globalObject";
+  } else if (isa<EmptySentinel>(V)) {
+    os << "empty";
   } else if (isa<Instruction>(V)) {
     os << "%" << InstNamer.getNumber(V);
   } else if (isa<BasicBlock>(V)) {

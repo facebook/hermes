@@ -134,6 +134,9 @@ class IRBuilder {
   /// Return the GlobalObject value.
   GlobalObject *getGlobalObject();
 
+  /// Return the EmptySentinel value.
+  EmptySentinel *getEmptySentinel();
+
   /// Convert StringRef to Identifier.
   Identifier createIdentifier(StringRef str);
 
