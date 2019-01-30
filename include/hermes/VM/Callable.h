@@ -721,6 +721,8 @@ class JSFunction final : public Callable {
   /// CodeBlock to execute when called.
   CodeBlock *codeBlock_;
 
+  static constexpr auto kHasFinalizer = HasFinalizer::Yes;
+
  protected:
   JSFunction(
       Runtime *runtime,
@@ -731,6 +733,9 @@ class JSFunction final : public Callable {
       : Callable(runtime, &vt.base.base, parent, clazz, environment),
         codeBlock_(codeBlock) {
     codeBlock->getRuntimeModule()->addUser();
+    assert(
+        !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
+        "kHasFinalizer invalid value");
   }
 
   ~JSFunction() {

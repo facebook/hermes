@@ -885,7 +885,7 @@ CallResult<HermesValue> JSFunction::create(
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
   void *mem =
-      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(JSFunction));
+      runtime->alloc</*fixedSize*/ true, kHasFinalizer>(sizeof(JSFunction));
   auto *self = new (mem) JSFunction(
       runtime,
       *parentHandle,
