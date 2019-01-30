@@ -5,7 +5,7 @@
 //CHECK-NEXT:    %BB0:
 //CHECK-NEXT:%0 = AllocObjectInst 1 : number
 //CHECK-NEXT:%1 = CreateFunctionInst %m() : number
-//CHECK-NEXT:%2 = StoreOwnPropertyInst %1 : closure, %0 : object, "m" : string
+//CHECK-NEXT:%2 = StoreNewOwnPropertyInst %1 : closure, %0 : object, "m" : string, true : boolean
 //CHECK-NEXT:%3 = LoadPropertyInst %0 : object, "m" : string
 //CHECK-NEXT:%4 = CallInst %3 : closure, %0 : object
 //CHECK-NEXT:%5 = ReturnInst %4 : number
@@ -119,9 +119,9 @@ function module5() {
 //CHECK-NEXT:    %BB0:
 //CHECK-NEXT:%0 = AllocObjectInst 2 : number
 //CHECK-NEXT:%1 = CreateFunctionInst %n() : boolean
-//CHECK-NEXT:%2 = StoreOwnPropertyInst %1 : closure, %0 : object, "n" : string
+//CHECK-NEXT:%2 = StoreNewOwnPropertyInst %1 : closure, %0 : object, "n" : string, true : boolean
 //CHECK-NEXT:%3 = CreateFunctionInst %"m 4#"() : undefined
-//CHECK-NEXT:%4 = StoreOwnPropertyInst %3 : closure, %0 : object, "m" : string
+//CHECK-NEXT:%4 = StoreNewOwnPropertyInst %3 : closure, %0 : object, "m" : string, true : boolean
 //CHECK-NEXT:%5 = LoadPropertyInst %0 : object, "m" : string
 //CHECK-NEXT:%6 = CallInst %5 : closure, %0 : object
 //CHECK-NEXT:%7 = LoadPropertyInst %0 : object, "n" : string
@@ -144,9 +144,9 @@ function module6() {
 //CHECK-NEXT:    %BB0:
 //CHECK-NEXT:%0 = AllocObjectInst 2 : number
 //CHECK-NEXT:%1 = CreateFunctionInst %a() : boolean
-//CHECK-NEXT:%2 = StoreOwnPropertyInst %1 : closure, %0 : object, "a" : string
+//CHECK-NEXT:%2 = StoreNewOwnPropertyInst %1 : closure, %0 : object, "a" : string, true : boolean
 //CHECK-NEXT:%3 = CreateFunctionInst %"m 5#"() : closure
-//CHECK-NEXT:%4 = StoreOwnPropertyInst %3 : closure, %0 : object, "m" : string
+//CHECK-NEXT:%4 = StoreNewOwnPropertyInst %3 : closure, %0 : object, "m" : string, true : boolean
 //CHECK-NEXT:%5 = LoadPropertyInst %0 : object, "m" : string
 //CHECK-NEXT:%6 = CallInst %5 : closure, %0 : object
 //CHECK-NEXT:%7 = CallInst %6 : closure, undefined : undefined
@@ -164,7 +164,7 @@ function module7() {
 //CHECK-NEXT:%0 = CreateFunctionInst %f() : boolean
 //CHECK-NEXT:%1 = AllocObjectInst 0 : number
 //CHECK-NEXT:%2 = AllocObjectInst 1 : number
-//CHECK-NEXT:%3 = StoreOwnPropertyInst %0 : closure, %2 : object, "m" : string
+//CHECK-NEXT:%3 = StoreNewOwnPropertyInst %0 : closure, %2 : object, "m" : string, true : boolean
 //CHECK-NEXT:%4 = StorePropertyInst %2 : object, %1 : object, "foo" : string
 //CHECK-NEXT:%5 = LoadPropertyInst %1 : object, "foo" : string
 //CHECK-NEXT:%6 = LoadPropertyInst %5, "m" : string
@@ -183,9 +183,9 @@ function module8() {
 //CHECK-NEXT:    %BB0:
 //CHECK-NEXT:%0 = AllocObjectInst 2 : number
 //CHECK-NEXT:%1 = CreateFunctionInst %"a 1#"() : boolean
-//CHECK-NEXT:%2 = StoreOwnPropertyInst %1 : closure, %0 : object, "a" : string
+//CHECK-NEXT:%2 = StoreNewOwnPropertyInst %1 : closure, %0 : object, "a" : string, true : boolean
 //CHECK-NEXT:%3 = CreateFunctionInst %b() : boolean
-//CHECK-NEXT:%4 = StoreOwnPropertyInst %3 : closure, %0 : object, "b" : string
+//CHECK-NEXT:%4 = StoreNewOwnPropertyInst %3 : closure, %0 : object, "b" : string, true : boolean
 //CHECK-NEXT:%5 = LoadPropertyInst %0 : object, "b" : string
 //CHECK-NEXT:%6 = CallInst %5 : closure, %0 : object
 //CHECK-NEXT:%7 = ReturnInst %6 : boolean
@@ -208,15 +208,15 @@ function module9() {
 //CHECK-NEXT:    %BB0:
 //CHECK-NEXT:%0 = AllocObjectInst 2 : number
 //CHECK-NEXT:%1 = CreateFunctionInst %num() : number
-//CHECK-NEXT:%2 = StoreOwnPropertyInst %1 : closure, %0 : object, "num" : string
-//CHECK-NEXT:%3 = StoreOwnPropertyInst undefined : undefined, %0 : object, "next" : string
+//CHECK-NEXT:%2 = StoreNewOwnPropertyInst %1 : closure, %0 : object, "num" : string, true : boolean
+//CHECK-NEXT:%3 = StoreNewOwnPropertyInst undefined : undefined, %0 : object, "next" : string, true : boolean
 //CHECK-NEXT:%4 = CondBranchInst %c, %BB1, %BB2
 //CHECK-NEXT:%BB1:
 //CHECK-NEXT:%5 = PhiInst %0 : object, %BB0, %11 : undefined|object, %BB1
 //CHECK-NEXT:%6 = AllocObjectInst 2 : number
 //CHECK-NEXT:%7 = CreateFunctionInst %"num 1#"() : boolean
-//CHECK-NEXT:%8 = StoreOwnPropertyInst %7 : closure, %6 : object, "num" : string
-//CHECK-NEXT:%9 = StoreOwnPropertyInst undefined : undefined, %6 : object, "next" : string
+//CHECK-NEXT:%8 = StoreNewOwnPropertyInst %7 : closure, %6 : object, "num" : string, true : boolean
+//CHECK-NEXT:%9 = StoreNewOwnPropertyInst undefined : undefined, %6 : object, "next" : string, true : boolean
 //CHECK-NEXT:%10 = StorePropertyInst %6 : object, %5 : undefined|object, "next" : string
 //CHECK-NEXT:%11 = LoadPropertyInst %5 : undefined|object, "next" : string
 //CHECK-NEXT:%12 = CondBranchInst %c, %BB1, %BB2

@@ -133,6 +133,14 @@ inline OptValue<uint32_t> toArrayIndex(llvm::StringRef str) {
   return toArrayIndex(str.begin(), str.end());
 }
 
+/// Attempt to convert a double to a valid JavaScript array number.
+inline OptValue<uint32_t> doubleToArrayIndex(double d) {
+  uint32_t index = (uint32_t)d;
+  if (index == d && index != 0xFFFFFFFFu)
+    return index;
+  return llvm::None;
+}
+
 /// Size of buffer that must be passed to numberToString.
 const size_t NUMBER_TO_STRING_BUF_SIZE = 32;
 

@@ -41,7 +41,7 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
    ;         'e': {"bar": null}
    ;       }
    ; First five values are added through NewObjectWithBuffer
-   ; while the sixth value is added through PutOwnById.
+   ; while the sixth value is added through PutNewOwnById.
    ; This test makes sure that each value is correctly stored
    ; and that two objects can correctly use the same buffers.
    */
@@ -81,7 +81,7 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   BFG->emitNewObjectWithBuffer(0, 5, 4, objIdxs.first, objIdxs.second);
   BFG->emitNewObjectWithBuffer(
       1, 1, 1, innerObjIdxs.first, innerObjIdxs.second);
-  BFG->emitPutOwnById(0, 1, IDe);
+  BFG->emitPutNewOwnById(0, 1, IDe);
 
   BFG->emitGetById(1, 0, 0, IDa);
   BFG->emitLoadConstFalse(2);

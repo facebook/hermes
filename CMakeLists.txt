@@ -301,6 +301,7 @@ list(APPEND HERMES_TEST_DEPS
   interp-dispatch-bench
   hdb
   hermes-repl
+  hbc-attribute
   hbc-deltaprep
   llvm-config
   )

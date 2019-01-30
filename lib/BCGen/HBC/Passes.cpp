@@ -110,10 +110,30 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (isa<SwitchInst>(Inst) && opIndex > 0)
     return true;
 
-  // StoreOwnPropertyInst's property ID should always be a literal.
-  if (isa<StoreOwnPropertyInst>(Inst) &&
-      opIndex == StoreOwnPropertyInst::PropertyIdx)
-    return true;
+  // StoreOwnPropertyInst and StoreNewOwnPropertyInst.
+  if (auto *SOP = dyn_cast<StoreOwnPropertyInst>(Inst)) {
+    if (opIndex == StoreOwnPropertyInst::PropertyIdx) {
+      if (isa<StoreNewOwnPropertyInst>(Inst)) {
+        // In StoreNewOwnPropertyInst the property name must be a literal
+        // string.
+        return true;
+      }
+
+      // If the propery is a LiteralNumber, the property is enumerable, and it
+      // is a valid array index, it is coming from an array initialization and
+      // we will emit it as PutByIndex.
+      if (auto *LN = dyn_cast<LiteralNumber>(Inst->getOperand(opIndex))) {
+        if (SOP->getIsEnumerable() && LN->convertToArrayIndex().hasValue())
+          return true;
+      }
+    }
+
+    // StoreOwnPropertyInst's isEnumerable is a boolean constant.
+    if (opIndex == StoreOwnPropertyInst::IsEnumerableIdx)
+      return true;
+
+    return false;
+  }
 
   // If StorePropertyInst's property ID is a LiteralString, we will keep it
   // untouched and emit try_put_by_id eventually.
@@ -135,9 +155,9 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
       isa<LiteralString>(Inst->getOperand(opIndex)))
     return true;
 
-  // StoreGetterSetterInst's property ID should always be a literal.
+  // StoreGetterSetterInst's isEnumerable is a boolean constant.
   if (isa<StoreGetterSetterInst>(Inst) &&
-      opIndex == StoreGetterSetterInst::PropertyIdx)
+      opIndex == StoreGetterSetterInst::IsEnumerableIdx)
     return true;
 
   // Both pattern and flags operands of the CreateRegExpInst

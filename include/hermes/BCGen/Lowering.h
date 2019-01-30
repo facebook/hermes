@@ -37,7 +37,7 @@ class SwitchLowering : public FunctionPass {
   void erasePhiTarget(BasicBlock *block, BasicBlock *toDelete);
 };
 
-/// Lowers AllocObjects and any PutOwnByIds which use literals
+/// Lowers AllocObjects and any PutNewOwnByIds which use literals
 /// to a single HBCAllocObjectFromBufferInst.
 class LowerAllocObject : public FunctionPass {
  public:

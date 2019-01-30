@@ -485,7 +485,7 @@ class FastJIT {
   Emitters
   compileNewArrayWithBuffer(Emitters emit, const Inst *ip, uint32_t idx);
   Emitters compilePutOwnByIndex(Emitters emit, const Inst *ip, uint32_t idx);
-  Emitters compilePutOwnById(Emitters emit, const Inst *ip, uint32_t idx);
+  Emitters compilePutNewOwnById(Emitters emit, const Inst *ip, uint32_t idx);
   Emitters compileLoadThisNS(Emitters emit, const Inst *ip);
   Emitters compileCoerceThisNS(Emitters emit, const Inst *ip);
 

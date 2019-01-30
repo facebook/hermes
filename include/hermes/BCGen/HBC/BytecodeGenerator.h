@@ -262,7 +262,7 @@ class BytecodeModuleGenerator {
   std::vector<uint32_t> cjsModulesStatic_;
 
   /// Set of all string IDs that are used explicitly as identifiers,
-  /// e.g. used in PutOwnById instruction.
+  /// e.g. used in PutNewOwnById instruction.
   llvm::DenseSet<unsigned> identifiers_{};
 
   /// Table of constants used to initialize constant arrays.

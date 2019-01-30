@@ -16,7 +16,7 @@
 //CHECK-NEXT:  %9 = CallInst %5, undefined : undefined, %8 : number
 //CHECK-NEXT:  %10 = AllocObjectInst 1 : number
 //CHECK-NEXT:  %11 = CreateFunctionInst %m() : undefined
-//CHECK-NEXT:  %12 = StoreOwnPropertyInst %11 : closure, %10 : object, "m" : string
+//CHECK-NEXT:  %12 = StoreNewOwnPropertyInst %11 : closure, %10 : object, "m" : string, true : boolean
 //CHECK-NEXT:  %13 = ReturnInst %10 : object
 //CHECK-NEXT:%BB2:
 //CHECK-NEXT:  %14 = ReturnInst undefined : undefined

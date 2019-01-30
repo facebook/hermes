@@ -32,7 +32,7 @@ function shadows() {
 //CHKRA-NEXT:  {{.*}} %0 = AllocObjectInst 1 : number
 //CHKRA-NEXT:  {{.*}} %1 = HBCGetGlobalObjectInst
 //CHKRA-NEXT:  {{.*}} %2 = TryLoadGlobalPropertyInst %1 : object, "print" : string
-//CHKRA-NEXT:  {{.*}} %3 = StoreOwnPropertyInst %2, %0 : object, "keys" : string
+//CHKRA-NEXT:  {{.*}} %3 = StoreNewOwnPropertyInst %2, %0 : object, "keys" : string, true : boolean
 //CHKRA-NEXT:  {{.*}} %4 = LoadPropertyInst %0 : object, "keys" : string
 //CHKRA-NEXT:  {{.*}} %5 = HBCLoadConstInst "evil" : string
 //CHKRA-NEXT:  {{.*}} %6 = CallInst %4, %0 : object, %5 : string

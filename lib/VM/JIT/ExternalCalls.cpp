@@ -388,7 +388,7 @@ ExecutionStatus externPutOwnByIndex(
       .getStatus(); // We don't need the bool value it returns
 }
 
-ExecutionStatus externPutOwnById(
+ExecutionStatus externPutNewOwnById(
     Runtime *runtime,
     PinnedHermesValue *target,
     PinnedHermesValue *prop,

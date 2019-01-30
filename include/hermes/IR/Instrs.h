@@ -915,8 +915,22 @@ class StoreOwnPropertyInst : public Instruction {
   StoreOwnPropertyInst(const StoreOwnPropertyInst &) = delete;
   void operator=(const StoreOwnPropertyInst &) = delete;
 
+ protected:
+  explicit StoreOwnPropertyInst(
+      ValueKind kind,
+      Value *storedValue,
+      Value *object,
+      Value *property,
+      LiteralBool *isEnumerable)
+      : Instruction(kind) {
+    pushOperand(storedValue);
+    pushOperand(object);
+    pushOperand(property);
+    pushOperand(isEnumerable);
+  }
+
  public:
-  enum { StoredValueIdx, ObjectIdx, PropertyIdx };
+  enum { StoredValueIdx, ObjectIdx, PropertyIdx, IsEnumerableIdx };
 
   Value *getStoredValue() const {
     return getOperand(StoredValueIdx);
@@ -924,19 +938,25 @@ class StoreOwnPropertyInst : public Instruction {
   Value *getObject() const {
     return getOperand(ObjectIdx);
   }
-  Literal *getProperty() const {
-    return cast<Literal>(getOperand(PropertyIdx));
+  Value *getProperty() const {
+    return getOperand(PropertyIdx);
+  }
+  bool getIsEnumerable() const {
+    return cast<LiteralBool>(getOperand(IsEnumerableIdx))->getValue();
   }
 
   explicit StoreOwnPropertyInst(
       Value *storedValue,
       Value *object,
-      Literal *property)
-      : Instruction(ValueKind::StoreOwnPropertyInstKind) {
-    pushOperand(storedValue);
-    pushOperand(object);
-    pushOperand(property);
-  }
+      Value *property,
+      LiteralBool *isEnumerable)
+      : StoreOwnPropertyInst(
+            ValueKind::StoreOwnPropertyInstKind,
+            storedValue,
+            object,
+            property,
+            isEnumerable) {}
+
   explicit StoreOwnPropertyInst(
       const StoreOwnPropertyInst *src,
       llvm::ArrayRef<Value *> operands)
@@ -954,10 +974,10 @@ class StoreOwnPropertyInst : public Instruction {
     switch (index) {
       case StoredValueIdx:
       case ObjectIdx:
-        return true;
       case PropertyIdx:
-        return kindIsA(kind, ValueKind::LiteralNumberKind) ||
-            kindIsA(kind, ValueKind::LiteralStringKind);
+        return true;
+      case IsEnumerableIdx:
+        return kindIsA(kind, ValueKind::LiteralBoolKind);
       default:
         return false;
     }
@@ -968,12 +988,59 @@ class StoreOwnPropertyInst : public Instruction {
   }
 };
 
+class StoreNewOwnPropertyInst : public StoreOwnPropertyInst {
+  StoreNewOwnPropertyInst(const StoreNewOwnPropertyInst &) = delete;
+  void operator=(const StoreNewOwnPropertyInst &) = delete;
+
+ public:
+  LiteralString *getPropertyName() const {
+    return cast<LiteralString>(getOperand(PropertyIdx));
+  }
+
+  explicit StoreNewOwnPropertyInst(
+      Value *storedValue,
+      Value *object,
+      LiteralString *property,
+      LiteralBool *isEnumerable)
+      : StoreOwnPropertyInst(
+            ValueKind::StoreNewOwnPropertyInstKind,
+            storedValue,
+            object,
+            property,
+            isEnumerable) {
+    assert(
+        object->getType().isObjectType() &&
+        "object operand must be known to be an object");
+  }
+
+  explicit StoreNewOwnPropertyInst(
+      const StoreNewOwnPropertyInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : StoreOwnPropertyInst(src, operands) {}
+
+  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
+    if (index == PropertyIdx)
+      return kindIsA(kind, ValueKind::LiteralStringKind);
+    return StoreOwnPropertyInst::canSetOperandImpl(kind, index);
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::StoreNewOwnPropertyInstKind);
+  }
+};
+
 class StoreGetterSetterInst : public Instruction {
   StoreGetterSetterInst(const StoreGetterSetterInst &) = delete;
   void operator=(const StoreGetterSetterInst &) = delete;
 
  public:
-  enum { StoredGetterIdx, StoredSetterIdx, ObjectIdx, PropertyIdx };
+  enum {
+    StoredGetterIdx,
+    StoredSetterIdx,
+    ObjectIdx,
+    PropertyIdx,
+    IsEnumerableIdx
+  };
 
   Value *getStoredGetter() const {
     return getOperand(StoredGetterIdx);
@@ -984,20 +1051,25 @@ class StoreGetterSetterInst : public Instruction {
   Value *getObject() const {
     return getOperand(ObjectIdx);
   }
-  LiteralString *getProperty() const {
-    return cast<LiteralString>(getOperand(PropertyIdx));
+  Value *getProperty() const {
+    return getOperand(PropertyIdx);
+  }
+  bool getIsEnumerable() const {
+    return cast<LiteralBool>(getOperand(IsEnumerableIdx))->getValue();
   }
 
   explicit StoreGetterSetterInst(
       Value *storedGetter,
       Value *storedSetter,
       Value *object,
-      LiteralString *property)
+      Value *property,
+      LiteralBool *isEnumerable)
       : Instruction(ValueKind::StoreGetterSetterInstKind) {
     pushOperand(storedGetter);
     pushOperand(storedSetter);
     pushOperand(object);
     pushOperand(property);
+    pushOperand(isEnumerable);
   }
   explicit StoreGetterSetterInst(
       const StoreGetterSetterInst *src,
@@ -1017,9 +1089,10 @@ class StoreGetterSetterInst : public Instruction {
       case StoredGetterIdx:
       case StoredSetterIdx:
       case ObjectIdx:
-        return true;
       case PropertyIdx:
-        return kindIsA(kind, ValueKind::LiteralStringKind);
+        return true;
+      case IsEnumerableIdx:
+        return kindIsA(kind, ValueKind::LiteralBoolKind);
       default:
         return false;
     }

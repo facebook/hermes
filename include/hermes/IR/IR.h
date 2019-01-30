@@ -659,6 +659,11 @@ class LiteralNumber : public Literal, public llvm::FoldingSetNode {
     return hermes::truncateToUInt32(value);
   }
 
+  /// Attempt to convert to an array index.
+  OptValue<uint32_t> convertToArrayIndex() const {
+    return doubleToArrayIndex(value);
+  }
+
   explicit LiteralNumber(double val)
       : Literal(ValueKind::LiteralNumberKind), value(val) {
     setType(Type::createNumber());

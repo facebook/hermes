@@ -195,10 +195,7 @@ OptValue<uint32_t> toArrayIndexFastPath(HermesValue value)
     LLVM_NO_SANITIZE("float-cast-overflow");
 inline OptValue<uint32_t> toArrayIndexFastPath(HermesValue value) {
   if (value.isNumber()) {
-    double d = value.getNumber();
-    uint32_t index = (uint32_t)d;
-    if (index == d && index != 0xFFFFFFFFu)
-      return index;
+    return hermes::doubleToArrayIndex(value.getNumber());
   }
   return llvm::None;
 }

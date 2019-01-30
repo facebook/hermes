@@ -6,7 +6,7 @@
 //CHECK-NEXT:%0 = AllocArrayInst 0 : number
 //CHECK-NEXT:%1 = AllocObjectInst 1 : number
 //CHECK-NEXT:%2 = CreateFunctionInst %m() : boolean
-//CHECK-NEXT:%3 = StoreOwnPropertyInst %2 : closure, %1 : object, "m" : string
+//CHECK-NEXT:%3 = StoreNewOwnPropertyInst %2 : closure, %1 : object, "m" : string, true : boolean
 //CHECK-NEXT:%4 = StorePropertyInst %1 : object, %0 : object, %i
 //CHECK-NEXT:%5 = LoadPropertyInst %0 : object, %j
 //CHECK-NEXT:%6 = LoadPropertyInst %5, "m" : string

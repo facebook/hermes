@@ -59,13 +59,14 @@ static void collectOwnProperties(
   for (auto *J : I.getUsers()) {
     if (auto *SOPI = dyn_cast<StoreOwnPropertyInst>(J)) {
       if (SOPI->getObject() == &I) {
-        props.insert(SOPI->getProperty());
+        if (auto *propName = dyn_cast<Literal>(SOPI->getProperty()))
+          props.insert(propName);
       }
     }
-    if (auto *SOPI = dyn_cast<StoreGetterSetterInst>(J)) {
-      if (SOPI->getObject() == &I) {
-        props.insert(SOPI->getProperty());
-      }
+    if (auto *SGSI = dyn_cast<StoreGetterSetterInst>(J)) {
+      if (SGSI->getObject() == &I)
+        if (auto *propName = dyn_cast<Literal>(SGSI->getProperty()))
+          props.insert(propName);
     }
   }
 }
@@ -134,6 +135,7 @@ static void generateInstructionConstraints(
       }
       break;
     }
+    case ValueKind::StoreNewOwnPropertyInstKind:
     case ValueKind::StoreOwnPropertyInstKind: {
       auto SPI = cast<StoreOwnPropertyInst>(&I);
       ap->addStoreOwnEdge(SPI->getObject(), SPI);

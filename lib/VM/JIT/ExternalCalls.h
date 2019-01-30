@@ -205,7 +205,7 @@ ExecutionStatus externPutOwnByIndex(
 /// \param target the target to put a property in.
 /// \param prop the property to be put.
 /// \param sid the SymbolID of the property which must already exist in the map.
-ExecutionStatus externPutOwnById(
+ExecutionStatus externPutNewOwnById(
     Runtime *runtime,
     PinnedHermesValue *target,
     PinnedHermesValue *prop,

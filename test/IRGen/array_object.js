@@ -9,9 +9,9 @@
 //CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [foo]
 //CHECK-NEXT:  %2 = StoreFrameInst %param, [param]
 //CHECK-NEXT:  %3 = AllocObjectInst 2 : number
-//CHECK-NEXT:  %4 = StoreOwnPropertyInst 2 : number, %3 : object, "1" : string
+//CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 2 : number, %3 : object, "1" : string, true : boolean
 //CHECK-NEXT:  %5 = LoadFrameInst [param]
-//CHECK-NEXT:  %6 = StoreOwnPropertyInst %5, %3 : object, "key" : string
+//CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %3 : object, "key" : string, true : boolean
 //CHECK-NEXT:  %7 = StoreFrameInst %3 : object, [obj]
 //CHECK-NEXT:  %8 = AllocArrayInst 4 : number, 1 : number, 2 : number, 3 : number, 4 : number
 //CHECK-NEXT:  %9 = StoreFrameInst %8 : object, [foo]

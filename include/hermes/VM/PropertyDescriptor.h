@@ -85,6 +85,16 @@ union PropertyFlags {
     return pf;
   }
 
+  /// Return an instance of PropertyFlags initialized to as writable,
+  /// configurable and non-enumerable.
+  static PropertyFlags nonEnumerablePropertyFlags() {
+    PropertyFlags pf{};
+    pf.enumerable = 0;
+    pf.writable = 1;
+    pf.configurable = 1;
+    return pf;
+  }
+
   /// Return the invalid instance.
   static PropertyFlags invalid() {
     PropertyFlags pf{};

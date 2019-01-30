@@ -589,50 +589,85 @@ void HBCISel::generateStoreOwnPropertyInst(
     BasicBlock *next) {
   auto valueReg = encodeValue(Inst->getStoredValue());
   auto objReg = encodeValue(Inst->getObject());
-  Literal *prop = Inst->getProperty();
-  if (auto *strProp = dyn_cast<LiteralString>(prop)) {
-    auto id = BCFGen_->addConstantString(strProp, true);
+  Value *prop = Inst->getProperty();
+  bool isEnumerable = Inst->getIsEnumerable();
 
-    // We can't use PutOwnById if the property is "__proto__";
-    bool dontUseOwn = strProp->getValue() == protoIdent_;
+  // If the property is a LiteralNumber, the property is enumerable, and it is a
+  // valid array index, it is coming from an array initialization and we will
+  // emit it as PutByIndex.
+  auto *numProp = dyn_cast<LiteralNumber>(prop);
+  if (numProp && isEnumerable) {
+    if (auto arrayIndex = numProp->convertToArrayIndex()) {
+      uint32_t index = arrayIndex.getValue();
+      if (index <= UINT8_MAX) {
+        BCFGen_->emitPutOwnByIndex(objReg, valueReg, index);
+      } else {
+        BCFGen_->emitPutOwnByIndexL(objReg, valueReg, index);
+      }
 
-    if (dontUseOwn) {
-      if (id <= UINT16_MAX)
-        BCFGen_->emitPutById(
-            objReg, valueReg, acquirePropertyWriteCacheIndex(), id);
-      else
-        BCFGen_->emitPutByIdLong(
-            objReg, valueReg, acquirePropertyWriteCacheIndex(), id);
+      return;
+    }
+  }
+
+  // It is a register operand.
+  auto propReg = encodeValue(Inst->getProperty());
+  BCFGen_->emitPutOwnByVal(objReg, valueReg, propReg, Inst->getIsEnumerable());
+}
+
+void HBCISel::generateStoreNewOwnPropertyInst(
+    StoreNewOwnPropertyInst *Inst,
+    BasicBlock *next) {
+  assert(
+      !toArrayIndex(Inst->getPropertyName()->getValue().str()).hasValue() &&
+      "Property name must not be a valid array index");
+
+  auto valueReg = encodeValue(Inst->getStoredValue());
+  auto objReg = encodeValue(Inst->getObject());
+  auto strProp = Inst->getPropertyName();
+  bool isEnumerable = Inst->getIsEnumerable();
+
+  auto id = BCFGen_->addConstantString(strProp, true);
+
+  // We can't use PutNewOwnById if the property is "__proto__";
+  bool dontUseOwn = strProp->getValue() == protoIdent_;
+
+  if (dontUseOwn) {
+    if (id <= UINT16_MAX)
+      BCFGen_->emitPutById(
+          objReg, valueReg, acquirePropertyWriteCacheIndex(), id);
+    else
+      BCFGen_->emitPutByIdLong(
+          objReg, valueReg, acquirePropertyWriteCacheIndex(), id);
+  } else {
+    if (isEnumerable) {
+      if (id > UINT16_MAX) {
+        BCFGen_->emitPutNewOwnByIdLong(objReg, valueReg, id);
+      } else if (id > UINT8_MAX) {
+        BCFGen_->emitPutNewOwnById(objReg, valueReg, id);
+      } else {
+        BCFGen_->emitPutNewOwnByIdShort(objReg, valueReg, id);
+      }
     } else {
       if (id > UINT16_MAX) {
-        BCFGen_->emitPutOwnByIdLong(objReg, valueReg, id);
-      } else if (id > UINT8_MAX) {
-        BCFGen_->emitPutOwnById(objReg, valueReg, id);
+        BCFGen_->emitPutNewOwnNEByIdLong(objReg, valueReg, id);
       } else {
-        BCFGen_->emitPutOwnByIdShort(objReg, valueReg, id);
+        BCFGen_->emitPutNewOwnNEById(objReg, valueReg, id);
       }
     }
-    return;
-  }
-  // For LiteralNumber index, we know this is from array initializations.
-  auto *numProp = dyn_cast<LiteralNumber>(prop);
-  uint32_t index = numProp->asUInt32();
-  if (index <= UINT8_MAX) {
-    BCFGen_->emitPutOwnByIndex(objReg, valueReg, index);
-  } else {
-    BCFGen_->emitPutOwnByIndexL(objReg, valueReg, index);
   }
 }
+
 void HBCISel::generateStoreGetterSetterInst(
     StoreGetterSetterInst *Inst,
     BasicBlock *next) {
   auto objReg = encodeValue(Inst->getObject());
-  auto ident = BCFGen_->addConstantString(Inst->getProperty(), true);
-  BCFGen_->emitPutGetterSetter(
+  auto ident = encodeValue(Inst->getProperty());
+  BCFGen_->emitPutOwnGetterSetterByVal(
       objReg,
       ident,
       encodeValue(Inst->getStoredGetter()),
-      encodeValue(Inst->getStoredSetter()));
+      encodeValue(Inst->getStoredSetter()),
+      Inst->getIsEnumerable());
 }
 void HBCISel::generateDeletePropertyInst(
     DeletePropertyInst *Inst,

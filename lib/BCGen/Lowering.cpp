@@ -153,12 +153,12 @@ bool LowerAllocObject::runOnFunction(Function *F) {
 // Estimated with the example of an integer. Substract the cost of serializing
 // the int and a 1-byte tag.
 static constexpr int32_t kLiteralSavedBytes = static_cast<int32_t>(
-    sizeof(inst::LoadConstIntInst) + sizeof(inst::PutOwnByIdInst) -
+    sizeof(inst::LoadConstIntInst) + sizeof(inst::PutNewOwnByIdInst) -
     sizeof(int32_t) - 1);
 // Number of bytes cost for serializing a non-literal into the buffer.
 // Cost includes a 1-byte tag and replacing with a longer put instruction.
 static constexpr int32_t kNonLiteralCostBytes = static_cast<int32_t>(
-    1 + sizeof(inst::PutByIdInst) - sizeof(inst::PutOwnByIdInst));
+    1 + sizeof(inst::PutByIdInst) - sizeof(inst::PutNewOwnByIdInst));
 // Max number of non-literals we allow to serialize into the buffer.
 // The number is chosen to be small and can allow most literals to be serialized
 // for most cases.
@@ -232,6 +232,17 @@ bool LowerAllocObject::lowerAlloc(AllocObjectInst *allocInst) {
       allocInst->getUsers().begin(), allocInst->getUsers().end());
   for (Instruction *u : users) {
     if (auto *put = dyn_cast<StoreOwnPropertyInst>(u)) {
+      // Skip if the property name isn't a LiteralString or a valid array index.
+      Literal *propLiteral = nullptr;
+      if (auto *LN = dyn_cast<LiteralNumber>(put->getProperty())) {
+        if (LN->convertToArrayIndex())
+          propLiteral = LN;
+      } else {
+        propLiteral = dyn_cast<LiteralString>(put->getProperty());
+      }
+      if (!propLiteral)
+        continue;
+
       // Skip if the instruction is storing the object itself into another
       // object.
       if (put->getStoredValue() == dyn_cast<Value>(allocInst) &&
@@ -248,14 +259,14 @@ bool LowerAllocObject::lowerAlloc(AllocObjectInst *allocInst) {
       if (loadInst &&
           loadInst->getSingleOperand()->getKind() !=
               ValueKind::LiteralUndefinedKind) {
-        prop_map.push_back(std::pair<Literal *, Literal *>(
-            put->getProperty(), loadInst->getConst()));
+        prop_map.push_back(
+            std::pair<Literal *, Literal *>(propLiteral, loadInst->getConst()));
         put->eraseFromParent();
       } else {
         // In the case of non-literal, use null as placeholder, and
         // later a PutById instruction will overwrite it with correct value.
         prop_map.push_back(std::pair<Literal *, Literal *>(
-            put->getProperty(), builder.getLiteralNull()));
+            propLiteral, builder.getLiteralNull()));
         builder.setLocation(put->getLocation());
         builder.setInsertionPoint(put);
         auto *newPut = builder.createStorePropertyInst(
@@ -324,9 +335,34 @@ bool LowerNumericProperties::stringToNumericProperty(
 
 bool LowerNumericProperties::runOnFunction(Function *F) {
   IRBuilder builder(F);
+  IRBuilder::InstructionDestroyer destroyer{};
+
   bool changed = false;
   for (BasicBlock &BB : *F) {
     for (Instruction &Inst : BB) {
+      // If StoreNewOwnPropertyInst's property name is a valid array index, we
+      // must convert the instruction to StoreOwnPropertyInst.
+      if (auto *SNOP = llvm::dyn_cast<StoreNewOwnPropertyInst>(&Inst)) {
+        auto *strLit = SNOP->getPropertyName();
+
+        // Check if the string looks exactly like an array index.
+        if (auto num = toArrayIndex(strLit->getValue().str())) {
+          builder.setInsertionPoint(&Inst);
+          builder.setLocation(SNOP->getLocation());
+          auto *inst = builder.createStoreOwnPropertyInst(
+              SNOP->getStoredValue(),
+              SNOP->getObject(),
+              builder.getLiteralNumber(*num),
+              SNOP->getIsEnumerable() ? IRBuilder::PropEnumerable::Yes
+                                      : IRBuilder::PropEnumerable::No);
+
+          Inst.replaceAllUsesWith(inst);
+          destroyer.add(&Inst);
+          changed = true;
+          continue;
+        }
+      }
+
       if (llvm::isa<LoadPropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, LoadPropertyInst::PropertyIdx);
@@ -339,6 +375,9 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
       } else if (llvm::isa<DeletePropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, DeletePropertyInst::PropertyIdx);
+      } else if (llvm::isa<StoreGetterSetterInst>(&Inst)) {
+        changed |= stringToNumericProperty(
+            builder, Inst, StoreGetterSetterInst::PropertyIdx);
       }
     }
   }
@@ -372,7 +411,10 @@ bool LimitAllocArray::runOnFunction(Function *F) {
           if (seenUndef) {
             e--;
             builder.createStoreOwnPropertyInst(
-                inst->getOperand(i), inst, builder.getLiteralNumber(ind));
+                inst->getOperand(i),
+                inst,
+                builder.getLiteralNumber(ind),
+                IRBuilder::PropEnumerable::Yes);
             inst->removeOperand(i);
             changed = true;
             continue;
@@ -391,7 +433,10 @@ bool LimitAllocArray::runOnFunction(Function *F) {
       for (unsigned i = inst->getElementCount() - 1; i >= maxSize_; i--) {
         int operandOffset = AllocArrayInst::ElementStartIdx + i;
         builder.createStoreOwnPropertyInst(
-            inst->getOperand(operandOffset), inst, builder.getLiteralNumber(i));
+            inst->getOperand(operandOffset),
+            inst,
+            builder.getLiteralNumber(i),
+            IRBuilder::PropEnumerable::Yes);
         inst->removeOperand(operandOffset);
       }
       totalElems += inst->getElementCount();

@@ -547,9 +547,9 @@ Emitters FastJIT::compileBB(Emitters emit) {
       CASE_WITH_SUFFIX(NewArrayWithBuffer, Long, op4);
       CASE_WITH_SUFFIX(PutOwnByIndex, , op3);
       CASE_WITH_SUFFIX(PutOwnByIndex, L, op3);
-      CASE_WITH_SUFFIX(PutOwnById, , op3);
-      CASE_WITH_SUFFIX(PutOwnById, Short, op3);
-      CASE_WITH_SUFFIX(PutOwnById, Long, op3);
+      CASE_WITH_SUFFIX(PutNewOwnById, , op3);
+      CASE_WITH_SUFFIX(PutNewOwnById, Short, op3);
+      CASE_WITH_SUFFIX(PutNewOwnById, Long, op3);
       CASE(LoadThisNS);
       CASE(CoerceThisNS);
       CASE(Throw);
@@ -1639,7 +1639,7 @@ FastJIT::compilePutOwnByIndex(Emitters emit, const Inst *ip, uint32_t idx) {
 }
 
 Emitters
-FastJIT::compilePutOwnById(Emitters emit, const Inst *ip, uint32_t idx) {
+FastJIT::compilePutNewOwnById(Emitters emit, const Inst *ip, uint32_t idx) {
   // Object to put property in -> arg2
   emit.fast = leaHermesReg(emit.fast, ip->iPutOwnByIndex.op1, Reg::rsi);
   // Property to be put -> arg3
@@ -1653,7 +1653,7 @@ FastJIT::compilePutOwnById(Emitters emit, const Inst *ip, uint32_t idx) {
       Reg::ecx);
 
   uint8_t *constAddr;
-  emit.slow = getConstant(emit.slow, (void *)externPutOwnById, constAddr);
+  emit.slow = getConstant(emit.slow, (void *)externPutNewOwnById, constAddr);
   emit.fast = callExternalNoReturnedVal(emit.fast, constAddr, ip);
 
   return emit;

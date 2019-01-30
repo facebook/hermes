@@ -223,7 +223,8 @@ Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
       if (consecutive) {
         elements.push_back(value);
       } else {
-        Builder.createStoreOwnPropertyInst(value, allocArrayInst, count);
+        Builder.createStoreOwnPropertyInst(
+            value, allocArrayInst, count, IRBuilder::PropEnumerable::Yes);
       }
     }
     count++;
@@ -456,7 +457,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             Builder.createIdentifier("set " + keyStr.str()));
       }
 
-      Builder.createStoreGetterSetterInst(getter, setter, Obj, Key);
+      Builder.createStoreGetterSetterInst(
+          getter, setter, Obj, Key, IRBuilder::PropEnumerable::Yes);
 
       propValue->accessorsGenerated = true;
     } else {
@@ -467,7 +469,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
       // Only store the value if it won't be overwritten.
       if (propMap[keyStr].valueNode == prop->_value) {
-        Builder.createStoreOwnPropertyInst(value, Obj, Key);
+        Builder.createStoreNewOwnPropertyInst(
+            value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       } else {
         Builder.getModule()->getContext().getSourceErrorManager().warning(
             propMap[keyStr].getSourceRange(),

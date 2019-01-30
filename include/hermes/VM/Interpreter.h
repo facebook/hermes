@@ -184,6 +184,16 @@ class Interpreter {
       Runtime *runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
+
+  static ExecutionStatus casePutOwnByVal(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
+  static ExecutionStatus casePutOwnGetterSetterByVal(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
 };
 
 } // namespace vm

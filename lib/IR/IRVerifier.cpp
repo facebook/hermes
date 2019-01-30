@@ -460,11 +460,25 @@ void Verifier::visitTryStoreGlobalPropertyInst(
 }
 
 void Verifier::visitStoreOwnPropertyInst(const StoreOwnPropertyInst &Inst) {
-  // Nothing to verify at this point.
+  Assert(
+      isa<LiteralBool>(Inst.getOperand(StoreOwnPropertyInst::IsEnumerableIdx)),
+      "StoreOwnPropertyInst::IsEnumerable must be a boolean literal");
+}
+void Verifier::visitStoreNewOwnPropertyInst(
+    const StoreNewOwnPropertyInst &Inst) {
+  visitStoreOwnPropertyInst(Inst);
+  Assert(
+      isa<LiteralString>(Inst.getOperand(StoreOwnPropertyInst::PropertyIdx)),
+      "StoreNewOwnPropertyInst::Property must be a string literal");
+  Assert(
+      Inst.getObject()->getType().isObjectType(),
+      "StoreNewOwnPropertyInst::Object must be known to be an object");
 }
 
 void Verifier::visitStoreGetterSetterInst(const StoreGetterSetterInst &Inst) {
-  // Nothing to verify at this point.
+  Assert(
+      isa<LiteralBool>(Inst.getOperand(StoreGetterSetterInst::IsEnumerableIdx)),
+      "StoreGetterSetterInsr::IsEnumerable must be a boolean constant");
 }
 
 void Verifier::visitAllocObjectInst(const hermes::AllocObjectInst &Inst) {

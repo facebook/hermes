@@ -72,6 +72,21 @@ union DefinePropertyFlags {
     dpf.setValue = 1;
     return dpf;
   }
+
+  /// Return an instance of DefinePropertyFlags initialized for defining a
+  /// property which is writable, configurable and non-enumerable, and setting
+  /// its non-accessor value.
+  static DefinePropertyFlags getNewNonEnumerableFlags() {
+    DefinePropertyFlags dpf{};
+    dpf.setEnumerable = 1;
+    dpf.enumerable = 0;
+    dpf.setWritable = 1;
+    dpf.writable = 1;
+    dpf.setConfigurable = 1;
+    dpf.configurable = 1;
+    dpf.setValue = 1;
+    return dpf;
+  }
 };
 
 /// Flags associated with an object.

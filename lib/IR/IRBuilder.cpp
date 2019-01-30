@@ -356,27 +356,51 @@ TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
 StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
     Value *storedValue,
     Value *object,
-    Literal *property) {
-  auto SPI = new StoreOwnPropertyInst(storedValue, object, property);
+    Value *property,
+    PropEnumerable isEnumerable) {
+  auto SPI = new StoreOwnPropertyInst(
+      storedValue,
+      object,
+      property,
+      getLiteralBool(isEnumerable == PropEnumerable::Yes));
   insert(SPI);
   return SPI;
+}
+StoreNewOwnPropertyInst *IRBuilder::createStoreNewOwnPropertyInst(
+    Value *storedValue,
+    Value *object,
+    LiteralString *property,
+    PropEnumerable isEnumerable) {
+  auto *inst = new StoreNewOwnPropertyInst(
+      storedValue,
+      object,
+      property,
+      getLiteralBool(isEnumerable == PropEnumerable::Yes));
+  insert(inst);
+  return inst;
 }
 
 StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
     Value *storedValue,
     Value *object,
-    int index) {
+    int index,
+    PropEnumerable isEnumerable) {
   return createStoreOwnPropertyInst(
-      storedValue, object, this->getLiteralNumber(index));
+      storedValue, object, this->getLiteralNumber(index), isEnumerable);
 }
 
 StoreGetterSetterInst *IRBuilder::createStoreGetterSetterInst(
     Value *storedGetter,
     Value *storedSetter,
     Value *object,
-    LiteralString *property) {
-  auto SGSI =
-      new StoreGetterSetterInst(storedGetter, storedSetter, object, property);
+    Value *property,
+    PropEnumerable isEnumerable) {
+  auto *SGSI = new StoreGetterSetterInst(
+      storedGetter,
+      storedSetter,
+      object,
+      property,
+      getLiteralBool(isEnumerable == PropEnumerable::Yes));
   insert(SGSI);
   return SGSI;
 }
@@ -405,9 +429,10 @@ StorePropertyInst *IRBuilder::createStorePropertyInst(
 StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
     Value *storedValue,
     Value *object,
-    StringRef property) {
+    StringRef property,
+    PropEnumerable isEnumerable) {
   Identifier Iden = createIdentifier(property);
-  return createStoreOwnPropertyInst(storedValue, object, Iden);
+  return createStoreOwnPropertyInst(storedValue, object, Iden, isEnumerable);
 }
 
 LoadPropertyInst *IRBuilder::createLoadPropertyInst(
@@ -452,9 +477,10 @@ TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
 StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
     Value *storedValue,
     Value *object,
-    Identifier property) {
+    Identifier property,
+    PropEnumerable isEnumerable) {
   auto L = getLiteralString(property);
-  return createStoreOwnPropertyInst(storedValue, object, L);
+  return createStoreOwnPropertyInst(storedValue, object, L, isEnumerable);
 }
 
 AllocObjectInst *IRBuilder::createAllocObjectInst(uint32_t size) {

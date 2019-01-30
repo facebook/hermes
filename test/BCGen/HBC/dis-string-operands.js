@@ -11,7 +11,7 @@ delete glob.baz;
 //CHECK:    DeclareGlobalVar  "glob"
 //CHECK:    DeclareGlobalVar  "re"
 //CHECK:    TryGetById        {{r[0-9]+}}, {{r[0-9]+}}, 1, "bar"
-//CHECK:    PutOwnByIdShort   {{r[0-9]+}}, {{r[0-9]+}}, "prop"
+//CHECK:    PutNewOwnByIdShort   {{r[0-9]+}}, {{r[0-9]+}}, "prop"
 //CHECK:    PutById           {{r[0-9]+}}, {{r[0-9]+}}, 1, "glob"
 //CHECK:    CreateRegExp      {{r[0-9]+}}, "foo", "i", 0
 //CHECK:    PutById           {{r[0-9]+}}, {{r[0-9]+}}, 2, "re"

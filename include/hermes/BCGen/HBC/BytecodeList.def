@@ -259,20 +259,55 @@ DEFINE_OPCODE_4(TryPutByIdLong, Reg8, Reg8, UInt8, UInt32)
 OPERAND_STRING_ID(TryPutById, 4)
 OPERAND_STRING_ID(TryPutByIdLong, 4)
 
-/// Set an own property on an object. This is similar to PutById, but
-/// only deals with own properties, ignoring the prototype chain.
-DEFINE_OPCODE_3(PutOwnByIdShort, Reg8, Reg8, UInt8)
-DEFINE_OPCODE_3(PutOwnById, Reg8, Reg8, UInt16)
-DEFINE_OPCODE_3(PutOwnByIdLong, Reg8, Reg8, UInt32)
-OPERAND_STRING_ID(PutOwnByIdShort, 3)
-OPERAND_STRING_ID(PutOwnById, 3)
-OPERAND_STRING_ID(PutOwnByIdLong, 3)
+/// Create a new own property on an object. This is similar to PutById, but
+/// the destination must be an object, it only deals with own properties,
+/// ignoring the prototype chain, and the property must not already be defined.
+/// Similarly to PutById, the property name cannot be a valid array index.
+/// Arg1 is the destination object, which is known to be an object.
+/// Arg2 is the value to write.
+/// Arg3 is the string table ID of the property name.
+/// Arg1[stringtable[Arg3]] = Arg2
+DEFINE_OPCODE_3(PutNewOwnByIdShort, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_3(PutNewOwnById, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_3(PutNewOwnByIdLong, Reg8, Reg8, UInt32)
+OPERAND_STRING_ID(PutNewOwnByIdShort, 3)
+OPERAND_STRING_ID(PutNewOwnById, 3)
+OPERAND_STRING_ID(PutNewOwnByIdLong, 3)
 
-/// Assign a value to a constant integer property. This is used (potentially
-/// in conjunction with NewArrayWithBuffer) for arr=[foo,bar] initializations.
+/// Create a new non-enumerable own property on an object. This is the same as
+/// PutNewOwnById, but creates the property with different enumerability.
+/// Arg1 is the destination object.
+/// Arg2 is the value to write.
+/// Arg3 is the string table ID of the property name.
+/// Arg1[stringtable[Arg3]] = Arg2
+DEFINE_OPCODE_3(PutNewOwnNEById, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_3(PutNewOwnNEByIdLong, Reg8, Reg8, UInt32)
+OPERAND_STRING_ID(PutNewOwnNEById, 3)
+OPERAND_STRING_ID(PutNewOwnNEByIdLong, 3)
+
+// The "NE" versions must be ordered after the "normal" versions.
+ASSERT_MONOTONE_INCREASING(
+    PutNewOwnByIdShort,
+    PutNewOwnById,
+    PutNewOwnByIdLong,
+    PutNewOwnNEById,
+    PutNewOwnNEByIdLong)
+
+/// Assign a value to a constant integer own property which will be created as
+/// enumerable. This is used (potentially in conjunction with
+/// NewArrayWithBuffer) for arr=[foo,bar] initializations.
 /// Arg1[Arg3] = Arg2;
 DEFINE_OPCODE_3(PutOwnByIndex, Reg8, Reg8, UInt8)
 DEFINE_OPCODE_3(PutOwnByIndexL, Reg8, Reg8, UInt32)
+
+/// Set an own property identified by value.
+/// Arg1 is the destination object.
+/// Arg2 is the value to write.
+/// Arg3 is the property name.
+/// Arg4 : bool -> enumerable. If true, the property is created as enumerable,
+///        non-enumerable otherwise.
+/// Arg1[Arg3] = Arg2;
+DEFINE_OPCODE_4(PutOwnByVal, Reg8, Reg8, Reg8, UInt8)
 
 /// Delete a property by string table index.
 /// Arg1 = delete Arg2[stringtable[Arg3]]
@@ -295,10 +330,14 @@ DEFINE_OPCODE_3(PutByVal, Reg8, Reg8, Reg8)
 /// Arg1 = delete Arg2[Arg3]
 DEFINE_OPCODE_3(DelByVal, Reg8, Reg8, Reg8)
 
-/// Add a getter and a setter for a property by name.
-/// Object.defineProperty(Arg1, stringTable[Arg2], { get: Arg3, set: Arg4 }).
-DEFINE_OPCODE_4(PutGetterSetter, Reg8, UInt32, Reg8, Reg8)
-OPERAND_STRING_ID(PutGetterSetter, 2)
+/// Add a getter and a setter for a property by value.
+/// Object.defineProperty(Arg1, Arg2, { get: Arg3, set: Arg4 }).
+/// Arg1 is the target object which will have a property defined.
+/// Arg2 is the property name
+/// Arg3 is the getter closure or undefined
+/// Arg4 is the setter closure or undefined
+/// Arg5 : boolean - if true, the property will be enumerable.
+DEFINE_OPCODE_5(PutOwnGetterSetterByVal, Reg8, Reg8, Reg8, Reg8, UInt8)
 
 /// Get the list of properties from an object to implement for..in loop.
 /// Returns Arg1, which is the register that holds array of properties.
@@ -638,6 +677,8 @@ DEFINE_JUMP_3(JStrictNotEqual)
 ASSERT_EQUAL_LAYOUT3(Call, Construct)
 ASSERT_EQUAL_LAYOUT4(GetById, TryGetById)
 ASSERT_EQUAL_LAYOUT4(PutById, TryPutById)
+ASSERT_EQUAL_LAYOUT3(PutNewOwnById, PutNewOwnNEById)
+ASSERT_EQUAL_LAYOUT3(PutNewOwnByIdLong, PutNewOwnNEByIdLong)
 ASSERT_EQUAL_LAYOUT3(Add, AddN)
 ASSERT_EQUAL_LAYOUT3(Sub, SubN)
 ASSERT_EQUAL_LAYOUT3(Mul, MulN)

@@ -45,6 +45,8 @@ class IRBuilder {
   //                          Stateless APIs.                                 //
   //--------------------------------------------------------------------------//
 
+  enum class PropEnumerable { No = 0, Yes = 1 };
+
   Module *getModule() {
     return M;
   }
@@ -277,16 +279,26 @@ class IRBuilder {
   StoreOwnPropertyInst *createStoreOwnPropertyInst(
       Value *storedValue,
       Value *object,
-      Literal *property);
+      Value *property,
+      PropEnumerable isEnumerable);
+  StoreNewOwnPropertyInst *createStoreNewOwnPropertyInst(
+      Value *storedValue,
+      Value *object,
+      LiteralString *property,
+      PropEnumerable isEnumerable);
 
-  StoreOwnPropertyInst *
-  createStoreOwnPropertyInst(Value *storedValue, Value *object, int index);
+  StoreOwnPropertyInst *createStoreOwnPropertyInst(
+      Value *storedValue,
+      Value *object,
+      int index,
+      PropEnumerable isEnumerable);
 
   StoreGetterSetterInst *createStoreGetterSetterInst(
       Value *storedGetter,
       Value *storedSetter,
       Value *object,
-      LiteralString *property);
+      Value *property,
+      PropEnumerable isEnumerable);
   DeletePropertyInst *createDeletePropertyInst(
       Value *object,
       StringRef property);
@@ -300,7 +312,8 @@ class IRBuilder {
   StoreOwnPropertyInst *createStoreOwnPropertyInst(
       Value *storedValue,
       Value *object,
-      StringRef property);
+      StringRef property,
+      PropEnumerable isEnumerable);
 
   DeletePropertyInst *createDeletePropertyInst(
       Value *object,
@@ -320,7 +333,8 @@ class IRBuilder {
   StoreOwnPropertyInst *createStoreOwnPropertyInst(
       Value *storedValue,
       Value *object,
-      Identifier property);
+      Identifier property,
+      PropEnumerable isEnumerable);
 
   AllocObjectInst *createAllocObjectInst(uint32_t size);
 

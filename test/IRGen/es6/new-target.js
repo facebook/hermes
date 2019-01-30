@@ -70,9 +70,9 @@ function func3() {
 //CHECK-NEXT:  %11 = StoreFrameInst %10 : closure, [innerArrow1]
 //CHECK-NEXT:  %12 = LoadFrameInst [innerFunction]
 //CHECK-NEXT:  %13 = AllocArrayInst 2 : number
-//CHECK-NEXT:  %14 = StoreOwnPropertyInst %12, %13 : object, 0 : number
+//CHECK-NEXT:  %14 = StoreOwnPropertyInst %12, %13 : object, 0 : number, true : boolean
 //CHECK-NEXT:  %15 = LoadFrameInst [innerArrow1]
-//CHECK-NEXT:  %16 = StoreOwnPropertyInst %15, %13 : object, 1 : number
+//CHECK-NEXT:  %16 = StoreOwnPropertyInst %15, %13 : object, 1 : number, true : boolean
 //CHECK-NEXT:  %17 = ReturnInst %13 : object
 //CHECK-NEXT:%BB1:
 //CHECK-NEXT:  %18 = ReturnInst undefined : undefined

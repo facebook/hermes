@@ -361,19 +361,29 @@ Effects | May read and write memory or throw.
 StoreOwnPropertyInst | _
 --- | --- |
 Description | Stores a value to an *own property* of JavaScript object.
-Example |   %4 = StoreOwnPropertyInst %value, %object, %property
-Arguments | %value is the value to be stored. %object is the object where the field %property will be created or modified. %property must be either a string literal or number literal.
-Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain. %property is a string literal when we are initiating an object; or a number literal when we are initiating an array.
+Example |   %4 = StoreOwnPropertyInst %value, %object, %property, %enumerable : boolean
+Arguments | %value is the value to be stored. %object is the object where the field with name %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not.
+Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain. 
+Effects | May read and write memory.
+
+### StoreNewOwnPropertyInst
+
+StoreNewOwnPropertyInst | _
+--- | --- |
+Description | Create a new *own property* in what is known to be a JavaScript object.
+Example |   `%4 = StoreNewOwnPropertyInst %value, %object, %property, %enumerable : boolean`
+Arguments | *%value* is the value to be stored. *%object*, which must be an object, is where the field with name *%property* will be created. *%property* must be a string literal, otherwise it is impossible to guarantee that it is new. *%enumerable* determines whether the new property will be created as enumerable or not.
+Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain. 
 Effects | May read and write memory.
 
 ### StoreGetterSetterInst
 
 StoreGetterSetterInst | _
 --- | --- |
-Description | Associates a pair of getter and setter with field in a JavaScript object, replacing the previous value.
-Example |   %4 = StoreGetterSetterInst %getter, %setter, %object, %property
-Arguments | %getter is a getter accessor, or undefined. %setter is a setter accessor, or undefined. %object is the object where the field %property will be created or modified. %property must be a string literal.
-Semantics | The instruction follows the rules of JavaScript property access. It replaces both accessors even if one or both of the parameters are undefined.
+Description | Associates a pair of getter and setter with an *own* field in a JavaScript object, replacing the previous value.
+Example |   %4 = StoreGetterSetterInst %getter, %setter, %object, %property, %enumerable
+Arguments | %getter is a getter accessor, or undefined. %setter is a setter accessor, or undefined. %object is the object where the field %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not. 
+Semantics | The instruction follows the rules of JavaScript property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain. It replaces both accessors even if one or both of the parameters are undefined.
 Effects | May read and write memory.
 
 ### AllocObjectInst

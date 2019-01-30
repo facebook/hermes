@@ -51,7 +51,12 @@ MARK_FIRST(StorePropertyInst)
 DEF_VALUE(StorePropertyInst, Instruction)
 DEF_VALUE(TryStoreGlobalPropertyInst, StorePropertyInst)
 MARK_LAST(StorePropertyInst)
+
+MARK_FIRST(StoreOwnPropertyInst)
 DEF_VALUE(StoreOwnPropertyInst, Instruction)
+DEF_VALUE(StoreNewOwnPropertyInst, StoreOwnPropertyInst)
+MARK_LAST(StoreOwnPropertyInst)
+
 DEF_VALUE(StoreGetterSetterInst, Instruction)
 DEF_VALUE(DeletePropertyInst, Instruction)
 MARK_FIRST(LoadPropertyInst)

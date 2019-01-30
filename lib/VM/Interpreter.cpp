@@ -2691,50 +2691,39 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(PutOwnByIdShort) {
-        nextIP = NEXTINST(PutOwnByIdShort);
-        idVal = ip->iPutOwnByIdShort.op3;
+      CASE(PutNewOwnByIdShort) {
+        nextIP = NEXTINST(PutNewOwnByIdShort);
+        idVal = ip->iPutNewOwnByIdShort.op3;
         goto putOwnById;
       }
-      CASE(PutOwnByIdLong) {
-        nextIP = NEXTINST(PutOwnByIdLong);
-        idVal = ip->iPutOwnByIdLong.op3;
+      CASE(PutNewOwnNEByIdLong)
+      CASE(PutNewOwnByIdLong) {
+        nextIP = NEXTINST(PutNewOwnByIdLong);
+        idVal = ip->iPutNewOwnByIdLong.op3;
         goto putOwnById;
       }
-      CASE(PutOwnById) {
-        nextIP = NEXTINST(PutOwnById);
-        idVal = ip->iPutOwnById.op3;
+      CASE(PutNewOwnNEById)
+      CASE(PutNewOwnById) {
+        nextIP = NEXTINST(PutNewOwnById);
+        idVal = ip->iPutNewOwnById.op3;
       }
     putOwnById : {
-      if (LLVM_LIKELY(O1REG(PutOwnById).isObject())) {
-        if (LLVM_UNLIKELY(
-                JSObject::defineNewOwnProperty(
-                    Handle<JSObject>::vmcast(&O1REG(PutOwnById)),
-                    runtime,
-                    ID(idVal),
-                    PropertyFlags::defaultNewNamedPropertyFlags(),
-                    Handle<>(&O2REG(PutOwnById))) ==
-                ExecutionStatus::EXCEPTION))
-          goto exception;
-      } else {
-        /* This is the "slow path". */
-        res = toObject(runtime, Handle<>(&O1REG(PutOwnById)));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-          goto exception;
-
-        tmpHandle = res.getValue();
-        if (LLVM_UNLIKELY(
-                JSObject::defineNewOwnProperty(
-                    Handle<JSObject>::vmcast(tmpHandle),
-                    runtime,
-                    ID(idVal),
-                    PropertyFlags::defaultNewNamedPropertyFlags(),
-                    Handle<>(&O2REG(PutOwnById))) ==
-                ExecutionStatus::EXCEPTION))
-          goto exception;
+      assert(
+          O1REG(PutNewOwnById).isObject() &&
+          "Object argument of PutNewOwnById must be an object");
+      if (LLVM_UNLIKELY(
+              JSObject::defineNewOwnProperty(
+                  Handle<JSObject>::vmcast(&O1REG(PutNewOwnById)),
+                  runtime,
+                  ID(idVal),
+                  ip->opCode <= OpCode::PutNewOwnByIdLong
+                      ? PropertyFlags::defaultNewNamedPropertyFlags()
+                      : PropertyFlags::nonEnumerablePropertyFlags(),
+                  Handle<>(&O2REG(PutNewOwnById))) ==
+              ExecutionStatus::EXCEPTION)) {
+        goto exception;
       }
       gcScope.flushToSmallCount(KEEP_HANDLES);
-      tmpHandle.clear();
       ip = nextIP;
       DISPATCH;
     }
@@ -2819,40 +2808,6 @@ tailCall:
         gcScope.flushToSmallCount(KEEP_HANDLES);
         tmpHandle.clear();
         ip = NEXTINST(DelByVal);
-        DISPATCH;
-      }
-      CASE(PutGetterSetter) {
-        {
-          PropertyFlags pf{};
-          pf.enumerable = 1;
-          pf.configurable = 1;
-          MutableHandle<Callable> getter(runtime);
-          MutableHandle<Callable> setter(runtime);
-          if (LLVM_LIKELY(!O3REG(PutGetterSetter).isUndefined())) {
-            pf.accessor = 1;
-            getter = vmcast<Callable>(O3REG(PutGetterSetter));
-          }
-          if (LLVM_LIKELY(!O4REG(PutGetterSetter).isUndefined())) {
-            pf.accessor = 1;
-            setter = vmcast<Callable>(O4REG(PutGetterSetter));
-          }
-          assert(pf.accessor && "No accessor set in PutGetterSetter");
-          res = PropertyAccessor::create(runtime, getter, setter);
-          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-          auto accessor = runtime->makeHandle<PropertyAccessor>(*res);
-          if (LLVM_UNLIKELY(
-                  JSObject::defineNewOwnProperty(
-                      Handle<JSObject>::vmcast(&O1REG(PutGetterSetter)),
-                      runtime,
-                      ID(ip->iPutGetterSetter.op2),
-                      pf,
-                      accessor) == ExecutionStatus::EXCEPTION))
-            goto exception;
-        }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(PutGetterSetter);
         DISPATCH;
       }
       CASE(CreateRegExp) {
@@ -2984,6 +2939,8 @@ tailCall:
           NEXTINST(JNotEqualLong),
           IPADD(ip->iJNotEqualLong.op1));
 
+      CASE_OUTOFLINE(PutOwnByVal);
+      CASE_OUTOFLINE(PutOwnGetterSetterByVal);
       CASE_OUTOFLINE(DirectEval);
 
       CASE(_last) {
