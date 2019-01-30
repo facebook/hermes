@@ -886,14 +886,14 @@ CallResult<HermesValue> JSFunction::create(
     CodeBlock *codeBlock) {
   void *mem =
       runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(JSFunction));
-  auto selfHandle = runtime->makeHandle(new (mem) JSFunction(
+  auto *self = new (mem) JSFunction(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       envHandle,
-      codeBlock));
-  selfHandle->flags_.lazyObject = 1;
-  return selfHandle.getHermesValue();
+      codeBlock);
+  self->flags_.lazyObject = 1;
+  return HermesValue::encodeObjectValue(self);
 }
 
 void JSFunction::_finalizeImpl(GCCell *cell, GC *) {
