@@ -10,9 +10,9 @@
 //CHECK-NEXT:  {{.*}}  %4 = HBCLoadConstInst 2 : number
 //CHECK-NEXT:  {{.*}}  %5 = AllocArrayInst 0 : number
 //CHECK-NEXT:  {{.*}}  %6 = StorePropertyInst %5 : object, %0 : object, "a" : string
-//CHECK-NEXT:  {{.*}}  %7 = AllocObjectInst 0 : number
+//CHECK-NEXT:  {{.*}}  %7 = AllocObjectInst 0 : number, empty
 //CHECK-NEXT:  {{.*}}  %8 = StorePropertyInst %7 : object, %0 : object, "x" : string
-//CHECK-NEXT:  {{.*}}  %9 = AllocObjectInst 0 : number
+//CHECK-NEXT:  {{.*}}  %9 = AllocObjectInst 0 : number, empty
 //CHECK-NEXT:  {{.*}}  %10 = StorePropertyInst %9 : object, %0 : object, "y" : string
 //CHECK-NEXT:  {{.*}}  %11 = HBCLoadConstInst 0 : number
 //CHECK-NEXT:  {{.*}}  %12 = StorePropertyInst %11 : number, %0 : object, "i" : string
@@ -20,7 +20,7 @@
 //CHECK-NEXT:  {{.*}}  %14 = MovInst %1 : undefined
 //CHECK-NEXT:  {{.*}}  %15 = CompareBranchInst '<', %13, %3 : number, %BB1, %BB2
 //CHECK-NEXT:%BB1:
-//CHECK-NEXT:  {{.*}}  %16 = AllocObjectInst 0 : number
+//CHECK-NEXT:  {{.*}}  %16 = AllocObjectInst 0 : number, empty
 //CHECK-NEXT:  {{.*}}  %17 = StorePropertyInst %16 : object, %0 : object, "y" : string
 //CHECK-NEXT:  {{.*}}  %18 = AllocStackInst $?anon_1_iter
 //CHECK-NEXT:  {{.*}}  %19 = AllocStackInst $?anon_2_base

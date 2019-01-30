@@ -139,7 +139,8 @@ bool LowerAllocObject::runOnFunction(Function *F) {
   for (BasicBlock &BB : *F)
     for (auto &it : BB) {
       if (auto *A = dyn_cast<AllocObjectInst>(&it))
-        allocs.push_back(A);
+        if (isa<EmptySentinel>(A->getParentObject()))
+          allocs.push_back(A);
     }
 
   for (auto *A : allocs) {

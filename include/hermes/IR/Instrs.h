@@ -1251,20 +1251,32 @@ class TryLoadGlobalPropertyInst : public LoadPropertyInst {
   }
 };
 
-class AllocObjectInst : public SingleOperandInst {
+class AllocObjectInst : public Instruction {
   AllocObjectInst(const AllocObjectInst &) = delete;
   void operator=(const AllocObjectInst &) = delete;
 
  public:
-  explicit AllocObjectInst(LiteralNumber *size)
-      : SingleOperandInst(ValueKind::AllocObjectInstKind, size) {
+  enum { SizeIdx, ParentObjectIdx };
+
+  uint32_t getSize() const {
+    return cast<LiteralNumber>(getOperand(SizeIdx))->asUInt32();
+  }
+
+  Value *getParentObject() const {
+    return getOperand(ParentObjectIdx);
+  }
+
+  explicit AllocObjectInst(LiteralNumber *size, Value *parentObject)
+      : Instruction(ValueKind::AllocObjectInstKind) {
     setType(Type::createObject());
     assert(size->isUInt32Representible() && "size must be uint32");
+    pushOperand(size);
+    pushOperand(parentObject);
   }
   explicit AllocObjectInst(
       const AllocObjectInst *src,
       llvm::ArrayRef<Value *> operands)
-      : SingleOperandInst(src, operands) {}
+      : Instruction(src, operands) {}
 
   SideEffectKind getSideEffect() {
     return SideEffectKind::None;
@@ -1275,12 +1287,12 @@ class AllocObjectInst : public SingleOperandInst {
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    return index == SingleOperandIdx &&
-        kindIsA(kind, ValueKind::LiteralNumberKind);
-  }
-
-  uint32_t getSize() const {
-    return cast<LiteralNumber>(getSingleOperand())->asUInt32();
+    switch (index) {
+      case SizeIdx:
+        return kindIsA(kind, ValueKind::LiteralNumberKind);
+      default:
+        return true;
+    }
   }
 
   static bool classof(const Value *V) {

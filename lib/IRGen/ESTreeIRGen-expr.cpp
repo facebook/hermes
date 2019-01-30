@@ -398,6 +398,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   // previous value.
   llvm::StringMap<PropertyValue> propMap;
   llvm::SmallVector<char, 32> stringStorage;
+  /// The optional __proto__ property.
+  ESTree::PropertyNode *protoProperty = nullptr;
 
   for (auto &P : Expr->_properties) {
     // We are reusing the storage, so make sure it is cleared at every
@@ -405,8 +407,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     stringStorage.clear();
 
     auto *prop = cast<ESTree::PropertyNode>(&P);
-    PropertyValue *propValue =
-        &propMap[propertyKeyAsString(stringStorage, prop->_key)];
+    auto propName = propertyKeyAsString(stringStorage, prop->_key);
+    PropertyValue *propValue = &propMap[propName];
+
     if (prop->_kind->str() == "get") {
       propValue->setGetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
     } else if (prop->_kind->str() == "set") {
@@ -414,11 +417,27 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     } else {
       assert(prop->_kind->str() == "init" && "invalid PropertyNode kind");
       propValue->setValue(prop->_value);
+      if (!protoProperty && propName == "__proto__")
+        protoProperty = prop;
     }
   }
 
+  /// Attempt to determine whether we can directly use the value of the
+  /// __proto__ property as a parent when creating the object for an object
+  /// initializer, instead of setting it later with
+  /// HermesInternal.silentSetPrototypeOf(). That is not possible to determine
+  /// statically in the general case, but we can check for the simple cases:
+  /// - __proto__ property is first.
+  /// - the value of __proto__ is constant.
+  Value *objectParent = nullptr;
+  if (protoProperty &&
+      (&Expr->_properties.front() == protoProperty ||
+       isConstantExpr(protoProperty->_value))) {
+    objectParent = genExpression(protoProperty->_value);
+  }
+
   // Allocate a new javascript object on the heap.
-  auto Obj = Builder.createAllocObjectInst(propMap.size());
+  auto Obj = Builder.createAllocObjectInst(propMap.size(), objectParent);
 
   // Initialize all properties. We check whether the value of each property
   // will be overwritten (by comparing against what we have saved in propMap).
@@ -462,6 +481,39 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
       propValue->accessorsGenerated = true;
     } else {
+      // The __proto__ property requires special handling.
+      if (keyStr == "__proto__") {
+        if (prop == protoProperty) {
+          // This is the first definition of __proto__. If we already used it
+          // as an object parent we just skip it, but otherwise we must
+          // explicitly set the parent now by calling \c
+          // HermesInternal.silentSetPrototypeOf().
+          if (!objectParent) {
+            auto *parent = genExpression(prop->_value);
+
+            IRBuilder::SaveRestore saveState{Builder};
+            Builder.setLocation(prop->_key->getDebugLoc());
+
+            Builder.createCallInst(
+                Builder.createLoadPropertyInst(
+                    Builder.createTryLoadGlobalPropertyInst("HermesInternal"),
+                    "silentSetPrototypeOf"),
+                Builder.getLiteralUndefined(),
+                {Obj, parent});
+          }
+        } else {
+          // __proto__ was defined more than once, which is an error.
+          Builder.getModule()->getContext().getSourceErrorManager().error(
+              prop->getSourceRange(),
+              "__proto__ was set multiple times in the object definition.");
+          Builder.getModule()->getContext().getSourceErrorManager().note(
+              protoProperty->getSourceRange(),
+              "The first definition was here.");
+        }
+
+        continue;
+      }
+
       // Always generate the values, even if we don't need it, for the side
       // effects.
       auto value =
@@ -477,9 +529,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             Twine("the property \"") + keyStr +
                 "\" was set multiple times in the object definition.");
 
-        StringRef note = "Previous definition location was here.";
         Builder.getModule()->getContext().getSourceErrorManager().note(
-            prop->getSourceRange(), note);
+            prop->getSourceRange(), "The first definition was here.");
       }
     }
   }

@@ -341,7 +341,9 @@ class IRBuilder {
       Identifier property,
       PropEnumerable isEnumerable);
 
-  AllocObjectInst *createAllocObjectInst(uint32_t size);
+  AllocObjectInst *createAllocObjectInst(
+      uint32_t size,
+      Value *parent = nullptr);
 
   AllocArrayInst *createAllocArrayInst(
       LiteralNumber *sizeHint,

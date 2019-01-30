@@ -391,9 +391,9 @@ Effects | May read and write memory.
 AllocObjectInst | _
 --- | --- |
 Description | Allocates a new JavaScript object on the heap.
-Example |  %0 = AllocObjectInst
-Arguments | None.
-Semantics | The instruction creates a new JavaScript object on the heap.
+Example |  `%0 = AllocObjectInst %sizeHint : LiteralNumber, %parent : EmptySentinel or null or Value` 
+Arguments | *%sizeHint% indicates that the object will need at least that many property slots. *%parent* is the optional parent to create the object with: *EmptySentinel* means use *Object.prototype*, *null* means no parent, or otherwise use the specified value.
+Semantics | The instruction creates a new JavaScript object on the heap. If the parent is invalid (not EmptySenyinel, null or object), it is silently ignored. 
 Effects | Does not read or write to memory.
 
 ### AllocArrayInst

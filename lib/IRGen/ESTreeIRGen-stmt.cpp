@@ -439,19 +439,6 @@ void ESTreeIRGen::genReturnStatement(ESTree::ReturnStatementNode *RetStmt) {
   Builder.setInsertionBlock(Builder.createBasicBlock(Parent));
 }
 
-/// \returns true if \p node is a constant expression.
-static bool isConstantExpr(ESTree::Node *node) {
-  switch (node->getKind()) {
-    case ESTree::NodeKind::StringLiteral:
-    case ESTree::NodeKind::NumericLiteral:
-    case ESTree::NodeKind::NullLiteral:
-    case ESTree::NodeKind::BooleanLiteral:
-      return true;
-    default:
-      return false;
-  }
-}
-
 /// \returns true if \p node is the default case.
 static inline bool isDefaultCase(ESTree::SwitchCaseNode *caseStmt) {
   // If there is no test field then this is the default block.

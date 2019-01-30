@@ -455,8 +455,11 @@ class JSObject : public GCCell {
   /// by the identity of its hidden class.
   inline bool shouldCacheForIn() const;
 
-  /// Sets the internal prototype property. Throws an exception if a cycle is
-  /// detected.
+  /// Sets the internal prototype property. This corresponds to ES6 9.1.2
+  /// [[SetPrototypeOf]].
+  /// - Does nothing if the value doesn't change.
+  /// - Fails if the object isn't extensible
+  /// - Fails if it detects a prototype cycle.
   static ExecutionStatus
   setParent(JSObject *self, Runtime *runtime, JSObject *parent);
 

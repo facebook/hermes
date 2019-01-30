@@ -36,6 +36,7 @@ BUILTIN_METHOD(Date, parse)
 
 BUILTIN_OBJECT(HermesInternal)
 BUILTIN_METHOD(HermesInternal, getEpilogues)
+BUILTIN_METHOD(HermesInternal, silentSetPrototypeOf)
 BUILTIN_METHOD(HermesInternal, requireFast)
 BUILTIN_METHOD(HermesInternal, require)
 

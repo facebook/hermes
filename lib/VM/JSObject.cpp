@@ -160,15 +160,22 @@ ObjectID JSObject::getObjectID(JSObject *self, Runtime *runtime) {
 
 ExecutionStatus
 JSObject::setParent(JSObject *self, Runtime *runtime, JSObject *parent) {
+  // ES6 9.1.2
+  // 4.
+  if (self->parent_ == parent)
+    return ExecutionStatus::RETURNED;
+  // 5.
   if (!self->isExtensible()) {
     return runtime->raiseTypeError("JSObject is not extensible.");
   }
-  // Check for a prototype cycle.
+  // 6-8. Check for a prototype cycle.
   for (auto *cur = parent; cur; cur = cur->parent_) {
     if (cur == self)
       return runtime->raiseTypeError("Prototype cycle detected");
   }
+  // 9.
   self->parent_.set(parent, &runtime->getHeap());
+  // 10.
   return ExecutionStatus::RETURNED;
 }
 

@@ -44,8 +44,8 @@ function test_one(x,y) {
 //CHECK-NEXT:  %16 = CallInst %x, undefined : undefined, 0 : number
   sink(null + null);
 
-//CHECK-NEXT:  %17 = AllocObjectInst 0 : number
-//CHECK-NEXT:  %18 = AllocObjectInst 0 : number
+//CHECK-NEXT:  %17 = AllocObjectInst 0 : number, empty
+//CHECK-NEXT:  %18 = AllocObjectInst 0 : number, empty
 //CHECK-NEXT:  %19 = BinaryOperatorInst '+', %17 : object, %18 : object
 //CHECK-NEXT:  %20 = CallInst %x, undefined : undefined, %19 : string|number
   sink({} + {});

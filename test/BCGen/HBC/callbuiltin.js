@@ -17,7 +17,7 @@ function foo(x) {
 //CHKBC-LABEL:Function<foo>(2 params, 9 registers, 0 symbols):
 //CHKBC-NEXT: Offset{{.*}}
 //CHKBC-NEXT:    LoadParam         r1, 1
-//CHKBC-NEXT:    CallBuiltin       r0, 40, 2
+//CHKBC-NEXT:    CallBuiltin       r0, 41, 2
 //CHKBC-NEXT:    Ret               r0
 
 // Make sure that this isn't incorrectly recognized as a builtin.
@@ -29,7 +29,7 @@ function shadows() {
 //CHKRA-LABEL:function shadows() : undefined
 //CHKRA-NEXT:frame = []
 //CHKRA-NEXT:%BB0:
-//CHKRA-NEXT:  {{.*}} %0 = AllocObjectInst 1 : number
+//CHKRA-NEXT:  {{.*}} %0 = AllocObjectInst 1 : number, empty
 //CHKRA-NEXT:  {{.*}} %1 = HBCGetGlobalObjectInst
 //CHKRA-NEXT:  {{.*}} %2 = TryLoadGlobalPropertyInst %1 : object, "print" : string
 //CHKRA-NEXT:  {{.*}} %3 = StoreNewOwnPropertyInst %2, %0 : object, "keys" : string, true : boolean

@@ -16,7 +16,7 @@ var x = {
 //CHECK-NEXT:  %BB0:
 //CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
 //CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
-//CHECK-NEXT:  %2 = AllocObjectInst 3 : number
+//CHECK-NEXT:  %2 = AllocObjectInst 3 : number, empty
 //CHECK-NEXT:  %3 = CreateFunctionInst %"get a"()
 //CHECK-NEXT:  %4 = StoreGetterSetterInst %3 : closure, undefined : undefined, %2 : object, "a" : string, true : boolean
 //CHECK-NEXT:  %5 = CreateFunctionInst %"get 1"()

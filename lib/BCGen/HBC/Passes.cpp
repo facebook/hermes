@@ -101,9 +101,17 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (isa<AllocArrayInst>(Inst))
     return true;
 
-  if (isa<AllocObjectInst>(Inst) &&
-      opIndex == AllocObjectInst::SingleOperandIdx)
-    return true;
+  if (isa<AllocObjectInst>(Inst)) {
+    // The AllocObjectInst::SizeIdx is a literal.
+    if (opIndex == AllocObjectInst::SizeIdx)
+      return true;
+    // AllocObjectInst::ParentObjectIdx is a literal if it is the EmptySentinel.
+    if (opIndex == AllocObjectInst::ParentObjectIdx &&
+        isa<EmptySentinel>(Inst->getOperand(opIndex)))
+      return true;
+
+    return false;
+  }
 
   // SwitchInst's rest of the operands are case values,
   // hence they will stay as constant.

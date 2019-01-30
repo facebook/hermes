@@ -9,10 +9,10 @@
 //CHECK:   %BB0:
 //CHECK:     %0 = AllocStackInst $?anon_0_ret
 //CHECK:     %1 = StoreStackInst undefined : undefined, %0
-//CHECK:     %2 = AllocObjectInst 1 : number
+//CHECK:     %2 = AllocObjectInst 1 : number, empty
 //CHECK:     %3 = StoreNewOwnPropertyInst 10 : number, %2 : object, "prop1" : string, true : boolean
 //CHECK:     %4 = StoreStackInst %2 : object, %0
-//CHECK:     %5 = AllocObjectInst 1 : number
+//CHECK:     %5 = AllocObjectInst 1 : number, empty
 //CHECK:     %6 = StoreNewOwnPropertyInst 10 : number, %5 : object, "prop1" : string, true : boolean
 //CHECK:     %7 = StoreStackInst %5 : object, %0
 //CHECK:     %8 = LoadStackInst %0

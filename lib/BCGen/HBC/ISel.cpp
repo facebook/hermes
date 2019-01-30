@@ -628,31 +628,19 @@ void HBCISel::generateStoreNewOwnPropertyInst(
 
   auto id = BCFGen_->addConstantString(strProp, true);
 
-  // We can't use PutNewOwnById if the property is "__proto__";
-  bool dontUseOwn = strProp->getValue() == protoIdent_;
-
-  if (dontUseOwn) {
-    if (id <= UINT16_MAX)
-      BCFGen_->emitPutById(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(), id);
-    else
-      BCFGen_->emitPutByIdLong(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(), id);
-  } else {
-    if (isEnumerable) {
-      if (id > UINT16_MAX) {
-        BCFGen_->emitPutNewOwnByIdLong(objReg, valueReg, id);
-      } else if (id > UINT8_MAX) {
-        BCFGen_->emitPutNewOwnById(objReg, valueReg, id);
-      } else {
-        BCFGen_->emitPutNewOwnByIdShort(objReg, valueReg, id);
-      }
+  if (isEnumerable) {
+    if (id > UINT16_MAX) {
+      BCFGen_->emitPutNewOwnByIdLong(objReg, valueReg, id);
+    } else if (id > UINT8_MAX) {
+      BCFGen_->emitPutNewOwnById(objReg, valueReg, id);
     } else {
-      if (id > UINT16_MAX) {
-        BCFGen_->emitPutNewOwnNEByIdLong(objReg, valueReg, id);
-      } else {
-        BCFGen_->emitPutNewOwnNEById(objReg, valueReg, id);
-      }
+      BCFGen_->emitPutNewOwnByIdShort(objReg, valueReg, id);
+    }
+  } else {
+    if (id > UINT16_MAX) {
+      BCFGen_->emitPutNewOwnNEByIdLong(objReg, valueReg, id);
+    } else {
+      BCFGen_->emitPutNewOwnNEById(objReg, valueReg, id);
     }
   }
 }
@@ -745,7 +733,12 @@ void HBCISel::generateAllocStackInst(AllocStackInst *Inst, BasicBlock *next) {
 void HBCISel::generateAllocObjectInst(AllocObjectInst *Inst, BasicBlock *next) {
   auto result = encodeValue(Inst);
   // TODO: Utilize sizeHint.
-  BCFGen_->emitNewObject(result);
+  if (isa<EmptySentinel>(Inst->getParentObject())) {
+    BCFGen_->emitNewObject(result);
+  } else {
+    auto parentReg = encodeValue(Inst->getParentObject());
+    BCFGen_->emitNewObjectWithParent(result, parentReg);
+  }
 }
 void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
   auto dstReg = encodeValue(Inst);

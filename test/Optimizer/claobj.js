@@ -3,7 +3,7 @@
 //CHECK-LABEL:function g() : number
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:    %BB0:
-//CHECK-NEXT:%0 = AllocObjectInst 1 : number
+//CHECK-NEXT:%0 = AllocObjectInst 1 : number, empty
 //CHECK-NEXT:%1 = CreateFunctionInst %m() : number
 //CHECK-NEXT:%2 = StoreNewOwnPropertyInst %1 : closure, %0 : object, "m" : string, true : boolean
 //CHECK-NEXT:%3 = LoadPropertyInst %0 : object, "m" : string
@@ -117,7 +117,7 @@ function module5() {
 //CHECK-LABEL:function module6() : boolean|number
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:    %BB0:
-//CHECK-NEXT:%0 = AllocObjectInst 2 : number
+//CHECK-NEXT:%0 = AllocObjectInst 2 : number, empty
 //CHECK-NEXT:%1 = CreateFunctionInst %n() : boolean
 //CHECK-NEXT:%2 = StoreNewOwnPropertyInst %1 : closure, %0 : object, "n" : string, true : boolean
 //CHECK-NEXT:%3 = CreateFunctionInst %"m 4#"() : undefined
@@ -142,7 +142,7 @@ function module6() {
 //CHECK-LABEL:function module7() : boolean
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:    %BB0:
-//CHECK-NEXT:%0 = AllocObjectInst 2 : number
+//CHECK-NEXT:%0 = AllocObjectInst 2 : number, empty
 //CHECK-NEXT:%1 = CreateFunctionInst %a() : boolean
 //CHECK-NEXT:%2 = StoreNewOwnPropertyInst %1 : closure, %0 : object, "a" : string, true : boolean
 //CHECK-NEXT:%3 = CreateFunctionInst %"m 5#"() : closure
@@ -162,8 +162,8 @@ function module7() {
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:    %BB0:
 //CHECK-NEXT:%0 = CreateFunctionInst %f() : boolean
-//CHECK-NEXT:%1 = AllocObjectInst 0 : number
-//CHECK-NEXT:%2 = AllocObjectInst 1 : number
+//CHECK-NEXT:%1 = AllocObjectInst 0 : number, empty
+//CHECK-NEXT:%2 = AllocObjectInst 1 : number, empty
 //CHECK-NEXT:%3 = StoreNewOwnPropertyInst %0 : closure, %2 : object, "m" : string, true : boolean
 //CHECK-NEXT:%4 = StorePropertyInst %2 : object, %1 : object, "foo" : string
 //CHECK-NEXT:%5 = LoadPropertyInst %1 : object, "foo" : string
@@ -181,7 +181,7 @@ function module8() {
 //CHECK-LABEL:function module9() : boolean
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:    %BB0:
-//CHECK-NEXT:%0 = AllocObjectInst 2 : number
+//CHECK-NEXT:%0 = AllocObjectInst 2 : number, empty
 //CHECK-NEXT:%1 = CreateFunctionInst %"a 1#"() : boolean
 //CHECK-NEXT:%2 = StoreNewOwnPropertyInst %1 : closure, %0 : object, "a" : string, true : boolean
 //CHECK-NEXT:%3 = CreateFunctionInst %b() : boolean
@@ -206,14 +206,14 @@ function module9() {
 //CHECK-LABEL:function module13(c) : boolean|number
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:    %BB0:
-//CHECK-NEXT:%0 = AllocObjectInst 2 : number
+//CHECK-NEXT:%0 = AllocObjectInst 2 : number, empty
 //CHECK-NEXT:%1 = CreateFunctionInst %num() : number
 //CHECK-NEXT:%2 = StoreNewOwnPropertyInst %1 : closure, %0 : object, "num" : string, true : boolean
 //CHECK-NEXT:%3 = StoreNewOwnPropertyInst undefined : undefined, %0 : object, "next" : string, true : boolean
 //CHECK-NEXT:%4 = CondBranchInst %c, %BB1, %BB2
 //CHECK-NEXT:%BB1:
 //CHECK-NEXT:%5 = PhiInst %0 : object, %BB0, %11 : undefined|object, %BB1
-//CHECK-NEXT:%6 = AllocObjectInst 2 : number
+//CHECK-NEXT:%6 = AllocObjectInst 2 : number, empty
 //CHECK-NEXT:%7 = CreateFunctionInst %"num 1#"() : boolean
 //CHECK-NEXT:%8 = StoreNewOwnPropertyInst %7 : closure, %6 : object, "num" : string, true : boolean
 //CHECK-NEXT:%9 = StoreNewOwnPropertyInst undefined : undefined, %6 : object, "next" : string, true : boolean

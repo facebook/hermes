@@ -75,6 +75,30 @@ hermesInternalGetEpilogues(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeObjectValue(*outer);
 }
 
+/// Set the parent of an object failing silently on any error.
+CallResult<HermesValue>
+silentObjectSetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
+  JSObject *O = dyn_vmcast<JSObject>(args.getArg(0));
+  if (!O)
+    return HermesValue::encodeUndefinedValue();
+
+  JSObject *parent;
+  HermesValue V = args.getArg(1);
+  if (V.isNull())
+    parent = nullptr;
+  else if (V.isObject())
+    parent = vmcast<JSObject>(V);
+  else
+    return HermesValue::encodeUndefinedValue();
+
+  JSObject::setParent(O, runtime, parent);
+
+  // Ignore exceptions.
+  runtime->clearThrownValue();
+
+  return HermesValue::encodeUndefinedValue();
+}
+
 /// Used for testing, determines how many live values
 /// are in the given WeakMap or WeakSet.
 CallResult<HermesValue>
@@ -176,6 +200,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 
 #undef SET_PROP
 }
+
 } // namespace
 
 Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
@@ -207,6 +232,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(P::detachArrayBuffer, hermesInternalDetachArrayBuffer, 1);
   defineInternMethod(P::createHeapSnapshot, hermesInternalCreateHeapSnapshot);
   defineInternMethod(P::getEpilogues, hermesInternalGetEpilogues);
+  defineInternMethod(P::silentSetPrototypeOf, silentObjectSetPrototypeOf, 2);
   defineInternMethod(P::getWeakSize, hermesInternalGetWeakSize);
   defineInternMethod(
       P::getInstrumentedStats, hermesInternalGetInstrumentedStats);

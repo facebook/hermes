@@ -140,7 +140,7 @@ function check_var_decl_for_in_loop(obj) {
 //CHECK-NEXT:frame = [x]
 //CHECK-NEXT:  %BB0:
 //CHECK-NEXT:    %0 = StoreFrameInst undefined : undefined, [x]
-//CHECK-NEXT:    %1 = AllocObjectInst 0 : number
+//CHECK-NEXT:    %1 = AllocObjectInst 0 : number, empty
 //CHECK-NEXT:    %2 = StoreFrameInst %1 : object, [x]
 //CHECK-NEXT:    %3 = AllocStackInst $?anon_0_iter
 //CHECK-NEXT:    %4 = AllocStackInst $?anon_1_base

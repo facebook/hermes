@@ -192,6 +192,10 @@ static void generateInstructionConstraints(
       llvm::DenseSet<Literal *> props;
       collectOwnProperties(I, props);
       ap->addObjectEdge(AI, props);
+      if (!isa<Literal>(AI->getParentObject()) &&
+          !isa<EmptySentinel>(AI->getParentObject())) {
+        ap->addUnknownDst(AI->getParentObject());
+      }
       break;
     }
     case ValueKind::AllocArrayInstKind: {

@@ -492,8 +492,11 @@ StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
   return createStoreOwnPropertyInst(storedValue, object, L, isEnumerable);
 }
 
-AllocObjectInst *IRBuilder::createAllocObjectInst(uint32_t size) {
-  auto AOI = new AllocObjectInst(M->getLiteralNumber(size));
+AllocObjectInst *IRBuilder::createAllocObjectInst(
+    uint32_t size,
+    Value *parent) {
+  auto AOI = new AllocObjectInst(
+      M->getLiteralNumber(size), parent ? parent : getEmptySentinel());
   insert(AOI);
   return AOI;
 }

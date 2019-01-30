@@ -4,7 +4,7 @@
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:    %BB0:
 //CHECK-NEXT:%0 = AllocArrayInst 0 : number
-//CHECK-NEXT:%1 = AllocObjectInst 1 : number
+//CHECK-NEXT:%1 = AllocObjectInst 1 : number, empty
 //CHECK-NEXT:%2 = CreateFunctionInst %m() : boolean
 //CHECK-NEXT:%3 = StoreNewOwnPropertyInst %2 : closure, %1 : object, "m" : string, true : boolean
 //CHECK-NEXT:%4 = StorePropertyInst %1 : object, %0 : object, %i

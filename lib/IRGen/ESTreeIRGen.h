@@ -48,6 +48,9 @@ inline Identifier getNameFieldFromID(const ESTree::Node *ID) {
   return Identifier::getFromPointer(cast<ESTree::IdentifierNode>(ID)->_name);
 }
 
+/// \returns true if \p node is known to be a constant expression.
+bool isConstantExpr(ESTree::Node *node);
+
 //===----------------------------------------------------------------------===//
 // FunctionContext
 

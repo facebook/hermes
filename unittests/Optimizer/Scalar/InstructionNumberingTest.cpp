@@ -109,7 +109,10 @@ TEST_F(InstructionNumberingTest, EmptyRangeTest) {
 
 TEST_F(InstructionNumberingTest, SingleInstructionTest) {
   auto *inst = builder_.createAllocObjectInst(1);
-  Expression expr(inst, {value(builder_.getLiteralNumber(1))});
+  Expression expr(
+      inst,
+      {value(builder_.getLiteralNumber(1)),
+       value(builder_.getEmptySentinel())});
 
   InstructionNumbering numbering(*block_);
   auto iter = numbering.begin();
@@ -119,15 +122,14 @@ TEST_F(InstructionNumberingTest, SingleInstructionTest) {
 }
 
 TEST_F(InstructionNumberingTest, ArrowOperatorTest) {
-  auto *inst = builder_.createAllocObjectInst(1);
-  Expression expr(inst, {value(builder_.getLiteralNumber(1))});
+  builder_.createAllocObjectInst(1);
 
   InstructionNumbering numbering(*block_);
   auto iter = numbering.begin();
-  EXPECT_EQ(1, iter->operands.size());
+  EXPECT_EQ(2, iter->operands.size());
 }
 
-// %0 = AllocObjectInst 8
+// %0 = AllocObjectInst 8, empty
 // %1 = LoadPropertyInst %0, "foo"
 // %2 = BinaryOperatorInst '*', %1, %1
 // %3 = AsNumberInst %2
@@ -141,7 +143,10 @@ TEST_F(InstructionNumberingTest, InternalOperandTest) {
   auto *inst3 = builder_.createAsNumberInst(inst2);
 
   std::vector<Expression> expressions{
-      Expression(inst0, {value(builder_.getLiteralNumber(8))}),
+      Expression(
+          inst0,
+          {value(builder_.getLiteralNumber(8)),
+           value(builder_.getEmptySentinel())}),
       Expression(inst1, {internal(0), value(foo)}),
       Expression(inst2, {internal(1), internal(1)}),
       Expression(inst3, {internal(2)}),

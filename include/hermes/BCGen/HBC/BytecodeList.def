@@ -82,6 +82,13 @@ DEFINE_OPCODE_5(NewObjectWithBufferLong, Reg8, UInt16, UInt16, UInt32, UInt32)
 /// Arg1 = {}
 DEFINE_OPCODE_1(NewObject, Reg8)
 
+/// Create a new empty Object with the specified parent. If the parent is
+/// null, no parent is used. If the parent is not an object, the builtin
+/// Object.prototype is used. Otherwise the parent itself is used.
+/// Arg1 = the created object
+/// Arg2 = the parent.
+DEFINE_OPCODE_2(NewObjectWithParent, Reg8, Reg8)
+
 /// Create an array from a static list of values, as for var=[1,2,3].
 /// Any non-constant elements can be set afterwards with PutOwnByIndex.
 /// Arg1 is the destination.

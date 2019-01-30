@@ -8,7 +8,7 @@
 //CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [obj]
 //CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [foo]
 //CHECK-NEXT:  %2 = StoreFrameInst %param, [param]
-//CHECK-NEXT:  %3 = AllocObjectInst 2 : number
+//CHECK-NEXT:  %3 = AllocObjectInst 2 : number, empty
 //CHECK-NEXT:  %4 = StoreNewOwnPropertyInst 2 : number, %3 : object, "1" : string, true : boolean
 //CHECK-NEXT:  %5 = LoadFrameInst [param]
 //CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %3 : object, "key" : string, true : boolean

@@ -7,19 +7,19 @@
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = AllocStackInst $?anon_0_ret
 //CHECK-NEXT:  %1 = StoreStackInst undefined : undefined, %0
-//CHECK-NEXT:  %2 = AllocObjectInst 1 : number
-//CHECK-NEXT:  %3 = AllocObjectInst 2 : number
+//CHECK-NEXT:  %2 = AllocObjectInst 1 : number, empty
+//CHECK-NEXT:  %3 = AllocObjectInst 2 : number, empty
 //CHECK-NEXT:  %4 = StoreNewOwnPropertyInst "example glossary" : string, %3 : object, "title" : string, true : boolean
-//CHECK-NEXT:  %5 = AllocObjectInst 2 : number
+//CHECK-NEXT:  %5 = AllocObjectInst 2 : number, empty
 //CHECK-NEXT:  %6 = StoreNewOwnPropertyInst "S" : string, %5 : object, "title" : string, true : boolean
-//CHECK-NEXT:  %7 = AllocObjectInst 1 : number
-//CHECK-NEXT:  %8 = AllocObjectInst 7 : number
+//CHECK-NEXT:  %7 = AllocObjectInst 1 : number, empty
+//CHECK-NEXT:  %8 = AllocObjectInst 7 : number, empty
 //CHECK-NEXT:  %9 = StoreNewOwnPropertyInst "SGML" : string, %8 : object, "ID" : string, true : boolean
 //CHECK-NEXT:  %10 = StoreNewOwnPropertyInst "SGML" : string, %8 : object, "SortAs" : string, true : boolean
 //CHECK-NEXT:  %11 = StoreNewOwnPropertyInst "Standard Generalized Markup Language" : string, %8 : object, "GlossTerm" : string, true : boolean
 //CHECK-NEXT:  %12 = StoreNewOwnPropertyInst "SGML" : string, %8 : object, "Acronym" : string, true : boolean
 //CHECK-NEXT:  %13 = StoreNewOwnPropertyInst "ISO 8879:1986" : string, %8 : object, "Abbrev" : string, true : boolean
-//CHECK-NEXT:  %14 = AllocObjectInst 2 : number
+//CHECK-NEXT:  %14 = AllocObjectInst 2 : number, empty
 //CHECK-NEXT:  %15 = StoreNewOwnPropertyInst "A meta-markup language, used to create markup languages such as DocBook." : string, %14 : object, "para" : string, true : boolean
 //CHECK-NEXT:  %16 = AllocArrayInst 2 : number, "GML" : string, "XML" : string
 //CHECK-NEXT:  %17 = StoreNewOwnPropertyInst %16 : object, %14 : object, "GlossSeeAlso" : string, true : boolean

@@ -29,7 +29,7 @@ __d(function(e,n,i,a) {
 //CHECK-NEXT:%0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 //CHECK-NEXT:%1 = CallInst %t, undefined : undefined, 2 : number
 //CHECK-NEXT:%2 = CallInst %0, undefined : undefined, 8 : number
-//CHECK-NEXT:%3 = AllocObjectInst 0 : number
+//CHECK-NEXT:%3 = AllocObjectInst 0 : number, empty
 //CHECK-NEXT:%4 = StorePropertyInst %3 : object, %r, "exports" : string
 //CHECK-NEXT:%5 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end

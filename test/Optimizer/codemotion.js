@@ -240,7 +240,7 @@ function code_sinking(x, y) {
 //CHECK-NEXT:  {{.*}}  %4 = HBCLoadConstInst undefined : undefined
 //CHECK-NEXT:  {{.*}}  %5 = ReturnInst %4 : undefined
 //CHECK-NEXT:%BB3:
-//CHECK-NEXT:  {{.*}}  %6 = AllocObjectInst 0 : number
+//CHECK-NEXT:  {{.*}}  %6 = AllocObjectInst 0 : number, empty
 //CHECK-NEXT:  {{.*}}  %7 = StorePropertyInst %1, %6 : object, %0
 //CHECK-NEXT:  {{.*}}  %8 = BranchInst %BB1
 //CHECK-NEXT:function_end

@@ -2452,15 +2452,27 @@ tailCall:
         // Create a new object using the built-in constructor. Note that the
         // built-in constructor is empty, so we don't actually need to call
         // it.
-        {
-          // Scope is necessary to execute CallResult destructor before
-          // DISPATCH.
-          O1REG(NewObject) = JSObject::create(runtime).getHermesValue();
-          assert(
-              gcScope.getHandleCountDbg() == KEEP_HANDLES &&
-              "Should not create handles.");
-          ip = NEXTINST(NewObject);
-        }
+        O1REG(NewObject) = JSObject::create(runtime).getHermesValue();
+        assert(
+            gcScope.getHandleCountDbg() == KEEP_HANDLES &&
+            "Should not create handles.");
+        ip = NEXTINST(NewObject);
+        DISPATCH;
+      }
+      CASE(NewObjectWithParent) {
+        O1REG(NewObjectWithParent) =
+            JSObject::create(
+                runtime,
+                O2REG(NewObjectWithParent).isObject()
+                    ? Handle<JSObject>::vmcast(&O2REG(NewObjectWithParent))
+                    : O2REG(NewObjectWithParent).isNull()
+                        ? runtime->makeNullHandle<JSObject>()
+                        : Handle<JSObject>::vmcast(&runtime->objectPrototype))
+                .getHermesValue();
+        assert(
+            gcScope.getHandleCountDbg() == KEEP_HANDLES &&
+            "Should not create handles.");
+        ip = NEXTINST(NewObjectWithParent);
         DISPATCH;
       }
 
