@@ -37,20 +37,42 @@ static bool kVerifyCardTable = true;
 
 /* static */ const char *OldGen::kSegmentName = "hermes-oldgen-segment";
 
-OldGen::OldGen(GenGC *gc, size_t minSize, size_t maxSize, bool releaseUnused)
-    : GCGeneration(gc),
-      // The minimum old generation size is 2 pages.
+OldGen::Size::Size(gcheapsize_t min, gcheapsize_t max)
+    : // The minimum old generation size is 2 pages.
       // Round up the minSize as needed.
-      minSize_(adjustSizeWithBounds(
-          minSize,
-          2 * hermes::oscompat::page_size(),
-          std::numeric_limits<size_t>::max())),
+      min_(adjustSizeWithBounds(
+          min,
+          2 * oscompat::page_size(),
+          std::numeric_limits<gcheapsize_t>::max())),
       // Round up the maxSize as needed.
-      maxSize_(adjustSizeWithBounds(
-          maxSize,
-          2 * hermes::oscompat::page_size(),
-          std::numeric_limits<size_t>::max())),
-      releaseUnused_(releaseUnused) {
+      max_(adjustSizeWithBounds(
+          max,
+          2 * oscompat::page_size(),
+          std::numeric_limits<gcheapsize_t>::max())) {}
+
+/* static */
+gcheapsize_t
+OldGen::Size::adjustSizeWithBounds(size_t desired, size_t min, size_t max) {
+  const size_t PS = hermes::oscompat::page_size();
+
+  // The old generation's size must be at least two pages wide.
+  assert(min >= 2 * PS);
+  // The max must be at least the min size.
+  assert(max >= min);
+
+  // The old generation's size must be
+  //  - page-aligned, if it fits within one segment.
+  //  - segment-aligned, otherwise.
+  //  - at most \c max bytes wide up to alignment.
+  const auto clamped = std::max(min, std::min(desired, max));
+  const auto alignment = clamped <= AlignedHeapSegment::maxSize()
+      ? PS
+      : AlignedHeapSegment::maxSize();
+  return llvm::alignTo(clamped, alignment);
+}
+
+OldGen::OldGen(GenGC *gc, Size sz, bool releaseUnused)
+    : GCGeneration(gc), sz_(sz), releaseUnused_(releaseUnused) {
   exchangeActiveSegment(
       {AlignedStorage{&gc_->storageProvider_, kSegmentName}, this});
   if (!activeSegment())
@@ -93,7 +115,7 @@ void OldGen::growTo(size_t desired) {
 
 void OldGen::shrinkTo(size_t desired) {
   assert(desired >= used());
-  // Note that this assertion implies that desired >= minSize_.
+  // Note that this assertion implies that desired >= sz_.min().
   assert(desired == adjustSize(desired) && "Size must be adjusted.");
 
   if (size() <= desired) {
@@ -560,7 +582,7 @@ void OldGen::recreateCardTableBoundaries() {
 }
 
 size_t OldGen::maxSegments() const {
-  return segmentsForSize(maxSize_);
+  return segmentsForSize(sz_.max());
 }
 
 bool OldGen::seedSegmentCacheForSize(size_t size) {

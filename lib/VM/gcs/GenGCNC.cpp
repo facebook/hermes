@@ -54,19 +54,20 @@ using std::chrono::steady_clock;
 namespace hermes {
 namespace vm {
 
-namespace {
+GenGC::Size::Size(const GCConfig &gcConfig)
+    : Size(gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()) {}
 
-/// If a > b, returns a - b, else 0.  Used to make sure we don't overflow
-/// when we subtract unsigned heap sizes in some situations.
-gcheapsize_t clampDiffNonNeg(gcheapsize_t a, gcheapsize_t b) {
-  if (a > b) {
-    return a - b;
-  } else {
-    return 0;
-  }
+GenGC::Size::Size(gcheapsize_t min, gcheapsize_t max)
+    : ygs_(min / kYoungGenFractionDenom, max / kYoungGenFractionDenom),
+      ogs_(clampDiffNonNeg(min, ygs_.min()), clampDiffNonNeg(max, ygs_.max())) {
 }
 
-} // namespace
+std::pair<gcheapsize_t, gcheapsize_t> GenGC::Size::adjustSize(
+    gcheapsize_t desired) const {
+  const gcheapsize_t ygSize = ygs_.adjustSize(desired / kYoungGenFractionDenom);
+  return std::make_pair(
+      ygSize, ogs_.adjustSize(std::max(desired, ygSize) - ygSize));
+}
 
 GenGC::GenGC(
     MetadataTable metaTable,
@@ -75,19 +76,11 @@ GenGC::GenGC(
     StorageProvider *provider)
     : GCBase(metaTable, gcCallbacks, gcConfig, provider),
       storageProvider_(provider),
-      youngGen_(
-          this,
-          gcConfig.getMinHeapSize() / kYoungGenFractionDenom,
-          gcConfig.getMaxHeapSize() / kYoungGenFractionDenom,
-          &oldGen_),
+      generationSizes_(Size(gcConfig)),
+      youngGen_(this, generationSizes_.youngGenSize(), &oldGen_),
       oldGen_(
           this,
-          clampDiffNonNeg(
-              gcConfig.getMinHeapSize(),
-              youngGenSize(gcConfig.getMinHeapSize())),
-          clampDiffNonNeg(
-              gcConfig.getMaxHeapSize(),
-              youngGenSize(gcConfig.getMaxHeapSize())),
+          generationSizes_.oldGenSize(),
           gcConfig.getShouldReleaseUnused()),
       allocContextFromYG_(gcConfig.getAllocInYoung()),
       revertToYGAtTTI_(gcConfig.getRevertToYGAtTTI()),
@@ -733,22 +726,20 @@ void GenGC::growTo(size_t hint) {
   // Young Generation satisfies this because youngGenSize is monotonic.  The Old
   // Generation satisfies this because it aligns up to a multiple of the Young
   // Generation's alignment boundary.
-
-  auto ygSize = youngGenSize(hint);
-  auto ogSize = oldGen_.adjustSize(std::max(hint, ygSize) - ygSize);
-
-  youngGen_.growTo(ygSize);
-  oldGen_.growTo(ogSize);
+  const auto sizes = generationSizes_.adjustSize(hint);
+  youngGen_.growTo(sizes.first);
+  oldGen_.growTo(sizes.second);
 }
 
 void GenGC::shrinkTo(size_t hint) {
-  auto ygSize = youngGenSize(hint);
+  const auto sizes = generationSizes_.adjustSize(hint);
+  const auto ygSize = sizes.first;
   // This should only be called when this assertion is guaranteed: for example,
   // when the young gen is empty.
   assert(youngGen_.usedDirect() <= ygSize);
   // The minimim size we can shrink to allows a young generation collection.
-  const size_t minHeapSize = ygSize + usedDirect();
-  auto ogSize = oldGen_.adjustSize(std::max(hint, minHeapSize) - ygSize);
+  const gcheapsize_t minHeapSize = usedDirect();
+  auto ogSize = oldGen_.adjustSize(std::max(sizes.second, minHeapSize));
 
   youngGen_.shrinkTo(ygSize);
   oldGen_.shrinkTo(ogSize);

@@ -7,8 +7,6 @@
 #ifndef HERMES_VM_STORAGEPROVIDER_H
 #define HERMES_VM_STORAGEPROVIDER_H
 
-#include "hermes/Public/GCConfig.h"
-
 #include <limits>
 #include <memory>
 
@@ -27,8 +25,10 @@ class StorageProvider {
 
   /// Get the recommended provider for the build mode.
   /// This should be the provider for any production scenario.
-  static std::unique_ptr<StorageProvider> defaultProvider(
-      const GCConfig &config);
+  /// \param maxAmount A maximum bytes of storage that any provider can choose
+  ///   to limit with, and return nullptr after reaching that limit.
+  /// \pre maxAmount must be a multiple of AlignedStorage::size().
+  static std::unique_ptr<StorageProvider> defaultProvider(size_t maxAmount);
 
   // NOTE: The rest of these factories should only be used by tests.
 

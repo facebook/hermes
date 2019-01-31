@@ -58,6 +58,50 @@ class WeakRef;
 /// collection collects both generations.)
 class GenGC final : public GCBase {
  public:
+  class Size final {
+   public:
+    explicit Size(const GCConfig &gcConfig);
+    Size(gcheapsize_t min, gcheapsize_t max);
+
+    gcheapsize_t min() const {
+      return ygs_.min() + ogs_.min();
+    }
+
+    gcheapsize_t max() const {
+      return ygs_.max() + ogs_.max();
+    }
+
+   private:
+    // Expose private functions to GenGC, but not the rest of the world.
+    friend class GenGC;
+
+    YoungGen::Size ygs_;
+    OldGen::Size ogs_;
+
+    YoungGen::Size youngGenSize() const {
+      return ygs_;
+    }
+
+    OldGen::Size oldGenSize() const {
+      return ogs_;
+    }
+
+    std::pair<gcheapsize_t, gcheapsize_t> adjustSize(
+        gcheapsize_t desired) const;
+
+    /// If a > b, returns a - b, else 0.  Used to make sure we don't overflow
+    /// when we subtract unsigned heap sizes in some situations.
+    static constexpr gcheapsize_t clampDiffNonNeg(
+        gcheapsize_t a,
+        gcheapsize_t b) {
+      return a > b ? a - b : 0;
+    }
+
+    /// We aim to keep the young gen 1 / kYoungGenFractionDenom of the total
+    /// heap size, subject to its own bounding and alignment requirements.
+    static constexpr unsigned kYoungGenFractionDenom = 8;
+  };
+
   /// The GC can make this false for periods in which the heap is not valid.
   /// This can affect debug assertions.
   bool heapIsValid() const {
@@ -395,9 +439,10 @@ class GenGC final : public GCBase {
  private:
 #endif
 
-  /// We aim to keep the young gen 1 / kYoungGenFractionDenom of the total heap
-  /// size, subject to its own bounding and alignment requirements.
-  static constexpr unsigned kYoungGenFractionDenom = 8;
+  /// FIXME: This is for backwards compatibility, new users should use
+  /// Size::kYoungGenFractionDenom.
+  static constexpr unsigned kYoungGenFractionDenom =
+      Size::kYoungGenFractionDenom;
 
   /// Young gen initial size, as a function of the overall heap's size.
   size_t youngGenSize(size_t totalHeapSize) const;
@@ -714,6 +759,9 @@ class GenGC final : public GCBase {
   /// A mapping from the lowest address in a segment's memory region, to a
   /// pointer to the segment itself.
   GCSegmentAddressIndex segmentIndex_;
+
+  /// The sizes of each generation.
+  Size generationSizes_;
 
   /// The generations that make up the heap.
   /// Note: these must be declared and initialized in this order; the OldGen's

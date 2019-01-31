@@ -143,7 +143,7 @@ MallocGC::MallocGC(
     : GCBase(metaTable, gcCallbacks, gcConfig, provider),
       pointers_(),
       weakPointers_(),
-      maxSize_(gcConfig.getMaxHeapSize()),
+      maxSize_(Size(gcConfig).max()),
       sizeLimit_(gcConfig.getInitHeapSize()) {}
 
 void MallocGC::collectBeforeAlloc(uint32_t size) {

@@ -31,10 +31,41 @@ class OldGen;
 /// be used as the young generation in a generational heap.
 class YoungGen : public GCGeneration {
  public:
+  /// See comment in GCGeneration.
+  class Size final {
+   public:
+    Size(gcheapsize_t min, gcheapsize_t max);
+
+    gcheapsize_t min() const {
+      return min_;
+    }
+
+    gcheapsize_t max() const {
+      return max_;
+    }
+
+    gcheapsize_t adjustSize(gcheapsize_t amount) const {
+      return adjustSizeWithBounds(amount, min_, max_);
+    }
+
+   private:
+    /// The minimum size of the allocation region, in bytes.  This value will
+    /// not exceed \c AlignedHeapSegment::maxSize().
+    gcheapsize_t min_;
+    /// The maximum size of the allocation region, in bytes.  This value will
+    /// not exceed \c AlignedHeapSegment::maxSize().
+    gcheapsize_t max_;
+
+    static gcheapsize_t adjustSizeWithBounds(
+        gcheapsize_t desired,
+        gcheapsize_t min,
+        gcheapsize_t max);
+  };
+
   /// Initialize the YoungGen as a generation in the given GenGC, with a minimum
-  /// and maximum allocation region size (in bytes) of \p minSize and \p
-  /// maxSize, respectively, and a later generation \p nextGen.
-  YoungGen(GenGC *gc, size_t minSize, size_t maxSize, OldGen *nextGen);
+  /// and maximum allocation region size (in bytes) given by \p sz, and a later
+  /// generation \p nextGen.
+  YoungGen(GenGC *gc, Size sz, OldGen *nextGen);
 
   /// @name GCGeneration API Begins
   /// @{
@@ -197,17 +228,8 @@ class YoungGen : public GCGeneration {
   /// of the copied GCCell.
   GCCell *forwardPointer(GCCell *ptr);
 
-  /// See GCGeneration.h for more information.
-  inline size_t adjustSizeWithBounds(size_t desired, size_t min, size_t max)
-      const;
-
-  /// The minimum size of the allocation region, in bytes.  This value will not
-  /// exceed \c AlignedHeapSegment::maxSize().
-  const size_t minSize_;
-
-  /// The maximum size of the allocation region, in bytes.  This value will not
-  /// exceed \c AlignedHeapSegment::maxSize().
-  const size_t maxSize_;
+  /// The minimum and maximum size of this generation.
+  const Size sz_;
 
   /// The low and high limits of the young gen, respectively.  These
   /// are the same as the initial segment's limits; we copy them
@@ -246,11 +268,11 @@ size_t YoungGen::sizeDirect() const {
 }
 
 size_t YoungGen::minSize() const {
-  return minSize_;
+  return sz_.min();
 }
 
 size_t YoungGen::maxSize() const {
-  return maxSize_;
+  return sz_.max();
 }
 
 size_t YoungGen::used() const {
@@ -268,29 +290,7 @@ size_t YoungGen::availableDirect() const {
 }
 
 size_t YoungGen::adjustSize(size_t desired) const {
-  return adjustSizeWithBounds(desired, minSize_, maxSize_);
-}
-
-size_t YoungGen::adjustSizeWithBounds(size_t desired, size_t min, size_t max)
-    const {
-#ifndef NDEBUG
-  const size_t PS = hermes::oscompat::page_size();
-#endif
-
-  assert(
-      2 * PS <= min &&
-      "The young generation's size must be at least two pages wide.");
-  assert(min <= max && "The max must be at least the min size.");
-
-  // The young generation's size must be
-  //  - heap aligned
-  //  - at most max bytes wide (which in turn is at most one segment's
-  //    allocation region wide), up to alignment.
-  assert(
-      max <= AlignedHeapSegment::maxSize() &&
-      "segment must be able to hold at least 2 pages");
-  auto clamped = std::max(min, std::min(desired, max));
-  return llvm::alignTo(clamped, HeapAlign);
+  return sz_.adjustSize(desired);
 }
 
 void YoungGen::growTo(size_t desired) {
@@ -302,7 +302,7 @@ void YoungGen::growTo(size_t desired) {
 void YoungGen::shrinkTo(size_t desired) {
   assert(ownsAllocContext());
   assert(desired >= usedDirect());
-  // Note that this assertion implies that desired >= minSize_.
+  // Note that this assertion implies that desired >= sz_.min().
   assert(desired == adjustSize(desired) && "Size must be adjusted.");
 
   // No-op if the size is already smaller than the desired size.

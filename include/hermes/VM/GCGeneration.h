@@ -82,6 +82,20 @@ class GenGC;
 /// The size() minus external memory, but zero if external memory is larger
 /// than size().
 ///   size_t effectiveSize();
+///
+/// It must also have the inner type:
+///   class Size;
+/// Which provides at least these functions publicly:
+///   Constructor.
+///     Size(gcheapsize_t min, gcheapsize_t max);
+///   Return the minimum amount of bytes holdable by this generation.
+///     gcheapsize_t min() const;
+///   Return the maximum amount of bytes holdable by this generation.
+///     gcheapsize_t max() const;
+///   Return the amount of space this generation will take for a given \p amount
+///   of bytes. It will clamp the size based on the min and max size of the
+///   generation, and also make sure it is aligned correctly.
+///     gcheapsize_t adjustSize(gcheapsize_t amount) const;
 /// @}
 ///
 /// @name Growth
@@ -98,11 +112,6 @@ class GenGC;
 ///     adjustSize(desired) - desired < C
 ///
 ///   size_t adjustSize(size_t desired) const;
-//
-/// The adjusted size for \p desired, using the given \p min and \p max
-/// as the minimum and maximum generation sizes, respectively.
-///   inline size_t adjustSizeWithBounds(
-///       size_t desired, size_t min, size_t max) const;
 ///
 /// Increases the size of the generation by the minimum amount such that
 /// this->size() >= size.  This function assumes that \p size has been adjusted,

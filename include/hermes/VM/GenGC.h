@@ -55,6 +55,24 @@ class WeakRef;
 /// collection collects both generations.)
 class GenGC final : public GCBase {
  public:
+  /// See comment in GCBase.
+  class Size final {
+   public:
+    explicit Size(const GCConfig &gcConfig);
+    Size(gcheapsize_t min, gcheapsize_t max);
+
+    gcheapsize_t min() const {
+      return min_;
+    }
+    gcheapsize_t max() const {
+      return max_;
+    }
+
+   private:
+    gcheapsize_t min_;
+    gcheapsize_t max_;
+  };
+
   /// The GC can make this false for periods in which the heap is not valid.
   /// This can affect debug assertions.
   bool heapIsValid() const {

@@ -142,6 +142,17 @@ class GCCell;
 /// after the mark call.
 ///   bool isUpdatingPointers() const;
 ///
+/// It must also have the inner type:
+///   class Size;
+/// Which provides at least these functions publicly:
+///   Constructor from either a GCConfig or the min and max heap size.
+///     explicit Size(const GCConfig &conf);
+///     Size(gcheapsize_t min, gcheapsize_t max);
+///   Return the minimum amount of bytes holdable by this heap.
+///     gcheapsize_t min() const;
+///   Return the maximum amount of bytes holdable by this heap.
+///     gcheapsize_t max() const;
+///
 class GCBase {
  public:
   /// An interface enabling the garbage collector to mark roots and free

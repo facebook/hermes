@@ -33,20 +33,45 @@ using std::chrono::steady_clock;
 namespace hermes {
 namespace vm {
 
-YoungGen::YoungGen(GenGC *gc, size_t minSize, size_t maxSize, OldGen *nextGen)
-    : GCGeneration(gc),
-      // The minimum young generation size is 2 pages.
+YoungGen::Size::Size(gcheapsize_t min, gcheapsize_t max)
+    : // The minimum young generation size is 2 pages.
       // Round up the minSize as needed.
-      minSize_(adjustSizeWithBounds(
-          minSize,
-          2 * hermes::oscompat::page_size(),
+      min_(adjustSizeWithBounds(
+          min,
+          2 * oscompat::page_size(),
           AlignedHeapSegment::maxSize())),
       // Round up the maxSize as needed.
-      maxSize_(adjustSizeWithBounds(
-          maxSize,
-          2 * hermes::oscompat::page_size(),
-          AlignedHeapSegment::maxSize())),
-      nextGen_(nextGen) {
+      max_(adjustSizeWithBounds(
+          max,
+          2 * oscompat::page_size(),
+          AlignedHeapSegment::maxSize())) {}
+
+/* static */ gcheapsize_t YoungGen::Size::adjustSizeWithBounds(
+    gcheapsize_t desired,
+    gcheapsize_t min,
+    gcheapsize_t max) {
+#ifndef NDEBUG
+  const size_t PS = hermes::oscompat::page_size();
+#endif
+
+  assert(
+      2 * PS <= min &&
+      "The young generation's size must be at least two pages wide.");
+  assert(min <= max && "The max must be at least the min size.");
+
+  // The young generation's size must be
+  //  - heap aligned
+  //  - at most max bytes wide (which in turn is at most one segment's
+  //    allocation region wide), up to alignment.
+  assert(
+      max <= AlignedHeapSegment::maxSize() &&
+      "segment must be able to hold at least 2 pages");
+  auto clamped = std::max(min, std::min(desired, max));
+  return llvm::alignTo(clamped, HeapAlign);
+}
+
+YoungGen::YoungGen(GenGC *gc, Size sz, OldGen *nextGen)
+    : GCGeneration(gc), sz_(sz), nextGen_(nextGen) {
   exchangeActiveSegment(
       {AlignedStorage{&gc_->storageProvider_, "hermes-younggen-segment"},
        this});

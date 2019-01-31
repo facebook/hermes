@@ -88,10 +88,35 @@ namespace vm {
 /// @}
 class OldGen : public GCGeneration {
  public:
+  /// See comment in GCGeneration.
+  class Size final {
+   public:
+    Size(gcheapsize_t min, gcheapsize_t max);
+
+    gcheapsize_t min() const {
+      return min_;
+    }
+
+    gcheapsize_t max() const {
+      return max_;
+    }
+
+    gcheapsize_t adjustSize(gcheapsize_t amount) const {
+      return adjustSizeWithBounds(amount, min_, max_);
+    }
+
+   private:
+    gcheapsize_t min_;
+    gcheapsize_t max_;
+
+    static gcheapsize_t
+    adjustSizeWithBounds(size_t desired, size_t min, size_t max);
+  };
+
   /// Initialize the OldGen as a generation in the given GenGC.  The \p minSize
   /// and \p maxSize arguments are hints for the minimum and maximum generation
   /// size, respectively, in bytes.
-  OldGen(GenGC *gc, size_t minSize, size_t maxSize, bool releaseUnused);
+  OldGen(GenGC *gc, Size ogs, bool releaseUnused);
 
   /// @name GCGeneration API
   /// @{
@@ -258,10 +283,6 @@ class OldGen : public GCGeneration {
   /// The maximum number of segments that can be allocated.
   size_t maxSegments() const;
 
-  /// See GCGeneration.h for more information.
-  inline size_t adjustSizeWithBounds(size_t desired, size_t min, size_t max)
-      const;
-
   /// The number of segments needed to allocate the given size.  (Rounds up,
   /// conservatively, if necessary.)
   inline static size_t segmentsForSize(size_t size);
@@ -342,11 +363,8 @@ class OldGen : public GCGeneration {
   /// allocated) segment may have a size smaller than the maximum.
   size_t size_{0};
 
-  /// The minimum size of the current generation.
-  const size_t minSize_;
-
-  /// The maximum size of the current generation.
-  const size_t maxSize_;
+  /// The minimum and maximum sizes of the current generation.
+  const Size sz_;
 
   /// The segments in the old generation that are filled with allocations, but
   /// are not currently being allocated into.
@@ -409,35 +427,15 @@ size_t OldGen::size() const {
 }
 
 size_t OldGen::minSize() const {
-  return minSize_;
+  return sz_.min();
 }
 
 size_t OldGen::maxSize() const {
-  return maxSize_;
+  return sz_.max();
 }
 
 size_t OldGen::adjustSize(size_t desired) const {
-  return adjustSizeWithBounds(desired, minSize_, maxSize_);
-}
-
-size_t OldGen::adjustSizeWithBounds(size_t desired, size_t min, size_t max)
-    const {
-  const size_t PS = hermes::oscompat::page_size();
-
-  // The old generation's size must be at least two pages wide.
-  assert(min >= 2 * PS);
-  // The max must be at least the min size.
-  assert(max >= min);
-
-  // The old generation's size must be
-  //  - page-aligned, if it fits within one segment.
-  //  - segment-aligned, otherwise.
-  //  - at most \c max bytes wide up to alignment.
-  const auto clamped = std::max(min, std::min(desired, max));
-  const auto alignment = clamped <= AlignedHeapSegment::maxSize()
-      ? PS
-      : AlignedHeapSegment::maxSize();
-  return llvm::alignTo(clamped, alignment);
+  return sz_.adjustSize(desired);
 }
 
 SegTraits<OldGen>::Range OldGen::allSegments() {

@@ -127,6 +127,26 @@ class MallocGC final : public GCBase {
   gcheapsize_t allocatedBytes_{0};
 
  public:
+  /// See comment in GCBase.
+  class Size final {
+   public:
+    explicit Size(const GCConfig &gcConfig)
+        : Size(gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()) {}
+    Size(gcheapsize_t min, gcheapsize_t max) : min_(min), max_(max) {}
+
+    gcheapsize_t min() const {
+      return min_;
+    }
+
+    gcheapsize_t max() const {
+      return max_;
+    }
+
+   private:
+    gcheapsize_t min_;
+    gcheapsize_t max_;
+  };
+
   MallocGC(
       MetadataTable metaTable,
       GCCallbacks *gcCallbacks,

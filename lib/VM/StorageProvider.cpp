@@ -178,10 +178,10 @@ void PreAllocatedStorageProvider::deleteStorage(void *storage) {
 
 /* static */
 std::unique_ptr<StorageProvider> StorageProvider::defaultProvider(
-    const GCConfig &config) {
+    size_t maxAmount) {
 #ifdef HERMESVM_FLAT_ADDRESS_SPACE
   // On 64-bit builds, we have plenty of VA, allocate it before-hand.
-  return preAllocatedProvider(config.getMaxHeapSize());
+  return preAllocatedProvider(maxAmount);
 #else
   // On 32-bit builds, we have limited VA. Allocate
   // each segment as it's needed.

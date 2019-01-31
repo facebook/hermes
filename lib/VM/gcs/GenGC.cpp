@@ -58,6 +58,12 @@ static gcheapsize_t clampAndPageAlign(gcheapsize_t size) {
 
 } // anonymous namespace
 
+GenGC::Size::Size(const GCConfig &gcConfig)
+    : Size(gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()) {}
+
+GenGC::Size::Size(gcheapsize_t min, gcheapsize_t max)
+    : min_(clampAndPageAlign(min)), max_(clampAndPageAlign(max)) {}
+
 GenGC::GenGC(
     MetadataTable metaTable,
     GCCallbacks *gcCallbacks,
@@ -67,7 +73,7 @@ GenGC::GenGC(
       // The minimum initial size is 2 pages.
       initialSize_(clampAndPageAlign(gcConfig.getInitHeapSize())),
       // The minimum maximum size is 2 pages.
-      maxSize_(clampAndPageAlign(gcConfig.getMaxHeapSize())),
+      maxSize_(Size(gcConfig).max()),
       storage_(allocBackingStorage()),
       oldGen_(
           this,
