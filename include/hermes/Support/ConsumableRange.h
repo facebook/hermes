@@ -25,6 +25,9 @@ class ConsumableRange {
   ConsumableRange(const ConsumableRange &other) = delete;
   ConsumableRange &operator=(const ConsumableRange &other) = delete;
 
+  ConsumableRange(ConsumableRange &&other) = default;
+  ConsumableRange &operator=(ConsumableRange &&other) = default;
+
   /// True if there is a next element, i.e., range is non-empty.
   bool hasNext() const {
     return cur_ != end_;
