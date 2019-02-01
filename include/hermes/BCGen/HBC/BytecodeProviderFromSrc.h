@@ -20,6 +20,7 @@ struct CompileFlags {
   bool lazy{false};
   bool strict{false};
   bool staticBuiltins{false};
+  bool verifyIR{false};
 };
 
 #ifndef HERMESVM_LEAN

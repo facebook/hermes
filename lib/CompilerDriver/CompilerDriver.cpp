@@ -380,6 +380,16 @@ static opt<std::string> BaseBytecodeFile(
     llvm::cl::desc("input base bytecode for delta optimizing mode"),
     llvm::cl::init(""));
 
+static opt<bool> VerifyIR(
+    "verify-ir",
+#ifdef HERMES_SLOW_DEBUG
+    init(true),
+#else
+    init(false),
+    Hidden,
+#endif
+    desc("Verify the IR after creating it"));
+
 } // namespace cl
 
 namespace {
@@ -1174,11 +1184,13 @@ CompileResult processSourceFiles(
 #endif
 
   // In dbg builds, verify the module before we emit bytecode.
-  bool failedVerification = verifyModule(M, &llvm::errs());
-  if (failedVerification) {
-    M.dump();
+  if (cl::VerifyIR) {
+    bool failedVerification = verifyModule(M, &llvm::errs());
+    if (failedVerification) {
+      M.dump();
+    }
+    assert(!failedVerification && "Module verification failed!");
   }
-  assert(!failedVerification && "Module verification failed!");
 
   BytecodeGenerationOptions genOptions{cl::DumpTarget};
   genOptions.optimizationEnabled = cl::OptimizationLevel > cl::OptLevel::Og;

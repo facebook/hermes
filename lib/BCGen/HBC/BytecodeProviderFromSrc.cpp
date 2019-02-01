@@ -117,6 +117,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
       "Can't optimize in lazy mode.");
   opts.optimizationEnabled = compileFlags.optimize;
   opts.staticBuiltinsEnabled = compileFlags.staticBuiltins;
+  opts.verifyIR = compileFlags.verifyIR;
   auto bytecode = createBCProviderFromSrc(
       hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), opts));
   return {std::move(bytecode), std::string{}};

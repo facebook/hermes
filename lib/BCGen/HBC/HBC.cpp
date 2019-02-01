@@ -83,7 +83,8 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   }
   PM.run(M);
 
-  if (verifyModule(*M, &llvm::errs(), VerificationMode::IR_VALID)) {
+  if (options.verifyIR &&
+      verifyModule(*M, &llvm::errs(), VerificationMode::IR_VALID)) {
     M->dump();
     llvm_unreachable("IR verification failed");
   }

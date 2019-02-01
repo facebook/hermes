@@ -43,6 +43,9 @@ struct BytecodeGenerationOptions {
   /// Whether static builtins are enabled.
   bool staticBuiltinsEnabled = false;
 
+  /// Whether the IR should be verified.
+  bool verifyIR = false;
+
   /* implicit */ BytecodeGenerationOptions(OutputFormatKind format)
       : format(format) {}
 
