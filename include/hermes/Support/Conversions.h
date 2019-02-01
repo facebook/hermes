@@ -134,6 +134,8 @@ inline OptValue<uint32_t> toArrayIndex(llvm::StringRef str) {
 }
 
 /// Attempt to convert a double to a valid JavaScript array number.
+OptValue<uint32_t> doubleToArrayIndex(double d)
+    LLVM_NO_SANITIZE("float-cast-overflow");
 inline OptValue<uint32_t> doubleToArrayIndex(double d) {
   uint32_t index = (uint32_t)d;
   if (index == d && index != 0xFFFFFFFFu)
