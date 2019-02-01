@@ -14,21 +14,18 @@
 // but will allow us to export the current values in scope.
 
 namespace hermes {
-
-namespace {
 template <typename K, typename V>
-class Node {
+class ScopedHashTableNode {
  public:
   K key_;
   V value_;
 
-  Node<K, V> *nextShadowed_{nullptr};
-  Node<K, V> *nextInScope_{nullptr};
+  ScopedHashTableNode<K, V> *nextShadowed_{nullptr};
+  ScopedHashTableNode<K, V> *nextInScope_{nullptr};
   uint32_t depth_;
-  Node(uint32_t depth, const K &key, const V &value)
+  ScopedHashTableNode(uint32_t depth, const K &key, const V &value)
       : key_(key), value_(value), depth_(depth) {}
 };
-} // namespace
 
 template <typename K, typename V>
 class ScopedHashTable;
@@ -38,7 +35,7 @@ class ScopedHashTableScope {
  private:
   uint32_t depth_;
   /// Start of the linked list of nodes in this scope. Owned by ScopedHashTable.
-  Node<K, V> *head_{nullptr};
+  ScopedHashTableNode<K, V> *head_{nullptr};
   /// The scope we're shadowing. Owned by the user.
   ScopedHashTableScope<K, V> *previous_;
   /// The table we're creating a scope for.
@@ -61,13 +58,13 @@ class ScopedHashTable {
  private:
   /// Maps from keys to most current definition. All Nodes are owned by this.
   /// They are allocated by insertIntoScope and deleted by clearCurrentScope
-  llvm::DenseMap<K, Node<K, V> *> map_;
+  llvm::DenseMap<K, ScopedHashTableNode<K, V> *> map_;
   // The current scope. Owned by the user.
   ScopedHashTableScope<K, V> *scope_{nullptr};
 
   /// Unlinks the innermost Node for a key and returns it.
-  Node<K, V> *pop(const K &key) {
-    Node<K, V> *&entry = map_[key];
+  ScopedHashTableNode<K, V> *pop(const K &key) {
+    ScopedHashTableNode<K, V> *&entry = map_[key];
     assert(entry && "Asked to pop an empty scope value");
     assert(
         entry->depth_ == scope_->depth_ &&
@@ -111,9 +108,9 @@ class ScopedHashTable {
       const K &key,
       const V &value) {
     assert(scope && "No currently defined scope");
-    Node<K, V> *&entry = map_[key];
+    ScopedHashTableNode<K, V> *&entry = map_[key];
     // All Nodes allocated here.
-    Node<K, V> *update = new Node<K, V>(scope->depth_, key, value);
+    auto *update = new ScopedHashTableNode<K, V>(scope->depth_, key, value);
     assert(
         (!entry || entry->depth_ <= scope->depth_) &&
         "Can't insert values under existing names");

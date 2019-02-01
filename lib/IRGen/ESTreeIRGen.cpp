@@ -241,7 +241,7 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
   } else if (auto *FD = dyn_cast<ESTree::FunctionDeclarationNode>(node)) {
     params = &FD->_params;
     body = FD->_body;
-  } else if (auto *AF = dyn_cast<ESTree::ArrowFunctionExpressionNode>(node)) {
+  } else if (auto *FD = dyn_cast<ESTree::ArrowFunctionExpressionNode>(node)) {
     // FIXME: Arrow functions are broken with lazy compilation because of the
     // all the extra bindings.
     assert(false && "Lazy compilation not supported in ES6");
