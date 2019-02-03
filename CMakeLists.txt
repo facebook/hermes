@@ -229,6 +229,21 @@ if (NOT ICU_FOUND)
   endif()
 endif()
 
+# ICU is available on Windows, but only since Windows 10 v1703.
+# Therefore, use it only as fallback.
+if (NOT ICU_FOUND AND
+    WIN32 AND # Windows 32 or 64 bit
+    # At least Windows 10 version 1703 (aka Creators Update)
+    NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS "10.0.15063")
+  add_definitions(-DUSE_WIN10_ICU)
+  set(ICU_FOUND 1)
+  set(ICU_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/external/icu_decls)
+  set(ICU_LIBRARIES
+    icuuc icuin
+  )
+  include_directories(${ICU_INCLUDE_DIRS})
+endif()
+
 # If we have no ICU, then error out.
 if (NOT ICU_FOUND)
   message(FATAL_ERROR "Unable to find ICU.")

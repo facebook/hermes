@@ -35,10 +35,15 @@ cd "$HERMES_WS_DIR"
 # You can substitute the 'Ninja' build system with "Xcode",
 # "Visual Studio 10 Win64" or other build system to create project files for
 # these editors.
-BUILD_SYSTEM=${1-Ninja}
-BUILD_DIR=${2-}
-BUILD_DIR_SUFFIX=""
+if [[ `uname` == *"_NT-"* ]]; then
+  BUILD_SYSTEM="${1-Visual Studio 15 2017 Win64}"
+else
+  BUILD_SYSTEM=${1-Ninja}
+fi
 
+BUILD_DIR=${2-}
+
+BUILD_DIR_SUFFIX=""
 if [ -n "$ENABLE_ASAN" ]; then
     BUILD_DIR_SUFFIX="${BUILD_DIR_SUFFIX}_asan";
 fi
@@ -47,11 +52,6 @@ if [ -n "$DISTRIBUTE" ]; then
 fi
 if [ -n "$BUILD_32BIT" ]; then
     BUILD_DIR_SUFFIX="${BUILD_DIR_SUFFIX}_32";
-fi
-
-# This is the only valid configuration on windows:
-if [[ `uname` == 'MSYS_NT-10.0' ]]; then
-	BUILD_SYSTEM="Visual Studio 14 2015 Win64"
 fi
 
 # Guess ICU_ROOT if ICU_ROOT is not specified and is on Linux

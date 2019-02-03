@@ -8,7 +8,6 @@
 
 #if HERMES_PLATFORM_UNICODE == HERMES_PLATFORM_UNICODE_ICU
 
-#include <unicode/udat.h>
 #include "hermes/Platform/Unicode/icu.h"
 
 namespace hermes {
