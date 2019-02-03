@@ -19,7 +19,7 @@ trap finish EXIT
 #   BUILD_TYPE=<...>         CMake build type. Defaults to Debug.
 #   BUILD_32BIT=1            Build 32-bit binaries on 64-bit systems
 #   LIBFUZZER_PATH=<..>      Path to libfuzzer
-#   ICU_PATH=<..>            Path to ICU library (required on Linux)
+#   ICU_ROOT=<..>            Path to ICU library
 
 # HERMES_WS_DIR is the root directory for LLVM checkout and build dirs.
 [ -z "$HERMES_WS_DIR" ] && echo "HERMES_WS_DIR must be set" >&2 && exit 1
@@ -54,11 +54,11 @@ if [[ `uname` == 'MSYS_NT-10.0' ]]; then
 	BUILD_SYSTEM="Visual Studio 14 2015 Win64"
 fi
 
-# Guess ICU_PATH if unspecified and not on Linux
-if [ -z "$ICU_PATH" ] && [[ `uname` = Linux ]]
+# Guess ICU_ROOT if ICU_ROOT is not specified and is on Linux
+if [ -z "$ICU_ROOT" ] && [[ `uname` = Linux ]]
 then
   guess_path=/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-4.8.1-glibc-2.17/c3f970a/
-  [ -d "$guess_path" ] && ICU_PATH=$guess_path
+  [ -d "$guess_path" ] && ICU_ROOT=$guess_path
 fi
 
 # If env DISTRIBUTE is set, we will use release build.
@@ -110,10 +110,10 @@ then
   FLAGS="$FLAGS -DHERMESVM_PROFILER_BB=ON"
 fi
 
-if [ -n "$ICU_PATH" ]
+if [ -n "$ICU_ROOT" ]
 then
-  echo "Using ICU path: $ICU_PATH"
-  FLAGS="$FLAGS -DICU_PATH=$ICU_PATH"
+  echo "Using ICU_ROOT: $ICU_ROOT"
+  FLAGS="$FLAGS -DICU_ROOT=$ICU_ROOT"
 elif [ -n "$SANDCASTLE" ] && [[ "$(uname)" != "Darwin" ]]
 then
   # If we're on sandcastle and not on OSX, we need an ICU path.

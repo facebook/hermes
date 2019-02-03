@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 3.7.0)
 
 include(CheckCXXSourceCompiles)
 
@@ -128,6 +128,12 @@ set(LLVM_BUILD_TOOLS ON)
 # Enable warnings.
 set(LLVM_ENABLE_WARNINGS ON)
 
+# Only interpret if() arguments as variables or keywords when unquoted.
+# CMake emits a warning if this is not set.
+if (POLICY CMP0054)
+  cmake_policy(SET CMP0054 NEW)
+endif()
+
 # Turn all warnings into errors on some compilers:
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 set(LLVM_ENABLE_WERROR ON)
@@ -196,25 +202,31 @@ link_directories("${LLVM_SRC_DIR}/lib"
 
 # Attempt to use system ICU first, if none specified.
 # Don't need ICU on Apple systems.
-if (NOT ICU_PATH AND NOT APPLE)
-  find_package(ICU 52 REQUIRED COMPONENTS uc i18n)
-elseif (ICU_PATH)
-  set(ICU_FOUND 1)
-  set(ICU_INCLUDE_DIRS ${ICU_PATH}/include)
-  set(ICU_LIBRARIES
-    ${ICU_PATH}/lib/libicuuc.so
-    ${ICU_PATH}/lib/libicui18n.so
-    ${ICU_PATH}/lib/libicudata.so
-  )
-  set(ICU_RPATH ${ICU_PATH}/lib)
-  include_directories(${ICU_INCLUDE_DIRS})
-else() # Apple
+if (APPLE)
   set(ICU_FOUND 1)
   set(ICU_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/external/icu_decls)
   set(ICU_LIBRARIES
     icucore
   )
   include_directories(${ICU_INCLUDE_DIRS})
+endif()
+
+if (NOT ICU_FOUND)
+  # Workaround: FindICU does not correctly recognize ICU include dir until
+  # CMake 3.8.0.  https://github.com/Kitware/CMake/commit/cdf7e5d8
+  list(APPEND icu_include_suffixes "include")
+
+  # FindICU uses ICU_ROOT variable as a hint
+  find_package(ICU 52 COMPONENTS uc i18n data)
+  if (ICU_FOUND)
+    foreach(LIB_FILE ${ICU_LIBRARIES})
+      get_filename_component(LIB_DIR ${LIB_FILE} DIRECTORY)
+      list(APPEND ICU_RPATH ${LIB_DIR})
+    endforeach(LIB_FILE)
+    list(REMOVE_DUPLICATES ICU_RPATH)
+    message("icu dir: ${ICU_RPATH}")
+    include_directories(${ICU_INCLUDE_DIRS})
+  endif()
 endif()
 
 # If we have no ICU, then error out.
@@ -227,8 +239,10 @@ endif()
 function(hermes_link_icu target_name)
   target_link_libraries(${target_name} PRIVATE ${ICU_LIBRARIES})
   if (ICU_RPATH)
-    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                  LINK_FLAGS " -Wl,-rpath,${ICU_RPATH} ")
+    set_property(TARGET ${target_name} APPEND PROPERTY
+                  INSTALL_RPATH ${ICU_RPATH})
+    set_property(TARGET ${target_name} PROPERTY
+                  BUILD_WITH_INSTALL_RPATH TRUE)
   endif()
 endfunction()
 
