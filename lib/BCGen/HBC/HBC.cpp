@@ -127,7 +127,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
   if (options.optimizationEnabled) {
     BMGen.initializeStringsFromStorage(
         baseBCProvider ? stringStorageFromBytecodeProvider(*baseBCProvider)
-                       : getOrderedStringStorage(M));
+                       : getOrderedStringStorage(M, options));
   }
 
   // Add each function to BMGen so that each function has a unique ID.
@@ -204,11 +204,15 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     BMGen.setFunctionGenerator(&F, std::move(funcGen));
   }
 
-  for (auto &F : *M) {
-    // Add every function's name to the global string table.
-    // We choose to add them all in the end to avoid shifting the indexes
-    // of other strings unnecessarily.
-    BMGen.addString(F.getOriginalOrInferredName().str(), false);
+  if (!options.stripFunctionNames) {
+    for (auto &F : *M) {
+      // Add every function's name to the global string table.
+      // We choose to add them all in the end to avoid shifting the indexes
+      // of other strings unnecessarily.
+      BMGen.addString(F.getOriginalOrInferredName().str(), false);
+    }
+  } else {
+    BMGen.addString(kStrippedFunctionName, false);
   }
 
   return BMGen.generate();

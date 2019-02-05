@@ -28,6 +28,8 @@ using llvm::SmallVector;
 using std::move;
 using std::unique_ptr;
 
+const char *const kStrippedFunctionName = "function-name-stripped";
+
 /// An allocation table that assigns a sequential integer ID
 /// to each newly added element. To support both fast lookup
 /// and sequential iteration, we use both DenseMap and SmallVector
@@ -289,11 +291,14 @@ class BytecodeModuleGenerator {
   /// the content has been modified during generation.
   bool valid_{true};
 
+  /// The entry point of the function (usually the global function).
+  int entryPointIndex_{-1};
+
   /// Generates string storage from the string table.
   ConsecutiveStringStorage generateStringStorage();
 
-  /// The entry point of the function (usually the global function).
-  int entryPointIndex_{-1};
+  /// Serialize all function names to string table.
+  void serializeFunctionNames();
 
  public:
   /// Constructor which enables optimizations if \p optimizationEnabled is set.

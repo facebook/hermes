@@ -200,6 +200,17 @@ ConsecutiveStringStorage BytecodeModuleGenerator::generateStringStorage() {
   return result;
 }
 
+void BytecodeModuleGenerator::serializeFunctionNames() {
+  if (options_.stripFunctionNames) {
+    addString(kStrippedFunctionName, false);
+    return;
+  }
+  auto functions = functionIDMap_.getElements();
+  for (unsigned i = 0, e = functions.size(); i < e; ++i) {
+    addString(functions[i]->getOriginalOrInferredName().str(), false);
+  }
+}
+
 std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   assert(
       valid_ &&
@@ -209,6 +220,9 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   assert(
       functionIDMap_.getElements().size() == functionGenerators_.size() &&
       "Missing functions.");
+
+  // Function names have to be serialized before generateStringStorage() call.
+  serializeFunctionNames();
 
   ConsecutiveStringStorage stringStorage = generateStringStorage();
   auto hashes = stringStorage.getIdentifierHashes();
@@ -232,16 +246,25 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
 
   DebugInfoGenerator debugInfoGen{std::move(filenameTable_)};
 
+  const uint32_t strippedFunctionNameId = options_.stripFunctionNames
+      ? stringTable_.getExistingStringId(kStrippedFunctionName)
+      : 0;
   auto functions = functionIDMap_.getElements();
   for (unsigned i = 0, e = functions.size(); i < e; ++i) {
     auto *F = functions[i];
     auto &BFG = *functionGenerators_[F];
+
+    uint32_t functionNameId = options_.stripFunctionNames
+        ? strippedFunctionNameId
+        : stringTable_.getExistingStringId(
+              functions[i]->getOriginalOrInferredName().str());
+
     std::unique_ptr<BytecodeFunction> func = BFG.generateBytecodeFunction(
         F->getDefinitionKind(),
         F->isStrictMode(),
         F->getParamCountIncludingThis(),
         F->getFunctionScope()->getVariables().size(),
-        addString(F->getOriginalOrInferredName().str(), false));
+        functionNameId);
 
     if (F->isLazy()) {
 #ifdef HERMESVM_LEAN

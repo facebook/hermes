@@ -75,7 +75,7 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
       llvm::ArrayRef<hermes::Literal *>{innerObjKeys},
       llvm::ArrayRef<hermes::Literal *>{innerObjVals});
 
-  enum IDs { IDa = 6, IDb, IDc, IDd, IDe, IDfoo, IDbar };
+  enum IDs { IDa = 7, IDb, IDc, IDd, IDe, IDfoo, IDbar };
 
   BFG->emitLoadConstInt(3, 1);
   BFG->emitNewObjectWithBuffer(0, 5, 4, objIdxs.first, objIdxs.second);

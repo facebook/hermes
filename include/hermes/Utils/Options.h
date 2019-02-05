@@ -46,6 +46,9 @@ struct BytecodeGenerationOptions {
   /// Whether the IR should be verified.
   bool verifyIR = false;
 
+  /// Strip all function names to reduce string table size.
+  bool stripFunctionNames = false;
+
   /* implicit */ BytecodeGenerationOptions(OutputFormatKind format)
       : format(format) {}
 

@@ -9,9 +9,9 @@
 
 #include <vector>
 
-#include "hermes/IR/IR.h"
-
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
+#include "hermes/IR/IR.h"
+#include "hermes/Utils/Options.h"
 
 namespace hermes {
 namespace hbc {
@@ -19,7 +19,9 @@ namespace hbc {
 /// \return a ConsecutiveStringStorage pre-loaded with the strings from the
 /// module \p M, in a way optimized for size and to take advantage of the small
 /// string index instructions in hbc.
-ConsecutiveStringStorage getOrderedStringStorage(Module *M);
+ConsecutiveStringStorage getOrderedStringStorage(
+    Module *M,
+    const BytecodeGenerationOptions &options);
 
 } // namespace hbc
 } // namespace hermes

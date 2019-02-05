@@ -7,6 +7,7 @@
 #ifndef HERMES_SUPPORT_STRINGSTORAGE_H
 #define HERMES_SUPPORT_STRINGSTORAGE_H
 
+#include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringTableEntry.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -203,6 +204,14 @@ class UniquingStringTable final {
     stringsByIndex_.push_back(copiedString);
     assert(stringsByIndex_.at(newIndex) == str && "String at unexpected index");
     return newIndex;
+  }
+
+  /// \return string id of an existing \p str in string table.
+  uint32_t getExistingStringId(llvm::StringRef str) const {
+    auto iter = stringsToIndex_.find(str);
+    assert(
+        iter != stringsToIndex_.end() && "str should exist the string table.");
+    return iter->second;
   }
 
   //// \return a ConsecutiveStringStorage for the strings in the table.

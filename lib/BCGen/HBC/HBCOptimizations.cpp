@@ -12,7 +12,9 @@
 using namespace hermes;
 using namespace hbc;
 
-ConsecutiveStringStorage hbc::getOrderedStringStorage(Module *M) {
+ConsecutiveStringStorage hbc::getOrderedStringStorage(
+    Module *M,
+    const BytecodeGenerationOptions &options) {
   llvm::DenseMap<llvm::StringRef, int> stringFreqs{};
   auto markStr = [&](llvm::StringRef str) { stringFreqs[str]++; };
 
@@ -24,8 +26,10 @@ ConsecutiveStringStorage hbc::getOrderedStringStorage(Module *M) {
   }
 
   // Walk function names.
-  for (auto &F : *M) {
-    markStr(F.getOriginalOrInferredName().str());
+  if (!options.stripFunctionNames) {
+    for (auto &F : *M) {
+      markStr(F.getOriginalOrInferredName().str());
+    }
   }
 
   // Walk function operands.

@@ -339,6 +339,12 @@ static CLFlag Inline('f', "inline", true, "inlining of functions");
 static CLFlag
     Outline('f', "outline", false, "IR outlining to reduce code size");
 
+static CLFlag StripFunctionNames(
+    'f',
+    "strip-function-names",
+    false,
+    "Strip function names to reduce string table size");
+
 static opt<bool> OutliningPlaceNearCaller(
     "outline-near-caller",
     init(OutliningSettings{}.placeNearCaller),
@@ -1201,6 +1207,8 @@ CompileResult processSourceFiles(
   // If the user requests to output a source map, then do not also emit debug
   // info into the bytecode.
   genOptions.stripDebugInfoSection = cl::OutputSourceMap;
+
+  genOptions.stripFunctionNames = cl::StripFunctionNames;
 
   // If the dump target is None, return bytecode in an executable form.
   if (cl::DumpTarget == None) {

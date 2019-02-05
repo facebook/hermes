@@ -188,10 +188,10 @@ TEST(HBCBytecodeGen, StringTableTest) {
   BMG.setEntryPointIndex(BMG.addFunction(F));
   BMG.setFunctionGenerator(F, std::move(BFG));
   std::shared_ptr<BytecodeModule> BM = BMG.generate();
-  // 4 strings
-  EXPECT_EQ(BM->getStringTableSize(), 4u);
-  // 'foobar' + 2 chars per unicode char.
-  EXPECT_EQ(BM->getStringStorageSize(), 10u);
+  // 4 strings + function name.
+  EXPECT_EQ(BM->getStringTableSize(), 5u);
+  // 'foobar' + 2 chars per unicode char + function name "global".
+  EXPECT_EQ(BM->getStringStorageSize(), 16u);
 
   Result.clear();
   BytecodeSerializer BS{OS};
@@ -201,18 +201,18 @@ TEST(HBCBytecodeGen, StringTableTest) {
                       llvm::make_unique<StringBuffer>(OS.str()))
                       .first;
 
-  EXPECT_EQ(bytecode->getStringCount(), 4u);
-  EXPECT_EQ(bytecode->getStringStorage().size(), 10u);
+  EXPECT_EQ(bytecode->getStringCount(), 5u);
+  EXPECT_EQ(bytecode->getStringStorage().size(), 16u);
   EXPECT_EQ(bytecode->getStringTableEntry(0).getOffset(), 0u);
   EXPECT_EQ(bytecode->getStringTableEntry(0).getLength(), 3u);
   EXPECT_FALSE(bytecode->getStringTableEntry(0).isUTF16());
   EXPECT_EQ(bytecode->getStringTableEntry(1).getOffset(), 3u);
   EXPECT_EQ(bytecode->getStringTableEntry(1).getLength(), 3u);
   EXPECT_FALSE(bytecode->getStringTableEntry(1).isUTF16());
-  EXPECT_EQ(bytecode->getStringTableEntry(2).getOffset(), 6u);
+  EXPECT_EQ(bytecode->getStringTableEntry(2).getOffset(), 12u);
   EXPECT_EQ(bytecode->getStringTableEntry(2).getLength(), 1u);
   EXPECT_TRUE(bytecode->getStringTableEntry(2).isUTF16());
-  EXPECT_EQ(bytecode->getStringTableEntry(3).getOffset(), 8u);
+  EXPECT_EQ(bytecode->getStringTableEntry(3).getOffset(), 14u);
   EXPECT_EQ(bytecode->getStringTableEntry(3).getLength(), 1u);
   EXPECT_TRUE(bytecode->getStringTableEntry(3).isUTF16());
 }
