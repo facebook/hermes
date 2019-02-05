@@ -104,6 +104,12 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args);
 static CallResult<HermesValue>
 stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args);
 
+/// ES8.0 21.1.1.13.
+/// ES8.0 21.1.3.14.
+/// \param ctx if true, do padStart, else do padEnd.
+static CallResult<HermesValue>
+stringPrototypePad(void *, Runtime *runtime, NativeArgs args);
+
 /// ES6.0 12.1.3.13.
 static CallResult<HermesValue>
 stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args);
@@ -348,6 +354,20 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       ctx,
       stringPrototypeNormalize,
       0);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      runtime->getPredefinedSymbolID(Predefined::padEnd),
+      (void *)false,
+      stringPrototypePad,
+      1);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      runtime->getPredefinedSymbolID(Predefined::padStart),
+      (void *)true,
+      stringPrototypePad,
+      1);
   defineMethod(
       runtime,
       stringPrototype,
@@ -1609,6 +1629,114 @@ stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
 
   // 9. Return ns.
   return StringPrimitive::createEfficient(runtime, ns);
+}
+
+static CallResult<HermesValue>
+stringPrototypePad(void *ctx, Runtime *runtime, NativeArgs args) {
+  bool padStart = (bool)ctx;
+
+  // 1. Let O be ? RequireObjectCoercible(this value).
+  auto O = args.getThisHandle();
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 2. Let S be ? ToString(O).
+  auto sRes = toString(runtime, O);
+  if (LLVM_UNLIKELY(sRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = toHandle(runtime, std::move(*sRes));
+
+  // 3. Let intMaxLength be ? ToLength(maxLength).
+  auto intMaxLengthRes = toLength(runtime, args.getArgHandle(runtime, 0));
+  if (LLVM_UNLIKELY(intMaxLengthRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  const uint64_t intMaxLength = intMaxLengthRes->getNumberAs<int64_t>();
+
+  // 4. Let stringLength be the number of elements in S.
+  const uint32_t stringLength = S->getStringLength();
+  SafeUInt32 size{stringLength};
+
+  // 5. If intMaxLength is not greater than stringLength, return S.
+  if (intMaxLength <= stringLength) {
+    return S.getHermesValue();
+  }
+
+  MutableHandle<StringPrimitive> filler{runtime};
+
+  if (args.getArg(1).isUndefined()) {
+    // 6. If fillString is undefined, let filler be a String consisting solely
+    // of the code unit 0x0020 (SPACE).
+    filler = runtime->getPredefinedString(Predefined::space);
+  } else {
+    // 7. Else, let filler be ? ToString(fillString).
+    auto fillerRes = toString(runtime, args.getArgHandle(runtime, 1));
+    if (LLVM_UNLIKELY(fillerRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    filler = fillerRes->get();
+  }
+
+  // 8. If filler is the empty String, return S.
+  if (filler->getStringLength() == 0) {
+    return S.getHermesValue();
+  }
+
+  // 9. Let fillLen be intMaxLength - stringLength.
+  const uint64_t fillLen = intMaxLength - stringLength;
+
+  // Check for overflow and strings that are too long, so we can ensure uint32_t
+  // is a large enough type to use for math below.
+  if (fillLen > StringPrimitive::MAX_STRING_LENGTH) {
+    return runtime->raiseRangeError("String pad result exceeds limit");
+  }
+
+  size.add((uint32_t)fillLen);
+
+  if (size.isZero()) {
+    return HermesValue::encodeStringValue(
+        runtime->getPredefinedString(Predefined::emptyString));
+  }
+
+  auto builderRes = StringBuilder::createStringBuilder(runtime, size);
+  if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  uint32_t resultLen = size.get();
+
+  // Repeatedly add filler to builder, taking up resultLen - stringLength
+  // characters.
+  auto addFiller = [&filler, resultLen, stringLength](StringBuilder &builder) {
+    uint32_t remaining = resultLen - stringLength;
+    const uint32_t fillerLen = filler->getStringLength();
+    while (remaining != 0) {
+      uint32_t length = std::min(remaining, fillerLen);
+      builder.appendStringPrim(filler, length);
+      remaining -= length;
+    }
+  };
+
+  if (padStart) {
+    // 10. Let truncatedStringFiller be a new String value consisting of
+    // repeated concatenations of filler truncated to length fillLen.
+    // 11. Return a new String value computed by the concatenation of
+    // truncatedStringFiller and S.
+    addFiller(*builderRes);
+    builderRes->appendStringPrim(S);
+  } else {
+    // 10. Let truncatedStringFiller be a new String value consisting of
+    // repeated concatenations of filler truncated to length fillLen.
+    // 11. Return a new String value computed by the concatenation of S and
+    // truncatedStringFiller.
+    builderRes->appendStringPrim(S);
+    addFiller(*builderRes);
+  }
+
+  return builderRes->getStringPrimitive().getHermesValue();
 }
 
 static CallResult<HermesValue>

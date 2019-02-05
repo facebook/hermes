@@ -1,4 +1,4 @@
-# Copyright (c) 2019-present, Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This source code is licensed under the MIT license found in the LICENSE
 # file in the root directory of this source tree.
@@ -215,8 +215,6 @@ BLACK_LIST = [
     "test262/test/built-ins/RegExp/prototype/sticky/",
     "test262/test/built-ins/RegExp/prototype/unicode/",
     "test262/test/built-ins/SharedArrayBuffer/",
-    "test262/test/built-ins/String/prototype/padEnd/",
-    "test262/test/built-ins/String/prototype/padStart/",
     "test262/test/built-ins/String/raw/",
     "test262/test/built-ins/intl402/",
     "test262/test/intl402/Collator/",

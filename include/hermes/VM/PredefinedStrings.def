@@ -19,6 +19,7 @@
 
 STR(emptyString, "")
 STR(comma, ",")
+STR(space, " ")
 STR(anonymous, "anonymous")
 
 STR(undefined, "undefined")
@@ -113,6 +114,8 @@ STR(lastIndexOf, "lastIndexOf")
 STR(localeCompare, "localeCompare")
 STR(match, "match")
 STR(normalize, "normalize")
+STR(padEnd, "padEnd")
+STR(padStart, "padStart")
 STR(repeat, "repeat")
 STR(replace, "replace")
 STR(search, "search")

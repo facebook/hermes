@@ -615,6 +615,54 @@ var r = s.normalize('NFKD');
 print(r.codePointAt(0), r.codePointAt(1), r.codePointAt(2), r.codePointAt(3));
 // CHECK-NEXT: 115 803 775 undefined
 
+print('padEnd');
+// CHECK-LABEL: padEnd
+print('abc'.padEnd(5, 'X'));
+// CHECK-NEXT: abcXX
+print('abc'.padEnd(2, 'X'));
+// CHECK-NEXT: abc
+print('abc'.padEnd(5) + 'X');
+// CHECK-NEXT: abc  X
+print('abc'.padEnd() + 'X');
+// CHECK-NEXT: abcX
+print('abc'.padEnd(-1) + 'X');
+// CHECK-NEXT: abcX
+print('abc'.padEnd(10, 'ABCD'));
+// CHECK-NEXT: abcABCDABC
+print('abc'.padEnd(14, 'ABCD'));
+// CHECK-NEXT: abcABCDABCDABC
+print('abc'.padEnd(4, 'ABCD'));
+// CHECK-NEXT: abcA
+print('abc'.padEnd(7, 'ABCD'));
+// CHECK-NEXT: abcABCD
+print('X' + ''.padEnd(5) + 'X');
+// CHECK-NEXT: X     X
+try { print('abc'.padEnd(1e100, 'ABC')); } catch (e) { print('caught', e.name) }
+// CHECK-NEXT: caught RangeError
+
+print('padStart');
+// CHECK-LABEL: padStart
+print('abc'.padStart(5, 'X'));
+// CHECK-NEXT: XXabc
+print('abc'.padStart(2, 'X'));
+// CHECK-NEXT: abc
+print('X' + 'abc'.padStart(5));
+// CHECK-NEXT: X  abc
+print('X' + 'abc'.padStart());
+// CHECK-NEXT: Xabc
+print('X' + 'abc'.padStart(-1));
+// CHECK-NEXT: Xabc
+print('abc'.padStart(10, 'ABCD'));
+// CHECK-NEXT: ABCDABCabc
+print('abc'.padStart(4, 'ABCD'));
+// CHECK-NEXT: Aabc
+print('abc'.padStart(7, 'ABCD'));
+// CHECK-NEXT: ABCDabc
+print('X' + ''.padStart(5) + 'X');
+// CHECK-NEXT: X     X
+try { print('abc'.padStart(1e100, 'ABC')); } catch (e) { print('caught', e.name) }
+// CHECK-NEXT: caught RangeError
+
 print('repeat');
 // CHECK-LABEL: repeat
 print('a'.repeat(3));

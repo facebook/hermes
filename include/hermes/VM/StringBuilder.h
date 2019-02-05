@@ -119,15 +119,15 @@ class StringBuilder {
     }
   }
 
-  /// Append a StringPrimitive \p other.
-  void appendStringPrim(Handle<StringPrimitive> other) {
+  /// Append the first \p length characters from StringPrimitive \p other.
+  void appendStringPrim(Handle<StringPrimitive> other, uint32_t length) {
     assert(
-        index_ + other->getStringLength() <= strPrim_->getStringLength() &&
+        index_ + length <= strPrim_->getStringLength() &&
         "StringBuilder append out of bound");
     if (other->isASCII()) {
-      appendASCIIRef(other->castToASCIIRef());
+      appendASCIIRef({other->castToASCIIPointer(), length});
     } else if (!strPrim_->isASCII()) {
-      appendUTF16Ref(other->castToUTF16Ref());
+      appendUTF16Ref({other->castToUTF16Pointer(), length});
     } else {
       // strPrim_ is ASCII, while other is UTF16. We have to recreate string.
       auto strRes = runtime_->ignoreAllocationFailure(StringPrimitive::create(
@@ -139,8 +139,13 @@ class StringBuilder {
       index_ = 0;
       // Append original string and other.
       appendASCIIRef(currentPartialString);
-      appendUTF16Ref(other->castToUTF16Ref());
+      appendUTF16Ref({other->castToUTF16Pointer(), length});
     }
+  }
+
+  /// Append all characters from StringPrimitive \p other.
+  void appendStringPrim(Handle<StringPrimitive> other) {
+    return appendStringPrim(other, other->getStringLength());
   }
 
   /// After appending finished, return the StringPrimitive.
