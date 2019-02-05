@@ -1,0 +1,47 @@
+diff --git a/ReactAndroid/build.gradle b/ReactAndroid/build.gradle
+index fd03e602cf..bac5c32b48 100644
+--- a/ReactAndroid/build.gradle
++++ b/ReactAndroid/build.gradle
+@@ -288,7 +288,7 @@ android {
+         jniLibs.srcDir "$buildDir/react-ndk/exported"
+         res.srcDirs = ['src/main/res/devsupport', 'src/main/res/shell', 'src/main/res/views/modal', 'src/main/res/views/uimanager']
+         java {
+-            srcDirs = ['src/main/java', 'src/main/libraries/soloader/java', 'src/main/jni/first-party/fb/jni/java']
++            srcDirs = ['src/main/java', 'src/main/libraries/soloader/java', 'src/main/jni/first-party/fb/jni/java', '../../../../hermes/first-party/hermes-executor/src/main/java']
+             exclude 'com/facebook/react/processing'
+             exclude 'com/facebook/react/module/processing'
+         }
+diff --git a/ReactAndroid/src/main/jni/Application.mk b/ReactAndroid/src/main/jni/Application.mk
+index c73c0397f5..62321559b9 100644
+--- a/ReactAndroid/src/main/jni/Application.mk
++++ b/ReactAndroid/src/main/jni/Application.mk
+@@ -32,3 +32,4 @@ APP_CPPFLAGS := -std=c++1y
+ APP_LDFLAGS := -Wl,--build-id
+ 
+ NDK_TOOLCHAIN_VERSION := clang
++HERMES_PATH := $(call my-dir)/../../../../../../../hermes
+diff --git a/ReactAndroid/src/main/jni/react/jni/Android.mk b/ReactAndroid/src/main/jni/react/jni/Android.mk
+index 9259233cca..93b702106d 100644
+--- a/ReactAndroid/src/main/jni/react/jni/Android.mk
++++ b/ReactAndroid/src/main/jni/react/jni/Android.mk
+@@ -65,3 +65,4 @@ $(call import-module,jsiexecutor)
+ # $(call import-module,jscexecutor)
+ 
+ include $(REACT_SRC_DIR)/jscexecutor/Android.mk
++include $(HERMES_PATH)/first-party/hermes-executor/src/main/java/com/facebook/hermes/reactexecutor/Android.mk
+diff --git a/ReactCommon/jsi/Android.mk b/ReactCommon/jsi/Android.mk
+index 4e650d9ca3..db81fe24ad 100644
+--- a/ReactCommon/jsi/Android.mk
++++ b/ReactCommon/jsi/Android.mk
+@@ -9,9 +9,9 @@ include $(CLEAR_VARS)
+ 
+ LOCAL_MODULE := jsi
+ 
+-LOCAL_SRC_FILES := $(wildcard $(LOCAL_PATH)/*.cpp)
++LOCAL_SRC_FILES := $(wildcard $(LOCAL_PATH)/*.cpp) $(HERMES_PATH)/API/jsi/jsi/adapter.cpp
+ 
+-LOCAL_C_INCLUDES += $(LOCAL_PATH)/..
++LOCAL_C_INCLUDES += $(LOCAL_PATH)/.. $(HERMES_PATH)/API/jsi
+ LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
+ 
+ LOCAL_CFLAGS := -fexceptions -frtti -O3
