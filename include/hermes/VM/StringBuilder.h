@@ -7,6 +7,7 @@
 #ifndef HERMES_VM_STRINGBUILDER_H
 #define HERMES_VM_STRINGBUILDER_H
 
+#include "hermes/ADT/SafeInt.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -44,6 +45,16 @@ class StringBuilder {
       return ExecutionStatus::EXCEPTION;
     }
     return StringBuilder(runtime, crtRes->getString());
+  }
+
+  static CallResult<StringBuilder> createStringBuilder(
+      Runtime *runtime,
+      SafeUInt32 length,
+      bool isASCII = false) {
+    if (length.isOverflowed()) {
+      return runtime->raiseRangeError("String length exceeds limit");
+    }
+    return createStringBuilder(runtime, *length, isASCII);
   }
 
   /// Append an UTF16Ref \p str. Note that str should not point to a GC-managed

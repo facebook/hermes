@@ -179,7 +179,7 @@ functionConstructor(void *, Runtime *runtime, NativeArgs args) {
   // String length of the function in its entirety.
   // Account for commas in the argument list initially.
   // If at least two arguments to the function (3 in total), there's a comma.
-  size_t size = paramCount > 0 ? paramCount - 1 : 0;
+  SafeUInt32 size{paramCount > 0 ? paramCount - 1 : 0};
 
   if (argCount == 0) {
     // No arguments, just set body to be the empty string.
@@ -195,7 +195,7 @@ functionConstructor(void *, Runtime *runtime, NativeArgs args) {
       }
       auto param = toHandle(runtime, std::move(*strRes));
       JSArray::setElementAt(params, runtime, i, param);
-      size += param->getStringLength();
+      size.add(param->getStringLength());
     }
 
     // Last parameter is the body.
@@ -204,7 +204,7 @@ functionConstructor(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
     body = strRes->get();
-    size += body->getStringLength();
+    size.add(body->getStringLength());
 
     if (argCount == 1 && isReturnThis(body, runtime)) {
       // If this raises an exception, we still return immediately.
@@ -218,14 +218,17 @@ functionConstructor(void *, Runtime *runtime, NativeArgs args) {
 
   // Constant parts of the function.
   auto functionHeader = createASCIIRef("(function (");
+  size.add(functionHeader.size());
+
   auto bodyHeader = createASCIIRef("){");
+  size.add(bodyHeader.size());
+
   // Note: add a \n before the closing '}' in case the function body ends with a
   // line comment.
   auto functionFooter = createASCIIRef("\n})");
-  auto separator = createASCIIRef(",");
+  size.add(functionFooter.size());
 
-  // Account for the function declaration.
-  size += functionHeader.size() + bodyHeader.size() + functionFooter.size();
+  auto separator = createASCIIRef(",");
 
   auto builder = StringBuilder::createStringBuilder(runtime, size);
   if (builder == ExecutionStatus::EXCEPTION) {
