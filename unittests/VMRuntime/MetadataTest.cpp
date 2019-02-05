@@ -7,54 +7,49 @@
 #include "hermes/VM/Metadata.h"
 
 #include "hermes/VM/BuildMetadata.h"
-#include "hermes/VM/GCCell.h"
 
 #include "gtest/gtest.h"
-#include "llvm/Support/TrailingObjects.h"
 
 namespace {
 
 using namespace hermes::vm;
 
-struct DummyCell final : public GCCell {
+struct DummyCell final {
+ public:
   static void buildMeta(const GCCell *cell, Metadata::Builder &mb);
 
-  std::uint32_t x;
-  std::uint32_t y;
-  std::uint64_t z;
+  std::uint32_t x_;
+  std::uint32_t y_;
+  std::uint64_t z_;
 };
+
+static_assert(
+    std::is_standard_layout<DummyCell>::value,
+    "DummyCell isn't a standard layout, offsetof won't work");
 
 void DummyCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const DummyCell *>(cell);
-  mb.addNonPointerField("@x", &self->x);
-  mb.addNonPointerField("@y", &self->y);
-  mb.addNonPointerField("@z", &self->z);
+  const auto *self = reinterpret_cast<const DummyCell *>(cell);
+  mb.addNonPointerField("@x", &self->x_);
+  mb.addNonPointerField("@y", &self->y_);
+  mb.addNonPointerField("@z", &self->z_);
 }
 
-struct DummyArrayCell final
-    : public VariableSizeRuntimeCell,
-      private llvm::TrailingObjects<DummyArrayCell, GCPointer<int>> {
-  friend TrailingObjects;
+struct DummyArrayCell {
+ public:
+  std::uint32_t length_ = 3;
+  DummyCell data_[3];
 
   static void buildMeta(const GCCell *cell, Metadata::Builder &mb);
-
-  DummyArrayCell(GC *gc, int length)
-      : VariableSizeRuntimeCell(
-            gc,
-            nullptr,
-            totalSizeToAlloc<GCPointer<int>>(length)),
-        length(length) {}
-
-  int length;
 };
 
+static_assert(
+    std::is_standard_layout<DummyArrayCell>::value,
+    "DummyArrayCell isn't a standard layout, offsetof won't work");
+
 void DummyArrayCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const DummyArrayCell *>(cell);
+  const auto *self = reinterpret_cast<const DummyArrayCell *>(cell);
   mb.addArray<Metadata::ArrayData::ArrayType::Pointer>(
-      "@dummystorage",
-      self->getTrailingObjects<GCPointer<int>>(),
-      &self->length,
-      sizeof(void *));
+      "@dummystorage", &self->data_, &self->length_, sizeof(DummyCell));
 }
 
 TEST(MetadataTest, TestNormalFields) {
@@ -63,21 +58,14 @@ TEST(MetadataTest, TestNormalFields) {
   ASSERT_FALSE(meta.array_);
   auto &fields = meta.nonPointerFields_;
   ASSERT_EQ(fields.size(), 3u);
-  EXPECT_EQ(fields.names[0], "@x");
-  EXPECT_EQ(fields.names[1], "@y");
-  EXPECT_EQ(fields.names[2], "@z");
-#ifdef HERMESVM_GCCELL_ID
-#ifndef NDEBUG
-  size_t offsetBase = 24;
-#else
-  size_t offsetBase = 16;
-#endif
-#else
-  size_t offsetBase = 8;
-#endif
-  EXPECT_EQ(fields.offsets[0], offsetBase);
-  EXPECT_EQ(fields.offsets[1], offsetBase + sizeof(uint32_t));
-  EXPECT_EQ(fields.offsets[2], offsetBase + sizeof(uint32_t) * 2);
+  EXPECT_STREQ(fields.names[0], "@x");
+  EXPECT_STREQ(fields.names[1], "@y");
+  EXPECT_STREQ(fields.names[2], "@z");
+
+  EXPECT_EQ(fields.offsets[0], offsetof(DummyCell, x_));
+  EXPECT_EQ(fields.offsets[1], offsetof(DummyCell, y_));
+  EXPECT_EQ(fields.offsets[2], offsetof(DummyCell, z_));
+
   EXPECT_EQ(fields.sizes[0], sizeof(uint32_t));
   EXPECT_EQ(fields.sizes[1], sizeof(uint32_t));
   EXPECT_EQ(fields.sizes[2], sizeof(uint64_t));
@@ -93,18 +81,10 @@ TEST(MetadataTest, TestArray) {
   ASSERT_TRUE(meta.array_);
   auto &array = *(meta.array_);
   EXPECT_EQ(array.type, Metadata::ArrayData::ArrayType::Pointer);
-#ifdef HERMESVM_GCCELL_ID
-#ifndef NDEBUG
-  size_t offsetBase = 28;
-#else
-  size_t offsetBase = 20;
-#endif
-#else
-  size_t offsetBase = 12;
-#endif
-  EXPECT_EQ(array.lengthOffset, offsetBase);
-  EXPECT_EQ(array.startOffset, offsetBase + sizeof(uint32_t));
-  EXPECT_EQ(array.stride, sizeof(GCPointer<int>));
+
+  EXPECT_EQ(array.lengthOffset, offsetof(DummyArrayCell, length_));
+  EXPECT_EQ(array.startOffset, offsetof(DummyArrayCell, data_));
+  EXPECT_EQ(array.stride, sizeof(DummyCell));
 }
 
 } // namespace
