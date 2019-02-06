@@ -473,7 +473,7 @@ TEST_F(InterpreterTest, FrameSizeTest) {
   const auto innerStackPointer =
       reinterpret_cast<uintptr_t>(status.getValue().getNativePointer<void>());
   // Increase this only if you have a reason to grow the interpreter's frame.
-  uintptr_t kStackFrameSizeLimit = 900;
+  uintptr_t kStackFrameSizeLimit = 1024;
   ASSERT_LE(outerStackPointer - innerStackPointer, kStackFrameSizeLimit);
 }
 #endif // NDEBUG
