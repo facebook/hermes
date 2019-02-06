@@ -90,10 +90,10 @@ class TraceInterpreter final {
   ///   young generation, change back to young-gen allocation at TTI.
   struct ExecuteOptions {
     std::string marker;
-    ::hermes::vm::gcheapsize_t minHeapSize;
-    ::hermes::vm::gcheapsize_t maxHeapSize;
-    bool allocInYoung;
-    bool revertToYGAtTTI;
+    ::hermes::vm::gcheapsize_t minHeapSize{0};
+    ::hermes::vm::gcheapsize_t maxHeapSize{0};
+    bool allocInYoung{true};
+    bool revertToYGAtTTI{true};
     bool shouldPrintGCStats{false};
     bool shouldTrackIO{false};
     uint8_t bytecodeWarmupPercent{0};
