@@ -114,12 +114,6 @@ class TerminatorInst : public Instruction {
   using succ_const_range = llvm::iterator_range<succ_const_iterator>;
 
  private:
-  /// If the basic block that this terminator instruction belongs to is covered
-  /// by a CatchInst, we append the basic block that contains the CatchInst
-  /// in this list. We maintain the users separate from operands. These blocks
-  /// can never be replaced, modified, or removed individually.
-  llvm::SmallVector<BasicBlock *, 4> catchTargets;
-
   inline succ_iterator succ_begin() {
     return succ_iterator(this);
   }
