@@ -188,4 +188,3 @@ target_compile_options(hermesVMRuntime PRIVATE -fexceptions)
 hermes_link_icu(hermesVMRuntime)
 
 add_subdirectory(Instrumentation)
-add_subdirectory(CPPUtil)
