@@ -4,8 +4,12 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#ifndef HERMES_VM_PROFILER_CHROMETRACESERIALIZER_H
-#define HERMES_VM_PROFILER_CHROMETRACESERIALIZER_H
+#ifndef HERMES_VM_PROFILER_CHROMETRACESERIALIZERPOSIX_H
+#define HERMES_VM_PROFILER_CHROMETRACESERIALIZERPOSIX_H
+
+// TODO: Remove dependency on SamplingProfilerPosix from ChromeTraceSerializer.
+// A new header may need to be introduced for data entities. It may make sense
+// to share the data entity across different SamplingProfiler implementations.
 
 /// This file convert sampled stack frames into Chrome trace format which
 /// is documented here:
@@ -13,6 +17,8 @@
 
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
+
+#ifdef HERMESVM_SAMPLING_PROFILER_USE_POSIX
 
 #include "llvm/ADT/DenseMap.h"
 
@@ -204,4 +210,6 @@ class ChromeTraceSerializer {
 } // namespace vm
 } // namespace hermes
 
-#endif // HERMES_VM_PROFILER_CHROMETRACESERIALIZER_H
+#endif // HERMESVM_SAMPLING_PROFILER_USE_POSIX
+
+#endif // HERMES_VM_PROFILER_CHROMETRACESERIALIZERPOSIX_H

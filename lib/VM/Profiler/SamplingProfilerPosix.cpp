@@ -5,9 +5,12 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/VM/Profiler/SamplingProfiler.h"
+
+#ifdef HERMESVM_SAMPLING_PROFILER_USE_POSIX
+
 #include "hermes/Support/ThreadLocal.h"
 #include "hermes/VM/Callable.h"
-#include "hermes/VM/Profiler/ChromeTraceSerializer.h"
+#include "hermes/VM/Profiler/ChromeTraceSerializerPosix.h"
 #include "hermes/VM/StackFrame-inline.h"
 
 #include <assert.h>
@@ -377,3 +380,5 @@ bool operator==(
 
 } // namespace vm
 } // namespace hermes
+
+#endif // HERMESVM_SAMPLING_PROFILER_USE_POSIX
