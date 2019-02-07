@@ -7,6 +7,8 @@
 #ifndef HERMES_SUPPORT_SNPRINTFBUF_H
 #define HERMES_SUPPORT_SNPRINTFBUF_H
 
+#include "hermes/Support/Compiler.h"
+
 #include <cassert>
 #include <memory>
 
@@ -26,7 +28,7 @@ class SNPrintfBuf {
   /// Adds the given \p fmt string, with the given arguments, to the
   /// buffer at the current index.  Advances the index
   /// by the size of the written characters.
-  void printf(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+  void printf(const char *fmt, ...) HERMES_ATTRIBUTE_FORMAT(printf, 2, 3);
 
   /// Yields the current buffer.  The lifetime of the returned pointer must
   /// not exceed the lifetime of \p this.
