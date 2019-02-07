@@ -53,6 +53,11 @@ union BytecodeOptions {
   BytecodeOptions() : _flags(0) {}
 };
 
+// See BytecodeFileFormatTest for details about bit field layouts
+static_assert(
+    sizeof(BytecodeOptions) == 1,
+    "BytecodeOptions should take up 1 byte total");
+
 /**
  * Header of binary file.
  */
@@ -127,8 +132,15 @@ struct BytecodeFileHeader {
 /// OverflowStringTableEntry for the entries whose length or offset doesn't fit
 /// into the bitfields.
 struct SmallStringTableEntry {
-  bool isUTF16 : 1;
-  bool isIdentifier : 1;
+  // isUTF16 and isIdentifier cannot be bool because C++ spec allows padding
+  // at type boundaries.
+  // Regardless of LLVM_PACKED_START,
+  // * GCC and CLANG never adds padding at type boundaries.
+  // * MSVC always add padding at type boundaries.
+  // * In addition, in MSVC, for each list of continuous fields with the same
+  //   types, they always occupy a multiple of the type's normal size.
+  uint32_t isUTF16 : 1;
+  uint32_t isIdentifier : 1;
   uint32_t offset : 22;
   uint32_t length : 8;
 
@@ -157,6 +169,11 @@ struct SmallStringTableEntry {
     }
   }
 };
+
+// See BytecodeFileFormatTest for details about bit field layouts
+static_assert(
+    sizeof(SmallStringTableEntry) == 4,
+    "SmallStringTableEntry should take up 4 bytes total");
 
 /// These are indexed by the 'offset' field of overflowed SmallStringTableEntry.
 struct OverflowStringTableEntry {
@@ -195,6 +212,11 @@ union FunctionHeaderFlag {
     return prohibitInvoke == (uint8_t)construct;
   }
 };
+
+// See BytecodeFileFormatTest for details about bit field layouts
+static_assert(
+    sizeof(FunctionHeaderFlag) == 1,
+    "FunctionHeaderFlag should take up 1 byte total");
 
 /// FUNC_HEADER_FIELDS is a macro for defining function header fields.
 /// The args are API type, small storage type, name, and bit length.

@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(BCSources
+  BytecodeFileFormatTest.cpp
   BytecodeFormConverterTest.cpp
   RATest.cpp
   SupportTest.cpp

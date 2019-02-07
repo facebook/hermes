@@ -99,6 +99,11 @@ struct BracketInsn : public Insn {
   }
 };
 
+// See BytecodeFileFormatTest for details about bit field layouts
+static_assert(
+    sizeof(BracketInsn) == 6,
+    "BracketInsn should take up 6 byte total");
+
 struct WordBoundaryInsn : public Insn {
   /// Whether the boundary is inverted (\B instead of \b).
   bool invert;
