@@ -353,7 +353,13 @@ class GCBase {
 
   /// \return true if we should run handle sanitization and the coin flip with
   /// probability sanitizeRate_ has passed.
+#ifdef HERMESVM_SANITIZE_HANDLES
   bool shouldSanitizeHandles();
+#else
+  static constexpr bool shouldSanitizeHandles() {
+    return false;
+  }
+#endif
 
   /// \return true if the "target space" for allocations should be randomized
   /// (for GCs where that concept makes sense).

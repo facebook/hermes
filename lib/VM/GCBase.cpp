@@ -250,14 +250,12 @@ void GCBase::oomDetail() {
   oomDetailFB(detailBuffer);
 }
 
-bool GCBase::shouldSanitizeHandles() {
 #ifdef HERMESVM_SANITIZE_HANDLES
+bool GCBase::shouldSanitizeHandles() {
   static std::uniform_real_distribution<> dist(0.0, 1.0);
   return dist(randomEngine_) < sanitizeRate_;
-#else
-  return false;
-#endif
 }
+#endif
 
 #if !defined(HERMES_FACEBOOK_BUILD)
 /// No-op in open-source build.
