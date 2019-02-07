@@ -41,8 +41,8 @@ class RuntimeFunctionHeader {
   const char *ptr_;
 
  public:
-  explicit RuntimeFunctionHeader(const hbc::SmallFuncHeader *small)
-      : ptr_(reinterpret_cast<const char *>(small)) {
+  explicit RuntimeFunctionHeader(const hbc::SmallFuncHeader *smallHeader)
+      : ptr_(reinterpret_cast<const char *>(smallHeader)) {
     assert(!isLarge());
   }
   explicit RuntimeFunctionHeader(const hbc::FunctionHeader *large)
@@ -341,13 +341,13 @@ class BCProviderFromBuffer final : public BCProviderBase {
   }
 
   RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const {
-    const hbc::SmallFuncHeader &small = functionHeaders_[functionID];
-    if (LLVM_UNLIKELY(small.flags.overflowed)) {
+    const hbc::SmallFuncHeader &smallHeader = functionHeaders_[functionID];
+    if (LLVM_UNLIKELY(smallHeader.flags.overflowed)) {
       auto large = reinterpret_cast<const hbc::FunctionHeader *>(
-          bufferPtr_ + small.getLargeHeaderOffset());
+          bufferPtr_ + smallHeader.getLargeHeaderOffset());
       return RuntimeFunctionHeader(large);
     } else {
-      return RuntimeFunctionHeader(&small);
+      return RuntimeFunctionHeader(&smallHeader);
     }
   }
 
@@ -360,20 +360,22 @@ class BCProviderFromBuffer final : public BCProviderBase {
   }
 
   StringTableEntry getStringTableEntry(uint32_t index) const {
-    auto &small = stringTableEntries_[index];
-    if (LLVM_UNLIKELY(small.isOverflowed())) {
+    auto &smallHeader = stringTableEntries_[index];
+    if (LLVM_UNLIKELY(smallHeader.isOverflowed())) {
       auto overflowBase =
           reinterpret_cast<const hbc::OverflowStringTableEntry *>(
               stringTableEntries_ + stringCount_);
-      auto overflow = overflowBase[small.offset];
-      StringTableEntry entry(overflow.offset, overflow.length, small.isUTF16);
-      if (small.isIdentifier) {
+      auto overflow = overflowBase[smallHeader.offset];
+      StringTableEntry entry(
+          overflow.offset, overflow.length, smallHeader.isUTF16);
+      if (smallHeader.isIdentifier) {
         entry.markAsIdentifier();
       }
       return entry;
     }
-    StringTableEntry entry(small.offset, small.length, small.isUTF16);
-    if (small.isIdentifier) {
+    StringTableEntry entry(
+        smallHeader.offset, smallHeader.length, smallHeader.isUTF16);
+    if (smallHeader.isIdentifier) {
       entry.markAsIdentifier();
     }
     return entry;
