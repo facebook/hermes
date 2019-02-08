@@ -15,7 +15,7 @@ The `metadata.json` file must be a JSON object, with the following fields:
   - Each value must be an array containing relative file names (with leading `./`)
     of the files to place into that segment.
   - The first element of `segments["0"]` is the first module `require`d at run time.
-- `resolutionTable`
+- `resolutionTable` (Optional)
   - An object for which the keys are relative file names
     (the same file names as in `segments`).
   - Values are objects which map from strings given to `require()`

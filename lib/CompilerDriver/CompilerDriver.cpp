@@ -837,7 +837,6 @@ std::unique_ptr<Context::ResolutionTable> readResolutionTable(
   JSONObject *resolutionTable =
       llvm::dyn_cast_or_null<JSONObject>(metadata->get("resolutionTable"));
   if (!resolutionTable) {
-    llvm::errs() << "Metadata must contain a \"resolutionTable\" key\n";
     return nullptr;
   }
 
