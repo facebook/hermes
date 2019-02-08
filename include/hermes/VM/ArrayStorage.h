@@ -227,9 +227,6 @@ class ArrayStorage final
   static gcheapsize_t _compactSizeCallback(const GCCell *self);
   static void _compactCallback(GCCell *self);
 
-#ifdef UNIT_TEST
- public:
-#endif
   /// Reallocate to a larger storage capacity of the storage and copy the
   /// specified portion of the data to the new storage. The length of the data
   /// to be copied is
@@ -243,6 +240,11 @@ class ArrayStorage final
       size_type toFirst,
       size_type toLast);
 
+// Mangling scheme used by MSVC encode public/private into the name.
+// As a result, vanilla "ifdef public" trick leads to link errors.
+#if defined(UNIT_TEST) || defined(_MSC_VER)
+ public:
+#endif
   /// This is a flexible function which can be used to extend the array by
   /// creating or removing elements in front or in the back. New elements are
   /// initialized to empty. Intuitively it shifts a specified number of elements

@@ -510,7 +510,9 @@ class GCBase {
       std::chrono::microseconds start,
       std::chrono::microseconds end);
 
-#ifdef UNIT_TEST
+// Mangling scheme used by MSVC encode public/private into the name.
+// As a result, vanilla "ifdef public" trick leads to link errors.
+#if defined(UNIT_TEST) || defined(_MSC_VER)
  public:
 #else
  protected:
