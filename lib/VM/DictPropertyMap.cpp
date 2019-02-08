@@ -64,11 +64,15 @@ std::pair<bool, DictPropertyMap::HashPair *> DictPropertyMap::lookupEntryFor(
   }
 }
 
-void DictPropertyMap::grow(
+ExecutionStatus DictPropertyMap::grow(
     MutableHandle<DictPropertyMap> &selfHandleRef,
     Runtime *runtime,
     size_type newCapacity) {
-  auto *newSelf = create(runtime, newCapacity).get();
+  auto res = create(runtime, newCapacity);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto *newSelf = res->get();
   auto *self = *selfHandleRef;
 
   selfHandleRef = newSelf;
@@ -127,16 +131,19 @@ void DictPropertyMap::grow(
 
   newSelf->numDescriptors_ = count;
   assert(count <= newSelf->descriptorCapacity_);
+  return ExecutionStatus::RETURNED;
 }
 
-std::pair<NamedPropertyDescriptor *, bool> DictPropertyMap::findOrAdd(
+CallResult<std::pair<NamedPropertyDescriptor *, bool>>
+DictPropertyMap::findOrAdd(
     MutableHandle<DictPropertyMap> &selfHandleRef,
     Runtime *runtime,
     SymbolID id) {
   auto *self = *selfHandleRef;
   auto found = lookupEntryFor(self, id);
   if (found.first) {
-    return {&self->getDescriptorPairs()[found.second->second].second, false};
+    return std::make_pair(
+        &self->getDescriptorPairs()[found.second->second].second, false);
   }
 
   // We want to grow the hash table if the number of occupied hash entries
@@ -145,12 +152,16 @@ std::pair<NamedPropertyDescriptor *, bool> DictPropertyMap::findOrAdd(
   // sufficient to only check for the latter.
 
   if (self->numDescriptors_ == self->descriptorCapacity_) {
-    grow(
-        selfHandleRef,
-        runtime,
-        self->numProperties_ == self->descriptorCapacity_
-            ? self->numProperties_ * 2
-            : self->numProperties_ + 1 + self->deletedListSize_);
+    if (LLVM_UNLIKELY(
+            grow(
+                selfHandleRef,
+                runtime,
+                self->numProperties_ == self->descriptorCapacity_
+                    ? self->numProperties_ * 2
+                    : self->numProperties_ + 1 + self->deletedListSize_) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
 
     self = *selfHandleRef;
 
@@ -169,7 +180,7 @@ std::pair<NamedPropertyDescriptor *, bool> DictPropertyMap::findOrAdd(
   descPair->first = id;
   ++self->numDescriptors_;
 
-  return {&descPair->second, true};
+  return std::make_pair(&descPair->second, true);
 }
 
 void DictPropertyMap::erase(DictPropertyMap *self, PropertyPos pos) {

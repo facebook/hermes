@@ -854,4 +854,36 @@ TEST_F(ObjectModelTest, MakePropertiesReadOnlyWithoutTransitionsTest) {
   EXPECT_PROPERTY_FLAG(FALSE, obj, *cHnd, configurable);
 }
 
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+struct ObjectModelLargeHeapTest : public RuntimeTestFixtureBase {
+  ObjectModelLargeHeapTest()
+      : RuntimeTestFixtureBase(
+            RuntimeConfig::Builder()
+                .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder)
+                                  .withInitHeapSize(1 << 20)
+                                  .withMaxHeapSize(1 << 26)
+                                  .build())
+                .build()) {}
+};
+
+// This test will OOM before it throws on non-NC GCs.
+TEST_F(ObjectModelLargeHeapTest, LargeObjectThrowsRangeError) {
+  Handle<JSObject> obj = toHandle(runtime, JSObject::create(runtime));
+  MutableHandle<> i{runtime, HermesValue::encodeNumberValue(0)};
+  while (true) {
+    GCScopeMarkerRAII marker{gcScope};
+    CallResult<bool> res = JSObject::putComputed(obj, runtime, i, i);
+    if (res == ExecutionStatus::EXCEPTION) {
+      // Check that RangeError was thrown.
+      auto *err = vmcast<JSObject>(runtime->getThrownValue());
+      EXPECT_EQ(
+          err->getParent(), vmcast<JSObject>(runtime->RangeErrorPrototype));
+      return;
+    }
+    i = HermesValue::encodeNumberValue(i->getNumber() + 1);
+  }
+  FAIL() << "Didn't throw";
+}
+#endif
+
 } // namespace

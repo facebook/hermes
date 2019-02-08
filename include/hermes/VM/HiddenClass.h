@@ -236,7 +236,7 @@ class HiddenClass final : public GCCell {
 
   /// Add a new property. It must not already exist.
   /// \return the resulting new class and the index of the new property.
-  static std::pair<Handle<HiddenClass>, SlotIndex> addProperty(
+  static CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> addProperty(
       Handle<HiddenClass> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -344,7 +344,7 @@ class HiddenClass final : public GCCell {
 
   /// Add a new property pair (\p name and \p desc) to the property map (which
   /// must have been initialized).
-  static void addToPropertyMap(
+  static ExecutionStatus addToPropertyMap(
       Handle<HiddenClass> selfHandle,
       Runtime *runtime,
       SymbolID name,

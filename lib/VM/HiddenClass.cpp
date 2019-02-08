@@ -178,7 +178,7 @@ Handle<HiddenClass> HiddenClass::deleteProperty(
   return newHandle;
 }
 
-std::pair<Handle<HiddenClass>, SlotIndex> HiddenClass::addProperty(
+CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
     Handle<HiddenClass> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -200,14 +200,18 @@ std::pair<Handle<HiddenClass>, SlotIndex> HiddenClass::addProperty(
     SlotIndex newSlot =
         DictPropertyMap::allocatePropertySlot(selfHandle->propertyMap_);
 
-    addToPropertyMap(
-        selfHandle,
-        runtime,
-        name,
-        NamedPropertyDescriptor(propertyFlags, newSlot));
+    if (LLVM_UNLIKELY(
+            addToPropertyMap(
+                selfHandle,
+                runtime,
+                name,
+                NamedPropertyDescriptor(propertyFlags, newSlot)) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
 
     ++selfHandle->numProperties_;
-    return {selfHandle, newSlot};
+    return std::make_pair(selfHandle, newSlot);
   }
 
   // Do we already have a transition for that property+flags pair?
@@ -223,11 +227,16 @@ std::pair<Handle<HiddenClass>, SlotIndex> HiddenClass::addProperty(
                  << " transitions Map to existing Class:"
                  << optChildHandle.getValue()->getDebugAllocationId() << "\n");
 
-      addToPropertyMap(
-          selfHandle,
-          runtime,
-          name,
-          NamedPropertyDescriptor(propertyFlags, selfHandle->numProperties_));
+      if (LLVM_UNLIKELY(
+              addToPropertyMap(
+                  selfHandle,
+                  runtime,
+                  name,
+                  NamedPropertyDescriptor(
+                      propertyFlags, selfHandle->numProperties_)) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
       optChildHandle.getValue()->propertyMap_.set(
           selfHandle->propertyMap_, &runtime->getHeap());
     } else {
@@ -241,7 +250,7 @@ std::pair<Handle<HiddenClass>, SlotIndex> HiddenClass::addProperty(
     // In any case, clear our own map.
     selfHandle->propertyMap_ = nullptr;
 
-    return {*optChildHandle, selfHandle->numProperties_};
+    return std::make_pair(*optChildHandle, selfHandle->numProperties_);
   }
 
   // Do we need to convert to dictionary?
@@ -255,12 +264,17 @@ std::pair<Handle<HiddenClass>, SlotIndex> HiddenClass::addProperty(
     }
 
     // Add the property to the child.
-    addToPropertyMap(
-        childHandle,
-        runtime,
-        name,
-        NamedPropertyDescriptor(propertyFlags, childHandle->numProperties_));
-    return {childHandle, childHandle->numProperties_++};
+    if (LLVM_UNLIKELY(
+            addToPropertyMap(
+                childHandle,
+                runtime,
+                name,
+                NamedPropertyDescriptor(
+                    propertyFlags, childHandle->numProperties_)) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return std::make_pair(childHandle, childHandle->numProperties_++);
   }
 
   // Allocate the child.
@@ -302,11 +316,16 @@ std::pair<Handle<HiddenClass>, SlotIndex> HiddenClass::addProperty(
         selfHandle->propertyMap_, &runtime->getHeap());
     selfHandle->propertyMap_ = nullptr;
 
-    addToPropertyMap(
-        childHandle,
-        runtime,
-        name,
-        NamedPropertyDescriptor(propertyFlags, selfHandle->numProperties_));
+    if (LLVM_UNLIKELY(
+            addToPropertyMap(
+                childHandle,
+                runtime,
+                name,
+                NamedPropertyDescriptor(
+                    propertyFlags, selfHandle->numProperties_)) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
   } else {
     DEBUG(
         dbgs() << "Adding property " << runtime->formatSymbolID(name)
@@ -315,7 +334,7 @@ std::pair<Handle<HiddenClass>, SlotIndex> HiddenClass::addProperty(
                << childHandle->getDebugAllocationId() << "\n");
   }
 
-  return {childHandle, selfHandle->numProperties_};
+  return std::make_pair(childHandle, selfHandle->numProperties_);
 }
 
 Handle<HiddenClass> HiddenClass::updateProperty(
@@ -613,7 +632,7 @@ bool HiddenClass::areAllReadOnly(
   return true;
 }
 
-void HiddenClass::addToPropertyMap(
+ExecutionStatus HiddenClass::addToPropertyMap(
     Handle<HiddenClass> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -623,9 +642,14 @@ void HiddenClass::addToPropertyMap(
   // Add the new field to the property map.
   MutableHandle<DictPropertyMap> updatedMap{runtime, selfHandle->propertyMap_};
 
-  DictPropertyMap::add(updatedMap, runtime, name, desc);
+  if (LLVM_UNLIKELY(
+          DictPropertyMap::add(updatedMap, runtime, name, desc) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
   selfHandle->propertyMap_.set(*updatedMap, &runtime->getHeap());
+  return ExecutionStatus::RETURNED;
 }
 
 void HiddenClass::initializeMissingPropertyMap(
@@ -652,26 +676,33 @@ void HiddenClass::initializeMissingPropertyMap(
     entries.emplace_back(cur->symbolID_, tmpFlags);
   }
 
+  assert(
+      DictPropertyMap::wouldFit(entries.size()) &&
+      "There shouldn't ever be this many properties");
   // Allocate the map with the correct size.
-  MutableHandle<DictPropertyMap> mapHandle{
+  auto res = DictPropertyMap::create(
       runtime,
-      DictPropertyMap::create(
-          runtime,
-          std::max(
-              (DictPropertyMap::size_type)entries.size(),
-              toRValue(DictPropertyMap::DEFAULT_CAPACITY)))
-          .get()};
+      std::max(
+          (DictPropertyMap::size_type)entries.size(),
+          toRValue(DictPropertyMap::DEFAULT_CAPACITY)));
+  assert(
+      res != ExecutionStatus::EXCEPTION &&
+      "Since the entries would fit, there shouldn't be an exception");
+  MutableHandle<DictPropertyMap> mapHandle{runtime, res->get()};
 
   // Add the collected entries in reverse order. Note that there could be
   // duplicates.
   SlotIndex slotIndex = 0;
   for (auto it = entries.rbegin(), e = entries.rend(); it != e; ++it) {
     auto inserted = DictPropertyMap::findOrAdd(mapHandle, runtime, it->first);
+    assert(
+        inserted != ExecutionStatus::EXCEPTION &&
+        "Space was already reserved, this couldn't have grown");
 
-    inserted.first->flags = it->second;
+    inserted->first->flags = it->second;
     // If it is a new property, allocate the next slot.
-    if (LLVM_LIKELY(inserted.second))
-      inserted.first->slot = slotIndex++;
+    if (LLVM_LIKELY(inserted->second))
+      inserted->first->slot = slotIndex++;
   }
 
   selfHandle->propertyMap_.set(*mapHandle, &runtime->getHeap());

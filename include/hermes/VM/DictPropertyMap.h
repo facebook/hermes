@@ -96,9 +96,14 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   }
 
   /// Create an instance of DictPropertyMap with the specified capacity.
-  static PseudoHandle<DictPropertyMap> create(
+  static CallResult<PseudoHandle<DictPropertyMap>> create(
       Runtime *runtime,
       size_type capacity = DEFAULT_CAPACITY) {
+    if (LLVM_UNLIKELY(!wouldFit(capacity))) {
+      return runtime->raiseRangeError(
+          TwineChar16("Property storage can't accommodate ") + capacity +
+          " properties");
+    }
     size_type hashCapacity = calcHashCapacity(capacity);
     void *mem = runtime->alloc</*fixedSize*/ false>(
         allocationSize(capacity, hashCapacity));
@@ -155,7 +160,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   /// doesn't exist.
   /// \return a pair consisting of pointer to the property descriptor and a pool
   ///   denoting whether a new property was added.
-  static std::pair<NamedPropertyDescriptor *, bool> findOrAdd(
+  static CallResult<std::pair<NamedPropertyDescriptor *, bool>> findOrAdd(
       MutableHandle<DictPropertyMap> &selfHandleRef,
       Runtime *runtime,
       SymbolID id);
@@ -165,7 +170,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   /// address will be updated in \p selfHandleRef.
   /// \p selfHandleRef pointer to the self handle, which may be updated if the
   ///     object is re-allocated.
-  static void add(
+  static ExecutionStatus add(
       MutableHandle<DictPropertyMap> &selfHandleRef,
       Runtime *runtime,
       SymbolID id,
@@ -179,6 +184,10 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   /// list, or, if the deleted list is empty, return slot \c numProperties_,
   /// which is the next slot at the end of the currently allocated storage.
   static SlotIndex allocatePropertySlot(DictPropertyMap *self);
+
+  /// \return true iff a DictPropertyMap of the given capacity would be too big
+  ///   to fit in the GC.
+  static bool wouldFit(size_type capacity);
 
   void dump();
 
@@ -288,7 +297,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   /// \param[in,out] selfHandleRef the original object handle on input, the new
   ///   object handle on output.
   /// \param newCapacity the capacity of the new object's descriptor array.
-  static void grow(
+  static ExecutionStatus grow(
       MutableHandle<DictPropertyMap> &selfHandleRef,
       Runtime *runtime,
       size_type newCapacity);
@@ -388,14 +397,24 @@ inline OptValue<DictPropertyMap::PropertyPos> DictPropertyMap::find(
   return PropertyPos{(size_type)(found.second - mutableSelf->getHashPairs())};
 }
 
-inline void DictPropertyMap::add(
+inline ExecutionStatus DictPropertyMap::add(
     MutableHandle<DictPropertyMap> &selfHandleRef,
     Runtime *runtime,
     SymbolID id,
     NamedPropertyDescriptor desc) {
   auto found = findOrAdd(selfHandleRef, runtime, id);
-  assert(found.second && "trying to add an existing property");
-  *found.first = desc;
+  if (LLVM_UNLIKELY(found == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  assert(found->second && "trying to add an existing property");
+  *found->first = desc;
+  return ExecutionStatus::RETURNED;
+}
+
+/* static */
+inline bool DictPropertyMap::wouldFit(size_type capacity) {
+  return allocationSize(capacity, calcHashCapacity(capacity)) <=
+      GC::maxAllocationSize();
 }
 
 } // namespace vm

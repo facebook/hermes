@@ -247,9 +247,12 @@ void JSObject::addInternalProperties(
         runtime,
         ReservedSymbolID::internalProperty(i),
         PropertyFlags{});
-    selfHandle->clazz_.set(*addResult.first, &runtime->getHeap());
+    assert(
+        addResult != ExecutionStatus::EXCEPTION &&
+        "Could not possibly grow larger than the limit");
+    selfHandle->clazz_.set(*addResult->first, &runtime->getHeap());
 
-    allocateNewSlotStorage(selfHandle, runtime, addResult.second, valueHandle);
+    allocateNewSlotStorage(selfHandle, runtime, addResult->second, valueHandle);
   }
 }
 
@@ -1904,10 +1907,13 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
   // allocation.
   auto addResult = HiddenClass::addProperty(
       runtime->makeHandle(selfHandle->clazz_), runtime, name, propertyFlags);
-  selfHandle->clazz_.set(*addResult.first, &runtime->getHeap());
+  if (LLVM_UNLIKELY(addResult == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  selfHandle->clazz_.set(*addResult->first, &runtime->getHeap());
 
   allocateNewSlotStorage(
-      selfHandle, runtime, addResult.second, valueOrAccessor);
+      selfHandle, runtime, addResult->second, valueOrAccessor);
 
   // If this is an index-like property, we need to clear the fast path flags.
   if (LLVM_UNLIKELY(selfHandle->clazz_->getHasIndexLikeProperties()))

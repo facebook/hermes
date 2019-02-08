@@ -61,17 +61,19 @@ TEST_F(HiddenClassTest, SmokeTest) {
     // x.a
     auto addRes = HiddenClass::addProperty(
         x, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(0u, addRes.second);
-    ASSERT_NE(*rootHnd, *addRes.first);
-    x = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(0u, addRes->second);
+    ASSERT_NE(*rootHnd, *addRes->first);
+    x = *addRes->first;
   }
   {
     // x.b
     auto addRes = HiddenClass::addProperty(
         x, runtime, *bHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(1u, addRes.second);
-    ASSERT_NE(*x, *addRes.first);
-    x = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(1u, addRes->second);
+    ASSERT_NE(*x, *addRes->first);
+    x = *addRes->first;
   }
   // y = {}
   y = *rootHnd;
@@ -79,24 +81,27 @@ TEST_F(HiddenClassTest, SmokeTest) {
     // y.a
     auto addRes = HiddenClass::addProperty(
         y, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(0u, addRes.second);
-    y = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(0u, addRes->second);
+    y = *addRes->first;
   }
   {
     // y.b
     auto addRes = HiddenClass::addProperty(
         y, runtime, *bHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(1u, addRes.second);
-    y = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(1u, addRes->second);
+    y = *addRes->first;
     ASSERT_EQ(*x, *y);
   }
   {
     // x.c
     auto addRes = HiddenClass::addProperty(
         x, runtime, *cHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(2u, addRes.second);
-    ASSERT_NE(*x, *addRes.first);
-    x = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(2u, addRes->second);
+    ASSERT_NE(*x, *addRes->first);
+    x = *addRes->first;
     ASSERT_EQ(3u, x->getNumProperties());
     ASSERT_FALSE(x->isDictionary());
     ASSERT_TRUE(x->isKnownLeaf());
@@ -105,8 +110,9 @@ TEST_F(HiddenClassTest, SmokeTest) {
     // y.d
     auto addRes = HiddenClass::addProperty(
         y, runtime, *dHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(2u, addRes.second);
-    y = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(2u, addRes->second);
+    y = *addRes->first;
     ASSERT_NE(*x, *y);
     ASSERT_EQ(3u, y->getNumProperties());
     ASSERT_FALSE(y->isDictionary());
@@ -161,22 +167,25 @@ TEST_F(HiddenClassTest, SmokeTest) {
     // z.a
     auto addRes = HiddenClass::addProperty(
         z, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(0u, addRes.second);
-    z = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(0u, addRes->second);
+    z = *addRes->first;
   }
   {
     // z.b
     auto addRes = HiddenClass::addProperty(
         z, runtime, *bHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(1u, addRes.second);
-    z = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(1u, addRes->second);
+    z = *addRes->first;
   }
   {
     // z.c
     auto addRes = HiddenClass::addProperty(
         z, runtime, *cHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(2u, addRes.second);
-    z = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(2u, addRes->second);
+    z = *addRes->first;
   }
 
   {
@@ -238,8 +247,9 @@ TEST_F(HiddenClassTest, SmokeTest) {
     // x.a (again)
     auto addRes = HiddenClass::addProperty(
         x, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(0u, addRes.second);
-    ASSERT_EQ(*x, *addRes.first);
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(0u, addRes->second);
+    ASSERT_EQ(*x, *addRes->first);
     ASSERT_EQ(3u, x->getNumProperties());
   }
 }
@@ -270,22 +280,25 @@ TEST_F(HiddenClassTest, MakePropertiesReadOnlyWithoutTransitionsTest) {
     // y.a
     auto addRes = HiddenClass::addProperty(
         y, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(0u, addRes.second);
-    y = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(0u, addRes->second);
+    y = *addRes->first;
   }
   {
     // y.b
     auto addRes = HiddenClass::addProperty(
         y, runtime, *bHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(1u, addRes.second);
-    y = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(1u, addRes->second);
+    y = *addRes->first;
   }
   {
     // y.c
     auto addRes = HiddenClass::addProperty(
         y, runtime, *cHnd, PropertyFlags::defaultNewNamedPropertyFlags());
-    ASSERT_EQ(2u, addRes.second);
-    y = *addRes.first;
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(2u, addRes->second);
+    y = *addRes->first;
   }
 
   NamedPropertyDescriptor desc;
@@ -381,8 +394,9 @@ TEST_F(HiddenClassTest, MakePropertiesReadOnlyWithoutTransitionsTest) {
       runtime,
       *dHnd,
       PropertyFlags::defaultNewNamedPropertyFlags());
-  ASSERT_EQ(3u, addRes.second);
-  ASSERT_NE(*addRes.first, *partlyFrozenSingleton);
-  ASSERT_EQ(addRes.first->getNumProperties(), 4);
+  ASSERT_RETURNED(addRes);
+  ASSERT_EQ(3u, addRes->second);
+  ASSERT_NE(*addRes->first, *partlyFrozenSingleton);
+  ASSERT_EQ(addRes->first->getNumProperties(), 4);
 }
 } // namespace

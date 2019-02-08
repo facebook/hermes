@@ -436,8 +436,12 @@ Handle<HiddenClass> JSArray::createClass(
       runtime,
       runtime->getPredefinedSymbolID(Predefined::length),
       pf);
-  assert(added.second == LengthPropIndex && "JSArray.length has invalid index");
-  classHandle = added.first;
+  assert(
+      added != ExecutionStatus::EXCEPTION &&
+      "Adding the first properties shouldn't cause overflow");
+  assert(
+      added->second == LengthPropIndex && "JSArray.length has invalid index");
+  classHandle = added->first;
 
   assert(
       classHandle->getNumProperties() == JSArrayPropertyCount &&

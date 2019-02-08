@@ -24,8 +24,9 @@ TEST_F(DictPropertyMapTest, SmokeTest) {
 
   NamedPropertyDescriptor desc1{};
 
-  MutableHandle<DictPropertyMap> map{runtime,
-                                     DictPropertyMap::create(runtime, 2).get()};
+  auto res = DictPropertyMap::create(runtime, 2);
+  ASSERT_RETURNED(res);
+  MutableHandle<DictPropertyMap> map{runtime, res->get()};
   auto saveMap = map.get();
 
   // Try to find a property in the empty map.
