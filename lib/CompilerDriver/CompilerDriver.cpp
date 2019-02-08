@@ -42,12 +42,6 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
 
-#ifdef __ANDROID__
-// Need to define _SSIZE_T if compiled for Android because the header doesn't.
-#include <sys/types.h>
-#define _SSIZE_T
-#endif
-
 #include "zip/src/zip.h"
 
 #include <unistd.h>
