@@ -303,18 +303,18 @@ class GCScope : public GCScopeDebugBase {
 
 #ifndef NDEBUG
   /// Return the number of handles in the scope.
-  size_t getHandleCountDbg() const LLVM_ATTRIBUTE_ALWAYS_INLINE {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE size_t getHandleCountDbg() const {
     return numAllocatedHandles_;
   }
 
-  void setHandleCountDbg(unsigned count) LLVM_ATTRIBUTE_ALWAYS_INLINE {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void setHandleCountDbg(unsigned count) {
     numAllocatedHandles_ = count;
   }
 #else
-  size_t getHandleCountDbg() const LLVM_ATTRIBUTE_ALWAYS_INLINE {
+  LLVM_ATTRIBUTE_ALWAYS_INLINE size_t getHandleCountDbg() const {
     return curChunkIndex_ * CHUNK_SIZE + (next_ - chunks_[curChunkIndex_]);
   }
-  void setHandleCountDbg(unsigned /*count*/) LLVM_ATTRIBUTE_ALWAYS_INLINE {}
+  LLVM_ATTRIBUTE_ALWAYS_INLINE void setHandleCountDbg(unsigned /*count*/) {}
 #endif
 
   /// An opaque object which remembers the state of GCScope. It can be used
