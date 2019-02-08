@@ -829,7 +829,8 @@ class HermesRuntimeImpl
       HermesRuntimeImpl &rt = hfc->hermesRuntimeImpl;
       assert(runtime == &rt.runtime_);
       auto &stats = rt.runtime_.getRuntimeStats();
-      const vm::instrumentation::RAIITimer timer{stats, stats.hostFunction};
+      const vm::instrumentation::RAIITimer timer{
+          "Host Function", stats, stats.hostFunction};
 
       llvm::SmallVector<jsi::Value, 8> apiArgs;
       for (vm::HermesValue hv : hvArgs) {
@@ -1482,7 +1483,8 @@ void HermesRuntimeImpl::evaluateJavaScript(
   };
 
   auto &stats = runtime_.getRuntimeStats();
-  const vm::instrumentation::RAIITimer timer{stats, stats.evaluateJS};
+  const vm::instrumentation::RAIITimer timer{
+      "Evaluate JS", stats, stats.evaluateJS};
   if (!isHermesBytecode(buffer->data(), buffer->size())) {
     hbc::CompileFlags flags{};
 
@@ -1930,7 +1932,8 @@ jsi::Value HermesRuntimeImpl::call(
   }
 
   auto &stats = runtime_.getRuntimeStats();
-  const vm::instrumentation::RAIITimer timer{stats, stats.incomingFunction};
+  const vm::instrumentation::RAIITimer timer{
+      "Incoming Function", stats, stats.incomingFunction};
   vm::ScopedNativeCallFrame newFrame{&runtime_,
                                      static_cast<uint32_t>(count),
                                      handle.getHermesValue(),
@@ -1963,6 +1966,11 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
     throw jsi::JSINativeException(
         "HermesRuntimeImpl::call: Unable to call function: stack overflow");
   }
+
+  auto &stats = runtime_.getRuntimeStats();
+  const vm::instrumentation::RAIITimer timer{
+      "Incoming Function: Call As Constructor", stats, stats.incomingFunction};
+
   // We follow es5 13.2.2 [[Construct]] here. Below F == func.
   // 13.2.2.5:
   //    Let proto be the value of calling the [[Get]] internal property of

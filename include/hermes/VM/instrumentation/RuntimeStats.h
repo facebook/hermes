@@ -7,6 +7,8 @@
 #ifndef HERMES_VM_RUNTIMESTATS_H
 #define HERMES_VM_RUNTIMESTATS_H
 
+#include "hermes/Support/PerfSection.h"
+
 #include <stdint.h>
 
 namespace hermes {
@@ -60,6 +62,10 @@ struct RuntimeStats {
 /// An RAII-style class for updating a Statistic.
 class RAIITimer {
   friend RuntimeStats;
+  /// RAII class for delimiting the code region tracked by this timer for the
+  /// purpose of capturing tracing profiles.
+  PerfSection perfSection_;
+
   /// The RuntimeStats we are updating. This is stored so we can manipulate its
   /// timerStack.
   RuntimeStats &runtimeStats_;
@@ -97,8 +103,12 @@ class RAIITimer {
   }
 
  public:
-  explicit RAIITimer(RuntimeStats &runtimeStats, RuntimeStats::Statistic &stat)
-      : runtimeStats_(runtimeStats),
+  explicit RAIITimer(
+      const char *name,
+      RuntimeStats &runtimeStats,
+      RuntimeStats::Statistic &stat)
+      : perfSection_(name),
+        runtimeStats_(runtimeStats),
         stat_(stat),
         parent_(runtimeStats.timerStack),
         wallTimeStart_(std::chrono::steady_clock::now()),
