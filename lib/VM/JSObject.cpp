@@ -724,14 +724,30 @@ JSObject *JSObject::getNamedDescriptor(
     MutableHandle<JSObject> mutableSelfHandle{runtime, selfHandle->parent_};
 
     do {
-      if (LLVM_UNLIKELY(mutableSelfHandle->flags_.lazyObject)) {
+      // Check the most common case first, at the cost of some code duplication.
+      if (LLVM_LIKELY(
+              !mutableSelfHandle->flags_.lazyObject &&
+              !mutableSelfHandle->flags_.hostObject)) {
+      findProp:
+        if (findProperty(
+                mutableSelfHandle,
+                runtime,
+                name,
+                PropertyFlags::invalid(),
+                desc)) {
+          return *mutableSelfHandle;
+        }
+      } else if (LLVM_UNLIKELY(mutableSelfHandle->flags_.lazyObject)) {
         JSObject::initializeLazyObject(runtime, mutableSelfHandle);
-      }
-      // Note that when looking in the prototype chain we must set forPutNamed
-      // to false because we would never be create a new property there.
-      if (findProperty(
-              mutableSelfHandle, runtime, name, PropertyFlags::invalid(), desc))
+        goto findProp;
+      } else {
+        assert(
+            mutableSelfHandle->flags_.hostObject &&
+            "descriptor flags are impossible");
+        desc.flags.hostObject = true;
+        desc.flags.writable = true;
         return *mutableSelfHandle;
+      }
     } while ((mutableSelfHandle = mutableSelfHandle->parent_));
   }
 
@@ -823,10 +839,7 @@ CallResult<HermesValue> JSObject::getNamed(
         runtime->makeHandle(accessor->getter), runtime, selfHandle);
   } else {
     assert(desc.flags.hostObject && "descriptor flags are impossible");
-    auto propRes = vmcast<HostObject>(selfHandle.get())->get(name);
-    if (propRes == ExecutionStatus::EXCEPTION)
-      return ExecutionStatus::EXCEPTION;
-    return propRes;
+    return vmcast<HostObject>(propObj)->get(name);
   }
 }
 

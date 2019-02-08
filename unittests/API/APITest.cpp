@@ -348,4 +348,22 @@ throws1();
   }
 }
 
+TEST_F(HermesRuntimeTest, HostObjectAsParentTest) {
+  class HostObjectWithProp : public HostObject {
+    Value get(Runtime &runtime, const PropNameID &name) override {
+      if (PropNameID::compare(
+              runtime, name, PropNameID::forAscii(runtime, "prop1")))
+        return 10;
+      return Value();
+    }
+  };
+
+  Object ho =
+      Object::createFromHostObject(*rt, std::make_shared<HostObjectWithProp>());
+  rt->global().setProperty(*rt, "ho", ho);
+
+  EXPECT_TRUE(
+      eval("var subClass = {__proto__: ho}; subClass.prop1 == 10;").getBool());
+}
+
 } // namespace
