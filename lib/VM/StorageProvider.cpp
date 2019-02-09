@@ -179,6 +179,9 @@ void PreAllocatedStorageProvider::deleteStorage(void *storage) {
 /* static */
 std::unique_ptr<StorageProvider> StorageProvider::defaultProvider(
     size_t maxAmount) {
+  assert(
+      maxAmount % AlignedStorage::size() == 0 &&
+      "maxAmount must be a multiple of AlignedStorage::size()");
 #ifdef HERMESVM_FLAT_ADDRESS_SPACE
   // On 64-bit builds, we have plenty of VA, allocate it before-hand.
   return preAllocatedProvider(maxAmount);
@@ -192,12 +195,11 @@ std::unique_ptr<StorageProvider> StorageProvider::defaultProvider(
 /* static */
 std::unique_ptr<StorageProvider> StorageProvider::preAllocatedProvider(
     size_t amount) {
-  // There must be at least 2 storages (one for Young Gen, one for Old Gen).
-  size_t adjustedAmount = std::max(amount, 2 * AlignedStorage::size());
-  // Align it to a storage size.
-  adjustedAmount = llvm::alignTo(adjustedAmount, AlignedStorage::size());
+  assert(
+      amount % AlignedStorage::size() == 0 &&
+      "amount must be a multiple of AlignedStorage::size()");
   return std::unique_ptr<StorageProvider>(
-      new PreAllocatedStorageProvider(adjustedAmount));
+      new PreAllocatedStorageProvider(amount));
 }
 
 /* static */

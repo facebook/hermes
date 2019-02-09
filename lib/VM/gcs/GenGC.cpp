@@ -64,6 +64,11 @@ GenGC::Size::Size(const GCConfig &gcConfig)
 GenGC::Size::Size(gcheapsize_t min, gcheapsize_t max)
     : min_(clampAndPageAlign(min)), max_(clampAndPageAlign(max)) {}
 
+gcheapsize_t GenGC::Size::storageFootprint() const {
+  // GenGC uses no storage from the StorageProvider.
+  return 0;
+}
+
 GenGC::GenGC(
     MetadataTable metaTable,
     GCCallbacks *gcCallbacks,

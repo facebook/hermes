@@ -46,6 +46,11 @@ YoungGen::Size::Size(gcheapsize_t min, gcheapsize_t max)
           2 * oscompat::page_size(),
           AlignedHeapSegment::maxSize())) {}
 
+gcheapsize_t YoungGen::Size::storageFootprint() const {
+  // Young Gen always needs at most one storage.
+  return AlignedStorage::size();
+}
+
 /* static */ gcheapsize_t YoungGen::Size::adjustSizeWithBounds(
     gcheapsize_t desired,
     gcheapsize_t min,

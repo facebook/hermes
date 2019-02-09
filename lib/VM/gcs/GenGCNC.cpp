@@ -62,6 +62,10 @@ GenGC::Size::Size(gcheapsize_t min, gcheapsize_t max)
       ogs_(clampDiffNonNeg(min, ygs_.min()), clampDiffNonNeg(max, ygs_.max())) {
 }
 
+gcheapsize_t GenGC::Size::storageFootprint() const {
+  return ogs_.storageFootprint() + ygs_.storageFootprint();
+}
+
 std::pair<gcheapsize_t, gcheapsize_t> GenGC::Size::adjustSize(
     gcheapsize_t desired) const {
   const gcheapsize_t ygSize = ygs_.adjustSize(desired / kYoungGenFractionDenom);

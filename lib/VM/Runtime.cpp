@@ -57,7 +57,7 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
   const GCConfig &gcConfig = runtimeConfig.getGCConfig();
   GC::Size sz{gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()};
   std::shared_ptr<StorageProvider> provider{
-      StorageProvider::defaultProvider(sz.max())};
+      StorageProvider::defaultProvider(sz.storageFootprint())};
   Runtime *rt = new Runtime(provider.get(), runtimeConfig);
   return std::shared_ptr<Runtime>{rt, [provider](Runtime *runtime) {
                                     // Provider is not used here, only kept

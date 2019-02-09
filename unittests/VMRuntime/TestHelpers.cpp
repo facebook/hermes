@@ -14,7 +14,9 @@ std::shared_ptr<DummyRuntime> DummyRuntime::create(
     const GCConfig &gcConfig) {
   const GC::Size gcSize{gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()};
   return create(
-      metaTable, gcConfig, StorageProvider::defaultProvider(gcSize.max()));
+      metaTable,
+      gcConfig,
+      StorageProvider::defaultProvider(gcSize.storageFootprint()));
 }
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(

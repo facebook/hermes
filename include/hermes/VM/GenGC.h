@@ -67,6 +67,7 @@ class GenGC final : public GCBase {
     gcheapsize_t max() const {
       return max_;
     }
+    gcheapsize_t storageFootprint() const;
 
    private:
     gcheapsize_t min_;

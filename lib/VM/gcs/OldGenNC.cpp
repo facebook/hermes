@@ -50,6 +50,10 @@ OldGen::Size::Size(gcheapsize_t min, gcheapsize_t max)
           2 * oscompat::page_size(),
           std::numeric_limits<gcheapsize_t>::max())) {}
 
+gcheapsize_t OldGen::Size::storageFootprint() const {
+  return maxSegments() * AlignedStorage::size();
+}
+
 /* static */
 gcheapsize_t
 OldGen::Size::adjustSizeWithBounds(size_t desired, size_t min, size_t max) {
@@ -581,16 +585,12 @@ void OldGen::recreateCardTableBoundaries() {
 #endif
 }
 
-size_t OldGen::maxSegments() const {
-  return segmentsForSize(sz_.max());
-}
-
 bool OldGen::seedSegmentCacheForSize(size_t size) {
   auto committedSegs = [this]() {
     return filledSegments_.size() + segmentCache_.size() + 1;
   };
 
-  const auto segReq = segmentsForSize(size);
+  const auto segReq = Size::segmentsForSize(size);
   auto segAlloc = committedSegs();
 
   // Remember how many segments we had cached in case we need to rollback.
@@ -615,7 +615,7 @@ bool OldGen::seedSegmentCacheForSize(size_t size) {
 
 bool OldGen::materializeNextSegment() {
   auto usedSegs = filledSegments_.size() + 1;
-  auto maxSizeSegs = segmentsForSize(effectiveSize());
+  auto maxSizeSegs = Size::segmentsForSize(effectiveSize());
 
   if (usedSegs >= maxSizeSegs) {
     return false;

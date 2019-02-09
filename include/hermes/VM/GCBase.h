@@ -152,6 +152,9 @@ class GCCell;
 ///     gcheapsize_t min() const;
 ///   Return the maximum amount of bytes holdable by this heap.
 ///     gcheapsize_t max() const;
+///   Return the total amount of bytes of storage this GC will require.
+///   This will be a multiple of AlignedStorage::size().
+///     gcheapsize_t storageFootprint() const;
 ///
 class GCBase {
  public:

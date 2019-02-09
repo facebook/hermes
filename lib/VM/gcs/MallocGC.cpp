@@ -135,6 +135,11 @@ struct MallocGC::FullMSCUpdateWeakRootsAcceptor final
   }
 };
 
+gcheapsize_t MallocGC::Size::storageFootprint() const {
+  // MallocGC uses no storage from the StorageProvider.
+  return 0;
+}
+
 MallocGC::MallocGC(
     MetadataTable metaTable,
     GCCallbacks *gcCallbacks,

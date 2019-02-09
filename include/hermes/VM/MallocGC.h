@@ -142,6 +142,8 @@ class MallocGC final : public GCBase {
       return max_;
     }
 
+    gcheapsize_t storageFootprint() const;
+
    private:
     gcheapsize_t min_;
     gcheapsize_t max_;
@@ -288,6 +290,7 @@ ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
 
 /// @name Inline implementations
 /// @{
+
 template <bool fixedSizeIgnored, HasFinalizer hasFinalizer>
 inline void *MallocGC::alloc(uint32_t size) {
   size = heapAlignSize(size);

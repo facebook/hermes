@@ -101,13 +101,24 @@ class OldGen : public GCGeneration {
       return max_;
     }
 
+    gcheapsize_t storageFootprint() const;
+
     gcheapsize_t adjustSize(gcheapsize_t amount) const {
       return adjustSizeWithBounds(amount, min_, max_);
     }
 
    private:
+    friend class OldGen;
+
     gcheapsize_t min_;
     gcheapsize_t max_;
+
+    /// The maximum number of segments that can be allocated.
+    inline size_t maxSegments() const;
+
+    /// The number of segments needed to allocate the given size.  (Rounds up,
+    /// conservatively, if necessary.)
+    inline static size_t segmentsForSize(size_t size);
 
     static gcheapsize_t
     adjustSizeWithBounds(size_t desired, size_t min, size_t max);
@@ -280,13 +291,6 @@ class OldGen : public GCGeneration {
   /// not allocate in.
   inline size_t fragmentationLoss() const;
 
-  /// The maximum number of segments that can be allocated.
-  size_t maxSegments() const;
-
-  /// The number of segments needed to allocate the given size.  (Rounds up,
-  /// conservatively, if necessary.)
-  inline static size_t segmentsForSize(size_t size);
-
   /// Returns an iterator to the segment at index \p ix in this generation's
   /// logical ordering.
   inline SegTraits<OldGen>::It segmentIt(size_t ix);
@@ -391,6 +395,14 @@ class OldGen : public GCGeneration {
   bool releaseUnused_;
 };
 
+size_t OldGen::Size::maxSegments() const {
+  return segmentsForSize(max());
+}
+
+/*static*/ size_t OldGen::Size::segmentsForSize(size_t size) {
+  return size > 0 ? (size - 1) / AlignedHeapSegment::maxSize() + 1 : 1;
+}
+
 AllocResult OldGen::alloc(uint32_t size, HasFinalizer hasFinalizer) {
   assert(ownsAllocContext());
   AllocResult result = allocRaw(size, hasFinalizer);
@@ -439,7 +451,8 @@ size_t OldGen::adjustSize(size_t desired) const {
 }
 
 SegTraits<OldGen>::Range OldGen::allSegments() {
-  return llvm::make_range(segmentIt(0), segmentIt(segmentsForSize(size())));
+  return llvm::make_range(
+      segmentIt(0), segmentIt(Size::segmentsForSize(size())));
 }
 
 template <typename F>
@@ -513,11 +526,6 @@ size_t OldGen::fragmentationLoss() const {
       filledSegments_.size() * AlignedHeapSegment::maxSize();
   assert(filledSegMaxSize >= usedInFilledSegments_);
   return filledSegMaxSize - usedInFilledSegments_;
-}
-
-/*static*/
-size_t OldGen::segmentsForSize(size_t size) {
-  return size > 0 ? (size - 1) / AlignedHeapSegment::maxSize() + 1 : 1;
 }
 
 SegTraits<OldGen>::It OldGen::segmentIt(size_t ix) {
