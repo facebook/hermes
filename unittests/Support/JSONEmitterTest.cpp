@@ -43,10 +43,12 @@ TEST(JSONEmitterTest, SmokeTest) {
   json.closeDict();
   json.closeDict();
 
-  EXPECT_EQ(
-      OS.str(),
+  // This intermediate variable is necessary because
+  // MSVC's macro preprocessor does not behave as expected with R-literals.
+  const char *expected =
       R"#({"a":123,"b":456.7,"dict1":{"dict1_arr1":["val1","val2","val3"],)#"
-      R"#("dict1_empty":{},"dict1_empty2":[],"str1":"\"ABC\bDEF\\"}})#");
+      R"#("dict1_empty":{},"dict1_empty2":[],"str1":"\"ABC\bDEF\\"}})#";
+  EXPECT_EQ(OS.str(), expected);
 }
 
 TEST(JSONEmitterTest, EmptyArray) {
