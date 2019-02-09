@@ -365,12 +365,6 @@ class RegisterAllocator {
   /// \returns true if the instruction \p already has a number.
   bool hasInstructionNumber(Instruction *I);
 
-  /// \returns true if the instruction is lowered into an instruction that
-  /// clobbers registers that are not explicitly defined as result or operands.
-  virtual bool mayClobberRegisters(Instruction *I) {
-    return false;
-  }
-
   /// Checks if the instruction \p I is manipulated by the target.
   virtual bool hasTargetSpecificLowering(Instruction *I) {
     return false;

@@ -35,9 +35,6 @@ bool MovElimination::runOnFunction(Function *F) {
   llvm::DenseMap<Register, unsigned> lastAssignment;
   // Keeps track of last use point of each register.
   llvm::DenseMap<Register, unsigned> lastUse;
-  // The index of the last time we invalidated all registers. We assume that
-  // new registers were invalidated at this index.
-  unsigned lastClobberIdx = 0;
 
   IRBuilder::InstructionDestroyer destroyer;
 
@@ -73,18 +70,11 @@ bool MovElimination::runOnFunction(Function *F) {
 
         if (IOp && op->hasOneUser() && IOp->getParent() == BB) {
           Register src = RA_.getRegister(IOp);
-          auto srcIt = lastAssignment.find(src);
-          auto dstIt = lastAssignment.find(dest);
-          auto dstUseIt = lastUse.find(dest);
-
-          // If we never wrote into the source or destination registers then we
-          // need to assume that the last time that it was modified was the last
-          // clobber point.
-          auto destIdx =
-              dstIt == lastAssignment.end() ? lastClobberIdx : dstIt->second;
-          auto srcIdx =
-              srcIt == lastAssignment.end() ? lastClobberIdx : srcIt->second;
-          auto destUseIdx = dstUseIt == lastUse.end() ? 0 : dstUseIt->second;
+          // Get the index of the instructions that last wrote to the source and
+          // dest registers. Note lookup() returns 0 if not found.
+          unsigned srcIdx = lastAssignment.lookup(src);
+          unsigned destIdx = lastAssignment.lookup(dest);
+          unsigned destUseIdx = lastUse.lookup(dest);
 
           // If the dest register was last written *after* the src register was
           // written into then we know that it is *live* in the range src..dest
@@ -99,14 +89,6 @@ bool MovElimination::runOnFunction(Function *F) {
             movRemoved = true;
           }
         }
-      }
-
-      // If the current instruction may clobber registers wipe out all
-      // knowledge of what goes in the register. Mark the last modification
-      // point as the current index.
-      if (RA_.mayClobberRegisters(&it)) {
-        lastAssignment.clear();
-        lastClobberIdx = index;
       }
 
       // Save the current instruction and report the last index where the
