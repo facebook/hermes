@@ -10,6 +10,7 @@
 
 #include "gtest/gtest.h"
 
+#include <cctype>
 #include <string>
 #include <vector>
 

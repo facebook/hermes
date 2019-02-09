@@ -12,6 +12,8 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cctype>
+
 using llvm::StringRef;
 using namespace hermes;
 
