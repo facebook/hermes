@@ -36,8 +36,6 @@
 #include <tuple>
 #include <utility>
 
-#include <sys/mman.h>
-
 #define DEBUG_TYPE "gc"
 
 using llvm::dbgs;
