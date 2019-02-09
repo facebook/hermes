@@ -75,12 +75,12 @@ TEST(DependentMemoryRegionTest, ParentUnused) {
   };
 
   std::vector<Label> labels{
-      {.ptr = reinterpret_cast<char *>(kParentSize), .unused = 0},
-      {.ptr = reinterpret_cast<char *>(kParentSize - 1 * PS), .unused = 1},
-      {.ptr = reinterpret_cast<char *>(kParentSize - 3 * PS), .unused = 1},
-      {.ptr = reinterpret_cast<char *>(kParentSize - 9 * PS), .unused = 3},
-      {.ptr = reinterpret_cast<char *>(kParentSize - 13 * PS), .unused = 4},
-      {.ptr = reinterpret_cast<char *>(kParentSize - 17 * PS), .unused = 5},
+      Label{reinterpret_cast<char *>(kParentSize), 0},
+      Label{reinterpret_cast<char *>(kParentSize - 1 * PS), 1},
+      Label{reinterpret_cast<char *>(kParentSize - 3 * PS), 1},
+      Label{reinterpret_cast<char *>(kParentSize - 9 * PS), 3},
+      Label{reinterpret_cast<char *>(kParentSize - 13 * PS), 4},
+      Label{reinterpret_cast<char *>(kParentSize - 17 * PS), 5},
   };
 
   for (size_t i = 1; i < labels.size(); ++i) {
