@@ -83,9 +83,8 @@ TEST_F(HermesRuntimeTest, ArrayBufferTest) {
 }
 
 TEST_F(HermesRuntimeTest, BytecodeTest) {
-  const uint8_t empty[] = {};
-  EXPECT_FALSE(HermesRuntime::isHermesBytecode(empty, sizeof(empty)));
   const uint8_t shortBytes[] = {1, 2, 3};
+  EXPECT_FALSE(HermesRuntime::isHermesBytecode(shortBytes, 0));
   EXPECT_FALSE(HermesRuntime::isHermesBytecode(shortBytes, sizeof(shortBytes)));
   uint8_t longBytes[1024];
   memset(longBytes, 'H', sizeof(longBytes));
