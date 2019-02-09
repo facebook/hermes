@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
 #include "gtest/gtest.h"
 
 #include "LogSuccessStorageProvider.h"
@@ -156,6 +162,36 @@ TEST(StorageProviderTest, LogFailStorageProvider) {
   for (auto s : storages) {
     provider.deleteStorage(s);
   }
+}
+
+/// StorageGuard will free storage on scope exit.
+class StorageGuard final {
+ public:
+  StorageGuard(std::shared_ptr<StorageProvider> provider, void *storage)
+      : provider_(std::move(provider)), storage_(storage) {}
+
+  ~StorageGuard() {
+    provider_->deleteStorage(storage_);
+  }
+
+  void *raw() const {
+    return storage_;
+  }
+
+ private:
+  std::shared_ptr<StorageProvider> provider_;
+  void *storage_;
+};
+
+TEST(StorageProviderTest, WithExcess) {
+  std::shared_ptr<StorageProvider> provider{
+      StorageProvider::defaultProviderWithExcess(0, 100)};
+  // This should succeed even though the maxAmount is 0.
+  // The excess bytes requested should be rounded up to give an extra storage
+  // allocation.
+  StorageGuard storage{provider, provider->newStorage()};
+  EXPECT_TRUE(storage.raw());
+  // A request for a second storage *can* fail, but is not required to.
 }
 
 } // namespace

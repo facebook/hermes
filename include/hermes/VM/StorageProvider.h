@@ -30,6 +30,17 @@ class StorageProvider {
   /// \pre maxAmount must be a multiple of AlignedStorage::size().
   static std::unique_ptr<StorageProvider> defaultProvider(size_t maxAmount);
 
+  /// Same as \p defaultProvider, but with an excess amount of bytes specified.
+  /// \param maxAmount Same as in \p defaultProvider
+  /// \param excess An excess amount of bytes that should be allowed to be
+  ///   allocated.
+  /// \pre excess <= StorageProvider::size().
+  /// \post The returned StorageProvider will be able to allocate at most 1
+  ///   extra storage for the excess amount specified.
+  static std::unique_ptr<StorageProvider> defaultProviderWithExcess(
+      size_t maxAmount,
+      size_t excess);
+
   // NOTE: The rest of these factories should only be used by tests.
 
   /// Provide storage from a pre-allocated \p amount.

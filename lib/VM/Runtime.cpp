@@ -57,15 +57,37 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
   const GCConfig &gcConfig = runtimeConfig.getGCConfig();
   GC::Size sz{gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()};
   std::shared_ptr<StorageProvider> provider{
-      StorageProvider::defaultProvider(sz.storageFootprint())};
-  Runtime *rt = new Runtime(provider.get(), runtimeConfig);
+#ifdef HERMESVM_FLAT_ADDRESS_SPACE
+      StorageProvider::defaultProviderWithExcess(
+          sz.storageFootprint(), sizeof(Runtime))
+#else
+      StorageProvider::defaultProvider(sz.storageFootprint())
+#endif
+  };
+  Runtime *rt = nullptr;
+#ifdef HERMESVM_FLAT_ADDRESS_SPACE
+  // Place Runtime in the first allocated storage.
+  void *storage = provider->newStorage();
+  if (LLVM_UNLIKELY(!storage)) {
+    hermes_fatal("Could not allocate initial storage for Runtime");
+  }
+  rt = new (storage) Runtime(provider.get(), runtimeConfig);
+#else
+  // When not using the flat address space, allocate runtime normally.
+  rt = new Runtime(provider.get(), runtimeConfig);
+#endif
+  // Return a shared pointer with a custom deleter to delete the underlying
+  // storage of the runtime.
   return std::shared_ptr<Runtime>{rt, [provider](Runtime *runtime) {
-                                    // Provider is not used here, only kept
-                                    // alive so it will be destructed once this
-                                    // function runs. It will be used in the
-                                    // future.
-                                    (void)provider;
+#ifdef HERMESVM_FLAT_ADDRESS_SPACE
+                                    runtime->~Runtime();
+                                    provider->deleteStorage(runtime);
+#else
                                     delete runtime;
+                                    // Provider is only captured to keep it
+                                    // alive until after the Runtime is deleted.
+                                    (void)provider;
+#endif
                                   }};
 }
 

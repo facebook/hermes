@@ -182,9 +182,23 @@ std::unique_ptr<StorageProvider> StorageProvider::defaultProvider(
   assert(
       maxAmount % AlignedStorage::size() == 0 &&
       "maxAmount must be a multiple of AlignedStorage::size()");
+  return defaultProviderWithExcess(maxAmount, 0);
+}
+
+/* static */
+std::unique_ptr<StorageProvider> StorageProvider::defaultProviderWithExcess(
+    size_t maxAmount,
+    size_t excess) {
+  assert(
+      maxAmount % AlignedStorage::size() == 0 &&
+      "maxAmount must be a multiple of AlignedStorage::size()");
+  assert(
+      excess <= AlignedStorage::size() &&
+      "Excess is greater than AlignedStorage::size, but storages aren't guaranteed to be contiguous");
 #ifdef HERMESVM_FLAT_ADDRESS_SPACE
   // On 64-bit builds, we have plenty of VA, allocate it before-hand.
-  return preAllocatedProvider(maxAmount);
+  return preAllocatedProvider(
+      llvm::alignTo<AlignedStorage::size()>(maxAmount + excess));
 #else
   // On 32-bit builds, we have limited VA. Allocate
   // each segment as it's needed.
