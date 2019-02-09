@@ -19,7 +19,7 @@ The REPL uses 'libreadline' for editing, if it is installed.
 
 Running the LLVM build script will clone LLVM and Clang (which are a dependency)
 and setup the symlinks that LLVM needs to build clang. Next, the script will
-build llvm and cland intto the directory "llvm_build".
+build llvm and clang into the directory "llvm_build".
 
     ./hermes/utils/build_llvm.sh
 
@@ -73,4 +73,3 @@ should compile and run on Windows, but this configuration has not been tested.
 ## Contributing to Hermes
 
 Contributions to Hermes are welcomed and encouraged!
-
