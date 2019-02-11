@@ -68,6 +68,63 @@ TEST_F(GCSegmentRangeTest, IterConsumable) {
   EXPECT_EQ(nullptr, range->next());
 }
 
+TEST_F(GCSegmentRangeTest, FuseConsumable) {
+  constexpr size_t NUM = 10;
+  std::vector<AlignedHeapSegment> segs;
+
+  for (size_t i = 0; i < NUM; ++i) {
+    segs.emplace_back(newSegment());
+  }
+
+  auto range = GCSegmentRange::fuse(
+      GCSegmentRange::fromConsumable(segs.begin(), segs.end()));
+
+  for (size_t i = 0; i < NUM; ++i) {
+    EXPECT_EQ(&segs[i], range->next()) << "Mismatch at " << i;
+  }
+
+  EXPECT_EQ(nullptr, range->next());
+}
+
+TEST_F(GCSegmentRangeTest, FuseEarlyTermination) {
+  constexpr size_t FAIL = 5;
+
+  // A range that pretends to materialise segments on the fly, failing on the
+  // FAIL-th allocation, but is able to continue afterwards.
+  struct Generator : public GCSegmentRange {
+    AlignedHeapSegment *next() override {
+      if (FAIL == allocs_++) {
+        return nullptr;
+      }
+
+      return &seg_;
+    }
+
+   private:
+    size_t allocs_{0};
+    AlignedHeapSegment seg_;
+  };
+
+  { // First verify the behaviour of Generator.
+    Generator g;
+    for (size_t i = 0; i < FAIL; ++i) {
+      ASSERT_NE(nullptr, g.next());
+    }
+    ASSERT_EQ(nullptr, g.next());
+    ASSERT_NE(nullptr, g.next());
+  }
+
+  { // Now make sure a fused version of Generator will not restart after a
+    // failure.
+    auto r = GCSegmentRange::fuse(llvm::make_unique<Generator>());
+    for (size_t i = 0; i < FAIL; ++i) {
+      EXPECT_NE(nullptr, r->next());
+    }
+    EXPECT_EQ(nullptr, r->next());
+    EXPECT_EQ(nullptr, r->next());
+  }
+}
+
 TEST_F(GCSegmentRangeTest, EmptyConcat) {
   auto range = GCSegmentRange::concat();
   EXPECT_EQ(nullptr, range->next());

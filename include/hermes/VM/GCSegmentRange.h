@@ -39,6 +39,16 @@ struct GCSegmentRange {
   /// \p seg Pointer to the segment the range will refer to.
   static inline GCSegmentRange::Ptr singleton(AlignedHeapSegment *seg);
 
+  /// Factory function for creating a fused range from any other type conforming
+  /// to the interface described in the documentation of \c GCSegmentRange.
+  /// Provided as a function for smoother template deduction.
+  ///
+  /// The resulting range behaves like the \p underlying one, until a call to
+  /// \c next on \p underlying fails.  From then on, all subsequent calls to \c
+  /// next() on the fused range will fail immediately, without delegating the
+  /// request to \p underlying.
+  static inline GCSegmentRange::Ptr fuse(GCSegmentRange::Ptr underlying);
+
   /// Factory function for constructing a concatenation of ranges from its
   /// component parts.
   ///
@@ -63,6 +73,8 @@ struct GCSegmentRange {
   template <typename I>
   struct Consumable;
 
+  struct Fused;
+
   struct Concat;
 };
 
@@ -85,6 +97,22 @@ struct GCSegmentRange::Consumable : public GCSegmentRange {
 
  private:
   ConsumableRange<I> consumable_;
+};
+
+/// Please refer to the documentation for GCSegmentRange::fuse for details on
+/// this implementation's behaviour.
+struct GCSegmentRange::Fused : public GCSegmentRange {
+  /// Construct a new fused range from the \p delegate range.  Fused takes
+  /// ownership of its delegate.
+  inline Fused(GCSegmentRange::Ptr delegate);
+
+  /// If calls to \c delegate_.next() have all succeeded so far, forwards the
+  /// request for a segment to the delegate, otherwise fails immediately.
+  inline AlignedHeapSegment *next() override;
+
+ private:
+  bool hasFailed_{false};
+  GCSegmentRange::Ptr delegate_;
 };
 
 /// A range composed of the concatenation of a sequence of component ranges.
@@ -115,6 +143,11 @@ inline GCSegmentRange::Ptr GCSegmentRange::fromConsumable(I begin, I end) {
   return std::unique_ptr<Consumable<I>>(new Consumable<I>{{begin, end}});
 }
 
+inline GCSegmentRange::Ptr GCSegmentRange::fuse(
+    GCSegmentRange::Ptr underlying) {
+  return std::unique_ptr<Fused>(new Fused{std::move(underlying)});
+}
+
 inline GCSegmentRange::Ptr GCSegmentRange::singleton(AlignedHeapSegment *seg) {
   return fromConsumable(seg, seg + 1);
 }
@@ -139,6 +172,19 @@ inline GCSegmentRange::Consumable<I>::Consumable(ConsumableRange<I> consumable)
 template <typename I>
 inline AlignedHeapSegment *GCSegmentRange::Consumable<I>::next() {
   return consumable_.hasNext() ? &consumable_.next() : nullptr;
+}
+
+inline GCSegmentRange::Fused::Fused(GCSegmentRange::Ptr delegate)
+    : delegate_{std::move(delegate)} {}
+
+inline AlignedHeapSegment *GCSegmentRange::Fused::next() {
+  if (LLVM_UNLIKELY(hasFailed_))
+    return nullptr;
+
+  auto *res = delegate_->next();
+  hasFailed_ = res == nullptr;
+
+  return res;
 }
 
 inline GCSegmentRange::Concat::Concat(Spine ranges)
