@@ -282,6 +282,8 @@ class OldGen : public GCGeneration {
 
  private:
   friend class OldGenSegmentIterator;
+  friend class OldGenFilledSegmentRange;
+  friend class OldGenMaterializingRange;
 
   AllocResult fullCollectThenAlloc(
       uint32_t allocSize,
