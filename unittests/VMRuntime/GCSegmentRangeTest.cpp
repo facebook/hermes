@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/GCSegmentRange-inline.h"
 #include "hermes/VM/GCSegmentRange.h"
 
 #include <vector>

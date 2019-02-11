@@ -8,7 +8,6 @@
 #define HERMES_VM_GCSEGMENTRANGE_H
 
 #include "hermes/Support/ConsumableRange.h"
-#include "hermes/VM/AlignedHeapSegment.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
@@ -18,6 +17,8 @@
 
 namespace hermes {
 namespace vm {
+
+class AlignedHeapSegment;
 
 /// An interface representing a sequence of segments, and a collection of
 /// implementations and factory functions for combining and manipulating them.
@@ -137,33 +138,6 @@ struct GCSegmentRange::Concat : public GCSegmentRange {
   Spine ranges_;
   Spine::iterator cursor_;
 };
-
-template <typename I>
-inline GCSegmentRange::Ptr GCSegmentRange::fromConsumable(I begin, I end) {
-  return std::unique_ptr<Consumable<I>>(new Consumable<I>{{begin, end}});
-}
-
-inline GCSegmentRange::Ptr GCSegmentRange::fuse(
-    GCSegmentRange::Ptr underlying) {
-  return std::unique_ptr<Fused>(new Fused{std::move(underlying)});
-}
-
-inline GCSegmentRange::Ptr GCSegmentRange::singleton(AlignedHeapSegment *seg) {
-  return fromConsumable(seg, seg + 1);
-}
-
-template <typename... Ranges>
-inline GCSegmentRange::Ptr GCSegmentRange::concat(
-    std::unique_ptr<Ranges>... ranges) {
-  Concat::Spine spine;
-  spine.reserve(sizeof...(Ranges));
-
-  // Hack to emit a sequence of emplace_back calls.
-  int sink[] = {(spine.emplace_back(std::move(ranges)), 0)...};
-  (void)sink;
-
-  return std::unique_ptr<Concat>(new Concat{std::move(spine)});
-}
 
 template <typename I>
 inline GCSegmentRange::Consumable<I>::Consumable(ConsumableRange<I> consumable)
