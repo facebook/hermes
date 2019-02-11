@@ -163,19 +163,18 @@ bool OldGen::growToFit(size_t amount) {
 }
 
 gcheapsize_t OldGen::bytesAllocatedSinceLastGC() const {
-  assert(ownsAllocContext() && "Only called when the context is owned.");
   auto segs = segmentsSinceLastGC();
-  assert(segs.begin() != segs.end());
+  AlignedHeapSegment *seg = segs->next();
 
-  auto segIt = segs.begin();
-  assert(segIt->dbgContainsLevel(levelAtEndOfLastGC_.ptr));
+  assert(seg && "Must be at least one segment");
+  assert(seg->dbgContainsLevel(levelAtEndOfLastGC_.ptr));
 
   // First do the diff for the alloc segment at the time of last GC.
-  gcheapsize_t res = segIt->level() - levelAtEndOfLastGC_.ptr;
+  gcheapsize_t res = seg->level() - levelAtEndOfLastGC_.ptr;
 
   // Now add any later segments into which allocation has occurred.
-  for (++segIt; segIt != segs.end(); ++segIt) {
-    res += segIt->used();
+  while ((seg = segs->next())) {
+    res += seg->used();
   }
 
   return res;
@@ -195,18 +194,18 @@ bool OldGen::dbgContains(const void *p) const {
 void OldGen::forObjsAllocatedSinceGC(
     const std::function<void(GCCell *)> &callback) {
   auto segs = segmentsSinceLastGC();
-  assert(segs.begin() != segs.end());
+  AlignedHeapSegment *seg = segs->next();
 
-  auto segIt = segs.begin();
-  assert(segIt->dbgContainsLevel(levelAtEndOfLastGC_.ptr));
+  assert(seg && "Must be at least one segment");
+  assert(seg->dbgContainsLevel(levelAtEndOfLastGC_.ptr));
 
   // First do the remainder, if any, of the region containing the first such
   // object.
-  segIt->forObjsInRange(callback, levelAtEndOfLastGC_.ptr, segIt->level());
+  seg->forObjsInRange(callback, levelAtEndOfLastGC_.ptr, seg->level());
 
   // Now do any subsequent segments.
-  for (++segIt; segIt != segs.end(); ++segIt) {
-    segIt->forAllObjs(callback);
+  while ((seg = segs->next())) {
+    seg->forAllObjs(callback);
   }
 }
 #endif // !NDEBUG

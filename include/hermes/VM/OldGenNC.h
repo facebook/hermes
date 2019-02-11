@@ -17,7 +17,6 @@
 #include "hermes/VM/GCSegmentRange-inline.h"
 #include "hermes/VM/GCSegmentRange.h"
 #include "hermes/VM/HasFinalizer.h"
-#include "hermes/VM/OldGenSegmentIterator.h"
 #include "hermes/VM/OldGenSegmentRanges.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/YoungGenNC.h"
@@ -297,15 +296,17 @@ class OldGen : public GCGeneration {
   /// not allocate in.
   inline size_t fragmentationLoss() const;
 
-  /// Returns an iterator to the segment at index \p ix in this generation's
-  /// logical ordering.
-  inline OldGenSegmentIterator segmentIt(size_t ix);
+  /// The maximum number of segments that can be allocated.
+  size_t maxSegments() const;
+
+  /// The number of segments needed to allocate the given size.  (Rounds up,
+  /// conservatively, if necessary.)
+  inline static size_t segmentsForSize(size_t size);
 
   /// The sequence of segments starting from the segment that contained the
   /// level at the end of the last GC, up to and including the segment that will
   /// be allocated into next.
-  inline llvm::iterator_range<OldGenSegmentIterator> segmentsSinceLastGC()
-      const;
+  inline GCSegmentRange::Ptr segmentsSinceLastGC() const;
 
   /// Allocate and store enough segments into the cache to allocate up to \p
   /// size bytes in this heap (including existing allocations).
@@ -538,18 +539,15 @@ size_t OldGen::fragmentationLoss() const {
   return filledSegMaxSize - usedInFilledSegments_;
 }
 
-OldGenSegmentIterator OldGen::segmentIt(size_t ix) {
-  return OldGenSegmentIterator{this, ix};
-}
-
-llvm::iterator_range<OldGenSegmentIterator> OldGen::segmentsSinceLastGC()
-    const {
-  // This cast is safe because the iterator only uses non-const instances to
-  // materialize segments, but used segments do not need materialising.
+GCSegmentRange::Ptr OldGen::segmentsSinceLastGC() const {
+  assert(ownsAllocContext());
+  // This API is only used in scenarios where the segments will not be mutated,
+  // but the range API is not const-polymorphic, so we have to const_cast the
+  // \c this.
   auto _this = const_cast<OldGen *>(this);
-  return llvm::make_range(
-      _this->segmentIt(levelAtEndOfLastGC_.segmentNum),
-      _this->segmentIt(filledSegments_.size() + 1));
+  return GCSegmentRange::concat(
+      OldGenFilledSegmentRange::create(_this, levelAtEndOfLastGC_.segmentNum),
+      GCSegmentRange::singleton(&_this->activeSegment()));
 }
 
 } // namespace vm
