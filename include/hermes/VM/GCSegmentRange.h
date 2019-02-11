@@ -14,6 +14,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include <memory>
+#include <vector>
 
 namespace hermes {
 namespace vm {
@@ -38,6 +39,14 @@ struct GCSegmentRange {
   /// \p seg Pointer to the segment the range will refer to.
   static inline GCSegmentRange::Ptr singleton(AlignedHeapSegment *seg);
 
+  /// Factory function for constructing a concatenation of ranges from its
+  /// component parts.
+  ///
+  /// \p ranges The sequence of component ranges, in the order we wish to
+  ///     concatenate them in.
+  template <typename... Ranges>
+  static inline GCSegmentRange::Ptr concat(std::unique_ptr<Ranges>... ranges);
+
   virtual ~GCSegmentRange() = default;
 
   /// Returns a pointer to the next segment, moving the underlying cursor
@@ -53,6 +62,8 @@ struct GCSegmentRange {
  private:
   template <typename I>
   struct Consumable;
+
+  struct Concat;
 };
 
 /// A range backed by a \c ConsumableRange of AlignedHeapSegments.
@@ -76,6 +87,29 @@ struct GCSegmentRange::Consumable : public GCSegmentRange {
   ConsumableRange<I> consumable_;
 };
 
+/// A range composed of the concatenation of a sequence of component ranges.
+struct GCSegmentRange::Concat : public GCSegmentRange {
+  using Spine = std::vector<GCSegmentRange::Ptr>;
+
+  /// Construct a range from its component ranges.
+  ///
+  /// \p spine A vector containing the component ranges.
+  inline Concat(Spine spine);
+
+  /// See docs for \c GCSegmentRange.
+  ///
+  /// Let I be the index of the last range we successfully requested a segment
+  /// from (initially 0).  The next segment of the concatenation of ranges
+  /// R0, R1, ..., RN is the  next segment of the first range in the sequence
+  /// RI, R(I + 1), ..., RN to return successfully from a call to \c next, or
+  /// \c nullptr if all ranges were unsuccessful in producing a next segment.
+  inline AlignedHeapSegment *next() override;
+
+ private:
+  Spine ranges_;
+  Spine::iterator cursor_;
+};
+
 template <typename I>
 inline GCSegmentRange::Ptr GCSegmentRange::fromConsumable(I begin, I end) {
   return std::unique_ptr<Consumable<I>>(new Consumable<I>{{begin, end}});
@@ -85,6 +119,19 @@ inline GCSegmentRange::Ptr GCSegmentRange::singleton(AlignedHeapSegment *seg) {
   return fromConsumable(seg, seg + 1);
 }
 
+template <typename... Ranges>
+inline GCSegmentRange::Ptr GCSegmentRange::concat(
+    std::unique_ptr<Ranges>... ranges) {
+  Concat::Spine spine;
+  spine.reserve(sizeof...(Ranges));
+
+  // Hack to emit a sequence of emplace_back calls.
+  int sink[] = {(spine.emplace_back(std::move(ranges)), 0)...};
+  (void)sink;
+
+  return std::unique_ptr<Concat>(new Concat{std::move(spine)});
+}
+
 template <typename I>
 inline GCSegmentRange::Consumable<I>::Consumable(ConsumableRange<I> consumable)
     : consumable_{std::move(consumable)} {}
@@ -92,6 +139,21 @@ inline GCSegmentRange::Consumable<I>::Consumable(ConsumableRange<I> consumable)
 template <typename I>
 inline AlignedHeapSegment *GCSegmentRange::Consumable<I>::next() {
   return consumable_.hasNext() ? &consumable_.next() : nullptr;
+}
+
+inline GCSegmentRange::Concat::Concat(Spine ranges)
+    : ranges_{std::move(ranges)}, cursor_{ranges_.begin()} {}
+
+inline AlignedHeapSegment *GCSegmentRange::Concat::next() {
+  while (LLVM_LIKELY(cursor_ != ranges_.end())) {
+    if (AlignedHeapSegment *res = (*cursor_)->next()) {
+      return res;
+    } else {
+      cursor_++;
+    }
+  }
+
+  return nullptr;
 }
 
 } // namespace vm

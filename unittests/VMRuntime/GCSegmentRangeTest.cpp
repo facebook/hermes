@@ -68,6 +68,49 @@ TEST_F(GCSegmentRangeTest, IterConsumable) {
   EXPECT_EQ(nullptr, range->next());
 }
 
+TEST_F(GCSegmentRangeTest, EmptyConcat) {
+  auto range = GCSegmentRange::concat();
+  EXPECT_EQ(nullptr, range->next());
+}
+
+TEST_F(GCSegmentRangeTest, SingletonConcat) {
+  auto seg = newSegment();
+  auto range = GCSegmentRange::concat(GCSegmentRange::singleton(&seg));
+
+  EXPECT_EQ(&seg, range->next());
+  EXPECT_EQ(nullptr, range->next());
+}
+
+TEST_F(GCSegmentRangeTest, ConcatMultiple) {
+  constexpr size_t NUM = 10;
+  std::vector<AlignedHeapSegment> init, tail;
+  auto mid = newSegment();
+
+  for (size_t i = 0; i < NUM; ++i) {
+    // Adding to the tail first, to make sure we are not simply iterating in
+    // creation order.
+    tail.emplace_back(newSegment());
+    init.emplace_back(newSegment());
+  }
+
+  auto range = GCSegmentRange::concat(
+      GCSegmentRange::fromConsumable(init.begin(), init.end()),
+      GCSegmentRange::singleton(&mid),
+      GCSegmentRange::fromConsumable(tail.begin(), tail.end()));
+
+  for (size_t i = 0; i < NUM; ++i) {
+    EXPECT_EQ(&init[i], range->next()) << "Mismatch at Init " << i;
+  }
+
+  EXPECT_EQ(&mid, range->next()) << "Mismatch at Mid";
+
+  for (size_t i = 0; i < NUM; ++i) {
+    EXPECT_EQ(&tail[i], range->next()) << "Mismatch at Tail " << i;
+  }
+
+  EXPECT_EQ(nullptr, range->next());
+}
+
 } // namespace
 
 #endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
