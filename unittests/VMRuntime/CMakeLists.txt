@@ -33,6 +33,7 @@ set(RTSources
   GCReturnUnusedMemoryTest.cpp
   GCSanitizeHandlesTest.cpp
   GCSegmentAddressIndexTest.cpp
+  GCSegmentRangeTest.cpp
   GCSizingTest.cpp
   HeapSnapshotTest.cpp
   HermesValueTest.cpp
