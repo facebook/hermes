@@ -21,7 +21,6 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue-inline.h"
-#include "hermes/VM/OldGenSegmentIterator.h"
 #include "hermes/VM/SnapshotAcceptor.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SweepResultNC.h"

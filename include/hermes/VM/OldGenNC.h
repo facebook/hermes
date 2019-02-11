@@ -284,7 +284,6 @@ class OldGen : public GCGeneration {
   void didFinishGC();
 
  private:
-  friend class OldGenSegmentIterator;
   friend class OldGenFilledSegmentRange;
   friend class OldGenMaterializingRange;
 

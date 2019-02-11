@@ -118,7 +118,6 @@ set(LLVM_OPTIONAL_SOURCES
   gcs/GenGCNC-FB.cpp
   gcs/MarkBitArrayNC.cpp
   gcs/OldGenNC.cpp
-  gcs/OldGenSegmentIterator.cpp
   gcs/OldGenSegmentRanges.cpp
   gcs/YoungGenNC.cpp
   gcs/AlignedHeapSegment.cpp
@@ -139,7 +138,6 @@ elseif (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
                            gcs/CompleteMarkState.cpp gcs/GCGeneration.cpp
                            gcs/GCSegmentAddressIndex.cpp gcs/GenGCNC.cpp
                            gcs/MarkBitArrayNC.cpp gcs/OldGenNC.cpp
-                           gcs/OldGenSegmentIterator.cpp
                            gcs/OldGenSegmentRanges.h gcs/YoungGenNC.cpp)
 elseif (${HERMESVM_GCKIND} STREQUAL "MALLOC")
   list(APPEND source_files gcs/MallocGC.cpp gcs/FillerCell.cpp)
