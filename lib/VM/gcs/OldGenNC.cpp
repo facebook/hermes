@@ -15,6 +15,8 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/GCSegmentRange-inline.h"
+#include "hermes/VM/GCSegmentRange.h"
 #include "hermes/VM/YoungGenNC-inline.h"
 
 #include "llvm/Support/Debug.h"
@@ -365,16 +367,21 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
   OldGenObjEvacAcceptor acceptor(*gc_);
   SlotVisitor<OldGenObjEvacAcceptor> visitor(acceptor);
 
-  const auto segLast = segmentIt(originalLevel.segmentNum);
-  const auto segEnd = segLast + 1;
+  auto segs = GCSegmentRange::concat(
+      OldGenFilledSegmentRange::create(this),
+      GCSegmentRange::singleton(&activeSegment()));
 
-  for (auto segIt = segmentIt(0); segIt != segEnd; ++segIt) {
+  size_t i = 0;
+  while (AlignedHeapSegment *seg = segs->next()) {
+    if (originalLevel.segmentNum < i)
+      break;
+
     const char *const origSegLevel =
-        segIt == segLast ? originalLevel.ptr : segIt->level();
+        i == originalLevel.segmentNum ? originalLevel.ptr : seg->level();
 
-    auto &cardTable = segIt->cardTable();
+    auto &cardTable = seg->cardTable();
 
-    size_t from = cardTable.addressToIndex(segIt->start());
+    size_t from = cardTable.addressToIndex(seg->start());
     size_t to = cardTable.addressToIndex(origSegLevel - 1) + 1;
 
     while (const auto oiBegin = cardTable.findNextDirtyCard(from, to)) {
@@ -394,8 +401,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
       const char *const end = cardTable.indexToAddress(iEnd);
       const void *const boundary = std::min(end, origSegLevel);
 
-      GCCell *const firstObj = segIt->cardTable().firstObjForCard(iBegin);
-
+      GCCell *const firstObj = cardTable.firstObjForCard(iBegin);
       GCCell *obj = firstObj;
 
       // Mark the first object with respect to the dirty card boundaries.
@@ -419,6 +425,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
       from = iEnd;
     }
     cardTable.clear();
+    i++;
   }
 }
 
