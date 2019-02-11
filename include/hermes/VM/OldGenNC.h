@@ -14,11 +14,15 @@
 #include "hermes/VM/CompactionResult.h"
 #include "hermes/VM/CompleteMarkState.h"
 #include "hermes/VM/GCGeneration.h"
+#include "hermes/VM/GCSegmentRange-inline.h"
+#include "hermes/VM/GCSegmentRange.h"
 #include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/OldGenSegmentIterator.h"
-#include "hermes/VM/OldGenTraits.h"
+#include "hermes/VM/OldGenSegmentRanges.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/YoungGenNC.h"
+
+#include "llvm/ADT/iterator_range.h"
 
 #include <cstddef>
 #include <deque>
@@ -144,7 +148,7 @@ class OldGen : public GCGeneration {
   void growTo(size_t desired);
   void shrinkTo(size_t desired);
   bool growToFit(size_t amount);
-  inline SegTraits<OldGen>::Range allSegments();
+  inline GCSegmentRange::Ptr allSegments();
   gcheapsize_t bytesAllocatedSinceLastGC() const;
   template <typename F>
   inline void forUsedSegments(F callback);
@@ -295,12 +299,13 @@ class OldGen : public GCGeneration {
 
   /// Returns an iterator to the segment at index \p ix in this generation's
   /// logical ordering.
-  inline SegTraits<OldGen>::It segmentIt(size_t ix);
+  inline OldGenSegmentIterator segmentIt(size_t ix);
 
   /// The sequence of segments starting from the segment that contained the
   /// level at the end of the last GC, up to and including the segment that will
   /// be allocated into next.
-  inline SegTraits<OldGen>::Range segmentsSinceLastGC() const;
+  inline llvm::iterator_range<OldGenSegmentIterator> segmentsSinceLastGC()
+      const;
 
   /// Allocate and store enough segments into the cache to allocate up to \p
   /// size bytes in this heap (including existing allocations).
@@ -452,9 +457,12 @@ size_t OldGen::adjustSize(size_t desired) const {
   return sz_.adjustSize(desired);
 }
 
-SegTraits<OldGen>::Range OldGen::allSegments() {
-  return llvm::make_range(
-      segmentIt(0), segmentIt(Size::segmentsForSize(size())));
+GCSegmentRange::Ptr OldGen::allSegments() {
+  assert(ownsAllocContext());
+  return GCSegmentRange::concat(
+      OldGenFilledSegmentRange::create(this),
+      GCSegmentRange::singleton(&activeSegment()),
+      GCSegmentRange::fuse(OldGenMaterializingRange::create(this)));
 }
 
 template <typename F>
@@ -530,11 +538,12 @@ size_t OldGen::fragmentationLoss() const {
   return filledSegMaxSize - usedInFilledSegments_;
 }
 
-SegTraits<OldGen>::It OldGen::segmentIt(size_t ix) {
+OldGenSegmentIterator OldGen::segmentIt(size_t ix) {
   return OldGenSegmentIterator{this, ix};
 }
 
-SegTraits<OldGen>::Range OldGen::segmentsSinceLastGC() const {
+llvm::iterator_range<OldGenSegmentIterator> OldGen::segmentsSinceLastGC()
+    const {
   // This cast is safe because the iterator only uses non-const instances to
   // materialize segments, but used segments do not need materialising.
   auto _this = const_cast<OldGen *>(this);

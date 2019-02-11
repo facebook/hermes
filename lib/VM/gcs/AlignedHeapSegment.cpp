@@ -214,10 +214,10 @@ void AlignedHeapSegment::sweepAndInstallForwardingPointers(
   // beginning of a dead region.
   char *adjacentPtr = ptr;
 
-  for (auto &compactionResult = sweepResult->compactionResult;
-       compactionResult.hasChunk();
-       compactionResult.nextChunk()) {
-    auto allocator = compactionResult.activeChunk()->allocator();
+  auto &compactionResult = sweepResult->compactionResult;
+  auto *chunk = compactionResult.activeChunk();
+  do {
+    auto allocator = chunk->allocator();
 
     // Each iteration of this loop fills the current compactionResult
     // as much as possible.
@@ -258,7 +258,7 @@ void AlignedHeapSegment::sweepAndInstallForwardingPointers(
     if (ind >= indexLimit) {
       break;
     }
-  }
+  } while ((chunk = compactionResult.nextChunk()));
   assert(ind >= indexLimit && "We didn't have enough space to compact into");
 
   if (adjacentPtr < level_) {

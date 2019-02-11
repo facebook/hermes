@@ -11,8 +11,7 @@
 #include "hermes/VM/AdviseUnused.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CardTableNC.h"
-#include "hermes/VM/OldGenTraits.h"
-#include "hermes/VM/YoungGenTraits.h"
+#include "hermes/VM/GCSegmentRange.h"
 
 #include <iterator>
 #include <vector>
@@ -29,17 +28,6 @@ class GCGeneration;
 class CompactionResult {
  public:
   class Chunk;
-
-  /// Compaction results request chunks to compact into from segments in the old
-  /// generation, and then the young generation.  This is codified in the type
-  /// of the iterator it stores to keep track of its progress through those
-  /// segments.
-  using SegmentIt = llvm::concat_iterator<
-      AlignedHeapSegment,
-      SegTraits<OldGen>::It,
-      SegTraits<YoungGen>::It>;
-
-  using SegmentRange = llvm::iterator_range<SegmentIt>;
 
   /// RAII class managing the allocation of objects into compaction result
   /// chunks. The class stores fields necessary for allocation inline, for fast
@@ -122,16 +110,11 @@ class CompactionResult {
   using ChunksRemaining = ConsumableRange<std::vector<Chunk>::const_iterator>;
 
   /// Construct a new compaction result, with chunks first drawn from segments
-  /// in \p ogSegs, and then \p ygSegs.
+  /// in \p ogSegs, and then \p ygSegs.  Assumes that there is at least one
+  /// segment available across both the supplied ranges.
   inline CompactionResult(
-      SegTraits<OldGen>::Range ogSegs,
-      SegTraits<YoungGen>::Range ygSegs);
-
-  /// \return A range corresponding to the concatenation of \p ogSegs and \p
-  ///     ygSegs.
-  static inline SegmentRange range(
-      SegTraits<OldGen>::Range ogSegs,
-      SegTraits<YoungGen>::Range ygSegs);
+      GCSegmentRange::Ptr ogSegs,
+      GCSegmentRange::Ptr ygSegs);
 
   /// \pre this->hasChunk().
   ///
@@ -139,78 +122,36 @@ class CompactionResult {
   ///     into.
   inline Chunk *activeChunk();
 
-  /// \return True if and only if there is currently a chunk under the
-  /// compaction result's cursor.
-  inline bool hasChunk();
-
-  /// Move the compaction result's cursor to the next chunk.
-  inline void nextChunk();
+  /// Move the compaction result's cursor past the current chunk (if one
+  /// exists).  If the next chunk exists, returns a pointer to it, otherwise
+  /// returns nullptr.
+  inline Chunk *nextChunk();
 
   /// \return a vector of the chunks that the compaction result's cursor has
   ///     been over.
   inline const std::vector<Chunk> &usedChunks() const;
 
  private:
-  /// Constructs the chunk under the compaction result's cursor, if it exists.
-  inline void materializeChunk();
-
-  SegmentIt segIt_;
-  SegmentIt segEnd_;
-
+  GCSegmentRange::Ptr segmentRange_;
   std::vector<Chunk> usedChunks_;
 };
 
-CompactionResult::SegmentRange CompactionResult::range(
-    SegTraits<OldGen>::Range ogSegs,
-    SegTraits<YoungGen>::Range ygSegs) {
-  return llvm::make_range(
-      SegmentIt(ogSegs, ygSegs),
-      // The end iterator of the concatenation, C, of ranges:
-      //
-      //     [B0, E0) + [B1, E1) + ... + [BN, EN)
-      //
-      // Is a concatenation of empty ranges:
-      //
-      //     [E0, E0) + [E1, E1) + ... + [EN, EN)
-      //
-      // Where each summand is the empty suffix of its corresponding summand in
-      // C.
-      SegmentIt(
-          llvm::make_range(std::end(ogSegs), std::end(ogSegs)),
-          llvm::make_range(std::end(ygSegs), std::end(ygSegs))));
-}
-
-CompactionResult::CompactionResult(
-    SegTraits<OldGen>::Range ogSegs,
-    SegTraits<YoungGen>::Range ygSegs)
-    : segIt_(std::begin(range(ogSegs, ygSegs))),
-      segEnd_(std::end(range(ogSegs, ygSegs))) {
-  materializeChunk();
-}
-
 CompactionResult::Chunk *CompactionResult::activeChunk() {
-  assert(hasChunk() && "Can only access chunks if we have them");
   return &usedChunks_.back();
 }
 
-bool CompactionResult::hasChunk() {
-  return segIt_ != segEnd_;
-}
+CompactionResult::Chunk *CompactionResult::nextChunk() {
+  if (auto *seg = segmentRange_->next()) {
+    usedChunks_.emplace_back(seg);
+    return activeChunk();
+  }
 
-void CompactionResult::nextChunk() {
-  segIt_++;
-  materializeChunk();
+  return nullptr;
 }
 
 const std::vector<CompactionResult::Chunk> &CompactionResult::usedChunks()
     const {
   return usedChunks_;
-}
-
-void CompactionResult::materializeChunk() {
-  if (hasChunk()) {
-    usedChunks_.emplace_back(&*segIt_);
-  }
 }
 
 } // namespace vm

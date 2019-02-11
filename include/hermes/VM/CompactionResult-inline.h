@@ -10,9 +10,20 @@
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/CompactionResult.h"
 #include "hermes/VM/GCGeneration.h"
+#include "hermes/VM/GCSegmentRange-inline.h"
 
 namespace hermes {
 namespace vm {
+
+CompactionResult::CompactionResult(
+    GCSegmentRange::Ptr ogSegs,
+    GCSegmentRange::Ptr ygSegs)
+    : segmentRange_(
+          GCSegmentRange::concat(std::move(ogSegs), std::move(ygSegs))) {
+  auto *seg = segmentRange_->next();
+  assert(seg && "Need at least one segment in range.");
+  usedChunks_.emplace_back(seg);
+}
 
 inline CompactionResult::Chunk::Chunk(AlignedHeapSegment *segment)
     : level_(segment->start()),

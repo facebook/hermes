@@ -10,6 +10,7 @@
 #include "EmptyCell.h"
 #include "TestHelpers.h"
 #include "hermes/VM/GC.h"
+#include "hermes/VM/LimitedStorageProvider.h"
 
 #include <deque>
 
@@ -176,6 +177,47 @@ TEST(GCEffectiveOOMDeathTest, IntegrationTest) {
 
   // The last allocation should cause us to effectively OOM.
   EXPECT_DEATH({ oneForOne(); }, "OOM");
+}
+
+/// Even if we run out of virtual memory during a full collection, we should
+/// be able to finish the GC.  This is a regression test as NCGen used to
+/// trigger an OOM if it could not materialise segments in the OldGen, during
+/// full collection, due to VA exhaustion.
+TEST(GCOOMVALimitFullGCTest, Test) {
+  const size_t kHeapSizeHint =
+      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+
+  using FullCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+  using HalfCell = EmptyCell<AlignedHeapSegment::maxSize() / 2>;
+
+  // Only space for two segments.
+  auto provider = llvm::make_unique<LimitedStorageProvider>(
+      StorageProvider::mmapProvider(), AlignedStorage::size() * 2);
+
+  auto runtime = DummyRuntime::create(
+      getMetadataTable(),
+      TestGCConfigFixedSize(kHeapSizeHint),
+      std::move(provider));
+  DummyRuntime &rt = *runtime;
+  auto &gc = rt.gc;
+
+  std::deque<GCCell *> roots;
+
+  roots.push_back(FullCell::createLongLived(rt));
+  rt.pointerRoots.push_back(&roots.back());
+
+  roots.push_back(HalfCell::create(rt));
+  rt.pointerRoots.push_back(&roots.back());
+
+  HalfCell::create(rt);
+
+  // The heap has now filled the materializable segments.  Allocating the next
+  // HalfCell should result in the dead HalfCell getting collected, with the
+  // new allocation taking its place.  It should not OOM.
+  ASSERT_EQ(0, gc.numGCs());
+  HalfCell::create(rt);
+  EXPECT_EQ(0, gc.numYoungGCs());
+  EXPECT_EQ(1, gc.numFullGCs());
 }
 
 } // namespace

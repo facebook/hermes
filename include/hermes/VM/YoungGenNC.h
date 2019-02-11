@@ -11,12 +11,12 @@
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CompactionResult.h"
 #include "hermes/VM/GCGeneration.h"
+#include "hermes/VM/GCSegmentRange-inline.h"
+#include "hermes/VM/GCSegmentRange.h"
 #include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/SweepResultNC.h"
-#include "hermes/VM/YoungGenTraits.h"
 
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <functional>
@@ -88,7 +88,7 @@ class YoungGen : public GCGeneration {
   inline void growTo(size_t desired);
   inline void shrinkTo(size_t desired);
   inline bool growToFit(size_t amount);
-  inline SegTraits<YoungGen>::Range allSegments();
+  inline GCSegmentRange::Ptr allSegments();
   gcheapsize_t bytesAllocatedSinceLastGC() const;
   template <typename F>
   inline void forUsedSegments(F callback);
@@ -323,9 +323,9 @@ bool YoungGen::growToFit(size_t amount) {
   return res;
 }
 
-SegTraits<YoungGen>::Range YoungGen::allSegments() {
+GCSegmentRange::Ptr YoungGen::allSegments() {
   assert(ownsAllocContext());
-  return llvm::make_range(&activeSegment(), &activeSegment() + 1);
+  return GCSegmentRange::singleton(&activeSegment());
 }
 
 template <typename F>
