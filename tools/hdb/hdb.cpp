@@ -14,7 +14,6 @@ int main(void) {
 
 #else // defined(HERMES_ENABLE_DEBUGGER)
 
-#include <getopt.h>
 #include <hermes/DebuggerAPI.h>
 #include <hermes/hermes.h>
 #include <jsi/jsi.h>
@@ -31,8 +30,12 @@ int main(void) {
 #include <map>
 #include <thread>
 
-// Note that we cannot use LLVM here because LLVM is built without
-// exceptions/RTTI, and so we will incur link errors.
+// hdb is a sample of using Hermes. Therefore, it should avoid introducing
+// a dependency on third-party libraries.
+// In addition, practically, we cannot use LLVM in hdb because Hermes build
+// rules builds LLVM without exceptions/RTTI, and so we will incur
+// link errors.
+
 using namespace facebook::hermes;
 using namespace facebook::jsi;
 
@@ -122,8 +125,60 @@ std::string chompToken(std::string *str, const char *separators = " \t") {
 
 void printUsageAndExit() {
   std::cerr
-      << "USAGE: hdb [--break-at-start] [--break-after=<secs>] [--lazy] <input JS file>\n";
+      << "USAGE: hdb [--break-at-start] [--break-after <secs>] [--lazy] <input JS file>\n";
   exit(EXIT_FAILURE);
+}
+
+struct Options {
+  std::string fileName{}; // required
+  bool breakAtStart{false};
+  bool lazy{false};
+  double breakAfterDelay{-1.}; // -1 disables breakAfterDelay
+};
+
+Options getCommandLineOptions(int argc, char **argv) {
+  Options result;
+
+  int idx = 1;
+  /// return next command line argument, or fail if no more is available
+  auto nextArg = [argc, argv, &idx]() {
+    if (idx >= argc) {
+      printUsageAndExit();
+    }
+    return argv[idx++];
+  };
+
+  while (idx < argc) {
+    char *arg = nextArg();
+    if (arg[0] != '-') {
+      if (result.fileName != "") {
+        printUsageAndExit();
+      }
+      result.fileName = arg;
+    } else if (strcmp(arg, "--break-at-start") == 0) {
+      result.breakAtStart = true;
+    } else if (strcmp(arg, "--lazy") == 0) {
+      result.lazy = true;
+    } else if (strcmp(arg, "--break-after") == 0) {
+      char *endptr = nullptr;
+      char *strValue = nextArg();
+      double breakAfterDelay = std::strtod(strValue, &endptr);
+      if (*endptr != '\0' || (breakAfterDelay < 0 && breakAfterDelay != -1.) ||
+          !std::isfinite(breakAfterDelay)) {
+        std::cerr << "Invalid break-after delay: " << strValue << std::endl;
+        exit(EXIT_FAILURE);
+      }
+      result.breakAfterDelay = breakAfterDelay;
+    } else {
+      printUsageAndExit();
+    }
+  }
+
+  if (result.fileName.empty()) {
+    printUsageAndExit();
+  }
+
+  return result;
 }
 
 /// Pointer to debugger for use in our async break signal handlers.
@@ -659,48 +714,13 @@ struct HDBDebugger : public debugger::EventObserver {
 };
 
 int main(int argc, char **argv) {
-  const char *filename = nullptr;
-  int breakAtStart = 0;
-  int lazy = 0;
-  double breakAfterDelay = -1;
-
-  const struct option longopts[] = {
-      {"break-at-start", no_argument, &breakAtStart, 1},
-      {"lazy", no_argument, &lazy, 1},
-      {"break-after", required_argument, nullptr, 'b'},
-      {nullptr, 0, nullptr, 0}};
-
-  int ch;
-  while ((ch = getopt_long(argc, argv, "", longopts, NULL)) != -1) {
-    switch (ch) {
-      case 0:
-        // Processed long option.
-        break;
-      case 'b': {
-        char *endptr = nullptr;
-        breakAfterDelay = std::strtod(optarg, &endptr);
-        if (*endptr != '\0' || breakAfterDelay < 0 ||
-            !std::isfinite(breakAfterDelay)) {
-          std::cerr << "Invalid delay" << std::endl;
-          exit(EXIT_FAILURE);
-        }
-        break;
-      }
-      default:
-        printUsageAndExit();
-        break;
-    }
-  }
+  Options options = getCommandLineOptions(argc, argv);
 
   HermesRuntime::DebugFlags debugFlags{};
-  debugFlags.lazy = lazy;
-
-  filename = argv[optind];
-  if (!filename)
-    printUsageAndExit();
+  debugFlags.lazy = options.lazy;
 
   // Read the file in 'filename'.
-  std::ifstream fileStream(filename);
+  std::ifstream fileStream(options.fileName);
   if (!fileStream) {
     const char *err = strerror(errno);
     std::cerr << "Unable to open file " << argv[1] << ": " << err << std::endl;
@@ -713,14 +733,14 @@ int main(int argc, char **argv) {
   std::unique_ptr<HermesRuntime> runtime = makeHermesRuntime();
   HDBDebugger debugger(*runtime);
   runtime->getDebugger().setEventObserver(&debugger);
-  runtime->getDebugger().setShouldPauseOnScriptLoad(breakAtStart);
+  runtime->getDebugger().setShouldPauseOnScriptLoad(options.breakAtStart);
   gDebugger = &runtime->getDebugger();
   try {
     setSIGINTShouldPause(true);
-    if (breakAfterDelay >= 0) {
-      schedulePause(breakAfterDelay);
+    if (options.breakAfterDelay >= 0) {
+      schedulePause(options.breakAfterDelay);
     }
-    runtime->debugJavaScript(fileContents, filename, debugFlags);
+    runtime->debugJavaScript(fileContents, options.fileName, debugFlags);
   } catch (const facebook::jsi::JSIException &e) {
     std::cout << "JavaScript terminated via uncaught exception: " << e.what()
               << '\n';

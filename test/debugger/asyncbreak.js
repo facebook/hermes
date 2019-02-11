@@ -1,4 +1,4 @@
-// RUN: %hdb < %s.debug %s --break-after=1 | %FileCheck --match-full-lines %s
+// RUN: %hdb < %s.debug %s --break-after 1 | %FileCheck --match-full-lines %s
 // REQUIRES: debugger
 
 print("Testing async break");

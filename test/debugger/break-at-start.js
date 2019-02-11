@@ -1,4 +1,4 @@
-// RUN: %hdb %s < %s.debug --break-after=0 | %FileCheck --match-full-lines %s
+// RUN: %hdb %s < %s.debug --break-after 0 | %FileCheck --match-full-lines %s
 // REQUIRES: debugger
 
 0;
