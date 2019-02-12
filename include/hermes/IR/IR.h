@@ -346,12 +346,14 @@ class Value {
   using Use = std::pair<Value *, unsigned>;
 
  private:
-  // We declare operator delete as a private member below.  IRBuilder
-  // constructs Value subtypes; C++ requires that if an exception is
-  // raised during construction of a new object, the object is
-  // deleted.  This synthesized code must apparently obey access
-  // specifications (or so claims the fbcode compilation).  Make
-  // IRBuilder a friend so it can call the operator delete.
+  // We declare operator delete as a private member below. Classes declared
+  // as friend below invokes constructor of Value subtypes directly.
+  // C++ requires that if an exception is raised during construction of
+  // a new object, the object is deleted.
+  // As a result, delete must be accessible to callers of constructors.
+  // On some (but not all) compilers, the -fno-exceptions compiler flag
+  // removes this requirement.
+  friend class Module;
   friend class IRBuilder;
 
   ValueKind Kind;
