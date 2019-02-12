@@ -242,7 +242,7 @@ int main(int argc, char **argv) {
   llvm::Optional<raw_fd_ostream> fileOS;
   if (!OutputFilename.empty()) {
     std::error_code EC;
-    fileOS.emplace(OutputFilename.data(), EC, llvm::sys::fs::F_Text);
+    fileOS.emplace(OutputFilename.data(), EC, llvm::sys::fs::F_None);
     if (EC) {
       llvm::errs() << "Error: fail to open file " << OutputFilename << ": "
                    << EC.message() << '\n';

@@ -54,6 +54,7 @@ using llvm::cast;
 using llvm::dyn_cast;
 using llvm::Optional;
 using llvm::raw_fd_ostream;
+using llvm::sys::fs::F_None;
 using llvm::sys::fs::F_Text;
 
 using namespace hermes;
@@ -437,13 +438,15 @@ std::unique_ptr<llvm::MemoryBuffer> memoryBufferFromZipFile(
   return buf;
 }
 
-/// Open the given file name \p fileName for writing in text mode. Print an
-/// error to llvm::errs() on failure.
+/// Open the given file name \p fileName for writing. Print an error to
+/// llvm::errs() on failure. Specify \p openFlags as \p F_None or \p F_Text
+/// for binary file and text file, respectively.
 /// \return the raw stream, or none on failure.
-std::unique_ptr<raw_fd_ostream> openTextFileForWrite(StringRef fileName) {
+static std::unique_ptr<raw_fd_ostream> openFileForWrite(
+    StringRef fileName,
+    llvm::sys::fs::OpenFlags openFlags) {
   std::error_code EC;
-  auto result =
-      llvm::make_unique<raw_fd_ostream>(fileName, EC, llvm::sys::fs::F_Text);
+  auto result = llvm::make_unique<raw_fd_ostream>(fileName, EC, openFlags);
   if (EC) {
     llvm::errs() << "Failed to open file " << fileName << ": " << EC.message()
                  << '\n';
@@ -929,7 +932,7 @@ CompileResult disassembleBytecode(std::unique_ptr<hbc::BCProvider> bytecode) {
 
   std::unique_ptr<raw_fd_ostream> fileOS;
   if (!cl::BytecodeOutputFilename.empty()) {
-    fileOS = openTextFileForWrite(cl::BytecodeOutputFilename);
+    fileOS = openFileForWrite(cl::BytecodeOutputFilename, F_Text);
     if (!fileOS)
       return InputFileError;
   }
@@ -1215,7 +1218,7 @@ CompileResult processSourceFiles(
   // Open the output file, if any.
   std::unique_ptr<raw_fd_ostream> fileOS{};
   if (!cl::BytecodeOutputFilename.empty()) {
-    fileOS = openTextFileForWrite(cl::BytecodeOutputFilename);
+    fileOS = openFileForWrite(cl::BytecodeOutputFilename, F_None);
     if (!fileOS)
       return OutputFileError;
   }
@@ -1230,7 +1233,7 @@ CompileResult processSourceFiles(
   // Output the source map if requested.
   if (cl::OutputSourceMap) {
     std::string mapFilePath = cl::BytecodeOutputFilename + ".map";
-    auto OS = openTextFileForWrite(mapFilePath);
+    auto OS = openFileForWrite(mapFilePath, F_Text);
     if (!OS)
       return OutputFileError;
     sourceMap->outputAsJSON(*OS);
