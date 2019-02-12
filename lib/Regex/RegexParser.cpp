@@ -665,7 +665,7 @@ class Parser {
       return true;
     }
     UIntList digits;
-    if (p->sequence(
+    if (p->sequence<UIntList *>(
             {term_Literal<'{'>, //
              term_DecimalDigits, //
              term_Literal<'}'>},
@@ -677,7 +677,7 @@ class Parser {
     }
     digits.clear();
 
-    if (p->sequence(
+    if (p->sequence<UIntList *>(
             {term_Literal<'{'>, //
              term_DecimalDigits, //
              term_Literal<','>, //
@@ -690,7 +690,7 @@ class Parser {
     }
     digits.clear();
 
-    if (p->sequence(
+    if (p->sequence<UIntList *>(
             {term_Literal<'{'>, //
              term_DecimalDigits, //
              term_Literal<','>, //
@@ -846,19 +846,22 @@ class Parser {
   // E6 A.1 HexEscapeSequence
   static bool prod_HexEscapeSequence(Parser *p, CharList *output) {
     REGEX_TRACE();
-    return p->sequence({term_Literal<'x'>, term_hexDigits<2>}, output);
+    return p->sequence<CharList *>(
+        {term_Literal<'x'>, term_hexDigits<2>}, output);
   }
 
   // ES6 21.2.1 RegExpUnicodeEscapeSequence
   static bool prod_RegExpUnicodeEscapeSequence(Parser *p, CharList *output) {
     REGEX_TRACE();
-    return p->sequence({term_Literal<'u'>, term_hexDigits<4>}, output);
+    return p->sequence<CharList *>(
+        {term_Literal<'u'>, term_hexDigits<4>}, output);
   }
 
   // ES 15.10.1 c ControlLetter
   static bool prod_C_ControlLetter(Parser *p, CharList *output) {
     REGEX_TRACE();
-    return p->sequence({term_Literal<'c'>, term_ControlLetter}, output);
+    return p->sequence<CharList *>(
+        {term_Literal<'c'>, term_ControlLetter}, output);
   }
 
   // ES6 B.1.4 IdentityEscape
@@ -956,7 +959,7 @@ class Parser {
     for (;;) {
       // Try parsing a range like a-b
       CharList rangeCharPair;
-      if (p->sequence(
+      if (p->sequence<CharList *>(
               {prod_ClassAtomInRange, //
                term_Literal<'-'>, //
                prod_ClassAtomInRange},
@@ -997,7 +1000,7 @@ class Parser {
     // /[\d-z]/ is equivalent to /[-\dz]/. Implement that here by simply
     // returning false if this is a character class escape.
     Optional<CharacterClass> multiCharClass;
-    if (p->sequence(
+    if (p->sequence<Optional<CharacterClass> *>(
             {term_Literal<'\\'>, term_CharacterClassEscape}, &multiCharClass))
       return false;
 
@@ -1013,7 +1016,8 @@ class Parser {
     // We rejected multi-character ClassEscapes above, so any remaining
     // ClassEscapes must be single character.
     ClassAtom escape;
-    if (p->sequence({term_Literal<'\\'>, prod_ClassEscape}, &escape)) {
+    if (p->sequence<ClassAtom *>(
+            {term_Literal<'\\'>, prod_ClassEscape}, &escape)) {
       assert(
           !escape.charClass_ && escape.singletons_.size() == 1 &&
           "Unexpected escape produced from prod_ClassEscape");
@@ -1025,7 +1029,8 @@ class Parser {
     // This is what happens to class escapes like \w in ranges.
     // Note that this never actually succeeds, because it will have been already
     // explored through ClassEscape -> CharacterEscape -> IdentityEscape.
-    return p->sequence({term_Literal<'\\'>, term_IdentityEscape}, output);
+    return p->sequence<CharList *>(
+        {term_Literal<'\\'>, term_IdentityEscape}, output);
   }
 
   // ES6 B.1.4 ClassAtom
@@ -1051,7 +1056,8 @@ class Parser {
 
     // \ ClassEscape
     ClassAtom atom;
-    if (p->sequence({term_Literal<'\\'>, prod_ClassEscape}, &atom)) {
+    if (p->sequence<ClassAtom *>(
+            {term_Literal<'\\'>, prod_ClassEscape}, &atom)) {
       output->push_back(std::move(atom));
       return true;
     }
