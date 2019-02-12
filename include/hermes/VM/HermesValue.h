@@ -397,7 +397,11 @@ class HermesValue {
   /// PinnedHermesValues, to indicate that they can be assigned, or
   /// GCHermesValues, to enforce that assignments of pointer values
   /// require a write barrier.
+  /// (except in MSVC: this is to work around lack of CWG 1734.
+  /// HermesValue will not be considered trivial otherwise.)
+#ifndef _MSC_VER
   void operator=(const HermesValue &hv) = delete;
+#endif
 
  protected:
   /// Performs an assignment without a barrier, in cases where the RHS
