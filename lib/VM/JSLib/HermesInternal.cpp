@@ -6,6 +6,7 @@
  */
 #include "JSLibInternal.h"
 
+#include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"
@@ -14,6 +15,13 @@ namespace hermes {
 namespace vm {
 
 namespace {
+
+/// \return a SymbolID  for a given C string \p s.
+static inline CallResult<Handle<SymbolID>> symbolForCStr(
+    Runtime *rt,
+    const char *s) {
+  return rt->getIdentifierTable().getSymbolHandle(rt, ASCIIRef{s, strlen(s)});
+}
 
 // ES7 24.1.1.3
 CallResult<HermesValue>
@@ -201,6 +209,32 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 #undef SET_PROP
 }
 
+/// \return an object mapping keys to runtime property values.
+CallResult<HermesValue>
+hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope(runtime);
+  auto resultHandle = toHandle(runtime, JSObject::create(runtime));
+  MutableHandle<> tmpHandle{runtime};
+
+  auto bcVersion = symbolForCStr(runtime, "Bytecode Version");
+  if (LLVM_UNLIKELY(bcVersion == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  tmpHandle = HermesValue::encodeDoubleValue(::hermes::hbc::BYTECODE_VERSION);
+  auto status = JSObject::defineNewOwnProperty(
+      resultHandle,
+      runtime,
+      **bcVersion,
+      PropertyFlags::defaultNewNamedPropertyFlags(),
+      tmpHandle);
+
+  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return resultHandle.getHermesValue();
+}
+
 } // namespace
 
 Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
@@ -236,6 +270,8 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(P::getWeakSize, hermesInternalGetWeakSize);
   defineInternMethod(
       P::getInstrumentedStats, hermesInternalGetInstrumentedStats);
+  defineInternMethod(
+      P::getRuntimeProperties, hermesInternalGetRuntimeProperties);
 
   // Define the 'require' function.
   runtime->requireFunction = *defineMethod(
