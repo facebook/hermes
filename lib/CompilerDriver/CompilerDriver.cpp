@@ -749,15 +749,16 @@ std::shared_ptr<Context> createContext(
   auto getFullPath =
       [&inputPath](llvm::StringRef relPath) -> llvm::SmallString<32> {
     llvm::SmallString<32> path{};
-    llvm::sys::path::append(path, inputPath, relPath);
-    llvm::sys::path::remove_dots(path);
+    llvm::sys::path::append(
+        path, llvm::sys::path::Style::posix, inputPath, relPath);
+    llvm::sys::path::remove_dots(path, false, llvm::sys::path::Style::posix);
     return path;
   };
   // Get the path to the actual file given the path relative to the folder root.
   // Ensures null termination.
   auto getZipPath = [](llvm::StringRef relPath) -> llvm::SmallString<32> {
     llvm::SmallString<32> path{relPath};
-    llvm::sys::path::remove_dots(path);
+    llvm::sys::path::remove_dots(path, false, llvm::sys::path::Style::posix);
     return path;
   };
 
@@ -893,11 +894,12 @@ bool generateIRForSourcesAsCJSModules(
     std::vector<std::unique_ptr<llvm::MemoryBuffer>> fileBufs) {
   auto context = M.shareContext();
   llvm::SmallString<64> rootPath{fileBufs[0]->getBufferIdentifier()};
-  llvm::sys::path::remove_filename(rootPath);
+  llvm::sys::path::remove_filename(rootPath, llvm::sys::path::Style::posix);
 
   // Construct a MemoryBuffer for our global entry point.
   llvm::SmallString<64> entryPointFilename{fileBufs[0]->getBufferIdentifier()};
-  llvm::sys::path::replace_path_prefix(entryPointFilename, rootPath, "./");
+  llvm::sys::path::replace_path_prefix(
+      entryPointFilename, rootPath, "./", llvm::sys::path::Style::posix);
   std::string requireString =
       ("HermesInternal.require.call('./', '" + entryPointFilename + "')").str();
   auto globalMemBuffer =
@@ -908,7 +910,8 @@ bool generateIRForSourcesAsCJSModules(
   Function *topLevelFunction = M.getTopLevelFunction();
   for (auto &fileBuf : fileBufs) {
     llvm::SmallString<64> filename{fileBuf->getBufferIdentifier()};
-    llvm::sys::path::replace_path_prefix(filename, rootPath, "./");
+    llvm::sys::path::replace_path_prefix(
+        filename, rootPath, "./", llvm::sys::path::Style::posix);
     auto *ast = parseJS(context, semCtx, std::move(fileBuf), true);
     if (!ast) {
       return false;

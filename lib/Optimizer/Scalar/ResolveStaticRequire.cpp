@@ -320,10 +320,10 @@ void ResolveStaticRequireImpl::resolveRequireCall(
 static void canonicalizePath(
     llvm::SmallVectorImpl<char> &dirname,
     StringRef target) {
-  llvm::sys::path::append(dirname, target);
+  llvm::sys::path::append(dirname, llvm::sys::path::Style::posix, target);
 
   // Remove all dots. This is done to get rid of ../ or anything like ././.
-  llvm::sys::path::remove_dots(dirname, true);
+  llvm::sys::path::remove_dots(dirname, true, llvm::sys::path::Style::posix);
 
   if (dirname[0] != '/') {
     // Prepend ./ in relative filepaths, because the `./` would've been
@@ -368,7 +368,8 @@ Literal *ResolveStaticRequireImpl::resolveModuleTarget(
   if (!targetIdentifier.isValid()) {
     // First, place the directory name into canonicalPath.
     llvm::SmallString<32> canonicalPath = cjsModule->filename.str();
-    llvm::sys::path::remove_filename(canonicalPath);
+    llvm::sys::path::remove_filename(
+        canonicalPath, llvm::sys::path::Style::posix);
 
     // Canonicalize (canonicalPath + target) together to get the final path.
     canonicalizePath(canonicalPath, target->getValue().str());

@@ -144,14 +144,15 @@ static llvm::SmallString<32> canonicalizePath(
     strPrim->copyUTF16String(u16String);
     std::string str{};
     hermes::convertUTF16ToUTF8WithReplacements(str, u16String);
-    llvm::sys::path::append(canonicalPath, str);
+    llvm::sys::path::append(canonicalPath, llvm::sys::path::Style::posix, str);
   };
 
   appendToCanonical(dirname);
   appendToCanonical(target);
 
   // Remove all dots. This is done to get rid of ../ or anything like ././.
-  llvm::sys::path::remove_dots(canonicalPath, true);
+  llvm::sys::path::remove_dots(
+      canonicalPath, true, llvm::sys::path::Style::posix);
 
   if (canonicalPath[0] != '/') {
     // Prepend ./ in relative filepaths, because the `./` would've been
@@ -213,7 +214,8 @@ CallResult<HermesValue> require(void *, Runtime *runtime, NativeArgs args) {
         TwineChar16("Unable to find module: ") + target.get());
   }
 
-  llvm::sys::path::remove_filename(canonicalPath);
+  llvm::sys::path::remove_filename(
+      canonicalPath, llvm::sys::path::Style::posix);
   auto dirnameRes = StringPrimitive::create(runtime, canonicalPath);
   if (LLVM_UNLIKELY(dirnameRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
