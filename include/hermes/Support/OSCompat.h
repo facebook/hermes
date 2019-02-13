@@ -9,6 +9,12 @@
 
 #include "llvm/Support/Compiler.h"
 
+#ifdef _WINDOWS
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
+
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -159,6 +165,26 @@ inline double copysign(double x, double y) {
 inline double nextafter(double x, double y) {
   return ::nextafter(x, y);
 }
+
+#ifdef _WINDOWS
+
+#define STDIN_FILENO 0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+
+/// \return whether fd refers to a terminal / character device
+inline int isatty(int fd) {
+  return ::_isatty(fd);
+}
+
+#else
+
+/// \return whether fd refers to a terminal / character device
+inline int isatty(int fd) {
+  return ::isatty(fd);
+}
+
+#endif
 
 } // namespace oscompat
 } // namespace hermes

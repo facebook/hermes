@@ -29,6 +29,7 @@
 #include "hermes/SourceMap/SourceMap.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/MemoryBuffer.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/Warning.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
@@ -44,7 +45,6 @@
 
 #include "zip/src/zip.h"
 
-#include <unistd.h>
 #include <sstream>
 
 #define DEBUG_TYPE "hermes"
@@ -477,7 +477,7 @@ SourceErrorOutputOptions guessErrorOutputOptions() {
 
   result.showColors = false;
   result.preferredMaxErrorWidth = SourceErrorOutputOptions::UnlimitedWidth;
-  if (isatty(STDERR_FILENO)) {
+  if (oscompat::isatty(STDERR_FILENO)) {
     result.showColors = true;
     result.preferredMaxErrorWidth = llvm::sys::Process::StandardErrColumns();
   }
@@ -586,7 +586,7 @@ bool validateFlags() {
 
   // Validate bytecode output file.
   if (cl::DumpTarget == EmitBundle && cl::BytecodeOutputFilename.empty() &&
-      isatty(STDOUT_FILENO)) {
+      oscompat::isatty(STDOUT_FILENO)) {
     // To skip this check and trash the terminal, use -out /dev/stdout.
     err("Refusing to write binary bundle to terminal.\n"
         "Specify output file with -out filename.");

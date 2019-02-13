@@ -13,6 +13,7 @@
 #include "hermes/ConsoleHost/RuntimeFlags.h"
 #include "hermes/Parser/JSLexer.h"
 #include "hermes/Public/GCConfig.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/Operations.h"
@@ -95,7 +96,7 @@ static ReadResult readInputLine(const char *prompt, std::string &line) {
   ::sigaction(SIGINT, &action, &oldAction);
 
 #if HAVE_LIBREADLINE
-  if (::isatty(STDIN_FILENO)) {
+  if (oscompat::isatty(STDIN_FILENO)) {
     char *rl = ::readline(prompt);
     action.sa_handler = oldAction.sa_handler;
     ::sigaction(SIGINT, &action, &oldAction);
@@ -232,7 +233,7 @@ int main(int argc, char **argv) {
   llvm::StringRef evaluateLineString =
 #include "evaluate-line.js"
       ;
-  bool hasColors = ::isatty(STDOUT_FILENO);
+  bool hasColors = oscompat::isatty(STDOUT_FILENO);
 
   auto callRes = evalFn->executeCall1(
       evalFn,

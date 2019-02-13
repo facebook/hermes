@@ -15,10 +15,10 @@ int main(void) {
 #else // defined(HERMES_ENABLE_DEBUGGER)
 
 #include <hermes/DebuggerAPI.h>
+#include <hermes/Support/OSCompat.h>
 #include <hermes/hermes.h>
 #include <jsi/jsi.h>
 #include <signal.h>
-#include <unistd.h>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
@@ -646,7 +646,8 @@ struct HDBDebugger : public debugger::EventObserver {
           exit(0);
         return debugger::Command::continueExecution();
       } else if (line.empty()) {
-        if (defaultCommand_.empty() || !::isatty(STDIN_FILENO)) {
+        if (defaultCommand_.empty() ||
+            !hermes::oscompat::isatty(STDIN_FILENO)) {
           continue;
         }
         line = defaultCommand_;
