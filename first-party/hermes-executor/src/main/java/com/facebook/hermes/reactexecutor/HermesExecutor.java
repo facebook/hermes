@@ -18,16 +18,11 @@ public class HermesExecutor extends JavaScriptExecutor {
     SoLoader.loadLibrary("hermes-executor");
   }
 
-  HermesExecutor(
-      @Nullable ScheduledExecutorService timeoutExecutor,
-      double timeoutMsec,
-      @Nullable RuntimeConfig config) {
+  HermesExecutor(@Nullable RuntimeConfig config) {
     super(
         config == null
-            ? initHybridDefaultConfig(timeoutExecutor, timeoutMsec)
+            ? initHybridDefaultConfig()
             : initHybrid(
-                timeoutExecutor,
-                timeoutMsec,
                 config.heapSizeMB,
                 config.recoverableOOM,
                 config.effectiveOOMThreshold,
@@ -53,12 +48,9 @@ public class HermesExecutor extends JavaScriptExecutor {
    */
   public static native boolean canLoadFile(String path);
 
-  private static native HybridData initHybridDefaultConfig(
-      @Nullable ScheduledExecutorService timeoutService, double timeoutMsec);
+  private static native HybridData initHybridDefaultConfig();
 
   private static native HybridData initHybrid(
-      @Nullable ScheduledExecutorService timeoutService,
-      double timeoutMsec,
       long heapSizeMB,
       boolean recoverableOOM,
       long effectiveOOMThreshold,

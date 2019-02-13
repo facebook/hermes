@@ -8,33 +8,23 @@ package com.facebook.hermes.reactexecutor;
 
 import com.facebook.react.bridge.JavaScriptExecutor;
 import com.facebook.react.bridge.JavaScriptExecutorFactory;
-import java.util.concurrent.ScheduledExecutorService;
-import javax.annotation.Nullable;
 
 public class HermesExecutorFactory implements JavaScriptExecutorFactory {
   private static final String TAG = "Hermes";
 
-  private final @Nullable ScheduledExecutorService mTimeoutExecutor;
-  private final double mTimeoutMsec;
   private final RuntimeConfig mConfig;
 
   public HermesExecutorFactory() {
-    this(null, 0, null);
+    this(null);
   }
 
-  public HermesExecutorFactory(
-      @Nullable ScheduledExecutorService timeoutExecutor,
-      double timeoutMsec,
-      RuntimeConfig config) {
-
-    mTimeoutExecutor = timeoutExecutor;
-    mTimeoutMsec = timeoutMsec;
+  public HermesExecutorFactory(RuntimeConfig config) {
     mConfig = config;
   }
 
   @Override
   public JavaScriptExecutor create() {
-    return new HermesExecutor(mTimeoutExecutor, mTimeoutMsec, mConfig);
+    return new HermesExecutor(mConfig);
   }
 
   @Override

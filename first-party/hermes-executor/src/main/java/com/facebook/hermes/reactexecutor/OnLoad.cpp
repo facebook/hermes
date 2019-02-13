@@ -100,9 +100,7 @@ class HermesExecutorHolder
       "Lcom/facebook/hermes/reactexecutor/HermesExecutor;";
 
   static jni::local_ref<jhybriddata> initHybridDefaultConfig(
-      jni::alias_ref<jclass>,
-      jni::alias_ref<jclass> timeoutService,
-      jdouble timeoutMsec) {
+      jni::alias_ref<jclass>) {
     JReactMarker::setLogPerfMarkerIfNeeded();
     return makeCxxInstance(folly::make_unique<HermesExecutorFactory>(
         [](const std::string &message, unsigned int logLevel) {
@@ -113,8 +111,6 @@ class HermesExecutorHolder
 
   static jni::local_ref<jhybriddata> initHybrid(
       jni::alias_ref<jclass>,
-      jni::alias_ref<jclass> timeoutService,
-      jdouble timeoutMsec,
       jlong heapSizeMB,
       bool recoverableOOM,
       jlong effectiveOOMThreshold,
