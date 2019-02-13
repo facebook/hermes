@@ -12,7 +12,8 @@ add_llvm_library(hermesSupport
         CheckedMalloc.cpp
         Conversions.cpp
         JSONEmitter.cpp
-        OSCompat.cpp
+        OSCompatPosix.cpp
+        OSCompatWindows.cpp
         PerfSection.cpp
         RegExpSerialization.cpp
         Semaphore.cpp

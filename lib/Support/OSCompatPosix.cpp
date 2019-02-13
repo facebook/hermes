@@ -4,6 +4,8 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
+#ifndef _WINDOWS
+
 #include "hermes/Support/OSCompat.h"
 
 #include <cassert>
@@ -60,9 +62,7 @@ namespace hermes {
 namespace oscompat {
 
 #ifndef NDEBUG
-namespace {
-size_t testPgSz = 0;
-} // namespace
+static size_t testPgSz = 0;
 
 void set_test_page_size(size_t pageSz) {
   testPgSz = pageSz;
@@ -73,20 +73,22 @@ void reset_test_page_size() {
 }
 #endif
 
+static inline size_t page_size_real() {
+  return getpagesize();
+}
+
 size_t page_size() {
 #ifndef NDEBUG
   if (testPgSz != 0) {
     return testPgSz;
   }
 #endif
-  return getpagesize();
+  return page_size_real();
 }
 
 #ifndef NDEBUG
-namespace {
-constexpr size_t unsetVMAllocLimit = std::numeric_limits<size_t>::max();
-size_t totalVMAllocLimit = unsetVMAllocLimit;
-} // namespace
+static constexpr size_t unsetVMAllocLimit = std::numeric_limits<size_t>::max();
+static size_t totalVMAllocLimit = unsetVMAllocLimit;
 
 void set_test_vm_allocate_limit(size_t totSz) {
   totalVMAllocLimit = totSz;
@@ -97,8 +99,7 @@ void unset_test_vm_allocate_limit() {
 }
 #endif // !NDEBUG
 
-namespace {
-void *vm_allocate_impl(size_t sz) {
+static void *vm_allocate_impl(size_t sz) {
 #ifndef NDEBUG
   if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
     return nullptr;
@@ -112,16 +113,15 @@ void *vm_allocate_impl(size_t sz) {
   return result == MAP_FAILED ? nullptr : result;
 }
 
-char *alignAlloc(void *p, size_t alignment) {
+static char *alignAlloc(void *p, size_t alignment) {
   return reinterpret_cast<char *>(
       llvm::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
 }
-} // namespace
 
 void *vm_allocate(size_t sz) {
   assert(sz % page_size() == 0);
 #ifndef NDEBUG
-  if (testPgSz != 0 && testPgSz > static_cast<size_t>(getpagesize())) {
+  if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
     return vm_allocate_aligned(sz, testPgSz);
   }
 #endif // !NDEBUG
@@ -133,7 +133,7 @@ void *vm_allocate_aligned(size_t sz, size_t alignment) {
   assert(alignment > 0 && alignment % page_size() == 0);
 
   // Use *real* page size here since that's what vm_allocate_impl guarantees.
-  const size_t excessSize = sz + alignment - getpagesize();
+  const size_t excessSize = sz + alignment - page_size_real();
   void *raw = vm_allocate_impl(excessSize);
   if (raw == nullptr)
     return raw;
@@ -349,3 +349,5 @@ std::string thread_name() {
 
 } // namespace oscompat
 } // namespace hermes
+
+#endif // not _WINDOWS

@@ -6,10 +6,11 @@
  */
 #include "hermes/VM/instrumentation/ProcessStats.h"
 
+#include "hermes/Support/OSCompat.h"
+
 #include "gtest/gtest.h"
 
 #include <sys/mman.h>
-#include <unistd.h>
 #include <chrono>
 #include <functional>
 
@@ -75,7 +76,7 @@ TEST(ProcessStatsTest, Test) {
 }
 
 void ProcessStatsTest(InfoAssertion assertionImpl) {
-  const size_t PS = getpagesize();
+  const size_t PS = hermes::oscompat::page_size();
   const size_t PSkB = PS / 1024;
 
   flushRSSEvents();
@@ -183,7 +184,7 @@ void infoAssertionImpl(
 }
 
 void flushRSSEvents() {
-  const size_t PS = getpagesize();
+  const size_t PS = hermes::oscompat::page_size();
   auto buf =
       mmap(nullptr, PS, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, 0, 0);
   assert(buf != MAP_FAILED);
@@ -202,7 +203,7 @@ void flushRSSEvents() {
 }
 
 void touchPages(char *from, char *to) {
-  const size_t PS = getpagesize();
+  const size_t PS = hermes::oscompat::page_size();
   for (volatile char *p = from; p < to; p += PS)
     *p = 1;
 }
