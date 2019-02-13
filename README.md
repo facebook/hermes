@@ -16,7 +16,7 @@ Create a base directory to work in, e.g. `~/workspace`, and `cd` into it. Then f
 export HERMES_WS_DIR="$PWD"
 
 # 2. Clone Hermes here
-git clone git:github.com/facebook/hermes
+git clone git@github.com:facebook/hermes.git
 
 # 3. Clone and build LLVM. This may take a while.
 hermes/utils/build_llvm.sh

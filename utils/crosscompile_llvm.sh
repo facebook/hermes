@@ -15,9 +15,9 @@ cd "$HERMES_WS_DIR"
 [ -d "$ANDROID_SDK" ] ||
     die "Android SDK does not exist (\$ANDROID_SDK=$ANDROID_SDK)"
 
-[ -f "hermes/LICENSE" ]   || die "Can't find hermes/ in $PWD"
-[ -f "llvm/LICENSE.txt" ] || die "Can't find llvm/ in $PWD"
-[ -d "llvm_build" ]       || die "Can't find llvm_build. Did you build_llvm.sh?"
+[ -d "hermes/" ]     || die "Can't find hermes/ in $PWD"
+[ -d "llvm/" ]       || die "Can't find llvm/ in $PWD"
+[ -d "llvm_build/" ] || die "Can't find llvm_build. Did you build_llvm.sh?"
 
 if [ ! -e 'llvm/hermes' ]
 then
