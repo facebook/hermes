@@ -87,6 +87,13 @@ void vm_prefetch(void *p, size_t sz);
 /// for a process (e.g. by /proc/<pid>/maps).
 void vm_name(void *p, size_t sz, const char *name);
 
+enum class ProtectMode { ReadWrite };
+
+/// Set the \p sz byte region of memory starting at \p p to the specified
+/// \p mode. \p p must be page-aligned. \return true if successful,
+/// false on error.
+bool vm_protect(void *p, size_t sz, ProtectMode mode);
+
 /// Resident set size (RSS), in bytes: the amount of RAM used by the process.
 /// It excludes virtual memory that has been paged out or was never loaded.
 uint64_t peak_rss();

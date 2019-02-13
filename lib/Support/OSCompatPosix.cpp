@@ -212,6 +212,11 @@ void vm_name(void *p, size_t sz, const char *name) {
 #endif // __ANDROID__
 }
 
+bool vm_protect(void *p, size_t sz, ProtectMode) {
+  int err = mprotect(p, sz, PROT_WRITE | PROT_READ);
+  return err != -1;
+}
+
 uint64_t peak_rss() {
   rusage ru;
   if (getrusage(RUSAGE_SELF, &ru)) {

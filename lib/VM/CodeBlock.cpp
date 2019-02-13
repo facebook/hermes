@@ -22,8 +22,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 
-#include <sys/mman.h>
-
 namespace hermes {
 namespace vm {
 
@@ -311,8 +309,9 @@ static void makeWritable(void *address, size_t length) {
   size_t totalLength =
       static_cast<char *>(endAddress) - static_cast<char *>(alignedAddress);
 
-  int err = mprotect(alignedAddress, totalLength, PROT_WRITE | PROT_READ);
-  if (err == -1) {
+  bool success = oscompat::vm_protect(
+      alignedAddress, totalLength, oscompat::ProtectMode::ReadWrite);
+  if (!success) {
     hermes_fatal("mprotect failed before modifying breakpoint");
   }
 }

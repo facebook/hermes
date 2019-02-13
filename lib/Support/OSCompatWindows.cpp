@@ -161,6 +161,12 @@ void vm_name(void *p, size_t sz, const char *name) {
   (void)name;
 }
 
+bool vm_protect(void *p, size_t sz, ProtectMode) {
+  DWORD oldProtect;
+  BOOL err = VirtualProtect(p, sz, PAGE_READWRITE, &oldProtect);
+  return err != 0;
+}
+
 uint64_t peak_rss() {
   PROCESS_MEMORY_COUNTERS pmc;
   auto ret = GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
