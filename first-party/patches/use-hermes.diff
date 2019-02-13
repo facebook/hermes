@@ -1,0 +1,32 @@
+diff --git a/android/app/src/main/java/com/awesomeproject/MainApplication.java b/android/app/src/main/java/com/awesomeproject/MainApplication.java
+index b6d8c48..28c0c2d 100644
+--- a/android/app/src/main/java/com/awesomeproject/MainApplication.java
++++ b/android/app/src/main/java/com/awesomeproject/MainApplication.java
+@@ -2,12 +2,15 @@ package com.awesomeproject;
+
+ import android.app.Application;
+
++import com.facebook.hermes.reactexecutor.HermesExecutorFactory;
++import com.facebook.react.bridge.JavaScriptExecutorFactory;
+ import com.facebook.react.ReactApplication;
+ import com.facebook.react.ReactNativeHost;
+ import com.facebook.react.ReactPackage;
+ import com.facebook.react.shell.MainReactPackage;
+ import com.facebook.soloader.SoLoader;
+
++
+ import java.util.Arrays;
+ import java.util.List;
+
+@@ -30,6 +33,11 @@ public class MainApplication extends Application implements ReactApplication {
+     protected String getJSMainModuleName() {
+       return "index";
+     }
++
++    @Override
++    protected JavaScriptExecutorFactory getJavaScriptExecutorFactory() {
++      return new HermesExecutorFactory();
++    }
+   };
+
+   @Override

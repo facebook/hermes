@@ -5,9 +5,19 @@ set(source_files
    CharacterProperties.cpp
 )
 
-add_llvm_library(hermesPlatformUnicode STATIC ${source_files}
-    LINK_LIBS
-    ${CORE_FOUNDATION}
-)
+if(HERMES_IS_ANDROID)
+  add_llvm_library(hermesPlatformUnicode STATIC ${source_files}
+      LINK_LIBS
+      hermesfbjni
+      ${CORE_FOUNDATION}
+  )
+  set_source_files_properties(PlatformUnicodeJava.cpp PROPERTIES
+      COMPILE_FLAGS "-frtti -fexceptions")
+else()
+  add_llvm_library(hermesPlatformUnicode STATIC ${source_files}
+      LINK_LIBS
+      ${CORE_FOUNDATION}
+  )
+endif()
 
 hermes_link_icu(hermesPlatformUnicode)

@@ -1,8 +1,35 @@
 diff --git a/ReactAndroid/build.gradle b/ReactAndroid/build.gradle
-index fd03e602cf..bac5c32b48 100644
+index fd03e602cf..f6e7f1a675 100644
 --- a/ReactAndroid/build.gradle
 +++ b/ReactAndroid/build.gradle
-@@ -288,7 +288,7 @@ android {
+@@ -160,6 +160,17 @@ task prepareJSC(dependsOn: downloadJSC) << {
+     }
+ }
+ 
++task prepareHermes() << {
++    def hermesAAR = new File("../../../../hermes/android/build/outputs/aar/android.aar")
++    def soFiles = zipTree(hermesAAR).matching({ it.include "**/*.so" })
++
++    copy {
++        from soFiles
++        from "../../../../hermes/first-party/libhermes/Android.mk"
++        into "$thirdPartyNdkDir/hermes"
++    }
++}
++
+ task downloadNdkBuildDependencies {
+     if (!boostPath) {
+         dependsOn downloadBoost
+@@ -221,7 +232,7 @@ def getNdkBuildFullPath() {
+     return ndkBuildFullPath
+ }
+ 
+-task buildReactNdkLib(dependsOn: [prepareJSC, prepareBoost, prepareDoubleConversion, prepareFolly, prepareGlog], type: Exec) {
++task buildReactNdkLib(dependsOn: [prepareJSC, prepareHermes, prepareBoost, prepareDoubleConversion, prepareFolly, prepareGlog], type: Exec) {
+     inputs.dir('src/main/jni/react')
+     outputs.dir("$buildDir/react-ndk/all")
+     commandLine getNdkBuildFullPath(),
+@@ -288,7 +299,7 @@ android {
          jniLibs.srcDir "$buildDir/react-ndk/exported"
          res.srcDirs = ['src/main/res/devsupport', 'src/main/res/shell', 'src/main/res/views/modal', 'src/main/res/views/uimanager']
          java {
@@ -21,10 +48,18 @@ index c73c0397f5..62321559b9 100644
  NDK_TOOLCHAIN_VERSION := clang
 +HERMES_PATH := $(call my-dir)/../../../../../../../hermes
 diff --git a/ReactAndroid/src/main/jni/react/jni/Android.mk b/ReactAndroid/src/main/jni/react/jni/Android.mk
-index 9259233cca..93b702106d 100644
+index 9259233cca..78e8804156 100644
 --- a/ReactAndroid/src/main/jni/react/jni/Android.mk
 +++ b/ReactAndroid/src/main/jni/react/jni/Android.mk
-@@ -65,3 +65,4 @@ $(call import-module,jsiexecutor)
+@@ -54,6 +54,7 @@ include $(BUILD_SHARED_LIBRARY)
+ $(call import-module,folly)
+ $(call import-module,fb)
+ $(call import-module,jsc)
++$(call import-module,hermes)
+ $(call import-module,fbgloginit)
+ $(call import-module,yogajni)
+ $(call import-module,cxxreact)
+@@ -65,3 +66,4 @@ $(call import-module,jsiexecutor)
  # $(call import-module,jscexecutor)
  
  include $(REACT_SRC_DIR)/jscexecutor/Android.mk

@@ -1,0 +1,49 @@
+buildscript {
+  repositories {
+    jcenter()
+    google()
+  }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:3.3.0'
+  }
+}
+
+apply plugin: 'com.android.library'
+
+def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+android {
+  compileSdkVersion = 28
+
+  defaultConfig {
+    externalNativeBuild {
+      cmake {
+        arguments "-DHERMES_IS_ANDROID=True"
+        arguments "-DCMAKE_ANDROID_STL_TYPE=c++_shared"
+        arguments "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
+        arguments "-DCMAKE_POSITION_INDEPENDENT_CODE=True"
+        arguments "-DLLVM_BUILD_BASE=${projectDir}/../../llvm"
+        arguments "-DLLVM_SRC_DIR=${projectDir}/../../llvm"
+        arguments "-DCMAKE_BUILD_TYPE=Debug"
+        targets "libhermes"
+      }
+    }
+    ndk {
+      abiFilters (*abis)
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      version "3.10.2"
+      path "../CMakeLists.txt"
+    }
+  }
+}
+
+allprojects {
+  repositories {
+    google()
+    jcenter()
+  }
+}
+

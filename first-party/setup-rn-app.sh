@@ -17,6 +17,14 @@ green "Running initial app setup"
 green "Patching app to use RN from source"
 patch -p 1 < ../hermes/first-party/patches/react-from-source.diff
 
+green "Patching app to use Hermes as its executor"
+(
+  # This is slightly awkward due to the project name changing
+  patch=$PWD/../hermes/first-party/patches/use-hermes.diff
+  cd android/app/src/main/java/com/*
+  patch -p 8 < "$patch"
+)
+
 green "Checking out RN"
 
 (
@@ -26,6 +34,7 @@ green "Checking out RN"
   cd react-native
   git checkout -b stable 1024dc251e1f4
   git apply ../../../hermes/first-party/patches/include-hermes-executor.diff
+  yarn install
 )
 
-green "The app should now be building part of the way, but it's missing libhermes"
+green "Done"

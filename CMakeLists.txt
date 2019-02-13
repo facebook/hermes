@@ -2,33 +2,6 @@ cmake_minimum_required(VERSION 3.7.0)
 
 include(CheckCXXSourceCompiles)
 
-# The hermes project is built using CMake and the LLVM's build system.
-# It expects LLVM_SRC_DIR and LLVM_BUILD_DIR to be set. For example:
-#
-# cmake -G Ninja -DLLVM_BUILD_DIR=$XXX -DLLVM_SRC_DIR=$YYY
-#
-list(APPEND CMAKE_MODULE_PATH "${LLVM_BUILD_DIR}/lib/cmake/llvm/")
-
-# Enable debug mode by default
-if (CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE Debug)
-endif()
-
-CHECK_CXX_SOURCE_COMPILES(
-  "int main() { void *p = &&label; goto *p; label: return 0; }"
-  HAVE_COMPUTED_GOTO)
-
-if(HAVE_COMPUTED_GOTO)
-  set(DEFAULT_INTERPRETER_THREADING ON)
-else()
-  set(DEFAULT_INTERPRETER_THREADING OFF)
-endif()
-if (CMAKE_BUILD_TYPE STREQUAL Debug)
-  set(DEFAULT_GCCELL_ID ON)
-else()
-  set(DEFAULT_GCCELL_ID OFF)
-endif()
-
 # Project options.
 set(HERMESVM_GCKIND GENERATIONAL
   CACHE STRING
@@ -78,9 +51,47 @@ set(HERMESVM_SYNTH_REPLAY OFF CACHE BOOL
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
   "Use libflowparser for parsing es6")
 
+set(HERMES_IS_ANDROID OFF CACHE BOOL
+  "Building for Android")
+
 set(ANDROID_LINUX_PERF_PATH ""
   CACHE STRING
   "If buildling for Android, full path to <linux/perf_events.h>")
+
+# On Android we need an ABI specific version of LLVM.
+# Unfortunately, the build system doesn't allow setting the
+# LLVM_BUILD_DIR per ABI, so we do it here instead.
+if (HERMES_IS_ANDROID)
+  set(LLVM_BUILD_DIR "${LLVM_BUILD_BASE}-${ANDROID_ABI}")
+  add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
+endif()
+
+# The hermes project is built using CMake and the LLVM's build system.
+# It expects LLVM_SRC_DIR and LLVM_BUILD_DIR to be set. For example:
+#
+# cmake -G Ninja -DLLVM_BUILD_DIR=$XXX -DLLVM_SRC_DIR=$YYY
+#
+list(APPEND CMAKE_MODULE_PATH "${LLVM_BUILD_DIR}/lib/cmake/llvm/")
+
+# Enable debug mode by default
+if (CMAKE_BUILD_TYPE STREQUAL "")
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+CHECK_CXX_SOURCE_COMPILES(
+  "int main() { void *p = &&label; goto *p; label: return 0; }"
+  HAVE_COMPUTED_GOTO)
+
+if(HAVE_COMPUTED_GOTO)
+  set(DEFAULT_INTERPRETER_THREADING ON)
+else()
+  set(DEFAULT_INTERPRETER_THREADING OFF)
+endif()
+if (CMAKE_BUILD_TYPE STREQUAL Debug)
+  set(DEFAULT_GCCELL_ID ON)
+else()
+  set(DEFAULT_GCCELL_ID OFF)
+endif()
 
 add_definitions(-DHERMESVM_GC_${HERMESVM_GCKIND})
 if(HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT)
@@ -200,6 +211,8 @@ include_directories("${LLVM_SRC_DIR}/include"
 link_directories("${LLVM_SRC_DIR}/lib"
                  "${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/lib")
 
+include_directories("first-party/fbjni/cxx/")
+
 # Attempt to use system ICU first, if none specified.
 # Don't need ICU on Apple systems.
 if (APPLE)
@@ -245,7 +258,7 @@ if (NOT ICU_FOUND AND
 endif()
 
 # If we have no ICU, then error out.
-if (NOT ICU_FOUND)
+if (NOT HERMES_IS_ANDROID AND NOT ICU_FOUND)
   message(FATAL_ERROR "Unable to find ICU.")
 endif()
 
@@ -311,6 +324,10 @@ include_directories(BEFORE
   ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/include
   ${CMAKE_CURRENT_SOURCE_DIR}/external
   )
+
+if(HERMES_IS_ANDROID AND EXISTS ${HERMES_SOURCE_DIR}/first-party/fbjni/cxx/fbjni)
+  add_subdirectory(${HERMES_SOURCE_DIR}/first-party/fbjni)
+endif()
 
 add_subdirectory(tools)
 add_subdirectory(include)

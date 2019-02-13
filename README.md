@@ -5,7 +5,53 @@
 Hermes is a JavaScript virtual machine that accepts [Flow](https://flowtype.org)
 type annotations, features host-side static optimizations and compact bytecode.
 
-## Getting Started
+## Getting Started for React Native developers
+
+Create a base directory to work in, e.g. `~/workspace`, and `cd` into it. Then follow the steps below (or copy-paste it all):
+
+```
+( set -e
+
+# 1. Use this directory as the workspace
+export HERMES_WS_DIR="$PWD"
+
+# 2. Clone Hermes here
+git clone git:github.com/facebook/hermes
+
+# 3. Clone and build LLVM. This may take a while.
+hermes/utils/build_llvm.sh
+
+# 4. Cross-compile LLVM dependencies for all Android ABIs
+hermes/utils/crosscompile_llvm.sh
+
+# 5. Compile libhermes for Android
+( cd hermes/android && gradle build )
+
+# 6. Create a react-native project
+react-native init AwesomeProject
+
+# 7. Patch this project to use libhermes
+( cd AwesomeProject && "$HERMES_WS_DIR/hermes/first-party/setup-rn-app.sh" )
+
+)
+```
+
+To set up an existing project to use Hermes:
+
+1. Set up the project to use [React Native from source](https://facebook.github.io/react-native/docs/building-from-source).
+   Note that their master branch may have moved on. The setup-rn-app script
+   uses [commit
+   1024dc251](https://github.com/facebook/react-native/commit/1024dc251e1f4777052b7c41807ea314672bb13a).
+2. Patch react-native to build the HermesExecutor using
+   [include-hermes-executor.diff](first-party/patches/include-hermes-executor.diff).
+3. Override `ReactNativeHost.getJavaScriptExecutorFactory()` to return a
+   `HermesExecutorFactory` as in
+   [use-hermes.diff](first-party/patches/use-hermes.diff).
+4. Verify that you are using Hermes by checking that `typeof(HermesInternal)`
+   is `object` (and not `undefined`).
+
+
+## Getting Started for Hermes developers
 
 ### System Requirements
 
