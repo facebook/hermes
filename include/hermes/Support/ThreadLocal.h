@@ -7,6 +7,10 @@
 #ifndef HERMES_SUPPORT_THREADLOCAL_H
 #define HERMES_SUPPORT_THREADLOCAL_H
 
+#ifdef _WINDOWS
+#error "ThreadLocal is not implemented because no code uses it in Windows"
+#else
+
 #include <hermes/Platform/Logging.h>
 
 #include <errno.h>
@@ -73,5 +77,7 @@ class ThreadLocal {
 };
 
 } // namespace hermes
+
+#endif // _WINDOWS
 
 #endif // HERMES_SUPPORT_THREADLOCAL_H

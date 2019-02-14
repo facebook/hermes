@@ -7,6 +7,10 @@
 #ifndef HERMES_SUPPORT_SEMAPHORE_H
 #define HERMES_SUPPORT_SEMAPHORE_H
 
+#ifdef _WINDOWS
+#error "Semaphore is not implemented because no code uses it in Windows"
+#else
+
 #include <semaphore.h>
 
 namespace hermes {
@@ -43,5 +47,7 @@ class Semaphore {
 };
 
 } // namespace hermes
+
+#endif // _WINDOWS
 
 #endif // HERMES_SUPPORT_SEMAPHORE_H
