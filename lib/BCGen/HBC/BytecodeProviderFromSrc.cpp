@@ -55,6 +55,11 @@ BCProviderFromSrc::createBCProviderFromSrc(
     llvm::StringRef sourceURL,
     const CompileFlags &compileFlags) {
   using llvm::Twine;
+
+  assert(
+      buffer->data()[buffer->size()] == 0 &&
+      "The input buffer must be null terminated");
+
   CodeGenerationSettings codeGenOpts{};
   codeGenOpts.unlimitedRegisters = false;
 

@@ -15,6 +15,10 @@ namespace hermes {
 /// A generic buffer interface.  E.g. for memmapped bytecode.
 class Buffer {
  public:
+  Buffer() : data_(nullptr), size_(0) {}
+
+  Buffer(const uint8_t *data, size_t size) : data_(data), size_(size) {}
+
   virtual ~Buffer() {}
 
   const uint8_t *data() const {

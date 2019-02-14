@@ -6,52 +6,49 @@
  */
 #include "CompileJS.h"
 
-#include "hermes/AST/Context.h"
-#include "hermes/AST/SemValidate.h"
-#include "hermes/BCGen/HBC/HBC.h"
-#include "hermes/IRGen/IRGen.h"
-#include "hermes/Parser/JSParser.h"
+#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/Support/Algorithms.h"
 
 #include "llvm/Support/SHA1.h"
 
 namespace hermes {
 
-bool compileJS(const std::string &str, std::string &bytecode, bool optimize) {
-  ::hermes::CodeGenerationSettings codeGenOpts;
-  codeGenOpts.unlimitedRegisters = false;
-  ::hermes::TypeCheckerSettings typeCheckerOpts;
-  ::hermes::OptimizationSettings optimizationOpts;
-  optimizationOpts.aggressiveNonStrictModeOptimizations = optimize;
-  optimizationOpts.inlining = optimize;
-  auto context = std::make_shared<::hermes::Context>(
-      codeGenOpts, typeCheckerOpts, optimizationOpts);
-  sem::SemContext semCtx{};
-  ::hermes::parser::JSParser jsParser(
-      *context, llvm::MemoryBuffer::getMemBuffer(str));
-  auto parsedJs = jsParser.parse();
-  if (!parsedJs || !validateAST(*context, semCtx, *parsedJs)) {
+bool compileJS(
+    const std::string &str,
+    const std::string &sourceURL,
+    std::string &bytecode,
+    bool optimize) {
+  hbc::CompileFlags flags{};
+  flags.optimize = optimize;
+
+  // Note that we are relying the zero termination provided by str.data(),
+  // because the parser requires it.
+  auto res = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+      hermes::make_unique<hermes::Buffer>(
+          (const uint8_t *)str.data(), str.size()),
+      sourceURL,
+      flags);
+  if (!res.first)
     return false;
-  }
-  ::hermes::ESTree::NodePtr ast = parsedJs.getValue();
-  ::hermes::Module module(context);
-  ::hermes::DeclarationFileListTy declFileList;
-  generateIRFromESTree(ast, &module, declFileList, {});
-  if (context->getSourceErrorManager().getErrorCount() != 0) {
-    return false;
-  }
+
   llvm::raw_string_ostream bcstream(bytecode);
+
   BytecodeGenerationOptions opts(::hermes::EmitBundle);
   opts.optimizationEnabled = optimize;
-  ::hermes::hbc::generateBytecode(
-      &module,
-      bcstream,
-      opts,
+
+  hbc::BytecodeSerializer BS{bcstream, opts};
+  BS.serialize(
+      *res.first->getBytecodeModule(),
       llvm::SHA1::hash(llvm::makeArrayRef(
           reinterpret_cast<const uint8_t *>(str.data()), str.size())));
+
   // Flush to string.
-  bcstream.str();
+  bcstream.flush();
   return true;
+}
+
+bool compileJS(const std::string &str, std::string &bytecode, bool optimize) {
+  return compileJS(str, "", bytecode, optimize);
 }
 
 } // namespace hermes

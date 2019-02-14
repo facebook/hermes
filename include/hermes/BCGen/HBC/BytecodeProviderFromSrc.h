@@ -46,10 +46,16 @@ class BCProviderFromSrc final : public BCProviderBase {
         new BCProviderFromSrc(std::move(module)));
   }
 
-  /// Creates a BCProviderFromSrc by compiling the given JavaScript in \p buffer
-  /// named as \p sourceURL, according to the flags in \p compileFlags. \return
-  /// a BCProvider and an empty error, or a null BCProvider and an error
-  /// message.
+  /// Creates a BCProviderFromSrc by compiling the given JavaScript.
+  /// \param buffer the JavaScript source to compile, encoded in utf-8. It is
+  ///     required to have null termination ('\0') in the byte past the end,
+  ///     in other words `assert(buffer.data()[buffer.size()] == 0)`.
+  /// \param sourceURL this will be used as the "file name" of the buffer for
+  ///     errors, stack traces, etc.
+  /// \param compileFlags self explanatory
+  ///
+  /// \return a BCProvider and an empty error, or a null BCProvider and an error
+  ///     message.
   static std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
   createBCProviderFromSrc(
       std::unique_ptr<Buffer> buffer,

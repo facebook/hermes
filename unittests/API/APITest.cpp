@@ -331,7 +331,7 @@ function throws1() { thrower(); }
 throws1();
 )";
   std::string bytecode;
-  bool compiled = hermes::compileJS(sourceCode, bytecode);
+  bool compiled = hermes::compileJS(sourceCode, sourceURL.c_str(), bytecode);
   ASSERT_TRUE(compiled) << "JS source should have compiled";
 
   for (const std::string &code : {sourceCode, bytecode}) {
