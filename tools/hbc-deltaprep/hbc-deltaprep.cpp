@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
   }
 
   std::error_code EC;
-  llvm::raw_fd_ostream fileOS(OutputFilename.data(), EC, llvm::sys::fs::F_Text);
+  llvm::raw_fd_ostream fileOS(OutputFilename.data(), EC, llvm::sys::fs::F_None);
   if (EC) {
     llvm::errs() << "Error: fail to open file " << OutputFilename << ": "
                  << EC.message() << '\n';
