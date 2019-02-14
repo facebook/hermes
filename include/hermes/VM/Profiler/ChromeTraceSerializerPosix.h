@@ -18,8 +18,6 @@
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 
-#ifdef HERMESVM_SAMPLING_PROFILER_USE_POSIX
-
 #include "llvm/ADT/DenseMap.h"
 
 #include <thread>
@@ -209,7 +207,5 @@ class ChromeTraceSerializer {
 
 } // namespace vm
 } // namespace hermes
-
-#endif // HERMESVM_SAMPLING_PROFILER_USE_POSIX
 
 #endif // HERMES_VM_PROFILER_CHROMETRACESERIALIZERPOSIX_H

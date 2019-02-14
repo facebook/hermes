@@ -4,9 +4,8 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
+#ifndef _WINDOWS
 #include "hermes/VM/Profiler/ChromeTraceSerializerPosix.h"
-
-#ifdef HERMESVM_SAMPLING_PROFILER_USE_POSIX
 
 namespace hermes {
 namespace vm {
@@ -326,4 +325,4 @@ void ChromeTraceSerializer::serialize(
 } // namespace vm
 } // namespace hermes
 
-#endif // HERMESVM_SAMPLING_PROFILER_USE_POSIX
+#endif // not _WINDOWS

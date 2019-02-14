@@ -38,7 +38,7 @@ set(source_files
   RuntimeModule.cpp
   Profiler/ChromeTraceSerializerPosix.cpp
   Profiler/ModuleIdManager.cpp
-  Profiler/SamplingProfilerNoOp.cpp
+  Profiler/SamplingProfilerWindows.cpp
   Profiler/SamplingProfilerPosix.cpp
   SegmentedArray.cpp
   SerializedLiteralParser.cpp

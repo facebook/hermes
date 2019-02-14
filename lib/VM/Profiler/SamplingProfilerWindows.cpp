@@ -4,9 +4,9 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#include "hermes/VM/Profiler/SamplingProfiler.h"
+#ifdef _WINDOWS
 
-#ifdef HERMESVM_SAMPLING_PROFILER_USE_NO_OP
+#include "hermes/VM/Profiler/SamplingProfiler.h"
 
 namespace hermes {
 namespace vm {
@@ -22,4 +22,4 @@ namespace vm {
 } // namespace vm
 } // namespace hermes
 
-#endif // HERMESVM_SAMPLING_PROFILER_USE_NO_OP
+#endif // _WINDOWS

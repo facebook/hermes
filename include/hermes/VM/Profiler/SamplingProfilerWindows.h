@@ -4,8 +4,8 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#ifndef HERMES_VM_PROFILER_SAMPLINGPROFILERNOOP_H
-#define HERMES_VM_PROFILER_SAMPLINGPROFILERNOOP_H
+#ifndef HERMES_VM_PROFILER_SAMPLINGPROFILERWINDOWS_H
+#define HERMES_VM_PROFILER_SAMPLINGPROFILERWINDOWS_H
 
 #include "hermes/VM/Runtime.h"
 
@@ -49,4 +49,4 @@ class SamplingProfiler {
 } // namespace vm
 } // namespace hermes
 
-#endif // HERMES_VM_PROFILER_SAMPLINGPROFILERNOOP_H
+#endif // HERMES_VM_PROFILER_SAMPLINGPROFILERWINDOWS_H
