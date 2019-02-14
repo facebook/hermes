@@ -9,6 +9,11 @@
 #include "hermes/VM/StringPrimitive.h"
 
 using namespace hermes::vm::detail;
+// In GCC/CLANG, method definitions can refer to ancestor namespaces of
+// the namespace that the class is declared in without namespace qualifiers.
+// This is not allowed in MSVC.
+using hermes::vm::StringPrimitive;
+using hermes::vm::SymbolID;
 
 template <typename T>
 uint32_t IdentifierHashTable::lookupString(
