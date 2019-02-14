@@ -25,7 +25,6 @@ public class HermesExecutor extends JavaScriptExecutor {
             : initHybrid(
                 config.heapSizeMB,
                 config.recoverableOOM,
-                config.effectiveOOMThreshold,
                 config.es6Symbol,
                 config.bytecodeWarmupPercent,
                 config.tripWireEnabled,
@@ -53,7 +52,6 @@ public class HermesExecutor extends JavaScriptExecutor {
   private static native HybridData initHybrid(
       long heapSizeMB,
       boolean recoverableOOM,
-      long effectiveOOMThreshold,
       boolean es6Symbol,
       int bytecodeWarmupPercent,
       boolean tripWireEnabled,

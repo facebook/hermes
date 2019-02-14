@@ -13,7 +13,6 @@ import javax.annotation.Nullable;
 public final class RuntimeConfig {
   public long heapSizeMB;
   public boolean recoverableOOM;
-  public long effectiveOOMThreshold;
   public boolean enableSampledStats;
   public boolean es6Symbol;
   public int bytecodeWarmupPercent;

@@ -27,7 +27,6 @@ static constexpr std::chrono::hours msToHours(jlong ms) {
 static ::hermes::vm::RuntimeConfig makeRuntimeConfig(
     jlong heapSizeMB,
     bool recoverableOOM,
-    jlong effectiveOOMThreshold,
     bool es6Symbol,
     jint bytecodeWarmupPercent,
     bool tripWireEnabled,
@@ -45,10 +44,6 @@ static ::hermes::vm::RuntimeConfig makeRuntimeConfig(
           .withAllocInYoung(false)
           .withRevertToYGAtTTI(true)
           .withFatalOOM(!recoverableOOM);
-
-  if (effectiveOOMThreshold > 0) {
-    gcConfigBuilder.withEffectiveOOMThreshold(effectiveOOMThreshold);
-  }
 
   if (tripWireEnabled) {
     assert(
@@ -113,7 +108,6 @@ class HermesExecutorHolder
       jni::alias_ref<jclass>,
       jlong heapSizeMB,
       bool recoverableOOM,
-      jlong effectiveOOMThreshold,
       bool es6Symbol,
       jint bytecodeWarmupPercent,
       bool tripWireEnabled,
@@ -124,7 +118,6 @@ class HermesExecutorHolder
     auto runtimeConfig = makeRuntimeConfig(
         heapSizeMB,
         recoverableOOM,
-        effectiveOOMThreshold,
         es6Symbol,
         bytecodeWarmupPercent,
         tripWireEnabled,
