@@ -82,6 +82,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
 #ifdef HERMES_ENABLE_DEBUGGER
   context->setDebugInfoSetting(
       compileFlags.debug ? DebugInfoSetting::ALL : DebugInfoSetting::THROWING);
+#else
+  context->setDebugInfoSetting(DebugInfoSetting::THROWING);
 #endif
 
   // Populate the declFileList.

@@ -1461,8 +1461,6 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
 
   // Generate the debug info.
   switch (F_->getContext().getDebugInfoSetting()) {
-    case DebugInfoSetting::NONE:
-      break;
     case DebugInfoSetting::THROWING:
       if (!ii->mayExecute()) {
         break;

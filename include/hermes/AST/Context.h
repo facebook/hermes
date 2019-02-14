@@ -92,7 +92,6 @@ struct OptimizationSettings {
 };
 
 enum class DebugInfoSetting {
-  NONE,
   THROWING,
   ALL,
 };
@@ -152,7 +151,7 @@ class Context {
   const std::unique_ptr<ResolutionTable> resolutionTable_;
 
   /// Whether we should emit debug information. Default to false.
-  DebugInfoSetting debugInfoSetting_{DebugInfoSetting::NONE};
+  DebugInfoSetting debugInfoSetting_{DebugInfoSetting::THROWING};
 
   const CodeGenerationSettings codeGenerationSettings_;
 
