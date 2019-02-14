@@ -39,11 +39,12 @@ class HermesLLVMMemoryBuffer : public llvm::MemoryBuffer {
  public:
   HermesLLVMMemoryBuffer(
       std::unique_ptr<hermes::Buffer> buffer,
-      llvm::StringRef name)
+      llvm::StringRef name,
+      bool requiresNullTerminator = true)
       : name_(name), data_(std::move(buffer)) {
     auto start = reinterpret_cast<const char *>(data_->data());
     auto end = start + data_->size();
-    init(start, end, false);
+    init(start, end, requiresNullTerminator);
   }
   virtual BufferKind getBufferKind() const override {
     return llvm::MemoryBuffer::BufferKind::MemoryBuffer_Malloc;
