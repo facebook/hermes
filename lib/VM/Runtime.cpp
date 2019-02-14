@@ -495,11 +495,10 @@ LLVM_ATTRIBUTE_NOINLINE
 static CallResult<HermesValue> interpretFunctionWithRandomStack(
     Runtime *runtime,
     CodeBlock *globalCode) {
-  static char *volatile dummy;
+  static void *volatile dummy;
   const unsigned amount = std::random_device()() % oscompat::page_size();
-  char arr[amount];
-  // Prevent compiler from optimizing arr away.
-  dummy = arr;
+  // Prevent compiler from optimizing alloca away by assigning to volatile
+  dummy = alloca(amount);
   (void)dummy;
   return runtime->interpretFunction(globalCode);
 }
