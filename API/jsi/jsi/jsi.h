@@ -1024,13 +1024,7 @@ class Value {
   ValueKind kind_;
   Data data_;
 
-  // In the future: Value becomes NaN-boxed.  In the Hermes impl, if
-  // the object contains a PinnedHermesValue, we need to be able to
-  // get a pointer to it; this can be casted from 'this'.  In the JSC
-  // impl, we need to be able to convert the boxed value into a JSC
-  // ref.  This can be done by casting this, deferencing it to get a
-  // number, doing some bit masks, and then casting again into the
-  // desired JSC ref type.
+  // In the future: Value becomes NaN-boxed. See T40538354.
 };
 
 /// Not movable and not copyable RAII marker advising the underlying
