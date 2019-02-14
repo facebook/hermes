@@ -15,8 +15,6 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/detail/BackingStorage.h"
 
-#include <sys/mman.h>
-#include <unistd.h>
 #include <cstdint>
 
 using namespace hermes::vm;
@@ -25,6 +23,9 @@ using namespace hermes::vm::detail;
 namespace {
 
 TEST(GCBackingStorageTest, AdviseUnused) {
+  // TODO(T40416012) Re-enable this test when vm_unused is fixed.
+  // Skip this test in Windows because vm_unused has a no-op implementation.
+#ifndef _WINDOWS
   const size_t FAILED = SIZE_MAX;
 
   const size_t HERMES_PAGE_SIZE = hermes::oscompat::page_size();
@@ -53,6 +54,7 @@ TEST(GCBackingStorageTest, AdviseUnused) {
 
   EXPECT_EQ(initial + TOTAL_PAGES, touched);
   EXPECT_EQ(touched - FREED_PAGES, marked);
+#endif
 }
 
 #ifndef NDEBUG

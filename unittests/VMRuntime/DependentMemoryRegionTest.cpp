@@ -20,6 +20,9 @@ using namespace hermes::vm::detail;
 namespace {
 
 TEST(DependentMemoryRegionTest, ParentUnused) {
+  // TODO(T40416012) Re-enable this test when vm_unused is fixed.
+  // Skip this test in Windows because vm_unused has a no-op implementation.
+#ifndef _WINDOWS
   const size_t FAIL = SIZE_MAX;
   const size_t PS = hermes::oscompat::page_size();
 
@@ -90,6 +93,7 @@ TEST(DependentMemoryRegionTest, ParentUnused) {
     ASSERT_NE(FAIL, footprint);
     EXPECT_EQ(labels[i].unused, kDMRPages + init - footprint);
   }
+#endif
 }
 
 } // anonymous namespace
