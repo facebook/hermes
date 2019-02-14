@@ -3,6 +3,6 @@ add_llvm_library(hermesInstrumentation
   PerfEventsLinux.cpp
   ProcessStats.cpp
   StatSamplingThread.cpp
-  PageAccessTracker.cpp
+  PageAccessTrackerPosix.cpp
   LINK_LIBS hermesSupport
 )

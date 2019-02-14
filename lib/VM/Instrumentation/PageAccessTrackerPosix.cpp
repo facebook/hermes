@@ -4,7 +4,10 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
+#ifndef _WINDOWS
+
 #include "hermes/VM/instrumentation/PageAccessTracker.h"
+
 #include "hermes/Support/JSONEmitter.h"
 
 #include <stdint.h>
@@ -214,3 +217,5 @@ bool PageAccessTracker::printPageAccessedOrder(
   }
   return true;
 }
+
+#endif // not _WINDOWS
