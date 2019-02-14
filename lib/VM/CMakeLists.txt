@@ -30,7 +30,6 @@ set(source_files
   LimitedStorageProvider.cpp
   LogFailStorageProvider.cpp
   HostModel.cpp
-  OOMException.cpp
   Operations.cpp
   PrimitiveBox.cpp
   Profiler.cpp

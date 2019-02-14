@@ -324,7 +324,6 @@ class GCBase {
         gcCallbacks_(gcCallbacks),
         recordGcStats_(gcConfig.getShouldRecordStats()),
         name_(gcConfig.getName()),
-        fatalOOM_(gcConfig.getFatalOOM()),
         tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
         tripwireLimit_(gcConfig.getTripwireConfig().getLimit()),
         tripwireCooldown_(gcConfig.getTripwireConfig().getCooldown())
@@ -624,9 +623,6 @@ class GCBase {
   std::string name_;
 
  private:
-  /// Whether an OOM should cause an abort (true) or an exception (false).
-  bool fatalOOM_;
-
   /// Callback called if it's not null when the Live Data Tripwire is triggered
   std::function<void(GCTripwireContext &)> tripwireCallback_;
 

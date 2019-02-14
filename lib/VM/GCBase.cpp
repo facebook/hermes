@@ -13,7 +13,6 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GCPointer-inline.h"
-#include "hermes/VM/OOMException.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/VTable.h"
 
@@ -223,12 +222,7 @@ uint64_t GCBase::nextObjectID() {
 
 void GCBase::oom() {
   oomDetail();
-
-  if (fatalOOM_) {
-    hermes_fatal("OOM");
-  } else {
-    throw OOMException();
-  }
+  hermes_fatal("OOM");
 }
 
 void GCBase::oomDetail() {

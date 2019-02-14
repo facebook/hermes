@@ -85,10 +85,6 @@ _HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, GC_TRIPWIRE_FIELDS, {});
                                                                            \
   /* Whether to revert, if necessary, to young-gen allocation at TTI. */   \
   F(bool, RevertToYGAtTTI, false)                                          \
-                                                                           \
-  /* Whether Hermes should abort the process when it runs out of memory    \
-   * (true), or throw a C++ exception (false). */                          \
-  F(bool, FatalOOM, true)                                                  \
   /* GC_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(GCConfig, GC_FIELDS, {
