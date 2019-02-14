@@ -13,7 +13,7 @@ namespace {
 using namespace hermes::platform_unicode;
 
 TEST(PlatformUnicode, CaseTest) {
-  llvm::SmallVector<char16_t, 16> str = {u'a', u'B', u'c', u'ß'};
+  llvm::SmallVector<char16_t, 16> str = {u'a', u'B', u'c', u'\u00df'};
   convertToCase(str, CaseConversion::ToUpper, false /* useCurrentLocale */);
   ASSERT_EQ(5, str.size());
   EXPECT_EQ(u'A', str[0]);
