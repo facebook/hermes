@@ -78,7 +78,7 @@ CallResult<HermesValue> escape(void *, Runtime *runtime, NativeArgs args) {
       R.push_back(toHexChar(c & 0xf));
     } else {
       // R += "%uwxyz" where wxyz is the 4 bytes of c.
-      R.append(u"\%u");
+      R.append(u"%u");
       R.push_back(toHexChar((c >> 12) & 0xf));
       R.push_back(toHexChar((c >> 8) & 0xf));
       R.push_back(toHexChar((c >> 4) & 0xf));
