@@ -26,7 +26,6 @@ static constexpr std::chrono::hours msToHours(jlong ms) {
 
 static ::hermes::vm::RuntimeConfig makeRuntimeConfig(
     jlong heapSizeMB,
-    bool recoverableOOM,
     bool es6Symbol,
     jint bytecodeWarmupPercent,
     bool tripWireEnabled,
@@ -42,8 +41,7 @@ static ::hermes::vm::RuntimeConfig makeRuntimeConfig(
           // runtime to allocate directly in the old generation, but revert to
           // normal operation when we reach the (first) TTI point.
           .withAllocInYoung(false)
-          .withRevertToYGAtTTI(true)
-          .withFatalOOM(!recoverableOOM);
+          .withRevertToYGAtTTI(true);
 
   if (tripWireEnabled) {
     assert(
@@ -107,7 +105,6 @@ class HermesExecutorHolder
   static jni::local_ref<jhybriddata> initHybrid(
       jni::alias_ref<jclass>,
       jlong heapSizeMB,
-      bool recoverableOOM,
       bool es6Symbol,
       jint bytecodeWarmupPercent,
       bool tripWireEnabled,
@@ -117,7 +114,6 @@ class HermesExecutorHolder
     JReactMarker::setLogPerfMarkerIfNeeded();
     auto runtimeConfig = makeRuntimeConfig(
         heapSizeMB,
-        recoverableOOM,
         es6Symbol,
         bytecodeWarmupPercent,
         tripWireEnabled,
