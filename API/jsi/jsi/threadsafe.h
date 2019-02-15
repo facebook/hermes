@@ -53,6 +53,19 @@ class ThreadSafeRuntimeImpl : public ThreadSafeRuntime {
 
   ~ThreadSafeRuntimeImpl() {}
 
+  std::shared_ptr<const jsi::PreparedJavaScript> prepareJavaScript(
+      const std::shared_ptr<const Buffer>& buffer,
+      std::string sourceURL) override {
+    Locker locker(*this);
+    return runtime_.prepareJavaScript(std::move(buffer), std::move(sourceURL));
+  }
+
+  void evaluatePreparedJavaScript(
+      const std::shared_ptr<const jsi::PreparedJavaScript>& js) override {
+    Locker locker(*this);
+    runtime_.evaluatePreparedJavaScript(js);
+  }
+
   void evaluateJavaScript(
       const std::shared_ptr<const jsi::Buffer>& buffer,
       const std::string& sourceURL) override {

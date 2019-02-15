@@ -45,6 +45,18 @@ class StringBuffer : public Buffer {
   std::string s_;
 };
 
+/// PreparedJavaScript is a base class repesenting JavaScript which is in a form
+/// optimized for execution, in a runtime-specific way. Construct one via
+/// jsi::Runtime::prepareJavaScript().
+/// ** This is an experimental API that is subject to change. **
+class PreparedJavaScript {
+ protected:
+  PreparedJavaScript() = default;
+
+ public:
+  virtual ~PreparedJavaScript() = 0;
+};
+
 class Runtime;
 class Pointer;
 class PropNameID;
@@ -138,6 +150,25 @@ class Runtime {
   virtual void evaluateJavaScript(
       const std::shared_ptr<const Buffer>& buffer,
       const std::string& sourceURL) = 0;
+
+  /// Prepares to evaluate the given JavaScript \c buffer by processing it into
+  /// a form optimized for execution. This may include pre-parsing, compiling,
+  /// etc. If the input is invalid (for example, cannot be parsed), a
+  /// JSIException will be thrown. The resulting object is tied to the
+  /// particular concrete type of Runtime from which it was created. It may be
+  /// used (via evaluatePreparedJavaScript) in any Runtime of the same concrete
+  /// type.
+  /// The PreparedJavaScript object may be passed to multiple VM instances, so
+  /// they can all share and benefit from the prepared script.
+  virtual std::shared_ptr<const PreparedJavaScript> prepareJavaScript(
+      const std::shared_ptr<const Buffer>& buffer,
+      std::string sourceURL) = 0;
+
+  /// Evaluates a PreparedJavaScript. If evaluation causes an error, a
+  /// JSIException will be thrown.
+  virtual void evaluatePreparedJavaScript(
+      const std::shared_ptr<const PreparedJavaScript>& js) = 0;
+
   /// \return the global object
   virtual Object global() = 0;
 

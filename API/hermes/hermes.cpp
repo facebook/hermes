@@ -614,6 +614,11 @@ class HermesRuntimeImpl
 
   // Concrete declarations of jsi::Runtime pure virtual methods
 
+  std::shared_ptr<const jsi::PreparedJavaScript> prepareJavaScript(
+      const std::shared_ptr<const jsi::Buffer> &buffer,
+      std::string sourceURL) override;
+  void evaluatePreparedJavaScript(
+      const std::shared_ptr<const jsi::PreparedJavaScript> &js) override;
   void evaluateJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) override;
@@ -1463,6 +1468,17 @@ void logGCStats(Runtime &rt, const char *msg) {
 
 size_t HermesRuntime::rootsListLength() const {
   return impl(this)->hermesValues_->size();
+}
+
+std::shared_ptr<const jsi::PreparedJavaScript>
+HermesRuntimeImpl::prepareJavaScript(
+    const std::shared_ptr<const jsi::Buffer> &buffer,
+    std::string sourceURL) {
+  throw jsi::JSINativeException("prepareJavaScript not implemented");
+}
+void HermesRuntimeImpl::evaluatePreparedJavaScript(
+    const std::shared_ptr<const jsi::PreparedJavaScript> &js) {
+  throw jsi::JSINativeException("evaluatePreparedJavaScript not implemented");
 }
 
 void HermesRuntimeImpl::evaluateJavaScript(

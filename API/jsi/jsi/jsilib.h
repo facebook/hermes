@@ -25,5 +25,30 @@ class FileBuffer : public Buffer {
   uint8_t* data_;
 };
 
+// A trivial implementation of PreparedJavaScript that simply stores the source
+// buffer and URL.
+class SourceJavaScriptPreparation final : public jsi::PreparedJavaScript,
+                                          public jsi::Buffer {
+  std::shared_ptr<const jsi::Buffer> buf_;
+  std::string sourceURL_;
+
+ public:
+  SourceJavaScriptPreparation(
+      std::shared_ptr<const jsi::Buffer> buf,
+      std::string sourceURL)
+      : buf_(std::move(buf)), sourceURL_(std::move(sourceURL)) {}
+
+  const std::string& sourceURL() const {
+    return sourceURL_;
+  }
+
+  size_t size() const override {
+    return buf_->size();
+  }
+  const uint8_t* data() const override {
+    return buf_->data();
+  }
+};
+
 } // namespace jsi
 } // namespace facebook

@@ -42,7 +42,9 @@ void throwJSError(Runtime& rt, const char* msg) {
 
 } // namespace detail
 
-Buffer::~Buffer() {}
+Buffer::~Buffer() = default;
+
+PreparedJavaScript::~PreparedJavaScript() = default;
 
 Value HostObject::get(Runtime&, const PropNameID&) {
   return Value();
