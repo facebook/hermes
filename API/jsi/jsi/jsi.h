@@ -136,7 +136,7 @@ class Runtime {
   /// format is unknown, or evaluation causes an error, a JSIException
   /// will be thrown.
   virtual void evaluateJavaScript(
-      std::unique_ptr<const Buffer> buffer,
+      const std::shared_ptr<const Buffer>& buffer,
       const std::string& sourceURL) = 0;
   /// \return the global object
   virtual Object global() = 0;

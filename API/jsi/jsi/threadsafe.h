@@ -54,10 +54,10 @@ class ThreadSafeRuntimeImpl : public ThreadSafeRuntime {
   ~ThreadSafeRuntimeImpl() {}
 
   void evaluateJavaScript(
-      std::unique_ptr<const Buffer> buffer,
+      const std::shared_ptr<const jsi::Buffer>& buffer,
       const std::string& sourceURL) override {
     Locker locker(*this);
-    runtime_.evaluateJavaScript(std::move(buffer), sourceURL);
+    runtime_.evaluateJavaScript(buffer, sourceURL);
   }
 
   Object global() override {

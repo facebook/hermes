@@ -615,7 +615,7 @@ class HermesRuntimeImpl
   // Concrete declarations of jsi::Runtime pure virtual methods
 
   void evaluateJavaScript(
-      std::unique_ptr<const jsi::Buffer> buffer,
+      const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) override;
   jsi::Object global() override;
 
@@ -1078,14 +1078,14 @@ class TracingHermesRuntimeImpl : public HermesRuntimeImpl {
   /// @{
 
   void evaluateJavaScript(
-      std::unique_ptr<const jsi::Buffer> buffer,
+      const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) override {
     if (isHermesBytecode(buffer->data(), buffer->size())) {
       trace_.setSourceHash(hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
           llvm::makeArrayRef(buffer->data(), buffer->size())));
     }
     trace_.emplace_back<SynthTrace::BeginExecJSRecord>(getTimeSinceStart());
-    HermesRuntimeImpl::evaluateJavaScript(std::move(buffer), sourceURL);
+    HermesRuntimeImpl::evaluateJavaScript(buffer, sourceURL);
     trace_.emplace_back<SynthTrace::EndExecJSRecord>(getTimeSinceStart());
   }
 
@@ -1466,21 +1466,21 @@ size_t HermesRuntime::rootsListLength() const {
 }
 
 void HermesRuntimeImpl::evaluateJavaScript(
-    std::unique_ptr<const jsi::Buffer> buffer,
+    const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
   ::hermes::instrumentation::HighFreqPerfMarker m("jsi-hermes-evaluate");
   vm::GCScope gcScope(&runtime_);
 
   class BufferAdapter : public ::hermes::Buffer {
    public:
-    BufferAdapter(std::unique_ptr<const jsi::Buffer> buf)
+    BufferAdapter(std::shared_ptr<const jsi::Buffer> buf)
         : buf_(std::move(buf)) {
       data_ = buf_->data();
       size_ = buf_->size();
     }
 
    private:
-    std::unique_ptr<const jsi::Buffer> buf_;
+    std::shared_ptr<const jsi::Buffer> buf_;
   };
 
   auto &stats = runtime_.getRuntimeStats();
@@ -1502,8 +1502,8 @@ void HermesRuntimeImpl::evaluateJavaScript(
     hermesLog("HermesVM", "%s", "Eval JS on source.");
 #endif
 
-    vm::ExecutionStatus res = runtime_.run(
-        std::make_unique<BufferAdapter>(std::move(buffer)), sourceURL, flags);
+    vm::ExecutionStatus res =
+        runtime_.run(std::make_unique<BufferAdapter>(buffer), sourceURL, flags);
     checkStatus(res);
     return;
   }
@@ -1517,7 +1517,7 @@ void HermesRuntimeImpl::evaluateJavaScript(
 #endif
 
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-      std::make_unique<BufferAdapter>(std::move(buffer)));
+      std::make_unique<BufferAdapter>(buffer));
   if (!ret.first) {
     throw jsi::JSINativeException("Error evaluating javascript: " + ret.second);
   }
