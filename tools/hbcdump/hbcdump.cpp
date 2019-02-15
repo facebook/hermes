@@ -17,6 +17,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -280,9 +281,18 @@ static bool executeCommand(
   return false;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv_) {
   llvm::sys::PrintStackTraceOnErrorSignal("hbcdump");
-  llvm::PrettyStackTraceProgram X(argc, argv);
+  llvm::PrettyStackTraceProgram X(argc, argv_);
+  llvm::SmallVector<const char *, 256> args;
+  llvm::SpecificBumpPtrAllocator<char> ArgAllocator;
+  if (llvm::sys::Process::GetArgumentVector(
+          args, llvm::makeArrayRef(argv_, argc), ArgAllocator)) {
+    llvm::errs() << "Failed to get argc and argv.\n";
+    return EXIT_FAILURE;
+  }
+  argc = args.size();
+  const char **argv = args.data();
   llvm::llvm_shutdown_obj Y;
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes bytecode dump tool\n");
 
