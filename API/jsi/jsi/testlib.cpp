@@ -894,6 +894,32 @@ TEST_P(JSITest, ExceptionStackTraceTest) {
   EXPECT_NE(stack.find("world"), std::string::npos);
 }
 
+TEST_P(JSITest, PreparedJavaScriptSourceTest) {
+  rt.evaluateJavaScript(std::make_unique<StringBuffer>("var q = 0;"), "");
+  auto prep = rt.prepareJavaScript(std::make_unique<StringBuffer>("q++;"), "");
+  EXPECT_EQ(rt.global().getProperty(rt, "q").getNumber(), 0);
+  rt.evaluatePreparedJavaScript(prep);
+  EXPECT_EQ(rt.global().getProperty(rt, "q").getNumber(), 1);
+  rt.evaluatePreparedJavaScript(prep);
+  EXPECT_EQ(rt.global().getProperty(rt, "q").getNumber(), 2);
+}
+
+TEST_P(JSITest, PreparedJavaScriptURLInBacktrace) {
+  std::string sourceURL = "//PreparedJavaScriptURLInBacktrace/Test/URL";
+  std::string throwingSource =
+      "function thrower() { throw new Error('oops')}"
+      "thrower();";
+  auto prep = rt.prepareJavaScript(
+      std::make_unique<StringBuffer>(throwingSource), sourceURL);
+  try {
+    rt.evaluatePreparedJavaScript(prep);
+    FAIL() << "prepareJavaScript should have thrown an exception";
+  } catch (facebook::jsi::JSError err) {
+    EXPECT_NE(std::string::npos, err.getStack().find(sourceURL))
+        << "Backtrace should contain source URL";
+  }
+}
+
 // TODO (T28293178) Remove this once exceptions are supported in all builds.
 #ifndef JSI_NO_EXCEPTION_TESTS
 

@@ -99,6 +99,30 @@ TEST_F(HermesRuntimeTest, BytecodeTest) {
   EXPECT_EQ(rt->global().getProperty(*rt, "x").getNumber(), 1);
 }
 
+TEST_F(HermesRuntimeTest, PreparedJavaScriptBytecodeTest) {
+  eval("var q = 0;");
+  std::string bytecode;
+  ASSERT_TRUE(hermes::compileJS("q++", bytecode));
+  auto prep =
+      rt->prepareJavaScript(std::make_unique<StringBuffer>(bytecode), "");
+  EXPECT_EQ(rt->global().getProperty(*rt, "q").getNumber(), 0);
+  rt->evaluatePreparedJavaScript(prep);
+  EXPECT_EQ(rt->global().getProperty(*rt, "q").getNumber(), 1);
+  rt->evaluatePreparedJavaScript(prep);
+  EXPECT_EQ(rt->global().getProperty(*rt, "q").getNumber(), 2);
+}
+
+TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
+  const char *badSource = "this is definitely not valid javascript";
+  bool caught = false;
+  try {
+    rt->prepareJavaScript(std::make_unique<StringBuffer>(badSource), "");
+  } catch (facebook::jsi::JSIException err) {
+    caught = true;
+  }
+  EXPECT_TRUE(caught) << "prepareJavaScript should have thrown an exception";
+}
+
 // In JSC we use multiple threads in our implementation of JSI so we can't
 // use the ASSERT_DEATH macros when testing that implementation.
 // Asserts are compiled out of opt builds

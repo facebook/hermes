@@ -18,6 +18,7 @@
 #endif
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/DebuggerAPI.h"
 #include "hermes/Instrumentation/PerfMarkers.h"
 #include "hermes/Platform/Logging.h"
@@ -1470,80 +1471,114 @@ size_t HermesRuntime::rootsListLength() const {
   return impl(this)->hermesValues_->size();
 }
 
+namespace {
+
+/// An implementation of PreparedJavaScript that wraps a BytecodeProvider.
+class HermesPreparedJavaScript final : public jsi::PreparedJavaScript {
+  std::shared_ptr<hbc::BCProvider> bcProvider_;
+  vm::RuntimeModuleFlags runtimeFlags_;
+  std::string sourceURL_;
+
+ public:
+  explicit HermesPreparedJavaScript(
+      std::unique_ptr<hbc::BCProvider> bcProvider,
+      vm::RuntimeModuleFlags runtimeFlags,
+      std::string sourceURL)
+      : bcProvider_(std::move(bcProvider)),
+        runtimeFlags_(runtimeFlags),
+        sourceURL_(std::move(sourceURL)) {}
+
+  std::shared_ptr<hbc::BCProvider> bytecodeProvider() const {
+    return bcProvider_;
+  }
+
+  vm::RuntimeModuleFlags runtimeFlags() const {
+    return runtimeFlags_;
+  }
+
+  const std::string &sourceURL() const {
+    return sourceURL_;
+  }
+};
+
+// A class which adapts a jsi buffer to a Hermes buffer.
+class BufferAdapter final : public ::hermes::Buffer {
+ public:
+  BufferAdapter(std::shared_ptr<const jsi::Buffer> buf) : buf_(std::move(buf)) {
+    data_ = buf_->data();
+    size_ = buf_->size();
+  }
+
+ private:
+  std::shared_ptr<const jsi::Buffer> buf_;
+};
+
+} // namespace
+
 std::shared_ptr<const jsi::PreparedJavaScript>
 HermesRuntimeImpl::prepareJavaScript(
-    const std::shared_ptr<const jsi::Buffer> &buffer,
+    const std::shared_ptr<const jsi::Buffer> &jsiBuffer,
     std::string sourceURL) {
-  throw jsi::JSINativeException("prepareJavaScript not implemented");
+  std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcErr{};
+  auto buffer = std::make_unique<BufferAdapter>(std::move(jsiBuffer));
+  vm::RuntimeModuleFlags runtimeFlags{};
+
+  bool isBytecode = isHermesBytecode(buffer->data(), buffer->size());
+  runtimeFlags.persistent = isBytecode;
+
+#ifdef HERMESVM_PLATFORM_LOGGING
+  hermesLog(
+      "HermesVM", "Prepare JS on %s.", isBytecode ? "bytecode" : "source");
+#endif
+
+  // Construct the BC provider either from buffer or source.
+  if (isBytecode) {
+    bcErr = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+        std::move(buffer));
+  } else {
+    hbc::CompileFlags compileFlags{};
+    compileFlags.optimize = false;
+    compileFlags.lazy = (buffer->size() >= kMinimumLazySize);
+#ifdef HERMES_ENABLE_DEBUGGER
+    compileFlags.debug = true;
+#endif
+#if defined(HERMESVM_LEAN)
+    bcErr.second = "prepareJavaScript source compilation not supported";
+#else
+    bcErr = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+        std::move(buffer), sourceURL, compileFlags);
+#endif
+  }
+  if (!bcErr.first) {
+    throw jsi::JSINativeException(std::move(bcErr.second));
+  }
+  return std::make_shared<const HermesPreparedJavaScript>(
+      std::move(bcErr.first), runtimeFlags, std::move(sourceURL));
 }
+
 void HermesRuntimeImpl::evaluatePreparedJavaScript(
     const std::shared_ptr<const jsi::PreparedJavaScript> &js) {
-  throw jsi::JSINativeException("evaluatePreparedJavaScript not implemented");
+  assert(
+      dynamic_cast<const HermesPreparedJavaScript *>(js.get()) &&
+      "js must be an instance of HermesPreparedJavaScript");
+  ::hermes::instrumentation::HighFreqPerfMarker m("jsi-hermes-evaluate");
+  auto &stats = runtime_.getRuntimeStats();
+  const vm::instrumentation::RAIITimer timer{
+      "Evaluate JS", stats, stats.evaluateJS};
+  const auto *hermesPrep =
+      static_cast<const HermesPreparedJavaScript *>(js.get());
+  vm::GCScope gcScope(&runtime_);
+  checkStatus(runtime_.runBytecode(
+      hermesPrep->bytecodeProvider(),
+      hermesPrep->runtimeFlags(),
+      hermesPrep->sourceURL(),
+      runtime_.makeNullHandle<vm::Environment>()));
 }
 
 void HermesRuntimeImpl::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
-  ::hermes::instrumentation::HighFreqPerfMarker m("jsi-hermes-evaluate");
-  vm::GCScope gcScope(&runtime_);
-
-  class BufferAdapter : public ::hermes::Buffer {
-   public:
-    BufferAdapter(std::shared_ptr<const jsi::Buffer> buf)
-        : buf_(std::move(buf)) {
-      data_ = buf_->data();
-      size_ = buf_->size();
-    }
-
-   private:
-    std::shared_ptr<const jsi::Buffer> buf_;
-  };
-
-  auto &stats = runtime_.getRuntimeStats();
-  const vm::instrumentation::RAIITimer timer{
-      "Evaluate JS", stats, stats.evaluateJS};
-  if (!isHermesBytecode(buffer->data(), buffer->size())) {
-    hbc::CompileFlags flags{};
-
-    flags.optimize = false;
-    if (buffer->size() >= kMinimumLazySize) {
-      flags.lazy = true;
-    }
-
-#ifdef HERMES_ENABLE_DEBUGGER
-    flags.debug = true;
-#endif
-
-#ifdef HERMESVM_PLATFORM_LOGGING
-    hermesLog("HermesVM", "%s", "Eval JS on source.");
-#endif
-
-    vm::ExecutionStatus res =
-        runtime_.run(std::make_unique<BufferAdapter>(buffer), sourceURL, flags);
-    checkStatus(res);
-    return;
-  }
-
-#ifdef HERMESVM_PLATFORM_LOGGING
-  std::pair<const uint8_t *, size_t> epilogue =
-      getBytecodeEpilogue(buffer->data(), buffer->size());
-  std::string epiStr(
-      reinterpret_cast<const char *>(epilogue.first), epilogue.second);
-  hermesLog("HermesVM", "Eval JS: bytecode epilogue is '%s'.", epiStr.c_str());
-#endif
-
-  auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-      std::make_unique<BufferAdapter>(buffer));
-  if (!ret.first) {
-    throw jsi::JSINativeException("Error evaluating javascript: " + ret.second);
-  }
-  vm::RuntimeModuleFlags flags;
-  flags.persistent = true;
-  checkStatus(runtime_.runBytecode(
-      std::move(ret.first),
-      flags,
-      sourceURL,
-      runtime_.makeNullHandle<vm::Environment>()));
+  evaluatePreparedJavaScript(prepareJavaScript(buffer, sourceURL));
 }
 
 jsi::Object HermesRuntimeImpl::global() {
