@@ -1,5 +1,5 @@
 // RUN: %hermes -dump-bytecode -target=HBC -g %s | %FileCheck %s --match-full-lines
-// RUN: cp %s %T/debug_info_à.js && %hermes -dump-bytecode -target=HBC -g %T/debug_info_à.js | %FileCheck %T/debug_info_à.js --match-full-lines --check-prefix=UNICODE
+// RUN: cp %s %T/debug_info_à.js && %hermes -dump-bytecode -target=HBC -g %T/debug_info_à.js | %FileCheck %s --match-full-lines --check-prefix=UNICODE
 
 var v1g = "global";
 
