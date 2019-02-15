@@ -57,6 +57,14 @@ class OutputEncoding {
  public:
   /// Read in user's preferred encoding and store it for future use.
   OutputEncoding() {
+#ifdef _WINDOWS
+    // On Windows, the encoding section of the value returned by
+    // setlocale(LC_ALL, "") is the system locale for non-Unicode programs.
+    // On an en-us installation, for example, this returns 1252,
+    // which represents ISO-8859-1. That is a non-sensical choice.
+    // As a result, we force encoding to UTF-8.
+    char *locale = const_cast<char *>(".UTF-8");
+#else
     // Set our locale to user's preferred locale by passing "" to setlocale.
     // When determining user's locale, the following environment
     // variables are considered: LC_ALL, LC_CTYPE, and LANG.
@@ -70,6 +78,7 @@ class OutputEncoding {
       // Let's just get the default. It will likely be 'C'.
       locale = std::setlocale(LC_ALL, nullptr);
     }
+#endif
 
     // If we were able to come up with an encoding,
     // make sure to convert it to the format ICU expects.
