@@ -443,7 +443,7 @@ JSError::errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
 // internal stacktrace_; if there is no debugger it can be freed. We no longer
 // need the accessor. Redefines the stack property to a regular property.
 #ifndef HERMES_ENABLE_DEBUGGER
-  selfHandle->stacktrace_.release();
+  selfHandle->stacktrace_.reset();
 #endif
 
   MutableHandle<> stacktraceStr{runtime};
@@ -478,7 +478,7 @@ JSError::errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
     auto &stacktrace = errorObject->stacktrace_;
     if (stacktrace) {
       // Release stacktrace_ if it's already set.
-      stacktrace.release();
+      stacktrace.reset();
     }
   }
   auto res = toObject(runtime, args.getThisHandle());
