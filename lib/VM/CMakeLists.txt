@@ -182,8 +182,6 @@ add_llvm_library(hermesVMRuntime STATIC ${source_files}
     ${CORE_FOUNDATION}
 )
 
-target_compile_options(hermesVMRuntime PRIVATE -fexceptions)
-
 hermes_link_icu(hermesVMRuntime)
 
 add_subdirectory(Instrumentation)
