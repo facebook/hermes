@@ -28,7 +28,10 @@
 #include <readline/readline.h>
 #endif
 
+#ifndef _WINDOWS
 #include <unistd.h>
+#endif
+
 #include <csetjmp>
 #include <csignal>
 #include <iostream>
@@ -50,6 +53,39 @@ static llvm::cl::opt<std::string> Prompt2String(
     llvm::cl::init("...  "),
     llvm::cl::desc("Prompt string for continuation lines in the REPL."));
 
+namespace {
+enum class ReadResult {
+  SUCCESS,
+  FAILURE,
+  INTERRUPT,
+};
+}
+
+/// Print the prompt \p prompt and read a line from stdin with editing, storing
+/// it in \p line.
+/// When the user sends SIGINT instead of providing input to the REPL,
+/// we return ReadResult::INTERRUPT directly from readInputLine.
+/// This works because readline allows longjmps out of it without breaking
+/// (it has a signal handler that cleans up and rethrows the signal).
+/// \return SUCCESS if it worked, INTERRUPT on SIGINT, FAILURE on EOF.
+static ReadResult readInputLine(const char *prompt, std::string &line);
+
+#ifdef _WINDOWS
+
+static ReadResult readInputLine(const char *prompt, std::string &line) {
+  llvm::outs() << prompt;
+  std::string current{};
+  bool success = !!std::getline(std::cin, current);
+
+  if (!success) {
+    return ReadResult::FAILURE;
+  }
+  line.append(current);
+  return ReadResult::SUCCESS;
+}
+
+#else
+
 static std::jmp_buf readlineJmpBuf;
 
 /// Store the last sigaction so we can restore it.
@@ -68,21 +104,6 @@ static void handleSignal(int sig) {
   }
 }
 
-namespace {
-enum class ReadResult {
-  SUCCESS,
-  FAILURE,
-  INTERRUPT,
-};
-}
-
-/// Print the prompt \p prompt and read a line from stdin with editing, storing
-/// it in \p line.
-/// When the user sends SIGINT instead of providing input to the REPL,
-/// we return ReadResult::INTERRUPT directly from readInputLine.
-/// This works because readline allows longjmps out of it without breaking
-/// (it has a signal handler that cleans up and rethrows the signal).
-/// \return SUCCESS if it worked, INTERRUPT on SIGINT, FAILURE on EOF.
 static ReadResult readInputLine(const char *prompt, std::string &line) {
   struct sigaction action;
   sigemptyset(&action.sa_mask);
@@ -120,6 +141,7 @@ static ReadResult readInputLine(const char *prompt, std::string &line) {
   line.append(current);
   return ReadResult::SUCCESS;
 }
+#endif
 
 /// Checks if the provided input needs another line to become valid.
 /// Currently, this only checks if there's open delimiter tokens
@@ -256,6 +278,11 @@ int main(int argc, char **argv) {
   auto evaluateLineFn = runtime->makeHandle<vm::JSFunction>(*callRes);
 
   runtime->getHeap().runtimeWillExecute();
+
+  // SetUnbuffered because there is no explicit flush after prompt (>>).
+  // There is also no explicitly flush at end of line. (An automatic flush
+  // mechanism is not guaranteed to be present, from my experiment on Windows)
+  llvm::outs().SetUnbuffered();
   while (true) {
     // Main loop
     auto readResult = readInputLine(
