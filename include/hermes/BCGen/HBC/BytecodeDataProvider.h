@@ -221,7 +221,7 @@ class BCProviderBase {
 
   /// Get the source text location of address \p offsetInFunction in funciton
   /// \p funcId.
-  virtual llvm::Optional<SourceMapTextLocation> getLocationForAddress(
+  llvm::Optional<SourceMapTextLocation> getLocationForAddress(
       uint32_t funcId,
       uint32_t offsetInFunction) const;
 
