@@ -640,7 +640,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   const char16_t separator = u',';
 
   // Final size of the result string. Initialize to account for the separators.
-  uint32_t size = len - 1;
+  SafeUInt32 size(len - 1);
 
   if (len == 0) {
     return emptyString.getHermesValue();
@@ -698,13 +698,11 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
         auto elementStr = toHandle(runtime, std::move(*strRes));
         uint32_t strLength = elementStr->getStringLength();
         // Throw RangeError on overflow.
-        if (LLVM_UNLIKELY(
-                strLength + size < strLength ||
-                size + strLength > StringPrimitive::MAX_STRING_LENGTH)) {
+        size.add(strLength);
+        if (LLVM_UNLIKELY(size.isOverflowed())) {
           return runtime->raiseRangeError(
               "resulting string length exceeds limit");
         }
-        size += strLength;
         JSArray::setElementAt(strings, runtime, i->getNumber(), elementStr);
       } else {
         return runtime->raiseTypeError("toLocaleString() not callable");
@@ -1131,7 +1129,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
 
   // Track the size of the resultant string. Use a 64-bit value to detect
   // overflow.
-  uint64_t size = 0;
+  SafeUInt32 size;
 
   // Storage for the strings for each element.
   auto arrRes = JSArray::create(runtime, len, 0);
@@ -1146,7 +1144,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
        i = HermesValue::encodeNumberValue(i->getNumber() + 1)) {
     // Add the size of the separator, except the first time.
     if (i->getNumberAs<uint32_t>())
-      size += sep->getStringLength();
+      size.add(sep->getStringLength());
 
     GCScope gcScope2(runtime);
     if (LLVM_UNLIKELY(
@@ -1166,13 +1164,13 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
       auto S = toHandle(runtime, std::move(*strRes));
-      size += S->getStringLength();
+      size.add(S->getStringLength());
       JSArray::setElementAt(strings, runtime, i->getNumber(), S);
     }
 
     // Check for string overflow on every iteration to create the illusion that
     // we are appending to the string. Also, prevent uint32_t overflow.
-    if (size > StringPrimitive::MAX_STRING_LENGTH) {
+    if (size.isOverflowed()) {
       return runtime->raiseRangeError("String is too long");
     }
   }

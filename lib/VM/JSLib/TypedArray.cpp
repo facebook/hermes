@@ -932,8 +932,17 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
         runtime->getPredefinedString(Predefined::emptyString));
   }
 
+  if (len > std::numeric_limits<uint32_t>::max() ||
+      sep->getStringLength() >
+          (double)StringPrimitive::MAX_STRING_LENGTH / len) {
+    // Check for overflow.
+    return runtime->raiseRangeError(
+        "String.prototype.repeat result exceeds limit");
+  }
+
   // Final size of the resultant string.
-  size_t size = sep->getStringLength() * (len - 1);
+  // Its safe to multiply as overflow check is done above
+  SafeUInt32 size(sep->getStringLength() * (len - 1));
 
   // Storage for the strings for each element.
   auto arrRes = JSArray::create(runtime, len, 0);
@@ -955,7 +964,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
       auto S = toHandle(runtime, std::move(*res2));
-      size += S->getStringLength();
+      size.add(S->getStringLength());
       JSArray::setElementAt(strings, runtime, i, S);
     }
   }
@@ -1418,7 +1427,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   auto separator = createASCIIRef(",");
 
   // Final size of the result string. Initialize to account for the separators.
-  JSTypedArrayBase::size_type size = len - 1;
+  SafeUInt32 size(len - 1);
 
   // Array to store each of the strings of the elements.
   auto arrRes = JSArray::create(runtime, len, len);
@@ -1459,7 +1468,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
       }
       auto elementStr = toHandle(runtime, std::move(*strRes));
       JSArray::setElementAt(strings, runtime, i, elementStr);
-      size += elementStr->getStringLength();
+      size.add(elementStr->getStringLength());
     } else {
       return runtime->raiseTypeError("toLocaleString() not callable");
     }

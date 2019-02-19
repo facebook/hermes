@@ -38,15 +38,6 @@ class StringBuilder {
   Runtime *runtime_;
 
  public:
-  static CallResult<StringBuilder>
-  createStringBuilder(Runtime *runtime, uint32_t length, bool isASCII = false) {
-    auto crtRes = StringPrimitive::create(runtime, length, isASCII);
-    if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return StringBuilder(runtime, crtRes->getString());
-  }
-
   static CallResult<StringBuilder> createStringBuilder(
       Runtime *runtime,
       SafeUInt32 length,
@@ -54,7 +45,11 @@ class StringBuilder {
     if (length.isOverflowed()) {
       return runtime->raiseRangeError("String length exceeds limit");
     }
-    return createStringBuilder(runtime, *length, isASCII);
+    auto crtRes = StringPrimitive::create(runtime, *length, isASCII);
+    if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return StringBuilder(runtime, crtRes->getString());
   }
 
   /// Append an UTF16Ref \p str. Note that str should not point to a GC-managed

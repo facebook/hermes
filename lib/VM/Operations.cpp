@@ -1498,9 +1498,10 @@ CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
     Handle<SymbolID> sym) {
   auto desc = runtime->makeHandle<StringPrimitive>(
       runtime->getStringPrimFromSymbolID(*sym));
+  SafeUInt32 descLen(desc->getStringLength());
+  descLen.add(8);
 
-  auto builder =
-      StringBuilder::createStringBuilder(runtime, desc->getStringLength() + 8);
+  auto builder = StringBuilder::createStringBuilder(runtime, descLen);
   if (LLVM_UNLIKELY(builder == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

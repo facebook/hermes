@@ -465,8 +465,8 @@ stringConstructor(void *, Runtime *runtime, NativeArgs args) {
 static CallResult<HermesValue>
 stringFromCharCode(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
-  unsigned n = args.getArgCount();
-  auto builder = StringBuilder::createStringBuilder(runtime, n);
+  uint32_t n = args.getArgCount();
+  auto builder = StringBuilder::createStringBuilder(runtime, SafeUInt32{n});
   if (builder == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -689,7 +689,7 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   }
   auto S = toHandle(runtime, std::move(*strRes));
   // Track the total characters in the result.
-  uint32_t size = S->getStringLength();
+  SafeUInt32 size(S->getStringLength());
   uint32_t argCount = args.getArgCount();
 
   // Store the results of toStrings and concat them at the end.
@@ -711,12 +711,11 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
     // and we know we're in bounds because we preallocated.
     strings->at(i).set(strRes->getHermesValue(), &runtime->getHeap());
     uint32_t strLength = strRes->get()->getStringLength();
-    if (LLVM_UNLIKELY(
-            strLength + size < strLength ||
-            size > StringPrimitive::MAX_STRING_LENGTH - strLength)) {
+
+    size.add(strLength);
+    if (LLVM_UNLIKELY(size.isOverflowed())) {
       return runtime->raiseRangeError("resulting string length exceeds limit");
     }
-    size += strLength;
 
     gcScope.flushToMarker(marker);
   }
@@ -1141,7 +1140,7 @@ static CallResult<HermesValue> convertCase(
         }
       }
 
-      auto len = S->getStringLength();
+      SafeUInt32 len(S->getStringLength());
       auto builder = StringBuilder::createStringBuilder(runtime, len);
       if (builder == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -1780,13 +1779,16 @@ stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
   }
 
   if (n > std::numeric_limits<uint32_t>::max() ||
-      strLen > (double)StringPrimitive::MAX_STRING_LENGTH / n) {
+      S->getStringLength() > (double)StringPrimitive::MAX_STRING_LENGTH / n) {
     // Check for overflow.
     return runtime->raiseRangeError(
         "String.prototype.repeat result exceeds limit");
   }
 
-  auto builderRes = StringBuilder::createStringBuilder(runtime, strLen * n);
+  // It's safe to multiply as the overflow check is done above.
+  SafeUInt32 finalLen(strLen * n);
+
+  auto builderRes = StringBuilder::createStringBuilder(runtime, finalLen);
   if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

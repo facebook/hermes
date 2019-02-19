@@ -118,8 +118,11 @@ CallResult<HermesValue> StringPrimitive::concat(
     return xHandle.getHermesValue();
   }
 
+  SafeUInt32 xyLen(xLen);
+  xyLen.add(yLen);
+
   auto builder = StringBuilder::createStringBuilder(
-      runtime, xLen + yLen, xHandle->isASCII() && yHandle->isASCII());
+      runtime, xyLen, xHandle->isASCII() && yHandle->isASCII());
   if (builder == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -137,8 +140,10 @@ CallResult<HermesValue> StringPrimitive::slice(
   assert(
       start + length <= str->getStringLength() && "Invalid length for slice");
 
+  SafeUInt32 safeLen(length);
+
   auto builder =
-      StringBuilder::createStringBuilder(runtime, length, str->isASCII());
+      StringBuilder::createStringBuilder(runtime, safeLen, str->isASCII());
   if (builder == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
