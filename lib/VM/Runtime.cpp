@@ -59,6 +59,9 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
   const bool useContiguousBackingStorage =
       runtimeConfig.getContiguousBackingStorage();
   if (useContiguousBackingStorage) {
+    assert(
+        sizeof(void *) == sizeof(uint64_t) &&
+        "Non-64 bit build with contiguous backing storage on");
     // TODO(T31421960): This can become a unique_ptr with C++14 lambda
     // initializers.
     std::shared_ptr<StorageProvider> provider{

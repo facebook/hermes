@@ -13,6 +13,11 @@
 #define API_TRACE 0
 #endif
 
+#if LLVM_PTR_SIZE != 8
+// Only have JSI be on the stack for builds that are not 64-bit.
+#define HERMESJSI_ON_STACK
+#endif
+
 #if API_TRACE
 #include "SynthTrace.h"
 #endif
