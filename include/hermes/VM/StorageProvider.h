@@ -34,7 +34,7 @@ class StorageProvider {
   /// \param maxAmount Same as in \p defaultProvider
   /// \param excess An excess amount of bytes that should be allowed to be
   ///   allocated.
-  /// \pre excess <= StorageProvider::size().
+  /// \pre excess <= AlignedStorage::size().
   /// \post The returned StorageProvider will be able to allocate at most 1
   ///   extra storage for the excess amount specified.
   static std::unique_ptr<StorageProvider> defaultProviderWithExcess(
@@ -44,7 +44,14 @@ class StorageProvider {
   // NOTE: The rest of these factories should only be used by tests.
 
   /// Provide storage from a pre-allocated \p amount.
-  static std::unique_ptr<StorageProvider> preAllocatedProvider(size_t amount);
+  /// \param excess An excess amount of bytes that should be allowed to be
+  ///   allocated.
+  /// \pre excess <= AlignedStorage::size().
+  /// \post The returned StorageProvider will be able to allocate at most 1
+  ///   extra storage for the excess amount specified.
+  static std::unique_ptr<StorageProvider> preAllocatedProvider(
+      size_t amount,
+      size_t excess);
 
   /// Provide storage from mmap'ed separate regions.
   static std::unique_ptr<StorageProvider> mmapProvider();

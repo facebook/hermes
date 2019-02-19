@@ -16,36 +16,40 @@ namespace vm {
 class PinnedHermesValue;
 
 // Parameters for Runtime initialisation.  Check documentation in README.md
-#define RUNTIME_FIELDS(F)                         \
-  /* Parameters to be passed on to the GC. */     \
-  F(vm::GCConfig, GCConfig)                       \
-                                                  \
-  /* Pre-allocated Register Stack */              \
-  F(PinnedHermesValue *, RegisterStack, nullptr)  \
-                                                  \
-  /* Register Stack Size */                       \
-  F(unsigned, MaxNumRegisters, 1024 * 1024)       \
-                                                  \
-  /* Whether or not the JIT is enabled */         \
-  F(bool, EnableJIT, false)                       \
-                                                  \
-  /* Whether to allow eval and Function ctor */   \
-  F(bool, EnableEval, true)                       \
-                                                  \
-  /* Support for ES6 Symbol. */                   \
-  F(bool, ES6Symbol, true)                        \
-                                                  \
-  /* Enable sampling certain statistics. */       \
-  F(bool, EnableSampledStats, false)              \
-                                                  \
-  /* Whether to enable sampling profiler */       \
-  F(bool, EnableSampleProfiling, false)           \
-                                                  \
-  /* Whether to randomize stack placement etc. */ \
-  F(bool, RandomizeMemoryLayout, false)           \
-                                                  \
-  /* Eagerly read bytecode into page cache. */    \
-  F(unsigned, BytecodeWarmupPercent, 0)           \
+#define RUNTIME_FIELDS(F)                                                \
+  /* Parameters to be passed on to the GC. */                            \
+  F(vm::GCConfig, GCConfig)                                              \
+                                                                         \
+  /* Pre-allocated Register Stack */                                     \
+  F(PinnedHermesValue *, RegisterStack, nullptr)                         \
+                                                                         \
+  /* Register Stack Size */                                              \
+  F(unsigned, MaxNumRegisters, 1024 * 1024)                              \
+                                                                         \
+  /* Whether or not the JIT is enabled */                                \
+  F(bool, EnableJIT, false)                                              \
+                                                                         \
+  /* Whether to allow eval and Function ctor */                          \
+  F(bool, EnableEval, true)                                              \
+                                                                         \
+  /* Support for ES6 Symbol. */                                          \
+  F(bool, ES6Symbol, true)                                               \
+                                                                         \
+  /* Whether to use a contiguous backing storage for segments (true), */ \
+  /* or a non-contiguous backing storage that is requested on-demand. */ \
+  F(bool, ContiguousBackingStorage, false)                               \
+                                                                         \
+  /* Enable sampling certain statistics. */                              \
+  F(bool, EnableSampledStats, false)                                     \
+                                                                         \
+  /* Whether to enable sampling profiler */                              \
+  F(bool, EnableSampleProfiling, false)                                  \
+                                                                         \
+  /* Whether to randomize stack placement etc. */                        \
+  F(bool, RandomizeMemoryLayout, false)                                  \
+                                                                         \
+  /* Eagerly read bytecode into page cache. */                           \
+  F(unsigned, BytecodeWarmupPercent, 0)                                  \
   /* RUNTIME_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {});

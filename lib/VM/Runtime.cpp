@@ -56,39 +56,42 @@ static const Predefined fixedPropCacheNames[(size_t)PropCacheID::_COUNT] = {
 std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
   const GCConfig &gcConfig = runtimeConfig.getGCConfig();
   GC::Size sz{gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()};
-  std::shared_ptr<StorageProvider> provider{
-#ifdef HERMESVM_FLAT_ADDRESS_SPACE
-      StorageProvider::defaultProviderWithExcess(
-          sz.storageFootprint(), sizeof(Runtime))
-#else
-      StorageProvider::defaultProvider(sz.storageFootprint())
-#endif
-  };
-  Runtime *rt = nullptr;
-#ifdef HERMESVM_FLAT_ADDRESS_SPACE
-  // Place Runtime in the first allocated storage.
-  void *storage = provider->newStorage();
-  if (LLVM_UNLIKELY(!storage)) {
-    hermes_fatal("Could not allocate initial storage for Runtime");
+  const bool useContiguousBackingStorage =
+      runtimeConfig.getContiguousBackingStorage();
+  if (useContiguousBackingStorage) {
+    // TODO(T31421960): This can become a unique_ptr with C++14 lambda
+    // initializers.
+    std::shared_ptr<StorageProvider> provider{
+        StorageProvider::preAllocatedProvider(
+            sz.storageFootprint(), sizeof(Runtime))};
+    // Place Runtime in the first allocated storage.
+    void *storage = provider->newStorage();
+    if (LLVM_UNLIKELY(!storage)) {
+      hermes_fatal("Could not allocate initial storage for Runtime");
+    }
+    Runtime *rt = new (storage) Runtime(provider.get(), runtimeConfig);
+    // Return a shared pointer with a custom deleter to delete the underlying
+    // storage of the runtime.
+    return std::shared_ptr<Runtime>{rt, [provider](Runtime *runtime) {
+                                      runtime->~Runtime();
+                                      provider->deleteStorage(runtime);
+                                    }};
+  } else {
+    // TODO(T31421960): This can become a unique_ptr with C++14 lambda
+    // initializers.
+    std::shared_ptr<StorageProvider> provider{StorageProvider::mmapProvider()};
+    // When not using the flat address space, allocate runtime normally.
+    Runtime *rt = new Runtime(provider.get(), runtimeConfig);
+    // Return a shared pointer with a custom deleter to delete the underlying
+    // storage of the runtime.
+    return std::shared_ptr<Runtime>{rt, [provider](Runtime *runtime) {
+                                      delete runtime;
+                                      // Provider is only captured to keep it
+                                      // alive until after the Runtime is
+                                      // deleted.
+                                      (void)provider;
+                                    }};
   }
-  rt = new (storage) Runtime(provider.get(), runtimeConfig);
-#else
-  // When not using the flat address space, allocate runtime normally.
-  rt = new Runtime(provider.get(), runtimeConfig);
-#endif
-  // Return a shared pointer with a custom deleter to delete the underlying
-  // storage of the runtime.
-  return std::shared_ptr<Runtime>{rt, [provider](Runtime *runtime) {
-#ifdef HERMESVM_FLAT_ADDRESS_SPACE
-                                    runtime->~Runtime();
-                                    provider->deleteStorage(runtime);
-#else
-                                    delete runtime;
-                                    // Provider is only captured to keep it
-                                    // alive until after the Runtime is deleted.
-                                    (void)provider;
-#endif
-                                  }};
 }
 
 CallResult<HermesValue> Runtime::getNamed(
