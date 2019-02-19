@@ -1522,10 +1522,9 @@ HermesRuntimeImpl::prepareJavaScript(
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcErr{};
   auto buffer = std::make_unique<BufferAdapter>(std::move(jsiBuffer));
   vm::RuntimeModuleFlags runtimeFlags{};
+  runtimeFlags.persistent = true;
 
   bool isBytecode = isHermesBytecode(buffer->data(), buffer->size());
-  runtimeFlags.persistent = isBytecode;
-
 #ifdef HERMESVM_PLATFORM_LOGGING
   hermesLog(
       "HermesVM", "Prepare JS on %s.", isBytecode ? "bytecode" : "source");
