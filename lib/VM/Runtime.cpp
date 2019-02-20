@@ -58,10 +58,16 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
   GC::Size sz{gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()};
   const bool useContiguousBackingStorage =
       runtimeConfig.getContiguousBackingStorage();
+#ifdef HERMESVM_PLATFORM_LOGGING
+  hermesLog(
+      "HermesVM",
+      "useContiguousBackingStorage == %s",
+      useContiguousBackingStorage ? "true" : "false");
+#endif
   if (useContiguousBackingStorage) {
-    assert(
-        sizeof(void *) == sizeof(uint64_t) &&
-        "Non-64 bit build with contiguous backing storage on");
+    if (sizeof(void *) != sizeof(uint64_t)) {
+      hermes_fatal("Non-64 bit build with contiguous backing storage on");
+    }
     // TODO(T31421960): This can become a unique_ptr with C++14 lambda
     // initializers.
     std::shared_ptr<StorageProvider> provider{
