@@ -29,26 +29,37 @@ class RuntimeModule;
 class StringPrimitive;
 class StringView;
 
-/// This class maintains a table of uniqued strings, or as they are commonly
-/// referred throughout the source "identifiers" or "symbols" (in ES6
-/// parlance).
+/// This class maintains a table of values used as keys in objects,
+/// or as they are commonly referred throughout the source "identifiers" or
+/// "symbols" (in ES6 parlance).
 ///
 /// The sequential integer index of each string in the table is a 32-bit
-/// integer value (referred to as \c IdentifierID) that uniquely identifies the
-/// string. For external type safety the \c IdentifierID is wrapped in a
+/// integer value (SymbolID::RawType) that uniquely identifies the string.
+/// For external type safety the 32-bit value is wrapped in a
 /// lightweight class \c SymbolID which doesn't offer additional functionality
 /// but restricts unsafe operations.
 ///
-/// SymbolIDs (and IdentifierIDs) are used in the VM to efficiently encode
-/// property names and string literals.
+/// SymbolIDs are used in the VM to efficiently encode property names and string
+/// literals.
 ///
 /// The strings are kept in \c std::vector with a side hash table to perform
 /// efficient lookups from a string to \c IdentifierID/SymbolID.
 ///
-/// Symbols that are no longer used by the VM are detected by the garbage
+/// There are two types of SymbolIDs stored in the IdentifierTable.
+/// - Internal SymbolIDs are uniqued strings. They are stored in a hash table,
+///   with a lookup vector which assigns SymbolIDs to strings. IdentifierTable
+///   provides a two-way mapping between internal SymbolIDs and the strings
+///   which they represent.
+/// - External SymbolIDs are values which back the primitive JS type Symbol.
+///   These are not uniqued (they are not placed in the hash table),
+///   but they are placed in a lookup vector. Thus, we can map from a SymbolID
+///   to the description string for the Symbol, but the mapping back is not
+///   unique. Note that this is the case because \c Symbol('x') !== Symbol('x').
+///
+/// SymbolIDs that are no longer used by the VM are detected by the garbage
 /// collector which then invokes the \c freeUnmarkedSymbols() method of this
-/// class. The memory for the unneeded symbols is released and their
-/// \c IdentifierIDs are made available for reuse. For that purpose a singly-
+/// class. The memory for the unneeded symbols is released and their raw
+/// SymbolIDs are made available for reuse. For that purpose a singly-
 /// linked list of freed ids is maintained inside the index array.
 class IdentifierTable {
   friend class detail::IdentifierHashTable;
