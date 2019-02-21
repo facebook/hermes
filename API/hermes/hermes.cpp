@@ -6,11 +6,17 @@
  */
 #include "hermes.h"
 
+#include "llvm/Support/Compiler.h"
+
 // Helper macro for deciding if the tracer should be used.
 #if defined(HERMESVM_API_TRACE) && !defined(HERMESVM_LEAN)
 #define API_TRACE 1
 #else
 #define API_TRACE 0
+#endif
+
+#ifndef LLVM_PTR_SIZE
+#error "LLVM_PTR_SIZE needs to be defined"
 #endif
 
 #if LLVM_PTR_SIZE != 8
