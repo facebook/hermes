@@ -965,6 +965,10 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
 class StackRuntime final : public Runtime {
  public:
   StackRuntime(StorageProvider *provider, const RuntimeConfig &config);
+
+  // A dummy virtual destructor to avoid problems when StackRuntime is used
+  // in compilation units compiled with RTTI.
+  virtual ~StackRuntime();
 };
 
 /// An RAII class for automatically tracking the native call frame depth.

@@ -1164,6 +1164,8 @@ StackRuntime::StackRuntime(
     const RuntimeConfig &config)
     : Runtime(provider, config) {}
 
+StackRuntime::~StackRuntime() {}
+
 /// Serialize a SymbolID.
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &OS,
