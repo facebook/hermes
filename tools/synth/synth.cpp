@@ -12,6 +12,7 @@
 #include <hermes/hermes.h>
 
 #include "hermes/ConsoleHost/MemorySizeParser.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 
 #include <iostream>
@@ -49,6 +50,11 @@ static opt<bool> GCPrintStats(
     "gc-print-stats",
     desc("Print GC stats. On by default."),
     init(true));
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
+static opt<bool>
+    PrintStats("print-stats", desc("Print statistics"), init(false));
+#endif
 
 static opt<bool> TrackBytecodeIO(
     "track-io",
@@ -88,6 +94,10 @@ int main(int argc, char **argv) {
     options.shouldPrintGCStats = GCPrintStats;
     options.shouldTrackIO = TrackBytecodeIO;
     options.bytecodeWarmupPercent = BytecodeWarmupPercent;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
+    if (PrintStats)
+      llvm::EnableStatistics();
+#endif
 #ifdef HERMESVM_API_TRACE
     // If this is tracing mode, get the trace instead of the stats.
     if (!options.marker.empty()) {
@@ -103,6 +113,10 @@ int main(int argc, char **argv) {
     llvm::outs() << TraceInterpreter::execAndGetStats(
                         TraceFile, BytecodeFile, options)
                  << "\n";
+#endif
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
+    if (PrintStats)
+      llvm::PrintStatistics(llvm::outs());
 #endif
     return 0;
   } catch (const std::invalid_argument &e) {
