@@ -45,36 +45,36 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault {
         gc.validPointer(cell) &&
         "Marked a pointer that the GC didn't allocate");
     CellHeader *header = CellHeader::from(cell);
-    if (gc.shouldSanitizeHandles()) {
-      // With handle-san on, handle moving pointers here.
-      if (header->isMarked()) {
-        cell = header->getForwardingPointer()->data();
-      } else {
-        // It hasn't been seen before, move it.
-        auto *newLocation =
-            new (checkedMalloc(cell->getAllocatedSize() + sizeof(CellHeader)))
-                CellHeader();
-        newLocation->mark();
-        memcpy(newLocation->data(), cell, cell->getAllocatedSize());
-        // Make sure to put an element on the worklist that is at the updated
-        // location. Don't update the stale address that is about to be free'd.
-        header->markWithForwardingPointer(newLocation);
-        worklist_.push_back(newLocation);
-        gc.newPointers_.insert(newLocation);
-        cell = newLocation->data();
-      }
+#ifdef HERMESVM_SANITIZE_HANDLES
+    // With handle-san on, handle moving pointers here.
+    if (header->isMarked()) {
+      cell = header->getForwardingPointer()->data();
     } else {
-      if (!header->isMarked()) {
-        // Only add to the worklist if it hasn't been marked yet.
-        header->mark();
-        worklist_.push_back(header);
-        // Move the pointer from the old pointers to the new pointers.
-        gc.pointers_.erase(header);
-        gc.newPointers_.insert(header);
-      }
-      // Else the cell is already marked and either on the worklist or already
-      // visited entirely, do nothing.
+      // It hasn't been seen before, move it.
+      auto *newLocation =
+          new (checkedMalloc(cell->getAllocatedSize() + sizeof(CellHeader)))
+              CellHeader();
+      newLocation->mark();
+      memcpy(newLocation->data(), cell, cell->getAllocatedSize());
+      // Make sure to put an element on the worklist that is at the updated
+      // location. Don't update the stale address that is about to be free'd.
+      header->markWithForwardingPointer(newLocation);
+      worklist_.push_back(newLocation);
+      gc.newPointers_.insert(newLocation);
+      cell = newLocation->data();
     }
+#else
+    if (!header->isMarked()) {
+      // Only add to the worklist if it hasn't been marked yet.
+      header->mark();
+      worklist_.push_back(header);
+      // Move the pointer from the old pointers to the new pointers.
+      gc.pointers_.erase(header);
+      gc.newPointers_.insert(header);
+    }
+    // Else the cell is already marked and either on the worklist or already
+    // visited entirely, do nothing.
+#endif
   }
 
   void accept(HermesValue &hv) override {
@@ -120,10 +120,11 @@ struct MallocGC::FullMSCUpdateWeakRootsAcceptor final
     CellHeader *header = CellHeader::from(cell);
 
     // Reset weak root if target GCCell is dead.
-    ptr = header->isMarked()
-        ? (gc.shouldSanitizeHandles() ? header->getForwardingPointer()->data()
-                                      : ptr)
-        : nullptr;
+#ifdef HERMESVM_SANITIZE_HANDLES
+    ptr = header->isMarked() ? header->getForwardingPointer()->data() : nullptr;
+#else
+    ptr = header->isMarked() ? ptr : nullptr;
+#endif
   }
   void accept(HermesValue &hv) override {
     if (!hv.isPointer()) {
@@ -169,18 +170,21 @@ void MallocGC::collectBeforeAlloc(uint32_t size) {
       "provide");
   // Check for memory pressure conditions to do a collection.
   // Use subtraction to prevent overflow.
-  if (shouldSanitizeHandles() || allocatedBytes_ >= sizeLimit_ - size) {
-    // Do a collection if the sanitization of handles is requested or if there
-    // is memory pressure.
-    collect();
-    // While we still can't fill the allocation, keep growing.
-    while (allocatedBytes_ >= sizeLimit_ - size) {
-      if (sizeLimit_ == maxSize_) {
-        // Can't grow memory any higher, OOM.
-        oom();
-      }
-      sizeLimit_ = growSizeLimit(sizeLimit_);
+#ifndef HERMESVM_SANITIZE_HANDLES
+  if (allocatedBytes_ < sizeLimit_ - size) {
+    return;
+  }
+#endif
+  // Do a collection if the sanitization of handles is requested or if there
+  // is memory pressure.
+  collect();
+  // While we still can't fill the allocation, keep growing.
+  while (allocatedBytes_ >= sizeLimit_ - size) {
+    if (sizeLimit_ == maxSize_) {
+      // Can't grow memory any higher, OOM.
+      oom();
     }
+    sizeLimit_ = growSizeLimit(sizeLimit_);
   }
 }
 
@@ -245,10 +249,10 @@ void MallocGC::collect() {
   numCollectedObjects_ = pointers_.size();
 #endif
   for (CellHeader *header : pointers_) {
-    if (!shouldSanitizeHandles()) {
-      // If handle sanitization isn't on, these pointers should all be dead.
-      assert(!header->isMarked() && "Live pointer left in dead heap section");
-    }
+#ifndef HERMESVM_SANITIZE_HANDLES
+    // If handle sanitization isn't on, these pointers should all be dead.
+    assert(!header->isMarked() && "Live pointer left in dead heap section");
+#endif
     GCCell *cell = header->data();
 #ifndef NDEBUG
     // Extract before running any potential finalizers.
@@ -393,13 +397,15 @@ void MallocGC::updateWeakReferences(MarkingAcceptor &acceptor) {
         if (!header->isMarked()) {
           // This pointer is no longer live, zero it out
           freeWeakSlot(&slot);
-        } else if (shouldSanitizeHandles()) {
+        } else {
+#ifdef HERMESVM_SANITIZE_HANDLES
           // Update the value to point to the new location
           GCCell *nextCell = header->getForwardingPointer()->data();
           assert(
               validPointer(cell) &&
               "Forwarding weak ref must be to a valid cell");
           slot.value = HermesValue::encodeObjectValue(nextCell);
+#endif
         }
         break;
     }
