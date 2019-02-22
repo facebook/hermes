@@ -35,7 +35,7 @@ try {
 //CHECK-NEXT:     Mov               r8, r5
 //CHECK-NEXT:     Call              r0, r4, 2
 //CHECK-NEXT:     ProfilePoint      2
-//CHECK-NEXT:     TryGetById        r5, r2, 3, "print"
+//CHECK-NEXT:     TryGetById        r5, r2, 1, "print"
 //CHECK-NEXT:     LoadConstString   r8, "rethrowing"
 //CHECK-NEXT:     LoadConstUndefined r9
 //CHECK-NEXT:     Call              r0, r5, 2
@@ -43,7 +43,7 @@ try {
 //CHECK-NEXT:     Jmp               L2
 //CHECK-NEXT:     Catch             r4
 //CHECK-NEXT:     ProfilePoint      6
-//CHECK-NEXT:     TryGetById        r6, r2, 4, "print"
+//CHECK-NEXT:     TryGetById        r6, r2, 1, "print"
 //CHECK-NEXT:     LoadConstString   r8, "rethrowing"
 //CHECK-NEXT:     LoadConstUndefined r9
 //CHECK-NEXT:     Call              r0, r6, 2
@@ -51,9 +51,9 @@ try {
 //CHECK-NEXT:     Catch             r4
 //CHECK-NEXT:     ProfilePoint      9
 //CHECK-NEXT:     StoreToEnvironment r1, 0, r4
-//CHECK-NEXT:     TryGetById        r2, r2, 5, "print"
+//CHECK-NEXT:     TryGetById        r2, r2, 1, "print"
 //CHECK-NEXT:     LoadFromEnvironment r1, r1, 0
-//CHECK-NEXT:     GetByIdShort      r8, r1, 6, "stack"
+//CHECK-NEXT:     GetByIdShort      r8, r1, 3, "stack"
 //CHECK-NEXT:     LoadConstUndefined r9
 //CHECK-NEXT:     Call              r0, r2, 2
 //CHECK-NEXT: L2:

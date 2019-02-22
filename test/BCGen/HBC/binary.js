@@ -6,7 +6,7 @@
 //CHECK-NEXT:    GetByIdShort      r1, r0, 1, "foo"
 //CHECK-NEXT:    LoadConstUndefined r3
 //CHECK-NEXT:    Call              r1, r1, 1
-//CHECK-NEXT:    GetByIdShort      r0, r0, 2, "foo"
+//CHECK-NEXT:    GetByIdShort      r0, r0, 1, "foo"
 //CHECK-NEXT:    Call              r0, r0, 1
 //CHECK-NEXT:    Eq                r2, r1, r0
 //CHECK-NEXT:    Neq               r2, r1, r0

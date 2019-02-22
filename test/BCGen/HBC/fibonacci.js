@@ -10,7 +10,7 @@
 //CHECK-NEXT:[@ {{.*}}] Sub 6<Reg8>, 5<Reg8>, 0<Reg8>
 //CHECK-NEXT:[@ {{.*}}] LoadConstUndefined 7<Reg8>
 //CHECK-NEXT:[@ {{.*}}] Call 2<Reg8>, 3<Reg8>, 2<UInt8>
-//CHECK-NEXT:[@ {{.*}}] GetByIdShort 3<Reg8>, 1<Reg8>, 2<UInt8>, 0<UInt8>
+//CHECK-NEXT:[@ {{.*}}] GetByIdShort 3<Reg8>, 1<Reg8>, 1<UInt8>, 0<UInt8>
 //CHECK-NEXT:[@ {{.*}}] LoadConstUInt8 1<Reg8>, 2<UInt8>
 //CHECK-NEXT:[@ {{.*}}] Sub 6<Reg8>, 5<Reg8>, 1<Reg8>
 //CHECK-NEXT:[@ {{.*}}] Call 1<Reg8>, 3<Reg8>, 2<UInt8>

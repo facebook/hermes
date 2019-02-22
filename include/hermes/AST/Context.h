@@ -83,6 +83,9 @@ struct OptimizationSettings {
   /// Support transforming Call to CallN.
   bool callN{false};
 
+  /// Reuse property cache entries for same property name.
+  bool reusePropCache{true};
+
   /// Recognize calls to global functions like Object.keys() and turn them
   /// into builtin calls.
   bool staticBuiltins{false};

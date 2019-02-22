@@ -29,6 +29,12 @@ STATISTIC(NumJumpPass, "Number of passes to resolve all jump targets");
 STATISTIC(
     NumUncachedNodes,
     "Number of put/get property instructions with property caching disabled");
+STATISTIC(
+    NumCachedNodes,
+    "Number of put/get property instructions with property caching enabled");
+STATISTIC(
+    NumCacheSlots,
+    "Number of cache slots allocated for all put/get property instructions");
 
 /// Given a list of basic blocks \p blocks linearized into the order they will
 /// be generated, \return the set of those basic blocks containing backwards
@@ -554,10 +560,10 @@ void HBCISel::generateStorePropertyInst(
     auto id = BCFGen_->addConstantString(Lit, true);
     if (id <= UINT16_MAX)
       BCFGen_->emitPutById(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(), id);
+          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
     else
       BCFGen_->emitPutByIdLong(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(), id);
+          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
     return;
   }
 
@@ -577,10 +583,10 @@ void HBCISel::generateTryStoreGlobalPropertyInst(
   auto id = BCFGen_->addConstantString(Lit, true);
   if (id <= UINT16_MAX) {
     BCFGen_->emitTryPutById(
-        objReg, valueReg, acquirePropertyWriteCacheIndex(), id);
+        objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
   } else {
     BCFGen_->emitTryPutByIdLong(
-        objReg, valueReg, acquirePropertyWriteCacheIndex(), id);
+        objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
   }
 }
 
@@ -687,13 +693,13 @@ void HBCISel::generateLoadPropertyInst(
     auto id = BCFGen_->addConstantString(Lit, true);
     if (id > UINT16_MAX) {
       BCFGen_->emitGetByIdLong(
-          resultReg, objReg, acquirePropertyReadCacheIndex(), id);
+          resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
     } else if (id > UINT8_MAX) {
       BCFGen_->emitGetById(
-          resultReg, objReg, acquirePropertyReadCacheIndex(), id);
+          resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
     } else {
       BCFGen_->emitGetByIdShort(
-          resultReg, objReg, acquirePropertyReadCacheIndex(), id);
+          resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
     }
     return;
   }
@@ -714,10 +720,10 @@ void HBCISel::generateTryLoadGlobalPropertyInst(
   auto id = BCFGen_->addConstantString(Lit, true);
   if (id > UINT16_MAX) {
     BCFGen_->emitTryGetByIdLong(
-        resultReg, objReg, acquirePropertyReadCacheIndex(), id);
+        resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
   } else {
     BCFGen_->emitTryGetById(
-        resultReg, objReg, acquirePropertyReadCacheIndex(), id);
+        resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
   }
 }
 
@@ -1517,25 +1523,47 @@ void HBCISel::generate(SourceMapGenerator *outSourceMap) {
   populatePropertyCachingInfo();
 }
 
-uint8_t HBCISel::acquirePropertyReadCacheIndex() {
+uint8_t HBCISel::acquirePropertyReadCacheIndex(unsigned id) {
+  const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
+  // Zero is reserved for indicating no-cache, so cannot be a value in the map.
+  uint8_t dummyZero = 0;
+  auto &idx = reuse ? propertyReadCacheIndexForId_[id] : dummyZero;
+  if (idx) {
+    ++NumCachedNodes;
+    return idx;
+  }
+
   if (LLVM_UNLIKELY(
           lastPropertyReadCacheIndex_ == std::numeric_limits<uint8_t>::max())) {
-    NumUncachedNodes++;
+    ++NumUncachedNodes;
     return PROPERTY_CACHING_DISABLED;
   }
 
-  /// Zero is reserved for indicating no-cache
-  return ++lastPropertyReadCacheIndex_;
+  ++NumCachedNodes;
+  ++NumCacheSlots;
+  idx = ++lastPropertyReadCacheIndex_;
+  return idx;
 }
 
-uint8_t HBCISel::acquirePropertyWriteCacheIndex() {
+uint8_t HBCISel::acquirePropertyWriteCacheIndex(unsigned id) {
+  const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
+  // Zero is reserved for indicating no-cache, so cannot be a value in the map.
+  uint8_t dummyZero = 0;
+  auto &idx = reuse ? propertyWriteCacheIndexForId_[id] : dummyZero;
+  if (idx) {
+    ++NumCachedNodes;
+    return idx;
+  }
+
   if (LLVM_UNLIKELY(
           lastPropertyWriteCacheIndex_ ==
           std::numeric_limits<uint8_t>::max())) {
-    NumUncachedNodes++;
+    ++NumUncachedNodes;
     return PROPERTY_CACHING_DISABLED;
   }
 
-  /// Zero is reserved for indicating no-cache
-  return ++lastPropertyWriteCacheIndex_;
+  ++NumCachedNodes;
+  ++NumCacheSlots;
+  idx = ++lastPropertyWriteCacheIndex_;
+  return idx;
 }

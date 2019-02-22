@@ -28,8 +28,8 @@
 //CHECK-NEXT:    Mov               r2, r6
 //CHECK-NEXT:    DebuggerCheckBreak
 //CHECK-NEXT:    JStrictEqual      L1, r7, r5
-//CHECK-NEXT:    TryGetById        r8, r0, 3, "Math"
-//CHECK-NEXT:    GetByIdShort      r7, r8, 4, "random"
+//CHECK-NEXT:    TryGetById        r8, r0, 1, "Math"
+//CHECK-NEXT:    GetByIdShort      r7, r8, 2, "random"
 //CHECK-NEXT:    Mov               r10, r8
 //CHECK-NEXT:    Call              r7, r7, 1
 //CHECK-NEXT:    JStrictEqual      L2, r7, r1
@@ -48,7 +48,7 @@
 //CHECK-NEXT:    DebuggerCheckBreak
 //CHECK-NEXT:    JGreaterN         L5, r2, r3
 //CHECK-NEXT:L4:
-//CHECK-NEXT:    TryGetById        r1, r0, 5, "print"
+//CHECK-NEXT:    TryGetById        r1, r0, 3, "print"
 //CHECK-NEXT:    LoadConstUndefined r0
 //CHECK-NEXT:    LoadConstUndefined r10
 //CHECK-NEXT:    Mov               r9, r2

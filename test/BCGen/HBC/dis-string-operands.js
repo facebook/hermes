@@ -19,5 +19,5 @@ delete glob.baz;
 //CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 3, "baz"
 //CHECK:    LoadConstString   {{r[0-9]+}}, "const-string"
 //CHECK:    TryPutById        {{r[0-9]+}}, {{r[0-9]+}}, 3, "bazz"
-//CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 4, "glob"
+//CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 2, "glob"
 //CHECK:    DelById           {{r[0-9]+}}, {{r[0-9]+}}, "baz"

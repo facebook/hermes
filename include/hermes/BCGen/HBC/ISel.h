@@ -15,6 +15,8 @@
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
 
+#include "llvm/ADT/DenseMap.h"
+
 namespace hermes {
 namespace hbc {
 
@@ -148,9 +150,14 @@ class HBCISel {
   uint8_t lastPropertyReadCacheIndex_{0};
   uint8_t lastPropertyWriteCacheIndex_{0};
 
-  /// Compute and return the next index to use for property caching.
-  uint8_t acquirePropertyReadCacheIndex();
-  uint8_t acquirePropertyWriteCacheIndex();
+  /// Map from property name to the read/write cache index for that name.
+  llvm::DenseMap<unsigned /* name */, uint8_t> propertyReadCacheIndexForId_;
+  llvm::DenseMap<unsigned /* name */, uint8_t> propertyWriteCacheIndexForId_;
+
+  /// Compute and return the index to use for caching the read/write of a
+  /// property with the given identifier name.
+  uint8_t acquirePropertyReadCacheIndex(unsigned id);
+  uint8_t acquirePropertyWriteCacheIndex(unsigned id);
 
   // Looking up filename/sourcemap id for each instruction is pretty slow,
   // and it's almost always from the same bufId every time. Cache the previous

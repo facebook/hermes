@@ -59,7 +59,7 @@ function foo() {
 // CHECK-NEXT:     LoadConstUndefined r0
 // CHECK-NEXT:     LoadConstUndefined r6
 // CHECK-NEXT:     Call              r3, r4, 2
-// CHECK-NEXT:     TryGetById        r3, r2, 2, "print"
+// CHECK-NEXT:     TryGetById        r3, r2, 1, "print"
 // CHECK-NEXT:     LoadFromEnvironment r5, r1, 4
 // CHECK-NEXT:     Call              r2, r3, 2
 // CHECK-NEXT:     StoreNPToEnvironment r1, 5, r0

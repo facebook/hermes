@@ -15,7 +15,7 @@ y = x;
 //CHECK-NEXT:    GetByIdShort      r4, r1, 2, "x"
 //CHECK-NEXT:    LoadConstUndefined r5
 //CHECK-NEXT:    Call              r0, r3, 2
-//CHECK-NEXT:    GetByIdShort      r0, r1, 3, "x"
+//CHECK-NEXT:    GetByIdShort      r0, r1, 2, "x"
 //CHECK-NEXT:    TryPutById        r1, r0, 2, "y"
 //CHECK-NEXT:    Ret               r0
 
@@ -29,6 +29,6 @@ y = x;
 //CHKNONSTRICT-NEXT:    GetByIdShort      r4, r1, 2, "x"
 //CHKNONSTRICT-NEXT:    LoadConstUndefined r5
 //CHKNONSTRICT-NEXT:    Call              r0, r3, 2
-//CHKNONSTRICT-NEXT:    GetByIdShort      r0, r1, 3, "x"
+//CHKNONSTRICT-NEXT:    GetByIdShort      r0, r1, 2, "x"
 //CHKNONSTRICT-NEXT:    PutById           r1, r0, 2, "y"
 //CHKNONSTRICT-NEXT:    Ret               r0

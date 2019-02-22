@@ -154,7 +154,7 @@ function f(x) {
 //CHECK-NEXT:    Ret               r0
 //CHECK-NEXT:L22:
 //CHECK-NEXT:    GetGlobalObject   r0
-//CHECK-NEXT:    GetByIdShort      r1, r0, 2, "g"
+//CHECK-NEXT:    GetByIdShort      r1, r0, 1, "g"
 //CHECK-NEXT:    LoadConstUndefined r3
 //CHECK-NEXT:    Call              r0, r1, 1
 //CHECK-NEXT:    LoadConstInt      r0, 342
@@ -170,7 +170,7 @@ function f(x) {
 //CHECK-NEXT:    Ret               r0
 //CHECK-NEXT:L23:
 //CHECK-NEXT:    GetGlobalObject   r0
-//CHECK-NEXT:    GetByIdShort      r1, r0, 3, "g"
+//CHECK-NEXT:    GetByIdShort      r1, r0, 1, "g"
 //CHECK-NEXT:    LoadConstUndefined r0
 //CHECK-NEXT:    LoadConstUndefined r3
 //CHECK-NEXT:    Call              r1, r1, 1

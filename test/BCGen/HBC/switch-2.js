@@ -128,7 +128,7 @@ function f(x) {
 //CHECK-NEXT:[@ 230] LoadConstInt 0<Reg8>, 2332<Imm32>
 //CHECK-NEXT:[@ 236] Ret 0<Reg8>
 //CHECK-NEXT:[@ 238] GetGlobalObject 0<Reg8>
-//CHECK-NEXT:[@ 240] GetByIdShort 1<Reg8>, 0<Reg8>, 2<UInt8>, 0<UInt8>
+//CHECK-NEXT:[@ 240] GetByIdShort 1<Reg8>, 0<Reg8>, 1<UInt8>, 0<UInt8>
 //CHECK-NEXT:[@ 245] LoadConstUndefined 3<Reg8>
 //CHECK-NEXT:[@ 247] Call 0<Reg8>, 1<Reg8>, 1<UInt8>
 //CHECK-NEXT:[@ 251] LoadConstInt 0<Reg8>, 342<Imm32>
@@ -140,7 +140,7 @@ function f(x) {
 //CHECK-NEXT:[@ 272] LoadConstInt 0<Reg8>, 342<Imm32>
 //CHECK-NEXT:[@ 278] Ret 0<Reg8>
 //CHECK-NEXT:[@ 280] GetGlobalObject 0<Reg8>
-//CHECK-NEXT:[@ 282] GetByIdShort 1<Reg8>, 0<Reg8>, 3<UInt8>, 0<UInt8>
+//CHECK-NEXT:[@ 282] GetByIdShort 1<Reg8>, 0<Reg8>, 1<UInt8>, 0<UInt8>
 //CHECK-NEXT:[@ 287] LoadConstUndefined 0<Reg8>
 //CHECK-NEXT:[@ 289] LoadConstUndefined 3<Reg8>
 //CHECK-NEXT:[@ 291] Call 1<Reg8>, 1<Reg8>, 1<UInt8>
