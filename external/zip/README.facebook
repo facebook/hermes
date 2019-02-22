@@ -6,3 +6,21 @@ Delete the line in `zip.c`:
 ```
 int symlink(const char *target, const char *linkpath); // needed on Linux
 ```
+
+Replace the following line in `zip.h`
+
+```
+typedef long  ssize_t;  /* byte count or error */
+```
+
+with
+
+```
+// 64-bit Windows is the only mainstream platform
+// where sizeof(long) != sizeof(void*)
+#ifdef _WIN64
+typedef long long ssize_t;  /* byte count or error */
+#else
+typedef long  ssize_t;  /* byte count or error */
+#endif
+```
