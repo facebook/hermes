@@ -22,9 +22,16 @@ add_llvm_library(hermesapi
         ${api_sources}
         LINK_LIBS jsi hermesVMRuntime)
 
+set(hermesapi_compile_flags "")
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
+    "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  string(APPEND hermesapi_compile_flags " -Wno-non-virtual-dtor")
+  string(APPEND hermesapi_compile_falgs " -Wno-covered-switch-default")
+endif()
+
 set_target_properties(hermesapi PROPERTIES
   CXX_STANDARD 14
-  COMPILE_FLAGS "-Wno-non-virtual-dtor -Wno-covered-switch-default"
+  COMPILE_FLAGS "${hermesapi_compile_flags}"
   COMPILE_DEFINITIONS "JSI_CREATE_SHARED_LIBRARY"
   )
 

@@ -191,10 +191,18 @@ if (NOT (CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_COMPILER_IS_GNUCXX))
     option(LLVM_ENABLE_LTO "Build Hermes with LTO" ON)
 endif()
 
-# Superss warnings about unknown warnings
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-warning-option")
-# Suppress an uninteresting warning about C++17 name mangling changes.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-noexcept-type")
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
+    "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  # Superss warnings about unknown warnings
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-warning-option")
+  # Suppress an uninteresting warning about C++17 name mangling changes.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-noexcept-type")
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+  # C4068 unknown pragma
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4068")
+  # C4201 nonstandard extension used: nameless struct/union
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4201")
+endif()
 
 # Export a JSON file with the compilation commands that external tools can use
 # to analyze the source code of the project.
