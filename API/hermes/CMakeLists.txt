@@ -25,6 +25,7 @@ add_llvm_library(hermesapi
 set_target_properties(hermesapi PROPERTIES
   CXX_STANDARD 14
   COMPILE_FLAGS "-Wno-non-virtual-dtor -Wno-covered-switch-default"
+  COMPILE_DEFINITIONS "JSI_CREATE_SHARED_LIBRARY"
   )
 
 set(LLVM_LINK_COMPONENTS
@@ -37,4 +38,3 @@ add_llvm_library(compileJS STATIC CompileJS.cpp)
 set_target_properties(compileJS PROPERTIES
   COMPILE_FLAGS "-fno-rtti"
   )
-

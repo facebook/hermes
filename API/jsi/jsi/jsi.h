@@ -15,8 +15,16 @@
 #include <vector>
 
 #ifndef JSI_EXPORT
+#ifdef _MSC_VER
+#ifdef JSI_CREATE_SHARED_LIBRARY
+#define JSI_EXPORT __declspec(dllexport)
+#else
+#define JSI_EXPORT
+#endif // JSI_CREATE_SHARED_LIBRARY
+#else // _MSC_VER
 #define JSI_EXPORT __attribute__((visibility("default")))
-#endif
+#endif // _MSC_VER
+#endif // !defined(JSI_EXPORT)
 
 class FBJSRuntime;
 namespace facebook {
