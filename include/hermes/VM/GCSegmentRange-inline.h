@@ -34,7 +34,10 @@ inline GCSegmentRange::Ptr GCSegmentRange::concat(
   spine.reserve(sizeof...(Ranges));
 
   // Hack to emit a sequence of emplace_back calls.
-  int sink[] = {(spine.emplace_back(std::move(ranges)), 0)...};
+  // The leading zero is necessary because MSVC does not allow stack-allocated
+  // empty arrays, which `sink` would otherwise be when this function is
+  // invoked with an empty parameter list.
+  int sink[] = {0, (spine.emplace_back(std::move(ranges)), 0)...};
   (void)sink;
 
   return std::unique_ptr<Concat>(new Concat{std::move(spine)});

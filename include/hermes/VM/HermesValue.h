@@ -399,6 +399,7 @@ class HermesValue {
   /// require a write barrier.
   /// (except in MSVC: this is to work around lack of CWG 1734.
   /// HermesValue will not be considered trivial otherwise.)
+  /// TODO(T40821815) Consider removing this workaround when updating MSVC
 #ifndef _MSC_VER
   void operator=(const HermesValue &hv) = delete;
 #endif

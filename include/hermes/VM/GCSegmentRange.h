@@ -55,8 +55,16 @@ struct GCSegmentRange {
   ///
   /// \p ranges The sequence of component ranges, in the order we wish to
   ///     concatenate them in.
+  ///
+  /// TODO(T40821815) Consider removing this workaround when updating MSVC
+  /// Note: std::unique_ptr<Ranges, std::default_delete<Ranges>> is equivalent
+  /// to std::unique_ptr<Ranges>. Writing it the more verbose way is necessary
+  /// to workaround a MSVC bug. MSVC otherwise emits a compiler error
+  /// when processing the definition of this method (C2244: unable to match
+  /// function definition to an existing declaration).
   template <typename... Ranges>
-  static inline GCSegmentRange::Ptr concat(std::unique_ptr<Ranges>... ranges);
+  static inline GCSegmentRange::Ptr concat(
+      std::unique_ptr<Ranges, std::default_delete<Ranges>>... ranges);
 
   virtual ~GCSegmentRange() = default;
 
