@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+trap 'echo "FAILED"' ERR
 
 die() {
   echo "$*"
@@ -17,6 +18,11 @@ green "Running initial app setup"
 green "Patching app to use RN from source"
 patch -p 1 < ../hermes/first-party/patches/react-from-source.diff
 
+# RN minor versions change weekly, so just replace whatever it currently is
+cp package.json package.json.bak
+sed -e 's|^ *"react-native".*|    "react-native": "github:facebook/react-native#master"|' package.json.bak > package.json
+rm package.json.bak
+
 green "Patching app to use Hermes as its executor"
 (
   # This is slightly awkward due to the project name changing
@@ -32,7 +38,10 @@ green "Checking out RN"
   rm -r react-native
   git clone https://github.com/facebook/react-native
   cd react-native
+  # Check out a revision before 'Could not get unknown property 'mergeResourcesProvider'
   git checkout -b stable 1024dc251e1f4
+  # Cherry pick required JSI changes
+  git cherry-pick ac90c4fd6d5 7a8957c0bea03 0d7faf6f73b
   git apply ../../../hermes/first-party/patches/include-hermes-executor.diff
   yarn install
 )
