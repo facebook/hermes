@@ -249,9 +249,9 @@ class JClass : public JavaClass<JClass, JObject, jclass> {
   ///     makeNativeMethod("nativeMethodWithExplicitDescriptor",
   ///                      "(Lcom/facebook/example/MyClass;)V",
   ///                      methodWithExplicitDescriptor),
-  ///     makeCriticalNativeMethod("criticalNativeMethodWithAutomaticDescriptor",
+  ///     makeCriticalNativeMethod_DO_NOT_USE_OR_YOU_WILL_BE_FIRED("criticalNativeMethodWithAutomaticDescriptor",
   ///                              criticalNativeMethodWithAutomaticDescriptor),
-  ///     makeCriticalNativeMethod("criticalNativeMethodWithExplicitDescriptor",
+  ///     makeCriticalNativeMethod_DO_NOT_USE_OR_YOU_WILL_BE_FIRED("criticalNativeMethodWithExplicitDescriptor",
   ///                              "(IIF)Z",
   ///                              criticalNativeMethodWithExplicitDescriptor),
   ///  });
