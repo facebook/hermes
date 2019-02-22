@@ -6,7 +6,15 @@
  */
 #include "hermes/VM/instrumentation/ProcessStats.h"
 
-#if defined(__MACH__)
+#if defined(_WINDOWS)
+// Include windows.h first because other includes from windows API need it.
+// The blank line after the include is necessary to avoid lint error.
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX // do not define min/max macros
+#include <windows.h>
+
+#include <psapi.h>
+#elif defined(__MACH__)
 #include <mach/mach.h>
 #elif defined(__linux__)
 #include <unistd.h>
@@ -21,7 +29,21 @@ namespace {
 ProcessStats::Info getProcessStatSnapshot() {
   int64_t rss, va;
 
-#if defined(__MACH__)
+#if defined(_WINDOWS)
+  PROCESS_MEMORY_COUNTERS pmc;
+  BOOL ret = GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+  assert(ret != 0 && "Failed to call GetProcessMemoryInfo");
+  (void)ret;
+
+  MEMORYSTATUSEX ms;
+  ms.dwLength = sizeof(ms);
+  ret = GlobalMemoryStatusEx(&ms);
+  assert(ret != 0 && "Failed to call GlobalMemoryStatusEx");
+  (void)ret;
+
+  rss = pmc.WorkingSetSize / 1024;
+  va = (ms.ullTotalVirtual - ms.ullAvailVirtual) / 1024;
+#elif defined(__MACH__)
   const task_t self = mach_task_self();
 
   struct task_basic_info info;
@@ -48,7 +70,10 @@ ProcessStats::Info getProcessStatSnapshot() {
 #error "Unsupported platform"
 #endif // __MACH__, __linux__
 
-  return {.RSSkB = rss, .VAkB = va};
+  ProcessStats::Info result;
+  result.RSSkB = rss;
+  result.VAkB = va;
+  return result;
 }
 
 } // namespace
@@ -73,7 +98,10 @@ void ProcessStats::sample(ProcessStats::Clock::time_point now) {
 }
 
 ProcessStats::Info ProcessStats::getIntegratedInfo() const {
-  return {.RSSkB = iRSSkBms_.area(), .VAkB = iVAkBms_.area()};
+  ProcessStats::Info ret;
+  ret.RSSkB = iRSSkBms_.area();
+  ret.VAkB = iVAkBms_.area();
+  return ret;
 }
 
 } // namespace vm

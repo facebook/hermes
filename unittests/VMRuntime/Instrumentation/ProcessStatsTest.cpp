@@ -10,7 +10,6 @@
 
 #include "gtest/gtest.h"
 
-#include <sys/mman.h>
 #include <chrono>
 #include <functional>
 
@@ -94,9 +93,8 @@ void ProcessStatsTest(InfoAssertion assertionImpl) {
 
   const auto initial = takeSample();
 
-  char *buf = reinterpret_cast<char *>(mmap(
-      nullptr, 10 * PS, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, 0, 0));
-  ASSERT_NE(MAP_FAILED, buf);
+  char *buf = reinterpret_cast<char *>(hermes::oscompat::vm_allocate(10 * PS));
+  ASSERT_NE(nullptr, buf);
 
   const auto afterMmap = takeSample();
 
@@ -109,8 +107,7 @@ void ProcessStatsTest(InfoAssertion assertionImpl) {
 
   const auto afterTouchAll = takeSample();
 
-  auto unmap = munmap(buf, 10 * PS);
-  ASSERT_NE(-1, unmap);
+  hermes::oscompat::vm_free(buf, 10 * PS);
 
   const auto afterUnmap = takeSample();
   const auto afterNoop2 = takeSample();
@@ -185,9 +182,8 @@ void infoAssertionImpl(
 
 void flushRSSEvents() {
   const size_t PS = hermes::oscompat::page_size();
-  auto buf =
-      mmap(nullptr, PS, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, 0, 0);
-  assert(buf != MAP_FAILED);
+  auto buf = hermes::oscompat::vm_allocate(PS);
+  assert(buf != nullptr);
 
   auto p = reinterpret_cast<volatile char *>(buf);
 
@@ -195,11 +191,9 @@ void flushRSSEvents() {
   *p = 1;
 
   // Page it out
-  madvise(buf, PS, MADV_DONTNEED);
+  hermes::oscompat::vm_unused(buf, PS);
 
-  auto unmap = munmap(buf, PS);
-  assert(unmap != -1);
-  (void)unmap;
+  hermes::oscompat::vm_free(buf, PS);
 }
 
 void touchPages(char *from, char *to) {
