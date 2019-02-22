@@ -41,6 +41,9 @@ HERMES_SLOW_STATISTIC(
     NumGetByIdCacheHits,
     "NumGetByIdCacheHits: Number of property 'read by id' cache hits");
 HERMES_SLOW_STATISTIC(
+    NumGetByIdCacheEvicts,
+    "NumGetByIdCacheEvicts: Number of property 'read by id' cache evictions");
+HERMES_SLOW_STATISTIC(
     NumGetByIdFastPaths,
     "NumGetByIdFastPaths: Number of property 'read by id' fast paths");
 HERMES_SLOW_STATISTIC(
@@ -62,6 +65,9 @@ HERMES_SLOW_STATISTIC(
 HERMES_SLOW_STATISTIC(
     NumPutByIdCacheHits,
     "NumPutByIdCacheHits: Number of property 'write by id' cache hits");
+HERMES_SLOW_STATISTIC(
+    NumPutByIdCacheEvicts,
+    "NumPutByIdCacheEvicts: Number of property 'write by id' cache evictions");
 HERMES_SLOW_STATISTIC(
     NumPutByIdFastPaths,
     "NumPutByIdFastPaths: Number of property 'write by id' fast paths");
@@ -1964,6 +1970,12 @@ tailCall:
           // those cases.
           if (LLVM_LIKELY(!clazz->isDictionary()) &&
               LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
+#ifdef HERMES_SLOW_DEBUG
+            if (cacheEntry->clazz && cacheEntry->clazz != clazz)
+              ++NumGetByIdCacheEvicts;
+#else
+            (void)NumGetByIdCacheEvicts;
+#endif
             // Cache the class, id and property slot.
             cacheEntry->clazz = clazz;
             cacheEntry->slot = desc.slot;
@@ -2068,6 +2080,12 @@ tailCall:
           // those cases.
           if (LLVM_LIKELY(!clazz->isDictionary()) &&
               LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
+#ifdef HERMES_SLOW_DEBUG
+            if (cacheEntry->clazz && cacheEntry->clazz != clazz)
+              ++NumPutByIdCacheEvicts;
+#else
+            (void)NumPutByIdCacheEvicts;
+#endif
             // Cache the class and property slot.
             cacheEntry->clazz = clazz;
             cacheEntry->slot = desc.slot;
