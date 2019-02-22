@@ -22,6 +22,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, NodeList &node) {
   return os << "<children>";
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, NodeBoolean &node) {
+  return os << (node ? "true" : "false");
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, NodeLabel &label) {
   if (label)
     os << '"' << label->str() << '"';

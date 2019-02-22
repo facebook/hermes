@@ -22,7 +22,7 @@ switch (foo()) {
 // CHECK-NEXT:       BlockStatement <children>
 // CHECK-NEXT:         ReturnStatement <child>
 // CHECK-NEXT:           CallExpression <child> <children>
-// CHECK-NEXT:             MemberExpression <child> <child> 0
+// CHECK-NEXT:             MemberExpression <child> <child> false
 // CHECK-NEXT:               Identifier "Math" <child>
 // CHECK-NEXT:               Identifier "random" <child>
 // CHECK-NEXT:     SwitchStatement <child> <children>
