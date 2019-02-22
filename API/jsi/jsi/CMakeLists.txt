@@ -11,6 +11,6 @@ include_directories(..)
 set(jsi_compile_flags "")
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
     "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  string(APPEND jsi_compile_flags " -Wno-non-virtual-dtor")
+  list(APPEND jsi_compile_flags "-Wno-non-virtual-dtor")
 endif()
-target_compile_options(jsi PUBLIC "${jsi_compile_flags}")
+target_compile_options(jsi PUBLIC ${jsi_compile_flags})
