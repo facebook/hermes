@@ -451,10 +451,10 @@ using BaseNode = Node;
     ARG0TY _##ARG0NM;                                                  \
     ARG1TY _##ARG1NM;                                                  \
     explicit NAME##Node(                                               \
-        ARG0TY ARG0NM_,                                                \
+        detail::ParamTrait<ARG0TY>::Type ARG0NM_,                      \
         detail::ParamTrait<ARG1TY>::Type ARG1NM_)                      \
         : BASE##Node(NodeKind::NAME),                                  \
-          _##ARG0NM(ARG0NM_),                                          \
+          _##ARG0NM(std::move(ARG0NM_)),                               \
           _##ARG1NM(std::move(ARG1NM_)) {}                             \
     template <class Visitor>                                           \
     void visit(Visitor &V) {                                           \
@@ -490,13 +490,13 @@ using BaseNode = Node;
     ARG1TY _##ARG1NM;                                                  \
     ARG2TY _##ARG2NM;                                                  \
     explicit NAME##Node(                                               \
-        ARG0TY ARG0NM_,                                                \
+        detail::ParamTrait<ARG0TY>::Type ARG0NM_,                      \
         detail::ParamTrait<ARG1TY>::Type ARG1NM_,                      \
-        ARG2TY ARG2NM_)                                                \
+        detail::ParamTrait<ARG2TY>::Type ARG2NM_)                      \
         : BASE##Node(NodeKind::NAME),                                  \
-          _##ARG0NM(ARG0NM_),                                          \
+          _##ARG0NM(std::move(ARG0NM_)),                               \
           _##ARG1NM(std::move(ARG1NM_)),                               \
-          _##ARG2NM(ARG2NM_) {}                                        \
+          _##ARG2NM(std::move(ARG2NM_)) {}                             \
     template <class Visitor>                                           \
     void visit(Visitor &V) {                                           \
       if (!V.shouldVisit(this)) {                                      \
@@ -536,15 +536,15 @@ using BaseNode = Node;
     ARG2TY _##ARG2NM;                                                  \
     ARG3TY _##ARG3NM;                                                  \
     explicit NAME##Node(                                               \
-        ARG0TY ARG0NM_,                                                \
-        ARG1TY ARG1NM_,                                                \
+        detail::ParamTrait<ARG0TY>::Type ARG0NM_,                      \
+        detail::ParamTrait<ARG1TY>::Type ARG1NM_,                      \
         detail::ParamTrait<ARG2TY>::Type ARG2NM_,                      \
-        ARG3TY ARG3NM_)                                                \
+        detail::ParamTrait<ARG3TY>::Type ARG3NM_)                      \
         : BASE##Node(NodeKind::NAME),                                  \
-          _##ARG0NM(ARG0NM_),                                          \
-          _##ARG1NM(ARG1NM_),                                          \
+          _##ARG0NM(std::move(ARG0NM_)),                               \
+          _##ARG1NM(std::move(ARG1NM_)),                               \
           _##ARG2NM(std::move(ARG2NM_)),                               \
-          _##ARG3NM(ARG3NM_) {}                                        \
+          _##ARG3NM(std::move(ARG3NM_)) {}                             \
     template <class Visitor>                                           \
     void visit(Visitor &V) {                                           \
       if (!V.shouldVisit(this)) {                                      \
@@ -590,17 +590,17 @@ using BaseNode = Node;
     ARG3TY _##ARG3NM;                                                  \
     ARG4TY _##ARG4NM;                                                  \
     explicit NAME##Node(                                               \
-        ARG0TY ARG0NM_,                                                \
-        ARG1TY ARG1NM_,                                                \
+        detail::ParamTrait<ARG0TY>::Type ARG0NM_,                      \
+        detail::ParamTrait<ARG1TY>::Type ARG1NM_,                      \
         detail::ParamTrait<ARG2TY>::Type ARG2NM_,                      \
-        ARG3TY ARG3NM_,                                                \
-        ARG4TY ARG4NM_)                                                \
+        detail::ParamTrait<ARG3TY>::Type ARG3NM_,                      \
+        detail::ParamTrait<ARG4TY>::Type ARG4NM_)                      \
         : BASE##Node(NodeKind::NAME),                                  \
-          _##ARG0NM(ARG0NM_),                                          \
-          _##ARG1NM(ARG1NM_),                                          \
+          _##ARG0NM(std::move(ARG0NM_)),                               \
+          _##ARG1NM(std::move(ARG1NM_)),                               \
           _##ARG2NM(std::move(ARG2NM_)),                               \
-          _##ARG3NM(ARG3NM_),                                          \
-          _##ARG4NM(ARG4NM_) {}                                        \
+          _##ARG3NM(std::move(ARG3NM_)),                               \
+          _##ARG4NM(std::move(ARG4NM_)) {}                             \
     template <class Visitor>                                           \
     void visit(Visitor &V) {                                           \
       if (!V.shouldVisit(this)) {                                      \
