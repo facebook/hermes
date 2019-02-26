@@ -5,7 +5,7 @@
  * file in the root directory of this source tree.
  */
 #ifdef _WINDOWS
-#include "hermes/VM/Profiler/SamplingProfilerNoOp.h"
+#include "hermes/VM/Profiler/SamplingProfilerWindows.h"
 #else
 #include "hermes/VM/Profiler/SamplingProfilerPosix.h"
 #endif

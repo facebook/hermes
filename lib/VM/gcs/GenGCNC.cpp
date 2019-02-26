@@ -43,8 +43,6 @@
 #include <unordered_map>
 #include <utility>
 
-#include <sys/mman.h>
-
 #define DEBUG_TYPE "gc"
 
 using llvm::dbgs;

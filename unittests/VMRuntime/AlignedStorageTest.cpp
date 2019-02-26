@@ -96,6 +96,9 @@ TEST_F(AlignedStorageTest, Offset) {
 }
 
 TEST_F(AlignedStorageTest, AdviseUnused) {
+// TODO(T40416012) Re-enable this test when vm_unused is fixed.
+// Skip this test in Windows because vm_unused has a no-op implementation.
+#ifndef _WINDOWS
   const size_t FAILED = SIZE_MAX;
   const size_t PAGE_SIZE = oscompat::page_size();
 
@@ -127,6 +130,7 @@ TEST_F(AlignedStorageTest, AdviseUnused) {
 
   EXPECT_EQ(initial + TOTAL_PAGES, touched);
   EXPECT_EQ(touched - FREED_PAGES, marked);
+#endif
 }
 
 TEST_F(AlignedStorageTest, Containment) {

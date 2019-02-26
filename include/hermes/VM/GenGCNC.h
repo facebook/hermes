@@ -434,7 +434,9 @@ class GenGC final : public GCBase {
   /// out-of-memory.
   void oomDetail() override;
 
-#ifdef UNIT_TEST
+// Mangling scheme used by MSVC encode public/private into the name.
+// As a result, vanilla "ifdef public" trick leads to link errors.
+#if defined(UNIT_TEST) || defined(_MSC_VER)
  public:
   /// Return a reference to the segment index, for testing purposes.
   inline const GCSegmentAddressIndex &segmentIndex() const;
