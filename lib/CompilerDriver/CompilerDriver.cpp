@@ -313,11 +313,6 @@ static CLFlag StaticRequire(
     false,
     "resolving of CommonJS require() calls at compile time");
 
-static opt<bool> StandaloneCpp(
-    "standalone-c++",
-    desc("Output standalone executable from c++ backend"),
-    init(false));
-
 static CLFlag Werror('W', "error", false, "Treat all warnings as errors");
 
 static CLFlag UndefinedVariableWarning(
