@@ -94,6 +94,10 @@ enum class ProtectMode { ReadWrite };
 /// false on error.
 bool vm_protect(void *p, size_t sz, ProtectMode mode);
 
+/// Return the number of pages in the given region that are currently in RAM.
+/// Return -1 on failure (including not supported).
+int pages_in_ram(const void *p, size_t sz);
+
 /// Resident set size (RSS), in bytes: the amount of RAM used by the process.
 /// It excludes virtual memory that has been paged out or was never loaded.
 uint64_t peak_rss();

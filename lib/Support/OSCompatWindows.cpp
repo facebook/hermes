@@ -167,6 +167,11 @@ bool vm_protect(void *p, size_t sz, ProtectMode) {
   return err != 0;
 }
 
+int pages_in_ram(const void *p, size_t sz) {
+  // Not yet supported.
+  return -1;
+}
+
 uint64_t peak_rss() {
   PROCESS_MEMORY_COUNTERS pmc;
   auto ret = GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));

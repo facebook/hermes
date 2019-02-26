@@ -204,9 +204,47 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
   SET_PROP(P::js_numGCs, heap.getNumGCs());
   SET_PROP(P::js_gcCPUTime, heap.getGCCPUTime());
   SET_PROP(P::js_gcTime, heap.getGCTime());
-  return resultHandle.getHermesValue();
 
 #undef SET_PROP
+
+/// Adds a property to \c resultHandle. \p KEY provides its name as a C string,
+/// and its value is rooted in \p VALUE.  If property definition fails, the
+/// exceptional execution status will be propogated to the outer function.
+#define SET_PROP_NEW(KEY, VALUE)                               \
+  do {                                                         \
+    auto keySym = symbolForCStr(runtime, KEY);                 \
+    if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) { \
+      return ExecutionStatus::EXCEPTION;                       \
+    }                                                          \
+    tmpHandle = HermesValue::encodeDoubleValue(VALUE);         \
+    auto status = JSObject::defineNewOwnProperty(              \
+        resultHandle,                                          \
+        runtime,                                               \
+        **keySym,                                              \
+        PropertyFlags::defaultNewNamedPropertyFlags(),         \
+        tmpHandle);                                            \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) { \
+      return ExecutionStatus::EXCEPTION;                       \
+    }                                                          \
+  } while (false)
+
+  if (runtime->getRuntimeStats().shouldSample) {
+    size_t bytecodePagesResident = 0;
+    for (auto &module : runtime->getRuntimeModules()) {
+      auto buf = module.getBytecode()->getRawBuffer();
+      if (buf.size()) {
+        int pages = oscompat::pages_in_ram(buf.data(), buf.size());
+        if (pages >= 0) {
+          bytecodePagesResident += pages;
+        }
+      }
+    }
+    SET_PROP_NEW("js_bytecodePagesResident", bytecodePagesResident);
+  }
+
+  return resultHandle.getHermesValue();
+
+#undef SET_PROP_NEW
 }
 
 /// \return an object mapping keys to runtime property values.

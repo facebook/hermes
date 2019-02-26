@@ -236,6 +236,11 @@ class BCProviderBase {
   /// Read some bytecode into OS page cache (only implemented for buffers).
   virtual void startWarmup(uint8_t percent) {}
 
+  /// Return the entire bytecode file (only implemented for buffers).
+  virtual llvm::ArrayRef<uint8_t> getRawBuffer() const {
+    return llvm::ArrayRef<uint8_t>();
+  }
+
   /// Given the functionID and offset of the instruction where exception
   /// happened, \returns the offset of the exception handler to jump to.
   /// \returns -1 if a handler is not found.
@@ -398,6 +403,10 @@ class BCProviderFromBuffer final : public BCProviderBase {
   virtual SHA1 getSourceHash() const;
 
   virtual void startWarmup(uint8_t percent);
+
+  virtual llvm::ArrayRef<uint8_t> getRawBuffer() const {
+    return llvm::ArrayRef<uint8_t>(bufferPtr_, buffer_->size());
+  }
 
   ~BCProviderFromBuffer() {
     stopWarmup();

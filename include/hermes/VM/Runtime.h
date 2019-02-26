@@ -663,11 +663,11 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   Debugger &getDebugger() {
     return debugger_;
   }
+#endif
 
   RuntimeModuleList &getRuntimeModules() {
     return runtimeModuleList_;
   }
-#endif
 
   bool hasES6Symbol() const {
     return hasES6Symbol_;

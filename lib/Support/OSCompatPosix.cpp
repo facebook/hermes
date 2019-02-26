@@ -9,6 +9,7 @@
 #include "hermes/Support/OSCompat.h"
 
 #include <cassert>
+#include <vector>
 
 #include <sys/mman.h>
 #include <sys/resource.h>
@@ -215,6 +216,34 @@ void vm_name(void *p, size_t sz, const char *name) {
 bool vm_protect(void *p, size_t sz, ProtectMode) {
   int err = mprotect(p, sz, PROT_WRITE | PROT_READ);
   return err != -1;
+}
+
+int pages_in_ram(const void *p, size_t sz) {
+  const auto PS = page_size();
+  {
+    // Align region start down to page boundary.
+    const uintptr_t addr = reinterpret_cast<uintptr_t>(p);
+    const size_t adjust = addr % PS;
+    p = reinterpret_cast<const void *>(addr - adjust);
+    sz += adjust;
+  }
+  // Total number of pages that the region overlaps.
+  const size_t mapSize = (sz + PS - 1) / PS;
+#ifdef __linux__
+  using MapElm = unsigned char;
+#else
+  using MapElm = char;
+#endif
+  std::vector<MapElm> bitMap(mapSize);
+  if (mincore(const_cast<void *>(p), sz, bitMap.data())) {
+    return -1;
+  }
+  int result = 0;
+  for (auto elm : bitMap) {
+    // Lowest bit tells whether in RAM.
+    result += (elm & 1);
+  }
+  return result;
 }
 
 uint64_t peak_rss() {
