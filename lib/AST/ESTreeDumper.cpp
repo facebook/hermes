@@ -15,11 +15,14 @@ namespace {
 using namespace hermes::ESTree;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, NodePtr &node) {
-  return os << "<child>";
+  return os << (node ? "<child>" : "<>");
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, NodeList &node) {
-  return os << "<children>";
+  if (node.empty()) {
+    return os << "<>";
+  }
+  return os << "<" << node.size() << " children>";
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, NodeBoolean &node) {
