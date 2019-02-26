@@ -26,6 +26,9 @@ public:
   static constexpr const char* kJavaDescriptor = "Ljava/nio/Buffer;";
 
   void rewind() const;
+  bool isDirect() const;
+  void* getDirectAddress() const;
+  size_t getDirectCapacity() const;
 };
 
 // JNI's NIO support has some awkward preconditions and error reporting. This
@@ -36,10 +39,13 @@ class JByteBuffer : public JavaClass<JByteBuffer, JBuffer> {
 
   static local_ref<JByteBuffer> wrapBytes(uint8_t* data, size_t size);
 
-  bool isDirect() const;
+  uint8_t* getDirectBytes() const {
+    return static_cast<uint8_t*>(getDirectAddress());
+  }
 
-  uint8_t* getDirectBytes() const;
-  size_t getDirectSize() const;
+  size_t getDirectSize() const {
+    return getDirectCapacity();
+  }
 };
 
 }}

@@ -34,22 +34,22 @@ void JBuffer::rewind() const {
   meth(self());
 }
 
-uint8_t* JByteBuffer::getDirectBytes() const {
+void* JBuffer::getDirectAddress() const {
   if (!self()) {
     throwNewJavaException("java/lang/NullPointerException", "java.lang.NullPointerException");
   }
-  void* bytes = Environment::current()->GetDirectBufferAddress(self());
+  void* addr = Environment::current()->GetDirectBufferAddress(self());
   FACEBOOK_JNI_THROW_PENDING_EXCEPTION();
-  if (!bytes) {
+  if (!addr) {
     throw std::runtime_error(
         isDirect() ?
-          "Attempt to get direct bytes of non-direct byte buffer." :
-          "Error getting direct bytes of byte buffer.");
+          "Attempt to get direct bytes of non-direct buffer." :
+          "Error getting direct bytes of buffer.");
   }
-  return static_cast<uint8_t*>(bytes);
+  return addr;
 }
 
-size_t JByteBuffer::getDirectSize() const {
+size_t JBuffer::getDirectCapacity() const {
   if (!self()) {
     throwNewJavaException("java/lang/NullPointerException", "java.lang.NullPointerException");
   }
@@ -58,13 +58,13 @@ size_t JByteBuffer::getDirectSize() const {
   if (size < 0) {
     throw std::runtime_error(
         isDirect() ?
-          "Attempt to get direct size of non-direct byte buffer." :
-          "Error getting direct size of byte buffer.");
+          "Attempt to get direct size of non-direct buffer." :
+          "Error getting direct size of buffer.");
   }
   return static_cast<size_t>(size);
 }
 
-bool JByteBuffer::isDirect() const {
+bool JBuffer::isDirect() const {
   static auto meth = javaClassStatic()->getMethod<jboolean()>("isDirect");
   return meth(self());
 }
