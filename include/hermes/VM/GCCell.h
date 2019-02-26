@@ -279,7 +279,7 @@ inline uint32_t GCCell::getAllocatedSize() const {
   return getAllocatedSize(getVT());
 }
 
-static const char kInvalidHeapValue = 0xcc;
+static const char kInvalidHeapValue = (char)0xcc;
 
 } // namespace vm
 } // namespace hermes

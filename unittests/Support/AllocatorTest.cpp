@@ -73,7 +73,8 @@ TEST(AllocatorTest, CanAlign) {
   BumpPtrAllocator alloc;
   for (int round = 0; round < 100; round++) {
     for (int i = 0; i < 16; i++) {
-      auto p = reinterpret_cast<uintptr_t>(alloc.Allocate<uint64_t>(1, 1 << i));
+      auto p = reinterpret_cast<uintptr_t>(
+          alloc.Allocate<uint64_t>(1, size_t(1) << i));
       EXPECT_EQ(p, llvm::alignTo(p, 1 << i));
     }
   }
