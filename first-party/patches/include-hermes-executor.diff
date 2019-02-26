@@ -7,7 +7,7 @@ index fd03e602cf..f6e7f1a675 100644
  }
  
 +task prepareHermes() << {
-+    def hermesAAR = new File("../../../../hermes/android/build/outputs/aar/android.aar")
++    def hermesAAR = new File("../../../../build/outputs/aar/android.aar")
 +    def soFiles = zipTree(hermesAAR).matching({ it.include "**/*.so" })
 +
 +    copy {
@@ -73,10 +73,10 @@ index 4e650d9ca3..db81fe24ad 100644
  LOCAL_MODULE := jsi
  
 -LOCAL_SRC_FILES := $(wildcard $(LOCAL_PATH)/*.cpp)
-+LOCAL_SRC_FILES := $(wildcard $(LOCAL_PATH)/*.cpp) $(HERMES_PATH)/API/jsi/jsi/adapter.cpp
++LOCAL_SRC_FILES := $(wildcard $(LOCAL_PATH)/*.cpp) $(wildcard $(HERMES_PATH)/API/jsi/jsi/adapter.cpp $(HERMES_PATH)/../jsi/jsi/adapter.cpp)
  
 -LOCAL_C_INCLUDES += $(LOCAL_PATH)/..
-+LOCAL_C_INCLUDES += $(LOCAL_PATH)/.. $(HERMES_PATH)/API/jsi
++LOCAL_C_INCLUDES += $(LOCAL_PATH)/.. $(wildcard $(HERMES_PATH)/API/jsi $(HERMES_PATH)/../jsi)
  LOCAL_EXPORT_C_INCLUDES := $(LOCAL_C_INCLUDES)
  
  LOCAL_CFLAGS := -fexceptions -frtti -O3

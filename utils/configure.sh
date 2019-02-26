@@ -110,6 +110,11 @@ then
   FLAGS="$FLAGS -DHERMESVM_PROFILER_BB=ON"
 fi
 
+if [ -n "$FBSOURCE_DIR" ]
+then
+  FLAGS="$FLAGS -DFBSOURCE_DIR=$FBSOURCE_DIR"
+fi
+
 if [ -n "$ICU_ROOT" ]
 then
   echo "Using ICU_ROOT: $ICU_ROOT"

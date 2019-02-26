@@ -10,7 +10,20 @@ buildscript {
 
 apply plugin: 'com.android.library'
 
+def facebookBuild = System.getenv("FACEBOOK") ?: "0"
 def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+def hermes_ws = System.getenv("HERMES_WS_DIR")
+
+// For Facebook internal use:
+def fbsource = System.getenv("FBSOURCE") ?:
+    System.getenv("HOME") + "/fbsource"
+
+if (hermes_ws == null || hermes_ws == "") {
+  throw new InvalidUserDataException("HERMES_WS_DIR is not set")
+}
+buildDir = "${hermes_ws}/build"
+buildDir.mkdirs()
+
 android {
   compileSdkVersion = 28
 
@@ -18,11 +31,13 @@ android {
     externalNativeBuild {
       cmake {
         arguments "-DHERMES_IS_ANDROID=True"
+        arguments "-DHERMES_FACEBOOK_BUILD=${facebookBuild}"
         arguments "-DCMAKE_ANDROID_STL_TYPE=c++_shared"
         arguments "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
         arguments "-DCMAKE_POSITION_INDEPENDENT_CODE=True"
-        arguments "-DLLVM_BUILD_BASE=${projectDir}/../../llvm"
-        arguments "-DLLVM_SRC_DIR=${projectDir}/../../llvm"
+        arguments "-DLLVM_BUILD_BASE=${hermes_ws}/llvm"
+        arguments "-DLLVM_SRC_DIR=${hermes_ws}/llvm"
+        arguments "-DFBSOURCE_DIR=${fbsource}"
         arguments "-DCMAKE_BUILD_TYPE=Debug"
         targets "libhermes"
       }
@@ -36,6 +51,8 @@ android {
     cmake {
       version "3.10.2"
       path "../CMakeLists.txt"
+      buildStagingDirectory = "${hermes_ws}/staging"
+      buildStagingDirectory.mkdirs()
     }
   }
 }
@@ -46,4 +63,3 @@ allprojects {
     jcenter()
   }
 }
-

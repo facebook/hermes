@@ -219,8 +219,6 @@ include_directories("${LLVM_SRC_DIR}/include"
 link_directories("${LLVM_SRC_DIR}/lib"
                  "${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/lib")
 
-include_directories("first-party/fbjni/cxx/")
-
 # Attempt to use system ICU first, if none specified.
 # Don't need ICU on Apple systems.
 if (APPLE)
@@ -321,8 +319,10 @@ set(LLVM_RUNTIME_OUTPUT_INTDIR ${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
 
 if(EXISTS ${HERMES_SOURCE_DIR}/API/jsi)
   set(HERMES_JSI_DIR ${HERMES_SOURCE_DIR}/API/jsi)
+elseif(EXISTS ${FBSOURCE_DIR}/xplat/jsi)
+  set(HERMES_JSI_DIR ${FBSOURCE_DIR}/xplat/jsi)
 else()
-  set(HERMES_JSI_DIR ${HERMES_SOURCE_DIR}/../jsi)
+  message(FATAL_ERROR "Unable to find jsi.")
 endif()
 
 include_directories(BEFORE
@@ -333,8 +333,16 @@ include_directories(BEFORE
   ${CMAKE_CURRENT_SOURCE_DIR}/external
   )
 
-if(HERMES_IS_ANDROID AND EXISTS ${HERMES_SOURCE_DIR}/first-party/fbjni/cxx/fbjni)
-  add_subdirectory(${HERMES_SOURCE_DIR}/first-party/fbjni)
+if(HERMES_IS_ANDROID)
+  if(EXISTS ${HERMES_SOURCE_DIR}/first-party/fbjni/cxx)
+    set(FBJNI_PATH ${HERMES_SOURCE_DIR}/first-party/fbjni)
+  elseif(EXISTS ${FBSOURCE_DIR}/fbandroid/libraries/fbjni/cxx)
+    set(FBJNI_PATH ${FBSOURCE_DIR}/fbandroid/libraries/fbjni)
+  else()
+    message(FATAL_ERROR "Unable to find fbjni.")
+  endif()
+  include_directories("${FBJNI_PATH}/cxx/")
+  add_subdirectory(first-party/fbjni)
 endif()
 
 add_subdirectory(tools)

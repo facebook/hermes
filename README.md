@@ -7,15 +7,17 @@ type annotations, features host-side static optimizations and compact bytecode.
 
 ## Getting Started for React Native developers
 
-Create a base directory to work in, e.g. `~/workspace`, and `cd` into it. Then follow the steps below (or copy-paste it all):
+Create a base directory to work in, e.g. `~/workspace`, and `cd` into it. Then
+follow the steps below (or copy-paste it all):
 
 ```
-( set -e
-
 # 1. Use this directory as the workspace
 export HERMES_WS_DIR="$PWD"
 
+( set -e
+
 # 2. Clone Hermes here
+#    (FB internal:  ln -s ~/fbsource/xplat/hermes hermes  )
 git clone git@github.com:facebook/hermes.git
 
 # 3. Clone and build LLVM. This may take a while.
@@ -75,6 +77,9 @@ generator, like GNU Makefiles and Xcode build. Peek into the configure script
 if you prefer to use an alternative build system.
 
     ./hermes/utils/configure.sh
+
+(FB internal: `export FBSOURCE_DIR="$HOME/fbsource"` first if building from
+fbsource instead of GitHub)
 
 After running the build script, running 'ninja' from the build directory will
 build the compiler driver.

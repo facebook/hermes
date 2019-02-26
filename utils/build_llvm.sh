@@ -131,9 +131,9 @@ if [[ "$TARGET_PLATFORM" == iphone* ]]; then
 fi
 
 if [[ "$TARGET_PLATFORM" == iphoneos ]]; then
-  FLAGS="$FLAGS -DCMAKE_OSX_ARCHITECTURES='armv7;arm64'"
+  FLAGS="$FLAGS -DCMAKE_OSX_ARCHITECTURES=armv7;arm64"
 elif [[ "$TARGET_PLATFORM" == iphonesimulator ]]; then
-  FLAGS="$FLAGS -DCMAKE_OSX_ARCHITECTURES='x86_64' \
+  FLAGS="$FLAGS -DCMAKE_OSX_ARCHITECTURES=x86_64 \
          -DCMAKE_OSX_SYSROOT=`xcodebuild -version -sdk iphonesimulator Path`"
 elif [[ "$TARGET_PLATFORM" == macosx ]]; then
   FLAGS="$FLAGS \
@@ -145,5 +145,6 @@ echo "cmake flags: $FLAGS"
 
 mkdir -p "$LLVM_BUILD_DIR"
 cd "$LLVM_BUILD_DIR"
-cmake -G "$BUILD_SYSTEM" ../llvm $FLAGS
+# shellcheck disable=SC2086
+cmake -G "$BUILD_SYSTEM" "$HERMES_WS_DIR/llvm" $FLAGS
 $BUILD_CMD

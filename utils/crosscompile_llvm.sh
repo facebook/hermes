@@ -35,7 +35,7 @@ do
       cd "llvm-$abi"
       # shellcheck disable=SC2191  # Allow literal = in array elements
       cmd=(
-        cmake -G Ninja ../llvm 
+        cmake -G Ninja "$HERMES_WS_DIR/llvm"
           -DANDROID_ABI="$abi"
           -DANDROID_PLATFORM="android-22"
           -DCMAKE_TOOLCHAIN_FILE="$ANDROID_SDK/ndk-bundle/build/cmake/android.toolchain.cmake"
@@ -48,8 +48,8 @@ do
           -DLLVM_TARGETS_TO_BUILD=
           -DCMAKE_BUILD_TYPE=MinSizeRel
           -DLLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=Off
-          -DLLVM_TABLEGEN="$PWD/../llvm_build/bin/llvm-tblgen"
-          -DCLANG_TABLEGEN="$PWD/../llvm_build/bin/clang-tblgen"
+          -DLLVM_TABLEGEN="$HERMES_WS_DIR/llvm_build/bin/llvm-tblgen"
+          -DCLANG_TABLEGEN="$HERMES_WS_DIR/llvm_build/bin/clang-tblgen"
           )
 
       printf '%q ' "${cmd[@]}"
@@ -58,7 +58,7 @@ do
 
       # The build does not complete successfully,
       # so just build what we need for now.
-      ninja libLLVM{Analysis,Core,Support,Demangle}.a
+      ninja libLLVM{Analysis,Core,Support,Demangle,Object}.a
     )
 done
 

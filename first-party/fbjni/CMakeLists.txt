@@ -1,19 +1,19 @@
 project(hermesfbjni CXX)
 
 set(fbjni_SOURCES
-  cxx/fbjni/ByteBuffer.cpp
-  cxx/fbjni/OnLoad.cpp
-  cxx/fbjni/ReadableByteChannel.cpp
-  cxx/fbjni/fbjni.cpp
-  cxx/fbjni/detail/Environment.cpp
-  cxx/fbjni/detail/Exceptions.cpp
-  cxx/fbjni/detail/Hybrid.cpp
-  cxx/fbjni/detail/References.cpp
-  cxx/fbjni/detail/utf8.cpp
-  cxx/lyra/cxa_throw.cpp
-  cxx/lyra/lyra.cpp
-  cxx/lyra/lyra_breakpad.cpp
-  cxx/lyra/lyra_exceptions.cpp
+  ${FBJNI_PATH}/cxx/fbjni/ByteBuffer.cpp
+  ${FBJNI_PATH}/cxx/fbjni/OnLoad.cpp
+  ${FBJNI_PATH}/cxx/fbjni/ReadableByteChannel.cpp
+  ${FBJNI_PATH}/cxx/fbjni/fbjni.cpp
+  ${FBJNI_PATH}/cxx/fbjni/detail/Environment.cpp
+  ${FBJNI_PATH}/cxx/fbjni/detail/Exceptions.cpp
+  ${FBJNI_PATH}/cxx/fbjni/detail/Hybrid.cpp
+  ${FBJNI_PATH}/cxx/fbjni/detail/References.cpp
+  ${FBJNI_PATH}/cxx/fbjni/detail/utf8.cpp
+  ${FBJNI_PATH}/cxx/lyra/cxa_throw.cpp
+  ${FBJNI_PATH}/cxx/lyra/lyra.cpp
+  ${FBJNI_PATH}/cxx/lyra/lyra_breakpad.cpp
+  ${FBJNI_PATH}/cxx/lyra/lyra_exceptions.cpp
 )
 
 add_library(hermesfbjni STATIC
@@ -35,7 +35,7 @@ target_compile_options(hermesfbjni PRIVATE
 )
 
 target_include_directories(hermesfbjni PUBLIC
-  cxx
+  ${FBJNI_PATH}/cxx
 )
 
 target_link_libraries(hermesfbjni
