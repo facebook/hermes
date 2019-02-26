@@ -1639,7 +1639,7 @@ class Module : public Value {
 
   /// Set the top-level function of this module - the function that will be
   /// executed when the module is executed.
-  void setTopLelevFunction(Function *topLevelFunction) {
+  void setTopLevelFunction(Function *topLevelFunction) {
     assert(
         topLevelFunction->getParent() == this &&
         "topLevelFunction from a different module");

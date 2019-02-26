@@ -130,7 +130,7 @@ void ESTreeIRGen::doIt() {
         false);
   }
 
-  Mod->setTopLelevFunction(topLevelFunction);
+  Mod->setTopLevelFunction(topLevelFunction);
 
   // Function context for topLevelFunction.
   FunctionContext topLevelFunctionContext{
