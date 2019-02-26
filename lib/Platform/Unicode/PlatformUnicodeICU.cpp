@@ -10,6 +10,8 @@
 
 #include "hermes/Platform/Unicode/icu.h"
 
+#include <time.h>
+
 namespace hermes {
 namespace platform_unicode {
 
@@ -62,7 +64,11 @@ void dateFormat(
   UErrorCode err{U_ZERO_ERROR};
   // Get the tzname manually to allow stable testing.
   llvm::SmallVector<char16_t, 32> tzstr;
+#ifdef _WINDOWS
+  const char *tz = _tzname[0];
+#else
   const char *tz = ::tzname[0];
+#endif
   tzstr.append(tz, tz + strlen(tz));
 
   auto *df = udat_open(

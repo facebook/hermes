@@ -224,6 +224,16 @@ std::string thread_name() {
   return "";
 }
 
+bool set_env(const char *name, const char *value) {
+  // Setting an env var to empty requires a lot of hacks on Windows
+  assert(*value != '\0' && "value cannot be empty string");
+  return _putenv_s(name, value) == 0;
+}
+
+bool unset_env(const char *name) {
+  return _putenv_s(name, "") == 0;
+}
+
 } // namespace oscompat
 } // namespace hermes
 

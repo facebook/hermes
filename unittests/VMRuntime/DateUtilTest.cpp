@@ -8,6 +8,8 @@
 
 #include "hermes/VM/JSLib/DateUtil.h"
 
+#include <cstdlib>
+
 using namespace hermes::vm;
 
 namespace {
@@ -119,55 +121,120 @@ TEST(DateUtilTest, WeekDayTest) {
 }
 
 TEST(DateUtilTest, LocalTZATest) {
+  // On Windows, TZ env can only be set to a very limited format,
+  // as documented in Microsoft Docs for _tzset. Specifically,
+  // * They cannot be set to IANA TZDB zone names.
+  // * Whenever DST rule is enabled (by specifying any 3 letter after the
+  //   digits), Windows always uses current US DST rules. It does NOT
+  //   follow historic rules for old dates or rules of other regions.
+
   // Ensure the local TZA is correct both in standard and daylight time zones.
-  setenv("TZ", "America/Los_Angeles", 1);
+  // Use the following two zones to guarantee that at least one of
+  // the zones is under DST whatever day this test is ran.
+
+  // US Pacific: DST is from Mar to Nov
+#ifdef _WINDOWS
+  hermes::oscompat::set_env("TZ", "PST8PDT");
+#else
+  hermes::oscompat::set_env("TZ", "America/Los_Angeles");
+#endif
   EXPECT_EQ(-2.88e+7, localTZA());
+
+  // New Zealand: DST is from Oct to Apr
+#ifdef _WINDOWS
+  // This test is skipped due to Windows deficiency in TZ env variable.
+#else
+  hermes::oscompat::set_env("TZ", "Pacific/Auckland");
+  EXPECT_EQ(4.32e+7, localTZA());
+#endif
 
   // Disble DST entirely and make sure the TZA is the same.
-  setenv("TZ", "PST+8", 1);
+  // Test both positive and negative zone.
+
+  // Negative fixed zone
+#ifdef _WINDOWS
+  hermes::oscompat::set_env("TZ", "PST8");
+#else
+  hermes::oscompat::set_env("TZ", "Etc/GMT+8");
+#endif
   EXPECT_EQ(-2.88e+7, localTZA());
 
-  unsetenv("TZ");
+  // Positive fixed zone
+#ifdef _WINDOWS
+  hermes::oscompat::set_env("TZ", "JST-9");
+#else
+  hermes::oscompat::set_env("TZ", "Asia/Tokyo");
+#endif
+  EXPECT_EQ(3.24e+7, localTZA());
+
+  hermes::oscompat::unset_env("TZ");
 }
 
 TEST(DateUtilTest, DaylightSavingTATest) {
-  // Note that the TZ env variable needs the "PDT" part to allow for the option
-  // of daylight time.
-  // Try this with DST modes and make sure they work.
-  setenv("TZ", "America/Los_Angeles", 1);
+  hermes::oscompat::set_env("TZ", "America/Los_Angeles");
   EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1489530532000)); // Mar 14, 2017
   EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1019514530000)); // Apr 22, 2002
   EXPECT_EQ(0, daylightSavingTA(1487111330000)); // Feb 14, 2017
   EXPECT_EQ(0, daylightSavingTA(1017700130000)); // Apr 1, 2002
 
-  setenv("TZ", "America/Chicago", 1);
+  hermes::oscompat::set_env("TZ", "America/Chicago");
   EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1489530532000)); // Mar 14, 2017
   EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1019514530000)); // Apr 22, 2002
   EXPECT_EQ(0, daylightSavingTA(1487111330000)); // Feb 14, 2017
   EXPECT_EQ(0, daylightSavingTA(1017700130000)); // Apr 1, 2002
 
-  unsetenv("TZ");
+  hermes::oscompat::unset_env("TZ");
 }
 
 TEST(DateUtilTest, LocalTimeTest) {
-  // UTC: Mon, 22 Apr 2002 13:37:00 GMT
-  // PDT: Mon, 22 Apr 2002 06:37:00 PDT (-0700)
-  // CDT: Mon, 22 Apr 2002 08:37:00 PDT (-0700)
-  // PST: Mon, 22 Apr 2002 05:37:00 PST (-0800)
-  setenv("TZ", "America/Los_Angeles", 1);
-  EXPECT_EQ(1019457420000, localTime(1019482620000));
-  EXPECT_EQ(1019482620000, utcTime(1019457420000));
+  // On Windows, TZ env can only be set to a very limited format,
+  // as documented in Microsoft Docs for _tzset. Specifically,
+  // * They cannot be set to IANA TZDB zone names.
+  // * Whenever DST rule is enabled (by specifying any 3 letter after the
+  //   digits), Windows always uses current US DST rules. It does NOT
+  //   follow historic rules for old dates or rules of other regions.
 
-  setenv("TZ", "America/Chicago", 1);
-  EXPECT_EQ(1019464620000, localTime(1019482620000));
-  EXPECT_EQ(1019482620000, utcTime(1019464620000));
+  // These test cases cover DST in effect, not in effect, and no DST.
+  // It also covers positive zone and negative zone.
+  // 2018-07-01T16:00:00Z
+  // 2018-07-01T09:00:00-0700[America/Los_Angeles] (DST in effect)
+  // 2018-07-01T12:00:00-0400[America/New_York] (DST in effect)
+  // 2018-07-02T04:00:00+1200[America/New_York] (DST not in effect)
+  // 2018-07-02T01:00:00+0900[Asia/Tokyo] (DST not observed)
 
-  // Disable DST entirely and test the conversions.
-  setenv("TZ", "PST+8", 1);
-  EXPECT_EQ(1019453820000, localTime(1019482620000));
-  EXPECT_EQ(1019482620000, utcTime(1019453820000));
+#ifdef _WINDOWS
+  hermes::oscompat::set_env("TZ", "PST8PDT");
+#else
+  hermes::oscompat::set_env("TZ", "America/Los_Angeles");
+#endif
+  EXPECT_EQ(1530435600000, localTime(1530460800000));
+  EXPECT_EQ(1530460800000, utcTime(1530435600000));
 
-  unsetenv("TZ");
+#ifdef _WINDOWS
+  hermes::oscompat::set_env("TZ", "EST5EDT");
+#else
+  hermes::oscompat::set_env("TZ", "America/New_York");
+#endif
+  EXPECT_EQ(1530446400000, localTime(1530460800000));
+  EXPECT_EQ(1530460800000, utcTime(1530446400000));
+
+#ifdef _WINDOWS
+  // This test is skipped due to Windows deficiency in TZ env variable.
+#else
+  hermes::oscompat::set_env("TZ", "Pacific/Auckland");
+  EXPECT_EQ(1530504000000, localTime(1530460800000));
+  EXPECT_EQ(1530460800000, utcTime(1530504000000));
+#endif
+
+#ifdef _WINDOWS
+  hermes::oscompat::set_env("TZ", "JST-9");
+#else
+  hermes::oscompat::set_env("TZ", "Asia/Tokyo");
+#endif
+  EXPECT_EQ(1530493200000, localTime(1530460800000));
+  EXPECT_EQ(1530460800000, utcTime(1530493200000));
+
+  hermes::oscompat::unset_env("TZ");
 }
 
 TEST(DateUtilTest, HoursMinutesSecondsMsTest) {

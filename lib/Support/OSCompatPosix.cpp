@@ -381,6 +381,16 @@ std::string thread_name() {
   return threadName;
 }
 
+bool set_env(const char *name, const char *value) {
+  // Enforce the contract of this function that value must not be empty
+  assert(*value != '\0' && "value cannot be empty string");
+  return setenv(name, value, 1) == 0;
+}
+
+bool unset_env(const char *name) {
+  return unsetenv(name) == 0;
+}
+
 } // namespace oscompat
 } // namespace hermes
 

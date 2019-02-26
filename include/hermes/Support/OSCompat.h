@@ -201,6 +201,17 @@ inline int isatty(int fd) {
 
 #endif
 
+/// Set the env var \p name to \p value.
+/// \p value must not be an empty string.
+/// Setting an env var to empty is not supported because doing it
+/// cross-platform is hard.
+/// \return true if successful, false on error.
+bool set_env(const char *name, const char *value);
+
+/// Unset the env var \p name.
+/// \return true if successful, false on error.
+bool unset_env(const char *name);
+
 } // namespace oscompat
 } // namespace hermes
 
