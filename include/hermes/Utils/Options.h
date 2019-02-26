@@ -49,6 +49,9 @@ struct BytecodeGenerationOptions {
   /// Strip all function names to reduce string table size.
   bool stripFunctionNames = false;
 
+  /// Add this much garbage after each function body (relative to its size).
+  unsigned padFunctionBodiesPercent = 0;
+
   /* implicit */ BytecodeGenerationOptions(OutputFormatKind format)
       : format(format) {}
 

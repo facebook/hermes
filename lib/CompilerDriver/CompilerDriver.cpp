@@ -396,6 +396,13 @@ static opt<bool> VerifyIR(
 #endif
     desc("Verify the IR after creating it"));
 
+static opt<unsigned> PadFunctionBodiesPercent(
+    "pad-function-bodies-percent",
+    desc(
+        "Add this much garbage after each function body (relative to its size)."),
+    init(0),
+    Hidden);
+
 } // namespace cl
 
 namespace {
@@ -1208,6 +1215,7 @@ CompileResult processSourceFiles(
   genOptions.prettyDisassemble = cl::PrettyDisassemble;
   genOptions.basicBlockProfiling = cl::BasicBlockProfiling;
   genOptions.staticBuiltinsEnabled = cl::StaticBuiltins;
+  genOptions.padFunctionBodiesPercent = cl::PadFunctionBodiesPercent;
 
   // If the user requests to output a source map, then do not also emit debug
   // info into the bytecode.

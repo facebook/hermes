@@ -229,6 +229,14 @@ void BytecodeSerializer::serializeFunctionsBytecode(BytecodeModule &BM) {
     pad(sizeof(uint32_t));
 
     writeBinaryArray(entry->getJumpTables());
+
+    if (options_.padFunctionBodiesPercent) {
+      size_t size = entry->getOpcodeArray().size();
+      size = (size * options_.padFunctionBodiesPercent) / 100;
+      while (size--)
+        writeBinary('\0');
+      pad(sizeof(uint32_t));
+    }
   }
 }
 
