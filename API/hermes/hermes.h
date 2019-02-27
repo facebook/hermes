@@ -125,13 +125,13 @@ class HermesRuntime : public jsi::Runtime {
 #endif
 
   /// Register this runtime for sampling profiler.
-  virtual void registerForProfiling() = 0;
+  void registerForProfiling();
   /// Unregister this runtime for sampling profiler.
-  virtual void unregisterForProfiling() = 0;
+  void unregisterForProfiling();
 
   /// Inform the VM that TTI has been reached.  (In case, for example, the
   /// runtime should change its behavior at that point.)
-  virtual void ttiReached() = 0;
+  void ttiReached();
 
  private:
   friend struct ::HermesTestHelper;

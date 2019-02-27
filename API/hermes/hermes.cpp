@@ -396,14 +396,6 @@ class HermesRuntimeImpl
     return os.str();
   }
 
-  void ttiReached() override {
-    runtime_.ttiReached();
-#ifdef HERMESVM_LLVM_PROFILE_DUMP
-    __llvm_profile_dump();
-    throw jsi::JSINativeException("TTI reached; profiling done");
-#endif
-  }
-
   // Overridden from jsi::Instrumentation
   jsi::Value getHeapInfo(bool includeExpensive) override {
     vm::GCBase::HeapInfo info;
@@ -501,14 +493,6 @@ class HermesRuntimeImpl
         "Cannot write the basic block profile trace out if Hermes wasn't built with "
         "hermes.profiler=BB");
 #endif
-  }
-
-  void registerForProfiling() override {
-    ::hermes::vm::SamplingProfiler::getInstance()->registerRuntime(&runtime_);
-  }
-
-  void unregisterForProfiling() override {
-    ::hermes::vm::SamplingProfiler::getInstance()->unregisterRuntime(&runtime_);
   }
 
   // Overridden from jsi::Instrumentation
@@ -1446,6 +1430,24 @@ void HermesRuntime::debugJavaScript(
   impl(this)->checkStatus(res);
 }
 #endif
+
+void HermesRuntime::ttiReached() {
+  impl(this)->runtime_.ttiReached();
+#ifdef HERMESVM_LLVM_PROFILE_DUMP
+  __llvm_profile_dump();
+  throw jsi::JSINativeException("TTI reached; profiling done");
+#endif
+}
+
+void HermesRuntime::registerForProfiling() {
+  ::hermes::vm::SamplingProfiler::getInstance()->registerRuntime(
+      &(impl(this)->runtime_));
+}
+
+void HermesRuntime::unregisterForProfiling() {
+  ::hermes::vm::SamplingProfiler::getInstance()->unregisterRuntime(
+      &(impl(this)->runtime_));
+}
 
 #ifdef HERMESVM_PLATFORM_LOGGING
 namespace {
