@@ -1,8 +1,10 @@
 set(LLVM_OPTIONAL_SOURCES
   hermes.cpp
+  hermes_tracing.cpp
   DebuggerAPI.cpp
   SynthTrace.cpp
   TraceInterpreter.cpp
+  TracingRuntime.cpp
   CompileJS.cpp
   )
 
@@ -13,8 +15,10 @@ set(api_sources
 
 if (HERMESVM_SYNTH_REPLAY)
   list(APPEND api_sources
+    hermes_tracing.cpp
     SynthTrace.cpp
     TraceInterpreter.cpp
+    TracingRuntime.cpp
   )
 endif()
 
