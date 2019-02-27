@@ -6,6 +6,7 @@
  */
 #include <hermes/hermes.h>
 #include <jsi/testlib.h>
+#include <jsi/threadsafe.h>
 
 using namespace facebook::hermes;
 

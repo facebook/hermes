@@ -68,6 +68,7 @@
 #endif
 
 #include <jsi/instrumentation.h>
+#include <jsi/threadsafe.h>
 
 #ifdef HERMESVM_LLVM_PROFILE_DUMP
 extern "C" {
@@ -138,19 +139,6 @@ jsi::JSError makeJSError(jsi::Runtime &rt, Args &&... args) {
   raw_ostream_append(os, std::forward<Args>(args)...);
   return jsi::JSError(rt, os.str());
 }
-
-struct Lock {
-  void lock(const HermesRuntimeImpl &) const {
-    mutex_.lock();
-  }
-
-  void unlock(const HermesRuntimeImpl &) const {
-    mutex_.unlock();
-  }
-
- private:
-  mutable std::recursive_mutex mutex_;
-};
 
 /// HermesVM uses the LLVM fatal error handle to report fatal errors. This
 /// wrapper helps us install the handler at construction time, before any
@@ -701,8 +689,6 @@ class HermesRuntimeImpl
   vm::HermesValue stringHVFromUtf8(const uint8_t *utf8, size_t length);
   size_t getLength(vm::Handle<vm::ArrayImpl> arr);
   size_t getByteLength(vm::Handle<vm::JSArrayBuffer> arr);
-
-  friend class jsi::detail::ThreadSafeRuntimeImpl<HermesRuntimeImpl, Lock>;
 
   struct JsiProxyBase : public vm::HostObjectProxy {
     JsiProxyBase(HermesRuntimeImpl &rt, std::shared_ptr<jsi::HostObject> ho)
@@ -2240,6 +2226,18 @@ void addRecordTTI(Runtime &rt) {
           }));
 }
 
+namespace {
+
+class HermesMutex : public std::recursive_mutex {
+ public:
+  // ThreadSafeRuntimeImpl expects that the lock ctor takes a
+  // reference to the Runtime.  Otherwise, this is a
+  // std::recursive_mutex.
+  HermesMutex(HermesRuntimeImpl &) {}
+};
+
+} // namespace
+
 std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const vm::RuntimeConfig &runtimeConfig,
     bool shouldExposeTraceFunctions) {
@@ -2297,7 +2295,7 @@ std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
           .build());
 #else
   auto ret = std::make_unique<
-      jsi::detail::ThreadSafeRuntimeImpl<HermesRuntimeImpl, Lock>>(
+      jsi::detail::ThreadSafeRuntimeImpl<HermesRuntimeImpl, HermesMutex>>(
       runtimeConfig);
 #endif
 

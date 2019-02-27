@@ -14,7 +14,6 @@
 
 #include <hermes/Public/RuntimeConfig.h>
 #include <jsi/jsi.h>
-#include <jsi/threadsafe.h>
 
 struct HermesTestHelper;
 
@@ -29,6 +28,12 @@ struct MockedEnvironment;
 } // namespace hermes
 
 namespace facebook {
+namespace jsi {
+
+class ThreadSafeRuntime;
+
+}
+
 namespace hermes {
 
 #ifdef HERMES_ENABLE_DEBUGGER

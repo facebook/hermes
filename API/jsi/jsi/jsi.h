@@ -30,12 +30,6 @@ class FBJSRuntime;
 namespace facebook {
 namespace jsi {
 
-namespace detail {
-
-template <typename R, typename L>
-class ThreadSafeRuntimeImpl;
-}
-
 class Buffer {
  public:
   virtual ~Buffer();
@@ -305,11 +299,9 @@ class Runtime {
   static const PointerValue* getPointerValue(const Pointer& pointer);
   static const PointerValue* getPointerValue(const Value& value);
 
-  // TODO T25594389: think harder about this friend declaration (and
-  // it's forward decl above)
-  template <typename R, typename L>
-  friend class detail::ThreadSafeRuntimeImpl;
   friend class ::FBJSRuntime;
+  template <typename Plain, typename Base>
+  friend class RuntimeDecorator;
 };
 
 // Base class for pointer-storing types.

@@ -6,6 +6,7 @@
  */
 #include "testlib.h"
 #include <gtest/gtest.h>
+#include <jsi/decorator.h>
 #include <jsi/jsi.h>
 
 #include <stdlib.h>
@@ -1056,6 +1057,101 @@ TEST_P(JSITest, HostObjectWithValueMembers) {
   EXPECT_EQ(
       bag["obj"].getObject(rt).getProperty(rt, "foo").getString(rt).utf8(rt),
       "bar");
+}
+
+TEST_P(JSITest, DecoratorTest) {
+  struct Inc {
+    Inc(int& i) {
+      ++i;
+    }
+  };
+
+  class CountRuntime final : public WithRuntimeDecorator<Inc, int> {
+   public:
+    CountRuntime(std::unique_ptr<Runtime> rt)
+        : WithRuntimeDecorator<Inc, int>(*rt, count_),
+          rt_(std::move(rt)),
+          count_(0) {}
+
+    int count() {
+      return count_;
+    }
+
+   private:
+    std::unique_ptr<Runtime> rt_;
+    int count_;
+  };
+
+  CountRuntime crt(factory());
+
+  crt.description();
+  EXPECT_EQ(crt.count(), 1);
+
+  crt.global().setProperty(crt, "o", Object(crt));
+  EXPECT_EQ(crt.count(), 6);
+}
+
+TEST_P(JSITest, MultiDecoratorTest) {
+  struct DecoData {
+    int count_ = 0;
+    int nest_ = 0;
+  };
+
+  struct Inc {
+    Inc(DecoData& dd) {
+      ++dd.count_;
+    }
+  };
+
+  struct Nest {
+    Nest(DecoData& dd) : dd_(dd) {
+      ++dd.nest_;
+    }
+
+    ~Nest() {
+      --dd_.nest_;
+    }
+
+    DecoData& dd_;
+  };
+
+  class MultiRuntime final
+      : public WithRuntimeDecorator<MultiWith<Inc, Nest>, DecoData> {
+   public:
+    MultiRuntime(std::unique_ptr<Runtime> rt)
+        : WithRuntimeDecorator<MultiWith<Inc, Nest>, DecoData>(*rt, dd_),
+          rt_(std::move(rt)) {}
+
+    int count() {
+      return dd_.count_;
+    }
+    int nest() {
+      return dd_.nest_;
+    }
+
+   private:
+    std::unique_ptr<Runtime> rt_;
+    DecoData dd_;
+  };
+
+  MultiRuntime mrt(factory());
+
+  Function expectNestOne = Function::createFromHostFunction(
+      mrt,
+      PropNameID::forAscii(mrt, "expectNestOne"),
+      0,
+      [](Runtime& rt, const Value& thisVal, const Value* args, size_t count) {
+        MultiRuntime* funcmrt = dynamic_cast<MultiRuntime*>(&rt);
+        EXPECT_NE(funcmrt, nullptr);
+        EXPECT_EQ(funcmrt->count(), 3);
+        EXPECT_EQ(funcmrt->nest(), 1);
+        return Value::undefined();
+      });
+
+  expectNestOne.call(mrt);
+
+  EXPECT_EQ(mrt.count(), 3);
+  EXPECT_EQ(mrt.nest(), 0);
 }
 
 INSTANTIATE_TEST_CASE_P(
