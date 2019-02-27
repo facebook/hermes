@@ -12,6 +12,7 @@
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/Support/UTF8.h"
+#include "hermes/VM/MockedEnvironment.h"
 
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/NativeFormatting.h"
@@ -21,6 +22,7 @@
 
 namespace facebook {
 namespace hermes {
+namespace tracing {
 
 namespace {
 
@@ -301,6 +303,23 @@ SynthTrace getTrace(
     }
   }
   return trace;
+}
+
+double decodeNumber(const std::string &numberAsString) {
+  // Assume the original platform and the current platform are both little
+  // endian for simplicity.
+  static_assert(
+      llvm::support::endian::system_endianness() ==
+          llvm::support::endianness::little,
+      "Only little-endian decoding allowed");
+  assert(
+      numberAsString.substr(0, 2) == std::string("0x") && "Invalid hex number");
+  // NOTE: This should use stoul, but that's not defined on Android.
+  std::stringstream ss;
+  ss << std::hex << numberAsString;
+  uint64_t x;
+  ss >> x;
+  return ::hermes::safeTypeCast<uint64_t, double>(x);
 }
 
 } // namespace
@@ -592,23 +611,6 @@ void SynthTrace::SetPropertyNativeRecord::toJSONInternal(
   os << ", \"value\": " << trace.encode(value_);
 }
 
-double decodeNumber(const std::string &numberAsString) {
-  // Assume the original platform and the current platform are both little
-  // endian for simplicity.
-  static_assert(
-      llvm::support::endian::system_endianness() ==
-          llvm::support::endianness::little,
-      "Only little-endian decoding allowed");
-  assert(
-      numberAsString.substr(0, 2) == std::string("0x") && "Invalid hex number");
-  // NOTE: This should use stoul, but that's not defined on Android.
-  std::stringstream ss;
-  ss << std::hex << numberAsString;
-  uint64_t x;
-  ss >> x;
-  return ::hermes::safeTypeCast<uint64_t, double>(x);
-}
-
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os,
     const SynthTrace::Printable &tracePrinter) {
@@ -725,5 +727,6 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
   return is;
 }
 
+} // namespace tracing
 } // namespace hermes
 } // namespace facebook

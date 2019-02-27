@@ -42,9 +42,6 @@ class Debugger;
 }
 #endif
 
-#ifdef HERMESVM_API_TRACE
-class SynthTrace;
-#endif
 class HermesRuntimeImpl;
 
 /// Represents a Hermes JS runtime.
@@ -83,14 +80,17 @@ class HermesRuntime : public jsi::Runtime {
   // provided by a class internal to the .cpp file, which is created
   // by the factory.
 
-#ifdef HERMESVM_API_TRACE
-  /// Get the trace of bridge traffic.
-  SynthTrace &trace();
-  /// Write the trace to the given stream.
-  void writeTrace(llvm::raw_ostream &os) const;
-  /// Gets a guaranteed unique id for an object, which is assigned at allocation
-  /// time and is static throughout that object's lifetime.
+  /// Gets a guaranteed unique id for an object, which is assigned at
+  /// allocation time and is static throughout that object's lifetime.
+  /// This is mainly useful for tracing and debugging use cases, so in
+  /// some optimized builds, this may not actually return unique
+  /// values.
   uint64_t getUniqueID(const jsi::Object &o) const;
+
+#ifdef HERMESVM_API_TRACE
+  /// Get a structure representing the enviroment-dependent behavior, so
+  /// it can be written into the trace for later replay.
+  const ::hermes::vm::MockedEnvironment &getMockedEnvironment() const;
 #endif
 
 #ifdef HERMESVM_SYNTH_REPLAY
@@ -134,10 +134,6 @@ class HermesRuntime : public jsi::Runtime {
   void registerForProfiling();
   /// Unregister this runtime for sampling profiler.
   void unregisterForProfiling();
-
-  /// Inform the VM that TTI has been reached.  (In case, for example, the
-  /// runtime should change its behavior at that point.)
-  void ttiReached();
 
  private:
   // Only HermesRuntimeImpl can subclass this.

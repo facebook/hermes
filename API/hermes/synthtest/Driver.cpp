@@ -59,11 +59,11 @@ void runInterpreter(
   // This will fail with an exception for an error.
   std::string outTrace;
   llvm::raw_string_ostream outTraceStream{outTrace};
-  TraceInterpreter::ExecuteOptions options;
+  tracing::TraceInterpreter::ExecuteOptions options;
   // Use value in the trace.
   options.minHeapSize = 0;
   options.maxHeapSize = 0;
-  TraceInterpreter::execAndTrace(
+  tracing::TraceInterpreter::execAndTrace(
       traceFile, bytecodeFile, options, outTraceStream);
   // Do nothing with outTrace. It could be compared to the original trace,
   // but it requires normalization.

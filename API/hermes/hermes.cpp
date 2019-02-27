@@ -8,13 +8,6 @@
 
 #include "llvm/Support/Compiler.h"
 
-// Helper macro for deciding if the tracer should be used.
-#if defined(HERMESVM_API_TRACE) && !defined(HERMESVM_LEAN)
-#define API_TRACE 1
-#else
-#define API_TRACE 0
-#endif
-
 #ifndef LLVM_PTR_SIZE
 #error "LLVM_PTR_SIZE needs to be defined"
 #endif
@@ -22,10 +15,6 @@
 #if LLVM_PTR_SIZE != 8
 // Only have JSI be on the stack for builds that are not 64-bit.
 #define HERMESJSI_ON_STACK
-#endif
-
-#if API_TRACE
-#include "SynthTrace.h"
 #endif
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
@@ -244,19 +233,12 @@ class StackRuntime {
 
 } // namespace
 
-class HermesRuntimeImpl
-#if !API_TRACE
-    final
-#endif
-    : public HermesRuntime,
-      private InstallHermesFatalErrorHandler,
-      private jsi::Instrumentation {
+class HermesRuntimeImpl final : public HermesRuntime,
+                                private InstallHermesFatalErrorHandler,
+                                private jsi::Instrumentation {
  public:
   static constexpr int64_t kSentinelNativeValue = 0x6ef71fe1;
 
-#if API_TRACE
- protected:
-#endif
   HermesRuntimeImpl(const vm::RuntimeConfig &runtimeConfig)
       :
 #ifdef HERMESJSI_ON_STACK
@@ -698,11 +680,7 @@ class HermesRuntimeImpl
     std::shared_ptr<jsi::HostObject> ho_;
   };
 
-  struct JsiProxy
-#if !API_TRACE
-      final
-#endif
-      : public JsiProxyBase {
+  struct JsiProxy final : public JsiProxyBase {
     using JsiProxyBase::JsiProxyBase;
     vm::CallResult<vm::HermesValue> get(vm::SymbolID id) override {
       jsi::PropNameID sym =
@@ -804,11 +782,7 @@ class HermesRuntimeImpl
     HermesRuntimeImpl &hermesRuntimeImpl;
   };
 
-  struct HFContext
-#if !API_TRACE
-      final
-#endif
-      : public HFContextBase {
+  struct HFContext final : public HFContextBase {
     using HFContextBase::HFContextBase;
 
     static vm::CallResult<vm::HermesValue>
@@ -906,398 +880,6 @@ class HermesRuntimeImpl
 
 namespace {
 
-#if API_TRACE
-
-SynthTrace::TraceValue toTraceValue(
-    HermesRuntimeImpl &rt,
-    SynthTrace &trace,
-    const jsi::Value &value) {
-  if (value.isUndefined()) {
-    return SynthTrace::encodeUndefined();
-  } else if (value.isNull()) {
-    return SynthTrace::encodeNull();
-  } else if (value.isBool()) {
-    return SynthTrace::encodeBool(value.getBool());
-  } else if (value.isNumber()) {
-    return SynthTrace::encodeNumber(value.getNumber());
-  } else if (value.isString()) {
-    return trace.encodeString(rt.utf8(value.getString(rt)));
-  } else if (value.isObject()) {
-    // Get a unique identifier from the object, and use that instead. This is
-    // so that object identity is tracked.
-    return SynthTrace::encodeObject(rt.getUniqueID(value.getObject(rt)));
-  } else {
-    throw std::logic_error("Unsupported value reached");
-  }
-}
-
-class TracingHermesRuntimeImpl : public HermesRuntimeImpl {
-  std::vector<SynthTrace::TraceValue> argStringifyer(
-      const jsi::Value *args,
-      size_t count) {
-    std::vector<SynthTrace::TraceValue> stringifiedArgs;
-    stringifiedArgs.reserve(count);
-    for (size_t i = 0; i < count; ++i) {
-      stringifiedArgs.emplace_back(toTraceValue(*this, trace_, args[i]));
-    }
-    return stringifiedArgs;
-  }
-
-  struct TracingJsiProxy : public JsiProxy {
-    TracingJsiProxy(
-        TracingHermesRuntimeImpl &rt,
-        std::shared_ptr<jsi::HostObject> ho)
-        : JsiProxy(rt, ho), objID_(0) {}
-
-    vm::CallResult<vm::HermesValue> get(vm::SymbolID id) override {
-      auto &rt = static_cast<TracingHermesRuntimeImpl &>(rt_);
-      // Convert the symbol to a serializable name.
-      jsi::PropNameID sym =
-          rt.add<jsi::PropNameID>(vm::HermesValue::encodeSymbolValue(id));
-      rt.trace_.emplace_back<SynthTrace::GetPropertyNativeRecord>(
-          rt.getTimeSinceStart(), objID_, rt.utf8(sym));
-      auto jsiRes = JsiProxy::get(id);
-      if (jsiRes == vm::ExecutionStatus::EXCEPTION) {
-        // The trace currently has no way to model exceptions thrown from C++
-        // code.
-        ::hermes::hermes_fatal(
-            "Exception happened in native code during trace");
-      }
-      rt.trace_.emplace_back<SynthTrace::GetPropertyNativeReturnRecord>(
-          rt.getTimeSinceStart(),
-          toTraceValue(
-              rt, rt.trace_, rt.valueFromHermesValue(jsiRes.getValue())));
-      return jsiRes;
-    }
-    vm::CallResult<bool> set(vm::SymbolID id, vm::HermesValue value) override {
-      auto &rt = static_cast<TracingHermesRuntimeImpl &>(rt_);
-      // Convert the symbol to a serializable name.
-      jsi::PropNameID sym =
-          rt.add<jsi::PropNameID>(vm::HermesValue::encodeSymbolValue(id));
-      rt.trace_.emplace_back<SynthTrace::SetPropertyNativeRecord>(
-          rt.getTimeSinceStart(),
-          objID_,
-          rt.utf8(sym),
-          toTraceValue(rt, rt.trace_, rt.valueFromHermesValue(value)));
-      auto result = JsiProxy::set(id, value);
-      if (result == vm::ExecutionStatus::EXCEPTION) {
-        // The trace currently has no way to model exceptions thrown from C++
-        // code.
-        ::hermes::hermes_fatal(
-            "Exception happened in native code during trace");
-      }
-      rt.trace_.emplace_back<SynthTrace::SetPropertyNativeReturnRecord>(
-          rt.getTimeSinceStart());
-      return result;
-    }
-    vm::CallResult<vm::Handle<vm::JSArray>> getHostPropertyNames() override {
-      // It is not important to track this event, since it cannot modify the
-      // heap.
-      auto result = JsiProxy::getHostPropertyNames();
-      if (result == vm::ExecutionStatus::EXCEPTION) {
-        // The trace currently has no way to model exceptions thrown from C++
-        // code.
-        ::hermes::hermes_fatal(
-            "Exception happened in native code during trace");
-      }
-      return result;
-    }
-
-    void setObjectID(SynthTrace::ObjectID id) {
-      objID_ = id;
-    }
-
-    /// The object id of the host object that this is attached to.
-    SynthTrace::ObjectID objID_;
-  };
-
-  struct TracingHFContext final : public HFContext {
-    TracingHFContext(jsi::HostFunctionType hf, TracingHermesRuntimeImpl &hri)
-        : HFContext(hf, hri), functionID_(0) {}
-
-    static vm::CallResult<vm::HermesValue>
-    func(void *context, vm::Runtime *runtime, vm::NativeArgs hvArgs) {
-      auto *hfc = reinterpret_cast<TracingHFContext *>(context);
-      auto &rt =
-          static_cast<TracingHermesRuntimeImpl &>(hfc->hermesRuntimeImpl);
-      llvm::SmallVector<jsi::Value, 8> apiArgs;
-      for (vm::HermesValue hv : hvArgs) {
-        apiArgs.push_back(rt.valueFromHermesValue(hv));
-      }
-      rt.trace_.emplace_back<SynthTrace::CallToNativeRecord>(
-          rt.getTimeSinceStart(),
-          hfc->functionID_,
-          // A host function does not have a this.
-          SynthTrace::encodeUndefined(),
-          rt.argStringifyer(
-              apiArgs.empty() ? nullptr : &apiArgs.front(), apiArgs.size()));
-      auto value = HFContext::func(context, runtime, hvArgs);
-      if (value == vm::ExecutionStatus::EXCEPTION) {
-        // The trace currently has no way to model exceptions thrown from C++
-        // code.
-        ::hermes::hermes_fatal(
-            "Exception happened in native code during trace");
-      }
-      rt.trace_.emplace_back<SynthTrace::ReturnFromNativeRecord>(
-          rt.getTimeSinceStart(),
-          toTraceValue(
-              rt, rt.trace_, rt.valueFromHermesValue(value.getValue())));
-      return value;
-    }
-
-    static void finalize(void *context) {
-      delete reinterpret_cast<TracingHFContext *>(context);
-    }
-
-    void setFunctionID(SynthTrace::ObjectID functionID) {
-      functionID_ = functionID;
-    }
-
-    /// The object id of the function that this is attached to.
-    SynthTrace::ObjectID functionID_;
-  };
-
- public:
-  TracingHermesRuntimeImpl(const vm::RuntimeConfig &runtimeConfig)
-      : HermesRuntimeImpl(runtimeConfig),
-        trace_(getUniqueID(global())),
-        conf_(runtimeConfig) {}
-
-  /// @name jsi::Runtime methods.
-  /// @{
-
-  void evaluateJavaScript(
-      const std::shared_ptr<const jsi::Buffer> &buffer,
-      const std::string &sourceURL) override {
-    if (isHermesBytecode(buffer->data(), buffer->size())) {
-      trace_.setSourceHash(hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
-          llvm::makeArrayRef(buffer->data(), buffer->size())));
-    }
-    trace_.emplace_back<SynthTrace::BeginExecJSRecord>(getTimeSinceStart());
-    HermesRuntimeImpl::evaluateJavaScript(buffer, sourceURL);
-    trace_.emplace_back<SynthTrace::EndExecJSRecord>(getTimeSinceStart());
-  }
-
-  jsi::Object createObject() override {
-    auto obj = HermesRuntimeImpl::createObject();
-    trace_.emplace_back<SynthTrace::CreateObjectRecord>(
-        getTimeSinceStart(), getUniqueID(obj));
-    return obj;
-  }
-
-  jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override {
-    vm::GCScope gcScope(&runtime_);
-    auto proxy = std::make_shared<TracingJsiProxy>(*this, ho);
-    auto objRes = vm::HostObject::createWithoutPrototype(&runtime_, proxy);
-    checkStatus(objRes.getStatus());
-    auto obj = add<jsi::Object>(*objRes);
-    // Track the unique id of the HostObject in the proxy so that the proxy
-    // also has a unique identifier.
-    proxy->setObjectID(getUniqueID(obj));
-    trace_.emplace_back<SynthTrace::CreateHostObjectRecord>(
-        getTimeSinceStart(), getUniqueID(obj));
-    return obj;
-  }
-
-  jsi::Value getProperty(const jsi::Object &obj, const jsi::String &name)
-      override {
-    auto value = HermesRuntimeImpl::getProperty(obj, name);
-    trace_.emplace_back<SynthTrace::GetPropertyRecord>(
-        getTimeSinceStart(),
-        getUniqueID(obj),
-        utf8(name),
-        toTraceValue(*this, trace_, value));
-    return value;
-  }
-
-  jsi::Value getProperty(const jsi::Object &obj, const jsi::PropNameID &name)
-      override {
-    auto value = HermesRuntimeImpl::getProperty(obj, name);
-    trace_.emplace_back<SynthTrace::GetPropertyRecord>(
-        getTimeSinceStart(),
-        getUniqueID(obj),
-        utf8(name),
-        toTraceValue(*this, trace_, value));
-    return value;
-  }
-
-  bool hasProperty(const jsi::Object &obj, const jsi::String &name) override {
-    trace_.emplace_back<SynthTrace::HasPropertyRecord>(
-        getTimeSinceStart(), getUniqueID(obj), utf8(name));
-    return HermesRuntimeImpl::hasProperty(obj, name);
-  }
-
-  bool hasProperty(const jsi::Object &obj, const jsi::PropNameID &name)
-      override {
-    trace_.emplace_back<SynthTrace::HasPropertyRecord>(
-        getTimeSinceStart(), getUniqueID(obj), utf8(name));
-    return HermesRuntimeImpl::hasProperty(obj, name);
-  }
-
-  void setPropertyValue(
-      jsi::Object &obj,
-      const jsi::String &name,
-      const jsi::Value &value) override {
-    trace_.emplace_back<SynthTrace::SetPropertyRecord>(
-        getTimeSinceStart(),
-        getUniqueID(obj),
-        utf8(name),
-        toTraceValue(*this, trace_, value));
-    HermesRuntimeImpl::setPropertyValue(obj, name, value);
-  }
-
-  void setPropertyValue(
-      jsi::Object &obj,
-      const jsi::PropNameID &name,
-      const jsi::Value &value) override {
-    trace_.emplace_back<SynthTrace::SetPropertyRecord>(
-        getTimeSinceStart(),
-        getUniqueID(obj),
-        utf8(name),
-        toTraceValue(*this, trace_, value));
-    HermesRuntimeImpl::setPropertyValue(obj, name, value);
-  }
-
-  jsi::WeakObject createWeakObject(const jsi::Object &o) override {
-    auto wo = HermesRuntimeImpl::createWeakObject(o);
-    // TODO mhorowitz: add synthtrace support for WeakObject
-    return wo;
-  }
-
-  jsi::Value lockWeakObject(const jsi::WeakObject &wo) override {
-    auto val = HermesRuntimeImpl::lockWeakObject(wo);
-    // TODO mhorowitz: add synthtrace support for WeakObject
-    return val;
-  }
-
-  jsi::Array createArray(size_t length) override {
-    auto arr = HermesRuntimeImpl::createArray(length);
-    trace_.emplace_back<SynthTrace::CreateArrayRecord>(
-        getTimeSinceStart(), getUniqueID(arr), length);
-    return arr;
-  }
-
-  size_t size(const jsi::Array &arr) override {
-    // Array size inquiries read from the length property, which is
-    // non-configurable and thus cannot have side effects.
-    return HermesRuntimeImpl::size(arr);
-  }
-
-  size_t size(const jsi::ArrayBuffer &buf) override {
-    // ArrayBuffer size inquiries read from the byteLength property, which is
-    // non-configurable and thus cannot have side effects.
-    return HermesRuntimeImpl::size(buf);
-  }
-
-  uint8_t *data(const jsi::ArrayBuffer &buf) override {
-    throw std::logic_error(
-        "Cannot write raw bytes into an ArrayBuffer in trace mode");
-  }
-
-  jsi::Value getValueAtIndex(const jsi::Array &arr, size_t i) override {
-    auto value = HermesRuntimeImpl::getValueAtIndex(arr, i);
-    trace_.emplace_back<SynthTrace::ArrayReadRecord>(
-        getTimeSinceStart(),
-        getUniqueID(arr),
-        i,
-        toTraceValue(*this, trace_, value));
-    return value;
-  }
-
-  void setValueAtIndexImpl(jsi::Array &arr, size_t i, const jsi::Value &value)
-      override {
-    trace_.emplace_back<SynthTrace::ArrayWriteRecord>(
-        getTimeSinceStart(),
-        getUniqueID(arr),
-        i,
-        toTraceValue(*this, trace_, value));
-    return HermesRuntimeImpl::setValueAtIndexImpl(arr, i, value);
-  }
-
-  jsi::Function createFunctionFromHostFunction(
-      const jsi::PropNameID &name,
-      unsigned int paramCount,
-      jsi::HostFunctionType func) override {
-    auto context =
-        ::hermes::make_unique<TracingHFContext>(std::move(func), *this);
-    auto hostfunc = HermesRuntimeImpl::createFunctionFromHostFunction(
-        context.get(), name, paramCount);
-    context->setFunctionID(getUniqueID(hostfunc));
-    context.release();
-    trace_.emplace_back<SynthTrace::CreateHostFunctionRecord>(
-        getTimeSinceStart(), getUniqueID(hostfunc));
-    return hostfunc;
-  }
-
-  jsi::Value call(
-      const jsi::Function &func,
-      const jsi::Value &jsThis,
-      const jsi::Value *args,
-      size_t count) override {
-    trace_.emplace_back<SynthTrace::CallFromNativeRecord>(
-        getTimeSinceStart(),
-        getUniqueID(func),
-        toTraceValue(*this, trace_, jsThis),
-        argStringifyer(args, count));
-    auto retval = HermesRuntimeImpl::call(func, jsThis, args, count);
-    trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
-        getTimeSinceStart(), toTraceValue(*this, trace_, retval));
-    return retval;
-  }
-
-  jsi::Value callAsConstructor(
-      const jsi::Function &func,
-      const jsi::Value *args,
-      size_t count) override {
-    trace_.emplace_back<SynthTrace::ConstructFromNativeRecord>(
-        getTimeSinceStart(),
-        getUniqueID(func),
-        // A construct call always has an undefined this.
-        // The ReturnToNativeRecord will contain the object that was either
-        // created by the new keyword, or the objec that's returned from the
-        // function.
-        SynthTrace::encodeUndefined(),
-        argStringifyer(args, count));
-    auto retval = HermesRuntimeImpl::callAsConstructor(func, args, count);
-    trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
-        getTimeSinceStart(), toTraceValue(*this, trace_, retval));
-    return retval;
-  }
-
-  /// @}
-
-  /// @name jsi::Instrumentation methods
-  /// @{
-
-  void writeBridgeTrafficTraceToFile(
-      const std::string &fileName) const override {
-    std::error_code ec;
-    llvm::raw_fd_ostream fs{fileName.c_str(), ec, llvm::sys::fs::F_Text};
-    if (ec) {
-      throw std::system_error(ec);
-    }
-    HermesRuntime::writeTrace(fs);
-  }
-
-  /// @}
-
-  void addTTIMarker() {
-    trace_.emplace_back<SynthTrace::MarkerRecord>(getTimeSinceStart(), "tti");
-  }
-
- private:
-  SynthTrace::TimeSinceStart getTimeSinceStart() const {
-    return std::chrono::duration_cast<SynthTrace::TimeSinceStart>(
-        std::chrono::steady_clock::now() - startTime_);
-  }
-
- public:
-  SynthTrace trace_;
-  const vm::RuntimeConfig conf_;
-  const SynthTrace::TimePoint startTime_{std::chrono::steady_clock::now()};
-};
-#endif
-
 #ifdef HERMES_ENABLE_DEBUGGER
 
 inline HermesRuntimeImpl *impl(HermesRuntime *rt) {
@@ -1361,22 +943,20 @@ void HermesRuntime::setFatalHandler(void (*handler)(const std::string &)) {
   detail::sApiFatalHandler = handler;
 }
 
-#if API_TRACE
-SynthTrace &HermesRuntime::trace() {
-  return static_cast<TracingHermesRuntimeImpl *>(this)->trace_;
-}
-
-void HermesRuntime::writeTrace(llvm::raw_ostream &os) const {
-  const auto *self = static_cast<const TracingHermesRuntimeImpl *>(this);
-  os << SynthTrace::Printable(
-      self->trace_, self->runtime_.getCommonStorage()->tracedEnv, self->conf_);
-}
-
-SynthTrace::ObjectID HermesRuntime::getUniqueID(const jsi::Object &o) const {
+uint64_t HermesRuntime::getUniqueID(const jsi::Object &o) const {
   return static_cast<vm::GCCell *>(impl(this)->phv(o).getObject())
       ->getDebugAllocationId();
 }
 
+#ifdef HERMESVM_API_TRACE
+/// Get a structure representing the enviroment-dependent behavior, so
+/// it can be written into the trace for later replay.
+const ::hermes::vm::MockedEnvironment &HermesRuntime::getMockedEnvironment()
+    const {
+  return static_cast<const HermesRuntimeImpl *>(this)
+      ->runtime_.getCommonStorage()
+      ->tracedEnv;
+}
 #endif
 
 #ifdef HERMESVM_SYNTH_REPLAY
@@ -1418,14 +998,6 @@ void HermesRuntime::debugJavaScript(
   impl(this)->checkStatus(res);
 }
 #endif
-
-void HermesRuntime::ttiReached() {
-  impl(this)->runtime_.ttiReached();
-#ifdef HERMESVM_LLVM_PROFILE_DUMP
-  __llvm_profile_dump();
-  throw jsi::JSINativeException("TTI reached; profiling done");
-#endif
-}
 
 void HermesRuntime::registerForProfiling() {
   ::hermes::vm::SamplingProfiler::getInstance()->registerRuntime(
@@ -2200,24 +1772,22 @@ size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSArrayBuffer> arr) {
   return static_cast<size_t>(res->getDouble());
 }
 
-template <typename Runtime>
-void addRecordTTI(Runtime &rt) {
+namespace {
+
+void addRecordTTI(jsi::Runtime &rt) {
   rt.global().setProperty(
       rt,
-      "nativeRecordTTI",
+      "__nativeRecordTTI",
       jsi::Function::createFromHostFunction(
           rt,
-          jsi::PropNameID::forAscii(rt, "nativeRecordTTI"),
+          jsi::PropNameID::forAscii(rt, "__nativeRecordTTI"),
           0,
           [](jsi::Runtime &rt, const jsi::Value &, const jsi::Value *, size_t)
               -> jsi::Value {
-#if API_TRACE
-            static_cast<TracingHermesRuntimeImpl &>(rt).addTTIMarker();
-#endif
-#if API_TRACE
-            static_cast<TracingHermesRuntimeImpl &>(rt).ttiReached();
-#else
-            static_cast<HermesRuntimeImpl &>(rt).ttiReached();
+            static_cast<HermesRuntimeImpl &>(rt).runtime_.ttiReached();
+#ifdef HERMESVM_LLVM_PROFILE_DUMP
+            __llvm_profile_dump();
+            throw jsi::JSINativeException("TTI reached; profiling done");
 #endif
 #ifdef HERMESVM_PLATFORM_LOGGING
             logGCStats(rt, "TTI call");
@@ -2225,8 +1795,6 @@ void addRecordTTI(Runtime &rt) {
             return jsi::Value::undefined();
           }));
 }
-
-namespace {
 
 class HermesMutex : public std::recursive_mutex {
  public:
@@ -2248,9 +1816,7 @@ std::unique_ptr<HermesRuntime> makeHermesRuntime(
       sizeof(HermesRuntime) == sizeof(void *),
       "HermesRuntime should only include a vtable ptr");
 
-#if API_TRACE
-  auto ret = std::make_unique<TracingHermesRuntimeImpl>(runtimeConfig);
-#elif defined(HERMESVM_PLATFORM_LOGGING)
+#if defined(HERMESVM_PLATFORM_LOGGING)
   auto ret = std::make_unique<HermesRuntimeImpl>(
       runtimeConfig.rebuild()
           .withGCConfig(runtimeConfig.getGCConfig()
@@ -2280,24 +1846,21 @@ std::unique_ptr<HermesRuntime> makeHermesRuntime(
 std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
     const vm::RuntimeConfig &runtimeConfig,
     bool shouldExposeTraceFunctions) {
-#if API_TRACE
-  auto ret = std::make_unique<
-      jsi::detail::ThreadSafeRuntimeImpl<TracingHermesRuntimeImpl, Lock>>(
-      runtimeConfig);
-#elif defined(HERMESVM_PLATFORM_LOGGING)
-  auto ret = std::make_unique<
-      jsi::detail::ThreadSafeRuntimeImpl<HermesRuntimeImpl, Lock>>(
+#if defined(HERMESVM_PLATFORM_LOGGING)
+  const vm::RuntimeConfig &actualRuntimeConfig =
       runtimeConfig.rebuild()
           .withGCConfig(runtimeConfig.getGCConfig()
                             .rebuild()
                             .withShouldRecordStats(true)
                             .build())
-          .build());
+          .build();
 #else
+  const vm::RuntimeConfig &actualRuntimeConfig = runtimeConfig;
+#endif
+
   auto ret = std::make_unique<
       jsi::detail::ThreadSafeRuntimeImpl<HermesRuntimeImpl, HermesMutex>>(
-      runtimeConfig);
-#endif
+      actualRuntimeConfig);
 
   if (shouldExposeTraceFunctions) {
     addRecordTTI(*ret);

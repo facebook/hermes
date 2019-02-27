@@ -24,6 +24,7 @@ class raw_ostream;
 
 namespace facebook {
 namespace hermes {
+namespace tracing {
 
 /// A SynthTrace is a list of events that occur in a run of a JS file by a
 /// runtime that uses JSI.
@@ -713,8 +714,6 @@ class SynthTrace {
       const SynthTrace::Printable &trace);
 };
 
-double decodeNumber(const std::string &numberAsString);
-
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os,
     const SynthTrace::Printable &trace);
@@ -723,6 +722,7 @@ llvm::raw_ostream &operator<<(
     SynthTrace::RecordType type);
 std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type);
 
+} // namespace tracing
 } // namespace hermes
 } // namespace facebook
 

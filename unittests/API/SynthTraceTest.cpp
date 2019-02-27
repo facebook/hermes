@@ -8,6 +8,7 @@
 #ifdef HERMESVM_API_TRACE
 
 #include <hermes/SynthTrace.h>
+#include <hermes/TracingRuntime.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -17,17 +18,21 @@
 #include <limits>
 #include <memory>
 
+using namespace facebook::hermes::tracing;
 using namespace facebook::hermes;
 namespace jsi = facebook::jsi;
 
 namespace {
 
 struct SynthTraceTest : public ::testing::Test {
-  std::unique_ptr<HermesRuntime> rt;
+  std::unique_ptr<TracingHermesRuntime> rt;
   SynthTrace::TimeSinceStart dummyTime{SynthTrace::TimeSinceStart::zero()};
 
   SynthTraceTest()
-      : rt(makeHermesRuntime(
+      : rt(makeTracingHermesRuntime(
+            makeHermesRuntime(
+                ::hermes::vm::RuntimeConfig(),
+                /* shouldExposeTraceFunctions */ false),
             ::hermes::vm::RuntimeConfig(),
             /* shouldExposeTraceFunctions */ false)) {}
 
@@ -314,7 +319,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       jsi::PropNameID propName;
 
      public:
-      TestHostObject(HermesRuntime &rt)
+      TestHostObject(jsi::Runtime &rt)
           : x(0.0), propName(jsi::PropNameID::forAscii(rt, "x")) {}
       jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
         if (jsi::PropNameID::compare(rt, name, propName)) {
@@ -389,6 +394,46 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
           dummyTime, objID, "x", SynthTrace::encodeNumber(insertValue)),
       *records.at(9));
 }
+
+// iOS doesn't support death tests
+#ifdef EXPECT_DEATH
+TEST_F(SynthTraceTest, HostFunctionThrowsExceptionFails) {
+  // TODO (T28293178) Remove this once exceptions are supported.
+  jsi::Function throwingFunc = jsi::Function::createFromHostFunction(
+      *rt,
+      jsi::PropNameID::forAscii(*rt, "thrower"),
+      0,
+      [](jsi::Runtime &rt,
+         const jsi::Value &thisVal,
+         const jsi::Value *args,
+         size_t count) -> jsi::Value {
+        throw std::runtime_error("Cannot call");
+      });
+  EXPECT_DEATH({ throwingFunc.call(*rt); }, "");
+}
+
+TEST_F(SynthTraceTest, HostObjectThrowsExceptionFails) {
+  // TODO (T28293178) Remove this once exceptions are supported.
+  class ThrowingHostObject : public jsi::HostObject {
+    jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &sym) override {
+      throw std::runtime_error("Cannot get");
+    }
+
+    void set(
+        jsi::Runtime &rt,
+        const jsi::PropNameID &sym,
+        const jsi::Value &val) override {
+      throw std::runtime_error("Cannot set");
+    }
+  };
+
+  jsi::Object thro = jsi::Object::createFromHostObject(
+      *rt, std::make_shared<ThrowingHostObject>());
+  ASSERT_TRUE(thro.isHostObject(*rt));
+  EXPECT_DEATH({ thro.getProperty(*rt, "foo"); }, "");
+  EXPECT_DEATH({ thro.setProperty(*rt, "foo", jsi::Value::undefined()); }, "");
+}
+#endif
 
 /// @}
 
@@ -548,8 +593,12 @@ TEST_F(SynthTraceSerializationTest, TimeIsPrinted) {
 }
 
 TEST_F(SynthTraceSerializationTest, FullTrace) {
-  std::unique_ptr<HermesRuntime> rt(makeHermesRuntime(
-      ::hermes::vm::RuntimeConfig(),
+  const ::hermes::vm::RuntimeConfig conf;
+  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
+      makeHermesRuntime(
+          conf,
+          /* shouldExposeTraceFunctions */ false),
+      conf,
       /* shouldExposeTraceFunctions */ false));
 
   SynthTrace::ObjectID globalObjID = rt->getUniqueID(rt->global());
@@ -586,7 +635,10 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
 
 TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
   const ::hermes::vm::RuntimeConfig conf;
-  std::unique_ptr<HermesRuntime> rt(makeHermesRuntime(
+  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
+      makeHermesRuntime(
+          conf,
+          /* shouldExposeTraceFunctions */ false),
       conf,
       /* shouldExposeTraceFunctions */ false));
 

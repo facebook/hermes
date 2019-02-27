@@ -83,7 +83,7 @@ static opt<unsigned> BytecodeWarmupPercent(
 int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes synth trace driver\n");
 
-  using namespace facebook::hermes;
+  using namespace facebook::hermes::tracing;
   try {
     TraceInterpreter::ExecuteOptions options;
     options.marker = Marker;

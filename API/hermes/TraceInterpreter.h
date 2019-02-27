@@ -6,9 +6,12 @@
  */
 #pragma once
 
+#ifndef HERMESVM_SYNTH_REPLAY
+#error TraceInterpreter can only be used with synth mode on.
+#endif
+
 #include <hermes/Public/RuntimeConfig.h>
 #include <hermes/SynthTrace.h>
-#include <hermes/hermes.h>
 
 #include <jsi/jsi.h>
 #include <llvm/Support/MemoryBuffer.h>
@@ -19,6 +22,8 @@
 
 namespace facebook {
 namespace hermes {
+
+namespace tracing {
 
 class TraceInterpreter final {
  public:
@@ -100,9 +105,11 @@ class TraceInterpreter final {
   };
 
  private:
-  HermesRuntime &rt;
+  jsi::Runtime &rt;
   ExecuteOptions options;
-  llvm::raw_ostream &outTrace;
+#ifdef HERMESVM_API_TRACE
+  std::function<void()> &writeTrace;
+#endif
   std::unique_ptr<const jsi::Buffer> bundle;
   const SynthTrace &trace;
   const std::unordered_map<SynthTrace::ObjectID, DefAndUse> &globalDefsAndUses;
@@ -153,11 +160,10 @@ class TraceInterpreter final {
 
  private:
   TraceInterpreter(
-      HermesRuntime &rt,
+      jsi::Runtime &rt,
       const ExecuteOptions &options,
-      llvm::raw_ostream &outTrace,
+      std::function<void()> &writeTrace,
       const SynthTrace &trace,
-      const ::hermes::vm::MockedEnvironment &env,
       std::unique_ptr<const jsi::Buffer> bundle,
       const std::unordered_map<SynthTrace::ObjectID, DefAndUse>
           &globalDefsAndUses,
@@ -171,12 +177,11 @@ class TraceInterpreter final {
       llvm::raw_ostream &outTrace);
 
   static std::string exec(
-      HermesRuntime &rt,
+      jsi::Runtime &rt,
       const ExecuteOptions &options,
       const SynthTrace &trace,
-      const ::hermes::vm::MockedEnvironment &env,
       std::unique_ptr<const jsi::Buffer> bundle,
-      llvm::raw_ostream &outTrace);
+      std::function<void()> &writeTrace);
 
   jsi::Function createHostFunction(
       SynthTrace::ObjectID funcID,
@@ -215,5 +220,6 @@ class TraceInterpreter final {
   std::string printStats();
 };
 
+} // namespace tracing
 } // namespace hermes
 } // namespace facebook

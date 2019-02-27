@@ -7,6 +7,7 @@
 #include <hermes/TraceInterpreter.h>
 
 #include <hermes/Support/SHA1.h>
+#include <hermes/TracingRuntime.h>
 #include <hermes/VM/instrumentation/PageAccessTracker.h>
 #include <hermes/VM/instrumentation/PerfEvents.h>
 #include <jsi/instrumentation.h>
@@ -20,6 +21,7 @@ using namespace facebook::jsi;
 
 namespace facebook {
 namespace hermes {
+namespace tracing {
 
 using RecordType = SynthTrace::RecordType;
 using ObjectID = SynthTrace::ObjectID;
@@ -385,11 +387,10 @@ std::string getStatsString(std::string &GCStats, bool shouldPrintIOStats) {
 } // namespace
 
 TraceInterpreter::TraceInterpreter(
-    HermesRuntime &rt,
+    jsi::Runtime &rt,
     const ExecuteOptions &options,
-    llvm::raw_ostream &outTrace,
+    std::function<void()> &writeTrace,
     const SynthTrace &trace,
-    const ::hermes::vm::MockedEnvironment &env,
     std::unique_ptr<const Buffer> bundle,
     const std::unordered_map<ObjectID, TraceInterpreter::DefAndUse>
         &globalDefsAndUses,
@@ -397,7 +398,9 @@ TraceInterpreter::TraceInterpreter(
     const HostObjectToCalls &hostObjectCalls)
     : rt(rt),
       options(options),
-      outTrace(outTrace),
+#ifdef HERMESVM_API_TRACE
+      writeTrace(writeTrace),
+#endif
       bundle(std::move(bundle)),
       trace(trace),
       globalDefsAndUses(globalDefsAndUses),
@@ -408,12 +411,8 @@ TraceInterpreter::TraceInterpreter(
       hostObjects(),
       hostObjectsCallCount(),
       gom() {
-#ifdef HERMESVM_SYNTH_REPLAY
-  // Set up the mocks for environment-dependent JS behavior
-  rt.setMockedEnvironment(env);
-#else
-  throw std::runtime_error(
-      "TraceInterpreter can only be run with synth mode on");
+#ifdef HERMESVM_API_TRACE
+  assert(writeTrace && "writeTrace must be non-empty");
 #endif
   // Add the global object to the global object map
   gom.emplace(trace.globalObjID(), rt.global());
@@ -502,15 +501,22 @@ std::string TraceInterpreter::execFromFileNames(
   rtConfig = rtConfigBuilder.withGCConfig(gcConfigBuilder.build()).build();
 
   ::hermes::vm::instrumentation::PerfEvents::begin();
-  std::unique_ptr<hermes::HermesRuntime> rt =
-      hermes::makeHermesRuntime(rtConfig);
-  std::string GCStats = exec(
-      *rt,
-      options,
-      trace,
-      std::get<2>(traceAndConfigAndEnv),
-      std::move(bytecodeFileBuffer),
-      outTrace);
+#ifdef HERMESVM_API_TRACE
+  std::unique_ptr<TracingHermesRuntime> rt =
+      makeTracingHermesRuntime(makeHermesRuntime(rtConfig), rtConfig);
+
+  // Set up the mocks for environment-dependent JS behavior
+  rt->hermesRuntime().setMockedEnvironment(std::get<2>(traceAndConfigAndEnv));
+  std::function<void()> writeTrace = [&rt, &outTrace] {
+    rt->writeTrace(outTrace);
+  };
+#else
+  std::unique_ptr<HermesRuntime> rt = makeHermesRuntime(rtConfig);
+  std::function<void()> writeTrace = nullptr;
+#endif
+
+  std::string GCStats =
+      exec(*rt, options, trace, std::move(bytecodeFileBuffer), writeTrace);
   if (!options.shouldPrintGCStats) {
     GCStats = "";
   }
@@ -524,12 +530,11 @@ std::string TraceInterpreter::execFromFileNames(
 
 /* static */
 std::string TraceInterpreter::exec(
-    HermesRuntime &rt,
+    jsi::Runtime &rt,
     const ExecuteOptions &options,
     const SynthTrace &trace,
-    const ::hermes::vm::MockedEnvironment &env,
     std::unique_ptr<const jsi::Buffer> bundle,
-    llvm::raw_ostream &outTrace) {
+    std::function<void()> &writeTrace) {
   if (!HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
     llvm::errs()
         << "Note: You are running from source code, not HBC bytecode.\n"
@@ -552,9 +557,8 @@ std::string TraceInterpreter::exec(
   TraceInterpreter interpreter(
       rt,
       options,
-      outTrace,
+      writeTrace,
       trace,
-      env,
       std::move(bundle),
       globalDefsAndUses,
       hostFuncs,
@@ -632,10 +636,7 @@ std::string TraceInterpreter::execEntryFunction(
   execFunction(entryFunc, Value::undefined(), nullptr, 0);
 #ifdef HERMESVM_API_TRACE
   // If tracing is also turned on, write out the trace to the given stream.
-  rt.writeTrace(outTrace);
-#else
-  // To avoid warnings about the unused variable.
-  (void)outTrace;
+  writeTrace();
 #endif
 
 #ifdef HERMESVM_PROFILER_BB
@@ -733,8 +734,11 @@ Value TraceInterpreter::execFunction(
             }
             // TODO(38878564): Make a special TTIRecord instead of hard-coding
             // this.
-            if (mr.tag_ == "tti") {
-              rt.ttiReached();
+            if (mr.tag_ == "tti" &&
+                rt.global().hasProperty(rt, "__nativeRecordTTI")) {
+              rt.global()
+                  .getPropertyAsFunction(rt, "__nativeRecordTTI")
+                  .call(rt);
             }
             break;
           }
@@ -1003,14 +1007,12 @@ Value TraceInterpreter::execFunction(
                      << e.what() << "\n";
 #ifdef HERMESVM_API_TRACE
         llvm::errs() << "Writing out the trace\n";
-        rt.writeTrace(outTrace);
+        writeTrace();
         llvm::errs() << "\n";
 #else
         llvm::errs()
             << "Rebuild and rerun with @fbsource//xplat/mode/hermes/trace to get a trace "
                "for comparison\n";
-        // To avoid warnings about the unused variable.
-        (void)outTrace;
 #endif
         // Do not re-throw, since that will pass back and forth between JS and
         // Native, causing more perturbations to the state of this interpreter,
@@ -1098,5 +1100,6 @@ std::string TraceInterpreter::printStats() {
   return stats;
 }
 
+} // namespace tracing
 } // namespace hermes
 } // namespace facebook

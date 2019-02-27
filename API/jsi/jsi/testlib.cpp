@@ -306,8 +306,6 @@ TEST_P(JSITest, HostObjectTest) {
       "hello");
   EXPECT_EQ(shbho->getThing(), "hello");
 
-  // TODO (T28293178) Remove this once exceptions are supported in all builds.
-#ifndef JSI_NO_EXCEPTION_TESTS
   class ThrowingHostObject : public HostObject {
     Value get(Runtime& rt, const PropNameID& sym) override {
       throw std::runtime_error("Cannot get");
@@ -335,7 +333,6 @@ TEST_P(JSITest, HostObjectTest) {
     exc = ex.what();
   }
   EXPECT_NE(exc.find("Cannot set"), std::string::npos);
-#endif
 
   class NopHostObject : public HostObject {};
   Object nopHo =
@@ -344,8 +341,7 @@ TEST_P(JSITest, HostObjectTest) {
   EXPECT_TRUE(function("function (obj) { return obj.thing; }")
                   .call(rt, nopHo)
                   .isUndefined());
-  // TODO (T28293178) Remove this once exceptions are supported in all builds.
-#ifndef JSI_NO_EXCEPTION_TESTS
+
   std::string nopExc;
   try {
     function("function (obj) { obj.thing = 'pika'; }").call(rt, nopHo);
@@ -353,7 +349,6 @@ TEST_P(JSITest, HostObjectTest) {
     nopExc = ex.what();
   }
   EXPECT_NE(nopExc.find("TypeError: "), std::string::npos);
-#endif
 
   class HostObjectWithPropertyNames : public HostObject {
     std::vector<PropNameID> getPropertyNames(Runtime& rt) override {
@@ -641,8 +636,7 @@ TEST_P(JSITest, HostFunctionTest) {
   EXPECT_TRUE(eval("cons.name == 'dot'").getBool());
   EXPECT_TRUE(eval("cons.length == 2").getBool());
   EXPECT_TRUE(eval("cons instanceof Function").getBool());
-  // TODO (T28293178) Remove this once exceptions are supported in all builds.
-#ifndef JSI_NO_EXCEPTION_TESTS
+
   EXPECT_TRUE(eval("(function() {"
                    "  try {"
                    "    cons('fail'); return false;"
@@ -652,7 +646,7 @@ TEST_P(JSITest, HostFunctionTest) {
                    "                          'expected 2 args'));"
                    "  }})()")
                   .getBool());
-#endif
+
   Function coolify = Function::createFromHostFunction(
       rt,
       PropNameID::forAscii(rt, "coolify"),
@@ -925,9 +919,6 @@ TEST_P(JSITest, PreparedJavaScriptURLInBacktrace) {
   }
 }
 
-// TODO (T28293178) Remove this once exceptions are supported in all builds.
-#ifndef JSI_NO_EXCEPTION_TESTS
-
 namespace {
 
 unsigned countOccurences(const std::string& of, const std::string& in) {
@@ -972,7 +963,6 @@ TEST_P(JSITest, JSErrorsArePropagatedNicely) {
     // EXPECT_EQ(countOccurences("callback", error.getStack(rt)), 5);
   }
 }
-#endif
 
 TEST_P(JSITest, JSErrorsCanBeConstructedWithStack) {
   auto err = JSError(rt, "message", "stack");

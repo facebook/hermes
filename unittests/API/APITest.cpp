@@ -126,13 +126,11 @@ TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
 // In JSC we use multiple threads in our implementation of JSI so we can't
 // use the ASSERT_DEATH macros when testing that implementation.
 // Asserts are compiled out of opt builds
-#ifndef NDEBUG
-#ifdef ASSERT_DEATH
+#if !defined(NDEBUG) && defined(ASSERT_DEATH)
 TEST_F(HermesRuntimeDeathTest, ValueTest) {
   ASSERT_DEATH(eval("'slay'").getNumber(), "Assertion.*isNumber");
   ASSERT_DEATH(eval("123").getString(*rt), "Assertion.*isString");
 }
-#endif
 #endif
 
 TEST_F(HermesRuntimeTest, DontGrowWhenMoveObjectOutOfValue) {
@@ -254,40 +252,6 @@ TEST_F(HermesRuntimeTest, HostObjectWithOwnProperties) {
                    "d.writable")
                   .getBool());
 }
-
-#ifdef HERMESVM_API_TRACE
-#ifdef EXPECT_DEATH
-TEST_F(HermesRuntimeTest, HostFunctionThrowsExceptionFails) {
-  // TODO (T28293178) Remove this once exceptions are supported.
-  Function throwingFunc = Function::createFromHostFunction(
-      *rt,
-      PropNameID::forAscii(*rt, "thrower"),
-      0,
-      [](Runtime &rt, const Value &thisVal, const Value *args, size_t count)
-          -> Value { throw std::runtime_error("Cannot call"); });
-  EXPECT_DEATH({ throwingFunc.call(*rt); }, "");
-}
-
-TEST_F(HermesRuntimeTest, HostObjectThrowsExceptionFails) {
-  // TODO (T28293178) Remove this once exceptions are supported.
-  class ThrowingHostObject : public HostObject {
-    Value get(Runtime &rt, const PropNameID &sym) override {
-      throw std::runtime_error("Cannot get");
-    }
-
-    void set(Runtime &rt, const PropNameID &sym, const Value &val) override {
-      throw std::runtime_error("Cannot set");
-    }
-  };
-
-  Object thro =
-      Object::createFromHostObject(*rt, std::make_shared<ThrowingHostObject>());
-  ASSERT_TRUE(thro.isHostObject(*rt));
-  EXPECT_DEATH({ thro.getProperty(*rt, "foo"); }, "");
-  EXPECT_DEATH({ thro.setProperty(*rt, "foo", Value::undefined()); }, "");
-}
-#endif
-#endif
 
 // TODO mhorowitz: move this to jsi/testlib.cpp once we have impls for all VMs
 TEST_F(HermesRuntimeTest, WeakReferences) {
