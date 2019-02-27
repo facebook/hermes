@@ -139,8 +139,6 @@ jsi::JSError makeJSError(jsi::Runtime &rt, Args &&... args) {
   return jsi::JSError(rt, os.str());
 }
 
-class HermesRuntimeImpl;
-
 struct Lock {
   void lock(const HermesRuntimeImpl &) const {
     mutex_.lock();
@@ -255,6 +253,8 @@ class StackRuntime {
   std::thread thread_;
 };
 #endif
+
+} // namespace
 
 class HermesRuntimeImpl
 #if !API_TRACE
@@ -917,6 +917,8 @@ class HermesRuntimeImpl
   std::unique_ptr<debugger::Debugger> debugger_;
 #endif
 };
+
+namespace {
 
 #if API_TRACE
 

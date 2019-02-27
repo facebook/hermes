@@ -40,6 +40,7 @@ class Debugger;
 #ifdef HERMESVM_API_TRACE
 class SynthTrace;
 #endif
+class HermesRuntimeImpl;
 
 /// Represents a Hermes JS runtime.
 class HermesRuntime : public jsi::Runtime {
@@ -134,6 +135,10 @@ class HermesRuntime : public jsi::Runtime {
   void ttiReached();
 
  private:
+  // Only HermesRuntimeImpl can subclass this.
+  HermesRuntime() = default;
+  friend class HermesRuntimeImpl;
+
   friend struct ::HermesTestHelper;
   size_t rootsListLength() const;
 
