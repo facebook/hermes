@@ -111,6 +111,9 @@ def main() -> int:
         "outfile", nargs="?", type=argparse.FileType("w"), default=sys.stdout
     )
     parser.add_argument(
+        "--add-record-num", dest="add_record_num", action="store_true", default=False
+    )
+    parser.add_argument(
         "--convert-number", dest="convert_number", action="store_true", default=False
     )
     args = parser.parse_args()
@@ -124,6 +127,12 @@ def main() -> int:
     trace_contents["trace"] = [
         normal.normalize_rec(stripTime(rec)) for rec in trace_contents["trace"]
     ]
+
+    if args.add_record_num:
+        # Add a globalRecordNum key for easier searching for a particular record.
+        for globalRecordNum, rec in enumerate(trace_contents["trace"]):
+            rec["globalRecordNum"] = globalRecordNum
+
     trace_contents["globalObjID"] = 0
     json.dump(trace_contents, args.outfile, indent=4)
     return 0
