@@ -395,7 +395,11 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     With around(warg_);
     return RD::isInspectable();
   };
-  Instrumentation& instrumentation() override {
+  // The jsi:: prefix is necessary because MSVC compiler complains C2247:
+  // Instrumentation is not accessible because RuntimeDecorator uses private
+  // to inherit from Instrumentation.
+  // TODO(T40821815) Consider removing this workaround when updating MSVC
+  jsi::Instrumentation& instrumentation() override {
     With around(warg_);
     return RD::instrumentation();
   }
