@@ -1,4 +1,5 @@
 // RUN: %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -fstatic-builtins -target=HBC -O %s | %FileCheck --match-full-lines %s
 
 function foo() {
   function f() {
@@ -17,6 +18,7 @@ function foo() {
   var a5 = f();
 
   // This is a call that requires 255 registers, causing an overflow.
+  // Arguments to calls shouldn't be moved by the spiller.
   var x = f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
       19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
       37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
@@ -34,6 +36,7 @@ function foo() {
       219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232,
       233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246,
       247, 248, 249, 250, 251, 252, 253);
+  Array.isArray(254);
   return x+a1+a2+a3+a4+a5;
 }
 

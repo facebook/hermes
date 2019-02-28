@@ -722,6 +722,8 @@ bool SpillRegisters::requiresShortOperand(Instruction *I, int op) {
     case ValueKind::CallInstKind:
     case ValueKind::ConstructInstKind:
     case ValueKind::HBCConstructInstKind:
+    case ValueKind::HBCCallBuiltinInstKind:
+    case ValueKind::HBCCallDirectInstKind:
       return op == 0;
     default:
       return true;
