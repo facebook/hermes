@@ -50,7 +50,6 @@ set_target_properties(compileJS PROPERTIES
   COMPILE_FLAGS "-fno-rtti"
   )
 
-
 add_library(libhermes SHARED ${api_sources})
 target_link_libraries(libhermes
   hermesapi

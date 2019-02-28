@@ -43,17 +43,14 @@ class HermesExecutorFactory : public JSExecutorFactory {
 class HermesExecutor : public JSIExecutor {
  public:
   HermesExecutor(
-      std::shared_ptr<facebook::hermes::HermesRuntime> runtime,
+      std::shared_ptr<jsi::Runtime> runtime,
       std::shared_ptr<ExecutorDelegate> delegate,
       std::shared_ptr<MessageQueueThread> jsQueue,
       Logger logger,
       const JSIScopedTimeoutInvoker &timeoutInvoker,
       RuntimeInstaller runtimeInstaller);
 
-  void destroy() override;
-
  private:
-  std::shared_ptr<facebook::hermes::HermesRuntime> hermesRuntime_;
   JSIExecutor::Logger logger_;
   JSIScopedTimeoutInvoker timeoutInvoker_;
 };
