@@ -270,6 +270,21 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  auto builtinsAreFrozen = symbolForCStr(runtime, "Builtins Frozen");
+  if (LLVM_UNLIKELY(builtinsAreFrozen == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  tmpHandle = HermesValue::encodeBoolValue(runtime->builtinsAreFrozen());
+  status = JSObject::defineNewOwnProperty(
+      resultHandle,
+      runtime,
+      **builtinsAreFrozen,
+      PropertyFlags::defaultNewNamedPropertyFlags(),
+      tmpHandle);
+  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   return resultHandle.getHermesValue();
 }
 
