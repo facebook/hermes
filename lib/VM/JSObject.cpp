@@ -2067,12 +2067,13 @@ JSObject::checkPropertyUpdate(
       return std::make_pair(PropertyUpdateStatus::failed, PropertyFlags{});
     }
 
-    if (currentFlags.accessor) {
-      newFlags.writable = 0;
-    } else {
-      // Data descriptor: set writable to default.
-      newFlags.writable = 1;
-    }
+    // If we change from accessor to data descriptor, Preserve the existing
+    // values of the converted property’s [[Configurable]] and [[Enumerable]]
+    // attributes and set the rest of the property’s attributes to their default
+    // values.
+    // If it's the other way around, since the accessor doesn't have the
+    // [[Writable]] attribute, do nothing.
+    newFlags.writable = 0;
   }
   // 8.12.9 [10] if both are data descriptors.
   else if (!currentFlags.accessor) {
