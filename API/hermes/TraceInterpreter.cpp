@@ -1004,8 +1004,10 @@ Value TraceInterpreter::execFunction(
         }
       } catch (const jsi::JSIException &e) {
         // If an exception occurs, write out the trace.
-        llvm::errs() << "An exception occurred while running the benchmark:\n"
-                     << e.what() << "\n";
+        llvm::errs()
+            << "An exception occurred while running the benchmark:\nAt record number "
+            << globalRecordNum << ":\n"
+            << e.what() << "\n";
 #ifdef HERMESVM_API_TRACE
         llvm::errs() << "Writing out the trace\n";
         writeTrace();
