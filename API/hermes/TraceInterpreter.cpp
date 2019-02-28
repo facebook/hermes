@@ -512,6 +512,7 @@ std::string TraceInterpreter::execFromFileNames(
   };
 #else
   std::unique_ptr<HermesRuntime> rt = makeHermesRuntime(rtConfig);
+  rt->setMockedEnvironment(std::get<2>(traceAndConfigAndEnv));
   std::function<void()> writeTrace = nullptr;
 #endif
 
