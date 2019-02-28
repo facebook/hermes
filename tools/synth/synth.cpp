@@ -100,10 +100,6 @@ int main(int argc, char **argv) {
 #endif
 #ifdef HERMESVM_API_TRACE
     // If this is tracing mode, get the trace instead of the stats.
-    if (!options.marker.empty()) {
-      throw std::invalid_argument(
-          "Shouldn't be given a marker for trace comparisons");
-    }
     options.shouldPrintGCStats = false;
     options.shouldTrackIO = false;
     TraceInterpreter::execAndTrace(
