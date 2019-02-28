@@ -49,3 +49,17 @@ add_llvm_library(compileJS STATIC CompileJS.cpp)
 set_target_properties(compileJS PROPERTIES
   COMPILE_FLAGS "-fno-rtti"
   )
+
+
+add_library(libhermes SHARED ${api_sources})
+target_link_libraries(libhermes
+  hermesapi
+  ${CORE_FOUNDATION}
+)
+set_target_properties(libhermes PROPERTIES
+  # Declare our dependency on std::make_unique
+  COMPILE_FLAGS "-std=c++14"
+  # Avoid becoming liblibhermes (and there's already a target called 'hermes')
+  OUTPUT_NAME hermes
+  )
+hermes_link_icu(libhermes)
