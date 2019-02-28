@@ -78,9 +78,6 @@ if you prefer to use an alternative build system.
 
     ./hermes/utils/configure.sh
 
-(FB internal: `export FBSOURCE_DIR="$HOME/fbsource"` first if building from
-fbsource instead of GitHub)
-
 After running the build script, running 'ninja' from the build directory will
 build the compiler driver.
 
