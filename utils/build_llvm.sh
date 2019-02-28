@@ -3,10 +3,18 @@
 set -x
 set -e
 
+# We assume this script is run from the Hermes directory, that it is
+# not copied elsewhere.  This is necessary because it references files
+# relative to the script directory.  So save the SCRIPT_DIR.
+# This trick is from
+# https://stackoverflow.com/questions/59895/get-the-source-directory-of-a-bash-script-from-within-the-script-itself
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 START_DIR="$PWD"
 function finish () {
   cd "$START_DIR"
 }
+
 trap finish EXIT
 
 # HERMES_WS_DIR is the root directory for LLVM checkout and build dirs.
@@ -16,9 +24,7 @@ trap finish EXIT
 mkdir -p "$HERMES_WS_DIR"
 cd "$HERMES_WS_DIR"
 
-LLVM_REV=6ed2765ff12725
-CLANG_REV=a2380ee70ae
-CLANG_EXTRA_REV=407b4a570b2
+LLVM_REV=4519ac3791135eb9c207f0684f4236dbc13ac83f
 
 BUILD_SYSTEM="${BUILD_SYSTEM:-Ninja}"
 BUILD_CMD="${BUILD_CMD:-ninja}"
@@ -81,26 +87,11 @@ fi
 
 (cd llvm; git checkout $LLVM_REV)
 
-# We don't need clang for the build, but we need clang tools for
-# development. (e.g. clang-format) By default we always fetch and
-# build clang.
-if [ -z "$SKIP_CLANG" ]; then
-  if [ ! -e "./clang/" ]; then
-    git clone https://github.com/llvm-mirror/clang.git
-  fi
-
-  (cd clang; git checkout $CLANG_REV)
-
-  #setup the symlinks
-  (cd llvm/tools; ln -s -f ../../clang)
-
-  # Download extra clang tools, in order to build tools such as clang-tidy
-  if [ ! -e "./clang/tools/extra" ]; then
-    (cd clang/tools; git clone https://github.com/llvm-mirror/clang-tools-extra.git extra)
-  fi
-
-  (cd clang/tools/extra; git checkout $CLANG_EXTRA_REV)
-fi
+#local edits
+#There are a small number of edits we need to make to the llvm files:
+(cd llvm/include/llvm/ADT; patch < "$SCRIPT_DIR"/llvm-patches/StringExtras.h.diff)
+(cd llvm/include/llvm/Support; patch < "$SCRIPT_DIR"/llvm-patches/raw_ostream.h.diff)
+(cd llvm/lib/Support; patch <  "$SCRIPT_DIR"/llvm-patches/Signals.cpp.diff)
 
 #build llvm
 FLAGS="-DLLVM_TARGETS_TO_BUILD= -DCMAKE_BUILD_TYPE=$BUILD_TYPE"

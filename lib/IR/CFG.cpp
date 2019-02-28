@@ -11,13 +11,12 @@
 
 using namespace hermes;
 
-template class llvm::DominatorTreeBase<BasicBlock>;
+template class llvm::DominatorTreeBase<BasicBlock, false>;
 template class llvm::DomTreeNodeBase<BasicBlock>;
 
-DominanceInfo::DominanceInfo(Function *F)
-    : DominatorTreeBase(/*isPostDom*/ false) {
+DominanceInfo::DominanceInfo(Function *F) : DominatorTreeBase() {
   assert(F->begin() != F->end() && "Function is empty!");
-  recalculate<Function>(*F);
+  recalculate(*F);
 }
 
 bool DominanceInfo::properlyDominates(

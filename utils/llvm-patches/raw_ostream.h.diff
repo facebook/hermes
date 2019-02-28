@@ -1,0 +1,11 @@
+--- raw_ostream.h	2019-02-20 10:18:24.554369479 -0800
++++ raw_ostream.h.new	2019-02-20 10:17:38.718433621 -0800
+@@ -341,7 +341,7 @@
+   explicit raw_pwrite_stream(bool Unbuffered = false)
+       : raw_ostream(Unbuffered) {}
+   void pwrite(const char *Ptr, size_t Size, uint64_t Offset) {
+-#ifndef NDBEBUG
++#ifndef NDEBUG
+     uint64_t Pos = tell();
+     // /dev/null always reports a pos of 0, so we cannot perform this check
+     // in that case.

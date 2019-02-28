@@ -565,6 +565,10 @@ void SourceErrorManager::printDiagnostic(
       changeColor(raw_ostream::BLACK);
       S << "note: ";
       break;
+    case llvm::SourceMgr::DK_Remark:
+      changeColor(raw_ostream::BLACK);
+      S << "remark: ";
+      break;
   }
 
   resetColor();

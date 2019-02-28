@@ -15,6 +15,10 @@
 #include <memory>
 #include <string>
 
+namespace llvm {
+class raw_ostream;
+}
+
 /// Support for statically compiling regexps.
 namespace hermes {
 

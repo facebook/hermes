@@ -438,7 +438,7 @@ std::unique_ptr<llvm::MemoryBuffer> memoryBufferFromZipFile(
 
   // Read data from the file, ensuring null termination of the data.
   std::unique_ptr<llvm::MemoryBuffer> buf =
-      llvm::MemoryBuffer::getNewMemBuffer(size, path);
+      llvm::WritableMemoryBuffer::getNewMemBuffer(size, path);
   zip_entry_noallocread(zip, const_cast<char *>(buf->getBufferStart()), size);
   zip_entry_close(zip);
 

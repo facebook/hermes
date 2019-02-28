@@ -1,0 +1,17 @@
+--- Signals.cpp	2019-02-20 10:11:32.002947489 -0800
++++ Signals.cpp.new	2019-02-19 10:16:58.090315638 -0800
+@@ -36,10 +36,14 @@
+ 
+ using namespace llvm;
+ 
++#if 0
+ static cl::opt<bool>
+     DisableSymbolication("disable-symbolication",
+                          cl::desc("Disable symbolizing crash backtraces."),
+                          cl::init(false), cl::Hidden);
++#else
++const bool DisableSymbolication = true;
++#endif
+ 
+ static ManagedStatic<std::vector<std::pair<void (*)(void *), void *>>>
+     CallBacksToRun;

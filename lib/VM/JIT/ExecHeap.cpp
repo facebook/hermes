@@ -29,8 +29,11 @@ ExecHeap::DualPool *ExecHeap::addPool() {
     return nullptr;
 
   // Allocate a new one.
-  llvm::sys::OwningMemoryBlock mb{llvm::sys::Memory::AllocateRWX(
-      firstHeapSize_ + secondHeapSize_, nullptr)};
+  std::error_code EC;
+  const unsigned kRWX = llvm::sys::Memory::MF_READ |
+      llvm::sys::Memory::MF_WRITE | llvm::sys::Memory::MF_EXEC;
+  llvm::sys::OwningMemoryBlock mb{llvm::sys::Memory::allocateMappedMemory(
+      firstHeapSize_ + secondHeapSize_, nullptr, kRWX, EC)};
   if (!mb.base())
     return nullptr;
 

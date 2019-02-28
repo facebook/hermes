@@ -269,7 +269,7 @@ struct GraphTraits<Inverse<hermes::Function *>>
 // Dominators
 //===----------------------------------------------------------------------===//
 
-extern template class llvm::DominatorTreeBase<hermes::BasicBlock>;
+extern template class llvm::DominatorTreeBase<hermes::BasicBlock, false>;
 extern template class llvm::DomTreeNodeBase<hermes::BasicBlock>;
 
 namespace hermes {
@@ -277,7 +277,7 @@ namespace hermes {
 using DominanceInfoNode = llvm::DomTreeNodeBase<BasicBlock>;
 
 /// A class for computing basic dominance info.
-class DominanceInfo : public llvm::DominatorTreeBase<BasicBlock> {
+class DominanceInfo : public llvm::DominatorTreeBase<BasicBlock, false> {
  public:
   explicit DominanceInfo(Function *F);
 
@@ -290,7 +290,7 @@ class DominanceInfo : public llvm::DominatorTreeBase<BasicBlock> {
   }
 
   void reset() {
-    llvm::DominatorTreeBase<BasicBlock>::reset();
+    llvm::DominatorTreeBase<BasicBlock, false>::reset();
   }
 };
 
