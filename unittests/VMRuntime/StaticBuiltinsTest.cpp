@@ -20,18 +20,19 @@ using namespace hermes::hbc;
 
 namespace {
 
-/// Assert that obj.prop is frozen.
-#define EXPECT_PROPERTY_FROZEN(obj, prop)                                   \
+/// Assert that obj.prop is frozen and the static builtin flag is marked.
+#define EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(obj, prop)              \
   {                                                                         \
     NamedPropertyDescriptor desc;                                           \
     ASSERT_TRUE(                                                            \
         JSObject::getNamedDescriptor(obj, runtime, prop, desc) != nullptr); \
     EXPECT_FALSE(desc.flags.writable);                                      \
     EXPECT_FALSE(desc.flags.configurable);                                  \
+    EXPECT_TRUE(desc.flags.staticBuiltin);                                  \
   }
 
-/// Verify builtin objects are frozen and the builtin methods on those objects
-/// are frozen too.
+/// Verify builtin objects and the builtin methods on those objects
+/// are frozen and marked as static builtins.
 static void verifyAllBuiltinsFrozen(Runtime *runtime) {
   GCScope gcScope{runtime};
   auto global = runtime->getGlobal();
@@ -39,7 +40,7 @@ static void verifyAllBuiltinsFrozen(Runtime *runtime) {
 #define BUILTIN_OBJECT(object)                                          \
   {                                                                     \
     auto objectID = runtime->getPredefinedSymbolID(Predefined::object); \
-    EXPECT_PROPERTY_FROZEN(global, objectID)                            \
+    EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(global, objectID)       \
   }
 
 #define BUILTIN_METHOD(object, method)                                  \
@@ -49,7 +50,7 @@ static void verifyAllBuiltinsFrozen(Runtime *runtime) {
     ASSERT_NE(cr, ExecutionStatus::EXCEPTION);                          \
     auto objHandle = runtime->makeHandle<JSObject>(*cr);                \
     auto methodID = runtime->getPredefinedSymbolID(Predefined::method); \
-    EXPECT_PROPERTY_FROZEN(objHandle, methodID);                        \
+    EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(objHandle, methodID);   \
   }
 #include "hermes/Inst/Builtins.def"
 }
@@ -125,6 +126,41 @@ TEST_F(StaticBuiltinsTest, BuiltinsOverridden) {
   flagsBuiltin.staticBuiltins = true;
   EXPECT_EQ(
       runtime->run(codeStaticBuiltin, "source/url", flagsBuiltin),
+      ExecutionStatus::EXCEPTION);
+}
+
+TEST_F(StaticBuiltinsTest, AttemptToOverrideBuiltins) {
+  // Run bytecode compiled with static builtins enabled but attempt to override
+  // a builtin method at the same time. We should get an exception.
+  std::string codeStaticBuiltin = R"(
+    Math.sin = false;
+  )";
+  CompileFlags flagsBuiltin;
+  flagsBuiltin.staticBuiltins = true;
+  EXPECT_EQ(
+      runtime->run(codeStaticBuiltin, "source/url", flagsBuiltin),
+      ExecutionStatus::EXCEPTION);
+}
+
+TEST_F(StaticBuiltinsTest, AttemptToOverrideBuiltins2) {
+  // Run bytecode compiled with static builtins enabled to freeze the builtins.
+  std::string codeStaticBuiltin = R"(
+    print('hello world');
+  )";
+  CompileFlags flagsBuiltin;
+  flagsBuiltin.staticBuiltins = true;
+  EXPECT_EQ(
+      runtime->run(codeStaticBuiltin, "source/url", flagsBuiltin),
+      ExecutionStatus::RETURNED);
+
+  // Run bytecode that attempts to override a builtin method. We should get an
+  // exception.
+  std::string codeOverrideBuiltin = R"(
+    Math.sin = false;
+  )";
+  CompileFlags flagsNone;
+  EXPECT_EQ(
+      runtime->run(codeOverrideBuiltin, "source/url", flagsNone),
       ExecutionStatus::EXCEPTION);
 }
 

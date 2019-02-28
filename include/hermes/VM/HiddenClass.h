@@ -15,6 +15,7 @@
 #include "hermes/VM/SegmentedArray.h"
 #include "hermes/VM/WeakValueMap.h"
 
+#include <functional>
 #include "llvm/ADT/ArrayRef.h"
 
 namespace hermes {
@@ -262,20 +263,24 @@ class HiddenClass final : public GCCell {
       Handle<HiddenClass> selfHandle,
       Runtime *runtime);
 
-  /// Make the properties in the set \p propsToFreeze non-writable and non-
-  /// configurable. If in dictionary mode, the properties are updated on the
-  /// hidden class directly; otherwise, create only one new hidden class as
-  /// result. Updating the properties mutates the property map directly without
-  /// creating transitions.
-  /// \p propsToFreeze is a list of SymbolIDs for properties that need to be
+  /// Update the flags for the properties in the list \p props with \p
+  /// flagsToClear and \p flagsToSet. If in dictionary mode, the properties are
+  /// updated on the hidden class directly; otherwise, create only one new
+  /// hidden class as result. Updating the properties mutates the property map
+  /// directly without creating transitions.
+  /// \p flagsToClear and \p flagsToSet are masks for updating the property
+  /// flags.
+  /// \p props is a list of SymbolIDs for properties that need to be updated
   /// made read-only. It should contain a subset of properties in the hidden
   /// class, so the SymbolIDs won't get freed by gc. It can be llvm::None; if it
-  /// is llvm::None, make every property read-only.
+  /// is llvm::None, update every property.
   /// \return the resulting hidden class.
-  static Handle<HiddenClass> makePropertiesReadOnlyWithoutTransitions(
+  static Handle<HiddenClass> updatePropertyFlagsWithoutTransitions(
       Handle<HiddenClass> selfHandle,
       Runtime *runtime,
-      OptValue<llvm::ArrayRef<SymbolID>> propsToFreeze);
+      PropertyFlags flagsToClear,
+      PropertyFlags flagsToSet,
+      OptValue<llvm::ArrayRef<SymbolID>> props);
 
   /// \return true if all properties are non-configurable
   static bool areAllNonConfigurable(

@@ -254,11 +254,9 @@ TEST_F(HiddenClassTest, SmokeTest) {
   }
 }
 
-TEST_F(HiddenClassTest, MakePropertiesReadOnlyWithoutTransitionsTest) {
+TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   GCScope gcScope{
-      runtime,
-      "HiddenClassTest.MakePropertiesReadOnlyWithoutTransitionsTest",
-      48};
+      runtime, "HiddenClassTest.UpdatePropertyFlagsWithoutTransitionsTest", 48};
 
   runtime->collect();
 
@@ -303,10 +301,15 @@ TEST_F(HiddenClassTest, MakePropertiesReadOnlyWithoutTransitionsTest) {
 
   NamedPropertyDescriptor desc;
 
+  PropertyFlags clearFlags;
+  clearFlags.writable = 1;
+  clearFlags.configurable = 1;
+  PropertyFlags setFlags;
+
   ASSERT_FALSE(y->isDictionary());
   // y is not a dictionary so we will get a new hidden class.
-  auto yClone = HiddenClass::makePropertiesReadOnlyWithoutTransitions(
-      y, runtime, llvm::None);
+  auto yClone = HiddenClass::updatePropertyFlagsWithoutTransitions(
+      y, runtime, clearFlags, setFlags, llvm::None);
   ASSERT_NE(*y, *yClone);
   ASSERT_EQ(y->getNumProperties(), yClone->getNumProperties());
   ASSERT_FALSE(yClone->isDictionary());
@@ -332,12 +335,6 @@ TEST_F(HiddenClassTest, MakePropertiesReadOnlyWithoutTransitionsTest) {
   ASSERT_FALSE(desc.flags.writable);
   ASSERT_FALSE(desc.flags.configurable);
 
-  auto y1 = HiddenClass::makeAllReadOnly(y, runtime);
-  // y1 is already read-only so we will not get a new hidden class.
-  auto y2 = HiddenClass::makePropertiesReadOnlyWithoutTransitions(
-      y1, runtime, llvm::None);
-  ASSERT_EQ(*y1, *y2);
-
   // Turn y into a dictionary y3 by deleting y.a
   found = HiddenClass::findProperty(
       y, runtime, *aHnd, PropertyFlags::invalid(), desc);
@@ -349,8 +346,8 @@ TEST_F(HiddenClassTest, MakePropertiesReadOnlyWithoutTransitionsTest) {
   ASSERT_TRUE(y3->isDictionary());
   ASSERT_EQ(2u, y3->getNumProperties());
   // We should not create a new hidden class in this case.
-  auto y4 = HiddenClass::makePropertiesReadOnlyWithoutTransitions(
-      y3, runtime, llvm::None);
+  auto y4 = HiddenClass::updatePropertyFlagsWithoutTransitions(
+      y3, runtime, clearFlags, setFlags, llvm::None);
   ASSERT_EQ(*y4, *y3);
 
   // Only freeze y.a and y.c
@@ -360,8 +357,12 @@ TEST_F(HiddenClassTest, MakePropertiesReadOnlyWithoutTransitionsTest) {
   propsToFreeze.push_back(*dHnd); // This is not in the map yet.
   // Freeze while only create a singleton hidden class.
   auto partlyFrozenSingleton =
-      HiddenClass::makePropertiesReadOnlyWithoutTransitions(
-          y, runtime, llvm::ArrayRef<SymbolID>(propsToFreeze));
+      HiddenClass::updatePropertyFlagsWithoutTransitions(
+          y,
+          runtime,
+          clearFlags,
+          setFlags,
+          llvm::ArrayRef<SymbolID>(propsToFreeze));
 
   ASSERT_NE(*y, *partlyFrozenSingleton);
   ASSERT_EQ(y->getNumProperties(), partlyFrozenSingleton->getNumProperties());

@@ -884,20 +884,24 @@ class JSObject : public GCCell {
   /// [[Extensible]] is false.
   static bool isFrozen(PseudoHandle<JSObject> self, Runtime *runtime);
 
-  /// Make the properties in the set \p propsToFreeze non-writable and
-  /// non-configurable. Note this doesn't set the 'frozen', 'seal', 'noExtend'
-  /// flags.
-  /// This method is efficient in freezing multiple properties than updating
+  /// Update the property flags in the list \p props on \p selfHandle,
+  /// with provided \p flagsToClear and \p flagsToSet, and if it is not
+  /// provided, update all properties.
+  /// This method is efficient in updating multiple properties than updating
   /// them one by one because it creates at most one hidden class and mutates
   /// that hidden class without creating new transitions under the hood.
-  /// \p propsToFreeze is a list of SymbolIDs for properties that need to be
-  /// made read-only. It should contain a subset of properties in the object, so
+  /// \p flagsToClear and \p flagsToSet are masks for updating the property
+  /// flags.
+  /// \p props is a list of SymbolIDs for properties that need to be
+  /// updated. It should contain a subset of properties in the object, so
   /// the SymbolIDs won't get freed by gc. It is optional; if it is llvm::None,
-  /// make every property read-only.
-  static void makePropertiesReadOnlyWithoutTransitions(
+  /// update every property.
+  static void updatePropertyFlagsWithoutTransitions(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
-      OptValue<llvm::ArrayRef<SymbolID>> propsToFreeze);
+      PropertyFlags flagsToClear,
+      PropertyFlags flagsToSet,
+      OptValue<llvm::ArrayRef<SymbolID>> props);
 
  protected:
   /// @name Virtual function implementations

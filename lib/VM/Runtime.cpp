@@ -1079,7 +1079,14 @@ void Runtime::freezeBuiltins() {
   // each object.
   std::vector<SymbolID> methodList;
 
-  (void)forEachBuiltin([this, &objectList, &methodList](
+  // Masks for setting the property a static builtin and read-only.
+  PropertyFlags clearFlags;
+  clearFlags.configurable = 1;
+  clearFlags.writable = 1;
+  PropertyFlags setFlags;
+  setFlags.staticBuiltin = 1;
+
+  (void)forEachBuiltin([this, &objectList, &methodList, &clearFlags, &setFlags](
                            unsigned methodIndex,
                            Predefined objectName,
                            Handle<JSObject> &currentObject,
@@ -1091,17 +1098,27 @@ void Runtime::freezeBuiltins() {
       // Store the object id in the object set.
       SymbolID objectID = getPredefinedSymbolID(objectName);
       objectList.push_back(objectID);
-      // Freeze all methods on the current object.
-      JSObject::makePropertiesReadOnlyWithoutTransitions(
-          currentObject, this, llvm::ArrayRef<SymbolID>(methodList));
+      // Freeze all methods and mark them as static builtins on the current
+      // object.
+      JSObject::updatePropertyFlagsWithoutTransitions(
+          currentObject,
+          this,
+          clearFlags,
+          setFlags,
+          llvm::ArrayRef<SymbolID>(methodList));
       methodList.clear();
     }
     return ExecutionStatus::RETURNED;
   });
 
-  // Freeze all builtin objects on the global object.
-  JSObject::makePropertiesReadOnlyWithoutTransitions(
-      getGlobal(), this, llvm::ArrayRef<SymbolID>(objectList));
+  // Freeze all builtin objects and mark them as static builtins on the global
+  // object.
+  JSObject::updatePropertyFlagsWithoutTransitions(
+      getGlobal(),
+      this,
+      clearFlags,
+      setFlags,
+      llvm::ArrayRef<SymbolID>(objectList));
 
   builtinsFrozen_ = true;
 }

@@ -791,11 +791,9 @@ TEST_F(ObjectModelTest, HasProperty) {
   ASSERT_TRUE(JSObject::hasNamed(self, runtime, *nonIndexID));
 }
 
-TEST_F(ObjectModelTest, MakePropertiesReadOnlyWithoutTransitionsTest) {
+TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   GCScope gcScope{
-      runtime,
-      "ObjectModelTest.MakePropertiesReadOnlyWithoutTransitionsTest",
-      48};
+      runtime, "ObjectModelTest.UpdatePropertyFlagsWithoutTransitionsTest", 48};
   auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
   auto bHnd = *runtime->getIdentifierTable().getSymbolHandle(
@@ -829,8 +827,17 @@ TEST_F(ObjectModelTest, MakePropertiesReadOnlyWithoutTransitionsTest) {
   propsToFreeze.push_back(*aHnd);
   propsToFreeze.push_back(*cHnd);
 
-  JSObject::makePropertiesReadOnlyWithoutTransitions(
-      obj, runtime, llvm::ArrayRef<SymbolID>(propsToFreeze));
+  PropertyFlags clearFlags;
+  clearFlags.writable = 1;
+  clearFlags.configurable = 1;
+  PropertyFlags setFlags;
+
+  JSObject::updatePropertyFlagsWithoutTransitions(
+      obj,
+      runtime,
+      clearFlags,
+      setFlags,
+      llvm::ArrayRef<SymbolID>(propsToFreeze));
   // check each property descriptor.
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, writable);
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, configurable);
@@ -842,7 +849,8 @@ TEST_F(ObjectModelTest, MakePropertiesReadOnlyWithoutTransitionsTest) {
   EXPECT_PROPERTY_FLAG(FALSE, obj, *cHnd, configurable);
 
   // Freeze all properties.
-  JSObject::makePropertiesReadOnlyWithoutTransitions(obj, runtime, llvm::None);
+  JSObject::updatePropertyFlagsWithoutTransitions(
+      obj, runtime, clearFlags, setFlags, llvm::None);
   // check each property descriptor.
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, writable);
   EXPECT_PROPERTY_FLAG(FALSE, obj, *aHnd, configurable);

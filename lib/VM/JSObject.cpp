@@ -1028,6 +1028,10 @@ CallResult<bool> JSObject::putNamed(
     }
 
     if (LLVM_UNLIKELY(!desc.flags.writable)) {
+      if (desc.flags.staticBuiltin) {
+        return runtime->raiseTypeError(
+            "Attempting to override a read-only builtin property.");
+      }
       if (opFlags.getThrowOnError()) {
         return runtime->raiseTypeError(
             TwineChar16("Cannot assign to read-only property '") +
@@ -1791,17 +1795,18 @@ void JSObject::freeze(Handle<JSObject> selfHandle, Runtime *runtime) {
   selfHandle->flags_.noExtend = true;
 }
 
-void JSObject::makePropertiesReadOnlyWithoutTransitions(
+void JSObject::updatePropertyFlagsWithoutTransitions(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
-    OptValue<llvm::ArrayRef<SymbolID>> propsToFreeze) {
-  // If the object is already frozen, all the properties are already read-only
-  // so we don't need to do anything.
-  if (selfHandle->flags_.frozen) {
-    return;
-  }
-  auto newClazz = HiddenClass::makePropertiesReadOnlyWithoutTransitions(
-      runtime->makeHandle(selfHandle->clazz_), runtime, propsToFreeze);
+    PropertyFlags flagsToClear,
+    PropertyFlags flagsToSet,
+    OptValue<llvm::ArrayRef<SymbolID>> props) {
+  auto newClazz = HiddenClass::updatePropertyFlagsWithoutTransitions(
+      runtime->makeHandle(selfHandle->clazz_),
+      runtime,
+      flagsToClear,
+      flagsToSet,
+      props);
   selfHandle->clazz_.set(*newClazz, &runtime->getHeap());
 }
 

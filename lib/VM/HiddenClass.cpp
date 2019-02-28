@@ -531,14 +531,12 @@ Handle<HiddenClass> HiddenClass::makeAllReadOnly(
   return std::move(curHandle);
 }
 
-Handle<HiddenClass> HiddenClass::makePropertiesReadOnlyWithoutTransitions(
+Handle<HiddenClass> HiddenClass::updatePropertyFlagsWithoutTransitions(
     Handle<HiddenClass> selfHandle,
     Runtime *runtime,
-    OptValue<llvm::ArrayRef<SymbolID>> propsToFreeze) {
-  if (LLVM_UNLIKELY(selfHandle->flags_.allReadOnly)) {
-    return selfHandle;
-  }
-
+    PropertyFlags flagsToClear,
+    PropertyFlags flagsToSet,
+    OptValue<llvm::ArrayRef<SymbolID>> props) {
   // Allocate the property map.
   if (LLVM_UNLIKELY(!selfHandle->propertyMap_))
     initializeMissingPropertyMap(selfHandle, runtime);
@@ -547,7 +545,7 @@ Handle<HiddenClass> HiddenClass::makePropertiesReadOnlyWithoutTransitions(
   if (selfHandle->isDictionary()) {
     classHandle = *selfHandle;
   } else {
-    // To create an orphan hidden class with frozen properties, first clone the
+    // To create an orphan hidden class with updated properties, first clone the
     // old one, and make it a root.
     classHandle = vmcast<HiddenClass>(
         runtime->ignoreAllocationFailure(HiddenClass::create(
@@ -566,30 +564,26 @@ Handle<HiddenClass> HiddenClass::makePropertiesReadOnlyWithoutTransitions(
   auto mapHandle =
       runtime->makeHandle<DictPropertyMap>(classHandle->propertyMap_);
 
-  auto makePropertyFlagsReadOnly = [](NamedPropertyDescriptor &desc) {
-    desc.flags.configurable = 0;
-    if (!desc.flags.accessor) {
-      desc.flags.writable = 0;
-    }
+  auto changeFlags = [&flagsToClear,
+                      &flagsToSet](NamedPropertyDescriptor &desc) {
+    desc.flags.changeFlags(flagsToClear, flagsToSet);
   };
 
-  // If we have the subset of properties to freeze, only freeze them; otherwise,
-  // freeze all properties.
-  if (propsToFreeze) {
+  // If we have the subset of properties to update, only update them; otherwise,
+  // update all properties.
+  if (props) {
     // Iterate over the properties that exist on the property map.
-    for (auto id : *propsToFreeze) {
+    for (auto id : *props) {
       auto pos = DictPropertyMap::find(*mapHandle, id);
       if (!pos) {
         continue;
       }
       auto descPair = DictPropertyMap::getDescriptorPair(*mapHandle, *pos);
-      makePropertyFlagsReadOnly(descPair->second);
+      changeFlags(descPair->second);
     }
   } else {
     DictPropertyMap::forEachMutablePropertyDescriptor(
-        mapHandle, runtime, makePropertyFlagsReadOnly);
-    classHandle->flags_.allReadOnly = true;
-    classHandle->flags_.allNonConfigurable = true;
+        mapHandle, runtime, changeFlags);
   }
 
   return std::move(classHandle);

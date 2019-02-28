@@ -49,6 +49,10 @@ union PropertyFlags {
     /// get*Descriptor methods, and never set in descriptors stored
     /// persistently.
     uint32_t hostObject : 1;
+    /// This property is a builtin method or object, and it could be
+    /// accessed by the CallBuiltin instruction. The property is made read-only
+    /// and is not allowed to be overriden.
+    uint32_t staticBuiltin : 1;
   };
 
   uint32_t _flags;
@@ -100,6 +104,12 @@ union PropertyFlags {
     PropertyFlags pf{};
     pf.invalidFlags = 1;
     return pf;
+  }
+
+  /// \p clear and \p set are masks for changing the property flags.
+  /// `clear.flag1 = 1` clears the flag; `set.flag1 = 1` sets the flag.
+  void changeFlags(PropertyFlags clear, PropertyFlags set) {
+    _flags = (_flags & ~clear._flags) | set._flags;
   }
 };
 
