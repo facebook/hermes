@@ -9,6 +9,9 @@
 
 #define FOREACH_TEST(F)              \
   F(callbacksCallJSFunction)         \
+  F(dateAsFunction)                  \
+  F(dateAsNew)                       \
+  F(dateNow)                         \
   F(hostCallsJS)                     \
   F(hostCallsJSCallsHost)            \
   F(hostCallsJSWithThis)             \
@@ -19,6 +22,7 @@
   F(hostFunctionReturn)              \
   F(hostFunctionReturnArgument)      \
   F(hostGlobalObject)                \
+  F(mathRandom)                      \
   F(nativeSetsConstant)              \
   F(parseGCConfig)
 
