@@ -1,3 +1,17 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+#include "TestFunctions.h"
+
+namespace facebook {
+namespace hermes {
+namespace synthtest {
+
+const char *hostGlobalObjectTrace() {
+  return R"###(
 {
   "version": 1,
   "globalObjID": 1,
@@ -123,3 +137,32 @@
     }
   ]
 }
+)###";
+}
+
+const char *hostGlobalObjectSource() {
+  return R"###(
+'use strict';
+
+(function(global) {
+  // Native code creates functions foo and baz.
+  // foo calls bar on the global object, which sets quux on the global object, and calls baz.
+  // baz checks that quux is an object with property b: true, and then returns.
+  // foo then creates an object with a property a which is set to null, and
+  // caches it.
+  // The second time foo is called, it returns the cached object.
+  global.bar = function() {
+    global.quux = {b: true};
+    global.baz();
+  };
+  global.foo();
+  if (global.foo().a !== null) {
+    throw new Error();
+  }
+})(this);
+)###";
+}
+
+} // namespace synthtest
+} // namespace hermes
+} // namespace facebook

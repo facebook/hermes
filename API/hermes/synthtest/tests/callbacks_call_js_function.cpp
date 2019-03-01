@@ -1,3 +1,17 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+#include "TestFunctions.h"
+
+namespace facebook {
+namespace hermes {
+namespace synthtest {
+
+const char *callbacksCallJSFunctionTrace() {
+  return R"###(
 {
   "version": 1,
   "globalObjID": 1,
@@ -63,3 +77,29 @@
     }
   ]
 }
+)###";
+}
+
+const char *callbacksCallJSFunctionSource() {
+  return R"###(
+'use strict';
+
+(function(global) {
+  // callbacks execute f
+  // read the zeroth element of the return result,
+  // execute that as a function with no args,
+  // read the zeroth element of the return value and expect it to be false.
+  global.f = function() {
+    return [
+      function() {
+        return [false];
+      }
+    ];
+  };
+})(this);
+)###";
+}
+
+} // namespace synthtest
+} // namespace hermes
+} // namespace facebook

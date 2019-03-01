@@ -1,3 +1,17 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+#include "TestFunctions.h"
+
+namespace facebook {
+namespace hermes {
+namespace synthtest {
+
+const char *hostFunctionReturnTrace() {
+  return R"###(
 {
   "version": 1,
   "globalObjID": 1,
@@ -29,12 +43,12 @@
       "time": 0,
       "functionID": 10,
       "thisArg": "undefined:",
-      "args": ["object:11"]
+      "args": []
     },
     {
       "type": "ReturnFromNativeRecord",
       "time": 0,
-      "retval": "object:11"
+      "retval": "undefined:"
     },
     {
       "type": "EndExecJSRecord",
@@ -42,3 +56,22 @@
     }
   ]
 }
+)###";
+}
+
+const char *hostFunctionReturnSource() {
+  return R"###(
+'use strict';
+
+(function(global) {
+  // Native code creates a function foo, that when called returns undefined.
+  if (global.foo() !== undefined) {
+    throw new Error();
+  }
+})(this);
+)###";
+}
+
+} // namespace synthtest
+} // namespace hermes
+} // namespace facebook

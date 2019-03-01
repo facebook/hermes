@@ -1,3 +1,17 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+#include "TestFunctions.h"
+
+namespace facebook {
+namespace hermes {
+namespace synthtest {
+
+const char *hostFunctionMutatesObjectTrace() {
+  return R"###(
 {
   "version": 1,
   "globalObjID": 1,
@@ -56,3 +70,32 @@
     }
   ]
 }
+)###";
+}
+
+const char *hostFunctionMutatesObjectSource() {
+  return R"###(
+'use strict';
+
+(function(global) {
+  // Native code creates a function foo.
+  // It takes in an object, sets a to "hello" and b to false, and then returns it.
+  // It should return the same object it takes in.
+  var o = {};
+  var x = global.foo(o);
+  if (x !== o) {
+    throw new Error("Didn't return the same object it took in");
+  }
+  if (o.a !== "hello") {
+    throw new Error("o.a !== \"hello\"");
+  }
+  if (o.b !== false) {
+    throw new Error("o.b !== false");
+  }
+})(this);
+)###";
+}
+
+} // namespace synthtest
+} // namespace hermes
+} // namespace facebook

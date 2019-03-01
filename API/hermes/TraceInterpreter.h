@@ -158,6 +158,12 @@ class TraceInterpreter final {
       const ExecuteOptions &options,
       llvm::raw_ostream &outTrace);
 
+  static std::string execFromMemoryBuffer(
+      std::unique_ptr<llvm::MemoryBuffer> traceBuf,
+      std::unique_ptr<llvm::MemoryBuffer> codeBuf,
+      const ExecuteOptions &options,
+      llvm::raw_ostream &outTrace);
+
  private:
   TraceInterpreter(
       jsi::Runtime &rt,

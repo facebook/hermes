@@ -1,3 +1,17 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+#include "TestFunctions.h"
+
+namespace facebook {
+namespace hermes {
+namespace synthtest {
+
+const char *hostCallsJSCallsHostTrace() {
+  return R"###(
 {
   "version": 1,
   "globalObjID": 1,
@@ -85,3 +99,34 @@
     }
   ]
 }
+)###";
+}
+
+const char *hostCallsJSCallsHostSource() {
+  return R"###(
+'use strict';
+
+(function(global) {
+  // Native code create the function foo which takes an object.
+  // foo calls f with that object as an argument.
+  // f calls the native function bar with a new object which has the same
+  // properties of the passed in object.
+  // bar returns the object immediately.
+  // That object is returned from f, which is returned from foo back to JS.
+  global.f = function(a) {
+    var o = {};
+    o.x = a.x;
+    return global.bar(o);
+  };
+  var a = {x: 2};
+  var y = global.foo(a);
+  if (a === y || y.x !== 2) {
+    throw new Error();
+  }
+})(this);
+)###";
+}
+
+} // namespace synthtest
+} // namespace hermes
+} // namespace facebook

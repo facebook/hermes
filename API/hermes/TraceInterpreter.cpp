@@ -455,31 +455,48 @@ std::string TraceInterpreter::execFromFileNames(
   if (!errorOrFile) {
     throw std::system_error(errorOrFile.getError());
   }
-  auto traceAndConfigAndEnv = SynthTrace::parse(std::move(errorOrFile.get()));
-  const auto &trace = std::get<0>(traceAndConfigAndEnv);
+  std::unique_ptr<llvm::MemoryBuffer> traceBuf = std::move(errorOrFile.get());
   errorOrFile = llvm::MemoryBuffer::getFile(bytecodeFile);
   if (!errorOrFile) {
     throw std::system_error(errorOrFile.getError());
   }
-  std::unique_ptr<llvm::MemoryBuffer> memBuf = std::move(errorOrFile.get());
-  bool bytecodeIsMmapped =
-      memBuf->getBufferKind() == llvm::MemoryBuffer::MemoryBuffer_MMap;
-  std::unique_ptr<const jsi::Buffer> bytecodeFileBuffer =
-      bufConvert(std::move(memBuf));
-  verifyHash(
-      trace.sourceHash(),
-      ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
-          llvm::makeArrayRef(
-              bytecodeFileBuffer->data(), bytecodeFileBuffer->size())));
+  std::unique_ptr<llvm::MemoryBuffer> bytecodeBuf =
+      std::move(errorOrFile.get());
+  return execFromMemoryBuffer(
+      std::move(traceBuf), std::move(bytecodeBuf), options, outTrace);
+}
+
+/* static */
+std::string TraceInterpreter::execFromMemoryBuffer(
+    std::unique_ptr<llvm::MemoryBuffer> traceBuf,
+    std::unique_ptr<llvm::MemoryBuffer> codeBuf,
+    const ExecuteOptions &options,
+    llvm::raw_ostream &outTrace) {
+  auto traceAndConfigAndEnv = SynthTrace::parse(std::move(traceBuf));
+  const auto &trace = std::get<0>(traceAndConfigAndEnv);
+  const bool codeIsMmapped =
+      codeBuf->getBufferKind() == llvm::MemoryBuffer::MemoryBuffer_MMap;
+  std::unique_ptr<const jsi::Buffer> codeFileBuffer =
+      bufConvert(std::move(codeBuf));
+  const bool isBytecode = HermesRuntime::isHermesBytecode(
+      codeFileBuffer->data(), codeFileBuffer->size());
+  if (isBytecode) {
+    // Only verify the source hash if running from bytecode.
+    verifyHash(
+        trace.sourceHash(),
+        ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
+            llvm::makeArrayRef(
+                codeFileBuffer->data(), codeFileBuffer->size())));
+  }
   // Need to mark bytecode file for io tracking after reading the whole file for
   // computing hash.
-  if (options.shouldTrackIO) {
-    if (!bytecodeIsMmapped) {
+  if (options.shouldTrackIO && isBytecode) {
+    if (!codeIsMmapped) {
       throw std::runtime_error(
           "Cannot track bytecode I/O when it's not mmapped.");
     }
-    uint8_t *bufStart = const_cast<uint8_t *>(bytecodeFileBuffer->data());
-    size_t bufSize = bytecodeFileBuffer->size();
+    uint8_t *bufStart = const_cast<uint8_t *>(codeFileBuffer->data());
+    size_t bufSize = codeFileBuffer->size();
     if (!::hermes::PageAccessTracker::initialize(bufStart, bufSize)) {
       throw std::runtime_error("Failed to initialze PageAccessTracker.");
     }
@@ -517,13 +534,14 @@ std::string TraceInterpreter::execFromFileNames(
 #endif
 
   std::string GCStats =
-      exec(*rt, options, trace, std::move(bytecodeFileBuffer), writeTrace);
+      exec(*rt, options, trace, std::move(codeFileBuffer), writeTrace);
   if (!options.shouldPrintGCStats) {
     GCStats = "";
   }
   std::string stats = getStatsString(GCStats, options.shouldTrackIO);
 
-  if (options.shouldTrackIO && !::hermes::PageAccessTracker::shutdown()) {
+  if (options.shouldTrackIO && isBytecode &&
+      !::hermes::PageAccessTracker::shutdown()) {
     throw std::runtime_error("Failed to shut down PageAccessTracker.");
   }
   return stats;
