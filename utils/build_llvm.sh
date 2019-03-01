@@ -67,8 +67,9 @@ echo "Using Build command: $BUILD_CMD"
 echo "Build Dir: $LLVM_BUILD_DIR"
 echo "Build Type: $BUILD_TYPE"
 
+GIT="git"
 if [ -n "$HTTP_PROXY" ]; then
-  git config --global http.proxy $HTTP_PROXY
+  GIT+=" -c http.proxy=$HTTP_PROXY"
 fi
 
 if [ ! -e "./llvm/" ]; then
@@ -77,7 +78,7 @@ if [ ! -e "./llvm/" ]; then
   RETRY=3
   n=0
   until [ $n -ge $RETRY ]; do
-    git clone https://github.com/llvm-mirror/llvm.git && break
+    $GIT clone https://github.com/llvm-mirror/llvm.git && break
     n=$[$n+1]
   done
   if [[ $n -ge $RETRY ]]; then
@@ -85,7 +86,7 @@ if [ ! -e "./llvm/" ]; then
   fi
 fi
 
-(cd llvm; git checkout $LLVM_REV)
+(cd llvm; $GIT checkout $LLVM_REV)
 
 #local edits
 #There are a small number of edits we need to make to the llvm files:
