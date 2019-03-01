@@ -36,15 +36,12 @@ do
       # shellcheck disable=SC2191  # Allow literal = in array elements
       cmd=(
         cmake -G Ninja "$HERMES_WS_DIR/llvm"
-          -DANDROID_ABI="$abi"
+          -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake"
           -DANDROID_PLATFORM="android-22"
-          -DCMAKE_TOOLCHAIN_FILE="$ANDROID_SDK/ndk-bundle/build/cmake/android.toolchain.cmake"
-          -DCMAKE_SYSTEM_NAME="Android"
-          -DCMAKE_ANDROID_ARCH_ABI="$abi"
-          -DCMAKE_ANDROID_NDK="$ANDROID_NDK"
-          -DCMAKE_ANDROID_STL_TYPE="c++_shared"
-          -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION="clang"
-          -DCMAKE_POSITION_INDEPENDENT_CODE="True"
+          -DANDROID_ABI="$abi"
+          -DANDROID_NDK="$ANDROID_NDK"
+          -DANDROID_STL="c++_shared"
+          -DANDROID_PIE="True"
           -DLLVM_TARGETS_TO_BUILD=
           -DCMAKE_BUILD_TYPE=MinSizeRel
           -DLLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=Off

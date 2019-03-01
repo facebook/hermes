@@ -32,9 +32,8 @@ android {
       cmake {
         arguments "-DHERMES_IS_ANDROID=True"
         arguments "-DHERMES_FACEBOOK_BUILD=${facebookBuild}"
-        arguments "-DCMAKE_ANDROID_STL_TYPE=c++_shared"
-        arguments "-DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang"
-        arguments "-DCMAKE_POSITION_INDEPENDENT_CODE=True"
+        arguments "-DANDROID_STL=c++_shared"
+        arguments "-DANDROID_PIE=True"
         arguments "-DLLVM_BUILD_BASE=${hermes_ws}/llvm"
         arguments "-DLLVM_SRC_DIR=${hermes_ws}/llvm"
         arguments "-DFBSOURCE_DIR=${fbsource}"
