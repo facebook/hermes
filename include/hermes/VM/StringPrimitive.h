@@ -449,7 +449,7 @@ class ExternalStringPrimitive final : public ExternalStringPrimitiveBase {
             sizeof(ExternalStringPrimitive<T>),
             length) {
     assert(isExternalLength(length) && "length should be external");
-    contents_ = static_cast<T *>(checkedMalloc(sizeof(T) * length));
+    contents_ = static_cast<T *>(checkedMalloc2(length, sizeof(T)));
   }
 
   ExternalStringPrimitive(Runtime *runtime, uint32_t length, SymbolID uniqueID)
@@ -460,7 +460,7 @@ class ExternalStringPrimitive final : public ExternalStringPrimitiveBase {
             length | (1u << 31),
             uniqueID) {
     assert(isExternalLength(length) && "length should be external");
-    contents_ = reinterpret_cast<T *>(checkedMalloc(sizeof(T) * length));
+    contents_ = reinterpret_cast<T *>(checkedMalloc2(length, sizeof(T)));
   }
 
   ExternalStringPrimitive(Runtime *runtime, Ref src);

@@ -20,12 +20,4 @@ void *checkedMalloc(size_t sz) {
   return res;
 }
 
-void *checkedCalloc(size_t elemSize, size_t numElems) {
-  void *res = calloc(elemSize, numElems);
-  if (LLVM_UNLIKELY(!res)) {
-    hermes_fatal("calloc failure");
-  }
-  return res;
-}
-
 } // namespace hermes

@@ -1,6 +1,7 @@
 set(SupportSources
   Algorithms.cpp
   AllocatorTest.cpp
+  CheckedMalloc.cpp
   ConsumableRangeTest.cpp
   ConversionsTest.cpp
   CtorConfigTest.cpp

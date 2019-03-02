@@ -108,7 +108,7 @@ void VMAllocateStorageProvider::deleteStorage(void *storage) {
 void *MallocStorageProvider::newStorage(const char *name) {
   // name is unused, can't name malloc memory.
   (void)name;
-  void *mem = checkedMalloc(2 * AlignedStorage::size());
+  void *mem = checkedMalloc2(AlignedStorage::size(), 2u);
   void *lowLim = alignAlloc(mem);
   assert(isAligned(lowLim) && "New storage should be aligned");
   lowLimToAllocHandle_[lowLim] = mem;

@@ -60,7 +60,7 @@ PinnedHermesValue *GCScope::_newChunkAndHandle(HermesValue value) {
   // Do we need to allocate a new chunk?
   if (curChunkIndex_ == chunks_.size()) {
     // Allocate memory with malloc() to prevent initialization.
-    void *mem = checkedMalloc(sizeof(PinnedHermesValue) * CHUNK_SIZE);
+    void *mem = checkedMalloc2(CHUNK_SIZE, sizeof(PinnedHermesValue));
     chunks_.push_back(static_cast<PinnedHermesValue *>(mem));
 
     // Initialize the new chunk.

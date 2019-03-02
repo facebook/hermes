@@ -185,7 +185,7 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
     // registerStack_ should be allocated with malloc instead of new so that the
     // default constructors don't run for the whole stack space.
     registerStack_ = static_cast<PinnedHermesValue *>(
-        checkedMalloc(sizeof(PinnedHermesValue) * maxNumRegisters));
+        checkedMalloc2(maxNumRegisters, sizeof(PinnedHermesValue)));
   } else {
     freeRegisterStack_ = false;
   }
