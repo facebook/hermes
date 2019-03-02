@@ -130,11 +130,19 @@ struct StackFrameLayout {
   };
 
   /// Calculate the number of register slots needed for an outgoing call: it
-  /// contains the outgoing arguments and the metadata.
+  /// contains the outgoing arguments and the metadata. This saturates: on
+  /// overflow it returns UINT32_MAX. Note that an overflow return is
+  /// conceptually "too small" in that the true number of registers required
+  /// would exceed the capacity of a uint32. The assumption is that the Runtime
+  /// bounds the register stack max size below UINT32_MAX, and therefore will
+  /// fail to allocate this "too small" size.
   /// \param numArgsExcludingThis number of arguments excluding \c thisArg
-  /// \return the number of registers needed.
+  /// \return the number of registers needed, or UINT32_MAX if the count
+  /// would overflow.
   static uint32_t callerOutgoingRegisters(uint32_t numArgsExcludingThis) {
-    return FirstArg + numArgsExcludingThis;
+    // The >= pattern is specially recognized as an overflow check.
+    uint32_t totalCount = FirstArg + numArgsExcludingThis;
+    return totalCount >= numArgsExcludingThis ? totalCount : UINT32_MAX;
   }
 
   /// \return the offset of the register containing the N-th argument to the

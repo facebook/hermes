@@ -12,3 +12,16 @@ try {
     print("caught:", e.name, e.message);
 }
 //CHECK: caught: RangeError {{.*}}
+
+var x = [];
+x.length = 4294967295;
+
+for (var i = 0; i < 20; i++) {
+    x[i] = i; 
+}
+try {
+  func.apply(99, x);
+} catch (e) {
+    print("caught:", e.name, e.message);
+}
+//CHECK: caught: RangeError {{.*}}
