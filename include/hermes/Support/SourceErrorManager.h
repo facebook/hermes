@@ -92,7 +92,9 @@ class SourceErrorManager {
   llvm::SourceMgr sm_{};
   SourceErrorOutputOptions outputOptions_;
 
-  unsigned messageCount_[3]{0, 0, 0};
+  static constexpr unsigned kMessageCountSize = 4;
+
+  unsigned messageCount_[kMessageCountSize]{0, 0, 0, 0};
 
   std::shared_ptr<SourceLocationCache> cache_;
 

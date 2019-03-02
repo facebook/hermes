@@ -313,6 +313,7 @@ void SourceErrorManager::message(
   if (suppressMessages_)
     return;
   upgradeDiag(dk);
+  assert(static_cast<unsigned>(dk) < kMessageCountSize && "bounds check");
   ++messageCount_[dk];
 
   if (bufferingEnabled_) {
