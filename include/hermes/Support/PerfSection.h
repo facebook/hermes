@@ -21,7 +21,8 @@ namespace hermes {
 /// print statement to standard output.
 class PerfSection {
  public:
-#if defined(HERMES_FACEBOOK_BUILD) || defined(HERMESVM_PLATFORM_LOGGING)
+#if (defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS)) || \
+    defined(HERMESVM_PLATFORM_LOGGING)
   /// Start a section with the given name, and optional category, used in logs.
   PerfSection(const char *name, const char *category = nullptr);
 
