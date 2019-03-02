@@ -52,7 +52,8 @@ set_target_properties(compileJS PROPERTIES
 
 add_library(libhermes SHARED ${api_sources})
 target_link_libraries(libhermes
-  hermesapi
+  jsi
+  hermesVMRuntime
   ${CORE_FOUNDATION}
 )
 set_target_properties(libhermes PROPERTIES
