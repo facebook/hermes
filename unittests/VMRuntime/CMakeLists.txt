@@ -49,6 +49,7 @@ set(RTSources
   ObjectModelTest.cpp
   OperationsTest.cpp
   HandleTest.cpp
+  RuntimeConfigTest.cpp
   SegmentedArrayTest.cpp
   SmallXStringTest.cpp
   StaticBuiltinsTest.cpp

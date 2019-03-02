@@ -44,6 +44,10 @@ namespace vm {
 
 namespace {
 
+/// The maximum number of registers that can be requested in a RuntimeConfig.
+static constexpr uint32_t kMaxSupportedNumRegisters =
+    UINT32_MAX / sizeof(PinnedHermesValue);
+
 static const Predefined fixedPropCacheNames[(size_t)PropCacheID::_COUNT] = {
 #define V(id, predef) predef,
     PROP_CACHE_IDS(V)
@@ -173,6 +177,9 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       (void *)this == (void *)(HandleRootOwner *)this &&
       "cast to HandleRootOwner should be no-op");
   auto maxNumRegisters = runtimeConfig.getMaxNumRegisters();
+  if (LLVM_UNLIKELY(maxNumRegisters > kMaxSupportedNumRegisters)) {
+    hermes_fatal("RuntimeConfig maxNumRegisters too big");
+  }
   registerStack_ = runtimeConfig.getRegisterStack();
   if (!registerStack_) {
     // registerStack_ should be allocated with malloc instead of new so that the
