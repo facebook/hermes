@@ -30,12 +30,15 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 HERMES_DIR="$PWD"
 [ ! -e "$HERMES_DIR/utils/configure.sh" ] && echo "Could not detect source dir" >&2 && exit 1
 
+# shellcheck source=xplat/hermes/utils/commons.sh
+source "$HERMES_DIR/utils/commons.sh"
+
 cd "$HERMES_WS_DIR"
 
 # You can substitute the 'Ninja' build system with "Xcode",
 # "Visual Studio 10 Win64" or other build system to create project files for
 # these editors.
-if [[ `uname` == *"_NT-"* ]]; then
+if [[ "$PLATFORM" == "windows" ]]; then
   BUILD_SYSTEM="${1-Visual Studio 15 2017 Win64}"
 else
   BUILD_SYSTEM=${1-Ninja}
@@ -55,7 +58,7 @@ if [ -n "$BUILD_32BIT" ]; then
 fi
 
 # Guess ICU_ROOT if ICU_ROOT is not specified and is on Linux
-if [ -z "$ICU_ROOT" ] && [[ `uname` = Linux ]]
+if [ -z "$ICU_ROOT" ] && [[ "$PLATFORM" == "linux" ]]
 then
   guess_path=/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-4.8.1-glibc-2.17/c3f970a/
   [ -d "$guess_path" ] && ICU_ROOT=$guess_path
@@ -79,9 +82,17 @@ cd "$BUILD_DIR"
 
 echo "Hermes Path: $HERMES_DIR"
 
-FLAGS="-DLLVM_BUILD_DIR=$PWD/../$LLVM_BUILD_DIR -DLLVM_SRC_DIR=$PWD/../llvm -DCMAKE_BUILD_TYPE=$BUILD_TYPE"
+FLAGS="-DLLVM_BUILD_DIR=$(platform_path "$HERMES_WS_DIR")/$LLVM_BUILD_DIR"
+FLAGS="$FLAGS -DLLVM_SRC_DIR=$(platform_path "$HERMES_WS_DIR")/llvm"
+FLAGS="$FLAGS -DCMAKE_BUILD_TYPE=$BUILD_TYPE"
 if [ -n "$BUILD_32BIT" ]; then
   FLAGS="$FLAGS -DLLVM_BUILD_32_BITS=On"
+fi
+
+if [[ "$PLATFORM" == 'windows' && "$(uname -m)" == 'x86_64' ]]; then
+  # Visual Studio generators use the x86 host compiler by default, even for
+  # 64-bit targets. This default setup leads to linker instability.
+  FLAGS="$FLAGS -Thost=x64"
 fi
 
 if [ -z "$DISTRIBUTE" ]
@@ -91,7 +102,7 @@ fi
 
 if [ -n "$LIBFUZZER_PATH" ]
 then
-  FLAGS="$FLAGS -DLIBFUZZER_PATH=$LIBFUZZER_PATH"
+  FLAGS="$FLAGS -DLIBFUZZER_PATH=$(platform_path "$LIBFUZZER_PATH")"
   ENABLE_ASAN=1
 fi
 
@@ -112,20 +123,19 @@ fi
 
 if [ -n "$FBSOURCE_DIR" ]
 then
-  FLAGS="$FLAGS -DFBSOURCE_DIR=$FBSOURCE_DIR"
+  FLAGS="$FLAGS -DFBSOURCE_DIR=$(platform_path "$FBSOURCE_DIR")"
 fi
 
 if [ -n "$ICU_ROOT" ]
 then
-  echo "Using ICU_ROOT: $ICU_ROOT"
-  FLAGS="$FLAGS -DICU_ROOT=$ICU_ROOT"
-elif [ -n "$SANDCASTLE" ] && [[ "$(uname)" != "Darwin" ]]
-then
-  # If we're on sandcastle and not on OSX, we need an ICU path.
+  FLAGS="$FLAGS -DICU_ROOT=$(platform_path "$ICU_ROOT")"
+elif [ -n "$SANDCASTLE" ] && [[ "$PLATFORM" != "macosx" ]] && [[ "$PLATFORM" != "windows" ]]; then
+  # If we're on sandcastle and not on OSX or Windows, we need an ICU path.
   echo "No ICU path provided on sandcastle."
   exit 1
 fi
 
 echo "cmake flags: $FLAGS"
 
-cmake "$HERMES_DIR" -G "$BUILD_SYSTEM" $FLAGS
+# shellcheck disable=SC2086
+cmake "$(platform_path "$HERMES_DIR")" -G "$BUILD_SYSTEM" $FLAGS

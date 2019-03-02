@@ -17,6 +17,13 @@ function finish () {
 
 trap finish EXIT
 
+# Detect the Hermes source dir
+HERMES_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.."; echo "$PWD")
+[ ! -e "$HERMES_DIR/utils/build_llvm.sh" ] && echo "Could not detect source dir" >&2 && exit 1
+
+# shellcheck source=xplat/hermes/utils/commons.sh
+source "$HERMES_DIR/utils/commons.sh"
+
 # HERMES_WS_DIR is the root directory for LLVM checkout and build dirs.
 [ -z "$HERMES_WS_DIR" ] && echo "HERMES_WS_DIR must be set" >&2 && exit 1
 [ "${HERMES_WS_DIR:0:1}" != "/" ] && echo "HERMES_WS_DIR must be an absolute path" >&2 && exit 1
@@ -26,23 +33,23 @@ cd "$HERMES_WS_DIR"
 
 LLVM_REV=4519ac3791135eb9c207f0684f4236dbc13ac83f
 
-BUILD_SYSTEM="${BUILD_SYSTEM:-Ninja}"
-BUILD_CMD="${BUILD_CMD:-ninja}"
-BUILD_DIR_SUFFIX=""
-
-if [[ `uname` == 'Linux' ]]; then
+if [[ "$PLATFORM" == 'linux' ]]; then
   TARGET_PLATFORM="${TARGET_PLATFORM:-linux}"
-elif [[ `uname` == 'Darwin' ]]; then
+  BUILD_SYSTEM="${BUILD_SYSTEM:-Ninja}"
+  BUILD_CMD="${BUILD_CMD:-ninja}"
+elif [[ "$PLATFORM" == 'macosx' ]]; then
   TARGET_PLATFORM="${TARGET_PLATFORM:-macosx}"
-elif [[ `uname` == 'MSYS_NT-10.0' ]]; then
-  # This is the only valid configuration on windows:
-  BUILD_SYSTEM="Visual Studio 14 2015 Win64"
-  BUILD_CMD=" devenv llvm_build/LLVM.sln /build"
+  BUILD_SYSTEM="${BUILD_SYSTEM:-Ninja}"
+  BUILD_CMD="${BUILD_CMD:-ninja}"
+elif [[ "$PLATFORM" == 'windows' ]]; then
   TARGET_PLATFORM="${TARGET_PLATFORM:-windows}"
+  BUILD_SYSTEM="${BUILD_SYSTEM:-Visual Studio 15 2017 Win64}"
+  BUILD_CMD="${BUILD_CMD:-MSBuild.exe LLVM.sln -target:build -maxcpucount -verbosity:normal}"
 else
   TARGET_PLATFORM="${TARGET_PLATFORM:-unknown}"
 fi
 
+BUILD_DIR_SUFFIX=""
 if [ -n "$ENABLE_ASAN" ]; then
     BUILD_DIR_SUFFIX="${BUILD_DIR_SUFFIX}_asan";
 fi
@@ -72,6 +79,11 @@ if [ -n "$HTTP_PROXY" ]; then
   GIT+=" -c http.proxy=$HTTP_PROXY"
 fi
 
+if [[ "$PLATFORM" == 'windows' ]]; then
+  GIT+=" -c core.filemode=false"
+  GIT+=" -c core.autocrlf=false"
+fi
+
 if [ ! -e "./llvm/" ]; then
   # Clone the LLVM and Clang repos.
   # Retry 3 times if clone failed
@@ -88,16 +100,28 @@ fi
 
 (cd llvm; $GIT checkout $LLVM_REV)
 
-#local edits
-#There are a small number of edits we need to make to the llvm files:
-(cd llvm/include/llvm/ADT; patch < "$SCRIPT_DIR"/llvm-patches/StringExtras.h.diff)
-(cd llvm/include/llvm/Support; patch < "$SCRIPT_DIR"/llvm-patches/raw_ostream.h.diff)
-(cd llvm/lib/Support; patch <  "$SCRIPT_DIR"/llvm-patches/Signals.cpp.diff)
+# local edits
+# There are a small number of edits we need to make to the llvm files.
+# Use `git apply` instead of `patch` because `patch` may not be available
+# on some Windows installations.
+(cd llvm/include/llvm/ADT; $GIT apply "$SCRIPT_DIR"/llvm-patches/StringExtras.h.diff)
+(cd llvm/include/llvm/Support; $GIT apply "$SCRIPT_DIR"/llvm-patches/raw_ostream.h.diff)
+(cd llvm/lib/Support; $GIT apply "$SCRIPT_DIR"/llvm-patches/Signals.cpp.diff)
 
 #build llvm
 FLAGS="-DLLVM_TARGETS_TO_BUILD= -DCMAKE_BUILD_TYPE=$BUILD_TYPE"
 if [ -n "$BUILD_32BIT" ]; then
   FLAGS="$FLAGS -DLLVM_BUILD_32_BITS=On"
+fi
+if [[ "$PLATFORM" == 'windows' && "$(uname -m)" == 'x86_64' ]]; then
+  # Visual Studio generators use the x86 host compiler by default, even for
+  # 64-bit targets. This default setup leads to link failures for LLVM build.
+  FLAGS="$FLAGS -Thost=x64"
+fi
+if [[ "$PLATFORM" == 'windows' ]]; then
+  # The examples look for LLVMX86CodeGen.lib on Windows, which we don't have
+  # because LLVM_TARGETS_TO_BUILD is set to empty.
+  FLAGS="$FLAGS -DLLVM_INCLUDE_EXAMPLES=Off"
 fi
 if [ -z "$DISTRIBUTE" ]
 then
@@ -138,5 +162,5 @@ echo "cmake flags: $FLAGS"
 mkdir -p "$LLVM_BUILD_DIR"
 cd "$LLVM_BUILD_DIR"
 # shellcheck disable=SC2086
-cmake -G "$BUILD_SYSTEM" "$HERMES_WS_DIR/llvm" $FLAGS
+cmake -G "$BUILD_SYSTEM" "$(platform_path "$HERMES_WS_DIR")/llvm" $FLAGS
 $BUILD_CMD
