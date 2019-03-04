@@ -37,7 +37,6 @@ android {
         arguments "-DLLVM_BUILD_BASE=${hermes_ws}/llvm"
         arguments "-DLLVM_SRC_DIR=${hermes_ws}/llvm"
         arguments "-DFBSOURCE_DIR=${fbsource}"
-        arguments "-DCMAKE_BUILD_TYPE=Debug"
         targets "libhermes"
       }
     }

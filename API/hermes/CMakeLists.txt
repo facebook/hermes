@@ -59,6 +59,11 @@ target_link_libraries(libhermes
 set_target_properties(libhermes PROPERTIES
   # Declare our dependency on std::make_unique
   COMPILE_FLAGS "-std=c++14"
+  # The linker doesn't support -flto -Os, so make sure it's linked with -O3.
+  # This only affects linking, not compilation, so without -flto it's a no-op.
+  # In other words, if the compiler flags are -O0 -fno-lto, then the resulting
+  # library will be -O0 in spite of setting -O3 here.
+  LINK_FLAGS "-O3"
   # Avoid becoming liblibhermes (and there's already a target called 'hermes')
   OUTPUT_NAME hermes
   )

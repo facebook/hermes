@@ -64,6 +64,17 @@ set(ANDROID_LINUX_PERF_PATH ""
 if (HERMES_IS_ANDROID)
   set(LLVM_BUILD_DIR "${LLVM_BUILD_BASE}-${ANDROID_ABI}")
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
+
+  # The toolchain passes -Wa,--noexecstack which is valid for compiling
+  # but not for linking. Just ignore it.
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-command-line-argument")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
+
+  # JS developers aren't VM developers. Give them a faster build.
+  set(CMAKE_CXX_FLAGS_DEBUG "-O3 -g")
+
+  # The release build can focus on size.
+  set(CMAKE_CXX_FLAGS_RELEASE "-Os -DNDEBUG")
 endif()
 
 # The hermes project is built using CMake and the LLVM's build system.
