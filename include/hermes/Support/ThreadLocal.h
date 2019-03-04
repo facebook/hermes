@@ -11,7 +11,7 @@
 #error "ThreadLocal is not implemented because no code uses it in Windows"
 #else
 
-#include <hermes/Platform/Logging.h>
+#include <hermes/Support/ErrorHandling.h>
 
 #include <errno.h>
 #include <pthread.h>
@@ -58,18 +58,17 @@ class ThreadLocal {
   void initialize() {
     int ret = pthread_key_create(&key_, nullptr);
     if (ret != 0) {
-      const char *msg = "(unknown error)";
+      const char *msg = "pthread_key_create failed: (unknown error)";
       switch (ret) {
         case EAGAIN:
-          msg = "PTHREAD_KEYS_MAX (1024) is exceeded";
+          msg =
+              "pthread_key_create failed: PTHREAD_KEYS_MAX (1024) is exceeded";
           break;
         case ENOMEM:
-          msg = "Out-of-memory";
+          msg = "pthread_key_create failed: Out-of-memory";
           break;
       }
-      (void)msg;
-      hermesLog("ThreadLocal", "pthread_key_create failed: %d %s", ret, msg);
-      abort();
+      hermes_fatal(msg);
     }
   }
 
