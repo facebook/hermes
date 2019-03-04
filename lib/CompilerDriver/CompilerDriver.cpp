@@ -148,7 +148,10 @@ cl::opt<OptLevel> OptimizationLevel(
 static CLFlag StaticBuiltins(
     'f',
     "static-builtins",
-    false,
+    // TODO (T35544739): change this back to false after employee testing static
+    // builtins.
+    // false,
+    true,
     " recognizing of calls to global functions like Object.keys() statically");
 
 static list<std::string>

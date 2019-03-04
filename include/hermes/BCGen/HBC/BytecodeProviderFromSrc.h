@@ -19,7 +19,9 @@ struct CompileFlags {
   bool debug{false};
   bool lazy{false};
   bool strict{false};
-  bool staticBuiltins{false};
+  // TODO (T35544739): change this back after employee testing static builtins.
+  // bool staticBuiltins{false};
+  bool staticBuiltins{true};
   bool verifyIR{false};
 };
 

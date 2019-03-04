@@ -72,6 +72,7 @@ TEST_F(StaticBuiltinsTest, FreezeBuiltins) {
 
   // run normal bytecode first
   CompileFlags flagsNone;
+  flagsNone.staticBuiltins = false;
   EXPECT_EQ(
       runtime->run(testCode, "source/url", flagsNone),
       ExecutionStatus::RETURNED);
@@ -113,6 +114,7 @@ TEST_F(StaticBuiltinsTest, BuiltinsOverridden) {
     assert(Array.isArray);
   )";
   CompileFlags flagsNone;
+  flagsNone.staticBuiltins = false;
   EXPECT_EQ(
       runtime->run(codeChangeBuiltin, "source/url", flagsNone),
       ExecutionStatus::RETURNED);
@@ -159,6 +161,7 @@ TEST_F(StaticBuiltinsTest, AttemptToOverrideBuiltins2) {
     Math.sin = false;
   )";
   CompileFlags flagsNone;
+  flagsNone.staticBuiltins = false;
   EXPECT_EQ(
       runtime->run(codeOverrideBuiltin, "source/url", flagsNone),
       ExecutionStatus::EXCEPTION);

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-# Copyright (c) 2019-present, Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This source code is licensed under the MIT license found in the LICENSE
 # file in the root directory of this source tree.
-
 
 import argparse
 import enum
@@ -303,6 +302,8 @@ def showStatus(filename):
 
 es6_args = ["-Xes6-symbol"]
 
+extra_compile_flags = ["-fno-static-builtins"]
+
 
 def fileInBlacklist(filename):
     for blName in BLACK_LIST:
@@ -446,14 +447,18 @@ def runTest(filename, keep_tmp, binary_path, hvm):
             # Compile to bytecode with Hermes.
             try:
                 printVerbose("Compiling: {} to {}".format(filename, binfile.name))
-                args = [
-                    os.path.join(binary_path, "hermes"),
-                    temp.name,
-                    "-hermes-parser",
-                    "-emit-binary",
-                    "-out",
-                    binfile.name,
-                ] + es6_args
+                args = (
+                    [
+                        os.path.join(binary_path, "hermes"),
+                        temp.name,
+                        "-hermes-parser",
+                        "-emit-binary",
+                        "-out",
+                        binfile.name,
+                    ]
+                    + es6_args
+                    + extra_compile_flags
+                )
                 if optEnabled:
                     args.append("-O")
                 if not strictEnabled:
