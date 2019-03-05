@@ -24,6 +24,19 @@ HERMES_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.."; echo "$PWD")
 # shellcheck source=xplat/hermes/utils/commons.sh
 source "$HERMES_DIR/utils/commons.sh"
 
+# define a helper retry function
+function retry() {
+  RETRY=$1
+  ATTEMPTS=0
+  while (( ATTEMPTS <= RETRY )); do
+    "${@:2}" && return 0
+    ATTEMPTS=$((ATTEMPTS+1))
+    echo "Retry: $ATTEMPTS failures so far"
+  done
+  echo "Retry depleted for command: ${*:2}"
+  return 1
+}
+
 # HERMES_WS_DIR is the root directory for LLVM checkout and build dirs.
 [ -z "$HERMES_WS_DIR" ] && echo "HERMES_WS_DIR must be set" >&2 && exit 1
 [ "${HERMES_WS_DIR:0:1}" != "/" ] && echo "HERMES_WS_DIR must be an absolute path" >&2 && exit 1
@@ -44,7 +57,11 @@ elif [[ "$PLATFORM" == 'macosx' ]]; then
 elif [[ "$PLATFORM" == 'windows' ]]; then
   TARGET_PLATFORM="${TARGET_PLATFORM:-windows}"
   BUILD_SYSTEM="${BUILD_SYSTEM:-Visual Studio 15 2017 Win64}"
-  BUILD_CMD="${BUILD_CMD:-MSBuild.exe LLVM.sln -target:build -maxcpucount -verbosity:normal}"
+  # Retry 3 times if build fails.
+  # This mitigates the issue that LLVM build with MSBuild fails intermittently
+  # with "LINK : fatal error LNK1000: unknown error".
+  # Build is incremental. As a result, retry should be fast.
+  BUILD_CMD="${BUILD_CMD:-retry 3 MSBuild.exe LLVM.sln -target:build -maxcpucount -verbosity:normal}"
 else
   TARGET_PLATFORM="${TARGET_PLATFORM:-unknown}"
 fi
@@ -87,15 +104,8 @@ fi
 if [ ! -e "./llvm/" ]; then
   # Clone the LLVM and Clang repos.
   # Retry 3 times if clone failed
-  RETRY=3
-  n=0
-  until [ $n -ge $RETRY ]; do
-    $GIT clone https://github.com/llvm-mirror/llvm.git && break
-    n=$[$n+1]
-  done
-  if [[ $n -ge $RETRY ]]; then
-    exit 1
-  fi
+  # shellcheck disable=SC2086
+  retry 3 $GIT clone https://github.com/llvm-mirror/llvm.git
 fi
 
 (cd llvm; $GIT checkout $LLVM_REV)
