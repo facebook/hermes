@@ -170,6 +170,36 @@ TEST(DateUtilTest, LocalTZATest) {
   hermes::oscompat::unset_env("TZ");
 }
 
+TEST(DateUtilTest, EquivalentTimeTest) {
+  // 2008-01-01, 2018-12-31
+  EXPECT_EQ(1199145600, detail::equivalentTime(1199145600));
+  EXPECT_EQ(1199190660, detail::equivalentTime(1199190660));
+  // 2033-01-01
+  EXPECT_EQ(1988150400, detail::equivalentTime(1988150400));
+  // 1970-01-01
+  EXPECT_EQ(0, detail::equivalentTime(0));
+  // 2037-01-01
+  EXPECT_EQ(2114380800, detail::equivalentTime(2114380800));
+  // 1969-01-01 -> 2014-01-01, 1969-12-31 -> 2014-12-31
+  EXPECT_EQ(1388534400, detail::equivalentTime(-31536000));
+  EXPECT_EQ(1388579460, detail::equivalentTime(-31490940));
+  // 2038-01-01 -> 2010-01-01, 2038-12-31 -> 2010-12-31
+  EXPECT_EQ(1262304000, detail::equivalentTime(2145916800));
+  EXPECT_EQ(1262349060, detail::equivalentTime(2145961860));
+  // -123456-01-01 -> 2020-01-01, -123456-12-31 -> 2020-12-31
+  EXPECT_EQ(1577836800, detail::equivalentTime(-3958062278400));
+  EXPECT_EQ(1577881860, detail::equivalentTime(-3958062233340));
+  // -123457-01-01 -> 2030-01-01, -123457-12-31 -> 2030-12-31
+  EXPECT_EQ(1893456000, detail::equivalentTime(-3958093814400));
+  EXPECT_EQ(1893501060, detail::equivalentTime(-3958093769340));
+  // +123456-01-01 -> 2008-01-01, +123456-12-31 -> 2008-12-31
+  EXPECT_EQ(1199145600, detail::equivalentTime(3833727840000));
+  EXPECT_EQ(1199190660, detail::equivalentTime(3833727885060));
+  // +123457-01-01 -> 2026-01-01, +123457-12-31 -> 2020-12-31
+  EXPECT_EQ(1767225600, detail::equivalentTime(3833759462400));
+  EXPECT_EQ(1767270660, detail::equivalentTime(3833759507460));
+}
+
 TEST(DateUtilTest, DaylightSavingTATest) {
   hermes::oscompat::set_env("TZ", "America/Los_Angeles");
   EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1489530532000)); // Mar 14, 2017

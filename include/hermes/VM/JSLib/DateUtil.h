@@ -109,6 +109,10 @@ double localTZA();
 /// \param t timestamp in milliseconds.
 double daylightSavingTA(double t);
 
+namespace detail {
+// Exposed for test only
+int32_t equivalentTime(int64_t epochSecs);
+} // namespace detail
 //===----------------------------------------------------------------------===//
 // ES5.1 15.9.1.9
 

@@ -24,6 +24,26 @@
 namespace hermes {
 namespace vm {
 
+/// Set \p quot to the largest integral value that is smaller than or equal to
+/// the algebraic quotient of \p x divided by \p y.
+/// Set \p rem to the floor modulus of \p x divided by \p y.
+static void floorDivMod(int64_t x, int64_t y, int64_t *quot, int64_t *rem) {
+  int64_t q = x / y;
+  // signs are different && not evenly divisable
+  if ((x ^ y) < 0 && q * y != x) {
+    q--;
+  }
+  *quot = q;
+  *rem = x - y * q;
+}
+
+/// \return the floor modulus of \p x divided by \p y.
+static int64_t floorMod(int64_t x, int64_t y) {
+  int64_t quot, rem;
+  floorDivMod(x, y, &quot, &rem);
+  return rem;
+}
+
 /// Perform the fmod operation and adjusts the result so that it's not negative.
 /// Useful in computing dates before Jan 1 1970.
 static inline double posfmod(double x, double y) {
@@ -67,6 +87,23 @@ static bool isLeapYear(double y) {
   }
   // y % 100 == 0
   if (std::fmod(y, 400) != 0) {
+    return false;
+  }
+  // y % 400 == 0
+  return true;
+}
+
+/// \return true if year \p y is a leap year.
+static bool isLeapYear(int32_t y) {
+  if (y % 4 != 0) {
+    return false;
+  }
+  // y % 4 == 0
+  if (y % 100 != 0) {
+    return true;
+  }
+  // y % 100 == 0
+  if (y % 400 != 0) {
     return false;
   }
   // y % 400 == 0
@@ -197,6 +234,130 @@ double localTZA() {
 //===----------------------------------------------------------------------===//
 // ES5.1 15.9.1.8
 
+static const int32_t DAYS_IN_1_YEAR = 365;
+static const int32_t DAYS_IN_4_YEARS = DAYS_IN_1_YEAR * 4 + 1;
+static const int32_t DAYS_IN_100_YEARS = DAYS_IN_4_YEARS * 25 - 1;
+static const int32_t DAYS_IN_400_YEARS = DAYS_IN_100_YEARS * 4 + 1;
+// ES5.1 15.9.1.1
+// The actual range of times supported by ECMAScript Date objects is slightly
+// smaller: exactly –100,000,000 days to 100,000,000 days measured relative to
+// midnight at the beginning of 01 January, 1970 UTC.
+static const int32_t BASE_YEAR = -274000;
+static const int32_t DAYS_FROM_BASE_YEAR_TO_1970 =
+    (-BASE_YEAR / 400) * DAYS_IN_400_YEARS + 4 * DAYS_IN_400_YEARS +
+    3 * DAYS_IN_100_YEARS + 17 * DAYS_IN_4_YEARS + 2 * DAYS_IN_1_YEAR;
+
+/// \p year will be set to the year the \p epochDays falls in.
+/// \p yearAsEpochDays will be set to the number of days from 1970-01-01 to Jan
+///    1st of \p year (e.g. 0 represents 1970, 365 represents 1971,
+///    1096 represents 1973).
+/// \p dayOfYear will be set to the date the \p epochDays fall on, represented
+///    as number of days since Jan 1st (e.g. 0 represents Jan 1;
+///    59 represents Feb 29 if \p year is a leap year, Mar 1 otherwise).
+static void decomposeEpochDays(
+    int32_t epochDays,
+    int32_t *year,
+    int32_t *yearAsEpochDays,
+    int32_t *dayOfYear) {
+  *year = BASE_YEAR;
+  *yearAsEpochDays = -DAYS_FROM_BASE_YEAR_TO_1970;
+  *dayOfYear = epochDays + DAYS_FROM_BASE_YEAR_TO_1970;
+
+  int32_t countOf400Years = *dayOfYear / DAYS_IN_400_YEARS;
+  *year += countOf400Years * 400;
+  *yearAsEpochDays += countOf400Years * DAYS_IN_400_YEARS;
+  *dayOfYear -= countOf400Years * DAYS_IN_400_YEARS;
+
+  int32_t countOf100Years = *dayOfYear / DAYS_IN_100_YEARS;
+  *year += countOf100Years * 100;
+  *yearAsEpochDays += countOf100Years * DAYS_IN_100_YEARS;
+  *dayOfYear -= countOf100Years * DAYS_IN_100_YEARS;
+
+  int32_t countOf4Years = *dayOfYear / DAYS_IN_4_YEARS;
+  *year += countOf4Years * 4;
+  *yearAsEpochDays += countOf4Years * DAYS_IN_4_YEARS;
+  *dayOfYear -= countOf4Years * DAYS_IN_4_YEARS;
+
+  int32_t countOf1Year = *dayOfYear / DAYS_IN_1_YEAR;
+  *year += countOf1Year * 1;
+  *yearAsEpochDays += countOf1Year * DAYS_IN_1_YEAR;
+  *dayOfYear -= countOf1Year * DAYS_IN_1_YEAR;
+}
+
+static int32_t weekDayFromEpochDays(int32_t epochDays) {
+  return floorMod(epochDays + 4, 7);
+}
+
+static int32_t epochDaysForYear2006To2033[] = {
+    13149, 13514, 13879, 14245, 14610, 14975, 15340, 15706, 16071, 16436,
+    16801, 17167, 17532, 17897, 18262, 18628, 18993, 19358, 19723, 20089,
+    20454, 20819, 21184, 21550, 21915, 22280, 22645, 23011};
+
+/// Returns an equivalent year, represented as number of days since 1970-01-01,
+/// for the purpose of determining DST using the rules in ES5.1 15.9.1.8
+/// Daylight Saving Time Adjustment.
+/// The returned year is guaranteed to be in range [1970, 2037].
+/// \p yearAsEpochDays must be set to the number of days from 1970-01-01 to Jan
+/// 1st of \p year.
+static int32_t equivalentYearAsEpochDays(
+    int32_t year,
+    int32_t yearAsEpochDays) {
+  if (year >= 1970 && year <= 2037) {
+    // This avoids surprising results for current year and nearby years.
+    // It also reduces overhead for the most common cases.
+    return yearAsEpochDays;
+  }
+  int32_t wkDay = weekDayFromEpochDays(yearAsEpochDays);
+  // * 2006-01-01 and 2012-01-01 are both Sundays.
+  // * Starting 2006/2012, for the 40 years after it, there is a leap year
+  //   every 4 years, with no exceptions (i.e. 100 year rules).
+  //   This is the basis of the following two bullet points.
+  // * any_int * 12 % 28 is guaranteed to be a multiple of 4.
+  //   As a result, the following operations does not change
+  //   whether a year is a leap year or not.
+  // * Every 4 years, there is 1 leap year and 3 non-leap years.
+  //   (365*3+366) % 7 = 5. This is the number of extra days on top of
+  //   full weeks we get every 4 years.
+  //   * After 28 (4 * 7) years, we get (5 * 7) % 7 = 0 day of extra day.
+  //     This is why subtracting 28 years does not change whether a year
+  //     is a leap year.
+  //   * After 12 (4 * 3) years, we get (5 * 3) % 7 = 1 day of extra day.
+  //     That's why adding 12 years increments weekday by 1.
+  int32_t eqYear = (isLeapYear(year) ? 2012 : 2006) + (wkDay * 12) % 28;
+  // Find the year in the range 2006..2033 that is equivalent mod 28.
+  // This is to avoid anything above year 2037.
+  eqYear = 2006 + (eqYear - 2006) % 28;
+  return epochDaysForYear2006To2033[eqYear - 2006];
+}
+
+static const int32_t SECS_PER_DAY = 24 * 60 * 60;
+// Numbers are from 15.9.1.1 Time Values and Time Range
+static const int64_t TIME_RANGE_SECS = SECS_PER_DAY * 100000000LL;
+
+/// Returns an equivalent time for the purpose of determining DST using the
+/// rules in ES5.1 15.9.1.8 Daylight Saving Time Adjustment
+///
+/// \p time_ms must be within the range specified by
+/// ES5.1 15.9.1.1 Time Values and Time Range.
+///
+/// Some library calls doesn't work when the input date-time cannot be
+/// represented as a 32-bit non-negative number of seconds since
+/// 1970-01-01T00:00:00. (e.g. std::localtime on Windows)
+///
+/// Note: not "static" so that it can be tested directly.
+int32_t detail::equivalentTime(int64_t epochSecs) {
+  // The math behind this implementation is similar to the EquivalentTime
+  // function in https://github.com/v8/v8/blob/master/src/date.h
+  assert(epochSecs >= -TIME_RANGE_SECS && epochSecs <= TIME_RANGE_SECS);
+  int64_t epochDays, secsOfDay;
+  floorDivMod(epochSecs, SECS_PER_DAY, &epochDays, &secsOfDay);
+  int32_t year, yearAsEpochDays, dayOfYear;
+  // Narrowing of epochDays will not result in truncation
+  decomposeEpochDays(epochDays, &year, &yearAsEpochDays, &dayOfYear);
+  int32_t eqYearAsEpochDays = equivalentYearAsEpochDays(year, yearAsEpochDays);
+  return (eqYearAsEpochDays + dayOfYear) * SECS_PER_DAY + secsOfDay;
+}
+
 double daylightSavingTA(double t) {
   if (!std::isfinite(t)) {
     return std::numeric_limits<double>::quiet_NaN();
@@ -212,17 +373,13 @@ double daylightSavingTA(double t) {
   // small errors in daylight savings time. This is only a problem in systems
   // with a 32-bit time_t, like some Android systems.
   time_t local = 0;
-  if (seconds > std::numeric_limits<time_t>::max()) {
-    local = std::numeric_limits<time_t>::max();
-  } else if (seconds < std::numeric_limits<time_t>::min()) {
-    local = std::numeric_limits<time_t>::min();
-  } else {
-    // This will truncate any fractional seconds, which is ok for daylight
-    // savings time calculations.
-    // The integral part of the float is guaranteed to be in bounds by the above
-    // checks.
-    local = seconds;
+  if (seconds > TIME_RANGE_SECS || seconds < -TIME_RANGE_SECS) {
+    // Return NaN if input is outside Time Range allowed in ES5.1
+    return std::numeric_limits<double>::quiet_NaN();
   }
+  // This will truncate any fractional seconds, which is ok for daylight
+  // savings time calculations.
+  local = detail::equivalentTime(static_cast<int64_t>(seconds));
 
   std::tm *brokenTime = std::localtime(&local);
   if (!brokenTime) {
