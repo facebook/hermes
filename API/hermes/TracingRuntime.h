@@ -175,6 +175,13 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
     RD::setPropertyValue(obj, name, value);
   }
 
+  jsi::Array getPropertyNames(const jsi::Object &o) override {
+    jsi::Array arr = RD::getPropertyNames(o);
+    trace_.emplace_back<SynthTrace::GetPropertyNamesRecord>(
+        getTimeSinceStart(), getUniqueID(o), getUniqueID(arr));
+    return arr;
+  }
+
   jsi::WeakObject createWeakObject(const jsi::Object &o) override {
     auto wo = RD::createWeakObject(o);
     // TODO mhorowitz: add synthtrace support for WeakObject

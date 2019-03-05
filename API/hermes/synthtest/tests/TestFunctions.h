@@ -12,6 +12,7 @@
   F(dateAsFunction)                  \
   F(dateAsNew)                       \
   F(dateNow)                         \
+  F(getPropertyNames)                \
   F(hostCallsJS)                     \
   F(hostCallsJSCallsHost)            \
   F(hostCallsJSWithThis)             \

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2019-present, Facebook, Inc.
+# Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This source code is licensed under the MIT license found in the LICENSE
 # file in the root directory of this source tree.
@@ -88,11 +88,20 @@ class Normalizer:
             return v
 
     def normalize_rec(self, rec):
-        for objkey in ["objID", "functionID", "hostObjectID"]:
+        # These should be kept in sync with changes to SynthTrace.h.
+        # Hopefully there is never a key that is used for both objects and
+        # non-objects (in different records).
+        # If there is a conflict between two keys with the same name and
+        # different value types:
+        # * if it is another number it will cause a failure at runtime
+        # * if it is a string it will cause a failure at parse time
+        OBJECT_HOLDING_KEYS = ["objID", "functionID", "hostObjectID", "propNamesID"]
+        VALUE_HOLDING_KEYS = ["value", "retval"]
+        for objkey in OBJECT_HOLDING_KEYS:
             if objkey in rec:
                 rec[objkey] = self.normal[rec[objkey]]
 
-        for valuekey in ["value", "retval"]:
+        for valuekey in VALUE_HOLDING_KEYS:
             if valuekey in rec:
                 rec[valuekey] = self.normalize_value(rec[valuekey])
 

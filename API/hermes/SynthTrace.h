@@ -73,6 +73,7 @@ class SynthTrace {
     GetProperty,
     SetProperty,
     HasProperty,
+    GetPropertyNames,
     CreateArray,
     ArrayRead,
     ArrayWrite,
@@ -383,6 +384,36 @@ class SynthTrace {
         const override;
     RecordType getType() const override {
       return type;
+    }
+    std::vector<ObjectID> uses() const override {
+      return {objID_};
+    }
+  };
+
+  struct GetPropertyNamesRecord final : public Record {
+    static constexpr RecordType type{RecordType::GetPropertyNames};
+    const ObjectID objID_;
+    // Since getPropertyNames always returns an array, this can be an object id
+    // rather than a TraceValue.
+    const ObjectID propNamesID_;
+
+    explicit GetPropertyNamesRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        ObjectID propNamesID)
+        : Record(time), objID_(objID), propNamesID_(propNamesID) {}
+
+    bool operator==(const GetPropertyNamesRecord &that) const {
+      return objID_ == that.objID_ && propNamesID_ == that.propNamesID_;
+    }
+
+    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+        const override;
+    RecordType getType() const override {
+      return type;
+    }
+    std::vector<ObjectID> defs() const override {
+      return {propNamesID_};
     }
     std::vector<ObjectID> uses() const override {
       return {objID_};

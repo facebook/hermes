@@ -842,6 +842,18 @@ Value TraceInterpreter::execFunction(
                 .hasProperty(rt, PropNameID::forUtf8(rt, hpr.propName_));
             break;
           }
+          case RecordType::GetPropertyNames: {
+            const auto &gpnr =
+                static_cast<const SynthTrace::GetPropertyNamesRecord &>(*rec);
+            jsi::Array arr = getObjForUse(gpnr.objID_).getPropertyNames(rt);
+            addObjectToDefs(
+                call,
+                gpnr.propNamesID_,
+                globalRecordNum,
+                std::move(arr),
+                locals);
+            break;
+          }
           case RecordType::CreateArray: {
             const auto &car =
                 static_cast<const SynthTrace::CreateArrayRecord &>(*rec);

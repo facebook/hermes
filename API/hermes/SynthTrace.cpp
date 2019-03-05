@@ -230,6 +230,12 @@ SynthTrace getTrace(
         trace.emplace_back<SynthTrace::HasPropertyRecord>(
             timeFromStart, objID->getValue(), propName->c_str());
         break;
+      case RecordType::GetPropertyNames:
+        trace.emplace_back<SynthTrace::GetPropertyNamesRecord>(
+            timeFromStart,
+            objID->getValue(),
+            getNumberAs<SynthTrace::ObjectID>(obj->get("propNamesID")));
+        break;
       case RecordType::CreateArray:
         trace.emplace_back<SynthTrace::CreateArrayRecord>(
             timeFromStart,
@@ -562,6 +568,13 @@ void SynthTrace::HasPropertyRecord::toJSONInternal(
   os << ", \"propName\": \"" << propName_ << "\"";
 }
 
+void SynthTrace::GetPropertyNamesRecord::toJSONInternal(
+    llvm::raw_ostream &os,
+    const SynthTrace &trace) const {
+  Record::toJSONInternal(os, trace);
+  os << ", \"objID\": " << objID_ << ", \"propNamesID\": " << propNamesID_;
+}
+
 void SynthTrace::CreateArrayRecord::toJSONInternal(
     llvm::raw_ostream &os,
     const SynthTrace &trace) const {
@@ -674,6 +687,7 @@ llvm::raw_ostream &operator<<(
     CASE(GetProperty);
     CASE(SetProperty);
     CASE(HasProperty);
+    CASE(GetPropertyNames);
     CASE(CreateArray);
     CASE(ArrayRead);
     CASE(ArrayWrite);
@@ -711,6 +725,7 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
   CASE(GetProperty)
   CASE(SetProperty)
   CASE(HasProperty)
+  CASE(GetPropertyNames);
   CASE(CreateArray)
   CASE(ArrayRead)
   CASE(ArrayWrite)

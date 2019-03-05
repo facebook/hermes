@@ -217,6 +217,24 @@ TEST_F(SynthTraceTest, HasProperty) {
       SynthTrace::HasPropertyRecord(dummyTime, objID, "a"), *records.at(1));
 }
 
+TEST_F(SynthTraceTest, GetPropertyNames) {
+  SynthTrace::ObjectID objID;
+  SynthTrace::ObjectID propNamesID;
+  {
+    auto obj = jsi::Object(*rt);
+    objID = rt->getUniqueID(obj);
+    jsi::Array names = obj.getPropertyNames(*rt);
+    propNamesID = rt->getUniqueID(names);
+  }
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(2, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateObjectRecord(dummyTime, objID), *records.at(0));
+  EXPECT_EQ_RECORD(
+      SynthTrace::GetPropertyNamesRecord(dummyTime, objID, propNamesID),
+      *records.at(1));
+}
+
 TEST_F(SynthTraceTest, CreateArray) {
   SynthTrace::ObjectID objID;
   {
@@ -558,6 +576,12 @@ TEST_F(SynthTraceSerializationTest, SetProperty) {
       R"({"type": "SetPropertyRecord", "time": 0, "objID": 1, "propName": "a", "value": "string:b"})",
       to_string(SynthTrace::SetPropertyRecord(
           dummyTime, 1, "a", trace.encodeString("b"))));
+}
+
+TEST_F(SynthTraceSerializationTest, GetPropertyNames) {
+  EXPECT_EQ(
+      R"({"type": "GetPropertyNamesRecord", "time": 0, "objID": 1, "propNamesID": 2})",
+      to_string(SynthTrace::GetPropertyNamesRecord(dummyTime, 1, 2)));
 }
 
 TEST_F(SynthTraceSerializationTest, CreateArray) {
