@@ -1,4 +1,11 @@
-cmake_minimum_required(VERSION 3.7.0)
+if(NOT HERMES_IS_ANDROID)
+  # We need FindICU from 3.7
+  cmake_minimum_required(VERSION 3.7.0)
+else()
+  # We'll be using ICU through Java, so we don't need FindICU.
+  # 3.6.0 is the minimum version shipped with the Android SDK.
+  cmake_minimum_required(VERSION 3.6.0)
+endif()
 
 include(CheckCXXSourceCompiles)
 
