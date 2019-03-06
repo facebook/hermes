@@ -21,7 +21,8 @@ extern "C" {
 /// \param sign location to store 1 if negative number, 0 if positive number.
 /// \param rve location to store pointer to the end of the returned string.
 /// \return string representation of s in ES5.1 9.8.1
-char *dtoa(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve);
+char *
+g_dtoa(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve);
 
 /// Same as dtoa, but #defines ROUND_BIASED, which enables the mode which is
 /// used for getting results with a fixed number of digits after the decimal.
@@ -38,7 +39,7 @@ char *dtoa_fixedpoint(
     int *sign,
     char **rve);
 
-void freedtoa(char *);
+void g_freedtoa(char *);
 void freedtoa_fixedpoint(char *);
 
 char *g_fmt(char *, double);

@@ -88,7 +88,7 @@ size_t numberToString(double m, char *dest, size_t destSize) {
   // Points to the end of the string s after it's populated.
   char *sEnd;
 
-  char *s = ::dtoa(m, 0, 0, &n, &sign, &sEnd);
+  char *s = ::g_dtoa(m, 0, 0, &n, &sign, &sEnd);
 
   if (sign)
     *destPtr++ = '-';
@@ -155,7 +155,7 @@ size_t numberToString(double m, char *dest, size_t destSize) {
   *destPtr++ = '\0';
   assert(static_cast<size_t>(destPtr - dest) < NUMBER_TO_STRING_BUF_SIZE);
 
-  freedtoa(s);
+  g_freedtoa(s);
   return destPtr - dest - 1;
 }
 } // namespace hermes

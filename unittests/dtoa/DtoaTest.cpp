@@ -25,16 +25,16 @@ TEST(DtoaTest, SmokeTest) {
   ASSERT_EQ(inv, se);
   ASSERT_EQ(0, val);
 
-#define DtoaDecimalTest(M, N, K, S, SIGN)          \
-  {                                                \
-    int n, sign;                                   \
-    char *s = ::dtoa(M, 0, 0, &n, &sign, nullptr); \
-    int k = ::strlen(s);                           \
-    EXPECT_EQ(N, n);                               \
-    EXPECT_EQ(K, k);                               \
-    EXPECT_EQ(SIGN, sign);                         \
-    EXPECT_STREQ(S, s);                            \
-    freedtoa(s);                                   \
+#define DtoaDecimalTest(M, N, K, S, SIGN)            \
+  {                                                  \
+    int n, sign;                                     \
+    char *s = ::g_dtoa(M, 0, 0, &n, &sign, nullptr); \
+    int k = ::strlen(s);                             \
+    EXPECT_EQ(N, n);                                 \
+    EXPECT_EQ(K, k);                                 \
+    EXPECT_EQ(SIGN, sign);                           \
+    EXPECT_STREQ(S, s);                              \
+    g_freedtoa(s);                                   \
   }
 
   DtoaDecimalTest(2.123, 1, 4, "2123", 0);

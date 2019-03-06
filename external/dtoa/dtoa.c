@@ -151,7 +151,7 @@
  *	in pow5mult, ensures lazy evaluation of only one copy of high
  *	powers of 5; omitting this lock would introduce a small
  *	probability of wasting memory, but would otherwise be harmless.)
- *	You must also invoke freedtoa(s) to free the value s returned by
+ *	You must also invoke g_freedtoa(s) to free the value s returned by
  *	dtoa.  You may do so whether or not MULTIPLE_THREADS is #defined.
  * #define NO_IEEE_Scale to disable new (Feb. 1997) logic in strtod that
  *	avoids underflows on inputs whose result does not underflow.
@@ -528,7 +528,7 @@ void FREE_DTOA_LOCK(int);
 
 #ifdef __cplusplus
 extern "C" double g_strtod(const char *s00, char **se);
-extern "C" char *dtoa(double d, int mode, int ndigits,
+extern "C" char *g_dtoa(double d, int mode, int ndigits,
 			int *decpt, int *sign, char **rve);
 #endif
 
@@ -3603,7 +3603,7 @@ nrv_alloc(const char *s, char **rve, int n)
 	return rv;
 	}
 
-/* freedtoa(s) must be used to free values s returned by dtoa
+/* g_freedtoa(s) must be used to free values s returned by dtoa
  * when MULTIPLE_THREADS is #defined.  It should be used in all cases,
  * but for consistency with earlier versions of dtoa, it is optional
  * when MULTIPLE_THREADS is not defined.
@@ -3611,9 +3611,9 @@ nrv_alloc(const char *s, char **rve, int n)
 
  void
 #ifdef KR_headers
-freedtoa(s) char *s;
+g_freedtoa(s) char *s;
 #else
-freedtoa(char *s)
+g_freedtoa(char *s)
 #endif
 {
 	Bigint *b = (Bigint *)((int *)s - 1);
@@ -3660,7 +3660,7 @@ freedtoa(char *s)
  */
 
  char *
-dtoa
+g_dtoa
 #ifdef KR_headers
 	(dd, mode, ndigits, decpt, sign, rve)
 	double dd; int mode, ndigits, *decpt, *sign; char **rve;
@@ -3738,7 +3738,7 @@ dtoa
 
 #ifndef MULTIPLE_THREADS
 	if (dtoa_result) {
-		freedtoa(dtoa_result);
+		g_freedtoa(dtoa_result);
 		dtoa_result = 0;
 		}
 #endif

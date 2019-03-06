@@ -621,9 +621,9 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
       // Store the string representation of n, as provided by dtoa.
       // We use the default version of dtoa, so we get the shortest string.
       // mode=0 and precision=0 give the shortest string.
-      char *s = ::dtoa(x, 0, 0, &decPt, &sign, &sEnd);
+      char *s = ::g_dtoa(x, 0, 0, &decPt, &sign, &sEnd);
       n.append(s, sEnd);
-      ::freedtoa(s);
+      ::g_freedtoa(s);
 
       // All but the first digit of n will be after the decimal point.
       f = n.size() - 1;

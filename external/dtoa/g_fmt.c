@@ -25,9 +25,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
- extern char *dtoa(double, int, int, int *, int *, char **);
+ extern char *g_dtoa(double, int, int, int *, int *, char **);
  extern char *g_fmt(char *, double);
- extern void freedtoa(char*);
+ extern void g_freedtoa(char*);
 #ifdef __cplusplus
 	}
 #endif
@@ -48,7 +48,7 @@ g_fmt(register char *b, double x)
 		goto done;
 		}
 #endif
-	s = s0 = dtoa(x, 0, 0, &decpt, &sign, &se);
+	s = s0 = g_dtoa(x, 0, 0, &decpt, &sign, &se);
 	if (sign)
 		*b++ = '-';
 	if (decpt == 9999) /* Infinity or Nan */ {
@@ -98,7 +98,7 @@ g_fmt(register char *b, double x)
 		*b = 0;
 		}
  done0:
-	freedtoa(s0);
+	g_freedtoa(s0);
  done:
 	return b0;
 	}
