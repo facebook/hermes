@@ -14,6 +14,7 @@
 #include <llvm/Support/SHA1.h>
 #include <llvm/Support/SaveAndRestore.h>
 
+#include <algorithm>
 #include <unordered_set>
 
 using namespace hermes::parser;
@@ -355,6 +356,28 @@ std::unique_ptr<const jsi::Buffer> bufConvert(
   return llvm::make_unique<const OwnedMemoryBuffer>(std::move(buf));
 }
 
+/// Returns a new object that views, but doesn't own, the data of \p buffer,
+/// which must therefore outlive the returned object.
+///
+/// (This is used to make repeated calls to APIs that takes a unique_ptr.)
+static std::unique_ptr<const jsi::Buffer> bufView(const jsi::Buffer *buffer) {
+  class NonOwnedMemoryBuffer : public jsi::Buffer {
+   public:
+    NonOwnedMemoryBuffer(const jsi::Buffer *buffer) : buf_(buffer) {}
+    size_t size() const override {
+      return buf_->size();
+    }
+    const uint8_t *data() const override {
+      return buf_->data();
+    }
+
+   private:
+    const jsi::Buffer *buf_;
+  };
+
+  return llvm::make_unique<const NonOwnedMemoryBuffer>(buffer);
+}
+
 void verifyHash(
     const ::hermes::SHA1 &expectedHash,
     const ::hermes::SHA1 &actualHash) {
@@ -382,6 +405,29 @@ std::string getStatsString(std::string &GCStats, bool shouldPrintIOStats) {
     stats += os.str();
   }
   return stats;
+}
+
+/// Returns the element of \p repGCStats with the median "totalTime" stat.
+static std::string mergeGCStats(const std::vector<std::string> &repGCStats) {
+  if (repGCStats.empty())
+    throw std::invalid_argument("Empty GC stats.");
+  std::vector<std::pair<double, const std::string *>> valueAndStats;
+  for (auto &stats : repGCStats) {
+    // Find "totalTime" by string search, to avoid JSONParser boilerplate
+    // and issues with the "GC Stats" header.
+    std::string target = "\"totalTime\":";
+    auto pos = stats.find(target);
+    if (pos == std::string::npos)
+      throw std::invalid_argument("Malformed GC stats.");
+    double value = std::atof(&stats[pos + target.size()]);
+    valueAndStats.emplace_back(value, &stats);
+  }
+  unsigned median = (valueAndStats.size() - 1) / 2;
+  std::nth_element(
+      valueAndStats.begin(),
+      valueAndStats.begin() + median,
+      valueAndStats.end());
+  return *valueAndStats[median].second;
 }
 
 } // namespace
@@ -515,29 +561,34 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   }
   gcConfigBuilder.withAllocInYoung(options.allocInYoung);
   gcConfigBuilder.withRevertToYGAtTTI(options.revertToYGAtTTI);
+  // If aggregating multiple reps, randomize the placement of some data
+  // structures in each rep, for a more robust time metric.
+  if (options.reps > 1) {
+    rtConfigBuilder.withRandomizeMemoryLayout(true);
+  }
   rtConfig = rtConfigBuilder.withGCConfig(gcConfigBuilder.build()).build();
 
-  ::hermes::vm::instrumentation::PerfEvents::begin();
+  std::vector<std::string> repGCStats(options.reps);
+  for (int rep = 0; rep < options.reps; ++rep) {
+    ::hermes::vm::instrumentation::PerfEvents::begin();
 #ifdef HERMESVM_API_TRACE
-  std::unique_ptr<TracingHermesRuntime> rt =
-      makeTracingHermesRuntime(makeHermesRuntime(rtConfig), rtConfig);
+    std::unique_ptr<TracingHermesRuntime> rt =
+        makeTracingHermesRuntime(makeHermesRuntime(rtConfig), rtConfig);
 
-  // Set up the mocks for environment-dependent JS behavior
-  rt->hermesRuntime().setMockedEnvironment(std::get<2>(traceAndConfigAndEnv));
-  std::function<void()> writeTrace = [&rt, &outTrace] {
-    rt->writeTrace(outTrace);
-  };
+    // Set up the mocks for environment-dependent JS behavior
+    rt->hermesRuntime().setMockedEnvironment(std::get<2>(traceAndConfigAndEnv));
+    std::function<void()> writeTrace = [&rt, &outTrace] {
+      rt->writeTrace(outTrace);
+    };
 #else
-  std::unique_ptr<HermesRuntime> rt = makeHermesRuntime(rtConfig);
-  rt->setMockedEnvironment(std::get<2>(traceAndConfigAndEnv));
-  std::function<void()> writeTrace = nullptr;
+    std::unique_ptr<HermesRuntime> rt = makeHermesRuntime(rtConfig);
+    rt->setMockedEnvironment(std::get<2>(traceAndConfigAndEnv));
+    std::function<void()> writeTrace = nullptr;
 #endif
-
-  std::string GCStats =
-      exec(*rt, options, trace, std::move(codeFileBuffer), writeTrace);
-  if (!options.shouldPrintGCStats) {
-    GCStats = "";
+    repGCStats[rep] =
+        exec(*rt, options, trace, bufView(codeFileBuffer.get()), writeTrace);
   }
+  auto GCStats = options.shouldPrintGCStats ? mergeGCStats(repGCStats) : "";
   std::string stats = getStatsString(GCStats, options.shouldTrackIO);
 
   if (options.shouldTrackIO && isBytecode &&

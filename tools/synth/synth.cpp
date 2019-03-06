@@ -78,6 +78,13 @@ static opt<unsigned> BytecodeWarmupPercent(
          "for large bytecode files."),
     init(0));
 
+static opt<int> Reps(
+    "reps",
+    desc(
+        "Number of repetitions of execution. Any GC stats printed are those for the "
+        "rep with the median \"totalTime\"."),
+    init(1));
+
 } // namespace
 
 int main(int argc, char **argv) {
@@ -87,6 +94,7 @@ int main(int argc, char **argv) {
   try {
     TraceInterpreter::ExecuteOptions options;
     options.marker = Marker;
+    options.reps = Reps;
     options.minHeapSize = MinHeap.bytes;
     options.maxHeapSize = MaxHeap.bytes;
     options.allocInYoung = GCAllocYoung;
