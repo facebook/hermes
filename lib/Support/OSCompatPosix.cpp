@@ -133,11 +133,29 @@ void *vm_allocate_aligned(size_t sz, size_t alignment) {
   assert(sz > 0 && sz % page_size() == 0);
   assert(alignment > 0 && alignment % page_size() == 0);
 
+  // Opportunistically allocate without alignment constraint,
+  // and see if the memory happens to be aligned.
+  // While this may be unlikely on the first allocation request,
+  // subsequent allocation requests have a good chance.
+  void *mem = vm_allocate_impl(sz);
+  if (mem == nullptr) {
+    // Don't attempt to do anything further if the allocation failed.
+    return nullptr;
+  }
+  if (mem == alignAlloc(mem, alignment)) {
+    return mem;
+  }
+
+  // Free the oppotunistic allocation.
+  oscompat::vm_free(mem, sz);
+
+  // This time, allocate a larger section to ensure that it contains
+  // a subsection that satisfies the request.
   // Use *real* page size here since that's what vm_allocate_impl guarantees.
   const size_t excessSize = sz + alignment - page_size_real();
   void *raw = vm_allocate_impl(excessSize);
   if (raw == nullptr)
-    return raw;
+    return nullptr;
 
   char *aligned = alignAlloc(raw, alignment);
   size_t excessAtFront = aligned - static_cast<char *>(raw);

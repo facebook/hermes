@@ -81,18 +81,14 @@ class PreAllocatedStorageProvider final : public StorageProvider {
 void *VMAllocateStorageProvider::newStorage(const char *name) {
   assert(AlignedStorage::size() % oscompat::page_size() == 0);
   // Allocate the space, hoping it will be the correct alignment.
-  void *mem = oscompat::vm_allocate(AlignedStorage::size());
-  if (!mem) {
-    // Don't attempt to do anything further if the allocation failed.
+  void *mem = oscompat::vm_allocate_aligned(
+      AlignedStorage::size(), AlignedStorage::size());
+  if (mem == nullptr) {
     return nullptr;
   }
-  if (LLVM_UNLIKELY(!isAligned(mem))) {
-    // Free and try again with a larger amount to ensure we can align it.
-    oscompat::vm_free(mem, AlignedStorage::size());
-    mem = oscompat::vm_allocate_aligned(
-        AlignedStorage::size(), AlignedStorage::size());
-    assert(isAligned(mem));
-  }
+  assert(isAligned(mem));
+  (void)isAligned;
+
   // Name the memory region on platforms that support naming.
   oscompat::vm_name(mem, AlignedStorage::size(), name);
   return mem;
