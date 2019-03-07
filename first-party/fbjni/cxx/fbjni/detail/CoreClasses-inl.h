@@ -57,6 +57,11 @@ inline void JObject::setFieldValue(JField<T> field, T value) noexcept {
   field.set(self(), value);
 }
 
+template<typename T, typename>
+inline void JObject::setFieldValue(JField<T> field, alias_ref<T> value) noexcept {
+  setFieldValue(field, value.get());
+}
+
 inline std::string JObject::toString() const {
   static const auto method = findClassLocal("java/lang/Object")->getMethod<jstring()>("toString");
 
@@ -295,6 +300,11 @@ inline local_ref<T*> JClass::getStaticFieldValue(JStaticField<T*> field) noexcep
 template<typename T>
 inline void JClass::setStaticFieldValue(JStaticField<T> field, T value) noexcept {
   field.set(self(), value);
+}
+
+template<typename T, typename>
+inline void JClass::setStaticFieldValue(JStaticField<T> field, alias_ref<T> value) noexcept {
+  setStaticFieldValue(field, value.get());
 }
 
 template<typename R, typename... Args>

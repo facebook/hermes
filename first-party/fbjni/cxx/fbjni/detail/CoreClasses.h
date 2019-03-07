@@ -130,10 +130,12 @@ public:
   template<typename T>
   local_ref<T*> getFieldValue(JField<T*> field) const noexcept;
 
-  /// Set the value of field. Any Java type is accepted, including the primitive types
-  /// and raw reference types.
+  /// Set the value of field. Any Java type is accepted.
   template<typename T>
   void setFieldValue(JField<T> field, T value) noexcept;
+  template<typename T,
+           typename = typename std::enable_if<IsPlainJniReference<T>(), T>::type>
+  void setFieldValue(JField<T> field, alias_ref<T> value) noexcept;
 
   /// Convenience method to create a std::string representing the object
   std::string toString() const;
@@ -310,10 +312,12 @@ class JClass : public JavaClass<JClass, JObject, jclass> {
   template<typename T>
   local_ref<T*> getStaticFieldValue(JStaticField<T*> field) noexcept;
 
-  /// Set the value of field. Any Java type is accepted, including the primitive types
-  /// and raw reference types.
+  /// Set the value of field. Any Java type is accepted.
   template<typename T>
   void setStaticFieldValue(JStaticField<T> field, T value) noexcept;
+  template<typename T,
+           typename = typename std::enable_if<IsPlainJniReference<T>(), T>::type>
+  void setStaticFieldValue(JStaticField<T> field, alias_ref<T> value) noexcept;
 
   /// Allocates a new object and invokes the specified constructor
   template<typename R, typename... Args>
