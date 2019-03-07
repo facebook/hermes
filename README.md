@@ -7,8 +7,20 @@ type annotations, features host-side static optimizations and compact bytecode.
 
 ## Getting Started for React Native developers
 
+First make sure that the Android SDK and NDK are installed, and that the
+environment variables `ANDROID_SDK` and `ANDROID_NDK` are set. Here's an
+example:
+
+```
+$ echo "$ANDROID_SDK"
+/opt/android_sdk
+
+$ echo "$ANDROID_NDK"
+/opt/android_ndk/r15c
+```
+
 Create a base directory to work in, e.g. `~/workspace`, and `cd` into it. Then
-follow the steps below (or copy-paste it all):
+follow the steps below (or copy-paste them all):
 
 ```
 # 1. Use this directory as the workspace
