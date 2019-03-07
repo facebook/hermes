@@ -64,8 +64,17 @@ void unset_test_vm_allocate_limit() {
 }
 #endif // !NDEBUG
 
-static void *vm_allocate_impl(size_t sz) {
+static char *alignAlloc(void *p, size_t alignment) {
+  return reinterpret_cast<char *>(
+      llvm::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
+}
+
+void *vm_allocate(size_t sz) {
 #ifndef NDEBUG
+  assert(sz % page_size() == 0);
+  if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
+    return vm_allocate_aligned(sz, testPgSz);
+  }
   if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
     return nullptr;
   } else if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit)) {
@@ -88,31 +97,116 @@ static void *vm_allocate_impl(size_t sz) {
   return result; // result == nullptr if VirtualAlloc failed
 }
 
-static char *alignAlloc(void *p, size_t alignment) {
-  return reinterpret_cast<char *>(
-      llvm::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
-}
+void *vm_allocate_aligned(size_t sz, size_t alignment) {
+  /// A value of 3 means vm_allocate_aligned will:
+  /// 1. Opportunistic: allocate and see if it happens to be aligned
+  /// 2. Regular: Try aligned allocation 3 times (see below for details)
+  /// 3. Fallback: Allocate more than needed, and waste the excess
+  constexpr int aligned_allocation_attempts = 3;
 
-void *vm_allocate(size_t sz) {
-  assert(sz % page_size() == 0);
 #ifndef NDEBUG
-  if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
-    return vm_allocate_aligned(sz, testPgSz);
+  assert(sz > 0 && sz % page_size() == 0);
+  assert(alignment > 0 && alignment % page_size() == 0);
+  if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
+    return nullptr;
+  } else if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit)) {
+    totalVMAllocLimit -= sz;
   }
 #endif // !NDEBUG
-  return vm_allocate_impl(sz);
-}
 
-void *vm_allocate_aligned(size_t sz, size_t alignment) {
-  // TODO(T40415882) Add support for aligned allocation on Windows.
-  assert(false && "Aligned allocation is not supported on Windows");
-  return nullptr;
+  // Opportunistically allocate without alignment constraint,
+  // and see if the memory happens to be aligned.
+  // While this may be unlikely on the first allocation request,
+  // subsequent allocation requests have a good chance.
+  void *addr =
+      VirtualAlloc(nullptr, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  if (addr == nullptr) {
+    // Don't attempt to do anything further if the allocation failed.
+    return nullptr;
+  }
+  if (LLVM_LIKELY(addr == alignAlloc(addr, alignment))) {
+    return addr;
+  }
+  // Free the oppotunistic allocation.
+  BOOL free_ret = VirtualFree(addr, 0, MEM_RELEASE);
+  assert(free_ret && "Failed to free memory region in vm_allocate_aligned");
+  (void)free_ret;
+
+  for (int attempts = 0; attempts < aligned_allocation_attempts; attempts++) {
+    // Allocate a larger section to ensure that it contains
+    // a subsection that satisfies the request.
+    addr = VirtualAlloc(
+        nullptr,
+        sz + alignment - page_size_real(),
+        MEM_RESERVE,
+        PAGE_READWRITE);
+    if (addr == nullptr) {
+      return nullptr;
+    }
+    // Find the desired subsection
+    char *aligned = alignAlloc(addr, alignment);
+
+    // Free the larger allocation (including the desired subsection)
+    free_ret = VirtualFree(addr, 0, MEM_RELEASE);
+    assert(free_ret && "Failed to free memory region in vm_allocate_aligned");
+    (void)free_ret;
+
+    // Request allocation at the desired subsection
+    void *alloc_at_aligned =
+        VirtualAlloc(aligned, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    if (alloc_at_aligned != nullptr) {
+      assert(alloc_at_aligned == aligned);
+      return aligned;
+    }
+  }
+
+  // Similar to the regular mechanism, but simply return the desired
+  // subsection (instead of free and re-allocate). This has two downsides:
+  // 1. Wasted virtual address space.
+  // 2. vm_free_aligned is now required to call VirtualQuery, which has
+  //    a non-trivial cost.
+  addr = VirtualAlloc(
+      nullptr, sz + alignment - page_size_real(), MEM_RESERVE, PAGE_READWRITE);
+  if (addr == nullptr) {
+    return nullptr;
+  }
+  addr = alignAlloc(addr, alignment);
+  addr = VirtualAlloc(addr, alignment, MEM_COMMIT, PAGE_READWRITE);
+  assert(
+      addr &&
+      "Failed to commit subsection of reserved memory in vm_allocate_aligned");
+  return addr;
 }
 
 void vm_free(void *p, size_t sz) {
+#ifndef NDEBUG
+  if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
+    vm_free_aligned(p, sz);
+    return;
+  }
+#endif // !NDEBUG
+
   BOOL ret = VirtualFree(p, 0, MEM_RELEASE);
 
   assert(ret && "Failed to free memory region.");
+  (void)ret;
+
+#ifndef NDEBUG
+  if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit) && p) {
+    totalVMAllocLimit += sz;
+  }
+#endif
+}
+
+void vm_free_aligned(void *p, size_t sz) {
+  // VirtualQuery is necessary because p may not be the base location
+  // of the allocation (due to possible fallback in vm_allocate_aligned).
+  MEMORY_BASIC_INFORMATION mbi;
+  SIZE_T query_ret = VirtualQuery(p, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
+  assert(query_ret != 0 && "Failed to invoke VirtualQuery in vm_free_aligned");
+
+  BOOL ret = VirtualFree(mbi.AllocationBase, 0, MEM_RELEASE);
+  assert(ret && "Failed to invoke VirtualFree in vm_free_aligned.");
   (void)ret;
 
 #ifndef NDEBUG

@@ -67,11 +67,16 @@ void *vm_allocate(size_t sz);
 void *vm_allocate_aligned(size_t sz, size_t alignment);
 
 /// Free a virtual memory region allocated by \p vm_allocate.
-/// \p p must point to the base address that was returned by \p vm_allocate
-/// or \p vm_allocate_aligned when the region was reserved.
+/// \p p must point to the base address that was returned by \p vm_allocate.
+/// Memory region returned by \p vm_allocate_aligned must be freed by
+/// invoking \p vm_free_aligned, instead of this function.
 /// \p size must match the value passed to the respective allocate functions.
 /// In other words, partial free is not allowed.
 void vm_free(void *p, size_t sz);
+
+/// Similar to \p vm_free, but for memory regions returned by
+/// \p vm_allocate_aligned.
+void vm_free_aligned(void *p, size_t sz);
 
 /// Mark the \p sz byte region of memory starting at \p p as not currently in
 /// use, so that the OS may free it. \p p must be page-aligned.

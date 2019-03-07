@@ -182,6 +182,10 @@ void vm_free(void *p, size_t sz) {
 #endif
 }
 
+void vm_free_aligned(void *p, size_t sz) {
+  vm_free(p, sz);
+}
+
 void vm_unused(void *p, size_t sz) {
 #ifndef NDEBUG
   const size_t PS = page_size();

@@ -98,7 +98,7 @@ void VMAllocateStorageProvider::deleteStorage(void *storage) {
   if (!storage) {
     return;
   }
-  oscompat::vm_free(storage, AlignedStorage::size());
+  oscompat::vm_free_aligned(storage, AlignedStorage::size());
 }
 
 void *MallocStorageProvider::newStorage(const char *name) {
@@ -133,7 +133,7 @@ PreAllocatedStorageProvider::PreAllocatedStorageProvider(size_t totalAmount)
 
 PreAllocatedStorageProvider::~PreAllocatedStorageProvider() {
   if (start_) {
-    oscompat::vm_free(start_, maxBytes_);
+    oscompat::vm_free_aligned(start_, maxBytes_);
   }
 }
 
