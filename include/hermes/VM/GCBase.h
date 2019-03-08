@@ -347,7 +347,11 @@ class GCBase {
             gcConfig.getTripwireConfig().getCooldown().count()));
 #endif // HERMESVM_PLATFORM_LOGGING
 #ifdef HERMESVM_SANITIZE_HANDLES
-    randomEngine_.seed(std::random_device()());
+    std::minstd_rand::result_type seed = std::random_device()();
+    if (sanitizeRate_ > 0.0 && sanitizeRate_ < 1.0) {
+      llvm::errs() << "Sanitize Rate Seed: " << seed << '\n';
+    }
+    randomEngine_.seed(seed);
 #endif
   }
 
