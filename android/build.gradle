@@ -21,7 +21,7 @@ def fbsource = System.getenv("FBSOURCE") ?:
 if (hermes_ws == null || hermes_ws == "") {
   throw new InvalidUserDataException("HERMES_WS_DIR is not set")
 }
-buildDir = "${hermes_ws}/build"
+buildDir = "${hermes_ws}/build_android"
 buildDir.mkdirs()
 
 android {
