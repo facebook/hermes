@@ -139,6 +139,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 /// outer function.
 #define SET_PROP(KEY, VALUE)                                   \
   do {                                                         \
+    GCScopeMarkerRAII marker{gcScope};                         \
     tmpHandle = HermesValue::encodeDoubleValue(VALUE);         \
     auto status = JSObject::defineNewOwnProperty(              \
         resultHandle,                                          \
