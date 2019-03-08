@@ -1207,36 +1207,37 @@ CallResult<HermesValue> getSubstitution(
   auto matchedStrView = StringPrimitive::createStringView(runtime, matched);
   SmallU16String<32> result{};
 
-  for (auto itr = replacementView.begin(), e = replacementView.end();
-       itr != e;) {
+  // Don't use a StringView iterator, as any calls to createStringView can
+  // allocate and move the underlying char storage.
+  for (size_t i = 0, e = replacementView.length(); i < e;) {
     // Go character by character and account for $ replacement strings.
-    char16_t c0 = *itr;
-    if (c0 != u'$' || itr + 1 == e) {
+    char16_t c0 = replacementView[i];
+    if (c0 != u'$' || i + 1 == e) {
       // Not a special replacement string, just add the character.
       result.append(c0);
-      ++itr;
+      ++i;
       continue;
     }
 
     // There's a character after the '$', check for replacement strings.
-    char16_t c1 = *(itr + 1);
+    char16_t c1 = replacementView[i + 1];
     if (c1 == u'$') {
       result.append(u'$');
-      itr += 2;
+      i += 2;
     } else if (c1 == u'&') {
       // The matched substring.
       matchedStrView.copyUTF16String(result);
-      itr += 2;
+      i += 2;
     } else if (c1 == u'`') {
       // Portion of string before the matched substring.
       stringView.slice(0, position).copyUTF16String(result);
-      itr += 2;
+      i += 2;
     } else if (c1 == u'\'') {
       // Portion of string after the matched substring.
       if (tailPos < stringLength) {
         stringView.slice(position + matchLength).copyUTF16String(result);
       }
-      itr += 2;
+      i += 2;
     } else if (u'0' <= c1 && c1 <= u'9') {
       // $n index.
       // '0' <= c1 <= '9' because $nn case can have 01 to 99.
@@ -1259,40 +1260,40 @@ CallResult<HermesValue> getSubstitution(
       };
 
       uint32_t n = c1 - u'0';
-      if (itr + 2 < e) {
+      if (i + 2 < e) {
         // Try for the $nn case if there's more characters available.
-        char16_t c2 = *(itr + 2);
+        char16_t c2 = replacementView[i + 2];
         // $nn index.
         uint32_t nn = (c1 - u'0') * 10 + (c2 - u'0');
         if ((u'0' <= c2 && c2 <= u'9') && (1 <= nn && nn <= m)) {
           // Valid $nn case.
           auto view = submatchOrEmpty(nn - 1);
           result.insert(result.end(), view.begin(), view.end());
-          itr += 3;
+          i += 3;
         } else if (1 <= n && n <= m) {
           // Try for the $n case first.
           auto view = submatchOrEmpty(n - 1);
           result.insert(result.end(), view.begin(), view.end());
-          itr += 2;
+          i += 2;
         } else {
           // No valid $n or $nn case, just append the characters and
           // move on.
           result.append({c0, c1});
-          itr += 2;
+          i += 2;
         }
       } else if (1 <= n && n <= m) {
         auto view = submatchOrEmpty(n - 1);
         result.insert(result.end(), view.begin(), view.end());
-        itr += 2;
+        i += 2;
       } else {
         // Not a valid $n.
         result.append({c0, c1});
-        itr += 2;
+        i += 2;
       }
     } else {
       // None of the replacement strings count, add both characters.
       result.append({c0, c1});
-      itr += 2;
+      i += 2;
     }
   }
   // 12. Return result.
