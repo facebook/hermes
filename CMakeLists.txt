@@ -82,6 +82,12 @@ if (HERMES_IS_ANDROID)
 
   # The release build can focus on size.
   set(CMAKE_CXX_FLAGS_RELEASE "-Os -DNDEBUG")
+
+  if (ANDROID_ABI STREQUAL "arm64-v8a")
+    # Using -flto on arm64 fails due to it using a different linker by default
+    # https://github.com/android-ndk/ndk/issues/242
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fuse-ld=gold")
+  endif()
 endif()
 
 # The hermes project is built using CMake and the LLVM's build system.
