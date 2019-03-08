@@ -188,6 +188,15 @@ void ESTreeIRGen::doCJSModule(
   llvm::SaveAndRestore<FunctionContext *> saveTopLevelContext(
       topLevelContext, &topLevelFunctionContext);
 
+  // Now declare all externally supplied global properties, but only if we don't
+  // have a lexical scope chain.
+  assert(
+      !lexicalScopeChain &&
+      "Lexical scope chain not supported for CJS modules");
+  for (auto declFile : DeclarationFileList) {
+    processDeclarationFile(declFile);
+  }
+
   Identifier functionName = Builder.createIdentifier("cjs_module");
   Function *newFunc =
       genES5Function(functionName, nullptr, func, func->_params, func->_body);
