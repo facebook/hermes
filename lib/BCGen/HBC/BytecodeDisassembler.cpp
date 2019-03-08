@@ -109,6 +109,8 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
   OS << "  RegExp count: " << bcProvider_->getRegExpTable().size() << "\n";
   OS << "  CommonJS module count: " << bcProvider_->getCJSModuleTable().size()
      << "\n";
+  OS << "  CommonJS module count (static): "
+     << bcProvider_->getCJSModuleTableStatic().size() << "\n";
   OS << "  Bytecode options:\n";
   OS << "    staticBuiltins: "
      << bcProvider_->getBytecodeOptions().staticBuiltins << "\n";

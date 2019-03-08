@@ -4,6 +4,9 @@
 
 print('module 1');
 
+// CHECK: CommonJS module count: 2
+// CHECK-NEXT: CommonJS module count (static): 0
+
 // CHECK: Global String Table:
 // CHECK: s{{.*}}[ASCII, {{.*}}]: ./cjs-multiple-1.js
 // CHECK: s{{.*}}[ASCII, {{.*}}]: ./cjs-multiple-2.js
@@ -15,6 +18,9 @@ print('module 1');
 // CHECK-NEXT:   0: <global>
 // CHECK-NEXT:   1: {{.*}}/cjs-multiple-1.js
 // CHECK-NEXT:   2: {{.*}}/cjs-multiple-2.js
+
+// STATIC: CommonJS module count: 0
+// STATIC-NEXT: CommonJS module count (static): 2
 
 // STATIC: Global String Table:
 // STATIC-NEXT: s0[ASCII, {{.*}}]: cjs_module
