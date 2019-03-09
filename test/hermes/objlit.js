@@ -1,4 +1,4 @@
-// RUN: %hermes -target=HBC -O -fno-static-builtins %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
 
 var saveProto = Object.prototype;
 var singleton = new Object();
