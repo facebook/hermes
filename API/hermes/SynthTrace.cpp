@@ -128,10 +128,7 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   auto callsToDateAsFunction =
       getListOfStrings(llvm::cast<JSONArray>(env->at("callsToDateAsFunction")));
   return ::hermes::vm::MockedEnvironment{
-      .mathRandomSeed = mathRandomSeed,
-      .callsToDateNow = callsToDateNow,
-      .callsToNewDate = callsToNewDate,
-      .callsToDateAsFunction = callsToDateAsFunction};
+      mathRandomSeed, callsToDateNow, callsToNewDate, callsToDateAsFunction};
 }
 
 ::hermes::SHA1 parseHashStrAsNumber(llvm::StringRef hashStr) {

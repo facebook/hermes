@@ -281,8 +281,8 @@ std::unordered_map<ObjectID, TraceInterpreter::DefAndUse> createGlobalMap(
     assert(
         lastDefBeforeFirstUse <= lastUse &&
         "Should never have the last def before first use be greater than the last use");
-    globalDefsAndUses[objID] = TraceInterpreter::DefAndUse{
-        .lastDefBeforeFirstUse = lastDefBeforeFirstUse, .lastUse = lastUse};
+    globalDefsAndUses[objID] =
+        TraceInterpreter::DefAndUse{lastDefBeforeFirstUse, lastUse};
   }
   return globalDefsAndUses;
 }
