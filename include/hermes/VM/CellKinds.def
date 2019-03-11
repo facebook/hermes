@@ -8,58 +8,74 @@
 // garbage collector.
 
 #ifndef CELL_KIND
-#define CELL_KIND(name, jsClassName)
+#define CELL_KIND(name)
+#endif
+
+#ifndef CELL_JS_NAME
+#define CELL_JS_NAME(name, jsClassName)
 #endif
 
 #ifndef CELL_RANGE
 #define CELL_RANGE(rangeName, first, last)
 #endif
 
-CELL_KIND(Uninitialized, "")
-CELL_KIND(FillerCell, "")
-CELL_KIND(DynamicUTF16StringPrimitive, "")
-CELL_KIND(DynamicASCIIStringPrimitive, "")
-CELL_KIND(ExternalUTF16StringPrimitive, "")
-CELL_KIND(ExternalASCIIStringPrimitive, "")
-CELL_KIND(DictPropertyMap, "")
-CELL_KIND(HiddenClass, "")
-CELL_KIND(ArrayStorage, "")
-CELL_KIND(SegmentedArray, "")
-CELL_KIND(Segment, "")
-CELL_KIND(PropertyAccessor, "")
-CELL_KIND(Environment, "")
-CELL_KIND(Object, "Object")
-CELL_KIND(HostObject, "Object")
-CELL_KIND(Error, "Error")
-CELL_KIND(Arguments, "Arguments")
-CELL_KIND(Array, "Array")
-CELL_KIND(ArrayBuffer, "ArrayBuffer")
-CELL_KIND(DataView, "DataView")
-#define TYPED_ARRAY(name, type) CELL_KIND(name##Array, #name "Array")
+// Helper macro for defining a CellKind which 1:1 corresponds with a JS Class.
+// Defines both the kind and the JS Class name.
+#define CELL_CLASS(name, jsClassName) \
+  CELL_KIND(name)                     \
+  CELL_JS_NAME(name, jsClassName)
+
+CELL_KIND(Uninitialized)
+CELL_KIND(FillerCell)
+CELL_KIND(DynamicUTF16StringPrimitive)
+CELL_KIND(DynamicASCIIStringPrimitive)
+CELL_KIND(ExternalUTF16StringPrimitive)
+CELL_KIND(ExternalASCIIStringPrimitive)
+CELL_KIND(DictPropertyMap)
+CELL_KIND(HiddenClass)
+CELL_KIND(ArrayStorage)
+CELL_KIND(SegmentedArray)
+CELL_KIND(Segment)
+CELL_KIND(PropertyAccessor)
+CELL_KIND(Environment)
+CELL_KIND(HashMapEntry)
+CELL_KIND(OrderedHashMap)
+
+CELL_JS_NAME(Object, "Object")
+CELL_KIND(Object)
+CELL_KIND(HostObject)
+
+CELL_CLASS(Error, "Error")
+CELL_CLASS(Arguments, "Arguments")
+CELL_CLASS(Array, "Array")
+CELL_CLASS(ArrayBuffer, "ArrayBuffer")
+CELL_CLASS(DataView, "DataView")
+#define TYPED_ARRAY(name, type) CELL_CLASS(name##Array, #name "Array")
 #include "hermes/VM/TypedArrays.def"
-CELL_KIND(ArrayIterator, "Array Iterator")
-CELL_KIND(HashMapEntry, "HashMapEntry")
-CELL_KIND(OrderedHashMap, "OrderedHashMap")
-CELL_KIND(Set, "Set")
-CELL_KIND(Map, "Map")
-CELL_KIND(SetIterator, "Set Iterator")
-CELL_KIND(MapIterator, "Map Iterator")
-CELL_KIND(WeakMap, "WeakMap")
-CELL_KIND(WeakSet, "WeakSet")
-CELL_KIND(BooleanObject, "Boolean")
-CELL_KIND(StringObject, "String")
-CELL_KIND(NumberObject, "Number")
-CELL_KIND(SymbolObject, "Symbol")
-CELL_KIND(StringIterator, "StringIterator")
-CELL_KIND(JSON, "JSON")
-CELL_KIND(Math, "Math")
-CELL_KIND(Date, "Date")
-CELL_KIND(RegExp, "RegExp")
-CELL_KIND(BoundFunction, "Function")
-CELL_KIND(NativeFunction, "Function")
-CELL_KIND(NativeConstructor, "Function")
-CELL_KIND(FinalizableNativeFunction, "Function")
-CELL_KIND(Function, "Function")
+CELL_CLASS(ArrayIterator, "Array Iterator")
+CELL_CLASS(Set, "Set")
+CELL_CLASS(Map, "Map")
+CELL_CLASS(SetIterator, "Set Iterator")
+CELL_CLASS(MapIterator, "Map Iterator")
+CELL_CLASS(WeakMap, "WeakMap")
+CELL_CLASS(WeakSet, "WeakSet")
+CELL_CLASS(BooleanObject, "Boolean")
+CELL_CLASS(StringObject, "String")
+CELL_CLASS(NumberObject, "Number")
+CELL_CLASS(SymbolObject, "Symbol")
+CELL_CLASS(StringIterator, "StringIterator")
+CELL_CLASS(JSON, "JSON")
+CELL_CLASS(Math, "Math")
+CELL_CLASS(Date, "Date")
+CELL_CLASS(RegExp, "RegExp")
+
+CELL_JS_NAME(Function, "Function")
+CELL_KIND(BoundFunction)
+CELL_KIND(NativeFunction)
+CELL_KIND(NativeConstructor)
+CELL_KIND(FinalizableNativeFunction)
+CELL_KIND(Function)
+
 // Update AllCells, below, if new CellKinds are added.
 // (AllCells is useful for checking that a CellKind is valid.)
 
@@ -78,4 +94,6 @@ CELL_RANGE(
     ExternalASCIIStringPrimitive)
 
 #undef CELL_KIND
+#undef CELL_JS_NAME
 #undef CELL_RANGE
+#undef CELL_CLASS

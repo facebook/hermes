@@ -12,7 +12,7 @@ namespace vm {
 
 /// Define all cell kinds known to the garbage collector.
 enum class CellKind {
-#define CELL_KIND(name, ...) name##Kind,
+#define CELL_KIND(name) name##Kind,
 #define CELL_RANGE(rangeName, first, last) \
   rangeName##Kind_first = first##Kind, rangeName##Kind_last = last##Kind,
 #include "hermes/VM/CellKinds.def"

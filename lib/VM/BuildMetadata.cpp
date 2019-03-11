@@ -20,7 +20,7 @@ static size_t getNumCellKinds() {
   // This embeds the same value as the CellKind enum, but adds one more at the
   // end to know how many values it contains.
   enum CellKinds {
-#define CELL_KIND(name, ...) name,
+#define CELL_KIND(name) name,
 #include "hermes/VM/CellKinds.def"
 #undef CELL_KIND
     numKinds,
@@ -35,7 +35,7 @@ static const Metadata *buildStorage() {
   // Only run this once per class, not once per Runtime instantiation.
   Metadata *storage = new Metadata[getNumCellKinds()];
   size_t i = 0;
-#define CELL_KIND(name, displayName) \
+#define CELL_KIND(name) \
   storage[i++] = buildMetadata(CellKind::name##Kind, name##BuildMeta);
 #include "hermes/VM/CellKinds.def"
 #undef CELL_KIND

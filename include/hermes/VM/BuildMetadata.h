@@ -21,7 +21,7 @@ using BuildMetadataCallback = void(const GCCell *, Metadata::Builder &);
 
 /// Forward declare all \c BuildMeta functions.
 /// These must be defined in other files.
-#define CELL_KIND(name, displayName) \
+#define CELL_KIND(name) \
   void name##BuildMeta(const GCCell *, Metadata::Builder &);
 #include "hermes/VM/CellKinds.def"
 #undef CELL_KIND

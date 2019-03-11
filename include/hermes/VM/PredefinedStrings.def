@@ -399,7 +399,7 @@ STR(squareSymbolReplace, "[Symbol.replace]")
 STR(squareSymbolSplit, "[Symbol.split]")
 
 // Define strings like "[object Number]" for all classes.
-#define CELL_KIND(name, jsClassName, ...) \
+#define CELL_JS_NAME(name, jsClassName) \
   STR(squareObject_##name, "[object " jsClassName "]")
 #include "hermes/VM/CellKinds.def"
 

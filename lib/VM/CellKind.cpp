@@ -13,7 +13,7 @@ namespace hermes {
 namespace vm {
 
 static const char *cellKinds[] = {
-#define CELL_KIND(name, ...) #name,
+#define CELL_KIND(name) #name,
 #include "hermes/VM/CellKinds.def"
 };
 
