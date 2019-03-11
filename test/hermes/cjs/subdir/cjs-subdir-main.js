@@ -11,9 +11,13 @@ var foo = require('./foo/cjs-subdir-foo.js');
 // CHECK-NEXT: foo: init
 // CHECK-NEXT: bar: init
 // CHECK-NEXT: foo: bar.y = 15
+// CHECK-NEXT: foo: absolute bar.y = 15
 
 print('main: foo.x =', foo.x);
 // CHECK-NEXT: main: foo.x = 15
+
+print('main: absolute foo.x =', require('/foo/cjs-subdir-foo.js').x);
+// CHECK-NEXT: main: absolute foo.x = 15
 
 print(require('./cjs-subdir-2.js').alpha);
 // CHECK-NEXT: 2: init

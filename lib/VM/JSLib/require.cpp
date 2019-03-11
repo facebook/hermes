@@ -146,16 +146,26 @@ static llvm::SmallString<32> canonicalizePath(
   // Copy the current path so we can modify it as necessary.
   llvm::SmallString<32> canonicalPath{};
 
-  auto appendToCanonical = [&canonicalPath](Handle<StringPrimitive> strPrim) {
+  auto appendToCanonical = [&canonicalPath](
+                               Handle<StringPrimitive> strPrim,
+                               uint32_t start = 0) {
     SmallU16String<32> u16String{};
     strPrim->copyUTF16String(u16String);
     std::string str{};
-    hermes::convertUTF16ToUTF8WithReplacements(str, u16String);
+    hermes::convertUTF16ToUTF8WithReplacements(
+        str, UTF16Ref{u16String}.slice(start));
     llvm::sys::path::append(canonicalPath, llvm::sys::path::Style::posix, str);
   };
 
-  appendToCanonical(dirname);
-  appendToCanonical(target);
+  if (target->getStringLength() > 0 && target->at(0) == u'/') {
+    // If the dirname is absolute (starts with a '/'), resolve from the module
+    // root.
+    appendToCanonical(target, 1);
+  } else {
+    // Else, the dirname is relative. Resolve from the dirname.
+    appendToCanonical(dirname);
+    appendToCanonical(target);
+  }
 
   // Remove all dots. This is done to get rid of ../ or anything like ././.
   llvm::sys::path::remove_dots(

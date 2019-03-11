@@ -320,6 +320,13 @@ void ResolveStaticRequireImpl::resolveRequireCall(
 static void canonicalizePath(
     llvm::SmallVectorImpl<char> &dirname,
     StringRef target) {
+  if (!target.empty() && target[0] == '/') {
+    // If the target is absolute (starts with a '/'), resolve from the module
+    // root (disregard the dirname).
+    dirname.clear();
+    llvm::sys::path::append(dirname, target.drop_front(1));
+    return;
+  }
   llvm::sys::path::append(dirname, llvm::sys::path::Style::posix, target);
 
   // Remove all dots. This is done to get rid of ../ or anything like ././.
