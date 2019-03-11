@@ -16,10 +16,14 @@ foo();
 
 // CHECK: Global String Table:
 // CHECK-NEXT:   s0[ASCII, {{.*}}]: ./
-// CHECK-NEXT:   s1[ASCII, {{.*}}]: ./cjs-dce.js
+// CHECK-NEXT:   i1[ASCII, {{.*}}] #{{[0-9A-Z]+}}: HermesInternal
+// CHECK-NEXT:   s2[ASCII, {{.*}}]: asdf
+// CHECK-NEXT:   s3[ASCII, {{.*}}]: foo
+// CHECK-NEXT:   i4[ASCII, {{.*}}] #{{[0-9A-Z]+}}: call
+// CHECK-NEXT:   s5[ASCII, {{.*}}]: cjs-dce.js
 
 // CHECK: CommonJS Modules:
-// CHECK-NEXT:   File ID 1 -> function ID 1
+// CHECK-NEXT:   File ID 5 -> function ID 1
 
 // CHECK: Function<global>{{.*}}:
 // CHECK-NEXT: Offset in debug table: {{.*}}
@@ -28,7 +32,7 @@ foo();
 // CHECK-NEXT:     GetByIdShort      r3, r0, 2, "require"
 // CHECK-NEXT:     GetByIdShort      r2, r3, 3, "call"
 // CHECK-NEXT:     LoadConstString   r5, "./"
-// CHECK-NEXT:     LoadConstString   r4, "./cjs-dce.js"
+// CHECK-NEXT:     LoadConstString   r4, "cjs-dce.js"
 // CHECK-NEXT:     Mov               r6, r3
 // CHECK-NEXT:     Call              r0, r2, 3
 // CHECK-NEXT:     Ret               r0

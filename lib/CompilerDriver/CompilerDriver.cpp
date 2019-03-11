@@ -876,33 +876,36 @@ std::unique_ptr<Context::ResolutionTable> readResolutionTable(
   }
 
   for (auto itFile : *resolutionTable) {
-    JSONString *filename = itFile.first;
+    llvm::StringRef filename =
+        llvm::sys::path::remove_leading_dotslash(itFile.first->str());
     JSONObject *fileTable = llvm::dyn_cast<JSONObject>(itFile.second);
     if (!fileTable) {
-      llvm::errs() << "Invalid value in resolution table for file: "
-                   << filename->str() << '\n';
+      llvm::errs() << "Invalid value in resolution table for file: " << filename
+                   << '\n';
       return nullptr;
     }
     Context::ResolutionTableEntry map{};
     for (auto itEntry : *fileTable) {
       JSONString *src = itEntry.first;
-      JSONString *dst = llvm::dyn_cast<JSONString>(itEntry.second);
-      if (!dst) {
-        llvm::errs() << "Invalid value in resolution table: " << filename->str()
+      JSONString *dstJSON = llvm::dyn_cast<JSONString>(itEntry.second);
+      if (!dstJSON) {
+        llvm::errs() << "Invalid value in resolution table: " << filename << '@'
+                     << src->str() << '\n';
+        return nullptr;
+      }
+      llvm::StringRef dst =
+          llvm::sys::path::remove_leading_dotslash(dstJSON->str());
+      auto emplaceRes = map.try_emplace(src->str(), dst);
+      if (!emplaceRes.second) {
+        llvm::errs() << "Duplicate entry in resolution table: " << filename
                      << '@' << src->str() << '\n';
         return nullptr;
       }
-      auto emplaceRes = map.try_emplace(src->str(), dst->str());
-      if (!emplaceRes.second) {
-        llvm::errs() << "Duplicate entry in resolution table: "
-                     << filename->str() << '@' << src->str() << '\n';
-        return nullptr;
-      }
     }
-    auto emplaceRes = result->try_emplace(filename->str(), std::move(map));
+    auto emplaceRes = result->try_emplace(filename, std::move(map));
     if (!emplaceRes.second) {
       llvm::errs() << "Duplicate entry in resolution table for file: "
-                   << filename->str() << '\n';
+                   << filename << '\n';
       return nullptr;
     }
   }
@@ -939,7 +942,9 @@ bool generateIRForSourcesAsCJSModules(
   llvm::sys::path::replace_path_prefix(
       entryPointFilename, rootPath, "./", llvm::sys::path::Style::posix);
   std::string requireString =
-      ("HermesInternal.require.call('./', '" + entryPointFilename + "')").str();
+      ("HermesInternal.require.call('./', '" +
+       llvm::sys::path::remove_leading_dotslash(entryPointFilename) + "')")
+          .str();
   auto globalMemBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(requireString, "<global>");
 
@@ -957,7 +962,7 @@ bool generateIRForSourcesAsCJSModules(
       }
       generateIRForCJSModule(
           cast<ESTree::FunctionExpressionNode>(ast),
-          filename,
+          llvm::sys::path::remove_leading_dotslash(filename),
           &M,
           topLevelFunction,
           declFileList);

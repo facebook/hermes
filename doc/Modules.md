@@ -16,8 +16,15 @@ The `metadata.json` file must be a JSON object, with the following fields:
     segment" that gets loaded on startup (ex. when React Native starts).
   - Each value must be an array containing file paths
     of the files to place into that segment, expressed relative to the root of
-    the ZIP file (ex. `subdir/foo.js`).
+    the ZIP file (ex. `subdir/foo.js`). File paths may include `./` at the start,
+    but they are not required to.
   - The first element of `segments["0"]` is the first module `require`d at run time.
+- `resolutionTable` (Optional)
+  - An object for which the keys are relative file names
+    (the same file names as in `segments`).
+  - Values are objects which map from strings given to `require()`
+    to their actual resolved file path relative to the directory or zip file root.
+    These relative paths should be the same as in `segments`, with leading `./`.
 
 ### Example Metadata File
 
@@ -25,12 +32,20 @@ The `metadata.json` file must be a JSON object, with the following fields:
 {
   "segments": {
     "0": [
-      "cjs-subdir-main.js",
+      "./cjs-subdir-main.js",
       "cjs-subdir-2.js",
       "bar/cjs-subdir-bar.js",
       "foo/cjs-subdir-foo.js"
     ]
   },
+  "resolutionTable": {
+    "./cjs-subdir-main.js": {
+      "foo": "./foo/cjs-subdir-foo.js"
+    },
+    "./foo/cjs-subdir-foo.js": {
+      "bar": "./bar/cjs-subdir-bar.js"
+    }
+  }
 }
 ```
 

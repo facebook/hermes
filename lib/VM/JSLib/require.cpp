@@ -161,12 +161,6 @@ static llvm::SmallString<32> canonicalizePath(
   llvm::sys::path::remove_dots(
       canonicalPath, true, llvm::sys::path::Style::posix);
 
-  if (canonicalPath[0] != '/') {
-    // Prepend ./ in relative filepaths, because the `./` would've been
-    // removed by remove_dots.
-    canonicalPath.insert(canonicalPath.begin(), {'.', '/'});
-  }
-
   return canonicalPath;
 }
 

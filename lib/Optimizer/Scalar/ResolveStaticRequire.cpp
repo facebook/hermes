@@ -324,12 +324,6 @@ static void canonicalizePath(
 
   // Remove all dots. This is done to get rid of ../ or anything like ././.
   llvm::sys::path::remove_dots(dirname, true, llvm::sys::path::Style::posix);
-
-  if (dirname[0] != '/') {
-    // Prepend ./ in relative filepaths, because the `./` would've been
-    // removed by remove_dots.
-    dirname.insert(dirname.begin(), {'.', '/'});
-  }
 }
 
 Literal *ResolveStaticRequireImpl::resolveModuleTarget(

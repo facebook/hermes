@@ -8,8 +8,8 @@ print('module 1');
 // CHECK-NEXT: CommonJS module count (static): 0
 
 // CHECK: Global String Table:
-// CHECK: s{{.*}}[ASCII, {{.*}}]: ./cjs-multiple-1.js
-// CHECK: s{{.*}}[ASCII, {{.*}}]: ./cjs-multiple-2.js
+// CHECK: s{{.*}}[ASCII, {{.*}}]: cjs-multiple-1.js
+// CHECK: s{{.*}}[ASCII, {{.*}}]: cjs-multiple-2.js
 // CHECK-NOT: cjs-multiple-1
 // CHECK: CommonJS Modules:
 // CHECK-NEXT:   File ID {{.*}} -> function ID 1
