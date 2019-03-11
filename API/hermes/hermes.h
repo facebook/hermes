@@ -80,6 +80,13 @@ class HermesRuntime : public jsi::Runtime {
   // provided by a class internal to the .cpp file, which is created
   // by the factory.
 
+  /// Load a new segment into the Runtime.
+  /// The \param context must be a valid RequireContext retrieved from JS
+  /// using `require.context`.
+  void loadSegment(
+      std::unique_ptr<const jsi::Buffer> buffer,
+      const jsi::Value &context);
+
   /// Gets a guaranteed unique id for an object, which is assigned at
   /// allocation time and is static throughout that object's lifetime.
   /// This is mainly useful for tracing and debugging use cases, so in

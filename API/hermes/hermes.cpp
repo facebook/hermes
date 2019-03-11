@@ -880,8 +880,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
 namespace {
 
-#ifdef HERMES_ENABLE_DEBUGGER
-
 inline HermesRuntimeImpl *impl(HermesRuntime *rt) {
   // This is guaranteed safe because HermesRuntime is abstract so
   // cannot be constructed, and the only instances created are
@@ -890,8 +888,6 @@ inline HermesRuntimeImpl *impl(HermesRuntime *rt) {
 
   return static_cast<HermesRuntimeImpl *>(rt);
 }
-
-#endif
 
 inline const HermesRuntimeImpl *impl(const HermesRuntime *rt) {
   // See above comment
@@ -941,6 +937,41 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
 
 void HermesRuntime::setFatalHandler(void (*handler)(const std::string &)) {
   detail::sApiFatalHandler = handler;
+}
+
+namespace {
+// A class which adapts a jsi buffer to a Hermes buffer.
+class BufferAdapter final : public ::hermes::Buffer {
+ public:
+  BufferAdapter(std::shared_ptr<const jsi::Buffer> buf) : buf_(std::move(buf)) {
+    data_ = buf_->data();
+    size_ = buf_->size();
+  }
+
+ private:
+  std::shared_ptr<const jsi::Buffer> buf_;
+};
+} // namespace
+
+void HermesRuntime::loadSegment(
+    std::unique_ptr<const jsi::Buffer> buffer,
+    const jsi::Value &context) {
+  auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+      std::make_unique<BufferAdapter>(std::move(buffer)));
+  if (!ret.first) {
+    throw jsi::JSINativeException("Error evaluating javascript: " + ret.second);
+  }
+
+  auto requireContext = vm::Handle<vm::RequireContext>::dyn_vmcast(
+      &impl(this)->runtime_, impl(this)->vmHandleFromValue(context));
+  if (!requireContext) {
+    throw jsi::JSINativeException("Error loading segment: Invalid context");
+  }
+
+  vm::RuntimeModuleFlags flags;
+  flags.persistent = true;
+  impl(this)->checkStatus(impl(this)->runtime_.loadSegment(
+      std::move(ret.first), requireContext, flags));
 }
 
 uint64_t HermesRuntime::getUniqueID(const jsi::Object &o) const {
@@ -1072,18 +1103,6 @@ class HermesPreparedJavaScript final : public jsi::PreparedJavaScript {
   const std::string &sourceURL() const {
     return sourceURL_;
   }
-};
-
-// A class which adapts a jsi buffer to a Hermes buffer.
-class BufferAdapter final : public ::hermes::Buffer {
- public:
-  BufferAdapter(std::shared_ptr<const jsi::Buffer> buf) : buf_(std::move(buf)) {
-    data_ = buf_->data();
-    size_ = buf_->size();
-  }
-
- private:
-  std::shared_ptr<const jsi::Buffer> buf_;
 };
 
 } // namespace
