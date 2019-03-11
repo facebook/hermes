@@ -44,15 +44,14 @@ CallResult<HermesValue> evalInEnvironment(
     bool singleFunction);
 
 /// If the target CJS module is not initialized, execute it.
-/// \param thisArg the "this" argument to call require() with.
-/// \param fast true if we are doing a requireFast call and don't pass "this".
+/// \param context the RequireContext to pass through the require.
+///        If null, use a fast require instead of the slow path.
 /// \return the resultant module.exports object.
 CallResult<HermesValue> runRequireCall(
     Runtime *runtime,
-    Handle<> thisArg,
+    Handle<RequireContext> context,
     Handle<Domain> domain,
-    uint32_t cjsModuleOffset,
-    bool fast);
+    uint32_t cjsModuleOffset);
 
 } // namespace vm
 } // namespace hermes

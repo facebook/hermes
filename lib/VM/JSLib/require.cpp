@@ -20,10 +20,9 @@ namespace vm {
 
 CallResult<HermesValue> runRequireCall(
     Runtime *runtime,
-    Handle<> thisArg,
+    Handle<RequireContext> context,
     Handle<Domain> domain,
-    uint32_t cjsModuleOffset,
-    bool fast) {
+    uint32_t cjsModuleOffset) {
   {
     auto cachedExports = domain->getCachedExports(cjsModuleOffset);
     if (!cachedExports->isEmpty()) {
@@ -57,17 +56,24 @@ CallResult<HermesValue> runRequireCall(
   domain->setModule(cjsModuleOffset, runtime, module);
 
   MutableHandle<> requireFn{runtime};
-  if (!fast) {
+  if (context) {
+    // Slow path.
+    // If the context is provided, then it will be used to resolve string
+    // requires in future calls to require().
     auto funcRes = BoundFunction::create(
         runtime,
         Handle<Callable>::vmcast(&runtime->requireFunction),
         1,
-        thisArg.unsafeGetPinnedHermesValue());
+        context.unsafeGetPinnedHermesValue());
     if (LLVM_UNLIKELY(funcRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     requireFn = *funcRes;
   } else {
+    // Fast path.
+    // The context must not be provided, and any actual calls to require()
+    // should have been turned into requireFast() calls.
+    // Calls to require() should throw.
     requireFn = runtime->throwInvalidRequire;
   }
 
@@ -131,7 +137,10 @@ CallResult<HermesValue> requireFast(void *, Runtime *runtime, NativeArgs args) {
         TwineChar16("Unable to find module with ID: ") + index);
   }
   return runRequireCall(
-      runtime, args.getThisHandle(), domain, *cjsModuleOffset, true);
+      runtime,
+      runtime->makeNullHandle<RequireContext>(),
+      domain,
+      *cjsModuleOffset);
 }
 
 static llvm::SmallString<32> canonicalizePath(
@@ -214,8 +223,7 @@ CallResult<HermesValue> require(void *, Runtime *runtime, NativeArgs args) {
   auto newRequireContext =
       RequireContext::create(runtime, domain, dirnameHandle);
 
-  return runRequireCall(
-      runtime, newRequireContext, domain, *cjsModuleOffset, false);
+  return runRequireCall(runtime, newRequireContext, domain, *cjsModuleOffset);
 }
 
 } // namespace vm

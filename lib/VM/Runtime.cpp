@@ -630,14 +630,13 @@ CallResult<HermesValue> Runtime::runBytecode(
     auto requireContext = RequireContext::create(
         this, domain, getPredefinedStringHandle(Predefined::dotSlash));
     return runRequireCall(
-        this, requireContext, domain, *domain->getCJSModuleOffset(0), false);
+        this, requireContext, domain, *domain->getCJSModuleOffset(0));
   } else if (runtimeModule->hasCJSModulesStatic()) {
     return runRequireCall(
         this,
-        getUndefinedValue(),
+        makeNullHandle<RequireContext>(),
         domain,
-        *domain->getCJSModuleOffset(0),
-        true);
+        *domain->getCJSModuleOffset(0));
   } else {
     // Create a JSFunction which will reference count the runtime module.
     // Note that its handle gets registered in the scope, so we don't need to
