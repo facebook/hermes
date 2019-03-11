@@ -399,8 +399,6 @@ class IdentifierTable {
       Handle<StringPrimitive> primHandle,
       SymbolID strId);
 
-  void reserveInternalIdentifier();
-
   /// Turn an existing lazy identifier into a StringPrimitive.
   StringPrimitive *materializeLazyIdentifier(Runtime *runtime, SymbolID id);
 };

@@ -38,7 +38,7 @@ inline bool isReserved(SymbolID id) {
 
 inline SymbolID internalProperty(unsigned i) {
   assert(i < NumInternalProperties && "Unsupported internal property index");
-  return SymbolID::unsafeCreate(Ordinal::InternalProperty0 + i);
+  return SymbolID::unsafeCreateNotUniqued(Ordinal::InternalProperty0 + i);
 }
 
 } // namespace ReservedSymbolID

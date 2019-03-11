@@ -879,6 +879,16 @@ std::unique_ptr<Buffer> Runtime::generateSpecialRuntimeBytecode() {
 
 void Runtime::initPredefinedStrings() {
   assert(!getTopGCScope() && "There shouldn't be any handles allocated yet");
+
+  for (unsigned i = 0; i < ReservedSymbolID::NumInternalProperties; ++i) {
+    SymbolID id = identifierTable_.createNotUniquedLazySymbol("");
+
+    assert(
+        id == ReservedSymbolID::internalProperty(i) &&
+        "Internal Property Symbol ID Mismatch");
+    (void)id;
+  }
+
   predefinedStrings_.resize((unsigned)Predefined::_PREDEFINED_COUNT);
   /// Create a buffer containing all strings.
   /// This ensures that all the strings live together in memory,

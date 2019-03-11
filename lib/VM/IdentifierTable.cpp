@@ -34,18 +34,6 @@ IdentifierTable::IdentTableLookupEntry::IdentTableLookupEntry(
 
 IdentifierTable::IdentifierTable() {
   hashTable_.setIdentifierTable(this);
-  for (unsigned i = 0; i < ReservedSymbolID::NumSymbols; ++i)
-    reserveInternalIdentifier();
-
-    // Ensure that the number of reserved symbols is correct.
-#define RESERVED_SYMBOL(x) x,
-  enum Dummy {
-#include "hermes/VM/ReservedSymbolIDs.def"
-    actual_number_of_reserved_symbols
-  };
-  static_assert(
-      actual_number_of_reserved_symbols == ReservedSymbolID::NumSymbols,
-      "Unexpected number of reserved symbols");
 }
 
 CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandle(
@@ -256,10 +244,6 @@ IdentifierTable::allocateDynamicString(
   }
   std::copy(str.data(), str.data() + str.size(), ptrForWrite);
   return std::move(result);
-}
-
-void IdentifierTable::reserveInternalIdentifier() {
-  lookupVector_.emplace_back("", 0, false);
 }
 
 uint32_t IdentifierTable::allocIDAndInsert(
