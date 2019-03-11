@@ -23,6 +23,7 @@
 #include "hermes/VM/InterpreterState.h"
 #include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/MockedEnvironment.h"
+#include "hermes/VM/Predefined.h"
 #include "hermes/VM/Profiler.h"
 #include "hermes/VM/PropertyCache.h"
 #include "hermes/VM/PropertyDescriptor.h"
@@ -75,14 +76,6 @@ static const unsigned STACK_RESERVE = 32;
 
 /// Type used to assign object unique integer identifiers.
 using ObjectID = uint32_t;
-
-enum class Predefined {
-#define STR(name, string) name,
-#include "PredefinedStrings.def"
-#define SYM(name, string) name,
-#include "PredefinedSymbols.def"
-  _PREDEFINED_COUNT
-};
 
 #define PROP_CACHE_IDS(V) V(RegExpLastIndex, Predefined::lastIndex)
 
