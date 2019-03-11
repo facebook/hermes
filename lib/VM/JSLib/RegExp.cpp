@@ -223,7 +223,7 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   // it; use this helper to define them. Note the context is passed as an
   // intptr_t which we convert to void*.
   auto defineGetter = [&](Handle<JSObject> obj,
-                          Predefined sym,
+                          Predefined::Str sym,
                           NativeFunctionPtr getter,
                           intptr_t ctx = 0) {
     defineAccessor(
@@ -840,7 +840,7 @@ regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   llvm::SmallString<3> result;
   static const struct FlagProp {
     char flagChar;
-    Predefined name;
+    Predefined::Str name;
   } flagProps[] = {
       {'g', Predefined::global},
       {'i', Predefined::ignoreCase},

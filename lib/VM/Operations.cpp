@@ -325,7 +325,7 @@ static CallResult<PseudoHandle<StringPrimitive>> numberToString(
     return createPseudoHandle(vmcast<StringPrimitive>(*result));
   }
 
-  auto getPredefined = [runtime](Predefined predefinedID) {
+  auto getPredefined = [runtime](Predefined::Str predefinedID) {
     return createPseudoHandle(runtime->getPredefinedString(predefinedID));
   };
 

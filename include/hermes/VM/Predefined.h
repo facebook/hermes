@@ -10,13 +10,29 @@
 namespace hermes {
 namespace vm {
 
-enum class Predefined {
+namespace Predefined {
+
+enum IProp {
+#define RESERVED_SYMBOL(x) x,
+#include "ReservedSymbolIDs.def"
+  _IPROP_AFTER_LAST
+};
+
+enum Str {
+  _STRING_BEFORE_FIRST = _IPROP_AFTER_LAST - 1,
 #define STR(name, string) name,
 #include "PredefinedStrings.def"
-#define SYM(name, string) name,
-#include "PredefinedSymbols.def"
-  _PREDEFINED_COUNT
+  _STRING_AFTER_LAST
 };
+
+enum Sym {
+  _SYMBOL_BEFORE_FIRST = _STRING_AFTER_LAST - 1,
+#define SYM(name, desc) name,
+#include "PredefinedSymbols.def"
+  _SYMBOL_AFTER_LAST
+};
+
+} // namespace Predefined
 
 } // namespace vm
 } // namespace hermes

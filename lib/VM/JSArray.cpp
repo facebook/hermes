@@ -336,7 +336,7 @@ CallResult<HermesValue> Arguments::create(
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
 
   PropertyFlags pf{};
-  using P = Predefined;
+  namespace P = Predefined;
 
 /// Adds a property to the object in \p OBJ_HANDLE.  \p SYMBOL provides its name
 /// as a \c Predefined enum value, and its value is  rooted in \p HANDLE.  If

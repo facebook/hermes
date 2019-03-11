@@ -96,7 +96,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
 
   GCScope scope{runtime, "defineNameLengthAndPrototype"};
 
-  using P = Predefined;
+  namespace P = Predefined;
 /// Adds a property to the object in \p OBJ_HANDLE.  \p SYMBOL provides its name
 /// as a \c Predefined enum value, and its value is  rooted in \p HANDLE.  If
 /// property definition fails, the exceptional execution status will be

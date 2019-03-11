@@ -132,7 +132,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
   auto resultHandle = toHandle(runtime, JSObject::create(runtime));
   MutableHandle<> tmpHandle{runtime};
 
-  using P = Predefined;
+  namespace P = Predefined;
 /// Adds a property to \c resultHandle. \p KEY provides its name as a \c
 /// Predefined enum value, and its value is rooted in \p VALUE.  If property
 /// definition fails, the exceptional execution status will be propogated to the
@@ -304,7 +304,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   constantDPF.configurable = 0;
 
   auto defineInternMethod =
-      [&](Predefined symID, NativeFunctionPtr func, uint8_t count = 0) {
+      [&](Predefined::Str symID, NativeFunctionPtr func, uint8_t count = 0) {
         (void)defineMethod(
             runtime,
             intern,
@@ -316,7 +316,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
       };
 
   // HermesInternal function properties
-  using P = Predefined;
+  namespace P = Predefined;
   defineInternMethod(P::detachArrayBuffer, hermesInternalDetachArrayBuffer, 1);
   defineInternMethod(P::createHeapSnapshot, hermesInternalCreateHeapSnapshot);
   defineInternMethod(P::getEpilogues, hermesInternalGetEpilogues);

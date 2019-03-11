@@ -48,9 +48,10 @@ namespace {
 static constexpr uint32_t kMaxSupportedNumRegisters =
     UINT32_MAX / sizeof(PinnedHermesValue);
 
-static const Predefined fixedPropCacheNames[(size_t)PropCacheID::_COUNT] = {
+static const Predefined::Str fixedPropCacheNames[(size_t)PropCacheID::_COUNT] =
+    {
 #define V(id, predef) predef,
-    PROP_CACHE_IDS(V)
+        PROP_CACHE_IDS(V)
 #undef V
 };
 
@@ -880,16 +881,7 @@ std::unique_ptr<Buffer> Runtime::generateSpecialRuntimeBytecode() {
 void Runtime::initPredefinedStrings() {
   assert(!getTopGCScope() && "There shouldn't be any handles allocated yet");
 
-  for (unsigned i = 0; i < ReservedSymbolID::NumInternalProperties; ++i) {
-    SymbolID id = identifierTable_.createNotUniquedLazySymbol("");
-
-    assert(
-        id == ReservedSymbolID::internalProperty(i) &&
-        "Internal Property Symbol ID Mismatch");
-    (void)id;
-  }
-
-  predefinedStrings_.resize((unsigned)Predefined::_PREDEFINED_COUNT);
+  predefinedStrings_.resize((unsigned)Predefined::_SYMBOL_AFTER_LAST);
   /// Create a buffer containing all strings.
   /// This ensures that all the strings live together in memory,
   /// and that we don't touch multiple separate pages to run this.
@@ -911,6 +903,13 @@ void Runtime::initPredefinedStrings() {
 #define SYM(name, desc) sizeof(desc) - 1,
 #include "hermes/VM/PredefinedSymbols.def"
   };
+
+  for (uint32_t idx = 0; idx < Predefined::_IPROP_AFTER_LAST; ++idx) {
+    SymbolID sym = identifierTable_.createNotUniquedLazySymbol("");
+    assert(sym == ReservedSymbolID::internalProperty(idx));
+    (void)sym;
+  }
+
   constexpr uint32_t strCount = sizeof strLengths / sizeof strLengths[0];
   static_assert(
       strCount == sizeof hashes / sizeof hashes[0],
@@ -922,6 +921,7 @@ void Runtime::initPredefinedStrings() {
             .registerLazyIdentifier(
                 {&buffer[offset], strLengths[idx]}, hashes[idx])
             .unsafeGetRaw();
+
     offset += strLengths[idx];
   }
 
@@ -933,6 +933,7 @@ void Runtime::initPredefinedStrings() {
             .createNotUniquedLazySymbol(
                 ASCIIRef{&buffer[offset], symLengths[idx]})
             .unsafeGetRaw();
+
     offset += symLengths[idx];
   }
 
@@ -1001,18 +1002,18 @@ static_assert(
 
 ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
                                             unsigned methodIndex,
-                                            Predefined objectName,
+                                            Predefined::Str objectName,
                                             Handle<JSObject> &object,
                                             SymbolID methodID)> &callback) {
   MutableHandle<JSObject> lastObject{this};
-  Predefined lastObjectName = Predefined::_PREDEFINED_COUNT;
+  Predefined::Str lastObjectName = Predefined::_STRING_AFTER_LAST;
 
   for (unsigned methodIndex = 0; methodIndex < inst::BuiltinMethod::_count;
        ++methodIndex) {
     GCScopeMarkerRAII marker{this};
     DEBUG(llvm::dbgs() << builtinMethods[methodIndex].name << "\n");
     // Find the object first, if it changed.
-    auto objectName = (Predefined)builtinMethods[methodIndex].object;
+    auto objectName = (Predefined::Str)builtinMethods[methodIndex].object;
     if (objectName != lastObjectName) {
       auto objectID = getPredefinedSymbolID(objectName);
       auto cr = JSObject::getNamed(getGlobal(), this, objectID);
@@ -1028,8 +1029,8 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
     }
 
     // Find the method.
-    auto methodID =
-        getPredefinedSymbolID((Predefined)builtinMethods[methodIndex].method);
+    auto methodName = (Predefined::Str)builtinMethods[methodIndex].method;
+    auto methodID = getPredefinedSymbolID(methodName);
 
     ExecutionStatus status =
         callback(methodIndex, objectName, lastObject, methodID);
@@ -1047,7 +1048,7 @@ void Runtime::initBuiltinTable() {
 
   (void)forEachBuiltin([this](
                            unsigned methodIndex,
-                           Predefined /* objectName */,
+                           Predefined::Str /* objectName */,
                            Handle<JSObject> &currentObject,
                            SymbolID methodID) {
     auto cr = JSObject::getNamed(currentObject, this, methodID);
@@ -1068,7 +1069,7 @@ ExecutionStatus Runtime::assertBuiltinsUnmodified() {
 
   return forEachBuiltin([this](
                             unsigned methodIndex,
-                            Predefined /* objectName */,
+                            Predefined::Str /* objectName */,
                             Handle<JSObject> &currentObject,
                             SymbolID methodID) {
     auto cr = JSObject::getNamed(currentObject, this, methodID);
@@ -1105,13 +1106,13 @@ void Runtime::freezeBuiltins() {
 
   (void)forEachBuiltin([this, &objectList, &methodList, &clearFlags, &setFlags](
                            unsigned methodIndex,
-                           Predefined objectName,
+                           Predefined::Str objectName,
                            Handle<JSObject> &currentObject,
                            SymbolID methodID) {
     methodList.push_back(methodID);
     // This is the last method on current object.
     if (methodIndex + 1 == inst::BuiltinMethod::_count ||
-        objectName != (Predefined)builtinMethods[methodIndex + 1].object) {
+        objectName != builtinMethods[methodIndex + 1].object) {
       // Store the object id in the object set.
       SymbolID objectID = getPredefinedSymbolID(objectName);
       objectList.push_back(objectID);

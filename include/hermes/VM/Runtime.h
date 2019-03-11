@@ -202,13 +202,16 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   }
 
   /// \return a \c SymbolID of a predefined symbol.
-  SymbolID getPredefinedSymbolID(Predefined predefined);
+  SymbolID getPredefinedSymbolID(Predefined::Str predefined);
+  SymbolID getPredefinedSymbolID(Predefined::Sym predefined);
 
   /// \return the \c StringPrimitive of a predefined string.
-  StringPrimitive *getPredefinedString(Predefined predefined);
+  StringPrimitive *getPredefinedString(Predefined::Str predefined);
+  StringPrimitive *getPredefinedString(Predefined::Sym predefined);
 
   /// \return a \c Handle<StringPrimitive> to a predefined string.
-  Handle<StringPrimitive> getPredefinedStringHandle(Predefined predefined);
+  Handle<StringPrimitive> getPredefinedStringHandle(Predefined::Str predefined);
+  Handle<StringPrimitive> getPredefinedStringHandle(Predefined::Sym predefined);
 
   /// \return the \c StringPrimitive given a symbol ID \p id.
   StringPrimitive *getStringPrimFromSymbolID(SymbolID id);
@@ -751,7 +754,7 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   /// \param methodID is the SymbolID for the name of the method.
   ExecutionStatus forEachBuiltin(const std::function<ExecutionStatus(
                                      unsigned methodIndex,
-                                     Predefined objectName,
+                                     Predefined::Str objectName,
                                      Handle<JSObject> &object,
                                      SymbolID methodID)> &callback);
 
@@ -1150,19 +1153,41 @@ inline void Runtime::ttiReached() {
   heap_.ttiReached();
 }
 
-inline SymbolID Runtime::getPredefinedSymbolID(Predefined predefined) {
+inline SymbolID Runtime::getPredefinedSymbolID(Predefined::Str predefined) {
   assert(
-      (unsigned)predefined < (unsigned)Predefined::_PREDEFINED_COUNT &&
+      Predefined::_STRING_BEFORE_FIRST < predefined &&
+      predefined < Predefined::_STRING_AFTER_LAST &&
       "Invalid predefined symbol");
-  return SymbolID::unsafeCreate(predefinedStrings_[(unsigned)predefined]);
+  return SymbolID::unsafeCreate(
+      predefinedStrings_[predefined - ReservedSymbolID::NumInternalProperties]);
 }
 
-inline StringPrimitive *Runtime::getPredefinedString(Predefined predefined) {
+inline SymbolID Runtime::getPredefinedSymbolID(Predefined::Sym predefined) {
+  assert(
+      Predefined::_SYMBOL_BEFORE_FIRST < predefined &&
+      predefined < Predefined::_SYMBOL_AFTER_LAST &&
+      "Invalid predefined symbol");
+  return SymbolID::unsafeCreate(
+      predefinedStrings_[predefined - ReservedSymbolID::NumInternalProperties]);
+}
+
+inline StringPrimitive *Runtime::getPredefinedString(
+    Predefined::Str predefined) {
+  return getStringPrimFromSymbolID(getPredefinedSymbolID(predefined));
+}
+
+inline StringPrimitive *Runtime::getPredefinedString(
+    Predefined::Sym predefined) {
   return getStringPrimFromSymbolID(getPredefinedSymbolID(predefined));
 }
 
 inline Handle<StringPrimitive> Runtime::getPredefinedStringHandle(
-    Predefined predefined) {
+    Predefined::Str predefined) {
+  return makeHandle(getPredefinedString(predefined));
+}
+
+inline Handle<StringPrimitive> Runtime::getPredefinedStringHandle(
+    Predefined::Sym predefined) {
   return makeHandle(getPredefinedString(predefined));
 }
 
