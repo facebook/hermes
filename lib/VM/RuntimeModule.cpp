@@ -198,7 +198,7 @@ void RuntimeModule::importStringIDMap() {
   stringIDMap_.clear();
 
   // Populate the string ID map with empty identifiers.
-  stringIDMap_.resize(strTableSize, SymbolID::createEmpty());
+  stringIDMap_.resize(strTableSize, SymbolID::empty());
 
   // Preallocate enough space to store all identifiers to prevent
   // unnecessary allocations.

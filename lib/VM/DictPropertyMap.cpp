@@ -50,12 +50,12 @@ std::pair<bool, DictPropertyMap::HashPair *> DictPropertyMap::lookupEntryFor(
 
     // If we encountered an empty pair, the search is over - we failed.
     // Return either this entry or a deleted one, if we encountered one.
-    if (curEntry->first == ReservedSymbolID::empty)
+    if (curEntry->first == SymbolID::empty())
       return {false, deleted ? deleted : curEntry};
 
     // The first time we encounter a deleted entry, record it so we can
     // potentially reuse it for insertion.
-    if (curEntry->first == ReservedSymbolID::deleted && !deleted)
+    if (curEntry->first == SymbolID::deleted() && !deleted)
       deleted = curEntry;
 
     ++NumExtraHashProbes;
@@ -114,10 +114,10 @@ ExecutionStatus DictPropertyMap::grow(
     do {
       const auto *src = self->getDescriptorPairs() + deletedIndex;
       assert(
-          src->first == ReservedSymbolID::deleted &&
+          src->first == SymbolID::deleted() &&
           "pair in the deleted list is not marked as deleted");
 
-      dst->first = ReservedSymbolID::deleted;
+      dst->first = SymbolID::deleted();
       dst->second.slot = src->second.slot;
 
       deletedIndex = getNextDeletedIndex(src);
@@ -169,7 +169,7 @@ DictPropertyMap::findOrAdd(
   }
 
   ++self->numProperties_;
-  if (found.second->first == ReservedSymbolID::deleted)
+  if (found.second->first == SymbolID::deleted())
     self->decDeletedHashCount();
 
   found.second->first = id;
@@ -192,11 +192,11 @@ void DictPropertyMap::erase(DictPropertyMap *self, PropertyPos pos) {
 
   auto *descPair = self->getDescriptorPairs() + descIndex;
   assert(
-      descPair->first != ReservedSymbolID::empty &&
+      descPair->first != SymbolID::empty() &&
       "accessing deleted descriptor pair");
 
-  hashPair->first = ReservedSymbolID::deleted;
-  descPair->first = ReservedSymbolID::deleted;
+  hashPair->first = SymbolID::deleted();
+  descPair->first = SymbolID::deleted();
   // Add the descriptor to the deleted list.
   setNextDeletedIndex(descPair, self->deletedListHead_);
   self->deletedListHead_ = descIndex;
@@ -215,7 +215,7 @@ SlotIndex DictPropertyMap::allocatePropertySlot(DictPropertyMap *self) {
 
   auto *deletedPair = self->getDescriptorPairs() + self->deletedListHead_;
   assert(
-      deletedPair->first == ReservedSymbolID::deleted &&
+      deletedPair->first == SymbolID::deleted() &&
       "Head of deleted list is not deleted");
 
   // Remove the first element from the deleted list.
@@ -223,7 +223,7 @@ SlotIndex DictPropertyMap::allocatePropertySlot(DictPropertyMap *self) {
   --self->deletedListSize_;
 
   // Mark the pair as "invalid" instead of "deleted".
-  deletedPair->first = ReservedSymbolID::empty;
+  deletedPair->first = SymbolID::empty();
 
   return deletedPair->second.slot;
 }

@@ -475,11 +475,11 @@ using namespace hermes::vm;
 template <>
 struct DenseMapInfo<HiddenClass::Transition> {
   static inline HiddenClass::Transition getEmptyKey() {
-    return HiddenClass::Transition(SymbolID());
+    return HiddenClass::Transition(SymbolID::empty());
   }
 
   static inline HiddenClass::Transition getTombstoneKey() {
-    return HiddenClass::Transition(SymbolID::createDeleted());
+    return HiddenClass::Transition(SymbolID::deleted());
   }
 
   static inline unsigned getHashValue(HiddenClass::Transition transition) {

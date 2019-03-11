@@ -41,11 +41,6 @@ inline SymbolID internalProperty(unsigned i) {
   return SymbolID::unsafeCreate(Ordinal::InternalProperty0 + i);
 }
 
-/// The "invalid" identifier id. Also marks an empty slot in hash tables
-constexpr SymbolID empty = SymbolID::createEmpty();
-/// Deleted identifier id. Marks deleted slots in hash tables.
-constexpr SymbolID deleted = SymbolID::createDeleted();
-
 } // namespace ReservedSymbolID
 
 } // namespace vm

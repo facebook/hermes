@@ -96,13 +96,17 @@ class SymbolID {
     return SymbolID{id};
   }
 
-  /// Create an instance of an uninitialized \c SymbolID.
-  static constexpr SymbolID createEmpty() {
+  /// SymbolID::Empty and SymbolID::Deleted cannot be declared as constexpr
+  /// member fields because those must be defined inline, and SymbolID is
+  /// incomplete at the time of declaration.
+
+  /// The "invalid" identifier id. Also marks an empty slot in hash tables.
+  static constexpr SymbolID empty() {
     return SymbolID{EMPTY_ID};
   }
 
-  /// Create a SymbolID that represents a deleted identifier.
-  static constexpr SymbolID createDeleted() {
+  /// Deleted identifier id. Marks deleted slots in hash tables.
+  static constexpr SymbolID deleted() {
     return SymbolID{DELETED_ID};
   }
 
@@ -136,10 +140,10 @@ using namespace hermes::vm;
 template <>
 struct DenseMapInfo<SymbolID> {
   static inline SymbolID getEmptyKey() {
-    return SymbolID::createEmpty();
+    return SymbolID::empty();
   }
   static inline SymbolID getTombstoneKey() {
-    return SymbolID::createDeleted();
+    return SymbolID::deleted();
   }
   static inline unsigned getHashValue(SymbolID symbolID) {
     return DenseMapInfo<SymbolID::RawType>::getHashValue(

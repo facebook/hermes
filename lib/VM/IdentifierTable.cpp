@@ -303,7 +303,7 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
   }
 
   CallResult<PseudoHandle<StringPrimitive>> cr = allocateDynamicString(
-      runtime, str, maybeIncomingPrimHandle, SymbolID::createEmpty());
+      runtime, str, maybeIncomingPrimHandle, SymbolID::empty());
   if (cr == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -444,9 +444,9 @@ CallResult<SymbolID> IdentifierTable::createExternalSymbol(
     // Need to reallocate in the old gen if the description is in the young gen.
     CallResult<PseudoHandle<StringPrimitive>> longLivedStr = desc->isASCII()
         ? allocateDynamicString<char, /* Unique */ false>(
-              runtime, desc->castToASCIIRef(), desc, SymbolID::createEmpty())
+              runtime, desc->castToASCIIRef(), desc, SymbolID::empty())
         : allocateDynamicString<char16_t, /* Unique */ false>(
-              runtime, desc->castToUTF16Ref(), desc, SymbolID::createEmpty());
+              runtime, desc->castToUTF16Ref(), desc, SymbolID::empty());
     // Since we keep a raw pointer to mem, no more JS heap allocations after
     // this point.
     if (LLVM_UNLIKELY(longLivedStr == ExecutionStatus::EXCEPTION)) {
@@ -469,7 +469,7 @@ CallResult<SymbolID> IdentifierTable::createExternalSymbol(
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SymbolID symbolID) {
   if (symbolID.isInvalid())
     return OS << "SymbolID(INVALID)";
-  else if (symbolID == ReservedSymbolID::deleted)
+  else if (symbolID == SymbolID::deleted())
     return OS << "SymbolID(DELETED)";
   else
     return OS << "SymbolID("

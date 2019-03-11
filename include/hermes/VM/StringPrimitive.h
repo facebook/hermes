@@ -396,7 +396,7 @@ class ExternalStringPrimitiveBase : public StringPrimitive {
       const VTable *vt,
       uint32_t cellSize,
       uint32_t length,
-      SymbolID uniqueID = SymbolID::createEmpty())
+      SymbolID uniqueID = SymbolID::empty())
       : StringPrimitive(runtime, vt, cellSize, length), uniqueID_(uniqueID){};
 
   static bool classof(const GCCell *cell) {

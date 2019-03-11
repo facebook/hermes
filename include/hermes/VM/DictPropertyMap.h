@@ -56,7 +56,7 @@ namespace vm {
 ///  - "valid". It contains a valid SymbolID and descriptor.
 ///  - "deleted". It contains ReservedSymbolId::deleted and is part of the
 ///  "deleted" list.
-///  - "invalid". It contains ReservedSymbolID::empty. It used to be "deleted"
+///  - "invalid". It contains SymbolID::empty(). It used to be "deleted"
 ///  but its slot was re-used by a new property.
 ///
 class DictPropertyMap final : public VariableSizeRuntimeCell,
@@ -244,8 +244,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
         descriptorCapacity_(descriptorCapacity),
         hashCapacity_(hashCapacity) {
     // Clear the hash table.
-    std::fill_n(
-        getHashPairs(), hashCapacity_, HashPair{ReservedSymbolID::empty, 0});
+    std::fill_n(getHashPairs(), hashCapacity_, HashPair{SymbolID::empty(), 0});
   }
 
   DescriptorPair *getDescriptorPairs() {
@@ -264,7 +263,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
       DescriptorPair *descPair,
       size_type nextIndex) {
     assert(
-        descPair->first == ReservedSymbolID::deleted &&
+        descPair->first == SymbolID::deleted() &&
         "Descriptor pair is not deleted");
     descPair->second.flags._flags = nextIndex;
   }
@@ -273,7 +272,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   /// index is kept in the PropertyFlags field.
   static size_type getNextDeletedIndex(const DescriptorPair *descPair) {
     assert(
-        descPair->first == ReservedSymbolID::deleted &&
+        descPair->first == SymbolID::deleted() &&
         "Descriptor pair is not deleted");
     return descPair->second.flags._flags;
   }
