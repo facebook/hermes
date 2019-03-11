@@ -10,7 +10,7 @@
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/Public/Buffer.h"
-#include "hermes/SourceMap/SourceMap.h"
+#include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/StringTableEntry.h"
 

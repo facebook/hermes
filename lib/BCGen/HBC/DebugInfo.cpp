@@ -7,7 +7,7 @@
 #include "hermes/BCGen/HBC/DebugInfo.h"
 
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
-#include "hermes/SourceMap/SourceMap.h"
+#include "hermes/SourceMap/SourceMapGenerator.h"
 
 using namespace hermes;
 using namespace hbc;

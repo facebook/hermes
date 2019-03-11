@@ -5,7 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/SourceMap/SourceMap.h"
+#include "hermes/SourceMap/SourceMapGenerator.h"
 
 #include "llvm/ADT/SmallVector.h"
 

@@ -10,7 +10,7 @@
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IR/Analysis.h"
-#include "hermes/SourceMap/SourceMap.h"
+#include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/Support/Statistic.h"
 
 #include "llvm/ADT/Optional.h"

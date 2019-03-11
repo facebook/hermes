@@ -26,7 +26,7 @@
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
-#include "hermes/SourceMap/SourceMap.h"
+#include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"

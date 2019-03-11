@@ -9,7 +9,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/Public/Buffer.h"
-#include "hermes/SourceMap/SourceMap.h"
+#include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/Support/MemoryBuffer.h"
 
 #include "llvm/ADT/SmallVector.h"

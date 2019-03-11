@@ -4,7 +4,8 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#include "hermes/SourceMap/SourceMap.h"
+#include "hermes/SourceMap/SourceMapGenerator.h"
+#include "hermes/SourceMap/SourceMapParser.h"
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
