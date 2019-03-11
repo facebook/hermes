@@ -304,7 +304,7 @@ void DebugInfo::populateSourceMap(
   auto segmentFor = [&](const DebugSourceLocation &loc,
                         uint32_t offsetInFile,
                         uint32_t debugOffset) {
-    SourceMapGenerator::Segment segment;
+    SourceMap::Segment segment;
     segment.generatedColumn = loc.address + offsetInFile;
     segment.sourceIndex =
         sourceMap->getSourceIndex(*getFilenameForAddress(debugOffset));
@@ -313,7 +313,7 @@ void DebugInfo::populateSourceMap(
     return segment;
   };
 
-  std::vector<SourceMapGenerator::Segment> segments;
+  std::vector<SourceMap::Segment> segments;
   llvm::ArrayRef<uint8_t> locsData = sourceLocationsData();
   uint32_t offset = 0;
   while (offset < locsData.size()) {

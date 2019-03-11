@@ -21,56 +21,14 @@ namespace hermes {
 /// implements.
 class SourceMapGenerator {
  public:
-  /// SourceMaps contain a list of lines which are in turn separated into
-  /// segments. A segment maps some column of the generated source to some
-  /// line/column of the represented source.
-  /// Note that the generated line is not stored in the segment, but is instead
-  /// implicit in the "mappings" field of the source map: generated lines are
-  /// not encoded directly but are simply separated with semicolons in the
-  /// encoding.
-  struct Segment {
-    /// Zero-based starting column of the generated code.
-    int32_t generatedColumn = 0;
-
-    /// Zero-based index into the "sources" list.
-    int32_t sourceIndex = 0;
-
-    /// Zero based starting line in the original source.
-    int32_t representedLine = 0;
-
-    /// Zero based starting column in the original source.
-    int32_t representedColumn = 0;
-
-    /// Zero based symbol name index into "names" list.
-    int32_t representedNameIndex = 0;
-
-    /// Construct a segment maps a generated column \p genCol to the given
-    /// represented line \p repLine and column \p repCol.
-    Segment(
-        int32_t genCol,
-        int32_t sourceIndex,
-        int32_t repLine,
-        int32_t repCol,
-        int32_t repNameIndex)
-        : generatedColumn(genCol),
-          sourceIndex(sourceIndex),
-          representedLine(repLine),
-          representedColumn(repCol),
-          representedNameIndex(repNameIndex) {}
-
-    /// Default constructor.
-    Segment() {}
-  };
-  using SegmentList = std::vector<Segment>;
-
   /// Add a line \p line represented as a list of Segments to the 'mappings'
   /// section.
-  void addMappingsLine(SegmentList line) {
+  void addMappingsLine(SourceMap::SegmentList line) {
     lines_.push_back(std::move(line));
   }
 
   /// \return the list of mappings lines.
-  llvm::ArrayRef<SegmentList> getMappingsLines() const {
+  llvm::ArrayRef<SourceMap::SegmentList> getMappingsLines() const {
     return lines_;
   }
 
@@ -103,9 +61,9 @@ class SourceMapGenerator {
 
   /// Encode the list \p segments into \p OS using the SourceMap
   /// Base64-VLQ scheme, delta-encoded starting with \p lastSegment.
-  static Segment encodeSourceLocations(
-      const Segment &lastSegment,
-      llvm::ArrayRef<Segment> segments,
+  static SourceMap::Segment encodeSourceLocations(
+      const SourceMap::Segment &lastSegment,
+      llvm::ArrayRef<SourceMap::Segment> segments,
       llvm::raw_ostream &OS);
 
   /// The list of sources, populating the sources field.
@@ -115,7 +73,7 @@ class SourceMapGenerator {
   std::vector<std::string> symbolNames_;
 
   /// The list of segments in our VLQ scheme.
-  std::vector<SegmentList> lines_;
+  std::vector<SourceMap::SegmentList> lines_;
 
   /// Map from {filenameID => source index}.
   /// Used to translate debug source locations involving string table indices

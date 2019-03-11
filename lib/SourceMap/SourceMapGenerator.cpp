@@ -26,15 +26,15 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, VLQ vlq) {
 }
 } // namespace
 
-SourceMapGenerator::Segment SourceMapGenerator::encodeSourceLocations(
-    const Segment &lastSegment,
-    llvm::ArrayRef<Segment> segments,
+SourceMap::Segment SourceMapGenerator::encodeSourceLocations(
+    const SourceMap::Segment &lastSegment,
+    llvm::ArrayRef<SourceMap::Segment> segments,
     llvm::raw_ostream &OS) {
   // Currently we only support a single source, so the source ID (and its delta)
   // is always 0.
-  Segment prev = lastSegment;
+  SourceMap::Segment prev = lastSegment;
   bool first = true;
-  for (const Segment &seg : segments) {
+  for (const SourceMap::Segment &seg : segments) {
     // Segments are separated by commas.
     OS << (first ? "" : ",") << VLQ{seg.generatedColumn - prev.generatedColumn}
        << VLQ{seg.sourceIndex - prev.sourceIndex}
@@ -49,11 +49,11 @@ SourceMapGenerator::Segment SourceMapGenerator::encodeSourceLocations(
 std::string SourceMapGenerator::getVLQMappingsString() const {
   std::string result;
   llvm::raw_string_ostream OS(result);
-  Segment lastSegment;
+  SourceMap::Segment lastSegment;
   // Lines are 0 based: the first line is 0 and not 1, therefore initialize it
   // to 1 so we encode it with a delta of 0.
   lastSegment.representedLine = 1;
-  for (const SegmentList &segments : lines_) {
+  for (const SourceMap::SegmentList &segments : lines_) {
     // The generated column (unlike other fields) resets with each new line.
     lastSegment.generatedColumn = 0;
     lastSegment = encodeSourceLocations(lastSegment, segments, OS);

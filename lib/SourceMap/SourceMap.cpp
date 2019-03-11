@@ -103,4 +103,46 @@ OptValue<int32_t> decode(const char *&begin, const char *end) {
 }
 } // namespace base64vlq
 
+llvm::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
+    uint32_t line,
+    uint32_t column) {
+  if (line == 0 || line > lines_.size()) {
+    return llvm::None;
+  }
+
+  // line is 1-based.
+  uint32_t lineIndex = line - 1;
+  auto &segments = lines_[lineIndex];
+  if (segments.empty()) {
+    return llvm::None;
+  }
+  // Algorithm: we wanted to locate the segment covering
+  // the needle(`column`) -- segment.generatedColumn <= column.
+  // We achieve it by binary searching the first sentinel
+  // segment strictly greater than needle(`column`) and then move backward
+  // one slot.
+  auto segIter = std::upper_bound(
+      segments.begin(),
+      segments.end(),
+      column,
+      [](uint32_t column, const Segment &seg) {
+        return column < (uint32_t)seg.generatedColumn;
+      });
+  // The found sentinal segment is the first one. No covering segment.
+  if (segIter == segments.begin()) {
+    return llvm::None;
+  }
+  // Move back one slot.
+  const Segment &target =
+      segIter == segments.end() ? segments.back() : *(--segIter);
+  // parseSegment() should have validated this.
+  assert(
+      (size_t)target.sourceIndex < sources_.size() &&
+      "SourceIndex is out-of-range.");
+  std::string fileName = getSourceFullPath(target.sourceIndex);
+  return SourceMapTextLocation{std::move(fileName),
+                               (uint32_t)target.representedLine,
+                               (uint32_t)target.representedColumn};
+}
+
 } // namespace hermes

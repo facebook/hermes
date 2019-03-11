@@ -47,22 +47,29 @@ const char *TestMapEmptySourceRoot = R"#({
 })#";
 
 /// Helper to return a Segment.
-SourceMapGenerator::Segment
+SourceMap::Segment
 loc(int32_t address, int32_t sourceIndex, int32_t line, int32_t column) {
-  return SourceMapGenerator::Segment{address, sourceIndex, line, column, 0};
+  return SourceMap::Segment{address, sourceIndex, line, column, 0};
 }
 
 void verifySegment(
-    SourceMapParser &parser,
+    SourceMap &sourceMap,
     int generatedLine,
     const std::vector<std::string> &sources,
-    const SourceMapGenerator::Segment &segment) {
+    const SourceMap::Segment &segment) {
   llvm::Optional<SourceMapTextLocation> locOpt =
-      parser.getLocationForAddress(generatedLine, segment.generatedColumn);
+      sourceMap.getLocationForAddress(generatedLine, segment.generatedColumn);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, sources[segment.sourceIndex]);
   EXPECT_EQ(locOpt.getValue().line, segment.representedLine);
   EXPECT_EQ(locOpt.getValue().column, segment.representedColumn);
+}
+
+std::unique_ptr<SourceMap> parseSourceMap(llvm::StringRef sourceMapContent) {
+  SourceMapParser parser;
+  std::unique_ptr<SourceMap> sourceMap = parser.parse(sourceMapContent);
+  EXPECT_TRUE(sourceMap != nullptr);
+  return sourceMap;
 }
 
 TEST(SourceMap, Basic) {
@@ -72,7 +79,7 @@ TEST(SourceMap, Basic) {
   std::vector<std::string> sources{"file1", "file2"};
   map.setSources(sources);
 
-  std::vector<SourceMapGenerator::Segment> segmentsList[] = {
+  std::vector<SourceMap::Segment> segmentsList[] = {
       {
           loc(0, 0, 1, 1), // addr 1:0 -> file1:1:1
           loc(2, 0, 2, 1), // addr 1:2 -> file1:2:1
@@ -101,14 +108,13 @@ TEST(SourceMap, Basic) {
       OS.str(),
       R"#({"version":3,"sources":["file1","file2"],"mappings":"AAAC,EACA,CACA,EAAC;ACGI,CACJ,EAAC,EACF;"})#");
 
-  SourceMapParser parser;
-  EXPECT_TRUE(parser.parse(storage));
-
+  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(storage);
   for (uint32_t line = 0; line < sizeof(segmentsList) / sizeof(segmentsList[0]);
        ++line) {
     const auto &segments = segmentsList[line];
     for (uint32_t i = 0; i < segments.size(); ++i) {
-      verifySegment(parser, /*generatedLine*/ line + 1, sources, segments[i]);
+      verifySegment(
+          *sourceMap, /*generatedLine*/ line + 1, sources, segments[i]);
     }
   }
 }
@@ -116,12 +122,10 @@ TEST(SourceMap, Basic) {
 /// "test that the `sources` field has the original sources" from
 /// https://github.com/mozilla/source-map/blob/master/test/test-source-map-consumer.js
 TEST(SourceMap, SourcesField) {
-  auto verifySources = [](const char *sourceMap,
+  auto verifySources = [](const char *sourceMapContent,
                           const std::vector<std::string> &expected) {
-    SourceMapParser parser;
-    EXPECT_TRUE(parser.parse(sourceMap));
-
-    std::vector<std::string> sources = parser.getAllFullPathSources();
+    std::unique_ptr<SourceMap> sourceMap = parseSourceMap(sourceMapContent);
+    std::vector<std::string> sources = sourceMap->getAllFullPathSources();
     EXPECT_EQ(sources.size(), expected.size());
     for (uint32_t i = 0; i < expected.size(); ++i) {
       EXPECT_EQ(sources[i], expected[i]);
@@ -135,37 +139,35 @@ TEST(SourceMap, SourcesField) {
 /// "test that the source root is reflected in a mapping's source field" from
 /// https://github.com/mozilla/source-map/blob/master/test/test-source-map-consumer.js
 TEST(SourceMap, SourceRoot) {
-  SourceMapParser parser;
-  EXPECT_TRUE(parser.parse(TestMap));
+  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(TestMap);
 
   llvm::Optional<SourceMapTextLocation> locOpt =
-      parser.getLocationForAddress(2, 1);
+      sourceMap->getLocationForAddress(2, 1);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "/the/root/two.js");
 
-  locOpt = parser.getLocationForAddress(1, 1);
+  locOpt = sourceMap->getLocationForAddress(1, 1);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "/the/root/one.js");
 
-  SourceMapParser parser2;
-  EXPECT_TRUE(parser2.parse(TestMapNoSourceRoot));
+  std::unique_ptr<SourceMap> sourceMap2 = parseSourceMap(TestMapNoSourceRoot);
 
-  locOpt = parser2.getLocationForAddress(2, 1);
+  locOpt = sourceMap2->getLocationForAddress(2, 1);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "two.js");
 
-  locOpt = parser2.getLocationForAddress(1, 1);
+  locOpt = sourceMap2->getLocationForAddress(1, 1);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "one.js");
 
-  SourceMapParser parser3;
-  EXPECT_TRUE(parser3.parse(TestMapEmptySourceRoot));
+  std::unique_ptr<SourceMap> sourceMap3 =
+      parseSourceMap(TestMapEmptySourceRoot);
 
-  locOpt = parser3.getLocationForAddress(2, 1);
+  locOpt = sourceMap3->getLocationForAddress(2, 1);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "two.js");
 
-  locOpt = parser3.getLocationForAddress(1, 1);
+  locOpt = sourceMap3->getLocationForAddress(1, 1);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "one.js");
 };
@@ -173,42 +175,45 @@ TEST(SourceMap, SourceRoot) {
 /// "test mapping tokens back exactly" from
 /// https://github.com/mozilla/source-map/blob/master/test/test-source-map-consumer.js
 TEST(SourceMap, ExactMappings) {
-  SourceMapParser parser;
-  EXPECT_TRUE(parser.parse(TestMap));
+  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(TestMap);
 
   std::vector<std::string> sources = {"/the/root/one.js", "/the/root/two.js"};
 
   int generatedLine = 1;
   int sourceIndex = 0;
-  verifySegment(parser, generatedLine, sources, loc(1, sourceIndex, 1, 1));
-  verifySegment(parser, generatedLine, sources, loc(5, sourceIndex, 1, 5));
-  verifySegment(parser, generatedLine, sources, loc(9, sourceIndex, 1, 11));
-  verifySegment(parser, generatedLine, sources, loc(18, sourceIndex, 1, 21));
-  verifySegment(parser, generatedLine, sources, loc(21, sourceIndex, 2, 3));
-  verifySegment(parser, generatedLine, sources, loc(28, sourceIndex, 2, 10));
-  verifySegment(parser, generatedLine, sources, loc(32, sourceIndex, 2, 14));
+  verifySegment(*sourceMap, generatedLine, sources, loc(1, sourceIndex, 1, 1));
+  verifySegment(*sourceMap, generatedLine, sources, loc(5, sourceIndex, 1, 5));
+  verifySegment(*sourceMap, generatedLine, sources, loc(9, sourceIndex, 1, 11));
+  verifySegment(
+      *sourceMap, generatedLine, sources, loc(18, sourceIndex, 1, 21));
+  verifySegment(*sourceMap, generatedLine, sources, loc(21, sourceIndex, 2, 3));
+  verifySegment(
+      *sourceMap, generatedLine, sources, loc(28, sourceIndex, 2, 10));
+  verifySegment(
+      *sourceMap, generatedLine, sources, loc(32, sourceIndex, 2, 14));
 
   generatedLine = 2;
   sourceIndex = 1;
-  verifySegment(parser, generatedLine, sources, loc(1, sourceIndex, 1, 1));
-  verifySegment(parser, generatedLine, sources, loc(5, sourceIndex, 1, 5));
-  verifySegment(parser, generatedLine, sources, loc(9, sourceIndex, 1, 11));
-  verifySegment(parser, generatedLine, sources, loc(18, sourceIndex, 1, 21));
-  verifySegment(parser, generatedLine, sources, loc(21, sourceIndex, 2, 3));
-  verifySegment(parser, generatedLine, sources, loc(28, sourceIndex, 2, 10));
+  verifySegment(*sourceMap, generatedLine, sources, loc(1, sourceIndex, 1, 1));
+  verifySegment(*sourceMap, generatedLine, sources, loc(5, sourceIndex, 1, 5));
+  verifySegment(*sourceMap, generatedLine, sources, loc(9, sourceIndex, 1, 11));
+  verifySegment(
+      *sourceMap, generatedLine, sources, loc(18, sourceIndex, 1, 21));
+  verifySegment(*sourceMap, generatedLine, sources, loc(21, sourceIndex, 2, 3));
+  verifySegment(
+      *sourceMap, generatedLine, sources, loc(28, sourceIndex, 2, 10));
 };
 
 /// "test mapping tokens fuzzy" from
 /// https://github.com/mozilla/source-map/blob/master/test/test-source-map-consumer.js
 TEST(SourceMap, FuzzyMappings) {
-  SourceMapParser parser;
-  EXPECT_TRUE(parser.parse(TestMap));
+  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(TestMap);
 
   std::vector<std::string> sources = {"/the/root/one.js", "/the/root/two.js"};
 
-  verifySegment(parser, 1, sources, loc(20, 0, 1, 21));
-  verifySegment(parser, 1, sources, loc(30, 0, 2, 10));
-  verifySegment(parser, 2, sources, loc(12, 1, 1, 11));
+  verifySegment(*sourceMap, 1, sources, loc(20, 0, 1, 21));
+  verifySegment(*sourceMap, 1, sources, loc(30, 0, 2, 10));
+  verifySegment(*sourceMap, 2, sources, loc(12, 1, 1, 11));
 };
 
 TEST(SourceMap, VLQRandos) {
