@@ -217,18 +217,11 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
   RuntimeModuleFlags flags;
   flags.hidesEpilogue = true;
   specialCodeBlockDomain_ = Domain::create(this).getHermesValue();
-  specialCodeBlockRuntimeModule_ = RuntimeModule::createManual(
-      this,
-      Handle<Domain>::vmcast(&specialCodeBlockDomain_),
-      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          generateSpecialRuntimeBytecode())
-          .first,
-      flags);
+  specialCodeBlockRuntimeModule_ = RuntimeModule::createUninitialized(
+      this, Handle<Domain>::vmcast(&specialCodeBlockDomain_), flags);
   assert(
       &runtimeModuleList_.back() == specialCodeBlockRuntimeModule_ &&
       "specialCodeBlockRuntimeModule_ not added to runtimeModuleList_");
-  emptyCodeBlock_ = specialCodeBlockRuntimeModule_->getCodeBlock(0);
-  returnThisCodeBlock_ = specialCodeBlockRuntimeModule_->getCodeBlock(1);
 
   // At this point, allocations can begin, as all the roots are markable.
 
@@ -236,6 +229,15 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
   initCharacterStrings();
 
   GCScope scope(this);
+
+  // Explicitly initialize the specialCodeBlockRuntimeModule_ without CJS
+  // modules.
+  specialCodeBlockRuntimeModule_->initializeWithoutCJSModules(
+      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+          generateSpecialRuntimeBytecode())
+          .first);
+  emptyCodeBlock_ = specialCodeBlockRuntimeModule_->getCodeBlock(0);
+  returnThisCodeBlock_ = specialCodeBlockRuntimeModule_->getCodeBlock(1);
 
   // Initialize the root hidden class.
   rootClazz_ = ignoreAllocationFailure(HiddenClass::createRoot(this));
@@ -611,8 +613,12 @@ CallResult<HermesValue> Runtime::runBytecode(
 
   Handle<Domain> domain = toHandle(this, Domain::create(this));
 
-  auto runtimeModule = RuntimeModule::create(
+  auto runtimeModuleRes = RuntimeModule::create(
       this, domain, std::move(bytecode), flags, sourceURL);
+  if (LLVM_UNLIKELY(runtimeModuleRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto runtimeModule = *runtimeModuleRes;
   auto globalCode = runtimeModule->getCodeBlock(globalFunctionIndex);
 
 #ifdef HERMES_ENABLE_DEBUGGER

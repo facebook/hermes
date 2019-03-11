@@ -102,7 +102,7 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
   InterpreterFunctionTest()
       : RuntimeTestFixture(),
         domain(toHandle(runtime, Domain::create(runtime))),
-        runtimeModule(RuntimeModule::createManual(runtime, domain)) {
+        runtimeModule(RuntimeModule::createUninitialized(runtime, domain)) {
     BFG = BytecodeFunctionGenerator::create(BMG, 1);
   }
 
@@ -138,7 +138,7 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
 using InterpreterTest = RuntimeTestFixture;
 
 TEST_F(InterpreterTest, SimpleSmokeTest) {
-  auto runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
+  auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
   /*
    ; calculate 10 - 2 and print "result =" the value.

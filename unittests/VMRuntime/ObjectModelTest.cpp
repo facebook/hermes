@@ -146,7 +146,7 @@ TEST_F(ObjectModelTest, SimplePrototypeTest) {
 
 TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
   GCScope gcScope{runtime, "ObjectModelTest.DefineOwnPropertyTest", 200};
-  auto runtimeModule = RuntimeModule::create(runtime, domain);
+  auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
   CallResult<bool> cr{false};
 
   auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(

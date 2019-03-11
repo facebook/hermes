@@ -7,8 +7,10 @@
 #ifndef HERMES_VM_DOMAIN_H
 #define HERMES_VM_DOMAIN_H
 
+#include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/CopyableVector.h"
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/JSObject.h"
 #include "hermes/VM/Runtime.h"
 
 namespace hermes {
@@ -29,10 +31,55 @@ namespace vm {
 ///
 /// Each RuntimeModule keeps a weak reference to its owning Domain,
 /// and those weak references are marked when the Domain marks its own WeakRefs.
+///
+/// A Domain owns a CommonJS module table which can be resolved either by slow
+/// dynamic requires (based on strings to file names) xor by statically resolved
+/// fast requires. The actual data for the CJS modules is stored in cjsModules_
+/// and can be retrieved quickly using an index, while the string -> index table
+/// used for dynamic requires provides an index into the cjsModules_ storage.
 class Domain final : public GCCell {
   using Super = GCCell;
+  friend void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   static VTable vt;
+
+  /// Offsets for fields in the cjsModules_ ArrayStorage which contain
+  /// information about each individual module.
+  enum Offsets : uint32_t {
+    /// Cache of the module.exports property, populated after require()
+    /// completes. We store both module and cachedExports in order to correctly
+    /// handle the case when the CJS module is still initializing and the
+    /// exports value may change during module initialization.
+    CachedExportsOffset,
+
+    /// Encapsulating JSObject of the given module.
+    /// Created when initialization of the CJS module begins.
+    /// Contains the `exports` property, which contains the exported values.
+    ModuleOffset,
+
+    /// Index of the function in the RuntimeModule.
+    /// Encoded as a HermesValue NativeUInt32.
+    FunctionIndexOffset,
+
+    /// Number of fields used by a CJS module in the ArrayStorage.
+    CJSModuleSize,
+  };
+
+  /// CJS Modules used when modules have been resolved ahead of time.
+  /// Used during requireFast modules by index.
+  /// Stores information on module i at entries (i * CJSModuleSize) through
+  /// ((i+1) * CJSModuleSize). In this way, we avoid allocating a new heap
+  /// object and keep information about a given CJS module accessible without an
+  /// extra indirection.
+  /// For example, requireFast(2) requires the (2 * CJSModuleSize)th element of
+  /// this vector.
+  /// Lazily allocated: field is nullptr until importCJSModuleTable() is called.
+  GCPointer<ArrayStorage> cjsModules_;
+
+  /// Map of { StringID => CJS module index }.
+  /// Used when doing a slow require() call that needs to resolve a filename.
+  /// The index is used to look up the actual CJSModule in cjsModules_.
+  llvm::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
 
   /// RuntimeModules owned by this Domain.
   /// These will be freed from the Domain destructor.
@@ -52,6 +99,76 @@ class Domain final : public GCCell {
       Runtime *runtime,
       RuntimeModule *runtimeModule) {
     self->runtimeModules_.push_back(runtimeModule, &runtime->getHeap());
+  }
+
+  /// Import the CommonJS module table from the given \p runtimeModule.
+  /// \pre a CommonJS module table must not already have been imported in this
+  /// Domain.
+  LLVM_NODISCARD static ExecutionStatus importCJSModuleTable(
+      Handle<Domain> self,
+      Runtime *runtime,
+      RuntimeModule *runtimeModule);
+
+  /// \return the offset of the CJS module corresponding to \p filename, None on
+  /// failure.
+  OptValue<uint32_t> getCJSModuleOffset(SymbolID filename) const {
+    assert(cjsModules_ && "CJS Modules not initialized");
+    auto it = cjsModuleTable_.find(filename);
+    return it != cjsModuleTable_.end() ? OptValue<uint32_t>{it->second}
+                                       : llvm::None;
+  }
+
+  /// \return the offset of the CJS module with ID \p index, None if a CJS
+  /// module with the given ID has not been loaded.
+  OptValue<uint32_t> getCJSModuleOffset(uint32_t id) const {
+    assert(cjsModules_ && "CJS Modules not initialized");
+    if (LLVM_UNLIKELY(id >= cjsModules_->size() / CJSModuleSize)) {
+      // Out of bounds.
+      return llvm::None;
+    }
+    uint32_t offset = id * CJSModuleSize;
+    if (LLVM_UNLIKELY(
+            cjsModules_->at(offset + FunctionIndexOffset).isEmpty())) {
+      // The entry has not been populated yet.
+      return llvm::None;
+    }
+    return offset;
+  }
+
+  /// \return the cached exports object for the given cjsModuleOffset.
+  PseudoHandle<> getCachedExports(uint32_t cjsModuleOffset) const {
+    return createPseudoHandle(
+        cjsModules_->at(cjsModuleOffset + CachedExportsOffset));
+  }
+
+  /// \return the module object for the given cjsModuleOffset.
+  PseudoHandle<JSObject> getModule(uint32_t cjsModuleOffset) const {
+    return createPseudoHandle(vmcast_or_null<JSObject>(
+        cjsModules_->at(cjsModuleOffset + ModuleOffset)));
+  }
+
+  /// \return the function index for the given cjsModuleOffset.
+  uint32_t getFunctionIndex(uint32_t cjsModuleOffset) const {
+    return cjsModules_->at(cjsModuleOffset + FunctionIndexOffset)
+        .getNativeUInt32();
+  }
+
+  /// Set the module object for the given cjsModuleOffset.
+  void setCachedExports(
+      uint32_t cjsModuleOffset,
+      Runtime *runtime,
+      HermesValue cachedExports) {
+    cjsModules_->at(cjsModuleOffset + CachedExportsOffset)
+        .set(cachedExports, &runtime->getHeap());
+  }
+
+  /// Set the module object for the given cjsModuleOffset.
+  void setModule(
+      uint32_t cjsModuleOffset,
+      Runtime *runtime,
+      Handle<JSObject> module) {
+    cjsModules_->at(cjsModuleOffset + ModuleOffset)
+        .set(module.getHermesValue(), &runtime->getHeap());
   }
 
  private:

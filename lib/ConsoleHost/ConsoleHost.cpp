@@ -162,8 +162,14 @@ bool executeHBCBytecode(
   if (options.stopAfterInit) {
     vm::Handle<vm::Domain> domain =
         vm::toHandle(runtime.get(), vm::Domain::create(runtime.get()));
-    vm::RuntimeModule::create(
-        runtime.get(), domain, std::move(bytecode), flags);
+    if (LLVM_UNLIKELY(
+            vm::RuntimeModule::create(
+                runtime.get(), domain, std::move(bytecode), flags) ==
+            vm::ExecutionStatus::EXCEPTION)) {
+      llvm::errs() << "Failed to initialize main RuntimeModule\n";
+      return false;
+    }
+
     return true;
   }
 

@@ -289,7 +289,7 @@ inline CodeBlock *createCodeBlock(
       0,
       BFG->generateBytecodeFunction(
           Function::DefinitionKind::ES5Function, true, 0, 0));
-  runtimeModule->initialize(
+  runtimeModule->initializeWithoutCJSModules(
       hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(BM)));
 
   return CodeBlock::createCodeBlock(

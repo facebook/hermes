@@ -56,7 +56,7 @@ namespace {
 Handle<StringPrimitive>
 benchmark(Runtime *runtime, double loopc, double factc) {
   auto domain = toHandle(runtime, Domain::create(runtime));
-  auto runtimeModule = RuntimeModule::createManual(runtime, domain);
+  auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
   std::map<int, int> labels{};
   std::map<int, int> jmps{};
@@ -150,7 +150,7 @@ L1:
       0,
       BFG->generateBytecodeFunction(
           hermes::Function::DefinitionKind::ES5Function, true, 0, 0));
-  runtimeModule->initialize(
+  runtimeModule->initializeWithoutCJSModules(
       BCProviderFromSrc::createBCProviderFromSrc(std::move(BM)));
   auto codeBlock = CodeBlock::createCodeBlock(
       runtimeModule,

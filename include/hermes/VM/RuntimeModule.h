@@ -67,36 +67,6 @@ union RuntimeModuleFlags {
 /// All RuntimeModule-s associated with a \c Runtime are kept together in a
 /// linked list which can be walked to perform memory management tasks.
 class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
- public:
-  /// Keeps track of each CommonJS module,
-  /// which are kept on a per RuntimeModule basis.
-  /// If module == nullptr, initialization has not begun.
-  /// If cachedExports is empty:
-  ///   - If module == nullptr, then initialization has not begun.
-  ///   - Else, initialization is in progress (recursive require).
-  /// If cachedExports is non-empty, initialization is complete,
-  /// and cachedExports contains the final exported property.
-  struct CJSModule {
-    /// Cache of the module.exports property, populated after require()
-    /// completes. We store both module and cachedExports in order to correctly
-    /// handle the case when the CJS module is still initializing and the
-    /// exports value may change during module initialization.
-    PinnedHermesValue cachedExports;
-
-    /// Encapsulating object of the given module.
-    /// Created when initialization of the CJS module begins.
-    /// Contains the `exports` property, which contains the exported values.
-    JSObject *module;
-
-    /// Index of the function in this RuntimeModule.
-    uint32_t functionIndex;
-
-    CJSModule(uint32_t functionIndex)
-        : cachedExports(HermesValue::encodeEmptyValue()),
-          module(nullptr),
-          functionIndex(functionIndex) {}
-  };
-
  private:
   friend StringID detail::mapString(RuntimeModule &module, const char *str);
 
@@ -155,28 +125,16 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
 
   CodeBlock *getCodeBlockSlowPath(unsigned index);
 
-  /// CJS Modules used when modules have been resolved ahead of time.
-  /// Used during requireFast modules by index.
-  /// For example, requireFast(2) requires the 2nd element of this vector.
-  /// Avoid using a deque here to avoid unnecessary overhead when not running
-  /// CJS modules.
-  llvm::SmallVector<CJSModule, 1> cjsModules_{};
-
-  /// Map of { StringID => CJS module index }.
-  /// Used when doing a slow require() call that needs to resolve a filename.
-  /// Need to store the index instead of a direct pointer because SmallVector
-  /// can copy on push_back, unlike deque.
-  llvm::SmallDenseMap<SymbolID, uint32_t, 1> cjsModuleTable_{};
-
  public:
   ~RuntimeModule();
 
-  /// Creates a new RuntimeModule under \p runtime.
+  /// Creates a new RuntimeModule under \p runtime and imports the CJS
+  /// module table into \p domain.
   /// \param runtime the runtime to use for the identifier table.
   /// \param bytecode the bytecode to import strings and functions from.
   /// \param sourceURL the filename to report in exception backtraces.
   /// \return a raw pointer to the runtime module.
-  static RuntimeModule *create(
+  static CallResult<RuntimeModule *> create(
       Runtime *runtime,
       Handle<Domain> domain,
       std::shared_ptr<hbc::BCProvider> &&bytecode = nullptr,
@@ -189,8 +147,9 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// \return a raw pointer to the runtime module.
   static RuntimeModule *createUninitialized(
       Runtime *runtime,
-      Handle<Domain> domain) {
-    return new RuntimeModule(runtime, domain, RuntimeModuleFlags{}, "");
+      Handle<Domain> domain,
+      RuntimeModuleFlags flags = {}) {
+    return new RuntimeModule(runtime, domain, flags, "");
   }
 
 #ifndef HERMESVM_LEAN
@@ -224,15 +183,22 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   void initializeLazy(std::unique_ptr<hbc::BCProvider> bytecode);
 #endif
 
-  /// Initialize modules created with \p createUninitialized.
+  /// Initialize modules created with \p createUninitialized,
+  /// but do not import the CJS module table, allowing us to always succeed.
   /// \param bytecode the bytecode data to initialize it with.
-  void initialize(std::shared_ptr<hbc::BCProvider> &&bytecode);
+  void initializeWithoutCJSModules(std::shared_ptr<hbc::BCProvider> &&bytecode);
+
+  /// Initialize modules created with \p createUninitialized and import the CJS
+  /// module table from the provided bytecode file.
+  /// \param bytecode the bytecode data to initialize it with.
+  LLVM_NODISCARD ExecutionStatus
+  initialize(std::shared_ptr<hbc::BCProvider> &&bytecode);
 
   /// Creates a RuntimeModule who will be managed manually, and after creation
   /// is guaranteed to have a user.
   /// If the number of users goes to zero it will be destroyed, and if not it
   /// will be destroyed when the Runtime is destroyed.
-  static RuntimeModule *createManual(
+  static CallResult<RuntimeModule *> createManual(
       Runtime *runtime,
       Handle<Domain> domain,
       std::shared_ptr<hbc::BCProvider> &&bytecode = nullptr,
@@ -320,17 +286,6 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
     return functionMap_;
   }
 
-  /// \return the CJS module corresponding to \p filename, nullptr on failure.
-  CJSModule *getCJSModule(SymbolID filename) {
-    auto it = cjsModuleTable_.find(filename);
-    return it != cjsModuleTable_.end() ? &cjsModules_[it->second] : nullptr;
-  }
-
-  /// \return the CJS module with ID \p index, nullptr on failure.
-  CJSModule *getCJSModule(uint32_t index) {
-    return index < cjsModules_.size() ? &cjsModules_[index] : nullptr;
-  }
-
   /// \return the sourceURL, or an empty string if none.
   llvm::StringRef getSourceURL() const {
     return sourceURL_;
@@ -383,9 +338,9 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// They will be created lazily when needed.
   void initializeFunctionMap();
 
-  // /// Import the CommonJS module table.
-  // /// Set every module to uninitialized, except for the first module.
-  void importCJSModuleTable();
+  /// Import the CommonJS module table.
+  /// Set every module to uninitialized, except for the first module.
+  LLVM_NODISCARD ExecutionStatus importCJSModuleTable();
 
   /// Map the supplied string to a given \p stringID, register it in the
   /// identifier table, and \return the symbol ID.

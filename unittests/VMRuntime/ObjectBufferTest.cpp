@@ -118,9 +118,9 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   BMG.addFunction(F);
   BMG.setFunctionGenerator(F, std::move(BFG));
 
-  auto *runtimeModule = RuntimeModule::create(
-      runtime,
-      domain,
+  auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
+
+  runtimeModule->initializeWithoutCJSModules(
       BCProviderFromSrc::createBCProviderFromSrc(BMG.generate()));
 
   ASSERT_EQ(detail::mapString(*runtimeModule, "a"), IDa);

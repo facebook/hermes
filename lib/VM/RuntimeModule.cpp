@@ -78,7 +78,7 @@ void RuntimeModule::prepareForRuntimeShutdown() {
   }
 }
 
-RuntimeModule *RuntimeModule::create(
+CallResult<RuntimeModule *> RuntimeModule::create(
     Runtime *runtime,
     Handle<Domain> domain,
     std::shared_ptr<hbc::BCProvider> &&bytecode,
@@ -86,26 +86,36 @@ RuntimeModule *RuntimeModule::create(
     llvm::StringRef sourceURL) {
   auto *result = new RuntimeModule(runtime, domain, flags, sourceURL);
   if (bytecode) {
-    result->initialize(std::move(bytecode));
+    if (result->initialize(std::move(bytecode)) == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
   }
   return result;
 }
 
-void RuntimeModule::initialize(std::shared_ptr<hbc::BCProvider> &&bytecode) {
+void RuntimeModule::initializeWithoutCJSModules(
+    std::shared_ptr<hbc::BCProvider> &&bytecode) {
   assert(!bcProvider_ && "RuntimeModule already initialized");
   bcProvider_ = std::move(bytecode);
   importStringIDMap();
   initializeFunctionMap();
-  importCJSModuleTable();
 }
 
-RuntimeModule *RuntimeModule::createManual(
+ExecutionStatus RuntimeModule::initialize(
+    std::shared_ptr<hbc::BCProvider> &&bytecode) {
+  initializeWithoutCJSModules(std::move(bytecode));
+  if (LLVM_UNLIKELY(importCJSModuleTable() == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+CallResult<RuntimeModule *> RuntimeModule::createManual(
     Runtime *runtime,
     Handle<Domain> domain,
     std::shared_ptr<hbc::BCProvider> &&bytecode,
     RuntimeModuleFlags flags) {
-  auto *result = create(runtime, domain, std::move(bytecode), flags);
-  return result;
+  return create(runtime, domain, std::move(bytecode), flags);
 }
 
 CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
@@ -175,7 +185,9 @@ void RuntimeModule::initializeLazy(std::unique_ptr<hbc::BCProvider> bytecode) {
   // Clear the old data provider first.
   bcProvider_ = nullptr;
 
-  initialize(std::move(bytecode));
+  // Initialize without CJS module table because this compilation is done
+  // separately, and the bytecode will not contain a module table.
+  initializeWithoutCJSModules(std::move(bytecode));
 
   // createLazyCodeBlock added a single codeblock as functionMap_[0]
   assert(functionMap_[0] && "Missing first entry");
@@ -251,19 +263,9 @@ void RuntimeModule::initializeFunctionMap() {
   functionMap_.resize(bcProvider_->getFunctionCount());
 }
 
-void RuntimeModule::importCJSModuleTable() {
-  assert(bcProvider_ && "Uninitialized RuntimeModule");
-  for (const auto &pair : bcProvider_->getCJSModuleTable()) {
-    auto index = cjsModules_.size();
-    cjsModules_.emplace_back(CJSModule{pair.second});
-    auto result =
-        cjsModuleTable_.try_emplace(getSymbolIDFromStringID(pair.first), index);
-    (void)result;
-    assert(result.second && "Duplicate CJS modules");
-  }
-  for (const auto &functionID : bcProvider_->getCJSModuleTableStatic()) {
-    cjsModules_.emplace_back(CJSModule{functionID});
-  }
+ExecutionStatus RuntimeModule::importCJSModuleTable() {
+  PerfSection perf("Import CJS Module Table");
+  return Domain::importCJSModuleTable(getDomain(runtime_), runtime_, this);
 }
 
 StringPrimitive *RuntimeModule::getStringPrimFromStringID(StringID stringID) {
@@ -305,15 +307,6 @@ SymbolID RuntimeModule::mapString(
 }
 
 void RuntimeModule::markRoots(SlotAcceptor &acceptor, bool markLongLived) {
-  for (auto &it : cjsModuleTable_) {
-    acceptor.accept(it.first);
-  }
-
-  for (auto &it : cjsModules_) {
-    acceptor.acceptPtr(it.module);
-    acceptor.accept(it.cachedExports);
-  }
-
   if (markLongLived) {
     for (auto symbol : stringIDMap_) {
       if (symbol.isValid()) {
@@ -373,8 +366,7 @@ size_t RuntimeModule::additionalMemorySize() const {
   size_t total = stringIDMap_.capacity() * sizeof(SymbolID) +
       functionMap_.capacity() * sizeof(CodeBlock *) +
       dependentModules_.capacity() * sizeof(RuntimeModule *) +
-      objectLiteralHiddenClasses_.getMemorySize() +
-      cjsModuleTable_.getMemorySize() + cjsModules_.capacity_in_bytes();
+      objectLiteralHiddenClasses_.getMemorySize();
   // Add the size of each CodeBlock
   for (const CodeBlock *cb : functionMap_) {
     // Skip the null code blocks, they are lazily inserted the first time
