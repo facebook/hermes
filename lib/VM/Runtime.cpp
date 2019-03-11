@@ -205,6 +205,10 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       StackFrameLayout::CalleeExtraRegistersAtStart,
       HermesValue::encodeUndefinedValue());
 
+  // Initialize predefinedStrings_.
+  // This function does not do any allocations.
+  initPredefinedStrings();
+
   // Initialize special code blocks pointing to their own runtime module.
   // specialCodeBlockRuntimeModule_ will be owned by runtimeModuleList_.
   RuntimeModuleFlags flags;
@@ -220,10 +224,6 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       "specialCodeBlockRuntimeModule_ not added to runtimeModuleList_");
   emptyCodeBlock_ = specialCodeBlockRuntimeModule_->getCodeBlock(0);
   returnThisCodeBlock_ = specialCodeBlockRuntimeModule_->getCodeBlock(1);
-
-  // Initialize predefinedStrings_.
-  // This function does not do any allocations.
-  initPredefinedStrings();
 
   // At this point, allocations can begin, as all the roots are markable.
 
