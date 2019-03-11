@@ -61,8 +61,6 @@ union RuntimeModuleFlags {
 /// If executing a CodeBlock, construct a RuntimeModule with
 /// RuntimeModule::create(runtime) first. If the string ID map and function map
 /// are needed, then use RuntimeModule::create(runtime, bytecodeModule).
-/// If the runtime module created shall be owned by the current scope instead
-/// of JSFunctions, use createManual.
 ///
 /// All RuntimeModule-s associated with a \c Runtime are kept together in a
 /// linked list which can be walked to perform memory management tasks.
@@ -193,16 +191,6 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// \param bytecode the bytecode data to initialize it with.
   LLVM_NODISCARD ExecutionStatus
   initialize(std::shared_ptr<hbc::BCProvider> &&bytecode);
-
-  /// Creates a RuntimeModule who will be managed manually, and after creation
-  /// is guaranteed to have a user.
-  /// If the number of users goes to zero it will be destroyed, and if not it
-  /// will be destroyed when the Runtime is destroyed.
-  static CallResult<RuntimeModule *> createManual(
-      Runtime *runtime,
-      Handle<Domain> domain,
-      std::shared_ptr<hbc::BCProvider> &&bytecode = nullptr,
-      RuntimeModuleFlags flags = {});
 
   /// Prepares this RuntimeModule for the systematic destruction of all modules.
   /// Normal destruction is reference counted, but when the Runtime shuts down,

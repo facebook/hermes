@@ -110,14 +110,6 @@ ExecutionStatus RuntimeModule::initialize(
   return ExecutionStatus::RETURNED;
 }
 
-CallResult<RuntimeModule *> RuntimeModule::createManual(
-    Runtime *runtime,
-    Handle<Domain> domain,
-    std::shared_ptr<hbc::BCProvider> &&bytecode,
-    RuntimeModuleFlags flags) {
-  return create(runtime, domain, std::move(bytecode), flags);
-}
-
 CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
 #ifndef HERMESVM_LEAN
   if (bcProvider_->isFunctionLazy(index)) {
