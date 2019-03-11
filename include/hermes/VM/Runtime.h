@@ -202,8 +202,8 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   }
 
   /// \return a \c SymbolID of a predefined symbol.
-  SymbolID getPredefinedSymbolID(Predefined::Str predefined);
-  SymbolID getPredefinedSymbolID(Predefined::Sym predefined);
+  static constexpr SymbolID getPredefinedSymbolID(Predefined::Str predefined);
+  static constexpr SymbolID getPredefinedSymbolID(Predefined::Sym predefined);
 
   /// \return the \c StringPrimitive of a predefined string.
   StringPrimitive *getPredefinedString(Predefined::Str predefined);
@@ -734,7 +734,7 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   /// 1) a function that returns the global object.
   static std::unique_ptr<Buffer> generateSpecialRuntimeBytecode();
 
-  /// Initialize the \c predefinedStrings_ array.
+  /// Insert the predefined strings into the IdentifierTable.
   /// NOTE: this function does not do any allocations in the GC heap, it is safe
   /// to use at any time in initialization.
   void initPredefinedStrings();
@@ -908,11 +908,6 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
 
   /// Cache for property lookups in non-JS code.
   PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
-
-  /// Pre-defined strings. These are returned wrapped by SymbolID. We do not
-  /// store SymbolID directly because default constructing all strings would be
-  /// needlessly expensive.
-  std::vector<SymbolID::RawType> predefinedStrings_{};
 
   /// StringPrimitive representation of the first 256 characters.
   /// These are allocated as "long-lived" objects, so they don't need
@@ -1153,22 +1148,14 @@ inline void Runtime::ttiReached() {
   heap_.ttiReached();
 }
 
-inline SymbolID Runtime::getPredefinedSymbolID(Predefined::Str predefined) {
-  assert(
-      Predefined::_STRING_BEFORE_FIRST < predefined &&
-      predefined < Predefined::_STRING_AFTER_LAST &&
-      "Invalid predefined symbol");
-  return SymbolID::unsafeCreate(
-      predefinedStrings_[predefined - ReservedSymbolID::NumInternalProperties]);
+/* static */ constexpr SymbolID Runtime::getPredefinedSymbolID(
+    Predefined::Str predefined) {
+  return SymbolID::unsafeCreate(predefined);
 }
 
-inline SymbolID Runtime::getPredefinedSymbolID(Predefined::Sym predefined) {
-  assert(
-      Predefined::_SYMBOL_BEFORE_FIRST < predefined &&
-      predefined < Predefined::_SYMBOL_AFTER_LAST &&
-      "Invalid predefined symbol");
-  return SymbolID::unsafeCreate(
-      predefinedStrings_[predefined - ReservedSymbolID::NumInternalProperties]);
+/* static */ constexpr SymbolID Runtime::getPredefinedSymbolID(
+    Predefined::Sym predefined) {
+  return SymbolID::unsafeCreateNotUniqued((unsigned)predefined);
 }
 
 inline StringPrimitive *Runtime::getPredefinedString(

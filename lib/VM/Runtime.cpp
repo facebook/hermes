@@ -206,7 +206,7 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       StackFrameLayout::CalleeExtraRegistersAtStart,
       HermesValue::encodeUndefinedValue());
 
-  // Initialize predefinedStrings_.
+  // Initialize Predefined Strings.
   // This function does not do any allocations.
   initPredefinedStrings();
 
@@ -881,7 +881,6 @@ std::unique_ptr<Buffer> Runtime::generateSpecialRuntimeBytecode() {
 void Runtime::initPredefinedStrings() {
   assert(!getTopGCScope() && "There shouldn't be any handles allocated yet");
 
-  predefinedStrings_.resize((unsigned)Predefined::_SYMBOL_AFTER_LAST);
   /// Create a buffer containing all strings.
   /// This ensures that all the strings live together in memory,
   /// and that we don't touch multiple separate pages to run this.
@@ -904,9 +903,13 @@ void Runtime::initPredefinedStrings() {
 #include "hermes/VM/PredefinedSymbols.def"
   };
 
+  uint32_t offset = 0;
+  uint32_t registered = 0;
+  (void)registered;
+
   for (uint32_t idx = 0; idx < Predefined::_IPROP_AFTER_LAST; ++idx) {
     SymbolID sym = identifierTable_.createNotUniquedLazySymbol("");
-    assert(sym == ReservedSymbolID::internalProperty(idx));
+    assert(sym == ReservedSymbolID::internalProperty(registered++));
     (void)sym;
   }
 
@@ -914,25 +917,23 @@ void Runtime::initPredefinedStrings() {
   static_assert(
       strCount == sizeof hashes / sizeof hashes[0],
       "Arrays should have same length");
-  uint32_t offset = 0;
   for (uint32_t idx = 0; idx < strCount; idx++) {
-    predefinedStrings_[idx] =
-        identifierTable_
-            .registerLazyIdentifier(
-                {&buffer[offset], strLengths[idx]}, hashes[idx])
-            .unsafeGetRaw();
+    SymbolID sym = identifierTable_.registerLazyIdentifier(
+        ASCIIRef{&buffer[offset], strLengths[idx]}, hashes[idx]);
+
+    assert(sym == getPredefinedSymbolID((Predefined::Str)registered++));
+    (void)sym;
 
     offset += strLengths[idx];
   }
 
   constexpr uint32_t symCount = sizeof symLengths / sizeof symLengths[0];
   for (uint32_t idx = 0; idx < symCount; ++idx) {
-    // Register at an offset of strCount to account for existing hashed strings.
-    predefinedStrings_[strCount + idx] =
-        identifierTable_
-            .createNotUniquedLazySymbol(
-                ASCIIRef{&buffer[offset], symLengths[idx]})
-            .unsafeGetRaw();
+    SymbolID sym = identifierTable_.createNotUniquedLazySymbol(
+        ASCIIRef{&buffer[offset], symLengths[idx]});
+
+    assert(sym == getPredefinedSymbolID((Predefined::Sym)registered++));
+    (void)sym;
 
     offset += symLengths[idx];
   }
