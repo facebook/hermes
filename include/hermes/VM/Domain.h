@@ -12,6 +12,7 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/StringPrimitive.h"
 
 namespace hermes {
 namespace vm {
@@ -202,6 +203,54 @@ class Domain final : public GCCell {
 
   /// Mark the WeakRefs in associated RuntimeModules which point to this Domain.
   void markWeakRefs(GC *gc);
+};
+
+/// The context used as the "this" value for require() calls, to allow the
+/// require() calls to find the Domain they must use to resolve requires, as
+/// well as to find the current directory name for path resolution.
+/// This must inherit from JSObject because even though the property storage is
+/// pointless, it is exposed to JS, and we assume that HermesValues which are
+/// objects are JSObjects.
+class RequireContext final : public JSObject {
+  using Super = JSObject;
+
+  static ObjectVTable vt;
+  friend void RequireContextBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
+
+  // We need two slots for the domain and dirname.
+  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
+      Super::NEEDED_PROPERTY_SLOTS + 2;
+
+ public:
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == CellKind::RequireContextKind;
+  }
+
+  /// Create a RequireContext with domain \p domain and dirname \p dirname.
+  static Handle<RequireContext> create(
+      Runtime *runtime,
+      Handle<Domain> domain,
+      Handle<StringPrimitive> dirname);
+
+  /// \return the domain for this require context.
+  static Domain *getDomain(RequireContext *self) {
+    return vmcast<Domain>(JSObject::getInternalProperty(self, 0));
+  }
+
+  /// \return the current dirname for this require context.
+  static StringPrimitive *getDirname(RequireContext *self) {
+    return vmcast<StringPrimitive>(JSObject::getInternalProperty(self, 1));
+  }
+
+ private:
+  RequireContext(
+      Runtime *runtime,
+      JSObject *parent,
+      HiddenClass *clazz,
+      JSObjectPropStorage *propStorage)
+      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
 };
 
 } // namespace vm

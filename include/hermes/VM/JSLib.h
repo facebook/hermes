@@ -13,6 +13,7 @@
 
 #include "hermes/Support/ScopeChain.h"
 #include "hermes/VM/CallResult.h"
+#include "hermes/VM/Domain.h"
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/HermesValue.h"
 
@@ -41,6 +42,17 @@ CallResult<HermesValue> evalInEnvironment(
     const ScopeChain &scopeChain,
     Handle<> thisArg,
     bool singleFunction);
+
+/// If the target CJS module is not initialized, execute it.
+/// \param thisArg the "this" argument to call require() with.
+/// \param fast true if we are doing a requireFast call and don't pass "this".
+/// \return the resultant module.exports object.
+CallResult<HermesValue> runRequireCall(
+    Runtime *runtime,
+    Handle<> thisArg,
+    Handle<Domain> domain,
+    uint32_t cjsModuleOffset,
+    bool fast);
 
 } // namespace vm
 } // namespace hermes

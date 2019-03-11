@@ -385,6 +385,7 @@ STR(returnThis, "return this")
 STR(require, "require")
 STR(requireFast, "requireFast")
 STR(exports, "exports")
+STR(dotSlash, "./")
 
 STR(squareObjectUndefined, "[object Undefined]")
 STR(squareObjectNull, "[object Null]")

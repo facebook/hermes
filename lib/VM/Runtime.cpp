@@ -626,27 +626,41 @@ CallResult<HermesValue> Runtime::runBytecode(
   getDebugger().willExecuteModule(runtimeModule, globalCode);
 #endif
 
-  // Create a JSFunction which will reference count the runtime module.
-  // Note that its handle gets registered in the scope, so we don't need to
-  // save it. Also note that environment will often be null here, except if this
-  // is local eval.
-  auto funcRes = JSFunction::create(
-      this,
-      domain,
-      Handle<JSObject>::vmcast(&functionPrototype),
-      environment,
-      globalCode);
+  if (runtimeModule->hasCJSModules()) {
+    auto requireContext = RequireContext::create(
+        this, domain, getPredefinedStringHandle(Predefined::dotSlash));
+    return runRequireCall(
+        this, requireContext, domain, *domain->getCJSModuleOffset(0), false);
+  } else if (runtimeModule->hasCJSModulesStatic()) {
+    return runRequireCall(
+        this,
+        getUndefinedValue(),
+        domain,
+        *domain->getCJSModuleOffset(0),
+        true);
+  } else {
+    // Create a JSFunction which will reference count the runtime module.
+    // Note that its handle gets registered in the scope, so we don't need to
+    // save it. Also note that environment will often be null here, except if
+    // this is local eval.
+    auto funcRes = JSFunction::create(
+        this,
+        domain,
+        Handle<JSObject>::vmcast(&functionPrototype),
+        environment,
+        globalCode);
 
-  if (funcRes == ExecutionStatus::EXCEPTION)
-    return ExecutionStatus::EXCEPTION;
+    if (funcRes == ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
 
-  ScopedNativeCallFrame newFrame{
-      this, 0, *funcRes, HermesValue::encodeUndefinedValue(), *thisArg};
-  if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return raiseStackOverflow();
-  return shouldRandomizeMemoryLayout_
-      ? interpretFunctionWithRandomStack(this, globalCode)
-      : interpretFunction(globalCode);
+    ScopedNativeCallFrame newFrame{
+        this, 0, *funcRes, HermesValue::encodeUndefinedValue(), *thisArg};
+    if (LLVM_UNLIKELY(newFrame.overflowed()))
+      return raiseStackOverflow();
+    return shouldRandomizeMemoryLayout_
+        ? interpretFunctionWithRandomStack(this, globalCode)
+        : interpretFunction(globalCode);
+  }
 }
 
 void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {

@@ -147,5 +147,42 @@ ExecutionStatus Domain::importCJSModuleTable(
   return ExecutionStatus::RETURNED;
 }
 
+ObjectVTable RequireContext::vt{
+    VTable(CellKind::RequireContextKind, sizeof(RequireContext)),
+    RequireContext::_getOwnIndexedRangeImpl,
+    RequireContext::_haveOwnIndexedImpl,
+    RequireContext::_getOwnIndexedPropertyFlagsImpl,
+    RequireContext::_getOwnIndexedImpl,
+    RequireContext::_setOwnIndexedImpl,
+    RequireContext::_deleteOwnIndexedImpl,
+    RequireContext::_checkAllOwnIndexedImpl,
+};
+
+void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  ObjectBuildMeta(cell, mb);
+}
+
+Handle<RequireContext> RequireContext::create(
+    Runtime *runtime,
+    Handle<Domain> domain,
+    Handle<StringPrimitive> dirname) {
+  auto propStorage = runtime->ignoreAllocationFailure(
+      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS));
+
+  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::No>(
+      sizeof(RequireContext));
+  auto self = runtime->makeHandle(new (mem) RequireContext(
+      runtime,
+      vmcast<JSObject>(runtime->objectPrototype),
+      runtime->getHiddenClassForPrototypeRaw(
+          vmcast<JSObject>(runtime->objectPrototype)),
+      *propStorage));
+
+  JSObject::addInternalProperties(self, runtime, 2, domain);
+  JSObject::setInternalProperty(*self, runtime, 1, dirname.getHermesValue());
+
+  return self;
+}
+
 } // namespace vm
 } // namespace hermes

@@ -263,6 +263,18 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
     return bcProvider_;
   }
 
+  /// \return true if the RuntimeModule has CJS modules that have not been
+  /// statically resolved.
+  bool hasCJSModules() const {
+    return !getBytecode()->getCJSModuleTable().empty();
+  }
+
+  /// \return true if the RuntimeModule has CJS modules that have been resolved
+  /// statically.
+  bool hasCJSModulesStatic() const {
+    return !getBytecode()->getCJSModuleTableStatic().empty();
+  }
+
   /// \return the domain which owns this RuntimeModule.
   inline Handle<Domain> getDomain(Runtime *);
 
