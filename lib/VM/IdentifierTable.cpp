@@ -21,10 +21,10 @@ namespace vm {
 
 IdentifierTable::IdentTableLookupEntry::IdentTableLookupEntry(
     StringPrimitive *str,
-    bool isExternal)
+    bool isNotUniqued)
     : strPrim_(str),
       isUTF16_(false),
-      isExternal_(isExternal),
+      isNotUniqued_(isNotUniqued),
       num_(NON_LAZY_STRING_PRIM_TAG) {
   assert(str && "Invalid string primitive pointer");
   llvm::SmallVector<char16_t, 32> storage{};
@@ -368,7 +368,7 @@ void IdentifierTable::freeSymbol(uint32_t index) {
       llvm::dbgs() << "Freeing symbol index " << index << " '"
                    << lookupVector_[index].getStringPrim() << "'\n");
 
-  if (LLVM_LIKELY(!lookupVector_[index].isExternal())) {
+  if (LLVM_LIKELY(!lookupVector_[index].isNotUniqued())) {
     hashTable_.remove(lookupVector_[index].getStringPrim());
   }
   freeID(index);
@@ -427,13 +427,13 @@ void IdentifierTable::freeUnmarkedSymbols(
   }
 }
 
-SymbolID IdentifierTable::createExternalLazySymbol(ASCIIRef desc) {
+SymbolID IdentifierTable::createNotUniquedLazySymbol(ASCIIRef desc) {
   uint32_t nextID = allocNextID();
   new (&lookupVector_[nextID]) IdentTableLookupEntry(desc, 0, true);
-  return SymbolID::unsafeCreateExternal(nextID);
+  return SymbolID::unsafeCreateNotUniqued(nextID);
 }
 
-CallResult<SymbolID> IdentifierTable::createExternalSymbol(
+CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
     Runtime *runtime,
     Handle<StringPrimitive> desc) {
   uint32_t nextID = allocNextID();
@@ -463,7 +463,7 @@ CallResult<SymbolID> IdentifierTable::createExternalSymbol(
   new (&lookupVector_[nextID]) IdentTableLookupEntry(*desc, true);
 #endif
 
-  return SymbolID::unsafeCreateExternal(nextID);
+  return SymbolID::unsafeCreateNotUniqued(nextID);
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SymbolID symbolID) {
@@ -473,7 +473,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SymbolID symbolID) {
     return OS << "SymbolID(DELETED)";
   else
     return OS << "SymbolID("
-              << (symbolID.isExternal() ? "(External)" : "(Internal)")
+              << (symbolID.isUniqued() ? "(Uniqued)" : "(Not Uniqued)")
               << symbolID.unsafeGetIndex() << ")";
 }
 

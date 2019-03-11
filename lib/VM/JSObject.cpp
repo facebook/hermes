@@ -379,7 +379,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyNames(
           return;
         }
 
-        if (id.isExternal()) {
+        if (id.isNotUniqued()) {
           return;
         }
 
@@ -531,7 +531,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertySymbols(
           return;
         }
 
-        if (id.isExternal()) {
+        if (id.isNotUniqued()) {
           tmpHandle = id;
           JSArray::setElementAt(array, runtime, index++, tmpHandle);
         }

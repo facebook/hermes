@@ -210,7 +210,7 @@ symbolConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   auto symbolRes =
-      runtime->getIdentifierTable().createExternalSymbol(runtime, descString);
+      runtime->getIdentifierTable().createNotUniquedSymbol(runtime, descString);
   if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -38,7 +38,7 @@ CallResult<SymbolID> SymbolRegistry::getSymbolForKey(
   }
 
   auto symbolRes =
-      runtime->getIdentifierTable().createExternalSymbol(runtime, key);
+      runtime->getIdentifierTable().createNotUniquedSymbol(runtime, key);
   if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

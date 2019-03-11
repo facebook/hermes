@@ -52,7 +52,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HermesValue hv) {
       return OS << "[NativeValue " << hv.getNativeValue() << "]";
     case SymbolTag:
       return OS << "[Symbol "
-                << (hv.getSymbol().isExternal() ? "(External)" : "(Internal)")
+                << (hv.getSymbol().isNotUniqued() ? "(External)" : "(Internal)")
                 << ' ' << hv.getSymbol().unsafeGetIndex() << "]";
     case BoolTag:
       return OS << (hv.getBool() ? "true" : "false");

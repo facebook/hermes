@@ -81,7 +81,7 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
 
 using IdentifierTableExternalTest = RuntimeTestFixture;
 
-TEST_F(IdentifierTableExternalTest, ExternalSymbol) {
+TEST_F(IdentifierTableExternalTest, NotUniquedSymbol) {
   auto &idTable = runtime->getIdentifierTable();
 
   {
@@ -89,9 +89,9 @@ TEST_F(IdentifierTableExternalTest, ExternalSymbol) {
     Handle<StringPrimitive> id1 = runtime->makeHandle<StringPrimitive>(
         *StringPrimitive::create(runtime, asdf));
     Handle<SymbolID> sym =
-        runtime->makeHandle(*idTable.createExternalSymbol(runtime, id1));
-    EXPECT_TRUE((*sym).isExternal());
-    EXPECT_FALSE((*sym).isInternal());
+        runtime->makeHandle(*idTable.createNotUniquedSymbol(runtime, id1));
+    EXPECT_TRUE((*sym).isNotUniqued());
+    EXPECT_FALSE((*sym).isUniqued());
     EXPECT_TRUE(idTable.getStringView(runtime, *sym).equals(asdf));
   }
 }

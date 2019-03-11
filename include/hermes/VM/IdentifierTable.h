@@ -151,19 +151,18 @@ class IdentifierTable {
   /// Invoked at the end of a GC to free all unmarked symbols.
   void freeUnmarkedSymbols(const std::vector<bool> &markedSymbols);
 
-  /// Allocate a new lazy external SymbolID which can be used as a Symbol
-  /// primitive; this function should only be used during Runtime
-  /// initialization.
-  /// Does not add an entry to the IdentifierHashTable.
-  /// \param desc the description of the external symbol.
+  /// Allocate a new SymbolID without adding an entry to the
+  /// IdentifierHashTable, so it is not uniqued; this function should only be
+  /// used during Runtime initialization. \param desc the description of the
+  /// external symbol.
   /// \return the newly allocated SymbolID.
-  SymbolID createExternalLazySymbol(ASCIIRef desc);
+  SymbolID createNotUniquedLazySymbol(ASCIIRef desc);
 
-  /// Allocate a new external SymbolID which can be used as a Symbol primitive.
-  /// Does not add an entry to the IdentifierHashTable.
+  /// Allocate a new SymbolID without adding an entry to the
+  /// IdentifierHashTable, so it is not uniqued.
   /// \param desc the description of the external symbol.
   /// \return the newly allocated SymbolID.
-  CallResult<SymbolID> createExternalSymbol(
+  CallResult<SymbolID> createNotUniquedSymbol(
       Runtime *runtime,
       Handle<StringPrimitive> desc);
 
@@ -206,9 +205,8 @@ class IdentifierTable {
     /// If the union is ASCII or UTF16, this is set to true if UTF16.
     bool isUTF16_ : 1;
 
-    /// Set to true if the Identifier is an external Symbol.
-    /// This means that the symbol hasn't been added to the hashtable.
-    bool isExternal_ : 1;
+    /// Set to true if the Identifier hasn't been added to the hashtable.
+    bool isNotUniqued_ : 1;
 
     uint32_t num_ : 30;
 
@@ -216,43 +214,43 @@ class IdentifierTable {
     uint32_t hash_{};
 
    public:
-    explicit IdentTableLookupEntry(ASCIIRef str, bool isExternal = false)
+    explicit IdentTableLookupEntry(ASCIIRef str, bool isNotUniqued = false)
         : asciiPtr_(str.data()),
           isUTF16_(false),
-          isExternal_(isExternal),
+          isNotUniqued_(isNotUniqued),
           num_(str.size()),
           hash_(hermes::hashString(str)) {}
     explicit IdentTableLookupEntry(
         ASCIIRef str,
         uint32_t hash,
-        bool isExternal = false)
+        bool isNotUniqued = false)
         : asciiPtr_(str.data()),
           isUTF16_(false),
-          isExternal_(isExternal),
+          isNotUniqued_(isNotUniqued),
           num_(str.size()),
           hash_(hash) {}
     explicit IdentTableLookupEntry(UTF16Ref str)
         : utf16Ptr_(str.data()),
           isUTF16_(true),
-          isExternal_(false),
+          isNotUniqued_(false),
           num_(str.size()),
           hash_(hermes::hashString(str)) {}
     explicit IdentTableLookupEntry(UTF16Ref str, uint32_t hash)
         : utf16Ptr_(str.data()),
           isUTF16_(true),
-          isExternal_(false),
+          isNotUniqued_(false),
           num_(str.size()),
           hash_(hash) {}
     explicit IdentTableLookupEntry(
         StringPrimitive *str,
-        bool isExternal = false);
+        bool isNotUniqued = false);
     explicit IdentTableLookupEntry(
         StringPrimitive *str,
         uint32_t hash,
-        bool isExternal = false)
+        bool isNotUniqued = false)
         : strPrim_(str),
           isUTF16_(true),
-          isExternal_(isExternal),
+          isNotUniqued_(isNotUniqued),
           num_(NON_LAZY_STRING_PRIM_TAG),
           hash_(hash) {
       assert(str && "Invalid string primitive pointer");
@@ -281,8 +279,8 @@ class IdentifierTable {
       // is a null check, and checking one pointer element is sufficient.
       return !strPrim_;
     }
-    bool isExternal() const {
-      return isExternal_;
+    bool isNotUniqued() const {
+      return isNotUniqued_;
     }
 
     /// Transform a lazy identifier into a StringPrimitive.

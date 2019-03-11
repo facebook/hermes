@@ -27,6 +27,7 @@
 #include "hermes/VM/PropertyCache.h"
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/RegExpMatch.h"
+#include "hermes/VM/ReservedSymbolIDs.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/StackFrame.h"
 #include "hermes/VM/SymbolRegistry.h"

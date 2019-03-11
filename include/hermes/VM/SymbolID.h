@@ -51,14 +51,15 @@ class SymbolID {
   SymbolID &operator=(const SymbolID &) = default;
 
   /// \return the index backing this SymbolID.
-  /// Top bit will be cleared, so this doesn't distinguish between external
-  /// and internal Symbols.
+  /// Top bit will be cleared, so this doesn't distinguish between uniqued
+  /// and not uniqued Symbols.
   uint32_t unsafeGetIndex() const {
     return id_ & ~0x80000000;
   }
 
   /// \return the raw 32-int number backing this SymbolID.
-  /// This encodes both the lookup vector index and the external status.
+  /// This encodes both the lookup vector index and whether the symbol has
+  /// been uniqued.
   RawType unsafeGetRaw() const {
     return id_;
   }
@@ -70,14 +71,16 @@ class SymbolID {
     return id_ >= FIRST_INVALID_ID;
   }
 
-  /// \return true if this SymbolID represents an external symbol (user-facing).
-  bool isExternal() const {
+  /// \return true if this SymbolID has not been uniqued through interning in
+  /// IdentifierTable's hash table.
+  constexpr bool isNotUniqued() const {
     static_assert(sizeof(RawType) == 4, "IdentifierID must be 32-bit");
     return id_ & 0x80000000;
   }
-  /// \return true if this SymbolID represents an internal symbol.
-  bool isInternal() const {
-    return !isExternal();
+  /// \return true if this SymbolID has been uniqued through interning in
+  /// IdentifierTable's hash table.
+  constexpr bool isUniqued() const {
+    return !isNotUniqued();
   }
 
   bool operator==(SymbolID sym) const {
@@ -110,15 +113,15 @@ class SymbolID {
     return SymbolID{DELETED_ID};
   }
 
-  /// Create an instance of an external \c SymbolID given its index.
+  /// Create an instance of a non-uniqued \c SymbolID given its index.
   /// This function is unsafe: there is nothing preventing the garbage collector
   /// from freeing the referenced identifier. So, this function must only be
   /// used when we have ensured by other means that the identifier cannot be
   /// collected: e.g. it could be stored in a Handle<SymbolID> or in a GC root.
   /// \param index the index of the given Symbol in the lookup vector.
-  /// This will create an external symbol (the top bit will be set).
-  static constexpr SymbolID unsafeCreateExternal(uint32_t index) {
-    return SymbolID{index | (RawType)(1 << 31)};
+  /// This will create a non-uniqued symbol (the top bit will be set).
+  static constexpr SymbolID unsafeCreateNotUniqued(uint32_t index) {
+    return SymbolID{index | 0x80000000};
   }
 
  private:

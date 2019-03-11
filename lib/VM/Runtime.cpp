@@ -920,7 +920,7 @@ void Runtime::initPredefinedStrings() {
     // Register at an offset of strCount to account for existing hashed strings.
     predefinedStrings_[strCount + idx] =
         identifierTable_
-            .createExternalLazySymbol(
+            .createNotUniquedLazySymbol(
                 ASCIIRef{&buffer[offset], symLengths[idx]})
             .unsafeGetRaw();
     offset += symLengths[idx];
@@ -1198,7 +1198,7 @@ llvm::raw_ostream &operator<<(
     return OS << "SymbolID(INVALID)";
 
   OS << "SymbolID("
-     << (format.symbolID.isExternal() ? "(External)" : "(Internal)")
+     << (format.symbolID.isNotUniqued() ? "(External)" : "(Internal)")
      << format.symbolID.unsafeGetIndex() << " \"";
 
   llvm::SmallString<16> buf;
