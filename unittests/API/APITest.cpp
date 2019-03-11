@@ -353,4 +353,11 @@ TEST_F(HermesRuntimeTest, HostObjectAsParentTest) {
       eval("var subClass = {__proto__: ho}; subClass.prop1 == 10;").getBool());
 }
 
+TEST_F(HermesRuntimeTest, GlobalObjectTest) {
+  rt->global().setProperty(*rt, "a", 5);
+  eval("f = function(b) { return a + b; }");
+  eval("gc()");
+  EXPECT_EQ(eval("f(10)").getNumber(), 15);
+}
+
 } // namespace

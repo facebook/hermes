@@ -9,6 +9,7 @@
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
 #include "llvm/Support/Path.h"
@@ -77,6 +78,7 @@ static CallResult<HermesValue> runRequireCall(
 
   auto funcRes = JSFunction::create(
       runtime,
+      runtimeModule->getDomain(runtime),
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       runtime->makeNullHandle<Environment>(),
       codeBlock);

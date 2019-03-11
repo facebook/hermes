@@ -5,7 +5,9 @@
  * file in the root directory of this source tree.
  */
 #include "TestHelpers.h"
+
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "hermes/VM/JSDate.h"
 
 using namespace hermes::hbc;
 using namespace hermes::vm;
@@ -37,6 +39,7 @@ static inline Handle<Callable> makeSimpleJSFunction(
   }
   return runtime->makeHandle<JSFunction>(*JSFunction::create(
       runtime,
+      runtimeModule->getDomain(runtime),
       Handle<JSObject>(runtime),
       Handle<Environment>(runtime),
       codeBlock));
@@ -143,7 +146,7 @@ TEST_F(ObjectModelTest, SimplePrototypeTest) {
 
 TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
   GCScope gcScope{runtime, "ObjectModelTest.DefineOwnPropertyTest", 200};
-  auto runtimeModule = RuntimeModule::create(runtime);
+  auto runtimeModule = RuntimeModule::create(runtime, domain);
   CallResult<bool> cr{false};
 
   auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
@@ -525,7 +528,7 @@ TEST_F(ObjectModelTest, EnvironmentSmokeTest) {
 }
 
 TEST_F(ObjectModelTest, NativeConstructorTest) {
-  auto functionCons = toHandle(
+  auto dateCons = toHandle(
       runtime,
       NativeConstructor::create(
           runtime,
@@ -533,13 +536,13 @@ TEST_F(ObjectModelTest, NativeConstructorTest) {
           nullptr,
           nullptr,
           0,
-          JSFunction::create,
+          JSDate::create,
           CellKind::FunctionKind));
-  auto crtRes = functionCons->newObject(
-      functionCons, runtime, runtime->makeNullHandle<JSObject>());
+  auto crtRes = dateCons->newObject(
+      dateCons, runtime, runtime->makeNullHandle<JSObject>());
   ASSERT_EQ(ExecutionStatus::RETURNED, crtRes.getStatus());
 
-  ASSERT_TRUE(dyn_vmcast<JSFunction>(*crtRes));
+  ASSERT_TRUE(dyn_vmcast<JSDate>(*crtRes));
 }
 
 /// Test "computed" methods on a non-array object.

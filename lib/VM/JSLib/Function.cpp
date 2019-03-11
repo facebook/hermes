@@ -62,12 +62,13 @@ Handle<JSObject> createFunctionConstructor(Runtime *runtime) {
   auto functionPrototype =
       Handle<Callable>::vmcast(&runtime->functionPrototype);
 
-  auto cons = defineSystemConstructor<JSFunction>(
+  auto cons = defineSystemConstructor(
       runtime,
       runtime->getPredefinedSymbolID(Predefined::Function),
       functionConstructor,
       functionPrototype,
       1,
+      JSFunction::createWithNewDomain,
       CellKind::FunctionKind);
 
   // Function.prototype.xxx() methods.
@@ -210,6 +211,7 @@ functionConstructor(void *, Runtime *runtime, NativeArgs args) {
       // If this raises an exception, we still return immediately.
       return JSFunction::create(
           runtime,
+          toHandle(runtime, Domain::create(runtime)),
           Handle<JSObject>(runtime, nullptr),
           Handle<Environment>(runtime, nullptr),
           runtime->getReturnThisCodeBlock());

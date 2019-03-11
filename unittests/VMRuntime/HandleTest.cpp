@@ -121,6 +121,7 @@ TEST_F(HandleTest, ValueAddAndRemoveTest) {
 }
 
 TEST_F(HandleTest, MarkTest) {
+  GCScope gcScope{runtime};
   Handle<> v1(runtime, HermesValue::encodeNumberValue(1));
   (void)v1;
   Handle<> v2(runtime, HermesValue::encodeNumberValue(2));
@@ -147,7 +148,7 @@ TEST_F(HandleTest, MarkTest) {
 /// Make sure that related Handle-s can be assigned.
 TEST_F(HandleTest, ScopedPointerConstructorTest) {
   auto function = runtime->makeHandle<JSFunction>(
-      *JSFunction::create(runtime, Handle<JSObject>(runtime, nullptr)));
+      *JSFunction::create(runtime, domain, Handle<JSObject>(runtime, nullptr)));
   Handle<JSObject> obj = function;
   ASSERT_EQ(function.get(), obj.get());
 }

@@ -6,6 +6,9 @@
  */
 #include "hermes/VM/Profiler/ModuleIdManager.h"
 
+#include "hermes/VM/Domain.h"
+#include "hermes/VM/RuntimeModule-inline.h"
+
 #include <algorithm>
 
 namespace hermes {
@@ -19,9 +22,11 @@ ModuleIdManager::ModuleId ModuleIdManager::findOrAdd(RuntimeModule *module) {
   }
   uint32_t moduleId = moduleIds_.size();
   moduleIds_[module] = moduleId;
-  // Add ref for runtime module.
-  module->addUser();
   idToModuleMap_[moduleId] = module;
+  if (domains_.empty() || domains_.back() == module->getDomainUnsafe()) {
+    // Only add the next domain if it hasn't already been added.
+    domains_.push_back(module->getDomainUnsafe());
+  }
   return moduleId;
 }
 
@@ -43,12 +48,17 @@ ModuleIdManager::BCProviderMap ModuleIdManager::generateBCProviderMap() const {
   return bcProviderMap;
 }
 
+void ModuleIdManager::markRoots(SlotAcceptorWithNames &acceptor) {
+  for (Domain *&domain : domains_) {
+    acceptor.acceptPtr(domain);
+  }
+}
+
 void ModuleIdManager::clear() {
   // Release module references.
-  for (const auto &entry : moduleIds_) {
-    entry.first->removeUser();
-  }
   moduleIds_.clear();
+  // Release domain references.
+  domains_.clear();
 }
 
 } // namespace vm

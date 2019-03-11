@@ -34,6 +34,7 @@
 //===----------------------------------------------------------------------===//
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/Domain.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/SmallXString.h"
@@ -54,7 +55,8 @@ namespace {
 
 Handle<StringPrimitive>
 benchmark(Runtime *runtime, double loopc, double factc) {
-  auto runtimeModule = RuntimeModule::createManual(runtime);
+  auto domain = toHandle(runtime, Domain::create(runtime));
+  auto runtimeModule = RuntimeModule::createManual(runtime, domain);
 
   std::map<int, int> labels{};
   std::map<int, int> jmps{};

@@ -10,6 +10,7 @@
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/RuntimeModule-inline.h"
 
 namespace hermes {
 namespace vm {
@@ -85,6 +86,7 @@ CallResult<HermesValue> externCreateClosure(
 
   return JSFunction::create(
       runtime,
+      codeBlock->getRuntimeModule()->getDomain(runtime),
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       Handle<Environment>::vmcast(env),
       codeBlock);

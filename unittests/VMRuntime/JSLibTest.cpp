@@ -5,6 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "TestHelpers.h"
+
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
@@ -462,7 +463,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     dpf.configurable = 1;
     dpf.setEnumerable = 1;
     dpf.enumerable = 1;
-    auto runtimeModule = RuntimeModule::createUninitialized(runtime);
+    auto runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
     BytecodeModuleGenerator BMG;
     auto BFG = BytecodeFunctionGenerator::create(BMG, 1);
@@ -471,11 +472,13 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     auto codeBlock = createCodeBlock(runtimeModule, BFG.get());
     auto getter = runtime->makeHandle<JSFunction>(*JSFunction::create(
         runtime,
+        runtimeModule->getDomain(runtime),
         Handle<JSObject>(runtime),
         Handle<Environment>(runtime),
         codeBlock));
     auto setter = runtime->makeHandle<JSFunction>(*JSFunction::create(
         runtime,
+        runtimeModule->getDomain(runtime),
         Handle<JSObject>(runtime),
         Handle<Environment>(runtime),
         codeBlock));

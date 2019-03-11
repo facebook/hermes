@@ -203,6 +203,11 @@ class SamplingProfiler {
   /// Unregister an active \p runtime and current thread with profiler.
   void unregisterRuntime(Runtime *runtime);
 
+  /// Mark roots that are kept alive by the SamplingProfiler.
+  void markRoots(SlotAcceptorWithNames &acceptor) {
+    moduleIdManager_.markRoots(acceptor);
+  }
+
   /// Dump sampled stack to \p OS.
   /// NOTE: this is for manual testing purpose.
   void dumpSampledStack(llvm::raw_ostream &OS);

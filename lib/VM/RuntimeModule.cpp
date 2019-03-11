@@ -8,8 +8,10 @@
 
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/Domain.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
 namespace hermes {
@@ -17,10 +19,18 @@ namespace vm {
 
 RuntimeModule::RuntimeModule(
     Runtime *runtime,
+    Handle<Domain> domain,
     RuntimeModuleFlags flags,
     llvm::StringRef sourceURL)
-    : runtime_(runtime), flags_(flags), sourceURL_(sourceURL) {
+    : runtime_(runtime),
+      domain_(&runtime->getHeap(), domain),
+      flags_(flags),
+      sourceURL_(sourceURL) {
+  assert(
+      domain_.isValid() && vmisa<Domain>(domain_.unsafeGetHermesValue()) &&
+      "initialized with invalid domain");
   runtime_->addRuntimeModule(this);
+  Domain::addRuntimeModule(domain, runtime, this);
 }
 
 SymbolID RuntimeModule::createSymbolFromStringID(
@@ -55,10 +65,6 @@ RuntimeModule::~RuntimeModule() {
       delete block;
     }
   }
-
-  for (auto *m : dependentModules_) {
-    m->removeUser();
-  }
 }
 
 void RuntimeModule::prepareForRuntimeShutdown() {
@@ -74,10 +80,11 @@ void RuntimeModule::prepareForRuntimeShutdown() {
 
 RuntimeModule *RuntimeModule::create(
     Runtime *runtime,
+    Handle<Domain> domain,
     std::shared_ptr<hbc::BCProvider> &&bytecode,
     RuntimeModuleFlags flags,
     llvm::StringRef sourceURL) {
-  auto result = new RuntimeModule(runtime, flags, sourceURL);
+  auto *result = new RuntimeModule(runtime, domain, flags, sourceURL);
   if (bytecode) {
     result->initialize(std::move(bytecode));
   }
@@ -94,18 +101,18 @@ void RuntimeModule::initialize(std::shared_ptr<hbc::BCProvider> &&bytecode) {
 
 RuntimeModule *RuntimeModule::createManual(
     Runtime *runtime,
+    Handle<Domain> domain,
     std::shared_ptr<hbc::BCProvider> &&bytecode,
     RuntimeModuleFlags flags) {
-  auto *result = create(runtime, std::move(bytecode), flags);
-  // Make sure the module never gets explicitly deleted.
-  result->addUser();
+  auto *result = create(runtime, domain, std::move(bytecode), flags);
   return result;
 }
 
 CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
 #ifndef HERMESVM_LEAN
   if (bcProvider_->isFunctionLazy(index)) {
-    auto *lazyModule = RuntimeModule::createLazyModule(runtime_, this, index);
+    auto *lazyModule = RuntimeModule::createLazyModule(
+        runtime_, getDomain(runtime_), this, index);
     functionMap_[index] = lazyModule->getOnlyLazyCodeBlock();
     return functionMap_[index];
   }
@@ -121,9 +128,10 @@ CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
 #ifndef HERMESVM_LEAN
 RuntimeModule *RuntimeModule::createLazyModule(
     Runtime *runtime,
+    Handle<Domain> domain,
     RuntimeModule *parent,
     uint32_t functionID) {
-  auto RM = createUninitialized(runtime);
+  auto RM = createUninitialized(runtime, domain);
   // Set the bcProvider's BytecodeModule to point to the parent's.
   assert(parent->isInitialized() && "Parent module must have been initialized");
 
@@ -161,7 +169,6 @@ SymbolID RuntimeModule::getLazyName() {
 
 void RuntimeModule::addDependency(RuntimeModule *child) {
   dependentModules_.push_back(child);
-  child->addUser();
 }
 
 void RuntimeModule::initializeLazy(std::unique_ptr<hbc::BCProvider> bytecode) {
@@ -329,6 +336,10 @@ void RuntimeModule::markWeakRoots(SlotAcceptor &acceptor) {
       acceptor.accept(reinterpret_cast<void *&>(entry.second));
     }
   }
+}
+
+void RuntimeModule::markDomainRef(GC *gc) {
+  gc->markWeakRef(domain_);
 }
 
 llvm::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(

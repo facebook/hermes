@@ -859,28 +859,30 @@ CallResult<HermesValue> NativeConstructor::_callImpl(
 //===----------------------------------------------------------------------===//
 // class JSFunction
 
-CallableVTable JSFunction::vt{{
-                                  VTable(
-                                      CellKind::FunctionKind,
-                                      sizeof(JSFunction),
-                                      JSFunction::_finalizeImpl),
-                                  JSFunction::_getOwnIndexedRangeImpl,
-                                  JSFunction::_haveOwnIndexedImpl,
-                                  JSFunction::_getOwnIndexedPropertyFlagsImpl,
-                                  JSFunction::_getOwnIndexedImpl,
-                                  JSFunction::_setOwnIndexedImpl,
-                                  JSFunction::_deleteOwnIndexedImpl,
-                                  JSFunction::_checkAllOwnIndexedImpl,
-                              },
-                              JSFunction::_newObjectImpl,
-                              JSFunction::_callImpl};
+CallableVTable JSFunction::vt{
+    {
+        VTable(CellKind::FunctionKind, sizeof(JSFunction)),
+        JSFunction::_getOwnIndexedRangeImpl,
+        JSFunction::_haveOwnIndexedImpl,
+        JSFunction::_getOwnIndexedPropertyFlagsImpl,
+        JSFunction::_getOwnIndexedImpl,
+        JSFunction::_setOwnIndexedImpl,
+        JSFunction::_deleteOwnIndexedImpl,
+        JSFunction::_checkAllOwnIndexedImpl,
+    },
+    JSFunction::_newObjectImpl,
+    JSFunction::_callImpl};
 
 void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   CallableBuildMeta(cell, mb);
+  const auto *self = static_cast<const JSFunction *>(cell);
+  mb.addNonPointerField("@codeBlock", &self->codeBlock_);
+  mb.addField("@domain", &self->domain_);
 }
 
 CallResult<HermesValue> JSFunction::create(
     Runtime *runtime,
+    Handle<Domain> domain,
     Handle<JSObject> parentHandle,
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
@@ -888,18 +890,13 @@ CallResult<HermesValue> JSFunction::create(
       runtime->alloc</*fixedSize*/ true, kHasFinalizer>(sizeof(JSFunction));
   auto *self = new (mem) JSFunction(
       runtime,
+      *domain,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(*parentHandle),
       envHandle,
       codeBlock);
   self->flags_.lazyObject = 1;
   return HermesValue::encodeObjectValue(self);
-}
-
-void JSFunction::_finalizeImpl(GCCell *cell, GC *) {
-  auto *self = vmcast<JSFunction>(cell);
-  // Destruct the object.
-  self->~JSFunction();
 }
 
 CallResult<HermesValue> JSFunction::_callImpl(

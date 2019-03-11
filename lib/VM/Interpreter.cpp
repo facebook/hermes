@@ -21,6 +21,7 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler.h"
 #include "hermes/VM/Runtime-inline.h"
+#include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
@@ -114,6 +115,7 @@ CallResult<HermesValue> Interpreter::createClosure(
     Handle<Environment> envHandle) {
   return JSFunction::create(
       runtime,
+      runtimeModule->getDomain(runtime),
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       envHandle,
       runtimeModule->getCodeBlock(funcIndex));

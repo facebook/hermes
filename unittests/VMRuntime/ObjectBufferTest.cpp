@@ -12,6 +12,7 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/Domain.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Runtime.h"
 
@@ -118,7 +119,9 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   BMG.setFunctionGenerator(F, std::move(BFG));
 
   auto *runtimeModule = RuntimeModule::create(
-      runtime, BCProviderFromSrc::createBCProviderFromSrc(BMG.generate()));
+      runtime,
+      domain,
+      BCProviderFromSrc::createBCProviderFromSrc(BMG.generate()));
 
   ASSERT_EQ(detail::mapString(*runtimeModule, "a"), IDa);
   ASSERT_EQ(detail::mapString(*runtimeModule, "b"), IDb);

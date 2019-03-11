@@ -17,6 +17,8 @@
 namespace hermes {
 namespace vm {
 
+class Domain;
+
 /// Manages profiler module/id/BCProvider mapping.
 class ModuleIdManager {
  public:
@@ -30,12 +32,13 @@ class ModuleIdManager {
   using ModuleIdMap = llvm::DenseMap<RuntimeModule *, ModuleId>;
 
   /// Maps from RuntimeModule to its id.
-  /// In charge of ref count for RuntimeModule.
   ModuleIdMap moduleIds_;
 
   /// Maps from module id to RuntimeModule.
-  /// Does not participate in RuntimeModule ref count.
   llvm::DenseMap<ModuleId, RuntimeModule *> idToModuleMap_;
+
+  /// Domains to be kept alive by this ModuleIdManager.
+  llvm::SmallVector<Domain *, 1> domains_;
 
  public:
   /// Find existing \p module or add it if does not exist.
@@ -47,6 +50,10 @@ class ModuleIdManager {
 
   /// \return the id => BCProvider map.
   ModuleIdManager::BCProviderMap generateBCProviderMap() const;
+
+  /// Mark roots that are kept alive by the ModuleIdManager.
+  /// Marks the domains of all registered RuntimeModules.
+  void markRoots(SlotAcceptorWithNames &acceptor);
 
   /// Release all modules.
   void clear();

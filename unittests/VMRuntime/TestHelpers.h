@@ -12,9 +12,11 @@
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/Domain.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StorageProvider.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringRefUtils.h"
@@ -65,10 +67,13 @@ class RuntimeTestFixtureBase : public ::testing::Test {
 
   GCScope gcScope;
 
+  Handle<Domain> domain;
+
   RuntimeTestFixtureBase(const RuntimeConfig &runtimeConfig)
       : rt(Runtime::create(runtimeConfig)),
         runtime(rt.get()),
-        gcScope(runtime) {}
+        gcScope(runtime),
+        domain(toHandle(runtime, Domain::create(runtime))) {}
 
   /// Can't copy due to internal pointer.
   RuntimeTestFixtureBase(const RuntimeTestFixtureBase &) = delete;

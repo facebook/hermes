@@ -7,6 +7,7 @@ set(source_files
   CheckHeapWellFormedAcceptor.cpp
   CodeBlock.cpp
   DictPropertyMap.cpp
+  Domain.cpp
   GCBase.cpp
   GCBase-FB.cpp
   GCCell.cpp

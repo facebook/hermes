@@ -8,6 +8,7 @@
 #define HERMES_VM_CALLABLE_H
 
 #include "hermes/VM/ArrayStorage.h"
+#include "hermes/VM/Domain.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/NativeArgs.h"
 
@@ -717,29 +718,30 @@ class NativeConstructor final : public NativeFunction {
 /// An interpreted callable function with environment.
 class JSFunction final : public Callable {
   using Super = Callable;
+  friend void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   /// CodeBlock to execute when called.
   CodeBlock *codeBlock_;
 
-  static constexpr auto kHasFinalizer = HasFinalizer::Yes;
+  static constexpr auto kHasFinalizer = HasFinalizer::No;
+
+  /// JSFunctions must keep their domains alive.
+  GCPointer<Domain> domain_;
 
  protected:
   JSFunction(
       Runtime *runtime,
+      Domain *domain,
       JSObject *parent,
       HiddenClass *clazz,
       Handle<Environment> environment,
       CodeBlock *codeBlock)
       : Callable(runtime, &vt.base.base, parent, clazz, environment),
-        codeBlock_(codeBlock) {
-    codeBlock->getRuntimeModule()->addUser();
+        codeBlock_(codeBlock),
+        domain_(domain, &runtime->getHeap()) {
     assert(
         !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
         "kHasFinalizer invalid value");
-  }
-
-  ~JSFunction() {
-    codeBlock_->getRuntimeModule()->removeUser();
   }
 
  public:
@@ -756,6 +758,7 @@ class JSFunction final : public Callable {
   /// Create a Function with the prototype property set to new Object().
   static CallResult<HermesValue> create(
       Runtime *runtime,
+      Handle<Domain> domain,
       Handle<JSObject> parentHandle,
       Handle<Environment> envHandle,
       CodeBlock *codeBlock);
@@ -764,12 +767,25 @@ class JSFunction final : public Callable {
   /// undefined, with the prototype property auto-initialized to new Object().
   static CallResult<HermesValue> create(
       Runtime *runtime,
+      Handle<Domain> domain,
       Handle<JSObject> parentHandle) {
     return create(
         runtime,
+        domain,
         parentHandle,
         runtime->makeNullHandle<Environment>(),
         runtime->getEmptyCodeBlock());
+  }
+
+  /// Create a Function with no environment and a CodeBlock simply returning
+  /// undefined, with the prototype property auto-initialized to new Object().
+  /// This creates a new Domain for the new Function to exist in, because it was
+  /// compiled separately from any currently executing JS code.
+  static CallResult<HermesValue> createWithNewDomain(
+      Runtime *runtime,
+      Handle<JSObject> protoHandle) {
+    return create(
+        runtime, toHandle(runtime, Domain::create(runtime)), protoHandle);
   }
 
   /// \return the code block containing the function code.
@@ -782,10 +798,6 @@ class JSFunction final : public Callable {
   }
 
  protected:
-  /// Called during GC when an object becomes unreachable. We need it because
-  /// CodeBlockPtr_ needs to be destructed.
-  static void _finalizeImpl(GCCell *cell, GC *);
-
   /// Call the JavaScript function with arguments already on the stack.
   /// \param construct true if this is a constructor call.
   static CallResult<HermesValue> _callImpl(

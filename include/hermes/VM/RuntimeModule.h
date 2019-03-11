@@ -12,6 +12,7 @@
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/StringRefUtils.h"
+#include "hermes/VM/WeakRef.h"
 
 #include "llvm/ADT/simple_ilist.h"
 
@@ -106,6 +107,15 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// SymbolID.
   std::vector<SymbolID> stringIDMap_;
 
+  /// Weak pointer to a GC-managed Domain that owns this RuntimeModule.
+  /// NOTE: This will not be made invalid through marking, because the domain
+  /// updates the WeakRefs on the RuntimeModule when it is marked.
+  /// We use WeakRef<Domain> here to express that the RuntimeModule does not own
+  /// the Domain.
+  /// We avoid using a raw pointer to Domain because we must be able to update
+  /// it when the GC moves the Domain.
+  WeakRef<Domain> domain_;
+
   /// The table maps from a function index to a CodeBlock.
   std::vector<CodeBlock *> functionMap_{};
 
@@ -116,10 +126,6 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// we run performance tests, we want to re-use a BCProvider between runtimes
   /// in order to minimize the noise.
   std::shared_ptr<hbc::BCProvider> bcProvider_{};
-
-  /// RuntimeModule is manually managed through reference counting,
-  /// which is more efficient than shared_ptr.
-  uint32_t refCount_{0};
 
   /// Flags associated with the module.
   RuntimeModuleFlags flags_{};
@@ -138,8 +144,12 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// Cacheing will be skipped if keyBufferIndex is >= 2^24.
   llvm::DenseMap<uint32_t, HiddenClass *> objectLiteralHiddenClasses_;
 
+  /// Registers the created RuntimeModule with \param domain, resulting in
+  /// \param domain owning it. The RuntimeModule will be freed when the
+  /// domain is collected..
   explicit RuntimeModule(
       Runtime *runtime,
+      Handle<Domain> domain,
       RuntimeModuleFlags flags,
       llvm::StringRef sourceURL);
 
@@ -168,6 +178,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// \return a raw pointer to the runtime module.
   static RuntimeModule *create(
       Runtime *runtime,
+      Handle<Domain> domain,
       std::shared_ptr<hbc::BCProvider> &&bytecode = nullptr,
       RuntimeModuleFlags flags = {},
       llvm::StringRef sourceURL = {});
@@ -176,8 +187,10 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// initialized later through lazy compilation.
   /// \param runtime the runtime to use for the identifier table.
   /// \return a raw pointer to the runtime module.
-  static RuntimeModule *createUninitialized(Runtime *runtime) {
-    return new RuntimeModule(runtime, RuntimeModuleFlags{}, "");
+  static RuntimeModule *createUninitialized(
+      Runtime *runtime,
+      Handle<Domain> domain) {
+    return new RuntimeModule(runtime, domain, RuntimeModuleFlags{}, "");
   }
 
 #ifndef HERMESVM_LEAN
@@ -186,6 +199,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// created RuntimeModule is going to be a dependent of the \p parent.
   static RuntimeModule *createLazyModule(
       Runtime *runtime,
+      Handle<Domain> domain,
       RuntimeModule *parent,
       uint32_t functionID);
 
@@ -220,6 +234,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// will be destroyed when the Runtime is destroyed.
   static RuntimeModule *createManual(
       Runtime *runtime,
+      Handle<Domain> domain,
       std::shared_ptr<hbc::BCProvider> &&bytecode = nullptr,
       RuntimeModuleFlags flags = {});
 
@@ -294,6 +309,12 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
     return bcProvider_;
   }
 
+  /// \return the domain which owns this RuntimeModule.
+  inline Handle<Domain> getDomain(Runtime *);
+
+  /// \return a raw pointer to the domain which owns this RuntimeModule.
+  inline Domain *getDomainUnsafe();
+
   /// \return a constant reference to the function map.
   const std::vector<CodeBlock *> &getFunctionMap() {
     return functionMap_;
@@ -326,27 +347,14 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
     return bcProvider_->getEpilogue();
   }
 
-  /// Called when a new JSFunction is created whose code block points to this.
-  void addUser() {
-    refCount_++;
-  }
-
-  /// Called when a JSFunction that uses this is destroyed.
-  /// If refCount_ becomes 0 after removal, this runtime module is deleted.
-  void removeUser() {
-    assert(refCount_ && "Negative refCount_ in RuntimeModule");
-    refCount_--;
-    if (refCount_ == 0 && !flags_.persistent) {
-      // We don't free persistent modules even when ref count is 0.
-      delete this;
-    }
-  }
-
   /// Mark the non-weak roots owned by this RuntimeModule.
   void markRoots(SlotAcceptor &acceptor, bool markLongLived);
 
   /// Mark the weak roots owned by this RuntimeModule.
   void markWeakRoots(SlotAcceptor &acceptor);
+
+  /// Mark the weak reference to the Domain which owns this RuntimeModule.
+  void markDomainRef(GC *gc);
 
   /// \return an estimate of the size of additional memory used by this
   /// RuntimeModule.

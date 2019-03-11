@@ -90,6 +90,7 @@ print(void *, Runtime *runtime, NativeArgs args) {
 
 class InterpreterFunctionTest : public RuntimeTestFixture {
  private:
+  Handle<Domain> domain;
   RuntimeModule *runtimeModule;
   BytecodeModuleGenerator BMG;
   bool hasRun = false;
@@ -100,7 +101,8 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
 
   InterpreterFunctionTest()
       : RuntimeTestFixture(),
-        runtimeModule(RuntimeModule::createManual(runtime)) {
+        domain(toHandle(runtime, Domain::create(runtime))),
+        runtimeModule(RuntimeModule::createManual(runtime, domain)) {
     BFG = BytecodeFunctionGenerator::create(BMG, 1);
   }
 
@@ -136,7 +138,7 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
 using InterpreterTest = RuntimeTestFixture;
 
 TEST_F(InterpreterTest, SimpleSmokeTest) {
-  auto runtimeModule = RuntimeModule::createUninitialized(runtime);
+  auto runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
   /*
    ; calculate 10 - 2 and print "result =" the value.
@@ -209,7 +211,7 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
 }
 
 TEST_F(InterpreterTest, IterativeFactorialTest) {
-  auto runtimeModule = RuntimeModule::createUninitialized(runtime);
+  auto runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
   /*
    get_arg    reg0, 1           ; load n
@@ -270,7 +272,7 @@ L2:
 }
 
 TEST_F(InterpreterTest, RecursiveFactorialTest) {
-  auto runtimeModule = RuntimeModule::createUninitialized(runtime);
+  auto runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
   auto factID = detail::mapString(*runtimeModule, "fact");
 
@@ -330,6 +332,7 @@ L1:
 
   auto factFn = runtime->makeHandle<JSFunction>(*JSFunction::create(
       runtime,
+      runtimeModule->getDomain(runtime),
       Handle<JSObject>(runtime),
       Handle<Environment>(runtime),
       codeBlock));
@@ -423,7 +426,7 @@ getSP(void *, Runtime *runtime, NativeArgs args) {
 // by the interpreter. We set a limit that will catch severe
 // regressions, e.g., due to compiler quirks.
 TEST_F(InterpreterTest, FrameSizeTest) {
-  auto runtimeModule = RuntimeModule::createUninitialized(runtime);
+  auto runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
   /*
    get_global   reg0

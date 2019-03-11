@@ -10,6 +10,7 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
 
@@ -33,6 +34,7 @@ void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSError *>(cell);
   mb.addField("@funcNames", &self->funcNames_);
+  mb.addField("@domains", &self->domains_);
 }
 
 CallResult<HermesValue> JSError::create(
@@ -196,14 +198,14 @@ static Handle<PropStorage> getCallStackFunctionNames(
   return std::move(names);
 }
 
-void JSError::recordStackTrace(
+ExecutionStatus JSError::recordStackTrace(
     Handle<JSError> selfHandle,
     Runtime *runtime,
     bool skipTopFrame,
     CodeBlock *codeBlock,
     const Inst *ip) {
   if (selfHandle->stacktrace_)
-    return;
+    return ExecutionStatus::RETURNED;
 
   auto frames = runtime->getStackFrames();
 
@@ -211,16 +213,42 @@ void JSError::recordStackTrace(
   // CodeBlock, do nothing.
   if (!skipTopFrame && !codeBlock && frames.begin() != frames.end() &&
       frames.begin()->getCalleeCodeBlock()) {
-    return;
+    return ExecutionStatus::RETURNED;
   }
 
   StackTracePtr stack{new StackTrace()};
+  auto domainsRes = ArrayStorage::create(runtime, 1);
+  if (LLVM_UNLIKELY(domainsRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto domains = runtime->makeMutableHandle<ArrayStorage>(
+      vmcast<ArrayStorage>(*domainsRes));
+
+  // Add the domain to the domains list, provided that it's not the same as the
+  // last domain in the list. This allows us to save storage with a constant
+  // time check, but we don't have to loop through and check every domain to
+  // deduplicate.
+  auto addDomain = [&domains,
+                    runtime](CodeBlock *codeBlock) -> ExecutionStatus {
+    Domain *domainPtr = codeBlock->getRuntimeModule()->getDomainUnsafe();
+    if (domains->size() > 0 &&
+        vmcast<Domain>(domains->at(domains->size() - 1)) == domainPtr) {
+      return ExecutionStatus::RETURNED;
+    }
+    GCScopeMarkerRAII marker{runtime};
+    Handle<Domain> domain = runtime->makeHandle(domainPtr);
+    return ArrayStorage::push_back(domains, runtime, domain);
+  };
 
   if (!skipTopFrame) {
-    if (codeBlock)
+    if (codeBlock) {
       stack->emplace_back(codeBlock, codeBlock->getOffsetOf(ip));
-    else
+      if (LLVM_UNLIKELY(addDomain(codeBlock) == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    } else {
       stack->emplace_back(nullptr, 0);
+    }
   }
 
   // Fill in the call stack.
@@ -230,6 +258,12 @@ void JSError::recordStackTrace(
     stack->emplace_back(
         savedCodeBlock,
         savedCodeBlock ? savedCodeBlock->getOffsetOf(cf.getSavedIP()) : 0);
+    if (savedCodeBlock) {
+      if (LLVM_UNLIKELY(
+              addDomain(savedCodeBlock) == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    }
   }
 
   // Remove the last entry.
@@ -245,6 +279,7 @@ void JSError::recordStackTrace(
 
   selfHandle->stacktrace_ = std::move(stack);
   selfHandle->funcNames_.set(*funcNames, &runtime->getHeap());
+  return ExecutionStatus::RETURNED;
 }
 
 /// Given a codeblock and opcode offset, \returns the debug information.

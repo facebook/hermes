@@ -18,6 +18,9 @@ namespace vm {
 /// exceptions. We only need to store the CodeBlock and bytecode offset
 /// to obtain the full function name/file name/position later when we
 /// need to generate the stacktrace string.
+/// We store the domains for the CodeBlocks within the JSError to ensure that
+/// the CodeBlocks never get freed, and thus every StackTraceInfo is still
+/// valid.
 struct StackTraceInfo {
   /// The code block of the function.
   CodeBlock *codeBlock;
@@ -25,35 +28,12 @@ struct StackTraceInfo {
   /// The bytecode offset where exception was thrown.
   uint32_t bytecodeOffset;
 
-  /// We need to manually manage the reference counting to the runtimemodule
-  /// in the constructor and destructor, because CodeBlocks collectively own
-  /// the runtime module through the reference counter. We need to make sure
-  /// the code block will not be freed if the exeception is passed around
-  /// across runtime modules.
   StackTraceInfo(CodeBlock *codeBlock, uint32_t bytecodeOffset)
-      : codeBlock(codeBlock), bytecodeOffset(bytecodeOffset) {
-    if (codeBlock)
-      codeBlock->getRuntimeModule()->addUser();
-  }
-  ~StackTraceInfo() {
-    if (codeBlock)
-      codeBlock->getRuntimeModule()->removeUser();
-  }
+      : codeBlock(codeBlock), bytecodeOffset(bytecodeOffset) {}
 
-  /// Delegate the copy constructor to the normal constructor, to properly
-  /// handle the refcount.
-  StackTraceInfo(const StackTraceInfo &that)
-      : StackTraceInfo(that.codeBlock, that.bytecodeOffset) {}
+  StackTraceInfo(const StackTraceInfo &) = default;
 
-  /// Move constructor can steal the RHS's refcount.
-  StackTraceInfo(StackTraceInfo &&that)
-      : codeBlock(that.codeBlock), bytecodeOffset(that.bytecodeOffset) {
-    that.codeBlock = nullptr;
-  }
-
-  /// Prevent assignment copy and move.
-  void operator=(const StackTraceInfo &that) = delete;
-  void operator=(StackTraceInfo &&that) = delete;
+  StackTraceInfo(StackTraceInfo &&) = default;
 };
 using StackTrace = std::vector<StackTraceInfo>;
 using StackTracePtr = std::unique_ptr<StackTrace>;
@@ -82,7 +62,7 @@ class JSError final : public JSObject {
   /// \param codeBlock optional current CodeBlock.
   /// \param ip if \c codeBlock is not \c nullptr, the instruction in the
   ///   current CodeBlock.
-  static void recordStackTrace(
+  static ExecutionStatus recordStackTrace(
       Handle<JSError> selfHandle,
       Runtime *runtime,
       bool skipTopFrame = false,
@@ -133,6 +113,9 @@ class JSError final : public JSObject {
 
   /// A pointer to the stack trace, or nullptr if it has not been set.
   StackTracePtr stacktrace_;
+
+  /// A list of Domains which are referenced by the stacktrace_.
+  GCPointer<ArrayStorage> domains_;
 
   /// If not null, an array of function names as the 'name' property of the
   /// Callables. This is parallel to the stack trace array.

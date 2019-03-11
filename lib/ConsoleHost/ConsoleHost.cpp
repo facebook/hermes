@@ -8,6 +8,7 @@
 
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/Domain.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/NativeArgs.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
@@ -159,7 +160,10 @@ bool executeHBCBytecode(
   flags.persistent = true;
 
   if (options.stopAfterInit) {
-    vm::RuntimeModule::create(runtime.get(), std::move(bytecode), flags);
+    vm::Handle<vm::Domain> domain =
+        vm::toHandle(runtime.get(), vm::Domain::create(runtime.get()));
+    vm::RuntimeModule::create(
+        runtime.get(), domain, std::move(bytecode), flags);
     return true;
   }
 

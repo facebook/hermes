@@ -22,12 +22,14 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/Domain.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
+#include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
 
@@ -214,8 +216,10 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
   // specialCodeBlockRuntimeModule_ will be owned by runtimeModuleList_.
   RuntimeModuleFlags flags;
   flags.hidesEpilogue = true;
+  specialCodeBlockDomain_ = Domain::create(this).getHermesValue();
   specialCodeBlockRuntimeModule_ = RuntimeModule::createManual(
       this,
+      Handle<Domain>::vmcast(&specialCodeBlockDomain_),
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
           generateSpecialRuntimeBytecode())
           .first,
@@ -341,6 +345,7 @@ void Runtime::markRoots(
 
   {
     MarkRootsPhaseTimer timer(this, MarkRootsPhase::RuntimeModules);
+    acceptor.accept(specialCodeBlockDomain_);
     for (auto &rm : runtimeModuleList_)
       rm.markRoots(acceptor, markLongLived);
     for (auto &entry : fixedPropCache_) {
@@ -440,6 +445,13 @@ void Runtime::markRoots(
   {
     MarkRootsPhaseTimer timer(this, MarkRootsPhase::SymbolRegistry);
     symbolRegistry_.markRoots(acceptor);
+  }
+
+  {
+    MarkRootsPhaseTimer timer(this, MarkRootsPhase::SamplingProfiler);
+    if (samplingProfiler_) {
+      samplingProfiler_->markRoots(acceptor);
+    }
   }
 
   {
@@ -594,11 +606,14 @@ CallResult<HermesValue> Runtime::runBytecode(
     // Start the warmup thread for this bytecode if it's a buffer.
     bytecode->startWarmup(bytecodeWarmupPercent_);
   }
-  auto runtimeModule =
-      RuntimeModule::create(this, std::move(bytecode), flags, sourceURL);
-  auto globalCode = runtimeModule->getCodeBlock(globalFunctionIndex);
 
   GCScope scope(this);
+
+  Handle<Domain> domain = toHandle(this, Domain::create(this));
+
+  auto runtimeModule = RuntimeModule::create(
+      this, domain, std::move(bytecode), flags, sourceURL);
+  auto globalCode = runtimeModule->getCodeBlock(globalFunctionIndex);
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // If the debugger is configured to pause on load, give it a chance to pause.
@@ -611,6 +626,7 @@ CallResult<HermesValue> Runtime::runBytecode(
   // is local eval.
   auto funcRes = JSFunction::create(
       this,
+      domain,
       Handle<JSObject>::vmcast(&functionPrototype),
       environment,
       globalCode);

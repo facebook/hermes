@@ -852,6 +852,9 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   /// Owned by specialCodeBlockRuntimeModule_.
   CodeBlock *returnThisCodeBlock_{};
 
+  /// Domain which owns the specialCodeBlockRuntimeModule_.
+  PinnedHermesValue specialCodeBlockDomain_{};
+
   /// The runtime module that owns emptyCodeBlock_ and returnThisCodeBlock_.
   /// We use a raw pointer here because it will be added to runtimeModuleList_,
   /// and will be freed when Runtime is freed.
