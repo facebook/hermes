@@ -263,13 +263,6 @@ void defineProperty(
   return defineProperty(runtime, objectHandle, name, value, dpf);
 }
 
-CallResult<HermesValue>
-throwTypeError(void *ctx, Runtime *runtime, NativeArgs) {
-  char *message = (char *)ctx;
-  assert(message != nullptr && "[[ThrowTypeError]] requires a message");
-  return runtime->raiseTypeError(TwineChar16(message));
-}
-
 ExecutionStatus iteratorCloseAndRethrow(
     Runtime *runtime,
     Handle<JSObject> iterator) {

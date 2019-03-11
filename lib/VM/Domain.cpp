@@ -6,7 +6,9 @@
  */
 #include "hermes/VM/Domain.h"
 
+#include "hermes/VM/Callable.h"
 #include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/JSLib.h"
 
 namespace hermes {
 namespace vm {
@@ -20,6 +22,7 @@ VTable Domain::vt{CellKind::DomainKind,
 void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Domain *>(cell);
   mb.addField("@cjsModules", &self->cjsModules_);
+  mb.addField("@throwingRequire", &self->throwingRequire_);
 }
 
 PseudoHandle<Domain> Domain::create(Runtime *runtime) {
@@ -97,6 +100,38 @@ ExecutionStatus Domain::importCJSModuleTable(
       return ExecutionStatus::EXCEPTION;
     }
     cjsModules = vmcast<ArrayStorage>(*cjsModulesRes);
+
+    auto requireFn = NativeFunction::create(
+        runtime,
+        Handle<JSObject>::vmcast(&runtime->functionPrototype),
+        const_cast<void *>(
+            (const void
+                 *)"Dynamic requires are not allowed after static resolution"),
+        throwTypeError,
+        runtime->getPredefinedSymbolID(Predefined::emptyString),
+        0,
+        runtime->makeNullHandle<JSObject>());
+
+    auto context = RequireContext::create(
+        runtime,
+        self,
+        runtime->getPredefinedStringHandle(Predefined::emptyString));
+
+    // Set the require.context property.
+    PropertyFlags pf = PropertyFlags::defaultNewNamedPropertyFlags();
+    pf.writable = 0;
+    pf.configurable = 0;
+    if (LLVM_UNLIKELY(
+            JSObject::defineNewOwnProperty(
+                requireFn,
+                runtime,
+                runtime->getPredefinedSymbolID(Predefined::context),
+                pf,
+                context) == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    self->throwingRequire_.set(*requireFn, &runtime->getHeap());
   } else {
     cjsModules = self->cjsModules_;
     // Resize the array to allow for the new modules, if necessary.

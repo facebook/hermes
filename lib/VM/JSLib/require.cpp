@@ -55,7 +55,7 @@ CallResult<HermesValue> runRequireCall(
 
   domain->setModule(cjsModuleOffset, runtime, module);
 
-  MutableHandle<> requireFn{runtime};
+  MutableHandle<JSObject> requireFn{runtime};
   if (context) {
     // Slow path.
     // If the context is provided, then it will be used to resolve string
@@ -68,13 +68,27 @@ CallResult<HermesValue> runRequireCall(
     if (LLVM_UNLIKELY(funcRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    requireFn = *funcRes;
+    requireFn = vmcast<BoundFunction>(*funcRes);
+
+    // Set the require.context property.
+    PropertyFlags pf = PropertyFlags::defaultNewNamedPropertyFlags();
+    pf.writable = 0;
+    pf.configurable = 0;
+    if (LLVM_UNLIKELY(
+            JSObject::defineNewOwnProperty(
+                requireFn,
+                runtime,
+                runtime->getPredefinedSymbolID(Predefined::context),
+                pf,
+                context) == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
   } else {
     // Fast path.
     // The context must not be provided, and any actual calls to require()
     // should have been turned into requireFast() calls.
     // Calls to require() should throw.
-    requireFn = runtime->throwInvalidRequire;
+    requireFn = domain->getThrowingRequire().get();
   }
 
   CodeBlock *codeBlock =

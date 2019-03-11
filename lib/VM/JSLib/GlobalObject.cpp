@@ -244,6 +244,13 @@ static CallResult<HermesValue> gc(void *, Runtime *runtime, NativeArgs) {
   return HermesValue::encodeUndefinedValue();
 }
 
+CallResult<HermesValue>
+throwTypeError(void *ctx, Runtime *runtime, NativeArgs) {
+  char *message = (char *)ctx;
+  assert(message != nullptr && "[[ThrowTypeError]] requires a message");
+  return runtime->raiseTypeError(TwineChar16(message));
+}
+
 // NOTE: when declaring more global symbols, don't forget to update
 // "Libhermes.h".
 void initGlobalObject(Runtime *runtime) {
@@ -371,19 +378,6 @@ void initGlobalObject(Runtime *runtime) {
   runtime->throwTypeErrorAccessor =
       runtime->ignoreAllocationFailure(PropertyAccessor::create(
           runtime, throwTypeErrorFunction, throwTypeErrorFunction));
-
-  runtime->throwInvalidRequire =
-      NativeFunction::create(
-          runtime,
-          Handle<JSObject>::vmcast(&runtime->functionPrototype),
-          const_cast<void *>((
-              const void
-                  *)"Dynamic requires are not allowed after static resolution"),
-          throwTypeError,
-          runtime->getPredefinedSymbolID(Predefined::emptyString),
-          0,
-          runtime->makeNullHandle<JSObject>())
-          .getHermesValue();
 
   // Define the 'parseInt' function.
   runtime->parseIntFunction =

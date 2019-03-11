@@ -403,7 +403,6 @@ void Runtime::markRoots(
     MARK(regExpLastInput);
     MARK(regExpLastRegExp);
     MARK(throwTypeErrorAccessor);
-    MARK(throwInvalidRequire);
     MARK(arrayClass);
     acceptor.acceptPtr(arrayClassRawPtr, "@arrayClass");
     MARK(iteratorPrototype);

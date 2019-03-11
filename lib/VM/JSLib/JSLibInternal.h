@@ -406,10 +406,6 @@ CallResult<HermesValue> encodeURI(void *, Runtime *runtime, NativeArgs args);
 CallResult<HermesValue>
 encodeURIComponent(void *, Runtime *runtime, NativeArgs args);
 
-/// The [[ThrowTypeError]] internal function.
-CallResult<HermesValue>
-throwTypeError(void *, Runtime *runtime, NativeArgs args);
-
 /// The require() function.
 /// Given a string containing a relative path to a module,
 /// require first checks the CommonJS module table to see if the module

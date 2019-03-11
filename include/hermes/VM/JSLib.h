@@ -53,6 +53,10 @@ CallResult<HermesValue> runRequireCall(
     Handle<Domain> domain,
     uint32_t cjsModuleOffset);
 
+/// The [[ThrowTypeError]] internal function.
+CallResult<HermesValue>
+throwTypeError(void *, Runtime *runtime, NativeArgs args);
+
 } // namespace vm
 } // namespace hermes
 

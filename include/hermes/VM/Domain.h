@@ -91,6 +91,12 @@ class Domain final : public GCCell {
   /// These will be freed from the Domain destructor.
   CopyableVector<RuntimeModule *> runtimeModules_{};
 
+  /// The require() function stub that is used when using requireFast() calls
+  /// within this domain. Holds the require.context property which users can use
+  /// to load new segments.
+  /// Lazily allocated upon loading the first CJS modules into this domain.
+  GCPointer<NativeFunction> throwingRequire_{};
+
  public:
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DomainKind;
@@ -183,6 +189,12 @@ class Domain final : public GCCell {
       Handle<JSObject> module) {
     cjsModules_->at(cjsModuleOffset + ModuleOffset)
         .set(module.getHermesValue(), &runtime->getHeap());
+  }
+
+  /// \return the throwing require function with require.context bound to a
+  /// context for this domain.
+  PseudoHandle<NativeFunction> getThrowingRequire() const {
+    return createPseudoHandle(throwingRequire_.get());
   }
 
  private:

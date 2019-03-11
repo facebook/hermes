@@ -574,8 +574,6 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   RegExpMatch regExpLastMatch{};
   /// [[ThrowTypeError]]
   PinnedHermesValue throwTypeErrorAccessor;
-  /// Throw a type error that indicates an invalid dynamic require.
-  PinnedHermesValue throwInvalidRequire;
   /// Class to be used for JSArray instances. Pointer to \c HiddenClass.
   PinnedHermesValue arrayClass;
   HiddenClass *arrayClassRawPtr{};

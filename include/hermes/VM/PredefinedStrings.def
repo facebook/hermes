@@ -384,6 +384,7 @@ STR(returnThis, "return this")
 
 STR(require, "require")
 STR(requireFast, "requireFast")
+STR(context, "context")
 STR(exports, "exports")
 STR(dotSlash, "./")
 
