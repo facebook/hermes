@@ -184,7 +184,7 @@ void BytecodeModuleGenerator::addCJSModuleStatic(
     uint32_t functionID) {
   assert(cjsModules_.empty() && "Unresolved modules must be in cjsModules_");
   assert(
-      moduleID == cjsModulesStatic_.size() &&
+      moduleID - cjsModuleOffset_ == cjsModulesStatic_.size() &&
       "Module ID out of order in cjsModulesStatic_");
   (void)moduleID;
   cjsModulesStatic_.push_back(functionID);
@@ -240,6 +240,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       std::move(arrayBuffer_),
       std::move(objKeyBuffer_),
       std::move(objValBuffer_),
+      cjsModuleOffset_,
       std::move(cjsModules_),
       std::move(cjsModulesStatic_),
       bytecodeOptions)};

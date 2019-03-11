@@ -31,6 +31,7 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
                             BM.getArrayBufferSize(),
                             BM.getObjectKeyBufferSize(),
                             BM.getObjectValueBufferSize(),
+                            BM.getCJSModuleOffset(),
                             cjsModuleCount,
                             debugInfoOffset_,
                             BM.getBytecodeOptions()};

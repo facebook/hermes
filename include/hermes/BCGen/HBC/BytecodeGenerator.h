@@ -255,6 +255,9 @@ class BytecodeModuleGenerator {
   /// This allows us to serialize the filenames as part of the debug info.
   UniquingStringTable filenameTable_{};
 
+  /// The ID of the first CJS module in this BytecodeModule.
+  uint32_t cjsModuleOffset_{0};
+
   /// A record of all the CJS modules registered in this run of generation.
   /// List of pairs: (filename ID, function index).
   std::vector<std::pair<uint32_t, uint32_t>> cjsModules_;
@@ -341,6 +344,11 @@ class BytecodeModuleGenerator {
   /// Add filename to the filename table.
   /// \return the index of the string.
   uint32_t addFilename(StringRef str);
+
+  /// Set the CJS module offset for this module.
+  void setCJSModuleOffset(uint32_t offset) {
+    cjsModuleOffset_ = offset;
+  }
 
   /// Adds a CJS module entry to the table.
   void addCJSModule(uint32_t functionID, uint32_t nameID);

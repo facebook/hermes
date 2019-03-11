@@ -284,6 +284,7 @@ BCProviderFromBuffer::BCProviderFromBuffer(std::unique_ptr<const Buffer> buffer)
   objValueBuffer_ = fields.objValueBuffer;
   regExpTable_ = fields.regExpTable;
   regExpStorage_ = fields.regExpStorage;
+  cjsModuleOffset_ = fileHeader->cjsModuleOffset;
   cjsModuleTable_ = fields.cjsModuleTable;
   cjsModuleTableStatic_ = fields.cjsModuleTableStatic;
 }

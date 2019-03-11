@@ -107,6 +107,8 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
   OS << "  Function count: " << bcProvider_->getFunctionCount() << "\n";
   OS << "  String count: " << bcProvider_->getStringCount() << "\n";
   OS << "  RegExp count: " << bcProvider_->getRegExpTable().size() << "\n";
+  OS << "  CommonJS module offset: " << bcProvider_->getCJSModuleOffset()
+     << "\n";
   OS << "  CommonJS module count: " << bcProvider_->getCJSModuleTable().size()
      << "\n";
   OS << "  CommonJS module count (static): "

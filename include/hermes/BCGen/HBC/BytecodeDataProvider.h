@@ -113,6 +113,9 @@ class BCProviderBase {
   llvm::ArrayRef<RegExpTableEntry> regExpTable_{};
   llvm::ArrayRef<unsigned char> regExpStorage_{};
 
+  /// The ID of the first CJS module in this BytecodeModule.
+  uint32_t cjsModuleOffset_;
+
   /// Table which indicates where to find the different CommonJS modules.
   /// List of unsorted pairs from {filename ID => function index}.
   llvm::ArrayRef<std::pair<uint32_t, uint32_t>> cjsModuleTable_{};
@@ -167,6 +170,9 @@ class BCProviderBase {
   }
   llvm::ArrayRef<unsigned char> getRegExpStorage() const {
     return regExpStorage_;
+  }
+  uint32_t getCJSModuleOffset() const {
+    return cjsModuleOffset_;
   }
   llvm::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTable() const {
     return cjsModuleTable_;
