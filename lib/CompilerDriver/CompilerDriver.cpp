@@ -402,6 +402,18 @@ static opt<unsigned> PadFunctionBodiesPercent(
 
 namespace {
 
+/// Encodes a list of files that are part of a given segment.
+using SegmentTableEntry = std::vector<std::unique_ptr<llvm::MemoryBuffer>>;
+
+/// Mapping from segment index to the file buffers in that segment.
+/// For a given table, table[i][j] is the j-indexed file in segment i.
+/// Use an std::map to ensure that the order of iteration is guaranteed here,
+/// allowing the assumption that the segments have strictly increasing
+/// module IDs. The entry point must be found at table[0][0].
+/// If multiple segments or multiple input files are not being used,
+/// the only input will be at table[0][0].
+using SegmentTable = std::map<uint32_t, SegmentTableEntry>;
+
 /// Read a file at path \p path into a memory buffer. If \p stdinOk is set,
 /// allow "-" to mean stdin. \return the memory buffer, or nullptr on error, in
 /// which case an error message will have been printed to llvm::errs().
@@ -745,12 +757,12 @@ std::shared_ptr<Context> createContext(
 /// In case of failure, ensure fileBufs is empty.
 /// \param inputPath the path to the directory or zip file containing metadata
 /// and files.
-/// \param fileBufs[out] result vector of file buffers.
+/// \param fileBufs[out] table of file buffers.
 /// \param alloc the allocator to use for JSON parsing of metadata.
 /// \return a pointer to the metadata JSON object, nullptr on failure.
 ::hermes::parser::JSONObject *readInputFilenamesFromDirectoryOrZip(
     llvm::StringRef inputPath,
-    std::vector<std::unique_ptr<llvm::MemoryBuffer>> &fileBufs,
+    SegmentTable &fileBufs,
     ::hermes::parser::JSLexer::Allocator &alloc,
     struct zip_t *zip) {
   // Get the path to the actual file given the path relative to the folder root.
@@ -805,11 +817,22 @@ std::shared_ptr<Context> createContext(
   }
 
   for (auto it : *segments) {
+    uint32_t segmentIdx;
+    if (it.first->str().getAsInteger(10, segmentIdx)) {
+      // getAsInteger returns true to signal error.
+      llvm::errs()
+          << "Metadata segment indices must be unsigned integers: Found "
+          << it.first->str() << '\n';
+      return nullptr;
+    }
+
     auto *segment = llvm::dyn_cast_or_null<parser::JSONArray>(it.second);
     if (!segment) {
       llvm::errs() << "Metadata segment information must be an array\n";
       return nullptr;
     }
+
+    SegmentTableEntry segmentBufs{};
     for (auto val : *segment) {
       auto *relPath = llvm::dyn_cast_or_null<parser::JSONString>(val);
       if (!relPath) {
@@ -820,7 +843,13 @@ std::shared_ptr<Context> createContext(
       if (!fileBuf) {
         return nullptr;
       }
-      fileBufs.push_back(std::move(fileBuf));
+      segmentBufs.push_back(std::move(fileBuf));
+    }
+    auto emplaceRes = fileBufs.emplace(segmentIdx, std::move(segmentBufs));
+    if (!emplaceRes.second) {
+      llvm::errs() << "Duplicate segment entry in metadata: " << segmentIdx
+                   << "\n";
+      return nullptr;
     }
   }
 
@@ -899,13 +928,14 @@ bool generateIRForSourcesAsCJSModules(
     Module &M,
     sem::SemContext &semCtx,
     const DeclarationFileListTy &declFileList,
-    std::vector<std::unique_ptr<llvm::MemoryBuffer>> fileBufs) {
+    SegmentTable fileBufs) {
   auto context = M.shareContext();
-  llvm::SmallString<64> rootPath{fileBufs[0]->getBufferIdentifier()};
+  llvm::SmallString<64> rootPath{fileBufs[0][0]->getBufferIdentifier()};
   llvm::sys::path::remove_filename(rootPath, llvm::sys::path::Style::posix);
 
   // Construct a MemoryBuffer for our global entry point.
-  llvm::SmallString<64> entryPointFilename{fileBufs[0]->getBufferIdentifier()};
+  llvm::SmallString<64> entryPointFilename{
+      fileBufs[0][0]->getBufferIdentifier()};
   llvm::sys::path::replace_path_prefix(
       entryPointFilename, rootPath, "./", llvm::sys::path::Style::posix);
   std::string requireString =
@@ -916,20 +946,22 @@ bool generateIRForSourcesAsCJSModules(
   auto *globalAST = parseJS(context, semCtx, std::move(globalMemBuffer));
   generateIRFromESTree(globalAST, &M, declFileList, {});
   Function *topLevelFunction = M.getTopLevelFunction();
-  for (auto &fileBuf : fileBufs) {
-    llvm::SmallString<64> filename{fileBuf->getBufferIdentifier()};
-    llvm::sys::path::replace_path_prefix(
-        filename, rootPath, "./", llvm::sys::path::Style::posix);
-    auto *ast = parseJS(context, semCtx, std::move(fileBuf), true);
-    if (!ast) {
-      return false;
+  for (auto &entry : fileBufs) {
+    for (auto &fileBuf : entry.second) {
+      llvm::SmallString<64> filename{fileBuf->getBufferIdentifier()};
+      llvm::sys::path::replace_path_prefix(
+          filename, rootPath, "./", llvm::sys::path::Style::posix);
+      auto *ast = parseJS(context, semCtx, std::move(fileBuf), true);
+      if (!ast) {
+        return false;
+      }
+      generateIRForCJSModule(
+          cast<ESTree::FunctionExpressionNode>(ast),
+          filename,
+          &M,
+          topLevelFunction,
+          declFileList);
     }
-    generateIRForCJSModule(
-        cast<ESTree::FunctionExpressionNode>(ast),
-        filename,
-        &M,
-        topLevelFunction,
-        declFileList);
   }
   return true;
 }
@@ -1076,15 +1108,17 @@ CompileResult generateBytecodeForSerialization(
 /// \return a CompileResult containing the compilation status and artifacts.
 CompileResult processSourceFiles(
     std::shared_ptr<Context> context,
-    std::vector<std::unique_ptr<llvm::MemoryBuffer>> fileBufs) {
+    SegmentTable fileBufs) {
   assert(!fileBufs.empty() && "Need at least one file to compile");
   assert(context && "Need a context to compile using");
   assert(!cl::BytecodeMode && "Input files must not be bytecode");
 
   llvm::SHA1 hasher;
-  for (const auto &file : fileBufs) {
-    hasher.update(
-        llvm::StringRef(file->getBufferStart(), file->getBufferSize()));
+  for (const auto &entry : fileBufs) {
+    for (const auto &file : entry.second) {
+      hasher.update(
+          llvm::StringRef(file->getBufferStart(), file->getBufferSize()));
+    }
   }
   auto rawFinalHash = hasher.final();
   SHA1 sourceHash{};
@@ -1093,13 +1127,17 @@ CompileResult processSourceFiles(
   std::copy(rawFinalHash.begin(), rawFinalHash.end(), sourceHash.begin());
 #ifndef NDEBUG
   if (cl::LexerOnly) {
-    parser::JSLexer jsLexer(
-        std::move(fileBufs[0]),
-        context->getSourceErrorManager(),
-        context->getAllocator());
     unsigned count = 0;
-    while (jsLexer.advance()->getKind() != parser::TokenKind::eof)
-      ++count;
+    for (auto &entry : fileBufs) {
+      for (auto &file : entry.second) {
+        parser::JSLexer jsLexer(
+            std::move(file),
+            context->getSourceErrorManager(),
+            context->getAllocator());
+        while (jsLexer.advance()->getKind() != parser::TokenKind::eof)
+          ++count;
+      }
+    }
     llvm::outs() << count << " tokens lexed\n";
     return Success;
   }
@@ -1149,7 +1187,7 @@ CompileResult processSourceFiles(
       return ParsingFailed;
     }
   } else {
-    ESTree::NodePtr ast = parseJS(context, semCtx, std::move(fileBufs[0]));
+    ESTree::NodePtr ast = parseJS(context, semCtx, std::move(fileBufs[0][0]));
     if (!ast) {
       return ParsingFailed;
     }
@@ -1290,7 +1328,7 @@ CompileResult compileFromCommandLineOptions() {
     return InvalidFlags;
 
   // Load input files.
-  std::vector<std::unique_ptr<llvm::MemoryBuffer>> fileBufs{};
+  SegmentTable fileBufs{};
 
   // Allocator for the metadata table.
   ::hermes::parser::JSLexer::Allocator metadataAlloc;
@@ -1315,19 +1353,21 @@ CompileResult compileFromCommandLineOptions() {
 
     resolutionTable = readResolutionTable(metadata);
   } else {
+    SegmentTableEntry entry{};
     for (const std::string &filename : cl::InputFilenames) {
       auto fileBuf = memoryBufferFromFile(filename, true);
       if (!fileBuf)
         return InputFileError;
-      fileBufs.push_back(std::move(fileBuf));
+      entry.push_back(std::move(fileBuf));
     }
+    fileBufs.emplace(0, std::move(entry));
   }
 
   if (cl::BytecodeMode) {
     assert(
-        fileBufs.size() == 1 &&
+        fileBufs.size() == 1 && fileBufs[0].size() == 1 &&
         "validateFlags() should enforce exactly one bytecode input file");
-    return processBytecodeFile(std::move(fileBufs.front()));
+    return processBytecodeFile(std::move(fileBufs[0][0]));
   } else {
     std::shared_ptr<Context> context =
         createContext(std::move(resolutionTable));
