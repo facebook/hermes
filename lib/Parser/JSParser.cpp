@@ -1572,7 +1572,7 @@ Optional<ESTree::Node *> JSParser::parsePropertyKey() {
       } else {
         sm_.error(
             tok_->getSourceRange(),
-            "invalid property name - must be a string, number of identifier");
+            "invalid property name - must be a string, number or identifier");
         return None;
       }
   }
