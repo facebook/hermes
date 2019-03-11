@@ -114,6 +114,18 @@ class Context {
   /// manage.
   using ResolutionTable = llvm::DenseMap<llvm::StringRef, ResolutionTableEntry>;
 
+  /// Represents a range of modules used in a given segment.
+  struct SegmentRange {
+    /// ID of the segment this range represents.
+    uint32_t segment;
+
+    /// ID of the first module in this segment, inclusive.
+    uint32_t first;
+
+    /// ID of the last module in this segment, inclusive.
+    uint32_t last;
+  };
+
  private:
   /// The allocator for AST nodes, which may be rolled back to parse subtrees
   /// during pre-parsing (for lazy parsing).
@@ -153,6 +165,12 @@ class Context {
   /// If non-null, the resolution table which resolves static require().
   const std::unique_ptr<ResolutionTable> resolutionTable_;
 
+  /// The table of segment ranges. The ranges are contiguous and generated based
+  /// on the user's metadata input to the compiler when splitting the bundle.
+  /// Determines which CJS modules are placed into which segment when splitting
+  /// the result bundle.
+  const std::vector<SegmentRange> segmentRanges_;
+
   /// Whether we should emit debug information. Default to false.
   DebugInfoSetting debugInfoSetting_{DebugInfoSetting::THROWING};
 
@@ -172,9 +190,11 @@ class Context {
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
       TypeCheckerSettings typeCheckOpts = TypeCheckerSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
-      std::unique_ptr<ResolutionTable> resolutionTable = nullptr)
+      std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
+      std::vector<SegmentRange> segmentRanges = {})
       : sm_(sm),
         resolutionTable_(std::move(resolutionTable)),
+        segmentRanges_(std::move(segmentRanges)),
         codeGenerationSettings_(std::move(codeGenOpts)),
         typeCheckerSettings_(std::move(typeCheckOpts)),
         optimizationSettings_(std::move(optimizationOpts)) {}
@@ -183,10 +203,12 @@ class Context {
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
       TypeCheckerSettings typeCheckOpts = TypeCheckerSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
-      std::unique_ptr<ResolutionTable> resolutionTable = nullptr)
+      std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
+      std::vector<SegmentRange> segmentRanges = {})
       : ownSm_(new SourceErrorManager()),
         sm_(*ownSm_),
         resolutionTable_(std::move(resolutionTable)),
+        segmentRanges_(std::move(segmentRanges)),
         codeGenerationSettings_(std::move(codeGenOpts)),
         typeCheckerSettings_(std::move(typeCheckOpts)),
         optimizationSettings_(std::move(optimizationOpts)) {}
@@ -210,6 +232,11 @@ class Context {
 
   SourceErrorManager &getSourceErrorManager() {
     return sm_;
+  }
+
+  /// \return the table for static require resolution, nullptr if not supplied.
+  const std::vector<SegmentRange> &getSegmentRanges() const {
+    return segmentRanges_;
   }
 
   /// \return the table for static require resolution, nullptr if not supplied.

@@ -663,7 +663,8 @@ bool validateFlags() {
 /// Create a Context, respecting the command line flags.
 /// \return the Context.
 std::shared_ptr<Context> createContext(
-    std::unique_ptr<Context::ResolutionTable> resolutionTable) {
+    std::unique_ptr<Context::ResolutionTable> resolutionTable,
+    std::vector<Context::SegmentRange> segmentRanges) {
   TypeCheckerSettings typeCheckerOpts;
   typeCheckerOpts.closureAnalysis = cl::EnableClosureAnalysis;
 
@@ -708,7 +709,8 @@ std::shared_ptr<Context> createContext(
       codeGenOpts,
       typeCheckerOpts,
       optimizationOpts,
-      std::move(resolutionTable));
+      std::move(resolutionTable),
+      std::move(segmentRanges));
 
   // Default is non-strict mode.
   context->setStrictMode(!cl::NonStrictMode && cl::StrictMode);
@@ -763,6 +765,7 @@ std::shared_ptr<Context> createContext(
 ::hermes::parser::JSONObject *readInputFilenamesFromDirectoryOrZip(
     llvm::StringRef inputPath,
     SegmentTable &fileBufs,
+    std::vector<Context::SegmentRange> &segmentRanges,
     ::hermes::parser::JSLexer::Allocator &alloc,
     struct zip_t *zip) {
   // Get the path to the actual file given the path relative to the folder root.
@@ -816,9 +819,11 @@ std::shared_ptr<Context> createContext(
     return nullptr;
   }
 
+  uint32_t moduleIdx = 0;
+
   for (auto it : *segments) {
-    uint32_t segmentIdx;
-    if (it.first->str().getAsInteger(10, segmentIdx)) {
+    Context::SegmentRange range;
+    if (it.first->str().getAsInteger(10, range.segment)) {
       // getAsInteger returns true to signal error.
       llvm::errs()
           << "Metadata segment indices must be unsigned integers: Found "
@@ -831,6 +836,10 @@ std::shared_ptr<Context> createContext(
       llvm::errs() << "Metadata segment information must be an array\n";
       return nullptr;
     }
+
+    range.first = moduleIdx;
+    range.last = moduleIdx + segment->size() - 1;
+    moduleIdx += segment->size();
 
     SegmentTableEntry segmentBufs{};
     for (auto val : *segment) {
@@ -845,12 +854,14 @@ std::shared_ptr<Context> createContext(
       }
       segmentBufs.push_back(std::move(fileBuf));
     }
-    auto emplaceRes = fileBufs.emplace(segmentIdx, std::move(segmentBufs));
+    auto emplaceRes = fileBufs.emplace(range.segment, std::move(segmentBufs));
     if (!emplaceRes.second) {
-      llvm::errs() << "Duplicate segment entry in metadata: " << segmentIdx
+      llvm::errs() << "Duplicate segment entry in metadata: " << range.segment
                    << "\n";
       return nullptr;
     }
+
+    segmentRanges.push_back(std::move(range));
   }
 
   return metadata;
@@ -1341,13 +1352,16 @@ CompileResult compileFromCommandLineOptions() {
   // Resolution table in metadata, null if none could be read.
   std::unique_ptr<Context::ResolutionTable> resolutionTable = nullptr;
 
+  // Segment table in metadata.
+  std::vector<Context::SegmentRange> segmentRanges;
+
   // Attempt to open the first file as a Zip file.
   struct zip_t *zip = zip_open(cl::InputFilenames[0].data(), 0, 'r');
 
   if (llvm::sys::fs::is_directory(cl::InputFilenames[0]) || zip) {
     ::hermes::parser::JSONObject *metadata =
         readInputFilenamesFromDirectoryOrZip(
-            cl::InputFilenames[0], fileBufs, metadataAlloc, zip);
+            cl::InputFilenames[0], fileBufs, segmentRanges, metadataAlloc, zip);
 
     if (zip) {
       zip_close(zip);
@@ -1358,6 +1372,13 @@ CompileResult compileFromCommandLineOptions() {
 
     resolutionTable = readResolutionTable(metadata);
   } else {
+    // If we aren't reading from a dir or a zip, we have only one segment.
+    Context::SegmentRange range;
+    range.first = 0;
+    range.last = cl::InputFilenames.size();
+    range.segment = 0;
+    segmentRanges.push_back(std::move(range));
+
     SegmentTableEntry entry{};
     for (const std::string &filename : cl::InputFilenames) {
       auto fileBuf = memoryBufferFromFile(filename, true);
@@ -1375,7 +1396,7 @@ CompileResult compileFromCommandLineOptions() {
     return processBytecodeFile(std::move(fileBufs[0][0]));
   } else {
     std::shared_ptr<Context> context =
-        createContext(std::move(resolutionTable));
+        createContext(std::move(resolutionTable), std::move(segmentRanges));
     return processSourceFiles(context, std::move(fileBufs));
   }
 }
