@@ -4,6 +4,7 @@
 // Runs an iterator until it is done.
 // Prints out `value` and `done` every iteration.
 function runIterator(it) {
+  print(it.toString());
   while (true) {
     var result = it.next();
     print(result.value, result.done);
@@ -22,58 +23,71 @@ print('Array Iterator');
 // CHECK-LABEL: Array Iterator
 var a = ['a','b','c'];
 runIterator(a.keys());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: 0 false
 // CHECK-NEXT: 1 false
 // CHECK-NEXT: 2 false
 // CHECK-NEXT: undefined true
 runIterator(a.values());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: a false
 // CHECK-NEXT: b false
 // CHECK-NEXT: c false
 // CHECK-NEXT: undefined true
 runIterator(a.entries());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: 0,a false
 // CHECK-NEXT: 1,b false
 // CHECK-NEXT: 2,c false
 // CHECK-NEXT: undefined true
 var a = [];
 runIterator(a.keys());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: undefined true
 runIterator(a.values());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: undefined true
 runIterator(a.entries());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: undefined true
 
 print('TypedArray Iterator');
 // CHECK-LABEL: TypedArray Iterator
 var a = new Uint8Array([10, 11, 12]);
 runIterator(a.keys());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: 0 false
 // CHECK-NEXT: 1 false
 // CHECK-NEXT: 2 false
 // CHECK-NEXT: undefined true
 runIterator(a.values());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: 10 false
 // CHECK-NEXT: 11 false
 // CHECK-NEXT: 12 false
 // CHECK-NEXT: undefined true
 runIterator(a.entries());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: 0,10 false
 // CHECK-NEXT: 1,11 false
 // CHECK-NEXT: 2,12 false
 // CHECK-NEXT: undefined true
 var a = new Uint8Array([]);
 runIterator(a.keys());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: undefined true
 runIterator(a.values());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: undefined true
 runIterator(a.entries());
+// CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: undefined true
 
 print('String Iterator');
 // CHECK-LABEL: String Iterator
 var a = 'abcd';
 runIterator(a[Symbol.iterator]());
+// CHECK-NEXT: [object String Iterator]
 // CHECK-NEXT: a false
 // CHECK-NEXT: b false
 // CHECK-NEXT: c false
@@ -81,9 +95,11 @@ runIterator(a[Symbol.iterator]());
 // CHECK-NEXT: undefined true
 var a = '';
 runIterator(a[Symbol.iterator]());
+// CHECK-NEXT: [object String Iterator]
 // CHECK-NEXT: undefined true
 var a = 'x\uD83D\uDCD3y';
 runIterator(a[Symbol.iterator]());
+// CHECK-NEXT: [object String Iterator]
 // CHECK-NEXT: x false
 // CHECK-NEXT: 📓 false
 // CHECK-NEXT: y false
