@@ -60,9 +60,8 @@ size_t Domain::_mallocSizeImpl(GCCell *cell) {
 ExecutionStatus Domain::importCJSModuleTable(
     Handle<Domain> self,
     Runtime *runtime,
-    RuntimeModule *runtimeModule) {
-  assert(!self->cjsModules_ && "Multiple module tables are unsupported");
-
+    RuntimeModule *runtimeModule,
+    uint32_t cjsModuleOffset) {
   if (runtimeModule->getBytecode()->getCJSModuleTable().empty() &&
       runtimeModule->getBytecode()->getCJSModuleTableStatic().empty()) {
     // Nothing to do, avoid allocating and simply return.
@@ -81,23 +80,38 @@ ExecutionStatus Domain::importCJSModuleTable(
       CJSModuleSize < 10, "CJSModuleSize must be small to avoid overflow");
 
   // Use uint64_t to allow us to check for overflow.
-  const uint64_t requiredSize = newModules * CJSModuleSize;
+  const uint64_t requiredSize = (cjsModuleOffset + newModules) * CJSModuleSize;
   if (requiredSize > std::numeric_limits<uint32_t>::max()) {
     return runtime->raiseRangeError("Loaded module count exceeded limit");
   }
 
-  // Create the module table on first import.
-  // Ensure the size and capacity are set correctly to allow for directly
-  // setting the values necessary.
-  auto cjsModulesRes =
-      ArrayStorage::create(runtime, requiredSize, requiredSize);
-  if (LLVM_UNLIKELY(cjsModulesRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  Handle<ArrayStorage> cjsModules{runtime,
-                                  vmcast<ArrayStorage>(*cjsModulesRes)};
+  MutableHandle<ArrayStorage> cjsModules{runtime};
 
-  uint32_t index = 0;
+  if (!self->cjsModules_) {
+    // Create the module table on first import.
+    // Ensure the size and capacity are set correctly to allow for directly
+    // setting the values necessary.
+    auto cjsModulesRes =
+        ArrayStorage::create(runtime, requiredSize, requiredSize);
+    if (LLVM_UNLIKELY(cjsModulesRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    cjsModules = vmcast<ArrayStorage>(*cjsModulesRes);
+  } else {
+    cjsModules = self->cjsModules_;
+    // Resize the array to allow for the new modules, if necessary.
+    if (requiredSize > self->cjsModules_->size()) {
+      if (LLVM_UNLIKELY(
+              ArrayStorage::resize(cjsModules, runtime, requiredSize) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    }
+  }
+
+  assert(cjsModules && "cjsModules not set");
+
+  uint32_t index = cjsModuleOffset * CJSModuleSize;
 
   /// Push element \param val onto cjsModules and increment index.
   const auto pushNoError = [runtime, &cjsModules, &index](HermesValue val) {
@@ -112,6 +126,7 @@ ExecutionStatus Domain::importCJSModuleTable(
     pushNoError(HermesValue::encodeEmptyValue());
     pushNoError(HermesValue::encodeObjectValue(nullptr));
     pushNoError(HermesValue::encodeNativeUInt32(pair.second));
+    pushNoError(HermesValue::encodeNativePointer(runtimeModule));
 
     auto result = self->cjsModuleTable_.try_emplace(
         runtimeModule->getSymbolIDFromStringID(pair.first), startIndex);
@@ -125,6 +140,7 @@ ExecutionStatus Domain::importCJSModuleTable(
     pushNoError(HermesValue::encodeEmptyValue());
     pushNoError(HermesValue::encodeObjectValue(nullptr));
     pushNoError(HermesValue::encodeNativeUInt32(functionID));
+    pushNoError(HermesValue::encodeNativePointer(runtimeModule));
   }
 
   self->cjsModules_.set(cjsModules.get(), &runtime->getHeap());

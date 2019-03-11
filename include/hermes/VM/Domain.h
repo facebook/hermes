@@ -61,6 +61,11 @@ class Domain final : public GCCell {
     /// Encoded as a HermesValue NativeUInt32.
     FunctionIndexOffset,
 
+    /// NativePointer to the RuntimeModule in which this CJS module lives.
+    /// Note: This must be kept alive by the Domain which allocated this
+    /// CJSModule.
+    runtimeModuleOffset,
+
     /// Number of fields used by a CJS module in the ArrayStorage.
     CJSModuleSize,
   };
@@ -102,12 +107,14 @@ class Domain final : public GCCell {
   }
 
   /// Import the CommonJS module table from the given \p runtimeModule.
-  /// \pre a CommonJS module table must not already have been imported in this
-  /// Domain.
+  /// Insert into the table starting at the \p cjsModuleOffset.
+  /// \pre the CommonJS module table must not already contain any of the module
+  /// IDs to be imported.
   LLVM_NODISCARD static ExecutionStatus importCJSModuleTable(
       Handle<Domain> self,
       Runtime *runtime,
-      RuntimeModule *runtimeModule);
+      RuntimeModule *runtimeModule,
+      uint32_t cjsModuleOffset);
 
   /// \return the offset of the CJS module corresponding to \p filename, None on
   /// failure.
@@ -151,6 +158,12 @@ class Domain final : public GCCell {
   uint32_t getFunctionIndex(uint32_t cjsModuleOffset) const {
     return cjsModules_->at(cjsModuleOffset + FunctionIndexOffset)
         .getNativeUInt32();
+  }
+
+  /// \return the runtime module for the given cjsModuleOffset.
+  RuntimeModule *getRuntimeModule(uint32_t cjsModuleOffset) const {
+    return cjsModules_->at(cjsModuleOffset + runtimeModuleOffset)
+        .getNativePointer<RuntimeModule>();
   }
 
   /// Set the module object for the given cjsModuleOffset.
