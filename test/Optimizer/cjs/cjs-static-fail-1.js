@@ -44,7 +44,17 @@ function func() {
 //CHECK: {{.*}}cjs-static-fail-1.js:43:11: warning: 'require' is copied to a variable which cannot be analyzed
 //CHECK-NEXT:     var r = require;
 //CHECK-NEXT:           ^
+}
 
+print({}[require]);
+//CHECK: {{.*}}cjs-static-fail-1.js:49:9: warning: 'require' is used as a property key and cannot be analyzed
+//CHECK-NEXT: print({}[require]);
+//CHECK-NEXT:         ^
+
+function loadFromRequire() {
+  // No warning should be issued for loading a property.
+  print(require.context);
+// CHECK-NOT: warning
 }
 
 exports.func = func;

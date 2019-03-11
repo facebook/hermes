@@ -233,6 +233,17 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       // Loading "require" from a frame variable.
 
       addUsers(LF);
+    } else if (auto *LPI = dyn_cast<LoadPropertyInst>(U.I)) {
+      if (LPI->getProperty() == U.V) {
+        // `require` must not be used as a key in a LoadPropertyInst,
+        // because it could be used in a getter and escape.
+        canResolve_ = false;
+        EM_.warning(
+            U.I->getLocation(),
+            "'require' is used as a property key and cannot be analyzed");
+      }
+      // Loading values from require is allowed.
+      // In particular, require.context is used to load new segments.
     } else {
       canResolve_ = false;
       EM_.warning(U.I->getLocation(), "'require' escapes or is modified");
