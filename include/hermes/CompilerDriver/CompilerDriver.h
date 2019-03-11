@@ -37,11 +37,20 @@ struct BytecodeBufferInfo {
   char *bufferStart{nullptr};
   /// Size of the bytecode buffer.
   size_t bufferSize{0};
+  /// Name of the bytecode file.
+  std::string filename;
 
   BytecodeBufferInfo() = default;
 
-  BytecodeBufferInfo(bool isMmapped, char *start, size_t size)
-      : bufferIsMmapped(isMmapped), bufferStart(start), bufferSize(size){};
+  BytecodeBufferInfo(
+      bool isMmapped,
+      char *start,
+      size_t size,
+      std::string filename)
+      : bufferIsMmapped(isMmapped),
+        bufferStart(start),
+        bufferSize(size),
+        filename(std::move(filename)){};
 };
 
 /// A type wrapping up the possible outputs of compileFiles.

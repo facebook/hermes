@@ -661,6 +661,22 @@ CallResult<HermesValue> Runtime::runBytecode(
   }
 }
 
+ExecutionStatus Runtime::loadSegment(
+    std::shared_ptr<hbc::BCProvider> &&bytecode,
+    Handle<RequireContext> requireContext,
+    RuntimeModuleFlags flags) {
+  GCScopeMarkerRAII marker{this};
+  auto domain = makeHandle(RequireContext::getDomain(*requireContext));
+
+  if (LLVM_UNLIKELY(
+          RuntimeModule::create(this, domain, std::move(bytecode), flags, "") ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return ExecutionStatus::RETURNED;
+}
+
 void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
   clearThrownValue();
 

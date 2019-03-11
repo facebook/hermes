@@ -1037,6 +1037,7 @@ CompileResult processBytecodeFile(std::unique_ptr<llvm::MemoryBuffer> fileBuf) {
       fileBuf->getBufferKind() == llvm::MemoryBuffer::MemoryBuffer_MMap;
   char *bufStart = const_cast<char *>(fileBuf->getBufferStart());
   size_t bufSize = fileBuf->getBufferSize();
+  std::string filename = fileBuf->getBufferIdentifier();
 
   std::unique_ptr<hbc::BCProviderFromBuffer> bytecode;
   auto buffer = llvm::make_unique<OwnedMemoryBuffer>(std::move(fileBuf));
@@ -1057,7 +1058,7 @@ CompileResult processBytecodeFile(std::unique_ptr<llvm::MemoryBuffer> fileBuf) {
     CompileResult result{Success};
     result.bytecodeProvider = std::move(bytecode);
     result.bytecodeBufferInfo =
-        BytecodeBufferInfo{isMmapped, bufStart, bufSize};
+        BytecodeBufferInfo{isMmapped, bufStart, bufSize, std::move(filename)};
     return result;
   }
 }

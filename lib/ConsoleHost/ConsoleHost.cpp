@@ -6,6 +6,8 @@
  */
 #include "hermes/ConsoleHost/ConsoleHost.h"
 
+#include "hermes/CompilerDriver/CompilerDriver.h"
+#include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Domain.h"
@@ -81,10 +83,49 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+static vm::CallResult<vm::HermesValue>
+loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
+  using namespace hermes::vm;
+  const auto *baseFilename = reinterpret_cast<std::string *>(ctx);
+
+  auto requireContext = args.dyncastArg<RequireContext>(runtime, 0);
+  if (!requireContext) {
+    runtime->raiseTypeError("First argument to loadSegment must be context");
+  }
+
+  auto segmentRes = toUInt32(runtime, args.getArgHandle(runtime, 1));
+  if (LLVM_UNLIKELY(segmentRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint32_t segment = segmentRes->getNumberAs<uint32_t>();
+
+  auto fileBufRes =
+      llvm::MemoryBuffer::getFile(Twine(*baseFilename) + "." + Twine(segment));
+  if (!fileBufRes) {
+    return runtime->raiseTypeError(
+        TwineChar16("Failed to open segment: ") + segment);
+  }
+
+  auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+      llvm::make_unique<OwnedMemoryBuffer>(std::move(*fileBufRes)));
+  if (!ret.first) {
+    return runtime->raiseTypeError("Error deserializing bytecode");
+  }
+
+  if (LLVM_UNLIKELY(
+          runtime->loadSegment(std::move(ret.first), requireContext) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return HermesValue::encodeUndefinedValue();
+}
+
 void installConsoleBindings(
     vm::Runtime *runtime,
     bool gcPrintStats,
-    vm::StatSamplingThread *statSampler) {
+    vm::StatSamplingThread *statSampler,
+    const std::string *filename) {
   vm::DefinePropertyFlags normalDPF{};
   normalDPF.setEnumerable = 1;
   normalDPF.setWritable = 1;
@@ -120,13 +161,25 @@ void installConsoleBindings(
       createHeapSnapshot,
       nullptr,
       2);
+
+  // Define the 'loadSegment' function.
+  defineGlobalFunc(
+      runtime
+          ->ignoreAllocationFailure(
+              runtime->getIdentifierTable().getSymbolHandle(
+                  runtime, llvm::createASCIIRef("loadSegment")))
+          .get(),
+      loadSegment,
+      reinterpret_cast<void *>(const_cast<std::string *>(filename)),
+      2);
 }
 
 /// Executes the HBC bytecode provided in HermesVM.
 /// \return true on success, false on error.
 bool executeHBCBytecode(
     std::shared_ptr<hbc::BCProvider> &&bytecode,
-    const ExecuteOptions &options) {
+    const ExecuteOptions &options,
+    const std::string *filename) {
   bool shouldRecordGCStats =
       options.runtimeConfig.getGCConfig().getShouldRecordStats();
   if (shouldRecordGCStats) {
@@ -154,7 +207,8 @@ bool executeHBCBytecode(
 #endif
 
   vm::GCScope scope(runtime.get());
-  installConsoleBindings(runtime.get(), shouldRecordGCStats, statSampler.get());
+  installConsoleBindings(
+      runtime.get(), shouldRecordGCStats, statSampler.get(), filename);
 
   vm::RuntimeModuleFlags flags;
   flags.persistent = true;

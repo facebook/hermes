@@ -78,6 +78,8 @@ int main(int argc, char **argv_) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileBufOrErr =
       llvm::MemoryBuffer::getFileOrSTDIN(InputFilename);
 
+  std::string filename = FileBufOrErr.get()->getBufferIdentifier().str();
+
   if (!FileBufOrErr) {
     llvm::errs() << "Error! Failed to open file: " << InputFilename << "\n";
     return -1;
@@ -128,7 +130,7 @@ int main(int argc, char **argv_) {
 
   bool success;
   if (Repeat <= 1) {
-    success = executeHBCBytecode(std::move(bytecode), options);
+    success = executeHBCBytecode(std::move(bytecode), options, &filename);
   } else {
     // The runtime is supposed to own the bytecode exclusively, but we
     // want to keep it around in this special case, so we can reuse it
@@ -138,7 +140,7 @@ int main(int argc, char **argv_) {
     success = true;
     for (unsigned i = 0; i < Repeat; ++i) {
       success &= executeHBCBytecode(
-          std::shared_ptr<hbc::BCProvider>{sharedBytecode}, options);
+          std::shared_ptr<hbc::BCProvider>{sharedBytecode}, options, &filename);
     }
   }
 

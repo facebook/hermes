@@ -71,7 +71,9 @@ static opt<BytecodeIOStatsFormatKind> BytecodeIOStatsFormat(
 
 /// Execute Hermes bytecode \p bytecode, respecting command line arguments.
 /// \return an exit status.
-static int executeHBCBytecodeFromCL(std::unique_ptr<hbc::BCProvider> bytecode) {
+static int executeHBCBytecodeFromCL(
+    std::unique_ptr<hbc::BCProvider> bytecode,
+    const driver::BytecodeBufferInfo &info) {
   ExecuteOptions options;
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
@@ -106,7 +108,7 @@ static int executeHBCBytecodeFromCL(std::unique_ptr<hbc::BCProvider> bytecode) {
 
   bool success;
   if (cl::Repeat <= 1) {
-    success = executeHBCBytecode(std::move(bytecode), options);
+    success = executeHBCBytecode(std::move(bytecode), options, &info.filename);
   } else {
     // The runtime is supposed to own the bytecode exclusively, but we
     // want to keep it around in this special case, so we can reuse it
@@ -116,7 +118,9 @@ static int executeHBCBytecodeFromCL(std::unique_ptr<hbc::BCProvider> bytecode) {
     success = true;
     for (unsigned i = 0; i < cl::Repeat; ++i) {
       success &= executeHBCBytecode(
-          std::shared_ptr<hbc::BCProvider>{sharedBytecode}, options);
+          std::shared_ptr<hbc::BCProvider>{sharedBytecode},
+          options,
+          &info.filename);
     }
   }
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -157,7 +161,8 @@ int main(int argc, char **argv_) {
         return EXIT_FAILURE;
       }
     }
-    auto ret = executeHBCBytecodeFromCL(std::move(res.bytecodeProvider));
+    auto ret = executeHBCBytecodeFromCL(
+        std::move(res.bytecodeProvider), res.bytecodeBufferInfo);
     if (ret == EXIT_SUCCESS && cl::TrackBytecodeIO) {
       if (!PageAccessTracker::printStats(
               llvm::outs(),

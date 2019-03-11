@@ -8,6 +8,7 @@
 #define HERMES_CONSOLEHOST_CONSOLEHOST_H
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/CompilerDriver/CompilerDriver.h"
 #include "hermes/ConsoleHost/MemorySizeParser.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/VM/instrumentation/StatSamplingThread.h"
@@ -31,10 +32,13 @@ class Runtime;
 ///     statistics.  If this is non-null, and gcPrintStats is true, the thread
 ///     will be stopped, and the process stats printed if quit is called.  If it
 ///     is null, this does not happen.
+/// \p filename If non-null, the filename of the BC buffer being loaded.
+///    Used to find the other segments to be loaded at runtime.
 void installConsoleBindings(
     vm::Runtime *runtime,
     bool gcPrintStats,
-    vm::StatSamplingThread *statSampler = nullptr);
+    vm::StatSamplingThread *statSampler = nullptr,
+    const std::string *filename = nullptr);
 
 /// Options for executing an HBC bundle.
 struct ExecuteOptions {
@@ -63,10 +67,12 @@ struct ExecuteOptions {
 };
 
 /// Executes the HBC bytecode provided in HermesVM.
+/// \param filename if non-null the file name for the bytecode file.
 /// \return true if the execution completed successfully, false on JS exception.
 bool executeHBCBytecode(
     std::shared_ptr<hbc::BCProvider> &&bytecode,
-    const ExecuteOptions &options);
+    const ExecuteOptions &options,
+    const std::string *filename);
 
 } // namespace hermes
 

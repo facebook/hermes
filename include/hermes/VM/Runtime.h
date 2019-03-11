@@ -160,6 +160,11 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
         .getStatus();
   }
 
+  ExecutionStatus loadSegment(
+      std::shared_ptr<hbc::BCProvider> &&bytecode,
+      Handle<RequireContext> requireContext,
+      RuntimeModuleFlags flags = {});
+
   /// A convenience function to print an exception to a stream.
   void printException(llvm::raw_ostream &os, Handle<> valueHandle);
 
