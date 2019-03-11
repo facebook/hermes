@@ -952,12 +952,11 @@ bool generateIRForSourcesAsCJSModules(
       fileBufs[0][0]->getBufferIdentifier()};
   llvm::sys::path::replace_path_prefix(
       entryPointFilename, rootPath, "./", llvm::sys::path::Style::posix);
-  std::string requireString =
-      ("HermesInternal.require.call('./', '" +
-       llvm::sys::path::remove_leading_dotslash(entryPointFilename) + "')")
-          .str();
-  auto globalMemBuffer =
-      llvm::MemoryBuffer::getMemBufferCopy(requireString, "<global>");
+
+  // The top-level function is empty, due to the fact that it is not intended to
+  // be executed. The Runtime must choose and execute the correct entry point
+  // (main) module, from which other modules may be `require`d.
+  auto globalMemBuffer = llvm::MemoryBuffer::getMemBufferCopy("", "<global>");
 
   auto *globalAST = parseJS(context, semCtx, std::move(globalMemBuffer));
   generateIRFromESTree(globalAST, &M, declFileList, {});

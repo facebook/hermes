@@ -116,37 +116,6 @@ bool ResolveStaticRequireImpl::run() {
 
   auto requireFastID = builder_.createIdentifier("requireFast");
 
-  // Find the top-level require call so it will be replaced with requireFast(0).
-  // TODO: Remove the unnecessary extra LoadPropertyInst from require() call.
-  CallInst *callSlow = nullptr;
-  Function *topLevelFunction = M_->getTopLevelFunction();
-  for (Instruction &I : *topLevelFunction->begin()) {
-    if (auto *callInst = dyn_cast<CallInst>(&I)) {
-      callSlow = callInst;
-    }
-  }
-  assert(
-      callSlow != nullptr &&
-      "Top level require call to main module must exist");
-
-  // Replace the slow require call with requireFast(0).
-  builder_.setInsertionPointAfter(callSlow);
-  builder_.setLocation(callSlow->getLocation());
-  /// (Call
-  ///   (LoadProperty (LoadFrame global@HermesInternal) "requireFast")
-  ///   undefined
-  ///   0)
-  auto *callFast = builder_.createCallInst(
-      builder_.createLoadPropertyInst(
-          builder_.createLoadPropertyInst(
-              builder_.getGlobalObject(), hermesInternalID),
-          requireFastID),
-      builder_.getLiteralUndefined(),
-      builder_.getLiteralPositiveZero());
-
-  callSlow->replaceAllUsesWith(callFast);
-  callSlow->eraseFromParent();
-
   // Replace all resolved calls with calls to HermesInternal.requireFast().
   for (const auto &RR : resolvedRequireCalls_) {
     builder_.setInsertionPointAfter(RR.call);

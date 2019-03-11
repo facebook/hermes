@@ -15,26 +15,18 @@ try {
 foo();
 
 // CHECK: Global String Table:
-// CHECK-NEXT:   s0[ASCII, {{.*}}]: ./
-// CHECK-NEXT:   i1[ASCII, {{.*}}] #{{[0-9A-Z]+}}: HermesInternal
-// CHECK-NEXT:   s2[ASCII, {{.*}}]: asdf
-// CHECK-NEXT:   s3[ASCII, {{.*}}]: foo
-// CHECK-NEXT:   i4[ASCII, {{.*}}] #{{[0-9A-Z]+}}: call
+// CHECK-NEXT:   s0[ASCII, {{.*}}]: asdf
+// CHECK-NEXT:   s1[ASCII, {{.*}}]: foo
+// CHECK-NEXT:   s2[ASCII, {{.*}}]: cjs_module
+// CHECK-NEXT:   i3[ASCII, {{.*}}] #{{[0-9A-Z]+}}: encodeURIComponent
+// CHECK-NEXT:   s4[ASCII, {{.*}}]: global
 // CHECK-NEXT:   s5[ASCII, {{.*}}]: cjs-dce.js
 
 // CHECK: CommonJS Modules:
 // CHECK-NEXT:   File ID 5 -> function ID 1
 
-// CHECK: Function<global>{{.*}}:
-// CHECK-NEXT: Offset in debug table: {{.*}}
-// CHECK-NEXT:     GetGlobalObject   r0
-// CHECK-NEXT:     TryGetById        r0, r0, 1, "HermesInternal"
-// CHECK-NEXT:     GetByIdShort      r3, r0, 2, "require"
-// CHECK-NEXT:     GetByIdShort      r2, r3, 3, "call"
-// CHECK-NEXT:     LoadConstString   r5, "./"
-// CHECK-NEXT:     LoadConstString   r4, "cjs-dce.js"
-// CHECK-NEXT:     Mov               r6, r3
-// CHECK-NEXT:     Call              r0, r2, 3
+// CHECK: Function<global>(1 params, 1 registers, 0 symbols):
+// CHECK-NEXT:     LoadConstUndefined r0
 // CHECK-NEXT:     Ret               r0
 
 //CHECK:Function<cjs_module>(4 params, 13 registers, 1 symbols):
