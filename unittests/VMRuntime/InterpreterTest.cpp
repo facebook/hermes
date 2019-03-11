@@ -411,7 +411,7 @@ TEST_F(InterpreterFunctionTest, TestToString) {
   ASSERT_EQ(createUTF16Ref(u"false"), tmp.arrayRef());
 }
 
-#ifdef NDEBUG
+#if defined(NDEBUG) && !defined(HERMES_UBSAN)
 // Returns the native stack pointer of the callee frame.
 static CallResult<HermesValue>
 getSP(void *, Runtime *runtime, NativeArgs args) {
