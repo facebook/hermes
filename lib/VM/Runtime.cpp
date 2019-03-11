@@ -887,19 +887,19 @@ void Runtime::initPredefinedStrings() {
 #define STR(name, string) string
 #include "hermes/VM/PredefinedStrings.def"
 #define SYM(name, desc) desc
-#include "hermes/VM/PredefinedStrings.def"
+#include "hermes/VM/PredefinedSymbols.def"
       ;
   static const uint8_t strLengths[] = {
 #define STR(name, string) sizeof(string) - 1,
 #include "hermes/VM/PredefinedStrings.def"
   };
-  static const uint8_t symLengths[] = {
-#define SYM(name, desc) sizeof(desc) - 1,
-#include "hermes/VM/PredefinedStrings.def"
-  };
   static const uint32_t hashes[] = {
 #define STR(name, string) constexprHashString(string),
 #include "hermes/VM/PredefinedStrings.def"
+  };
+  static const uint8_t symLengths[] = {
+#define SYM(name, desc) sizeof(desc) - 1,
+#include "hermes/VM/PredefinedSymbols.def"
   };
   constexpr uint32_t strCount = sizeof strLengths / sizeof strLengths[0];
   static_assert(

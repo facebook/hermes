@@ -77,8 +77,9 @@ using ObjectID = uint32_t;
 
 enum class Predefined {
 #define STR(name, string) name,
-#define SYM(name, string) name,
 #include "PredefinedStrings.def"
+#define SYM(name, string) name,
+#include "PredefinedSymbols.def"
   _PREDEFINED_COUNT
 };
 

@@ -8,14 +8,9 @@
 #define STR(name, string)
 #endif
 
-#ifndef SYM
-#define SYM(name, desc)
-#endif
-
 /// List of predefined strings.
 /// Use STR(name, string) to define new ones.
-/// Use SYM(name, desc) to define new well-known symbols.
-/// Access is done via PredefinedStrings.name after instantiation.
+/// Access is done via Predefined::name after instantiation.
 
 STR(emptyString, "")
 STR(comma, ",")
@@ -408,15 +403,4 @@ STR(squareSymbolSplit, "[Symbol.split]")
   STR(squareObject_##name, "[object " jsClassName "]")
 #include "hermes/VM/CellKinds.def"
 
-SYM(SymbolHasInstance, "Symbol.hasInstance")
-SYM(SymbolIterator, "Symbol.iterator")
-SYM(SymbolIsConcatSpreadable, "Symbol.isConcatSpreadable")
-SYM(SymbolToPrimitive, "Symbol.toPrimitive")
-SYM(SymbolToStringTag, "Symbol.toStringTag")
-SYM(SymbolMatch, "Symbol.match")
-SYM(SymbolSearch, "Symbol.search")
-SYM(SymbolReplace, "Symbol.replace")
-SYM(SymbolSplit, "Symbol.split")
-
 #undef STR
-#undef SYM
