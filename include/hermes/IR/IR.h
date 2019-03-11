@@ -8,6 +8,7 @@
 #define HERMES_IR_IR_H
 
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_node.h"
@@ -24,6 +25,7 @@
 #include "hermes/Support/ScopeChain.h"
 
 #include <deque>
+#include <unordered_map>
 
 namespace hermes {
 
@@ -1603,6 +1605,16 @@ class Module : public Value {
   /// true if all CJS modules have been resolved.
   bool cjsModulesResolved_{false};
 
+  using CJSModuleUseGraph =
+      std::unordered_map<Function *, llvm::SmallPtrSet<Function *, 2>>;
+
+  /// Graph which maps from a function F to a set of functions which it uses.
+  /// Used to determine what functions must be generated for a given segment.
+  /// Lazily generated the first time bytecode is generated for a split bundle,
+  /// and used when generating bytecode for a given segment.
+  /// If empty, this has not been generated yet.
+  CJSModuleUseGraph cjsModuleUseGraph_{};
+
  public:
   explicit Module(std::shared_ptr<Context> ctx)
       : Value(ValueKind::ModuleKind), Ctx(std::move(ctx)) {}
@@ -1746,6 +1758,11 @@ class Module : public Value {
     cjsModulesResolved_ = cjsModulesResolved;
   }
 
+  /// \return the set of functions which are used by the modules in the segment
+  /// specified by \p range. Order is unspecified, so the return value should
+  /// not be used for iteration, only for checking membership.
+  llvm::DenseSet<Function *> getFunctionsInSegment(Context::SegmentRange range);
+
   inline iterator begin() {
     return FunctionList.begin();
   }
@@ -1789,6 +1806,11 @@ class Module : public Value {
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::ModuleKind;
   }
+
+ private:
+  /// Calculate the CJS module function graph, if it hasn't been calculated yet.
+  /// Caches the result in cjsModuleUseGraph_.
+  void populateCJSModuleUseGraph();
 };
 
 /// The hash of a Type is the hash of its opaque value.

@@ -462,10 +462,12 @@ std::unique_ptr<llvm::MemoryBuffer> memoryBufferFromZipFile(
 /// for binary file and text file, respectively.
 /// \return the raw stream, or none on failure.
 static std::unique_ptr<raw_fd_ostream> openFileForWrite(
-    StringRef fileName,
+    llvm::Twine fileName,
     llvm::sys::fs::OpenFlags openFlags) {
   std::error_code EC;
-  auto result = llvm::make_unique<raw_fd_ostream>(fileName, EC, openFlags);
+  llvm::SmallString<32> fileNameOut;
+  auto result = llvm::make_unique<raw_fd_ostream>(
+      fileName.toStringRef(fileNameOut), EC, openFlags);
   if (EC) {
     llvm::errs() << "Failed to open file " << fileName << ": " << EC.message()
                  << '\n';
@@ -1090,6 +1092,7 @@ CompileResult generateBytecodeForSerialization(
     Module &M,
     const BytecodeGenerationOptions &genOptions,
     const SHA1 &sourceHash,
+    OptValue<Context::SegmentRange> range,
     SourceMapGenerator *sourceMapGenOrNull) {
   // Serialize the bytecode to the file.
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
@@ -1105,6 +1108,7 @@ CompileResult generateBytecodeForSerialization(
         OS,
         genOptions,
         sourceHash,
+        range,
         sourceMapGenOrNull,
         std::move(baseBCProvider));
 
@@ -1279,31 +1283,53 @@ CompileResult processSourceFiles(
     return generateBytecodeForExecution(M, genOptions);
   }
 
-  // Ok, we're going to return the bytecode in a serializable form.
-  // Open the output file, if any.
-  std::unique_ptr<raw_fd_ostream> fileOS{};
-  if (!cl::BytecodeOutputFilename.empty()) {
-    fileOS = openFileForWrite(cl::BytecodeOutputFilename, F_None);
-    if (!fileOS)
-      return OutputFileError;
-  }
-  auto &OS = fileOS ? *fileOS : llvm::outs();
-  auto result = generateBytecodeForSerialization(
-      OS,
-      M,
-      genOptions,
-      sourceHash,
-      sourceMap ? sourceMap.getPointer() : nullptr);
+  if (context->getSegmentRanges().size() < 2) {
+    // Ok, we're going to return the bytecode in a serializable form.
+    // Open the output file, if any.
+    std::unique_ptr<raw_fd_ostream> fileOS{};
+    if (!cl::BytecodeOutputFilename.empty()) {
+      fileOS = openFileForWrite(cl::BytecodeOutputFilename, F_None);
+      if (!fileOS)
+        return OutputFileError;
+    }
+    auto &OS = fileOS ? *fileOS : llvm::outs();
+    auto result = generateBytecodeForSerialization(
+        OS,
+        M,
+        genOptions,
+        sourceHash,
+        llvm::None,
+        sourceMap ? sourceMap.getPointer() : nullptr);
 
-  // Output the source map if requested.
-  if (cl::OutputSourceMap) {
-    std::string mapFilePath = cl::BytecodeOutputFilename + ".map";
-    auto OS = openFileForWrite(mapFilePath, F_Text);
-    if (!OS)
-      return OutputFileError;
-    sourceMap->outputAsJSON(*OS);
+    // Output the source map if requested.
+    if (cl::OutputSourceMap) {
+      std::string mapFilePath = cl::BytecodeOutputFilename + ".map";
+      auto OS = openFileForWrite(mapFilePath, F_Text);
+      if (!OS)
+        return OutputFileError;
+      sourceMap->outputAsJSON(*OS);
+    }
+    return result;
+  } else {
+    StringRef base = cl::BytecodeOutputFilename;
+    for (const auto &range : context->getSegmentRanges()) {
+      auto fileOS = openFileForWrite(
+          range.segment == 0 ? base
+                             : (Twine(base) + "." + Twine(range.segment)),
+          F_None);
+      if (!fileOS)
+        return OutputFileError;
+      auto &OS = *fileOS;
+      auto result = generateBytecodeForSerialization(
+          OS,
+          M,
+          genOptions,
+          sourceHash,
+          range,
+          sourceMap ? sourceMap.getPointer() : nullptr);
+    }
+    return Success;
   }
-  return result;
 }
 
 /// Print the Hermes version to the stream \p s, outputting the \p vmStr (which

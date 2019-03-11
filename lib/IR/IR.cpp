@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -547,6 +548,53 @@ void Module::eraseGlobalProperty(GlobalObjectProperty *prop) {
     Value::destroy(*it);
     globalPropertyList_.erase(it);
   }
+}
+
+void Module::populateCJSModuleUseGraph() {
+  if (!cjsModuleUseGraph_.empty()) {
+    return;
+  }
+
+  for (Function &f : *this) {
+    for (Instruction *user : f.getUsers()) {
+      // Add an edge to f, from the function which uses f.
+      cjsModuleUseGraph_[user->getParent()->getParent()].insert(&f);
+    }
+  }
+}
+
+llvm::DenseSet<Function *> Module::getFunctionsInSegment(
+    Context::SegmentRange range) {
+  populateCJSModuleUseGraph();
+
+  // Final set of functions which must be output when generating this segment.
+  llvm::DenseSet<Function *> result{};
+
+  // Current set of functions which we haven't inspected (the frontier).
+  // Use this to perform graph search and find all used functions.
+  llvm::SetVector<Function *> worklist{};
+
+  // Populate the worklist initially with the wrapper functions for each module
+  // in the given range.
+  for (auto i = range.first; i <= range.last; ++i) {
+    worklist.insert(cjsModules_[i].function);
+  }
+
+  while (!worklist.empty()) {
+    Function *cur = worklist.back();
+    worklist.pop_back();
+    if (result.count(cur)) {
+      // We've already visited this function and added its children, so don't do
+      // it again.
+      continue;
+    }
+    result.insert(cur);
+    // The functions that are used by the function cur.
+    const auto targets = cjsModuleUseGraph_[cur];
+    worklist.insert(targets.begin(), targets.end());
+  }
+
+  return result;
 }
 
 Context &Instruction::getContext() const {

@@ -111,6 +111,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     Module *M,
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
+    OptValue<Context::SegmentRange> range,
     SourceMapGenerator *outSourceMap,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   PerfSection perf("Bytecode Generation");
@@ -121,6 +122,15 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
 
   BytecodeModuleGenerator BMGen(options);
 
+  if (range) {
+    BMGen.setCJSModuleOffset(range->first);
+  }
+
+  // Empty if all functions should be generated (i.e. bundle splitting was not
+  // requested).
+  llvm::DenseSet<Function *> functionsToGenerate =
+      range ? M->getFunctionsInSegment(*range) : llvm::DenseSet<Function *>{};
+
   // Perhaps seed our string storage. If we are in delta optimizing mode, start
   // with the string storage from our base bytecode provider. Otherwise, seed
   // with an ordered storage built by walking the module's strings.
@@ -130,8 +140,18 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
                        : getOrderedStringStorage(M, options));
   }
 
+  /// \return true if we should generate function \p f.
+  const auto shouldGenerate =
+      [&range, entryPoint, &functionsToGenerate](const Function *f) {
+        return !range || f == entryPoint || functionsToGenerate.count(f) > 0;
+      };
+
   // Add each function to BMGen so that each function has a unique ID.
   for (auto &F : *M) {
+    if (!shouldGenerate(&F)) {
+      continue;
+    }
+
     unsigned index = BMGen.addFunction(&F);
     if (&F == entryPoint) {
       BMGen.setEntryPointIndex(index);
@@ -153,6 +173,10 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
   FunctionScopeAnalysis scopeAnalysis{entryPoint};
   // Bytecode generation for each function.
   for (auto &F : *M) {
+    if (!shouldGenerate(&F)) {
+      continue;
+    }
+
     std::unique_ptr<BytecodeFunctionGenerator> funcGen;
 
     if (F.isLazy()) {
@@ -223,12 +247,14 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecode(
     raw_ostream &OS,
     const BytecodeGenerationOptions &options,
     const SHA1 &sourceHash,
+    OptValue<Context::SegmentRange> range,
     SourceMapGenerator *outSourceMap,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   auto BM = generateBytecodeModule(
       M,
       M->getTopLevelFunction(),
       options,
+      range,
       outSourceMap,
       std::move(baseBCProvider));
   if (options.format == OutputFormatKind::EmitBundle) {
