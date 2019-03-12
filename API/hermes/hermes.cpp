@@ -243,16 +243,20 @@ class HermesRuntimeImpl final : public HermesRuntime,
       :
 #ifdef HERMESJSI_ON_STACK
         stackRuntime_(runtimeConfig),
-        runtime_(stackRuntime_.getRuntime())
+        runtime_(stackRuntime_.getRuntime()),
 #else
         rt_(::hermes::vm::Runtime::create(
             runtimeConfig.rebuild()
                 .withRegisterStack(nullptr)
                 .withMaxNumRegisters(kMaxNumRegisters)
                 .build())),
-        runtime_(*rt_)
+        runtime_(*rt_),
 #endif
-  {
+        crashMgr_(runtimeConfig.getCrashMgr()) {
+#ifndef HERMESJSI_ON_STACK
+    // Register the memory for the runtime if it isn't stored on the stack.
+    crashMgr_->registerMemory(&runtime_, sizeof(vm::Runtime));
+#endif
     runtime_.addCustomRootsFunction([this](
                                         vm::GC *, vm::SlotAcceptor &acceptor) {
       for (auto it = hermesValues_->begin(); it != hermesValues_->end();) {
@@ -281,6 +285,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
     // Deallocate the debugger so it frees any HermesPointerValues it may hold.
     // This must be done before we check hermesValues_ below.
     debugger_.reset();
+#endif
+#ifndef HERMESJSI_ON_STACK
+    // Unregister the memory for the runtime if it isn't stored on the stack.
+    crashMgr_->unregisterMemory(&runtime_);
 #endif
   }
 
@@ -876,6 +884,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   friend class debugger::Debugger;
   std::unique_ptr<debugger::Debugger> debugger_;
 #endif
+  std::shared_ptr<vm::CrashManager> crashMgr_;
 };
 
 namespace {

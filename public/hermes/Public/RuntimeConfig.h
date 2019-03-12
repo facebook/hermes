@@ -7,8 +7,11 @@
 #ifndef HERMES_PUBLIC_RUNTIMECONFIG_H
 #define HERMES_PUBLIC_RUNTIMECONFIG_H
 
+#include "hermes/Public/CrashManager.h"
 #include "hermes/Public/CtorConfig.h"
 #include "hermes/Public/GCConfig.h"
+
+#include <memory>
 
 namespace hermes {
 namespace vm {
@@ -50,6 +53,8 @@ class PinnedHermesValue;
                                                                          \
   /* Eagerly read bytecode into page cache. */                           \
   F(unsigned, BytecodeWarmupPercent, 0)                                  \
+  /* An interface for managing crashes. */                               \
+  F(std::shared_ptr<CrashManager>, CrashMgr, new NopCrashManager)        \
   /* RUNTIME_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {});

@@ -877,6 +877,8 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   /// When set to false, the register stack is not allocated
   /// by the runtime itself.
   bool freeRegisterStack_{true};
+  /// Manages data to be used in the case of a crash.
+  std::shared_ptr<CrashManager> crashMgr_;
   /// Points to the last register in the callers frame. The current frame (the
   /// callee frame) starts in the next register and continues up to and
   /// including \c stackPointer_.

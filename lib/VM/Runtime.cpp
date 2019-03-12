@@ -175,7 +175,8 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       runtimeStats_(runtimeConfig.getEnableSampledStats()),
       commonStorage_(createRuntimeCommonStorage()),
-      stackPointer_() {
+      stackPointer_(),
+      crashMgr_(runtimeConfig.getCrashMgr()) {
   assert(
       (void *)this == (void *)(HandleRootOwner *)this &&
       "cast to HandleRootOwner should be no-op");
@@ -187,8 +188,11 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
   if (!registerStack_) {
     // registerStack_ should be allocated with malloc instead of new so that the
     // default constructors don't run for the whole stack space.
-    registerStack_ = static_cast<PinnedHermesValue *>(
-        checkedMalloc2(maxNumRegisters, sizeof(PinnedHermesValue)));
+    const auto numBytesForRegisters =
+        sizeof(PinnedHermesValue) * maxNumRegisters;
+    registerStack_ =
+        static_cast<PinnedHermesValue *>(checkedMalloc(numBytesForRegisters));
+    crashMgr_->registerMemory(registerStack_, numBytesForRegisters);
   } else {
     freeRegisterStack_ = false;
   }
@@ -274,6 +278,7 @@ Runtime::~Runtime() {
 
   heap_.finalizeAll();
   if (freeRegisterStack_) {
+    crashMgr_->unregisterMemory(registerStack_);
     ::free(registerStack_);
   }
   // Remove inter-module dependencies so we can delete them in any order.
