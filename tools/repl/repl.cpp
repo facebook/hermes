@@ -228,7 +228,11 @@ int main(int argc, char **argv) {
           .withGCConfig(vm::GCConfig::Builder()
                             .withInitHeapSize(cl::InitHeapSize.bytes)
                             .withMaxHeapSize(cl::MaxHeapSize.bytes)
-                            .withSanitizeRate(cl::GCSanitizeRate)
+                            .withSanitizeConfig(
+                                vm::GCSanitizeConfig::Builder()
+                                    .withSanitizeRate(cl::GCSanitizeRate)
+                                    .withRandomSeed(cl::GCSanitizeRandomSeed)
+                                    .build())
                             .withShouldRecordStats(cl::GCPrintStats)
                             .build())
           .withES6Symbol(cl::ES6Symbol)

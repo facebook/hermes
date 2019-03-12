@@ -85,7 +85,10 @@ struct TestHarness {
         getMetadataTable(),
         TestGCConfigFixedSize(
             1u << 20,
-            GCConfig::Builder(kTestGCConfigBuilder).withSanitizeRate(1.0)));
+            GCConfig::Builder(kTestGCConfigBuilder)
+                .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
+                                        .withSanitizeRate(1.0)
+                                        .build())));
   }
 
   void triggerFreshHeap() {

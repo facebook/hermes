@@ -113,7 +113,11 @@ int main(int argc, char **argv_) {
               vm::GCConfig::Builder()
                   .withInitHeapSize(cl::InitHeapSize.bytes)
                   .withMaxHeapSize(cl::MaxHeapSize.bytes)
-                  .withSanitizeRate(cl::GCSanitizeRate)
+                  .withSanitizeConfig(
+                      vm::GCSanitizeConfig::Builder()
+                          .withSanitizeRate(cl::GCSanitizeRate)
+                          .withRandomSeed(cl::GCSanitizeRandomSeed)
+                          .build())
                   .withShouldRandomizeAllocSpace(cl::GCRandomizeAllocSpace)
                   .withShouldRecordStats(cl::GCPrintStats)
                   .withShouldReleaseUnused(false)

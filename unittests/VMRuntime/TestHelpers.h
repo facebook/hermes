@@ -27,8 +27,10 @@ namespace hermes {
 namespace vm {
 
 static const GCConfig::Builder kTestGCConfigBuilder =
-    GCConfig::Builder().withSanitizeRate(0.0).withShouldRandomizeAllocSpace(
-        false);
+    GCConfig::Builder()
+        .withSanitizeConfig(
+            vm::GCSanitizeConfig::Builder().withSanitizeRate(0.0).build())
+        .withShouldRandomizeAllocSpace(false);
 
 static const GCConfig kTestGCConfigSmall =
     GCConfig::Builder(kTestGCConfigBuilder)

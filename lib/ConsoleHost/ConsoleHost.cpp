@@ -197,7 +197,9 @@ bool executeHBCBytecode(
 
 #ifdef HERMESVM_SANITIZE_HANDLES
   {
-    double sanitizeRate = options.runtimeConfig.getGCConfig().getSanitizeRate();
+    double sanitizeRate = options.runtimeConfig.getGCConfig()
+                              .getSanitizeConfig()
+                              .getSanitizeRate();
     if (sanitizeRate > 0.0 && sanitizeRate < 1.0) {
       llvm::errs()
           << "Warning: you are using handle sanitation with random sampling.\n"

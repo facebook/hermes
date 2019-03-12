@@ -11,6 +11,7 @@
 #include "llvm/Support/CommandLine.h"
 
 #include "hermes/ConsoleHost/MemorySizeParser.h"
+#include "hermes/ConsoleHost/RandomSeedParser.h"
 
 #include <string>
 
@@ -38,6 +39,17 @@ static opt<double> GCSanitizeRate(
     init(0.05)
 #else
     init(0.0),
+    Hidden
+#endif
+);
+
+static opt<int64_t, false, RandomSeedParser> GCSanitizeRandomSeed(
+    "gc-sanitize-handles-random-seed",
+    desc("A number used as a seed to the random engine for handle sanitization."
+         "A negative value means to choose the seed at random"),
+    init(-1)
+#ifndef HERMESVM_SANITIZE_HANDLES
+        ,
     Hidden
 #endif
 );

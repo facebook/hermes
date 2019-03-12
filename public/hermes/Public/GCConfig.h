@@ -46,6 +46,20 @@ _HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, GC_TRIPWIRE_FIELDS, {});
 
 #undef HEAP_TRIPWIRE_FIELDS
 
+#define GC_HANDLESAN_FIELDS(F)                                        \
+  /* The probability with which the GC should keep moving the heap */ \
+  /* to detect stale GC handles. */                                   \
+  F(double, SanitizeRate, 0.0)                                        \
+  /* Random seed to use for basis of decisions whether or not to */   \
+  /* sanitize. A negative value will mean a seed will be chosen at */ \
+  /* random. */                                                       \
+  F(int64_t, RandomSeed, -1)                                          \
+  /* GC_HANDLESAN_FIELDS END */
+
+_HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {});
+
+#undef GC_HANDLESAN_FIELDS
+
 /// Parameters for GC Initialisation.  Check documentation in README.md
 #define GC_FIELDS(F)                                                       \
   /* Minimum heap size hint. */                                            \
@@ -60,9 +74,8 @@ _HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, GC_TRIPWIRE_FIELDS, {});
   /* Number of consecutive full collections considered to be an OOM. */    \
   F(unsigned, EffectiveOOMThreshold, std::numeric_limits<unsigned>::max()) \
                                                                            \
-  /* The probability with which the GC should keep moving the heap */      \
-  /* to detect stale GC handles. */                                        \
-  F(double, SanitizeRate, 0.0)                                             \
+  /* Sanitizer configuration for the GC. */                                \
+  F(GCSanitizeConfig, SanitizeConfig)                                      \
                                                                            \
   /* Whether the GC should spread allocations across all its "spaces". */  \
   F(bool, ShouldRandomizeAllocSpace, false)                                \
