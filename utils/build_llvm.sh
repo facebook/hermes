@@ -3,13 +3,6 @@
 set -x
 set -e
 
-# We assume this script is run from the Hermes directory, that it is
-# not copied elsewhere.  This is necessary because it references files
-# relative to the script directory.  So save the SCRIPT_DIR.
-# This trick is from
-# https://stackoverflow.com/questions/59895/get-the-source-directory-of-a-bash-script-from-within-the-script-itself
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
 START_DIR="$PWD"
 function finish () {
   cd "$START_DIR"
@@ -114,10 +107,10 @@ fi
 # There are a small number of edits we need to make to the llvm files.
 # Use `git apply` instead of `patch` because `patch` may not be available
 # on some Windows installations.
-(cd llvm/include/llvm/ADT; $GIT apply "$SCRIPT_DIR"/llvm-patches/StringExtras.h.patch)
-(cd llvm/include/llvm/Support; $GIT apply "$SCRIPT_DIR"/llvm-patches/raw_ostream.h.patch)
-(cd llvm/lib/Support; $GIT apply "$SCRIPT_DIR"/llvm-patches/Signals.cpp.patch)
-(cd llvm/lib/Support; $GIT apply "$SCRIPT_DIR"/llvm-patches/Host.cpp.patch)
+(cd llvm/include/llvm/ADT; $GIT apply "$HERMES_DIR"/utils/llvm-patches/StringExtras.h.patch)
+(cd llvm/include/llvm/Support; $GIT apply "$HERMES_DIR"/utils/llvm-patches/raw_ostream.h.patch)
+(cd llvm/lib/Support; $GIT apply "$HERMES_DIR"/utils/llvm-patches/Signals.cpp.patch)
+(cd llvm/lib/Support; $GIT apply "$HERMES_DIR"/utils/llvm-patches/Host.cpp.patch)
 
 #build llvm
 FLAGS="-DLLVM_TARGETS_TO_BUILD= -DCMAKE_BUILD_TYPE=$BUILD_TYPE"
