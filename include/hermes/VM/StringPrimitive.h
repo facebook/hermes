@@ -182,7 +182,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       size_t length);
 
   /// Flatten the string if it's a rope, possibly causing allocation/GC.
-#ifdef NDEBUG
+#ifndef HERMESVM_SANITIZE_HANDLES
   static Handle<StringPrimitive> ensureFlat(
       Runtime *,
       Handle<StringPrimitive> self) {

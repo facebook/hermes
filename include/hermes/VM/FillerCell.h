@@ -29,6 +29,14 @@ class FillerCell final : public VariableSizeRuntimeCell {
     return cell->getKind() == CellKind::FillerCellKind;
   }
 
+  static FillerCell *create(Runtime *runtime, size_type size) {
+    assert(
+        size >= sizeof(FillerCell) &&
+        "Cannot make a FillerCell smaller than the baseline for a FillerCell");
+    return new (runtime->alloc</*FixedSize*/ false>(size))
+        FillerCell(&runtime->getHeap(), size);
+  }
+
   FillerCell(GC *gc, size_type size) : VariableSizeRuntimeCell(gc, &vt, size) {}
 };
 

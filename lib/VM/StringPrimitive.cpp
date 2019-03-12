@@ -9,6 +9,7 @@
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/FillerCell.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
@@ -157,16 +158,13 @@ CallResult<HermesValue> StringPrimitive::slice(
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
-#ifndef NDEBUG
+#ifdef HERMESVM_SANITIZE_HANDLES
 Handle<StringPrimitive> StringPrimitive::ensureFlat(
     Runtime *runtime,
     Handle<StringPrimitive> self) {
   // In the future, ensureFlat may trigger GC as it might allocate for
-  // ropes. Force a collection here just to make sure no caller is
-  // keeping raw pointers when calling this function.
-  if (runtime->getHeap().shouldSanitizeHandles()) {
-    runtime->collect();
-  }
+  // ropes. Allocate here to force collections to occur.
+  FillerCell::create(runtime, sizeof(FillerCell));
   return self;
   // TODO: Deal with different subclasses (e.g. rope)
 }
