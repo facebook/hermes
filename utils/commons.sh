@@ -5,6 +5,21 @@ if ! (return 0 2>/dev/null); then
   exit 1
 fi
 
+# Run a command repeatedly until it success (exit code is 0), up to X times.
+# For example, "retry 3 make -j2" will run "make -j2" repeatedly until
+# it fails 3 times or succeeds.
+function retry() {
+  RETRY=$1
+  ATTEMPTS=0
+  while (( ATTEMPTS <= RETRY )); do
+    "${@:2}" && return 0
+    ATTEMPTS=$((ATTEMPTS+1))
+    echo "Retry: $ATTEMPTS failures so far"
+  done
+  echo "Retry depleted for command: ${*:2}"
+  return 1
+}
+
 # Determine platform so that things like NT
 # don't need to be littered everywhere.
 case "$(uname)" in

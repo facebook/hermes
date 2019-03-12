@@ -17,19 +17,6 @@ HERMES_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.."; echo "$PWD")
 # shellcheck source=xplat/hermes/utils/commons.sh
 source "$HERMES_DIR/utils/commons.sh"
 
-# define a helper retry function
-function retry() {
-  RETRY=$1
-  ATTEMPTS=0
-  while (( ATTEMPTS <= RETRY )); do
-    "${@:2}" && return 0
-    ATTEMPTS=$((ATTEMPTS+1))
-    echo "Retry: $ATTEMPTS failures so far"
-  done
-  echo "Retry depleted for command: ${*:2}"
-  return 1
-}
-
 # HERMES_WS_DIR is the root directory for LLVM checkout and build dirs.
 [ -z "$HERMES_WS_DIR" ] && echo "HERMES_WS_DIR must be set" >&2 && exit 1
 [ "${HERMES_WS_DIR:0:1}" != "/" ] && echo "HERMES_WS_DIR must be an absolute path" >&2 && exit 1
