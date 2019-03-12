@@ -15,7 +15,7 @@ def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
 def hermes_ws = System.getenv("HERMES_WS_DIR")
 
 // For Facebook internal use:
-def fbsource = System.getenv("FBSOURCE") ?:
+def fbsource = System.getenv("FBSOURCE_DIR") ?:
     System.getenv("HOME") + "/fbsource"
 
 if (hermes_ws == null || hermes_ws == "") {
