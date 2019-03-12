@@ -129,6 +129,7 @@ class GenGC final : public GCBase {
       MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       const GCConfig &gcConfig,
+      std::shared_ptr<CrashManager> crashMgr,
       StorageProvider *provider);
 
   /// Allocate a new cell of the specified size \p size.
@@ -735,10 +736,6 @@ class GenGC final : public GCBase {
 
   /// Shrink the slot storage if there are free slots at the end.
   void shrinkWeakSlots();
-
-  /// Report OOM \p detail information in a Facebook-specific way, in
-  /// Facebook builds.
-  static void oomDetailFB(char *detail);
 
   /// At the end of a full collection, update the exponential weighted average
   /// of the live data.

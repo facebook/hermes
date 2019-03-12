@@ -268,7 +268,11 @@ struct DummyRuntime final : public HandleRootOwner,
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig,
       std::shared_ptr<StorageProvider> storageProvider)
-      : gc(metaTable, this, gcConfig, storageProvider.get()) {}
+      : gc(metaTable,
+           this,
+           gcConfig,
+           std::shared_ptr<CrashManager>(new NopCrashManager),
+           storageProvider.get()) {}
 };
 
 // Provide HermesValue & wrappers comparison operators for convenience.

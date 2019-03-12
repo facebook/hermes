@@ -12,8 +12,8 @@
 namespace hermes {
 namespace vm {
 
-/// A CrashManager provides functions that determine what memory is included in
-/// dumps in case of crashes.
+/// A CrashManager provides functions that determine what memory and data is
+/// included in dumps in case of crashes.
 class CrashManager {
  public:
   /// Registers some memory to be included in any crash dump that occurs.
@@ -25,6 +25,14 @@ class CrashManager {
   /// Unregisters some memory from being included in any crash dump that occurs.
   virtual void unregisterMemory(void *mem) = 0;
 
+  /// Registers custom data to be included in any crash dump that occurs.
+  /// Calling \c setCustomData on the same key twice will overwrite the previous
+  /// value.
+  /// \param key A tag to look for in the custom data output. Distinguishes
+  ///   between multiple values.
+  /// \param val The value to store for the given key.
+  virtual void setCustomData(const char *key, const char *val) = 0;
+
   virtual ~CrashManager() {}
 };
 
@@ -33,6 +41,7 @@ class NopCrashManager final : public CrashManager {
  public:
   void registerMemory(void *, size_t) override {}
   void unregisterMemory(void *) override {}
+  void setCustomData(const char *, const char *) override {}
   ~NopCrashManager() {}
 };
 

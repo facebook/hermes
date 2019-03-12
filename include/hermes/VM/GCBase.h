@@ -8,6 +8,7 @@
 #define HERMES_VM_GCBASE_H
 
 #include "hermes/Platform/Logging.h"
+#include "hermes/Public/CrashManager.h"
 #include "hermes/Public/GCConfig.h"
 #include "hermes/Public/GCTripwireContext.h"
 #include "hermes/Support/CheckedMalloc.h"
@@ -318,10 +319,12 @@ class GCBase {
       MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       const GCConfig &gcConfig,
+      std::shared_ptr<CrashManager> crashMgr,
       // Do nothing with this in the default case, only NCGen needs this.
       StorageProvider *)
       : metaTable_(metaTable),
         gcCallbacks_(gcCallbacks),
+        crashMgr_(crashMgr),
         recordGcStats_(gcConfig.getShouldRecordStats()),
         name_(gcConfig.getName()),
         tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
@@ -615,6 +618,9 @@ class GCBase {
   /// tasks.
   GCCallbacks *const gcCallbacks_;
 
+  /// A place to log crash data if a crash is about to occur.
+  std::shared_ptr<CrashManager> crashMgr_;
+
   /// Whether to output GC statistics at the end of execution.
   bool recordGcStats_{false};
   /// Time at which execution of the Hermes VM began.
@@ -664,10 +670,6 @@ class GCBase {
 #else
   static const bool randomizeAllocSpace_{false};
 #endif
-
-  /// Report OOM \p detail in a Facebook-specific way, in
-  /// Facebook builds.
-  static void oomDetailFB(char *detail);
 };
 
 // Utilities for formatting time durations and memory sizes.

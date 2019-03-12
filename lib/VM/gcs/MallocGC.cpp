@@ -145,8 +145,9 @@ MallocGC::MallocGC(
     MetadataTable metaTable,
     GCCallbacks *gcCallbacks,
     const GCConfig &gcConfig,
+    std::shared_ptr<CrashManager> crashMgr,
     StorageProvider *provider)
-    : GCBase(metaTable, gcCallbacks, gcConfig, provider),
+    : GCBase(metaTable, gcCallbacks, gcConfig, std::move(crashMgr), provider),
       pointers_(),
       weakPointers_(),
       maxSize_(Size(gcConfig).max()),

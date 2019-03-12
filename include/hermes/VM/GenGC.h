@@ -95,6 +95,7 @@ class GenGC final : public GCBase {
       MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       const GCConfig &gcConfig,
+      std::shared_ptr<CrashManager> crashMgr,
       StorageProvider *provider);
 
   /// Allocate a new cell of the specified size \p size.

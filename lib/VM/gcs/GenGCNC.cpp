@@ -74,8 +74,9 @@ GenGC::GenGC(
     MetadataTable metaTable,
     GCCallbacks *gcCallbacks,
     const GCConfig &gcConfig,
+    std::shared_ptr<CrashManager> crashMgr,
     StorageProvider *provider)
-    : GCBase(metaTable, gcCallbacks, gcConfig, provider),
+    : GCBase(metaTable, gcCallbacks, gcConfig, std::move(crashMgr), provider),
       storageProvider_(provider),
       generationSizes_(Size(gcConfig)),
       youngGen_(this, generationSizes_.youngGenSize(), &oldGen_),
@@ -1899,12 +1900,8 @@ void GenGC::oomDetail() {
       numFailedSegmentMaterializations(),
       maxSize());
   hermesLog("HermesGC", "NCGen OOM: %s", detailBuffer);
-  oomDetailFB(detailBuffer);
+  crashMgr_->setCustomData("HermesGCOOMDetailNCGen", detailBuffer);
 }
-
-#ifndef HERMES_FACEBOOK_BUILD
-/*static*/ void GenGC::oomDetailFB(char *) {}
-#endif
 
 void *GenGC::allocSlow(uint32_t sz, bool fixedSize, HasFinalizer hasFinalizer) {
   AllocContextYieldThenClaim yielder(this);

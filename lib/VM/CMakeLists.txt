@@ -9,7 +9,6 @@ set(source_files
   DictPropertyMap.cpp
   Domain.cpp
   GCBase.cpp
-  GCBase-FB.cpp
   GCCell.cpp
   OrderedHashMap.cpp
   HandleRootOwner.cpp
@@ -115,7 +114,6 @@ set(LLVM_OPTIONAL_SOURCES
   gcs/GCGeneration.cpp
   gcs/GCSegmentAddressIndex.cpp
   gcs/GenGCNC.cpp
-  gcs/GenGCNC-FB.cpp
   gcs/MarkBitArrayNC.cpp
   gcs/OldGenNC.cpp
   gcs/OldGenSegmentRanges.cpp

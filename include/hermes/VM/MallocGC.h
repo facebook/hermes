@@ -153,6 +153,7 @@ class MallocGC final : public GCBase {
       MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
       const GCConfig &gcConfig,
+      std::shared_ptr<CrashManager> crashMgr,
       StorageProvider *provider);
 
   /// Allocate an object in the GC controlled heap with the size to allocate

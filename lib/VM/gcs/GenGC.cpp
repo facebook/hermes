@@ -71,8 +71,9 @@ GenGC::GenGC(
     MetadataTable metaTable,
     GCCallbacks *gcCallbacks,
     const GCConfig &gcConfig,
+    std::shared_ptr<CrashManager> crashMgr,
     StorageProvider *provider)
-    : GCBase(metaTable, gcCallbacks, gcConfig, provider),
+    : GCBase(metaTable, gcCallbacks, gcConfig, std::move(crashMgr), provider),
       // The minimum initial size is 2 pages.
       initialSize_(clampAndPageAlign(gcConfig.getInitHeapSize())),
       // The minimum maximum size is 2 pages.
