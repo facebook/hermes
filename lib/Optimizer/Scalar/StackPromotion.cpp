@@ -428,13 +428,19 @@ bool StackPromotion::runOnFunction(Function *F) {
   }
   promoteVariables(F);
 
-  // Now that we've promoted some variables, delete the unused variables:
+  // Now that we've promoted some variables, remove the unused variables from
+  // the list and destroy them.
   auto &vars = F->getFunctionScope()->getVariables();
   vars.erase(
       std::remove_if(
           vars.begin(),
           vars.end(),
-          [](Variable *V) { return !V->getNumUsers(); }),
+          [](Variable *V) {
+            if (V->getNumUsers())
+              return false;
+            Value::destroy(V);
+            return true;
+          }),
       vars.end());
 
   return changed;
