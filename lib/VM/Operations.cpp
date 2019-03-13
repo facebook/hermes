@@ -22,6 +22,11 @@
 
 #include "llvm/ADT/SmallString.h"
 
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+#include "glue/BreakpadCustomData.h"
+#include "llvm/Support/raw_ostream.h"
+#endif
+
 #include <cfloat>
 #include <cmath>
 
@@ -1144,12 +1149,65 @@ numberToStringWithRadix(Runtime *runtime, double number, unsigned radix) {
       StringPrimitive::create(runtime, result)));
 }
 
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+static void dumpStackToMiniDump(Runtime *runtime) {
+  std::string _backingString;
+  llvm::raw_string_ostream stream(_backingString);
+  MutableHandle<> name{runtime};
+  for (StackFramePtr cf : runtime->getStackFrames()) {
+    name = HermesValue::encodeUndefinedValue();
+    if (auto callableHandle = Handle<Callable>::dyn_vmcast(
+            runtime, Handle<>(&cf.getCalleeClosureOrCBRef()))) {
+      NamedPropertyDescriptor desc;
+      JSObject *propObj = JSObject::getNamedDescriptor(
+          callableHandle,
+          runtime,
+          runtime->getPredefinedSymbolID(Predefined::name),
+          desc);
+      if (propObj && !desc.flags.accessor) {
+        name = JSObject::getNamedSlotValue(propObj, desc);
+      }
+    } else if (cf.getCalleeClosureOrCBRef().isNativeValue()) {
+      auto *cb =
+          cf.getCalleeClosureOrCBRef().getNativePointer<const CodeBlock>();
+      if (cb->getName().isValid())
+        name = HermesValue::encodeStringValue(
+            runtime->getStringPrimFromSymbolID(cb->getName()));
+    }
+    if (name->isString()) {
+      stream << name->getString();
+    } else {
+      stream << "<unknown>";
+    }
+    stream << "\n";
+  }
+  setBreakpadCustomData(
+      "T41592234-data", "Stack trace: %s", stream.str().c_str());
+}
+#endif
+
+// This is part of tracking down T41592234. If you're looking at this code
+// more than a week after that task was created you can probably just delete
+// everything from this diff.
+static inline void validateHermesValue(
+    Runtime *runtime,
+    CallResult<HermesValue> &objRes) {
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+  if (LLVM_UNLIKELY(
+          sizeof(void *) == 4 &&
+          (objRes->getRaw() & 0xFFFFFF00) == 0xFFFFFF00)) {
+    dumpStackToMiniDump(runtime);
+  }
+#endif
+}
+
 CallResult<PseudoHandle<>>
 getMethod(Runtime *runtime, Handle<> O, Handle<> key) {
   auto objRes = toObject(runtime, O);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+  validateHermesValue(runtime, objRes);
   auto obj = runtime->makeHandle<JSObject>(*objRes);
   auto funcRes = JSObject::getComputed(obj, runtime, key);
   if (LLVM_UNLIKELY(funcRes == ExecutionStatus::EXCEPTION)) {
