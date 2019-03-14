@@ -206,7 +206,13 @@ struct DummyRuntime final : public HandleRootOwner,
   static std::shared_ptr<DummyRuntime> create(
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig,
-      std::unique_ptr<StorageProvider> provider);
+      std::shared_ptr<StorageProvider> provider);
+
+  /// Provide the correct storage provider based on build modes.
+  /// All decorator StorageProviders must wrap the one returned from this
+  /// function.
+  static std::unique_ptr<StorageProvider> defaultProvider(
+      const GCConfig &gcConfig);
 
   ~DummyRuntime() override {
     gc.finalizeAll();
@@ -269,12 +275,7 @@ struct DummyRuntime final : public HandleRootOwner,
   DummyRuntime(
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig,
-      std::shared_ptr<StorageProvider> storageProvider)
-      : gc(metaTable,
-           this,
-           gcConfig,
-           std::shared_ptr<CrashManager>(new NopCrashManager),
-           storageProvider.get()) {}
+      std::shared_ptr<StorageProvider> storageProvider);
 };
 
 // Provide HermesValue & wrappers comparison operators for convenience.

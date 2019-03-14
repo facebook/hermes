@@ -190,14 +190,21 @@ TEST(GCOOMVALimitFullGCTest, Test) {
   using FullCell = EmptyCell<AlignedHeapSegment::maxSize()>;
   using HalfCell = EmptyCell<AlignedHeapSegment::maxSize() / 2>;
 
+  const GCConfig config = TestGCConfigFixedSize(kHeapSizeHint);
+
   // Only space for two segments.
   auto provider = llvm::make_unique<LimitedStorageProvider>(
-      StorageProvider::mmapProvider(), AlignedStorage::size() * 2);
+      DummyRuntime::defaultProvider(config),
+      AlignedStorage::size() *
+#ifdef HERMESVM_COMPRESSED_POINTERS
+          3
+#else
+          2
+#endif
+  );
 
-  auto runtime = DummyRuntime::create(
-      getMetadataTable(),
-      TestGCConfigFixedSize(kHeapSizeHint),
-      std::move(provider));
+  auto runtime =
+      DummyRuntime::create(getMetadataTable(), config, std::move(provider));
   DummyRuntime &rt = *runtime;
   auto &gc = rt.gc;
 
