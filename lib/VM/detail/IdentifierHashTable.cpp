@@ -109,6 +109,17 @@ uint32_t IdentifierHashTable::lookupString(
   }
 }
 
+uint32_t IdentifierHashTable::lookupString(
+    const StringPrimitive *str,
+    uint32_t hash,
+    bool mustBeNew) const {
+  if (str->isASCII()) {
+    return lookupString(str->castToASCIIRef(), hash, mustBeNew);
+  } else {
+    return lookupString(str->castToUTF16Ref(), hash, mustBeNew);
+  }
+}
+
 void IdentifierHashTable::insert(uint32_t idx, SymbolID id) {
   assert(!storage_[idx].isValid() && "Cannot insert into a valid entry");
   new (&storage_[idx]) HashTableEntry(id.unsafeGetIndex());
@@ -139,14 +150,13 @@ void IdentifierHashTable::growAndRehash(uint32_t newCapacity) {
     // Pass true as second argument as we know this string is not in the table.
     uint32_t idx = 0;
     auto &lookupTableEntry = identifierTable_->getLookupTableEntry(entry.index);
+    uint32_t hash = lookupTableEntry.getHash();
     if (lookupTableEntry.isStringPrim()) {
-      idx = lookupString(lookupTableEntry.getStringPrim(), true);
+      idx = lookupString(lookupTableEntry.getStringPrim(), hash, true);
     } else if (lookupTableEntry.isLazyASCII()) {
-      idx = lookupString(
-          lookupTableEntry.getLazyASCIIRef(), lookupTableEntry.getHash(), true);
+      idx = lookupString(lookupTableEntry.getLazyASCIIRef(), hash, true);
     } else if (lookupTableEntry.isLazyUTF16()) {
-      idx = lookupString(
-          lookupTableEntry.getLazyUTF16Ref(), lookupTableEntry.getHash(), true);
+      idx = lookupString(lookupTableEntry.getLazyUTF16Ref(), hash, true);
     }
     storage_[idx] = entry;
   }

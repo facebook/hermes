@@ -184,6 +184,13 @@ class IdentifierHashTable {
   uint32_t lookupString(const StringPrimitive *str, bool mustBeNew = false)
       const;
 
+  /// Similar to lookupString(llvm::ArrayRef<T>...), but provided
+  /// a StringPrimitive argument, and the string hash.
+  uint32_t lookupString(
+      const StringPrimitive *str,
+      uint32_t hash,
+      bool mustBeNew = false) const;
+
   /// \return a const reference to the hash table storage given \p index.
   const HashTableEntry &at(uint32_t index) const {
     assert(index < capacity() && "Index out of bound");
