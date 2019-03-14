@@ -174,35 +174,6 @@ void PreAllocatedStorageProvider::deleteStorage(void *storage) {
 } // namespace
 
 /* static */
-std::unique_ptr<StorageProvider> StorageProvider::defaultProvider(
-    size_t maxAmount) {
-  assert(
-      maxAmount % AlignedStorage::size() == 0 &&
-      "maxAmount must be a multiple of AlignedStorage::size()");
-  return defaultProviderWithExcess(maxAmount, 0);
-}
-
-/* static */
-std::unique_ptr<StorageProvider> StorageProvider::defaultProviderWithExcess(
-    size_t maxAmount,
-    size_t excess) {
-  assert(
-      maxAmount % AlignedStorage::size() == 0 &&
-      "maxAmount must be a multiple of AlignedStorage::size()");
-  assert(
-      excess <= AlignedStorage::size() &&
-      "Excess is greater than AlignedStorage::size, but storages aren't guaranteed to be contiguous");
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  // On 64-bit builds, we have plenty of VA, allocate it before-hand.
-  return preAllocatedProvider(maxAmount, excess);
-#else
-  // On 32-bit builds, we have limited VA. Allocate
-  // each segment as it's needed.
-  return mmapProvider();
-#endif
-}
-
-/* static */
 std::unique_ptr<StorageProvider> StorageProvider::preAllocatedProvider(
     size_t amount,
     size_t excess) {

@@ -185,7 +185,7 @@ class StorageGuard final {
 
 TEST(StorageProviderTest, WithExcess) {
   std::shared_ptr<StorageProvider> provider{
-      StorageProvider::defaultProviderWithExcess(0, 100)};
+      StorageProvider::preAllocatedProvider(0, 100)};
   // This should succeed even though the maxAmount is 0.
   // The excess bytes requested should be rounded up to give an extra storage
   // allocation.

@@ -200,9 +200,7 @@ class StackRuntime {
         alignof(::hermes::vm::PinnedHermesValue)>::type
         registerStack[kMaxNumRegisters];
 
-    stack->provider_ = vm::StorageProvider::defaultProvider(
-        vm::GC::Size{config.getMinHeapSize(), config.getMaxHeapSize()}
-            .storageFootprint());
+    stack->provider_ = vm::StorageProvider::mmapProvider();
     stack->runtime_ = &rt;
     stack->registerStack_ =
         reinterpret_cast<::hermes::vm::PinnedHermesValue *>(registerStack);
