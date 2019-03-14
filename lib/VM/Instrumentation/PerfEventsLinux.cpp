@@ -43,6 +43,7 @@ struct PerfCounter {
 
 static PerfCounter counters[] = {
     {-1, "instructions", PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS},
+    {-1, "cpu-cycles", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES},
     {-1,
      "L1-icache-load-misses",
      PERF_TYPE_HW_CACHE,
