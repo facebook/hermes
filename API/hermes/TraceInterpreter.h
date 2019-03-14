@@ -85,6 +85,7 @@ class TraceInterpreter final {
       std::unordered_map<SynthTrace::ObjectID, PropNameToCalls>;
 
   /// Options for executing the trace.
+  /// \param warmupReps Number of initial executions whose stats are discarded.
   /// \param reps Number of repetitions of execution. Stats returned are those
   ///   for the rep with the median totalTime.
   /// \param minHeapSize if non-zero, the minimum heap size, overriding
@@ -97,6 +98,7 @@ class TraceInterpreter final {
   ///   young generation, change back to young-gen allocation at TTI.
   struct ExecuteOptions {
     std::string marker;
+    int warmupReps{0};
     int reps{1};
     ::hermes::vm::gcheapsize_t minHeapSize{0};
     ::hermes::vm::gcheapsize_t maxHeapSize{0};

@@ -569,7 +569,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   rtConfig = rtConfigBuilder.withGCConfig(gcConfigBuilder.build()).build();
 
   std::vector<std::string> repGCStats(options.reps);
-  for (int rep = 0; rep < options.reps; ++rep) {
+  for (int rep = -options.warmupReps; rep < options.reps; ++rep) {
     ::hermes::vm::instrumentation::PerfEvents::begin();
 #ifdef HERMESVM_API_TRACE
     std::unique_ptr<TracingHermesRuntime> rt =
@@ -585,8 +585,12 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     rt->setMockedEnvironment(std::get<2>(traceAndConfigAndEnv));
     std::function<void()> writeTrace = nullptr;
 #endif
-    repGCStats[rep] =
+    auto stats =
         exec(*rt, options, trace, bufView(codeFileBuffer.get()), writeTrace);
+    // If we're not warming up, save the stats.
+    if (rep >= 0) {
+      repGCStats[rep] = stats;
+    }
   }
   auto GCStats = options.shouldPrintGCStats ? mergeGCStats(repGCStats) : "";
   std::string stats = getStatsString(GCStats, options.shouldTrackIO);
