@@ -176,6 +176,7 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
           provider),
       jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 8, (1 << 20) * 32),
       hasES6Symbol_(runtimeConfig.getES6Symbol()),
+      validatePointers_(runtimeConfig.getEnableValidatePointers()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       runtimeStats_(runtimeConfig.getEnableSampledStats()),
