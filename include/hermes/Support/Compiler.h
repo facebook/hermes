@@ -48,6 +48,16 @@
 #define HERMES_ATTRIBUTE_FORMAT(archetype, string_index, first_to_check)
 #endif
 
+#ifndef LLVM_PTR_SIZE
+#error "LLVM_PTR_SIZE needs to be defined"
+#endif
+
+#if defined(HERMESVM_ALLOW_COMPRESSED_POINTERS) && LLVM_PTR_SIZE == 8
+/// \macro HERMESVM_COMPRESSED_POINTERS
+/// \brief If defined, store pointers as 32 bits in GC-managed Hermes objects.
+#define HERMESVM_COMPRESSED_POINTERS
+#endif
+
 namespace hermes {
 
 /// Some compiler versions don't support \c std::is_trivially_copyable<>, so

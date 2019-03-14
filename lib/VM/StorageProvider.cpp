@@ -7,6 +7,7 @@
 #include "hermes/VM/StorageProvider.h"
 
 #include "hermes/Support/CheckedMalloc.h"
+#include "hermes/Support/Compiler.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedStorage.h"
 
@@ -191,7 +192,7 @@ std::unique_ptr<StorageProvider> StorageProvider::defaultProviderWithExcess(
   assert(
       excess <= AlignedStorage::size() &&
       "Excess is greater than AlignedStorage::size, but storages aren't guaranteed to be contiguous");
-#ifdef HERMESVM_FLAT_ADDRESS_SPACE
+#ifdef HERMESVM_COMPRESSED_POINTERS
   // On 64-bit builds, we have plenty of VA, allocate it before-hand.
   return preAllocatedProvider(maxAmount, excess);
 #else
