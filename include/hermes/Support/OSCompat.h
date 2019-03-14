@@ -107,6 +107,10 @@ int pages_in_ram(const void *p, size_t sz);
 /// It excludes virtual memory that has been paged out or was never loaded.
 uint64_t peak_rss();
 
+/// Get the number of \p voluntary and \p involuntary context switches the
+/// process has made so far, or return false if unsupported.
+bool num_context_switches(long &voluntary, long &involuntary);
+
 /// \return OS thread id of current thread.
 uint64_t thread_id();
 

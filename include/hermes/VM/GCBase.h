@@ -629,6 +629,9 @@ class GCBase {
   /// Time at which execution of the Hermes VM began.
   std::chrono::time_point<std::chrono::steady_clock> execStartTime_;
   std::chrono::microseconds execStartCPUTime_;
+  /// Number of context switches before execution of the Hermes VM began.
+  long startNumVoluntaryContextSwitches_{0};
+  long startNumInvoluntaryContextSwitches_{0};
   // The cumulative GC stats.
   CumulativeHeapStats cumStats_;
 

@@ -34,6 +34,8 @@ void GCBase::runtimeWillExecute() {
   if (recordGcStats_) {
     execStartTime_ = std::chrono::steady_clock::now();
     execStartCPUTime_ = oscompat::thread_cpu_time();
+    oscompat::num_context_switches(
+        startNumVoluntaryContextSwitches_, startNumInvoluntaryContextSwitches_);
   }
 }
 
@@ -159,12 +161,21 @@ void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
      << "\t\t\"Malloc size\": " << info.mallocSizeEstimate << "\n"
      << "\t},\n";
 
+  long vol = -1;
+  long invol = -1;
+  if (oscompat::num_context_switches(vol, invol)) {
+    vol -= startNumVoluntaryContextSwitches_;
+    invol -= startNumInvoluntaryContextSwitches_;
+  }
+
   os << "\t\"general\": {\n"
      << "\t\t\"numCollections\": " << cumStats_.numCollections << ",\n"
      << "\t\t\"totalTime\": " << elapsedTime.count() << ",\n"
      << "\t\t\"totalCPUTime\": " << elapsedCPUSeconds << ",\n"
      << "\t\t\"totalGCTime\": " << formatSecs(cumStats_.gcWallTime.sum()).secs
      << ",\n"
+     << "\t\t\"volCtxSwitch\": " << vol << ",\n"
+     << "\t\t\"involCtxSwitch\": " << invol << ",\n"
      << "\t\t\"avgGCPause\": " << formatSecs(cumStats_.avgGCWallTime()).secs
      << ",\n"
      << "\t\t\"maxGCPause\": " << formatSecs(cumStats_.gcWallTime.max()).secs

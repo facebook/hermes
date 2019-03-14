@@ -281,6 +281,18 @@ uint64_t peak_rss() {
   return rss;
 }
 
+bool num_context_switches(long &voluntary, long &involuntary) {
+  voluntary = involuntary = -1;
+  rusage ru;
+  if (getrusage(RUSAGE_SELF, &ru)) {
+    // failed
+    return false;
+  }
+  voluntary = ru.ru_nvcsw;
+  involuntary = ru.ru_nivcsw;
+  return true;
+}
+
 // Platform-specific implementations of thread_id
 #if defined(__APPLE__) && defined(__MACH__)
 

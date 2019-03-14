@@ -276,6 +276,12 @@ uint64_t peak_rss() {
   return pmc.PeakWorkingSetSize;
 }
 
+bool num_context_switches(long &voluntary, long &involuntary) {
+  // Not yet supported.
+  voluntary = involuntary = -1;
+  return false;
+}
+
 uint64_t thread_id() {
   return GetCurrentThreadId();
 }
