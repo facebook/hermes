@@ -10,8 +10,9 @@
 #include <jsi/jsi.h>
 
 #include <stdlib.h>
-#include <unistd.h>
+#include <chrono>
 #include <functional>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -44,7 +45,7 @@ TEST_P(JSITest, PropNameIDTest) {
       rt, movedQuux, PropNameID::forAscii(rt, std::string("foo"))));
   uint8_t utf8[] = {0xF0, 0x9F, 0x86, 0x97};
   PropNameID utf8PropNameID = PropNameID::forUtf8(rt, utf8, sizeof(utf8));
-  EXPECT_EQ(utf8PropNameID.utf8(rt), "\U0001F197");
+  EXPECT_EQ(utf8PropNameID.utf8(rt), u8"\U0001F197");
   EXPECT_TRUE(PropNameID::compare(
       rt, utf8PropNameID, PropNameID::forUtf8(rt, utf8, sizeof(utf8))));
   PropNameID nonUtf8PropNameID = PropNameID::forUtf8(rt, "meow");
@@ -571,7 +572,7 @@ TEST_P(JSITest, FunctionConstructorTest) {
   EXPECT_TRUE(date.isObject());
   EXPECT_TRUE(instanceof.call(rt, date, dateCtor).getBool());
   // Sleep for 50 milliseconds
-  usleep(50000);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
   EXPECT_GE(
       function("function (d) { return (new Date()).getTime() - d.getTime(); }")
           .call(rt, date)

@@ -44,6 +44,7 @@ TEST_P(FBJSITest, IsThreadSafeIfThreadSafe) {
   EXPECT_EQ(obj.getProperty(rt, "val").getNumber(), 1500);
 }
 
+#ifndef _WINDOWS // skip on Windows because FileBuffer has dummy implementation
 TEST_P(FBJSITest, FileBuffer) {
   class TmpFile {
    public:
@@ -102,6 +103,7 @@ TEST_P(FBJSITest, FileBuffer) {
   EXPECT_NE(
       exc.find("Could not open this-is-not-a-valid-path: "), std::string::npos);
 }
+#endif // !defined(_WINDOWS)
 
 INSTANTIATE_TEST_CASE_P(
     Runtimes,

@@ -4,6 +4,8 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
+#ifndef _WINDOWS
+
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -110,3 +112,5 @@ FileBuffer::~FileBuffer() {
 
 } // namespace jsi
 } // namespace facebook
+
+#endif // !defined(_WINDOWS)
