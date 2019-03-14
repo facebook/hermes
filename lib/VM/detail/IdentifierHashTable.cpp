@@ -142,9 +142,11 @@ void IdentifierHashTable::growAndRehash(uint32_t newCapacity) {
     if (lookupTableEntry.isStringPrim()) {
       idx = lookupString(lookupTableEntry.getStringPrim(), true);
     } else if (lookupTableEntry.isLazyASCII()) {
-      idx = lookupString(lookupTableEntry.getLazyASCIIRef(), true);
+      idx = lookupString(
+          lookupTableEntry.getLazyASCIIRef(), lookupTableEntry.getHash(), true);
     } else if (lookupTableEntry.isLazyUTF16()) {
-      idx = lookupString(lookupTableEntry.getLazyUTF16Ref(), true);
+      idx = lookupString(
+          lookupTableEntry.getLazyUTF16Ref(), lookupTableEntry.getHash(), true);
     }
     storage_[idx] = entry;
   }
