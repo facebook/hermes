@@ -8,7 +8,9 @@
 #define HERMES_VM_OPERATIONS_H
 
 #include "hermes/VM/CallResult.h"
+#include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SymbolID.h"
 
 #include "llvm/ADT/SmallVector.h"
 
@@ -344,6 +346,18 @@ CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
 
 /// ES6.0 22.1.3.1.1
 CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value);
+
+/// \return true if and only if \p id is a primitive SymbolID backing a JS
+/// Symbol instance.
+constexpr bool isSymbolPrimitive(SymbolID id) {
+  return id.isNotUniqued() && !InternalProperty::isInternal(id);
+}
+
+/// \return true if and only if \p id is a primitive SymbolID backing a JS
+/// Property Name.
+constexpr bool isPropertyNamePrimitive(SymbolID id) {
+  return id.isUniqued();
+}
 
 } // namespace vm
 } // namespace hermes

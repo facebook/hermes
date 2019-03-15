@@ -12,6 +12,7 @@
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSDate.h"
+#include "hermes/VM/Operations.h"
 #include "hermes/VM/StringView.h"
 
 #include "llvm/ADT/SmallSet.h"
@@ -30,7 +31,7 @@ ObjectVTable JSObject::vt{
     JSObject::_checkAllOwnIndexedImpl,
 };
 
-// We need a way to generate the named of the direct properties in the data
+// We need a way to generate the names of the direct properties in the data
 // segment.
 namespace {
 
@@ -364,7 +365,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyNames(
   // encountered.
   llvm::SmallVector<uint32_t, 8> indexNames{};
 
-  // Iterate the named properties.
+  // Iterate the named properties excluding those which use Symbols.
   HiddenClass::forEachProperty(
       runtime->makeHandle(selfHandle->clazz_),
       runtime,
@@ -376,11 +377,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyNames(
        &indexNames,
        &tmpHandle,
        &dedupSet](SymbolID id, NamedPropertyDescriptor desc) {
-        if (InternalProperty::isInternal(id)) {
-          return;
-        }
-
-        if (id.isNotUniqued()) {
+        if (!isPropertyNamePrimitive(id)) {
           return;
         }
 
@@ -426,7 +423,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyNames(
 
         assert(
             !InternalProperty::isInternal(id) &&
-            "host object returned reserved sybmol");
+            "host object returned reserved symbol");
         auto propNameAsIndex = toArrayIndex(
             runtime->getIdentifierTable().getStringView(runtime, id));
         if (LLVM_UNLIKELY(propNameAsIndex)) {
@@ -528,14 +525,12 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertySymbols(
       runtime,
       [runtime, &array, &index, &tmpHandle](
           SymbolID id, NamedPropertyDescriptor desc) {
-        if (InternalProperty::isInternal(id)) {
+        if (!isSymbolPrimitive(id)) {
           return;
         }
 
-        if (id.isNotUniqued()) {
-          tmpHandle = id;
-          JSArray::setElementAt(array, runtime, index++, tmpHandle);
-        }
+        tmpHandle = id;
+        JSArray::setElementAt(array, runtime, index++, tmpHandle);
       });
 
   // Properly set the length of the array.
