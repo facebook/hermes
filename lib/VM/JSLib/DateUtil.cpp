@@ -207,6 +207,19 @@ double weekDay(double t) {
 // ES5.1 15.9.1.7
 
 double localTZA() {
+#ifdef _WINDOWS
+
+  _tzset();
+
+  long gmtoff;
+  int err = _get_timezone(&gmtoff);
+  assert(err == 0 && "_get_timezone failed in localTZA()");
+
+  // The result of _get_timezone is negated
+  return -gmtoff * MS_PER_SECOND;
+
+#else
+
   ::tzset();
 
   // Get the current time in seconds (might have DST adjustment included).
@@ -221,14 +234,12 @@ double localTZA() {
     llvm_unreachable("localtime failed in localTZA()");
   }
 
-#ifdef _WINDOWS
-  long gmtoff = -_timezone;
-#else
   long gmtoff = local->tm_gmtoff;
-#endif
 
   // Use the gmtoff field and subtract an hour if currently in DST.
   return (gmtoff * MS_PER_SECOND) - (local->tm_isdst ? MS_PER_HOUR : 0);
+
+#endif
 }
 
 //===----------------------------------------------------------------------===//
