@@ -5,13 +5,21 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/VM/IdentifierTable.h"
+#include "hermes/Support/UTF8.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/StringView.h"
 
 #include "TestHelpers.h"
 
 #include "gtest/gtest.h"
 
+#include <iterator>
+#include <sstream>
+#include <string>
+#include <vector>
+
+using namespace hermes;
 using namespace hermes::vm;
 
 namespace {
@@ -118,6 +126,77 @@ TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
   EXPECT_DEATH(
       { idTable.getStringPrim(runtime, symbol); },
       "Unhandled out of memory exception");
+}
+
+// Verifies that SymbolIDs are allocated consecutively, increasing from zero, as
+// long as none have been freed.
+TEST_F(IdentifierTableTest, ConsecutiveIncreasingSymbolIDAlloc) {
+  IdentifierTable idTable;
+
+  // Backing store for StringRefs
+  std::vector<std::string> ascii;
+  std::vector<std::u16string> utf16;
+
+  for (size_t i = 0; i < 100; ++i) {
+    std::stringstream ssa;
+    ssa << "ascii-" << i;
+    ascii.emplace_back(ssa.str());
+
+    std::stringstream ssu;
+    ssu << "utf16-" << i;
+    auto abuf = ssu.str();
+    std::u16string buf;
+    convertUTF8WithSurrogatesToUTF16(
+        std::back_inserter(buf), abuf.data(), abuf.data() + abuf.size());
+
+    utf16.emplace_back(std::move(buf));
+  }
+
+  { // Add refs to the ID Table.  First time round, allocate all new IDs.
+    size_t idx = 0;
+    for (auto &s : ascii) {
+      auto r = createASCIIRef(s.c_str());
+      EXPECT_EQ(idTable.registerLazyIdentifier(r).unsafeGetIndex(), idx++)
+          << "Uniqued ASCII First Round";
+    }
+
+    for (auto &s : utf16) {
+      auto r = createUTF16Ref(s.c_str());
+      EXPECT_EQ(idTable.registerLazyIdentifier(r).unsafeGetIndex(), idx++)
+          << "Uniqued UTF16 First Round";
+    }
+
+    for (auto &s : ascii) {
+      auto r = createASCIIRef(s.c_str());
+      EXPECT_EQ(idTable.createNotUniquedLazySymbol(r).unsafeGetIndex(), idx++)
+          << "Not Uniqued ASCII First Round";
+    }
+  }
+
+  { // Next time around: The IDs should be the same as before for the uniqued
+    // SymbolIDs.
+    size_t idx = 0;
+    for (auto &s : ascii) {
+      auto r = createASCIIRef(s.c_str());
+      EXPECT_EQ(idTable.registerLazyIdentifier(r).unsafeGetIndex(), idx++)
+          << "Uniqued ASCII Second Round";
+    }
+
+    for (auto &s : utf16) {
+      auto r = createUTF16Ref(s.c_str());
+      EXPECT_EQ(idTable.registerLazyIdentifier(r).unsafeGetIndex(), idx++)
+          << "Uniqued UTF16 Second Round";
+    }
+
+    // These symbols are not uniqued so they are going to get re-allocated every
+    // time, although still linearly.
+    idx = idTable.getSymbolsEnd();
+    for (auto &s : ascii) {
+      auto r = createASCIIRef(s.c_str());
+      EXPECT_EQ(idTable.createNotUniquedLazySymbol(r).unsafeGetIndex(), idx++)
+          << "Not Uniqued ASCII Second Round";
+    }
+  }
 }
 
 } // namespace

@@ -60,6 +60,9 @@ class StringView;
 /// class. The memory for the unneeded symbols is released and their raw
 /// SymbolIDs are made available for reuse. For that purpose a singly-
 /// linked list of freed ids is maintained inside the index array.
+///
+/// SymbolIDs are guaranteed to be allocated sequentially from zero until the
+/// first occasion when a symbol is freed.
 class IdentifierTable {
   friend class detail::IdentifierHashTable;
 
