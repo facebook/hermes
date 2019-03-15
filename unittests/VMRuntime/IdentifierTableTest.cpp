@@ -79,9 +79,9 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
       (uint64_t)runtime->getStringPrimFromSymbolID(sb) % (uint64_t)HeapAlign);
 }
 
-using IdentifierTableNotUniquedTest = RuntimeTestFixture;
+using IdentifierTableTest = RuntimeTestFixture;
 
-TEST_F(IdentifierTableNotUniquedTest, NotUniquedSymbol) {
+TEST_F(IdentifierTableTest, NotUniquedSymbol) {
   auto &idTable = runtime->getIdentifierTable();
 
   {
@@ -96,17 +96,14 @@ TEST_F(IdentifierTableNotUniquedTest, NotUniquedSymbol) {
   }
 }
 
-TEST(IdentifierTableTest, LazyExternalSymbolTooBig) {
-  auto &rtConfig = kTestRTConfig;
-  auto rt = Runtime::create(rtConfig);
-  Runtime *runtime = rt.get();
+TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
   GCScope gcScope{runtime};
   auto &idTable = runtime->getIdentifierTable();
 
   static const auto kExtStringThreshold =
       StringPrimitive::EXTERNAL_STRING_THRESHOLD;
-  const auto extSize = 1 +
-      std::max(rtConfig.getGCConfig().getMaxHeapSize(), kExtStringThreshold);
+  const auto extSize =
+      1 + std::max(kTestGCConfig.getMaxHeapSize(), kExtStringThreshold);
 
   // A string of this size is definitely too big to be allocated.
   ASSERT_TRUE(StringPrimitive::isExternalLength(extSize));
