@@ -66,14 +66,9 @@ static void DummyObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@pointer", &self->pointer);
 }
 
-static Metadata buildMetaWrapper() {
-  Metadata::Builder mb(nullptr);
-  DummyObjectBuildMeta(nullptr, mb);
-  return mb.build();
-}
-
 static MetadataTableForTests getMetadataTable() {
-  static const Metadata storage[] = {buildMetaWrapper()};
+  static const Metadata storage[] = {
+      buildMetadata(CellKind::UninitializedKind, DummyObjectBuildMeta)};
   return MetadataTableForTests(storage);
 }
 
