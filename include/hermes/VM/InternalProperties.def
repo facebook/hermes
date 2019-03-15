@@ -9,8 +9,6 @@
 #endif
 
 /// Anonymous internal propertes. Not part of the object map.
-/// If more properties are added here, InternalProperty::NumInternalProperties
-/// must also be updated.
 PROP(0)
 PROP(1)
 PROP(2)
