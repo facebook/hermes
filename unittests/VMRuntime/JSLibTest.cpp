@@ -945,11 +945,8 @@ TEST_F(JSLibTest, MockedEnvironmentTest) {
   const std::deque<uint64_t> newDateColl{newDate};
   const std::deque<std::string> dateAsFuncColl{dateAsFunc};
 
-  runtime->setMockedEnvironment(
-      hermes::vm::MockedEnvironment{.mathRandomSeed = mathRandomSeed,
-                                    .callsToDateNow = dateNowColl,
-                                    .callsToNewDate = newDateColl,
-                                    .callsToDateAsFunction = dateAsFuncColl});
+  runtime->setMockedEnvironment(hermes::vm::MockedEnvironment{
+      mathRandomSeed, dateNowColl, newDateColl, dateAsFuncColl});
 
   {
     // Call Math.random() and check that its output matches the one given.

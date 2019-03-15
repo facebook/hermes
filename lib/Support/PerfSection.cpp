@@ -77,7 +77,7 @@ void PerfSection::addArg(
   } else {
     data = value.data();
   }
-  val.value.stringref = {.data = data, .size = value.size(), .owned = doCopy};
+  val.value.stringref = {data, value.size(), doCopy};
 }
 
 PerfSection::~PerfSection() {
@@ -136,10 +136,10 @@ PerfSection::~PerfSection() {
   std::transform(
       kvPairs.begin(), kvPairs.end(), argArr.get(), [](const KVPair &kvPair) {
         return FbSystraceSectionArg{
-            .key = kvPair.first.c_str(),
-            .key_len = static_cast<int>(kvPair.first.size()),
-            .value = kvPair.second.c_str(),
-            .value_len = static_cast<int>(kvPair.second.size()),
+            kvPair.first.c_str(),
+            static_cast<int>(kvPair.first.size()),
+            kvPair.second.c_str(),
+            static_cast<int>(kvPair.second.size()),
         };
       });
   fbsystrace_end_section_with_args(
