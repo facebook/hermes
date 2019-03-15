@@ -230,9 +230,6 @@ void MallocGC::collect() {
     // Since `markCell` adds onto worklist_, this cannot be expressed as a
     // normal loop.
     GCBase::markCell(cell, this, acceptor);
-#ifndef NDEBUG
-    ++numAllocatedObjects_;
-#endif
     allocatedBytes_ += cell->getAllocatedSize();
   }
 
@@ -246,9 +243,6 @@ void MallocGC::collect() {
   // Free the unused symbols.
   gcCallbacks_->freeSymbols(acceptor.markedSymbols_);
   // By the end of the marking loop, all pointers left in pointers_ are dead.
-#ifndef NDEBUG
-  numCollectedObjects_ = pointers_.size();
-#endif
   for (CellHeader *header : pointers_) {
 #ifndef HERMESVM_SANITIZE_HANDLES
     // If handle sanitization isn't on, these pointers should all be dead.
@@ -277,7 +271,21 @@ void MallocGC::collect() {
   }
 
 #ifndef NDEBUG
+#ifdef HERMESVM_SANITIZE_HANDLES
+  // If handle sanitization is on, pointers_ is unmodified from before the
+  // collection, and the number of collected objects is the difference between
+  // the pointers before, and the pointers after the collection.
+  assert(
+      pointers_.size() >= newPointers_.size() &&
+      "There cannot be more new pointers than there are old pointers");
+  numCollectedObjects_ = pointers_.size() - newPointers_.size();
+#else
+  // If handle sanitization is not on, live pointers are removed from pointers_
+  // so the number of collected objects is equal to the size of pointers_.
+  numCollectedObjects_ = pointers_.size();
+#endif
   numReachableObjects_ = newPointers_.size();
+  numAllocatedObjects_ = newPointers_.size();
 #endif
   pointers_ = std::move(newPointers_);
   assert(
