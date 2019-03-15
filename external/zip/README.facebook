@@ -1,26 +1,8 @@
 # Zip Library
 https://github.com/kuba--/zip
-Version: df34e4609aa7dee4601b8d3d4bb29b15d2a32a78
+Version: 635ef1d1452d187e027ecdcd164fa0fafa0fd2dd
 
 Delete the line in `zip.c`:
 ```
 int symlink(const char *target, const char *linkpath); // needed on Linux
-```
-
-Replace the following line in `zip.h`
-
-```
-typedef long  ssize_t;  /* byte count or error */
-```
-
-with
-
-```
-// 64-bit Windows is the only mainstream platform
-// where sizeof(long) != sizeof(void*)
-#ifdef _WIN64
-typedef long long ssize_t;  /* byte count or error */
-#else
-typedef long  ssize_t;  /* byte count or error */
-#endif
 ```

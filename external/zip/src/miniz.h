@@ -3022,7 +3022,6 @@ static mz_bool tdefl_compress_lz_codes(tdefl_compressor *d) {
         sym = s_tdefl_large_dist_sym[match_dist >> 8];
         num_extra_bits = s_tdefl_large_dist_extra[match_dist >> 8];
       }
-      MZ_ASSERT(d->m_huff_code_sizes[1][sym]);
       TDEFL_PUT_BITS(d->m_huff_codes[1][sym], d->m_huff_code_sizes[1][sym]);
       TDEFL_PUT_BITS(match_dist & mz_bitmasks[num_extra_bits], num_extra_bits);
     } else {
