@@ -46,15 +46,14 @@ class StringView;
 /// efficient lookups from a string to \c IdentifierID/SymbolID.
 ///
 /// There are two types of SymbolIDs stored in the IdentifierTable.
-/// - Internal SymbolIDs are uniqued strings. They are stored in a hash table,
-///   with a lookup vector which assigns SymbolIDs to strings. IdentifierTable
-///   provides a two-way mapping between internal SymbolIDs and the strings
-///   which they represent.
-/// - External SymbolIDs are values which back the primitive JS type Symbol.
-///   These are not uniqued (they are not placed in the hash table),
-///   but they are placed in a lookup vector. Thus, we can map from a SymbolID
+/// - Uniqued SymbolIDs. They are stored in a hash table, with a lookup vector
+///   which assigns SymbolIDs to strings. IdentifierTable provides a two-way
+///   mapping between internal SymbolIDs and the strings which they represent.
+/// - Not Uniqued SymbolIDs.  These are not placed in the hash table, but they
+///   are placed in the lookup vector. Thus, we can map from a SymbolID
 ///   to the description string for the Symbol, but the mapping back is not
-///   unique. Note that this is the case because \c Symbol('x') !== Symbol('x').
+///   unique. These back the primitive JS type Symbol because \c Symbol('x') !==
+///   Symbol('x').
 ///
 /// SymbolIDs that are no longer used by the VM are detected by the garbage
 /// collector which then invokes the \c freeUnmarkedSymbols() method of this
@@ -154,13 +153,13 @@ class IdentifierTable {
   /// Allocate a new SymbolID without adding an entry to the
   /// IdentifierHashTable, so it is not uniqued; this function should only be
   /// used during Runtime initialization. \param desc the description of the
-  /// external symbol.
+  /// not uniqued symbol.
   /// \return the newly allocated SymbolID.
   SymbolID createNotUniquedLazySymbol(ASCIIRef desc);
 
   /// Allocate a new SymbolID without adding an entry to the
   /// IdentifierHashTable, so it is not uniqued.
-  /// \param desc the description of the external symbol.
+  /// \param desc the description of the not uniqued symbol.
   /// \return the newly allocated SymbolID.
   CallResult<SymbolID> createNotUniquedSymbol(
       Runtime *runtime,

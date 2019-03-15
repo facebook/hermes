@@ -79,9 +79,9 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
       (uint64_t)runtime->getStringPrimFromSymbolID(sb) % (uint64_t)HeapAlign);
 }
 
-using IdentifierTableExternalTest = RuntimeTestFixture;
+using IdentifierTableNotUniquedTest = RuntimeTestFixture;
 
-TEST_F(IdentifierTableExternalTest, NotUniquedSymbol) {
+TEST_F(IdentifierTableNotUniquedTest, NotUniquedSymbol) {
   auto &idTable = runtime->getIdentifierTable();
 
   {
