@@ -64,6 +64,13 @@ else
   BUILD_TYPE="${BUILD_TYPE:-Debug}"
 fi
 
+# If CROSSCOMPILE_ONLY is set, we'll only build tblgen since
+# that's the only thing we need to cross-compile LLVM for Android.
+if [ -n "$CROSSCOMPILE_ONLY" ]
+then
+  BUILD_CMD="$BUILD_CMD bin/llvm-tblgen"
+fi
+
 LLVM_BUILD_DIR="${LLVM_BUILD_DIR:-llvm_build$BUILD_DIR_SUFFIX}"
 
 echo "Using Build system: $BUILD_SYSTEM"
