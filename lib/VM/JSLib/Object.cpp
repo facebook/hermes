@@ -157,7 +157,7 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
 
   auto cons = defineSystemConstructor(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Object),
+      Predefined::getSymbolID(Predefined::Object),
       objectConstructor,
       Handle<JSObject>::vmcast(&runtime->objectPrototype),
       1,
@@ -169,49 +169,49 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       objectPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toString),
+      Predefined::getSymbolID(Predefined::toString),
       ctx,
       objectPrototypeToString,
       0);
   defineMethod(
       runtime,
       objectPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toLocaleString),
+      Predefined::getSymbolID(Predefined::toLocaleString),
       ctx,
       objectPrototypeToLocaleString,
       0);
   defineMethod(
       runtime,
       objectPrototype,
-      runtime->getPredefinedSymbolID(Predefined::valueOf),
+      Predefined::getSymbolID(Predefined::valueOf),
       ctx,
       objectPrototypeValueOf,
       0);
   defineMethod(
       runtime,
       objectPrototype,
-      runtime->getPredefinedSymbolID(Predefined::hasOwnProperty),
+      Predefined::getSymbolID(Predefined::hasOwnProperty),
       ctx,
       objectPrototypeHasOwnProperty,
       1);
   defineMethod(
       runtime,
       objectPrototype,
-      runtime->getPredefinedSymbolID(Predefined::isPrototypeOf),
+      Predefined::getSymbolID(Predefined::isPrototypeOf),
       ctx,
       objectPrototypeIsPrototypeOf,
       1);
   defineMethod(
       runtime,
       objectPrototype,
-      runtime->getPredefinedSymbolID(Predefined::propertyIsEnumerable),
+      Predefined::getSymbolID(Predefined::propertyIsEnumerable),
       ctx,
       objectPrototypePropertyIsEnumerable,
       1);
   defineAccessor(
       runtime,
       objectPrototype,
-      runtime->getPredefinedSymbolID(Predefined::underscore_proto),
+      Predefined::getSymbolID(Predefined::underscore_proto),
       ctx,
       objectPrototypeProto_getter,
       objectPrototypeProto_setter,
@@ -220,28 +220,28 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       objectPrototype,
-      runtime->getPredefinedSymbolID(Predefined::__defineGetter__),
+      Predefined::getSymbolID(Predefined::__defineGetter__),
       ctx,
       objectPrototypeDefineGetter,
       2);
   defineMethod(
       runtime,
       objectPrototype,
-      runtime->getPredefinedSymbolID(Predefined::__defineSetter__),
+      Predefined::getSymbolID(Predefined::__defineSetter__),
       ctx,
       objectPrototypeDefineSetter,
       2);
   defineMethod(
       runtime,
       objectPrototype,
-      runtime->getPredefinedSymbolID(Predefined::__lookupGetter__),
+      Predefined::getSymbolID(Predefined::__lookupGetter__),
       ctx,
       objectPrototypeLookupGetter,
       1);
   defineMethod(
       runtime,
       objectPrototype,
-      runtime->getPredefinedSymbolID(Predefined::__lookupSetter__),
+      Predefined::getSymbolID(Predefined::__lookupSetter__),
       ctx,
       objectPrototypeLookupSetter,
       1);
@@ -250,21 +250,21 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::getPrototypeOf),
+      Predefined::getSymbolID(Predefined::getPrototypeOf),
       ctx,
       objectGetPrototypeOf,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::getOwnPropertyDescriptor),
+      Predefined::getSymbolID(Predefined::getOwnPropertyDescriptor),
       ctx,
       objectGetOwnPropertyDescriptor,
       2);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::getOwnPropertyNames),
+      Predefined::getSymbolID(Predefined::getOwnPropertyNames),
       ctx,
       objectGetOwnPropertyNames,
       1);
@@ -272,7 +272,7 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
     defineMethod(
         runtime,
         cons,
-        runtime->getPredefinedSymbolID(Predefined::getOwnPropertySymbols),
+        Predefined::getSymbolID(Predefined::getOwnPropertySymbols),
         ctx,
         objectGetOwnPropertySymbols,
         1);
@@ -280,92 +280,87 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::seal),
+      Predefined::getSymbolID(Predefined::seal),
       ctx,
       objectSeal,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::freeze),
+      Predefined::getSymbolID(Predefined::freeze),
       ctx,
       objectFreeze,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::preventExtensions),
+      Predefined::getSymbolID(Predefined::preventExtensions),
       ctx,
       objectPreventExtensions,
       1);
 
   defineMethod(
-      runtime,
-      cons,
-      runtime->getPredefinedSymbolID(Predefined::is),
-      ctx,
-      objectIs,
-      2);
+      runtime, cons, Predefined::getSymbolID(Predefined::is), ctx, objectIs, 2);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::isSealed),
+      Predefined::getSymbolID(Predefined::isSealed),
       ctx,
       objectIsSealed,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::isFrozen),
+      Predefined::getSymbolID(Predefined::isFrozen),
       ctx,
       objectIsFrozen,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::isExtensible),
+      Predefined::getSymbolID(Predefined::isExtensible),
       ctx,
       objectIsExtensible,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::keys),
+      Predefined::getSymbolID(Predefined::keys),
       ctx,
       objectKeys,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::create),
+      Predefined::getSymbolID(Predefined::create),
       ctx,
       objectCreate,
       2);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::defineProperty),
+      Predefined::getSymbolID(Predefined::defineProperty),
       ctx,
       objectDefineProperty,
       3);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::defineProperties),
+      Predefined::getSymbolID(Predefined::defineProperties),
       ctx,
       objectDefineProperties,
       2);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::assign),
+      Predefined::getSymbolID(Predefined::assign),
       ctx,
       objectAssign,
       2);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::setPrototypeOf),
+      Predefined::getSymbolID(Predefined::setPrototypeOf),
       ctx,
       objectSetPrototypeOf,
       2);
@@ -474,7 +469,7 @@ objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
     auto result = JSObject::defineOwnProperty(
         obj,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::value),
+        Predefined::getSymbolID(Predefined::value),
         dpf,
         value,
         PropOpFlags().plusThrowOnError());
@@ -488,7 +483,7 @@ objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
     result = JSObject::defineOwnProperty(
         obj,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::writable),
+        Predefined::getSymbolID(Predefined::writable),
         dpf,
         runtime->getBoolValue(desc.flags.writable),
         PropOpFlags().plusThrowOnError());
@@ -514,7 +509,7 @@ objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
     auto result = JSObject::defineOwnProperty(
         obj,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::get),
+        Predefined::getSymbolID(Predefined::get),
         dpf,
         getter,
         PropOpFlags().plusThrowOnError());
@@ -528,7 +523,7 @@ objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
     result = JSObject::defineOwnProperty(
         obj,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::set),
+        Predefined::getSymbolID(Predefined::set),
         dpf,
         setter,
         PropOpFlags().plusThrowOnError());
@@ -543,7 +538,7 @@ objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
   auto result = JSObject::defineOwnProperty(
       obj,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::enumerable),
+      Predefined::getSymbolID(Predefined::enumerable),
       dpf,
       runtime->getBoolValue(desc.flags.enumerable),
       PropOpFlags().plusThrowOnError());
@@ -557,7 +552,7 @@ objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
   result = JSObject::defineOwnProperty(
       obj,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::configurable),
+      Predefined::getSymbolID(Predefined::configurable),
       dpf,
       runtime->getBoolValue(desc.flags.configurable),
       PropOpFlags().plusThrowOnError());
@@ -659,12 +654,12 @@ static ExecutionStatus objectToPropertyDescriptor(
   if (JSObject::getNamedDescriptor(
           attributes,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::enumerable),
+          Predefined::getSymbolID(Predefined::enumerable),
           desc)) {
     auto propRes = JSObject::getNamed(
         attributes,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::enumerable),
+        Predefined::getSymbolID(Predefined::enumerable),
         PropOpFlags().plusThrowOnError());
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -677,12 +672,12 @@ static ExecutionStatus objectToPropertyDescriptor(
   if (JSObject::getNamedDescriptor(
           attributes,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::configurable),
+          Predefined::getSymbolID(Predefined::configurable),
           desc)) {
     auto propRes = JSObject::getNamed(
         attributes,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::configurable),
+        Predefined::getSymbolID(Predefined::configurable),
         PropOpFlags().plusThrowOnError());
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -695,12 +690,12 @@ static ExecutionStatus objectToPropertyDescriptor(
   if (JSObject::getNamedDescriptor(
           attributes,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::value),
+          Predefined::getSymbolID(Predefined::value),
           desc)) {
     auto propRes = JSObject::getNamed(
         attributes,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::value),
+        Predefined::getSymbolID(Predefined::value),
         PropOpFlags().plusThrowOnError());
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -713,12 +708,12 @@ static ExecutionStatus objectToPropertyDescriptor(
   if (JSObject::getNamedDescriptor(
           attributes,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::writable),
+          Predefined::getSymbolID(Predefined::writable),
           desc)) {
     auto propRes = JSObject::getNamed(
         attributes,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::writable),
+        Predefined::getSymbolID(Predefined::writable),
         PropOpFlags().plusThrowOnError());
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -732,12 +727,12 @@ static ExecutionStatus objectToPropertyDescriptor(
   if (JSObject::getNamedDescriptor(
           attributes,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::get),
+          Predefined::getSymbolID(Predefined::get),
           desc)) {
     auto propRes = JSObject::getNamed(
         attributes,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::get),
+        Predefined::getSymbolID(Predefined::get),
         PropOpFlags().plusThrowOnError());
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -758,12 +753,12 @@ static ExecutionStatus objectToPropertyDescriptor(
   if (JSObject::getNamedDescriptor(
           attributes,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::set),
+          Predefined::getSymbolID(Predefined::set),
           desc)) {
     auto propRes = JSObject::getNamed(
         attributes,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::set),
+        Predefined::getSymbolID(Predefined::set),
         PropOpFlags().plusThrowOnError());
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1188,9 +1183,7 @@ CallResult<HermesValue> directObjectPrototypeToString(
     auto O = runtime->makeHandle<JSObject>(res.getValue());
     // 16. Let tag be Get (O, @@toStringTag).
     auto tagRes = JSObject::getNamed(
-        O,
-        runtime,
-        runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag));
+        O, runtime, Predefined::getSymbolID(Predefined::SymbolToStringTag));
     if (LLVM_UNLIKELY(tagRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1266,9 +1259,7 @@ objectPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   }
   auto selfHandle = runtime->makeHandle<JSObject>(objRes.getValue());
   auto propRes = JSObject::getNamed(
-      selfHandle,
-      runtime,
-      runtime->getPredefinedSymbolID(Predefined::toString));
+      selfHandle, runtime, Predefined::getSymbolID(Predefined::toString));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

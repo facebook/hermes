@@ -35,8 +35,8 @@ static StringView getFunctionName(
     Runtime *runtime,
     const CodeBlock *codeBlock) {
   auto functionName = codeBlock->getName();
-  if (functionName == runtime->getPredefinedSymbolID(Predefined::emptyString)) {
-    functionName = runtime->getPredefinedSymbolID(Predefined::anonymous);
+  if (functionName == Predefined::getSymbolID(Predefined::emptyString)) {
+    functionName = Predefined::getSymbolID(Predefined::anonymous);
   }
   return runtime->getIdentifierTable().getStringView(runtime, functionName);
 }

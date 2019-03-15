@@ -175,30 +175,28 @@ parseFloat(void *, Runtime *runtime, NativeArgs args) {
   // substring.
   if (LLVM_UNLIKELY(isPrefix(
           idTable.getStringView(
-              runtime, runtime->getPredefinedSymbolID(Predefined::Infinity)),
+              runtime, Predefined::getSymbolID(Predefined::Infinity)),
           str16))) {
     return HermesValue::encodeDoubleValue(
         std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
           idTable.getStringView(
-              runtime,
-              runtime->getPredefinedSymbolID(Predefined::PositiveInfinity)),
+              runtime, Predefined::getSymbolID(Predefined::PositiveInfinity)),
           str16))) {
     return HermesValue::encodeDoubleValue(
         std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
           idTable.getStringView(
-              runtime,
-              runtime->getPredefinedSymbolID(Predefined::NegativeInfinity)),
+              runtime, Predefined::getSymbolID(Predefined::NegativeInfinity)),
           str16))) {
     return HermesValue::encodeDoubleValue(
         -std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
           idTable.getStringView(
-              runtime, runtime->getPredefinedSymbolID(Predefined::NaN)),
+              runtime, Predefined::getSymbolID(Predefined::NaN)),
           str16))) {
     return HermesValue::encodeNaNValue();
   }
@@ -298,7 +296,7 @@ void initGlobalObject(Runtime *runtime) {
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::NaN),
+      Predefined::getSymbolID(Predefined::NaN),
       constantDPF,
       runtime->makeHandle(HermesValue::encodeNaNValue())));
 
@@ -306,7 +304,7 @@ void initGlobalObject(Runtime *runtime) {
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Infinity),
+      Predefined::getSymbolID(Predefined::Infinity),
       constantDPF,
       runtime->makeHandle(HermesValue::encodeDoubleValue(
           std::numeric_limits<double>::infinity()))));
@@ -315,7 +313,7 @@ void initGlobalObject(Runtime *runtime) {
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::undefined),
+      Predefined::getSymbolID(Predefined::undefined),
       constantDPF,
       runtime->makeHandle(HermesValue::encodeUndefinedValue())));
 
@@ -356,7 +354,7 @@ void initGlobalObject(Runtime *runtime) {
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::length),
+      Predefined::getSymbolID(Predefined::length),
       clearConfigurableDPF,
       runtime->getUndefinedValue()));
 
@@ -366,13 +364,13 @@ void initGlobalObject(Runtime *runtime) {
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       const_cast<void *>((const void *)"Restricted in strict mode"),
       throwTypeError,
-      runtime->getPredefinedSymbolID(Predefined::emptyString),
+      Predefined::getSymbolID(Predefined::emptyString),
       0,
       runtime->makeNullHandle<JSObject>());
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       throwTypeErrorFunction,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::length),
+      Predefined::getSymbolID(Predefined::length),
       clearConfigurableDPF,
       runtime->getUndefinedValue()));
   runtime->throwTypeErrorAccessor =
@@ -382,13 +380,13 @@ void initGlobalObject(Runtime *runtime) {
   // Define the 'parseInt' function.
   runtime->parseIntFunction =
       defineGlobalFunc(
-          runtime->getPredefinedSymbolID(Predefined::parseInt), parseInt, 2)
+          Predefined::getSymbolID(Predefined::parseInt), parseInt, 2)
           .getHermesValue();
 
   // Define the 'parseFloat' function.
   runtime->parseFloatFunction =
       defineGlobalFunc(
-          runtime->getPredefinedSymbolID(Predefined::parseFloat), parseFloat, 1)
+          Predefined::getSymbolID(Predefined::parseFloat), parseFloat, 1)
           .getHermesValue();
 
   // "Forward declaration" of String.prototype. Its properties will be
@@ -535,7 +533,7 @@ void initGlobalObject(Runtime *runtime) {
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       functionConstructor,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::length),
+      Predefined::getSymbolID(Predefined::length),
       clearConfigurableDPF,
       runtime->getUndefinedValue()));
 
@@ -603,7 +601,7 @@ void initGlobalObject(Runtime *runtime) {
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Math),
+      Predefined::getSymbolID(Predefined::Math),
       normalDPF,
       createMathObject(runtime)));
 
@@ -611,7 +609,7 @@ void initGlobalObject(Runtime *runtime) {
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::JSON),
+      Predefined::getSymbolID(Predefined::JSON),
       normalDPF,
       createJSONObject(runtime)));
 
@@ -619,7 +617,7 @@ void initGlobalObject(Runtime *runtime) {
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::HermesInternal),
+      Predefined::getSymbolID(Predefined::HermesInternal),
       constantDPF,
       createHermesInternalObject(runtime)));
 
@@ -629,55 +627,52 @@ void initGlobalObject(Runtime *runtime) {
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::DebuggerInternal),
+      Predefined::getSymbolID(Predefined::DebuggerInternal),
       constantDPF,
       createDebuggerInternalObject(runtime)));
 
 #endif // HERMES_ENABLE_DEBUGGER
 
   // Define the 'print' function.
-  defineGlobalFunc(runtime->getPredefinedSymbolID(Predefined::print), print, 1);
+  defineGlobalFunc(Predefined::getSymbolID(Predefined::print), print, 1);
 
   // Define the 'eval' function.
-  defineGlobalFunc(runtime->getPredefinedSymbolID(Predefined::eval), eval, 1);
+  defineGlobalFunc(Predefined::getSymbolID(Predefined::eval), eval, 1);
 
   // Define the 'isNaN' function.
-  defineGlobalFunc(runtime->getPredefinedSymbolID(Predefined::isNaN), isNaN, 1);
+  defineGlobalFunc(Predefined::getSymbolID(Predefined::isNaN), isNaN, 1);
 
   // Define the 'isFinite' function.
-  defineGlobalFunc(
-      runtime->getPredefinedSymbolID(Predefined::isFinite), isFinite, 1);
+  defineGlobalFunc(Predefined::getSymbolID(Predefined::isFinite), isFinite, 1);
 
   // Define the 'escape' function.
-  defineGlobalFunc(
-      runtime->getPredefinedSymbolID(Predefined::escape), escape, 1);
+  defineGlobalFunc(Predefined::getSymbolID(Predefined::escape), escape, 1);
 
   // Define the 'unescape' function.
-  defineGlobalFunc(
-      runtime->getPredefinedSymbolID(Predefined::unescape), unescape, 1);
+  defineGlobalFunc(Predefined::getSymbolID(Predefined::unescape), unescape, 1);
 
   // Define the 'decodeURI' function.
   defineGlobalFunc(
-      runtime->getPredefinedSymbolID(Predefined::decodeURI), decodeURI, 1);
+      Predefined::getSymbolID(Predefined::decodeURI), decodeURI, 1);
 
   // Define the 'decodeURIComponent' function.
   defineGlobalFunc(
-      runtime->getPredefinedSymbolID(Predefined::decodeURIComponent),
+      Predefined::getSymbolID(Predefined::decodeURIComponent),
       decodeURIComponent,
       1);
 
   // Define the 'encodeURI' function.
   defineGlobalFunc(
-      runtime->getPredefinedSymbolID(Predefined::encodeURI), encodeURI, 1);
+      Predefined::getSymbolID(Predefined::encodeURI), encodeURI, 1);
 
   // Define the 'encodeURIComponent' function.
   defineGlobalFunc(
-      runtime->getPredefinedSymbolID(Predefined::encodeURIComponent),
+      Predefined::getSymbolID(Predefined::encodeURIComponent),
       encodeURIComponent,
       1);
 
   // Define the 'gc' function.
-  defineGlobalFunc(runtime->getPredefinedSymbolID(Predefined::gc), gc, 0);
+  defineGlobalFunc(Predefined::getSymbolID(Predefined::gc), gc, 0);
 }
 
 } // namespace vm

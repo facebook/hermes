@@ -178,9 +178,7 @@ CallResult<HermesValue> ordinaryToPrimitive(
   for (int i = 0; i < 2; ++i) {
     if (preferredType == PreferredType::STRING) {
       auto propRes = JSObject::getNamed(
-          selfHandle,
-          runtime,
-          runtime->getPredefinedSymbolID(Predefined::toString));
+          selfHandle, runtime, Predefined::getSymbolID(Predefined::toString));
       if (propRes == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
       if (auto funcHandle = Handle<Callable>::dyn_vmcast(
@@ -197,9 +195,7 @@ CallResult<HermesValue> ordinaryToPrimitive(
       preferredType = PreferredType::NUMBER;
     } else {
       auto propRes = JSObject::getNamed(
-          selfHandle,
-          runtime,
-          runtime->getPredefinedSymbolID(Predefined::valueOf));
+          selfHandle, runtime, Predefined::getSymbolID(Predefined::valueOf));
       if (propRes == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
       if (auto funcHandle = Handle<Callable>::dyn_vmcast(
@@ -235,7 +231,7 @@ toPrimitive(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
           runtime,
           valueHandle,
           runtime->makeHandle(
-              runtime->getPredefinedSymbolID(Predefined::SymbolToPrimitive)));
+              Predefined::getSymbolID(Predefined::SymbolToPrimitive)));
       if (LLVM_UNLIKELY(exoticToPrim == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -406,20 +402,18 @@ static inline double stringToNumber(
 
   // Fast check for special values (no extraneous whitespace).
   if (runtime->symbolEqualsToStringPrim(
-          runtime->getPredefinedSymbolID(Predefined::Infinity), *strPrim)) {
+          Predefined::getSymbolID(Predefined::Infinity), *strPrim)) {
     return std::numeric_limits<double>::infinity();
   }
   if (runtime->symbolEqualsToStringPrim(
-          runtime->getPredefinedSymbolID(Predefined::PositiveInfinity),
-          *strPrim)) {
+          Predefined::getSymbolID(Predefined::PositiveInfinity), *strPrim)) {
     return std::numeric_limits<double>::infinity();
   }
   if (runtime->symbolEqualsToStringPrim(
-          runtime->getPredefinedSymbolID(Predefined::NegativeInfinity),
-          *strPrim)) {
+          Predefined::getSymbolID(Predefined::NegativeInfinity), *strPrim)) {
   }
   if (runtime->symbolEqualsToStringPrim(
-          runtime->getPredefinedSymbolID(Predefined::NaN), *strPrim)) {
+          Predefined::getSymbolID(Predefined::NaN), *strPrim)) {
     return std::numeric_limits<double>::quiet_NaN();
   }
 
@@ -449,21 +443,19 @@ static inline double stringToNumber(
   // This should only run if user created a string with extra whitespace,
   // since normal uses would get caught by the initial check.
   if (LLVM_UNLIKELY(str16.equals(idTable.getStringView(
-          runtime, runtime->getPredefinedSymbolID(Predefined::Infinity))))) {
+          runtime, Predefined::getSymbolID(Predefined::Infinity))))) {
     return std::numeric_limits<double>::infinity();
   }
   if (LLVM_UNLIKELY(str16.equals(idTable.getStringView(
-          runtime,
-          runtime->getPredefinedSymbolID(Predefined::PositiveInfinity))))) {
+          runtime, Predefined::getSymbolID(Predefined::PositiveInfinity))))) {
     return std::numeric_limits<double>::infinity();
   }
   if (LLVM_UNLIKELY(str16.equals(idTable.getStringView(
-          runtime,
-          runtime->getPredefinedSymbolID(Predefined::NegativeInfinity))))) {
+          runtime, Predefined::getSymbolID(Predefined::NegativeInfinity))))) {
     return -std::numeric_limits<double>::infinity();
   }
   if (LLVM_UNLIKELY(str16.equals(idTable.getStringView(
-          runtime, runtime->getPredefinedSymbolID(Predefined::NaN))))) {
+          runtime, Predefined::getSymbolID(Predefined::NaN))))) {
     return std::numeric_limits<double>::quiet_NaN();
   }
 
@@ -1162,7 +1154,7 @@ static void dumpStackToMiniDump(Runtime *runtime) {
       JSObject *propObj = JSObject::getNamedDescriptor(
           callableHandle,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::name),
+          Predefined::getSymbolID(Predefined::name),
           desc);
       if (propObj && !desc.flags.accessor) {
         name = JSObject::getNamedSlotValue(propObj, desc);
@@ -1232,7 +1224,7 @@ CallResult<PseudoHandle<JSObject>> getIterator(
         runtime,
         obj,
         runtime->makeHandle(
-            runtime->getPredefinedSymbolID(Predefined::SymbolIterator)));
+            Predefined::getSymbolID(Predefined::SymbolIterator)));
     if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1261,7 +1253,7 @@ CallResult<PseudoHandle<JSObject>> iteratorNext(
   auto methodRes = getMethod(
       runtime,
       iterator,
-      runtime->makeHandle(runtime->getPredefinedSymbolID(Predefined::next)));
+      runtime->makeHandle(Predefined::getSymbolID(Predefined::next)));
   if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1293,7 +1285,7 @@ CallResult<Handle<JSObject>> iteratorStep(
   }
   Handle<JSObject> result = toHandle(runtime, std::move(*resultRes));
   auto completeRes = JSObject::getNamed(
-      result, runtime, runtime->getPredefinedSymbolID(Predefined::done));
+      result, runtime, Predefined::getSymbolID(Predefined::done));
   if (LLVM_UNLIKELY(completeRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1313,8 +1305,7 @@ ExecutionStatus iteratorClose(
   auto returnRes = getMethod(
       runtime,
       iterator,
-      runtime->makeHandle(
-          runtime->getPredefinedSymbolID(Predefined::returnStr)));
+      runtime->makeHandle(Predefined::getSymbolID(Predefined::returnStr)));
   if (LLVM_UNLIKELY(returnRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1345,7 +1336,7 @@ createIterResultObject(Runtime *runtime, Handle<> value, bool done) {
   auto status = JSObject::defineOwnProperty(
       objHandle,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::value),
+      Predefined::getSymbolID(Predefined::value),
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
       value);
   (void)status;
@@ -1355,7 +1346,7 @@ createIterResultObject(Runtime *runtime, Handle<> value, bool done) {
   status = JSObject::defineOwnProperty(
       objHandle,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::done),
+      Predefined::getSymbolID(Predefined::done),
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
       runtime->getBoolValue(done));
   assert(
@@ -1371,7 +1362,7 @@ CallResult<Handle<Callable>> speciesConstructor(
   // construct from the "constructor" property in self if that is defined, else
   // use the default one.
   auto res = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::constructor));
+      O, runtime, Predefined::getSymbolID(Predefined::constructor));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1450,7 +1441,7 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
   auto propRes = JSObject::getNamed(
       runtime->makeHandle(ctor),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::prototype));
+      Predefined::getSymbolID(Predefined::prototype));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1496,7 +1487,7 @@ instanceOfOperator(Runtime *runtime, Handle<> object, Handle<> constructor) {
   CallResult<HermesValue> instOfHandlerRes = JSObject::getNamed(
       Handle<JSObject>::vmcast(constructor),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::SymbolHasInstance));
+      Predefined::getSymbolID(Predefined::SymbolHasInstance));
   if (LLVM_UNLIKELY(instOfHandlerRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1537,7 +1528,7 @@ CallResult<bool> isRegExp(Runtime *runtime, Handle<> arg) {
   Handle<JSObject> obj = Handle<JSObject>::vmcast(arg);
   // 2. Let isRegExp be Get(argument, @@match).
   auto propRes = JSObject::getNamed(
-      obj, runtime, runtime->getPredefinedSymbolID(Predefined::SymbolMatch));
+      obj, runtime, Predefined::getSymbolID(Predefined::SymbolMatch));
   // 3. ReturnIfAbrupt(isRegExp).
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1579,7 +1570,7 @@ CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value) {
   CallResult<HermesValue> spreadable = JSObject::getNamed(
       O,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::SymbolIsConcatSpreadable));
+      Predefined::getSymbolID(Predefined::SymbolIsConcatSpreadable));
   if (LLVM_UNLIKELY(spreadable == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

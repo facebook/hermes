@@ -27,7 +27,7 @@ Handle<JSObject> createDebuggerInternalObject(Runtime *runtime) {
   defineAccessor(
       runtime,
       intern,
-      runtime->getPredefinedSymbolID(Predefined::isDebuggerAttached),
+      Predefined::getSymbolID(Predefined::isDebuggerAttached),
       nullptr,
       isDebuggerAttached,
       nullptr,
@@ -39,7 +39,7 @@ Handle<JSObject> createDebuggerInternalObject(Runtime *runtime) {
   defineAccessor(
       runtime,
       intern,
-      runtime->getPredefinedSymbolID(Predefined::shouldPauseOnThrow),
+      Predefined::getSymbolID(Predefined::shouldPauseOnThrow),
       nullptr,
       shouldPauseOnThrow,
       nullptr,

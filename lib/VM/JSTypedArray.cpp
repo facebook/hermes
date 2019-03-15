@@ -337,11 +337,11 @@ CallResult<HermesValue> JSTypedArray<T, C>::create(
 /// @name Specializations for specific types
 /// @{
 
-#define TYPED_ARRAY(name, type)                                     \
-  template <>                                                       \
-  SymbolID JSTypedArray<type, CellKind::name##ArrayKind>::getName(  \
-      Runtime *runtime) {                                           \
-    return runtime->getPredefinedSymbolID(Predefined::name##Array); \
+#define TYPED_ARRAY(name, type)                                    \
+  template <>                                                      \
+  SymbolID JSTypedArray<type, CellKind::name##ArrayKind>::getName( \
+      Runtime *runtime) {                                          \
+    return Predefined::getSymbolID(Predefined::name##Array);       \
   }
 #include "hermes/VM/TypedArrays.def"
 

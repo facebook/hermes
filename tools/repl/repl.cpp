@@ -246,9 +246,7 @@ int main(int argc, char **argv) {
 
   auto global = runtime->getGlobal();
   auto propRes = vm::JSObject::getNamed(
-      global,
-      runtime.get(),
-      runtime->getPredefinedSymbolID(vm::Predefined::eval));
+      global, runtime.get(), vm::Predefined::getSymbolID(vm::Predefined::eval));
   if (propRes == vm::ExecutionStatus::EXCEPTION) {
     runtime->printException(
         llvm::outs(), runtime->makeHandle(runtime->getThrownValue()));

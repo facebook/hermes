@@ -35,7 +35,7 @@ Handle<JSObject> createWeakSetConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       weakSetPrototype,
-      runtime->getPredefinedSymbolID(Predefined::add),
+      Predefined::getSymbolID(Predefined::add),
       nullptr,
       weakSetPrototypeAdd,
       1);
@@ -43,7 +43,7 @@ Handle<JSObject> createWeakSetConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       weakSetPrototype,
-      runtime->getPredefinedSymbolID(Predefined::deleteStr),
+      Predefined::getSymbolID(Predefined::deleteStr),
       nullptr,
       weakSetPrototypeDelete,
       1);
@@ -51,7 +51,7 @@ Handle<JSObject> createWeakSetConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       weakSetPrototype,
-      runtime->getPredefinedSymbolID(Predefined::has),
+      Predefined::getSymbolID(Predefined::has),
       nullptr,
       weakSetPrototypeHas,
       1);
@@ -62,13 +62,13 @@ Handle<JSObject> createWeakSetConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       weakSetPrototype,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::WeakSet),
       dpf);
 
   auto cons = defineSystemConstructor<JSWeakSet>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::WeakSet),
+      Predefined::getSymbolID(Predefined::WeakSet),
       weakSetConstructor,
       weakSetPrototype,
       0,
@@ -78,7 +78,7 @@ Handle<JSObject> createWeakSetConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       weakSetPrototype,
-      runtime->getPredefinedSymbolID(Predefined::constructor),
+      Predefined::getSymbolID(Predefined::constructor),
       cons);
 
   return cons;
@@ -100,7 +100,7 @@ weakSetConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   auto propRes = JSObject::getNamed(
-      selfHandle, runtime, runtime->getPredefinedSymbolID(Predefined::add));
+      selfHandle, runtime, Predefined::getSymbolID(Predefined::add));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -129,7 +129,7 @@ weakSetConstructor(void *, Runtime *runtime, NativeArgs args) {
       return selfHandle.getHermesValue();
     }
     auto nextValueRes = JSObject::getNamed(
-        *nextRes, runtime, runtime->getPredefinedSymbolID(Predefined::value));
+        *nextRes, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(nextValueRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

@@ -27,14 +27,14 @@ void populateIteratorPrototype(Runtime *runtime) {
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       nullptr,
       iteratorPrototypeIterator,
-      runtime->getPredefinedSymbolID(Predefined::squareSymbolIterator),
+      Predefined::getSymbolID(Predefined::squareSymbolIterator),
       0,
       runtime->makeNullHandle<JSObject>());
 
   defineProperty(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::SymbolIterator),
+      Predefined::getSymbolID(Predefined::SymbolIterator),
       runtime->makeHandle<NativeFunction>(*iteratorFunc));
 }
 

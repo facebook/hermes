@@ -123,7 +123,7 @@ TEST_F(ArrayTest, CppAPITest) {
 }
 
 TEST_F(ArrayTest, TestLength) {
-  auto lengthID = runtime->getPredefinedSymbolID(Predefined::length);
+  auto lengthID = Predefined::getSymbolID(Predefined::length);
   auto arrayRes = JSArray::create(runtime, 10, 10);
   ASSERT_EQ(arrayRes.getStatus(), ExecutionStatus::RETURNED);
   auto array = toHandle(runtime, std::move(*arrayRes));

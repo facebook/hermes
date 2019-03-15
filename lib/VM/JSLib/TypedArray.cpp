@@ -196,7 +196,7 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
   auto arrayLike = runtime->makeHandle<JSObject>(objRes.getValue());
   // 6. Let len be ? ToLength(? Get(arrayLike, "length")).
   auto propRes = JSObject::getNamed(
-      arrayLike, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      arrayLike, runtime, Predefined::getSymbolID(Predefined::length));
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -303,7 +303,7 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
   auto arrayLike = runtime->makeHandle<JSObject>(objRes.getValue());
   // 7. Let len be ? ToLength(? Get(arrayLike, "length")).
   auto propRes = JSObject::getNamed(
-      arrayLike, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      arrayLike, runtime, Predefined::getSymbolID(Predefined::length));
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1199,7 +1199,7 @@ CallResult<HermesValue> typedArrayPrototypeSetObject(
   }
   auto src = runtime->makeHandle<JSObject>(objRes.getValue());
   auto propRes = JSObject::getNamed(
-      src, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      src, runtime, Predefined::getSymbolID(Predefined::length));
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1452,7 +1452,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
     auto propRes = JSObject::getNamed(
         elementObj,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::toLocaleString));
+        Predefined::getSymbolID(Predefined::toLocaleString));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1549,7 +1549,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   auto st = Callable::defineNameLengthAndPrototype(
       cons,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::TypedArray),
+      Predefined::getSymbolID(Predefined::TypedArray),
       0,
       proto,
       Callable::WritablePrototype::No,
@@ -1570,7 +1570,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   defineAccessor(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::buffer),
+      Predefined::getSymbolID(Predefined::buffer),
       nullptr,
       typedArrayPrototypeBuffer,
       nullptr,
@@ -1579,7 +1579,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   defineAccessor(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::byteLength),
+      Predefined::getSymbolID(Predefined::byteLength),
       nullptr,
       typedArrayPrototypeByteLength,
       nullptr,
@@ -1588,7 +1588,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   defineAccessor(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::byteOffset),
+      Predefined::getSymbolID(Predefined::byteOffset),
       nullptr,
       typedArrayPrototypeByteOffset,
       nullptr,
@@ -1597,7 +1597,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   defineAccessor(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::length),
+      Predefined::getSymbolID(Predefined::length),
       nullptr,
       typedArrayPrototypeLength,
       nullptr,
@@ -1606,8 +1606,8 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   defineAccessor(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
-      runtime->getPredefinedSymbolID(Predefined::squareSymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::squareSymbolToStringTag),
       nullptr,
       typedArrayPrototypeSymbolToStringTag,
       nullptr,
@@ -1617,140 +1617,140 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::copyWithin),
+      Predefined::getSymbolID(Predefined::copyWithin),
       nullptr,
       typedArrayPrototypeCopyWithin,
       2);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::every),
+      Predefined::getSymbolID(Predefined::every),
       &on,
       typedArrayPrototypeEverySome,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::some),
+      Predefined::getSymbolID(Predefined::some),
       &off,
       typedArrayPrototypeEverySome,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::fill),
+      Predefined::getSymbolID(Predefined::fill),
       nullptr,
       typedArrayPrototypeFill,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::filter),
+      Predefined::getSymbolID(Predefined::filter),
       &off,
       typedArrayPrototypeMapFilter,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::find),
+      Predefined::getSymbolID(Predefined::find),
       &off,
       typedArrayPrototypeFind,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::findIndex),
+      Predefined::getSymbolID(Predefined::findIndex),
       &on,
       typedArrayPrototypeFind,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::forEach),
+      Predefined::getSymbolID(Predefined::forEach),
       nullptr,
       typedArrayPrototypeForEach,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::includes),
+      Predefined::getSymbolID(Predefined::includes),
       &includes,
       typedArrayPrototypeIndexOf,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::indexOf),
+      Predefined::getSymbolID(Predefined::indexOf),
       &indexOf,
       typedArrayPrototypeIndexOf,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::lastIndexOf),
+      Predefined::getSymbolID(Predefined::lastIndexOf),
       &lastIndexOf,
       typedArrayPrototypeIndexOf,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::join),
+      Predefined::getSymbolID(Predefined::join),
       nullptr,
       typedArrayPrototypeJoin,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::map),
+      Predefined::getSymbolID(Predefined::map),
       &on,
       typedArrayPrototypeMapFilter,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::reduce),
+      Predefined::getSymbolID(Predefined::reduce),
       &off,
       typedArrayPrototypeReduce,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::reduceRight),
+      Predefined::getSymbolID(Predefined::reduceRight),
       &on,
       typedArrayPrototypeReduce,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::reverse),
+      Predefined::getSymbolID(Predefined::reverse),
       nullptr,
       typedArrayPrototypeReverse,
       0);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::set),
+      Predefined::getSymbolID(Predefined::set),
       nullptr,
       typedArrayPrototypeSet,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::slice),
+      Predefined::getSymbolID(Predefined::slice),
       nullptr,
       typedArrayPrototypeSlice,
       2);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::sort),
+      Predefined::getSymbolID(Predefined::sort),
       nullptr,
       typedArrayPrototypeSort,
       1);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::subarray),
+      Predefined::getSymbolID(Predefined::subarray),
       nullptr,
       typedArrayPrototypeSubarray,
       2);
@@ -1762,21 +1762,21 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::keys),
+      Predefined::getSymbolID(Predefined::keys),
       &iterationKindKey,
       typedArrayPrototypeIterator,
       0);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::values),
+      Predefined::getSymbolID(Predefined::values),
       &iterationKindValue,
       typedArrayPrototypeIterator,
       0);
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::entries),
+      Predefined::getSymbolID(Predefined::entries),
       &iterationKindEntry,
       typedArrayPrototypeIterator,
       0);
@@ -1793,11 +1793,11 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   // Use the same valuesMethod for Symbol.iterator.
   {
     auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed(
-        proto, runtime, runtime->getPredefinedSymbolID(Predefined::values)));
+        proto, runtime, Predefined::getSymbolID(Predefined::values)));
     runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
         proto,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::SymbolIterator),
+        Predefined::getSymbolID(Predefined::SymbolIterator),
         dpf,
         runtime->makeHandle<NativeFunction>(propValue)));
   }
@@ -1806,11 +1806,11 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
     auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed(
         Handle<JSArray>::vmcast(&runtime->arrayPrototype),
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::toString)));
+        Predefined::getSymbolID(Predefined::toString)));
     runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
         proto,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::toString),
+        Predefined::getSymbolID(Predefined::toString),
         dpf,
         runtime->makeHandle<NativeFunction>(propValue)));
   }
@@ -1818,7 +1818,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::toLocaleString),
+      Predefined::getSymbolID(Predefined::toLocaleString),
       nullptr,
       typedArrayPrototypeToLocaleString,
       0);
@@ -1827,7 +1827,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::from),
+      Predefined::getSymbolID(Predefined::from),
       nullptr,
       typedArrayFrom,
       1);
@@ -1835,7 +1835,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::of),
+      Predefined::getSymbolID(Predefined::of),
       nullptr,
       typedArrayOf,
       0);
@@ -1873,7 +1873,7 @@ Handle<JSObject> createTypedArrayConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::BYTES_PER_ELEMENT),
+      Predefined::getSymbolID(Predefined::BYTES_PER_ELEMENT),
       bytesPerElement,
       dpf);
 
@@ -1881,7 +1881,7 @@ Handle<JSObject> createTypedArrayConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::BYTES_PER_ELEMENT),
+      Predefined::getSymbolID(Predefined::BYTES_PER_ELEMENT),
       bytesPerElement,
       dpf);
   return cons;

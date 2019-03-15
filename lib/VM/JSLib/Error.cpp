@@ -48,7 +48,7 @@ Handle<JSObject> createErrorConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       errorPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toString),
+      Predefined::getSymbolID(Predefined::toString),
       nullptr,
       errorPrototypeToString,
       0);
@@ -59,19 +59,19 @@ Handle<JSObject> createErrorConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       errorPrototype,
-      runtime->getPredefinedSymbolID(Predefined::name),
+      Predefined::getSymbolID(Predefined::name),
       runtime->makeHandle(HermesValue::encodeStringValue(defaultName)));
 
   auto defaultMessage = runtime->getPredefinedString(Predefined::emptyString);
   defineProperty(
       runtime,
       errorPrototype,
-      runtime->getPredefinedSymbolID(Predefined::message),
+      Predefined::getSymbolID(Predefined::message),
       runtime->makeHandle(HermesValue::encodeStringValue(defaultMessage)));
 
   return defineSystemConstructor<JSError>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Error),
+      Predefined::getSymbolID(Predefined::Error),
       ErrorConstructor,
       errorPrototype,
       1,
@@ -88,16 +88,16 @@ Handle<JSObject> createErrorConstructor(Runtime *runtime) {
     defineProperty(                                                          \
         runtime,                                                             \
         errorPrototype,                                                      \
-        runtime->getPredefinedSymbolID(Predefined::name),                    \
+        Predefined::getSymbolID(Predefined::name),                           \
         runtime->makeHandle(HermesValue::encodeStringValue(defaultName)));   \
     defineProperty(                                                          \
         runtime,                                                             \
         errorPrototype,                                                      \
-        runtime->getPredefinedSymbolID(Predefined::message),                 \
+        Predefined::getSymbolID(Predefined::message),                        \
         runtime->getPredefinedStringHandle(Predefined::emptyString));        \
     return defineSystemConstructor(                                          \
         runtime,                                                             \
-        runtime->getPredefinedSymbolID(Predefined::error_name),              \
+        Predefined::getSymbolID(Predefined::error_name),                     \
         error_name##Constructor,                                             \
         errorPrototype,                                                      \
         Handle<JSObject>::vmcast(&runtime->errorConstructor),                \
@@ -165,10 +165,7 @@ errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   auto error = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      error,
-      runtime,
-      runtime->getPredefinedSymbolID(Predefined::name),
-      PropOpFlags());
+      error, runtime, Predefined::getSymbolID(Predefined::name), PropOpFlags());
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -189,7 +186,7 @@ errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
           (propRes = JSObject::getNamed(
                error,
                runtime,
-               runtime->getPredefinedSymbolID(Predefined::message),
+               Predefined::getSymbolID(Predefined::message),
                PropOpFlags())) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

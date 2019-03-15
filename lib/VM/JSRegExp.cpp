@@ -99,7 +99,7 @@ ExecutionStatus JSRegExp::initialize(
   auto res = JSObject::defineOwnProperty(
       selfHandle,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::lastIndex),
+      Predefined::getSymbolID(Predefined::lastIndex),
       dpf,
       runtime->makeHandle(HermesValue::encodeNumberValue(0)));
   (void)res;

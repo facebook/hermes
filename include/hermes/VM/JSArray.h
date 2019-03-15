@@ -330,7 +330,7 @@ class JSArray final : public ArrayImpl {
     return putNamed(
         selfHandle,
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::length),
+        Predefined::getSymbolID(Predefined::length),
         runtime->makeHandle(HermesValue::encodeNumberValue(newValue)));
   }
 

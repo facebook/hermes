@@ -372,19 +372,14 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
         "defineOwnProperty() failed on a new object");
     (void)result;
   };
-  setMathValueProperty(runtime->getPredefinedSymbolID(Predefined::E), M_E);
-  setMathValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::LN10), M_LN10);
-  setMathValueProperty(runtime->getPredefinedSymbolID(Predefined::LN2), M_LN2);
-  setMathValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::LOG2E), M_LOG2E);
-  setMathValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::LOG10E), M_LOG10E);
-  setMathValueProperty(runtime->getPredefinedSymbolID(Predefined::PI), M_PI);
-  setMathValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::SQRT1_2), M_SQRT1_2);
-  setMathValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::SQRT2), M_SQRT2);
+  setMathValueProperty(Predefined::getSymbolID(Predefined::E), M_E);
+  setMathValueProperty(Predefined::getSymbolID(Predefined::LN10), M_LN10);
+  setMathValueProperty(Predefined::getSymbolID(Predefined::LN2), M_LN2);
+  setMathValueProperty(Predefined::getSymbolID(Predefined::LOG2E), M_LOG2E);
+  setMathValueProperty(Predefined::getSymbolID(Predefined::LOG10E), M_LOG10E);
+  setMathValueProperty(Predefined::getSymbolID(Predefined::PI), M_PI);
+  setMathValueProperty(Predefined::getSymbolID(Predefined::SQRT1_2), M_SQRT1_2);
+  setMathValueProperty(Predefined::getSymbolID(Predefined::SQRT2), M_SQRT2);
 
   // ES5.1 15.8.2, Math function properties
   auto setMathFunctionProperty1Arg = [=](SymbolID name,
@@ -412,121 +407,120 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
   // We use the C versions of some of these functions from <math.h>
   // because on Android, the C++ <cmath> library doesn't have them.
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::abs), std::abs);
+      Predefined::getSymbolID(Predefined::abs), std::abs);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::acos), std::acos);
+      Predefined::getSymbolID(Predefined::acos), std::acos);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::acosh), ::acosh);
+      Predefined::getSymbolID(Predefined::acosh), ::acosh);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::asin), std::asin);
+      Predefined::getSymbolID(Predefined::asin), std::asin);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::asinh), ::asinh);
+      Predefined::getSymbolID(Predefined::asinh), ::asinh);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::atan), std::atan);
+      Predefined::getSymbolID(Predefined::atan), std::atan);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::atanh), ::atanh);
+      Predefined::getSymbolID(Predefined::atanh), ::atanh);
   setMathFunctionProperty2Arg(
-      runtime->getPredefinedSymbolID(Predefined::atan2), std::atan2);
+      Predefined::getSymbolID(Predefined::atan2), std::atan2);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::cbrt), ::cbrt);
+      Predefined::getSymbolID(Predefined::cbrt), ::cbrt);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::ceil), std::ceil);
+      Predefined::getSymbolID(Predefined::ceil), std::ceil);
   defineMethod(
       runtime,
       math,
-      runtime->getPredefinedSymbolID(Predefined::clz32),
+      Predefined::getSymbolID(Predefined::clz32),
       nullptr,
       mathClz32,
       1);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::cos), std::cos);
+      Predefined::getSymbolID(Predefined::cos), std::cos);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::cosh), ::cosh);
+      Predefined::getSymbolID(Predefined::cosh), ::cosh);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::exp), std::exp);
+      Predefined::getSymbolID(Predefined::exp), std::exp);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::expm1), ::expm1);
+      Predefined::getSymbolID(Predefined::expm1), ::expm1);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::floor), std::floor);
+      Predefined::getSymbolID(Predefined::floor), std::floor);
   defineMethod(
       runtime,
       math,
-      runtime->getPredefinedSymbolID(Predefined::fround),
+      Predefined::getSymbolID(Predefined::fround),
       nullptr,
       mathFround,
       1);
   defineMethod(
       runtime,
       math,
-      runtime->getPredefinedSymbolID(Predefined::hypot),
+      Predefined::getSymbolID(Predefined::hypot),
       nullptr,
       mathHypot,
       2);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::log), std::log);
+      Predefined::getSymbolID(Predefined::log), std::log);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::log10), std::log10);
+      Predefined::getSymbolID(Predefined::log10), std::log10);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::log1p), ::log1p);
+      Predefined::getSymbolID(Predefined::log1p), ::log1p);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::log2), oscompat::log2);
+      Predefined::getSymbolID(Predefined::log2), oscompat::log2);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::trunc), oscompat::trunc);
+      Predefined::getSymbolID(Predefined::trunc), oscompat::trunc);
   defineMethod(
       runtime,
       math,
-      runtime->getPredefinedSymbolID(Predefined::max),
+      Predefined::getSymbolID(Predefined::max),
       nullptr,
       mathMax,
       2);
   defineMethod(
       runtime,
       math,
-      runtime->getPredefinedSymbolID(Predefined::min),
+      Predefined::getSymbolID(Predefined::min),
       nullptr,
       mathMin,
       2);
   defineMethod(
       runtime,
       math,
-      runtime->getPredefinedSymbolID(Predefined::imul),
+      Predefined::getSymbolID(Predefined::imul),
       nullptr,
       mathImul,
       2);
   defineMethod(
       runtime,
       math,
-      runtime->getPredefinedSymbolID(Predefined::pow),
+      Predefined::getSymbolID(Predefined::pow),
       nullptr,
       mathPow,
       2);
   defineMethod(
       runtime,
       math,
-      runtime->getPredefinedSymbolID(Predefined::random),
+      Predefined::getSymbolID(Predefined::random),
       nullptr,
       mathRandom,
       0);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::round),
-      roundHalfwaysTowardsInfinity);
+      Predefined::getSymbolID(Predefined::round), roundHalfwaysTowardsInfinity);
   defineMethod(
       runtime,
       math,
-      runtime->getPredefinedSymbolID(Predefined::sign),
+      Predefined::getSymbolID(Predefined::sign),
       nullptr,
       mathSign,
       1);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::sin), std::sin);
+      Predefined::getSymbolID(Predefined::sin), std::sin);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::sinh), ::sinh);
+      Predefined::getSymbolID(Predefined::sinh), ::sinh);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::sqrt), std::sqrt);
+      Predefined::getSymbolID(Predefined::sqrt), std::sqrt);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::tan), std::tan);
+      Predefined::getSymbolID(Predefined::tan), std::tan);
   setMathFunctionProperty1Arg(
-      runtime->getPredefinedSymbolID(Predefined::tanh), ::tanh);
+      Predefined::getSymbolID(Predefined::tanh), ::tanh);
 
   auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
@@ -534,7 +528,7 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
   defineProperty(
       runtime,
       math,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::Math),
       dpf);
 

@@ -147,7 +147,7 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
 
   auto cons = defineSystemConstructor<JSRegExp>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::RegExp),
+      Predefined::getSymbolID(Predefined::RegExp),
       regExpConstructor,
       proto,
       2,
@@ -156,7 +156,7 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::exec),
+      Predefined::getSymbolID(Predefined::exec),
       nullptr,
       regExpPrototypeExec,
       1);
@@ -164,7 +164,7 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::test),
+      Predefined::getSymbolID(Predefined::test),
       nullptr,
       regExpPrototypeTest,
       1);
@@ -172,7 +172,7 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::toString),
+      Predefined::getSymbolID(Predefined::toString),
       nullptr,
       regExpPrototypeToString,
       0);
@@ -182,8 +182,8 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   (void)defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::SymbolMatch),
-      runtime->getPredefinedSymbolID(Predefined::squareSymbolMatch),
+      Predefined::getSymbolID(Predefined::SymbolMatch),
+      Predefined::getSymbolID(Predefined::squareSymbolMatch),
       nullptr,
       regExpPrototypeSymbolMatch,
       1,
@@ -192,8 +192,8 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   (void)defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::SymbolSearch),
-      runtime->getPredefinedSymbolID(Predefined::squareSymbolSearch),
+      Predefined::getSymbolID(Predefined::SymbolSearch),
+      Predefined::getSymbolID(Predefined::squareSymbolSearch),
       nullptr,
       regExpPrototypeSymbolSearch,
       1,
@@ -202,8 +202,8 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   (void)defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::SymbolReplace),
-      runtime->getPredefinedSymbolID(Predefined::squareSymbolReplace),
+      Predefined::getSymbolID(Predefined::SymbolReplace),
+      Predefined::getSymbolID(Predefined::squareSymbolReplace),
       nullptr,
       regExpPrototypeSymbolReplace,
       2,
@@ -212,8 +212,8 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   (void)defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::SymbolSplit),
-      runtime->getPredefinedSymbolID(Predefined::squareSymbolSplit),
+      Predefined::getSymbolID(Predefined::SymbolSplit),
+      Predefined::getSymbolID(Predefined::squareSymbolSplit),
       nullptr,
       regExpPrototypeSymbolSplit,
       2,
@@ -229,7 +229,7 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
     defineAccessor(
         runtime,
         obj,
-        runtime->getPredefinedSymbolID(sym),
+        Predefined::getSymbolID(sym),
         ctx ? reinterpret_cast<void *>(ctx) : nullptr,
         getter,
         nullptr,
@@ -344,7 +344,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
   auto propRes = JSObject::getNamed(
       runtime->getGlobal(),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::RegExp));
+      Predefined::getSymbolID(Predefined::RegExp));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -362,7 +362,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
       auto patternConstructor = JSObject::getNamed(
           patternObj,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::constructor));
+          Predefined::getSymbolID(Predefined::constructor));
       if (LLVM_UNLIKELY(patternConstructor == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -401,9 +401,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
     //   b. ReturnIfAbrupt(P).
     Handle<JSObject> patternObj = Handle<JSObject>::vmcast(pattern);
     propRes = JSObject::getNamed(
-        patternObj,
-        runtime,
-        runtime->getPredefinedSymbolID(Predefined::source));
+        patternObj, runtime, Predefined::getSymbolID(Predefined::source));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -413,9 +411,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
       //   i. Let F be Get(pattern, "flags").
       //   ii. ReturnIfAbrupt(F).
       propRes = JSObject::getNamed(
-          patternObj,
-          runtime,
-          runtime->getPredefinedSymbolID(Predefined::flags));
+          patternObj, runtime, Predefined::getSymbolID(Predefined::flags));
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -536,7 +532,7 @@ CallResult<Handle<JSArray>> directRegExpExec(
   CallResult<bool> defineResult = JSObject::defineOwnProperty(
       A,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::index),
+      Predefined::getSymbolID(Predefined::index),
       dpf,
       runtime->makeHandle(
           HermesValue::encodeNumberValue(match.front()->location)));
@@ -546,7 +542,7 @@ CallResult<Handle<JSArray>> directRegExpExec(
   (void)defineResult;
 
   defineResult = JSObject::defineOwnProperty(
-      A, runtime, runtime->getPredefinedSymbolID(Predefined::input), dpf, S);
+      A, runtime, Predefined::getSymbolID(Predefined::input), dpf, S);
   assert(
       defineResult != ExecutionStatus::EXCEPTION &&
       "defineOwnProperty() failed on a new object");
@@ -555,7 +551,7 @@ CallResult<Handle<JSArray>> directRegExpExec(
   defineResult = JSObject::defineOwnProperty(
       A,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::length),
+      Predefined::getSymbolID(Predefined::length),
       dpf,
       runtime->makeHandle(HermesValue::encodeNumberValue(match.size())));
   assert(
@@ -631,8 +627,8 @@ static CallResult<HermesValue>
 regExpExec(Runtime *runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
   // 3. Let exec be Get(R, "exec").
   // 4. ReturnIfAbrupt(exec).
-  auto propRes = JSObject::getNamed(
-      R, runtime, runtime->getPredefinedSymbolID(Predefined::exec));
+  auto propRes =
+      JSObject::getNamed(R, runtime, Predefined::getSymbolID(Predefined::exec));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -722,7 +718,7 @@ regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 
   // Let pattern be ToString(Get(R, "source"))
   auto source = JSObject::getNamed(
-      regexp, runtime, runtime->getPredefinedSymbolID(Predefined::source));
+      regexp, runtime, Predefined::getSymbolID(Predefined::source));
   if (LLVM_UNLIKELY(source == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -734,7 +730,7 @@ regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 
   // Let flags be ToString(Get(R, "flags"))
   auto flagsObj = JSObject::getNamed(
-      regexp, runtime, runtime->getPredefinedSymbolID(Predefined::flags));
+      regexp, runtime, Predefined::getSymbolID(Predefined::flags));
   if (LLVM_UNLIKELY(flagsObj == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -848,7 +844,7 @@ regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   };
   for (FlagProp f : flagProps) {
     auto flagVal =
-        JSObject::getNamed(R, runtime, runtime->getPredefinedSymbolID(f.name));
+        JSObject::getNamed(R, runtime, Predefined::getSymbolID(f.name));
     if (LLVM_UNLIKELY(flagVal == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1003,7 +999,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   // 5. Let global be ToBoolean(Get(rx, "global")).
   // 6. ReturnIfAbrupt(global).
   auto propRes = JSObject::getNamed(
-      rx, runtime, runtime->getPredefinedSymbolID(Predefined::global));
+      rx, runtime, Predefined::getSymbolID(Predefined::global));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1165,7 +1161,7 @@ regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return JSObject::getNamed(
-      resultObj, runtime, runtime->getPredefinedSymbolID(Predefined::index));
+      resultObj, runtime, Predefined::getSymbolID(Predefined::index));
 }
 
 /// ES6.0 21.1.3.14.1
@@ -1338,7 +1334,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   // 8. Let global be ToBoolean(Get(rx, "global")).
   // 9. ReturnIfAbrupt(global).
   auto propRes = JSObject::getNamed(
-      rx, runtime, runtime->getPredefinedSymbolID(Predefined::global));
+      rx, runtime, Predefined::getSymbolID(Predefined::global));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1459,7 +1455,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     // a. Let nCaptures be ToLength(Get(result, "length")).
     // b. ReturnIfAbrupt(nCaptures).
     propRes = JSObject::getNamed(
-        result, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+        result, runtime, Predefined::getSymbolID(Predefined::length));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1488,7 +1484,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     // g. Let position be ToInteger(Get(result, "index")).
     // h. ReturnIfAbrupt(position).
     propRes = JSObject::getNamed(
-        result, runtime, runtime->getPredefinedSymbolID(Predefined::index));
+        result, runtime, Predefined::getSymbolID(Predefined::index));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

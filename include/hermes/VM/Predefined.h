@@ -7,6 +7,8 @@
 #ifndef HERMES_VM_PREDEFINED_H
 #define HERMES_VM_PREDEFINED_H
 
+#include "hermes/VM/SymbolID.h"
+
 namespace hermes {
 namespace vm {
 
@@ -31,6 +33,19 @@ enum Sym {
 #include "PredefinedSymbols.def"
   _SYMBOL_AFTER_LAST
 };
+
+/// \return a \c SymbolID of a predefined symbol.
+constexpr SymbolID getSymbolID(IProp predefined) {
+  return SymbolID::unsafeCreateNotUniqued(predefined);
+}
+
+constexpr SymbolID getSymbolID(Str predefined) {
+  return SymbolID::unsafeCreate(predefined);
+}
+
+constexpr SymbolID getSymbolID(Sym predefined) {
+  return SymbolID::unsafeCreateNotUniqued(predefined);
+}
 
 } // namespace Predefined
 

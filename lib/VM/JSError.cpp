@@ -104,7 +104,7 @@ ExecutionStatus JSError::setupStack(
   auto res = JSObject::defineOwnProperty(
       selfHandle,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::stack),
+      Predefined::getSymbolID(Predefined::stack),
       dpf,
       accessor);
   (void)res;
@@ -133,7 +133,7 @@ ExecutionStatus JSError::setMessage(
   return JSObject::defineOwnProperty(
              selfHandle,
              runtime,
-             runtime->getPredefinedSymbolID(Predefined::message),
+             Predefined::getSymbolID(Predefined::message),
              dpf,
              stringMessage)
       .getStatus();
@@ -174,7 +174,7 @@ static Handle<PropStorage> getCallStackFunctionNames(
       JSObject *propObj = JSObject::getNamedDescriptor(
           callableHandle,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::name),
+          Predefined::getSymbolID(Predefined::name),
           desc);
       if (propObj && !desc.flags.accessor)
         name = JSObject::getNamedSlotValue(propObj, desc);
@@ -499,7 +499,7 @@ JSError::errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
   if (JSObject::defineOwnProperty(
           selfHandle,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::stack),
+          Predefined::getSymbolID(Predefined::stack),
           dpf,
           stacktraceStr) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -529,7 +529,7 @@ JSError::errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
   if (JSObject::defineOwnProperty(
           selfHandle,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::stack),
+          Predefined::getSymbolID(Predefined::stack),
           dpf,
           args.getArgHandle(runtime, 0)) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;

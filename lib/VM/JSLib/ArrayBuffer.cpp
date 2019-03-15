@@ -58,7 +58,7 @@ Handle<JSObject> createArrayBufferConstructor(Runtime *runtime) {
       Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype);
   auto cons = defineSystemConstructor<JSArrayBuffer>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::ArrayBuffer),
+      Predefined::getSymbolID(Predefined::ArrayBuffer),
       arrayBufferConstructor,
       arrayBufferPrototype,
       1,
@@ -68,7 +68,7 @@ Handle<JSObject> createArrayBufferConstructor(Runtime *runtime) {
   defineAccessor(
       runtime,
       arrayBufferPrototype,
-      runtime->getPredefinedSymbolID(Predefined::byteLength),
+      Predefined::getSymbolID(Predefined::byteLength),
       nullptr,
       arrayBufferPrototypeByteLength,
       nullptr,
@@ -77,7 +77,7 @@ Handle<JSObject> createArrayBufferConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayBufferPrototype,
-      runtime->getPredefinedSymbolID(Predefined::slice),
+      Predefined::getSymbolID(Predefined::slice),
       nullptr,
       arrayBufferPrototypeSlice,
       2);
@@ -88,7 +88,7 @@ Handle<JSObject> createArrayBufferConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       arrayBufferPrototype,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::ArrayBuffer),
       dpf);
 
@@ -96,7 +96,7 @@ Handle<JSObject> createArrayBufferConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::isView),
+      Predefined::getSymbolID(Predefined::isView),
       nullptr,
       arrayBufferIsView,
       1);

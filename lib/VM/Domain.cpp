@@ -108,7 +108,7 @@ ExecutionStatus Domain::importCJSModuleTable(
             (const void
                  *)"Dynamic requires are not allowed after static resolution"),
         throwTypeError,
-        runtime->getPredefinedSymbolID(Predefined::emptyString),
+        Predefined::getSymbolID(Predefined::emptyString),
         0,
         runtime->makeNullHandle<JSObject>());
 
@@ -125,7 +125,7 @@ ExecutionStatus Domain::importCJSModuleTable(
             JSObject::defineNewOwnProperty(
                 requireFn,
                 runtime,
-                runtime->getPredefinedSymbolID(Predefined::context),
+                Predefined::getSymbolID(Predefined::context),
                 pf,
                 context) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;

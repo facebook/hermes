@@ -92,7 +92,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       mapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::clear),
+      Predefined::getSymbolID(Predefined::clear),
       nullptr,
       mapPrototypeClear,
       0);
@@ -100,7 +100,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       mapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::deleteStr),
+      Predefined::getSymbolID(Predefined::deleteStr),
       nullptr,
       mapPrototypeDelete,
       1);
@@ -108,7 +108,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       mapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::entries),
+      Predefined::getSymbolID(Predefined::entries),
       nullptr,
       mapPrototypeEntries,
       0);
@@ -116,7 +116,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       mapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::forEach),
+      Predefined::getSymbolID(Predefined::forEach),
       nullptr,
       mapPrototypeForEach,
       1);
@@ -124,7 +124,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       mapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::get),
+      Predefined::getSymbolID(Predefined::get),
       nullptr,
       mapPrototypeGet,
       1);
@@ -132,7 +132,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       mapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::has),
+      Predefined::getSymbolID(Predefined::has),
       nullptr,
       mapPrototypeHas,
       1);
@@ -140,7 +140,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       mapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::keys),
+      Predefined::getSymbolID(Predefined::keys),
       nullptr,
       mapPrototypeKeys,
       0);
@@ -148,7 +148,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       mapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::set),
+      Predefined::getSymbolID(Predefined::set),
       nullptr,
       mapPrototypeSet,
       2);
@@ -156,7 +156,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   defineAccessor(
       runtime,
       mapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::size),
+      Predefined::getSymbolID(Predefined::size),
       nullptr,
       mapPrototypeSizeGetter,
       nullptr,
@@ -166,7 +166,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       mapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::values),
+      Predefined::getSymbolID(Predefined::values),
       nullptr,
       mapPrototypeValues,
       0);
@@ -181,13 +181,11 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   dpf.configurable = 1;
 
   auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed(
-      mapPrototype,
-      runtime,
-      runtime->getPredefinedSymbolID(Predefined::entries)));
+      mapPrototype, runtime, Predefined::getSymbolID(Predefined::entries)));
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       mapPrototype,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::SymbolIterator),
+      Predefined::getSymbolID(Predefined::SymbolIterator),
       dpf,
       runtime->makeHandle<NativeFunction>(propValue)));
 
@@ -197,13 +195,13 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       mapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::Map),
       dpf);
 
   auto cons = defineSystemConstructor<JSMap>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Map),
+      Predefined::getSymbolID(Predefined::Map),
       mapConstructor,
       mapPrototype,
       0,
@@ -230,7 +228,7 @@ mapConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   auto propRes = JSObject::getNamed(
-      selfHandle, runtime, runtime->getPredefinedSymbolID(Predefined::set));
+      selfHandle, runtime, Predefined::getSymbolID(Predefined::set));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -269,7 +267,7 @@ mapConstructor(void *, Runtime *runtime, NativeArgs args) {
     }
     pairHandle = vmcast<JSObject>(nextRes->getHermesValue());
     auto nextItemRes = JSObject::getNamed(
-        pairHandle, runtime, runtime->getPredefinedSymbolID(Predefined::value));
+        pairHandle, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -492,7 +490,7 @@ Handle<JSObject> createMapIteratorPrototype(Runtime *runtime) {
   defineMethod(
       runtime,
       parentHandle,
-      runtime->getPredefinedSymbolID(Predefined::next),
+      Predefined::getSymbolID(Predefined::next),
       nullptr,
       mapIteratorPrototypeNext,
       0);
@@ -503,7 +501,7 @@ Handle<JSObject> createMapIteratorPrototype(Runtime *runtime) {
   defineProperty(
       runtime,
       parentHandle,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::MapIterator),
       dpf);
 

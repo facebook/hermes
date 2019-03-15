@@ -342,17 +342,13 @@ CallResult<HermesValue> Arguments::create(
 /// as a \c Predefined enum value, and its value is  rooted in \p HANDLE.  If
 /// property definition fails, the exceptional execution status will be
 /// propogated to the outer function.
-#define DEFINE_PROP(OBJ_HANDLE, SYMBOL, HANDLE)                \
-  do {                                                         \
-    auto status = JSObject::defineNewOwnProperty(              \
-        OBJ_HANDLE,                                            \
-        runtime,                                               \
-        runtime->getPredefinedSymbolID(SYMBOL),                \
-        pf,                                                    \
-        HANDLE);                                               \
-    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) { \
-      return ExecutionStatus::EXCEPTION;                       \
-    }                                                          \
+#define DEFINE_PROP(OBJ_HANDLE, SYMBOL, HANDLE)                            \
+  do {                                                                     \
+    auto status = JSObject::defineNewOwnProperty(                          \
+        OBJ_HANDLE, runtime, Predefined::getSymbolID(SYMBOL), pf, HANDLE); \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {             \
+      return ExecutionStatus::EXCEPTION;                                   \
+    }                                                                      \
   } while (false)
 
   // Define the length property.
@@ -432,10 +428,7 @@ Handle<HiddenClass> JSArray::createClass(
   pf.internalSetter = 1;
 
   auto added = HiddenClass::addProperty(
-      classHandle,
-      runtime,
-      runtime->getPredefinedSymbolID(Predefined::length),
-      pf);
+      classHandle, runtime, Predefined::getSymbolID(Predefined::length), pf);
   assert(
       added != ExecutionStatus::EXCEPTION &&
       "Adding the first properties shouldn't cause overflow");
@@ -718,7 +711,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
     // 9. Else,
     // a. Let len be ToLength(Get(a, "length")).
     auto propRes = JSObject::getNamed(
-        a, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+        a, runtime, Predefined::getSymbolID(Predefined::length));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

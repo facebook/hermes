@@ -178,7 +178,7 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
 
   auto cons = defineSystemConstructor<JSString>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::String),
+      Predefined::getSymbolID(Predefined::String),
       stringConstructor,
       stringPrototype,
       1,
@@ -189,210 +189,210 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toString),
+      Predefined::getSymbolID(Predefined::toString),
       ctx,
       stringPrototypeToString,
       0);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::valueOf),
+      Predefined::getSymbolID(Predefined::valueOf),
       ctx,
       stringPrototypeToString,
       0);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::charAt),
+      Predefined::getSymbolID(Predefined::charAt),
       ctx,
       stringPrototypeCharAt,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::charCodeAt),
+      Predefined::getSymbolID(Predefined::charCodeAt),
       ctx,
       stringPrototypeCharCodeAt,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::codePointAt),
+      Predefined::getSymbolID(Predefined::codePointAt),
       ctx,
       stringPrototypeCodePointAt,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::concat),
+      Predefined::getSymbolID(Predefined::concat),
       ctx,
       stringPrototypeConcat,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::endsWith),
+      Predefined::getSymbolID(Predefined::endsWith),
       ctx,
       stringPrototypeEndsWith,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::slice),
+      Predefined::getSymbolID(Predefined::slice),
       ctx,
       stringPrototypeSlice,
       2);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::split),
+      Predefined::getSymbolID(Predefined::split),
       ctx,
       stringPrototypeSplit,
       2);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::substring),
+      Predefined::getSymbolID(Predefined::substring),
       ctx,
       stringPrototypeSubstring,
       2);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toLowerCase),
+      Predefined::getSymbolID(Predefined::toLowerCase),
       ctx,
       stringPrototypeToLowerCase,
       0);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toLocaleLowerCase),
+      Predefined::getSymbolID(Predefined::toLocaleLowerCase),
       ctx,
       stringPrototypeToLocaleLowerCase,
       0);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toUpperCase),
+      Predefined::getSymbolID(Predefined::toUpperCase),
       ctx,
       stringPrototypeToUpperCase,
       0);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toLocaleUpperCase),
+      Predefined::getSymbolID(Predefined::toLocaleUpperCase),
       ctx,
       stringPrototypeToLocaleUpperCase,
       0);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::substr),
+      Predefined::getSymbolID(Predefined::substr),
       ctx,
       stringPrototypeSubstr,
       2);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::trim),
+      Predefined::getSymbolID(Predefined::trim),
       ctx,
       stringPrototypeTrim,
       0);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::trimLeft),
+      Predefined::getSymbolID(Predefined::trimLeft),
       ctx,
       stringPrototypeTrimLeft,
       0);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::trimRight),
+      Predefined::getSymbolID(Predefined::trimRight),
       ctx,
       stringPrototypeTrimRight,
       0);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::includes),
+      Predefined::getSymbolID(Predefined::includes),
       (void *)false,
       stringPrototypeIncludesOrStartsWith,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::indexOf),
+      Predefined::getSymbolID(Predefined::indexOf),
       ctx,
       stringPrototypeIndexOf,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::lastIndexOf),
+      Predefined::getSymbolID(Predefined::lastIndexOf),
       ctx,
       stringPrototypeLastIndexOf,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::localeCompare),
+      Predefined::getSymbolID(Predefined::localeCompare),
       ctx,
       stringPrototypeLocaleCompare,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::match),
+      Predefined::getSymbolID(Predefined::match),
       ctx,
       stringPrototypeMatch,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::normalize),
+      Predefined::getSymbolID(Predefined::normalize),
       ctx,
       stringPrototypeNormalize,
       0);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::padEnd),
+      Predefined::getSymbolID(Predefined::padEnd),
       (void *)false,
       stringPrototypePad,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::padStart),
+      Predefined::getSymbolID(Predefined::padStart),
       (void *)true,
       stringPrototypePad,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::repeat),
+      Predefined::getSymbolID(Predefined::repeat),
       ctx,
       stringPrototypeRepeat,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::replace),
+      Predefined::getSymbolID(Predefined::replace),
       ctx,
       stringPrototypeReplace,
       2);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::search),
+      Predefined::getSymbolID(Predefined::search),
       ctx,
       stringPrototypeSearch,
       1);
   defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::startsWith),
+      Predefined::getSymbolID(Predefined::startsWith),
       (void *)true,
       stringPrototypeIncludesOrStartsWith,
       1);
@@ -402,8 +402,8 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
   (void)defineMethod(
       runtime,
       stringPrototype,
-      runtime->getPredefinedSymbolID(Predefined::SymbolIterator),
-      runtime->getPredefinedSymbolID(Predefined::squareSymbolIterator),
+      Predefined::getSymbolID(Predefined::SymbolIterator),
+      Predefined::getSymbolID(Predefined::squareSymbolIterator),
       ctx,
       stringPrototypeSymbolIterator,
       0,
@@ -413,14 +413,14 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::fromCharCode),
+      Predefined::getSymbolID(Predefined::fromCharCode),
       ctx,
       stringFromCharCode,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::fromCodePoint),
+      Predefined::getSymbolID(Predefined::fromCodePoint),
       ctx,
       stringFromCodePoint,
       1);
@@ -1027,8 +1027,7 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
     auto methodRes = getMethod(
         runtime,
         separator,
-        runtime->makeHandle(
-            runtime->getPredefinedSymbolID(Predefined::SymbolSplit)));
+        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSplit)));
     // b. ReturnIfAbrupt(splitter).
     if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1526,8 +1525,7 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
     auto methodRes = getMethod(
         runtime,
         regexp,
-        runtime->makeHandle(
-            runtime->getPredefinedSymbolID(Predefined::SymbolMatch)));
+        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolMatch)));
     // b. ReturnIfAbrupt(matcher).
     if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1559,7 +1557,7 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
 
   // 8. Return Invoke(rx, @@match, «‍S»).
   auto propRes = JSObject::getNamed(
-      rx, runtime, runtime->getPredefinedSymbolID(Predefined::SymbolMatch));
+      rx, runtime, Predefined::getSymbolID(Predefined::SymbolMatch));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1820,7 +1818,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
         runtime,
         searchValue,
         runtime->makeHandle(
-            runtime->getPredefinedSymbolID(Predefined::SymbolReplace)));
+            Predefined::getSymbolID(Predefined::SymbolReplace)));
     // b. ReturnIfAbrupt(replacer).
     if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1959,8 +1957,7 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
     auto methodRes = getMethod(
         runtime,
         regexp,
-        runtime->makeHandle(
-            runtime->getPredefinedSymbolID(Predefined::SymbolSearch)));
+        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSearch)));
     // b. ReturnIfAbrupt(searcher).
     if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1993,7 +1990,7 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
 
   // 8. Return Invoke(rx, @@search, «string»).
   auto propRes = JSObject::getNamed(
-      rx, runtime, runtime->getPredefinedSymbolID(Predefined::SymbolSearch));
+      rx, runtime, Predefined::getSymbolID(Predefined::SymbolSearch));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

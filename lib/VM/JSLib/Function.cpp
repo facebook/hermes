@@ -64,7 +64,7 @@ Handle<JSObject> createFunctionConstructor(Runtime *runtime) {
 
   auto cons = defineSystemConstructor(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Function),
+      Predefined::getSymbolID(Predefined::Function),
       functionConstructor,
       functionPrototype,
       1,
@@ -75,28 +75,28 @@ Handle<JSObject> createFunctionConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       functionPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toString),
+      Predefined::getSymbolID(Predefined::toString),
       nullptr,
       functionPrototypeToString,
       0);
   defineMethod(
       runtime,
       functionPrototype,
-      runtime->getPredefinedSymbolID(Predefined::apply),
+      Predefined::getSymbolID(Predefined::apply),
       nullptr,
       functionPrototypeApply,
       2);
   defineMethod(
       runtime,
       functionPrototype,
-      runtime->getPredefinedSymbolID(Predefined::call),
+      Predefined::getSymbolID(Predefined::call),
       nullptr,
       functionPrototypeCall,
       1);
   defineMethod(
       runtime,
       functionPrototype,
-      runtime->getPredefinedSymbolID(Predefined::bind),
+      Predefined::getSymbolID(Predefined::bind),
       nullptr,
       functionPrototypeBind,
       1);
@@ -108,8 +108,8 @@ Handle<JSObject> createFunctionConstructor(Runtime *runtime) {
   (void)defineMethod(
       runtime,
       functionPrototype,
-      runtime->getPredefinedSymbolID(Predefined::SymbolHasInstance),
-      runtime->getPredefinedSymbolID(Predefined::squareSymbolHasInstance),
+      Predefined::getSymbolID(Predefined::SymbolHasInstance),
+      Predefined::getSymbolID(Predefined::squareSymbolHasInstance),
       nullptr,
       functionPrototypeSymbolHasInstance,
       1,
@@ -275,10 +275,10 @@ functionConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (JSObject::defineOwnProperty(
           function,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::name),
+          Predefined::getSymbolID(Predefined::name),
           dpf,
           runtime->makeHandle(runtime->getStringPrimFromSymbolID(
-              runtime->getPredefinedSymbolID(Predefined::anonymous)))) ==
+              Predefined::getSymbolID(Predefined::anonymous)))) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -301,7 +301,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 
   // Extract the name.
   auto propRes = JSObject::getNamed(
-      func, runtime, runtime->getPredefinedSymbolID(Predefined::name));
+      func, runtime, Predefined::getSymbolID(Predefined::name));
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -366,7 +366,7 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
   }
 
   auto propRes = JSObject::getNamed(
-      argObj, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      argObj, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -1628,7 +1628,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
   auto protoRes = vm::JSObject::getNamed(
       funcHandle,
       &runtime_,
-      runtime_.getPredefinedSymbolID(vm::Predefined::prototype));
+      vm::Predefined::getSymbolID(vm::Predefined::prototype));
   checkStatus(protoRes.getStatus());
   // 13.2.2.6:
   //    If Type(proto) is Object, set the [[Prototype]] internal property
@@ -1775,7 +1775,7 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
 
 size_t HermesRuntimeImpl::getLength(vm::Handle<vm::ArrayImpl> arr) {
   auto res = vm::JSObject::getNamed(
-      arr, &runtime_, runtime_.getPredefinedSymbolID(vm::Predefined::length));
+      arr, &runtime_, vm::Predefined::getSymbolID(vm::Predefined::length));
   checkStatus(res.getStatus());
   if (!res->isNumber()) {
     throw jsi::JSError(*this, "getLength: property 'length' is not a number");
@@ -1786,9 +1786,7 @@ size_t HermesRuntimeImpl::getLength(vm::Handle<vm::ArrayImpl> arr) {
 
 size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSArrayBuffer> arr) {
   auto res = vm::JSObject::getNamed(
-      arr,
-      &runtime_,
-      runtime_.getPredefinedSymbolID(vm::Predefined::byteLength));
+      arr, &runtime_, vm::Predefined::getSymbolID(vm::Predefined::byteLength));
   checkStatus(res.getStatus());
   if (!res->isNumber()) {
     throw jsi::JSError(

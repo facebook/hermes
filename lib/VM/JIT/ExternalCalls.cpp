@@ -771,7 +771,7 @@ CallResult<HermesValue> slowPathGetArgumentsLength(
   return JSObject::getNamed(
       Handle<JSObject>::vmcast(obj),
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::length));
+      Predefined::getSymbolID(Predefined::length));
 }
 
 CallResult<HermesValue> externIsIn(

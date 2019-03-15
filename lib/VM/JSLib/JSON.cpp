@@ -38,14 +38,14 @@ Handle<JSObject> createJSONObject(Runtime *runtime) {
   defineMethod(
       runtime,
       json,
-      runtime->getPredefinedSymbolID(Predefined::parse),
+      Predefined::getSymbolID(Predefined::parse),
       nullptr,
       jsonParse,
       2);
   defineMethod(
       runtime,
       json,
-      runtime->getPredefinedSymbolID(Predefined::stringify),
+      Predefined::getSymbolID(Predefined::stringify),
       nullptr,
       jsonStringify,
       3);
@@ -56,7 +56,7 @@ Handle<JSObject> createJSONObject(Runtime *runtime) {
   defineProperty(
       runtime,
       json,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::JSON),
       dpf);
 

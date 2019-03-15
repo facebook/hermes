@@ -144,7 +144,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     auto status = JSObject::defineNewOwnProperty(              \
         resultHandle,                                          \
         runtime,                                               \
-        runtime->getPredefinedSymbolID(KEY),                   \
+        Predefined::getSymbolID(KEY),                          \
         PropertyFlags::defaultNewNamedPropertyFlags(),         \
         tmpHandle);                                            \
     if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) { \
@@ -308,7 +308,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
         (void)defineMethod(
             runtime,
             intern,
-            runtime->getPredefinedSymbolID(symID),
+            Predefined::getSymbolID(symID),
             nullptr /* context */,
             func,
             count,
@@ -331,7 +331,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   runtime->requireFunction = *defineMethod(
       runtime,
       intern,
-      runtime->getPredefinedSymbolID(Predefined::require),
+      Predefined::getSymbolID(Predefined::require),
       nullptr,
       require,
       1,
@@ -341,7 +341,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   (void)defineMethod(
       runtime,
       intern,
-      runtime->getPredefinedSymbolID(Predefined::requireFast),
+      Predefined::getSymbolID(Predefined::requireFast),
       nullptr,
       requireFast,
       1,

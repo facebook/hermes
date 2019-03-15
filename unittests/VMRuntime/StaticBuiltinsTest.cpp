@@ -36,21 +36,21 @@ namespace {
 static void verifyAllBuiltinsFrozen(Runtime *runtime) {
   GCScope gcScope{runtime};
   auto global = runtime->getGlobal();
-  runtime->getPredefinedSymbolID(Predefined::isArray);
-#define BUILTIN_OBJECT(object)                                          \
-  {                                                                     \
-    auto objectID = runtime->getPredefinedSymbolID(Predefined::object); \
-    EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(global, objectID)       \
+  Predefined::getSymbolID(Predefined::isArray);
+#define BUILTIN_OBJECT(object)                                    \
+  {                                                               \
+    auto objectID = Predefined::getSymbolID(Predefined::object);  \
+    EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(global, objectID) \
   }
 
-#define BUILTIN_METHOD(object, method)                                  \
-  {                                                                     \
-    auto objectID = runtime->getPredefinedSymbolID(Predefined::object); \
-    auto cr = JSObject::getNamed(global, runtime, objectID);            \
-    ASSERT_NE(cr, ExecutionStatus::EXCEPTION);                          \
-    auto objHandle = runtime->makeHandle<JSObject>(*cr);                \
-    auto methodID = runtime->getPredefinedSymbolID(Predefined::method); \
-    EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(objHandle, methodID);   \
+#define BUILTIN_METHOD(object, method)                                \
+  {                                                                   \
+    auto objectID = Predefined::getSymbolID(Predefined::object);      \
+    auto cr = JSObject::getNamed(global, runtime, objectID);          \
+    ASSERT_NE(cr, ExecutionStatus::EXCEPTION);                        \
+    auto objHandle = runtime->makeHandle<JSObject>(*cr);              \
+    auto methodID = Predefined::getSymbolID(Predefined::method);      \
+    EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(objHandle, methodID); \
   }
 #include "hermes/Inst/Builtins.def"
 }

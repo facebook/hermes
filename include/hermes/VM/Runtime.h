@@ -205,10 +205,6 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
     heap_.collect();
   }
 
-  /// \return a \c SymbolID of a predefined symbol.
-  static constexpr SymbolID getPredefinedSymbolID(Predefined::Str predefined);
-  static constexpr SymbolID getPredefinedSymbolID(Predefined::Sym predefined);
-
   /// \return the \c StringPrimitive of a predefined string.
   StringPrimitive *getPredefinedString(Predefined::Str predefined);
   StringPrimitive *getPredefinedString(Predefined::Sym predefined);
@@ -1162,24 +1158,14 @@ inline void Runtime::ttiReached() {
   heap_.ttiReached();
 }
 
-/* static */ constexpr SymbolID Runtime::getPredefinedSymbolID(
-    Predefined::Str predefined) {
-  return SymbolID::unsafeCreate(predefined);
-}
-
-/* static */ constexpr SymbolID Runtime::getPredefinedSymbolID(
-    Predefined::Sym predefined) {
-  return SymbolID::unsafeCreateNotUniqued((unsigned)predefined);
-}
-
 inline StringPrimitive *Runtime::getPredefinedString(
     Predefined::Str predefined) {
-  return getStringPrimFromSymbolID(getPredefinedSymbolID(predefined));
+  return getStringPrimFromSymbolID(Predefined::getSymbolID(predefined));
 }
 
 inline StringPrimitive *Runtime::getPredefinedString(
     Predefined::Sym predefined) {
-  return getStringPrimFromSymbolID(getPredefinedSymbolID(predefined));
+  return getStringPrimFromSymbolID(Predefined::getSymbolID(predefined));
 }
 
 inline Handle<StringPrimitive> Runtime::getPredefinedStringHandle(

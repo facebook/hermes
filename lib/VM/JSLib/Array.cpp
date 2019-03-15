@@ -154,161 +154,161 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toString),
+      Predefined::getSymbolID(Predefined::toString),
       nullptr,
       arrayPrototypeToString,
       0);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toLocaleString),
+      Predefined::getSymbolID(Predefined::toLocaleString),
       nullptr,
       arrayPrototypeToLocaleString,
       0);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::concat),
+      Predefined::getSymbolID(Predefined::concat),
       nullptr,
       arrayPrototypeConcat,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::copyWithin),
+      Predefined::getSymbolID(Predefined::copyWithin),
       nullptr,
       arrayPrototypeCopyWithin,
       2);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::join),
+      Predefined::getSymbolID(Predefined::join),
       nullptr,
       arrayPrototypeJoin,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::pop),
+      Predefined::getSymbolID(Predefined::pop),
       nullptr,
       arrayPrototypePop,
       0);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::push),
+      Predefined::getSymbolID(Predefined::push),
       nullptr,
       arrayPrototypePush,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::reverse),
+      Predefined::getSymbolID(Predefined::reverse),
       nullptr,
       arrayPrototypeReverse,
       0);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::shift),
+      Predefined::getSymbolID(Predefined::shift),
       nullptr,
       arrayPrototypeShift,
       0);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::slice),
+      Predefined::getSymbolID(Predefined::slice),
       nullptr,
       arrayPrototypeSlice,
       2);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::sort),
+      Predefined::getSymbolID(Predefined::sort),
       nullptr,
       arrayPrototypeSort,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::splice),
+      Predefined::getSymbolID(Predefined::splice),
       nullptr,
       arrayPrototypeSplice,
       2);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::unshift),
+      Predefined::getSymbolID(Predefined::unshift),
       nullptr,
       arrayPrototypeUnshift,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::indexOf),
+      Predefined::getSymbolID(Predefined::indexOf),
       nullptr,
       arrayPrototypeIndexOf,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::lastIndexOf),
+      Predefined::getSymbolID(Predefined::lastIndexOf),
       nullptr,
       arrayPrototypeLastIndexOf,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::every),
+      Predefined::getSymbolID(Predefined::every),
       nullptr,
       arrayPrototypeEvery,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::some),
+      Predefined::getSymbolID(Predefined::some),
       nullptr,
       arrayPrototypeSome,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::forEach),
+      Predefined::getSymbolID(Predefined::forEach),
       nullptr,
       arrayPrototypeForEach,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::map),
+      Predefined::getSymbolID(Predefined::map),
       nullptr,
       arrayPrototypeMap,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::filter),
+      Predefined::getSymbolID(Predefined::filter),
       nullptr,
       arrayPrototypeFilter,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::fill),
+      Predefined::getSymbolID(Predefined::fill),
       nullptr,
       arrayPrototypeFill,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::find),
+      Predefined::getSymbolID(Predefined::find),
       nullptr,
       arrayPrototypeFind,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::findIndex),
+      Predefined::getSymbolID(Predefined::findIndex),
       // Pass a non-null pointer here to indicate we're finding the index.
       reinterpret_cast<void *>(arrayPrototypeFind),
       arrayPrototypeFind,
@@ -316,14 +316,14 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::reduce),
+      Predefined::getSymbolID(Predefined::reduce),
       nullptr,
       arrayPrototypeReduce,
       1);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::reduceRight),
+      Predefined::getSymbolID(Predefined::reduceRight),
       nullptr,
       arrayPrototypeReduceRight,
       1);
@@ -335,29 +335,27 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::keys),
+      Predefined::getSymbolID(Predefined::keys),
       &iterationKindKey,
       arrayPrototypeIterator,
       0);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::values),
+      Predefined::getSymbolID(Predefined::values),
       &iterationKindValue,
       arrayPrototypeIterator,
       0);
   defineMethod(
       runtime,
       arrayPrototype,
-      runtime->getPredefinedSymbolID(Predefined::entries),
+      Predefined::getSymbolID(Predefined::entries),
       &iterationKindEntry,
       arrayPrototypeIterator,
       0);
 
   auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed(
-      arrayPrototype,
-      runtime,
-      runtime->getPredefinedSymbolID(Predefined::values)));
+      arrayPrototype, runtime, Predefined::getSymbolID(Predefined::values)));
   runtime->arrayPrototypeValues = propValue;
 
   DefinePropertyFlags dpf{};
@@ -372,13 +370,13 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       arrayPrototype,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::SymbolIterator),
+      Predefined::getSymbolID(Predefined::SymbolIterator),
       dpf,
       Handle<>(&runtime->arrayPrototypeValues)));
 
   auto cons = defineSystemConstructor<JSArray>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Array),
+      Predefined::getSymbolID(Predefined::Array),
       arrayConstructor,
       arrayPrototype,
       1,
@@ -387,14 +385,14 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::isArray),
+      Predefined::getSymbolID(Predefined::isArray),
       nullptr,
       arrayIsArray,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::of),
+      Predefined::getSymbolID(Predefined::of),
       nullptr,
       arrayOf,
       0);
@@ -403,7 +401,7 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
     defineMethod(
         runtime,
         cons,
-        runtime->getPredefinedSymbolID(Predefined::from),
+        Predefined::getSymbolID(Predefined::from),
         nullptr,
         arrayFrom,
         1);
@@ -542,7 +540,7 @@ arrayOf(void *, Runtime *runtime, NativeArgs args) {
   auto setStatus = JSObject::putNamed(
       A,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::length),
+      Predefined::getSymbolID(Predefined::length),
       runtime->makeHandle(HermesValue::encodeNumberValue(len)),
       PropOpFlags().plusThrowOnError());
   if (LLVM_UNLIKELY(setStatus == ExecutionStatus::EXCEPTION)) {
@@ -592,7 +590,7 @@ arrayPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   auto array = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      array, runtime, runtime->getPredefinedSymbolID(Predefined::join));
+      array, runtime, Predefined::getSymbolID(Predefined::join));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -625,7 +623,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   }
 
   auto propRes = JSObject::getNamed(
-      array, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      array, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -680,8 +678,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
               (propRes = JSObject::getNamed(
                    elementObj,
                    runtime,
-                   runtime->getPredefinedSymbolID(
-                       Predefined::toLocaleString))) ==
+                   Predefined::getSymbolID(Predefined::toLocaleString))) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -801,9 +798,7 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
         len = JSArray::getLength(*arrHandle);
       } else {
         CallResult<HermesValue> lengthRes = JSObject::getNamed(
-            objHandle,
-            runtime,
-            runtime->getPredefinedSymbolID(Predefined::length));
+            objHandle, runtime, Predefined::getSymbolID(Predefined::length));
         if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -938,7 +933,7 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   // handling, because ToInteger may return Infinity and we must do double
   // arithmetic.
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1101,7 +1096,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   }
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1200,7 +1195,7 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(res.getValue());
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1215,7 +1210,7 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
             JSObject::putNamed(
                 O,
                 runtime,
-                runtime->getPredefinedSymbolID(Predefined::length),
+                Predefined::getSymbolID(Predefined::length),
                 runtime->makeHandle(HermesValue::encodeDoubleValue(0)),
                 PropOpFlags().plusThrowOnError()) ==
             ExecutionStatus::EXCEPTION))
@@ -1241,7 +1236,7 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
           JSObject::putNamed(
               O,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::length),
+              Predefined::getSymbolID(Predefined::length),
               runtime->makeHandle(HermesValue::encodeDoubleValue(len - 1)),
               PropOpFlags().plusThrowOnError()) == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
@@ -1270,7 +1265,7 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
   } else {
     // Slow path, used when pushing onto non-array objects.
     auto propRes = JSObject::getNamed(
-        O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+        O, runtime, Predefined::getSymbolID(Predefined::length));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1305,7 +1300,7 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
           JSObject::putNamed(
               O,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::length),
+              Predefined::getSymbolID(Predefined::length),
               n,
               PropOpFlags().plusThrowOnError()) == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
@@ -1322,7 +1317,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1455,7 +1450,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1470,7 +1465,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
     if (JSObject::putNamed(
             O,
             runtime,
-            runtime->getPredefinedSymbolID(Predefined::length),
+            Predefined::getSymbolID(Predefined::length),
             runtime->makeHandle(HermesValue::encodeDoubleValue(0)),
             PropOpFlags().plusThrowOnError()) == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
@@ -1546,7 +1541,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
           JSObject::putNamed(
               O,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::length),
+              Predefined::getSymbolID(Predefined::length),
               runtime->makeHandle(HermesValue::encodeDoubleValue(len - 1)),
               PropOpFlags().plusThrowOnError()) == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
@@ -1569,7 +1564,7 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   auto A = toHandle(runtime, std::move(*arrRes));
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1885,7 +1880,7 @@ arrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1923,7 +1918,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
   auto A = toHandle(runtime, std::move(*arrRes));
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2139,7 +2134,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
           JSObject::putNamed(
               O,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::length),
+              Predefined::getSymbolID(Predefined::length),
               runtime->makeHandle(HermesValue::encodeDoubleValue(
                   len - actualDeleteCount + itemCount)),
               PropOpFlags().plusThrowOnError()) ==
@@ -2160,7 +2155,7 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2243,7 +2238,7 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
           JSObject::putNamed(
               O,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::length),
+              Predefined::getSymbolID(Predefined::length),
               runtime->makeHandle(newLen),
               PropOpFlags().plusThrowOnError()) == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
@@ -2262,7 +2257,7 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2368,7 +2363,7 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2460,7 +2455,7 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2527,7 +2522,7 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2603,7 +2598,7 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2688,7 +2683,7 @@ arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
   // Get the length.
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2750,7 +2745,7 @@ arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
 
   // Get the length.
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2817,7 +2812,7 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed(
-      O, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2982,8 +2977,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   auto methodRes = getMethod(
       runtime,
       itemsHandle,
-      runtime->makeHandle(
-          runtime->getPredefinedSymbolID(Predefined::SymbolIterator)));
+      runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolIterator)));
   if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3049,7 +3043,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
         auto setStatus = JSObject::putNamed(
             A,
             runtime,
-            runtime->getPredefinedSymbolID(Predefined::length),
+            Predefined::getSymbolID(Predefined::length),
             k,
             PropOpFlags().plusThrowOnError());
         if (LLVM_UNLIKELY(setStatus == ExecutionStatus::EXCEPTION)) {
@@ -3060,7 +3054,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
       // v. Let nextValue be IteratorValue(next).
       // vi. ReturnIfAbrupt(nextValue).
       auto propRes = JSObject::getNamed(
-          *next, runtime, runtime->getPredefinedSymbolID(Predefined::value));
+          *next, runtime, Predefined::getSymbolID(Predefined::value));
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -3110,7 +3104,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   // 10. Let len be ToLength(Get(arrayLike, "length")).
   // 11. ReturnIfAbrupt(len).
   auto propRes = JSObject::getNamed(
-      arrayLike, runtime, runtime->getPredefinedSymbolID(Predefined::length));
+      arrayLike, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3196,7 +3190,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   auto setStatus = JSObject::putNamed(
       A,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::length),
+      Predefined::getSymbolID(Predefined::length),
       k,
       PropOpFlags().plusThrowOnError());
   // 18. ReturnIfAbrupt(setStatus).

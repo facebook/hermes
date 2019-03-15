@@ -439,7 +439,7 @@ CallResult<HermesValue> RuntimeJSONParser::revive(Handle<> value) {
   auto status = JSObject::defineOwnProperty(
       root,
       runtime_,
-      runtime_->getPredefinedSymbolID(Predefined::emptyString),
+      Predefined::getSymbolID(Predefined::emptyString),
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
       value);
   (void)status;
@@ -682,7 +682,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
             (propRes = JSObject::getNamed(
                  valueObj,
                  runtime_,
-                 runtime_->getPredefinedSymbolID(Predefined::toJSON))) ==
+                 Predefined::getSymbolID(Predefined::toJSON))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -740,17 +740,17 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
 
   // Str.5.
   if (operationStrValue_->isNull()) {
-    appendToOutput(runtime_->getPredefinedSymbolID(Predefined::null));
+    appendToOutput(Predefined::getSymbolID(Predefined::null));
     return true;
   }
 
   if (operationStrValue_->isBool()) {
     if (operationStrValue_->getBool()) {
       // Str.6.
-      appendToOutput(runtime_->getPredefinedSymbolID(Predefined::trueStr));
+      appendToOutput(Predefined::getSymbolID(Predefined::trueStr));
     } else {
       // Str.7.
-      appendToOutput(runtime_->getPredefinedSymbolID(Predefined::falseStr));
+      appendToOutput(Predefined::getSymbolID(Predefined::falseStr));
     }
     return true;
   }
@@ -771,7 +771,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
           "toString on a number cannot fail");
       appendToOutput(status->get());
     } else {
-      appendToOutput(runtime_->getPredefinedSymbolID(Predefined::null));
+      appendToOutput(Predefined::getSymbolID(Predefined::null));
     }
     return true;
   }
@@ -843,7 +843,7 @@ ExecutionStatus JSONStringifyer::operationJA() {
     }
     if (LLVM_UNLIKELY(!status.getValue())) {
       // operationStr returns undefined, we need to replace with null.
-      appendToOutput(runtime_->getPredefinedSymbolID(Predefined::null));
+      appendToOutput(Predefined::getSymbolID(Predefined::null));
     }
   }
   indentGapCount_ = stepBack;
@@ -1029,7 +1029,7 @@ CallResult<HermesValue> JSONStringifyer::stringify(Handle<> value) {
   auto status = JSObject::defineOwnProperty(
       operationStrHolder_,
       runtime_,
-      runtime_->getPredefinedSymbolID(Predefined::emptyString),
+      Predefined::getSymbolID(Predefined::emptyString),
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
       value);
   assert(

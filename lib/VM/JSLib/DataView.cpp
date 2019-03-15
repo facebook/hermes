@@ -178,7 +178,7 @@ Handle<JSObject> createDataViewConstructor(Runtime *runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime->dataViewPrototype);
   auto cons = defineSystemConstructor<JSDataView>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::DataView),
+      Predefined::getSymbolID(Predefined::DataView),
       dataViewConstructor,
       proto,
       3,
@@ -188,7 +188,7 @@ Handle<JSObject> createDataViewConstructor(Runtime *runtime) {
   defineAccessor(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::buffer),
+      Predefined::getSymbolID(Predefined::buffer),
       nullptr,
       dataViewPrototypeBuffer,
       nullptr,
@@ -197,7 +197,7 @@ Handle<JSObject> createDataViewConstructor(Runtime *runtime) {
   defineAccessor(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::byteLength),
+      Predefined::getSymbolID(Predefined::byteLength),
       nullptr,
       dataViewPrototypeByteLength,
       nullptr,
@@ -206,7 +206,7 @@ Handle<JSObject> createDataViewConstructor(Runtime *runtime) {
   defineAccessor(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::byteOffset),
+      Predefined::getSymbolID(Predefined::byteOffset),
       nullptr,
       dataViewPrototypeByteOffset,
       nullptr,
@@ -217,14 +217,14 @@ Handle<JSObject> createDataViewConstructor(Runtime *runtime) {
   defineMethod(                                              \
       runtime,                                               \
       proto,                                                 \
-      runtime->getPredefinedSymbolID(Predefined::get##name), \
+      Predefined::getSymbolID(Predefined::get##name),        \
       nullptr,                                               \
       dataViewPrototypeGet<type>,                            \
       1);                                                    \
   defineMethod(                                              \
       runtime,                                               \
       proto,                                                 \
-      runtime->getPredefinedSymbolID(Predefined::set##name), \
+      Predefined::getSymbolID(Predefined::set##name),        \
       nullptr,                                               \
       dataViewPrototypeSet<type, CellKind::name##ArrayKind>, \
       2);
@@ -237,7 +237,7 @@ Handle<JSObject> createDataViewConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::DataView),
       dpf);
 

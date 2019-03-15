@@ -39,7 +39,7 @@ Handle<JSObject> createWeakMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       weakMapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::deleteStr),
+      Predefined::getSymbolID(Predefined::deleteStr),
       nullptr,
       weakMapPrototypeDelete,
       1);
@@ -47,7 +47,7 @@ Handle<JSObject> createWeakMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       weakMapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::get),
+      Predefined::getSymbolID(Predefined::get),
       nullptr,
       weakMapPrototypeGet,
       1);
@@ -55,7 +55,7 @@ Handle<JSObject> createWeakMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       weakMapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::has),
+      Predefined::getSymbolID(Predefined::has),
       nullptr,
       weakMapPrototypeHas,
       1);
@@ -63,7 +63,7 @@ Handle<JSObject> createWeakMapConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       weakMapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::set),
+      Predefined::getSymbolID(Predefined::set),
       nullptr,
       weakMapPrototypeSet,
       2);
@@ -74,13 +74,13 @@ Handle<JSObject> createWeakMapConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       weakMapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::WeakMap),
       dpf);
 
   auto cons = defineSystemConstructor<JSWeakMap>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::WeakMap),
+      Predefined::getSymbolID(Predefined::WeakMap),
       weakMapConstructor,
       weakMapPrototype,
       0,
@@ -90,7 +90,7 @@ Handle<JSObject> createWeakMapConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       weakMapPrototype,
-      runtime->getPredefinedSymbolID(Predefined::constructor),
+      Predefined::getSymbolID(Predefined::constructor),
       cons);
 
   return cons;
@@ -112,7 +112,7 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   auto propRes = JSObject::getNamed(
-      selfHandle, runtime, runtime->getPredefinedSymbolID(Predefined::set));
+      selfHandle, runtime, Predefined::getSymbolID(Predefined::set));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -146,7 +146,7 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
       return selfHandle.getHermesValue();
     }
     auto nextItemRes = JSObject::getNamed(
-        *nextRes, runtime, runtime->getPredefinedSymbolID(Predefined::value));
+        *nextRes, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

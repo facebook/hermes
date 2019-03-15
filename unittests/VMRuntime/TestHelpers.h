@@ -161,13 +161,13 @@ inline const GCConfig TestGCConfigFixedSize(
   } while (0)
 
 /// Get a named value from an object.
-#define GET_VALUE(objHandle, predefinedId)                         \
-  do {                                                             \
-    propRes = JSObject::getNamed(                                  \
-        objHandle,                                                 \
-        runtime,                                                   \
-        runtime->getPredefinedSymbolID(Predefined::predefinedId)); \
-    ASSERT_RETURNED(propRes.getStatus());                          \
+#define GET_VALUE(objHandle, predefinedId)                  \
+  do {                                                      \
+    propRes = JSObject::getNamed(                           \
+        objHandle,                                          \
+        runtime,                                            \
+        Predefined::getSymbolID(Predefined::predefinedId)); \
+    ASSERT_RETURNED(propRes.getStatus());                   \
   } while (0)
 
 /// Get the global object.

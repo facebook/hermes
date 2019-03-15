@@ -200,7 +200,7 @@ CallResult<HermesValue> Interpreter::getArgumentsPropByValSlowPath(
 
     // Are they requesting "arguments.length"?
     if (runtime->symbolEqualsToStringPrim(
-            runtime->getPredefinedSymbolID(Predefined::length), *strPrim)) {
+            Predefined::getSymbolID(Predefined::length), *strPrim)) {
       return HermesValue::encodeDoubleValue(frame.getArgCount());
     }
   }
@@ -283,8 +283,7 @@ inline OptValue<HermesValue> Interpreter::tryGetPrimitiveOwnPropertyById(
     Runtime *runtime,
     Handle<> base,
     SymbolID id) {
-  if (base->isString() &&
-      id == runtime->getPredefinedSymbolID(Predefined::length)) {
+  if (base->isString() && id == Predefined::getSymbolID(Predefined::length)) {
     return HermesValue::encodeNumberValue(base->getString()->getStringLength());
   }
   return llvm::None;
@@ -2408,7 +2407,7 @@ tailCall:
         res = JSObject::getNamed(
             Handle<JSObject>::vmcast(&O2REG(GetArgumentsLength)),
             runtime,
-            runtime->getPredefinedSymbolID(Predefined::length));
+            Predefined::getSymbolID(Predefined::length));
         if (res == ExecutionStatus::EXCEPTION) {
           goto exception;
         }

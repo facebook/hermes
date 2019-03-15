@@ -177,7 +177,7 @@ Handle<JSObject> createDateConstructor(Runtime *runtime) {
   auto datePrototype = Handle<JSObject>::vmcast(&runtime->datePrototype);
   auto cons = defineSystemConstructor<JSDate>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Date),
+      Predefined::getSymbolID(Predefined::Date),
       dateConstructor,
       datePrototype,
       7,
@@ -187,14 +187,14 @@ Handle<JSObject> createDateConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       datePrototype,
-      runtime->getPredefinedSymbolID(Predefined::valueOf),
+      Predefined::getSymbolID(Predefined::valueOf),
       nullptr,
       datePrototypeGetTime,
       0);
   defineMethod(
       runtime,
       datePrototype,
-      runtime->getPredefinedSymbolID(Predefined::getTime),
+      Predefined::getSymbolID(Predefined::getTime),
       nullptr,
       datePrototypeGetTime,
       0);
@@ -210,20 +210,17 @@ Handle<JSObject> createDateConstructor(Runtime *runtime) {
   };
 
   defineToStringMethod(
-      runtime->getPredefinedSymbolID(Predefined::toString),
-      optDatetimeToString);
+      Predefined::getSymbolID(Predefined::toString), optDatetimeToString);
   defineToStringMethod(
-      runtime->getPredefinedSymbolID(Predefined::toDateString),
-      optDateToString);
+      Predefined::getSymbolID(Predefined::toDateString), optDateToString);
   defineToStringMethod(
-      runtime->getPredefinedSymbolID(Predefined::toTimeString),
-      optTimeToString);
+      Predefined::getSymbolID(Predefined::toTimeString), optTimeToString);
   defineToStringMethod(
-      runtime->getPredefinedSymbolID(Predefined::toISOString), optISOToString);
+      Predefined::getSymbolID(Predefined::toISOString), optISOToString);
   defineToStringMethod(
-      runtime->getPredefinedSymbolID(Predefined::toUTCString), optUTCToString);
+      Predefined::getSymbolID(Predefined::toUTCString), optUTCToString);
   defineToStringMethod(
-      runtime->getPredefinedSymbolID(Predefined::toGMTString), optUTCToString);
+      Predefined::getSymbolID(Predefined::toGMTString), optUTCToString);
 
   auto defineToLocaleStringMethod = [&](SymbolID name,
                                         ToLocaleStringOptions &opts) {
@@ -237,13 +234,13 @@ Handle<JSObject> createDateConstructor(Runtime *runtime) {
   };
 
   defineToLocaleStringMethod(
-      runtime->getPredefinedSymbolID(Predefined::toLocaleString),
+      Predefined::getSymbolID(Predefined::toLocaleString),
       optDatetimeToLocaleString);
   defineToLocaleStringMethod(
-      runtime->getPredefinedSymbolID(Predefined::toLocaleDateString),
+      Predefined::getSymbolID(Predefined::toLocaleDateString),
       optDateToLocaleString);
   defineToLocaleStringMethod(
-      runtime->getPredefinedSymbolID(Predefined::toLocaleTimeString),
+      Predefined::getSymbolID(Predefined::toLocaleTimeString),
       optTimeToLocaleString);
 
   auto defineGetterMethod = [&](SymbolID name, GetterOptions &opts) {
@@ -257,50 +254,42 @@ Handle<JSObject> createDateConstructor(Runtime *runtime) {
   };
 
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getFullYear), optFullYear);
+      Predefined::getSymbolID(Predefined::getFullYear), optFullYear);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getYear), optYear);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getMonth), optMonth);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getDate), optDate);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getDay), optDay);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getHours), optHours);
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getYear), optYear);
+      Predefined::getSymbolID(Predefined::getMinutes), optMinutes);
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getMonth), optMonth);
+      Predefined::getSymbolID(Predefined::getSeconds), optSeconds);
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getDate), optDate);
+      Predefined::getSymbolID(Predefined::getMilliseconds), optMilliseconds);
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getDay), optDay);
+      Predefined::getSymbolID(Predefined::getUTCFullYear), optUTCFullYear);
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getHours), optHours);
+      Predefined::getSymbolID(Predefined::getUTCMonth), optUTCMonth);
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getMinutes), optMinutes);
+      Predefined::getSymbolID(Predefined::getUTCDate), optUTCDate);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getUTCDay), optUTCDay);
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getSeconds), optSeconds);
+      Predefined::getSymbolID(Predefined::getUTCHours), optUTCHours);
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getMilliseconds),
-      optMilliseconds);
+      Predefined::getSymbolID(Predefined::getUTCMinutes), optUTCMinutes);
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getUTCFullYear),
-      optUTCFullYear);
+      Predefined::getSymbolID(Predefined::getUTCSeconds), optUTCSeconds);
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getUTCMonth), optUTCMonth);
-  defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getUTCDate), optUTCDate);
-  defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getUTCDay), optUTCDay);
-  defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getUTCHours), optUTCHours);
-  defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getUTCMinutes), optUTCMinutes);
-  defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getUTCSeconds), optUTCSeconds);
-  defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getUTCMilliseconds),
+      Predefined::getSymbolID(Predefined::getUTCMilliseconds),
       optUTCMilliseconds);
   defineGetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::getTimezoneOffset),
+      Predefined::getSymbolID(Predefined::getTimezoneOffset),
       optTimezoneOffset);
 
   defineMethod(
       runtime,
       datePrototype,
-      runtime->getPredefinedSymbolID(Predefined::setTime),
+      Predefined::getSymbolID(Predefined::setTime),
       nullptr,
       datePrototypeSetTime,
       1);
@@ -317,77 +306,77 @@ Handle<JSObject> createDateConstructor(Runtime *runtime) {
       };
 
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setMilliseconds),
+      Predefined::getSymbolID(Predefined::setMilliseconds),
       1,
       false,
       datePrototypeSetMilliseconds);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setUTCMilliseconds),
+      Predefined::getSymbolID(Predefined::setUTCMilliseconds),
       1,
       true,
       datePrototypeSetMilliseconds);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setSeconds),
+      Predefined::getSymbolID(Predefined::setSeconds),
       2,
       false,
       datePrototypeSetSeconds);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setUTCSeconds),
+      Predefined::getSymbolID(Predefined::setUTCSeconds),
       2,
       true,
       datePrototypeSetSeconds);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setMinutes),
+      Predefined::getSymbolID(Predefined::setMinutes),
       3,
       false,
       datePrototypeSetMinutes);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setUTCMinutes),
+      Predefined::getSymbolID(Predefined::setUTCMinutes),
       3,
       true,
       datePrototypeSetMinutes);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setHours),
+      Predefined::getSymbolID(Predefined::setHours),
       4,
       false,
       datePrototypeSetHours);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setUTCHours),
+      Predefined::getSymbolID(Predefined::setUTCHours),
       4,
       true,
       datePrototypeSetHours);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setDate),
+      Predefined::getSymbolID(Predefined::setDate),
       1,
       false,
       datePrototypeSetDate);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setUTCDate),
+      Predefined::getSymbolID(Predefined::setUTCDate),
       1,
       true,
       datePrototypeSetDate);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setMonth),
+      Predefined::getSymbolID(Predefined::setMonth),
       2,
       false,
       datePrototypeSetMonth);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setUTCMonth),
+      Predefined::getSymbolID(Predefined::setUTCMonth),
       2,
       true,
       datePrototypeSetMonth);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setFullYear),
+      Predefined::getSymbolID(Predefined::setFullYear),
       3,
       false,
       datePrototypeSetFullYear);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setUTCFullYear),
+      Predefined::getSymbolID(Predefined::setUTCFullYear),
       3,
       true,
       datePrototypeSetFullYear);
   defineSetterMethod(
-      runtime->getPredefinedSymbolID(Predefined::setYear),
+      Predefined::getSymbolID(Predefined::setYear),
       1,
       false,
       datePrototypeSetYear);
@@ -395,7 +384,7 @@ Handle<JSObject> createDateConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       datePrototype,
-      runtime->getPredefinedSymbolID(Predefined::toJSON),
+      Predefined::getSymbolID(Predefined::toJSON),
       nullptr,
       datePrototypeToJSON,
       1);
@@ -406,8 +395,8 @@ Handle<JSObject> createDateConstructor(Runtime *runtime) {
   (void)defineMethod(
       runtime,
       datePrototype,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToPrimitive),
-      runtime->getPredefinedSymbolID(Predefined::squareSymbolToPrimitive),
+      Predefined::getSymbolID(Predefined::SymbolToPrimitive),
+      Predefined::getSymbolID(Predefined::squareSymbolToPrimitive),
       nullptr,
       datePrototypeSymbolToPrimitive,
       1,
@@ -417,21 +406,21 @@ Handle<JSObject> createDateConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::parse),
+      Predefined::getSymbolID(Predefined::parse),
       nullptr,
       dateParse,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::UTC),
+      Predefined::getSymbolID(Predefined::UTC),
       nullptr,
       dateUTC,
       7);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::now),
+      Predefined::getSymbolID(Predefined::now),
       nullptr,
       dateNow,
       0);
@@ -1103,9 +1092,7 @@ datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeNullValue();
   }
   if ((propRes = JSObject::getNamed(
-           O,
-           runtime,
-           runtime->getPredefinedSymbolID(Predefined::toISOString))) ==
+           O, runtime, Predefined::getSymbolID(Predefined::toISOString))) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1135,14 +1122,12 @@ datePrototypeSymbolToPrimitive(void *, Runtime *runtime, NativeArgs args) {
   PreferredType tryFirst;
 
   if (runtime->symbolEqualsToStringPrim(
-          runtime->getPredefinedSymbolID(Predefined::string),
-          hint->getString()) ||
+          Predefined::getSymbolID(Predefined::string), hint->getString()) ||
       runtime->symbolEqualsToStringPrim(
-          runtime->getPredefinedSymbolID(Predefined::defaultStr),
-          hint->getString())) {
+          Predefined::getSymbolID(Predefined::defaultStr), hint->getString())) {
     tryFirst = PreferredType::STRING;
   } else if (runtime->symbolEqualsToStringPrim(
-                 runtime->getPredefinedSymbolID(Predefined::number),
+                 Predefined::getSymbolID(Predefined::number),
                  hint->getString())) {
     tryFirst = PreferredType::NUMBER;
   } else {

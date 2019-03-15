@@ -53,7 +53,7 @@ Handle<JSObject> createSymbolConstructor(Runtime *runtime) {
 
   auto cons = defineSystemConstructor<JSSymbol>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Symbol),
+      Predefined::getSymbolID(Predefined::Symbol),
       symbolConstructor,
       symbolPrototype,
       0,
@@ -62,14 +62,14 @@ Handle<JSObject> createSymbolConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::predefinedFor),
+      Predefined::getSymbolID(Predefined::predefinedFor),
       nullptr,
       symbolFor,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::keyFor),
+      Predefined::getSymbolID(Predefined::keyFor),
       nullptr,
       symbolKeyFor,
       1);
@@ -87,69 +87,64 @@ Handle<JSObject> createSymbolConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::hasInstance),
+      Predefined::getSymbolID(Predefined::hasInstance),
       runtime->makeHandle(
-          runtime->getPredefinedSymbolID(Predefined::SymbolHasInstance)),
+          Predefined::getSymbolID(Predefined::SymbolHasInstance)),
       dpf);
   defineProperty(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::iterator),
-      runtime->makeHandle(
-          runtime->getPredefinedSymbolID(Predefined::SymbolIterator)),
+      Predefined::getSymbolID(Predefined::iterator),
+      runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolIterator)),
       dpf);
   defineProperty(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::isConcatSpreadable),
+      Predefined::getSymbolID(Predefined::isConcatSpreadable),
       runtime->makeHandle(
-          runtime->getPredefinedSymbolID(Predefined::SymbolIsConcatSpreadable)),
+          Predefined::getSymbolID(Predefined::SymbolIsConcatSpreadable)),
       dpf);
   defineProperty(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::toPrimitive),
+      Predefined::getSymbolID(Predefined::toPrimitive),
       runtime->makeHandle(
-          runtime->getPredefinedSymbolID(Predefined::SymbolToPrimitive)),
+          Predefined::getSymbolID(Predefined::SymbolToPrimitive)),
       dpf);
   defineProperty(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::toStringTag),
+      Predefined::getSymbolID(Predefined::toStringTag),
       runtime->makeHandle(
-          runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag)),
-      dpf);
-
-  defineProperty(
-      runtime,
-      cons,
-      runtime->getPredefinedSymbolID(Predefined::match),
-      runtime->makeHandle(
-          runtime->getPredefinedSymbolID(Predefined::SymbolMatch)),
+          Predefined::getSymbolID(Predefined::SymbolToStringTag)),
       dpf);
 
   defineProperty(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::search),
-      runtime->makeHandle(
-          runtime->getPredefinedSymbolID(Predefined::SymbolSearch)),
+      Predefined::getSymbolID(Predefined::match),
+      runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolMatch)),
       dpf);
 
   defineProperty(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::replace),
-      runtime->makeHandle(
-          runtime->getPredefinedSymbolID(Predefined::SymbolReplace)),
+      Predefined::getSymbolID(Predefined::search),
+      runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSearch)),
       dpf);
 
   defineProperty(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::split),
-      runtime->makeHandle(
-          runtime->getPredefinedSymbolID(Predefined::SymbolSplit)),
+      Predefined::getSymbolID(Predefined::replace),
+      runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolReplace)),
+      dpf);
+
+  defineProperty(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::split),
+      runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSplit)),
       dpf);
 
   // Symbol.prototype.xxx methods.
@@ -157,14 +152,14 @@ Handle<JSObject> createSymbolConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       symbolPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toString),
+      Predefined::getSymbolID(Predefined::toString),
       ctx,
       symbolPrototypeToString,
       0);
   defineMethod(
       runtime,
       symbolPrototype,
-      runtime->getPredefinedSymbolID(Predefined::valueOf),
+      Predefined::getSymbolID(Predefined::valueOf),
       ctx,
       symbolPrototypeValueOf,
       0);
@@ -175,14 +170,14 @@ Handle<JSObject> createSymbolConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       symbolPrototype,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::Symbol),
       dpf);
   (void)defineMethod(
       runtime,
       symbolPrototype,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToPrimitive),
-      runtime->getPredefinedSymbolID(Predefined::squareSymbolToPrimitive),
+      Predefined::getSymbolID(Predefined::SymbolToPrimitive),
+      Predefined::getSymbolID(Predefined::squareSymbolToPrimitive),
       nullptr,
       symbolPrototypeValueOf,
       1,

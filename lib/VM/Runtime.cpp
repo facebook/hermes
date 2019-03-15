@@ -24,7 +24,6 @@
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/IdentifierTable.h"
-#include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
@@ -120,7 +119,7 @@ CallResult<HermesValue> Runtime::getNamed(
     return JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
         *obj, cacheEntry->slot);
   }
-  auto sym = getPredefinedSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
+  auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
   NamedPropertyDescriptor desc;
   // Check writable and internalSetter flags since the cache slot is shared for
   // get/put.
@@ -148,7 +147,7 @@ ExecutionStatus Runtime::putNamedThrowOnError(
         *obj, this, cacheEntry->slot, hv);
     return ExecutionStatus::RETURNED;
   }
-  auto sym = getPredefinedSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
+  auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
   NamedPropertyDescriptor desc;
   if (LLVM_LIKELY(JSObject::tryGetOwnNamedDescriptorFast(*obj, sym, desc)) &&
       !desc.flags.accessor && desc.flags.writable &&
@@ -697,7 +696,9 @@ void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
   if (auto objHandle = Handle<JSObject>::dyn_vmcast(this, valueHandle)) {
     if (LLVM_UNLIKELY(
             (propRes = JSObject::getNamed(
-                 objHandle, this, getPredefinedSymbolID(Predefined::stack))) ==
+                 objHandle,
+                 this,
+                 Predefined::getSymbolID(Predefined::stack))) ==
             ExecutionStatus::EXCEPTION)) {
       os << "exception thrown while getting stack trace\n";
       return;
@@ -971,7 +972,7 @@ void Runtime::initPredefinedStrings() {
 
   for (uint32_t idx = 0; idx < Predefined::_IPROP_AFTER_LAST; ++idx) {
     SymbolID sym = identifierTable_.createNotUniquedLazySymbol("");
-    assert(sym == InternalProperty::getSymbolID(registered++));
+    assert(sym == Predefined::getSymbolID((Predefined::IProp)registered++));
     (void)sym;
   }
 
@@ -983,7 +984,7 @@ void Runtime::initPredefinedStrings() {
     SymbolID sym = identifierTable_.registerLazyIdentifier(
         ASCIIRef{&buffer[offset], strLengths[idx]}, hashes[idx]);
 
-    assert(sym == getPredefinedSymbolID((Predefined::Str)registered++));
+    assert(sym == Predefined::getSymbolID((Predefined::Str)registered++));
     (void)sym;
 
     offset += strLengths[idx];
@@ -994,7 +995,7 @@ void Runtime::initPredefinedStrings() {
     SymbolID sym = identifierTable_.createNotUniquedLazySymbol(
         ASCIIRef{&buffer[offset], symLengths[idx]});
 
-    assert(sym == getPredefinedSymbolID((Predefined::Sym)registered++));
+    assert(sym == Predefined::getSymbolID((Predefined::Sym)registered++));
     (void)sym;
 
     offset += symLengths[idx];
@@ -1078,7 +1079,7 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
     // Find the object first, if it changed.
     auto objectName = (Predefined::Str)builtinMethods[methodIndex].object;
     if (objectName != lastObjectName) {
-      auto objectID = getPredefinedSymbolID(objectName);
+      auto objectID = Predefined::getSymbolID(objectName);
       auto cr = JSObject::getNamed(getGlobal(), this, objectID);
       assert(
           cr.getStatus() != ExecutionStatus::EXCEPTION &&
@@ -1093,7 +1094,7 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
 
     // Find the method.
     auto methodName = (Predefined::Str)builtinMethods[methodIndex].method;
-    auto methodID = getPredefinedSymbolID(methodName);
+    auto methodID = Predefined::getSymbolID(methodName);
 
     ExecutionStatus status =
         callback(methodIndex, objectName, lastObject, methodID);
@@ -1177,7 +1178,7 @@ void Runtime::freezeBuiltins() {
     if (methodIndex + 1 == inst::BuiltinMethod::_count ||
         objectName != builtinMethods[methodIndex + 1].object) {
       // Store the object id in the object set.
-      SymbolID objectID = getPredefinedSymbolID(objectName);
+      SymbolID objectID = Predefined::getSymbolID(objectName);
       objectList.push_back(objectID);
       // Freeze all methods and mark them as static builtins on the current
       // object.

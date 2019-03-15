@@ -82,7 +82,7 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
 
   auto cons = defineSystemConstructor<JSNumber>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Number),
+      Predefined::getSymbolID(Predefined::Number),
       numberConstructor,
       numberPrototype,
       1,
@@ -91,42 +91,42 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       numberPrototype,
-      runtime->getPredefinedSymbolID(Predefined::valueOf),
+      Predefined::getSymbolID(Predefined::valueOf),
       nullptr,
       numberPrototypeValueOf,
       0);
   defineMethod(
       runtime,
       numberPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toString),
+      Predefined::getSymbolID(Predefined::toString),
       nullptr,
       numberPrototypeToString,
       1);
   defineMethod(
       runtime,
       numberPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toLocaleString),
+      Predefined::getSymbolID(Predefined::toLocaleString),
       nullptr,
       numberPrototypeToLocaleString,
       0);
   defineMethod(
       runtime,
       numberPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toFixed),
+      Predefined::getSymbolID(Predefined::toFixed),
       nullptr,
       numberPrototypeToFixed,
       1);
   defineMethod(
       runtime,
       numberPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toExponential),
+      Predefined::getSymbolID(Predefined::toExponential),
       nullptr,
       numberPrototypeToExponential,
       1);
   defineMethod(
       runtime,
       numberPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toPrecision),
+      Predefined::getSymbolID(Predefined::toPrecision),
       nullptr,
       numberPrototypeToPrecision,
       1);
@@ -152,71 +152,69 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
   };
 
   setNumberValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::MAX_VALUE),
+      Predefined::getSymbolID(Predefined::MAX_VALUE),
       std::numeric_limits<double>::max());
   setNumberValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::MIN_VALUE),
+      Predefined::getSymbolID(Predefined::MIN_VALUE),
       std::numeric_limits<double>::denorm_min());
   setNumberValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::NaN),
+      Predefined::getSymbolID(Predefined::NaN),
       std::numeric_limits<double>::quiet_NaN());
   setNumberValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::NEGATIVE_INFINITY),
+      Predefined::getSymbolID(Predefined::NEGATIVE_INFINITY),
       -std::numeric_limits<double>::infinity());
   setNumberValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::POSITIVE_INFINITY),
+      Predefined::getSymbolID(Predefined::POSITIVE_INFINITY),
       std::numeric_limits<double>::infinity());
   // ES6.0 20.1.2.1
   setNumberValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::EPSILON),
+      Predefined::getSymbolID(Predefined::EPSILON),
       std::numeric_limits<double>::epsilon());
   // ES6.0 20.1.2.6
   constexpr double kMaxSafeInteger = 9007199254740991;
   setNumberValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::MAX_SAFE_INTEGER),
-      kMaxSafeInteger);
+      Predefined::getSymbolID(Predefined::MAX_SAFE_INTEGER), kMaxSafeInteger);
   // ES6.0 20.1.2.8
   setNumberValueProperty(
-      runtime->getPredefinedSymbolID(Predefined::MIN_SAFE_INTEGER),
-      -kMaxSafeInteger);
+      Predefined::getSymbolID(Predefined::MIN_SAFE_INTEGER), -kMaxSafeInteger);
 
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::isFinite),
+      Predefined::getSymbolID(Predefined::isFinite),
       nullptr,
       numberIsFinite,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::isInteger),
+      Predefined::getSymbolID(Predefined::isInteger),
       nullptr,
       numberIsInteger,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::isNaN),
+      Predefined::getSymbolID(Predefined::isNaN),
       nullptr,
       numberIsNaN,
       1);
   defineMethod(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::isSafeInteger),
+      Predefined::getSymbolID(Predefined::isSafeInteger),
       nullptr,
       numberIsSafeInteger,
       1);
   defineProperty(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::parseInt),
+      Predefined::getSymbolID(Predefined::parseInt),
       Handle<>(&runtime->parseIntFunction));
   defineProperty(
       runtime,
       cons,
-      runtime->getPredefinedSymbolID(Predefined::parseFloat),
+      Predefined::getSymbolID(Predefined::parseFloat),
       Handle<>(&runtime->parseFloatFunction));
 
   return cons;

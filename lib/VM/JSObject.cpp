@@ -1233,7 +1233,7 @@ CallResult<bool> JSObject::putComputed(
           auto cr = putNamed(
               selfHandle,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::length),
+              Predefined::getSymbolID(Predefined::length),
               runtime->makeHandle(
                   HermesValue::encodeNumberValue(*arrayIndex + 1)),
               opFlags);
@@ -1661,7 +1661,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
       bool lengthPresent = getOwnNamedDescriptor(
           arrayHandle,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::length),
+          Predefined::getSymbolID(Predefined::length),
           lengthDesc);
       (void)lengthPresent;
       assert(lengthPresent && ".length must be present in JSArray");
@@ -2153,7 +2153,7 @@ CallResult<bool> JSObject::internalSetter(
     Handle<> value,
     PropOpFlags opFlags) {
   if (vmisa<JSArray>(selfHandle.get())) {
-    if (name == runtime->getPredefinedSymbolID(Predefined::length)) {
+    if (name == Predefined::getSymbolID(Predefined::length)) {
       return JSArray::setLength(
           Handle<JSArray>::vmcast(selfHandle), runtime, value, opFlags);
     }

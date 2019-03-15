@@ -37,7 +37,7 @@ CallResult<HermesValue> runRequireCall(
     return JSObject::getNamed(
         toHandle(runtime, std::move(module)),
         runtime,
-        runtime->getPredefinedSymbolID(Predefined::exports));
+        Predefined::getSymbolID(Predefined::exports));
   }
 
   GCScope gcScope{runtime};
@@ -48,7 +48,7 @@ CallResult<HermesValue> runRequireCall(
           JSObject::putNamed(
               module,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::exports),
+              Predefined::getSymbolID(Predefined::exports),
               exports) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -78,7 +78,7 @@ CallResult<HermesValue> runRequireCall(
             JSObject::defineNewOwnProperty(
                 requireFn,
                 runtime,
-                runtime->getPredefinedSymbolID(Predefined::context),
+                Predefined::getSymbolID(Predefined::context),
                 pf,
                 context) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -124,7 +124,7 @@ CallResult<HermesValue> runRequireCall(
   // The module.exports object may have been replaced during initialization,
   // so we have to run getNamed to ensure we pick up the changes.
   auto exportsRes = JSObject::getNamed(
-      module, runtime, runtime->getPredefinedSymbolID(Predefined::exports));
+      module, runtime, Predefined::getSymbolID(Predefined::exports));
   if (LLVM_UNLIKELY(exportsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

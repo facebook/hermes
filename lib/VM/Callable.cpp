@@ -101,17 +101,13 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
 /// as a \c Predefined enum value, and its value is  rooted in \p HANDLE.  If
 /// property definition fails, the exceptional execution status will be
 /// propogated to the outer function.
-#define DEFINE_PROP(OBJ_HANDLE, SYMBOL, HANDLE)                \
-  do {                                                         \
-    auto status = JSObject::defineNewOwnProperty(              \
-        OBJ_HANDLE,                                            \
-        runtime,                                               \
-        runtime->getPredefinedSymbolID(SYMBOL),                \
-        pf,                                                    \
-        HANDLE);                                               \
-    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) { \
-      return ExecutionStatus::EXCEPTION;                       \
-    }                                                          \
+#define DEFINE_PROP(OBJ_HANDLE, SYMBOL, HANDLE)                            \
+  do {                                                                     \
+    auto status = JSObject::defineNewOwnProperty(                          \
+        OBJ_HANDLE, runtime, Predefined::getSymbolID(SYMBOL), pf, HANDLE); \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {             \
+      return ExecutionStatus::EXCEPTION;                                   \
+    }                                                                      \
   } while (false)
 
   // Define the name.
@@ -312,9 +308,7 @@ CallResult<HermesValue> Callable::createThisForConstruct(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
   auto prototypeProp = JSObject::getNamed(
-      selfHandle,
-      runtime,
-      runtime->getPredefinedSymbolID(Predefined::prototype));
+      selfHandle, runtime, Predefined::getSymbolID(Predefined::prototype));
   if (LLVM_UNLIKELY(prototypeProp == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -331,7 +325,7 @@ CallResult<double> Callable::extractOwnLengthProperty(
   if (!JSObject::getOwnNamedDescriptor(
           selfHandle,
           runtime,
-          runtime->getPredefinedSymbolID(Predefined::length),
+          Predefined::getSymbolID(Predefined::length),
           desc)) {
     return 0.0;
   }
@@ -460,7 +454,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
           JSObject::defineNewOwnProperty(
               selfHandle,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::length),
+              Predefined::getSymbolID(Predefined::length),
               pf,
               length) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -468,7 +462,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
 
   // Set the name by prepending "bound ".
   auto propRes = JSObject::getNamed(
-      target, runtime, runtime->getPredefinedSymbolID(Predefined::name));
+      target, runtime, Predefined::getSymbolID(Predefined::name));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -495,7 +489,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
           JSObject::defineOwnProperty(
               selfHandle,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::name),
+              Predefined::getSymbolID(Predefined::name),
               dpf,
               runtime->makeHandle(*strRes)) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -514,7 +508,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
           JSObject::defineNewOwnProperty(
               selfHandle,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::caller),
+              Predefined::getSymbolID(Predefined::caller),
               pf,
               accessor) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -524,7 +518,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
           JSObject::defineNewOwnProperty(
               selfHandle,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::arguments),
+              Predefined::getSymbolID(Predefined::arguments),
               pf,
               accessor) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -549,9 +543,7 @@ CallResult<HermesValue> BoundFunction::_newObjectImpl(
 
   // Obtain "target.prototype".
   auto propRes = JSObject::getNamed(
-      targetHandle,
-      runtime,
-      runtime->getPredefinedSymbolID(Predefined::prototype));
+      targetHandle, runtime, Predefined::getSymbolID(Predefined::prototype));
   if (propRes == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   auto prototype = runtime->makeHandle(*propRes);

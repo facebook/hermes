@@ -84,7 +84,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       setPrototype,
-      runtime->getPredefinedSymbolID(Predefined::add),
+      Predefined::getSymbolID(Predefined::add),
       nullptr,
       setPrototypeAdd,
       1);
@@ -92,7 +92,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       setPrototype,
-      runtime->getPredefinedSymbolID(Predefined::clear),
+      Predefined::getSymbolID(Predefined::clear),
       nullptr,
       setPrototypeClear,
       0);
@@ -100,7 +100,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       setPrototype,
-      runtime->getPredefinedSymbolID(Predefined::deleteStr),
+      Predefined::getSymbolID(Predefined::deleteStr),
       nullptr,
       setPrototypeDelete,
       1);
@@ -108,7 +108,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       setPrototype,
-      runtime->getPredefinedSymbolID(Predefined::entries),
+      Predefined::getSymbolID(Predefined::entries),
       nullptr,
       setPrototypeEntries,
       0);
@@ -116,7 +116,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       setPrototype,
-      runtime->getPredefinedSymbolID(Predefined::forEach),
+      Predefined::getSymbolID(Predefined::forEach),
       nullptr,
       setPrototypeForEach,
       1);
@@ -124,7 +124,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       setPrototype,
-      runtime->getPredefinedSymbolID(Predefined::has),
+      Predefined::getSymbolID(Predefined::has),
       nullptr,
       setPrototypeHas,
       1);
@@ -132,7 +132,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   defineAccessor(
       runtime,
       setPrototype,
-      runtime->getPredefinedSymbolID(Predefined::size),
+      Predefined::getSymbolID(Predefined::size),
       nullptr,
       setPrototypeSizeGetter,
       nullptr,
@@ -142,7 +142,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       setPrototype,
-      runtime->getPredefinedSymbolID(Predefined::values),
+      Predefined::getSymbolID(Predefined::values),
       nullptr,
       setPrototypeValues,
       0);
@@ -159,19 +159,17 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   // Use the same valuesMethod for both keys() and values().
   auto propValue = runtime->makeHandle<NativeFunction>(
       runtime->ignoreAllocationFailure(JSObject::getNamed(
-          setPrototype,
-          runtime,
-          runtime->getPredefinedSymbolID(Predefined::values))));
+          setPrototype, runtime, Predefined::getSymbolID(Predefined::values))));
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       setPrototype,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::keys),
+      Predefined::getSymbolID(Predefined::keys),
       dpf,
       propValue));
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       setPrototype,
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::SymbolIterator),
+      Predefined::getSymbolID(Predefined::SymbolIterator),
       dpf,
       propValue));
 
@@ -181,13 +179,13 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   defineProperty(
       runtime,
       setPrototype,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::Set),
       dpf);
 
   auto cons = defineSystemConstructor<JSSet>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Set),
+      Predefined::getSymbolID(Predefined::Set),
       setConstructor,
       setPrototype,
       0,
@@ -216,7 +214,7 @@ setConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   auto propRes = JSObject::getNamed(
-      selfHandle, runtime, runtime->getPredefinedSymbolID(Predefined::add));
+      selfHandle, runtime, Predefined::getSymbolID(Predefined::add));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -252,7 +250,7 @@ setConstructor(void *, Runtime *runtime, NativeArgs args) {
     }
     tmpHandle = vmcast<JSObject>(nextRes->getHermesValue());
     auto nextValueRes = JSObject::getNamed(
-        tmpHandle, runtime, runtime->getPredefinedSymbolID(Predefined::value));
+        tmpHandle, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(nextValueRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -418,7 +416,7 @@ Handle<JSObject> createSetIteratorPrototype(Runtime *runtime) {
   defineMethod(
       runtime,
       parentHandle,
-      runtime->getPredefinedSymbolID(Predefined::next),
+      Predefined::getSymbolID(Predefined::next),
       nullptr,
       setIteratorPrototypeNext,
       0);
@@ -429,7 +427,7 @@ Handle<JSObject> createSetIteratorPrototype(Runtime *runtime) {
   defineProperty(
       runtime,
       parentHandle,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::SetIterator),
       dpf);
 

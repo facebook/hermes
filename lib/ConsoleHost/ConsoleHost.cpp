@@ -151,13 +151,13 @@ void installConsoleBindings(
 
   // Define the 'quit' function.
   defineGlobalFunc(
-      runtime->getPredefinedSymbolID(vm::Predefined::quit),
+      vm::Predefined::getSymbolID(vm::Predefined::quit),
       // Use the version which prints stats if that was requested.
       gcPrintStats ? printStatsAndQuit : quit,
       statSampler,
       0);
   defineGlobalFunc(
-      runtime->getPredefinedSymbolID(vm::Predefined::createHeapSnapshot),
+      vm::Predefined::getSymbolID(vm::Predefined::createHeapSnapshot),
       createHeapSnapshot,
       nullptr,
       2);

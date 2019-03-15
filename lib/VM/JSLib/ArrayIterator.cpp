@@ -27,7 +27,7 @@ void populateArrayIteratorPrototype(Runtime *runtime) {
   defineMethod(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::next),
+      Predefined::getSymbolID(Predefined::next),
       nullptr,
       arrayIteratorPrototypeNext,
       0);
@@ -38,7 +38,7 @@ void populateArrayIteratorPrototype(Runtime *runtime) {
   defineProperty(
       runtime,
       proto,
-      runtime->getPredefinedSymbolID(Predefined::SymbolToStringTag),
+      Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime->getPredefinedStringHandle(Predefined::ArrayIterator),
       dpf);
 }

@@ -58,7 +58,7 @@ CallResult<HermesValue> JSString::create(
           JSObject::defineNewOwnProperty(
               selfHandle,
               runtime,
-              runtime->getPredefinedSymbolID(Predefined::length),
+              Predefined::getSymbolID(Predefined::length),
               pf,
               runtime->makeHandle(HermesValue::encodeDoubleValue(
                   value->getStringLength()))) == ExecutionStatus::EXCEPTION)) {
@@ -74,10 +74,7 @@ void JSString::setPrimitiveString(
     Handle<StringPrimitive> string) {
   NamedPropertyDescriptor desc;
   bool res = JSObject::getOwnNamedDescriptor(
-      selfHandle,
-      runtime,
-      runtime->getPredefinedSymbolID(Predefined::length),
-      desc);
+      selfHandle, runtime, Predefined::getSymbolID(Predefined::length), desc);
   assert(res && "cannot find 'length' property");
   (void)res;
 

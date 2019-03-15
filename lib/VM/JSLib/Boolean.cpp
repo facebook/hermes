@@ -45,7 +45,7 @@ Handle<JSObject> createBooleanConstructor(Runtime *runtime) {
 
   auto cons = defineSystemConstructor<JSBoolean>(
       runtime,
-      runtime->getPredefinedSymbolID(Predefined::Boolean),
+      Predefined::getSymbolID(Predefined::Boolean),
       booleanConstructor,
       booleanPrototype,
       1,
@@ -55,14 +55,14 @@ Handle<JSObject> createBooleanConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       booleanPrototype,
-      runtime->getPredefinedSymbolID(Predefined::toString),
+      Predefined::getSymbolID(Predefined::toString),
       nullptr,
       booleanPrototypeToString,
       0);
   defineMethod(
       runtime,
       booleanPrototype,
-      runtime->getPredefinedSymbolID(Predefined::valueOf),
+      Predefined::getSymbolID(Predefined::valueOf),
       nullptr,
       booleanPrototypeValueOf,
       0);
