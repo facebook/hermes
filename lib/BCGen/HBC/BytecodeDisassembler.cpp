@@ -126,7 +126,7 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
     return;
 
   unsigned idents = 0;
-  auto identHashes = bcProvider_->getIdentifierHashes();
+  auto identHashes = bcProvider_->getIdentifierTranslations();
 
   std::locale loc("C");
   OS << "Global String Table:\n";
@@ -663,9 +663,9 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       bcProvider->getStringStorage().begin(),
       bcProvider->getStringStorage().end());
   addSection(
-      "Identifier hashes",
-      bcProvider->getIdentifierHashes().begin(),
-      bcProvider->getIdentifierHashes().end());
+      "Identifier translations",
+      bcProvider->getIdentifierTranslations().begin(),
+      bcProvider->getIdentifierTranslations().end());
   addSection(
       "Array buffer",
       bcProvider->getArrayBuffer().begin(),

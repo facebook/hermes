@@ -173,9 +173,9 @@ class BytecodeModule {
   /// each string in the string storage.
   std::vector<StringTableEntry> stringTable_;
 
-  /// The list of identifier hashes, corresponding to the string entries marked
-  /// as identifiers, in order.
-  std::vector<uint32_t> identifierHashes_;
+  /// The list of identifier translations, corresponding to the string entries
+  /// marked as identifiers, in order.
+  std::vector<uint32_t> identifierTranslations_;
 
   /// The regexp bytecode buffer.
   std::vector<unsigned char> regExpStorage_;
@@ -219,7 +219,7 @@ class BytecodeModule {
   explicit BytecodeModule(
       uint32_t functionCount,
       std::vector<StringTableEntry> &&stringTable,
-      std::vector<uint32_t> &&identifierHashes,
+      std::vector<uint32_t> &&identifierTranslations,
       std::vector<char> &&stringStorage,
       std::vector<RegExpTableEntry> &&regExpTable,
       std::vector<unsigned char> &&regExpStorage,
@@ -234,7 +234,7 @@ class BytecodeModule {
       : globalFunctionIndex_(globalFunctionIndex),
         stringStorage_(std::move(stringStorage)),
         stringTable_(std::move(stringTable)),
-        identifierHashes_(std::move(identifierHashes)),
+        identifierTranslations_(std::move(identifierTranslations)),
         regExpStorage_(std::move(regExpStorage)),
         regExpTable_(std::move(regExpTable)),
         arrayBuffer_(std::move(arrayBuffer)),
@@ -281,11 +281,11 @@ class BytecodeModule {
 
   /// \return the number of identifiers.
   uint32_t getIdentifierCount() const {
-    return identifierHashes_.size();
+    return identifierTranslations_.size();
   }
 
-  llvm::ArrayRef<uint32_t> getIdentifierHashes() const {
-    return identifierHashes_;
+  llvm::ArrayRef<uint32_t> getIdentifierTranslations() const {
+    return identifierTranslations_;
   }
 
   uint32_t getStringStorageSize() const {

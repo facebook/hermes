@@ -225,7 +225,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   serializeFunctionNames();
 
   ConsecutiveStringStorage stringStorage = generateStringStorage();
-  auto hashes = stringStorage.getIdentifierHashes();
+  auto hashes = stringStorage.getIdentifierTranslations();
 
   BytecodeOptions bytecodeOptions;
   bytecodeOptions.staticBuiltins = options_.staticBuiltinsEnabled;

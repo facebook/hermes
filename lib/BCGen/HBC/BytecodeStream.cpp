@@ -96,7 +96,7 @@ void BytecodeSerializer::serializeStringTable(BytecodeModule &BM) {
   }
   writeBinaryArray(ArrayRef<OverflowStringTableEntry>(overflow));
   stringTableBytes_ = loc_ - stringTableBegin;
-  writeBinaryArray(BM.getIdentifierHashes());
+  writeBinaryArray(BM.getIdentifierTranslations());
   writeBinaryArray(BM.getStringStorage());
 }
 

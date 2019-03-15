@@ -128,9 +128,9 @@ class ConsecutiveStringStorage {
   /// Append a storage \p rhs.
   void appendStorage(ConsecutiveStringStorage &&rhs);
 
-  /// \returns a list of hashes corresponding to the entries marked as
+  /// \returns a list of translations corresponding to the entries marked as
   /// identifiers, in-order.
-  std::vector<uint32_t> getIdentifierHashes() const;
+  std::vector<uint32_t> getIdentifierTranslations() const;
 
   /// A helper function to return a string at a given \p idx. This converts
   /// UTF16 strings to UTF8 using \p storage if necessary.

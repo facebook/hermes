@@ -392,8 +392,8 @@ struct BytecodeFileFields {
   /// The list of short string table entries.
   Array<hbc::SmallStringTableEntry> stringTableEntries{};
 
-  /// The list of identifier hashes.
-  Array<uint32_t> identifierHashes{};
+  /// The list of identifier translations.
+  Array<uint32_t> identifierTranslations{};
 
   /// The list of overflowed string table entries.
   Array<hbc::OverflowStringTableEntry> stringTableOverflowEntries{};

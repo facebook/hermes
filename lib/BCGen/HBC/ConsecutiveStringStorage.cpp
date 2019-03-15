@@ -807,7 +807,8 @@ uint32_t ConsecutiveStringStorage::getEntryHash(
   }
 }
 
-std::vector<uint32_t> ConsecutiveStringStorage::getIdentifierHashes() const {
+std::vector<uint32_t> ConsecutiveStringStorage::getIdentifierTranslations()
+    const {
   ensureTableValid();
   ensureStorageValid();
   std::vector<uint32_t> result;

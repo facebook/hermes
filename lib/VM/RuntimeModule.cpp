@@ -215,21 +215,22 @@ void RuntimeModule::importStringIDMap() {
   // unnecessary allocations.
   runtime_->getIdentifierTable().reserve(strTableSize);
 
-  // Get the hashes of string entries marked as identifiers.
-  auto identifierHashes = bcProvider_->getIdentifierHashes();
+  // Get the array of pre-computed translations from identifiers in the bytecode
+  // to their runtime representation as SymbolIDs.
+  auto translations = bcProvider_->getIdentifierTranslations();
   assert(
-      identifierHashes.size() <= strTableSize &&
+      translations.size() <= strTableSize &&
       "Should not have more strings than identifiers");
   uint32_t identifierIndex = 0;
 
   for (StringID id = 0; id < strTableSize; ++id) {
     StringTableEntry entry = bcProvider_->getStringTableEntry(id);
     if (entry.isIdentifier()) {
-      createSymbolFromStringID(id, entry, identifierHashes[identifierIndex++]);
+      createSymbolFromStringID(id, entry, translations[identifierIndex++]);
     }
   }
   assert(
-      identifierIndex == identifierHashes.size() &&
+      identifierIndex == translations.size() &&
       "Hash count should match identifier count");
   if (strTableSize == 0) {
     // If the string table turns out to be empty,

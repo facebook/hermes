@@ -269,10 +269,10 @@ class UsageCounter : public BytecodeVisitor {
           sizeof(OverflowStringTableEntry));
     }
 
-    // If this is an identifier, it'll have an identifier hash
+    // If this is an identifier, it'll have an identifier translation.
     if (entry.isIdentifier()) {
       appendRecord(
-          "data:string:identifier_hash", stringIndex, sizeof(uint32_t));
+          "data:string:identifier_translation", stringIndex, sizeof(uint32_t));
     }
 
     auto offset = entry.getOffset();

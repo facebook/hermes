@@ -104,7 +104,7 @@ class BCProviderBase {
   /// Below are all the different global data tables/storage.
   uint32_t stringCount_{};
   llvm::ArrayRef<char> stringStorage_{};
-  llvm::ArrayRef<uint32_t> identifierHashes_{};
+  llvm::ArrayRef<uint32_t> identifierTranslations_{};
 
   llvm::ArrayRef<unsigned char> arrayBuffer_{};
   llvm::ArrayRef<unsigned char> objKeyBuffer_{};
@@ -150,8 +150,8 @@ class BCProviderBase {
   uint32_t getStringCount() const {
     return stringCount_;
   }
-  llvm::ArrayRef<uint32_t> getIdentifierHashes() const {
-    return identifierHashes_;
+  llvm::ArrayRef<uint32_t> getIdentifierTranslations() const {
+    return identifierTranslations_;
   }
   llvm::ArrayRef<char> getStringStorage() const {
     return stringStorage_;

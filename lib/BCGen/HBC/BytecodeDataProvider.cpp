@@ -149,7 +149,7 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
   stringTableOverflowEntries =
       castArrayRef<OverflowStringTableEntry>(buf, overflowCount);
 
-  identifierHashes = castArrayRef<uint32_t>(buf, h->identifierCount);
+  identifierTranslations = castArrayRef<uint32_t>(buf, h->identifierCount);
 
   stringStorage = castArrayRef<char>(buf, h->stringStorageSize);
   arrayBuffer = castArrayRef<unsigned char>(buf, h->arrayBufferSize);
@@ -277,7 +277,7 @@ BCProviderFromBuffer::BCProviderFromBuffer(std::unique_ptr<const Buffer> buffer)
   functionHeaders_ = fields.functionHeaders.data();
   stringCount_ = fileHeader->stringCount;
   stringTableEntries_ = fields.stringTableEntries.data();
-  identifierHashes_ = fields.identifierHashes;
+  identifierTranslations_ = fields.identifierTranslations;
   stringStorage_ = fields.stringStorage;
   arrayBuffer_ = fields.arrayBuffer;
   objKeyBuffer_ = fields.objKeyBuffer;
