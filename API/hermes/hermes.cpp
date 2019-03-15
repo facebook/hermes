@@ -161,7 +161,7 @@ class StackRuntime {
     runtime_->emplace(
         provider_.get(),
         runtimeConfig.rebuild()
-            .withRegisterStack(registerStack_)
+            .withRegisterStack(nullptr)
             .withMaxNumRegisters(kMaxNumRegisters)
             .build());
   }
@@ -175,7 +175,6 @@ class StackRuntime {
     shutdown_.set_value();
     thread_.join();
     runtime_ = nullptr;
-    registerStack_ = nullptr;
   }
 
   ::hermes::vm::Runtime &getRuntime() {
@@ -195,15 +194,9 @@ class StackRuntime {
 #endif
 
     llvm::Optional<::hermes::vm::StackRuntime> rt;
-    typename std::aligned_storage<
-        sizeof(::hermes::vm::PinnedHermesValue),
-        alignof(::hermes::vm::PinnedHermesValue)>::type
-        registerStack[kMaxNumRegisters];
 
     stack->provider_ = vm::StorageProvider::mmapProvider();
     stack->runtime_ = &rt;
-    stack->registerStack_ =
-        reinterpret_cast<::hermes::vm::PinnedHermesValue *>(registerStack);
     stack->startup_.set_value();
     stack->shutdown_.get_future().wait();
     assert(!rt.hasValue() && "Runtime was not torn down before thread");
@@ -219,12 +212,11 @@ class StackRuntime {
   // * Set up the promises
   // * Initialize various pointers to null
   // * Start the thread which uses them
-  // * Initialize provider_, runtime_, and registerStack_ from that thread
+  // * Initialize provider_ and runtime_ from that thread
   std::promise<void> startup_;
   std::promise<void> shutdown_;
   std::unique_ptr<::hermes::vm::StorageProvider> provider_;
   llvm::Optional<::hermes::vm::StackRuntime> *runtime_{nullptr};
-  ::hermes::vm::PinnedHermesValue *registerStack_{nullptr};
   std::thread thread_;
 };
 #endif
