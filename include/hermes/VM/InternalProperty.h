@@ -28,7 +28,8 @@ inline bool isInternal(SymbolID id) {
 
 inline SymbolID getSymbolID(unsigned i) {
   assert(i < NumInternalProperties && "Unsupported internal property index");
-  return SymbolID::unsafeCreateNotUniqued(Predefined::InternalProperty0 + i);
+  return Predefined::getSymbolID(
+      static_cast<Predefined::IProp>(Predefined::InternalProperty0 + i));
 }
 
 } // namespace InternalProperty
