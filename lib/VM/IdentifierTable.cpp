@@ -140,15 +140,6 @@ void IdentifierTable::debugGetSymbolName(
 }
 
 void IdentifierTable::markIdentifiers(SlotAcceptorWithNames &acceptor, GC *gc) {
-  // Mark the reserved identifiers since they are not on the hash table.
-  for (uint32_t i = 0; i < ReservedSymbolID::NumSymbols; ++i) {
-    auto &vectorEntry = getLookupTableEntry(i);
-    if (vectorEntry.isStringPrim()) {
-      acceptor.accept(
-          reinterpret_cast<void *&>(vectorEntry.getStringPrimRef()),
-          "IdentifierTable_Reserved_Identifier");
-    }
-  }
   for (auto &vectorEntry : lookupVector_) {
     if (!vectorEntry.isFreeSlot() && vectorEntry.isStringPrim()) {
 #if defined(HERMESVM_GC_GENERATIONAL) || \
