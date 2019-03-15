@@ -209,7 +209,8 @@ CallResult<HermesValue> JSWeakMapImpl<C>::create(
   }
   auto valueStorage = runtime->makeHandle<BigStorage>(*valueRes);
 
-  void *mem = runtime->alloc(sizeof(JSWeakMapImpl<C>));
+  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      sizeof(JSWeakMapImpl<C>));
   return HermesValue::encodeObjectValue(new (mem) JSWeakMapImpl<C>(
       runtime,
       *parentHandle,
