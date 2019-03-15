@@ -9,6 +9,7 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/HostModel.h"
+#include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/StringView.h"
@@ -232,7 +233,7 @@ void JSObject::addInternalProperties(
     Handle<> valueHandle) {
   assert(count != 0 && "Cannot add 0 internal properties");
   assert(
-      count <= ReservedSymbolID::NumInternalProperties &&
+      count <= InternalProperty::NumInternalProperties &&
       "Too many internal properties");
   assert(
       !selfHandle->clazz_->isDictionary() &&
@@ -245,7 +246,7 @@ void JSObject::addInternalProperties(
     auto addResult = HiddenClass::addProperty(
         runtime->makeHandle(selfHandle->clazz_),
         runtime,
-        ReservedSymbolID::internalProperty(i),
+        InternalProperty::getSymbolID(i),
         PropertyFlags{});
     assert(
         addResult != ExecutionStatus::EXCEPTION &&
@@ -375,7 +376,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyNames(
        &indexNames,
        &tmpHandle,
        &dedupSet](SymbolID id, NamedPropertyDescriptor desc) {
-        if (ReservedSymbolID::isReserved(id)) {
+        if (InternalProperty::isInternal(id)) {
           return;
         }
 
@@ -424,7 +425,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyNames(
         dedupSet.insert(id.unsafeGetRaw());
 
         assert(
-            !ReservedSymbolID::isReserved(id) &&
+            !InternalProperty::isInternal(id) &&
             "host object returned reserved sybmol");
         auto propNameAsIndex = toArrayIndex(
             runtime->getIdentifierTable().getStringView(runtime, id));
@@ -527,7 +528,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertySymbols(
       runtime,
       [runtime, &array, &index, &tmpHandle](
           SymbolID id, NamedPropertyDescriptor desc) {
-        if (ReservedSymbolID::isReserved(id)) {
+        if (InternalProperty::isInternal(id)) {
           return;
         }
 

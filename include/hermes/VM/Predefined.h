@@ -13,8 +13,8 @@ namespace vm {
 namespace Predefined {
 
 enum IProp {
-#define RESERVED_SYMBOL(x) x,
-#include "ReservedSymbolIDs.def"
+#define PROP(i) InternalProperty##i,
+#include "InternalProperties.def"
   _IPROP_AFTER_LAST
 };
 

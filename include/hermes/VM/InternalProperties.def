@@ -1,0 +1,19 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+#ifndef PROP
+#define PROP(i)
+#endif
+
+/// Anonymous internal propertes. Not part of the object map.
+/// If more properties are added here, InternalProperty::NumInternalProperties
+/// must also be updated.
+PROP(0)
+PROP(1)
+PROP(2)
+PROP(3)
+
+#undef PROP

@@ -24,6 +24,7 @@
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/IdentifierTable.h"
+#include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
@@ -970,7 +971,7 @@ void Runtime::initPredefinedStrings() {
 
   for (uint32_t idx = 0; idx < Predefined::_IPROP_AFTER_LAST; ++idx) {
     SymbolID sym = identifierTable_.createNotUniquedLazySymbol("");
-    assert(sym == ReservedSymbolID::internalProperty(registered++));
+    assert(sym == InternalProperty::getSymbolID(registered++));
     (void)sym;
   }
 

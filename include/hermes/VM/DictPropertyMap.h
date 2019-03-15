@@ -9,7 +9,6 @@
 
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/PropertyDescriptor.h"
-#include "hermes/VM/ReservedSymbolIDs.h"
 #include "hermes/VM/Runtime.h"
 
 #include "llvm/Support/TrailingObjects.h"

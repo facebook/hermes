@@ -9,7 +9,6 @@
 
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/CallResult.h"
-#include "hermes/VM/ReservedSymbolIDs.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
