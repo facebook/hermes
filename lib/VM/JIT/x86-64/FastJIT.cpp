@@ -1055,7 +1055,8 @@ Emitters FastJIT::compileCreateClosure(Emitters emit, const Inst *ip) {
   // and can be embedded in JIT'ed code.
   // &calleeCodeBlock  -> arg2
   CodeBlock *calleeBlock =
-      codeBlock_->getRuntimeModule()->getCodeBlock(ip->iCreateClosure.op3);
+      codeBlock_->getRuntimeModule()->getCodeBlockMayAllocate(
+          ip->iCreateClosure.op3);
   emit = loadConstantAddrIntoNativeReg(emit, calleeBlock, Reg::rsi);
 
   //&env -> arg3

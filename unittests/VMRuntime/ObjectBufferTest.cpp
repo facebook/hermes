@@ -131,7 +131,7 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   ASSERT_EQ(detail::mapString(*runtimeModule, "foo"), IDfoo);
   ASSERT_EQ(detail::mapString(*runtimeModule, "bar"), IDbar);
 
-  auto codeBlock = runtimeModule->getCodeBlock(0);
+  auto codeBlock = runtimeModule->getCodeBlockMayAllocate(0);
 
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {

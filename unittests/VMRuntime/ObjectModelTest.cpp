@@ -29,7 +29,7 @@ static inline Handle<Callable> makeSimpleJSFunction(
   CodeBlock *codeBlock;
 
   if (runtimeModule->getBytecode()) {
-    codeBlock = runtimeModule->getCodeBlock(0);
+    codeBlock = runtimeModule->getCodeBlockMayAllocate(0);
   } else {
     BytecodeModuleGenerator BMG;
     auto BFG = BytecodeFunctionGenerator::create(BMG, 1);

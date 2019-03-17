@@ -239,7 +239,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   }
 
   /// \return the CodeBlock for a function by function index.
-  inline CodeBlock *getCodeBlock(unsigned index) {
+  inline CodeBlock *getCodeBlockMayAllocate(unsigned index) {
     if (LLVM_LIKELY(functionMap_[index])) {
       return functionMap_[index];
     }

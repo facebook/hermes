@@ -118,7 +118,7 @@ CallResult<HermesValue> Interpreter::createClosure(
       runtimeModule->getDomain(runtime),
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       envHandle,
-      runtimeModule->getCodeBlock(funcIndex));
+      runtimeModule->getCodeBlockMayAllocate(funcIndex));
 }
 
 CallResult<HermesValue> Interpreter::reifyArgumentsSlowPath(
@@ -1509,9 +1509,9 @@ tailCall:
 #endif
 
         CodeBlock *calleeBlock = ip->opCode == OpCode::CallDirect
-            ? curCodeBlock->getRuntimeModule()->getCodeBlock(
+            ? curCodeBlock->getRuntimeModule()->getCodeBlockMayAllocate(
                   ip->iCallDirect.op3)
-            : curCodeBlock->getRuntimeModule()->getCodeBlock(
+            : curCodeBlock->getRuntimeModule()->getCodeBlockMayAllocate(
                   ip->iCallDirectLongIndex.op3);
 
         auto newFrame = StackFramePtr::initFrame(

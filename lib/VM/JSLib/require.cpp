@@ -93,7 +93,7 @@ CallResult<HermesValue> runRequireCall(
 
   CodeBlock *codeBlock =
       domain->getRuntimeModule(cjsModuleOffset)
-          ->getCodeBlock(domain->getFunctionIndex(cjsModuleOffset));
+          ->getCodeBlockMayAllocate(domain->getFunctionIndex(cjsModuleOffset));
 
   auto funcRes = JSFunction::create(
       runtime,

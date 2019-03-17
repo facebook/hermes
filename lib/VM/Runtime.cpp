@@ -246,8 +246,9 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
           generateSpecialRuntimeBytecode())
           .first);
-  emptyCodeBlock_ = specialCodeBlockRuntimeModule_->getCodeBlock(0);
-  returnThisCodeBlock_ = specialCodeBlockRuntimeModule_->getCodeBlock(1);
+  emptyCodeBlock_ = specialCodeBlockRuntimeModule_->getCodeBlockMayAllocate(0);
+  returnThisCodeBlock_ =
+      specialCodeBlockRuntimeModule_->getCodeBlockMayAllocate(1);
 
   // Initialize the root hidden class.
   rootClazz_ = ignoreAllocationFailure(HiddenClass::createRoot(this));
@@ -629,7 +630,7 @@ CallResult<HermesValue> Runtime::runBytecode(
     return ExecutionStatus::EXCEPTION;
   }
   auto runtimeModule = *runtimeModuleRes;
-  auto globalCode = runtimeModule->getCodeBlock(globalFunctionIndex);
+  auto globalCode = runtimeModule->getCodeBlockMayAllocate(globalFunctionIndex);
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // If the debugger is configured to pause on load, give it a chance to pause.

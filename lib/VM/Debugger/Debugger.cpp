@@ -52,7 +52,9 @@ static std::string getFileNameAsUTF8(
 /// \return a scope chain containing the block and all its lexical parents,
 /// excluding the global scope.
 /// \return none if the scope chain is unavailable.
-static llvm::Optional<ScopeChain> scopeChainForBlock(const CodeBlock *cb) {
+static llvm::Optional<ScopeChain> scopeChainForBlock(
+    Runtime *runtime,
+    const CodeBlock *cb) {
   OptValue<uint32_t> lexicalDataOffset = cb->getDebugLexicalDataOffset();
   if (!lexicalDataOffset)
     return llvm::None;
@@ -62,6 +64,7 @@ static llvm::Optional<ScopeChain> scopeChainForBlock(const CodeBlock *cb) {
   const hbc::BCProvider *bytecode = runtimeModule->getBytecode();
   const hbc::DebugInfo *debugInfo = bytecode->getDebugInfo();
   while (lexicalDataOffset) {
+    GCScopeMarkerRAII marker{runtime};
     scopeChain.functions.emplace_back();
     auto &scopeItem = scopeChain.functions.back();
     // Append a new list to the chain.
@@ -75,8 +78,8 @@ static llvm::Optional<ScopeChain> scopeChainForBlock(const CodeBlock *cb) {
     if (!parentId || *parentId == bytecode->getGlobalFunctionIndex())
       break;
 
-    lexicalDataOffset =
-        runtimeModule->getCodeBlock(*parentId)->getDebugLexicalDataOffset();
+    lexicalDataOffset = runtimeModule->getCodeBlockMayAllocate(*parentId)
+                            ->getDebugLexicalDataOffset();
   }
   return {std::move(scopeChain)};
 }
@@ -371,7 +374,7 @@ void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {
   // We want to pause on the first instruction of this module.
   // Add a breakpoint on the first opcode of its global function.
   auto globalFunctionIndex = module->getBytecode()->getGlobalFunctionIndex();
-  auto globalCode = module->getCodeBlock(globalFunctionIndex);
+  auto globalCode = module->getCodeBlockMayAllocate(globalFunctionIndex);
   setOnLoadBreakpoint(globalCode, 0);
 }
 
@@ -718,7 +721,7 @@ auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
     return result;
   }
 
-  auto scopeChain = scopeChainForBlock(cb);
+  auto scopeChain = scopeChainForBlock(runtime_, cb);
   if (!scopeChain) {
     // Binary was compiled without variable debug info.
     result.variableCountsByScope_.push_back(0);
@@ -755,7 +758,7 @@ HermesValue Debugger::getVariableInFrame(
   }
   const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
   assert(cb && "Unexpectedly null code block");
-  auto scopeChain = scopeChainForBlock(cb);
+  auto scopeChain = scopeChainForBlock(runtime_, cb);
   if (!scopeChain) {
     // Binary was compiled without variable debug info.
     return undefined;
@@ -851,7 +854,7 @@ HermesValue Debugger::evalInFrame(
   }
 
   const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
-  auto scopeChain = scopeChainForBlock(cb);
+  auto scopeChain = scopeChainForBlock(runtime_, cb);
   if (!scopeChain) {
     // Binary was compiled without variable debug info.
     return HermesValue::encodeUndefinedValue();
@@ -929,15 +932,18 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   // exactly when a CodeBlock is lazy, because that's only when the AST exists.
   // If it is, we compile the CodeBlock and start over,
   // skipping any CodeBlocks we've seen before.
+  GCScope gcScope{runtime_};
   for (auto &runtimeModule : runtime_->getRuntimeModules()) {
     llvm::DenseSet<CodeBlock *> visited{};
     std::vector<CodeBlock *> toVisit{};
     for (uint32_t i = 0, e = runtimeModule.getNumCodeBlocks(); i < e; ++i) {
+      GCScopeMarkerRAII marker{gcScope};
       // Use getCodeBlock to ensure they get initialized (but not compiled).
-      toVisit.push_back(runtimeModule.getCodeBlock(i));
+      toVisit.push_back(runtimeModule.getCodeBlockMayAllocate(i));
     }
 
     while (!toVisit.empty()) {
+      GCScopeMarkerRAII marker{gcScope};
       CodeBlock *codeBlock = toVisit.back();
       toVisit.pop_back();
 
@@ -972,8 +978,9 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
         // Compiling the function will add more functions to the runtimeModule.
         // Re-add them all so we can continue the search.
         for (uint32_t i = 0, e = runtimeModule.getNumCodeBlocks(); i < e; ++i) {
+          GCScopeMarkerRAII marker2{gcScope};
           // Use getCodeBlock to ensure they get initialized (but not compiled).
-          toVisit.push_back(runtimeModule.getCodeBlock(i));
+          toVisit.push_back(runtimeModule.getCodeBlockMayAllocate(i));
         }
       }
     }
@@ -1042,7 +1049,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
 
     if (locationOpt.hasValue()) {
       breakpoint.codeBlock =
-          runtimeModule.getCodeBlock(locationOpt->functionIndex);
+          runtimeModule.getCodeBlockMayAllocate(locationOpt->functionIndex);
       breakpoint.offset = locationOpt->bytecodeOffset;
 
       SourceLocation resolvedLocation;
