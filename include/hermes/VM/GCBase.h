@@ -320,46 +320,7 @@ class GCBase {
       GCCallbacks *gcCallbacks,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
-      // Do nothing with this in the default case, only NCGen needs this.
-      StorageProvider *)
-      : metaTable_(metaTable),
-        gcCallbacks_(gcCallbacks),
-        crashMgr_(crashMgr),
-        recordGcStats_(gcConfig.getShouldRecordStats()),
-        name_(gcConfig.getName()),
-        tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
-        tripwireLimit_(gcConfig.getTripwireConfig().getLimit()),
-        tripwireCooldown_(gcConfig.getTripwireConfig().getCooldown())
-#ifdef HERMESVM_SANITIZE_HANDLES
-        ,
-        sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate())
-#endif
-#ifndef NDEBUG
-        ,
-        randomizeAllocSpace_(gcConfig.getShouldRandomizeAllocSpace())
-#endif
-  {
-#ifdef HERMESVM_PLATFORM_LOGGING
-    hermesLog(
-        "HermesGC",
-        "Initialisation (Init: %dMB, Max: %dMB, Tripwire: %dMB/%" PRId64 "h)",
-        gcConfig.getInitHeapSize() >> 20,
-        gcConfig.getMaxHeapSize() >> 20,
-        gcConfig.getTripwireConfig().getLimit() >> 20,
-        static_cast<int64_t>(
-            gcConfig.getTripwireConfig().getCooldown().count()));
-#endif // HERMESVM_PLATFORM_LOGGING
-#ifdef HERMESVM_SANITIZE_HANDLES
-    std::minstd_rand::result_type seed =
-        gcConfig.getSanitizeConfig().getRandomSeed() >= 0
-        ? gcConfig.getSanitizeConfig().getRandomSeed()
-        : std::random_device()();
-    if (sanitizeRate_ > 0.0 && sanitizeRate_ < 1.0) {
-      llvm::errs() << "Sanitize Rate Seed: " << seed << '\n';
-    }
-    randomEngine_.seed(seed);
-#endif
-  }
+      StorageProvider *provider);
 
   virtual ~GCBase() {}
 

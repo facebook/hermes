@@ -19,6 +19,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <inttypes.h>
@@ -29,6 +30,58 @@ using llvm::format;
 
 namespace hermes {
 namespace vm {
+
+GCBase::GCBase(
+    MetadataTable metaTable,
+    GCCallbacks *gcCallbacks,
+    const GCConfig &gcConfig,
+    std::shared_ptr<CrashManager> crashMgr,
+    // Do nothing with this in the default case, only NCGen needs this.
+    StorageProvider *)
+    : metaTable_(metaTable),
+      gcCallbacks_(gcCallbacks),
+      crashMgr_(crashMgr),
+      recordGcStats_(gcConfig.getShouldRecordStats()),
+      name_(gcConfig.getName()),
+      tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
+      tripwireLimit_(gcConfig.getTripwireConfig().getLimit()),
+      tripwireCooldown_(gcConfig.getTripwireConfig().getCooldown())
+#ifdef HERMESVM_SANITIZE_HANDLES
+      ,
+      sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate())
+#endif
+#ifndef NDEBUG
+      ,
+      randomizeAllocSpace_(gcConfig.getShouldRandomizeAllocSpace())
+#endif
+{
+#ifdef HERMESVM_PLATFORM_LOGGING
+  hermesLog(
+      "HermesGC",
+      "Initialisation (Init: %dMB, Max: %dMB, Tripwire: %dMB/%" PRId64 "h)",
+      gcConfig.getInitHeapSize() >> 20,
+      gcConfig.getMaxHeapSize() >> 20,
+      gcConfig.getTripwireConfig().getLimit() >> 20,
+      static_cast<int64_t>(gcConfig.getTripwireConfig().getCooldown().count()));
+#endif // HERMESVM_PLATFORM_LOGGING
+#ifdef HERMESVM_SANITIZE_HANDLES
+  const std::minstd_rand::result_type seed =
+      gcConfig.getSanitizeConfig().getRandomSeed() >= 0
+      ? gcConfig.getSanitizeConfig().getRandomSeed()
+      : std::random_device()();
+  if (sanitizeRate_ > 0.0 && sanitizeRate_ < 1.0) {
+    llvm::errs()
+        << "Warning: you are using handle sanitization with random sampling.\n"
+        << "Sanitize Rate: ";
+    llvm::write_double(llvm::errs(), sanitizeRate_, llvm::FloatStyle::Percent);
+    llvm::errs() << "\n"
+                 << "Sanitize Rate Seed: " << seed << "\n"
+                 << "Re-run with -gc-sanitize-handles-random-seed=" << seed
+                 << " for deterministic crashes.\n";
+  }
+  randomEngine_.seed(seed);
+#endif
+}
 
 void GCBase::runtimeWillExecute() {
   if (recordGcStats_) {

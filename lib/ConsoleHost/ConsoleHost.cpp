@@ -195,19 +195,6 @@ bool executeHBCBytecode(
         std::chrono::milliseconds(100));
   }
 
-#ifdef HERMESVM_SANITIZE_HANDLES
-  {
-    double sanitizeRate = options.runtimeConfig.getGCConfig()
-                              .getSanitizeConfig()
-                              .getSanitizeRate();
-    if (sanitizeRate > 0.0 && sanitizeRate < 1.0) {
-      llvm::errs()
-          << "Warning: you are using handle sanitation with random sampling.\n"
-          << "Re-run with -gc-sanitize-handles=1 for deterministic crashes.\n";
-    }
-  }
-#endif
-
   vm::GCScope scope(runtime.get());
   installConsoleBindings(
       runtime.get(), shouldRecordGCStats, statSampler.get(), filename);
