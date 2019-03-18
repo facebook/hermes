@@ -265,6 +265,7 @@ ExecutionStatus JSError::recordStackTrace(
       }
     }
   }
+  selfHandle->domains_.set(domains.get(), &runtime->getHeap());
 
   // Remove the last entry.
   stack->pop_back();
