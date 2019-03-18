@@ -36,7 +36,7 @@ static opt<double> GCSanitizeRate(
          "enabled, this causes accesses via stale pointers into the heap to "
          "be sanitized."),
 #ifdef HERMESVM_SANITIZE_HANDLES
-    init(0.005)
+    init(0.001)
 #else
     init(0.0),
     Hidden
