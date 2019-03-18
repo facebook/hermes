@@ -338,7 +338,12 @@ set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++11")
 set(HERMES_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(HERMES_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-
+# Tell LLVM where to place the compiled binaries.
+#
+# NOTE: LLVM also uses this variable to find its own binaries, which can create
+# problems. For now the only LLVM tool we need is llvm-lit, so our short term
+# solution is to just hack that special case (the long term solution would be
+# to stop using add_llvm_tool() for our own tools).
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${HERMES_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
 
 if(EXISTS ${HERMES_SOURCE_DIR}/API/jsi)
@@ -414,6 +419,10 @@ set(HERMES_TEST_PARAMS
   )
 
 set(LLVM_LIT_ARGS "-sv")
+
+# This is a hack to help LLVM find its own llvm-lit tool, since we had to set
+# LLVM_RUNTIME_OUTPUT_INTDIR to our own build dir.
+set(LLVM_LIT_OUTPUT_DIR ${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/bin)
 
 add_lit_testsuite(check-hermes "Running the Hermes regression tests"
   ${HERMES_SOURCE_DIR}/test
