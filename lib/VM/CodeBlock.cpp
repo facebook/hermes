@@ -151,10 +151,8 @@ CodeBlock *CodeBlock::createCodeBlock(
   }
 #endif
 
-  auto *ptr = new CodeBlock(
+  return CodeBlock::create(
       runtimeModule, header, bytecode, functionID, cacheSize, readCacheSize);
-
-  return ptr;
 }
 
 int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
@@ -268,7 +266,8 @@ void CodeBlock::lazyCompileImpl(Runtime *runtime) {
 #endif // HERMESVM_LEAN
 
 void CodeBlock::markCachedHiddenClasses(SlotAcceptor &acceptor) {
-  for (auto &prop : propertyCache_) {
+  for (auto &prop :
+       llvm::makeMutableArrayRef(propertyCache(), propertyCacheSize_)) {
     if (prop.clazz) {
       acceptor.accept(reinterpret_cast<void *&>(prop.clazz));
     }

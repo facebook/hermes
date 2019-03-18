@@ -20,6 +20,7 @@
 #include "hermes/VM/SerializedLiteralParser.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/TrailingObjects.h"
 
 #include <memory>
 #include <vector>
@@ -34,7 +35,9 @@ class CodeBlock;
 typedef CallResult<HermesValue> (*JITCompiledFunctionPtr)(Runtime *runtime);
 
 /// A sequence of instructions representing the body of a function.
-class CodeBlock final {
+class CodeBlock final
+    : private llvm::TrailingObjects<CodeBlock, PropertyCacheEntry> {
+  friend TrailingObjects;
   /// Points to the runtime module with the information required for this code
   /// block.
   RuntimeModule *runtimeModule_;
@@ -62,12 +65,12 @@ class CodeBlock final {
   uint32_t executionCount_ = 0;
 #endif
 
-  /// The read/write property cache.
-  std::vector<PropertyCacheEntry> propertyCache_;
+  /// Total size of the property cache.
+  const uint32_t propertyCacheSize_;
 
-  /// Pointer to the first element of the write property cache in the cache
-  /// vector.
-  PropertyCacheEntry *const writePropCacheBegin_;
+  /// Offset of the write property cache, which occurs after the read property
+  /// cache.
+  const uint32_t writePropCacheOffset_;
 
 #ifndef HERMESVM_LEAN
   /// Compiles a lazy CodeBlock. Intended to be called from lazyCompile.
@@ -79,11 +82,14 @@ class CodeBlock final {
   /// \param start if true, return the start coordinates, else end coordinates.
   SourceErrorManager::SourceCoords getLazyFunctionLoc(bool start) const;
 
- public:
-#if defined(HERMESVM_PROFILER_JSFUNCTION) || defined(HERMESVM_PROFILER_EXTERN)
-  /// ID written/read by JS function profiler on first/later function events.
-  ProfilerID profilerID{NO_PROFILER_ID};
-#endif
+  /// \return the base pointer of the property cache.
+  PropertyCacheEntry *propertyCache() {
+    return getTrailingObjects<PropertyCacheEntry>();
+  }
+
+  PropertyCacheEntry *writePropertyCache() {
+    return getTrailingObjects<PropertyCacheEntry>() + writePropCacheOffset_;
+  }
 
   CodeBlock(
       RuntimeModule *runtimeModule,
@@ -96,11 +102,45 @@ class CodeBlock final {
         functionHeader_(header),
         bytecode_(bytecode),
         functionID_(functionID),
-        propertyCache_(cacheSize),
-        // if the write cache is empty, this is an invalid pointer. However if
-        // the write cache is empty, its never accessed and hence
-        // writePropCacheBegin_ is never dereferenced.
-        writePropCacheBegin_{propertyCache_.data() + writePropCacheOffset} {}
+        propertyCacheSize_(cacheSize),
+        writePropCacheOffset_(writePropCacheOffset) {
+    std::uninitialized_fill_n(propertyCache(), cacheSize, PropertyCacheEntry{});
+  }
+
+ public:
+#if defined(HERMESVM_PROFILER_JSFUNCTION) || defined(HERMESVM_PROFILER_EXTERN)
+  /// ID written/read by JS function profiler on first/later function events.
+  ProfilerID profilerID{NO_PROFILER_ID};
+#endif
+
+  /// Create a CodeBlock for a given runtime module \p runtimeModule. The result
+  /// must be deallocated via delete, which is overridden.
+  /// TODO: it would be nice to have this return a unique_ptr with a custom
+  /// deleter; however lazy compilation requires that multiple RuntimeModules
+  /// reference the same CodeBlock, so it is not yet possible.
+  static CodeBlock *create(
+      RuntimeModule *runtimeModule,
+      hbc::RuntimeFunctionHeader header,
+      const uint8_t *bytecode,
+      uint32_t functionID,
+      uint32_t cacheSize,
+      uint32_t writePropCacheOffset) {
+    auto allocSize = totalSizeToAlloc<PropertyCacheEntry>(cacheSize);
+    void *mem = checkedMalloc(allocSize);
+    return new (mem) CodeBlock(
+        runtimeModule,
+        header,
+        bytecode,
+        functionID,
+        cacheSize,
+        writePropCacheOffset);
+  }
+
+  /// Override of delete that balances the memory allocated in our create()
+  /// function. Note the destructor has run already.
+  static void operator delete(void *cb) {
+    free(cb);
+  }
 
   using const_iterator = const uint8_t *;
 
@@ -277,18 +317,15 @@ class CodeBlock final {
 #endif
 
   inline PropertyCacheEntry *getReadCacheEntry(uint8_t idx) {
-    assert(
-        propertyCache_.data() + idx < writePropCacheBegin_ &&
-        "idx out of ReadCache bound");
-    return &propertyCache_[idx];
+    assert(idx < writePropCacheOffset_ && "idx out of ReadCache bound");
+    return &propertyCache()[idx];
   }
 
   inline PropertyCacheEntry *getWriteCacheEntry(uint8_t idx) {
     assert(
-        writePropCacheBegin_ + idx <
-            propertyCache_.data() + propertyCache_.size() &&
+        writePropCacheOffset_ + idx < propertyCacheSize_ &&
         "idx out of WriteCache bound");
-    return &writePropCacheBegin_[idx];
+    return &propertyCache()[writePropCacheOffset_ + idx];
   }
 
   // Mark all hidden classes in the property cache as roots.
@@ -303,7 +340,7 @@ class CodeBlock final {
   /// \return an estimate of the size of additional memory used by this
   /// CodeBlock.
   size_t additionalMemorySize() const {
-    return propertyCache_.capacity() * sizeof(PropertyCacheEntry);
+    return propertyCacheSize_ * sizeof(PropertyCacheEntry);
   }
 
 #ifdef HERMES_ENABLE_DEBUGGER
