@@ -669,6 +669,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
   vm::HermesValue stringHVFromUtf8(const uint8_t *utf8, size_t length);
   size_t getLength(vm::Handle<vm::ArrayImpl> arr);
   size_t getByteLength(vm::Handle<vm::JSArrayBuffer> arr);
+  void addRecordTTI();
+#ifdef HERMESVM_PLATFORM_LOGGING
+  void logGCStats(const char *msg);
+#endif
 
   struct JsiProxyBase : public vm::HostObjectProxy {
     JsiProxyBase(HermesRuntimeImpl &rt, std::shared_ptr<jsi::HostObject> ho)
@@ -1040,13 +1044,10 @@ void HermesRuntime::unregisterForProfiling() {
 }
 
 #ifdef HERMESVM_PLATFORM_LOGGING
-namespace {
-
-template <typename Runtime>
-void logGCStats(Runtime &rt, const char *msg) {
+void HermesRuntimeImpl::logGCStats(const char *msg) {
   // The GC stats can exceed the android logcat length limit, of
   // 1024 bytes.  Break it up.
-  std::string stats = rt.instrumentation().getRecordedGCStats();
+  std::string stats = instrumentation().getRecordedGCStats();
   auto copyRegionFrom = [&stats](size_t from) -> size_t {
     size_t rBrace = stats.find("},", from);
     if (rBrace == std::string::npos) {
@@ -1066,8 +1067,6 @@ void logGCStats(Runtime &rt, const char *msg) {
   for (size_t ind = 0; ind < stats.size(); ind = copyRegionFrom(ind))
     ;
 }
-
-} // namespace
 #endif
 
 size_t HermesRuntime::rootsListLength() const {
@@ -1788,17 +1787,16 @@ size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSArrayBuffer> arr) {
   return static_cast<size_t>(res->getDouble());
 }
 
-namespace {
-
-void addRecordTTI(jsi::Runtime &rt) {
-  rt.global().setProperty(
-      rt,
+void HermesRuntimeImpl::addRecordTTI() {
+  global().setProperty(
+      *this,
       "__nativeRecordTTI",
       jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(rt, "__nativeRecordTTI"),
+          *this,
+          jsi::PropNameID::forAscii(*this, "__nativeRecordTTI"),
           0,
-          [](jsi::Runtime &rt, const jsi::Value &, const jsi::Value *, size_t)
+          [this](
+              jsi::Runtime &rt, const jsi::Value &, const jsi::Value *, size_t)
               -> jsi::Value {
             static_cast<HermesRuntimeImpl &>(rt).runtime_.ttiReached();
 #ifdef HERMESVM_LLVM_PROFILE_DUMP
@@ -1806,11 +1804,16 @@ void addRecordTTI(jsi::Runtime &rt) {
             throw jsi::JSINativeException("TTI reached; profiling done");
 #endif
 #ifdef HERMESVM_PLATFORM_LOGGING
-            logGCStats(rt, "TTI call");
+            logGCStats("TTI call");
+#else
+            // Lambda capture unused without platform logging on.
+            (void)this;
 #endif
             return jsi::Value::undefined();
           }));
 }
+
+namespace {
 
 class HermesMutex : public std::recursive_mutex {
  public:
@@ -1845,7 +1848,7 @@ std::unique_ptr<HermesRuntime> makeHermesRuntime(
 #endif
 
   if (shouldExposeTraceFunctions) {
-    addRecordTTI(*ret);
+    ret->addRecordTTI();
   }
 
 #ifdef HERMES_ENABLE_DEBUGGER
@@ -1879,7 +1882,7 @@ std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
       actualRuntimeConfig);
 
   if (shouldExposeTraceFunctions) {
-    addRecordTTI(*ret);
+    ret->plain().addRecordTTI();
   }
 
 #ifdef HERMES_ENABLE_DEBUGGER
