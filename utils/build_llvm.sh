@@ -101,10 +101,7 @@ fi
 # There are a small number of edits we need to make to the llvm files.
 # Use `git apply` instead of `patch` because `patch` may not be available
 # on some Windows installations.
-(cd llvm/include/llvm/ADT; $GIT apply "$HERMES_DIR"/utils/llvm-patches/StringExtras.h.patch)
-(cd llvm/include/llvm/Support; $GIT apply "$HERMES_DIR"/utils/llvm-patches/raw_ostream.h.patch)
-(cd llvm/lib/Support; $GIT apply "$HERMES_DIR"/utils/llvm-patches/Signals.cpp.patch)
-(cd llvm/lib/Support; $GIT apply "$HERMES_DIR"/utils/llvm-patches/Host.cpp.patch)
+(cd llvm; $GIT apply "$HERMES_DIR"/utils/llvm-patches/*.patch)
 
 #build llvm
 FLAGS="-DLLVM_TARGETS_TO_BUILD= -DCMAKE_BUILD_TYPE=$BUILD_TYPE"

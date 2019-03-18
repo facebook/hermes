@@ -1,6 +1,6 @@
---- StringExtras.h	2019-02-20 10:13:14.923803141 -0800
-+++ StringExtras.h.new	2019-02-19 10:16:40.233342263 -0800
-@@ -186,9 +186,11 @@
+--- a/include/llvm/ADT/StringExtras.h
++++ b/include/llvm/ADT/StringExtras.h
+@@ -186,9 +186,11 @@ inline bool to_float(const Twine &T, double &Num) {
    return detail::to_float(T, Num, strtod);
  }
  

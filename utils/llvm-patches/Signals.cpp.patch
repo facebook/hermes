@@ -1,5 +1,5 @@
---- Signals.cpp	2019-02-20 10:11:32.002947489 -0800
-+++ Signals.cpp.new	2019-02-19 10:16:58.090315638 -0800
+--- a/lib/Support/Signals.cpp
++++ b/lib/Support/Signals.cpp
 @@ -36,10 +36,14 @@
  
  using namespace llvm;
