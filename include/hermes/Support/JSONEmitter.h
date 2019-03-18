@@ -34,7 +34,7 @@ namespace hermes {
 ///  json.emitKeyValue("age", 2);
 ///  json.emitKey("platforms");
 ///  json.openArray();
-///  json.emitValues({"ios", "android"});
+///  json.emitValues({"linux", "mac", "android"});
 ///  json.closeArray();
 ///  json.closeDict();
 ///
