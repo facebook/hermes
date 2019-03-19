@@ -213,6 +213,9 @@ class MallocGC final : public GCBase {
 #ifndef NDEBUG
   /// \return true iff the pointer \p p is controlled by this GC.
   bool validPointer(const void *p) const;
+
+  /// Returns true if \p cell is the most-recently allocated finalizable object.
+  bool isMostRecentFinalizableObj(const GCCell *cell) const;
 #endif
 
   /// Same as in superclass GCBase.

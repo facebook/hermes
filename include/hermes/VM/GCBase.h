@@ -88,6 +88,9 @@ class GCCell;
 /// Returns true if \p p points into the heap.
 ///   bool contains(const void *p) const;
 ///
+/// Returns true iff \p cell is the most-recently allocated finalizable object.
+///   bool isMostRecentFinalizableObj(const GCCell* cell) const;
+///
 /// Return the lower bound of the heap's virtual address range (inclusive).
 ///   char *lowLim() const;
 ///
@@ -539,6 +542,15 @@ class GCBase {
   /// Do any additional GC-specific logging that is useful before dying with
   /// out-of-memory.
   virtual void oomDetail();
+
+#ifndef NDEBUG
+  // Returns true iff \p finalizables is non-empty, and \p cell is the
+  // last element in the vector.  Useful in code checking that
+  // objects with finalizers are allocated correctly.
+  static bool isMostRecentCellInFinalizerVector(
+      const std::vector<GCCell *> &finalizables,
+      const GCCell *cell);
+#endif
 
   /// Number of finalized objects in the last collection.
   unsigned numFinalizedObjects_{0};

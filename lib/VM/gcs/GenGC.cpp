@@ -340,6 +340,13 @@ char *GenGC::hiLim() const {
 bool GenGC::validPointer(const void *ptr) const {
   return youngGen_.validPointer(ptr) || oldGen_.validPointer(ptr);
 }
+
+bool GenGC::isMostRecentFinalizableObj(const GCCell *cell) const {
+  return GCBase::isMostRecentCellInFinalizerVector(
+             youngGen_.cellsWithFinalizers(), cell) ||
+      GCBase::isMostRecentCellInFinalizerVector(
+             oldGen_.cellsWithFinalizers(), cell);
+}
 #endif
 
 size_t GenGC::size() const {

@@ -399,6 +399,19 @@ bool GenGC::validPointer(const void *ptr) const {
   AlignedHeapSegment *segment = segmentIndex_.segmentCovering(ptr);
   return segment && segment->validPointer(ptr);
 }
+
+bool GenGC::isMostRecentFinalizableObj(const GCCell *cell) const {
+  if (GCBase::isMostRecentCellInFinalizerVector(
+          allocContext_.cellsWithFinalizers, cell)) {
+    return true;
+  } else {
+    // If we're allocating in the young gen, it might have been directly
+    // allocated in the old gen.
+    return allocContextFromYG_ &&
+        GCBase::isMostRecentCellInFinalizerVector(
+               oldGen_.allocContext().cellsWithFinalizers, cell);
+  }
+}
 #endif
 
 size_t GenGC::size() const {

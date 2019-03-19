@@ -10,11 +10,21 @@
 namespace hermes {
 namespace vm {
 
-#ifdef HERMESVM_GCCELL_ID
-
+#if defined(HERMESVM_GCCELL_ID) || !defined(NDEBUG)
 GCCell::GCCell(GC *gc, const VTable *vtp)
-    : vtp_(vtp), _debugAllocationId_(gc->nextObjectID()) {}
-
+    : vtp_(vtp)
+#ifdef HERMESVM_GCCELL_ID
+      ,
+      _debugAllocationId_(gc->nextObjectID())
+#endif
+{
+  // If the vtp has a finalizer, then it should be the most recent thing
+  // added to the finalizer list.
+  assert(
+      (vtp->finalize_ == nullptr || gc->isMostRecentFinalizableObj(this)) &&
+      "If the vtp has a finalizer, then the obj should be on the "
+      "finalizer list");
+}
 #endif
 
 } // namespace vm

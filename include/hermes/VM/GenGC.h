@@ -217,6 +217,9 @@ class GenGC final : public GCBase {
   /// Return true if \p ptr is currently pointing at valid accessable memory,
   /// allocated to an object.
   bool validPointer(const void *ptr) const;
+
+  /// Returns true if \p cell is the most-recently allocated finalizable object.
+  bool isMostRecentFinalizableObj(const GCCell *cell) const;
 #endif
 
   /// \return true if \p is in the young generation.

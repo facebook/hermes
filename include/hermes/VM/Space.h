@@ -347,6 +347,11 @@ class ContigAllocGCSpace : public GCSpace {
   /// Returns true iff \p p is located within a valid section of the space, and
   /// not at dead memory.
   bool validPointer(const void *p) const;
+
+  /// Returns the space's finalizer list, for debugging purposes.
+  const std::vector<GCCell *> &cellsWithFinalizers() const {
+    return cellsWithFinalizers_;
+  }
 #endif
 
  protected:

@@ -38,7 +38,7 @@ class GCCell {
 #endif
 
  public:
-#ifdef HERMESVM_GCCELL_ID
+#if defined(HERMESVM_GCCELL_ID) || !defined(NDEBUG)
   explicit GCCell(GC *gc, const VTable *vtp);
 #else
   explicit GCCell(GC *, const VTable *vtp) : vtp_(vtp) {}

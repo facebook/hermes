@@ -308,6 +308,15 @@ void GCBase::oomDetail() {
   crashMgr_->setCustomData("HermesGCOOMDetailBasic", detailBuffer);
 }
 
+#ifndef NDEBUG
+/*static*/
+bool GCBase::isMostRecentCellInFinalizerVector(
+    const std::vector<GCCell *> &finalizables,
+    const GCCell *cell) {
+  return !finalizables.empty() && finalizables.back() == cell;
+}
+#endif
+
 #ifdef HERMESVM_SANITIZE_HANDLES
 bool GCBase::shouldSanitizeHandles() {
   static std::uniform_real_distribution<> dist(0.0, 1.0);

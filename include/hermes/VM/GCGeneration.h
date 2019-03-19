@@ -298,6 +298,7 @@ class GCGeneration {
 
   /// Returns a reference to the generation's allocation context.
   inline AllocContext &allocContext();
+  inline const AllocContext &allocContext() const;
 
   /// When/if the allocContext_ is borrowed by an owning GC, this
   /// allows that owner to set this generation's trueAllocContext to
@@ -447,7 +448,7 @@ inline const std::vector<GCCell *> &GCGeneration::cellsWithFinalizers() const {
   return allocContext_.cellsWithFinalizers;
 }
 
-void GCGeneration::addToFinalizerList(void *cell) {
+inline void GCGeneration::addToFinalizerList(void *cell) {
   // We assume here that the cell will be initialized, and become a
   // GCCell, soon after this call, before it is retrieved from
   // cellsWithFinalizers_.  Therefore, we cast here to the eventual type.
@@ -472,6 +473,9 @@ void GCGeneration::debitExternalMemory(size_t size) {
 }
 
 inline GCGeneration::AllocContext &GCGeneration::allocContext() {
+  return allocContext_;
+}
+inline const GCGeneration::AllocContext &GCGeneration::allocContext() const {
   return allocContext_;
 }
 
