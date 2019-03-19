@@ -402,6 +402,10 @@ ESTREE_NODE_2_ARGS(TemplateLiteral, Base,
                    NodeList, quasis, false,
                    NodeList, expressions, false)
 
+ESTREE_NODE_2_ARGS(TaggedTemplateExpression, Base,
+                   NodePtr, tag, false,
+                   NodePtr, quasi, false)
+
 // In ESTree, it is defined as {tail : boolean,
 //                              value : {cooked : string, raw : string}},
 // we flatten the value field.

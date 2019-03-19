@@ -374,6 +374,11 @@ class ESTreeIRGen {
   /// translated to a call to HermesInternal.concat().
   Value *genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr);
 
+  /// Generate IR for a tagged template expression, which involves converting
+  /// a template literal to a template object, then invoking the tag function
+  /// with the template object and substitution expressions.
+  Value *genTaggedTemplateExpr(ESTree::TaggedTemplateExpressionNode *Expr);
+
   /// @}
 
  private:

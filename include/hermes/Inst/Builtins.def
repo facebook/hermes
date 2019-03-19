@@ -39,6 +39,7 @@ BUILTIN_METHOD(HermesInternal, getEpilogues)
 BUILTIN_METHOD(HermesInternal, silentSetPrototypeOf)
 BUILTIN_METHOD(HermesInternal, requireFast)
 BUILTIN_METHOD(HermesInternal, require)
+BUILTIN_METHOD(HermesInternal, getTemplateObject)
 
 BUILTIN_OBJECT(JSON)
 BUILTIN_METHOD(JSON, parse)

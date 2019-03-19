@@ -149,6 +149,10 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
     return genTemplateLiteralExpr(Tl);
   }
 
+  if (auto *Tt = dyn_cast<ESTree::TaggedTemplateExpressionNode>(expr)) {
+    return genTaggedTemplateExpr(Tt);
+  }
+
   assert(false && "Don't know this kind of expression");
   return nullptr;
 }
@@ -939,6 +943,69 @@ Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {
           Builder.createTryLoadGlobalPropertyInst("HermesInternal"), "concat"),
       firstCookedStr,
       argList);
+}
+
+Value *ESTreeIRGen::genTaggedTemplateExpr(
+    ESTree::TaggedTemplateExpressionNode *Expr) {
+  DEBUG(dbgs() << "IRGen 'TaggedTemplateExpression' expression.\n");
+  // First get the template object.
+
+  auto *templateLit = cast<ESTree::TemplateLiteralNode>(Expr->_quasi);
+  // True if the cooked strings and raw strings are duplicated.
+  bool dup = true;
+  CallInst::ArgumentList argList;
+  // Add the first argument dup first, as a placeholder which we overwrite with
+  // the correct value later.
+  argList.push_back(Builder.getLiteralBool(dup));
+  for (auto &node : templateLit->_quasis) {
+    auto *templateElt = cast<ESTree::TemplateElementNode>(&node);
+    if (templateElt->_cooked != templateElt->_raw) {
+      dup = false;
+    }
+    argList.push_back(Builder.getLiteralString(templateElt->_raw->str()));
+  }
+  argList.front() = Builder.getLiteralBool(dup);
+  // If the cooked strings are not the same as raw strings, append them to
+  // argument list.
+  if (!dup) {
+    for (auto &node : templateLit->_quasis) {
+      auto *templateElt = cast<ESTree::TemplateElementNode>(&node);
+      argList.push_back(Builder.getLiteralString(templateElt->_cooked->str()));
+    }
+  }
+
+  // Generate a function call to HermesInternal.getTemplateObject() with these
+  // arguments.
+  auto *templateObj = Builder.createCallInst(
+      Builder.createLoadPropertyInst(
+          Builder.createTryLoadGlobalPropertyInst("HermesInternal"),
+          "getTemplateObject"),
+      Builder.getLiteralUndefined() /* this */,
+      argList);
+
+  // Then we call the tag function, passing the template object followed by a
+  // list of substitutions as arguments.
+  CallInst::ArgumentList tagFuncArgList;
+  tagFuncArgList.push_back(templateObj);
+  for (auto &sub : templateLit->_expressions) {
+    tagFuncArgList.push_back(genExpression(&sub));
+  }
+
+  Value *callee;
+  Value *thisVal;
+  // Tag function is a member expression.
+  if (auto *Mem = dyn_cast<ESTree::MemberExpressionNode>(Expr->_tag)) {
+    Value *obj = genExpression(Mem->_object);
+    Value *prop = genMemberExpressionProperty(Mem);
+    // Call the callee with obj as the 'this'.
+    thisVal = obj;
+    callee = Builder.createLoadPropertyInst(obj, prop);
+  } else {
+    thisVal = Builder.getLiteralUndefined();
+    callee = genExpression(Expr->_tag);
+  }
+
+  return Builder.createCallInst(callee, thisVal, tagFuncArgList);
 }
 
 } // namespace irgen

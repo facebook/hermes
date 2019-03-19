@@ -289,6 +289,132 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
   return resultHandle.getHermesValue();
 }
 
+/// ES6.0 12.2.9.3 Runtime Semantics: GetTemplateObject ( templateLiteral )
+/// Given a template literal, return a template object that looks like this:
+/// [cookedString0, cookedString1, ..., raw: [rawString0, rawString1]].
+/// This object is frozen, as well as the 'raw' object nested inside.
+/// We only pass the parts from the template literal that are needed to
+/// construct this object. That is, the raw strings and cooked strings.
+/// Arguments: \p dup is a boolean, when it is true, cooked strings are the same
+/// as raw strings. Then raw strings are passed. Finally cooked strings are
+/// optionally passed if \p dup is true.
+CallResult<HermesValue>
+hermesInternalGetTemplateObject(void *, Runtime *runtime, NativeArgs args) {
+  if (LLVM_UNLIKELY(args.getArgCount() < 2)) {
+    return runtime->raiseTypeError(
+        "There must be at least two arguments to getTemplateObject: dup, and the first raw string.");
+  }
+
+  GCScope gcScope{runtime};
+
+  bool dup = args.getArg(0).getBool();
+  if (LLVM_UNLIKELY(!dup && args.getArgCount() % 2 == 0)) {
+    return runtime->raiseTypeError(
+        "There must be the same number of raw and cooked strings.");
+  }
+  uint32_t count = dup ? args.getArgCount() - 1 : args.getArgCount() / 2;
+  // Create template object and raw object.
+  auto arrRes = JSArray::create(runtime, count, 0);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto rawObj = runtime->makeHandle<JSObject>(arrRes->getHermesValue());
+  auto arrRes2 = JSArray::create(runtime, count, 0);
+  if (LLVM_UNLIKELY(arrRes2 == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto templateObj = runtime->makeHandle<JSObject>(arrRes2->getHermesValue());
+
+  // Set cooked and raw strings as elements in template object and raw object,
+  // respectively.
+  DefinePropertyFlags dpf{};
+  dpf.setWritable = 1;
+  dpf.setConfigurable = 1;
+  dpf.setEnumerable = 1;
+  dpf.setValue = 1;
+  dpf.writable = 0;
+  dpf.configurable = 0;
+  dpf.enumerable = 1;
+  MutableHandle<> idx{runtime};
+  MutableHandle<> rawValue{runtime};
+  MutableHandle<> cookedValue{runtime};
+  uint32_t cookedBegin = dup ? 1 : 1 + count;
+  auto marker = gcScope.createMarker();
+  for (uint32_t i = 0; i < count; ++i) {
+    idx = HermesValue::encodeNumberValue(i);
+
+    cookedValue = args.getArg(cookedBegin + i);
+    auto putRes = JSObject::defineOwnComputedPrimitive(
+        templateObj, runtime, idx, dpf, cookedValue);
+    assert(
+        putRes != ExecutionStatus::EXCEPTION && *putRes &&
+        "Failed to set cooked value to template object.");
+
+    rawValue = args.getArg(1 + i);
+    putRes = JSObject::defineOwnComputedPrimitive(
+        rawObj, runtime, idx, dpf, rawValue);
+    assert(
+        putRes != ExecutionStatus::EXCEPTION && *putRes &&
+        "Failed to set raw value to raw object.");
+
+    gcScope.flushToMarker(marker);
+  }
+  // Make 'length' property on the raw object read-only.
+  DefinePropertyFlags readOnlyDPF{};
+  readOnlyDPF.setWritable = 1;
+  readOnlyDPF.setConfigurable = 1;
+  readOnlyDPF.writable = 0;
+  readOnlyDPF.configurable = 0;
+  auto readOnlyRes = JSObject::defineOwnProperty(
+      rawObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::length),
+      readOnlyDPF,
+      runtime->getUndefinedValue(),
+      PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(readOnlyRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(!*readOnlyRes)) {
+    return runtime->raiseTypeError(
+        "Failed to set 'length' property on the raw object read-only.");
+  }
+  JSObject::preventExtensions(rawObj.get());
+
+  // Set raw object as a read-only non-enumerable property of the template
+  // object.
+  PropertyFlags constantPF{};
+  constantPF.writable = 0;
+  constantPF.configurable = 0;
+  constantPF.enumerable = 0;
+  auto putNewRes = JSObject::defineNewOwnProperty(
+      templateObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::raw),
+      constantPF,
+      rawObj);
+  if (LLVM_UNLIKELY(putNewRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Make 'length' property on the template object read-only.
+  readOnlyRes = JSObject::defineOwnProperty(
+      templateObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::length),
+      readOnlyDPF,
+      runtime->getUndefinedValue(),
+      PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(readOnlyRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(!*readOnlyRes)) {
+    return runtime->raiseTypeError(
+        "Failed to set 'length' property on the raw object read-only.");
+  }
+  JSObject::preventExtensions(templateObj.get());
+
+  return templateObj.getHermesValue();
+}
 } // namespace
 
 Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
@@ -326,6 +452,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
       P::getInstrumentedStats, hermesInternalGetInstrumentedStats);
   defineInternMethod(
       P::getRuntimeProperties, hermesInternalGetRuntimeProperties);
+  defineInternMethod(P::getTemplateObject, hermesInternalGetTemplateObject);
 
   // Define the 'require' function.
   runtime->requireFunction = *defineMethod(

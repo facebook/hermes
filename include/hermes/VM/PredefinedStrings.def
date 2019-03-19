@@ -84,6 +84,7 @@ STR(__defineSetter__, "__defineSetter__")
 STR(__lookupGetter__, "__lookupGetter__")
 STR(__lookupSetter__, "__lookupSetter__")
 STR(assign, "assign")
+STR(raw, "raw")
 
 STR(String, "String")
 STR(fromCharCode, "fromCharCode")
@@ -381,6 +382,7 @@ STR(isDebuggerAttached, "isDebuggerAttached")
 STR(shouldPauseOnThrow, "shouldPauseOnThrow")
 #endif
 STR(returnThis, "return this")
+STR(getTemplateObject, "getTemplateObject")
 
 STR(require, "require")
 STR(requireFast, "requireFast")
