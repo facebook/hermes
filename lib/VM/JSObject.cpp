@@ -980,6 +980,37 @@ CallResult<bool> JSObject::hasComputed(
   return !!propObj;
 }
 
+static ExecutionStatus raiseErrorForOverridingStaticBuiltin(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    Handle<SymbolID> name) {
+  Handle<StringPrimitive> methodNameHnd =
+      runtime->makeHandle(runtime->getStringPrimFromSymbolID(name.get()));
+  // If the 'name' property does not exist or is an accessor, we don't display
+  // the name.
+  NamedPropertyDescriptor desc;
+  auto *obj = JSObject::getNamedDescriptor(
+      selfHandle, runtime, Predefined::getSymbolID(Predefined::name), desc);
+  if (!obj || desc.flags.accessor) {
+    return runtime->raiseTypeError(
+        TwineChar16("Attempting to override read-only builtin method '") +
+        TwineChar16(methodNameHnd.get()) + "'");
+  }
+
+  // Display the name property of the builtin object if it is a string.
+  StringPrimitive *objName = dyn_vmcast<StringPrimitive>(
+      JSObject::getNamedSlotValue(selfHandle.get(), desc));
+  if (!objName) {
+    return runtime->raiseTypeError(
+        TwineChar16("Attempting to override read-only builtin method '") +
+        TwineChar16(methodNameHnd.get()) + "'");
+  }
+
+  return runtime->raiseTypeError(
+      TwineChar16("Attempting to override read-only builtin method '") +
+      TwineChar16(objName) + "." + TwineChar16(methodNameHnd.get()) + "'");
+}
+
 CallResult<bool> JSObject::putNamed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
@@ -1025,8 +1056,8 @@ CallResult<bool> JSObject::putNamed(
 
     if (LLVM_UNLIKELY(!desc.flags.writable)) {
       if (desc.flags.staticBuiltin) {
-        return runtime->raiseTypeError(
-            "Attempting to override a read-only builtin property.");
+        return raiseErrorForOverridingStaticBuiltin(
+            selfHandle, runtime, runtime->makeHandle(name));
       }
       if (opFlags.getThrowOnError()) {
         return runtime->raiseTypeError(

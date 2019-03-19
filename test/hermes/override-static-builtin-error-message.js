@@ -1,0 +1,40 @@
+// RUN: %hermes -O -fstatic-builtins -target=HBC %s | %FileCheck --match-full-lines %s
+
+try {
+  HermesInternal.getEpilogues = 1;
+} catch (e) {
+  print(e.toString());
+}
+// CHECK: TypeError: Attempting to override read-only builtin method 'getEpilogues'
+
+try {
+  Math.sin = 2;
+} catch (e) {
+  print(e.toString());
+}
+// CHECK: TypeError: Attempting to override read-only builtin method 'sin'
+
+try {
+  Array.isArray = 2;
+} catch (e) {
+  print(e.toString());
+}
+// CHECK: TypeError: Attempting to override read-only builtin method 'Array.isArray'
+
+Object.defineProperty(Array, 'name', {configurable : true});
+Object.defineProperty(Array, 'name', {writable : true});
+Array.name = undefined;
+try {
+  Array.isArray = 2;
+} catch (e) {
+  print(e.toString());
+}
+// CHECK: TypeError: Attempting to override read-only builtin method 'isArray'
+
+Object.defineProperty(Array, 'name', {get: function () {return 1;}, set: function() { return ;}});
+try {
+  Array.isArray = 2;
+} catch (e) {
+  print(e.toString());
+}
+// CHECK: TypeError: Attempting to override read-only builtin method 'isArray'
