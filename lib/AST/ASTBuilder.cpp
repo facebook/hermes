@@ -81,6 +81,11 @@ class ASTBuilder {
   /// Convert an ESTree Literal node into a type-specific tttLiteral node.
   /// Report an error and return None on error.
   llvm::Optional<ESTree::Node *> convertLiteral(const parser::JSONObject *lit);
+
+  /// Flatten an ESTree TemplateElement node so we get rid of the 'value' field.
+  /// Report an error and return None on error.
+  llvm::Optional<ESTree::Node *> convertTemplateElement(
+      const parser::JSONObject *obj);
 };
 
 bool ASTBuilder::extractNodeLabel(
@@ -152,6 +157,32 @@ bool ASTBuilder::extractNodeList(
   }
 
   return true;
+}
+
+llvm::Optional<ESTree::Node *> ASTBuilder::convertTemplateElement(
+    const parser::JSONObject *obj) {
+  NodeBoolean tail{};
+  if (!extractNodeBoolean(obj, "tail", tail)) {
+    sm_.error(SMLoc{}, "Invalid field 'tail' in TemplateElement");
+    return None;
+  }
+  NodeLabel cooked{};
+  NodeLabel raw{};
+  auto *value = dyn_cast_or_null<JSONObject>(obj->get("value"));
+  if (!value) {
+    sm_.error(SMLoc{}, "Invalid field 'value' in TemplateElement");
+    return None;
+  }
+  if (!extractNodeLabel(value, "cooked", cooked)) {
+    sm_.error(SMLoc{}, "Invalid field 'cooked' in TemplateElement/value");
+    return None;
+  }
+  if (!extractNodeLabel(value, "raw", raw)) {
+    sm_.error(SMLoc{}, "Invalid field 'raw' in TemplateElement/value");
+    return None;
+  }
+
+  return new (context_) TemplateElementNode(tail, cooked, raw);
 }
 
 llvm::Optional<Node *> ASTBuilder::convertLiteral(
@@ -286,6 +317,12 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
     if (!lit)
       return None;
     result = *lit;
+  } else if (Typename == "TemplateElement") {
+    auto templateElement = convertTemplateElement(jsObj);
+    if (!templateElement) {
+      return None;
+    }
+    result = *templateElement;
   } else
 #define ESTREE_NODE_0_ARGS(NAME, BASE)    \
   if (Typename == #NAME) {                \

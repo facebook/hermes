@@ -145,6 +145,10 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
     return genSequenceExpr(Sq);
   }
 
+  if (auto *Tl = dyn_cast<ESTree::TemplateLiteralNode>(expr)) {
+    return genTemplateLiteralExpr(Tl);
+  }
+
   assert(false && "Don't know this kind of expression");
   return nullptr;
 }
@@ -889,6 +893,52 @@ void ESTreeIRGen::genLogicalExpressionBranch(
 
   Builder.setInsertionBlock(block);
   genExpressionBranch(logical->_right, onTrue, onFalse);
+}
+
+Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {
+  DEBUG(dbgs() << "IRGen 'TemplateLiteral' expression.\n");
+
+  assert(
+      Expr->_quasis.size() == Expr->_expressions.size() + 1 &&
+      "The string count should always be one more than substitution count.");
+
+  // Construct an argument list for calling HermesInternal.concat():
+  // cookedStr0, substitution0, cookedStr1, ..., substitutionN, cookedStrN + 1,
+  // skipping any empty string, except for the first cooked string, which is
+  // going to be the `this` to the concat call.
+
+  // Get the first cooked string.
+  auto strItr = Expr->_quasis.begin();
+  auto *tempEltNode = cast<ESTree::TemplateElementNode>(&*strItr);
+  auto firstCookedStr = Builder.getLiteralString(tempEltNode->_cooked->str());
+  ++strItr;
+  // If the template literal is effectively only one string, directly return it.
+  if (strItr == Expr->_quasis.end()) {
+    return firstCookedStr;
+  }
+  CallInst::ArgumentList argList;
+  auto exprItr = Expr->_expressions.begin();
+  while (strItr != Expr->_quasis.end()) {
+    auto *sub = genExpression(&*exprItr);
+    argList.push_back(sub);
+    tempEltNode = cast<ESTree::TemplateElementNode>(&*strItr);
+    auto cookedStr = tempEltNode->_cooked->str();
+    if (!cookedStr.empty()) {
+      argList.push_back(Builder.getLiteralString(cookedStr));
+    }
+    ++strItr;
+    ++exprItr;
+  }
+  assert(
+      exprItr == Expr->_expressions.end() &&
+      "All the substitutions must have been collected.");
+
+  // Generate a function call to HermesInternal.concat() with these arguments.
+  return Builder.createCallInst(
+      Builder.createLoadPropertyInst(
+          Builder.createTryLoadGlobalPropertyInst("HermesInternal"), "concat"),
+      firstCookedStr,
+      argList);
 }
 
 } // namespace irgen

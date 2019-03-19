@@ -347,6 +347,29 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
       1,
       constantDPF);
 
+  // Make a copy of the original String.prototype.concat implementation that we
+  // can use internally.
+  // TODO: we can't make HermesInternal.concat a static builtin method now
+  // because this method should be called with a meaningful `this`, but
+  // CallBuiltin instruction does not support it.
+  auto propRes = JSObject::getNamed(
+      runtime->makeHandle<JSObject>(runtime->stringPrototype),
+      runtime,
+      Predefined::getSymbolID(Predefined::concat));
+  assert(
+      propRes != ExecutionStatus::EXCEPTION && !propRes->isUndefined() &&
+      "Failed to get String.prototype.concat.");
+  auto putRes = JSObject::defineOwnProperty(
+      intern,
+      runtime,
+      Predefined::getSymbolID(Predefined::concat),
+      constantDPF,
+      runtime->makeHandle(*propRes));
+  assert(
+      putRes != ExecutionStatus::EXCEPTION && *putRes &&
+      "Failed to set HermesInternal.concat.");
+  (void)putRes;
+
   JSObject::preventExtensions(*intern);
 
   return intern;

@@ -40,5 +40,21 @@ function shadows() {
 //CHKRA-NEXT:  {{.*}} %8 = ReturnInst %7 : undefined
 //CHKRA-NEXT:function_end
 
+function checkNonStaticBuiltin() {
+  HermesInternal.concat('hello');
+}
+
+//CHKRA-LABEL:function checkNonStaticBuiltin() : undefined
+//CHKRA-NEXT:frame = []
+//CHKRA-NEXT:%BB0:
+//CHKRA-NEXT:  {{.*}}	%0 = HBCGetGlobalObjectInst
+//CHKRA-NEXT:  {{.*}}	%1 = TryLoadGlobalPropertyInst %0 : object, "HermesInternal" : string
+//CHKRA-NEXT:  {{.*}}	%2 = LoadPropertyInst %1, "concat" : string
+//CHKRA-NEXT:  {{.*}}	%3 = HBCLoadConstInst "hello" : string
+//CHKRA-NEXT:  {{.*}}	%4 = CallInst %2, %1, %3 : string
+//CHKRA-NEXT:  {{.*}}	%5 = HBCLoadConstInst undefined : undefined
+//CHKRA-NEXT:  {{.*}}	%6 = ReturnInst %5 : undefined
+//CHKRA-NEXT:function_end
+
 print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 //CHECK: 5,a,b,lastKey
