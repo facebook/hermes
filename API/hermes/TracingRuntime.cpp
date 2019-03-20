@@ -83,15 +83,12 @@ void addRecordTTI(TracingRuntime &tracingRuntime) {
 
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    bool shouldExposeTraceFunctions) {
+    const ::hermes::vm::RuntimeConfig &runtimeConfig) {
   auto ret = std::make_unique<TracingHermesRuntime>(
       std::move(hermesRuntime), runtimeConfig);
-  if (shouldExposeTraceFunctions) {
-    // Wrap __nativeRecordTTI using the plain runtime, so it doesn't
-    // get traced itself, as it's not part of the app.
-    addRecordTTI(*ret);
-  }
+  // Wrap __nativeRecordTTI using the plain runtime, so it doesn't
+  // get traced itself, as it's not part of the app.
+  addRecordTTI(*ret);
   return ret;
 }
 

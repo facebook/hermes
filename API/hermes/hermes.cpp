@@ -1826,8 +1826,7 @@ class HermesMutex : public std::recursive_mutex {
 } // namespace
 
 std::unique_ptr<HermesRuntime> makeHermesRuntime(
-    const vm::RuntimeConfig &runtimeConfig,
-    bool shouldExposeTraceFunctions) {
+    const vm::RuntimeConfig &runtimeConfig) {
   // This is insurance against someone adding data members to
   // HermesRuntime.  If on some weird platform it fails, it can be
   // updated or removed.
@@ -1847,9 +1846,7 @@ std::unique_ptr<HermesRuntime> makeHermesRuntime(
   auto ret = std::make_unique<HermesRuntimeImpl>(runtimeConfig);
 #endif
 
-  if (shouldExposeTraceFunctions) {
-    ret->addRecordTTI();
-  }
+  ret->addRecordTTI();
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // Only HermesRuntime can create a debugger instance.  This requires
@@ -1863,8 +1860,7 @@ std::unique_ptr<HermesRuntime> makeHermesRuntime(
 }
 
 std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
-    const vm::RuntimeConfig &runtimeConfig,
-    bool shouldExposeTraceFunctions) {
+    const vm::RuntimeConfig &runtimeConfig) {
 #if defined(HERMESVM_PLATFORM_LOGGING)
   const vm::RuntimeConfig &actualRuntimeConfig =
       runtimeConfig.rebuild()
@@ -1881,9 +1877,7 @@ std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
       jsi::detail::ThreadSafeRuntimeImpl<HermesRuntimeImpl, HermesMutex>>(
       actualRuntimeConfig);
 
-  if (shouldExposeTraceFunctions) {
-    ret->plain().addRecordTTI();
-  }
+  ret->plain().addRecordTTI();
 
 #ifdef HERMES_ENABLE_DEBUGGER
   auto &hermesRt = ret->getUnsafeRuntime();

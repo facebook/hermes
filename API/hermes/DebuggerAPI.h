@@ -249,12 +249,9 @@ class Debugger {
 
  private:
   friend std::unique_ptr<HermesRuntime> hermes::makeHermesRuntime(
-      const ::hermes::vm::RuntimeConfig &,
-      bool);
+      const ::hermes::vm::RuntimeConfig &);
   friend std::unique_ptr<jsi::ThreadSafeRuntime>
-  hermes::makeThreadSafeHermesRuntime(
-      const ::hermes::vm::RuntimeConfig &,
-      bool);
+  hermes::makeThreadSafeHermesRuntime(const ::hermes::vm::RuntimeConfig &);
   friend ProgramState;
 
   /// Debuggers may not be moved or copied.

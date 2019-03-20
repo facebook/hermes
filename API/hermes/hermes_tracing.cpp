@@ -15,11 +15,10 @@ namespace hermes {
 
 std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    bool shouldExposeTraceFunctions) {
+    const ::hermes::vm::RuntimeConfig &runtimeConfig) {
 #ifdef HERMESVM_API_TRACE
   return tracing::makeTracingHermesRuntime(
-      std::move(hermesRuntime), runtimeConfig, shouldExposeTraceFunctions);
+      std::move(hermesRuntime), runtimeConfig);
 #else
   return hermesRuntime;
 #endif

@@ -157,12 +157,10 @@ class HermesRuntime : public jsi::Runtime {
 
 std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
-        ::hermes::vm::RuntimeConfig(),
-    bool shouldExposeTraceFunctions = true);
+        ::hermes::vm::RuntimeConfig());
 std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
-        ::hermes::vm::RuntimeConfig(),
-    bool shouldExposeTraceFunctions = true);
+        ::hermes::vm::RuntimeConfig());
 } // namespace hermes
 } // namespace facebook
 

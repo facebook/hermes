@@ -14,9 +14,7 @@ namespace hermes {
 
 std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    bool shouldExposeTraceFunctions = true);
-
+    const ::hermes::vm::RuntimeConfig &runtimeConfig);
 }
 } // namespace facebook
 

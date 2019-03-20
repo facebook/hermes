@@ -408,8 +408,7 @@ class TracingHermesRuntime final : public TracingRuntime {
 
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    bool shouldExposeTraceFunctions = true);
+    const ::hermes::vm::RuntimeConfig &runtimeConfig);
 
 } // namespace tracing
 } // namespace hermes

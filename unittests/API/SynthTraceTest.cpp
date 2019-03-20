@@ -30,11 +30,8 @@ struct SynthTraceTest : public ::testing::Test {
 
   SynthTraceTest()
       : rt(makeTracingHermesRuntime(
-            makeHermesRuntime(
-                ::hermes::vm::RuntimeConfig(),
-                /* shouldExposeTraceFunctions */ false),
-            ::hermes::vm::RuntimeConfig(),
-            /* shouldExposeTraceFunctions */ false)) {}
+            makeHermesRuntime(::hermes::vm::RuntimeConfig()),
+            ::hermes::vm::RuntimeConfig())) {}
 
   template <typename T>
   void expectEqual(
@@ -618,12 +615,8 @@ TEST_F(SynthTraceSerializationTest, TimeIsPrinted) {
 
 TEST_F(SynthTraceSerializationTest, FullTrace) {
   const ::hermes::vm::RuntimeConfig conf;
-  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
-      makeHermesRuntime(
-          conf,
-          /* shouldExposeTraceFunctions */ false),
-      conf,
-      /* shouldExposeTraceFunctions */ false));
+  std::unique_ptr<TracingHermesRuntime> rt(
+      makeTracingHermesRuntime(makeHermesRuntime(conf), conf));
 
   SynthTrace::ObjectID globalObjID = rt->getUniqueID(rt->global());
   SynthTrace::ObjectID objID;
@@ -659,12 +652,8 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
 
 TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
   const ::hermes::vm::RuntimeConfig conf;
-  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
-      makeHermesRuntime(
-          conf,
-          /* shouldExposeTraceFunctions */ false),
-      conf,
-      /* shouldExposeTraceFunctions */ false));
+  std::unique_ptr<TracingHermesRuntime> rt(
+      makeTracingHermesRuntime(makeHermesRuntime(conf), conf));
 
   SynthTrace::ObjectID globalObjID = rt->getUniqueID(rt->global());
   uint64_t dateNow = 0;
