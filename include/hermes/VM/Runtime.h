@@ -10,6 +10,7 @@
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/Support/JSONEmitter.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/BasicBlockExecutionInfo.h"
 #include "hermes/VM/CallResult.h"
@@ -783,6 +784,15 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
     runtimeModuleList_.remove(*rm);
   }
 
+  /// Called by CrashManager on the event of a crash to produce a stream of data
+  /// to crash log. Output should be a JSON object. This is the central point
+  /// for adding calls to further functions which dump specific elements of
+  /// of crash dump data for a Hermes Runtime instance.
+  void crashCallback(int fd);
+
+  /// Write a JS stack trace as part of a \c crashCallback() run.
+  void crashWriteCallStack(JSONEmitter &json);
+
  private:
   GC heap_;
   std::vector<std::function<void(GC *, SlotAcceptor &)>> customMarkRootFuncs_;
@@ -926,6 +936,10 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
 #ifdef HERMESVM_PROFILER_BB
   BasicBlockExecutionInfo basicBlockExecInfo_;
 #endif
+
+  /// Store a key for the function that is executed if a crash occurs.
+  /// This key will be unregistered in the destructor.
+  const CrashManager::CallbackKey crashCallbackKey_;
 
   /// Keep a strong reference to the SamplingProfiler so that
   /// we are sure it's safe to unregisterRuntime in destructor.

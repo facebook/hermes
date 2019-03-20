@@ -181,7 +181,9 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       runtimeStats_(runtimeConfig.getEnableSampledStats()),
       commonStorage_(createRuntimeCommonStorage()),
       stackPointer_(),
-      crashMgr_(runtimeConfig.getCrashMgr()) {
+      crashMgr_(runtimeConfig.getCrashMgr()),
+      crashCallbackKey_(
+          crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })) {
   assert(
       (void *)this == (void *)(HandleRootOwner *)this &&
       "cast to HandleRootOwner should be no-op");
@@ -283,6 +285,7 @@ Runtime::~Runtime() {
   samplingProfiler_->unregisterRuntime(this);
 
   heap_.finalizeAll();
+  crashMgr_->unregisterCallback(crashCallbackKey_);
   if (freeRegisterStack_) {
     crashMgr_->unregisterMemory(registerStack_);
     ::free(registerStack_);
@@ -1282,6 +1285,73 @@ llvm::raw_ostream &operator<<(
 
   OS << buf;
   return OS << "\")";
+}
+
+template <typename T>
+static std::string &llvmStreamableToString(const T &v) {
+  // Use a static string to back this function to avoid allocations. We should
+  // only be calling this from the crash dumper so not have to worry about
+  // multi-threaded usage.
+  static std::string buf;
+  buf.clear();
+  llvm::raw_string_ostream strstrm(buf);
+  strstrm << v;
+  strstrm.flush();
+  return buf;
+}
+
+void Runtime::crashCallback(int fd) {
+  llvm::raw_fd_ostream jsonStream(fd, false);
+  JSONEmitter json(jsonStream);
+  json.openDict();
+  json.emitKeyValue("type", "runtime");
+  json.emitKeyValue(
+      "address", llvmStreamableToString(llvm::format_hex((uintptr_t)this, 10)));
+  json.emitKeyValue(
+      "registerStack",
+      llvmStreamableToString(llvm::format_hex((uintptr_t)registerStack_, 10)));
+  json.emitKeyValue(
+      "registerStackPointer",
+      llvmStreamableToString(llvm::format_hex((uintptr_t)stackPointer_, 10)));
+  json.emitKeyValue(
+      "registerStackEnd",
+      llvmStreamableToString(
+          llvm::format_hex((uintptr_t)registerStackEnd_, 10)));
+  json.emitKey("callstack");
+  crashWriteCallStack(json);
+  json.closeDict();
+}
+
+void Runtime::crashWriteCallStack(JSONEmitter &json) {
+  llvm::DenseMap<const CodeBlock *, uint32_t> virtualOffsetCache;
+  json.openArray();
+  for (auto frame : getStackFrames()) {
+    json.openDict();
+    json.emitKeyValue(
+        "StackFrameRegOffs", (uint32_t)(registerStackEnd_ - frame.ptr()));
+    auto codeBlock = frame.getSavedCodeBlock();
+    if (codeBlock) {
+      auto bytecodeOffs = codeBlock->getOffsetOf(frame.getSavedIP());
+      auto blockSourceCode = codeBlock->getDebugSourceLocationsOffset();
+      if (blockSourceCode.hasValue()) {
+        // Virtual offset below is actively wrong if we have source code info
+        // so just note this scenario for now. Proper info emitted in the diff
+        // above.
+        json.emitKeyValue("SourceLocation", true);
+      } else {
+        auto pair = virtualOffsetCache.insert({codeBlock, 0});
+        uint32_t &virtualOffset = pair.first->second;
+        if (pair.second) {
+          virtualOffset = codeBlock->getVirtualOffset();
+        }
+        json.emitKeyValue("ByteCodeAddress", virtualOffset + bytecodeOffs);
+      }
+    } else {
+      json.emitKeyValue("NativeCode", true);
+    }
+    json.closeDict(); // frame
+  }
+  json.closeArray(); // frames
 }
 
 } // namespace vm
