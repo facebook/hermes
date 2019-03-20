@@ -669,10 +669,6 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
     return hasES6Symbol_;
   }
 
-  bool shouldValidatePointers() const {
-    return validatePointers_;
-  }
-
   bool builtinsAreFrozen() const {
     return builtinsFrozen_;
   }
@@ -796,9 +792,6 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
 
   /// Set to true if we should enable ES6 Symbol.
   const bool hasES6Symbol_;
-
-  /// Set to true if we should validate certain HermesValue pointers.
-  const bool validatePointers_;
 
   /// Set to true if we should randomize stack placement etc.
   const bool shouldRandomizeMemoryLayout_;

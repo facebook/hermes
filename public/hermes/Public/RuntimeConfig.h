@@ -45,9 +45,6 @@ class PinnedHermesValue;
   /* Enable sampling certain statistics. */                              \
   F(bool, EnableSampledStats, false)                                     \
                                                                          \
-  /* Enable pointer validation. */                                       \
-  F(bool, EnableValidatePointers, false)                                 \
-                                                                         \
   /* Whether to enable sampling profiler */                              \
   F(bool, EnableSampleProfiling, false)                                  \
                                                                          \
