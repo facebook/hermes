@@ -43,12 +43,13 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   /// @name jsi::Runtime methods.
   /// @{
 
-  void evaluateJavaScript(
+  jsi::Value evaluateJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) override {
     trace_.emplace_back<SynthTrace::BeginExecJSRecord>(getTimeSinceStart());
-    RD::evaluateJavaScript(buffer, sourceURL);
+    auto res = RD::evaluateJavaScript(buffer, sourceURL);
     trace_.emplace_back<SynthTrace::EndExecJSRecord>(getTimeSinceStart());
+    return res;
   }
 
   jsi::Object createObject() override {
@@ -370,7 +371,7 @@ class TracingHermesRuntime final : public TracingRuntime {
   void writeBridgeTrafficTraceToFile(
       const std::string &fileName) const override;
 
-  void evaluateJavaScript(
+  jsi::Value evaluateJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) override {
     if (HermesRuntime::isHermesBytecode(buffer->data(), buffer->size())) {
@@ -378,7 +379,7 @@ class TracingHermesRuntime final : public TracingRuntime {
           ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
               llvm::makeArrayRef(buffer->data(), buffer->size())));
     }
-    TracingRuntime::evaluateJavaScript(buffer, sourceURL);
+    return TracingRuntime::evaluateJavaScript(buffer, sourceURL);
   }
 
   HermesRuntime &hermesRuntime() {

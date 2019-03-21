@@ -111,19 +111,19 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
     return plain_;
   }
 
-  void evaluateJavaScript(
+  Value evaluateJavaScript(
       const std::shared_ptr<const Buffer>& buffer,
       const std::string& sourceURL) override {
-    plain().evaluateJavaScript(buffer, sourceURL);
+    return plain().evaluateJavaScript(buffer, sourceURL);
   }
   std::shared_ptr<const PreparedJavaScript> prepareJavaScript(
       const std::shared_ptr<const Buffer>& buffer,
       std::string sourceURL) override {
     return plain().prepareJavaScript(buffer, std::move(sourceURL));
   }
-  void evaluatePreparedJavaScript(
+  Value evaluatePreparedJavaScript(
       const std::shared_ptr<const PreparedJavaScript>& js) override {
-    plain().evaluatePreparedJavaScript(js);
+    return plain().evaluatePreparedJavaScript(js);
   }
   Object global() override {
     return plain().global();
@@ -366,11 +366,11 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
 
   WithRuntimeDecorator(Plain& plain, WithArg& warg) : RD(plain), warg_(warg) {}
 
-  void evaluateJavaScript(
+  Value evaluateJavaScript(
       const std::shared_ptr<const Buffer>& buffer,
       const std::string& sourceURL) override {
     With around(warg_);
-    RD::evaluateJavaScript(buffer, sourceURL);
+    return RD::evaluateJavaScript(buffer, sourceURL);
   }
   std::shared_ptr<const PreparedJavaScript> prepareJavaScript(
       const std::shared_ptr<const Buffer>& buffer,
@@ -378,10 +378,10 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     With around(warg_);
     return RD::prepareJavaScript(buffer, std::move(sourceURL));
   }
-  void evaluatePreparedJavaScript(
+  Value evaluatePreparedJavaScript(
       const std::shared_ptr<const PreparedJavaScript>& js) override {
     With around(warg_);
-    RD::evaluatePreparedJavaScript(js);
+    return RD::evaluatePreparedJavaScript(js);
   }
   Object global() override {
     With around(warg_);

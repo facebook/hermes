@@ -550,7 +550,7 @@ static CallResult<HermesValue> interpretFunctionWithRandomStack(
   return runtime->interpretFunction(globalCode);
 }
 
-ExecutionStatus Runtime::run(
+CallResult<HermesValue> Runtime::run(
     llvm::StringRef code,
     llvm::StringRef sourceURL,
     const hbc::CompileFlags &compileFlags) {
@@ -569,7 +569,7 @@ ExecutionStatus Runtime::run(
 #endif
 }
 
-ExecutionStatus Runtime::run(
+CallResult<HermesValue> Runtime::run(
     std::unique_ptr<hermes::Buffer> code,
     llvm::StringRef sourceURL,
     const hbc::CompileFlags &compileFlags) {

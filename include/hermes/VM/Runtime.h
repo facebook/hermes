@@ -110,7 +110,7 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   /// \param sourceURL the location of the source that's being run.
   /// \param compileFlags Flags controlling compilation.
   /// \return the status of the execution.
-  ExecutionStatus run(
+  CallResult<HermesValue> run(
       llvm::StringRef code,
       llvm::StringRef sourceURL,
       const hbc::CompileFlags &compileFlags);
@@ -119,7 +119,7 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   /// \param sourceURL the location of the source that's being run.
   /// \param compileFlags Flags controlling compilation.
   /// \return the status of the execution.
-  ExecutionStatus run(
+  CallResult<HermesValue> run(
       std::unique_ptr<Buffer> code,
       llvm::StringRef sourceURL,
       const hbc::CompileFlags &compileFlags);
@@ -143,21 +143,18 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   /// Uses global_ as the "this" value initially.
   /// \p isPersistent indicates whether the created runtime module should
   /// persist in memory.
-  // Sharon: this top-layer runBytecode does not need to return
-  // CallResult<HermesValue>,?
-  ExecutionStatus runBytecode(
+  CallResult<HermesValue> runBytecode(
       std::shared_ptr<hbc::BCProvider> &&bytecode,
       RuntimeModuleFlags runtimeModuleFlags,
       llvm::StringRef sourceURL,
       Handle<Environment> environment) {
     heap_.runtimeWillExecute();
     return runBytecode(
-               std::move(bytecode),
-               runtimeModuleFlags,
-               sourceURL,
-               environment,
-               Handle<>(&global_))
-        .getStatus();
+        std::move(bytecode),
+        runtimeModuleFlags,
+        sourceURL,
+        environment,
+        Handle<>(&global_));
   }
 
   ExecutionStatus loadSegment(

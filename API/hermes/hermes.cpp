@@ -581,9 +581,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
   std::shared_ptr<const jsi::PreparedJavaScript> prepareJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       std::string sourceURL) override;
-  void evaluatePreparedJavaScript(
+  jsi::Value evaluatePreparedJavaScript(
       const std::shared_ptr<const jsi::PreparedJavaScript> &js) override;
-  void evaluateJavaScript(
+  jsi::Value evaluateJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) override;
   jsi::Object global() override;
@@ -1028,7 +1028,7 @@ void HermesRuntime::debugJavaScript(
   hbc::CompileFlags flags{};
   flags.debug = true;
   flags.lazy = debugFlags.lazy;
-  vm::ExecutionStatus res = runtime.run(src, sourceURL, flags);
+  vm::ExecutionStatus res = runtime.run(src, sourceURL, flags).getStatus();
   impl(this)->checkStatus(res);
 }
 #endif
@@ -1145,7 +1145,7 @@ HermesRuntimeImpl::prepareJavaScript(
       std::move(bcErr.first), runtimeFlags, std::move(sourceURL));
 }
 
-void HermesRuntimeImpl::evaluatePreparedJavaScript(
+jsi::Value HermesRuntimeImpl::evaluatePreparedJavaScript(
     const std::shared_ptr<const jsi::PreparedJavaScript> &js) {
   assert(
       dynamic_cast<const HermesPreparedJavaScript *>(js.get()) &&
@@ -1157,17 +1157,19 @@ void HermesRuntimeImpl::evaluatePreparedJavaScript(
   const auto *hermesPrep =
       static_cast<const HermesPreparedJavaScript *>(js.get());
   vm::GCScope gcScope(&runtime_);
-  checkStatus(runtime_.runBytecode(
+  auto res = runtime_.runBytecode(
       hermesPrep->bytecodeProvider(),
       hermesPrep->runtimeFlags(),
       hermesPrep->sourceURL(),
-      runtime_.makeNullHandle<vm::Environment>()));
+      runtime_.makeNullHandle<vm::Environment>());
+  checkStatus(res.getStatus());
+  return valueFromHermesValue(*res);
 }
 
-void HermesRuntimeImpl::evaluateJavaScript(
+jsi::Value HermesRuntimeImpl::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
-  evaluatePreparedJavaScript(prepareJavaScript(buffer, sourceURL));
+  return evaluatePreparedJavaScript(prepareJavaScript(buffer, sourceURL));
 }
 
 jsi::Object HermesRuntimeImpl::global() {
