@@ -301,6 +301,10 @@ SymbolID RuntimeModule::mapString(
 }
 
 void RuntimeModule::markRoots(SlotAcceptor &acceptor, bool markLongLived) {
+  for (auto &it : templateMap_) {
+    acceptor.acceptPtr(it.second);
+  }
+
   if (markLongLived) {
     for (auto symbol : stringIDMap_) {
       if (symbol.isValid()) {
@@ -360,7 +364,8 @@ size_t RuntimeModule::additionalMemorySize() const {
   size_t total = stringIDMap_.capacity() * sizeof(SymbolID) +
       functionMap_.capacity() * sizeof(CodeBlock *) +
       dependentModules_.capacity() * sizeof(RuntimeModule *) +
-      objectLiteralHiddenClasses_.getMemorySize();
+      objectLiteralHiddenClasses_.getMemorySize() +
+      templateMap_.getMemorySize();
   // Add the size of each CodeBlock
   for (const CodeBlock *cb : functionMap_) {
     // Skip the null code blocks, they are lazily inserted the first time

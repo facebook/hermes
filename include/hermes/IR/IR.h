@@ -8,6 +8,7 @@
 #define HERMES_IR_IR_H
 
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
@@ -26,6 +27,7 @@
 
 #include <deque>
 #include <unordered_map>
+#include <vector>
 
 namespace hermes {
 
@@ -1548,6 +1550,8 @@ class Module : public Value {
  public:
   using FunctionListType = iplist<Function>;
 
+  using RawStringList = std::vector<LiteralString *>;
+
   struct CJSModule {
     /// ID of the module, allocated using a counter.
     uint32_t id;
@@ -1614,6 +1618,16 @@ class Module : public Value {
   /// and used when generating bytecode for a given segment.
   /// If empty, this has not been generated yet.
   CJSModuleUseGraph cjsModuleUseGraph_{};
+
+  struct HashRawStrings {
+    std::size_t operator()(const RawStringList &rawStrings) const {
+      return llvm::hash_combine_range(rawStrings.begin(), rawStrings.end());
+    }
+  };
+
+  /// A map from a list of raw strings from a template literal to its unique id.
+  std::unordered_map<RawStringList, uint32_t, HashRawStrings>
+      templateObjectIDMap_;
 
  public:
   explicit Module(std::shared_ptr<Context> ctx)
@@ -1762,6 +1776,9 @@ class Module : public Value {
   /// specified by \p range. Order is unspecified, so the return value should
   /// not be used for iteration, only for checking membership.
   llvm::DenseSet<Function *> getFunctionsInSegment(Context::SegmentRange range);
+
+  /// Given a list of raw strings from a template literal, get its unique id.
+  uint32_t getTemplateObjectID(RawStringList &&rawStrings);
 
   inline iterator begin() {
     return FunctionList.begin();

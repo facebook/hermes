@@ -295,24 +295,44 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
 /// This object is frozen, as well as the 'raw' object nested inside.
 /// We only pass the parts from the template literal that are needed to
 /// construct this object. That is, the raw strings and cooked strings.
-/// Arguments: \p dup is a boolean, when it is true, cooked strings are the same
-/// as raw strings. Then raw strings are passed. Finally cooked strings are
+/// Arguments: \p templateObjID is the unique id associated with the template
+/// object. \p dup is a boolean, when it is true, cooked strings are the same as
+/// raw strings. Then raw strings are passed. Finally cooked strings are
 /// optionally passed if \p dup is true.
 CallResult<HermesValue>
 hermesInternalGetTemplateObject(void *, Runtime *runtime, NativeArgs args) {
-  if (LLVM_UNLIKELY(args.getArgCount() < 2)) {
-    return runtime->raiseTypeError(
-        "There must be at least two arguments to getTemplateObject: dup, and the first raw string.");
+  if (LLVM_UNLIKELY(args.getArgCount() < 3)) {
+    return runtime->raiseTypeError("At least three arguments expected");
+  }
+  if (LLVM_UNLIKELY(!args.getArg(0).isNumber())) {
+    return runtime->raiseTypeError("First argument should be a number");
+  }
+  if (LLVM_UNLIKELY(!args.getArg(1).isBool())) {
+    return runtime->raiseTypeError("Second argument should be a bool");
   }
 
   GCScope gcScope{runtime};
 
-  bool dup = args.getArg(0).getBool();
-  if (LLVM_UNLIKELY(!dup && args.getArgCount() % 2 == 0)) {
+  // Try finding the template object in the template object cache.
+  uint32_t templateObjID = args.getArg(0).getNumberAs<uint32_t>();
+  auto savedCB = runtime->getStackFrames().begin()->getSavedCodeBlock();
+  if (LLVM_UNLIKELY(!savedCB)) {
+    return runtime->raiseTypeError("Cannot be called from native code");
+  }
+  RuntimeModule *runtimeModule = savedCB->getRuntimeModule();
+  JSObject *cachedTemplateObj =
+      runtimeModule->findCachedTemplateObject(templateObjID);
+  if (cachedTemplateObj) {
+    return HermesValue::encodeObjectValue(cachedTemplateObj);
+  }
+
+  bool dup = args.getArg(1).getBool();
+  if (LLVM_UNLIKELY(!dup && args.getArgCount() % 2 == 1)) {
     return runtime->raiseTypeError(
         "There must be the same number of raw and cooked strings.");
   }
-  uint32_t count = dup ? args.getArgCount() - 1 : args.getArgCount() / 2;
+  uint32_t count = dup ? args.getArgCount() - 2 : args.getArgCount() / 2 - 1;
+
   // Create template object and raw object.
   auto arrRes = JSArray::create(runtime, count, 0);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
@@ -338,7 +358,7 @@ hermesInternalGetTemplateObject(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> idx{runtime};
   MutableHandle<> rawValue{runtime};
   MutableHandle<> cookedValue{runtime};
-  uint32_t cookedBegin = dup ? 1 : 1 + count;
+  uint32_t cookedBegin = dup ? 2 : 2 + count;
   auto marker = gcScope.createMarker();
   for (uint32_t i = 0; i < count; ++i) {
     idx = HermesValue::encodeNumberValue(i);
@@ -350,7 +370,7 @@ hermesInternalGetTemplateObject(void *, Runtime *runtime, NativeArgs args) {
         putRes != ExecutionStatus::EXCEPTION && *putRes &&
         "Failed to set cooked value to template object.");
 
-    rawValue = args.getArg(1 + i);
+    rawValue = args.getArg(2 + i);
     putRes = JSObject::defineOwnComputedPrimitive(
         rawObj, runtime, idx, dpf, rawValue);
     assert(
@@ -412,6 +432,9 @@ hermesInternalGetTemplateObject(void *, Runtime *runtime, NativeArgs args) {
         "Failed to set 'length' property on the raw object read-only.");
   }
   JSObject::preventExtensions(templateObj.get());
+
+  // Cache the template object.
+  runtimeModule->cacheTemplateObject(templateObjID, templateObj);
 
   return templateObj.getHermesValue();
 }

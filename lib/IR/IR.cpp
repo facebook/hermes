@@ -597,6 +597,16 @@ llvm::DenseSet<Function *> Module::getFunctionsInSegment(
   return result;
 }
 
+uint32_t Module::getTemplateObjectID(RawStringList &&rawStrings) {
+  // Try inserting into the map with a dummy value.
+  auto res = templateObjectIDMap_.emplace(std::move(rawStrings), 0);
+  if (res.second) {
+    // Insertion succeeded. Overwrite the value with the correct id.
+    res.first->second = templateObjectIDMap_.size() - 1;
+  }
+  return res.first->second;
+}
+
 Context &Instruction::getContext() const {
   return Parent->getContext();
 }

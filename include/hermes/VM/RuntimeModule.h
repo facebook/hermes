@@ -112,6 +112,9 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// Cacheing will be skipped if keyBufferIndex is >= 2^24.
   llvm::DenseMap<uint32_t, HiddenClass *> objectLiteralHiddenClasses_;
 
+  /// A map from template object ids to template objects.
+  llvm::DenseMap<uint32_t, JSObject *> templateMap_;
+
   /// Registers the created RuntimeModule with \param domain, resulting in
   /// \param domain owning it. The RuntimeModule will be freed when the
   /// domain is collected..
@@ -329,6 +332,26 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// \param keyBufferIndex value of NewObjectWithBuffer instruction.
   /// \param clazz the hidden class to cache.
   void tryCacheLiteralHiddenClass(unsigned keyBufferIndex, HiddenClass *clazz);
+
+  /// Given \p templateObjectID, retrieve the cached template object.
+  /// if it doesn't exist, return a nullptr.
+  JSObject *findCachedTemplateObject(uint32_t templateObjID) {
+    return templateMap_.lookup(templateObjID);
+  }
+
+  /// Cache a template object in the template map using a template object ID as
+  /// key.
+  /// \p templateObjID is the template object ID, and it should not already
+  /// exist in the map.
+  /// \p templateObj is the template object that we are caching.
+  void cacheTemplateObject(
+      uint32_t templateObjID,
+      Handle<JSObject> templateObj) {
+    assert(
+        templateMap_.count(templateObjID) == 0 &&
+        "The template object already exists.");
+    templateMap_[templateObjID] = templateObj.get();
+  }
 
  private:
   /// Import the string table from the supplied module.

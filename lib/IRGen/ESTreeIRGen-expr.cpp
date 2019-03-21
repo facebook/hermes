@@ -948,13 +948,24 @@ Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {
 Value *ESTreeIRGen::genTaggedTemplateExpr(
     ESTree::TaggedTemplateExpressionNode *Expr) {
   DEBUG(dbgs() << "IRGen 'TaggedTemplateExpression' expression.\n");
-  // First get the template object.
-
+  // Step 1: get the template object.
   auto *templateLit = cast<ESTree::TemplateLiteralNode>(Expr->_quasi);
-  // True if the cooked strings and raw strings are duplicated.
-  bool dup = true;
+
+  // Construct an argument list for calling HermesInternal.getTemplateObject():
+  // [template object ID, dup, raw strings, (optional) cooked strings].
   CallInst::ArgumentList argList;
-  // Add the first argument dup first, as a placeholder which we overwrite with
+  // Retrieve template object ID.
+  Module::RawStringList rawStrings;
+  for (auto &n : templateLit->_quasis) {
+    auto element = cast<ESTree::TemplateElementNode>(&n);
+    rawStrings.push_back(Builder.getLiteralString(element->_raw->str()));
+  }
+  uint32_t templateObjID = Mod->getTemplateObjectID(std::move(rawStrings));
+  argList.push_back(Builder.getLiteralNumber(templateObjID));
+
+  // dup is true if the cooked strings and raw strings are duplicated.
+  bool dup = true;
+  // Add the argument dup first as a placeholder which we overwrite with
   // the correct value later.
   argList.push_back(Builder.getLiteralBool(dup));
   for (auto &node : templateLit->_quasis) {
@@ -964,7 +975,7 @@ Value *ESTreeIRGen::genTaggedTemplateExpr(
     }
     argList.push_back(Builder.getLiteralString(templateElt->_raw->str()));
   }
-  argList.front() = Builder.getLiteralBool(dup);
+  argList[1] = Builder.getLiteralBool(dup);
   // If the cooked strings are not the same as raw strings, append them to
   // argument list.
   if (!dup) {
@@ -983,7 +994,7 @@ Value *ESTreeIRGen::genTaggedTemplateExpr(
       Builder.getLiteralUndefined() /* this */,
       argList);
 
-  // Then we call the tag function, passing the template object followed by a
+  // Step 2: call the tag function, passing the template object followed by a
   // list of substitutions as arguments.
   CallInst::ArgumentList tagFuncArgList;
   tagFuncArgList.push_back(templateObj);
