@@ -37,14 +37,21 @@ void JSONEmitter::emitValue(llvm::StringRef val) {
   primitiveEmitString(val);
 }
 
+void JSONEmitter::emitNullValue() {
+  willEmitValue();
+  OS << "null";
+}
+
 void JSONEmitter::emitKey(llvm::StringRef key) {
   assert(inDict() && "Not emitting a dictionary");
   State &state = states_.back();
   assert(state.needsKey && "Not expecting a key");
+  assert(!state.needsValue && "Missing a value for a key.");
   if (state.needsComma)
     OS << ',';
   state.needsComma = false;
   state.needsKey = false;
+  state.needsValue = true;
   primitiveEmitString(key);
   OS << ':';
 }
@@ -57,6 +64,7 @@ void JSONEmitter::openDict() {
 
 void JSONEmitter::closeDict() {
   assert(inDict() && "Not currently emitting a dictionary");
+  assert(!states_.back().needsValue && "Missing a value for a key.");
   OS << '}';
   states_.pop_back();
 }
@@ -122,4 +130,5 @@ void JSONEmitter::willEmitValue() {
     OS << ',';
   state.needsKey = (state.type == State::Dict);
   state.needsComma = true;
+  state.needsValue = false;
 }

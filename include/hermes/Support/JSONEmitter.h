@@ -66,6 +66,9 @@ class JSONEmitter {
     emitValue(llvm::StringRef(val));
   }
 
+  /// Emit a null as value.
+  void emitNullValue();
+
   /// Emit a dictionary key \p key. This requires that we are currently emitting
   /// a dictionary, and it expects a key (not a value).
   void emitKey(llvm::StringRef key);
@@ -146,9 +149,15 @@ class JSONEmitter {
     /// Whether we are a dictionary and expect a key.
     bool needsKey;
 
+    /// Whether we expect a value (only after emitting a key in a dict).
+    bool needsValue;
+
     /// Construct a State given a type \p t.
     /* implicit */ State(Type t)
-        : type(t), needsComma(false), needsKey(type == Dict) {}
+        : type(t),
+          needsComma(false),
+          needsKey(type == Dict),
+          needsValue(false) {}
   };
 
   /// The stack of states.
