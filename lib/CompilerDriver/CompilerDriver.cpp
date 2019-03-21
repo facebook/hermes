@@ -8,7 +8,7 @@
 
 #include "hermes/AST/CommonJS.h"
 #include "hermes/AST/Context.h"
-#include "hermes/AST/ESTreeDumper.h"
+#include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
@@ -159,7 +159,7 @@ static opt<OutputFormatKind> DumpTarget(
     init(None),
     values(
         clEnumValN(None, "no-dump", "Parse only, no output (default)"),
-        clEnumValN(DumpAST, "dump-ast", "Dump the AST as text"),
+        clEnumValN(DumpAST, "dump-ast", "Dump the AST as text in JSON"),
         clEnumValN(
             DumpTransformedAST,
             "dump-transformed-ast",
@@ -177,6 +177,9 @@ static opt<OutputFormatKind> DumpTarget(
             "Dump the Lowered IR after register allocation"),
         clEnumValN(DumpBytecode, "dump-bytecode", "Dump bytecode as text"),
         clEnumValN(EmitBundle, "emit-binary", "Emit compiled binary")));
+
+static opt<bool>
+    PrettyJSON("pretty-json", init(false), desc("Pretty print the JSON AST"));
 
 static opt<bool> PrettyDisassemble(
     "pretty-disassemble",
@@ -558,7 +561,8 @@ ESTree::NodePtr parseJS(
   }
 
   if (cl::DumpTarget == DumpAST) {
-    hermes::dumpESTree(llvm::outs(), parsedAST);
+    hermes::dumpESTreeJSON(
+        llvm::outs(), parsedAST, cl::PrettyJSON /* pretty */);
   }
 
   if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
@@ -566,7 +570,8 @@ ESTree::NodePtr parseJS(
   }
 
   if (cl::DumpTarget == DumpTransformedAST) {
-    hermes::dumpESTree(llvm::outs(), parsedAST);
+    hermes::dumpESTreeJSON(
+        llvm::outs(), parsedAST, cl::PrettyJSON /* pretty */);
   }
 
   return parsedAST;

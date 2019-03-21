@@ -1,7 +1,7 @@
 add_llvm_library(hermesAST
     ASTBuilder.cpp
     ESTree.cpp
-    ESTreeDumper.cpp
+    ESTreeJSONDumper.cpp
     RecursiveVisitor.h
     SemValidate.cpp
     SemanticValidator.cpp SemanticValidator.h

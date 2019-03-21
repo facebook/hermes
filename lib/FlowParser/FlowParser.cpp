@@ -10,7 +10,7 @@
 #include "hermes/FlowParser/FlowParser.h"
 
 #include "hermes/AST/ASTBuilder.h"
-#include "hermes/AST/ESTreeDumper.h"
+#include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/Support/Conversions.h"
 
 #include "llvm/Support/Debug.h"
@@ -246,7 +246,7 @@ llvm::Optional<ESTree::FileNode *> parseFlowParser(
     return llvm::None;
   }
 
-  DEBUG(hermes::dumpESTree(llvm::dbgs(), parsed));
+  DEBUG(hermes::dumpESTreeJSON(llvm::dbgs(), parsed, true /* pretty */));
 
   return cast<ESTree::FileNode>(parsed);
 }
