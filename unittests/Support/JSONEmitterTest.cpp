@@ -93,8 +93,21 @@ TEST(JSONEmitterTest, Escapes) {
   std::string storage;
   llvm::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
-  json.emitValue("x\b\f\n\r\tx");
-  EXPECT_EQ(OS.str(), R"#("x\b\f\n\r\tx")#");
+  json.emitValue("x\"\\/\b\f\n\r\tx");
+  const char *expected = R"#("x\"\\\/\b\f\n\r\tx")#";
+  EXPECT_EQ(OS.str(), expected);
+}
+
+TEST(JSONEmitterTest, NonAsciiEscapes) {
+  std::string storage;
+  llvm::raw_string_ostream OS(storage);
+  JSONEmitter json(OS);
+  json.openDict();
+  json.emitKeyValue("ha", u8"\u54C8");
+  json.emitKeyValue("gClef", u8"\U0001D11E");
+  json.closeDict();
+  const char *expected = R"#({"ha":"\u54c8","gClef":"\ud834\udd1e"})#";
+  EXPECT_EQ(OS.str(), expected);
 }
 
 TEST(JSONEmitterTest, JSONL) {

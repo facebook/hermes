@@ -26,6 +26,8 @@ namespace hermes {
 /// caught via assert().
 ///
 /// JSONEmitter accepts 8-bit strings which it expects to be in UTF-8 format.
+/// Invalid UTF-8 strings are fatal errors. It is the caller's responsibility
+/// to ensure only valid UTF-8 is passed.
 ///
 /// Example usage:
 ///  JSONEmitter json(llvm::outs());
@@ -126,6 +128,8 @@ class JSONEmitter {
 
   /// A function to unconditionally emit a string. This is used for both
   /// dictionary keys and ordinary string values.
+  /// Assumes \p str is encoded in utf-8.
+  /// Escapes certain control characters and non-ascii characters.
   void primitiveEmitString(llvm::StringRef str);
 
   /// \return whether a dictionary is currently being emitted.

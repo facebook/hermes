@@ -519,8 +519,8 @@ TEST_F(SynthTraceSerializationTest, EncodeUTF8String) {
   // "namaste" in Hindi, encoded as UTF-8.
   std::string namaste = u8"नमस्ते";
   EXPECT_EQ(
-      std::string("\"string:") + namaste + "\"",
-      trace.encode(trace.encodeString(namaste)));
+      trace.encode(trace.encodeString(namaste)),
+      "\"string:\\u0928\\u092e\\u0938\\u094d\\u0924\\u0947\"");
 }
 
 TEST_F(SynthTraceSerializationTest, CallNoArgs) {
