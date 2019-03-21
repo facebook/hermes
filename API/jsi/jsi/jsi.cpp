@@ -195,6 +195,8 @@ Value::Value(Runtime& runtime, const Value& other) : Value(other.kind_) {
     data_.boolean = other.data_.boolean;
   } else if (kind_ == NumberKind) {
     data_.number = other.data_.number;
+  } else if (kind_ == SymbolKind) {
+    new (&data_.pointer) Pointer(runtime.cloneSymbol(other.data_.pointer.ptr_));
   } else if (kind_ == StringKind) {
     new (&data_.pointer) Pointer(runtime.cloneString(other.data_.pointer.ptr_));
   } else if (kind_ >= ObjectKind) {
@@ -230,6 +232,10 @@ bool Value::strictEquals(Runtime& runtime, const Value& a, const Value& b) {
       return a.data_.boolean == b.data_.boolean;
     case NumberKind:
       return a.data_.number == b.data_.number;
+    case SymbolKind:
+      return runtime.strictEquals(
+          static_cast<const Symbol&>(a.data_.pointer),
+          static_cast<const Symbol&>(b.data_.pointer));
     case StringKind:
       return runtime.strictEquals(
           static_cast<const String&>(a.data_.pointer),
@@ -268,6 +274,24 @@ Object Value::asObject(Runtime& rt) && {
   auto ptr = data_.pointer.ptr_;
   data_.pointer.ptr_ = nullptr;
   return static_cast<Object>(ptr);
+}
+
+Symbol Value::asSymbol(Runtime& rt) const& {
+  if (!isSymbol()) {
+    throw JSError(
+        rt, "Value is " + kindToString(*this, &rt) + ", expected a Symbol");
+  }
+
+  return getSymbol(rt);
+}
+
+Symbol Value::asSymbol(Runtime& rt) && {
+  if (!isSymbol()) {
+    throw JSError(
+        rt, "Value is " + kindToString(*this, &rt) + ", expected a Symbol");
+  }
+
+  return std::move(*this).getSymbol(rt);
 }
 
 String Value::asString(Runtime& rt) const& {

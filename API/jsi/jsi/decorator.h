@@ -147,6 +147,9 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
   // lifetime has started is ok.
   RuntimeDecorator(Plain& plain) : plain_(plain) {}
 
+  Runtime::PointerValue* cloneSymbol(const Runtime::PointerValue* pv) override {
+    return plain_.cloneSymbol(pv);
+  };
   Runtime::PointerValue* cloneString(const Runtime::PointerValue* pv) override {
     return plain_.cloneString(pv);
   };
@@ -175,6 +178,10 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
   bool compare(const PropNameID& a, const PropNameID& b) override {
     return plain_.compare(a, b);
   };
+
+  std::string symbolToString(const Symbol& sym) override {
+    return plain_.symbolToString(sym);
+  }
 
   String createStringFromAscii(const char* str, size_t length) override {
     return plain_.createStringFromAscii(str, length);
@@ -298,6 +305,9 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
     plain_.popScope(ss);
   }
 
+  bool strictEquals(const Symbol& a, const Symbol& b) const override {
+    return plain_.strictEquals(a, b);
+  };
   bool strictEquals(const String& a, const String& b) const override {
     return plain_.strictEquals(a, b);
   };
@@ -405,6 +415,10 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
   }
 
  protected:
+  Runtime::PointerValue* cloneSymbol(const Runtime::PointerValue* pv) override {
+    With around(warg_);
+    return RD::cloneSymbol(pv);
+  };
   Runtime::PointerValue* cloneString(const Runtime::PointerValue* pv) override {
     With around(warg_);
     return RD::cloneString(pv);
@@ -440,6 +454,11 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
   bool compare(const PropNameID& a, const PropNameID& b) override {
     With around(warg_);
     return RD::compare(a, b);
+  };
+
+  std::string symbolToString(const Symbol& sym) override {
+    With around(warg_);
+    return RD::symbolToString(sym);
   };
 
   String createStringFromAscii(const char* str, size_t length) override {
@@ -590,6 +609,10 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     RD::popScope(ss);
   }
 
+  bool strictEquals(const Symbol& a, const Symbol& b) const override {
+    With around(warg_);
+    return RD::strictEquals(a, b);
+  };
   bool strictEquals(const String& a, const String& b) const override {
     With around(warg_);
     return RD::strictEquals(a, b);
