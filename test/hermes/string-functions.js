@@ -755,6 +755,21 @@ print(''.includes(''));
 try { print('abcd'.includes(/d/)); } catch (e) { print('caught', e.name); }
 // CHECK-NEXT: caught TypeError
 
+print('raw');
+// CHECK-LABEL: raw
+print(String.raw({raw: ["first ", " second"]}, 'ABCD'));
+// CHECK-NEXT: first ABCD second
+print(String.raw({raw: ["first", "second", "third"]}, 'ABCD', 'EFG'));
+// CHECK-NEXT: firstABCDsecondEFGthird
+print(String.raw({raw: ["first", "second"]}, 'ABCD', 'EFG'));
+// CHECK-NEXT: firstABCDsecond
+print(String.raw({raw: ["first", "second", "third"]}, 'ABCD', 'EFG', "JK", "HL"));
+// CHECK-NEXT: firstABCDsecondEFGthird
+print(String.raw({raw: []}, 'ABCD', 'EFG', 'asdf'), "EMPTY");
+// CHECK-NEXT: EMPTY
+print(String.raw({raw: {length: -10}}), "EMPTY");
+// CHECK-NEXT: EMPTY
+
 print('replace');
 // CHECK-LABEL: replace
 print('x' + ''.replace('a', 'b') + 'y');

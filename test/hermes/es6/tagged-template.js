@@ -45,3 +45,17 @@ obj1.func`hello${`world${666}!`}!${888}`;
 //CHECK: true ["hello","!",""] 3
 //CHECK: true ["hello","!",""] 3
 //CHECK: ["world666!",888]
+
+print(String.raw`hello${1} world${2}\n${3}`);
+//CHECK: hello1 world2\n3
+print(String.raw`hello
+world`);
+//CHECK: hello
+//CHECK: world
+var animal = "dog";
+print(String.raw`hello ${animal}!`);
+//CHECK: hello dog!
+print(String.raw`Hi\u000A there!`);
+//CHECK: Hi\u000A there!
+print(String.raw`\u548C${1 + 1}\u5E73`);
+//CHECK: \u548C2\u5E73

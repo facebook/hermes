@@ -46,6 +46,11 @@ stringFromCharCode(void *, Runtime *runtime, NativeArgs args);
 /// ES6.0 21.1.2.2.
 static CallResult<HermesValue>
 stringFromCodePoint(void *, Runtime *runtime, NativeArgs args);
+
+/// ES6.0 21.1.2.4
+static CallResult<HermesValue>
+stringRaw(void *, Runtime *runtime, NativeArgs args);
+
 /// @}
 
 /// @name String.prototype
@@ -424,6 +429,13 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       ctx,
       stringFromCodePoint,
       1);
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::raw),
+      ctx,
+      stringRaw,
+      1);
 
   return cons;
 }
@@ -540,6 +552,118 @@ stringFromCodePoint(void *, Runtime *runtime, NativeArgs args) {
   // 6. Return the String value whose elements are, in order, the elements in
   // the List elements. If length is 0, the empty string is returned.
   return StringPrimitive::createEfficient(runtime, elements);
+}
+
+/// ES6.0 21.1.2.4 String.raw ( template , ...substitutions )
+static CallResult<HermesValue>
+stringRaw(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let substitutions be a List consisting of all of the arguments passed to
+  // this function, starting with the second argument.
+  // If fewer than two arguments were passed, the List is empty.
+  // 2. Let numberOfSubstitutions be the number of elements in substitutions.
+  uint32_t numberOfSubstitutions =
+      args.getArgCount() < 2 ? 0 : args.getArgCount() - 1;
+
+  // 3. Let cooked be ToObject(template).
+  auto cookedRes = toObject(runtime, args.getArgHandle(runtime, 0));
+  if (LLVM_UNLIKELY(cookedRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto cooked = runtime->makeHandle<JSObject>(*cookedRes);
+
+  // 5. Let raw be ToObject(Get(cooked, "raw")).
+  auto getRes = JSObject::getNamed(
+      cooked, runtime, Predefined::getSymbolID(Predefined::raw));
+  if (LLVM_UNLIKELY(getRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto rawRes = toObject(runtime, runtime->makeHandle(*getRes));
+  if (LLVM_UNLIKELY(rawRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto raw = runtime->makeHandle<JSObject>(*rawRes);
+
+  // 7. Let literalSegments be ToLength(Get(raw, "length"))
+  auto lengthRes = JSObject::getNamed(
+      raw, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto literalSegmentsRes = toLength(runtime, runtime->makeHandle(*lengthRes));
+  if (LLVM_UNLIKELY(literalSegmentsRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  int64_t literalSegments = literalSegmentsRes->getNumberAs<int64_t>();
+  // 9. If literalSegments ≤ 0, return the empty string.
+  if (literalSegments <= 0) {
+    return HermesValue::encodeStringValue(
+        runtime->getPredefinedString(Predefined::emptyString));
+  }
+
+  // 10. Let stringElements be a new List.
+  llvm::SmallVector<char16_t, 32> stringElements{};
+
+  // 11. Let nextIndex be 0.
+  MutableHandle<> nextIndex{runtime, HermesValue::encodeNumberValue(0)};
+
+  MutableHandle<> tmpHandle{runtime};
+  MutableHandle<StringPrimitive> nextSeg{runtime};
+  MutableHandle<> next{runtime};
+  MutableHandle<StringPrimitive> nextSub{runtime};
+
+  // 12. Repeat
+  GCScopeMarkerRAII marker{gcScope};
+  for (;; marker.flush()) {
+    // 12. a. Let nextKey be ToString(nextIndex).
+    // 12. b. Let nextSeg be ToString(Get(raw, nextKey)).
+    auto nextSegPropRes = JSObject::getComputed(raw, runtime, nextIndex);
+    if (LLVM_UNLIKELY(nextSegPropRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    tmpHandle = *nextSegPropRes;
+    auto nextSegRes = toString(runtime, tmpHandle);
+    if (LLVM_UNLIKELY(nextSegRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    nextSeg = nextSegRes->get();
+
+    // 12. d. Append in order the code unit elements of nextSeg to the end of
+    // stringElements.
+    nextSeg->copyUTF16String(stringElements);
+
+    // 12. e. If nextIndex + 1 = literalSegments, then
+    if (nextIndex->getNumberAs<int64_t>() + 1 == literalSegments) {
+      // 12. i. Return the String value whose code units are, in order, the
+      // elements in the List stringElements. If stringElements has no elements,
+      // the empty string is returned.
+      return StringPrimitive::createEfficient(runtime, stringElements);
+    }
+
+    if (nextIndex->getNumberAs<int64_t>() < numberOfSubstitutions) {
+      // 12. f. If nextIndex < numberOfSubstitutions, let next be
+      // substitutions[nextIndex].
+      // Add one to nextIndex to get index in substitutions.
+      next = args.getArg(nextIndex->getNumberAs<int64_t>() + 1);
+      // 12. h. Let nextSub be ToString(next).
+      auto nextSubRes = toString(runtime, next);
+      if (LLVM_UNLIKELY(nextSubRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      nextSub = nextSubRes->get();
+      // 12. j. Append in order the code unit elements of nextSub to the end of
+      // stringElements.
+      nextSub->copyUTF16String(stringElements);
+    }
+
+    // 12. g. Else, let next be the empty String.
+    // Omitted because nothing happens.
+
+    // 12. k. Let nextIndex be nextIndex + 1.
+    nextIndex =
+        HermesValue::encodeNumberValue(nextIndex->getNumberAs<int64_t>() + 1);
+  }
 }
 
 //===----------------------------------------------------------------------===//
