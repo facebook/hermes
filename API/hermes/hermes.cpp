@@ -534,7 +534,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return vm::HermesValue::encodeBoolValue(value.getBool());
     } else if (value.isNumber()) {
       return vm::HermesValue::encodeNumberValue(value.getNumber());
-    } else if (value.isString() || value.isObject()) {
+    } else if (value.isSymbol() || value.isString() || value.isObject()) {
       return phv(value);
     } else {
       llvm_unreachable("unknown value kind");
@@ -551,7 +551,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
     } else if (value.isNumber()) {
       return runtime_.makeHandle(
           vm::HermesValue::encodeNumberValue(value.getNumber()));
-    } else if (value.isString() || value.isObject()) {
+    } else if (value.isSymbol() || value.isString() || value.isObject()) {
       return vm::Handle<vm::HermesValue>(&phv(value));
     } else {
       llvm_unreachable("unknown value kind");
@@ -567,6 +567,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return hv.getBool();
     } else if (hv.isDouble()) {
       return hv.getDouble();
+    } else if (hv.isSymbol()) {
+      return add<jsi::Symbol>(hv);
     } else if (hv.isString()) {
       return add<jsi::String>(hv);
     } else if (hv.isObject()) {
@@ -592,6 +594,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   bool isInspectable() override;
   jsi::Instrumentation &instrumentation() override;
 
+  PointerValue *cloneSymbol(const Runtime::PointerValue *pv) override;
   PointerValue *cloneString(const Runtime::PointerValue *pv) override;
   PointerValue *cloneObject(const Runtime::PointerValue *pv) override;
   PointerValue *clonePropNameID(const Runtime::PointerValue *pv) override;
@@ -603,6 +606,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::PropNameID createPropNameIDFromString(const jsi::String &str) override;
   std::string utf8(const jsi::PropNameID &) override;
   bool compare(const jsi::PropNameID &, const jsi::PropNameID &) override;
+
+  std::string symbolToString(const jsi::Symbol &) override;
 
   jsi::String createStringFromAscii(const char *str, size_t length) override;
   jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
@@ -657,6 +662,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const jsi::Value *args,
       size_t count) override;
 
+  bool strictEquals(const jsi::Symbol &a, const jsi::Symbol &b) const override;
   bool strictEquals(const jsi::String &a, const jsi::String &b) const override;
   bool strictEquals(const jsi::Object &a, const jsi::Object &b) const override;
 
@@ -1192,6 +1198,11 @@ jsi::Instrumentation &HermesRuntimeImpl::instrumentation() {
   return *this;
 }
 
+jsi::Runtime::PointerValue *HermesRuntimeImpl::cloneSymbol(
+    const Runtime::PointerValue *pv) {
+  return clone(pv);
+}
+
 jsi::Runtime::PointerValue *HermesRuntimeImpl::cloneString(
     const Runtime::PointerValue *pv) {
   return clone(pv);
@@ -1264,6 +1275,31 @@ bool HermesRuntimeImpl::compare(
   return phv(a).getSymbol() == phv(b).getSymbol();
 }
 
+namespace {
+
+std::string toStdString(
+    vm::Runtime *runtime,
+    vm::Handle<vm::StringPrimitive> handle) {
+  auto view = vm::StringPrimitive::createStringView(runtime, handle);
+  vm::SmallU16String<32> allocator;
+  std::string ret;
+  ::hermes::convertUTF16ToUTF8WithReplacements(
+      ret, view.getUTF16Ref(allocator));
+  return ret;
+}
+
+} // namespace
+
+std::string HermesRuntimeImpl::symbolToString(const jsi::Symbol &sym) {
+  vm::GCScope gcScope(&runtime_);
+  auto res = symbolDescriptiveString(
+      &runtime_,
+      ::hermes::vm::Handle<::hermes::vm::SymbolID>::vmcast(&phv(sym)));
+  checkStatus(res.getStatus());
+
+  return toStdString(&runtime_, res.getValue());
+}
+
 jsi::String HermesRuntimeImpl::createStringFromAscii(
     const char *str,
     size_t length) {
@@ -1292,12 +1328,7 @@ std::string HermesRuntimeImpl::utf8(const jsi::String &str) {
   vm::GCScope gcScope(&runtime_);
   vm::Handle<vm::StringPrimitive> handle(
       &runtime_, stringHandle(str)->getString());
-  auto view = vm::StringPrimitive::createStringView(&runtime_, handle);
-  vm::SmallU16String<32> allocator;
-  std::string ret;
-  ::hermes::convertUTF16ToUTF8WithReplacements(
-      ret, view.getUTF16Ref(allocator));
-  return ret;
+  return toStdString(&runtime_, handle);
 }
 
 jsi::Object HermesRuntimeImpl::createObject() {
@@ -1672,6 +1703,11 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
   vm::HermesValue resultHValue =
       resultValue.isObject() ? resultValue : objHandle.getHermesValue();
   return valueFromHermesValue(resultHValue);
+}
+
+bool HermesRuntimeImpl::strictEquals(const jsi::Symbol &a, const jsi::Symbol &b)
+    const {
+  return phv(a).getSymbol() == phv(b).getSymbol();
 }
 
 bool HermesRuntimeImpl::strictEquals(const jsi::String &a, const jsi::String &b)
