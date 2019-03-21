@@ -49,34 +49,48 @@ void JSONEmitter::emitKey(llvm::StringRef key) {
   assert(!state.needsValue && "Missing a value for a key.");
   if (state.needsComma)
     OS << ',';
+  prettyNewLine();
   state.needsComma = false;
   state.needsKey = false;
   state.needsValue = true;
   primitiveEmitString(key);
   OS << ':';
+  if (pretty_) {
+    OS << ' ';
+  }
 }
 
 void JSONEmitter::openDict() {
   willEmitValue();
   OS << '{';
+  indentMore();
   states_.push_back(State::Dict);
 }
 
 void JSONEmitter::closeDict() {
   assert(inDict() && "Not currently emitting a dictionary");
   assert(!states_.back().needsValue && "Missing a value for a key.");
+  indentLess();
+  if (!states_.back().isEmpty) {
+    prettyNewLine();
+  }
   OS << '}';
   states_.pop_back();
 }
 
 void JSONEmitter::openArray() {
   willEmitValue();
+  indentMore();
   OS << '[';
   states_.push_back(State::Array);
 }
 
 void JSONEmitter::closeArray() {
   assert(inArray() && "Not currently emitting an array");
+  indentLess();
+  if (!states_.back().isEmpty) {
+    prettyNewLine();
+  }
   OS << ']';
   states_.pop_back();
 }
@@ -131,4 +145,30 @@ void JSONEmitter::willEmitValue() {
   state.needsKey = (state.type == State::Dict);
   state.needsComma = true;
   state.needsValue = false;
+  state.isEmpty = false;
+  if (state.type == State::Array) {
+    prettyNewLine();
+  }
+}
+
+void JSONEmitter::prettyNewLine() {
+  if (!pretty_)
+    return;
+  OS << "\n";
+  for (uint32_t i = 0; i < indent_; ++i) {
+    OS << " ";
+  }
+}
+
+void JSONEmitter::indentMore() {
+  if (!pretty_)
+    return;
+  indent_ += 2;
+}
+
+void JSONEmitter::indentLess() {
+  if (!pretty_)
+    return;
+  assert(indent_ >= 2 && "Unbalanced indentation.");
+  indent_ -= 2;
 }

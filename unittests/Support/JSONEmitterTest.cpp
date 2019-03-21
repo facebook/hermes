@@ -111,4 +111,60 @@ TEST(JSONEmitterTest, JSONL) {
   EXPECT_EQ(OS.str(), "{}\n{}\n");
 }
 
+TEST(JSONEmitterTest, PrettyPrint) {
+  std::string storage;
+  llvm::raw_string_ostream OS(storage);
+  JSONEmitter json(OS, true /*pretty*/);
+  json.openDict();
+  json.emitKeyValue("artist", "prince");
+  json.emitKey("instruments");
+  json.openArray();
+  json.emitValue("piano");
+  json.openDict();
+  json.emitKey("guitars");
+  json.openArray();
+  json.emitValues({"cloud", "love symbol", "telecaster"});
+  json.closeArray();
+  json.closeDict();
+  json.emitValue("drums");
+  json.closeArray();
+  json.emitKey("songs");
+  json.openDict();
+  json.emitKeyValue("purple rain", 1984);
+  json.emitKeyValue("1999", 1982);
+  json.closeDict();
+  json.emitKeyValue("color", "purple");
+  json.emitKey("emptyDict");
+  json.openDict();
+  json.closeDict();
+  json.emitKey("emptyArray");
+  json.openArray();
+  json.closeArray();
+  json.closeDict();
+
+  const char *expected = R"#({
+  "artist": "prince",
+  "instruments": [
+    "piano",
+    {
+      "guitars": [
+        "cloud",
+        "love symbol",
+        "telecaster"
+      ]
+    },
+    "drums"
+  ],
+  "songs": {
+    "purple rain": 1984,
+    "1999": 1982
+  },
+  "color": "purple",
+  "emptyDict": {},
+  "emptyArray": []
+})#";
+
+  EXPECT_EQ(OS.str(), expected);
+}
+
 }; // anonymous namespace

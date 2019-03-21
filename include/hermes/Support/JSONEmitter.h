@@ -43,7 +43,12 @@ class JSONEmitter {
   /// Construct a JSONEmitter to output to a stream \p OS. The emitter is
   /// initially empty. Usually you will want to invoke openDict() immediately on
   /// it.
-  JSONEmitter(llvm::raw_ostream &OS) : OS(OS) {}
+  /// \p pretty is the option to pretty print the JSON object, with new lines
+  /// and indentation. Note that since the JSONEmitter does not know when
+  /// the printing will stop, the user needs to print a new line themselves
+  /// when they finish.
+  JSONEmitter(llvm::raw_ostream &OS, bool pretty = false)
+      : OS(OS), pretty_(pretty) {}
 
   /// Emit a boolean value \p val.
   void emitValue(bool val);
@@ -137,6 +142,15 @@ class JSONEmitter {
   /// key), perform housekeeping tasks such as emitting a trailing comma.
   void willEmitValue();
 
+  /// In pretty printing mode, print a new line then indent.
+  void prettyNewLine();
+
+  /// In pretty printing mode, indent one level more.
+  void indentMore();
+
+  /// In pretty printing mode, indent one level less.
+  void indentLess();
+
   /// A State represents the status of a single object (Dictionary or Array)
   /// being emitted.
   struct State {
@@ -152,12 +166,16 @@ class JSONEmitter {
     /// Whether we expect a value (only after emitting a key in a dict).
     bool needsValue;
 
+    /// Whether the dict or object is empty.
+    bool isEmpty;
+
     /// Construct a State given a type \p t.
     /* implicit */ State(Type t)
         : type(t),
           needsComma(false),
           needsKey(type == Dict),
-          needsValue(false) {}
+          needsValue(false),
+          isEmpty(true) {}
   };
 
   /// The stack of states.
@@ -165,6 +183,12 @@ class JSONEmitter {
 
   /// The stream to output to.
   llvm::raw_ostream &OS;
+
+  /// Pretty print the JSON object.
+  bool pretty_{false};
+
+  /// Number of spaces needed to indent.
+  uint32_t indent_{0};
 };
 
 }; // namespace hermes
