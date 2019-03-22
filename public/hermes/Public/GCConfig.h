@@ -9,6 +9,7 @@
 
 #include "hermes/Public/CtorConfig.h"
 #include "hermes/Public/GCTripwireContext.h"
+#include "hermes/Public/MemoryEventTracker.h"
 
 #include <algorithm>
 #include <cassert>
@@ -16,6 +17,7 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <string>
 
 namespace hermes {
@@ -98,6 +100,9 @@ _HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {});
                                                                            \
   /* Whether to revert, if necessary, to young-gen allocation at TTI. */   \
   F(bool, RevertToYGAtTTI, false)                                          \
+                                                                           \
+  /* Pointer to the memory profiler (Memory Event Tracker). */             \
+  F(std::shared_ptr<MemoryEventTracker>, MemEventTracker, nullptr)         \
   /* GC_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(GCConfig, GC_FIELDS, {
