@@ -424,7 +424,7 @@ Value *ESTreeIRGen::genMemberExpressionProperty(
 
   Identifier fieldName = getNameFieldFromID(Id);
   DEBUG(
-      dbgs() << "Emitting direct lable access to field '" << fieldName
+      dbgs() << "Emitting direct label access to field '" << fieldName
              << "'\n");
   return Builder.getLiteralString(fieldName);
 }
