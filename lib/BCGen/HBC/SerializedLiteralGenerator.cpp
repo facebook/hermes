@@ -149,8 +149,12 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
         }
         break;
       }
-      default:
+      case ValueKind::LiteralBoolKind:
+      case ValueKind::LiteralNullKind:
+        /* no-op */
         break;
+      default:
+        llvm_unreachable("Invalid Literal Kind");
     }
   }
   // The last value in the buffer can't get serialized in the loop.
