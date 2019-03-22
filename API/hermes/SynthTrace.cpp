@@ -191,7 +191,8 @@ SynthTrace getTrace(
         trace.emplace_back<SynthTrace::BeginExecJSRecord>(timeFromStart);
         break;
       case RecordType::EndExecJS:
-        trace.emplace_back<SynthTrace::EndExecJSRecord>(timeFromStart);
+        trace.emplace_back<SynthTrace::EndExecJSRecord>(
+            timeFromStart, trace.decode(retval->c_str()));
         break;
       case RecordType::Marker:
         trace.emplace_back<SynthTrace::MarkerRecord>(
@@ -530,6 +531,138 @@ void SynthTrace::Record::toJSON(llvm::raw_ostream &os, const SynthTrace &trace)
   os << "}";
 }
 
+bool SynthTrace::MarkerRecord::operator==(const Record &that) const {
+  return Record::operator==(that) &&
+      tag_ == dynamic_cast<const MarkerRecord &>(that).tag_;
+}
+
+bool SynthTrace::ReturnRecord::operator==(const ReturnRecord &that) const {
+  return equal(retVal_, that.retVal_);
+}
+
+bool SynthTrace::EndExecJSRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const EndExecJSRecord &>(that);
+  return MarkerRecord::operator==(thatCasted) &&
+      ReturnRecord::operator==(thatCasted);
+}
+
+bool SynthTrace::CreateObjectRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const CreateObjectRecord &>(that);
+  return objID_ == thatCasted.objID_;
+}
+
+bool SynthTrace::GetOrSetPropertyRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const GetOrSetPropertyRecord *>(&that);
+  return objID_ == thatCasted->objID_ && propName_ == thatCasted->propName_ &&
+      equal(value_, thatCasted->value_);
+}
+
+bool SynthTrace::HasPropertyRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const HasPropertyRecord &>(that);
+  return objID_ == thatCasted.objID_ && propName_ == thatCasted.propName_;
+}
+
+bool SynthTrace::GetPropertyNamesRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const GetPropertyNamesRecord &>(that);
+  return objID_ == thatCasted.objID_ && propNamesID_ == thatCasted.propNamesID_;
+}
+
+bool SynthTrace::CreateArrayRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const CreateArrayRecord &>(that);
+  return objID_ == thatCasted.objID_ && length_ == thatCasted.length_;
+}
+
+bool SynthTrace::ArrayReadOrWriteRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const ArrayReadOrWriteRecord *>(&that);
+  return objID_ == thatCasted->objID_ && index_ == thatCasted->index_ &&
+      value_.getRaw() == thatCasted->value_.getRaw();
+}
+
+bool SynthTrace::CallRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const CallRecord *>(&that);
+  return functionID_ == thatCasted->functionID_ &&
+      std::equal(
+             args_.begin(),
+             args_.end(),
+             thatCasted->args_.begin(),
+             [](TraceValue x, TraceValue y) { return equal(x, y); });
+}
+
+bool SynthTrace::ReturnFromNativeRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  return ReturnRecord::operator==(
+      dynamic_cast<const ReturnFromNativeRecord &>(that));
+}
+
+bool SynthTrace::ReturnToNativeRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  return ReturnRecord::operator==(dynamic_cast<const ReturnRecord &>(that));
+}
+
+bool SynthTrace::GetOrSetPropertyNativeRecord::operator==(
+    const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const GetOrSetPropertyNativeRecord *>(&that);
+  return hostObjectID_ == thatCasted->hostObjectID_ &&
+      propName_ == thatCasted->propName_;
+}
+
+bool SynthTrace::GetPropertyNativeRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const GetPropertyNativeRecord &>(that);
+  return GetOrSetPropertyNativeRecord::operator==(thatCasted);
+}
+
+bool SynthTrace::GetPropertyNativeReturnRecord::operator==(
+    const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const GetPropertyNativeReturnRecord &>(that);
+  return ReturnRecord::operator==(thatCasted);
+}
+
+bool SynthTrace::SetPropertyNativeRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const SetPropertyNativeRecord &>(that);
+  return hostObjectID_ == thatCasted.hostObjectID_ &&
+      propName_ == thatCasted.propName_ && equal(value_, thatCasted.value_);
+}
+
 void SynthTrace::Record::toJSONInternal(
     llvm::raw_ostream &os,
     const SynthTrace &trace) const {
@@ -539,7 +672,7 @@ void SynthTrace::Record::toJSONInternal(
 void SynthTrace::MarkerRecord::toJSONInternal(
     llvm::raw_ostream &os,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
+  // Does not call Record::toJSONInternal() as this is an abstract type
   os << ", \"tag\": \"" << tag_ << "\"";
 }
 
@@ -602,8 +735,30 @@ void SynthTrace::CallRecord::toJSONInternal(
 void SynthTrace::ReturnRecord::toJSONInternal(
     llvm::raw_ostream &os,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
+  // Does not call Record::toJSONInternal() as this is an abstract type
   os << ", \"retval\": " << trace.encode(retVal_);
+}
+
+void SynthTrace::EndExecJSRecord::toJSONInternal(
+    llvm::raw_ostream &os,
+    const SynthTrace &trace) const {
+  Record::toJSONInternal(os, trace);
+  MarkerRecord::toJSONInternal(os, trace);
+  ReturnRecord::toJSONInternal(os, trace);
+}
+
+void SynthTrace::ReturnFromNativeRecord::toJSONInternal(
+    llvm::raw_ostream &os,
+    const SynthTrace &trace) const {
+  Record::toJSONInternal(os, trace);
+  ReturnRecord::toJSONInternal(os, trace);
+}
+
+void SynthTrace::ReturnToNativeRecord::toJSONInternal(
+    llvm::raw_ostream &os,
+    const SynthTrace &trace) const {
+  Record::toJSONInternal(os, trace);
+  ReturnRecord::toJSONInternal(os, trace);
 }
 
 void SynthTrace::GetOrSetPropertyNativeRecord::toJSONInternal(

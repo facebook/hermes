@@ -13,7 +13,7 @@ namespace synthtest {
 const char *hostFunctionCreatesObjectsTrace() {
   return R"###(
 {
-  "version": 1,
+  "version": 2,
   "globalObjID": 1,
   "env": {
     "mathRandomSeed": 0,
@@ -102,6 +102,7 @@ const char *hostFunctionCreatesObjectsTrace() {
     },
     {
       "type": "EndExecJSRecord",
+      "retval": "undefined:",
       "time": 0
     }
   ]

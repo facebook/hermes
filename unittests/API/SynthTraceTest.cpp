@@ -42,8 +42,7 @@ struct SynthTraceTest : public ::testing::Test {
     // gtest doesn't know how to convert a T, so change T to its superclass,
     // Record.
     const SynthTrace::Record &baseExpected = expected;
-    if (expected.getType() != actual.getType() ||
-        !(expected == dynamic_cast<const T &>(actual))) {
+    if (!(expected == dynamic_cast<const T &>(actual))) {
       ADD_FAILURE_AT(file, line)
           << "expected is: " << ::testing::PrintToString(baseExpected)
           << ", actual is: " << ::testing::PrintToString(actual);
@@ -613,6 +612,13 @@ TEST_F(SynthTraceSerializationTest, TimeIsPrinted) {
       to_string(SynthTrace::BeginExecJSRecord(std::chrono::milliseconds(100))));
 }
 
+TEST_F(SynthTraceSerializationTest, EndExecHasRetval) {
+  EXPECT_EQ(
+      R"({"type": "EndExecJSRecord", "time": 0, "tag": "end_global_code", "retval": "null:"})",
+      to_string(
+          SynthTrace::EndExecJSRecord(dummyTime, SynthTrace::encodeNull())));
+}
+
 TEST_F(SynthTraceSerializationTest, FullTrace) {
   const ::hermes::vm::RuntimeConfig conf;
   std::unique_ptr<TracingHermesRuntime> rt(
@@ -631,7 +637,7 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   std::string expected;
   llvm::raw_string_ostream expectedStream{expected};
   expectedStream
-      << R"(\{"version": 1)"
+      << R"(\{"version": 2)"
       << R"(, "globalObjID": )" << globalObjID
       << R"(, "sourceHash": "[0-9]{40}", "gcConfig": \{"initHeapSize": [0-9]+, "maxHeapSize": [0-9]+\})"
       << R"(, "env": \{"mathRandomSeed": [0-9]+, "callsToDateNow": \[\], )"
@@ -675,7 +681,7 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
   std::string expected;
   llvm::raw_string_ostream expectedStream{expected};
   expectedStream
-      << R"(\{"version": 1)"
+      << R"(\{"version": 2)"
       << R"(, "globalObjID": )" << globalObjID
       << R"(, "sourceHash": "[0-9]{40}", "gcConfig": \{"initHeapSize": )"
       << conf.getGCConfig().getInitHeapSize() << R"(, "maxHeapSize": )"
@@ -706,7 +712,7 @@ struct SynthTraceParseTest : public ::testing::Test {
 TEST_F(SynthTraceParseTest, ParseHeader) {
   const char *src = R"(
 {
-  "version": 1,
+  "version": 2,
   "globalObjID": 258,
   "sourceHash": "6440b537af26795e5f452bcd320faccb02055a4f",
   "gcConfig": {

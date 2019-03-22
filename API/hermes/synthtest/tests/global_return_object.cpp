@@ -10,7 +10,7 @@ namespace facebook {
 namespace hermes {
 namespace synthtest {
 
-const char *nativeSetsConstantTrace() {
+const char *globalReturnObjectTrace() {
   return R"###(
 {
   "version": 2,
@@ -23,38 +23,35 @@ const char *nativeSetsConstantTrace() {
   },
   "trace": [
     {
-      "type": "SetPropertyRecord",
-      "time": 0,
-      "objID": 1,
-      "propName": "foo",
-      "value": "number:0x4000000000000000"
-    },
-    {
       "type": "BeginExecJSRecord",
       "time": 0
     },
     {
       "type": "EndExecJSRecord",
-      "retval": "undefined:",
+      "retval": "object:10",
       "time": 0
+    },
+    {
+      "type": "GetPropertyRecord",
+      "time": 0,
+      "objID": 10,
+      "propName": "a",
+      "value": "object:11"
+    },
+    {
+      "type": "CallFromNativeRecord",
+      "time": 0,
+      "functionID": 11,
+      "thisArg": "undefined:",
+      "args": []
     }
   ]
 }
 )###";
 }
 
-const char *nativeSetsConstantSource() {
-  return R"###(
-'use strict';
-
-(function(global) {
-  // Native code should inject the number 2 into the property name foo on
-  // the global object.
-  if (global.foo !== 2) {
-    throw new Error("Expecting 2, got " + global.foo);
-  }
-})(this);
-)###";
+const char *globalReturnObjectSource() {
+  return "({a:function() {}})";
 }
 
 } // namespace synthtest

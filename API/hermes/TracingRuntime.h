@@ -48,7 +48,8 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       const std::string &sourceURL) override {
     trace_.emplace_back<SynthTrace::BeginExecJSRecord>(getTimeSinceStart());
     auto res = RD::evaluateJavaScript(buffer, sourceURL);
-    trace_.emplace_back<SynthTrace::EndExecJSRecord>(getTimeSinceStart());
+    trace_.emplace_back<SynthTrace::EndExecJSRecord>(
+        getTimeSinceStart(), toTraceValue(res));
     return res;
   }
 

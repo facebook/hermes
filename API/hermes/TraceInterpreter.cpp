@@ -740,6 +740,8 @@ Value TraceInterpreter::execFunction(
   std::unordered_map<ObjectID, Object> locals;
   // Save a value so that Call can set it, and Return can access it.
   Value retval;
+  // Carry the return value from BeginJSExec to EndJSExec.
+  Value overallRetval;
 #ifndef NDEBUG
   if (depth != 1) {
     RecordType firstRecType = call.pieces.front().records.front()->getType();
@@ -792,12 +794,33 @@ Value TraceInterpreter::execFunction(
         switch (rec->getType()) {
           case RecordType::BeginExecJS:
             // Since this is bytecode, there's no sourceURL to pass.
-            rt.evaluateJavaScript(std::move(bundle), "");
+            // overallRetval is to be consumed when we get an EndExecJS record.
+            overallRetval = rt.evaluateJavaScript(std::move(bundle), "");
             break;
-          case RecordType::EndExecJS:
+          case RecordType::EndExecJS: {
+            const auto &eejsr =
+                dynamic_cast<const SynthTrace::EndExecJSRecord &>(*rec);
+            if (eejsr.retVal_.isObject()) {
+              addObjectToDefs(
+                  call,
+                  SynthTrace::decodeObject(eejsr.retVal_),
+                  globalRecordNum,
+                  std::move(overallRetval).asObject(rt),
+                  locals);
+            } else {
+              assert(
+                  !overallRetval.isObject() &&
+                  "Trace expects non-object but actual return was an object");
+              auto v = traceValueToJSIValue(rt, trace, nullptr, eejsr.retVal_);
+              assert(
+                  Value::strictEquals(rt, v, overallRetval) &&
+                  "evaluateJavaScript() retval does not match trace");
+            }
+            break;
+          }
           case RecordType::Marker: {
             const auto &mr =
-                static_cast<const SynthTrace::MarkerRecord &>(*rec);
+                dynamic_cast<const SynthTrace::MarkerRecord &>(*rec);
             // If the tag is the requested tag, and the stats have not already
             // been collected, collect them.
             if (mr.tag_ == options.marker && !markerFound) {
@@ -1001,12 +1024,12 @@ Value TraceInterpreter::execFunction(
           }
           case RecordType::ReturnFromNative: {
             const auto &rfnr =
-                static_cast<const SynthTrace::ReturnFromNativeRecord &>(*rec);
+                dynamic_cast<const SynthTrace::ReturnFromNativeRecord &>(*rec);
             return traceValueToJSIValue(rt, trace, getObjForUse, rfnr.retVal_);
           }
           case RecordType::ReturnToNative: {
             const auto &rtnr =
-                static_cast<const SynthTrace::ReturnToNativeRecord &>(*rec);
+                dynamic_cast<const SynthTrace::ReturnToNativeRecord &>(*rec);
             if (rtnr.retVal_.isObject()) {
               // Use the retval stored by the previous CallFromNative.
               // The ReturnToNative is always the first record to be executed
@@ -1058,7 +1081,7 @@ Value TraceInterpreter::execFunction(
           }
           case RecordType::GetPropertyNativeReturn: {
             const auto &gpnrr =
-                static_cast<const SynthTrace::GetPropertyNativeReturnRecord &>(
+                dynamic_cast<const SynthTrace::GetPropertyNativeReturnRecord &>(
                     *rec);
             return traceValueToJSIValue(rt, trace, getObjForUse, gpnrr.retVal_);
           }

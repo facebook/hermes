@@ -13,7 +13,7 @@ namespace synthtest {
 const char *mathRandomTrace() {
   return R"###(
 {
-  "version": 1,
+  "version": 2,
   "globalObjID": 1,
   "env": {
     "mathRandomSeed": 10,
@@ -28,6 +28,7 @@ const char *mathRandomTrace() {
     },
     {
       "type": "EndExecJSRecord",
+      "retval": "string:use strict",
       "time": 0
     }
   ]

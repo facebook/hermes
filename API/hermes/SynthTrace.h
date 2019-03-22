@@ -120,8 +120,15 @@ class SynthTrace {
     }
 
    protected:
+    /// Compare records for equality. Derived classes should override this, call
+    /// their parent, and mark any public versions as "final".
+    virtual bool operator==(const Record &that) const {
+      return getType() == that.getType();
+    }
+
     /// Emit JSON fields into \p os, excluding the closing curly brace.
-    /// NOTE: This is overridable, and children should call the parent.
+    /// NOTE: This is overridable, and non-abstract children should call the
+    /// parent.
     virtual void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
         const;
   };
@@ -209,7 +216,7 @@ class SynthTrace {
 
   /// The version of the Synth Benchmark
   constexpr static uint32_t synthVersion() {
-    return 1;
+    return 2;
   }
 
  public:
@@ -219,19 +226,19 @@ class SynthTrace {
   /// A MarkerRecord is an event that simply records an interesting event that
   /// is not necessarily meaningful to the interpreter. It comes with a tag that
   /// says what type of marker it was.
-  struct MarkerRecord : public Record {
+  struct MarkerRecord : virtual Record {
     static constexpr RecordType type{RecordType::Marker};
     const std::string tag_;
     explicit MarkerRecord(TimeSinceStart time, const std::string &tag)
         : Record(time), tag_(tag) {}
-    bool operator==(const MarkerRecord &that) const {
-      return tag_ == that.tag_;
-    }
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
-        const override;
     RecordType getType() const override {
       return type;
     }
+
+   protected:
+    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+        const override;
+    bool operator==(const Record &that) const override;
   };
 
   /// A BeginExecJSRecord is an event where execution begins of JS source
@@ -245,18 +252,43 @@ class SynthTrace {
     }
   };
 
+  struct ReturnRecord : virtual Record {
+    const TraceValue retVal_;
+
+    explicit ReturnRecord(TimeSinceStart time, TraceValue value)
+        : Record(time), retVal_(value) {}
+
+   protected:
+    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+        const override;
+    bool operator==(const ReturnRecord &that) const;
+  };
+
   /// A EndExecJSRecord is an event where execution of JS source code stops.
   /// This does not mean that the source code will never be entered again, just
   /// that it has an entered a phase where it is waiting for native code to call
   /// into the JS. This event is not guaranteed to be the last event, for the
-  /// aforementioned reason.
-  struct EndExecJSRecord final : public MarkerRecord {
+  /// aforementioned reason. The logged retVal is the result of the evaluation
+  /// ("undefined" in the majority of cases).
+  struct EndExecJSRecord final : public MarkerRecord, public ReturnRecord {
     static constexpr RecordType type{RecordType::EndExecJS};
-    EndExecJSRecord(TimeSinceStart time)
-        : MarkerRecord(time, "end_global_code") {}
+    EndExecJSRecord(TimeSinceStart time, TraceValue retVal)
+        : Record(time),
+          MarkerRecord(time, "end_global_code"),
+          ReturnRecord(time, retVal) {}
 
     RecordType getType() const override {
       return type;
+    }
+    bool operator==(const Record &that) const final;
+    virtual void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+        const final;
+    std::vector<ObjectID> defs() const override {
+      auto defs = ReturnRecord::defs();
+      if (retVal_.isObject()) {
+        defs.push_back(decodeObject(retVal_));
+      }
+      return defs;
     }
   };
 
@@ -269,9 +301,7 @@ class SynthTrace {
     explicit CreateObjectRecord(TimeSinceStart time, ObjectID objID)
         : Record(time), objID_(objID) {}
 
-    bool operator==(const CreateObjectRecord &that) const {
-      return objID_ == that.objID_;
-    }
+    bool operator==(const Record &that) const final;
 
     void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
         const override;
@@ -316,10 +346,7 @@ class SynthTrace {
         TraceValue value)
         : Record(time), objID_(objID), propName_(propName), value_(value) {}
 
-    bool operator==(const GetOrSetPropertyRecord &that) const {
-      return objID_ == that.objID_ && propName_ == that.propName_ &&
-          equal(value_, that.value_);
-    }
+    bool operator==(const Record &that) const final;
 
     std::vector<ObjectID> uses() const override {
       return {objID_};
@@ -376,9 +403,7 @@ class SynthTrace {
         const std::string &propName)
         : Record(time), objID_(objID), propName_(propName) {}
 
-    bool operator==(const HasPropertyRecord &that) const {
-      return objID_ == that.objID_ && propName_ == that.propName_;
-    }
+    bool operator==(const Record &that) const final;
 
     void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
         const override;
@@ -403,9 +428,7 @@ class SynthTrace {
         ObjectID propNamesID)
         : Record(time), objID_(objID), propNamesID_(propNamesID) {}
 
-    bool operator==(const GetPropertyNamesRecord &that) const {
-      return objID_ == that.objID_ && propNamesID_ == that.propNamesID_;
-    }
+    bool operator==(const Record &that) const final;
 
     void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
         const override;
@@ -433,9 +456,7 @@ class SynthTrace {
         size_t length)
         : Record(time), objID_(objID), length_(length) {}
 
-    bool operator==(const CreateArrayRecord &that) const {
-      return objID_ == that.objID_ && length_ == that.length_;
-    }
+    bool operator==(const Record &that) const final;
 
     void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
         const override;
@@ -459,10 +480,7 @@ class SynthTrace {
         TraceValue value)
         : Record(time), objID_(objID), index_(index), value_(value) {}
 
-    bool operator==(const ArrayReadOrWriteRecord &that) const {
-      return objID_ == that.objID_ && index_ == that.index_ &&
-          value_.getRaw() == that.value_.getRaw();
-    }
+    bool operator==(const Record &that) const final;
 
     void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
         const override;
@@ -526,14 +544,8 @@ class SynthTrace {
           thisArg_(thisArg),
           args_(args) {}
 
-    bool operator==(const CallRecord &that) const {
-      return functionID_ == that.functionID_ &&
-          std::equal(
-                 args_.begin(),
-                 args_.end(),
-                 that.args_.begin(),
-                 [](TraceValue x, TraceValue y) { return equal(x, y); });
-    }
+    bool operator==(const Record &that) const final;
+
     void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
         const override;
     std::vector<ObjectID> uses() const override {
@@ -582,25 +594,13 @@ class SynthTrace {
     }
   };
 
-  struct ReturnRecord : public Record {
-    const TraceValue retVal_;
-
-    explicit ReturnRecord(TimeSinceStart time, TraceValue value)
-        : Record(time), retVal_(value) {}
-
-    bool operator==(const ReturnRecord &that) const {
-      return equal(retVal_, that.retVal_);
-    }
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
-        const override;
-  };
-
   /// A ReturnFromNativeRecord is an event where a native function returns to a
   /// JS caller.
   /// It pairs with \c CallToNativeRecord.
   struct ReturnFromNativeRecord final : public ReturnRecord {
     static constexpr RecordType type{RecordType::ReturnFromNative};
-    using ReturnRecord::ReturnRecord;
+    ReturnFromNativeRecord(TimeSinceStart time, TraceValue retVal)
+        : Record(time), ReturnRecord(time, retVal) {}
     RecordType getType() const override {
       return type;
     }
@@ -611,6 +611,9 @@ class SynthTrace {
       }
       return uses;
     }
+    bool operator==(const Record &that) const final;
+    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+        const override;
   };
 
   /// A ReturnToNativeRecord is an event where a JS function returns to a native
@@ -618,7 +621,8 @@ class SynthTrace {
   /// It pairs with \c CallFromNativeRecord.
   struct ReturnToNativeRecord final : public ReturnRecord {
     static constexpr RecordType type{RecordType::ReturnToNative};
-    using ReturnRecord::ReturnRecord;
+    ReturnToNativeRecord(TimeSinceStart time, TraceValue retVal)
+        : Record(time), ReturnRecord(time, retVal){};
     RecordType getType() const override {
       return type;
     }
@@ -629,6 +633,9 @@ class SynthTrace {
       }
       return defs;
     }
+    bool operator==(const Record &that) const final;
+    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+        const override;
   };
 
   /// A CallToNativeRecord is an event where JS code calls into a natively
@@ -657,14 +664,14 @@ class SynthTrace {
         std::string propName)
         : Record(time), hostObjectID_(hostObjectID), propName_(propName) {}
 
-    bool operator==(const GetOrSetPropertyNativeRecord &that) const {
-      return hostObjectID_ == that.hostObjectID_ && propName_ == that.propName_;
-    }
     void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
         const override;
     std::vector<ObjectID> uses() const override {
       return {hostObjectID_};
     }
+
+   protected:
+    bool operator==(const Record &that) const override;
   };
 
   /// A GetPropertyNativeRecord is an event where JS tries to access a property
@@ -677,11 +684,13 @@ class SynthTrace {
     RecordType getType() const override {
       return type;
     }
+    bool operator==(const Record &that) const final;
   };
 
   struct GetPropertyNativeReturnRecord final : public ReturnRecord {
     static constexpr RecordType type{RecordType::GetPropertyNativeReturn};
-    using ReturnRecord::ReturnRecord;
+    GetPropertyNativeReturnRecord(TimeSinceStart time, TraceValue retVal)
+        : Record(time), ReturnRecord(time, retVal){};
     RecordType getType() const override {
       return type;
     }
@@ -692,6 +701,7 @@ class SynthTrace {
       }
       return uses;
     }
+    bool operator==(const Record &that) const final;
   };
 
   /// A SetPropertyNativeRecord is an event where JS code writes to the property
@@ -708,10 +718,7 @@ class SynthTrace {
         TraceValue value)
         : GetOrSetPropertyNativeRecord(time, hostObjectID, propName),
           value_(value) {}
-    bool operator==(const SetPropertyNativeRecord &that) const {
-      return hostObjectID_ == that.hostObjectID_ &&
-          propName_ == that.propName_ && equal(value_, that.value_);
-    }
+    bool operator==(const Record &that) const final;
     void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
         const override;
     RecordType getType() const override {
@@ -733,9 +740,9 @@ class SynthTrace {
     RecordType getType() const override {
       return type;
     }
-    bool operator==(const SetPropertyNativeReturnRecord &) const {
+    bool operator==(const Record &that) const final {
       // Since there are no fields to compare, any two will always be the same.
-      return true;
+      return Record::operator==(that);
     }
   };
 

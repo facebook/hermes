@@ -13,7 +13,7 @@ namespace synthtest {
 const char *hostFunctionReturnTrace() {
   return R"###(
 {
-  "version": 1,
+  "version": 2,
   "globalObjID": 1,
   "env": {
     "mathRandomSeed": 0,
@@ -52,6 +52,7 @@ const char *hostFunctionReturnTrace() {
     },
     {
       "type": "EndExecJSRecord",
+      "retval": "undefined:",
       "time": 0
     }
   ]

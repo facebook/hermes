@@ -13,7 +13,7 @@ namespace synthtest {
 const char *dateAsNewTrace() {
   return R"###(
 {
-  "version": 1,
+  "version": 2,
   "globalObjID": 1,
   "env": {
     "mathRandomSeed": 0,
@@ -28,6 +28,7 @@ const char *dateAsNewTrace() {
     },
     {
       "type": "EndExecJSRecord",
+      "retval": "string:use strict",
       "time": 0
     }
   ]

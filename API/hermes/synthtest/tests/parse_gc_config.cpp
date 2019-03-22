@@ -13,7 +13,7 @@ namespace synthtest {
 const char *parseGCConfigTrace() {
   return R"###(
 {
-  "version": 1,
+  "version": 2,
   "globalObjID": 0,
   "gcConfig": {
     "initHeapSize": 100,
@@ -32,6 +32,7 @@ const char *parseGCConfigTrace() {
     },
     {
       "type": "EndExecJSRecord",
+      "retval": "undefined:",
       "time": 0
     }
   ]
