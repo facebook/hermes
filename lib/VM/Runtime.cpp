@@ -1331,7 +1331,6 @@ void Runtime::crashCallback(int fd) {
  *          doing memory allocation, or using libc etc. as much as possible
  ****************************************************************************/
 void Runtime::crashWriteCallStack(JSONEmitter &json) {
-  llvm::DenseMap<const CodeBlock *, uint32_t> virtualOffsetCache;
   json.openArray();
   for (auto frame : getStackFrames()) {
     json.openDict();
@@ -1339,7 +1338,9 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
         "StackFrameRegOffs", (uint32_t)(registerStackEnd_ - frame.ptr()));
     auto codeBlock = frame.getSavedCodeBlock();
     if (codeBlock) {
+      json.emitKeyValue("FunctionID", codeBlock->getFunctionID());
       auto bytecodeOffs = codeBlock->getOffsetOf(frame.getSavedIP());
+      json.emitKeyValue("ByteCodeOffset", bytecodeOffs);
       auto blockSourceCode = codeBlock->getDebugSourceLocationsOffset();
       if (blockSourceCode.hasValue()) {
         auto debugInfo =
@@ -1356,13 +1357,6 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
                llvm::Twine(sourceLocation->column))
                   .toStringRef(srcLocStorage));
         }
-      } else {
-        auto pair = virtualOffsetCache.insert({codeBlock, 0});
-        uint32_t &virtualOffset = pair.first->second;
-        if (pair.second) {
-          virtualOffset = codeBlock->getVirtualOffset();
-        }
-        json.emitKeyValue("ByteCodeAddress", virtualOffset + bytecodeOffs);
       }
     } else {
       json.emitKeyValue("NativeCode", true);
