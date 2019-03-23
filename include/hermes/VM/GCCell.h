@@ -147,14 +147,8 @@ class GCCell {
   /// Validity is defined by:
   ///   * The cell has a correct magic header
   ///   * The cell has a non-null vtable pointer that points to a VTable.
-  ///   * The cell's vtable contains a kind that is within the range of
-  ///     CellKind.
   bool isValid() const {
-    return magic_ == kMagic && vtp_ &&
-        kindInRange(
-               vtp_->kind,
-               CellKind::AllCellsKind_first,
-               CellKind::AllCellsKind_last);
+    return magic_ == kMagic && vtp_ && vtp_->isValid();
   }
 #endif
 

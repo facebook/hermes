@@ -26,6 +26,21 @@ class GCCell;
 /// methods to "mark" (really, to invoke a GC callback on JS values in
 /// the block) and (optionally) finalize the cell.
 struct VTable {
+  // Value is 64 bits to make sure it can be used as a pointer in both 32 and
+  // 64-bit builds.
+  // "57ab1e" == "vtable".
+  // ff added at the beginning to make sure it's a kernel address (even in a
+  // 32-bit build).
+  static constexpr uint64_t kMagic{0xff57ab1eff57ab1e};
+  // This is used to ensure a VTable is valid and is not some other value.
+  // Notably, since VTable * can sometimes be a forwarding pointer, if a pointer
+  // to a VTable is accidentally used as a GCCell, it will try to use the first
+  // word as another VTable *. By putting in a magic number here, it will
+  // SIGSEGV on a specific address, which will make it easy to know exactly
+  // what went wrong.
+  // This is left on even in opt builds because VTable sizes are not
+  // particularly important.
+  const uint64_t magic_{kMagic};
   /// The cell kind.
   const CellKind kind;
   /// `size` should be the size of the cell if it is fixed, or 0 if it is
@@ -75,12 +90,14 @@ struct VTable {
   }
 
   void finalizeIfExists(GCCell *cell, GC *gc) const {
+    assert(isValid());
     if (finalize_) {
       finalize_(cell, gc);
     }
   }
 
   void finalize(GCCell *cell, GC *gc) const {
+    assert(isValid());
     assert(
         finalize_ &&
         "Cannot unconditionally finalize if it doesn't have a finalize pointer");
@@ -88,27 +105,41 @@ struct VTable {
   }
 
   void markWeakIfExists(GCCell *cell, GC *gc) const {
+    assert(isValid());
     if (markWeak_) {
       markWeak_(cell, gc);
     }
   }
 
   size_t getMallocSize(GCCell *cell) const {
+    assert(isValid());
     return mallocSize_ ? mallocSize_(cell) : 0;
   }
 
   bool canBeCompacted() const {
+    assert(isValid());
     return compact_;
   }
 
   /// Tell the \p cell to shrink itself, and return its new size. If the cell
   /// doesn't have any shrinking to do, return the \p origSize.
   gcheapsize_t getCompactedSize(GCCell *cell, gcheapsize_t origSize) const {
+    assert(isValid());
     return canBeCompacted() ? heapAlignSize(compactSize_(cell)) : origSize;
   }
 
   void compact(GCCell *cell) const {
+    assert(isValid());
     compact_(cell);
+  }
+
+  /// \return true iff this VTable is valid.
+  /// Validity is defined by:
+  ///   * A kind that is within the range of valid CellKinds.
+  bool isValid() const {
+    return magic_ == kMagic &&
+        kindInRange(
+               kind, CellKind::AllCellsKind_first, CellKind::AllCellsKind_last);
   }
 };
 
