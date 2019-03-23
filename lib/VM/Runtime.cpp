@@ -1300,6 +1300,10 @@ static std::string &llvmStreamableToString(const T &v) {
   return buf;
 }
 
+/****************************************************************************
+ * WARNING: This code is run after a crash. Avoid walking data structures,
+ *          doing memory allocation, or using libc etc. as much as possible
+ ****************************************************************************/
 void Runtime::crashCallback(int fd) {
   llvm::raw_fd_ostream jsonStream(fd, false);
   JSONEmitter json(jsonStream);
@@ -1322,6 +1326,10 @@ void Runtime::crashCallback(int fd) {
   json.closeDict();
 }
 
+/****************************************************************************
+ * WARNING: This code is run after a crash. Avoid walking data structures,
+ *          doing memory allocation, or using libc etc. as much as possible
+ ****************************************************************************/
 void Runtime::crashWriteCallStack(JSONEmitter &json) {
   llvm::DenseMap<const CodeBlock *, uint32_t> virtualOffsetCache;
   json.openArray();
@@ -1334,10 +1342,20 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
       auto bytecodeOffs = codeBlock->getOffsetOf(frame.getSavedIP());
       auto blockSourceCode = codeBlock->getDebugSourceLocationsOffset();
       if (blockSourceCode.hasValue()) {
-        // Virtual offset below is actively wrong if we have source code info
-        // so just note this scenario for now. Proper info emitted in the diff
-        // above.
-        json.emitKeyValue("SourceLocation", true);
+        auto debugInfo =
+            codeBlock->getRuntimeModule()->getBytecode()->getDebugInfo();
+        auto sourceLocation = debugInfo->getLocationForAddress(
+            blockSourceCode.getValue(), bytecodeOffs);
+        if (sourceLocation) {
+          auto file = debugInfo->getFilenameByID(sourceLocation->filenameId);
+          llvm::SmallString<256> srcLocStorage;
+          json.emitKeyValue(
+              "SourceLocation",
+              (llvm::Twine(file) + llvm::Twine(":") +
+               llvm::Twine(sourceLocation->line) + llvm::Twine(":") +
+               llvm::Twine(sourceLocation->column))
+                  .toStringRef(srcLocStorage));
+        }
       } else {
         auto pair = virtualOffsetCache.insert({codeBlock, 0});
         uint32_t &virtualOffset = pair.first->second;
