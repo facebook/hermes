@@ -69,6 +69,9 @@ class SourceMapGenerator {
   }
 
  private:
+  /// Implementation of outputAsJSON for a merged source map generator.
+  void outputAsJSONImpl(llvm::raw_ostream &OS) const;
+
   /// \return the mappings encoded in VLQ format.
   std::string getVLQMappingsString() const;
 
@@ -78,6 +81,38 @@ class SourceMapGenerator {
       const SourceMap::Segment &lastSegment,
       llvm::ArrayRef<SourceMap::Segment> segments,
       llvm::raw_ostream &OS);
+
+  /// Adds the source filename to the sources_ if it doesn't already exist.
+  /// \return the index of \p filename in sources_.
+  uint32_t addSource(llvm::StringRef filename) {
+    auto it = filenameTable_.find(filename);
+    if (it != filenameTable_.end()) {
+      return it->second;
+    }
+    uint32_t result = sources_.size();
+    sources_.push_back(filename);
+    auto res = filenameTable_.try_emplace(sources_.back(), result);
+    (void)res;
+    assert(res.second && "Duplicate entries in sources of SourceMap");
+    return result;
+  }
+
+  /// Merge the input source maps with the state in this generator,
+  /// and return a new generator which contains a merged representation.
+  SourceMapGenerator mergedWithInputSourceMaps() const;
+
+  /// \return the input source map location for \p seg if the input source map
+  /// exists and has a valid location for \p seg, else return llvm::None.
+  llvm::Optional<SourceMapTextLocation> getInputLocationForSegment(
+      const SourceMap::Segment &seg) const {
+    // True iff inputSourceMaps_ has a valid source map for seg.sourceIndex.
+    bool hasInput = (uint32_t)seg.sourceIndex < inputSourceMaps_.size() &&
+        inputSourceMaps_[seg.sourceIndex] != nullptr;
+
+    return hasInput ? inputSourceMaps_[seg.sourceIndex]->getLocationForAddress(
+                          seg.representedLine, seg.representedColumn)
+                    : llvm::None;
+  }
 
   /// The list of sources, populating the sources field.
   std::vector<std::string> sources_;

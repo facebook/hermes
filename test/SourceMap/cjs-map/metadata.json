@@ -1,0 +1,11 @@
+{
+  "segments": {
+    "0": [
+      "cjs-subdir-main.min.js",
+      "cjs-subdir-unminified.js"
+    ],
+    "2": [
+      "cjs-subdir-2.min.js"
+    ]
+  }
+}

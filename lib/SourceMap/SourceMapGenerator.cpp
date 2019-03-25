@@ -63,7 +63,53 @@ std::string SourceMapGenerator::getVLQMappingsString() const {
   return result;
 }
 
+SourceMapGenerator SourceMapGenerator::mergedWithInputSourceMaps() const {
+  assert(
+      !inputSourceMaps_.empty() &&
+      "Cannot merge source maps without input source maps");
+
+  // Create a new SourceMapGenerator with the merged data.
+  SourceMapGenerator merged;
+
+  for (uint32_t i = 0, e = lines_.size(); i < e; ++i) {
+    SourceMap::SegmentList newLine{};
+
+    for (const auto &seg : lines_[i]) {
+      assert(seg.sourceIndex >= 0 && "Negative source index");
+      SourceMap::Segment newSeg = seg;
+
+      if (auto loc = getInputLocationForSegment(seg)) {
+        // We have an input source map and were able to find a merged source
+        // location.
+        newSeg.representedLine = loc->line;
+        newSeg.representedColumn = loc->column;
+        newSeg.sourceIndex = merged.addSource(loc->fileName);
+      } else {
+        // Failed to find a merge location. Use the existing location,
+        // but copy over the source file name.
+        newSeg.sourceIndex = merged.addSource(sources_[seg.sourceIndex]);
+      }
+
+      newLine.push_back(std::move(newSeg));
+    }
+
+    merged.addMappingsLine(std::move(newLine), i);
+  }
+
+  return merged;
+}
+
 void SourceMapGenerator::outputAsJSON(llvm::raw_ostream &OS) const {
+  if (inputSourceMaps_.empty()) {
+    this->outputAsJSONImpl(OS);
+  } else {
+    // If there are input source maps, we must merge them into a new
+    // SourceMapGenerator before output.
+    mergedWithInputSourceMaps().outputAsJSONImpl(OS);
+  }
+}
+
+void SourceMapGenerator::outputAsJSONImpl(llvm::raw_ostream &OS) const {
   JSONEmitter json(OS);
   json.openDict();
   json.emitKeyValue("version", 3);
