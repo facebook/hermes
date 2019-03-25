@@ -23,8 +23,14 @@ class SourceMapGenerator {
  public:
   /// Add a line \p line represented as a list of Segments to the 'mappings'
   /// section.
-  void addMappingsLine(SourceMap::SegmentList line) {
-    lines_.push_back(std::move(line));
+  /// \param cjsModuleOffset the offset of the module represented by the given
+  /// line, used as the "line" when reporting stack traces from the VM,
+  /// which doesn't have access to the segment IDs.
+  void addMappingsLine(SourceMap::SegmentList line, uint32_t cjsModuleOffset) {
+    if (lines_.size() <= cjsModuleOffset) {
+      lines_.resize(cjsModuleOffset + 1);
+    }
+    lines_[cjsModuleOffset] = std::move(line);
   }
 
   /// \return the list of mappings lines.

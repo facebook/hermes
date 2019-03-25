@@ -294,7 +294,8 @@ void DebugInfo::disassembleLexicalData(llvm::raw_ostream &OS) const {
 
 void DebugInfo::populateSourceMap(
     SourceMapGenerator *sourceMap,
-    llvm::ArrayRef<uint32_t> functionOffsets) const {
+    llvm::ArrayRef<uint32_t> functionOffsets,
+    uint32_t cjsModuleOffset) const {
   // Since our bytecode is not JavaScript, we interpret the source map in a
   // creative way: each bytecode module is represented as a line, and bytecode
   // addresses in the file are represented as column offsets.
@@ -324,7 +325,7 @@ void DebugInfo::populateSourceMap(
       segments.push_back(segmentFor(*loc, offsetInFile, offset));
     offset = fdid.getOffset();
   }
-  sourceMap->addMappingsLine(std::move(segments));
+  sourceMap->addMappingsLine(std::move(segments), cjsModuleOffset);
 }
 
 uint32_t DebugInfoGenerator::appendSourceLocations(

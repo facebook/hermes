@@ -246,7 +246,8 @@ class DebugInfo {
   /// start position in the bytecode file.
   void populateSourceMap(
       SourceMapGenerator *sourceMap,
-      llvm::ArrayRef<uint32_t> functionOffsets) const;
+      llvm::ArrayRef<uint32_t> functionOffsets,
+      uint32_t cjsModuleOffset) const;
 };
 
 class DebugInfoGenerator {

@@ -35,7 +35,7 @@ void BytecodeModule::populateSourceMap(SourceMapGenerator *sourceMap) const {
     functionOffsets.push_back(offset);
     offset += func->getHeader().bytecodeSizeInBytes;
   }
-  debugInfo_.populateSourceMap(sourceMap, functionOffsets);
+  debugInfo_.populateSourceMap(sourceMap, functionOffsets, cjsModuleOffset_);
 }
 
 void BytecodeModule::inlineJumpTables() {

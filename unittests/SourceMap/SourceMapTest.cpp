@@ -93,8 +93,9 @@ TEST(SourceMap, Basic) {
           loc(5, 1, 8, 1), // addr 2:5 -> file2:8:1
       }};
 
+  uint32_t i = 0;
   for (const auto &segments : segmentsList) {
-    map.addMappingsLine(segments);
+    map.addMappingsLine(segments, i++);
   }
 
   ASSERT_EQ(map.getMappingsLines().size(), 2u);

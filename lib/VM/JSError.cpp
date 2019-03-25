@@ -421,7 +421,12 @@ void JSError::constructStackTraceString(
         // Code block was not in the cache, update the cache.
         virtualOffset = sti.codeBlock->getVirtualOffset();
       }
-      lineNo = 1;
+      // Add 1 to the CJSModuleOffset to account for 1-based indexing of
+      // symbolication tools.
+      lineNo = sti.codeBlock->getRuntimeModule()
+                   ->getBytecode()
+                   ->getCJSModuleOffset() +
+          1;
       columnNo = sti.bytecodeOffset + virtualOffset;
       isAddress = true;
     }
