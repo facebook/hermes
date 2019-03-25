@@ -50,6 +50,7 @@ TEST(HBCBytecodeGen, IntegrationTest) {
   Ctx->setDebugInfoSetting(DebugInfoSetting::ALL);
 
   BytecodeModuleGenerator BMG;
+  BMG.addFilename("main.js");
 
   Function *globalFunction = Builder.createTopLevelFunction({});
   auto BFG1 = BytecodeFunctionGenerator::create(BMG, 3);
@@ -105,7 +106,7 @@ TEST(HBCBytecodeGen, IntegrationTest) {
   // Verify basic properties of the source map.
   // We have two functions. Each function has one segment per debug location.
   SourceMapGenerator sourceMap;
-  sourceMap.addFilenameMapping(0, 0);
+  sourceMap.setSources({"main.js"});
   BM->populateSourceMap(&sourceMap);
   const auto &mappings = sourceMap.getMappingsLines();
   EXPECT_EQ(mappings.size(), 1u);

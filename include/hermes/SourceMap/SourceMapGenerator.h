@@ -37,6 +37,12 @@ class SourceMapGenerator {
   /// sourceIndex field of Segment.
   void setSources(std::vector<std::string> sources) {
     sources_ = std::move(sources);
+    filenameTable_.clear();
+    for (uint32_t i = 0, e = sources_.size(); i < e; ++i) {
+      auto res = filenameTable_.try_emplace(sources_[i], i);
+      (void)res;
+      assert(res.second && "Duplicate entries in sources of SourceMap");
+    }
   }
 
   /// Set the list of input source maps to \p maps.
@@ -49,16 +55,10 @@ class SourceMapGenerator {
   /// Output the given source map as JSON.
   void outputAsJSON(llvm::raw_ostream &OS) const;
 
-  /// Add filename ID to the map to indicate what the source index is.
-  /// If the filenameId is already mapped (often the case), do nothing.
-  void addFilenameMapping(uint32_t filenameId, uint32_t sourceIndex) {
-    filenameTable.try_emplace(filenameId, sourceIndex);
-  }
-
-  /// Get the source index given the filename ID.
-  uint32_t getSourceIndex(uint32_t filenameId) const {
-    auto it = filenameTable.find(filenameId);
-    assert(it != filenameTable.end() && "unable to find filenameId");
+  /// Get the source index given the filename.
+  uint32_t getSourceIndex(llvm::StringRef filename) const {
+    auto it = filenameTable_.find(filename);
+    assert(it != filenameTable_.end() && "unable to find filenameId");
     return it->second;
   }
 
@@ -87,10 +87,11 @@ class SourceMapGenerator {
   /// contains nullptr.
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps_;
 
-  /// Map from {filenameID => source index}.
-  /// Used to translate debug source locations involving string table indices
+  /// Map from {filename => source index}.
+  /// Used to translate debug source locations involving source file names
   /// to indices into sources_.
-  llvm::DenseMap<uint32_t, uint32_t> filenameTable{};
+  /// Populated automatically when setSources() is called.
+  llvm::DenseMap<llvm::StringRef, uint32_t> filenameTable_{};
 };
 
 } // namespace hermes

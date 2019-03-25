@@ -218,12 +218,6 @@ bool HBCISel::getDebugSourceLocation(
 
     StringRef filename = buffer->getBufferIdentifier();
     debugIdCache_.currentFilenameId = BCFGen_->addFilename(filename);
-    if (outSourceMap) {
-      // Subtract 2 from the bufId to account for LLVM's 1-indexing,
-      // and the fact that the global definitions are in the first buffer.
-      outSourceMap->addFilenameMapping(
-          debugIdCache_.currentFilenameId, coords.bufId - 2);
-    }
 
     auto sourceMappingUrl = manager.getSourceMappingUrl(coords.bufId);
     if (sourceMappingUrl.empty()) {
