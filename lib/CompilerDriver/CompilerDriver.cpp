@@ -994,12 +994,16 @@ bool generateIRForSourcesAsCJSModules(
 
   SourceMapParser sourceMapParser{};
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
+  std::vector<std::string> sources{};
 
   Function *topLevelFunction = M.getTopLevelFunction();
   for (auto &entry : fileBufs) {
     for (auto &fileBufAndMap : entry.second) {
       auto &fileBuf = fileBufAndMap.file;
       llvm::SmallString<64> filename{fileBuf->getBufferIdentifier()};
+      if (sourceMapGen) {
+        sources.push_back(fileBuf->getBufferIdentifier());
+      }
       llvm::sys::path::replace_path_prefix(
           filename, rootPath, "./", llvm::sys::path::Style::posix);
       auto *ast = parseJS(context, semCtx, std::move(fileBuf), true);
@@ -1030,6 +1034,7 @@ bool generateIRForSourcesAsCJSModules(
   }
 
   if (sourceMapGen) {
+    sourceMapGen->setSources(std::move(sources));
     sourceMapGen->setInputSourceMaps(std::move(inputSourceMaps));
   }
 
