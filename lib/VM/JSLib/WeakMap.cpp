@@ -127,7 +127,7 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> iter = toHandle<JSObject>(runtime, std::move(*iterRes));
+  auto iteratorRecord = *iterRes;
 
   MutableHandle<JSObject> nextItem{runtime};
   MutableHandle<> keyHandle{runtime};
@@ -138,7 +138,7 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
 
   for (;;) {
     gcScope.flushToMarker(marker);
-    auto nextRes = iteratorStep(runtime, iter);
+    auto nextRes = iteratorStep(runtime, iteratorRecord);
     if (LLVM_UNLIKELY(nextRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -152,17 +152,17 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
     }
     if (!vmisa<JSObject>(*nextItemRes)) {
       runtime->raiseTypeError("WeakMap([iterable]) elements must be objects");
-      return iteratorCloseAndRethrow(runtime, iter);
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
     nextItem = vmcast<JSObject>(*nextItemRes);
     auto keyRes = JSObject::getComputed(nextItem, runtime, zero);
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
-      return iteratorCloseAndRethrow(runtime, iter);
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
     keyHandle = *keyRes;
     auto valueRes = JSObject::getComputed(nextItem, runtime, one);
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
-      return iteratorCloseAndRethrow(runtime, iter);
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
     valueHandle = *valueRes;
     if (LLVM_UNLIKELY(
@@ -172,7 +172,7 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
                 selfHandle,
                 keyHandle.getHermesValue(),
                 valueHandle.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
-      return iteratorCloseAndRethrow(runtime, iter);
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
   }
 

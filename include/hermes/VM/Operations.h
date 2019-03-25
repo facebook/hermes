@@ -247,11 +247,24 @@ numberToStringWithRadix(Runtime *runtime, double number, unsigned radix);
 CallResult<PseudoHandle<>>
 getMethod(Runtime *runtime, Handle<> O, Handle<> key);
 
+/// ES9.0 Record type for iterator records.
+/// Used for caching the "next" method to avoid repeated property lookups.
+struct IteratorRecord {
+  /// Actual iterator object.
+  const Handle<JSObject> iterator;
+
+  /// Cache for the "next" method to call to step the iterator.
+  const Handle<Callable> nextMethod;
+
+  IteratorRecord(Handle<JSObject> iterator, Handle<Callable> nextMethod)
+      : iterator(iterator), nextMethod(nextMethod) {}
+};
+
 /// ES6.0 7.4.1
 /// \param obj object to iterate over.
 /// \param method an optional method to call instead of retrieving @@iterator.
 /// \return the iterator object
-CallResult<PseudoHandle<JSObject>> getIterator(
+CallResult<IteratorRecord> getIterator(
     Runtime *runtime,
     Handle<> obj,
     llvm::Optional<Handle<Callable>> method = llvm::None);
@@ -259,14 +272,14 @@ CallResult<PseudoHandle<JSObject>> getIterator(
 /// ES6.0 7.4.2
 CallResult<PseudoHandle<JSObject>> iteratorNext(
     Runtime *runtime,
-    Handle<JSObject> iterator,
+    const IteratorRecord &iteratorRecord,
     llvm::Optional<Handle<>> value = llvm::None);
 
 /// ES6.0 7.4.5
 /// \return a null pointer instead of the boolean false.
 CallResult<Handle<JSObject>> iteratorStep(
     Runtime *runtime,
-    Handle<JSObject> iterator);
+    const IteratorRecord &iteratorRecord);
 
 /// ES6.0 7.4.7
 /// \param completion the thrown value to complete this operation with, empty if

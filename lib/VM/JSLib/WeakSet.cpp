@@ -115,12 +115,13 @@ weakSetConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto iter = toHandle(runtime, std::move(*iterRes));
+  auto iteratorRecord = *iterRes;
 
   auto marker = gcScope.createMarker();
   for (;;) {
     gcScope.flushToMarker(marker);
-    CallResult<Handle<JSObject>> nextRes = iteratorStep(runtime, iter);
+    CallResult<Handle<JSObject>> nextRes =
+        iteratorStep(runtime, iteratorRecord);
     if (LLVM_UNLIKELY(nextRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -137,7 +138,7 @@ weakSetConstructor(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(
             Callable::executeCall1(adder, runtime, selfHandle, *nextValueRes) ==
             ExecutionStatus::EXCEPTION)) {
-      return iteratorCloseAndRethrow(runtime, iter);
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
   }
 

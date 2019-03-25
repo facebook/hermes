@@ -1136,7 +1136,6 @@ numberToStringWithRadix(Runtime *runtime, double number, unsigned radix) {
       StringPrimitive::create(runtime, result)));
 }
 
-
 CallResult<PseudoHandle<>>
 getMethod(Runtime *runtime, Handle<> O, Handle<> key) {
   auto objRes = toObject(runtime, O);
@@ -1157,7 +1156,7 @@ getMethod(Runtime *runtime, Handle<> O, Handle<> key) {
   return PseudoHandle<>::create(*funcRes);
 }
 
-CallResult<PseudoHandle<JSObject>> getIterator(
+CallResult<IteratorRecord> getIterator(
     Runtime *runtime,
     Handle<> obj,
     llvm::Optional<Handle<Callable>> methodOpt) {
@@ -1178,37 +1177,46 @@ CallResult<PseudoHandle<JSObject>> getIterator(
   } else {
     method = **methodOpt;
   }
-  auto iterator = Callable::executeCall0(method, runtime, obj);
-  if (LLVM_UNLIKELY(iterator == ExecutionStatus::EXCEPTION)) {
+  auto iteratorRes = Callable::executeCall0(method, runtime, obj);
+  if (LLVM_UNLIKELY(iteratorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (LLVM_UNLIKELY(!iterator->isObject())) {
+  if (LLVM_UNLIKELY(!iteratorRes->isObject())) {
     return runtime->raiseTypeError("Iterators must be objects");
   }
-  return PseudoHandle<JSObject>::create(vmcast<JSObject>(*iterator));
+  auto iterator = runtime->makeHandle<JSObject>(*iteratorRes);
+
+  auto nextMethodRes = JSObject::getNamed(
+      iterator, runtime, Predefined::getSymbolID(Predefined::next));
+  if (LLVM_UNLIKELY(nextMethodRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // We perform this check prior to returning, because every function in the JS
+  // library which gets an iterator immediately calls the 'next' function.
+  if (!vmisa<Callable>(*nextMethodRes)) {
+    return runtime->raiseTypeError(
+        "'next' method on iterator must be callable");
+  }
+
+  auto nextMethod = runtime->makeHandle<Callable>(*nextMethodRes);
+
+  return IteratorRecord{iterator, nextMethod};
 }
 
 CallResult<PseudoHandle<JSObject>> iteratorNext(
     Runtime *runtime,
-    Handle<JSObject> iterator,
+    const IteratorRecord &iteratorRecord,
     llvm::Optional<Handle<>> value) {
   GCScopeMarkerRAII marker{runtime};
-  auto methodRes = getMethod(
-      runtime,
-      iterator,
-      runtime->makeHandle(Predefined::getSymbolID(Predefined::next)));
-  if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  if (!vmisa<Callable>(methodRes->getHermesValue())) {
-    return runtime->raiseTypeError("Iterator .next() method must be callable");
-  }
-  Handle<Callable> method =
-      runtime->makeHandle(vmcast<Callable>(methodRes->getHermesValue()));
   auto resultRes = value
       ? Callable::executeCall1(
-            method, runtime, iterator, value->getHermesValue())
-      : Callable::executeCall0(method, runtime, iterator);
+            iteratorRecord.nextMethod,
+            runtime,
+            iteratorRecord.iterator,
+            value->getHermesValue())
+      : Callable::executeCall0(
+            iteratorRecord.nextMethod, runtime, iteratorRecord.iterator);
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1221,8 +1229,8 @@ CallResult<PseudoHandle<JSObject>> iteratorNext(
 
 CallResult<Handle<JSObject>> iteratorStep(
     Runtime *runtime,
-    Handle<JSObject> iterator) {
-  auto resultRes = iteratorNext(runtime, iterator);
+    const IteratorRecord &iteratorRecord) {
+  auto resultRes = iteratorNext(runtime, iteratorRecord);
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

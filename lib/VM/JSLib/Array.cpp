@@ -3016,7 +3016,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto iterator = toHandle(runtime, std::move(iterRes.getValue()));
+    auto iteratorRecord = *iterRes;
     // f. Let k be 0.
     MutableHandle<> k{runtime, HermesValue::encodeNumberValue(0)};
     // g. Repeat
@@ -3029,9 +3029,9 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
       auto pkHandle = pkRes.getValue();
-      // ii. Let next be IteratorStep(iterator).
+      // ii. Let next be IteratorStep(iteratorRecord).
       // iii. ReturnIfAbrupt(next).
-      auto next = iteratorStep(runtime, iterator);
+      auto next = iteratorStep(runtime, iteratorRecord);
       if (LLVM_UNLIKELY(next == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -3067,7 +3067,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
         // 2. If mappedValue is an abrupt completion, return
         // IteratorClose(iterator, mappedValue).
         if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
-          return iteratorCloseAndRethrow(runtime, iterator);
+          return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
         }
         // 3. Let mappedValue be mappedValue.[[value]].
         mappedValue = callRes.getValue();
@@ -3087,7 +3087,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
                   mappedValue,
                   PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
-        return iteratorCloseAndRethrow(runtime, iterator);
+        return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
       }
       // xi. Increase k by 1.
       k = HermesValue::encodeNumberValue(k->getNumber() + 1);
