@@ -39,6 +39,13 @@ class SourceMapGenerator {
     sources_ = std::move(sources);
   }
 
+  /// Set the list of input source maps to \p maps.
+  /// The order should match the indexes used in the sourceIndex field of
+  /// Segment.
+  void setInputSourceMaps(std::vector<std::unique_ptr<SourceMap>> maps) {
+    inputSourceMaps_ = std::move(maps);
+  }
+
   /// Output the given source map as JSON.
   void outputAsJSON(llvm::raw_ostream &OS) const;
 
@@ -74,6 +81,11 @@ class SourceMapGenerator {
 
   /// The list of segments in our VLQ scheme.
   std::vector<SourceMap::SegmentList> lines_;
+
+  /// The list of input source maps, such that the input file i has the
+  /// SourceMap at index i. If no map was provided for a file, this list
+  /// contains nullptr.
+  std::vector<std::unique_ptr<SourceMap>> inputSourceMaps_;
 
   /// Map from {filenameID => source index}.
   /// Used to translate debug source locations involving string table indices

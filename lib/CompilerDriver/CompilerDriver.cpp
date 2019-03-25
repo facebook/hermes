@@ -27,6 +27,7 @@
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
+#include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"
@@ -405,8 +406,16 @@ static opt<unsigned> PadFunctionBodiesPercent(
 
 namespace {
 
+struct FileAndSourceMap {
+  /// Input source file. May be a JavaScript source file or an HBC file.
+  std::unique_ptr<llvm::MemoryBuffer> file;
+
+  /// SourceMap file. nullptr if not specified by the user.
+  std::unique_ptr<llvm::MemoryBuffer> sourceMap;
+};
+
 /// Encodes a list of files that are part of a given segment.
-using SegmentTableEntry = std::vector<std::unique_ptr<llvm::MemoryBuffer>>;
+using SegmentTableEntry = std::vector<FileAndSourceMap>;
 
 /// Mapping from segment index to the file buffers in that segment.
 /// For a given table, table[i][j] is the j-indexed file in segment i.
@@ -418,15 +427,20 @@ using SegmentTableEntry = std::vector<std::unique_ptr<llvm::MemoryBuffer>>;
 using SegmentTable = std::map<uint32_t, SegmentTableEntry>;
 
 /// Read a file at path \p path into a memory buffer. If \p stdinOk is set,
-/// allow "-" to mean stdin. \return the memory buffer, or nullptr on error, in
+/// allow "-" to mean stdin.
+/// \param silent if true, don't print an error message on failure.
+/// \return the memory buffer, or nullptr on error, in
 /// which case an error message will have been printed to llvm::errs().
 std::unique_ptr<llvm::MemoryBuffer> memoryBufferFromFile(
     llvm::StringRef path,
-    bool stdinOk = false) {
+    bool stdinOk = false,
+    bool silent = false) {
   auto fileBuf = stdinOk ? llvm::MemoryBuffer::getFileOrSTDIN(path)
                          : llvm::MemoryBuffer::getFile(path);
   if (!fileBuf) {
-    llvm::errs() << "Error! Failed to open file: " << path << '\n';
+    if (!silent) {
+      llvm::errs() << "Error! Failed to open file: " << path << '\n';
+    }
     return nullptr;
   }
   return std::move(*fileBuf);
@@ -437,15 +451,16 @@ std::unique_ptr<llvm::MemoryBuffer> memoryBufferFromFile(
 /// \param zip the zip file to read from (must not be null).
 /// \param path the path in the zip file, must be null-terminated.
 /// \return the read file, nullptr on error.
-std::unique_ptr<llvm::MemoryBuffer> memoryBufferFromZipFile(
-    zip_t *zip,
-    const char *path) {
+std::unique_ptr<llvm::MemoryBuffer>
+memoryBufferFromZipFile(zip_t *zip, const char *path, bool silent = false) {
   assert(zip && "zip file must not be null");
   int result = 0;
 
   result = zip_entry_open(zip, path);
   if (result == -1) {
-    llvm::errs() << "Zip error reading " << path << ": File does not exist\n";
+    if (!silent) {
+      llvm::errs() << "Zip error reading " << path << ": File does not exist\n";
+    }
     return nullptr;
   }
 
@@ -792,9 +807,13 @@ std::shared_ptr<Context> createContext(
     return path;
   };
 
-  auto getFile = [&zip, &getZipPath, &getFullPath](llvm::StringRef path) {
-    return zip ? memoryBufferFromZipFile(zip, getZipPath(path).c_str())
-               : memoryBufferFromFile(getFullPath(path));
+  auto getFile = [&zip, &getZipPath, &getFullPath](
+                     llvm::Twine path, bool silent = false) {
+    llvm::SmallString<32> out{};
+    return zip ? memoryBufferFromZipFile(
+                     zip, getZipPath(path.toStringRef(out)).c_str(), silent)
+               : memoryBufferFromFile(
+                     getFullPath(path.toStringRef(out)), false, silent);
   };
 
   auto metadataBuf = getFile("metadata.json");
@@ -859,7 +878,9 @@ std::shared_ptr<Context> createContext(
       if (!fileBuf) {
         return nullptr;
       }
-      segmentBufs.push_back(std::move(fileBuf));
+      auto mapBuf = getFile(llvm::Twine(relPath->str(), ".map"), true);
+      // mapBuf is optional, so simply pass it through if it's null.
+      segmentBufs.push_back({std::move(fileBuf), std::move(mapBuf)});
     }
     auto emplaceRes = fileBufs.emplace(range.segment, std::move(segmentBufs));
     if (!emplaceRes.second) {
@@ -943,20 +964,23 @@ SourceMapGenerator createSourceMapGenerator(std::shared_ptr<Context> context) {
 
 /// Generate IR for CJS modules into the Module \p M for the source files in
 /// \p fileBufs. Treat the first element in fileBufs as the entry point.
+/// \param inputSourceMaps the parsed versions of the input source maps,
+/// in the order in which the files were compiled.
 /// \return true on success, false on error, in which case an error will be
 /// printed.
 bool generateIRForSourcesAsCJSModules(
     Module &M,
     sem::SemContext &semCtx,
     const DeclarationFileListTy &declFileList,
-    SegmentTable fileBufs) {
+    SegmentTable fileBufs,
+    SourceMapGenerator *sourceMapGen) {
   auto context = M.shareContext();
-  llvm::SmallString<64> rootPath{fileBufs[0][0]->getBufferIdentifier()};
+  llvm::SmallString<64> rootPath{fileBufs[0][0].file->getBufferIdentifier()};
   llvm::sys::path::remove_filename(rootPath, llvm::sys::path::Style::posix);
 
   // Construct a MemoryBuffer for our global entry point.
   llvm::SmallString<64> entryPointFilename{
-      fileBufs[0][0]->getBufferIdentifier()};
+      fileBufs[0][0].file->getBufferIdentifier()};
   llvm::sys::path::replace_path_prefix(
       entryPointFilename, rootPath, "./", llvm::sys::path::Style::posix);
 
@@ -967,9 +991,14 @@ bool generateIRForSourcesAsCJSModules(
 
   auto *globalAST = parseJS(context, semCtx, std::move(globalMemBuffer));
   generateIRFromESTree(globalAST, &M, declFileList, {});
+
+  SourceMapParser sourceMapParser{};
+  std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
+
   Function *topLevelFunction = M.getTopLevelFunction();
   for (auto &entry : fileBufs) {
-    for (auto &fileBuf : entry.second) {
+    for (auto &fileBufAndMap : entry.second) {
+      auto &fileBuf = fileBufAndMap.file;
       llvm::SmallString<64> filename{fileBuf->getBufferIdentifier()};
       llvm::sys::path::replace_path_prefix(
           filename, rootPath, "./", llvm::sys::path::Style::posix);
@@ -983,8 +1012,27 @@ bool generateIRForSourcesAsCJSModules(
           &M,
           topLevelFunction,
           declFileList);
+      if (fileBufAndMap.sourceMap) {
+        auto inputMap =
+            sourceMapParser.parse(fileBufAndMap.sourceMap->getBuffer());
+        if (!inputMap) {
+          // parse() returns nullptr on failure.
+          llvm::errs() << "Error: Invalid source map: "
+                       << fileBufAndMap.sourceMap->getBufferIdentifier()
+                       << '\n';
+          return false;
+        }
+        inputSourceMaps.push_back(std::move(inputMap));
+      } else {
+        inputSourceMaps.push_back(nullptr);
+      }
     }
   }
+
+  if (sourceMapGen) {
+    sourceMapGen->setInputSourceMaps(std::move(inputSourceMaps));
+  }
+
   return true;
 }
 
@@ -1140,7 +1188,8 @@ CompileResult processSourceFiles(
 
   llvm::SHA1 hasher;
   for (const auto &entry : fileBufs) {
-    for (const auto &file : entry.second) {
+    for (const auto &fileAndMap : entry.second) {
+      const auto &file = fileAndMap.file;
       hasher.update(
           llvm::StringRef(file->getBufferStart(), file->getBufferSize()));
     }
@@ -1154,9 +1203,9 @@ CompileResult processSourceFiles(
   if (cl::LexerOnly) {
     unsigned count = 0;
     for (auto &entry : fileBufs) {
-      for (auto &file : entry.second) {
+      for (auto &fileAndMap : entry.second) {
         parser::JSLexer jsLexer(
-            std::move(file),
+            std::move(fileAndMap.file),
             context->getSourceErrorManager(),
             context->getAllocator());
         while (jsLexer.advance()->getKind() != parser::TokenKind::eof)
@@ -1207,12 +1256,19 @@ CompileResult processSourceFiles(
   sem::SemContext semCtx{};
 
   if (context->getUseCJSModules()) {
+    // Allow the IR generation function to populate inputSourceMaps to ensure
+    // proper source map ordering.
     if (!generateIRForSourcesAsCJSModules(
-            M, semCtx, declFileList, std::move(fileBufs))) {
+            M,
+            semCtx,
+            declFileList,
+            std::move(fileBufs),
+            sourceMap ? &*sourceMap : nullptr)) {
       return ParsingFailed;
     }
   } else {
-    ESTree::NodePtr ast = parseJS(context, semCtx, std::move(fileBufs[0][0]));
+    ESTree::NodePtr ast =
+        parseJS(context, semCtx, std::move(fileBufs[0][0].file));
     if (!ast) {
       return ParsingFailed;
     }
@@ -1423,7 +1479,7 @@ CompileResult compileFromCommandLineOptions() {
       auto fileBuf = memoryBufferFromFile(filename, true);
       if (!fileBuf)
         return InputFileError;
-      entry.push_back(std::move(fileBuf));
+      entry.push_back({std::move(fileBuf), nullptr});
     }
     fileBufs.emplace(0, std::move(entry));
   }
@@ -1432,7 +1488,7 @@ CompileResult compileFromCommandLineOptions() {
     assert(
         fileBufs.size() == 1 && fileBufs[0].size() == 1 &&
         "validateFlags() should enforce exactly one bytecode input file");
-    return processBytecodeFile(std::move(fileBufs[0][0]));
+    return processBytecodeFile(std::move(fileBufs[0][0].file));
   } else {
     std::shared_ptr<Context> context =
         createContext(std::move(resolutionTable), std::move(segmentRanges));
