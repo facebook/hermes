@@ -1289,6 +1289,7 @@ CompileResult processSourceFiles(
     return generateBytecodeForExecution(M, genOptions);
   }
 
+  CompileResult result{Success};
   if (context->getSegmentRanges().size() < 2) {
     // Ok, we're going to return the bytecode in a serializable form.
     // Open the output file, if any.
@@ -1306,16 +1307,9 @@ CompileResult processSourceFiles(
         sourceHash,
         llvm::None,
         sourceMap ? sourceMap.getPointer() : nullptr);
-
-    // Output the source map if requested.
-    if (cl::OutputSourceMap) {
-      std::string mapFilePath = cl::BytecodeOutputFilename + ".map";
-      auto OS = openFileForWrite(mapFilePath, F_Text);
-      if (!OS)
-        return OutputFileError;
-      sourceMap->outputAsJSON(*OS);
+    if (result.status != Success) {
+      return result;
     }
-    return result;
   } else {
     StringRef base = cl::BytecodeOutputFilename;
     for (const auto &range : context->getSegmentRanges()) {
@@ -1326,16 +1320,30 @@ CompileResult processSourceFiles(
       if (!fileOS)
         return OutputFileError;
       auto &OS = *fileOS;
-      auto result = generateBytecodeForSerialization(
+      auto segResult = generateBytecodeForSerialization(
           OS,
           M,
           genOptions,
           sourceHash,
           range,
           sourceMap ? sourceMap.getPointer() : nullptr);
+      if (segResult.status != Success) {
+        return segResult;
+      }
     }
-    return Success;
+    result = Success;
   }
+
+  // Output the source map if requested.
+  if (cl::OutputSourceMap) {
+    std::string mapFilePath = cl::BytecodeOutputFilename + ".map";
+    auto OS = openFileForWrite(mapFilePath, F_Text);
+    if (!OS)
+      return OutputFileError;
+    sourceMap->outputAsJSON(*OS);
+  }
+
+  return result;
 }
 
 /// Print the Hermes version to the stream \p s, outputting the \p vmStr (which
