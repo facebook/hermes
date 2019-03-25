@@ -84,7 +84,12 @@ static ::hermes::vm::RuntimeConfig makeRuntimeConfig(
       .build();
 }
 
-static void noop(jsi::Runtime &runtime) {}
+static void installBindings(jsi::Runtime &runtime) {
+  react::Logger androidLogger =
+      static_cast<void (*)(const std::string &, unsigned int)>(
+          &reactAndroidLoggingHook);
+  react::bindNativeLogger(runtime, androidLogger);
+}
 
 class HermesExecutorHolder
     : public jni::HybridClass<HermesExecutorHolder, JavaScriptExecutorHolder> {
@@ -95,11 +100,9 @@ class HermesExecutorHolder
   static jni::local_ref<jhybriddata> initHybridDefaultConfig(
       jni::alias_ref<jclass>) {
     JReactMarker::setLogPerfMarkerIfNeeded();
-    return makeCxxInstance(folly::make_unique<HermesExecutorFactory>(
-        [](const std::string &message, unsigned int logLevel) {
-          reactAndroidLoggingHook(message, logLevel);
-        },
-        noop));
+
+    return makeCxxInstance(
+        folly::make_unique<HermesExecutorFactory>(installBindings));
   }
 
   static jni::local_ref<jhybriddata> initHybrid(
@@ -121,12 +124,7 @@ class HermesExecutorHolder
         tripWireCooldownMS,
         tripWireLimitBytes);
     return makeCxxInstance(folly::make_unique<HermesExecutorFactory>(
-        [](const std::string &message, unsigned int logLevel) {
-          reactAndroidLoggingHook(message, logLevel);
-        },
-        noop,
-        JSIExecutor::defaultTimeoutInvoker,
-        runtimeConfig));
+        installBindings, JSIExecutor::defaultTimeoutInvoker, runtimeConfig));
   }
 
   static bool canLoadFile(jni::alias_ref<jclass>, const std::string &path) {
