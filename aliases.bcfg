@@ -1,0 +1,28 @@
+#
+# aliases.bcfg
+#
+# These files let you define project-specific aliases. To use, simply add a
+# new entry to
+#
+#    tools/buckconfigs/aliases/mobile-aliases.bcfg
+#
+# and any aliases defined here will be available throughout fbsource
+#
+# NOTE: You must use "cell//" syntax for all targets listed in this file.
+#
+
+# TODO(T35677535): Hermes aliases used for xplat migration - remove when done.
+[alias]
+  hermes = fbsource//xplat/hermes/tools/hermes:hermes
+  hermes_hvm = fbsource//xplat/hermes/tools/hvm:hvm
+  hermes_hvm_lean = fbsource//xplat/hermes/tools/hvm:hvm-lean
+  hermes_repl = fbsource//xplat/hermes/tools/repl:hermes-repl
+  hermes_android_binary = fbsource//xplat/hermes/tools/hermes:hermesAndroid
+  hermes_android_synth = fbsource//xplat/hermes/tools/synth:synthAndroid
+  hermes_testsuite = fbsource//xplat/hermes/utils/testsuite:run_testsuite
+  hermes_synth = fbsource//xplat/hermes/tools/synth:synth
+  hermes_synth_fb4a_marketplace_tti = fbsource//xplat/hermes/tools/synth:synth-fb4a-marketplace-tti
+  hermes_synth_fb4a_marketplace_big_gc_synth_trace = fbsource//xplat/hermes/facebook/js_bundles:fb4a_marketplace_big_gc_synth_trace
+  hermes_synth_fb4a_marketplace_big_gc_synth_bytecode = fbsource//xplat/hermes/facebook/js_bundles:fb4a_marketplace_big_gc_synth_bytecode
+  hermes_old_synth_rn_wilde_tti = fbsource//xplat/hermes/facebook/js_bundles:rn_wilde_tti
+  hermes_old_synth_rn_ig_tti = fbsource//xplat/hermes/facebook/js_bundles:rn_ig_tti
