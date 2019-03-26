@@ -387,7 +387,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         } else if (isUnicodeOnlySpace(ch)) {
           continue;
         } else {
-          if (ch > 31 && ch < 128)
+          if (ch > 31 && ch < 127)
             errorRange(
                 token_.getStartLoc(),
                 "unrecognized character '" + Twine((char)ch) + "'");
