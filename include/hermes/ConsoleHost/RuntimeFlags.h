@@ -114,6 +114,11 @@ static opt<std::string> ProfilerSymbolsFile(
 static opt<bool>
     ES6Symbol("Xes6-symbol", desc("Enable support for ES6 Symbol"), init(true));
 
+static llvm::cl::opt<bool> StopAfterInit(
+    "stop-after-module-init",
+    llvm::cl::desc("Exit once module loading is finished. Useful "
+                   "to measure module initialization time"));
+
 } // namespace cl
 
 #endif // HERMES_VM_RUNTIMEFLAGS_H

@@ -48,11 +48,6 @@ static llvm::cl::opt<bool> PrettyDisassemble(
     llvm::cl::desc("Pretty print the disassembled bytecode"));
 #endif
 
-static llvm::cl::opt<bool> StopAfterInit(
-    "stop-after-module-init",
-    llvm::cl::desc("Exit once module loading is finished. Useful "
-                   "to measure module initialization time"));
-
 static llvm::cl::opt<unsigned> Repeat(
     "Xrepeat",
     llvm::cl::desc("Repeat execution N number of times"),
@@ -126,7 +121,7 @@ int main(int argc, char **argv_) {
           .withES6Symbol(cl::ES6Symbol)
           .build();
 
-  options.stopAfterInit = StopAfterInit;
+  options.stopAfterInit = cl::StopAfterInit;
 #ifdef HERMESVM_PROFILER_EXTERN
   options.patchProfilerSymbols = cl::PatchProfilerSymbols;
   options.profilerSymbolsFile = cl::ProfilerSymbolsFile;

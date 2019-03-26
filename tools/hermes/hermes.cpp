@@ -109,6 +109,7 @@ static int executeHBCBytecodeFromCL(
 #endif
   options.dumpJITCode = cl::DumpJITCode;
   options.jitCrashOnError = cl::JITCrashOnError;
+  options.stopAfterInit = cl::StopAfterInit;
 
   bool success;
   if (cl::Repeat <= 1) {
