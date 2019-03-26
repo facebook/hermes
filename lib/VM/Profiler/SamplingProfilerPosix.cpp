@@ -32,7 +32,7 @@ namespace vm {
 
 /// Name of the semaphore.
 const char *const kSamplingDoneSemaphoreName = "/samplingDoneSem";
-/*static*/ std::atomic<Runtime *> SamplingProfiler::targetRuntime_;
+
 volatile std::atomic<SamplingProfiler *> SamplingProfiler::sProfilerInstance_{
     nullptr};
 
@@ -41,7 +41,6 @@ void SamplingProfiler::registerRuntime(Runtime *runtime) {
 
   // TODO: should we only register runtime when profiler is enabled?
   activeRuntimeThreads_[runtime] = pthread_self();
-  targetRuntime_.store(runtime);
   threadLocalRuntime_.set(runtime);
   threadNames_[oscompat::thread_id()] = oscompat::thread_name();
 }
@@ -54,7 +53,6 @@ void SamplingProfiler::unregisterRuntime(Runtime *runtime) {
   assert(succeed && "How can runtime not registered yet?");
   (void)succeed;
 
-  targetRuntime_.store(nullptr);
   threadLocalRuntime_.set(nullptr);
 }
 
@@ -94,12 +92,12 @@ bool SamplingProfiler::unregisterSignalHandler() {
 
 void SamplingProfiler::profilingSignalHandler(int signo) {
   // Fetch runtime used by this sampling thread.
-  auto curThreadRuntime = targetRuntime_.load();
+  auto profilerInstance = sProfilerInstance_.load();
+  Runtime *curThreadRuntime = profilerInstance->threadLocalRuntime_.get();
   if (curThreadRuntime == nullptr) {
     // Runtime may have unregistered itself before signal.
     return;
   }
-  auto profilerInstance = sProfilerInstance_.load();
   // Sampling stack will touch GC objects(like closure) so
   // only do so if heap is valid.
   if (curThreadRuntime->getHeap().heapIsValid()) {

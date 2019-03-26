@@ -106,18 +106,8 @@ class SamplingProfiler {
   /// Protected by profilerLock_.
   llvm::DenseMap<Runtime *, pthread_t> activeRuntimeThreads_;
 
-  /// Last registered runtime.
-  /// NOTE: currently we only support sampling one thread/runtime so
-  /// use a single static variable to store the last registered runtime.
-  /// It has the following limitations:
-  /// 1. No multiple threads sampling.
-  /// 2. No recursive runtime in one thread sampling.
-  /// Will revise these limitations in later diffs.
-  static std::atomic<Runtime *> targetRuntime_;
-
-  /// Per-thread runtime instance for loom profiling.
-  /// Note: it is different from targetRuntime_ which is used by local
-  /// sample profiling.
+  /// Per-thread runtime instance for loom/local profiling.
+  /// Limitations: No recursive runtimes in one thread.
   ThreadLocal<Runtime> threadLocalRuntime_;
 
   /// Whether profiler is enabled or not. Protected by profilerLock_.
