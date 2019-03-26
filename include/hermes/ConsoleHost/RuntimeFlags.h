@@ -119,6 +119,21 @@ static llvm::cl::opt<bool> StopAfterInit(
     llvm::cl::desc("Exit once module loading is finished. Useful "
                    "to measure module initialization time"));
 
+static opt<bool> TrackBytecodeIO(
+    "track-io",
+    desc(
+        "Track bytecode I/O when executing bytecode. Only works with bytecode mode"));
+
+enum BytecodeIOStatsFormatKind { HUMAN, JSON };
+
+static opt<BytecodeIOStatsFormatKind> BytecodeIOStatsFormat(
+    "io-stats-format",
+    llvm::cl::init(HUMAN),
+    llvm::cl::desc("Options for the format for printing bytecode I/O stats"),
+    llvm::cl::values(
+        clEnumVal(HUMAN, "Output in human readable format"),
+        clEnumVal(JSON, "Output in JSON format (default)")));
+
 } // namespace cl
 
 #endif // HERMES_VM_RUNTIMEFLAGS_H

@@ -52,21 +52,6 @@ static opt<bool> RandomizeMemoryLayout(
     llvm::cl::init(false),
     llvm::cl::Hidden);
 
-static opt<bool> TrackBytecodeIO(
-    "track-io",
-    desc(
-        "Track bytecode I/O when executing bytecode. Only works with bytecode mode"));
-
-enum BytecodeIOStatsFormatKind { HUMAN, JSON };
-
-static opt<BytecodeIOStatsFormatKind> BytecodeIOStatsFormat(
-    "io-stats-format",
-    llvm::cl::init(HUMAN),
-    llvm::cl::desc("Options for the format for printing bytecode I/O stats"),
-    llvm::cl::values(
-        clEnumVal(HUMAN, "Output in human readable format"),
-        clEnumVal(JSON, "Output in JSON format (default)")));
-
 } // namespace cl
 
 /// Execute Hermes bytecode \p bytecode, respecting command line arguments.
