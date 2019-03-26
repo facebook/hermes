@@ -1,0 +1,1 @@
+async (yield) => 1;
