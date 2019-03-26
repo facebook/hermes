@@ -168,7 +168,7 @@ int main(int argc, char **argv_) {
     }
     auto ret = executeHBCBytecodeFromCL(
         std::move(res.bytecodeProvider), res.bytecodeBufferInfo);
-    if (ret == EXIT_SUCCESS && cl::TrackBytecodeIO) {
+    if (cl::TrackBytecodeIO) {
       if (!PageAccessTracker::printStats(
               llvm::outs(),
               cl::BytecodeIOStatsFormat ==
