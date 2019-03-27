@@ -263,25 +263,11 @@ CallResult<HermesValue> Interpreter::handleCallSlowPath(
   if (auto *native = dyn_vmcast<NativeFunction>(*callTarget)) {
     ++NumNativeFunctionCalls;
     // Call the native function directly
-    CallResult<HermesValue> res = NativeFunction::_nativeCall(native, runtime);
-
-    // Check for exception.
-    // TODO: T30015280
-    if (LLVM_UNLIKELY(!runtime->thrownValue_.isEmpty())) {
-      assert(
-          res == ExecutionStatus::EXCEPTION &&
-          "thrownValue_ is not empty but ExecutionStatus is not EXCEPTION.");
-      return ExecutionStatus::EXCEPTION;
-    }
-    assert(
-        res == ExecutionStatus::RETURNED &&
-        "thrownValue_ is empty but ExecutionStatus is not RETURNED.");
-    return res;
+    return NativeFunction::_nativeCall(native, runtime);
   } else if (auto *bound = dyn_vmcast<BoundFunction>(*callTarget)) {
     ++NumBoundFunctionCalls;
     // Call the bound function.
     return BoundFunction::_boundCall(bound, runtime);
-
   } else {
     return runtime->raiseTypeErrorForValue(
         Handle<>(callTarget), " is not a function");
