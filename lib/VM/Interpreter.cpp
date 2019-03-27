@@ -76,6 +76,13 @@ HERMES_SLOW_STATISTIC(
     NumPutByIdTransient,
     "NumPutByIdTransient: Number of property 'write by id' to non-objects");
 
+HERMES_SLOW_STATISTIC(
+    NumNativeFunctionCalls,
+    "NumNativeFunctionCalls: Number of native function calls");
+HERMES_SLOW_STATISTIC(
+    NumBoundFunctionCalls,
+    "NumBoundCalls: Number of bound function calls");
+
 // Ensure that instructions declared as having matching layouts actually do.
 #include "InstLayout.inc"
 
@@ -254,6 +261,7 @@ CallResult<HermesValue> Interpreter::handleCallSlowPath(
     Runtime *runtime,
     PinnedHermesValue *callTarget) {
   if (auto *native = dyn_vmcast<NativeFunction>(*callTarget)) {
+    ++NumNativeFunctionCalls;
     // Call the native function directly
     CallResult<HermesValue> res = NativeFunction::_nativeCall(native, runtime);
 
@@ -270,6 +278,7 @@ CallResult<HermesValue> Interpreter::handleCallSlowPath(
         "thrownValue_ is empty but ExecutionStatus is not RETURNED.");
     return res;
   } else if (auto *bound = dyn_vmcast<BoundFunction>(*callTarget)) {
+    ++NumBoundFunctionCalls;
     // Call the bound function.
     return BoundFunction::_boundCall(bound, runtime);
 
