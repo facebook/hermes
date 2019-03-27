@@ -27,6 +27,7 @@ add_llvm_library(hermesOptimizer
   Optimizer/Scalar/InstructionEscapeAnalysis.cpp
   Optimizer/Scalar/InstructionNumbering.cpp
   IR/Analysis.cpp
+  IR/IREval.cpp
   LINK_LIBS llvm_extra
 )
 
@@ -41,7 +42,6 @@ add_llvm_library(hermesFrontend
   IR/IR.cpp
   IR/CFG.cpp
   IR/IRBuilder.cpp
-  IR/IREval.cpp
   IR/IRVerifier.cpp
   IR/Instrs.cpp
   Utils/Dumper.cpp
