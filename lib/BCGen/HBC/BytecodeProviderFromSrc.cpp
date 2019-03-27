@@ -8,6 +8,7 @@
 
 #include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
+#include "hermes/Optimizer/PassManager/Pipeline.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/Support/MemoryBuffer.h"
@@ -118,11 +119,18 @@ BCProviderFromSrc::createBCProviderFromSrc(
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, outputManager.getErrorString()};
   }
-
-  BytecodeGenerationOptions opts{OutputFormatKind::None};
   assert(
       (compileFlags.optimize ? !compileFlags.lazy : true) &&
       "Can't optimize in lazy mode.");
+
+  if (compileFlags.optimize) {
+    runFullOptimizationPasses(M);
+  } else {
+    runNoOptimizationPasses(M);
+  }
+
+  BytecodeGenerationOptions opts{OutputFormatKind::None};
+
   opts.optimizationEnabled = compileFlags.optimize;
   opts.staticBuiltinsEnabled = compileFlags.staticBuiltins;
   opts.verifyIR = compileFlags.verifyIR;
