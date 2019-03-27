@@ -4,6 +4,7 @@ add_llvm_library(hermesParser
         JSLexer.cpp
         JSONParser.cpp
         JSParser.cpp
+        JSParserImpl.cpp JSParserImpl.h
         LINK_LIBS hermesSupport hermesAST dtoa
 )
 
