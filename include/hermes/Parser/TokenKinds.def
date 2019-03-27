@@ -130,6 +130,7 @@ PUNCTUATOR(greatergreatergreaterequal, ">>>=")
 PUNCTUATOR(ampequal,            "&=")
 PUNCTUATOR(pipeequal,           "|=")
 PUNCTUATOR(caretequal,          "^=")
+PUNCTUATOR(equalgreater,        "=>")
 
 TOK(numeric_literal, "number")
 TOK(string_literal, "string")

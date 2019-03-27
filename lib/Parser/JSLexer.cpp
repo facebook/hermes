@@ -173,9 +173,25 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       PUNC_L1_1('?', TokenKind::question);
       PUNC_L1_1(':', TokenKind::colon);
 
-      // = == ===
+      // = => == ===
+      case '=':
+        token_.setStart(curCharPtr_);
+        if (curCharPtr_[1] == '>') {
+          token_.setPunctuator(TokenKind::equalgreater);
+          curCharPtr_ += 2;
+        } else if (curCharPtr_[1] != '=') {
+          token_.setPunctuator(TokenKind::equal);
+          curCharPtr_ += 1;
+        } else if (curCharPtr_[2] == '=') {
+          token_.setPunctuator(TokenKind::equalequalequal);
+          curCharPtr_ += 3;
+        } else {
+          token_.setPunctuator(TokenKind::equalequal);
+          curCharPtr_ += 2;
+        }
+        break;
+
       // ! != !==
-      PUNC_L3_3('=', TokenKind::equal,   '=', TokenKind::equalequal,   '=', TokenKind::equalequalequal);
       PUNC_L3_3('!', TokenKind::exclaim, '=', TokenKind::exclaimequal, '=', TokenKind::exclaimequalequal);
 
       // + ++ +=
