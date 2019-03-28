@@ -405,6 +405,12 @@ BLACK_LIST = [
     "test262/test/language/expressions/object/yield-non-strict-syntax.js",
     "test262/test/language/expressions/object/yield-non-strict-access.js",
     # let/const (block scope)
+    "esprima/test_fixtures/declaration/let/",
+    "esprima/test_fixtures/declaration/const/",
+    "esprima/test_fixtures/statement/iteration/for-let-let.js",
+    "esprima/test_fixtures/statement/iteration/const_forin.js",
+    "esprima/test_fixtures/statement/iteration/migrated_0012.js",
+    "esprima/test_fixtures/statement/iteration/migrated_0020.js",
     "mjsunit/compiler/osr-while-let.js",
     "mjsunit/compiler/osr-block-scope-func.js",
     "mjsunit/compiler/osr-block-scope-id.js",
@@ -449,6 +455,9 @@ BLACK_LIST = [
     "test262/test/language/expressions/assignment/destructuring/obj-prop-__proto__dup.js",
     "test262/test/language/statements/for-in/head-var-bound-names-dup.js",
     # computed property names
+    "esprima/test_fixtures/expression/primary/object/migrated_0034.js",
+    "esprima/test_fixtures/expression/primary/object/migrated_0035.js",
+    "esprima/test_fixtures/expression/primary/object/migrated_0036.js",
     "mjsunit/es6/computed-property-names.js",
     "test262/test/harness/verifyProperty-desc-is-not-object.js",
     "test262/test/harness/verifyProperty-restore-accessor-symbol.js",
@@ -591,7 +600,8 @@ BLACK_LIST = [
     # number literals
     "test262/test/built-ins/Number/string-binary-literal.js",
     "test262/test/built-ins/Number/string-octal-literal.js",
-    # default argumetns
+    # default arguments
+    "esprima/test_fixtures/expression/primary/object/migrated_0038.js",
     "mjsunit/es6/default-parameters-debug.js",
     "test262/test/built-ins/ThrowTypeError/unique-per-realm-non-simple.js",
     "test262/test/language/arguments-object/unmapped/via-params-dflt.js",
@@ -1622,6 +1632,70 @@ BLACK_LIST = [
     "mjsunit/var.js",
     "mjsunit/verify-assert-false.js",
     "mjsunit/verify-check-false.js",
+    ### Unsupported Esprima tests ###
+    ## select ES6 features ##
+    # TODO: de-blacklist the ES6 tests after we have parser support
+    "esprima/test_fixtures/ES6/",
+    # template literal
+    "esprima/test_fixtures/statement/return/multiline_template.js",
+    # array pattern
+    "esprima/test_fixtures/statement/iteration/pattern-in-for-in.js",
+    ## ES6 end ##
+    # Hermes parser does not output tokens.
+    "esprima/test_fixtures/tokenize/",
+    # Hermes does not emit comments
+    "esprima/test_fixtures/comment/",
+    # Hermes does not support tolerant parse
+    "esprima/test_fixtures/tolerant-parse/",
+    # Hermes does not support 'with'
+    "esprima/test_fixtures/directive-prolog/migrated_0000.js",
+    "esprima/test_fixtures/directive-prolog/migrated_0001.js",
+    "esprima/test_fixtures/statement/with/",
+    # unsupported features
+    "esprima/test_fixtures/ES2016/",
+    "esprima/test_fixtures/es2017/",
+    "esprima/test_fixtures/es2018/",
+    "esprima/test_fixtures/JSX/",
+    # not sure why they fail yet
+    "esprima/test_fixtures/expression/postfix/migrated_0004.js",
+    "esprima/test_fixtures/expression/postfix/migrated_0005.js",
+    "esprima/test_fixtures/statement/iteration/migrated_0003.js",
+    "esprima/test_fixtures/expression/unary/migrated_0005.js",
+    "esprima/test_fixtures/expression/unary/migrated_0004.js",
+    "esprima/test_fixtures/expression/assignment/migrated_0002.js",
+    # not sure why fail yet; numeric
+    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0024.js",
+    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0021.js",
+    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0023.js",
+    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0022.js",
+    # not sure why fail yet; regexp
+    "esprima/test_fixtures/expression/primary/literal/regular-expression/u-flag-valid-range.js",
+    "esprima/test_fixtures/expression/primary/literal/regular-expression/u-flag-surrogate-pair.js",
+    # function declaration vs expression
+    "esprima/test_fixtures/statement/labelled/function-declaration.js",
+    "esprima/test_fixtures/statement/if/migrated_0003.js",
+    # TODO: double lost percision, possibly related to JSONEmitter
+    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0007.js",
+    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0006.js",
+    # These should fail but aren't failing.
+    "esprima/test_fixtures/tolerant-parse/migrated_0049.js",
+    "esprima/test_fixtures/statement/if/invalid-function-declaration3.js",
+    "esprima/test_fixtures/statement/if/invalid-function-declaration1.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0221.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0234.js",
+    "esprima/test_fixtures/invalid-syntax/GH-1106-08.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0188.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0208.js",
+    "esprima/test_fixtures/invalid-syntax/GH-1106-09.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0242.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0233.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0247.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0216.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0187.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0222.js",
+    "esprima/test_fixtures/expression/primary/keyword/invalid-escaped-true.js",
+    "esprima/test_fixtures/declaration/function/invalid-strict-labelled-function-declaration.js",
+    ### Unsupported Esprima tests end ###
 ]
 
 UNSUPPORTED_FEATURES = [

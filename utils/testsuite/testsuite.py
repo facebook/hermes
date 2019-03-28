@@ -18,9 +18,11 @@ from os.path import basename, isdir, isfile, join, splitext
 
 try:
     from testsuite.testsuite_blacklist import BLACK_LIST, UNSUPPORTED_FEATURES
+    import testsuite.esprima_test_runner as esprima
 except ImportError:
     # Hacky way to handle non-buck builds that call the file immediately.
     from testsuite_blacklist import BLACK_LIST, UNSUPPORTED_FEATURES
+    import esprima_test_runner as esprima
 
 
 ## This is a simple script that runs the hermes compiler on
@@ -263,7 +265,7 @@ featuresMatcher2 = re.compile(r"\s*features:\s*\n(.*)\*\/", re.MULTILINE | re.DO
 def getSuite(filename):
     suite = None
     # Try all possible test suites to see which one we're in.
-    for s in ["test262", "mjsunit", "CVEs"]:
+    for s in ["test262", "mjsunit", "CVEs", "esprima"]:
         if (s + "/") in filename:
             suite = filename[: filename.find(s) + len(s)]
             break
@@ -394,7 +396,15 @@ def testShouldRun(filename, content):
     return True, "", flags, strictModes
 
 
-def runTest(filename, keep_tmp, binary_path, hvm):
+ESPRIMA_TEST_STATUS_MAP = {
+    esprima.TestStatus.TEST_PASSED: TestFlag.TEST_PASSED,
+    esprima.TestStatus.TEST_FAILED: TestFlag.COMPILE_FAILED,
+    esprima.TestStatus.TEST_SKIPPED: TestFlag.TEST_SKIPPED,
+    esprima.TestStatus.TEST_TIMEOUT: TestFlag.COMPILE_TIMEOUT,
+}
+
+
+def runTest(filename, keep_tmp, binary_path, hvm, esprima_runner):
     """
     Runs a single js test pointed by \p filename
     """
@@ -406,6 +416,17 @@ def runTest(filename, keep_tmp, binary_path, hvm):
         return (TestFlag.TEST_SKIPPED, "")
 
     showStatus(filename)
+
+    if "esprima" in suite:
+        if esprima.is_test_unsupported(filename):
+            return (TestFlag.TEST_SKIPPED, "")
+        else:
+            hermes_path = os.path.join(binary_path, "hermes")
+            test_res = esprima_runner.run_test(filename, hermes_path)
+            return (
+                ESPRIMA_TEST_STATUS_MAP[test_res[0]],
+                "" if test_res[0] == esprima.TestStatus.TEST_PASSED else test_res[1],
+            )
 
     content = open(filename, "rb").read().decode("utf-8")
 
@@ -741,7 +762,11 @@ def run(
         print("{} not found.".format(join(binary_path, hvm)))
         sys.exit(1)
 
-    calls = makeCalls((keep_tmp, binary_path, hvm), onlyfiles, rangeLeft, rangeRight)
+    esprima_runner = esprima.EsprimaTestRunner(verbose)
+
+    calls = makeCalls(
+        (keep_tmp, binary_path, hvm, esprima_runner), onlyfiles, rangeLeft, rangeRight
+    )
     results, resultsHist = testLoop(calls, jobs, fail_fast)
 
     # Sort the results for easier reading of failed tests.
