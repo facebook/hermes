@@ -18,7 +18,9 @@ namespace hermes {
 enum class Warning {
   UndefinedVariable,
   DirectEval,
-  NumWarnings,
+  Misc,
+
+  _NumWarnings,
 };
 
 } // namespace hermes

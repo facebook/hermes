@@ -319,6 +319,9 @@ static CLFlag StaticRequire(
 
 static CLFlag Werror('W', "error", false, "Treat all warnings as errors");
 
+static opt<bool>
+    DisableAllWarnings("w", desc("Disable all warnings"), init(false));
+
 static CLFlag UndefinedVariableWarning(
     'W',
     "undefined-variable",
@@ -742,6 +745,8 @@ std::shared_ptr<Context> createContext(
       Warning::UndefinedVariable, cl::UndefinedVariableWarning);
   context->getSourceErrorManager().setWarningStatus(
       Warning::DirectEval, cl::DirectEvalWarning);
+  if (cl::DisableAllWarnings)
+    context->getSourceErrorManager().disableAllWarnings();
 
   if (cl::CommonJS) {
     context->setUseCJSModules(true);

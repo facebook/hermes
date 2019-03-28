@@ -239,7 +239,7 @@ bool SourceLocationCache::findBufferLineAndLoc(
 
 SourceErrorManager::SourceErrorManager()
     : cache_(new SourceLocationCache(sm_)),
-      warningStatuses_((unsigned)Warning::NumWarnings, true) {
+      warningStatuses_((unsigned)Warning::_NumWarnings, true) {
   sm_.setDiagHandler(SourceErrorManager::printDiagnostic, this);
 }
 

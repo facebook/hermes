@@ -170,6 +170,10 @@ class SourceErrorManager {
     warningsAreErrors_ = warningsAreErrors;
   }
 
+  void disableAllWarnings() {
+    warningStatuses_.reset();
+  }
+
   void setWarningStatus(Warning warning, bool enabled) {
     enabled ? warningStatuses_.set((unsigned)warning)
             : warningStatuses_.reset((unsigned)warning);
@@ -240,11 +244,11 @@ class SourceErrorManager {
     message(DK_Error, loc, rng, msg);
   }
   void warning(SMLoc loc, SMRange rng, const llvm::Twine &msg) {
-    message(DK_Warning, loc, rng, msg);
+    warning(Warning::Misc, loc, rng, msg);
   }
   void warning(Warning w, SMLoc loc, SMRange rng, const llvm::Twine &msg) {
     if (isWarningEnabled(w)) {
-      warning(loc, rng, msg);
+      message(DK_Warning, loc, rng, msg);
     }
   }
   void note(SMLoc loc, SMRange rng, const llvm::Twine &msg) {
@@ -255,11 +259,11 @@ class SourceErrorManager {
     message(DK_Error, rng, msg);
   }
   void warning(SMRange rng, const llvm::Twine &msg) {
-    message(DK_Warning, rng, msg);
+    warning(Warning::Misc, rng, msg);
   }
   void warning(Warning w, SMRange rng, const llvm::Twine &msg) {
     if (isWarningEnabled(w)) {
-      warning(rng, msg);
+      message(DK_Warning, rng, msg);
     }
   }
   void note(SMRange rng, const llvm::Twine &msg) {
@@ -270,7 +274,7 @@ class SourceErrorManager {
     message(DK_Error, loc, msg);
   }
   void warning(SMLoc loc, const llvm::Twine &msg) {
-    message(DK_Warning, loc, msg);
+    warning(Warning::Misc, loc, msg);
   }
   void warning(Warning w, SMLoc loc, const llvm::Twine &msg) {
     if (isWarningEnabled(w)) {
