@@ -495,9 +495,9 @@ JSParserImpl::parseVariableStatement() {
 Optional<const char *> JSParserImpl::parseVariableDeclarationList(
     SMLoc varLoc,
     ESTree::NodeList &declList,
-    bool noIn) {
+    Param param) {
   do {
-    auto optDecl = parseVariableDeclaration(varLoc, noIn);
+    auto optDecl = parseVariableDeclaration(varLoc, param);
     if (!optDecl)
       return None;
     declList.push_back(*optDecl.getValue());
@@ -507,7 +507,7 @@ Optional<const char *> JSParserImpl::parseVariableDeclarationList(
 }
 
 Optional<ESTree::VariableDeclaratorNode *>
-JSParserImpl::parseVariableDeclaration(SMLoc varLoc, bool noIn) {
+JSParserImpl::parseVariableDeclaration(SMLoc varLoc, Param param) {
   if (!need(
           TokenKind::identifier,
           "in variable declaration",
@@ -525,7 +525,7 @@ JSParserImpl::parseVariableDeclaration(SMLoc varLoc, bool noIn) {
   if (check(TokenKind::equal)) {
     auto debugLoc = advance().Start;
 
-    auto expr = parseAssignmentExpression(noIn);
+    auto expr = parseAssignmentExpression(param);
     if (!expr)
       return None;
 
@@ -729,13 +729,13 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement() {
 
   if (check(TokenKind::rw_var)) {
     // Productions valid here:
-    //   for ( var VariableDeclarationListNoIn
-    //   for ( var VariableDeclarationNoIn
+    //   for ( var VariableDeclarationList[In]
+    //   for ( var VariableDeclaration[In]
     SMLoc varStartLoc = tok_->getStartLoc();
     advance();
 
     ESTree::NodeList declList;
-    if (!parseVariableDeclarationList(varStartLoc, declList, true))
+    if (!parseVariableDeclarationList(varStartLoc, declList, Param{}))
       return None;
 
     auto endLoc = declList.back().getEndLoc();
@@ -746,11 +746,11 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement() {
             ESTree::VariableDeclarationNode(varIdent_, std::move(declList)));
   } else {
     // Productions valid here:
-    //   for ( ExpressionNoInopt
+    //   for ( Expression[In]opt
     //   for ( LeftHandSideExpression
 
     if (!check(TokenKind::semi)) {
-      auto optExpr1 = parseExpression(true);
+      auto optExpr1 = parseExpression(Param{});
       if (!optExpr1)
         return None;
       expr1 = optExpr1.getValue();
@@ -759,7 +759,7 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement() {
 
   if (checkAndEat(TokenKind::rw_in)) {
     // Productions valid here:
-    //   for ( var VariableDeclarationNoIn in Expression ) Statement
+    //   for ( var VariableDeclaration[In] in Expression ) Statement
     //   for ( LeftHandSideExpression in Expression ) Statement
 
     if (decl && decl->_declarations.size() > 1) {
@@ -790,9 +790,9 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement() {
             decl ? decl : expr1, optRightExpr.getValue(), optBody.getValue()));
   } else if (checkAndEat(TokenKind::semi)) {
     // Productions valid here:
-    //   for ( var VariableDeclarationListNoIn ; Expressionopt ; Expressionopt )
+    //   for ( var VariableDeclarationList[In] ; Expressionopt ; Expressionopt )
     //       Statement
-    //   for ( ExpressionNoInopt ; Expressionopt ; Expressionopt ) Statement
+    //   for ( Expression[In]opt ; Expressionopt ; Expressionopt ) Statement
 
     ESTree::NodePtr test = nullptr;
     if (!check(TokenKind::semi)) {
@@ -2008,7 +2008,7 @@ inline unsigned getPrecedenceExcept(TokenKind kind, TokenKind except) {
 }
 } // namespace
 
-Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(bool noIn) {
+Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   // The stack can never go deeper than the number of precedence levels,
   // and we have 10.
   static const unsigned STACK_SIZE = 16;
@@ -2022,7 +2022,8 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(bool noIn) {
   unsigned sp = STACK_SIZE;
 
   // Decide whether to recognize "in" as a binary operator.
-  const TokenKind exceptKind = noIn ? TokenKind::rw_in : TokenKind::none;
+  const TokenKind exceptKind =
+      !param.has(ParamIn) ? TokenKind::rw_in : TokenKind::none;
 
   auto optExpr = parseUnaryExpression();
   if (!optExpr)
@@ -2067,8 +2068,8 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(bool noIn) {
   return topExpr;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(bool noIn) {
-  auto optTest = parseBinaryExpression(noIn);
+Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(Param param) {
+  auto optTest = parseBinaryExpression(param);
   if (!optTest)
     return None;
 
@@ -2076,7 +2077,7 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(bool noIn) {
   if (!checkAndEat(TokenKind::question))
     return optTest.getValue();
 
-  auto optConsequent = parseAssignmentExpression(false);
+  auto optConsequent = parseAssignmentExpression(ParamIn);
   if (!optConsequent)
     return None;
 
@@ -2088,7 +2089,7 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(bool noIn) {
           questionLoc))
     return None;
 
-  auto optAlternate = parseAssignmentExpression(noIn);
+  auto optAlternate = parseAssignmentExpression(param);
   if (!optAlternate)
     return None;
 
@@ -2101,8 +2102,8 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(bool noIn) {
           optConsequent.getValue()));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(bool noIn) {
-  auto optLeftExpr = parseConditionalExpression(noIn);
+Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
+  auto optLeftExpr = parseConditionalExpression(param);
   if (!optLeftExpr)
     return None;
 
@@ -2112,7 +2113,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(bool noIn) {
   UniqueString *op = getTokenIdent(tok_->getKind());
   auto debugLoc = advance().Start;
 
-  auto optRightExpr = parseAssignmentExpression(noIn);
+  auto optRightExpr = parseAssignmentExpression(param);
   if (!optRightExpr)
     return None;
 
@@ -2124,8 +2125,8 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(bool noIn) {
           op, optLeftExpr.getValue(), optRightExpr.getValue()));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseExpression(bool noIn) {
-  auto optExpr = parseAssignmentExpression(noIn);
+Optional<ESTree::Node *> JSParserImpl::parseExpression(Param param) {
+  auto optExpr = parseAssignmentExpression(param);
   if (!optExpr)
     return None;
 
@@ -2136,7 +2137,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExpression(bool noIn) {
   exprList.push_back(*optExpr.getValue());
 
   while (checkAndEat(TokenKind::comma)) {
-    auto optExpr2 = parseAssignmentExpression(noIn);
+    auto optExpr2 = parseAssignmentExpression(param);
     if (!optExpr2)
       return None;
 

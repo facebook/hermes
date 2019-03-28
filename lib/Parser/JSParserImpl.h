@@ -28,6 +28,42 @@ using llvm::ArrayRef;
 using llvm::None;
 using llvm::Optional;
 
+/// A convenience class to encapsulate passing multiple boolean parameters
+/// between parser functions.
+class Param {
+  unsigned flags_;
+
+ public:
+  constexpr Param() : flags_(0) {}
+  constexpr explicit Param(unsigned f) : flags_(f) {}
+
+  constexpr Param operator+(Param b) const {
+    return Param{flags_ | b.flags_};
+  }
+  constexpr Param operator-(Param b) const {
+    return Param{flags_ & ~(b.flags_)};
+  }
+
+  /// \return true if any of the flags in \p p are set in this instance.
+  bool has(Param p) const {
+    return flags_ & p.flags_;
+  }
+
+  /// \return true if all of the flags in \p p are set in this instance.
+  bool hasAll(Param p) const {
+    return (flags_ & p.flags_) == p.flags_;
+  }
+
+  /// \return \p p if at least on of its bits is set in this instance,
+  ///   otherwise returns an empty param.
+  Param get(Param p) const {
+    return Param{flags_ & p.flags_};
+  }
+};
+
+/// If set, "in" is recognized as a binary operator in RelationalExpression.
+static constexpr Param ParamIn{1 << 0};
+
 /// An EcmaScript 5.1 parser.
 /// It is a standard recursive descent LL(1) parser with no tricks. The only
 /// complication, is the need to communicate information to the lexer whether
@@ -297,14 +333,6 @@ class JSParserImpl {
   // Parser functions. All of these correspond more or less directly to grammar
   // productions, except in cases where the grammar is ambiguous, but even then
   // the name should be self-explanatory.
-  // The "noIn" parameter allows us to implement the "...NoIn" productions in
-  // the grammar without code duplication. Ultimately it controls whether
-  // parseRelationalExpression() recognizes the "in" operator or not. The flag
-  // is passed down along the chain of productions until
-  // parseRelationalExpression().
-  // Note that some expression parsong functions are actually duplicated into a
-  // regular and a "...NoIn" form, instead of passing the flag, where it was
-  // easy to do so.
 
   Optional<ESTree::FileNode *> parseProgram();
   /// Parse a function declaration, and optionally force an eager parse.
@@ -338,13 +366,13 @@ class JSParserImpl {
   Optional<const char *> parseVariableDeclarationList(
       SMLoc varLoc,
       ESTree::NodeList &declList,
-      bool noIn = false);
+      Param param = ParamIn);
 
   /// \param varLoc is the location of the `rw_var` token and is used for error
   /// display.
   Optional<ESTree::VariableDeclaratorNode *> parseVariableDeclaration(
       SMLoc varLoc,
-      bool noIn = false);
+      Param param = ParamIn);
 
   Optional<ESTree::EmptyStatementNode *> parseEmptyStatement();
   Optional<ESTree::Node *> parseExpressionOrLabelledStatement();
@@ -398,11 +426,11 @@ class JSParserImpl {
 
   /// Parse a binary expression using a precedence table, in order to decrease
   /// recursion depth.
-  Optional<ESTree::Node *> parseBinaryExpression(bool noIn);
+  Optional<ESTree::Node *> parseBinaryExpression(Param param);
 
-  Optional<ESTree::Node *> parseConditionalExpression(bool noIn = false);
-  Optional<ESTree::Node *> parseAssignmentExpression(bool noIn = false);
-  Optional<ESTree::Node *> parseExpression(bool noIn = false);
+  Optional<ESTree::Node *> parseConditionalExpression(Param param = ParamIn);
+  Optional<ESTree::Node *> parseAssignmentExpression(Param param = ParamIn);
+  Optional<ESTree::Node *> parseExpression(Param param = ParamIn);
 
   /// If the current token can be recognised as a directive (ES5.1 14.1),
   /// process the directive and return the allocated directive statement.
