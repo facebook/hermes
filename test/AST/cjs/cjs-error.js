@@ -2,6 +2,6 @@
 
 var = 3;
 
-// CHECK: {{.*}}cjs-error.js:3:5: error: 'identifier' expected in variable declaration
+// CHECK: {{.*}}cjs-error.js:3:5: error: 'identifier' expected in declaration
 // CHECK-NEXT: var = 3;
 // CHECK-NEXT: ~~~~^

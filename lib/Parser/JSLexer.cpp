@@ -941,7 +941,6 @@ TokenKind JSLexer::scanReservedWord(const char *start, unsigned length) {
     switch (rw) {
       case TokenKind::rw_implements:
       case TokenKind::rw_interface:
-      case TokenKind::rw_let:
       case TokenKind::rw_package:
       case TokenKind::rw_private:
       case TokenKind::rw_protected:

@@ -56,13 +56,20 @@ class Param {
 
   /// \return \p p if at least on of its bits is set in this instance,
   ///   otherwise returns an empty param.
-  Param get(Param p) const {
+  constexpr Param get(Param p) const {
     return Param{flags_ & p.flags_};
+  }
+
+  template <typename... T>
+  constexpr Param get(Param p, T... tail) const {
+    return Param{get(p).flags_ | get(tail...).flags_};
   }
 };
 
 /// If set, "in" is recognized as a binary operator in RelationalExpression.
 static constexpr Param ParamIn{1 << 0};
+static constexpr Param ParamYield{1 << 1};
+static constexpr Param ParamReturn{1 << 2};
 
 /// An EcmaScript 5.1 parser.
 /// It is a standard recursive descent LL(1) parser with no tricks. The only
@@ -147,23 +154,19 @@ class JSParserImpl {
   static constexpr unsigned MAX_RECURSION_DEPTH = 1024;
 
   // Certain known identifiers which we need to use when constructing the
-  // ESTree.
-  UniqueString *varIdent_;
+  // ESTree or when parsing;
   UniqueString *getIdent_;
   UniqueString *setIdent_;
   UniqueString *initIdent_;
   UniqueString *useStrictIdent_;
+  UniqueString *letIdent_;
+  UniqueString *ofIdent_;
   /// String representation of all tokens.
   UniqueString *tokenIdent_[NUM_JS_TOKENS];
 
   UniqueString *getTokenIdent(TokenKind kind) const {
     return tokenIdent_[(unsigned)kind];
   }
-
-  /// The $hermes:direct-use-only annotation.
-  Identifier hermesOnlyDirectAccess_;
-  /// The $hermes:init-once annotation.
-  Identifier hermesInitOnce_;
 
   /// Allocate an ESTree node of a certain type with supplied location and
   /// construction arguments. All nodes are allocated using the supplied
@@ -288,27 +291,26 @@ class JSParserImpl {
   bool check(TokenKind kind) const {
     return tok_->getKind() == kind;
   }
+  /// \return true if the current token is the specified identifier.
+  bool check(UniqueString *ident) const {
+    return tok_->getKind() == TokenKind::identifier &&
+        tok_->getIdentifier() == ident;
+  }
   /// Check whether the current token is one of the specified ones. \returns
   /// true if it is.
   bool check(TokenKind kind1, TokenKind kind2) const {
     return tok_->getKind() == kind1 || tok_->getKind() == kind2;
   }
-  /// Check whether the current token is an identifier or a reserved word and it
-  /// is the same as the specified identifier.
-  bool checkIdentifier(UniqueString *ident) const {
-    return (tok_->getKind() == TokenKind::identifier || tok_->isResWord()) &&
-        tok_->getResWordOrIdentifier() == ident;
-  }
 
   template <typename T>
   inline bool checkN(T t) const {
-    return tok_->getKind() == t;
+    return check(t);
   }
   /// Convenience function to compare against more than 2 token kinds. We still
   /// use check() for 2 or 1 kinds because it is more typesafe.
   template <typename Head, typename... Tail>
   inline bool checkN(Head h, Tail... tail) const {
-    return tok_->getKind() == h || checkN(tail...);
+    return check(h) || checkN(tail...);
   }
 
   /// Check whether the current token is an assignment operator.
@@ -337,56 +339,104 @@ class JSParserImpl {
   Optional<ESTree::FileNode *> parseProgram();
   /// Parse a function declaration, and optionally force an eager parse.
   /// Otherwise, the function will be skipped in lazy mode and a dummy returned.
+  /// \param param [Yield]
   Optional<ESTree::FunctionDeclarationNode *> parseFunctionDeclaration(
+      Param param,
       bool forceEagerly = false);
-  Optional<ESTree::Node *> parseStatement();
+  /// \param param [Yield, Return]
+  Optional<ESTree::Node *> parseStatement(Param param);
+
+  /// Parse a statement list.
+  /// \param param [Yield]
+  /// \param until stop parsing when this token is enountered
+  /// \param parseDirectives if true, recognize directives in the beginning of
+  ///   the block. Specifically, it will recognize "use strict" and enable
+  ///   strict mode.
+  /// \return a dummy value for consistency.
+  Optional<bool> parseStatementList(
+      Param param,
+      TokenKind until,
+      bool parseDirectives,
+      ESTree::NodeList &stmtList);
 
   /// Parse a statement block.
+  /// \param param [Yield, Return]
   /// \param grammarContext context to be used when consuming the closing brace.
   /// \param parseDirectives if true, recognize directives in the beginning of
   ///   the block. Specifically, it will recognize "use strict" and enable
   ///   strict mode.
   Optional<ESTree::BlockStatementNode *> parseBlock(
+      Param param,
       JSLexer::GrammarContext grammarContext = JSLexer::AllowRegExp,
       bool parseDirectives = false);
 
   /// Parse a function body. This is a wrapper around parseBlock for the
   /// purposes of lazy parsing.
+  /// \param param [Yield]
   Optional<ESTree::BlockStatementNode *> parseFunctionBody(
+      Param param,
       bool eagerly,
       JSLexer::GrammarContext grammarContext = JSLexer::AllowRegExp,
       bool parseDirectives = false);
 
-  Optional<ESTree::VariableDeclarationNode *> parseVariableStatement();
+  /// ES 2015 12.1
+  /// Does not generate an error. It is expected that the caller will do it.
+  /// \param param [Yield]
+  Optional<ESTree::IdentifierNode *> parseBindingIdentifier(Param param);
+  /// \param id the identifier node of the binding.
+  Optional<ESTree::VariableDeclaratorNode *> parseInitializerOpt(
+      Param param,
+      ESTree::IdentifierNode *id);
+  /// Parse a VariableStatement or LexicalDeclaration.
+  /// \param param [In, Yield]
+  /// \param declLoc the location of the let/const for error messages.
+  Optional<ESTree::VariableDeclarationNode *> parseLexicalDeclaration(
+      Param param);
+  /// Parse a VariableStatement or LexicalDeclaration.
+  /// \param param [Yield]
+  /// \param declLoc the location of the let/const for error messages.
+  Optional<ESTree::VariableDeclarationNode *> parseVariableStatement(
+      Param param);
 
   /// Parse a list of variable declarations. \returns a dummy value but the
   /// optionality still encodes the error condition.
-  /// \param varLoc is the location of the `rw_var` token and is used for error
+  /// \param param [In, Yield]
+  /// \param declLoc is the location of the `rw_var` token and is used for error
   /// display.
   Optional<const char *> parseVariableDeclarationList(
-      SMLoc varLoc,
+      Param param,
       ESTree::NodeList &declList,
-      Param param = ParamIn);
+      SMLoc declLoc);
 
-  /// \param varLoc is the location of the `rw_var` token and is used for error
-  /// display.
+  /// \param param [In, Yield]
+  /// \param declLoc is the location of the let/var/const token and is used for
+  /// error display.
   Optional<ESTree::VariableDeclaratorNode *> parseVariableDeclaration(
-      SMLoc varLoc,
-      Param param = ParamIn);
+      Param param,
+      SMLoc declLoc);
 
   Optional<ESTree::EmptyStatementNode *> parseEmptyStatement();
-  Optional<ESTree::Node *> parseExpressionOrLabelledStatement();
-  Optional<ESTree::IfStatementNode *> parseIfStatement();
-  Optional<ESTree::WhileStatementNode *> parseWhileStatement();
-  Optional<ESTree::DoWhileStatementNode *> parseDoWhileStatement();
-  Optional<ESTree::Node *> parseForStatement();
+  /// \param param [Yield, Return]
+  Optional<ESTree::Node *> parseExpressionOrLabelledStatement(Param param);
+  /// \param param [Yield, Return]
+  Optional<ESTree::IfStatementNode *> parseIfStatement(Param param);
+  /// \param param [Yield, Return]
+  Optional<ESTree::WhileStatementNode *> parseWhileStatement(Param param);
+  /// \param param [Yield, Return]
+  Optional<ESTree::DoWhileStatementNode *> parseDoWhileStatement(Param param);
+  /// \param param [Yield, Return]
+  Optional<ESTree::Node *> parseForStatement(Param param);
   Optional<ESTree::ContinueStatementNode *> parseContinueStatement();
   Optional<ESTree::BreakStatementNode *> parseBreakStatement();
   Optional<ESTree::ReturnStatementNode *> parseReturnStatement();
-  Optional<ESTree::WithStatementNode *> parseWithStatement();
-  Optional<ESTree::SwitchStatementNode *> parseSwitchStatement();
-  Optional<ESTree::ThrowStatementNode *> parseThrowStatement();
-  Optional<ESTree::TryStatementNode *> parseTryStatement();
+  /// \param param [Yield, Return]
+  Optional<ESTree::WithStatementNode *> parseWithStatement(Param param);
+  /// \param param [Yield, Return]
+  Optional<ESTree::SwitchStatementNode *> parseSwitchStatement(Param param);
+  /// \param param [Yield]
+  Optional<ESTree::ThrowStatementNode *> parseThrowStatement(Param param);
+  /// \param param [Yield, Return]
+  Optional<ESTree::TryStatementNode *> parseTryStatement(Param param);
   Optional<ESTree::DebuggerStatementNode *> parseDebuggerStatement();
 
   Optional<ESTree::Node *> parsePrimaryExpression();

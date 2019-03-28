@@ -33,6 +33,8 @@ class Keywords {
   const UniqueString *const identDelete;
   /// Identifier for "use strict".
   const UniqueString *const identUseStrict;
+  /// Identifier for "var:.
+  const UniqueString *const identVar;
 
   Keywords(Context &astContext);
 };

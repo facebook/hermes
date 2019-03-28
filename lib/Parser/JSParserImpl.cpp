@@ -60,15 +60,12 @@ JSParserImpl::JSParserImpl(Context &context, uint32_t bufferId, ParserPass pass)
 }
 
 void JSParserImpl::initializeIdentifiers() {
-  varIdent_ = lexer_.getIdentifier("var");
   getIdent_ = lexer_.getIdentifier("get");
   setIdent_ = lexer_.getIdentifier("set");
   initIdent_ = lexer_.getIdentifier("init");
   useStrictIdent_ = lexer_.getIdentifier("use strict");
-
-  hermesOnlyDirectAccess_ =
-      lexer_.getStringTable().getIdentifier("hermes:only-direct-access");
-  hermesInitOnce_ = lexer_.getStringTable().getIdentifier("hermes:init-once");
+  letIdent_ = lexer_.getIdentifier("let");
+  ofIdent_ = lexer_.getIdentifier("of");
 
   // Generate the string representation of all tokens.
   for (unsigned i = 0; i != NUM_JS_TOKENS; ++i)
@@ -218,29 +215,11 @@ bool JSParserImpl::recursionDepthExceeded() {
 
 Optional<ESTree::FileNode *> JSParserImpl::parseProgram() {
   SMLoc startLoc = tok_->getStartLoc();
+  SaveStrictMode saveStrict{this};
   ESTree::NodeList stmtList;
 
-  SaveStrictMode saveStrict{this};
-
-  // Parse directives.
-  while (auto *dirStmt = parseDirective())
-    stmtList.push_back(*dirStmt);
-
-  while (tok_->getKind() != TokenKind::eof) {
-    if (tok_->getKind() == TokenKind::rw_function) {
-      auto fdecl = parseFunctionDeclaration();
-      if (!fdecl)
-        return None;
-
-      stmtList.push_back(*fdecl.getValue());
-    } else {
-      auto stmt = parseStatement();
-      if (!stmt)
-        return None;
-
-      stmtList.push_back(*stmt.getValue());
-    }
-  }
+  if (!parseStatementList(Param{}, TokenKind::eof, true, stmtList))
+    return None;
 
   auto *program = setLocation(
       startLoc, tok_, new (context_) ESTree::ProgramNode(std::move(stmtList)));
@@ -250,23 +229,20 @@ Optional<ESTree::FileNode *> JSParserImpl::parseProgram() {
 }
 
 Optional<ESTree::FunctionDeclarationNode *>
-JSParserImpl::parseFunctionDeclaration(bool forceEagerly) {
+JSParserImpl::parseFunctionDeclaration(Param param, bool forceEagerly) {
   // function
   assert(tok_->getKind() == TokenKind::rw_function);
   SMLoc startLoc = advance().Start;
   // identifier
-  if (!need(
-          TokenKind::identifier,
-          "after 'function'",
-          "location of 'function'",
-          startLoc))
+  auto optId = parseBindingIdentifier(param.get(ParamYield));
+  if (!optId) {
+    errorExpected(
+        TokenKind::identifier,
+        "after 'function'",
+        "location of 'function'",
+        startLoc);
     return None;
-
-  auto *id = setLocation(
-      tok_,
-      tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
-  advance();
+  }
 
   // (
   SMLoc lparenLoc = tok_->getStartLoc();
@@ -321,12 +297,12 @@ JSParserImpl::parseFunctionDeclaration(bool forceEagerly) {
   if (pass_ == PreParse) {
     // Create the nodes we want to keep before the AllocationScope.
     auto node = new (context_) ESTree::FunctionDeclarationNode(
-        id, nullptr, std::move(paramList), nullptr);
+        *optId, nullptr, std::move(paramList), nullptr);
     // Initialize the node with a blank body.
     node->_body = new (context_) ESTree::BlockStatementNode({});
 
     AllocationScope scope(context_.getAllocator());
-    auto body = parseFunctionBody(false, JSLexer::AllowDiv, true);
+    auto body = parseFunctionBody(Param{}, false, JSLexer::AllowDiv, true);
     if (!body)
       return None;
 
@@ -334,7 +310,8 @@ JSParserImpl::parseFunctionDeclaration(bool forceEagerly) {
     return setLocation(startLoc, body.getValue(), node);
   }
 
-  auto parsedBody = parseFunctionBody(forceEagerly, JSLexer::AllowRegExp, true);
+  auto parsedBody =
+      parseFunctionBody(Param{}, forceEagerly, JSLexer::AllowRegExp, true);
   if (!parsedBody)
     return None;
   auto *body = parsedBody.getValue();
@@ -343,12 +320,12 @@ JSParserImpl::parseFunctionDeclaration(bool forceEagerly) {
       startLoc,
       body,
       new (context_) ESTree::FunctionDeclarationNode(
-          id, body, std::move(paramList), nullptr));
+          *optId, body, std::move(paramList), nullptr));
   node->strictness = ESTree::makeStrictness(isStrictMode());
   return node;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseStatement() {
+Optional<ESTree::Node *> JSParserImpl::parseStatement(Param param) {
   CHECK_RECURSION;
 
 #define _RET(parseFunc)       \
@@ -359,19 +336,19 @@ Optional<ESTree::Node *> JSParserImpl::parseStatement() {
 
   switch (tok_->getKind()) {
     case TokenKind::l_brace:
-      _RET(parseBlock());
+      _RET(parseBlock(param));
     case TokenKind::rw_var:
-      _RET(parseVariableStatement());
+      _RET(parseVariableStatement(param.get(ParamYield)));
     case TokenKind::semi:
       _RET(parseEmptyStatement());
     case TokenKind::rw_if:
-      _RET(parseIfStatement());
+      _RET(parseIfStatement(param.get(ParamYield, ParamReturn)));
     case TokenKind::rw_while:
-      _RET(parseWhileStatement());
+      _RET(parseWhileStatement(param.get(ParamYield, ParamReturn)));
     case TokenKind::rw_do:
-      _RET(parseDoWhileStatement());
+      _RET(parseDoWhileStatement(param.get(ParamYield, ParamReturn)));
     case TokenKind::rw_for:
-      _RET(parseForStatement());
+      _RET(parseForStatement(param.get(ParamYield, ParamReturn)));
     case TokenKind::rw_continue:
       _RET(parseContinueStatement());
     case TokenKind::rw_break:
@@ -379,24 +356,26 @@ Optional<ESTree::Node *> JSParserImpl::parseStatement() {
     case TokenKind::rw_return:
       _RET(parseReturnStatement());
     case TokenKind::rw_with:
-      _RET(parseWithStatement());
+      _RET(parseWithStatement(param.get(ParamYield, ParamReturn)));
     case TokenKind::rw_switch:
-      _RET(parseSwitchStatement());
+      _RET(parseSwitchStatement(param.get(ParamYield, ParamReturn)));
     case TokenKind::rw_throw:
-      _RET(parseThrowStatement());
+      _RET(parseThrowStatement(param.get(ParamYield)));
     case TokenKind::rw_try:
-      _RET(parseTryStatement());
+      _RET(parseTryStatement(param.get(ParamYield, ParamReturn)));
     case TokenKind::rw_debugger:
       _RET(parseDebuggerStatement());
 
     default:
-      _RET(parseExpressionOrLabelledStatement());
+      _RET(parseExpressionOrLabelledStatement(
+          param.get(ParamYield, ParamReturn)));
   }
 
 #undef _RET
 }
 
 Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
+    Param param,
     bool eagerly,
     JSLexer::GrammarContext grammarContext,
     bool parseDirectives) {
@@ -416,7 +395,8 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     }
   }
 
-  auto body = parseBlock(grammarContext, parseDirectives);
+  auto body = parseBlock(
+      param.get(ParamYield) + ParamReturn, grammarContext, parseDirectives);
   if (!body)
     return None;
 
@@ -427,7 +407,43 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
   return body;
 }
 
+Optional<bool> JSParserImpl::parseStatementList(
+    Param param,
+    TokenKind until,
+    bool parseDirectives,
+    ESTree::NodeList &stmtList) {
+  if (parseDirectives)
+    while (auto *dirStmt = parseDirective())
+      stmtList.push_back(*dirStmt);
+
+  while (!check(until, TokenKind::eof)) {
+    if (tok_->getKind() == TokenKind::rw_function) {
+      auto fdecl = parseFunctionDeclaration(param.get(ParamYield));
+      if (!fdecl)
+        return None;
+
+      stmtList.push_back(*fdecl.getValue());
+    } else if (check(TokenKind::rw_const) || check(letIdent_)) {
+      auto optLexDecl =
+          parseLexicalDeclaration(ParamIn + param.get(ParamYield));
+      if (!optLexDecl)
+        return None;
+
+      stmtList.push_back(*optLexDecl.getValue());
+    } else {
+      auto stmt = parseStatement(param.get(ParamYield, ParamReturn));
+      if (!stmt)
+        return None;
+
+      stmtList.push_back(*stmt.getValue());
+    }
+  }
+
+  return true;
+}
+
 Optional<ESTree::BlockStatementNode *> JSParserImpl::parseBlock(
+    Param param,
     JSLexer::GrammarContext grammarContext,
     bool parseDirectives) {
   // {
@@ -436,24 +452,9 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseBlock(
 
   ESTree::NodeList stmtList;
 
-  if (parseDirectives)
-    while (auto *dirStmt = parseDirective())
-      stmtList.push_back(*dirStmt);
-
-  while (!check(TokenKind::r_brace, TokenKind::eof)) {
-    if (tok_->getKind() == TokenKind::rw_function) {
-      auto fdecl = parseFunctionDeclaration();
-      if (!fdecl)
-        return None;
-
-      stmtList.push_back(*fdecl.getValue());
-    } else {
-      auto stmt = parseStatement();
-      if (!stmt)
-        return None;
-
-      stmtList.push_back(*stmt.getValue());
-    }
+  if (!parseStatementList(
+          param, TokenKind::r_brace, parseDirectives, stmtList)) {
+    return None;
   }
 
   // }
@@ -472,55 +473,30 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseBlock(
   return body;
 }
 
-Optional<ESTree::VariableDeclarationNode *>
-JSParserImpl::parseVariableStatement() {
-  assert(check(TokenKind::rw_var));
-  SMLoc startLoc = advance().Start;
-
-  ESTree::NodeList declList;
-  if (!parseVariableDeclarationList(startLoc, declList))
-    return None;
-
-  auto endLoc = declList.back().getEndLoc();
-  if (!eatSemi(endLoc))
-    return None;
-
-  return setLocation(
-      startLoc,
-      endLoc,
-      new (context_)
-          ESTree::VariableDeclarationNode(varIdent_, std::move(declList)));
-}
-
-Optional<const char *> JSParserImpl::parseVariableDeclarationList(
-    SMLoc varLoc,
-    ESTree::NodeList &declList,
+Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
     Param param) {
-  do {
-    auto optDecl = parseVariableDeclaration(varLoc, param);
-    if (!optDecl)
-      return None;
-    declList.push_back(*optDecl.getValue());
-  } while (checkAndEat(TokenKind::comma));
+  UniqueString *id;
+  if (check(TokenKind::identifier)) {
+    id = tok_->getIdentifier();
+  } else if (check(TokenKind::rw_yield)) {
+    id = tok_->getResWordIdentifier();
+    if (isStrictMode() || param.has(ParamYield))
+      sm_.error(
+          tok_->getSourceRange(),
+          "Unexpected usage of 'yield' as an identifier");
+  } else {
+    return None;
+  }
 
-  return "OK";
+  auto *node = setLocation(
+      tok_, tok_, new (context_) ESTree::IdentifierNode(id, nullptr));
+  advance();
+  return node;
 }
 
-Optional<ESTree::VariableDeclaratorNode *>
-JSParserImpl::parseVariableDeclaration(SMLoc varLoc, Param param) {
-  if (!need(
-          TokenKind::identifier,
-          "in variable declaration",
-          "declaration started here",
-          varLoc))
-    return None;
-
-  auto *id = setLocation(
-      tok_,
-      tok_,
-      new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
-  advance();
-
+Optional<ESTree::VariableDeclaratorNode *> JSParserImpl::parseInitializerOpt(
+    Param param,
+    ESTree::IdentifierNode *id) {
   ESTree::VariableDeclaratorNode *node;
   if (check(TokenKind::equal)) {
     auto debugLoc = advance().Start;
@@ -542,6 +518,65 @@ JSParserImpl::parseVariableDeclaration(SMLoc varLoc, Param param) {
   return node;
 }
 
+Optional<ESTree::VariableDeclarationNode *>
+JSParserImpl::parseLexicalDeclaration(Param param) {
+  assert(
+      (check(TokenKind::rw_var) || check(TokenKind::rw_const) ||
+       check(letIdent_)) &&
+      "parseLexicalDeclaration() expects var/const/let");
+  auto kindIdent = tok_->getResWordOrIdentifier();
+
+  SMLoc startLoc = advance().Start;
+
+  ESTree::NodeList declList;
+  if (!parseVariableDeclarationList(param, declList, startLoc))
+    return None;
+
+  auto endLoc = declList.back().getEndLoc();
+  if (!eatSemi(endLoc))
+    return None;
+
+  return setLocation(
+      startLoc,
+      endLoc,
+      new (context_)
+          ESTree::VariableDeclarationNode(kindIdent, std::move(declList)));
+}
+
+Optional<ESTree::VariableDeclarationNode *>
+JSParserImpl::parseVariableStatement(Param param) {
+  return parseLexicalDeclaration(ParamIn + param.get(ParamYield));
+}
+
+Optional<const char *> JSParserImpl::parseVariableDeclarationList(
+    Param param,
+    ESTree::NodeList &declList,
+    SMLoc declLoc) {
+  do {
+    auto optDecl = parseVariableDeclaration(param, declLoc);
+    if (!optDecl)
+      return None;
+    declList.push_back(*optDecl.getValue());
+  } while (checkAndEat(TokenKind::comma));
+
+  return "OK";
+}
+
+Optional<ESTree::VariableDeclaratorNode *>
+JSParserImpl::parseVariableDeclaration(Param param, SMLoc declLoc) {
+  auto optIdent = parseBindingIdentifier(param.get(ParamYield));
+  if (!optIdent) {
+    errorExpected(
+        TokenKind::identifier,
+        "in declaration",
+        "declaration started here",
+        declLoc);
+    return None;
+  }
+
+  return parseInitializerOpt(param, optIdent.getValue());
+}
+
 Optional<ESTree::EmptyStatementNode *> JSParserImpl::parseEmptyStatement() {
   assert(check(TokenKind::semi));
   auto *empty =
@@ -550,7 +585,8 @@ Optional<ESTree::EmptyStatementNode *> JSParserImpl::parseEmptyStatement() {
   return empty;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement() {
+Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
+    Param param) {
   bool startsWithIdentifier = check(TokenKind::identifier);
   auto optExpr = parseExpression();
   if (!optExpr)
@@ -563,7 +599,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement() {
       checkAndEat(TokenKind::colon)) {
     auto *id = cast<ESTree::IdentifierNode>(optExpr.getValue());
 
-    auto optBody = parseStatement();
+    auto optBody = parseStatement(param.get(ParamYield, ParamReturn));
     if (!optBody)
       return None;
 
@@ -584,7 +620,8 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement() {
   }
 }
 
-Optional<ESTree::IfStatementNode *> JSParserImpl::parseIfStatement() {
+Optional<ESTree::IfStatementNode *> JSParserImpl::parseIfStatement(
+    Param param) {
   assert(check(TokenKind::rw_if));
   SMLoc startLoc = advance().Start;
 
@@ -607,12 +644,12 @@ Optional<ESTree::IfStatementNode *> JSParserImpl::parseIfStatement() {
           condLoc))
     return None;
 
-  auto optConsequent = parseStatement();
+  auto optConsequent = parseStatement(param.get(ParamYield, ParamReturn));
   if (!optConsequent)
     return None;
 
   if (checkAndEat(TokenKind::rw_else)) {
-    auto optAlternate = parseStatement();
+    auto optAlternate = parseStatement(param.get(ParamYield, ParamReturn));
     if (!optAlternate)
       return None;
 
@@ -632,7 +669,8 @@ Optional<ESTree::IfStatementNode *> JSParserImpl::parseIfStatement() {
   }
 }
 
-Optional<ESTree::WhileStatementNode *> JSParserImpl::parseWhileStatement() {
+Optional<ESTree::WhileStatementNode *> JSParserImpl::parseWhileStatement(
+    Param param) {
   assert(check(TokenKind::rw_while));
   SMLoc startLoc = advance().Start;
 
@@ -654,7 +692,7 @@ Optional<ESTree::WhileStatementNode *> JSParserImpl::parseWhileStatement() {
           startLoc))
     return None;
 
-  auto optBody = parseStatement();
+  auto optBody = parseStatement(param.get(ParamYield, ParamReturn));
   if (!optBody)
     return None;
 
@@ -665,11 +703,12 @@ Optional<ESTree::WhileStatementNode *> JSParserImpl::parseWhileStatement() {
           ESTree::WhileStatementNode(optBody.getValue(), optTest.getValue()));
 }
 
-Optional<ESTree::DoWhileStatementNode *> JSParserImpl::parseDoWhileStatement() {
+Optional<ESTree::DoWhileStatementNode *> JSParserImpl::parseDoWhileStatement(
+    Param param) {
   assert(check(TokenKind::rw_do));
   SMLoc startLoc = advance().Start;
 
-  auto optBody = parseStatement();
+  auto optBody = parseStatement(param.get(ParamYield, ParamReturn));
   if (!optBody)
     return None;
 
@@ -711,7 +750,7 @@ Optional<ESTree::DoWhileStatementNode *> JSParserImpl::parseDoWhileStatement() {
           ESTree::DoWhileStatementNode(optBody.getValue(), optTest.getValue()));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseForStatement() {
+Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
   assert(check(TokenKind::rw_for));
   SMLoc startLoc = advance().Start;
 
@@ -727,15 +766,16 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement() {
   ESTree::VariableDeclarationNode *decl = nullptr;
   ESTree::NodePtr expr1 = nullptr;
 
-  if (check(TokenKind::rw_var)) {
+  if (checkN(TokenKind::rw_var, TokenKind::rw_const, letIdent_)) {
     // Productions valid here:
-    //   for ( var VariableDeclarationList[In]
-    //   for ( var VariableDeclaration[In]
+    //   for ( var/let/const VariableDeclarationList
+    //   for ( var/let/const VariableDeclaration
     SMLoc varStartLoc = tok_->getStartLoc();
+    auto *declIdent = tok_->getResWordOrIdentifier();
     advance();
 
     ESTree::NodeList declList;
-    if (!parseVariableDeclarationList(varStartLoc, declList, Param{}))
+    if (!parseVariableDeclarationList(Param{}, declList, varStartLoc))
       return None;
 
     auto endLoc = declList.back().getEndLoc();
@@ -743,10 +783,10 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement() {
         varStartLoc,
         endLoc,
         new (context_)
-            ESTree::VariableDeclarationNode(varIdent_, std::move(declList)));
+            ESTree::VariableDeclarationNode(declIdent, std::move(declList)));
   } else {
     // Productions valid here:
-    //   for ( Expression[In]opt
+    //   for ( Expression_opt
     //   for ( LeftHandSideExpression
 
     if (!check(TokenKind::semi)) {
@@ -757,40 +797,51 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement() {
     }
   }
 
-  if (checkAndEat(TokenKind::rw_in)) {
+  if (checkN(TokenKind::rw_in, ofIdent_)) {
     // Productions valid here:
-    //   for ( var VariableDeclaration[In] in Expression ) Statement
-    //   for ( LeftHandSideExpression in Expression ) Statement
+    //   for ( var/let/const VariableDeclaration[In] in/of
+    //   for ( LeftHandSideExpression in/of
 
     if (decl && decl->_declarations.size() > 1) {
       sm_.error(
           decl->getSourceRange(),
-          "Only one binding must be declared in a for-in loop");
+          "Only one binding must be declared in a for-in/for-of loop");
       return None;
     }
 
-    auto optRightExpr = parseExpression();
+    // Remember whether we are parsing for-in or for-of.
+    bool const forInLoop = check(TokenKind::rw_in);
+    advance();
+
+    auto optRightExpr = forInLoop
+        ? parseExpression()
+        : parseAssignmentExpression(ParamIn + param.get(ParamYield));
 
     if (!eat(
             TokenKind::r_paren,
             JSLexer::AllowRegExp,
-            "after 'for(... in ...'",
+            "after 'for(... in/of ...'",
             "location of '('",
             lparenLoc))
       return None;
 
-    auto optBody = parseStatement();
+    auto optBody = parseStatement(param.get(ParamYield, ParamReturn));
     if (!optBody || !optRightExpr)
       return None;
 
-    return setLocation(
-        startLoc,
-        optBody.getValue(),
-        new (context_) ESTree::ForInStatementNode(
-            decl ? decl : expr1, optRightExpr.getValue(), optBody.getValue()));
+    ESTree::Node *node;
+    if (forInLoop) {
+      node = new (context_) ESTree::ForInStatementNode(
+          decl ? decl : expr1, optRightExpr.getValue(), optBody.getValue());
+    } else {
+      node = new (context_) ESTree::ForOfStatementNode(
+          decl ? decl : expr1, optRightExpr.getValue(), optBody.getValue());
+    }
+    return setLocation(startLoc, optBody.getValue(), node);
   } else if (checkAndEat(TokenKind::semi)) {
     // Productions valid here:
-    //   for ( var VariableDeclarationList[In] ; Expressionopt ; Expressionopt )
+    //   for ( var/let/const VariableDeclarationList[In] ; Expressionopt ;
+    //   Expressionopt )
     //       Statement
     //   for ( Expression[In]opt ; Expressionopt ; Expressionopt ) Statement
 
@@ -826,7 +877,7 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement() {
             lparenLoc))
       return None;
 
-    auto optBody = parseStatement();
+    auto optBody = parseStatement(param.get(ParamYield, ParamReturn));
     if (!optBody)
       return None;
 
@@ -922,7 +973,8 @@ Optional<ESTree::ReturnStatementNode *> JSParserImpl::parseReturnStatement() {
       loc, loc, new (context_) ESTree::ReturnStatementNode(optArg.getValue()));
 }
 
-Optional<ESTree::WithStatementNode *> JSParserImpl::parseWithStatement() {
+Optional<ESTree::WithStatementNode *> JSParserImpl::parseWithStatement(
+    Param param) {
   assert(check(TokenKind::rw_with));
   SMLoc startLoc = advance().Start;
 
@@ -947,7 +999,7 @@ Optional<ESTree::WithStatementNode *> JSParserImpl::parseWithStatement() {
           lparenLoc))
     return None;
 
-  auto optBody = parseStatement();
+  auto optBody = parseStatement(param.get(ParamYield, ParamReturn));
   if (!optBody)
     return None;
 
@@ -958,7 +1010,8 @@ Optional<ESTree::WithStatementNode *> JSParserImpl::parseWithStatement() {
           ESTree::WithStatementNode(optExpr.getValue(), optBody.getValue()));
 }
 
-Optional<ESTree::SwitchStatementNode *> JSParserImpl::parseSwitchStatement() {
+Optional<ESTree::SwitchStatementNode *> JSParserImpl::parseSwitchStatement(
+    Param param) {
   assert(check(TokenKind::rw_switch));
   SMLoc startLoc = advance().Start;
 
@@ -1042,7 +1095,7 @@ Optional<ESTree::SwitchStatementNode *> JSParserImpl::parseSwitchStatement() {
 
     while (!checkN(
         TokenKind::rw_default, TokenKind::rw_case, TokenKind::r_brace)) {
-      auto optStmt = parseStatement();
+      auto optStmt = parseStatement(param.get(ParamYield, ParamReturn));
       if (!optStmt)
         return None;
       stmtList.push_back(*optStmt.getValue());
@@ -1075,7 +1128,8 @@ Optional<ESTree::SwitchStatementNode *> JSParserImpl::parseSwitchStatement() {
           optDiscriminant.getValue(), std::move(clauseList)));
 }
 
-Optional<ESTree::ThrowStatementNode *> JSParserImpl::parseThrowStatement() {
+Optional<ESTree::ThrowStatementNode *> JSParserImpl::parseThrowStatement(
+    Param param) {
   assert(check(TokenKind::rw_throw));
   SMLoc startLoc = advance().Start;
 
@@ -1099,13 +1153,14 @@ Optional<ESTree::ThrowStatementNode *> JSParserImpl::parseThrowStatement() {
       new (context_) ESTree::ThrowStatementNode(optExpr.getValue()));
 }
 
-Optional<ESTree::TryStatementNode *> JSParserImpl::parseTryStatement() {
+Optional<ESTree::TryStatementNode *> JSParserImpl::parseTryStatement(
+    Param param) {
   assert(check(TokenKind::rw_try));
   SMLoc startLoc = advance().Start;
 
   if (!need(TokenKind::l_brace, "after 'try'", "location of 'try'", startLoc))
     return None;
-  auto optTryBody = parseBlock();
+  auto optTryBody = parseBlock(param.get(ParamYield, ParamReturn));
   if (!optTryBody)
     return None;
 
@@ -1149,7 +1204,7 @@ Optional<ESTree::TryStatementNode *> JSParserImpl::parseTryStatement() {
             "location of 'catch'",
             handlerStartLoc))
       return None;
-    auto optCatchBody = parseBlock();
+    auto optCatchBody = parseBlock(param.get(ParamYield, ParamReturn));
     if (!optCatchBody)
       return None;
 
@@ -1169,7 +1224,7 @@ Optional<ESTree::TryStatementNode *> JSParserImpl::parseTryStatement() {
             "location of 'finally'",
             finallyLoc))
       return None;
-    auto optFinallyBody = parseBlock();
+    auto optFinallyBody = parseBlock(param.get(ParamYield, ParamReturn));
     if (!optFinallyBody)
       return None;
 
@@ -1393,7 +1448,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
 
   SaveStrictMode saveStrictMode{this};
 
-  if (checkIdentifier(getIdent_)) {
+  if (check(getIdent_)) {
     UniqueString *ident = tok_->getResWordOrIdentifier();
     SMRange identRng = tok_->getSourceRange();
     advance();
@@ -1431,7 +1486,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
               "start of getter declaration",
               startLoc))
         return None;
-      auto block = parseBlock(JSLexer::AllowRegExp, true);
+      auto block = parseBlock(ParamReturn, JSLexer::AllowRegExp, true);
       if (!block)
         return None;
 
@@ -1444,7 +1499,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
           ESTree::PropertyNode(optKey.getValue(), funcExpr, getIdent_);
       return setLocation(startLoc, block.getValue(), node);
     }
-  } else if (checkIdentifier(setIdent_)) {
+  } else if (check(setIdent_)) {
     UniqueString *ident = tok_->getResWordOrIdentifier();
     SMRange identRng = tok_->getSourceRange();
     advance();
@@ -1496,7 +1551,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
               "start of setter declaration",
               startLoc))
         return None;
-      auto block = parseBlock(JSLexer::AllowRegExp, true);
+      auto block = parseBlock(ParamReturn, JSLexer::AllowRegExp, true);
       if (!block)
         return None;
 
@@ -1644,7 +1699,7 @@ JSParserImpl::parseFunctionExpression(bool forceEagerly) {
     node->_body = new (context_) ESTree::BlockStatementNode({});
 
     AllocationScope scope(context_.getAllocator());
-    auto body = parseFunctionBody(false, JSLexer::AllowDiv, true);
+    auto body = parseFunctionBody(ParamReturn, false, JSLexer::AllowDiv, true);
     if (!body)
       return None;
 
@@ -1652,7 +1707,8 @@ JSParserImpl::parseFunctionExpression(bool forceEagerly) {
     return setLocation(startLoc, body.getValue(), node);
   }
 
-  auto body = parseFunctionBody(forceEagerly, JSLexer::AllowDiv, true);
+  auto body =
+      parseFunctionBody(ParamReturn, forceEagerly, JSLexer::AllowDiv, true);
   if (!body)
     return None;
 
@@ -2220,7 +2276,7 @@ Optional<ESTree::NodePtr> JSParserImpl::parseLazyFunction(
       return castNode(parseFunctionExpression(true));
 
     case ESTree::NodeKind::FunctionDeclaration:
-      return castNode(parseFunctionDeclaration(true));
+      return castNode(parseFunctionDeclaration(ParamReturn, true));
 
     default:
       llvm_unreachable("Asked to parse unexpected node type");

@@ -33,7 +33,8 @@ Keywords::Keywords(Context &astContext)
       identEval(astContext.getIdentifier("eval").getUnderlyingPointer()),
       identDelete(astContext.getIdentifier("delete").getUnderlyingPointer()),
       identUseStrict(
-          astContext.getIdentifier("use strict").getUnderlyingPointer()) {}
+          astContext.getIdentifier("use strict").getUnderlyingPointer()),
+      identVar(astContext.getIdentifier("var").getUnderlyingPointer()) {}
 
 //===----------------------------------------------------------------------===//
 // SemanticValidator
@@ -149,11 +150,12 @@ void SemanticValidator::visit(ForInStatementNode *forIn) {
     assert(
         VD->_declarations.size() == 1 && "for-in must have a single binding");
 
-    // for-in initializers are only allowed in non-strict mode.
+    // for-in initializers are only allowed in non-strict mode and only for
+    // "var" declarations.
     auto *initNode =
         cast<ESTree::VariableDeclaratorNode>(&VD->_declarations.front())->_init;
 
-    if (initNode && curFunction()->strictMode) {
+    if (initNode && (curFunction()->strictMode || VD->_kind != kw_.identVar)) {
       sm_.error(
           initNode->getSourceRange(),
           "for-in variable declaration may not be initialized");

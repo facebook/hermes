@@ -524,7 +524,7 @@ TEST(JSLexerTest, reservedTokens) {
   DiagContext ctx(sm);
 
   static const char str[] =
-      "implements let private public "
+      "implements private public "
       "interface package protected static "
       "yield";
 
@@ -532,7 +532,6 @@ TEST(JSLexerTest, reservedTokens) {
   {
     JSLexer lex(str, sm, alloc, nullptr, true);
     ASSERT_EQ(TokenKind::rw_implements, lex.advance()->getKind());
-    ASSERT_EQ(TokenKind::rw_let, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::rw_private, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::rw_public, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::rw_interface, lex.advance()->getKind());
@@ -547,7 +546,6 @@ TEST(JSLexerTest, reservedTokens) {
   // Ensure we don't recognize the words in strict mode.
   {
     JSLexer lex(str, sm, alloc, nullptr, false);
-    ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());

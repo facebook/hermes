@@ -20,3 +20,9 @@ tryParse("for(var i = 10 in {}); i");
 
 tryParse("'use strict'; for(var i = 10 in {}); i");
 //CHECK-NEXT: caught: 1:27:for-in variable declaration may not be initialized
+
+tryParse("for(let i = 10 in {}); i");
+//CHECK-NEXT: caught: 1:13:for-in variable declaration may not be initialized
+
+tryParse("'use strict'; for(let i = 10 in {}); i");
+//CHECK-NEXT: caught: 1:27:for-in variable declaration may not be initialized

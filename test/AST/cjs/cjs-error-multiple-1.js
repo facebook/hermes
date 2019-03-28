@@ -2,6 +2,6 @@
 
 require('./cjs-error-multiple-2.js');
 
-// CHECK: {{.*}}cjs-error-multiple-2.js:2:5: error: 'identifier' expected in variable declaration
+// CHECK: {{.*}}cjs-error-multiple-2.js:2:5: error: 'identifier' expected in declaration
 // CHECK-NEXT: var = 3;
 // CHECK-NEXT: ~~~~^
