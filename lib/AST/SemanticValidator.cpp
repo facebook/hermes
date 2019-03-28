@@ -145,11 +145,24 @@ void SemanticValidator::visit(ForInStatementNode *forIn) {
   SaveAndRestore<StatementNode *> saveSwitch(
       curFunction()->activeSwitchOrLoop, forIn);
 
-  if (!isa<VariableDeclarationNode>(forIn->_left))
-    if (!isLValue(forIn->_left))
+  if (auto *VD = dyn_cast<VariableDeclarationNode>(forIn->_left)) {
+    assert(
+        VD->_declarations.size() == 1 && "for-in must have a single binding");
+
+    // for-in initializers are only allowed in non-strict mode.
+    auto *initNode =
+        cast<ESTree::VariableDeclaratorNode>(&VD->_declarations.front())->_init;
+
+    if (initNode && curFunction()->strictMode) {
       sm_.error(
-          forIn->_left->getSourceRange(),
-          "invalid left-hand side in for-in-loop");
+          initNode->getSourceRange(),
+          "for-in variable declaration may not be initialized");
+    }
+  } else if (!isLValue(forIn->_left)) {
+    sm_.error(
+        forIn->_left->getSourceRange(),
+        "invalid left-hand side in for-in-loop");
+  }
   visitESTreeChildren(*this, forIn);
 }
 

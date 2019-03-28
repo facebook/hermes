@@ -335,6 +335,22 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   auto *sizeStorage =
       Builder.createAllocStackInst(genAnonymousLabelName("size"));
 
+  // Check for the obscure case "for(var i = init in ....)". We need to
+  // initialize the loop variable with the initializer.
+  if (auto *VD = dyn_cast<ESTree::VariableDeclarationNode>(ForInStmt->_left)) {
+    assert(
+        VD->_declarations.size() == 1 && "for-in must have a single binding");
+    auto *declarator =
+        cast<ESTree::VariableDeclaratorNode>(&VD->_declarations.front());
+    if (declarator->_init) {
+      // Note that we need to create a separate LReference for the
+      // initialization because the loop one must execute inside the loop for
+      // cases like "for(a[i++] in ...)".
+      LReference initRef = createLRef(VD);
+      initRef.emitStore(Builder, genExpression(declarator->_init));
+    }
+  }
+
   // Generate the right hand side of the for-in loop. The result of this
   // expression is the object we iterate on. We use this object as the 'base'
   // of the enumerator.
