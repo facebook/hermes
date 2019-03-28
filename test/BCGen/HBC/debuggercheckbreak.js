@@ -1,4 +1,4 @@
-// RUN: %hermes -dump-bytecode -target=HBC %s -O -g | %FileCheck %s --match-full-lines
+// RUN: %hermes -dump-bytecode -target=HBC %s -fno-calln -O -g | %FileCheck %s --match-full-lines
 
 //CHECK-LABEL:Function<global>{{.*}}:
 //CHECK-NEXT:Offset in debug table: src 0x0, vars 0x0

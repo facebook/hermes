@@ -1,4 +1,4 @@
-// RUN: %hermes -O -commonjs -dump-bytecode %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -fno-calln -commonjs -dump-bytecode %s | %FileCheck --match-full-lines %s
 
 var x = encodeURIComponent('asdf');
 function foo() {

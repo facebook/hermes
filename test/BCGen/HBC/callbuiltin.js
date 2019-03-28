@@ -1,6 +1,6 @@
-// RUN: %hermesc -O -fstatic-builtins -target=HBC -dump-ra %s | %FileCheck --match-full-lines --check-prefix=CHKRA %s
-// RUN: %hermesc -O -fstatic-builtins -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines --check-prefix=CHKBC %s
-// RUN: %hermes -O -fstatic-builtins -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -fno-calln -fstatic-builtins -target=HBC -dump-ra %s | %FileCheck --match-full-lines --check-prefix=CHKRA %s
+// RUN: %hermesc -O -fno-calln -fstatic-builtins -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines --check-prefix=CHKBC %s
+// RUN: %hermes -O -fno-calln -fstatic-builtins -target=HBC %s | %FileCheck --match-full-lines %s
 
 function foo(x) {
     return Object.keys(x)

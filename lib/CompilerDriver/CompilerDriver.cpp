@@ -325,8 +325,7 @@ static CLFlag UndefinedVariableWarning(
     true,
     "Do not warn when an undefined variable is referenced.");
 
-static opt<bool>
-    EnableCallN("enable-calln", desc("Optimize Call to CallN"), init(false));
+static CLFlag CallN('f', "calln", true, "Optimize Call to CallN");
 
 static opt<bool> ReusePropCache(
     "reuse-prop-cache",
@@ -721,7 +720,7 @@ std::shared_ptr<Context> createContext(
   optimizationOpts.outliningSettings.minParameters = cl::OutliningMinParameters;
   optimizationOpts.outliningSettings.maxParameters = cl::OutliningMaxParameters;
 
-  optimizationOpts.callN = cl::EnableCallN;
+  optimizationOpts.callN = cl::CallN;
   optimizationOpts.reusePropCache = cl::ReusePropCache;
 
   optimizationOpts.staticBuiltins = cl::StaticBuiltins;

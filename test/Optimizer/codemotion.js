@@ -1,4 +1,4 @@
-// RUN: %hermes -dump-ra %s -O | %FileCheck --match-full-lines %s
+// RUN: %hermes -fno-calln -dump-ra %s -O | %FileCheck --match-full-lines %s
 
 //CHECK-LABEL:function hoist_branch(x, y)
 //CHECK-NEXT:frame = []

@@ -1,4 +1,4 @@
-// RUN: %hermes -target=HBC -dump-bytecode --pretty-disassemble -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -dump-bytecode --pretty-disassemble -fno-calln -O %s | %FileCheck --match-full-lines %s
 
 function foo (a) {
     var sum = 0;

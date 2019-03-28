@@ -1,4 +1,4 @@
-// RUN: %hermesc -commonjs -fstatic-require -fstatic-builtins -dump-bytecode %s %S/m1.js %S/m2.js -O  | %FileCheck --match-full-lines --check-prefix=CHKOPT %s
+// RUN: %hermesc -commonjs -fstatic-require -fstatic-builtins -dump-bytecode %s %S/m1.js %S/m2.js -fno-calln -O  | %FileCheck --match-full-lines --check-prefix=CHKOPT %s
 // RUN: %hermesc -commonjs -fstatic-require -fstatic-builtins -dump-bytecode %s %S/m1.js %S/m2.js -Og | %FileCheck --match-full-lines --check-prefix=CHKDBG %s
 
 var m1 = require("./m" + "1.js");

@@ -1,4 +1,4 @@
-// RUN: %hermes -target=HBC -dump-bytecode -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -dump-bytecode -fno-calln -O %s | %FileCheck --match-full-lines %s
 "use strict";
 
 //CHECK-LABEL:Function<global>{{.*}}:

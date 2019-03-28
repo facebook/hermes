@@ -1,5 +1,5 @@
-// RUN: %hermes -target=HBC -dump-bytecode -O -strict %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -target=HBC -dump-bytecode -O -non-strict %s | %FileCheck --match-full-lines --check-prefix=CHKNONSTRICT %s
+// RUN: %hermes -target=HBC -dump-bytecode -O -fno-calln -strict %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -dump-bytecode -O -fno-calln -non-strict %s | %FileCheck --match-full-lines --check-prefix=CHKNONSTRICT %s
 
 var x = 5;
 foo(x);

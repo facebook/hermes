@@ -1,4 +1,4 @@
-// RUN: %hermes -strict -target=HBC -dump-bytecode -pretty-disassemble -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -strict -target=HBC -dump-bytecode -pretty-disassemble -fno-calln -O %s | %FileCheck --match-full-lines %s
 
 function g() {}
 

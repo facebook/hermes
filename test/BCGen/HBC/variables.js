@@ -1,5 +1,5 @@
 // RUN: %hermes -strict -target=HBC -dump-lir %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -strict -O -target=HBC -dump-lir %s | %FileCheck --match-full-lines --check-prefix=CHKOPT %s
+// RUN: %hermes -strict -O -fno-calln -target=HBC -dump-lir %s | %FileCheck --match-full-lines --check-prefix=CHKOPT %s
 
 var a = 5;
 a;

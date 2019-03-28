@@ -1,5 +1,5 @@
-// RUN: %hermesc -O -dump-ir %s | %FileCheck --match-full-lines %s
-// RUN: %hermesc -O -dump-lir %s | %FileCheck --match-full-lines --check-prefix=CHKLIR %s
+// RUN: %hermesc -O -fno-calln -dump-ir %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -fno-calln -dump-lir %s | %FileCheck --match-full-lines --check-prefix=CHKLIR %s
 //
 // Test optimizing out of unnecessary store undefined into a freshly created
 // environment

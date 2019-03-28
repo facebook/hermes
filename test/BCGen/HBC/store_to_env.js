@@ -1,4 +1,4 @@
-// RUN: %hermes -O -dump-bytecode %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -fno-calln -dump-bytecode %s | %FileCheck --match-full-lines %s
 
 function foo() {
     var myNum = 1234;

@@ -1,4 +1,4 @@
-// RUN: %hermes -target=HBC -dump-ra -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -dump-ra -fno-calln -O %s | %FileCheck --match-full-lines %s
 
 //CHECK-LABEL:function f(x) : string
 //CHECK-NEXT: frame = []

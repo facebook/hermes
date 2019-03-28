@@ -1,4 +1,4 @@
-// RUN: %hermes -dump-postra -O %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -fno-calln -dump-postra -O %s | %FileCheck %s --match-full-lines
 
 // Positive zero is 'cheap'.
 function poszero(f) {

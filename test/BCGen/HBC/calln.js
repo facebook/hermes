@@ -1,5 +1,5 @@
-// RUN: %hermes -O -dump-lra -enable-calln %s | %FileCheck --check-prefix=LRA --match-full-lines %s
-// RUN: %hermes -O -dump-bytecode -enable-calln %s | %FileCheck --check-prefix=BCGEN --match-full-lines %s
+// RUN: %hermes -O -dump-lra -fcalln %s | %FileCheck --check-prefix=LRA --match-full-lines %s
+// RUN: %hermes -O -dump-bytecode -fcalln %s | %FileCheck --check-prefix=BCGEN --match-full-lines %s
 
 // Variants that should produce a HBCCallNInst instruction.
 

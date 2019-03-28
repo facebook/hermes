@@ -1,4 +1,4 @@
-// RUN: %hermes -target=HBC -dump-bytecode -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -dump-bytecode -fno-calln -O %s | %FileCheck --match-full-lines %s
 
 //CHECK-LABEL:Function<binary>(1 params, 10 registers, 0 symbols):
 //CHECK-NEXT:Offset in debug table: {{.*}}

@@ -1,4 +1,4 @@
-// RUN: %hermesc -O -dump-bytecode %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -fno-calln -dump-bytecode %s | %FileCheck --match-full-lines %s
 
 // Code generation for static proto
 function staticProto() {
