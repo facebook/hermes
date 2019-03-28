@@ -120,6 +120,8 @@ std::string chompToken(std::string *str, const char *separators = " \t") {
   auto sepOrNpos = str->find_first_of(separators);
   result.assign(*str, 0, sepOrNpos);
   str->erase(0, sepOrNpos);
+  // Chomp trailing spaces.
+  str->erase(0, str->find_first_not_of(separators));
   return result;
 }
 
@@ -405,8 +407,7 @@ struct HDBDebugger : public debugger::EventObserver {
                     << loc.line << ':' << loc.column
                     << (info.resolved ? "" : " (unresolved)");
           if (conditional) {
-            // input has a leading space already.
-            std::cout << " if" << input;
+            std::cout << " if " << input;
           }
           std::cout << '\n';
         }

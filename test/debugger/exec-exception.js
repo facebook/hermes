@@ -27,7 +27,7 @@ callme();
 // CHECK-NEXT:   3: eventuallyThrows: {{.*}}:7:19
 // CHECK-NEXT:   4: eventuallyThrows: {{.*}}:7:19
 // CHECK-NEXT:   5: eventuallyThrows: {{.*}}:7:19
-// CHECK-NEXT:   6: eval: {{.*}}:1:18
+// CHECK-NEXT:   6: eval: {{.*}}:1:17
 // CHECK-NEXT:   7: (native)
 // CHECK-NEXT:   8: global: {{.*}}:16:7
 // CHECK-NEXT: Thrown value is: { message: I frew up. }

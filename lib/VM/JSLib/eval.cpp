@@ -88,7 +88,7 @@ CallResult<HermesValue> evalInEnvironment(
   if (!parsed || !validateAST(*context, semCtx, *parsed)) {
     auto msg = evalOutputManager.getFirstMessage();
     return runtime->raiseSyntaxError(
-        TwineChar16(msg.getLineNo()) + ":" + msg.getColumnNo() + ":" +
+        TwineChar16(msg.getLineNo()) + ":" + (msg.getColumnNo() + 1) + ":" +
         msg.getMessage());
   }
   auto *ast = parsed.getValue();
