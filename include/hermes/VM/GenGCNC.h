@@ -699,9 +699,6 @@ class GenGC final : public GCBase {
   ///     index.
   void forgetSegments(const std::vector<const char *> &lowLims);
 
-  /// Allocate new backing storage, and move the contents of the heap there.
-  void swapToFreshHeap();
-
   /// Update all the weak references' pointers in response to the GC's heap
   /// having moved.
   void moveWeakReferences(ptrdiff_t delta);
@@ -870,8 +867,14 @@ ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
 
 template <bool fixedSize, HasFinalizer hasFinalizer>
 inline void *GenGC::alloc(uint32_t sz) {
-  if (shouldSanitizeHandles())
-    swapToFreshHeap();
+  if (shouldSanitizeHandles()) {
+    // In order to get the maximum benefit of sanitization, the entire heap
+    // should be moved and poisoned with ASAN to force errors to occur.
+    // MallocGC already implements that well though, and it is complicated and
+    // slow to implement that for NCGen. So instead do a full collection which
+    // is almost as good.
+    collect();
+  }
 
 #ifdef HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT
   AllocResult res = oldGen_.alloc(sz, hasFinalizer);
@@ -896,8 +899,14 @@ inline void *GenGC::alloc(uint32_t sz) {
 
 template <HasFinalizer hasFinalizer>
 inline void *GenGC::allocLongLived(uint32_t size) {
-  if (shouldSanitizeHandles())
-    swapToFreshHeap();
+  if (shouldSanitizeHandles()) {
+    // In order to get the maximum benefit of sanitization, the entire heap
+    // should be moved and poisoned with ASAN to force errors to occur.
+    // MallocGC already implements that well though, and it is complicated and
+    // slow to implement that for NCGen. So instead do a full collection which
+    // is almost as good.
+    collect();
+  }
   AllocResult res;
   if (allocContextFromYG_) {
     res = oldGen_.alloc(size, hasFinalizer);

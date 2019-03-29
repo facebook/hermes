@@ -677,51 +677,6 @@ void GenGC::forgetSegments(const std::vector<const char *> &lowLims) {
   segmentIndex_.remove(lowLims.begin(), lowLims.end());
 }
 
-void GenGC::swapToFreshHeap() {
-#if 0 // TODO (T25686322): Implement swapping to a fresh heap for GenGCNC.
-  BackingStorage newStorage = allocBackingStorage();
-  const ptrdiff_t delta = newStorage.lowLim() - storage_.lowLim();
-
-  std::unique_ptr<SlotAcceptor> acceptor = getMoveHeapAcceptor(*this, delta);
-
-  inGC_ = true;
-
-  markRoots(*acceptor, /*markLongLived*/ true);
-
-  // Note: we must move the oldGen_ before the young, because the youngGen_
-  // needs to know the oldGen_ start after the move.
-  oldGen_.moveHeap(this, delta);
-  youngGen_.moveHeap(this, delta);
-
-  moveWeakReferences(delta);
-
-  inGC_ = false;
-
-  // Move over the occupied parts of the heap.
-  memcpy(youngGen_.start(), youngGen_.start() - delta, youngGen_.used());
-  memcpy(oldGen_.start(), oldGen_.start() - delta, oldGen_.used());
-
-  // NOTE: This modification probably needs to be made in this code when
-  // this is implemented:
-  // (Note that in each case, we use the ContigAllocGCSpace definition of
-  // "used()" -- the generation-level definition includes external storage which
-  // we don't care about here.
-  // See the GenGC version of this function for a how-to.
-
-  oscompat::asan_unpoison_if_enabled(
-      youngGen_.start() - delta, youngGen_.end() - delta);
-  oscompat::asan_unpoison_if_enabled(
-      oldGen_.start() - delta, oldGen_.end() - delta);
-#ifndef NDEBUG
-  // Now that the memory has been moved, make sure to clear the empty space.
-  youngGen_.clear(youngGen_.level(), youngGen_.end());
-  oldGen_.clear(oldGen_.level(), oldGen_.end());
-#endif
-
-  std::swap(storage_, newStorage);
-#endif // 0
-}
-
 void GenGC::moveWeakReferences(ptrdiff_t delta) {
   for (auto &slot : weakSlots_) {
     if (slot.extra == WeakSlotState::Free || !slot.value.isPointer())
