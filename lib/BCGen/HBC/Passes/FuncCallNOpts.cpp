@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
 #define DEBUG_TYPE "funccallnopts"
 
 #include "hermes/BCGen/HBC/Passes/FuncCallNOpts.h"
@@ -24,9 +30,6 @@ std::vector<Value *> getArgumentsWithoutThis(CallInst *call) {
 /// Replace Call instructions with HBCCallNInst when the argument count is
 /// in range.
 bool FuncCallNOpts::runOnFunction(Function *F) {
-  if (!F->getContext().getOptimizationSettings().callN)
-    return false;
-
   bool changed = false;
   IRBuilder::InstructionDestroyer destroyer;
   IRBuilder builder{F};

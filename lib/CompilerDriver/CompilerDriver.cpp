@@ -328,8 +328,6 @@ static CLFlag UndefinedVariableWarning(
     true,
     "Do not warn when an undefined variable is referenced.");
 
-static CLFlag CallN('f', "calln", true, "Optimize Call to CallN");
-
 static opt<bool> ReusePropCache(
     "reuse-prop-cache",
     desc("Reuse property cache entries for same property name"),
@@ -723,7 +721,6 @@ std::shared_ptr<Context> createContext(
   optimizationOpts.outliningSettings.minParameters = cl::OutliningMinParameters;
   optimizationOpts.outliningSettings.maxParameters = cl::OutliningMaxParameters;
 
-  optimizationOpts.callN = cl::CallN;
   optimizationOpts.reusePropCache = cl::ReusePropCache;
 
   optimizationOpts.staticBuiltins = cl::StaticBuiltins;

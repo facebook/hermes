@@ -80,9 +80,6 @@ struct OptimizationSettings {
   /// Specific settings for the outliner.
   OutliningSettings outliningSettings;
 
-  /// Support transforming Call to CallN.
-  bool callN{true};
-
   /// Reuse property cache entries for same property name.
   bool reusePropCache{true};
 
