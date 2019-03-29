@@ -1,13 +1,13 @@
-// RUN: %hermes -target=HBC -dump-bytecode -fno-calln -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -dump-bytecode -O %s | %FileCheck --match-full-lines %s
 
 //CHECK-LABEL:Function<binary>(1 params, 10 registers, 0 symbols):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:    GetGlobalObject   r0
 //CHECK-NEXT:    GetByIdShort      r1, r0, 1, "foo"
-//CHECK-NEXT:    LoadConstUndefined r3
-//CHECK-NEXT:    Call              r1, r1, 1
+//CHECK-NEXT:    LoadConstUndefined r2
+//CHECK-NEXT:    Call1             r1, r1, r2
 //CHECK-NEXT:    GetByIdShort      r0, r0, 1, "foo"
-//CHECK-NEXT:    Call              r0, r0, 1
+//CHECK-NEXT:    Call1             r0, r0, r2
 //CHECK-NEXT:    Eq                r2, r1, r0
 //CHECK-NEXT:    Neq               r2, r1, r0
 //CHECK-NEXT:    Neq               r2, r1, r0

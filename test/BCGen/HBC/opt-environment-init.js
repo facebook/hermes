@@ -1,5 +1,5 @@
-// RUN: %hermesc -O -fno-calln -dump-ir %s | %FileCheck --match-full-lines %s
-// RUN: %hermesc -O -fno-calln -dump-lir %s | %FileCheck --match-full-lines --check-prefix=CHKLIR %s
+// RUN: %hermesc -O -dump-ir %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -dump-lir %s | %FileCheck --match-full-lines --check-prefix=CHKLIR %s
 //
 // Test optimizing out of unnecessary store undefined into a freshly created
 // environment
@@ -39,7 +39,7 @@ function foo(o) {
 //CHKLIR-NEXT:  %2 = HBCStoreToEnvironmentInst %0, %1 : number, [cnt] : number
 //CHKLIR-NEXT:  %3 = HBCLoadParamInst 1 : number
 //CHKLIR-NEXT:  %4 = HBCLoadConstInst undefined : undefined
-//CHKLIR-NEXT:  %5 = CallInst %3, %4 : undefined
+//CHKLIR-NEXT:  %5 = HBCCallNInst %3, %4 : undefined
 //CHKLIR-NEXT:  %6 = HBCStoreToEnvironmentInst %0, %4 : undefined, [flag2]
 //CHKLIR-NEXT:  %7 = HBCCreateFunctionInst %""() : number, %0
 //CHKLIR-NEXT:  %8 = ReturnInst %7 : closure

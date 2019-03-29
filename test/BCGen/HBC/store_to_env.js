@@ -1,4 +1,4 @@
-// RUN: %hermes -O -fno-calln -dump-bytecode %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -dump-bytecode %s | %FileCheck --match-full-lines %s
 
 function foo() {
     var myNum = 1234;
@@ -55,13 +55,12 @@ function foo() {
 // CHECK-NEXT:     StoreToEnvironment r1, 2, r0
 // CHECK-NEXT:     GetGlobalObject   r2
 // CHECK-NEXT:     TryGetById        r4, r2, 1, "print"
-// CHECK-NEXT:     LoadFromEnvironment r5, r1, 3
+// CHECK-NEXT:     LoadFromEnvironment r3, r1, 3
 // CHECK-NEXT:     LoadConstUndefined r0
-// CHECK-NEXT:     LoadConstUndefined r6
-// CHECK-NEXT:     Call              r3, r4, 2
+// CHECK-NEXT:     Call2             r3, r4, r0, r3
 // CHECK-NEXT:     TryGetById        r3, r2, 1, "print"
-// CHECK-NEXT:     LoadFromEnvironment r5, r1, 4
-// CHECK-NEXT:     Call              r2, r3, 2
+// CHECK-NEXT:     LoadFromEnvironment r2, r1, 4
+// CHECK-NEXT:     Call2             r2, r3, r0, r2
 // CHECK-NEXT:     StoreNPToEnvironment r1, 5, r0
 // CHECK-NEXT:     Ret               r0
 

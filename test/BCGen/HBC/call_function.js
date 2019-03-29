@@ -1,4 +1,4 @@
-// RUN: %hermes -target=HBC -dump-bytecode -fno-calln -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -dump-bytecode -O %s | %FileCheck --match-full-lines %s
 "use strict";
 
 //CHECK-LABEL:Function<global>{{.*}}:
@@ -9,11 +9,10 @@
 //CHECK-NEXT:    GetGlobalObject   r0
 //CHECK-NEXT:    PutById           r0, r1, 1, "foo"
 //CHECK-NEXT:    GetByIdShort      r3, r0, 1, "foo"
-//CHECK-NEXT:    LoadConstUndefined r7
-//CHECK-NEXT:    LoadConstUInt8    r4, 1
-//CHECK-NEXT:    LoadConstZero     r6
-//CHECK-NEXT:    LoadConstZero     r5
-//CHECK-NEXT:    Call              r0, r3, 4
+//CHECK-NEXT:    LoadConstUndefined r2
+//CHECK-NEXT:    LoadConstZero     r1
+//CHECK-NEXT:    LoadConstUInt8    r0, 1
+//CHECK-NEXT:    Call4             r0, r3, r2, r1, r1, r0
 //CHECK-NEXT:    Ret               r0
 
 function foo(x, y, z) { }

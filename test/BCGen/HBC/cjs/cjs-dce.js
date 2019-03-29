@@ -1,4 +1,4 @@
-// RUN: %hermes -O -fno-calln -commonjs -dump-bytecode %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -commonjs -dump-bytecode %s | %FileCheck --match-full-lines %s
 
 var x = encodeURIComponent('asdf');
 function foo() {
@@ -36,18 +36,15 @@ foo();
 //CHECK-NEXT:    GetGlobalObject   r0
 //CHECK-NEXT:    TryGetById        r4, r0, 1, "encodeURIComponen"...
 //CHECK-NEXT:    LoadConstUndefined r0
-//CHECK-NEXT:    LoadConstString   r5, "asdf"
-//CHECK-NEXT:    LoadConstUndefined r6
-//CHECK-NEXT:    Call              r2, r4, 2
+//CHECK-NEXT:    LoadConstString   r2, "asdf"
+//CHECK-NEXT:    Call2             r2, r4, r0, r2
 //CHECK-NEXT:    StoreToEnvironment r3, 0, r2
 //CHECK-NEXT:    Mov               r2, r1
-//CHECK-NEXT:    LoadConstUndefined r6
-//CHECK-NEXT:    Call              r2, r2, 1
+//CHECK-NEXT:    Call1             r2, r2, r0
 //CHECK-NEXT:    Jmp               L1
 //CHECK-NEXT:    Catch             r2
 //CHECK-NEXT:L1:
-//CHECK-NEXT:    LoadConstUndefined r6
-//CHECK-NEXT:    Call              r1, r1, 1
+//CHECK-NEXT:    Call1             r1, r1, r0
 //CHECK-NEXT:    Ret               r0
 
 // CHECK: Exception Handlers:

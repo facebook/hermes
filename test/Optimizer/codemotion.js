@@ -1,4 +1,4 @@
-// RUN: %hermes -fno-calln -dump-ra %s -O | %FileCheck --match-full-lines %s
+// RUN: %hermes -dump-ra %s -O | %FileCheck --match-full-lines %s
 
 //CHECK-LABEL:function hoist_branch(x, y)
 //CHECK-NEXT:frame = []
@@ -96,7 +96,7 @@ function no_hoist_inc_dec(x, y) {
 //CHECK-NEXT:%BB1:
 //CHECK-NEXT:  {{.*}}  %7 = PhiInst %5 : number, %BB0, %11 : number, %BB1
 //CHECK-NEXT:  {{.*}}  %8 = TryLoadGlobalPropertyInst %2 : object, "print" : string
-//CHECK-NEXT:  {{.*}}  %9 = CallInst %8, %3 : undefined, %7 : number
+//CHECK-NEXT:  {{.*}}  %9 = HBCCallNInst %8, %3 : undefined, %7 : number
 //CHECK-NEXT:  {{.*}}  %10 = BinaryOperatorInst '+', %7 : number, %4 : number
 //CHECK-NEXT:  {{.*}}  %11 = MovInst %10 : number
 //CHECK-NEXT:  {{.*}}  %12 = CompareBranchInst '<', %11 : number, %0, %BB1, %BB2
@@ -124,7 +124,7 @@ function hoist_loop(x) {
 //CHECK-NEXT:  {{.*}}  %9 = BinaryOperatorInst '*', %6 : number, %8 : number
 //CHECK-NEXT:  {{.*}}  %10 = BranchInst %BB1
 //CHECK-NEXT:%BB1:
-//CHECK-NEXT:  {{.*}}  %11 = CallInst %0, %1 : undefined, %9 : number
+//CHECK-NEXT:  {{.*}}  %11 = HBCCallNInst %0, %1 : undefined, %9 : number
 //CHECK-NEXT:  {{.*}}  %12 = BranchInst %BB1
 //CHECK-NEXT:function_end
 function hoist_loop_expression(a, b, call) {
@@ -150,11 +150,11 @@ function hoist_loop_expression(a, b, call) {
 //CHECK-NEXT:  {{.*}}  %9 = BranchInst %BB1
 //CHECK-NEXT:%BB1:
 //CHECK-NEXT:  {{.*}}  %10 = TryLoadGlobalPropertyInst %0 : object, "print" : string
-//CHECK-NEXT:  {{.*}}  %11 = CallInst %10, %1 : undefined, %6 : number
+//CHECK-NEXT:  {{.*}}  %11 = HBCCallNInst %10, %1 : undefined, %6 : number
 //CHECK-NEXT:  {{.*}}  %12 = CondBranchInst %8 : number, %BB2, %BB1
 //CHECK-NEXT:%BB2:
 //CHECK-NEXT:  {{.*}}  %13 = TryLoadGlobalPropertyInst %0 : object, "print" : string
-//CHECK-NEXT:  {{.*}}  %14 = CallInst %13, %1 : undefined, %6 : number
+//CHECK-NEXT:  {{.*}}  %14 = HBCCallNInst %13, %1 : undefined, %6 : number
 //CHECK-NEXT:  {{.*}}  %15 = BranchInst %BB1
 //CHECK-NEXT:function_end
 
@@ -186,7 +186,7 @@ function hoist_from_multiblock_loop(x) {
 //CHECK-NEXT:  {{.*}}  %10 = ReturnInst %0
 //CHECK-NEXT:%BB3:
 //CHECK-NEXT:  {{.*}}  %11 = TryLoadGlobalPropertyInst %1 : object, "print" : string
-//CHECK-NEXT:  {{.*}}  %12 = CallInst %11, %2 : undefined, %7 : number
+//CHECK-NEXT:  {{.*}}  %12 = HBCCallNInst %11, %2 : undefined, %7 : number
 //CHECK-NEXT:  {{.*}}  %13 = BranchInst %BB1
 //CHECK-NEXT:function_end
 

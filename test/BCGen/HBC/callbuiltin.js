@@ -1,6 +1,6 @@
-// RUN: %hermesc -O -fno-calln -fstatic-builtins -target=HBC -dump-ra %s | %FileCheck --match-full-lines --check-prefix=CHKRA %s
-// RUN: %hermesc -O -fno-calln -fstatic-builtins -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines --check-prefix=CHKBC %s
-// RUN: %hermes -O -fno-calln -fstatic-builtins -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -fstatic-builtins -target=HBC -dump-ra %s | %FileCheck --match-full-lines --check-prefix=CHKRA %s
+// RUN: %hermesc -O -fstatic-builtins -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines --check-prefix=CHKBC %s
+// RUN: %hermes -O -fstatic-builtins -target=HBC %s | %FileCheck --match-full-lines %s
 
 function foo(x) {
     return Object.keys(x)
@@ -35,7 +35,7 @@ function shadows() {
 //CHKRA-NEXT:  {{.*}} %3 = StoreNewOwnPropertyInst %2, %0 : object, "keys" : string, true : boolean
 //CHKRA-NEXT:  {{.*}} %4 = LoadPropertyInst %0 : object, "keys" : string
 //CHKRA-NEXT:  {{.*}} %5 = HBCLoadConstInst "evil" : string
-//CHKRA-NEXT:  {{.*}} %6 = CallInst %4, %0 : object, %5 : string
+//CHKRA-NEXT:  {{.*}} %6 = HBCCallNInst %4, %0 : object, %5 : string
 //CHKRA-NEXT:  {{.*}} %7 = HBCLoadConstInst undefined : undefined
 //CHKRA-NEXT:  {{.*}} %8 = ReturnInst %7 : undefined
 //CHKRA-NEXT:function_end
@@ -51,7 +51,7 @@ function checkNonStaticBuiltin() {
 //CHKRA-NEXT:  {{.*}}	%1 = TryLoadGlobalPropertyInst %0 : object, "HermesInternal" : string
 //CHKRA-NEXT:  {{.*}}	%2 = LoadPropertyInst %1, "concat" : string
 //CHKRA-NEXT:  {{.*}}	%3 = HBCLoadConstInst "hello" : string
-//CHKRA-NEXT:  {{.*}}	%4 = CallInst %2, %1, %3 : string
+//CHKRA-NEXT:  {{.*}}	%4 = HBCCallNInst %2, %1, %3 : string
 //CHKRA-NEXT:  {{.*}}	%5 = HBCLoadConstInst undefined : undefined
 //CHKRA-NEXT:  {{.*}}	%6 = ReturnInst %5 : undefined
 //CHKRA-NEXT:function_end

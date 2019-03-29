@@ -1,4 +1,4 @@
-// RUN: %hermes -fno-calln -dump-postra -O %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -dump-postra -O %s | %FileCheck %s --match-full-lines
 
 // Positive zero is 'cheap'.
 function poszero(f) {
@@ -6,8 +6,11 @@ function poszero(f) {
 }
 // CHECK: function poszero(f)
 // CHECK:   %2 = HBCLoadConstInst 0 : number
-// CHECK-NEXT:   %3 = HBCLoadConstInst 0 : number
-// CHECK-NEXT:   %4 = CallInst %0, %1 : undefined, %2 : number, %3 : number
+// CHECK-NEXT:  %3 = ImplicitMovInst %1 : undefined
+// CHECK-NEXT:  %4 = ImplicitMovInst %2 : number
+// CHECK-NEXT:  %5 = ImplicitMovInst %2 : number
+// CHECK-NEXT:  %6 = HBCCallNInst %0, %1 : undefined, %2 : number, %2 : number
+// CHECK-NEXT:  %7 = ReturnInst %6
 
 // Negative zero is NOT 'cheap'.
 function negzero(f) {
@@ -15,6 +18,6 @@ function negzero(f) {
 }
 // CHECK:function negzero(f)
 // CHECK:  %2 = HBCLoadConstInst -0 : number
-// CHECK-NEXT:  %3 = MovInst %2 : number
-// CHECK-NEXT:  %4 = MovInst %2 : number
-// CHECK-NEXT: %5 = CallInst %0, %1 : undefined, %3 : number, %4 : number
+// CHECK-NEXT:  %3 = ImplicitMovInst %1 : undefined
+// CHECK-NEXT:  %4 = ImplicitMovInst %2 : number
+// CHECK-NEXT:  %5 = ImplicitMovInst %2 : number

@@ -1,4 +1,4 @@
-// RUN: %hermes -O -fcalln %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 
 function printer() {
   print(this);

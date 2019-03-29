@@ -1,4 +1,4 @@
-// RUN: %hermes -strict -target=HBC -dump-bytecode -pretty-disassemble -fno-calln -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -strict -target=HBC -dump-bytecode -pretty-disassemble -O %s | %FileCheck --match-full-lines %s
 
 function g() {}
 
@@ -73,7 +73,7 @@ function f(x) {
 //CHECK-LABEL:Function<f>(2 params, 10 registers, 0 symbols):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:    LoadParam         r0, 1
-//CHECK-NEXT:    SwitchImm         r0, 294, L18, 0, 16
+//CHECK-NEXT:    SwitchImm         r0, 292, L18, 0, 16
 //CHECK-NEXT:L17:
 //CHECK-NEXT:    LoadConstInt      r1, 3352
 //CHECK-NEXT:    Ret               r1
@@ -113,8 +113,8 @@ function f(x) {
 //CHECK-NEXT:L5:
 //CHECK-NEXT:    GetGlobalObject   r1
 //CHECK-NEXT:    GetByIdShort      r2, r1, 1, "g"
-//CHECK-NEXT:    LoadConstUndefined r3
-//CHECK-NEXT:    Call              r1, r2, 1
+//CHECK-NEXT:    LoadConstUndefined r1
+//CHECK-NEXT:    Call1             r1, r2, r1
 //CHECK-NEXT:    LoadConstInt      r1, 342
 //CHECK-NEXT:    Ret               r1
 //CHECK-NEXT:L4:
@@ -130,7 +130,7 @@ function f(x) {
 //CHECK-NEXT:    LoadConstUInt8    r1, 32
 //CHECK-NEXT:    Ret               r1
 //CHECK-NEXT:L18:
-//CHECK-NEXT:    SwitchImm         r0, 201, L23, 1, 14
+//CHECK-NEXT:    SwitchImm         r0, 199, L23, 1, 14
 //CHECK-NEXT:L30:
 //CHECK-NEXT:    LoadConstInt      r0, 3342
 //CHECK-NEXT:    Ret               r0
@@ -155,8 +155,8 @@ function f(x) {
 //CHECK-NEXT:L22:
 //CHECK-NEXT:    GetGlobalObject   r0
 //CHECK-NEXT:    GetByIdShort      r1, r0, 1, "g"
-//CHECK-NEXT:    LoadConstUndefined r3
-//CHECK-NEXT:    Call              r0, r1, 1
+//CHECK-NEXT:    LoadConstUndefined r0
+//CHECK-NEXT:    Call1             r0, r1, r0
 //CHECK-NEXT:    LoadConstInt      r0, 342
 //CHECK-NEXT:    Ret               r0
 //CHECK-NEXT:L21:
@@ -172,12 +172,11 @@ function f(x) {
 //CHECK-NEXT:    GetGlobalObject   r0
 //CHECK-NEXT:    GetByIdShort      r1, r0, 1, "g"
 //CHECK-NEXT:    LoadConstUndefined r0
-//CHECK-NEXT:    LoadConstUndefined r3
-//CHECK-NEXT:    Call              r1, r1, 1
+//CHECK-NEXT:    Call1             r1, r1, r0
 //CHECK-NEXT:    Ret               r0
 
 //CHECK-LABEL: Jump Tables:
-//CHECK-NEXT:  offset 294
+//CHECK-NEXT:  offset 292
 //CHECK-NEXT:   0 : L1
 //CHECK-NEXT:   1 : L2
 //CHECK-NEXT:   2 : L3
@@ -195,7 +194,7 @@ function f(x) {
 //CHECK-NEXT:   14 : L15
 //CHECK-NEXT:   15 : L16
 //CHECK-NEXT:   16 : L17
-//CHECK-NEXT:  offset 201
+//CHECK-NEXT:  offset 199
 //CHECK-NEXT:   1 : L19
 //CHECK-NEXT:   2 : L20
 //CHECK-NEXT:   3 : L21

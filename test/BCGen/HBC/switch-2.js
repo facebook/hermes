@@ -1,4 +1,4 @@
-// RUN: %hermes -strict -target=HBC -dump-bytecode -pretty-disassemble=false -fno-calln -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -strict -target=HBC -dump-bytecode -pretty-disassemble=false -O %s | %FileCheck --match-full-lines %s
 
 function g() {}
 
@@ -73,7 +73,7 @@ function f(x) {
 //CHECK-LABEL:Function<f>(2 params, 10 registers, 0 symbols):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:[@ 0] LoadParam 0<Reg8>, 1<UInt8>
-//CHECK-NEXT:[@ 3] SwitchImm 0<Reg8>, 294<UInt32>, 161<Addr32>, 0<UInt32>, 16<UInt32>
+//CHECK-NEXT:[@ 3] SwitchImm 0<Reg8>, 292<UInt32>, 161<Addr32>, 0<UInt32>, 16<UInt32>
 //CHECK-NEXT:[@ 21] LoadConstInt 1<Reg8>, 3352<Imm32>
 //CHECK-NEXT:[@ 27] Ret 1<Reg8>
 //CHECK-NEXT:[@ 29] LoadConstInt 1<Reg8>, 3523<Imm32>
@@ -100,8 +100,8 @@ function f(x) {
 //CHECK-NEXT:[@ 115] Ret 1<Reg8>
 //CHECK-NEXT:[@ 117] GetGlobalObject 1<Reg8>
 //CHECK-NEXT:[@ 119] GetByIdShort 2<Reg8>, 1<Reg8>, 1<UInt8>, 0<UInt8>
-//CHECK-NEXT:[@ 124] LoadConstUndefined 3<Reg8>
-//CHECK-NEXT:[@ 126] Call 1<Reg8>, 2<Reg8>, 1<UInt8>
+//CHECK-NEXT:[@ 124] LoadConstUndefined 1<Reg8>
+//CHECK-NEXT:[@ 126] Call1 1<Reg8>, 2<Reg8>, 1<Reg8>
 //CHECK-NEXT:[@ 130] LoadConstInt 1<Reg8>, 342<Imm32>
 //CHECK-NEXT:[@ 136] Ret 1<Reg8>
 //CHECK-NEXT:[@ 138] LoadConstUInt8 1<Reg8>, 132<UInt8>
@@ -112,7 +112,7 @@ function f(x) {
 //CHECK-NEXT:[@ 157] Ret 1<Reg8>
 //CHECK-NEXT:[@ 159] LoadConstUInt8 1<Reg8>, 32<UInt8>
 //CHECK-NEXT:[@ 162] Ret 1<Reg8>
-//CHECK-NEXT:[@ 164] SwitchImm 0<Reg8>, 201<UInt32>, 116<Addr32>, 1<UInt32>, 14<UInt32>
+//CHECK-NEXT:[@ 164] SwitchImm 0<Reg8>, 199<UInt32>, 116<Addr32>, 1<UInt32>, 14<UInt32>
 //CHECK-NEXT:[@ 182] LoadConstInt 0<Reg8>, 3342<Imm32>
 //CHECK-NEXT:[@ 188] Ret 0<Reg8>
 //CHECK-NEXT:[@ 190] LoadConstInt 0<Reg8>, 3254<Imm32>
@@ -129,8 +129,8 @@ function f(x) {
 //CHECK-NEXT:[@ 236] Ret 0<Reg8>
 //CHECK-NEXT:[@ 238] GetGlobalObject 0<Reg8>
 //CHECK-NEXT:[@ 240] GetByIdShort 1<Reg8>, 0<Reg8>, 1<UInt8>, 0<UInt8>
-//CHECK-NEXT:[@ 245] LoadConstUndefined 3<Reg8>
-//CHECK-NEXT:[@ 247] Call 0<Reg8>, 1<Reg8>, 1<UInt8>
+//CHECK-NEXT:[@ 245] LoadConstUndefined 0<Reg8>
+//CHECK-NEXT:[@ 247] Call1 0<Reg8>, 1<Reg8>, 0<Reg8>
 //CHECK-NEXT:[@ 251] LoadConstInt 0<Reg8>, 342<Imm32>
 //CHECK-NEXT:[@ 257] Ret 0<Reg8>
 //CHECK-NEXT:[@ 259] LoadConstUInt8 0<Reg8>, 132<UInt8>
@@ -142,12 +142,11 @@ function f(x) {
 //CHECK-NEXT:[@ 280] GetGlobalObject 0<Reg8>
 //CHECK-NEXT:[@ 282] GetByIdShort 1<Reg8>, 0<Reg8>, 1<UInt8>, 0<UInt8>
 //CHECK-NEXT:[@ 287] LoadConstUndefined 0<Reg8>
-//CHECK-NEXT:[@ 289] LoadConstUndefined 3<Reg8>
-//CHECK-NEXT:[@ 291] Call 1<Reg8>, 1<Reg8>, 1<UInt8>
-//CHECK-NEXT:[@ 295] Ret 0<Reg8>
+//CHECK-NEXT:[@ 289] Call1 1<Reg8>, 1<Reg8>, 0<Reg8>
+//CHECK-NEXT:[@ 293] Ret 0<Reg8>
 
 //CHECK-LABEL: Jump Tables:
-//CHECK-NEXT:  offset 294
+//CHECK-NEXT:  offset 292
 //CHECK-NEXT:   0 : 156
 //CHECK-NEXT:   1 : 148
 //CHECK-NEXT:   2 : 140
@@ -165,7 +164,7 @@ function f(x) {
 //CHECK-NEXT:   14 : 34
 //CHECK-NEXT:   15 : 26
 //CHECK-NEXT:   16 : 18
-//CHECK-NEXT:  offset 201
+//CHECK-NEXT:  offset 199
 //CHECK-NEXT:   1 : 108
 //CHECK-NEXT:   2 : 100
 //CHECK-NEXT:   3 : 95

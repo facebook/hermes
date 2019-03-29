@@ -1,4 +1,4 @@
-// RUN: %hermesc -commonjs -fstatic-require -fstatic-builtins -dump-bytecode %s %S/m1.js %S/m2.js -fno-calln -O  | %FileCheck --match-full-lines --check-prefix=CHKOPT %s
+// RUN: %hermesc -commonjs -fstatic-require -fstatic-builtins -dump-bytecode %s %S/m1.js %S/m2.js -O  | %FileCheck --match-full-lines --check-prefix=CHKOPT %s
 // RUN: %hermesc -commonjs -fstatic-require -fstatic-builtins -dump-bytecode %s %S/m1.js %S/m2.js -Og | %FileCheck --match-full-lines --check-prefix=CHKDBG %s
 
 var m1 = require("./m" + "1.js");
@@ -16,8 +16,7 @@ exports.bar = bar;
 //CHKOPT-NEXT:    LoadConstUInt8    r2, 1
 //CHKOPT-NEXT:    CallBuiltin       r1, 7, 2
 //CHKOPT-NEXT:    GetByIdShort      r0, r1, 1, "foo"
-//CHKOPT-NEXT:    Mov               r3, r1
-//CHKOPT-NEXT:    Call              r0, r0, 1
+//CHKOPT-NEXT:    Call1             r0, r0, r1
 //CHKOPT-NEXT:    CreateEnvironment r0
 //CHKOPT-NEXT:    CreateClosure     r1, r0, 2
 //CHKOPT-NEXT:    LoadParam         r0, 1
@@ -30,8 +29,7 @@ exports.bar = bar;
 //CHKOPT-NEXT:    LoadConstUInt8    r2, 2
 //CHKOPT-NEXT:    CallBuiltin       r1, 7, 2
 //CHKOPT-NEXT:    GetByIdShort      r0, r1, 1, "baz"
-//CHKOPT-NEXT:    Mov               r3, r1
-//CHKOPT-NEXT:    Call              r0, r0, 1
+//CHKOPT-NEXT:    Call1             r0, r0, r1
 //CHKOPT-NEXT:    LoadConstUndefined r0
 //CHKOPT-NEXT:    Ret               r0
 

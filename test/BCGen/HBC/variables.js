@@ -1,5 +1,5 @@
 // RUN: %hermes -strict -target=HBC -dump-lir %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -strict -O -fno-calln -target=HBC -dump-lir %s | %FileCheck --match-full-lines --check-prefix=CHKOPT %s
+// RUN: %hermes -strict -O -target=HBC -dump-lir %s | %FileCheck --match-full-lines --check-prefix=CHKOPT %s
 
 var a = 5;
 a;
@@ -99,7 +99,7 @@ function foo(a) {
 //CHKOPT-NEXT:  %1 = LoadPropertyInst %0 : object, "bar" : string
 //CHKOPT-NEXT:  %2 = HBCLoadConstInst undefined : undefined
 //CHKOPT-NEXT:  %3 = HBCLoadParamInst 1 : number
-//CHKOPT-NEXT:  %4 = CallInst %1, %2 : undefined, %3
+//CHKOPT-NEXT:  %4 = HBCCallNInst %1, %2 : undefined, %3
 //CHKOPT-NEXT:  %5 = ReturnInst %4
 //CHKOPT-NEXT:function_end
 

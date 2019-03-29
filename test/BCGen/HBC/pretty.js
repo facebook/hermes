@@ -1,4 +1,4 @@
-// RUN: %hermes -target=HBC -dump-bytecode --pretty-disassemble -fno-calln -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -dump-bytecode --pretty-disassemble -O %s | %FileCheck --match-full-lines %s
 
 function foo (a) {
     var sum = 0;
@@ -25,8 +25,6 @@ function foo (a) {
 //CHECK-NEXT:    GetGlobalObject   r0
 //CHECK-NEXT:    TryGetById        r2, r0, 1, "print"
 //CHECK-NEXT:    LoadConstUndefined r0
-//CHECK-NEXT:    LoadConstString   r6, "This\x0ais \u0435"...
-//CHECK-NEXT:    LoadConstUndefined r7
-//CHECK-NEXT:    Mov               r5, r3
-//CHECK-NEXT:    Call              r1, r2, 3
+//CHECK-NEXT:    LoadConstString   r1, "This\x0ais \u0435"...
+//CHECK-NEXT:    Call3             r1, r2, r0, r1, r3
 //CHECK-NEXT:    Ret               r0

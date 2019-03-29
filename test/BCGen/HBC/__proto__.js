@@ -1,4 +1,4 @@
-// RUN: %hermesc -O -fno-calln -dump-bytecode %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -dump-bytecode %s | %FileCheck --match-full-lines %s
 
 // Code generation for static proto
 function staticProto() {
@@ -23,13 +23,13 @@ function dynamicProto(func, getProto) {
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:    NewObject         r0
 //CHECK-NEXT:    LoadParam         r1, 1
-//CHECK-NEXT:    LoadConstUndefined r5
-//CHECK-NEXT:    Call              r1, r1, 1
+//CHECK-NEXT:    LoadConstUndefined r2
+//CHECK-NEXT:    Call1             r1, r1, r2
 //CHECK-NEXT:    PutNewOwnByIdShort r0, r1, "a"
 //CHECK-NEXT:    LoadConstUInt8    r1, 10
 //CHECK-NEXT:    PutNewOwnByIdShort r0, r1, "b"
 //CHECK-NEXT:    LoadParam         r1, 2
-//CHECK-NEXT:    Call              r3, r1, 1
+//CHECK-NEXT:    Call1             r3, r1, r2
 //CHECK-NEXT:    Mov               r4, r0
 //CHECK-NEXT:    CallBuiltin       r1, 6, 3
 //CHECK-NEXT:    Ret               r0

@@ -1,4 +1,4 @@
-// RUN: %hermes -strict -target=HBC -dump-bytecode --basic-block-profiling -fno-calln -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -strict -target=HBC -dump-bytecode --basic-block-profiling -O %s | %FileCheck --match-full-lines %s
 
 var condition = false;
 try {
@@ -18,6 +18,7 @@ try {
 //CHECK-NEXT:     CreateEnvironment r1
 //CHECK-NEXT:     LoadConstString   r6, "yes"
 //CHECK-NEXT:     LoadConstString   r5, "no"
+//CHECK-NEXT:     LoadConstUndefined r3
 //CHECK-NEXT:     LoadConstUndefined r0
 //CHECK-NEXT:     LoadConstFalse    r4
 //CHECK-NEXT:     GetGlobalObject   r2
@@ -31,31 +32,26 @@ try {
 //CHECK-NEXT:     Mov               r5, r6
 //CHECK-NEXT: L1:
 //CHECK-NEXT:     ProfilePoint      3
-//CHECK-NEXT:     LoadConstUndefined r9
-//CHECK-NEXT:     Mov               r8, r5
-//CHECK-NEXT:     Call              r0, r4, 2
+//CHECK-NEXT:     Call2             r0, r4, r3, r5
 //CHECK-NEXT:     ProfilePoint      2
 //CHECK-NEXT:     TryGetById        r5, r2, 1, "print"
-//CHECK-NEXT:     LoadConstString   r8, "rethrowing"
-//CHECK-NEXT:     LoadConstUndefined r9
-//CHECK-NEXT:     Call              r0, r5, 2
+//CHECK-NEXT:     LoadConstString   r4, "rethrowing"
+//CHECK-NEXT:     Call2             r0, r5, r3, r4
 //CHECK-NEXT:     ProfilePoint      1
 //CHECK-NEXT:     Jmp               L2
 //CHECK-NEXT:     Catch             r4
 //CHECK-NEXT:     ProfilePoint      6
 //CHECK-NEXT:     TryGetById        r6, r2, 1, "print"
-//CHECK-NEXT:     LoadConstString   r8, "rethrowing"
-//CHECK-NEXT:     LoadConstUndefined r9
-//CHECK-NEXT:     Call              r0, r6, 2
+//CHECK-NEXT:     LoadConstString   r5, "rethrowing"
+//CHECK-NEXT:     Call2             r0, r6, r3, r5
 //CHECK-NEXT:     Throw             r4
 //CHECK-NEXT:     Catch             r4
 //CHECK-NEXT:     ProfilePoint      9
 //CHECK-NEXT:     StoreToEnvironment r1, 0, r4
 //CHECK-NEXT:     TryGetById        r2, r2, 1, "print"
 //CHECK-NEXT:     LoadFromEnvironment r1, r1, 0
-//CHECK-NEXT:     GetByIdShort      r8, r1, 3, "stack"
-//CHECK-NEXT:     LoadConstUndefined r9
-//CHECK-NEXT:     Call              r0, r2, 2
+//CHECK-NEXT:     GetByIdShort      r1, r1, 3, "stack"
+//CHECK-NEXT:     Call2             r0, r2, r3, r1
 //CHECK-NEXT: L2:
 //CHECK-NEXT:     ProfilePoint      8
 //CHECK-NEXT:     Ret               r0

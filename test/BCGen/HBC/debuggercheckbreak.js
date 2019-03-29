@@ -1,4 +1,4 @@
-// RUN: %hermes -dump-bytecode -target=HBC %s -fno-calln -O -g | %FileCheck %s --match-full-lines
+// RUN: %hermes -dump-bytecode -target=HBC %s -O -g | %FileCheck %s --match-full-lines
 
 //CHECK-LABEL:Function<global>{{.*}}:
 //CHECK-NEXT:Offset in debug table: src 0x0, vars 0x0
@@ -23,15 +23,13 @@
 //CHECK-NEXT:L3:
 //CHECK-NEXT:    TryGetById        r7, r0, 1, "Math"
 //CHECK-NEXT:    GetByIdShort      r2, r7, 2, "random"
-//CHECK-NEXT:    Mov               r10, r7
-//CHECK-NEXT:    Call              r7, r2, 1
+//CHECK-NEXT:    Call1             r7, r2, r7
 //CHECK-NEXT:    Mov               r2, r6
 //CHECK-NEXT:    DebuggerCheckBreak
 //CHECK-NEXT:    JStrictEqual      L1, r7, r5
 //CHECK-NEXT:    TryGetById        r8, r0, 1, "Math"
 //CHECK-NEXT:    GetByIdShort      r7, r8, 2, "random"
-//CHECK-NEXT:    Mov               r10, r8
-//CHECK-NEXT:    Call              r7, r7, 1
+//CHECK-NEXT:    Call1             r7, r7, r8
 //CHECK-NEXT:    JStrictEqual      L2, r7, r1
 //CHECK-NEXT:    AddN              r6, r2, r4
 //CHECK-NEXT:    Jmp               L3
@@ -50,9 +48,7 @@
 //CHECK-NEXT:L4:
 //CHECK-NEXT:    TryGetById        r1, r0, 3, "print"
 //CHECK-NEXT:    LoadConstUndefined r0
-//CHECK-NEXT:    LoadConstUndefined r10
-//CHECK-NEXT:    Mov               r9, r2
-//CHECK-NEXT:    Call              r1, r1, 2
+//CHECK-NEXT:    Call2             r1, r1, r0, r2
 //CHECK-NEXT:    Ret               r0
 
 function test1() {
