@@ -54,12 +54,17 @@ green "Checking out RN"
   cd react-native
   # Check out a revision before 'Could not get unknown property 'mergeResourcesProvider'
   git checkout -b stable 1024dc251e1f4
+  # Apply JSI/JSIExecutor refactorings
+  git cherry-pick 96de12ab48 81860c59c3 19866aee3d3 64f3a87c9d2e dcc40a6267b4
   # Copy in the latest version of JSI
   cp -f "$jsi"/* ReactCommon/jsi/ && rm -f ReactCommon/jsi/*testlib*
+  git commit -a -m "Auto-update JSI"
   # Make the JSCRuntime compatible with updated JSI
   git apply ../../../hermes/first-party/patches/update-jsc-runtime.diff
+  git commit -a -m "Auto-patch JSCRuntime"
   # Set up the HermesExecutor
   git apply ../../../hermes/first-party/patches/include-hermes-executor.diff
+  git commit -a -m "Auto-add HermesExecutor"
   yarn install
 )
 

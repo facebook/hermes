@@ -42,7 +42,7 @@ hermes/utils/crosscompile_llvm.sh
 ( cd hermes/android && gradle build )
 
 # 6. Create a react-native project
-react-native init AwesomeProject
+react-native init AwesomeProject --version 0.59.2
 
 # 7. Patch this project to use libhermes
 ( cd AwesomeProject && "$HERMES_WS_DIR/hermes/first-party/setup-rn-app.sh" )

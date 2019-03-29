@@ -1,12 +1,14 @@
 diff --git a/ReactCommon/jsi/JSCRuntime.cpp b/ReactCommon/jsi/JSCRuntime.cpp
-index 3e9543653a..b8bd316c20 100644
+index 9ef987d667..034ff130fe 100644
 --- a/ReactCommon/jsi/JSCRuntime.cpp
 +++ b/ReactCommon/jsi/JSCRuntime.cpp
-@@ -37,8 +37,21 @@ class JSCRuntime : public jsi::Runtime {
+@@ -36,9 +36,23 @@ class JSCRuntime : public jsi::Runtime {
+   JSCRuntime(JSGlobalContextRef ctx);
    ~JSCRuntime();
- 
-   void evaluateJavaScript(
+
+-  void evaluateJavaScript(
 -      std::unique_ptr<const jsi::Buffer> buffer,
++  jsi::Value evaluateJavaScript(
 +      const std::shared_ptr<const jsi::Buffer>& buffer,
        const std::string& sourceURL) override;
 +
@@ -14,23 +16,34 @@ index 3e9543653a..b8bd316c20 100644
 +      const std::shared_ptr<const jsi::Buffer>& buffer,
 +      std::string sourceURL) override {
 +    assert(false && "Not implemented");
-+		return nullptr;
-+	}
++               return nullptr;
++       }
 +
-+  void evaluatePreparedJavaScript(
++  jsi::Value evaluatePreparedJavaScript(
 +      const std::shared_ptr<const jsi::PreparedJavaScript>& js) override {
 +    assert(false && "Not implemented");
++    return jsi::Value::undefined();
 +  }
 +
    jsi::Object global() override;
- 
+
    std::string description() override;
-@@ -315,7 +328,7 @@ JSCRuntime::~JSCRuntime() {
+@@ -346,8 +360,8 @@ JSCRuntime::~JSCRuntime() {
+ #endif
  }
- 
- void JSCRuntime::evaluateJavaScript(
+
+-void JSCRuntime::evaluateJavaScript(
 -    std::unique_ptr<const jsi::Buffer> buffer,
++jsi::Value JSCRuntime::evaluateJavaScript(
 +    const std::shared_ptr<const jsi::Buffer>& buffer,
      const std::string& sourceURL) {
    std::string tmp(
        reinterpret_cast<const char*>(buffer->data()), buffer->size());
+@@ -364,6 +378,7 @@ void JSCRuntime::evaluateJavaScript(
+     JSStringRelease(sourceURLRef);
+   }
+   checkException(res, exc);
++  return createValue(res);
+ }
+
+ jsi::Object JSCRuntime::global() {
