@@ -179,6 +179,10 @@ uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
   uint32_t elemNumForMaxSaving = 0;
   uint32_t nonLiteralsSoFar = 0;
   for (Instruction *u : allocInst->getUsers()) {
+    // Stop when we see a getter/setter.
+    if (isa<StoreGetterSetterInst>(u)) {
+      break;
+    }
     if (auto *put = dyn_cast<StoreOwnPropertyInst>(u)) {
       // Skip if the instruction is storing the object itself into another
       // object.

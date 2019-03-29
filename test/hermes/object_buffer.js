@@ -28,3 +28,18 @@ print(obj.o(8));
 print(obj.c.a);
 //CHECK-NEXT: 2
 print(obj.c.b);
+
+var obj2 = {
+  a: 1,
+  get b() {
+    return 3;
+  },
+  c: 2,
+  set b(x) {
+    return;
+  },
+  d: 5,
+  e: 6
+};
+print(Object.keys(obj2));
+//CHECK-NEXT: a,b,c,d,e
