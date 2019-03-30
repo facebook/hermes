@@ -240,7 +240,7 @@ bool vm_protect(void *p, size_t sz, ProtectMode) {
   return err != -1;
 }
 
-int pages_in_ram(const void *p, size_t sz) {
+int pages_in_ram(const void *p, size_t sz, llvm::SmallVectorImpl<int> *runs) {
   const auto PS = page_size();
   {
     // Align region start down to page boundary.
@@ -260,12 +260,23 @@ int pages_in_ram(const void *p, size_t sz) {
   if (mincore(const_cast<void *>(p), sz, bitMap.data())) {
     return -1;
   }
-  int result = 0;
+  // Total pages in RAM.
+  int totalIn = 0;
+  bool currentRunStatus = true;
+  if (runs)
+    runs->push_back(0);
   for (auto elm : bitMap) {
     // Lowest bit tells whether in RAM.
-    result += (elm & 1);
+    bool thisStatus = (elm & 1);
+    totalIn += thisStatus;
+    if (runs) {
+      if (thisStatus != currentRunStatus)
+        runs->push_back(0);
+      currentRunStatus = thisStatus;
+      ++runs->back();
+    }
   }
-  return result;
+  return totalIn;
 }
 
 uint64_t peak_rss() {

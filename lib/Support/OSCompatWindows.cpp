@@ -261,7 +261,7 @@ bool vm_protect(void *p, size_t sz, ProtectMode) {
   return err != 0;
 }
 
-int pages_in_ram(const void *p, size_t sz) {
+int pages_in_ram(const void *p, size_t sz, llvm::SmallVectorImpl<int> *runs) {
   // Not yet supported.
   return -1;
 }

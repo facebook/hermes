@@ -231,16 +231,20 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 
   if (runtime->getRuntimeStats().shouldSample) {
     size_t bytecodePagesResident = 0;
+    size_t bytecodePagesResidentRuns = 0;
     for (auto &module : runtime->getRuntimeModules()) {
       auto buf = module.getBytecode()->getRawBuffer();
       if (buf.size()) {
-        int pages = oscompat::pages_in_ram(buf.data(), buf.size());
+        llvm::SmallVector<int, 64> runs;
+        int pages = oscompat::pages_in_ram(buf.data(), buf.size(), &runs);
         if (pages >= 0) {
           bytecodePagesResident += pages;
+          bytecodePagesResidentRuns += runs.size();
         }
       }
     }
     SET_PROP_NEW("js_bytecodePagesResident", bytecodePagesResident);
+    SET_PROP_NEW("js_bytecodePagesResidentRuns", bytecodePagesResidentRuns);
   }
 
   return resultHandle.getHermesValue();

@@ -7,6 +7,7 @@
 #ifndef HERMES_SUPPORT_OSCOMPAT_H
 #define HERMES_SUPPORT_OSCOMPAT_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 
 #ifdef _WINDOWS
@@ -100,8 +101,16 @@ enum class ProtectMode { ReadWrite };
 bool vm_protect(void *p, size_t sz, ProtectMode mode);
 
 /// Return the number of pages in the given region that are currently in RAM.
+/// If \p runs is provided, then populate it with the lengths of runs of
+/// consecutive pages with the same resident/non-resident status, alternating
+/// between the two statuses, and with the first element always denoting a
+/// number of resident pages (0 if the first page is not resident).
+///
 /// Return -1 on failure (including not supported).
-int pages_in_ram(const void *p, size_t sz);
+int pages_in_ram(
+    const void *p,
+    size_t sz,
+    llvm::SmallVectorImpl<int> *runs = nullptr);
 
 /// Resident set size (RSS), in bytes: the amount of RAM used by the process.
 /// It excludes virtual memory that has been paged out or was never loaded.
