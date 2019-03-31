@@ -123,6 +123,25 @@ TEST_F(HermesRuntimeTest, PreparedJavaScriptInvalidSourceThrows) {
   EXPECT_TRUE(caught) << "prepareJavaScript should have thrown an exception";
 }
 
+TEST_F(HermesRuntimeTest, NoCorruptionOnJSError) {
+  // If the test crashes or infinite loops, the likely cause is that
+  // Hermes API library is not built with proper compiler flags
+  // (-fexception in GCC/CLANG, /EHsc in MSVC)
+  try {
+    rt->evaluateJavaScript(std::make_unique<StringBuffer>("foo.bar = 1"), "");
+    FAIL() << "Expected JSIException";
+  } catch (const facebook::jsi::JSIException &) {
+    // expected exception, ignore
+  }
+  try {
+    rt->evaluateJavaScript(std::make_unique<StringBuffer>("foo.baz = 1"), "");
+    FAIL() << "Expected JSIException";
+  } catch (const facebook::jsi::JSIException &) {
+    // expected exception, ignore
+  }
+  rt->evaluateJavaScript(std::make_unique<StringBuffer>("gc()"), "");
+}
+
 // In JSC we use multiple threads in our implementation of JSI so we can't
 // use the ASSERT_DEATH macros when testing that implementation.
 // Asserts are compiled out of opt builds
