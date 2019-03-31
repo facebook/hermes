@@ -116,9 +116,16 @@ fi
 
 # local edits
 # There are a small number of edits we need to make to the llvm files.
+if ! (cd llvm; $GIT diff-index --quiet HEAD); then
+  echo "llvm dir is dirty (contains uncommitted changes)" >&2
+  exit 1
+fi
 # Use `git apply` instead of `patch` because `patch` may not be available
 # on some Windows installations.
 (cd llvm; $GIT apply "$HERMES_DIR"/utils/llvm-patches/*.patch)
+# Commit the patches we applied. Since we're in detached HEAD mode,
+# committing ensures that the patch operations above are idempotent
+(cd llvm; $GIT -c user.name='nobody' -c user.email='nobody@example.com' commit -a -m "Patch by Hermes build script")
 
 #build llvm
 FLAGS="-DLLVM_TARGETS_TO_BUILD= -DCMAKE_BUILD_TYPE=$BUILD_TYPE"
