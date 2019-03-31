@@ -3,9 +3,10 @@
 set -x
 set -e
 
-START_DIR="$PWD"
 function finish () {
-  cd "$START_DIR"
+  local ret=$?
+  echo "Exiting with $ret after $SECONDS seconds"
+  return $ret
 }
 
 trap finish EXIT

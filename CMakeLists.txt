@@ -293,6 +293,7 @@ if (NOT ICU_FOUND AND
     icuuc icuin
   )
   include_directories(${ICU_INCLUDE_DIRS})
+  message("Using Windows 10 built-in ICU")
 endif()
 
 # If we have no ICU, then error out.
