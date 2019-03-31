@@ -118,10 +118,6 @@ if [[ "$PLATFORM" == 'windows' ]]; then
   # because LLVM_TARGETS_TO_BUILD is set to empty.
   FLAGS="$FLAGS -DLLVM_INCLUDE_EXAMPLES=Off"
 fi
-if [ -z "$DISTRIBUTE" ]
-then
-  FLAGS="$FLAGS -DLLVM_ENABLE_ASSERTIONS=On"
-fi
 if [ -n "$ENABLE_ASAN" ]
 then
   FLAGS="$FLAGS -DLLVM_USE_SANITIZER=Address"

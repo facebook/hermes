@@ -200,8 +200,6 @@ if (POLICY CMP0023)
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL Debug)
-    # Enable LLVM assertions in debug mode
-    option(LLVM_ENABLE_ASSERTIONS "Enable assertions" ON)
     # Enable HERMES_SLOW_DEBUG in debug mode
     add_definitions(-DHERMES_SLOW_DEBUG)
     set(HERMES_BUILD_MODE "dbg")
