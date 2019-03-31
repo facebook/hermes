@@ -4,6 +4,8 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
+#ifdef HERMES_ENABLE_DEBUGGER
+
 #include "hermes/VM/Debugger/Debugger.h"
 
 #include "hermes/Support/UTF8.h"
@@ -1105,3 +1107,5 @@ auto Debugger::resolveScriptId(
 } // namespace hermes
 
 #endif
+
+#endif // HERMES_ENABLE_DEBUGGER

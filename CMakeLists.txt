@@ -43,6 +43,14 @@ set(HERMESVM_GCCELL_ID ${DEFAULT_GCCELL_ID} CACHE BOOL
 set(HERMESVM_SANITIZE_HANDLES OFF CACHE BOOL
   "Enable Handle sanitization")
 
+# Build with -DHERMES_SLOW_DEBUG for debug builds
+# This does not affect release builds
+set(HERMES_SLOW_DEBUG ON CACHE BOOL
+  "Enable slow checks in Debug builds")
+
+set(HERMES_ENABLE_DEBUGGER OFF CACHE BOOL
+  "Build with debugger support")
+
 set(HERMES_FACEBOOK_BUILD OFF CACHE BOOL
     "Build Facebook (rather than open-source) version of Hermes")
 
@@ -98,7 +106,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${LLVM_BUILD_DIR}/lib/cmake/llvm/")
 
 # Enable debug mode by default
-if (CMAKE_BUILD_TYPE STREQUAL "")
+if ((NOT GENERATOR_IS_MULTI_CONFIG) AND CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
@@ -111,11 +119,8 @@ if(HAVE_COMPUTED_GOTO)
 else()
   set(DEFAULT_INTERPRETER_THREADING OFF)
 endif()
-if (CMAKE_BUILD_TYPE STREQUAL Debug)
-  set(DEFAULT_GCCELL_ID ON)
-else()
-  set(DEFAULT_GCCELL_ID OFF)
-endif()
+
+set(DEFAULT_GCCELL_ID $<$<CONFIG:Debug>:ON>$<$<NOT:$<CONFIG:Debug>>:OFF>)
 
 add_definitions(-DHERMESVM_GC_${HERMESVM_GCKIND})
 if(HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT)
@@ -199,16 +204,21 @@ if (POLICY CMP0023)
   cmake_policy(SET CMP0023 OLD)
 endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL Debug)
-    # Enable HERMES_SLOW_DEBUG in debug mode
-    add_definitions(-DHERMES_SLOW_DEBUG)
-    set(HERMES_BUILD_MODE "dbg")
-else()
-    set(HERMES_BUILD_MODE "opt")
+if(HERMES_SLOW_DEBUG)
+  # Enable HERMES_SLOW_DEBUG in Debug mode
+  set_property(DIRECTORY APPEND PROPERTY
+      COMPILE_DEFINITIONS $<$<CONFIG:Debug>:HERMES_SLOW_DEBUG>)
 endif()
 
-if (NOT (CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_COMPILER_IS_GNUCXX))
-    # Enable LTO if we are not a DEBUG build and not GCC
+if ((NOT GENERATOR_IS_MULTI_CONFIG) AND (CMAKE_BUILD_TYPE STREQUAL Debug))
+    set(HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST "dbg")
+else()
+    set(HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST "opt")
+endif()
+
+if (NOT (GENERATOR_IS_MULTI_CONFIG OR CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_COMPILER_IS_GNUCXX))
+    # Enable LTO if we are not multi config generator and not a DEBUG build
+    # and not GCC
     # GCC currently fails to link Hermes with LTO (see t16557748)
     option(LLVM_ENABLE_LTO "Build Hermes with LTO" ON)
 endif()
@@ -321,13 +331,7 @@ if (HERMES_USE_FLOWPARSER)
   add_definitions(-DHERMES_USE_FLOWPARSER)
 endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL Debug)
-  set(HERMES_ENABLE_DEBUGGER 1)
-else()
-  set(HERMES_ENABLE_DEBUGGER "")
-endif()
-
-if (${HERMES_ENABLE_DEBUGGER})
+if (HERMES_ENABLE_DEBUGGER)
   add_definitions(-DHERMES_ENABLE_DEBUGGER)
 endif()
 
@@ -399,7 +403,7 @@ list(APPEND HERMES_TEST_DEPS
   llvm-config
   )
 
-set(HERMES_TEST_PARAMS
+set(HERMES_LIT_TEST_PARAMS
   test_exec_root=${HERMES_BINARY_DIR}/test
   unittests_dir=${HERMES_BINARY_DIR}/unittests
   debugger_enabled=${HERMES_ENABLE_DEBUGGER}
@@ -413,7 +417,7 @@ set(HERMES_TEST_PARAMS
   hdb=${HERMES_BINARY_DIR}/bin/hdb
   repl=${HERMES_BINARY_DIR}/bin/hermes-repl
   hbc-deltaprep=${HERMES_BINARY_DIR}/bin/hbc-deltaprep
-  build_mode=${HERMES_BUILD_MODE}
+  build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
   )
 
 set(LLVM_LIT_ARGS "-sv")
@@ -425,7 +429,7 @@ set(LLVM_LIT_OUTPUT_DIR ${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/bin)
 add_lit_testsuite(check-hermes "Running the Hermes regression tests"
   ${HERMES_SOURCE_DIR}/test
   ${HERMES_SOURCE_DIR}/unittests
-  PARAMS ${HERMES_TEST_PARAMS}
+  PARAMS ${HERMES_LIT_TEST_PARAMS}
   DEPENDS ${HERMES_TEST_DEPS}
   ARGS ${HERMES_TEST_EXTRA_ARGS}
   )

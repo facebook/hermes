@@ -4,6 +4,8 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
+#ifdef HERMES_ENABLE_DEBUGGER
+
 #include "JSLibInternal.h"
 
 namespace hermes {
@@ -69,3 +71,5 @@ shouldPauseOnThrow(void *ctx, Runtime *runtime, NativeArgs args) {
 
 } // namespace vm
 } // namespace hermes
+
+#endif // HERMES_ENABLE_DEBUGGER

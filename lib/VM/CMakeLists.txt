@@ -143,12 +143,10 @@ else()
   message(WARNING "Not linking garbage collector")
 endif()
 
-if (${HERMES_ENABLE_DEBUGGER})
-  list(APPEND source_files
-    Debugger/Debugger.cpp
-    JSLib/DebuggerInternal.cpp
-  )
-endif()
+list(APPEND source_files
+  Debugger/Debugger.cpp
+  JSLib/DebuggerInternal.cpp
+)
 
 # HostModel.cpp defines an abstract base class HostObjectProxy.
 # This can be (and is) implemented by code which uses rtti, and

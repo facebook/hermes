@@ -42,6 +42,8 @@ elif [[ "$PLATFORM" == 'windows' ]]; then
   # with "LINK : fatal error LNK1000: unknown error".
   # Build is incremental. As a result, retry should be fast.
   BUILD_CMD="${BUILD_CMD:-retry 3 MSBuild.exe LLVM.sln -target:build -maxcpucount -verbosity:normal}"
+  # If release build is also intended, run the above command with
+  # the additional flag: -property:Configuration=MinSizeRel
 else
   TARGET_PLATFORM="${TARGET_PLATFORM:-unknown}"
 fi
@@ -50,6 +52,19 @@ BUILD_DIR_SUFFIX=""
 if [ -n "$ENABLE_ASAN" ]; then
     BUILD_DIR_SUFFIX="${BUILD_DIR_SUFFIX}_asan";
 fi
+# For multi config generators, user of this script should avoid setting
+# DISTRIBUTE because it adds confusion and does not do anything meaningful.
+# In CMake terminology, a multi config generator is one that generates all
+# configurations (Debug, MinSizeRel, Release, RelWithDebInfo) in
+# a single invocation of CMake. For example, MSVC and XCode are multi
+# config generator. You choose which build configuration you want when
+# you invoke the respective build tools, after CMake finishes.
+# * Setting this env variable adds the _release suffix to directory name.
+#   However, with a multi config generator, both release and debug builds
+#   are generated in one shot.
+# * Setting this env variable also changes BUILD_TYPE to MinSizeRel,
+#   which is ignored by multi config generators because they generate all
+#   configurations.
 if [ -n "$DISTRIBUTE" ]; then
     BUILD_DIR_SUFFIX="${BUILD_DIR_SUFFIX}_release";
 fi
@@ -58,6 +73,7 @@ if [ -n "$BUILD_32BIT" ]; then
 fi
 
 # If env DISTRIBUTE is set, we will use release build.
+# For multi config generators (see comments above), BUILD_TYPE is meaningless
 if [ -n "$DISTRIBUTE" ]; then
   BUILD_TYPE="${BUILD_TYPE:-MinSizeRel}"
 else
