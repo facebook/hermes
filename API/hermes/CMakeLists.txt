@@ -44,10 +44,17 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
+# Disable EH and RTTI for compileJS
+set(LLVM_REQUIRES_EH OFF)
+set(LLVM_REQUIRES_RTTI OFF)
+
 add_llvm_library(compileJS STATIC CompileJS.cpp)
 
-set_property(TARGET compileJS APPEND_STRING PROPERTY
-  COMPILE_FLAGS " -fno-rtti")
+# Restore EH and RTTI (Note: At the time of writing, there is no usage of
+# add_llvm_library either after this line in this file or in a sub directory.
+# However, the values are restored anyways for the sake of sanity.)
+set(LLVM_REQUIRES_EH ON)
+set(LLVM_REQUIRES_RTTI ON)
 
 add_library(libhermes SHARED ${api_sources})
 target_link_libraries(libhermes

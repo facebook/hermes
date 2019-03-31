@@ -18,16 +18,15 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
+# Build SegmentTestCompile without EH and RTTI
+add_llvm_library(SegmentTestCompile STATIC SegmentTestCompile.cpp)
+
+# Turn on EH and RTTI for APITests
 set(LLVM_REQUIRES_EH ON)
 set(LLVM_REQUIRES_RTTI ON)
 # For some reason (bug?) add_unittest() is clearing LLVM_REQUIRES_RTTI, so
 # we need to set this one.
 set(LLVM_ENABLE_RTTI ON)
-
-add_llvm_library(SegmentTestCompile STATIC SegmentTestCompile.cpp)
-set_target_properties(SegmentTestCompile PROPERTIES
-  COMPILE_FLAGS "-fno-rtti"
-  )
 
 add_hermes_unittest(APITests
   APITest.cpp
