@@ -53,6 +53,9 @@ size_t gcRegionFootprint(const GC &gc) {
 }
 
 TEST(GCReturnUnusedMemoryNCTest, CollectReturnsFreeMemory) {
+  // TODO(T40416012) Re-enable this test when vm_unused is fixed.
+  // Skip this test in Windows because vm_unused has a no-op implementation.
+#ifndef _WINDOWS
   // Use an mmap-based storage for this test.
   std::unique_ptr<StorageProvider> provider = StorageProvider::mmapProvider();
   auto runtime =
@@ -90,6 +93,7 @@ TEST(GCReturnUnusedMemoryNCTest, CollectReturnsFreeMemory) {
 
   EXPECT_LT(before, touched);
   EXPECT_GT(touched, collected);
+#endif // _WINDOWS
 }
 
 } // namespace
