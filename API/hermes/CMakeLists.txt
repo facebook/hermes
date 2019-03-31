@@ -30,14 +30,14 @@ set(hermesapi_compile_flags "")
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
     "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
   string(APPEND hermesapi_compile_flags " -Wno-non-virtual-dtor")
-  string(APPEND hermesapi_compile_falgs " -Wno-covered-switch-default")
 endif()
 
-set_target_properties(hermesapi PROPERTIES
-  CXX_STANDARD 14
-  COMPILE_FLAGS "${hermesapi_compile_flags}"
-  COMPILE_DEFINITIONS "JSI_CREATE_SHARED_LIBRARY"
-  )
+set_property(TARGET hermesapi PROPERTY
+  CXX_STANDARD 14)
+set_property(TARGET hermesapi APPEND_STRING PROPERTY
+  COMPILE_FLAGS ${hermesapi_compile_flags})
+set_property(TARGET hermesapi APPEND_STRING PROPERTY
+  COMPILE_DEFINITIONS "JSI_CREATE_SHARED_LIBRARY")
 
 set(LLVM_LINK_COMPONENTS
   Core
@@ -46,9 +46,8 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_library(compileJS STATIC CompileJS.cpp)
 
-set_target_properties(compileJS PROPERTIES
-  COMPILE_FLAGS "-fno-rtti"
-  )
+set_property(TARGET compileJS APPEND_STRING PROPERTY
+  COMPILE_FLAGS " -fno-rtti")
 
 add_library(libhermes SHARED ${api_sources})
 target_link_libraries(libhermes
