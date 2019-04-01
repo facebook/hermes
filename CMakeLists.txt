@@ -229,6 +229,8 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-warning-option")
   # Suppress an uninteresting warning about C++17 name mangling changes.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-noexcept-type")
+  # Don't export symbols unless we explicitly say so
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   # C4068 unknown pragma
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4068")

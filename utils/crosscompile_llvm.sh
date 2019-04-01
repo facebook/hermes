@@ -37,6 +37,7 @@ do
       cmd=(
         cmake -G Ninja "$HERMES_WS_DIR/llvm"
           -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake"
+          -DCMAKE_CXX_FLAGS="-fvisibility=hidden"
           -DANDROID_PLATFORM="android-22"
           -DANDROID_ABI="$abi"
           -DANDROID_NDK="$ANDROID_NDK"
