@@ -819,6 +819,7 @@ void ProfileAnalyzer::dumpFunctionOffsets(
   printer.emitKeyValue("Offset", header.offset());
   printer.emitKeyValue(
       "VirtualOffset", bcProvider->getVirtualOffsetForFunction(funcId));
+  printer.emitKeyValue("Size", header.bytecodeSizeInBytes());
 
   auto dbg = bcProvider->getDebugOffsets(funcId);
   if (dbg) {
