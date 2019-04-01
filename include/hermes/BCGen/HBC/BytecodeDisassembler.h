@@ -159,6 +159,7 @@ class PrettyDisassembleVisitor : public BytecodeVisitor {
   inst::OpCode opcode_;
   std::unordered_map<uint64_t, unsigned> &jumpTargets_;
   const uint8_t *bytecodeStart_ = nullptr;
+  uint32_t funcVirtualOffset_{0};
 
  protected:
   raw_ostream &os_;
@@ -292,6 +293,11 @@ class BytecodeDisassembler {
   /// Set options for disassembly output.
   void setOptions(DisassemblyOptions options) {
     options_ = options;
+  }
+
+  /// Get the current options for disassembly output.
+  DisassemblyOptions getOptions() const {
+    return options_;
   }
 
   /// Print the disassembled bytecode of \p funcId to \p OS.

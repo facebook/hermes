@@ -115,9 +115,10 @@ static void printHelp(llvm::Optional<llvm::StringRef> command = llvm::None) {
        "       inst\n"},
       {"disassemble",
        "'disassemble': Display bytecode disassembled output of whole binary.\n"
-       "'disassemble <FUNC_ID>': Display bytecode disassembled output of function with id <FUNC_ID>.\n\n"
-       "USAGE: disassemble <FUNC_ID>\n"
-       "       dis <FUNC_ID>\n"},
+       "'disassemble <FUNC_ID>': Display bytecode disassembled output of function with id <FUNC_ID>.\n"
+       "Add the '-offsets' flag to show virtual offsets for all instructions.\n\n"
+       "USAGE: disassemble <FUNC_ID> [-offsets]\n"
+       "       dis <FUNC_ID> [-offsets]\n"},
       {"summary",
        "Display overall summary information.\n\n"
        "USAGE: summary\n"},
@@ -192,6 +193,37 @@ static void enterCommandLoop(
   }
 }
 
+/// Find the first instance of a value in a container and remove it.
+/// \return true if the value was found and removed, false otherwise.
+template <typename Container, typename Value>
+static bool findAndRemoveOne(Container &haystack, const Value &needle) {
+  auto it = std::find(haystack.begin(), haystack.end(), needle);
+  if (it != haystack.end()) {
+    haystack.erase(it);
+    return true;
+  }
+  return false;
+}
+
+/// Simple RAII helper for setting and reverting disassembler options.
+class DisassemblerOptionsHolder {
+ public:
+  DisassemblerOptionsHolder(
+      BytecodeDisassembler &disassembler,
+      DisassemblyOptions newOptions)
+      : disassembler_(disassembler), savedOptions_(disassembler.getOptions()) {
+    disassembler_.setOptions(newOptions);
+  }
+
+  ~DisassemblerOptionsHolder() {
+    disassembler_.setOptions(savedOptions_);
+  }
+
+ private:
+  BytecodeDisassembler &disassembler_;
+  DisassemblyOptions savedOptions_;
+};
+
 /// Execute a single command from \p commandTokens.
 /// \return true telling caller to terminate the interactive command loop.
 static bool executeCommand(
@@ -230,6 +262,11 @@ static bool executeCommand(
       return false;
     }
   } else if (command == "disassemble" || command == "dis") {
+    auto localOptions = findAndRemoveOne(commandTokens, "-offsets")
+        ? DisassemblyOptions::IncludeVirtualOffsets
+        : DisassemblyOptions::None;
+    DisassemblerOptionsHolder optionsHolder(
+        disassembler, disassembler.getOptions() | localOptions);
     if (commandTokens.size() == 1) {
       disassembler.disassemble(os);
     } else if (commandTokens.size() == 2) {

@@ -508,6 +508,7 @@ void PrettyDisassembleVisitor::beforeStart(
     unsigned funcId,
     const uint8_t *bytecodeStart) {
   bytecodeStart_ = bytecodeStart;
+  funcVirtualOffset_ = bcProvider_->getVirtualOffsetForFunction(funcId);
   // Print source line for the function.
   printSourceLineForOffset(0);
 }
@@ -518,14 +519,22 @@ void PrettyDisassembleVisitor::preVisitInstruction(
     int length) {
   opcode_ = opcode;
   auto label = jumpTargets_.find((uint64_t)ip);
+  assert(ip >= bytecodeStart_ && "Why is ip less than bytecodeStart_?");
+  uint32_t offset = ip - bytecodeStart_;
   if (label != jumpTargets_.end()) {
     os_ << "L" << label->second << ":\n";
-    assert(ip >= bytecodeStart_ && "Why is ip less than bytecodeStart_?");
-    printSourceLineForOffset(ip - bytecodeStart_);
+    printSourceLineForOffset(offset);
     // Use the overrided indention for next line's output.
     os_ << llvm::left_justify("", getIndentation());
   }
-  os_ << "    " << llvm::left_justify(getOpCodeString(opcode), 17);
+  uint32_t globalVirtualOffset = funcVirtualOffset_ + offset;
+  if ((options_ & DisassemblyOptions::IncludeVirtualOffsets) ==
+      DisassemblyOptions::IncludeVirtualOffsets) {
+    os_ << "    ";
+    os_ << llvm::right_justify(formatString("%d", globalVirtualOffset), 10);
+  }
+  os_ << "    ";
+  os_ << llvm::left_justify(getOpCodeString(opcode), 17);
 }
 
 void PrettyDisassembleVisitor::visitOperand(
