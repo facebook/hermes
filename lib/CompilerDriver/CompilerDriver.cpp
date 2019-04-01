@@ -957,8 +957,6 @@ std::unique_ptr<Context::ResolutionTable> readResolutionTable(
 SourceMapGenerator createSourceMapGenerator(std::shared_ptr<Context> context) {
   SourceMapGenerator result;
   std::vector<std::string> sources{cl::InputFilenames};
-  if (context->getUseCJSModules())
-    sources.insert(sources.begin(), "<global>");
   result.setSources(std::move(sources));
   return result;
 }
@@ -995,7 +993,8 @@ bool generateIRForSourcesAsCJSModules(
 
   SourceMapParser sourceMapParser{};
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
-  std::vector<std::string> sources{};
+  inputSourceMaps.push_back(nullptr);
+  std::vector<std::string> sources{"<global>"};
 
   Function *topLevelFunction = M.getTopLevelFunction();
   for (auto &entry : fileBufs) {
