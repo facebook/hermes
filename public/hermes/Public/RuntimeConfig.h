@@ -38,10 +38,6 @@ class PinnedHermesValue;
   /* Support for ES6 Symbol. */                                          \
   F(bool, ES6Symbol, true)                                               \
                                                                          \
-  /* Whether to use a contiguous backing storage for segments (true), */ \
-  /* or a non-contiguous backing storage that is requested on-demand. */ \
-  F(bool, ContiguousBackingStorage, false)                               \
-                                                                         \
   /* Enable sampling certain statistics. */                              \
   F(bool, EnableSampledStats, false)                                     \
                                                                          \
