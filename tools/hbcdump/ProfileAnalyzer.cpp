@@ -834,4 +834,19 @@ void ProfileAnalyzer::dumpFunctionOffsets(
   printer.closeDict();
 }
 
+llvm::Optional<uint32_t> ProfileAnalyzer::getFunctionFromVirtualOffset(
+    uint32_t virtualOffset) {
+  auto bcProvider = hbcParser_.getBCProvider();
+  uint32_t funcCount = bcProvider->getFunctionCount();
+
+  uint32_t endVirtualOffset = 0;
+  for (uint32_t i = 0; i < funcCount; ++i) {
+    endVirtualOffset += bcProvider->getFunctionHeader(i).bytecodeSizeInBytes();
+    if (virtualOffset < endVirtualOffset) {
+      return i;
+    }
+  }
+  return llvm::None;
+}
+
 } // namespace hermes

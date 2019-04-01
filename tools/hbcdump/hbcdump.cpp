@@ -130,6 +130,9 @@ static void printHelp(llvm::Optional<llvm::StringRef> command = llvm::None) {
       {"block",
        "Display top hot basic blocks in sorted order.\n\n"
        "USAGE: block\n"},
+      {"at-virtual",
+       "Display information about the function at a given virtual offset.\n\n"
+       "USAGE: at-virtual <OFFSET> [-json]\n"},
       {"help",
        "Help instructions for hbcdump tool commands.\n\n"
        "USAGE: help <COMMAND>\n"
@@ -303,6 +306,26 @@ static bool executeCommand(
     analyzer.dumpSummary();
   } else if (command == "block") {
     analyzer.dumpBasicBlockStats();
+  } else if (command == "at_virtual" || command == "at-virtual") {
+    bool json = findAndRemoveOne(commandTokens, "-json");
+    std::unique_ptr<StructuredPrinter> printer =
+        StructuredPrinter::create(os, json);
+    if (commandTokens.size() == 2) {
+      uint32_t virtualOffset;
+      if (commandTokens[1].getAsInteger(0, virtualOffset)) {
+        os << "Error: cannot parse virtualOffset as integer.\n";
+        return false;
+      }
+      auto funcId = analyzer.getFunctionFromVirtualOffset(virtualOffset);
+      if (funcId.hasValue()) {
+        analyzer.dumpFunctionOffsets(*funcId, *printer);
+      } else {
+        os << "Virtual offset " << virtualOffset << " is invalid.\n";
+      }
+    } else {
+      printHelp(command);
+      return false;
+    }
   } else if (command == "help" || command == "h") {
     // Interactive help command.
     if (commandTokens.size() == 2) {

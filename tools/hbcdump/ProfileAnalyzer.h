@@ -147,6 +147,8 @@ class ProfileAnalyzer {
     }
     printer.closeArray();
   }
+  // Return the ID of the function, if any, found at a given virtual offset.
+  llvm::Optional<uint32_t> getFunctionFromVirtualOffset(uint32_t virtualOffset);
 };
 
 } // namespace hermes
