@@ -442,6 +442,11 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   uint32_t getCurrentFrameOffset() const;
 #endif
 
+  /// Flag the interpreter that a type error with the specified message must be
+  /// thrown when execution resumes.
+  /// If the message is not a string, it is converted using toString().
+  ExecutionStatus raiseTypeError(Handle<> message);
+
   /// Flag the interpreter that a type error must be thrown when execution
   /// resumes.
   /// \return ExecutionResult::EXCEPTION

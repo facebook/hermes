@@ -801,6 +801,26 @@ uint32_t Runtime::getCurrentFrameOffset() const {
 
 #endif
 
+/// A placeholder used to construct a Error Object that takes in a the specified
+/// message.
+static ExecutionStatus raisePlaceholder(
+    Runtime *runtime,
+    Handle<JSObject> prototype,
+    Handle<> message) {
+  GCScopeMarkerRAII gcScope{runtime};
+
+  // Create the error object, initialize stack property and set message.
+  auto errRes = JSError::create(runtime, prototype);
+  if (LLVM_UNLIKELY(errRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto errorObj = runtime->makeHandle<JSError>(*errRes);
+  JSError::recordStackTrace(errorObj, runtime);
+  JSError::setupStack(errorObj, runtime);
+  JSError::setMessage(errorObj, runtime, message);
+  return runtime->setThrownValue(errorObj.getHermesValue());
+}
+
 /// A placeholder used to construct a Error Object that takes in a const
 /// message. A new StringPrimitive is created each time.
 // TODO: Predefine each error message.
@@ -808,7 +828,7 @@ static ExecutionStatus raisePlaceholder(
     Runtime *runtime,
     Handle<JSObject> prototype,
     const TwineChar16 &msg) {
-  // Since this happens unexpetedly and rarely, don't rely on the parent
+  // Since this happens unexpectedly and rarely, don't rely on the parent
   // GCScope.
   GCScope gcScope{runtime};
 
@@ -821,16 +841,15 @@ static ExecutionStatus raisePlaceholder(
   }
   auto str = runtime->makeHandle<StringPrimitive>(*strRes);
   DEBUG(llvm::errs() << buf.arrayRef() << "\n");
-  // Create the error object, initialize stack property and set message.
-  auto errRes = JSError::create(runtime, prototype);
-  if (LLVM_UNLIKELY(errRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto errorObj = runtime->makeHandle<JSError>(*errRes);
-  JSError::recordStackTrace(errorObj, runtime);
-  JSError::setupStack(errorObj, runtime);
-  JSError::setMessage(errorObj, runtime, str);
-  return runtime->setThrownValue(errorObj.getHermesValue());
+  return raisePlaceholder(runtime, prototype, str);
+}
+
+ExecutionStatus Runtime::raiseTypeError(Handle<> message) {
+  // Since this happens unexpectedly and rarely, don't rely on the parent
+  // GCScope.
+  GCScope gcScope{this};
+  return raisePlaceholder(
+      this, Handle<JSObject>::vmcast(&TypeErrorPrototype), message);
 }
 
 ExecutionStatus Runtime::raiseTypeErrorForValue(
