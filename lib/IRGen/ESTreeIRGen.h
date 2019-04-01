@@ -510,6 +510,13 @@ class ESTreeIRGen {
   /// that can be translated to lref.
   LReference createLRef(ESTree::Node *node);
 
+  /// Generate a call to a method of HermesInterna with the specified name \p
+  /// name.
+  Value *genHermesInternalCall(
+      StringRef name,
+      Value *thisValue,
+      ArrayRef<Value *> args);
+
  private:
   /// "Converts" a ScopeChain into a SerializedScope by resolving the
   /// identifiers.

@@ -502,10 +502,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             IRBuilder::SaveRestore saveState{Builder};
             Builder.setLocation(prop->_key->getDebugLoc());
 
-            Builder.createCallInst(
-                Builder.createLoadPropertyInst(
-                    Builder.createTryLoadGlobalPropertyInst("HermesInternal"),
-                    "silentSetPrototypeOf"),
+            genHermesInternalCall(
+                "silentSetPrototypeOf",
                 Builder.getLiteralUndefined(),
                 {Obj, parent});
           }
@@ -938,11 +936,7 @@ Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {
       "All the substitutions must have been collected.");
 
   // Generate a function call to HermesInternal.concat() with these arguments.
-  return Builder.createCallInst(
-      Builder.createLoadPropertyInst(
-          Builder.createTryLoadGlobalPropertyInst("HermesInternal"), "concat"),
-      firstCookedStr,
-      argList);
+  return genHermesInternalCall("concat", firstCookedStr, argList);
 }
 
 Value *ESTreeIRGen::genTaggedTemplateExpr(
@@ -987,12 +981,8 @@ Value *ESTreeIRGen::genTaggedTemplateExpr(
 
   // Generate a function call to HermesInternal.getTemplateObject() with these
   // arguments.
-  auto *templateObj = Builder.createCallInst(
-      Builder.createLoadPropertyInst(
-          Builder.createTryLoadGlobalPropertyInst("HermesInternal"),
-          "getTemplateObject"),
-      Builder.getLiteralUndefined() /* this */,
-      argList);
+  auto *templateObj = genHermesInternalCall(
+      "getTemplateObject", Builder.getLiteralUndefined() /* this */, argList);
 
   // Step 2: call the tag function, passing the template object followed by a
   // list of substitutions as arguments.

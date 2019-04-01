@@ -469,6 +469,17 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node) {
   llvm_unreachable("Unexpected for-in pattern.");
 }
 
+Value *ESTreeIRGen::genHermesInternalCall(
+    StringRef name,
+    Value *thisValue,
+    ArrayRef<Value *> args) {
+  return Builder.createCallInst(
+      Builder.createLoadPropertyInst(
+          Builder.createTryLoadGlobalPropertyInst("HermesInternal"), name),
+      thisValue,
+      args);
+}
+
 std::shared_ptr<SerializedScope> ESTreeIRGen::resolveScopeIdentifiers(
     const ScopeChain &chain) {
   std::shared_ptr<SerializedScope> current{};
