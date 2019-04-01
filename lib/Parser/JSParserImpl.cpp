@@ -1564,6 +1564,21 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
           ESTree::PropertyNode(optKey.getValue(), funcExpr, setIdent_);
       return setLocation(startLoc, block.getValue(), node);
     }
+  } else if (check(TokenKind::identifier)) {
+    auto *ident = tok_->getIdentifier();
+    key = setLocation(
+        tok_, tok_, new (context_) ESTree::IdentifierNode(ident, nullptr));
+    advance();
+    // If the next token is "," or "}", this is a shorthand property definition.
+    if (check(TokenKind::comma, TokenKind::r_brace)) {
+      auto *value = setLocation(
+          key, key, new (context_) ESTree::IdentifierNode(ident, nullptr));
+
+      return setLocation(
+          startLoc,
+          value,
+          new (context_) ESTree::PropertyNode(key, value, initIdent_));
+    }
   } else {
     auto optKey = parsePropertyKey();
     if (!optKey)
