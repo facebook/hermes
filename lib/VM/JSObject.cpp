@@ -1056,8 +1056,20 @@ CallResult<bool> JSObject::putNamed(
 
     if (LLVM_UNLIKELY(!desc.flags.writable)) {
       if (desc.flags.staticBuiltin) {
-        return raiseErrorForOverridingStaticBuiltin(
-            selfHandle, runtime, runtime->makeHandle(name));
+        // TODO(T35544739): clean up the experiment after we are done.
+        // This is an experiment for learning the crash rate of static
+        // builtins. When the VMExperimentFlags is 0, we get default behavior,
+        // which is throwing an exception; when the flag is 1, we do nothing;
+        // when the flag is 2, we trigger a crash.
+        uint32_t experimentFlag = runtime->getVMExperimentFlags();
+        if (experimentFlag == 1) {
+          return false;
+        } else if (experimentFlag == 2) {
+          hermes_fatal("Attempting to override a static builtin.");
+        } else {
+          return raiseErrorForOverridingStaticBuiltin(
+              selfHandle, runtime, runtime->makeHandle(name));
+        }
       }
       if (opFlags.getThrowOnError()) {
         return runtime->raiseTypeError(
