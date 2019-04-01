@@ -25,7 +25,6 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
 
   Builder.getFunction()->incrementStatementCount();
 
-  // IRGen Function declarations.
   if (/* auto *FD = */ dyn_cast<ESTree::FunctionDeclarationNode>(stmt)) {
     // It has already been hoisted. Do nothing.  But, keep this to
     // match the AST structure, and we may want to do something in the
@@ -33,32 +32,30 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     return;
   }
 
-  // IRGen if statement.
   if (auto *IF = dyn_cast<ESTree::IfStatementNode>(stmt)) {
     return genIfStatement(IF);
   }
 
-  // IRGen for-in statement.
   if (auto *FIS = dyn_cast<ESTree::ForInStatementNode>(stmt)) {
     return genForInStatement(FIS);
   }
 
-  // IRGen return statement.
+  if (auto *FOS = dyn_cast<ESTree::ForOfStatementNode>(stmt)) {
+    return genForOfStatement(FOS);
+  }
+
   if (auto *Ret = dyn_cast<ESTree::ReturnStatementNode>(stmt)) {
     return genReturnStatement(Ret);
   }
 
-  // Expression statement.
   if (auto *exprStmt = dyn_cast<ESTree::ExpressionStatementNode>(stmt)) {
     return genExpressionWrapper(exprStmt->_expression);
   }
 
-  // Handle Switch expressions.
   if (auto *SW = dyn_cast<ESTree::SwitchStatementNode>(stmt)) {
     return genSwitchStatement(SW);
   }
 
-  // Variable declarations:
   if (auto *VND = dyn_cast<ESTree::VariableDeclaratorNode>(stmt)) {
     auto variableName = getNameFieldFromID(VND->_id);
     DEBUG(
@@ -428,6 +425,35 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
 
   genStatement(ForInStmt->_body);
 
+  Builder.createBranchInst(getNextBlock);
+
+  Builder.setInsertionBlock(exitBlock);
+}
+
+void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
+  // FIXME: catch exceptions and close the iterator.
+
+  auto *function = Builder.getInsertionBlock()->getParent();
+  auto *getNextBlock = Builder.createBasicBlock(function);
+  auto *bodyBlock = Builder.createBasicBlock(function);
+  auto *exitBlock = Builder.createBasicBlock(function);
+
+  auto *exprValue = genExpression(forOfStmt->_right);
+  auto iteratorRecord = emitGetIteraror(exprValue);
+
+  Builder.createBranchInst(getNextBlock);
+
+  Builder.setInsertionBlock(getNextBlock);
+  auto *nextResult = emitIteratorNext(iteratorRecord);
+  auto *done = emitIteratorComplete(nextResult);
+  Builder.createCondBranchInst(done, exitBlock, bodyBlock);
+
+  Builder.setInsertionBlock(bodyBlock);
+
+  auto *nextValue = emitIteratorValue(nextResult);
+  createLRef(forOfStmt->_left).emitStore(Builder, nextValue);
+
+  genStatement(forOfStmt->_body);
   Builder.createBranchInst(getNextBlock);
 
   Builder.setInsertionBlock(exitBlock);

@@ -7,11 +7,16 @@ x + 1 = 10;
 //CHECK-NEXT: ^~~~~
 
 for (x + 1 in x);
-//CHECK: {{.*}}lvalue-errors.js:9:6: error: invalid left-hand side in for-in-loop
+//CHECK: {{.*}}lvalue-errors.js:9:6: error: invalid left-hand side in for-in/for-of loop
 //CHECK-NEXT: for (x + 1 in x);
 //CHECK-NEXT:      ^~~~~
 
+for (x + 1 of x);
+//CHECK: {{.*}}lvalue-errors.js:14:6: error: invalid left-hand side in for-in/for-of loop
+//CHECK-NEXT: for (x + 1 of x);
+//CHECK-NEXT:      ^~~~~
+
 ++0;
-//CHECK: {{.*}}lvalue-errors.js:14:3: error: invalid operand in update operation
+//CHECK: {{.*}}lvalue-errors.js:19:3: error: invalid operand in update operation
 //CHECK-NEXT: ++0;
 //CHECK-NEXT:   ^

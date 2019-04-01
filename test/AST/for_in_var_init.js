@@ -15,14 +15,17 @@ function tryParse(str) {
     print("OK", result);
 }
 
-tryParse("for(var i = 10 in {}); i");
+tryParse("for(var i1 = 10 in {}); i1");
 //CHECK-NEXT: OK 10
 
-tryParse("'use strict'; for(var i = 10 in {}); i");
-//CHECK-NEXT: caught: 1:27:for-in variable declaration may not be initialized
+tryParse("'use strict'; for(var i2 = 10 in {}); i2");
+//CHECK-NEXT: caught: 1:28:for-in/for-of variable declaration may not be initialized
 
-tryParse("for(let i = 10 in {}); i");
-//CHECK-NEXT: caught: 1:13:for-in variable declaration may not be initialized
+tryParse("for(let i3 = 10 in {}); i3");
+//CHECK-NEXT: caught: 1:14:for-in/for-of variable declaration may not be initialized
 
-tryParse("'use strict'; for(let i = 10 in {}); i");
-//CHECK-NEXT: caught: 1:27:for-in variable declaration may not be initialized
+tryParse("'use strict'; for(let i4 = 10 in {}); i4");
+//CHECK-NEXT: caught: 1:28:for-in/for-of variable declaration may not be initialized
+
+tryParse("for(let i5 = 10 of []); i5");
+//CHECK-NEXT: caught: 1:14:for-in/for-of variable declaration may not be initialized

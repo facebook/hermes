@@ -480,6 +480,46 @@ Value *ESTreeIRGen::genHermesInternalCall(
       args);
 }
 
+void ESTreeIRGen::emitEnsureObject(Value *value, StringRef message) {
+  // TODO: use "thisArg" when builts get fixed to support it.
+  genHermesInternalCall(
+      "ensureObject",
+      Builder.getLiteralUndefined(),
+      {value, Builder.getLiteralString(message)});
+}
+
+Value *ESTreeIRGen::emitIterarorSymbol() {
+  // FIXME: use the builtin value of @@iteraror. Symbol could have been
+  // overridden.
+  return Builder.createLoadPropertyInst(
+      Builder.createTryLoadGlobalPropertyInst("Symbol"), "iterator");
+}
+
+ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIteraror(Value *obj) {
+  auto *method = Builder.createLoadPropertyInst(obj, emitIterarorSymbol());
+  auto *iterator = Builder.createCallInst(method, obj, {});
+
+  emitEnsureObject(iterator, "iterator is not an object");
+  auto *nextMethod = Builder.createLoadPropertyInst(iterator, "next");
+
+  return {iterator, nextMethod};
+}
+
+Value *ESTreeIRGen::emitIteratorNext(IteratorRecord iteratorRecord) {
+  auto *nextResult = Builder.createCallInst(
+      iteratorRecord.nextMethod, iteratorRecord.iterator, {});
+  emitEnsureObject(nextResult, "iterator.next() did not return an object");
+  return nextResult;
+}
+
+Value *ESTreeIRGen::emitIteratorComplete(Value *iterResult) {
+  return Builder.createLoadPropertyInst(iterResult, "done");
+}
+
+Value *ESTreeIRGen::emitIteratorValue(Value *iterResult) {
+  return Builder.createLoadPropertyInst(iterResult, "value");
+}
+
 std::shared_ptr<SerializedScope> ESTreeIRGen::resolveScopeIdentifiers(
     const ScopeChain &chain) {
   std::shared_ptr<SerializedScope> current{};

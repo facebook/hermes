@@ -98,6 +98,9 @@ class SemanticValidator {
   void visit(IdentifierNode *identifier);
 
   void visit(ForInStatementNode *forIn);
+  void visit(ForOfStatementNode *forOf);
+  void visitForInOf(LoopStatementNode *loopNode, Node *left);
+
   void visit(AssignmentExpressionNode *assignment);
   void visit(UpdateExpressionNode *update);
 

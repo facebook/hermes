@@ -288,6 +288,7 @@ class ESTreeIRGen {
   void genIfStatement(ESTree::IfStatementNode *IfStmt);
   void genReturnStatement(ESTree::ReturnStatementNode *RetStmt);
   void genForInStatement(ESTree::ForInStatementNode *ForInStmt);
+  void genForOfStatement(ESTree::ForOfStatementNode *forOfStmt);
 
   /// Generate IR for for/while/do..while statements.
   /// \p loop the loop statement node
@@ -516,6 +517,49 @@ class ESTreeIRGen {
       StringRef name,
       Value *thisValue,
       ArrayRef<Value *> args);
+
+  /// Generate code to ensure that \p value is an object and it it isn't, throw
+  /// a type error with the specified message.
+  void emitEnsureObject(Value *value, StringRef message);
+
+  /// \return the internal value @@iterator
+  Value *emitIterarorSymbol();
+
+  /// IteratorRecord as defined in ES2018 7.4.1 GetIterator
+  struct IteratorRecord {
+    Value *iterator;
+    Value *nextMethod;
+  };
+
+  /// ES2018 7.4.1 GetIterator
+  /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-getiterator
+  ///
+  /// Call obj[@@iterator], which should return an iterator, and return the
+  /// iterator itself and its \c next() method.
+  ///
+  /// \return (iterator, nextMethod)
+  IteratorRecord emitGetIteraror(Value *obj);
+
+  /// ES2018 7.4.2 IteratorNext
+  /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratornext
+  ///
+  /// Call the next method and throw an exception if the result is not an
+  /// object.
+  ///
+  /// \return the result object.
+  Value *emitIteratorNext(IteratorRecord iteratorRecord);
+
+  /// ES2018 7.4.3 IteratorComplete
+  /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratorcomplete
+  ///
+  /// \return \c iterResult.done
+  Value *emitIteratorComplete(Value *iterResult);
+
+  /// ES2018 7.4.4 IteratorValue
+  /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratorvalue
+  ///
+  /// \return \c iterResult.value
+  Value *emitIteratorValue(Value *iterResult);
 
  private:
   /// "Converts" a ScopeChain into a SerializedScope by resolving the

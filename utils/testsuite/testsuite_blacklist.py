@@ -197,6 +197,7 @@ BLACK_LIST = [
     "early-err-bad-flag.js",  # test262
     "early-err-pattern.js",  # test262
     "strict-initializer.js",  # test262
+    "test262/test/language/statements/try/early-catch-var.js",
     # Unsupported test262 features
     "args-trailing-comma",
     "let-array-with-newline.js",

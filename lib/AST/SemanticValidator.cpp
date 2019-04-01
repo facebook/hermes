@@ -139,33 +139,42 @@ void SemanticValidator::visit(ArrowFunctionExpressionNode *arrowFunc) {
 
 /// Ensure that the left side of for-in is an l-value.
 void SemanticValidator::visit(ForInStatementNode *forIn) {
-  forIn->setLabelIndex(curFunction()->allocateLabel());
+  visitForInOf(forIn, forIn->_left);
+}
+void SemanticValidator::visit(ForOfStatementNode *forOf) {
+  visitForInOf(forOf, forOf->_left);
+}
+
+void SemanticValidator::visitForInOf(LoopStatementNode *loopNode, Node *left) {
+  loopNode->setLabelIndex(curFunction()->allocateLabel());
 
   SaveAndRestore<LoopStatementNode *> saveLoop(
-      curFunction()->activeLoop, forIn);
+      curFunction()->activeLoop, loopNode);
   SaveAndRestore<StatementNode *> saveSwitch(
-      curFunction()->activeSwitchOrLoop, forIn);
+      curFunction()->activeSwitchOrLoop, loopNode);
 
-  if (auto *VD = dyn_cast<VariableDeclarationNode>(forIn->_left)) {
+  if (auto *VD = dyn_cast<VariableDeclarationNode>(left)) {
     assert(
-        VD->_declarations.size() == 1 && "for-in must have a single binding");
+        VD->_declarations.size() == 1 &&
+        "for-in/for-of must have a single binding");
 
-    // for-in initializers are only allowed in non-strict mode and only for
-    // "var" declarations.
     auto *initNode =
         cast<ESTree::VariableDeclaratorNode>(&VD->_declarations.front())->_init;
 
-    if (initNode && (curFunction()->strictMode || VD->_kind != kw_.identVar)) {
+    // Initializers are only allowed in for-in, non-strict mode "var"
+    // declarations.
+    if (initNode &&
+        !(isa<ForInStatementNode>(loopNode) && !curFunction()->strictMode &&
+          VD->_kind == kw_.identVar)) {
       sm_.error(
           initNode->getSourceRange(),
-          "for-in variable declaration may not be initialized");
+          "for-in/for-of variable declaration may not be initialized");
     }
-  } else if (!isLValue(forIn->_left)) {
+  } else if (!isLValue(left)) {
     sm_.error(
-        forIn->_left->getSourceRange(),
-        "invalid left-hand side in for-in-loop");
+        left->getSourceRange(), "invalid left-hand side in for-in/for-of loop");
   }
-  visitESTreeChildren(*this, forIn);
+  visitESTreeChildren(*this, loopNode);
 }
 
 /// Ensure that the left side of assgnments is an l-value.
