@@ -383,6 +383,7 @@ STR(shouldPauseOnThrow, "shouldPauseOnThrow")
 #endif
 STR(returnThis, "return this")
 STR(getTemplateObject, "getTemplateObject")
+STR(ensureObject, "ensureObject")
 
 STR(require, "require")
 STR(requireFast, "requireFast")

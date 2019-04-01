@@ -442,6 +442,21 @@ hermesInternalGetTemplateObject(void *, Runtime *runtime, NativeArgs args) {
 
   return templateObj.getHermesValue();
 }
+
+/// If the first argument is not an object, throw a type error with the second
+/// argument as a message.
+///
+/// \code
+///   HermesInternal.ensureObject = function(value, errorMessage) {...}
+/// \endcode
+CallResult<HermesValue>
+hermesInternalEnsureObject(void *, Runtime *runtime, NativeArgs args) {
+  if (LLVM_LIKELY(args.getArg(0).isObject()))
+    return HermesValue::encodeUndefinedValue();
+
+  return runtime->raiseTypeError(args.getArgHandle(runtime, 1));
+}
+
 } // namespace
 
 Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
@@ -480,6 +495,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(
       P::getRuntimeProperties, hermesInternalGetRuntimeProperties);
   defineInternMethod(P::getTemplateObject, hermesInternalGetTemplateObject);
+  defineInternMethod(P::ensureObject, hermesInternalEnsureObject, 2);
 
   // Define the 'require' function.
   runtime->requireFunction = *defineMethod(
