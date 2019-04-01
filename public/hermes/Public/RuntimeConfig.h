@@ -55,6 +55,8 @@ class PinnedHermesValue;
   F(unsigned, BytecodeWarmupPercent, 0)                                  \
   /* An interface for managing crashes. */                               \
   F(std::shared_ptr<CrashManager>, CrashMgr, new NopCrashManager)        \
+  /* The flags passed from a VM experiment */                            \
+  F(uint32_t, VMExperimentFlags, 0)                                      \
   /* RUNTIME_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {});

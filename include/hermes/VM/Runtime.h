@@ -676,6 +676,10 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
     return builtinsFrozen_;
   }
 
+  uint32_t getVMExperimentFlags() const {
+    return vmExperimentFlags_;
+  }
+
  protected:
   /// Construct a Runtime on the stack.
   /// NOTE: This should only be used by StackRuntime. All other uses should use
@@ -810,6 +814,18 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
 
   // Percentage in [0,100] of bytecode we should eagerly read into page cache.
   const uint8_t bytecodeWarmupPercent_;
+
+  /// This value can be passed to the runtime as flags to test experimental
+  /// features. Each experimental feature decides how to interpret these
+  /// values. If experiments are disjoint or there is only be one experiment
+  /// running at a time, each experiment can use the value however they want.
+  /// The most common usage pattern would be assigning consecutive values. For
+  /// example, to conduct an experiment for awesome_feature in the VM, assign 0
+  /// as default scenario, with awesome_feature turned off; assign 1 as
+  /// experimental scenario, with awesome_feature turned on.
+  /// When the experiments are not disjoint, different experiments can use
+  /// different bits in this value.
+  uint32_t vmExperimentFlags_{0};
 
   friend class GCScope;
   friend class HandleBase;
