@@ -8,6 +8,7 @@
 #define HERMES_TOOLS_HBCDUMP_PROFILEANALYZER_H
 
 #include "HBCParser.h"
+#include "StructuredPrinter.h"
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -135,15 +136,16 @@ class ProfileAnalyzer {
   // Print a high-level summary for the profile trace.
   void dumpSummary();
   // Print offsets of a function.
-  void dumpFunctionOffsets(uint32_t funcId);
+  void dumpFunctionOffsets(uint32_t funcId, StructuredPrinter &printer);
   // Print offsets for all functions in bundle.
-  void dumpAllFunctionOffsets() {
+  void dumpAllFunctionOffsets(StructuredPrinter &printer) {
+    printer.openArray();
     for (uint32_t i = 0, e = hbcParser_.getBCProvider()->getFunctionCount();
          i < e;
          i++) {
-      dumpFunctionOffsets(i);
-      os_ << "\n";
+      dumpFunctionOffsets(i, printer);
     }
+    printer.closeArray();
   }
 };
 

@@ -6,6 +6,7 @@
  */
 #include "HBCParser.h"
 #include "ProfileAnalyzer.h"
+#include "StructuredPrinter.h"
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/Public/Buffer.h"
@@ -281,15 +282,18 @@ static bool executeCommand(
       return false;
     }
   } else if (command == "offset" || command == "offsets") {
+    bool json = findAndRemoveOne(commandTokens, "-json");
+    std::unique_ptr<StructuredPrinter> printer =
+        StructuredPrinter::create(os, json);
     if (commandTokens.size() == 1) {
-      analyzer.dumpAllFunctionOffsets();
+      analyzer.dumpAllFunctionOffsets(*printer);
     } else if (commandTokens.size() == 2) {
       uint32_t funcId;
       if (commandTokens[1].getAsInteger(0, funcId)) {
         os << "Error: cannot parse func_id as integer.\n";
         return false;
       }
-      analyzer.dumpFunctionOffsets(funcId);
+      analyzer.dumpFunctionOffsets(funcId, *printer);
     } else {
       os << "Usage: offsets [funcId]\n";
     }

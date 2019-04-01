@@ -803,29 +803,34 @@ void ProfileAnalyzer::dumpSummary() {
       << "\n";
 }
 
-void ProfileAnalyzer::dumpFunctionOffsets(uint32_t funcId) {
+void ProfileAnalyzer::dumpFunctionOffsets(
+    uint32_t funcId,
+    StructuredPrinter &printer) {
   auto bcProvider = hbcParser_.getBCProvider();
   if (funcId >= bcProvider->getFunctionCount()) {
     os_ << "FunctionID " << funcId << " is invalid.\n";
     return;
   }
 
+  printer.openDict();
+
   auto header = bcProvider->getFunctionHeader(funcId);
-  os_ << "FunctionID: " << funcId << "\n";
-  os_ << "Offset: " << header.offset() << "\n";
-  os_ << "VirtualOffset: " << bcProvider->getVirtualOffsetForFunction(funcId)
-      << "\n";
+  printer.emitKeyValue("FunctionID", funcId);
+  printer.emitKeyValue("Offset", header.offset());
+  printer.emitKeyValue(
+      "VirtualOffset", bcProvider->getVirtualOffsetForFunction(funcId));
 
   auto dbg = bcProvider->getDebugOffsets(funcId);
-  if (!dbg)
-    return;
+  if (dbg) {
+    if (dbg->sourceLocations != DebugOffsets::NO_OFFSET) {
+      printer.emitKeyValue("DebugSourceLocation: ", dbg->sourceLocations);
+    }
+    if (dbg->lexicalData != DebugOffsets::NO_OFFSET) {
+      printer.emitKeyValue("DebugLexicalData: ", dbg->lexicalData);
+    }
+  }
 
-  if (dbg->sourceLocations != DebugOffsets::NO_OFFSET) {
-    os_ << "DebugSourceLocation: " << dbg->sourceLocations << "\n";
-  }
-  if (dbg->lexicalData != DebugOffsets::NO_OFFSET) {
-    os_ << "DebugLexicalData: " << dbg->lexicalData << "\n";
-  }
+  printer.closeDict();
 }
 
 } // namespace hermes
