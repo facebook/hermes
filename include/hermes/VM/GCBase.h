@@ -13,6 +13,7 @@
 #include "hermes/Public/GCTripwireContext.h"
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/OSCompat.h"
+#include "hermes/Support/StatsAccumulator.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GCDecl.h"
@@ -216,59 +217,17 @@ class GCBase {
     GCRef(GC &gc) : gc(gc) {}
   };
 
-  /// Gathers summary statistics for a given statistic.
-  struct Accumulation {
-    /// Update the summary stats with the addition of a new \param value.
-    inline void record(double value) {
-      sum_ += value;
-      sumOfSquares_ += value * value;
-      max_ = std::max(max_, value);
-    }
-
-    /// Accessors
-    inline double sum() const {
-      return sum_;
-    }
-
-    inline double sumOfSquares() const {
-      return sumOfSquares_;
-    }
-
-    inline double max() const {
-      return max_;
-    }
-
-    /// Returns the average of all added values, given \param n, the number of
-    /// added values.
-    inline double average(unsigned n) const {
-      return n == 0 ? 0.0 : sum_ / n;
-    }
-
-   private:
-    double sum_{0.0};
-    double sumOfSquares_{0.0};
-    double max_{0.0};
-  };
-
   /// Stats for collections. Time unit, where applicable, is seconds.
   struct CumulativeHeapStats {
     unsigned numCollections{0};
 
     /// Summary statistics for GC wall times.
-    Accumulation gcWallTime;
+    StatsAccumulator<double> gcWallTime;
 
     /// Summary statistics for GC CPU times.
-    Accumulation gcCPUTime;
+    StatsAccumulator<double> gcCPUTime;
 
     gcheapsize_t finalHeapSize{0};
-
-    double avgGCWallTime() {
-      return gcWallTime.average(numCollections);
-    }
-
-    double avgGCCPUTime() {
-      return gcCPUTime.average(numCollections);
-    }
   };
 
   struct HeapInfo {

@@ -229,14 +229,14 @@ void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
      << ",\n"
      << "\t\t\"volCtxSwitch\": " << vol << ",\n"
      << "\t\t\"involCtxSwitch\": " << invol << ",\n"
-     << "\t\t\"avgGCPause\": " << formatSecs(cumStats_.avgGCWallTime()).secs
-     << ",\n"
+     << "\t\t\"avgGCPause\": "
+     << formatSecs(cumStats_.gcWallTime.average()).secs << ",\n"
      << "\t\t\"maxGCPause\": " << formatSecs(cumStats_.gcWallTime.max()).secs
      << ",\n"
      << "\t\t\"totalGCCPUTime\": " << formatSecs(cumStats_.gcCPUTime.sum()).secs
      << ",\n"
-     << "\t\t\"avgGCCPUPause\": " << formatSecs(cumStats_.avgGCCPUTime()).secs
-     << ",\n"
+     << "\t\t\"avgGCCPUPause\": "
+     << formatSecs(cumStats_.gcCPUTime.average()).secs << ",\n"
      << "\t\t\"maxGCCPUPause\": " << formatSecs(cumStats_.gcCPUTime.max()).secs
      << ",\n"
      << "\t\t\"finalHeapSize\": " << formatSize(cumStats_.finalHeapSize).bytes

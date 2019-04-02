@@ -12,6 +12,7 @@ set(SupportSources
   RegexTest.cpp
   SNPrintfBufTest.cpp
   SourceErrorManagerTest.cpp
+  StatsAccumulatorTest.cpp
   UnicodeTest.cpp
   )
 
