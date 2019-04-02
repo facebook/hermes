@@ -1054,78 +1054,86 @@ TEST_P(JSITest, HostObjectWithValueMembers) {
 }
 
 TEST_P(JSITest, DecoratorTest) {
-  struct Inc {
-    Inc(int& i) {
-      ++i;
+  struct Count {
+    // init here is just to show that a With type does not need to be
+    // default constructible.
+    explicit Count(int init) : count(init) {}
+
+    // Test optional before method.
+
+    void after() {
+      ++count;
     }
+
+    int count;
   };
 
-  class CountRuntime final : public WithRuntimeDecorator<Inc, int> {
+  static constexpr int kInit = 17;
+
+  class CountRuntime final : public WithRuntimeDecorator<Count> {
    public:
-    CountRuntime(std::unique_ptr<Runtime> rt)
-        : WithRuntimeDecorator<Inc, int>(*rt, count_),
+    explicit CountRuntime(std::unique_ptr<Runtime> rt)
+        : WithRuntimeDecorator<Count>(*rt, count_),
           rt_(std::move(rt)),
-          count_(0) {}
+          count_(kInit) {}
 
     int count() {
-      return count_;
+      return count_.count;
     }
 
    private:
     std::unique_ptr<Runtime> rt_;
-    int count_;
+    Count count_;
   };
 
   CountRuntime crt(factory());
 
   crt.description();
-  EXPECT_EQ(crt.count(), 1);
+  EXPECT_EQ(crt.count(), kInit + 1);
 
   crt.global().setProperty(crt, "o", Object(crt));
-  EXPECT_EQ(crt.count(), 6);
+  EXPECT_EQ(crt.count(), kInit + 6);
 }
 
 TEST_P(JSITest, MultiDecoratorTest) {
-  struct DecoData {
-    int count_ = 0;
-    int nest_ = 0;
-  };
-
   struct Inc {
-    Inc(DecoData& dd) {
-      ++dd.count_;
+    void before() {
+      ++count;
     }
+
+    // Test optional after method.
+
+    int count = 0;
   };
 
   struct Nest {
-    Nest(DecoData& dd) : dd_(dd) {
-      ++dd.nest_;
+    void before() {
+      ++nest;
     }
 
-    ~Nest() {
-      --dd_.nest_;
+    void after() {
+      --nest;
     }
 
-    DecoData& dd_;
+    int nest = 0;
   };
 
-  class MultiRuntime final
-      : public WithRuntimeDecorator<MultiWith<Inc, Nest>, DecoData> {
+  class MultiRuntime final : public WithRuntimeDecorator<WithTuple<Inc, Nest>> {
    public:
-    MultiRuntime(std::unique_ptr<Runtime> rt)
-        : WithRuntimeDecorator<MultiWith<Inc, Nest>, DecoData>(*rt, dd_),
+    explicit MultiRuntime(std::unique_ptr<Runtime> rt)
+        : WithRuntimeDecorator<WithTuple<Inc, Nest>>(*rt, tuple_),
           rt_(std::move(rt)) {}
 
     int count() {
-      return dd_.count_;
+      return std::get<0>(tuple_).count;
     }
     int nest() {
-      return dd_.nest_;
+      return std::get<1>(tuple_).nest;
     }
 
    private:
     std::unique_ptr<Runtime> rt_;
-    DecoData dd_;
+    WithTuple<Inc, Nest> tuple_;
   };
 
   MultiRuntime mrt(factory());

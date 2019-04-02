@@ -23,41 +23,53 @@ class ThreadSafeRuntime : public Runtime {
 
 namespace detail {
 
+template <typename R, typename L>
+struct WithLock {
+  L lock;
+  WithLock(R& r) : lock(r) {}
+  void before() {
+    lock.lock();
+  }
+  void after() {
+    lock.unlock();
+  }
+};
+
 // The actual implementation of a given ThreadSafeRuntime. It's parameterized
 // by:
 //
 // - R: The actual Runtime type that this wraps
-// - L: A lock type that has two members:
-//   - void lock(const R&)
-//   - void unlock(const R&)
+// - L: A lock type that has three members:
+//   - L(R& r)       // ctor
+//   - void lock()
+//   - void unlock()
 template <typename R, typename L>
 class ThreadSafeRuntimeImpl final
-    : public WithRuntimeDecorator<std::lock_guard<L>, L, R, ThreadSafeRuntime> {
+    : public WithRuntimeDecorator<WithLock<R, L>, R, ThreadSafeRuntime> {
  public:
   template <typename... Args>
   ThreadSafeRuntimeImpl(Args&&... args)
-      : WithRuntimeDecorator<std::lock_guard<L>, L, R, ThreadSafeRuntime>(
+      : WithRuntimeDecorator<WithLock<R, L>, R, ThreadSafeRuntime>(
             unsafe_,
             lock_),
         unsafe_(std::forward<Args>(args)...),
         lock_(unsafe_) {}
 
   R& getUnsafeRuntime() override {
-    return WithRuntimeDecorator<std::lock_guard<L>, L, R, ThreadSafeRuntime>::
-        plain();
+    return WithRuntimeDecorator<WithLock<R, L>, R, ThreadSafeRuntime>::plain();
   }
 
   void lock() const override {
-    lock_.lock();
+    lock_.before();
   }
 
   void unlock() const override {
-    lock_.unlock();
+    lock_.after();
   }
 
  private:
   R unsafe_;
-  mutable L lock_;
+  mutable WithLock<R, L> lock_;
 };
 
 } // namespace detail

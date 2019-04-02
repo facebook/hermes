@@ -361,219 +361,257 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
   Plain& plain_;
 };
 
+namespace detail {
+
+// This metaprogramming allows the With type's methods to be
+// optional.
+
+template <typename T, typename U = void>
+struct BeforeCaller {
+  static void before(T&) {}
+};
+
+template <typename T, typename U = void>
+struct AfterCaller {
+  static void after(T&) {}
+};
+
+// void() is a ctor for an instance of void.
+// decltype(..., void()) is either SFINAE, or void.
+// So, if SFINAE does not happen for T, then this specialization exists,
+// and always applies.
+template <typename T>
+struct BeforeCaller<T, decltype(&T::before, void())> {
+  static void before(T& t) {
+    t.before();
+  }
+};
+
+template <typename T>
+struct AfterCaller<T, decltype(&T::after, void())> {
+  static void after(T& t) {
+    t.after();
+  }
+};
+
+} // namespace detail
+
 // A decorator which implements an around idiom.  A With instance is
 // RAII constructed before each call to the undecorated class; the
 // ctor is passed a single argument of type WithArg&.  Plain and Base
 // are used as in the base class.
 template <
     typename With,
-    typename WithArg,
     typename Plain = Runtime,
     typename Base = Runtime>
 class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
  public:
   using RD = RuntimeDecorator<Plain, Base>;
 
-  WithRuntimeDecorator(Plain& plain, WithArg& warg) : RD(plain), warg_(warg) {}
+  // The reference arguments to the ctor are stored, but not used by
+  // the ctor, and there is no ctor, so they can be passed members of
+  // the derived class.
+  WithRuntimeDecorator(Plain& plain, With& with) : RD(plain), with_(with) {}
 
   Value evaluateJavaScript(
       const std::shared_ptr<const Buffer>& buffer,
       const std::string& sourceURL) override {
-    With around(warg_);
+    Around around{with_};
     return RD::evaluateJavaScript(buffer, sourceURL);
   }
   std::shared_ptr<const PreparedJavaScript> prepareJavaScript(
       const std::shared_ptr<const Buffer>& buffer,
       std::string sourceURL) override {
-    With around(warg_);
+    Around around{with_};
     return RD::prepareJavaScript(buffer, std::move(sourceURL));
   }
   Value evaluatePreparedJavaScript(
       const std::shared_ptr<const PreparedJavaScript>& js) override {
-    With around(warg_);
+    Around around{with_};
     return RD::evaluatePreparedJavaScript(js);
   }
   Object global() override {
-    With around(warg_);
+    Around around{with_};
     return RD::global();
   }
   std::string description() override {
-    With around(warg_);
+    Around around{with_};
     return RD::description();
   };
   bool isInspectable() override {
-    With around(warg_);
+    Around around{with_};
     return RD::isInspectable();
   };
+
   // The jsi:: prefix is necessary because MSVC compiler complains C2247:
   // Instrumentation is not accessible because RuntimeDecorator uses private
   // to inherit from Instrumentation.
   // TODO(T40821815) Consider removing this workaround when updating MSVC
   jsi::Instrumentation& instrumentation() override {
-    With around(warg_);
+    Around around{with_};
     return RD::instrumentation();
   }
 
  protected:
   Runtime::PointerValue* cloneSymbol(const Runtime::PointerValue* pv) override {
-    With around(warg_);
+    Around around{with_};
     return RD::cloneSymbol(pv);
   };
   Runtime::PointerValue* cloneString(const Runtime::PointerValue* pv) override {
-    With around(warg_);
+    Around around{with_};
     return RD::cloneString(pv);
   };
   Runtime::PointerValue* cloneObject(const Runtime::PointerValue* pv) override {
-    With around(warg_);
+    Around around{with_};
     return RD::cloneObject(pv);
   };
   Runtime::PointerValue* clonePropNameID(
       const Runtime::PointerValue* pv) override {
-    With around(warg_);
+    Around around{with_};
     return RD::clonePropNameID(pv);
   };
 
   PropNameID createPropNameIDFromAscii(const char* str, size_t length)
       override {
-    With around(warg_);
+    Around around{with_};
     return RD::createPropNameIDFromAscii(str, length);
   };
   PropNameID createPropNameIDFromUtf8(const uint8_t* utf8, size_t length)
       override {
-    With around(warg_);
+    Around around{with_};
     return RD::createPropNameIDFromUtf8(utf8, length);
   };
   PropNameID createPropNameIDFromString(const String& str) override {
-    With around(warg_);
+    Around around{with_};
     return RD::createPropNameIDFromString(str);
   };
   std::string utf8(const PropNameID& id) override {
-    With around(warg_);
+    Around around{with_};
     return RD::utf8(id);
   };
   bool compare(const PropNameID& a, const PropNameID& b) override {
-    With around(warg_);
+    Around around{with_};
     return RD::compare(a, b);
   };
 
   std::string symbolToString(const Symbol& sym) override {
-    With around(warg_);
+    Around around{with_};
     return RD::symbolToString(sym);
   };
 
   String createStringFromAscii(const char* str, size_t length) override {
-    With around(warg_);
+    Around around{with_};
     return RD::createStringFromAscii(str, length);
   };
   String createStringFromUtf8(const uint8_t* utf8, size_t length) override {
-    With around(warg_);
+    Around around{with_};
     return RD::createStringFromUtf8(utf8, length);
   };
   std::string utf8(const String& s) override {
-    With around(warg_);
+    Around around{with_};
     return RD::utf8(s);
   }
 
   Object createObject() override {
-    With around(warg_);
+    Around around{with_};
     return RD::createObject();
   };
   Object createObject(std::shared_ptr<HostObject> ho) override {
-    With around(warg_);
+    Around around{with_};
     return RD::createObject(std::move(ho));
   };
   std::shared_ptr<HostObject> getHostObject(const jsi::Object& o) override {
-    With around(warg_);
+    Around around{with_};
     return RD::getHostObject(o);
   };
   HostFunctionType& getHostFunction(const jsi::Function& f) override {
-    With around(warg_);
+    Around around{with_};
     return RD::getHostFunction(f);
   };
 
   Value getProperty(const Object& o, const PropNameID& name) override {
-    With around(warg_);
+    Around around{with_};
     return RD::getProperty(o, name);
   };
   Value getProperty(const Object& o, const String& name) override {
-    With around(warg_);
+    Around around{with_};
     return RD::getProperty(o, name);
   };
   bool hasProperty(const Object& o, const PropNameID& name) override {
-    With around(warg_);
+    Around around{with_};
     return RD::hasProperty(o, name);
   };
   bool hasProperty(const Object& o, const String& name) override {
-    With around(warg_);
+    Around around{with_};
     return RD::hasProperty(o, name);
   };
   void setPropertyValue(Object& o, const PropNameID& name, const Value& value)
       override {
-    With around(warg_);
+    Around around{with_};
     RD::setPropertyValue(o, name, value);
   };
   void setPropertyValue(Object& o, const String& name, const Value& value)
       override {
-    With around(warg_);
+    Around around{with_};
     RD::setPropertyValue(o, name, value);
   };
 
   bool isArray(const Object& o) const override {
-    With around(warg_);
+    Around around{with_};
     return RD::isArray(o);
   };
   bool isArrayBuffer(const Object& o) const override {
-    With around(warg_);
+    Around around{with_};
     return RD::isArrayBuffer(o);
   };
   bool isFunction(const Object& o) const override {
-    With around(warg_);
+    Around around{with_};
     return RD::isFunction(o);
   };
   bool isHostObject(const jsi::Object& o) const override {
-    With around(warg_);
+    Around around{with_};
     return RD::isHostObject(o);
   };
   bool isHostFunction(const jsi::Function& f) const override {
-    With around(warg_);
+    Around around{with_};
     return RD::isHostFunction(f);
   };
   Array getPropertyNames(const Object& o) override {
-    With around(warg_);
+    Around around{with_};
     return RD::getPropertyNames(o);
   };
 
   WeakObject createWeakObject(const Object& o) override {
-    With around(warg_);
+    Around around{with_};
     return RD::createWeakObject(o);
   };
   Value lockWeakObject(const WeakObject& wo) override {
-    With around(warg_);
+    Around around{with_};
     return RD::lockWeakObject(wo);
   };
 
   Array createArray(size_t length) override {
-    With around(warg_);
+    Around around{with_};
     return RD::createArray(length);
   };
   size_t size(const Array& a) override {
-    With around(warg_);
+    Around around{with_};
     return RD::size(a);
   };
   size_t size(const ArrayBuffer& ab) override {
-    With around(warg_);
+    Around around{with_};
     return RD::size(ab);
   };
   uint8_t* data(const ArrayBuffer& ab) override {
-    With around(warg_);
+    Around around{with_};
     return RD::data(ab);
   };
   Value getValueAtIndex(const Array& a, size_t i) override {
-    With around(warg_);
+    Around around{with_};
     return RD::getValueAtIndex(a, i);
   };
   void setValueAtIndexImpl(Array& a, size_t i, const Value& value) override {
-    With around(warg_);
+    Around around{with_};
     RD::setValueAtIndexImpl(a, i, value);
   };
 
@@ -581,7 +619,7 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
       const PropNameID& name,
       unsigned int paramCount,
       HostFunctionType func) override {
-    With around(warg_);
+    Around around{with_};
     return RD::createFunctionFromHostFunction(
         name, paramCount, std::move(func));
   };
@@ -590,64 +628,92 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
       const Value& jsThis,
       const Value* args,
       size_t count) override {
-    With around(warg_);
+    Around around{with_};
     return RD::call(f, jsThis, args, count);
   };
   Value callAsConstructor(const Function& f, const Value* args, size_t count)
       override {
-    With around(warg_);
+    Around around{with_};
     return RD::callAsConstructor(f, args, count);
   };
 
   // Private data for managing scopes.
   Runtime::ScopeState* pushScope() override {
-    With around(warg_);
+    Around around{with_};
     return RD::pushScope();
   }
   void popScope(Runtime::ScopeState* ss) override {
-    With around(warg_);
+    Around around{with_};
     RD::popScope(ss);
   }
 
   bool strictEquals(const Symbol& a, const Symbol& b) const override {
-    With around(warg_);
+    Around around{with_};
     return RD::strictEquals(a, b);
   };
   bool strictEquals(const String& a, const String& b) const override {
-    With around(warg_);
+    Around around{with_};
     return RD::strictEquals(a, b);
   };
   bool strictEquals(const Object& a, const Object& b) const override {
-    With around(warg_);
+    Around around{with_};
     return RD::strictEquals(a, b);
   };
 
   bool instanceOf(const Object& o, const Function& f) override {
-    With around(warg_);
+    Around around{with_};
     return RD::instanceOf(o, f);
   };
 
  private:
-  WithArg& warg_;
+  // Wrap an RAII type around With& to guarantee after always happens.
+  struct Around {
+    Around(With& with) : with_(with) {
+      detail::BeforeCaller<With>::before(with_);
+    }
+    ~Around() {
+      detail::AfterCaller<With>::after(with_);
+    }
+
+    With& with_;
+  };
+
+  With& with_;
 };
 
 // Nesting WithRuntimeDecorator will work, but using this as the With
 // type will be easier to read, write, and understand.
 template <typename... T>
-class MultiWith {
+class WithTuple : public std::tuple<T...> {
  public:
-  template <typename Arg>
-  MultiWith(Arg& arg) : values_(RepeatFor<T>(arg)...) {}
+  using std::tuple<T...>::tuple;
 
- private:
-  // This is used to repeat the same value N times to construct the
-  // member tuple elements.
-  template <typename Ti, typename Arg>
-  Arg& RepeatFor(Arg& arg) {
-    return arg;
+  void before() {
+    all_before<0, T...>();
   }
 
-  std::tuple<T...> values_;
+  void after() {
+    all_after<0, T...>();
+  }
+
+ private:
+  template <size_t N, typename U, typename... Rest>
+  void all_before() {
+    detail::BeforeCaller<U>::before(std::get<N>(*this));
+    all_before<N + 1, Rest...>();
+  }
+
+  template <size_t N>
+  void all_before() {}
+
+  template <size_t N, typename U, typename... Rest>
+  void all_after() {
+    all_after<N + 1, Rest...>();
+    detail::AfterCaller<U>::after(std::get<N>(*this));
+  }
+
+  template <size_t N>
+  void all_after() {}
 };
 
 } // namespace jsi
