@@ -1400,6 +1400,13 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
       return expr.getValue();
     }
 
+    case TokenKind::rw_function: {
+      auto fExpr = parseFunctionExpression();
+      if (!fExpr)
+        return None;
+      return fExpr.getValue();
+    }
+
     default:
       sm_.error(tok_->getStartLoc(), "invalid expression");
       return None;
@@ -1705,12 +1712,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberExpression() {
   SMLoc startLoc = tok_->getStartLoc();
 
   ESTree::NodePtr expr;
-  if (check(TokenKind::rw_function)) {
-    auto fExpr = parseFunctionExpression();
-    if (!fExpr)
-      return None;
-    expr = fExpr.getValue();
-  } else if (checkAndEat(TokenKind::rw_new)) {
+  if (checkAndEat(TokenKind::rw_new)) {
     auto mExpr = parseMemberExpression();
     if (!mExpr)
       return None;
