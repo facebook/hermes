@@ -8,8 +8,6 @@
 
 #include "hermes/Support/PerfSection.h"
 
-#include <sstream>
-
 using llvm::cast;
 using llvm::dyn_cast;
 using llvm::isa;
@@ -88,7 +86,8 @@ void JSParserImpl::errorExpected(
     const char *where,
     const char *what,
     SMLoc whatLoc) {
-  std::ostringstream ss;
+  llvm::SmallString<4> str;
+  llvm::raw_svector_ostream ss{str};
 
   for (unsigned i = 0; i < toks.size(); ++i) {
     // Insert a separator after the first token.
