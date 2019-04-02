@@ -107,25 +107,30 @@ bool SourceMapParser::parseMappings(
     const char *pCur = sourceMappings.data() + curSegOffset;
     const char *pSegEnd = sourceMappings.data() + endSegOffset;
 
-    llvm::Optional<SourceMap::Segment> segmentOpt =
-        parseSegment(prevSegment, pCur, pSegEnd);
-    if (!segmentOpt.hasValue()) {
-      return false;
-    }
-    segments.emplace_back(segmentOpt.getValue());
-
-    // TODO: assert pCur equals to pSegEnd.
-
-    if (!lastSegmentInLine) {
-      prevSegment = segments.back();
-    } else {
-      // Make a copy so that we can make modification.
-      lastLineSegment = segments.back();
-      // generated column should be reset for new line.
-      lastLineSegment.generatedColumn = 0;
-      prevSegment = lastLineSegment;
-
+    if (pCur == pSegEnd && lastSegmentInLine && segments.empty()) {
+      // The line is empty, so avoid doing any extra work.
       lines.emplace_back(std::move(segments));
+    } else {
+      llvm::Optional<SourceMap::Segment> segmentOpt =
+          parseSegment(prevSegment, pCur, pSegEnd);
+      if (!segmentOpt.hasValue()) {
+        return false;
+      }
+      segments.emplace_back(segmentOpt.getValue());
+
+      // TODO: assert pCur equals to pSegEnd.
+
+      if (!lastSegmentInLine) {
+        prevSegment = segments.back();
+      } else {
+        // Make a copy so that we can make modification.
+        lastLineSegment = segments.back();
+        // generated column should be reset for new line.
+        lastLineSegment.generatedColumn = 0;
+        prevSegment = lastLineSegment;
+
+        lines.emplace_back(std::move(segments));
+      }
     }
     curSegOffset = endSegOffset + 1;
   }

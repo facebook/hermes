@@ -46,6 +46,15 @@ const char *TestMapEmptySourceRoot = R"#({
   "mappings": "CAAC,IAAI,IAAM,SAAUA,GAClB,OAAOC,IAAID;CCDb,IAAI,IAAM,SAAUE,GAClB,OAAOA"
 })#";
 
+// Empty "sourceRoot" field.
+const char *TestMapEmptyLines = R"#({
+  "version": 3,
+  "file": "min.js",
+  "names": ["bar", "baz", "n"],
+  "sources": ["one.js", "two.js"],
+  "mappings": ";;CAAC,IAAI,IAAM,SAAUA,GAClB,OAAOC,IAAID;CCDb,IAAI,IAAM,SAAUE,GAClB,OAAOA"
+})#";
+
 /// Helper to return a Segment.
 SourceMap::Segment
 loc(int32_t address, int32_t sourceIndex, int32_t line, int32_t column) {
@@ -216,6 +225,37 @@ TEST(SourceMap, FuzzyMappings) {
   verifySegment(*sourceMap, 1, sources, loc(30, 0, 2, 10));
   verifySegment(*sourceMap, 2, sources, loc(12, 1, 1, 11));
 };
+
+/// Test to make sure we can properly parse empty lines.
+TEST(SourceMap, EmptyLines) {
+  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(TestMapEmptyLines);
+
+  std::vector<std::string> sources = {"one.js", "two.js"};
+
+  int generatedLine = 3;
+  int sourceIndex = 0;
+  verifySegment(*sourceMap, generatedLine, sources, loc(1, sourceIndex, 1, 1));
+  verifySegment(*sourceMap, generatedLine, sources, loc(5, sourceIndex, 1, 5));
+  verifySegment(*sourceMap, generatedLine, sources, loc(9, sourceIndex, 1, 11));
+  verifySegment(
+      *sourceMap, generatedLine, sources, loc(18, sourceIndex, 1, 21));
+  verifySegment(*sourceMap, generatedLine, sources, loc(21, sourceIndex, 2, 3));
+  verifySegment(
+      *sourceMap, generatedLine, sources, loc(28, sourceIndex, 2, 10));
+  verifySegment(
+      *sourceMap, generatedLine, sources, loc(32, sourceIndex, 2, 14));
+
+  generatedLine = 4;
+  sourceIndex = 1;
+  verifySegment(*sourceMap, generatedLine, sources, loc(1, sourceIndex, 1, 1));
+  verifySegment(*sourceMap, generatedLine, sources, loc(5, sourceIndex, 1, 5));
+  verifySegment(*sourceMap, generatedLine, sources, loc(9, sourceIndex, 1, 11));
+  verifySegment(
+      *sourceMap, generatedLine, sources, loc(18, sourceIndex, 1, 21));
+  verifySegment(*sourceMap, generatedLine, sources, loc(21, sourceIndex, 2, 3));
+  verifySegment(
+      *sourceMap, generatedLine, sources, loc(28, sourceIndex, 2, 10));
+}
 
 TEST(SourceMap, VLQRandos) {
   // clang-format off
