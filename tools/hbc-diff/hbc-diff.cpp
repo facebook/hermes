@@ -24,19 +24,21 @@ enum ExecutionStatus {
   LoadFileFailed,
 };
 
-static std::array<const char *, 13> sectionNames = {{"Total",
-                                                     "Function headers",
-                                                     "String table",
-                                                     "String storage",
-                                                     "Array buffer",
-                                                     "Object key buffer",
-                                                     "Object value buffer",
-                                                     "Regexp table",
-                                                     "Regexp storage",
-                                                     "CommonJS module table",
-                                                     "Function bodies",
-                                                     "Function info",
-                                                     "Debug info"}};
+static std::array<const char *, 14> sectionNames = {
+    {"Total",
+     "Function headers",
+     "String table",
+     "String storage",
+     "Array buffer",
+     "Object key buffer",
+     "Object value buffer",
+     "Regexp table",
+     "Regexp storage",
+     "CommonJS module table",
+     "CommonJS module table (static)",
+     "Function bodies",
+     "Function info",
+     "Debug info"}};
 
 /// Prints the number of bytes represented by \p size to \p os.
 /// \param humanize display sizes in KiB, MiB, GiB instead of just bytes.
@@ -101,6 +103,9 @@ static ExecutionStatus diffFiles(
     fileSizes[i].push_back(bytecode->getRegExpStorage().size());
     fileSizes[i].push_back(
         bytecode->getCJSModuleTable().size() *
+        sizeof(std::pair<uint32_t, uint32_t>));
+    fileSizes[i].push_back(
+        bytecode->getCJSModuleTableStatic().size() *
         sizeof(std::pair<uint32_t, uint32_t>));
 
     // function bytecode
