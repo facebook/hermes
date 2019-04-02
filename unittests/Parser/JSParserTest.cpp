@@ -28,7 +28,7 @@ TEST(JSParserTest, Function1) {
 TEST(JSParserTest, Function1Err) {
   Context context;
   DiagContext diag(context);
-  JSParser parser(context, "function func (a,) {}");
+  JSParser parser(context, "function func (a+) {}");
   auto parsed = parser.parse();
   ASSERT_FALSE(parsed.hasValue());
   ASSERT_EQ(1, diag.getErrCountClear());
@@ -75,6 +75,7 @@ TEST(JSParserTest, TestSwitch) {
 
 TEST(JSParserTest, TestSwitchTwoDefaults) {
   Context context;
+  DiagContext diag(context);
   JSParser parser(
       context, "switch (0) {default: break; case 2: break; default: }");
   auto parsed = parser.parse();
@@ -97,6 +98,7 @@ TEST(JSParserTest, TestThrow) {
 
 TEST(JSParserTest, TestBadThrowNewLine) {
   Context context;
+  DiagContext diag(context);
   JSParser parser(context, "throw\n1;");
   auto parsed = parser.parse();
   ASSERT_FALSE(parsed.hasValue());
@@ -118,6 +120,7 @@ TEST(JSParserTest, TestTry) {
 
 TEST(JSParserTest, TestBadTry) {
   Context context;
+  DiagContext diag(context);
   JSParser parser(context, "try {1;} cetch {2;}");
   auto parsed = parser.parse();
   ASSERT_FALSE(parsed.hasValue());

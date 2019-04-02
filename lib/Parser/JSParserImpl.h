@@ -343,6 +343,15 @@ class JSParserImpl {
   Optional<ESTree::FunctionDeclarationNode *> parseFunctionDeclaration(
       Param param,
       bool forceEagerly = false);
+
+  /// Parse a function declaration or expression, and optionally force an eager
+  /// parse. Otherwise, the function will be skipped in lazy mode and a dummy
+  /// returned.
+  /// \param param [Yield]
+  Optional<ESTree::FunctionLikeNode *> parseFunctionHelper(
+      Param param,
+      bool isDeclaration,
+      bool forceEagerly = false);
   /// \param param [Yield, Return]
   Optional<ESTree::Node *> parseStatement(Param param);
 

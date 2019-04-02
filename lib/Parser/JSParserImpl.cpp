@@ -230,12 +230,23 @@ Optional<ESTree::FileNode *> JSParserImpl::parseProgram() {
 
 Optional<ESTree::FunctionDeclarationNode *>
 JSParserImpl::parseFunctionDeclaration(Param param, bool forceEagerly) {
+  auto optRes = parseFunctionHelper(param, true, forceEagerly);
+  if (!optRes)
+    return None;
+  return cast<ESTree::FunctionDeclarationNode>(*optRes);
+}
+
+Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
+    Param param,
+    bool isDeclaration,
+    bool forceEagerly) {
   // function
   assert(tok_->getKind() == TokenKind::rw_function);
   SMLoc startLoc = advance().Start;
+
   // identifier
   auto optId = parseBindingIdentifier(param.get(ParamYield));
-  if (!optId) {
+  if (isDeclaration && !optId) {
     errorExpected(
         TokenKind::identifier,
         "after 'function'",
@@ -249,31 +260,35 @@ JSParserImpl::parseFunctionDeclaration(Param param, bool forceEagerly) {
   if (!eat(
           TokenKind::l_paren,
           JSLexer::AllowRegExp,
-          "before parameter list in function declaration",
-          "function declaration location",
-          startLoc))
+          "at start of function parameter list",
+          isDeclaration ? "function declaration starts here"
+                        : "function expression starts here",
+          startLoc)) {
     return None;
+  }
 
   ESTree::NodeList paramList;
 
-  if (tok_->getKind() != TokenKind::r_paren) {
-    do {
-      if (!need(
-              TokenKind::identifier,
-              "inside function parameter list",
-              "start of parameter list",
-              lparenLoc))
+  if (!check(TokenKind::r_paren)) {
+    for (;;) {
+      auto optParamIdent = parseBindingIdentifier(param.get(ParamYield));
+      if (!optParamIdent) {
+        errorExpected(
+            TokenKind::identifier,
+            "inside function parameter list",
+            "start of parameter list",
+            lparenLoc);
         return None;
+      }
+      paramList.push_back(*optParamIdent.getValue());
 
-      auto *ident = setLocation(
-          tok_,
-          tok_,
-          new (context_)
-              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
-      advance();
+      if (!checkAndEat(TokenKind::comma))
+        break;
 
-      paramList.push_back(*ident);
-    } while (checkAndEat(TokenKind::comma));
+      // Check for ",)".
+      if (check(TokenKind::r_paren))
+        break;
+    }
   }
 
   // )
@@ -281,28 +296,47 @@ JSParserImpl::parseFunctionDeclaration(Param param, bool forceEagerly) {
           TokenKind::r_paren,
           JSLexer::AllowRegExp,
           "at end of function parameter list",
-          "function parameter list starts here",
-          lparenLoc))
+          "start of parameter list",
+          lparenLoc)) {
     return None;
+  }
 
   // {
   if (!need(
           TokenKind::l_brace,
-          "in function declaration",
-          "start of function declaration",
-          startLoc))
+          isDeclaration ? "in function declaration" : "in function expression",
+          isDeclaration ? "start of function declaration"
+                        : "start of function expression",
+          startLoc)) {
     return None;
+  }
+
   SaveStrictMode saveStrictMode{this};
+
+  // Grammar context to be used when lexing the closing brace.
+  auto grammarContext =
+      isDeclaration ? JSLexer::AllowRegExp : JSLexer::AllowDiv;
 
   if (pass_ == PreParse) {
     // Create the nodes we want to keep before the AllocationScope.
-    auto node = new (context_) ESTree::FunctionDeclarationNode(
-        *optId, nullptr, std::move(paramList), nullptr);
-    // Initialize the node with a blank body.
-    node->_body = new (context_) ESTree::BlockStatementNode({});
+    ESTree::FunctionLikeNode *node;
+
+    if (isDeclaration) {
+      auto *decl = new (context_) ESTree::FunctionDeclarationNode(
+          *optId, std::move(paramList), nullptr, nullptr);
+      // Initialize the node with a blank body.
+      decl->_body = new (context_) ESTree::BlockStatementNode({});
+      node = decl;
+    } else {
+      auto *expr = new (context_) ESTree::FunctionExpressionNode(
+          optId ? *optId : nullptr, std::move(paramList), nullptr);
+      // Initialize the node with a blank body.
+      expr->_body = new (context_) ESTree::BlockStatementNode({});
+      node = expr;
+    }
 
     AllocationScope scope(context_.getAllocator());
-    auto body = parseFunctionBody(Param{}, false, JSLexer::AllowDiv, true);
+    auto body = parseFunctionBody(Param{}, false, grammarContext, true);
     if (!body)
       return None;
 
@@ -311,18 +345,24 @@ JSParserImpl::parseFunctionDeclaration(Param param, bool forceEagerly) {
   }
 
   auto parsedBody =
-      parseFunctionBody(Param{}, forceEagerly, JSLexer::AllowRegExp, true);
+      parseFunctionBody(Param{}, forceEagerly, grammarContext, true);
   if (!parsedBody)
     return None;
   auto *body = parsedBody.getValue();
 
-  auto *node = setLocation(
-      startLoc,
-      body,
-      new (context_) ESTree::FunctionDeclarationNode(
-          *optId, body, std::move(paramList), nullptr));
-  node->strictness = ESTree::makeStrictness(isStrictMode());
-  return node;
+  ESTree::FunctionLikeNode *node;
+  if (isDeclaration) {
+    auto *decl = new (context_) ESTree::FunctionDeclarationNode(
+        *optId, std::move(paramList), body, nullptr);
+    decl->strictness = ESTree::makeStrictness(isStrictMode());
+    node = decl;
+  } else {
+    auto *expr = new (context_) ESTree::FunctionExpressionNode(
+        optId ? *optId : nullptr, std::move(paramList), body);
+    expr->strictness = ESTree::makeStrictness(isStrictMode());
+    node = expr;
+  }
+  return setLocation(startLoc, body, node);
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseStatement(Param param) {
@@ -1655,82 +1695,10 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyKey() {
 
 Optional<ESTree::FunctionExpressionNode *>
 JSParserImpl::parseFunctionExpression(bool forceEagerly) {
-  assert(check(TokenKind::rw_function));
-  SMLoc startLoc = advance().Start;
-
-  ESTree::IdentifierNode *id = nullptr;
-  if (check(TokenKind::identifier)) {
-    id = setLocation(
-        tok_,
-        tok_,
-        new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
-    advance();
-  }
-
-  ESTree::NodeList paramList;
-  SMLoc lparenLoc = tok_->getStartLoc();
-  eat(TokenKind::l_paren,
-      JSLexer::AllowRegExp,
-      "at start of function parameter list",
-      "function expression starts here",
-      startLoc);
-  if (!check(TokenKind::r_paren)) {
-    do {
-      if (!need(
-              TokenKind::identifier,
-              "inside function parameter list",
-              "start of function parameter list",
-              lparenLoc))
-        return None;
-      auto *param = setLocation(
-          tok_,
-          tok_,
-          new (context_)
-              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
-      advance();
-      paramList.push_back(*param);
-    } while (checkAndEat(TokenKind::comma));
-  }
-  if (!eat(
-          TokenKind::r_paren,
-          JSLexer::AllowRegExp,
-          "at end of function parameter list",
-          "start of function parameter list",
-          lparenLoc))
+  auto optRes = parseFunctionHelper(Param{}, false, forceEagerly);
+  if (!optRes)
     return None;
-  if (!need(
-          TokenKind::l_brace,
-          "in function expression",
-          "start of function expression",
-          startLoc))
-    return None;
-  SaveStrictMode saveStrictMode{this};
-
-  if (pass_ == PreParse) {
-    // Create the nodes we want to keep before the AllocationScope.
-    auto node = new (context_)
-        ESTree::FunctionExpressionNode(id, std::move(paramList), nullptr);
-    // Initialize the node with a blank body.
-    node->_body = new (context_) ESTree::BlockStatementNode({});
-
-    AllocationScope scope(context_.getAllocator());
-    auto body = parseFunctionBody(ParamReturn, false, JSLexer::AllowDiv, true);
-    if (!body)
-      return None;
-
-    node->strictness = ESTree::makeStrictness(isStrictMode());
-    return setLocation(startLoc, body.getValue(), node);
-  }
-
-  auto body =
-      parseFunctionBody(ParamReturn, forceEagerly, JSLexer::AllowDiv, true);
-  if (!body)
-    return None;
-
-  auto node = new (context_)
-      ESTree::FunctionExpressionNode(id, std::move(paramList), body.getValue());
-  node->strictness = ESTree::makeStrictness(isStrictMode());
-  return setLocation(startLoc, body.getValue(), node);
+  return cast<ESTree::FunctionExpressionNode>(*optRes);
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseMemberExpression() {
