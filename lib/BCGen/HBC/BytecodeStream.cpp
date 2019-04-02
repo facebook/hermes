@@ -11,9 +11,8 @@ using namespace hbc;
 
 // ============================ File ============================
 void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
-  bool cjsModulesResolved = !BM.getCJSModuleTableStatic().empty();
-  int32_t cjsModuleCount = cjsModulesResolved
-      ? -BM.getCJSModuleTableStatic().size()
+  uint32_t cjsModuleCount = BM.getBytecodeOptions().cjsModulesStaticallyResolved
+      ? BM.getCJSModuleTableStatic().size()
       : BM.getCJSModuleTable().size();
 
   BytecodeFileHeader header{MAGIC,

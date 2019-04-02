@@ -162,9 +162,9 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
   regExpStorage = castArrayRef<unsigned char>(buf, h->regExpStorageSize);
 
   align(buf);
-  if (h->cjsModuleCount < 0) {
+  if (h->options.cjsModulesStaticallyResolved) {
     // Modules have been statically resolved.
-    cjsModuleTableStatic = castArrayRef<uint32_t>(buf, -h->cjsModuleCount);
+    cjsModuleTableStatic = castArrayRef<uint32_t>(buf, h->cjsModuleCount);
   } else {
     // Modules are not resolved, use the filename -> function ID mapping.
     cjsModuleTable =

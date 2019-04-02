@@ -99,6 +99,7 @@ std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
 } // namespace
 
 void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
+  const auto bcopts = bcProvider_->getBytecodeOptions();
   OS << "Bytecode File Information:\n";
   // If the version number in the bytecode file differs from this, the bytecode
   // provider would have exited with an error message.
@@ -114,8 +115,9 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
   OS << "  CommonJS module count (static): "
      << bcProvider_->getCJSModuleTableStatic().size() << "\n";
   OS << "  Bytecode options:\n";
-  OS << "    staticBuiltins: "
-     << bcProvider_->getBytecodeOptions().staticBuiltins << "\n";
+  OS << "    staticBuiltins: " << bcopts.staticBuiltins << "\n";
+  OS << "    cjsModulesStaticallyResolved: "
+     << bcopts.cjsModulesStaticallyResolved << "\n";
   OS << "\n";
 }
 

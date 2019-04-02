@@ -229,6 +229,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
 
   BytecodeOptions bytecodeOptions;
   bytecodeOptions.staticBuiltins = options_.staticBuiltinsEnabled;
+  bytecodeOptions.cjsModulesStaticallyResolved = !cjsModulesStatic_.empty();
   std::unique_ptr<BytecodeModule> BM{new BytecodeModule(
       functionGenerators_.size(),
       stringStorage.acquireStringTable(),
