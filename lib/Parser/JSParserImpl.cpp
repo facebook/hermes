@@ -1791,12 +1791,19 @@ Optional<const char *> JSParserImpl::parseArguments(
   assert(check(TokenKind::l_paren));
   SMLoc startLoc = advance().Start;
   if (!check(TokenKind::r_paren)) {
-    do {
+    for (;;) {
       auto arg = parseAssignmentExpression();
       if (!arg)
         return None;
       argList.push_back(*arg.getValue());
-    } while (checkAndEat(TokenKind::comma));
+
+      if (!checkAndEat(TokenKind::comma))
+        break;
+
+      // Check for ",)".
+      if (check(TokenKind::r_paren))
+        break;
+    }
   }
   endLoc = tok_->getEndLoc();
   if (!eat(

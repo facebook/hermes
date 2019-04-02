@@ -1,4 +1,4 @@
-// RUN: %hermes -hermes-parser %s
+// RUN: %hermesc -dump-ast %s
 // Make sure we parse trailing commas
 
 var a1 = [1,];
@@ -8,3 +8,5 @@ var a4 = [];
 
 var b1 = {x:0,}
 var b2 = {}
+
+foo(1, 2, );
