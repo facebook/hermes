@@ -845,7 +845,8 @@ HermesValue Debugger::evalInFrame(
   bool singleFunction = false;
 
   // Environment may be undefined if it has not been created yet.
-  Handle<Environment> env = frameInfo->frame->getDebugEnvironmentHandle();
+  Handle<Environment> env =
+      frameInfo->frame->getDebugEnvironmentHandle(runtime_);
   if (!env) {
     // TODO: this comes about when we break in a function before its environment
     // has been created. What we would like to do here is synthesize an

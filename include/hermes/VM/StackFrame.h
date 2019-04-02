@@ -149,7 +149,8 @@ class StackFramePtrT {
   /// possible if we are early in the code block, or with optimized code. This
   /// is stored in the call frame so that the debugger can gain access to the
   /// Environment at arbitrary frames. Note this is managed by the GC.
-  inline Handle<Environment> getDebugEnvironmentHandle() const;
+  inline Handle<Environment> getDebugEnvironmentHandle(
+      HandleRootOwner *runtime) const;
 
   /// \return the callee debug environment.
   /// The environment associated with the callee's stack frame, that is, the
@@ -237,8 +238,6 @@ class StackFramePtrT {
         HermesValue::encodeNativePointer(savedIP);
     stackPointer[StackFrameLayout::SavedCodeBlock] =
         HermesValue::encodeNativePointer(savedCodeBlock);
-    stackPointer[StackFrameLayout::DebugEnvironment] =
-        HermesValue::encodeUndefinedValue();
     stackPointer[StackFrameLayout::ArgCount] =
         HermesValue::encodeNativeUInt32(argCount);
     stackPointer[StackFrameLayout::NewTarget] = newTarget;
