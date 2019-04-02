@@ -46,7 +46,6 @@ set(RTSources
   LogSuccessStorageProvider.cpp
   NativeFrameTest.cpp
   MarkBitArrayNCTest.cpp
-  MemoryEventTrackerTest.cpp
   ObjectBufferTest.cpp
   ObjectModelTest.cpp
   OperationsTest.cpp
