@@ -459,7 +459,10 @@ class JSParserImpl {
 
   Optional<ESTree::FunctionExpressionNode *> parseFunctionExpression(
       bool forceEagerly = false);
-  Optional<ESTree::Node *> parseMemberExpression();
+
+  /// Parse MemberExpression except the production starting with "new".
+  Optional<ESTree::Node *> parseMemberExpressionExceptNew();
+
   /// Returns a dummy Optional<> just to indicate success or failure like all
   /// other functions.
   Optional<const char *> parseArguments(
@@ -478,7 +481,22 @@ class JSParserImpl {
       SMLoc startLoc,
       ESTree::NodePtr expr);
 
-  Optional<ESTree::Node *> parseNewExpression(bool &outWasNewExpression);
+  /// Parse a \c NewExpression or a \c MemberExpression.
+  /// After we have recognized "new", there is an apparent ambiguity in the
+  /// grammar between \c NewExpression and \c MemberExpression:
+  ///
+  /// \code
+  ///     NewExpression:
+  ///         MemberExpression
+  ///         new NewExpression
+  ///
+  ///     MemberExpression:
+  ///         new MemberExpression Arguments
+  /// \endcode
+  ///
+  /// The difference is that in the first case there are no arguments to the
+  /// constructor.
+  Optional<ESTree::Node *> parseNewExpressionOrMemberExpression();
   Optional<ESTree::Node *> parseLeftHandSideExpression();
   Optional<ESTree::Node *> parsePostfixExpression();
   Optional<ESTree::Node *> parseUnaryExpression();

@@ -1708,39 +1708,15 @@ JSParserImpl::parseFunctionExpression(bool forceEagerly) {
   return cast<ESTree::FunctionExpressionNode>(*optRes);
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseMemberExpression() {
+Optional<ESTree::Node *> JSParserImpl::parseMemberExpressionExceptNew() {
   SMLoc startLoc = tok_->getStartLoc();
 
   ESTree::NodePtr expr;
-  if (checkAndEat(TokenKind::rw_new)) {
-    auto mExpr = parseMemberExpression();
-    if (!mExpr)
-      return None;
 
-    auto debugLoc = tok_->getStartLoc();
-    if (!need(
-            TokenKind::l_paren,
-            "after 'new ...'",
-            "location of 'new'",
-            startLoc))
-      return None;
-    ESTree::NodeList argList;
-    SMLoc endLoc;
-    if (!parseArguments(argList, endLoc))
-      return None;
-
-    expr = setLocation(
-        startLoc,
-        endLoc,
-        debugLoc,
-        new (context_)
-            ESTree::NewExpressionNode(mExpr.getValue(), std::move(argList)));
-  } else {
-    auto primExpr = parsePrimaryExpression();
-    if (!primExpr)
-      return None;
-    expr = primExpr.getValue();
-  }
+  auto primExpr = parsePrimaryExpression();
+  if (!primExpr)
+    return None;
+  expr = primExpr.getValue();
 
   SMLoc objectLoc = startLoc;
   while (check(TokenKind::l_square, TokenKind::period)) {
@@ -1873,33 +1849,20 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
   return expr;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseNewExpression(
-    bool &outWasNewExpression) {
-  assert(check(TokenKind::rw_new));
+Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrMemberExpression() {
+  if (!check(TokenKind::rw_new))
+    return parseMemberExpressionExceptNew();
+
   SMLoc startLoc = advance().Start;
 
-  outWasNewExpression = false;
-
-  ESTree::NodePtr expr;
-  bool childIsNewExpression;
-
-  if (check(TokenKind::rw_new)) {
-    auto nExpr = parseNewExpression(childIsNewExpression);
-    if (!nExpr)
-      return None;
-    expr = nExpr.getValue();
-  } else {
-    auto mExpr = parseMemberExpression();
-    if (!mExpr)
-      return None;
-    childIsNewExpression = false;
-    expr = mExpr.getValue();
-  }
+  auto optExpr = parseNewExpressionOrMemberExpression();
+  if (!optExpr)
+    return None;
+  ESTree::NodePtr expr = optExpr.getValue();
 
   // Do we have arguments to a child MemberExpression? If yes, then it really
   // was a 'new MemberExpression(args)', otherwise it is a NewExpression
-  if (childIsNewExpression || !check(TokenKind::l_paren)) {
-    outWasNewExpression = true;
+  if (!check(TokenKind::l_paren)) {
     return setLocation(
         startLoc,
         expr,
@@ -1932,24 +1895,12 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpression(
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
-  ESTree::NodePtr expr;
   SMLoc startLoc = tok_->getStartLoc();
 
-  if (check(TokenKind::rw_new)) {
-    bool childIsNewExpression;
-    auto optNewExpr = parseNewExpression(childIsNewExpression);
-    if (!optNewExpr)
-      return None;
-
-    expr = optNewExpr.getValue();
-    if (childIsNewExpression)
-      return expr;
-  } else {
-    auto optMemberExpr = parseMemberExpression();
-    if (!optMemberExpr)
-      return None;
-    expr = optMemberExpr.getValue();
-  }
+  auto optExpr = parseNewExpressionOrMemberExpression();
+  if (!optExpr)
+    return None;
+  auto *expr = optExpr.getValue();
 
   // Is this a CallExpression?
   if (check(TokenKind::l_paren)) {
