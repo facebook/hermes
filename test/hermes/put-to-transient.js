@@ -1,4 +1,5 @@
 // RUN: %hermes -target=HBC -Wno-undefined-variable %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -Wno-undefined-variable -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 "use strict";
 
 if (typeof print === "undefined")

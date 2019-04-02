@@ -1,4 +1,5 @@
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 
 print("WeakMap");
 // CHECK-LABEL: WeakMap

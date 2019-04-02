@@ -1,4 +1,5 @@
 // RUN: %hermes -O -Wno-direct-eval -non-strict %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -Wno-direct-eval -non-strict -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 
 // Verify property access on transient objects.
 

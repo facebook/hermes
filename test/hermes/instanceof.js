@@ -1,4 +1,5 @@
 // RUN: %hermes -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 
 print("instanceof");
 //CHECK-LABEL: instanceof

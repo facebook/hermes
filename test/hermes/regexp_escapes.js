@@ -1,4 +1,5 @@
 // RUN: %hermes -non-strict -O -gc-sanitize-handles=0 -target=HBC %s  | %FileCheck --match-full-lines %s
+// RUN: %hermes -non-strict -O -gc-sanitize-handles=0 -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 
 print('RegExp Escapes');
 // CHECK-LABEL: RegExp Escapes

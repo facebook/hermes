@@ -1,4 +1,5 @@
 // RUN: %hermes -Wno-direct-eval -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Wno-direct-eval -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 "use strict";
 
 print('strict eval');

@@ -1,6 +1,7 @@
 // RUN: %hermes -commonjs %S/cjs-circle-1.js %S/cjs-circle-2.js %S/cjs-circle-3.js | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -commonjs %S/cjs-circle-1.js %S/cjs-circle-2.js %S/cjs-circle-3.js | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -fstatic-builtins -fstatic-require -commonjs %S/cjs-circle-1.js %S/cjs-circle-2.js %S/cjs-circle-3.js | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -fstatic-builtins -fstatic-require -commonjs %S/cjs-circle-1.js %S/cjs-circle-2.js %S/cjs-circle-3.js -emit-binary -out %t.hbc && %hermes %t.hbc | %FileCheck --match-full-lines %s
 
 print('1: init');
 // CHECK-LABEL: 1: init
