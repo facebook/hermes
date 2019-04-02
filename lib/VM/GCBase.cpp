@@ -43,6 +43,9 @@ GCBase::GCBase(
       crashMgr_(crashMgr),
       recordGcStats_(gcConfig.getShouldRecordStats()),
       name_(gcConfig.getName()),
+#ifdef HERMESVM_MEMORY_PROFILER
+      memEventTracker_(gcConfig.getMemEventTracker()),
+#endif
       tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
       tripwireLimit_(gcConfig.getTripwireConfig().getLimit()),
       tripwireCooldown_(gcConfig.getTripwireConfig().getCooldown())

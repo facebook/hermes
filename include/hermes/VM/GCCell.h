@@ -37,12 +37,18 @@ class GCCell {
   uint64_t _debugAllocationId_;
 #endif
 
+ protected:
+  /// Single value enum that acts as a fill-in parameter to differentiate
+  /// GCCell constructors.
+  enum class AllocEventOption { DoNotEmit };
+
  public:
-#if defined(HERMESVM_GCCELL_ID) || !defined(NDEBUG)
   explicit GCCell(GC *gc, const VTable *vtp);
-#else
-  explicit GCCell(GC *, const VTable *vtp) : vtp_(vtp) {}
-#endif
+
+  /// GCCell constructor with extra 'fake' parameter 'opt' that lets us
+  /// differentiate from the other constructor. This constructor does not
+  /// emit an allocation event to the memory profiler when it is enabled.
+  explicit GCCell(GC *gc, const VTable *vtp, AllocEventOption doNotEmit);
 
   // GCCell-s are not copyable (in the C++ sense).
   GCCell(const GCCell &) = delete;
@@ -194,6 +200,10 @@ class GCCell {
   /// of that external memory, else zero.
   inline uint32_t externalMemorySize() const;
 
+ protected:
+  /// Emit allocation event to memory profiler if it is enabled.
+  void trackAlloc(GC *gc, const VTable *vtp);
+
  private:
   /// This version assumes that the bit is set, and that it can
   /// therefore subtract 1.
@@ -216,13 +226,15 @@ class VariableSizeRuntimeCell : public GCCell {
   /// A VariableSizeRuntimeCell must be constructed from a fixed size, and has
   /// that same size for its lifetime.
   /// To change the size, allocate a new object.
-  explicit VariableSizeRuntimeCell(GC *gc, const VTable *vtp, uint32_t size)
-      : GCCell(gc, vtp), variableSize_(heapAlignSize(size)) {
+  VariableSizeRuntimeCell(GC *gc, const VTable *vtp, uint32_t size)
+      : GCCell(gc, vtp, AllocEventOption::DoNotEmit),
+        variableSize_(heapAlignSize(size)) {
     // Need to align to the GC here, since the GC doesn't know about this field.
     assert(
         size >= sizeof(VariableSizeRuntimeCell) &&
         "Should not allocate a VariableSizeRuntimeCell of size less than "
         "the size of a cell");
+    trackAlloc(gc, vtp);
   }
 
  public:
@@ -249,6 +261,19 @@ class VariableSizeRuntimeCell : public GCCell {
 static_assert(
     alignof(GCCell) <= HeapAlign,
     "GCCell's alignment exceeds the alignment requirement of the heap");
+
+#if !defined(HERMESVM_GCCELL_ID) && defined(NDEBUG)
+inline GCCell::GCCell(GC *gc, const VTable *vtp) : vtp_(vtp) {
+  trackAlloc(gc, vtp);
+}
+
+inline GCCell::GCCell(GC *gc, const VTable *vtp, AllocEventOption doNotEmit)
+    : vtp_(vtp) {}
+#endif
+
+#ifndef HERMESVM_MEMORY_PROFILER
+inline void GCCell::trackAlloc(GC *gc, const VTable *vtp) {}
+#endif
 
 inline uint32_t GCCell::getAllocatedSize(const VTable *vtp) const {
   // The size is either fixed in the VTable, or variable and stored as some
