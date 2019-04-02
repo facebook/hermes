@@ -1,4 +1,4 @@
-// RUN: %hermes -O -Xes6-symbol=true %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 "use strict";
 
 print('Symbol()');

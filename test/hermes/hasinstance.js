@@ -1,4 +1,4 @@
-// RUN: %hermes -Xes6-symbol -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 
 var C = {x: 2}
 C[Symbol.hasInstance] = function(o) {

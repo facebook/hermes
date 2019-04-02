@@ -1,4 +1,4 @@
-// RUN: cat %s | %repl -prompt "" -prompt2 "" -Xes6-symbol=true | %FileCheck --match-full-lines %s
+// RUN: cat %s | %repl -prompt "" -prompt2 "" | %FileCheck --match-full-lines %s
 
 "pretty printer"
 // CHECK-LABEL: "pretty printer"

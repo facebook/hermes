@@ -1,4 +1,4 @@
-// RUN: LANG=en_US.UTF-8 %hermes -O -Xes6-symbol=true -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: LANG=en_US.UTF-8 %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
 "use strict";
 
 print('String');

@@ -1,4 +1,4 @@
-// RUN: %hermes -Xes6-symbol -O %s | %FileCheck --match-full-lines %s 
+// RUN: %hermes -O %s | %FileCheck --match-full-lines %s 
 print("Set prototype and constructor");
 //CHECK-LABEL: Set prototype and constructor
 
