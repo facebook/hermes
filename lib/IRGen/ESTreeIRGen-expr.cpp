@@ -153,8 +153,9 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
     return genTaggedTemplateExpr(Tt);
   }
 
-  assert(false && "Don't know this kind of expression");
-  return nullptr;
+  Builder.getModule()->getContext().getSourceErrorManager().error(
+      expr->getSourceRange(), Twine("Invalid expression encountered"));
+  return Builder.getLiteralUndefined();
 }
 
 void ESTreeIRGen::genExpressionBranch(

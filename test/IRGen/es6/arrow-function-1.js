@@ -1,5 +1,4 @@
-// RUN: %hermesc -Xflow-parser -dump-ir %s | %FileCheck --match-full-lines %s
-// REQUIRES: flowparser
+// RUN: %hermesc -dump-ir %s | %FileCheck --match-full-lines %s
 
 var func1 = () => 10;
 //CHECK-LABEL:arrow func1()

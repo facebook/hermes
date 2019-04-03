@@ -122,6 +122,9 @@ class SemanticValidator {
 
   void visit(UnaryExpressionNode *unaryExpr);
 
+  void visit(CoverEmptyArgsNode *CEA);
+  void visit(CoverTrailingCommaNode *CTC);
+
  private:
   inline bool haveActiveContext() const {
     return funcCtx_ != nullptr;

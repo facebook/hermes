@@ -57,7 +57,13 @@ enum class NodeKind {
 class Node : public llvm::ilist_node<Node> {
   Node(const Node &) = delete;
   void operator=(const Node &) = delete;
+
   NodeKind kind_;
+
+  /// How many parens this node was surrounded by.
+  /// This value can be 0, 1 and 2 (indicating 2 or more).
+  unsigned parens_ = 0;
+
   SMRange sourceRange_{};
   SMLoc debugLoc_{};
 
@@ -87,6 +93,13 @@ class Node : public llvm::ilist_node<Node> {
   }
   SMLoc getDebugLoc() const {
     return debugLoc_;
+  }
+
+  unsigned getParens() const {
+    return parens_;
+  }
+  void incParens() {
+    parens_ = parens_ < 2 ? parens_ + 1 : 2;
   }
 
   /// Copy all location data from a different node.
@@ -327,6 +340,8 @@ class StringLiteralDecoration {
   /// Was this recognised as a directive.
   bool directive = false;
 };
+
+class CoverDecoration {};
 
 namespace detail {
 /// We need to to be able customize some ESTree types when passing them through

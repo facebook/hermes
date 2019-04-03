@@ -8,3 +8,8 @@ function foo(p, p) {
   "use strict";
   return p + p;
 }
+
+var bar = (a, b, a) => 1;
+//CHECK: {{.*}}param_redeclaration.js:12:18: error: cannot declare two parameters with the same name 'a'
+//CHECK-NEXT: var bar = (a, b, a) => 1;
+//CHECK-NEXT:                  ^

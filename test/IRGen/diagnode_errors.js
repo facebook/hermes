@@ -16,7 +16,7 @@ function three() { return z; return z;}
 //CHECK-NEXT:                           ^
 
 function four() { with({}) {}; }
-//CHECK: {{.*}}diagnode_errors.js:18:19: error: Unsupported statement encountered.
+//CHECK: {{.*}}diagnode_errors.js:18:19: error: invalid statement encountered.
 //CHECK-NEXT: function four() { with({}) {}; }
 //CHECK-NEXT:                   ^~~~~~~~~~~
 

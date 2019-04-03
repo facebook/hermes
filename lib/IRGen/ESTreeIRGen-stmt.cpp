@@ -198,7 +198,7 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
   }
 
   Builder.getModule()->getContext().getSourceErrorManager().error(
-      stmt->getSourceRange(), Twine("Unsupported statement encountered."));
+      stmt->getSourceRange(), Twine("invalid statement encountered."));
 }
 
 void ESTreeIRGen::genExpressionWrapper(ESTree::Node *expr) {

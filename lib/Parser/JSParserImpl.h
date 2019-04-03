@@ -506,6 +506,13 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseBinaryExpression(Param param);
 
   Optional<ESTree::Node *> parseConditionalExpression(Param param = ParamIn);
+
+  /// \return true if the parsed node can be re-interpreted as ArrowParameters.
+  bool matchArrowParameters(ESTree::Node *node, ESTree::NodeList &paramList);
+
+  Optional<ESTree::Node *> parseArrowFunctionExpression(
+      Param param,
+      ESTree::Node *leftExpr);
   Optional<ESTree::Node *> parseAssignmentExpression(Param param = ParamIn);
   Optional<ESTree::Node *> parseExpression(Param param = ParamIn);
 

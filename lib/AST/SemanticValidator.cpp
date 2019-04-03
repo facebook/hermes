@@ -426,6 +426,14 @@ void SemanticValidator::visit(UnaryExpressionNode *unaryExpr) {
   visitESTreeChildren(*this, unaryExpr);
 }
 
+void SemanticValidator::visit(CoverEmptyArgsNode *CEA) {
+  sm_.error(CEA->getSourceRange(), "invalid expression");
+}
+
+void SemanticValidator::visit(CoverTrailingCommaNode *CTC) {
+  sm_.error(CTC->getSourceRange(), "expression expected after ','");
+}
+
 void SemanticValidator::visitFunction(
     FunctionLikeNode *node,
     const Node *id,
@@ -448,7 +456,7 @@ void SemanticValidator::visitFunction(
     validateDeclarationName(&param);
 
   // Check if we have seen this parameter name before.
-  if (curFunction()->strictMode) {
+  if (curFunction()->strictMode || isa<ArrowFunctionExpressionNode>(node)) {
     llvm::SmallSet<NodeLabel, 8> paramNameSet;
     for (auto &param : params) {
       auto &curIdNode = cast<IdentifierNode>(param);

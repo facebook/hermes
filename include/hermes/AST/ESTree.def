@@ -463,6 +463,20 @@ ESTREE_NODE_5_ARGS(
     NodeBoolean, computed, false,
     NodeBoolean, static, false)
 
+
+ESTREE_FIRST(Cover, Base)
+
+// CoverParenthesizedExpressionAndArrowParameterList: "(" ")"
+ESTREE_NODE_0_ARGS(CoverEmptyArgs, Cover)
+
+// CoverParenthesizedExpressionAndArrowParameterList:
+//      "(" Expression "," ")"
+// This is the dummy "empty expression" for the last comma inside a
+// SequenceExpression.
+ESTREE_NODE_0_ARGS(CoverTrailingComma, Cover)
+
+ESTREE_LAST(Cover)
+
 #undef ESTREE_FIRST
 #undef ESTREE_LAST
 #undef ESTREE_WRAP

@@ -1385,7 +1385,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
     }
 
     case TokenKind::l_paren: {
-      SMRange rng = advance();
+      SMLoc startLoc = advance().Start;
+
+      // Cover "()".
+      if (check(TokenKind::r_paren)) {
+        SMLoc endLoc = advance().End;
+        return setLocation(
+            startLoc, endLoc, new (context_) ESTree::CoverEmptyArgsNode());
+      }
+
       auto expr = parseExpression();
       if (!expr)
         return None;
@@ -1394,8 +1402,10 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
               JSLexer::AllowDiv,
               "at end of parenthesized expression",
               "started here",
-              rng.Start))
+              startLoc))
         return None;
+      // Record the number of parens surrounding an expression.
+      expr.getValue()->incParens();
       return expr.getValue();
     }
 
@@ -2100,13 +2110,111 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(Param param) {
           optConsequent.getValue()));
 }
 
+bool JSParserImpl::matchArrowParameters(
+    ESTree::Node *node,
+    ESTree::NodeList &paramList) {
+  // Empty argument list "()".
+  if (node->getParens() == 0 && isa<ESTree::CoverEmptyArgsNode>(node))
+    return true;
+
+  // A single identifier.
+  if (auto *identNode = dyn_cast<ESTree::IdentifierNode>(node)) {
+    // "a" and "(a)" are both OK, but "((a))" isn't.
+    if (identNode->getParens() > 1)
+      return false;
+    paramList.push_back(*identNode);
+    return true;
+  }
+
+  // A sequence of identifiers.
+  if (auto *seqNode = dyn_cast<ESTree::SequenceExpressionNode>(node)) {
+    // The sequence must be surrounded by a single pair of parens.
+    if (seqNode->getParens() != 1)
+      return false;
+
+    for (auto &expr : seqNode->_expressions) {
+      // No parens around parameters.
+      if (expr.getParens() != 0)
+        return false;
+
+      if (isa<ESTree::IdentifierNode>(expr))
+        continue;
+      if (isa<ESTree::CoverTrailingCommaNode>(expr))
+        continue;
+
+      return false;
+    }
+
+    paramList = std::move(seqNode->_expressions);
+
+    // Erase the trailing comma node.
+    if (!paramList.empty() &&
+        isa<ESTree::CoverTrailingCommaNode>(paramList.back())) {
+      paramList.pop_back();
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
+    Param param,
+    ESTree::Node *leftExpr) {
+  // ArrowFunction : ArrowParameters [no line terminator] => ConciseBody.
+  assert(
+      check(TokenKind::equalgreater) && !lexer_.isNewLineBeforeCurrentToken() &&
+      "ArrowFunctionExpression expects [no new line] '=>'");
+
+  // Eat the '=>'.
+  advance();
+
+  ESTree::NodeList paramList;
+  if (!matchArrowParameters(leftExpr, paramList)) {
+    sm_.error(
+        leftExpr->getSourceRange(), "Invalid argument list for arrow function");
+    return None;
+  }
+
+  SaveStrictMode saveStrictMode{this};
+  ESTree::Node *body;
+  bool expression;
+
+  if (check(TokenKind::l_brace)) {
+    auto optBody = parseFunctionBody(Param{}, true, JSLexer::AllowDiv, true);
+    if (!optBody)
+      return None;
+    body = *optBody;
+    expression = false;
+  } else {
+    auto optConcise = parseAssignmentExpression(param.get(ParamIn));
+    if (!optConcise)
+      return None;
+    body = *optConcise;
+    expression = true;
+  }
+
+  auto *arrow = new (context_) ESTree::ArrowFunctionExpressionNode(
+      nullptr, std::move(paramList), body, expression);
+
+  arrow->strictness = ESTree::makeStrictness(isStrictMode());
+  return setLocation(leftExpr, body, arrow);
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
   auto optLeftExpr = parseConditionalExpression(param);
   if (!optLeftExpr)
     return None;
 
+  // Check for ArrowFunction.
+  //   ArrowFunction : ArrowParameters [no line terminator] => ConciseBody.
+  if (check(TokenKind::equalgreater) && !lexer_.isNewLineBeforeCurrentToken()) {
+    return parseArrowFunctionExpression(param, *optLeftExpr);
+  }
+
   if (!checkAssign())
-    return optLeftExpr.getValue();
+    return *optLeftExpr;
 
   UniqueString *op = getTokenIdent(tok_->getKind());
   auto debugLoc = advance().Start;
@@ -2134,7 +2242,20 @@ Optional<ESTree::Node *> JSParserImpl::parseExpression(Param param) {
   ESTree::NodeList exprList;
   exprList.push_back(*optExpr.getValue());
 
-  while (checkAndEat(TokenKind::comma)) {
+  while (check(TokenKind::comma)) {
+    // Eat the ",".
+    auto commaRng = advance();
+
+    // CoverParenthesizedExpressionAndArrowParameterList: (Expression ,)
+    if (check(TokenKind::r_paren)) {
+      auto *coverNode = setLocation(
+          commaRng,
+          tok_->getStartLoc(),
+          new (context_) ESTree::CoverTrailingCommaNode());
+      exprList.push_back(*coverNode);
+      break;
+    }
+
     auto optExpr2 = parseAssignmentExpression(param);
     if (!optExpr2)
       return None;
