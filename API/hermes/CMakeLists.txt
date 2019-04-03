@@ -69,7 +69,7 @@ set_target_properties(libhermes PROPERTIES
   # This only affects linking, not compilation, so without -flto it's a no-op.
   # In other words, if the compiler flags are -O0 -fno-lto, then the resulting
   # library will be -O0 in spite of setting -O3 here.
-  LINK_FLAGS "-O3 -Wl,--gc-sections"
+  LINK_FLAGS "-O3 ${OPTIONAL_GC_SECTIONS}"
   # Avoid becoming liblibhermes (and there's already a target called 'hermes')
   OUTPUT_NAME hermes
   )

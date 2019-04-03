@@ -7,6 +7,7 @@ else()
   cmake_minimum_required(VERSION 3.6.0)
 endif()
 
+include(CheckCXXCompilerFlag)
 include(CheckCXXSourceCompiles)
 
 # Project options.
@@ -118,6 +119,20 @@ if(HAVE_COMPUTED_GOTO)
   set(DEFAULT_INTERPRETER_THREADING ON)
 else()
   set(DEFAULT_INTERPRETER_THREADING OFF)
+endif()
+
+# Check if the linker supports --gc-sections
+# We can't simply CHECK_CXX_COMPILER_FLAG("-Wl,--gc-sections" ..) because CMake
+# will compile and link separately and only passes the flag during compilation.
+set(OLD_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS "--gc-sections")
+CHECK_CXX_COMPILER_FLAG("" HAVE_GC_SECTIONS)
+set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS}")
+
+if(HAVE_GC_SECTIONS)
+  set(OPTIONAL_GC_SECTIONS "-Wl,--gc-sections")
+else()
+  set(OPTIONAL_GC_SECTIONS "")
 endif()
 
 set(DEFAULT_GCCELL_ID $<$<CONFIG:Debug>:ON>$<$<NOT:$<CONFIG:Debug>>:OFF>)
