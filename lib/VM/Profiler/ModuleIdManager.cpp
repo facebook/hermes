@@ -23,8 +23,9 @@ ModuleIdManager::ModuleId ModuleIdManager::findOrAdd(RuntimeModule *module) {
   uint32_t moduleId = moduleIds_.size();
   moduleIds_[module] = moduleId;
   idToModuleMap_[moduleId] = module;
-  if (domains_.empty() || domains_.back() == module->getDomainUnsafe()) {
-    // Only add the next domain if it hasn't already been added.
+  if (domains_.empty() || domains_.back() != module->getDomainUnsafe()) {
+    // Only add the next domain if it wasn't the last one added,
+    // to reduce a possibly large domains_ list.
     domains_.push_back(module->getDomainUnsafe());
   }
   return moduleId;
