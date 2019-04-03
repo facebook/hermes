@@ -376,21 +376,19 @@ struct AfterCaller {
   static void after(T&) {}
 };
 
-// void() is a ctor for an instance of void.
-// decltype(..., void()) is either SFINAE, or void.
-// So, if SFINAE does not happen for T, then this specialization exists,
-// and always applies.
-// The (void) cast on the left side of the comma operator is needed to
-// avoid a gcc warning.
+// decltype((void)&...) is either SFINAE, or void.
+// So, if SFINAE does not happen for T, then this specialization exists
+// for BeforeCaller<T, void>, and always applies.  If not, only the
+// default above exists, and that is used instead.
 template <typename T>
-struct BeforeCaller<T, decltype((void)&T::before, void())> {
+struct BeforeCaller<T, decltype((void)&T::before)> {
   static void before(T& t) {
     t.before();
   }
 };
 
 template <typename T>
-struct AfterCaller<T, decltype((void)&T::after, void())> {
+struct AfterCaller<T, decltype((void)&T::after)> {
   static void after(T& t) {
     t.after();
   }
