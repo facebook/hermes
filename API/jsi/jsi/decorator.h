@@ -380,15 +380,17 @@ struct AfterCaller {
 // decltype(..., void()) is either SFINAE, or void.
 // So, if SFINAE does not happen for T, then this specialization exists,
 // and always applies.
+// The (void) cast on the left side of the comma operator is needed to
+// avoid a gcc warning.
 template <typename T>
-struct BeforeCaller<T, decltype(&T::before, void())> {
+struct BeforeCaller<T, decltype((void)&T::before, void())> {
   static void before(T& t) {
     t.before();
   }
 };
 
 template <typename T>
-struct AfterCaller<T, decltype(&T::after, void())> {
+struct AfterCaller<T, decltype((void)&T::after, void())> {
   static void after(T& t) {
     t.after();
   }
