@@ -551,6 +551,14 @@ void SemanticValidator::validateDeclarationNames(
     return;
   }
 
+  if (auto *obj = dyn_cast<ObjectPatternNode>(node)) {
+    for (auto &node : obj->_properties) {
+      auto *prop = cast<PropertyNode>(&node);
+      validateDeclarationNames(prop->_key, idents);
+    }
+    return;
+  }
+
   sm_.error(node->getSourceRange(), "unsupported destructuring node");
 }
 
@@ -566,6 +574,14 @@ void SemanticValidator::validateAssignmentTarget(const Node *node) {
   if (auto *APN = dyn_cast<ArrayPatternNode>(node)) {
     for (auto &elem : APN->_elements) {
       validateAssignmentTarget(&elem);
+    }
+    return;
+  }
+
+  if (auto *obj = dyn_cast<ObjectPatternNode>(node)) {
+    for (auto &node : obj->_properties) {
+      auto *prop = cast<PropertyNode>(&node);
+      validateAssignmentTarget(prop->_key);
     }
     return;
   }

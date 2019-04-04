@@ -645,13 +645,21 @@ Optional<ESTree::Node *> JSParserImpl::parseBindingPattern(Param param) {
   assert(
       check(TokenKind::l_square, TokenKind::l_brace) &&
       "BindingPattern expects '{' or '['");
-  if (check(TokenKind::l_square))
-    return parseArrayBindingPattern(param);
-  else
-    return parseObjectBindingPattern(param);
+  if (check(TokenKind::l_square)) {
+    auto optAB = parseArrayBindingPattern(param);
+    if (!optAB)
+      return None;
+    return *optAB;
+  } else {
+    auto optOB = parseObjectBindingPattern(param);
+    if (!optOB)
+      return None;
+    return *optOB;
+  }
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseArrayBindingPattern(Param param) {
+Optional<ESTree::ArrayPatternNode *> JSParserImpl::parseArrayBindingPattern(
+    Param param) {
   assert(check(TokenKind::l_square) && "ArrayBindingPattern expects '['");
 
   // Eat the '[', recording the start location.
@@ -693,12 +701,6 @@ Optional<ESTree::Node *> JSParserImpl::parseArrayBindingPattern(Param param) {
       new (context_) ESTree::ArrayPatternNode(std::move(elemList)));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseObjectBindingPattern(Param param) {
-  assert(check(TokenKind::l_brace) && "ObjectBindingPattern expects '{'");
-  sm_.error(tok_->getSourceRange(), "object binding pattern not supported yet");
-  return None;
-}
-
 Optional<ESTree::Node *> JSParserImpl::parseBindingElement(Param param) {
   ESTree::Node *elem;
 
@@ -722,6 +724,17 @@ Optional<ESTree::Node *> JSParserImpl::parseBindingElement(Param param) {
   if (!check(TokenKind::equal))
     return elem;
 
+  auto optInit = parseBindingInitializer(param, elem);
+  if (!optInit)
+    return None;
+  return *optInit;
+}
+
+Optional<ESTree::AssignmentPatternNode *> JSParserImpl::parseBindingInitializer(
+    Param param,
+    ESTree::Node *left) {
+  assert(check(TokenKind::equal) && "binding initializer requires '='");
+
   // Parse the initializer.
   auto debugLoc = advance().Start;
 
@@ -730,10 +743,95 @@ Optional<ESTree::Node *> JSParserImpl::parseBindingElement(Param param) {
     return None;
 
   return setLocation(
-      elem,
+      left,
       *expr,
       debugLoc,
-      new (context_) ESTree::AssignmentPatternNode(elem, *expr));
+      new (context_) ESTree::AssignmentPatternNode(left, *expr));
+}
+
+Optional<ESTree::ObjectPatternNode *> JSParserImpl::parseObjectBindingPattern(
+    Param param) {
+  assert(check(TokenKind::l_brace) && "ObjectBindingPattern expects '{'");
+
+  // Eat the '{', recording the start location.
+  auto startLoc = advance().Start;
+
+  ESTree::NodeList propList{};
+
+  if (!check(TokenKind::r_brace)) {
+    for (;;) {
+      auto optProp = parseBindingProperty(param);
+      if (!optProp)
+        return None;
+
+      propList.push_back(**optProp);
+
+      if (!checkAndEat(TokenKind::comma))
+        break;
+      if (check(TokenKind::r_brace)) // check for ",}"
+        break;
+    }
+  }
+
+  SMLoc endLoc = tok_->getEndLoc();
+  if (!eat(
+          TokenKind::r_brace,
+          JSLexer::AllowDiv,
+          "at end of object binding pattern '{...'",
+          "location of '{'",
+          startLoc))
+    return None;
+
+  return setLocation(
+      startLoc,
+      endLoc,
+      new (context_) ESTree::ObjectPatternNode(std::move(propList)));
+}
+
+Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
+    Param param) {
+  auto optIdent = parseBindingIdentifier(param);
+  if (!optIdent) {
+    sm_.error(
+        tok_->getStartLoc(), "identifier expected in object binding pattern");
+    return None;
+  }
+
+  auto *key = *optIdent;
+  ESTree::Node *value;
+
+  if (check(TokenKind::equal)) {
+    // BindingIdentifier Initializer
+    //                   ^
+
+    // Clone the key.
+    auto *left = setLocation(
+        key, key, new (context_) ESTree::IdentifierNode(key->_name, nullptr));
+    auto optInit = parseBindingInitializer(param, left);
+    if (!optInit)
+      return None;
+
+    value = *optInit;
+  } else if (checkAndEat(TokenKind::colon)) {
+    // BindingIdentifier ":" BindingElement
+    //                       ^
+
+    auto optBinding = parseBindingElement(param);
+    if (!optBinding)
+      return None;
+
+    value = *optBinding;
+  } else {
+    // BindingIdentifier
+    //                   ^
+
+    // Clone the key.
+    value = setLocation(
+        key, key, new (context_) ESTree::IdentifierNode(key->_name, nullptr));
+  }
+
+  return setLocation(
+      key, value, new (context_) ESTree::PropertyNode(key, value, initIdent_));
 }
 
 Optional<ESTree::EmptyStatementNode *> JSParserImpl::parseEmptyStatement() {

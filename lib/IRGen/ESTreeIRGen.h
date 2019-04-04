@@ -605,6 +605,11 @@ class ESTreeIRGen {
       ESTree::ObjectPatternNode *target,
       Value *source);
 
+  /// If the initializer \p init is nullptr, just return \p value.
+  /// Otherwise emit code to check whether \p value equals \c undefined, and
+  /// evaluate and return the initializer in that case.
+  Value *emitOptionalInitialization(Value *value, ESTree::Node *init);
+
  private:
   /// "Converts" a ScopeChain into a SerializedScope by resolving the
   /// identifiers.

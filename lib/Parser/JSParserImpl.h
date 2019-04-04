@@ -426,9 +426,14 @@ class JSParserImpl {
       ESTree::VariableDeclarationNode *declNode);
 
   Optional<ESTree::Node *> parseBindingPattern(Param param);
-  Optional<ESTree::Node *> parseArrayBindingPattern(Param param);
-  Optional<ESTree::Node *> parseObjectBindingPattern(Param param);
+  Optional<ESTree::ArrayPatternNode *> parseArrayBindingPattern(Param param);
   Optional<ESTree::Node *> parseBindingElement(Param param);
+  /// Parse "'=' Initializer" in a binding pattern.
+  Optional<ESTree::AssignmentPatternNode *> parseBindingInitializer(
+      Param param,
+      ESTree::Node *left);
+  Optional<ESTree::ObjectPatternNode *> parseObjectBindingPattern(Param param);
+  Optional<ESTree::PropertyNode *> parseBindingProperty(Param param);
 
   Optional<ESTree::EmptyStatementNode *> parseEmptyStatement();
   /// \param param [Yield, Return]

@@ -712,8 +712,56 @@ void ESTreeIRGen::emitDestructuringArray(
 void ESTreeIRGen::emitDestructuringObject(
     ESTree::ObjectPatternNode *target,
     Value *source) {
-  Mod->getContext().getSourceErrorManager().error(
-      target->getSourceRange(), "unsupported destructuring target");
+  for (auto &elem : target->_properties) {
+    auto *propNode = cast<ESTree::PropertyNode>(&elem);
+
+    ESTree::Node *valueNode = propNode->_value;
+    ESTree::Node *init = nullptr;
+
+    // If we have an initializer, unwrap it.
+    if (auto *assign = dyn_cast<ESTree::AssignmentPatternNode>(valueNode)) {
+      valueNode = assign->_left;
+      init = assign->_right;
+    }
+
+    auto *loadedValue = Builder.createLoadPropertyInst(
+        source, getNameFieldFromID(propNode->_key));
+
+    createLRef(valueNode).emitStore(
+        emitOptionalInitialization(loadedValue, init));
+  }
+}
+
+Value *ESTreeIRGen::emitOptionalInitialization(
+    Value *value,
+    ESTree::Node *init) {
+  if (!init)
+    return value;
+
+  auto *currentBlock = Builder.getInsertionBlock();
+  auto *getDefaultBlock = Builder.createBasicBlock(Builder.getFunction());
+  auto *storeBlock = Builder.createBasicBlock(Builder.getFunction());
+
+  //    if (value !== undefined) goto storeBlock    [if initializer present]
+  //    value = initializer                         [if initializer present]
+  //  storeBlock:
+  Builder.createCondBranchInst(
+      Builder.createBinaryOperatorInst(
+          value,
+          Builder.getLiteralUndefined(),
+          BinaryOperatorInst::OpKind::StrictlyNotEqualKind),
+      storeBlock,
+      getDefaultBlock);
+
+  // getDefaultBlock:
+  Builder.setInsertionBlock(getDefaultBlock);
+  auto *defaultValue = genExpression(init);
+  Builder.createBranchInst(storeBlock);
+
+  // storeBlock:
+  Builder.setInsertionBlock(storeBlock);
+  return Builder.createPhiInst(
+      {value, defaultValue}, {currentBlock, getDefaultBlock});
 }
 
 std::shared_ptr<SerializedScope> ESTreeIRGen::resolveScopeIdentifiers(
