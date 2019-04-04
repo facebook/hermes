@@ -7,6 +7,7 @@
 #ifndef HERMES_VM_JSREGEXP_H
 #define HERMES_VM_JSREGEXP_H
 
+#include "hermes/VM/CopyableVector.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/SmallXString.h"
@@ -112,7 +113,7 @@ class JSRegExp final : public JSObject {
       JSObjectPropStorage *propStorage)
       : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
 
-  std::vector<uint8_t> bytecode_;
+  CopyableVector<uint8_t> bytecode_;
 
   FlagBits flagBits_ = {};
 

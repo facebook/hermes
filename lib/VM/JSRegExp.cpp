@@ -108,15 +108,7 @@ ExecutionStatus JSRegExp::initialize(
       "defineOwnProperty() failed");
 
   if (bytecode) {
-    // The bytecode was provided in the parameter.
-    // Ideally we should set bytecode_ as a const vector, but
-    // since we have the code path that would generate the bytecode
-    // at runtime, we could not. In this case we just cast away
-    // the constness, but there should not be any modifications to
-    // the bytecode at runtime.
-    // TODO: Can we make this more reliable?
-    selfHandle->bytecode_ = llvm::ArrayRef<uint8_t>{
-        const_cast<uint8_t *>(bytecode->data()), bytecode->size()};
+    selfHandle->bytecode_ = *bytecode;
   } else {
     regex::constants::SyntaxFlags nativeFlags = {};
     if (fbits->ignoreCase)
@@ -139,7 +131,7 @@ ExecutionStatus JSRegExp::initialize(
       return ExecutionStatus::EXCEPTION;
     }
     // The regex is valid. Compile and store its bytecode.
-    selfHandle->bytecode_ = regex.compile();
+    selfHandle->bytecode_ = llvm::makeArrayRef(regex.compile());
   }
 
   return ExecutionStatus::RETURNED;
