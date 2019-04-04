@@ -380,6 +380,11 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow();
 
+  // Initialize the arguments to undefined because we might allocate and cause
+  // a gc while populating them.
+  // TODO: look into doing this lazily.
+  newFrame.fillArguments(n, HermesValue::encodeUndefinedValue());
+
   Handle<ArrayImpl> argArray = Handle<ArrayImpl>::dyn_vmcast(runtime, argObj);
   MutableHandle<> iHandle{runtime, HermesValue::encodeNumberValue(0)};
   auto marker = gcScope.createMarker();
