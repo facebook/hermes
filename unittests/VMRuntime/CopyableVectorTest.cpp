@@ -66,6 +66,43 @@ TEST_F(CopyableVectorTest, PushBackInt) {
   }
 }
 
+TEST_F(CopyableVectorTest, ArrayRef) {
+  using llvm::ArrayRef;
+  CopyableVector<char> v;
+  auto arr1 = ArrayRef<char>("1234", 4);
+  auto arr2 = ArrayRef<char>("12345678", 8);
+  EXPECT_EQ(0, v.size());
+  v = arr1;
+  EXPECT_EQ(arr1, ArrayRef<char>(v));
+  EXPECT_NE(arr2, ArrayRef<char>(v));
+  v = arr2;
+  EXPECT_NE(arr1, ArrayRef<char>(v));
+  EXPECT_EQ(arr2, ArrayRef<char>(v));
+}
+
+TEST_F(CopyableVectorTest, ArrayRefNonTrivial) {
+  using llvm::ArrayRef;
+  CopyableVector<std::string> v;
+  std::string strings1[] = {"12", "345678", "91011", "121314151617181920"};
+  std::string strings2[] = {"abc",
+                            "defhi",
+                            "jklmonpqrst",
+                            "uvwxyzABCDEF",
+                            "HIGHJKLMNOP",
+                            "Q",
+                            "",
+                            "RSTU"};
+  auto arr1 = llvm::makeArrayRef(strings1);
+  auto arr2 = llvm::makeArrayRef(strings2);
+  EXPECT_EQ(0, v.size());
+  v = arr1;
+  EXPECT_EQ(arr1, ArrayRef<std::string>(v));
+  EXPECT_NE(arr2, ArrayRef<std::string>(v));
+  v = arr2;
+  EXPECT_NE(arr1, ArrayRef<std::string>(v));
+  EXPECT_EQ(arr2, ArrayRef<std::string>(v));
+}
+
 TEST_F(CopyableVectorTest, PushBackStruct) {
   struct Elem {
     int x;

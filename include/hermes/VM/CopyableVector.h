@@ -7,6 +7,7 @@
 #ifndef HERMES_SUPPORT_COPYABLEVECTOR_H
 #define HERMES_SUPPORT_COPYABLEVECTOR_H
 
+#include "hermes/Support/Algorithms.h"
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/VM/GC.h"
 
@@ -65,7 +66,7 @@ class CopyableVector {
   explicit CopyableVector(size_type capacity = 1)
       : size_(0), capacity_(std::max((size_type)1, capacity)) {
     assert(capacity_ <= kMaxCapacity && "capacity overflow for CopyableVector");
-    start_ = static_cast<T *>(checkedMalloc(capacity_ * sizeof(T)));
+    start_ = static_cast<T *>(checkedMalloc2(sizeof(T), capacity_));
   }
 
   /// The destructor frees the memory allocated on the C++ heap.
@@ -82,6 +83,24 @@ class CopyableVector {
   CopyableVector(CopyableVector &&) = delete;
   CopyableVector &operator=(const CopyableVector &) = delete;
   CopyableVector &operator=(CopyableVector &&) = delete;
+
+  /// Set this to the contents of an ArrayRef \p arr.
+  /// Currently this does not invoke operator= of its contained elements;
+  /// instead it destroys all contained elements and reinitializes via
+  /// placement new.
+  void operator=(llvm::ArrayRef<T> arr) {
+    assert(
+        (arr.data() < this->begin() || arr.data() >= this->end()) &&
+        "Cannot assign a subarray of self");
+    reserve(arr.size());
+    // We do not try to be fancy and invoke operator= of existing elements.
+    // Instead just blow everything away.
+    for (auto &v : *this) {
+      v.~T();
+    }
+    hermes::uninitializedCopyN(arr.data(), arr.size(), this->begin());
+    size_ = arr.size();
+  }
 
   /// \return the number of elements in this vector.
   size_type size() const {
@@ -178,6 +197,11 @@ class CopyableVector {
     if (capacity > capacity_) {
       grow(capacity);
     }
+  }
+
+  /// Conversion to an ArrayRef.
+  /* implicit */ operator llvm::ArrayRef<T>() const {
+    return llvm::makeArrayRef(begin(), size());
   }
 
  private:
