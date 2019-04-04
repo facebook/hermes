@@ -829,14 +829,6 @@ Value TraceInterpreter::execFunction(
               }
               markerFound = true;
             }
-            // TODO(38878564): Make a special TTIRecord instead of hard-coding
-            // this.
-            if (mr.tag_ == "tti" &&
-                rt.global().hasProperty(rt, "__nativeRecordTTI")) {
-              rt.global()
-                  .getPropertyAsFunction(rt, "__nativeRecordTTI")
-                  .call(rt);
-            }
             break;
           }
           case RecordType::CreateObject: {

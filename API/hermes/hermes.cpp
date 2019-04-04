@@ -675,7 +675,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
   vm::HermesValue stringHVFromUtf8(const uint8_t *utf8, size_t length);
   size_t getLength(vm::Handle<vm::ArrayImpl> arr);
   size_t getByteLength(vm::Handle<vm::JSArrayBuffer> arr);
-  void addRecordTTI();
 #ifdef HERMESVM_PLATFORM_LOGGING
   void logGCStats(const char *msg);
 #endif
@@ -1825,32 +1824,6 @@ size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSArrayBuffer> arr) {
   return static_cast<size_t>(res->getDouble());
 }
 
-void HermesRuntimeImpl::addRecordTTI() {
-  global().setProperty(
-      *this,
-      "__nativeRecordTTI",
-      jsi::Function::createFromHostFunction(
-          *this,
-          jsi::PropNameID::forAscii(*this, "__nativeRecordTTI"),
-          0,
-          [this](
-              jsi::Runtime &rt, const jsi::Value &, const jsi::Value *, size_t)
-              -> jsi::Value {
-            static_cast<HermesRuntimeImpl &>(rt).runtime_.ttiReached();
-#ifdef HERMESVM_LLVM_PROFILE_DUMP
-            __llvm_profile_dump();
-            throw jsi::JSINativeException("TTI reached; profiling done");
-#endif
-#ifdef HERMESVM_PLATFORM_LOGGING
-            logGCStats("TTI call");
-#else
-            // Lambda capture unused without platform logging on.
-            (void)this;
-#endif
-            return jsi::Value::undefined();
-          }));
-}
-
 namespace {
 
 class HermesMutex : public std::recursive_mutex {
@@ -1884,8 +1857,6 @@ std::unique_ptr<HermesRuntime> makeHermesRuntime(
   auto ret = std::make_unique<HermesRuntimeImpl>(runtimeConfig);
 #endif
 
-  ret->addRecordTTI();
-
 #ifdef HERMES_ENABLE_DEBUGGER
   // Only HermesRuntime can create a debugger instance.  This requires
   // the setter and not using make_unique, so the call to new is here
@@ -1914,8 +1885,6 @@ std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
   auto ret = std::make_unique<
       jsi::detail::ThreadSafeRuntimeImpl<HermesRuntimeImpl, HermesMutex>>(
       actualRuntimeConfig);
-
-  ret->plain().addRecordTTI();
 
 #ifdef HERMES_ENABLE_DEBUGGER
   auto &hermesRt = ret->getUnsafeRuntime();

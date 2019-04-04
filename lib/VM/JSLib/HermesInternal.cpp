@@ -457,6 +457,19 @@ hermesInternalEnsureObject(void *, Runtime *runtime, NativeArgs args) {
   return runtime->raiseTypeError(args.getArgHandle(runtime, 1));
 }
 
+CallResult<HermesValue>
+hermesInternalTTIReached(void *, Runtime *runtime, NativeArgs args) {
+  runtime->ttiReached();
+#ifdef HERMESVM_LLVM_PROFILE_DUMP
+  __llvm_profile_dump();
+  throw jsi::JSINativeException("TTI reached; profiling done");
+#endif
+#ifdef HERMESVM_PLATFORM_LOGGING
+  logGCStats("TTI call");
+#endif
+  return HermesValue::encodeUndefinedValue();
+}
+
 } // namespace
 
 Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
@@ -496,6 +509,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
       P::getRuntimeProperties, hermesInternalGetRuntimeProperties);
   defineInternMethod(P::getTemplateObject, hermesInternalGetTemplateObject);
   defineInternMethod(P::ensureObject, hermesInternalEnsureObject, 2);
+  defineInternMethod(P::ttiReached, hermesInternalTTIReached);
 
   // Define the 'require' function.
   runtime->requireFunction = *defineMethod(

@@ -391,14 +391,13 @@ jsi::Value TracingHermesRuntime::evaluateJavaScript(
 namespace {
 
 void addRecordTTI(TracingRuntime &tracingRuntime) {
-  // I'd rather use Optional here, but the thing bound into the lambda
-  // must be copyable.
   jsi::Runtime &rt = tracingRuntime.plain();
   const char funcName[] = "__nativeRecordTTI";
-  std::shared_ptr<jsi::Function> prev;
   if (rt.global().hasProperty(rt, funcName)) {
-    prev = std::make_shared<jsi::Function>(
-        rt.global().getPropertyAsFunction(rt, funcName));
+    // If this function is already defined, throw.
+    throw jsi::JSINativeException(
+        std::string("global.") + funcName +
+        " already exists, won't overwrite it");
   }
   rt.global().setProperty(
       rt,
@@ -407,15 +406,11 @@ void addRecordTTI(TracingRuntime &tracingRuntime) {
           rt,
           jsi::PropNameID::forAscii(rt, funcName),
           0,
-          [prev, &tracingRuntime](
+          [&tracingRuntime](
               jsi::Runtime &rt, const jsi::Value &, const jsi::Value *, size_t)
               -> jsi::Value {
             tracingRuntime.addTTIMarker();
-            if (prev) {
-              return prev->call(rt);
-            } else {
-              return jsi::Value::undefined();
-            }
+            return jsi::Value::undefined();
           }));
 }
 
@@ -426,8 +421,6 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig) {
   auto ret = std::make_unique<TracingHermesRuntime>(
       std::move(hermesRuntime), runtimeConfig);
-  // Wrap __nativeRecordTTI using the plain runtime, so it doesn't
-  // get traced itself, as it's not part of the app.
   addRecordTTI(*ret);
   return ret;
 }
