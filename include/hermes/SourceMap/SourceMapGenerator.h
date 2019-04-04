@@ -69,6 +69,15 @@ class SourceMapGenerator {
   }
 
  private:
+  /// Delta encoding state.
+  struct State {
+    int32_t generatedColumn = 0;
+    int32_t sourceIndex = 0;
+    int32_t representedLine = 0;
+    int32_t representedColumn = 0;
+    int32_t nameIndex = 0;
+  };
+
   /// Implementation of outputAsJSON for a merged source map generator.
   void outputAsJSONImpl(llvm::raw_ostream &OS) const;
 
@@ -76,9 +85,9 @@ class SourceMapGenerator {
   std::string getVLQMappingsString() const;
 
   /// Encode the list \p segments into \p OS using the SourceMap
-  /// Base64-VLQ scheme, delta-encoded starting with \p lastSegment.
-  static SourceMap::Segment encodeSourceLocations(
-      const SourceMap::Segment &lastSegment,
+  /// Base64-VLQ scheme, delta-encoded with \p lastState as the starting state.
+  static SourceMapGenerator::State encodeSourceLocations(
+      const SourceMapGenerator::State &lastState,
       llvm::ArrayRef<SourceMap::Segment> segments,
       llvm::raw_ostream &OS);
 
@@ -105,12 +114,21 @@ class SourceMapGenerator {
   /// exists and has a valid location for \p seg, else return llvm::None.
   llvm::Optional<SourceMapTextLocation> getInputLocationForSegment(
       const SourceMap::Segment &seg) const {
-    // True iff inputSourceMaps_ has a valid source map for seg.sourceIndex.
-    bool hasInput = (uint32_t)seg.sourceIndex < inputSourceMaps_.size() &&
-        inputSourceMaps_[seg.sourceIndex] != nullptr;
+    if (seg.representedLocation.hasValue()) {
+      assert(
+          seg.representedLocation->sourceIndex >= 0 && "Negative source index");
+    }
+    // True iff inputSourceMaps_ has a valid source map for
+    // seg.representedLocation->sourceIndex.
+    bool hasInput = seg.representedLocation.hasValue() &&
+        (uint32_t)seg.representedLocation->sourceIndex <
+            inputSourceMaps_.size() &&
+        inputSourceMaps_[seg.representedLocation->sourceIndex] != nullptr;
 
-    return hasInput ? inputSourceMaps_[seg.sourceIndex]->getLocationForAddress(
-                          seg.representedLine, seg.representedColumn)
+    return hasInput ? inputSourceMaps_[seg.representedLocation->sourceIndex]
+                          ->getLocationForAddress(
+                              seg.representedLocation->lineIndex,
+                              seg.representedLocation->columnIndex)
                     : llvm::None;
   }
 

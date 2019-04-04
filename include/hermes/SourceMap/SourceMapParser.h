@@ -21,6 +21,15 @@ class SourceMapParser {
   std::unique_ptr<SourceMap> parse(llvm::StringRef sourceMapContent);
 
  private:
+  /// Delta encoding state.
+  struct State {
+    int32_t generatedColumn = 0;
+    int32_t sourceIndex = 0;
+    int32_t representedLine = 0;
+    int32_t representedColumn = 0;
+    int32_t nameIndex = 0;
+  };
+
   /// Parse "mappings" section from \p sourceMappings. The parsed line mappings
   /// are returned in \p lines.
   bool parseMappings(
@@ -28,10 +37,8 @@ class SourceMapParser {
       std::vector<SourceMap::SegmentList> &lines);
 
   /// Parse single segment in mapping.
-  llvm::Optional<SourceMap::Segment> parseSegment(
-      const SourceMap::Segment &prevSegment,
-      const char *&pCur,
-      const char *pSegEnd);
+  llvm::Optional<SourceMap::Segment>
+  parseSegment(const State &state, const char *&pCur, const char *pSegEnd);
 };
 
 } // namespace hermes

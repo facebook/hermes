@@ -56,34 +56,49 @@ class SourceMap {
     /// Zero-based starting column of the generated code.
     int32_t generatedColumn = 0;
 
-    /// Zero-based index into the "sources" list.
-    int32_t sourceIndex = 0;
+    struct SourceLocation {
+      /// Zero-based index into the "sources" list.
+      int32_t sourceIndex = 0;
 
-    /// Zero based starting line in the original source.
-    int32_t representedLine = 0;
+      /// Zero based starting line in the original source.
+      int32_t lineIndex = 0;
 
-    /// Zero based starting column in the original source.
-    int32_t representedColumn = 0;
+      /// Zero based starting column in the original source.
+      int32_t columnIndex = 0;
 
-    /// Zero based symbol name index into "names" list.
-    int32_t representedNameIndex = 0;
+      /// Zero based symbol name index into "names" list.
+      llvm::Optional<int32_t> nameIndex = llvm::None;
 
-    /// Construct a segment maps a generated column \p genCol to the given
+      SourceLocation(
+          int32_t sourceIndex,
+          int32_t lineIndex,
+          int32_t columnIndex,
+          llvm::Optional<int32_t> nameIndex = llvm::None)
+          : sourceIndex(sourceIndex),
+            lineIndex(lineIndex),
+            columnIndex(columnIndex),
+            nameIndex(nameIndex) {}
+
+      /// Default constructor
+      SourceLocation() = default;
+    };
+
+    llvm::Optional<SourceLocation> representedLocation;
+
+    /// Construct a segment that maps a generated column \p genCol to the given
     /// represented line \p repLine and column \p repCol.
     Segment(
         int32_t genCol,
         int32_t sourceIndex,
         int32_t repLine,
         int32_t repCol,
-        int32_t repNameIndex)
+        llvm::Optional<int32_t> repNameIndex = llvm::None)
         : generatedColumn(genCol),
-          sourceIndex(sourceIndex),
-          representedLine(repLine),
-          representedColumn(repCol),
-          representedNameIndex(repNameIndex) {}
+          representedLocation(
+              SourceLocation{sourceIndex, repLine, repCol, repNameIndex}) {}
 
     /// Default constructor.
-    Segment() {}
+    Segment() = default;
   };
   using SegmentList = std::vector<Segment>;
 

@@ -135,14 +135,20 @@ llvm::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
   // Move back one slot.
   const Segment &target =
       segIter == segments.end() ? segments.back() : *(--segIter);
+  // Unmapped location
+  if (!target.representedLocation.hasValue()) {
+    return llvm::None;
+  }
   // parseSegment() should have validated this.
   assert(
-      (size_t)target.sourceIndex < sources_.size() &&
+      (size_t)target.representedLocation->sourceIndex < sources_.size() &&
       "SourceIndex is out-of-range.");
-  std::string fileName = getSourceFullPath(target.sourceIndex);
-  return SourceMapTextLocation{std::move(fileName),
-                               (uint32_t)target.representedLine,
-                               (uint32_t)target.representedColumn};
+  std::string fileName =
+      getSourceFullPath(target.representedLocation->sourceIndex);
+  return SourceMapTextLocation{
+      std::move(fileName),
+      (uint32_t)target.representedLocation->lineIndex,
+      (uint32_t)target.representedLocation->columnIndex};
 }
 
 } // namespace hermes

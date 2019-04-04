@@ -56,9 +56,20 @@ const char *TestMapEmptyLines = R"#({
 })#";
 
 /// Helper to return a Segment.
-SourceMap::Segment
-loc(int32_t address, int32_t sourceIndex, int32_t line, int32_t column) {
-  return SourceMap::Segment{address, sourceIndex, line, column, 0};
+SourceMap::Segment loc(
+    int32_t address,
+    int32_t sourceIndex,
+    int32_t line,
+    int32_t column,
+    llvm::Optional<int32_t> nameIndex = llvm::None) {
+  return SourceMap::Segment{address, sourceIndex, line, column, nameIndex};
+}
+
+/// Helper to return a segment with no represented location.
+SourceMap::Segment loc(int32_t address) {
+  SourceMap::Segment seg;
+  seg.generatedColumn = address;
+  return seg;
 }
 
 void verifySegment(
@@ -68,10 +79,17 @@ void verifySegment(
     const SourceMap::Segment &segment) {
   llvm::Optional<SourceMapTextLocation> locOpt =
       sourceMap.getLocationForAddress(generatedLine, segment.generatedColumn);
-  EXPECT_TRUE(locOpt.hasValue());
-  EXPECT_EQ(locOpt.getValue().fileName, sources[segment.sourceIndex]);
-  EXPECT_EQ(locOpt.getValue().line, segment.representedLine);
-  EXPECT_EQ(locOpt.getValue().column, segment.representedColumn);
+  if (segment.representedLocation.hasValue()) {
+    EXPECT_TRUE(locOpt.hasValue());
+    EXPECT_EQ(
+        locOpt.getValue().fileName,
+        sources[segment.representedLocation->sourceIndex]);
+    EXPECT_EQ(locOpt.getValue().line, segment.representedLocation->lineIndex);
+    EXPECT_EQ(
+        locOpt.getValue().column, segment.representedLocation->columnIndex);
+  } else {
+    EXPECT_FALSE(locOpt.hasValue());
+  }
 }
 
 std::unique_ptr<SourceMap> parseSourceMap(llvm::StringRef sourceMapContent) {
@@ -93,6 +111,7 @@ TEST(SourceMap, Basic) {
           loc(0, 0, 1, 1), // addr 1:0 -> file1:1:1
           loc(2, 0, 2, 1), // addr 1:2 -> file1:2:1
           loc(3, 0, 3, 1), // addr 1:3 -> file1:3:1
+          loc(4), //          addr 1:4 -> unmapped
           loc(5, 0, 3, 2), // addr 1:5 -> file1:3:2
       },
       {
@@ -108,7 +127,7 @@ TEST(SourceMap, Basic) {
   }
 
   ASSERT_EQ(map.getMappingsLines().size(), 2u);
-  EXPECT_EQ(map.getMappingsLines()[0].size(), 4u);
+  EXPECT_EQ(map.getMappingsLines()[0].size(), 5u);
   EXPECT_EQ(map.getMappingsLines()[1].size(), 4u);
 
   std::string storage;
@@ -116,7 +135,7 @@ TEST(SourceMap, Basic) {
   map.outputAsJSON(OS);
   EXPECT_EQ(
       OS.str(),
-      R"#({"version":3,"sources":["file1","file2"],"mappings":"AAAC,EACA,CACA,EAAC;ACGI,CACJ,EAAC,EACF;"})#");
+      R"#({"version":3,"sources":["file1","file2"],"mappings":"AAAC,EACA,CACA,C,CAAC;ACGI,CACJ,EAAC,EACF;"})#");
 
   std::unique_ptr<SourceMap> sourceMap = parseSourceMap(storage);
   for (uint32_t line = 0; line < sizeof(segmentsList) / sizeof(segmentsList[0]);
@@ -224,6 +243,30 @@ TEST(SourceMap, FuzzyMappings) {
   verifySegment(*sourceMap, 1, sources, loc(20, 0, 1, 21));
   verifySegment(*sourceMap, 1, sources, loc(30, 0, 2, 10));
   verifySegment(*sourceMap, 2, sources, loc(12, 1, 1, 11));
+};
+
+/// Test to make sure we can parse mappings with no represented location
+TEST(SourceMap, NoRepresentedLocation) {
+  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(
+      R"#({
+        "version": 3,
+        "sources": ["a.js", "b.js"],
+        "mappings": "CACC,E,G;A,A,CCCC"
+      })#");
+
+  std::vector<std::string> sources = {"a.js", "b.js"};
+
+  int generatedLine = 1;
+  int sourceIndex = 0;
+  verifySegment(*sourceMap, generatedLine, sources, loc(1, sourceIndex, 2, 1));
+  verifySegment(*sourceMap, generatedLine, sources, loc(3));
+  verifySegment(*sourceMap, generatedLine, sources, loc(6));
+
+  generatedLine = 2;
+  sourceIndex = 1;
+  verifySegment(*sourceMap, generatedLine, sources, loc(0));
+  verifySegment(*sourceMap, generatedLine, sources, loc(0));
+  verifySegment(*sourceMap, generatedLine, sources, loc(1, sourceIndex, 3, 2));
 };
 
 /// Test to make sure we can properly parse empty lines.

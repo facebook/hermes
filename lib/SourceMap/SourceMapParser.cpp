@@ -84,12 +84,10 @@ bool SourceMapParser::parseMappings(
     std::vector<SourceMap::SegmentList> &lines) {
   assert(lines.empty() && "lines is an out parameter so should be empty");
   SourceMap::SegmentList segments;
-  // Represent last line's segment value.
-  SourceMap::Segment lastLineSegment;
+  State state;
   // Lines are encoded zero-based in source map while query
   // via 1-based so converting representedLine to be 1-based.
-  lastLineSegment.representedLine = 1;
-  SourceMap::Segment prevSegment = lastLineSegment;
+  state.representedLine = 1; // TODO(moti): Fix this off-by-one error
 
   uint32_t curSegOffset = 0;
   while (curSegOffset < sourceMappings.size()) {
@@ -112,22 +110,30 @@ bool SourceMapParser::parseMappings(
       lines.emplace_back(std::move(segments));
     } else {
       llvm::Optional<SourceMap::Segment> segmentOpt =
-          parseSegment(prevSegment, pCur, pSegEnd);
+          parseSegment(state, pCur, pSegEnd);
       if (!segmentOpt.hasValue()) {
         return false;
       }
+
+      state.generatedColumn = segmentOpt->generatedColumn;
+      if (segmentOpt->representedLocation.hasValue()) {
+        state.sourceIndex = segmentOpt->representedLocation->sourceIndex;
+        state.representedLine = segmentOpt->representedLocation->lineIndex;
+        state.representedColumn = segmentOpt->representedLocation->columnIndex;
+
+        if (segmentOpt->representedLocation->nameIndex.hasValue()) {
+          state.nameIndex =
+              segmentOpt->representedLocation->nameIndex.getValue();
+        }
+      }
+
       segments.emplace_back(segmentOpt.getValue());
 
       // TODO: assert pCur equals to pSegEnd.
 
-      if (!lastSegmentInLine) {
-        prevSegment = segments.back();
-      } else {
-        // Make a copy so that we can make modification.
-        lastLineSegment = segments.back();
+      if (lastSegmentInLine) {
         // generated column should be reset for new line.
-        lastLineSegment.generatedColumn = 0;
-        prevSegment = lastLineSegment;
+        state.generatedColumn = 0;
 
         lines.emplace_back(std::move(segments));
       }
@@ -138,7 +144,7 @@ bool SourceMapParser::parseMappings(
 }
 
 llvm::Optional<SourceMap::Segment> SourceMapParser::parseSegment(
-    const SourceMap::Segment &prevSegment,
+    const SourceMapParser::State &state,
     const char *&pCur,
     const char *pSegEnd) {
   SourceMap::Segment segment;
@@ -148,14 +154,15 @@ llvm::Optional<SourceMap::Segment> SourceMapParser::parseSegment(
   if (!val.hasValue()) {
     return llvm::None;
   }
-  segment.generatedColumn = prevSegment.generatedColumn + val.getValue();
+  segment.generatedColumn = state.generatedColumn + val.getValue();
 
   // Parse 2nd field: sourceIndex.
   val = base64vlq::decode(pCur, pSegEnd);
   if (!val.hasValue()) {
     return segment;
   }
-  segment.sourceIndex = prevSegment.sourceIndex + val.getValue();
+  segment.representedLocation = SourceMap::Segment::SourceLocation();
+  segment.representedLocation->sourceIndex = state.sourceIndex + val.getValue();
 
   // Parse 3rd field: representedLine.
   val = base64vlq::decode(pCur, pSegEnd);
@@ -163,7 +170,8 @@ llvm::Optional<SourceMap::Segment> SourceMapParser::parseSegment(
     // Segment can only be 1, 4 or 5 length.
     return llvm::None;
   }
-  segment.representedLine = prevSegment.representedLine + val.getValue();
+  segment.representedLocation->lineIndex =
+      state.representedLine + val.getValue();
 
   // Parse 4th field: representedColumn.
   val = base64vlq::decode(pCur, pSegEnd);
@@ -171,14 +179,15 @@ llvm::Optional<SourceMap::Segment> SourceMapParser::parseSegment(
     // Segment can only be 1, 4 or 5 length.
     return llvm::None;
   }
-  segment.representedColumn = prevSegment.representedColumn + val.getValue();
+  segment.representedLocation->columnIndex =
+      state.representedColumn + val.getValue();
 
   // Parse 5th field: nameIndex.
   val = base64vlq::decode(pCur, pSegEnd);
   if (!val.hasValue()) {
     return segment;
   }
-  // TODO: store nameIndex in Segment.
+  segment.representedLocation->nameIndex = state.nameIndex + val.getValue();
 
   return segment;
 }

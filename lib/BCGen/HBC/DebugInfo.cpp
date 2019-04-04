@@ -307,10 +307,11 @@ void DebugInfo::populateSourceMap(
                         uint32_t debugOffset) {
     SourceMap::Segment segment;
     segment.generatedColumn = loc.address + offsetInFile;
-    segment.sourceIndex = sourceMap->getSourceIndex(
-        getFilenameByID(*getFilenameForAddress(debugOffset)));
-    segment.representedLine = loc.line;
-    segment.representedColumn = loc.column;
+    segment.representedLocation = SourceMap::Segment::SourceLocation(
+        sourceMap->getSourceIndex(
+            getFilenameByID(*getFilenameForAddress(debugOffset))),
+        loc.line,
+        loc.column);
     return segment;
   };
 
