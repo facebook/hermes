@@ -307,8 +307,8 @@ jsi::Value TracingRuntime::callAsConstructor(
   return retval;
 }
 
-void TracingRuntime::addTTIMarker() {
-  trace_.emplace_back<SynthTrace::MarkerRecord>(getTimeSinceStart(), "tti");
+void TracingRuntime::addMarker(const std::string &marker) {
+  trace_.emplace_back<SynthTrace::MarkerRecord>(getTimeSinceStart(), marker);
 }
 
 std::vector<SynthTrace::TraceValue> TracingRuntime::argStringifyer(
@@ -390,9 +390,9 @@ jsi::Value TracingHermesRuntime::evaluateJavaScript(
 
 namespace {
 
-void addRecordTTI(TracingRuntime &tracingRuntime) {
+void addRecordMarker(TracingRuntime &tracingRuntime) {
   jsi::Runtime &rt = tracingRuntime.plain();
-  const char funcName[] = "__nativeRecordTTI";
+  const char *funcName = "__nativeRecordTraceMarker";
   if (rt.global().hasProperty(rt, funcName)) {
     // If this function is already defined, throw.
     throw jsi::JSINativeException(
@@ -406,10 +406,16 @@ void addRecordTTI(TracingRuntime &tracingRuntime) {
           rt,
           jsi::PropNameID::forAscii(rt, funcName),
           0,
-          [&tracingRuntime](
-              jsi::Runtime &rt, const jsi::Value &, const jsi::Value *, size_t)
-              -> jsi::Value {
-            tracingRuntime.addTTIMarker();
+          [funcName, &tracingRuntime](
+              jsi::Runtime &rt,
+              const jsi::Value &,
+              const jsi::Value *args,
+              size_t argc) -> jsi::Value {
+            if (argc < 1) {
+              throw jsi::JSINativeException(
+                  std::string(funcName) + " requires a single string argument");
+            }
+            tracingRuntime.addMarker(args[0].asString(rt).utf8(rt));
             return jsi::Value::undefined();
           }));
 }
@@ -421,7 +427,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig) {
   auto ret = std::make_unique<TracingHermesRuntime>(
       std::move(hermesRuntime), runtimeConfig);
-  addRecordTTI(*ret);
+  addRecordMarker(*ret);
   return ret;
 }
 

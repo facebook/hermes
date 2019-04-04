@@ -829,6 +829,12 @@ Value TraceInterpreter::execFunction(
               }
               markerFound = true;
             }
+#ifdef HERMESVM_API_TRACE
+            // If tracing is on, assume the runtime is a tracing runtime and
+            // re-emit the marker into the result stream.
+            // If the current runtime is not a tracing runtime this will throw.
+            dynamic_cast<TracingRuntime &>(rt).addMarker(mr.tag_);
+#endif
             break;
           }
           case RecordType::CreateObject: {

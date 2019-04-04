@@ -90,7 +90,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   /// @}
 
-  void addTTIMarker();
+  void addMarker(const std::string &marker);
 
   SynthTrace &trace() {
     return trace_;

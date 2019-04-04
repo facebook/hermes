@@ -470,6 +470,12 @@ hermesInternalTTIReached(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+CallResult<HermesValue>
+hermesInternalTTRCReached(void *, Runtime *runtime, NativeArgs args) {
+  // Currently does nothing, but could change in the future.
+  return HermesValue::encodeUndefinedValue();
+}
+
 } // namespace
 
 Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
@@ -510,6 +516,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(P::getTemplateObject, hermesInternalGetTemplateObject);
   defineInternMethod(P::ensureObject, hermesInternalEnsureObject, 2);
   defineInternMethod(P::ttiReached, hermesInternalTTIReached);
+  defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
 
   // Define the 'require' function.
   runtime->requireFunction = *defineMethod(
