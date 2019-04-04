@@ -440,30 +440,43 @@ void SemanticValidator::visitFunction(
   FunctionContext newFuncCtx{
       this, haveActiveContext() && curFunction()->strictMode, node};
 
+  Node *useStrictNode = nullptr;
+
   // Note that body might me empty (for lazy functions) or an expression (for
   // arrow functions).
   if (isa<ESTree::BlockStatementNode>(body)) {
-    scanDirectivePrologue(cast<ESTree::BlockStatementNode>(body)->_body);
+    useStrictNode =
+        scanDirectivePrologue(cast<ESTree::BlockStatementNode>(body)->_body);
     updateNodeStrictness(node);
   }
 
   if (id)
     validateDeclarationNames(id, nullptr);
 
-  for (auto &param : params)
-    validateDeclarationNames(&param, nullptr);
+  // Set to false if the parameter list contains binding patterns.
+  bool simpleParameterList = true;
+  for (auto &param : params) {
+    simpleParameterList &= !isa<PatternNode>(param);
+    validateDeclarationNames(&param, &node->paramNames);
+  }
+
+  if (!simpleParameterList && useStrictNode) {
+    sm_.error(
+        useStrictNode->getSourceRange(),
+        "'use strict' not allowed inside function with non-simple parameter list");
+  }
 
   // Check if we have seen this parameter name before.
-  if (curFunction()->strictMode || isa<ArrowFunctionExpressionNode>(node)) {
+  if (!simpleParameterList || curFunction()->strictMode ||
+      isa<ArrowFunctionExpressionNode>(node)) {
     llvm::SmallSet<NodeLabel, 8> paramNameSet;
-    for (auto &param : params) {
-      auto &curIdNode = cast<IdentifierNode>(param);
-      auto insert_result = paramNameSet.insert(curIdNode._name);
+    for (auto curIdNode : node->paramNames) {
+      auto insert_result = paramNameSet.insert(curIdNode->_name);
       if (insert_result.second == false) {
         sm_.error(
-            curIdNode.getSourceRange(),
+            curIdNode->getSourceRange(),
             "cannot declare two parameters with the same name '" +
-                curIdNode._name->str() + "'");
+                curIdNode->_name->str() + "'");
       }
     }
   }
@@ -471,15 +484,21 @@ void SemanticValidator::visitFunction(
   visitESTreeChildren(*this, node);
 }
 
-void SemanticValidator::scanDirectivePrologue(NodeList &body) {
+Node *SemanticValidator::scanDirectivePrologue(NodeList &body) {
+  Node *result = nullptr;
   for (auto &nodeRef : body) {
     auto directive = ESTree::matchDirective(&nodeRef);
     if (!directive)
       break;
 
-    if (*directive == kw_.identUseStrict)
+    if (*directive == kw_.identUseStrict) {
       curFunction()->strictMode = true;
+      if (!result)
+        result = &nodeRef;
+    }
   }
+
+  return result;
 }
 
 bool SemanticValidator::isLValue(const Node *node) const {

@@ -25,49 +25,25 @@ ESTREE_NODE_0_ARGS(Empty, Base)
 ESTREE_NODE_0_ARGS(Metadata, Base)
 
 ESTREE_FIRST(FunctionLike, Base)
-ESTREE_NODE_1_ARGS(Program, FunctionLike, NodeList, body, false)
+ESTREE_NODE_1_ARGS(Program, FunctionLike,
+    NodeList, body, false)
 ESTREE_NODE_3_ARGS(
-    FunctionExpression,
-    FunctionLike,
-    NodePtr,
-    id,
-    true,
-    NodeList,
-    params,
-    false,
-    NodePtr,
-    body,
-    false)
+    FunctionExpression, FunctionLike,
+    NodePtr, id, true,
+    NodeList, params, false,
+    NodePtr, body, false)
 ESTREE_NODE_4_ARGS(
-    ArrowFunctionExpression,
-    FunctionLike,
-    NodePtr,
-    id,
-    true,
-    NodeList,
-    params,
-    false,
-    NodePtr,
-    body,
-    false,
-    NodeBoolean,
-    expression,
-    false)
+    ArrowFunctionExpression, FunctionLike,
+    NodePtr, id, true,
+    NodeList, params, false,
+    NodePtr, body, false,
+    NodeBoolean, expression, false)
 ESTREE_NODE_4_ARGS(
-    FunctionDeclaration,
-    FunctionLike,
-    NodePtr,
-    id,
-    false,
-    NodeList,
-    params,
-    false,
-    NodePtr,
-    body,
-    false,
-    NodePtr,
-    returnType,
-    true)
+    FunctionDeclaration, FunctionLike,
+    NodePtr, id, false,
+    NodeList, params, false,
+    NodePtr, body, false,
+    NodePtr, returnType, true)
 ESTREE_LAST(FunctionLike)
 
 ESTREE_FIRST(Statement, Base)

@@ -270,16 +270,11 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
 
   if (!check(TokenKind::r_paren)) {
     for (;;) {
-      auto optParamIdent = parseBindingIdentifier(param.get(ParamYield));
-      if (!optParamIdent) {
-        errorExpected(
-            TokenKind::identifier,
-            "inside function parameter list",
-            "start of parameter list",
-            lparenLoc);
+      auto optElem = parseBindingElement(param);
+      if (!optElem)
         return None;
-      }
-      paramList.push_back(*optParamIdent.getValue());
+
+      paramList.push_back(**optElem);
 
       if (!checkAndEat(TokenKind::comma))
         break;

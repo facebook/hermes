@@ -62,8 +62,7 @@ void ESTreeIRGen::genFunctionDeclaration(
   assert(
       funcStorage && "function declaration variable should have been hoisted");
 
-  Function *newFunc =
-      genES5Function(functionName, nullptr, func, func->_params, func->_body);
+  Function *newFunc = genES5Function(functionName, nullptr, func);
 
   // Store the newly created closure into a frame variable with the same name.
   auto *newClosure = Builder.createCreateFunctionInst(newFunc);
@@ -98,8 +97,7 @@ Value *ESTreeIRGen::genFunctionExpression(
     nameTable_.insert(originalNameIden, tempClosureVar);
   }
 
-  Function *newFunc = genES5Function(
-      originalNameIden, tempClosureVar, FE, FE->_params, FE->_body);
+  Function *newFunc = genES5Function(originalNameIden, tempClosureVar, FE);
 
   Value *closure = Builder.createCreateFunctionInst(newFunc);
 
@@ -126,7 +124,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
   {
     FunctionContext newFunctionContext{this, newFunc, AF->getSemInfo()};
 
-    emitFunctionPrologue(AF->_params);
+    emitFunctionPrologue(AF);
 
     // Propagate captured "this", "new.target" and "arguments" from parents.
     auto *prev = curFunction()->getPreviousContext();
@@ -146,10 +144,11 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
 Function *ESTreeIRGen::genES5Function(
     Identifier originalName,
     Variable *lazyClosureAlias,
-    ESTree::FunctionLikeNode *functionNode,
-    const ESTree::NodeList &params,
-    ESTree::Node *body) {
+    ESTree::FunctionLikeNode *functionNode) {
   assert(functionNode && "Function AST cannot be null");
+
+  auto *body = ESTree::getBlockStatement(functionNode);
+  assert(body && "body of ES5 function cannot be null");
 
   auto *newFunction = Builder.createFunction(
       originalName,
@@ -169,7 +168,7 @@ Function *ESTreeIRGen::genES5Function(
 
       // Give the stub parameters so that we'll know the function's .length .
       Builder.createParameter(newFunction, "this");
-      for (auto &param : params) {
+      for (auto &param : ESTree::getParams(functionNode)) {
         auto idenNode = cast<ESTree::IdentifierNode>(&param);
         Identifier paramName = getNameFieldFromID(idenNode);
         Builder.createParameter(newFunction, paramName);
@@ -182,7 +181,7 @@ Function *ESTreeIRGen::genES5Function(
   FunctionContext newFunctionContext{
       this, newFunction, functionNode->getSemInfo()};
 
-  emitFunctionPrologue(params);
+  emitFunctionPrologue(functionNode);
   initCaptureStateInES5Function();
   genStatement(body);
   emitFunctionEpilogue(Builder.getLiteralUndefined());
@@ -225,7 +224,7 @@ void ESTreeIRGen::initCaptureStateInES5Function() {
   }
 }
 
-void ESTreeIRGen::emitFunctionPrologue(const ESTree::NodeList &params) {
+void ESTreeIRGen::emitFunctionPrologue(ESTree::FunctionLikeNode *funcNode) {
   auto *newFunc = curFunction()->function;
   auto *semInfo = curFunction()->getSemInfo();
   DEBUG(
@@ -256,24 +255,7 @@ void ESTreeIRGen::emitFunctionPrologue(const ESTree::NodeList &params) {
 
   // Construct the parameter list. Create function parameters and register
   // them in the scope.
-  DEBUG(dbgs() << "IRGen function parameters.\n");
-  // Always create the "this" parameter.
-  Builder.createParameter(newFunc, "this");
-  for (auto &param : params) {
-    auto idenNode = cast<ESTree::IdentifierNode>(&param);
-    Identifier paramName = getNameFieldFromID(idenNode);
-    DEBUG(dbgs() << "Adding parameter: " << paramName << "\n");
-
-    auto *P = Builder.createParameter(newFunc, paramName);
-    auto *ParamStorage =
-        Builder.createVariable(newFunc->getFunctionScope(), paramName);
-
-    // Register the storage for the parameter.
-    nameTable_.insert(paramName, ParamStorage);
-
-    // Store the parameter into the local scope.
-    emitStore(Builder, P, ParamStorage);
-  }
+  emitParameters(funcNode);
 
   // Generate and initialize the code for the hoisted function declarations
   // before generating the rest of the body.
@@ -286,6 +268,44 @@ void ESTreeIRGen::emitFunctionPrologue(const ESTree::NodeList &params) {
   auto *nextBlock = Builder.createBasicBlock(newFunc);
   curFunction()->entryTerminator = Builder.createBranchInst(nextBlock);
   Builder.setInsertionBlock(nextBlock);
+}
+
+void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
+  auto *newFunc = curFunction()->function;
+
+  DEBUG(dbgs() << "IRGen function parameters.\n");
+
+  // Always create the "this" parameter.
+  Builder.createParameter(newFunc, "this");
+
+  // Create a variable for every parameter.
+  for (auto *idNode : funcNode->paramNames) {
+    Identifier paramName = getNameFieldFromID(idNode);
+    DEBUG(dbgs() << "Adding parameter: " << paramName << "\n");
+    auto *paramStorage =
+        Builder.createVariable(newFunc->getFunctionScope(), paramName);
+    // Register the storage for the parameter.
+    nameTable_.insert(paramName, paramStorage);
+  }
+
+  // FIXME: T42569352 TDZ for parameters used in initializer expressions.
+  for (auto &elem : ESTree::getParams(funcNode)) {
+    ESTree::Node *param = &elem;
+    ESTree::Node *init = nullptr;
+
+    // Unpack the optional initialization.
+    if (auto *assign = dyn_cast<ESTree::AssignmentPatternNode>(param)) {
+      param = assign->_left;
+      init = assign->_right;
+    }
+
+    Identifier formalParamName = isa<ESTree::IdentifierNode>(param)
+        ? getNameFieldFromID(param)
+        : genAnonymousLabelName("param");
+
+    auto *formalParam = Builder.createParameter(newFunc, formalParamName);
+    createLRef(param).emitStore(emitOptionalInitialization(formalParam, init));
+  }
 }
 
 void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {

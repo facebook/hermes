@@ -214,7 +214,7 @@ void ESTreeIRGen::doIt() {
     }
   }
 
-  emitFunctionPrologue(ESTree::NodeList{});
+  emitFunctionPrologue(Program);
 
   Value *retVal;
   {
@@ -258,8 +258,7 @@ void ESTreeIRGen::doCJSModule(
   }
 
   Identifier functionName = Builder.createIdentifier("cjs_module");
-  Function *newFunc =
-      genES5Function(functionName, nullptr, func, func->_params, func->_body);
+  Function *newFunc = genES5Function(functionName, nullptr, func);
 
   Builder.getModule()->addCJSModule(
       Builder.createIdentifier(filename), newFunc);
@@ -301,26 +300,11 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
     nameTable_.insert(lazyData->originalName, parentVar);
   }
 
-  ESTree::NodeList const *params;
-  ESTree::NodePtr body;
+  assert(
+      !isa<ESTree::ArrowFunctionExpressionNode>(node) &&
+      "lazy compilation not supported for arrow functions");
 
-  if (auto *FE = dyn_cast<ESTree::FunctionExpressionNode>(node)) {
-    params = &FE->_params;
-    body = FE->_body;
-  } else if (auto *FD = dyn_cast<ESTree::FunctionDeclarationNode>(node)) {
-    params = &FD->_params;
-    body = FD->_body;
-  } else if (auto *FD = dyn_cast<ESTree::ArrowFunctionExpressionNode>(node)) {
-    // FIXME: Arrow functions are broken with lazy compilation because of the
-    // all the extra bindings.
-    assert(false && "Lazy compilation not supported in ES6");
-    params = &FD->_params;
-    body = FD->_body;
-  } else {
-    llvm_unreachable("invalid lazy function AST node");
-  }
-
-  return genES5Function(lazyData->originalName, parentVar, node, *params, body);
+  return genES5Function(lazyData->originalName, parentVar, node);
 }
 
 std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(

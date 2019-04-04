@@ -249,6 +249,7 @@ class FunctionLikeDecoration {
 
  public:
   Strictness strictness{Strictness::NotSet};
+  llvm::SmallVector<IdentifierNode *, 4> paramNames{};
 
   void setSemInfo(sem::FunctionInfo *semInfo) {
     assert(semInfo && "setting semInfo to null");
@@ -260,6 +261,12 @@ class FunctionLikeDecoration {
     assert(semInfo_ && "semInfo is not set!");
     return semInfo_;
   }
+};
+
+class ProgramDecoration {
+ public:
+  // An empty parameter list which we need for compatibility with functions.
+  NodeList dummyParamList;
 };
 
 /// A decoration describing a label.
@@ -402,6 +409,10 @@ struct DecoratorTrait<LabeledStatementNode> {
 template <>
 struct DecoratorTrait<TryStatementNode> {
   using Type = TryStatementDecoration;
+};
+template <>
+struct DecoratorTrait<ProgramNode> {
+  using Type = ProgramDecoration;
 };
 
 } // namespace detail
@@ -675,6 +686,15 @@ void ESTreeVisit(Visitor &V, NodePtr Node) {
 /// Check whether a node is a directive (a statement consisting of a single
 /// string) and if so extract the directive string.
 llvm::Optional<NodeLabel> matchDirective(const ESTree::Node *node);
+
+/// Return a reference to the parameter list of a FunctionLikeNode.
+NodeList &getParams(FunctionLikeNode *node);
+
+/// If the body of the function-like node is a block statement, return it,
+/// otherwise return nullptr.
+/// ProgramNode doesn't have a block statement body, as well as some arrow
+/// functions.
+BlockStatementNode *getBlockStatement(FunctionLikeNode *node);
 
 } // namespace ESTree
 } // namespace hermes

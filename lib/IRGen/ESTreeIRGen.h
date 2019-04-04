@@ -463,15 +463,11 @@ class ESTreeIRGen {
   ///   available inside the closure. Used only by lazy compilation.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
-  /// \param params are the formal parameters and \p body is the body of the
-  ///   closure.
   /// \returns a new Function.
   Function *genES5Function(
       Identifier originalName,
       Variable *lazyClosureAlias,
-      ESTree::FunctionLikeNode *functionNode,
-      const ESTree::NodeList &params,
-      ESTree::Node *body);
+      ESTree::FunctionLikeNode *functionNode);
 
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.
@@ -488,9 +484,11 @@ class ESTreeIRGen {
   ///   generating their functions)
   /// - create "this" parameter
   /// - create all explicit parameters and store them in variables
-  ///
-  /// \param params the parameter list
-  void emitFunctionPrologue(const ESTree::NodeList &params);
+  void emitFunctionPrologue(ESTree::FunctionLikeNode *funcNode);
+
+  /// Emit the loading and initialization of parameters in the function
+  /// prologue.
+  void emitParameters(ESTree::FunctionLikeNode *funcNode);
 
   /// Optionally emit a return value and perform cleanup after emission of the
   /// current function is finished. Specifically it attempts to merge the entry

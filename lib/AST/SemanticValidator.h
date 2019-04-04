@@ -154,7 +154,8 @@ class SemanticValidator {
   /// string literal).
   /// Update the flags in the function context to reflect the directives. (We
   /// currently only recognize "use strict".)
-  void scanDirectivePrologue(NodeList &body);
+  /// \return the node containing "use strict" or nullptr.
+  Node *scanDirectivePrologue(NodeList &body);
 
   /// Determine if the argument is something that can be assigned to: a
   /// variable or a property. 'arguments' cannot be assigned to in strict mode,
