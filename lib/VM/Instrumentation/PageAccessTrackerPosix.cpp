@@ -103,12 +103,15 @@ PageAccessTracker::PageAccessTracker(
       totalPages_(totalPages),
       signal_(signal) {
   accessedPageIds_ = llvm::make_unique<unsigned int[]>(totalPages);
+  accessedMicros_ = llvm::make_unique<unsigned int[]>(totalPages);
 }
 
-void PageAccessTracker::recordPageAccess(void *accessedAddr) {
+void PageAccessTracker::recordPageAccess(void *accessedAddr, uint32_t micros) {
   assert(accessedPageCount_ < totalPages_ && "Unexpected page count overflow.");
-  accessedPageIds_[accessedPageCount_++] =
+  accessedPageIds_[accessedPageCount_] =
       ((uintptr_t)accessedAddr - (uintptr_t)bufStartPage_) / pageSize_;
+  accessedMicros_[accessedPageCount_] = micros;
+  ++accessedPageCount_;
 }
 
 bool PageAccessTracker::isTracking(void *addr) {
@@ -136,7 +139,6 @@ void PageAccessTracker::signalHandler(
     kill(getpid(), signum);
     return;
   }
-  tracker->recordPageAccess(si->si_addr);
   // Mark the page readable so we can continue execution.
   void *accessedPage =
       (void
@@ -144,6 +146,18 @@ void PageAccessTracker::signalHandler(
   if (mprotect(accessedPage, tracker->pageSize_, PROT_READ) != 0) {
     _exit(EXIT_FAILURE);
   }
+  // Measure how long it takes to actually read the page.
+  auto toNanos = [](timespec &ts) {
+    return static_cast<double>(ts.tv_sec) * 1e9 + ts.tv_nsec;
+  };
+  timespec t;
+  clock_gettime(CLOCK_REALTIME, &t);
+  auto before = toNanos(t);
+  // Read the first byte and "use" it in clock_gettime to prevent reordering.
+  t.tv_nsec += *reinterpret_cast<char *>(accessedPage);
+  clock_gettime(CLOCK_REALTIME, &t);
+  auto after = toNanos(t);
+  tracker->recordPageAccess(si->si_addr, (after - before) / 1000);
 }
 
 void PageAccessTracker::printStats(llvm::raw_ostream &OS) {
@@ -168,13 +182,19 @@ void PageAccessTracker::printStatsJSON(llvm::raw_ostream &OS) {
     json.emitValue(accessedPageIds_[i]);
   }
   json.closeArray();
+  json.emitKey("micros");
+  json.openArray();
+  for (unsigned i = 0; i < accessedPageCount_; ++i) {
+    json.emitValue(accessedMicros_[i]);
+  }
+  json.closeArray();
   json.closeDict();
 }
 
 void PageAccessTracker::printPageAccessedOrder(llvm::raw_ostream &OS) {
-  OS << "Page ids in accessed order:\n";
+  OS << "Page ids (and microseconds to access) in accessed order:\n";
   for (unsigned i = 0; i < accessedPageCount_; ++i) {
-    OS << accessedPageIds_[i] << "\n";
+    OS << accessedPageIds_[i] << " (" << accessedMicros_[i] << " us)\n";
   }
 }
 

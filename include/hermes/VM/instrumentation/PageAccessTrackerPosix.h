@@ -35,6 +35,8 @@ class PageAccessTracker {
   uint32_t totalPages_{0};
   /// Array of page ids in the order they are accessed.
   std::unique_ptr<uint32_t[]> accessedPageIds_{nullptr};
+  /// Array of microseconds that each access took.
+  std::unique_ptr<uint32_t[]> accessedMicros_{nullptr};
   /// Total number of pages accessed during executing bytecode.
   uint32_t accessedPageCount_{0};
   /// Signal number that we are tracking.
@@ -48,9 +50,10 @@ class PageAccessTracker {
 
   ~PageAccessTracker() = default;
 
-  /// Given \p accessedAddr, the accessed address, record the access.
+  /// Given \p accessedAddr, the accessed address, and \p micros, the number of
+  /// microseconds it took, record the access.
   /// Intended to only be called by the signal handler.
-  void recordPageAccess(void *accessedPage);
+  void recordPageAccess(void *accessedPage, uint32_t micros);
 
   /// Given \p addr, determine if we are tracking this address.
   bool isTracking(void *addr);
