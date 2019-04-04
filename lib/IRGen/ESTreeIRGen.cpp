@@ -68,10 +68,16 @@ Value *LReference::emitLoad() {
   IRBuilder::ScopedLocationChange slc(builder, loadLoc_);
 
   switch (kind_) {
+    case Kind::Empty:
+      assert(false && "empty cannot be loaded");
+      return builder.getLiteralUndefined();
     case Kind::Member:
       return builder.createLoadPropertyInst(base_, property_);
     case Kind::VarOrGlobal:
       return irgen::emitLoad(builder, base_);
+    case Kind::Destructuring:
+      assert(false && "destructuring cannot be loaded");
+      return builder.getLiteralUndefined();
     case Kind::Error:
       return builder.getLiteralUndefined();
   }
@@ -83,6 +89,8 @@ void LReference::emitStore(Value *value) {
   auto &builder = getBuilder();
 
   switch (kind_) {
+    case Kind::Empty:
+      return;
     case Kind::Member:
       builder.createStorePropertyInst(value, base_, property_);
       return;
@@ -91,6 +99,8 @@ void LReference::emitStore(Value *value) {
       return;
     case Kind::Error:
       return;
+    case Kind::Destructuring:
+      return irgen_->emitDestructuringAssignment(destructuringTarget_, value);
   }
 
   llvm_unreachable("invalid LReference kind");
@@ -483,6 +493,12 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node) {
   SMLoc sourceLoc = node->getDebugLoc();
   IRBuilder::ScopedLocationChange slc(Builder, sourceLoc);
 
+  if (isa<ESTree::EmptyNode>(node)) {
+    DEBUG(dbgs() << "Creating an LRef for EmptyNode.\n");
+    return LReference(
+        LReference::Kind::Empty, this, nullptr, nullptr, sourceLoc);
+  }
+
   /// Create lref for member expression (ex: o.f).
   if (auto *ME = dyn_cast<ESTree::MemberExpressionNode>(node)) {
     DEBUG(dbgs() << "Creating an LRef for member expression.\n");
@@ -507,15 +523,15 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node) {
     DEBUG(dbgs() << "Creating an LRef for variable declaration.\n");
 
     assert(V->_declarations.size() == 1 && "Malformed variable declaration");
-    auto decl = cast<ESTree::VariableDeclaratorNode>(&V->_declarations.front());
+    auto *decl =
+        cast<ESTree::VariableDeclaratorNode>(&V->_declarations.front());
 
-    DEBUG(
-        dbgs() << "Looking for var-identifier \""
-               << getNameFieldFromID(decl->_id) << "\"\n");
-    auto *var =
-        ensureVariableExists(dyn_cast<ESTree::IdentifierNode>(decl->_id));
-    return LReference(
-        LReference::Kind::VarOrGlobal, this, var, nullptr, sourceLoc);
+    return createLRef(decl->_id);
+  }
+
+  // Destructuring assignment.
+  if (auto *pat = dyn_cast<ESTree::PatternNode>(node)) {
+    return LReference(this, pat);
   }
 
   Builder.getModule()->getContext().getSourceErrorManager().error(
@@ -573,6 +589,131 @@ Value *ESTreeIRGen::emitIteratorComplete(Value *iterResult) {
 
 Value *ESTreeIRGen::emitIteratorValue(Value *iterResult) {
   return Builder.createLoadPropertyInst(iterResult, "value");
+}
+
+void ESTreeIRGen::emitDestructuringAssignment(
+    ESTree::PatternNode *target,
+    Value *source) {
+  if (auto *APN = dyn_cast<ESTree::ArrayPatternNode>(target))
+    return emitDestructuringArray(APN, source);
+  else if (auto *OPN = dyn_cast<ESTree::ObjectPatternNode>(target))
+    return emitDestructuringObject(OPN, source);
+  else {
+    Mod->getContext().getSourceErrorManager().error(
+        target->getSourceRange(), "unsupported destructuring target");
+  }
+}
+
+void ESTreeIRGen::emitDestructuringArray(
+    ESTree::ArrayPatternNode *target,
+    Value *source) {
+  auto iteratorRecord = emitGetIteraror(source);
+
+  /// iteratorDone = undefined.
+  auto *iteratorDone =
+      Builder.createAllocStackInst(genAnonymousLabelName("iterDone"));
+  Builder.createStoreStackInst(Builder.getLiteralUndefined(), iteratorDone);
+
+  auto *value =
+      Builder.createAllocStackInst(genAnonymousLabelName("iterValue"));
+
+  bool first = true;
+
+  for (auto &elem : target->_elements) {
+    ESTree::Node *target = &elem;
+    ESTree::Node *init = nullptr;
+
+    // If we have an initializer, unwrap it.
+    if (auto *assign = dyn_cast<ESTree::AssignmentPatternNode>(target)) {
+      target = assign->_left;
+      init = assign->_right;
+    }
+
+    auto lref = createLRef(target);
+
+    // Pseudocode of the algorithm for a step:
+    //
+    //   value = undefined;
+    //   if (iteratorDone) goto nextBlock
+    // notDoneBlock:
+    //   stepResult = IteratorNext(iteratorRecord)
+    //   stepDone = IteratorComplete(stepResult)
+    //   iteratorDone = stepDone
+    //   if (stepDone) goto nextBlock
+    // newValueBlock:
+    //   value = IteratorValue(stepResult)
+    // nextBlock:
+    //   if (value !== undefined) goto storeBlock    [if initializer present]
+    //   value = initializer                         [if initializer present]
+    // storeBlock:
+    //   lref.emitStore(value)
+
+    auto *notDoneBlock = Builder.createBasicBlock(Builder.getFunction());
+    auto *newValueBlock = Builder.createBasicBlock(Builder.getFunction());
+    auto *nextBlock = Builder.createBasicBlock(Builder.getFunction());
+    auto *getDefaultBlock =
+        init ? Builder.createBasicBlock(Builder.getFunction()) : nullptr;
+    auto *storeBlock =
+        init ? Builder.createBasicBlock(Builder.getFunction()) : nullptr;
+
+    Builder.createStoreStackInst(Builder.getLiteralUndefined(), value);
+
+    // In the first iteration we know that "done" is false.
+    if (first) {
+      first = false;
+      Builder.createBranchInst(notDoneBlock);
+    } else {
+      Builder.createCondBranchInst(
+          Builder.createLoadStackInst(iteratorDone), nextBlock, notDoneBlock);
+    }
+
+    // notDoneBlock:
+    Builder.setInsertionBlock(notDoneBlock);
+    auto *stepResult = emitIteratorNext(iteratorRecord);
+    auto *stepDone = emitIteratorComplete(stepResult);
+    Builder.createStoreStackInst(stepDone, iteratorDone);
+    Builder.createCondBranchInst(
+        stepDone, init ? getDefaultBlock : nextBlock, newValueBlock);
+
+    // newValueBlock:
+    Builder.setInsertionBlock(newValueBlock);
+    auto *stepValue = emitIteratorValue(stepResult);
+    Builder.createStoreStackInst(stepValue, value);
+    Builder.createBranchInst(nextBlock);
+
+    // nextBlock:
+    Builder.setInsertionBlock(nextBlock);
+
+    if (init) {
+      //    if (value !== undefined) goto storeBlock    [if initializer present]
+      //    value = initializer                         [if initializer present]
+      //  storeBlock:
+      Builder.createCondBranchInst(
+          Builder.createBinaryOperatorInst(
+              Builder.createLoadStackInst(value),
+              Builder.getLiteralUndefined(),
+              BinaryOperatorInst::OpKind::StrictlyNotEqualKind),
+          storeBlock,
+          getDefaultBlock);
+
+      // getDefaultBlock:
+      Builder.setInsertionBlock(getDefaultBlock);
+      Builder.createStoreStackInst(genExpression(init), value);
+      Builder.createBranchInst(storeBlock);
+
+      // storeBlock:
+      Builder.setInsertionBlock(storeBlock);
+    }
+    if (!lref.isEmpty())
+      lref.emitStore(Builder.createLoadStackInst(value));
+  }
+}
+
+void ESTreeIRGen::emitDestructuringObject(
+    ESTree::ObjectPatternNode *target,
+    Value *source) {
+  Mod->getContext().getSourceErrorManager().error(
+      target->getSourceRange(), "unsupported destructuring target");
 }
 
 std::shared_ptr<SerializedScope> ESTreeIRGen::resolveScopeIdentifiers(

@@ -533,30 +533,6 @@ Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
   return node;
 }
 
-Optional<ESTree::VariableDeclaratorNode *> JSParserImpl::parseInitializerOpt(
-    Param param,
-    ESTree::IdentifierNode *id) {
-  ESTree::VariableDeclaratorNode *node;
-  if (check(TokenKind::equal)) {
-    auto debugLoc = advance().Start;
-
-    auto expr = parseAssignmentExpression(param);
-    if (!expr)
-      return None;
-
-    node = setLocation(
-        id,
-        expr.getValue(),
-        debugLoc,
-        new (context_) ESTree::VariableDeclaratorNode(expr.getValue(), id));
-  } else {
-    node = setLocation(
-        id, id, new (context_) ESTree::VariableDeclaratorNode(nullptr, id));
-  }
-
-  return node;
-}
-
 Optional<ESTree::VariableDeclarationNode *>
 JSParserImpl::parseLexicalDeclaration(Param param) {
   assert(
@@ -575,11 +551,15 @@ JSParserImpl::parseLexicalDeclaration(Param param) {
   if (!eatSemi(endLoc))
     return None;
 
-  return setLocation(
+  auto *res = setLocation(
       startLoc,
       endLoc,
       new (context_)
           ESTree::VariableDeclarationNode(kindIdent, std::move(declList)));
+
+  ensureDestructuringInitialized(res);
+
+  return res;
 }
 
 Optional<ESTree::VariableDeclarationNode *>
@@ -601,19 +581,159 @@ Optional<const char *> JSParserImpl::parseVariableDeclarationList(
   return "OK";
 }
 
+void JSParserImpl::ensureDestructuringInitialized(
+    ESTree::VariableDeclarationNode *declNode) {
+  for (auto &elem : declNode->_declarations) {
+    auto *declarator = cast<ESTree::VariableDeclaratorNode>(&elem);
+
+    if (!isa<ESTree::PatternNode>(declarator->_id) || declarator->_init)
+      continue;
+
+    sm_.error(
+        declarator->_id->getSourceRange(),
+        "destucturing declaration must be initialized");
+  }
+}
+
 Optional<ESTree::VariableDeclaratorNode *>
 JSParserImpl::parseVariableDeclaration(Param param, SMLoc declLoc) {
-  auto optIdent = parseBindingIdentifier(param.get(ParamYield));
-  if (!optIdent) {
-    errorExpected(
-        TokenKind::identifier,
-        "in declaration",
-        "declaration started here",
-        declLoc);
-    return None;
+  ESTree::Node *target;
+
+  if (check(TokenKind::l_square, TokenKind::l_brace)) {
+    auto optPat = parseBindingPattern(param);
+    if (!optPat)
+      return None;
+
+    target = *optPat;
+  } else {
+    auto optIdent = parseBindingIdentifier(param.get(ParamYield));
+    if (!optIdent) {
+      errorExpected(
+          TokenKind::identifier,
+          "in declaration",
+          "declaration started here",
+          declLoc);
+      return None;
+    }
+
+    target = *optIdent;
   }
 
-  return parseInitializerOpt(param, optIdent.getValue());
+  // No initializer?
+  if (!check(TokenKind::equal)) {
+    return setLocation(
+        target,
+        target,
+        new (context_) ESTree::VariableDeclaratorNode(nullptr, target));
+  };
+
+  // Parse the initializer.
+  auto debugLoc = advance().Start;
+
+  auto expr = parseAssignmentExpression(param);
+  if (!expr)
+    return None;
+
+  return setLocation(
+      target,
+      *expr,
+      debugLoc,
+      new (context_) ESTree::VariableDeclaratorNode(*expr, target));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseBindingPattern(Param param) {
+  assert(
+      check(TokenKind::l_square, TokenKind::l_brace) &&
+      "BindingPattern expects '{' or '['");
+  if (check(TokenKind::l_square))
+    return parseArrayBindingPattern(param);
+  else
+    return parseObjectBindingPattern(param);
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseArrayBindingPattern(Param param) {
+  assert(check(TokenKind::l_square) && "ArrayBindingPattern expects '['");
+
+  // Eat the '[', recording the start location.
+  auto startLoc = advance().Start;
+
+  ESTree::NodeList elemList;
+
+  if (!check(TokenKind::r_square)) {
+    for (;;) {
+      if (check(TokenKind::comma)) {
+        elemList.push_back(
+            *setLocation(tok_, tok_, new (context_) ESTree::EmptyNode()));
+      } else {
+        auto optElem = parseBindingElement(param);
+        if (!optElem)
+          return None;
+        elemList.push_back(*optElem.getValue());
+      }
+
+      if (!checkAndEat(TokenKind::comma))
+        break;
+      if (check(TokenKind::r_square)) // Check for ",]".
+        break;
+    }
+  }
+
+  SMLoc endLoc = tok_->getEndLoc();
+  if (!eat(
+          TokenKind::r_square,
+          JSLexer::AllowDiv,
+          "at end of array binding pattern '[...'",
+          "location of '['",
+          startLoc))
+    return None;
+
+  return setLocation(
+      startLoc,
+      endLoc,
+      new (context_) ESTree::ArrayPatternNode(std::move(elemList)));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseObjectBindingPattern(Param param) {
+  assert(check(TokenKind::l_brace) && "ObjectBindingPattern expects '{'");
+  sm_.error(tok_->getSourceRange(), "object binding pattern not supported yet");
+  return None;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseBindingElement(Param param) {
+  ESTree::Node *elem;
+
+  if (check(TokenKind::l_square, TokenKind::l_brace)) {
+    auto optPat = parseBindingPattern(param);
+    if (!optPat)
+      return None;
+    elem = *optPat;
+  } else {
+    auto optIdent = parseBindingIdentifier(param);
+    if (!optIdent) {
+      sm_.error(
+          tok_->getStartLoc(),
+          "identifier, '{' or '[' expected in binding pattern");
+      return None;
+    }
+    elem = *optIdent;
+  }
+
+  // No initializer?
+  if (!check(TokenKind::equal))
+    return elem;
+
+  // Parse the initializer.
+  auto debugLoc = advance().Start;
+
+  auto expr = parseAssignmentExpression(ParamIn + param);
+  if (!expr)
+    return None;
+
+  return setLocation(
+      elem,
+      *expr,
+      debugLoc,
+      new (context_) ESTree::AssignmentPatternNode(elem, *expr));
 }
 
 Optional<ESTree::EmptyStatementNode *> JSParserImpl::parseEmptyStatement() {
@@ -621,6 +741,9 @@ Optional<ESTree::EmptyStatementNode *> JSParserImpl::parseEmptyStatement() {
   auto *empty =
       setLocation(tok_, tok_, new (context_) ESTree::EmptyStatementNode());
   advance();
+
+  std::string s;
+  s.data();
   return empty;
 }
 
@@ -883,6 +1006,9 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
     //   Expressionopt )
     //       Statement
     //   for ( Expression[In]opt ; Expressionopt ; Expressionopt ) Statement
+
+    if (decl)
+      ensureDestructuringInitialized(decl);
 
     ESTree::NodePtr test = nullptr;
     if (!check(TokenKind::semi)) {
@@ -2202,6 +2328,64 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   return setLocation(leftExpr, body, arrow);
 }
 
+Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
+    ESTree::Node *node) {
+  assert(
+      (isa<ESTree::ArrayExpressionNode>(node) ||
+       isa<ESTree::ObjectExpressionNode>(node)) &&
+      "reparseAssignmentPattern expects ArrayExpressionNode");
+
+  if (auto *AEN = dyn_cast<ESTree::ArrayExpressionNode>(node)) {
+    return reparseArrayAsignmentPattern(AEN);
+  } else {
+    sm_.error(
+        node->getSourceRange(), "object destructuring is not supported yet");
+    return None;
+  }
+}
+
+Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
+    ESTree::ArrayExpressionNode *AEN) {
+  ESTree::NodeList elements{};
+
+  for (auto it = AEN->_elements.begin(), e = AEN->_elements.end(); it != e;) {
+    ESTree::Node *elem = &*it++;
+    AEN->_elements.remove(*elem);
+
+    ESTree::Node *init = nullptr;
+
+    // If we encounter an initializer, unpack it.
+    if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(elem)) {
+      if (asn->_operator == getTokenIdent(TokenKind::equal)) {
+        elem = asn->_left;
+        init = asn->_right;
+      }
+    }
+
+    // Reparse {...} or [...]
+    if (isa<ESTree::ArrayExpressionNode>(elem) ||
+        isa<ESTree::ObjectExpressionNode>(elem)) {
+      auto optSubPattern = reparseAssignmentPattern(elem);
+      if (!optSubPattern)
+        return None;
+
+      elem = *optSubPattern;
+    }
+
+    if (init) {
+      elem = setLocation(
+          elem, init, new (context_) ESTree::AssignmentPatternNode(elem, init));
+    }
+
+    elements.push_back(*elem);
+  }
+
+  return setLocation(
+      AEN->getStartLoc(),
+      AEN->getEndLoc(),
+      new (context_) ESTree::ArrayPatternNode(std::move(elements)));
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
   auto optLeftExpr = parseConditionalExpression(param);
   if (!optLeftExpr)
@@ -2215,6 +2399,15 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
 
   if (!checkAssign())
     return *optLeftExpr;
+
+  // Check for destructuring assignment.
+  if (check(TokenKind::equal) &&
+      (isa<ESTree::ArrayExpressionNode>(*optLeftExpr) ||
+       isa<ESTree::ObjectExpressionNode>(*optLeftExpr))) {
+    optLeftExpr = reparseAssignmentPattern(*optLeftExpr);
+    if (!optLeftExpr)
+      return None;
+  }
 
   UniqueString *op = getTokenIdent(tok_->getKind());
   auto debugLoc = advance().Start;

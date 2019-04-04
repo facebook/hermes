@@ -29,3 +29,18 @@ tryParse("'use strict'; for(let i4 = 10 in {}); i4");
 
 tryParse("for(let i5 = 10 of []); i5");
 //CHECK-NEXT: caught: 1:14:for-in/for-of variable declaration may not be initialized
+
+tryParse("var p1, [p2, p3] = [], p4;");
+//CHECK-NEXT: OK undefined
+
+tryParse("var p5, [p6, p7], p8;");
+//CHECK-NEXT: caught: 1:9:destucturing declaration must be initialized
+
+tryParse("for(var [a1] of [[1]]); a1");
+//CHECK-NEXT: OK 1
+
+tryParse("for(var [a2] = 0 of []);");
+//CHECK-NEXT: caught: 1:16:destructuring declaration cannot be initialized in for-in/for-of loop
+
+tryParse("for(var [a3] = 0 in []);");
+//CHECK-NEXT: caught: 1:16:destructuring declaration cannot be initialized in for-in/for-of loop

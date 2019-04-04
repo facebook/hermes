@@ -230,7 +230,7 @@ void ESTreeIRGen::emitFunctionPrologue(const ESTree::NodeList &params) {
   auto *semInfo = curFunction()->getSemInfo();
   DEBUG(
       dbgs() << "Hoisting "
-             << (semInfo->decls.size() + semInfo->closures.size())
+             << (semInfo->varDecls.size() + semInfo->closures.size())
              << " variable decls.\n");
 
   Builder.setLocation(newFunc->getSourceRange().Start);
@@ -241,9 +241,8 @@ void ESTreeIRGen::emitFunctionPrologue(const ESTree::NodeList &params) {
 
   // Create variable declarations for each of the hoisted variables and
   // functions. Initialize only the variables to undefined.
-  for (auto *vd : semInfo->decls) {
-    auto res =
-        declareVariableOrGlobalProperty(newFunc, getNameFieldFromID(vd->_id));
+  for (auto *id : semInfo->varDecls) {
+    auto res = declareVariableOrGlobalProperty(newFunc, getNameFieldFromID(id));
     // If this is not a frame variable or it was already declared, skip.
     auto *var = dyn_cast<Variable>(res.first);
     if (!var || !res.second)

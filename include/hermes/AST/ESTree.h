@@ -341,6 +341,7 @@ class StringLiteralDecoration {
   bool directive = false;
 };
 
+class PatternDecoration {};
 class CoverDecoration {};
 
 namespace detail {

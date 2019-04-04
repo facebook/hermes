@@ -463,6 +463,24 @@ ESTREE_NODE_5_ARGS(
     NodeBoolean, computed, false,
     NodeBoolean, static, false)
 
+// Patterns =======================================
+ESTREE_FIRST(Pattern, Base)
+
+ESTREE_NODE_1_ARGS(
+    ObjectPattern, Pattern,
+    NodeList, properties, false)
+
+ESTREE_NODE_1_ARGS(
+    ArrayPattern, Pattern,
+    NodeList, elements, false)
+
+ESTREE_NODE_2_ARGS(
+    AssignmentPattern, Pattern,
+    NodePtr, left, false,          // Pattern
+    NodePtr, right, false)         // Expression
+
+ESTREE_LAST(Pattern)
+// ================================================
 
 ESTREE_FIRST(Cover, Base)
 

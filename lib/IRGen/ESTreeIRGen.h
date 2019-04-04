@@ -161,12 +161,16 @@ class FunctionContext {
 class LReference {
  public:
   enum class Kind {
+    /// Elision in destructuring pattern.
+    Empty,
     /// Reference to a member expression.
     Member,
     /// Reference to a variable or a global property.
     VarOrGlobal,
     /// Invalid reference. Error has been reported, so it does nothing.
     Error,
+    /// Destructuring assignment target.
+    Destructuring,
   };
 
   LReference(
@@ -175,11 +179,20 @@ class LReference {
       Value *base,
       Value *property,
       SMLoc loadLoc)
-      : kind_(kind),
-        irgen_(irgen),
-        base_(base),
-        property_(property),
-        loadLoc_(loadLoc) {}
+      : kind_(kind), irgen_(irgen) {
+    base_ = base;
+    property_ = property;
+    loadLoc_ = loadLoc;
+  }
+
+  LReference(ESTreeIRGen *irgen, ESTree::PatternNode *target)
+      : kind_(Kind::Destructuring), irgen_(irgen) {
+    destructuringTarget_ = target;
+  }
+
+  bool isEmpty() const {
+    return kind_ == Kind::Empty;
+  }
 
   Value *emitLoad();
   void emitStore(Value *value);
@@ -194,12 +207,21 @@ class LReference {
   /// The associated instance of ESTreeIRGen.
   ESTreeIRGen *irgen_;
 
-  /// The base of the object, or the variable we load from.
-  Value *base_;
-  /// The name/value of the field this reference accesses, or null if this is
-  /// a variable access.
-  Value *property_;
-  /// Debug position for loads.
+  union {
+    struct {
+      /// The base of the object, or the variable we load from.
+      Value *base_;
+      /// The name/value of the field this reference accesses, or null if this
+      /// is a variable access.
+      Value *property_;
+    };
+
+    /// Destructuring assignment target.
+    ESTree::PatternNode *destructuringTarget_;
+  };
+
+  /// Debug position for loads. Must be outside of the union because it has a
+  /// constructor.
   SMLoc loadLoc_;
 
   /// \return a reference to IRGen's builder.
@@ -289,6 +311,11 @@ class ESTreeIRGen {
   /// Wrapper of genExpression. If curFunction()->globalReturnRegister is
   /// set, stores the expression value into it.
   void genExpressionWrapper(ESTree::Node *expr);
+
+  void genVariableDeclaration(ESTree::VariableDeclarationNode *declaration);
+  void genVariableDeclarator(
+      ESTree::NodeLabel kind,
+      ESTree::VariableDeclaratorNode *declarator);
 
   void genIfStatement(ESTree::IfStatementNode *IfStmt);
   void genReturnStatement(ESTree::ReturnStatementNode *RetStmt);
@@ -565,6 +592,18 @@ class ESTreeIRGen {
   ///
   /// \return \c iterResult.value
   Value *emitIteratorValue(Value *iterResult);
+
+  /// Generate code for destructuring assignment to ArrayPattern or
+  /// ObjectPattern.
+  void emitDestructuringAssignment(ESTree::PatternNode *target, Value *source);
+
+  /// Generate code for destructuring assignment to ArrayPattern.
+  void emitDestructuringArray(ESTree::ArrayPatternNode *target, Value *source);
+
+  /// Generate code for destructuring assignment to ObjectPattern.
+  void emitDestructuringObject(
+      ESTree::ObjectPatternNode *target,
+      Value *source);
 
  private:
   /// "Converts" a ScopeChain into a SerializedScope by resolving the

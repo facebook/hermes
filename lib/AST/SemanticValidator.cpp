@@ -75,8 +75,7 @@ void SemanticValidator::visit(ProgramNode *node) {
 }
 
 void SemanticValidator::visit(VariableDeclaratorNode *varDecl) {
-  validateDeclarationName(varDecl->_id);
-  curFunction()->semInfo->decls.push_back(varDecl);
+  validateDeclarationNames(varDecl->_id, &curFunction()->semInfo->varDecls);
   visitESTreeChildren(*this, varDecl);
 }
 
@@ -158,17 +157,20 @@ void SemanticValidator::visitForInOf(LoopStatementNode *loopNode, Node *left) {
         VD->_declarations.size() == 1 &&
         "for-in/for-of must have a single binding");
 
-    auto *initNode =
-        cast<ESTree::VariableDeclaratorNode>(&VD->_declarations.front())->_init;
+    auto *declarator =
+        cast<ESTree::VariableDeclaratorNode>(&VD->_declarations.front());
 
-    // Initializers are only allowed in for-in, non-strict mode "var"
-    // declarations.
-    if (initNode &&
-        !(isa<ForInStatementNode>(loopNode) && !curFunction()->strictMode &&
-          VD->_kind == kw_.identVar)) {
-      sm_.error(
-          initNode->getSourceRange(),
-          "for-in/for-of variable declaration may not be initialized");
+    if (declarator->_init) {
+      if (isa<ESTree::PatternNode>(declarator->_id)) {
+        sm_.error(
+            declarator->_init->getSourceRange(),
+            "destructuring declaration cannot be initialized in for-in/for-of loop");
+      } else if (!(isa<ForInStatementNode>(loopNode) &&
+                   !curFunction()->strictMode && VD->_kind == kw_.identVar)) {
+        sm_.error(
+            declarator->_init->getSourceRange(),
+            "for-in/for-of variable declaration may not be initialized");
+      }
     }
   } else if (!isLValue(left)) {
     sm_.error(
@@ -179,11 +181,7 @@ void SemanticValidator::visitForInOf(LoopStatementNode *loopNode, Node *left) {
 
 /// Ensure that the left side of assgnments is an l-value.
 void SemanticValidator::visit(AssignmentExpressionNode *assignment) {
-  // Check if the left-hand side is valid.
-  if (!isLValue(assignment->_left))
-    sm_.error(
-        assignment->_left->getSourceRange(),
-        "invalid assignment left-hand side");
+  validateAssignmentTarget(assignment->_left);
   visitESTreeChildren(*this, assignment);
 }
 
@@ -436,7 +434,7 @@ void SemanticValidator::visit(CoverTrailingCommaNode *CTC) {
 
 void SemanticValidator::visitFunction(
     FunctionLikeNode *node,
-    const Node *id,
+    Node *id,
     NodeList &params,
     Node *body) {
   FunctionContext newFuncCtx{
@@ -450,10 +448,10 @@ void SemanticValidator::visitFunction(
   }
 
   if (id)
-    validateDeclarationName(id);
+    validateDeclarationNames(id, nullptr);
 
   for (auto &param : params)
-    validateDeclarationName(&param);
+    validateDeclarationNames(&param, nullptr);
 
   // Check if we have seen this parameter name before.
   if (curFunction()->strictMode || isa<ArrowFunctionExpressionNode>(node)) {
@@ -506,13 +504,8 @@ bool SemanticValidator::isLValue(const Node *node) const {
   return true;
 }
 
-bool SemanticValidator::isValidDeclarationName(const Node *node) const {
-  // The identifier is sometimes optional, in which case it is valid.
-  if (!node)
-    return true;
-
-  auto *idNode = cast<IdentifierNode>(node);
-
+bool SemanticValidator::isValidDeclarationName(
+    const IdentifierNode *idNode) const {
   // 'arguments' cannot be redeclared in strict mode.
   if (idNode->_name == kw_.identArguments && curFunction()->strictMode)
     return false;
@@ -526,12 +519,58 @@ bool SemanticValidator::isValidDeclarationName(const Node *node) const {
   return true;
 }
 
-void SemanticValidator::validateDeclarationName(const Node *node) {
-  if (!isValidDeclarationName(node)) {
-    sm_.error(
-        node->getSourceRange(),
-        "cannot declare '" + cast<IdentifierNode>(node)->_name->str() + "'");
+void SemanticValidator::validateDeclarationNames(
+    Node *node,
+    llvm::SmallVectorImpl<ESTree::IdentifierNode *> *idents) {
+  // The identifier is sometimes optional, in which case it is valid.
+  if (!node)
+    return;
+
+  if (auto *idNode = dyn_cast<IdentifierNode>(node)) {
+    if (idents)
+      idents->push_back(idNode);
+    if (!isValidDeclarationName(idNode)) {
+      sm_.error(
+          node->getSourceRange(),
+          "cannot declare '" + cast<IdentifierNode>(node)->_name->str() + "'");
+    }
+
+    return;
   }
+
+  if (isa<EmptyNode>(node))
+    return;
+
+  if (auto *assign = dyn_cast<AssignmentPatternNode>(node))
+    return validateDeclarationNames(assign->_left, idents);
+
+  if (auto *array = dyn_cast<ArrayPatternNode>(node)) {
+    for (auto &elem : array->_elements) {
+      validateDeclarationNames(&elem, idents);
+    }
+    return;
+  }
+
+  sm_.error(node->getSourceRange(), "unsupported destructuring node");
+}
+
+void SemanticValidator::validateAssignmentTarget(const Node *node) {
+  if (isa<EmptyNode>(node) || isLValue(node)) {
+    return;
+  }
+
+  if (auto *assign = dyn_cast<AssignmentPatternNode>(node)) {
+    return validateAssignmentTarget(assign->_left);
+  }
+
+  if (auto *APN = dyn_cast<ArrayPatternNode>(node)) {
+    for (auto &elem : APN->_elements) {
+      validateAssignmentTarget(&elem);
+    }
+    return;
+  }
+
+  sm_.error(node->getSourceRange(), "invalid assignment left-hand side");
 }
 
 void SemanticValidator::updateNodeStrictness(FunctionLikeNode *node) {

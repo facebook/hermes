@@ -146,11 +146,8 @@ class SemanticValidator {
   /// \param params the parameter list
   /// \param body the body. It may be a BlockStatementNode, an EmptyNode (for
   ///     lazy functions), or an expression (for simple arrow functions).
-  void visitFunction(
-      FunctionLikeNode *node,
-      const Node *id,
-      NodeList &params,
-      Node *body);
+  void
+  visitFunction(FunctionLikeNode *node, Node *id, NodeList &params, Node *body);
 
   /// Scan a list of directives in the beginning of a program of function
   /// (see ES5.1 4.1 - a directive is a statement consisting of a single
@@ -165,11 +162,20 @@ class SemanticValidator {
   bool isLValue(const Node *node) const;
 
   /// In strict mode 'arguments' and 'eval' cannot be used in declarations.
-  bool isValidDeclarationName(const Node *node) const;
+  bool isValidDeclarationName(const IdentifierNode *idNode) const;
 
-  /// If the supplied Identifier node is not a valid name to be used in a
-  /// declaration, report an error.
-  void validateDeclarationName(const Node *node);
+  /// Ensure that the declared identifier(s) is valid to be used in a
+  /// declaration and append them to the specified list.
+  /// \param node is one of nullptr, EmptyNode, IdentifierNode, PatternNode.
+  /// \param idents if not-null, all identifiers are appended there.
+  void validateDeclarationNames(
+      Node *node,
+      llvm::SmallVectorImpl<ESTree::IdentifierNode *> *idents);
+
+  /// Ensure that the specified node is a valid target for an assignment, in
+  /// other words it is an l-value, a Pattern (checked recursively) or an Empty
+  /// (used by elision).
+  void validateAssignmentTarget(const Node *node);
 
   /// A debugging method to set the strictness of a function-like node to
   /// the curent strictness, asserting that it doesn't change if it had been

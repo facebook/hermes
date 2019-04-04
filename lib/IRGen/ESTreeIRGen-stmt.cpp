@@ -56,28 +56,8 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     return genSwitchStatement(SW);
   }
 
-  if (auto *VND = dyn_cast<ESTree::VariableDeclaratorNode>(stmt)) {
-    auto variableName = getNameFieldFromID(VND->_id);
-    DEBUG(
-        dbgs() << "IRGen variable declaration for \"" << variableName
-               << "\".\n");
-
-    // Materialize the initialization clause and save it into the variable.
-    auto *storage = nameTable_.lookup(variableName);
-    assert(storage && "Declared variable not found in name table");
-    if (VND->_init) {
-      DEBUG(dbgs() << "Variable \"" << variableName << "\" has initializer.\n");
-      emitStore(Builder, genExpression(VND->_init, variableName), storage);
-    }
-
-    return;
-  }
-
   if (auto *VDN = dyn_cast<ESTree::VariableDeclarationNode>(stmt)) {
-    for (auto &decl : VDN->_declarations) {
-      genStatement(&decl);
-    }
-    return;
+    return genVariableDeclaration(VDN);
   }
 
   // IRGen the content of the block.
@@ -205,6 +185,28 @@ void ESTreeIRGen::genExpressionWrapper(ESTree::Node *expr) {
   Value *val = genExpression(expr);
   if (curFunction()->globalReturnRegister) {
     Builder.createStoreStackInst(val, curFunction()->globalReturnRegister);
+  }
+}
+
+void ESTreeIRGen::genVariableDeclaration(
+    ESTree::VariableDeclarationNode *declaration) {
+  for (auto &decl : declaration->_declarations)
+    genVariableDeclarator(
+        declaration->_kind, cast<ESTree::VariableDeclaratorNode>(&decl));
+}
+
+void ESTreeIRGen::genVariableDeclarator(
+    ESTree::NodeLabel kind,
+    ESTree::VariableDeclaratorNode *declarator) {
+  IRBuilder::ScopedLocationChange slc(Builder, declarator->getDebugLoc());
+  Builder.getFunction()->incrementStatementCount();
+
+  auto lref = createLRef(declarator->_id);
+  if (declarator->_init) {
+    Identifier nameHint{};
+    if (isa<ESTree::IdentifierNode>(declarator->_id))
+      nameHint = getNameFieldFromID(declarator->_id);
+    lref.emitStore(genExpression(declarator->_init, nameHint));
   }
 }
 

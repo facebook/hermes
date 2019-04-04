@@ -392,10 +392,6 @@ class JSParserImpl {
   /// Does not generate an error. It is expected that the caller will do it.
   /// \param param [Yield]
   Optional<ESTree::IdentifierNode *> parseBindingIdentifier(Param param);
-  /// \param id the identifier node of the binding.
-  Optional<ESTree::VariableDeclaratorNode *> parseInitializerOpt(
-      Param param,
-      ESTree::IdentifierNode *id);
   /// Parse a VariableStatement or LexicalDeclaration.
   /// \param param [In, Yield]
   /// \param declLoc the location of the let/const for error messages.
@@ -423,6 +419,16 @@ class JSParserImpl {
   Optional<ESTree::VariableDeclaratorNode *> parseVariableDeclaration(
       Param param,
       SMLoc declLoc);
+
+  /// Ensure that all destructuring declarations in the specified declaration
+  /// node are initialized and report errors if they are not.
+  void ensureDestructuringInitialized(
+      ESTree::VariableDeclarationNode *declNode);
+
+  Optional<ESTree::Node *> parseBindingPattern(Param param);
+  Optional<ESTree::Node *> parseArrayBindingPattern(Param param);
+  Optional<ESTree::Node *> parseObjectBindingPattern(Param param);
+  Optional<ESTree::Node *> parseBindingElement(Param param);
 
   Optional<ESTree::EmptyStatementNode *> parseEmptyStatement();
   /// \param param [Yield, Return]
@@ -513,6 +519,15 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseArrowFunctionExpression(
       Param param,
       ESTree::Node *leftExpr);
+
+  /// Reparse an ArrayExpression into an ArrayPattern.
+  Optional<ESTree::Node *> reparseArrayAsignmentPattern(
+      ESTree::ArrayExpressionNode *AEN);
+
+  /// Reparse an ArrayExpression or ObjectExpression into ArrayPattern or
+  /// ObjectPattern.
+  Optional<ESTree::Node *> reparseAssignmentPattern(ESTree::Node *node);
+
   Optional<ESTree::Node *> parseAssignmentExpression(Param param = ParamIn);
   Optional<ESTree::Node *> parseExpression(Param param = ParamIn);
 
