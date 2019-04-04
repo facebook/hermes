@@ -75,7 +75,7 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
   // Handle MemberExpression expressions for access property.
   if (auto *Mem = dyn_cast<ESTree::MemberExpressionNode>(expr)) {
     LReference lref = createLRef(Mem);
-    return lref.emitLoad(Builder);
+    return lref.emitLoad();
   }
 
   // Handle Array expressions (syntax: [1,2,3]).
@@ -642,7 +642,7 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
   LReference lref = createLRef(updateExpr->_argument);
 
   // Load the original value.
-  Value *original = lref.emitLoad(Builder);
+  Value *original = lref.emitLoad();
 
   // Convert the original value to number. Even on suffix operators we return
   // the converted value.
@@ -653,7 +653,7 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
       original, Builder.getLiteralNumber(1), opKind);
 
   // Store the result.
-  lref.emitStore(Builder, result);
+  lref.emitStore(result);
 
   // Depending on the prefixness return the previous value or the modified
   // value.
@@ -681,14 +681,14 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
     // LHS before materializing the RHS. Unlike in C, this
     // code is well defined: "x+= x++".
     // https://es5.github.io/#x11.13.1
-    auto V = lref.emitLoad(Builder);
+    auto V = lref.emitLoad();
     RHS = genExpression(AE->_right, nameHint);
     RHS = Builder.createBinaryOperatorInst(V, RHS, AssignmentKind);
   } else {
     RHS = genExpression(AE->_right, nameHint);
   }
 
-  lref.emitStore(Builder, RHS);
+  lref.emitStore(RHS);
 
   // Return the value that we stored as the result of the expression.
   return RHS;

@@ -57,6 +57,56 @@ bool isConstantExpr(ESTree::Node *node) {
 }
 
 //===----------------------------------------------------------------------===//
+// LReference
+
+IRBuilder &LReference::getBuilder() {
+  return irgen_->Builder;
+}
+
+Value *LReference::emitLoad() {
+  auto &builder = getBuilder();
+  IRBuilder::ScopedLocationChange slc(builder, loadLoc_);
+
+  switch (kind_) {
+    case Kind::Member:
+      return builder.createLoadPropertyInst(base_, property_);
+    case Kind::VarOrGlobal:
+      return irgen::emitLoad(builder, base_);
+    case Kind::Error:
+      return builder.getLiteralUndefined();
+  }
+
+  llvm_unreachable("invalid LReference kind");
+}
+
+void LReference::emitStore(Value *value) {
+  auto &builder = getBuilder();
+
+  switch (kind_) {
+    case Kind::Member:
+      builder.createStorePropertyInst(value, base_, property_);
+      return;
+    case Kind::VarOrGlobal:
+      irgen::emitStore(builder, value, base_);
+      return;
+    case Kind::Error:
+      return;
+  }
+
+  llvm_unreachable("invalid LReference kind");
+}
+
+Variable *LReference::castAsVariable() const {
+  return kind_ == Kind::VarOrGlobal ? dyn_cast_or_null<Variable>(base_)
+                                    : nullptr;
+}
+GlobalObjectProperty *LReference::castAsGlobalObjectProperty() const {
+  return kind_ == Kind::VarOrGlobal
+      ? dyn_cast_or_null<GlobalObjectProperty>(base_)
+      : nullptr;
+}
+
+//===----------------------------------------------------------------------===//
 // ESTreeIRGen
 
 ESTreeIRGen::ESTreeIRGen(
@@ -438,7 +488,7 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node) {
     DEBUG(dbgs() << "Creating an LRef for member expression.\n");
     Value *obj = genExpression(ME->_object);
     Value *prop = genMemberExpressionProperty(ME);
-    return LReference(obj, prop, sourceLoc);
+    return LReference(LReference::Kind::Member, this, obj, prop, sourceLoc);
   }
 
   /// Create lref for identifiers  (ex: a).
@@ -448,7 +498,8 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node) {
         dbgs() << "Looking for identifier \"" << getNameFieldFromID(iden)
                << "\"\n");
     auto *var = ensureVariableExists(iden);
-    return LReference(var, nullptr, sourceLoc);
+    return LReference(
+        LReference::Kind::VarOrGlobal, this, var, nullptr, sourceLoc);
   }
 
   /// Create lref for variable decls (ex: var a).
@@ -463,10 +514,14 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node) {
                << getNameFieldFromID(decl->_id) << "\"\n");
     auto *var =
         ensureVariableExists(dyn_cast<ESTree::IdentifierNode>(decl->_id));
-    return LReference(var, nullptr, sourceLoc);
+    return LReference(
+        LReference::Kind::VarOrGlobal, this, var, nullptr, sourceLoc);
   }
 
-  llvm_unreachable("Unexpected for-in pattern.");
+  Builder.getModule()->getContext().getSourceErrorManager().error(
+      node->getSourceRange(), "unsupported assignment target");
+
+  return LReference(LReference::Kind::Error, this, nullptr, nullptr, sourceLoc);
 }
 
 Value *ESTreeIRGen::genHermesInternalCall(

@@ -344,7 +344,7 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
       // initialization because the loop one must execute inside the loop for
       // cases like "for(a[i++] in ...)".
       LReference initRef = createLRef(VD);
-      initRef.emitStore(Builder, genExpression(declarator->_init));
+      initRef.emitStore(genExpression(declarator->_init));
     }
   }
 
@@ -421,7 +421,7 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   //  3. for (var x in [1,2,3])
   // See ES5 $12.6.4 "The for-in Statement"
   LReference lref = createLRef(ForInStmt->_left);
-  lref.emitStore(Builder, propertyStringRepr);
+  lref.emitStore(propertyStringRepr);
 
   genStatement(ForInStmt->_body);
 
@@ -451,7 +451,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   Builder.setInsertionBlock(bodyBlock);
 
   auto *nextValue = emitIteratorValue(nextResult);
-  createLRef(forOfStmt->_left).emitStore(Builder, nextValue);
+  createLRef(forOfStmt->_left).emitStore(nextValue);
 
   genStatement(forOfStmt->_body);
   Builder.createBranchInst(getNextBlock);

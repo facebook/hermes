@@ -159,47 +159,51 @@ class FunctionContext {
 /// This is a utility class that's related to the ES5 Reference type without
 /// the runtime semantic parts - https://es5.github.io/#x8.7.
 class LReference {
+ public:
+  enum class Kind {
+    /// Reference to a member expression.
+    Member,
+    /// Reference to a variable or a global property.
+    VarOrGlobal,
+    /// Invalid reference. Error has been reported, so it does nothing.
+    Error,
+  };
+
+  LReference(
+      Kind kind,
+      ESTreeIRGen *irgen,
+      Value *base,
+      Value *property,
+      SMLoc loadLoc)
+      : kind_(kind),
+        irgen_(irgen),
+        base_(base),
+        property_(property),
+        loadLoc_(loadLoc) {}
+
+  Value *emitLoad();
+  void emitStore(Value *value);
+
+  Variable *castAsVariable() const;
+  GlobalObjectProperty *castAsGlobalObjectProperty() const;
+
+ private:
+  /// Self explanatory.
+  Kind kind_;
+
+  /// The associated instance of ESTreeIRGen.
+  ESTreeIRGen *irgen_;
+
   /// The base of the object, or the variable we load from.
   Value *base_;
   /// The name/value of the field this reference accesses, or null if this is
-  /// a
-  /// variable access.
+  /// a variable access.
   Value *property_;
   /// Debug position for loads.
   SMLoc loadLoc_;
 
- public:
-  LReference(Value *base, Value *property, SMLoc loadLoc)
-      : base_(base), property_(property), loadLoc_(loadLoc) {}
-
-  Value *emitLoad(IRBuilder &builder) {
-    IRBuilder::ScopedLocationChange slc(builder, loadLoc_);
-
-    if (property_)
-      return builder.createLoadPropertyInst(base_, property_);
-    else
-      return irgen::emitLoad(builder, base_);
-  }
-
-  void emitStore(IRBuilder &builder, Value *value) {
-    if (property_)
-      builder.createStorePropertyInst(value, base_, property_);
-    else
-      irgen::emitStore(builder, value, base_);
-  }
-
-  Variable *castAsVariable() const {
-    if (property_) {
-      return nullptr;
-    }
-    return dyn_cast<Variable>(base_);
-  }
-  GlobalObjectProperty *castAsGlobalObjectProperty() const {
-    if (property_) {
-      return nullptr;
-    }
-    return dyn_cast<GlobalObjectProperty>(base_);
-  }
+  /// \return a reference to IRGen's builder.
+  IRBuilder &getBuilder();
 };
 
 //===----------------------------------------------------------------------===//
@@ -208,6 +212,7 @@ class LReference {
 /// Performs lowering of the JSON ESTree down to Hermes IR.
 class ESTreeIRGen {
   friend class FunctionContext;
+  friend class LReference;
 
   using BasicBlockListType = llvm::SmallVector<BasicBlock *, 4>;
 
