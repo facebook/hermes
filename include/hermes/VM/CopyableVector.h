@@ -61,12 +61,16 @@ class CopyableVector {
       std::numeric_limits<size_type>::max() / sizeof(T);
 
   /// Create a CopyableVector.
-  /// \param capacity the initial capacity. If less than 1, defaults to 1.
+  /// \param capacity the initial capacity.
   /// \pre capacity is at most kMaxCapacity.
-  explicit CopyableVector(size_type capacity = 1)
-      : size_(0), capacity_(std::max((size_type)1, capacity)) {
+  explicit CopyableVector(size_type capacity = 0)
+      : size_(0), capacity_(capacity) {
     assert(capacity_ <= kMaxCapacity && "capacity overflow for CopyableVector");
-    start_ = static_cast<T *>(checkedMalloc2(sizeof(T), capacity_));
+    if (capacity_ == 0) {
+      start_ = nullptr;
+    } else {
+      start_ = static_cast<T *>(checkedMalloc2(sizeof(T), capacity_));
+    }
   }
 
   /// The destructor frees the memory allocated on the C++ heap.
@@ -159,11 +163,7 @@ class CopyableVector {
   /// allocated region.
   void push_back(const T &elem, GC *gc) {
     if (LLVM_UNLIKELY(size_ == capacity_)) {
-      if (capacity_ * 2 < capacity_) {
-        // Capacity overflowed.
-        gc->oom();
-      }
-      grow(capacity_ * 2);
+      grow(gc);
     }
     new (start_ + size_) T(elem);
     ++size_;
@@ -174,11 +174,7 @@ class CopyableVector {
   /// allocated region.
   void push_back(T &&elem, GC *gc) {
     if (LLVM_UNLIKELY(size_ == capacity_)) {
-      if (capacity_ * 2 < capacity_) {
-        // Capacity overflowed.
-        gc->oom();
-      }
-      grow(capacity_ * 2);
+      grow(gc);
     }
     new (start_ + size_) T(std::move(elem));
     ++size_;
@@ -195,7 +191,7 @@ class CopyableVector {
   /// Ensure that the capacity of the storage is at least \p capacity elements.
   void reserve(size_type capacity) {
     if (capacity > capacity_) {
-      grow(capacity);
+      setCapacity(capacity);
     }
   }
 
@@ -205,11 +201,23 @@ class CopyableVector {
   }
 
  private:
+  /// Grow the vector storage according to its growth strategy.
+  /// Trigger OOM on \p gc on overflow.
+  void grow(GC *gc) {
+    // Grow by a factor of 1.5, rounding up.
+    size_t desired = capacity_ + (capacity_ - capacity_ / 2u);
+    if (desired < capacity_ || desired > kMaxCapacity) {
+      // Overflow.
+      gc->oom();
+    }
+    setCapacity(std::max<size_type>(1u, desired));
+  }
+
   /// Grow the vector storage to have capacity \p newCapacity.
   /// \pre the \p newCapacity is bigger than the current capacity.
-  void grow(size_type newCapacity) {
-    assert(newCapacity > capacity_ && "Calls to grow() must grow the vector");
-    T *newStart = static_cast<T *>(checkedMalloc(newCapacity * sizeof(T)));
+  void setCapacity(size_type newCapacity) {
+    assert(newCapacity > capacity_ && "setCapacity() must grow the vector");
+    T *newStart = static_cast<T *>(checkedMalloc2(sizeof(T), newCapacity));
     for (T *src = start_, *end = start_ + size_, *target = newStart; src < end;
          ++src, ++target) {
       new (target) T(std::move(*src));
