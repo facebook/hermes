@@ -80,6 +80,7 @@ static int executeHBCBytecodeFromCL(
                   .build())
           .withEnableJIT(cl::DumpJITCode || cl::EnableJIT)
           .withEnableEval(cl::EnableEval)
+          .withVMExperimentFlags(cl::VMExperimentFlags)
           .withES6Symbol(cl::ES6Symbol)
           .withEnableSampleProfiling(cl::SampleProfiling)
           .withRandomizeMemoryLayout(cl::RandomizeMemoryLayout)

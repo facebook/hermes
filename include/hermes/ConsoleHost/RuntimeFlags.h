@@ -134,6 +134,12 @@ static opt<BytecodeIOStatsFormatKind> BytecodeIOStatsFormat(
         clEnumVal(HUMAN, "Output in human readable format"),
         clEnumVal(JSON, "Output in JSON format (default)")));
 
+static opt<uint32_t> VMExperimentFlags(
+    "Xvm-experiment-flags",
+    llvm::cl::desc("VM experiment flags."),
+    llvm::cl::init(0),
+    llvm::cl::Hidden);
+
 } // namespace cl
 
 #endif // HERMES_VM_RUNTIMEFLAGS_H
