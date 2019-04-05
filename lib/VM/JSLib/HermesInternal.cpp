@@ -168,6 +168,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
   SET_PROP(P::js_incomingFunctionTime, stats.incomingFunction.wallDuration);
   SET_PROP(P::js_incomingFunctionCPUTime, stats.incomingFunction.cpuDuration);
   SET_PROP(P::js_incomingFunctionCount, stats.incomingFunction.count);
+  SET_PROP(P::js_VMExperiments, runtime->getVMExperimentFlags());
 
   auto makeHermesTime = [](double host, double eval, double incoming) {
     return eval - host + incoming;
@@ -259,34 +260,39 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
   auto resultHandle = toHandle(runtime, JSObject::create(runtime));
   MutableHandle<> tmpHandle{runtime};
 
-  auto bcVersion = symbolForCStr(runtime, "Bytecode Version");
-  if (LLVM_UNLIKELY(bcVersion == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
+  /// Add a property \p value keyed under \p key to resultHandle.
+  /// \return an ExecutionStatus.
+  auto addProperty = [&](Handle<> value, const char *key) {
+    auto keySym = symbolForCStr(runtime, key);
+    if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return JSObject::defineNewOwnProperty(
+        resultHandle,
+        runtime,
+        **keySym,
+        PropertyFlags::defaultNewNamedPropertyFlags(),
+        value);
+  };
+
   tmpHandle = HermesValue::encodeDoubleValue(::hermes::hbc::BYTECODE_VERSION);
-  auto status = JSObject::defineNewOwnProperty(
-      resultHandle,
-      runtime,
-      **bcVersion,
-      PropertyFlags::defaultNewNamedPropertyFlags(),
-      tmpHandle);
-
-  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "Bytecode Version") ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto builtinsAreFrozen = symbolForCStr(runtime, "Builtins Frozen");
-  if (LLVM_UNLIKELY(builtinsAreFrozen == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
   tmpHandle = HermesValue::encodeBoolValue(runtime->builtinsAreFrozen());
-  status = JSObject::defineNewOwnProperty(
-      resultHandle,
-      runtime,
-      **builtinsAreFrozen,
-      PropertyFlags::defaultNewNamedPropertyFlags(),
-      tmpHandle);
-  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "Builtins Frozen") ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  tmpHandle = HermesValue::encodeNumberValue(runtime->getVMExperimentFlags());
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "VM Experiments") ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
