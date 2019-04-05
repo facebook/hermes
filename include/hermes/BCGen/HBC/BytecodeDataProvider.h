@@ -11,6 +11,7 @@
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/Public/Buffer.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/StringTableEntry.h"
 
@@ -242,6 +243,9 @@ class BCProviderBase {
   /// Read some bytecode into OS page cache (only implemented for buffers).
   virtual void startWarmup(uint8_t percent) {}
 
+  /// Issue an madvise call (only implemented for buffers).
+  virtual void madvise(oscompat::MAdvice advice) {}
+
   /// Return the entire bytecode file (only implemented for buffers).
   virtual llvm::ArrayRef<uint8_t> getRawBuffer() const {
     return llvm::ArrayRef<uint8_t>();
@@ -409,6 +413,8 @@ class BCProviderFromBuffer final : public BCProviderBase {
   virtual SHA1 getSourceHash() const;
 
   virtual void startWarmup(uint8_t percent);
+
+  virtual void madvise(oscompat::MAdvice advice);
 
   virtual llvm::ArrayRef<uint8_t> getRawBuffer() const {
     return llvm::ArrayRef<uint8_t>(bufferPtr_, buffer_->size());

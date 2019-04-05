@@ -240,6 +240,19 @@ bool vm_protect(void *p, size_t sz, ProtectMode) {
   return err != -1;
 }
 
+bool vm_madvise(void *p, size_t sz, MAdvice advice) {
+  int param = MADV_NORMAL;
+  switch (advice) {
+    case MAdvice::Random:
+      param = MADV_RANDOM;
+      break;
+    case MAdvice::Sequential:
+      param = MADV_SEQUENTIAL;
+      break;
+  }
+  return madvise(p, sz, param) == 0;
+}
+
 int pages_in_ram(const void *p, size_t sz, llvm::SmallVectorImpl<int> *runs) {
   const auto PS = page_size();
   {

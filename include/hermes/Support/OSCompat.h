@@ -100,6 +100,11 @@ enum class ProtectMode { ReadWrite };
 /// false on error.
 bool vm_protect(void *p, size_t sz, ProtectMode mode);
 
+/// Issue an madvise() call.
+/// \return true on success, false on error.
+enum class MAdvice { Random, Sequential };
+bool vm_madvise(void *p, size_t sz, MAdvice advice);
+
 /// Return the number of pages in the given region that are currently in RAM.
 /// If \p runs is provided, then populate it with the lengths of runs of
 /// consecutive pages with the same resident/non-resident status, alternating

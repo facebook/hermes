@@ -263,6 +263,11 @@ void BCProviderFromBuffer::startWarmup(uint8_t percent) {
   }
 }
 
+void BCProviderFromBuffer::madvise(oscompat::MAdvice advice) {
+  (void)oscompat::vm_madvise(
+      const_cast<uint8_t *>(buffer_->data()), buffer_->size(), advice);
+}
+
 BCProviderFromBuffer::BCProviderFromBuffer(std::unique_ptr<const Buffer> buffer)
     : buffer_(std::move(buffer)), bufferPtr_(buffer_->data()) {
   ConstBytecodeFileFields fields;

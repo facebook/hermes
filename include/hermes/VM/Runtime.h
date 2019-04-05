@@ -80,6 +80,8 @@ enum {
   Default = 0,
   OverrideBuitinsIgnore = 1 << 0,
   OverrideBuitinsFatal = 1 << 1,
+  MAdviseSequential = 1 << 2,
+  MAdviseRandom = 1 << 3,
 };
 /// Set of flags for active VM experiments.
 using VMExperimentFlags = uint32_t;

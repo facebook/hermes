@@ -261,6 +261,11 @@ bool vm_protect(void *p, size_t sz, ProtectMode) {
   return err != 0;
 }
 
+bool vm_madvise(void *p, size_t sz, MAdvice advice) {
+  // Not implemented.
+  return false;
+}
+
 int pages_in_ram(const void *p, size_t sz, llvm::SmallVectorImpl<int> *runs) {
   // Not yet supported.
   return -1;

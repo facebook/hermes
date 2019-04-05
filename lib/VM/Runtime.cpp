@@ -611,9 +611,16 @@ CallResult<HermesValue> Runtime::runBytecode(
     assert(builtinsFrozen_ && "Builtins must be frozen by now.");
   }
 
-  if (flags.persistent && bytecodeWarmupPercent_ > 0) {
-    // Start the warmup thread for this bytecode if it's a buffer.
-    bytecode->startWarmup(bytecodeWarmupPercent_);
+  if (flags.persistent) {
+    if (bytecodeWarmupPercent_ > 0) {
+      // Start the warmup thread for this bytecode if it's a buffer.
+      bytecode->startWarmup(bytecodeWarmupPercent_);
+    }
+    if (getVMExperimentFlags() & experiments::MAdviseRandom) {
+      bytecode->madvise(oscompat::MAdvice::Random);
+    } else if (getVMExperimentFlags() & experiments::MAdviseSequential) {
+      bytecode->madvise(oscompat::MAdvice::Sequential);
+    }
   }
 
   GCScope scope(this);
