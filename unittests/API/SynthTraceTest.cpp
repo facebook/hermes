@@ -594,6 +594,16 @@ TEST_F(SynthTraceSerializationTest, ArrayWrite) {
           dummyTime, 1, 0, trace.encodeString("a"))));
 }
 
+TEST_F(SynthTraceSerializationTest, GetPropertyNative) {
+  EXPECT_EQ(
+      R"({"type":"GetPropertyNativeRecord","time":0,"hostObjectID":1,"propName":"foo"})",
+      to_string(SynthTrace::GetPropertyNativeRecord(dummyTime, 1, "foo")));
+  EXPECT_EQ(
+      R"({"type":"GetPropertyNativeReturnRecord","time":0,"retval":"null:"})",
+      to_string(SynthTrace::GetPropertyNativeReturnRecord(
+          dummyTime, SynthTrace::encodeNull())));
+}
+
 TEST_F(SynthTraceSerializationTest, SetPropertyNative) {
   EXPECT_EQ(
       R"({"type":"SetPropertyNativeRecord","time":0,"hostObjectID":1,"propName":"foo","value":"string:bar"})",

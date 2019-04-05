@@ -704,6 +704,10 @@ class SynthTrace {
       return uses;
     }
     bool operator==(const Record &that) const final;
+
+   protected:
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
+        const override;
   };
 
   /// A SetPropertyNativeRecord is an event where JS code writes to the property

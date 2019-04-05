@@ -756,6 +756,13 @@ void SynthTrace::GetOrSetPropertyNativeRecord::toJSONInternal(
   json.emitKeyValue("propName", propName_);
 }
 
+void SynthTrace::GetPropertyNativeReturnRecord::toJSONInternal(
+    JSONEmitter &json,
+    const SynthTrace &trace) const {
+  Record::toJSONInternal(json, trace);
+  ReturnRecord::toJSONInternal(json, trace);
+}
+
 void SynthTrace::SetPropertyNativeRecord::toJSONInternal(
     JSONEmitter &json,
     const SynthTrace &trace) const {
