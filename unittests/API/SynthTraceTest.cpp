@@ -594,6 +594,12 @@ TEST_F(SynthTraceSerializationTest, ArrayWrite) {
           dummyTime, 1, 0, trace.encodeString("a"))));
 }
 
+TEST_F(SynthTraceSerializationTest, MarkerRecord) {
+  EXPECT_EQ(
+      R"({"type":"MarkerRecord","time":0,"tag":"foo"})",
+      to_string(SynthTrace::MarkerRecord(dummyTime, "foo")));
+}
+
 TEST_F(SynthTraceSerializationTest, GetPropertyNative) {
   EXPECT_EQ(
       R"({"type":"GetPropertyNativeRecord","time":0,"hostObjectID":1,"propName":"foo"})",

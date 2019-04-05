@@ -512,7 +512,7 @@ bool SynthTrace::MarkerRecord::operator==(const Record &that) const {
       tag_ == dynamic_cast<const MarkerRecord &>(that).tag_;
 }
 
-bool SynthTrace::ReturnRecord::operator==(const ReturnRecord &that) const {
+bool SynthTrace::ReturnMixin::operator==(const ReturnMixin &that) const {
   return equal(retVal_, that.retVal_);
 }
 
@@ -522,7 +522,7 @@ bool SynthTrace::EndExecJSRecord::operator==(const Record &that) const {
   }
   auto thatCasted = dynamic_cast<const EndExecJSRecord &>(that);
   return MarkerRecord::operator==(thatCasted) &&
-      ReturnRecord::operator==(thatCasted);
+      ReturnMixin::operator==(thatCasted);
 }
 
 bool SynthTrace::CreateObjectRecord::operator==(const Record &that) const {
@@ -592,7 +592,7 @@ bool SynthTrace::ReturnFromNativeRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
   }
-  return ReturnRecord::operator==(
+  return ReturnMixin::operator==(
       dynamic_cast<const ReturnFromNativeRecord &>(that));
 }
 
@@ -600,7 +600,7 @@ bool SynthTrace::ReturnToNativeRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
   }
-  return ReturnRecord::operator==(dynamic_cast<const ReturnRecord &>(that));
+  return ReturnMixin::operator==(dynamic_cast<const ReturnMixin &>(that));
 }
 
 bool SynthTrace::GetOrSetPropertyNativeRecord::operator==(
@@ -627,7 +627,7 @@ bool SynthTrace::GetPropertyNativeReturnRecord::operator==(
     return false;
   }
   auto thatCasted = dynamic_cast<const GetPropertyNativeReturnRecord &>(that);
-  return ReturnRecord::operator==(thatCasted);
+  return ReturnMixin::operator==(thatCasted);
 }
 
 bool SynthTrace::SetPropertyNativeRecord::operator==(const Record &that) const {
@@ -653,7 +653,7 @@ void SynthTrace::Record::toJSONInternal(JSONEmitter &json, const SynthTrace &)
 void SynthTrace::MarkerRecord::toJSONInternal(
     JSONEmitter &json,
     const SynthTrace &trace) const {
-  // Does not call Record::toJSONInternal() as this is an abstract type
+  Record::toJSONInternal(json, trace);
   json.emitKeyValue("tag", tag_);
 }
 
@@ -719,33 +719,31 @@ void SynthTrace::CallRecord::toJSONInternal(
   json.closeArray();
 }
 
-void SynthTrace::ReturnRecord::toJSONInternal(
+void SynthTrace::ReturnMixin::toJSONInternal(
     JSONEmitter &json,
     const SynthTrace &trace) const {
-  // Does not call Record::toJSONInternal() as this is an abstract type
   json.emitKeyValue("retval", trace.encode(retVal_));
 }
 
 void SynthTrace::EndExecJSRecord::toJSONInternal(
     ::hermes::JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(json, trace);
   MarkerRecord::toJSONInternal(json, trace);
-  ReturnRecord::toJSONInternal(json, trace);
+  ReturnMixin::toJSONInternal(json, trace);
 }
 
 void SynthTrace::ReturnFromNativeRecord::toJSONInternal(
     ::hermes::JSONEmitter &json,
     const SynthTrace &trace) const {
   Record::toJSONInternal(json, trace);
-  ReturnRecord::toJSONInternal(json, trace);
+  ReturnMixin::toJSONInternal(json, trace);
 }
 
 void SynthTrace::ReturnToNativeRecord::toJSONInternal(
     ::hermes::JSONEmitter &json,
     const SynthTrace &trace) const {
   Record::toJSONInternal(json, trace);
-  ReturnRecord::toJSONInternal(json, trace);
+  ReturnMixin::toJSONInternal(json, trace);
 }
 
 void SynthTrace::GetOrSetPropertyNativeRecord::toJSONInternal(
@@ -760,7 +758,7 @@ void SynthTrace::GetPropertyNativeReturnRecord::toJSONInternal(
     JSONEmitter &json,
     const SynthTrace &trace) const {
   Record::toJSONInternal(json, trace);
-  ReturnRecord::toJSONInternal(json, trace);
+  ReturnMixin::toJSONInternal(json, trace);
 }
 
 void SynthTrace::SetPropertyNativeRecord::toJSONInternal(

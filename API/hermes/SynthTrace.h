@@ -227,7 +227,7 @@ class SynthTrace {
   /// A MarkerRecord is an event that simply records an interesting event that
   /// is not necessarily meaningful to the interpreter. It comes with a tag that
   /// says what type of marker it was.
-  struct MarkerRecord : virtual Record {
+  struct MarkerRecord : public Record {
     static constexpr RecordType type{RecordType::Marker};
     const std::string tag_;
     explicit MarkerRecord(TimeSinceStart time, const std::string &tag)
@@ -253,16 +253,14 @@ class SynthTrace {
     }
   };
 
-  struct ReturnRecord : virtual Record {
+  struct ReturnMixin {
     const TraceValue retVal_;
 
-    explicit ReturnRecord(TimeSinceStart time, TraceValue value)
-        : Record(time), retVal_(value) {}
+    explicit ReturnMixin(TraceValue value) : retVal_(value) {}
 
-   protected:
     void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
-        const override;
-    bool operator==(const ReturnRecord &that) const;
+        const;
+    bool operator==(const ReturnMixin &that) const;
   };
 
   /// A EndExecJSRecord is an event where execution of JS source code stops.
@@ -271,12 +269,10 @@ class SynthTrace {
   /// into the JS. This event is not guaranteed to be the last event, for the
   /// aforementioned reason. The logged retVal is the result of the evaluation
   /// ("undefined" in the majority of cases).
-  struct EndExecJSRecord final : public MarkerRecord, public ReturnRecord {
+  struct EndExecJSRecord final : public MarkerRecord, public ReturnMixin {
     static constexpr RecordType type{RecordType::EndExecJS};
     EndExecJSRecord(TimeSinceStart time, TraceValue retVal)
-        : Record(time),
-          MarkerRecord(time, "end_global_code"),
-          ReturnRecord(time, retVal) {}
+        : MarkerRecord(time, "end_global_code"), ReturnMixin(retVal) {}
 
     RecordType getType() const override {
       return type;
@@ -286,7 +282,7 @@ class SynthTrace {
         ::hermes::JSONEmitter &json,
         const SynthTrace &trace) const final;
     std::vector<ObjectID> defs() const override {
-      auto defs = ReturnRecord::defs();
+      auto defs = MarkerRecord::defs();
       if (retVal_.isObject()) {
         defs.push_back(decodeObject(retVal_));
       }
@@ -599,15 +595,15 @@ class SynthTrace {
   /// A ReturnFromNativeRecord is an event where a native function returns to a
   /// JS caller.
   /// It pairs with \c CallToNativeRecord.
-  struct ReturnFromNativeRecord final : public ReturnRecord {
+  struct ReturnFromNativeRecord final : public Record, public ReturnMixin {
     static constexpr RecordType type{RecordType::ReturnFromNative};
     ReturnFromNativeRecord(TimeSinceStart time, TraceValue retVal)
-        : Record(time), ReturnRecord(time, retVal) {}
+        : Record(time), ReturnMixin(retVal) {}
     RecordType getType() const override {
       return type;
     }
     std::vector<ObjectID> uses() const override {
-      auto uses = ReturnRecord::uses();
+      auto uses = Record::uses();
       if (retVal_.isObject()) {
         uses.push_back(decodeObject(retVal_));
       }
@@ -621,15 +617,15 @@ class SynthTrace {
   /// A ReturnToNativeRecord is an event where a JS function returns to a native
   /// caller.
   /// It pairs with \c CallFromNativeRecord.
-  struct ReturnToNativeRecord final : public ReturnRecord {
+  struct ReturnToNativeRecord final : public Record, public ReturnMixin {
     static constexpr RecordType type{RecordType::ReturnToNative};
     ReturnToNativeRecord(TimeSinceStart time, TraceValue retVal)
-        : Record(time), ReturnRecord(time, retVal){};
+        : Record(time), ReturnMixin(retVal) {}
     RecordType getType() const override {
       return type;
     }
     std::vector<ObjectID> defs() const override {
-      auto defs = ReturnRecord::defs();
+      auto defs = Record::defs();
       if (retVal_.isObject()) {
         defs.push_back(decodeObject(retVal_));
       }
@@ -689,15 +685,16 @@ class SynthTrace {
     bool operator==(const Record &that) const final;
   };
 
-  struct GetPropertyNativeReturnRecord final : public ReturnRecord {
+  struct GetPropertyNativeReturnRecord final : public Record,
+                                               public ReturnMixin {
     static constexpr RecordType type{RecordType::GetPropertyNativeReturn};
     GetPropertyNativeReturnRecord(TimeSinceStart time, TraceValue retVal)
-        : Record(time), ReturnRecord(time, retVal){};
+        : Record(time), ReturnMixin(retVal) {}
     RecordType getType() const override {
       return type;
     }
     std::vector<ObjectID> uses() const override {
-      auto uses = ReturnRecord::uses();
+      auto uses = Record::uses();
       if (retVal_.isObject()) {
         uses.push_back(decodeObject(retVal_));
       }
