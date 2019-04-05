@@ -7,6 +7,7 @@
 #include "hermes/CompilerDriver/CompilerDriver.h"
 #include "hermes/ConsoleHost/ConsoleHost.h"
 #include "hermes/ConsoleHost/RuntimeFlags.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/VM/instrumentation/PageAccessTracker.h"
 
 #include "llvm/ADT/SmallString.h"
@@ -136,6 +137,10 @@ int main(int argc, char **argv_) {
 
   llvm::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
+  // Make sure any allocated alt signal stack is deleted on exit.
+  // (Initialize this here, after llvm stuff above -- captures current
+  // alt signal stack.)
+  oscompat::SigAltStackDeleter sigAltDeleter;
   driver::CompileResult res = driver::compileFromCommandLineOptions();
   if (res.bytecodeProvider) {
     if (cl::TrackBytecodeIO) {

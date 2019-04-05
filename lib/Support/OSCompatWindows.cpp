@@ -339,6 +339,11 @@ bool unset_env(const char *name) {
   return _putenv_s(name, "") == 0;
 }
 
+/// Windows does not have the concept of alternate signal stacks, so nothing to
+/// do.
+SigAltStackDeleter::SigAltStackDeleter() {}
+SigAltStackDeleter::~SigAltStackDeleter() {}
+
 } // namespace oscompat
 } // namespace hermes
 

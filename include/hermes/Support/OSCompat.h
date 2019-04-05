@@ -235,6 +235,19 @@ bool set_env(const char *name, const char *value);
 /// \return true if successful, false on error.
 bool unset_env(const char *name);
 
+/// LLVM sets up an alternate signal stack.  By default, the stack is
+/// never deleted, and is reported as a leak.  The destructor of this
+/// class deletes the alt signal stack, if one was installed.
+class SigAltStackDeleter {
+ public:
+  SigAltStackDeleter();
+  ~SigAltStackDeleter();
+#if !defined(__APPLE__) && !defined(_WINDOWS)
+ private:
+  void *origStack_{nullptr};
+#endif
+};
+
 } // namespace oscompat
 } // namespace hermes
 

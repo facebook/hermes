@@ -11,6 +11,7 @@
 #include <cassert>
 #include <vector>
 
+#include <signal.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
 
@@ -447,6 +448,25 @@ bool set_env(const char *name, const char *value) {
 
 bool unset_env(const char *name) {
   return unsetenv(name) == 0;
+}
+
+SigAltStackDeleter::SigAltStackDeleter() {
+#ifndef __APPLE__
+  stack_t oldAltStack;
+  if (sigaltstack(nullptr, &oldAltStack) == 0) {
+    origStack_ = oldAltStack.ss_sp;
+  }
+#endif
+}
+
+SigAltStackDeleter::~SigAltStackDeleter() {
+#ifndef __APPLE__
+  stack_t oldAltStack;
+  if (sigaltstack(nullptr, &oldAltStack) == 0 && oldAltStack.ss_sp != nullptr &&
+      oldAltStack.ss_sp == origStack_) {
+    free(oldAltStack.ss_sp);
+  }
+#endif
 }
 
 } // namespace oscompat
