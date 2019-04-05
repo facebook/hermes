@@ -14,7 +14,6 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
   uint32_t cjsModuleCount = BM.getBytecodeOptions().cjsModulesStaticallyResolved
       ? BM.getCJSModuleTableStatic().size()
       : BM.getCJSModuleTable().size();
-
   BytecodeFileHeader header{MAGIC,
                             BYTECODE_VERSION,
                             sourceHash,
@@ -22,8 +21,8 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
                             BM.getGlobalFunctionIndex(),
                             BM.getNumFunctions(),
                             BM.getStringTableSize(),
+                            overflowStringEntryCount_,
                             BM.getIdentifierCount(),
-                            stringTableBytes_,
                             BM.getStringStorageSize(),
                             static_cast<uint32_t>(BM.getRegExpTable().size()),
                             static_cast<uint32_t>(BM.getRegExpStorage().size()),
@@ -84,7 +83,6 @@ void BytecodeSerializer::serializeFunctionTable(BytecodeModule &BM) {
 
 // ========================== String Table ==========================
 void BytecodeSerializer::serializeStringTable(BytecodeModule &BM) {
-  auto stringTableBegin = loc_;
   std::vector<OverflowStringTableEntry> overflow;
   for (auto &entry : BM.getStringTable()) {
     SmallStringTableEntry small(entry, overflow.size());
@@ -93,8 +91,8 @@ void BytecodeSerializer::serializeStringTable(BytecodeModule &BM) {
       overflow.emplace_back(entry.getOffset(), entry.getLength());
     }
   }
-  writeBinaryArray(ArrayRef<OverflowStringTableEntry>(overflow));
-  stringTableBytes_ = loc_ - stringTableBegin;
+  overflowStringEntryCount_ = static_cast<uint32_t>(overflow.size());
+  writeBinaryArray(llvm::makeArrayRef(overflow));
   writeBinaryArray(BM.getIdentifierTranslations());
   writeBinaryArray(BM.getStringStorage());
 }

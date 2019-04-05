@@ -663,12 +663,14 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       "Function table",
       functionHeadersStart,
       functionHeadersStart + fileHeader->functionCount);
-  auto stringTableStart = reinterpret_cast<const uint8_t *>(
-      bcProvider->getSmallStringTableEntries().begin());
   addSection(
       "String table",
-      stringTableStart,
-      stringTableStart + fileHeader->stringTableBytes);
+      bcProvider->getSmallStringTableEntries().begin(),
+      bcProvider->getSmallStringTableEntries().end());
+  addSection(
+      "Overflow String table",
+      bcProvider->getOverflowStringTableEntries().begin(),
+      bcProvider->getOverflowStringTableEntries().end());
   addSection(
       "String storage",
       bcProvider->getStringStorage().begin(),

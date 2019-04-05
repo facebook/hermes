@@ -139,16 +139,9 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
 
   functionHeaders = castArrayRef<SmallFuncHeader>(buf, h->functionCount);
 
-  // The string table entries have the short and overflow entries packed
-  // adjacent, with the sum size given by stringTableBytes;
-  const auto *stringTableEnd =
-      alignCheckCast<OverflowStringTableEntry>(buf + h->stringTableBytes);
   stringTableEntries = castArrayRef<SmallStringTableEntry>(buf, h->stringCount);
-  size_t overflowCount =
-      stringTableEnd - alignCheckCast<OverflowStringTableEntry>(buf);
   stringTableOverflowEntries =
-      castArrayRef<OverflowStringTableEntry>(buf, overflowCount);
-
+      castArrayRef<OverflowStringTableEntry>(buf, h->overflowStringCount);
   identifierTranslations = castArrayRef<uint32_t>(buf, h->identifierCount);
 
   stringStorage = castArrayRef<char>(buf, h->stringStorageSize);
@@ -283,6 +276,7 @@ BCProviderFromBuffer::BCProviderFromBuffer(std::unique_ptr<const Buffer> buffer)
   stringCount_ = fileHeader->stringCount;
   stringTableEntries_ = fields.stringTableEntries.data();
   identifierTranslations_ = fields.identifierTranslations;
+  overflowStringTableEntries_ = fields.stringTableOverflowEntries;
   stringStorage_ = fields.stringStorage;
   arrayBuffer_ = fields.arrayBuffer;
   objKeyBuffer_ = fields.objKeyBuffer;

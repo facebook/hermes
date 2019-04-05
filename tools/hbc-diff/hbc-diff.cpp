@@ -93,7 +93,12 @@ static ExecutionStatus diffFiles(
     fileSizes[i].push_back(fileHeader->fileLength);
     fileSizes[i].push_back(
         bytecode->getFunctionCount() * sizeof(hbc::SmallFuncHeader));
-    fileSizes[i].push_back(fileHeader->stringTableBytes);
+    fileSizes[i].push_back(
+        bytecode->getSmallStringTableEntries().size() *
+        sizeof(hbc::SmallStringTableEntry));
+    fileSizes[i].push_back(
+        bytecode->getOverflowStringTableEntries().size() *
+        sizeof(hbc::OverflowStringTableEntry));
     fileSizes[i].push_back(bytecode->getStringStorage().size());
     fileSizes[i].push_back(bytecode->getArrayBuffer().size());
     fileSizes[i].push_back(bytecode->getObjectKeyBuffer().size());

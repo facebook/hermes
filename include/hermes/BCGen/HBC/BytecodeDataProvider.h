@@ -279,8 +279,13 @@ class BCProviderFromBuffer final : public BCProviderBase {
   /// List of function headers.
   const hbc::SmallFuncHeader *functionHeaders_{};
 
-  /// List of string table entires (compact part, followed by overflow ones).
+  /// List of string table entries.
+  /// Some of these may overflow, in which case their offset indexes into the
+  /// overflow table below.
   const hbc::SmallStringTableEntry *stringTableEntries_{};
+
+  /// List of overflow string table entries.
+  llvm::ArrayRef<OverflowStringTableEntry> overflowStringTableEntries_{};
 
   /// Offset of the location to find debug info.
   uint32_t debugInfoOffset_{};
@@ -366,21 +371,23 @@ class BCProviderFromBuffer final : public BCProviderBase {
     }
   }
 
+  /// Returns the ArrayRef to the small string table entries.
+  /// Some of these may be indexes into overflow string table entries.
+  llvm::ArrayRef<SmallStringTableEntry> getSmallStringTableEntries() const {
+    return llvm::makeArrayRef(stringTableEntries_, stringCount_);
+  }
+
   /// Returns the arrayref to the small string table entries;
   /// this is also the start of the string table section.
-  const llvm::ArrayRef<hbc::SmallStringTableEntry> getSmallStringTableEntries()
+  llvm::ArrayRef<OverflowStringTableEntry> getOverflowStringTableEntries()
       const {
-    return llvm::ArrayRef<hbc::SmallStringTableEntry>(
-        stringTableEntries_, stringCount_);
+    return overflowStringTableEntries_;
   }
 
   StringTableEntry getStringTableEntry(uint32_t index) const {
     auto &smallHeader = stringTableEntries_[index];
     if (LLVM_UNLIKELY(smallHeader.isOverflowed())) {
-      auto overflowBase =
-          reinterpret_cast<const hbc::OverflowStringTableEntry *>(
-              stringTableEntries_ + stringCount_);
-      auto overflow = overflowBase[smallHeader.offset];
+      auto overflow = overflowStringTableEntries_[smallHeader.offset];
       StringTableEntry entry(
           overflow.offset, overflow.length, smallHeader.isUTF16);
       if (smallHeader.isIdentifier) {

@@ -44,8 +44,8 @@ class BytecodeSerializer {
   uint32_t fileLength_{0};
   /// Offset of the debug info tables.
   uint32_t debugInfoOffset_{0};
-  /// Bytes used for string table (not string storage).
-  uint32_t stringTableBytes_{0};
+  /// Count of overflow string entries, computed during layout phase.
+  uint32_t overflowStringEntryCount_{0};
 
   /// Each subsection of a function's `info' section is aligned thusly.
   static constexpr uint32_t INFO_ALIGNMENT = 4;
