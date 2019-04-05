@@ -1061,10 +1061,10 @@ CallResult<bool> JSObject::putNamed(
         // builtins. When the VMExperimentFlags is 0, we get default behavior,
         // which is throwing an exception; when the flag is 1, we do nothing;
         // when the flag is 2, we trigger a crash.
-        uint32_t experimentFlag = runtime->getVMExperimentFlags();
-        if (experimentFlag == 1) {
+        auto experimentFlags = runtime->getVMExperimentFlags();
+        if (experimentFlags & experiments::OverrideBuitinsIgnore) {
           return false;
-        } else if (experimentFlag == 2) {
+        } else if (experimentFlags & experiments::OverrideBuitinsFatal) {
           hermes_fatal("Attempting to override a static builtin.");
         } else {
           return raiseErrorForOverridingStaticBuiltin(
