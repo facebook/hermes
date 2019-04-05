@@ -28,6 +28,7 @@ namespace {
 
 using namespace ::hermes::parser;
 using RecordType = SynthTrace::RecordType;
+using JSONEmitter = ::hermes::JSONEmitter;
 
 JSONObject *parseJSON(
     JSONFactory::Allocator &alloc,
@@ -326,9 +327,7 @@ double decodeNumber(const std::string &numberAsString) {
   return ::hermes::safeTypeCast<uint64_t, double>(x);
 }
 
-} // namespace
-
-static std::string doublePrinter(double x) {
+std::string doublePrinter(double x) {
   // Encode a number as its little-endian hex encoding.
   // NOTE: While this could use big-endian, it makes it more complicated for
   // JS to read out (forces use of a DataView rather than a Float64Array)
@@ -347,20 +346,7 @@ static std::string doublePrinter(double x) {
   return result;
 }
 
-template <typename C, typename Printer>
-static void
-printSeqContainer(llvm::raw_ostream &os, const C &args, Printer printer) {
-  bool begin = true;
-  os << "[";
-  for (const auto &arg : args) {
-    if (!begin) {
-      os << ", ";
-    }
-    begin = false;
-    printer(os, arg);
-  }
-  os << "]";
-}
+} // namespace
 
 SynthTrace::TraceValue SynthTrace::encodeUndefined() {
   return TraceValue::encodeUndefinedValue();
@@ -407,38 +393,28 @@ SynthTrace::ObjectID SynthTrace::decodeObject(TraceValue value) {
   return reinterpret_cast<ObjectID>(value.getObject());
 }
 
-SynthTrace::JSONEncodedString SynthTrace::encode(TraceValue value) const {
+std::string SynthTrace::encode(TraceValue value) const {
   if (value.isUndefined()) {
-    return "\"undefined:\"";
-  }
-  if (value.isNull()) {
-    return "\"null:\"";
-  }
-  if (value.isString()) {
-    JSONEncodedString result;
-    llvm::raw_string_ostream str(result);
-    ::hermes::JSONEmitter emitter{str};
-    emitter.emitValue(std::string("string:") + decodeString(value));
-    str.flush();
-    return result;
-  }
-  std::stringstream ss;
-  if (value.isObject()) {
-    ss << "\"object:" << decodeObject(value) << "\"";
+    return "undefined:";
+  } else if (value.isNull()) {
+    return "null:";
+  } else if (value.isString()) {
+    // This is not properly escaped yet, and must be passed through
+    // JSONEmitter::emitValue before it can be put into JSON.
+    return std::string("string:") + decodeString(value);
+  } else if (value.isObject()) {
+    return std::string("object:") +
+        ::hermes::oscompat::to_string(decodeObject(value));
   } else if (value.isNumber()) {
-    ss << "\"number:" << doublePrinter(value.getDouble()) << "\"";
+    return std::string("number:") + doublePrinter(value.getDouble());
   } else if (value.isBool()) {
-    ss << "\"bool:" << (value.getBool() ? "true" : "false") << "\"";
-  }
-  auto result = ss.str();
-  if (result.empty()) {
+    return std::string("bool:") + (value.getBool() ? "true" : "false");
+  } else {
     llvm_unreachable("No other values allowed in the trace");
   }
-  return result;
 }
 
-SynthTrace::TraceValue SynthTrace::decode(
-    const SynthTrace::JSONEncodedString &str) {
+SynthTrace::TraceValue SynthTrace::decode(const std::string &str) {
   auto location = str.find(':');
   assert(location < str.size() && "Must contain a type tag");
   auto tag = std::string(str.begin(), str.begin() + location);
@@ -524,11 +500,11 @@ SynthTrace::parse(const std::string &tracefile) {
   return parse(std::move(llvm::MemoryBuffer::getFile(tracefile).get()));
 }
 
-void SynthTrace::Record::toJSON(llvm::raw_ostream &os, const SynthTrace &trace)
+void SynthTrace::Record::toJSON(JSONEmitter &json, const SynthTrace &trace)
     const {
-  os << "{";
-  toJSONInternal(os, trace);
-  os << "}";
+  json.openDict();
+  toJSONInternal(json, trace);
+  json.closeDict();
 }
 
 bool SynthTrace::MarkerRecord::operator==(const Record &that) const {
@@ -663,117 +639,128 @@ bool SynthTrace::SetPropertyNativeRecord::operator==(const Record &that) const {
       propName_ == thatCasted.propName_ && equal(value_, thatCasted.value_);
 }
 
-void SynthTrace::Record::toJSONInternal(
-    llvm::raw_ostream &os,
-    const SynthTrace &trace) const {
-  os << "\"type\": \"" << getType() << "Record\", \"time\": " << time_.count();
+void SynthTrace::Record::toJSONInternal(JSONEmitter &json, const SynthTrace &)
+    const {
+  std::string storage;
+  llvm::raw_string_ostream os{storage};
+  os << getType() << "Record";
+  os.flush();
+
+  json.emitKeyValue("type", storage);
+  json.emitKeyValue("time", time_.count());
 }
 
 void SynthTrace::MarkerRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    JSONEmitter &json,
     const SynthTrace &trace) const {
   // Does not call Record::toJSONInternal() as this is an abstract type
-  os << ", \"tag\": \"" << tag_ << "\"";
+  json.emitKeyValue("tag", tag_);
 }
 
 void SynthTrace::CreateObjectRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
-  os << ", \"objID\": " << objID_;
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("objID", objID_);
 }
 
 void SynthTrace::GetOrSetPropertyRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
-  os << ", \"objID\": " << objID_ << ", \"propName\": \"" << propName_
-     << "\", \"value\": " << trace.encode(value_);
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("propName", propName_);
+  json.emitKeyValue("value", trace.encode(value_));
 }
 
 void SynthTrace::HasPropertyRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
-  os << ", \"propName\": \"" << propName_ << "\"";
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("propName", propName_);
 }
 
 void SynthTrace::GetPropertyNamesRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
-  os << ", \"objID\": " << objID_ << ", \"propNamesID\": " << propNamesID_;
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("propNamesID", propNamesID_);
 }
 
 void SynthTrace::CreateArrayRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
-  os << ", \"objID\": " << objID_ << ", \"length\": " << length_;
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("length", length_);
 }
 
 void SynthTrace::ArrayReadOrWriteRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
-  os << ", \"objID\": " << objID_ << ", \"index\": " << index_
-     << ", \"value\": " << trace.encode(value_);
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("index", index_);
+  json.emitKeyValue("value", trace.encode(value_));
 }
 
 void SynthTrace::CallRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
-  os << ", \"functionID\": " << functionID_
-     << ", \"thisArg\": " << trace.encode(thisArg_) << ", \"args\": ";
-  printSeqContainer(
-      os, args_, [&trace](llvm::raw_ostream &os, const TraceValue &arg) {
-        os << trace.encode(arg);
-      });
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("functionID", functionID_);
+  json.emitKeyValue("thisArg", trace.encode(thisArg_));
+  json.emitKey("args");
+  json.openArray();
+  for (const TraceValue &arg : args_) {
+    json.emitValue(trace.encode(arg));
+  }
+  json.closeArray();
 }
 
 void SynthTrace::ReturnRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    JSONEmitter &json,
     const SynthTrace &trace) const {
   // Does not call Record::toJSONInternal() as this is an abstract type
-  os << ", \"retval\": " << trace.encode(retVal_);
+  json.emitKeyValue("retval", trace.encode(retVal_));
 }
 
 void SynthTrace::EndExecJSRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    ::hermes::JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
-  MarkerRecord::toJSONInternal(os, trace);
-  ReturnRecord::toJSONInternal(os, trace);
+  Record::toJSONInternal(json, trace);
+  MarkerRecord::toJSONInternal(json, trace);
+  ReturnRecord::toJSONInternal(json, trace);
 }
 
 void SynthTrace::ReturnFromNativeRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    ::hermes::JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
-  ReturnRecord::toJSONInternal(os, trace);
+  Record::toJSONInternal(json, trace);
+  ReturnRecord::toJSONInternal(json, trace);
 }
 
 void SynthTrace::ReturnToNativeRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    ::hermes::JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
-  ReturnRecord::toJSONInternal(os, trace);
+  Record::toJSONInternal(json, trace);
+  ReturnRecord::toJSONInternal(json, trace);
 }
 
 void SynthTrace::GetOrSetPropertyNativeRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    JSONEmitter &json,
     const SynthTrace &trace) const {
-  Record::toJSONInternal(os, trace);
-  os << ", \"hostObjectID\": " << hostObjectID_ << ", \"propName\": \""
-     << propName_ << "\"";
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("hostObjectID", hostObjectID_);
+  json.emitKeyValue("propName", propName_);
 }
 
 void SynthTrace::SetPropertyNativeRecord::toJSONInternal(
-    llvm::raw_ostream &os,
+    JSONEmitter &json,
     const SynthTrace &trace) const {
-  GetOrSetPropertyNativeRecord::toJSONInternal(os, trace);
-  os << ", \"value\": " << trace.encode(value_);
+  GetOrSetPropertyNativeRecord::toJSONInternal(json, trace);
+  json.emitKeyValue("value", trace.encode(value_));
 }
 
 llvm::raw_ostream &operator<<(
@@ -782,45 +769,71 @@ llvm::raw_ostream &operator<<(
   // Don't need to emit start time, since each time is output with respect to
   // the start time.
 
-  // Version
-  os << "{\"version\": " << tracePrinter.trace.synthVersion();
+  JSONEmitter json{os};
+  {
+    // Global section.
+    json.openDict();
+    json.emitKeyValue("version", tracePrinter.trace.synthVersion());
+    json.emitKeyValue("globalObjID", tracePrinter.trace.globalObjID());
+    json.emitKeyValue(
+        "sourceHash", ::hermes::hashAsString(tracePrinter.trace.sourceHash()));
 
-  os << ", \"globalObjID\": " << tracePrinter.trace.globalObjID()
-     << ", \"sourceHash\": \""
-     << ::hermes::hashAsString(tracePrinter.trace.sourceHash())
-     // GC Config section.
-     << "\", \"gcConfig\": {\"initHeapSize\": "
-     << tracePrinter.conf.getGCConfig().getInitHeapSize()
-     << ", \"maxHeapSize\": "
-     << tracePrinter.conf.getGCConfig().getMaxHeapSize() << "}";
+    // GCConfig section.
+    {
+      json.emitKey("gcConfig");
+      json.openDict();
+      json.emitKeyValue(
+          "initHeapSize", tracePrinter.conf.getGCConfig().getInitHeapSize());
+      json.emitKeyValue(
+          "maxHeapSize", tracePrinter.conf.getGCConfig().getMaxHeapSize());
+      json.closeDict();
+    }
 
-  // Environment section.
-  os << ", \"env\": {\"mathRandomSeed\": " << tracePrinter.env.mathRandomSeed;
-  const auto uintPrinter = [](llvm::raw_ostream &os, uint64_t x) { os << x; };
-  os << ", \"callsToDateNow\": ";
-  printSeqContainer(os, tracePrinter.env.callsToDateNow, uintPrinter);
-  os << ", \"callsToNewDate\": ";
-  printSeqContainer(os, tracePrinter.env.callsToNewDate, uintPrinter);
-  os << ", \"callsToDateAsFunction\": ";
-  printSeqContainer(
-      os,
-      tracePrinter.env.callsToDateAsFunction,
-      [](llvm::raw_ostream &os, const std::string &datestr) {
-        os << "\"" << datestr << "\"";
-      });
-  os << "}";
+    {
+      // Environment section.
+      json.emitKey("env");
+      json.openDict();
+      json.emitKeyValue("mathRandomSeed", tracePrinter.env.mathRandomSeed);
 
-  // Records section.
-  os << ", \"trace\": ";
-  printSeqContainer(
-      os,
-      tracePrinter.trace.records(),
-      [&tracePrinter](
-          llvm::raw_ostream &os,
-          const std::unique_ptr<SynthTrace::Record> &rec) {
-        rec->toJSON(os, tracePrinter.trace);
-      });
-  return os << "}";
+      json.emitKey("callsToDateNow");
+      json.openArray();
+      for (uint64_t dateNow : tracePrinter.env.callsToDateNow) {
+        json.emitValue(dateNow);
+      }
+      json.closeArray();
+
+      json.emitKey("callsToNewDate");
+      json.openArray();
+      for (uint64_t newDate : tracePrinter.env.callsToNewDate) {
+        json.emitValue(newDate);
+      }
+      json.closeArray();
+
+      json.emitKey("callsToDateAsFunction");
+      json.openArray();
+      for (const std::string &dateAsFunc :
+           tracePrinter.env.callsToDateAsFunction) {
+        json.emitValue(dateAsFunc);
+      }
+      json.closeArray();
+
+      json.closeDict();
+    }
+
+    {
+      // Records section.
+      json.emitKey("trace");
+      json.openArray();
+      for (const std::unique_ptr<SynthTrace::Record> &rec :
+           tracePrinter.trace.records()) {
+        rec->toJSON(json, tracePrinter.trace);
+      }
+      json.closeArray();
+    }
+
+    json.closeDict();
+  }
+  return os;
 }
 
 llvm::raw_ostream &operator<<(

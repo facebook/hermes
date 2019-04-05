@@ -56,10 +56,16 @@ class JSONEmitter {
   void emitValue(bool val);
 
   /// Emit an integer value \p val.
-  void emitValue(int32_t val);
+  void emitValue(short val);
+  void emitValue(int val);
+  void emitValue(long val);
+  void emitValue(long long val);
 
   /// Emit an unsigned integer value \p val.
-  void emitValue(uint32_t val);
+  void emitValue(unsigned short val);
+  void emitValue(unsigned int val);
+  void emitValue(unsigned long val);
+  void emitValue(unsigned long long val);
 
   /// Emit a double value \p val.
   /// Note that only finite values may be so emitted. Infinities and NaNs are

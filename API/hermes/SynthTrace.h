@@ -8,6 +8,7 @@
 #define HERMES_SYNTHTRACE_H
 
 #include "hermes/Public/RuntimeConfig.h"
+#include "hermes/Support/JSONEmitter.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/Operations.h"
@@ -51,9 +52,6 @@ class SynthTrace {
   /// NOTE: Since HermesValue can only store 64-bit values, strings need to be
   /// changed into a table index.
   using TraceValue = ::hermes::vm::HermesValue;
-  /// A JSONEncodedString has already been properly escaped for directly
-  /// emitting into a stream of JSON.
-  using JSONEncodedString = std::string;
 
   /// A TimePoint is a time when some event occurred.
   using TimePoint = std::chrono::steady_clock::time_point;
@@ -99,8 +97,10 @@ class SynthTrace {
     explicit Record(TimeSinceStart time) : time_(time) {}
     virtual ~Record() = default;
 
-    /// Write out a serialization of this Record to \p os.
-    void toJSON(llvm::raw_ostream &os, const SynthTrace &trace) const;
+    /// Write out a serialization of this Record.
+    /// \param json An emitter connected to an ostream which will write out
+    ///   JSON.
+    void toJSON(::hermes::JSONEmitter &json, const SynthTrace &trace) const;
     virtual RecordType getType() const = 0;
 
     /// \return A list of object ids that are defined by this record.
@@ -129,8 +129,9 @@ class SynthTrace {
     /// Emit JSON fields into \p os, excluding the closing curly brace.
     /// NOTE: This is overridable, and non-abstract children should call the
     /// parent.
-    virtual void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
-        const;
+    virtual void toJSONInternal(
+        ::hermes::JSONEmitter &json,
+        const SynthTrace &trace) const;
   };
 
   explicit SynthTrace(ObjectID globalObjID)
@@ -157,8 +158,8 @@ class SynthTrace {
     sourceHash_ = sourceHash;
   }
 
-  /// Given a trace value, turn it into its JSON encoded typed string.
-  JSONEncodedString encode(TraceValue value) const;
+  /// Given a trace value, turn it into its typed string.
+  std::string encode(TraceValue value) const;
   /// Encode an undefined JS value for the trace.
   static TraceValue encodeUndefined();
   /// Encode a null JS value for the trace.
@@ -174,7 +175,7 @@ class SynthTrace {
   TraceValue encodeString(const std::string &value);
 
   /// Decodes a string into a trace value. It can add to the string table.
-  TraceValue decode(const JSONEncodedString &);
+  TraceValue decode(const std::string &);
   /// Extracts an object ID from a trace value.
   /// \pre The value must be an object.
   static ObjectID decodeObject(TraceValue value);
@@ -236,7 +237,7 @@ class SynthTrace {
     }
 
    protected:
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
     bool operator==(const Record &that) const override;
   };
@@ -259,7 +260,7 @@ class SynthTrace {
         : Record(time), retVal_(value) {}
 
    protected:
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
     bool operator==(const ReturnRecord &that) const;
   };
@@ -281,8 +282,9 @@ class SynthTrace {
       return type;
     }
     bool operator==(const Record &that) const final;
-    virtual void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
-        const final;
+    virtual void toJSONInternal(
+        ::hermes::JSONEmitter &json,
+        const SynthTrace &trace) const final;
     std::vector<ObjectID> defs() const override {
       auto defs = ReturnRecord::defs();
       if (retVal_.isObject()) {
@@ -303,7 +305,7 @@ class SynthTrace {
 
     bool operator==(const Record &that) const final;
 
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
     RecordType getType() const override {
       return type;
@@ -352,7 +354,7 @@ class SynthTrace {
       return {objID_};
     }
 
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
   };
 
@@ -405,7 +407,7 @@ class SynthTrace {
 
     bool operator==(const Record &that) const final;
 
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
     RecordType getType() const override {
       return type;
@@ -430,7 +432,7 @@ class SynthTrace {
 
     bool operator==(const Record &that) const final;
 
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
     RecordType getType() const override {
       return type;
@@ -458,7 +460,7 @@ class SynthTrace {
 
     bool operator==(const Record &that) const final;
 
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
     RecordType getType() const override {
       return type;
@@ -482,7 +484,7 @@ class SynthTrace {
 
     bool operator==(const Record &that) const final;
 
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
     std::vector<ObjectID> uses() const override {
       return {objID_};
@@ -546,7 +548,7 @@ class SynthTrace {
 
     bool operator==(const Record &that) const final;
 
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
     std::vector<ObjectID> uses() const override {
       // The function is used regardless of direction.
@@ -612,7 +614,7 @@ class SynthTrace {
       return uses;
     }
     bool operator==(const Record &that) const final;
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
   };
 
@@ -634,7 +636,7 @@ class SynthTrace {
       return defs;
     }
     bool operator==(const Record &that) const final;
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
   };
 
@@ -664,7 +666,7 @@ class SynthTrace {
         std::string propName)
         : Record(time), hostObjectID_(hostObjectID), propName_(propName) {}
 
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
     std::vector<ObjectID> uses() const override {
       return {hostObjectID_};
@@ -719,7 +721,7 @@ class SynthTrace {
         : GetOrSetPropertyNativeRecord(time, hostObjectID, propName),
           value_(value) {}
     bool operator==(const Record &that) const final;
-    void toJSONInternal(llvm::raw_ostream &os, const SynthTrace &trace)
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
     RecordType getType() const override {
       return type;

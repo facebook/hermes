@@ -22,12 +22,42 @@ void JSONEmitter::emitValue(bool val) {
   OS << (val ? "true" : "false");
 }
 
-void JSONEmitter::emitValue(int32_t val) {
+void JSONEmitter::emitValue(short val) {
   willEmitValue();
   OS << val;
 }
 
-void JSONEmitter::emitValue(uint32_t val) {
+void JSONEmitter::emitValue(int val) {
+  willEmitValue();
+  OS << val;
+}
+
+void JSONEmitter::emitValue(long val) {
+  willEmitValue();
+  OS << val;
+}
+
+void JSONEmitter::emitValue(long long val) {
+  willEmitValue();
+  OS << val;
+}
+
+void JSONEmitter::emitValue(unsigned short val) {
+  willEmitValue();
+  OS << val;
+}
+
+void JSONEmitter::emitValue(unsigned int val) {
+  willEmitValue();
+  OS << val;
+}
+
+void JSONEmitter::emitValue(unsigned long val) {
+  willEmitValue();
+  OS << val;
+}
+
+void JSONEmitter::emitValue(unsigned long long val) {
   willEmitValue();
   OS << val;
 }

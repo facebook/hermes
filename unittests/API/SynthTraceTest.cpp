@@ -461,7 +461,8 @@ struct SynthTraceSerializationTest : public ::testing::Test {
   std::string to_string(const SynthTrace::Record &rec) {
     std::string result;
     llvm::raw_string_ostream resultStream{result};
-    rec.toJSON(resultStream, trace);
+    ::hermes::JSONEmitter json{resultStream};
+    rec.toJSON(json, trace);
     resultStream.flush();
     return result;
   }
@@ -469,69 +470,60 @@ struct SynthTraceSerializationTest : public ::testing::Test {
 
 TEST_F(SynthTraceSerializationTest, EncodeNumber) {
   EXPECT_EQ(
-      "\"number:0x3ff0000000000000\"",
-      trace.encode(SynthTrace::encodeNumber(1)));
+      "number:0x3ff0000000000000", trace.encode(SynthTrace::encodeNumber(1)));
 }
 
 TEST_F(SynthTraceSerializationTest, EncodeNaN) {
   EXPECT_EQ(
-      "\"number:0x7ff8000000000000\"",
+      "number:0x7ff8000000000000",
       trace.encode(
           SynthTrace::encodeNumber(std::numeric_limits<double>::quiet_NaN())));
 }
 
 TEST_F(SynthTraceSerializationTest, EncodeInfinity) {
   EXPECT_EQ(
-      "\"number:0x7ff0000000000000\"",
+      "number:0x7ff0000000000000",
       trace.encode(
           SynthTrace::encodeNumber(std::numeric_limits<double>::infinity())));
 }
 
 TEST_F(SynthTraceSerializationTest, EncodeNegativeInfinity) {
   EXPECT_EQ(
-      "\"number:0xfff0000000000000\"",
+      "number:0xfff0000000000000",
       trace.encode(
           SynthTrace::encodeNumber(-std::numeric_limits<double>::infinity())));
 }
 
 TEST_F(SynthTraceSerializationTest, EncodeReallyBigInteger) {
   EXPECT_EQ(
-      "\"number:0x423d2729eec71f97\"",
+      "number:0x423d2729eec71f97",
       trace.encode(SynthTrace::encodeNumber(125211111111.1234)));
 }
 
 TEST_F(SynthTraceSerializationTest, EncodeString) {
-  EXPECT_EQ("\"string:hello\"", trace.encode(trace.encodeString("hello")));
+  EXPECT_EQ("string:hello", trace.encode(trace.encodeString("hello")));
 }
 
 TEST_F(SynthTraceSerializationTest, EncodeEmptyString) {
-  EXPECT_EQ("\"string:\"", trace.encode(trace.encodeString("")));
+  EXPECT_EQ("string:", trace.encode(trace.encodeString("")));
 }
 
 TEST_F(SynthTraceSerializationTest, EncodeStringWithQuotes) {
   EXPECT_EQ(
-      "\"string:this string contains \\\"quotes\\\"\"",
+      "string:this string contains \"quotes\"",
       trace.encode(trace.encodeString("this string contains \"quotes\"")));
-}
-
-TEST_F(SynthTraceSerializationTest, EncodeUTF8String) {
-  // "namaste" in Hindi, encoded as UTF-8.
-  std::string namaste = u8"नमस्ते";
-  EXPECT_EQ(
-      trace.encode(trace.encodeString(namaste)),
-      "\"string:\\u0928\\u092e\\u0938\\u094d\\u0924\\u0947\"");
 }
 
 TEST_F(SynthTraceSerializationTest, CallNoArgs) {
   EXPECT_EQ(
-      R"({"type": "CallFromNativeRecord", "time": 0, "functionID": 1, "thisArg": "undefined:", "args": []})",
+      R"({"type":"CallFromNativeRecord","time":0,"functionID":1,"thisArg":"undefined:","args":[]})",
       to_string(SynthTrace::CallFromNativeRecord(
           dummyTime, 1, SynthTrace::encodeUndefined(), {})));
 }
 
 TEST_F(SynthTraceSerializationTest, Call) {
   EXPECT_EQ(
-      R"({"type": "CallFromNativeRecord", "time": 0, "functionID": 1, "thisArg": "object:1", "args": ["undefined:", "bool:true"]})",
+      R"({"type":"CallFromNativeRecord","time":0,"functionID":1,"thisArg":"object:1","args":["undefined:","bool:true"]})",
       to_string(SynthTrace::CallFromNativeRecord(
           dummyTime,
           1,
@@ -541,7 +533,7 @@ TEST_F(SynthTraceSerializationTest, Call) {
 
 TEST_F(SynthTraceSerializationTest, Construct) {
   EXPECT_EQ(
-      R"({"type": "ConstructFromNativeRecord", "time": 0, "functionID": 1, "thisArg": "undefined:", "args": ["null:"]})",
+      R"({"type":"ConstructFromNativeRecord","time":0,"functionID":1,"thisArg":"undefined:","args":["null:"]})",
       to_string(SynthTrace::ConstructFromNativeRecord(
           dummyTime,
           1,
@@ -551,70 +543,79 @@ TEST_F(SynthTraceSerializationTest, Construct) {
 
 TEST_F(SynthTraceSerializationTest, Return) {
   EXPECT_EQ(
-      R"({"type": "ReturnFromNativeRecord", "time": 0, "retval": "bool:true"})",
+      R"({"type":"ReturnFromNativeRecord","time":0,"retval":"bool:true"})",
       to_string(SynthTrace::ReturnFromNativeRecord(
           dummyTime, SynthTrace::encodeBool(true))));
   EXPECT_EQ(
-      R"({"type": "ReturnToNativeRecord", "time": 0, "retval": "bool:false"})",
+      R"({"type":"ReturnToNativeRecord","time":0,"retval":"bool:false"})",
       to_string(SynthTrace::ReturnToNativeRecord(
           dummyTime, SynthTrace::encodeBool(false))));
 }
 
+TEST_F(SynthTraceSerializationTest, ReturnEncodeUTF8String) {
+  // "namaste" in Hindi, encoded as UTF-8.
+  std::string namaste = u8"नमस्ते";
+  EXPECT_EQ(
+      R"({"type":"ReturnFromNativeRecord","time":0,"retval":"string:\u0928\u092e\u0938\u094d\u0924\u0947"})",
+      to_string(SynthTrace::ReturnFromNativeRecord{
+          dummyTime, trace.encodeString(namaste)}));
+}
+
 TEST_F(SynthTraceSerializationTest, GetProperty) {
   EXPECT_EQ(
-      R"({"type": "GetPropertyRecord", "time": 0, "objID": 1, "propName": "a", "value": "undefined:"})",
+      R"({"type":"GetPropertyRecord","time":0,"objID":1,"propName":"a","value":"undefined:"})",
       to_string(SynthTrace::GetPropertyRecord(
           dummyTime, 1, "a", SynthTrace::encodeUndefined())));
 }
 
 TEST_F(SynthTraceSerializationTest, SetProperty) {
   EXPECT_EQ(
-      R"({"type": "SetPropertyRecord", "time": 0, "objID": 1, "propName": "a", "value": "string:b"})",
+      R"({"type":"SetPropertyRecord","time":0,"objID":1,"propName":"a","value":"string:b"})",
       to_string(SynthTrace::SetPropertyRecord(
           dummyTime, 1, "a", trace.encodeString("b"))));
 }
 
 TEST_F(SynthTraceSerializationTest, GetPropertyNames) {
   EXPECT_EQ(
-      R"({"type": "GetPropertyNamesRecord", "time": 0, "objID": 1, "propNamesID": 2})",
+      R"({"type":"GetPropertyNamesRecord","time":0,"objID":1,"propNamesID":2})",
       to_string(SynthTrace::GetPropertyNamesRecord(dummyTime, 1, 2)));
 }
 
 TEST_F(SynthTraceSerializationTest, CreateArray) {
   EXPECT_EQ(
-      R"({"type": "CreateArrayRecord", "time": 0, "objID": 1, "length": 10})",
+      R"({"type":"CreateArrayRecord","time":0,"objID":1,"length":10})",
       to_string(SynthTrace::CreateArrayRecord(dummyTime, 1, 10)));
 }
 
 TEST_F(SynthTraceSerializationTest, ArrayWrite) {
   EXPECT_EQ(
-      R"({"type": "ArrayWriteRecord", "time": 0, "objID": 1, "index": 0, "value": "string:a"})",
+      R"({"type":"ArrayWriteRecord","time":0,"objID":1,"index":0,"value":"string:a"})",
       to_string(SynthTrace::ArrayWriteRecord(
           dummyTime, 1, 0, trace.encodeString("a"))));
 }
 
 TEST_F(SynthTraceSerializationTest, SetPropertyNative) {
   EXPECT_EQ(
-      R"({"type": "SetPropertyNativeRecord", "time": 0, "hostObjectID": 1, "propName": "foo", "value": "string:bar"})",
+      R"({"type":"SetPropertyNativeRecord","time":0,"hostObjectID":1,"propName":"foo","value":"string:bar"})",
       to_string(SynthTrace::SetPropertyNativeRecord(
           dummyTime, 1, "foo", trace.encodeString("bar"))));
 }
 
 TEST_F(SynthTraceSerializationTest, SetPropertyNativeReturn) {
   EXPECT_EQ(
-      R"({"type": "SetPropertyNativeReturnRecord", "time": 0})",
+      R"({"type":"SetPropertyNativeReturnRecord","time":0})",
       to_string(SynthTrace::SetPropertyNativeReturnRecord(dummyTime)));
 }
 
 TEST_F(SynthTraceSerializationTest, TimeIsPrinted) {
   EXPECT_EQ(
-      R"({"type": "BeginExecJSRecord", "time": 100})",
+      R"({"type":"BeginExecJSRecord","time":100})",
       to_string(SynthTrace::BeginExecJSRecord(std::chrono::milliseconds(100))));
 }
 
 TEST_F(SynthTraceSerializationTest, EndExecHasRetval) {
   EXPECT_EQ(
-      R"({"type": "EndExecJSRecord", "time": 0, "tag": "end_global_code", "retval": "null:"})",
+      R"({"type":"EndExecJSRecord","time":0,"tag":"end_global_code","retval":"null:"})",
       to_string(
           SynthTrace::EndExecJSRecord(dummyTime, SynthTrace::encodeNull())));
 }
@@ -637,15 +638,14 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   std::string expected;
   llvm::raw_string_ostream expectedStream{expected};
   expectedStream
-      << R"(\{"version": 2)"
-      << R"(, "globalObjID": )" << globalObjID
-      << R"(, "sourceHash": "[0-9]{40}", "gcConfig": \{"initHeapSize": [0-9]+, "maxHeapSize": [0-9]+\})"
-      << R"(, "env": \{"mathRandomSeed": [0-9]+, "callsToDateNow": \[\], )"
-      << R"("callsToNewDate": \[\], "callsToDateAsFunction": \[\]\}, )"
-      << R"("trace": \[\{"type": "CreateObjectRecord", "time": [0-9]+, "objID": )"
-      << objID
-      << R"(\}, \{"type": "GetPropertyRecord", "time": [0-9]+, "objID": )"
-      << objID << R"(, "propName": "a", "value": "undefined:"\}\]\})";
+      << R"(\{"version":2)"
+      << R"(,"globalObjID":)" << globalObjID
+      << R"(,"sourceHash":"[0-9]{40}","gcConfig":\{"initHeapSize":[0-9]+,"maxHeapSize":[0-9]+\})"
+      << R"(,"env":\{"mathRandomSeed":[0-9]+,"callsToDateNow":\[\],)"
+      << R"("callsToNewDate":\[\],"callsToDateAsFunction":\[\]\},)"
+      << R"("trace":\[\{"type":"CreateObjectRecord","time":[0-9]+,"objID":)"
+      << objID << R"(\},\{"type":"GetPropertyRecord","time":[0-9]+,"objID":)"
+      << objID << R"(,"propName":"a","value":"undefined:"\}\]\})";
   expectedStream.flush();
 
   std::string result;
@@ -681,17 +681,17 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
   std::string expected;
   llvm::raw_string_ostream expectedStream{expected};
   expectedStream
-      << R"(\{"version": 2)"
-      << R"(, "globalObjID": )" << globalObjID
-      << R"(, "sourceHash": "[0-9]{40}", "gcConfig": \{"initHeapSize": )"
-      << conf.getGCConfig().getInitHeapSize() << R"(, "maxHeapSize": )"
+      << R"(\{"version":2)"
+      << R"(,"globalObjID":)" << globalObjID
+      << R"(,"sourceHash":"[0-9]{40}","gcConfig":\{"initHeapSize":)"
+      << conf.getGCConfig().getInitHeapSize() << R"(,"maxHeapSize":)"
       << conf.getGCConfig().getMaxHeapSize()
-      << R"(\}, "env": \{"mathRandomSeed": [0-9]+, "callsToDateNow": \[)"
-      << dateNow << R"(\], "callsToNewDate": \[)" << newDate
-      << R"(\], "callsToDateAsFunction": \[")"
+      << R"(\},"env":\{"mathRandomSeed":[0-9]+,"callsToDateNow":\[)" << dateNow
+      << R"(\],"callsToNewDate":\[)" << newDate
+      << R"(\],"callsToDateAsFunction":\[")"
       << dateAsFunc
       // Ignore the elements inside the trace, those are tested elsewhere.
-      << R"("\]\}, .*)";
+      << R"("\]\},.*)";
   expectedStream.flush();
 
   std::string result;
