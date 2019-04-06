@@ -9,6 +9,7 @@ endif()
 
 add_llvm_library(hermesSupport
         Allocator.cpp
+        ASAN.cpp
         CheckedMalloc.cpp
         Conversions.cpp
         JSONEmitter.cpp

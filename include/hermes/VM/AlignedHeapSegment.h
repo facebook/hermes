@@ -7,6 +7,7 @@
 #ifndef HERMES_VM_SEGMENT_H
 #define HERMES_VM_SEGMENT_H
 
+#include "hermes/Support/ASAN.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AdviseUnused.h"
 #include "hermes/VM/AlignedStorage.h"
@@ -375,7 +376,7 @@ AllocResult AlignedHeapSegment::alloc(uint32_t size) {
     level_ += size;
   }
 
-  oscompat::asan_unpoison_if_enabled(cellPtr, cellPtr + size);
+  asan_unpoison_if_enabled(cellPtr, cellPtr + size);
 #ifndef NDEBUG
   checkUnwritten(cellPtr, cellPtr + size);
 #endif

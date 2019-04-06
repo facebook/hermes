@@ -8,6 +8,7 @@
 // it is included only by GC.h.  (For example, it assumes GCBase is declared.)
 #include "hermes/VM/GC.h"
 
+#include "hermes/Support/ASAN.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/AllocSource.h"
@@ -624,10 +625,8 @@ void GenGC::swapToFreshHeap() {
       oldGen_.start(),
       oldGen_.start() - delta,
       oldGen_.ContigAllocGCSpace::used());
-  oscompat::asan_unpoison_if_enabled(
-      youngGen_.start() - delta, youngGen_.end() - delta);
-  oscompat::asan_unpoison_if_enabled(
-      oldGen_.start() - delta, oldGen_.end() - delta);
+  asan_unpoison_if_enabled(youngGen_.start() - delta, youngGen_.end() - delta);
+  asan_unpoison_if_enabled(oldGen_.start() - delta, oldGen_.end() - delta);
 #ifndef NDEBUG
   // Now that the memory has been moved, make sure to clear the empty space.
   youngGen_.clear(youngGen_.level(), youngGen_.end());

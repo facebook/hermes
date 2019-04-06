@@ -7,6 +7,7 @@
 #define DEBUG_TYPE "gc"
 #include "hermes/VM/Space.h"
 
+#include "hermes/Support/ASAN.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
@@ -123,7 +124,7 @@ void GCSpace::clear() {
 
 void GCSpace::clear(char *start, char *end) {
 #ifdef ASAN_ENABLED
-  oscompat::asan_poison_if_enabled(start, end);
+  asan_poison_if_enabled(start, end);
 #else
   std::memset(start, kInvalidHeapValue, end - start);
 #endif
@@ -227,7 +228,7 @@ void ContigAllocGCSpace::compact(
     const SweepResult &sweepResult) {
   // If we're using ASAN, we've poisoned the unallocated portion of the space;
   // unpoison that now, since we may copy into it.
-  oscompat::asan_unpoison_if_enabled(level(), end());
+  asan_unpoison_if_enabled(level(), end());
   char *ptr = start_;
   size_t ind = markBits.addressToIndex(start_);
   size_t objInd = 0;
