@@ -307,11 +307,13 @@ void DebugInfo::populateSourceMap(
                         uint32_t debugOffset) {
     SourceMap::Segment segment;
     segment.generatedColumn = loc.address + offsetInFile;
+    assert(loc.line >= 1 && "line numbers in debug info must be 1-based");
+    assert(loc.column >= 1 && "column numbers in debug info must be 1-based");
     segment.representedLocation = SourceMap::Segment::SourceLocation(
         sourceMap->getSourceIndex(
             getFilenameByID(*getFilenameForAddress(debugOffset))),
-        loc.line,
-        loc.column);
+        loc.line - 1,
+        loc.column - 1);
     return segment;
   };
 

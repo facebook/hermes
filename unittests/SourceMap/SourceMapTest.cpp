@@ -57,12 +57,12 @@ const char *TestMapEmptyLines = R"#({
 
 /// Helper to return a Segment.
 SourceMap::Segment loc(
-    int32_t address,
+    int32_t address /* 0-based */,
     int32_t sourceIndex,
-    int32_t line,
-    int32_t column,
+    int32_t line /* 1-based */,
+    int32_t column /* 0-based */,
     llvm::Optional<int32_t> nameIndex = llvm::None) {
-  return SourceMap::Segment{address, sourceIndex, line, column, nameIndex};
+  return SourceMap::Segment{address, sourceIndex, line - 1, column, nameIndex};
 }
 
 /// Helper to return a segment with no represented location.
@@ -78,15 +78,17 @@ void verifySegment(
     const std::vector<std::string> &sources,
     const SourceMap::Segment &segment) {
   llvm::Optional<SourceMapTextLocation> locOpt =
-      sourceMap.getLocationForAddress(generatedLine, segment.generatedColumn);
+      sourceMap.getLocationForAddress(
+          generatedLine, segment.generatedColumn + 1);
   if (segment.representedLocation.hasValue()) {
     EXPECT_TRUE(locOpt.hasValue());
     EXPECT_EQ(
         locOpt.getValue().fileName,
         sources[segment.representedLocation->sourceIndex]);
-    EXPECT_EQ(locOpt.getValue().line, segment.representedLocation->lineIndex);
     EXPECT_EQ(
-        locOpt.getValue().column, segment.representedLocation->columnIndex);
+        locOpt.getValue().line, segment.representedLocation->lineIndex + 1);
+    EXPECT_EQ(
+        locOpt.getValue().column, segment.representedLocation->columnIndex + 1);
   } else {
     EXPECT_FALSE(locOpt.hasValue());
   }
@@ -171,32 +173,32 @@ TEST(SourceMap, SourceRoot) {
   std::unique_ptr<SourceMap> sourceMap = parseSourceMap(TestMap);
 
   llvm::Optional<SourceMapTextLocation> locOpt =
-      sourceMap->getLocationForAddress(2, 1);
+      sourceMap->getLocationForAddress(2, 2);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "/the/root/two.js");
 
-  locOpt = sourceMap->getLocationForAddress(1, 1);
+  locOpt = sourceMap->getLocationForAddress(1, 2);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "/the/root/one.js");
 
   std::unique_ptr<SourceMap> sourceMap2 = parseSourceMap(TestMapNoSourceRoot);
 
-  locOpt = sourceMap2->getLocationForAddress(2, 1);
+  locOpt = sourceMap2->getLocationForAddress(2, 2);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "two.js");
 
-  locOpt = sourceMap2->getLocationForAddress(1, 1);
+  locOpt = sourceMap2->getLocationForAddress(1, 2);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "one.js");
 
   std::unique_ptr<SourceMap> sourceMap3 =
       parseSourceMap(TestMapEmptySourceRoot);
 
-  locOpt = sourceMap3->getLocationForAddress(2, 1);
+  locOpt = sourceMap3->getLocationForAddress(2, 2);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "two.js");
 
-  locOpt = sourceMap3->getLocationForAddress(1, 1);
+  locOpt = sourceMap3->getLocationForAddress(1, 2);
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "one.js");
 };

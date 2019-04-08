@@ -85,9 +85,6 @@ bool SourceMapParser::parseMappings(
   assert(lines.empty() && "lines is an out parameter so should be empty");
   SourceMap::SegmentList segments;
   State state;
-  // Lines are encoded zero-based in source map while query
-  // via 1-based so converting representedLine to be 1-based.
-  state.representedLine = 1; // TODO(moti): Fix this off-by-one error
 
   uint32_t curSegOffset = 0;
   while (curSegOffset < sourceMappings.size()) {

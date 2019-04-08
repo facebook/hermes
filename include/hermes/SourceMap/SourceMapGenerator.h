@@ -127,8 +127,8 @@ class SourceMapGenerator {
 
     return hasInput ? inputSourceMaps_[seg.representedLocation->sourceIndex]
                           ->getLocationForAddress(
-                              seg.representedLocation->lineIndex,
-                              seg.representedLocation->columnIndex)
+                              seg.representedLocation->lineIndex + 1,
+                              seg.representedLocation->columnIndex + 1)
                     : llvm::None;
   }
 

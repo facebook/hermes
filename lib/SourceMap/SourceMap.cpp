@@ -116,6 +116,8 @@ llvm::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
   if (segments.empty()) {
     return llvm::None;
   }
+  assert(column >= 1 && "the column argument to this function is 1-based");
+  uint32_t columnIndex = column - 1;
   // Algorithm: we wanted to locate the segment covering
   // the needle(`column`) -- segment.generatedColumn <= column.
   // We achieve it by binary searching the first sentinel
@@ -124,7 +126,7 @@ llvm::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
   auto segIter = std::upper_bound(
       segments.begin(),
       segments.end(),
-      column,
+      columnIndex,
       [](uint32_t column, const Segment &seg) {
         return column < (uint32_t)seg.generatedColumn;
       });
@@ -147,8 +149,8 @@ llvm::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
       getSourceFullPath(target.representedLocation->sourceIndex);
   return SourceMapTextLocation{
       std::move(fileName),
-      (uint32_t)target.representedLocation->lineIndex,
-      (uint32_t)target.representedLocation->columnIndex};
+      (uint32_t)target.representedLocation->lineIndex + 1,
+      (uint32_t)target.representedLocation->columnIndex + 1};
 }
 
 } // namespace hermes

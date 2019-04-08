@@ -20,7 +20,9 @@ namespace hermes {
 /// names not existing in string table.
 struct SourceMapTextLocation {
   std::string fileName;
+  // 1-based
   uint32_t line;
+  // 1-based
   uint32_t column;
 };
 
@@ -111,6 +113,8 @@ class SourceMap {
         lines_(std::move(lines)) {}
 
   /// Query source map text location for \p line and \p column.
+  /// In both the input and output of this function, Line and column numbers
+  /// are 1-based.
   llvm::Optional<SourceMapTextLocation> getLocationForAddress(
       uint32_t line,
       uint32_t column);

@@ -61,6 +61,7 @@ TEST(HBCBytecodeGen, IntegrationTest) {
   Function *f1 =
       Builder.createFunction("f1", Function::DefinitionKind::ES5Function, true);
   auto BFG2 = BytecodeFunctionGenerator::create(BMG, 10);
+  BFG2->setSourceLocation(DebugSourceLocation(0, 0, 1, 1, 0));
   const DebugSourceLocation debugSourceLoc(0, 1, 20, 300, 0);
   BFG2->addDebugSourceLocation(debugSourceLoc);
   BFG2->emitCall(9, 8, 7);

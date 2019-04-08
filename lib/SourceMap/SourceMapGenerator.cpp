@@ -62,9 +62,6 @@ std::string SourceMapGenerator::getVLQMappingsString() const {
   std::string result;
   llvm::raw_string_ostream OS(result);
   State state;
-  // Lines are 0 based: the first line is 0 and not 1, therefore initialize it
-  // to 1 so we encode it with a delta of 0.
-  state.representedLine = 1; // TODO(moti): Fix this off-by-one error.
   for (const SourceMap::SegmentList &segments : lines_) {
     // The generated column (unlike other fields) resets with each new line.
     state.generatedColumn = 0;
@@ -92,8 +89,11 @@ SourceMapGenerator SourceMapGenerator::mergedWithInputSourceMaps() const {
       if (auto loc = getInputLocationForSegment(seg)) {
         // We have an input source map and were able to find a merged source
         // location.
+        assert(loc->line >= 1 && "line numbers in debug info must be 1-based");
+        assert(
+            loc->column >= 1 && "column numbers in debug info must be 1-based");
         newSeg.representedLocation = SourceMap::Segment::SourceLocation(
-            merged.addSource(loc->fileName), loc->line, loc->column
+            merged.addSource(loc->fileName), loc->line - 1, loc->column - 1
             // TODO: Handle name index
         );
       } else {
