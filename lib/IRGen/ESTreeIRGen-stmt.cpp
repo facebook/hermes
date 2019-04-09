@@ -440,6 +440,11 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   auto *bodyBlock = Builder.createBasicBlock(function);
   auto *exitBlock = Builder.createBasicBlock(function);
 
+  // Initialize the goto labels.
+  auto &label = curFunction()->labels[forOfStmt->getLabelIndex()];
+  label.breakTarget = exitBlock;
+  label.continueTarget = getNextBlock;
+
   auto *exprValue = genExpression(forOfStmt->_right);
   auto iteratorRecord = emitGetIteraror(exprValue);
 

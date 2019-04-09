@@ -146,3 +146,181 @@ function forof_update(seq) {
 //CHKOPT-NEXT:%BB3:
 //CHKOPT-NEXT:  %23 = ReturnInst %4 : object
 //CHKOPT-NEXT:function_end
+
+function forof_break(seq) {
+    var sum = 0;
+    for(var i of seq) {
+        if (i < 0)
+            break;
+        sum += i;
+    }
+    return sum;
+}
+//CHECK-LABEL: function forof_break(seq)
+//CHECK-NEXT: frame = [sum, i, seq]
+//CHECK-NEXT: %BB0:
+//CHECK-NEXT:   %0 = StoreFrameInst undefined : undefined, [sum]
+//CHECK-NEXT:   %1 = StoreFrameInst undefined : undefined, [i]
+//CHECK-NEXT:   %2 = StoreFrameInst %seq, [seq]
+//CHECK-NEXT:   %3 = StoreFrameInst 0 : number, [sum]
+//CHECK-NEXT:   %4 = LoadFrameInst [seq]
+//CHECK-NEXT:   %5 = TryLoadGlobalPropertyInst globalObject : object, "Symbol" : string
+//CHECK-NEXT:   %6 = LoadPropertyInst %5, "iterator" : string
+//CHECK-NEXT:   %7 = LoadPropertyInst %4, %6
+//CHECK-NEXT:   %8 = CallInst %7, %4
+//CHECK-NEXT:   %9 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+//CHECK-NEXT:   %10 = LoadPropertyInst %9, "ensureObject" : string
+//CHECK-NEXT:   %11 = CallInst %10, undefined : undefined, %8, "iterator is not an object" : string
+//CHECK-NEXT:   %12 = LoadPropertyInst %8, "next" : string
+//CHECK-NEXT:   %13 = BranchInst %BB1
+//CHECK-NEXT: %BB1:
+//CHECK-NEXT:   %14 = CallInst %12, %8
+//CHECK-NEXT:   %15 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+//CHECK-NEXT:   %16 = LoadPropertyInst %15, "ensureObject" : string
+//CHECK-NEXT:   %17 = CallInst %16, undefined : undefined, %14, "iterator.next() did not return an object" : string
+//CHECK-NEXT:   %18 = LoadPropertyInst %14, "done" : string
+//CHECK-NEXT:   %19 = CondBranchInst %18, %BB2, %BB3
+//CHECK-NEXT: %BB3:
+//CHECK-NEXT:   %20 = LoadPropertyInst %14, "value" : string
+//CHECK-NEXT:   %21 = StoreFrameInst %20, [i]
+//CHECK-NEXT:   %22 = LoadFrameInst [i]
+//CHECK-NEXT:   %23 = BinaryOperatorInst '<', %22, 0 : number
+//CHECK-NEXT:   %24 = CondBranchInst %23, %BB4, %BB5
+//CHECK-NEXT: %BB2:
+//CHECK-NEXT:   %25 = LoadFrameInst [sum]
+//CHECK-NEXT:   %26 = ReturnInst %25
+//CHECK-NEXT: %BB4:
+//CHECK-NEXT:   %27 = BranchInst %BB2
+//CHECK-NEXT: %BB5:
+//CHECK-NEXT:   %28 = BranchInst %BB6
+//CHECK-NEXT: %BB6:
+//CHECK-NEXT:   %29 = LoadFrameInst [sum]
+//CHECK-NEXT:   %30 = LoadFrameInst [i]
+//CHECK-NEXT:   %31 = BinaryOperatorInst '+', %29, %30
+//CHECK-NEXT:   %32 = StoreFrameInst %31, [sum]
+//CHECK-NEXT:   %33 = BranchInst %BB1
+//CHECK-NEXT: %BB7:
+//CHECK-NEXT:   %34 = BranchInst %BB6
+//CHECK-NEXT: %BB8:
+//CHECK-NEXT:   %35 = ReturnInst undefined : undefined
+//CHECK-NEXT: function_end
+
+//CHKOPT-LABEL: function forof_break(seq) : string|number
+//CHKOPT-NEXT: frame = []
+//CHKOPT-NEXT: %BB0:
+//CHKOPT-NEXT:   %0 = HBCLoadParamInst 1 : number
+//CHKOPT-NEXT:   %1 = HBCLoadConstInst 0 : number
+//CHKOPT-NEXT:   %2 = HBCLoadConstInst "iterator.next() did not return an object" : string
+//CHKOPT-NEXT:   %3 = HBCGetGlobalObjectInst
+//CHKOPT-NEXT:   %4 = TryLoadGlobalPropertyInst %3 : object, "Symbol" : string
+//CHKOPT-NEXT:   %5 = LoadPropertyInst %4, "iterator" : string
+//CHKOPT-NEXT:   %6 = LoadPropertyInst %0, %5
+//CHKOPT-NEXT:   %7 = HBCCallNInst %6, %0
+//CHKOPT-NEXT:   %8 = HBCLoadConstInst "iterator is not an object" : string
+//CHKOPT-NEXT:   %9 = HBCCallBuiltinInst [HermesInternal.ensureObject] : number, undefined : undefined, %7, %8 : string
+//CHKOPT-NEXT:   %10 = LoadPropertyInst %7, "next" : string
+//CHKOPT-NEXT:   %11 = BranchInst %BB1
+//CHKOPT-NEXT: %BB1:
+//CHKOPT-NEXT:   %12 = PhiInst %1 : number, %BB0, %20 : string|number, %BB2
+//CHKOPT-NEXT:   %13 = HBCCallNInst %10, %7
+//CHKOPT-NEXT:   %14 = HBCCallBuiltinInst [HermesInternal.ensureObject] : number, undefined : undefined, %13, %2 : string
+//CHKOPT-NEXT:   %15 = LoadPropertyInst %13, "done" : string
+//CHKOPT-NEXT:   %16 = CondBranchInst %15, %BB3, %BB4
+//CHKOPT-NEXT: %BB4:
+//CHKOPT-NEXT:   %17 = LoadPropertyInst %13, "value" : string
+//CHKOPT-NEXT:   %18 = CompareBranchInst '<', %17, %1 : number, %BB3, %BB2
+//CHKOPT-NEXT: %BB3:
+//CHKOPT-NEXT:   %19 = ReturnInst %12 : string|number
+//CHKOPT-NEXT: %BB2:
+//CHKOPT-NEXT:   %20 = BinaryOperatorInst '+', %12 : string|number, %17
+//CHKOPT-NEXT:   %21 = BranchInst %BB1
+//CHKOPT-NEXT: function_end
+
+function forof_continue(seq) {
+    var sum = 0;
+    for(var i of seq) {
+        if (i < 0)
+            continue;
+        sum += i;
+    }
+    return sum;
+}
+//CHECK-LABEL: function forof_continue(seq)
+//CHECK-NEXT: frame = [sum, i, seq]
+//CHECK-NEXT: %BB0:
+//CHECK-NEXT:   %0 = StoreFrameInst undefined : undefined, [sum]
+//CHECK-NEXT:   %1 = StoreFrameInst undefined : undefined, [i]
+//CHECK-NEXT:   %2 = StoreFrameInst %seq, [seq]
+//CHECK-NEXT:   %3 = StoreFrameInst 0 : number, [sum]
+//CHECK-NEXT:   %4 = LoadFrameInst [seq]
+//CHECK-NEXT:   %5 = TryLoadGlobalPropertyInst globalObject : object, "Symbol" : string
+//CHECK-NEXT:   %6 = LoadPropertyInst %5, "iterator" : string
+//CHECK-NEXT:   %7 = LoadPropertyInst %4, %6
+//CHECK-NEXT:   %8 = CallInst %7, %4
+//CHECK-NEXT:   %9 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+//CHECK-NEXT:   %10 = LoadPropertyInst %9, "ensureObject" : string
+//CHECK-NEXT:   %11 = CallInst %10, undefined : undefined, %8, "iterator is not an object" : string
+//CHECK-NEXT:   %12 = LoadPropertyInst %8, "next" : string
+//CHECK-NEXT:   %13 = BranchInst %BB1
+//CHECK-NEXT: %BB1:
+//CHECK-NEXT:   %14 = CallInst %12, %8
+//CHECK-NEXT:   %15 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+//CHECK-NEXT:   %16 = LoadPropertyInst %15, "ensureObject" : string
+//CHECK-NEXT:   %17 = CallInst %16, undefined : undefined, %14, "iterator.next() did not return an object" : string
+//CHECK-NEXT:   %18 = LoadPropertyInst %14, "done" : string
+//CHECK-NEXT:   %19 = CondBranchInst %18, %BB2, %BB3
+//CHECK-NEXT: %BB3:
+//CHECK-NEXT:   %20 = LoadPropertyInst %14, "value" : string
+//CHECK-NEXT:   %21 = StoreFrameInst %20, [i]
+//CHECK-NEXT:   %22 = LoadFrameInst [i]
+//CHECK-NEXT:   %23 = BinaryOperatorInst '<', %22, 0 : number
+//CHECK-NEXT:   %24 = CondBranchInst %23, %BB4, %BB5
+//CHECK-NEXT: %BB2:
+//CHECK-NEXT:   %25 = LoadFrameInst [sum]
+//CHECK-NEXT:   %26 = ReturnInst %25
+//CHECK-NEXT: %BB4:
+//CHECK-NEXT:   %27 = BranchInst %BB1
+//CHECK-NEXT: %BB5:
+//CHECK-NEXT:   %28 = BranchInst %BB6
+//CHECK-NEXT: %BB6:
+//CHECK-NEXT:   %29 = LoadFrameInst [sum]
+//CHECK-NEXT:   %30 = LoadFrameInst [i]
+//CHECK-NEXT:   %31 = BinaryOperatorInst '+', %29, %30
+//CHECK-NEXT:   %32 = StoreFrameInst %31, [sum]
+//CHECK-NEXT:   %33 = BranchInst %BB1
+//CHECK-NEXT: %BB7:
+//CHECK-NEXT:   %34 = BranchInst %BB6
+//CHECK-NEXT: %BB8:
+//CHECK-NEXT:   %35 = ReturnInst undefined : undefined
+//CHECK-NEXT: function_end
+
+//CHKOPT-LABEL: function forof_continue(seq) : string|number
+//CHKOPT-NEXT: frame = []
+//CHKOPT-NEXT: %BB0:
+//CHKOPT-NEXT:   %0 = HBCLoadParamInst 1 : number
+//CHKOPT-NEXT:   %1 = HBCLoadConstInst 0 : number
+//CHKOPT-NEXT:   %2 = HBCLoadConstInst "iterator.next() did not return an object" : string
+//CHKOPT-NEXT:   %3 = HBCGetGlobalObjectInst
+//CHKOPT-NEXT:   %4 = TryLoadGlobalPropertyInst %3 : object, "Symbol" : string
+//CHKOPT-NEXT:   %5 = LoadPropertyInst %4, "iterator" : string
+//CHKOPT-NEXT:   %6 = LoadPropertyInst %0, %5
+//CHKOPT-NEXT:   %7 = HBCCallNInst %6, %0
+//CHKOPT-NEXT:   %8 = HBCLoadConstInst "iterator is not an object" : string
+//CHKOPT-NEXT:   %9 = HBCCallBuiltinInst [HermesInternal.ensureObject] : number, undefined : undefined, %7, %8 : string
+//CHKOPT-NEXT:   %10 = LoadPropertyInst %7, "next" : string
+//CHKOPT-NEXT:   %11 = BranchInst %BB1
+//CHKOPT-NEXT: %BB1:
+//CHKOPT-NEXT:   %12 = PhiInst %1 : number, %BB0, %12 : string|number, %BB2, %20 : string|number, %BB3
+//CHKOPT-NEXT:   %13 = HBCCallNInst %10, %7
+//CHKOPT-NEXT:   %14 = HBCCallBuiltinInst [HermesInternal.ensureObject] : number, undefined : undefined, %13, %2 : string
+//CHKOPT-NEXT:   %15 = LoadPropertyInst %13, "done" : string
+//CHKOPT-NEXT:   %16 = CondBranchInst %15, %BB4, %BB2
+//CHKOPT-NEXT: %BB2:
+//CHKOPT-NEXT:   %17 = LoadPropertyInst %13, "value" : string
+//CHKOPT-NEXT:   %18 = CompareBranchInst '<', %17, %1 : number, %BB1, %BB3
+//CHKOPT-NEXT: %BB4:
+//CHKOPT-NEXT:   %19 = ReturnInst %12 : string|number
+//CHKOPT-NEXT: %BB3:
+//CHKOPT-NEXT:   %20 = BinaryOperatorInst '+', %12 : string|number, %17
+//CHKOPT-NEXT:   %21 = BranchInst %BB1
+//CHKOPT-NEXT: function_end
