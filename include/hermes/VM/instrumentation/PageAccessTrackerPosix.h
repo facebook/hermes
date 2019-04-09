@@ -7,6 +7,7 @@
 #ifndef HERMES_VM_INSTRUMENTATION_PAGEACCESSTRACKERPOSIX_H
 #define HERMES_VM_INSTRUMENTATION_PAGEACCESSTRACKERPOSIX_H
 
+#include <sigmux.h>
 #include <signal.h>
 #include <memory>
 
@@ -41,6 +42,8 @@ class PageAccessTracker {
   uint32_t accessedPageCount_{0};
   /// Signal number that we are tracking.
   int signal_{0};
+  /// Signal handling framework data.
+  sigmux_registration *sigmuxCookie_{nullptr};
 
   PageAccessTracker(
       uint32_t pageSize,
@@ -71,7 +74,9 @@ class PageAccessTracker {
   /// touched is in the range we are tracking, mark it readable and continue
   /// execution; otherwise re-trigger the signal, handle it with default
   /// handler, and kill the process.
-  static void signalHandler(int signum, siginfo_t *si, void * /* unused */);
+  static sigmux_action signalHandler(
+      struct sigmux_siginfo *siginfo,
+      void * /* unused */);
 
  public:
   /// Initialize the PageAccessTracker, mark the whole address range unreadable.

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#ifndef _WINDOWS
+#if defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS)
 
 #include "hermes/VM/instrumentation/PageAccessTracker.h"
 
@@ -59,14 +59,14 @@ bool PageAccessTracker::initialize(void *bufStart, size_t bufSize) {
   tracker = new PageAccessTracker(pageSize, bufStartPage, totalPages, signum);
 
   // Register custom signal handler for accessing unreadable pages.
-  struct sigaction sa;
-  sigemptyset(&sa.sa_mask);
-  sa.sa_flags = SA_SIGINFO;
-  sa.sa_sigaction = signalHandler;
-  if (sigaction(signum, &sa, NULL) != 0) {
-    perror("sigaction failed");
+  if (sigmux_init(signum)) {
+    perror("sigmux_init failed");
     return false;
   }
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, signum);
+  tracker->sigmuxCookie_ = sigmux_register(&mask, signalHandler, nullptr, 0);
 
   // Mark the whole bytecode file unreadable.
   if (mprotect(bufStartPage, totalPages * pageSize, PROT_NONE) != 0) {
@@ -84,10 +84,7 @@ bool PageAccessTracker::shutdown() {
     return false;
   }
   // Reset the signal handler to default.
-  if (signal(tracker->signal_, SIG_DFL) == SIG_ERR) {
-    perror("signal failed");
-    return false;
-  }
+  sigmux_unregister(tracker->sigmuxCookie_);
   delete tracker;
   tracker = nullptr;
   return true;
@@ -119,10 +116,10 @@ bool PageAccessTracker::isTracking(void *addr) {
       (uintptr_t)addr < (uintptr_t)bufStartPage_ + pageSize_ * totalPages_;
 }
 
-void PageAccessTracker::signalHandler(
-    int signum,
-    siginfo_t *si,
-    void * /* unused */) {
+sigmux_action PageAccessTracker::signalHandler(
+    struct sigmux_siginfo *siginfo,
+    void *) {
+  siginfo_t *si = siginfo->info;
   if (!tracker) {
     // This is impossible because the signal handler would only be registered
     // if the PageAccessTracker is initialized.
@@ -130,14 +127,9 @@ void PageAccessTracker::signalHandler(
   }
 
   // Check if accessed address falls into the file buffer range.
-  // If the address is not in range, set the default signal handler and
-  // kill the process.
-  if (!tracker->isTracking(si->si_addr)) {
-    if (signal(signum, SIG_DFL) == SIG_ERR) {
-      _exit(EXIT_FAILURE);
-    }
-    kill(getpid(), signum);
-    return;
+  // If the address is not in range, tell sigmux to search for other handlers.
+  if (si->si_signo != tracker->signal_ || !tracker->isTracking(si->si_addr)) {
+    return SIGMUX_CONTINUE_SEARCH;
   }
   // Mark the page readable so we can continue execution.
   void *accessedPage =
@@ -158,6 +150,9 @@ void PageAccessTracker::signalHandler(
   clock_gettime(CLOCK_REALTIME, &t);
   auto after = toNanos(t);
   tracker->recordPageAccess(si->si_addr, (after - before) / 1000);
+
+  // We successfully handled the signal.
+  return SIGMUX_CONTINUE_EXECUTION;
 }
 
 void PageAccessTracker::printStats(llvm::raw_ostream &OS) {
@@ -238,4 +233,4 @@ bool PageAccessTracker::printPageAccessedOrder(
   return true;
 }
 
-#endif // not _WINDOWS
+#endif // HERMES_FACEBOOK_BUILD and not _WINDOWS

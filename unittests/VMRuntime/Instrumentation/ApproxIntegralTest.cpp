@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
+#ifndef _WINDOWS
 #include "hermes/VM/instrumentation/ApproxIntegral.h"
 
 #include "gtest/gtest.h"
@@ -149,3 +150,4 @@ void testErrorConverges(
 }
 
 } // namespace
+#endif // not _WINDOWS
