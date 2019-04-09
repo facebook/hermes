@@ -21,14 +21,6 @@
 namespace facebook {
 namespace jni {
 
-namespace {
-local_ref<JByteBuffer> createEmpty() {
-  static auto cls = JByteBuffer::javaClassStatic();
-  static auto meth = cls->getStaticMethod<JByteBuffer::javaobject(int)>("allocateDirect");
-  return meth(cls, 0);
-}
-}
-
 void JBuffer::rewind() const {
   static auto meth = javaClassStatic()->getMethod<alias_ref<JBuffer>()>("rewind");
   meth(self());
@@ -74,7 +66,7 @@ local_ref<JByteBuffer> JByteBuffer::wrapBytes(uint8_t* data, size_t size) {
   // dalvik returns an invalid result and Android's art aborts if size == 0.
   // Workaround this by using a slow path through Java in that case.
   if (!size) {
-    return createEmpty();
+    return allocateDirect(0);
   }
   auto res = adopt_local(static_cast<javaobject>(Environment::current()->NewDirectByteBuffer(data, size)));
   FACEBOOK_JNI_THROW_PENDING_EXCEPTION();
@@ -82,6 +74,12 @@ local_ref<JByteBuffer> JByteBuffer::wrapBytes(uint8_t* data, size_t size) {
     throw std::runtime_error("Direct byte buffers are unsupported.");
   }
   return res;
+}
+
+local_ref<JByteBuffer> JByteBuffer::allocateDirect(jint size) {
+  static auto cls = JByteBuffer::javaClassStatic();
+  static auto meth = cls->getStaticMethod<JByteBuffer::javaobject(int)>("allocateDirect");
+  return meth(cls, size);
 }
 
 }}
