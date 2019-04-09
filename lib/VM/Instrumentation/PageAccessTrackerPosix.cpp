@@ -21,18 +21,14 @@
 
 using namespace hermes;
 
-PageAccessTracker *volatile PageAccessTracker::tracker = nullptr;
-
-bool PageAccessTracker::initialize(void *bufStart, size_t bufSize) {
-  if (tracker) {
-    llvm::errs() << "PageAccessTracker can only be initialized once.\n";
-    return false;
-  }
+std::unique_ptr<volatile PageAccessTracker> PageAccessTracker::create(
+    void *bufStart,
+    size_t bufSize) {
   uint32_t pageSize = getpagesize();
   if (bufSize < pageSize) {
     llvm::errs()
         << "Nothing to track because the buffer is less than a page.\n";
-    return false;
+    return nullptr;
   }
   // If buffer start is not page aligned, choose the next page's start address.
   void *bufStartPage =
@@ -56,38 +52,47 @@ bool PageAccessTracker::initialize(void *bufStart, size_t bufSize) {
 #error "OS type not supported."
 #endif
 
-  tracker = new PageAccessTracker(pageSize, bufStartPage, totalPages, signum);
-
-  // Register custom signal handler for accessing unreadable pages.
-  if (sigmux_init(signum)) {
-    perror("sigmux_init failed");
-    return false;
-  }
-  sigset_t mask;
-  sigemptyset(&mask);
-  sigaddset(&mask, signum);
-  tracker->sigmuxCookie_ = sigmux_register(&mask, signalHandler, nullptr, 0);
+  std::unique_ptr<volatile PageAccessTracker> tracker;
+  tracker.reset(
+      (new PageAccessTracker(pageSize, bufStartPage, totalPages, signum))
+          ->install());
 
   // Mark the whole bytecode file unreadable.
   if (mprotect(bufStartPage, totalPages * pageSize, PROT_NONE) != 0) {
     perror("mprotect failed");
-    return false;
+    tracker.reset();
   }
 
-  return true;
+  return tracker;
 }
 
-bool PageAccessTracker::shutdown() {
-  if (!tracker) {
-    llvm::errs()
-        << "Cannot shutdown PageAccessTracker without first initializing it.\n";
-    return false;
+volatile PageAccessTracker *PageAccessTracker::install() {
+  // Register custom signal handler for accessing unreadable pages.
+  assert(sigmuxCookie_ == nullptr);
+  if (sigmux_init(signal_)) {
+    perror("sigmux_init failed");
+    return nullptr;
   }
-  // Reset the signal handler to default.
-  sigmux_unregister(tracker->sigmuxCookie_);
-  delete tracker;
-  tracker = nullptr;
-  return true;
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, signal_);
+  sigmuxCookie_ = sigmux_register(&mask, signalHandler, this, 0);
+  return this;
+}
+
+PageAccessTracker *PageAccessTracker::uninstall() volatile {
+  if (sigmuxCookie_) {
+    sigmux_unregister(sigmuxCookie_);
+    sigmuxCookie_ = nullptr;
+  }
+  // We are no longer volatile.
+  return const_cast<PageAccessTracker *>(this);
+}
+
+PageAccessTracker::~PageAccessTracker() {
+  if (sigmuxCookie_) {
+    sigmux_unregister(sigmuxCookie_);
+  }
 }
 
 PageAccessTracker::PageAccessTracker(
@@ -118,7 +123,8 @@ bool PageAccessTracker::isTracking(void *addr) {
 
 sigmux_action PageAccessTracker::signalHandler(
     struct sigmux_siginfo *siginfo,
-    void *) {
+    void *trackerPtr) {
+  auto tracker = reinterpret_cast<PageAccessTracker *>(trackerPtr);
   siginfo_t *si = siginfo->info;
   if (!tracker) {
     // This is impossible because the signal handler would only be registered
@@ -205,31 +211,27 @@ void PageAccessTracker::printPageAccessedOrderJSON(llvm::raw_ostream &OS) {
   json.closeDict();
 }
 
-bool PageAccessTracker::printStats(llvm::raw_ostream &OS, bool json) {
-  if (!tracker) {
-    llvm::errs() << "PageAccessTracker is not initialized.\n";
-    return false;
-  }
+bool PageAccessTracker::printStats(llvm::raw_ostream &OS, bool json) volatile {
+  auto tracker = uninstall();
   if (json) {
     tracker->printStatsJSON(OS);
   } else {
     tracker->printStats(OS);
   }
+  tracker->install();
   return true;
 }
 
 bool PageAccessTracker::printPageAccessedOrder(
     llvm::raw_ostream &OS,
-    bool json) {
-  if (!tracker) {
-    llvm::errs() << "PageAccessTracker is not initialized.\n";
-    return false;
-  }
+    bool json) volatile {
+  auto tracker = uninstall();
   if (json) {
     tracker->printPageAccessedOrderJSON(OS);
   } else {
     tracker->printPageAccessedOrder(OS);
   }
+  tracker->install();
   return true;
 }
 

@@ -7,26 +7,26 @@
 #ifndef HERMES_VM_INSTRUMENTATION_PAGEACCESSTRACKERWINDOWS_H
 #define HERMES_VM_INSTRUMENTATION_PAGEACCESSTRACKERWINDOWS_H
 
+#include <memory>
 #include "llvm/Support/raw_ostream.h"
 
 namespace hermes {
 
 class PageAccessTracker {
  public:
-  static bool initialize(void *bufStart, size_t bufSize) {
+  static std::unique_ptr<volatile PageAccessTracker> create(
+      void *bufStart,
+      size_t bufSize) {
+    std::unique_ptr<volatile PageAccessTracker> tracker;
+    return tracker;
+  }
+
+  bool printStats(llvm::raw_ostream &OS, bool json) volatile {
     return false;
   }
 
-  static bool printStats(llvm::raw_ostream &OS, bool json) {
+  bool printPageAccessedOrder(llvm::raw_ostream &OS, bool json) volatile {
     return false;
-  }
-
-  static bool printPageAccessedOrder(llvm::raw_ostream &OS, bool json) {
-    return false;
-  }
-
-  static bool shutdown() {
-    return true;
   }
 };
 

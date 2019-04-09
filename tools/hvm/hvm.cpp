@@ -82,6 +82,7 @@ int main(int argc, char **argv_) {
   }
 
   auto buffer = llvm::make_unique<MemoryBuffer>(FileBufOrErr.get().get());
+  std::unique_ptr<volatile PageAccessTracker> tracker;
   if (cl::TrackBytecodeIO) {
     if (FileBufOrErr.get()->getBufferKind() !=
         llvm::MemoryBuffer::MemoryBuffer_MMap) {
@@ -91,8 +92,9 @@ int main(int argc, char **argv_) {
           << "Cannot use PageAccessTracker because bytecode is not mmapped.\n";
       return EXIT_FAILURE;
     }
-    if (!PageAccessTracker::initialize(
-            const_cast<unsigned char *>(buffer->data()), buffer->size())) {
+    tracker = PageAccessTracker::create(
+        const_cast<unsigned char *>(buffer->data()), buffer->size());
+    if (!tracker) {
       return EXIT_FAILURE;
     }
   }
@@ -158,13 +160,10 @@ int main(int argc, char **argv_) {
     }
   }
 
-  if (cl::TrackBytecodeIO) {
-    if (!PageAccessTracker::printStats(
+  if (tracker) {
+    if (!tracker->printStats(
             llvm::outs(),
             cl::BytecodeIOStatsFormat == cl::BytecodeIOStatsFormatKind::JSON)) {
-      return EXIT_FAILURE;
-    }
-    if (!PageAccessTracker::shutdown()) {
       return EXIT_FAILURE;
     }
   }

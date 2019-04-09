@@ -392,13 +392,15 @@ void verifyHash(
   }
 }
 
-std::string getStatsString(std::string &GCStats, bool shouldPrintIOStats) {
+std::string getStatsString(
+    std::string &GCStats,
+    volatile ::hermes::PageAccessTracker *tracker) {
   std::string stats = GCStats;
-  if (shouldPrintIOStats) {
+  if (tracker) {
     std::string s;
     llvm::raw_string_ostream os(s);
     os << "Bytecode I/O stats:\n";
-    if (!::hermes::PageAccessTracker::printStats(os, true)) {
+    if (!tracker->printStats(os, true)) {
       throw std::runtime_error("Failed to print bytecode I/O stats.");
     }
     os << "\n";
@@ -536,6 +538,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   }
   // Need to mark bytecode file for io tracking after reading the whole file for
   // computing hash.
+  std::unique_ptr<volatile ::hermes::PageAccessTracker> tracker;
   if (options.shouldTrackIO && isBytecode) {
     if (!codeIsMmapped) {
       throw std::runtime_error(
@@ -543,7 +546,8 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     }
     uint8_t *bufStart = const_cast<uint8_t *>(codeFileBuffer->data());
     size_t bufSize = codeFileBuffer->size();
-    if (!::hermes::PageAccessTracker::initialize(bufStart, bufSize)) {
+    tracker = ::hermes::PageAccessTracker::create(bufStart, bufSize);
+    if (!tracker) {
       throw std::runtime_error("Failed to initialze PageAccessTracker.");
     }
   }
@@ -593,12 +597,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     }
   }
   auto GCStats = options.shouldPrintGCStats ? mergeGCStats(repGCStats) : "";
-  std::string stats = getStatsString(GCStats, options.shouldTrackIO);
-
-  if (options.shouldTrackIO && isBytecode &&
-      !::hermes::PageAccessTracker::shutdown()) {
-    throw std::runtime_error("Failed to shut down PageAccessTracker.");
-  }
+  std::string stats = getStatsString(GCStats, tracker.get());
   return stats;
 }
 

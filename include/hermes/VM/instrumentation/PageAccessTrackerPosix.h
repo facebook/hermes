@@ -16,18 +16,13 @@
 namespace hermes {
 
 /// Track paging behavior over a mmapped address range.
-/// This is only meant be used in single-thread applications.
 /// Usage:
 ///   ... create a mmapped buffer ...
-///   PageAccessTracker::initialize(...);
+///   auto tracker = PageAccessTracker::create(...);
 ///   ... do your thing ...
-///   PageAccessTracker::printStats(...);
-///   PageAccessTracker::shutdown();
+///   tracker->printStats(...);
 class PageAccessTracker {
  private:
-  /// Single instance of PageAccessTracker. This can only be instantiated when
-  /// calling initialize, and can only be modified in the signal handler.
-  static PageAccessTracker *volatile tracker;
   uint32_t pageSize_{0};
   /// Page aligned address for the beginning of the buffer.
   void *bufStartPage_{nullptr};
@@ -41,7 +36,7 @@ class PageAccessTracker {
   /// Total number of pages accessed during executing bytecode.
   uint32_t accessedPageCount_{0};
   /// Signal number that we are tracking.
-  int signal_{0};
+  const int signal_;
   /// Signal handling framework data.
   sigmux_registration *sigmuxCookie_{nullptr};
 
@@ -50,8 +45,6 @@ class PageAccessTracker {
       void *bufStartPage,
       uint32_t totalPages,
       int signal);
-
-  ~PageAccessTracker() = default;
 
   /// Given \p accessedAddr, the accessed address, and \p micros, the number of
   /// microseconds it took, record the access.
@@ -78,6 +71,13 @@ class PageAccessTracker {
       struct sigmux_siginfo *siginfo,
       void * /* unused */);
 
+  /// Unregisters the signal handler and returns a non-volatile this, which
+  /// can be used to access the collected stats.
+  PageAccessTracker *uninstall() volatile;
+
+  /// (Re)installs the signal handler and returns a volatile this.
+  volatile PageAccessTracker *install();
+
  public:
   /// Initialize the PageAccessTracker, mark the whole address range unreadable.
   /// This function is intended to only be called once before shutdown.
@@ -86,24 +86,25 @@ class PageAccessTracker {
   /// \param bufStart, pointer to the start of the buffer.
   /// \param bufSize, the size of the buffer.
   /// \return true if initialization is successful.
-  static bool initialize(void *bufStart, size_t bufSize);
+  static std::unique_ptr<volatile PageAccessTracker> create(
+      void *bufStart,
+      size_t bufSize);
 
   /// Print the tracked stats, including page size, total number of pages,
   /// number of pages accessed, and the page ids in the accessed order.
   /// \param json If true, print in json format, otherwise in a more readable
   /// format.
   /// \return true if function completed successfully, false on failure.
-  static bool printStats(llvm::raw_ostream &OS, bool json);
+  bool printStats(llvm::raw_ostream &OS, bool json) volatile;
 
   /// Print only the page ids in the accessed order.
   /// \param json If true, print in json format, otherwise in a more readable
   /// format.
   /// \return true if function completed successfully, false on failure.
-  static bool printPageAccessedOrder(llvm::raw_ostream &OS, bool json);
+  bool printPageAccessedOrder(llvm::raw_ostream &OS, bool json) volatile;
 
-  /// Shut down the PageAccessTracker.
-  /// \return true if shutdown is successful.
-  static bool shutdown();
+  /// Unregisters the signal handler.
+  ~PageAccessTracker();
 };
 
 } // namespace hermes

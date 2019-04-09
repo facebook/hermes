@@ -143,6 +143,7 @@ int main(int argc, char **argv_) {
   oscompat::SigAltStackDeleter sigAltDeleter;
   driver::CompileResult res = driver::compileFromCommandLineOptions();
   if (res.bytecodeProvider) {
+    std::unique_ptr<volatile PageAccessTracker> tracker;
     if (cl::TrackBytecodeIO) {
       if (!res.bytecodeBufferInfo.bufferIsMmapped) {
         // We use llvm::MemoryBuffer which does not use mmap if the file size
@@ -151,22 +152,20 @@ int main(int argc, char **argv_) {
             << "Cannot use PageAccessTracker because bytecode is not mmapped.\n";
         return EXIT_FAILURE;
       }
-      if (!PageAccessTracker::initialize(
-              res.bytecodeBufferInfo.bufferStart,
-              res.bytecodeBufferInfo.bufferSize)) {
+      tracker = PageAccessTracker::create(
+          res.bytecodeBufferInfo.bufferStart,
+          res.bytecodeBufferInfo.bufferSize);
+      if (!tracker) {
         return EXIT_FAILURE;
       }
     }
     auto ret = executeHBCBytecodeFromCL(
         std::move(res.bytecodeProvider), res.bytecodeBufferInfo);
-    if (cl::TrackBytecodeIO) {
-      if (!PageAccessTracker::printStats(
+    if (tracker) {
+      if (!tracker->printStats(
               llvm::outs(),
               cl::BytecodeIOStatsFormat ==
                   cl::BytecodeIOStatsFormatKind::JSON)) {
-        return EXIT_FAILURE;
-      }
-      if (!PageAccessTracker::shutdown()) {
         return EXIT_FAILURE;
       }
     }
