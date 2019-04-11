@@ -7,6 +7,7 @@
 #ifndef HERMES_VM_ORDERED_HASHMAP_H
 #define HERMES_VM_ORDERED_HASHMAP_H
 
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Runtime.h"
 
@@ -159,6 +160,11 @@ class OrderedHashMap final : public GCCell {
 
   /// Number of alive entries in the storage.
   uint32_t size_{0};
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// Whether we've informed the CrashManager of overflow.
+  bool overflowRecorded_{false};
+#endif
 
   /// Hash a HermesValue to an index to our hash table.
   static uint32_t

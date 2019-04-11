@@ -693,6 +693,9 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
     return vmExperimentFlags_;
   }
 
+  // Return a reference to the runtime's CrashManager.
+  inline CrashManager &getCrashManager();
+
  protected:
   /// Construct a Runtime on the stack.
   /// NOTE: This should only be used by StackRuntime. All other uses should use
@@ -1327,6 +1330,10 @@ inline ExecutionStatus Runtime::setThrownValue(HermesValue value) {
 
 inline void Runtime::clearThrownValue() {
   thrownValue_ = HermesValue::encodeEmptyValue();
+}
+
+inline CrashManager &Runtime::getCrashManager() {
+  return *crashMgr_;
 }
 
 //===----------------------------------------------------------------------===//

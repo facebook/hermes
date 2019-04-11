@@ -7,6 +7,7 @@
 #include "hermes/VM/ArrayStorage.h"
 
 #include "hermes/Support/Algorithms.h"
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Metadata.h"
 
@@ -149,6 +150,9 @@ ExecutionStatus ArrayStorage::throwExcessiveCapacityError(
   assert(
       capacity > maxElements() &&
       "Shouldn't call this without first checking that capacity is big");
+  // Record the fact that this error occurred.
+  HERMES_EXTRA_DEBUG(runtime->getCrashManager().setCustomData(
+      "Hermes_ArrayStorage_overflow", "1"));
   return runtime->raiseRangeError(
       TwineChar16(
           "Requested an array size larger than the max allowable: Requested elements = ") +

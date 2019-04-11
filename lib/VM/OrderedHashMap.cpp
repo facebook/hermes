@@ -101,7 +101,21 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
       "Avoid overflow checks on multiplying capacity by 4");
   if (self->size_ * 4 > self->capacity_ * 3) {
     // Load factor is more than 0.75, need to increase the capacity.
-    newCapacity = std::min(toRValue(MAX_CAPACITY), self->capacity_ * 2);
+    newCapacity = self->capacity_ * 2;
+    if (LLVM_UNLIKELY(newCapacity > MAX_CAPACITY)) {
+      // Eventually, we should cap the max value at the
+      // largest power of two <= MAX_CAPACITY.
+      // For now, though leave the value capped at MAX_CAPACITY for
+      // now, in case that's connected to T42745080.
+      newCapacity = MAX_CAPACITY;
+      // Record the fact that this overflow occurred (in case
+      // it's correlated with crashes).
+      HERMES_EXTRA_DEBUG(if (!self->overflowRecorded_) {
+        runtime->getCrashManager().setCustomData(
+            "Hermes_OrderedHashMap_overflow", "1");
+        self->overflowRecorded_ = true;
+      });
+    }
   } else if (
       self->size_ * 4 < self->capacity_ && self->capacity_ > INITIAL_CAPACITY) {
     // Load factor is less than 0.25, and we are not at initial cap.

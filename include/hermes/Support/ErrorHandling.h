@@ -11,6 +11,11 @@
 
 #include <cstdlib>
 
+/// This macro is always enabled.  It exists to mark code that intended to
+/// do some extra checking in the service of debugging some production crash;
+/// if we figure out the problem, we might wish to delete them.
+#define HERMES_EXTRA_DEBUG(x) x
+
 namespace hermes {
 
 /// Reports a serious error and aborts execution. Calls any installed error
