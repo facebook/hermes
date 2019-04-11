@@ -15,6 +15,7 @@ using namespace hermes;
 
 namespace {
 
+#ifdef HERMES_FACEBOOK_BUILD
 TEST(PageAccessTrackerTest, Order) {
   const size_t PS = hermes::oscompat::page_size();
   const int numPages = 3;
@@ -35,6 +36,7 @@ TEST(PageAccessTrackerTest, Order) {
   std::string expected = "\"page_ids\":[1,2,0],";
   EXPECT_TRUE(out.find(expected) != std::string::npos);
 }
+#endif
 
 } // namespace
 #endif // __linux__
