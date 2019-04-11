@@ -463,6 +463,36 @@ hermesInternalEnsureObject(void *, Runtime *runtime, NativeArgs args) {
   return runtime->raiseTypeError(args.getArgHandle(runtime, 1));
 }
 
+#ifdef HERMESVM_PLATFORM_LOGGING
+void logGCStats(Runtime *runtime, const char *msg) {
+  // The GC stats can exceed the android logcat length limit, of
+  // 1024 bytes.  Break it up.
+  std::string stats;
+  {
+    llvm::raw_string_ostream os(stats);
+    runtime->printHeapStats(os);
+  }
+  auto copyRegionFrom = [&stats](size_t from) -> size_t {
+    size_t rBrace = stats.find("},", from);
+    if (rBrace == std::string::npos) {
+      std::string portion = stats.substr(from);
+      hermesLog("HermesVM", "%s", portion.c_str());
+      return stats.size();
+    }
+
+    // Add 2 for the length of the search string, to get to the end.
+    const size_t to = rBrace + 2;
+    std::string portion = stats.substr(from, to - from);
+    hermesLog("HermesVM", "%s", portion.c_str());
+    return to;
+  };
+
+  hermesLog("HermesVM", "%s:", msg);
+  for (size_t ind = 0; ind < stats.size(); ind = copyRegionFrom(ind))
+    ;
+}
+#endif
+
 CallResult<HermesValue>
 hermesInternalTTIReached(void *, Runtime *runtime, NativeArgs args) {
   runtime->ttiReached();
@@ -471,7 +501,7 @@ hermesInternalTTIReached(void *, Runtime *runtime, NativeArgs args) {
   throw jsi::JSINativeException("TTI reached; profiling done");
 #endif
 #ifdef HERMESVM_PLATFORM_LOGGING
-  logGCStats("TTI call");
+  logGCStats(runtime, "TTI call");
 #endif
   return HermesValue::encodeUndefinedValue();
 }
