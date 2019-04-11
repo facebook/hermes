@@ -420,6 +420,9 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
     return runtimeStats_;
   }
 
+  /// Print the heap and other misc. stats to the given stream.
+  void printHeapStats(llvm::raw_ostream &os);
+
   /// Returns the common storage object.
   RuntimeCommonStorage *getCommonStorage() {
     return commonStorage_.get();
@@ -830,6 +833,9 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
 
   // Percentage in [0,100] of bytecode we should eagerly read into page cache.
   const uint8_t bytecodeWarmupPercent_;
+
+  // Signal-based I/O tracking. Slows down execution.
+  const bool trackIO_;
 
   /// This value can be passed to the runtime as flags to test experimental
   /// features. Each experimental feature decides how to interpret these

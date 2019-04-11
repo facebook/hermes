@@ -359,8 +359,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   std::string getRecordedGCStats() override {
     std::string s;
     llvm::raw_string_ostream os(s);
-
-    runtime_.getHeap().printAllCollectedStats(os);
+    runtime_.printHeapStats(os);
     return os.str();
   }
 

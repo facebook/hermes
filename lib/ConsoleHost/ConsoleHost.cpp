@@ -29,9 +29,10 @@ quit(void *, vm::Runtime *runtime, vm::NativeArgs) {
 
 static void printStats(vm::Runtime *runtime, llvm::raw_ostream &os) {
   std::string stats;
-  llvm::raw_string_ostream tmp{stats};
-  runtime->getHeap().printAllCollectedStats(tmp);
-  tmp.flush();
+  {
+    llvm::raw_string_ostream tmp{stats};
+    runtime->printHeapStats(tmp);
+  }
   vm::instrumentation::PerfEvents::endAndInsertStats(stats);
   os << stats;
 }

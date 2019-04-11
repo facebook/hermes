@@ -4,8 +4,8 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#ifndef HERMES_VM_INSTRUMENTATION_PAGEACCESSTRACKERPOSIX_H
-#define HERMES_VM_INSTRUMENTATION_PAGEACCESSTRACKERPOSIX_H
+#ifndef HERMES_SUPPORT_PAGEACCESSTRACKERPOSIX_H
+#define HERMES_SUPPORT_PAGEACCESSTRACKERPOSIX_H
 
 #include <sigmux.h>
 #include <signal.h>
@@ -109,4 +109,4 @@ class PageAccessTracker {
 
 } // namespace hermes
 
-#endif // HERMES_VM_INSTRUMENTATION_PAGEACCESSTRACKERPOSIX_H
+#endif // HERMES_SUPPORT_PAGEACCESSTRACKERPOSIX_H

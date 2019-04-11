@@ -261,6 +261,14 @@ void BCProviderFromBuffer::madvise(oscompat::MAdvice advice) {
       const_cast<uint8_t *>(buffer_->data()), buffer_->size(), advice);
 }
 
+void BCProviderFromBuffer::startPageAccessTracker() {
+  auto size = buffer_->size();
+  if (!tracker_) {
+    tracker_ =
+        PageAccessTracker::create(const_cast<uint8_t *>(bufferPtr_), size);
+  }
+}
+
 BCProviderFromBuffer::BCProviderFromBuffer(std::unique_ptr<const Buffer> buffer)
     : buffer_(std::move(buffer)), bufferPtr_(buffer_->data()) {
   ConstBytecodeFileFields fields;

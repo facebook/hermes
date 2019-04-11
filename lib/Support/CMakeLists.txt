@@ -15,6 +15,7 @@ add_llvm_library(hermesSupport
         JSONEmitter.cpp
         OSCompatPosix.cpp
         OSCompatWindows.cpp
+        PageAccessTrackerPosix.cpp
         PerfSection.cpp
         RegExpSerialization.cpp
         Semaphore.cpp

@@ -12,6 +12,7 @@
 #include "hermes/Public/Buffer.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/Support/OSCompat.h"
+#include "hermes/Support/PageAccessTracker.h"
 #include "hermes/Support/RegExpSerialization.h"
 #include "hermes/Support/StringTableEntry.h"
 
@@ -246,6 +247,15 @@ class BCProviderBase {
   /// Issue an madvise call (only implemented for buffers).
   virtual void madvise(oscompat::MAdvice advice) {}
 
+  /// Start tracking I/O (only implemented for buffers). Any access before this
+  /// call (e.g. reading header to construct the provider) will not be recorded.
+  virtual void startPageAccessTracker() {}
+
+  /// Access the page I/O tracker (only implemented for buffers).
+  virtual volatile PageAccessTracker *getPageAccessTracker() {
+    return nullptr;
+  }
+
   /// Return the entire bytecode file (only implemented for buffers).
   virtual llvm::ArrayRef<uint8_t> getRawBuffer() const {
     return llvm::ArrayRef<uint8_t>();
@@ -295,6 +305,8 @@ class BCProviderFromBuffer final : public BCProviderBase {
 
   /// Set by \p stopWarmup to tell any warmup thread to abort.
   std::atomic<bool> warmupAbortFlag_;
+
+  std::unique_ptr<volatile PageAccessTracker> tracker_;
 
   /// Tells any running warmup thread to abort and then joins that thread.
   void stopWarmup();
@@ -422,6 +434,12 @@ class BCProviderFromBuffer final : public BCProviderBase {
   virtual void startWarmup(uint8_t percent);
 
   virtual void madvise(oscompat::MAdvice advice);
+
+  virtual void startPageAccessTracker();
+
+  virtual volatile PageAccessTracker *getPageAccessTracker() {
+    return tracker_.get();
+  }
 
   virtual llvm::ArrayRef<uint8_t> getRawBuffer() const {
     return llvm::ArrayRef<uint8_t>(bufferPtr_, buffer_->size());

@@ -50,6 +50,10 @@ namespace {
 static constexpr uint32_t kMaxSupportedNumRegisters =
     UINT32_MAX / sizeof(PinnedHermesValue);
 
+// Only track I/O for buffers > 64 kB (which excludes things like
+// Runtime::generateSpecialRuntimeBytecode).
+static constexpr size_t MIN_IO_TRACKING_SIZE = 64 * 1024;
+
 static const Predefined::Str fixedPropCacheNames[(size_t)PropCacheID::_COUNT] =
     {
 #define V(id, predef) predef,
@@ -172,6 +176,7 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       hasES6Symbol_(runtimeConfig.getES6Symbol()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
+      trackIO_(runtimeConfig.getTrackIO()),
       vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
       runtimeStats_(runtimeConfig.getEnableSampledStats()),
       commonStorage_(createRuntimeCommonStorage()),
@@ -504,6 +509,17 @@ void Runtime::printRuntimeGCStats(llvm::raw_ostream &os) const {
   os << "\n\t}";
 }
 
+void Runtime::printHeapStats(llvm::raw_ostream &os) {
+  getHeap().printAllCollectedStats(os);
+  for (auto &module : getRuntimeModules()) {
+    auto tracker = module.getBytecode()->getPageAccessTracker();
+    if (tracker) {
+      tracker->printStats(os, true);
+      os << "\n";
+    }
+  }
+}
+
 unsigned Runtime::getSymbolsEnd() const {
   return identifierTable_.getSymbolsEnd();
 }
@@ -623,6 +639,12 @@ CallResult<HermesValue> Runtime::runBytecode(
     } else if (getVMExperimentFlags() & experiments::MAdviseSequential) {
       bytecode->madvise(oscompat::MAdvice::Sequential);
     }
+  }
+  // Only track I/O for buffers > 64 kB (which excludes things like
+  // Runtime::generateSpecialRuntimeBytecode).
+  if (flags.persistent && trackIO_ &&
+      bytecode->getRawBuffer().size() > MIN_IO_TRACKING_SIZE) {
+    bytecode->startPageAccessTracker();
   }
 
   GCScope scope(this);
@@ -963,7 +985,9 @@ std::unique_ptr<Buffer> Runtime::generateSpecialRuntimeBytecode() {
     bcGen.emitRet(0);
     builder.addFunction(1, bcGen.acquireBytecode());
   }
-  return builder.generateBytecodeBuffer();
+  auto buffer = builder.generateBytecodeBuffer();
+  assert(buffer->size() < MIN_IO_TRACKING_SIZE);
+  return buffer;
 }
 
 void Runtime::initPredefinedStrings() {

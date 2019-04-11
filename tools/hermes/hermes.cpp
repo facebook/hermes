@@ -8,7 +8,7 @@
 #include "hermes/ConsoleHost/ConsoleHost.h"
 #include "hermes/ConsoleHost/RuntimeFlags.h"
 #include "hermes/Support/OSCompat.h"
-#include "hermes/VM/instrumentation/PageAccessTracker.h"
+#include "hermes/Support/PageAccessTracker.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -85,6 +85,7 @@ static int executeHBCBytecodeFromCL(
           .withES6Symbol(cl::ES6Symbol)
           .withEnableSampleProfiling(cl::SampleProfiling)
           .withRandomizeMemoryLayout(cl::RandomizeMemoryLayout)
+          .withTrackIO(cl::TrackBytecodeIO)
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;
@@ -143,32 +144,8 @@ int main(int argc, char **argv_) {
   oscompat::SigAltStackDeleter sigAltDeleter;
   driver::CompileResult res = driver::compileFromCommandLineOptions();
   if (res.bytecodeProvider) {
-    std::unique_ptr<volatile PageAccessTracker> tracker;
-    if (cl::TrackBytecodeIO) {
-      if (!res.bytecodeBufferInfo.bufferIsMmapped) {
-        // We use llvm::MemoryBuffer which does not use mmap if the file size
-        // is less than a page.
-        llvm::errs()
-            << "Cannot use PageAccessTracker because bytecode is not mmapped.\n";
-        return EXIT_FAILURE;
-      }
-      tracker = PageAccessTracker::create(
-          res.bytecodeBufferInfo.bufferStart,
-          res.bytecodeBufferInfo.bufferSize);
-      if (!tracker) {
-        return EXIT_FAILURE;
-      }
-    }
     auto ret = executeHBCBytecodeFromCL(
         std::move(res.bytecodeProvider), res.bytecodeBufferInfo);
-    if (tracker) {
-      if (!tracker->printStats(
-              llvm::outs(),
-              cl::BytecodeIOStatsFormat ==
-                  cl::BytecodeIOStatsFormatKind::JSON)) {
-        return EXIT_FAILURE;
-      }
-    }
     return ret;
   } else {
     return res.status;

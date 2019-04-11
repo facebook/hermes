@@ -1,7 +1,6 @@
 set(ISources
   ApproxIntegralTest.cpp
   ProcessStatsTest.cpp
-  PageAccessTrackerTest.cpp
 )
 
 add_hermes_unittest(HermesInstrumentationTests

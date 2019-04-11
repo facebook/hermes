@@ -53,8 +53,14 @@ class PinnedHermesValue;
                                                                          \
   /* Eagerly read bytecode into page cache. */                           \
   F(unsigned, BytecodeWarmupPercent, 0)                                  \
+                                                                         \
+  /* Signal-based I/O tracking. Slows down execution. If enabled, */     \
+  /* all bytecode bufffers > 64 kB passed to Hermes must be mmap:ed. */  \
+  F(bool, TrackIO, false)                                                \
+                                                                         \
   /* An interface for managing crashes. */                               \
   F(std::shared_ptr<CrashManager>, CrashMgr, new NopCrashManager)        \
+                                                                         \
   /* The flags passed from a VM experiment */                            \
   F(uint32_t, VMExperimentFlags, 0)                                      \
   /* RUNTIME_FIELDS END */

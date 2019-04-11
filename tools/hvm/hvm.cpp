@@ -24,9 +24,9 @@
 #include "hermes/Public/Buffer.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/MemoryBuffer.h"
+#include "hermes/Support/PageAccessTracker.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
-#include "hermes/VM/instrumentation/PageAccessTracker.h"
 
 #define DEBUG_TYPE "hvm"
 
@@ -82,22 +82,6 @@ int main(int argc, char **argv_) {
   }
 
   auto buffer = llvm::make_unique<MemoryBuffer>(FileBufOrErr.get().get());
-  std::unique_ptr<volatile PageAccessTracker> tracker;
-  if (cl::TrackBytecodeIO) {
-    if (FileBufOrErr.get()->getBufferKind() !=
-        llvm::MemoryBuffer::MemoryBuffer_MMap) {
-      // We use llvm::MemoryBuffer which does not use mmap if the file size
-      // is less than a page.
-      llvm::errs()
-          << "Cannot use PageAccessTracker because bytecode is not mmapped.\n";
-      return EXIT_FAILURE;
-    }
-    tracker = PageAccessTracker::create(
-        const_cast<unsigned char *>(buffer->data()), buffer->size());
-    if (!tracker) {
-      return EXIT_FAILURE;
-    }
-  }
   auto ret =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer));
 
@@ -136,6 +120,7 @@ int main(int argc, char **argv_) {
                   .withName("hvm")
                   .build())
           .withES6Symbol(cl::ES6Symbol)
+          .withTrackIO(cl::TrackBytecodeIO)
           .build();
 
   options.stopAfterInit = cl::StopAfterInit;
@@ -157,14 +142,6 @@ int main(int argc, char **argv_) {
     for (unsigned i = 0; i < Repeat; ++i) {
       success &= executeHBCBytecode(
           std::shared_ptr<hbc::BCProvider>{sharedBytecode}, options, &filename);
-    }
-  }
-
-  if (tracker) {
-    if (!tracker->printStats(
-            llvm::outs(),
-            cl::BytecodeIOStatsFormat == cl::BytecodeIOStatsFormatKind::JSON)) {
-      return EXIT_FAILURE;
     }
   }
   return success ? 0 : 1;

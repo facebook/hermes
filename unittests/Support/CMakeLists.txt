@@ -8,6 +8,7 @@ set(SupportSources
   HashStringTest.cpp
   JSONEmitterTest.cpp
   LEB128Test.cpp
+  PageAccessTrackerTest.cpp
   PlatformLoggingTest.cpp
   RegexTest.cpp
   SNPrintfBufTest.cpp

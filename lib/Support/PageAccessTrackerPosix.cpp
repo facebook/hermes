@@ -4,9 +4,9 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#if defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS)
+#if defined(HERMES_FACEBOOK_BUILD) && defined(__linux__)
 
-#include "hermes/VM/instrumentation/PageAccessTracker.h"
+#include "hermes/Support/PageAccessTracker.h"
 
 #include "hermes/Support/JSONEmitter.h"
 
@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "llvm/ADT/STLExtras.h"
@@ -235,4 +236,4 @@ bool PageAccessTracker::printPageAccessedOrder(
   return true;
 }
 
-#endif // HERMES_FACEBOOK_BUILD and not _WINDOWS
+#endif // HERMES_FACEBOOK_BUILD and __linux__

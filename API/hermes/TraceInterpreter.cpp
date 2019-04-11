@@ -8,7 +8,6 @@
 
 #include <hermes/Support/SHA1.h>
 #include <hermes/TracingRuntime.h>
-#include <hermes/VM/instrumentation/PageAccessTracker.h>
 #include <hermes/VM/instrumentation/PerfEvents.h>
 #include <jsi/instrumentation.h>
 #include <llvm/Support/SHA1.h>
@@ -392,23 +391,6 @@ void verifyHash(
   }
 }
 
-std::string getStatsString(
-    std::string &GCStats,
-    volatile ::hermes::PageAccessTracker *tracker) {
-  std::string stats = GCStats;
-  if (tracker) {
-    std::string s;
-    llvm::raw_string_ostream os(s);
-    os << "Bytecode I/O stats:\n";
-    if (!tracker->printStats(os, true)) {
-      throw std::runtime_error("Failed to print bytecode I/O stats.");
-    }
-    os << "\n";
-    stats += os.str();
-  }
-  return stats;
-}
-
 /// Returns the element of \p repGCStats with the median "totalTime" stat.
 static std::string mergeGCStats(const std::vector<std::string> &repGCStats) {
   if (repGCStats.empty())
@@ -536,24 +518,11 @@ std::string TraceInterpreter::execFromMemoryBuffer(
             llvm::makeArrayRef(
                 codeFileBuffer->data(), codeFileBuffer->size())));
   }
-  // Need to mark bytecode file for io tracking after reading the whole file for
-  // computing hash.
-  std::unique_ptr<volatile ::hermes::PageAccessTracker> tracker;
-  if (options.shouldTrackIO && isBytecode) {
-    if (!codeIsMmapped) {
-      throw std::runtime_error(
-          "Cannot track bytecode I/O when it's not mmapped.");
-    }
-    uint8_t *bufStart = const_cast<uint8_t *>(codeFileBuffer->data());
-    size_t bufSize = codeFileBuffer->size();
-    tracker = ::hermes::PageAccessTracker::create(bufStart, bufSize);
-    if (!tracker) {
-      throw std::runtime_error("Failed to initialze PageAccessTracker.");
-    }
-  }
   auto &rtConfig = std::get<1>(traceAndConfigAndEnv);
   ::hermes::vm::RuntimeConfig::Builder rtConfigBuilder = rtConfig.rebuild();
   rtConfigBuilder.withBytecodeWarmupPercent(options.bytecodeWarmupPercent);
+  rtConfigBuilder.withTrackIO(
+      options.shouldTrackIO && isBytecode && codeIsMmapped);
   ::hermes::vm::GCConfig::Builder gcConfigBuilder =
       rtConfig.getGCConfig().rebuild();
   gcConfigBuilder.withShouldRecordStats(options.shouldPrintGCStats);
@@ -596,9 +565,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
       repGCStats[rep] = stats;
     }
   }
-  auto GCStats = options.shouldPrintGCStats ? mergeGCStats(repGCStats) : "";
-  std::string stats = getStatsString(GCStats, tracker.get());
-  return stats;
+  return options.shouldPrintGCStats ? mergeGCStats(repGCStats) : "";
 }
 
 /* static */
