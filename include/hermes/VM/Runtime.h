@@ -994,6 +994,11 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
     return flag;
   }
 #endif
+
+  /// Holds references to persistent BC providers for the lifetime of the
+  /// Runtime. This is needed because the identifier table may contain pointers
+  /// into bytecode, and so memory backing these must be preserved.
+  std::vector<std::shared_ptr<hbc::BCProvider>> presistentBCProviders_;
 };
 
 /// StackRuntime is meant to be used whenever a Runtime should be allocated on
