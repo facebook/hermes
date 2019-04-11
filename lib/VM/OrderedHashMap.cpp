@@ -6,6 +6,7 @@
  */
 #include "hermes/VM/OrderedHashMap.h"
 
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Operations.h"
@@ -50,6 +51,7 @@ OrderedHashMap::OrderedHashMap(
       hashTable_(hashTableStorage.get(), &runtime->getHeap()) {
   ArrayStorage::resizeWithinCapacity(
       hashTableStorage, runtime, INITIAL_CAPACITY);
+  HERMES_EXTRA_DEBUG(ValidityChecker::check(this));
 }
 
 CallResult<HermesValue> OrderedHashMap::create(Runtime *runtime) {
@@ -202,6 +204,7 @@ ExecutionStatus OrderedHashMap::insert(
     Runtime *runtime,
     Handle<> key,
     Handle<> value) {
+  HERMES_EXTRA_DEBUG(ValidityChecker validCheck(self));
   uint32_t bucket = hashToBucket(self, runtime, key);
   if (auto *entry = self->lookupInBucket(bucket, key.getHermesValue())) {
     // Element already exists, update value and return.
@@ -255,6 +258,7 @@ bool OrderedHashMap::erase(
     Handle<OrderedHashMap> self,
     Runtime *runtime,
     Handle<> key) {
+  HERMES_EXTRA_DEBUG(ValidityChecker validCheck(self));
   uint32_t bucket = hashToBucket(self, runtime, key);
   HashMapEntry *prevEntry = nullptr;
   auto *entry = dyn_vmcast<HashMapEntry>(self->hashTable_->at(bucket));
@@ -316,6 +320,7 @@ HashMapEntry *OrderedHashMap::iteratorNext(HashMapEntry *entry) const {
 }
 
 void OrderedHashMap::clear(Runtime *runtime) {
+  HERMES_EXTRA_DEBUG(ValidityChecker validCheck(runtime->makeHandle(this)));
   if (!firstIterationEntry_) {
     // Empty set.
     return;
@@ -344,6 +349,21 @@ void OrderedHashMap::clear(Runtime *runtime) {
   firstIterationEntry_->prevIterationEntry = nullptr;
   size_ = 0;
 }
+
+#ifdef HERMES_EXTRA_DEBUG
+/*static*/
+void OrderedHashMap::ValidityChecker::check(const OrderedHashMap *self) {
+  if (!self->isValid(CellKind::OrderedHashMapKind)) {
+    hermes_fatal("OrderedHashMap has invalid vtable.");
+  }
+  if (self->capacity_ == 0) {
+    hermes_fatal("OrderedHashMap has zero capacity_.");
+  }
+  if (self->hashTable_.get() == nullptr) {
+    hermes_fatal("OrderedHashMap has null hashTable_.");
+  }
+}
+#endif
 
 } // namespace vm
 } // namespace hermes

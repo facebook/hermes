@@ -147,16 +147,25 @@ class GCCell {
         reinterpret_cast<char *>(this) + getAllocatedSize());
   }
 
-#ifndef NDEBUG
   /// \return true iff the cell is valid.
   ///
   /// Validity is defined by:
   ///   * The cell has a correct magic header
   ///   * The cell has a non-null vtable pointer that points to a VTable.
   bool isValid() const {
+#ifndef NDEBUG
+    // We only do the cell magic number check in debug builds.
     return magic_ == kMagic && vtp_ && vtp_->isValid();
-  }
+#else
+    return vtp_ && vtp_->isValid();
 #endif
+  }
+
+  /// \return true iff the cell is valid (i.e., its vtable is valid)
+  // and has the given \p expectedKind.
+  bool isValid(CellKind expectedKind) const {
+    return vtp_ && vtp_->isValid(expectedKind);
+  }
 
   /// Placement new
   static void *operator new(size_t, void *p) {
