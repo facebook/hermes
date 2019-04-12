@@ -381,6 +381,11 @@ HermesValue JSTypedArray<T, C>::_getOwnIndexedImpl(
     Runtime *runtime,
     uint32_t index) {
   auto *self = vmcast<JSTypedArray>(selfObj);
+  if (LLVM_UNLIKELY(!self->attached())) {
+    // NOTE: This should be a TypeError to be fully spec-compliant, but
+    // getOwnIndexed is not allowed to return an exception.
+    return HermesValue::encodeNumberValue(0);
+  }
   if (LLVM_LIKELY(index < self->getLength())) {
     return SafeNumericEncoder<T>::encode(self->template at<T>(index));
   }
