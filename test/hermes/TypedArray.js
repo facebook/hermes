@@ -1,6 +1,6 @@
 // RUN: %hermes -target=HBC -O -gc-sanitize-handles=0 %s
 
-"use strict";
+'use strict';
 
 function isLittleEndian() {
   var uint16 = new Uint16Array(1);
@@ -11,47 +11,54 @@ function isLittleEndian() {
 
 function getByteWidth(cons) {
   switch (cons) {
-  case Int8Array:
-  case Uint8Array:
-  case Uint8ClampedArray:
-    return 1;
-  case Int16Array:
-  case Uint16Array:
-    return 2;
-  case Int32Array:
-  case Uint32Array:
-  case Float32Array:
-    return 4;
-  case Float64Array:
-    return 8;
+    case Int8Array:
+    case Uint8Array:
+    case Uint8ClampedArray:
+      return 1;
+    case Int16Array:
+    case Uint16Array:
+      return 2;
+    case Int32Array:
+    case Uint32Array:
+    case Float32Array:
+      return 4;
+    case Float64Array:
+      return 8;
   }
 }
 
 // This has the same API as the Node.js assert object.
 var assert = {
-  equal : function(actual, expected, msg) {
+  equal: function(actual, expected, msg) {
     // Remember to check for NaN which does not compare as equal with itself.
     // NOTE: this should become Number.isNaN() when that is implemented.
-    if (actual !== expected
-        && !(isNaN(actual) && isNaN(expected))) {
+    if (actual !== expected && !(isNaN(actual) && isNaN(expected))) {
       assert.fail(
-        (msg ? msg + " -- " : "") + "Not equal: actual <" + actual +
-        ">, and expected <" + expected + ">"
+        (msg ? msg + ' -- ' : '') +
+          'Not equal: actual <' +
+          actual +
+          '>, and expected <' +
+          expected +
+          '>',
       );
     }
   },
-  notEqual : function(actual, expected, msg) {
+  notEqual: function(actual, expected, msg) {
     if (actual === expected) {
       assert.fail(
-        (msg ? msg + " -- " : "") +
-        "Equal: actual <" + actual + ">, and expected <" + expected + ">"
+        (msg ? msg + ' -- ' : '') +
+          'Equal: actual <' +
+          actual +
+          '>, and expected <' +
+          expected +
+          '>',
       );
     }
   },
-  ok : function(value, msg) {
+  ok: function(value, msg) {
     assert.equal(!!value, true, msg);
   },
-  throws : function(block, error, msg) {
+  throws: function(block, error, msg) {
     try {
       block();
     } catch (e) {
@@ -59,16 +66,23 @@ var assert = {
       return;
     }
     // Can't put fail inside the try because it will catch the AssertionError.
-    assert.fail((msg ? msg + " -- " : "") + "Failed to throw");
+    assert.fail((msg ? msg + ' -- ' : '') + 'Failed to throw');
   },
-  fail : function(msg) {
-    throw new Error("AssertionError: " + (msg ? msg : "Failed"));
-  }
+  fail: function(msg) {
+    throw new Error('AssertionError: ' + (msg ? msg : 'Failed'));
+  },
 };
 
 var cons = [
-  Int8Array, Int16Array, Int32Array, Uint8Array, Uint8ClampedArray, Uint16Array,
-  Uint32Array, Float32Array, Float64Array
+  Int8Array,
+  Int16Array,
+  Int32Array,
+  Uint8Array,
+  Uint8ClampedArray,
+  Uint16Array,
+  Uint32Array,
+  Float32Array,
+  Float64Array,
 ];
 var LE = isLittleEndian();
 
@@ -94,14 +108,17 @@ cons.forEach(function(TypedArray) {
 // Check BYTES_PER_ELEMENT
 cons.forEach(function(TypedArray) {
   assert.equal(TypedArray.BYTES_PER_ELEMENT, getByteWidth(TypedArray));
-  assert.equal((new TypedArray()).BYTES_PER_ELEMENT, getByteWidth(TypedArray));
+  assert.equal(new TypedArray().BYTES_PER_ELEMENT, getByteWidth(TypedArray));
   // Check flags of the field.
-  var desc = Object.getOwnPropertyDescriptor(TypedArray, "BYTES_PER_ELEMENT");
+  var desc = Object.getOwnPropertyDescriptor(TypedArray, 'BYTES_PER_ELEMENT');
   assert.ok(!desc.writable);
   assert.ok(!desc.enumerable);
   assert.ok(!desc.configurable);
 
-  desc = Object.getOwnPropertyDescriptor(TypedArray.prototype, "BYTES_PER_ELEMENT");
+  desc = Object.getOwnPropertyDescriptor(
+    TypedArray.prototype,
+    'BYTES_PER_ELEMENT',
+  );
   assert.ok(!desc.writable);
   assert.ok(!desc.enumerable);
   assert.ok(!desc.configurable);
@@ -110,13 +127,25 @@ cons.forEach(function(TypedArray) {
 // Check the flags for various fields.
 cons.forEach(function(TypedArray) {
   var proto = Object.getPrototypeOf(TypedArray);
-  assert.ok(!Object.getOwnPropertyDescriptor(proto.prototype, 'buffer').enumerable);
-  assert.ok(!Object.getOwnPropertyDescriptor(proto.prototype, 'byteLength').enumerable);
-  assert.ok(!Object.getOwnPropertyDescriptor(proto.prototype, 'byteOffset').enumerable);
+  assert.ok(
+    !Object.getOwnPropertyDescriptor(proto.prototype, 'buffer').enumerable,
+  );
+  assert.ok(
+    !Object.getOwnPropertyDescriptor(proto.prototype, 'byteLength').enumerable,
+  );
+  assert.ok(
+    !Object.getOwnPropertyDescriptor(proto.prototype, 'byteOffset').enumerable,
+  );
 
-  assert.ok(Object.getOwnPropertyDescriptor(proto.prototype, 'buffer').configurable);
-  assert.ok(Object.getOwnPropertyDescriptor(proto.prototype, 'byteLength').configurable);
-  assert.ok(Object.getOwnPropertyDescriptor(proto.prototype, 'byteOffset').configurable);
+  assert.ok(
+    Object.getOwnPropertyDescriptor(proto.prototype, 'buffer').configurable,
+  );
+  assert.ok(
+    Object.getOwnPropertyDescriptor(proto.prototype, 'byteLength').configurable,
+  );
+  assert.ok(
+    Object.getOwnPropertyDescriptor(proto.prototype, 'byteOffset').configurable,
+  );
 });
 
 // Check length of the constructors.
@@ -160,8 +189,8 @@ cons.forEach(function(TypedArray) {
 });
 
 // Check constructor from Array with arbitrary types
-cons.forEach (function(TypedArray) {
-  var view = new TypedArray(["1", {}, false]);
+cons.forEach(function(TypedArray) {
+  var view = new TypedArray(['1', {}, false]);
   assert.equal(view.length, 3);
   assert.equal(view[0], 1);
   if (TypedArray == Float32Array || TypedArray == Float64Array) {
@@ -332,17 +361,23 @@ cons.forEach(function(TypedArray) {
 /// @{
 
 cons.forEach(function(TA) {
-  assert.equal(new TA([1,2,3,4,5]).copyWithin(-2).toString(), '1,2,3,1,2');
-  assert.equal(new TA([1,2,3,4,5]).copyWithin(0).toString(), '1,2,3,4,5');
-  assert.equal(new TA([1,2,3,4,5]).copyWithin(0,3,4).toString(), '4,2,3,4,5');
-  assert.equal(new TA([1,2,3,4,5]).copyWithin(-2,-3,-1).toString(), '1,2,3,3,4');
+  assert.equal(new TA([1, 2, 3, 4, 5]).copyWithin(-2).toString(), '1,2,3,1,2');
+  assert.equal(new TA([1, 2, 3, 4, 5]).copyWithin(0).toString(), '1,2,3,4,5');
+  assert.equal(
+    new TA([1, 2, 3, 4, 5]).copyWithin(0, 3, 4).toString(),
+    '4,2,3,4,5',
+  );
+  assert.equal(
+    new TA([1, 2, 3, 4, 5]).copyWithin(-2, -3, -1).toString(),
+    '1,2,3,3,4',
+  );
 });
 
 (function() {
   // Ensure bit-level preservation.
   var A = new Float32Array(4);
-  A[0] = 0/0;
-  A[1] = -(0/0);
+  A[0] = 0 / 0;
+  A[1] = -(0 / 0);
   var bytes1 = new Uint8Array(A.buffer, 0, 8);
   A.copyWithin(2, 0); // Copy bytes to the second half of A.
   var bytes2 = new Uint8Array(A.buffer, 8, 8);
@@ -359,7 +394,7 @@ cons.forEach(function(TA) {
 
 cons.forEach(function(c, i) {
   // Function exists.
-  assert.ok("from" in c);
+  assert.ok('from' in c);
   assert.ok(c.from);
 
   // Works on arrays.
@@ -389,7 +424,7 @@ cons.forEach(function(c, i) {
   assert.equal(ta[2], 3);
 
   // Array with holes.
-  ta = c.from([1,2,,,3]);
+  ta = c.from([1, 2, , , 3]);
   assert.equal(ta.length, 5);
   assert.equal(ta[0], 1);
   assert.equal(ta[1], 2);
@@ -417,7 +452,7 @@ cons.forEach(function(c, i) {
 
 cons.forEach(function(TypedArray) {
   // Function exists.
-  assert.ok("of" in TypedArray);
+  assert.ok('of' in TypedArray);
   assert.ok(TypedArray.of);
   assert.equal(TypedArray.of.length, 0);
 
@@ -457,38 +492,54 @@ cons.forEach(function(TypedArray) {
 cons.forEach(function(TypedArray) {
   var view = new TypedArray([0, 1, 2, 3, 4]);
   // Check that callback function is passed parameters correctly
-  assert.ok(view.every(function(elem, i, v) {
-    return elem === i && v == view;
-  }));
+  assert.ok(
+    view.every(function(elem, i, v) {
+      return elem === i && v == view;
+    }),
+  );
 
   // Check basic properties
-  assert.ok(view.every(function() {
-    return true;
-  }));
-  assert.ok(!view.every(function() {
-    return false;
-  }));
+  assert.ok(
+    view.every(function() {
+      return true;
+    }),
+  );
+  assert.ok(
+    !view.every(function() {
+      return false;
+    }),
+  );
 
-  assert.ok(!view.every(function(elem, i) {
-    return i !== 0;
-  }));
+  assert.ok(
+    !view.every(function(elem, i) {
+      return i !== 0;
+    }),
+  );
 
   // Check that callback function is passed parameters correctly
-  assert.ok(!view.some(function(elem, i, v) {
-    return !(elem === i && v == view);
-  }));
+  assert.ok(
+    !view.some(function(elem, i, v) {
+      return !(elem === i && v == view);
+    }),
+  );
   // Check basic properties
-  assert.ok(!view.some(function() {
-    return false;
-  }));
-  assert.ok(view.some(function() {
-    return true;
-  }));
-  assert.ok(view.some(function(elem, i) {
-    if (i == 0) {
+  assert.ok(
+    !view.some(function() {
+      return false;
+    }),
+  );
+  assert.ok(
+    view.some(function() {
       return true;
-    }
-  }));
+    }),
+  );
+  assert.ok(
+    view.some(function(elem, i) {
+      if (i == 0) {
+        return true;
+      }
+    }),
+  );
 });
 
 /// @}
@@ -618,10 +669,13 @@ cons.forEach(function(TypedArray) {
 cons.forEach(function(TypedArray) {
   var arr = new TypedArray([0, 1, 2, 3]);
 
-  assert.equal(arr.forEach(function(elem, i, view) {
-    assert.equal(elem, i);
-    assert.equal(view, arr);
-  }), undefined);
+  assert.equal(
+    arr.forEach(function(elem, i, view) {
+      assert.equal(elem, i);
+      assert.equal(view, arr);
+    }),
+    undefined,
+  );
 
   var numcalls = 0;
   arr.forEach(function() {
@@ -671,22 +725,22 @@ cons.forEach(function(TypedArray) {
 /// @{
 cons.forEach(function(ta) {
   var arr = new ta([1, 2, 3]);
-  assert.equal(arr.join(), "1,2,3");
-  assert.equal(arr.join(","), "1,2,3");
-  assert.equal(arr.join(""), "123");
-  assert.equal(arr.join("asdf"), "1asdf2asdf3asdf");
+  assert.equal(arr.join(), '1,2,3');
+  assert.equal(arr.join(','), '1,2,3');
+  assert.equal(arr.join(''), '123');
+  assert.equal(arr.join('asdf'), '1asdf2asdf3asdf');
 
   // Test empty case.
-  assert.equal(new ta([]).join(), "");
+  assert.equal(new ta([]).join(), '');
 
   // Test toString.
   assert.equal(ta.prototype.toString, Array.prototype.toString);
   assert.equal(arr.toString(), arr.join());
   // Test difference between integral and floating toString
   if (ta === Float32Array || ta === Float64Array) {
-    assert.equal(new ta([{}]).toString(), "NaN");
+    assert.equal(new ta([{}]).toString(), 'NaN');
   } else {
-    assert.equal(new ta([{}]).toString(), "0", ta.toString());
+    assert.equal(new ta([{}]).toString(), '0', ta.toString());
   }
 });
 /// @}
@@ -700,11 +754,15 @@ cons.forEach(function(TypedArray) {
   for (var i = 0; i < arr.length; i++) {
     assert.equal(arr[i], arr.length - 1 - i);
   }
-  var emptyReversed =
-    new (Object.getPrototypeOf(arr).constructor)([]).reverse();
+  var emptyReversed = new (Object.getPrototypeOf(arr)).constructor(
+    [],
+  ).reverse();
   assert.equal(emptyReversed.length, 0);
-  var oddReversed =
-    new (Object.getPrototypeOf(arr).constructor)([1, 2, 3]).reverse();
+  var oddReversed = new (Object.getPrototypeOf(arr)).constructor([
+    1,
+    2,
+    3,
+  ]).reverse();
   assert.equal(oddReversed.length, 3);
   assert.equal(oddReversed[0], 3);
   assert.equal(oddReversed[1], 2);
@@ -750,13 +808,13 @@ cons.forEach(function(ta) {
   }, TypeError);
 
   // Check that detaching in the middle of sorting will cause a TypeError.
-  x = new ta([1,2,3]);
+  x = new ta([1, 2, 3]);
   assert.throws(function() {
     x.sort(function f(unused1, unused2) {
       var a = {};
       a.valueOf = function() {
         HermesInternal.detachArrayBuffer(x.buffer);
-      }
+      };
       return a;
     });
   }, TypeError);
@@ -885,12 +943,11 @@ cons.forEach(function(ta) {
   // Check that detach check is called after returning to runtime.
   var typedarray = new Uint8Array(16);
   var evilNumber = {
-    valueOf:
-      function() {
-        HermesInternal.detachArrayBuffer(typedarray.buffer);
-        return 0;
-      }
-  }
+    valueOf: function() {
+      HermesInternal.detachArrayBuffer(typedarray.buffer);
+      return 0;
+    },
+  };
   assert.throws(function() {
     typedarray.set([evilNumber, 5, 5], 5);
   }, TypeError);
@@ -924,7 +981,7 @@ cons.forEach(function(ta) {
     assert.equal(x[1], arr.length - 1);
 
     // Check empty.
-    arr = new (Object.getPrototypeOf(arr).constructor)([]);
+    arr = new (Object.getPrototypeOf(arr)).constructor([]);
     x = arr.slice(0);
     assert.equal(x.length, 0);
   });
@@ -998,14 +1055,14 @@ cons.forEach(function(ta) {
 /// @{
 cons.forEach(function(TypedArray) {
   var arr = new TypedArray([1, 2, 3]);
-  assert.equal(arr.toLocaleString(), "1,2,3");
+  assert.equal(arr.toLocaleString(), '1,2,3');
   var n = 0;
   var oldToLocale = Number.prototype.toLocaleString;
   Number.prototype.toLocaleString = function() {
     ++n;
     return this;
-  }
-  assert.equal(arr.toLocaleString(), "1,2,3");
+  };
+  assert.equal(arr.toLocaleString(), '1,2,3');
   assert.equal(n, 3);
   Number.prototype.toLocaleString = oldToLocale;
 });
@@ -1025,7 +1082,11 @@ cons.forEach(function(TypedArray) {
   }
   // Check non-number usages.
   other = arr.map(function(elem) {
-    return {valueOf: function() { return 0; }};
+    return {
+      valueOf: function() {
+        return 0;
+      },
+    };
   });
   assert.equal(other.length, arr.length);
   for (var i = 0; i < other.length; i++) {
@@ -1054,41 +1115,83 @@ cons.forEach(function(TypedArray) {
   assert.equal(arr.reduceRight(sum, 0), totalsum);
 
   // Check that it properly uses the first element
-  assert.equal(arr.reduce(function(acc) {
-    return acc;
-  }), 0);
-  assert.equal(arr.reduce(function(acc) {
-    return acc;
-  }, 1), 1);
-  assert.equal(arr.reduceRight(function(acc) {
-    return acc;
-  }), arr.length - 1);
-  assert.equal(arr.reduceRight(function(acc) {
-    return acc;
-  }, 1), 1);
+  assert.equal(
+    arr.reduce(function(acc) {
+      return acc;
+    }),
+    0,
+  );
+  assert.equal(
+    arr.reduce(function(acc) {
+      return acc;
+    }, 1),
+    1,
+  );
+  assert.equal(
+    arr.reduceRight(function(acc) {
+      return acc;
+    }),
+    arr.length - 1,
+  );
+  assert.equal(
+    arr.reduceRight(function(acc) {
+      return acc;
+    }, 1),
+    1,
+  );
 
   // Check non-objects:
-  assert.equal(arr.reduce(function() {
-    return {};
-  }), {});
-  assert.equal(arr.reduceRight(function() {
-    return {};
-  }), {});
+  assert.equal(
+    arr.reduce(function() {
+      return {};
+    }),
+    {},
+  );
+  assert.equal(
+    arr.reduceRight(function() {
+      return {};
+    }),
+    {},
+  );
 
   // Check empty array.
-  var empty = new (Object.getPrototypeOf(arr).constructor)([]);
+  var empty = new (Object.getPrototypeOf(arr)).constructor([]);
   var numcalls = 0;
-  assert.throws(function() {empty.reduce(function() {})}, TypeError);
-  assert.equal(empty.reduce(function() {numcalls++;}, 0), 0);
+  assert.throws(function() {
+    empty.reduce(function() {});
+  }, TypeError);
+  assert.equal(
+    empty.reduce(function() {
+      numcalls++;
+    }, 0),
+    0,
+  );
   assert.equal(numcalls, 0);
   numcalls = 0;
-  assert.throws(function() {empty.reduceRight(function() {})}, TypeError);
-  assert.equal(empty.reduceRight(function() {numcalls++;}, 0), 0);
+  assert.throws(function() {
+    empty.reduceRight(function() {});
+  }, TypeError);
+  assert.equal(
+    empty.reduceRight(function() {
+      numcalls++;
+    }, 0),
+    0,
+  );
   assert.equal(numcalls, 0);
 
   // Check reduce and reduceRight are different
-  assert.equal(arr.reduce(function(acc, elem) { return elem; }), arr.length - 1);
-  assert.equal(arr.reduceRight(function(acc, elem) { return elem; }), 0);
+  assert.equal(
+    arr.reduce(function(acc, elem) {
+      return elem;
+    }),
+    arr.length - 1,
+  );
+  assert.equal(
+    arr.reduceRight(function(acc, elem) {
+      return elem;
+    }),
+    0,
+  );
 });
 /// @}
 
