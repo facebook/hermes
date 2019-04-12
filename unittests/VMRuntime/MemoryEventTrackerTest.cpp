@@ -23,10 +23,16 @@ class AllocEvent {
  public:
   AllocEvent(uint32_t kind, uint32_t size) : kind_(kind), size_(size) {}
   bool operator==(const AllocEvent &) const;
+  friend void PrintTo(const AllocEvent &ae, std::ostream *os);
 };
 
 bool AllocEvent::operator==(const AllocEvent &that) const {
   return this->kind_ == that.kind_ && this->size_ == that.size_;
+}
+
+void PrintTo(const AllocEvent &ae, std::ostream *os) {
+  *os << "Alloc (" << cellKindStr(static_cast<CellKind>(ae.kind_)) << ", "
+      << ae.size_ << ")";
 }
 
 /// Implementation of MemoryEventTracker interface for MemoryEvents
@@ -38,11 +44,81 @@ class DummyMemoryEventTracker : public MemoryEventTracker {
   }
 
   void emitAlloc(uint32_t kind, uint32_t size) override {
-    allocEvents_.emplace_back(AllocEvent(kind, size));
+    allocEvents_.emplace_back(kind, size);
   }
 
  private:
   std::vector<AllocEvent> allocEvents_;
 };
+
+/// Object containing some dummy integer, used to test the MemEventTracker
+/// allocations.
+struct DummyObject final : public GCCell {
+  static const VTable vt;
+  const uint32_t dummyInt;
+
+  DummyObject(GC *gc) : GCCell(gc, &vt), dummyInt(0) {}
+
+  static DummyObject *create(DummyRuntime &runtime) {
+    return new (runtime.alloc(sizeof(DummyObject)))
+        DummyObject(&runtime.getHeap());
+  }
+
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == CellKind::UninitializedKind;
+  }
+};
+
+const VTable DummyObject::vt{CellKind::UninitializedKind, sizeof(DummyObject)};
+
+static void DummyObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  const auto *self = static_cast<const DummyObject *>(cell);
+  mb.addNonPointerField("@dummyInt", &self->dummyInt);
+}
+
+static MetadataTableForTests getMetadataTable() {
+  static const Metadata storage[] = {
+      buildMetadata(CellKind::UninitializedKind, DummyObjectBuildMeta)};
+  return MetadataTableForTests(storage);
+}
+} // namespace
+
+namespace hermes {
+namespace vm {
+template <>
+struct IsGCObject<DummyObject> : public std::true_type {};
+} // namespace vm
+} // namespace hermes
+
+namespace {
+/// Abstraction that allows us to store the MemoryEventTracker so that
+/// we can compare its events with some correct sequence of events in
+/// unittests.
+class MemEventTrackerTest : public DummyRuntimeTestFixtureBase {
+ protected:
+  std::shared_ptr<DummyMemoryEventTracker> memEventTracker_;
+  MemEventTrackerTest()
+      : MemEventTrackerTest(std::make_shared<DummyMemoryEventTracker>()) {}
+  MemEventTrackerTest(std::shared_ptr<DummyMemoryEventTracker> memEventTracker)
+      : DummyRuntimeTestFixtureBase(
+            getMetadataTable(),
+            GCConfig::Builder()
+                .withInitHeapSize(kInitHeapSize)
+                .withMaxHeapSize(kMaxHeapSize)
+                .withMemEventTracker(memEventTracker)
+                .build()),
+        memEventTracker_(std::move(memEventTracker)) {}
+};
+
+TEST_F(MemEventTrackerTest, AllocTest) {
+  // Allocate some object, no need to keep it alive, we're only checking for
+  // allocation events.
+  DummyObject::create(*runtime);
+
+  // Vector containing correct allocation events
+  std::vector<AllocEvent> events{AllocEvent(
+      static_cast<uint32_t>(CellKind::UninitializedKind), sizeof(DummyObject))};
+  EXPECT_EQ(events, memEventTracker_->getAllocEvents());
+}
 } // namespace
 #endif

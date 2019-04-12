@@ -26,6 +26,14 @@
 namespace hermes {
 namespace vm {
 
+// Initial and max heap size constants
+static constexpr uint32_t kInitHeapSmall = 1 << 8;
+static constexpr uint32_t kMaxHeapSmall = 1 << 11;
+static constexpr uint32_t kInitHeapSize = 1 << 16;
+static constexpr uint32_t kMaxHeapSize = 1 << 19;
+static constexpr uint32_t kInitHeapLarge = 1 << 20;
+static constexpr uint32_t kMaxHeapLarge = 1 << 23;
+
 static const GCConfig::Builder kTestGCConfigBuilder =
     GCConfig::Builder()
         .withSanitizeConfig(
@@ -34,19 +42,19 @@ static const GCConfig::Builder kTestGCConfigBuilder =
 
 static const GCConfig kTestGCConfigSmall =
     GCConfig::Builder(kTestGCConfigBuilder)
-        .withInitHeapSize(1 << 8)
-        .withMaxHeapSize(1 << 11)
+        .withInitHeapSize(kInitHeapSmall)
+        .withMaxHeapSize(kMaxHeapSmall)
         .build();
 
 static const GCConfig kTestGCConfig = GCConfig::Builder(kTestGCConfigBuilder)
-                                          .withInitHeapSize(1 << 16)
-                                          .withMaxHeapSize(1 << 19)
+                                          .withInitHeapSize(kInitHeapSize)
+                                          .withMaxHeapSize(kMaxHeapSize)
                                           .build();
 
 static const GCConfig kTestGCConfigLarge =
     GCConfig::Builder(kTestGCConfigBuilder)
-        .withInitHeapSize(1 << 20)
-        .withMaxHeapSize(1 << 23)
+        .withInitHeapSize(kInitHeapLarge)
+        .withMaxHeapSize(kMaxHeapLarge)
         .build();
 
 static const RuntimeConfig kTestRTConfigSmallHeap =
@@ -276,6 +284,30 @@ struct DummyRuntime final : public HandleRootOwner,
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig,
       std::shared_ptr<StorageProvider> storageProvider);
+};
+
+/// A DummyRuntimeTestFixtureBase should be used by any test that requires a
+/// DummyRuntime. It takes a metadata table and a GCConfig, the latter can be
+/// used to specify heap size using the constants i.e kInitHeapSize and to
+/// specify a MemoryEventTracker implementation for testing memory profiling.
+class DummyRuntimeTestFixtureBase : public ::testing::Test {
+  std::shared_ptr<DummyRuntime> rt;
+
+ protected:
+  // Convenience accessor that points to rt.
+  DummyRuntime *runtime;
+
+  GCScope gcScope;
+
+  DummyRuntimeTestFixtureBase(
+      MetadataTableForTests metaTable,
+      const GCConfig &gcConfig)
+      : rt(DummyRuntime::create(metaTable, gcConfig)),
+        runtime(rt.get()),
+        gcScope(runtime) {}
+
+  /// Can't copy due to internal pointer.
+  DummyRuntimeTestFixtureBase(const DummyRuntimeTestFixtureBase &) = delete;
 };
 
 // Provide HermesValue & wrappers comparison operators for convenience.
