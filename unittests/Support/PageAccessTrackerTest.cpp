@@ -19,10 +19,11 @@ namespace {
 TEST(PageAccessTrackerTest, Order) {
   const size_t PS = hermes::oscompat::page_size();
   const int numPages = 3;
-  auto buf = hermes::oscompat::vm_allocate(PS * numPages);
+  auto result = hermes::oscompat::vm_allocate(PS * numPages);
+  ASSERT_TRUE(result);
   std::unique_ptr<volatile PageAccessTracker> tracker =
-      PageAccessTracker::create(buf, PS * numPages);
-  auto p = reinterpret_cast<volatile char *>(buf);
+      PageAccessTracker::create(result.get(), PS * numPages);
+  auto p = reinterpret_cast<volatile char *>(result.get());
 
   p[1 * PS];
   p[2 * PS];

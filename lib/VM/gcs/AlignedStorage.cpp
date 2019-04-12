@@ -22,12 +22,23 @@ void swap(AlignedStorage &a, AlignedStorage &b) {
   swap(a.provider_, b.provider_);
 }
 
-AlignedStorage::AlignedStorage(StorageProvider *provider)
-    : AlignedStorage(provider, nullptr) {}
+llvm::ErrorOr<AlignedStorage> AlignedStorage::create(
+    StorageProvider *provider) {
+  return create(provider, nullptr);
+}
 
-AlignedStorage::AlignedStorage(StorageProvider *provider, const char *name)
-    : lowLim_(reinterpret_cast<char *>(provider->newStorage(name))),
-      provider_(provider) {
+llvm::ErrorOr<AlignedStorage> AlignedStorage::create(
+    StorageProvider *provider,
+    const char *name) {
+  auto result = provider->newStorage(name);
+  if (!result) {
+    return result.getError();
+  }
+  return AlignedStorage{provider, *result};
+}
+
+AlignedStorage::AlignedStorage(StorageProvider *provider, void *lowLim)
+    : lowLim_(static_cast<char *>(lowLim)), provider_(provider) {
   assert(
       AlignedStorage::start(lowLim_) == lowLim_ &&
       "The lower limit of this storage must be aligned");

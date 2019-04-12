@@ -35,7 +35,7 @@ struct CardTableNCTest : public ::testing::Test {
 
  protected:
   std::unique_ptr<StorageProvider> provider{StorageProvider::mmapProvider()};
-  AlignedStorage as{provider.get()};
+  AlignedStorage as{std::move(AlignedStorage::create(provider.get()).get())};
   CardTable *table{new (as.lowLim()) CardTable()};
 
   // Addresses in the aligned storage to interact with during the tests.

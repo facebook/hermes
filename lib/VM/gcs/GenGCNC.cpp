@@ -258,7 +258,7 @@ void GenGC::ttiReached() {
 
 void GenGC::collect(bool canEffectiveOOM) {
   if (canEffectiveOOM && ++consecFullGCs_ >= oomThreshold_)
-    oom();
+    oom(make_error_code(OOMError::Effective));
 
   const size_t usedBefore = used();
   const size_t sizeBefore = size();
@@ -1856,9 +1856,9 @@ void GenGC::sizeDiagnosticCensus() {
           acceptor.diagnostic.numPointer * oppositeGCPointerSize);
 }
 
-void GenGC::oomDetail() {
+void GenGC::oomDetail(std::error_code reason) {
   AllocContextYieldThenClaim yielder(this);
-  GCBase::oomDetail();
+  GCBase::oomDetail(reason);
   // Could use a stringstream here, but want to avoid dynamic
   // allocation in OOM situations.
   char detailBuffer[100];

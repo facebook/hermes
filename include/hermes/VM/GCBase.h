@@ -38,6 +38,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <random>
+#include <system_error>
 #include <vector>
 
 namespace hermes {
@@ -355,7 +356,7 @@ class GCBase {
 
   /// Do any logging of info about the heap that is useful, then dies with a
   /// fatal out-of-memory error.
-  LLVM_ATTRIBUTE_NORETURN void oom();
+  LLVM_ATTRIBUTE_NORETURN void oom(std::error_code reason);
 
   /// Creates a snapshot of the heap and writes it to the given \p fileName.
   /// \p compact whether to write a compact version or a pretty human-readable
@@ -511,7 +512,7 @@ class GCBase {
 
   /// Do any additional GC-specific logging that is useful before dying with
   /// out-of-memory.
-  virtual void oomDetail();
+  virtual void oomDetail(std::error_code reason);
 
 #ifndef NDEBUG
   // Returns true iff \p finalizables is non-empty, and \p cell is the

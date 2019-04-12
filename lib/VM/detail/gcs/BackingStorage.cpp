@@ -7,6 +7,7 @@
 #include "hermes/VM/detail/BackingStorage.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <cassert>
@@ -34,12 +35,15 @@ allocForStorage(gcheapsize_t sz, gcheapsize_t minSz, AllocSource src) {
       // We'll do it by eighths.
       assert(sz >= 8); // Since sz is page-aligned, save assumption.
       gcheapsize_t increment = sz / 8;
+      // Store the result for the case where all attempts fail.
+      llvm::ErrorOr<void *> result{std::error_code{}};
       while (sz >= minSz) {
-        char *res = static_cast<char *>(oscompat::vm_allocate(sz));
-        if (res) {
+        result = oscompat::vm_allocate(sz);
+        if (result) {
           // No such thing as original pointer for VMAllocate, so just
           // duplicate the returned pointer.
-          return std::make_tuple(res, res, sz);
+          return std::make_tuple(
+              static_cast<char *>(result.get()), result.get(), sz);
         }
         if (sz == minSz)
           break;
@@ -47,7 +51,10 @@ allocForStorage(gcheapsize_t sz, gcheapsize_t minSz, AllocSource src) {
             static_cast<gcheapsize_t>(llvm::alignTo(sz - increment, pageSize)),
             minSz);
       }
-      hermes_fatal("vm_allocate() failed to allocate backing storage");
+      hermes_fatal(
+          (llvm::Twine("vm_allocate() failed to allocate backing storage: ") +
+           convert_error_to_message(result.getError()))
+              .str());
     }
 
     case AllocSource::Malloc:

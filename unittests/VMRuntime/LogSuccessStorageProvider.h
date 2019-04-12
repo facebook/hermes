@@ -19,7 +19,7 @@ namespace vm {
 struct LogSuccessStorageProvider final : public StorageProvider {
   LogSuccessStorageProvider(std::unique_ptr<StorageProvider> delegate);
 
-  void *newStorage(const char *name) override;
+  llvm::ErrorOr<void *> newStorage(const char *name) override;
   void deleteStorage(void *storage) override;
 
   /// The number of storages this provider has allocated in its lifetime.

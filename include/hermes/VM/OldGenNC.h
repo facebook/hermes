@@ -319,10 +319,6 @@ class OldGen : public GCGeneration {
   /// and false otherwise.
   bool materializeNextSegment();
 
-  /// Prepare a segment so it is ready to be materialised.  \returns true if
-  /// initialisation was successful.
-  bool initSegmentForMaterialization(AlignedHeapSegment &segment);
-
   /// Indicate that the materialised segments at index \p from onwards, in the
   /// order they were allocated into, are no longer in use.
   ///

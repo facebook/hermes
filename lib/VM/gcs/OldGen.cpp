@@ -280,7 +280,7 @@ void *OldGen::fullCollectThenAlloc(
     return res.ptr;
   }
 
-  gc_->oom();
+  gc_->oom(make_error_code(OOMError::MaxHeapReached));
 }
 
 void OldGen::moveHeap(GC *gc, ptrdiff_t moveHeapDelta) {

@@ -6,6 +6,7 @@
  */
 #ifdef _WINDOWS
 
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 
 #include <cassert>
@@ -19,6 +20,7 @@
 #include <io.h>
 #include <psapi.h>
 
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace hermes {
@@ -69,18 +71,20 @@ static char *alignAlloc(void *p, size_t alignment) {
       llvm::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
 }
 
-void *vm_allocate(size_t sz) {
-#ifndef NDEBUG
-  assert(sz % page_size() == 0);
-  if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
-    return vm_allocate_aligned(sz, testPgSz);
+static llvm::ErrorOr<void *>
+vm_allocate_impl(void *addr, size_t sz, DWORD flags) {
+  void *result = VirtualAlloc(addr, sz, flags, PAGE_READWRITE);
+  if (result == nullptr) {
+    // Windows does not have POSIX error codes, but defines its own set.
+    // Use system_category with GetLastError so that the codes are interpreted
+    // correctly.
+    return std::error_code(GetLastError(), std::system_category());
   }
-  if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
-    return nullptr;
-  } else if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit)) {
-    totalVMAllocLimit -= sz;
-  }
-#endif // !NDEBUG
+  return result;
+}
+
+static llvm::ErrorOr<void *> vm_allocate_impl(size_t sz) {
+  // Default flags are to reserve and commit.
 
   // TODO(T40416012) introduce explicit "commit" in OSCompat abstraction of
   // virtual memory
@@ -92,12 +96,32 @@ void *vm_allocate(size_t sz) {
   // in Hermes' virtual memory abstraction.
   // As a result, even though Windows allows one to "reserve" a page without
   // "commit"ting it, we have to do both here.
-  void *result =
-      VirtualAlloc(nullptr, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-  return result; // result == nullptr if VirtualAlloc failed
+  return vm_allocate_impl(nullptr, sz, MEM_RESERVE | MEM_COMMIT);
 }
 
-void *vm_allocate_aligned(size_t sz, size_t alignment) {
+static std::error_code vm_free_impl(void *p, size_t sz) {
+  BOOL ret = VirtualFree(p, 0, MEM_RELEASE);
+
+  return ret ? std::error_code{}
+             : std::error_code(GetLastError(), std::system_category());
+}
+
+llvm::ErrorOr<void *> vm_allocate(size_t sz) {
+#ifndef NDEBUG
+  assert(sz % page_size() == 0);
+  if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
+    return vm_allocate_aligned(sz, testPgSz);
+  }
+  if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
+    return nullptr;
+  } else if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit)) {
+    totalVMAllocLimit -= sz;
+  }
+#endif // !NDEBUG
+  return vm_allocate_impl(sz);
+}
+
+llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   /// A value of 3 means vm_allocate_aligned will:
   /// 1. Opportunistic: allocate and see if it happens to be aligned
   /// 2. Regular: Try aligned allocation 3 times (see below for details)
@@ -118,45 +142,51 @@ void *vm_allocate_aligned(size_t sz, size_t alignment) {
   // and see if the memory happens to be aligned.
   // While this may be unlikely on the first allocation request,
   // subsequent allocation requests have a good chance.
-  void *addr =
-      VirtualAlloc(nullptr, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-  if (addr == nullptr) {
+  llvm::ErrorOr<void *> result = vm_allocate_impl(sz);
+  if (!result) {
     // Don't attempt to do anything further if the allocation failed.
-    return nullptr;
+    return result;
   }
+  void *addr = *result;
   if (LLVM_LIKELY(addr == alignAlloc(addr, alignment))) {
     return addr;
   }
   // Free the oppotunistic allocation.
-  BOOL free_ret = VirtualFree(addr, 0, MEM_RELEASE);
-  assert(free_ret && "Failed to free memory region in vm_allocate_aligned");
-  (void)free_ret;
+  std::error_code err = vm_free_impl(addr, sz);
+  if (err) {
+    hermes_fatal(
+        (llvm::Twine("Failed to free memory region in vm_allocate_aligned: ") +
+         convert_error_to_message(err))
+            .str());
+  }
 
   for (int attempts = 0; attempts < aligned_allocation_attempts; attempts++) {
     // Allocate a larger section to ensure that it contains
     // a subsection that satisfies the request.
-    addr = VirtualAlloc(
-        nullptr,
-        sz + alignment - page_size_real(),
-        MEM_RESERVE,
-        PAGE_READWRITE);
-    if (addr == nullptr) {
-      return nullptr;
+    result = vm_allocate_impl(
+        nullptr, sz + alignment - page_size_real(), MEM_RESERVE);
+    if (!result) {
+      return result;
     }
+    addr = *result;
     // Find the desired subsection
     char *aligned = alignAlloc(addr, alignment);
 
     // Free the larger allocation (including the desired subsection)
-    free_ret = VirtualFree(addr, 0, MEM_RELEASE);
-    assert(free_ret && "Failed to free memory region in vm_allocate_aligned");
-    (void)free_ret;
+    err = vm_free_impl(addr, sz);
+    if (err) {
+      hermes_fatal(
+          (llvm::Twine(
+               "Failed to free memory region in vm_allocate_aligned: ") +
+           convert_error_to_message(err))
+              .str());
+    }
 
     // Request allocation at the desired subsection
-    void *alloc_at_aligned =
-        VirtualAlloc(aligned, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    if (alloc_at_aligned != nullptr) {
-      assert(alloc_at_aligned == aligned);
-      return aligned;
+    result = vm_allocate_impl(aligned, sz, MEM_RESERVE | MEM_COMMIT);
+    if (result) {
+      assert(result.get() == aligned);
+      return result.get();
     }
   }
 
@@ -165,17 +195,22 @@ void *vm_allocate_aligned(size_t sz, size_t alignment) {
   // 1. Wasted virtual address space.
   // 2. vm_free_aligned is now required to call VirtualQuery, which has
   //    a non-trivial cost.
-  addr = VirtualAlloc(
-      nullptr, sz + alignment - page_size_real(), MEM_RESERVE, PAGE_READWRITE);
-  if (addr == nullptr) {
-    return nullptr;
+  result =
+      vm_allocate_impl(nullptr, sz + alignment - page_size_real(), MEM_RESERVE);
+  if (!result) {
+    return result;
   }
+  addr = *result;
   addr = alignAlloc(addr, alignment);
-  addr = VirtualAlloc(addr, alignment, MEM_COMMIT, PAGE_READWRITE);
-  assert(
-      addr &&
-      "Failed to commit subsection of reserved memory in vm_allocate_aligned");
-  return addr;
+  result = vm_allocate_impl(addr, alignment, MEM_COMMIT);
+  if (!result) {
+    hermes_fatal(
+        (llvm::Twine(
+             "Failed to commit subsection of reserved memory in vm_allocate_aligned: ") +
+         convert_error_to_message(result.getError()))
+            .str());
+  }
+  return result;
 }
 
 void vm_free(void *p, size_t sz) {
@@ -186,10 +221,12 @@ void vm_free(void *p, size_t sz) {
   }
 #endif // !NDEBUG
 
-  BOOL ret = VirtualFree(p, 0, MEM_RELEASE);
-
-  assert(ret && "Failed to free memory region.");
-  (void)ret;
+  std::error_code err = vm_free_impl(p, sz);
+  if (err) {
+    hermes_fatal((llvm::Twine("Failed to free virtual memory region: ") +
+                  convert_error_to_message(err))
+                     .str());
+  }
 
 #ifndef NDEBUG
   if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit) && p) {

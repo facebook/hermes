@@ -77,11 +77,12 @@ gcheapsize_t YoungGen::Size::storageFootprint() const {
 
 YoungGen::YoungGen(GenGC *gc, Size sz, OldGen *nextGen)
     : GCGeneration(gc), sz_(sz), nextGen_(nextGen) {
-  exchangeActiveSegment(
-      {AlignedStorage{&gc_->storageProvider_, "hermes-younggen-segment"},
-       this});
-  if (!activeSegment())
-    gc_->oom();
+  auto result =
+      AlignedStorage::create(&gc_->storageProvider_, "hermes-younggen-segment");
+  if (!result) {
+    gc_->oom(result.getError());
+  }
+  exchangeActiveSegment({std::move(result.get()), this});
   resetTrueAllocContext();
 
   lowLim_ = activeSegment().lowLim();
@@ -256,7 +257,7 @@ AllocResult YoungGen::fullCollectThenAlloc(
   }
 
   // We did everything we could, bail.
-  gc_->oom();
+  gc_->oom(make_error_code(OOMError::MaxHeapReached));
 }
 
 void YoungGen::collect() {

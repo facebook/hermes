@@ -35,13 +35,13 @@ char *alignAlloc(void *p) {
 
 class VMAllocateStorageProvider final : public StorageProvider {
  public:
-  void *newStorage(const char *name) override;
+  llvm::ErrorOr<void *> newStorage(const char *name) override;
   void deleteStorage(void *storage) override;
 };
 
 class MallocStorageProvider final : public StorageProvider {
  public:
-  void *newStorage(const char *name) override;
+  llvm::ErrorOr<void *> newStorage(const char *name) override;
   void deleteStorage(void *storage) override;
 
  private:
@@ -53,10 +53,10 @@ class MallocStorageProvider final : public StorageProvider {
 
 class PreAllocatedStorageProvider final : public StorageProvider {
  public:
-  PreAllocatedStorageProvider(size_t totalAmount);
+  PreAllocatedStorageProvider(size_t totalAmount, void *region);
   ~PreAllocatedStorageProvider();
 
-  void *newStorage(const char *name) override;
+  llvm::ErrorOr<void *> newStorage(const char *name) override;
   void deleteStorage(void *storage) override;
 
  private:
@@ -79,14 +79,15 @@ class PreAllocatedStorageProvider final : public StorageProvider {
   std::stack<char *, std::vector<char *>> freeList_;
 };
 
-void *VMAllocateStorageProvider::newStorage(const char *name) {
+llvm::ErrorOr<void *> VMAllocateStorageProvider::newStorage(const char *name) {
   assert(AlignedStorage::size() % oscompat::page_size() == 0);
   // Allocate the space, hoping it will be the correct alignment.
-  void *mem = oscompat::vm_allocate_aligned(
+  auto result = oscompat::vm_allocate_aligned(
       AlignedStorage::size(), AlignedStorage::size());
-  if (mem == nullptr) {
-    return nullptr;
+  if (!result) {
+    return result;
   }
+  void *mem = *result;
   assert(isAligned(mem));
   (void)isAligned;
 
@@ -102,7 +103,7 @@ void VMAllocateStorageProvider::deleteStorage(void *storage) {
   oscompat::vm_free_aligned(storage, AlignedStorage::size());
 }
 
-void *MallocStorageProvider::newStorage(const char *name) {
+llvm::ErrorOr<void *> MallocStorageProvider::newStorage(const char *name) {
   // name is unused, can't name malloc memory.
   (void)name;
   void *mem = checkedMalloc2(AlignedStorage::size(), 2u);
@@ -120,13 +121,11 @@ void MallocStorageProvider::deleteStorage(void *storage) {
   lowLimToAllocHandle_.erase(storage);
 }
 
-PreAllocatedStorageProvider::PreAllocatedStorageProvider(size_t totalAmount)
+PreAllocatedStorageProvider::PreAllocatedStorageProvider(
+    size_t totalAmount,
+    void *region)
     : maxBytes_(totalAmount),
-      start_(
-          maxBytes_ ? static_cast<char *>(oscompat::vm_allocate_aligned(
-                          maxBytes_,
-                          AlignedStorage::size()))
-                    : nullptr),
+      start_(static_cast<char *>(region)),
       end_(start_ ? start_ + maxBytes_ : nullptr),
       level_(start_) {
   assert(maxBytes_ % AlignedStorage::size() == 0 && "Un-aligned maxBytes");
@@ -138,7 +137,8 @@ PreAllocatedStorageProvider::~PreAllocatedStorageProvider() {
   }
 }
 
-void *PreAllocatedStorageProvider::newStorage(const char *name) {
+llvm::ErrorOr<void *> PreAllocatedStorageProvider::newStorage(
+    const char *name) {
   char *newStorage;
   if (!freeList_.empty()) {
     newStorage = freeList_.top();
@@ -150,7 +150,7 @@ void *PreAllocatedStorageProvider::newStorage(const char *name) {
   } else {
     // Nothing free, and level_ is already at the end_, cannot allocate a
     // storage.
-    return nullptr;
+    return make_error_code(OOMError::MaxStorageReached);
   }
   oscompat::vm_name(newStorage, AlignedStorage::size(), name);
   assert(
@@ -174,17 +174,26 @@ void PreAllocatedStorageProvider::deleteStorage(void *storage) {
 } // namespace
 
 /* static */
-std::unique_ptr<StorageProvider> StorageProvider::preAllocatedProvider(
-    size_t amount,
-    size_t excess) {
+llvm::ErrorOr<std::unique_ptr<StorageProvider>>
+StorageProvider::preAllocatedProvider(size_t amount, size_t excess) {
   assert(
       amount % AlignedStorage::size() == 0 &&
       "amount must be a multiple of AlignedStorage::size()");
   assert(
       excess <= AlignedStorage::size() &&
       "Excess is greater than AlignedStorage::size, but storages aren't guaranteed to be contiguous");
-  return std::unique_ptr<StorageProvider>(new PreAllocatedStorageProvider(
-      llvm::alignTo<AlignedStorage::size()>(amount + excess)));
+  const auto maxBytes = llvm::alignTo<AlignedStorage::size()>(amount + excess);
+  void *region = nullptr;
+  if (maxBytes) {
+    auto result =
+        oscompat::vm_allocate_aligned(maxBytes, AlignedStorage::size());
+    if (!result) {
+      return result.getError();
+    }
+    region = result.get();
+  }
+  return std::unique_ptr<StorageProvider>(
+      new PreAllocatedStorageProvider(maxBytes, region));
 }
 
 /* static */

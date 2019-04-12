@@ -17,7 +17,7 @@ LogSuccessStorageProvider::LogSuccessStorageProvider(
     std::unique_ptr<StorageProvider> delegate)
     : delegate_(std::move(delegate)) {}
 
-void *LogSuccessStorageProvider::newStorage(const char *name) {
+llvm::ErrorOr<void *> LogSuccessStorageProvider::newStorage(const char *name) {
   auto res = delegate_->newStorage(name);
 
   if (LLVM_LIKELY(res)) {

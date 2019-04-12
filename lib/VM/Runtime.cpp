@@ -19,6 +19,7 @@
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/PerfSection.h"
+#include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
@@ -75,14 +76,28 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
     }
     // TODO(T31421960): This can become a unique_ptr with C++14 lambda
     // initializers.
-    std::shared_ptr<StorageProvider> provider{
-        StorageProvider::preAllocatedProvider(
-            sz.storageFootprint(), sizeof(Runtime))};
-    // Place Runtime in the first allocated storage.
-    void *storage = provider->newStorage();
-    if (LLVM_UNLIKELY(!storage)) {
-      hermes_fatal("Could not allocate initial storage for Runtime");
+    auto storageResult = StorageProvider::preAllocatedProvider(
+        sz.storageFootprint(), sizeof(Runtime));
+    if (!storageResult) {
+      hermes_fatal(
+          (llvm::Twine("Could not allocate backing storage for heap: ") +
+           convert_error_to_message(storageResult.getError()) +
+           ", requested size: " + llvm::Twine(sz.storageFootprint()))
+              .str());
     }
+    std::shared_ptr<StorageProvider> provider{};
+    // Place Runtime in the first allocated storage.
+    static_assert(
+        sizeof(Runtime) <= AlignedStorage::size(),
+        "Runtime must fit into a single storage");
+    auto result = provider->newStorage("hermes-runtime-segment");
+    if (!result) {
+      hermes_fatal(
+          (llvm::Twine("Could not allocate initial storage for Runtime: ") +
+           convert_error_to_message(result.getError()))
+              .str());
+    }
+    void *storage = *result;
     Runtime *rt = new (storage) Runtime(provider.get(), runtimeConfig);
     // Return a shared pointer with a custom deleter to delete the underlying
     // storage of the runtime.

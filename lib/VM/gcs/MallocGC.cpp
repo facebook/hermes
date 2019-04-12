@@ -163,7 +163,7 @@ void MallocGC::collectBeforeAlloc(uint32_t size) {
   }
   if (size > maxSize_) {
     // No way to handle the allocation no matter what.
-    oom();
+    oom(make_error_code(OOMError::MaxHeapReached));
   }
   assert(
       size <= sizeLimit_ &&
@@ -183,7 +183,7 @@ void MallocGC::collectBeforeAlloc(uint32_t size) {
   while (allocatedBytes_ >= sizeLimit_ - size) {
     if (sizeLimit_ == maxSize_) {
       // Can't grow memory any higher, OOM.
-      oom();
+      oom(make_error_code(OOMError::MaxHeapReached));
     }
     sizeLimit_ = growSizeLimit(sizeLimit_);
   }

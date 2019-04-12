@@ -36,7 +36,7 @@ struct MarkBitArrayNCTest : public ::testing::Test {
 
 MarkBitArrayNCTest::MarkBitArrayNCTest()
     : provider(StorageProvider::mmapProvider()),
-      as(provider.get()),
+      as{std::move(AlignedStorage::create(provider.get()).get())},
       mba(new (as.lowLim()) MarkBitArrayNC()) {
   auto first = as.lowLim();
   auto last = reinterpret_cast<char *>(

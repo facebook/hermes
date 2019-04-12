@@ -12,6 +12,7 @@ add_llvm_library(hermesSupport
         ASAN.cpp
         CheckedMalloc.cpp
         Conversions.cpp
+        ErrorHandling.cpp
         JSONEmitter.cpp
         OSCompatPosix.cpp
         OSCompatWindows.cpp

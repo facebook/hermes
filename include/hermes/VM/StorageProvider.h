@@ -7,6 +7,8 @@
 #ifndef HERMES_VM_STORAGEPROVIDER_H
 #define HERMES_VM_STORAGEPROVIDER_H
 
+#include "llvm/Support/ErrorOr.h"
+
 #include <limits>
 #include <memory>
 
@@ -29,7 +31,7 @@ class StorageProvider {
   /// \pre excess <= AlignedStorage::size().
   /// \post The returned StorageProvider will be able to allocate at most 1
   ///   extra storage for the excess amount specified.
-  static std::unique_ptr<StorageProvider> preAllocatedProvider(
+  static llvm::ErrorOr<std::unique_ptr<StorageProvider>> preAllocatedProvider(
       size_t amount,
       size_t excess);
 
@@ -42,13 +44,13 @@ class StorageProvider {
   /// @}
 
   /// Create a new segment memory space.
-  void *newStorage() {
+  llvm::ErrorOr<void *> newStorage() {
     return newStorage(nullptr);
   }
   /// Create a new segment memory space and give this memory the name \p name.
   /// \return A pointer to a block of memory that has AlignedStorage::size()
   ///   bytes, and is aligned on AlignedStorage::size().
-  virtual void *newStorage(const char *name) = 0;
+  virtual llvm::ErrorOr<void *> newStorage(const char *name) = 0;
 
   /// Delete the given segment's memory space, and make it available for re-use.
   /// \post Nothing in the range [storage, storage + AlignedStorage::size())

@@ -11,7 +11,7 @@
 namespace hermes {
 namespace vm {
 
-void *LogFailStorageProvider::newStorage(const char *name) {
+llvm::ErrorOr<void *> LogFailStorageProvider::newStorage(const char *name) {
   auto res = delegate_->newStorage(name);
 
   if (LLVM_UNLIKELY(!res)) {

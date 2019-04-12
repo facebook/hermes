@@ -37,20 +37,22 @@ struct AlignedStorageTest : public ::testing::Test {
 };
 
 TEST_F(AlignedStorageTest, SuccesfulAllocation) {
-  AlignedStorage s{provider.get()};
-  EXPECT_TRUE(static_cast<bool>(s));
+  auto result = AlignedStorage::create(provider.get());
+  EXPECT_TRUE(result);
 }
 
 #ifndef NDEBUG
 TEST_F(AlignedStorageTest, FailedAllocation) {
   LimitedStorageProvider limitedProvider{StorageProvider::mmapProvider(), 0};
-  AlignedStorage s{&limitedProvider};
-  EXPECT_FALSE(static_cast<bool>(s));
+  auto result = AlignedStorage::create(&limitedProvider);
+  EXPECT_FALSE(result);
 }
 #endif // !NDEBUG
 
 TEST_F(AlignedStorageTest, Start) {
-  AlignedStorage storage{provider.get()};
+  auto result = AlignedStorage::create(provider.get());
+  ASSERT_TRUE(result);
+  AlignedStorage storage = std::move(result.get());
 
   char *lo = storage.lowLim();
   char *hi = storage.hiLim();
@@ -65,7 +67,8 @@ TEST_F(AlignedStorageTest, Start) {
 }
 
 TEST_F(AlignedStorageTest, End) {
-  AlignedStorage storage{provider.get()};
+  AlignedStorage storage{
+      std::move(AlignedStorage::create(provider.get()).get())};
 
   char *lo = storage.lowLim();
   char *hi = storage.hiLim();
@@ -80,7 +83,8 @@ TEST_F(AlignedStorageTest, End) {
 }
 
 TEST_F(AlignedStorageTest, Offset) {
-  AlignedStorage storage{provider.get()};
+  AlignedStorage storage{
+      std::move(AlignedStorage::create(provider.get()).get())};
 
   char *lo = storage.lowLim();
   char *hi = storage.hiLim();
@@ -102,7 +106,8 @@ TEST_F(AlignedStorageTest, AdviseUnused) {
   const size_t FAILED = SIZE_MAX;
   const size_t PAGE_SIZE = oscompat::page_size();
 
-  AlignedStorage storage{provider.get()};
+  AlignedStorage storage{
+      std::move(AlignedStorage::create(provider.get()).get())};
   ASSERT_EQ(0, storage.size() % PAGE_SIZE);
 
   const size_t TOTAL_PAGES = storage.size() / PAGE_SIZE;
@@ -134,7 +139,8 @@ TEST_F(AlignedStorageTest, AdviseUnused) {
 }
 
 TEST_F(AlignedStorageTest, Containment) {
-  AlignedStorage storage{provider.get()};
+  AlignedStorage storage{
+      std::move(AlignedStorage::create(provider.get()).get())};
 
   // Boundaries
   EXPECT_FALSE(storage.contains(storage.lowLim() - 1));
@@ -182,14 +188,13 @@ TEST_F(AlignedStorageTest, Alignment) {
   const size_t SIZE = AlignedStorage::size();
 
   for (size_t space = SIZE + MB; space < 2 * SIZE; space += MB) {
-    storages.emplace_back(provider.get());
+    storages.emplace_back(
+        std::move(AlignedStorage::create(provider.get()).get()));
     AlignedStorage &storage = storages.back();
 
     EXPECT_EQ(storage.lowLim(), alignPointer(storage.lowLim(), SIZE));
 
-    void *spacer = oscompat::vm_allocate(space);
-    ASSERT_NE(nullptr, spacer);
-    spacers.push_back(spacer);
+    spacers.push_back(oscompat::vm_allocate(space).get());
   }
 
   { // When \c storages goes out of scope, it will correctly destruct the \c

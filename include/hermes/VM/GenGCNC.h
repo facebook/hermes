@@ -436,7 +436,7 @@ class GenGC final : public GCBase {
  protected:
   /// Do any additional GC-specific logging that is useful before dying with
   /// out-of-memory.
-  void oomDetail() override;
+  void oomDetail(std::error_code reason) override;
 
 // Mangling scheme used by MSVC encode public/private into the name.
 // As a result, vanilla "ifdef public" trick leads to link errors.

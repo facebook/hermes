@@ -53,7 +53,9 @@ void GCSegmentAddressIndexTest::addSegments(size_t n) {
 
   // Create the requisite number of segments.
   for (size_t i = 0; i < n; ++i) {
-    segments_.emplace_back(AlignedStorage{provider_.get()});
+    auto result = AlignedStorage::create(provider_.get());
+    ASSERT_TRUE(result) << "Allocating an AlignedStorage failed";
+    segments_.emplace_back(std::move(result.get()));
     insertions.push_back(&segments_.back());
   }
 
@@ -217,7 +219,9 @@ TEST_F(GCSegmentAddressIndexTest, CoveringNonExistent) {
 /// the index.
 TEST_F(GCSegmentAddressIndexTest, CoveringNotInIndex) {
   addSegments(1);
-  AlignedHeapSegment s{AlignedStorage{provider_.get()}};
+  auto result = AlignedStorage::create(provider_.get());
+  ASSERT_TRUE(result);
+  AlignedHeapSegment s{std::move(result.get())};
 
   void *ptr = s.start();
   EXPECT_EQ(nullptr, index.segmentCovering(ptr));

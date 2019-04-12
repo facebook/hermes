@@ -208,7 +208,7 @@ class CopyableVector {
     size_t desired = capacity_ + (capacity_ - capacity_ / 2u);
     if (desired < capacity_ || desired > kMaxCapacity) {
       // Overflow.
-      gc->oom();
+      gc->oom(make_error_code(OOMError::CopyableVectorCapacityIntegerOverflow));
     }
     setCapacity(std::max<size_type>(1u, desired));
   }

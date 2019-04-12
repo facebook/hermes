@@ -287,21 +287,25 @@ uint64_t GCBase::nextObjectID() {
 }
 #endif
 
-void GCBase::oom() {
-  oomDetail();
-  hermes_fatal("OOM");
+void GCBase::oom(std::error_code reason) {
+  oomDetail(reason);
+
+  hermes_fatal((llvm::Twine("OOM: ") + convert_error_to_message(reason)).str());
 }
 
-void GCBase::oomDetail() {
+void GCBase::oomDetail(std::error_code reason) {
   HeapInfo heapInfo;
   getHeapInfo(heapInfo);
   // Could use a stringstream here, but want to avoid dynamic allocation.
-  char detailBuffer[200];
+  char detailBuffer[400];
   snprintf(
       detailBuffer,
       sizeof(detailBuffer),
-      "[%.20s] numCollections = %d, heapSize = %d, allocated = %d, va = %" PRIu64,
+      "[%.20s] reason = %150s (%d from category: %50s), numCollections = %d, heapSize = %d, allocated = %d, va = %" PRIu64,
       name_.c_str(),
+      reason.message().c_str(),
+      reason.value(),
+      reason.category().name(),
       heapInfo.numCollections,
       heapInfo.heapSize,
       heapInfo.allocatedBytes,

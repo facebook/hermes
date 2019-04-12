@@ -32,7 +32,9 @@ GCSegmentRangeTest::GCSegmentRangeTest()
     : provider_{StorageProvider::mmapProvider()} {}
 
 AlignedHeapSegment GCSegmentRangeTest::newSegment() {
-  AlignedHeapSegment seg{provider_.get()};
+  auto result = AlignedStorage::create(provider_.get());
+  EXPECT_TRUE(result);
+  AlignedHeapSegment seg{std::move(result.get())};
   EXPECT_TRUE(seg);
 
   return seg;

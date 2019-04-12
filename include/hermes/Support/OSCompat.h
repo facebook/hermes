@@ -9,6 +9,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorOr.h"
 
 #ifdef _WINDOWS
 #include <io.h>
@@ -21,6 +22,7 @@
 #include <cstddef>
 #include <sstream>
 #include <string>
+#include <system_error>
 
 // This file defines cross-os APIs for functionality provided by our target
 // operating systems.
@@ -51,13 +53,13 @@ void unset_test_vm_allocate_limit();
 // a multiple of page_size()), and returns a pointer to the start.
 // Returns nullptr if the allocation is unsuccessful.  The pages
 // will be zero-filled on demand.
-void *vm_allocate(size_t sz);
+llvm::ErrorOr<void *> vm_allocate(size_t sz);
 
 // Allocates a virtual memory region of the given size and alignment (both
 // must be multiples of page_size()), and returns a pointer to the start.
 // Returns nullptr if the allocation is unsuccessful.  The pages
 // will be zero-filled on demand.
-void *vm_allocate_aligned(size_t sz, size_t alignment);
+llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment);
 
 /// Free a virtual memory region allocated by \p vm_allocate.
 /// \p p must point to the base address that was returned by \p vm_allocate.

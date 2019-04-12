@@ -127,7 +127,7 @@ AllocResult YoungGen::fullCollectThenAlloc(
   }
 
   // We did everything we could, bail.
-  gc_->oom();
+  gc_->oom(make_error_code(OOMError::MaxHeapReached));
 }
 
 void YoungGen::collect() {

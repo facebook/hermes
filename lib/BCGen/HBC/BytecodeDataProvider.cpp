@@ -406,7 +406,7 @@ void BCProviderFromBuffer::prefetch(llvm::ArrayRef<uint8_t> aref) {
   std::string errstr;
   if (!fields.populateFromBuffer(aref, &errstr)) {
 #ifndef NDEBUG
-    hermes_fatal(errstr.c_str());
+    hermes_fatal(errstr);
 #else
     return;
 #endif

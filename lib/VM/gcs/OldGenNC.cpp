@@ -79,11 +79,11 @@ OldGen::Size::adjustSizeWithBounds(size_t desired, size_t min, size_t max) {
 
 OldGen::OldGen(GenGC *gc, Size sz, bool releaseUnused)
     : GCGeneration(gc), sz_(sz), releaseUnused_(releaseUnused) {
-  exchangeActiveSegment(
-      {AlignedStorage{&gc_->storageProvider_, kSegmentName}, this});
-  if (!activeSegment())
-    gc_->oom();
-
+  auto result = AlignedStorage::create(&gc_->storageProvider_, kSegmentName);
+  if (!result) {
+    gc_->oom(result.getError());
+  }
+  exchangeActiveSegment({std::move(result.get()), this});
   // Record the initial level, as if we had done a GC before starting.
   didFinishGC();
   updateCardTableBoundary();
@@ -559,7 +559,7 @@ AllocResult OldGen::fullCollectThenAlloc(
     return res;
   }
 
-  gc_->oom();
+  gc_->oom(make_error_code(OOMError::MaxHeapReached));
 }
 
 void OldGen::moveHeap(GC *gc, ptrdiff_t moveHeapDelta) {
@@ -604,15 +604,15 @@ bool OldGen::seedSegmentCacheForSize(size_t size) {
 
   // Try and seed the segment cache with enough segments to fit the request.
   for (; segAlloc < segReq; ++segAlloc) {
-    segmentCache_.emplace_back(
-        AlignedStorage{&gc_->storageProvider_, kSegmentName}, this);
-
-    if (!initSegmentForMaterialization(segmentCache_.back())) {
+    auto result = AlignedStorage::create(&gc_->storageProvider_, kSegmentName);
+    if (!result) {
       // We could not allocate all the segments we needed, so give back the ones
       // we were able to allocate.
       segmentCache_.resize(cacheBefore);
       return false;
     }
+    segmentCache_.emplace_back(std::move(result.get()), this);
+    segmentCache_.back().growToLimit();
   }
 
   assert(committedSegs() >= segReq);
@@ -639,15 +639,13 @@ bool OldGen::materializeNextSegment() {
     exchangeActiveSegment(std::move(segmentCache_.back()), filledSegSlot);
     segmentCache_.pop_back();
   } else {
-    exchangeActiveSegment(
-        {AlignedStorage{&gc_->storageProvider_, kSegmentName}, this},
-        filledSegSlot);
-    bool initSuccess = initSegmentForMaterialization(activeSegmentRaw());
-    if (LLVM_UNLIKELY(!initSuccess)) {
-      exchangeActiveSegment(std::move(*filledSegSlot));
+    auto result = AlignedStorage::create(&gc_->storageProvider_, kSegmentName);
+    if (!result) {
       filledSegments_.pop_back();
       return false;
     }
+    exchangeActiveSegment({std::move(result.get()), this}, filledSegSlot);
+    activeSegment().growToLimit();
   }
 
   // The active segment has changed, so we need to update the next card table
@@ -662,15 +660,6 @@ bool OldGen::materializeNextSegment() {
   // the effective end of the generation.
   updateEffectiveEndForExternalMemory();
 
-  return true;
-}
-
-bool OldGen::initSegmentForMaterialization(AlignedHeapSegment &segment) {
-  if (!segment) {
-    return false;
-  }
-
-  segment.growToLimit();
   return true;
 }
 
@@ -735,7 +724,7 @@ AllocResult OldGen::allocRawSlow(uint32_t size, HasFinalizer hasFinalizer) {
   assert(ownsAllocContext() && "Only called when the context is owned.");
   // The size being allocated must fit in a segment.
   if (LLVM_UNLIKELY(size > AlignedHeapSegment::maxSize())) {
-    gc_->oom();
+    gc_->oom(make_error_code(OOMError::SuperSegmentAlloc));
   }
 
   // Allocation failed in the current segment; try the next one, if

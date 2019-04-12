@@ -28,7 +28,8 @@ class LogFailStorageProvider final : public StorageProvider {
 
   inline size_t numFailedAllocs() const;
 
-  void *newStorage(const char *name) override;
+  using StorageProvider::newStorage;
+  llvm::ErrorOr<void *> newStorage(const char *name) override;
 
   void deleteStorage(void *storage) override;
 };

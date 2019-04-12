@@ -8,6 +8,7 @@
 #define HERMES_VM_ALIGNED_STORAGE_H
 
 #include "hermes/VM/AllocSource.h"
+#include "llvm/Support/ErrorOr.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -59,15 +60,13 @@ struct AlignedStorage {
 
   friend void swap(AlignedStorage &, AlignedStorage &);
 
+  static llvm::ErrorOr<AlignedStorage> create(StorageProvider *provider);
+  static llvm::ErrorOr<AlignedStorage> create(
+      StorageProvider *provider,
+      const char *name);
+
   /// Allocates a 'null' instance (one that does not own a memory region)
   AlignedStorage() = default;
-
-  /// Manages a region of memory.
-  /// \p provider The allocator of this storage. It will be used to delete this
-  ///   storage.
-  /// \p name The name to give to this storage.
-  AlignedStorage(StorageProvider *provider);
-  AlignedStorage(StorageProvider *provider, const char *name);
 
   /// \c AlignedStorage is moveable and assignable, but non-copyable.
   AlignedStorage(AlignedStorage &&);
@@ -105,6 +104,12 @@ struct AlignedStorage {
   inline bool contains(const void *ptr) const;
 
  private:
+  /// Manages a region of memory.
+  /// \p provider The allocator of this storage. It will be used to delete this
+  ///   storage.
+  /// \p name The name to give to this storage.
+  AlignedStorage(StorageProvider *provider, void *lowLim);
+
   /// Mask for isolating the offset into a storage for a pointer.
   static constexpr size_t kLowMask{kSize - 1};
 

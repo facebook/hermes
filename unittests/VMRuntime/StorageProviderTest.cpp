@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "LogSuccessStorageProvider.h"
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/LimitedStorageProvider.h"
 #include "hermes/VM/LogFailStorageProvider.h"
@@ -22,7 +23,7 @@ namespace {
 struct NullStorageProvider : public StorageProvider {
   static std::unique_ptr<NullStorageProvider> create();
 
-  void *newStorage(const char *) override;
+  llvm::ErrorOr<void *> newStorage(const char *) override;
   void deleteStorage(void *) override;
 };
 
@@ -31,8 +32,9 @@ std::unique_ptr<NullStorageProvider> NullStorageProvider::create() {
   return llvm::make_unique<NullStorageProvider>();
 }
 
-void *NullStorageProvider::newStorage(const char *) {
-  return nullptr;
+llvm::ErrorOr<void *> NullStorageProvider::newStorage(const char *) {
+  // Doesn't matter what code is returned here.
+  return make_error_code(OOMError::TestVMLimitReached);
 }
 
 void NullStorageProvider::deleteStorage(void *) {}
@@ -44,8 +46,9 @@ TEST(StorageProviderTest, LogSuccessStorageProviderSuccess) {
   ASSERT_EQ(0, provider.numDeleted());
   ASSERT_EQ(0, provider.numLive());
 
-  auto *s = provider.newStorage("Test");
-  ASSERT_NE(nullptr, s);
+  auto result = provider.newStorage("Test");
+  ASSERT_TRUE(result);
+  void *s = result.get();
 
   EXPECT_EQ(1, provider.numAllocated());
   EXPECT_EQ(0, provider.numDeleted());
@@ -65,14 +68,12 @@ TEST(StorageProviderTest, LogSuccessStorageProviderFail) {
   ASSERT_EQ(0, provider.numDeleted());
   ASSERT_EQ(0, provider.numLive());
 
-  auto *s = provider.newStorage("Test");
-  ASSERT_EQ(nullptr, s);
+  auto result = provider.newStorage("Test");
+  ASSERT_FALSE(result);
 
   EXPECT_EQ(0, provider.numAllocated());
   EXPECT_EQ(0, provider.numDeleted());
   EXPECT_EQ(0, provider.numLive());
-
-  provider.deleteStorage(s);
 
   EXPECT_EQ(0, provider.numAllocated());
   EXPECT_EQ(0, provider.numDeleted());
@@ -87,11 +88,12 @@ TEST(StorageProviderTest, LimitedStorageProviderEnforce) {
   };
   void *live[LIM];
   for (size_t i = 0; i < LIM; ++i) {
-    live[i] = provider.newStorage("Live");
-    ASSERT_NE(nullptr, live[i]);
+    auto result = provider.newStorage("Live");
+    ASSERT_TRUE(result);
+    live[i] = result.get();
   }
 
-  EXPECT_EQ(nullptr, provider.newStorage("Dead"));
+  EXPECT_FALSE(provider.newStorage("Dead"));
 
   // Clean-up
   for (auto s : live) {
@@ -109,8 +111,9 @@ TEST(StorageProviderTest, LimitedStorageProviderTrackDelete) {
   // If the storage gets deleted, we should be able to re-allocate it, even if
   // the total number of allocations exceeds the limit.
   for (size_t i = 0; i < LIM + 1; ++i) {
-    auto *s = provider.newStorage("Live");
-    EXPECT_NE(nullptr, s);
+    auto result = provider.newStorage("Live");
+    ASSERT_TRUE(result);
+    auto *s = result.get();
     provider.deleteStorage(s);
   }
 }
@@ -125,16 +128,16 @@ TEST(StorageProviderTest, LimitedStorageProviderDeleteNull) {
   void *live[LIM];
 
   for (size_t i = 0; i < LIM; ++i) {
-    live[i] = provider.newStorage("Live");
-    ASSERT_NE(nullptr, live[i]);
+    auto result = provider.newStorage("Live");
+    ASSERT_TRUE(result);
+    live[i] = result.get();
   }
 
   // The allocations should fail because we have hit the limit, and the
   // deletions should not affect the limit, because they are of null storages.
   for (size_t i = 0; i < 2; ++i) {
-    void *s = provider.newStorage("Dead");
-    EXPECT_EQ(nullptr, s);
-    provider.deleteStorage(s);
+    auto result = provider.newStorage("Live");
+    EXPECT_FALSE(result);
   }
 
   // Clean-up
@@ -151,9 +154,15 @@ TEST(StorageProviderTest, LogFailStorageProvider) {
   LogFailStorageProvider provider{&delegate};
 
   constexpr size_t FAILS = 3;
-  void *storages[LIM + FAILS];
-  for (size_t i = 0; i < LIM + FAILS; ++i) {
-    storages[i] = provider.newStorage("");
+  void *storages[LIM];
+  for (size_t i = 0; i < LIM; ++i) {
+    auto result = provider.newStorage();
+    ASSERT_TRUE(result);
+    storages[i] = result.get();
+  }
+  for (size_t i = 0; i < FAILS; ++i) {
+    auto result = provider.newStorage();
+    ASSERT_FALSE(result);
   }
 
   EXPECT_EQ(FAILS, provider.numFailedAllocs());
@@ -184,12 +193,13 @@ class StorageGuard final {
 };
 
 TEST(StorageProviderTest, WithExcess) {
-  std::shared_ptr<StorageProvider> provider{
-      StorageProvider::preAllocatedProvider(0, 100)};
+  auto result = StorageProvider::preAllocatedProvider(0, 100);
+  ASSERT_TRUE(result);
+  std::shared_ptr<StorageProvider> provider{std::move(result.get())};
   // This should succeed even though the maxAmount is 0.
   // The excess bytes requested should be rounded up to give an extra storage
   // allocation.
-  StorageGuard storage{provider, provider->newStorage()};
+  StorageGuard storage{provider, provider->newStorage().get()};
   EXPECT_TRUE(storage.raw());
   // A request for a second storage *can* fail, but is not required to.
 }

@@ -29,7 +29,8 @@ static size_t runLength(const size_t *begin, const size_t *end) {
 
 struct AlignedHeapSegmentTest : public ::testing::Test {
   AlignedHeapSegmentTest()
-      : provider_(StorageProvider::mmapProvider()), s(provider_.get()) {}
+      : provider_(StorageProvider::mmapProvider()),
+        s(std::move(AlignedStorage::create(provider_.get()).get())) {}
 
   ~AlignedHeapSegmentTest() = default;
 

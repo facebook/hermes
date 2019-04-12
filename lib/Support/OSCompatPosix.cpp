@@ -6,6 +6,7 @@
  */
 #ifndef _WINDOWS
 
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 
 #include <cassert>
@@ -101,10 +102,10 @@ void unset_test_vm_allocate_limit() {
 }
 #endif // !NDEBUG
 
-static void *vm_allocate_impl(size_t sz) {
+static llvm::ErrorOr<void *> vm_allocate_impl(size_t sz) {
 #ifndef NDEBUG
   if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
-    return nullptr;
+    return make_error_code(OOMError::TestVMLimitReached);
   } else if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit)) {
     totalVMAllocLimit -= sz;
   }
@@ -112,7 +113,12 @@ static void *vm_allocate_impl(size_t sz) {
 
   void *result = mmap(
       nullptr, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  return result == MAP_FAILED ? nullptr : result;
+  if (result == MAP_FAILED) {
+    // Since mmap is a POSIX API, even on MacOS, errno should use the POSIX
+    // generic_category.
+    return std::error_code(errno, std::generic_category());
+  }
+  return result;
 }
 
 static char *alignAlloc(void *p, size_t alignment) {
@@ -120,7 +126,7 @@ static char *alignAlloc(void *p, size_t alignment) {
       llvm::alignTo(reinterpret_cast<uintptr_t>(p), alignment));
 }
 
-void *vm_allocate(size_t sz) {
+llvm::ErrorOr<void *> vm_allocate(size_t sz) {
   assert(sz % page_size() == 0);
 #ifndef NDEBUG
   if (testPgSz != 0 && testPgSz > static_cast<size_t>(page_size_real())) {
@@ -130,7 +136,7 @@ void *vm_allocate(size_t sz) {
   return vm_allocate_impl(sz);
 }
 
-void *vm_allocate_aligned(size_t sz, size_t alignment) {
+llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   assert(sz > 0 && sz % page_size() == 0);
   assert(alignment > 0 && alignment % page_size() == 0);
 
@@ -138,11 +144,11 @@ void *vm_allocate_aligned(size_t sz, size_t alignment) {
   // and see if the memory happens to be aligned.
   // While this may be unlikely on the first allocation request,
   // subsequent allocation requests have a good chance.
-  void *mem = vm_allocate_impl(sz);
-  if (mem == nullptr) {
-    // Don't attempt to do anything further if the allocation failed.
-    return nullptr;
+  auto result = vm_allocate_impl(sz);
+  if (!result) {
+    return result;
   }
+  void *mem = *result;
   if (mem == alignAlloc(mem, alignment)) {
     return mem;
   }
@@ -154,10 +160,11 @@ void *vm_allocate_aligned(size_t sz, size_t alignment) {
   // a subsection that satisfies the request.
   // Use *real* page size here since that's what vm_allocate_impl guarantees.
   const size_t excessSize = sz + alignment - page_size_real();
-  void *raw = vm_allocate_impl(excessSize);
-  if (raw == nullptr)
-    return nullptr;
+  result = vm_allocate_impl(excessSize);
+  if (!result)
+    return result;
 
+  void *raw = *result;
   char *aligned = alignAlloc(raw, alignment);
   size_t excessAtFront = aligned - static_cast<char *>(raw);
   size_t excessAtBack = excessSize - excessAtFront - sz;

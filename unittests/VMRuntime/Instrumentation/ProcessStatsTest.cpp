@@ -94,7 +94,7 @@ void ProcessStatsTest(InfoAssertion assertionImpl) {
 
   const auto initial = takeSample();
 
-  char *buf = reinterpret_cast<char *>(hermes::oscompat::vm_allocate(10 * PS));
+  char *buf = static_cast<char *>(hermes::oscompat::vm_allocate(10 * PS).get());
   ASSERT_NE(nullptr, buf);
 
   const auto afterMmap = takeSample();
@@ -183,8 +183,9 @@ void infoAssertionImpl(
 
 void flushRSSEvents() {
   const size_t PS = hermes::oscompat::page_size();
-  auto buf = hermes::oscompat::vm_allocate(PS);
-  assert(buf != nullptr);
+  auto result = hermes::oscompat::vm_allocate(PS);
+  assert(result);
+  void *buf = result.get();
 
   auto p = reinterpret_cast<volatile char *>(buf);
 
