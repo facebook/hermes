@@ -8,6 +8,7 @@
 #define HERMES_VM_INSTRUMENTATION_PAGEACCESSTRACKERWINDOWS_H
 
 #include <memory>
+#include <vector>
 #include "llvm/Support/raw_ostream.h"
 
 namespace hermes {
@@ -19,6 +20,10 @@ class PageAccessTracker {
       size_t bufSize) {
     std::unique_ptr<volatile PageAccessTracker> tracker;
     return tracker;
+  }
+
+  std::vector<uint32_t> getPagesAccessed() volatile {
+    return std::vector<uint32_t>();
   }
 
   bool printStats(llvm::raw_ostream &OS, bool json) volatile {

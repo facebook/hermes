@@ -212,6 +212,15 @@ void PageAccessTracker::printPageAccessedOrderJSON(llvm::raw_ostream &OS) {
   json.closeDict();
 }
 
+std::vector<uint32_t> PageAccessTracker::getPagesAccessed() volatile {
+  auto tracker = uninstall();
+  std::vector<uint32_t> result(
+      tracker->accessedPageIds_.get(),
+      tracker->accessedPageIds_.get() + tracker->accessedPageCount_);
+  tracker->install();
+  return result;
+}
+
 bool PageAccessTracker::printStats(llvm::raw_ostream &OS, bool json) volatile {
   auto tracker = uninstall();
   if (json) {

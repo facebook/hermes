@@ -10,6 +10,7 @@
 #include <sigmux.h>
 #include <signal.h>
 #include <memory>
+#include <vector>
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -79,16 +80,18 @@ class PageAccessTracker {
   volatile PageAccessTracker *install();
 
  public:
-  /// Initialize the PageAccessTracker, mark the whole address range unreadable.
-  /// This function is intended to only be called once before shutdown.
+  /// Create a new PageAccessTracker, mark the whole address range unreadable.
   /// Note if the beginning or end of the buffer is not on the page boundary,
   /// the first page or last page the buffer actually covers won't be tracked.
   /// \param bufStart, pointer to the start of the buffer.
   /// \param bufSize, the size of the buffer.
-  /// \return true if initialization is successful.
+  /// \return The new object, or nullptr if creation failed.
   static std::unique_ptr<volatile PageAccessTracker> create(
       void *bufStart,
       size_t bufSize);
+
+  /// Get the page ids in the order they were accessed.
+  std::vector<uint32_t> getPagesAccessed() volatile;
 
   /// Print the tracked stats, including page size, total number of pages,
   /// number of pages accessed, and the page ids in the accessed order.

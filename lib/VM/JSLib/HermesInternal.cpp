@@ -246,6 +246,30 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     }
     SET_PROP_NEW("js_bytecodePagesResident", bytecodePagesResident);
     SET_PROP_NEW("js_bytecodePagesResidentRuns", bytecodePagesResidentRuns);
+
+    // Stats for the module with most accesses.
+    uint32_t bytecodePagesAccessed = 0;
+    JenkinsHash bytecodePagesTraceHash = 0;
+    for (auto &module : runtime->getRuntimeModules()) {
+      auto tracker = module.getBytecode()->getPageAccessTracker();
+      if (tracker) {
+        auto ids = tracker->getPagesAccessed();
+        if (ids.size() <= bytecodePagesAccessed)
+          continue;
+        bytecodePagesAccessed = ids.size();
+        bytecodePagesTraceHash = 0;
+        for (auto id : ids) {
+          // char16_t is at least 16 bits unsigned, so the quality of this hash
+          // might degrade if accessing bytecode above 2^16 * 4 kB = 256 MB.
+          bytecodePagesTraceHash = updateJenkinsHash(
+              bytecodePagesTraceHash, static_cast<char16_t>(id));
+        }
+      }
+    }
+    if (bytecodePagesAccessed) {
+      SET_PROP_NEW("js_bytecodePagesAccessed", bytecodePagesAccessed);
+      SET_PROP_NEW("js_bytecodePagesTraceHash", bytecodePagesTraceHash);
+    }
   }
 
   return resultHandle.getHermesValue();

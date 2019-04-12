@@ -55,7 +55,7 @@ class PinnedHermesValue;
   F(unsigned, BytecodeWarmupPercent, 0)                                  \
                                                                          \
   /* Signal-based I/O tracking. Slows down execution. If enabled, */     \
-  /* all bytecode bufffers > 64 kB passed to Hermes must be mmap:ed. */  \
+  /* all bytecode buffers > 64 kB passed to Hermes must be mmap:ed. */   \
   F(bool, TrackIO, false)                                                \
                                                                          \
   /* An interface for managing crashes. */                               \
