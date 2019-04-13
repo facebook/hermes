@@ -432,6 +432,10 @@ void SemanticValidator::visit(CoverTrailingCommaNode *CTC) {
   sm_.error(CTC->getSourceRange(), "expression expected after ','");
 }
 
+void SemanticValidator::visit(CoverInitializerNode *CI) {
+  sm_.error(CI->getStartLoc(), "':' expected in property initialization");
+}
+
 void SemanticValidator::visitFunction(
     FunctionLikeNode *node,
     Node *id,

@@ -462,6 +462,13 @@ ESTREE_NODE_0_ARGS(CoverEmptyArgs, Cover)
 // SequenceExpression.
 ESTREE_NODE_0_ARGS(CoverTrailingComma, Cover)
 
+// CoverInitializer
+// This is used for destructuring object assignment with initializers. It
+// will be the value node of a Property.
+ESTREE_NODE_1_ARGS(
+    CoverInitializer, Cover,
+    NodePtr, init, false)
+
 ESTREE_LAST(Cover)
 
 #undef ESTREE_FIRST

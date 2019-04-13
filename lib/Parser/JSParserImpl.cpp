@@ -1862,22 +1862,38 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
     key = optKey.getValue();
   }
 
-  if (!eat(
-          TokenKind::colon,
-          JSLexer::AllowRegExp,
-          "in property initialization",
-          "start of property initialization",
-          startLoc))
-    return None;
+  ESTree::Node *value;
 
-  auto value = parseAssignmentExpression();
-  if (!value)
-    return None;
+  // Check for CoverInitializedName: IdentifierReference Initializer
+  if (isa<ESTree::IdentifierNode>(key) && check(TokenKind::equal)) {
+    auto startLoc = advance().Start;
+    auto optInit = parseAssignmentExpression();
+    if (!optInit)
+      return None;
+
+    value = setLocation(
+        startLoc,
+        *optInit,
+        new (context_) ESTree::CoverInitializerNode(*optInit));
+  } else {
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::AllowRegExp,
+            "in property initialization",
+            "start of property initialization",
+            startLoc))
+      return None;
+
+    auto optValue = parseAssignmentExpression();
+    if (!optValue)
+      return None;
+    value = *optValue;
+  }
 
   return setLocation(
       startLoc,
-      value.getValue(),
-      new (context_) ESTree::PropertyNode(key, value.getValue(), initIdent_));
+      value,
+      new (context_) ESTree::PropertyNode(key, value, initIdent_));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parsePropertyKey() {
@@ -2423,17 +2439,12 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
 
 Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
     ESTree::Node *node) {
-  assert(
-      (isa<ESTree::ArrayExpressionNode>(node) ||
-       isa<ESTree::ObjectExpressionNode>(node)) &&
-      "reparseAssignmentPattern expects ArrayExpressionNode");
-
   if (auto *AEN = dyn_cast<ESTree::ArrayExpressionNode>(node)) {
     return reparseArrayAsignmentPattern(AEN);
+  } else if (auto *OEN = dyn_cast<ESTree::ObjectExpressionNode>(node)) {
+    return reparseObjectAssignmentPattern(OEN);
   } else {
-    sm_.error(
-        node->getSourceRange(), "object destructuring is not supported yet");
-    return None;
+    return node;
   }
 }
 
@@ -2456,14 +2467,10 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
     }
 
     // Reparse {...} or [...]
-    if (isa<ESTree::ArrayExpressionNode>(elem) ||
-        isa<ESTree::ObjectExpressionNode>(elem)) {
-      auto optSubPattern = reparseAssignmentPattern(elem);
-      if (!optSubPattern)
-        return None;
-
-      elem = *optSubPattern;
-    }
+    auto optSubPattern = reparseAssignmentPattern(elem);
+    if (!optSubPattern)
+      continue;
+    elem = *optSubPattern;
 
     if (init) {
       elem = setLocation(
@@ -2477,6 +2484,67 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
       AEN->getStartLoc(),
       AEN->getEndLoc(),
       new (context_) ESTree::ArrayPatternNode(std::move(elements)));
+}
+
+Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
+    ESTree::ObjectExpressionNode *OEN) {
+  ESTree::NodeList elements{};
+
+  for (auto it = OEN->_properties.begin(), e = OEN->_properties.end();
+       it != e;) {
+    auto *propNode = cast<ESTree::PropertyNode>(&*it++);
+    OEN->_properties.remove(*propNode);
+
+    if (propNode->_kind != initIdent_) {
+      sm_.error(
+          SourceErrorManager::combineIntoRange(
+              propNode->getStartLoc(), propNode->_key->getStartLoc()),
+          "invalid destructuring target");
+      continue;
+    }
+
+    ESTree::Node *value = propNode->_value;
+    ESTree::Node *init = nullptr;
+
+    // If we encounter an initializer, unpack it.
+    if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(value)) {
+      if (asn->_operator == getTokenIdent(TokenKind::equal)) {
+        value = asn->_left;
+        init = asn->_right;
+      }
+    } else if (
+        auto *coverInitializer =
+            dyn_cast<ESTree::CoverInitializerNode>(value)) {
+      assert(
+          isa<ESTree::IdentifierNode>(propNode->_key) &&
+          "CoverInitializedName must start with an identifier");
+      // Clone the key.
+      value = new (context_) ESTree::IdentifierNode(
+          cast<ESTree::IdentifierNode>(propNode->_key)->_name, nullptr);
+      value->copyLocationFrom(propNode->_key);
+
+      init = coverInitializer->_init;
+    }
+
+    // Reparse {...} or [...]
+    auto optSubPattern = reparseAssignmentPattern(value);
+    if (!optSubPattern)
+      continue;
+    value = *optSubPattern;
+
+    // If we have an initializer, create an AssignmentPattern.
+    if (init) {
+      value = new (context_) ESTree::AssignmentPatternNode(value, init);
+      value->copyLocationFrom(propNode->_value);
+    }
+
+    propNode->_value = value;
+    elements.push_back(*propNode);
+  }
+
+  auto *OP = new (context_) ESTree::ObjectPatternNode(std::move(elements));
+  OP->copyLocationFrom(OEN);
+  return OP;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {

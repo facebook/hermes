@@ -529,6 +529,10 @@ class JSParserImpl {
   Optional<ESTree::Node *> reparseArrayAsignmentPattern(
       ESTree::ArrayExpressionNode *AEN);
 
+  /// Reparse an ObjectExpression into an ObjectPattern.
+  Optional<ESTree::Node *> reparseObjectAssignmentPattern(
+      ESTree::ObjectExpressionNode *OEN);
+
   /// Reparse an ArrayExpression or ObjectExpression into ArrayPattern or
   /// ObjectPattern.
   Optional<ESTree::Node *> reparseAssignmentPattern(ESTree::Node *node);
