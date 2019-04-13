@@ -604,7 +604,10 @@ void SemanticValidator::validateAssignmentTarget(const Node *node) {
   if (auto *obj = dyn_cast<ObjectPatternNode>(node)) {
     for (auto &node : obj->_properties) {
       auto *prop = cast<PropertyNode>(&node);
-      validateAssignmentTarget(prop->_key);
+      assert(
+          prop->_kind->str() == "init" &&
+          "getters and setters must have been reported by the parser");
+      validateAssignmentTarget(prop->_value);
     }
     return;
   }
