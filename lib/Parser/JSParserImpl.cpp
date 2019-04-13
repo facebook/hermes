@@ -1064,6 +1064,16 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
       return None;
     }
 
+    // Check for destructuring pattern on the left and reparse it.
+    if (expr1 &&
+        (isa<ESTree::ArrayExpressionNode>(expr1) ||
+         isa<ESTree::ObjectExpressionNode>(expr1))) {
+      auto optExpr1 = reparseAssignmentPattern(expr1);
+      if (!optExpr1)
+        return None;
+      expr1 = *optExpr1;
+    }
+
     // Remember whether we are parsing for-in or for-of.
     bool const forInLoop = check(TokenKind::rw_in);
     advance();

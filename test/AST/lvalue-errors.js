@@ -7,12 +7,12 @@ x + 1 = 10;
 //CHECK-NEXT: ^~~~~
 
 for (x + 1 in x);
-//CHECK: {{.*}}lvalue-errors.js:9:6: error: invalid left-hand side in for-in/for-of loop
+//CHECK: {{.*}}lvalue-errors.js:9:6: error: invalid assignment left-hand side
 //CHECK-NEXT: for (x + 1 in x);
 //CHECK-NEXT:      ^~~~~
 
 for (x + 1 of x);
-//CHECK: {{.*}}lvalue-errors.js:14:6: error: invalid left-hand side in for-in/for-of loop
+//CHECK: {{.*}}lvalue-errors.js:14:6: error: invalid assignment left-hand side
 //CHECK-NEXT: for (x + 1 of x);
 //CHECK-NEXT:      ^~~~~
 

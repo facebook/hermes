@@ -172,9 +172,8 @@ void SemanticValidator::visitForInOf(LoopStatementNode *loopNode, Node *left) {
             "for-in/for-of variable declaration may not be initialized");
       }
     }
-  } else if (!isLValue(left)) {
-    sm_.error(
-        left->getSourceRange(), "invalid left-hand side in for-in/for-of loop");
+  } else {
+    validateAssignmentTarget(left);
   }
   visitESTreeChildren(*this, loopNode);
 }
