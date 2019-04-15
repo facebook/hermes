@@ -22,6 +22,7 @@
   hermes_testsuite = fbsource//xplat/hermes/utils/testsuite:run_testsuite
   hermes_synth = fbsource//xplat/hermes/tools/synth:synth
   hermes_synth_fb4a_marketplace_tti = fbsource//xplat/hermes/tools/synth:synth-fb4a-marketplace-tti
+  hermes_synth_fb4a_marketplace_big_gc = fbsource//xplat/hermes/tools/synth:synth-fb4a-marketplace-big-gc
   hermes_synth_fb4a_marketplace_big_gc_synth_trace = fbsource//xplat/hermes/facebook/js_bundles:fb4a_marketplace_big_gc_synth_trace
   hermes_synth_fb4a_marketplace_big_gc_synth_bytecode = fbsource//xplat/hermes/facebook/js_bundles:fb4a_marketplace_big_gc_synth_bytecode
   hermes_old_synth_rn_wilde_tti = fbsource//xplat/hermes/facebook/js_bundles:rn_wilde_tti
