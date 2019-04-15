@@ -260,6 +260,13 @@ void GenGC::collect(bool canEffectiveOOM) {
   if (canEffectiveOOM && ++consecFullGCs_ >= oomThreshold_)
     oom(make_error_code(OOMError::Effective));
 
+  /// Yield, then reclaim, the allocation context.  (This is a noop
+  /// if the context has already been yielded.)
+  AllocContextYieldThenClaim yielder(this);
+
+  // Make sure the AllocContext been yielded back to its owner.
+  assert(!allocContext_.activeSegment);
+
   const size_t usedBefore = used();
   const size_t sizeBefore = size();
   cumPreBytes_ += used();
