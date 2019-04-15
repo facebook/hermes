@@ -203,7 +203,6 @@ BLACK_LIST = [
     "let-array-with-newline.js",
     "let-block-with-newline.js",
     "let-identifier-with-newline.js",
-    "test262/test/built-ins/Array/prototype/includes/",
     "test262/test/built-ins/AsyncFunction/",
     "test262/test/built-ins/Atomics/",
     "test262/test/built-ins/Function/prototype/toString/",

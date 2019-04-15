@@ -809,3 +809,35 @@ try {[1].reduceRight(1)} catch(e) {print('caught', e.name, e.message);}
 // CHECK-NEXT: caught TypeError {{.*}}
 try {print(a.reduce(function(){}));} catch(e) {print('caught', e.name, e.message)}
 // CHECK-NEXT: caught TypeError {{.*}}
+
+print('includes');
+// CHECK-LABEL: includes
+print([1,2,3,4].includes(1));
+// CHECK-NEXT: true
+print([1,2,3,4].includes(1, Infinity));
+// CHECK-NEXT: false
+print([1,2,3,4].includes(1, 1));
+// CHECK-NEXT: false
+print([1,2,3,4].includes(1, -2));
+// CHECK-NEXT: false
+print([1,2,3,4].includes(1, -4));
+// CHECK-NEXT: true
+print([1,2,3,4].includes(3));
+// CHECK-NEXT: true
+print([1,2,3,4].includes(4));
+// CHECK-NEXT: true
+print([1,2,3,4].includes(4, -1));
+// CHECK-NEXT: true
+print([1,2,3,4].includes(4, 3));
+// CHECK-NEXT: true
+print([1,2,3,4].includes({}));
+// CHECK-NEXT: false
+print([1,2,3,4].includes(10));
+// CHECK-NEXT: false
+print([].includes(10));
+// CHECK-NEXT: false
+print(Array.prototype.includes.call({length: 3, 0: 'a', 1: 'b', 2: 'c'}, 'a'));
+// CHECK-NEXT: true
+var o = {};
+print([,,,o,,,].includes(o));
+// CHECK-NEXT: true
