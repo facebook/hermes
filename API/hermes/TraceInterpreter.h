@@ -107,6 +107,8 @@ class TraceInterpreter final {
     bool shouldPrintGCStats{false};
     bool shouldTrackIO{false};
     uint8_t bytecodeWarmupPercent{0};
+    double sanitizeRate{0.0};
+    int64_t sanitizeRandomSeed{-1};
   };
 
  private:

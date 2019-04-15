@@ -534,6 +534,11 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   }
   gcConfigBuilder.withAllocInYoung(options.allocInYoung);
   gcConfigBuilder.withRevertToYGAtTTI(options.revertToYGAtTTI);
+  gcConfigBuilder.withSanitizeConfig(
+      ::hermes::vm::GCSanitizeConfig::Builder()
+          .withSanitizeRate(options.sanitizeRate)
+          .withRandomSeed(options.sanitizeRandomSeed)
+          .build());
   // If aggregating multiple reps, randomize the placement of some data
   // structures in each rep, for a more robust time metric.
   if (options.reps > 1) {

@@ -11,7 +11,7 @@
 #include <hermes/TraceInterpreter.h>
 #include <hermes/hermes.h>
 
-#include "hermes/ConsoleHost/MemorySizeParser.h"
+#include "hermes/ConsoleHost/RuntimeFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -36,41 +36,10 @@ static opt<std::string> Marker("marker", desc("marker to stop at"), init(""));
 static llvm::cl::alias
     MarkerA("m", desc("alias for -marker"), llvm::cl::aliasopt(Marker));
 
-static opt<cl::MemorySize, false, cl::MemorySizeParser> MinHeap(
-    "gc-min-heap",
-    desc("Minimum heap size.  Format: <unsigned>{{K,M,G}{iB}"),
-    init(cl::MemorySize{0}));
-
-static opt<cl::MemorySize, false, cl::MemorySizeParser> MaxHeap(
-    "gc-max-heap",
-    desc("Maximum heap size.  Format: <unsigned>{{K,M,G}{iB}"),
-    init(cl::MemorySize{0}));
-
-static opt<bool> GCPrintStats(
-    "gc-print-stats",
-    desc("Print GC stats. On by default."),
-    init(true));
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
 static opt<bool>
     PrintStats("print-stats", desc("Print statistics"), init(false));
 #endif
-
-static opt<bool> TrackBytecodeIO(
-    "track-io",
-    desc("Track bytecode I/O during execution, and print stats."),
-    init(false));
-
-static opt<bool> GCAllocYoung(
-    "gc-alloc-young",
-    desc("Determines whether to (initially) allocate in the young generation"),
-    init(true));
-
-static opt<bool> GCRevertToYGAtTTI(
-    "gc-revert-to-yg-at-tti",
-    desc("Determines whether to revert to young generation, if necessary, at "
-         "TTI notification"),
-    init(false));
 
 static opt<unsigned> BytecodeWarmupPercent(
     "bytecode-warmup-percent",
@@ -95,13 +64,15 @@ int main(int argc, char **argv) {
     TraceInterpreter::ExecuteOptions options;
     options.marker = Marker;
     options.reps = Reps;
-    options.minHeapSize = MinHeap.bytes;
-    options.maxHeapSize = MaxHeap.bytes;
-    options.allocInYoung = GCAllocYoung;
-    options.revertToYGAtTTI = GCRevertToYGAtTTI;
-    options.shouldPrintGCStats = GCPrintStats;
-    options.shouldTrackIO = TrackBytecodeIO;
+    options.minHeapSize = cl::MinHeapSize.bytes;
+    options.maxHeapSize = cl::MaxHeapSize.bytes;
+    options.allocInYoung = cl::GCAllocYoung;
+    options.revertToYGAtTTI = cl::GCRevertToYGAtTTI;
+    options.shouldPrintGCStats = cl::GCPrintStats;
+    options.shouldTrackIO = cl::TrackBytecodeIO;
     options.bytecodeWarmupPercent = BytecodeWarmupPercent;
+    options.sanitizeRate = cl::GCSanitizeRate;
+    options.sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
     if (PrintStats)
       llvm::EnableStatistics();
@@ -114,6 +85,7 @@ int main(int argc, char **argv) {
         TraceFile, BytecodeFile, options, llvm::outs());
     llvm::outs() << "\n";
 #else
+    options.shouldPrintGCStats = true;
     llvm::outs() << TraceInterpreter::execAndGetStats(
                         TraceFile, BytecodeFile, options)
                  << "\n";
