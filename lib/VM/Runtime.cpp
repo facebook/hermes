@@ -85,7 +85,7 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
            ", requested size: " + llvm::Twine(sz.storageFootprint()))
               .str());
     }
-    std::shared_ptr<StorageProvider> provider{};
+    std::shared_ptr<StorageProvider> provider{std::move(storageResult.get())};
     // Place Runtime in the first allocated storage.
     static_assert(
         sizeof(Runtime) <= AlignedStorage::size(),
