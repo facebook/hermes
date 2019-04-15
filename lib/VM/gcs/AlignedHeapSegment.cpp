@@ -226,9 +226,15 @@ void AlignedHeapSegment::sweepAndInstallForwardingPointers(
       ptr = markBits.indexToAddress(ind);
       GCCell *cell = reinterpret_cast<GCCell *>(ptr);
       auto cellSize = cell->getAllocatedSize();
+      // TODO(T43077289): if we rehabilitate ArrayStorage trimming, reenable
+      // this code.
+#if 0
       auto postCompactionSize = cell->getVT()->getCompactedSize(cell, cellSize);
 
       auto res = allocator.alloc(postCompactionSize);
+#else
+      auto res = allocator.alloc(cellSize);
+#endif
       if (!res.success) {
         // The current chunk is exhausted; must move on to the next.
         break;
@@ -314,6 +320,9 @@ void AlignedHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
           "Cell was invalid after placing the vtable back in");
       // Must read this now, since the memmove below might overwrite it.
       auto cellSize = cell->getAllocatedSize();
+      // TODO(T43077289): if we rehabilitate ArrayStorage trimming, reenable
+      // this code.
+#if 0
       const bool canBeCompacted = cell->getVT()->canBeCompacted();
       const auto postCompactionSize =
           cell->getVT()->getCompactedSize(cell, cellSize);
@@ -326,6 +335,11 @@ void AlignedHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
         newCell->setSizeDuringGCCompaction(postCompactionSize);
         newCell->getVT()->compact(newCell);
       }
+#else
+      if (newAddr != ptr) {
+        std::memmove(newAddr, ptr, cellSize);
+      }
+#endif
 
       ptr += cellSize;
       ind += (cellSize >> LogHeapAlign);
