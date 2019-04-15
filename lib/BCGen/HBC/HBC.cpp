@@ -136,8 +136,9 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
   // with an ordered storage built by walking the module's strings.
   if (options.optimizationEnabled) {
     BMGen.initializeStringsFromStorage(
-        baseBCProvider ? stringStorageFromBytecodeProvider(*baseBCProvider)
-                       : getOrderedStringStorage(M, options));
+        baseBCProvider
+            ? stringStorageFromBytecodeProvider(*baseBCProvider)
+            : getOrderedStringStorage(M, options, functionsToGenerate));
   }
 
   /// \return true if we should generate function \p f.

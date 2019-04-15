@@ -14,9 +14,15 @@ using namespace hbc;
 
 ConsecutiveStringStorage hbc::getOrderedStringStorage(
     Module *M,
-    const BytecodeGenerationOptions &options) {
+    const BytecodeGenerationOptions &options,
+    const llvm::DenseSet<Function *> &functionsToGenerate) {
   llvm::DenseMap<llvm::StringRef, int> stringFreqs{};
   auto markStr = [&](llvm::StringRef str) { stringFreqs[str]++; };
+
+  /// \return true if we should generate function \p f.
+  const auto shouldGenerate = [&functionsToGenerate](const Function *f) {
+    return functionsToGenerate.empty() || functionsToGenerate.count(f) > 0;
+  };
 
   // Walk declared global properties.
   for (auto *prop : M->getGlobalProperties()) {
@@ -28,12 +34,16 @@ ConsecutiveStringStorage hbc::getOrderedStringStorage(
   // Walk function names.
   if (!options.stripFunctionNames) {
     for (auto &F : *M) {
+      if (!shouldGenerate(&F))
+        continue;
       markStr(F.getOriginalOrInferredName().str());
     }
   }
 
   // Walk function operands.
   for (auto &F : *M) {
+    if (!shouldGenerate(&F))
+      continue;
     for (auto &BB : F) {
       for (auto &I : BB) {
         for (int i = 0, e = I.getNumOperands(); i < e; i++) {

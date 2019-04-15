@@ -19,9 +19,12 @@ namespace hbc {
 /// \return a ConsecutiveStringStorage pre-loaded with the strings from the
 /// module \p M, in a way optimized for size and to take advantage of the small
 /// string index instructions in hbc.
+/// \param functionsToGenerate functions for which to output strings. If empty,
+/// output strings for all functions.
 ConsecutiveStringStorage getOrderedStringStorage(
     Module *M,
-    const BytecodeGenerationOptions &options);
+    const BytecodeGenerationOptions &options,
+    const llvm::DenseSet<Function *> &functionsToGenerate);
 
 } // namespace hbc
 } // namespace hermes
