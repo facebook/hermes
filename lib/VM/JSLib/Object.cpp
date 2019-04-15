@@ -93,6 +93,14 @@ objectIsExtensible(void *, Runtime *runtime, NativeArgs args);
 static CallResult<HermesValue>
 objectKeys(void *, Runtime *runtime, NativeArgs args);
 
+/// ES8.0 19.1.2.21
+static CallResult<HermesValue>
+objectValues(void *, Runtime *runtime, NativeArgs args);
+
+/// ES8.0 19.1.2.5.
+static CallResult<HermesValue>
+objectEntries(void *, Runtime *runtime, NativeArgs args);
+
 /// ES6 19.1.2.1 Object.assign
 static CallResult<HermesValue>
 objectAssign(void *, Runtime *runtime, NativeArgs args);
@@ -328,6 +336,20 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::keys),
       ctx,
       objectKeys,
+      1);
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::values),
+      ctx,
+      objectValues,
+      1);
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::entries),
+      ctx,
+      objectEntries,
       1);
   defineMethod(
       runtime,
@@ -1012,20 +1034,130 @@ objectIsExtensible(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(obj->isExtensible());
 }
 
-static CallResult<HermesValue>
-objectKeys(void *, Runtime *runtime, NativeArgs args) {
+namespace {
+/// "Kind" provided to enumerableOwnProperties to request different
+/// representation of the properties in the object.
+enum class EnumerableOwnPropertiesKind {
+  Key,
+  Value,
+  KeyValue,
+};
+} // namespace
+
+/// ES8.0 7.3.21.
+/// EnumerableOwnProperties gets the requested properties based on \p kind.
+static CallResult<HermesValue> enumerableOwnProperties(
+    Runtime *runtime,
+    NativeArgs args,
+    EnumerableOwnPropertiesKind kind) {
+  GCScope gcScope{runtime};
+
   auto objRes = toObject(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto objHandle = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto cr =
+  auto namesRes =
       getOwnPropertyNamesAsStrings(objHandle, runtime, true /*onlyEnumerable*/);
-  if (cr == ExecutionStatus::EXCEPTION) {
+  if (namesRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return *cr;
+  if (kind == EnumerableOwnPropertiesKind::Key) {
+    return *namesRes;
+  }
+  auto names = runtime->makeHandle<JSArray>(*namesRes);
+  uint32_t len = JSArray::getLength(*names);
+
+  auto propertiesRes = JSArray::create(runtime, len, len);
+  if (LLVM_UNLIKELY(propertiesRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto properties = toHandle(runtime, std::move(*propertiesRes));
+
+  MutableHandle<StringPrimitive> name{runtime};
+  MutableHandle<JSObject> propObj{runtime};
+  MutableHandle<> value{runtime};
+  MutableHandle<> entry{runtime};
+
+  uint32_t targetIdx = 0;
+
+  // Add the requested elements to properties.
+  // We must keep track of the targetIdx because elements' enumerability may be
+  // modified by a getter at any point in the loop, so `i` will not necessarily
+  // correspond to `targetIdx`.
+  auto marker = gcScope.createMarker();
+  for (uint32_t i = 0, len = JSArray::getLength(*names); i < len; ++i) {
+    gcScope.flushToMarker(marker);
+
+    name = names->at(i).getString();
+    ComputedPropertyDescriptor desc;
+    if (LLVM_UNLIKELY(
+            JSObject::getComputedDescriptor(
+                objHandle, runtime, name, propObj, desc) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!propObj || !desc.flags.enumerable) {
+      // Ensure that the property is still there and that it is enumerable,
+      // as descriptors can be modified by a getter at any point.
+      continue;
+    }
+
+    auto valueRes =
+        JSObject::getComputedPropertyValue(objHandle, runtime, propObj, desc);
+    if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    value = *valueRes;
+
+    if (kind == EnumerableOwnPropertiesKind::KeyValue) {
+      auto entryRes = JSArray::create(runtime, 2, 2);
+      if (LLVM_UNLIKELY(entryRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      entry = entryRes->getHermesValue();
+      JSArray::setElementAt(Handle<JSArray>::vmcast(entry), runtime, 0, name);
+      JSArray::setElementAt(Handle<JSArray>::vmcast(entry), runtime, 1, value);
+    } else {
+      assert(
+          kind == EnumerableOwnPropertiesKind::Value &&
+          "Name kind should have returned early");
+      entry = value.getHermesValue();
+    }
+
+    // The element must exist because we just read it.
+    JSArray::setElementAt(properties, runtime, targetIdx++, entry);
+  }
+
+  // Set length at the end only, because properties may be shorter than
+  // names.size() - some properties may have been made non-enumerable by getters
+  // in the loop.
+  if (LLVM_UNLIKELY(
+          JSArray::setLengthProperty(properties, runtime, targetIdx) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return properties.getHermesValue();
+}
+
+static CallResult<HermesValue>
+objectKeys(void *, Runtime *runtime, NativeArgs args) {
+  return enumerableOwnProperties(
+      runtime, args, EnumerableOwnPropertiesKind::Key);
+}
+
+static CallResult<HermesValue>
+objectValues(void *, Runtime *runtime, NativeArgs args) {
+  return enumerableOwnProperties(
+      runtime, args, EnumerableOwnPropertiesKind::Value);
+}
+
+static CallResult<HermesValue>
+objectEntries(void *, Runtime *runtime, NativeArgs args) {
+  return enumerableOwnProperties(
+      runtime, args, EnumerableOwnPropertiesKind::KeyValue);
 }
 
 static CallResult<HermesValue>

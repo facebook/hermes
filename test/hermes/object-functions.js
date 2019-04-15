@@ -157,6 +157,34 @@ var x = Object.create(null);
 print(Object.getPrototypeOf(x));
 //CHECK-NEXT: null
 
+print('values');
+// CHECK-LABEL: values
+print(Object.values({a: 1, b: 2}));
+// CHECK-NEXT: 1,2
+print(Object.values({}).length);
+// CHECK-NEXT: 0
+var x = {a: 1, c: 3};
+Object.defineProperty(x, 'b', {enumerable: false, value: 2});
+print(Object.values(x));
+// CHECK-NEXT: 1,3
+
+print('entries');
+// CHECK-LABEL: entries
+print(Object.entries({}).length);
+// CHECK-NEXT: 0
+var e = Object.entries({a: 1, b: 2});
+print(e.length, e[0].length, e[1].length);
+// CHECK-NEXT: 2 2 2
+print(e[0], e[1])
+// CHECK-NEXT: a,1 b,2
+var x = {a: 1, c: 3};
+Object.defineProperty(x, 'b', {enumerable: false, value: 2});
+var e = Object.entries(x);
+print(e.length)
+// CHECK-NEXT: 2
+print(e[0], e[1]);
+// CHECK-NEXT: a,1 c,3
+
 function testGetOwnPropertyNames() {
   var obj = {a: 0, b: 1};
   Object.defineProperty(obj, 'c', {value: 2, enumerable: false});
