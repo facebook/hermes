@@ -6,7 +6,6 @@
  */
 #include "hermes/VM/AlignedHeapSegment.h"
 
-#include "hermes/Support/ASAN.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
@@ -52,7 +51,7 @@ AlignedHeapSegment::~AlignedHeapSegment() {
   }
 
   contents()->~Contents();
-  asan_unpoison_if_enabled(start(), end());
+  __asan_unpoison_memory_region(start(), end() - start());
 }
 
 template <AdviseUnused MU>
@@ -302,7 +301,7 @@ void AlignedHeapSegment::updateReferences(
 void AlignedHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
   // If we're using ASAN, we've poisoned the unallocated portion of the space;
   // unpoison that now, since we may copy into it.
-  asan_unpoison_if_enabled(level(), end());
+  __asan_unpoison_memory_region(level(), end() - level());
   MarkBitArrayNC &markBits = markBitArray();
   char *ptr = start();
   size_t ind = markBits.addressToIndex(ptr);
@@ -414,8 +413,8 @@ void AlignedHeapSegment::clear() {
 }
 
 /* static */ void AlignedHeapSegment::clear(char *start, char *end) {
-#ifdef ASAN_ENABLED
-  asan_poison_if_enabled(start, end);
+#if LLVM_ADDRESS_SANITIZER_BUILD
+  __asan_poison_memory_region(start, end - start);
 #else
   std::memset(start, kInvalidHeapValue, end - start);
 #endif

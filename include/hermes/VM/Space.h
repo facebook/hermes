@@ -7,7 +7,6 @@
 #ifndef HERMES_VM_SPACE_H
 #define HERMES_VM_SPACE_H
 
-#include "hermes/Support/ASAN.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/BuildMetadata.h"
@@ -40,7 +39,7 @@ class GCSpace {
   /// [lowLim, hiLim), within which [start, end) is initially in use.
   GCSpace(char *lowLim, char *start, char *end, char *hiLim);
   ~GCSpace() {
-    asan_unpoison_if_enabled(start_, end_);
+    __asan_unpoison_memory_region(start_, end_ - start_);
   }
 
   /// Expose the bounds.
@@ -430,7 +429,7 @@ inline AllocResult ContigAllocGCSpace::allocRaw(
     level_ += size;
   }
   auto *cell = reinterpret_cast<GCCell *>(cellPtr);
-  asan_unpoison_if_enabled(cellPtr, cellPtr + size);
+  __asan_unpoison_memory_region(cellPtr, size);
 #ifndef NDEBUG
   checkUnwritten(cellPtr, cellPtr + size);
   numAllocatedObjects_++;
