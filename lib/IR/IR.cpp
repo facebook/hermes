@@ -632,27 +632,6 @@ int Parameter::getIndexInParamList() const {
   llvm_unreachable("Cannot find parameter in the function");
 }
 
-Context &Value::getContext() const {
-  const Value *V = this;
-
-  if (auto *I = dyn_cast<Instruction>(V)) {
-    return I->getContext();
-  } else if (auto *P = dyn_cast<Parameter>(V)) {
-    return P->getContext();
-  } else if (auto *L = dyn_cast<Label>(V)) {
-    return L->getContext();
-  } else if (auto *BB = dyn_cast<BasicBlock>(V)) {
-    return BB->getContext();
-  } else if (auto *VS = dyn_cast<VariableScope>(V)) {
-    return VS->getContext();
-  } else if (auto *M = dyn_cast<Module>(V)) {
-    return M->getContext();
-  } else if (auto *VR = dyn_cast<Variable>(V)) {
-    return VR->getParent()->getContext();
-  }
-  llvm_unreachable("Invalid value");
-}
-
 void Function::dump() {
   IRPrinter D(getParent()->getContext(), llvm::outs());
   D.visit(*this);

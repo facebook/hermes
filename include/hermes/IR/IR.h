@@ -395,11 +395,6 @@ class Value {
   /// Run a Value's destructor and deallocate its memory.
   static void destroy(Value *V);
 
-  Context &getContext() const;
-
-  /// Share this Module's context.
-  std::shared_ptr<Context> shareContext();
-
   /// \return the users of the value.
   const UseListTy &getUsers() const;
 
