@@ -145,7 +145,7 @@ bool padOrder(
     std::vector<unsigned> &result,
     int max) {
   result.clear();
-  result.resize(max);
+  result.reserve(max);
   llvm::DenseSet<uint32_t> processed;
 
   for (int fixed : order) {
