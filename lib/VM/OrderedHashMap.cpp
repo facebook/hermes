@@ -142,13 +142,17 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
   auto newHashTable = runtime->makeHandle<ArrayStorage>(*arrRes);
 
   // Now re-add all entries to the hash table.
-  MutableHandle<> tmpHandle{runtime};
+  MutableHandle<HashMapEntry> entry{runtime};
+  MutableHandle<HashMapEntry> oldNextInBucket{runtime};
+  MutableHandle<> keyHandle{runtime};
+  GCScopeMarkerRAII marker{runtime};
   for (unsigned i = 0, len = self->hashTable_->size(); i < len; ++i) {
-    auto entry = dyn_vmcast<HashMapEntry>(self->hashTable_->at(i));
+    entry = dyn_vmcast<HashMapEntry>(self->hashTable_->at(i));
     while (entry) {
-      tmpHandle = entry->key;
-      uint32_t bucket = hashToBucket(self, runtime, tmpHandle);
-      HashMapEntry *oldNextInBucket = entry->nextEntryInBucket;
+      marker.flush();
+      keyHandle = entry->key;
+      uint32_t bucket = hashToBucket(self, runtime, keyHandle);
+      oldNextInBucket = entry->nextEntryInBucket;
       if (newHashTable->at(bucket).isEmpty()) {
         // Empty bucket.
         entry->nextEntryInBucket = nullptr;
@@ -159,10 +163,9 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
             &runtime->getHeap());
       }
       // Update bucket head to the new entry.
-      newHashTable->at(bucket).set(
-          HermesValue::encodeObjectValue(entry), &runtime->getHeap());
+      newHashTable->at(bucket).set(entry.getHermesValue(), &runtime->getHeap());
 
-      entry = oldNextInBucket;
+      entry = *oldNextInBucket;
     }
   }
 
