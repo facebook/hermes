@@ -124,16 +124,6 @@ static opt<bool> TrackBytecodeIO(
     desc(
         "Track bytecode I/O when executing bytecode. Only works with bytecode mode"));
 
-enum BytecodeIOStatsFormatKind { HUMAN, JSON };
-
-static opt<BytecodeIOStatsFormatKind> BytecodeIOStatsFormat(
-    "io-stats-format",
-    llvm::cl::init(HUMAN),
-    llvm::cl::desc("Options for the format for printing bytecode I/O stats"),
-    llvm::cl::values(
-        clEnumVal(HUMAN, "Output in human readable format"),
-        clEnumVal(JSON, "Output in JSON format (default)")));
-
 static opt<uint32_t> VMExperimentFlags(
     "Xvm-experiment-flags",
     llvm::cl::desc("VM experiment flags."),

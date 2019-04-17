@@ -16,6 +16,7 @@
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Inst/Builtins.h"
 #include "hermes/Parser/JSParser.h"
+#include "hermes/Platform/Logging.h"
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/PerfSection.h"
@@ -660,6 +661,12 @@ CallResult<HermesValue> Runtime::runBytecode(
   if (flags.persistent && trackIO_ &&
       bytecode->getRawBuffer().size() > MIN_IO_TRACKING_SIZE) {
     bytecode->startPageAccessTracker();
+    if (!bytecode->getPageAccessTracker()) {
+      hermesLog(
+          "Hermes",
+          "Failed to start bytecode I/O instrumentation, "
+          "maybe not supported on this platform.");
+    }
   }
 
   GCScope scope(this);
