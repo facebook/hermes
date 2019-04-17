@@ -32,37 +32,45 @@ export HERMES_WS_DIR="$PWD"
 #    (FB internal:  ln -s ~/fbsource/xplat/hermes hermes  )
 git clone git@github.com:facebook/hermes.git
 
-# 3. Clone and build LLVM. This may take a while.
+# 2. Clone react-native-hermes here
+git clone git@github.com:facebookexperimental/react-native-hermes.git
+
+# 3. Replace the RN template app version number (1000.0.0) with the path
+#    to your react-native-hermes directory.
+printf '%s\n' "%s|1000.0.0|file://${HERMES_WS_DIR:?}/react-native-hermes" wq |
+    ed react-native-hermes/template/package.json
+
+# 4. Fetch react-native-hermes' dependencies
+( cd react-native-hermes && yarn install )
+
+# 5. Clone and build LLVM. This may take a while.
 hermes/utils/build_llvm.sh
 
-# 4. Cross-compile LLVM dependencies for all Android ABIs
+# 6. Cross-compile LLVM dependencies for all Android ABIs
 hermes/utils/crosscompile_llvm.sh
 
-# 5. Compile libhermes for Android
+# 7. Compile libhermes for Android
 ( cd hermes/android && gradle build )
 
-# 6. Create a react-native project
-react-native init AwesomeProject --version 0.59.2
+# 8. Create a React Native demo project from the react-native-hermes template
+npx @react-native-community/cli@next init AwesomeProject --template "file://${HERMES_WS_DIR:?}/react-native-hermes"
 
-# 7. Patch this project to use libhermes
-( cd AwesomeProject && "$HERMES_WS_DIR/hermes/first-party/setup-rn-app.sh" )
+# 9. Build and run the demo project
+( cd AwesomeProject && npx @react-native-community/cli@next run-android )
 
 )
 ```
 
 To set up an existing project to use Hermes:
 
-1. Set up the project to use [React Native from source](https://facebook.github.io/react-native/docs/building-from-source).
-   Note that their master branch may have moved on. The setup-rn-app script
-   uses [commit
-   1024dc251](https://github.com/facebook/react-native/commit/1024dc251e1f4777052b7c41807ea314672bb13a).
-2. Patch react-native to build the HermesExecutor using
-   [include-hermes-executor.diff](first-party/patches/include-hermes-executor.diff).
+1. Clone React Native from `git@github.com:facebookexperimental/react-native-hermes.git`
+2. Set up the project to use [React Native from source](https://facebook.github.io/react-native/docs/building-from-source),
+   from the `react-native-hermes` directory.
 3. Override `ReactNativeHost.getJavaScriptExecutorFactory()` to return a
-   `HermesExecutorFactory` as in
-   [use-hermes.diff](first-party/patches/use-hermes.diff).
+   `HermesExecutorFactory`. See the example in the
+   [demo app template](https://github.com/facebookexperimental/react-native-hermes/blob/master/template/android/app/src/main/java/com/helloworld/MainApplication.java#L38)
 4. Verify that you are using Hermes by checking that `typeof(HermesInternal)`
-   is `object` (and not `undefined`).
+   is `"object"` (and not `"undefined"`).
 
 
 ## Getting Started for Hermes developers
