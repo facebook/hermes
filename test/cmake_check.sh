@@ -1,13 +1,22 @@
 #!/bin/bash
 cm_lists=$(mktemp /tmp/cmake_check.XXXXXX)
 trap 'rm "$cm_lists"' EXIT
-find hermes -name CMakeLists.txt -exec cat {} + > "$cm_lists"
-for path in $(find hermes -name "*.cpp")
+
+hermes=$1
+if [ ! -d "$hermes/include/hermes" ]
+then
+  echo "Hermes directory not supplied"
+  exit 1
+fi
+
+find "$hermes" -name CMakeLists.txt -exec cat {} + > "$cm_lists"
+for path in $(find "$hermes" -name "*.cpp")
 do
     # Except some paths
     case "$path" in
-        hermes/facebook/*) continue;;
-        hermes/first-party/*) continue;;
+        $hermes/facebook/*) continue;;
+        $hermes/first-party/*) continue;;
+        $hermes/API/hermes/synthtest/tests/*) continue;;
     esac
     base=$(basename "$path")
     if ! grep -Fq "$base" "$cm_lists"
