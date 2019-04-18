@@ -59,9 +59,12 @@ class MarkBitArrayNC {
   /// past the last array index if there is not another marked bit.
   size_t findNextMarkedBitFrom(size_t ind);
 
- private:
-#ifdef UNIT_TEST
+// Mangling scheme used by MSVC encode public/private into the name.
+// As a result, vanilla "ifdef public" trick leads to link errors.
+#if defined(UNIT_TEST) || defined(_MSC_VER)
  public:
+#else
+ private:
 #endif
 
   /// \return The lowest address that can be marked in this array. i.e. The

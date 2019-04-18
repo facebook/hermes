@@ -361,7 +361,9 @@ class GenGC final : public GCBase {
   /// Mark a symbol id as being used.
   void markSymbol(SymbolID symbolID);
 
-#ifdef UNIT_TEST
+// Mangling scheme used by MSVC encode public/private into the name.
+// As a result, vanilla "ifdef public" trick leads to link errors.
+#if defined(UNIT_TEST) || defined(_MSC_VER)
  public:
 #else
  private:
