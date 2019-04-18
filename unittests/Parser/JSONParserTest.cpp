@@ -5,6 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/Parser/JSONParser.h"
+#include "hermes/Support/JSONEmitter.h"
 
 #include "gtest/gtest.h"
 
@@ -157,6 +158,35 @@ TEST(JSONParserTest, HiddenClassTest) {
   auto o3 = llvm::dyn_cast<JSONObject>(array->at(1));
   ASSERT_NE(nullptr, o3);
   ASSERT_EQ(o1->getHiddenClass(), o3->getHiddenClass());
+}
+
+TEST(JSONParserTest, EmitTest) {
+  JSLexer::Allocator alloc;
+  JSONFactory factory(alloc);
+  SourceErrorManager sm;
+  std::string storage;
+  llvm::raw_string_ostream OS(storage);
+  JSONEmitter emitter(OS);
+  JSONParser parser(
+      factory,
+      "{"
+      " 'key1' : 1,"
+      " 'key2' : 'value2',"
+      " 'key3' : {'nested1': true},"
+      " \"key4\" : [false, null, 'value2']"
+      "}",
+      sm);
+
+  auto t1 = parser.parse();
+  ASSERT_TRUE(t1.hasValue());
+  t1.getValue()->emitInto(emitter);
+
+  // This intermediate variable is necessary because
+  // MSVC's macro preprocessor does not behave as expected with R-literals.
+  const char *expected =
+      R"#({"key1":1,"key2":"value2","key3":{"nested1":true},)#"
+      R"#("key4":[false,null,"value2"]})#";
+  EXPECT_EQ(OS.str(), expected);
 }
 
 }; // anonymous namespace

@@ -8,6 +8,7 @@
 #include "hermes/ADT/HalfPairIterator.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
 
 namespace hermes {
 namespace parser {
@@ -34,6 +35,41 @@ const char *JSONKindToString(JSONKind kind) {
       return "Null";
   }
   llvm_unreachable("Illegal JSONKind");
+}
+
+void JSONValue::emitInto(JSONEmitter &emitter) const {
+  using llvm::cast;
+
+  switch (this->getKind()) {
+    case JSONKind::Object:
+      emitter.openDict();
+      for (auto pair : *cast<JSONObject>(this)) {
+        emitter.emitKey(pair.first->str());
+        pair.second->emitInto(emitter);
+      }
+      emitter.closeDict();
+      break;
+    case JSONKind::Array:
+      emitter.openArray();
+      for (auto *val : *cast<JSONArray>(this)) {
+        val->emitInto(emitter);
+      }
+      emitter.closeArray();
+      break;
+    case JSONKind::String:
+      emitter.emitValue(cast<JSONString>(this)->str());
+      break;
+    case JSONKind::Number: {
+      emitter.emitValue(cast<JSONNumber>(this)->getValue());
+      break;
+    }
+    case JSONKind::Boolean:
+      emitter.emitValue(cast<JSONBoolean>(this)->getValue());
+      break;
+    case JSONKind::Null:
+      emitter.emitNullValue();
+      break;
+  }
 }
 
 JSONFactory::JSONFactory(Allocator &allocator, StringTable *strTab)

@@ -17,6 +17,7 @@
 #include "hermes/Parser/JSLexer.h"
 #include "hermes/Parser/pack.h"
 #include "hermes/Support/Conversions.h"
+#include "hermes/Support/JSONEmitter.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -57,6 +58,9 @@ class JSONValue {
   JSONKind getKind() const {
     return kind_;
   }
+
+  /// Writes this JSON value into \p emitter.
+  void emitInto(JSONEmitter &emitter) const;
 };
 
 /// The base type for all values except arrays and objects.
