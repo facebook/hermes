@@ -229,6 +229,14 @@ class UniquingStringTable final {
     return iter->second;
   }
 
+  /// \return string id of an existing \p str in string table, assuming it is
+  /// marked as an identifier.
+  uint32_t getExistingIdentifierId(llvm::StringRef str) const {
+    auto idx = getExistingStringId(str);
+    assert(isIdentifier_[idx] && "str is not an identifier.");
+    return idx;
+  }
+
   //// \return a ConsecutiveStringStorage for the strings in the table.
   ///  If \p optimize is set, attempt to pack the strings in the storage to
   ///  reduce their size.
