@@ -131,21 +131,20 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
   llvm::DenseSet<Function *> functionsToGenerate =
       range ? M->getFunctionsInSegment(*range) : llvm::DenseSet<Function *>{};
 
-  // Perhaps seed our string storage. If we are in delta optimizing mode, start
-  // with the string storage from our base bytecode provider. Otherwise, seed
-  // with an ordered storage built by walking the module's strings.
-  if (options.optimizationEnabled) {
-    BMGen.initializeStringsFromStorage(
-        baseBCProvider
-            ? stringStorageFromBytecodeProvider(*baseBCProvider)
-            : getOrderedStringStorage(M, options, functionsToGenerate));
-  }
-
   /// \return true if we should generate function \p f.
   const auto shouldGenerate =
       [&range, entryPoint, &functionsToGenerate](const Function *f) {
         return !range || f == entryPoint || functionsToGenerate.count(f) > 0;
       };
+
+  // Perhaps seed our string storage. If we are in delta optimizing mode, start
+  // with the string storage from our base bytecode provider. Otherwise, seed
+  // with an ordered storage built by walking the module's strings.
+  if (options.optimizationEnabled) {
+    BMGen.initializeStringsFromStorage(
+        baseBCProvider ? stringStorageFromBytecodeProvider(*baseBCProvider)
+                       : getOrderedStringStorage(M, options, shouldGenerate));
+  }
 
   // Add each function to BMGen so that each function has a unique ID.
   for (auto &F : *M) {

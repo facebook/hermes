@@ -15,14 +15,9 @@ using namespace hbc;
 ConsecutiveStringStorage hbc::getOrderedStringStorage(
     Module *M,
     const BytecodeGenerationOptions &options,
-    const llvm::DenseSet<Function *> &functionsToGenerate) {
+    std::function<bool(Function *)> shouldVisitFunction) {
   llvm::DenseMap<llvm::StringRef, int> stringFreqs{};
   auto markStr = [&](llvm::StringRef str) { stringFreqs[str]++; };
-
-  /// \return true if we should generate function \p f.
-  const auto shouldGenerate = [&functionsToGenerate](const Function *f) {
-    return functionsToGenerate.empty() || functionsToGenerate.count(f) > 0;
-  };
 
   // Walk declared global properties.
   for (auto *prop : M->getGlobalProperties()) {
@@ -34,7 +29,7 @@ ConsecutiveStringStorage hbc::getOrderedStringStorage(
   // Walk function names.
   if (!options.stripFunctionNames) {
     for (auto &F : *M) {
-      if (!shouldGenerate(&F))
+      if (!shouldVisitFunction(&F))
         continue;
       markStr(F.getOriginalOrInferredName().str());
     }
@@ -42,7 +37,7 @@ ConsecutiveStringStorage hbc::getOrderedStringStorage(
 
   // Walk function operands.
   for (auto &F : *M) {
-    if (!shouldGenerate(&F))
+    if (!shouldVisitFunction(&F))
       continue;
     for (auto &BB : F) {
       for (auto &I : BB) {

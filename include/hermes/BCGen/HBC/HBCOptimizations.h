@@ -7,6 +7,7 @@
 #ifndef HERMES_BCGEN_HBC_HBCOPTIMIZATIONS_H
 #define HERMES_BCGEN_HBC_HBCOPTIMIZATIONS_H
 
+#include <functional>
 #include <vector>
 
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
@@ -19,12 +20,12 @@ namespace hbc {
 /// \return a ConsecutiveStringStorage pre-loaded with the strings from the
 /// module \p M, in a way optimized for size and to take advantage of the small
 /// string index instructions in hbc.
-/// \param functionsToGenerate functions for which to output strings. If empty,
-/// output strings for all functions.
+/// \param shouldVisitFunction indicates which functions for which to output
+/// strings.
 ConsecutiveStringStorage getOrderedStringStorage(
     Module *M,
     const BytecodeGenerationOptions &options,
-    const llvm::DenseSet<Function *> &functionsToGenerate);
+    std::function<bool(Function *)> shouldVisitFunction);
 
 } // namespace hbc
 } // namespace hermes
