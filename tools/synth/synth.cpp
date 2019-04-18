@@ -65,17 +65,20 @@ static opt<int> Reps(
 static opt<bool> GCAllocYoung(
     "gc-alloc-young",
     desc("Determines whether to (initially) allocate in the young generation"),
+    cat(GCCategory),
     init(false));
 
 static opt<bool> GCRevertToYGAtTTI(
     "gc-revert-to-yg-at-tti",
     desc("Determines whether to revert to young generation, if necessary, at "
          "TTI notification"),
+    cat(GCCategory),
     init(true));
 
 static opt<bool> GCPrintStats(
     "gc-print-stats",
     desc("Output summary garbage collection statistics at exit"),
+    cat(GCCategory),
     init(true));
 
 /// @}

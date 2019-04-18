@@ -21,12 +21,18 @@
 
 namespace cl {
 
+using llvm::cl::cat;
 using llvm::cl::desc;
 using llvm::cl::Hidden;
 using llvm::cl::init;
 using llvm::cl::opt;
 using llvm::cl::Option;
+using llvm::cl::OptionCategory;
 using llvm::cl::parser;
+
+static OptionCategory GCCategory(
+    "Garbage Collector Options",
+    "These control various parts of the GC.");
 
 static opt<double> GCSanitizeRate(
     "gc-sanitize-handles",
@@ -35,6 +41,7 @@ static opt<double> GCSanitizeRate(
          "Sanitization moves the heap to a new location. With ASAN "
          "enabled, this causes accesses via stale pointers into the heap to "
          "be sanitized."),
+    cat(GCCategory),
 #ifdef HERMESVM_SANITIZE_HANDLES
     init(0.001)
 #else
@@ -47,6 +54,7 @@ static opt<int64_t, false, RandomSeedParser> GCSanitizeRandomSeed(
     "gc-sanitize-handles-random-seed",
     desc("A number used as a seed to the random engine for handle sanitization."
          "A negative value means to choose the seed at random"),
+    cat(GCCategory),
     init(-1)
 #ifndef HERMESVM_SANITIZE_HANDLES
         ,
@@ -59,16 +67,19 @@ static opt<bool> GCRandomizeAllocSpace(
     desc(
         "For GC's, like GenGC, that can allocate in different spaces, randomize "
         "the choice of space."),
+    cat(GCCategory),
     init(false));
 
 static opt<MemorySize, false, MemorySizeParser> MinHeapSize(
     "gc-min-heap",
     desc("Minimum heap size.  Format: <unsigned>{{K,M,G}{iB}"),
+    cat(GCCategory),
     init(MemorySize{0}));
 
 static opt<MemorySize, false, MemorySizeParser> InitHeapSize(
     "gc-init-heap",
     desc("Initial heap size.  Format: <unsigned>{{K,M,G}{iB}"),
+    cat(GCCategory),
     init(MemorySize{1024 * 1024}));
 
 static opt<bool> SampleProfiling(
@@ -79,6 +90,7 @@ static opt<bool> SampleProfiling(
 static opt<MemorySize, false, MemorySizeParser> MaxHeapSize(
     "gc-max-heap",
     desc("Max heap size.  Format: <unsigned>{K,M,G}{iB}"),
+    cat(GCCategory),
     init(MemorySize{1024 * 1024 * 1024}));
 
 #ifdef HERMESVM_PROFILER_EXTERN

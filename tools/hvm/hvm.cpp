@@ -58,6 +58,7 @@ static llvm::cl::opt<unsigned> Repeat(
 static llvm::cl::opt<bool> GCPrintStats(
     "gc-print-stats",
     llvm::cl::desc("Output summary garbage collection statistics at exit"),
+    llvm::cl::cat(cl::GCCategory),
     llvm::cl::init(false));
 
 // This is the vm driver.
