@@ -32,15 +32,8 @@ class UniquingStringLiteralTable final {
   // If \p optimize is set, optimize the layout of the storage.
   void flushUnwrittenStringsToStorage(bool optimize);
 
-  // Disable copying.
-  UniquingStringLiteralTable(const UniquingStringLiteralTable &) = delete;
-  void operator=(const UniquingStringLiteralTable &) = delete;
-
  public:
   UniquingStringLiteralTable() = default;
-  UniquingStringLiteralTable(UniquingStringLiteralTable &&) = default;
-  UniquingStringLiteralTable &operator=(UniquingStringLiteralTable &&) =
-      default;
 
   /// Construct by decoding a ConsecutiveStringStorage \p css.
   explicit UniquingStringLiteralTable(ConsecutiveStringStorage &&css);
