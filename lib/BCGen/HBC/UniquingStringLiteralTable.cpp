@@ -49,9 +49,10 @@ UniquingStringLiteralTable::UniquingStringLiteralTable(
     storage.appendStorage({unwritten, strings.end(), flags});
   }
 
+  auto tableView = storage.getStringTableView();
   for (uint32_t idx = 0; idx < isIdentifier.size(); ++idx) {
     if (isIdentifier[idx]) {
-      storage.markEntryAsIdentifier(idx);
+      tableView[idx].markAsIdentifier();
     }
   }
 

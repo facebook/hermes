@@ -43,7 +43,7 @@ class ConsecutiveStringStorage {
 
  public:
   using StringTableRefTy = StringTableEntry::StringTableRefTy;
-
+  using MutStringTableRefTy = StringTableEntry::MutStringTableRefTy;
   using StringStorageRefTy = StringTableEntry::StringStorageRefTy;
 
  private:
@@ -115,6 +115,11 @@ class ConsecutiveStringStorage {
     return strTable_;
   }
 
+  MutStringTableRefTy getStringTableView() {
+    ensureTableValid();
+    return strTable_;
+  }
+
   /// \returns the number of strings contained in this storage.
   size_t count() const {
     ensureTableValid();
@@ -159,12 +164,6 @@ class ConsecutiveStringStorage {
   bool isIdentifierAtIndex(uint32_t idx) const {
     ensureTableValid();
     return strTable_.at(idx).isIdentifier();
-  }
-
-  /// Mark the entry at a given index \p idx as an identifier.
-  void markEntryAsIdentifier(uint32_t idx) {
-    ensureTableValid();
-    strTable_.at(idx).markAsIdentifier();
   }
 };
 

@@ -28,6 +28,7 @@ class StringTableEntry {
 
  public:
   using StringTableRefTy = llvm::ArrayRef<StringTableEntry>;
+  using MutStringTableRefTy = llvm::MutableArrayRef<StringTableEntry>;
   using StringStorageRefTy = llvm::ArrayRef<char>;
 
   StringTableEntry(uint32_t offset, uint32_t length, bool isUTF16)
