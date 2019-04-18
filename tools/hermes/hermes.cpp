@@ -53,6 +53,22 @@ static opt<bool> RandomizeMemoryLayout(
     llvm::cl::init(false),
     llvm::cl::Hidden);
 
+static opt<bool> GCAllocYoung(
+    "gc-alloc-young",
+    desc("Determines whether to (initially) allocate in the young generation"),
+    init(true));
+
+static opt<bool> GCRevertToYGAtTTI(
+    "gc-revert-to-yg-at-tti",
+    desc("Determines whether to revert to young generation, if necessary, at "
+         "TTI notification"),
+    init(false));
+
+static opt<bool> GCPrintStats(
+    "gc-print-stats",
+    desc("Output summary garbage collection statistics at exit"),
+    init(false));
+
 } // namespace cl
 
 /// Execute Hermes bytecode \p bytecode, respecting command line arguments.

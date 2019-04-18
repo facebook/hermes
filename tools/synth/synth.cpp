@@ -7,24 +7,27 @@
 #ifdef HERMESVM_SYNTH_REPLAY
 // Only run this file with replay mode on
 
+#include <hermes/ConsoleHost/RuntimeFlags.h>
 #include <hermes/Support/MemoryBuffer.h>
 #include <hermes/TraceInterpreter.h>
 #include <hermes/hermes.h>
 
-#include "hermes/ConsoleHost/RuntimeFlags.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 
 #include <iostream>
 #include <tuple>
 
-namespace {
+namespace cl {
 
 using llvm::cl::desc;
 using llvm::cl::init;
 using llvm::cl::opt;
 using llvm::cl::Positional;
 using llvm::cl::Required;
+
+/// @name Synth benchmark specific flags
+/// @{
 
 static opt<std::string>
     TraceFile(desc("input trace file"), Positional, Required);
@@ -54,7 +57,30 @@ static opt<int> Reps(
         "rep with the median \"totalTime\"."),
     init(1));
 
-} // namespace
+/// @}
+
+/// @name Common flags from Hermes VM
+/// @{
+
+static opt<bool> GCAllocYoung(
+    "gc-alloc-young",
+    desc("Determines whether to (initially) allocate in the young generation"),
+    init(false));
+
+static opt<bool> GCRevertToYGAtTTI(
+    "gc-revert-to-yg-at-tti",
+    desc("Determines whether to revert to young generation, if necessary, at "
+         "TTI notification"),
+    init(true));
+
+static opt<bool> GCPrintStats(
+    "gc-print-stats",
+    desc("Output summary garbage collection statistics at exit"),
+    init(true));
+
+/// @}
+
+} // namespace cl
 
 int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes synth trace driver\n");
@@ -62,19 +88,19 @@ int main(int argc, char **argv) {
   using namespace facebook::hermes::tracing;
   try {
     TraceInterpreter::ExecuteOptions options;
-    options.marker = Marker;
-    options.reps = Reps;
+    options.marker = cl::Marker;
+    options.reps = cl::Reps;
     options.minHeapSize = cl::MinHeapSize.bytes;
     options.maxHeapSize = cl::MaxHeapSize.bytes;
     options.allocInYoung = cl::GCAllocYoung;
     options.revertToYGAtTTI = cl::GCRevertToYGAtTTI;
     options.shouldPrintGCStats = cl::GCPrintStats;
     options.shouldTrackIO = cl::TrackBytecodeIO;
-    options.bytecodeWarmupPercent = BytecodeWarmupPercent;
+    options.bytecodeWarmupPercent = cl::BytecodeWarmupPercent;
     options.sanitizeRate = cl::GCSanitizeRate;
     options.sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
-    if (PrintStats)
+    if (cl::PrintStats)
       llvm::EnableStatistics();
 #endif
 #ifdef HERMESVM_API_TRACE
@@ -82,16 +108,15 @@ int main(int argc, char **argv) {
     options.shouldPrintGCStats = false;
     options.shouldTrackIO = false;
     TraceInterpreter::execAndTrace(
-        TraceFile, BytecodeFile, options, llvm::outs());
+        cl::TraceFile, cl::BytecodeFile, options, llvm::outs());
     llvm::outs() << "\n";
 #else
-    options.shouldPrintGCStats = true;
     llvm::outs() << TraceInterpreter::execAndGetStats(
-                        TraceFile, BytecodeFile, options)
+                        cl::TraceFile, cl::BytecodeFile, options)
                  << "\n";
 #endif
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
-    if (PrintStats)
+    if (cl::PrintStats)
       llvm::PrintStatistics(llvm::outs());
 #endif
     return 0;

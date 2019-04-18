@@ -55,6 +55,11 @@ static llvm::cl::opt<unsigned> Repeat(
     llvm::cl::init(1),
     llvm::cl::Hidden);
 
+static llvm::cl::opt<bool> GCPrintStats(
+    "gc-print-stats",
+    llvm::cl::desc("Output summary garbage collection statistics at exit"),
+    llvm::cl::init(false));
+
 // This is the vm driver.
 int main(int argc, char **argv_) {
   llvm::sys::PrintStackTraceOnErrorSignal("hvm");
@@ -115,7 +120,7 @@ int main(int argc, char **argv_) {
                           .withRandomSeed(cl::GCSanitizeRandomSeed)
                           .build())
                   .withShouldRandomizeAllocSpace(cl::GCRandomizeAllocSpace)
-                  .withShouldRecordStats(cl::GCPrintStats)
+                  .withShouldRecordStats(GCPrintStats)
                   .withShouldReleaseUnused(false)
                   .withName("hvm")
                   .build())

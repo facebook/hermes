@@ -53,6 +53,11 @@ static llvm::cl::opt<std::string> Prompt2String(
     llvm::cl::init("...  "),
     llvm::cl::desc("Prompt string for continuation lines in the REPL."));
 
+static llvm::cl::opt<bool> GCPrintStats(
+    "gc-print-stats",
+    llvm::cl::desc("Output summary garbage collection statistics at exit"),
+    llvm::cl::init(false));
+
 namespace {
 enum class ReadResult {
   SUCCESS,
@@ -233,13 +238,13 @@ int main(int argc, char **argv) {
                                     .withSanitizeRate(cl::GCSanitizeRate)
                                     .withRandomSeed(cl::GCSanitizeRandomSeed)
                                     .build())
-                            .withShouldRecordStats(cl::GCPrintStats)
+                            .withShouldRecordStats(GCPrintStats)
                             .build())
           .withES6Symbol(cl::ES6Symbol)
           .build());
 
   vm::GCScope gcScope(runtime.get());
-  installConsoleBindings(runtime.get(), cl::GCPrintStats);
+  installConsoleBindings(runtime.get(), GCPrintStats);
 
   std::string code;
   code.reserve(256);
