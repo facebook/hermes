@@ -5,6 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/BCGen/HBC/HBCOptimizations.h"
+#include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -17,39 +18,11 @@ ConsecutiveStringStorage hbc::getOrderedStringStorage(
     const BytecodeGenerationOptions &options,
     std::function<bool(Function *)> shouldVisitFunction) {
   llvm::DenseMap<llvm::StringRef, int> stringFreqs{};
-  auto markStr = [&](llvm::StringRef str) { stringFreqs[str]++; };
-
-  // Walk declared global properties.
-  for (auto *prop : M->getGlobalProperties()) {
-    if (prop->isDeclared()) {
-      markStr(prop->getName()->getValue().str());
-    }
-  }
-
-  // Walk function names.
-  if (!options.stripFunctionNames) {
-    for (auto &F : *M) {
-      if (!shouldVisitFunction(&F))
-        continue;
-      markStr(F.getOriginalOrInferredName().str());
-    }
-  }
-
-  // Walk function operands.
-  for (auto &F : *M) {
-    if (!shouldVisitFunction(&F))
-      continue;
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        for (int i = 0, e = I.getNumOperands(); i < e; i++) {
-          auto *op = I.getOperand(i);
-          if (auto *str = dyn_cast<LiteralString>(op)) {
-            markStr(str->getValue().str());
-          }
-        }
-      }
-    }
-  }
+  traverseLiteralStrings(
+      M,
+      /* includeFunctionNames */ !options.stripFunctionNames,
+      shouldVisitFunction,
+      [&stringFreqs](llvm::StringRef str) { stringFreqs[str]++; });
 
   std::vector<llvm::StringRef> sortedStrings;
   for (const auto &keyVal : stringFreqs) {
