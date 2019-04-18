@@ -60,4 +60,24 @@ allprojects {
     google()
     jcenter()
   }
+
+  afterEvaluate {
+    // Gradle 4/5.0 outputs android-debug.aar and android-release.aar
+    // Gradle 5.1 outputs android.aar for both
+    // Unify the two by renaming the files afterwards.
+    // Neither appear to care whether the original filename actually exists.
+    def aarDir = "$buildDir/outputs/aar/"
+    tasks.named("assembleDebug").configure {
+      doLast {
+        file("$aarDir/android-debug.aar").renameTo("$aarDir/hermes-debug.aar")
+        file("$aarDir/android.aar").renameTo("$aarDir/hermes-debug.aar")
+      }
+    }
+    tasks.named("assembleRelease").configure {
+      doLast {
+        file("$aarDir/android-release.aar").renameTo("$aarDir/hermes-release.aar")
+        file("$aarDir/android.aar").renameTo("$aarDir/hermes-release.aar")
+      }
+    }
+  }
 }
