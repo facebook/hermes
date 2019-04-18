@@ -266,10 +266,6 @@ class BytecodeModuleGenerator {
   /// List of function indices.
   std::vector<uint32_t> cjsModulesStatic_;
 
-  /// Set of all string IDs that are used explicitly as identifiers,
-  /// e.g. used in PutNewOwnById instruction.
-  llvm::DenseSet<unsigned> identifiers_{};
-
   /// Table of constants used to initialize constant arrays.
   /// They are stored as chars in order to shorten bytecode size.
   std::vector<unsigned char> arrayBuffer_{};
@@ -296,9 +292,6 @@ class BytecodeModuleGenerator {
 
   /// The entry point of the function (usually the global function).
   int entryPointIndex_{-1};
-
-  /// Generates string storage from the string table.
-  ConsecutiveStringStorage generateStringStorage();
 
   /// Serialize all function names to string table.
   void serializeFunctionNames();

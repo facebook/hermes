@@ -880,7 +880,9 @@ UniquingStringTable::UniquingStringTable(ConsecutiveStringStorage &&css)
   std::string utf8Storage;
   uint32_t count = storage_.getStringTableView().size();
   for (uint32_t i = 0; i < count; i++) {
-    uint32_t added = addString(storage_.getStringAtIndex(i, utf8Storage));
+    uint32_t added = addString(
+        storage_.getStringAtIndex(i, utf8Storage),
+        storage_.isIdentifierAtIndex(i));
     (void)added;
     assert(
         added == i &&

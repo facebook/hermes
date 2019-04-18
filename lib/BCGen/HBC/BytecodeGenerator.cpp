@@ -149,11 +149,7 @@ void BytecodeModuleGenerator::setFunctionGenerator(
 }
 
 unsigned BytecodeModuleGenerator::addString(StringRef str, bool isIdentifier) {
-  auto id = stringTable_.addString(str);
-  if (isIdentifier) {
-    identifiers_.insert(id);
-  }
-  return id;
+  return stringTable_.addString(str, isIdentifier);
 }
 
 void BytecodeModuleGenerator::initializeStringsFromStorage(
@@ -190,16 +186,6 @@ void BytecodeModuleGenerator::addCJSModuleStatic(
   cjsModulesStatic_.push_back(functionID);
 }
 
-ConsecutiveStringStorage BytecodeModuleGenerator::generateStringStorage() {
-  ConsecutiveStringStorage result =
-      stringTable_.generateStorage(options_.optimizationEnabled);
-  // Mark the identifiers.
-  for (auto entryIdx : identifiers_) {
-    result.markEntryAsIdentifier(entryIdx);
-  }
-  return result;
-}
-
 void BytecodeModuleGenerator::serializeFunctionNames() {
   if (options_.stripFunctionNames) {
     addString(kStrippedFunctionName, false);
@@ -221,10 +207,11 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       functionIDMap_.getElements().size() == functionGenerators_.size() &&
       "Missing functions.");
 
-  // Function names have to be serialized before generateStringStorage() call.
+  // Function names have to be serialized before string storage is generated.
   serializeFunctionNames();
 
-  ConsecutiveStringStorage stringStorage = generateStringStorage();
+  ConsecutiveStringStorage stringStorage =
+      stringTable_.generateStorage(options_.optimizationEnabled);
   auto hashes = stringStorage.getIdentifierTranslations();
 
   BytecodeOptions bytecodeOptions;

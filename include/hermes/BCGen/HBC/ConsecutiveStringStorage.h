@@ -140,6 +140,13 @@ class ConsecutiveStringStorage {
       uint32_t idx,
       std::string &utf8ConversionStorage) const;
 
+  /// \return true if and only if the entry at index \p idx is marked as an
+  /// identifier.
+  bool isIdentifierAtIndex(uint32_t idx) const {
+    ensureTableValid();
+    return strTable_.at(idx).isIdentifier();
+  }
+
   /// Mark the entry at a given index \p idx as an identifier.
   void markEntryAsIdentifier(uint32_t idx) {
     ensureTableValid();
@@ -160,6 +167,10 @@ class UniquingStringTable final {
 
   // Our strings ordered by their index.
   std::vector<llvm::StringRef> stringsByIndex_;
+
+  // Mapping such that \c isIdentifier_[i] is true if and only if the string at
+  // \c stringsByIndex_[i] should be treated as an identifier.
+  std::vector<bool> isIdentifier_;
 
   // Count of strings written to our Storage.
   // These are always at the beginning of stringsByIndex_.
@@ -184,12 +195,15 @@ class UniquingStringTable final {
   /// Construct by decoding a ConsecutiveStringStorage \p css.
   explicit UniquingStringTable(ConsecutiveStringStorage &&css);
 
-  /// Adds a string, if not already present.
+  /// Adds a string, \p str, if not already present.  Additionally marks that
+  /// string as an identifier if \p isIdentifier is true (defaults to false).
   /// \returns the index identifier of the string (either existing or new).
-  uint32_t addString(llvm::StringRef str) {
+  uint32_t addString(llvm::StringRef str, bool isIdentifier = false) {
     assert(stringsToIndex_.size() == stringsByIndex_.size());
     auto iter = stringsToIndex_.find(str);
     if (iter != stringsToIndex_.end()) {
+      if (isIdentifier)
+        isIdentifier_[iter->second] = true;
       return iter->second;
     }
 
@@ -202,6 +216,7 @@ class UniquingStringTable final {
     assert(inserted.second && "Unexpectedly failed to insert");
     (void)inserted;
     stringsByIndex_.push_back(copiedString);
+    isIdentifier_.push_back(isIdentifier);
     assert(stringsByIndex_.at(newIndex) == str && "String at unexpected index");
     return newIndex;
   }
@@ -223,6 +238,13 @@ class UniquingStringTable final {
     // now be empty.
     flushUnwrittenStringsToStorage(optimize);
     ConsecutiveStringStorage result = std::move(storage_);
+
+    for (uint32_t idx = 0; idx < isIdentifier_.size(); ++idx) {
+      if (isIdentifier_[idx]) {
+        result.markEntryAsIdentifier(idx);
+      }
+    }
+
     storage_ = ConsecutiveStringStorage{};
     writtenStrings_ = 0;
     return result;
