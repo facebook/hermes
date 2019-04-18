@@ -132,10 +132,14 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       range ? M->getFunctionsInSegment(*range) : llvm::DenseSet<Function *>{};
 
   /// \return true if we should generate function \p f.
-  const auto shouldGenerate =
-      [&range, entryPoint, &functionsToGenerate](const Function *f) {
-        return !range || f == entryPoint || functionsToGenerate.count(f) > 0;
-      };
+  std::function<bool(const Function *)> shouldGenerate;
+  if (range) {
+    shouldGenerate = [entryPoint, &functionsToGenerate](const Function *f) {
+      return f == entryPoint || functionsToGenerate.count(f) > 0;
+    };
+  } else {
+    shouldGenerate = [](const Function *) { return true; };
+  }
 
   // Perhaps seed our string storage. If we are in delta optimizing mode, start
   // with the string storage from our base bytecode provider. Otherwise, seed
