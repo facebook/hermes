@@ -67,7 +67,8 @@ TEST(StringStorageTest, ConsecutiveStringStorageTest) {
   EXPECT_EQ(idx4, 3u);
   EXPECT_EQ(idx5, 0u);
 
-  hbc::ConsecutiveStringStorage CSS = USLT.generateStorage();
+  hbc::ConsecutiveStringStorage CSS =
+      hbc::UniquingStringLiteralTable::toStorage(USLT);
 
   std::string result;
 
@@ -84,17 +85,6 @@ TEST(StringStorageTest, ConsecutiveStringStorageTest) {
   }
 
   EXPECT_EQ(result, "helloworldsome\\x02string");
-}
-
-TEST(StringStorageTest, GenerateStringStorage) {
-  hbc::UniquingStringLiteralTable USLT;
-  USLT.addString("one");
-  auto css1 = USLT.generateStorage();
-  EXPECT_EQ(1u, css1.getStringTableView().size());
-
-  USLT.addString("two");
-  auto css2 = USLT.generateStorage();
-  EXPECT_EQ(2u, css2.getStringTableView().size());
 }
 
 TEST(StringStorageTest, PackingStringStorageTest) {
@@ -610,7 +600,8 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
   }
 
   // Copy the base storage.
-  hbc::ConsecutiveStringStorage baseStorage = baseTable.generateStorage(true);
+  hbc::ConsecutiveStringStorage baseStorage =
+      hbc::UniquingStringLiteralTable::toStorage(baseTable, true);
   std::vector<char> baseBuffer = baseStorage.getStorageView().vec();
   std::vector<StringTableEntry> baseEntries =
       baseStorage.getStringTableView().vec();
@@ -627,7 +618,8 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
   for (auto str : newStrings) {
     newTable.addString(str);
   }
-  hbc::ConsecutiveStringStorage newStorage = newTable.generateStorage();
+  hbc::ConsecutiveStringStorage newStorage =
+      hbc::UniquingStringLiteralTable::toStorage(newTable);
 
   // Verify that the new storage buffer starts with the base storage buffer.
   auto newBuffer = newStorage.getStorageView();

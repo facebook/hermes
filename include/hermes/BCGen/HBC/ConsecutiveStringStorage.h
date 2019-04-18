@@ -115,6 +115,12 @@ class ConsecutiveStringStorage {
     return strTable_;
   }
 
+  /// \returns the number of strings contained in this storage.
+  size_t count() const {
+    ensureTableValid();
+    return strTable_.size();
+  }
+
   /// \returns a reference to the string table. Notice that whoever receives
   /// the table may temper, swap or destroy the content. Hence after this
   /// call, the string table is no longer valid to use.
