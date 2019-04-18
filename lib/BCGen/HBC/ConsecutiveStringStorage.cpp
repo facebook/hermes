@@ -608,11 +608,12 @@ class StringTableBuilder {
   // Entries which contain non-ASCII characters.
   std::vector<StringPacker<char16_t>::StringEntry> u16Strings_;
 
-  /// Constructs from a list of StringRefs.
-  /// Note we copy the StringRefs, but not the underlying data.
-  /// The resulting builder must not outlive the supplied StringRefs.
-  /// In delta optimizing mode, only new strings are added here and packed.
-  StringTableBuilder(ArrayRef<llvm::StringRef> strings) {
+  /// Constructs from a list of strings, given as a pair of iterators: begin
+  /// and end.  Note that we do not always copy the underlying string data so
+  /// the resulting builder must not outlive these strings.  In delta
+  /// optimizing mode, only new strings are added here and packed.
+  template <typename I>
+  StringTableBuilder(I begin, I end) {
     // Generate and store a StringEntry for each string.
     // Remember the index of each string in our StringEntry, so that we can
     // later output the table in the correct order.
@@ -621,15 +622,17 @@ class StringTableBuilder {
     // In delta optimizing mode, the ids of new strings in the string table
     // are adjusted to reflect that they appear after the old strings.
     uint32_t index = 0;
-    for (llvm::StringRef str : strings) {
+    for (auto it = begin; it != end; ++it) {
+      auto &str = *it;
+      const char *begin = str.data();
+      const char *end = begin + str.size();
       if (isAllASCII(str.begin(), str.end())) {
-        ArrayRef<char> astr(str.begin(), str.end());
+        ArrayRef<char> astr(begin, end);
         asciiStrings_.emplace_back(index, astr);
       } else {
         u16StringStorage_.emplace_back();
         std::vector<char16_t> &ustr = u16StringStorage_.back();
-        convertUTF8WithSurrogatesToUTF16(
-            std::back_inserter(ustr), str.begin(), str.end());
+        convertUTF8WithSurrogatesToUTF16(std::back_inserter(ustr), begin, end);
         u16Strings_.emplace_back(index, ustr);
       }
       index++;
@@ -766,12 +769,14 @@ class StringTableBuilder {
 namespace hermes {
 namespace hbc {
 
+template <typename I>
 ConsecutiveStringStorage::ConsecutiveStringStorage(
-    ArrayRef<llvm::StringRef> strings,
+    I begin,
+    I end,
     OptimizationFlags flags) {
   // Prepare to build our string table.
   // Generate storage for our ASCII and u16 strings.
-  StringTableBuilder builder(strings);
+  StringTableBuilder builder(begin, end);
   std::vector<char> asciiStorage;
   std::vector<char16_t> u16Storage;
   builder.packIntoStorage(&asciiStorage, &u16Storage, flags & OptimizePacking);
@@ -793,6 +798,16 @@ ConsecutiveStringStorage::ConsecutiveStringStorage(
   StringTableSize += unpackedSize;
   StringTableSavings += unpackedSize - storage_.size();
 }
+
+template ConsecutiveStringStorage::ConsecutiveStringStorage(
+    StringSetVector::const_iterator begin,
+    StringSetVector::const_iterator end,
+    OptimizationFlags flags);
+
+template ConsecutiveStringStorage::ConsecutiveStringStorage(
+    ArrayRef<llvm::StringRef>::const_iterator begin,
+    ArrayRef<llvm::StringRef>::const_iterator end,
+    OptimizationFlags flags);
 
 uint32_t ConsecutiveStringStorage::getEntryHash(
     const StringTableEntry &entry) const {
@@ -890,21 +905,22 @@ UniquingStringTable::UniquingStringTable(ConsecutiveStringStorage &&css)
   }
   // Since we initialized from storage, all of our strings have already been
   // written to this storage.
-  assert(stringsByIndex_.size() == count && "Should have 'count' strings");
+  assert(strings_.size() == count && "Should have 'count' strings");
   writtenStrings_ = count;
 }
 
 void UniquingStringTable::flushUnwrittenStringsToStorage(bool optimize) {
   assert(
-      writtenStrings_ <= stringsByIndex_.size() &&
+      writtenStrings_ <= strings_.size() &&
       "Cannot have more written strings than strings");
-  if (writtenStrings_ == stringsByIndex_.size())
+  if (writtenStrings_ == strings_.size())
     return;
-  auto unwrittenStrings =
-      ArrayRef<llvm::StringRef>(stringsByIndex_).drop_front(writtenStrings_);
+
   uint32_t flags = optimize ? ConsecutiveStringStorage::OptimizePacking : 0;
-  storage_.appendStorage(ConsecutiveStringStorage{unwrittenStrings, flags});
-  writtenStrings_ = stringsByIndex_.size();
+  auto unwritten = strings_.begin() + writtenStrings_;
+  storage_.appendStorage(
+      ConsecutiveStringStorage{unwritten, strings_.end(), flags});
+  writtenStrings_ = strings_.size();
 }
 
 } // namespace hbc

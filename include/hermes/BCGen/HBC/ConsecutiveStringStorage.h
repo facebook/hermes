@@ -8,6 +8,7 @@
 #define HERMES_SUPPORT_STRINGSTORAGE_H
 
 #include "hermes/Support/OptValue.h"
+#include "hermes/Support/StringSetVector.h"
 #include "hermes/Support/StringTableEntry.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -17,6 +18,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -84,10 +86,16 @@ class ConsecutiveStringStorage {
   ConsecutiveStringStorage(ConsecutiveStringStorage &&) = default;
   ConsecutiveStringStorage &operator=(ConsecutiveStringStorage &&) = default;
 
-  /// Construct from a list of strings, which must be unique.
+  /// Construct from a list of unique strings.  Note that this is only
+  /// instantiated for a small number of different \p I types.
+  template <typename I>
+  ConsecutiveStringStorage(I begin, I end, OptimizationFlags flags = 0);
+
+  /// Construct from a list of unique strings.
   explicit ConsecutiveStringStorage(
       llvm::ArrayRef<llvm::StringRef> strings,
-      OptimizationFlags flags = 0);
+      OptimizationFlags flags = 0)
+      : ConsecutiveStringStorage(strings.begin(), strings.end(), flags) {}
 
   /// Construct from a table and storage.
   ConsecutiveStringStorage(
@@ -155,25 +163,16 @@ class ConsecutiveStringStorage {
 };
 
 /// Class storing a uniqued set of strings and indexes.
-/// This is similar to llvm's SetVector, but more efficient because it does not
-/// duplicate the strings in the index.
 class UniquingStringTable final {
-  // The object that owns storage for the strings.
-  // deque has the important property that appending does not move strings.
-  std::deque<std::string> stringsStorage_;
-
-  // A map from strings to their index in the stringsByIndex vector.
-  llvm::DenseMap<llvm::StringRef, uint32_t> stringsToIndex_;
-
-  // Our strings ordered by their index.
-  std::vector<llvm::StringRef> stringsByIndex_;
+  /// Mapping between strings and IDs.
+  StringSetVector strings_;
 
   // Mapping such that \c isIdentifier_[i] is true if and only if the string at
-  // \c stringsByIndex_[i] should be treated as an identifier.
+  // \c strings_[i] should be treated as an identifier.
   std::vector<bool> isIdentifier_;
 
   // Count of strings written to our Storage.
-  // These are always at the beginning of stringsByIndex_.
+  // These are always at the beginning of strings_;
   uint32_t writtenStrings_{0};
 
   // The ConsecutiveStringStorage containing all written strings.
@@ -199,34 +198,22 @@ class UniquingStringTable final {
   /// string as an identifier if \p isIdentifier is true (defaults to false).
   /// \returns the index identifier of the string (either existing or new).
   uint32_t addString(llvm::StringRef str, bool isIdentifier = false) {
-    assert(stringsToIndex_.size() == stringsByIndex_.size());
-    auto iter = stringsToIndex_.find(str);
-    if (iter != stringsToIndex_.end()) {
-      if (isIdentifier)
-        isIdentifier_[iter->second] = true;
-      return iter->second;
+    assert(strings_.size() == isIdentifier_.size());
+    auto id = strings_.insert(str);
+    if (id == isIdentifier_.size()) {
+      isIdentifier_.push_back(isIdentifier);
+    } else if (isIdentifier) {
+      isIdentifier_[id] = true;
     }
 
-    // Copy the string into the deque, and insert it into the map.
-    // Our string is owned by the deque.
-    stringsStorage_.emplace_back(str.begin(), str.end());
-    llvm::StringRef copiedString(stringsStorage_.back());
-    size_t newIndex = stringsToIndex_.size();
-    auto inserted = stringsToIndex_.insert({copiedString, newIndex});
-    assert(inserted.second && "Unexpectedly failed to insert");
-    (void)inserted;
-    stringsByIndex_.push_back(copiedString);
-    isIdentifier_.push_back(isIdentifier);
-    assert(stringsByIndex_.at(newIndex) == str && "String at unexpected index");
-    return newIndex;
+    return id;
   }
 
   /// \return string id of an existing \p str in string table.
   uint32_t getExistingStringId(llvm::StringRef str) const {
-    auto iter = stringsToIndex_.find(str);
-    assert(
-        iter != stringsToIndex_.end() && "str should exist the string table.");
-    return iter->second;
+    auto iter = strings_.find(str);
+    assert(iter != strings_.end() && "str should exist in string table.");
+    return std::distance(strings_.begin(), iter);
   }
 
   /// \return string id of an existing \p str in string table, assuming it is
@@ -260,7 +247,7 @@ class UniquingStringTable final {
 
   /// \return whether the table is empty.
   bool empty() const {
-    return stringsByIndex_.empty();
+    return strings_.empty();
   }
 };
 
