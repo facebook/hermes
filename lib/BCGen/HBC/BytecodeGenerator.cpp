@@ -155,7 +155,7 @@ unsigned BytecodeModuleGenerator::addString(StringRef str, bool isIdentifier) {
 void BytecodeModuleGenerator::initializeStringsFromStorage(
     ConsecutiveStringStorage &&css) {
   assert(stringTable_.empty() && "String table must be empty");
-  stringTable_ = UniquingStringTable{std::move(css)};
+  stringTable_ = UniquingStringLiteralTable{std::move(css)};
 }
 
 uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp regexp) {

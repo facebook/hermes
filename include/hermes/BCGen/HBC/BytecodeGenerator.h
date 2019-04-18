@@ -17,6 +17,7 @@
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/BCGen/HBC/UniquingFilenameTable.h"
+#include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/IR/IR.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OptValue.h"
@@ -247,7 +248,7 @@ class BytecodeModuleGenerator {
   SerializedLiteralGenerator literalGenerator_;
 
   /// A module-wide string table.
-  UniquingStringTable stringTable_{};
+  UniquingStringLiteralTable stringTable_{};
 
   /// A module-wide compiled regexp table.
   UniquingRegExpTable regExpTable_;

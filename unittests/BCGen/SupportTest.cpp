@@ -5,6 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
+#include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/RegExpSerialization.h"
 
@@ -50,14 +51,14 @@ TEST(StringStorageTest, GetStringFromEntryTest) {
 }
 
 TEST(StringStorageTest, ConsecutiveStringStorageTest) {
-  hbc::UniquingStringTable UST;
+  hbc::UniquingStringLiteralTable USLT;
 
-  auto idx0 = UST.addString("hello");
-  auto idx1 = UST.addString("hello");
-  auto idx2 = UST.addString("world");
-  auto idx3 = UST.addString("some string");
-  auto idx4 = UST.addString("");
-  auto idx5 = UST.addString("hello");
+  auto idx0 = USLT.addString("hello");
+  auto idx1 = USLT.addString("hello");
+  auto idx2 = USLT.addString("world");
+  auto idx3 = USLT.addString("some string");
+  auto idx4 = USLT.addString("");
+  auto idx5 = USLT.addString("hello");
 
   EXPECT_EQ(idx0, 0u);
   EXPECT_EQ(idx1, 0u);
@@ -66,7 +67,7 @@ TEST(StringStorageTest, ConsecutiveStringStorageTest) {
   EXPECT_EQ(idx4, 3u);
   EXPECT_EQ(idx5, 0u);
 
-  hbc::ConsecutiveStringStorage CSS = UST.generateStorage();
+  hbc::ConsecutiveStringStorage CSS = USLT.generateStorage();
 
   std::string result;
 
@@ -86,13 +87,13 @@ TEST(StringStorageTest, ConsecutiveStringStorageTest) {
 }
 
 TEST(StringStorageTest, GenerateStringStorage) {
-  hbc::UniquingStringTable UST;
-  UST.addString("one");
-  auto css1 = UST.generateStorage();
+  hbc::UniquingStringLiteralTable USLT;
+  USLT.addString("one");
+  auto css1 = USLT.generateStorage();
   EXPECT_EQ(1u, css1.getStringTableView().size());
 
-  UST.addString("two");
-  auto css2 = UST.generateStorage();
+  USLT.addString("two");
+  auto css2 = USLT.generateStorage();
   EXPECT_EQ(2u, css2.getStringTableView().size());
 }
 
@@ -603,7 +604,7 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
       "nlytelugu",   "derdamped",  "nsi",          "inepanaka",
       "dershivoo",   "vooopenly",  "ernatrypa",    "secparflaith",
       "ecoc",        "octpeseta",  "nationachime", "ationremass"};
-  hbc::UniquingStringTable baseTable;
+  hbc::UniquingStringLiteralTable baseTable;
   for (auto str : baseStrings) {
     baseTable.addString(str);
   }
@@ -615,7 +616,7 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
       baseStorage.getStringTableView().vec();
 
   // Create a new table starting with the base storage.
-  hbc::UniquingStringTable newTable(std::move(baseStorage));
+  hbc::UniquingStringLiteralTable newTable(std::move(baseStorage));
   std::vector<llvm::StringRef> newStrings = {
       "ina",          "rchamomis",   "fulurinal",    "rustful",
       "descar",       "unstripped",  "liere",        "oyoreback",
