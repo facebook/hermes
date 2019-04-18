@@ -22,7 +22,7 @@ ConsecutiveStringStorage hbc::getOrderedStringStorage(
       M,
       /* includeFunctionNames */ !options.stripFunctionNames,
       shouldVisitFunction,
-      [&stringFreqs](llvm::StringRef str) { stringFreqs[str]++; });
+      [&stringFreqs](llvm::StringRef str, bool) { stringFreqs[str]++; });
 
   std::vector<llvm::StringRef> sortedStrings;
   for (const auto &keyVal : stringFreqs) {

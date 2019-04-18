@@ -5,8 +5,42 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
+#include "hermes/IR/Instrs.h"
 
 #include <functional>
+
+namespace {
+
+using namespace hermes;
+
+/// \return true if and only if a literal string operand at index \p idx of
+/// instruction \p I is to be treated as an Identifier during Hermes Bytecode
+/// generation.
+bool isIdOperand(Instruction *I, unsigned idx) {
+#define CASE_WITH_PROP_IDX(INSN) \
+  case ValueKind::INSN##Kind:    \
+    return idx == INSN::PropertyIdx
+
+  switch (I->getKind()) {
+    CASE_WITH_PROP_IDX(DeletePropertyInst);
+    CASE_WITH_PROP_IDX(LoadPropertyInst);
+    CASE_WITH_PROP_IDX(StoreNewOwnPropertyInst);
+    CASE_WITH_PROP_IDX(StorePropertyInst);
+    CASE_WITH_PROP_IDX(TryLoadGlobalPropertyInst);
+    CASE_WITH_PROP_IDX(TryStoreGlobalPropertyInst);
+
+    case ValueKind::HBCAllocObjectFromBufferInstKind:
+      // AllocObjectFromBuffer stores the keys and values as alternating
+      // operands starting from FirstKeyIdx.
+      return (idx - HBCAllocObjectFromBufferInst::FirstKeyIdx) % 2 == 0;
+
+    default:
+      return false;
+  }
+#undef CASE
+}
+
+} // namespace
 
 namespace hermes {
 namespace hbc {
@@ -15,11 +49,11 @@ void traverseLiteralStrings(
     Module *M,
     bool includeFunctionNames,
     std::function<bool(Function *)> shouldVisitFunction,
-    std::function<void(llvm::StringRef)> traversal) {
+    std::function<void(llvm::StringRef, bool)> traversal) {
   // Walk declared global properties.
   for (auto *prop : M->getGlobalProperties()) {
     if (prop->isDeclared()) {
-      traversal(prop->getName()->getValue().str());
+      traversal(prop->getName()->getValue().str(), /* isIdentifier */ true);
     }
   }
 
@@ -27,7 +61,9 @@ void traverseLiteralStrings(
   if (includeFunctionNames) {
     for (auto &F : *M) {
       if (shouldVisitFunction(&F)) {
-        traversal(F.getOriginalOrInferredName().str());
+        traversal(
+            F.getOriginalOrInferredName().str(),
+            /* isIdentifier */ false);
       }
     }
   }
@@ -43,7 +79,7 @@ void traverseLiteralStrings(
         for (int i = 0, e = I.getNumOperands(); i < e; i++) {
           auto *op = I.getOperand(i);
           if (auto *str = dyn_cast<LiteralString>(op)) {
-            traversal(str->getValue().str());
+            traversal(str->getValue().str(), isIdOperand(&I, i));
           }
         }
       }

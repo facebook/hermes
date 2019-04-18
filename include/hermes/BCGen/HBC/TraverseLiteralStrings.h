@@ -25,7 +25,7 @@ void traverseLiteralStrings(
     Module *M,
     bool includeFunctionNames,
     std::function<bool(Function *)> shouldVisitFunction,
-    std::function<void(llvm::StringRef)> traversal);
+    std::function<void(llvm::StringRef, bool)> traversal);
 
 } // namespace hbc
 } // namespace hermes
