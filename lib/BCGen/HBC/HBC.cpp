@@ -93,7 +93,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
 /// Used in delta optimizing mode.
 /// \return a ConsecutiveStringStorage from a bytecode provider \p
 /// baseBCProvider.
-static ConsecutiveStringStorage stringStorageFromBytecodeProvider(
+ConsecutiveStringStorage stringStorageFromBytecodeProvider(
     const BCProviderBase &bcProvider) {
   std::vector<StringTableEntry> entries;
   uint32_t count = bcProvider.getStringCount();
