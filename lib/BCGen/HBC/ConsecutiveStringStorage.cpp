@@ -805,6 +805,11 @@ template ConsecutiveStringStorage::ConsecutiveStringStorage(
     OptimizationFlags flags);
 
 template ConsecutiveStringStorage::ConsecutiveStringStorage(
+    StringSetVector::iterator begin,
+    StringSetVector::iterator end,
+    OptimizationFlags flags);
+
+template ConsecutiveStringStorage::ConsecutiveStringStorage(
     ArrayRef<llvm::StringRef>::const_iterator begin,
     ArrayRef<llvm::StringRef>::const_iterator end,
     OptimizationFlags flags);

@@ -16,6 +16,7 @@
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+#include "hermes/BCGen/HBC/UniquingFilenameTable.h"
 #include "hermes/IR/IR.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OptValue.h"
@@ -253,7 +254,7 @@ class BytecodeModuleGenerator {
 
   /// A module-wide filename table, kept separate from the main string table.
   /// This allows us to serialize the filenames as part of the debug info.
-  UniquingStringTable filenameTable_{};
+  UniquingFilenameTable filenameTable_{};
 
   /// The ID of the first CJS module in this BytecodeModule.
   uint32_t cjsModuleOffset_{0};

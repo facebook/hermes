@@ -10,6 +10,7 @@
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/BCGen/HBC/StreamVector.h"
+#include "hermes/BCGen/HBC/UniquingFilenameTable.h"
 #include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Support/LEB128.h"
 #include "hermes/Support/OptValue.h"
@@ -293,7 +294,7 @@ class DebugInfoGenerator {
   DebugInfoGenerator &operator=(const DebugInfoGenerator &) = default;
 
  public:
-  explicit DebugInfoGenerator(UniquingStringTable &&filenameTable);
+  explicit DebugInfoGenerator(UniquingFilenameTable &&filenameTable);
 
   DebugInfoGenerator(DebugInfoGenerator &&) = default;
 

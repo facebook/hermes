@@ -386,8 +386,9 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
   return startOffset;
 }
 
-DebugInfoGenerator::DebugInfoGenerator(UniquingStringTable &&filenameTable)
-    : filenameStrings_(filenameTable.generateStorage()) {
+DebugInfoGenerator::DebugInfoGenerator(UniquingFilenameTable &&filenameTable)
+    : filenameStrings_(
+          UniquingFilenameTable::toStorage(std::move(filenameTable))) {
   // Initialize the empty lexical data.
   assert(
       lexicalData_.size() == kEmptyLexicalDataOffset &&

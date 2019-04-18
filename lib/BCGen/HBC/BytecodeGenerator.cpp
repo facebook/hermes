@@ -163,7 +163,7 @@ uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp regexp) {
 }
 
 uint32_t BytecodeModuleGenerator::addFilename(StringRef filename) {
-  return filenameTable_.addString(filename);
+  return filenameTable_.addFilename(filename);
 }
 
 void BytecodeModuleGenerator::addCJSModule(

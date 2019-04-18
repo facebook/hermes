@@ -36,10 +36,10 @@ void checkAddress(
 }
 
 static DebugInfoGenerator makeGenerator() {
-  UniquingStringTable strings;
-  strings.addString("file1.js");
-  strings.addString("file2.js");
-  return DebugInfoGenerator{std::move(strings)};
+  UniquingFilenameTable files;
+  files.addFilename("file1.js");
+  files.addFilename("file2.js");
+  return DebugInfoGenerator{std::move(files)};
 }
 
 TEST(DebugInfo, TestBasicInfo) {

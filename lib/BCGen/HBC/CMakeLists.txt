@@ -18,6 +18,7 @@ add_llvm_library(hermesHBCBackend
   SerializedLiteralParserBase.cpp
   SimpleBytecodeBuilder.cpp
   TraverseLiteralStrings.cpp
+  UniquingFilenameTable.cpp
   Passes/FuncCallNOpts.cpp
   Passes/InsertProfilePoint.cpp
   Passes/LowerBuiltinCalls.cpp
