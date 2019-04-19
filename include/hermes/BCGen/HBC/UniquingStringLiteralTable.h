@@ -58,7 +58,7 @@ class UniquingStringLiteralAccumulator final : public StringLiteralIDMapping {
   /// Add a new string -- \p str -- to the accumulation.  If \p isIdentifier is
   /// true, then the string is marked as potentially being used as an
   /// identifier.
-  inline void addString(llvm::StringRef str, bool isIdentifier = false);
+  inline void addString(llvm::StringRef str, bool isIdentifier);
 
   /// \return a ConsecutiveStringStorage for \p strings.  If \p optimize is
   /// set, attempt to pack the strings in the storage to reduce their size.

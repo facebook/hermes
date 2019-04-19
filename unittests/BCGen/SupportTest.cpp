@@ -53,12 +53,12 @@ TEST(StringStorageTest, GetStringFromEntryTest) {
 TEST(StringStorageTest, ConsecutiveStringStorageTest) {
   hbc::UniquingStringLiteralAccumulator USLA;
 
-  USLA.addString("hello");
-  USLA.addString("hello");
-  USLA.addString("world");
-  USLA.addString("some string");
-  USLA.addString("");
-  USLA.addString("hello");
+  USLA.addString("hello", /* isIdentifier */ false);
+  USLA.addString("hello", /* isIdentifier */ false);
+  USLA.addString("world", /* isIdentifier */ false);
+  USLA.addString("some string", /* isIdentifier */ false);
+  USLA.addString("", /* isIdentifier */ false);
+  USLA.addString("hello", /* isIdentifier */ false);
 
   hbc::ConsecutiveStringStorage CSS =
       hbc::UniquingStringLiteralAccumulator::toStorage(std::move(USLA));
@@ -597,7 +597,7 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
       "ecoc",        "octpeseta",  "nationachime", "ationremass"};
   hbc::UniquingStringLiteralAccumulator baseAccum;
   for (auto str : baseStrings) {
-    baseAccum.addString(str);
+    baseAccum.addString(str, /* isIdentifier */ false);
   }
 
   // Copy the base storage.
@@ -620,7 +620,7 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
       "amomisminium", "ucetminyan",  "lierendrafty"};
   hbc::UniquingStringLiteralAccumulator newAccum(std::move(baseStorage));
   for (auto str : newStrings) {
-    newAccum.addString(str);
+    newAccum.addString(str, /* isIdentifier */ false);
   }
 
   hbc::ConsecutiveStringStorage newStorage =
