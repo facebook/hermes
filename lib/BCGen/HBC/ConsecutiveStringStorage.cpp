@@ -53,11 +53,6 @@ class StringPacker {
     /// Index of the string in the original array.
     uint32_t stringID_;
 
-    /// Index of the string in the resulting output string table. This matches
-    /// stringID (the incoming index) unless the OptimizeOrdering flag is set,
-    /// in which case it may be changed.
-    uint32_t outputIndex_;
-
     /// Text of the string.
     ArrayRef<CharT> chars_;
 
@@ -96,24 +91,8 @@ class StringPacker {
     }
 
     StringEntry(uint32_t stringID, ArrayRef<CharT> chars)
-        : stringID_(stringID), outputIndex_(stringID), chars_(chars) {}
+        : stringID_(stringID), chars_(chars) {}
   };
-
-  /// \return true if entry \p e1 should come before entry \p e2 according to
-  /// our "optimal ordering" heuristic. This heuristic tries to order entries by
-  /// their offsets, or by their lengths if offsets match, but only within a
-  /// frequency class.
-  static bool compareByOptimalOrdering(
-      const StringEntry &e1,
-      const StringEntry &e2) {
-    int cls1 = e1.frequencyClass();
-    int cls2 = e2.frequencyClass();
-    if (cls1 != cls2)
-      return cls1 < cls2;
-    if (e1.offsetInStorage_ != e2.offsetInStorage_)
-      return e1.offsetInStorage_ < e2.offsetInStorage_;
-    return e1.chars_.size() < e2.chars_.size();
-  }
 
   /// A Trigram represents three packed characters.
   /// Note that Trigrams are keys in an llvm::DenseSet, which reserves the
@@ -683,26 +662,6 @@ class StringTableBuilder {
 #endif
   }
 
-  /// Sort our entries in a way that enables optimal ordering, and set their
-  /// stringOutputIndex.
-  void optimallyReorderEntries() {
-    std::sort(
-        asciiStrings_.begin(),
-        asciiStrings_.end(),
-        StringPacker<char>::compareByOptimalOrdering);
-    std::sort(
-        u16Strings_.begin(),
-        u16Strings_.end(),
-        StringPacker<char16_t>::compareByOptimalOrdering);
-    uint32_t outputIndex = 0;
-    for (auto &entry : asciiStrings_) {
-      entry.outputIndex_ = outputIndex++;
-    }
-    for (auto &entry : u16Strings_) {
-      entry.outputIndex_ = outputIndex++;
-    }
-  }
-
   /// Given that our strings have been packed into some storage, builds a string
   /// table from our stored string entries.
   /// \return a string table representing the offset and length of each string.
@@ -720,13 +679,13 @@ class StringTableBuilder {
     table.resize(asciiStrings_.size() + u16Strings_.size());
 
     for (const auto &asciiStr : asciiStrings_) {
-      table.at(asciiStr.outputIndex_) = {
+      table.at(asciiStr.stringID_) = {
           static_cast<uint32_t>(asciiStr.offsetInStorage_),
           static_cast<uint32_t>(asciiStr.chars_.size()),
           false /* isUTF16 */};
     }
     for (const auto &u16Str : u16Strings_) {
-      table.at(u16Str.outputIndex_) = {
+      table.at(u16Str.stringID_) = {
           static_cast<uint32_t>(
               u16Str.offsetInStorage_ * sizeof(char16_t) + u16OffsetAdjust),
           static_cast<uint32_t>(u16Str.chars_.size()),
@@ -784,11 +743,6 @@ ConsecutiveStringStorage::ConsecutiveStringStorage(
   // Append the u16 storage to the ASCII storage, to form our combined storage.
   storage_.insert(storage_.end(), asciiStorage.begin(), asciiStorage.end());
   auto u16Offset = StringTableBuilder::appendU16Storage(u16Storage, &storage_);
-
-  // Perhaps sort our entries.
-  if (flags & OptimizeOrdering) {
-    builder.optimallyReorderEntries();
-  }
 
   // Build our table over the storage.
   strTable_ = builder.generateStringTable(storage_, u16Offset);
