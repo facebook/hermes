@@ -10,7 +10,8 @@ then
 fi
 
 find "$hermes" -name CMakeLists.txt -exec cat {} + > "$cm_lists"
-for path in $(find "$hermes" -name "*.cpp")
+# Exclude paths in hidden directories.
+for path in $(find "$hermes" -name "*.cpp" -not -path '*/\.*')
 do
     # Except some paths
     case "$path" in
