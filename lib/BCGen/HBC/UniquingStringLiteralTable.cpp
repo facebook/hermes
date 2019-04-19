@@ -41,9 +41,8 @@ UniquingStringLiteralAccumulator::toStorage(
       "Cannot have more written strings than strings");
 
   if (existingStrings < strings.size()) {
-    uint32_t flags = optimize ? ConsecutiveStringStorage::OptimizePacking : 0;
     auto unwritten = strings.begin() + existingStrings;
-    storage.appendStorage({unwritten, strings.end(), flags});
+    storage.appendStorage({unwritten, strings.end(), optimize});
   }
 
   auto tableView = storage.getStringTableView();

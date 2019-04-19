@@ -70,18 +70,6 @@ class ConsecutiveStringStorage {
   uint32_t getEntryHash(const StringTableEntry &entry) const;
 
  public:
-  // Optimization options for the constructor.
-  enum Optimizations {
-    // Attempt to pack the strings in a way that maximizes overlap, resulting in
-    // a smaller storage buffer.
-    OptimizePacking = 1 << 0,
-
-    // Reorder the table index to reflect the character buffer order, improving
-    // compressibility.
-    OptimizeOrdering = 1 << 1,
-  };
-  using OptimizationFlags = uint32_t;
-
   ConsecutiveStringStorage() = default;
   ConsecutiveStringStorage(ConsecutiveStringStorage &&) = default;
   ConsecutiveStringStorage &operator=(ConsecutiveStringStorage &&) = default;
@@ -89,13 +77,13 @@ class ConsecutiveStringStorage {
   /// Construct from a list of unique strings.  Note that this is only
   /// instantiated for a small number of different \p I types.
   template <typename I>
-  ConsecutiveStringStorage(I begin, I end, OptimizationFlags flags = 0);
+  ConsecutiveStringStorage(I begin, I end, bool optimize = false);
 
   /// Construct from a list of unique strings.
   explicit ConsecutiveStringStorage(
       llvm::ArrayRef<llvm::StringRef> strings,
-      OptimizationFlags flags = 0)
-      : ConsecutiveStringStorage(strings.begin(), strings.end(), flags) {}
+      bool optimize = false)
+      : ConsecutiveStringStorage(strings.begin(), strings.end(), optimize) {}
 
   /// Construct from a table and storage.
   ConsecutiveStringStorage(

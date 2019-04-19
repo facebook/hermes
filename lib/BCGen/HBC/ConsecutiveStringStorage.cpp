@@ -732,13 +732,13 @@ template <typename I>
 ConsecutiveStringStorage::ConsecutiveStringStorage(
     I begin,
     I end,
-    OptimizationFlags flags) {
+    bool optimize) {
   // Prepare to build our string table.
   // Generate storage for our ASCII and u16 strings.
   StringTableBuilder builder(begin, end);
   std::vector<char> asciiStorage;
   std::vector<char16_t> u16Storage;
-  builder.packIntoStorage(&asciiStorage, &u16Storage, flags & OptimizePacking);
+  builder.packIntoStorage(&asciiStorage, &u16Storage, optimize);
 
   // Append the u16 storage to the ASCII storage, to form our combined storage.
   storage_.insert(storage_.end(), asciiStorage.begin(), asciiStorage.end());
@@ -756,17 +756,17 @@ ConsecutiveStringStorage::ConsecutiveStringStorage(
 template ConsecutiveStringStorage::ConsecutiveStringStorage(
     StringSetVector::const_iterator begin,
     StringSetVector::const_iterator end,
-    OptimizationFlags flags);
+    bool optimize);
 
 template ConsecutiveStringStorage::ConsecutiveStringStorage(
     StringSetVector::iterator begin,
     StringSetVector::iterator end,
-    OptimizationFlags flags);
+    bool optimize);
 
 template ConsecutiveStringStorage::ConsecutiveStringStorage(
     ArrayRef<llvm::StringRef>::const_iterator begin,
     ArrayRef<llvm::StringRef>::const_iterator end,
-    OptimizationFlags flags);
+    bool optimize);
 
 uint32_t ConsecutiveStringStorage::getEntryHash(
     const StringTableEntry &entry) const {
