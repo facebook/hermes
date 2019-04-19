@@ -221,6 +221,15 @@ std::vector<uint32_t> PageAccessTracker::getPagesAccessed() volatile {
   return result;
 }
 
+std::vector<uint32_t> PageAccessTracker::getMicros() volatile {
+  auto tracker = uninstall();
+  std::vector<uint32_t> result(
+      tracker->accessedMicros_.get(),
+      tracker->accessedMicros_.get() + tracker->accessedPageCount_);
+  tracker->install();
+  return result;
+}
+
 bool PageAccessTracker::printStats(llvm::raw_ostream &OS, bool json) volatile {
   auto tracker = uninstall();
   if (json) {

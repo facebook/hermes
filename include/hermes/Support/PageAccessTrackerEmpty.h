@@ -26,6 +26,10 @@ class PageAccessTracker {
     return std::vector<uint32_t>();
   }
 
+  std::vector<uint32_t> getMicros() volatile {
+    return std::vector<uint32_t>();
+  }
+
   bool printStats(llvm::raw_ostream &OS, bool json) volatile {
     return false;
   }

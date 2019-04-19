@@ -93,6 +93,9 @@ class PageAccessTracker {
   /// Get the page ids in the order they were accessed.
   std::vector<uint32_t> getPagesAccessed() volatile;
 
+  /// Get the microseconds for each access.
+  std::vector<uint32_t> getMicros() volatile;
+
   /// Print the tracked stats, including page size, total number of pages,
   /// number of pages accessed, and the page ids in the accessed order.
   /// \param json If true, print in json format, otherwise in a more readable

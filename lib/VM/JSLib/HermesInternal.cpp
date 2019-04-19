@@ -250,6 +250,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     // Stats for the module with most accesses.
     uint32_t bytecodePagesAccessed = 0;
     JenkinsHash bytecodePagesTraceHash = 0;
+    double bytecodeIOus = 0;
     for (auto &module : runtime->getRuntimeModules()) {
       auto tracker = module.getBytecode()->getPageAccessTracker();
       if (tracker) {
@@ -264,11 +265,16 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
           bytecodePagesTraceHash = updateJenkinsHash(
               bytecodePagesTraceHash, static_cast<char16_t>(id));
         }
+        bytecodeIOus = 0;
+        for (auto us : tracker->getMicros()) {
+          bytecodeIOus += us;
+        }
       }
     }
     if (bytecodePagesAccessed) {
       SET_PROP_NEW("js_bytecodePagesAccessed", bytecodePagesAccessed);
       SET_PROP_NEW("js_bytecodePagesTraceHash", bytecodePagesTraceHash);
+      SET_PROP_NEW("js_bytecodeIOTime", bytecodeIOus / 1e6);
     }
   }
 
