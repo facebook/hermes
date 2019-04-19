@@ -22,11 +22,11 @@ print('module 1');
 // STATIC-NEXT: CommonJS module count (static): 2
 
 // STATIC: Global String Table:
-// STATIC-NEXT: s0[ASCII, {{.*}}]: global
+// STATIC-NEXT: i0[ASCII, {{.*}}] #{{[0-9A-Z]+}}: print
 // STATIC-NEXT: s1[ASCII, {{.*}}]: cjs_module
 // STATIC-NEXT: s2[ASCII, {{.*}}]: module 1
-// STATIC-NEXT: i3[ASCII, {{.*}}] #{{[0-9A-Z]+}}: print
-// STATIC-NEXT: s4[ASCII, {{.*}}]: module 2
+// STATIC-NEXT: s3[ASCII, {{.*}}]: module 2
+// STATIC-NEXT: s4[ASCII, {{.*}}]: global
 // STATIC-NOT: cjs-multiple-1
 // STATIC: CommonJS Modules (Static):
 // STATIC-NEXT:  Module index 0 -> function ID 1

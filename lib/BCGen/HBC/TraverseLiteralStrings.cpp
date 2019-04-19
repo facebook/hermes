@@ -45,9 +45,34 @@ bool isIdOperand(Instruction *I, unsigned idx) {
 namespace hermes {
 namespace hbc {
 
+void traverseFunctionNames(
+    Module *M,
+    std::function<bool(Function *)> shouldVisitFunction,
+    std::function<void(llvm::StringRef)> traversal) {
+  for (auto &F : *M) {
+    if (shouldVisitFunction(&F)) {
+      traversal(F.getOriginalOrInferredName().str());
+    }
+  }
+}
+
+void traverseCJSModuleNames(
+    Module *M,
+    std::function<bool(Function *)> shouldVisitFunction,
+    std::function<void(llvm::StringRef)> traversal) {
+  for (auto &F : *M) {
+    if (!shouldVisitFunction(&F)) {
+      continue;
+    }
+
+    if (auto *cjsModule = M->findCJSModule(&F)) {
+      traversal(cjsModule->filename.str());
+    }
+  }
+}
+
 void traverseLiteralStrings(
     Module *M,
-    bool includeFunctionNames,
     std::function<bool(Function *)> shouldVisitFunction,
     std::function<void(llvm::StringRef, bool)> traversal) {
   // Walk declared global properties.
@@ -57,28 +82,10 @@ void traverseLiteralStrings(
     }
   }
 
-  // Walk function names.
-  if (includeFunctionNames) {
-    for (auto &F : *M) {
-      if (shouldVisitFunction(&F)) {
-        traversal(
-            F.getOriginalOrInferredName().str(),
-            /* isIdentifier */ false);
-      }
-    }
-  }
-
   // Walk functions.
   for (auto &F : *M) {
     if (!shouldVisitFunction(&F)) {
       continue;
-    }
-
-    // Walk the names of modules that have not been statically resolved.
-    if (auto *cjsModule = M->findCJSModule(&F)) {
-      if (!M->getCJSModulesResolved()) {
-        traversal(cjsModule->filename.str(), /* isIdentifier */ false);
-      }
     }
 
     for (auto &BB : F) {

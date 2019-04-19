@@ -2,9 +2,9 @@
 
 //CHECK-LABEL:Global String Table:
 //CHECK-NEXT:  s0[ASCII, 0..-1]:
-//CHECK-NEXT:  s1[ASCII, {{[0-9]+}}..{{[0-9]+}}]: abcdefg
-//CHECK-NEXT:  s2[ASCII, {{[0-9]+}}..{{[0-9]+}}]: global
-//CHECK-NEXT:  i3[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: a
+//CHECK-NEXT:  i1[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: a
+//CHECK-NEXT:  s2[ASCII, {{[0-9]+}}..{{[0-9]+}}]: abcdefg
+//CHECK-NEXT:  s3[ASCII, {{[0-9]+}}..{{[0-9]+}}]: global
 //CHECK-NEXT:  i4[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: b
 //CHECK-NEXT:  s5[ASCII, {{[0-9]+}}..{{[0-9]+}}]: bar
 //CHECK-NEXT:  i6[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: c

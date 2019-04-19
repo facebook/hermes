@@ -8,19 +8,19 @@ var z = [{}];
 //CHECK-NEXT:  i0[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: x
 //CHECK-NEXT:  i1[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: y
 //CHECK-NEXT:  i2[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: z
-//CHECK-NEXT:  s3[ASCII, {{[0-9]+\.\.[0-9]+}}]: global
-//CHECK-NEXT:  i4[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: length
-//CHECK-NEXT:  s5[ASCII, {{[0-9]+\.\.[0-9]+}}]: foo
-//CHECK-NEXT:  s6[ASCII, {{[0-9]+\.\.[0-9]+}}]: bar
+//CHECK-NEXT:  s3[ASCII, {{[0-9]+\.\.[0-9]+}}]: foo
+//CHECK-NEXT:  s4[ASCII, {{[0-9]+\.\.[0-9]+}}]: bar
+//CHECK-NEXT:  s5[ASCII, {{[0-9]+\.\.[0-9]+}}]: global
+//CHECK-NEXT:  i6[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: length
 
 //CHECK-LABEL:Array Buffer:
 //CHECK-NEXT:true
 //CHECK-NEXT:false
 //CHECK-NEXT:[int 0]
 //CHECK-NEXT:[int 1]
-//CHECK-NEXT:[String 5]
-//CHECK-NEXT:[String 5]
-//CHECK-NEXT:[String 6]
+//CHECK-NEXT:[String 3]
+//CHECK-NEXT:[String 3]
+//CHECK-NEXT:[String 4]
 
 //CHECK-LABEL:Function<global>{{.*}}:
 //CHECK-NEXT:Offset in debug table: src 0x0, vars 0x0

@@ -23,10 +23,10 @@ var obj = {'key1': 'val1', 'key2': '你好'};
 //CHECK-NEXT:  i5[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: invalid_surrogate_pair
 //CHECK-NEXT:  i6[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: gamma
 //CHECK-NEXT:  i7[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: invalid_single_surrogate
-//CHECK-NEXT:  s8[ASCII, {{[0-9]+}}..{{[0-9]+}}]: global
-//CHECK-NEXT:  i9[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: key1
-//CHECK-NEXT:  s10[ASCII, {{[0-9]+}}..{{[0-9]+}}]: val1
-//CHECK-NEXT:  i11[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: key2
+//CHECK-NEXT:  i8[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: key1
+//CHECK-NEXT:  s9[ASCII, {{[0-9]+}}..{{[0-9]+}}]: val1
+//CHECK-NEXT:  i10[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: key2
+//CHECK-NEXT:  s11[ASCII, {{[0-9]+}}..{{[0-9]+}}]: global
 //CHECK-NEXT:  s12[UTF-16, {{[0-9]+}}..{{[0-9]+}}]: \xC0\x03
 //CHECK-NEXT:  s13[UTF-16, {{[0-9]+}}..{{[0-9]+}}]: \x35\xD8\xBA\xDE
 //CHECK-NEXT:  s14[UTF-16, {{[0-9]+}}..{{[0-9]+}}]: \x35\xD8\xAA\xDE

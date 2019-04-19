@@ -25,13 +25,28 @@ namespace hbc {
 /// ID for a string that has not been traversed in this way (if assertions have
 /// been enabled).
 
-/// Walk the structure of the bytecode module \p M, calling \p traversal with
-/// the contents of every literal string found therein.  Also accepts a
-/// predicate to \p shouldVisitFunction, which is queried for each function,
-/// to check whether it should be traversed.
+/// Calls \p traversal with the function name of every function in bytecode
+/// module \p M that passes the predicate \p shouldVisitFunction.
+void traverseFunctionNames(
+    Module *M,
+    std::function<bool(Function *)> shouldVisitFunction,
+    std::function<void(llvm::StringRef)> traversal);
+
+/// Calls \p traversal with the name of the CommonJS module of every function
+/// in bytecode module \p M that passes the predicate \p shouldVisitFunction.
+void traverseCJSModuleNames(
+    Module *M,
+    std::function<bool(Function *)> shouldVisitFunction,
+    std::function<void(llvm::StringRef)> traversal);
+
+/// Walk the structure of the bytecode module \p M, calling \p traversal, for
+/// each string encountered, with the string's character representation and a
+/// boolean that is true if the string is being used as an identifier at that
+/// position in the structure.  The predicate \p shouldVisitFunction, is queried
+/// for each function, to check whether it should be traversed.  Only usages of
+/// strings in functions for which the predicate returns true are traversed.
 void traverseLiteralStrings(
     Module *M,
-    bool includeFunctionNames,
     std::function<bool(Function *)> shouldVisitFunction,
     std::function<void(llvm::StringRef, bool)> traversal);
 

@@ -149,16 +149,24 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
               *baseBCProvider)}
         : UniquingStringLiteralAccumulator{};
 
-    traverseLiteralStrings(
-        M,
-        !options.stripFunctionNames,
-        shouldGenerate,
-        [&strings](llvm::StringRef str, bool isIdentifier) {
-          strings.addString(str, isIdentifier);
-        });
+    auto addStringOrIdent = [&strings](llvm::StringRef str, bool isIdentifier) {
+      strings.addString(str, isIdentifier);
+    };
+
+    auto addString = [&strings](llvm::StringRef str) {
+      strings.addString(str, /* isIdentifier */ false);
+    };
+
+    traverseLiteralStrings(M, shouldGenerate, addStringOrIdent);
 
     if (options.stripFunctionNames) {
-      strings.addString(kStrippedFunctionName, /* isIdentifier */ false);
+      addString(kStrippedFunctionName);
+    } else {
+      traverseFunctionNames(M, shouldGenerate, addString);
+    }
+
+    if (!M->getCJSModulesResolved()) {
+      traverseCJSModuleNames(M, shouldGenerate, addString);
     }
 
     BMGen.initializeStringStorage(UniquingStringLiteralAccumulator::toStorage(
