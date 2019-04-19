@@ -7,9 +7,12 @@
 #include "JSLibInternal.h"
 
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
+#include "hermes/Support/Base64vlq.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"
+
+#include <random>
 
 namespace hermes {
 namespace vm {
@@ -230,6 +233,31 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     }                                                          \
   } while (false)
 
+/// Adds a property to \c resultHandle. \p KEY and \p VALUE provide its name and
+/// value as a C string and ASCIIRef respectively. If property definition fails,
+/// the exceptional execution status will be propogated to the outer function.
+#define SET_PROP_STR(KEY, VALUE)                               \
+  do {                                                         \
+    auto keySym = symbolForCStr(runtime, KEY);                 \
+    if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) { \
+      return ExecutionStatus::EXCEPTION;                       \
+    }                                                          \
+    auto valStr = StringPrimitive::create(runtime, VALUE);     \
+    if (LLVM_UNLIKELY(valStr == ExecutionStatus::EXCEPTION)) { \
+      return ExecutionStatus::EXCEPTION;                       \
+    }                                                          \
+    tmpHandle = *valStr;                                       \
+    auto status = JSObject::defineNewOwnProperty(              \
+        resultHandle,                                          \
+        runtime,                                               \
+        **keySym,                                              \
+        PropertyFlags::defaultNewNamedPropertyFlags(),         \
+        tmpHandle);                                            \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) { \
+      return ExecutionStatus::EXCEPTION;                       \
+    }                                                          \
+  } while (false)
+
   if (runtime->getRuntimeStats().shouldSample) {
     size_t bytecodePagesResident = 0;
     size_t bytecodePagesResidentRuns = 0;
@@ -251,6 +279,10 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     uint32_t bytecodePagesAccessed = 0;
     JenkinsHash bytecodePagesTraceHash = 0;
     double bytecodeIOus = 0;
+    // Sample a small number of (position in access order, page id) pairs
+    // encoded as a base64vlq stream.
+    static constexpr unsigned NUM_SAMPLES = 32;
+    std::string sample;
     for (auto &module : runtime->getRuntimeModules()) {
       auto tracker = module.getBytecode()->getPageAccessTracker();
       if (tracker) {
@@ -269,12 +301,24 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
         for (auto us : tracker->getMicros()) {
           bytecodeIOus += us;
         }
+        sample.clear();
+        llvm::raw_string_ostream str(sample);
+        std::random_device rng;
+        for (unsigned sampleIdx = 0; sampleIdx < NUM_SAMPLES; ++sampleIdx) {
+          int32_t accessOrderPos = rng() % ids.size();
+          base64vlq::encode(str, accessOrderPos);
+          base64vlq::encode(str, ids[accessOrderPos]);
+        }
       }
     }
     if (bytecodePagesAccessed) {
       SET_PROP_NEW("js_bytecodePagesAccessed", bytecodePagesAccessed);
       SET_PROP_NEW("js_bytecodePagesTraceHash", bytecodePagesTraceHash);
       SET_PROP_NEW("js_bytecodeIOTime", bytecodeIOus / 1e6);
+      std::string blah("blah");
+      SET_PROP_STR(
+          "js_bytecodePagesTraceSample",
+          ASCIIRef(sample.data(), sample.size()));
     }
   }
 

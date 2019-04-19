@@ -6,6 +6,7 @@
  */
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/SourceMap/SourceMapParser.h"
+#include "hermes/Support/Base64vlq.h"
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"

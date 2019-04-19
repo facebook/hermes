@@ -6,6 +6,7 @@
  */
 #include "hermes/SourceMap/SourceMapGenerator.h"
 
+#include "hermes/Support/Base64vlq.h"
 #include "hermes/Support/JSONEmitter.h"
 
 namespace hermes {

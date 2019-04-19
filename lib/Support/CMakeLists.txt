@@ -9,6 +9,7 @@ endif()
 
 add_llvm_library(hermesSupport
         Allocator.cpp
+        Base64vlq.cpp
         CheckedMalloc.cpp
         Conversions.cpp
         ErrorHandling.cpp

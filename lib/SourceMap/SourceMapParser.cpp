@@ -7,6 +7,7 @@
 #include "hermes/SourceMap/SourceMapParser.h"
 
 #include "hermes/Parser/JSONParser.h"
+#include "hermes/Support/Base64vlq.h"
 
 #include <algorithm>
 

@@ -26,23 +26,6 @@ struct SourceMapTextLocation {
   uint32_t column;
 };
 
-/// The vlq namespace contains support for SourceMap-style Base-64
-/// variable-length quantities.
-namespace base64vlq {
-
-/// Encode \p value into \p OS as a Base64 variable-length quantity.
-/// \return OS.
-llvm::raw_ostream &encode(llvm::raw_ostream &OS, int32_t value);
-
-/// Decode a Base64 variable-length quantity from the range starting at \p begin
-/// and ending at \p end (whose length is end - begin).
-/// \return the decoded value, or None if a value could not be decoded.
-/// If a value could be decoded, \p begin is updated to point after the end of
-/// the string.
-OptValue<int32_t> decode(const char *&begin, const char *end);
-
-} // namespace base64vlq
-
 /// In-memory representation of JavaScript version 3 source map.
 /// See https://sourcemaps.info/spec.html for the spec.
 class SourceMap {
