@@ -519,6 +519,10 @@ typedArrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
 #define TYPED_ARRAY(name, type)                                            \
   case CellKind::name##ArrayKind: {                                        \
     auto *arr = vmcast<JSTypedArray<type, CellKind::name##ArrayKind>>(*O); \
+    if (!arr->attached()) {                                                \
+      return runtime->raiseTypeError(                                      \
+          "Underlying ArrayBuffer detached after calling copyWithin");     \
+    }                                                                      \
     while (count > 0) {                                                    \
       arr->at<type>(to) = arr->at<type>(from);                             \
       from += direction;                                                   \

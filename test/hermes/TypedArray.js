@@ -371,6 +371,21 @@ cons.forEach(function(TA) {
     new TA([1, 2, 3, 4, 5]).copyWithin(-2, -3, -1).toString(),
     '1,2,3,3,4',
   );
+  if (HermesInternal.detachArrayBuffer) {
+    var ta = new TA(1000);
+    assert.throws(function() {
+      ta.copyWithin(
+        {
+          valueOf: function() {
+            HermesInternal.detachArrayBuffer(ta.buffer);
+            return 1;
+          },
+        },
+        4,
+        256,
+      );
+    }, TypeError);
+  }
 });
 
 (function() {
