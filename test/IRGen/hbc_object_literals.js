@@ -124,16 +124,26 @@ var obj4 = {
 //IRGEN-NEXT:  %59 = ReturnInst %2 : undefined
 //IRGEN-NEXT:function_end
 
+//BCGEN-LABEL:Global String Table:
+//BCGEN:  s1[ASCII, {{.*}}]: hello
+//BCGEN:  i8[ASCII, {{.*}}] #{{.*}}: g
+//BCGEN:  i10[ASCII, {{.*}}] #{{.*}}: a
+//BCGEN:  i12[ASCII, {{.*}}] #{{.*}}: f
+//BCGEN:  i13[ASCII, {{.*}}] #{{.*}}: b
+//BCGEN:  i14[ASCII, {{.*}}] #{{.*}}: c
+//BCGEN:  i15[ASCII, {{.*}}] #{{.*}}: d
+//BCGEN:  i16[ASCII, {{.*}}] #{{.*}}: e
+
 //BCGEN-LABEL:Object Key Buffer:
-//BCGEN-NEXT:[String 3]
-//BCGEN-NEXT:[String 17]
-//BCGEN-NEXT:[String 18]
-//BCGEN-NEXT:[String 5]
-//BCGEN-NEXT:[String 19]
-//BCGEN-NEXT:[String 0]
-//BCGEN-NEXT:[String 1]
+//BCGEN-NEXT:[String 10]
+//BCGEN-NEXT:[String 13]
+//BCGEN-NEXT:[String 14]
+//BCGEN-NEXT:[String 15]
+//BCGEN-NEXT:[String 16]
+//BCGEN-NEXT:[String 12]
+//BCGEN-NEXT:[String 8]
 //BCGEN-NEXT:Object Value Buffer:
-//BCGEN-NEXT:[String 7]
+//BCGEN-NEXT:[String 1]
 //BCGEN-NEXT:[int 1]
 //BCGEN-NEXT:null
 //BCGEN-NEXT:null

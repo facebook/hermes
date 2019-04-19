@@ -51,24 +51,25 @@ TEST(StringStorageTest, GetStringFromEntryTest) {
 }
 
 TEST(StringStorageTest, ConsecutiveStringStorageTest) {
-  hbc::UniquingStringLiteralTable USLT;
+  hbc::UniquingStringLiteralAccumulator USLA;
 
-  auto idx0 = USLT.addString("hello");
-  auto idx1 = USLT.addString("hello");
-  auto idx2 = USLT.addString("world");
-  auto idx3 = USLT.addString("some string");
-  auto idx4 = USLT.addString("");
-  auto idx5 = USLT.addString("hello");
-
-  EXPECT_EQ(idx0, 0u);
-  EXPECT_EQ(idx1, 0u);
-  EXPECT_EQ(idx2, 1u);
-  EXPECT_EQ(idx3, 2u);
-  EXPECT_EQ(idx4, 3u);
-  EXPECT_EQ(idx5, 0u);
+  USLA.addString("hello");
+  USLA.addString("hello");
+  USLA.addString("world");
+  USLA.addString("some string");
+  USLA.addString("");
+  USLA.addString("hello");
 
   hbc::ConsecutiveStringStorage CSS =
-      hbc::UniquingStringLiteralTable::toStorage(USLT);
+      hbc::UniquingStringLiteralAccumulator::toStorage(std::move(USLA));
+
+  hbc::StringLiteralTable SLT{CSS};
+
+  EXPECT_EQ(CSS.count(), 4);
+  EXPECT_EQ(SLT.getStringID("hello"), 0);
+  EXPECT_EQ(SLT.getStringID("world"), 1);
+  EXPECT_EQ(SLT.getStringID("some string"), 2);
+  EXPECT_EQ(SLT.getStringID(""), 3);
 
   std::string result;
 
@@ -594,20 +595,22 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
       "nlytelugu",   "derdamped",  "nsi",          "inepanaka",
       "dershivoo",   "vooopenly",  "ernatrypa",    "secparflaith",
       "ecoc",        "octpeseta",  "nationachime", "ationremass"};
-  hbc::UniquingStringLiteralTable baseTable;
+  hbc::UniquingStringLiteralAccumulator baseAccum;
   for (auto str : baseStrings) {
-    baseTable.addString(str);
+    baseAccum.addString(str);
   }
 
   // Copy the base storage.
   hbc::ConsecutiveStringStorage baseStorage =
-      hbc::UniquingStringLiteralTable::toStorage(baseTable, true);
+      hbc::UniquingStringLiteralAccumulator::toStorage(
+          std::move(baseAccum), true);
+  hbc::StringLiteralTable baseTable{baseStorage};
+
   std::vector<char> baseBuffer = baseStorage.getStorageView().vec();
   std::vector<StringTableEntry> baseEntries =
       baseStorage.getStringTableView().vec();
 
   // Create a new table starting with the base storage.
-  hbc::UniquingStringLiteralTable newTable(std::move(baseStorage));
   std::vector<llvm::StringRef> newStrings = {
       "ina",          "rchamomis",   "fulurinal",    "rustful",
       "descar",       "unstripped",  "liere",        "oyoreback",
@@ -615,11 +618,14 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
       "fulinarch",    "ust",         "yoreb",        "ppedescarp",
       "pilger",       "omisminium",  "miniummoiley", "deepmost",
       "amomisminium", "ucetminyan",  "lierendrafty"};
+  hbc::UniquingStringLiteralAccumulator newAccum(std::move(baseStorage));
   for (auto str : newStrings) {
-    newTable.addString(str);
+    newAccum.addString(str);
   }
+
   hbc::ConsecutiveStringStorage newStorage =
-      hbc::UniquingStringLiteralTable::toStorage(newTable);
+      hbc::UniquingStringLiteralAccumulator::toStorage(std::move(newAccum));
+  hbc::StringLiteralTable newTable{newStorage};
 
   // Verify that the new storage buffer starts with the base storage buffer.
   auto newBuffer = newStorage.getStorageView();
@@ -629,7 +635,7 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
 
   // Verify that all base IDs are the same.
   for (auto str : baseStrings) {
-    EXPECT_EQ(baseTable.addString(str), newTable.addString(str));
+    EXPECT_EQ(baseTable.getStringID(str), newTable.getStringID(str));
   }
 }
 

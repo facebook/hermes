@@ -551,7 +551,7 @@ void HBCISel::generateStorePropertyInst(
 
   if (auto *Lit = dyn_cast<LiteralString>(prop)) {
     // Property is a string
-    auto id = BCFGen_->addConstantString(Lit, true);
+    auto id = BCFGen_->getIdentifierID(Lit);
     if (id <= UINT16_MAX)
       BCFGen_->emitPutById(
           objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
@@ -574,7 +574,7 @@ void HBCISel::generateTryStoreGlobalPropertyInst(
 
   auto *Lit = cast<LiteralString>(prop);
 
-  auto id = BCFGen_->addConstantString(Lit, true);
+  auto id = BCFGen_->getIdentifierID(Lit);
   if (id <= UINT16_MAX) {
     BCFGen_->emitTryPutById(
         objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
@@ -626,7 +626,7 @@ void HBCISel::generateStoreNewOwnPropertyInst(
   auto strProp = Inst->getPropertyName();
   bool isEnumerable = Inst->getIsEnumerable();
 
-  auto id = BCFGen_->addConstantString(strProp, true);
+  auto id = BCFGen_->getIdentifierID(strProp);
 
   if (isEnumerable) {
     if (id > UINT16_MAX) {
@@ -665,7 +665,7 @@ void HBCISel::generateDeletePropertyInst(
   auto prop = Inst->getProperty();
 
   if (auto *Lit = dyn_cast<LiteralString>(prop)) {
-    auto id = BCFGen_->addConstantString(Lit, true);
+    auto id = BCFGen_->getIdentifierID(Lit);
     if (id <= UINT16_MAX)
       BCFGen_->emitDelById(resultReg, objReg, id);
     else
@@ -684,7 +684,7 @@ void HBCISel::generateLoadPropertyInst(
   auto prop = Inst->getProperty();
 
   if (auto *Lit = dyn_cast<LiteralString>(prop)) {
-    auto id = BCFGen_->addConstantString(Lit, true);
+    auto id = BCFGen_->getIdentifierID(Lit);
     if (id > UINT16_MAX) {
       BCFGen_->emitGetByIdLong(
           resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
@@ -711,7 +711,7 @@ void HBCISel::generateTryLoadGlobalPropertyInst(
 
   auto *Lit = cast<LiteralString>(prop);
 
-  auto id = BCFGen_->addConstantString(Lit, true);
+  auto id = BCFGen_->getIdentifierID(Lit);
   if (id > UINT16_MAX) {
     BCFGen_->emitTryGetByIdLong(
         resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
@@ -828,8 +828,8 @@ void HBCISel::generateDebuggerInst(DebuggerInst *Inst, BasicBlock *next) {
 void HBCISel::generateCreateRegExpInst(
     CreateRegExpInst *Inst,
     BasicBlock *next) {
-  auto patternStrID = BCFGen_->addConstantString(Inst->getPattern(), false);
-  auto flagsStrID = BCFGen_->addConstantString(Inst->getFlags(), false);
+  auto patternStrID = BCFGen_->getStringID(Inst->getPattern());
+  auto flagsStrID = BCFGen_->getStringID(Inst->getFlags());
   // Compile the regexp. We expect this to succeed because the AST went through
   // the SemanticValidator. This is a bit of a hack: what we would really like
   // to do is have the Parser emit a CompiledRegExp that can be threaded through
@@ -1244,8 +1244,7 @@ void HBCISel::generateHBCLoadConstInst(
       break;
     }
     case ValueKind::LiteralStringKind: {
-      auto idx =
-          BCFGen_->addConstantString(cast<LiteralString>(literal), false);
+      auto idx = BCFGen_->getStringID(cast<LiteralString>(literal));
       if (idx <= UINT16_MAX) {
         BCFGen_->emitLoadConstString(output, idx);
       } else {
@@ -1409,8 +1408,8 @@ void HBCISel::initialize() {
       // Declare every "declared" global variable.
       if (!prop->isDeclared())
         continue;
-      auto id = BCFGen_->addConstantString(
-          builder.getLiteralString(prop->getName()->getValue()), true);
+      auto id = BCFGen_->getIdentifierID(
+          builder.getLiteralString(prop->getName()->getValue()));
       BCFGen_->emitDeclareGlobalVar(id);
     }
   }

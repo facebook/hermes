@@ -7,6 +7,8 @@
 #include "TestHelpers.h"
 #include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
+#include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
+#include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Utils/Options.h"

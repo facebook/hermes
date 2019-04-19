@@ -17,6 +17,14 @@
 namespace hermes {
 namespace hbc {
 
+/// These functions are used during bytecode generation to exhaustively
+/// traverse *every* occurrence of a string in the IR that needs to appear in
+/// the final bytecode output.  If a string is not visited by one of these
+/// functions, it will not be available in the resulting bytecode's string
+/// table.  The compiler will assert at any attempt to request the string table
+/// ID for a string that has not been traversed in this way (if assertions have
+/// been enabled).
+
 /// Walk the structure of the bytecode module \p M, calling \p traversal with
 /// the contents of every literal string found therein.  Also accepts a
 /// predicate to \p shouldVisitFunction, which is queried for each function,

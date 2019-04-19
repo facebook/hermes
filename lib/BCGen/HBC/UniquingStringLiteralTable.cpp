@@ -11,49 +11,109 @@
 namespace hermes {
 namespace hbc {
 
-UniquingStringLiteralTable::UniquingStringLiteralTable(
-    ConsecutiveStringStorage &&css)
-    : storage_(std::move(css)) {
-  // Note that we acquired the storage and made it our own.
+StringLiteralIDMapping::StringLiteralIDMapping(
+    const ConsecutiveStringStorage &css) {
   // Initialize our tables by decoding our storage's string table.
   std::string utf8Storage;
-  uint32_t count = storage_.count();
+  uint32_t count = css.count();
+  isIdentifier_.reserve(count);
   for (uint32_t i = 0; i < count; i++) {
-    uint32_t added = addString(
-        storage_.getStringAtIndex(i, utf8Storage),
-        storage_.isIdentifierAtIndex(i));
-    (void)added;
-    assert(
-        added == i &&
-        "UniquingStringLiteralTable index should match acquired string storage index");
+    uint32_t j = strings_.insert(css.getStringAtIndex(i, utf8Storage));
+    assert(i == j && "Duplicate string in storage.");
+    (void)j;
+
+    isIdentifier_.push_back(css.isIdentifierAtIndex(i));
   }
-  // Since we initialized from storage, all of our strings have already been
-  // written to this storage.
-  assert(strings_.size() == count && "Should have 'count' strings");
 }
 
-/* static */ ConsecutiveStringStorage UniquingStringLiteralTable::toStorage(
-    UniquingStringLiteralTable &table,
+/* static */ ConsecutiveStringStorage
+UniquingStringLiteralAccumulator::toStorage(
+    UniquingStringLiteralAccumulator table,
     bool optimize) {
   auto &storage = table.storage_;
   auto &strings = table.strings_;
   auto &isIdentifier = table.isIdentifier_;
+  auto &freqs = table.freqs_;
 
+  const size_t existingStrings = storage.count();
   assert(
-      storage.count() <= strings.size() &&
+      existingStrings <= strings.size() &&
       "Cannot have more written strings than strings");
 
-  if (storage.count() < strings.size()) {
+  if (existingStrings < strings.size()) {
     uint32_t flags = optimize ? ConsecutiveStringStorage::OptimizePacking : 0;
-    auto unwritten = strings.begin() + storage.count();
+    auto unwritten = strings.begin() + existingStrings;
     storage.appendStorage({unwritten, strings.end(), flags});
   }
 
   auto tableView = storage.getStringTableView();
-  for (uint32_t idx = 0; idx < isIdentifier.size(); ++idx) {
-    if (isIdentifier[idx]) {
-      tableView[idx].markAsIdentifier();
+  for (size_t i = 0; i < strings.size(); ++i) {
+    if (isIdentifier[i]) {
+      tableView[i].markAsIdentifier();
     }
+  }
+
+  /// Associates a StringTableEntry with its original index in the table.
+  struct IndexedEntry {
+    size_t origIndex;
+    StringTableEntry entry;
+
+    IndexedEntry(size_t origIndex, StringTableEntry entry)
+        : origIndex(origIndex), entry(entry) {}
+
+   private:
+    // Key for performing comparisons with.  Ordering on this key is used to
+    // optimise string index layout to compress better.
+    using Key = std::tuple<uint32_t, uint32_t>;
+    inline Key key() const {
+      return std::make_tuple(entry.getOffset(), entry.getLength());
+    }
+
+   public:
+    inline bool operator<(const IndexedEntry &that) const {
+      return this->key() < that.key();
+    }
+  };
+
+  std::vector<IndexedEntry> indexedEntries;
+  indexedEntries.reserve(strings.size());
+
+  // Associate the newly added strings with their original indices in the
+  // table.
+  for (size_t i = existingStrings; i < strings.size(); ++i) {
+    indexedEntries.emplace_back(i, tableView[i]);
+  }
+
+  // Sort the new strings by frequency.
+  std::sort(
+      indexedEntries.begin(),
+      indexedEntries.end(),
+      [&freqs, existingStrings](const IndexedEntry &a, const IndexedEntry &b) {
+        auto ai = a.origIndex - existingStrings;
+        auto bi = b.origIndex - existingStrings;
+
+        return freqs[ai] > freqs[bi];
+      });
+
+  // Translates from an index in the string storage to an iterator into
+  // indexedEntries.  Clamps indices that are too large or too small.
+  auto entriesFrom = [&indexedEntries, existingStrings](size_t ix) {
+    // Bound from below and shift down by the number of existing strings.
+    ix = std::max(existingStrings, ix) - existingStrings;
+
+    // Bound from above by the number of indexed entries.
+    ix = std::min(ix, indexedEntries.size());
+
+    return indexedEntries.begin() + ix;
+  };
+
+  std::sort(entriesFrom(0), entriesFrom(UINT8_MAX));
+  std::sort(entriesFrom(UINT8_MAX), entriesFrom(UINT16_MAX));
+  std::sort(entriesFrom(UINT16_MAX), entriesFrom(SIZE_MAX));
+
+  // Write the re-ordered entries back into the table.
+  for (size_t i = existingStrings; i < strings.size(); ++i) {
+    tableView[i] = indexedEntries[i - existingStrings].entry;
   }
 
   return std::move(storage);

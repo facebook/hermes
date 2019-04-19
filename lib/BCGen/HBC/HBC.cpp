@@ -16,6 +16,7 @@
 #include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
 #include "hermes/BCGen/HBC/Passes/LowerBuiltinCalls.h"
 #include "hermes/BCGen/HBC/Passes/OptEnvironmentInit.h"
+#include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
@@ -141,13 +142,28 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     shouldGenerate = [](const Function *) { return true; };
   }
 
-  // Perhaps seed our string storage. If we are in delta optimizing mode, start
-  // with the string storage from our base bytecode provider. Otherwise, seed
-  // with an ordered storage built by walking the module's strings.
-  if (options.optimizationEnabled) {
-    BMGen.initializeStringsFromStorage(
-        baseBCProvider ? stringStorageFromBytecodeProvider(*baseBCProvider)
-                       : getOrderedStringStorage(M, options, shouldGenerate));
+  { // Collect all the strings in the bytecode module into a storage.
+    // If we are in delta optimizing mode, start with the string storage from
+    // our base bytecode provider.
+    auto strings = baseBCProvider
+        ? UniquingStringLiteralAccumulator{stringStorageFromBytecodeProvider(
+              *baseBCProvider)}
+        : UniquingStringLiteralAccumulator{};
+
+    traverseLiteralStrings(
+        M,
+        !options.stripFunctionNames,
+        shouldGenerate,
+        [&strings](llvm::StringRef str, bool isIdentifier) {
+          strings.addString(str, isIdentifier);
+        });
+
+    if (options.stripFunctionNames) {
+      strings.addString(kStrippedFunctionName, /* isIdentifier */ false);
+    }
+
+    BMGen.initializeStringStorage(UniquingStringLiteralAccumulator::toStorage(
+        std::move(strings), options.optimizationEnabled));
   }
 
   // Add each function to BMGen so that each function has a unique ID.
@@ -166,8 +182,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       if (M->getCJSModulesResolved()) {
         BMGen.addCJSModuleStatic(cjsModule->id, index);
       } else {
-        unsigned nameID = BMGen.addString(cjsModule->filename.str(), false);
-        BMGen.addCJSModule(index, nameID);
+        BMGen.addCJSModule(index, BMGen.getStringID(cjsModule->filename.str()));
       }
     }
   }
@@ -230,17 +245,6 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     }
 
     BMGen.setFunctionGenerator(&F, std::move(funcGen));
-  }
-
-  if (!options.stripFunctionNames) {
-    for (auto &F : *M) {
-      // Add every function's name to the global string table.
-      // We choose to add them all in the end to avoid shifting the indexes
-      // of other strings unnecessarily.
-      BMGen.addString(F.getOriginalOrInferredName().str(), false);
-    }
-  } else {
-    BMGen.addString(kStrippedFunctionName, false);
   }
 
   return BMGen.generate();

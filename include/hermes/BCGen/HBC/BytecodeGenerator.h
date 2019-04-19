@@ -124,11 +124,13 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
 
   unsigned getFunctionID(Function *F);
 
-  /// Add a constant string to the string table. \isIdentifier indicates
-  /// whether this string is used explicitly as an identifier. Such
-  /// information can be embedded in the bytecode, and speed up the
-  /// bytecode loading.
-  unsigned addConstantString(LiteralString *value, bool isIdentifier);
+  /// \return the ID in the bytecode's string table for a given literal string
+  /// \p value.
+  unsigned getStringID(LiteralString *value) const;
+
+  /// \return the ID in the bytecode's string table for a given literal string
+  /// \p value, assuming it has been registered for us as an identifier.
+  unsigned getIdentifierID(LiteralString *value) const;
 
   /// Adds a compiled regexp to the module table.
   /// \return the index of the regexp in the table.
@@ -247,8 +249,11 @@ class BytecodeModuleGenerator {
   /// Generate literals buffer for object/array.
   SerializedLiteralGenerator literalGenerator_;
 
-  /// A module-wide string table.
-  UniquingStringLiteralTable stringTable_{};
+  /// The strings in this module.
+  ConsecutiveStringStorage stringStorage_{};
+
+  /// The mapping from strings to ID for strings in the above storage.
+  StringLiteralTable stringTable_{};
 
   /// A module-wide compiled regexp table.
   UniquingRegExpTable regExpTable_;
@@ -295,9 +300,6 @@ class BytecodeModuleGenerator {
   /// The entry point of the function (usually the global function).
   int entryPointIndex_{-1};
 
-  /// Serialize all function names to string table.
-  void serializeFunctionNames();
-
  public:
   /// Constructor which enables optimizations if \p optimizationEnabled is set.
   BytecodeModuleGenerator(
@@ -323,14 +325,22 @@ class BytecodeModuleGenerator {
     entryPointIndex_ = index;
   }
 
-  /// Add string to the string table, \p returns the index of the string.
-  unsigned addString(StringRef str, bool isIdentifier);
+  /// \returns the index of the string in this module's string table if it
+  /// exists.  If the string does not exist will trigger an assertion failure
+  /// if assertions are enabled.
+  unsigned getStringID(StringRef str) const;
 
-  /// Inititialize the string table from an existing string storage \p css. This
-  /// is used in delta optimizing mode and also when pre-seeding the string
-  /// table with an optimal order. The string table must be empty when this is
-  /// called.
-  void initializeStringsFromStorage(ConsecutiveStringStorage &&css);
+  /// \returns the index of the string in this module's string table, assuming
+  /// it exists and is an identifier.  If the string does not exist in the
+  /// table, or it is not marked as an identifier, an assertion failure will be
+  /// triggered, if assertions are enabled.
+  unsigned getIdentifierID(StringRef str) const;
+
+  /// Set the string storage this generator uses to find the IDs for strings.
+  /// Once it is set, this storage will not be further modified -- all strings
+  /// must be added beforehand.  This can only be called once on a given
+  /// generator.
+  void initializeStringStorage(ConsecutiveStringStorage css);
 
   /// Adds a compiled regexp to the module table.
   /// \return the index of the regexp in the table.

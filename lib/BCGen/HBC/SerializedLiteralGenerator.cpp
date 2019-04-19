@@ -84,9 +84,10 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
             : NumberTag;
         break;
       case ValueKind::LiteralStringKind: {
-        int ind = BMGen_.addString(
-            llvm::cast<LiteralString>(literals[i])->getValue().str(),
-            isKeyBuffer);
+        auto str = llvm::cast<LiteralString>(literals[i])->getValue().str();
+        int ind =
+            isKeyBuffer ? BMGen_.getIdentifierID(str) : BMGen_.getStringID(str);
+
         if (ind > UINT16_MAX) {
           newTag = LongStringTag;
         } else if (ind > UINT8_MAX) {
@@ -135,11 +136,10 @@ uint32_t SerializedLiteralGenerator::serializeBuffer(
       case ValueKind::LiteralStringKind: {
         // For strings, we are going to store the index to the string table,
         // which will need to be decoded at runtime.
-        // Since addString returns an index if the string already
-        // exists, it is safe to call it twice.
-        auto stringID = BMGen_.addString(
-            llvm::cast<LiteralString>(literals[i])->getValue().str(),
-            isKeyBuffer);
+        auto str = llvm::cast<LiteralString>(literals[i])->getValue().str();
+        auto stringID =
+            isKeyBuffer ? BMGen_.getIdentifierID(str) : BMGen_.getStringID(str);
+
         if (stringID > UINT16_MAX) {
           serializeValueToBuffer<uint32_t>(stringID, tmpSeqBuffer);
         } else if (stringID > UINT8_MAX) {

@@ -49,6 +49,26 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
 
   const unsigned FRAME_SIZE = 4;
   BytecodeModuleGenerator BMG;
+
+  { // Make BMG aware of the strings it needs.
+    UniquingStringLiteralAccumulator strings;
+
+    // Name of the top-level function.
+    strings.addString("global", /* isIdentifier */ false);
+
+    // Strings used in the test.
+    strings.addString("a", /* isIdentifier */ true);
+    strings.addString("b", /* isIdentifier */ true);
+    strings.addString("c", /* isIdentifier */ true);
+    strings.addString("d", /* isIdentifier */ true);
+    strings.addString("e", /* isIdentifier */ true);
+    strings.addString("foo", /* isIdentifier */ false);
+    strings.addString("bar", /* isIdentifier */ true);
+
+    BMG.initializeStringStorage(
+        UniquingStringLiteralAccumulator::toStorage(std::move(strings)));
+  }
+
   auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
 
   // Need to generate the BytecodeModule twice.
@@ -76,7 +96,13 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
       llvm::ArrayRef<hermes::Literal *>{innerObjKeys},
       llvm::ArrayRef<hermes::Literal *>{innerObjVals});
 
-  enum IDs { IDa = 7, IDb, IDc, IDd, IDe, IDfoo, IDbar };
+  auto IDa = BMG.getStringID("a");
+  auto IDb = BMG.getStringID("b");
+  auto IDc = BMG.getStringID("c");
+  auto IDd = BMG.getStringID("d");
+  auto IDe = BMG.getStringID("e");
+  auto IDfoo = BMG.getStringID("foo");
+  auto IDbar = BMG.getStringID("bar");
 
   BFG->emitLoadConstInt(3, 1);
   BFG->emitNewObjectWithBuffer(0, 5, 4, objIdxs.first, objIdxs.second);
@@ -123,16 +149,7 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
   runtimeModule->initializeWithoutCJSModules(
       BCProviderFromSrc::createBCProviderFromSrc(BMG.generate()));
 
-  ASSERT_EQ(detail::mapString(*runtimeModule, "a"), IDa);
-  ASSERT_EQ(detail::mapString(*runtimeModule, "b"), IDb);
-  ASSERT_EQ(detail::mapString(*runtimeModule, "c"), IDc);
-  ASSERT_EQ(detail::mapString(*runtimeModule, "d"), IDd);
-  ASSERT_EQ(detail::mapString(*runtimeModule, "e"), IDe);
-  ASSERT_EQ(detail::mapString(*runtimeModule, "foo"), IDfoo);
-  ASSERT_EQ(detail::mapString(*runtimeModule, "bar"), IDbar);
-
   auto codeBlock = runtimeModule->getCodeBlockMayAllocate(0);
-
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
     ScopedNativeCallFrame frame{

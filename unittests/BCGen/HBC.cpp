@@ -12,6 +12,7 @@
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/Passes.h"
+#include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/Public/Buffer.h"
@@ -20,6 +21,8 @@
 #include "TestHelpers.h"
 
 #include "gtest/gtest.h"
+
+#include <initializer_list>
 
 #define DEBUG_TYPE "hbc-unittests"
 
@@ -39,6 +42,21 @@ class StringBuffer : public Buffer {
   std::string string_;
 };
 
+/// Create a string storage appropriate (i.e. that contains all the necessary
+/// strings) for use with these tests.  Additionally adds the strings in
+/// \p strs if the test requires extra
+ConsecutiveStringStorage stringsForTest(
+    std::initializer_list<llvm::StringRef> strs = {}) {
+  UniquingStringLiteralAccumulator strings;
+
+  strings.addString("global", /* isIdentifier */ false);
+  for (auto &str : strs) {
+    strings.addString(str, /* isIdentifier */ false);
+  }
+
+  return UniquingStringLiteralAccumulator::toStorage(std::move(strings));
+}
+
 TEST(HBCBytecodeGen, IntegrationTest) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
@@ -50,6 +68,7 @@ TEST(HBCBytecodeGen, IntegrationTest) {
   Ctx->setDebugInfoSetting(DebugInfoSetting::ALL);
 
   BytecodeModuleGenerator BMG;
+  BMG.initializeStringStorage(stringsForTest({"f1"}));
   BMG.addFilename("main.js");
 
   Function *globalFunction = Builder.createTopLevelFunction({});
@@ -123,12 +142,15 @@ TEST(HBCBytecodeGen, StripDebugInfo) {
   Ctx->setDebugInfoSetting(DebugInfoSetting::ALL);
 
   BytecodeModuleGenerator BMG;
+  BMG.initializeStringStorage(stringsForTest());
+
   Function *globalFunction = Builder.createTopLevelFunction({});
   auto BFG1 = BytecodeFunctionGenerator::create(BMG, 3);
   BFG1->addDebugSourceLocation(DebugSourceLocation{0, 1, 20, 300, 0});
   BFG1->emitMov(1, 2);
   BMG.setEntryPointIndex(BMG.addFunction(globalFunction));
   BMG.setFunctionGenerator(globalFunction, std::move(BFG1));
+
   std::shared_ptr<BytecodeModule> BM = BMG.generate();
 
   BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults();
@@ -167,17 +189,19 @@ TEST(HBCBytecodeGen, StringTableTest) {
   IRBuilder Builder(&M);
 
   BytecodeModuleGenerator BMG;
+  BMG.initializeStringStorage(
+      stringsForTest({"foo", "bar", /* Ā */ "\xc4\x80", /* å */ "\xc3\xa5"}));
 
   Function *F = Builder.createTopLevelFunction(true);
   auto BFG = BytecodeFunctionGenerator::create(BMG, 2);
-  auto fooIdx1 = BFG->addConstantString(Builder.getLiteralString("foo"), false);
-  auto barIdx1 = BFG->addConstantString(Builder.getLiteralString("bar"), false);
-  auto fooIdx2 = BFG->addConstantString(Builder.getLiteralString("foo"), false);
-  auto barIdx2 = BFG->addConstantString(Builder.getLiteralString("bar"), false);
+  auto fooIdx1 = BFG->getStringID(Builder.getLiteralString("foo"));
+  auto barIdx1 = BFG->getStringID(Builder.getLiteralString("bar"));
+  auto fooIdx2 = BFG->getStringID(Builder.getLiteralString("foo"));
+  auto barIdx2 = BFG->getStringID(Builder.getLiteralString("bar"));
   auto unicodeIdx1 =
-      BFG->addConstantString(Builder.getLiteralString("\xc4\x80"), false); // Ā
+      BFG->getStringID(Builder.getLiteralString("\xc4\x80")); // Ā
   auto unicodeIdx2 =
-      BFG->addConstantString(Builder.getLiteralString("\xc3\xa5"), false); // å
+      BFG->getStringID(Builder.getLiteralString("\xc3\xa5")); // å
 
   BFG->emitLoadConstString(1, fooIdx1);
   BFG->emitLoadConstString(1, barIdx1);
@@ -192,7 +216,7 @@ TEST(HBCBytecodeGen, StringTableTest) {
   std::shared_ptr<BytecodeModule> BM = BMG.generate();
   // 4 strings + function name.
   EXPECT_EQ(BM->getStringTableSize(), 5u);
-  // 'foobar' + 2 chars per unicode char + function name "global".
+  // function name "global" + 'foobar' + 2 chars per unicode char
   EXPECT_EQ(BM->getStringStorageSize(), 16u);
 
   Result.clear();
@@ -205,18 +229,18 @@ TEST(HBCBytecodeGen, StringTableTest) {
 
   EXPECT_EQ(bytecode->getStringCount(), 5u);
   EXPECT_EQ(bytecode->getStringStorage().size(), 16u);
-  EXPECT_EQ(bytecode->getStringTableEntry(0).getOffset(), 0u);
-  EXPECT_EQ(bytecode->getStringTableEntry(0).getLength(), 3u);
-  EXPECT_FALSE(bytecode->getStringTableEntry(0).isUTF16());
-  EXPECT_EQ(bytecode->getStringTableEntry(1).getOffset(), 3u);
+  EXPECT_EQ(bytecode->getStringTableEntry(1).getOffset(), 6u);
   EXPECT_EQ(bytecode->getStringTableEntry(1).getLength(), 3u);
   EXPECT_FALSE(bytecode->getStringTableEntry(1).isUTF16());
-  EXPECT_EQ(bytecode->getStringTableEntry(2).getOffset(), 12u);
-  EXPECT_EQ(bytecode->getStringTableEntry(2).getLength(), 1u);
-  EXPECT_TRUE(bytecode->getStringTableEntry(2).isUTF16());
-  EXPECT_EQ(bytecode->getStringTableEntry(3).getOffset(), 14u);
+  EXPECT_EQ(bytecode->getStringTableEntry(2).getOffset(), 9u);
+  EXPECT_EQ(bytecode->getStringTableEntry(2).getLength(), 3u);
+  EXPECT_FALSE(bytecode->getStringTableEntry(2).isUTF16());
+  EXPECT_EQ(bytecode->getStringTableEntry(3).getOffset(), 12u);
   EXPECT_EQ(bytecode->getStringTableEntry(3).getLength(), 1u);
   EXPECT_TRUE(bytecode->getStringTableEntry(3).isUTF16());
+  EXPECT_EQ(bytecode->getStringTableEntry(4).getOffset(), 14u);
+  EXPECT_EQ(bytecode->getStringTableEntry(4).getLength(), 1u);
+  EXPECT_TRUE(bytecode->getStringTableEntry(4).isUTF16());
 }
 
 TEST(HBCBytecodeGen, ExceptionTableTest) {
@@ -228,6 +252,7 @@ TEST(HBCBytecodeGen, ExceptionTableTest) {
   IRBuilder Builder(&M);
 
   BytecodeModuleGenerator BMG;
+  BMG.initializeStringStorage(stringsForTest());
 
   Function *F = Builder.createTopLevelFunction(true);
   auto BFG = BytecodeFunctionGenerator::create(BMG, 3);
@@ -269,6 +294,7 @@ TEST(HBCBytecodeGen, ArrayBufferTest) {
   IRBuilder Builder(&M);
 
   BytecodeModuleGenerator BMG;
+  BMG.initializeStringStorage(stringsForTest({"abc"}));
 
   Function *F = Builder.createTopLevelFunction(true);
   auto BFG = BytecodeFunctionGenerator::create(BMG, 3);

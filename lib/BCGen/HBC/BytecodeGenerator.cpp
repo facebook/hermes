@@ -23,11 +23,13 @@ using hermes::oscompat::to_string;
 namespace hermes {
 namespace hbc {
 
-unsigned BytecodeFunctionGenerator::addConstantString(
-    LiteralString *value,
-    bool isIdentifier) {
-  // Add the string to the global string table, and return the index.
-  return BMGen_.addString(value->getValue().str(), isIdentifier);
+unsigned BytecodeFunctionGenerator::getStringID(LiteralString *value) const {
+  return BMGen_.getStringID(value->getValue().str());
+}
+
+unsigned BytecodeFunctionGenerator::getIdentifierID(
+    LiteralString *value) const {
+  return BMGen_.getIdentifierID(value->getValue().str());
 }
 
 uint32_t BytecodeFunctionGenerator::addRegExp(CompiledRegExp regexp) {
@@ -148,14 +150,19 @@ void BytecodeModuleGenerator::setFunctionGenerator(
   functionGenerators_[F] = std::move(BFG);
 }
 
-unsigned BytecodeModuleGenerator::addString(StringRef str, bool isIdentifier) {
-  return stringTable_.addString(str, isIdentifier);
+unsigned BytecodeModuleGenerator::getStringID(StringRef str) const {
+  return stringTable_.getStringID(str);
 }
 
-void BytecodeModuleGenerator::initializeStringsFromStorage(
-    ConsecutiveStringStorage &&css) {
+unsigned BytecodeModuleGenerator::getIdentifierID(StringRef str) const {
+  return stringTable_.getIdentifierID(str);
+}
+
+void BytecodeModuleGenerator::initializeStringStorage(
+    ConsecutiveStringStorage css) {
   assert(stringTable_.empty() && "String table must be empty");
-  stringTable_ = UniquingStringLiteralTable{std::move(css)};
+  stringStorage_ = std::move(css);
+  stringTable_ = StringLiteralTable{stringStorage_};
 }
 
 uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp regexp) {
@@ -186,17 +193,6 @@ void BytecodeModuleGenerator::addCJSModuleStatic(
   cjsModulesStatic_.push_back(functionID);
 }
 
-void BytecodeModuleGenerator::serializeFunctionNames() {
-  if (options_.stripFunctionNames) {
-    addString(kStrippedFunctionName, false);
-    return;
-  }
-  auto functions = functionIDMap_.getElements();
-  for (unsigned i = 0, e = functions.size(); i < e; ++i) {
-    addString(functions[i]->getOriginalOrInferredName().str(), false);
-  }
-}
-
 std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   assert(
       valid_ &&
@@ -207,23 +203,16 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       functionIDMap_.getElements().size() == functionGenerators_.size() &&
       "Missing functions.");
 
-  // Function names have to be serialized before string storage is generated.
-  serializeFunctionNames();
-
-  ConsecutiveStringStorage stringStorage =
-      UniquingStringLiteralTable::toStorage(
-          stringTable_, options_.optimizationEnabled);
-
-  auto hashes = stringStorage.getIdentifierTranslations();
+  auto hashes = stringStorage_.getIdentifierTranslations();
 
   BytecodeOptions bytecodeOptions;
   bytecodeOptions.staticBuiltins = options_.staticBuiltinsEnabled;
   bytecodeOptions.cjsModulesStaticallyResolved = !cjsModulesStatic_.empty();
   std::unique_ptr<BytecodeModule> BM{new BytecodeModule(
       functionGenerators_.size(),
-      stringStorage.acquireStringTable(),
+      stringStorage_.acquireStringTable(),
       std::move(hashes),
-      stringStorage.acquireStringStorage(),
+      stringStorage_.acquireStringStorage(),
       regExpTable_.getEntryList(),
       regExpTable_.getBytecodeBuffer(),
       entryPointIndex_,
@@ -237,9 +226,8 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
 
   DebugInfoGenerator debugInfoGen{std::move(filenameTable_)};
 
-  const uint32_t strippedFunctionNameId = options_.stripFunctionNames
-      ? stringTable_.getExistingStringId(kStrippedFunctionName)
-      : 0;
+  const uint32_t strippedFunctionNameId =
+      options_.stripFunctionNames ? getStringID(kStrippedFunctionName) : 0;
   auto functions = functionIDMap_.getElements();
   for (unsigned i = 0, e = functions.size(); i < e; ++i) {
     auto *F = functions[i];
@@ -247,8 +235,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
 
     uint32_t functionNameId = options_.stripFunctionNames
         ? strippedFunctionNameId
-        : stringTable_.getExistingStringId(
-              functions[i]->getOriginalOrInferredName().str());
+        : getStringID(functions[i]->getOriginalOrInferredName().str());
 
     std::unique_ptr<BytecodeFunction> func = BFG.generateBytecodeFunction(
         F->getDefinitionKind(),

@@ -15,11 +15,11 @@ try {
 foo();
 
 // CHECK: Global String Table:
-// CHECK-NEXT:   s0[ASCII, {{.*}}]: asdf
-// CHECK-NEXT:   s1[ASCII, {{.*}}]: foo
-// CHECK-NEXT:   s2[ASCII, {{.*}}]: cjs_module
-// CHECK-NEXT:   i3[ASCII, {{.*}}] #{{[0-9A-Z]+}}: encodeURIComponent
-// CHECK-NEXT:   s4[ASCII, {{.*}}]: global
+// CHECK-NEXT:   s0[ASCII, {{.*}}]: global
+// CHECK-NEXT:   s1[ASCII, {{.*}}]: cjs_module
+// CHECK-NEXT:   i2[ASCII, {{.*}}] #{{[0-9A-Z]+}}: encodeURIComponent
+// CHECK-NEXT:   s3[ASCII, {{.*}}]: asdf
+// CHECK-NEXT:   s4[ASCII, {{.*}}]: foo
 // CHECK-NEXT:   s5[ASCII, {{.*}}]: cjs-dce.js
 
 // CHECK: CommonJS Modules:

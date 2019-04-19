@@ -68,13 +68,21 @@ void traverseLiteralStrings(
     }
   }
 
-  // Walk function operands.
+  // Walk functions.
   for (auto &F : *M) {
     if (!shouldVisitFunction(&F)) {
       continue;
     }
 
+    // Walk the names of modules that have not been statically resolved.
+    if (auto *cjsModule = M->findCJSModule(&F)) {
+      if (!M->getCJSModulesResolved()) {
+        traversal(cjsModule->filename.str(), /* isIdentifier */ false);
+      }
+    }
+
     for (auto &BB : F) {
+      // Walk instruction operands.
       for (auto &I : BB) {
         for (int i = 0, e = I.getNumOperands(); i < e; i++) {
           auto *op = I.getOperand(i);
