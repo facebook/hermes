@@ -9,7 +9,6 @@
 #include "hermes/BCGen/BCOpt.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
-#include "hermes/BCGen/HBC/HBCOptimizations.h"
 #include "hermes/BCGen/HBC/ISel.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/Passes/FuncCallNOpts.h"

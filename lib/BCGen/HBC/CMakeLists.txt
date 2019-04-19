@@ -2,7 +2,6 @@ add_llvm_library(hermesHBCBackend
   STATIC
   BackendContext.cpp
   HBC.cpp
-  HBCOptimizations.cpp
   ISel.cpp
   Bytecode.cpp
   BytecodeStream.cpp
