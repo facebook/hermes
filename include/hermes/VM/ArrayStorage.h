@@ -224,8 +224,8 @@ class ArrayStorage final
   /// Shrinks \p self during GC compaction, so that it's capacity is equal to
   /// its size.
   /// \return the size the object will have when compaction is complete.
-  static gcheapsize_t _compactSizeCallback(const GCCell *self);
-  static void _compactCallback(GCCell *self);
+  static gcheapsize_t _trimSizeCallback(const GCCell *self);
+  static void _trimCallback(GCCell *self);
 
   /// Reallocate to a larger storage capacity of the storage and copy the
   /// specified portion of the data to the new storage. The length of the data

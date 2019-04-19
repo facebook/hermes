@@ -228,9 +228,9 @@ void AlignedHeapSegment::sweepAndInstallForwardingPointers(
       // TODO(T43077289): if we rehabilitate ArrayStorage trimming, reenable
       // this code.
 #if 0
-      auto postCompactionSize = cell->getVT()->getCompactedSize(cell, cellSize);
+      auto trimmedSize = cell->getVT()->getTrimmedSize(cell, cellSize);
 
-      auto res = allocator.alloc(postCompactionSize);
+      auto res = allocator.alloc(trimmedSize);
 #else
       auto res = allocator.alloc(cellSize);
 #endif
@@ -322,17 +322,16 @@ void AlignedHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
       // TODO(T43077289): if we rehabilitate ArrayStorage trimming, reenable
       // this code.
 #if 0
-      const bool canBeCompacted = cell->getVT()->canBeCompacted();
-      const auto postCompactionSize =
-          cell->getVT()->getCompactedSize(cell, cellSize);
+      const bool canBeCompacted = cell->getVT()->canBeTrimmed();
+      const auto trimmedSize = cell->getVT()->getTrimmedSize(cell, cellSize);
       if (newAddr != ptr) {
-        std::memmove(newAddr, ptr, postCompactionSize);
+        std::memmove(newAddr, ptr, trimmedSize);
       }
       if (canBeCompacted) {
         // Set the new cell size.
         auto *newCell = reinterpret_cast<VariableSizeRuntimeCell *>(newAddr);
-        newCell->setSizeDuringGCCompaction(postCompactionSize);
-        newCell->getVT()->compact(newCell);
+        newCell->setSizeDuringGCCompaction(trimmedSize);
+        newCell->getVT()->trim(newCell);
       }
 #else
       if (newAddr != ptr) {

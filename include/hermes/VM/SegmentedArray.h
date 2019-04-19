@@ -544,8 +544,8 @@ class SegmentedArray final
   /// than the max size_type.
   static constexpr SegmentNumber maxNumSegmentsWithoutOverflow();
 
-  static gcheapsize_t _compactSizeCallback(const GCCell *self);
-  static void _compactCallback(GCCell *self);
+  static gcheapsize_t _trimSizeCallback(const GCCell *self);
+  static void _trimCallback(GCCell *self);
 };
 
 constexpr SegmentedArray::size_type SegmentedArray::maxElements() {

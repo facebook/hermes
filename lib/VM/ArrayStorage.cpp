@@ -20,8 +20,8 @@ VTable ArrayStorage::vt(
     nullptr,
     nullptr,
     nullptr,
-    _compactSizeCallback,
-    _compactCallback);
+    _trimSizeCallback,
+    _trimCallback);
 
 void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const ArrayStorage *>(cell);
@@ -171,12 +171,12 @@ ExecutionStatus ArrayStorage::pushBackSlowPath(
   return ExecutionStatus::RETURNED;
 }
 
-gcheapsize_t ArrayStorage::_compactSizeCallback(const GCCell *cell) {
+gcheapsize_t ArrayStorage::_trimSizeCallback(const GCCell *cell) {
   const auto *self = reinterpret_cast<const ArrayStorage *>(cell);
   return allocationSize(self->size());
 }
 
-void ArrayStorage::_compactCallback(GCCell *cell) {
+void ArrayStorage::_trimCallback(GCCell *cell) {
   auto *self = reinterpret_cast<ArrayStorage *>(cell);
   // Shrink the capacity to the current size.
   self->capacity_ = self->size();

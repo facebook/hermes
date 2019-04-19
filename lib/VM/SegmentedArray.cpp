@@ -48,8 +48,8 @@ VTable SegmentedArray::vt(
     nullptr,
     nullptr,
     nullptr,
-    _compactSizeCallback,
-    _compactCallback);
+    _trimSizeCallback,
+    _trimCallback);
 
 void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const SegmentedArray *>(cell);
@@ -384,14 +384,14 @@ void SegmentedArray::decreaseSize(size_type amount) {
   numSlotsUsed_ = numSlotsForCapacity(finalSize);
 }
 
-gcheapsize_t SegmentedArray::_compactSizeCallback(const GCCell *cell) {
+gcheapsize_t SegmentedArray::_trimSizeCallback(const GCCell *cell) {
   const auto *self = reinterpret_cast<const SegmentedArray *>(cell);
   // This array will shrink so that it has the same slot capacity as the slot
   // size.
   return allocationSizeForSlots(self->numSlotsUsed_);
 }
 
-void SegmentedArray::_compactCallback(GCCell *cell) {
+void SegmentedArray::_trimCallback(GCCell *cell) {
   auto *self = reinterpret_cast<SegmentedArray *>(cell);
   // Shrink so that the capacity is equal to the size.
   self->slotCapacity_ = self->numSlotsUsed_;

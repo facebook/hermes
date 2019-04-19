@@ -61,13 +61,13 @@ struct VTable {
   /// Used to report any externally allocated memory for metric gathering.
   using MallocSizeCallback = size_t(GCCell *);
   MallocSizeCallback *const mallocSize_;
-  /// Ask the cell what its post-compaction size will be.
+  /// Ask the cell what its post-trimming size will be.
   /// This should not modify the cell.
-  using CompactSizeCallback = gcheapsize_t(const GCCell *);
-  CompactSizeCallback *const compactSize_;
-  /// Compact the cell, decreasing any size-related fields inside the cell.
-  using CompactCallback = void(GCCell *);
-  CompactCallback *const compact_;
+  using TrimSizeCallback = gcheapsize_t(const GCCell *);
+  TrimSizeCallback *const trimSize_;
+  /// Trim the cell, decreasing any size-related fields inside the cell.
+  using TrimCallback = void(GCCell *);
+  TrimCallback *const trim_;
 
   constexpr explicit VTable(
       CellKind kind,
@@ -75,15 +75,15 @@ struct VTable {
       FinalizeCallback *finalize = nullptr,
       MarkWeakCallback *markWeak = nullptr,
       MallocSizeCallback *mallocSize = nullptr,
-      CompactSizeCallback *compactSize = nullptr,
-      CompactCallback *compact = nullptr)
+      TrimSizeCallback *trimSize = nullptr,
+      TrimCallback *trim = nullptr)
       : kind(kind),
         size(heapAlignSize(size)),
         finalize_(finalize),
         markWeak_(markWeak),
         mallocSize_(mallocSize),
-        compactSize_(compactSize),
-        compact_(compact) {}
+        trimSize_(trimSize),
+        trim_(trim) {}
 
   bool isVariableSize() const {
     return size == 0;
@@ -116,21 +116,21 @@ struct VTable {
     return mallocSize_ ? mallocSize_(cell) : 0;
   }
 
-  bool canBeCompacted() const {
+  bool canBeTrimmed() const {
     assert(isValid());
-    return compact_;
+    return trim_;
   }
 
   /// Tell the \p cell to shrink itself, and return its new size. If the cell
   /// doesn't have any shrinking to do, return the \p origSize.
-  gcheapsize_t getCompactedSize(GCCell *cell, gcheapsize_t origSize) const {
+  gcheapsize_t getTrimmedSize(GCCell *cell, gcheapsize_t origSize) const {
     assert(isValid());
-    return canBeCompacted() ? heapAlignSize(compactSize_(cell)) : origSize;
+    return canBeTrimmed() ? heapAlignSize(trimSize_(cell)) : origSize;
   }
 
-  void compact(GCCell *cell) const {
+  void trim(GCCell *cell) const {
     assert(isValid());
-    compact_(cell);
+    trim_(cell);
   }
 
   /// \return true iff this VTable is valid.
