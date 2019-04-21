@@ -153,183 +153,184 @@ void YoungGen::collect() {
 
   auto wallStart = steady_clock::now();
   auto cpuStart = oscompat::thread_cpu_time();
-  gc_->inGC_ = true;
+  {
+    GC::GCCycle cycle{gc_};
 
 #ifndef NDEBUG
-  gc_->doAllocCensus();
+    gc_->doAllocCensus();
 #endif
 
-  // Add bytes since the last GC to the total.
-  gc_->updateTotalAllocStats();
+    // Add bytes since the last GC to the total.
+    gc_->updateTotalAllocStats();
 
 // Reset the number of reachable and finalized objects for the young gen.
 #ifndef NDEBUG
-  resetNumReachableObjects();
-  resetNumHiddenClasses();
+    resetNumReachableObjects();
+    resetNumHiddenClasses();
 
-  // Remember the number of allocated objects, to compute the number collected.
-  unsigned numAllocatedObjectsBefore = gc_->computeNumAllocatedObjects();
+    // Remember the number of allocated objects, to compute the number
+    // collected.
+    unsigned numAllocatedObjectsBefore = gc_->computeNumAllocatedObjects();
 #endif
-  resetNumFinalizedObjects();
-  // Track the sum of the total pre-collection sizes of the young gens.
-  size_t youngGenUsedBefore = used();
-  ygSystraceSection.addArg("ygUsedBefore", youngGenUsedBefore);
+    resetNumFinalizedObjects();
+    // Track the sum of the total pre-collection sizes of the young gens.
+    size_t youngGenUsedBefore = used();
+    ygSystraceSection.addArg("ygUsedBefore", youngGenUsedBefore);
 
-  size_t oldGenUsedBefore = nextGen_->used();
-  cumPreBytes_ += youngGenUsedBefore;
+    size_t oldGenUsedBefore = nextGen_->used();
+    cumPreBytes_ += youngGenUsedBefore;
 
-  DEBUG(
-      dbgs() << "\nStarting (young-gen, " << formatSize(size())
-             << ") garbage collection; collection # " << gc_->numCollections()
-             << "\n");
+    DEBUG(
+        dbgs() << "\nStarting (young-gen, " << formatSize(size())
+               << ") garbage collection; collection # " << gc_->numCollections()
+               << "\n");
 #ifdef HERMES_SLOW_DEBUG
-  gc_->checkWellFormedHeap();
+    gc_->checkWellFormedHeap();
 #endif
 
-  // Remember the point in the older generation into which we started
-  // promoting objects.
-  char *toScan = nextGen_->level();
+    // Remember the point in the older generation into which we started
+    // promoting objects.
+    char *toScan = nextGen_->level();
 
-  // We do this first, before marking from the roots, so that we can take
-  // a "snapshot" of the level of the old gen, and only iterate over pointers
-  // in old-gen objects allocated at the start of the collection.
-  auto markOldToYoungStart = steady_clock::now();
-  {
-    PerfSection ygMarkOldToYoungSystraceRegion("ygMarkOldToYoung");
-    nextGen_->markYoungGenPointers(this);
-  }
-
-  auto markRootsStart = steady_clock::now();
-  YoungGenEvacAcceptor acceptor(*gc_, *this);
-  DroppingAcceptor<YoungGenEvacAcceptor> nameAcceptor{acceptor};
-  {
-    PerfSection ygMarkRootsSystraceRegion("ygMarkRoots");
-    gc_->markRoots(nameAcceptor, /*markLongLived*/ false);
-  }
-
-  auto scanTransitiveStart = steady_clock::now();
-  {
-    PerfSection ygScanTransitiveSystraceRegion("ygScanTransitive");
-    while (toScan < nextGen_->level()) {
-      GCCell *cell = reinterpret_cast<GCCell *>(toScan);
-      toScan += cell->getAllocatedSize();
-
-      // Ask the object to mark the pointers it owns.
-      GCBase::markCell(cell, gc_, acceptor);
+    // We do this first, before marking from the roots, so that we can take
+    // a "snapshot" of the level of the old gen, and only iterate over pointers
+    // in old-gen objects allocated at the start of the collection.
+    auto markOldToYoungStart = steady_clock::now();
+    {
+      PerfSection ygMarkOldToYoungSystraceRegion("ygMarkOldToYoung");
+      nextGen_->markYoungGenPointers(this);
     }
-  }
 
-  // We've now determined reachability; find weak refs to young-gen
-  // pointers that have become unreachable.
-  auto updateWeakRefsStart = steady_clock::now();
-  {
-    PerfSection ygUpdateWeakRefsSystraceRegion("ygUpdateWeakRefs");
-    gc_->updateWeakReferences(/*fullGC*/ false);
-  }
+    auto markRootsStart = steady_clock::now();
+    YoungGenEvacAcceptor acceptor(*gc_, *this);
+    DroppingAcceptor<YoungGenEvacAcceptor> nameAcceptor{acceptor};
+    {
+      PerfSection ygMarkRootsSystraceRegion("ygMarkRoots");
+      gc_->markRoots(nameAcceptor, /*markLongLived*/ false);
+    }
 
-  // Call the finalizers of unreachable objects. Assumes all cells that survived
-  // the young gen collection are moved to the old gen collection.
-  auto finalizersStart = steady_clock::now();
-  {
-    PerfSection ygFinalizeSystraceRegion("ygFinalize");
-    finalizeUnreachableAndTransferReachableObjects();
-  }
+    auto scanTransitiveStart = steady_clock::now();
+    {
+      PerfSection ygScanTransitiveSystraceRegion("ygScanTransitive");
+      while (toScan < nextGen_->level()) {
+        GCCell *cell = reinterpret_cast<GCCell *>(toScan);
+        toScan += cell->getAllocatedSize();
 
-  // Restart allocation at the bottom of the space.
-  level_ = start_;
+        // Ask the object to mark the pointers it owns.
+        GCBase::markCell(cell, gc_, acceptor);
+      }
+    }
+
+    // We've now determined reachability; find weak refs to young-gen
+    // pointers that have become unreachable.
+    auto updateWeakRefsStart = steady_clock::now();
+    {
+      PerfSection ygUpdateWeakRefsSystraceRegion("ygUpdateWeakRefs");
+      gc_->updateWeakReferences(/*fullGC*/ false);
+    }
+
+    // Call the finalizers of unreachable objects. Assumes all cells that
+    // survived the young gen collection are moved to the old gen collection.
+    auto finalizersStart = steady_clock::now();
+    {
+      PerfSection ygFinalizeSystraceRegion("ygFinalize");
+      finalizeUnreachableAndTransferReachableObjects();
+    }
+
+    // Restart allocation at the bottom of the space.
+    level_ = start_;
 
 #ifndef NDEBUG
-  clear();
+    clear();
 #endif
 
-  // Record the final level in both generations, so we can track later
-  // allocations.
-  gc_->recordGenLevelsAtEndOfLastGC();
+    // Record the final level in both generations, so we can track later
+    // allocations.
+    gc_->recordGenLevelsAtEndOfLastGC();
 
 #ifdef HERMES_SLOW_DEBUG
-  gc_->checkWellFormedHeap();
+    gc_->checkWellFormedHeap();
 #endif
 
 #ifndef NDEBUG
-  // Update statistics:
+    // Update statistics:
 
-  // Update the "last-gc" stats for the heap as a whole.
-  // At this point, all young-gen objects that were reachable have
-  // been moved to the old generation, and we're considering the
-  // objects already in the old generation to be reachable, so the
-  // total number of reachable objects is just the old-gen allocated
-  // objects.
-  gc_->recordNumReachableObjects(nextGen_->numAllocatedObjects());
+    // Update the "last-gc" stats for the heap as a whole.
+    // At this point, all young-gen objects that were reachable have
+    // been moved to the old generation, and we're considering the
+    // objects already in the old generation to be reachable, so the
+    // total number of reachable objects is just the old-gen allocated
+    // objects.
+    gc_->recordNumReachableObjects(nextGen_->numAllocatedObjects());
 
-  // The hidden classes found reachable in the young gen were moved to
-  // the old gen; move the stat, and record it in the GCBase variable.
-  nextGen_->incNumHiddenClasses(/*leafOnly*/ false, numHiddenClasses_);
-  nextGen_->incNumHiddenClasses(/*leafOnly*/ true, numLeafHiddenClasses_);
-  gc_->recordNumHiddenClasses(
-      nextGen_->numHiddenClasses(/*leafOnly*/ false),
-      nextGen_->numHiddenClasses(/*leafOnly*/ true));
+    // The hidden classes found reachable in the young gen were moved to
+    // the old gen; move the stat, and record it in the GCBase variable.
+    nextGen_->incNumHiddenClasses(/*leafOnly*/ false, numHiddenClasses_);
+    nextGen_->incNumHiddenClasses(/*leafOnly*/ true, numLeafHiddenClasses_);
+    gc_->recordNumHiddenClasses(
+        nextGen_->numHiddenClasses(/*leafOnly*/ false),
+        nextGen_->numHiddenClasses(/*leafOnly*/ true));
 
-  // Record the number of collected objects.
-  gc_->recordNumCollectedObjects(
-      numAllocatedObjectsBefore - gc_->numReachableObjects_);
-  // Only objects in the young generation were finalized, so we set
-  // the heap number to the young-gen's number.
-  gc_->recordNumFinalizedObjects(numFinalizedObjects_);
+    // Record the number of collected objects.
+    gc_->recordNumCollectedObjects(
+        numAllocatedObjectsBefore - gc_->numReachableObjects_);
+    // Only objects in the young generation were finalized, so we set
+    // the heap number to the young-gen's number.
+    gc_->recordNumFinalizedObjects(numFinalizedObjects_);
 
-  // Space is free; reset num allocated, reachable.
-  numAllocatedObjects_ = 0;
-  resetNumReachableObjects();
-  resetNumHiddenClasses();
+    // Space is free; reset num allocated, reachable.
+    numAllocatedObjects_ = 0;
+    resetNumReachableObjects();
+    resetNumHiddenClasses();
 #endif
 
-  auto cpuEnd = oscompat::thread_cpu_time();
-  auto wallEnd = steady_clock::now();
+    auto cpuEnd = oscompat::thread_cpu_time();
+    auto wallEnd = steady_clock::now();
 
-  double wallElapsedSecs = GCBase::clockDiffSeconds(wallStart, wallEnd);
-  double cpuElapsedSecs = GCBase::clockDiffSeconds(cpuStart, cpuEnd);
+    double wallElapsedSecs = GCBase::clockDiffSeconds(wallStart, wallEnd);
+    double cpuElapsedSecs = GCBase::clockDiffSeconds(cpuStart, cpuEnd);
 
-  // Record as an overall collection.
-  gc_->recordGCStats(wallElapsedSecs, cpuElapsedSecs, gc_->size());
-  // Also record as a young-gen collection.
-  gc_->recordGCStats(
-      wallElapsedSecs,
-      cpuElapsedSecs,
-      size(),
-      &gc_->youngGenCollectionCumStats_);
+    // Record as an overall collection.
+    gc_->recordGCStats(wallElapsedSecs, cpuElapsedSecs, gc_->size());
+    // Also record as a young-gen collection.
+    gc_->recordGCStats(
+        wallElapsedSecs,
+        cpuElapsedSecs,
+        size(),
+        &gc_->youngGenCollectionCumStats_);
 
-  gc_->inGC_ = false;
+    markOldToYoungSecs_ +=
+        GCBase::clockDiffSeconds(markOldToYoungStart, markRootsStart);
+    markRootsSecs_ +=
+        GCBase::clockDiffSeconds(markRootsStart, scanTransitiveStart);
+    scanTransitiveSecs_ +=
+        GCBase::clockDiffSeconds(scanTransitiveStart, updateWeakRefsStart);
+    updateWeakRefsSecs_ +=
+        GCBase::clockDiffSeconds(updateWeakRefsStart, finalizersStart);
+    finalizersSecs_ += GCBase::clockDiffSeconds(finalizersStart, wallEnd);
+    // Track the bytes of promoted objects.
+    size_t promotedBytes = (nextGen_->used() - oldGenUsedBefore);
+    cumPromotedBytes_ += promotedBytes;
+    ygSystraceSection.addArg("ygPromoted", promotedBytes);
 
-  markOldToYoungSecs_ +=
-      GCBase::clockDiffSeconds(markOldToYoungStart, markRootsStart);
-  markRootsSecs_ +=
-      GCBase::clockDiffSeconds(markRootsStart, scanTransitiveStart);
-  scanTransitiveSecs_ +=
-      GCBase::clockDiffSeconds(scanTransitiveStart, updateWeakRefsStart);
-  updateWeakRefsSecs_ +=
-      GCBase::clockDiffSeconds(updateWeakRefsStart, finalizersStart);
-  finalizersSecs_ += GCBase::clockDiffSeconds(finalizersStart, wallEnd);
-  // Track the bytes of promoted objects.
-  size_t promotedBytes = (nextGen_->used() - oldGenUsedBefore);
-  cumPromotedBytes_ += promotedBytes;
-  ygSystraceSection.addArg("ygPromoted", promotedBytes);
-
-  DEBUG(
-      dbgs() << "End (young-gen) garbage collection. numCollected="
-             << gc_->numCollectedObjects_
-             << "; wall time=" << formatSecs(wallElapsedSecs)
-             << "; cpu time=" << formatSecs(cpuElapsedSecs) << "\n\n");
+    DEBUG(
+        dbgs() << "End (young-gen) garbage collection. numCollected="
+               << gc_->numCollectedObjects_
+               << "; wall time=" << formatSecs(wallElapsedSecs)
+               << "; cpu time=" << formatSecs(cpuElapsedSecs) << "\n\n");
 
 #ifdef HERMES_SLOW_DEBUG
-  GCBase::DebugHeapInfo info;
-  gc_->getDebugHeapInfo(info);
-  info.assertInvariants();
-  // Assert an additional invariant involving the number of allocated
-  // objects before collection.
-  assert(
-      numAllocatedObjectsBefore - info.numReachableObjects ==
-          info.numCollectedObjects &&
-      "collected objects computed incorrectly");
+    GCBase::DebugHeapInfo info;
+    gc_->getDebugHeapInfo(info);
+    info.assertInvariants();
+    // Assert an additional invariant involving the number of allocated
+    // objects before collection.
+    assert(
+        numAllocatedObjectsBefore - info.numReachableObjects ==
+            info.numCollectedObjects &&
+        "collected objects computed incorrectly");
 #endif
+  }
 }
 
 void YoungGen::creditExternalMemory(uint32_t size) {

@@ -116,8 +116,6 @@ class MallocGC final : public GCBase {
   /// invalidated if they point to an object that is dead, and do not count
   /// towards whether an object is live or dead.
   std::deque<WeakRefSlot> weakPointers_;
-  /// inGC_ is a way to record if MallocGC is in the middle of a collection.
-  bool inGC_ = false;
   /// maxSize_ is the absolute highest amount of memory that MallocGC is allowed
   /// to allocate.
   const gcheapsize_t maxSize_;
@@ -193,20 +191,10 @@ class MallocGC final : public GCBase {
   /// Run the finalizers for all objects.
   void finalizeAll();
 
-  /// \return true iff this is currently performing a collection. No allocations
-  /// should occur while a collection is ongoing.
-  bool inGC() const {
-    return inGC_;
-  }
-
   /// \return true iff this is collecting the entire heap, or false if it is
   /// only a portion of the heap.
   /// \pre Assumes inGC() is true, or else this has no meaning.
   bool inFullCollection() const {
-    return true;
-  }
-
-  bool heapIsValid() const {
     return true;
   }
 

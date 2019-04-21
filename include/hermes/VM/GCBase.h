@@ -114,8 +114,9 @@ class GCCell;
 /// Mark a GCPointer<T>, which must be within the heap.
 ///   void mark(GCPointer<T> &ptr, Name name);
 ///
-/// Check if the heap is not valid or not.
-/// bool heapIsValid() const;
+/// \return true if a GC cycle is currently in progress.
+/// \post If false, all objects in the heap have a valid VTable.
+///   bool inGC() const;
 ///
 /// Various forms of write barriers: these can have empty implementations
 /// for GCs that don't require them:
@@ -432,6 +433,10 @@ class GCBase {
 
   /// @}
 
+  bool inGC() const {
+    return inGC_;
+  }
+
   /// Get the next unique object ID for a newly created object.
   uint64_t nextObjectID();
 
@@ -476,6 +481,17 @@ class GCBase {
   // Visibility here is public for unit_tests and protected otherwise
 
  protected:
+  /// An RAII-style object used to denote regions when a GC cycle is considered
+  /// active.
+  class GCCycle final {
+   public:
+    GCCycle(GCBase *gc);
+    ~GCCycle();
+
+   private:
+    GCBase *const gc_;
+  };
+
   /// Returns the number of bytes allocated allocated since the last GC.
   /// TODO: Implement this for heaps other than GenGC
   /// (at which point this can become an abstract function).
@@ -570,6 +586,10 @@ class GCBase {
 
   /// Whether to output GC statistics at the end of execution.
   bool recordGcStats_{false};
+
+  /// Whether or not a GC cycle is currently occurring.
+  bool inGC_;
+
   /// Time at which execution of the Hermes VM began.
   std::chrono::time_point<std::chrono::steady_clock> execStartTime_;
   std::chrono::microseconds execStartCPUTime_;

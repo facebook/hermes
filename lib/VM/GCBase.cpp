@@ -42,6 +42,8 @@ GCBase::GCBase(
       gcCallbacks_(gcCallbacks),
       crashMgr_(crashMgr),
       recordGcStats_(gcConfig.getShouldRecordStats()),
+      // Start off not in GC.
+      inGC_(false),
       name_(gcConfig.getName()),
 #ifdef HERMESVM_MEMORY_PROFILER
       memEventTracker_(gcConfig.getMemEventTracker()),
@@ -84,6 +86,14 @@ GCBase::GCBase(
   }
   randomEngine_.seed(seed);
 #endif
+}
+
+GCBase::GCCycle::GCCycle(GCBase *gc) : gc_(gc) {
+  gc_->inGC_ = true;
+}
+
+GCBase::GCCycle::~GCCycle() {
+  gc_->inGC_ = false;
 }
 
 void GCBase::runtimeWillExecute() {

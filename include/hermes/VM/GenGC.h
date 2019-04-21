@@ -74,19 +74,6 @@ class GenGC final : public GCBase {
     gcheapsize_t max_;
   };
 
-  /// The GC can make this false for periods in which the heap is not valid.
-  /// This can affect debug assertions.
-  bool heapIsValid() const {
-    return !inGC_;
-  }
-
-#ifndef NDEBUG
-  /// Returns whether a GC is currently in progress.
-  bool inGC() const {
-    return inGC_;
-  }
-#endif
-
   /// Initialize the GC with a suggested initial heap size, and given
   /// maximum size.
   /// \param gcCallbacks A callback interface enabling the garbage collector to
@@ -602,9 +589,6 @@ class GenGC final : public GCBase {
   /// this memory.
   BackingStorage storage_;
 
-  /// Whether GC is in progress.
-  bool inGC_ = false;
-
   /// The generations that make up the heap.
   /// Note: these must be declared and initialized in this order; the YoungGen
   /// constructor takes a pointer to the OldGen as an argument, and assumes it
@@ -675,7 +659,7 @@ class GenGC final : public GCBase {
 // just do an unchecked cast.
 template <class ToType>
 ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
-  if (gc->heapIsValid()) {
+  if (!gc->inGC()) {
     return llvm::cast<ToType>(cell);
   } else {
     return static_cast<ToType *>(cell);

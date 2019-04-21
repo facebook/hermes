@@ -191,7 +191,7 @@ void MallocGC::collectBeforeAlloc(uint32_t size) {
 
 #ifdef HERMES_SLOW_DEBUG
 void MallocGC::checkWellFormed() {
-  inGC_ = true;
+  GCCycle cycle{this};
   CheckHeapWellFormedAcceptor acceptor(*this);
   DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
   markRoots(nameAcceptor);
@@ -201,7 +201,6 @@ void MallocGC::checkWellFormed() {
     assert(cell->isValid() && "Invalid cell encountered in heap");
     GCBase::markCell(cell, this, acceptor);
   }
-  inGC_ = false;
 }
 #endif
 
@@ -218,86 +217,89 @@ void MallocGC::collect() {
   resetWeakReferences();
 
   // Begin the collection phases.
-  inGC_ = true;
-  MarkingAcceptor acceptor(*this);
-  DroppingAcceptor<MarkingAcceptor> nameAcceptor{acceptor};
-  markRoots(nameAcceptor);
-  while (!acceptor.worklist_.empty()) {
-    CellHeader *header = acceptor.worklist_.back();
-    acceptor.worklist_.pop_back();
-    assert(header->isMarked() && "Pointer on the worklist isn't marked");
-    GCCell *cell = header->data();
-    // Since `markCell` adds onto worklist_, this cannot be expressed as a
-    // normal loop.
-    GCBase::markCell(cell, this, acceptor);
-    allocatedBytes_ += cell->getAllocatedSize();
-  }
-
-  // Update weak roots references.
-  MallocGC::FullMSCUpdateWeakRootsAcceptor weakAcceptor(*this);
-  DroppingAcceptor<SlotAcceptor> nameWeakAcceptor{weakAcceptor};
-  markWeakRoots(nameWeakAcceptor);
-
-  // Update and remove weak references.
-  updateWeakReferences(acceptor);
-  // Free the unused symbols.
-  gcCallbacks_->freeSymbols(acceptor.markedSymbols_);
-  // By the end of the marking loop, all pointers left in pointers_ are dead.
-  for (CellHeader *header : pointers_) {
-#ifndef HERMESVM_SANITIZE_HANDLES
-    // If handle sanitization isn't on, these pointers should all be dead.
-    assert(!header->isMarked() && "Live pointer left in dead heap section");
-#endif
-    GCCell *cell = header->data();
-#ifndef NDEBUG
-    // Extract before running any potential finalizers.
-    const auto freedSize = cell->getAllocatedSize();
-#endif
-    // Run the finalizer if it exists and the cell is actually dead.
-    if (!header->isMarked()) {
-      cell->getVT()->finalizeIfExists(cell, this);
-#ifndef NDEBUG
-      // Update statistics.
-      if (cell->getVT()->finalize_) {
-        ++numFinalizedObjects_;
-      }
-#endif
+  {
+    GCCycle cycle{this};
+    MarkingAcceptor acceptor(*this);
+    DroppingAcceptor<MarkingAcceptor> nameAcceptor{acceptor};
+    markRoots(nameAcceptor);
+    while (!acceptor.worklist_.empty()) {
+      CellHeader *header = acceptor.worklist_.back();
+      acceptor.worklist_.pop_back();
+      assert(header->isMarked() && "Pointer on the worklist isn't marked");
+      GCCell *cell = header->data();
+      // Since `markCell` adds onto worklist_, this cannot be expressed as a
+      // normal loop.
+      GCBase::markCell(cell, this, acceptor);
+      allocatedBytes_ += cell->getAllocatedSize();
     }
-#ifndef NDEBUG
-    // Before free'ing, fill with a dead value for debugging
-    std::fill_n(reinterpret_cast<char *>(cell), freedSize, kInvalidHeapValue);
+
+    // Update weak roots references.
+    MallocGC::FullMSCUpdateWeakRootsAcceptor weakAcceptor(*this);
+    DroppingAcceptor<SlotAcceptor> nameWeakAcceptor{weakAcceptor};
+    markWeakRoots(nameWeakAcceptor);
+
+    // Update and remove weak references.
+    updateWeakReferences(acceptor);
+    // Free the unused symbols.
+    gcCallbacks_->freeSymbols(acceptor.markedSymbols_);
+    // By the end of the marking loop, all pointers left in pointers_ are dead.
+    for (CellHeader *header : pointers_) {
+#ifndef HERMESVM_SANITIZE_HANDLES
+      // If handle sanitization isn't on, these pointers should all be dead.
+      assert(!header->isMarked() && "Live pointer left in dead heap section");
 #endif
-    free(header);
-  }
+      GCCell *cell = header->data();
+#ifndef NDEBUG
+      // Extract before running any potential finalizers.
+      const auto freedSize = cell->getAllocatedSize();
+#endif
+      // Run the finalizer if it exists and the cell is actually dead.
+      if (!header->isMarked()) {
+        cell->getVT()->finalizeIfExists(cell, this);
+#ifndef NDEBUG
+        // Update statistics.
+        if (cell->getVT()->finalize_) {
+          ++numFinalizedObjects_;
+        }
+#endif
+      }
+#ifndef NDEBUG
+      // Before free'ing, fill with a dead value for debugging
+      std::fill_n(reinterpret_cast<char *>(cell), freedSize, kInvalidHeapValue);
+#endif
+      free(header);
+    }
 
 #ifndef NDEBUG
 #ifdef HERMESVM_SANITIZE_HANDLES
-  // If handle sanitization is on, pointers_ is unmodified from before the
-  // collection, and the number of collected objects is the difference between
-  // the pointers before, and the pointers after the collection.
-  assert(
-      pointers_.size() >= newPointers_.size() &&
-      "There cannot be more new pointers than there are old pointers");
-  numCollectedObjects_ = pointers_.size() - newPointers_.size();
+    // If handle sanitization is on, pointers_ is unmodified from before the
+    // collection, and the number of collected objects is the difference between
+    // the pointers before, and the pointers after the collection.
+    assert(
+        pointers_.size() >= newPointers_.size() &&
+        "There cannot be more new pointers than there are old pointers");
+    numCollectedObjects_ = pointers_.size() - newPointers_.size();
 #else
-  // If handle sanitization is not on, live pointers are removed from pointers_
-  // so the number of collected objects is equal to the size of pointers_.
-  numCollectedObjects_ = pointers_.size();
+    // If handle sanitization is not on, live pointers are removed from
+    // pointers_ so the number of collected objects is equal to the size of
+    // pointers_.
+    numCollectedObjects_ = pointers_.size();
 #endif
-  numReachableObjects_ = newPointers_.size();
-  numAllocatedObjects_ = newPointers_.size();
+    numReachableObjects_ = newPointers_.size();
+    numAllocatedObjects_ = newPointers_.size();
 #endif
-  pointers_ = std::move(newPointers_);
-  assert(
-      newPointers_.empty() &&
-      "newPointers_ should be empty between collections");
-  // Clear all the mark bits in pointers_.
-  for (CellHeader *header : pointers_) {
-    assert(header->isMarked() && "Should only be live pointers left");
-    header->unmark();
+    pointers_ = std::move(newPointers_);
+    assert(
+        newPointers_.empty() &&
+        "newPointers_ should be empty between collections");
+    // Clear all the mark bits in pointers_.
+    for (CellHeader *header : pointers_) {
+      assert(header->isMarked() && "Should only be live pointers left");
+      header->unmark();
+    }
   }
+
   // End of the collection phases, begin cleanup and stat recording.
-  inGC_ = false;
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif

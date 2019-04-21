@@ -1134,10 +1134,8 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   // We need to yield/claim at outer scope, to cover the calls to
   // forUsedSegments below.
   AllocContextYieldThenClaim yielder(this);
-#ifndef NDEBUG
   // We'll say we're in GC even though we're not, to avoid assertion failures.
-  inGC_ = true;
-#endif
+  GCCycle cycle{this};
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormedHeap();
 #endif
@@ -1202,9 +1200,6 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
 
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormedHeap();
-#endif
-#ifndef NDEBUG
-  inGC_ = false;
 #endif
 }
 
@@ -1288,11 +1283,10 @@ void GenGC::printFullCollectionStats(llvm::raw_ostream &os, bool trailingComma)
 GenGC::CollectionSection::CollectionSection(GenGC *gc, const char *name)
     : PerfSection(name, gc->getName().c_str()),
       gc_(gc),
+      cycle_(gc),
       wallStart_(steady_clock::now()),
       cpuStart_(oscompat::thread_cpu_time()),
       yielder_(gc) {
-  gc_->inGC_ = true;
-
 #ifdef HERMES_SLOW_DEBUG
   gc_->checkWellFormedHeap();
 #endif
@@ -1312,7 +1306,6 @@ GenGC::CollectionSection::~CollectionSection() {
   gc_->checkWellFormedHeap();
 #endif
 
-  gc_->inGC_ = false;
 #ifdef HERMESVM_PLATFORM_LOGGING
   assert(
       wallElapsedSecs_ >= 0.0 && "Requires wallElapsedSecs_ to have been set.");

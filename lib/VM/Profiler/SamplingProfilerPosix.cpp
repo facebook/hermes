@@ -100,7 +100,7 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
   }
   // Sampling stack will touch GC objects(like closure) so
   // only do so if heap is valid.
-  if (curThreadRuntime->getHeap().heapIsValid()) {
+  if (!curThreadRuntime->getHeap().inGC()) {
     assert(
         profilerInstance != nullptr &&
         "Why is sProfilerInstance_ not initialized yet?");
@@ -233,7 +233,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
   // Sampling stack will touch GC objects(like closure) so
   // only do so if heap is valid.
   uint32_t sampledStackDepth = 0;
-  if (curThreadRuntime->getHeap().heapIsValid()) {
+  if (!curThreadRuntime->getHeap().inGC()) {
     assert(
         profilerInstance != nullptr &&
         "Why is sProfilerInstance_ not initialized yet?");

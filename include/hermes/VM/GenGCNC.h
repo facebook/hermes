@@ -105,19 +105,6 @@ class GenGC final : public GCBase {
     static constexpr unsigned kYoungGenFractionDenom = 8;
   };
 
-  /// The GC can make this false for periods in which the heap is not valid.
-  /// This can affect debug assertions.
-  bool heapIsValid() const {
-    return !inGC_;
-  }
-
-#ifndef NDEBUG
-  /// Returns whether a GC is currently in progress.
-  bool inGC() const {
-    return inGC_;
-  }
-#endif
-
   /// Initialize the GC with the give \p gcCallbacks and \p gcConfig.
   /// maximum size.
   /// \param gcCallbacks A callback interface enabling the garbage collector to
@@ -562,6 +549,7 @@ class GenGC final : public GCBase {
 
    private:
     GenGC *gc_;
+    GCCycle cycle_;
     TimePoint wallStart_;
     std::chrono::microseconds cpuStart_;
     // Initial value indicates unset.
@@ -755,9 +743,6 @@ class GenGC final : public GCBase {
   /// The storage provider is a way to access storage for new segments.
   LogFailStorageProvider storageProvider_;
 
-  /// Whether GC is in progress.
-  bool inGC_ = false;
-
   /// A mapping from the lowest address in a segment's memory region, to a
   /// pointer to the segment itself.
   GCSegmentAddressIndex segmentIndex_;
@@ -858,7 +843,7 @@ class GenGC final : public GCBase {
 // just do an unchecked cast.
 template <class ToType>
 ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
-  if (gc->heapIsValid()) {
+  if (!gc->inGC()) {
     return llvm::cast<ToType>(cell);
   } else {
     return static_cast<ToType *>(cell);

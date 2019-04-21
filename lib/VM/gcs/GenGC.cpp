@@ -189,100 +189,97 @@ void GenGC::collect() {
       dbgs() << "\nStarting (full, young=" << formatSize(youngGen_.size())
              << "; old=" << formatSize(oldGen_.size())
              << ") garbage collection # " << numCollections() << "\n");
-
-  inGC_ = true;
+  {
+    GCCycle cycle{this};
 
 #ifndef NDEBUG
-  doAllocCensus();
+    doAllocCensus();
 #endif
 
-  updateTotalAllocStats();
+    updateTotalAllocStats();
 #ifdef HERMES_SLOW_DEBUG
-  checkWellFormedHeap();
+    checkWellFormedHeap();
 #endif
 
-  markPhase();
+    markPhase();
 
-  std::vector<SweepResult> sweepResults = sweepAndInstallForwardingPointers();
-  updateReferences(sweepResults);
-  compact(sweepResults);
+    std::vector<SweepResult> sweepResults = sweepAndInstallForwardingPointers();
+    updateReferences(sweepResults);
+    compact(sweepResults);
 
-  // First arg indicates whether we were able to completely evacuate the young
-  // generation.
-  oldGen_.cardTable().updateAfterCompaction(
-      youngGen_.used() == 0, oldGen_.level());
+    // First arg indicates whether we were able to completely evacuate the young
+    // generation.
+    oldGen_.cardTable().updateAfterCompaction(
+        youngGen_.used() == 0, oldGen_.level());
 #ifdef HERMES_SLOW_DEBUG
-  oldGen_.verifyCardObjectTable();
+    oldGen_.verifyCardObjectTable();
 #endif
 
-  oldGen_.levelChangedFrom(oldGenLevelBefore);
+    oldGen_.levelChangedFrom(oldGenLevelBefore);
 
-  // Record the new levels of the generations, so we can accurately
-  // identify new allocations, to count their size and to iterate over
-  // allocated objects.
-  recordGenLevelsAtEndOfLastGC();
+    // Record the new levels of the generations, so we can accurately
+    // identify new allocations, to count their size and to iterate over
+    // allocated objects.
+    recordGenLevelsAtEndOfLastGC();
 
-  inGC_ = false;
-
-  // Should we increase the total heap size?
-  size_t sizeBefore = size();
-  fullGCSystraceRegion.addArg("fullGCSizeBefore", sizeBefore);
-  if (used() > size() / 2) {
+    // Should we increase the total heap size?
+    size_t sizeBefore = size();
+    fullGCSystraceRegion.addArg("fullGCSizeBefore", sizeBefore);
+    if (used() > size() / 2) {
 #ifndef NDEBUG
-    size_t oldSize = size();
+      size_t oldSize = size();
 #endif
-    uint64_t desiredNewSize = llvm::alignTo(
-        static_cast<uint64_t>(static_cast<double>(used()) / occupancyTarget()),
-        oscompat::page_size());
-    OptValue<SizeConfig> sizeConfig = newSizesForDesiredSize(desiredNewSize);
-    if (sizeConfig) {
-      youngGen_.growHigh(sizeConfig->ygSize - youngGen_.size());
-      oldGen_.growHigh(sizeConfig->ogSize - oldGen_.size());
+      uint64_t desiredNewSize = llvm::alignTo(
+          static_cast<uint64_t>(
+              static_cast<double>(used()) / occupancyTarget()),
+          oscompat::page_size());
+      OptValue<SizeConfig> sizeConfig = newSizesForDesiredSize(desiredNewSize);
+      if (sizeConfig) {
+        youngGen_.growHigh(sizeConfig->ygSize - youngGen_.size());
+        oldGen_.growHigh(sizeConfig->ogSize - oldGen_.size());
 
-      didResize();
-      DEBUG(
-          dbgs() << "Increased heap size by " << sizeConfig->total() - oldSize
-                 << " to " << formatSize(sizeConfig->total()) << "\n");
+        didResize();
+        DEBUG(
+            dbgs() << "Increased heap size by " << sizeConfig->total() - oldSize
+                   << " to " << formatSize(sizeConfig->total()) << "\n");
+      }
     }
-  }
-  size_t sizeAfter = size();
-  fullGCSystraceRegion.addArg("fullGCSizeAfter", sizeAfter);
+    size_t sizeAfter = size();
+    fullGCSystraceRegion.addArg("fullGCSizeAfter", sizeAfter);
 
-  gcCallbacks_->freeSymbols(markedSymbols_);
+    gcCallbacks_->freeSymbols(markedSymbols_);
 
-  auto cpuEnd = oscompat::thread_cpu_time();
-  auto wallEnd = steady_clock::now();
+    auto cpuEnd = oscompat::thread_cpu_time();
+    auto wallEnd = steady_clock::now();
 
-  // Update the statistics.
-  unsigned numAllocatedObjectsBefore = recordStats(sweepResults);
+    // Update the statistics.
+    unsigned numAllocatedObjectsBefore = recordStats(sweepResults);
 
-  double wallElapsedSecs = GCBase::clockDiffSeconds(wallStart, wallEnd);
-  double cpuElapsedSecs = GCBase::clockDiffSeconds(cpuStart, cpuEnd);
+    double wallElapsedSecs = GCBase::clockDiffSeconds(wallStart, wallEnd);
+    double cpuElapsedSecs = GCBase::clockDiffSeconds(cpuStart, cpuEnd);
 
-  // Record as an overall collection.
-  recordGCStats(wallElapsedSecs, cpuElapsedSecs, size());
-  // Also record as a full collection.
-  recordGCStats(
-      wallElapsedSecs, cpuElapsedSecs, size(), &fullCollectionCumStats_);
+    // Record as an overall collection.
+    recordGCStats(wallElapsedSecs, cpuElapsedSecs, size());
+    // Also record as a full collection.
+    recordGCStats(
+        wallElapsedSecs, cpuElapsedSecs, size(), &fullCollectionCumStats_);
+    size_t usedAfter = used();
+    cumPostBytes_ += usedAfter;
+    fullGCSystraceRegion.addArg("fullGCUsedAfter", usedAfter);
 
-  size_t usedAfter = used();
-  cumPostBytes_ += usedAfter;
-  fullGCSystraceRegion.addArg("fullGCUsedAfter", usedAfter);
-
-  DEBUG(
-      dbgs() << "End (full) garbage collection. numCollected="
-             << numCollectedObjects_
-             << "; wall time=" << formatSecs(wallElapsedSecs)
-             << "; cpu time=" << formatSecs(cpuElapsedSecs) << "\n\n");
+    DEBUG(
+        dbgs() << "End (full) garbage collection. numCollected="
+               << numCollectedObjects_
+               << "; wall time=" << formatSecs(wallElapsedSecs)
+               << "; cpu time=" << formatSecs(cpuElapsedSecs) << "\n\n");
 
 #ifdef HERMES_SLOW_DEBUG
-  inGC_ = true;
-  checkWellFormedHeap();
-  inGC_ = false;
+    checkWellFormedHeap();
 #endif
-  checkInvariants(numAllocatedObjectsBefore, usedBefore);
+    checkInvariants(numAllocatedObjectsBefore, usedBefore);
 
-  checkTripwire(usedAfter, steady_clock::now());
+    checkTripwire(usedAfter, steady_clock::now());
+  }
 }
 
 unsigned GenGC::recordStats(const std::vector<SweepResult> &sweepResults) {
@@ -596,21 +593,21 @@ void GenGC::swapToFreshHeap() {
   std::unique_ptr<SlotAcceptor> acceptor = getMoveHeapAcceptor(*this, delta);
   DroppingAcceptor<SlotAcceptor> nameAcceptor{*acceptor};
 
-  inGC_ = true;
+  {
+    GCCycle cycle{this};
 
-  markRoots(nameAcceptor, /*markLongLived*/ true);
-  // For purposes of heap swapping, treat weak roots as strong.
-  markWeakRoots(nameAcceptor);
+    markRoots(nameAcceptor, /*markLongLived*/ true);
+    // For purposes of heap swapping, treat weak roots as strong.
+    markWeakRoots(nameAcceptor);
 
-  // Note: we must move the oldGen_ before the young, because the youngGen_
-  // needs to know the oldGen_ start after the move.
-  oldGen_.moveHeap(this, delta);
-  youngGen_.moveHeap(this, delta);
+    // Note: we must move the oldGen_ before the young, because the youngGen_
+    // needs to know the oldGen_ start after the move.
+    oldGen_.moveHeap(this, delta);
+    youngGen_.moveHeap(this, delta);
 
-  moveWeakReferences(delta);
-  markBits_.moveParentRegion(delta);
-
-  inGC_ = false;
+    moveWeakReferences(delta);
+    markBits_.moveParentRegion(delta);
+  }
 
   // Move over the occupied parts of the heap.
   // (Note that in each case, we use the ContigAllocGCSpace definition of
@@ -991,10 +988,8 @@ void GenGC::updateTotalAllocStats() {
 }
 
 void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
-#ifndef NDEBUG
   // We'll say we're in GC even though we're not, to avoid assertion failures.
-  inGC_ = true;
-#endif
+  GCCycle cycle{this};
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormedHeap();
 #endif
@@ -1052,9 +1047,6 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
 
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormedHeap();
-#endif
-#ifndef NDEBUG
-  inGC_ = false;
 #endif
 }
 
