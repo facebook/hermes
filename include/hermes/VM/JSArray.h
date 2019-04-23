@@ -363,15 +363,11 @@ class JSArray final : public ArrayImpl {
             needsBarrier) {}
 
   /// A helper to update the named '.length' property.
-  static void
-  putLength(Handle<JSArray> selfHandle, Runtime *runtime, uint32_t newLength) {
-    selfHandle->shadowLength_ = newLength;
+  static void putLength(JSArray *self, uint32_t newLength) {
+    self->shadowLength_ = newLength;
 
-    setNamedSlotValue(
-        *selfHandle,
-        runtime,
-        LengthPropIndex,
-        HermesValue::encodeNumberValue(newLength));
+    namedSlotRef(self, LengthPropIndex)
+        .setNonPtr(HermesValue::encodeNumberValue(newLength));
   }
 
   /// Update the JavaScript '.length' property, which also resizes the array.

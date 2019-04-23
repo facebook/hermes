@@ -485,9 +485,7 @@ CallResult<HermesValue> JSArray::create(
       *indexedStorage,
       GCPointerBase::NoBarriers());
 
-  self->shadowLength_ = length;
-  setNamedSlotValue(
-      self, runtime, LengthPropIndex, HermesValue::encodeNumberValue(length));
+  putLength(self, length);
 
   return HermesValue::encodeObjectValue(self);
 }
@@ -542,7 +540,7 @@ CallResult<bool> JSArray::setLength(
     PropOpFlags opFlags) {
   // Fast-path: if we are enlarging, do nothing.
   if (LLVM_LIKELY(newLength >= selfHandle->shadowLength_)) {
-    putLength(selfHandle, runtime, newLength);
+    putLength(*selfHandle, newLength);
     return true;
   }
 
@@ -631,7 +629,7 @@ CallResult<bool> JSArray::setLength(
       return ExecutionStatus::EXCEPTION;
     }
   }
-  putLength(selfHandle, runtime, adjustedLength);
+  putLength(*selfHandle, adjustedLength);
 
   if (adjustedLength != newLength) {
     if (opFlags.getThrowOnError()) {
