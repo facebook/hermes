@@ -8,7 +8,7 @@ print("foo.length/configurable:", Object.getOwnPropertyDescriptor(foo, "length")
 print("foo.__proto__.length/configurable:", Object.getOwnPropertyDescriptor(foo.__proto__, "length").configurable);
 //CHECK: foo.__proto__.length/configurable: false
 print("Function.length/configurable:", Object.getOwnPropertyDescriptor(Function, "length").configurable);
-//CHECK: Function.length/configurable: false
+//CHECK: Function.length/configurable: true
 
 print(isNaN.name);
 //CHECK: isNaN

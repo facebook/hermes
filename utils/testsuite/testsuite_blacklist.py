@@ -1014,8 +1014,6 @@ BLACK_LIST = [
     # SharedArrayBuffer
     "test262/test/built-ins/ArrayBuffer/prototype/byteLength/this-is-sharedarraybuffer.js",
     "test262/test/built-ins/ArrayBuffer/prototype/slice/this-is-sharedarraybuffer.js",
-    # function length
-    "test262/test/built-ins/Function/length/15.3.3.2-1.js",
     # function name
     "test262/test/language/expressions/assignment/fn-name-lhs-member.js",
     "test262/test/language/expressions/assignment/fn-name-lhs-cover.js",

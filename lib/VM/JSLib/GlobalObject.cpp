@@ -529,13 +529,7 @@ void initGlobalObject(Runtime *runtime) {
   createStringConstructor(runtime);
 
   // Function constructor.
-  auto functionConstructor = createFunctionConstructor(runtime);
-  runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
-      functionConstructor,
-      runtime,
-      Predefined::getSymbolID(Predefined::length),
-      clearConfigurableDPF,
-      runtime->getUndefinedValue()));
+  createFunctionConstructor(runtime);
 
   // Number constructor.
   createNumberConstructor(runtime);
