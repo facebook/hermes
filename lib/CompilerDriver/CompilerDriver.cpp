@@ -165,6 +165,9 @@ static opt<OutputFormatKind> DumpTarget(
             DumpTransformedAST,
             "dump-transformed-ast",
             "Dump the transformed AST as text after validation"),
+#ifndef NDEBUG
+        clEnumValN(ViewCFG, "view-cfg", "View the CFG."),
+#endif
         clEnumValN(DumpIR, "dump-ir", "Dump the IR as text"),
         clEnumValN(DumpLIR, "dump-lir", "Dump the Lowered IR as text"),
         clEnumValN(DumpRA, "dump-ra", "Dump the register-allocated IR as text"),
@@ -278,8 +281,6 @@ static opt<bool> LexerOnly(
     "Xlexer-only",
     desc("Only run the lexer on the input (debug builds only)"),
     Hidden);
-
-static opt<bool> ViewCFG("view-cfg", desc("view the CFG."));
 
 #endif
 
@@ -1310,24 +1311,27 @@ CompileResult processSourceFiles(
     }
   }
 
-  if (cl::DumpTarget == DumpIR) {
-    M.dump();
-  }
-
-#ifndef NDEBUG
-  if (cl::ViewCFG) {
-    M.viewGraph();
-  }
-#endif
-
   // In dbg builds, verify the module before we emit bytecode.
   if (cl::VerifyIR) {
     bool failedVerification = verifyModule(M, &llvm::errs());
     if (failedVerification) {
       M.dump();
+      return VerificationFailed;
     }
     assert(!failedVerification && "Module verification failed!");
   }
+
+  if (cl::DumpTarget == DumpIR) {
+    M.dump();
+    return Success;
+  }
+
+#ifndef NDEBUG
+  if (cl::DumpTarget == ViewCFG) {
+    M.viewGraph();
+    return Success;
+  }
+#endif
 
   BytecodeGenerationOptions genOptions{cl::DumpTarget};
   genOptions.optimizationEnabled = cl::OptimizationLevel > cl::OptLevel::Og;

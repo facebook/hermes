@@ -13,6 +13,7 @@ enum OutputFormatKind {
   None = 0,
   DumpAST,
   DumpTransformedAST,
+  ViewCFG,
   DumpIR,
   DumpLIR,
   DumpRA,

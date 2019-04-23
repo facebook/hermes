@@ -21,6 +21,8 @@ enum CompileStatus {
   InvalidFlags,
   /// The input files were source code that could not be parsed.
   ParsingFailed,
+  /// The IR could not be verified.
+  VerificationFailed,
   /// The file containing the global environment could not be parsed.
   LoadGlobalsFailed,
   /// An input file could not be read.

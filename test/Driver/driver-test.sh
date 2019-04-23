@@ -10,9 +10,10 @@ HERMES=$3
 Success=0
 InvalidFlags=1
 ParsingFailed=2
-LoadGlobalsFailed=3
-InputFileError=4
-OutputFileError=5
+VerificationFailed=3
+LoadGlobalsFailed=4
+InputFileError=5
+OutputFileError=6
 
 set -x
 
