@@ -616,15 +616,11 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
 
   MutableHandle<StringPrimitive> strPrim{runtime};
   SymbolID id{};
-  // If the name is a valid integer array index, store it here.
-  OptValue<uint32_t> arrayIndex;
 
-  // Try to convert the property name to an array index.
-  TO_ARRAY_INDEX(runtime, nameValHandle, strPrim, arrayIndex);
-
-  // Try the fast paths first if the property is an array index.
-  if (arrayIndex) {
-    if (selfHandle->flags_.fastIndexProperties) {
+  // Try the fast paths first if we have "fast" index properties and the
+  // property name is an obvious index.
+  if (selfHandle->flags_.fastIndexProperties) {
+    if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
       auto res =
           getOwnIndexedPropertyFlags(selfHandle.get(), runtime, *arrayIndex);
       if (res) {
@@ -639,13 +635,6 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
       // and we don't have index-like named properties.
       return false;
     }
-
-    if (!selfHandle->clazz_->getHasIndexLikeProperties() &&
-        !selfHandle->flags_.hostObject && !selfHandle->flags_.lazyObject) {
-      // The property name is an integer index, but we don't have any properties
-      // that look like indexes.
-      return false;
-    }
   }
 
   // Convert the string to an SymbolID;
@@ -657,18 +646,27 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
     return true;
   }
 
-  // If we didn't already check for the indexed storage before (because we have
-  // "index-like" named properties), do so now.
-  if (arrayIndex) {
-    auto res =
-        getOwnIndexedPropertyFlags(selfHandle.get(), runtime, *arrayIndex);
-    if (res) {
-      desc.flags = *res;
-      desc.flags.indexed = 1;
-      desc.slot = *arrayIndex;
-      return true;
+  // If we have indexed storage, perform potentially expensive conversions
+  // to array index and check it.
+  if (selfHandle->flags_.indexedStorage) {
+    // If the name is a valid integer array index, store it here.
+    OptValue<uint32_t> arrayIndex;
+
+    // Try to convert the property name to an array index.
+    TO_ARRAY_INDEX(runtime, nameValHandle, strPrim, arrayIndex);
+
+    if (arrayIndex) {
+      auto res =
+          getOwnIndexedPropertyFlags(selfHandle.get(), runtime, *arrayIndex);
+      if (res) {
+        desc.flags = *res;
+        desc.flags.indexed = 1;
+        desc.slot = *arrayIndex;
+        return true;
+      }
     }
   }
+
   if (LLVM_UNLIKELY(selfHandle->flags_.lazyObject)) {
     JSObject::initializeLazyObject(runtime, selfHandle);
     return getOwnComputedPrimitiveDescriptor(
