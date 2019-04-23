@@ -20,7 +20,8 @@ void HermesValue::setInGC(HermesValue hv, GC *gc) {
   assert(gc->inGC());
 }
 
-void GCHermesValue::set(HermesValue hv, GC *gc) {
+template <typename NeedsBarriers>
+inline void GCHermesValue::set(HermesValue hv, GC *gc) {
   HERMES_SLOW_ASSERT(
       gc &&
       "Must pass a valid GC in case this is a pointer, if not use setNonPtr");
@@ -28,13 +29,16 @@ void GCHermesValue::set(HermesValue hv, GC *gc) {
     HERMES_SLOW_ASSERT(
         gc->validPointer(hv.getPointer()) &&
         "Setting an invalid pointer into a GCHermesValue");
+    assert(
+        NeedsBarriers::value || !gc->needsWriteBarrier(this, hv.getPointer()));
   }
   setNoBarrier(hv);
-  gc->writeBarrier(this, hv);
+  if (NeedsBarriers::value)
+    gc->writeBarrier(this, hv);
 }
 
 void GCHermesValue::setNonPtr(HermesValue hv) {
-  assert(!hv.isPointer());
+  assert(!hv.isPointer() || !hv.getPointer());
   setNoBarrier(hv);
 }
 

@@ -452,6 +452,7 @@ class GCHermesValue : public HermesValue {
 
   /// The HermesValue \p hv may be an object pointer.  Assign the
   /// value, and perform any necessary write barriers.
+  template <typename NeedsBarriers = std::true_type>
   inline void set(HermesValue hv, GC *gc);
 
   /// The HermesValue \p hv must not be an object pointer.  Assign the
