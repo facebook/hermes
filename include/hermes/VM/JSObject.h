@@ -463,6 +463,16 @@ class JSObject : public GCCell {
   static ExecutionStatus
   setParent(JSObject *self, Runtime *runtime, JSObject *parent);
 
+  /// Allocate an internal property. This simply allocates a new property with
+  /// SymbolID InternalProperty::getSymbolID(index) and returns the allocated
+  /// slot. The returned values should be anticipated statically and are only
+  /// for debuggong.
+  static SlotIndex addInternalProperty(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      unsigned index,
+      Handle<> valueHandle);
+
   /// Allocate internal properties - it reserves \p count slots, starting from
   /// index 0, which are not accessible by name. This method can be called
   /// exactly once per object, before any other properties have been added.
@@ -473,13 +483,23 @@ class JSObject : public GCCell {
       unsigned count,
       Handle<> valueHandle);
 
-  static HermesValue getInternalProperty(JSObject *self, SlotIndex index);
+  /// Return a reference to an internal property slot.
+  static GCHermesValue &internalPropertyRef(JSObject *self, SlotIndex index) {
+    return namedSlotRef<PropStorage::Inline::Yes>(self, index);
+  }
+
+  static HermesValue getInternalProperty(JSObject *self, SlotIndex index) {
+    return internalPropertyRef(self, index);
+  }
 
   static void setInternalProperty(
       JSObject *self,
       Runtime *runtime,
       SlotIndex index,
-      HermesValue value);
+      HermesValue value) {
+    return setNamedSlotValue<PropStorage::Inline::Yes>(
+        self, runtime, index, value);
+  }
 
   /// Return a list of property names belonging to this object. Indexed property
   /// names will be represented as numbers for efficiency. The order of
@@ -500,16 +520,27 @@ class JSObject : public GCCell {
       Handle<JSObject> selfHandle,
       Runtime *runtime);
 
+  /// Return a reference to a slot in the "named value" storage space by
+  /// \p index.
+  /// \pre inl == PropStorage::Inline::Yes -> index <
+  ///   PropStorage::kValueToSegmentThreshold.
+  template <PropStorage::Inline inl = PropStorage::Inline::No>
+  static GCHermesValue &namedSlotRef(JSObject *self, SlotIndex index);
+
   /// Load a value from the "named value" storage space by \p index.
   /// \pre inl == PropStorage::Inline::Yes -> index <
   /// PropStorage::kValueToSegmentThreshold.
   template <PropStorage::Inline inl = PropStorage::Inline::No>
-  static HermesValue getNamedSlotValue(JSObject *self, SlotIndex index);
+  static HermesValue getNamedSlotValue(JSObject *self, SlotIndex index) {
+    return namedSlotRef<inl>(self, index);
+  }
   /// Load a value from the "named value" storage space by the slot described by
   /// the property descriptor \p desc.
   static HermesValue getNamedSlotValue(
       JSObject *self,
-      NamedPropertyDescriptor desc);
+      NamedPropertyDescriptor desc) {
+    return getNamedSlotValue(self, desc.slot);
+  }
 
   /// Store a value to the "named value" storage space by \p index.
   /// \pre inl == PropStorage::Inline::Yes -> index <
@@ -520,13 +551,16 @@ class JSObject : public GCCell {
       Runtime *runtime,
       SlotIndex index,
       HermesValue value);
+
   /// Store a value to the "named value" storage space by the slot described by
   /// \p desc.
   static void setNamedSlotValue(
       JSObject *self,
       Runtime *runtime,
       NamedPropertyDescriptor desc,
-      HermesValue value);
+      HermesValue value) {
+    setNamedSlotValue(self, runtime, desc.slot, value);
+  }
 
   /// Load a value using a named descriptor. Read the value either from
   /// named storage or indexed storage depending on the presence of the
@@ -1175,35 +1209,13 @@ inline CallResult<Handle<JSObjectPropStorage>> JSObject::createPropStorage(
   return runtime->makeHandle<JSObjectPropStorage>(*res);
 }
 
-inline HermesValue JSObject::getInternalProperty(
-    JSObject *self,
-    SlotIndex index) {
-  return getNamedSlotValue(self, NamedPropertyDescriptor{{}, index});
-}
-
-inline void JSObject::setInternalProperty(
-    JSObject *self,
-    Runtime *runtime,
-    SlotIndex index,
-    HermesValue value) {
-  return setNamedSlotValue(
-      self, runtime, NamedPropertyDescriptor{{}, index}, value);
-}
-
 template <PropStorage::Inline inl>
-inline HermesValue JSObject::getNamedSlotValue(
-    JSObject *self,
-    SlotIndex index) {
+inline GCHermesValue &JSObject::namedSlotRef(JSObject *self, SlotIndex index) {
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
     return self->directProps_[index];
 
   return self->propStorage_->at<inl>(index - DIRECT_PROPERTY_SLOTS);
 }
-inline HermesValue JSObject::getNamedSlotValue(
-    JSObject *self,
-    NamedPropertyDescriptor desc) {
-  return getNamedSlotValue(self, desc.slot);
-}
 
 template <PropStorage::Inline inl>
 inline void JSObject::setNamedSlotValue(
@@ -1211,18 +1223,14 @@ inline void JSObject::setNamedSlotValue(
     Runtime *runtime,
     SlotIndex index,
     HermesValue value) {
+  // NOTE: even though it is tempting to implement this in terms of assignment
+  // to namedSlotRef(), it is a slight performance regression, which is not
+  // entirely unexpected.
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
     return self->directProps_[index].set(value, &runtime->getHeap());
 
   self->propStorage_->at<inl>(index - DIRECT_PROPERTY_SLOTS)
       .set(value, &runtime->getHeap());
-}
-inline void JSObject::setNamedSlotValue(
-    JSObject *self,
-    Runtime *runtime,
-    NamedPropertyDescriptor desc,
-    HermesValue value) {
-  return setNamedSlotValue(self, runtime, desc.slot, value);
 }
 
 inline HermesValue JSObject::getComputedSlotValue(

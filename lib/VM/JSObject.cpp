@@ -227,6 +227,33 @@ void JSObject::allocateNewSlotStorage(
       .set(*valueHandle, &runtime->getHeap());
 }
 
+SlotIndex JSObject::addInternalProperty(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    unsigned index,
+    Handle<> valueHandle) {
+  assert(
+      index < InternalProperty::NumInternalProperties &&
+      "Internal property index is too large");
+  assert(
+      !selfHandle->clazz_->isDictionary() &&
+      "Internal properties can only be added in class mode");
+
+  auto addResult = HiddenClass::addProperty(
+      runtime->makeHandle(selfHandle->clazz_),
+      runtime,
+      InternalProperty::getSymbolID(index),
+      PropertyFlags{});
+  assert(
+      addResult != ExecutionStatus::EXCEPTION &&
+      "Could not possibly grow larger than the limit");
+  selfHandle->clazz_.set(*addResult->first, &runtime->getHeap());
+
+  allocateNewSlotStorage(selfHandle, runtime, addResult->second, valueHandle);
+
+  return addResult->second;
+}
+
 void JSObject::addInternalProperties(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
@@ -242,19 +269,16 @@ void JSObject::addInternalProperties(
   assert(
       selfHandle->clazz_->getNumProperties() == 0 &&
       "Internal properties must be added first");
+  assert(
+      count <= DIRECT_PROPERTY_SLOTS &&
+      "We shouldn't add internal properties to indirect storage");
 
   for (unsigned i = 0; i != count; ++i) {
-    auto addResult = HiddenClass::addProperty(
-        runtime->makeHandle(selfHandle->clazz_),
-        runtime,
-        InternalProperty::getSymbolID(i),
-        PropertyFlags{});
+    auto slotIndex = addInternalProperty(selfHandle, runtime, i, valueHandle);
+    (void)slotIndex;
     assert(
-        addResult != ExecutionStatus::EXCEPTION &&
-        "Could not possibly grow larger than the limit");
-    selfHandle->clazz_.set(*addResult->first, &runtime->getHeap());
-
-    allocateNewSlotStorage(selfHandle, runtime, addResult->second, valueHandle);
+        slotIndex == i &&
+        "bulk added internal property slot should match its index");
   }
 }
 
