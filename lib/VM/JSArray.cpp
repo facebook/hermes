@@ -311,12 +311,6 @@ CallResult<HermesValue> Arguments::create(
     size_type length,
     Handle<Callable> curFunction,
     bool strictMode) {
-  auto propStorage =
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   CallResult<HermesValue> arrRes{ExecutionStatus::EXCEPTION};
   if (LLVM_UNLIKELY(
           (arrRes = StorageType::create(runtime, length)) ==
@@ -326,12 +320,14 @@ CallResult<HermesValue> Arguments::create(
   auto indexedStorage = runtime->makeHandle<StorageType>(*arrRes);
 
   void *mem = runtime->alloc(sizeof(Arguments));
-  auto selfHandle = runtime->makeHandle(new (mem) Arguments(
-      runtime,
-      runtime->objectPrototypeRawPtr,
-      runtime->getHiddenClassForPrototypeRaw(runtime->objectPrototypeRawPtr),
-      **propStorage,
-      *indexedStorage));
+  auto selfHandle = runtime->makeHandle(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+          new (mem) Arguments(
+              runtime,
+              runtime->objectPrototypeRawPtr,
+              runtime->getHiddenClassForPrototypeRaw(
+                  runtime->objectPrototypeRawPtr),
+              *indexedStorage)));
 
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
 
@@ -453,16 +449,9 @@ CallResult<HermesValue> JSArray::create(
 
   // Allocate property storage with size corresponding to number of properties
   // in the hidden class.
-  auto numProperties = classHandle->getNumProperties();
   assert(
-      numProperties >= JSArrayPropertyCount &&
-      "creating JSArray with insufficient number of properties");
-
-  auto propStorage =
-      JSObject::createPropStorage(runtime, numProperties, numProperties);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
+      classHandle->getNumProperties() == JSArrayPropertyCount &&
+      "invalid number of properties in JSArray hidden class");
 
   // Only allocate the storage if capacity is not zero.
   MutableHandle<StorageType> indexedStorage{runtime, nullptr};
@@ -477,13 +466,13 @@ CallResult<HermesValue> JSArray::create(
   }
 
   void *mem = runtime->alloc(sizeof(JSArray));
-  JSArray *self = new (mem) JSArray(
-      runtime,
-      *prototypeHandle,
-      *classHandle,
-      **propStorage,
-      *indexedStorage,
-      GCPointerBase::NoBarriers());
+  JSArray *self = JSObject::allocateSmallPropStorage<JSArrayPropertyCount>(
+      new (mem) JSArray(
+          runtime,
+          *prototypeHandle,
+          *classHandle,
+          *indexedStorage,
+          GCPointerBase::NoBarriers()));
 
   putLength(self, length);
 
@@ -666,21 +655,16 @@ CallResult<HermesValue> JSArrayIterator::create(
     Runtime *runtime,
     Handle<JSObject> array,
     IterationKind iterationKind) {
-  auto propStorage = createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
 
   void *mem = runtime->alloc(sizeof(JSArrayIterator));
-  auto *self = new (mem) JSArrayIterator(
-      runtime,
-      *proto,
-      runtime->getHiddenClassForPrototypeRaw(*proto),
-      **propStorage,
-      *array,
-      iterationKind);
+  auto *self = JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+      new (mem) JSArrayIterator(
+          runtime,
+          *proto,
+          runtime->getHiddenClassForPrototypeRaw(*proto),
+          *array,
+          iterationKind));
   return HermesValue::encodeObjectValue(self);
 }
 

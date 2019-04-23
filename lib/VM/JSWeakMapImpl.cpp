@@ -197,12 +197,6 @@ template <CellKind C>
 CallResult<HermesValue> JSWeakMapImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  auto propStorage =
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   auto valueRes = BigStorage::create(runtime, 1);
   if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -211,12 +205,13 @@ CallResult<HermesValue> JSWeakMapImpl<C>::create(
 
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       sizeof(JSWeakMapImpl<C>));
-  return HermesValue::encodeObjectValue(new (mem) JSWeakMapImpl<C>(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
-      **propStorage,
-      *valueStorage));
+  return HermesValue::encodeObjectValue(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+          new (mem) JSWeakMapImpl<C>(
+              runtime,
+              *parentHandle,
+              runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+              *valueStorage)));
 }
 
 template class JSWeakMapImpl<CellKind::WeakMapKind>;

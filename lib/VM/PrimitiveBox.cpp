@@ -34,18 +34,13 @@ CallResult<HermesValue> JSString::create(
     Runtime *runtime,
     Handle<StringPrimitive> value,
     Handle<JSObject> parentHandle) {
-  auto propStorage =
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   void *mem = runtime->alloc(sizeof(JSString));
-  auto selfHandle = runtime->makeHandle(new (mem) JSString(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
-      **propStorage));
+  auto selfHandle = runtime->makeHandle(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+          new (mem) JSString(
+              runtime,
+              *parentHandle,
+              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 
   JSObject::addInternalProperties(selfHandle, runtime, 1, value);
 
@@ -187,20 +182,15 @@ void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<HermesValue> JSStringIterator::create(
     Runtime *runtime,
     Handle<StringPrimitive> string) {
-  auto propStorage = createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   auto proto = Handle<JSObject>::vmcast(&runtime->stringIteratorPrototype);
 
   void *mem = runtime->alloc(sizeof(JSStringIterator));
-  auto *self = new (mem) JSStringIterator(
-      runtime,
-      *proto,
-      runtime->getHiddenClassForPrototypeRaw(*proto),
-      **propStorage,
-      *string);
+  auto *self = JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+      new (mem) JSStringIterator(
+          runtime,
+          *proto,
+          runtime->getHiddenClassForPrototypeRaw(*proto),
+          *string));
   return HermesValue::encodeObjectValue(self);
 }
 
@@ -287,18 +277,13 @@ CallResult<HermesValue> JSNumber::create(
     Runtime *runtime,
     double value,
     Handle<JSObject> parentHandle) {
-  auto propStorage =
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   void *mem = runtime->alloc(sizeof(JSNumber));
-  auto selfHandle = runtime->makeHandle(new (mem) JSNumber(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
-      **propStorage));
+  auto selfHandle = runtime->makeHandle(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+          new (mem) JSNumber(
+              runtime,
+              *parentHandle,
+              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 
   JSObject::addInternalProperties(
       selfHandle,
@@ -329,18 +314,13 @@ void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 CallResult<HermesValue>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
-  auto propStorage =
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   void *mem = runtime->alloc(sizeof(JSBoolean));
-  auto selfHandle = runtime->makeHandle(new (mem) JSBoolean(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
-      **propStorage));
+  auto selfHandle = runtime->makeHandle(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+          new (mem) JSBoolean(
+              runtime,
+              *parentHandle,
+              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 
   JSObject::addInternalProperties(
       selfHandle, runtime, 1, runtime->getBoolValue(value));
@@ -369,18 +349,13 @@ CallResult<HermesValue> JSSymbol::create(
     Runtime *runtime,
     SymbolID value,
     Handle<JSObject> parentHandle) {
-  auto propStorage =
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   void *mem = runtime->alloc(sizeof(JSSymbol));
-  auto selfHandle = runtime->makeHandle(new (mem) JSSymbol(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
-      **propStorage));
+  auto selfHandle = runtime->makeHandle(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+          new (mem) JSSymbol(
+              runtime,
+              *parentHandle,
+              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 
   JSObject::addInternalProperties(
       selfHandle, runtime, 1, runtime->makeHandle(value));

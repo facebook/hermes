@@ -101,9 +101,8 @@ class JSWeakMapImplBase : public JSObject {
       const VTable *vtp,
       JSObject *parent,
       HiddenClass *clazz,
-      JSObjectPropStorage *propStorage,
       BigStorage *valueStorage)
-      : JSObject(runtime, vtp, parent, clazz, propStorage),
+      : JSObject(runtime, vtp, parent, clazz),
         valueStorage_(valueStorage, &runtime->getHeap()) {}
 
  public:
@@ -255,15 +254,8 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
       Runtime *runtime,
       JSObject *parent,
       HiddenClass *clazz,
-      JSObjectPropStorage *propStorage,
       BigStorage *valueStorage)
-      : JSWeakMapImplBase(
-            runtime,
-            &vt.base,
-            parent,
-            clazz,
-            propStorage,
-            valueStorage) {}
+      : JSWeakMapImplBase(runtime, &vt.base, parent, clazz, valueStorage) {}
 };
 
 using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;

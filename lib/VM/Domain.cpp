@@ -201,17 +201,15 @@ Handle<RequireContext> RequireContext::create(
     Runtime *runtime,
     Handle<Domain> domain,
     Handle<StringPrimitive> dirname) {
-  auto propStorage = runtime->ignoreAllocationFailure(
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS));
-
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::No>(
       sizeof(RequireContext));
-  auto self = runtime->makeHandle(new (mem) RequireContext(
-      runtime,
-      vmcast<JSObject>(runtime->objectPrototype),
-      runtime->getHiddenClassForPrototypeRaw(
-          vmcast<JSObject>(runtime->objectPrototype)),
-      *propStorage));
+  auto self = runtime->makeHandle(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+          new (mem) RequireContext(
+              runtime,
+              vmcast<JSObject>(runtime->objectPrototype),
+              runtime->getHiddenClassForPrototypeRaw(
+                  vmcast<JSObject>(runtime->objectPrototype)))));
 
   JSObject::addInternalProperties(self, runtime, 2, domain);
   JSObject::setInternalProperty(*self, runtime, 1, dirname.getHermesValue());

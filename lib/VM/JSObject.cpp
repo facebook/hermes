@@ -102,20 +102,17 @@ PseudoHandle<JSObject> JSObject::create(Runtime *runtime) {
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     unsigned propertyCount) {
-  // Assuming object literal seldom adds new properties, explicitly use
-  // propertyCount as capacity instead of DEFAULT_PROPERTY_CAPACITY.
-  auto propStorage = runtime->ignoreAllocationFailure(
-      createPropStorage(runtime, propertyCount, propertyCount));
-
   void *mem = runtime->alloc</*fixedSize*/ true>(sizeof(JSObject));
   JSObject *objProto = runtime->objectPrototypeRawPtr;
-  return createPseudoHandle(new (mem) JSObject(
+  return runtime->ignoreAllocationFailure(JSObject::allocatePropStorage(
+      createPseudoHandle(new (mem) JSObject(
+          runtime,
+          &vt.base,
+          objProto,
+          runtime->getHiddenClassForPrototypeRaw(objProto),
+          GCPointerBase::NoBarriers())),
       runtime,
-      &vt.base,
-      objProto,
-      runtime->getHiddenClassForPrototypeRaw(objProto),
-      *propStorage,
-      GCPointerBase::NoBarriers()));
+      propertyCount));
 }
 
 PseudoHandle<JSObject> JSObject::create(
@@ -215,7 +212,7 @@ void JSObject::allocateNewSlotStorage(
     selfHandle->propStorage_.set(*hnd, &runtime->getHeap());
   }
 
-  if (LLVM_LIKELY(newSlotIndex >= selfHandle->propStorage_->size())) {
+  if (newSlotIndex >= selfHandle->propStorage_->size()) {
     assert(
         newSlotIndex == selfHandle->propStorage_->size() &&
         "allocated slot must be at end");

@@ -99,11 +99,7 @@ class JSArrayBuffer final : public JSObject {
   size_type size_;
   bool attached_;
 
-  JSArrayBuffer(
-      Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObjectPropStorage *propStorage);
+  JSArrayBuffer(Runtime *runtime, JSObject *parent, HiddenClass *clazz);
 
   ~JSArrayBuffer();
 };

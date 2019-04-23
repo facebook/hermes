@@ -48,18 +48,13 @@ template <CellKind C>
 CallResult<HermesValue> JSMapImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  auto propStorage =
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   void *mem = runtime->alloc(sizeof(JSMapImpl));
-  return HermesValue::encodeObjectValue(new (mem) JSMapImpl(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
-      **propStorage));
+  return HermesValue::encodeObjectValue(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+          new (mem) JSMapImpl(
+              runtime,
+              *parentHandle,
+              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 }
 
 template class JSMapImpl<CellKind::SetKind>;
@@ -104,18 +99,13 @@ template <CellKind C>
 CallResult<HermesValue> JSMapIteratorImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
-  auto propStorage =
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   void *mem = runtime->alloc(sizeof(JSMapIteratorImpl<C>));
-  return HermesValue::encodeObjectValue(new (mem) JSMapIteratorImpl<C>(
-      runtime,
-      *prototype,
-      runtime->getHiddenClassForPrototypeRaw(*prototype),
-      **propStorage));
+  return HermesValue::encodeObjectValue(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+          new (mem) JSMapIteratorImpl<C>(
+              runtime,
+              *prototype,
+              runtime->getHiddenClassForPrototypeRaw(*prototype))));
 }
 
 template class JSMapIteratorImpl<CellKind::MapIteratorKind>;

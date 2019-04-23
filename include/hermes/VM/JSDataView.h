@@ -100,11 +100,7 @@ class JSDataView final : public JSObject {
   /// length_ is the amount of bytes the DataView views inside the storage.
   size_type length_;
 
-  JSDataView(
-      Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObjectPropStorage *propStorage);
+  JSDataView(Runtime *runtime, JSObject *parent, HiddenClass *clazz);
 };
 
 /// @name Implementations

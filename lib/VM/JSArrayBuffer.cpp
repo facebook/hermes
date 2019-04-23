@@ -37,19 +37,14 @@ void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<HermesValue> JSArrayBuffer::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  auto propStorage =
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       sizeof(JSArrayBuffer));
-  return HermesValue::encodeObjectValue(new (mem) JSArrayBuffer(
+  auto *self = new (mem) JSArrayBuffer(
       runtime,
       *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
-      **propStorage));
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle));
+  return HermesValue::encodeObjectValue(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(self));
 }
 
 CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
@@ -106,9 +101,8 @@ void JSArrayBuffer::copyDataBlockBytes(
 JSArrayBuffer::JSArrayBuffer(
     Runtime *runtime,
     JSObject *parent,
-    HiddenClass *clazz,
-    JSObjectPropStorage *propStorage)
-    : JSObject(runtime, &vt.base, parent, clazz, propStorage),
+    HiddenClass *clazz)
+    : JSObject(runtime, &vt.base, parent, clazz),
       data_(nullptr),
       size_(0),
       attached_(false) {}

@@ -128,10 +128,9 @@ class ArrayImpl : public JSObject {
       const VTable *vt,
       JSObject *parent,
       HiddenClass *clazz,
-      JSObjectPropStorage *propStorage,
       StorageType *indexedStorage,
       NeedsBarriers needsBarriers)
-      : JSObject(runtime, vt, parent, clazz, propStorage, needsBarriers),
+      : JSObject(runtime, vt, parent, clazz, needsBarriers),
         indexedStorage_(indexedStorage, &runtime->getHeap(), needsBarriers) {
     flags_.indexedStorage = true;
     flags_.fastIndexProperties = true;
@@ -143,14 +142,12 @@ class ArrayImpl : public JSObject {
       const VTable *vt,
       JSObject *parent,
       HiddenClass *clazz,
-      JSObjectPropStorage *propStorage,
       StorageType *indexedStorage)
       : ArrayImpl(
             runtime,
             vt,
             parent,
             clazz,
-            propStorage,
             indexedStorage,
             GCPointerBase::YesBarriers()) {}
 
@@ -247,15 +244,8 @@ class Arguments final : public ArrayImpl {
       Runtime *runtime,
       JSObject *parent,
       HiddenClass *clazz,
-      JSObjectPropStorage *propStorage,
       StorageType *indexedStorage)
-      : ArrayImpl(
-            runtime,
-            &vt.base,
-            parent,
-            clazz,
-            propStorage,
-            indexedStorage) {}
+      : ArrayImpl(runtime, &vt.base, parent, clazz, indexedStorage) {}
 };
 
 class JSArray final : public ArrayImpl {
@@ -350,7 +340,6 @@ class JSArray final : public ArrayImpl {
       Runtime *runtime,
       JSObject *parent,
       HiddenClass *clazz,
-      JSObjectPropStorage *propStorage,
       StorageType *indexedStorage,
       NeedsBarrier needsBarrier)
       : ArrayImpl(
@@ -358,7 +347,6 @@ class JSArray final : public ArrayImpl {
             &vt.base,
             parent,
             clazz,
-            propStorage,
             indexedStorage,
             needsBarrier) {}
 
@@ -421,10 +409,9 @@ class JSArrayIterator : public JSObject {
       Runtime *runtime,
       JSObject *parent,
       HiddenClass *clazz,
-      JSObjectPropStorage *propStorage,
       JSObject *iteratedObject,
       IterationKind iterationKind)
-      : JSObject(runtime, &vt.base, parent, clazz, propStorage),
+      : JSObject(runtime, &vt.base, parent, clazz),
         iteratedObject_(iteratedObject, &runtime->getHeap()),
         iterationKind_(iterationKind) {}
 

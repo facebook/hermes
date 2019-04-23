@@ -97,12 +97,8 @@ class JSError final : public JSObject {
   errorStackSetter(void *, Runtime *runtime, NativeArgs args);
 
  protected:
-  JSError(
-      Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObjectPropStorage *propStorage)
-      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
+  JSError(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
+      : JSObject(runtime, &vt.base, parent, clazz) {}
 
  private:
   static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =

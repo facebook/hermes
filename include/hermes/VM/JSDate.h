@@ -51,12 +51,8 @@ class JSDate final : public JSObject {
   }
 
  protected:
-  JSDate(
-      Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObjectPropStorage *propStorage)
-      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
+  JSDate(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
+      : JSObject(runtime, &vt.base, parent, clazz) {}
 
  protected:
   static const SlotIndex primitiveValueIndex = 0;

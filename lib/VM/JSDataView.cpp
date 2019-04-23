@@ -31,26 +31,17 @@ void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<HermesValue> JSDataView::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
-  auto propStorage =
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   void *mem = runtime->alloc(sizeof(JSDataView));
-  return HermesValue::encodeObjectValue(new (mem) JSDataView(
-      runtime,
-      *prototype,
-      runtime->getHiddenClassForPrototypeRaw(*prototype),
-      **propStorage));
+  return HermesValue::encodeObjectValue(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+          new (mem) JSDataView(
+              runtime,
+              *prototype,
+              runtime->getHiddenClassForPrototypeRaw(*prototype))));
 }
 
-JSDataView::JSDataView(
-    Runtime *runtime,
-    JSObject *parent,
-    HiddenClass *clazz,
-    JSObjectPropStorage *propStorage)
-    : JSObject(runtime, &vt.base, parent, clazz, propStorage),
+JSDataView::JSDataView(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
+    : JSObject(runtime, &vt.base, parent, clazz),
       buffer_(nullptr),
       offset_(0),
       length_(0) {}

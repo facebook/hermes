@@ -139,12 +139,8 @@ class JSMapImpl final : public JSObject {
   static void MapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  protected:
-  JSMapImpl(
-      Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObjectPropStorage *propStorage)
-      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
+  JSMapImpl(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
+      : JSObject(runtime, &vt.base, parent, clazz) {}
 
  private:
   /// The underlying storage.
@@ -254,12 +250,8 @@ class JSMapIteratorImpl final : public JSObject {
       Metadata::Builder &mb);
 
  protected:
-  JSMapIteratorImpl(
-      Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObjectPropStorage *propStorage)
-      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
+  JSMapIteratorImpl(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
+      : JSObject(runtime, &vt.base, parent, clazz) {}
 
  private:
   /// The internal pointer to the Map data. nullptr if the iterator has not been

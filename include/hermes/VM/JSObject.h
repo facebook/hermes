@@ -235,17 +235,6 @@ struct ObjectVTable {
   bool (*checkAllOwnIndexed)(JSObject *self, CheckAllOwnIndexedMode mode);
 };
 
-/// This is intended to act like an opaque type that is actually PropStorage.
-/// We use it to enforce at compile time that only the result of
-/// JSObject::createPropStorage() can be used to construct the object.
-/// Note that it can really be opaque because of our casting mechanics.
-class JSObjectPropStorage : public GCCell {
- public:
-  static bool classof(const GCCell *cell) {
-    return PropStorage::classof(cell);
-  }
-};
-
 /// This is the basic JavaScript Object class. All programmer-visible classes in
 /// JavaScript (like Array, Function, Arguments, Number, String, etc) inherit
 /// from it. At the highest level it is simply a collection of name/value
@@ -296,22 +285,6 @@ class JSObject : public GCCell {
       const VTable *vtp,
       JSObject *parent,
       HiddenClass *clazz,
-      JSObjectPropStorage *propStorage,
-      NeedsBarriers needsBarriers)
-      : GCCell(&runtime->getHeap(), vtp),
-        parent_(parent, &runtime->getHeap(), needsBarriers),
-        clazz_(clazz, &runtime->getHeap(), needsBarriers),
-        propStorage_(
-            unwrapPropStorage(propStorage),
-            &runtime->getHeap(),
-            needsBarriers) {}
-
-  template <typename NeedsBarriers>
-  JSObject(
-      Runtime *runtime,
-      const VTable *vtp,
-      JSObject *parent,
-      HiddenClass *clazz,
       NeedsBarriers needsBarriers)
       : GCCell(&runtime->getHeap(), vtp),
         parent_(parent, &runtime->getHeap(), needsBarriers),
@@ -321,20 +294,6 @@ class JSObject : public GCCell {
   /// Until we apply the NeedsBarriers pattern to all subtypes of JSObject, we
   /// will need versions that do not take the extra NeedsBarrier argument
   /// (defaulting to NoBarriers).
-  JSObject(
-      Runtime *runtime,
-      const VTable *vtp,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObjectPropStorage *propStorage)
-      : JSObject(
-            runtime,
-            vtp,
-            parent,
-            clazz,
-            propStorage,
-            GCPointerBase::NoBarriers()) {}
-
   JSObject(
       Runtime *runtime,
       const VTable *vtp,
@@ -396,18 +355,26 @@ class JSObject : public GCCell {
 
   ~JSObject() = default;
 
-  /// Allocate an instance of property storage with the specified capacity.
-  static inline CallResult<Handle<JSObjectPropStorage>> createPropStorage(
+  /// Allocate an instance of property storage with the specified size.
+  static inline ExecutionStatus allocatePropStorage(
+      Handle<JSObject> selfHandle,
       Runtime *runtime,
-      PropStorage::size_type capacity);
-
-  /// Allocate an instance of property storage with the specified capacity and
-  /// size.
-  /// Requires that \p size <= \p capacity.
-  static inline CallResult<Handle<JSObjectPropStorage>> createPropStorage(
-      Runtime *runtime,
-      PropStorage::size_type capacity,
       PropStorage::size_type size);
+
+  /// Allocate an instance of property storage with the specified size.
+  /// If an allocation is required, a handle is allocated internally and the
+  /// updated self value is returned. This means that the return value MUST
+  /// be used by the caller.
+  static inline CallResult<PseudoHandle<JSObject>> allocatePropStorage(
+      PseudoHandle<JSObject> self,
+      Runtime *runtime,
+      PropStorage::size_type size);
+
+  /// Allocate an instance of property storage with the specified capacity,
+  /// which must fit inside the direct property slots.
+  /// \return a copy of self for convenience.
+  template <PropStorage::size_type size, typename T>
+  static inline T *allocateSmallPropStorage(T *self);
 
   bool isExtensible() const {
     return !flags_.noExtend;
@@ -996,16 +963,6 @@ class JSObject : public GCCell {
  private:
   // Internal API
 
-  /// "Wrap" PropStorage by casting it to an opaque type.
-  static JSObjectPropStorage *wrapPropStorage(PropStorage *ps) {
-    return (JSObjectPropStorage *)ps;
-  }
-
-  /// Convenience method to "unwrap" PropStorage from JSObjectPropStorage.
-  static PropStorage *unwrapPropStorage(JSObjectPropStorage *ps) {
-    return vmcast_or_null<PropStorage>((GCCell *)ps);
-  }
-
   const ObjectVTable *getVT() const {
     return reinterpret_cast<const ObjectVTable *>(GCCell::getVT());
   }
@@ -1183,30 +1140,45 @@ class PropertyAccessor final : public GCCell {
 //===----------------------------------------------------------------------===//
 // Object inline methods.
 
-inline CallResult<Handle<JSObjectPropStorage>> JSObject::createPropStorage(
+inline ExecutionStatus JSObject::allocatePropStorage(
+    Handle<JSObject> selfHandle,
     Runtime *runtime,
-    PropStorage::size_type capacity) {
-  if (capacity <= DIRECT_PROPERTY_SLOTS)
-    return runtime->makeNullHandle<JSObjectPropStorage>();
-
-  auto res = PropStorage::create(runtime, capacity - DIRECT_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-  return runtime->makeHandle<JSObjectPropStorage>(*res);
-}
-
-inline CallResult<Handle<JSObjectPropStorage>> JSObject::createPropStorage(
-    Runtime *runtime,
-    PropStorage::size_type capacity,
     PropStorage::size_type size) {
-  if (capacity <= DIRECT_PROPERTY_SLOTS)
-    return runtime->makeNullHandle<JSObjectPropStorage>();
+  if (LLVM_LIKELY(size <= DIRECT_PROPERTY_SLOTS))
+    return ExecutionStatus::RETURNED;
 
   auto res = PropStorage::create(
-      runtime, capacity - DIRECT_PROPERTY_SLOTS, size - DIRECT_PROPERTY_SLOTS);
+      runtime, size - DIRECT_PROPERTY_SLOTS, size - DIRECT_PROPERTY_SLOTS);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  return runtime->makeHandle<JSObjectPropStorage>(*res);
+
+  selfHandle->propStorage_.set(vmcast<PropStorage>(*res), &runtime->getHeap());
+  return ExecutionStatus::RETURNED;
+}
+
+inline CallResult<PseudoHandle<JSObject>> JSObject::allocatePropStorage(
+    PseudoHandle<JSObject> self,
+    Runtime *runtime,
+    PropStorage::size_type size) {
+  if (LLVM_LIKELY(size <= DIRECT_PROPERTY_SLOTS))
+    return self;
+
+  auto selfHandle = toHandle(runtime, std::move(self));
+  if (LLVM_UNLIKELY(
+          allocatePropStorage(selfHandle, runtime, size) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return PseudoHandle<JSObject>(selfHandle);
+}
+
+template <PropStorage::size_type size, typename T>
+inline T *JSObject::allocateSmallPropStorage(T *self) {
+  static_assert(
+      size <= DIRECT_PROPERTY_SLOTS,
+      "smallPropStorage size must fit in direct properties");
+  return self;
 }
 
 template <PropStorage::Inline inl>

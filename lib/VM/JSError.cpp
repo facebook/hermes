@@ -40,19 +40,14 @@ void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<HermesValue> JSError::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  auto propStorage =
-      JSObject::createPropStorage(runtime, NEEDED_PROPERTY_SLOTS);
-  if (LLVM_UNLIKELY(propStorage == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   void *mem =
       runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(JSError));
-  return HermesValue::encodeObjectValue(new (mem) JSError(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
-      **propStorage));
+  return HermesValue::encodeObjectValue(
+      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
+          new (mem) JSError(
+              runtime,
+              *parentHandle,
+              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 }
 
 ExecutionStatus JSError::setupStack(

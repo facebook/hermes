@@ -205,8 +205,7 @@ class JSTypedArrayBase : public JSObject {
       Runtime *runtime,
       const VTable *vt,
       JSObject *parent,
-      HiddenClass *clazz,
-      JSObjectPropStorage *propStorage);
+      HiddenClass *clazz);
 
   /// Allocates a buffer using \p runtime with \p length number of
   /// elements, each of \p byteWidth size in bytes.
@@ -310,11 +309,7 @@ class JSTypedArray final : public JSTypedArrayBase {
       Handle<> value);
 
  private:
-  explicit JSTypedArray(
-      Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObjectPropStorage *propStorage);
+  explicit JSTypedArray(Runtime *runtime, JSObject *parent, HiddenClass *clazz);
 };
 
 /// @name toDestType specializations

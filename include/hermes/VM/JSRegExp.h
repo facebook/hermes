@@ -106,12 +106,8 @@ class JSRegExp final : public JSObject {
       uint32_t searchStartOffset);
 
  private:
-  JSRegExp(
-      Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObjectPropStorage *propStorage)
-      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
+  JSRegExp(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
+      : JSObject(runtime, &vt.base, parent, clazz) {}
 
   CopyableVector<uint8_t> bytecode_;
 

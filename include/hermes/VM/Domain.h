@@ -257,12 +257,8 @@ class RequireContext final : public JSObject {
   }
 
  private:
-  RequireContext(
-      Runtime *runtime,
-      JSObject *parent,
-      HiddenClass *clazz,
-      JSObjectPropStorage *propStorage)
-      : JSObject(runtime, &vt.base, parent, clazz, propStorage) {}
+  RequireContext(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
+      : JSObject(runtime, &vt.base, parent, clazz) {}
 };
 
 } // namespace vm
