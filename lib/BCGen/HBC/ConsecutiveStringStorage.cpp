@@ -80,16 +80,6 @@ class StringPacker {
     /// a cycle.
     llvm::DenseSet<const StringEntry *> potentialCycles_;
 
-    /// \return the "frequency class" for a string. The frequency class reflects
-    /// the fact that HBC has different instructions for smaller string indexes,
-    /// with a cutoff at 8 bits and another at 16. Therefore higher frequency
-    /// classes necessarily mean more bits required to represent the index.
-    /// Strings are presented to ConsecutiveStringPacker in frequency order; we
-    /// do not reorder strings between different classes.
-    int frequencyClass() const {
-      return (stringID_ > UINT8_MAX) + (stringID_ > UINT16_MAX);
-    }
-
     StringEntry(uint32_t stringID, ArrayRef<CharT> chars)
         : stringID_(stringID), chars_(chars) {}
   };
@@ -347,13 +337,6 @@ class StringPacker {
             // Can't parent ourselves.
             if (parent == rightString)
               continue;
-            // Don't parent from a higher frequency class. That is, if we are a
-            // short common string that is a substring of a longer uncommon
-            // string, don't pull the uncommon string forwards into the front of
-            // the storage. (However if we are a short uncommon string, allow us
-            // to be parented by a longer more common string.)
-            if (parent->frequencyClass() > rightString->frequencyClass())
-              continue;
 
             // Don't parent if we have an existing parent with a lower ID.
             // This means that we prefer parents that tend to end up early in
@@ -411,10 +394,6 @@ class StringPacker {
 
     // Would forming src->dst create a cycle?
     if (src->potentialCycles_.count(dst))
-      return false;
-
-    // Are they in different classes?
-    if (src->frequencyClass() != dst->frequencyClass())
       return false;
 
     // This edge is OK!
