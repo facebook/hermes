@@ -14,6 +14,7 @@ set(SupportSources
   SNPrintfBufTest.cpp
   SourceErrorManagerTest.cpp
   StatsAccumulatorTest.cpp
+  StringKindTest.cpp
   StringSetVectorTest.cpp
   UnicodeTest.cpp
   )

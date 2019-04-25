@@ -6,6 +6,7 @@
  */
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/BCGen/HBC/PredefinedStringIDs.h"
+#include "hermes/Support/StringKind.h"
 
 #include <cassert>
 
@@ -53,19 +54,16 @@ UniquingStringLiteralAccumulator::toStorage(
     }
   }
 
-  enum class StringKind {
-    String = 0,
-    Identifier,
-    Predefined,
-  };
-
   /// Associates a StringTableEntry with its original index in the table.
   struct IndexedEntry {
     size_t origIndex;
-    StringKind kind;
+    StringKind::Kind kind;
     StringTableEntry entry;
 
-    IndexedEntry(size_t origIndex, StringKind kind, StringTableEntry entry)
+    IndexedEntry(
+        size_t origIndex,
+        StringKind::Kind kind,
+        StringTableEntry entry)
         : origIndex(origIndex), kind(kind), entry(entry) {
       assert(
           (entry.isIdentifier() || kind == StringKind::String) &&
@@ -75,7 +73,7 @@ UniquingStringLiteralAccumulator::toStorage(
    private:
     // Key for performing comparisons with.  Ordering on this key is used to
     // optimise string index layout to compress better.
-    using Key = std::tuple<StringKind, uint32_t, uint32_t>;
+    using Key = std::tuple<StringKind::Kind, uint32_t, uint32_t>;
     inline Key key() const {
       return std::make_tuple(kind, entry.getOffset(), entry.getLength());
     }

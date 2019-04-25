@@ -24,6 +24,7 @@ add_llvm_library(hermesSupport
         SNPrintfBuf.cpp
         SourceErrorManager.cpp
         SimpleDiagHandler.cpp
+        StringKind.cpp
         StringTable.cpp
         UTF8.cpp
         LEB128.cpp
