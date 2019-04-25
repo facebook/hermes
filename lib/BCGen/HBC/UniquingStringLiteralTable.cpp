@@ -52,21 +52,30 @@ UniquingStringLiteralAccumulator::toStorage(
     }
   }
 
+  enum class StringKind {
+    String = 0,
+    Identifier,
+  };
+
   /// Associates a StringTableEntry with its original index in the table.
   struct IndexedEntry {
     size_t origIndex;
+    StringKind kind;
     StringTableEntry entry;
 
-    IndexedEntry(size_t origIndex, StringTableEntry entry)
-        : origIndex(origIndex), entry(entry) {}
+    IndexedEntry(size_t origIndex, StringKind kind, StringTableEntry entry)
+        : origIndex(origIndex), kind(kind), entry(entry) {
+      assert(
+          (entry.isIdentifier() || kind == StringKind::String) &&
+          "Identifiers cannot have 'String' Kind and vice-versa.");
+    }
 
    private:
     // Key for performing comparisons with.  Ordering on this key is used to
     // optimise string index layout to compress better.
-    using Key = std::tuple<bool, uint32_t, uint32_t>;
+    using Key = std::tuple<StringKind, uint32_t, uint32_t>;
     inline Key key() const {
-      return std::make_tuple(
-          entry.isIdentifier(), entry.getOffset(), entry.getLength());
+      return std::make_tuple(kind, entry.getOffset(), entry.getLength());
     }
 
    public:
@@ -80,7 +89,10 @@ UniquingStringLiteralAccumulator::toStorage(
 
   // Associate string index entries with their original indices in the table.
   for (size_t i = 0; i < strings.size(); ++i) {
-    indexedEntries.emplace_back(i, tableView[i]);
+    StringKind kind =
+        isIdentifier[i] ? StringKind::Identifier : StringKind::String;
+
+    indexedEntries.emplace_back(i, kind, tableView[i]);
   }
 
   // Sort the new strings by frequency of identifier references.
