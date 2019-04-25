@@ -63,9 +63,10 @@ UniquingStringLiteralAccumulator::toStorage(
    private:
     // Key for performing comparisons with.  Ordering on this key is used to
     // optimise string index layout to compress better.
-    using Key = std::tuple<uint32_t, uint32_t>;
+    using Key = std::tuple<bool, uint32_t, uint32_t>;
     inline Key key() const {
-      return std::make_tuple(entry.getOffset(), entry.getLength());
+      return std::make_tuple(
+          entry.isIdentifier(), entry.getOffset(), entry.getLength());
     }
 
    public:

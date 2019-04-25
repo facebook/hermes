@@ -6,11 +6,11 @@
 //CHECK-NEXT:[@ {{.*}}] LoadConstUInt8 0<Reg8>, 1<UInt8>
 //CHECK-NEXT:[@ {{.*}}] JLessEqual 45<Addr8>, 5<Reg8>, 0<Reg8>
 //CHECK-NEXT:[@ {{.*}}] GetGlobalObject 1<Reg8>
-//CHECK-NEXT:[@ {{.*}}] GetByIdShort 3<Reg8>, 1<Reg8>, 1<UInt8>, 0<UInt8>
+//CHECK-NEXT:[@ {{.*}}] GetByIdShort 3<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt8>
 //CHECK-NEXT:[@ {{.*}}] Sub 2<Reg8>, 5<Reg8>, 0<Reg8>
 //CHECK-NEXT:[@ {{.*}}] LoadConstUndefined 4<Reg8>
 //CHECK-NEXT:[@ {{.*}}] Call2 2<Reg8>, 3<Reg8>, 4<Reg8>, 2<Reg8>
-//CHECK-NEXT:[@ {{.*}}] GetByIdShort 3<Reg8>, 1<Reg8>, 1<UInt8>, 0<UInt8>
+//CHECK-NEXT:[@ {{.*}}] GetByIdShort 3<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt8>
 //CHECK-NEXT:[@ {{.*}}] LoadConstUInt8 1<Reg8>, 2<UInt8>
 //CHECK-NEXT:[@ {{.*}}] Sub 1<Reg8>, 5<Reg8>, 1<Reg8>
 //CHECK-NEXT:[@ {{.*}}] Call2 1<Reg8>, 3<Reg8>, 4<Reg8>, 1<Reg8>

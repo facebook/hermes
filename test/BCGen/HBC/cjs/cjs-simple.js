@@ -3,7 +3,7 @@
 print('done');
 
 // CHECK: Global String Table:
-// CHECK:   s4[ASCII, {{.*}}]: cjs-simple.js
+// CHECK:   s3[ASCII, {{.*}}]: cjs-simple.js
 
 // CHECK: CommonJS Modules:
-// CHECK-NEXT:   File ID 4 -> function ID 1
+// CHECK-NEXT:   File ID 3 -> function ID 1
