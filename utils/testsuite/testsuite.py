@@ -193,7 +193,9 @@ def generateSource(content, strict, suite, flags):
         "%OptimizeObjectForAddingMultipleProperties": "builtin_nop",
         "%ToFastProperties": "builtin_nop",
         "%NormalizeElements": "builtin_nop",
-        "%ArrayBufferNeuter": "builtin_nop",
+        "%ArrayBufferNeuter": "HermesInternal.detachArrayBuffer",
+        # ArrayBufferDetach is the more modern version of ArrayBufferNeuter.
+        "%ArrayBufferDetach": "HermesInternal.detachArrayBuffer",
         "%RunMicrotasks": "builtin_nop",
         "%SetAllocationTimeout": "builtin_nop",
         "%UnblockConcurrentRecompilation": "builtin_nop",
