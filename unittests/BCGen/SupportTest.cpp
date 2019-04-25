@@ -5,9 +5,11 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
+#include "hermes/BCGen/HBC/PredefinedStringIDs.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/RegExpSerialization.h"
+#include "hermes/VM/Predefined.h"
 
 #include "gtest/gtest.h"
 
@@ -637,6 +639,16 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
   for (auto str : baseStrings) {
     EXPECT_EQ(baseTable.getStringID(str), newTable.getStringID(str));
   }
+}
+
+TEST(PredefinedStringIDTest, NonExistent) {
+  EXPECT_FALSE(hbc::getPredefinedStringID("not_a_predefined_string"));
+}
+
+TEST(PredefinedStringIDTest, ObjectString) {
+  EXPECT_EQ(
+      vm::Predefined::getSymbolID(vm::Predefined::Object),
+      hbc::getPredefinedStringID("Object"));
 }
 
 } // end anonymous namespace
