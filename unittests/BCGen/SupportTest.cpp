@@ -651,4 +651,69 @@ TEST(PredefinedStringIDTest, ObjectString) {
       hbc::getPredefinedStringID("Object"));
 }
 
+TEST(StringAccumulatorTest, Ordering) {
+  // When outputing a string storage instance, the accumulator sorts its index
+  // entries.  First strings get grouped into "frequency classes".  The first
+  // group contains the top 2^8 strings by number of usages of that string as
+  // an identifier, the second group is the next (2^16 - 2^8) hottest strings,
+  // and the last group is all the remaining strings.  Then within each class,
+  // strings are further subdivided into the following categories (emitted in
+  // the given order):
+  //
+  // - Strings that are not identifiers.
+  // - Strings that are identifiers but are not predefined.
+  // - Strings that are both identifiers and predefined.
+  //
+  // Finally, within each category, strings are sorted first by the offset of
+  // their character buffer in the string storage, and then by their size.
+  //
+  // This test verified the grouping into categories.
+
+  hbc::UniquingStringLiteralAccumulator USLA;
+
+  // Make sure we have some predefined strings to play with.
+  ASSERT_TRUE(hbc::getPredefinedStringID("Object"));
+  ASSERT_TRUE(hbc::getPredefinedStringID("Function"));
+  ASSERT_TRUE(hbc::getPredefinedStringID("String"));
+
+  // ...And some not predefined strings too.
+  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefStr0"));
+  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefStr1"));
+  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefStr2"));
+  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefId0"));
+  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefId1"));
+  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefId2"));
+
+  USLA.addString("Object", /* isIdentifier */ true);
+  USLA.addString("String", /* isIdentifier */ false);
+  USLA.addString("NoPredefId0", /* isIdentifier */ true);
+  USLA.addString("NoPredefStr0", /* isIdentifier */ false);
+  USLA.addString("NoPredefStr1", /* isIdentifier */ false);
+  USLA.addString("NoPredefId1", /* isIdentifier */ true);
+  USLA.addString("Function", /* isIdentifier */ true);
+  USLA.addString("NoPredefStr2", /* isIdentifier */ false);
+  USLA.addString("NoPredefId2", /* isIdentifier */ true);
+
+  auto storage = hbc::UniquingStringLiteralAccumulator::toStorage(
+      std::move(USLA), /* optimize */ false);
+
+  hbc::StringLiteralTable SLT{storage};
+
+  std::vector<llvm::StringRef> expected{
+      "String",
+      "NoPredefStr0",
+      "NoPredefStr1",
+      "NoPredefStr2",
+      "NoPredefId0",
+      "NoPredefId1",
+      "NoPredefId2",
+      "Object",
+      "Function",
+  };
+
+  for (size_t i = 0; i < expected.size(); ++i) {
+    EXPECT_EQ(i, SLT.getStringID(expected[i])) << "at index " << i;
+  }
+}
+
 } // end anonymous namespace

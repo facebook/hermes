@@ -27,8 +27,8 @@ print(require('./cjs-subdir-2.js').alpha);
 // BC-NEXT:   s2[ASCII, {{.*}}]: global
 // BC-NEXT:   s3[ASCII, {{.*}}]: 2: init
 // BC-NEXT:   s4[ASCII, {{.*}}]: cjs_module
-// BC-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: print
-// BC-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: loadSegment
-// BC-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: context
-// BC-NEXT:   i8[ASCII, {{.*}}] #{{.*}}: x
-// BC-NEXT:   i9[ASCII, {{.*}}] #{{.*}}: alpha
+// BC-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: loadSegment
+// BC-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: x
+// BC-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: alpha
+// BC-NEXT:   i8[ASCII, {{.*}}] #{{.*}}: print
+// BC-NEXT:   i9[ASCII, {{.*}}] #{{.*}}: context

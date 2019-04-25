@@ -5,6 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
+#include "hermes/BCGen/HBC/PredefinedStringIDs.h"
 
 #include <cassert>
 
@@ -55,6 +56,7 @@ UniquingStringLiteralAccumulator::toStorage(
   enum class StringKind {
     String = 0,
     Identifier,
+    Predefined,
   };
 
   /// Associates a StringTableEntry with its original index in the table.
@@ -87,12 +89,20 @@ UniquingStringLiteralAccumulator::toStorage(
   std::vector<IndexedEntry> indexedEntries;
   indexedEntries.reserve(strings.size());
 
+  /// Works out the String Kind for the i'th string in the accumulator.
+  const auto kind = [&strings, &isIdentifier](size_t i) {
+    if (isIdentifier[i] && getPredefinedStringID(strings[i])) {
+      return StringKind::Predefined;
+    } else if (isIdentifier[i]) {
+      return StringKind::Identifier;
+    } else {
+      return StringKind::String;
+    }
+  };
+
   // Associate string index entries with their original indices in the table.
   for (size_t i = 0; i < strings.size(); ++i) {
-    StringKind kind =
-        isIdentifier[i] ? StringKind::Identifier : StringKind::String;
-
-    indexedEntries.emplace_back(i, kind, tableView[i]);
+    indexedEntries.emplace_back(i, kind(i), tableView[i]);
   }
 
   // Sort the new strings by frequency of identifier references.
@@ -112,7 +122,7 @@ UniquingStringLiteralAccumulator::toStorage(
 
   // Translates from an index in the string storage to an iterator into
   // indexedEntries.  Clamps indices that are too large or too small.
-  auto entriesFrom = [&indexedEntries, existingStrings](size_t ix) {
+  const auto entriesFrom = [&indexedEntries, existingStrings](size_t ix) {
     // Bound from below -- we only wish to sort new entries.
     ix = std::max(existingStrings, ix);
 
