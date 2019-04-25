@@ -177,29 +177,23 @@ void ChromeTraceSerializer::serializeSampledEvents(JSONEmitter &json) const {
   }
 }
 
-void ChromeTraceSerializer::serializeStackFrames(
-    JSONEmitter &json,
-    const ModuleIdManager &moduleIdManager) const {
-  const ModuleIdManager::BCProviderMap bcProviderMap =
-      moduleIdManager.generateBCProviderMap();
+void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
   for (const auto &tree : trace_.getCallTree()) {
-    tree->dfsWalk([&json, &bcProviderMap](
+    tree->dfsWalk([&json](
                       const ChromeStackFrameNode &node,
                       const ChromeStackFrameNode *parent) {
       json.emitKey(oscompat::to_string(node.getId()));
       json.openDict();
 
-      auto getFunctionName =
-          [](const std::shared_ptr<hbc::BCProvider> &bcProvider,
-             uint32_t funcId) {
-            hbc::RuntimeFunctionHeader functionHeader =
-                bcProvider->getFunctionHeader(funcId);
-            return bcProvider->getStringRefFromID(functionHeader.functionName())
-                .str();
-          };
+      auto getFunctionName = [](hbc::BCProvider *bcProvider, uint32_t funcId) {
+        hbc::RuntimeFunctionHeader functionHeader =
+            bcProvider->getFunctionHeader(funcId);
+        return bcProvider->getStringRefFromID(functionHeader.functionName())
+            .str();
+      };
 
       auto getSourceLocation =
-          [](const std::shared_ptr<hbc::BCProvider> &bcProvider,
+          [](hbc::BCProvider *bcProvider,
              uint32_t funcId,
              uint32_t opcodeOffset) -> OptValue<hbc::DebugSourceLocation> {
         const hbc::DebugOffsets *debugOffsets =
@@ -215,9 +209,8 @@ void ChromeTraceSerializer::serializeStackFrames(
       std::string frameName, categoryName;
       const auto &frame = node.getFrameInfo();
       if (frame.kind == SamplingProfiler::StackFrame::FrameKind::JSFunction) {
-        ModuleIdManager::ModuleId moduleId = frame.jsFrame.runtimeModuleId;
-        assert(bcProviderMap.count(moduleId) == 1 && "Unknown module id");
-        const auto &bcProvider = bcProviderMap.lookup(moduleId);
+        RuntimeModule *module = frame.jsFrame.module;
+        hbc::BCProvider *bcProvider = module->getBytecode();
 
         llvm::raw_string_ostream os(frameName);
         os << getFunctionName(bcProvider, frame.jsFrame.functionId);
@@ -281,9 +274,7 @@ void ChromeTraceSerializer::serializeStackFrames(
   }
 }
 
-void ChromeTraceSerializer::serialize(
-    const ModuleIdManager &moduleIdManager,
-    llvm::raw_ostream &OS) const {
+void ChromeTraceSerializer::serialize(llvm::raw_ostream &OS) const {
   JSONEmitter json(OS);
 
   // The format of the chrome trace is a bit vague. Here are the essential
@@ -316,7 +307,7 @@ void ChromeTraceSerializer::serialize(
   // Emit "stackFrames" entries.
   json.emitKey("stackFrames");
   json.openDict();
-  serializeStackFrames(json, moduleIdManager);
+  serializeStackFrames(json);
   json.closeDict(); // stackFrames.
 
   json.closeDict(); // Whole trace.

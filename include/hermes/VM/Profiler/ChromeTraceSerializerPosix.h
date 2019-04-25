@@ -193,16 +193,13 @@ class ChromeTraceSerializer {
   // Emit "sampled" events for captured stack traces.
   void serializeSampledEvents(JSONEmitter &json) const;
   // Emit "stackFrames" entries.
-  void serializeStackFrames(
-      JSONEmitter &json,
-      const ModuleIdManager &moduleIdManager) const;
+  void serializeStackFrames(JSONEmitter &json) const;
 
  public:
   explicit ChromeTraceSerializer(ChromeTraceFormat &&chromeTrace);
 
   /// Serialize chrome trace to \p OS.
-  void serialize(const ModuleIdManager &moduleIdManager, llvm::raw_ostream &OS)
-      const;
+  void serialize(llvm::raw_ostream &OS) const;
 };
 
 } // namespace vm

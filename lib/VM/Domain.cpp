@@ -9,6 +9,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSLib.h"
+#include "hermes/VM/Profiler/SamplingProfiler.h"
 
 namespace hermes {
 namespace vm {
@@ -29,12 +30,16 @@ PseudoHandle<Domain> Domain::create(Runtime *runtime) {
   void *mem =
       runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(Domain));
   auto self = createPseudoHandle(new (mem) Domain(runtime));
+  auto &samplingProfiler = SamplingProfiler::getInstance();
+  samplingProfiler->increaseDomainCount();
   return self;
 }
 
 void Domain::_finalizeImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast<Domain>(cell);
   self->~Domain();
+  auto &samplingProfiler = SamplingProfiler::getInstance();
+  samplingProfiler->decreaseDomainCount();
 }
 
 Domain::~Domain() {

@@ -9,7 +9,6 @@
 
 #include "hermes/Support/Semaphore.h"
 #include "hermes/Support/ThreadLocal.h"
-#include "hermes/VM/Profiler/ModuleIdManager.h"
 #include "hermes/VM/Runtime.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -42,8 +41,8 @@ class SamplingProfiler {
   // TODO: consolidate the stack frame struct with other function/extern
   // profilers.
   struct JSFunctionFrameInfo {
-    // Id of the module this function is associated with.
-    ModuleIdManager::ModuleId runtimeModuleId;
+    // RuntimeModule this function is associated with.
+    RuntimeModule *module;
     // Function id associated with current frame.
     uint32_t functionId;
     // IP offset within the function.
@@ -100,8 +99,9 @@ class SamplingProfiler {
   /// signal handler is unsafe.
   static volatile std::atomic<SamplingProfiler *> sProfilerInstance_;
 
-  /// Lock for profiler operations.
+  /// Lock for profiler operations and access to member fields.
   std::mutex profilerLock_;
+
   /// Stores a list of active <thread, runtime> pair.
   /// Protected by profilerLock_.
   llvm::DenseMap<Runtime *, pthread_t> activeRuntimeThreads_;
@@ -134,8 +134,16 @@ class SamplingProfiler {
   /// Prellocated map that contains thread names mapping.
   ThreadNamesMap threadNames_;
 
-  /// Manages the module id for symbolication.
-  ModuleIdManager moduleIdManager_;
+  /// Domains to be kept alive for sampled RuntimeModules.
+  /// Its storage size is increased/decreased by
+  /// increaseDomainCount/decreaseDomainCount outside signal handler.
+  /// New storage is initialized with null pointers.
+  /// This prevents any memory allocation to domains_ inside
+  /// signal handler.
+  /// domains_.size() >= number of constructed but not destructed Domain
+  /// objects.
+  /// registerDomain() keeps a Domain from being destructed.
+  std::vector<Domain *> domains_;
 
  private:
   SamplingProfiler();
@@ -150,6 +158,11 @@ class SamplingProfiler {
 
   /// Unregister sampling signal handler.
   bool unregisterSignalHandler();
+
+  /// Hold \p domain so that the RuntimeModule(s) used by profiler are not
+  /// released during symbolication.
+  /// Refer to Domain.h for relationship between Domain and RuntimeModule.
+  void registerDomain(Domain *domain);
 
   /// Signal handler to walk the stack frames.
   static void profilingSignalHandler(int signo);
@@ -175,12 +188,7 @@ class SamplingProfiler {
 
   /// Clear previous stored samples.
   /// Note: caller should take the lock before calling.
-  void clear() {
-    sampledStacks_.clear();
-    moduleIdManager_.clear();
-    // TODO: keep thread names that are still in use.
-    threadNames_.clear();
-  }
+  void clear();
 
  public:
   /// Return the singleton profiler instance.
@@ -193,9 +201,16 @@ class SamplingProfiler {
   /// Unregister an active \p runtime and current thread with profiler.
   void unregisterRuntime(Runtime *runtime);
 
+  /// Reserve domain slots to avoid memory allocation in signal handler.
+  void increaseDomainCount();
+  /// Shrink domain storage to fit domains alive.
+  void decreaseDomainCount();
+
   /// Mark roots that are kept alive by the SamplingProfiler.
   void markRoots(SlotAcceptorWithNames &acceptor) {
-    moduleIdManager_.markRoots(acceptor);
+    for (Domain *&domain : domains_) {
+      acceptor.acceptPtr(domain);
+    }
   }
 
   /// Dump sampled stack to \p OS.

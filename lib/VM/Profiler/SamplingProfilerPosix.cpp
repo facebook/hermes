@@ -11,6 +11,7 @@
 #include "hermes/Support/ThreadLocal.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Profiler/ChromeTraceSerializerPosix.h"
+#include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 
 #include <assert.h>
@@ -54,6 +55,44 @@ void SamplingProfiler::unregisterRuntime(Runtime *runtime) {
   (void)succeed;
 
   threadLocalRuntime_.set(nullptr);
+}
+
+void SamplingProfiler::increaseDomainCount() {
+  std::lock_guard<std::mutex> lockGuard(profilerLock_);
+  // Reserve an empty slot. Use push_back to get exponential capacity expansion.
+  domains_.push_back(nullptr);
+}
+
+void SamplingProfiler::decreaseDomainCount() {
+  std::lock_guard<std::mutex> lockGuard(profilerLock_);
+  // Shrink domains_ because a Domain has been destroyed.
+  // The destroyed domain should not be held by SamplingProfiler so
+  // there must have a corresponding reserved empty slot in domains_. Since
+  // domains_ is used from front the last slot in domains_ should be null.
+  assert(!domains_.empty() && "Why there is no domain?");
+  assert(
+      domains_.back() == nullptr &&
+      "The destroyed domain should not be referenced.");
+  domains_.pop_back();
+}
+
+void SamplingProfiler::registerDomain(Domain *domain) {
+  // If domain is already registered do nothing, otherwise
+  // store domain in the first unused/empty slot.
+  // Invariant: domains_ are always filled from the front and the whole content
+  // are destroyed at once so the registered/used domains are always at the
+  // beginning of domains_.
+  for (size_t i = 0, e = domains_.size(); i < e; ++i) {
+    if (domains_[i] == domain) {
+      // Already registered.
+      return;
+    } else if (domains_[i] == nullptr) {
+      // Not registered before, fill in the first reserved empty slot.
+      domains_[i] = domain;
+      return;
+    }
+  }
+  llvm_unreachable("Cannot find a reserved null domain slot.");
 }
 
 int SamplingProfiler::invokeSignalAction(void (*handler)(int)) {
@@ -185,7 +224,8 @@ uint32_t SamplingProfiler::walkRuntimeStack(
           (ip == nullptr ? 0 : calleeCodeBlock->getOffsetOf(ip));
       auto *module = calleeCodeBlock->getRuntimeModule();
       assert(module != nullptr && "Cannot fetch runtimeModule for code block");
-      frameStorage.jsFrame.runtimeModuleId = moduleIdManager_.findOrAdd(module);
+      frameStorage.jsFrame.module = module;
+      registerDomain(module->getDomainUnsafe());
     } else {
       if (auto *nativeFunction =
               dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {
@@ -255,14 +295,12 @@ uint32_t SamplingProfiler::walkRuntimeStack(
     constexpr uint64_t kNativeFrameMask = ((uint64_t)1 << 63);
     const StackFrame &stackFrame = profilerInstance->sampleStorage_.stack[i];
     if (stackFrame.kind == StackFrame::FrameKind::JSFunction) {
-      ModuleIdManager::ModuleId moduleId = stackFrame.jsFrame.runtimeModuleId;
-      OptValue<RuntimeModule *> moduleOpt =
-          profilerInstance->moduleIdManager_.getModule(moduleId);
-      assert(moduleOpt.hasValue() && "Unable to find module from id.");
-      auto *bcProvider = moduleOpt.getValue()->getBytecode();
+      auto *bcProvider = stackFrame.jsFrame.module->getBytecode();
       uint32_t virtualOffset = bcProvider->getVirtualOffsetForFunction(
                                    stackFrame.jsFrame.functionId) +
           stackFrame.jsFrame.offset;
+
+      uint32_t moduleId = bcProvider->getCJSModuleOffset();
       uint64_t frameAddress = ((uint64_t)moduleId << 32) + virtualOffset;
       assert(
           (frameAddress & kNativeFrameMask) == 0 &&
@@ -320,7 +358,7 @@ void SamplingProfiler::dumpChromeTrace(llvm::raw_ostream &OS) {
   auto pid = getpid();
   ChromeTraceSerializer serializer(
       ChromeTraceFormat::create(pid, threadNames_, sampledStacks_));
-  serializer.serialize(moduleIdManager_, OS);
+  serializer.serialize(OS);
   clear();
 }
 
@@ -357,6 +395,17 @@ bool SamplingProfiler::disable() {
   // Telling timer thread to exit.
   enabled_ = false;
   return true;
+}
+
+void SamplingProfiler::clear() {
+  sampledStacks_.clear();
+  // Release all strong roots to domains.
+  // Note: we can't clear domains_ because we have to maintain the storage size.
+  for (Domain *&domain : domains_) {
+    domain = nullptr;
+  }
+  // TODO: keep thread names that are still in use.
+  threadNames_.clear();
 }
 
 bool operator==(
