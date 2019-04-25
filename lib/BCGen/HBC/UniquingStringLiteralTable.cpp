@@ -6,7 +6,6 @@
  */
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/BCGen/HBC/PredefinedStringIDs.h"
-#include "hermes/Support/StringKind.h"
 
 #include <cassert>
 
@@ -147,6 +146,17 @@ UniquingStringLiteralAccumulator::toStorage(
   }
 
   return std::move(storage);
+}
+
+std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
+  StringKind::Accumulator acc;
+
+  assert(strings_.size() == isIdentifier_.size());
+  for (size_t i = 0; i < strings_.size(); ++i) {
+    acc.push_back(kind(strings_[i], isIdentifier_[i]));
+  }
+
+  return std::move(acc).entries();
 }
 
 } // namespace hbc

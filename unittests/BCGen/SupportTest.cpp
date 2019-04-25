@@ -699,7 +699,7 @@ TEST(StringAccumulatorTest, Ordering) {
 
   hbc::StringLiteralTable SLT{storage};
 
-  std::vector<llvm::StringRef> expected{
+  std::vector<llvm::StringRef> expectedStrings{
       "String",
       "NoPredefStr0",
       "NoPredefStr1",
@@ -711,8 +711,23 @@ TEST(StringAccumulatorTest, Ordering) {
       "Function",
   };
 
-  for (size_t i = 0; i < expected.size(); ++i) {
-    EXPECT_EQ(i, SLT.getStringID(expected[i])) << "at index " << i;
+  for (size_t i = 0; i < expectedStrings.size(); ++i) {
+    EXPECT_EQ(i, SLT.getStringID(expectedStrings[i])) << "at index " << i;
+  }
+
+  std::vector<StringKind::Entry> expectedKinds{
+      {StringKind::String, 4},
+      {StringKind::Identifier, 3},
+      {StringKind::Predefined, 2},
+  };
+
+  auto actualKinds = SLT.getStringKinds();
+  EXPECT_EQ(actualKinds.size(), expectedKinds.size());
+  for (size_t i = 0; i < expectedKinds.size(); ++i) {
+    EXPECT_EQ(expectedKinds[i].kind(), actualKinds[i].kind())
+        << "at index " << i;
+    EXPECT_EQ(expectedKinds[i].count(), actualKinds[i].count())
+        << "at index " << i;
   }
 }
 

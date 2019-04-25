@@ -8,6 +8,7 @@
 #define HERMES_BCGEN_HBC_UNIQUINGSTRINGLITERALTABLE_H
 
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
+#include "hermes/Support/StringKind.h"
 
 namespace hermes {
 namespace hbc {
@@ -80,6 +81,13 @@ struct StringLiteralTable final : public StringLiteralIDMapping {
   /// \return string id of an existing \p str in string table, assuming it is
   /// marked as an identifier.
   inline uint32_t getIdentifierID(llvm::StringRef str) const;
+
+  /// \return a sequence of string kinds represented by a run-length encoding.
+  /// The i'th kind in the abstract sequence (i.e. not the i'th entry in the
+  /// returned vector, which represents a run of the same kind) is the kind of
+  /// the string with ID i in the mapping (and the underlying storage it was
+  /// initialised with).
+  std::vector<StringKind::Entry> getStringKinds() const;
 };
 
 inline bool StringLiteralIDMapping::empty() const {
