@@ -41,12 +41,12 @@ class UniquingStringLiteralAccumulator final : public StringLiteralIDMapping {
   /// Strings the accumulator was initialised with.
   ConsecutiveStringStorage storage_;
 
-  /// The number of times a string was encountered.  This information is only
-  /// tracked for newly added strings (those not in the storage the accumulator
-  /// may have been initialized with) and is keyed by the offset of the string
-  /// in the mapping from the first newly added string.  This information is
-  /// used to order the resulting storage.
-  std::vector<size_t> freqs_;
+  /// The number of times a string was added as an identifier.  This information
+  /// is only tracked for newly added strings (those not in the storage the
+  /// accumulator may have been initialized with) and is keyed by the offset of
+  /// the string in the mapping from the first newly added string.  This
+  /// information is used to order the resulting storage.
+  std::vector<size_t> numIdentifierRefs_;
 
  public:
   UniquingStringLiteralAccumulator() = default;
@@ -97,19 +97,17 @@ inline void UniquingStringLiteralAccumulator::addString(
   const auto fresh = strings_.size();
   auto id = strings_.insert(str);
   if (id == fresh) {
-    isIdentifier_.push_back(isIdentifier);
-    freqs_.push_back(1);
-    return;
-  }
-
-  if (id >= storage_.count()) {
-    // We only track the frequency of new strings, so the ID needs to be
-    // translated.
-    freqs_[id - storage_.count()]++;
+    isIdentifier_.push_back(false);
+    numIdentifierRefs_.push_back(0);
   }
 
   if (isIdentifier) {
     isIdentifier_[id] = true;
+    if (id >= storage_.count()) {
+      // We only track the frequency of new strings, so the ID needs to be
+      // translated.
+      numIdentifierRefs_[id - storage_.count()]++;
+    }
   }
 }
 

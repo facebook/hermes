@@ -33,7 +33,7 @@ UniquingStringLiteralAccumulator::toStorage(
   auto &storage = table.storage_;
   auto &strings = table.strings_;
   auto &isIdentifier = table.isIdentifier_;
-  auto &freqs = table.freqs_;
+  auto &numIdentifierRefs = table.numIdentifierRefs_;
 
   const size_t existingStrings = storage.count();
   assert(
@@ -83,15 +83,16 @@ UniquingStringLiteralAccumulator::toStorage(
     indexedEntries.emplace_back(i, tableView[i]);
   }
 
-  // Sort the new strings by frequency.
+  // Sort the new strings by frequency of identifier references.
   std::sort(
       indexedEntries.begin(),
       indexedEntries.end(),
-      [&freqs, existingStrings](const IndexedEntry &a, const IndexedEntry &b) {
+      [&numIdentifierRefs, existingStrings](
+          const IndexedEntry &a, const IndexedEntry &b) {
         auto ai = a.origIndex - existingStrings;
         auto bi = b.origIndex - existingStrings;
 
-        return freqs[ai] > freqs[bi];
+        return numIdentifierRefs[ai] > numIdentifierRefs[bi];
       });
 
   // Translates from an index in the string storage to an iterator into
