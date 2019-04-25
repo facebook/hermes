@@ -283,7 +283,8 @@ BLACK_LIST = [
     "mjsunit/es6/string-startswith.js",
     "mjsunit/es6/string-startwith.js",
     "mjsunit/es6/tail-call-",
-    "mjsunit/es6/typedarray-copywithin.js",
+    # These tests test for incorrect behavior of detached ArrayBuffer that v8
+    # supports.
     "mjsunit/es6/typedarray-every.js",
     "mjsunit/es6/typedarray-foreach.js",
     "mjsunit/es7/array-includes-receiver.js",
