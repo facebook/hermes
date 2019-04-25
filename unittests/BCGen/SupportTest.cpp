@@ -67,7 +67,7 @@ TEST(StringStorageTest, ConsecutiveStringStorageTest) {
 
   hbc::StringLiteralTable SLT{CSS};
 
-  EXPECT_EQ(CSS.count(), 4);
+  EXPECT_EQ(SLT.count(), 4);
   EXPECT_EQ(SLT.getStringID("hello"), 0);
   EXPECT_EQ(SLT.getStringID("world"), 1);
   EXPECT_EQ(SLT.getStringID("some string"), 2);

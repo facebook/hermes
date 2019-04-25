@@ -17,6 +17,9 @@ namespace hbc {
 /// gathers strings into a storage, and the StringLiteralTable, which exposes
 /// the mapping from string to numeric ID.
 struct StringLiteralIDMapping {
+  /// \return the number of strings in the mapping.
+  inline size_t count() const;
+
   /// \return true if and only if no strings have been recorded.
   inline bool empty() const;
 
@@ -89,6 +92,10 @@ struct StringLiteralTable final : public StringLiteralIDMapping {
   /// initialised with).
   std::vector<StringKind::Entry> getStringKinds() const;
 };
+
+inline size_t StringLiteralIDMapping::count() const {
+  return strings_.size();
+}
 
 inline bool StringLiteralIDMapping::empty() const {
   return strings_.size() == 0;
