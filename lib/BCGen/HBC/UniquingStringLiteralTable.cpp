@@ -78,18 +78,20 @@ UniquingStringLiteralAccumulator::toStorage(
   std::vector<IndexedEntry> indexedEntries;
   indexedEntries.reserve(strings.size());
 
-  // Associate the newly added strings with their original indices in the
-  // table.
-  for (size_t i = existingStrings; i < strings.size(); ++i) {
+  // Associate string index entries with their original indices in the table.
+  for (size_t i = 0; i < strings.size(); ++i) {
     indexedEntries.emplace_back(i, tableView[i]);
   }
 
   // Sort the new strings by frequency of identifier references.
   std::sort(
-      indexedEntries.begin(),
+      indexedEntries.begin() + existingStrings,
       indexedEntries.end(),
       [&numIdentifierRefs, existingStrings](
           const IndexedEntry &a, const IndexedEntry &b) {
+        assert(a.origIndex >= existingStrings && "Sorting an old string");
+        assert(b.origIndex >= existingStrings && "Sorting an old string");
+
         auto ai = a.origIndex - existingStrings;
         auto bi = b.origIndex - existingStrings;
 
@@ -99,8 +101,8 @@ UniquingStringLiteralAccumulator::toStorage(
   // Translates from an index in the string storage to an iterator into
   // indexedEntries.  Clamps indices that are too large or too small.
   auto entriesFrom = [&indexedEntries, existingStrings](size_t ix) {
-    // Bound from below and shift down by the number of existing strings.
-    ix = std::max(existingStrings, ix) - existingStrings;
+    // Bound from below -- we only wish to sort new entries.
+    ix = std::max(existingStrings, ix);
 
     // Bound from above by the number of indexed entries.
     ix = std::min(ix, indexedEntries.size());
@@ -114,7 +116,7 @@ UniquingStringLiteralAccumulator::toStorage(
 
   // Write the re-ordered entries back into the table.
   for (size_t i = existingStrings; i < strings.size(); ++i) {
-    tableView[i] = indexedEntries[i - existingStrings].entry;
+    tableView[i] = indexedEntries[i].entry;
   }
 
   return std::move(storage);
