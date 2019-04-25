@@ -13,6 +13,22 @@
 namespace hermes {
 namespace hbc {
 
+namespace {
+
+/// Works out the String Kind for the string \p str depending on whether it
+/// \p isIdentifier or not.
+StringKind::Kind kind(llvm::StringRef str, bool isIdentifier) {
+  if (isIdentifier && getPredefinedStringID(str)) {
+    return StringKind::Predefined;
+  } else if (isIdentifier) {
+    return StringKind::Identifier;
+  } else {
+    return StringKind::String;
+  }
+}
+
+} // namespace
+
 StringLiteralIDMapping::StringLiteralIDMapping(
     const ConsecutiveStringStorage &css) {
   // Initialize our tables by decoding our storage's string table.
@@ -87,20 +103,11 @@ UniquingStringLiteralAccumulator::toStorage(
   std::vector<IndexedEntry> indexedEntries;
   indexedEntries.reserve(strings.size());
 
-  /// Works out the String Kind for the i'th string in the accumulator.
-  const auto kind = [&strings, &isIdentifier](size_t i) {
-    if (isIdentifier[i] && getPredefinedStringID(strings[i])) {
-      return StringKind::Predefined;
-    } else if (isIdentifier[i]) {
-      return StringKind::Identifier;
-    } else {
-      return StringKind::String;
-    }
-  };
 
   // Associate string index entries with their original indices in the table.
   for (size_t i = 0; i < strings.size(); ++i) {
-    indexedEntries.emplace_back(i, kind(i), tableView[i]);
+    indexedEntries.emplace_back(
+        i, kind(strings[i], isIdentifier[i]), tableView[i]);
   }
 
   // Sort the new strings by frequency of identifier references.
