@@ -13,8 +13,8 @@ namespace hermes {
 namespace hbc {
 
 /// Implementation shared between the UniquingStringLiteralAccumulator, which
-/// gathers strings into a storage, and the UniquingStringLiteralTable, which
-/// exposes the mapping from string to numeric ID.
+/// gathers strings into a storage, and the StringLiteralTable, which exposes
+/// the mapping from string to numeric ID.
 struct StringLiteralIDMapping {
   /// \return true if and only if no strings have been recorded.
   inline bool empty() const;
@@ -67,9 +67,9 @@ class UniquingStringLiteralAccumulator final : public StringLiteralIDMapping {
       bool optimize = false);
 };
 
-/// Exposes the mapping from strings to their IDs in a
-/// ConsecutiveStringStorage.  This class does not own the storage it is
-/// mapping, but also does not require the storage to outlive it.
+/// Exposes the mapping from strings to their IDs in a ConsecutiveStringStorage.
+/// This class does not own the storage it is mapping, but also does not require
+/// the storage to outlive it.
 struct StringLiteralTable final : public StringLiteralIDMapping {
   StringLiteralTable() = default;
   inline StringLiteralTable(const ConsecutiveStringStorage &css);
