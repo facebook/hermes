@@ -68,4 +68,16 @@ TEST(StringSetVector, Find) {
   EXPECT_TRUE(ssv.end() == ssv.find("bar"));
 }
 
+TEST(StringSetVector, Indexing) {
+  StringSetVector ssv;
+
+  ssv.insert("hello");
+  ssv.insert("world");
+  ssv.insert("hello");
+
+  ASSERT_EQ(2, ssv.size());
+  EXPECT_EQ("hello", ssv[0]);
+  EXPECT_EQ("world", ssv[1]);
+}
+
 } // namespace
