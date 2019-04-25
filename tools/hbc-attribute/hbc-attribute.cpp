@@ -134,6 +134,9 @@ class UsageCounter : public BytecodeVisitor {
       }
     }
     emitter_.emitKeyValue("virtualOffset", virtualOffsets_[currentFuncId_]);
+    emitter_.emitKeyValue(
+        "bytecodeSize",
+        bcProvider_->getFunctionHeader(currentFuncId_).bytecodeSizeInBytes());
     emitter_.closeDict();
   }
 
