@@ -277,6 +277,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 
     // Stats for the module with most accesses.
     uint32_t bytecodePagesAccessed = 0;
+    uint32_t bytecodeSize = 0;
     JenkinsHash bytecodePagesTraceHash = 0;
     double bytecodeIOus = 0;
     // Sample a small number of (position in access order, page id) pairs
@@ -290,6 +291,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
         if (ids.size() <= bytecodePagesAccessed)
           continue;
         bytecodePagesAccessed = ids.size();
+        bytecodeSize = module.getBytecode()->getRawBuffer().size();
         bytecodePagesTraceHash = 0;
         for (auto id : ids) {
           // char16_t is at least 16 bits unsigned, so the quality of this hash
@@ -313,9 +315,9 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     }
     if (bytecodePagesAccessed) {
       SET_PROP_NEW("js_bytecodePagesAccessed", bytecodePagesAccessed);
+      SET_PROP_NEW("js_bytecodeSize", bytecodeSize);
       SET_PROP_NEW("js_bytecodePagesTraceHash", bytecodePagesTraceHash);
       SET_PROP_NEW("js_bytecodeIOTime", bytecodeIOus / 1e6);
-      std::string blah("blah");
       SET_PROP_STR(
           "js_bytecodePagesTraceSample",
           ASCIIRef(sample.data(), sample.size()));
