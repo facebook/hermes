@@ -568,7 +568,7 @@ class ESTreeIRGen {
   /// iterator itself and its \c next() method.
   ///
   /// \return (iterator, nextMethod)
-  IteratorRecord emitGetIteraror(Value *obj);
+  IteratorRecord emitGetIterator(Value *obj);
 
   /// ES2018 7.4.2 IteratorNext
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratornext

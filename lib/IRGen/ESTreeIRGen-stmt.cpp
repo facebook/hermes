@@ -446,7 +446,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   label.continueTarget = getNextBlock;
 
   auto *exprValue = genExpression(forOfStmt->_right);
-  auto iteratorRecord = emitGetIteraror(exprValue);
+  auto iteratorRecord = emitGetIterator(exprValue);
 
   Builder.createBranchInst(getNextBlock);
 

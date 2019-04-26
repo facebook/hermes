@@ -550,7 +550,7 @@ Value *ESTreeIRGen::emitIterarorSymbol() {
       Builder.createTryLoadGlobalPropertyInst("Symbol"), "iterator");
 }
 
-ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIteraror(Value *obj) {
+ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIterator(Value *obj) {
   auto *method = Builder.createLoadPropertyInst(obj, emitIterarorSymbol());
   auto *iterator = Builder.createCallInst(method, obj, {});
 
@@ -591,7 +591,7 @@ void ESTreeIRGen::emitDestructuringAssignment(
 void ESTreeIRGen::emitDestructuringArray(
     ESTree::ArrayPatternNode *target,
     Value *source) {
-  auto iteratorRecord = emitGetIteraror(source);
+  auto iteratorRecord = emitGetIterator(source);
 
   /// iteratorDone = undefined.
   auto *iteratorDone =
