@@ -136,6 +136,7 @@ class TestFlag(enum.Enum):
     TEST_FAILED = enum.auto()
     TEST_PASSED = enum.auto()
     TEST_SKIPPED = enum.auto()
+    TEST_UNEXPECTED_PASSED = enum.auto()
     COMPILE_FAILED = enum.auto()
     COMPILE_TIMEOUT = enum.auto()
     EXECUTE_FAILED = enum.auto()
@@ -146,6 +147,7 @@ class TestFlag(enum.Enum):
             TestFlag.TEST_FAILED.value: "TEST_FAILED",
             TestFlag.TEST_PASSED.value: "TEST_PASSED",
             TestFlag.TEST_SKIPPED.value: "TEST_SKIPPED",
+            TestFlag.TEST_UNEXPECTED_PASSED.value: "TEST_UNEXPECTED_PASSED",
             TestFlag.COMPILE_FAILED.value: "COMPILE_FAILED",
             TestFlag.COMPILE_TIMEOUT.value: "COMPILE_TIMEOUT",
             TestFlag.EXECUTE_FAILED.value: "EXECUTE_FAILED",
@@ -406,14 +408,15 @@ ESPRIMA_TEST_STATUS_MAP = {
 }
 
 
-def runTest(filename, keep_tmp, binary_path, hvm, esprima_runner):
+def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner):
     """
     Runs a single js test pointed by \p filename
     """
     baseFileName = basename(filename)
     suite = getSuite(filename)
+    blacklisted = fileInBlacklist(filename)
 
-    if fileInBlacklist(filename):
+    if blacklisted and not test_blacklist:
         printVerbose("Skipping test in blacklist: {}".format(filename))
         return (TestFlag.TEST_SKIPPED, "")
 
@@ -497,7 +500,14 @@ def runTest(filename, keep_tmp, binary_path, hvm, esprima_runner):
                             baseFileName
                         )
                     )
-                    return (TestFlag.COMPILE_FAILED, "")
+                    # If the test was in the blacklist, it was possible a
+                    # compiler failure was expected. Else, it is unexpected and
+                    # will return a failure.
+                    return (
+                        (TestFlag.TEST_SKIPPED, "")
+                        if blacklisted
+                        else (TestFlag.COMPILE_FAILED, "")
+                    )
             except subprocess.CalledProcessError as e:
                 run_vm = False
                 if negativePhase != "early":
@@ -508,11 +518,19 @@ def runTest(filename, keep_tmp, binary_path, hvm, esprima_runner):
                     )
                     errString = e.output.decode("utf-8").strip()
                     printVerbose(textwrap.indent(errString, "\t"))
-                    return (TestFlag.COMPILE_FAILED, errString)
+                    return (
+                        (TestFlag.TEST_SKIPPED, "")
+                        if blacklisted
+                        else (TestFlag.COMPILE_FAILED, errString)
+                    )
                 printVerbose("PASS: Hermes correctly failed to compile")
             except subprocess.TimeoutExpired:
                 printVerbose("FAIL: Compilation timed out on {}".format(baseFileName))
-                return (TestFlag.COMPILE_TIMEOUT, "")
+                return (
+                    (TestFlag.TEST_SKIPPED, "")
+                    if blacklisted
+                    else (TestFlag.COMPILE_TIMEOUT, "")
+                )
 
             # If the compilation succeeded, run the bytecode with the specified VM.
             if run_vm:
@@ -529,7 +547,11 @@ def runTest(filename, keep_tmp, binary_path, hvm, esprima_runner):
 
                     if negativePhase == "runtime":
                         printVerbose("FAIL: Expected execution to throw")
-                        return (TestFlag.EXECUTE_FAILED, "")
+                        return (
+                            (TestFlag.TEST_SKIPPED, "")
+                            if blacklisted
+                            else (TestFlag.EXECUTE_FAILED, "")
+                        )
                     else:
                         printVerbose("PASS: Execution completed successfully")
                 except subprocess.CalledProcessError as e:
@@ -546,21 +568,35 @@ def runTest(filename, keep_tmp, binary_path, hvm, esprima_runner):
                             printVerbose(textwrap.indent(errString, "\t"))
                         else:
                             printVerbose("No output received from process")
-                        return (TestFlag.EXECUTE_FAILED, errString)
+                        return (
+                            (TestFlag.TEST_SKIPPED, "")
+                            if blacklisted
+                            else (TestFlag.EXECUTE_FAILED, errString)
+                        )
                     else:
                         printVerbose(
                             "PASS: Execution of binary threw an error as expected"
                         )
                 except subprocess.TimeoutExpired:
                     printVerbose("FAIL: Execution of binary timed out")
-                    return (TestFlag.EXECUTE_TIMEOUT, "")
+                    return (
+                        (TestFlag.TEST_SKIPPED, "")
+                        if blacklisted
+                        else (TestFlag.EXECUTE_TIMEOUT, "")
+                    )
 
     if not keep_tmp:
         os.unlink(temp.name)
         os.unlink(binfile.name)
 
-    printVerbose("PASS: Test completed successfully")
-    return (TestFlag.TEST_PASSED, "")
+    if blacklisted:
+        # If the test was blacklisted, but it passed successfully, consider that
+        # an error case.
+        printVerbose("FAIL: A blacklisted test completed successfully")
+        return (TestFlag.TEST_UNEXPECTED_PASSED, "")
+    else:
+        printVerbose("PASS: Test completed successfully")
+        return (TestFlag.TEST_PASSED, "")
 
 
 def makeCalls(params, onlyfiles, rangeLeft, rangeRight):
@@ -587,6 +623,7 @@ def testLoop(calls, jobs, fail_fast):
         TestFlag.EXECUTE_TIMEOUT: 0,
         TestFlag.TEST_PASSED: 0,
         TestFlag.TEST_SKIPPED: 0,
+        TestFlag.TEST_UNEXPECTED_PASSED: 0,
     }
 
     with Pool(processes=jobs) as pool:
@@ -634,6 +671,12 @@ def get_arg_parser():
         dest="keep_tmp",
         action="store_true",
         help="Keep temporary files of successful tests.",
+    )
+    parser.add_argument(
+        "--test-blacklist",
+        dest="test_blacklist",
+        action="store_true",
+        help="Also test if tests in the blacklist fail",
     )
     parser.add_argument(
         "-a",
@@ -698,6 +741,7 @@ def run(
     is_verbose,
     match,
     source,
+    test_blacklist,
     keep_tmp,
     show_all,
 ):
@@ -767,7 +811,10 @@ def run(
     esprima_runner = esprima.EsprimaTestRunner(verbose)
 
     calls = makeCalls(
-        (keep_tmp, binary_path, hvm, esprima_runner), onlyfiles, rangeLeft, rangeRight
+        (test_blacklist, keep_tmp, binary_path, hvm, esprima_runner),
+        onlyfiles,
+        rangeLeft,
+        rangeRight,
     )
     results, resultsHist = testLoop(calls, jobs, fail_fast)
 
@@ -792,16 +839,20 @@ def run(
     else:
         passRate = "--"
 
-    print("------------------------------")
-    print("| RESULTS: HVM    |          |")
-    print("|-----------------+----------|")
-    print("| Pass            | {:>8} |".format(resultsHist[TestFlag.TEST_PASSED]))
-    print("|-----------------+----------|")
-    print("| Compile fail    | {:>8} |".format(resultsHist[TestFlag.COMPILE_FAILED]))
-    print("| Compile timeout | {:>8} |".format(resultsHist[TestFlag.COMPILE_TIMEOUT]))
-    print("| Execute fail    | {:>8} |".format(resultsHist[TestFlag.EXECUTE_FAILED]))
-    print("| Execute timeout | {:>8} |".format(resultsHist[TestFlag.EXECUTE_TIMEOUT]))
-    print("------------------------------")
+    # Turn off formatting so that the table looks nice in source code.
+    # fmt: off
+    print("---------------------------------")
+    print("| RESULTS: HVM       |          |")
+    print("|--------------------+----------|")
+    print("| Pass               | {:>8} |".format(resultsHist[TestFlag.TEST_PASSED]))
+    print("|--------------------+----------|")
+    print("| Compile fail       | {:>8} |".format(resultsHist[TestFlag.COMPILE_FAILED]))
+    print("| Compile timeout    | {:>8} |".format(resultsHist[TestFlag.COMPILE_TIMEOUT]))
+    print("| Execute fail       | {:>8} |".format(resultsHist[TestFlag.EXECUTE_FAILED]))
+    print("| Execute timeout    | {:>8} |".format(resultsHist[TestFlag.EXECUTE_TIMEOUT]))
+    if test_blacklist:
+        print("| Blacklisted passes | {:>8} |".format(resultsHist[TestFlag.TEST_UNEXPECTED_PASSED]))
+    print("---------------------------------")
 
     print("")
     print("--------------------------------")
@@ -809,5 +860,6 @@ def run(
     print("| Tests skipped     | {:>8} |".format(skipped))
     print("| Pass Rate         | {:>8} |".format(passRate))
     print("--------------------------------")
+    # fmt: on
 
     return (eligible - resultsHist[TestFlag.TEST_PASSED]) > 0
