@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import time
 from multiprocessing.dummy import Lock, Pool
 from os.path import basename, isdir, isfile, join, splitext
 
@@ -418,19 +419,20 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
 
     if blacklisted and not test_blacklist:
         printVerbose("Skipping test in blacklist: {}".format(filename))
-        return (TestFlag.TEST_SKIPPED, "")
+        return (TestFlag.TEST_SKIPPED, "", 0)
 
     showStatus(filename)
 
     if "esprima" in suite:
         if esprima.is_test_unsupported(filename):
-            return (TestFlag.TEST_SKIPPED, "")
+            return (TestFlag.TEST_SKIPPED, "", 0)
         else:
             hermes_path = os.path.join(binary_path, "hermes")
             test_res = esprima_runner.run_test(filename, hermes_path)
             return (
                 ESPRIMA_TEST_STATUS_MAP[test_res[0]],
                 "" if test_res[0] == esprima.TestStatus.TEST_PASSED else test_res[1],
+                0,
             )
 
     content = open(filename, "rb").read().decode("utf-8")
@@ -438,12 +440,15 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
     shouldRun, skipReason, flags, strictModes = testShouldRun(filename, content)
     if not shouldRun:
         printVerbose(skipReason + ": " + filename)
-        return (TestFlag.TEST_SKIPPED, "")
+        return (TestFlag.TEST_SKIPPED, "", 0)
 
     # Check if the test is expected to fail, and how.
     m = negativeMatcher.search(content)
     negativePhase = m.group(1) if m else ""
 
+    # Report the max duration of any successful run for the variants of a test.
+    # Unsuccessful runs are ignored for simplicity.
+    max_duration = 0
     for strictEnabled in strictModes:
         temp = tempfile.NamedTemporaryFile(
             prefix=splitext(baseFileName)[0] + "-", suffix=".js", delete=False
@@ -452,7 +457,7 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
         source = source.encode("utf-8")
         if "testIntl.js" in includes:
             # No support for multiple Intl constructors in that file.
-            return (TestFlag.TEST_SKIPPED, "")
+            return (TestFlag.TEST_SKIPPED, "", 0)
         temp.write(source)
         temp.close()
 
@@ -469,6 +474,7 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
             printVerbose("\nRunning with Hermes...")
             printVerbose("Optimization: {}".format(str(optEnabled)))
             run_vm = True
+            start = time.time()
 
             # Compile to bytecode with Hermes.
             try:
@@ -504,9 +510,9 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                     # compiler failure was expected. Else, it is unexpected and
                     # will return a failure.
                     return (
-                        (TestFlag.TEST_SKIPPED, "")
+                        (TestFlag.TEST_SKIPPED, "", 0)
                         if blacklisted
-                        else (TestFlag.COMPILE_FAILED, "")
+                        else (TestFlag.COMPILE_FAILED, "", 0)
                     )
             except subprocess.CalledProcessError as e:
                 run_vm = False
@@ -519,17 +525,17 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                     errString = e.output.decode("utf-8").strip()
                     printVerbose(textwrap.indent(errString, "\t"))
                     return (
-                        (TestFlag.TEST_SKIPPED, "")
+                        (TestFlag.TEST_SKIPPED, "", 0)
                         if blacklisted
-                        else (TestFlag.COMPILE_FAILED, errString)
+                        else (TestFlag.COMPILE_FAILED, errString, 0)
                     )
                 printVerbose("PASS: Hermes correctly failed to compile")
             except subprocess.TimeoutExpired:
                 printVerbose("FAIL: Compilation timed out on {}".format(baseFileName))
                 return (
-                    (TestFlag.TEST_SKIPPED, "")
+                    (TestFlag.TEST_SKIPPED, "", 0)
                     if blacklisted
-                    else (TestFlag.COMPILE_TIMEOUT, "")
+                    else (TestFlag.COMPILE_TIMEOUT, "", 0)
                 )
 
             # If the compilation succeeded, run the bytecode with the specified VM.
@@ -548,9 +554,9 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                     if negativePhase == "runtime":
                         printVerbose("FAIL: Expected execution to throw")
                         return (
-                            (TestFlag.TEST_SKIPPED, "")
+                            (TestFlag.TEST_SKIPPED, "", 0)
                             if blacklisted
-                            else (TestFlag.EXECUTE_FAILED, "")
+                            else (TestFlag.EXECUTE_FAILED, "", 0)
                         )
                     else:
                         printVerbose("PASS: Execution completed successfully")
@@ -569,9 +575,9 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                         else:
                             printVerbose("No output received from process")
                         return (
-                            (TestFlag.TEST_SKIPPED, "")
+                            (TestFlag.TEST_SKIPPED, "", 0)
                             if blacklisted
-                            else (TestFlag.EXECUTE_FAILED, errString)
+                            else (TestFlag.EXECUTE_FAILED, errString, 0)
                         )
                     else:
                         printVerbose(
@@ -580,10 +586,11 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                 except subprocess.TimeoutExpired:
                     printVerbose("FAIL: Execution of binary timed out")
                     return (
-                        (TestFlag.TEST_SKIPPED, "")
+                        (TestFlag.TEST_SKIPPED, "", 0)
                         if blacklisted
-                        else (TestFlag.EXECUTE_TIMEOUT, "")
+                        else (TestFlag.EXECUTE_TIMEOUT, "", 0)
                     )
+            max_duration = max(max_duration, time.time() - start)
 
     if not keep_tmp:
         os.unlink(temp.name)
@@ -593,10 +600,10 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
         # If the test was blacklisted, but it passed successfully, consider that
         # an error case.
         printVerbose("FAIL: A blacklisted test completed successfully")
-        return (TestFlag.TEST_UNEXPECTED_PASSED, "")
+        return (TestFlag.TEST_UNEXPECTED_PASSED, "", max_duration)
     else:
         printVerbose("PASS: Test completed successfully")
-        return (TestFlag.TEST_PASSED, "")
+        return (TestFlag.TEST_PASSED, "", max_duration)
 
 
 def makeCalls(params, onlyfiles, rangeLeft, rangeRight):
@@ -612,7 +619,7 @@ def makeCalls(params, onlyfiles, rangeLeft, rangeRight):
     return calls
 
 
-def testLoop(calls, jobs, fail_fast):
+def testLoop(calls, jobs, fail_fast, num_slowest_tests):
     results = []
 
     # Histogram for results from the Hermes compiler.
@@ -625,21 +632,37 @@ def testLoop(calls, jobs, fail_fast):
         TestFlag.TEST_SKIPPED: 0,
         TestFlag.TEST_UNEXPECTED_PASSED: 0,
     }
+    slowest_tests = [("", 0)] * num_slowest_tests
 
     with Pool(processes=jobs) as pool:
         for res in pool.imap_unordered(
             lambda params: (params[0], runTest(*params)), calls, 1
         ):
+            testname = res[0]
             results.append(res)
-            (hermesStatus, errString) = res[1]
+            (hermesStatus, errString, duration) = res[1]
             resultsHist[hermesStatus] += 1
+            insert_pos = len(slowest_tests)
+            for i, (_, other_duration) in reversed(list(enumerate(slowest_tests))):
+                if duration < other_duration:
+                    break
+                else:
+                    insert_pos = i
+            if insert_pos < len(slowest_tests):
+                # If this was one of the slowest tests, push it into the list
+                # and drop the bottom of the list.
+                slowest_tests = (
+                    slowest_tests[:insert_pos]
+                    + [(testname, duration)]
+                    + slowest_tests[insert_pos:-1]
+                )
             if (
                 fail_fast
                 and hermesStatus != TestFlag.TEST_PASSED
                 and hermesStatus != TestFlag.TEST_SKIPPED
             ):
                 break
-    return results, resultsHist
+    return results, resultsHist, slowest_tests
 
 
 def get_arg_parser():
@@ -721,6 +744,14 @@ def get_arg_parser():
         "pipe this to hermes.)",
     )
     parser.add_argument(
+        "--num-slowest-tests",
+        dest="num_slowest_tests",
+        type=int,
+        default=10,
+        help="Print the top N tests that take the longest time to execute on "
+        "average, where N is the option value",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         dest="verbose",
@@ -742,6 +773,7 @@ def run(
     match,
     source,
     test_blacklist,
+    num_slowest_tests,
     keep_tmp,
     show_all,
 ):
@@ -816,13 +848,15 @@ def run(
         rangeLeft,
         rangeRight,
     )
-    results, resultsHist = testLoop(calls, jobs, fail_fast)
+    results, resultsHist, slowest_tests = testLoop(
+        calls, jobs, fail_fast, num_slowest_tests
+    )
 
     # Sort the results for easier reading of failed tests.
     results.sort(key=lambda f: f[1][0].value)
     if results:
         print("")
-    for testName, (hermesStatus, errString) in results:
+    for testName, (hermesStatus, errString, _) in results:
         if show_all or (
             (hermesStatus != TestFlag.TEST_PASSED)
             and (hermesStatus != TestFlag.TEST_SKIPPED)
@@ -830,6 +864,26 @@ def run(
             print("{} {}".format(str(hermesStatus), testName))
         if errString:
             print("{}".format(textwrap.indent(errString, "\t")))
+
+    if num_slowest_tests:
+        print()
+        print("Top {:d} slowest tests".format(num_slowest_tests))
+        maxNameWidth = 0
+        maxNumWidth = 0
+        for testName, duration in slowest_tests:
+            maxNameWidth = max(maxNameWidth, len(testName))
+            maxNumWidth = max(maxNumWidth, len("{:.3f}".format(duration)))
+        for testName, duration in slowest_tests:
+            print(
+                "{:<{testNameWidth}} {:>{durationWidth}.3f}".format(
+                    testName,
+                    duration,
+                    # Add 3 just in case it's right at the borderline
+                    testNameWidth=maxNameWidth + 3,
+                    durationWidth=maxNumWidth,
+                )
+            )
+        print()
 
     skipped = resultsHist[TestFlag.TEST_SKIPPED]
 
