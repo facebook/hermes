@@ -28,7 +28,10 @@ trap finish EXIT
 
 # Detect the Hermes source dir
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-HERMES_DIR="$PWD"
+
+# Get the path without symlinks, as CMake doesn't handle them correctly
+HERMES_DIR="$(pwd -P)"
+
 [ ! -e "$HERMES_DIR/utils/configure.sh" ] && echo "Could not detect source dir" >&2 && exit 1
 
 # shellcheck source=xplat/hermes/utils/commons.sh
