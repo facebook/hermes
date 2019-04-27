@@ -7,7 +7,6 @@ add_subdirectory(repl)
 add_subdirectory(hbc-diff)
 add_subdirectory(hbc-deltaprep)
 add_subdirectory(hbc-attribute)
-add_subdirectory(hbc-reorder)
 
 if (DEFINED LIBFUZZER_PATH)
   add_subdirectory(fuzzer)
