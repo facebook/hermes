@@ -53,10 +53,10 @@ hermes/utils/crosscompile_llvm.sh
 ( cd hermes/android && gradle build )
 
 # 8. Create a React Native demo project from the react-native-hermes template
-npx @react-native-community/cli@next init AwesomeProject --template "file://${HERMES_WS_DIR:?}/react-native-hermes"
+npx @react-native-community/cli@2.0.0-alpha.16 init AwesomeProject --template "file://${HERMES_WS_DIR:?}/react-native-hermes"
 
 # 9. Build and run the demo project
-( cd AwesomeProject && npx @react-native-community/cli@next run-android )
+( cd AwesomeProject && npx @react-native-community/cli@2.0.0-alpha.16 run-android )
 
 )
 ```
