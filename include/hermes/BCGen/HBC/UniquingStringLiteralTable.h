@@ -85,7 +85,10 @@ struct StringLiteralTable final : public StringLiteralIDMapping {
   /// Exposes interface to extract parts of underlying ConsecutiveStringStorage
   inline std::vector<StringTableEntry> acquireStringTable();
   inline std::vector<char> acquireStringStorage();
-  inline std::vector<uint32_t> getIdentifierTranslations() const;
+
+  /// \returns a list of translations corresponding to the strings marked as
+  /// identifiers, in their order in the underlying storage.
+  std::vector<uint32_t> getIdentifierTranslations() const;
 
   /// \return a sequence of string kinds represented by a run-length encoding.
   /// The i'th kind in the abstract sequence (i.e. not the i'th entry in the
@@ -151,11 +154,6 @@ inline std::vector<StringTableEntry> StringLiteralTable::acquireStringTable() {
 
 inline std::vector<char> StringLiteralTable::acquireStringStorage() {
   return storage_.acquireStringStorage();
-}
-
-inline std::vector<uint32_t> StringLiteralTable::getIdentifierTranslations()
-    const {
-  return storage_.getIdentifierTranslations();
 }
 
 } // namespace hbc

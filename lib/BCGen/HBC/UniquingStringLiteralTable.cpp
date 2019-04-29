@@ -147,6 +147,18 @@ UniquingStringLiteralAccumulator::toStorage(
   return std::move(storage);
 }
 
+std::vector<uint32_t> StringLiteralTable::getIdentifierTranslations() const {
+  std::vector<uint32_t> result;
+  assert(strings_.size() == isIdentifier_.size());
+  for (size_t i = 0; i < isIdentifier_.size(); ++i) {
+    if (isIdentifier_[i]) {
+      result.push_back(storage_.getEntryHash(i));
+    }
+  }
+
+  return result;
+}
+
 std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
   StringKind::Accumulator acc;
 

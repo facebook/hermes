@@ -66,9 +66,6 @@ class ConsecutiveStringStorage {
     assert(isStorageValid_ && "String Storage no longer valid");
   }
 
-  /// \return the hash of a given entry.
-  uint32_t getEntryHash(const StringTableEntry &entry) const;
-
  public:
   ConsecutiveStringStorage() = default;
   ConsecutiveStringStorage(ConsecutiveStringStorage &&) = default;
@@ -126,12 +123,12 @@ class ConsecutiveStringStorage {
     return std::move(storage_);
   }
 
+  /// \return the hash of the string represented by the \p i'th entry, as it
+  /// would be represented at runtime.
+  uint32_t getEntryHash(size_t i) const;
+
   /// Append a storage \p rhs.
   void appendStorage(ConsecutiveStringStorage &&rhs);
-
-  /// \returns a list of translations corresponding to the entries marked as
-  /// identifiers, in-order.
-  std::vector<uint32_t> getIdentifierTranslations() const;
 
   /// A helper function to return a string at a given \p idx. This converts
   /// UTF16 strings to UTF8 using \p storage if necessary.

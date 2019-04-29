@@ -747,9 +747,11 @@ template ConsecutiveStringStorage::ConsecutiveStringStorage(
     ArrayRef<llvm::StringRef>::const_iterator end,
     bool optimize);
 
-uint32_t ConsecutiveStringStorage::getEntryHash(
-    const StringTableEntry &entry) const {
+uint32_t ConsecutiveStringStorage::getEntryHash(size_t i) const {
+  ensureTableValid();
   ensureStorageValid();
+
+  auto &entry = strTable_[i];
   const char *data = &storage_[entry.getOffset()];
   uint32_t length = entry.getLength();
   if (entry.isUTF16()) {
@@ -758,19 +760,6 @@ uint32_t ConsecutiveStringStorage::getEntryHash(
   } else {
     return hermes::hashString(ArrayRef<char>{data, length});
   }
-}
-
-std::vector<uint32_t> ConsecutiveStringStorage::getIdentifierTranslations()
-    const {
-  ensureTableValid();
-  ensureStorageValid();
-  std::vector<uint32_t> result;
-  for (const auto &entry : strTable_) {
-    if (entry.isIdentifier()) {
-      result.push_back(getEntryHash(entry));
-    }
-  }
-  return result;
 }
 
 void ConsecutiveStringStorage::appendStorage(ConsecutiveStringStorage &&rhs) {
