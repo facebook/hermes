@@ -91,12 +91,6 @@ class ConsecutiveStringStorage {
       std::vector<char> &&storage)
       : strTable_(std::move(table)), storage_(std::move(storage)) {}
 
-  /// \returns a view to the current storage.
-  StringStorageRefTy getStorageView() const {
-    ensureStorageValid();
-    return storage_;
-  }
-
   /// \returns a view to the current table.
   StringTableRefTy getStringTableView() const {
     ensureTableValid();

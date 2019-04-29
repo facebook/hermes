@@ -93,8 +93,8 @@ TEST(StringStorageTest, ConsecutiveStringStorageTest) {
 TEST(StringStorageTest, PackingStringStorageTest) {
   std::vector<llvm::StringRef> strings{"phab", "alphabet", "soup", "ou"};
   hbc::ConsecutiveStringStorage storage(strings);
-  const auto &data = storage.getStorageView();
-  llvm::StringRef dataAsStr(&data[0], data.size());
+  const auto data = storage.acquireStringStorage();
+  llvm::StringRef dataAsStr(data.data(), data.size());
   EXPECT_EQ(dataAsStr.str(), "phabalphabetsoupou");
 }
 
@@ -111,10 +111,11 @@ static void test1OptimizingStringStorage(
   std::string info = " from test on line " + to_string(line);
   std::unique_ptr<hbc::ConsecutiveStringStorage> baseConsecutiveStrStorage;
   hbc::ConsecutiveStringStorage storage(strings, true /* optimize */);
-  auto data = storage.getStorageView();
-  llvm::StringRef dataAsString(data.begin(), data.size());
+  auto index = storage.acquireStringTable();
+  auto data = storage.acquireStringStorage();
+  llvm::StringRef dataAsString(data.data(), data.size());
   size_t idx = 0;
-  for (const auto &p : storage.getStringTableView()) {
+  for (const auto &p : index) {
     uint32_t offset = p.getOffset();
     uint32_t length = p.getLength();
     EXPECT_TRUE(offset + length >= offset && offset + length <= data.size())
