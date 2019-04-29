@@ -927,6 +927,7 @@ BLACK_LIST = [
     # SpeciesConstructor
     "test262/test/built-ins/ArrayBuffer/prototype/slice/species-constructor-is-not-object.js",
     # t19359477
+    "mjsunit/regress/regress-3976.js",
     "mjsunit/string-replace-gc.js",
     # Time out. # T20489563
     "mjsunit/regress/regress-crbug-482998.js",
