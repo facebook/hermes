@@ -53,7 +53,7 @@ class SymbolID {
   /// \return the index backing this SymbolID.
   /// Top bit will be cleared, so this doesn't distinguish between uniqued
   /// and not uniqued Symbols.
-  uint32_t unsafeGetIndex() const {
+  constexpr uint32_t unsafeGetIndex() const {
     return id_ & ~0x80000000;
   }
 

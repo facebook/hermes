@@ -47,6 +47,10 @@ constexpr SymbolID getSymbolID(Sym predefined) {
   return SymbolID::unsafeCreateNotUniqued(predefined);
 }
 
+constexpr bool isPredefined(SymbolID sym) {
+  return sym.unsafeGetIndex() < _SYMBOL_AFTER_LAST;
+}
+
 } // namespace Predefined
 
 } // namespace vm
