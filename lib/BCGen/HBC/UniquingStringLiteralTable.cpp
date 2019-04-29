@@ -28,18 +28,18 @@ StringKind::Kind kind(llvm::StringRef str, bool isIdentifier) {
 
 } // namespace
 
-StringLiteralIDMapping::StringLiteralIDMapping(
-    const ConsecutiveStringStorage &css) {
+StringLiteralIDMapping::StringLiteralIDMapping(ConsecutiveStringStorage storage)
+    : storage_(std::move(storage)) {
   // Initialize our tables by decoding our storage's string table.
   std::string utf8Storage;
-  uint32_t count = css.count();
+  uint32_t count = storage_.count();
   isIdentifier_.reserve(count);
   for (uint32_t i = 0; i < count; i++) {
-    uint32_t j = strings_.insert(css.getStringAtIndex(i, utf8Storage));
+    uint32_t j = strings_.insert(storage_.getStringAtIndex(i, utf8Storage));
     assert(i == j && "Duplicate string in storage.");
     (void)j;
 
-    isIdentifier_.push_back(css.isIdentifierAtIndex(i));
+    isIdentifier_.push_back(storage_.isIdentifierAtIndex(i));
   }
 }
 
@@ -101,7 +101,6 @@ UniquingStringLiteralAccumulator::toStorage(
 
   std::vector<IndexedEntry> indexedEntries;
   indexedEntries.reserve(strings.size());
-
 
   // Associate string index entries with their original indices in the table.
   for (size_t i = 0; i < strings.size(); ++i) {

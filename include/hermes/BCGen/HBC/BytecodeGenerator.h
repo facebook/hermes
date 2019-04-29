@@ -249,10 +249,8 @@ class BytecodeModuleGenerator {
   /// Generate literals buffer for object/array.
   SerializedLiteralGenerator literalGenerator_;
 
-  /// The strings in this module.
-  ConsecutiveStringStorage stringStorage_{};
-
-  /// The mapping from strings to ID for strings in the above storage.
+  /// The mapping from strings to ID for strings in the resulting bytecode
+  /// module.
   StringLiteralTable stringTable_{};
 
   /// A module-wide compiled regexp table.

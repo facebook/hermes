@@ -161,8 +161,7 @@ unsigned BytecodeModuleGenerator::getIdentifierID(StringRef str) const {
 void BytecodeModuleGenerator::initializeStringStorage(
     ConsecutiveStringStorage css) {
   assert(stringTable_.empty() && "String table must be empty");
-  stringStorage_ = std::move(css);
-  stringTable_ = StringLiteralTable{stringStorage_};
+  stringTable_ = StringLiteralTable{std::move(css)};
 }
 
 uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp regexp) {
@@ -203,16 +202,16 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       functionIDMap_.getElements().size() == functionGenerators_.size() &&
       "Missing functions.");
 
-  auto hashes = stringStorage_.getIdentifierTranslations();
+  auto hashes = stringTable_.getIdentifierTranslations();
 
   BytecodeOptions bytecodeOptions;
   bytecodeOptions.staticBuiltins = options_.staticBuiltinsEnabled;
   bytecodeOptions.cjsModulesStaticallyResolved = !cjsModulesStatic_.empty();
   std::unique_ptr<BytecodeModule> BM{new BytecodeModule(
       functionGenerators_.size(),
-      stringStorage_.acquireStringTable(),
+      stringTable_.acquireStringTable(),
       std::move(hashes),
-      stringStorage_.acquireStringStorage(),
+      stringTable_.acquireStringStorage(),
       regExpTable_.getEntryList(),
       regExpTable_.getBytecodeBuffer(),
       entryPointIndex_,

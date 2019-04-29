@@ -23,11 +23,14 @@ struct StringLiteralIDMapping {
   /// \return true if and only if no strings have been recorded.
   inline bool empty() const;
 
- protected:
   StringLiteralIDMapping() = default;
 
-  /// Decode the strings from \p css to seed the mapping.
-  explicit StringLiteralIDMapping(const ConsecutiveStringStorage &css);
+  /// Take ownership of \p storage and decode it to seed the strings_ mapping.
+  explicit StringLiteralIDMapping(ConsecutiveStringStorage storage);
+
+ protected:
+  /// The storage that the mapping was initialised with.
+  ConsecutiveStringStorage storage_;
 
   /// Mapping between strings and IDs.
   StringSetVector strings_;
@@ -42,9 +45,6 @@ struct StringLiteralIDMapping {
 /// storage is created, this class does not return the ID of the string when it
 /// is added.
 class UniquingStringLiteralAccumulator final : public StringLiteralIDMapping {
-  /// Strings the accumulator was initialised with.
-  ConsecutiveStringStorage storage_;
-
   /// The number of times a string was added as an identifier.  This information
   /// is only tracked for newly added strings (those not in the storage the
   /// accumulator may have been initialized with) and is keyed by the offset of
@@ -54,10 +54,7 @@ class UniquingStringLiteralAccumulator final : public StringLiteralIDMapping {
 
  public:
   UniquingStringLiteralAccumulator() = default;
-
-  /// Seed the mapping from the strings in \p css and take ownership of it.
-  inline explicit UniquingStringLiteralAccumulator(
-      ConsecutiveStringStorage css);
+  using StringLiteralIDMapping::StringLiteralIDMapping;
 
   /// Add a new string -- \p str -- to the accumulation.  If \p isIdentifier is
   /// true, then the string is marked as potentially being used as an
@@ -76,7 +73,7 @@ class UniquingStringLiteralAccumulator final : public StringLiteralIDMapping {
 /// the storage to outlive it.
 struct StringLiteralTable final : public StringLiteralIDMapping {
   StringLiteralTable() = default;
-  inline StringLiteralTable(const ConsecutiveStringStorage &css);
+  using StringLiteralIDMapping::StringLiteralIDMapping;
 
   /// \return string id of an existing \p str in string table.
   inline uint32_t getStringID(llvm::StringRef str) const;
@@ -84,6 +81,11 @@ struct StringLiteralTable final : public StringLiteralIDMapping {
   /// \return string id of an existing \p str in string table, assuming it is
   /// marked as an identifier.
   inline uint32_t getIdentifierID(llvm::StringRef str) const;
+
+  /// Exposes interface to extract parts of underlying ConsecutiveStringStorage
+  inline std::vector<StringTableEntry> acquireStringTable();
+  inline std::vector<char> acquireStringStorage();
+  inline std::vector<uint32_t> getIdentifierTranslations() const;
 
   /// \return a sequence of string kinds represented by a run-length encoding.
   /// The i'th kind in the abstract sequence (i.e. not the i'th entry in the
@@ -100,10 +102,6 @@ inline size_t StringLiteralIDMapping::count() const {
 inline bool StringLiteralIDMapping::empty() const {
   return strings_.size() == 0;
 }
-
-inline UniquingStringLiteralAccumulator::UniquingStringLiteralAccumulator(
-    ConsecutiveStringStorage css)
-    : StringLiteralIDMapping(css), storage_(std::move(css)) {}
 
 inline void UniquingStringLiteralAccumulator::addString(
     llvm::StringRef str,
@@ -126,10 +124,6 @@ inline void UniquingStringLiteralAccumulator::addString(
   }
 }
 
-inline StringLiteralTable::StringLiteralTable(
-    const ConsecutiveStringStorage &css)
-    : StringLiteralIDMapping(css) {}
-
 inline uint32_t StringLiteralTable::getStringID(llvm::StringRef str) const {
   auto iter = strings_.find(str);
   assert(
@@ -149,6 +143,19 @@ inline uint32_t StringLiteralTable::getIdentifierID(llvm::StringRef str) const {
       "of the traversal functions in TraverseLiteralStrings.h, was the usage "
       "of the string as an identifier correctly traversed?");
   return idx;
+}
+
+inline std::vector<StringTableEntry> StringLiteralTable::acquireStringTable() {
+  return storage_.acquireStringTable();
+}
+
+inline std::vector<char> StringLiteralTable::acquireStringStorage() {
+  return storage_.acquireStringStorage();
+}
+
+inline std::vector<uint32_t> StringLiteralTable::getIdentifierTranslations()
+    const {
+  return storage_.getIdentifierTranslations();
 }
 
 } // namespace hbc
