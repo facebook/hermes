@@ -1980,7 +1980,6 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<StringPrimitive> replaceValueStr{runtime};
   bool functionalReplace = !!replaceFn;
   // 9. If functionalReplace is false, then
-  auto strView = StringPrimitive::createStringView(runtime, string);
   if (!functionalReplace) {
     // a. Let replaceValue be ToString(replaceValue).
     // b. ReturnIfAbrupt(replaceValue).
@@ -1994,16 +1993,10 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
   // the index within string of the first code unit of the matched substring and
   // let matched be searchString. If no occurrences of searchString were found,
   // return string.
-  uint32_t strLen = string->getStringLength();
-  uint32_t searchLen = searchString->getStringLength();
+  // Special case: if they're both empty then the match is at position 0.
   uint32_t pos = 0;
-  if (strLen == 0) {
-    if (searchLen == 0) {
-      return replaceValueStr.getHermesValue();
-    } else {
-      return string.getHermesValue();
-    }
-  } else {
+  auto strView = StringPrimitive::createStringView(runtime, string);
+  if (!strView.empty()) {
     auto searchView = StringPrimitive::createStringView(runtime, searchString);
     auto searchResult = std::search(
         strView.begin(), strView.end(), searchView.begin(), searchView.end());
@@ -2013,6 +2006,9 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
     } else {
       return string.getHermesValue();
     }
+  } else if (searchString->getStringLength() != 0) {
+    // If string is empty and search is not empty, there is no match.
+    return string.getHermesValue();
   }
   MutableHandle<StringPrimitive> replStr{runtime};
   // 11. If functionalReplace is true, then

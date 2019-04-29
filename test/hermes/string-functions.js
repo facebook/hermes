@@ -774,6 +774,8 @@ print('replace');
 // CHECK-LABEL: replace
 print('x' + ''.replace('a', 'b') + 'y');
 // CHECK-NEXT: xy
+print('x' + 'abc'.replace('', 'b') + 'y');
+// CHECK-NEXT: xbabcy
 print('x' + ''.replace('', 'b') + 'y');
 // CHECK-NEXT: xby
 print('abcabc'.replace('b', 'xy'));
@@ -814,6 +816,10 @@ print('abcabc'.replace('bc', function(matched, offset, string) {
 }));
 // CHECK-NEXT: bc 1 abcabc
 // CHECK-NEXT: aXYZabc
+print('x' + ''.replace('', function(matched, offset, string) {
+  return 'XYZ';
+}));
+// CHECK-NEXT: xXYZ
 print('abCdefgh'.replace(
   /([cC]).*([gG])/,
   function(matched, c, g, offset, string) {
