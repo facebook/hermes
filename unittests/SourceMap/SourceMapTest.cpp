@@ -107,7 +107,9 @@ TEST(SourceMap, Basic) {
   EXPECT_EQ(map.getMappingsLines().size(), 0u);
 
   std::vector<std::string> sources{"file1", "file2"};
-  map.setSources(sources);
+  for (const auto &source : sources) {
+    map.addSource(source);
+  }
 
   std::vector<SourceMap::Segment> segmentsList[] = {
       {
@@ -271,6 +273,97 @@ TEST(SourceMap, NoRepresentedLocation) {
   verifySegment(*sourceMap, generatedLine, sources, loc(0));
   verifySegment(*sourceMap, generatedLine, sources, loc(1, sourceIndex, 3, 2));
 };
+
+/// Test source map merging behavior.
+///
+/// Suppose we're compiling file1 and file2 and we have input source maps for
+/// both files:
+///
+///           (I)
+///     file1 -> file1orig
+///     file2 -> file2orig
+///
+/// If we generate mappings to file1 and file2,
+///
+///           (II)
+///     output -> file1 + file2
+///
+/// after merging them with (I) we expect to see:
+///
+///          (III)
+///     output -> file1orig + file2orig (+ file1 + file2)
+///
+/// In general, mappings to file1 and file2 may remain in (III) because some
+/// mappings in (II) point to unmapped locations in (I).
+TEST(SourceMap, MergedWithInputSourceMaps) {
+  static const char file1MapJson[] =
+      R"#({
+             "version": 3,
+             "sources": ["file1orig"],
+             "mappings": "CAAA"
+          })#";
+
+  static const char file2MapJson[] =
+      R"#({
+            "version": 3,
+            "sourceRoot": "/foo/",
+            "sources": ["file2orig"],
+            "mappings": "CACA,KACC"
+          })#";
+
+  std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
+  inputSourceMaps.push_back(parseSourceMap(file1MapJson));
+  inputSourceMaps.push_back(parseSourceMap(file2MapJson));
+
+  std::vector<std::string> sources = {"file1", "file2"};
+  SourceMap::SegmentList segments = {
+      loc(0, 0, 1, 0), // addr 1:0 -> file1:1:0   (unmapped in file1orig)
+      loc(2, 0, 1, 1), // addr 1:2 -> file1:1:1 -> file1orig:1:0
+      loc(3, 0, 1, 4), // addr 1:3 -> file1:1:4 -> file1orig:1:0
+      loc(4, 0, 2, 0), // addr 1:4 -> file1:2:0   (unmapped in file1orig)
+      loc(5), //          addr 1:5 -> unmapped
+      loc(6, 1, 1, 0), // addr 1:6 -> file2:1:0   (unmapped in file2orig)
+      loc(7, 1, 1, 1), // addr 1:7 -> file2:1:1 -> file2orig:2:0
+      loc(8, 1, 1, 4), // addr 1:8 -> file2:1:4 -> file2orig:2:0
+      loc(9, 1, 1, 6), // addr 1:9 -> file2:1:6 -> file2orig:3:1
+  };
+
+  std::vector<std::string> expectedSources = {
+      "file1", "file1orig", "file2", "/foo/file2orig"};
+  SourceMap::SegmentList expectedSegments = {
+      loc(0, 0, 1, 0), // addr 1:0 -> file1:1:0   (unmapped in file1orig)
+      loc(2, 1, 1, 0), // addr 1:2 -> file1:1:1 -> file1orig:1:0
+      loc(3, 1, 1, 0), // addr 1:3 -> file1:1:4 -> file1orig:1:0
+      loc(4, 0, 2, 0), // addr 1:4 -> file1:2:0   (unmapped in file1orig)
+      loc(5), //          addr 1:5 -> unmapped
+      loc(6, 2, 1, 0), // addr 1:6 -> file2:1:0   (unmapped in file2orig)
+      loc(7, 3, 2, 0), // addr 1:7 -> file2:1:1 -> file2orig:2:0
+      loc(8, 3, 2, 0), // addr 1:8 -> file2:1:4 -> file2orig:2:0
+      loc(9, 3, 3, 1), // addr 1:9 -> file2:1:6 -> file2orig:3:1
+  };
+
+  SourceMapGenerator gen;
+  for (const auto &source : sources) {
+    gen.addSource(source);
+  }
+
+  gen.setInputSourceMaps(std::move(inputSourceMaps));
+  gen.addMappingsLine(segments, 0);
+
+  std::string storage;
+  llvm::raw_string_ostream OS(storage);
+  gen.outputAsJSON(OS);
+  EXPECT_EQ(
+      OS.str(),
+      R"#({"version":3,"sources":["file1","file1orig","file2","\/foo\/file2orig"],)#"
+      R"#("mappings":"AAAA,ECAA,CAAA,CDCA,C,CEDA,CCCA,CAAA,CACC;"})#");
+
+  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(storage);
+  for (uint32_t i = 0; i < expectedSegments.size(); ++i) {
+    verifySegment(
+        *sourceMap, /*generatedLine*/ 1, expectedSources, expectedSegments[i]);
+  }
+}
 
 /// Test to make sure we can properly parse empty lines.
 TEST(SourceMap, EmptyLines) {

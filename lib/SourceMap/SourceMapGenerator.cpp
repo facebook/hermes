@@ -73,10 +73,17 @@ std::string SourceMapGenerator::getVLQMappingsString() const {
   return result;
 }
 
+std::vector<llvm::StringRef> SourceMapGenerator::getSources() const {
+  return std::vector<llvm::StringRef>(
+      filenameTable_.begin(), filenameTable_.end());
+}
+
 SourceMapGenerator SourceMapGenerator::mergedWithInputSourceMaps() const {
   assert(
       !inputSourceMaps_.empty() &&
       "Cannot merge source maps without input source maps");
+
+  auto sources = getSources();
 
   // Create a new SourceMapGenerator with the merged data.
   SourceMapGenerator merged;
@@ -102,7 +109,7 @@ SourceMapGenerator SourceMapGenerator::mergedWithInputSourceMaps() const {
         // but copy over the source file name.
         if (seg.representedLocation.hasValue()) {
           newSeg.representedLocation->sourceIndex =
-              merged.addSource(sources_[seg.representedLocation->sourceIndex]);
+              merged.addSource(sources[seg.representedLocation->sourceIndex]);
         }
       }
 
@@ -132,7 +139,7 @@ void SourceMapGenerator::outputAsJSONImpl(llvm::raw_ostream &OS) const {
 
   json.emitKey("sources");
   json.openArray();
-  json.emitValues(llvm::makeArrayRef(sources_));
+  json.emitValues(llvm::makeArrayRef(getSources()));
   json.closeArray();
 
   json.emitKeyValue("mappings", getVLQMappingsString());

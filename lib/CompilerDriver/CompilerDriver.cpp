@@ -954,14 +954,6 @@ std::unique_ptr<Context::ResolutionTable> readResolutionTable(
   return result;
 }
 
-/// \return a SourceMapGenerator, whose sources respect the command line flags.
-SourceMapGenerator createSourceMapGenerator(std::shared_ptr<Context> context) {
-  SourceMapGenerator result;
-  std::vector<std::string> sources{cl::InputFilenames};
-  result.setSources(std::move(sources));
-  return result;
-}
-
 /// Generate IR for CJS modules into the Module \p M for the source files in
 /// \p fileBufs. Treat the first element in fileBufs as the entry point.
 /// \param inputSourceMaps the parsed versions of the input source maps,
@@ -1035,7 +1027,9 @@ bool generateIRForSourcesAsCJSModules(
   }
 
   if (sourceMapGen) {
-    sourceMapGen->setSources(std::move(sources));
+    for (const auto &source : sources) {
+      sourceMapGen->addSource(source);
+    }
     sourceMapGen->setInputSourceMaps(std::move(inputSourceMaps));
   }
 
@@ -1253,9 +1247,9 @@ CompileResult processSourceFiles(
   context->setLazyCompilation(cl::LazyCompilation);
 
   // Create the source map if requested.
-  llvm::Optional<SourceMapGenerator> sourceMap;
+  llvm::Optional<SourceMapGenerator> sourceMap{};
   if (cl::OutputSourceMap) {
-    sourceMap = createSourceMapGenerator(context);
+    sourceMap = SourceMapGenerator{};
   }
 
   Module M(context);
@@ -1273,6 +1267,12 @@ CompileResult processSourceFiles(
       return ParsingFailed;
     }
   } else {
+    if (sourceMap) {
+      for (const auto &filename : cl::InputFilenames) {
+        sourceMap->addSource(filename);
+      }
+    }
+
     ESTree::NodePtr ast =
         parseJS(context, semCtx, std::move(fileBufs[0][0].file));
     if (!ast) {

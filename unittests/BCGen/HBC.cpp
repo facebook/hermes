@@ -126,7 +126,7 @@ TEST(HBCBytecodeGen, IntegrationTest) {
   // Verify basic properties of the source map.
   // We have two functions. Each function has one segment per debug location.
   SourceMapGenerator sourceMap;
-  sourceMap.setSources({"main.js"});
+  sourceMap.addSource("main.js");
   BM->populateSourceMap(&sourceMap);
   const auto &mappings = sourceMap.getMappingsLines();
   EXPECT_EQ(mappings.size(), 1u);

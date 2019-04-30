@@ -8,9 +8,9 @@
 #define HERMES_SUPPORT_SOURCEMAPGENERATOR_H
 
 #include "hermes/SourceMap/SourceMap.h"
+#include "hermes/Support/StringSetVector.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 
 namespace hermes {
 
@@ -38,24 +38,17 @@ class SourceMapGenerator {
     return lines_;
   }
 
-  /// Set the list of sources to \p sources. The sources are the list of
-  /// original input filenames. The order should match the indexes used in the
-  /// sourceIndex field of Segment.
-  void setSources(std::vector<std::string> sources) {
-    sources_ = std::move(sources);
-    filenameTable_.clear();
-    for (uint32_t i = 0, e = sources_.size(); i < e; ++i) {
-      auto res = filenameTable_.try_emplace(sources_[i], i);
-      (void)res;
-      assert(res.second && "Duplicate entries in sources of SourceMap");
-    }
-  }
-
   /// Set the list of input source maps to \p maps.
   /// The order should match the indexes used in the sourceIndex field of
   /// Segment.
   void setInputSourceMaps(std::vector<std::unique_ptr<SourceMap>> maps) {
     inputSourceMaps_ = std::move(maps);
+  }
+
+  /// Adds the source filename to filenameTable_ if it doesn't already exist.
+  /// \return the index of \p filename in filenameTable_.
+  uint32_t addSource(llvm::StringRef filename) {
+    return filenameTable_.insert(filename);
   }
 
   /// Output the given source map as JSON.
@@ -65,7 +58,7 @@ class SourceMapGenerator {
   uint32_t getSourceIndex(llvm::StringRef filename) const {
     auto it = filenameTable_.find(filename);
     assert(it != filenameTable_.end() && "unable to find filenameId");
-    return it->second;
+    return std::distance(filenameTable_.begin(), it);
   }
 
  private:
@@ -84,27 +77,17 @@ class SourceMapGenerator {
   /// \return the mappings encoded in VLQ format.
   std::string getVLQMappingsString() const;
 
+  /// \return a list of sources, in order.
+  /// This list refers to internals of the StringMap and is invalidated by
+  /// addSource().
+  std::vector<llvm::StringRef> getSources() const;
+
   /// Encode the list \p segments into \p OS using the SourceMap
   /// Base64-VLQ scheme, delta-encoded with \p lastState as the starting state.
   static SourceMapGenerator::State encodeSourceLocations(
       const SourceMapGenerator::State &lastState,
       llvm::ArrayRef<SourceMap::Segment> segments,
       llvm::raw_ostream &OS);
-
-  /// Adds the source filename to the sources_ if it doesn't already exist.
-  /// \return the index of \p filename in sources_.
-  uint32_t addSource(llvm::StringRef filename) {
-    auto it = filenameTable_.find(filename);
-    if (it != filenameTable_.end()) {
-      return it->second;
-    }
-    uint32_t result = sources_.size();
-    sources_.push_back(filename);
-    auto res = filenameTable_.try_emplace(sources_.back(), result);
-    (void)res;
-    assert(res.second && "Duplicate entries in sources of SourceMap");
-    return result;
-  }
 
   /// Merge the input source maps with the state in this generator,
   /// and return a new generator which contains a merged representation.
@@ -132,9 +115,6 @@ class SourceMapGenerator {
                     : llvm::None;
   }
 
-  /// The list of sources, populating the sources field.
-  std::vector<std::string> sources_;
-
   /// The list of symbol names, populating the names field.
   std::vector<std::string> symbolNames_;
 
@@ -147,10 +127,7 @@ class SourceMapGenerator {
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps_;
 
   /// Map from {filename => source index}.
-  /// Used to translate debug source locations involving source file names
-  /// to indices into sources_.
-  /// Populated automatically when setSources() is called.
-  llvm::DenseMap<llvm::StringRef, uint32_t> filenameTable_{};
+  StringSetVector filenameTable_{};
 };
 
 } // namespace hermes
