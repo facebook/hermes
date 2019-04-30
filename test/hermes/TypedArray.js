@@ -822,6 +822,17 @@ cons.forEach(function(ta) {
     x.sort({});
   }, TypeError);
 
+  // Sorting a TypedArray allocates handles linearly with respect to the size
+  // of the buffer. Sorting a larger array will ensure that we clean those up
+  // periodically.
+  x = new ta(104);
+  x.sort(function(unused1, unused2) {
+    return true;
+  });
+  for (var i = 0; i < x.length; i++) {
+    assert.equal(x[i], 0);
+  }
+
   // Check that detaching in the middle of sorting will cause a TypeError.
   x = new ta([1, 2, 3]);
   assert.throws(function() {

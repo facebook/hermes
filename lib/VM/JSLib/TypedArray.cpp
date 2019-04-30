@@ -1103,6 +1103,10 @@ class TypedArraySortModel : public SortModel {
   MutableHandle<HermesValue> aHandle_;
   MutableHandle<HermesValue> bHandle_;
 
+  /// Marker created after initializing all fields so handles allocated later
+  /// can be flushed.
+  GCScope::Marker gcMarker_;
+
  public:
   TypedArraySortModel(
       Runtime *runtime,
@@ -1113,7 +1117,8 @@ class TypedArraySortModel : public SortModel {
         compareFn_(compareFn),
         self_(obj),
         aHandle_(runtime),
-        bHandle_(runtime) {}
+        bHandle_(runtime),
+        gcMarker_(gcScope_.createMarker()) {}
 
   // Swap elements at indices a and b.
   virtual ExecutionStatus swap(uint32_t a, uint32_t b) override {
@@ -1132,6 +1137,7 @@ class TypedArraySortModel : public SortModel {
 
   // Compare elements at index a and at index b.
   virtual CallResult<bool> less(uint32_t a, uint32_t b) override {
+    GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
     HermesValue aVal = JSObject::getOwnIndexed(*self_, runtime_, a);
     HermesValue bVal = JSObject::getOwnIndexed(*self_, runtime_, b);
     if (!WithCompareFn) {
