@@ -10,22 +10,46 @@
 
 #include "llvm/ADT/DenseMap.h"
 
+#include <array>
+#include <tuple>
+
 namespace {
 
 using namespace hermes::vm;
 using StringIDMap = llvm::DenseMap<llvm::StringRef, SymbolID>;
 
 StringIDMap createPredefinedStringSet() {
+  namespace P = Predefined;
+  constexpr static size_t NumPredefStrings =
+      P::_STRING_AFTER_LAST - P::_STRING_BEFORE_FIRST - 1;
+
+  static const char buffer[] =
+#define STR(name, string) string
+#include "hermes/VM/PredefinedStrings.def"
+      ;
+
+  static const uint8_t lengths[] = {
+#define STR(name, string) sizeof(string) - 1,
+#include "hermes/VM/PredefinedStrings.def"
+  };
+
+  static const Predefined::Str ids[] = {
+#define STR(name, string) P::name,
+#include "hermes/VM/PredefinedStrings.def"
+  };
+
   StringIDMap predefined;
 
-#define STR(name, string)                                                 \
-  do {                                                                    \
-    auto pid = Predefined::name;                                          \
-    auto res = predefined.insert({string, Predefined::getSymbolID(pid)}); \
-    assert(res.second && "Duplicate predefined string.");                 \
-    (void)res;                                                            \
-  } while (0);
-#include "hermes/VM/PredefinedStrings.def"
+  assert(
+      NumPredefStrings == sizeof(ids) / sizeof(Predefined::Str) &&
+      "Mismatched count of predefined strings.");
+  const char *chars = buffer;
+  for (uint32_t i = 0; i < NumPredefStrings; chars += lengths[i++]) {
+    auto res = predefined.try_emplace(
+        {chars, lengths[i]}, Predefined::getSymbolID(ids[i]));
+    assert(res.second && "Duplicate predefined string.");
+    (void)res;
+  }
 
   return predefined;
 }
