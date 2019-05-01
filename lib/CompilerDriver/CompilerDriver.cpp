@@ -1269,7 +1269,7 @@ CompileResult processSourceFiles(
   } else {
     if (sourceMap) {
       for (const auto &filename : cl::InputFilenames) {
-        sourceMap->addSource(filename);
+        sourceMap->addSource(filename == "-" ? "<stdin>" : filename);
       }
     }
 
