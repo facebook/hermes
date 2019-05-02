@@ -279,7 +279,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   Builder.createParameter(newFunc, "this");
 
   // Create a variable for every parameter.
-  for (auto *idNode : funcNode->paramNames) {
+  for (auto *idNode : funcNode->getSemInfo()->paramNames) {
     Identifier paramName = getNameFieldFromID(idNode);
     DEBUG(dbgs() << "Adding parameter: " << paramName << "\n");
     auto *paramStorage =

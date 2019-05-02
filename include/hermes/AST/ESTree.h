@@ -12,7 +12,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/Support/Casting.h"
@@ -249,7 +248,6 @@ class FunctionLikeDecoration {
 
  public:
   Strictness strictness{Strictness::NotSet};
-  llvm::SmallVector<IdentifierNode *, 4> paramNames{};
 
   void setSemInfo(sem::FunctionInfo *semInfo) {
     assert(semInfo && "setting semInfo to null");

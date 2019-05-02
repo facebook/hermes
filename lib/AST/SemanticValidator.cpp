@@ -460,7 +460,7 @@ void SemanticValidator::visitFunction(
   bool simpleParameterList = true;
   for (auto &param : params) {
     simpleParameterList &= !isa<PatternNode>(param);
-    validateDeclarationNames(&param, &node->paramNames);
+    validateDeclarationNames(&param, &newFuncCtx.semInfo->paramNames);
   }
 
   if (!simpleParameterList && useStrictNode) {
@@ -473,7 +473,7 @@ void SemanticValidator::visitFunction(
   if (!simpleParameterList || curFunction()->strictMode ||
       isa<ArrowFunctionExpressionNode>(node)) {
     llvm::SmallSet<NodeLabel, 8> paramNameSet;
-    for (auto curIdNode : node->paramNames) {
+    for (auto curIdNode : newFuncCtx.semInfo->paramNames) {
       auto insert_result = paramNameSet.insert(curIdNode->_name);
       if (insert_result.second == false) {
         sm_.error(

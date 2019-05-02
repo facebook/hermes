@@ -19,6 +19,9 @@ namespace sem {
 /// Semantic information for a function declaration, expression, method, etc.
 class FunctionInfo {
  public:
+  /// Parameter names.
+  llvm::SmallVector<ESTree::IdentifierNode *, 4> paramNames{};
+
   /// The list of hoisted variable declarations.
   llvm::SmallVector<ESTree::IdentifierNode *, 4> varDecls{};
 
