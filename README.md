@@ -45,6 +45,8 @@ printf '%s\n' "%s|1000.0.0|file://${HERMES_WS_DIR:?}/react-native-hermes" wq |
 
 # 5. Clone and build LLVM. This may take a while.
 hermes/utils/build_llvm.sh
+# for cli release build:
+DISTRIBUTE=1 hermes/utils/build_llvm.sh
 
 # 6. Cross-compile LLVM dependencies for all Android ABIs
 hermes/utils/crosscompile_llvm.sh
@@ -52,10 +54,18 @@ hermes/utils/crosscompile_llvm.sh
 # 7. Compile libhermes for Android
 ( cd hermes/android && gradle build )
 
-# 8. Create a React Native demo project from the react-native-hermes template
+# 8. Configure the build for the hermes compiler and repl for the host platform
+./hermes/utils/configure.sh
+# for cli release build
+DISTRIBUTE=1 ./hermes/utils/configure.sh
+
+# 9. Build the compiler and repl for cli release
+( cd build_release && ninja github-release )
+
+# 10. Create a React Native demo project from the react-native-hermes template
 npx @react-native-community/cli@2.0.0-alpha.16 init AwesomeProject --template "file://${HERMES_WS_DIR:?}/react-native-hermes"
 
-# 9. Build and run the demo project
+# 11. Build and run the demo project
 ( cd AwesomeProject && npx @react-native-community/cli@2.0.0-alpha.16 run-android )
 
 )
