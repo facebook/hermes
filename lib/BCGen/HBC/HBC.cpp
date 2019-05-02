@@ -112,7 +112,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
     OptValue<Context::SegmentRange> range,
-    SourceMapGenerator *outSourceMap,
+    SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   PerfSection perf("Bytecode Generation");
   lowerIR(M, options);
@@ -248,7 +248,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       funcGen =
           BytecodeFunctionGenerator::create(BMGen, RA.getMaxRegisterUsage());
       HBCISel hbciSel(&F, funcGen.get(), RA, scopeAnalysis);
-      hbciSel.generate(outSourceMap);
+      hbciSel.generate(sourceMapGen);
     }
 
     BMGen.setFunctionGenerator(&F, std::move(funcGen));
@@ -263,14 +263,14 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecode(
     const BytecodeGenerationOptions &options,
     const SHA1 &sourceHash,
     OptValue<Context::SegmentRange> range,
-    SourceMapGenerator *outSourceMap,
+    SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   auto BM = generateBytecodeModule(
       M,
       M->getTopLevelFunction(),
       options,
       range,
-      outSourceMap,
+      sourceMapGen,
       std::move(baseBCProvider));
   if (options.format == OutputFormatKind::EmitBundle) {
     assert(BM != nullptr);
@@ -279,7 +279,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecode(
   }
   // Now that the BytecodeFunctions know their offsets into the stream, we can
   // populate the source map.
-  if (outSourceMap)
-    BM->populateSourceMap(outSourceMap);
+  if (sourceMapGen)
+    BM->populateSourceMap(sourceMapGen);
   return BM;
 }

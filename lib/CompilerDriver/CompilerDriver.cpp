@@ -1247,9 +1247,9 @@ CompileResult processSourceFiles(
   context->setLazyCompilation(cl::LazyCompilation);
 
   // Create the source map if requested.
-  llvm::Optional<SourceMapGenerator> sourceMap{};
+  llvm::Optional<SourceMapGenerator> sourceMapGen{};
   if (cl::OutputSourceMap) {
-    sourceMap = SourceMapGenerator{};
+    sourceMapGen = SourceMapGenerator{};
   }
 
   Module M(context);
@@ -1263,13 +1263,13 @@ CompileResult processSourceFiles(
             semCtx,
             declFileList,
             std::move(fileBufs),
-            sourceMap ? &*sourceMap : nullptr)) {
+            sourceMapGen ? &*sourceMapGen : nullptr)) {
       return ParsingFailed;
     }
   } else {
-    if (sourceMap) {
+    if (sourceMapGen) {
       for (const auto &filename : cl::InputFilenames) {
-        sourceMap->addSource(filename == "-" ? "<stdin>" : filename);
+        sourceMapGen->addSource(filename == "-" ? "<stdin>" : filename);
       }
     }
 
@@ -1349,7 +1349,7 @@ CompileResult processSourceFiles(
   // If the dump target is None, return bytecode in an executable form.
   if (cl::DumpTarget == None) {
     assert(
-        !sourceMap &&
+        !sourceMapGen &&
         "validateFlags() should enforce no source map output for execution");
     return generateBytecodeForExecution(M, genOptions);
   }
@@ -1371,7 +1371,7 @@ CompileResult processSourceFiles(
         genOptions,
         sourceHash,
         llvm::None,
-        sourceMap ? sourceMap.getPointer() : nullptr);
+        sourceMapGen ? sourceMapGen.getPointer() : nullptr);
     if (result.status != Success) {
       return result;
     }
@@ -1391,7 +1391,7 @@ CompileResult processSourceFiles(
           genOptions,
           sourceHash,
           range,
-          sourceMap ? sourceMap.getPointer() : nullptr);
+          sourceMapGen ? sourceMapGen.getPointer() : nullptr);
       if (segResult.status != Success) {
         return segResult;
       }
@@ -1405,7 +1405,7 @@ CompileResult processSourceFiles(
     auto OS = openFileForWrite(mapFilePath, F_Text);
     if (!OS)
       return OutputFileError;
-    sourceMap->outputAsJSON(*OS);
+    sourceMapGen->outputAsJSON(*OS);
   }
 
   return result;
