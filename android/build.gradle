@@ -53,6 +53,16 @@ android {
       buildStagingDirectory.mkdirs()
     }
   }
+
+  buildTypes {
+    debug {
+      externalNativeBuild {
+        cmake {
+          arguments "-DHERMES_ENABLE_DEBUGGER=True"
+        }
+      }
+    }
+  }
 }
 
 allprojects {
