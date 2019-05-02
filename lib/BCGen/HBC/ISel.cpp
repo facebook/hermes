@@ -203,8 +203,7 @@ void HBCISel::generateJumpTable() {
 bool HBCISel::getDebugSourceLocation(
     SourceErrorManager &manager,
     SMLoc loc,
-    DebugSourceLocation *out,
-    SourceMapGenerator *outSourceMap) {
+    DebugSourceLocation *out) {
   SourceErrorManager::SourceCoords coords{};
   if (!manager.findBufferLineAndLoc(loc, coords)) {
     return false;
@@ -258,7 +257,7 @@ void HBCISel::addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap) {
     assert(inst->hasLocation() && "Missing location");
     auto location = inst->getLocation();
 
-    if (!getDebugSourceLocation(manager, location, &info, outSourceMap)) {
+    if (!getDebugSourceLocation(manager, location, &info)) {
       llvm_unreachable("Unable to get source location");
     }
     info.address = reloc.loc;
@@ -269,8 +268,7 @@ void HBCISel::addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap) {
   // If there's no debug info, don't set the function location.
   // This avoids polluting the string table with source file names.
   if (hasDebugInfo) {
-    getDebugSourceLocation(
-        manager, F_->getSourceRange().Start, &info, outSourceMap);
+    getDebugSourceLocation(manager, F_->getSourceRange().Start, &info);
     info.address = 0;
     info.statement = 0;
     BCFGen_->setSourceLocation(info);

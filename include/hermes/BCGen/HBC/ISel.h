@@ -124,8 +124,7 @@ class HBCISel {
   bool getDebugSourceLocation(
       SourceErrorManager &manager,
       SMLoc loc,
-      DebugSourceLocation *out,
-      SourceMapGenerator *outSourceMap);
+      DebugSourceLocation *out);
 
   /// Add applicable debug info.
   void addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap);
