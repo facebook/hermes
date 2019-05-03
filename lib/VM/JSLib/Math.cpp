@@ -215,8 +215,10 @@ mathRandom(void *, Runtime *runtime, NativeArgs) {
 }
 
 // ES6.0 20.2.2.17
-static CallResult<HermesValue>
-mathFround(void *, Runtime *runtime, NativeArgs args) {
+static CallResult<HermesValue> mathFround(
+    void *,
+    Runtime *runtime,
+    NativeArgs args) LLVM_NO_SANITIZE("float-cast-overflow") {
   auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -225,6 +227,10 @@ mathFround(void *, Runtime *runtime, NativeArgs args) {
 
   // Make the double x into a 32-bit float,
   // and then recast it back to a 64-bit float to return it.
+  // This is UB for values outside of the range of a float, but this works on
+  // our current compilers.
+  // TODO(T43892577): Find an alternative that doesn't use UB (or validate that
+  // the UB is ok).
   return HermesValue::encodeNumberValue(
       static_cast<double>(static_cast<float>(x)));
 }

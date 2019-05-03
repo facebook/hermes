@@ -288,6 +288,8 @@ print(Math.fround(1.5));
 // CHECK-NEXT: 1.5
 print(Math.fround(-4.2));
 // CHECK-NEXT: -4.199999809265137
+print(Math.fround(-1.79769e+308));
+// CHECK-NEXT: -Infinity
 
 print('imul');
 // CHECK-LABEL: imul
