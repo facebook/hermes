@@ -8,7 +8,7 @@
 
 #include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
-#ifdef HERMESVM_ENABLE_OPT_COMPILE_IN_RUNTIME
+#ifdef HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME
 #include "hermes/Optimizer/PassManager/Pipeline.h"
 #endif
 #include "hermes/Parser/JSParser.h"
