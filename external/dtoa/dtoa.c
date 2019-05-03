@@ -2501,6 +2501,7 @@ g_strtod
 	CONST char *s, *s0, *s1;
 	double aadj, aadj1;
 	Long L;
+	ULong UL;
 	U aadj2, adj, rv, rv0;
 	ULong y, z;
 	BCinfo bc;
@@ -2654,17 +2655,17 @@ g_strtod
 			while(c == '0')
 				c = *++s;
 			if (c > '0' && c <= '9') {
-				L = c - '0';
+				UL = c - '0';
 				s1 = s;
 				while((c = *++s) >= '0' && c <= '9')
-					L = 10*L + c - '0';
-				if (s - s1 > 8 || L > 19999)
+					UL = 10*UL + c - '0';
+				if (s - s1 > 8 || UL > 19999)
 					/* Avoid confusion from exponents
 					 * so large that e might overflow.
 					 */
 					e = 19999; /* safe for 16 bit ints */
 				else
-					e = (int)L;
+					e = (int)UL;
 				if (esign)
 					e = -e;
 				}

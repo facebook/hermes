@@ -1,5 +1,0 @@
-# This file contains functions from the dtoa library that fail with sanitizers
-# on.
-
-[signed-integer-overflow]
-fun:g_strtod
