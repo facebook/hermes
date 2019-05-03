@@ -73,6 +73,10 @@ namespace facebook {
 namespace hermes {
 namespace detail {
 
+#if !defined(NDEBUG) && !defined(ASSERT_ON_DANGLING_VM_REFS)
+#define ASSERT_ON_DANGLING_VM_REFS
+#endif
+
 static void (*sApiFatalHandler)(const std::string &) = nullptr;
 /// Handler called by HermesVM to report unrecoverable errors.
 /// This is a forward declaration to prevent a compiler warning.
@@ -293,6 +297,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
     CountedPointerValue() : refCount(1) {}
 
     void invalidate() override {
+#ifdef ASSERT_ON_DANGLING_VM_REFS
+      assert(
+          ((1 << 31) & refCount) == 0 &&
+          "This PointerValue was left dangling after the Runtime was destroyed.");
+#endif
       dec();
     }
 
@@ -312,6 +321,18 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return refCount.load(std::memory_order_relaxed);
     }
 
+#ifdef ASSERT_ON_DANGLING_VM_REFS
+    void markDangling() {
+      // Mark this PointerValue as dangling by setting the top bit AND the
+      // second-top bit. The top bit is used to determine if the pointer is
+      // dangling. Setting the second-top bit ensures that accidental
+      // over-calling the dec() function doesn't clear the top bit without
+      // complicating the implementation of dec().
+      refCount |= 0b11 << 30;
+    }
+#endif
+
+   private:
     std::atomic<uint32_t> refCount;
   };
 
@@ -837,15 +858,32 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   template <typename T>
   struct ManagedValues {
-#ifndef NDEBUG
+#ifdef ASSERT_ON_DANGLING_VM_REFS
+    // If we have active HermesValuePointers whhen deconstructing, these will
+    // now be dangling. We deliberately allocate and immediately leak heap
+    // memory to hold the internal list. This keeps alive memory holding the
+    // ref-count of the now dangling references, allowing them to detect the
+    // dangling case safely and assert when they are eventually released. By
+    // deferring the assert it's a bit easier to see what's holding the pointers
+    // for too long.
     ~ManagedValues() {
-      for (const auto &s : values) {
-        assert(
-            s.get() == 0 &&
-            "Runtime destroyed with outstanding API references");
+      bool anyDangling = false;
+      for (auto it = values.begin(); it != values.end();) {
+        if (it->get() == 0) {
+          it = values.erase(it);
+        } else {
+          anyDangling = true;
+          it->markDangling();
+          ++it;
+        }
+      }
+      if (anyDangling) {
+        // This is the deliberate memory leak described above.
+        new std::list<T>(std::move(values));
       }
     }
 #endif
+
     std::list<T> *operator->() {
       return &values;
     }
