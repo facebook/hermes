@@ -1,0 +1,20 @@
+{
+  "name": "hermesvm",
+  "version": "0.0.3",
+  "private": true,
+  "files": [
+    "android/hermes-debug.aar",
+    "android/hermes-release.aar",
+    "osx-bin/hermes",
+    "osx-bin/hermes-repl"
+  ],
+  "devDependencies": {
+    "request": "^2.88.0",
+    "tar": "^4.4.8",
+    "command-line-args": "^5.1.1"
+  },
+  "scripts": {
+    "prepack": "node fetch.js",
+    "prepack-dev": "node fetch.js --dev"
+  }
+}
