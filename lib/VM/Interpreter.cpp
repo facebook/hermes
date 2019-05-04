@@ -115,19 +115,6 @@ static const WrapperFunc interpWrappers[] = {PROFILER_SYMBOLS(LIST_ITEM)};
     defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode); \
   } while (0)
 
-CallResult<HermesValue> Interpreter::createClosure(
-    Runtime *runtime,
-    RuntimeModule *runtimeModule,
-    unsigned funcIndex,
-    Handle<Environment> envHandle) {
-  return JSFunction::create(
-      runtime,
-      runtimeModule->getDomain(runtime),
-      Handle<JSObject>::vmcast(&runtime->functionPrototype),
-      envHandle,
-      runtimeModule->getCodeBlockMayAllocate(funcIndex));
-}
-
 CallResult<HermesValue> Interpreter::reifyArgumentsSlowPath(
     Runtime *runtime,
     Handle<Callable> curFunction,
@@ -1743,33 +1730,31 @@ tailCall:
       }
 
       CASE(CreateClosure) {
-        res = createClosure(
-            runtime,
-            curCodeBlock->getRuntimeModule(),
-            ip->iCreateClosure.op3,
-            Handle<Environment>::vmcast(&O2REG(CreateClosure)));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-        O1REG(CreateClosure) = *res;
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(CreateClosure);
-        DISPATCH;
+        idVal = ip->iCreateClosure.op3;
+        nextIP = NEXTINST(CreateClosure);
+        goto createClosure;
       }
       CASE(CreateClosureLongIndex) {
-        res = createClosure(
-            runtime,
-            curCodeBlock->getRuntimeModule(),
-            ip->iCreateClosureLongIndex.op3,
-            Handle<Environment>::vmcast(&O2REG(CreateClosureLongIndex)));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-        O1REG(CreateClosureLongIndex) = *res;
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(CreateClosureLongIndex);
-        DISPATCH;
+        idVal = ip->iCreateClosureLongIndex.op3;
+        nextIP = NEXTINST(CreateClosureLongIndex);
+        goto createClosure;
       }
+    createClosure : {
+      auto *runtimeModule = curCodeBlock->getRuntimeModule();
+      res = JSFunction::create(
+          runtime,
+          runtimeModule->getDomain(runtime),
+          Handle<JSObject>::vmcast(&runtime->functionPrototype),
+          Handle<Environment>::vmcast(&O2REG(CreateClosure)),
+          runtimeModule->getCodeBlockMayAllocate(idVal));
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        goto exception;
+      }
+      O1REG(CreateClosure) = *res;
+      gcScope.flushToSmallCount(KEEP_HANDLES);
+      ip = nextIP;
+      DISPATCH;
+    }
 
       CASE(GetEnvironment) {
         // The currently executing function must exist, so get the environment.

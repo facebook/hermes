@@ -19,14 +19,6 @@ namespace vm {
 /// Runtime.
 class Interpreter {
  public:
-  /// Allocate a closure for the specified function and the specified
-  /// environment. \param funcIndex function index in the global function table.
-  static CallResult<HermesValue> createClosure(
-      Runtime *runtime,
-      RuntimeModule *runtimeModule,
-      unsigned funcIndex,
-      Handle<Environment> envHandle);
-
   /// Slow path for ReifyArguments resReg, lazyReg
   /// It assumes that he fast path has handled the case when 'lazyReg' is
   /// already initialized. It creates a new 'arguments' object and populates it
