@@ -455,19 +455,24 @@ set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
 
 # This is how github release files are built.
 
-set(HERMES_GITHUB_VERSION v0.0.1)
-string(TOLOWER ${CMAKE_SYSTEM_NAME} HERMES_GITHUB_SYSTEM_NAME)
+# This must be consistent with the release_version in
+# android/build.gradle and npm/package.json
+set(HERMES_RELEASE_VERSION 0.0.3)
+
 set(HERMES_GITHUB_DIR ${HERMES_BINARY_DIR}/github)
-set(HERMES_GITHUB_FILE hermes-cli-${HERMES_GITHUB_SYSTEM_NAME}-${HERMES_GITHUB_VERSION}.tar.gz)
+string(TOLOWER ${CMAKE_SYSTEM_NAME} HERMES_GITHUB_SYSTEM_NAME)
+set(HERMES_CLI_GITHUB_FILE hermes-cli-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz)
 
 add_custom_command(
-  OUTPUT ${HERMES_GITHUB_DIR}/${HERMES_GITHUB_FILE}
+  OUTPUT ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE}
+  WORKING_DIRECTORY ${HERMES_BINARY_DIR}/bin
+  DEPENDS hermes hermes-repl
+  VERBATIM
   COMMAND
-    ${CMAKE_COMMAND} -E tar zcf ${HERMES_GITHUB_DIR}/${HERMES_GITHUB_FILE}
+    ${CMAKE_COMMAND} -E tar zcf ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE}
     ${HERMES_BINARY_DIR}/bin/hermes
-    ${HERMES_BINARY_DIR}/bin/hermes-repl
-  DEPENDS hermes hermes-repl)
+    ${HERMES_BINARY_DIR}/bin/hermes-repl)
 
 add_custom_target(
-  github-release
-  DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_GITHUB_FILE})
+  github-cli-release
+  DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})

@@ -13,6 +13,9 @@ apply plugin: 'com.android.library'
 def facebookBuild = System.getenv("FACEBOOK") ?: "0"
 def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
 def hermes_ws = System.getenv("HERMES_WS_DIR")
+// This must be consistent with the release_version in npm/package.json
+// and the HERMES_RELEASE_VERSION in CMakeLists.txt
+def release_version = "0.0.3"
 
 // For Facebook internal use:
 def fbsource = System.getenv("FBSOURCE_DIR") ?:
@@ -90,4 +93,12 @@ allprojects {
       }
     }
   }
+}
+
+task githubRelease(dependsOn: ['build'], type: Tar) {
+  baseName = "hermes-runtime-android"
+  version = "v" + release_version
+  extension = "tar.gz"
+  compression = Compression.GZIP
+  from "$buildDir/outputs/aar"
 }

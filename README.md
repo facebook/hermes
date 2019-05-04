@@ -32,43 +32,66 @@ export HERMES_WS_DIR="$PWD"
 #    (FB internal:  ln -s ~/fbsource/xplat/hermes hermes  )
 git clone git@github.com:facebook/hermes.git
 
-# 2. Clone react-native-hermes here
-git clone git@github.com:facebookexperimental/react-native-hermes.git
-
-# 3. Replace the RN template app version number (1000.0.0) with the path
-#    to your react-native-hermes directory.
-printf '%s\n' "%s|1000.0.0|file://${HERMES_WS_DIR:?}/react-native-hermes" wq |
-    ed react-native-hermes/template/package.json
-
-# 4. Fetch react-native-hermes' dependencies
-( cd react-native-hermes && yarn install )
-
-# 5. Clone and build LLVM. This may take a while.
+# 3. Clone and build LLVM. This may take a while.
 hermes/utils/build_llvm.sh
 # for cli release build:
 DISTRIBUTE=1 hermes/utils/build_llvm.sh
 
-# 6. Cross-compile LLVM dependencies for all Android ABIs
+# 4. Cross-compile LLVM dependencies for all Android ABIs
 hermes/utils/crosscompile_llvm.sh
 
-# 7. Compile libhermes for Android
-( cd hermes/android && gradle build )
+# 5. Compile libhermes for Android
+( cd hermes/android && gradle githubRelease)
 
-# 8. Configure the build for the hermes compiler and repl for the host platform
+# 6. Configure the build for the hermes compiler and repl for the host platform
 ./hermes/utils/configure.sh
 # for cli release build
 DISTRIBUTE=1 ./hermes/utils/configure.sh
 
-# 9. Build the compiler and repl for cli release
-( cd build_release && ninja github-release )
+# 7. Build the compiler and repl for cli release
+( cd build_release && ninja github-cli-release )
 
-# 10. Create a React Native demo project from the react-native-hermes template
+# 8. Build the hermesvm npm
+cp build_android/distributions/hermes-runtime-android-v*.tar.gz hermes/npm
+cp build_release/github/hermes-cli-*-v*.tar.gz hermes/npm
+(cd hermes/npm && npm run prepack-dev && yarn link)
+# for release build (this will not work with the private repo, unless
+# you add a personal access token <https://github.com/settings/tokens>
+# to the URLs in fetch.js, like ?access_token=...)
+# Create a github release
+# Update the release_version number in hermes/CMakeLists.txt
+# Add files to the github release.  This will require building on more than one machine:
+#   build_android/distributions/hermes-runtime-android-v<version>.tar.gz
+#   build_release/github/hermes-cli-darwin-v<version>.tar.gz
+#   build_release/github/hermes-cli-linux-v<version>.tar.gz
+# Update the release version and file digests in hermes/npm/package.json
+# (cd hermes/npm && npm pack)
+# TODO: have travis automate this
+
+# 9. Clone react-native-hermes here
+git clone git@github.com:facebookexperimental/react-native-hermes.git
+
+# 10. Replace the RN template app version number (1000.0.0) with the path
+#    to your react-native-hermes directory.
+printf '%s\n' "%s|1000.0.0|file://${HERMES_WS_DIR:?}/react-native-hermes" wq |
+    ed react-native-hermes/template/package.json
+
+# 11. Fetch react-native-hermes' dependencies
+( cd react-native-hermes && yarn install )
+
+# 12. Create a React Native demo project from the react-native-hermes template
 npx @react-native-community/cli@2.0.0-alpha.16 init AwesomeProject --template "file://${HERMES_WS_DIR:?}/react-native-hermes"
+( cd AwesomeProject/node_modules/react-native && yarn link hermesvm )
 
-# 11. Build and run the demo project
+# 13. Build and run the demo project
+( cd AwesomeProject && react-native start ) &
 ( cd AwesomeProject && npx @react-native-community/cli@2.0.0-alpha.16 run-android )
 
 )
+
+# 14. If you want to build RNTester:
+( cd react-native-github && yarn link hermesvm )
+( cd react-native-github && ./gradlew RNTester:android:app:installDebug )
 ```
 
 To set up an existing project to use Hermes:
