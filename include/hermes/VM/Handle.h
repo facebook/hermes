@@ -164,6 +164,7 @@ struct HermesValueCast<T, false> {
 /// comparison and increment).
 template <typename T>
 class Handle : public HandleBase {
+ protected:
   /// Create a Handle aliasing a non-movable HermesValue without
   /// allocating a handle.
   explicit Handle(const PinnedHermesValue *valueAddr, bool)
@@ -270,6 +271,13 @@ class Handle : public HandleBase {
     return Handle<T>(other, true);
   }
 
+  /// Cast the argument to the desired type and assert if it doesn't have the
+  /// correct type.
+  static Handle<T> vmcast_or_null(const HandleBase &other) {
+    (void)hermes::vm::vmcast_or_null<T>(other.getHermesValue());
+    return Handle<T>(other, true);
+  }
+
   static Handle<T> dyn_vmcast(
       HandleRootOwner *runtime,
       const HandleBase &other);
@@ -295,6 +303,10 @@ template <typename T>
 class MutableHandle : public Handle<T> {
   MutableHandle(const MutableHandle &) = delete;
   void operator=(const MutableHandle &) = delete;
+
+  /// Alias a MutableHandle with a non-movable HermesValue without any checks.
+  explicit MutableHandle(PinnedHermesValue *valueAddr, bool dummy)
+      : Handle<T>(valueAddr, dummy) {}
 
  public:
   using value_type = typename Handle<T>::value_type;
@@ -324,6 +336,23 @@ class MutableHandle : public Handle<T> {
 
   void set(value_type value) {
     *HandleBase::handleRef() = HermesValueTraits<T>::encode(value);
+  }
+
+  /// Create a MutableHandle from a pinned HermesValue and assert that the value
+  /// has the correct type.
+  static MutableHandle<T> vmcast(PinnedHermesValue *valueAddr) {
+    HermesValueCast<T>::assertValid(*valueAddr);
+    return MutableHandle<T>(valueAddr, true);
+  }
+
+  /// Alias a MutableHandle with a pinned HermesValue. This is only for cases
+  /// where the MutableHandle<> is an output-only value, so we don't want to
+  /// unnecessarily initialize it to a value compatible with its type.
+  static MutableHandle<T> aliasForOutput(PinnedHermesValue *valueAddr) {
+#ifdef HERMES_SLOW_DEBUG
+    *valueAddr = HermesValue::encodeInvalidValue();
+#endif
+    return MutableHandle<T>(valueAddr, true);
   }
 } HERMES_ATTRIBUTE_WARN_UNUSED_VARIABLES;
 
