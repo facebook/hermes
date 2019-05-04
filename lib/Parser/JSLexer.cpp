@@ -153,10 +153,14 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         if (curCharPtr_ == bufferEnd_) {
           token_.setEof();
         } else {
-          sm_.error(
-              token_.getStartLoc(), "unrecognized Unicode character \\u0000");
-          ++curCharPtr_;
-          continue;
+          if (!error(
+                  token_.getStartLoc(),
+                  "unrecognized Unicode character \\u0000")) {
+            token_.setEof();
+          } else {
+            ++curCharPtr_;
+            continue;
+          }
         }
         break;
 
@@ -544,7 +548,7 @@ uint32_t JSLexer::consumeUnicodeEscape() {
   ++curCharPtr_;
 
   if (*curCharPtr_ != 'u') {
-    sm_.error(
+    error(
         {SMLoc::getFromPointer(curCharPtr_ - 1),
          SMLoc::getFromPointer(curCharPtr_ + 1)},
         "invalid Unicode escape");
@@ -647,10 +651,13 @@ void JSLexer::consumeIdentifierParts() {
 unsigned char JSLexer::consumeOctal(unsigned maxLen) {
   assert(*curCharPtr_ >= '0' && *curCharPtr_ <= '7');
 
-  if (strictMode_)
-    sm_.error(
-        SMLoc::getFromPointer(curCharPtr_ - 1),
-        "octals not allowed in strict mode");
+  if (strictMode_) {
+    if (!error(
+            SMLoc::getFromPointer(curCharPtr_ - 1),
+            "octals not allowed in strict mode")) {
+      return 0;
+    }
+  }
 
   auto res = (unsigned char)(*curCharPtr_++ - '0');
   while (--maxLen && *curCharPtr_ >= '0' && *curCharPtr_ <= '7')
@@ -668,7 +675,7 @@ llvm::Optional<uint32_t> JSLexer::consumeHex(unsigned requiredLen) {
     else if (ch >= 'a' && ch <= 'f')
       ch -= 'a' - 10;
     else {
-      sm_.error(SMLoc::getFromPointer(curCharPtr_), "invalid hex number");
+      error(SMLoc::getFromPointer(curCharPtr_), "invalid hex number");
       return llvm::None;
     }
     cp = (cp << 4) + ch;
@@ -730,8 +737,7 @@ const char *JSLexer::skipBlockComment(const char *start) {
     switch ((unsigned char)*start) {
       case 0:
         if (start == bufferEnd_) {
-          sm_.error(
-              SMLoc::getFromPointer(start), "non-terminated block comment");
+          error(SMLoc::getFromPointer(start), "non-terminated block comment");
           sm_.note(blockCommentStart, "comment started here");
           goto endLoop;
         } else {
@@ -884,7 +890,7 @@ end:
   double val;
 
   if (!ok) {
-    sm_.error(token_.getSourceRange(), "invalid numeric literal");
+    error(token_.getSourceRange(), "invalid numeric literal");
     val = std::numeric_limits<double>::quiet_NaN();
   } else if (real || radix == 10) {
     // We need a zero-terminated buffer for g_strtod().
@@ -895,26 +901,30 @@ end:
     char *endPtr;
     val = ::g_strtod(buf.data(), &endPtr);
     if (endPtr != &buf.back()) {
-      sm_.error(token_.getSourceRange(), "invalid numeric literal");
+      error(token_.getSourceRange(), "invalid numeric literal");
       val = std::numeric_limits<double>::quiet_NaN();
     }
   } else {
-    if (radix == 8 && strictMode_ && curCharPtr_ - start > 1)
-      sm_.error(
-          token_.getSourceRange(),
-          "Octal literals are not allowed in strict mode");
+    if (radix == 8 && strictMode_ && curCharPtr_ - start > 1) {
+      if (!error(
+              token_.getSourceRange(),
+              "Octal literals are not allowed in strict mode")) {
+        val = std::numeric_limits<double>::quiet_NaN();
+        goto done;
+      }
+    }
 
     // Handle the zero-radix case. This could only happen with radix 16 because
     // otherwise start wouldn't have been changed.
     if (curCharPtr_ == start) {
-      sm_.error(token_.getSourceRange(), "No hexadecimal digits after 0x");
+      error(token_.getSourceRange(), "No hexadecimal digits after 0x");
       val = std::numeric_limits<double>::quiet_NaN();
     } else {
       // Parse the rest of the number:
       auto parsedInt = parseIntWithRadix(
           llvm::ArrayRef<char>{start, (size_t)(curCharPtr_ - start)}, radix);
       if (!parsedInt) {
-        sm_.error(token_.getSourceRange(), "invalid integer literal");
+        error(token_.getSourceRange(), "invalid integer literal");
         val = std::numeric_limits<double>::quiet_NaN();
       } else {
         val = parsedInt.getValue();
@@ -922,6 +932,7 @@ end:
     }
   }
 
+done:
   token_.setNumericLiteral(val);
 }
 
@@ -1056,8 +1067,7 @@ void JSLexer::scanString() {
 
         case '\0': // EOF?
           if (curCharPtr_ == bufferEnd_) { // eof?
-            sm_.error(
-                SMLoc::getFromPointer(curCharPtr_), "non-terminated string");
+            error(SMLoc::getFromPointer(curCharPtr_), "non-terminated string");
             sm_.note(token_.getStartLoc(), "string started here");
             goto breakLoop;
           } else {
@@ -1124,11 +1134,11 @@ void JSLexer::scanString() {
     } else if (LLVM_UNLIKELY(
                    *curCharPtr_ == '\n' || *curCharPtr_ == '\r' ||
                    matchUnicodeLineTerminator(curCharPtr_))) {
-      sm_.error(SMLoc::getFromPointer(curCharPtr_), "non-terminated string");
+      error(SMLoc::getFromPointer(curCharPtr_), "non-terminated string");
       sm_.note(token_.getStartLoc(), "string started here");
       break;
     } else if (LLVM_UNLIKELY(*curCharPtr_ == 0 && curCharPtr_ == bufferEnd_)) {
-      sm_.error(SMLoc::getFromPointer(curCharPtr_), "non-terminated string");
+      error(SMLoc::getFromPointer(curCharPtr_), "non-terminated string");
       sm_.note(token_.getStartLoc(), "string started here");
       break;
     } else {
@@ -1202,7 +1212,7 @@ void JSLexer::scanRegExp() {
       case '\n':
       case '\r':
       unterminated:
-        sm_.error(
+        error(
             SMLoc::getFromPointer(curCharPtr_),
             "non-terminated regular expression literal");
         sm_.note(startLoc, "regular expresson started here");
@@ -1234,6 +1244,33 @@ exitLoop:
 
   token_.setRegExpLiteral(new (allocator_.Allocate<RegExpLiteral>(1))
                               RegExpLiteral(body, flags));
+}
+
+bool JSLexer::error(llvm::SMLoc loc, const llvm::Twine &msg) {
+  sm_.error(loc, msg);
+  if (!sm_.isErrorLimitReached())
+    return true;
+  forceEOF();
+  return false;
+}
+
+bool JSLexer::error(llvm::SMRange range, const llvm::Twine &msg) {
+  sm_.error(range, msg);
+  if (!sm_.isErrorLimitReached())
+    return true;
+  forceEOF();
+  return false;
+}
+
+bool JSLexer::error(
+    llvm::SMLoc loc,
+    llvm::SMRange range,
+    const llvm::Twine &msg) {
+  sm_.error(loc, range, msg);
+  if (!sm_.isErrorLimitReached())
+    return true;
+  forceEOF();
+  return false;
 }
 
 }; // namespace parser

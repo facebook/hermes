@@ -44,8 +44,7 @@ Function *generateLazyFunctionIR(
     hbc::LazyCompilationData *lazyData,
     Module *M) {
   auto &context = M->getContext();
-  SimpleDiagHandlerRAII diagHandler{
-      context.getSourceErrorManager().getSourceMgr()};
+  SimpleDiagHandlerRAII diagHandler{context.getSourceErrorManager()};
 
   AllocationScope alloc(context.getAllocator());
   sem::SemContext semCtx{};

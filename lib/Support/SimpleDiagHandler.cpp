@@ -32,15 +32,21 @@ std::string SimpleDiagHandler::getErrorString() const {
       .str();
 }
 
-SimpleDiagHandlerRAII::SimpleDiagHandlerRAII(llvm::SourceMgr &sourceMgr)
-    : sourceMgr_(sourceMgr),
-      oldHandler_(sourceMgr.getDiagHandler()),
-      oldContext_(sourceMgr.getDiagContext()) {
-  installInto(sourceMgr);
+SimpleDiagHandlerRAII::SimpleDiagHandlerRAII(
+    SourceErrorManager &sourceErrorManager)
+    : sourceErrorManager_(sourceErrorManager),
+      oldHandler_(sourceErrorManager.getSourceMgr().getDiagHandler()),
+      oldContext_(sourceErrorManager.getSourceMgr().getDiagContext()),
+      oldErrorLimit_(sourceErrorManager.getErrorLimit()) {
+  installInto(sourceErrorManager.getSourceMgr());
+  sourceErrorManager.clearErrorLimitReached();
+  sourceErrorManager.setErrorLimit(1);
 }
 
 SimpleDiagHandlerRAII::~SimpleDiagHandlerRAII() {
-  sourceMgr_.setDiagHandler(oldHandler_, oldContext_);
+  sourceErrorManager_.clearErrorLimitReached();
+  sourceErrorManager_.setErrorLimit(oldErrorLimit_);
+  sourceErrorManager_.getSourceMgr().setDiagHandler(oldHandler_, oldContext_);
 }
 
 } // namespace hermes

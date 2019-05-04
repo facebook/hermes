@@ -292,6 +292,11 @@ class JSLexer {
     return &token_;
   }
 
+  /// Force an EOF at the next token.
+  void forceEOF() {
+    curCharPtr_ = bufferEnd_;
+  }
+
   /// Grammar context to be passed to advance() determining whether "/" or
   /// RegExp can follow at that point.
   enum GrammarContext { AllowRegExp, AllowDiv };
@@ -313,14 +318,32 @@ class JSLexer {
   const Token *rescanCurrentTokenAsDirective();
 
   /// Report an error for the range from startLoc to curCharPtr.
-  void errorRange(SMLoc startLoc, const llvm::Twine &msg) {
-    sm_.error({startLoc, SMLoc::getFromPointer(curCharPtr_)}, msg);
+  bool errorRange(SMLoc startLoc, const llvm::Twine &msg) {
+    return error({startLoc, SMLoc::getFromPointer(curCharPtr_)}, msg);
   }
 
   /// Report an error using the current token's location.
-  void error(const llvm::Twine &msg) {
-    sm_.error(token_.getSourceRange(), msg);
+  bool error(const llvm::Twine &msg) {
+    return error(token_.getSourceRange(), msg);
   }
+
+  /// Emit an error at the specified source location. If the maximum number of
+  /// errors has been reached, return false and move the scanning pointer to
+  /// EOF.
+  /// \return false if too many errors have been emitted and we need to abort.
+  bool error(SMLoc loc, const llvm::Twine &msg);
+
+  /// Emit an error at the specified source range. If the maximum number of
+  /// errors has been reached, return false and move the scanning pointer to
+  /// EOF.
+  /// \return false if too many errors have been emitted and we need to abort.
+  bool error(SMRange range, const llvm::Twine &msg);
+
+  /// Emit an error at the specified source location and range. If the maximum
+  /// number of errors has been reached, return false and move the scanning
+  /// pointer to EOF.
+  /// \return false if too many errors have been emitted and we need to abort.
+  bool error(SMLoc loc, SMRange range, const llvm::Twine &msg);
 
   UniqueString *getIdentifier(StringRef name) {
     return strTab_.getString(name);

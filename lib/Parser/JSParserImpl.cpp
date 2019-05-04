@@ -121,12 +121,12 @@ void JSParserImpl::errorExpected(
   if (whatCoords.isSameSourceLineAs(curCoords)) {
     // If the what source coordinates are on the same line as the error, show
     // them both.
-    sm_.error(
+    lexer_.error(
         errorLoc,
         SourceErrorManager::combineIntoRange(whatLoc, errorLoc),
         ss.str());
   } else {
-    sm_.error(errorLoc, ss.str());
+    lexer_.error(errorLoc, ss.str());
 
     if (what && whatCoords.isValid())
       sm_.note(whatLoc, what);
@@ -196,7 +196,7 @@ bool JSParserImpl::eatSemi(SMLoc &endLoc, bool optional) {
   }
 
   if (!optional)
-    sm_.error(tok_->getStartLoc(), "';' expected");
+    lexer_.error(tok_->getStartLoc(), "';' expected");
   return false;
 }
 
@@ -208,7 +208,7 @@ void JSParserImpl::processDirective(UniqueString *directive) {
 bool JSParserImpl::recursionDepthExceeded() {
   if (recursionDepth_ < MAX_RECURSION_DEPTH)
     return false;
-  sm_.error(tok_->getStartLoc(), "Too many nested expressions/statements");
+  lexer_.error(tok_->getStartLoc(), "Too many nested expressions/statements");
   return true;
 }
 
@@ -515,7 +515,7 @@ Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
   } else if (check(TokenKind::rw_yield)) {
     id = tok_->getResWordIdentifier();
     if (isStrictMode() || param.has(ParamYield))
-      sm_.error(
+      lexer_.error(
           tok_->getSourceRange(),
           "Unexpected usage of 'yield' as an identifier");
   } else {
@@ -584,7 +584,7 @@ void JSParserImpl::ensureDestructuringInitialized(
     if (!isa<ESTree::PatternNode>(declarator->_id) || declarator->_init)
       continue;
 
-    sm_.error(
+    lexer_.error(
         declarator->_id->getSourceRange(),
         "destucturing declaration must be initialized");
   }
@@ -707,7 +707,7 @@ Optional<ESTree::Node *> JSParserImpl::parseBindingElement(Param param) {
   } else {
     auto optIdent = parseBindingIdentifier(param);
     if (!optIdent) {
-      sm_.error(
+      lexer_.error(
           tok_->getStartLoc(),
           "identifier, '{' or '[' expected in binding pattern");
       return None;
@@ -787,7 +787,7 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
     Param param) {
   auto optIdent = parseBindingIdentifier(param);
   if (!optIdent) {
-    sm_.error(
+    lexer_.error(
         tok_->getStartLoc(), "identifier expected in object binding pattern");
     return None;
   }
@@ -1058,7 +1058,7 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
     //   for ( LeftHandSideExpression in/of
 
     if (decl && decl->_declarations.size() > 1) {
-      sm_.error(
+      lexer_.error(
           decl->getSourceRange(),
           "Only one binding must be declared in a for-in/for-of loop");
       return None;
@@ -1333,7 +1333,8 @@ Optional<ESTree::SwitchStatementNode *> JSParserImpl::parseSwitchStatement(
       testExpr = optTestExpr.getValue();
     } else if (checkAndEat(TokenKind::rw_default)) {
       if (defaultLocation.isValid()) {
-        sm_.error(clauseStartLoc, "more than one 'default' clause in 'switch'");
+        lexer_.error(
+            clauseStartLoc, "more than one 'default' clause in 'switch'");
         sm_.note(defaultLocation, "first 'default' clause was defined here");
 
         // We want to continue parsing but ignore the statements.
@@ -1402,7 +1403,8 @@ Optional<ESTree::ThrowStatementNode *> JSParserImpl::parseThrowStatement(
   SMLoc startLoc = advance().Start;
 
   if (lexer_.isNewLineBeforeCurrentToken()) {
-    sm_.error(tok_->getStartLoc(), "'throw' argument must be on the same line");
+    lexer_.error(
+        tok_->getStartLoc(), "'throw' argument must be on the same line");
     sm_.note(startLoc, "location of the 'throw'");
     return None;
   }
@@ -1646,7 +1648,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
     }
 
     default:
-      sm_.error(tok_->getStartLoc(), "invalid expression");
+      lexer_.error(tok_->getStartLoc(), "invalid expression");
       return None;
   }
 }
@@ -1946,7 +1948,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyKey() {
         advance();
         return res;
       } else {
-        sm_.error(
+        lexer_.error(
             tok_->getSourceRange(),
             "invalid property name - must be a string, number or identifier");
         return None;
@@ -2417,7 +2419,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
 
   ESTree::NodeList paramList;
   if (!matchArrowParameters(leftExpr, paramList)) {
-    sm_.error(
+    lexer_.error(
         leftExpr->getSourceRange(), "Invalid argument list for arrow function");
     return None;
   }
@@ -2506,7 +2508,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
     OEN->_properties.remove(*propNode);
 
     if (propNode->_kind != initIdent_) {
-      sm_.error(
+      lexer_.error(
           SourceErrorManager::combineIntoRange(
               propNode->getStartLoc(), propNode->_key->getStartLoc()),
           "invalid destructuring target");

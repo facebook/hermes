@@ -7,7 +7,7 @@
 #ifndef HERMES_SUPPORT_SIMPLEDIAGHANDLER_H
 #define HERMES_SUPPORT_SIMPLEDIAGHANDLER_H
 
-#include "llvm/Support/SourceMgr.h"
+#include "hermes/Support/SourceErrorManager.h"
 
 namespace hermes {
 
@@ -40,20 +40,22 @@ class SimpleDiagHandler {
 };
 
 /// A RAII wrapper around \c SimpleDiagHandler that automatically installs
-/// and uninstalls itself.
+/// and uninstalls itself. It also sets an error limit of 1.
 class SimpleDiagHandlerRAII : public SimpleDiagHandler {
  public:
-  SimpleDiagHandlerRAII(llvm::SourceMgr &sourceMgr);
+  SimpleDiagHandlerRAII(SourceErrorManager &sourceErrorManager);
   ~SimpleDiagHandlerRAII();
 
  private:
-  /// The SourceMgr where this handler is installed.
-  llvm::SourceMgr &sourceMgr_;
+  /// The SourceErrorManager where this handler is installed.
+  SourceErrorManager &sourceErrorManager_;
 
   /// The previous handler, to be restored on destruction.
   void (*const oldHandler_)(const llvm::SMDiagnostic &, void *);
   /// The previous context, to be restoed on destruction.
   void *const oldContext_;
+  /// The previous error limit.
+  unsigned const oldErrorLimit_;
 };
 
 } // namespace hermes

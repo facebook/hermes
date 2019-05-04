@@ -318,6 +318,11 @@ static CLFlag StaticRequire(
     false,
     "resolving of CommonJS require() calls at compile time");
 
+static opt<unsigned> ErrorLimit(
+    "ferror-limit",
+    desc("Maximum number of errors (0 means unlimited)"),
+    init(20));
+
 static CLFlag Werror('W', "error", false, "Treat all warnings as errors");
 
 static opt<bool>
@@ -745,6 +750,7 @@ std::shared_ptr<Context> createContext(
       Warning::DirectEval, cl::DirectEvalWarning);
   if (cl::DisableAllWarnings)
     context->getSourceErrorManager().disableAllWarnings();
+  context->getSourceErrorManager().setErrorLimit(cl::ErrorLimit);
 
   if (cl::CommonJS) {
     context->setUseCJSModules(true);

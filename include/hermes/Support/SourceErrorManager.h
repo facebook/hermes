@@ -96,6 +96,12 @@ class SourceErrorManager {
 
   unsigned messageCount_[kMessageCountSize]{0, 0, 0, 0};
 
+  /// Supress errors after this has been reached
+  unsigned errorLimit_ = UINT_MAX;
+
+  /// Set to true once the error limit has been reached.
+  bool errorLimitReached_ = false;
+
   std::shared_ptr<SourceLocationCache> cache_;
 
   /// Mapping from warnings to true if enabled, false if disabled.
@@ -161,6 +167,27 @@ class SourceErrorManager {
   /// decreased back to zero, all buffered messages are sorted by their source
   /// coordinates and printed.
   void disableBuffering();
+
+  /// Set the error limit - the maximum number of errors after which to abort
+  /// compilation. Zero indicates no limit.
+  void setErrorLimit(unsigned errorLimit) {
+    errorLimit_ = errorLimit == 0 ? UINT_MAX : errorLimit;
+  }
+  /// \return the error limit, or 0 if no limit is set.
+  unsigned int getErrorLimit() const {
+    return errorLimit_ == UINT_MAX ? 0 : errorLimit_;
+  }
+
+  /// \return true if the error limit has been reached.
+  bool isErrorLimitReached() const {
+    return errorLimitReached_;
+  }
+
+  /// Clear the "error limit reached" flag and the error message count.
+  void clearErrorLimitReached() {
+    messageCount_[DK_Error] = 0;
+    errorLimitReached_ = false;
+  }
 
   bool getWarningsAreErrors() const {
     return warningsAreErrors_;
@@ -349,6 +376,10 @@ class SourceErrorManager {
     if (warningsAreErrors_ && dk == DK_Warning)
       dk = DK_Error;
   }
+
+  /// Implementation of generating a message.
+  void doGenMessage(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
+
   /// Actually print the message without performing any checks, buffering, etc.
   void doPrintMessage(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
 };

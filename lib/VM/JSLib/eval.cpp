@@ -69,8 +69,7 @@ CallResult<HermesValue> evalInEnvironment(
   codeGenOpts.unlimitedRegisters = false;
   auto context = std::make_shared<Context>(codeGenOpts);
 
-  SimpleDiagHandlerRAII evalOutputManager{
-      context->getSourceErrorManager().getSourceMgr()};
+  SimpleDiagHandlerRAII evalOutputManager{context->getSourceErrorManager()};
   // The spec requires that global eval always start in non-strict mode.
   context->setStrictMode(false);
   context->setEnableEval(true);

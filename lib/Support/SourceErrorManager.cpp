@@ -289,6 +289,20 @@ void SourceErrorManager::dumpCoords(llvm::raw_ostream &OS, SMLoc loc) {
   dumpCoords(OS, coords);
 }
 
+void SourceErrorManager::doGenMessage(
+    hermes::SourceErrorManager::DiagKind dk,
+    llvm::SMLoc loc,
+    llvm::SMRange sm,
+    llvm::Twine const &msg) {
+  if (bufferingEnabled_) {
+    SourceCoords coords;
+    findBufferLineAndLoc(loc, coords);
+    bufferedMessages_.emplace_back(dk, loc, sm, msg.str(), coords);
+  } else {
+    doPrintMessage(dk, loc, sm, msg);
+  }
+}
+
 void SourceErrorManager::doPrintMessage(
     DiagKind dk,
     SMLoc loc,
@@ -314,14 +328,17 @@ void SourceErrorManager::message(
     return;
   upgradeDiag(dk);
   assert(static_cast<unsigned>(dk) < kMessageCountSize && "bounds check");
-  ++messageCount_[dk];
 
-  if (bufferingEnabled_) {
-    SourceCoords coords;
-    findBufferLineAndLoc(loc, coords);
-    bufferedMessages_.emplace_back(dk, loc, sm, msg.str(), coords);
-  } else {
-    doPrintMessage(dk, loc, sm, msg);
+  // Supress all messages once the error limit has been reached.
+  if (LLVM_UNLIKELY(errorLimitReached_))
+    return;
+
+  ++messageCount_[dk];
+  doGenMessage(dk, loc, sm, msg);
+
+  if (LLVM_UNLIKELY(dk == DK_Error && messageCount_[DK_Error] == errorLimit_)) {
+    errorLimitReached_ = true;
+    doGenMessage(DK_Error, {}, {}, "too many errors emitted");
   }
 }
 
