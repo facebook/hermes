@@ -54,7 +54,7 @@ DISTRIBUTE=1 ./hermes/utils/configure.sh
 # 8. Build the hermesvm npm
 cp build_android/distributions/hermes-runtime-android-v*.tar.gz hermes/npm
 cp build_release/github/hermes-cli-*-v*.tar.gz hermes/npm
-(cd hermes/npm && npm run prepack-dev && yarn link)
+(cd hermes/npm && yarn && yarn run prepack-dev && yarn link)
 # for release build (this will not work with the private repo, unless
 # you add a personal access token <https://github.com/settings/tokens>
 # to the URLs in fetch.js, like ?access_token=...)
@@ -65,7 +65,7 @@ cp build_release/github/hermes-cli-*-v*.tar.gz hermes/npm
 #   build_release/github/hermes-cli-darwin-v<version>.tar.gz
 #   build_release/github/hermes-cli-linux-v<version>.tar.gz
 # Update the release version and file digests in hermes/npm/package.json
-# (cd hermes/npm && npm pack)
+# (cd hermes/npm && yarn pack)
 # TODO: have travis automate this
 
 # 9. Clone react-native-hermes here

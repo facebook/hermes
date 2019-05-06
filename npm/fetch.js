@@ -12,17 +12,35 @@ const commandLineArgs = require('command-line-args');
 const npmjson = require('./package.json');
 const releaseVersion = npmjson.version;
 
-const pipeline = util.promisify(stream.pipeline);
-
 const optionDefinitions = [
   { name: 'dev', type: Boolean }
 ];
 const options = commandLineArgs(optionDefinitions);
 
+// This is a limited replacement for util.promisify(stream.pipeline),
+// because node 8 doesn't have stream.pipeline.
+function pipeline(readable, writable) {
+  return new Promise((resolve, reject) => {
+    readable
+      .on('error', reject)
+      .on('finish', resolve)
+      .pipe(writable);
+  });
+}
+
+// This is a limited replacement for events.once, because node 8
+// doesn't have it.
+
+function eventsOnce(stream, ev) {
+  return new Promise((resolve, reject) => {
+    stream.once(ev, resolve);
+  });
+}
+
 async function readAll(readable) {
   var ret = undefined;
   readable.on('data', (d) => ret = (ret || "") + d.toString());
-  await events.once(readable, 'end');
+  await eventsOnce(readable, 'end');
   return ret;
 };
 
@@ -73,7 +91,7 @@ async function downloadRelease(url, dest) {
         }})
       .on('response', response => response.pause())
 
-  const response = (await events.once(req, 'response'))[0];
+  const response = (await eventsOnce(req, 'response'))[0];
   if (response.statusCode === 200) {
     // I could pipe directly to tar.extract here, but I'd rather
     // verify the hash before unpacking.
@@ -84,7 +102,7 @@ async function downloadRelease(url, dest) {
     // this pipeline does not work correctly.  Instead, we do the best
     // we can and await on the input ending.
     pipeline(response, process.stderr);
-    await events.once(response, 'end');
+    await eventsOnce(response, 'end');
     throw "fetch failed";
   }
 };
@@ -94,7 +112,19 @@ async function fetchUnpackVerify(tarball, files, url, destdir) {
   // tarballs in place, and no hashes are checked.  This makes
   // iteration faster.
 
-  if (!options.dev) {
+  // If the necessary files exist (hashes are not checked in dev mode), stop.
+  if (options.dev) {
+    try {
+      await Promise.all(files.map(_ => util.promisify(fs.access)(_.name)));
+      console.log(files.map(_ => _.name).join(", ") + " existing");
+      return;
+    } catch (err) {
+      if (err.code !== "ENOENT") {
+        throw err;
+      }
+      // fall through
+    }
+  } else {
     // If we have the necessary files, stop.
     if (await verifyAll(files)) {
       console.log(files.map(_ => _.name).join(", ") + " existing and verified");
@@ -112,8 +142,16 @@ async function fetchUnpackVerify(tarball, files, url, destdir) {
   }
 
   try {
-    // Unpack the tarball
     await util.promisify(fs.mkdir)(destdir, {recursive:true});
+  } catch (err) {
+    // node 8 doesn't have the recursive option, so ignore EEXIST
+    if (err.code !== "EEXIST") {
+      throw err;
+    }
+  }
+
+  try {
+    // Unpack the tarball
     const outputs = [];
     await tar.extract({
       file: tarball.name,
