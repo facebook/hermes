@@ -51,6 +51,11 @@ gcheapsize_t YoungGen::Size::storageFootprint() const {
   return AlignedStorage::size();
 }
 
+gcheapsize_t YoungGen::Size::minStorageFootprint() const {
+  // Young Gen always needs at least one storage.
+  return AlignedStorage::size();
+}
+
 /* static */ gcheapsize_t YoungGen::Size::adjustSizeWithBounds(
     gcheapsize_t desired,
     gcheapsize_t min,

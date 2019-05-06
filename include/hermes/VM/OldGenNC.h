@@ -105,6 +105,7 @@ class OldGen : public GCGeneration {
     }
 
     gcheapsize_t storageFootprint() const;
+    gcheapsize_t minStorageFootprint() const;
 
     gcheapsize_t adjustSize(gcheapsize_t amount) const {
       return adjustSizeWithBounds(amount, min_, max_);
@@ -116,6 +117,8 @@ class OldGen : public GCGeneration {
     gcheapsize_t min_;
     gcheapsize_t max_;
 
+    /// The minimum number of segments that can be allocated.
+    inline size_t minSegments() const;
     /// The maximum number of segments that can be allocated.
     inline size_t maxSegments() const;
 
@@ -400,6 +403,10 @@ class OldGen : public GCGeneration {
 
 size_t OldGen::Size::maxSegments() const {
   return segmentsForSize(max());
+}
+
+size_t OldGen::Size::minSegments() const {
+  return segmentsForSize(min());
 }
 
 /*static*/ size_t OldGen::Size::segmentsForSize(size_t size) {

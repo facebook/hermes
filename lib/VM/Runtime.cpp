@@ -78,7 +78,7 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
     // TODO(T31421960): This can become a unique_ptr with C++14 lambda
     // initializers.
     auto storageResult = StorageProvider::preAllocatedProvider(
-        sz.storageFootprint(), sizeof(Runtime));
+        sz.storageFootprint(), sz.minStorageFootprint(), sizeof(Runtime));
     if (!storageResult) {
       hermes_fatal(
           (llvm::Twine("Could not allocate backing storage for heap: ") +

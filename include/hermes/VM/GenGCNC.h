@@ -73,6 +73,7 @@ class GenGC final : public GCBase {
 
     /// \return The maximum number of bytes ever needed in storage.
     gcheapsize_t storageFootprint() const;
+    gcheapsize_t minStorageFootprint() const;
 
    private:
     // Expose private functions to GenGC, but not the rest of the world.

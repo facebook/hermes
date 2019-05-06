@@ -113,7 +113,7 @@ llvm::ErrorOr<void *> vm_allocate(size_t sz) {
     return vm_allocate_aligned(sz, testPgSz);
   }
   if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
-    return nullptr;
+    return make_error_code(OOMError::TestVMLimitReached);
   } else if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit)) {
     totalVMAllocLimit -= sz;
   }
@@ -132,7 +132,7 @@ llvm::ErrorOr<void *> vm_allocate_aligned(size_t sz, size_t alignment) {
   assert(sz > 0 && sz % page_size() == 0);
   assert(alignment > 0 && alignment % page_size() == 0);
   if (LLVM_UNLIKELY(sz > totalVMAllocLimit)) {
-    return nullptr;
+    return make_error_code(OOMError::TestVMLimitReached);
   } else if (LLVM_UNLIKELY(totalVMAllocLimit != unsetVMAllocLimit)) {
     totalVMAllocLimit -= sz;
   }

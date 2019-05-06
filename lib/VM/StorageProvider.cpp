@@ -175,22 +175,32 @@ void PreAllocatedStorageProvider::deleteStorage(void *storage) {
 
 /* static */
 llvm::ErrorOr<std::unique_ptr<StorageProvider>>
-StorageProvider::preAllocatedProvider(size_t amount, size_t excess) {
+StorageProvider::preAllocatedProvider(
+    size_t amount,
+    size_t minAmount,
+    size_t excess) {
   assert(
       amount % AlignedStorage::size() == 0 &&
       "amount must be a multiple of AlignedStorage::size()");
   assert(
+      minAmount % AlignedStorage::size() == 0 &&
+      "minAmount must be a multiple of AlignedStorage::size()");
+  assert(
       excess <= AlignedStorage::size() &&
       "Excess is greater than AlignedStorage::size, but storages aren't guaranteed to be contiguous");
-  const auto maxBytes = llvm::alignTo<AlignedStorage::size()>(amount + excess);
+  auto maxBytes = llvm::alignTo<AlignedStorage::size()>(amount + excess);
+  const auto minBytes =
+      llvm::alignTo<AlignedStorage::size()>(minAmount + excess);
   void *region = nullptr;
   if (maxBytes) {
     auto result =
-        oscompat::vm_allocate_aligned(maxBytes, AlignedStorage::size());
+        vmAllocateAllowLess(maxBytes, minBytes, AlignedStorage::size());
     if (!result) {
       return result.getError();
     }
-    region = result.get();
+    std::pair<void *, size_t> memAndSz = result.get();
+    region = memAndSz.first;
+    maxBytes = memAndSz.second;
   }
   return std::unique_ptr<StorageProvider>(
       new PreAllocatedStorageProvider(maxBytes, region));
@@ -204,6 +214,37 @@ std::unique_ptr<StorageProvider> StorageProvider::mmapProvider() {
 /* static */
 std::unique_ptr<StorageProvider> StorageProvider::mallocProvider() {
   return std::unique_ptr<StorageProvider>(new MallocStorageProvider);
+}
+
+llvm::ErrorOr<std::pair<void *, size_t>>
+vmAllocateAllowLess(size_t sz, size_t minSz, size_t alignment) {
+  assert(sz >= minSz && "Shouldn't supply a lower size than the minimum");
+  assert(minSz != 0 && "Minimum size must not be zero");
+  assert(sz == llvm::alignTo(sz, alignment));
+  assert(minSz == llvm::alignTo(minSz, alignment));
+  // Try fractions of the requested size, down to the minimum.
+  // We'll do it by eighths.
+  assert(sz >= 8); // Since sz is page-aligned, safe assumption.
+  const size_t increment = sz / 8;
+  // Store the result for the case where all attempts fail.
+  llvm::ErrorOr<void *> result{std::error_code{}};
+  while (sz >= minSz) {
+    result = oscompat::vm_allocate_aligned(sz, alignment);
+    if (result) {
+      assert(
+          sz == llvm::alignTo(sz, alignment) &&
+          "Should not return an un-aligned size");
+      return std::make_pair(result.get(), sz);
+    }
+    if (sz < increment || sz == minSz) {
+      // Would either underflow or can't reduce any lower.
+      break;
+    }
+    sz = std::max(
+        static_cast<size_t>(llvm::alignDown(sz - increment, alignment)), minSz);
+  }
+  assert(!result && "Must be an error if none of the allocations succeeded");
+  return result.getError();
 }
 
 } // namespace vm

@@ -141,6 +141,7 @@ class MallocGC final : public GCBase {
     }
 
     gcheapsize_t storageFootprint() const;
+    gcheapsize_t minStorageFootprint() const;
 
    private:
     gcheapsize_t min_;

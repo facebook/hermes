@@ -45,6 +45,7 @@ class YoungGen : public GCGeneration {
     }
 
     gcheapsize_t storageFootprint() const;
+    gcheapsize_t minStorageFootprint() const;
 
     gcheapsize_t adjustSize(gcheapsize_t amount) const {
       return adjustSizeWithBounds(amount, min_, max_);

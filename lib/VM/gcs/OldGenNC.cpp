@@ -56,6 +56,10 @@ gcheapsize_t OldGen::Size::storageFootprint() const {
   return maxSegments() * AlignedStorage::size();
 }
 
+gcheapsize_t OldGen::Size::minStorageFootprint() const {
+  return minSegments() * AlignedStorage::size();
+}
+
 /* static */
 gcheapsize_t
 OldGen::Size::adjustSizeWithBounds(size_t desired, size_t min, size_t max) {

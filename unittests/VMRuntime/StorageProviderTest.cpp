@@ -8,6 +8,7 @@
 
 #include "LogSuccessStorageProvider.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/LimitedStorageProvider.h"
 #include "hermes/VM/LogFailStorageProvider.h"
@@ -193,7 +194,7 @@ class StorageGuard final {
 };
 
 TEST(StorageProviderTest, WithExcess) {
-  auto result = StorageProvider::preAllocatedProvider(0, 100);
+  auto result = StorageProvider::preAllocatedProvider(0, 0, 100);
   ASSERT_TRUE(result);
   std::shared_ptr<StorageProvider> provider{std::move(result.get())};
   // This should succeed even though the maxAmount is 0.
@@ -203,5 +204,66 @@ TEST(StorageProviderTest, WithExcess) {
   EXPECT_TRUE(storage.raw());
   // A request for a second storage *can* fail, but is not required to.
 }
+
+#ifndef NDEBUG
+
+class SetVALimit final {
+ public:
+  explicit SetVALimit(size_t vaLimit) {
+    oscompat::set_test_vm_allocate_limit(vaLimit);
+  }
+
+  ~SetVALimit() {
+    oscompat::unset_test_vm_allocate_limit();
+  }
+};
+
+static const size_t KB = 1 << 10;
+static const size_t MB = KB * KB;
+
+TEST(StorageProviderTest, SucceedsWithoutReducing) {
+  // Should succeed without reducing the size at all.
+  SetVALimit limit{16 * MB};
+  auto result = vmAllocateAllowLess(8 * MB, 1 * MB, 1 * MB);
+  ASSERT_TRUE(result);
+  auto memAndSize = result.get();
+  EXPECT_NE(memAndSize.first, nullptr);
+  EXPECT_EQ(memAndSize.second, 8 * MB);
+}
+
+TEST(StorageProviderTest, SucceedsAfterReducing) {
+  {
+    // Should succeed after reducing the size to below the limit.
+    SetVALimit limit{40 * MB};
+    auto result = vmAllocateAllowLess(100 * MB, 25 * MB, 1 * MB);
+    ASSERT_TRUE(result);
+    auto memAndSize = result.get();
+    EXPECT_NE(memAndSize.first, nullptr);
+    EXPECT_GE(memAndSize.second, 25 * MB);
+    EXPECT_LE(memAndSize.second, 40 * MB);
+  }
+  {
+    // Test using the AlignedStorage alignment
+    SetVALimit limit{50 * AlignedStorage::size()};
+    auto result = vmAllocateAllowLess(
+        100 * AlignedStorage::size(),
+        30 * AlignedStorage::size(),
+        AlignedStorage::size());
+    ASSERT_TRUE(result);
+    auto memAndSize = result.get();
+    EXPECT_NE(memAndSize.first, nullptr);
+    EXPECT_GE(memAndSize.second, 30 * AlignedStorage::size());
+    EXPECT_LE(memAndSize.second, 50 * AlignedStorage::size());
+  }
+}
+
+TEST(StorageProviderTest, FailsDueToLimitLowerThanMin) {
+  // Should not succeed, limit below min amount.
+  SetVALimit limit{5 * MB};
+  auto result = vmAllocateAllowLess(100 * MB, 10 * MB, 1 * MB);
+  ASSERT_FALSE(result);
+}
+
+#endif
 
 } // namespace

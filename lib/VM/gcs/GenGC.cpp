@@ -67,6 +67,11 @@ gcheapsize_t GenGC::Size::storageFootprint() const {
   return 0;
 }
 
+gcheapsize_t GenGC::Size::minStorageFootprint() const {
+  // GenGC uses no storage from the StorageProvider.
+  return 0;
+}
+
 GenGC::GenGC(
     MetadataTable metaTable,
     GCCallbacks *gcCallbacks,

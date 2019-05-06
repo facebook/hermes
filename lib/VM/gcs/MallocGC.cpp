@@ -141,6 +141,11 @@ gcheapsize_t MallocGC::Size::storageFootprint() const {
   return 0;
 }
 
+gcheapsize_t MallocGC::Size::minStorageFootprint() const {
+  // MallocGC uses no storage from the StorageProvider.
+  return 0;
+}
+
 MallocGC::MallocGC(
     MetadataTable metaTable,
     GCCallbacks *gcCallbacks,

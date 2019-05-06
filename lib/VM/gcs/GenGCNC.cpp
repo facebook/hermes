@@ -63,6 +63,10 @@ gcheapsize_t GenGC::Size::storageFootprint() const {
   return ogs_.storageFootprint() + ygs_.storageFootprint();
 }
 
+gcheapsize_t GenGC::Size::minStorageFootprint() const {
+  return ogs_.minStorageFootprint() + ygs_.minStorageFootprint();
+}
+
 std::pair<gcheapsize_t, gcheapsize_t> GenGC::Size::adjustSize(
     gcheapsize_t desired) const {
   const gcheapsize_t ygSize = ygs_.adjustSize(desired / kYoungGenFractionDenom);
