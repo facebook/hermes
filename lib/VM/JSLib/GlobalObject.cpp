@@ -513,6 +513,17 @@ void initGlobalObject(Runtime *runtime) {
           runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype))
           .getHermesValue();
 
+  runtime->generatorPrototype =
+      JSObject::create(
+          runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype))
+          .getHermesValue();
+
+  // %Generator% intrinsic object.
+  runtime->generatorFunctionPrototype =
+      JSObject::create(
+          runtime, Handle<JSObject>::vmcast(&runtime->functionPrototype))
+          .getHermesValue();
+
   // Object constructor.
   createObjectConstructor(runtime);
 

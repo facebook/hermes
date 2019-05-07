@@ -47,10 +47,12 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime *runtime) {
   // lazy functions can be Bound or JS Functions.
   if (auto jsFun = Handle<JSFunction>::dyn_vmcast(runtime, fn)) {
     const CodeBlock *codeBlock = jsFun->getCodeBlock();
-    // create empty object for prototype.
-    auto objProto = Handle<JSObject>::vmcast(&runtime->objectPrototype);
+    // Create empty object for prototype.
+    auto prototypeParent = vmisa<JSGeneratorFunction>(*jsFun)
+        ? Handle<JSObject>::vmcast(&runtime->generatorPrototype)
+        : Handle<JSObject>::vmcast(&runtime->objectPrototype);
     auto prototypeObjectHandle =
-        toHandle(runtime, JSObject::create(runtime, objProto));
+        toHandle(runtime, JSObject::create(runtime, prototypeParent));
 
     auto cr = Callable::defineNameLengthAndPrototype(
         fn,
@@ -898,6 +900,46 @@ CallResult<HermesValue> JSFunction::_callImpl(
   if (auto *jitPtr = self->getCodeBlock()->getJITCompiled())
     return (*jitPtr)(runtime);
   return runtime->interpretFunction(self->getCodeBlock());
+}
+
+//===----------------------------------------------------------------------===//
+// class JSGeneratorFunction
+
+CallableVTable JSGeneratorFunction::vt{
+    {
+        VTable(CellKind::GeneratorFunctionKind, sizeof(JSGeneratorFunction)),
+        JSGeneratorFunction::_getOwnIndexedRangeImpl,
+        JSGeneratorFunction::_haveOwnIndexedImpl,
+        JSGeneratorFunction::_getOwnIndexedPropertyFlagsImpl,
+        JSGeneratorFunction::_getOwnIndexedImpl,
+        JSGeneratorFunction::_setOwnIndexedImpl,
+        JSGeneratorFunction::_deleteOwnIndexedImpl,
+        JSGeneratorFunction::_checkAllOwnIndexedImpl,
+    },
+    JSGeneratorFunction::_newObjectImpl,
+    JSGeneratorFunction::_callImpl};
+
+void GeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  FunctionBuildMeta(cell, mb);
+}
+
+CallResult<HermesValue> JSGeneratorFunction::create(
+    Runtime *runtime,
+    Handle<Domain> domain,
+    Handle<JSObject> parentHandle,
+    Handle<Environment> envHandle,
+    CodeBlock *codeBlock) {
+  void *mem =
+      runtime->alloc</*fixedSize*/ true, kHasFinalizer>(sizeof(JSFunction));
+  auto *self = new (mem) JSGeneratorFunction(
+      runtime,
+      *domain,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+      envHandle,
+      codeBlock);
+  self->flags_.lazyObject = 1;
+  return HermesValue::encodeObjectValue(self);
 }
 
 } // namespace vm

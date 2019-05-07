@@ -716,7 +716,7 @@ class NativeConstructor final : public NativeFunction {
 };
 
 /// An interpreted callable function with environment.
-class JSFunction final : public Callable {
+class JSFunction : public Callable {
   using Super = Callable;
   friend void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -731,18 +731,35 @@ class JSFunction final : public Callable {
  protected:
   JSFunction(
       Runtime *runtime,
+      const VTable *vtp,
       Domain *domain,
       JSObject *parent,
       HiddenClass *clazz,
       Handle<Environment> environment,
       CodeBlock *codeBlock)
-      : Callable(runtime, &vt.base.base, parent, clazz, environment),
+      : Callable(runtime, vtp, parent, clazz, environment),
         codeBlock_(codeBlock),
         domain_(domain, &runtime->getHeap()) {
     assert(
         !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
         "kHasFinalizer invalid value");
   }
+
+  JSFunction(
+      Runtime *runtime,
+      Domain *domain,
+      JSObject *parent,
+      HiddenClass *clazz,
+      Handle<Environment> environment,
+      CodeBlock *codeBlock)
+      : JSFunction(
+            runtime,
+            &vt.base.base,
+            domain,
+            parent,
+            clazz,
+            environment,
+            codeBlock) {}
 
  public:
   static CallableVTable vt;
@@ -752,7 +769,10 @@ class JSFunction final : public Callable {
       Super::NEEDED_PROPERTY_SLOTS + 2;
 
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::FunctionKind;
+    return kindInRange(
+        cell->getKind(),
+        CellKind::CodeBlockFunctionKind_first,
+        CellKind::CodeBlockFunctionKind_last);
   }
 
   /// Create a Function with the prototype property set to new Object().
@@ -803,6 +823,61 @@ class JSFunction final : public Callable {
   static CallResult<HermesValue> _callImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime);
+};
+
+/// A function which interprets code and returns a Generator when called.
+/// Needs a separate class because it must be a different CellKind from
+/// JSFunction.
+class JSGeneratorFunction final : public JSFunction {
+  using Super = JSFunction;
+
+  static constexpr auto kHasFinalizer = HasFinalizer::No;
+
+ public:
+  static CallableVTable vt;
+
+  /// Create a GeneratorFunction.
+  static CallResult<HermesValue> create(
+      Runtime *runtime,
+      Handle<Domain> domain,
+      Handle<JSObject> parentHandle,
+      Handle<Environment> envHandle,
+      CodeBlock *codeBlock);
+
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == CellKind::GeneratorFunctionKind;
+  }
+
+ protected:
+  JSGeneratorFunction(
+      Runtime *runtime,
+      const VTable *vtp,
+      Domain *domain,
+      JSObject *parent,
+      HiddenClass *clazz,
+      Handle<Environment> environment,
+      CodeBlock *codeBlock)
+      : Super(runtime, vtp, domain, parent, clazz, environment, codeBlock) {
+    assert(
+        !vt.base.base.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
+        "kHasFinalizer invalid value");
+  }
+
+  JSGeneratorFunction(
+      Runtime *runtime,
+      Domain *domain,
+      JSObject *parent,
+      HiddenClass *clazz,
+      Handle<Environment> environment,
+      CodeBlock *codeBlock)
+      : JSFunction(
+            runtime,
+            &vt.base.base,
+            domain,
+            parent,
+            clazz,
+            environment,
+            codeBlock) {}
 };
 
 } // namespace vm

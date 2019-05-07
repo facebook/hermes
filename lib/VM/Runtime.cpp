@@ -439,6 +439,8 @@ void Runtime::markRoots(
     MARK(arrayIteratorPrototype);
     MARK(arrayPrototypeValues);
     MARK(stringIteratorPrototype);
+    MARK(generatorFunctionPrototype);
+    MARK(generatorPrototype);
     MARK(jsErrorStackAccessor);
     MARK(parseIntFunction);
     MARK(parseFloatFunction);

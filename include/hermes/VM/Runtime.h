@@ -604,6 +604,10 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   PinnedHermesValue arrayPrototypeValues;
   /// StringIteratorPrototype
   PinnedHermesValue stringIteratorPrototype;
+  /// GeneratorPrototype
+  PinnedHermesValue generatorPrototype;
+  /// %Generator% (GeneratorFunction prototype)
+  PinnedHermesValue generatorFunctionPrototype;
 
   /// parseInt function
   PinnedHermesValue parseIntFunction;
