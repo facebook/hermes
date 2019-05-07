@@ -352,6 +352,8 @@ STR(iterator, "iterator")
 STR(toPrimitive, "toPrimitive")
 STR(toStringTag, "toStringTag")
 
+STR(Generator, "Generator")
+
 STR(HermesInternal, "HermesInternal")
 STR(detachArrayBuffer, "detachArrayBuffer")
 STR(createHeapSnapshot, "createHeapSnapshot")

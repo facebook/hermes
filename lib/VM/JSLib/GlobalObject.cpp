@@ -602,6 +602,9 @@ void initGlobalObject(Runtime *runtime) {
   /// String Iterator.
   populateStringIteratorPrototype(runtime);
 
+  // %GeneratorPrototype%.
+  populateGeneratorPrototype(runtime);
+
   // Define the global Math object
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),

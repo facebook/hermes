@@ -61,6 +61,7 @@ set(source_files
   JSLib/DataView.cpp
   JSLib/TypedArray.cpp
   JSLib/Error.cpp
+  JSLib/GeneratorPrototype.cpp
   JSLib/GlobalObject.cpp
   JSLib/IteratorPrototype.cpp
   JSLib/HermesInternal.cpp

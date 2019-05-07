@@ -365,6 +365,9 @@ void populateArrayIteratorPrototype(Runtime *runtime);
 /// Create the StringIterator prototype.
 void populateStringIteratorPrototype(Runtime *runtime);
 
+/// Create the %GeneratorPrototype%.
+void populateGeneratorPrototype(Runtime *runtime);
+
 /// A preliminary quick&dirty implementation of the 'print' global function.
 /// Prints all arguments using 'toString()'.
 CallResult<HermesValue> print(void *, Runtime *runtime, NativeArgs args);
