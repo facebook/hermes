@@ -12,6 +12,8 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
+#include "llvm/ADT/ArrayRef.h"
+
 namespace hermes {
 namespace vm {
 
@@ -940,6 +942,142 @@ CallResult<HermesValue> JSGeneratorFunction::create(
       codeBlock);
   self->flags_.lazyObject = 1;
   return HermesValue::encodeObjectValue(self);
+}
+
+//===----------------------------------------------------------------------===//
+// class GeneratorInnerFunction
+
+CallableVTable GeneratorInnerFunction::vt{
+    {
+        VTable(
+            CellKind::GeneratorInnerFunctionKind,
+            sizeof(GeneratorInnerFunction)),
+        GeneratorInnerFunction::_getOwnIndexedRangeImpl,
+        GeneratorInnerFunction::_haveOwnIndexedImpl,
+        GeneratorInnerFunction::_getOwnIndexedPropertyFlagsImpl,
+        GeneratorInnerFunction::_getOwnIndexedImpl,
+        GeneratorInnerFunction::_setOwnIndexedImpl,
+        GeneratorInnerFunction::_deleteOwnIndexedImpl,
+        GeneratorInnerFunction::_checkAllOwnIndexedImpl,
+    },
+    GeneratorInnerFunction::_newObjectImpl,
+    GeneratorInnerFunction::_callImpl};
+
+void GeneratorInnerFunctionBuildMeta(
+    const GCCell *cell,
+    Metadata::Builder &mb) {
+  FunctionBuildMeta(cell, mb);
+  const auto *self = static_cast<const GeneratorInnerFunction *>(cell);
+  mb.addNonPointerField("@state", &self->state_);
+  mb.addNonPointerField("@argCount", &self->argCount_);
+  mb.addField("@savedContext", &self->savedContext_);
+  mb.addField("@result", &self->result_);
+  mb.addNonPointerField("@nextIPOffset", &self->nextIPOffset_);
+  mb.addNonPointerField("@action", &self->action_);
+}
+
+CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
+    Runtime *runtime,
+    Handle<Domain> domain,
+    Handle<JSObject> parentHandle,
+    Handle<Environment> envHandle,
+    CodeBlock *codeBlock,
+    NativeArgs args) {
+  void *mem = runtime->alloc(sizeof(GeneratorInnerFunction));
+  auto self = runtime->makeHandle(new (mem) GeneratorInnerFunction(
+      runtime,
+      *domain,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+      envHandle,
+      codeBlock,
+      args.getArgCount()));
+
+  // The frame size to save goes from the stack pointer all the way to
+  // the final local. Multiply by StackIncrement to account for the fact that
+  // the local offsets may be negative.
+  const int32_t frameSize = StackFrameLayout::StackIncrement *
+      StackFrameLayout::localOffset(codeBlock->getFrameSize());
+
+  // Size needed to store the complete context:
+  // - "this"
+  // - actual arguments
+  // - stack frame
+  const uint32_t ctxSize = 1 + args.getArgCount() + frameSize;
+
+  auto ctxRes = ArrayStorage::create(runtime, ctxSize, ctxSize);
+  if (LLVM_UNLIKELY(ctxRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto ctx = runtime->makeHandle<ArrayStorage>(*ctxRes);
+
+  // Set "this" as the first element.
+  ctx->at(0).set(args.getThisArg(), &runtime->getHeap());
+
+  // Set the rest of the arguments.
+  // Argument i goes in slot i+1 to account for the "this".
+  for (uint32_t i = 0, e = args.getArgCount(); i < e; ++i) {
+    ctx->at(i + 1).set(args.getArg(i), &runtime->getHeap());
+  }
+
+  self->savedContext_.set(ctx.get(), &runtime->getHeap());
+
+  return self;
+}
+
+/// Call the callable with arguments already on the stack.
+CallResult<HermesValue> GeneratorInnerFunction::callInnerFunction(
+    Handle<GeneratorInnerFunction> selfHandle,
+    Runtime *runtime,
+    Handle<> arg,
+    Action action) {
+  auto self = Handle<GeneratorInnerFunction>::vmcast(selfHandle);
+
+  self->result_.set(arg.getHermesValue(), &runtime->getHeap());
+  self->action_ = action;
+
+  Handle<ArrayStorage> ctx{runtime, selfHandle->savedContext_};
+  // Account for the `this` argument stored as the first element of ctx.
+  const uint32_t argCount = self->argCount_;
+  // Generators cannot be used as constructors, so newTarget is always
+  // undefined.
+  HermesValue newTarget = HermesValue::encodeUndefinedValue();
+  ScopedNativeCallFrame frame{runtime,
+                              argCount, // Account for `this`.
+                              selfHandle.getHermesValue(),
+                              newTarget,
+                              ctx->at(0)};
+  for (ArrayStorage::size_type i = 0, e = argCount; i < e; ++i) {
+    frame->getArgRef(i) = ctx->at(i + 1);
+  }
+
+  return JSFunction::_callImpl(selfHandle, runtime);
+}
+
+void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
+  const uint32_t frameOffset = getFrameOffsetInContext();
+  const uint32_t frameSize = getFrameSizeInContext();
+  // Start at the lower end of the range to be copied.
+  PinnedHermesValue *dst = StackFrameLayout::StackIncrement > 0
+      ? runtime->getCurrentFrame().ptr()
+      : runtime->getCurrentFrame().ptr() - frameSize;
+  const GCHermesValue *src = &savedContext_->at(frameOffset);
+  std::memcpy(dst, src, frameSize * sizeof(PinnedHermesValue));
+}
+
+void GeneratorInnerFunction::saveStack(Runtime *runtime) {
+  const uint32_t frameOffset = getFrameOffsetInContext();
+  const uint32_t frameSize = getFrameSizeInContext();
+  // Start at the lower end of the range to be copied.
+  PinnedHermesValue *first = StackFrameLayout::StackIncrement > 0
+      ? runtime->getCurrentFrame().ptr()
+      : runtime->getCurrentFrame().ptr() - frameSize;
+  // Use GCHermesValue::copy to ensure write barriers are executed.
+  GCHermesValue::copy(
+      first,
+      first + frameSize,
+      &savedContext_->at(frameOffset),
+      &runtime->getHeap());
 }
 
 } // namespace vm

@@ -77,6 +77,7 @@ CELL_KIND(NativeFunction)
 CELL_KIND(NativeConstructor)
 CELL_KIND(FinalizableNativeFunction)
 CELL_KIND(GeneratorFunction)
+CELL_KIND(GeneratorInnerFunction)
 CELL_KIND(Function)
 
 // Update AllCells, below, if new CellKinds are added.
