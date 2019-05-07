@@ -128,6 +128,44 @@ with registers. This is why the Register Allocator introduces MOV instructions
 that represent a copy of one register to another. We lower some of the
 load/store instructions into MOVs, and spill registers with MOV instructions.
 
+## Generator Overview
+
+When generating the IR for a generator function, we make two functions:
+an outer GeneratorFunction and an inner function.
+The outer function calls CreateGenerator on the inner function,
+and returns the resultant generator.
+
+The inner function assumes that it can store and retrieve state from
+its own closure. As such, it contains instructions to start, save/yield,
+and resume generators.
+
+CreateGenerator:
+An instruction to create a generator given a `Function`.
+First, it creates an inner GeneratorInnerFunction, then it wraps it in a Generator object.
+Used by the GeneratorFunction to create the generator which is returned upon calling it.
+
+StartGenerator:
+Always the first instruction executed when an inner function is called.
+Restores values for all local variables in the generator,
+and jumps to the resume point of the generator if it's suspended.
+If the generator hasn't been started yet, simply continues execution.
+
+SaveAndYield:
+Saves necessary state to the closure and yields execution.
+In practice, this will save state and use the return opcode to
+allow the caller to get the yield result.
+Emitting a SaveAndYield also emits its corresponding ResumeGenerator.
+
+ResumeGenerator:
+Placed at the start of the block following the SaveAndYield to which it
+corresponds. Resumes execution by loading context from the closure,
+and then using state stored in the closure, does one of 3 things:
+- Continues execution with the result of the instruction being the
+  argument to `.next()`.
+- Throws a value immediately
+- Sets an `%isReturn` flag to true, which later instructions may branch on to execute the `finally`
+  if necessary, and then return.
+
 ## Instruction semantics
 
 This section describes the semantic of the instruction that are defined in the
@@ -154,7 +192,6 @@ Example |  %0 = ReturnInst %17
 Arguments | A single operand which is the returned value. Notice the functions that return without an explicit value return the 'undefined' value.
 Semantics | Terminates a basic block and transfer the control to the caller of the current function.
 Effects | Does not read or write from memory.
-
 
 ### AllocStackInst
 
@@ -561,6 +598,42 @@ Arguments | Any value.
 Semantics |
 Effects | Does not read or write memory (it potentially creates a new object)
 
+### CreateGenerator
+
+CreateGenerator | _
+Description | Constructs a new GeneratorInnerFunction from its code representation, and wraps it in a Generator object.
+Example | %0 = CreateGenerator %function,
+Arguments | %function is the function that represents the code of the generator's inner function.
+Semantics | Creates a new GeneratorInnerFunction closure that may access the environment and wraps it in a generator
+Effects | Does not read or write to memory (creates a new object).
+
+### StartGenerator
+
+StartGenerator | _
+Description | Jump to the proper first instruction to execute in a GeneratorInnerFunction
+Example |  %0 = StartGenerator
+Arguments | None
+Semantics | Jumps to a BasicBlock which begins with a ResumeGenerator and sets the internal generator state to "executing", but does not handle next(), return(), or throw() as requested by the user.
+Effects | Reads and writes memory. Restores the stack based on saved state, and jumps to another BasicBlock
+
+### SaveAndYield
+
+SaveAndYield | _
+Description | Saves information needed to resume generator execution and yield.
+Example |  %0 = SaveAndYield %value, %next
+Arguments | %value is the value to yield, %next is the next BasicBlock to execute upon resuming, which must begin with a ResumeGeneratorInst (generated alongside SaveAndYield).
+Semantics | Saves the frame variables and the next IP to the closure, and yield execution.
+Effects | Reads and writes to memory, may throw or execute.
+
+### ResumeGenerator
+
+ResumeGenerator | _
+Description | Perform the user-requested action on resuming a generator.
+Example |  %0 = ResumeGenerator %isReturn
+Arguments | %isReturn is an output argument set to true if the user requested a return, false otherwise.
+Semantics | If the user requested next(), continue on. If the user requested throw(), throw. If the user requested return(), set %isReturn to true and continue. Subsequent instructions will check %isReturn and execute any `finally` handlers, for example, before returning.
+Effects | May read and write memory. (may throw)
+
 ### UnreachableInst
 
 UnreachableInst | _
@@ -596,6 +669,16 @@ Description | Create a new closure capturing the specified environment and using
 Example | %0 = HBCCreateFunction %environment, %body,
 Arguments | %environment is the closure's environment. %body is the closure's body.
 Semantics | The instruction creates a new closure that may access the specified environment.
+Effects | Does not read or write to memory.
+
+### HBCCreateGenerator
+
+CreateGenerator | _
+--- | --- |
+Description | Constructs a new Generator into the current scope from its code representation.
+Example | %0 = CreateGenerator %environment, %body,
+Arguments | %environment is the closure's environment, %body is the closure's body.
+Semantics | The instruction creates a new GeneratorInnerFunction access the environment and wraps it in a Generator.
 Effects | Does not read or write to memory.
 
 ### HBCAllocObjectFromBufferInst

@@ -214,7 +214,7 @@ void ESTreeIRGen::doIt() {
     }
   }
 
-  emitFunctionPrologue(Program);
+  emitFunctionPrologue(Program, Builder.createBasicBlock(topLevelFunction));
 
   Value *retVal;
   {

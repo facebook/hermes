@@ -62,7 +62,9 @@ void ESTreeIRGen::genFunctionDeclaration(
   assert(
       funcStorage && "function declaration variable should have been hoisted");
 
-  Function *newFunc = genES5Function(functionName, nullptr, func);
+  Function *newFunc = func->_generator
+      ? genGeneratorFunction(functionName, nullptr, func)
+      : genES5Function(functionName, nullptr, func);
 
   // Store the newly created closure into a frame variable with the same name.
   auto *newClosure = Builder.createCreateFunctionInst(newFunc);
@@ -97,7 +99,9 @@ Value *ESTreeIRGen::genFunctionExpression(
     nameTable_.insert(originalNameIden, tempClosureVar);
   }
 
-  Function *newFunc = genES5Function(originalNameIden, tempClosureVar, FE);
+  Function *newFunc = FE->_generator
+      ? genGeneratorFunction(originalNameIden, tempClosureVar, FE)
+      : genES5Function(originalNameIden, tempClosureVar, FE);
 
   Value *closure = Builder.createCreateFunctionInst(newFunc);
 
@@ -124,7 +128,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
   {
     FunctionContext newFunctionContext{this, newFunc, AF->getSemInfo()};
 
-    emitFunctionPrologue(AF);
+    emitFunctionPrologue(AF, Builder.createBasicBlock(newFunc));
 
     // Propagate captured "this", "new.target" and "arguments" from parents.
     auto *prev = curFunction()->getPreviousContext();
@@ -144,17 +148,28 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
 Function *ESTreeIRGen::genES5Function(
     Identifier originalName,
     Variable *lazyClosureAlias,
-    ESTree::FunctionLikeNode *functionNode) {
+    ESTree::FunctionLikeNode *functionNode,
+    bool isGeneratorInnerFunction) {
   assert(functionNode && "Function AST cannot be null");
 
   auto *body = ESTree::getBlockStatement(functionNode);
   assert(body && "body of ES5 function cannot be null");
 
-  auto *newFunction = Builder.createFunction(
-      originalName,
-      Function::DefinitionKind::ES5Function,
-      ESTree::isStrict(functionNode->strictness),
-      body->getSourceRange());
+  Function *newFunction = isGeneratorInnerFunction
+      ? Builder.createGeneratorInnerFunction(
+            originalName,
+            Function::DefinitionKind::ES5Function,
+            ESTree::isStrict(functionNode->strictness),
+            body->getSourceRange(),
+            /* insertBefore */ nullptr)
+      : Builder.createFunction(
+            originalName,
+            Function::DefinitionKind::ES5Function,
+            ESTree::isStrict(functionNode->strictness),
+            body->getSourceRange(),
+            /* isGlobal */ false,
+            /* insertBefore */ nullptr);
+
   newFunction->setLazyClosureAlias(lazyClosureAlias);
 
   if (auto *bodyBlock = dyn_cast<ESTree::BlockStatementNode>(body)) {
@@ -181,14 +196,64 @@ Function *ESTreeIRGen::genES5Function(
   FunctionContext newFunctionContext{
       this, newFunction, functionNode->getSemInfo()};
 
-  emitFunctionPrologue(functionNode);
+  if (isGeneratorInnerFunction) {
+    // StartGeneratorInst
+    // ResumeGeneratorInst
+    // at the beginning of the function, to allow for the first .next() call.
+    auto *initGenBB = Builder.createBasicBlock(newFunction);
+    Builder.setInsertionBlock(initGenBB);
+    Builder.createStartGeneratorInst();
+    auto *resumeIsReturn =
+        Builder.createAllocStackInst(genAnonymousLabelName("isReturn"));
+    auto *entryPoint = Builder.createBasicBlock(newFunction);
+    genResumeGenerator(nullptr, resumeIsReturn, entryPoint);
+    emitFunctionPrologue(functionNode, entryPoint);
+  } else {
+    emitFunctionPrologue(functionNode, Builder.createBasicBlock(newFunction));
+  }
+
   initCaptureStateInES5Function();
+
   genStatement(body);
   emitFunctionEpilogue(Builder.getLiteralUndefined());
 
   return curFunction()->function;
 }
 #endif
+
+Function *ESTreeIRGen::genGeneratorFunction(
+    Identifier originalName,
+    Variable *lazyClosureAlias,
+    ESTree::FunctionLikeNode *functionNode) {
+  assert(functionNode && "Function AST cannot be null");
+
+  // Build the outer function which creates the generator.
+  // Does not have an associated source range.
+  auto *outerFn = Builder.createGeneratorFunction(
+      originalName,
+      Function::DefinitionKind::ES5Function,
+      ESTree::isStrict(functionNode->strictness),
+      /* insertBefore */ nullptr);
+
+  auto *innerFn = genES5Function(
+      genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
+      lazyClosureAlias,
+      functionNode,
+      true);
+
+  {
+    FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
+    emitFunctionPrologue(functionNode, Builder.createBasicBlock(outerFn));
+    initCaptureStateInES5Function();
+
+    // Create a generator function, which will store the arguments.
+    auto *gen = Builder.createCreateGeneratorInst(innerFn);
+
+    emitFunctionEpilogue(gen);
+  }
+
+  return outerFn;
+}
 
 void ESTreeIRGen::initCaptureStateInES5Function() {
   // Capture "this", "new.target" and "arguments" if there are inner arrows.
@@ -224,7 +289,9 @@ void ESTreeIRGen::initCaptureStateInES5Function() {
   }
 }
 
-void ESTreeIRGen::emitFunctionPrologue(ESTree::FunctionLikeNode *funcNode) {
+void ESTreeIRGen::emitFunctionPrologue(
+    ESTree::FunctionLikeNode *funcNode,
+    BasicBlock *entry) {
   auto *newFunc = curFunction()->function;
   auto *semInfo = curFunction()->getSemInfo();
   DEBUG(
@@ -235,7 +302,6 @@ void ESTreeIRGen::emitFunctionPrologue(ESTree::FunctionLikeNode *funcNode) {
   Builder.setLocation(newFunc->getSourceRange().Start);
 
   // Start pumping instructions into the entry basic block.
-  auto *entry = Builder.createBasicBlock(newFunc);
   Builder.setInsertionBlock(entry);
 
   // Create variable declarations for each of the hoisted variables and

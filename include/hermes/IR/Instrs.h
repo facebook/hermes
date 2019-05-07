@@ -2621,6 +2621,64 @@ class SwitchImmInst : public TerminatorInst {
   void setSuccessor(unsigned idx, BasicBlock *B);
 };
 
+class SaveAndYieldInst : public TerminatorInst {
+  SaveAndYieldInst(const SaveAndYieldInst &) = delete;
+  void operator=(const SaveAndYieldInst &) = delete;
+
+ public:
+  enum { ResultIdx, NextBlockIdx };
+
+  Value *getResult() const {
+    return getOperand(ResultIdx);
+  }
+
+  BasicBlock *getNextBlock() const {
+    return cast<BasicBlock>(getOperand(NextBlockIdx));
+  }
+
+  explicit SaveAndYieldInst(Value *result, BasicBlock *nextBlock)
+      : TerminatorInst(ValueKind::SaveAndYieldInstKind) {
+    pushOperand(result);
+    pushOperand(nextBlock);
+  }
+  explicit SaveAndYieldInst(
+      const SaveAndYieldInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : TerminatorInst(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  unsigned getNumSuccessors() const {
+    return 1;
+  }
+
+  BasicBlock *getSuccessor(unsigned idx) const {
+    assert(idx == 0 && "SaveAndYieldInst should only have 1 successor");
+    return getNextBlock();
+  }
+
+  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
+    switch (index) {
+      case ResultIdx:
+        return true;
+      case NextBlockIdx:
+        return kindIsA(kind, ValueKind::BasicBlockKind);
+      default:
+        return false;
+    }
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::SaveAndYieldInstKind);
+  }
+};
+
 class DirectEvalInst : public SingleOperandInst {
   DirectEvalInst(const DirectEvalInst &) = delete;
   void operator=(const DirectEvalInst &) = delete;
@@ -3291,6 +3349,135 @@ class CompareBranchInst : public TerminatorInst {
   void setSuccessor(unsigned idx, BasicBlock *B) {
     assert(idx <= 1 && "CompareBranchInst only have 2 successors!");
     setOperand(B, idx + TrueBlockIdx);
+  }
+};
+
+class CreateGeneratorInst : public CreateFunctionInst {
+  CreateGeneratorInst(const CreateGeneratorInst &) = delete;
+  void operator=(const CreateGeneratorInst &) = delete;
+
+ public:
+  explicit CreateGeneratorInst(ValueKind kind, Function *genFunction)
+      : CreateFunctionInst(kind, genFunction) {
+    setType(Type::createObject());
+  }
+  explicit CreateGeneratorInst(Function *genFunction)
+      : CreateGeneratorInst(ValueKind::CreateGeneratorInstKind, genFunction) {}
+  explicit CreateGeneratorInst(
+      const CreateGeneratorInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : CreateFunctionInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::CreateGeneratorInstKind);
+  }
+};
+
+/// Creating a closure in HBC requires an explicit environment.
+class HBCCreateGeneratorInst : public CreateGeneratorInst {
+  HBCCreateGeneratorInst(const HBCCreateGeneratorInst &) = delete;
+  void operator=(const HBCCreateGeneratorInst &) = delete;
+
+ public:
+  enum { EnvIdx = CreateGeneratorInst::LAST_IDX };
+
+  explicit HBCCreateGeneratorInst(Function *code, Value *env)
+      : CreateGeneratorInst(ValueKind::HBCCreateGeneratorInstKind, code) {
+    pushOperand(env);
+  }
+  explicit HBCCreateGeneratorInst(
+      const HBCCreateGeneratorInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : CreateGeneratorInst(src, operands) {}
+
+  Value *getEnvironment() const {
+    return getOperand(EnvIdx);
+  }
+
+  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
+    switch (index) {
+      case CreateGeneratorInst::FunctionCodeIdx:
+        return kindIsA(kind, ValueKind::FunctionKind);
+      case EnvIdx:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::HBCCreateGeneratorInstKind);
+  }
+};
+
+class StartGeneratorInst : public Instruction {
+  StartGeneratorInst(const StartGeneratorInst &) = delete;
+  void operator=(const StartGeneratorInst &) = delete;
+
+ public:
+  explicit StartGeneratorInst()
+      : Instruction(ValueKind::StartGeneratorInstKind) {}
+  explicit StartGeneratorInst(
+      const StartGeneratorInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
+    return false;
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::StartGeneratorInstKind);
+  }
+};
+
+class ResumeGeneratorInst : public Instruction {
+  ResumeGeneratorInst(const ResumeGeneratorInst &) = delete;
+  void operator=(const ResumeGeneratorInst &) = delete;
+
+ public:
+  enum { IsReturnIdx };
+
+  explicit ResumeGeneratorInst(Value *isReturn)
+      : Instruction(ValueKind::ResumeGeneratorInstKind) {
+    pushOperand(isReturn);
+  }
+  explicit ResumeGeneratorInst(
+      const ResumeGeneratorInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  Value *getIsReturn() {
+    return getOperand(IsReturnIdx);
+  }
+
+  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
+    switch (index) {
+      case IsReturnIdx:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::ResumeGeneratorInstKind);
   }
 };
 

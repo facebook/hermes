@@ -870,6 +870,31 @@ void HBCISel::generateThrowInst(ThrowInst *Inst, BasicBlock *next) {
 void HBCISel::generateSwitchInst(SwitchInst *Inst, BasicBlock *next) {
   llvm_unreachable("SwitchInst should have been lowered");
 }
+void HBCISel::generateSaveAndYieldInst(
+    SaveAndYieldInst *Inst,
+    BasicBlock *next) {
+  llvm_unreachable("SaveAndYieldInst unimplemented");
+}
+void HBCISel::generateCreateGeneratorInst(
+    CreateGeneratorInst *Inst,
+    BasicBlock *next) {
+  llvm_unreachable("CreateGeneratorInst should have been lowered");
+}
+void HBCISel::generateHBCCreateGeneratorInst(
+    HBCCreateGeneratorInst *Inst,
+    BasicBlock *next) {
+  llvm_unreachable("HBCCreateGeneratorInst unimplemented");
+}
+void HBCISel::generateStartGeneratorInst(
+    StartGeneratorInst *Inst,
+    BasicBlock *next) {
+  llvm_unreachable("StartGeneratorInst unimplemented");
+}
+void HBCISel::generateResumeGeneratorInst(
+    ResumeGeneratorInst *Inst,
+    BasicBlock *next) {
+  llvm_unreachable("ResumeGeneratorInst unimplemented");
+}
 
 void HBCISel::generateCondBranchInst(CondBranchInst *Inst, BasicBlock *next) {
   auto condReg = encodeValue(Inst->getCondition());

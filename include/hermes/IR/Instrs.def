@@ -81,8 +81,10 @@ DEF_VALUE(UnreachableInst, Instruction)
 
 MARK_FIRST(CreateFunctionInst)
 DEF_VALUE(CreateFunctionInst, Instruction)
+DEF_VALUE(CreateGeneratorInst, Instruction)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCCreateFunctionInst, CreateFunctionInst)
+DEF_VALUE(HBCCreateGeneratorInst, Instruction)
 #endif
 MARK_LAST(CreateFunctionInst)
 
@@ -99,6 +101,7 @@ TERMINATOR(CheckHasInstanceInst, TerminatorInst)
 TERMINATOR(TryStartInst, TerminatorInst)
 TERMINATOR(CompareBranchInst, TerminatorInst)
 TERMINATOR(SwitchImmInst, TerminatorInst)
+TERMINATOR(SaveAndYieldInst, TerminatorInst)
 MARK_LAST(TerminatorInst)
 
 MARK_FIRST(CallInst)
@@ -111,6 +114,9 @@ DEF_VALUE(HBCCallDirectInst, CallInst)
 DEF_VALUE(HBCCallNInst, CallInst)
 #endif
 MARK_LAST(CallInst)
+
+DEF_VALUE(StartGeneratorInst, Instruction)
+DEF_VALUE(ResumeGeneratorInst, Instruction)
 
 // These are target dependent instructions:
 

@@ -158,6 +158,7 @@ ExternalScope::ExternalScope(Function *function, int32_t depth)
 }
 
 Function::Function(
+    ValueKind kind,
     Module *parent,
     Identifier originalName,
     DefinitionKind definitionKind,
@@ -165,7 +166,7 @@ Function::Function(
     bool isGlobal,
     SMRange sourceRange,
     Function *insertBefore)
-    : Value(ValueKind::FunctionKind),
+    : Value(kind),
       parent_(parent),
       isGlobal_(isGlobal),
       externalScopes_(),

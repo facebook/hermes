@@ -255,6 +255,7 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
           isa<LoadStackInst>(Inst) || isa<StoreStackInst>(Inst) ||
               isa<CatchInst>(Inst) || isa<GetPNamesInst>(Inst) ||
               isa<CheckHasInstanceInst>(Inst) || isa<GetNextPNameInst>(Inst) ||
+              isa<ResumeGeneratorInst>(Inst) ||
               isa<HBCGetArgumentsPropByValInst>(Inst) ||
               isa<HBCGetArgumentsLengthInst>(Inst) ||
               isa<HBCReifyArgumentsInst>(Inst),
@@ -279,6 +280,13 @@ void Verifier::visitReturnInst(const ReturnInst &Inst) {
       isTerminator(&Inst),
       "Return Instruction must be the last instruction of a basic block");
   Assert(Inst.getNumSuccessors() == 0, "ReturnInst should not have successors");
+}
+
+void Verifier::visitSaveAndYieldInst(const SaveAndYieldInst &Inst) {
+  Assert(isTerminator(&Inst), "SaveAndYield must be a terminator");
+  Assert(
+      Inst.getParent()->getTerminator() == &Inst,
+      "SaveAndYield must be the terminator");
 }
 
 void Verifier::visitBranchInst(const BranchInst &Inst) {
@@ -730,6 +738,20 @@ void Verifier::visitCompareBranchInst(const CompareBranchInst &Inst) {
   visitCondBranchLikeInst(Inst);
   visitBinaryOperatorLikeInst(Inst);
 }
+
+void Verifier::visitCreateGeneratorInst(const CreateGeneratorInst &Inst) {}
+void Verifier::visitStartGeneratorInst(const StartGeneratorInst &Inst) {
+  Assert(
+      &Inst == &Inst.getParent()->front() &&
+          Inst.getParent() == &Inst.getParent()->getParent()->front(),
+      "StartGeneratorInst must be the first instruction of a function");
+}
+void Verifier::visitResumeGeneratorInst(const ResumeGeneratorInst &Inst) {}
+
+void Verifier::visitHBCCreateGeneratorInst(const HBCCreateGeneratorInst &Inst) {
+  visitCreateGeneratorInst(Inst);
+}
+
 void Verifier::visitHBCGetThisNSInst(const HBCGetThisNSInst &Inst) {
   // Nothing to verify at this point.
 }

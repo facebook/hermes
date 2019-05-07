@@ -7,6 +7,7 @@
 #define DEBUG_TYPE "utils"
 
 #include "hermes/Optimizer/Scalar/Utils.h"
+
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"

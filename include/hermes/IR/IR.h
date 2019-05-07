@@ -1304,6 +1304,17 @@ class Function : public ilist_node_with_parent<Function, Module>, public Value {
   Variable *lazyClosureAlias_{};
 #endif
 
+ protected:
+  explicit Function(
+      ValueKind kind,
+      Module *parent,
+      Identifier originalName,
+      DefinitionKind definitionKind,
+      bool strictMode,
+      bool isGlobal,
+      SMRange sourceRange,
+      Function *insertBefore = nullptr);
+
  public:
   /// \param parent Module this function will belong to.
   /// \param originalName User-specified function name, or an empty string.
@@ -1319,7 +1330,16 @@ class Function : public ilist_node_with_parent<Function, Module>, public Value {
       bool strictMode,
       bool isGlobal,
       SMRange sourceRange,
-      Function *insertBefore = nullptr);
+      Function *insertBefore = nullptr)
+      : Function(
+            ValueKind::FunctionKind,
+            parent,
+            originalName,
+            definitionKind,
+            strictMode,
+            isGlobal,
+            sourceRange,
+            insertBefore) {}
 
   ~Function();
 
@@ -1515,7 +1535,59 @@ class Function : public ilist_node_with_parent<Function, Module>, public Value {
   void viewGraph();
 
   static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::FunctionKind;
+    return kindIsA(V->getKind(), ValueKind::FunctionKind);
+  }
+};
+
+class GeneratorFunction final : public Function {
+ public:
+  explicit GeneratorFunction(
+      Module *parent,
+      Identifier originalName,
+      DefinitionKind definitionKind,
+      bool strictMode,
+      bool isGlobal,
+      SMRange sourceRange,
+      Function *insertBefore)
+      : Function(
+            ValueKind::GeneratorFunctionKind,
+            parent,
+            originalName,
+            definitionKind,
+            strictMode,
+            isGlobal,
+            sourceRange,
+            insertBefore) {}
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::GeneratorFunctionKind);
+  }
+};
+
+class GeneratorInnerFunction final : public Function {
+ public:
+  explicit GeneratorInnerFunction(
+      Module *parent,
+      Identifier originalName,
+      DefinitionKind definitionKind,
+      bool strictMode,
+      bool isGlobal,
+      SMRange sourceRange,
+      Function *insertBefore)
+      : Function(
+            ValueKind::GeneratorInnerFunctionKind,
+            parent,
+            originalName,
+            definitionKind,
+            strictMode,
+            isGlobal,
+            sourceRange,
+            insertBefore) {
+    setType(Type::createAnyType());
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::GeneratorInnerFunctionKind);
   }
 };
 

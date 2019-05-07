@@ -46,6 +46,47 @@ Function *IRBuilder::createFunction(
       insertBefore);
 }
 
+GeneratorFunction *IRBuilder::createGeneratorFunction(
+    Identifier OriginalName,
+    Function::DefinitionKind definitionKind,
+    bool strictMode,
+    Function *insertBefore) {
+  if (!OriginalName.isValid()) {
+    // Function must have a name, even it's empty.
+    // Eventually we will give it a properly inferred name.
+    OriginalName = createIdentifier("");
+  }
+  return new GeneratorFunction(
+      M,
+      OriginalName,
+      definitionKind,
+      strictMode,
+      /* isGlobal */ false,
+      /* sourceRange */ {},
+      insertBefore);
+}
+
+GeneratorInnerFunction *IRBuilder::createGeneratorInnerFunction(
+    Identifier OriginalName,
+    Function::DefinitionKind definitionKind,
+    bool strictMode,
+    SMRange sourceRange,
+    Function *insertBefore) {
+  if (!OriginalName.isValid()) {
+    // Function must have a name, even it's empty.
+    // Eventually we will give it a properly inferred name.
+    OriginalName = createIdentifier("");
+  }
+  return new GeneratorInnerFunction(
+      M,
+      OriginalName,
+      definitionKind,
+      strictMode,
+      /* isGlobal */ false,
+      sourceRange,
+      insertBefore);
+}
+
 ExternalScope *IRBuilder::createExternalScope(
     Function *function,
     int32_t depth) {
@@ -648,6 +689,32 @@ DebuggerInst *IRBuilder::createDebuggerInst() {
   return DI;
 }
 
+SaveAndYieldInst *IRBuilder::createSaveAndYieldInst(
+    Value *result,
+    BasicBlock *nextBlock) {
+  auto *I = new SaveAndYieldInst(result, nextBlock);
+  insert(I);
+  return I;
+}
+
+CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(Function *innerFn) {
+  auto *I = new CreateGeneratorInst(innerFn);
+  insert(I);
+  return I;
+}
+
+StartGeneratorInst *IRBuilder::createStartGeneratorInst() {
+  auto *I = new StartGeneratorInst();
+  insert(I);
+  return I;
+}
+
+ResumeGeneratorInst *IRBuilder::createResumeGeneratorInst(Value *isReturn) {
+  auto *I = new ResumeGeneratorInst(isReturn);
+  insert(I);
+  return I;
+}
+
 HBCResolveEnvironment *IRBuilder::createHBCResolveEnvironment(
     VariableScope *scope) {
   auto RSC = new HBCResolveEnvironment(scope);
@@ -791,6 +858,14 @@ HBCCreateFunctionInst *IRBuilder::createHBCCreateFunctionInst(
 
 HBCSpillMovInst *IRBuilder::createHBCSpillMovInst(Instruction *value) {
   auto *inst = new HBCSpillMovInst(value);
+  insert(inst);
+  return inst;
+}
+
+HBCCreateGeneratorInst *IRBuilder::createHBCCreateGeneratorInst(
+    Function *function,
+    Value *env) {
+  auto *inst = new HBCCreateGeneratorInst(function, env);
   insert(inst);
   return inst;
 }

@@ -353,6 +353,18 @@ bool LowerLoadStoreFrameInst::runOnFunction(Function *F) {
           changed = true;
           break;
         }
+        case ValueKind::CreateGeneratorInstKind: {
+          auto *CFI = cast<CreateGeneratorInst>(Inst);
+
+          builder.setInsertionPoint(Inst);
+          auto *newInst = builder.createHBCCreateGeneratorInst(
+              CFI->getFunctionCode(), captureScope);
+
+          Inst->replaceAllUsesWith(newInst);
+          Inst->eraseFromParent();
+          changed = true;
+          break;
+        }
         default:
           break;
       }

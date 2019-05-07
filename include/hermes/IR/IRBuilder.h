@@ -75,6 +75,27 @@ class IRBuilder {
       bool isGlobal = false,
       Function *insertBefore = nullptr);
 
+  /// Create a new GeneratorFunction and add it to the Module.
+  /// \param OriginalName the original name specified by the user.
+  /// \param insertBefore Another function in the module where this function
+  ///   should be inserted before. If null, appends to the end of the module.
+  GeneratorFunction *createGeneratorFunction(
+      Identifier OriginalName,
+      Function::DefinitionKind definitionKind,
+      bool strictMode,
+      Function *insertBefore = nullptr);
+
+  /// Create a new GeneratorInnerFunction and add it to the Module.
+  /// \param OriginalName the original name specified by the user.
+  /// \param insertBefore Another function in the module where this function
+  ///   should be inserted before. If null, appends to the end of the module.
+  GeneratorInnerFunction *createGeneratorInnerFunction(
+      Identifier OriginalName,
+      Function::DefinitionKind definitionKind,
+      bool strictMode,
+      SMRange sourceRange = SMRange{},
+      Function *insertBefore = nullptr);
+
   /// Create the top level function representing the global scope.
   Function *createTopLevelFunction(
       bool strictMode,
@@ -409,6 +430,16 @@ class IRBuilder {
 
   DebuggerInst *createDebuggerInst();
 
+  SaveAndYieldInst *createSaveAndYieldInst(
+      Value *result,
+      BasicBlock *nextBlock);
+
+  CreateGeneratorInst *createCreateGeneratorInst(Function *innerFn);
+
+  StartGeneratorInst *createStartGeneratorInst();
+
+  ResumeGeneratorInst *createResumeGeneratorInst(Value *isReturn);
+
   //--------------------------------------------------------------------------//
   //                  Target specific insertions                              //
   //--------------------------------------------------------------------------//
@@ -468,6 +499,10 @@ class IRBuilder {
       Function *function,
       Value *env);
   HBCSpillMovInst *createHBCSpillMovInst(Instruction *value);
+
+  HBCCreateGeneratorInst *createHBCCreateGeneratorInst(
+      Function *function,
+      Value *env);
 
   HBCAllocObjectFromBufferInst *createHBCAllocObjectFromBufferInst(
       HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map,

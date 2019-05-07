@@ -153,6 +153,10 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
     return genTaggedTemplateExpr(Tt);
   }
 
+  if (auto *Y = dyn_cast<ESTree::YieldExpressionNode>(expr)) {
+    return genYieldExpr(Y);
+  }
+
   Builder.getModule()->getContext().getSourceErrorManager().error(
       expr->getSourceRange(), Twine("Invalid expression encountered"));
   return Builder.getLiteralUndefined();
@@ -556,6 +560,43 @@ Value *ESTreeIRGen::genSequenceExpr(ESTree::SequenceExpressionNode *Sq) {
   }
 
   return result;
+}
+
+Value *ESTreeIRGen::genYieldExpr(ESTree::YieldExpressionNode *Y) {
+  auto *bb = Builder.getInsertionBlock();
+  auto *next = Builder.createBasicBlock(bb->getParent());
+  Value *value = Y->_argument ? genExpression(Y->_argument)
+                              : Builder.getLiteralUndefined();
+
+  auto *resumeIsReturn =
+      Builder.createAllocStackInst(genAnonymousLabelName("isReturn"));
+
+  Builder.createSaveAndYieldInst(value, next);
+  Builder.setInsertionBlock(next);
+  return genResumeGenerator(
+      Y, resumeIsReturn, Builder.createBasicBlock(bb->getParent()));
+}
+
+Value *ESTreeIRGen::genResumeGenerator(
+    ESTree::YieldExpressionNode *yield,
+    AllocStackInst *isReturn,
+    BasicBlock *nextBB) {
+  auto *resume = Builder.createResumeGeneratorInst(isReturn);
+  auto *function = Builder.getInsertionBlock()->getParent();
+
+  auto *retBB = Builder.createBasicBlock(function);
+
+  Builder.createCondBranchInst(
+      Builder.createLoadStackInst(isReturn), retBB, nextBB);
+
+  Builder.setInsertionBlock(retBB);
+  if (yield) {
+    genFinallyBeforeControlChange(yield->surroundingTry, nullptr);
+  }
+  Builder.createReturnInst(resume);
+
+  Builder.setInsertionBlock(nextBB);
+  return resume;
 }
 
 Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {

@@ -269,6 +269,12 @@ class ESTreeIRGen {
     return curFunction()->genAnonymousLabelName(hint);
   }
 
+  /// Generate a unique string that represents a temporary value. The string \p
+  /// hint appears in the name.
+  Identifier genAnonymousLabelName(Identifier hint) {
+    return genAnonymousLabelName(hint.isValid() ? hint.str() : "anonymous");
+  }
+
  public:
   explicit ESTreeIRGen(
       ESTree::Node *root,
@@ -383,6 +389,7 @@ class ESTreeIRGen {
   Value *genAssignmentExpr(ESTree::AssignmentExpressionNode *AE);
   Value *genConditionalExpr(ESTree::ConditionalExpressionNode *C);
   Value *genSequenceExpr(ESTree::SequenceExpressionNode *Sq);
+  Value *genYieldExpr(ESTree::YieldExpressionNode *Y);
   Value *genUnaryExpression(ESTree::UnaryExpressionNode *U);
   Value *genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr);
   Value *genLogicalExpression(ESTree::LogicalExpressionNode *logical);
@@ -411,6 +418,17 @@ class ESTreeIRGen {
   /// a template literal to a template object, then invoking the tag function
   /// with the template object and substitution expressions.
   Value *genTaggedTemplateExpr(ESTree::TaggedTemplateExpressionNode *Expr);
+
+  /// Generate IR for handling resuming a suspended generator.
+  /// \param yield the corresponding yield to resume from, nullptr if this is
+  ///   the first resume and there is no yield.
+  /// \param isReturn the slot indicating whether the user requested a return.
+  /// \param nextBB the next BasicBlock to run if the user did not request a
+  ///   return.
+  Value *genResumeGenerator(
+      ESTree::YieldExpressionNode *yield,
+      AllocStackInst *isReturn,
+      BasicBlock *nextBB);
 
   /// @}
 
@@ -463,8 +481,27 @@ class ESTreeIRGen {
   ///   available inside the closure. Used only by lazy compilation.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
+  /// \param isGeneratorInnerFunction whether this is a GeneratorInnerFunction.
   /// \returns a new Function.
   Function *genES5Function(
+      Identifier originalName,
+      Variable *lazyClosureAlias,
+      ESTree::FunctionLikeNode *functionNode,
+      bool isGeneratorInnerFunction = false);
+
+  /// Generate the IR for two functions: an outer GeneratorFunction and an inner
+  /// GeneratorInnerFunction. The outer function runs CreateGenerator on the
+  /// inner function and returns the result.
+  /// \param originalName is the original non-unique name specified by the user
+  ///   or inferred according to the rules of ES6.
+  /// \param lazyClosureAlias an optional variable in the parent that will
+  ///   contain the closure being created. It is non-null only if an alias
+  ///   binding from  \c originalName to the variable was created and is
+  ///   available inside the closure. Used only by lazy compilation.
+  /// \param functionNode is the ESTree function node (declaration, expression,
+  ///   object method).
+  /// \return the outer Function.
+  Function *genGeneratorFunction(
       Identifier originalName,
       Variable *lazyClosureAlias,
       ESTree::FunctionLikeNode *functionNode);
@@ -476,15 +513,18 @@ class ESTreeIRGen {
 
   /// Emit the function prologue for the current function, consisting of the
   /// following things:
-  /// - an entry block and a next block, so we can append stuff to the end
-  ///   block.
+  /// - a next block, so we can append instructions to it to generate the actual
+  ///   code for the function
   /// - declare all hoisted es5 variables and global properties
   /// - initialize all hoisted es5 variables to undefined
   /// - declare all hoisted es5 functions and initialize them (recursively
   ///   generating their functions)
   /// - create "this" parameter
   /// - create all explicit parameters and store them in variables
-  void emitFunctionPrologue(ESTree::FunctionLikeNode *funcNode);
+  /// \param entry the unpopulated entry block for the function
+  void emitFunctionPrologue(
+      ESTree::FunctionLikeNode *funcNode,
+      BasicBlock *entry);
 
   /// Emit the loading and initialization of parameters in the function
   /// prologue.

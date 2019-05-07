@@ -64,6 +64,7 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
         case ValueKind::CreateArgumentsInstKind:
         // TODO: we can't deal with changing the scope depth of functions yet.
         case ValueKind::CreateFunctionInstKind:
+        case ValueKind::CreateGeneratorInstKind:
           // Fail.
           return false;
         default:
@@ -166,6 +167,8 @@ static Value *inlineFunction(
         // Labels, literals and variables are unchanged.
         newOp = oldOp;
       } else {
+        llvm::errs() << "INVALID OPERAND FOR : " << I->getKindStr() << '\n';
+        llvm::errs() << "INVALID OPERAND     : " << oldOp->getKindStr() << '\n';
         llvm_unreachable("unexpected operand kind");
       }
 
@@ -280,6 +283,8 @@ bool Inlining::runOnModule(Module *M) {
       auto *FC = CFI->getFunctionCode();
       if (!canBeInlined(FC, intoFunction))
         continue;
+      llvm::dbgs() << FC->getKindStr() << '\n';
+      llvm::dbgs() << intoFunction->getKindStr() << '\n';
 
       DEBUG(llvm::dbgs() << "Inlining function '" << FC->getInternalNameStr()
                          << "' ";

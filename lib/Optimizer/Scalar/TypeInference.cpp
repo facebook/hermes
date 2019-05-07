@@ -325,6 +325,12 @@ static bool inferFunctionReturnType(Function *F) {
   Type returnTy;
   bool first = true;
 
+  if (isa<GeneratorInnerFunction>(F)) {
+    // GeneratorInnerFunctions may be called with `.return()` at the start,
+    // with any value of any type.
+    return false;
+  }
+
   for (auto &bbit : *F) {
     for (auto &it : bbit) {
       Instruction *I = &it;
