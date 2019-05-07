@@ -117,6 +117,7 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// have at least one entry for this purpose.
   std::unique_ptr<BytecodeFunction> generateBytecodeFunction(
       Function::DefinitionKind definitionKind,
+      ValueKind valueKind,
       bool strictMode,
       uint32_t paramCount,
       uint32_t environmentSize,

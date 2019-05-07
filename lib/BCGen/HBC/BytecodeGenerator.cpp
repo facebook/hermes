@@ -72,6 +72,7 @@ std::pair<uint32_t, uint32_t> BytecodeModuleGenerator::addObjectBuffer(
 std::unique_ptr<BytecodeFunction>
 BytecodeFunctionGenerator::generateBytecodeFunction(
     Function::DefinitionKind definitionKind,
+    ValueKind valueKind,
     bool strictMode,
     uint32_t paramCount,
     uint32_t environmentSize,
@@ -79,6 +80,7 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
   return std::unique_ptr<BytecodeFunction>(new BytecodeFunction(
       std::move(opcodes_),
       definitionKind,
+      valueKind,
       strictMode,
       FunctionHeader(
           bytecodeSize_,
@@ -238,6 +240,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
 
     std::unique_ptr<BytecodeFunction> func = BFG.generateBytecodeFunction(
         F->getDefinitionKind(),
+        F->getKind(),
         F->isStrictMode(),
         F->getParamCountIncludingThis(),
         F->getFunctionScope()->getVariables().size(),

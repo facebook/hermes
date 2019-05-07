@@ -9,7 +9,7 @@ function *loop(x) {
   return 'DONE LOOPING';
 }
 
-// CHECK-LABEL: Function<loop>(2 params, 5 registers, 2 symbols):
+// CHECK-LABEL: NCFunction<loop>(2 params, 5 registers, 2 symbols):
 // CHECK-NEXT:     CreateEnvironment r0
 // CHECK-NEXT:     LoadParam         r1, 1
 // CHECK-NEXT:     LoadConstUndefined r2

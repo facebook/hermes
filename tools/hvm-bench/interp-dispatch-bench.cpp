@@ -149,7 +149,11 @@ L1:
   BM->setFunction(
       0,
       BFG->generateBytecodeFunction(
-          hermes::Function::DefinitionKind::ES5Function, true, 0, 0));
+          hermes::Function::DefinitionKind::ES5Function,
+          hermes::ValueKind::FunctionKind,
+          true,
+          0,
+          0));
   runtimeModule->initializeWithoutCJSModules(
       BCProviderFromSrc::createBCProviderFromSrc(std::move(BM)));
   auto codeBlock = CodeBlock::createCodeBlock(

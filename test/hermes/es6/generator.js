@@ -19,6 +19,14 @@ show(it.next());
 show(it.next());
 // CHECK-NEXT: undefined | true
 
+try {
+  new simple();
+  print('must throw');
+} catch (e) {
+  print('caught', e.name);
+}
+// CHECK-NEXT: caught TypeError
+
 function *useArgs(x, y) {
   yield x;
   yield x + 1;

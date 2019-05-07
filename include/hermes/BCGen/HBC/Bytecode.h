@@ -56,6 +56,7 @@ class BytecodeFunction {
   explicit BytecodeFunction(
       std::vector<opcode_atom_t> &&opcodes,
       Function::DefinitionKind definitionKind,
+      ValueKind valueKind,
       bool strictMode,
       FunctionHeader &&header,
       std::vector<HBCExceptionHandlerInfo> &&exceptionHandlers,
@@ -73,7 +74,20 @@ class BytecodeFunction {
         header_.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitCall;
         break;
       default:
-        header_.flags.prohibitInvoke = FunctionHeaderFlag::ProhibitNone;
+        // ES9.0 9.2.3 step 4 states that generator functions cannot be
+        // constructed.
+        // We place this check outside the `DefinitionKind` because generator
+        // functions may also be ES6 methods, for example, and are not included
+        // in the DefinitionKind enum.
+        // Note that we only have to check for GeneratorFunctionKind in this
+        // case, because ES6 methods are already checked above, and ES6
+        // constructors are prohibited from being generator functions.
+        // As such, this is the only case in which we must change the
+        // prohibitInvoke flag based on valueKind.
+        header_.flags.prohibitInvoke =
+            valueKind == ValueKind::GeneratorFunctionKind
+            ? FunctionHeaderFlag::ProhibitConstruct
+            : FunctionHeaderFlag::ProhibitNone;
         break;
     }
     header_.flags.strictMode = strictMode;
