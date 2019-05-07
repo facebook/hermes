@@ -341,17 +341,6 @@ class BlockStatementDecoration {
   uint32_t bufferId;
 };
 
-class StringLiteralDecoration {
- public:
-  /// Indicates whether the string literal originally contained any escapes
-  /// or new line continuations. We need this in order to detect directives
-  /// (ES5.1. 14.1).
-  bool potentialDirective = false;
-
-  /// Was this recognised as a directive.
-  bool directive = false;
-};
-
 class PatternDecoration {};
 class CoverDecoration {};
 
@@ -382,10 +371,6 @@ struct DecoratorTrait {
   using Type = EmptyDecoration;
 };
 
-template <>
-struct DecoratorTrait<StringLiteralNode> {
-  using Type = StringLiteralDecoration;
-};
 template <>
 struct DecoratorTrait<BlockStatementNode> {
   using Type = BlockStatementDecoration;
@@ -690,10 +675,6 @@ void ESTreeVisit(Visitor &V, NodePtr Node) {
 #include "ESTree.def"
   }
 }
-
-/// Check whether a node is a directive (a statement consisting of a single
-/// string) and if so extract the directive string.
-llvm::Optional<NodeLabel> matchDirective(const ESTree::Node *node);
 
 /// Return a reference to the parameter list of a FunctionLikeNode.
 NodeList &getParams(FunctionLikeNode *node);

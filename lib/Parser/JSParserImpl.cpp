@@ -446,9 +446,13 @@ Optional<bool> JSParserImpl::parseStatementList(
     TokenKind until,
     bool parseDirectives,
     ESTree::NodeList &stmtList) {
-  if (parseDirectives)
-    while (auto *dirStmt = parseDirective())
+  if (parseDirectives) {
+    ESTree::ExpressionStatementNode *dirStmt;
+    while (check(TokenKind::string_literal) &&
+           (dirStmt = parseDirective()) != nullptr) {
       stmtList.push_back(*dirStmt);
+    }
+  }
 
   while (!check(until, TokenKind::eof)) {
     if (tok_->getKind() == TokenKind::rw_function) {
@@ -2639,21 +2643,14 @@ Optional<ESTree::Node *> JSParserImpl::parseExpression(Param param) {
 
 ESTree::ExpressionStatementNode *JSParserImpl::parseDirective() {
   // Is the current token a directive?
-  auto tok = lexer_.rescanCurrentTokenAsDirective();
-  if (!tok)
+  if (!lexer_.isCurrentTokenADirective())
     return nullptr;
 
-  // Save the updated current token. (This is technically a no-op, since the
-  // same token is being reused, but that could change in the future.
-  tok_ = tok;
-
-  // Allocate a SingLiteralNode for the directive.
+  // Allocate a StringLiteralNode for the directive.
   auto *strLit = setLocation(
       tok_,
       tok_,
-      new (context_) ESTree::StringLiteralNode(tok_->getDirective()));
-  strLit->potentialDirective = true;
-  strLit->directive = true;
+      new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
   auto endLoc = tok_->getEndLoc();
 
   // Actually process the directive. Note that we want to do that before we
@@ -2664,16 +2661,14 @@ ESTree::ExpressionStatementNode *JSParserImpl::parseDirective() {
   advance(JSLexer::AllowDiv);
 
   // Consume the optional semicolon.
-  if (check(TokenKind::semi)) {
-    endLoc = tok_->getEndLoc();
-    advance();
-  }
+  if (check(TokenKind::semi))
+    endLoc = advance().End;
 
   // Allocate an ExpressionStatementNode for the directive.
   return setLocation(
       strLit,
       endLoc,
-      new (context_) ESTree::ExpressionStatementNode(strLit, nullptr));
+      new (context_) ESTree::ExpressionStatementNode(strLit, strLit->_value));
 }
 
 namespace {

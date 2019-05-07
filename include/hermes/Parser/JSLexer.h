@@ -66,6 +66,11 @@ class Token {
   UniqueString *stringLiteral_{nullptr};
   RegExpLiteral *regExpLiteral_{nullptr};
 
+  /// If the current token is a string literal, this flag indicates whether it
+  /// contains any escapes or new line continuations. We need this in order to
+  /// detect directives.
+  bool stringLiteralContainsEscapes_ = false;
+
   Token(const Token &) = delete;
   const Token &operator=(const Token &) = delete;
 
@@ -119,9 +124,9 @@ class Token {
     assert(getKind() == TokenKind::string_literal);
     return stringLiteral_;
   }
-  UniqueString *getDirective() const {
-    assert(getKind() == TokenKind::directive);
-    return stringLiteral_;
+  bool getStringLiteralContainsEscapes() const {
+    assert(getKind() == TokenKind::string_literal);
+    return stringLiteralContainsEscapes_;
   }
 
   RegExpLiteral *getRegExpLiteral() const {
@@ -152,9 +157,10 @@ class Token {
     kind_ = TokenKind::identifier;
     ident_ = ident;
   }
-  void setStringLiteral(UniqueString *literal) {
+  void setStringLiteral(UniqueString *literal, bool containsEscapes) {
     kind_ = TokenKind::string_literal;
     stringLiteral_ = literal;
+    stringLiteralContainsEscapes_ = containsEscapes;
   }
   void setRegExpLiteral(RegExpLiteral *literal) {
     kind_ = TokenKind::regexp_literal;
@@ -164,13 +170,6 @@ class Token {
     assert(kind > TokenKind::_first_resword && kind < TokenKind::_last_resword);
     kind_ = kind;
     ident_ = ident;
-  }
-  // Change a string_literal to directive.
-  void changeToDirective() {
-    assert(
-        kind_ == TokenKind::string_literal &&
-        "Only string_literal can be changed to directive");
-    kind_ = TokenKind::directive;
   }
 
   friend class JSLexer;
@@ -202,10 +201,6 @@ class JSLexer {
   const char *bufferEnd_;
 
   bool newLineBeforeCurrentToken_ = false;
-  /// If the current token is a string literal, this flag indicates whether it
-  /// contains any escapes or new line continuations. We need this in order to
-  /// detect directives.
-  bool stringLiteralContainsEscapes_ = false;
 
   llvm::SmallString<256> tmpStorage_;
 
@@ -309,13 +304,13 @@ class JSLexer {
   const Token *advance(GrammarContext grammarContext = AllowRegExp);
 
   /// Check whether the current token is a directive, in other words is it a
-  /// string literal without escapes and new line continuations, followed by
-  /// either new line or semicolon. If it is, rescan it as a directive. This
-  /// doesn't move the input pointer, so the optional semicolon and the new
-  /// line will be consumed normally by the next \c advance() call.
+  /// string literal without escapes or new line continuations, followed by
+  /// either new line, semicolon or right brace.
+  /// This doesn't move the input pointer, so the optional semicolon, brace
+  /// or the new line will be consumed normally by the next \c advance() call.
   ///
-  /// \return the adjusted token if it is a directive, or nullptr if it isn't.
-  const Token *rescanCurrentTokenAsDirective();
+  /// \return true if the token can be interpreted as a directive.
+  bool isCurrentTokenADirective();
 
   /// Report an error for the range from startLoc to curCharPtr.
   bool errorRange(SMLoc startLoc, const llvm::Twine &msg) {

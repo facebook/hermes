@@ -30,8 +30,14 @@ function f3() {
 }
 
 function f4(eval) {
+//CHECK: {{.*}}directives-3.js:32:13: error: cannot declare 'eval'
+//CHECK-NEXT: function f4(eval) {
+//CHECK-NEXT:             ^~~~
+
     "use strict"
-//CHECK:  {{.*}}/directives-3.js:32:13: error: cannot declare 'eval'
-//CHECK-NEXT:  function f4(eval) {
-//CHECK-NEXT:              ^~~~
 }
+
+function f5(eval) {"use strict"  }
+//CHECK: {{.*}}directives-3.js:40:13: error: cannot declare 'eval'
+//CHECK-NEXT: function f5(eval) {"use strict"  }
+//CHECK-NEXT:             ^~~~

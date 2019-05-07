@@ -431,11 +431,11 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
   return &token_;
 }
 
-const Token *JSLexer::rescanCurrentTokenAsDirective() {
+bool JSLexer::isCurrentTokenADirective() {
   // The current token must be a string literal without escapes.
   if (token_.getKind() != TokenKind::string_literal ||
-      stringLiteralContainsEscapes_) {
-    return nullptr;
+      token_.getStringLiteralContainsEscapes()) {
+    return false;
   }
 
   const char *ptr = curCharPtr_;
@@ -445,7 +445,8 @@ const Token *JSLexer::rescanCurrentTokenAsDirective() {
   // try to find. There can also be comments. So, we loop, consuming whitespace
   // until we encounter:
   // - EOF. Don't consume it and succeed.
-  // - Semicolon. Consume it and succeed.
+  // - Semicolon. Don't consume it and succeed.
+  // - Right brace. Don't consume it and succeed.
   // - A new line. Don't consume it and succeed.
   // - A line comment. It implies a new line. Don't consume it and succeed.
   // - A block comment. Consume it and continue.
@@ -458,23 +459,24 @@ const Token *JSLexer::rescanCurrentTokenAsDirective() {
       case 0:
         // EOF?
         if (ptr == bufferEnd_)
-          goto success;
+          return true;
         // We encountered a stray 0 character.
-        return nullptr;
+        return false;
 
       case ';':
-        goto success;
+      case '}':
+        return true;
 
       case '\r':
       case '\n':
-        goto success;
+        return true;
 
       // Line separator \u2028 UTF8 encoded is      : e2 80 a8
       // Paragraph separator \u2029 UTF8 encoded is : e2 80 a9
       case UTF8_LINE_TERMINATOR_CHAR0:
         if (matchUnicodeLineTerminatorOffset1(ptr))
-          goto success;
-        return nullptr;
+          return true;
+        return false;
 
       case '\v':
       case '\f':
@@ -512,13 +514,13 @@ const Token *JSLexer::rescanCurrentTokenAsDirective() {
       case '/':
         if (ptr[1] == '/') { // Line comment?
           // It implies a new line, so we are good.
-          goto success;
+          return true;
         } else if (ptr[1] == '*') { // Block comment?
           SourceErrorManager::SaveAndSuppressMessages suppress(&sm_);
           ptr = skipBlockComment(ptr);
           continue;
         } else {
-          return nullptr;
+          return false;
         }
 
       // Handle all other characters: if it is a unicode space, skip it.
@@ -532,15 +534,13 @@ const Token *JSLexer::rescanCurrentTokenAsDirective() {
             continue;
           }
         }
-        return nullptr;
+        return false;
       }
     }
   }
 
-success:
   // We arrive here if we matched a directive. 'ptr' is the final character.
-  token_.changeToDirective();
-  return &token_;
+  return true;
 }
 
 uint32_t JSLexer::consumeUnicodeEscape() {
@@ -1152,8 +1152,7 @@ void JSLexer::scanString() {
     }
   }
 breakLoop:
-  stringLiteralContainsEscapes_ = escapes;
-  token_.setStringLiteral(getStringLiteral(tmpStorage_.str()));
+  token_.setStringLiteral(getStringLiteral(tmpStorage_.str()), escapes);
 }
 
 /// TODO: this has to be implemented properly.

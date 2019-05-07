@@ -499,11 +499,13 @@ void SemanticValidator::visitFunction(
 Node *SemanticValidator::scanDirectivePrologue(NodeList &body) {
   Node *result = nullptr;
   for (auto &nodeRef : body) {
-    auto directive = ESTree::matchDirective(&nodeRef);
-    if (!directive)
+    auto *exprSt = dyn_cast<ESTree::ExpressionStatementNode>(&nodeRef);
+    if (!exprSt || !exprSt->_directive)
       break;
 
-    if (*directive == kw_.identUseStrict) {
+    auto *directive = exprSt->_directive;
+
+    if (directive == kw_.identUseStrict) {
       curFunction()->strictMode = true;
       if (!result)
         result = &nodeRef;

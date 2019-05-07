@@ -9,7 +9,7 @@
 #endif
 
 #ifndef RESWORD
-#define RESWORD(name) TOK(rw_ ## name, #name)
+#define RESWORD(name) TOK(rw_##name, #name)
 #endif
 
 #ifndef PUNCTUATOR
@@ -23,6 +23,8 @@
 #ifndef RANGE_MARKER
 #define RANGE_MARKER(name) TOK(name, "<" #name ">")
 #endif
+
+// clang-format off
 
 TOK(none, "<none>")
 TOK(identifier, "identifier")
@@ -134,7 +136,6 @@ PUNCTUATOR(equalgreater,        "=>")
 TOK(numeric_literal, "number")
 TOK(string_literal, "string")
 TOK(regexp_literal, "regexp")
-TOK(directive, "directive")
 
 TOK(eof, "<eof>")
 RANGE_MARKER(_last_token)

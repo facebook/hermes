@@ -214,26 +214,7 @@ llvm::Optional<Node *> ASTBuilder::convertLiteral(
   switch (value->getKind()) {
     case parser::JSONKind::String: {
       auto *jsonString = cast<JSONString>(value);
-      auto *node = new (context_) StringLiteralNode(jsonString->stringBase());
-      // Determine whether the string literal contained any escapes or line
-      // continuations so we can detect directives.
-      // The check for size 2 is just a sanity check - the raw string must at
-      // least have quotation marks.
-      UniqueString *raw;
-      if (extractNodeLabel(lit, "raw", raw) && raw->str().size() >= 2) {
-        StringRef str = raw->str();
-        if (str[0] == '\\' && str.size() >= 4) {
-          // Remove the escaped quotes.
-          str = str.slice(2, str.size() - 2);
-        } else {
-          // Remove the quotes.
-          str = str.slice(1, str.size() - 1);
-        }
-
-        if (!str.find('\\'))
-          node->potentialDirective = true;
-      }
-      return node;
+      return new (context_) StringLiteralNode(jsonString->stringBase());
     }
     case parser::JSONKind::Boolean:
       return new (context_)
