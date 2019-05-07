@@ -149,12 +149,17 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     pf.configurable = 0;
     DEFINE_PROP(selfHandle, P::prototype, prototypeObjectHandle);
 
-    // Set the 'constructor' property in the prototype object.
-    pf.clear();
-    pf.enumerable = 0;
-    pf.writable = 1;
-    pf.configurable = 1;
-    DEFINE_PROP(prototypeObjectHandle, P::constructor, selfHandle);
+    if (!vmisa<JSGeneratorFunction>(*selfHandle)) {
+      // Set the 'constructor' property in the prototype object.
+      // This must not be set for GeneratorFunctions, because
+      // prototypes must not point back to their constructors.
+      // See the diagram: ES9.0 25.2 (GeneratorFunction objects).
+      pf.clear();
+      pf.enumerable = 0;
+      pf.writable = 1;
+      pf.configurable = 1;
+      DEFINE_PROP(prototypeObjectHandle, P::constructor, selfHandle);
+    }
   }
 
   return ExecutionStatus::RETURNED;

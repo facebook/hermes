@@ -37,3 +37,7 @@ function *g() {}
 g.prototype = null;
 print(Object.getPrototypeOf(g()) === Generator.prototype);
 // CHECK-NEXT: true
+
+// f.prototype should not have a .constructor property.
+print(Object.getOwnPropertyNames(f.prototype).length);
+// CHECK-NEXT: 0
