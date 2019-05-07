@@ -22,6 +22,7 @@ set(source_files
   JSDataView.cpp
   JSDate.cpp
   JSError.cpp
+  JSGenerator.cpp
   JSObject.cpp
   JSRegExp.cpp
   JSMapImpl.cpp
