@@ -17,6 +17,7 @@
 #include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
+#include "hermes/VM/JSGenerator.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler.h"
@@ -123,9 +124,48 @@ CallResult<HermesValue> Interpreter::createGeneratorClosure(
   return JSGeneratorFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
-      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype),
       envHandle,
       runtimeModule->getCodeBlockMayAllocate(funcIndex));
+}
+
+CallResult<HermesValue> Interpreter::createGenerator(
+    Runtime *runtime,
+    RuntimeModule *runtimeModule,
+    unsigned funcIndex,
+    Handle<Environment> envHandle,
+    NativeArgs args) {
+  auto gifRes = GeneratorInnerFunction::create(
+      runtime,
+      runtimeModule->getDomain(runtime),
+      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      envHandle,
+      runtimeModule->getCodeBlockMayAllocate(funcIndex),
+      args);
+  if (LLVM_UNLIKELY(gifRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto generatorFunction = runtime->makeHandle(vmcast<JSGeneratorFunction>(
+      runtime->getCurrentFrame().getCalleeClosure()));
+
+  auto prototypeProp = JSObject::getNamed(
+      generatorFunction,
+      runtime,
+      Predefined::getSymbolID(Predefined::prototype));
+  if (LLVM_UNLIKELY(prototypeProp == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<JSObject> prototype = vmisa<JSObject>(*prototypeProp)
+      ? runtime->makeHandle<JSObject>(*prototypeProp)
+      : Handle<JSObject>::vmcast(&runtime->generatorPrototype);
+
+  auto res = JSGenerator::create(runtime, *gifRes, prototype);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return res->getHermesValue();
 }
 
 CallResult<HermesValue> Interpreter::reifyArgumentsSlowPath(
@@ -1582,22 +1622,55 @@ tailCall:
       }
 
       CASE(CompleteGenerator) {
-        llvm_unreachable("CompleteGenerator unimplemented");
+        auto *innerFn = vmcast<GeneratorInnerFunction>(
+            runtime->getCurrentFrame().getCalleeClosure());
+        innerFn->setState(GeneratorInnerFunction::State::Completed);
+        ip = NEXTINST(CompleteGenerator);
+        DISPATCH;
       }
 
       CASE(SaveGenerator) {
-        llvm_unreachable("SaveGenerator unimplemented");
+        nextIP = IPADD(ip->iSaveGenerator.op1);
+        goto doSaveGen;
       }
       CASE(SaveGeneratorLong) {
-        llvm_unreachable("SaveGeneratorLong unimplemented");
+        nextIP = IPADD(ip->iSaveGeneratorLong.op1);
+        goto doSaveGen;
       }
 
+    doSaveGen : {
+      auto *innerFn = vmcast<GeneratorInnerFunction>(
+          runtime->getCurrentFrame().getCalleeClosure());
+
+      innerFn->saveStack(runtime);
+      innerFn->setNextIP(nextIP);
+      innerFn->setState(GeneratorInnerFunction::State::SuspendedYield);
+      ip = NEXTINST(SaveGenerator);
+      DISPATCH;
+    }
+
       CASE(StartGenerator) {
-        llvm_unreachable("StartGenerator unimplemented");
+        auto *innerFn = vmcast<GeneratorInnerFunction>(
+            runtime->getCurrentFrame().getCalleeClosure());
+        if (innerFn->getState() ==
+            GeneratorInnerFunction::State::SuspendedStart) {
+          nextIP = NEXTINST(StartGenerator);
+        } else {
+          nextIP = innerFn->getNextIP();
+          innerFn->restoreStack(runtime);
+        }
+        innerFn->setState(GeneratorInnerFunction::State::Executing);
+        ip = nextIP;
+        DISPATCH;
       }
 
       CASE(ResumeGenerator) {
-        llvm_unreachable("ResumeGenerator unimplemented");
+        auto *innerFn = vmcast<GeneratorInnerFunction>(
+            runtime->getCurrentFrame().getCalleeClosure());
+        O1REG(ResumeGenerator) = innerFn->getResult();
+        innerFn->clearResult();
+        ip = NEXTINST(ResumeGenerator);
+        DISPATCH;
       }
 
       CASE(Ret) {
@@ -1819,10 +1892,34 @@ tailCall:
       }
 
       CASE(CreateGenerator) {
-        llvm_unreachable("CreateGenerator unimplemented");
+        res = createGenerator(
+            runtime,
+            curCodeBlock->getRuntimeModule(),
+            ip->iCreateGenerator.op3,
+            Handle<Environment>::vmcast(&O2REG(CreateGenerator)),
+            FRAME.getNativeArgs());
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        O1REG(CreateGenerator) = *res;
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(CreateGenerator);
+        DISPATCH;
       }
       CASE(CreateGeneratorLongIndex) {
-        llvm_unreachable("CreateGenerator unimplemented");
+        res = createGenerator(
+            runtime,
+            curCodeBlock->getRuntimeModule(),
+            ip->iCreateGenerator.op3,
+            Handle<Environment>::vmcast(&O2REG(CreateGeneratorLongIndex)),
+            FRAME.getNativeArgs());
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        O1REG(CreateGenerator) = *res;
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(CreateGeneratorLongIndex);
+        DISPATCH;
       }
 
       CASE(GetEnvironment) {

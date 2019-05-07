@@ -27,6 +27,15 @@ class Interpreter {
       unsigned funcIndex,
       Handle<Environment> envHandle);
 
+  /// Allocate a generator for the specified function and the specified
+  /// environment. \param funcIndex function index in the global function table.
+  static CallResult<HermesValue> createGenerator(
+      Runtime *runtime,
+      RuntimeModule *runtimeModule,
+      unsigned funcIndex,
+      Handle<Environment> envHandle,
+      NativeArgs args);
+
   /// Slow path for ReifyArguments resReg, lazyReg
   /// It assumes that he fast path has handled the case when 'lazyReg' is
   /// already initialized. It creates a new 'arguments' object and populates it

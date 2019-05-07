@@ -871,6 +871,12 @@ void HBCISel::generateBranchInst(BranchInst *Inst, BasicBlock *next) {
 }
 void HBCISel::generateReturnInst(ReturnInst *Inst, BasicBlock *next) {
   auto value = encodeValue(Inst->getValue());
+  Function *F = Inst->getParent()->getParent();
+  if (isa<GeneratorInnerFunction>(F)) {
+    // Generator inner functions must complete before `return`,
+    // unlike when they yield.
+    BCFGen_->emitCompleteGenerator();
+  }
   BCFGen_->emitRet(value);
 }
 void HBCISel::generateThrowInst(ThrowInst *Inst, BasicBlock *next) {
@@ -882,7 +888,10 @@ void HBCISel::generateSwitchInst(SwitchInst *Inst, BasicBlock *next) {
 void HBCISel::generateSaveAndYieldInst(
     SaveAndYieldInst *Inst,
     BasicBlock *next) {
-  llvm_unreachable("SaveAndYieldInst unimplemented");
+  auto result = encodeValue(Inst->getResult());
+  auto loc = BCFGen_->emitSaveGeneratorLong(0);
+  registerLongJump(loc, Inst->getNextBlock());
+  BCFGen_->emitRet(result);
 }
 void HBCISel::generateCreateGeneratorInst(
     CreateGeneratorInst *Inst,
@@ -892,17 +901,27 @@ void HBCISel::generateCreateGeneratorInst(
 void HBCISel::generateHBCCreateGeneratorInst(
     HBCCreateGeneratorInst *Inst,
     BasicBlock *next) {
-  llvm_unreachable("HBCCreateGeneratorInst unimplemented");
+  auto env = encodeValue(Inst->getEnvironment());
+  auto output = encodeValue(Inst);
+  auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
+  if (LLVM_LIKELY(code <= UINT16_MAX)) {
+    // Most of the cases, function index will be less than 2^16.
+    BCFGen_->emitCreateGenerator(output, env, code);
+  } else {
+    BCFGen_->emitCreateGeneratorLongIndex(output, env, code);
+  }
 }
 void HBCISel::generateStartGeneratorInst(
     StartGeneratorInst *Inst,
     BasicBlock *next) {
-  llvm_unreachable("StartGeneratorInst unimplemented");
+  BCFGen_->emitStartGenerator();
 }
 void HBCISel::generateResumeGeneratorInst(
     ResumeGeneratorInst *Inst,
     BasicBlock *next) {
-  llvm_unreachable("ResumeGeneratorInst unimplemented");
+  auto value = encodeValue(Inst);
+  auto isReturn = encodeValue(Inst->getIsReturn());
+  BCFGen_->emitResumeGenerator(value, isReturn);
 }
 
 void HBCISel::generateCondBranchInst(CondBranchInst *Inst, BasicBlock *next) {
