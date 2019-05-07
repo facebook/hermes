@@ -115,6 +115,19 @@ static const WrapperFunc interpWrappers[] = {PROFILER_SYMBOLS(LIST_ITEM)};
     defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode); \
   } while (0)
 
+CallResult<HermesValue> Interpreter::createGeneratorClosure(
+    Runtime *runtime,
+    RuntimeModule *runtimeModule,
+    unsigned funcIndex,
+    Handle<Environment> envHandle) {
+  return JSGeneratorFunction::create(
+      runtime,
+      runtimeModule->getDomain(runtime),
+      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      envHandle,
+      runtimeModule->getCodeBlockMayAllocate(funcIndex));
+}
+
 CallResult<HermesValue> Interpreter::reifyArgumentsSlowPath(
     Runtime *runtime,
     Handle<Callable> curFunction,
@@ -1776,10 +1789,33 @@ tailCall:
     }
 
       CASE(CreateGeneratorClosure) {
-        llvm_unreachable("CreateGeneratorClosure unimplemented");
+        res = createGeneratorClosure(
+            runtime,
+            curCodeBlock->getRuntimeModule(),
+            ip->iCreateClosure.op3,
+            Handle<Environment>::vmcast(&O2REG(CreateGeneratorClosure)));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        O1REG(CreateGeneratorClosure) = *res;
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(CreateGeneratorClosure);
+        DISPATCH;
       }
       CASE(CreateGeneratorClosureLongIndex) {
-        llvm_unreachable("CreateGeneratorClosure unimplemented");
+        res = createGeneratorClosure(
+            runtime,
+            curCodeBlock->getRuntimeModule(),
+            ip->iCreateClosureLongIndex.op3,
+            Handle<Environment>::vmcast(
+                &O2REG(CreateGeneratorClosureLongIndex)));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        O1REG(CreateGeneratorClosureLongIndex) = *res;
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(CreateGeneratorClosureLongIndex);
+        DISPATCH;
       }
 
       CASE(CreateGenerator) {

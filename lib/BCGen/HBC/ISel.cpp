@@ -779,11 +779,20 @@ void HBCISel::generateHBCCreateFunctionInst(
   auto env = encodeValue(Inst->getEnvironment());
   auto output = encodeValue(Inst);
   auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
+  bool isGen = isa<GeneratorFunction>(Inst->getFunctionCode());
   if (LLVM_LIKELY(code <= UINT16_MAX)) {
     // Most of the cases, function index will be less than 2^16.
-    BCFGen_->emitCreateClosure(output, env, code);
+    if (isGen) {
+      BCFGen_->emitCreateGeneratorClosure(output, env, code);
+    } else {
+      BCFGen_->emitCreateClosure(output, env, code);
+    }
   } else {
-    BCFGen_->emitCreateClosureLongIndex(output, env, code);
+    if (isGen) {
+      BCFGen_->emitCreateGeneratorClosureLongIndex(output, env, code);
+    } else {
+      BCFGen_->emitCreateClosureLongIndex(output, env, code);
+    }
   }
 }
 
