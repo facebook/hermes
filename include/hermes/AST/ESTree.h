@@ -319,6 +319,12 @@ class ReturnStatementDecoration {
   TryStatementNode *surroundingTry = nullptr;
 };
 
+class YieldExpressionDecoration {
+ public:
+  /// The closest surrounding try statement.
+  TryStatementNode *surroundingTry = nullptr;
+};
+
 class LabeledStatementDecoration : public LabelDecorationBase {};
 
 class TryStatementDecoration {
@@ -411,6 +417,10 @@ struct DecoratorTrait<TryStatementNode> {
 template <>
 struct DecoratorTrait<ProgramNode> {
   using Type = ProgramDecoration;
+};
+template <>
+struct DecoratorTrait<YieldExpressionNode> {
+  using Type = YieldExpressionDecoration;
 };
 
 } // namespace detail

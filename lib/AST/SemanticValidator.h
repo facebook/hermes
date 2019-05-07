@@ -119,6 +119,7 @@ class SemanticValidator {
   void visit(ContinueStatementNode *continueStmt);
 
   void visit(ReturnStatementNode *returnStmt);
+  void visit(YieldExpressionNode *yieldExpr);
 
   void visit(UnaryExpressionNode *unaryExpr);
 

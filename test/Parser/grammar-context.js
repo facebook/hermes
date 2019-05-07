@@ -28,7 +28,8 @@
 //CHECK-NEXT:                   }
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
-//CHECK-NEXT:             }
+//CHECK-NEXT:             },
+//CHECK-NEXT:             "generator": false
 //CHECK-NEXT:           },
 //CHECK-NEXT:           "right": {
 //CHECK-NEXT:             "type": "ObjectExpression",

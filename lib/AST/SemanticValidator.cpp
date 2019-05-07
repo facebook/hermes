@@ -410,6 +410,15 @@ void SemanticValidator::visit(ReturnStatementNode *returnStmt) {
   visitESTreeChildren(*this, returnStmt);
 }
 
+void SemanticValidator::visit(YieldExpressionNode *yieldExpr) {
+  yieldExpr->surroundingTry = curFunction()->activeTry;
+
+  if (curFunction()->isGlobalScope())
+    sm_.error(
+        yieldExpr->getSourceRange(), "'yield' not in a generator function");
+  visitESTreeChildren(*this, yieldExpr);
+}
+
 void SemanticValidator::visit(UnaryExpressionNode *unaryExpr) {
   // Check for unqualified delete in strict mode.
   if (unaryExpr->_operator == kw_.identDelete) {

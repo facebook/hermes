@@ -108,7 +108,8 @@ function foo(a = 10, {b = 20, c} = {c:30}, [d,e]) {}
 //CHECK-NEXT:           "type": "BlockStatement",
 //CHECK-NEXT:           "body": []
 //CHECK-NEXT:         },
-//CHECK-NEXT:         "returnType": null
+//CHECK-NEXT:         "returnType": null,
+//CHECK-NEXT:         "generator": false
 //CHECK-NEXT:       }
 
 //CHECK-NEXT:     ]

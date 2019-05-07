@@ -317,13 +317,13 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
 
     if (isDeclaration) {
       auto *decl = new (context_) ESTree::FunctionDeclarationNode(
-          *optId, std::move(paramList), nullptr, nullptr);
+          *optId, std::move(paramList), nullptr, nullptr, false);
       // Initialize the node with a blank body.
       decl->_body = new (context_) ESTree::BlockStatementNode({});
       node = decl;
     } else {
       auto *expr = new (context_) ESTree::FunctionExpressionNode(
-          optId ? *optId : nullptr, std::move(paramList), nullptr);
+          optId ? *optId : nullptr, std::move(paramList), nullptr, false);
       // Initialize the node with a blank body.
       expr->_body = new (context_) ESTree::BlockStatementNode({});
       node = expr;
@@ -347,12 +347,12 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   ESTree::FunctionLikeNode *node;
   if (isDeclaration) {
     auto *decl = new (context_) ESTree::FunctionDeclarationNode(
-        *optId, std::move(paramList), body, nullptr);
+        *optId, std::move(paramList), body, nullptr, false);
     decl->strictness = ESTree::makeStrictness(isStrictMode());
     node = decl;
   } else {
     auto *expr = new (context_) ESTree::FunctionExpressionNode(
-        optId ? *optId : nullptr, std::move(paramList), body);
+        optId ? *optId : nullptr, std::move(paramList), body, false);
     expr->strictness = ESTree::makeStrictness(isStrictMode());
     node = expr;
   }
@@ -1778,7 +1778,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
         return None;
 
       auto *funcExpr = new (context_) ESTree::FunctionExpressionNode(
-          nullptr, ESTree::NodeList{}, block.getValue());
+          nullptr, ESTree::NodeList{}, block.getValue(), false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
       setLocation(startLoc, block.getValue(), funcExpr);
 
@@ -1843,7 +1843,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
         return None;
 
       auto *funcExpr = new (context_) ESTree::FunctionExpressionNode(
-          nullptr, std::move(params), block.getValue());
+          nullptr, std::move(params), block.getValue(), false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
       setLocation(startLoc, block.getValue(), funcExpr);
 
