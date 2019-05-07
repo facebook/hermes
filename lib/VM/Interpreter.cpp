@@ -1568,6 +1568,25 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(CompleteGenerator) {
+        llvm_unreachable("CompleteGenerator unimplemented");
+      }
+
+      CASE(SaveGenerator) {
+        llvm_unreachable("SaveGenerator unimplemented");
+      }
+      CASE(SaveGeneratorLong) {
+        llvm_unreachable("SaveGeneratorLong unimplemented");
+      }
+
+      CASE(StartGenerator) {
+        llvm_unreachable("StartGenerator unimplemented");
+      }
+
+      CASE(ResumeGenerator) {
+        llvm_unreachable("ResumeGenerator unimplemented");
+      }
+
       CASE(Ret) {
 #ifdef HERMES_ENABLE_DEBUGGER
         // Check for an async debugger request.
@@ -1755,6 +1774,20 @@ tailCall:
       ip = nextIP;
       DISPATCH;
     }
+
+      CASE(CreateGeneratorClosure) {
+        llvm_unreachable("CreateGeneratorClosure unimplemented");
+      }
+      CASE(CreateGeneratorClosureLongIndex) {
+        llvm_unreachable("CreateGeneratorClosure unimplemented");
+      }
+
+      CASE(CreateGenerator) {
+        llvm_unreachable("CreateGenerator unimplemented");
+      }
+      CASE(CreateGeneratorLongIndex) {
+        llvm_unreachable("CreateGenerator unimplemented");
+      }
 
       CASE(GetEnvironment) {
         // The currently executing function must exist, so get the environment.

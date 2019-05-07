@@ -505,6 +505,13 @@ DEFINE_OPCODE_0(Unreachable)
 DEFINE_OPCODE_3(CreateClosure, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateClosureLongIndex, Reg8, Reg8, UInt32)
 
+/// Create a closure for a GeneratorFunction.
+/// Arg1 is the register in which to store the closure.
+/// Arg2 is the current environment as loaded by GetEnvironment 0.
+/// Arg3 is index in the function table.
+DEFINE_OPCODE_3(CreateGeneratorClosure, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_3(CreateGeneratorClosureLongIndex, Reg8, Reg8, UInt32)
+
 /// Allocate an empty, uninitialized object (immediately before a constructor).
 /// Arg1 is the destination register.
 /// Arg2 is the prototype to assign it.
@@ -623,6 +630,28 @@ OPERAND_STRING_ID(CreateRegExp, 3)
 /// that Arg2 is *unaligned* it is dynamically aligned at runtime.
 DEFINE_OPCODE_5(SwitchImm, Reg8, UInt32, Addr32, UInt32, UInt32)
 
+/// Start the generator by jumping to the next instruction to begin.
+/// Restore the stack frame if this generator has previously been suspended.
+DEFINE_OPCODE_0(StartGenerator)
+
+/// Resume generator by performing one of the following user-requested actions:
+/// - next(val): Set Arg1 to val, Arg2 to false, run next instruction
+/// - return(val): Set Arg1 to val, Arg2 to true, run next instruction
+/// - throw(val): Throw val as an error
+/// Arg1 is the result provided by the user.
+/// Arg2 is a boolean which is true if the user requested a return().
+DEFINE_OPCODE_2(ResumeGenerator, Reg8, Reg8)
+
+/// Set the generator status to complete, but do not return.
+DEFINE_OPCODE_0(CompleteGenerator)
+
+/// Create a generator.
+/// Arg1 is the register in which to store the generator.
+/// Arg2 is the current environment as loaded by GetEnvironment 0.
+/// Arg3 is index in the function table.
+DEFINE_OPCODE_3(CreateGenerator, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_3(CreateGeneratorLongIndex, Reg8, Reg8, UInt32)
+
 // Jump instructions must be defined through the following DEFINE_JUMP macros.
 // The numeric suffix indicates number of operands the instruction takes.
 // The macros will automatically generate two opcodes for each definition,
@@ -650,6 +679,10 @@ DEFINE_JUMP_2(JmpTrue)
 DEFINE_JUMP_2(JmpFalse)
 /// Jump if the value is undefined.
 DEFINE_JUMP_2(JmpUndefined)
+/// Save the provided value, yield, and signal the VM to restart execution
+/// at the provided target.
+DEFINE_JUMP_1(SaveGenerator)
+
 /// Conditional branches to Arg1 based on Arg2 and Arg3.
 /// The *N branches assume numbers and are illegal for other types.
 
