@@ -21,6 +21,12 @@ namespace vm {
 static CallResult<HermesValue>
 generatorPrototypeNext(void *, Runtime *runtime, NativeArgs args);
 
+/// ES6.0 25.3.1.3.
+/// ES6.0 25.3.1.4.
+/// \param ctx (isThrow) if true, throw(). If false, return().
+static CallResult<HermesValue>
+generatorPrototypeReturnOrThrow(void *ctx, Runtime *runtime, NativeArgs args);
+
 void populateGeneratorPrototype(Runtime *runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime->generatorPrototype);
 
@@ -30,6 +36,23 @@ void populateGeneratorPrototype(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::next),
       nullptr,
       generatorPrototypeNext,
+      1);
+
+  static bool staticTrue = true;
+  static bool staticFalse = false;
+  defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::returnStr),
+      /* isThrow */ (void *)&staticFalse,
+      generatorPrototypeReturnOrThrow,
+      1);
+  defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::throwStr),
+      /* isThrow */ (void *)&staticTrue,
+      generatorPrototypeReturnOrThrow,
       1);
 
   auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -106,6 +129,67 @@ generatorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
       toHandle(runtime, JSGenerator::getInnerFunction(generatorRes->get())),
       args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return result->getHermesValue();
+}
+
+// ES6.0 25.3.3.4.
+// Placed separately from generatorPrototypeReturnOrThrow for readability
+// and for simpler comparison to the spec.
+static CallResult<Handle<JSObject>> generatorResumeAbrupt(
+    Runtime *runtime,
+    Handle<GeneratorInnerFunction> generator,
+    Handle<> value,
+    bool isThrow) {
+  if (generator->getState() == GeneratorInnerFunction::State::SuspendedStart) {
+    // If state is "suspendedStart", then
+    // Set generator’s [[GeneratorState]] internal slot to "completed".
+    generator->setState(GeneratorInnerFunction::State::Completed);
+  }
+
+  if (generator->getState() == GeneratorInnerFunction::State::Completed) {
+    if (!isThrow) {
+      // abruptCompletion.[[type]] is return.
+      return createIterResultObject(runtime, value, true);
+    }
+    runtime->setThrownValue(*value);
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // Assert: state is "suspendedYield".
+  assert(
+      generator->getState() == GeneratorInnerFunction::State::SuspendedYield);
+
+  auto action = isThrow ? GeneratorInnerFunction::Action::Throw
+                        : GeneratorInnerFunction::Action::Return;
+  auto valueRes = GeneratorInnerFunction::callInnerFunction(
+      generator, runtime, value, action);
+  if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+    generator->setState(GeneratorInnerFunction::State::Completed);
+    return ExecutionStatus::EXCEPTION;
+  }
+  return createIterResultObject(
+      runtime,
+      runtime->makeHandle(*valueRes),
+      generator->getState() == GeneratorInnerFunction::State::Completed);
+}
+
+static CallResult<HermesValue>
+generatorPrototypeReturnOrThrow(void *ctx, Runtime *runtime, NativeArgs args) {
+  bool isThrow = *reinterpret_cast<bool *>(ctx);
+
+  auto generatorRes = generatorValidate(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(generatorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto result = generatorResumeAbrupt(
+      runtime,
+      toHandle(runtime, JSGenerator::getInnerFunction(generatorRes->get())),
+      args.getArgHandle(runtime, 0),
+      isThrow);
+  if (result == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   return result->getHermesValue();

@@ -353,6 +353,7 @@ STR(toPrimitive, "toPrimitive")
 STR(toStringTag, "toStringTag")
 
 STR(Generator, "Generator")
+STR(throwStr, "throw")
 
 STR(HermesInternal, "HermesInternal")
 STR(detachArrayBuffer, "detachArrayBuffer")

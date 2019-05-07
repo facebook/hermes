@@ -1668,7 +1668,13 @@ tailCall:
         auto *innerFn = vmcast<GeneratorInnerFunction>(
             runtime->getCurrentFrame().getCalleeClosure());
         O1REG(ResumeGenerator) = innerFn->getResult();
+        O2REG(ResumeGenerator) = HermesValue::encodeBoolValue(
+            innerFn->getAction() == GeneratorInnerFunction::Action::Return);
         innerFn->clearResult();
+        if (innerFn->getAction() == GeneratorInnerFunction::Action::Throw) {
+          runtime->setThrownValue(O1REG(ResumeGenerator));
+          goto exception;
+        }
         ip = NEXTINST(ResumeGenerator);
         DISPATCH;
       }
