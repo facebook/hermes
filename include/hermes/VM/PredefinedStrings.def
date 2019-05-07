@@ -355,6 +355,8 @@ STR(toStringTag, "toStringTag")
 STR(Generator, "Generator")
 STR(throwStr, "throw")
 
+STR(GeneratorFunction, "GeneratorFunction")
+
 STR(HermesInternal, "HermesInternal")
 STR(detachArrayBuffer, "detachArrayBuffer")
 STR(createHeapSnapshot, "createHeapSnapshot")

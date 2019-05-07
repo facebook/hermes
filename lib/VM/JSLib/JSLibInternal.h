@@ -356,6 +356,9 @@ Handle<JSObject> createWeakSetConstructor(Runtime *runtime);
 /// Create the Symbol constructor and populate methods.
 Handle<JSObject> createSymbolConstructor(Runtime *runtime);
 
+/// Create the GeneratorFunction constructor and populate methods.
+Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime);
+
 /// Create the IteratorPrototype.
 void populateIteratorPrototype(Runtime *runtime);
 
@@ -428,6 +431,13 @@ CallResult<HermesValue> require(void *, Runtime *runtime, NativeArgs args);
 /// \pre the first argument must be a resolved integer module ID.
 /// Performs the rest of the require() as the normal require function does.
 CallResult<HermesValue> requireFast(void *, Runtime *runtime, NativeArgs args);
+
+/// ES19.2.1.1.1. Create a new function given arguments and a body.
+/// \param isGeneratorFunction when true, make a generator with "function*".
+CallResult<HermesValue> createDynamicFunction(
+    Runtime *runtime,
+    NativeArgs args,
+    bool isGeneratorFunction);
 
 } // namespace vm
 } // namespace hermes

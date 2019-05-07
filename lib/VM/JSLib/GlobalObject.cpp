@@ -602,6 +602,9 @@ void initGlobalObject(Runtime *runtime) {
   /// String Iterator.
   populateStringIteratorPrototype(runtime);
 
+  // GeneratorFunction constructor (not directly exposed in the global object).
+  createGeneratorFunctionConstructor(runtime);
+
   // %GeneratorPrototype%.
   populateGeneratorPrototype(runtime);
 
