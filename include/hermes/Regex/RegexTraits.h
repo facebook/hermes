@@ -71,7 +71,28 @@ inline char16_t canonicalizeToCase(
 /// Implementation of regex::Traits for char16_t
 struct U16RegexTraits {
  private:
-  using CanonicalizeCache = llvm::SmallDenseMap<uint16_t, uint16_t, 16>;
+  // A DenseMapInfo for our canonicalization cache.
+  // Use 0 and 1 as empty and tombstone; we skip the cache for ASCII but wish to
+  // support 0xFFFF and 0xFFFE as keys.
+  struct CanonicalizationDenseMapInfo {
+    static inline char16_t getEmptyKey() {
+      return 0;
+    }
+    static inline char16_t getTombstoneKey() {
+      return 1;
+    }
+
+    static unsigned getHashValue(char16_t c) {
+      return llvm::DenseMapInfo<uint16_t>::getHashValue(c);
+    }
+
+    static bool isEqual(char16_t lhs, char16_t rhs) {
+      return lhs == rhs;
+    }
+  };
+
+  using CanonicalizeCache =
+      llvm::SmallDenseMap<uint16_t, uint16_t, 16, CanonicalizationDenseMapInfo>;
   mutable CanonicalizeCache toLowerCache_;
   mutable CanonicalizeCache toUpperCache_;
 
@@ -94,6 +115,8 @@ struct U16RegexTraits {
       char16_t ch,
       CaseCanonicalization whichCase) const {
     // canonicalizeToCase has a fast ASCII path.
+    // Note that we use 0 and 1 as sentinel values in the map so they must not
+    // be placed in the cache.
     if (ch <= 127) {
       return canonicalizeToCase(ch, whichCase);
     }
