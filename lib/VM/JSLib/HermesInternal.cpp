@@ -539,6 +539,153 @@ hermesInternalEnsureObject(void *, Runtime *runtime, NativeArgs args) {
   return runtime->raiseTypeError(args.getArgHandle(runtime, 1));
 }
 
+/// \code
+///   HermesInternal.copyDataProperties =
+///         function (target, source, excludedItems) {}
+/// \endcode
+///
+/// Copy all enumerable own properties of object \p source, that are not also
+/// properties of \p excludedItems, into \p target, which must be an object, and
+/// return \p target. If \p excludedItems is not specified, it is assumed
+/// to be empty.
+CallResult<HermesValue>
+hermesInternalCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  Handle<JSObject> target = args.dyncastArg<JSObject>(runtime, 0);
+  // To be safe, ignore non-objects.
+  if (!target)
+    return HermesValue::encodeUndefinedValue();
+
+  Handle<> untypedSource = args.getArgHandle(runtime, 1);
+  if (untypedSource->isNull() || untypedSource->isUndefined())
+    return target.getHermesValue();
+
+  Handle<JSObject> source = untypedSource->isObject()
+      ? Handle<JSObject>::vmcast(untypedSource)
+      : Handle<JSObject>::vmcast(
+            runtime->makeHandle(*toObject(runtime, untypedSource)));
+  Handle<JSObject> excludedItems = args.dyncastArg<JSObject>(runtime, 2);
+
+  MutableHandle<> nameHandle{runtime};
+  MutableHandle<> valueHandle{runtime};
+
+  // Process all named properties/symbols.
+  bool success = JSObject::forEachOwnPropertyWhile(
+      source,
+      runtime,
+      // indexedCB.
+      [runtime, &source, &target, &excludedItems, &nameHandle, &valueHandle](
+          uint32_t index, ComputedPropertyDescriptor desc) {
+        if (!desc.flags.enumerable)
+          return true;
+
+        nameHandle = HermesValue::encodeNumberValue(index);
+
+        if (excludedItems) {
+          ComputedPropertyDescriptor xdesc;
+          auto cr = JSObject::getOwnComputedPrimitiveDescriptor(
+              excludedItems, runtime, nameHandle, xdesc);
+          if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+            return false;
+          if (*cr)
+            return true;
+        }
+
+        valueHandle = JSObject::getOwnIndexed(*source, runtime, index);
+
+        if (LLVM_UNLIKELY(
+                JSObject::defineOwnComputedPrimitive(
+                    target,
+                    runtime,
+                    nameHandle,
+                    DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                    valueHandle) == ExecutionStatus::EXCEPTION)) {
+          return false;
+        }
+
+        return true;
+      },
+      // namedCB.
+      [runtime, &source, &target, &excludedItems, &valueHandle](
+          SymbolID sym, NamedPropertyDescriptor desc) {
+        if (!desc.flags.enumerable)
+          return true;
+        if (InternalProperty::isInternal(sym))
+          return true;
+
+        // Skip excluded items.
+        if (excludedItems &&
+            JSObject::hasNamedOrIndexed(excludedItems, runtime, sym)) {
+          return true;
+        }
+
+        auto cr =
+            JSObject::getNamedPropertyValue(source, runtime, source, desc);
+        if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+          return false;
+
+        valueHandle = *cr;
+
+        if (LLVM_UNLIKELY(
+                JSObject::defineOwnProperty(
+                    target,
+                    runtime,
+                    sym,
+                    DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                    valueHandle) == ExecutionStatus::EXCEPTION)) {
+          return false;
+        }
+
+        return true;
+      });
+
+  if (LLVM_UNLIKELY(!success))
+    return ExecutionStatus::EXCEPTION;
+
+  return target.getHermesValue();
+}
+
+/// \code
+///   HermesInternal.copyRestArgs = function (from) {}
+/// \encode
+/// Copy the callers parameters starting from index \c from (where the first
+/// parameter is index 0) into a JSArray.
+CallResult<HermesValue>
+hermesInternalCopyRestArgs(void *, Runtime *runtime, NativeArgs args) {
+  GCScopeMarkerRAII marker{runtime};
+
+  // Obtain the caller's stack frame.
+  auto frames = runtime->getStackFrames();
+  auto it = frames.begin();
+  ++it;
+  // Check for the extremely unlikely case where there is no caller frame.
+  if (LLVM_UNLIKELY(it == frames.end()))
+    return HermesValue::encodeUndefinedValue();
+
+  // "from" should be a number.
+  if (!args.getArg(0).isNumber())
+    return HermesValue::encodeUndefinedValue();
+  uint32_t from = truncateToUInt32(args.getArg(0).getNumber());
+
+  uint32_t argCount = it->getArgCount();
+  uint32_t length = from <= argCount ? argCount - from : 0;
+
+  auto cr = JSArray::create(runtime, length, length);
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  auto array = toHandle(runtime, std::move(*cr));
+  JSArray::setStorageEndIndex(array, runtime, length);
+
+  for (uint32_t i = 0; i != length; ++i) {
+    array->unsafeSetExistingElementAt(
+        array.get(), runtime, i, it->getArgRef(from));
+    ++from;
+  }
+
+  return array.getHermesValue();
+}
+
 #ifdef HERMESVM_PLATFORM_LOGGING
 void logGCStats(Runtime *runtime, const char *msg) {
   // The GC stats can exceed the android logcat length limit, of
@@ -627,6 +774,9 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
       P::getRuntimeProperties, hermesInternalGetRuntimeProperties);
   defineInternMethod(P::getTemplateObject, hermesInternalGetTemplateObject);
   defineInternMethod(P::ensureObject, hermesInternalEnsureObject, 2);
+  defineInternMethod(
+      P::copyDataProperties, hermesInternalCopyDataProperties, 3);
+  defineInternMethod(P::copyRestArgs, hermesInternalCopyRestArgs, 1);
   defineInternMethod(P::ttiReached, hermesInternalTTIReached);
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
 

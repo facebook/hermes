@@ -904,6 +904,25 @@ class JSObject : public GCCell {
       PropertyFlags flagsToSet,
       OptValue<llvm::ArrayRef<SymbolID>> props);
 
+  /// First call \p indexedCB, passing each indexed property's \c uint32_t
+  /// index and \c ComputedPropertyDescriptor. Then call \p namedCB passing each
+  /// named property's \c SymbolID and \c  NamedPropertyDescriptor as
+  /// parameters.
+  /// The callbacks return true to continue or false to stop immediately.
+  ///
+  /// Obviously the callbacks shouldn't be doing naughty things like modifying
+  /// the property map or creating new hidden classes (even implicitly).
+  ///
+  /// A marker for the current gcScope is obtained in the beginning and the
+  /// scope is flushed after every callback.
+  /// \return false if the callback returned false, true otherwise.
+  template <typename IndexedCB, typename NamedCB>
+  static bool forEachOwnPropertyWhile(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      const IndexedCB &indexedCB,
+      const NamedCB &namedCB);
+
  protected:
   /// @name Virtual function implementations
   /// @{
@@ -1139,6 +1158,28 @@ class PropertyAccessor final : public GCCell {
 
 //===----------------------------------------------------------------------===//
 // Object inline methods.
+
+template <typename IndexedCB, typename NamedCB>
+bool JSObject::forEachOwnPropertyWhile(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    const IndexedCB &indexedCB,
+    const NamedCB &namedCB) {
+  auto *self = *selfHandle;
+  auto range = getOwnIndexedRange(self);
+  for (auto i = range.first; i != range.second; ++i) {
+    auto optPF = getOwnIndexedPropertyFlags(self, runtime, i);
+    if (!optPF)
+      continue;
+    ComputedPropertyDescriptor desc{*optPF, i};
+    desc.flags.indexed = true;
+    if (!indexedCB(i, desc))
+      return false;
+  }
+
+  return HiddenClass::forEachPropertyWhile(
+      runtime->makeHandle(selfHandle->clazz_), runtime, namedCB);
+}
 
 inline ExecutionStatus JSObject::allocatePropStorage(
     Handle<JSObject> selfHandle,

@@ -41,6 +41,8 @@ BUILTIN_METHOD(HermesInternal, requireFast)
 BUILTIN_METHOD(HermesInternal, require)
 BUILTIN_METHOD(HermesInternal, getTemplateObject)
 BUILTIN_METHOD(HermesInternal, ensureObject)
+BUILTIN_METHOD(HermesInternal, copyDataProperties)
+BUILTIN_METHOD(HermesInternal, copyRestArgs)
 
 BUILTIN_OBJECT(JSON)
 BUILTIN_METHOD(JSON, parse)
