@@ -669,9 +669,18 @@ Optional<ESTree::ArrayPatternNode *> JSParserImpl::parseArrayBindingPattern(
   if (!check(TokenKind::r_square)) {
     for (;;) {
       if (check(TokenKind::comma)) {
+        // Elision.
         elemList.push_back(
             *setLocation(tok_, tok_, new (context_) ESTree::EmptyNode()));
+      } else if (check(TokenKind::dotdotdot)) {
+        // BindingRestElement.
+        auto optRestElem = parseBindingRestElement(param);
+        if (!optRestElem)
+          return None;
+        elemList.push_back(*optRestElem.getValue());
+        break;
       } else {
+        // BindingElement.
         auto optElem = parseBindingElement(param);
         if (!optElem)
           return None;
@@ -727,6 +736,21 @@ Optional<ESTree::Node *> JSParserImpl::parseBindingElement(Param param) {
   if (!optInit)
     return None;
   return *optInit;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseBindingRestElement(Param param) {
+  assert(
+      check(TokenKind::dotdotdot) &&
+      "BindingRestElement expected to start with '...'");
+
+  auto startLoc = advance().Start;
+
+  auto optElem = parseBindingElement(param);
+  if (!optElem)
+    return None;
+
+  return setLocation(
+      startLoc, *optElem, new (context_) ESTree::RestElementNode(*optElem));
 }
 
 Optional<ESTree::AssignmentPatternNode *> JSParserImpl::parseBindingInitializer(

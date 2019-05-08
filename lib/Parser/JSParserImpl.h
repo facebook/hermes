@@ -428,6 +428,7 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseBindingPattern(Param param);
   Optional<ESTree::ArrayPatternNode *> parseArrayBindingPattern(Param param);
   Optional<ESTree::Node *> parseBindingElement(Param param);
+  Optional<ESTree::Node *> parseBindingRestElement(Param param);
   /// Parse "'=' Initializer" in a binding pattern.
   Optional<ESTree::AssignmentPatternNode *> parseBindingInitializer(
       Param param,
