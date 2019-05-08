@@ -283,8 +283,6 @@ bool Inlining::runOnModule(Module *M) {
       auto *FC = CFI->getFunctionCode();
       if (!canBeInlined(FC, intoFunction))
         continue;
-      llvm::dbgs() << FC->getKindStr() << '\n';
-      llvm::dbgs() << intoFunction->getKindStr() << '\n';
 
       DEBUG(llvm::dbgs() << "Inlining function '" << FC->getInternalNameStr()
                          << "' ";
