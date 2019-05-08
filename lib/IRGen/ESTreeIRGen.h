@@ -636,7 +636,14 @@ class ESTreeIRGen {
   void emitDestructuringAssignment(ESTree::PatternNode *target, Value *source);
 
   /// Generate code for destructuring assignment to ArrayPattern.
-  void emitDestructuringArray(ESTree::ArrayPatternNode *target, Value *source);
+  void emitDestructuringArray(
+      ESTree::ArrayPatternNode *targetPat,
+      Value *source);
+
+  void emitRestElement(
+      ESTree::RestElementNode *rest,
+      IteratorRecord iteratorRecord,
+      AllocStackInst *iteratorDone);
 
   /// Generate code for destructuring assignment to ObjectPattern.
   void emitDestructuringObject(

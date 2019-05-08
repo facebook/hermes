@@ -589,7 +589,7 @@ void ESTreeIRGen::emitDestructuringAssignment(
 }
 
 void ESTreeIRGen::emitDestructuringArray(
-    ESTree::ArrayPatternNode *target,
+    ESTree::ArrayPatternNode *targetPat,
     Value *source) {
   auto iteratorRecord = emitGetIterator(source);
 
@@ -603,9 +603,14 @@ void ESTreeIRGen::emitDestructuringArray(
 
   bool first = true;
 
-  for (auto &elem : target->_elements) {
+  for (auto &elem : targetPat->_elements) {
     ESTree::Node *target = &elem;
     ESTree::Node *init = nullptr;
+
+    if (auto *rest = dyn_cast<ESTree::RestElementNode>(target)) {
+      emitRestElement(rest, iteratorRecord, iteratorDone);
+      break;
+    }
 
     // If we have an initializer, unwrap it.
     if (auto *assign = dyn_cast<ESTree::AssignmentPatternNode>(target)) {
@@ -668,6 +673,8 @@ void ESTreeIRGen::emitDestructuringArray(
     // nextBlock:
     Builder.setInsertionBlock(nextBlock);
 
+    // NOTE: we can't use emitOptionalInitializationHere() because we want to
+    // be able to jump directly to getDefaultBlock.
     if (init) {
       //    if (value !== undefined) goto storeBlock    [if initializer present]
       //    value = initializer                         [if initializer present]
@@ -691,6 +698,53 @@ void ESTreeIRGen::emitDestructuringArray(
     if (!lref.isEmpty())
       lref.emitStore(Builder.createLoadStackInst(value));
   }
+}
+
+void ESTreeIRGen::emitRestElement(
+    ESTree::RestElementNode *rest,
+    hermes::irgen::ESTreeIRGen::IteratorRecord iteratorRecord,
+    hermes::AllocStackInst *iteratorDone) {
+  // 13.3.3.8 BindingRestElement:...BindingIdentifier
+
+  auto *notDoneBlock = Builder.createBasicBlock(Builder.getFunction());
+  auto *newValueBlock = Builder.createBasicBlock(Builder.getFunction());
+  auto *doneBlock = Builder.createBasicBlock(Builder.getFunction());
+
+  auto lref = createLRef(rest->_argument);
+
+  auto *A = Builder.createAllocArrayInst({}, 0);
+  auto *n = Builder.createAllocStackInst(genAnonymousLabelName("n"));
+
+  // n = 0.
+  Builder.createStoreStackInst(Builder.getLiteralPositiveZero(), n);
+
+  Builder.createCondBranchInst(
+      Builder.createLoadStackInst(iteratorDone), doneBlock, notDoneBlock);
+
+  // notDoneBlock:
+  Builder.setInsertionBlock(notDoneBlock);
+  auto *stepResult = emitIteratorNext(iteratorRecord);
+  auto *stepDone = emitIteratorComplete(stepResult);
+  Builder.createStoreStackInst(stepDone, iteratorDone);
+  Builder.createCondBranchInst(stepDone, doneBlock, newValueBlock);
+
+  // newValueBlock:
+  Builder.setInsertionBlock(newValueBlock);
+  auto *stepValue = emitIteratorValue(stepResult);
+  auto *nVal = Builder.createLoadStackInst(n);
+  nVal->setType(Type::createNumber());
+  // A[n] = stepValue;
+  Builder.createStorePropertyInst(stepValue, A, nVal);
+  // ++n;
+  auto add = Builder.createBinaryOperatorInst(
+      nVal, Builder.getLiteralNumber(1), BinaryOperatorInst::OpKind::AddKind);
+  add->setType(Type::createNumber());
+  Builder.createStoreStackInst(add, n);
+  Builder.createBranchInst(notDoneBlock);
+
+  // doneBlock:
+  Builder.setInsertionBlock(doneBlock);
+  lref.emitStore(A);
 }
 
 void ESTreeIRGen::emitDestructuringObject(
