@@ -17,7 +17,7 @@ function foo(x) {
 //CHKBC-LABEL:Function<foo>(2 params, 9 registers, 0 symbols):
 //CHKBC-NEXT: Offset{{.*}}
 //CHKBC-NEXT:    LoadParam         r1, 1
-//CHKBC-NEXT:    CallBuiltin       r0, 43, 2
+//CHKBC-NEXT:    CallBuiltin       r0, "Object.keys", 2
 //CHKBC-NEXT:    Ret               r0
 
 // Make sure that this isn't incorrectly recognized as a builtin.

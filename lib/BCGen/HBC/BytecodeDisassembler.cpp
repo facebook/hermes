@@ -8,6 +8,7 @@
 
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+#include "hermes/Inst/Builtins.h"
 #include "hermes/Support/JenkinsHash.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/RegExpSerialization.h"
@@ -548,6 +549,14 @@ void PrettyDisassembleVisitor::visitOperand(
     os_ << ",";
   }
   os_ << " ";
+
+  // Special handling for CallBuiltin.
+  if (operandIndex == 1 && opcode_ == inst::OpCode::CallBuiltin) {
+    uint8_t builtinIndex;
+    decodeOperand(operandBuf, &builtinIndex);
+    os_ << '"' << inst::getBuiltinMethodName(builtinIndex) << '"';
+    return;
+  }
 
   if (operandType == OperandType::Reg8 || operandType == OperandType::Reg32) {
     os_ << "r";
