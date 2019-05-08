@@ -449,6 +449,10 @@ ESTREE_NODE_1_ARGS(
     ArrayPattern, Pattern,
     NodeList, elements, false)
 
+ESTREE_NODE_1_ARGS(
+    RestElement, Pattern,
+    NodePtr, argument, false)
+
 ESTREE_NODE_2_ARGS(
     AssignmentPattern, Pattern,
     NodePtr, left, false,          // Pattern
