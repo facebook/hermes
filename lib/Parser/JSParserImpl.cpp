@@ -270,6 +270,16 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
 
   if (!check(TokenKind::r_paren)) {
     for (;;) {
+      if (check(TokenKind::dotdotdot)) {
+        // BindingRestElement.
+        auto optRestElem = parseBindingRestElement(param);
+        if (!optRestElem)
+          return None;
+        paramList.push_back(*optRestElem.getValue());
+        break;
+      }
+
+      // BindingElement.
       auto optElem = parseBindingElement(param);
       if (!optElem)
         return None;
@@ -748,6 +758,12 @@ Optional<ESTree::Node *> JSParserImpl::parseBindingRestElement(Param param) {
   auto optElem = parseBindingElement(param);
   if (!optElem)
     return None;
+  if (isa<ESTree::AssignmentPatternNode>(*optElem)) {
+    lexer_.error(
+        optElem.getValue()->getSourceRange(),
+        "rest elemenent may not have a default initializer");
+    return None;
+  }
 
   return setLocation(
       startLoc, *optElem, new (context_) ESTree::RestElementNode(*optElem));

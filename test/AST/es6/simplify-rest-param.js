@@ -1,5 +1,4 @@
-// RUN: %hermesc -Xflow-parser -dump-transformed-ast -pretty-json %s | %FileCheck --match-full-lines %s
-// REQUIRES: flowparser
+// RUN: %hermesc -dump-transformed-ast -pretty-json %s | %FileCheck --match-full-lines %s
 
 // Transform (a, ...[b]) into (a, b)
 
