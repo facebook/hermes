@@ -182,8 +182,7 @@ uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
     // Stop when we see a getter/setter.
     if (isa<StoreGetterSetterInst>(u)) {
       break;
-    }
-    if (auto *put = dyn_cast<StoreOwnPropertyInst>(u)) {
+    } else if (auto *put = dyn_cast<StoreOwnPropertyInst>(u)) {
       // Skip if the instruction is storing the object itself into another
       // object.
       if (put->getStoredValue() == dyn_cast<Value>(allocInst) &&
@@ -217,6 +216,9 @@ uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
         }
         savingSoFar -= kNonLiteralCostBytes;
       }
+    } else {
+      // Stop when we reach an unsupported instruction.
+      break;
     }
   }
   return elemNumForMaxSaving;
@@ -281,6 +283,9 @@ bool LowerAllocObject::lowerAlloc(AllocObjectInst *allocInst) {
         put->replaceAllUsesWith(newPut);
         put->eraseFromParent();
       }
+    } else {
+      // Stop when we reach an unsupported instruction.
+      break;
     }
   }
 

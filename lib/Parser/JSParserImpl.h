@@ -463,6 +463,7 @@ class JSParserImpl {
   Optional<ESTree::Node *> parsePrimaryExpression();
   Optional<ESTree::ArrayExpressionNode *> parseArrayLiteral();
   Optional<ESTree::ObjectExpressionNode *> parseObjectLiteral();
+  Optional<ESTree::Node *> parseSpreadElement();
   Optional<ESTree::Node *> parsePropertyAssignment();
 
   /// Parse a property key which is a string, number or identifier. If it is

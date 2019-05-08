@@ -415,6 +415,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   ESTree::PropertyNode *protoProperty = nullptr;
 
   for (auto &P : Expr->_properties) {
+    if (isa<ESTree::SpreadElementNode>(&P))
+      continue;
+
     // We are reusing the storage, so make sure it is cleared at every
     // iteration.
     stringStorage.clear();
@@ -459,6 +462,14 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   // is no need to create them if we don't use them because creating a function
   // has no side effects.
   for (auto &P : Expr->_properties) {
+    if (auto *spread = dyn_cast<ESTree::SpreadElementNode>(&P)) {
+      genHermesInternalCall(
+          "copyDataProperties",
+          Builder.getLiteralUndefined(),
+          {Obj, genExpression(spread->_argument)});
+      continue;
+    }
+
     // We are reusing the storage, so make sure it is cleared at every
     // iteration.
     stringStorage.clear();

@@ -1711,18 +1711,11 @@ Optional<ESTree::ArrayExpressionNode *> JSParserImpl::parseArrayLiteral() {
             *setLocation(tok_, tok_, new (context_) ESTree::EmptyNode()));
       } else if (check(TokenKind::dotdotdot)) {
         // Spread.
-        auto spreadStartLoc = advance();
-
-        auto optExpr = parseAssignmentExpression();
-        if (!optExpr)
+        auto optSpread = parseSpreadElement();
+        if (!optSpread)
           return None;
 
-        auto *spread = setLocation(
-            spreadStartLoc,
-            *optExpr,
-            new (context_) ESTree::SpreadElementNode(*optExpr));
-
-        elemList.push_back(*spread);
+        elemList.push_back(**optSpread);
       } else {
         auto expr = parseAssignmentExpression();
         if (!expr)
@@ -1760,11 +1753,20 @@ Optional<ESTree::ObjectExpressionNode *> JSParserImpl::parseObjectLiteral() {
 
   if (!check(TokenKind::r_brace)) {
     for (;;) {
-      auto prop = parsePropertyAssignment();
-      if (!prop)
-        return None;
+      if (check(TokenKind::dotdotdot)) {
+        // Spread.
+        auto optSpread = parseSpreadElement();
+        if (!optSpread)
+          return None;
 
-      elemList.push_back(*prop.getValue());
+        elemList.push_back(**optSpread);
+      } else {
+        auto prop = parsePropertyAssignment();
+        if (!prop)
+          return None;
+
+        elemList.push_back(*prop.getValue());
+      }
 
       if (!checkAndEat(TokenKind::comma))
         break;
@@ -1786,6 +1788,20 @@ Optional<ESTree::ObjectExpressionNode *> JSParserImpl::parseObjectLiteral() {
       startLoc,
       endLoc,
       new (context_) ESTree::ObjectExpressionNode(std::move(elemList)));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseSpreadElement() {
+  assert(check(TokenKind::dotdotdot) && "SpreadElement must start with '...'");
+  auto spreadStartLoc = advance();
+
+  auto optExpr = parseAssignmentExpression();
+  if (!optExpr)
+    return None;
+
+  return setLocation(
+      spreadStartLoc,
+      *optExpr,
+      new (context_) ESTree::SpreadElementNode(*optExpr));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
