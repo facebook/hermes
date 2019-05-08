@@ -123,6 +123,8 @@ class SemanticValidator {
 
   void visit(UnaryExpressionNode *unaryExpr);
 
+  void visit(ArrayPatternNode *arrayPat);
+
   void visit(SpreadElementNode *S);
   void visit(CoverEmptyArgsNode *CEA);
   void visit(CoverTrailingCommaNode *CTC);
@@ -188,6 +190,10 @@ class SemanticValidator {
 
   /// Get the LabelDecorationBase depending on the node type.
   static LabelDecorationBase *getLabelDecorationBase(StatementNode *node);
+
+  /// Collapse array pattern rest elements into their parent:
+  /// [a, ...[b, c]] => [a, b, c].
+  static void collapseNestedAP(NodeList &elements);
 };
 
 //===----------------------------------------------------------------------===//
