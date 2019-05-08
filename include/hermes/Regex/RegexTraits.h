@@ -166,12 +166,6 @@ struct U16RegexTraits {
   using char_type = char16_t;
   using CharT = char_type;
 
-  /// \return the character \p ch as uppercase, with some special rules.
-  /// This implements the Canonicalize operation from ES5.1 15.10.2.8.
-  char16_t canonicalize(char16_t ch) const {
-    return canonicalizeToCase(ch, CaseUpper);
-  }
-
   /// \return whether the character \p c has the character type \p type.
   bool characterHasType(char_type c, regex::CharacterClass::Type type) const {
     switch (type) {
@@ -201,8 +195,7 @@ struct U16RegexTraits {
     }
 
     // Canonicalize (i.e. uppercase) the 1-character string.
-    // This would probably benefit from a cache.
-    return canonicalize(c);
+    return cachingCanonicalizeToCase(c, CaseUpper);
   }
 
   template <bool ICase>
