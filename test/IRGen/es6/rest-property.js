@@ -1,5 +1,4 @@
-// RUN: %hermesc -Xflow-parser -dump-ir %s | %FileCheck --match-full-lines %s
-// REQUIRES: flowparser
+// RUN: %hermesc -dump-ir %s | %FileCheck --match-full-lines %s
 
 function f1(t) {
     var {...a} = t;
@@ -52,7 +51,7 @@ function f2(t) {
 
 function f3(t) {
     var a, rest;
-    ({a, ...rest}) = t;
+    ({a, ...rest} = t);
 }
 //CHECK-LABEL: function f3(t)
 //CHECK-NEXT: frame = [a, rest, t]
@@ -74,7 +73,7 @@ function f3(t) {
 
 function f4(o, t) {
     var a;
-    ({a, ...o.rest}) = t;
+    ({a, ...o.rest} = t);
 }
 //CHECK-LABEL: function f4(o, t)
 //CHECK-NEXT: frame = [a, o, t]

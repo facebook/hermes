@@ -799,6 +799,14 @@ Optional<ESTree::ObjectPatternNode *> JSParserImpl::parseObjectBindingPattern(
 
   if (!check(TokenKind::r_brace)) {
     for (;;) {
+      if (check(TokenKind::dotdotdot)) {
+        // BindingRestProperty.
+        auto optRestElem = parseBindingRestProperty(param);
+        if (!optRestElem)
+          return None;
+        propList.push_back(*optRestElem.getValue());
+        break;
+      }
       auto optProp = parseBindingProperty(param);
       if (!optProp)
         return None;
@@ -871,6 +879,32 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
 
   return setLocation(
       key, value, new (context_) ESTree::PropertyNode(key, value, initIdent_));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseBindingRestProperty(
+    hermes::parser::detail::Param param) {
+  assert(
+      check(TokenKind::dotdotdot) &&
+      "BindingRestProperty expected to start with '...'");
+
+  auto startLoc = advance().Start;
+
+  // NOTE: the spec says that this cannot be another pattern, even though it
+  // would make sense.
+#if 0
+  auto optElem = parseBindingElement(param);
+#else
+  auto optElem = parseBindingIdentifier(param);
+#endif
+  if (!optElem) {
+    sm_.error(
+        tok_->getStartLoc(),
+        "identifier expected after '...' in object pattern");
+    return None;
+  }
+
+  return setLocation(
+      startLoc, *optElem, new (context_) ESTree::RestElementNode(*optElem));
 }
 
 Optional<ESTree::EmptyStatementNode *> JSParserImpl::parseEmptyStatement() {
@@ -2600,54 +2634,79 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
 
   for (auto it = OEN->_properties.begin(), e = OEN->_properties.end();
        it != e;) {
-    auto *propNode = cast<ESTree::PropertyNode>(&*it++);
-    OEN->_properties.remove(*propNode);
+    auto *node = &*it++;
+    OEN->_properties.remove(*node);
 
-    if (propNode->_kind != initIdent_) {
-      lexer_.error(
-          SourceErrorManager::combineIntoRange(
-              propNode->getStartLoc(), propNode->_key->getStartLoc()),
-          "invalid destructuring target");
-      continue;
-    }
-
-    ESTree::Node *value = propNode->_value;
-    ESTree::Node *init = nullptr;
-
-    // If we encounter an initializer, unpack it.
-    if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(value)) {
-      if (asn->_operator == getTokenIdent(TokenKind::equal)) {
-        value = asn->_left;
-        init = asn->_right;
+    if (auto *spread = dyn_cast<ESTree::SpreadElementNode>(node)) {
+      if (it != e) {
+        lexer_.error(spread->getSourceRange(), "rest property must be last");
+        continue;
       }
-    } else if (
-        auto *coverInitializer =
-            dyn_cast<ESTree::CoverInitializerNode>(value)) {
-      assert(
-          isa<ESTree::IdentifierNode>(propNode->_key) &&
-          "CoverInitializedName must start with an identifier");
-      // Clone the key.
-      value = new (context_) ESTree::IdentifierNode(
-          cast<ESTree::IdentifierNode>(propNode->_key)->_name, nullptr);
-      value->copyLocationFrom(propNode->_key);
 
-      init = coverInitializer->_init;
+      // NOTE: the spec says that AssignmentRestProperty cannot be another
+      // pattern (see
+      // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-destructuring-assignment-static-semantics-early-errors)
+      // even though it would be logical.
+#if 0
+      auto optSubPattern = reparseAssignmentPattern(spread->_argument);
+      if (!optSubPattern)
+        continue;
+      node = *optSubPattern;
+#else
+      node = spread->_argument;
+#endif
+      node = setLocation(
+          spread, node, new (context_) ESTree::RestElementNode(node));
+    } else {
+      auto *propNode = cast<ESTree::PropertyNode>(node);
+
+      if (propNode->_kind != initIdent_) {
+        lexer_.error(
+            SourceErrorManager::combineIntoRange(
+                propNode->getStartLoc(), propNode->_key->getStartLoc()),
+            "invalid destructuring target");
+        continue;
+      }
+
+      ESTree::Node *value = propNode->_value;
+      ESTree::Node *init = nullptr;
+
+      // If we encounter an initializer, unpack it.
+      if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(value)) {
+        if (asn->_operator == getTokenIdent(TokenKind::equal)) {
+          value = asn->_left;
+          init = asn->_right;
+        }
+      } else if (
+          auto *coverInitializer =
+              dyn_cast<ESTree::CoverInitializerNode>(value)) {
+        assert(
+            isa<ESTree::IdentifierNode>(propNode->_key) &&
+            "CoverInitializedName must start with an identifier");
+        // Clone the key.
+        value = new (context_) ESTree::IdentifierNode(
+            cast<ESTree::IdentifierNode>(propNode->_key)->_name, nullptr);
+        value->copyLocationFrom(propNode->_key);
+
+        init = coverInitializer->_init;
+      }
+
+      // Reparse {...} or [...]
+      auto optSubPattern = reparseAssignmentPattern(value);
+      if (!optSubPattern)
+        continue;
+      value = *optSubPattern;
+
+      // If we have an initializer, create an AssignmentPattern.
+      if (init) {
+        value = new (context_) ESTree::AssignmentPatternNode(value, init);
+        value->copyLocationFrom(propNode->_value);
+      }
+
+      propNode->_value = value;
     }
 
-    // Reparse {...} or [...]
-    auto optSubPattern = reparseAssignmentPattern(value);
-    if (!optSubPattern)
-      continue;
-    value = *optSubPattern;
-
-    // If we have an initializer, create an AssignmentPattern.
-    if (init) {
-      value = new (context_) ESTree::AssignmentPatternNode(value, init);
-      value->copyLocationFrom(propNode->_value);
-    }
-
-    propNode->_value = value;
-    elements.push_back(*propNode);
+    elements.push_back(*node);
   }
 
   auto *OP = new (context_) ESTree::ObjectPatternNode(std::move(elements));

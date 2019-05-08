@@ -1,5 +1,4 @@
-// RUN: %hermes -Xflow-parser -O %s | %FileCheck --match-full-lines %s
-// REQUIRES: flowparser
+// RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 
 print("BEGIN");
 //CHECK: BEGIN

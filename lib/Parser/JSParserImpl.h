@@ -435,6 +435,7 @@ class JSParserImpl {
       ESTree::Node *left);
   Optional<ESTree::ObjectPatternNode *> parseObjectBindingPattern(Param param);
   Optional<ESTree::PropertyNode *> parseBindingProperty(Param param);
+  Optional<ESTree::Node *> parseBindingRestProperty(Param param);
 
   Optional<ESTree::EmptyStatementNode *> parseEmptyStatement();
   /// \param param [Yield, Return]

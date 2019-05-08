@@ -21,3 +21,9 @@ trycode("var [a, ...b = []] = []");
 
 trycode("[a, ...b = []] = []");
 //CHECK-NEXT: caught: 1:8:invalid assignment left-hand side
+
+trycode("var {a, ...b = {}} = {}");
+//CHECK-NEXT: caught: 1:14:'}' expected at end of object binding pattern '{...'
+
+trycode("({a, ...b = {}} = {})");
+//CHECK-NEXT: caught: 1:9:invalid assignment left-hand side
