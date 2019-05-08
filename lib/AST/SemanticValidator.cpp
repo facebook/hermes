@@ -600,7 +600,7 @@ void SemanticValidator::validateDeclarationNames(
   if (auto *obj = dyn_cast<ObjectPatternNode>(node)) {
     for (auto &node : obj->_properties) {
       auto *prop = cast<PropertyNode>(&node);
-      validateDeclarationNames(prop->_key, idents);
+      validateDeclarationNames(prop->_value, idents);
     }
     return;
   }

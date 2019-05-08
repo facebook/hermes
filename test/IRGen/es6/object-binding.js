@@ -1,7 +1,7 @@
 // RUN: %hermesc -dump-ir %s | %FileCheck %s --match-full-lines
 
 //CHECK-LABEL: function global()
-//CHECK-NEXT: frame = [], globals = [a, b, c]
+//CHECK-NEXT: frame = [], globals = [a, b, d, e]
 //CHECK-NEXT: %BB0:
 //CHECK-NEXT:   %0 = BranchInst %BB1
 //CHECK-NEXT: %BB1:
@@ -39,7 +39,7 @@ var {a: b = g} = x;
 //CHECK-NEXT:  %22 = PhiInst %17, %BB1, %20, %BB3
 //CHECK-NEXT:  %23 = StorePropertyInst %22, globalObject : object, "b" : string
 
-var {a: [b = 1, c] = g} = x;
+var {a: [b = 1, e] = g} = x;
 //CHECK-NEXT:  %24 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
 //CHECK-NEXT:  %25 = LoadPropertyInst %24, "a" : string
 //CHECK-NEXT:  %26 = BinaryOperatorInst '!==', %25, undefined : undefined
@@ -101,4 +101,4 @@ var {a: [b = 1, c] = g} = x;
 //CHECK-NEXT:  %73 = BranchInst %BB11
 //CHECK-NEXT:%BB11:
 //CHECK-NEXT:  %74 = LoadStackInst %41
-//CHECK-NEXT:  %75 = StorePropertyInst %74, globalObject : object, "c" : string
+//CHECK-NEXT:  %75 = StorePropertyInst %74, globalObject : object, "e" : string
