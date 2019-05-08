@@ -502,6 +502,8 @@ void SemanticValidator::visitFunction(
     }
   }
 
+  collapseNestedAP(params);
+
   visitESTreeChildren(*this, node);
 }
 
