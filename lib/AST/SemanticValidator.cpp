@@ -598,9 +598,13 @@ void SemanticValidator::validateDeclarationNames(
   }
 
   if (auto *obj = dyn_cast<ObjectPatternNode>(node)) {
-    for (auto &node : obj->_properties) {
-      auto *prop = cast<PropertyNode>(&node);
-      validateDeclarationNames(prop->_value, idents);
+    for (auto &propNode : obj->_properties) {
+      if (auto *prop = dyn_cast<PropertyNode>(&propNode)) {
+        validateDeclarationNames(prop->_value, idents);
+      } else {
+        auto *rest = cast<RestElementNode>(&propNode);
+        validateDeclarationNames(rest->_argument, idents);
+      }
     }
     return;
   }
@@ -630,11 +634,15 @@ void SemanticValidator::validateAssignmentTarget(const Node *node) {
 
   if (auto *obj = dyn_cast<ObjectPatternNode>(node)) {
     for (auto &propNode : obj->_properties) {
-      auto *prop = cast<PropertyNode>(&propNode);
-      assert(
-          prop->_kind->str() == "init" &&
-          "getters and setters must have been reported by the parser");
-      validateAssignmentTarget(prop->_value);
+      if (auto *prop = dyn_cast<PropertyNode>(&propNode)) {
+        assert(
+            prop->_kind->str() == "init" &&
+            "getters and setters must have been reported by the parser");
+        validateAssignmentTarget(prop->_value);
+      } else {
+        auto *rest = cast<RestElementNode>(&propNode);
+        validateAssignmentTarget(rest->_argument);
+      }
     }
     return;
   }

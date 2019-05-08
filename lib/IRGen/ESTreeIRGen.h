@@ -650,6 +650,14 @@ class ESTreeIRGen {
       ESTree::ObjectPatternNode *target,
       Value *source);
 
+  /// Generate code for assigning to the "rest" property in an object
+  /// destructuring pattern. \p excludedItems is a list of the keys that have
+  /// been destructured so far, so they can be excluded from the rest property.
+  void emitRestProperty(
+      ESTree::RestElementNode *rest,
+      const llvm::SmallVectorImpl<Identifier> &excludedItems,
+      Value *source);
+
   /// If the initializer \p init is nullptr, just return \p value.
   /// Otherwise emit code to check whether \p value equals \c undefined, and
   /// evaluate and return the initializer in that case.

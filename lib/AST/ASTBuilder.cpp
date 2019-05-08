@@ -291,9 +291,14 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
 
   Node *result;
 
-  // Special-case ESTree Literal nodes, which we have to convert to a type-
-  // specific literal.
+  // Some parsers (e.g. Flow) emit RestProperty instead of RestElement, so map
+  // the former to the latter.
+  if (Typename == "RestProperty")
+    Typename = "RestElement";
+
   if (Typename == "Literal") {
+    // Special-case ESTree Literal nodes, which we have to convert to a type-
+    // specific literal.
     auto lit = convertLiteral(jsObj);
     if (!lit)
       return None;

@@ -750,7 +750,14 @@ void ESTreeIRGen::emitRestElement(
 void ESTreeIRGen::emitDestructuringObject(
     ESTree::ObjectPatternNode *target,
     Value *source) {
+  // Keep track of which keys have been destructured.
+  llvm::SmallVector<Identifier, 4> excludedItems{};
+
   for (auto &elem : target->_properties) {
+    if (auto *rest = dyn_cast<ESTree::RestElementNode>(&elem)) {
+      emitRestProperty(rest, excludedItems, source);
+      break;
+    }
     auto *propNode = cast<ESTree::PropertyNode>(&elem);
 
     ESTree::Node *valueNode = propNode->_value;
@@ -762,12 +769,42 @@ void ESTreeIRGen::emitDestructuringObject(
       init = assign->_right;
     }
 
-    auto *loadedValue = Builder.createLoadPropertyInst(
-        source, getNameFieldFromID(propNode->_key));
+    auto key = getNameFieldFromID(propNode->_key);
+    excludedItems.push_back(key);
+    auto *loadedValue = Builder.createLoadPropertyInst(source, key);
 
     createLRef(valueNode).emitStore(
         emitOptionalInitialization(loadedValue, init));
   }
+}
+
+void ESTreeIRGen::emitRestProperty(
+    ESTree::RestElementNode *rest,
+    const llvm::SmallVectorImpl<Identifier> &excludedItems,
+    hermes::Value *source) {
+  auto lref = createLRef(rest->_argument);
+
+  // Construct the excluded items.
+  HBCAllocObjectFromBufferInst::ObjectPropertyMap exMap{};
+  auto *zeroValue = Builder.getLiteralPositiveZero();
+  for (auto id : excludedItems) {
+    exMap.emplace_back(std::make_pair(Builder.getLiteralString(id), zeroValue));
+  }
+
+  Value *excludedObj;
+  if (excludedItems.empty()) {
+    excludedObj = Builder.getLiteralUndefined();
+  } else {
+    excludedObj =
+        Builder.createHBCAllocObjectFromBufferInst(exMap, excludedItems.size());
+  }
+
+  auto *restValue = genHermesInternalCall(
+      "copyDataProperties",
+      Builder.getLiteralUndefined(),
+      {Builder.createAllocObjectInst(0), source, excludedObj});
+
+  lref.emitStore(restValue);
 }
 
 Value *ESTreeIRGen::emitOptionalInitialization(
