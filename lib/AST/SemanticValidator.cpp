@@ -289,10 +289,10 @@ void SemanticValidator::visit(TryStatementNode *tryStatement) {
     SaveAndRestore<TryStatementNode *> saveTry(
         curFunction()->activeTry, tryStatement);
 
-    visitESTreeNode(*this, tryStatement->_block);
+    visitESTreeNode(*this, tryStatement->_block, tryStatement);
   }
-  visitESTreeNode(*this, tryStatement->_handler);
-  visitESTreeNode(*this, tryStatement->_finalizer);
+  visitESTreeNode(*this, tryStatement->_handler, tryStatement);
+  visitESTreeNode(*this, tryStatement->_finalizer, tryStatement);
 }
 
 void SemanticValidator::visit(DoWhileStatementNode *loop) {
