@@ -343,6 +343,9 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         token_.setStart(curCharPtr_);
         if (curCharPtr_[1] >= '0' && curCharPtr_[1] <= '9') {
           scanNumber();
+        } else if (curCharPtr_[1] == '.' && curCharPtr_[2] == '.') {
+          token_.setPunctuator(TokenKind::dotdotdot);
+          curCharPtr_ += 3;
         } else {
           token_.setPunctuator(TokenKind::period);
           ++curCharPtr_;
