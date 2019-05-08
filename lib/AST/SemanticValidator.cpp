@@ -444,7 +444,7 @@ void SemanticValidator::visit(SpreadElementNode *S, Node *parent) {
 }
 
 void SemanticValidator::visit(CoverEmptyArgsNode *CEA) {
-  sm_.error(CEA->getSourceRange(), "invalid expression");
+  sm_.error(CEA->getSourceRange(), "invalid empty parentheses '( )'");
 }
 
 void SemanticValidator::visit(CoverTrailingCommaNode *CTC) {
@@ -453,6 +453,10 @@ void SemanticValidator::visit(CoverTrailingCommaNode *CTC) {
 
 void SemanticValidator::visit(CoverInitializerNode *CI) {
   sm_.error(CI->getStartLoc(), "':' expected in property initialization");
+}
+
+void SemanticValidator::visit(CoverRestElementNode *R) {
+  sm_.error(R->getSourceRange(), "'...' not allowed in this context");
 }
 
 void SemanticValidator::visitFunction(
@@ -613,7 +617,7 @@ void SemanticValidator::validateDeclarationNames(
     return;
   }
 
-  sm_.error(node->getSourceRange(), "unsupported destructuring node");
+  sm_.error(node->getSourceRange(), "invalid destructuring target");
 }
 
 void SemanticValidator::validateAssignmentTarget(const Node *node) {

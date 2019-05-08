@@ -100,6 +100,9 @@ class Node : public llvm::ilist_node<Node> {
   void incParens() {
     parens_ = parens_ < 2 ? parens_ + 1 : 2;
   }
+  void clearParens() {
+    parens_ = 0;
+  }
 
   /// Copy all location data from a different node.
   void copyLocationFrom(const Node *src) {

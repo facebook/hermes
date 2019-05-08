@@ -16,6 +16,9 @@ print("BEGIN")
 trycode("function foo(a, ...b = 10) {}");
 //CHECK-NEXT: caught: 1:20:rest elemenent may not have a default initializer
 
+trycode("let foo = (a, ...b = 10) => {}");
+//CHECK-NEXT: caught: 1:18:rest elemenent may not have a default initializer
+
 trycode("var [a, ...b = []] = []");
 //CHECK-NEXT: caught: 1:12:rest elemenent may not have a default initializer
 

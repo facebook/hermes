@@ -521,24 +521,33 @@ class JSParserImpl {
 
   Optional<ESTree::Node *> parseConditionalExpression(Param param = ParamIn);
 
-  /// \return true if the parsed node can be re-interpreted as ArrowParameters.
-  bool matchArrowParameters(ESTree::Node *node, ESTree::NodeList &paramList);
+  /// Reparse the specified node as arrow function parameter list and store the
+  /// parameter list in \p paramList. Print an error and return false on error,
+  /// otherwise return true.
+  bool reparseArrowParameters(ESTree::Node *node, ESTree::NodeList &paramList);
 
   Optional<ESTree::Node *> parseArrowFunctionExpression(
       Param param,
       ESTree::Node *leftExpr);
 
   /// Reparse an ArrayExpression into an ArrayPattern.
+  /// \param inDecl whether this is a declaration context or assignment.
   Optional<ESTree::Node *> reparseArrayAsignmentPattern(
-      ESTree::ArrayExpressionNode *AEN);
+      ESTree::ArrayExpressionNode *AEN,
+      bool inDecl);
 
   /// Reparse an ObjectExpression into an ObjectPattern.
+  /// \param inDecl whether this is a declaration context or assignment.
   Optional<ESTree::Node *> reparseObjectAssignmentPattern(
-      ESTree::ObjectExpressionNode *OEN);
+      ESTree::ObjectExpressionNode *OEN,
+      bool inDecl);
 
   /// Reparse an ArrayExpression or ObjectExpression into ArrayPattern or
   /// ObjectPattern.
-  Optional<ESTree::Node *> reparseAssignmentPattern(ESTree::Node *node);
+  /// \param inDecl whether this is a declaration context or assignment.
+  Optional<ESTree::Node *> reparseAssignmentPattern(
+      ESTree::Node *node,
+      bool inDecl);
 
   Optional<ESTree::Node *> parseAssignmentExpression(Param param = ParamIn);
   Optional<ESTree::Node *> parseExpression(Param param = ParamIn);

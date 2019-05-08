@@ -129,6 +129,7 @@ class SemanticValidator {
   void visit(CoverEmptyArgsNode *CEA);
   void visit(CoverTrailingCommaNode *CTC);
   void visit(CoverInitializerNode *CI);
+  void visit(CoverRestElementNode *R);
 
  private:
   inline bool haveActiveContext() const {

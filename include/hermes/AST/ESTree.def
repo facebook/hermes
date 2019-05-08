@@ -484,6 +484,14 @@ ESTREE_NODE_1_ARGS(
     CoverInitializer, Cover,
     NodePtr, init, false)
 
+// CoverRestElement
+// This is used for parsing "...elem" in "()" and in SequenceExpression, so it
+// can later be reparsed as an arrow function rest parameter. "rest" will point
+// to the actual RestElement.
+ESTREE_NODE_1_ARGS(
+    CoverRestElement, Cover,
+    NodePtr, rest, false)
+
 ESTREE_LAST(Cover)
 
 #undef ESTREE_FIRST

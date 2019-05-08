@@ -16,16 +16,19 @@ print("BEGIN")
 //CHECK: BEGIN
 
 trycode("var t1 = ();");
-//CHECK-NEXT: caught: 1:10:invalid expression
+//CHECK-NEXT: caught: 1:10:invalid empty parentheses '( )'
 
 trycode("var t1 = () + 5;");
-//CHECK-NEXT: caught: 1:10:invalid expression
+//CHECK-NEXT: caught: 1:10:invalid empty parentheses '( )'
 
 trycode("var t1 = (a, b, ) + 5;");
 //CHECK-NEXT: caught: 1:15:expression expected after ','
 
 trycode("var t1 = ((a)) => 1;");
-//CHECK-NEXT: caught: 1:12:Invalid argument list for arrow function
+//CHECK-NEXT: caught: 1:12:invalid arrow function parameter list
 
 trycode("var t1 = (a,1) => 1;");
-//CHECK-NEXT: caught: 1:11:Invalid argument list for arrow function
+//CHECK-NEXT: caught: 1:13:identifier or pattern expected
+
+trycode("var t1 = ((a),b) => 1;");
+//CHECK-NEXT: caught: 1:12:parentheses are not allowed around parameters

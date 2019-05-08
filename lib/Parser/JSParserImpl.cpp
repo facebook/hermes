@@ -1146,7 +1146,7 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
     if (expr1 &&
         (isa<ESTree::ArrayExpressionNode>(expr1) ||
          isa<ESTree::ObjectExpressionNode>(expr1))) {
-      auto optExpr1 = reparseAssignmentPattern(expr1);
+      auto optExpr1 = reparseAssignmentPattern(expr1, false);
       if (!optExpr1)
         return None;
       expr1 = *optExpr1;
@@ -1703,9 +1703,23 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
             startLoc, endLoc, new (context_) ESTree::CoverEmptyArgsNode());
       }
 
-      auto expr = parseExpression();
-      if (!expr)
-        return None;
+      ESTree::Node *expr;
+      if (check(TokenKind::dotdotdot)) {
+        auto optRest = parseBindingRestElement(ParamIn);
+        if (!optRest)
+          return None;
+
+        expr = setLocation(
+            *optRest,
+            *optRest,
+            new (context_) ESTree::CoverRestElementNode(*optRest));
+      } else {
+        auto optExpr = parseExpression();
+        if (!optExpr)
+          return None;
+        expr = *optExpr;
+      }
+
       if (!eat(
               TokenKind::r_paren,
               JSLexer::AllowDiv,
@@ -1714,8 +1728,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
               startLoc))
         return None;
       // Record the number of parens surrounding an expression.
-      expr.getValue()->incParens();
-      return expr.getValue();
+      expr->incParens();
+      return expr;
     }
 
     case TokenKind::rw_function: {
@@ -2466,53 +2480,94 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(Param param) {
           optConsequent.getValue()));
 }
 
-bool JSParserImpl::matchArrowParameters(
+bool JSParserImpl::reparseArrowParameters(
     ESTree::Node *node,
     ESTree::NodeList &paramList) {
   // Empty argument list "()".
   if (node->getParens() == 0 && isa<ESTree::CoverEmptyArgsNode>(node))
     return true;
 
-  // A single identifier.
-  if (auto *identNode = dyn_cast<ESTree::IdentifierNode>(node)) {
-    // "a" and "(a)" are both OK, but "((a))" isn't.
-    if (identNode->getParens() > 1)
-      return false;
-    paramList.push_back(*identNode);
+  // A single identifier without parens.
+  if (node->getParens() == 0 && isa<ESTree::IdentifierNode>(node)) {
+    paramList.push_back(*node);
     return true;
   }
 
-  // A sequence of identifiers.
+  if (node->getParens() != 1) {
+    sm_.error(node->getSourceRange(), "invalid arrow function parameter list");
+    return false;
+  }
+
+  ESTree::NodeList nodeList{};
+
   if (auto *seqNode = dyn_cast<ESTree::SequenceExpressionNode>(node)) {
-    // The sequence must be surrounded by a single pair of parens.
-    if (seqNode->getParens() != 1)
-      return false;
-
-    for (auto &expr : seqNode->_expressions) {
-      // No parens around parameters.
-      if (expr.getParens() != 0)
-        return false;
-
-      if (isa<ESTree::IdentifierNode>(expr))
-        continue;
-      if (isa<ESTree::CoverTrailingCommaNode>(expr))
-        continue;
-
-      return false;
-    }
-
-    paramList = std::move(seqNode->_expressions);
-
-    // Erase the trailing comma node.
-    if (!paramList.empty() &&
-        isa<ESTree::CoverTrailingCommaNode>(paramList.back())) {
-      paramList.pop_back();
-    }
-
-    return true;
+    nodeList = std::move(seqNode->_expressions);
+  } else {
+    node->clearParens();
+    nodeList.push_back(*node);
   }
 
-  return false;
+  // If the node has 0 parentheses, return true, otherwise print an error and
+  // return false.
+  auto checkParens = [this](ESTree::Node *n) {
+    if (n->getParens() == 0)
+      return true;
+
+    lexer_.error(
+        n->getSourceRange(), "parentheses are not allowed around parameters");
+    return false;
+  };
+
+  for (auto it = nodeList.begin(), e = nodeList.end(); it != e;) {
+    auto *expr = &*it;
+    it = nodeList.erase(it);
+
+    if (!checkParens(expr))
+      continue;
+
+    if (auto *CRE = dyn_cast<ESTree::CoverRestElementNode>(expr)) {
+      if (it != e)
+        lexer_.error(expr->getSourceRange(), "rest parameter must be last");
+      else
+        paramList.push_back(*CRE->_rest);
+      continue;
+    }
+
+    if (isa<ESTree::CoverTrailingCommaNode>(expr)) {
+      assert(
+          it == e &&
+          "CoverTrailingCommaNode should have been only parsed last");
+      // Just skip it.
+      continue;
+    }
+
+    ESTree::Node *init = nullptr;
+
+    // If we encounter an initializer, unpack it.
+    if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(expr)) {
+      if (asn->_operator == getTokenIdent(TokenKind::equal)) {
+        expr = asn->_left;
+        init = asn->_right;
+
+        if (!checkParens(expr))
+          continue;
+      }
+    }
+
+    auto optParam = reparseAssignmentPattern(expr, true);
+    if (!optParam)
+      continue;
+    expr = *optParam;
+
+    if (init) {
+      expr = setLocation(
+          expr, init, new (context_) ESTree::AssignmentPatternNode(expr, init));
+    }
+
+    paramList.push_back(*expr);
+  }
+
+  return true;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
@@ -2527,11 +2582,8 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   advance();
 
   ESTree::NodeList paramList;
-  if (!matchArrowParameters(leftExpr, paramList)) {
-    lexer_.error(
-        leftExpr->getSourceRange(), "Invalid argument list for arrow function");
+  if (!reparseArrowParameters(leftExpr, paramList))
     return None;
-  }
 
   SaveStrictMode saveStrictMode{this};
   ESTree::Node *body;
@@ -2559,20 +2611,31 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
 }
 
 Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
-    ESTree::Node *node) {
+    ESTree::Node *node,
+    bool inDecl) {
   if (!node->getParens()) {
     if (auto *AEN = dyn_cast<ESTree::ArrayExpressionNode>(node)) {
-      return reparseArrayAsignmentPattern(AEN);
+      return reparseArrayAsignmentPattern(AEN, inDecl);
     }
     if (auto *OEN = dyn_cast<ESTree::ObjectExpressionNode>(node)) {
-      return reparseObjectAssignmentPattern(OEN);
+      return reparseObjectAssignmentPattern(OEN, inDecl);
+    }
+    if (isa<ESTree::IdentifierNode>(node) || isa<ESTree::PatternNode>(node)) {
+      return node;
     }
   }
+
+  if (inDecl) {
+    lexer_.error(node->getSourceRange(), "identifier or pattern expected");
+    return None;
+  }
+
   return node;
 }
 
 Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
-    ESTree::ArrayExpressionNode *AEN) {
+    ESTree::ArrayExpressionNode *AEN,
+    bool inDecl) {
   ESTree::NodeList elements{};
 
   for (auto it = AEN->_elements.begin(), e = AEN->_elements.end(); it != e;) {
@@ -2585,7 +2648,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
         continue;
       }
 
-      auto optSubPattern = reparseAssignmentPattern(spread->_argument);
+      auto optSubPattern = reparseAssignmentPattern(spread->_argument, inDecl);
       if (!optSubPattern)
         continue;
       elem = setLocation(
@@ -2606,7 +2669,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
       }
 
       // Reparse {...} or [...]
-      auto optSubPattern = reparseAssignmentPattern(elem);
+      auto optSubPattern = reparseAssignmentPattern(elem, inDecl);
       if (!optSubPattern)
         continue;
       elem = *optSubPattern;
@@ -2629,7 +2692,8 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
 }
 
 Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
-    ESTree::ObjectExpressionNode *OEN) {
+    ESTree::ObjectExpressionNode *OEN,
+    bool inDecl) {
   ESTree::NodeList elements{};
 
   for (auto it = OEN->_properties.begin(), e = OEN->_properties.end();
@@ -2648,12 +2712,19 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
       // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-destructuring-assignment-static-semantics-early-errors)
       // even though it would be logical.
 #if 0
-      auto optSubPattern = reparseAssignmentPattern(spread->_argument);
+      auto optSubPattern = reparseAssignmentPattern(spread->_argument, inDecl);
       if (!optSubPattern)
         continue;
       node = *optSubPattern;
 #else
       node = spread->_argument;
+      if (inDecl) {
+        if (!isa<ESTree::IdentifierNode>(node)) {
+          lexer_.error(
+              node->getSourceRange(), "identifier expected in parameter list");
+          continue;
+        }
+      }
 #endif
       node = setLocation(
           spread, node, new (context_) ESTree::RestElementNode(node));
@@ -2692,7 +2763,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
       }
 
       // Reparse {...} or [...]
-      auto optSubPattern = reparseAssignmentPattern(value);
+      auto optSubPattern = reparseAssignmentPattern(value, inDecl);
       if (!optSubPattern)
         continue;
       value = *optSubPattern;
@@ -2732,7 +2803,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
   if (check(TokenKind::equal) &&
       (isa<ESTree::ArrayExpressionNode>(*optLeftExpr) ||
        isa<ESTree::ObjectExpressionNode>(*optLeftExpr))) {
-    optLeftExpr = reparseAssignmentPattern(*optLeftExpr);
+    optLeftExpr = reparseAssignmentPattern(*optLeftExpr, false);
     if (!optLeftExpr)
       return None;
   }
@@ -2777,11 +2848,24 @@ Optional<ESTree::Node *> JSParserImpl::parseExpression(Param param) {
       break;
     }
 
-    auto optExpr2 = parseAssignmentExpression(param);
-    if (!optExpr2)
-      return None;
+    ESTree::Node *expr2;
 
-    exprList.push_back(*optExpr2.getValue());
+    if (check(TokenKind::dotdotdot)) {
+      auto optRest = parseBindingRestElement(param);
+      if (!optRest)
+        return None;
+      expr2 = setLocation(
+          *optRest,
+          *optRest,
+          new (context_) ESTree::CoverRestElementNode(*optRest));
+    } else {
+      auto optExpr2 = parseAssignmentExpression(param);
+      if (!optExpr2)
+        return None;
+      expr2 = *optExpr2;
+    }
+
+    exprList.push_back(*expr2);
   }
 
   auto *firstExpr = &exprList.front();
