@@ -292,9 +292,11 @@ llvm::Optional<Node *> ASTBuilder::build(const JSONValue *node) {
   Node *result;
 
   // Some parsers (e.g. Flow) emit RestProperty instead of RestElement, so map
-  // the former to the latter.
+  // the former to the latter. Same for SpreadProperty and SpreadElement.
   if (Typename == "RestProperty")
     Typename = "RestElement";
+  else if (Typename == "SpreadProperty")
+    Typename = "SpreadElement";
 
   if (Typename == "Literal") {
     // Special-case ESTree Literal nodes, which we have to convert to a type-
