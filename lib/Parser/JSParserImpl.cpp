@@ -2510,13 +2510,15 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
 
 Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
     ESTree::Node *node) {
-  if (auto *AEN = dyn_cast<ESTree::ArrayExpressionNode>(node)) {
-    return reparseArrayAsignmentPattern(AEN);
-  } else if (auto *OEN = dyn_cast<ESTree::ObjectExpressionNode>(node)) {
-    return reparseObjectAssignmentPattern(OEN);
-  } else {
-    return node;
+  if (!node->getParens()) {
+    if (auto *AEN = dyn_cast<ESTree::ArrayExpressionNode>(node)) {
+      return reparseArrayAsignmentPattern(AEN);
+    }
+    if (auto *OEN = dyn_cast<ESTree::ObjectExpressionNode>(node)) {
+      return reparseObjectAssignmentPattern(OEN);
+    }
   }
+  return node;
 }
 
 Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
@@ -2544,10 +2546,12 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
       ESTree::Node *init = nullptr;
 
       // If we encounter an initializer, unpack it.
-      if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(elem)) {
-        if (asn->_operator == getTokenIdent(TokenKind::equal)) {
-          elem = asn->_left;
-          init = asn->_right;
+      if (!elem->getParens()) {
+        if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(elem)) {
+          if (asn->_operator == getTokenIdent(TokenKind::equal)) {
+            elem = asn->_left;
+            init = asn->_right;
+          }
         }
       }
 
