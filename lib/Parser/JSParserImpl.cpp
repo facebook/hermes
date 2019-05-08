@@ -1689,9 +1689,24 @@ Optional<ESTree::ArrayExpressionNode *> JSParserImpl::parseArrayLiteral() {
 
   if (!check(TokenKind::r_square)) {
     for (;;) {
+      // Elision.
       if (check(TokenKind::comma)) {
         elemList.push_back(
             *setLocation(tok_, tok_, new (context_) ESTree::EmptyNode()));
+      } else if (check(TokenKind::dotdotdot)) {
+        // Spread.
+        auto spreadStartLoc = advance();
+
+        auto optExpr = parseAssignmentExpression();
+        if (!optExpr)
+          return None;
+
+        auto *spread = setLocation(
+            spreadStartLoc,
+            *optExpr,
+            new (context_) ESTree::SpreadElementNode(*optExpr));
+
+        elemList.push_back(*spread);
       } else {
         auto expr = parseAssignmentExpression();
         if (!expr)
@@ -2496,25 +2511,42 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
     ESTree::Node *elem = &*it++;
     AEN->_elements.remove(*elem);
 
-    ESTree::Node *init = nullptr;
-
-    // If we encounter an initializer, unpack it.
-    if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(elem)) {
-      if (asn->_operator == getTokenIdent(TokenKind::equal)) {
-        elem = asn->_left;
-        init = asn->_right;
+    if (auto *spread = dyn_cast<ESTree::SpreadElementNode>(elem)) {
+      if (it != e) {
+        lexer_.error(spread->getSourceRange(), "rest element must be last");
+        continue;
       }
-    }
 
-    // Reparse {...} or [...]
-    auto optSubPattern = reparseAssignmentPattern(elem);
-    if (!optSubPattern)
-      continue;
-    elem = *optSubPattern;
-
-    if (init) {
+      auto optSubPattern = reparseAssignmentPattern(spread->_argument);
+      if (!optSubPattern)
+        continue;
       elem = setLocation(
-          elem, init, new (context_) ESTree::AssignmentPatternNode(elem, init));
+          spread,
+          *optSubPattern,
+          new (context_) ESTree::RestElementNode(*optSubPattern));
+    } else {
+      ESTree::Node *init = nullptr;
+
+      // If we encounter an initializer, unpack it.
+      if (auto *asn = dyn_cast<ESTree::AssignmentExpressionNode>(elem)) {
+        if (asn->_operator == getTokenIdent(TokenKind::equal)) {
+          elem = asn->_left;
+          init = asn->_right;
+        }
+      }
+
+      // Reparse {...} or [...]
+      auto optSubPattern = reparseAssignmentPattern(elem);
+      if (!optSubPattern)
+        continue;
+      elem = *optSubPattern;
+
+      if (init) {
+        elem = setLocation(
+            elem,
+            init,
+            new (context_) ESTree::AssignmentPatternNode(elem, init));
+      }
     }
 
     elements.push_back(*elem);

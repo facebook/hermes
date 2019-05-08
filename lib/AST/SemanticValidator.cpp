@@ -432,6 +432,10 @@ void SemanticValidator::visit(UnaryExpressionNode *unaryExpr) {
   visitESTreeChildren(*this, unaryExpr);
 }
 
+void SemanticValidator::visit(SpreadElementNode *S) {
+  sm_.error(S->getSourceRange(), "spread operator is not supported");
+}
+
 void SemanticValidator::visit(CoverEmptyArgsNode *CEA) {
   sm_.error(CEA->getSourceRange(), "invalid expression");
 }

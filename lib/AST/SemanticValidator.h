@@ -123,6 +123,7 @@ class SemanticValidator {
 
   void visit(UnaryExpressionNode *unaryExpr);
 
+  void visit(SpreadElementNode *S);
   void visit(CoverEmptyArgsNode *CEA);
   void visit(CoverTrailingCommaNode *CTC);
   void visit(CoverInitializerNode *CI);

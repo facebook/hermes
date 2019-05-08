@@ -1,5 +1,4 @@
-// RUN: %hermesc -Xflow-parser -dump-ir %s | %FileCheck --match-full-lines %s
-// REQUIRES: flowparser
+// RUN: %hermesc -dump-ir %s | %FileCheck --match-full-lines %s
 
 function f1(t) {
     var [...a] = t;
