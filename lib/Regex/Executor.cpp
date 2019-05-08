@@ -430,12 +430,9 @@ bool bracketMatchesChar(
     }
   }
 
-  for (uint32_t i = 0, rangeCount = insn->rangeCount; i < rangeCount; i++) {
-    if (traits.template rangeContains<ICase>(
-            ranges[i].start, ranges[i].end, ch))
-      return true ^ insn->negate;
-  }
-  return false ^ insn->negate;
+  bool contained = traits.template rangesContain<ICase>(
+      llvm::makeArrayRef(ranges, insn->rangeCount), ch);
+  return contained ^ insn->negate;
 }
 
 /// Do initialization of the given state before it enters the loop body

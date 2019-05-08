@@ -68,6 +68,19 @@ inline char16_t canonicalizeToCase(
   return cu;
 }
 
+/// \return whether any range in \p ranges contains the character \p c,
+/// inclusive of both ends.
+inline bool anyRangeContainsChar(
+    llvm::ArrayRef<BracketRange16> ranges,
+    char16_t c) {
+  for (const auto &r : ranges) {
+    if (r.start <= c && c <= r.end) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Implementation of regex::Traits for char16_t
 struct U16RegexTraits {
  private:
@@ -133,28 +146,23 @@ struct U16RegexTraits {
     return cachedChar;
   }
 
-  /// Given an inclusive range [first-last], a character \p c, and its
+  /// Given a list of inclusive ranges, a character \p c, and its
   /// canonicalized form \p cc, return whether any character that canonicalizes
   /// to cc is contained within the range. The caller will have already checked
   /// both c and cc (which may be the same character). This implements
   /// ES5.1 15.10.2.8 "CharacterSetMatcher".
   bool rangeContainsPrecanonicalizedForm(
-      char16_t first,
-      char16_t last,
+      llvm::ArrayRef<BracketRange16> ranges,
       char16_t cc,
       char16_t c) const {
     // Check special cases. These are all the cases where simple case mapping is
     // not sufficient, that is, where the lowercase and uppercase variants are
     // not in 1-1 correspondence. Examples include dotted capital I, Greek
     // sigma, etc.
-    auto inRange = [=](char16_t testChar) {
-      return first <= testChar && testChar <= last;
-    };
-
     if (const auto *pclist = hermes::getExceptionalPrecanonicalizations(cc)) {
       // 0 is used to indicate a missing entry.
       for (auto pc : *pclist) {
-        if (pc != 0 && inRange(pc)) {
+        if (pc != 0 && anyRangeContainsChar(ranges, pc)) {
           return true;
         }
       }
@@ -164,7 +172,7 @@ struct U16RegexTraits {
       // lowercase form. The caller already checked c and cc, so we can skip the
       // check for those.
       char16_t lowc = cachingCanonicalizeToCase(cc, CaseLower);
-      return lowc != c && lowc != cc && inRange(lowc);
+      return lowc != c && lowc != cc && anyRangeContainsChar(ranges, lowc);
     }
   }
 
@@ -208,17 +216,18 @@ struct U16RegexTraits {
   /// last]. If ICase is set, perform a canonicalizing membership test as
   /// specified in "CharacterSetMatcher" ES5.1 15.10.2.8.
   template <bool ICase>
-  bool rangeContains(char16_t first, char16_t last, char16_t c) const {
-    if (first <= c && c <= last)
+  bool rangesContain(llvm::ArrayRef<BracketRange16> ranges, char16_t c) const {
+    if (anyRangeContainsChar(ranges, c)) {
       return true;
+    }
     if (ICase) {
       // Canonicalize and check for membership in the range again, if the
       // character changed.
       char16_t cc = cachingCanonicalizeToCase(c, CaseUpper);
-      if (cc != c && first <= cc && cc <= last)
+      if (cc != c && anyRangeContainsChar(ranges, cc))
         return true;
       // Check for other pre-canonicalizations of cc.
-      return rangeContainsPrecanonicalizedForm(first, last, cc, c);
+      return rangeContainsPrecanonicalizedForm(ranges, cc, c);
     }
     return false;
   }
@@ -257,11 +266,11 @@ struct ASCIIRegexTraits {
     return c;
   }
 
-  /// \return whether this range contains \p c.
-  /// Note that our range contains char16_t, but we test chars for membership.
+  /// \return whether any of a list of ranges contains \p c.
+  /// Note that our ranges contain char16_t, but we test chars for membership.
   template <bool ICase>
-  bool rangeContains(char16_t first, char16_t last, char16_t c) const {
-    if (first <= c && c <= last)
+  bool rangesContain(llvm::ArrayRef<BracketRange16> ranges, char16_t c) const {
+    if (anyRangeContainsChar(ranges, c))
       return true;
     if (ICase) {
       // We need to do a case-insensitive comparison.
@@ -272,7 +281,7 @@ struct ASCIIRegexTraits {
       // and, if so, whether its other case is in the range.
       if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')) {
         c ^= 0x20; // flip case!
-        return first <= c && c <= last;
+        return anyRangeContainsChar(ranges, c);
       }
     }
     return false;
