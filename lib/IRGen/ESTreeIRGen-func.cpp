@@ -355,9 +355,20 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   }
 
   // FIXME: T42569352 TDZ for parameters used in initializer expressions.
+  uint32_t paramIndex = uint32_t{0} - 1;
   for (auto &elem : ESTree::getParams(funcNode)) {
     ESTree::Node *param = &elem;
     ESTree::Node *init = nullptr;
+    ++paramIndex;
+
+    if (auto *rest = dyn_cast<ESTree::RestElementNode>(param)) {
+      createLRef(rest->_argument)
+          .emitStore(genHermesInternalCall(
+              "copyRestArgs",
+              Builder.getLiteralUndefined(),
+              Builder.getLiteralNumber(paramIndex)));
+      break;
+    }
 
     // Unpack the optional initialization.
     if (auto *assign = dyn_cast<ESTree::AssignmentPatternNode>(param)) {
