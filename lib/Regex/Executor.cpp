@@ -430,12 +430,6 @@ bool bracketMatchesChar(
     }
   }
 
-  // Optionally canonicalize and then check ranges.
-  // TODO: find a way to make the icase path cheaper. Currently we build a
-  // UnicodeSet for each range.
-  if (ICase)
-    ch = traits.caseFold(ch);
-
   for (uint32_t i = 0, rangeCount = insn->rangeCount; i < rangeCount; i++) {
     if (traits.template rangeContains<ICase>(
             ranges[i].start, ranges[i].end, ch))

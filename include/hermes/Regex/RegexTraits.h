@@ -133,11 +133,15 @@ struct U16RegexTraits {
     return cachedChar;
   }
 
-  /// \return whether any character that canonicalizes to \p c is contained
-  /// within  the given range \p first through \p last, inclusive.
+  /// Given an inclusive range [first-last], a character \p c, and its
+  /// canonicalized form \p cc, return whether any character that canonicalizes
+  /// to cc is contained within the range. The caller will have already checked
+  /// both c and cc (which may be the same character). This implements
+  /// ES5.1 15.10.2.8 "CharacterSetMatcher".
   bool rangeContainsPrecanonicalizedForm(
       char16_t first,
       char16_t last,
+      char16_t cc,
       char16_t c) const {
     // Check special cases. These are all the cases where simple case mapping is
     // not sufficient, that is, where the lowercase and uppercase variants are
@@ -147,7 +151,7 @@ struct U16RegexTraits {
       return first <= testChar && testChar <= last;
     };
 
-    if (const auto *pclist = hermes::getExceptionalPrecanonicalizations(c)) {
+    if (const auto *pclist = hermes::getExceptionalPrecanonicalizations(cc)) {
       // 0 is used to indicate a missing entry.
       for (auto pc : *pclist) {
         if (pc != 0 && inRange(pc)) {
@@ -157,8 +161,10 @@ struct U16RegexTraits {
       return false;
     } else {
       // If we get here, then the only character which may match is the
-      // lowercase form (the caller already checked the character itself).
-      return inRange(cachingCanonicalizeToCase(c, CaseLower));
+      // lowercase form. The caller already checked c and cc, so we can skip the
+      // check for those.
+      char16_t lowc = cachingCanonicalizeToCase(cc, CaseLower);
+      return lowc != c && lowc != cc && inRange(lowc);
     }
   }
 
@@ -198,13 +204,23 @@ struct U16RegexTraits {
     return cachingCanonicalizeToCase(c, CaseUpper);
   }
 
+  /// \return whether the character c is contained within the range [first,
+  /// last]. If ICase is set, perform a canonicalizing membership test as
+  /// specified in "CharacterSetMatcher" ES5.1 15.10.2.8.
   template <bool ICase>
   bool rangeContains(char16_t first, char16_t last, char16_t c) const {
     if (first <= c && c <= last)
       return true;
-    return ICase &&
-        rangeContainsPrecanonicalizedForm(
-               first, last, canonicalizeToCase(c, CaseUpper));
+    if (ICase) {
+      // Canonicalize and check for membership in the range again, if the
+      // character changed.
+      char16_t cc = cachingCanonicalizeToCase(c, CaseUpper);
+      if (cc != c && first <= cc && cc <= last)
+        return true;
+      // Check for other pre-canonicalizations of cc.
+      return rangeContainsPrecanonicalizedForm(first, last, cc, c);
+    }
+    return false;
   }
 };
 
