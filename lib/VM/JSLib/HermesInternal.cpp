@@ -780,16 +780,6 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(P::ttiReached, hermesInternalTTIReached);
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
 
-  // Define the 'require' function.
-  runtime->requireFunction = *defineMethod(
-      runtime,
-      intern,
-      Predefined::getSymbolID(Predefined::require),
-      nullptr,
-      require,
-      1,
-      constantDPF);
-
   // Define the 'requireFast' function, which takes a number argument.
   (void)defineMethod(
       runtime,

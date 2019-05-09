@@ -682,6 +682,18 @@ void initGlobalObject(Runtime *runtime) {
       encodeURIComponent,
       1);
 
+  // Define the 'require' function.
+  runtime->requireFunction =
+      NativeFunction::create(
+          runtime,
+          Handle<JSObject>::vmcast(&runtime->functionPrototype),
+          nullptr,
+          require,
+          Predefined::getSymbolID(Predefined::require),
+          1,
+          runtime->makeNullHandle<JSObject>())
+          .getHermesValue();
+
   // Define the 'gc' function.
   defineGlobalFunc(Predefined::getSymbolID(Predefined::gc), gc, 0);
 }
