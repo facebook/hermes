@@ -43,12 +43,14 @@ static void verifyAllBuiltinsFrozen(Runtime *runtime) {
     EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(global, objectID) \
   }
 
+  MutableHandle<JSObject> objHandle{runtime};
+
 #define BUILTIN_METHOD(object, method)                                \
   {                                                                   \
     auto objectID = Predefined::getSymbolID(Predefined::object);      \
     auto cr = JSObject::getNamed(global, runtime, objectID);          \
     ASSERT_NE(cr, ExecutionStatus::EXCEPTION);                        \
-    auto objHandle = runtime->makeHandle<JSObject>(*cr);              \
+    objHandle = vmcast<JSObject>(*cr);                                \
     auto methodID = Predefined::getSymbolID(Predefined::method);      \
     EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(objHandle, methodID); \
   }
