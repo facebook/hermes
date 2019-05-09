@@ -627,7 +627,7 @@ void GenGC::swapToFreshHeap() {
       oldGen_.start() - delta,
       oldGen_.ContigAllocGCSpace::used());
   __asan_unpoison_memory_region(
-      youngGen_.start() - delta, youngGen_.end() - youngGen.start());
+      youngGen_.start() - delta, youngGen_.end() - youngGen_.start());
   __asan_unpoison_memory_region(
       oldGen_.start() - delta, oldGen_.end() - oldGen_.start());
 #ifndef NDEBUG
