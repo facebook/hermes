@@ -33,7 +33,7 @@ namespace hbc {
 struct DebugSourceLocation {
   // The bytecode offset of this debug info.
   uint32_t address{0};
-  // The filename index in the string table.
+  // The filename index in the filename table.
   uint32_t filenameId{0};
   // The sourceMappingUrl index in the string table.
   // Use kInvalidBreakpoint for an invalid URL.

@@ -128,7 +128,7 @@ class UsageCounter : public BytecodeVisitor {
       if (auto pos =
               debugInfo->getLocationForAddress(offsets->sourceLocations, 0)) {
         emitter_.emitKeyValue(
-            "file", bcProvider_->getStringRefFromID(pos->filenameId));
+            "file", debugInfo->getFilenameByID(pos->filenameId));
         emitter_.emitKeyValue("line", pos->line);
         emitter_.emitKeyValue("column", pos->column);
       }
