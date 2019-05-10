@@ -1165,16 +1165,17 @@ bool JSObject::forEachOwnPropertyWhile(
     Runtime *runtime,
     const IndexedCB &indexedCB,
     const NamedCB &namedCB) {
-  auto *self = *selfHandle;
-  auto range = getOwnIndexedRange(self);
+  auto range = getOwnIndexedRange(*selfHandle);
+  GCScopeMarkerRAII gcMarker{runtime};
   for (auto i = range.first; i != range.second; ++i) {
-    auto optPF = getOwnIndexedPropertyFlags(self, runtime, i);
+    auto optPF = getOwnIndexedPropertyFlags(*selfHandle, runtime, i);
     if (!optPF)
       continue;
     ComputedPropertyDescriptor desc{*optPF, i};
     desc.flags.indexed = true;
-    if (!indexedCB(i, desc))
+    if (!indexedCB(runtime, i, desc))
       return false;
+    gcMarker.flush();
   }
 
   return HiddenClass::forEachPropertyWhile(

@@ -575,8 +575,8 @@ hermesInternalCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
       source,
       runtime,
       // indexedCB.
-      [runtime, &source, &target, &excludedItems, &nameHandle, &valueHandle](
-          uint32_t index, ComputedPropertyDescriptor desc) {
+      [&source, &target, &excludedItems, &nameHandle, &valueHandle](
+          Runtime *runtime, uint32_t index, ComputedPropertyDescriptor desc) {
         if (!desc.flags.enumerable)
           return true;
 
@@ -607,8 +607,8 @@ hermesInternalCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
         return true;
       },
       // namedCB.
-      [runtime, &source, &target, &excludedItems, &valueHandle](
-          SymbolID sym, NamedPropertyDescriptor desc) {
+      [&source, &target, &excludedItems, &valueHandle](
+          Runtime *runtime, SymbolID sym, NamedPropertyDescriptor desc) {
         if (!desc.flags.enumerable)
           return true;
         if (InternalProperty::isInternal(sym))

@@ -596,7 +596,9 @@ bool HiddenClass::areAllNonConfigurable(
     return true;
 
   if (!forEachPropertyWhile(
-          selfHandle, runtime, [](SymbolID, NamedPropertyDescriptor desc) {
+          selfHandle,
+          runtime,
+          [](Runtime *, SymbolID, NamedPropertyDescriptor desc) {
             return !desc.flags.configurable;
           })) {
     return false;
@@ -613,7 +615,9 @@ bool HiddenClass::areAllReadOnly(
     return true;
 
   if (!forEachPropertyWhile(
-          selfHandle, runtime, [](SymbolID, NamedPropertyDescriptor desc) {
+          selfHandle,
+          runtime,
+          [](Runtime *, SymbolID, NamedPropertyDescriptor desc) {
             if (!desc.flags.accessor && desc.flags.writable)
               return false;
             return !desc.flags.configurable;

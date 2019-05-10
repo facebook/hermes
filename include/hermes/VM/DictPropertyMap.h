@@ -341,7 +341,7 @@ bool DictPropertyMap::forEachPropertyWhile(
   for (size_type i = 0, e = selfHandle->numDescriptors_; i != e; ++i) {
     auto const *descPair = selfHandle->getDescriptorPairs() + i;
     if (descPair->first.isValid()) {
-      if (!callback(descPair->first, descPair->second))
+      if (!callback(runtime, descPair->first, descPair->second))
         return false;
       gcMarker.flush();
     }
