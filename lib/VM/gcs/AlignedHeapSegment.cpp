@@ -420,7 +420,7 @@ void AlignedHeapSegment::clear() {
 }
 
 /* static */ void AlignedHeapSegment::checkUnwritten(char *start, char *end) {
-#if !defined(ASAN_ENABLED) && defined(HERMES_SLOW_DEBUG)
+#if !LLVM_ADDRESS_SANITIZER_BUILD && defined(HERMES_SLOW_DEBUG)
   // Check that the space was not written into.
   std::for_each(
       start, end, [](char value) { assert(value == kInvalidHeapValue); });
