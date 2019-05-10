@@ -424,16 +424,13 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
     showStatus(filename)
 
     if "esprima" in suite:
-        if esprima.is_test_unsupported(filename):
-            return (TestFlag.TEST_SKIPPED, "", 0)
-        else:
-            hermes_path = os.path.join(binary_path, "hermes")
-            test_res = esprima_runner.run_test(filename, hermes_path)
-            return (
-                ESPRIMA_TEST_STATUS_MAP[test_res[0]],
-                "" if test_res[0] == esprima.TestStatus.TEST_PASSED else test_res[1],
-                0,
-            )
+        hermes_path = os.path.join(binary_path, "hermes")
+        test_res = esprima_runner.run_test(filename, hermes_path)
+        return (
+            ESPRIMA_TEST_STATUS_MAP[test_res[0]],
+            "" if test_res[0] == esprima.TestStatus.TEST_PASSED else test_res[1],
+            0,
+        )
 
     content = open(filename, "rb").read().decode("utf-8")
 

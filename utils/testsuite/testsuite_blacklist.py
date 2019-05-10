@@ -1471,6 +1471,10 @@ BLACK_LIST = [
     "esprima/test_fixtures/invalid-syntax/migrated_0222.js",
     "esprima/test_fixtures/expression/primary/keyword/invalid-escaped-true.js",
     "esprima/test_fixtures/declaration/function/invalid-strict-labelled-function-declaration.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0043.source.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0044.source.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0041.source.js",
+    "esprima/test_fixtures/expression/primary/literal/regular-expression/migrated_0006.source.js",
     ### Unsupported Esprima tests end ###
 ]
 

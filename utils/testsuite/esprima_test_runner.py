@@ -8,6 +8,7 @@ import argparse
 import enum
 import json
 import subprocess
+import tempfile
 from os.path import isfile
 
 
@@ -60,15 +61,8 @@ for k in list(HERMES_OMITTED_KEYS.keys()) + list(ESPRIMA_OMITTED_KEYS.keys()):
 
 OMITTED_KEYS_COMMON = HERMES_OMITTED_KEYS_COMMON.union(ESPRIMA_OMITTED_KEYS_COMMON)
 
-PARSER_TIMEOUT = 40
+HERMES_TIMEOUT = 40
 COMPILER_ARGS = ["-hermes-parser", "-dump-ast"]
-
-
-def is_test_unsupported(path):
-    # TODO: ".source.js" tests needs to be evaluated first, skipping them for now.
-    if ".source.js" in path:
-        return True
-    return False
 
 
 class EsprimaTestRunner:
@@ -250,6 +244,46 @@ class EsprimaTestRunner:
         self.printDebug("no expected file for:", testfile)
         raise TypeError("Can't find expected file.")
 
+    # Run Hermes parser on the test and return the result from the subprocess.
+    def parseSource(self, hermes, filename):
+        # ".source.js" files has the format of "var source = \"...\";", and
+        # the value of the 'source' variable should be the input to the parser.
+        # So we evaluate the source with Hermes first and then parse the output.
+        if ".source.js" in filename:
+            with open(filename, "rb") as f:
+                with tempfile.NamedTemporaryFile() as to_evaluate:
+                    # append to the original source to print the 'source' variable.
+                    for line in f:
+                        to_evaluate.write(line)
+                    to_evaluate.write(b"print(source);")
+                    to_evaluate.flush()
+                    with tempfile.NamedTemporaryFile() as evaluated:
+                        # evaluate the source to get the actual test input.
+                        evaluate_cmd = [hermes, to_evaluate.name]
+                        evaluate_res = subprocess.run(
+                            evaluate_cmd,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            timeout=HERMES_TIMEOUT,
+                        )
+                        # get rid of the newline added by print().
+                        evaluated.write(evaluate_res.stdout.strip())
+                        evaluated.flush()
+                        # run the test through Hermes parser.
+                        return subprocess.run(
+                            [hermes] + COMPILER_ARGS + [evaluated.name],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            timeout=HERMES_TIMEOUT,
+                        )
+        else:
+            return subprocess.run(
+                [hermes] + COMPILER_ARGS + [filename],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=HERMES_TIMEOUT,
+            )
+
     # There are three types of tests: correct tests, error tests, and token tests.
     # The files of expected output that ends with ".tree.json" has the expected AST,
     # so we expect to match the correct output; but a few of them have an 'errors'
@@ -263,15 +297,9 @@ class EsprimaTestRunner:
     # Returns (TestStatus, error string)
     def run_test(self, filename, hermes):
         self.printDebug("testing", filename)
-        args = [hermes] + COMPILER_ARGS
         expected_filename = self.get_expected_file_name(filename)
         try:
-            res = subprocess.run(
-                args + [filename],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=PARSER_TIMEOUT,
-            )
+            res = self.parseSource(hermes, filename)
             self.printDebug("process return code", res.returncode)
             if expected_filename.endswith(".tree.json"):
                 with open(expected_filename, "r") as expected_file:
