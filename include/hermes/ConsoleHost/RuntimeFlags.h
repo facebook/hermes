@@ -43,7 +43,7 @@ static opt<double> GCSanitizeRate(
          "be sanitized."),
     cat(GCCategory),
 #ifdef HERMESVM_SANITIZE_HANDLES
-    init(0.001)
+    init(0.01)
 #else
     init(0.0),
     Hidden
