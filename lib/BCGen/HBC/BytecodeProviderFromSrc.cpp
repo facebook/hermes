@@ -32,6 +32,7 @@ BCProviderFromSrc::BCProviderFromSrc(
 
   stringStorage_ = module_->getStringStorage();
   stringCount_ = module_->getStringTable().size();
+  stringKinds_ = module_->getStringKinds();
   identifierTranslations_ = module_->getIdentifierTranslations();
 
   regExpStorage_ = module_->getRegExpStorage();

@@ -150,8 +150,14 @@ UniquingStringLiteralAccumulator::toStorage(
 std::vector<uint32_t> StringLiteralTable::getIdentifierTranslations() const {
   std::vector<uint32_t> result;
   assert(strings_.size() == isIdentifier_.size());
-  for (size_t i = 0; i < isIdentifier_.size(); ++i) {
-    if (isIdentifier_[i]) {
+  for (size_t i = 0; i < strings_.size(); ++i) {
+    if (!isIdentifier_[i]) {
+      continue;
+    }
+
+    if (auto sym = getPredefinedStringID(strings_[i])) {
+      result.push_back(sym->unsafeGetRaw());
+    } else {
       result.push_back(storage_.getEntryHash(i));
     }
   }

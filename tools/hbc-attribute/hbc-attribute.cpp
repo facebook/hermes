@@ -20,10 +20,14 @@
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/LEB128.h"
 #include "hermes/Support/MemoryBuffer.h"
+#include "hermes/Support/StringKind.h"
 
+#include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <sstream>
 #include <string>
+#include <vector>
 
 /*
  * hbc-attribute attributes bundle size to each function. Additional tools
@@ -63,7 +67,7 @@ using SLG = hermes::hbc::SerializedLiteralGenerator;
  * If you have added or modified sections, make sure they're counted properly.
  */
 static_assert(
-    BYTECODE_VERSION == 54,
+    BYTECODE_VERSION == 55,
     "Bytecode version changed. Please verify that hbc-attribute counts correctly..");
 
 static llvm::cl::opt<std::string> InputFilename(
@@ -93,6 +97,10 @@ class UsageCounter : public BytecodeVisitor {
   uintptr_t functionEnd_;
 
   llvm::DenseMap<std::pair<StringRef, unsigned>, unsigned> emitted_;
+
+  /// Indices into the bytecode's string table corresponding to the (exclusive)
+  /// end of each string kind entry.
+  std::vector<uint32_t> stringKindEnds_;
 
   void appendRecord(llvm::StringRef type, unsigned dedupKey, unsigned size) {
     assert(size < (2 << 20) && "Abnormally large size!");
@@ -258,7 +266,19 @@ class UsageCounter : public BytecodeVisitor {
     emitter_.closeArray();
   }
 
+  void countStringKind(unsigned stringIndex) {
+    // Map from string table index to kind index.
+    auto it = std::upper_bound(
+        stringKindEnds_.begin(), stringKindEnds_.end(), stringIndex);
+
+    assert(it != stringKindEnds_.end() && "String index out of range");
+    auto kindIndex = std::distance(stringKindEnds_.begin(), it);
+    appendRecord("data:string:kind", kindIndex, sizeof(StringKind::Entry));
+  }
+
   void countStringLiteral(unsigned stringIndex) {
+    countStringKind(stringIndex);
+
     auto entry = bcProvider_->getStringTableEntry(stringIndex);
     auto wasLarge = SmallStringTableEntry(entry, 0).isOverflowed();
 
@@ -446,7 +466,13 @@ class UsageCounter : public BytecodeVisitor {
       : BytecodeVisitor(bc),
         emitter_(emitter),
         virtualOffsets_(offsets),
-        bundleStart_(bundleStart) {}
+        bundleStart_(bundleStart) {
+    unsigned end = 0;
+    for (auto entry : bc->getStringKinds()) {
+      end += entry.count();
+      stringKindEnds_.push_back(end);
+    }
+  }
 };
 
 // Getting all virtual offsets is O(N^2) unless we do them in a single pass.

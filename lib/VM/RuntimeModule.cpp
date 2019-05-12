@@ -10,6 +10,7 @@
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/HiddenClass.h"
+#include "hermes/VM/Predefined.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -217,21 +218,42 @@ void RuntimeModule::importStringIDMap() {
 
   // Get the array of pre-computed translations from identifiers in the bytecode
   // to their runtime representation as SymbolIDs.
+  auto kinds = bcProvider_->getStringKinds();
   auto translations = bcProvider_->getIdentifierTranslations();
   assert(
       translations.size() <= strTableSize &&
       "Should not have more strings than identifiers");
-  uint32_t identifierIndex = 0;
+  {
+    StringID strID = 0;
+    uint32_t trnID = 0;
 
-  for (StringID id = 0; id < strTableSize; ++id) {
-    StringTableEntry entry = bcProvider_->getStringTableEntry(id);
-    if (entry.isIdentifier()) {
-      createSymbolFromStringID(id, entry, translations[identifierIndex++]);
+    for (auto entry : kinds) {
+      switch (entry.kind()) {
+        case StringKind::String:
+          strID += entry.count();
+          break;
+
+        case StringKind::Identifier:
+          for (uint32_t i = 0; i < entry.count(); ++i, ++strID, ++trnID) {
+            createSymbolFromStringID(
+                strID,
+                bcProvider_->getStringTableEntry(strID),
+                translations[trnID]);
+          }
+          break;
+
+        case StringKind::Predefined:
+          for (uint32_t i = 0; i < entry.count(); ++i, ++strID, ++trnID) {
+            mapPredefined(strID, translations[trnID]);
+          }
+          break;
+      }
     }
+
+    assert(strID == strTableSize && "Should map every string in the bytecode.");
+    assert(trnID == translations.size() && "Should translate all identifiers.");
   }
-  assert(
-      identifierIndex == translations.size() &&
-      "Hash count should match identifier count");
+
   if (strTableSize == 0) {
     // If the string table turns out to be empty,
     // we always add one empty string to it.
@@ -296,6 +318,14 @@ SymbolID RuntimeModule::mapString(
     id = *runtime_->ignoreAllocationFailure(
         runtime_->getIdentifierTable().getSymbolHandle(runtime_, str, hash));
   }
+  stringIDMap_[stringID] = id;
+  return id;
+}
+
+SymbolID RuntimeModule::mapPredefined(StringID stringID, uint32_t rawSymbolID) {
+  SymbolID id = SymbolID::unsafeCreate(rawSymbolID);
+  assert(Predefined::isPredefined(id));
+
   stringIDMap_[stringID] = id;
   return id;
 }

@@ -22,6 +22,7 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
                             BM.getNumFunctions(),
                             BM.getStringTableSize(),
                             overflowStringEntryCount_,
+                            static_cast<uint32_t>(BM.getStringKinds().size()),
                             BM.getIdentifierCount(),
                             BM.getStringStorageSize(),
                             static_cast<uint32_t>(BM.getRegExpTable().size()),
@@ -93,6 +94,7 @@ void BytecodeSerializer::serializeStringTable(BytecodeModule &BM) {
   }
   overflowStringEntryCount_ = static_cast<uint32_t>(overflow.size());
   writeBinaryArray(llvm::makeArrayRef(overflow));
+  writeBinaryArray(BM.getStringKinds());
   writeBinaryArray(BM.getIdentifierTranslations());
   writeBinaryArray(BM.getStringStorage());
 }

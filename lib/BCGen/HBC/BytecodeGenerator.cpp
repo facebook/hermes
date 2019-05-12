@@ -204,6 +204,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
       functionIDMap_.getElements().size() == functionGenerators_.size() &&
       "Missing functions.");
 
+  auto kinds = stringTable_.getStringKinds();
   auto hashes = stringTable_.getIdentifierTranslations();
 
   BytecodeOptions bytecodeOptions;
@@ -212,6 +213,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   std::unique_ptr<BytecodeModule> BM{new BytecodeModule(
       functionGenerators_.size(),
       stringTable_.acquireStringTable(),
+      std::move(kinds),
       std::move(hashes),
       stringTable_.acquireStringStorage(),
       regExpTable_.getEntryList(),

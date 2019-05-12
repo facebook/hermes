@@ -16,6 +16,7 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Support/RegExpSerialization.h"
+#include "hermes/Support/StringKind.h"
 #include "hermes/Support/StringTableEntry.h"
 #include "hermes/Utils/Options.h"
 
@@ -187,6 +188,9 @@ class BytecodeModule {
   /// each string in the string storage.
   std::vector<StringTableEntry> stringTable_;
 
+  /// Run-length encoding representing the kinds of strings in the table.
+  std::vector<StringKind::Entry> stringKinds_;
+
   /// The list of identifier translations, corresponding to the string entries
   /// marked as identifiers, in order.
   std::vector<uint32_t> identifierTranslations_;
@@ -233,6 +237,7 @@ class BytecodeModule {
   explicit BytecodeModule(
       uint32_t functionCount,
       std::vector<StringTableEntry> &&stringTable,
+      std::vector<StringKind::Entry> &&stringKinds,
       std::vector<uint32_t> &&identifierTranslations,
       std::vector<char> &&stringStorage,
       std::vector<RegExpTableEntry> &&regExpTable,
@@ -248,6 +253,7 @@ class BytecodeModule {
       : globalFunctionIndex_(globalFunctionIndex),
         stringStorage_(std::move(stringStorage)),
         stringTable_(std::move(stringTable)),
+        stringKinds_(std::move(stringKinds)),
         identifierTranslations_(std::move(identifierTranslations)),
         regExpStorage_(std::move(regExpStorage)),
         regExpTable_(std::move(regExpTable)),
@@ -291,6 +297,10 @@ class BytecodeModule {
   }
   StringTableEntry::StringTableRefTy getStringTable() const {
     return stringTable_;
+  }
+
+  llvm::ArrayRef<StringKind::Entry> getStringKinds() const {
+    return stringKinds_;
   }
 
   /// \return the number of identifiers.
