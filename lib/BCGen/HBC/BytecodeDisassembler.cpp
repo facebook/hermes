@@ -108,6 +108,8 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
   OS << "  Source hash: " << hashAsString(bcProvider_->getSourceHash()) << "\n";
   OS << "  Function count: " << bcProvider_->getFunctionCount() << "\n";
   OS << "  String count: " << bcProvider_->getStringCount() << "\n";
+  OS << "  String Kind Entry count: " << bcProvider_->getStringKinds().size()
+     << "\n";
   OS << "  RegExp count: " << bcProvider_->getRegExpTable().size() << "\n";
   OS << "  CommonJS module offset: " << bcProvider_->getCJSModuleOffset()
      << "\n";
@@ -684,6 +686,10 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       "String storage",
       bcProvider->getStringStorage().begin(),
       bcProvider->getStringStorage().end());
+  addSection(
+      "String Kinds",
+      bcProvider->getStringKinds().begin(),
+      bcProvider->getStringKinds().end());
   addSection(
       "Identifier translations",
       bcProvider->getIdentifierTranslations().begin(),
