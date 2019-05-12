@@ -29,7 +29,8 @@ Handle<JSObject> createDebuggerInternalObject(Runtime *runtime) {
   defineAccessor(
       runtime,
       intern,
-      Predefined::getSymbolID(Predefined::isDebuggerAttached),
+      runtime->getIdentifierTable().registerLazyIdentifier(
+          createASCIIRef("isDebuggerAttached")),
       nullptr,
       isDebuggerAttached,
       nullptr,
@@ -41,7 +42,8 @@ Handle<JSObject> createDebuggerInternalObject(Runtime *runtime) {
   defineAccessor(
       runtime,
       intern,
-      Predefined::getSymbolID(Predefined::shouldPauseOnThrow),
+      runtime->getIdentifierTable().registerLazyIdentifier(
+          createASCIIRef("shouldPauseOnThrow")),
       nullptr,
       shouldPauseOnThrow,
       nullptr,

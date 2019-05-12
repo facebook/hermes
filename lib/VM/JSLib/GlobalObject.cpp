@@ -638,7 +638,8 @@ void initGlobalObject(Runtime *runtime) {
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),
       runtime,
-      Predefined::getSymbolID(Predefined::DebuggerInternal),
+      runtime->getIdentifierTable().registerLazyIdentifier(
+          createASCIIRef("DebuggerInternal")),
       constantDPF,
       createDebuggerInternalObject(runtime)));
 

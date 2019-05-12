@@ -384,11 +384,6 @@ STR(js_numGCs, "js_numGCs")
 STR(js_gcCPUTime, "js_gcCPUTime")
 STR(js_gcTime, "js_gcTime")
 STR(js_VMExperiments, "js_VMExperiments")
-#ifdef HERMES_ENABLE_DEBUGGER
-STR(DebuggerInternal, "DebuggerInternal")
-STR(isDebuggerAttached, "isDebuggerAttached")
-STR(shouldPauseOnThrow, "shouldPauseOnThrow")
-#endif
 STR(returnThis, "return this")
 STR(getTemplateObject, "getTemplateObject")
 STR(ensureObject, "ensureObject")
