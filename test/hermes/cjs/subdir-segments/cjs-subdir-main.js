@@ -30,5 +30,5 @@ print(require('./cjs-subdir-2.js').alpha);
 // BC-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: loadSegment
 // BC-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: x
 // BC-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: alpha
-// BC-NEXT:   i8[ASCII, {{.*}}] #{{.*}}: print
-// BC-NEXT:   i9[ASCII, {{.*}}] #{{.*}}: context
+// BC-NEXT:   p8[ASCII, {{.*}}] @{{.*}}: print
+// BC-NEXT:   p9[ASCII, {{.*}}] @{{.*}}: context

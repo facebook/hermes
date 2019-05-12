@@ -11,7 +11,7 @@ var z = [{}];
 //CHECK-NEXT:  i3[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: x
 //CHECK-NEXT:  i4[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: y
 //CHECK-NEXT:  i5[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: z
-//CHECK-NEXT:  i6[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: length
+//CHECK-NEXT:  p6[ASCII, {{[0-9]+\.\.[0-9]+}}] @{{[0-9]+}}: length
 
 //CHECK-LABEL:Array Buffer:
 //CHECK-NEXT:true

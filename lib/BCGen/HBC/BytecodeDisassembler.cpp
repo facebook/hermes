@@ -21,6 +21,7 @@
 #include <string>
 
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace hermes::inst;
 using hermes::oscompat::to_string;
@@ -97,6 +98,19 @@ std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
   return "empty";
 }
 
+const char *stringKindTag(StringKind::Kind kind) {
+  switch (kind) {
+    case StringKind::String:
+      return "s";
+    case StringKind::Identifier:
+      return "i";
+    case StringKind::Predefined:
+      return "p";
+  }
+
+  llvm_unreachable("Unrecognised String Kind.");
+}
+
 } // namespace
 
 void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
@@ -125,48 +139,71 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
 }
 
 void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
-  auto strTableSize = bcProvider_->getStringCount();
   auto strStorage = bcProvider_->getStringStorage();
-  if (strTableSize == 0)
+  auto translations = bcProvider_->getIdentifierTranslations();
+
+  const auto strCount = bcProvider_->getStringCount();
+  const auto trnCount = translations.size();
+
+  if (strCount == 0)
     return;
 
-  unsigned idents = 0;
-  auto identHashes = bcProvider_->getIdentifierTranslations();
+  auto kinds = bcProvider_->getStringKinds();
 
-  std::locale loc("C");
+  uint32_t strID = 0;
+  uint32_t trnID = 0;
+
   OS << "Global String Table:\n";
-  for (unsigned i = 0; i < strTableSize; ++i) {
-    auto entry = bcProvider_->getStringTableEntry(i);
-    OS << (entry.isIdentifier() ? "  i" : "  s") << i << "[";
+  const std::locale loc("C");
+  for (auto kindEntry : kinds) {
+    for (uint32_t i = 0; i < kindEntry.count(); ++i, ++strID) {
+      auto strEntry = bcProvider_->getStringTableEntry(strID);
+      OS << stringKindTag(kindEntry.kind()) << strID << "[";
 
-    uint32_t offset = entry.getOffset();
-    uint32_t length = entry.getLength();
-    if (entry.isUTF16()) {
-      OS << "UTF-16";
-      length *= 2;
-    } else {
-      OS << "ASCII";
-    }
-    int64_t end = static_cast<int64_t>(offset) + length - 1;
-    OS << ", " << offset << ".." << end << "]";
-
-    if (entry.isIdentifier()) {
-      uint32_t hash = identHashes[idents++];
-      OS << " #" << llvm::format_hex_no_prefix(hash, 8, /* Upper */ true);
-    }
-
-    OS << ": ";
-    for (unsigned j = 0; j < length; ++j) {
-      unsigned char c = strStorage[offset + j];
-      if (!entry.isUTF16() && isprint((char)c, loc)) {
-        OS << c;
+      uint32_t offset = strEntry.getOffset();
+      uint32_t length = strEntry.getLength();
+      if (strEntry.isUTF16()) {
+        OS << "UTF-16";
+        length *= 2;
       } else {
-        OS << "\\x" << llvm::format_hex_no_prefix(c, 2, true);
+        OS << "ASCII";
       }
+
+      int64_t end = static_cast<int64_t>(offset) + length - 1;
+      OS << ", " << offset << ".." << end << "]";
+
+      switch (kindEntry.kind()) {
+        case StringKind::Identifier:
+          OS << " #"
+             << llvm::format_hex_no_prefix(
+                    translations[trnID++], 8, /* Upper */ true);
+          break;
+        case StringKind::Predefined:
+          OS << " @" << translations[trnID++];
+          break;
+
+        default:
+          break;
+      }
+
+      OS << ": ";
+      for (unsigned j = 0; j < length; ++j) {
+        unsigned char c = strStorage[offset + j];
+        if (!strEntry.isUTF16() && isprint((char)c, loc)) {
+          OS << c;
+        } else {
+          OS << "\\x" << llvm::format_hex_no_prefix(c, 2, true);
+        }
+      }
+      OS << "\n";
     }
-    OS << "\n";
   }
   OS << "\n";
+
+  assert(strID == strCount && "Visited all strings.");
+  (void)strCount;
+  assert(trnID == trnCount && "Visited all translations.");
+  (void)trnCount;
 }
 
 /// NOTE: The output might not show the value of every literal used
