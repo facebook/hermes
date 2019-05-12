@@ -413,4 +413,15 @@ STR(squareSymbolSplit, "[Symbol.split]")
   STR(squareObject_##name, "[object " jsClassName "]")
 #include "hermes/VM/CellKinds.def"
 
+#ifdef HERMES_RESERVED_STRINGS_FILE
+#define STR_TOKEN(s) #s
+#define STR_MACRO(s) STR_TOKEN(s)
+
+#define RESERVED(name, str) STR(name, str)
+#include STR_MACRO(HERMES_RESERVED_STRINGS_FILE)
+
+#undef STR_TOKEN
+#undef STR_MACRO
+#endif
+
 #undef STR
