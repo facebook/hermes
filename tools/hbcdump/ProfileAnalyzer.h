@@ -137,6 +137,12 @@ class ProfileAnalyzer {
   void dumpString(uint32_t stringID) {
     os_ << hbcParser_.getBCProvider()->getStringRefFromID(stringID);
   }
+  // Print the file name string corresponding to \p filenameId.
+  void dumpFileName(uint32_t filenameId) {
+    const auto *debugInfo = hbcParser_.getBCProvider()->getDebugInfo();
+    std::string fileName = debugInfo->getFilenameByID(filenameId);
+    os_ << fileName;
+  }
   // Print a high-level summary for the profile trace.
   void dumpSummary();
   // Print offsets of a function.

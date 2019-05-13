@@ -291,6 +291,13 @@ static bool executeCommand(
       return false;
     }
     analyzer.dumpString(stringId);
+  } else if (command == "filename") {
+    uint32_t filenameId;
+    if (commandTokens[1].getAsInteger(0, filenameId)) {
+      os << "Error: cannot parse filename_id as integer.\n";
+      return false;
+    }
+    analyzer.dumpFileName(filenameId);
   } else if (command == "offset" || command == "offsets") {
     bool json = findAndRemoveOne(commandTokens, "-json");
     std::unique_ptr<StructuredPrinter> printer =
