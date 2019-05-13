@@ -133,6 +133,10 @@ class ProfileAnalyzer {
   void dumpFunctionBasicBlockStat(unsigned funcId);
   // Print page I/O access information.
   void dumpIO();
+  // Print the string corresponding to \p stringID.
+  void dumpString(uint32_t stringID) {
+    os_ << hbcParser_.getBCProvider()->getStringRefFromID(stringID);
+  }
   // Print a high-level summary for the profile trace.
   void dumpSummary();
   // Print offsets of a function.
