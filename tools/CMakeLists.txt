@@ -1,6 +1,7 @@
 add_subdirectory(hermes)
 add_subdirectory(hermesc)
 add_subdirectory(hdb)
+add_subdirectory(hbcdump)
 add_subdirectory(hvm)
 add_subdirectory(hvm-bench)
 add_subdirectory(repl)

@@ -118,9 +118,9 @@ std::unique_ptr<StructuredPrinter> StructuredPrinter::create(
     bool json) {
   std::unique_ptr<StructuredPrinter> printer;
   if (json) {
-    return std::make_unique<JSONStructuredPrinter>(OS);
+    return llvm::make_unique<JSONStructuredPrinter>(OS);
   }
-  return std::make_unique<PlainTextStructuredPrinter>(OS);
+  return llvm::make_unique<PlainTextStructuredPrinter>(OS);
 }
 
 void PlainTextStructuredPrinter::emitValue(bool val) {

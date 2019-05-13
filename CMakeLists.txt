@@ -415,6 +415,7 @@ list(APPEND HERMES_TEST_DEPS
   hvm
   interp-dispatch-bench
   hdb
+  hbcdump
   hermes-repl
   hbc-attribute
   hbc-deltaprep
@@ -433,6 +434,7 @@ set(HERMES_LIT_TEST_PARAMS
   hermes=${HERMES_BINARY_DIR}/bin/hermes
   hermesc=${HERMES_BINARY_DIR}/bin/hermesc
   hdb=${HERMES_BINARY_DIR}/bin/hdb
+  hbcdump=${HERMES_BINARY_DIR}/bin/hbcdump
   repl=${HERMES_BINARY_DIR}/bin/hermes-repl
   hbc-deltaprep=${HERMES_BINARY_DIR}/bin/hbc-deltaprep
   build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}

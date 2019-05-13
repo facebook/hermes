@@ -202,13 +202,14 @@ llvm::Optional<SourceMapTextLocation> BCProviderBase::getLocationForAddress(
   auto *funcDebugOffsets = getDebugOffsets(funcId);
   if (funcDebugOffsets != nullptr &&
       funcDebugOffsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
-    OptValue<DebugSourceLocation> locOpt =
-        getDebugInfo()->getLocationForAddress(
-            funcDebugOffsets->sourceLocations, offsetInFunction);
+    const hbc::DebugInfo *debugInfo = getDebugInfo();
+    assert(debugInfo != nullptr && "debugInfo is null");
+    OptValue<DebugSourceLocation> locOpt = debugInfo->getLocationForAddress(
+        funcDebugOffsets->sourceLocations, offsetInFunction);
     if (locOpt.hasValue()) {
       DebugSourceLocation loc = locOpt.getValue();
-      auto fileName = getStringRefFromID(loc.filenameId);
-      return SourceMapTextLocation{fileName.str(), loc.line, loc.column};
+      std::string fileName = debugInfo->getFilenameByID(loc.filenameId);
+      return SourceMapTextLocation{std::move(fileName), loc.line, loc.column};
     }
   }
   return llvm::None;
