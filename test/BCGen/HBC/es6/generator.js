@@ -20,6 +20,7 @@ function *loop(x) {
 
 // CHECK-LABEL: Function<?anon_0_loop>(2 params, 15 registers, 2 symbols):
 // CHECK-NEXT: Offset in debug table: src 0x7, vars 0x0
+// CHECK-NEXT:     StartGenerator
 // CHECK-NEXT:     CreateEnvironment r0
 // CHECK-NEXT:     LoadParam         r1, 1
 // CHECK-NEXT:     LoadConstUndefined r2
@@ -27,7 +28,6 @@ function *loop(x) {
 // CHECK-NEXT:     LoadConstUInt8    r4, 1
 // CHECK-NEXT:     LoadConstString   r5, "DONE LOOPING"
 // CHECK-NEXT:     GetGlobalObject   r6
-// CHECK-NEXT:     StartGenerator
 // CHECK-NEXT:     ResumeGenerator   r8, r7
 // CHECK-NEXT:     Mov               r9, r7
 // CHECK-NEXT:     JmpTrue           L1, r9

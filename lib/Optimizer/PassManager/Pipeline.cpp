@@ -82,6 +82,9 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addOutlining();
   PM.addTypeInference();
 
+  // Move StartGenerator instructions to the start of functions.
+  PM.addHoistStartGenerator();
+
   // Run the optimizations.
   PM.run(&M);
 }
@@ -92,6 +95,9 @@ void hermes::runDebugOptimizationPasses(Module &M) {
 
   PM.addInstSimplify();
   PM.addResolveStaticRequire();
+
+  // Move StartGenerator instructions to the start of functions.
+  PM.addHoistStartGenerator();
 
   // Run the optimizations.
   PM.run(&M);

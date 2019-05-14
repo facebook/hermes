@@ -24,6 +24,7 @@ add_llvm_library(hermesOptimizer
   Optimizer/Scalar/UncalledMethodOpts.cpp
   Optimizer/Scalar/Inlining.cpp
   Optimizer/Scalar/Outlining.cpp
+  Optimizer/Scalar/HoistStartGenerator.cpp
   Optimizer/Scalar/InstructionEscapeAnalysis.cpp
   Optimizer/Scalar/InstructionNumbering.cpp
   IR/Analysis.cpp

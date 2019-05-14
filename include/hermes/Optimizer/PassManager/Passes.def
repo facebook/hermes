@@ -36,6 +36,10 @@ PASS(UncalledMethodOpts, "uncalledmethodopts", "Uncalled Method Optimizations")
 PASS(Inlining, "inlining", "Inlining")
 PASS(Outlining, "outlining", "Outlining")
 PASS(ResolveStaticRequire, "staticrequire", "Resolve static require")
+PASS(
+    HoistStartGenerator,
+    "hoiststartgenerator",
+    "Move StartGenerator to start of function")
 PASS(Auditor, "auditor", "Auditor")
 
 #undef PASS

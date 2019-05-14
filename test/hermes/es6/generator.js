@@ -44,6 +44,26 @@ show(it.next());
 show(it.next());
 // CHECK-NEXT: undefined | true
 
+function *locals(x,y) {
+  var a,b,c;
+  a = 4;
+  yield a;
+  b = a + 5;
+  yield b;
+  c = b + 6;
+  yield c;
+}
+
+var it = locals(10, 42);
+show(it.next());
+// CHECK-NEXT: 4 | false
+show(it.next());
+// CHECK-NEXT: 9 | false
+show(it.next());
+// CHECK-NEXT: 15 | false
+show(it.next());
+// CHECK-NEXT: undefined | true
+
 function* thrower(x, y) {
   try {
     print('in try');
@@ -90,3 +110,19 @@ show(it.return('MY RETVAL'));
 // CHECK-NEXT: 20 | false
 show(it.next());
 // CHECK-NEXT: MY RETVAL | true
+
+// Ensures that the StartGenerator instruction is moved to the start
+// of the function after optimizations.
+function *localsTry() {
+  var x = 0;
+  try {
+    yield x;
+  } catch (e) {
+  }
+}
+
+var it = localsTry();
+show(it.next());
+// CHECK-NEXT: 0 | false
+show(it.next());
+// CHECK-NEXT: undefined | true

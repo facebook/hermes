@@ -81,6 +81,10 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
     // Drop unused HBCLoadParamInsts.
     PM.addDCE();
   }
+
+  // Move StartGenerator instructions to the start of functions.
+  PM.addHoistStartGenerator();
+
   PM.run(M);
 
   if (options.verifyIR &&
