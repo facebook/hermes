@@ -24,10 +24,6 @@
 #include <thread>
 #include <vector>
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-#include <profilo/ExternalApi.h>
-#endif
-
 namespace hermes {
 namespace vm {
 
@@ -183,14 +179,12 @@ class SamplingProfiler {
   /// rules of signal handler(no lock, no memory allocation etc...)
   uint32_t walkRuntimeStack(const Runtime *runtime, StackTrace &sampleStorage);
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
   /// Registered loom callback for collecting stack frames.
-  static StackCollectionRetcode collectStackForLoom(
+  static bool collectStackForLoom(
       ucontext_t *ucontext,
       int64_t *frames,
       uint8_t *depth,
       uint8_t max_depth);
-#endif
 
   /// Clear previous stored samples.
   /// Note: caller should take the lock before calling.
