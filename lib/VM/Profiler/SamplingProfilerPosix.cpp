@@ -24,10 +24,6 @@
 #include <chrono>
 #include <thread>
 
-#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
-#include <profilo/ExternalApi.h>
-#endif
-
 namespace hermes {
 namespace vm {
 
@@ -259,7 +255,8 @@ uint32_t SamplingProfiler::walkRuntimeStack(
   return instance;
 }
 
-/*static*/ bool SamplingProfiler::collectStackForLoom(
+#if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
+/*static*/ StackCollectionRetcode SamplingProfiler::collectStackForLoom(
     ucontext_t *ucontext,
     int64_t *frames,
     uint8_t *depth,
@@ -268,7 +265,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
   Runtime *curThreadRuntime = profilerInstance->threadLocalRuntime_.get();
   if (curThreadRuntime == nullptr) {
     // No runtime in this thread.
-    return false;
+    return StackCollectionRetcode::NO_STACK_FOR_THREAD;
   }
   // Sampling stack will touch GC objects(like closure) so
   // only do so if heap is valid.
@@ -313,8 +310,12 @@ uint32_t SamplingProfiler::walkRuntimeStack(
     }
   }
   *depth = sampledStackDepth;
-  return true;
+  if (*depth == 0) {
+    return StackCollectionRetcode::EMPTY_STACK;
+  }
+  return StackCollectionRetcode::SUCCESS;
 }
+#endif
 
 SamplingProfiler::SamplingProfiler() : sampleStorage_(kMaxStackDepth) {
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
