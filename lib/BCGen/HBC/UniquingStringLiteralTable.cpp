@@ -28,18 +28,20 @@ StringKind::Kind kind(llvm::StringRef str, bool isIdentifier) {
 
 } // namespace
 
-StringLiteralIDMapping::StringLiteralIDMapping(ConsecutiveStringStorage storage)
-    : storage_(std::move(storage)) {
+StringLiteralIDMapping::StringLiteralIDMapping(
+    ConsecutiveStringStorage storage,
+    std::vector<bool> isIdentifier)
+    : storage_(std::move(storage)), isIdentifier_(std::move(isIdentifier)) {
   // Initialize our tables by decoding our storage's string table.
   std::string utf8Storage;
   uint32_t count = storage_.count();
-  isIdentifier_.reserve(count);
+  assert(isIdentifier_.size() == count);
   for (uint32_t i = 0; i < count; i++) {
     uint32_t j = strings_.insert(storage_.getStringAtIndex(i, utf8Storage));
     assert(i == j && "Duplicate string in storage.");
     (void)j;
 
-    isIdentifier_.push_back(storage_.isIdentifierAtIndex(i));
+    assert(isIdentifier_[i] == storage_.isIdentifierAtIndex(i));
   }
 }
 
@@ -72,14 +74,13 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
   return std::move(acc).entries();
 }
 
-/* static */ ConsecutiveStringStorage
-UniquingStringLiteralAccumulator::toStorage(
-    UniquingStringLiteralAccumulator table,
+/* static */ StringLiteralTable UniquingStringLiteralAccumulator::toTable(
+    UniquingStringLiteralAccumulator accum,
     bool optimize) {
-  auto &storage = table.storage_;
-  auto &strings = table.strings_;
-  auto &isIdentifier = table.isIdentifier_;
-  auto &numIdentifierRefs = table.numIdentifierRefs_;
+  auto &storage = accum.storage_;
+  auto &strings = accum.strings_;
+  auto &isIdentifier = accum.isIdentifier_;
+  auto &numIdentifierRefs = accum.numIdentifierRefs_;
 
   const size_t existingStrings = storage.count();
   assert(
@@ -171,9 +172,10 @@ UniquingStringLiteralAccumulator::toStorage(
   // Write the re-ordered entries back into the table.
   for (size_t i = existingStrings; i < strings.size(); ++i) {
     tableView[i] = indexedEntries[i].entry;
+    isIdentifier[i] = indexedEntries[i].kind != StringKind::String;
   }
 
-  return std::move(storage);
+  return StringLiteralTable{std::move(storage), std::move(isIdentifier)};
 }
 
 } // namespace hbc

@@ -160,10 +160,10 @@ unsigned BytecodeModuleGenerator::getIdentifierID(StringRef str) const {
   return stringTable_.getIdentifierID(str);
 }
 
-void BytecodeModuleGenerator::initializeStringStorage(
-    ConsecutiveStringStorage css) {
+void BytecodeModuleGenerator::initializeStringTable(
+    StringLiteralTable stringTable) {
   assert(stringTable_.empty() && "String table must be empty");
-  stringTable_ = StringLiteralTable{std::move(css)};
+  stringTable_ = std::move(stringTable);
 }
 
 uint32_t BytecodeModuleGenerator::addRegExp(CompiledRegExp regexp) {

@@ -95,18 +95,36 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
 }
 
 /// Used in delta optimizing mode.
-/// \return a ConsecutiveStringStorage from a bytecode provider \p
-/// baseBCProvider.
-ConsecutiveStringStorage stringStorageFromBytecodeProvider(
+/// \return a UniquingStringLiteralAccumulator seeded with strings  from a
+/// bytecode provider \p bcProvider.
+UniquingStringLiteralAccumulator stringAccumulatorFromBCProvider(
     const BCProviderBase &bcProvider) {
-  std::vector<StringTableEntry> entries;
   uint32_t count = bcProvider.getStringCount();
+
+  std::vector<StringTableEntry> entries;
+  std::vector<bool> isIdentifier;
+
   entries.reserve(count);
-  for (unsigned i = 0; i < count; ++i) {
-    entries.push_back(bcProvider.getStringTableEntry(i));
+  isIdentifier.reserve(count);
+
+  {
+    unsigned i = 0;
+    for (auto kindEntry : bcProvider.getStringKinds()) {
+      bool isIdentRun = kindEntry.kind() != StringKind::String;
+      for (unsigned j = 0; j < kindEntry.count(); ++j, ++i) {
+        entries.push_back(bcProvider.getStringTableEntry(i));
+        isIdentifier.push_back(isIdentRun);
+      }
+    }
+
+    assert(i == count && "Did not initialise every string");
   }
+
   auto strStorage = bcProvider.getStringStorage();
-  return ConsecutiveStringStorage{std::move(entries), strStorage.vec()};
+  ConsecutiveStringStorage css{std::move(entries), strStorage.vec()};
+
+  return UniquingStringLiteralAccumulator{std::move(css),
+                                          std::move(isIdentifier)};
 }
 
 } // namespace
@@ -149,8 +167,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
     // If we are in delta optimizing mode, start with the string storage from
     // our base bytecode provider.
     auto strings = baseBCProvider
-        ? UniquingStringLiteralAccumulator{stringStorageFromBytecodeProvider(
-              *baseBCProvider)}
+        ? stringAccumulatorFromBCProvider(*baseBCProvider)
         : UniquingStringLiteralAccumulator{};
 
     auto addStringOrIdent = [&strings](llvm::StringRef str, bool isIdentifier) {
@@ -173,7 +190,7 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       traverseCJSModuleNames(M, shouldGenerate, addString);
     }
 
-    BMGen.initializeStringStorage(UniquingStringLiteralAccumulator::toStorage(
+    BMGen.initializeStringTable(UniquingStringLiteralAccumulator::toTable(
         std::move(strings), options.optimizationEnabled));
   }
 

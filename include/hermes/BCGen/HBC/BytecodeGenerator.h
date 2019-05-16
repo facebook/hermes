@@ -335,11 +335,11 @@ class BytecodeModuleGenerator {
   /// triggered, if assertions are enabled.
   unsigned getIdentifierID(StringRef str) const;
 
-  /// Set the string storage this generator uses to find the IDs for strings.
-  /// Once it is set, this storage will not be further modified -- all strings
+  /// Set the string table this generator uses to find the IDs for strings.
+  /// Once it is set, this table will not be further modified -- all strings
   /// must be added beforehand.  This can only be called once on a given
   /// generator.
-  void initializeStringStorage(ConsecutiveStringStorage css);
+  void initializeStringTable(StringLiteralTable stringTable);
 
   /// Adds a compiled regexp to the module table.
   /// \return the index of the regexp in the table.

@@ -26,7 +26,12 @@ struct StringLiteralIDMapping {
   StringLiteralIDMapping() = default;
 
   /// Take ownership of \p storage and decode it to seed the strings_ mapping.
-  explicit StringLiteralIDMapping(ConsecutiveStringStorage storage);
+  /// \p isIdentifier indicates which strings in \p storage are to be treated as
+  /// identifiers (i.e. the string at ID \c i in \p storage is an identifier if
+  /// and only if \c isIdentifier[i] evaluates to true).
+  explicit StringLiteralIDMapping(
+      ConsecutiveStringStorage storage,
+      std::vector<bool> isIdentifier);
 
  protected:
   /// The storage that the mapping was initialised with.
@@ -91,9 +96,11 @@ class UniquingStringLiteralAccumulator final : public StringLiteralIDMapping {
   /// identifier.
   inline void addString(llvm::StringRef str, bool isIdentifier);
 
-  /// \return a ConsecutiveStringStorage for \p strings.  If \p optimize is
-  /// set, attempt to pack the strings in the storage to reduce their size.
-  static ConsecutiveStringStorage toStorage(
+  /// \return a StringLiteralTable with the same strings as the accumulator
+  /// \p strings.  If \p optimize is set, attempt to pack the strings to
+  /// reduce the size taken up by the character buffer.  The mapping from ID
+  /// to String is not preserved between \p strings and the resulting table.
+  static StringLiteralTable toTable(
       UniquingStringLiteralAccumulator strings,
       bool optimize = false);
 };

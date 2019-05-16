@@ -42,10 +42,10 @@ class StringBuffer : public Buffer {
   std::string string_;
 };
 
-/// Create a string storage appropriate (i.e. that contains all the necessary
+/// Create a string table appropriate (i.e. that contains all the necessary
 /// strings) for use with these tests.  Additionally adds the strings in
 /// \p strs if the test requires extra
-ConsecutiveStringStorage stringsForTest(
+StringLiteralTable stringsForTest(
     std::initializer_list<llvm::StringRef> strs = {}) {
   UniquingStringLiteralAccumulator strings;
 
@@ -54,7 +54,7 @@ ConsecutiveStringStorage stringsForTest(
     strings.addString(str, /* isIdentifier */ false);
   }
 
-  return UniquingStringLiteralAccumulator::toStorage(std::move(strings));
+  return UniquingStringLiteralAccumulator::toTable(std::move(strings));
 }
 
 TEST(HBCBytecodeGen, IntegrationTest) {
@@ -68,7 +68,7 @@ TEST(HBCBytecodeGen, IntegrationTest) {
   Ctx->setDebugInfoSetting(DebugInfoSetting::ALL);
 
   BytecodeModuleGenerator BMG;
-  BMG.initializeStringStorage(stringsForTest({"f1"}));
+  BMG.initializeStringTable(stringsForTest({"f1"}));
   BMG.addFilename("main.js");
 
   Function *globalFunction = Builder.createTopLevelFunction({});
@@ -142,7 +142,7 @@ TEST(HBCBytecodeGen, StripDebugInfo) {
   Ctx->setDebugInfoSetting(DebugInfoSetting::ALL);
 
   BytecodeModuleGenerator BMG;
-  BMG.initializeStringStorage(stringsForTest());
+  BMG.initializeStringTable(stringsForTest());
 
   Function *globalFunction = Builder.createTopLevelFunction({});
   auto BFG1 = BytecodeFunctionGenerator::create(BMG, 3);
@@ -189,7 +189,7 @@ TEST(HBCBytecodeGen, StringTableTest) {
   IRBuilder Builder(&M);
 
   BytecodeModuleGenerator BMG;
-  BMG.initializeStringStorage(
+  BMG.initializeStringTable(
       stringsForTest({"foo", "bar", /* Ā */ "\xc4\x80", /* å */ "\xc3\xa5"}));
 
   Function *F = Builder.createTopLevelFunction(true);
@@ -252,7 +252,7 @@ TEST(HBCBytecodeGen, ExceptionTableTest) {
   IRBuilder Builder(&M);
 
   BytecodeModuleGenerator BMG;
-  BMG.initializeStringStorage(stringsForTest());
+  BMG.initializeStringTable(stringsForTest());
 
   Function *F = Builder.createTopLevelFunction(true);
   auto BFG = BytecodeFunctionGenerator::create(BMG, 3);
@@ -294,7 +294,7 @@ TEST(HBCBytecodeGen, ArrayBufferTest) {
   IRBuilder Builder(&M);
 
   BytecodeModuleGenerator BMG;
-  BMG.initializeStringStorage(stringsForTest({"abc"}));
+  BMG.initializeStringTable(stringsForTest({"abc"}));
 
   Function *F = Builder.createTopLevelFunction(true);
   auto BFG = BytecodeFunctionGenerator::create(BMG, 3);

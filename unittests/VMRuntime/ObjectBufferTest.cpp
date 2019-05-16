@@ -65,8 +65,8 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
     strings.addString("foo", /* isIdentifier */ false);
     strings.addString("bar", /* isIdentifier */ true);
 
-    BMG.initializeStringStorage(
-        UniquingStringLiteralAccumulator::toStorage(std::move(strings)));
+    BMG.initializeStringTable(
+        UniquingStringLiteralAccumulator::toTable(std::move(strings)));
   }
 
   auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
