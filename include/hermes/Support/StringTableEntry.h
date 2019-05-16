@@ -16,14 +16,12 @@ namespace hermes {
 /// An entry in the string table inside the ConsecutiveStringStorage.
 class StringTableEntry {
   static constexpr uint32_t UTF16_MASK = 1 << 31;
-  static constexpr uint32_t IDENTIFIER_MASK = 1 << 30;
 
   /// The offset of this string in the string storage.
   uint32_t offset_;
 
   /// The length of this string. We use the most significant bit to represent
-  /// whether it's a UTF16 string; we use the second most significant bit to
-  /// represent whether it's an identifier.
+  /// whether it's a UTF16 string.
   uint32_t length_;
 
  public:
@@ -47,22 +45,12 @@ class StringTableEntry {
 
   /// \return the length of this entry's string.
   uint32_t getLength() const {
-    return length_ & (~UTF16_MASK) & (~IDENTIFIER_MASK);
+    return length_ & (~UTF16_MASK);
   }
 
   /// \return whether this entry is UTF16.
   bool isUTF16() const {
     return length_ & UTF16_MASK;
-  }
-
-  /// \return whether this entry is an identifier.
-  bool isIdentifier() const {
-    return length_ & IDENTIFIER_MASK;
-  }
-
-  /// Mark this entry as an identifier.
-  void markAsIdentifier() {
-    length_ |= IDENTIFIER_MASK;
   }
 };
 

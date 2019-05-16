@@ -137,13 +137,6 @@ class ConsecutiveStringStorage {
   llvm::StringRef getStringAtIndex(
       uint32_t idx,
       std::string &utf8ConversionStorage) const;
-
-  /// \return true if and only if the entry at index \p idx is marked as an
-  /// identifier.
-  bool isIdentifierAtIndex(uint32_t idx) const {
-    ensureTableValid();
-    return strTable_.at(idx).isIdentifier();
-  }
 };
 
 } // namespace hbc

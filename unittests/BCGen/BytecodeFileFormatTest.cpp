@@ -73,11 +73,9 @@ TEST(BytecodeFileFormatTest, SmallStringTableEntryLayout) {
 
   e.isUTF16 = 0x1;
   EXPECT_EQ(toHexString(e), "01 00 00 00");
-  e.isIdentifier = 0x1;
-  EXPECT_EQ(toHexString(e), "03 00 00 00");
   e.offset = 0xFF;
-  EXPECT_EQ(toHexString(e), "ff 03 00 00");
-  e.offset = 0x3FFFFF;
+  EXPECT_EQ(toHexString(e), "ff 01 00 00");
+  e.offset = 0x7FFFFF;
   EXPECT_EQ(toHexString(e), "ff ff ff 00");
   e.length = 0xF;
   EXPECT_EQ(toHexString(e), "ff ff ff 0f");

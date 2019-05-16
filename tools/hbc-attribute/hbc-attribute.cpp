@@ -67,7 +67,7 @@ using SLG = hermes::hbc::SerializedLiteralGenerator;
  * If you have added or modified sections, make sure they're counted properly.
  */
 static_assert(
-    BYTECODE_VERSION == 55,
+    BYTECODE_VERSION == 56,
     "Bytecode version changed. Please verify that hbc-attribute counts correctly..");
 
 static llvm::cl::opt<std::string> InputFilename(
@@ -274,6 +274,14 @@ class UsageCounter : public BytecodeVisitor {
     assert(it != stringKindEnds_.end() && "String index out of range");
     auto kindIndex = std::distance(stringKindEnds_.begin(), it);
     appendRecord("data:string:kind", kindIndex, sizeof(StringKind::Entry));
+
+    StringKind::Kind kind = bcProvider_->getStringKinds()[kindIndex].kind();
+    if (kind != StringKind::String) {
+      // Strings whose kind are not "String" are Identifiers and have a
+      // translation field.
+      appendRecord(
+          "data:string:identifier_translation", stringIndex, sizeof(uint32_t));
+    }
   }
 
   void countStringLiteral(unsigned stringIndex) {
@@ -290,12 +298,6 @@ class UsageCounter : public BytecodeVisitor {
           "data:string:overflow_entry",
           stringIndex,
           sizeof(OverflowStringTableEntry));
-    }
-
-    // If this is an identifier, it'll have an identifier translation.
-    if (entry.isIdentifier()) {
-      appendRecord(
-          "data:string:identifier_translation", stringIndex, sizeof(uint32_t));
     }
 
     auto offset = entry.getOffset();

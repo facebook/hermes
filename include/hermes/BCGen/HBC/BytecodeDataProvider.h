@@ -406,16 +406,10 @@ class BCProviderFromBuffer final : public BCProviderBase {
       auto overflow = overflowStringTableEntries_[smallHeader.offset];
       StringTableEntry entry(
           overflow.offset, overflow.length, smallHeader.isUTF16);
-      if (smallHeader.isIdentifier) {
-        entry.markAsIdentifier();
-      }
       return entry;
     }
     StringTableEntry entry(
         smallHeader.offset, smallHeader.length, smallHeader.isUTF16);
-    if (smallHeader.isIdentifier) {
-      entry.markAsIdentifier();
-    }
     return entry;
   }
 

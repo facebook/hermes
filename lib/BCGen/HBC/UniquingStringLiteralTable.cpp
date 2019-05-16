@@ -40,8 +40,6 @@ StringLiteralIDMapping::StringLiteralIDMapping(
     uint32_t j = strings_.insert(storage_.getStringAtIndex(i, utf8Storage));
     assert(i == j && "Duplicate string in storage.");
     (void)j;
-
-    assert(isIdentifier_[i] == storage_.isIdentifierAtIndex(i));
   }
 }
 
@@ -92,13 +90,6 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
     storage.appendStorage({unwritten, strings.end(), optimize});
   }
 
-  auto tableView = storage.getStringTableView();
-  for (size_t i = 0; i < strings.size(); ++i) {
-    if (isIdentifier[i]) {
-      tableView[i].markAsIdentifier();
-    }
-  }
-
   /// Associates a StringTableEntry with its original index in the table.
   struct IndexedEntry {
     size_t origIndex;
@@ -109,11 +100,7 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
         size_t origIndex,
         StringKind::Kind kind,
         StringTableEntry entry)
-        : origIndex(origIndex), kind(kind), entry(entry) {
-      assert(
-          (entry.isIdentifier() || kind == StringKind::String) &&
-          "Identifiers cannot have 'String' Kind and vice-versa.");
-    }
+        : origIndex(origIndex), kind(kind), entry(entry) {}
 
    private:
     // Key for performing comparisons with.  Ordering on this key is used to
@@ -129,6 +116,7 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
     }
   };
 
+  auto tableView = storage.getStringTableView();
   std::vector<IndexedEntry> indexedEntries;
   indexedEntries.reserve(strings.size());
 

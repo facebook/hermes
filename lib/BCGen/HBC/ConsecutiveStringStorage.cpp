@@ -778,10 +778,7 @@ void ConsecutiveStringStorage::appendStorage(ConsecutiveStringStorage &&rhs) {
   for (const StringTableEntry &entry : rhs.strTable_) {
     uint32_t length = entry.getLength();
     uint32_t offset = entry.getOffset() + (length ? storageDelta : 0);
-    StringTableEntry newEntry{offset, entry.getLength(), entry.isUTF16()};
-    if (entry.isIdentifier())
-      newEntry.markAsIdentifier();
-    strTable_.push_back(newEntry);
+    strTable_.emplace_back(offset, length, entry.isUTF16());
   }
   storage_.insert(storage_.end(), rhs.storage_.begin(), rhs.storage_.end());
 }

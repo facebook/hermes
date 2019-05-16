@@ -219,9 +219,6 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
     if (LLVM_UNLIKELY(!id.isValid())) {
       // Materialize this lazily created symbol.
       auto entry = bcProvider_->getStringTableEntry(stringID);
-      assert(
-          !entry.isIdentifier() &&
-          "Identifier entries should have been created at module load time");
       id = createSymbolFromStringID(stringID, entry, llvm::None);
     }
     assert(id.isValid() && "Failed to create symbol for stringID");
