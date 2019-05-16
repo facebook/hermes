@@ -8,6 +8,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import argparse
 from collections import namedtuple
+from itertools import groupby
 from sys import stdin
 
 from hbc_sections import HBCSections
@@ -28,6 +29,49 @@ def section_access_info(sections):
     for access in page_accesses():
         labels = "/".join(sections.labels(access.page))
         yield (labels, access.time)
+
+
+def grouped_section_access_info(sections):
+    """Consecutive accesses with the same label are grouped together.
+
+    This function produces a list of tuples, each containing a string, and
+    a list of access times.
+    """
+    groups = []
+    info = section_access_info(sections)
+    for label, group in groupby(info, key=lambda a: a[0]):
+        groups.append((label, [time for _, time in group]))
+    return groups
+
+
+MAX_LABEL_WIDTH = 25
+
+
+def display_brief(grouped_accesses):
+    FMT = "{} -- \u03a3 = {}us"
+    for label, times in grouped_accesses:
+        count = len(times)
+        total = sum(times)
+
+        if count > 1:
+            label += " x{}".format(count)
+
+        if len(label) <= MAX_LABEL_WIDTH:
+            print(FMT.format(label.ljust(MAX_LABEL_WIDTH), total))
+        else:
+            print(label)
+            print(FMT.format("".ljust(MAX_LABEL_WIDTH), total))
+
+
+def display_all(grouped_accesses):
+    FMT = "{} -- {}us"
+    for label, times in grouped_accesses:
+        for time in times:
+            if len(label) <= MAX_LABEL_WIDTH:
+                print(FMT.format(label.ljust(MAX_LABEL_WIDTH), time))
+            else:
+                print(label)
+                print(FMT.format("".ljust(MAX_LABEL_WIDTH), time))
 
 
 if __name__ == "__main__":
@@ -58,16 +102,19 @@ if __name__ == "__main__":
         ),
     )
 
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Verbose output.  Each access is emitted on its own line.",
+    )
+
     args = parser.parse_args()
     sections = HBCSections.from_bytecode(args.hbcdump, args.bytecode)
 
-    accesses = list(section_access_info(sections))
-    label_lens = (len(a[0]) for a in accesses)
-    pad = max(l for l in label_lens if l < 25)
+    accesses = grouped_section_access_info(sections)
 
-    for label, time in accesses:
-        if len(label) <= pad:
-            print("{} -- {}us".format(label.ljust(pad), time))
-        else:
-            print(label)
-            print("{} -- {}us".format("".ljust(pad), time))
+    if args.verbose:
+        display_all(accesses)
+    else:
+        display_brief(accesses)
