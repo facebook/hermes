@@ -108,8 +108,6 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Like the above, but the created StringPrimitives will be
   /// allocated in a "long-lived" area of the heap (if the GC supports
   /// that concept).
-  static CallResult<HermesValue>
-  createLongLived(Runtime *runtime, uint32_t length, bool asciiNotUTF16);
   static CallResult<HermesValue> createLongLived(
       Runtime *runtime,
       ASCIIRef str);
@@ -607,29 +605,6 @@ inline CallResult<HermesValue> StringPrimitive::create(
     return DynamicStringPrimitive<char16_t>::create(runtime, str);
   } else {
     return ExternalStringPrimitive<char16_t>::create(runtime, str);
-  }
-}
-
-inline CallResult<HermesValue> StringPrimitive::createLongLived(
-    Runtime *runtime,
-    uint32_t length,
-    bool asciiNotUTF16) {
-  static_assert(
-      EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
-      "External string threshold should be smaller than max string size.");
-  if (LLVM_LIKELY(!isExternalLength(length))) {
-    if (asciiNotUTF16) {
-      return DynamicStringPrimitive<char>::createLongLived(runtime, length);
-    } else {
-      return DynamicStringPrimitive<char16_t>::createLongLived(runtime, length);
-    }
-  } else {
-    if (asciiNotUTF16) {
-      return ExternalStringPrimitive<char>::createLongLived(runtime, length);
-    } else {
-      return ExternalStringPrimitive<char16_t>::createLongLived(
-          runtime, length);
-    }
   }
 }
 
