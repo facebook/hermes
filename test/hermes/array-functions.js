@@ -263,6 +263,18 @@ print(a.pop(), a.length, a[0], a[1], a[2]);
 // CHECK-NEXT: undefined 0 undefined undefined undefined
 print(a.pop(), a.length, a[0], a[1], a[2]);
 // CHECK-NEXT: undefined 0 undefined undefined undefined
+// Test recursion of pop re-entering itself.
+var a = [];
+Object.defineProperty(a, 9, {
+  get: Array.prototype.pop,
+});
+try {
+  print(a.pop());
+} catch (e) {
+  // Infinite recursion, should throw call stack exceeded.
+  print(e.name);
+}
+// CHECK-NEXT: RangeError
 
 print('push');
 // CHECK-LABEL: push

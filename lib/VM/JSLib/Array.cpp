@@ -1199,6 +1199,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
 
 static CallResult<HermesValue>
 arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope(runtime);
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
