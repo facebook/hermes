@@ -27,8 +27,8 @@ def page_accesses():
 
 def section_access_info(sections):
     for access in page_accesses():
-        labels = "/".join(sections.labels(access.page))
-        yield (labels, access.time)
+        offset, names = sections.labels(access.page)
+        yield ("/".join(names), offset, access.time)
 
 
 def grouped_section_access_info(sections):
@@ -40,21 +40,24 @@ def grouped_section_access_info(sections):
     groups = []
     info = section_access_info(sections)
     for label, group in groupby(info, key=lambda a: a[0]):
-        groups.append((label, [time for _, time in group]))
+        groups.append((label, [(offset, time) for _, offset, time in group]))
     return groups
 
 
 MAX_LABEL_WIDTH = 25
 
 
-def display_brief(grouped_accesses):
+def display_brief(grouped_accesses, offsets):
     FMT = "{} -- \u03a3 = {}us"
-    for label, times in grouped_accesses:
-        count = len(times)
-        total = sum(times)
+    for label, accesses in grouped_accesses:
+        count = len(accesses)
+        total = sum(time for _, time in accesses)
 
         if count > 1:
             label += " x{}".format(count)
+
+        if offsets:
+            label += " @ " + ", ".join(str(offset) for offset, _ in accesses)
 
         if len(label) <= MAX_LABEL_WIDTH:
             print(FMT.format(label.ljust(MAX_LABEL_WIDTH), total))
@@ -63,10 +66,15 @@ def display_brief(grouped_accesses):
             print(FMT.format("".ljust(MAX_LABEL_WIDTH), total))
 
 
-def display_all(grouped_accesses):
+def display_all(grouped_accesses, offsets):
     FMT = "{} -- {}us"
-    for label, times in grouped_accesses:
-        for time in times:
+    for group_label, accesses in grouped_accesses:
+        for offset, time in accesses:
+            if offsets:
+                label = "{} @ {}".format(group_label, offset)
+            else:
+                label = group_label
+
             if len(label) <= MAX_LABEL_WIDTH:
                 print(FMT.format(label.ljust(MAX_LABEL_WIDTH), time))
             else:
@@ -103,6 +111,19 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "-o",
+        "--offsets",
+        action="store_true",
+        help=(
+            "Output the offsets at which each access occurred.  Offsets are "
+            "given in increments of pages from the beginning of the section "
+            "being read.  If there are multiple sections in a page, the first "
+            "section is taken to be the one being read for the purposes of "
+            "this calculation."
+        ),
+    )
+
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -115,6 +136,6 @@ if __name__ == "__main__":
     accesses = grouped_section_access_info(sections)
 
     if args.verbose:
-        display_all(accesses)
+        display_all(accesses, args.offsets)
     else:
-        display_brief(accesses)
+        display_brief(accesses, args.offsets)

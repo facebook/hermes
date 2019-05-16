@@ -46,16 +46,22 @@ class HBCSections:
             of the bytecode file.
         pagesz -- The size of an individual page in bytes.  Defaults to 4096.
 
-        Returns a list string containing the sections that overlap the page.
-        If there are multiple, they will appear in starting address order, and
-        in the case of a tie, in the order the sections were output by the
-        hbcdump tool.
+        Returns a 2-tuple containing:
+
+          - The offset into the first section the read occurred in, as a number
+            of pages.
+          - A list containing the sections that overlap the page.  If there are
+            multiple, they will appear in starting address order, and in the
+            case of a tie, in the order the sections were output by the hbcdump
+            tool.
         """
         first = bisect_right(self.ends, pagesz * pageno)
         last = bisect_right(self.ends, pagesz * (pageno + 1) - 1)
 
+        off = pageno - self.sections[first].start // pagesz
+
         assert self.sections and last < self.sections[-1].end
-        return [s.label for s in self.sections[first : last + 1]]
+        return off, [s.label for s in self.sections[first : last + 1]]
 
 
 def parse_section(str):
