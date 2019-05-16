@@ -105,6 +105,14 @@ To set up an existing project to use Hermes:
 4. Verify that you are using Hermes by checking that `typeof(HermesInternal)`
    is `"object"` (and not `"undefined"`).
 
+## Debugging React Native apps running Hermes
+
+1. Open [chrome://inspect/](chrome://inspect/) in Chrome
+2. Make sure `localhost:8081` appears as a target in the "Configure..." menu
+3. Start a debug build of your Hermes-enabled React Native app on an emulator
+
+"Hermes React Native" should now appear as Remote Target, and you can hit
+"inspect" to open a debugger.
 
 ## Getting Started for Hermes developers
 
