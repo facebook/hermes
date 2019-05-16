@@ -158,18 +158,6 @@ CallResult<HermesValue> StringPrimitive::slice(
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
-#ifdef HERMESVM_SANITIZE_HANDLES
-Handle<StringPrimitive> StringPrimitive::ensureFlat(
-    Runtime *runtime,
-    Handle<StringPrimitive> self) {
-  // In the future, ensureFlat may trigger GC as it might allocate for
-  // ropes. Allocate here to force collections to occur.
-  FillerCell::create(runtime, sizeof(FillerCell));
-  return self;
-  // TODO: Deal with different subclasses (e.g. rope)
-}
-#endif
-
 StringView StringPrimitive::createStringView(
     Runtime *runtime,
     Handle<StringPrimitive> self) {

@@ -25,6 +25,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
+#include "hermes/VM/FillerCell.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
@@ -560,6 +561,14 @@ size_t Runtime::mallocSize() const {
   }
   return totalSize;
 }
+
+#ifdef HERMESVM_SANITIZE_HANDLES
+void Runtime::potentiallyMoveHeap() {
+  // Do a dummy allocation which could force a heap move if handle sanitization
+  // is on.
+  FillerCell::create(this, sizeof(FillerCell));
+}
+#endif
 
 void Runtime::setMockedEnvironment(const MockedEnvironment &env) {
 #ifdef HERMESVM_SYNTH_REPLAY

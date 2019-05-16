@@ -226,6 +226,10 @@ class Callable : public JSObject {
   static CallResult<HermesValue> call(
       Handle<Callable> selfHandle,
       Runtime *runtime) {
+    // Any call to a native or JS function could potentially allocate.
+    // Move the heap to force raw pointer errors to come out whenever a call is
+    // made.
+    runtime->potentiallyMoveHeap();
     return selfHandle->getVT()->call(selfHandle, runtime);
   }
 

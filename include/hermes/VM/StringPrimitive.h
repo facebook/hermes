@@ -182,17 +182,15 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       size_t length);
 
   /// Flatten the string if it's a rope, possibly causing allocation/GC.
-#ifndef HERMESVM_SANITIZE_HANDLES
-  static Handle<StringPrimitive> ensureFlat(
-      Runtime *,
-      Handle<StringPrimitive> self) {
-    return self;
-  }
-#else
   static Handle<StringPrimitive> ensureFlat(
       Runtime *runtime,
-      Handle<StringPrimitive> self);
-#endif
+      Handle<StringPrimitive> self) {
+    // In the future, ensureFlat may trigger GC as it might allocate for
+    // ropes. Move the heap here.
+    runtime->potentiallyMoveHeap();
+    return self;
+    // TODO: Deal with different subclasses (e.g. rope)
+  }
 
   /// \return true if the string is flat.
   bool isFlat() const {

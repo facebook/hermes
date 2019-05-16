@@ -216,6 +216,9 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
     heap_.collect();
   }
 
+  /// Potentially move the heap if handle sanitization is on.
+  void potentiallyMoveHeap();
+
   /// \return the \c StringPrimitive of a predefined string.
   StringPrimitive *getPredefinedString(Predefined::Str predefined);
   StringPrimitive *getPredefinedString(Predefined::Sym predefined);
@@ -1345,6 +1348,10 @@ inline void Runtime::clearThrownValue() {
 inline CrashManager &Runtime::getCrashManager() {
   return *crashMgr_;
 }
+
+#ifndef HERMESVM_SANITIZE_HANDLES
+inline void Runtime::potentiallyMoveHeap() {}
+#endif
 
 //===----------------------------------------------------------------------===//
 
