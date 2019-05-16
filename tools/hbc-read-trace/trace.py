@@ -47,7 +47,7 @@ def grouped_section_access_info(sections):
 MAX_LABEL_WIDTH = 25
 
 
-def display_brief(grouped_accesses, offsets):
+def display_brief(grouped_accesses, display_offsets, display_time):
     FMT = "{} -- \u03a3 = {}us"
     for label, accesses in grouped_accesses:
         count = len(accesses)
@@ -56,8 +56,12 @@ def display_brief(grouped_accesses, offsets):
         if count > 1:
             label += " x{}".format(count)
 
-        if offsets:
+        if display_offsets:
             label += " @ " + ", ".join(str(offset) for offset, _ in accesses)
+
+        if not display_time:
+            print(label)
+            continue
 
         if len(label) <= MAX_LABEL_WIDTH:
             print(FMT.format(label.ljust(MAX_LABEL_WIDTH), total))
@@ -66,14 +70,18 @@ def display_brief(grouped_accesses, offsets):
             print(FMT.format("".ljust(MAX_LABEL_WIDTH), total))
 
 
-def display_all(grouped_accesses, offsets):
+def display_all(grouped_accesses, display_offsets, display_time):
     FMT = "{} -- {}us"
     for group_label, accesses in grouped_accesses:
         for offset, time in accesses:
-            if offsets:
+            if display_offsets:
                 label = "{} @ {}".format(group_label, offset)
             else:
                 label = group_label
+
+            if not display_time:
+                print(label)
+                continue
 
             if len(label) <= MAX_LABEL_WIDTH:
                 print(FMT.format(label.ljust(MAX_LABEL_WIDTH), time))
@@ -114,6 +122,7 @@ if __name__ == "__main__":
         "-o",
         "--offsets",
         action="store_true",
+        dest="display_offsets",
         help=(
             "Output the offsets at which each access occurred.  Offsets are "
             "given in increments of pages from the beginning of the section "
@@ -121,6 +130,14 @@ if __name__ == "__main__":
             "section is taken to be the one being read for the purposes of "
             "this calculation."
         ),
+    )
+
+    parser.add_argument(
+        "-T",
+        "--no-time",
+        action="store_false",
+        dest="display_time",
+        help="Suppress output of the time taken.",
     )
 
     parser.add_argument(
@@ -132,10 +149,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     sections = HBCSections.from_bytecode(args.hbcdump, args.bytecode)
-
     accesses = grouped_section_access_info(sections)
+    display = display_all if args.verbose else display_brief
 
-    if args.verbose:
-        display_all(accesses, args.offsets)
-    else:
-        display_brief(accesses, args.offsets)
+    display(accesses, args.display_offsets, args.display_time)
