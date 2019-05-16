@@ -43,6 +43,35 @@ StringLiteralIDMapping::StringLiteralIDMapping(ConsecutiveStringStorage storage)
   }
 }
 
+std::vector<uint32_t> StringLiteralTable::getIdentifierTranslations() const {
+  std::vector<uint32_t> result;
+  assert(strings_.size() == isIdentifier_.size());
+  for (size_t i = 0; i < strings_.size(); ++i) {
+    if (!isIdentifier_[i]) {
+      continue;
+    }
+
+    if (auto sym = getPredefinedStringID(strings_[i])) {
+      result.push_back(sym->unsafeGetRaw());
+    } else {
+      result.push_back(storage_.getEntryHash(i));
+    }
+  }
+
+  return result;
+}
+
+std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
+  StringKind::Accumulator acc;
+
+  assert(strings_.size() == isIdentifier_.size());
+  for (size_t i = 0; i < strings_.size(); ++i) {
+    acc.push_back(kind(strings_[i], isIdentifier_[i]));
+  }
+
+  return std::move(acc).entries();
+}
+
 /* static */ ConsecutiveStringStorage
 UniquingStringLiteralAccumulator::toStorage(
     UniquingStringLiteralAccumulator table,
@@ -145,35 +174,6 @@ UniquingStringLiteralAccumulator::toStorage(
   }
 
   return std::move(storage);
-}
-
-std::vector<uint32_t> StringLiteralTable::getIdentifierTranslations() const {
-  std::vector<uint32_t> result;
-  assert(strings_.size() == isIdentifier_.size());
-  for (size_t i = 0; i < strings_.size(); ++i) {
-    if (!isIdentifier_[i]) {
-      continue;
-    }
-
-    if (auto sym = getPredefinedStringID(strings_[i])) {
-      result.push_back(sym->unsafeGetRaw());
-    } else {
-      result.push_back(storage_.getEntryHash(i));
-    }
-  }
-
-  return result;
-}
-
-std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
-  StringKind::Accumulator acc;
-
-  assert(strings_.size() == isIdentifier_.size());
-  for (size_t i = 0; i < strings_.size(); ++i) {
-    acc.push_back(kind(strings_[i], isIdentifier_[i]));
-  }
-
-  return std::move(acc).entries();
 }
 
 } // namespace hbc
