@@ -660,8 +660,11 @@ void SemanticValidator::validateAssignmentTarget(const Node *node) {
 
 void SemanticValidator::updateNodeStrictness(FunctionLikeNode *node) {
   auto strictness = ESTree::makeStrictness(curFunction()->strictMode);
+  // Only verify the strictness if there are no errors. Otherwise it is not
+  // possible to ensure that it is correct.
   assert(
-      (!strictnessIsPreset_ || node->strictness == strictness) &&
+      (sm_.getErrorCount() || !strictnessIsPreset_ ||
+       node->strictness == strictness) &&
       "Preset strictness is different from detected strictness");
   node->strictness = strictness;
 }

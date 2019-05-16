@@ -16,3 +16,11 @@ function bar(p = 10) {
 //CHECK-NEXT:     ^~~~~~~~~~~~~
 
 }
+
+function baz(f = function() {}) {
+    "use strict";
+//CHECK: {{.*}}non-simple-params.js:21:5: error: 'use strict' not allowed inside function with non-simple parameter list
+//CHECK-NEXT:     "use strict";
+//CHECK-NEXT:     ^~~~~~~~~~~~~
+
+}
