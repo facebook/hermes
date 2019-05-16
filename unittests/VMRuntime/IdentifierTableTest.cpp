@@ -114,7 +114,6 @@ TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
       1 + std::max(kTestGCConfig.getMaxHeapSize(), kExtStringThreshold);
 
   // A string of this size is definitely too big to be allocated.
-  ASSERT_TRUE(StringPrimitive::isExternalLength(extSize));
   ASSERT_FALSE(runtime->getHeap().canAllocExternalMemory(extSize));
 
   auto buf = reinterpret_cast<char *>(malloc(extSize));

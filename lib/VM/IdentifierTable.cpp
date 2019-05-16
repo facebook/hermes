@@ -210,7 +210,7 @@ IdentifierTable::allocateDynamicString(
     // Since we keep a raw pointer to mem, no more JS heap allocations after
     // this point.
     if (primHandle) {
-      str = vmcast<ExternalStringPrimitive<T>>(*primHandle)->getStringRef();
+      str = primHandle->getStringRef<T>();
     }
     ExternalStringPrimitive<T> *tmpResult = Unique
         ? new (mem) ExternalStringPrimitive<T>(runtime, length, strId)
@@ -224,7 +224,7 @@ IdentifierTable::allocateDynamicString(
     // Since we keep a raw pointer to mem, no more JS heap allocations after
     // this point.
     if (primHandle) {
-      str = vmcast<DynamicStringPrimitive<T>>(*primHandle)->getStringRef();
+      str = primHandle->getStringRef<T>();
     }
     DynamicStringPrimitive<T> *tmpResult = Unique
         ? new (mem) DynamicStringPrimitive<T>(runtime, length, strId)

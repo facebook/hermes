@@ -63,18 +63,21 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       : VariableSizeRuntimeCell(&runtime->getHeap(), vt, cellSize),
         length(length) {}
 
- public:
-  /// No string with length exceeding this constant can be allocated.
-  static constexpr uint32_t MAX_STRING_LENGTH = 256 * 1024 * 1024;
-  // Strings whose length is at least this size are allocated as "external"
-  // strings, outside the JS heap.
-  static constexpr uint32_t EXTERNAL_STRING_THRESHOLD = 64 * 1024;
-
   /// Returns true if a string of the given \p length should be allocated as an
-  /// external string, outside the JS heap.
+  /// external string, outside the JS heap. Note that some external strings may
+  /// be shorter than this length.
   static bool isExternalLength(uint32_t length) {
     return length >= EXTERNAL_STRING_THRESHOLD;
   }
+
+ public:
+  /// No string with length exceeding this constant can be allocated.
+  static constexpr uint32_t MAX_STRING_LENGTH = 256 * 1024 * 1024;
+
+  // Strings whose length is at least this size are always allocated as
+  // "external" strings, outside the JS heap. Note that there may be external
+  // strings smaller than this length.
+  static constexpr uint32_t EXTERNAL_STRING_THRESHOLD = 64 * 1024;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -213,10 +216,13 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Whether this is an ASCII string.
   inline bool isASCII() const;
 
-#ifdef UNIT_TEST
-  /// Allocate a StringPrimitive in the C heap for purposes for unit testing.
-  static StringPrimitive *mallocPrimitive(UTF16Ref ref);
-#endif
+  /// Whether this is an external string.
+  inline bool isExternal() const;
+
+  /// Get a StringRef of T. T must be char or char16_t corresponding to whether
+  /// this string is ASCII or UTF-16.
+  template <typename T>
+  inline ArrayRef<T> getStringRef() const;
 
   /// If the given cell has is an ExternalStringPrimitive, returns the
   /// size of its associated external memory (in bytes), else zero.
@@ -444,7 +450,6 @@ class ExternalStringPrimitive final : public ExternalStringPrimitiveBase {
             &vt,
             sizeof(ExternalStringPrimitive<T>),
             length) {
-    assert(isExternalLength(length) && "length should be external");
     contents_ = static_cast<T *>(checkedMalloc2(length, sizeof(T)));
   }
 
@@ -455,7 +460,6 @@ class ExternalStringPrimitive final : public ExternalStringPrimitiveBase {
             sizeof(ExternalStringPrimitive<T>),
             length | (1u << 31),
             uniqueID) {
-    assert(isExternalLength(length) && "length should be external");
     contents_ = reinterpret_cast<T *>(checkedMalloc2(length, sizeof(T)));
   }
 
@@ -635,7 +639,7 @@ inline CallResult<HermesValue> StringPrimitive::createLongLived(
 }
 
 inline const char *StringPrimitive::castToASCIIPointer() const {
-  if (LLVM_LIKELY(!isExternalLength(getStringLength()))) {
+  if (LLVM_LIKELY(!isExternal())) {
     return vmcast<DynamicASCIIStringPrimitive>(this)->getRawPointer();
   } else {
     return vmcast<ExternalASCIIStringPrimitive>(this)->getRawPointer();
@@ -643,7 +647,7 @@ inline const char *StringPrimitive::castToASCIIPointer() const {
 }
 
 inline const char16_t *StringPrimitive::castToUTF16Pointer() const {
-  if (LLVM_LIKELY(!isExternalLength(getStringLength()))) {
+  if (LLVM_LIKELY(!isExternal())) {
     return vmcast<DynamicUTF16StringPrimitive>(this)->getRawPointer();
   } else {
     return vmcast<ExternalUTF16StringPrimitive>(this)->getRawPointer();
@@ -651,7 +655,7 @@ inline const char16_t *StringPrimitive::castToUTF16Pointer() const {
 }
 
 inline char *StringPrimitive::castToASCIIPointerForWrite() {
-  if (LLVM_LIKELY(!isExternalLength(getStringLength()))) {
+  if (LLVM_LIKELY(!isExternal())) {
     return vmcast<DynamicASCIIStringPrimitive>(this)->getRawPointerForWrite();
   } else {
     return vmcast<ExternalASCIIStringPrimitive>(this)->getRawPointerForWrite();
@@ -659,7 +663,7 @@ inline char *StringPrimitive::castToASCIIPointerForWrite() {
 }
 
 inline char16_t *StringPrimitive::castToUTF16PointerForWrite() {
-  if (LLVM_LIKELY(!isExternalLength(getStringLength()))) {
+  if (LLVM_LIKELY(!isExternal())) {
     return vmcast<DynamicUTF16StringPrimitive>(this)->getRawPointerForWrite();
   } else {
     return vmcast<ExternalUTF16StringPrimitive>(this)->getRawPointerForWrite();
@@ -668,7 +672,7 @@ inline char16_t *StringPrimitive::castToUTF16PointerForWrite() {
 
 inline SymbolID StringPrimitive::getUniqueID() const {
   assert(this->isUniqued() && "String is not uniqued");
-  if (LLVM_LIKELY(!isExternalLength(getStringLength()))) {
+  if (LLVM_LIKELY(!isExternal())) {
     if (isASCII()) {
       return SymbolID::unsafeCreate(
           *vmcast<DynamicASCIIStringPrimitive>(this)
@@ -685,7 +689,7 @@ inline SymbolID StringPrimitive::getUniqueID() const {
 
 inline void StringPrimitive::updateUniqueID(SymbolID id) {
   assert(this->isUniqued() && "String is not uniqued");
-  if (LLVM_LIKELY(!isExternalLength(getStringLength()))) {
+  if (LLVM_LIKELY(!isExternal())) {
     if (isASCII()) {
       *vmcast<DynamicASCIIStringPrimitive>(this)
            ->template getTrailingObjects<uint32_t>() = id.unsafeGetRaw();
@@ -734,6 +738,29 @@ inline bool StringPrimitive::isASCII() const {
   // even.
   return (static_cast<unsigned>(getKind()) & 0x1) ==
       (static_cast<unsigned>(CellKind::DynamicASCIIStringPrimitiveKind) & 0x1);
+}
+
+inline bool StringPrimitive::isExternal() const {
+  // We require that external cell kinds be larger than dynamic cell kinds.
+  static_assert(
+      CellKind::DynamicUTF16StringPrimitiveKind <
+          CellKind::DynamicASCIIStringPrimitiveKind,
+      "kind order assumption");
+  static_assert(
+      CellKind::DynamicASCIIStringPrimitiveKind <
+          CellKind::ExternalUTF16StringPrimitiveKind,
+      "kind order assumption");
+  static_assert(
+      CellKind::ExternalUTF16StringPrimitiveKind <
+          CellKind::ExternalASCIIStringPrimitiveKind,
+      "kind order assumption");
+  return getKind() >= CellKind::ExternalUTF16StringPrimitiveKind;
+}
+
+template <typename T>
+inline ArrayRef<T> StringPrimitive::getStringRef() const {
+  return isExternal() ? vmcast<ExternalStringPrimitive<T>>(this)->getStringRef()
+                      : vmcast<DynamicStringPrimitive<T>>(this)->getStringRef();
 }
 
 /*static*/
