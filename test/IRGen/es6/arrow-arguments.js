@@ -34,12 +34,12 @@ function foo() {
 //CHECK-LABEL:function foo()
 //CHECK-NEXT:frame = [arrow1, ?anon_0_this, ?anon_1_new.target, ?anon_2_arguments]
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [arrow1]
-//CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this]
-//CHECK-NEXT:  %2 = GetNewTargetInst
-//CHECK-NEXT:  %3 = StoreFrameInst %2, [?anon_1_new.target]
-//CHECK-NEXT:  %4 = CreateArgumentsInst
-//CHECK-NEXT:  %5 = StoreFrameInst %4 : object, [?anon_2_arguments]
+//CHECK-NEXT:  %0 = CreateArgumentsInst
+//CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [arrow1]
+//CHECK-NEXT:  %2 = StoreFrameInst %this, [?anon_0_this]
+//CHECK-NEXT:  %3 = GetNewTargetInst
+//CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
+//CHECK-NEXT:  %5 = StoreFrameInst %0 : object, [?anon_2_arguments]
 //CHECK-NEXT:  %6 = CreateFunctionInst %arrow1()
 //CHECK-NEXT:  %7 = StoreFrameInst %6 : closure, [arrow1]
 //CHECK-NEXT:  %8 = LoadFrameInst [?anon_2_arguments]
@@ -91,10 +91,10 @@ function bar() {
 //CHECK-LABEL:function bar()
 //CHECK-NEXT:frame = [inner]
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = CreateFunctionInst %inner()
-//CHECK-NEXT:  %1 = StoreFrameInst %0 : closure, [inner]
-//CHECK-NEXT:  %2 = CreateArgumentsInst
-//CHECK-NEXT:  %3 = LoadPropertyInst %2 : object, 0 : number
+//CHECK-NEXT:  %0 = CreateArgumentsInst
+//CHECK-NEXT:  %1 = CreateFunctionInst %inner()
+//CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [inner]
+//CHECK-NEXT:  %3 = LoadPropertyInst %0 : object, 0 : number
 //CHECK-NEXT:  %4 = StorePropertyInst %3, globalObject : object, "dummy" : string
 //CHECK-NEXT:  %5 = LoadFrameInst [inner]
 //CHECK-NEXT:  %6 = ReturnInst %5
@@ -105,12 +105,12 @@ function bar() {
 //CHECK-LABEL:function inner()
 //CHECK-NEXT:frame = [arrow3, ?anon_0_this, ?anon_1_new.target, ?anon_2_arguments]
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [arrow3]
-//CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this]
-//CHECK-NEXT:  %2 = GetNewTargetInst
-//CHECK-NEXT:  %3 = StoreFrameInst %2, [?anon_1_new.target]
-//CHECK-NEXT:  %4 = CreateArgumentsInst
-//CHECK-NEXT:  %5 = StoreFrameInst %4 : object, [?anon_2_arguments]
+//CHECK-NEXT:  %0 = CreateArgumentsInst
+//CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [arrow3]
+//CHECK-NEXT:  %2 = StoreFrameInst %this, [?anon_0_this]
+//CHECK-NEXT:  %3 = GetNewTargetInst
+//CHECK-NEXT:  %4 = StoreFrameInst %3, [?anon_1_new.target]
+//CHECK-NEXT:  %5 = StoreFrameInst %0 : object, [?anon_2_arguments]
 //CHECK-NEXT:  %6 = LoadFrameInst [?anon_2_arguments]
 //CHECK-NEXT:  %7 = LoadPropertyInst %6, 0 : number
 //CHECK-NEXT:  %8 = StorePropertyInst %7, globalObject : object, "dummy" : string

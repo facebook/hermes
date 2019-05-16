@@ -793,18 +793,7 @@ Value *ESTreeIRGen::genIdentifierExpression(
       return Builder.createLoadFrameInst(curFunction()->capturedArguments);
     }
 
-    // The first time we encounter 'arguments' we must initialize the
-    // arguments object before the entry terminator.
-    if (!curFunction()->createdArguments) {
-      DEBUG(dbgs() << "Creating arguments object\n");
-
-      IRBuilder::SaveRestore saveBuilder(Builder);
-      Builder.setInsertionPoint(curFunction()->entryTerminator);
-      Builder.setLocation(Builder.getFunction()->getSourceRange().Start);
-      curFunction()->createdArguments = Builder.createCreateArgumentsInst();
-    }
-
-    return curFunction()->createdArguments;
+    return curFunction()->createArgumentsInst;
   }
 
   // Lookup variable name.

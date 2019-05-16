@@ -93,10 +93,6 @@ class FunctionContext {
   /// A new variable scope that is used throughout the body of the function.
   NameTableScopeTy scope;
 
-  /// The function's entry block terminator, saved so we can append
-  /// instructions that must execute before the body of the function.
-  TerminatorInst *entryTerminator{};
-
   /// Stack Register that will hold the return value of the global scope.
   AllocStackInst *globalReturnRegister{nullptr};
 
@@ -104,9 +100,9 @@ class FunctionContext {
   /// label to create a unique number;
   size_t anonymousLabelCounter{0};
 
-  /// This holds the created arguments and is lazily initialized the first
-  /// time we encounter usage of 'arguments'.
-  CreateArgumentsInst *createdArguments{};
+  /// This holds the CreateArguments instruction. We always insert it in the
+  /// prologue and delete it in the epilogue if it wasn't used.
+  CreateArgumentsInst *createArgumentsInst{};
 
   /// Parents of arrow functions need to capture their "this" parameter so the
   /// arrow function can use it. Normal functions and constructors store their

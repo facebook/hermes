@@ -284,7 +284,7 @@ void ESTreeIRGen::initCaptureStateInES5Function() {
         Builder.createVariable(scope, genAnonymousLabelName("arguments"));
     emitStore(
         Builder,
-        Builder.createCreateArgumentsInst(),
+        curFunction()->createArgumentsInst,
         curFunction()->capturedArguments);
   }
 }
@@ -303,6 +303,10 @@ void ESTreeIRGen::emitFunctionPrologue(
 
   // Start pumping instructions into the entry basic block.
   Builder.setInsertionBlock(entry);
+
+  // Always insert a CreateArgumentsInst. We will delete it later if it is
+  // unused.
+  curFunction()->createArgumentsInst = Builder.createCreateArgumentsInst();
 
   // Create variable declarations for each of the hoisted variables and
   // functions. Initialize only the variables to undefined.
@@ -328,12 +332,6 @@ void ESTreeIRGen::emitFunctionPrologue(
   for (auto funcDecl : semInfo->closures) {
     genFunctionDeclaration(funcDecl);
   }
-
-  // Separate the next block, so we can append instructions to the entry block
-  // in the future.
-  auto *nextBlock = Builder.createBasicBlock(newFunc);
-  curFunction()->entryTerminator = Builder.createBranchInst(nextBlock);
-  Builder.setInsertionBlock(nextBlock);
 }
 
 void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
@@ -392,31 +390,9 @@ void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
     Builder.createReturnInst(returnValue);
   }
 
-  // If Entry is the only user of nextBlock, merge Entry and nextBlock, to
-  // create less "noise" when optimization is disabled.
-  BasicBlock *nextBlock = nullptr;
-
-  if (curFunction()->entryTerminator->getNumSuccessors() == 1)
-    nextBlock = curFunction()->entryTerminator->getSuccessor(0);
-
-  if (nextBlock->getNumUsers() == 1 &&
-      nextBlock->hasUser(curFunction()->entryTerminator)) {
-    DEBUG(dbgs() << "Merging entry and nextBlock.\n");
-
-    // Move all instructions from nextBlock into Entry.
-    while (nextBlock->begin() != nextBlock->end())
-      nextBlock->begin()->moveBefore(curFunction()->entryTerminator);
-
-    // Now we can delete the original terminator;
-    curFunction()->entryTerminator->eraseFromParent();
-    curFunction()->entryTerminator = nullptr;
-
-    // Delete the now empty next block
-    nextBlock->eraseFromParent();
-    nextBlock = nullptr;
-  } else {
-    DEBUG(dbgs() << "Could not merge entry and nextBlock.\n");
-  }
+  // Delete CreateArgumentsInst if it is unused.
+  if (!curFunction()->createArgumentsInst->hasUsers())
+    curFunction()->createArgumentsInst->eraseFromParent();
 
   curFunction()->function->clearStatementCount();
 }
