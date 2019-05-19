@@ -706,44 +706,30 @@ inline bool StringPrimitive::isASCII() const {
   // return getKind() == CellKind::DynamicASCIIStringPrimitiveKind ||
   //        getKind() == CellKind::ExternalASCIIStringPrimitiveKind;
   // We speed this up by making the assumption that the string primitive kinds
-  // are defined consecutively, in the order:
-  // CELL_KIND(DynamicUTF16StringPrimitive, "")
-  // CELL_KIND(DynamicASCIIStringPrimitive, "")
-  // CELL_KIND(ExternalUTF16StringPrimitive, "")
-  // CELL_KIND(ExternalASCIIStringPrimitive, "")
-  // We verify this:
+  // are defined consecutively, alternating between ASCII and UTF16.
+  // We statically enforce this:
   static_assert(
-      static_cast<unsigned>(CellKind::DynamicUTF16StringPrimitiveKind) + 1 ==
-          static_cast<unsigned>(CellKind::DynamicASCIIStringPrimitiveKind),
-      "kind order assumption");
-  static_assert(
-      static_cast<unsigned>(CellKind::DynamicASCIIStringPrimitiveKind) + 1 ==
-          static_cast<unsigned>(CellKind::ExternalUTF16StringPrimitiveKind),
-      "kind order assumption");
-  static_assert(
-      static_cast<unsigned>(CellKind::ExternalUTF16StringPrimitiveKind) + 1 ==
-          static_cast<unsigned>(CellKind::ExternalASCIIStringPrimitiveKind),
-      "kind order assumption");
+      cellKindsContiguousAscending(
+          CellKind::DynamicUTF16StringPrimitiveKind,
+          CellKind::DynamicASCIIStringPrimitiveKind,
+          CellKind::ExternalUTF16StringPrimitiveKind,
+          CellKind::ExternalASCIIStringPrimitiveKind),
+      "Cell kinds in unexpected order");
   // Given this assumption, the ASCII versions are either both odd or both
   // even.
-  return (static_cast<unsigned>(getKind()) & 0x1) ==
-      (static_cast<unsigned>(CellKind::DynamicASCIIStringPrimitiveKind) & 0x1);
+  return (static_cast<uint32_t>(getKind()) & 1u) ==
+      (static_cast<uint32_t>(CellKind::DynamicASCIIStringPrimitiveKind) & 1u);
 }
 
 inline bool StringPrimitive::isExternal() const {
   // We require that external cell kinds be larger than dynamic cell kinds.
   static_assert(
-      CellKind::DynamicUTF16StringPrimitiveKind <
+      cellKindsContiguousAscending(
+          CellKind::DynamicUTF16StringPrimitiveKind,
           CellKind::DynamicASCIIStringPrimitiveKind,
-      "kind order assumption");
-  static_assert(
-      CellKind::DynamicASCIIStringPrimitiveKind <
           CellKind::ExternalUTF16StringPrimitiveKind,
-      "kind order assumption");
-  static_assert(
-      CellKind::ExternalUTF16StringPrimitiveKind <
-          CellKind::ExternalASCIIStringPrimitiveKind,
-      "kind order assumption");
+          CellKind::ExternalASCIIStringPrimitiveKind),
+      "Cell kinds in unexpected order");
   return getKind() >= CellKind::ExternalUTF16StringPrimitiveKind;
 }
 

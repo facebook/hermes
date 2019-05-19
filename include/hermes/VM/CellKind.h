@@ -7,6 +7,8 @@
 #ifndef HERMES_VM_CELLKIND_H
 #define HERMES_VM_CELLKIND_H
 
+#include <type_traits>
+
 namespace hermes {
 namespace vm {
 
@@ -22,6 +24,20 @@ enum class CellKind {
 /// between \p from and \p to.
 inline bool kindInRange(CellKind value, CellKind from, CellKind to) {
   return value >= from && value <= to;
+}
+
+/// \return whether a sequence of CellKinds is contiguous ascending
+/// (like 3, 4, 5, 6).
+constexpr bool cellKindsContiguousAscending(CellKind v1, CellKind v2) {
+  using raw_t = typename std::underlying_type<CellKind>::type;
+  return static_cast<raw_t>(v1) + 1 == static_cast<raw_t>(v2);
+}
+
+template <typename... T>
+constexpr bool
+cellKindsContiguousAscending(CellKind v1, CellKind v2, T... rest) {
+  return cellKindsContiguousAscending(v1, v2) &&
+      cellKindsContiguousAscending(v2, rest...);
 }
 
 const char *cellKindStr(CellKind kind);
