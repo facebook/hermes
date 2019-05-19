@@ -89,10 +89,11 @@ class JSWeakMapImpl;
 template <CellKind C>
 struct IsGCObject<JSWeakMapImpl<C>> : public std::true_type {};
 
-template <typename T>
+template <typename T, bool Uniqued>
 class DynamicStringPrimitive;
-template <typename T>
-struct IsGCObject<DynamicStringPrimitive<T>> : public std::true_type {};
+template <typename T, bool Uniqued>
+struct IsGCObject<DynamicStringPrimitive<T, Uniqued>> : public std::true_type {
+};
 
 template <typename T, bool isGCObject = IsGCObject<T>::value>
 struct HermesValueTraits;

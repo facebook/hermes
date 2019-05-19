@@ -23,6 +23,27 @@ void DynamicASCIIStringPrimitiveBuildMeta(
 void DynamicUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {}
+
+/// There is no SymbolStringPrimitiveCellKind, but we factor this into a
+/// function so that the subclasses can share it and so only one friend
+/// declaration is required.
+void symbolStringPrimitiveBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  const auto *self = static_cast<const SymbolStringPrimitive *>(cell);
+  mb.addField("uniqueID", &self->uniqueID_);
+}
+
+void DynamicUniquedASCIIStringPrimitiveBuildMeta(
+    const GCCell *cell,
+    Metadata::Builder &mb) {
+  symbolStringPrimitiveBuildMeta(cell, mb);
+}
+
+void DynamicUniquedUTF16StringPrimitiveBuildMeta(
+    const GCCell *cell,
+    Metadata::Builder &mb) {
+  symbolStringPrimitiveBuildMeta(cell, mb);
+}
+
 void ExternalASCIIStringPrimitiveBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {}
@@ -191,56 +212,50 @@ StringView StringPrimitive::createStringViewMustBeFlat(
   return StringView(self);
 }
 
-template <typename T>
-DynamicStringPrimitive<T>::DynamicStringPrimitive(Runtime *runtime, Ref src)
+template <typename T, bool Uniqued>
+DynamicStringPrimitive<T, Uniqued>::DynamicStringPrimitive(
+    Runtime *runtime,
+    Ref src)
     : DynamicStringPrimitive(runtime, (uint32_t)src.size()) {
   hermes::uninitializedCopy(
       src.begin(), src.end(), this->template getTrailingObjects<T>());
 }
 
-template <typename T>
-DynamicStringPrimitive<T>::DynamicStringPrimitive(
-    Runtime *runtime,
-    Ref src,
-    SymbolID uniqueID)
-    : DynamicStringPrimitive(runtime, (uint32_t)src.size(), uniqueID) {
-  hermes::uninitializedCopy(
-      src.begin(), src.end(), this->template getTrailingObjects<T>());
-}
-
-template <typename T>
-CallResult<HermesValue> DynamicStringPrimitive<T>::create(
+template <typename T, bool Uniqued>
+CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::create(
     Runtime *runtime,
     Ref str) {
   assert(!isExternalLength(str.size()) && "length should not be external");
   void *mem =
       runtime->alloc</*fixedSize*/ false>(allocationSize((uint32_t)str.size()));
   return HermesValue::encodeStringValue(
-      (new (mem) DynamicStringPrimitive<T>(runtime, str)));
+      (new (mem) DynamicStringPrimitive<T, Uniqued>(runtime, str)));
 }
 
-template <typename T>
-CallResult<HermesValue> DynamicStringPrimitive<T>::createLongLived(
+template <typename T, bool Uniqued>
+CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::createLongLived(
     Runtime *runtime,
     Ref str) {
   assert(!isExternalLength(str.size()) && "length should not be external");
   void *mem = runtime->allocLongLived(allocationSize((uint32_t)str.size()));
   return HermesValue::encodeStringValue(
-      (new (mem) DynamicStringPrimitive<T>(runtime, str)));
+      (new (mem) DynamicStringPrimitive<T, Uniqued>(runtime, str)));
 }
 
-template <typename T>
-CallResult<HermesValue> DynamicStringPrimitive<T>::create(
+template <typename T, bool Uniqued>
+CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::create(
     Runtime *runtime,
     uint32_t length) {
   assert(!isExternalLength(length) && "length should not be external");
   void *mem = runtime->alloc</*fixedSize*/ false>(allocationSize(length));
   return HermesValue::encodeStringValue(
-      (new (mem) DynamicStringPrimitive<T>(runtime, length)));
+      (new (mem) DynamicStringPrimitive<T, Uniqued>(runtime, length)));
 }
 
-template class DynamicStringPrimitive<char16_t>;
-template class DynamicStringPrimitive<char>;
+template class DynamicStringPrimitive<char16_t, true /* Uniqued */>;
+template class DynamicStringPrimitive<char, true /* Uniqued */>;
+template class DynamicStringPrimitive<char16_t, false /* not Uniqued */>;
+template class DynamicStringPrimitive<char, false /* not Uniqued */>;
 
 template <typename T>
 ExternalStringPrimitive<T>::ExternalStringPrimitive(Runtime *runtime, Ref src)

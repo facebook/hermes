@@ -220,17 +220,16 @@ IdentifierTable::allocateDynamicString(
     result = createPseudoHandle<StringPrimitive>(tmpResult);
   } else {
     void *mem = runtime->allocLongLived(
-        DynamicStringPrimitive<T>::allocationSize((uint32_t)length, Unique));
+        DynamicStringPrimitive<T, Unique>::allocationSize((uint32_t)length));
     // Since we keep a raw pointer to mem, no more JS heap allocations after
     // this point.
     if (primHandle) {
       str = primHandle->getStringRef<T>();
     }
-    DynamicStringPrimitive<T> *tmpResult = Unique
-        ? new (mem) DynamicStringPrimitive<T>(runtime, length, strId)
-        : new (mem) DynamicStringPrimitive<T>(runtime, length);
-    ptrForWrite = tmpResult->getRawPointerForWrite();
-    result = createPseudoHandle<StringPrimitive>(tmpResult);
+    auto *tmp =
+        new (mem) DynamicStringPrimitive<T, Unique>(runtime, length, strId);
+    ptrForWrite = tmp->getRawPointerForWrite();
+    result = createPseudoHandle<StringPrimitive>(tmp);
   }
   std::copy(str.data(), str.data() + str.size(), ptrForWrite);
   return std::move(result);

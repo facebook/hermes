@@ -1831,6 +1831,7 @@ void GenGC::sizeDiagnosticCensus() {
         static_cast<int>(cell->isVariableSize());
 
     if (cell->getKind() == CellKind::DynamicASCIIStringPrimitiveKind ||
+        cell->getKind() == CellKind::DynamicUniquedASCIIStringPrimitiveKind ||
         cell->getKind() == CellKind::ExternalASCIIStringPrimitiveKind) {
       acceptor.diagnostic.asciiStr.count++;
       auto *strprim = vmcast<StringPrimitive>(cell);
@@ -1840,6 +1841,7 @@ void GenGC::sizeDiagnosticCensus() {
       acceptor.diagnostic.asciiStr.totalChars += strprim->getStringLength();
     } else if (
         cell->getKind() == CellKind::DynamicUTF16StringPrimitiveKind ||
+        cell->getKind() == CellKind::DynamicUniquedUTF16StringPrimitiveKind ||
         cell->getKind() == CellKind::ExternalUTF16StringPrimitiveKind) {
       acceptor.diagnostic.utf16Str.count++;
       auto *strprim = vmcast<StringPrimitive>(cell);

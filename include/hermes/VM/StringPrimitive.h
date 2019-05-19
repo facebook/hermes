@@ -16,6 +16,8 @@
 
 #include "llvm/Support/TrailingObjects.h"
 
+#include <type_traits>
+
 namespace hermes {
 namespace vm {
 
@@ -268,32 +270,81 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// it is safe to call this function which guarantees to not trigger gc.
   static StringView createStringViewMustBeFlat(Handle<StringPrimitive> self);
 
-  /// Set the unique id. This shouldn't usually be done.
+ protected:
+  /// Set the unique id. This should normally only be done immediately after
+  /// construction. This requires and asserts that the string is uniqued.
   void updateUniqueID(SymbolID id);
 
-  /// \return the unique id
+  /// \return the unique id.
+  /// This requires and asserts that the string is uniqued.
   SymbolID getUniqueID() const;
 };
 
+/// A subclass of StringPrimitive which stores a SymbolID.
+class SymbolStringPrimitive : public StringPrimitive {
+  SymbolID uniqueID_{};
+
+  friend void symbolStringPrimitiveBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
+
+ public:
+  explicit SymbolStringPrimitive(
+      Runtime *runtime,
+      const VTable *vt,
+      uint32_t cellSize,
+      uint32_t length)
+      : StringPrimitive(runtime, vt, cellSize, length | (1u << 31)) {}
+
+  static bool classof(const GCCell *cell) {
+    return kindInRange(
+        cell->getKind(),
+        CellKind::DynamicUniquedUTF16StringPrimitiveKind,
+        CellKind::DynamicUniquedASCIIStringPrimitiveKind);
+  }
+
+  /// Set the unique id. This should normally only be done immediately after
+  /// construction.
+  void updateUniqueID(SymbolID id) {
+    assert(isUniqued() && "StringPrimitive is not uniqued");
+    uniqueID_ = id;
+  }
+
+  /// \return the unique id.
+  SymbolID getUniqueID() const {
+    assert(isUniqued() && "StringPrimitive is not uniqued");
+    return uniqueID_;
+  }
+};
+
+/// A helper typedef which is either SymbolStringPrimitive or StringPrimitive.
+template <bool Uniqued>
+using OptSymbolStringPrimitive = typename std::
+    conditional<Uniqued, SymbolStringPrimitive, StringPrimitive>::type;
+
 /// An immutable JavaScript primitive string consisting of length and
-/// characters (either char or char16).
+/// characters (either char or char16), optionally Uniqued.
 /// The storage is allocated in and managed by the GC.
-template <typename T>
+template <typename T, bool Uniqued>
 class DynamicStringPrimitive final
-    : public StringPrimitive,
-      private llvm::TrailingObjects<DynamicStringPrimitive<T>, T, uint32_t> {
+    : public OptSymbolStringPrimitive<Uniqued>,
+      private llvm::TrailingObjects<DynamicStringPrimitive<T, Uniqued>, T> {
   friend class IdentifierTable;
-  friend class llvm::TrailingObjects<DynamicStringPrimitive<T>, T, uint32_t>;
+  friend class llvm::TrailingObjects<DynamicStringPrimitive<T, Uniqued>, T>;
   friend class StringBuilder;
   friend class StringPrimitive;
+  using OptSymbolStringPrimitive<Uniqued>::isExternalLength;
+  using OptSymbolStringPrimitive<Uniqued>::getStringLength;
 
   using Ref = llvm::ArrayRef<T>;
 
   /// \return the cell kind for this string.
   static constexpr CellKind getCellKind() {
     return std::is_same<T, char16_t>::value
-        ? CellKind::DynamicUTF16StringPrimitiveKind
-        : CellKind::DynamicASCIIStringPrimitiveKind;
+        ? (Uniqued ? CellKind::DynamicUniquedUTF16StringPrimitiveKind
+                   : CellKind::DynamicUTF16StringPrimitiveKind)
+        : (Uniqued ? CellKind::DynamicUniquedASCIIStringPrimitiveKind
+                   : CellKind::DynamicASCIIStringPrimitiveKind);
   }
 
  public:
@@ -301,35 +352,31 @@ class DynamicStringPrimitive final
     return cell->getKind() == DynamicStringPrimitive::getCellKind();
   }
 
- protected:
-  size_t numTrailingObjects(
-      typename DynamicStringPrimitive::template OverloadToken<T>) const {
-    return getStringLength();
-  }
-
  private:
   static const VTable vt;
 
-  explicit DynamicStringPrimitive(Runtime *runtime, uint32_t length)
-      : StringPrimitive(runtime, &vt, allocationSize(length), length) {
-    assert(!isExternalLength(length) && "length should not be external");
-  }
-
-  DynamicStringPrimitive(Runtime *runtime, uint32_t length, SymbolID uniqueID)
-      : StringPrimitive(
+  /// Construct from a DynamicStringPrimitive, perhaps with a SymbolID.
+  /// If a non-empty SymbolID is provided, we must be a Uniqued string.
+  explicit DynamicStringPrimitive(
+      Runtime *runtime,
+      uint32_t length,
+      SymbolID id = {})
+      : OptSymbolStringPrimitive<Uniqued>(
             runtime,
             &vt,
-            allocationSize(length, true),
-            length | (1u << 31)) {
+            allocationSize(length),
+            length) {
     assert(!isExternalLength(length) && "length should not be external");
-    *(this->template getTrailingObjects<uint32_t>()) = uniqueID.unsafeGetRaw();
+    if (Uniqued) {
+      this->updateUniqueID(id);
+    } else {
+      assert(
+          id == SymbolID::empty() &&
+          "Non-Uniqued string passed a valid SymbolID");
+    }
   }
 
   explicit DynamicStringPrimitive(Runtime *runtime, Ref src);
-
-  /// Construct an object initializing it with a copy of the passed UTF16
-  /// string and a specified ID.
-  DynamicStringPrimitive(Runtime *runtime, Ref src, SymbolID uniqueID);
 
   /// Copy a UTF-16 sequence into a new StringPrim. Throw \c RangeError if the
   /// string is longer than \c MAX_STRING_LENGTH characters. The new string is
@@ -346,10 +393,10 @@ class DynamicStringPrimitive final
   /// \c CallResult<HermesValue>. This should only be used by StringBuilder.
   static CallResult<HermesValue> create(Runtime *runtime, uint32_t length);
 
-  /// Calculate the allocation size of a StringPrimitive given character length.
-  static uint32_t allocationSize(uint32_t length, bool isUniqued = false) {
-    return DynamicStringPrimitive::template totalSizeToAlloc<T, uint32_t>(
-        length, (size_t)isUniqued);
+  /// Calculate the allocation size of a StringPrimitive given character
+  /// length.
+  static uint32_t allocationSize(uint32_t length) {
+    return DynamicStringPrimitive::template totalSizeToAlloc<T>(length);
   }
 
   const T *getRawPointer() const {
@@ -506,12 +553,21 @@ class ExternalStringPrimitive final : public ExternalStringPrimitiveBase {
   T *contents_{nullptr};
 };
 
-template <typename T>
-const VTable DynamicStringPrimitive<T>::vt =
-    VTable(DynamicStringPrimitive<T>::getCellKind(), 0, nullptr, nullptr);
+template <typename T, bool Uniqued>
+const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
+    DynamicStringPrimitive<T, Uniqued>::getCellKind(),
+    0,
+    nullptr,
+    nullptr);
 
-using DynamicUTF16StringPrimitive = DynamicStringPrimitive<char16_t>;
-using DynamicASCIIStringPrimitive = DynamicStringPrimitive<char>;
+using DynamicUTF16StringPrimitive =
+    DynamicStringPrimitive<char16_t, false /* not Uniqued */>;
+using DynamicASCIIStringPrimitive =
+    DynamicStringPrimitive<char, false /* not Uniqued */>;
+using DynamicUniquedUTF16StringPrimitive =
+    DynamicStringPrimitive<char16_t, true /* Uniqued */>;
+using DynamicUniquedASCIIStringPrimitive =
+    DynamicStringPrimitive<char, true /* Uniqued */>;
 
 template <typename T>
 const VTable ExternalStringPrimitive<T>::vt = VTable(
@@ -563,9 +619,9 @@ StringPrimitive::create(Runtime *runtime, uint32_t length, bool asciiNotUTF16) {
       "External string threshold should be smaller than max string size.");
   if (LLVM_LIKELY(!isExternalLength(length))) {
     if (asciiNotUTF16) {
-      return DynamicStringPrimitive<char>::create(runtime, length);
+      return DynamicASCIIStringPrimitive::create(runtime, length);
     } else {
-      return DynamicStringPrimitive<char16_t>::create(runtime, length);
+      return DynamicUTF16StringPrimitive::create(runtime, length);
     }
   } else {
     if (asciiNotUTF16) {
@@ -583,7 +639,7 @@ inline CallResult<HermesValue> StringPrimitive::create(
       EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
       "External string threshold should be smaller than max string size.");
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
-    return DynamicStringPrimitive<char>::create(runtime, str);
+    return DynamicASCIIStringPrimitive::create(runtime, str);
   } else {
     return ExternalStringPrimitive<char>::create(runtime, str);
   }
@@ -596,7 +652,7 @@ inline CallResult<HermesValue> StringPrimitive::create(
       EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
       "External string threshold should be smaller than max string size.");
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
-    return DynamicStringPrimitive<char16_t>::create(runtime, str);
+    return DynamicUTF16StringPrimitive::create(runtime, str);
   } else {
     return ExternalStringPrimitive<char16_t>::create(runtime, str);
   }
@@ -609,7 +665,7 @@ inline CallResult<HermesValue> StringPrimitive::createLongLived(
       EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
       "External string threshold should be smaller than max string size.");
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
-    return DynamicStringPrimitive<char>::createLongLived(runtime, str);
+    return DynamicASCIIStringPrimitive::createLongLived(runtime, str);
   } else {
     return ExternalStringPrimitive<char>::createLongLived(runtime, str);
   }
@@ -622,56 +678,58 @@ inline CallResult<HermesValue> StringPrimitive::createLongLived(
       EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
       "External string threshold should be smaller than max string size.");
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
-    return DynamicStringPrimitive<char16_t>::createLongLived(runtime, str);
+    return DynamicUTF16StringPrimitive::createLongLived(runtime, str);
   } else {
     return ExternalStringPrimitive<char16_t>::createLongLived(runtime, str);
   }
 }
 
 inline const char *StringPrimitive::castToASCIIPointer() const {
-  if (LLVM_LIKELY(!isExternal())) {
-    return vmcast<DynamicASCIIStringPrimitive>(this)->getRawPointer();
-  } else {
+  if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalASCIIStringPrimitive>(this)->getRawPointer();
+  } else if (isUniqued()) {
+    return vmcast<DynamicUniquedASCIIStringPrimitive>(this)->getRawPointer();
+  } else {
+    return vmcast<DynamicASCIIStringPrimitive>(this)->getRawPointer();
   }
 }
 
 inline const char16_t *StringPrimitive::castToUTF16Pointer() const {
-  if (LLVM_LIKELY(!isExternal())) {
-    return vmcast<DynamicUTF16StringPrimitive>(this)->getRawPointer();
-  } else {
+  if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalUTF16StringPrimitive>(this)->getRawPointer();
+  } else if (isUniqued()) {
+    return vmcast<DynamicUniquedUTF16StringPrimitive>(this)->getRawPointer();
+  } else {
+    return vmcast<DynamicUTF16StringPrimitive>(this)->getRawPointer();
   }
 }
 
 inline char *StringPrimitive::castToASCIIPointerForWrite() {
-  if (LLVM_LIKELY(!isExternal())) {
-    return vmcast<DynamicASCIIStringPrimitive>(this)->getRawPointerForWrite();
-  } else {
+  if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalASCIIStringPrimitive>(this)->getRawPointerForWrite();
+  } else if (isUniqued()) {
+    return vmcast<DynamicUniquedASCIIStringPrimitive>(this)
+        ->getRawPointerForWrite();
+  } else {
+    return vmcast<DynamicASCIIStringPrimitive>(this)->getRawPointerForWrite();
   }
 }
 
 inline char16_t *StringPrimitive::castToUTF16PointerForWrite() {
-  if (LLVM_LIKELY(!isExternal())) {
-    return vmcast<DynamicUTF16StringPrimitive>(this)->getRawPointerForWrite();
-  } else {
+  if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalUTF16StringPrimitive>(this)->getRawPointerForWrite();
+  } else if (isUniqued()) {
+    return vmcast<DynamicUniquedUTF16StringPrimitive>(this)
+        ->getRawPointerForWrite();
+  } else {
+    return vmcast<DynamicUTF16StringPrimitive>(this)->getRawPointerForWrite();
   }
 }
 
 inline SymbolID StringPrimitive::getUniqueID() const {
-  assert(this->isUniqued() && "String is not uniqued");
+  assert(this->isUniqued() && "StringPrimitive is not uniqued");
   if (LLVM_LIKELY(!isExternal())) {
-    if (isASCII()) {
-      return SymbolID::unsafeCreate(
-          *vmcast<DynamicASCIIStringPrimitive>(this)
-               ->template getTrailingObjects<uint32_t>());
-    } else {
-      return SymbolID::unsafeCreate(
-          *vmcast<DynamicUTF16StringPrimitive>(this)
-               ->template getTrailingObjects<uint32_t>());
-    }
+    return vmcast<SymbolStringPrimitive>(this)->getUniqueID();
   } else {
     return vmcast<ExternalStringPrimitiveBase>(this)->uniqueID_;
   }
@@ -680,13 +738,7 @@ inline SymbolID StringPrimitive::getUniqueID() const {
 inline void StringPrimitive::updateUniqueID(SymbolID id) {
   assert(this->isUniqued() && "String is not uniqued");
   if (LLVM_LIKELY(!isExternal())) {
-    if (isASCII()) {
-      *vmcast<DynamicASCIIStringPrimitive>(this)
-           ->template getTrailingObjects<uint32_t>() = id.unsafeGetRaw();
-    } else {
-      *vmcast<DynamicUTF16StringPrimitive>(this)
-           ->template getTrailingObjects<uint32_t>() = id.unsafeGetRaw();
-    }
+    vmcast<SymbolStringPrimitive>(this)->updateUniqueID(id);
   } else {
     vmcast<ExternalStringPrimitiveBase>(this)->uniqueID_ = id;
   }
@@ -704,6 +756,7 @@ inline char16_t StringPrimitive::at(uint32_t index) const {
 inline bool StringPrimitive::isASCII() const {
   // Abstractly, we're doing the following test:
   // return getKind() == CellKind::DynamicASCIIStringPrimitiveKind ||
+  //        getKind() == CellKind::DynamicUniquedASCIIStringPrimitiveKind ||
   //        getKind() == CellKind::ExternalASCIIStringPrimitiveKind;
   // We speed this up by making the assumption that the string primitive kinds
   // are defined consecutively, alternating between ASCII and UTF16.
@@ -712,6 +765,8 @@ inline bool StringPrimitive::isASCII() const {
       cellKindsContiguousAscending(
           CellKind::DynamicUTF16StringPrimitiveKind,
           CellKind::DynamicASCIIStringPrimitiveKind,
+          CellKind::DynamicUniquedUTF16StringPrimitiveKind,
+          CellKind::DynamicUniquedASCIIStringPrimitiveKind,
           CellKind::ExternalUTF16StringPrimitiveKind,
           CellKind::ExternalASCIIStringPrimitiveKind),
       "Cell kinds in unexpected order");
@@ -727,6 +782,8 @@ inline bool StringPrimitive::isExternal() const {
       cellKindsContiguousAscending(
           CellKind::DynamicUTF16StringPrimitiveKind,
           CellKind::DynamicASCIIStringPrimitiveKind,
+          CellKind::DynamicUniquedUTF16StringPrimitiveKind,
+          CellKind::DynamicUniquedASCIIStringPrimitiveKind,
           CellKind::ExternalUTF16StringPrimitiveKind,
           CellKind::ExternalASCIIStringPrimitiveKind),
       "Cell kinds in unexpected order");
@@ -735,8 +792,15 @@ inline bool StringPrimitive::isExternal() const {
 
 template <typename T>
 inline ArrayRef<T> StringPrimitive::getStringRef() const {
-  return isExternal() ? vmcast<ExternalStringPrimitive<T>>(this)->getStringRef()
-                      : vmcast<DynamicStringPrimitive<T>>(this)->getStringRef();
+  if (isExternal()) {
+    return vmcast<ExternalStringPrimitive<T>>(this)->getStringRef();
+  } else if (isUniqued()) {
+    return vmcast<DynamicStringPrimitive<T, true /* Uniqued */>>(this)
+        ->getStringRef();
+  } else {
+    return vmcast<DynamicStringPrimitive<T, false /* not Uniqued */>>(this)
+        ->getStringRef();
+  }
 }
 
 /*static*/

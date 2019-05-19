@@ -28,9 +28,11 @@ MetadataTableForTests getMetadataTable() {
       Metadata(), // Uninitialized
       Metadata(), // FillerCell
       Metadata(), // DynamicUTF16StringPrimitive
-      Metadata(), // DynamicAsciiStringPrimitive
+      Metadata(), // DynamicASCIIStringPrimitive
+      Metadata(), // DynamicUniquedUTF16StringPrimitive
+      Metadata(), // DynamicUniquedASCIIStringPrimitive
       Metadata(), // ExternalUTF16StringPrimitive
-      Metadata() // ExternalAsciiStringPrimitive
+      Metadata(), // ExternalASCIIStringPrimitive
   };
   return MetadataTableForTests(storage);
 }
