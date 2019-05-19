@@ -275,30 +275,6 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   SymbolID getUniqueID() const;
 };
 
-/// A trait to map from StringPrimitive template types to CellKind.
-template <bool external, typename T>
-struct StringPrimTrait {};
-
-template <>
-struct StringPrimTrait</*external*/ false, char> {
-  static constexpr CellKind kind = CellKind::DynamicASCIIStringPrimitiveKind;
-};
-
-template <>
-struct StringPrimTrait</*external*/ false, char16_t> {
-  static constexpr CellKind kind = CellKind::DynamicUTF16StringPrimitiveKind;
-};
-
-template <>
-struct StringPrimTrait</*external*/ true, char> {
-  static constexpr CellKind kind = CellKind::ExternalASCIIStringPrimitiveKind;
-};
-
-template <>
-struct StringPrimTrait</*external*/ true, char16_t> {
-  static constexpr CellKind kind = CellKind::ExternalUTF16StringPrimitiveKind;
-};
-
 /// An immutable JavaScript primitive string consisting of length and
 /// characters (either char or char16).
 /// The storage is allocated in and managed by the GC.
@@ -313,9 +289,16 @@ class DynamicStringPrimitive final
 
   using Ref = llvm::ArrayRef<T>;
 
+  /// \return the cell kind for this string.
+  static constexpr CellKind getCellKind() {
+    return std::is_same<T, char16_t>::value
+        ? CellKind::DynamicUTF16StringPrimitiveKind
+        : CellKind::DynamicASCIIStringPrimitiveKind;
+  }
+
  public:
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == StringPrimTrait</*external*/ false, T>::kind;
+    return cell->getKind() == DynamicStringPrimitive::getCellKind();
   }
 
  protected:
@@ -432,9 +415,16 @@ class ExternalStringPrimitive final : public ExternalStringPrimitiveBase {
 
   using Ref = llvm::ArrayRef<T>;
 
+  /// \return the cell kind for this string.
+  static constexpr CellKind getCellKind() {
+    return std::is_same<T, char16_t>::value
+        ? CellKind::ExternalUTF16StringPrimitiveKind
+        : CellKind::ExternalASCIIStringPrimitiveKind;
+  }
+
  public:
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == StringPrimTrait</*external*/ true, T>::kind;
+    return cell->getKind() == ExternalStringPrimitive::getCellKind();
   }
 
  private:
@@ -518,14 +508,14 @@ class ExternalStringPrimitive final : public ExternalStringPrimitiveBase {
 
 template <typename T>
 const VTable DynamicStringPrimitive<T>::vt =
-    VTable(StringPrimTrait</*external*/ false, T>::kind, 0, nullptr, nullptr);
+    VTable(DynamicStringPrimitive<T>::getCellKind(), 0, nullptr, nullptr);
 
 using DynamicUTF16StringPrimitive = DynamicStringPrimitive<char16_t>;
 using DynamicASCIIStringPrimitive = DynamicStringPrimitive<char>;
 
 template <typename T>
 const VTable ExternalStringPrimitive<T>::vt = VTable(
-    StringPrimTrait</*external*/ true, T>::kind,
+    ExternalStringPrimitive<T>::getCellKind(),
     sizeof(ExternalStringPrimitive<T>),
     ExternalStringPrimitive<T>::_finalizeImpl,
     nullptr, // markWeak.

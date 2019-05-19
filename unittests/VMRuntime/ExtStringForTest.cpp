@@ -16,10 +16,9 @@
 namespace hermes {
 namespace vm {
 
-const VTable ExtStringForTest::vt{
-    StringPrimTrait</*external*/ true, char>::kind,
-    heapAlignSize(sizeof(ExtStringForTest)),
-    ExtStringForTest::_finalizeImpl};
+const VTable ExtStringForTest::vt{ExternalStringPrimitive<char>::getCellKind(),
+                                  heapAlignSize(sizeof(ExtStringForTest)),
+                                  ExtStringForTest::_finalizeImpl};
 
 void ExtStringForTest::_finalizeImpl(GCCell *cell, GC *gc) {
   ExtStringForTest *self = vmcast<ExtStringForTest>(cell);
