@@ -61,9 +61,10 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       Runtime *runtime,
       const VTable *vt,
       uint32_t cellSize,
-      uint32_t length)
+      uint32_t length,
+      bool uniqued)
       : VariableSizeRuntimeCell(&runtime->getHeap(), vt, cellSize),
-        length(length) {}
+        length(length | (uniqued ? (1u << 31) : 0)) {}
 
   /// Returns true if a string of the given \p length should be allocated as an
   /// external string, outside the JS heap. Note that some external strings may
@@ -281,6 +282,9 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 };
 
 /// A subclass of StringPrimitive which stores a SymbolID.
+/// Note that not all SymbolStringPrimitive are uniqued.
+/// All ExternalStringPrimitives store a Symbol, but only those marked as
+/// uniqued will use it.
 class SymbolStringPrimitive : public StringPrimitive {
   SymbolID uniqueID_{};
 
@@ -289,18 +293,20 @@ class SymbolStringPrimitive : public StringPrimitive {
       Metadata::Builder &mb);
 
  public:
-  explicit SymbolStringPrimitive(
-      Runtime *runtime,
-      const VTable *vt,
-      uint32_t cellSize,
-      uint32_t length)
-      : StringPrimitive(runtime, vt, cellSize, length | (1u << 31)) {}
+  using StringPrimitive::StringPrimitive;
 
   static bool classof(const GCCell *cell) {
+    static_assert(
+        cellKindsContiguousAscending(
+            CellKind::DynamicUniquedUTF16StringPrimitiveKind,
+            CellKind::DynamicUniquedASCIIStringPrimitiveKind,
+            CellKind::ExternalUTF16StringPrimitiveKind,
+            CellKind::ExternalASCIIStringPrimitiveKind),
+        "Unexpected CellKind ordering");
     return kindInRange(
         cell->getKind(),
         CellKind::DynamicUniquedUTF16StringPrimitiveKind,
-        CellKind::DynamicUniquedASCIIStringPrimitiveKind);
+        CellKind::ExternalASCIIStringPrimitiveKind);
   }
 
   /// Set the unique id. This should normally only be done immediately after
@@ -365,7 +371,8 @@ class DynamicStringPrimitive final
             runtime,
             &vt,
             allocationSize(length),
-            length) {
+            length,
+            Uniqued) {
     assert(!isExternalLength(length) && "length should not be external");
     if (Uniqued) {
       this->updateUniqueID(id);
@@ -416,32 +423,6 @@ class DynamicStringPrimitive final
   }
 };
 
-/// A common base class for the instantiations of ExternalStringPrimitive,
-/// below, so these can access fields (currently just one) that do not depend
-/// on the character type.
-class ExternalStringPrimitiveBase : public StringPrimitive {
-  friend class StringPrimitive;
-
- public:
-  ExternalStringPrimitiveBase(
-      Runtime *runtime,
-      const VTable *vt,
-      uint32_t cellSize,
-      uint32_t length,
-      SymbolID uniqueID = SymbolID::empty())
-      : StringPrimitive(runtime, vt, cellSize, length), uniqueID_(uniqueID){};
-
-  static bool classof(const GCCell *cell) {
-    return kindInRange(
-        cell->getKind(),
-        CellKind::ExternalUTF16StringPrimitiveKind,
-        CellKind::ExternalASCIIStringPrimitiveKind);
-  }
-
- protected:
-  SymbolID uniqueID_;
-};
-
 /// An immutable JavaScript primitive string consisting of length and a pointer
 /// to characters (either char or char16).  The storage is malloced; the object
 /// contains a pointer to that storage.  The object has a finalizer that
@@ -450,7 +431,7 @@ class ExternalStringPrimitiveBase : public StringPrimitive {
 /// are not actually variable-sized: we indicate that they are fixed-size in the
 /// metadata.
 template <typename T>
-class ExternalStringPrimitive final : public ExternalStringPrimitiveBase {
+class ExternalStringPrimitive final : public SymbolStringPrimitive {
   friend class IdentifierTable;
   friend class StringBuilder;
   friend class StringPrimitive;
@@ -481,23 +462,19 @@ class ExternalStringPrimitive final : public ExternalStringPrimitiveBase {
     return getStringLength() * sizeof(T);
   }
 
-  ExternalStringPrimitive(Runtime *runtime, uint32_t length)
-      : ExternalStringPrimitiveBase(
+  ExternalStringPrimitive(Runtime *runtime, uint32_t length, bool uniqued)
+      : SymbolStringPrimitive(
             runtime,
             &vt,
             sizeof(ExternalStringPrimitive<T>),
-            length) {
+            length,
+            uniqued) {
     contents_ = static_cast<T *>(checkedMalloc2(length, sizeof(T)));
   }
 
   ExternalStringPrimitive(Runtime *runtime, uint32_t length, SymbolID uniqueID)
-      : ExternalStringPrimitiveBase(
-            runtime,
-            &vt,
-            sizeof(ExternalStringPrimitive<T>),
-            length | (1u << 31),
-            uniqueID) {
-    contents_ = reinterpret_cast<T *>(checkedMalloc2(length, sizeof(T)));
+      : ExternalStringPrimitive(runtime, length, true /* uniqued */) {
+    updateUniqueID(uniqueID);
   }
 
   ExternalStringPrimitive(Runtime *runtime, Ref src);
@@ -728,20 +705,12 @@ inline char16_t *StringPrimitive::castToUTF16PointerForWrite() {
 
 inline SymbolID StringPrimitive::getUniqueID() const {
   assert(this->isUniqued() && "StringPrimitive is not uniqued");
-  if (LLVM_LIKELY(!isExternal())) {
-    return vmcast<SymbolStringPrimitive>(this)->getUniqueID();
-  } else {
-    return vmcast<ExternalStringPrimitiveBase>(this)->uniqueID_;
-  }
+  return vmcast<SymbolStringPrimitive>(this)->getUniqueID();
 }
 
 inline void StringPrimitive::updateUniqueID(SymbolID id) {
   assert(this->isUniqued() && "String is not uniqued");
-  if (LLVM_LIKELY(!isExternal())) {
-    vmcast<SymbolStringPrimitive>(this)->updateUniqueID(id);
-  } else {
-    vmcast<ExternalStringPrimitiveBase>(this)->uniqueID_ = id;
-  }
+  vmcast<SymbolStringPrimitive>(this)->updateUniqueID(id);
 }
 
 inline char16_t StringPrimitive::at(uint32_t index) const {

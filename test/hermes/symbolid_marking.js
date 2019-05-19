@@ -28,5 +28,11 @@ function tester(propname) {
 
 var a = "aa";
 var b = "bb";
-tester(a + b)
+tester(a + b);
 // CHECK: a
+
+// Test with a string long enough to be external.
+var x = "x";
+for (var i=0; i < 18; i++) x += x;
+tester(x);
+// CHECK: x

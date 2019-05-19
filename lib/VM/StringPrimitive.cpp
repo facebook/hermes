@@ -46,10 +46,15 @@ void DynamicUniquedUTF16StringPrimitiveBuildMeta(
 
 void ExternalASCIIStringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {}
+    Metadata::Builder &mb) {
+  symbolStringPrimitiveBuildMeta(cell, mb);
+}
+
 void ExternalUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {}
+    Metadata::Builder &mb) {
+  symbolStringPrimitiveBuildMeta(cell, mb);
+}
 
 CallResult<HermesValue> StringPrimitive::createEfficient(
     Runtime *runtime,
@@ -259,7 +264,10 @@ template class DynamicStringPrimitive<char, false /* not Uniqued */>;
 
 template <typename T>
 ExternalStringPrimitive<T>::ExternalStringPrimitive(Runtime *runtime, Ref src)
-    : ExternalStringPrimitive(runtime, (uint32_t)src.size()) {
+    : ExternalStringPrimitive(
+          runtime,
+          (uint32_t)src.size(),
+          false /* not uniqued */) {
   hermes::uninitializedCopy(src.begin(), src.end(), contents_);
 }
 
@@ -326,8 +334,9 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
   }
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       sizeof(ExternalStringPrimitive<T>));
-  auto res = HermesValue::encodeStringValue(
-      (new (mem) ExternalStringPrimitive<T>(runtime, length)));
+  auto res =
+      HermesValue::encodeStringValue((new (mem) ExternalStringPrimitive<T>(
+          runtime, length, false /* not uniqued */)));
   runtime->getHeap().creditExternalMemory(res.getString(), allocSize);
   return res;
 }
