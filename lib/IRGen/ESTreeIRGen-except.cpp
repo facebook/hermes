@@ -10,7 +10,7 @@ namespace hermes {
 namespace irgen {
 
 void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
-  DEBUG(dbgs() << "IRGen 'try' statement\n");
+  LLVM_DEBUG(dbgs() << "IRGen 'try' statement\n");
   auto *parent = Builder.getInsertionBlock()->getParent();
 
   // try-catch-finally statements must have been transformed by the validator

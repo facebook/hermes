@@ -161,13 +161,13 @@ bool BundlerUtils::isJSModuleRequires(Instruction *II, ModuleID &modId) {
 void BundlerUtils::findFunctionRequires(
     Function *F,
     llvm::DenseSet<ModuleID> &requires) {
-  DEBUG(dbgs() << "Function " << F->getInternalName() << " requires:\n");
+  LLVM_DEBUG(dbgs() << "Function " << F->getInternalName() << " requires:\n");
   for (BasicBlock &BB : *F) {
     for (Instruction &II : BB) {
       ModuleID modId;
       if (!isJSModuleRequires(&II, modId))
         continue;
-      DEBUG(dbgs() << " " << modId << "\n");
+      LLVM_DEBUG(dbgs() << " " << modId << "\n");
       // Record the required module; the same module could be required multiple
       // times. The set semantics of insert obviates a membership tests.
       requires.insert(modId);
@@ -240,14 +240,14 @@ void BundlerUtils::identifyInlineableJSModules() {
       llvm_unreachable("Expected to find module in the JSmoduleTable\n");
     }
 
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "JSModule# " << modId << ", "
                << (it->second)->getInternalName().str() << " is inlineable\n");
 
     inlineableJSmodules_.insert(modId);
   }
 
-  DEBUG(dbgs() << "digraph jsmodulesinlined {\n");
+  LLVM_DEBUG(dbgs() << "digraph jsmodulesinlined {\n");
   for (auto p : JSmoduleTable_) {
     ModuleID jsModId = p.first;
     auto it = importsMap_.find(jsModId);
@@ -256,17 +256,17 @@ void BundlerUtils::identifyInlineableJSModules() {
     llvm::DenseSet<ModuleID> &imports = it->second;
     for (ModuleID i : imports) {
       if (inlineableJSmodules_.count(i) != 0) {
-        DEBUG(
+        LLVM_DEBUG(
             dbgs() << "m" << i << " -> "
                    << "m" << jsModId << " [color=\"red\"];\n");
       } else {
-        DEBUG(
+        LLVM_DEBUG(
             dbgs() << "m" << i << " -> "
                    << "m" << jsModId << ";\n");
       }
     }
   }
-  DEBUG(dbgs() << "}\n");
+  LLVM_DEBUG(dbgs() << "}\n");
 }
 
 void BundlerUtils::createJSModuleDependencies(Module *M) {
@@ -282,7 +282,7 @@ void BundlerUtils::createJSModuleDependencies(Module *M) {
       JSmoduleTable_[modId] = F;
       revJSmoduleTable_[F] = modId;
 
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "JSModule# " << modId << " is "
                  << F->getInternalName().str() << "\n");
     }

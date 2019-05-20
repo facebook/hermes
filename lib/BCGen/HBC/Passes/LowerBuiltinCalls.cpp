@@ -138,7 +138,7 @@ static bool run(Function *F) {
       if (callInst->getNumArguments() > HBCCallBuiltinInst::MAX_ARGUMENTS)
         continue;
 
-      DEBUG(
+      LLVM_DEBUG(
           llvm::dbgs() << "Found builtin [" << *builtinIndex << "] "
                        << inst::getBuiltinMethodName(*builtinIndex) << "()\n");
 

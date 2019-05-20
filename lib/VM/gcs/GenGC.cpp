@@ -190,7 +190,7 @@ void GenGC::collect() {
   resetNumFinalizedObjectsInGens();
   cumPreBytes_ += used();
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "\nStarting (full, young=" << formatSize(youngGen_.size())
              << "; old=" << formatSize(oldGen_.size())
              << ") garbage collection # " << numCollections() << "\n");
@@ -244,7 +244,7 @@ void GenGC::collect() {
         oldGen_.growHigh(sizeConfig->ogSize - oldGen_.size());
 
         didResize();
-        DEBUG(
+        LLVM_DEBUG(
             dbgs() << "Increased heap size by " << sizeConfig->total() - oldSize
                    << " to " << formatSize(sizeConfig->total()) << "\n");
       }
@@ -272,7 +272,7 @@ void GenGC::collect() {
     cumPostBytes_ += usedAfter;
     fullGCSystraceRegion.addArg("fullGCUsedAfter", usedAfter);
 
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "End (full) garbage collection. numCollected="
                << numCollectedObjects_
                << "; wall time=" << formatSecs(wallElapsedSecs)
@@ -549,7 +549,7 @@ void GenGC::markSymbol(SymbolID symbolID) {
   if (!markedSymbols_[index]) {
     markedSymbols_[index] = true;
     ++numMarkedSymbols_;
-    DEBUG(dbgs() << "markSymbol " << index << "\n");
+    LLVM_DEBUG(dbgs() << "markSymbol " << index << "\n");
   }
 #else
   markedSymbols_[index] = true;

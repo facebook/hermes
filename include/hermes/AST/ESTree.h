@@ -177,27 +177,7 @@ class Node : public llvm::ilist_node<Node> {
   }
 };
 
-} // namespace ESTree
-} // namespace hermes
-
-//===----------------------------------------------------------------------===//
-// ilist_traits for Node
-//===----------------------------------------------------------------------===//
-
-namespace llvm {
-
-template <>
-struct ilist_traits<::hermes::ESTree::Node>
-    : public ilist_default_traits<::hermes::ESTree::Node> {
-  using Node = ::hermes::ESTree::Node;
-};
-
-} // namespace llvm
-
-namespace hermes {
-namespace ESTree {
-
-// Skip lables.
+// Skip labels.
 template <class Visitor>
 void ESTreeVisit(Visitor &V, const NodeLabel &label) {}
 template <class Visitor>

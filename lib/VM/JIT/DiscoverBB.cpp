@@ -74,12 +74,12 @@ void discoverBasicBlocks(
   std::sort(basicBlocks.begin(), basicBlocks.end());
 
   // Create a mapping from a label to a basic block number.
-  DEBUG(llvm::dbgs() << "Discovered Basic Blocks:\n");
+  LLVM_DEBUG(llvm::dbgs() << "Discovered Basic Blocks:\n");
   labels.clear();
   labels.reserve(labelSet.size());
   for (unsigned i = 0, size = basicBlocks.size(); i != size; ++i) {
     labels.try_emplace(basicBlocks[i], i);
-    DEBUG(llvm::dbgs() << "  BB" << i << " at " << basicBlocks[i] << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "  BB" << i << " at " << basicBlocks[i] << "\n");
   }
 }
 

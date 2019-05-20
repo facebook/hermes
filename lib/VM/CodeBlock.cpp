@@ -231,7 +231,7 @@ namespace {
 std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
     hbc::LazyCompilationData *lazyData) {
   assert(lazyData);
-  DEBUG(
+  LLVM_DEBUG(
       llvm::dbgs() << "Compiling lazy function " << lazyData->originalName
                    << "\n");
 

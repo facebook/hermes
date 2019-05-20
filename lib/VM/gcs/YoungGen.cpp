@@ -180,7 +180,7 @@ void YoungGen::collect() {
     size_t oldGenUsedBefore = nextGen_->used();
     cumPreBytes_ += youngGenUsedBefore;
 
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "\nStarting (young-gen, " << formatSize(size())
                << ") garbage collection; collection # " << gc_->numCollections()
                << "\n");
@@ -313,7 +313,7 @@ void YoungGen::collect() {
     cumPromotedBytes_ += promotedBytes;
     ygSystraceSection.addArg("ygPromoted", promotedBytes);
 
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "End (young-gen) garbage collection. numCollected="
                << gc_->numCollectedObjects_
                << "; wall time=" << formatSecs(wallElapsedSecs)

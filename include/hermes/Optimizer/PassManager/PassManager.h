@@ -91,8 +91,8 @@ class PassManager {
 
       auto *FP = dyn_cast<FunctionPass>(P);
       assert(FP && "Invalid pass kind");
-      DEBUG(dbgs() << "Running the pass " << FP->getName() << "\n");
-      DEBUG(
+      LLVM_DEBUG(dbgs() << "Running the pass " << FP->getName() << "\n");
+      LLVM_DEBUG(
           dbgs() << "Optimizing the function " << F->getInternalNameStr()
                  << "\n");
       FP->runOnFunction(F);
@@ -134,13 +134,14 @@ class PassManager {
 
       /// Handle function passes:
       if (auto *FP = dyn_cast<FunctionPass>(P)) {
-        DEBUG(dbgs() << "Running the function pass " << FP->getName() << "\n");
+        LLVM_DEBUG(
+            dbgs() << "Running the function pass " << FP->getName() << "\n");
 
         for (auto &I : *M) {
           Function *F = &I;
           if (F->isLazy())
             continue;
-          DEBUG(
+          LLVM_DEBUG(
               dbgs() << "Optimizing the function " << F->getInternalNameStr()
                      << "\n");
           FP->runOnFunction(F);
@@ -152,7 +153,8 @@ class PassManager {
 
       /// Handle module passes:
       if (auto *MP = dyn_cast<ModulePass>(P)) {
-        DEBUG(dbgs() << "Running the module pass " << MP->getName() << "\n");
+        LLVM_DEBUG(
+            dbgs() << "Running the module pass " << MP->getName() << "\n");
         MP->runOnModule(M);
         // Move to the next pass.
         continue;

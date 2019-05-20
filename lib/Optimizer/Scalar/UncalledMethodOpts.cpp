@@ -37,7 +37,7 @@ bool UncalledMethodOpts::replaceFunctionBodyWithReturn(Function *F) {
   bool changed = true;
   IRBuilder::InstructionDestroyer destroyer;
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Replacing the body of Function " << F->getInternalName()
              << "\n");
   NumUMO++;
@@ -75,7 +75,7 @@ bool UncalledMethodOpts::runOnModule(Module *M) {
 
   bool changed = false;
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "\nStart uncalled methods opts on module "
              << "\n");
 
@@ -88,7 +88,7 @@ bool UncalledMethodOpts::runOnModule(Module *M) {
 
   // Process the function nests nested in the top level.
   for (auto &R : CA.analysisRoots_) {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Working with root " << R->getInternalName().c_str() << "\n");
 
     auto analysis = CA.analysisMap_.find(R);

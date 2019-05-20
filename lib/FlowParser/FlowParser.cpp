@@ -221,7 +221,7 @@ llvm::Optional<ESTree::FileNode *> parseFlowParser(
     return llvm::None;
   }
 
-  DEBUG(dump(llvm::dbgs(), jsonValue));
+  LLVM_DEBUG(dump(llvm::dbgs(), jsonValue));
 
   if (!printErrors(context, bufferId, jsonValue))
     return llvm::None;
@@ -246,7 +246,7 @@ llvm::Optional<ESTree::FileNode *> parseFlowParser(
     return llvm::None;
   }
 
-  DEBUG(hermes::dumpESTreeJSON(llvm::dbgs(), parsed, true /* pretty */));
+  LLVM_DEBUG(hermes::dumpESTreeJSON(llvm::dbgs(), parsed, true /* pretty */));
 
   return cast<ESTree::FileNode>(parsed);
 }

@@ -25,7 +25,7 @@ source "$HERMES_DIR/utils/commons.sh"
 mkdir -p "$HERMES_WS_DIR"
 cd "$HERMES_WS_DIR"
 
-LLVM_REV=4519ac3791135eb9c207f0684f4236dbc13ac83f
+LLVM_REV=c179d7b006348005d2da228aed4c3c251590baa3
 
 if [[ "$PLATFORM" == 'linux' ]]; then
   TARGET_PLATFORM="${TARGET_PLATFORM:-linux}"
@@ -122,7 +122,7 @@ if ! (cd llvm; $GIT diff-index --quiet HEAD); then
 fi
 # Use `git apply` instead of `patch` because `patch` may not be available
 # on some Windows installations.
-(cd llvm; $GIT apply "$HERMES_DIR"/utils/llvm-patches/*.patch)
+(cd llvm; $GIT apply "$HERMES_DIR"/utils/llvm-changes-for-hermes.patch)
 # Commit the patches we applied. Since we're in detached HEAD mode,
 # committing ensures that the patch operations above are idempotent
 (cd llvm; $GIT -c user.name='nobody' -c user.email='nobody@example.com' commit -a -m "Patch by Hermes build script")

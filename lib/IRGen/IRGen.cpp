@@ -25,7 +25,7 @@ bool generateIRFromESTree(
   ESTreeIRGen Generator(node, declFileList, M, scopeChain);
   Generator.doIt();
 
-  DEBUG(dbgs() << "Finished IRGen.\n");
+  LLVM_DEBUG(dbgs() << "Finished IRGen.\n");
   return false;
 }
 
@@ -63,7 +63,7 @@ Function *generateLazyFunctionIR(
   if (!parsed ||
       !sem::validateFunctionAST(
           context, semCtx, *parsed, lazyData->strictMode)) {
-    DEBUG(
+    LLVM_DEBUG(
         llvm::dbgs() << "Lazy AST parsing/validation failed with error: "
                      << diagHandler.getErrorString());
     return ESTreeIRGen::genSyntaxErrorFunction(

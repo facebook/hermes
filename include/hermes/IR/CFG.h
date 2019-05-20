@@ -133,11 +133,9 @@ inline unsigned pred_count_unique(const BasicBlock *BB) {
 // BasicBlock succ_iterator helpers
 //===----------------------------------------------------------------------===//
 
-typedef llvm::TerminatorInst::SuccIterator<TerminatorInst *, BasicBlock>
-    succ_iterator;
-typedef llvm::TerminatorInst::
-    SuccIterator<const TerminatorInst *, const BasicBlock>
-        succ_const_iterator;
+typedef llvm::SuccIterator<TerminatorInst, BasicBlock> succ_iterator;
+typedef llvm::SuccIterator<const TerminatorInst, const BasicBlock>
+    succ_const_iterator;
 using succ_range = llvm::iterator_range<succ_iterator>;
 using succ_const_range = llvm::iterator_range<succ_const_iterator>;
 

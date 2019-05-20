@@ -1242,7 +1242,7 @@ CompileResult processSourceFiles(
     auto fileBuf = memoryBufferFromFile(fileName);
     if (!fileBuf)
       return InputFileError;
-    DEBUG(
+    LLVM_DEBUG(
         llvm::dbgs() << "Parsing global definitions from " << fileName << '\n');
     if (!loadGlobalDefinition(*context, std::move(fileBuf), declFileList)) {
       return LoadGlobalsFailed;

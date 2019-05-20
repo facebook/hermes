@@ -58,7 +58,7 @@ Metadata buildMetadata(CellKind kind, BuildMetadataCallback *builder) {
   Metadata::Builder mb(base);
   builder(base, mb);
   Metadata meta = mb.build();
-  DEBUG(
+  LLVM_DEBUG(
       llvm::dbgs() << "Initialized metadata for cell kind " << cellKindStr(kind)
                    << ": " << meta << "\n");
   return meta;

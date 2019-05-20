@@ -211,7 +211,7 @@ void MallocGC::checkWellFormed() {
 
 void MallocGC::collect() {
   using std::chrono::steady_clock;
-  DEBUG(llvm::dbgs() << "Beginning collection");
+  LLVM_DEBUG(llvm::dbgs() << "Beginning collection");
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();
 #endif

@@ -284,15 +284,15 @@ bool Inlining::runOnModule(Module *M) {
       if (!canBeInlined(FC, intoFunction))
         continue;
 
-      DEBUG(llvm::dbgs() << "Inlining function '" << FC->getInternalNameStr()
-                         << "' ";
-            FC->getContext().getSourceErrorManager().dumpCoords(
-                llvm::dbgs(), FC->getSourceRange().Start);
-            llvm::dbgs() << " into function '"
-                         << intoFunction->getInternalNameStr() << "' ";
-            FC->getContext().getSourceErrorManager().dumpCoords(
-                llvm::dbgs(), intoFunction->getSourceRange().Start);
-            llvm::dbgs() << "\n";);
+      LLVM_DEBUG(llvm::dbgs() << "Inlining function '"
+                              << FC->getInternalNameStr() << "' ";
+                 FC->getContext().getSourceErrorManager().dumpCoords(
+                     llvm::dbgs(), FC->getSourceRange().Start);
+                 llvm::dbgs() << " into function '"
+                              << intoFunction->getInternalNameStr() << "' ";
+                 FC->getContext().getSourceErrorManager().dumpCoords(
+                     llvm::dbgs(), intoFunction->getSourceRange().Start);
+                 llvm::dbgs() << "\n";);
 
       IRBuilder builder(M);
 

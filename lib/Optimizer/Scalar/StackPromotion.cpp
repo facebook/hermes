@@ -412,12 +412,13 @@ bool StackPromotion::runOnFunction(Function *F) {
     // Global variables can be accessed in any scope through "this".
     // There is no guaranteed way to statically verify a global variable
     // is never captured.
-    DEBUG(dbgs() << "We cannot promote variables in global scope.");
+    LLVM_DEBUG(dbgs() << "We cannot promote variables in global scope.");
     return false;
   }
   bool changed = false;
 
-  DEBUG(dbgs() << "Promoting variables in " << F->getInternalNameStr() << "\n");
+  LLVM_DEBUG(
+      dbgs() << "Promoting variables in " << F->getInternalNameStr() << "\n");
   DominanceInfo DT(F);
 
   for (auto *V : F->getFunctionScope()->getVariables()) {

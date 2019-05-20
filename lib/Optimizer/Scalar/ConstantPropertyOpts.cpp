@@ -114,7 +114,7 @@ Literal *ConstantPropertyOpts::simplifyLoadPropertyInst(LoadPropertyInst *LPI) {
       retVal->getKind() == ValueKind::LiteralStringKind ||
       retVal->getKind() == ValueKind::LiteralNullKind ||
       retVal->getKind() == ValueKind::LiteralUndefinedKind) {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << LPI->getProperty()->getKindStr()
                << " gets value from a unique " << retVal->getKindStr() << "\n");
     NumCPO++;
@@ -126,7 +126,7 @@ Literal *ConstantPropertyOpts::simplifyLoadPropertyInst(LoadPropertyInst *LPI) {
 }
 
 bool ConstantPropertyOpts::runOnFunction(Function *F) {
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Starting to CPO on Function " << F->getInternalName() << "\n");
   bool changed = false;
   IRBuilder::InstructionDestroyer destroyer;
@@ -166,7 +166,7 @@ bool ConstantPropertyOpts::runOnModule(Module *M) {
 
   bool changed = false;
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "\nStart Constant Property opts on module "
              << "\n");
 
@@ -179,7 +179,7 @@ bool ConstantPropertyOpts::runOnModule(Module *M) {
 
   // Process the function nests nested in the top level.
   for (auto &R : CA.analysisRoots_) {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Working with root " << R->getInternalName().c_str() << "\n");
 
     auto analysis = CA.analysisMap_.find(R);

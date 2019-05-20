@@ -42,7 +42,7 @@ FastJIT::FastJIT(JITContext *context, CodeBlock *codeBlock)
     : context_(context), codeBlock_(codeBlock) {}
 
 void FastJIT::compile() {
-  DEBUG(
+  LLVM_DEBUG(
       llvm::dbgs() << "JIT compilation of FunctionID "
                    << codeBlock_->getFunctionID() << "\n");
 
@@ -83,7 +83,7 @@ void FastJIT::compile() {
 
   resolveRelocations();
 
-  DEBUG(disassembleResult(emit, llvm::dbgs(), true));
+  LLVM_DEBUG(disassembleResult(emit, llvm::dbgs(), true));
   if (context_->getDumpJITCode())
     disassembleResult(emit, llvm::outs(), false);
 
@@ -95,7 +95,7 @@ void FastJIT::compile() {
     codeBlock_->setJITCompiled((JITCompiledFunctionPtr)fast_.data());
 
     // Dump the heap at the end.
-    DEBUG(context_->getHeap().dump(llvm::dbgs()));
+    LLVM_DEBUG(context_->getHeap().dump(llvm::dbgs()));
   } else {
     context_->getHeap().free(*blocks);
     if (context_->getCrashOnError()) {
@@ -110,7 +110,7 @@ void FastJIT::error(const llvm::Twine &msg) {
   error_ = true;
   if (errorMsg_.empty())
     errorMsg_ = msg.str();
-  DEBUG(llvm::dbgs() << "FastJIT error: " << msg << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "FastJIT error: " << msg << "\n");
 }
 
 llvm::Optional<ExecHeap::BlockPair> FastJIT::allocRWX(
@@ -310,7 +310,7 @@ Emitters FastJIT::compileBB(Emitters emit) {
     if (!checkSpace(emit))
       return emit;
 
-    DEBUG(llvm::dbgs() << ";   " << decodeInstruction(ip) << "\n");
+    LLVM_DEBUG(llvm::dbgs() << ";   " << decodeInstruction(ip) << "\n");
 #ifndef NDEBUG
     auto sav = emit;
 #endif
@@ -596,14 +596,15 @@ Emitters FastJIT::compileBB(Emitters emit) {
     }
 #undef CASE
 
-    DEBUG(disassembleRange(
-              sav.fast.current(), emit.fast.current(), llvm::dbgs(), true);
-          if (sav.slow.current() != emit.slow.current() &&
-              !slowPathSections_.back().data) {
-            llvm::dbgs() << "; SLOW PATH\n";
-            disassembleRange(
-                sav.slow.current(), emit.slow.current(), llvm::dbgs(), true);
-          });
+    LLVM_DEBUG(
+        disassembleRange(
+            sav.fast.current(), emit.fast.current(), llvm::dbgs(), true);
+        if (sav.slow.current() != emit.slow.current() &&
+            !slowPathSections_.back().data) {
+          llvm::dbgs() << "; SLOW PATH\n";
+          disassembleRange(
+              sav.slow.current(), emit.slow.current(), llvm::dbgs(), true);
+        });
   }
 
   return emit;

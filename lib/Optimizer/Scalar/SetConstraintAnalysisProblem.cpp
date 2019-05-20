@@ -66,7 +66,7 @@ void SetConstraintAnalysisProblem::addEdge(Term *src, Term *dst) {
   terms_.insert(src);
   terms_.insert(dst);
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Adding edge: "
              << "%" << src->value_id_ << ":" << src->getPrintStr() << " -> "
              << "%" << dst->value_id_ << ":" << dst->getPrintStr());
@@ -74,11 +74,11 @@ void SetConstraintAnalysisProblem::addEdge(Term *src, Term *dst) {
   auto it1 = src->outs_.find(dst);
   auto it2 = dst->ins_.find(src);
   if (it1 != src->outs_.end() && it2 != dst->ins_.end()) {
-    DEBUG(dbgs() << "... already exists.\n");
+    LLVM_DEBUG(dbgs() << "... already exists.\n");
     return;
   }
 
-  DEBUG(dbgs() << "... adding to work list.\n");
+  LLVM_DEBUG(dbgs() << "... adding to work list.\n");
   src->outs_.insert(dst);
   dst->ins_.insert(src);
   worklist_.push_back(std::make_pair(src, dst));
@@ -378,7 +378,7 @@ void SetConstraintAnalysisProblem::matchLambdaToStore(
 }
 
 bool SetConstraintAnalysisProblem::saturate() {
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Saturating ..."
              << "\n");
 
@@ -388,7 +388,7 @@ bool SetConstraintAnalysisProblem::saturate() {
     Term *src = p.first;
     Term *dst = p.second;
 
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Removing from worklist: "
                << "%" << src->value_id_ << ":" << src->getPrintStr() << " -> "
                << "%" << dst->value_id_ << ":" << dst->getPrintStr() << "\n");
@@ -575,19 +575,19 @@ bool SetConstraintAnalysisProblem::saturate() {
 
   extractCallGraph();
 
-  DEBUG(dbgs() << "... done.\n");
+  LLVM_DEBUG(dbgs() << "... done.\n");
   return false;
 }
 
 void SetConstraintAnalysisProblem::dumpSaturationResults() {
   for (auto t : terms_) {
     if (auto *lt = dyn_cast<LambdaTerm>(t)) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Call sites for "
                  << "%" << lt->value_id_ << ":" << lt->getPrintStr() << "\n");
       for (auto *out : lt->outs_) {
         if (dyn_cast<CallTerm>(out) || dyn_cast<EscapeTerm>(out)) {
-          DEBUG(
+          LLVM_DEBUG(
               dbgs() << "  "
                      << "%" << out->value_id_ << ":" << out->getPrintStr()
                      << "\n");
@@ -595,12 +595,12 @@ void SetConstraintAnalysisProblem::dumpSaturationResults() {
       }
     }
     if (auto *ct = dyn_cast<CallTerm>(t)) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Callees at "
                  << "%" << ct->value_id_ << ":" << ct->getPrintStr() << "\n");
       for (auto *in : ct->ins_) {
         if (dyn_cast<LambdaTerm>(in) || dyn_cast<EscapeTerm>(in)) {
-          DEBUG(
+          LLVM_DEBUG(
               dbgs() << "  "
                      << "%" << in->value_id_ << ":" << in->getPrintStr()
                      << "\n");
@@ -608,13 +608,13 @@ void SetConstraintAnalysisProblem::dumpSaturationResults() {
       }
     }
     if (auto *lpt = dyn_cast<LoadPropertyTerm>(t)) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Objects/Arrays reaching at "
                  << "%" << lpt->value_id_ << ":" << lpt->getPrintStr() << "\n");
       for (auto *in : lpt->ins_) {
         if (dyn_cast<ObjectTerm>(in) || dyn_cast<EscapeTerm>(in) ||
             dyn_cast<ArrayTerm>(in)) {
-          DEBUG(
+          LLVM_DEBUG(
               dbgs() << "  "
                      << "%" << in->value_id_ << ":" << in->getPrintStr()
                      << "\n");
@@ -623,13 +623,13 @@ void SetConstraintAnalysisProblem::dumpSaturationResults() {
     }
     if (auto *ot = dyn_cast<ObjectTerm>(t)) {
       auto *normt = normalTermFactory(ot->value_);
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Stores reaching at "
                  << "%" << ot->value_id_ << ":" << ot->getPrintStr() << "\n");
       for (auto *in : normt->ins_) {
         if (dyn_cast<EscapeTerm>(in) || dyn_cast<StoreOwnPropertyTerm>(in) ||
             dyn_cast<StorePropertyTerm>(in)) {
-          DEBUG(
+          LLVM_DEBUG(
               dbgs() << "  "
                      << "%" << in->value_id_ << ":" << in->getPrintStr()
                      << "\n");
@@ -638,12 +638,12 @@ void SetConstraintAnalysisProblem::dumpSaturationResults() {
     }
     if (auto *at = dyn_cast<ArrayTerm>(t)) {
       auto *normt = normalTermFactory(at->value_);
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Stores reaching at "
                  << "%" << at->value_id_ << ":" << at->getPrintStr() << "\n");
       for (auto *in : normt->ins_) {
         if (dyn_cast<EscapeTerm>(in) || dyn_cast<StorePropertyTerm>(in)) {
-          DEBUG(
+          LLVM_DEBUG(
               dbgs() << "  "
                      << "%" << in->value_id_ << ":" << in->getPrintStr()
                      << "\n");
@@ -666,7 +666,7 @@ void profileEscapeTerm(EscapeTerm *et) {
     Function *f = cast<Function>(ev);
     StringRef c = f->getInternalNameStr();
     std::string str(c);
-    DEBUG(dbgs() << "Escape due to Function: " << str << "\n");
+    LLVM_DEBUG(dbgs() << "Escape due to Function: " << str << "\n");
 #endif
   } else if (dyn_cast<LoadPropertyInst>(ev)) {
     EscapeCauseLPI++;
@@ -678,7 +678,7 @@ void profileEscapeTerm(EscapeTerm *et) {
     LoadFrameInst *lfi = cast<LoadFrameInst>(ev);
     const char *c = lfi->getLocation().getPointer();
     std::string str(c, 0, 40);
-    DEBUG(dbgs() << "Escape due to LFI: " << str << "\n");
+    LLVM_DEBUG(dbgs() << "Escape due to LFI: " << str << "\n");
 #endif
   } else if (dyn_cast<AllocArrayInst>(ev)) {
     EscapeCauseArrayAlloc++;
@@ -687,7 +687,7 @@ void profileEscapeTerm(EscapeTerm *et) {
     AllocArrayInst *ai = cast<AllocArrayInst>(ev);
     const char *c = ai->getLocation().getPointer();
     std::string str(c, 0, 40);
-    DEBUG(dbgs() << "Escape due to array: " << str << "\n");
+    LLVM_DEBUG(dbgs() << "Escape due to array: " << str << "\n");
 #endif
   } else
     EscapeCauseOther++;
@@ -717,7 +717,8 @@ void SetConstraintAnalysisProblem::extractCallGraph() {
         if (dyn_cast<EscapeTerm>(out)) {
           escapes = true;
           DoesEscape++;
-          DEBUG(dbgs() << "Escaped Function " << F->getInternalName() << "\n");
+          LLVM_DEBUG(
+              dbgs() << "Escaped Function " << F->getInternalName() << "\n");
           // If F escapes, then we don't care about other outs_.
           break;
         }
@@ -730,7 +731,8 @@ void SetConstraintAnalysisProblem::extractCallGraph() {
           DoesNotEscape++;
         else {
           NoInfoFunction++;
-          DEBUG(dbgs() << "Uncalled Function " << F->getInternalName() << "\n");
+          LLVM_DEBUG(
+              dbgs() << "Uncalled Function " << F->getInternalName() << "\n");
         }
         callsites_.insert(std::make_pair(F, callSites));
       }

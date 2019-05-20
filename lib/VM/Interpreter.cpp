@@ -879,7 +879,7 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   // Default flags when accessing properties.
   PropOpFlags defaultPropOpFlags;
 
-  DEBUG(dbgs() << "interpretFunction() called\n");
+  LLVM_DEBUG(dbgs() << "interpretFunction() called\n");
 
   ScopedNativeDepthTracker depthTracker{runtime};
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
@@ -928,22 +928,22 @@ tailCall:
     frameRegs = &newFrame.getFirstLocalRef();
 
 #ifndef NDEBUG
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "function entry: stackLevel=" << runtime->getStackLevel()
                << ", argCount=" << runtime->getCurrentFrame().getArgCount()
                << ", frameSize=" << curCodeBlock->getFrameSize() << "\n");
 
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << " callee "
                << DumpHermesValue(
                       runtime->getCurrentFrame().getCalleeClosureOrCBRef())
                << "\n");
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "   this "
                << DumpHermesValue(runtime->getCurrentFrame().getThisArgRef())
                << "\n");
     for (uint32_t i = 0; i != runtime->getCurrentFrame()->getArgCount(); ++i) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << " " << llvm::format_decimal(i, 4) << " "
                  << DumpHermesValue(runtime->getCurrentFrame().getArgRef(i))
                  << "\n");
@@ -1559,7 +1559,7 @@ tailCall:
             HermesValue::encodeUndefinedValue());
         (void)newFrame;
 
-        DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));
+        LLVM_DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));
 
         assert(!SingleStep && "can't single-step a call");
 
@@ -1580,7 +1580,7 @@ tailCall:
           if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
             goto exception;
           O1REG(CallDirect) = *res;
-          DEBUG(
+          LLVM_DEBUG(
               dbgs() << "JIT return value r" << (unsigned)ip->iCallDirect.op1
                      << "=" << DumpHermesValue(O1REG(Call)) << "\n");
           gcScope.flushToSmallCount(KEEP_HANDLES);

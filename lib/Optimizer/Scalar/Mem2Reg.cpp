@@ -524,7 +524,7 @@ static Value *getLiveOutValue(
     BlockToInstMap &phiLoc,
     DominanceInfo &DT,
     BlockToInstMap &stores) {
-  DEBUG(llvm::dbgs() << "Searching for a value definition.\n");
+  LLVM_DEBUG(llvm::dbgs() << "Searching for a value definition.\n");
 
   // Walk the Dom tree in search of a defining value:
   for (DomTreeNode *Node = DT.getNode(startBB); Node; Node = Node->getIDom()) {
@@ -543,7 +543,7 @@ static Value *getLiveOutValue(
     }
     // Move to the next dominating block.
   }
-  DEBUG(llvm::dbgs() << "Could not find a def. Using undefined.\n");
+  LLVM_DEBUG(llvm::dbgs() << "Could not find a def. Using undefined.\n");
   IRBuilder builder(startBB->getParent());
   return builder.getLiteralUndefined();
 }
@@ -602,7 +602,7 @@ static void promoteAllocStackToSSA(
     }
   }
 
-  DEBUG(llvm::dbgs() << " Found: " << PQ.size() << " Defs\n");
+  LLVM_DEBUG(llvm::dbgs() << " Found: " << PQ.size() << " Defs\n");
 
   // A list of nodes for which we already calculated the dominator frontier.
   llvm::SmallPtrSet<DomTreeNode *, 32> visited;
@@ -662,7 +662,7 @@ static void promoteAllocStackToSSA(
     }
   }
 
-  DEBUG(llvm::dbgs() << " Found: " << phiBlocks.size() << " new PHIs\n");
+  LLVM_DEBUG(llvm::dbgs() << " Found: " << phiBlocks.size() << " new PHIs\n");
 
   // At this point we've calculated the locations of all of the new phi nodes.
   // Next, create the phi nodes and promote all of the loads and stores into the
@@ -696,7 +696,7 @@ static void promoteAllocStackToSSA(
     llvm_unreachable("Invalid use");
   }
 
-  DEBUG(llvm::dbgs() << " Finished placing Phis \n");
+  LLVM_DEBUG(llvm::dbgs() << " Finished placing Phis \n");
 
   // For all phi nodes we've decided to insert:
   for (auto *BB : phiBlocks) {
@@ -732,7 +732,7 @@ static void promoteAllocStackToSSA(
   }
 
   NumAlloc++;
-  DEBUG(llvm::dbgs() << " Finished placing Phis \n");
+  LLVM_DEBUG(llvm::dbgs() << " Finished placing Phis \n");
 }
 
 bool Mem2Reg::runOnFunction(Function *F) {
@@ -751,7 +751,7 @@ bool Mem2Reg::runOnFunction(Function *F) {
 
   collectStackAllocations(F, &D, allocations, unsafeAllocations);
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Optimizing loads and stores in " << F->getInternalNameStr()
              << "\n");
 

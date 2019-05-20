@@ -98,7 +98,7 @@ Handle<HiddenClass> HiddenClass::convertToDictionary(
       selfHandle->propertyMap_, &runtime->getHeap());
   selfHandle->propertyMap_ = nullptr;
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Converted Class:" << selfHandle->getDebugAllocationId()
              << " to dictionary Class:"
              << newClassHandle->getDebugAllocationId() << "\n");
@@ -122,7 +122,7 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
       auto it = self->transitionMap_.find({name, expectedFlags});
 
       if (it != self->transitionMap_.end()) {
-        DEBUG(
+        LLVM_DEBUG(
             dbgs() << "Property " << runtime->formatSymbolID(name)
                    << " NOT FOUND in Class:" << self->getDebugAllocationId()
                    << " due to existing transition to Class:"
@@ -170,7 +170,7 @@ Handle<HiddenClass> HiddenClass::deleteProperty(
 
   DictPropertyMap::erase(newHandle->propertyMap_, pos);
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Deleting from Class:" << selfHandle->getDebugAllocationId()
              << " produces Class:" << newHandle->getDebugAllocationId()
              << "\n");
@@ -221,7 +221,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
     // If the child doesn't have a property map, but we do, update our map and
     // move it to the child.
     if (!optChildHandle.getValue()->propertyMap_ && selfHandle->propertyMap_) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Adding property " << runtime->formatSymbolID(name)
                  << " to Class:" << selfHandle->getDebugAllocationId()
                  << " transitions Map to existing Class:"
@@ -240,7 +240,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
       optChildHandle.getValue()->propertyMap_.set(
           selfHandle->propertyMap_, &runtime->getHeap());
     } else {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Adding property " << runtime->formatSymbolID(name)
                  << " to Class:" << selfHandle->getDebugAllocationId()
                  << " transitions to existing Class:"
@@ -305,7 +305,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
         !DictPropertyMap::find(selfHandle->propertyMap_, name) &&
         "Adding an existing property to hidden class");
 
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Adding property " << runtime->formatSymbolID(name)
                << " to Class:" << selfHandle->getDebugAllocationId()
                << " transitions Map to new Class:"
@@ -327,7 +327,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
       return ExecutionStatus::EXCEPTION;
     }
   } else {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Adding property " << runtime->formatSymbolID(name)
                << " to Class:" << selfHandle->getDebugAllocationId()
                << " transitions to new Class:"
@@ -376,7 +376,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
     // If the child doesn't have a property map, but we do, update our map and
     // move it to the child.
     if (!optChildHandle.getValue()->propertyMap_) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Updating property " << runtime->formatSymbolID(name)
                  << " in Class:" << selfHandle->getDebugAllocationId()
                  << " transitions Map to existing Class:"
@@ -386,7 +386,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
       optChildHandle.getValue()->propertyMap_.set(
           selfHandle->propertyMap_, &runtime->getHeap());
     } else {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Updating property " << runtime->formatSymbolID(name)
                  << " in Class:" << selfHandle->getDebugAllocationId()
                  << " transitions to existing Class:"
@@ -424,7 +424,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
       inserted &&
       "transition already exists when updating a property in hidden class");
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Updating property " << runtime->formatSymbolID(name)
              << " in Class:" << selfHandle->getDebugAllocationId()
              << " transitions Map to new Class:"
@@ -446,7 +446,7 @@ Handle<HiddenClass> HiddenClass::makeAllNonConfigurable(
   if (!selfHandle->propertyMap_)
     initializeMissingPropertyMap(selfHandle, runtime);
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Class:" << selfHandle->getDebugAllocationId()
              << " making all non-configurable\n");
 
@@ -490,7 +490,7 @@ Handle<HiddenClass> HiddenClass::makeAllReadOnly(
   if (!selfHandle->propertyMap_)
     initializeMissingPropertyMap(selfHandle, runtime);
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Class:" << selfHandle->getDebugAllocationId()
              << " making all read-only\n");
 
@@ -660,7 +660,7 @@ void HiddenClass::initializeMissingPropertyMap(
   if (selfHandle->parent_ && selfHandle->parent_->propertyMap_)
     return stealPropertyMapFromParent(selfHandle, runtime);
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Class:" << selfHandle->getDebugAllocationId()
              << " allocating new map\n");
 
@@ -714,7 +714,7 @@ void HiddenClass::stealPropertyMapFromParent(
       self->parent_ && self->parent_->propertyMap_ && !self->propertyMap_ &&
       "stealPropertyMapFromParent() must be called with a valid parent with a property map");
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Class:" << self->getDebugAllocationId()
              << " stealing map from parent Class:"
              << self->parent_->getDebugAllocationId() << "\n");

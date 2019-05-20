@@ -51,7 +51,7 @@ static bool performFunctionDCE(Function *F) {
       if (I->getNumUsers())
         continue;
 
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "\t\tDCE: Erasing instruction \"" << I->getName()
                  << "\"\n");
       I->eraseFromParent();
@@ -70,7 +70,7 @@ bool DCE::runOnModule(Module *M) {
 
   // Perform per-function DCE.
   for (auto &F : *M) {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "\tDCE: running on function \"" << F.getInternalName()
                << "\"\n");
     changed |= performFunctionDCE(&F);
@@ -95,7 +95,7 @@ bool DCE::runOnModule(Module *M) {
     }
 
     for (auto *F : toDelete) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "\tDCE: Erasing function \"" << F->getInternalName()
                  << "\"\n");
       F->eraseFromParent();

@@ -10,7 +10,8 @@ namespace hermes {
 namespace irgen {
 
 Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
-  DEBUG(dbgs() << "IRGen expression of type " << expr->getNodeName() << "\n");
+  LLVM_DEBUG(
+      dbgs() << "IRGen expression of type " << expr->getNodeName() << "\n");
   IRBuilder::ScopedLocationChange slc(Builder, expr->getDebugLoc());
 
   // Handle identifiers.
@@ -27,14 +28,14 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
   // Handle String Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-string-literals
   if (auto *Lit = dyn_cast<ESTree::StringLiteralNode>(expr)) {
-    DEBUG(dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
+    LLVM_DEBUG(dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
     return Builder.getLiteralString(Lit->_value->str());
   }
 
   // Handle Regexp Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-regular-expression-literals
   if (auto *Lit = dyn_cast<ESTree::RegExpLiteralNode>(expr)) {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Loading regexp Literal \"" << Lit->_pattern->str() << " / "
                << Lit->_flags->str() << "\"\n");
 
@@ -46,14 +47,14 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
   // Handle Boolean Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-boolean-literals
   if (auto *Lit = dyn_cast<ESTree::BooleanLiteralNode>(expr)) {
-    DEBUG(dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
+    LLVM_DEBUG(dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
     return Builder.getLiteralBool(Lit->_value);
   }
 
   // Handle Number Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-numeric-literals
   if (auto *Lit = dyn_cast<ESTree::NumericLiteralNode>(expr)) {
-    DEBUG(dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
+    LLVM_DEBUG(dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
     return Builder.getLiteralNumber(Lit->_value);
   }
 
@@ -206,7 +207,7 @@ void ESTreeIRGen::genExpressionBranch(
 }
 
 Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
-  DEBUG(dbgs() << "Initializing a new array\n");
+  LLVM_DEBUG(dbgs() << "Initializing a new array\n");
   AllocArrayInst::ArrayValueList elements;
 
   // We store consecutive elements until we encounter elision,
@@ -257,7 +258,7 @@ Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
 }
 
 Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
-  DEBUG(dbgs() << "IRGen 'call' statement/expression.\n");
+  LLVM_DEBUG(dbgs() << "IRGen 'call' statement/expression.\n");
 
   // Check for a direct call to eval().
   if (auto *identNode = dyn_cast<ESTree::IdentifierNode>(call->_callee)) {
@@ -324,20 +325,20 @@ static StringRef propertyKeyAsString(
   // Handle String Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-string-literals
   if (auto *Lit = dyn_cast<ESTree::StringLiteralNode>(Key)) {
-    DEBUG(dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
+    LLVM_DEBUG(dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
     return Lit->_value->str();
   }
 
   // Handle identifiers as if they are String Literals.
   if (auto *Iden = dyn_cast<ESTree::IdentifierNode>(Key)) {
-    DEBUG(dbgs() << "Loading String Literal \"" << Iden->_name << "\"\n");
+    LLVM_DEBUG(dbgs() << "Loading String Literal \"" << Iden->_name << "\"\n");
     return Iden->_name->str();
   }
 
   // Handle Number Literals.
   // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-numeric-literals
   if (auto *Lit = dyn_cast<ESTree::NumericLiteralNode>(Key)) {
-    DEBUG(dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
+    LLVM_DEBUG(dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
     storage.resize(NUMBER_TO_STRING_BUF_SIZE);
     auto len = numberToString(Lit->_value, storage.data(), storage.size());
     return StringRef(storage.begin(), len);
@@ -348,7 +349,7 @@ static StringRef propertyKeyAsString(
 }
 
 Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
-  DEBUG(dbgs() << "Initializing a new object\n");
+  LLVM_DEBUG(dbgs() << "Initializing a new object\n");
 
   /// Store information about a property. Is it an accessor (getter/setter) or
   /// a value, and the actual value.
@@ -617,7 +618,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
   if (kind == UnaryOperatorInst::OpKind::DeleteKind) {
     if (auto *memberExpr =
             dyn_cast<ESTree::MemberExpressionNode>(U->_argument)) {
-      DEBUG(dbgs() << "IRGen delete member expression.\n");
+      LLVM_DEBUG(dbgs() << "IRGen delete member expression.\n");
 
       Value *obj = genExpression(memberExpr->_object);
       Value *prop = genMemberExpressionProperty(memberExpr);
@@ -676,7 +677,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
 }
 
 Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
-  DEBUG(dbgs() << "IRGen update expression.\n");
+  LLVM_DEBUG(dbgs() << "IRGen update expression.\n");
   bool isPrefix = updateExpr->_prefix;
 
   // The operands ++ and -- are equivalent to adding or subtracting the
@@ -713,7 +714,7 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
 }
 
 Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
-  DEBUG(dbgs() << "IRGen assignment operator.\n");
+  LLVM_DEBUG(dbgs() << "IRGen assignment operator.\n");
 
   auto opStr = AE->_operator->str();
   auto AssignmentKind = BinaryOperatorInst::parseAssignmentOperator(opStr);
@@ -781,7 +782,7 @@ Value *ESTreeIRGen::genConditionalExpr(ESTree::ConditionalExpressionNode *C) {
 Value *ESTreeIRGen::genIdentifierExpression(
     ESTree::IdentifierNode *Iden,
     bool afterTypeOf) {
-  DEBUG(dbgs() << "Looking for identifier \"" << Iden->_name << "\"\n");
+  LLVM_DEBUG(dbgs() << "Looking for identifier \"" << Iden->_name << "\"\n");
 
   // 'arguments' is an array-like object holding all function arguments.
   // If one of the parameters is called "arguments" then it shadows the
@@ -807,7 +808,7 @@ Value *ESTreeIRGen::genIdentifierExpression(
     return Builder.getLiteralUndefined();
   }
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Found variable " << StrName << " in function \""
              << (isa<GlobalObjectProperty>(Var) ? StringRef("global")
                                                 : cast<Variable>(Var)
@@ -847,7 +848,7 @@ Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
 }
 
 Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
-  DEBUG(dbgs() << "IRGen 'new' statement/expression.\n");
+  LLVM_DEBUG(dbgs() << "IRGen 'new' statement/expression.\n");
 
   // Implement the new operator.
   // http://www.ecma-international.org/ecma-262/7.0/index.html#sec-new-operator
@@ -865,7 +866,7 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
 Value *ESTreeIRGen::genLogicalExpression(
     ESTree::LogicalExpressionNode *logical) {
   auto opStr = logical->_operator->str();
-  DEBUG(dbgs() << "IRGen of short circuiting: " << opStr << ".\n");
+  LLVM_DEBUG(dbgs() << "IRGen of short circuiting: " << opStr << ".\n");
 
   // True if the operand is And (&&) or False if the operand is Or (||).
   bool isAnd = false;
@@ -922,7 +923,7 @@ void ESTreeIRGen::genLogicalExpressionBranch(
     BasicBlock *onTrue,
     BasicBlock *onFalse) {
   auto opStr = logical->_operator->str();
-  DEBUG(dbgs() << "IRGen of short circuiting: " << opStr << " branch.\n");
+  LLVM_DEBUG(dbgs() << "IRGen of short circuiting: " << opStr << " branch.\n");
 
   auto parentFunc = Builder.getInsertionBlock()->getParent();
   auto block = Builder.createBasicBlock(parentFunc);
@@ -940,7 +941,7 @@ void ESTreeIRGen::genLogicalExpressionBranch(
 }
 
 Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {
-  DEBUG(dbgs() << "IRGen 'TemplateLiteral' expression.\n");
+  LLVM_DEBUG(dbgs() << "IRGen 'TemplateLiteral' expression.\n");
 
   assert(
       Expr->_quasis.size() == Expr->_expressions.size() + 1 &&
@@ -983,7 +984,7 @@ Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {
 
 Value *ESTreeIRGen::genTaggedTemplateExpr(
     ESTree::TaggedTemplateExpressionNode *Expr) {
-  DEBUG(dbgs() << "IRGen 'TaggedTemplateExpression' expression.\n");
+  LLVM_DEBUG(dbgs() << "IRGen 'TaggedTemplateExpression' expression.\n");
   // Step 1: get the template object.
   auto *templateLit = cast<ESTree::TemplateLiteralNode>(Expr->_quasi);
 

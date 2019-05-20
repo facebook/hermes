@@ -42,7 +42,7 @@ static bool capturesArgumentVector(Function *F) {
 /// Optimize the calls to F, and the use of literals in F.
 /// \returns true if some code changed.
 static bool performFSO(Function *F, std::vector<Function *> &worklist) {
-  DEBUG(dbgs() << "-- Inspecting " << F->getInternalNameStr() << "\n");
+  LLVM_DEBUG(dbgs() << "-- Inspecting " << F->getInternalNameStr() << "\n");
 
   if (capturesArgumentVector(F))
     return false;
@@ -53,7 +53,7 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
   if (!getCallSites(F, callsites))
     return false;
 
-  DEBUG(dbgs() << "-- Has " << callsites.size() << " call sites\n");
+  LLVM_DEBUG(dbgs() << "-- Has " << callsites.size() << " call sites\n");
 
   unsigned numFormalParam = F->getParameters().size();
 
@@ -79,7 +79,7 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
 
       auto *L = dyn_cast<Literal>(arg);
       if (L) {
-        DEBUG(
+        LLVM_DEBUG(
             dbgs() << "-- Found literal for argument " << i << ": "
                    << L->getKindStr() << ".\n");
       }
@@ -94,8 +94,9 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
       // then mark this argument as invalid.
       Literal *prev = args[i].first;
       if (prev != L) {
-        DEBUG(dbgs() << "-- Found disagreement for argument " << i << "\n");
-        DEBUG(
+        LLVM_DEBUG(
+            dbgs() << "-- Found disagreement for argument " << i << "\n");
+        LLVM_DEBUG(
             dbgs() << "-- Previous value is "
                    << (prev ? prev->getKindStr() : "nullptr") << ".\n");
         args[i] = {nullptr, true};
@@ -113,16 +114,16 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
     }
   }
 
-  DEBUG(dbgs() << "-- Found " << unusedParams.size() << " unused args.\n");
+  LLVM_DEBUG(dbgs() << "-- Found " << unusedParams.size() << " unused args.\n");
 
   bool changed = false;
 
   unsigned paramIdx = 0;
   for (auto *P : F->getParameters()) {
-    DEBUG(dbgs() << "-- Inspecting param " << P->getName().str() << ".\n");
+    LLVM_DEBUG(dbgs() << "-- Inspecting param " << P->getName().str() << ".\n");
 
     if (Literal *L = args[paramIdx].first) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "-- Found literal " << L->getKindStr() << " for param "
                  << P->getName().str() << ".\n");
       P->replaceAllUsesWith(L);

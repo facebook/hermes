@@ -107,7 +107,7 @@ void GCBase::runtimeWillExecute() {
 
 bool GCBase::createSnapshotToFile(const std::string &fileName, bool compact) {
   std::error_code code;
-  llvm::raw_fd_ostream os(fileName, code, llvm::sys::fs::OpenFlags::F_RW);
+  llvm::raw_fd_ostream os(fileName, code, llvm::sys::fs::FileAccess::FA_Write);
   if (code) {
     return false;
   }

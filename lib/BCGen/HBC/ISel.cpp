@@ -1501,13 +1501,13 @@ void HBCISel::generate(BasicBlock *BB, BasicBlock *next) {
     basicBlockMap_[nullptr] = std::make_pair(end_loc, nullptr);
   }
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Generated the block " << BB << " from " << begin_loc << " .. "
              << end_loc << "\n");
 }
 
 void HBCISel::generate(Instruction *ii, BasicBlock *next) {
-  DEBUG(dbgs() << "Generating the instruction " << ii->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Generating the instruction " << ii->getName() << "\n");
 
   // Generate the debug info.
   switch (F_->getContext().getDebugInfoSetting()) {
@@ -1554,7 +1554,7 @@ void HBCISel::generate(SourceMapGenerator *outSourceMap) {
   for (int i = 0, e = order.size(); i < e; ++i) {
     BasicBlock *BB = order[i];
     BasicBlock *next = ((i + 1) == e) ? nullptr : order[i + 1];
-    DEBUG(dbgs() << "Generating bytecode for basic block " << BB << "\n");
+    LLVM_DEBUG(dbgs() << "Generating bytecode for basic block " << BB << "\n");
     generate(BB, next);
   }
 

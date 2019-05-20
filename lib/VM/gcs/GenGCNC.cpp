@@ -285,7 +285,7 @@ void GenGC::collect(bool canEffectiveOOM) {
   numMarkedSymbols_ = 0;
 #endif
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "\nStarting (full, young=" << formatSize(youngGen_.sizeDirect())
              << "; old=" << formatSize(oldGen_.size())
              << ") garbage collection # " << numGCs() << "\n");
@@ -651,7 +651,7 @@ void GenGC::markSymbol(SymbolID symbolID) {
   if (!markedSymbols_[index]) {
     markedSymbols_[index] = true;
     ++numMarkedSymbols_;
-    DEBUG(dbgs() << "markSymbol " << index << "\n");
+    LLVM_DEBUG(dbgs() << "markSymbol " << index << "\n");
   }
 #else
   markedSymbols_[index] = true;
@@ -1342,7 +1342,7 @@ void GenGC::CollectionSection::recordGCStats(
   gc_->recordGCStats(
       wallElapsedSecs_, cpuElapsedSecs_, regionSize, regionStats);
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "End garbage collection. numCollected="
              << gc_->numCollectedObjects_
              << "; wall time=" << formatSecs(wallElapsedSecs_)

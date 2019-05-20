@@ -14,7 +14,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist_node.h"
-#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 
 using llvm::ArrayRef;
@@ -106,10 +106,9 @@ class TerminatorInst : public Instruction {
     return kindIsA(V->getKind(), ValueKind::TerminatorInstKind);
   }
 
-  using succ_iterator =
-      llvm::TerminatorInst::SuccIterator<TerminatorInst *, BasicBlock>;
-  using succ_const_iterator = llvm::TerminatorInst::
-      SuccIterator<const TerminatorInst *, const BasicBlock>;
+  using succ_iterator = llvm::SuccIterator<TerminatorInst, BasicBlock>;
+  using succ_const_iterator =
+      llvm::SuccIterator<const TerminatorInst, const BasicBlock>;
   using succ_range = llvm::iterator_range<succ_iterator>;
   using succ_const_range = llvm::iterator_range<succ_const_iterator>;
 

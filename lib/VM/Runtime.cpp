@@ -292,7 +292,7 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
 
   symbolRegistry_.init(this);
 
-  DEBUG(llvm::dbgs() << "Runtime initialized\n");
+  LLVM_DEBUG(llvm::dbgs() << "Runtime initialized\n");
 
   samplingProfiler_ = SamplingProfiler::getInstance();
   samplingProfiler_->registerRuntime(this);
@@ -898,7 +898,7 @@ static ExecutionStatus raisePlaceholder(
     return ExecutionStatus::EXCEPTION;
   }
   auto str = runtime->makeHandle<StringPrimitive>(*strRes);
-  DEBUG(llvm::errs() << buf.arrayRef() << "\n");
+  LLVM_DEBUG(llvm::errs() << buf.arrayRef() << "\n");
   return raisePlaceholder(runtime, prototype, str);
 }
 
@@ -1157,7 +1157,7 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
   for (unsigned methodIndex = 0; methodIndex < inst::BuiltinMethod::_count;
        ++methodIndex) {
     GCScopeMarkerRAII marker{this};
-    DEBUG(llvm::dbgs() << builtinMethods[methodIndex].name << "\n");
+    LLVM_DEBUG(llvm::dbgs() << builtinMethods[methodIndex].name << "\n");
     // Find the object first, if it changed.
     auto objectName = (Predefined::Str)builtinMethods[methodIndex].object;
     if (objectName != lastObjectName) {

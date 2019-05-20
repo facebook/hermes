@@ -401,11 +401,11 @@ static bool propagateArgs(llvm::DenseSet<CallInst *> &callSites, Function *F) {
     // Update the type if we have new information.
     if (!first && paramTy.isProperSubsetOf(P->getType())) {
       P->setType(paramTy);
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << F->getInternalName().c_str() << "::" << P->getName().c_str()
                  << " changed to ");
-      DEBUG(paramTy.print(dbgs()));
-      DEBUG(dbgs() << "\n");
+      LLVM_DEBUG(paramTy.print(dbgs()));
+      LLVM_DEBUG(dbgs() << "\n");
       changed = true;
     }
   }
@@ -418,16 +418,17 @@ static bool propagateArgs(llvm::DenseSet<CallInst *> &callSites, Function *F) {
 bool TypeInferenceImpl::inferParams(Function *F) {
   bool changed;
   if (cgp_->hasUnknownCallsites(F)) {
-    DEBUG(dbgs() << F->getInternalName().str() << " has unknown call sites.\n");
+    LLVM_DEBUG(
+        dbgs() << F->getInternalName().str() << " has unknown call sites.\n");
     return false;
   }
   llvm::DenseSet<CallInst *> &callsites = cgp_->getKnownCallsites(F);
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << F->getInternalName().str() << " has " << callsites.size()
              << " call sites.\n");
   changed = propagateArgs(callsites, F);
   if (changed) {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "inferParams changed for function "
                << F->getInternalName().str() << "\n");
     NumPT++;
@@ -453,9 +454,9 @@ static bool propagateReturn(llvm::DenseSet<Function *> &funcs, CallInst *CI) {
 
   if (!first && retTy.isProperSubsetOf(CI->getType())) {
     CI->setType(retTy);
-    DEBUG(dbgs() << CI->getName().str() << " changed to ");
-    DEBUG(retTy.print(dbgs()));
-    DEBUG(dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << CI->getName().str() << " changed to ");
+    LLVM_DEBUG(retTy.print(dbgs()));
+    LLVM_DEBUG(dbgs() << "\n");
     changed = true;
   }
 
@@ -467,16 +468,17 @@ static bool propagateReturn(llvm::DenseSet<Function *> &funcs, CallInst *CI) {
 bool TypeInferenceImpl::inferCallInst(CallInst *CI) {
   bool changed = false;
   if (cgp_->hasUnknownCallees(CI)) {
-    DEBUG(dbgs() << "Unknown callees for : " << CI->getName().str() << "\n");
+    LLVM_DEBUG(
+        dbgs() << "Unknown callees for : " << CI->getName().str() << "\n");
     return false;
   }
   llvm::DenseSet<Function *> &callees = cgp_->getKnownCallees(CI);
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Found " << callees.size()
              << " callees for : " << CI->getName().str() << "\n");
   changed = propagateReturn(callees, CI);
   if (changed) {
-    DEBUG(dbgs() << "inferCallInst changed!\n");
+    LLVM_DEBUG(dbgs() << "inferCallInst changed!\n");
     NumRT++;
   }
   return changed;
@@ -636,7 +638,7 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
   bool changed = false;
   bool localChanged = false;
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "\nStart Type Inference on " << F->getInternalName().c_str()
              << "\n");
 
@@ -682,7 +684,7 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
 bool TypeInferenceImpl::runOnModule(Module *M, bool doCLA) {
   bool changed = false;
 
-  DEBUG(dbgs() << "\nStart Type Inference on Module\n");
+  LLVM_DEBUG(dbgs() << "\nStart Type Inference on Module\n");
 
   auto typeCheckerOpts = M->getContext().getTypeCheckerSettings();
   if (!doCLA || !typeCheckerOpts.closureAnalysis) {
@@ -709,7 +711,7 @@ bool TypeInferenceImpl::runOnModule(Module *M, bool doCLA) {
 
   // Process the function nests nested in the top level.
   for (auto &R : CA.analysisRoots_) {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Working with root " << R->getInternalName().c_str() << "\n");
 
     auto analysis = CA.analysisMap_.find(R);

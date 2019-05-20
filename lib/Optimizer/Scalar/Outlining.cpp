@@ -661,7 +661,7 @@ bool Outlining::runOnModule(Module *M) {
 
   const OutliningSettings &settings =
       M->getContext().getOptimizationSettings().outliningSettings;
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Outliner: Running on all functions"
              << "\nOutliner: placeNearCaller = " << settings.placeNearCaller
              << "\nOutliner: maxRounds = " << settings.maxRounds

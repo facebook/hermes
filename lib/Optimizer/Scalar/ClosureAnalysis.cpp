@@ -312,7 +312,7 @@ static void generateConstraints(
     Function &R,
     SetConstraintAnalysisProblem *ap,
     FunctionSet &nested) {
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Generating constraints with root " << R.getInternalName().str()
              << " ...\n");
 
@@ -329,7 +329,7 @@ static void generateConstraints(
       }
     }
   }
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "... finished generating constraints with root "
              << R.getInternalName().str() << "\n");
   return;
@@ -346,7 +346,7 @@ void ClosureAnalysis::generateConstraintsJSModule(
     unsigned int modId,
     llvm::SetVector<unsigned int> &deps,
     bool isIndependent) {
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Generating constraints with JSModule "
              << R.getInternalName().str() << " independent = " << isIndependent
              << "...\n");
@@ -364,7 +364,7 @@ void ClosureAnalysis::generateConstraintsJSModule(
         if (bundlerUtils_.isJSModuleRequires(I, fmodId)) {
           // Is the required module marked as a dependent?
           if (deps.count(fmodId) != 0) {
-            DEBUG(
+            LLVM_DEBUG(
                 dbgs() << "Intercepting requires in "
                        << F->getInternalName().str() << ", requiring module id "
                        << fmodId << "\n");
@@ -377,7 +377,7 @@ void ClosureAnalysis::generateConstraintsJSModule(
         Value *SV;
         // Is the module.exports from a non-independent module?
         if (!isIndependent && bundlerUtils_.isJSModuleExports(I, SV)) {
-          DEBUG(
+          LLVM_DEBUG(
               dbgs() << "Intercepting module.exports in "
                      << F->getInternalName().str() << ", module id " << modId
                      << "\n");
@@ -390,7 +390,7 @@ void ClosureAnalysis::generateConstraintsJSModule(
       }
     }
   }
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "... finished generating constraints for "
              << R.getInternalName().str() << "\n");
   return;
@@ -411,7 +411,7 @@ static Function *getEnclosingFunction(Function *F) {
 }
 
 static bool isAnalysisRoot(Function *F, Function2Num &cmap) {
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Checking isAnalysisRoot on " << F->getInternalName().c_str()
              << "\n");
 
@@ -467,7 +467,7 @@ collectNestedFunctions(Function &R, Function &F, FunctionSet &nested) {
 
       Function *CF = CFI->getFunctionCode();
 
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Nested " << CF->getInternalName().str() << " in root "
                  << R.getInternalName().str() << "\n");
 
@@ -494,7 +494,7 @@ static void dumpNestingStats(Module *M, Function2Num &cmap) {
     auto it = cmap.find(&F);
     if (it == cmap.end()) {
       unreachables++;
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Unreachable function: " << F.getInternalName().str()
                  << "\n");
       continue;
@@ -504,8 +504,9 @@ static void dumpNestingStats(Module *M, Function2Num &cmap) {
     functions++;
   }
 
-  DEBUG(dbgs() << "Number of functions: " << functions << "\n");
-  DEBUG(dbgs() << "Number of unreachable functions: " << unreachables << "\n");
+  LLVM_DEBUG(dbgs() << "Number of functions: " << functions << "\n");
+  LLVM_DEBUG(
+      dbgs() << "Number of unreachable functions: " << unreachables << "\n");
 
   unsigned int cumsum = 0;
   for (unsigned int i = 0; i < size; i++) {
@@ -520,7 +521,7 @@ static void dumpNestingStats(Module *M, Function2Num &cmap) {
 
   for (unsigned int i = 0; i < size; i++) {
     unsigned int perc = (100 * cumhist[i]) / cumsum;
-    DEBUG(dbgs() << i << ", " << hist[i] << ", " << perc << "\n");
+    LLVM_DEBUG(dbgs() << i << ", " << hist[i] << ", " << perc << "\n");
     if (perc >= 99) {
       break;
     }
@@ -538,7 +539,7 @@ void ClosureAnalysis::analyzeJSModuleWithDependents(
   if (bundlerUtils_.getImportsOfModule(modId, imports_of_id)) {
     for (unsigned int r : imports_of_id) {
       if (bundlerUtils_.isInlineableJSModule(r)) {
-        DEBUG(
+        LLVM_DEBUG(
             dbgs() << "JSModule# " << modId << " carrying along JSModule# " << r
                    << "\n");
         bundlerUtils_.modId2Function(
@@ -556,7 +557,7 @@ void ClosureAnalysis::analyzeJSModuleWithDependents(
   FunctionSet &nested = nm_it->second;
 
   if (nested.size() >= MAX_NEST_SIZE) {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Skipping CLA on " << F->getInternalName().str() << ", "
                << nested.size() << " nested functions is too big!\n");
 
@@ -566,7 +567,7 @@ void ClosureAnalysis::analyzeJSModuleWithDependents(
     leader_bailed_out = true;
 
   } else {
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Performing CLA on " << F->getInternalName().str() << ", "
                << nested.size() << "\n");
 
@@ -597,7 +598,7 @@ bool ClosureAnalysis::analyzeModule(Module *M) {
 
   for (auto &F : *M) {
     if (isAnalysisRoot(&F, cmap)) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "\nProcessing analysis root: " << F.getInternalName().str()
                  << "\n");
       rcount++;
@@ -617,9 +618,9 @@ bool ClosureAnalysis::analyzeModule(Module *M) {
     }
   }
 
-  DEBUG(dbgs() << "\n");
-  DEBUG(dbgs() << "root count = " << rcount << "\n");
-  DEBUG(dbgs() << "nested count = " << ncount << "\n");
+  LLVM_DEBUG(dbgs() << "\n");
+  LLVM_DEBUG(dbgs() << "root count = " << rcount << "\n");
+  LLVM_DEBUG(dbgs() << "nested count = " << ncount << "\n");
 
   NumAnalysisRoots = rcount;
   NumNested = ncount;
@@ -647,7 +648,7 @@ bool ClosureAnalysis::analyzeModule(Module *M) {
       // If F is an inlineable JSmodule, it will be processed along with the
       // JSmodule that requires it.
       if (bundlerUtils_.isInlineableJSModule(modId)) {
-        DEBUG(
+        LLVM_DEBUG(
             dbgs() << "JSModule# " << modId << " is inlineable .. skipping!\n");
         continue;
       }
@@ -670,7 +671,7 @@ bool ClosureAnalysis::analyzeModule(Module *M) {
     FunctionSet &nestedForF = nm_it->second;
 
     if (nestedForF.size() >= MAX_NEST_SIZE) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Skipping CLA on " << F->getInternalName().str() << ", "
                  << nestedForF.size() << " nested functions is too big!\n");
       // SetConstraint analysis result is a null for these.
@@ -678,7 +679,7 @@ bool ClosureAnalysis::analyzeModule(Module *M) {
       continue;
     }
 
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Performing CLA on " << F->getInternalName().str() << ", "
                << nestedForF.size() << "\n");
     SetConstraintAnalysisProblem *ap = new SetConstraintAnalysisProblem();

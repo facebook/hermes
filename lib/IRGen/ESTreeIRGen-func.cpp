@@ -56,7 +56,7 @@ void ESTreeIRGen::genFunctionDeclaration(
     ESTree::FunctionDeclarationNode *func) {
   // Find the name of the function.
   Identifier functionName = getNameFieldFromID(func->_id);
-  DEBUG(dbgs() << "IRGen function \"" << functionName << "\".\n");
+  LLVM_DEBUG(dbgs() << "IRGen function \"" << functionName << "\".\n");
 
   auto *funcStorage = nameTable_.lookup(functionName);
   assert(
@@ -75,7 +75,7 @@ void ESTreeIRGen::genFunctionDeclaration(
 Value *ESTreeIRGen::genFunctionExpression(
     ESTree::FunctionExpressionNode *FE,
     Identifier nameHint) {
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Creating anonymous closure. "
              << Builder.getInsertionBlock()->getParent()->getInternalName()
              << ".\n");
@@ -114,7 +114,7 @@ Value *ESTreeIRGen::genFunctionExpression(
 Value *ESTreeIRGen::genArrowFunctionExpression(
     ESTree::ArrowFunctionExpressionNode *AF,
     Identifier nameHint) {
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Creating arrow function. "
              << Builder.getInsertionBlock()->getParent()->getInternalName()
              << ".\n");
@@ -294,7 +294,7 @@ void ESTreeIRGen::emitFunctionPrologue(
     BasicBlock *entry) {
   auto *newFunc = curFunction()->function;
   auto *semInfo = curFunction()->getSemInfo();
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Hoisting "
              << (semInfo->varDecls.size() + semInfo->closures.size())
              << " variable decls.\n");
@@ -337,7 +337,7 @@ void ESTreeIRGen::emitFunctionPrologue(
 void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   auto *newFunc = curFunction()->function;
 
-  DEBUG(dbgs() << "IRGen function parameters.\n");
+  LLVM_DEBUG(dbgs() << "IRGen function parameters.\n");
 
   // Always create the "this" parameter.
   Builder.createParameter(newFunc, "this");
@@ -345,7 +345,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   // Create a variable for every parameter.
   for (auto *idNode : funcNode->getSemInfo()->paramNames) {
     Identifier paramName = getNameFieldFromID(idNode);
-    DEBUG(dbgs() << "Adding parameter: " << paramName << "\n");
+    LLVM_DEBUG(dbgs() << "Adding parameter: " << paramName << "\n");
     auto *paramStorage =
         Builder.createVariable(newFunc->getFunctionScope(), paramName);
     // Register the storage for the parameter.

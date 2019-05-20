@@ -26,7 +26,7 @@ using llvm::raw_ostream;
 bool hermes::runCustomOptimizationPasses(
     Module &M,
     const std::vector<std::string> &Opts) {
-  DEBUG(dbgs() << "Optimizing with custom pipeline...\n");
+  LLVM_DEBUG(dbgs() << "Optimizing with custom pipeline...\n");
   PassManager PM;
 
   // Add the optimization passes.
@@ -41,7 +41,7 @@ bool hermes::runCustomOptimizationPasses(
 }
 
 void hermes::runFullOptimizationPasses(Module &M) {
-  DEBUG(dbgs() << "Running -O3 optimizations...\n");
+  LLVM_DEBUG(dbgs() << "Running -O3 optimizations...\n");
   PassManager PM;
 
   // Add the optimization passes.
@@ -90,7 +90,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
 }
 
 void hermes::runDebugOptimizationPasses(Module &M) {
-  DEBUG(dbgs() << "Running -Og optimizations...\n");
+  LLVM_DEBUG(dbgs() << "Running -Og optimizations...\n");
   PassManager PM;
 
   PM.addInstSimplify();
@@ -104,5 +104,5 @@ void hermes::runDebugOptimizationPasses(Module &M) {
 }
 
 void hermes::runNoOptimizationPasses(Module &) {
-  DEBUG(dbgs() << "Running -O0 optimizations...\n");
+  LLVM_DEBUG(dbgs() << "Running -O0 optimizations...\n");
 }

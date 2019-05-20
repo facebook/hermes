@@ -132,12 +132,12 @@ ESTreeIRGen::ESTreeIRGen(
       identEval_(Builder.createIdentifier("eval")) {}
 
 void ESTreeIRGen::doIt() {
-  DEBUG(dbgs() << "Processing top level program.\n");
+  LLVM_DEBUG(dbgs() << "Processing top level program.\n");
 
   ESTree::ProgramNode *Program;
 
   if (auto File = dyn_cast<ESTree::FileNode>(Root)) {
-    DEBUG(dbgs() << "Found File decl.\n");
+    LLVM_DEBUG(dbgs() << "Found File decl.\n");
     Program = dyn_cast<ESTree::ProgramNode>(File->_program);
   } else {
     Program = dyn_cast<ESTree::ProgramNode>(Root);
@@ -149,7 +149,7 @@ void ESTreeIRGen::doIt() {
     return;
   }
 
-  DEBUG(dbgs() << "Found Program decl.\n");
+  LLVM_DEBUG(dbgs() << "Found Program decl.\n");
 
   // The function which will "execute" the module.
   Function *topLevelFunction;
@@ -347,7 +347,7 @@ GlobalObjectProperty *ESTreeIRGen::declareAmbientGlobalProperty(
   if (prop)
     return prop;
 
-  DEBUG(
+  LLVM_DEBUG(
       llvm::dbgs() << "declaring ambient global property " << name << " "
                    << name.getUnderlyingPointer() << "\n");
 
@@ -467,7 +467,7 @@ Value *ESTreeIRGen::genMemberExpressionProperty(
   auto Id = cast<ESTree::IdentifierNode>(Mem->_property);
 
   Identifier fieldName = getNameFieldFromID(Id);
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Emitting direct label access to field '" << fieldName
              << "'\n");
   return Builder.getLiteralString(fieldName);
@@ -478,14 +478,14 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node) {
   IRBuilder::ScopedLocationChange slc(Builder, sourceLoc);
 
   if (isa<ESTree::EmptyNode>(node)) {
-    DEBUG(dbgs() << "Creating an LRef for EmptyNode.\n");
+    LLVM_DEBUG(dbgs() << "Creating an LRef for EmptyNode.\n");
     return LReference(
         LReference::Kind::Empty, this, nullptr, nullptr, sourceLoc);
   }
 
   /// Create lref for member expression (ex: o.f).
   if (auto *ME = dyn_cast<ESTree::MemberExpressionNode>(node)) {
-    DEBUG(dbgs() << "Creating an LRef for member expression.\n");
+    LLVM_DEBUG(dbgs() << "Creating an LRef for member expression.\n");
     Value *obj = genExpression(ME->_object);
     Value *prop = genMemberExpressionProperty(ME);
     return LReference(LReference::Kind::Member, this, obj, prop, sourceLoc);
@@ -493,8 +493,8 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node) {
 
   /// Create lref for identifiers  (ex: a).
   if (auto *iden = dyn_cast<ESTree::IdentifierNode>(node)) {
-    DEBUG(dbgs() << "Creating an LRef for identifier.\n");
-    DEBUG(
+    LLVM_DEBUG(dbgs() << "Creating an LRef for identifier.\n");
+    LLVM_DEBUG(
         dbgs() << "Looking for identifier \"" << getNameFieldFromID(iden)
                << "\"\n");
     auto *var = ensureVariableExists(iden);
@@ -504,7 +504,7 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node) {
 
   /// Create lref for variable decls (ex: var a).
   if (auto *V = dyn_cast<ESTree::VariableDeclarationNode>(node)) {
-    DEBUG(dbgs() << "Creating an LRef for variable declaration.\n");
+    LLVM_DEBUG(dbgs() << "Creating an LRef for variable declaration.\n");
 
     assert(V->_declarations.size() == 1 && "Malformed variable declaration");
     auto *decl =

@@ -67,7 +67,7 @@ bool RegisterFile::isFree(Register r) {
 }
 
 void RegisterFile::killRegister(Register reg) {
-  DEBUG(dbgs() << "-- Releasing the register " << reg << "\n");
+  LLVM_DEBUG(dbgs() << "-- Releasing the register " << reg << "\n");
 
   assert(isUsed(reg) && "Killing an unused register!");
   registers.set(reg.getIndex());
@@ -94,7 +94,7 @@ Register RegisterFile::allocateRegister() {
     registers.resize(numRegs + 1, false);
     Register R = Register(numRegs);
     assert(isUsed(R) && "Error allocating a new register.");
-    DEBUG(dbgs() << "-- Creating the new register " << R << "\n");
+    LLVM_DEBUG(dbgs() << "-- Creating the new register " << R << "\n");
     return R;
   }
 
@@ -102,7 +102,7 @@ Register RegisterFile::allocateRegister() {
   int i = registers.find_first();
   assert(i >= 0 && "Unexpected failure to allocate a register");
   Register R(i);
-  DEBUG(dbgs() << "-- Assigning the free register " << R << "\n");
+  LLVM_DEBUG(dbgs() << "-- Assigning the free register " << R << "\n");
   assert(isFree(R) && "Error finding a free register");
   registers.reset(i);
   return R;
@@ -121,11 +121,12 @@ Register RegisterFile::tailAllocateConsecutive(unsigned n) {
 
   int firstClear = lastUsed + 1;
 
-  DEBUG(dbgs() << "-- Found the last set bit at offset " << lastUsed << "\n");
+  LLVM_DEBUG(
+      dbgs() << "-- Found the last set bit at offset " << lastUsed << "\n");
   registers.resize(std::max(registers.size(), firstClear + n), true);
   registers.reset(firstClear, firstClear + n);
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "-- Allocated tail consecutive registers of length " << n
              << ", starting at " << Register(firstClear) << "\n");
   return Register(firstClear);
@@ -363,17 +364,18 @@ void RegisterAllocator::calculateGlobalLiveness(ArrayRef<BasicBlock *> order) {
   for (auto &it : blockLiveness_) {
     BasicBlock *BB = it.first;
     BlockLifetimeInfo &livenessInfo = it.second;
-    DEBUG(llvm::dbgs() << "Block " << BB << "\n");
-    DEBUG(dumpVector(livenessInfo.gen_, "gen     ", llvm::dbgs()));
-    DEBUG(dumpVector(livenessInfo.kill_, "kill    ", llvm::dbgs()));
-    DEBUG(dumpVector(livenessInfo.liveIn_, "liveIn  ", llvm::dbgs()));
-    DEBUG(dumpVector(livenessInfo.liveOut_, "liveOut ", llvm::dbgs()));
-    DEBUG(dumpVector(livenessInfo.maskIn_, "maskIn  ", llvm::dbgs()));
-    DEBUG(llvm::dbgs() << "------\n");
+    LLVM_DEBUG(llvm::dbgs() << "Block " << BB << "\n");
+    LLVM_DEBUG(dumpVector(livenessInfo.gen_, "gen     ", llvm::dbgs()));
+    LLVM_DEBUG(dumpVector(livenessInfo.kill_, "kill    ", llvm::dbgs()));
+    LLVM_DEBUG(dumpVector(livenessInfo.liveIn_, "liveIn  ", llvm::dbgs()));
+    LLVM_DEBUG(dumpVector(livenessInfo.liveOut_, "liveOut ", llvm::dbgs()));
+    LLVM_DEBUG(dumpVector(livenessInfo.maskIn_, "maskIn  ", llvm::dbgs()));
+    LLVM_DEBUG(llvm::dbgs() << "------\n");
   }
 #endif
 
-  DEBUG(dbgs() << "Completed liveness in " << iterations << " iterations\n");
+  LLVM_DEBUG(
+      dbgs() << "Completed liveness in " << iterations << " iterations\n");
 }
 
 Interval &RegisterAllocator::getInstructionInterval(Instruction *I) {
@@ -491,13 +493,13 @@ void RegisterAllocator::coalesce(
       if (destIvl.intersects(opIvl))
         continue;
 
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Coalescing instruction @" << opIdx << "  " << opIvl
                  << " -> @" << destIdx << "  " << destIvl << "\n");
 
       for (auto &it : map) {
         if (it.second == op) {
-          DEBUG(
+          LLVM_DEBUG(
               dbgs() << "Remapping @" << getInstructionNumber(it.first)
                      << " from @" << opIdx << " to @" << destIdx << "\n");
           it.second = dest;
@@ -665,19 +667,19 @@ void RegisterAllocator::allocate(ArrayRef<BasicBlock *> order) {
     Interval &instInterval = instructionInterval_[instIdx];
     unsigned currentIndex = instInterval.end();
 
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Looking at index " << currentIndex << ": " << instInterval
                << " " << inst->getName() << "\n");
 
     // Free all of the intervals that start after the current index.
     while (!liveIntervalsQueue.empty()) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "\t Cleaning up for index " << currentIndex << " PQ("
                  << liveIntervalsQueue.size() << ")\n");
 
       unsigned topIdx = liveIntervalsQueue.top();
       Interval &range = instructionInterval_[topIdx];
-      DEBUG(dbgs() << "\t Earliest interval: " << range << "\n");
+      LLVM_DEBUG(dbgs() << "\t Earliest interval: " << range << "\n");
 
       // Flush empty intervals and intervals that finished after our index.
       bool nonEmptyInterval = range.size();
@@ -689,7 +691,7 @@ void RegisterAllocator::allocate(ArrayRef<BasicBlock *> order) {
 
       Instruction *I = instructionsByNumbers_[topIdx];
       Register R = getRegister(I);
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "\t Reached idx #" << currentIndex << " deleting inverval "
                  << range << " that's allocated to register " << R
                  << " used by instruction " << I->getName() << "\n");
@@ -718,7 +720,7 @@ void RegisterAllocator::allocate(ArrayRef<BasicBlock *> order) {
   // Free the remaining intervals.
   while (!liveIntervalsQueue.empty()) {
     Instruction *I = instructionsByNumbers_[liveIntervalsQueue.top()];
-    DEBUG(
+    LLVM_DEBUG(
         dbgs() << "Free register used by instruction " << I->getName() << "\n");
     file.killRegister(getRegister(I));
     handleInstruction(I);

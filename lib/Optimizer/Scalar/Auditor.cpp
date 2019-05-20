@@ -133,11 +133,11 @@ static void auditInferredTypes(Function *F) {
 }
 
 bool Auditor::runOnFunction(Function *F) {
-  DEBUG(dbgs() << "Auditing calls in " << F->getInternalNameStr() << "\n");
+  LLVM_DEBUG(dbgs() << "Auditing calls in " << F->getInternalNameStr() << "\n");
 
   auditCallInstructions(F);
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "Auditing instruction return types in "
              << F->getInternalNameStr() << "\n");
 

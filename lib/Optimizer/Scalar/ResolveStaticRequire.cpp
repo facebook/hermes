@@ -332,7 +332,7 @@ Literal *ResolveStaticRequireImpl::resolveModuleTarget(
   const auto *resolutionTable =
       moduleFunction->getContext().getResolutionTable();
   if (resolutionTable) {
-    DEBUG(
+    LLVM_DEBUG(
         llvm::errs() << "Resolving " << cjsModule->filename.str() << " @ "
                      << target->getValue().str() << '\n');
     auto fileEntry = resolutionTable->find(cjsModule->filename.str());

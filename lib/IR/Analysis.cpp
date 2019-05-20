@@ -221,7 +221,7 @@ FunctionScopeAnalysis::calculateFunctionScopeData(Function *F) {
     // Because the calculation is done lazily, any function requested
     // must have a CreateFunctionInst.
     if (Inst == nullptr) {
-      DEBUG(
+      LLVM_DEBUG(
           dbgs() << "Function \"" << F->getInternalName()
                  << "\" has no CreateFunctionInst\n");
       lexicalScopeMap_[F] = ScopeData::orphan();

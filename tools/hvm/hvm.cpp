@@ -6,10 +6,10 @@
  */
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -62,18 +62,11 @@ static llvm::cl::opt<bool> GCPrintStats(
     llvm::cl::init(false));
 
 // This is the vm driver.
-int main(int argc, char **argv_) {
+int main(int argc, char **argv) {
+  // Normalize the arg vector.
+  llvm::InitLLVM initLLVM(argc, argv);
   llvm::sys::PrintStackTraceOnErrorSignal("hvm");
-  llvm::PrettyStackTraceProgram X(argc, argv_);
-  llvm::SmallVector<const char *, 256> args;
-  llvm::SpecificBumpPtrAllocator<char> ArgAllocator;
-  if (llvm::sys::Process::GetArgumentVector(
-          args, llvm::makeArrayRef(argv_, argc), ArgAllocator)) {
-    llvm::errs() << "Failed to get argc and argv.\n";
-    return EXIT_FAILURE;
-  }
-  argc = args.size();
-  const char **argv = args.data();
+  llvm::PrettyStackTraceProgram X(argc, argv);
   llvm::llvm_shutdown_obj Y;
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes VM driver\n");
 

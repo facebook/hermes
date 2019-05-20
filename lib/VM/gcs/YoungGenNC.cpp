@@ -289,7 +289,7 @@ void YoungGen::collect() {
   size_t oldGenUsedBefore = nextGen_->used();
   cumPreBytes_ += youngGenUsedBefore;
 
-  DEBUG(
+  LLVM_DEBUG(
       dbgs() << "\nStarting (young-gen, " << formatSize(sizeDirect())
              << ") garbage collection; collection # " << gc_->numGCs() << "\n");
 

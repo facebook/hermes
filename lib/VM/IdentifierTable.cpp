@@ -250,7 +250,7 @@ uint32_t IdentifierTable::allocIDAndInsert(
 
   hashTable_.insert(hashTableIndex, symbolId);
 
-  DEBUG(
+  LLVM_DEBUG(
       llvm::dbgs() << "allocated symbol " << nextId << " '" << strPrim
                    << "'\n");
 
@@ -300,7 +300,7 @@ SymbolID IdentifierTable::registerLazyIdentifierImpl(
   assert(lookupVector_[nextId].isFreeSlot() && "Allocated a non-free slot");
   new (&lookupVector_[nextId]) IdentTableLookupEntry(str, hash);
   hashTable_.insert(idx, symbolId);
-  DEBUG(
+  LLVM_DEBUG(
       llvm::dbgs() << "Allocated lazy identifier: " << nextId << " " << str
                    << "\n");
   return symbolId;
@@ -326,7 +326,7 @@ StringPrimitive *IdentifierTable::materializeLazyIdentifier(
                                 entry.getLazyUTF16Ref(),
                                 runtime->makeNullHandle<StringPrimitive>(),
                                 id));
-  DEBUG(llvm::dbgs() << "Materializing lazy identifier " << id << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Materializing lazy identifier " << id << "\n");
   entry.materialize(strPrim.get());
   return strPrim.get();
 }
@@ -337,7 +337,7 @@ void IdentifierTable::freeSymbol(uint32_t index) {
       lookupVector_[index].isNonLazyStringPrim() &&
       "The specified symbol cannot be freed");
 
-  DEBUG(
+  LLVM_DEBUG(
       llvm::dbgs() << "Freeing symbol index " << index << " '"
                    << lookupVector_[index].getStringPrim() << "'\n");
 
@@ -355,7 +355,8 @@ uint32_t IdentifierTable::allocNextID() {
       hermes_fatal("Failed to allocate Identifier: IdentifierTable is full");
     }
     lookupVector_.emplace_back();
-    DEBUG(llvm::dbgs() << "Allocated new symbol id at end " << newID << "\n");
+    LLVM_DEBUG(
+        llvm::dbgs() << "Allocated new symbol id at end " << newID << "\n");
     return newID;
   }
 
@@ -364,7 +365,7 @@ uint32_t IdentifierTable::allocNextID() {
   const auto &entry = getLookupTableEntry(nextId);
   assert(entry.isFreeSlot() && "firstFreeID_ is not a free slot");
   firstFreeID_ = entry.getNextFreeSlot();
-  DEBUG(llvm::dbgs() << "Allocated freed symbol id " << nextId << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Allocated freed symbol id " << nextId << "\n");
   return nextId;
 }
 
@@ -376,7 +377,7 @@ void IdentifierTable::freeID(uint32_t id) {
   // Add the freed index to the free list.
   lookupVector_[id].free(firstFreeID_);
   firstFreeID_ = id;
-  DEBUG(llvm::dbgs() << "Freeing ID " << id << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Freeing ID " << id << "\n");
 
   // In the unlikely event that we freed the last element in the vector,
   // shrink the vector.
