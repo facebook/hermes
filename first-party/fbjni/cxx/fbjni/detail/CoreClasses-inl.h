@@ -463,7 +463,6 @@ local_ref<typename JArrayClass<T>::javaobject> adopt_local_array(jobjectArray re
 template <typename JArrayType>
 auto JPrimitiveArray<JArrayType>::getRegion(jsize start, jsize length)
     -> std::unique_ptr<T[]> {
-  using T = typename jtype_traits<JArrayType>::entry_type;
   auto buf = std::unique_ptr<T[]>{new T[length]};
   getRegion(start, length, buf.get());
   return buf;
