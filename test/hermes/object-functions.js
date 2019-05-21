@@ -253,8 +253,19 @@ testIsPrototypeOf();
 //CHECK-NEXT: false
 //CHECK-NEXT: true
 
+print("Object.prototype.toLocaleString");
+//CHECK-LABEL: Object.prototype.toLocaleString
 print(Object.prototype.toLocaleString() === Object.prototype.toString());
 //CHECK-NEXT: true
+var obj = {};
+Object.defineProperty(obj, "toString", {get: Object.prototype.toLocaleString});
+try {
+  print(obj);
+} catch (e) {
+  // Should be a stack overflow from infinite recursion.
+  print(e.name);
+}
+//CHECK-NEXT: RangeError
 
 var obj = {};
 var proto = {};
@@ -431,4 +442,3 @@ function testObjectAssignModifications() {
 }
 testObjectAssignModifications()
 //CHECK-NEXT: {"a":10,"c":32}
-

@@ -1385,6 +1385,7 @@ objectPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 
 static CallResult<HermesValue>
 objectPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
