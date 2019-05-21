@@ -534,6 +534,13 @@ class Debugger {
   /// into it \p ipOffset.
   CallFrameInfo getCallFrameInfo(const CodeBlock *codeBlock, uint32_t offset)
       const;
+
+  /// If the current instruction is a jump instruction, set a breakpoint at
+  /// the jump target.
+  void breakAtJumpTarget(InterpreterState &state);
+
+  /// Set breakpoints at all possible next instructions after the current one.
+  void breakAtPossibleNextInstructions(InterpreterState &state);
 };
 
 } // namespace vm

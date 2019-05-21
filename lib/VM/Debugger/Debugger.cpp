@@ -27,10 +27,10 @@ namespace vm {
 using namespace hermes::inst;
 namespace fhd = ::facebook::hermes::debugger;
 
-static inline bool isCall(OpCode opCode) {
-  return opCode == OpCode::Call || opCode == OpCode::Construct ||
-      opCode == OpCode::CallLong || opCode == OpCode::ConstructLong ||
-      opCode == OpCode::CallDirect || opCode == OpCode::CallDirectLongIndex;
+// These instructions won't recursively invoke the interpreter,
+// and we also can't easily determine where they will jump to.
+static inline bool shouldSingleStep(OpCode opCode) {
+  return opCode == OpCode::Throw || opCode == OpCode::SwitchImm;
 }
 
 static StringView getFunctionName(
@@ -88,6 +88,48 @@ static llvm::Optional<ScopeChain> scopeChainForBlock(
 
 void Debugger::triggerAsyncPause() {
   runtime_->triggerAsyncDebuggerPause();
+}
+
+void Debugger::breakAtJumpTarget(InterpreterState &state) {
+  const Inst *ip = state.codeBlock->getOffsetPtr(state.offset);
+
+#define DEFINE_JUMP_LONG_VARIANT(name, nameLong) \
+  case OpCode::name: {                           \
+    setStepBreakpoint(                           \
+        state.codeBlock,                         \
+        state.offset + ip->i##name.op1,          \
+        runtime_->getCurrentFrameOffset());      \
+    return;                                      \
+  }                                              \
+  case OpCode::nameLong: {                       \
+    setStepBreakpoint(                           \
+        state.codeBlock,                         \
+        state.offset + ip->i##nameLong.op1,      \
+        runtime_->getCurrentFrameOffset());      \
+    return;                                      \
+  }
+
+  switch (ip->opCode) {
+#include "hermes/BCGen/HBC/BytecodeList.def"
+    default:
+      return;
+  }
+#undef DEFINE_JUMP_LONG_VARIANT
+}
+
+void Debugger::breakAtPossibleNextInstructions(InterpreterState &state) {
+  auto nextOffset = state.codeBlock->getNextOffset(state.offset);
+  // Set a breakpoint at the next instruction in the code block if this is not
+  // the last instruction.
+  if (nextOffset < state.codeBlock->getOpcodeArray().size()) {
+    setStepBreakpoint(
+        state.codeBlock, nextOffset, runtime_->getCurrentFrameOffset());
+  }
+  // If the instruction is a jump, set a break point at the possible
+  // jump target; otherwise, only break at the next instruction.
+  // This instruction could jump to itself, so this step should be after the
+  // previous step.
+  breakAtJumpTarget(state);
 }
 
 ExecutionStatus Debugger::runDebugger(
@@ -155,24 +197,26 @@ ExecutionStatus Debugger::runDebugger(
               return ExecutionStatus::RETURNED;
             }
 
-            if (isCall(curCode)) {
-              setStepBreakpoint(
-                  state.codeBlock,
-                  state.codeBlock->getNextOffset(state.offset),
-                  runtime_->getCurrentFrameOffset());
-              if (*curStepMode_ == StepMode::Into) {
-                pauseOnAllCodeBlocks_ = true;
+            // These instructions won't recursively invoke the interpreter,
+            // and we also can't easily determine where they will jump to,
+            // so use single-step mode.
+            if (shouldSingleStep(curCode)) {
+              ExecutionStatus status = stepInstruction(state);
+              if (status == ExecutionStatus::EXCEPTION) {
+                isDebugging_ = false;
+                return status;
               }
-              isDebugging_ = false;
-              return ExecutionStatus::RETURNED;
+              locationOpt = getLocationForState(state);
+              continue;
             }
 
-            ExecutionStatus status = stepInstruction(state);
-            if (status == ExecutionStatus::EXCEPTION) {
-              isDebugging_ = false;
-              return status;
+            // Set a breakpoint at the next instruction and continue.
+            breakAtPossibleNextInstructions(state);
+            if (*curStepMode_ == StepMode::Into) {
+              pauseOnAllCodeBlocks_ = true;
             }
-            locationOpt = getLocationForState(state);
+            isDebugging_ = false;
+            return ExecutionStatus::RETURNED;
           }
         }
 
@@ -297,26 +341,7 @@ ExecutionStatus Debugger::debuggerLoop(
             // but it could, and clearing all handles is really cheap.
             gcScope.flushToSmallCount(KEEP_HANDLES);
             OpCode curCode = state.codeBlock->getOpCode(state.offset);
-            if (isCall(curCode)) {
-              // Set a breakpoint after the call instruction and continue.
-              // The expectation is that we'll break again when we hit that
-              // breakpoint in this call stack level.
-              // We can get the next offset because the call can't be the last
-              // instruction in a code block - it must return.
-              auto nextOffset = state.codeBlock->getNextOffset(state.offset);
-              setStepBreakpoint(
-                  state.codeBlock,
-                  nextOffset,
-                  runtime_->getCurrentFrameOffset());
-              if (stepMode == StepMode::Into) {
-                // Stepping in could enter another code block,
-                // so handle that by breakpointing all code blocks.
-                pauseOnAllCodeBlocks_ = true;
-              }
-              isDebugging_ = false;
-              curStepMode_ = stepMode;
-              return ExecutionStatus::RETURNED;
-            }
+
             if (curCode == OpCode::Ret) {
               breakpointCaller();
               pauseOnAllCodeBlocks_ = true;
@@ -325,19 +350,49 @@ ExecutionStatus Debugger::debuggerLoop(
               curStepMode_ = StepMode::Out;
               return ExecutionStatus::RETURNED;
             }
-            ExecutionStatus status = stepInstruction(state);
-            if (status == ExecutionStatus::EXCEPTION) {
-              breakpointExceptionHandler(state);
-              isDebugging_ = false;
-              curStepMode_ = stepMode;
-              return status;
+
+            // These instructions won't recursively invoke the interpreter,
+            // and we also can't easily determine where they will jump to,
+            // so use single-step mode.
+            if (shouldSingleStep(curCode)) {
+              ExecutionStatus status = stepInstruction(state);
+              if (status == ExecutionStatus::EXCEPTION) {
+                breakpointExceptionHandler(state);
+                isDebugging_ = false;
+                curStepMode_ = stepMode;
+                return status;
+              }
+              auto locationOpt = getLocationForState(state);
+              if (locationOpt.hasValue() && locationOpt->statement != 0 &&
+                  !sameStatementDifferentInstruction(state, preStepState_)) {
+                // We've moved on from the statement that was executing.
+                break;
+              }
+              continue;
             }
-            auto locationOpt = getLocationForState(state);
-            if (locationOpt.hasValue() && locationOpt->statement != 0 &&
-                !sameStatementDifferentInstruction(state, preStepState_)) {
-              // We've moved on from the statement that was executing.
-              break;
+
+            // Set a breakpoint at the next instruction and continue.
+            // If there is a user installed breakpoint, we need to temporarily
+            // uninstall the breakpoint so that we can get the correct
+            // offset for the next instruction.
+            auto breakpointOpt =
+                getBreakpointLocation(state.codeBlock, state.offset);
+            if (breakpointOpt) {
+              state.codeBlock->uninstallBreakpointAtOffset(
+                  state.offset, breakpointOpt->opCode);
             }
+            breakAtPossibleNextInstructions(state);
+            if (breakpointOpt) {
+              state.codeBlock->installBreakpointAtOffset(state.offset);
+            }
+            if (stepMode == StepMode::Into) {
+              // Stepping in could enter another code block,
+              // so handle that by breakpointing all code blocks.
+              pauseOnAllCodeBlocks_ = true;
+            }
+            isDebugging_ = false;
+            curStepMode_ = stepMode;
+            return ExecutionStatus::RETURNED;
           }
         } else {
           ExecutionStatus status;
@@ -686,7 +741,7 @@ ExecutionStatus Debugger::stepInstruction(InterpreterState &state) {
       codeBlock->getOpCode(offset) != OpCode::Ret &&
       "can't stepInstruction in Ret, use step-out semantics instead");
   assert(
-      !isCall(codeBlock->getOpCode(offset)) &&
+      shouldSingleStep(codeBlock->getOpCode(offset)) &&
       "can't stepInstruction through Call, use step-in semantics instead");
   auto locationOpt = getBreakpointLocation(codeBlock, offset);
   ExecutionStatus status;
