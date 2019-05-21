@@ -92,7 +92,10 @@ static const std::map<std::string, std::string> commandToHelpText = {
      "USAGE: exec\n"},
     {"sourceMap",
      "Given a file ID, retrieves the source map URL, provided it has been stored in the file. Else, returns an empty string.\n\n"
-     "USAGE: sourceMap <fileId>\n"}};
+     "USAGE: sourceMap <fileId>\n"},
+    {"quit",
+     "Quit the debugger.\n\n"
+     "USAGE: quit\n"}};
 static const std::string topLevelHelpText =
     "These hdb commands are defined internally. Type `help' to see this list.\n"
     "Type `help name' to find out more about the function `name'.\n\n"
@@ -106,6 +109,7 @@ static const std::string topLevelHelpText =
     "backtrace\n"
     "expand\n"
     "sourceMap <fileId>\n"
+    "quit\n"
     "Debugger commands: continue, step, next, finish, exec\n";
 
 namespace {
@@ -492,6 +496,8 @@ struct HDBDebugger : public debugger::EventObserver {
       } else {
         std::cout << topLevelHelpText;
       }
+    } else if (command == "quit" || command == "q") {
+      exit(0);
     } else {
       return false;
     }
