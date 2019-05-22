@@ -229,15 +229,28 @@ TEST(HBCBytecodeGen, StringTableTest) {
 
   EXPECT_EQ(bytecode->getStringCount(), 5u);
   EXPECT_EQ(bytecode->getStringStorage().size(), 16u);
-  EXPECT_EQ(bytecode->getStringTableEntry(1).getOffset(), 6u);
+
+  // bar
+  EXPECT_EQ(bytecode->getStringTableEntry(0).getOffset(), 0u);
+  EXPECT_EQ(bytecode->getStringTableEntry(0).getLength(), 3u);
+  EXPECT_FALSE(bytecode->getStringTableEntry(0).isUTF16());
+
+  // foo
+  EXPECT_EQ(bytecode->getStringTableEntry(1).getOffset(), 3u);
   EXPECT_EQ(bytecode->getStringTableEntry(1).getLength(), 3u);
   EXPECT_FALSE(bytecode->getStringTableEntry(1).isUTF16());
-  EXPECT_EQ(bytecode->getStringTableEntry(2).getOffset(), 9u);
-  EXPECT_EQ(bytecode->getStringTableEntry(2).getLength(), 3u);
+
+  // global
+  EXPECT_EQ(bytecode->getStringTableEntry(2).getOffset(), 6u);
+  EXPECT_EQ(bytecode->getStringTableEntry(2).getLength(), 6u);
   EXPECT_FALSE(bytecode->getStringTableEntry(2).isUTF16());
+
+  // UTF16
   EXPECT_EQ(bytecode->getStringTableEntry(3).getOffset(), 12u);
   EXPECT_EQ(bytecode->getStringTableEntry(3).getLength(), 1u);
   EXPECT_TRUE(bytecode->getStringTableEntry(3).isUTF16());
+
+  // UTF16
   EXPECT_EQ(bytecode->getStringTableEntry(4).getOffset(), 14u);
   EXPECT_EQ(bytecode->getStringTableEntry(4).getLength(), 1u);
   EXPECT_TRUE(bytecode->getStringTableEntry(4).isUTF16());

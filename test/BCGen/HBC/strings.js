@@ -2,12 +2,12 @@
 
 //CHECK-LABEL:Global String Table:
 //CHECK-NEXT:  s0[ASCII, 0..-1]:
-//CHECK-NEXT:  s1[ASCII, {{[0-9]+}}..{{[0-9]+}}]: abcdefg
-//CHECK-NEXT:  s2[ASCII, {{[0-9]+}}..{{[0-9]+}}]: global
-//CHECK-NEXT:  s3[ASCII, {{[0-9]+}}..{{[0-9]+}}]: bar
-//CHECK-NEXT:  s4[ASCII, {{[0-9]+}}..{{[0-9]+}}]: cee
-//CHECK-NEXT:  s5[ASCII, {{[0-9]+}}..{{[0-9]+}}]: 123
-//CHECK-NEXT:  s6[ASCII, {{[0-9]+}}..{{[0-9]+}}]: \x00\x00ppp\x00\x00
+//CHECK-NEXT:  s1[ASCII, {{[0-9]+}}..{{[0-9]+}}]: \x00\x00ppp\x00\x00
+//CHECK-NEXT:  s2[ASCII, {{[0-9]+}}..{{[0-9]+}}]: 123
+//CHECK-NEXT:  s3[ASCII, {{[0-9]+}}..{{[0-9]+}}]: abcdefg
+//CHECK-NEXT:  s4[ASCII, {{[0-9]+}}..{{[0-9]+}}]: global
+//CHECK-NEXT:  s5[ASCII, {{[0-9]+}}..{{[0-9]+}}]: bar
+//CHECK-NEXT:  s6[ASCII, {{[0-9]+}}..{{[0-9]+}}]: cee
 //CHECK-NEXT:  s7[UTF-16, {{[0-9]+}}..{{[0-9]+}}]: \xE5\x00
 //CHECK-NEXT:  s8[UTF-16, {{[0-9]+}}..{{[0-9]+}}]: \x3F\x04\x40\x04\x38\x04\x32\x04\x35\x04\x42\x04
 //CHECK-NEXT:  i9[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: a

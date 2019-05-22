@@ -22,13 +22,13 @@ print(require('./cjs-subdir-2.js').alpha);
 
 // BC-LABEL: String count: 10
 // BC-LABEL: Global String Table:
-// BC-NEXT:   s0[ASCII, {{.*}}]: main: init
-// BC-NEXT:   s1[ASCII, {{.*}}]: main: foo.x =
+// BC-NEXT:   s0[ASCII, {{.*}}]: 2: init
+// BC-NEXT:   s1[ASCII, {{.*}}]: cjs_module
 // BC-NEXT:   s2[ASCII, {{.*}}]: global
-// BC-NEXT:   s3[ASCII, {{.*}}]: 2: init
-// BC-NEXT:   s4[ASCII, {{.*}}]: cjs_module
-// BC-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: loadSegment
-// BC-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: x
-// BC-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: alpha
-// BC-NEXT:   p8[ASCII, {{.*}}] @{{.*}}: print
-// BC-NEXT:   p9[ASCII, {{.*}}] @{{.*}}: context
+// BC-NEXT:   s3[ASCII, {{.*}}]: main: foo.x =
+// BC-NEXT:   s4[ASCII, {{.*}}]: main: init
+// BC-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: alpha
+// BC-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: loadSegment
+// BC-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: x
+// BC-NEXT:   p8[ASCII, {{.*}}] @{{.*}}: context
+// BC-NEXT:   p9[ASCII, {{.*}}] @{{.*}}: print

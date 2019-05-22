@@ -66,10 +66,10 @@ TEST(StringStorageTest, ConsecutiveStringStorageTest) {
       hbc::UniquingStringLiteralAccumulator::toTable(std::move(USLA));
 
   EXPECT_EQ(SLT.count(), 4);
-  EXPECT_EQ(SLT.getStringID("hello"), 0);
-  EXPECT_EQ(SLT.getStringID("world"), 1);
+  EXPECT_EQ(SLT.getStringID(""), 0);
+  EXPECT_EQ(SLT.getStringID("hello"), 1);
   EXPECT_EQ(SLT.getStringID("some string"), 2);
-  EXPECT_EQ(SLT.getStringID(""), 3);
+  EXPECT_EQ(SLT.getStringID("world"), 3);
 
   std::string result;
 
@@ -85,7 +85,7 @@ TEST(StringStorageTest, ConsecutiveStringStorageTest) {
     }
   }
 
-  EXPECT_EQ(result, "helloworldsome\\x02string");
+  EXPECT_EQ(result, "hellosome\\x02stringworld");
 }
 
 TEST(StringStorageTest, PackingStringStorageTest) {
@@ -700,15 +700,15 @@ TEST(StringAccumulatorTest, Ordering) {
       std::move(USLA), /* optimize */ false);
 
   std::vector<llvm::StringRef> expectedStrings{
-      "String",
       "NoPredefStr0",
       "NoPredefStr1",
       "NoPredefStr2",
+      "String",
       "NoPredefId0",
       "NoPredefId1",
       "NoPredefId2",
-      "Object",
       "Function",
+      "Object",
   };
 
   for (size_t i = 0; i < expectedStrings.size(); ++i) {

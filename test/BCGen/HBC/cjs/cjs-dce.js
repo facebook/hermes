@@ -15,15 +15,15 @@ try {
 foo();
 
 // CHECK: Global String Table:
-// CHECK-NEXT:   s0[ASCII, {{.*}}]: cjs_module
-// CHECK-NEXT:   s1[ASCII, {{.*}}]: asdf
-// CHECK-NEXT:   s2[ASCII, {{.*}}]: foo
-// CHECK-NEXT:   s3[ASCII, {{.*}}]: global
-// CHECK-NEXT:   s4[ASCII, {{.*}}]: cjs-dce.js
+// CHECK-NEXT:   s0[ASCII, {{.*}}]: asdf
+// CHECK-NEXT:   s1[ASCII, {{.*}}]: foo
+// CHECK-NEXT:   s2[ASCII, {{.*}}]: cjs-dce.js
+// CHECK-NEXT:   s3[ASCII, {{.*}}]: cjs_module
+// CHECK-NEXT:   s4[ASCII, {{.*}}]: global
 // CHECK-NEXT:   p5[ASCII, {{.*}}] @{{[0-9]+}}: encodeURIComponent
 
 // CHECK: CommonJS Modules:
-// CHECK-NEXT:   File ID 4 -> function ID 1
+// CHECK-NEXT:   File ID 2 -> function ID 1
 
 // CHECK: Function<global>(1 params, 1 registers, 0 symbols):
 // CHECK-NEXT:     LoadConstUndefined r0

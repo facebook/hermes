@@ -24,8 +24,8 @@ print('module 1');
 // STATIC: Global String Table:
 // STATIC-NEXT: s0[ASCII, {{.*}}]: cjs_module
 // STATIC-NEXT: s1[ASCII, {{.*}}]: module 1
-// STATIC-NEXT: s2[ASCII, {{.*}}]: module 2
-// STATIC-NEXT: s3[ASCII, {{.*}}]: global
+// STATIC-NEXT: s2[ASCII, {{.*}}]: global
+// STATIC-NEXT: s3[ASCII, {{.*}}]: module 2
 // STATIC-NEXT: p4[ASCII, {{.*}}] @{{[0-9]+}}: print
 // STATIC-NOT: cjs-multiple-1
 // STATIC: CommonJS Modules (Static):

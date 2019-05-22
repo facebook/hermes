@@ -14,6 +14,6 @@ print(o.foo)
 // CHECK-NEXT:  i3[ASCII, {{.*}}] #{{.*}}: o
 // CHECK-NEXT:  p4[ASCII, {{.*}}] @{{.*}}: Object
 // CHECK-NEXT:  p5[ASCII, {{.*}}] @{{.*}}: defineProperty
-// CHECK-NEXT:  p6[ASCII, {{.*}}] @{{.*}}: value
-// CHECK-NEXT:  p7[ASCII, {{.*}}] @{{.*}}: print
+// CHECK-NEXT:  p6[ASCII, {{.*}}] @{{.*}}: print
+// CHECK-NEXT:  p7[ASCII, {{.*}}] @{{.*}}: value
 

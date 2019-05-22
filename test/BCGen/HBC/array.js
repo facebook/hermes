@@ -5,8 +5,8 @@ var y = ["foo", "foo", "bar",,,];
 var z = [{}];
 
 //CHECK-LABEL:Global String Table:
-//CHECK-NEXT:  s0[ASCII, {{[0-9]+\.\.[0-9]+}}]: foo
-//CHECK-NEXT:  s1[ASCII, {{[0-9]+\.\.[0-9]+}}]: bar
+//CHECK-NEXT:  s0[ASCII, {{[0-9]+\.\.[0-9]+}}]: bar
+//CHECK-NEXT:  s1[ASCII, {{[0-9]+\.\.[0-9]+}}]: foo
 //CHECK-NEXT:  s2[ASCII, {{[0-9]+\.\.[0-9]+}}]: global
 //CHECK-NEXT:  i3[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: x
 //CHECK-NEXT:  i4[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: y
@@ -18,9 +18,9 @@ var z = [{}];
 //CHECK-NEXT:false
 //CHECK-NEXT:[int 0]
 //CHECK-NEXT:[int 1]
-//CHECK-NEXT:[String 0]
-//CHECK-NEXT:[String 0]
 //CHECK-NEXT:[String 1]
+//CHECK-NEXT:[String 1]
+//CHECK-NEXT:[String 0]
 
 //CHECK-LABEL:Function<global>{{.*}}:
 //CHECK-NEXT:Offset in debug table: src 0x0, vars 0x0

@@ -125,25 +125,25 @@ var obj4 = {
 //IRGEN-NEXT:function_end
 
 //BCGEN-LABEL:Global String Table:
-//BCGEN:  s0[ASCII, {{.*}}]: hello
-//BCGEN:  i10[ASCII, {{.*}}] #{{.*}}: g
-//BCGEN:  i11[ASCII, {{.*}}] #{{.*}}: a
-//BCGEN:  i12[ASCII, {{.*}}] #{{.*}}: b
-//BCGEN:  i13[ASCII, {{.*}}] #{{.*}}: c
-//BCGEN:  i14[ASCII, {{.*}}] #{{.*}}: d
-//BCGEN:  i15[ASCII, {{.*}}] #{{.*}}: e
-//BCGEN:  i16[ASCII, {{.*}}] #{{.*}}: f
+//BCGEN:  s1[ASCII, {{.*}}]: hello
+//BCGEN:  i2[ASCII, {{.*}}] #{{.*}}: g
+//BCGEN:  i3[ASCII, {{.*}}] #{{.*}}: a
+//BCGEN:  i9[ASCII, {{.*}}] #{{.*}}: b
+//BCGEN:  i10[ASCII, {{.*}}] #{{.*}}: c
+//BCGEN:  i11[ASCII, {{.*}}] #{{.*}}: d
+//BCGEN:  i12[ASCII, {{.*}}] #{{.*}}: e
+//BCGEN:  i13[ASCII, {{.*}}] #{{.*}}: f
 
 //BCGEN-LABEL:Object Key Buffer:
+//BCGEN-NEXT:[String 3]
+//BCGEN-NEXT:[String 9]
+//BCGEN-NEXT:[String 10]
 //BCGEN-NEXT:[String 11]
 //BCGEN-NEXT:[String 12]
 //BCGEN-NEXT:[String 13]
-//BCGEN-NEXT:[String 14]
-//BCGEN-NEXT:[String 15]
-//BCGEN-NEXT:[String 16]
-//BCGEN-NEXT:[String 10]
+//BCGEN-NEXT:[String 2]
 //BCGEN-NEXT:Object Value Buffer:
-//BCGEN-NEXT:[String 0]
+//BCGEN-NEXT:[String 1]
 //BCGEN-NEXT:[int 1]
 //BCGEN-NEXT:null
 //BCGEN-NEXT:null
