@@ -30,10 +30,10 @@ BCProviderFromSrc::BCProviderFromSrc(
 
   globalFunctionIndex_ = module_->getGlobalFunctionIndex();
 
-  stringStorage_ = module_->getStringStorage();
-  stringCount_ = module_->getStringTable().size();
   stringKinds_ = module_->getStringKinds();
   identifierTranslations_ = module_->getIdentifierTranslations();
+  stringCount_ = module_->getStringTable().size();
+  stringStorage_ = module_->getStringStorage();
 
   regExpStorage_ = module_->getRegExpStorage();
   regExpTable_ = module_->getRegExpTable();

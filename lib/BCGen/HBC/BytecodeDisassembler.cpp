@@ -712,6 +712,14 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       functionHeadersStart,
       functionHeadersStart + fileHeader->functionCount);
   addSection(
+      "String Kinds",
+      bcProvider->getStringKinds().begin(),
+      bcProvider->getStringKinds().end());
+  addSection(
+      "Identifier translations",
+      bcProvider->getIdentifierTranslations().begin(),
+      bcProvider->getIdentifierTranslations().end());
+  addSection(
       "String table",
       bcProvider->getSmallStringTableEntries().begin(),
       bcProvider->getSmallStringTableEntries().end());
@@ -723,14 +731,6 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       "String storage",
       bcProvider->getStringStorage().begin(),
       bcProvider->getStringStorage().end());
-  addSection(
-      "String Kinds",
-      bcProvider->getStringKinds().begin(),
-      bcProvider->getStringKinds().end());
-  addSection(
-      "Identifier translations",
-      bcProvider->getIdentifierTranslations().begin(),
-      bcProvider->getIdentifierTranslations().end());
   addSection(
       "Array buffer",
       bcProvider->getArrayBuffer().begin(),

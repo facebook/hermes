@@ -139,12 +139,12 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
 
   functionHeaders = castArrayRef<SmallFuncHeader>(buf, h->functionCount);
 
+  stringKinds = castArrayRef<StringKind::Entry>(buf, h->stringKindCount);
+  identifierTranslations = castArrayRef<uint32_t>(buf, h->identifierCount);
+
   stringTableEntries = castArrayRef<SmallStringTableEntry>(buf, h->stringCount);
   stringTableOverflowEntries =
       castArrayRef<OverflowStringTableEntry>(buf, h->overflowStringCount);
-
-  stringKinds = castArrayRef<StringKind::Entry>(buf, h->stringKindCount);
-  identifierTranslations = castArrayRef<uint32_t>(buf, h->identifierCount);
 
   stringStorage = castArrayRef<char>(buf, h->stringStorageSize);
   arrayBuffer = castArrayRef<unsigned char>(buf, h->arrayBufferSize);
@@ -284,10 +284,10 @@ BCProviderFromBuffer::BCProviderFromBuffer(std::unique_ptr<const Buffer> buffer)
   globalFunctionIndex_ = fileHeader->globalCodeIndex;
   debugInfoOffset_ = fileHeader->debugInfoOffset;
   functionHeaders_ = fields.functionHeaders.data();
-  stringCount_ = fileHeader->stringCount;
-  stringTableEntries_ = fields.stringTableEntries.data();
   stringKinds_ = fields.stringKinds;
   identifierTranslations_ = fields.identifierTranslations;
+  stringCount_ = fileHeader->stringCount;
+  stringTableEntries_ = fields.stringTableEntries.data();
   overflowStringTableEntries_ = fields.stringTableOverflowEntries;
   stringStorage_ = fields.stringStorage;
   arrayBuffer_ = fields.arrayBuffer;

@@ -212,9 +212,9 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
   bytecodeOptions.cjsModulesStaticallyResolved = !cjsModulesStatic_.empty();
   std::unique_ptr<BytecodeModule> BM{new BytecodeModule(
       functionGenerators_.size(),
-      stringTable_.acquireStringTable(),
       std::move(kinds),
       std::move(hashes),
+      stringTable_.acquireStringTable(),
       stringTable_.acquireStringStorage(),
       regExpTable_.getEntryList(),
       regExpTable_.getBytecodeBuffer(),

@@ -181,19 +181,19 @@ class BytecodeModule {
   /// scope.
   uint32_t globalFunctionIndex_{};
 
-  /// The global string storage. A sequence of chars.
-  std::vector<char> stringStorage_;
-
-  /// The global string table, a list of <offset, length> pair to represent
-  /// each string in the string storage.
-  std::vector<StringTableEntry> stringTable_;
-
   /// Run-length encoding representing the kinds of strings in the table.
   std::vector<StringKind::Entry> stringKinds_;
 
   /// The list of identifier translations, corresponding to the string entries
   /// marked as identifiers, in order.
   std::vector<uint32_t> identifierTranslations_;
+
+  /// The global string table, a list of <offset, length> pair to represent
+  /// each string in the string storage.
+  std::vector<StringTableEntry> stringTable_;
+
+  /// The global string storage. A sequence of chars.
+  std::vector<char> stringStorage_;
 
   /// The regexp bytecode buffer.
   std::vector<unsigned char> regExpStorage_;
@@ -236,9 +236,9 @@ class BytecodeModule {
   /// Used during serialization.
   explicit BytecodeModule(
       uint32_t functionCount,
-      std::vector<StringTableEntry> &&stringTable,
       std::vector<StringKind::Entry> &&stringKinds,
       std::vector<uint32_t> &&identifierTranslations,
+      std::vector<StringTableEntry> &&stringTable,
       std::vector<char> &&stringStorage,
       std::vector<RegExpTableEntry> &&regExpTable,
       std::vector<unsigned char> &&regExpStorage,
@@ -251,10 +251,10 @@ class BytecodeModule {
       std::vector<uint32_t> &&cjsModuleTableStatic,
       BytecodeOptions options)
       : globalFunctionIndex_(globalFunctionIndex),
-        stringStorage_(std::move(stringStorage)),
-        stringTable_(std::move(stringTable)),
         stringKinds_(std::move(stringKinds)),
         identifierTranslations_(std::move(identifierTranslations)),
+        stringTable_(std::move(stringTable)),
+        stringStorage_(std::move(stringStorage)),
         regExpStorage_(std::move(regExpStorage)),
         regExpTable_(std::move(regExpTable)),
         arrayBuffer_(std::move(arrayBuffer)),
@@ -292,13 +292,6 @@ class BytecodeModule {
     return getFunction(globalFunctionIndex_);
   }
 
-  uint32_t getStringTableSize() const {
-    return stringTable_.size();
-  }
-  StringTableEntry::StringTableRefTy getStringTable() const {
-    return stringTable_;
-  }
-
   llvm::ArrayRef<StringKind::Entry> getStringKinds() const {
     return stringKinds_;
   }
@@ -312,9 +305,18 @@ class BytecodeModule {
     return identifierTranslations_;
   }
 
+  uint32_t getStringTableSize() const {
+    return stringTable_.size();
+  }
+
+  StringTableEntry::StringTableRefTy getStringTable() const {
+    return stringTable_;
+  }
+
   uint32_t getStringStorageSize() const {
     return stringStorage_.size();
   }
+
   StringTableEntry::StringStorageRefTy getStringStorage() const {
     return stringStorage_;
   }

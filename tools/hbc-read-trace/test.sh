@@ -31,10 +31,10 @@ EOF
 cat <<EOF > "$TMP/expected"
 <unknown>
 function-table
-string-table
-overflow-string-table
 string-kinds
 identifier-translations
+string-table
+overflow-string-table
 string-storage
 array-buffer
 object-key-buffer
