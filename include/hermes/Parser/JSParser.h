@@ -57,14 +57,23 @@ class JSParser {
 
   void setStrictMode(bool mode);
 
+  /// Return true if the parser detected 'use static builtin' directive from the
+  /// source.
+  bool getUseStaticBuiltin() const;
+
   llvm::Optional<ESTree::FileNode *> parse();
 
   void seek(SMLoc startPos);
 
   /// Parse the given buffer id, indexing all functions and storing them in the
   /// \p Context. Returns true on success, at which point the file can be
-  /// processed on demand in \p LazyParse mode.
-  static bool preParseBuffer(Context &context, uint32_t bufferId);
+  /// processed on demand in \p LazyParse mode. \p useStaticBuiltinDetected will
+  /// be set to true if 'use static builtin' directive is detected in the
+  /// source.
+  static bool preParseBuffer(
+      Context &context,
+      uint32_t bufferId,
+      bool &useStaticBuiltinDetected);
 
   /// Parse the AST of a specified function type at a given starting point.
   /// This is used for lazy compilation to parse and compile the function on

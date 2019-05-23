@@ -10,6 +10,8 @@
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 
+#include "llvm/ADT/Optional.h"
+
 namespace hermes {
 namespace hbc {
 
@@ -19,7 +21,11 @@ struct CompileFlags {
   bool debug{false};
   bool lazy{false};
   bool strict{false};
-  bool staticBuiltins{false};
+  /// The value is optional; when it is set, the optimization setting is based
+  /// on the value; when it is unset, it means the parser needs to automatically
+  /// detect the 'use static builtin' directive and set the optimization setting
+  /// accordingly.
+  llvm::Optional<bool> staticBuiltins;
   bool verifyIR{false};
 };
 

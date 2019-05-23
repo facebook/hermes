@@ -169,4 +169,76 @@ TEST_F(StaticBuiltinsTest, AttemptToOverrideBuiltins2) {
       ExecutionStatus::EXCEPTION);
 }
 
+#ifndef NDEBUG
+TEST_F(StaticBuiltinsTest, UseStaticBuiltinDirective) {
+  std::string codeStaticBuiltin = R"(
+    'use static builtin';
+    Array.isArray = 1;
+  )";
+  CompileFlags flagsAutoBuiltin;
+  EXPECT_EQ(
+      runtime->run(codeStaticBuiltin, "source/url", flagsAutoBuiltin),
+      ExecutionStatus::EXCEPTION);
+}
+
+TEST_F(StaticBuiltinsTest, ForceNoBuiltinFlag) {
+  std::string codeStaticBuiltin = R"(
+    'use static builtin';
+    Array.isArray = 1;
+  )";
+  CompileFlags flagsForceNoBuiltin;
+  flagsForceNoBuiltin.staticBuiltins = false;
+  EXPECT_EQ(
+      runtime->run(codeStaticBuiltin, "source/url", flagsForceNoBuiltin),
+      ExecutionStatus::RETURNED);
+}
+
+TEST_F(StaticBuiltinsTest, UseStaticBuiltinDirectiveLazyCompilation) {
+  std::string codeStaticBuiltin = R"(
+    Array.isArray = 1;
+    function func() {
+      /* Some text to pad out the function so that it won't be eagerly compiled
+       * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
+       * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+       */
+       /* Some text to pad out the function so that it won't be eagerly compiled
+        * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
+        * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+        */
+      'use static builtin';
+      return;
+    }
+  )";
+  CompileFlags flagsAutoBuiltinLazy;
+  flagsAutoBuiltinLazy.lazy = true;
+  EXPECT_EQ(
+      runtime->run(codeStaticBuiltin, "source/url", flagsAutoBuiltinLazy),
+      ExecutionStatus::EXCEPTION);
+}
+
+TEST_F(StaticBuiltinsTest, ForceNoBuiltinFlagLazyCompilation) {
+  std::string codeStaticBuiltin = R"(
+    Array.isArray = 1;
+    function func() {
+      /* Some text to pad out the function so that it won't be eagerly compiled
+       * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
+       * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+       */
+       /* Some text to pad out the function so that it won't be eagerly compiled
+        * for being too short. Lorem ipsum dolor sit amet, consectetur adipiscing
+        * elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+        */
+      'use static builtin';
+      return;
+    }
+  )";
+  CompileFlags flagsForceNoBuiltin;
+  flagsForceNoBuiltin.staticBuiltins = false;
+  flagsForceNoBuiltin.lazy = true;
+  EXPECT_EQ(
+      runtime->run(codeStaticBuiltin, "source/url", flagsForceNoBuiltin),
+      ExecutionStatus::RETURNED);
+}
+#endif
+
 } // namespace

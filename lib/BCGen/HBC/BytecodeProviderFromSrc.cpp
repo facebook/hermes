@@ -69,7 +69,11 @@ BCProviderFromSrc::createBCProviderFromSrc(
   codeGenOpts.unlimitedRegisters = false;
 
   OptimizationSettings optSettings;
-  optSettings.staticBuiltins = compileFlags.staticBuiltins;
+  // If the optional value is not set, the parser will automatically detect
+  // the 'use static builtin' directive and we will set it correctly.
+  optSettings.staticBuiltins = compileFlags.staticBuiltins.hasValue()
+      ? compileFlags.staticBuiltins.getValue()
+      : false;
 
   auto context = std::make_shared<Context>(
       codeGenOpts, TypeCheckerSettings(), optSettings);
@@ -102,8 +106,10 @@ BCProviderFromSrc::createBCProviderFromSrc(
       llvm::make_unique<HermesLLVMMemoryBuffer>(std::move(buffer), sourceURL));
 
   auto parserMode = parser::FullParse;
+  bool useStaticBuiltinDetected = false;
   if (context->isLazyCompilation()) {
-    if (!parser::JSParser::preParseBuffer(*context, fileBufId)) {
+    if (!parser::JSParser::preParseBuffer(
+            *context, fileBufId, useStaticBuiltinDetected)) {
       return {nullptr, outputManager.getErrorString()};
     }
     parserMode = parser::LazyParse;
@@ -114,6 +120,16 @@ BCProviderFromSrc::createBCProviderFromSrc(
   auto parsed = parser.parse();
   if (!parsed || !hermes::sem::validateAST(*context, semCtx, *parsed)) {
     return {nullptr, outputManager.getErrorString()};
+  }
+  // If we are using lazy parse mode, we should have already detected the 'use
+  // static builtin' directive in the pre-parsing stage.
+  if (parserMode != parser::LazyParse) {
+    useStaticBuiltinDetected = parser.getUseStaticBuiltin();
+  }
+  // The compiler flag is not set, automatically detect 'use static builtin'
+  // from the source.
+  if (!compileFlags.staticBuiltins) {
+    context->setStaticBuiltinOptimization(useStaticBuiltinDetected);
   }
 
   Module M(context);
@@ -136,7 +152,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
 
   BytecodeGenerationOptions opts{OutputFormatKind::None};
   opts.optimizationEnabled = compileFlags.optimize;
-  opts.staticBuiltinsEnabled = compileFlags.staticBuiltins;
+  opts.staticBuiltinsEnabled =
+      context->getOptimizationSettings().staticBuiltins;
   opts.verifyIR = compileFlags.verifyIR;
   auto bytecode = createBCProviderFromSrc(
       hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), opts));

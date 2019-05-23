@@ -35,6 +35,10 @@ void JSParser::setStrictMode(bool mode) {
   return impl_->setStrictMode(mode);
 }
 
+bool JSParser::getUseStaticBuiltin() const {
+  return impl_->getUseStaticBuiltin();
+}
+
 llvm::Optional<ESTree::FileNode *> JSParser::parse() {
   return impl_->parse();
 }
@@ -43,8 +47,12 @@ void JSParser::seek(SMLoc startPos) {
   return impl_->seek(startPos);
 }
 
-bool JSParser::preParseBuffer(Context &context, uint32_t bufferId) {
-  return detail::JSParserImpl::preParseBuffer(context, bufferId);
+bool JSParser::preParseBuffer(
+    Context &context,
+    uint32_t bufferId,
+    bool &useStaticBuiltinDetected) {
+  return detail::JSParserImpl::preParseBuffer(
+      context, bufferId, useStaticBuiltinDetected);
 }
 
 llvm::Optional<ESTree::NodePtr> JSParser::parseLazyFunction(

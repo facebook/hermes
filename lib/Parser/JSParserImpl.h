@@ -115,8 +115,13 @@ class JSParserImpl {
 
   /// Parse the given buffer id, indexing all functions and storing them in the
   /// \p Context. Returns true on success, at which point the file can be
-  /// processed on demand in \p LazyParse mode.
-  static bool preParseBuffer(Context &context, uint32_t bufferId);
+  /// processed on demand in \p LazyParse mode. \p useStaticBuiltinDetected will
+  /// be set to true if 'use static builtin' directive is detected in the
+  /// source.
+  static bool preParseBuffer(
+      Context &context,
+      uint32_t bufferId,
+      bool &useStaticBuiltinDetected);
 
   /// Parse the AST of a specified function type at a given starting point.
   /// This is used for lazy compilation to parse and compile the function on
@@ -125,7 +130,19 @@ class JSParserImpl {
       ESTree::NodeKind kind,
       SMLoc start);
 
+  /// Return true if the parser detected 'use static builtin' directive from the
+  /// source.
+  bool getUseStaticBuiltin() const {
+    return useStaticBuiltin_;
+  }
+
  private:
+  /// Called when the parser detects 'use static builtin' directive from the
+  /// source.
+  void setUseStaticBuiltin() {
+    useStaticBuiltin_ = true;
+  }
+
   /// Called during construction to initialize Identifiers used for parsing,
   /// such as "var". The lexer and parser uses these to avoid passing strings
   /// around.
@@ -153,6 +170,9 @@ class JSParserImpl {
   /// Self-explanatory: the maximum depth of parser recursion.
   static constexpr unsigned MAX_RECURSION_DEPTH = 1024;
 
+  /// Set when the parser sees the 'use static builtin' directive in any scope.
+  bool useStaticBuiltin_{false};
+
   // Certain known identifiers which we need to use when constructing the
   // ESTree or when parsing;
   UniqueString *getIdent_;
@@ -161,6 +181,7 @@ class JSParserImpl {
   UniqueString *useStrictIdent_;
   UniqueString *letIdent_;
   UniqueString *ofIdent_;
+  UniqueString *useStaticBuiltinIdent_;
   /// String representation of all tokens.
   UniqueString *tokenIdent_[NUM_JS_TOKENS];
 

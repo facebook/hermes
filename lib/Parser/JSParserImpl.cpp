@@ -64,6 +64,7 @@ void JSParserImpl::initializeIdentifiers() {
   useStrictIdent_ = lexer_.getIdentifier("use strict");
   letIdent_ = lexer_.getIdentifier("let");
   ofIdent_ = lexer_.getIdentifier("of");
+  useStaticBuiltinIdent_ = lexer_.getIdentifier("use static builtin");
 
   // Generate the string representation of all tokens.
   for (unsigned i = 0; i != NUM_JS_TOKENS; ++i)
@@ -203,6 +204,10 @@ bool JSParserImpl::eatSemi(SMLoc &endLoc, bool optional) {
 void JSParserImpl::processDirective(UniqueString *directive) {
   if (directive == useStrictIdent_)
     setStrictMode(true);
+#ifndef NDEBUG
+  if (directive == useStaticBuiltinIdent_)
+    setUseStaticBuiltin();
+#endif
 }
 
 bool JSParserImpl::recursionDepthExceeded() {
@@ -2917,11 +2922,15 @@ Optional<ESTree::NodePtr> castNode(Optional<T> node) {
 }
 } // namespace
 
-bool JSParserImpl::preParseBuffer(Context &context, uint32_t bufferId) {
+bool JSParserImpl::preParseBuffer(
+    Context &context,
+    uint32_t bufferId,
+    bool &useStaticBuiltinDetected) {
   PerfSection preparsing("Pre-Parsing JavaScript");
   AllocationScope scope(context.getAllocator());
   JSParserImpl parser(context, bufferId, PreParse);
   auto result = parser.parse();
+  useStaticBuiltinDetected = parser.getUseStaticBuiltin();
   return result.hasValue();
 }
 

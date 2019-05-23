@@ -171,11 +171,11 @@ class Context {
   /// Whether we should emit debug information. Default to false.
   DebugInfoSetting debugInfoSetting_{DebugInfoSetting::THROWING};
 
-  const CodeGenerationSettings codeGenerationSettings_;
+  CodeGenerationSettings codeGenerationSettings_;
 
-  const TypeCheckerSettings typeCheckerSettings_;
+  TypeCheckerSettings typeCheckerSettings_;
 
-  const OptimizationSettings optimizationSettings_;
+  OptimizationSettings optimizationSettings_;
 
   /// The HBC backend context. We use a shared pointer to avoid any dependencies
   /// on its destructor.
@@ -286,6 +286,14 @@ class Context {
 
   void setLazyCompilation(bool lazyCompilation) {
     lazyCompilation_ = lazyCompilation;
+  }
+
+  void setStaticBuiltinOptimization(bool staticBuiltins) {
+    optimizationSettings_.staticBuiltins = staticBuiltins;
+  }
+
+  bool getStaticBuiltinOptimization() const {
+    return optimizationSettings_.staticBuiltins;
   }
 
   const CodeGenerationSettings &getCodeGenerationSettings() const {

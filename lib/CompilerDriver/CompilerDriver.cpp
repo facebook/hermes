@@ -146,11 +146,29 @@ cl::opt<OptLevel> OptimizationLevel(
         clEnumValN(OptLevel::Og, "Og", "Optimizations suitable for debugging"),
         clEnumValN(OptLevel::OMax, "O", "Expensive optimizations")));
 
-static CLFlag StaticBuiltins(
-    'f',
-    "static-builtins",
-    false,
-    " recognizing of calls to global functions like Object.keys() statically");
+enum class StaticBuiltinSetting {
+  ForceOn,
+  ForceOff,
+  AutoDetect,
+};
+
+cl::opt<StaticBuiltinSetting> StaticBuiltins(
+    cl::desc(
+        "recognizing of calls to global functions like Object.keys() statically"),
+    cl::init(StaticBuiltinSetting::AutoDetect),
+    cl::values(
+        clEnumValN(
+            StaticBuiltinSetting::ForceOn,
+            "fstatic-builtins",
+            "Enable static builtins."),
+        clEnumValN(
+            StaticBuiltinSetting::ForceOff,
+            "fno-static-builtins",
+            "Disable static builtins."),
+        clEnumValN(
+            StaticBuiltinSetting::AutoDetect,
+            "fauto-detect-static-builtins",
+            "Automatically detect 'use static builtin' directive from the source.")));
 
 static list<std::string>
     CustomOptimize("custom-opt", desc("Custom optimzations"), Hidden);
@@ -546,13 +564,17 @@ ESTree::NodePtr parseJS(
     bool wrapCJSModule = false) {
   assert(fileBuf && "Need a file to compile");
   assert(context && "Need a context to compile using");
+  // This value will be set to true if the parser detected the 'use static
+  // builtin' directive in the source.
+  bool useStaticBuiltinDetected = false;
 
   int fileBufId =
       context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf));
   auto mode = parser::FullParse;
 
   if (context->isLazyCompilation()) {
-    if (!parser::JSParser::preParseBuffer(*context, fileBufId)) {
+    if (!parser::JSParser::preParseBuffer(
+            *context, fileBufId, useStaticBuiltinDetected)) {
       return nullptr;
     }
     mode = parser::LazyParse;
@@ -568,10 +590,19 @@ ESTree::NodePtr parseJS(
   {
     parser::JSParser jsParser(*context, fileBufId, mode);
     parsedJs = jsParser.parse();
+    // If we are using lazy parse mode, we should have already detected the 'use
+    // static builtin' directive in the pre-parsing stage.
+    if (mode != parser::LazyParse) {
+      useStaticBuiltinDetected = jsParser.getUseStaticBuiltin();
+    }
   }
   if (!parsedJs)
     return nullptr;
   ESTree::NodePtr parsedAST = parsedJs.getValue();
+
+  if (cl::StaticBuiltins == cl::StaticBuiltinSetting::AutoDetect) {
+    context->setStaticBuiltinOptimization(useStaticBuiltinDetected);
+  }
 
   if (wrapCJSModule) {
     parsedAST =
@@ -729,7 +760,10 @@ std::shared_ptr<Context> createContext(
 
   optimizationOpts.reusePropCache = cl::ReusePropCache;
 
-  optimizationOpts.staticBuiltins = cl::StaticBuiltins;
+  // When the setting is auto-detect, we will set the correct value after
+  // parsing.
+  optimizationOpts.staticBuiltins =
+      cl::StaticBuiltins == cl::StaticBuiltinSetting::ForceOn;
   optimizationOpts.staticRequire = cl::StaticRequire;
 
   auto context = std::make_shared<Context>(
@@ -1343,7 +1377,9 @@ CompileResult processSourceFiles(
   genOptions.optimizationEnabled = cl::OptimizationLevel > cl::OptLevel::Og;
   genOptions.prettyDisassemble = cl::PrettyDisassemble;
   genOptions.basicBlockProfiling = cl::BasicBlockProfiling;
-  genOptions.staticBuiltinsEnabled = cl::StaticBuiltins;
+  // The static builtin setting should be set correctly after command line
+  // options parsing and js parsing. Set the bytecode header flag here.
+  genOptions.staticBuiltinsEnabled = context->getStaticBuiltinOptimization();
   genOptions.padFunctionBodiesPercent = cl::PadFunctionBodiesPercent;
 
   // If the user requests to output a source map, then do not also emit debug
