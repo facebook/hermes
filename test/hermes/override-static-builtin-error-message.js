@@ -21,6 +21,14 @@ try {
 }
 // CHECK: TypeError: Attempting to override read-only builtin method 'Array.isArray'
 
+try {
+  var isArray = 'isArray';
+  Array[isArray] = 2;
+} catch (e) {
+  print(e.toString());
+}
+// CHECK: TypeError: Attempting to override read-only builtin method 'Array.isArray'
+
 Object.defineProperty(Array, 'name', {configurable : true});
 Object.defineProperty(Array, 'name', {writable : true});
 Array.name = undefined;
