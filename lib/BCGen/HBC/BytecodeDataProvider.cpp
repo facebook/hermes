@@ -133,38 +133,94 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
     return false;
   }
 
-  auto *buf = buffer.data();
-  header = castData<BytecodeFileHeader>(buf);
-  const BytecodeFileHeader *h = header;
+  // Helper type which populates a BytecodeFileFields. This is nested inside the
+  // function so we can leverage BytecodeFileFields template types.
+  struct BytecodeFileFieldsPopulator {
+    /// The fields being populated.
+    BytecodeFileFields &f;
 
-  functionHeaders = castArrayRef<SmallFuncHeader>(buf, h->functionCount);
+    /// Current buffer position.
+    Pointer<uint8_t> buf;
 
-  stringKinds = castArrayRef<StringKind::Entry>(buf, h->stringKindCount);
-  identifierTranslations = castArrayRef<uint32_t>(buf, h->identifierCount);
+    /// A pointer to the bytecode file header.
+    const BytecodeFileHeader *h;
 
-  stringTableEntries = castArrayRef<SmallStringTableEntry>(buf, h->stringCount);
-  stringTableOverflowEntries =
-      castArrayRef<OverflowStringTableEntry>(buf, h->overflowStringCount);
+    BytecodeFileFieldsPopulator(
+        BytecodeFileFields &fields,
+        Pointer<uint8_t> buffer)
+        : f(fields), buf(buffer) {
+      f.header = castData<BytecodeFileHeader>(buf);
+      h = f.header;
+    }
 
-  stringStorage = castArrayRef<char>(buf, h->stringStorageSize);
-  arrayBuffer = castArrayRef<unsigned char>(buf, h->arrayBufferSize);
+    void visitFunctionHeaders() {
+      align(buf);
+      f.functionHeaders = castArrayRef<SmallFuncHeader>(buf, h->functionCount);
+    }
 
-  objKeyBuffer = castArrayRef<unsigned char>(buf, h->objKeyBufferSize);
-  objValueBuffer = castArrayRef<unsigned char>(buf, h->objValueBufferSize);
+    void visitStringKinds() {
+      align(buf);
+      f.stringKinds = castArrayRef<StringKind::Entry>(buf, h->stringKindCount);
+    }
 
-  align(buf);
-  regExpTable = castArrayRef<RegExpTableEntry>(buf, h->regExpCount);
-  regExpStorage = castArrayRef<unsigned char>(buf, h->regExpStorageSize);
+    void visitIdentifierTranslations() {
+      align(buf);
+      f.identifierTranslations =
+          castArrayRef<uint32_t>(buf, h->identifierCount);
+    }
 
-  align(buf);
-  if (h->options.cjsModulesStaticallyResolved) {
-    // Modules have been statically resolved.
-    cjsModuleTableStatic = castArrayRef<uint32_t>(buf, h->cjsModuleCount);
-  } else {
-    // Modules are not resolved, use the filename -> function ID mapping.
-    cjsModuleTable =
-        castArrayRef<std::pair<uint32_t, uint32_t>>(buf, h->cjsModuleCount);
-  }
+    void visitSmallStringTable() {
+      align(buf);
+      f.stringTableEntries =
+          castArrayRef<SmallStringTableEntry>(buf, h->stringCount);
+    }
+
+    void visitOverflowStringTable() {
+      align(buf);
+      f.stringTableOverflowEntries =
+          castArrayRef<OverflowStringTableEntry>(buf, h->overflowStringCount);
+    }
+
+    void visitStringStorage() {
+      align(buf);
+      f.stringStorage = castArrayRef<char>(buf, h->stringStorageSize);
+    }
+    void visitArrayBuffer() {
+      align(buf);
+      f.arrayBuffer = castArrayRef<unsigned char>(buf, h->arrayBufferSize);
+    }
+    void visitObjectKeyBuffer() {
+      align(buf);
+      f.objKeyBuffer = castArrayRef<unsigned char>(buf, h->objKeyBufferSize);
+    }
+    void visitObjectValueBuffer() {
+      align(buf);
+      f.objValueBuffer =
+          castArrayRef<unsigned char>(buf, h->objValueBufferSize);
+    }
+    void visitRegExpTable() {
+      align(buf);
+      f.regExpTable = castArrayRef<RegExpTableEntry>(buf, h->regExpCount);
+    }
+    void visitRegExpStorage() {
+      align(buf);
+      f.regExpStorage = castArrayRef<unsigned char>(buf, h->regExpStorageSize);
+    }
+    void visitCJSModuleTable() {
+      align(buf);
+      if (h->options.cjsModulesStaticallyResolved) {
+        // Modules have been statically resolved.
+        f.cjsModuleTableStatic = castArrayRef<uint32_t>(buf, h->cjsModuleCount);
+      } else {
+        // Modules are not resolved, use the filename -> function ID mapping.
+        f.cjsModuleTable =
+            castArrayRef<std::pair<uint32_t, uint32_t>>(buf, h->cjsModuleCount);
+      }
+    }
+  };
+
+  BytecodeFileFieldsPopulator populator{*this, buffer.data()};
+  visitBytecodeSegmentsInOrder(populator);
   return true;
 }
 

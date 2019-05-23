@@ -32,8 +32,13 @@ class BytecodeFunction;
 class BytecodeModule;
 
 class BytecodeSerializer {
+  friend void visitBytecodeSegmentsInOrder<BytecodeSerializer>(
+      BytecodeSerializer &);
+
   /// Output Stream
   raw_ostream &os_;
+  // Module being serialized.
+  BytecodeModule *bytecodeModule_;
   /// Options controlling bytecode generation.
   BytecodeGenerationOptions options_;
   /// Current output offset.
@@ -80,10 +85,6 @@ class BytecodeSerializer {
 
   void serializeFunctionTable(BytecodeModule &BM);
 
-  void serializeStringTable(BytecodeModule &BM);
-
-  void serializeRegExps(BytecodeModule &BM);
-
   void serializeCJSModuleTable(BytecodeModule &BM);
 
   void serializeDebugInfo(BytecodeModule &BM);
@@ -100,6 +101,19 @@ class BytecodeSerializer {
   void serializeFunctionInfo(BytecodeFunction &BF);
 
   void finishLayout(BytecodeModule &BM);
+
+  void visitFunctionHeaders();
+  void visitStringKinds();
+  void visitIdentifierTranslations();
+  void visitSmallStringTable();
+  void visitOverflowStringTable();
+  void visitStringStorage();
+  void visitArrayBuffer();
+  void visitObjectKeyBuffer();
+  void visitObjectValueBuffer();
+  void visitRegExpTable();
+  void visitRegExpStorage();
+  void visitCJSModuleTable();
 
  public:
   explicit BytecodeSerializer(

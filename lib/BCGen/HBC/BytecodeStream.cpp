@@ -11,6 +11,7 @@ using namespace hbc;
 
 // ============================ File ============================
 void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
+  bytecodeModule_ = &BM;
   uint32_t cjsModuleCount = BM.getBytecodeOptions().cjsModulesStaticallyResolved
       ? BM.getCJSModuleTableStatic().size()
       : BM.getCJSModuleTable().size();
@@ -37,18 +38,7 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
   writeBinary(header);
   // Sizes of file and function headers are tuned for good cache line packing.
   // If you reorder the format, try to avoid headers crossing cache lines.
-  serializeFunctionTable(BM);
-
-  serializeStringTable(BM);
-
-  serializeArrayBuffer(BM);
-
-  serializeObjectBuffer(BM);
-
-  serializeRegExps(BM);
-
-  serializeCJSModuleTable(BM);
-
+  visitBytecodeSegmentsInOrder(*this);
   serializeFunctionsBytecode(BM);
 
   for (auto &entry : BM.getFunctionTable()) {
@@ -80,33 +70,6 @@ void BytecodeSerializer::serializeFunctionTable(BytecodeModule &BM) {
     FunctionHeader header = entry->getHeader();
     writeBinary(SmallFuncHeader(header));
   }
-}
-
-// ========================== String Table ==========================
-void BytecodeSerializer::serializeStringTable(BytecodeModule &BM) {
-  writeBinaryArray(BM.getStringKinds());
-  writeBinaryArray(BM.getIdentifierTranslations());
-
-  std::vector<OverflowStringTableEntry> overflow;
-  for (auto &entry : BM.getStringTable()) {
-    SmallStringTableEntry small(entry, overflow.size());
-    writeBinary(small);
-    if (small.isOverflowed()) {
-      overflow.emplace_back(entry.getOffset(), entry.getLength());
-    }
-  }
-  overflowStringEntryCount_ = static_cast<uint32_t>(overflow.size());
-  writeBinaryArray(llvm::makeArrayRef(overflow));
-  writeBinaryArray(BM.getStringStorage());
-}
-
-// ========================== RegExps ==========================
-void BytecodeSerializer::serializeRegExps(BytecodeModule &BM) {
-  llvm::ArrayRef<RegExpTableEntry> table = BM.getRegExpTable();
-  llvm::ArrayRef<unsigned char> storage = BM.getRegExpStorage();
-  pad(4);
-  writeBinaryArray(table);
-  writeBinaryArray(storage);
 }
 
 // ========================== DebugInfo ==========================
@@ -260,4 +223,79 @@ void BytecodeSerializer::serializeFunctionInfo(BytecodeFunction &BF) {
 
   // Add offset in debug info (if function has debug info).
   serializeDebugOffsets(BF);
+}
+
+void BytecodeSerializer::visitFunctionHeaders() {
+  pad(4);
+  serializeFunctionTable(*bytecodeModule_);
+}
+
+void BytecodeSerializer::visitStringKinds() {
+  pad(4);
+  writeBinaryArray(bytecodeModule_->getStringKinds());
+}
+
+void BytecodeSerializer::visitIdentifierTranslations() {
+  pad(4);
+  writeBinaryArray(bytecodeModule_->getIdentifierTranslations());
+}
+
+void BytecodeSerializer::visitSmallStringTable() {
+  pad(4);
+  uint32_t overflowCount = 0;
+  for (auto &entry : bytecodeModule_->getStringTable()) {
+    SmallStringTableEntry small(entry, overflowCount);
+    writeBinary(small);
+    overflowCount += small.isOverflowed();
+  }
+  overflowStringEntryCount_ = overflowCount;
+}
+
+void BytecodeSerializer::visitOverflowStringTable() {
+  pad(4);
+  llvm::SmallVector<OverflowStringTableEntry, 64> overflow;
+  for (auto &entry : bytecodeModule_->getStringTable()) {
+    SmallStringTableEntry small(entry, overflow.size());
+    if (small.isOverflowed()) {
+      overflow.emplace_back(entry.getOffset(), entry.getLength());
+    }
+  }
+  writeBinaryArray(llvm::makeArrayRef(overflow));
+}
+
+void BytecodeSerializer::visitStringStorage() {
+  pad(4);
+  writeBinaryArray(bytecodeModule_->getStringStorage());
+}
+
+void BytecodeSerializer::visitArrayBuffer() {
+  pad(4);
+  serializeArrayBuffer(*bytecodeModule_);
+}
+
+void BytecodeSerializer::visitObjectKeyBuffer() {
+  pad(4);
+  auto objectKeyValBufferPair = bytecodeModule_->getObjectBuffer();
+  writeBinaryArray(objectKeyValBufferPair.first);
+}
+
+void BytecodeSerializer::visitObjectValueBuffer() {
+  pad(4);
+  auto objectKeyValBufferPair = bytecodeModule_->getObjectBuffer();
+  writeBinaryArray(objectKeyValBufferPair.second);
+}
+
+void BytecodeSerializer::visitRegExpTable() {
+  pad(4);
+  writeBinaryArray(bytecodeModule_->getRegExpTable());
+}
+
+void BytecodeSerializer::visitRegExpStorage() {
+  pad(4);
+  writeBinaryArray(bytecodeModule_->getRegExpStorage());
+}
+
+void BytecodeSerializer::visitCJSModuleTable() {
+  pad(4);
+  serializeCJSModuleTable(*bytecodeModule_);
 }
