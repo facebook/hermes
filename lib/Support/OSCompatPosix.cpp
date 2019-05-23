@@ -16,9 +16,11 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 
+#if defined(__linux__)
 #if !defined(RUSAGE_THREAD)
 #define RUSAGE_THREAD 1
 #endif
+#endif // __linux__
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -316,7 +318,13 @@ uint64_t peak_rss() {
 bool num_context_switches(long &voluntary, long &involuntary) {
   voluntary = involuntary = -1;
   rusage ru;
-  if (getrusage(RUSAGE_SELF, &ru)) {
+  // Only Linux is known to have RUSAGE_THREAD.
+#if defined(__linux__)
+  const int who = RUSAGE_THREAD;
+#else
+  const int who = RUSAGE_SELF;
+#endif
+  if (getrusage(who, &ru)) {
     // failed
     return false;
   }

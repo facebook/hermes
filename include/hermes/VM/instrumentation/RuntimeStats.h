@@ -25,6 +25,8 @@ struct RuntimeStats {
   struct Sampled {
     int64_t threadMinorFaults{0};
     int64_t threadMajorFaults{0};
+    long volCtxSwitches{0};
+    long involCtxSwitches{0};
   };
 
   /// A Statistic tracks duration in wall and CPU time, (optionally) the number
@@ -97,7 +99,9 @@ class RAIITimer {
 
     RuntimeStats::Sampled result{};
     if (!oscompat::thread_page_fault_count(
-            &result.threadMinorFaults, &result.threadMajorFaults))
+            &result.threadMinorFaults, &result.threadMajorFaults) ||
+        !oscompat::num_context_switches(
+            result.volCtxSwitches, result.involCtxSwitches))
       return {};
     return result;
   }
@@ -134,6 +138,10 @@ class RAIITimer {
         currentSampled.threadMinorFaults - sampledStart_.threadMinorFaults;
     stat_.sampled.threadMajorFaults +=
         currentSampled.threadMajorFaults - sampledStart_.threadMajorFaults;
+    stat_.sampled.volCtxSwitches +=
+        currentSampled.volCtxSwitches - sampledStart_.volCtxSwitches;
+    stat_.sampled.involCtxSwitches +=
+        currentSampled.involCtxSwitches - sampledStart_.involCtxSwitches;
     wallTimeStart_ = currentWallTime;
     cpuTimeStart_ = currentCPUTime;
     sampledStart_ = currentSampled;

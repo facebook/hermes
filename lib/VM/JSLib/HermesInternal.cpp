@@ -233,6 +233,21 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     }                                                          \
   } while (false)
 
+  if (stats.shouldSample) {
+    SET_PROP_NEW(
+        "js_hermesVolCtxSwitches",
+        makeHermesTime(
+            stats.hostFunction.sampled.volCtxSwitches,
+            stats.evaluateJS.sampled.volCtxSwitches,
+            stats.incomingFunction.sampled.volCtxSwitches));
+    SET_PROP_NEW(
+        "js_hermesInvolCtxSwitches",
+        makeHermesTime(
+            stats.hostFunction.sampled.involCtxSwitches,
+            stats.evaluateJS.sampled.involCtxSwitches,
+            stats.incomingFunction.sampled.involCtxSwitches));
+  }
+
 /// Adds a property to \c resultHandle. \p KEY and \p VALUE provide its name and
 /// value as a C string and ASCIIRef respectively. If property definition fails,
 /// the exceptional execution status will be propogated to the outer function.
