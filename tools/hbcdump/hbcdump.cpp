@@ -165,8 +165,9 @@ static void enterCommandLoop(
     const std::vector<std::string> &startupCommands) {
   BytecodeDisassembler disassembler(bcProvider);
 
-  // Include source information by default in disassembly output.
-  DisassemblyOptions options = DisassemblyOptions::IncludeSource;
+  // Include source information and func IDs by default in disassembly output.
+  DisassemblyOptions options = DisassemblyOptions::IncludeSource |
+      DisassemblyOptions::IncludeFunctionIds;
   if (PrettyDisassemble) {
     options = options | DisassemblyOptions::Pretty;
   }

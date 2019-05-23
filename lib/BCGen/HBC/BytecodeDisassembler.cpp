@@ -939,6 +939,10 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
     }
 
     OS << defKindStr << "<" << functionName << ">";
+    if ((options_ & DisassemblyOptions::IncludeFunctionIds) ==
+        DisassemblyOptions::IncludeFunctionIds) {
+      OS << funcId;
+    }
     OS << "(" << functionHeader.paramCount() << " params, "
        << functionHeader.frameSize() << " registers, "
        << static_cast<unsigned int>(functionHeader.environmentSize())
