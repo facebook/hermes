@@ -844,7 +844,7 @@ static inline double doDiv(double x, double y) {
   return x / y;
 }
 
-/// \return the product of x divided by y.
+/// \return the product of x multiplied by y.
 static inline double doMult(double x, double y) {
   return x * y;
 }
