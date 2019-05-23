@@ -647,13 +647,22 @@ CallResult<HermesValue> Runtime::runBytecode(
 
   auto globalFunctionIndex = bytecode->getGlobalFunctionIndex();
 
-  if (bytecode->getBytecodeOptions().staticBuiltins && !builtinsFrozen_) {
-    if (assertBuiltinsUnmodified() == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
+// TODO(T35544739): clean up the experiment after we are done.
+#ifdef NDEBUG
+  if (vmExperimentFlags_ &
+      (experiments::FreezeBuiltinsAndFatalOnOverride |
+       experiments::FreezeBuiltinsAndThrowOnOverride)) {
+#endif
+    if (bytecode->getBytecodeOptions().staticBuiltins && !builtinsFrozen_) {
+      if (assertBuiltinsUnmodified() == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      freezeBuiltins();
+      assert(builtinsFrozen_ && "Builtins must be frozen by now.");
     }
-    freezeBuiltins();
-    assert(builtinsFrozen_ && "Builtins must be frozen by now.");
+#ifdef NDEBUG
   }
+#endif
 
   if (flags.persistent) {
     presistentBCProviders_.push_back(bytecode);

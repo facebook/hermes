@@ -1,4 +1,4 @@
-// RUN: %hermes -O -fstatic-builtins -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -fstatic-builtins -Xvm-experiment-flags=1 -target=HBC %s | %FileCheck --match-full-lines %s
 
 try {
   HermesInternal.getEpilogues = 1;

@@ -57,7 +57,11 @@ static void verifyAllBuiltinsFrozen(Runtime *runtime) {
 #include "hermes/Inst/Builtins.def"
 }
 
-using StaticBuiltinsTest = RuntimeTestFixture;
+class StaticBuiltinsTest : public RuntimeTestFixture {
+ public:
+  StaticBuiltinsTest()
+      : RuntimeTestFixture(experiments::FreezeBuiltinsAndThrowOnOverride) {}
+};
 
 TEST_F(StaticBuiltinsTest, FreezeBuiltins) {
   std::string testCode = R"(
