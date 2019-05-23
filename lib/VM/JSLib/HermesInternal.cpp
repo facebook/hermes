@@ -246,6 +246,8 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
             stats.hostFunction.sampled.involCtxSwitches,
             stats.evaluateJS.sampled.involCtxSwitches,
             stats.incomingFunction.sampled.involCtxSwitches));
+    // Sampled because it doesn't vary much, not because it's expensive to get.
+    SET_PROP_NEW("js_pageSize", oscompat::page_size());
   }
 
 /// Adds a property to \c resultHandle. \p KEY and \p VALUE provide its name and
