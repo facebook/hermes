@@ -13,6 +13,10 @@
 
 #ifdef _WINDOWS
 #include <io.h>
+// Expose alloca to whoever includes OSCompat.h
+// On Windows, malloc.h defines alloca (alloca is used in Runtime.cpp
+// in order to achieve non-deterministic stack depth).
+#include <malloc.h>
 #else
 #include <unistd.h>
 #endif

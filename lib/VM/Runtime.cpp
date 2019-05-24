@@ -19,6 +19,7 @@
 #include "hermes/Platform/Logging.h"
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/Support/CheckedMalloc.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/BuildMetadata.h"
