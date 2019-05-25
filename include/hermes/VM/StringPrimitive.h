@@ -36,6 +36,16 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       llvm::raw_ostream &OS,
       const StringPrimitive *str);
 
+  /// Private implementation of createEfficient.
+  /// Create a StringPrimitive containing the contents of \p str.
+  /// If \p optStorage is provided, the implementation may acquire ownership of
+  /// it.
+  template <typename T>
+  static CallResult<HermesValue> createEfficientImpl(
+      Runtime *runtime,
+      llvm::ArrayRef<T> str,
+      std::basic_string<T> *optStorage = nullptr);
+
   /// The following private overloads are to prevent creation of a
   /// StringPrimitive from a string literal. Naively allowing this would invoke
   /// ArrayRef's array template constructor, which would include the terminating
@@ -91,6 +101,10 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   // Strings whose length is smaller than this will never be externally
   // allocated. This is to protect against a small string optimization which may
   // use interior pointers, which would break when memcpy'd by the GC.
+  // This is also the size at which StringPrimitive will acquire an std::string
+  // via ownership transfer. This is advantageous in that it reduces the amount
+  // of copying from the malloc heap to the GC heap. However it should not be
+  // too small, because the std::string itself imposes a space overhead.
   static constexpr uint32_t EXTERNAL_STRING_MIN_SIZE = 128;
 
   static bool classof(const GCCell *cell) {
@@ -116,11 +130,24 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Create a StringPrimitive as efficiently as the contents of \p str allow.
   /// If it is the empty string or a single character string,
   /// return a string interned in the Runtime.
-  /// If it is an ASCII string, create an ASCII string directly.
-  /// Else, create a standard UTF-16 string.
+  static CallResult<HermesValue> createEfficient(
+      Runtime *runtime,
+      ASCIIRef str);
+
   static CallResult<HermesValue> createEfficient(
       Runtime *runtime,
       UTF16Ref str);
+
+  /// Versions of createEfficient that allow for ownership transfer of an
+  /// std::string. Create a StringPrimitive from \p str. The implementation may
+  /// choose to acquire ownership of \p str and use it to back the string.
+  static CallResult<HermesValue> createEfficient(
+      Runtime *runtime,
+      std::basic_string<char> &&str);
+
+  static CallResult<HermesValue> createEfficient(
+      Runtime *runtime,
+      std::basic_string<char16_t> &&str);
 
   /// Like the above, but the created StringPrimitives will be
   /// allocated in a "long-lived" area of the heap (if the GC supports

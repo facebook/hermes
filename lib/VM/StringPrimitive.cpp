@@ -56,21 +56,39 @@ void ExternalUTF16StringPrimitiveBuildMeta(
   symbolStringPrimitiveBuildMeta(cell, mb);
 }
 
-CallResult<HermesValue> StringPrimitive::createEfficient(
+template <typename T>
+CallResult<HermesValue> StringPrimitive::createEfficientImpl(
     Runtime *runtime,
-    UTF16Ref str) {
+    llvm::ArrayRef<T> str,
+    std::basic_string<T> *optStorage) {
+  constexpr bool charIs8Bit = std::is_same<T, char>::value;
+  assert(
+      (!optStorage ||
+       str == llvm::makeArrayRef(optStorage->data(), optStorage->size())) &&
+      "If optStorage is provided, it must equal the input string");
+  assert(
+      (!charIs8Bit || isAllASCII(str.begin(), str.end())) &&
+      "8 bit strings must be ASCII");
   if (str.empty()) {
     return HermesValue::encodeStringValue(
         runtime->getPredefinedString(Predefined::emptyString));
   }
-
   if (str.size() == 1) {
     return runtime->getCharacterString(str[0]).getHermesValue();
   }
 
-  if (isAllASCII(str.begin(), str.end())) {
-    auto result =
-        StringPrimitive::create(runtime, str.size(), /* asciiNotUTF16 */ true);
+  // Check if we should acquire ownership of storage.
+  if (optStorage != nullptr &&
+      str.size() >= StringPrimitive::EXTERNAL_STRING_MIN_SIZE) {
+    return ExternalStringPrimitive<T>::create(runtime, std::move(*optStorage));
+  }
+
+  // Check if we fit in ASCII.
+  // We are ASCII if we are 8 bit, or we are 16 bit and all of our text is
+  // ASCII.
+  bool isAscii = charIs8Bit || isAllASCII(str.begin(), str.end());
+  if (isAscii) {
+    auto result = StringPrimitive::create(runtime, str.size(), isAscii);
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -81,6 +99,32 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
   }
 
   return StringPrimitive::create(runtime, str);
+}
+
+CallResult<HermesValue> StringPrimitive::createEfficient(
+    Runtime *runtime,
+    ASCIIRef str) {
+  return createEfficientImpl(runtime, str);
+}
+
+CallResult<HermesValue> StringPrimitive::createEfficient(
+    Runtime *runtime,
+    UTF16Ref str) {
+  return createEfficientImpl(runtime, str);
+}
+
+CallResult<HermesValue> StringPrimitive::createEfficient(
+    Runtime *runtime,
+    std::basic_string<char> &&str) {
+  return createEfficientImpl(
+      runtime, llvm::makeArrayRef(str.data(), str.size()), &str);
+}
+
+CallResult<HermesValue> StringPrimitive::createEfficient(
+    Runtime *runtime,
+    std::basic_string<char16_t> &&str) {
+  return createEfficientImpl(
+      runtime, llvm::makeArrayRef(str.data(), str.size()), &str);
 }
 
 bool StringPrimitive::sliceEquals(

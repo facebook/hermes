@@ -49,6 +49,52 @@ TEST_F(StringPrimTest, CreateASCIITest) {
   EXPECT_TRUE(s1->equals(s2.get()));
 }
 
+TEST_F(StringPrimTest, CreateEfficientTest) {
+  auto handlefy = [&](CallResult<HermesValue> cr) {
+    return Handle<StringPrimitive>::vmcast(runtime, *cr);
+  };
+
+  static_assert(
+      StringPrimitive::EXTERNAL_STRING_MIN_SIZE > 3,
+      "Test strings should be shorter than EXTERNAL_STRING_MIN_SIZE");
+  std::string narrowShort = "foo";
+  std::u16string wideShort(u"foo");
+  auto s1 = handlefy(StringPrimitive::createEfficient(
+      runtime, createASCIIRef(narrowShort.c_str())));
+  auto s2 = handlefy(StringPrimitive::createEfficient(
+      runtime, createUTF16Ref(wideShort.c_str())));
+  auto s3 = handlefy(
+      StringPrimitive::createEfficient(runtime, std::move(narrowShort)));
+  auto s4 =
+      handlefy(StringPrimitive::createEfficient(runtime, std::move(wideShort)));
+  for (auto s : {s1, s2, s3, s4}) {
+    EXPECT_TRUE(s->equals(s1.get()));
+    EXPECT_EQ(3, s->getStringLength());
+    EXPECT_FALSE(s->isExternal());
+  }
+
+  size_t longLength = StringPrimitive::EXTERNAL_STRING_MIN_SIZE;
+  std::string narrowLong(longLength, '!');
+  std::u16string wideLong(longLength, u'!');
+  auto e1 = handlefy(StringPrimitive::createEfficient(
+      runtime, createASCIIRef(narrowLong.c_str())));
+  auto e2 = handlefy(StringPrimitive::createEfficient(
+      runtime, createUTF16Ref(wideLong.c_str())));
+  auto e3 = handlefy(
+      StringPrimitive::createEfficient(runtime, std::move(narrowLong)));
+  auto e4 =
+      handlefy(StringPrimitive::createEfficient(runtime, std::move(wideLong)));
+  for (auto s : {e1, e2, e3, e4}) {
+    EXPECT_TRUE(s->equals(e1.get()));
+    EXPECT_EQ(longLength, s->getStringLength());
+    if (s == e3 || s == e4) {
+      EXPECT_TRUE(s->isExternal());
+    } else {
+      EXPECT_FALSE(s->isExternal());
+    }
+  }
+}
+
 TEST_F(StringPrimTest, CompareTest) {
 #define TEST_CMP(v, a, b)                                 \
   {                                                       \
