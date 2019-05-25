@@ -692,6 +692,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   void popScope(ScopeState *prv) override;
 
   void checkStatus(vm::ExecutionStatus);
+  vm::HermesValue stringHVFromAscii(const char *ascii, size_t length);
   vm::HermesValue stringHVFromUtf8(const uint8_t *utf8, size_t length);
   size_t getLength(vm::Handle<vm::ArrayImpl> arr);
   size_t getByteLength(vm::Handle<vm::JSArrayBuffer> arr);
@@ -1317,11 +1318,8 @@ jsi::String HermesRuntimeImpl::createStringFromAscii(
         "non-ASCII character in string");
   }
 #endif
-
   vm::GCScope gcScope(&runtime_);
-  return add<jsi::String>(vm::StringPrimitive::createNoThrow(
-                              &runtime_, llvm::StringRef(str, length))
-                              .getHermesValue());
+  return add<jsi::String>(stringHVFromAscii(str, length));
 }
 
 jsi::String HermesRuntimeImpl::createStringFromUtf8(
@@ -1781,9 +1779,21 @@ void HermesRuntimeImpl::checkStatus(vm::ExecutionStatus status) {
   }
 }
 
+vm::HermesValue HermesRuntimeImpl::stringHVFromAscii(
+    const char *str,
+    size_t length) {
+  auto strRes = vm::StringPrimitive::createEfficient(
+      &runtime_, llvm::makeArrayRef(str, length));
+  checkStatus(strRes.getStatus());
+  return *strRes;
+}
+
 vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
     const uint8_t *utf8,
     size_t length) {
+  if (::hermes::isAllASCII(utf8, utf8 + length)) {
+    return stringHVFromAscii((const char *)utf8, length);
+  }
   std::u16string out;
   out.resize(length);
   const llvm::UTF8 *sourceStart = (const llvm::UTF8 *)utf8;
