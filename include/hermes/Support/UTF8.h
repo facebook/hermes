@@ -24,12 +24,12 @@ void encodeUTF8(char *&dst, uint32_t cp);
 
 /// Check whether a byte is a regular ASCII or a UTF8 starting byte.
 /// \return true if it is UTF8 starting byte.
-inline static bool isUTF8Start(char ch) {
+inline bool isUTF8Start(char ch) {
   return (ch & 0x80) != 0;
 }
 
 /// \return true if this is a UTF-8 leading byte.
-inline static bool isUTF8LeadingByte(char ch) {
+inline bool isUTF8LeadingByte(char ch) {
   return (ch & 0xC0) == 0xC0;
 }
 
@@ -41,13 +41,20 @@ inline static bool isUTF8ContinuationByte(char ch) {
 
 /// \return true if this is a pure ASCII char sequence.
 template <typename Iter>
-inline static bool isAllASCII(Iter begin, Iter end) {
+inline bool isAllASCII(Iter begin, Iter end) {
   while (begin < end) {
     if (*begin < 0 || *begin > 127)
       return false;
     ++begin;
   }
   return true;
+}
+
+/// Overload for char* and uint8_t*.
+bool isAllASCII(const uint8_t *start, const uint8_t *end);
+
+inline bool isAllASCII(const char *start, const char *end) {
+  return isAllASCII((const uint8_t *)start, (const uint8_t *)end);
 }
 
 /// Decode a sequence of UTF8 encoded bytes when it is known that the first byte

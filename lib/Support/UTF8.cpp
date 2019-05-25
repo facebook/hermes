@@ -129,4 +129,42 @@ void convertUTF16ToUTF8WithSingleSurrogates(
   }
 }
 
+bool isAllASCII(const uint8_t *start, const uint8_t *end) {
+  const uint8_t *cursor = start;
+  size_t len = end - start;
+  static_assert(
+      sizeof(uint32_t) == 4 && alignof(uint32_t) <= 4,
+      "uint32_t must be 4 bytes and cannot be more than 4 byte aligned");
+
+  if (len >= 4) {
+    // Step by 1s until aligned for uint32_t.
+    uint8_t mask = 0;
+    while ((uintptr_t)cursor % alignof(uint32_t)) {
+      mask |= *cursor++;
+      len -= 1;
+    }
+    if (mask & 0x80u) {
+      return false;
+    }
+
+    // Now that we are aligned, step by 4s.
+    while (len >= 4) {
+      uint32_t val = *(const uint32_t *)cursor;
+      if (val & 0x80808080u) {
+        return false;
+      }
+      cursor += 4;
+      len -= 4;
+    }
+  }
+  assert(len < 4 && "Length should now be less than 4");
+  uint8_t mask = 0;
+  while (len--) {
+    mask |= *cursor++;
+  }
+  if (mask & 0x80u)
+    return false;
+  return true;
+}
+
 }; // namespace hermes
