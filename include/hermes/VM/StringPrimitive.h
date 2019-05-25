@@ -173,13 +173,6 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       Runtime *runtime,
       llvm::StringRef ascii);
 
-  /// Copy a std::u16string into a new StringPrim.
-  static CallResult<HermesValue> create(
-      Runtime *runtime,
-      const std::u16string &str) {
-    return create(runtime, UTF16Ref(str.data(), str.size()));
-  }
-
   /// \return the length of string in 16-bit characters.
   uint32_t getStringLength() const {
     return length & ~(1u << 31);

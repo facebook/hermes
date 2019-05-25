@@ -1803,7 +1803,7 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
       "not enough space allocated for UTF16 conversion");
   out.resize((char16_t *)targetStart - &out[0]);
 
-  auto strRes = vm::StringPrimitive::create(&runtime_, out);
+  auto strRes = vm::StringPrimitive::createEfficient(&runtime_, std::move(out));
   checkStatus(strRes.getStatus());
 
   return *strRes;
