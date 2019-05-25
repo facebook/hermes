@@ -7,9 +7,12 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
 
+#include "llvm/Support/AlignOf.h"
+
 #include "TestHelpers.h"
 
 #include <climits>
+#include <random>
 
 #include "gtest/gtest.h"
 
@@ -90,6 +93,71 @@ TEST_F(StringPrimTest, ConcatTest) {
     EXPECT_TRUE(StringPrimitive::createStringView(
                     runtime, runtime->makeHandle<StringPrimitive>(*strRes))
                     .equals(createUTF16Ref(u"abc")));
+  }
+}
+
+// This attempts to test that strings above a sufficient length may be freely
+// memcpy'd around. This would not be true if the small-string optimization used
+// an interior pointer, or if someone else maintained a pointer to the string.
+template <typename StringType>
+void test1StringMemcpySafety(const StringType &s) {
+  // Grub through the string's bits, looking for pointers to the interior of the
+  // string.
+  intptr_t start = reinterpret_cast<intptr_t>(&s);
+  intptr_t end = reinterpret_cast<intptr_t>(&s + 1);
+  const intptr_t *stringGuts = reinterpret_cast<const intptr_t *>(&s);
+  for (size_t i = 0; i < sizeof(StringType) / sizeof(void *); i++) {
+    intptr_t p = stringGuts[i];
+    EXPECT_FALSE(start <= p && p <= end) << "string size: " << s.size();
+    // Mask off low bits in case it uses them as flags.
+    p &= ~(intptr_t)1;
+    EXPECT_FALSE(start <= p && p <= end) << "string size: " << s.size();
+    p &= ~(intptr_t)2;
+    EXPECT_FALSE(start <= p && p <= end) << "string size: " << s.size();
+  }
+
+  // memcpy our string and verify the buffer, when interpreted as a string, is
+  // equal to the original.
+  llvm::AlignedCharArrayUnion<StringType> mb;
+  memcpy(mb.buffer, &s, sizeof(StringType));
+  const StringType *memcpydStr =
+      reinterpret_cast<const StringType *>(mb.buffer);
+  EXPECT_EQ(s, *memcpydStr) << "string size: " << s.size();
+  EXPECT_EQ(s.size(), memcpydStr->size()) << "string size: " << s.size();
+  EXPECT_TRUE(std::equal(s.begin(), s.end(), memcpydStr->begin()))
+      << "string size: " << s.size();
+
+  // std::move a string. If any bits changed, it means the string is not memcpy
+  // safe, because the move constructor does something nontrivial. Note it is
+  // not the case in general that a moved-to string will be bitwise identical to
+  // its source; the string may have an internal buffer whose last bytes are
+  // unused when the string is externally allocated, and these last bytes may
+  // not be copied by the move ctor. That is, the move ctor may be conceptually
+  // a memcpy of only a prefix of the string. So copy the bits of the moved-from
+  // string into a buffer, and then use placement new with move ctor; this
+  // ensures that any ignored bytes have the same contents in both strings.
+  StringType s1 = s;
+  llvm::AlignedCharArrayUnion<StringType> savedBits;
+  memcpy(savedBits.buffer, &s1, sizeof(StringType));
+
+  llvm::AlignedCharArrayUnion<StringType> b = savedBits;
+  StringType *movedString = new (b.buffer) StringType(std::move(s1));
+  // We expect the move-constructed string to be bitwise identical to the string
+  // before it was moved from. That is, the move ctor should be a memcpy.
+  EXPECT_EQ(0, memcmp(b.buffer, &savedBits.buffer, sizeof(StringType)))
+      << "string size: " << s.size();
+  // Sanity check: the moved-from string should have changed, e.g. zeroed
+  // pointer.
+  EXPECT_NE(0, memcmp(&s1, &savedBits.buffer, sizeof(StringType)))
+      << "string size: " << s.size();
+  movedString->~StringType();
+}
+
+TEST_F(StringPrimTest, StringsAreMemcpySafe) {
+  for (size_t length = StringPrimitive::EXTERNAL_STRING_MIN_SIZE; length < 2048;
+       length++) {
+    test1StringMemcpySafety(std::string(length, '!'));
+    test1StringMemcpySafety(std::u16string(length, u'!'));
   }
 }
 

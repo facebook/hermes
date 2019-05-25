@@ -796,7 +796,7 @@ regExpSourceGetter(void *ctx, Runtime *runtime, NativeArgs args) {
       // hardly ever be encountered.
       const char *emptyPattern = "(?:)";
       return StringPrimitive::create(
-          runtime, {emptyPattern, strlen(emptyPattern)});
+          runtime, ASCIIRef{emptyPattern, strlen(emptyPattern)});
     }
     return runtime->raiseTypeError(
         "RegExp.prototype.source getter called on non-RegExp");

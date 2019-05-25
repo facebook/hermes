@@ -251,7 +251,6 @@ template <typename T, bool Uniqued>
 CallResult<HermesValue> DynamicStringPrimitive<T, Uniqued>::create(
     Runtime *runtime,
     uint32_t length) {
-  assert(!isExternalLength(length) && "length should not be external");
   void *mem = runtime->alloc</*fixedSize*/ false>(allocationSize(length));
   return HermesValue::encodeStringValue(
       (new (mem) DynamicStringPrimitive<T, Uniqued>(runtime, length)));
@@ -266,36 +265,32 @@ template <typename T>
 ExternalStringPrimitive<T>::ExternalStringPrimitive(Runtime *runtime, Ref src)
     : ExternalStringPrimitive(
           runtime,
-          (uint32_t)src.size(),
-          false /* not uniqued */) {
-  hermes::uninitializedCopy(src.begin(), src.end(), contents_);
-}
+          StdString(src.begin(), src.end()),
+          false /* not uniqued */) {}
 
 template <typename T>
 ExternalStringPrimitive<T>::ExternalStringPrimitive(
     Runtime *runtime,
     Ref src,
     SymbolID uniqueID)
-    : ExternalStringPrimitive(runtime, (uint32_t)src.size(), uniqueID) {
-  hermes::uninitializedCopy(src.begin(), src.end(), contents_);
+    : ExternalStringPrimitive(
+          runtime,
+          StdString(src.begin(), src.end()),
+          true /* uniqued */) {
+  updateUniqueID(uniqueID);
 }
 
 template <typename T>
 CallResult<HermesValue> ExternalStringPrimitive<T>::create(
     Runtime *runtime,
-    Ref str) {
-  assert(isExternalLength(str.size()) && "length should be external");
+    StdString &&str) {
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
   uint32_t allocSize = str.size() * sizeof(T);
-  if (LLVM_UNLIKELY(!runtime->getHeap().canAllocExternalMemory(allocSize))) {
-    return runtime->raiseRangeError(
-        "Cannot allocate an external string primitive.");
-  }
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       sizeof(ExternalStringPrimitive<T>));
   auto res = HermesValue::encodeStringValue(
-      (new (mem) ExternalStringPrimitive<T>(runtime, str)));
+      (new (mem) ExternalStringPrimitive<T>(runtime, std::move(str))));
   runtime->getHeap().creditExternalMemory(res.getString(), allocSize);
   return res;
 }
@@ -303,8 +298,7 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
 template <typename T>
 CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
     Runtime *runtime,
-    Ref str) {
-  assert(isExternalLength(str.size()) && "length should be external");
+    StdString &&str) {
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
   uint32_t allocSize = str.size() * sizeof(T);
@@ -315,7 +309,7 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
   void *mem = runtime->allocLongLived<HasFinalizer::Yes>(
       sizeof(ExternalStringPrimitive<T>));
   auto res = HermesValue::encodeStringValue(
-      (new (mem) ExternalStringPrimitive<T>(runtime, str)));
+      (new (mem) ExternalStringPrimitive<T>(runtime, std::move(str))));
   runtime->getHeap().creditExternalMemory(res.getString(), allocSize);
   return res;
 }

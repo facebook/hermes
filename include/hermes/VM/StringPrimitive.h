@@ -51,6 +51,12 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       Runtime *,
       const CharT (&Arr)[N]);
 
+  /// Internal helper to return a std::string from an ArrayRef.
+  template <typename CharT>
+  static std::basic_string<CharT> arrayToString(llvm::ArrayRef<CharT> arr) {
+    return std::basic_string<CharT>{arr.begin(), arr.end()};
+  }
+
  protected:
   /// Length of the string in 16-bit characters. The highest bit is set to 1
   /// if the string has been uniqued.
@@ -81,6 +87,11 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   // "external" strings, outside the JS heap. Note that there may be external
   // strings smaller than this length.
   static constexpr uint32_t EXTERNAL_STRING_THRESHOLD = 64 * 1024;
+
+  // Strings whose length is smaller than this will never be externally
+  // allocated. This is to protect against a small string optimization which may
+  // use interior pointers, which would break when memcpy'd by the GC.
+  static constexpr uint32_t EXTERNAL_STRING_MIN_SIZE = 128;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -424,9 +435,8 @@ class DynamicStringPrimitive final
 };
 
 /// An immutable JavaScript primitive string consisting of length and a pointer
-/// to characters (either char or char16).  The storage is malloced; the object
-/// contains a pointer to that storage.  The object has a finalizer that
-/// deallocates the storage.
+/// to characters (either char or char16). The storage uses std::string or
+/// std::u16string, and the object's finalizer deallocates the storage.
 /// Note: while StringPrimitive extends VariableSizeRuntimeCell, these subtypes
 /// are not actually variable-sized: we indicate that they are fixed-size in the
 /// metadata.
@@ -442,6 +452,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
 #endif
 
   using Ref = llvm::ArrayRef<T>;
+  using StdString = std::basic_string<T>;
 
   /// \return the cell kind for this string.
   static constexpr CellKind getCellKind() {
@@ -462,20 +473,32 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
     return getStringLength() * sizeof(T);
   }
 
-  ExternalStringPrimitive(Runtime *runtime, uint32_t length, bool uniqued)
+  ExternalStringPrimitive(Runtime *runtime, StdString &&contents, bool uniqued)
       : SymbolStringPrimitive(
             runtime,
             &vt,
             sizeof(ExternalStringPrimitive<T>),
-            length,
-            uniqued) {
-    contents_ = static_cast<T *>(checkedMalloc2(length, sizeof(T)));
+            contents.size(),
+            uniqued),
+        contents_(std::move(contents)) {
+    assert(
+        getStringLength() >= EXTERNAL_STRING_MIN_SIZE &&
+        "ExternalStringPrimitive length must be at least EXTERNAL_STRING_MIN_SIZE");
   }
+
+  ExternalStringPrimitive(Runtime *runtime, uint32_t length, bool uniqued)
+      : ExternalStringPrimitive(runtime, StdString(length, '\0'), uniqued) {}
 
   ExternalStringPrimitive(Runtime *runtime, uint32_t length, SymbolID uniqueID)
       : ExternalStringPrimitive(runtime, length, true /* uniqued */) {
     updateUniqueID(uniqueID);
   }
+
+  ExternalStringPrimitive(Runtime *runtime, StdString &&contents)
+      : ExternalStringPrimitive(
+            runtime,
+            std::move(contents),
+            false /* not uniqued */) {}
 
   ExternalStringPrimitive(Runtime *runtime, Ref src);
 
@@ -483,20 +506,20 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// string and a specified ID.
   ExternalStringPrimitive(Runtime *runtime, Ref src, SymbolID uniqueID);
 
-  /// Destructor deallocates the contents_ array.
-  ~ExternalStringPrimitive() {
-    free(contents_);
-  }
+  /// Destructor deallocates the contents_ string.
+  ~ExternalStringPrimitive() = default;
 
-  /// Copy a UTF-16 sequence into a new StringPrim. Throw \c RangeError if the
-  /// string is longer than \c MAX_STRING_LENGTH characters.
-  static CallResult<HermesValue> create(Runtime *runtime, Ref str);
+  /// Transfer ownership of an std::string into a new StringPrim. Throw \c
+  /// RangeError if the string is longer than \c MAX_STRING_LENGTH characters.
+  static CallResult<HermesValue> create(Runtime *runtime, StdString &&str);
 
   /// Like the above, but the created StringPrimitive will be allocated in a
   /// "long-lived" area of the heap (if the GC supports that concept).  Note
   /// that this applies only to the object proper; the contents array is
   /// allocated outside the JS heap in either case.
-  static CallResult<HermesValue> createLongLived(Runtime *runtime, Ref str);
+  static CallResult<HermesValue> createLongLived(
+      Runtime *runtime,
+      StdString &&str);
 
   /// Create a StringPrim object with a specified capacity \p length in
   /// 16-bit characters. Throw \c RangeError if the string is longer than
@@ -505,7 +528,8 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   static CallResult<HermesValue> create(Runtime *runtime, uint32_t length);
 
   const T *getRawPointer() const {
-    return contents_;
+    // C++11 defines this to be valid even if the string is empty.
+    return &contents_[0];
   }
 
   /// In rare cases it is convenient to allocate an object without populating
@@ -513,7 +537,8 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// normally be done, but for those rare cases, this method gives access to
   /// the writable buffer.
   T *getRawPointerForWrite() {
-    return contents_;
+    // C++11 defines this to be valid even if the string is empty.
+    return &contents_[0];
   }
 
   Ref getStringRef() const {
@@ -527,7 +552,9 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// assumed to be an ExternalStringPrimitive.
   static size_t _mallocSizeImpl(GCCell *cell);
 
-  T *contents_{nullptr};
+  /// The backing storage of this string. Note that the string's length is fixed
+  /// and must always be equal to StringPrimitive::getStringLength().
+  StdString contents_{};
 };
 
 template <typename T, bool Uniqued>
@@ -618,7 +645,7 @@ inline CallResult<HermesValue> StringPrimitive::create(
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
     return DynamicASCIIStringPrimitive::create(runtime, str);
   } else {
-    return ExternalStringPrimitive<char>::create(runtime, str);
+    return ExternalStringPrimitive<char>::create(runtime, arrayToString(str));
   }
 }
 
@@ -631,7 +658,8 @@ inline CallResult<HermesValue> StringPrimitive::create(
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
     return DynamicUTF16StringPrimitive::create(runtime, str);
   } else {
-    return ExternalStringPrimitive<char16_t>::create(runtime, str);
+    return ExternalStringPrimitive<char16_t>::create(
+        runtime, arrayToString(str));
   }
 }
 
@@ -644,7 +672,8 @@ inline CallResult<HermesValue> StringPrimitive::createLongLived(
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
     return DynamicASCIIStringPrimitive::createLongLived(runtime, str);
   } else {
-    return ExternalStringPrimitive<char>::createLongLived(runtime, str);
+    return ExternalStringPrimitive<char>::createLongLived(
+        runtime, arrayToString(str));
   }
 }
 
@@ -657,7 +686,8 @@ inline CallResult<HermesValue> StringPrimitive::createLongLived(
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
     return DynamicUTF16StringPrimitive::createLongLived(runtime, str);
   } else {
-    return ExternalStringPrimitive<char16_t>::createLongLived(runtime, str);
+    return ExternalStringPrimitive<char16_t>::createLongLived(
+        runtime, arrayToString(str));
   }
 }
 
