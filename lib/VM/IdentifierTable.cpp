@@ -194,30 +194,18 @@ IdentifierTable::allocateDynamicString(
 
   GCScope gcScope(runtime);
 
-  T *ptrForWrite;
   PseudoHandle<StringPrimitive> result;
   if (StringPrimitive::isExternalLength(length)) {
     if (LLVM_UNLIKELY(length > StringPrimitive::MAX_STRING_LENGTH)) {
       return runtime->raiseRangeError("String length exceeds limit");
     }
-    uint32_t allocSize = length * sizeof(T);
-    if (LLVM_UNLIKELY(!runtime->getHeap().canAllocExternalMemory(allocSize))) {
-      return runtime->raiseRangeError(
-          "Cannot allocate an external string primitive.");
+    std::basic_string<T> stdString(str.begin(), str.end());
+    auto cr = ExternalStringPrimitive<T>::createLongLived(
+        runtime, std::move(stdString), Unique ? strId : SymbolID::empty());
+    if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
     }
-    void *mem = runtime->allocLongLived<HasFinalizer::Yes>(
-        sizeof(ExternalStringPrimitive<T>));
-    // Since we keep a raw pointer to mem, no more JS heap allocations after
-    // this point.
-    if (primHandle) {
-      str = primHandle->getStringRef<T>();
-    }
-    ExternalStringPrimitive<T> *tmpResult = Unique
-        ? new (mem) ExternalStringPrimitive<T>(runtime, length, strId)
-        : new (mem) ExternalStringPrimitive<T>(runtime, length);
-    runtime->getHeap().creditExternalMemory(tmpResult, allocSize);
-    ptrForWrite = tmpResult->getRawPointerForWrite();
-    result = createPseudoHandle<StringPrimitive>(tmpResult);
+    result = createPseudoHandle(vmcast<StringPrimitive>(*cr));
   } else {
     void *mem = runtime->allocLongLived(
         DynamicStringPrimitive<T, Unique>::allocationSize((uint32_t)length));
@@ -228,10 +216,10 @@ IdentifierTable::allocateDynamicString(
     }
     auto *tmp =
         new (mem) DynamicStringPrimitive<T, Unique>(runtime, length, strId);
-    ptrForWrite = tmp->getRawPointerForWrite();
+    std::copy(str.begin(), str.end(), tmp->getRawPointerForWrite());
     result = createPseudoHandle<StringPrimitive>(tmp);
   }
-  std::copy(str.data(), str.data() + str.size(), ptrForWrite);
+
   return std::move(result);
 }
 

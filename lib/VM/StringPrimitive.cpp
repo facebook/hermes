@@ -262,20 +262,22 @@ template class DynamicStringPrimitive<char16_t, false /* not Uniqued */>;
 template class DynamicStringPrimitive<char, false /* not Uniqued */>;
 
 template <typename T>
-ExternalStringPrimitive<T>::ExternalStringPrimitive(Runtime *runtime, Ref src)
+ExternalStringPrimitive<T>::ExternalStringPrimitive(
+    Runtime *runtime,
+    StdString &&contents)
     : ExternalStringPrimitive(
           runtime,
-          StdString(src.begin(), src.end()),
+          std::move(contents),
           false /* not uniqued */) {}
 
 template <typename T>
 ExternalStringPrimitive<T>::ExternalStringPrimitive(
     Runtime *runtime,
-    Ref src,
+    StdString &&contents,
     SymbolID uniqueID)
     : ExternalStringPrimitive(
           runtime,
-          StdString(src.begin(), src.end()),
+          std::move(contents),
           true /* uniqued */) {
   updateUniqueID(uniqueID);
 }
@@ -298,7 +300,8 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
 template <typename T>
 CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
     Runtime *runtime,
-    StdString &&str) {
+    StdString &&str,
+    SymbolID uniqueID) {
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
   uint32_t allocSize = str.size() * sizeof(T);
@@ -308,8 +311,8 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
   }
   void *mem = runtime->allocLongLived<HasFinalizer::Yes>(
       sizeof(ExternalStringPrimitive<T>));
-  auto res = HermesValue::encodeStringValue(
-      (new (mem) ExternalStringPrimitive<T>(runtime, std::move(str))));
+  auto res = HermesValue::encodeStringValue((
+      new (mem) ExternalStringPrimitive<T>(runtime, std::move(str), uniqueID)));
   runtime->getHeap().creditExternalMemory(res.getString(), allocSize);
   return res;
 }
@@ -326,13 +329,7 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
     return runtime->raiseRangeError(
         "Cannot allocate an external string primitive.");
   }
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(ExternalStringPrimitive<T>));
-  auto res =
-      HermesValue::encodeStringValue((new (mem) ExternalStringPrimitive<T>(
-          runtime, length, false /* not uniqued */)));
-  runtime->getHeap().creditExternalMemory(res.getString(), allocSize);
-  return res;
+  return create(runtime, StdString(length, T(0)));
 }
 
 template <typename T>

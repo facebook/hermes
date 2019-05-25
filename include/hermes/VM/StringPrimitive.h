@@ -473,6 +473,8 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
     return getStringLength() * sizeof(T);
   }
 
+  /// Construct an ExternalStringPrimitive from the given string \p contents,
+  /// optionally uniqued according to \p uniqued.
   ExternalStringPrimitive(Runtime *runtime, StdString &&contents, bool uniqued)
       : SymbolStringPrimitive(
             runtime,
@@ -486,25 +488,16 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
         "ExternalStringPrimitive length must be at least EXTERNAL_STRING_MIN_SIZE");
   }
 
-  ExternalStringPrimitive(Runtime *runtime, uint32_t length, bool uniqued)
-      : ExternalStringPrimitive(runtime, StdString(length, '\0'), uniqued) {}
+  /// Construct an ExternalStringPrimitive from the given string \p contents,
+  /// non-uniqued.
+  ExternalStringPrimitive(Runtime *runtime, StdString &&contents);
 
-  ExternalStringPrimitive(Runtime *runtime, uint32_t length, SymbolID uniqueID)
-      : ExternalStringPrimitive(runtime, length, true /* uniqued */) {
-    updateUniqueID(uniqueID);
-  }
-
-  ExternalStringPrimitive(Runtime *runtime, StdString &&contents)
-      : ExternalStringPrimitive(
-            runtime,
-            std::move(contents),
-            false /* not uniqued */) {}
-
-  ExternalStringPrimitive(Runtime *runtime, Ref src);
-
-  /// Construct an object initializing it with a copy of the passed UTF16
-  /// string and a specified ID.
-  ExternalStringPrimitive(Runtime *runtime, Ref src, SymbolID uniqueID);
+  /// Construct an ExternalStringPrimitive from the given string \p contents,
+  /// uniqued via the given symbol \p uniqueID.
+  ExternalStringPrimitive(
+      Runtime *runtime,
+      StdString &&contents,
+      SymbolID uniqueID);
 
   /// Destructor deallocates the contents_ string.
   ~ExternalStringPrimitive() = default;
@@ -519,7 +512,8 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// allocated outside the JS heap in either case.
   static CallResult<HermesValue> createLongLived(
       Runtime *runtime,
-      StdString &&str);
+      StdString &&str,
+      SymbolID uniqueID = SymbolID::empty());
 
   /// Create a StringPrim object with a specified capacity \p length in
   /// 16-bit characters. Throw \c RangeError if the string is longer than
