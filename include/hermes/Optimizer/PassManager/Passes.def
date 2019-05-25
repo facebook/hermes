@@ -34,7 +34,6 @@ PASS(
     "Constant Property Optimizations")
 PASS(UncalledMethodOpts, "uncalledmethodopts", "Uncalled Method Optimizations")
 PASS(Inlining, "inlining", "Inlining")
-PASS(Outlining, "outlining", "Outlining")
 PASS(ResolveStaticRequire, "staticrequire", "Resolve static require")
 PASS(
     HoistStartGenerator,

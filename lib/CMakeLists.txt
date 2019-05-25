@@ -23,13 +23,10 @@ add_llvm_library(hermesOptimizer
   Optimizer/Scalar/ConstantPropertyOpts.cpp
   Optimizer/Scalar/UncalledMethodOpts.cpp
   Optimizer/Scalar/Inlining.cpp
-  Optimizer/Scalar/Outlining.cpp
   Optimizer/Scalar/HoistStartGenerator.cpp
   Optimizer/Scalar/InstructionEscapeAnalysis.cpp
-  Optimizer/Scalar/InstructionNumbering.cpp
   IR/Analysis.cpp
   IR/IREval.cpp
-  LINK_LIBS llvm_extra
 )
 
 add_llvm_library(hermesFrontend

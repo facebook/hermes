@@ -79,7 +79,6 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addMem2Reg();
   PM.addAuditor();
 
-  PM.addOutlining();
   PM.addTypeInference();
 
   // Move StartGenerator instructions to the start of functions.

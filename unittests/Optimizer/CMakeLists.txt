@@ -1,6 +1,5 @@
 set(OptimizerSources
   Scalar/InstructionEscapeAnalysisTest.cpp
-  Scalar/InstructionNumberingTest.cpp
   )
 
 add_hermes_unittest(HermesOptimizerTests
