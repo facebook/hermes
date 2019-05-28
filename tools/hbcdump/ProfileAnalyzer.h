@@ -143,6 +143,8 @@ class ProfileAnalyzer {
     std::string fileName = debugInfo->getFilenameByID(filenameId);
     os_ << fileName;
   }
+  // Print bundle epilogue.
+  void dumpEpilogue();
   // Print a high-level summary for the profile trace.
   void dumpSummary();
   // Print offsets of a function.

@@ -341,6 +341,8 @@ static bool executeCommand(
       printHelp(command);
       return false;
     }
+  } else if (command == "epilogue" || command == "epi") {
+    analyzer.dumpEpilogue();
   } else if (command == "help" || command == "h") {
     // Interactive help command.
     if (commandTokens.size() == 2) {

@@ -684,6 +684,13 @@ void ProfileAnalyzer::dumpIO() {
   os_ << "\n";
 }
 
+void ProfileAnalyzer::dumpEpilogue() {
+  llvm::ArrayRef<uint8_t> epilogue = hbcParser_.getBCProvider()->getEpilogue();
+  std::string epiStr(
+      reinterpret_cast<const char *>(epilogue.data()), epilogue.size());
+  os_ << epiStr << "\n";
+}
+
 void ProfileAnalyzer::dumpSummary() {
   if (!profileDataOpt_.hasValue()) {
     os_ << "This command requires trace profile to run.\n";
