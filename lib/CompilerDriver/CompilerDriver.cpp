@@ -1397,12 +1397,13 @@ CompileResult processSourceFiles(
   }
 
   CompileResult result{Success};
+  std::unique_ptr<raw_fd_ostream> fileOS{};
+  StringRef base = cl::BytecodeOutputFilename;
   if (context->getSegmentRanges().size() < 2) {
     // Ok, we're going to return the bytecode in a serializable form.
     // Open the output file, if any.
-    std::unique_ptr<raw_fd_ostream> fileOS{};
-    if (!cl::BytecodeOutputFilename.empty()) {
-      fileOS = openFileForWrite(cl::BytecodeOutputFilename, F_None);
+    if (!base.empty()) {
+      fileOS = openFileForWrite(base, F_None);
       if (!fileOS)
         return OutputFileError;
     }
@@ -1418,15 +1419,16 @@ CompileResult processSourceFiles(
       return result;
     }
   } else {
-    StringRef base = cl::BytecodeOutputFilename;
     for (const auto &range : context->getSegmentRanges()) {
-      auto fileOS = openFileForWrite(
-          range.segment == 0 ? base
-                             : (Twine(base) + "." + Twine(range.segment)),
-          F_None);
-      if (!fileOS)
-        return OutputFileError;
-      auto &OS = *fileOS;
+      if (!base.empty()) {
+        fileOS = openFileForWrite(
+            range.segment == 0 ? base
+                               : (Twine(base) + "." + Twine(range.segment)),
+            F_None);
+        if (!fileOS)
+          return OutputFileError;
+      }
+      auto &OS = base.empty() ? llvm::outs() : *fileOS;
       auto segResult = generateBytecodeForSerialization(
           OS,
           M,
@@ -1443,7 +1445,7 @@ CompileResult processSourceFiles(
 
   // Output the source map if requested.
   if (cl::OutputSourceMap) {
-    std::string mapFilePath = cl::BytecodeOutputFilename + ".map";
+    std::string mapFilePath = base.str() + ".map";
     auto OS = openFileForWrite(mapFilePath, F_Text);
     if (!OS)
       return OutputFileError;
