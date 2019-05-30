@@ -13,6 +13,7 @@
 #endif
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
+#include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/SimpleDiagHandler.h"
 
@@ -59,6 +60,16 @@ BCProviderFromSrc::createBCProviderFromSrc(
     std::unique_ptr<Buffer> buffer,
     llvm::StringRef sourceURL,
     const CompileFlags &compileFlags) {
+  return createBCProviderFromSrc(
+      std::move(buffer), sourceURL, /*sourceMap*/ nullptr, compileFlags);
+}
+
+std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
+BCProviderFromSrc::createBCProviderFromSrc(
+    std::unique_ptr<Buffer> buffer,
+    llvm::StringRef sourceURL,
+    std::unique_ptr<SourceMap> sourceMap,
+    const CompileFlags &compileFlags) {
   using llvm::Twine;
 
   assert(
@@ -104,6 +115,12 @@ BCProviderFromSrc::createBCProviderFromSrc(
 
   int fileBufId = context->getSourceErrorManager().addNewSourceBuffer(
       llvm::make_unique<HermesLLVMMemoryBuffer>(std::move(buffer), sourceURL));
+  if (sourceMap != nullptr) {
+    auto sourceMapTranslator =
+        std::make_shared<SourceMapTranslator>(context->getSourceErrorManager());
+    context->getSourceErrorManager().setTranslator(sourceMapTranslator);
+    sourceMapTranslator->addSourceMap(fileBufId, std::move(sourceMap));
+  }
 
   auto parserMode = parser::FullParse;
   bool useStaticBuiltinDetected = false;

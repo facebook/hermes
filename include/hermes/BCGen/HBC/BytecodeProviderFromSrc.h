@@ -68,6 +68,24 @@ class BCProviderFromSrc final : public BCProviderBase {
       llvm::StringRef sourceURL,
       const CompileFlags &compileFlags);
 
+  /// Creates a BCProviderFromSrc by compiling the given JavaScript.
+  /// \param buffer the JavaScript source to compile, encoded in utf-8. It is
+  ///     required to have null termination ('\0') in the byte past the end,
+  ///     in other words `assert(buffer.data()[buffer.size()] == 0)`.
+  /// \param sourceURL this will be used as the "file name" of the buffer for
+  ///     errors, stack traces, etc.
+  /// \param sourceMap optional input source map for \p buffer.
+  /// \param compileFlags self explanatory
+  ///
+  /// \return a BCProvider and an empty error, or a null BCProvider and an error
+  ///     message.
+  static std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
+  createBCProviderFromSrc(
+      std::unique_ptr<Buffer> buffer,
+      llvm::StringRef sourceURL,
+      std::unique_ptr<SourceMap> sourceMap,
+      const CompileFlags &compileFlags);
+
   RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const {
     return RuntimeFunctionHeader(&module_->getFunction(functionID).getHeader());
   }
