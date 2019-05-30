@@ -18,7 +18,7 @@ class SourceMapParser {
  public:
   /// Parse input \p sourceMapContent and return parsed SourceMap.
   /// Return nullptr on failure if malformed.
-  std::unique_ptr<SourceMap> parse(llvm::StringRef sourceMapContent);
+  static std::unique_ptr<SourceMap> parse(llvm::StringRef sourceMapContent);
 
  private:
   /// Delta encoding state.
@@ -32,12 +32,12 @@ class SourceMapParser {
 
   /// Parse "mappings" section from \p sourceMappings. The parsed line mappings
   /// are returned in \p lines.
-  bool parseMappings(
+  static bool parseMappings(
       llvm::StringRef sourceMappings,
       std::vector<SourceMap::SegmentList> &lines);
 
   /// Parse single segment in mapping.
-  llvm::Optional<SourceMap::Segment>
+  static llvm::Optional<SourceMap::Segment>
   parseSegment(const State &state, const char *&pCur, const char *pSegEnd);
 };
 

@@ -28,6 +28,7 @@
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/SourceMap/SourceMapParser.h"
+#include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"
@@ -264,6 +265,10 @@ static opt<std::string> BytecodeOutputFilename("out", desc("Output file name"));
 static opt<bool> EmitDebugInfo(
     "g",
     desc("Emit debug info for all instructions"));
+
+static opt<std::string> InputSourceMap(
+    "source-map",
+    desc("Specify a matching source map for the input JS file"));
 
 static opt<bool> OutputSourceMap(
     "output-source-map",
@@ -555,12 +560,16 @@ SourceErrorOutputOptions guessErrorOutputOptions() {
 }
 
 /// Parse the given files and return a single AST pointer.
+/// \p sourceMap any parsed source map associated with \p fileBuf.
+/// \p sourceMapTranslator input source map coordinate translator.
 /// \return A pointer to the new validated AST, nullptr if parsing failed.
 /// If using CJS modules, return a FunctionExpressionNode, else a FileNode.
 ESTree::NodePtr parseJS(
     std::shared_ptr<Context> &context,
     sem::SemContext &semCtx,
     std::unique_ptr<llvm::MemoryBuffer> fileBuf,
+    std::unique_ptr<SourceMap> sourceMap = nullptr,
+    std::shared_ptr<SourceMapTranslator> sourceMapTranslator = nullptr,
     bool wrapCJSModule = false) {
   assert(fileBuf && "Need a file to compile");
   assert(context && "Need a context to compile using");
@@ -570,6 +579,10 @@ ESTree::NodePtr parseJS(
 
   int fileBufId =
       context->getSourceErrorManager().addNewSourceBuffer(std::move(fileBuf));
+  if (sourceMap != nullptr && sourceMapTranslator != nullptr) {
+    sourceMapTranslator->addSourceMap(fileBufId, std::move(sourceMap));
+  }
+
   auto mode = parser::FullParse;
 
   if (context->isLazyCompilation()) {
@@ -1039,7 +1052,14 @@ bool generateIRForSourcesAsCJSModules(
       }
       llvm::sys::path::replace_path_prefix(
           filename, rootPath, "./", llvm::sys::path::Style::posix);
-      auto *ast = parseJS(context, semCtx, std::move(fileBuf), true);
+      // TODO: use sourceMapTranslator for CJS module.
+      auto *ast = parseJS(
+          context,
+          semCtx,
+          std::move(fileBuf),
+          /*sourceMap*/ nullptr,
+          /*sourceMapTranslator*/ nullptr,
+          /*wrapCJSModule*/ true);
       if (!ast) {
         return false;
       }
@@ -1313,8 +1333,27 @@ CompileResult processSourceFiles(
       }
     }
 
-    ESTree::NodePtr ast =
-        parseJS(context, semCtx, std::move(fileBufs[0][0].file));
+    auto &mainFileBuf = fileBufs[0][0];
+    std::unique_ptr<SourceMap> sourceMap{nullptr};
+    if (mainFileBuf.sourceMap != nullptr) {
+      sourceMap = SourceMapParser::parse(mainFileBuf.sourceMap->getBuffer());
+      if (!sourceMap) {
+        // parse() returns nullptr on failure.
+        llvm::errs() << "Error: Invalid source map: "
+                     << fileBufs[0][0].sourceMap->getBufferIdentifier() << '\n';
+        return InputFileError;
+      }
+    }
+
+    auto sourceMapTranslator =
+        std::make_shared<SourceMapTranslator>(context->getSourceErrorManager());
+    context->getSourceErrorManager().setTranslator(sourceMapTranslator);
+    ESTree::NodePtr ast = parseJS(
+        context,
+        semCtx,
+        std::move(mainFileBuf.file),
+        std::move(sourceMap),
+        sourceMapTranslator);
     if (!ast) {
       return ParsingFailed;
     }
@@ -1534,6 +1573,21 @@ CompileResult compileFromCommandLineOptions() {
         return InputFileError;
       entry.push_back({std::move(fileBuf), nullptr});
     }
+
+    // Read input source map if available.
+    if (!cl::InputSourceMap.empty()) {
+      // TODO: support multiple JS sources from command line.
+      if (cl::InputFilenames.size() != 1) {
+        llvm::errs()
+            << "Error: only support single js file for input source map."
+            << '\n';
+        return InvalidFlags;
+      }
+      assert(entry.size() == 1 && "Can't have more than one entries.");
+      entry[0].sourceMap =
+          memoryBufferFromFile(cl::InputSourceMap, /*stdinOk*/ false);
+    }
+
     fileBufs.emplace(0, std::move(entry));
   }
 

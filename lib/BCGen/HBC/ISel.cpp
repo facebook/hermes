@@ -205,7 +205,7 @@ bool HBCISel::getDebugSourceLocation(
     SMLoc loc,
     DebugSourceLocation *out) {
   SourceErrorManager::SourceCoords coords{};
-  if (!manager.findBufferLineAndLoc(loc, coords)) {
+  if (!manager.findBufferLineAndLoc(loc, coords, /*translate*/ true)) {
     return false;
   }
 
