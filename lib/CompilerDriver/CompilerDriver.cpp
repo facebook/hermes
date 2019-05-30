@@ -261,6 +261,12 @@ static opt<BytecodeFormatKind> BytecodeFormat(
 
 static opt<std::string> BytecodeOutputFilename("out", desc("Output file name"));
 
+static opt<std::string> BytecodeManifestFilename(
+    "bytecode-output-manifest",
+    init("manifest.json"),
+    desc(
+        "Name of the manifest file generated when compiling multiple segments to bytecode"));
+
 /// Emit debug info for every instruction instead of just the throwing ones.
 static opt<bool> EmitDebugInfo(
     "g",
@@ -1439,8 +1445,6 @@ CompileResult processSourceFiles(
   std::unique_ptr<raw_fd_ostream> fileOS{};
   StringRef base = cl::BytecodeOutputFilename;
   if (context->getSegmentRanges().size() < 2) {
-    // Ok, we're going to return the bytecode in a serializable form.
-    // Open the output file, if any.
     if (!base.empty()) {
       fileOS = openFileForWrite(base, F_None);
       if (!fileOS)
@@ -1458,12 +1462,20 @@ CompileResult processSourceFiles(
       return result;
     }
   } else {
+    std::string manifestStr;
+    llvm::raw_string_ostream manifestOS{manifestStr};
+    JSONEmitter manifest{manifestOS, /* pretty */ true};
+    manifest.openArray();
+
     for (const auto &range : context->getSegmentRanges()) {
+      std::string filename = base.str();
+      if (range.segment != 0) {
+        filename += "." + oscompat::to_string(range.segment);
+      }
+      std::string flavor = "seg-" + oscompat::to_string(range.segment);
+
       if (!base.empty()) {
-        fileOS = openFileForWrite(
-            range.segment == 0 ? base
-                               : (Twine(base) + "." + Twine(range.segment)),
-            F_None);
+        fileOS = openFileForWrite(filename, F_None);
         if (!fileOS)
           return OutputFileError;
       }
@@ -1478,7 +1490,29 @@ CompileResult processSourceFiles(
       if (segResult.status != Success) {
         return segResult;
       }
+
+      // Add to the manifest.
+      manifest.openDict();
+      manifest.emitKeyValue("resource", llvm::sys::path::filename(base));
+      manifest.emitKeyValue("flavor", flavor);
+      manifest.emitKeyValue("location", llvm::sys::path::filename(filename));
+
+      manifest.closeDict();
     }
+
+    manifest.closeArray();
+
+    // Only output to manifest file if we are actually generating binary
+    // bytecode.
+    if (!base.empty() && !cl::BytecodeManifestFilename.empty()) {
+      llvm::SmallString<32> manifestPath = llvm::sys::path::parent_path(base);
+      llvm::sys::path::append(manifestPath, cl::BytecodeManifestFilename);
+      fileOS = openFileForWrite(manifestPath, F_Text);
+      if (!fileOS)
+        return OutputFileError;
+      *fileOS << manifestOS.str();
+    }
+
     result = Success;
   }
 

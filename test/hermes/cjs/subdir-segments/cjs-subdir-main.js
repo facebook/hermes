@@ -2,6 +2,7 @@
 // RUN: %hermes -commonjs -fstatic-require -fstatic-builtins %S/ -emit-binary -out %T/test.hbc && %hermes %T/test.hbc | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -commonjs -fstatic-require -fstatic-builtins %S/ -emit-binary -out %T/test.hbc && %hermes %T/test.hbc | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -commonjs -fstatic-require -fstatic-builtins %S/ -dump-bytecode | %FileCheck --match-full-lines %s -check-prefix BC
+// RUN: %hermes -O -commonjs -fstatic-require -fstatic-builtins %S/ -emit-binary -out %T/test.hbc && cat %T/manifest.json | %FileCheck --match-full-lines %s -check-prefix MANIFEST
 
 print('main: init');
 // CHECK-LABEL: main: init
@@ -32,3 +33,16 @@ print(require('./cjs-subdir-2.js').alpha);
 // BC-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: x
 // BC-NEXT:   p8[ASCII, {{.*}}] @{{.*}}: context
 // BC-NEXT:   p9[ASCII, {{.*}}] @{{.*}}: print
+
+// MANIFEST-LABEL: [
+// MANIFEST-NEXT:   {
+// MANIFEST-NEXT:     "resource": "test.hbc",
+// MANIFEST-NEXT:     "flavor": "seg-0",
+// MANIFEST-NEXT:     "location": "test.hbc"
+// MANIFEST-NEXT:   },
+// MANIFEST-NEXT:   {
+// MANIFEST-NEXT:     "resource": "test.hbc",
+// MANIFEST-NEXT:     "flavor": "seg-1",
+// MANIFEST-NEXT:     "location": "test.hbc.1"
+// MANIFEST-NEXT:   }
+// MANIFEST-NEXT: ]
