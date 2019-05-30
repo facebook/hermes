@@ -237,6 +237,8 @@ bool SourceLocationCache::findBufferLineAndLoc(
   return true;
 }
 
+SourceErrorManager::ICoordTranslator::~ICoordTranslator() = default;
+
 SourceErrorManager::SourceErrorManager()
     : cache_(new SourceLocationCache(sm_)),
       warningStatuses_((unsigned)Warning::_NumWarnings, true) {
@@ -269,6 +271,12 @@ void SourceErrorManager::disableBuffering() {
 
   // Clean the buffer.
   bufferedMessages_.clear();
+}
+
+uint32_t SourceErrorManager::addNewVirtualSourceBuffer(
+    llvm::StringRef bufferName) {
+  return addNewSourceBuffer(
+      llvm::MemoryBuffer::getMemBuffer("", bufferName, true));
 }
 
 void SourceErrorManager::dumpCoords(
@@ -352,6 +360,17 @@ void SourceErrorManager::message(DiagKind dk, SMLoc loc, const Twine &msg) {
 
 bool SourceErrorManager::findBufferLineAndLoc(SMLoc loc, SourceCoords &result) {
   return cache_->findBufferLineAndLoc(loc, result);
+}
+
+bool SourceErrorManager::findBufferLineAndLoc(
+    llvm::SMLoc loc,
+    hermes::SourceErrorManager::SourceCoords &result,
+    bool translate) {
+  if (!findBufferLineAndLoc(loc, result))
+    return false;
+  if (translate && translator_)
+    translator_->translate(result);
+  return true;
 }
 
 SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {

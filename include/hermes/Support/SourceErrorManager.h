@@ -88,11 +88,17 @@ class SourceErrorManager {
     }
   };
 
+  struct ICoordTranslator {
+    virtual ~ICoordTranslator() = 0;
+    virtual void translate(SourceCoords &coords) = 0;
+  };
+
   using DiagHandlerTy = llvm::SourceMgr::DiagHandlerTy;
 
  private:
   llvm::SourceMgr sm_{};
   SourceErrorOutputOptions outputOptions_;
+  std::shared_ptr<ICoordTranslator> translator_{};
 
   static constexpr unsigned kMessageCountSize = 4;
 
@@ -228,12 +234,25 @@ class SourceErrorManager {
     return sm_.getDiagContext();
   }
 
+  const std::shared_ptr<ICoordTranslator> &getTranslator() const {
+    return translator_;
+  }
+  void setTranslator(const std::shared_ptr<ICoordTranslator> &translator) {
+    translator_ = translator;
+  }
+
   /// Add a new source buffer to this source manager. This takes ownership of
   /// the memory buffer.
   /// \return the ID of the newly added buffer.
   uint32_t addNewSourceBuffer(std::unique_ptr<llvm::MemoryBuffer> f) {
     return sm_.AddNewSourceBuffer(std::move(f), SMLoc{});
   }
+
+  /// Add a source buffer which maps to a file, but doesn't actually contain any
+  /// source.
+  /// \param bufferName the LLVM buffer name associated with the buffer. In
+  ///     practice it usually contains a file path.
+  uint32_t addNewVirtualSourceBuffer(llvm::StringRef bufferName);
 
   const llvm::MemoryBuffer *getSourceBuffer(uint32_t bufId) const {
     return sm_.getMemoryBuffer(bufId);
@@ -256,10 +275,16 @@ class SourceErrorManager {
   }
 
   /// Find the bufferId, line and column of the specified location \p loc.
-  /// This is a very slow method that should be used only for error generation.
   /// \return true on success, false if could not be found, in which case
   ///     result.isValid() would also return false.
   bool findBufferLineAndLoc(SMLoc loc, SourceCoords &result);
+
+  /// Find the bufferId, line and column of the specified location \p loc.
+  /// Optionally perform source coordinate translation depending on
+  /// \p translate.
+  /// \return true on success, false if could not be found, in which case
+  ///     result.isValid() would also return false.
+  bool findBufferLineAndLoc(SMLoc loc, SourceCoords &result, bool translate);
 
   /// Find the SMLoc corresponding to the supplied source coordinates.
   SMLoc findSMLocFromCoords(SourceCoords coords);
