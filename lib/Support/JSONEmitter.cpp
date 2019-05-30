@@ -8,6 +8,7 @@
 
 #include <cmath>
 #include <iterator>
+#include "hermes/Support/Conversions.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/UTF8.h"
 #include "llvm/ADT/SmallVector.h"
@@ -65,7 +66,9 @@ void JSONEmitter::emitValue(unsigned long long val) {
 void JSONEmitter::emitValue(double val) {
   assert(std::isfinite(val) && "Value is not finite");
   willEmitValue();
-  OS << llvm::format("%g", val);
+  char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
+  (void)hermes::numberToString(val, buf8, sizeof(buf8));
+  OS << buf8;
 }
 
 void JSONEmitter::emitValue(llvm::StringRef val) {

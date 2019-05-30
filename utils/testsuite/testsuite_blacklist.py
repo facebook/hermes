@@ -1450,9 +1450,6 @@ BLACK_LIST = [
     # function declaration vs expression
     "esprima/test_fixtures/statement/labelled/function-declaration.js",
     "esprima/test_fixtures/statement/if/migrated_0003.js",
-    # TODO: double lost percision, possibly related to JSONEmitter
-    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0007.js",
-    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0006.js",
     # These should fail but aren't failing.
     "esprima/test_fixtures/tolerant-parse/migrated_0049.js",
     "esprima/test_fixtures/statement/if/invalid-function-declaration3.js",
