@@ -57,11 +57,11 @@ function func3() {
 //CHECK-NEXT:frame = [innerArrow1, innerFunction, ?anon_0_this, ?anon_1_new.target]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [innerArrow1]
-//CHECK-NEXT:  %1 = CreateFunctionInst %innerFunction()
-//CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [innerFunction]
-//CHECK-NEXT:  %3 = StoreFrameInst %this, [?anon_0_this]
-//CHECK-NEXT:  %4 = GetNewTargetInst
-//CHECK-NEXT:  %5 = StoreFrameInst %4, [?anon_1_new.target]
+//CHECK-NEXT:  %1 = StoreFrameInst %this, [?anon_0_this]
+//CHECK-NEXT:  %2 = GetNewTargetInst
+//CHECK-NEXT:  %3 = StoreFrameInst %2, [?anon_1_new.target]
+//CHECK-NEXT:  %4 = CreateFunctionInst %innerFunction()
+//CHECK-NEXT:  %5 = StoreFrameInst %4 : closure, [innerFunction]
 //CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 //CHECK-NEXT:  %7 = GetNewTargetInst
 //CHECK-NEXT:  %8 = BinaryOperatorInst '!==', %7, undefined : undefined

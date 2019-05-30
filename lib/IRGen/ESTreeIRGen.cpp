@@ -214,13 +214,13 @@ void ESTreeIRGen::doIt() {
     }
   }
 
-  emitFunctionPrologue(Program, Builder.createBasicBlock(topLevelFunction));
+  emitFunctionPrologue(
+      Program,
+      Builder.createBasicBlock(topLevelFunction),
+      InitES5CaptureState::Yes);
 
   Value *retVal;
   {
-    /// Initialize or propagate captured variable state for arrow functions.
-    initCaptureStateInES5Function();
-
     // Allocate the return register, initialize it to undefined.
     curFunction()->globalReturnRegister =
         Builder.createAllocStackInst(genAnonymousLabelName("ret"));

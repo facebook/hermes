@@ -505,7 +505,10 @@ class ESTreeIRGen {
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.
   /// This is used only by \c genES5Function() and the global scope.
-  void initCaptureStateInES5Function();
+  /// This is called internally by emitFunctionPrologue().
+  void initCaptureStateInES5FunctionHelper();
+
+  enum class InitES5CaptureState { No, Yes };
 
   /// Emit the function prologue for the current function, consisting of the
   /// following things:
@@ -518,9 +521,12 @@ class ESTreeIRGen {
   /// - create "this" parameter
   /// - create all explicit parameters and store them in variables
   /// \param entry the unpopulated entry block for the function
+  /// \param doInitES5CaptureState initialize the capture state for ES5
+  ///     functions.
   void emitFunctionPrologue(
       ESTree::FunctionLikeNode *funcNode,
-      BasicBlock *entry);
+      BasicBlock *entry,
+      InitES5CaptureState doInitES5CaptureState);
 
   /// Emit the loading and initialization of parameters in the function
   /// prologue.

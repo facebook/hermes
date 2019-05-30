@@ -128,13 +128,14 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
   {
     FunctionContext newFunctionContext{this, newFunc, AF->getSemInfo()};
 
-    emitFunctionPrologue(AF, Builder.createBasicBlock(newFunc));
-
     // Propagate captured "this", "new.target" and "arguments" from parents.
     auto *prev = curFunction()->getPreviousContext();
     curFunction()->capturedThis = prev->capturedThis;
     curFunction()->capturedNewTarget = prev->capturedNewTarget;
     curFunction()->capturedArguments = prev->capturedArguments;
+
+    emitFunctionPrologue(
+        AF, Builder.createBasicBlock(newFunc), InitES5CaptureState::No);
 
     genStatement(AF->_body);
     emitFunctionEpilogue(Builder.getLiteralUndefined());
@@ -207,12 +208,13 @@ Function *ESTreeIRGen::genES5Function(
         Builder.createAllocStackInst(genAnonymousLabelName("isReturn"));
     auto *entryPoint = Builder.createBasicBlock(newFunction);
     genResumeGenerator(nullptr, resumeIsReturn, entryPoint);
-    emitFunctionPrologue(functionNode, entryPoint);
+    emitFunctionPrologue(functionNode, entryPoint, InitES5CaptureState::Yes);
   } else {
-    emitFunctionPrologue(functionNode, Builder.createBasicBlock(newFunction));
+    emitFunctionPrologue(
+        functionNode,
+        Builder.createBasicBlock(newFunction),
+        InitES5CaptureState::Yes);
   }
-
-  initCaptureStateInES5Function();
 
   genStatement(body);
   emitFunctionEpilogue(Builder.getLiteralUndefined());
@@ -243,8 +245,10 @@ Function *ESTreeIRGen::genGeneratorFunction(
 
   {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
-    emitFunctionPrologue(functionNode, Builder.createBasicBlock(outerFn));
-    initCaptureStateInES5Function();
+    emitFunctionPrologue(
+        functionNode,
+        Builder.createBasicBlock(outerFn),
+        InitES5CaptureState::Yes);
 
     // Create a generator function, which will store the arguments.
     auto *gen = Builder.createCreateGeneratorInst(innerFn);
@@ -255,7 +259,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
   return outerFn;
 }
 
-void ESTreeIRGen::initCaptureStateInES5Function() {
+void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   // Capture "this", "new.target" and "arguments" if there are inner arrows.
   if (!curFunction()->getSemInfo()->containsArrowFunctions)
     return;
@@ -291,7 +295,8 @@ void ESTreeIRGen::initCaptureStateInES5Function() {
 
 void ESTreeIRGen::emitFunctionPrologue(
     ESTree::FunctionLikeNode *funcNode,
-    BasicBlock *entry) {
+    BasicBlock *entry,
+    InitES5CaptureState doInitES5CaptureState) {
   auto *newFunc = curFunction()->function;
   auto *semInfo = curFunction()->getSemInfo();
   LLVM_DEBUG(
@@ -323,6 +328,13 @@ void ESTreeIRGen::emitFunctionPrologue(
   for (auto *fd : semInfo->closures)
     declareVariableOrGlobalProperty(newFunc, getNameFieldFromID(fd->_id));
 
+  // Always create the "this" parameter. It needs to be created before we
+  // initialized the ES5 capture state.
+  Builder.createParameter(newFunc, "this");
+
+  if (doInitES5CaptureState != InitES5CaptureState::No)
+    initCaptureStateInES5FunctionHelper();
+
   // Construct the parameter list. Create function parameters and register
   // them in the scope.
   emitParameters(funcNode);
@@ -338,9 +350,6 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   auto *newFunc = curFunction()->function;
 
   LLVM_DEBUG(dbgs() << "IRGen function parameters.\n");
-
-  // Always create the "this" parameter.
-  Builder.createParameter(newFunc, "this");
 
   // Create a variable for every parameter.
   for (auto *idNode : funcNode->getSemInfo()->paramNames) {
