@@ -11,12 +11,12 @@
 
 namespace hermes {
 
-/// A diagnostic handler for \c SourceErrorManager and llvm::SourceMgr that
-/// remembers the first error and ignores the rest.
+/// A diagnostic handler for \c SourceErrorManager that remembers the first
+///     error and ignores the rest.
 class SimpleDiagHandler {
  public:
-  /// Install this handler into the specified SourceMgr.
-  void installInto(llvm::SourceMgr &sourceMgr);
+  /// Install this handler into the specified SourceErrorManager.
+  void installInto(SourceErrorManager &sm);
 
   /// \return true if an error message has been tracked.
   bool hasFirstMessage() const {

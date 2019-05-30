@@ -18,7 +18,7 @@ class DiagContext {
 
  public:
   DiagContext(SourceErrorManager &mgr) {
-    mgr.getSourceMgr().setDiagHandler(handler, this);
+    mgr.setDiagHandler(handler, this);
   }
   DiagContext(Context &astContext)
       : DiagContext(astContext.getSourceErrorManager()) {}

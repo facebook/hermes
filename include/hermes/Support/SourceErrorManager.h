@@ -88,6 +88,8 @@ class SourceErrorManager {
     }
   };
 
+  using DiagHandlerTy = llvm::SourceMgr::DiagHandlerTy;
+
  private:
   llvm::SourceMgr sm_{};
   SourceErrorOutputOptions outputOptions_;
@@ -210,8 +212,20 @@ class SourceErrorManager {
     outputOptions_ = opts;
   }
 
-  llvm::SourceMgr &getSourceMgr() {
-    return sm_;
+  /// Specify a diagnostic handler to be invoked every time PrintMessage is
+  /// called. \p ctx is passed into the handler when it is invoked.
+  void setDiagHandler(DiagHandlerTy DH, void *ctx = nullptr) {
+    sm_.setDiagHandler(DH, ctx);
+  }
+
+  /// \return the current diag handler.
+  DiagHandlerTy getDiagHandler() const {
+    return sm_.getDiagHandler();
+  }
+
+  /// \return the current diag handler context.
+  void *getDiagContext() const {
+    return sm_.getDiagContext();
   }
 
   /// Add a new source buffer to this source manager. This takes ownership of

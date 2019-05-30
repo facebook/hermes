@@ -12,8 +12,8 @@ using llvm::Twine;
 
 namespace hermes {
 
-void SimpleDiagHandler::installInto(llvm::SourceMgr &sourceMgr) {
-  sourceMgr.setDiagHandler(handler, this);
+void SimpleDiagHandler::installInto(hermes::SourceErrorManager &sm) {
+  sm.setDiagHandler(handler, this);
 }
 
 void SimpleDiagHandler::handler(const llvm::SMDiagnostic &msg, void *ctx) {
@@ -35,10 +35,10 @@ std::string SimpleDiagHandler::getErrorString() const {
 SimpleDiagHandlerRAII::SimpleDiagHandlerRAII(
     SourceErrorManager &sourceErrorManager)
     : sourceErrorManager_(sourceErrorManager),
-      oldHandler_(sourceErrorManager.getSourceMgr().getDiagHandler()),
-      oldContext_(sourceErrorManager.getSourceMgr().getDiagContext()),
+      oldHandler_(sourceErrorManager.getDiagHandler()),
+      oldContext_(sourceErrorManager.getDiagContext()),
       oldErrorLimit_(sourceErrorManager.getErrorLimit()) {
-  installInto(sourceErrorManager.getSourceMgr());
+  installInto(sourceErrorManager);
   sourceErrorManager.clearErrorLimitReached();
   sourceErrorManager.setErrorLimit(1);
 }
@@ -46,7 +46,7 @@ SimpleDiagHandlerRAII::SimpleDiagHandlerRAII(
 SimpleDiagHandlerRAII::~SimpleDiagHandlerRAII() {
   sourceErrorManager_.clearErrorLimitReached();
   sourceErrorManager_.setErrorLimit(oldErrorLimit_);
-  sourceErrorManager_.getSourceMgr().setDiagHandler(oldHandler_, oldContext_);
+  sourceErrorManager_.setDiagHandler(oldHandler_, oldContext_);
 }
 
 } // namespace hermes
