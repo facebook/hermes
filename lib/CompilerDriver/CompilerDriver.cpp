@@ -837,6 +837,24 @@ std::shared_ptr<Context> createContext(
   return root.getValue();
 }
 
+/// Given the root path to the directory or zip file, the file name, and
+/// a zip struct that represents the zip file if it's a zip, return
+/// the memory buffer of the file content.
+std::unique_ptr<llvm::MemoryBuffer> getFileFromDirectoryOrZip(
+    zip_t *zip,
+    llvm::StringRef rootPath,
+    llvm::Twine fileName,
+    bool silent = false) {
+  llvm::SmallString<32> path{};
+  if (!zip) {
+    llvm::sys::path::append(path, llvm::sys::path::Style::posix, rootPath);
+  }
+  llvm::sys::path::append(path, llvm::sys::path::Style::posix, fileName);
+  llvm::sys::path::remove_dots(path, false, llvm::sys::path::Style::posix);
+  return zip ? memoryBufferFromZipFile(zip, path.c_str(), silent)
+             : memoryBufferFromFile(path, false, silent);
+}
+
 /// Read input filenames from the given path and populate the files in \p
 /// fileBufs.
 /// In case of failure, ensure fileBufs is empty.
@@ -851,33 +869,7 @@ std::shared_ptr<Context> createContext(
     std::vector<Context::SegmentRange> &segmentRanges,
     ::hermes::parser::JSLexer::Allocator &alloc,
     struct zip_t *zip) {
-  // Get the path to the actual file given the path relative to the folder root.
-  auto getFullPath =
-      [&inputPath](llvm::StringRef relPath) -> llvm::SmallString<32> {
-    llvm::SmallString<32> path{};
-    llvm::sys::path::append(
-        path, llvm::sys::path::Style::posix, inputPath, relPath);
-    llvm::sys::path::remove_dots(path, false, llvm::sys::path::Style::posix);
-    return path;
-  };
-  // Get the path to the actual file given the path relative to the folder root.
-  // Ensures null termination.
-  auto getZipPath = [](llvm::StringRef relPath) -> llvm::SmallString<32> {
-    llvm::SmallString<32> path{relPath};
-    llvm::sys::path::remove_dots(path, false, llvm::sys::path::Style::posix);
-    return path;
-  };
-
-  auto getFile = [&zip, &getZipPath, &getFullPath](
-                     llvm::Twine path, bool silent = false) {
-    llvm::SmallString<32> out{};
-    return zip ? memoryBufferFromZipFile(
-                     zip, getZipPath(path.toStringRef(out)).c_str(), silent)
-               : memoryBufferFromFile(
-                     getFullPath(path.toStringRef(out)), false, silent);
-  };
-
-  auto metadataBuf = getFile("metadata.json");
+  auto metadataBuf = getFileFromDirectoryOrZip(zip, inputPath, "metadata.json");
   if (!metadataBuf) {
     llvm::errs()
         << "Failed to read metadata: Input must contain a metadata.json file\n";
@@ -935,11 +927,12 @@ std::shared_ptr<Context> createContext(
         llvm::errs() << "Segment paths must be strings\n";
         return nullptr;
       }
-      auto fileBuf = getFile(relPath->str());
+      auto fileBuf = getFileFromDirectoryOrZip(zip, inputPath, relPath->str());
       if (!fileBuf) {
         return nullptr;
       }
-      auto mapBuf = getFile(llvm::Twine(relPath->str(), ".map"), true);
+      auto mapBuf = getFileFromDirectoryOrZip(
+          zip, inputPath, llvm::Twine(relPath->str(), ".map"), true);
       // mapBuf is optional, so simply pass it through if it's null.
       segmentBufs.push_back({std::move(fileBuf), std::move(mapBuf)});
     }
@@ -954,6 +947,133 @@ std::shared_ptr<Context> createContext(
   }
 
   return metadata;
+}
+
+/// A map from segment ID to the deserialized base bytecode of that segment.
+using BaseBytecodeMap =
+    llvm::DenseMap<uint32_t, std::unique_ptr<hbc::BCProviderFromBuffer>>;
+
+/// Load the base bytecode provider from given file buffer \fileBuf.
+/// \return the base bytecode provider, or nullptr if an error happened.
+std::unique_ptr<hbc::BCProviderFromBuffer> loadBaseBytecodeProvider(
+    std::unique_ptr<llvm::MemoryBuffer> fileBuf) {
+  if (!fileBuf) {
+    llvm::errs() << "Unable to read from base bytecode file.\n";
+    return nullptr;
+  }
+  // Transfer ownership to an owned memory buffer.
+  auto ownedBuf = llvm::make_unique<OwnedMemoryBuffer>(std::move(fileBuf));
+  auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+      std::move(ownedBuf));
+  if (!ret.first) {
+    llvm::errs() << "Error deserializing base bytecode: " << ret.second;
+    return nullptr;
+  }
+  return std::move(ret.first);
+}
+
+/// Read the base bytecode provider map from either a directory or a zip file.
+/// This is used when commonjs is used and we need to optimize for delta
+/// bytecode updates. A metadata.hbc.json file is expected to exist in the
+/// directory or zip, which contains a map from segment ID to the file name of
+/// the base bytecode file for that segment.
+/// Returns whether the read succeeded.
+bool readBaseBytecodeFromDirectoryOrZip(
+    BaseBytecodeMap &map,
+    llvm::StringRef inputPath,
+    ::hermes::parser::JSLexer::Allocator &alloc,
+    struct zip_t *zip) {
+  auto manifestBuf = getFileFromDirectoryOrZip(zip, inputPath, "manifest.json");
+  if (!manifestBuf) {
+    llvm::errs()
+        << "Failed to read manifest: Input must contain a manifest.json file\n";
+    return false;
+  }
+
+  auto *manifestVal = parseJSONFile(manifestBuf, alloc);
+  if (!manifestVal) {
+    // parseJSONFile prints any error messages.
+    return false;
+  }
+
+  // Pull data from the manifest JSON object into C++ data structures.
+  // The manifest format is documented at doc/Modules.md.
+
+  auto *manifest = dyn_cast<parser::JSONArray>(manifestVal);
+  if (!manifest) {
+    llvm::errs() << "Manifest must be a JSON array.\n";
+    return false;
+  }
+
+  for (auto it : *manifest) {
+    auto *segment = llvm::dyn_cast_or_null<parser::JSONObject>(it);
+    if (!segment) {
+      llvm::errs() << "Each segment entry must be a JSON object.\n";
+      return false;
+    }
+    auto *flavor =
+        llvm::dyn_cast_or_null<parser::JSONString>(segment->get("flavor"));
+    if (!flavor || flavor->str().size() <= 4 ||
+        !flavor->str().startswith("seg-")) {
+      llvm::errs()
+          << "flavor must be a string that prefix a number with seg-.\n";
+      return false;
+    }
+    uint32_t segmentID;
+    if (flavor->str().substr(4).getAsInteger(10, segmentID)) {
+      // getAsInteger returns true to signal error.
+      llvm::errs()
+          << "flavor must be a string that prefix a number with seg-. Found "
+          << flavor->str() << '\n';
+      return false;
+    }
+
+    auto *location =
+        llvm::dyn_cast_or_null<parser::JSONString>(segment->get("location"));
+    if (!location) {
+      llvm::errs() << "Segment bytecode location must be a string.\n";
+      return false;
+    }
+
+    auto fileBuf = getFileFromDirectoryOrZip(zip, inputPath, location->str());
+    if (!fileBuf) {
+      llvm::errs() << "Base bytecode does not exist: " << location->str()
+                   << ".\n";
+      return false;
+    }
+
+    auto bcProvider = loadBaseBytecodeProvider(std::move(fileBuf));
+    if (!bcProvider) {
+      return false;
+    }
+
+    map[segmentID] = std::move(bcProvider);
+  }
+
+  return true;
+}
+
+/// Read base bytecode and returns whether it succeeded.
+bool readBaseBytecodeMap(
+    BaseBytecodeMap &map,
+    llvm::StringRef inputPath,
+    ::hermes::parser::JSLexer::Allocator &alloc) {
+  assert(!inputPath.empty() && "No base bytecode file requested");
+  struct zip_t *zip = zip_open(inputPath.data(), 0, 'r');
+
+  if (llvm::sys::fs::is_directory(inputPath) || zip) {
+    auto ret = readBaseBytecodeFromDirectoryOrZip(map, inputPath, alloc, zip);
+    if (zip) {
+      zip_close(zip);
+    }
+    return ret;
+  }
+  auto bcProvider = loadBaseBytecodeProvider(memoryBufferFromFile(inputPath));
+  if (!bcProvider) {
+    return false;
+  }
+  map[0] = std::move(bcProvider);
+  return true;
 }
 
 /// Read a resolution table. Given a file name, it maps every require string
@@ -1126,24 +1246,6 @@ CompileResult disassembleBytecode(std::unique_ptr<hbc::BCProvider> bytecode) {
   return Success;
 }
 
-/// Load the base bytecode provider as requested by command line options.
-/// \return the base bytecode provider.
-std::unique_ptr<hbc::BCProviderFromBuffer> loadBaseBytecodeProvider() {
-  assert(!cl::BaseBytecodeFile.empty() && "No base bytecode file requested");
-  auto fileBuf = memoryBufferFromFile(cl::BaseBytecodeFile);
-  if (!fileBuf)
-    return nullptr;
-  // Transfer ownership to an owned memory buffer.
-  auto ownedBuf = llvm::make_unique<OwnedMemoryBuffer>(std::move(fileBuf));
-  auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-      std::move(ownedBuf));
-  if (!ret.first) {
-    llvm::errs() << "Error deserializing base bytecode: " << ret.second;
-    return nullptr;
-  }
-  return std::move(ret.first);
-}
-
 /// Process the bytecode file given in \p fileBuf. Disassemble it if requested,
 /// otherwise return it as the CompileResult artifact. \return a compile result.
 CompileResult processBytecodeFile(std::unique_ptr<llvm::MemoryBuffer> fileBuf) {
@@ -1207,21 +1309,24 @@ CompileResult generateBytecodeForExecution(
 /// Compile the module \p M with the options \p genOptions, serializing the
 /// result to \p OS. If sourceMapGenOrNull is not null, populate it.
 /// \return the CompileResult.
+/// The corresponding base bytecode will be removed from \baseBytecodeMap.
 CompileResult generateBytecodeForSerialization(
     raw_ostream &OS,
     Module &M,
     const BytecodeGenerationOptions &genOptions,
     const SHA1 &sourceHash,
     OptValue<Context::SegmentRange> range,
-    SourceMapGenerator *sourceMapGenOrNull) {
+    SourceMapGenerator *sourceMapGenOrNull,
+    BaseBytecodeMap &baseBytecodeMap) {
   // Serialize the bytecode to the file.
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
-    std::unique_ptr<hbc::BCProviderFromBuffer> baseBCProvider;
-    // Load the base bytecode if requested.
-    if (!cl::BaseBytecodeFile.empty()) {
-      baseBCProvider = loadBaseBytecodeProvider();
-      if (!baseBCProvider)
-        return InputFileError;
+    std::unique_ptr<hbc::BCProviderFromBuffer> baseBCProvider = nullptr;
+    auto itr = baseBytecodeMap.find(range ? range->segment : 0);
+    if (itr != baseBytecodeMap.end()) {
+      baseBCProvider = std::move(itr->second);
+      // We want to erase it from the map because unique_ptr can only
+      // have one owner.
+      baseBytecodeMap.erase(itr);
     }
     auto bytecodeModule = hbc::generateBytecode(
         &M,
@@ -1441,6 +1546,15 @@ CompileResult processSourceFiles(
     return generateBytecodeForExecution(M, genOptions);
   }
 
+  BaseBytecodeMap baseBytecodeMap;
+  if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC &&
+      !cl::BaseBytecodeFile.empty()) {
+    if (!readBaseBytecodeMap(
+            baseBytecodeMap, cl::BaseBytecodeFile, context->getAllocator())) {
+      return InputFileError;
+    }
+  }
+
   CompileResult result{Success};
   std::unique_ptr<raw_fd_ostream> fileOS{};
   StringRef base = cl::BytecodeOutputFilename;
@@ -1457,7 +1571,8 @@ CompileResult processSourceFiles(
         genOptions,
         sourceHash,
         llvm::None,
-        sourceMapGen ? sourceMapGen.getPointer() : nullptr);
+        sourceMapGen ? sourceMapGen.getPointer() : nullptr,
+        baseBytecodeMap);
     if (result.status != Success) {
       return result;
     }
@@ -1486,7 +1601,8 @@ CompileResult processSourceFiles(
           genOptions,
           sourceHash,
           range,
-          sourceMapGen ? sourceMapGen.getPointer() : nullptr);
+          sourceMapGen ? sourceMapGen.getPointer() : nullptr,
+          baseBytecodeMap);
       if (segResult.status != Success) {
         return segResult;
       }
