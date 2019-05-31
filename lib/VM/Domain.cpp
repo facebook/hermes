@@ -168,8 +168,10 @@ ExecutionStatus Domain::importCJSModuleTable(
     pushNoError(HermesValue::encodeNativeUInt32(pair.second));
     pushNoError(HermesValue::encodeNativePointer(runtimeModule));
 
-    auto result = self->cjsModuleTable_.try_emplace(
-        runtimeModule->getSymbolIDFromStringID(pair.first), startIndex);
+    // symbolId must not be inlined because getSymbolIDFromStringID allocates,
+    // which can make self->cjsModuleTable_ stale.
+    SymbolID symbolId = runtimeModule->getSymbolIDFromStringID(pair.first);
+    auto result = self->cjsModuleTable_.try_emplace(symbolId, startIndex);
     (void)result;
     assert(result.second && "Duplicate CJS modules");
   }
