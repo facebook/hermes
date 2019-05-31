@@ -22,7 +22,7 @@ namespace {
 /**
  * @param base the beginning of the logical array
  */
-ExecutionStatus
+LLVM_NODISCARD ExecutionStatus
 heapFixDown(SortModel *sm, uint32_t base, uint32_t begin, uint32_t end) {
   CallResult<bool> res{false};
   if (LLVM_UNLIKELY(end - begin <= 1)) {
@@ -70,7 +70,9 @@ ExecutionStatus heapSort(SortModel *sm, uint32_t begin, uint32_t end) {
   // "heapify"
   uint32_t start = (end - begin - 2) / 2 + begin;
   do {
-    heapFixDown(sm, begin, start, end);
+    if (heapFixDown(sm, begin, start, end) == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
   } while (start-- != begin);
 
   while (end - begin > 1) {
@@ -78,7 +80,9 @@ ExecutionStatus heapSort(SortModel *sm, uint32_t begin, uint32_t end) {
     if (sm->swap(begin, end) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    heapFixDown(sm, begin, begin, end);
+    if (heapFixDown(sm, begin, begin, end) == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
   }
 
   return ExecutionStatus::RETURNED;
