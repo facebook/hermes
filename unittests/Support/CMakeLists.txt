@@ -1,3 +1,8 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This source code is licensed under the MIT license found in the LICENSE
+# file in the root directory of this source tree.
+
 set(SupportSources
   Algorithms.cpp
   AllocatorTest.cpp
@@ -8,6 +13,7 @@ set(SupportSources
   HashStringTest.cpp
   JSONEmitterTest.cpp
   LEB128Test.cpp
+  OptValueTest.cpp
   PageAccessTrackerTest.cpp
   PlatformLoggingTest.cpp
   RegexTest.cpp

@@ -69,6 +69,42 @@ static_assert(
     IsTriviallyCopyable<OptValue<int>, true>::value,
     "OptValue<int> must be trivially copyable");
 
+/// Specialization for bool that improves codegen by collapsing compares.
+template <>
+class OptValue<bool> {
+  // -1 = none, 0 = false, 1 = true
+  int value_;
+
+ public:
+  typedef bool value_type;
+  OptValue(llvm::NoneType) : value_(-1) {}
+  explicit OptValue() : value_(-1) {}
+  OptValue(bool v) : value_(v ? 1 : 0) {}
+
+  OptValue(const OptValue &) = default;
+  OptValue &operator=(const OptValue &) = default;
+  ~OptValue() = default;
+
+  bool hasValue() const {
+    return value_ >= 0;
+  }
+  explicit operator bool() const {
+    return hasValue();
+  }
+
+  bool getValue() const {
+    assert(hasValue());
+    return value_ > 0;
+  }
+
+  bool operator*() const {
+    return getValue();
+  }
+};
+static_assert(
+    IsTriviallyCopyable<OptValue<bool>, true>::value,
+    "OptValue<bool> must be trivially copyable");
+
 template <typename T, typename U>
 bool operator==(const OptValue<T> &a, const OptValue<U> &b) {
   if (a && b)
