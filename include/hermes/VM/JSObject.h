@@ -674,11 +674,14 @@ class JSObject : public GCCell {
   /// The following three methods implement ES5.1 8.12.3.
   /// getNamed is an optimized path for getting a property with a SymbolID when
   /// it is statically known that the SymbolID is not index-like.
+  /// If \p cacheEntry is not null, and the result is suitable for use in a
+  /// property cache, populate the cache.
   static CallResult<HermesValue> getNamed(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
-      PropOpFlags opFlags = PropOpFlags());
+      PropOpFlags opFlags = PropOpFlags(),
+      PropertyCacheEntry *cacheEntry = nullptr);
 
   // getNamedOrIndexed accesses a property with a SymbolIDs which may be
   // index-like.

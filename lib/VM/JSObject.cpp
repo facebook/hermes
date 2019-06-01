@@ -828,7 +828,8 @@ CallResult<HermesValue> JSObject::getNamed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
-    PropOpFlags opFlags) {
+    PropOpFlags opFlags,
+    PropertyCacheEntry *cacheEntry) {
   NamedPropertyDescriptor desc;
 
   // Locate the descriptor. propObj contains the object which may be anywhere
@@ -844,8 +845,14 @@ CallResult<HermesValue> JSObject::getNamed(
     return HermesValue::encodeUndefinedValue();
   }
 
-  if (LLVM_LIKELY(!desc.flags.accessor && !desc.flags.hostObject))
+  if (LLVM_LIKELY(!desc.flags.accessor && !desc.flags.hostObject)) {
+    // Populate the cache if requested.
+    if (cacheEntry && !propObj->getClass()->isDictionary()) {
+      cacheEntry->clazz = propObj->getClass();
+      cacheEntry->slot = desc.slot;
+    }
     return getNamedSlotValue(propObj, desc);
+  }
 
   if (desc.flags.accessor) {
     auto *accessor = vmcast<PropertyAccessor>(getNamedSlotValue(propObj, desc));

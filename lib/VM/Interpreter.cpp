@@ -43,6 +43,9 @@ HERMES_SLOW_STATISTIC(
     NumGetByIdCacheHits,
     "NumGetByIdCacheHits: Number of property 'read by id' cache hits");
 HERMES_SLOW_STATISTIC(
+    NumGetByIdProtoHits,
+    "NumGetByIdProtoHits: Number of property 'read by id' cache hits for the prototype");
+HERMES_SLOW_STATISTIC(
     NumGetByIdCacheEvicts,
     "NumGetByIdCacheEvicts: Number of property 'read by id' cache evictions");
 HERMES_SLOW_STATISTIC(
@@ -2140,6 +2143,26 @@ tailCall:
           ip = nextIP;
           DISPATCH;
         }
+
+        // The cache may also be populated via the prototype of the object.
+        // This value is only reliable if the fast path was a definite
+        // not-found.
+        if (fastPathResult.hasValue() && !fastPathResult.getValue()) {
+          JSObject *parent = obj->getParent();
+          // TODO: This isLazy check is because a lazy object is reported as
+          // having no properties and therefore cannot contain the property.
+          // This check does not belong here, it should be merged into
+          // tryGetOwnNamedDescriptorFast().
+          if (parent && cacheEntry->clazz == parent->getClass() &&
+              LLVM_LIKELY(!obj->isLazy())) {
+            ++NumGetByIdProtoHits;
+            O1REG(GetById) =
+                JSObject::getNamedSlotValue(parent, cacheEntry->slot);
+            ip = nextIP;
+            DISPATCH;
+          }
+        }
+
 #ifdef HERMES_SLOW_DEBUG
         JSObject *propObj = JSObject::getNamedDescriptor(
             Handle<JSObject>::vmcast(&O2REG(GetById)), runtime, id, desc);
@@ -2162,7 +2185,9 @@ tailCall:
                      runtime,
                      id,
                      !tryProp ? defaultPropOpFlags
-                              : defaultPropOpFlags.plusMustExist())) ==
+                              : defaultPropOpFlags.plusMustExist(),
+                     cacheIdx != hbc::PROPERTY_CACHING_DISABLED ? cacheEntry
+                                                                : nullptr)) ==
                 ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
