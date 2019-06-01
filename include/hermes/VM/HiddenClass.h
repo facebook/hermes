@@ -214,10 +214,12 @@ class HiddenClass final : public GCCell {
       PropertyFlags expectedFlags,
       NamedPropertyDescriptor &desc);
 
-  /// An optimistic fast path for \c findProperty(). It only succeeds if there
-  /// is an allocated property map. If it fails, the "slow path",
-  /// \c findProperty() itself, must be used.
-  static bool tryFindPropertyFast(
+  /// An optimistic fast path for \c findProperty(). If there is an allocated
+  /// property map, this will return an OptValue containing either true or
+  /// false. If there was no allocated property map, this returns llvm::None. If
+  /// this fails by returning None, the "slow path", \c findProperty() itself,
+  /// must be used.
+  static OptValue<bool> tryFindPropertyFast(
       const HiddenClass *self,
       SymbolID name,
       NamedPropertyDescriptor &desc);
@@ -449,7 +451,7 @@ bool HiddenClass::forEachPropertyWhile(
       runtime->makeHandle(selfHandle->propertyMap_), runtime, callback);
 }
 
-inline bool HiddenClass::tryFindPropertyFast(
+inline OptValue<bool> HiddenClass::tryFindPropertyFast(
     const HiddenClass *self,
     SymbolID name,
     NamedPropertyDescriptor &desc) {
@@ -458,10 +460,10 @@ inline bool HiddenClass::tryFindPropertyFast(
     if (LLVM_LIKELY(found)) {
       desc = DictPropertyMap::getDescriptorPair(self->propertyMap_, *found)
                  ->second;
-      return true;
     }
+    return found.hasValue();
   }
-  return false;
+  return llvm::None;
 }
 
 } // namespace vm

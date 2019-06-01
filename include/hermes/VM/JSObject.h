@@ -588,7 +588,9 @@ class JSObject : public GCCell {
   /// implementation-dependent conditions are met, it can look up a property
   /// quickly and succeed. If it fails, the "slow path" - \c
   /// getOwnNamedDescriptor() must be used.
-  static bool tryGetOwnNamedDescriptorFast(
+  /// \return true or false if a definitive answer can be provided, llvm::None
+  /// if the result is unknown.
+  static OptValue<bool> tryGetOwnNamedDescriptorFast(
       JSObject *self,
       SymbolID name,
       NamedPropertyDescriptor &desc);
@@ -1287,7 +1289,7 @@ inline bool JSObject::getOwnNamedDescriptor(
   return findProperty(selfHandle, runtime, name, desc).hasValue();
 }
 
-inline bool JSObject::tryGetOwnNamedDescriptorFast(
+inline OptValue<bool> JSObject::tryGetOwnNamedDescriptorFast(
     JSObject *self,
     SymbolID name,
     NamedPropertyDescriptor &desc) {

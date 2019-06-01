@@ -2114,8 +2114,10 @@ tailCall:
         }
         auto id = ID(idVal);
         NamedPropertyDescriptor desc;
+        OptValue<bool> fastPathResult =
+            JSObject::tryGetOwnNamedDescriptorFast(obj, id, desc);
         if (LLVM_LIKELY(
-                JSObject::tryGetOwnNamedDescriptorFast(obj, id, desc)) &&
+                fastPathResult.hasValue() && fastPathResult.getValue()) &&
             !desc.flags.accessor) {
           ++NumGetByIdFastPaths;
 
@@ -2223,8 +2225,9 @@ tailCall:
         }
         auto id = ID(idVal);
         NamedPropertyDescriptor desc;
-        if (LLVM_LIKELY(
-                JSObject::tryGetOwnNamedDescriptorFast(obj, id, desc)) &&
+        OptValue<bool> hasOwnProp =
+            JSObject::tryGetOwnNamedDescriptorFast(obj, id, desc);
+        if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
             !desc.flags.accessor && desc.flags.writable &&
             !desc.flags.internalSetter) {
           ++NumPutByIdFastPaths;
