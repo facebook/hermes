@@ -366,7 +366,7 @@ void Instruction::eraseFromParent() {
   getParent()->erase(this);
 }
 
-void Function::eraseFromParent() {
+void Function::eraseFromParentNoDestroy() {
   // Erase all of the basic blocks before deleting the function.
   while (begin() != end()) {
     begin()->replaceAllUsesWith(nullptr);

@@ -65,8 +65,13 @@ static bool performFunctionDCE(Function *F) {
 bool DCE::runOnModule(Module *M) {
   bool changed = false;
 
-  // A list of unused functions to delete.
-  llvm::SmallVector<Function *, 16> toDelete;
+  // A list of unused functions to deallocate from memory.
+  // We need to destroy the memory at the very end of this function because
+  // a dead function may have a variable that is referrenced by an inner
+  // function (which will also become dead once the outer function is removed).
+  // However we cannot destroy the outer function right away until we destroy
+  // the inner function.
+  llvm::SmallVector<Function *, 16> toDestroy;
 
   // Perform per-function DCE.
   for (auto &F : *M) {
@@ -78,6 +83,9 @@ bool DCE::runOnModule(Module *M) {
 
   bool localChanged = false;
   do {
+    // A list of unused functions to remove from the module without being
+    // destroyed.
+    llvm::SmallVector<Function *, 16> toRemove;
     localChanged = false;
     for (auto &F : *M) {
       // Try to remove unused functions. Notice that the top-level-function has
@@ -87,22 +95,31 @@ bool DCE::runOnModule(Module *M) {
         continue;
       }
       if (!F.isGlobalScope() && !F.hasUsers()) {
-        toDelete.push_back(&F);
+        toRemove.push_back(&F);
+        toDestroy.push_back(&F);
         changed = true;
         localChanged = true;
         NumFuncDCE++;
       }
     }
 
-    for (auto *F : toDelete) {
+    // We erase the basic blocks and instructions from each function in
+    // toRemove, and also remove the function from the module. However
+    // the memory of the function remain alive.
+    for (auto *F : toRemove) {
       LLVM_DEBUG(
           dbgs() << "\tDCE: Erasing function \"" << F->getInternalName()
                  << "\"\n");
-      F->eraseFromParent();
+      F->eraseFromParentNoDestroy();
     }
-    toDelete.clear();
-
   } while (localChanged);
+
+  // Now that all instructions have been destroyed from each dead function,
+  // it's now safe to destroy them including the variables in them.
+  for (auto *F : toDestroy) {
+    assert(F->empty() && "All basic blocks should have been deleted.");
+    Value::destroy(F);
+  }
 
   return changed | localChanged;
 }

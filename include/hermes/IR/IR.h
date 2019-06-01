@@ -1381,8 +1381,10 @@ class Function : public ilist_node_with_parent<Function, Module>, public Value {
     return BasicBlockList;
   }
 
-  /// Erase the function from the module, remove all references.
-  void eraseFromParent();
+  /// Erase all the basic blocks and instructions in this function.
+  /// Then remove the function from the module, remove all references.
+  /// However this does not deallocate (destroy) the memory of this function.
+  void eraseFromParentNoDestroy();
 
   /// \returns the original function name specified by the user,
   /// or if not specified, the inferred name.
