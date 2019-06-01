@@ -462,6 +462,8 @@ inline OptValue<bool> HiddenClass::tryFindPropertyFast(
                  ->second;
     }
     return found.hasValue();
+  } else if (self->numProperties_ == 0) {
+    return false;
   }
   return llvm::None;
 }
