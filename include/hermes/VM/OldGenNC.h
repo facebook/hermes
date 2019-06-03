@@ -107,8 +107,8 @@ class OldGen : public GCGeneration {
     gcheapsize_t storageFootprint() const;
     gcheapsize_t minStorageFootprint() const;
 
-    gcheapsize_t adjustSize(gcheapsize_t amount) const {
-      return adjustSizeWithBounds(amount, min_, max_);
+    gcheapsize_t adjustSize(gcheapsize_t desired) const {
+      return adjustSizeWithBounds(desired, min_, max_);
     }
 
    private:
@@ -457,6 +457,9 @@ size_t OldGen::maxSize() const {
 }
 
 size_t OldGen::adjustSize(size_t desired) const {
+  // The desired size must be at least levelOffset(), to maintain the invariant
+  // levelOffset() <= size().
+  desired = std::max(desired, levelOffset());
   return sz_.adjustSize(desired);
 }
 
