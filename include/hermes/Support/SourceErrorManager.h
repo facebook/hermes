@@ -286,6 +286,10 @@ class SourceErrorManager {
   ///     result.isValid() would also return false.
   bool findBufferLineAndLoc(SMLoc loc, SourceCoords &result, bool translate);
 
+  /// Given a \p loc, return the buffer that the location is in.
+  /// Returns nullptr if the buffer is not found.
+  const llvm::MemoryBuffer *findBufferForLoc(SMLoc loc) const;
+
   /// Find the SMLoc corresponding to the supplied source coordinates.
   SMLoc findSMLocFromCoords(SourceCoords coords);
 

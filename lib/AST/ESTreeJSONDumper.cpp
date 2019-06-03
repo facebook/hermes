@@ -7,6 +7,7 @@
 #include "hermes/AST/ESTreeJSONDumper.h"
 
 #include "hermes/Support/JSONEmitter.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 namespace hermes {
 
@@ -16,10 +17,14 @@ using namespace hermes::ESTree;
 
 class ESTreeJSONDumper {
   JSONEmitter json_;
+  SourceErrorManager *sm_{nullptr};
 
  public:
-  explicit ESTreeJSONDumper(llvm::raw_ostream &os, bool pretty)
-      : json_(os, pretty) {}
+  explicit ESTreeJSONDumper(
+      llvm::raw_ostream &os,
+      bool pretty,
+      SourceErrorManager *sm)
+      : json_(os, pretty), sm_(sm) {}
 
   void doIt(NodePtr rootNode) {
     dumpNode(rootNode);
@@ -27,12 +32,51 @@ class ESTreeJSONDumper {
   }
 
  private:
+  /// Print the source location for the \p node.
+  void printSourceLocation(Node *node) {
+    if (!sm_)
+      return;
+    SourceErrorManager::SourceCoords start, end;
+    SMRange rng = node->getSourceRange();
+    if (!sm_->findBufferLineAndLoc(rng.Start, start) ||
+        !sm_->findBufferLineAndLoc(rng.End, end))
+      return;
+
+    json_.emitKey("loc");
+    json_.openDict();
+    json_.emitKey("start");
+    json_.openDict();
+    json_.emitKeyValue("line", start.line);
+    json_.emitKeyValue("column", start.col);
+    json_.closeDict();
+    json_.emitKey("end");
+    json_.openDict();
+    json_.emitKeyValue("line", end.line);
+    json_.emitKeyValue("column", end.col);
+    json_.closeDict();
+    json_.closeDict();
+
+    const llvm::MemoryBuffer *buffer = sm_->findBufferForLoc(rng.Start);
+    assert(buffer && "The buffer must exist");
+    const char *bufStart = buffer->getBufferStart();
+    assert(
+        rng.Start.getPointer() >= bufStart &&
+        rng.End.getPointer() <= buffer->getBufferEnd() &&
+        "The range must be within the buffer");
+    json_.emitKey("range");
+    json_.openArray();
+    json_.emitValues(
+        {rng.Start.getPointer() - bufStart, rng.End.getPointer() - bufStart});
+    json_.closeArray();
+  }
+
 /// Visitor functions for each node type.
 #define ESTREE_NODE_0_ARGS(NAME, BASE) \
   void visit(NAME##Node *node) {       \
     json_.openDict();                  \
     json_.emitKeyValue("type", #NAME); \
     dumpChildren(node);                \
+    printSourceLocation(node);         \
     json_.closeDict();                 \
   }
 
@@ -41,6 +85,7 @@ class ESTreeJSONDumper {
     json_.openDict();                                           \
     json_.emitKeyValue("type", #NAME);                          \
     dumpChildren(node);                                         \
+    printSourceLocation(node);                                  \
     json_.closeDict();                                          \
   }
 
@@ -50,6 +95,7 @@ class ESTreeJSONDumper {
     json_.openDict();                                             \
     json_.emitKeyValue("type", #NAME);                            \
     dumpChildren(node);                                           \
+    printSourceLocation(node);                                    \
     json_.closeDict();                                            \
   }
 
@@ -69,6 +115,7 @@ class ESTreeJSONDumper {
     json_.openDict();                  \
     json_.emitKeyValue("type", #NAME); \
     dumpChildren(node);                \
+    printSourceLocation(node);         \
     json_.closeDict();                 \
   }
 
@@ -91,6 +138,7 @@ class ESTreeJSONDumper {
     json_.openDict();                  \
     json_.emitKeyValue("type", #NAME); \
     dumpChildren(node);                \
+    printSourceLocation(node);         \
     json_.closeDict();                 \
   }
 
@@ -116,6 +164,7 @@ class ESTreeJSONDumper {
     json_.openDict();                  \
     json_.emitKeyValue("type", #NAME); \
     dumpChildren(node);                \
+    printSourceLocation(node);         \
     json_.closeDict();                 \
   }
 
@@ -292,8 +341,12 @@ class ESTreeJSONDumper {
 
 } // namespace
 
-void dumpESTreeJSON(llvm::raw_ostream &os, NodePtr rootNode, bool pretty) {
-  return ESTreeJSONDumper(os, pretty).doIt(rootNode);
+void dumpESTreeJSON(
+    llvm::raw_ostream &os,
+    NodePtr rootNode,
+    bool pretty,
+    SourceErrorManager *sm) {
+  return ESTreeJSONDumper(os, pretty, sm).doIt(rootNode);
 }
 
 } // namespace hermes

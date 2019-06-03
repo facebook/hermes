@@ -373,6 +373,15 @@ bool SourceErrorManager::findBufferLineAndLoc(
   return true;
 }
 
+const llvm::MemoryBuffer *SourceErrorManager::findBufferForLoc(
+    SMLoc loc) const {
+  uint32_t bufID = sm_.FindBufferContainingLoc(loc);
+  if (bufID == 0) {
+    return nullptr;
+  }
+  return sm_.getMemoryBuffer(bufID);
+}
+
 SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
   if (!coords.isValid())
     return {};

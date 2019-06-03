@@ -15,10 +15,12 @@ namespace hermes {
 
 /// Print out the contents of the given tree to \p os.
 /// \p pretty for pretty print the JSON.
+/// When \p sm is not null, print the source locations for the AST nodes.
 void dumpESTreeJSON(
     llvm::raw_ostream &os,
     ESTree::NodePtr rootNode,
-    bool pretty);
+    bool pretty,
+    SourceErrorManager *sm = nullptr);
 
 } // namespace hermes
 

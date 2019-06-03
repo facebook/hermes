@@ -296,7 +296,7 @@ static opt<bool> DumpUseList(
 
 static opt<bool> DumpSourceLocation(
     "dump-source-location",
-    desc("Print source location information in IR dumps"));
+    desc("Print source location information in IR or AST dumps."));
 
 static opt<bool> DumpBetweenPasses(
     "Xdump-between-passes",
@@ -633,7 +633,10 @@ ESTree::NodePtr parseJS(
 
   if (cl::DumpTarget == DumpAST) {
     hermes::dumpESTreeJSON(
-        llvm::outs(), parsedAST, cl::PrettyJSON /* pretty */);
+        llvm::outs(),
+        parsedAST,
+        cl::PrettyJSON /* pretty */,
+        cl::DumpSourceLocation ? &context->getSourceErrorManager() : nullptr);
   }
 
   if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
@@ -642,7 +645,10 @@ ESTree::NodePtr parseJS(
 
   if (cl::DumpTarget == DumpTransformedAST) {
     hermes::dumpESTreeJSON(
-        llvm::outs(), parsedAST, cl::PrettyJSON /* pretty */);
+        llvm::outs(),
+        parsedAST,
+        cl::PrettyJSON /* pretty */,
+        cl::DumpSourceLocation ? &context->getSourceErrorManager() : nullptr);
   }
 
   return parsedAST;
