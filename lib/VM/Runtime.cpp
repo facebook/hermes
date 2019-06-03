@@ -646,6 +646,7 @@ CallResult<HermesValue> Runtime::runBytecode(
   auto globalFunctionIndex = bytecode->getGlobalFunctionIndex();
 
 // TODO(T35544739): clean up the experiment after we are done.
+// In non-debug builds, only freeze builtins when we are in experimental groups.
 #ifdef NDEBUG
   if (vmExperimentFlags_ &
       (experiments::FreezeBuiltinsAndFatalOnOverride |

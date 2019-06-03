@@ -204,10 +204,8 @@ bool JSParserImpl::eatSemi(SMLoc &endLoc, bool optional) {
 void JSParserImpl::processDirective(UniqueString *directive) {
   if (directive == useStrictIdent_)
     setStrictMode(true);
-#ifndef NDEBUG
   if (directive == useStaticBuiltinIdent_)
     setUseStaticBuiltin();
-#endif
 }
 
 bool JSParserImpl::recursionDepthExceeded() {

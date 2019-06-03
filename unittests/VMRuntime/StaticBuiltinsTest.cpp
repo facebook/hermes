@@ -60,6 +60,9 @@ static void verifyAllBuiltinsFrozen(Runtime *runtime) {
 class StaticBuiltinsTest : public RuntimeTestFixture {
  public:
   StaticBuiltinsTest()
+      // TODO(T35544739): clean up the experiment after we are done.
+      // When we are doing the experiment, set this flag to ensure the default
+      // behavior.
       : RuntimeTestFixture(experiments::FreezeBuiltinsAndThrowOnOverride) {}
 };
 
@@ -173,7 +176,6 @@ TEST_F(StaticBuiltinsTest, AttemptToOverrideBuiltins2) {
       ExecutionStatus::EXCEPTION);
 }
 
-#ifndef NDEBUG
 TEST_F(StaticBuiltinsTest, UseStaticBuiltinDirective) {
   std::string codeStaticBuiltin = R"(
     'use static builtin';
@@ -243,6 +245,5 @@ TEST_F(StaticBuiltinsTest, ForceNoBuiltinFlagLazyCompilation) {
       runtime->run(codeStaticBuiltin, "source/url", flagsForceNoBuiltin),
       ExecutionStatus::RETURNED);
 }
-#endif
 
 } // namespace
