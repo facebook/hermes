@@ -23,6 +23,11 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
   SourceErrorManager sm;
   parser::JSONParser jsonParser(factory, sourceMapContent, sm);
 
+  llvm::Optional<JSONValue *> parsedMap = jsonParser.parse();
+  if (!parsedMap.hasValue()) {
+    return nullptr;
+  }
+
   // Parse for JavaScript version 3 source map https://sourcemaps.info/spec.html
   // Not yet implemented:
   //  1. 'file' field
@@ -30,8 +35,7 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
   //  3. 'sourcesContent' field.
   //  4. Index map.
   //  5. Facebook segments extension.
-  auto *json =
-      llvm::dyn_cast_or_null<JSONObject>(jsonParser.parse().getValue());
+  auto *json = llvm::dyn_cast_or_null<JSONObject>(parsedMap.getValue());
   if (json == nullptr) {
     return nullptr;
   }

@@ -28,6 +28,15 @@ const char *TestMap = R"#({
   "mappings": "CAAC,IAAI,IAAM,SAAUA,GAClB,OAAOC,IAAID;CCDb,IAAI,IAAM,SAAUE,GAClB,OAAOA"
 })#";
 
+// The following source map is missing enclosing brace so is invalid.
+const char *InvalidJsonMap = R"#({
+  "version": 3,
+  "file": "min.js",
+  "names": ["bar", "baz", "n"],
+  "sources": ["one.js", "two.js"],
+  "sourceRoot": "/the/root/",
+)#";
+
 // No "sourceRoot" field.
 const char *TestMapNoSourceRoot = R"#({
   "version": 3,
@@ -95,13 +104,6 @@ void verifySegment(
   }
 }
 
-std::unique_ptr<SourceMap> parseSourceMap(llvm::StringRef sourceMapContent) {
-  SourceMapParser parser;
-  std::unique_ptr<SourceMap> sourceMap = parser.parse(sourceMapContent);
-  EXPECT_TRUE(sourceMap != nullptr);
-  return sourceMap;
-}
-
 TEST(SourceMap, Basic) {
   SourceMapGenerator map;
   EXPECT_EQ(map.getMappingsLines().size(), 0u);
@@ -142,7 +144,7 @@ TEST(SourceMap, Basic) {
       OS.str(),
       R"#({"version":3,"sources":["file1","file2"],"mappings":"AAAC,EACA,CACA,C,CAAC;ACGI,CACJ,EAAC,EACF;"})#");
 
-  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(storage);
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(storage);
   for (uint32_t line = 0; line < sizeof(segmentsList) / sizeof(segmentsList[0]);
        ++line) {
     const auto &segments = segmentsList[line];
@@ -153,12 +155,18 @@ TEST(SourceMap, Basic) {
   }
 }
 
+TEST(SourceMap, InvalidJsonMapTest) {
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(InvalidJsonMap);
+  EXPECT_TRUE(sourceMap == nullptr);
+};
+
 /// "test that the `sources` field has the original sources" from
 /// https://github.com/mozilla/source-map/blob/master/test/test-source-map-consumer.js
 TEST(SourceMap, SourcesField) {
   auto verifySources = [](const char *sourceMapContent,
                           const std::vector<std::string> &expected) {
-    std::unique_ptr<SourceMap> sourceMap = parseSourceMap(sourceMapContent);
+    std::unique_ptr<SourceMap> sourceMap =
+        SourceMapParser::parse(sourceMapContent);
     std::vector<std::string> sources = sourceMap->getAllFullPathSources();
     EXPECT_EQ(sources.size(), expected.size());
     for (uint32_t i = 0; i < expected.size(); ++i) {
@@ -173,7 +181,7 @@ TEST(SourceMap, SourcesField) {
 /// "test that the source root is reflected in a mapping's source field" from
 /// https://github.com/mozilla/source-map/blob/master/test/test-source-map-consumer.js
 TEST(SourceMap, SourceRoot) {
-  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(TestMap);
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(TestMap);
 
   llvm::Optional<SourceMapTextLocation> locOpt =
       sourceMap->getLocationForAddress(2, 2);
@@ -184,7 +192,8 @@ TEST(SourceMap, SourceRoot) {
   EXPECT_TRUE(locOpt.hasValue());
   EXPECT_EQ(locOpt.getValue().fileName, "/the/root/one.js");
 
-  std::unique_ptr<SourceMap> sourceMap2 = parseSourceMap(TestMapNoSourceRoot);
+  std::unique_ptr<SourceMap> sourceMap2 =
+      SourceMapParser::parse(TestMapNoSourceRoot);
 
   locOpt = sourceMap2->getLocationForAddress(2, 2);
   EXPECT_TRUE(locOpt.hasValue());
@@ -195,7 +204,7 @@ TEST(SourceMap, SourceRoot) {
   EXPECT_EQ(locOpt.getValue().fileName, "one.js");
 
   std::unique_ptr<SourceMap> sourceMap3 =
-      parseSourceMap(TestMapEmptySourceRoot);
+      SourceMapParser::parse(TestMapEmptySourceRoot);
 
   locOpt = sourceMap3->getLocationForAddress(2, 2);
   EXPECT_TRUE(locOpt.hasValue());
@@ -209,7 +218,7 @@ TEST(SourceMap, SourceRoot) {
 /// "test mapping tokens back exactly" from
 /// https://github.com/mozilla/source-map/blob/master/test/test-source-map-consumer.js
 TEST(SourceMap, ExactMappings) {
-  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(TestMap);
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(TestMap);
 
   std::vector<std::string> sources = {"/the/root/one.js", "/the/root/two.js"};
 
@@ -241,7 +250,7 @@ TEST(SourceMap, ExactMappings) {
 /// "test mapping tokens fuzzy" from
 /// https://github.com/mozilla/source-map/blob/master/test/test-source-map-consumer.js
 TEST(SourceMap, FuzzyMappings) {
-  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(TestMap);
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(TestMap);
 
   std::vector<std::string> sources = {"/the/root/one.js", "/the/root/two.js"};
 
@@ -252,7 +261,7 @@ TEST(SourceMap, FuzzyMappings) {
 
 /// Test to make sure we can parse mappings with no represented location
 TEST(SourceMap, NoRepresentedLocation) {
-  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(
       R"#({
         "version": 3,
         "sources": ["a.js", "b.js"],
@@ -312,8 +321,8 @@ TEST(SourceMap, MergedWithInputSourceMaps) {
           })#";
 
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
-  inputSourceMaps.push_back(parseSourceMap(file1MapJson));
-  inputSourceMaps.push_back(parseSourceMap(file2MapJson));
+  inputSourceMaps.push_back(SourceMapParser::parse(file1MapJson));
+  inputSourceMaps.push_back(SourceMapParser::parse(file2MapJson));
 
   std::vector<std::string> sources = {"file1", "file2"};
   SourceMap::SegmentList segments = {
@@ -358,7 +367,7 @@ TEST(SourceMap, MergedWithInputSourceMaps) {
       R"#({"version":3,"sources":["file1","file1orig","file2","\/foo\/file2orig"],)#"
       R"#("mappings":"AAAA,ECAA,CAAA,CDCA,C,CEDA,CCCA,CAAA,CACC;"})#");
 
-  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(storage);
+  std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(storage);
   for (uint32_t i = 0; i < expectedSegments.size(); ++i) {
     verifySegment(
         *sourceMap, /*generatedLine*/ 1, expectedSources, expectedSegments[i]);
@@ -367,7 +376,8 @@ TEST(SourceMap, MergedWithInputSourceMaps) {
 
 /// Test to make sure we can properly parse empty lines.
 TEST(SourceMap, EmptyLines) {
-  std::unique_ptr<SourceMap> sourceMap = parseSourceMap(TestMapEmptyLines);
+  std::unique_ptr<SourceMap> sourceMap =
+      SourceMapParser::parse(TestMapEmptyLines);
 
   std::vector<std::string> sources = {"one.js", "two.js"};
 
