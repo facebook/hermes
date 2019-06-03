@@ -23,7 +23,9 @@ try {
 //CHECK-NEXT:     LoadConstFalse    r4
 //CHECK-NEXT:     GetGlobalObject   r2
 //CHECK-NEXT:     PutById           r2, r4, 1, "condition"
+//CHECK-NEXT: L8:
 //CHECK-NEXT:     ProfilePoint      7
+//CHECK-NEXT: L6:
 //CHECK-NEXT:     ProfilePoint      5
 //CHECK-NEXT:     TryGetById        r4, r2, 1, "print"
 //CHECK-NEXT:     GetByIdShort      r7, r2, 2, "condition"
@@ -33,18 +35,22 @@ try {
 //CHECK-NEXT: L1:
 //CHECK-NEXT:     ProfilePoint      3
 //CHECK-NEXT:     Call2             r0, r4, r3, r5
+//CHECK-NEXT: L7:
 //CHECK-NEXT:     ProfilePoint      2
 //CHECK-NEXT:     TryGetById        r5, r2, 1, "print"
 //CHECK-NEXT:     LoadConstString   r4, "rethrowing"
 //CHECK-NEXT:     Call2             r0, r5, r3, r4
+//CHECK-NEXT: L9:
 //CHECK-NEXT:     ProfilePoint      1
-//CHECK-NEXT:     Jmp               L2
+//CHECK-NEXT:     Jmp               L3
+//CHECK-NEXT: L2:
 //CHECK-NEXT:     Catch             r4
 //CHECK-NEXT:     ProfilePoint      6
 //CHECK-NEXT:     TryGetById        r6, r2, 1, "print"
 //CHECK-NEXT:     LoadConstString   r5, "rethrowing"
 //CHECK-NEXT:     Call2             r0, r6, r3, r5
 //CHECK-NEXT:     Throw             r4
+//CHECK-NEXT: L4:
 //CHECK-NEXT:     Catch             r4
 //CHECK-NEXT:     ProfilePoint      9
 //CHECK-NEXT:     StoreToEnvironment r1, 0, r4
@@ -52,6 +58,11 @@ try {
 //CHECK-NEXT:     LoadFromEnvironment r1, r1, 0
 //CHECK-NEXT:     GetByIdShort      r1, r1, 3, "stack"
 //CHECK-NEXT:     Call2             r0, r2, r3, r1
-//CHECK-NEXT: L2:
+//CHECK-NEXT: L3:
 //CHECK-NEXT:     ProfilePoint      8
 //CHECK-NEXT:     Ret               r0
+
+//CHECK-LABEL: Exception Handlers:
+//CHECK-NEXT: 0: start = L6, end = L7, target = L2
+//CHECK-NEXT: 1: start = L8, end = L9, target = L4
+//CHECK-NEXT: 2: start = L2, end = L4, target = L4

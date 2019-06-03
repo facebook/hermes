@@ -30,7 +30,7 @@ foo();
 // CHECK-NEXT:     Ret               r0
 
 //CHECK:Function<cjs_module>(4 params, 13 registers, 1 symbols):
-//CHECK-NEXT:Offset in debug table: {{.*}}
+//CHECK-NEXT:Offset in debug table: src 0x0, vars 0x0
 //CHECK-NEXT:    CreateEnvironment r3
 //CHECK-NEXT:    CreateClosure     r1, r3, 2
 //CHECK-NEXT:    GetGlobalObject   r0
@@ -39,16 +39,19 @@ foo();
 //CHECK-NEXT:    LoadConstString   r2, "asdf"
 //CHECK-NEXT:    Call2             r2, r4, r0, r2
 //CHECK-NEXT:    StoreToEnvironment r3, 0, r2
+//CHECK-NEXT:L4:
 //CHECK-NEXT:    Mov               r2, r1
 //CHECK-NEXT:    Call1             r2, r2, r0
-//CHECK-NEXT:    Jmp               L1
-//CHECK-NEXT:    Catch             r2
+//CHECK-NEXT:L5:
+//CHECK-NEXT:    Jmp               L2
 //CHECK-NEXT:L1:
+//CHECK-NEXT:    Catch             r2
+//CHECK-NEXT:L2:
 //CHECK-NEXT:    Call1             r1, r1, r0
 //CHECK-NEXT:    Ret               r0
 
-// CHECK: Exception Handlers:
-// CHECK-NEXT: 0: start = {{.*}}
+//CHECK:Exception Handlers:
+//CHECK-NEXT:0: start = L4, end = L5, target = L1
 
 // CHECK: Function<foo>(1 params, 1 registers, 0 symbols):
 // CHECK-NEXT:     GetEnvironment    r0, 0

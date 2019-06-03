@@ -108,41 +108,56 @@ class BytecodeVisitor {
   void visitInstructionsInFunction(unsigned funcId);
 };
 
+using JumpTargetsTy = std::unordered_map<const void *, unsigned>;
+
 /// Visitor to build jump targets table for jump or SwitchImm instructions.
 class JumpTargetsVisitor : public BytecodeVisitor {
  private:
+  unsigned funcId_ = 0;
+  const uint8_t *bytecodeStart_ = nullptr;
+
   unsigned labelNumber_{0};
   // Remember all SwitchImm so we can loop through their associated jump tables.
   std::vector<inst::Inst const *> switchInsts_{};
   // Maps from jump_target_ip => label_number.
-  std::unordered_map<uint64_t, unsigned> jumpTargets_{};
+  JumpTargetsTy jumpTargets_{};
 
  private:
-  void createOrSetLabel(uint64_t dest) {
-    if (jumpTargets_.find(dest) == jumpTargets_.end()) {
-      jumpTargets_[dest] = ++labelNumber_;
-    }
+  void createOrSetLabel(const void *dest) {
+    auto res = jumpTargets_.emplace(dest, 0);
+    if (res.second)
+      res.first->second = ++labelNumber_;
   }
 
  protected:
-  void preVisitInstruction(inst::OpCode opcode, const uint8_t *ip, int length);
+  void beforeStart(unsigned funcId, const uint8_t *bytecodeStart) override {
+    funcId_ = funcId;
+    bytecodeStart_ = bytecodeStart;
+  }
 
-  void
-  visitSwitchImmTargets(uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
-    createOrSetLabel((uint64_t)dest);
+  void afterStart() override;
+
+  void preVisitInstruction(inst::OpCode opcode, const uint8_t *ip, int length)
+      override;
+
+  void visitSwitchImmTargets(
+      uint32_t jmpIdx,
+      int32_t offset,
+      const uint8_t *dest) override {
+    createOrSetLabel(dest);
   }
 
   void visitOperand(
       const uint8_t *ip,
       inst::OperandType operandType,
       const uint8_t *operandBuf,
-      int operandIndex);
+      int operandIndex) override;
 
  public:
   JumpTargetsVisitor(std::shared_ptr<hbc::BCProvider> bcProvider)
       : BytecodeVisitor(bcProvider) {}
 
-  std::unordered_map<uint64_t, unsigned> &getJumpTargets() {
+  JumpTargetsTy &getJumpTargets() {
     return jumpTargets_;
   }
   std::vector<inst::Inst const *> &getSwitchIntructions() {
@@ -157,7 +172,7 @@ class JumpTargetsVisitor : public BytecodeVisitor {
 class PrettyDisassembleVisitor : public BytecodeVisitor {
  private:
   inst::OpCode opcode_;
-  std::unordered_map<uint64_t, unsigned> &jumpTargets_;
+  JumpTargetsTy &jumpTargets_;
   const uint8_t *bytecodeStart_ = nullptr;
   uint32_t funcVirtualOffset_{0};
 
@@ -193,7 +208,7 @@ class PrettyDisassembleVisitor : public BytecodeVisitor {
  public:
   PrettyDisassembleVisitor(
       std::shared_ptr<hbc::BCProvider> bcProvider,
-      std::unordered_map<uint64_t, unsigned> &jumpTargets,
+      JumpTargetsTy &jumpTargets,
       raw_ostream &os,
       DisassemblyOptions options = DisassemblyOptions::None)
       : BytecodeVisitor(bcProvider),
@@ -201,7 +216,7 @@ class PrettyDisassembleVisitor : public BytecodeVisitor {
         os_(os),
         options_(options) {}
 
-  std::unordered_map<uint64_t, unsigned> &getJumpTargets() {
+  JumpTargetsTy &getJumpTargets() {
     return jumpTargets_;
   }
 };
@@ -277,6 +292,12 @@ class BytecodeDisassembler {
 
   /// Print the content of the exception handler table into \p OS.
   void disassembleExceptionHandlers(unsigned funcId, raw_ostream &OS);
+
+  /// Print the content of the exception handler table into \p OS.
+  void disassembleExceptionHandlersPretty(
+      unsigned funcId,
+      const JumpTargetsTy &jumpTargets,
+      raw_ostream &OS);
 
   /// Print the contents of the regexp bytecode table into \p OS.
   void disassembleRegexs(raw_ostream &OS);

@@ -286,9 +286,30 @@ void BytecodeDisassembler::disassembleExceptionHandlers(
     return;
   OS << "Exception Handlers:\n";
   for (unsigned i = 0, e = funcExceptionHandlers.size(); i < e; ++i) {
-    auto entry = funcExceptionHandlers[i];
+    const auto &entry = funcExceptionHandlers[i];
     OS << i << ": start = " << entry.start << ", end = " << entry.end
        << ", target = " << entry.target << "\n";
+  }
+  OS << "\n";
+}
+
+void BytecodeDisassembler::disassembleExceptionHandlersPretty(
+    unsigned funcId,
+    const JumpTargetsTy &jumpTargets,
+    raw_ostream &OS) {
+  auto funcExceptionHandlers = bcProvider_->getExceptionTable(funcId);
+  if (funcExceptionHandlers.size() == 0)
+    return;
+
+  const uint8_t *bytecodeStart = bcProvider_->getBytecode(funcId);
+
+  OS << "Exception Handlers:\n";
+  for (unsigned i = 0, e = funcExceptionHandlers.size(); i < e; ++i) {
+    const auto &entry = funcExceptionHandlers[i];
+    OS << i << ": start = L" << jumpTargets.at(bytecodeStart + entry.start)
+       << ", end = L" << jumpTargets.at(bytecodeStart + entry.end)
+       << ", target = L" << jumpTargets.at(bytecodeStart + entry.target)
+       << "\n";
   }
   OS << "\n";
 }
@@ -454,13 +475,33 @@ uint32_t BytecodeDisassembler::fuzzyHashBytecode(
   return hasher.getHash();
 }
 
+void JumpTargetsVisitor::afterStart() {
+  for (const auto &entry : bcProvider_->getExceptionTable(funcId_)) {
+    createOrSetLabel(bytecodeStart_ + entry.start);
+    createOrSetLabel(bytecodeStart_ + entry.end);
+    createOrSetLabel(bytecodeStart_ + entry.target);
+  }
+}
+
 void JumpTargetsVisitor::preVisitInstruction(
     OpCode opcode,
     const uint8_t *ip,
     int length) {
-  // Decode jump table of SwitchImm instruction.
-  if (opcode == OpCode::SwitchImm) {
-    switchInsts_.push_back((inst::Inst const *)ip);
+  switch (opcode) {
+    case OpCode::SwitchImm:
+      // Decode jump table of SwitchImm instruction.
+      switchInsts_.push_back((inst::Inst const *)ip);
+      break;
+
+    case OpCode::Ret:
+    case OpCode::Throw:
+    case OpCode::Jmp:
+    case OpCode::JmpLong:
+      createOrSetLabel(ip + length);
+      break;
+
+    default:
+      break;
   }
 }
 
@@ -470,16 +511,16 @@ void JumpTargetsVisitor::visitOperand(
     const uint8_t *operandBuf,
     int operandIndex) {
   switch (operandType) {
-#define DEFINE_OPERAND_TYPE(name, ctype)           \
-  case OperandType::name: {                        \
-    if (operandType == OperandType::Addr8 ||       \
-        operandType == OperandType::Addr32) {      \
-      ctype operandVal;                            \
-      decodeOperand(operandBuf, &operandVal);      \
-      /* operandVal is relative to current ip.*/   \
-      createOrSetLabel((uint64_t)ip + operandVal); \
-    }                                              \
-    break;                                         \
+#define DEFINE_OPERAND_TYPE(name, ctype)          \
+  case OperandType::name: {                       \
+    if (operandType == OperandType::Addr8 ||      \
+        operandType == OperandType::Addr32) {     \
+      ctype operandVal;                           \
+      decodeOperand(operandBuf, &operandVal);     \
+      /* operandVal is relative to current ip.*/  \
+      createOrSetLabel(ip + (int32_t)operandVal); \
+    }                                             \
+    break;                                        \
   }
 #include "hermes/BCGen/HBC/BytecodeList.def"
   }
@@ -560,7 +601,7 @@ void PrettyDisassembleVisitor::preVisitInstruction(
     const uint8_t *ip,
     int length) {
   opcode_ = opcode;
-  auto label = jumpTargets_.find((uint64_t)ip);
+  auto label = jumpTargets_.find(ip);
   assert(ip >= bytecodeStart_ && "Why is ip less than bytecodeStart_?");
   uint32_t offset = ip - bytecodeStart_;
   if (label != jumpTargets_.end()) {
@@ -611,7 +652,7 @@ void PrettyDisassembleVisitor::visitOperand(
     if (operandType == OperandType::Addr8 ||                        \
         operandType == OperandType::Addr32) {                       \
       /* operandVal is relative to current ip.*/                    \
-      os_ << "L" << jumpTargets_[(uint64_t)ip + operandVal];        \
+      os_ << "L" << jumpTargets_[ip + (int32_t)operandVal];         \
     } else if (isStringID) {                                        \
       dumpOperandString(operandVal, os_);                           \
     } else {                                                        \
@@ -849,10 +890,13 @@ void BytecodeDisassembler::disassembleFunctionPretty(
       switchJumpTableForEach(
           inst, [&](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
             OS << "   " << jmpIdx << " : "
-               << "L" << jumpTargets[(uint64_t)dest] << "\n";
+               << "L" << jumpTargets[dest] << "\n";
           });
     }
   }
+
+  OS << "\n";
+  disassembleExceptionHandlersPretty(funcId, jumpTargets, OS);
 }
 
 void BytecodeDisassembler::disassembleFunctionRaw(
@@ -875,6 +919,9 @@ void BytecodeDisassembler::disassembleFunctionRaw(
           });
     }
   }
+
+  OS << "\n";
+  disassembleExceptionHandlers(funcId, OS);
 }
 
 std::vector<std::pair<uint32_t, uint32_t>>
@@ -956,8 +1003,6 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
          << llvm::format_hex(funcDebugOffsets->lexicalData, 2) << '\n';
     }
     disassembleFunction(funcId, OS);
-    OS << "\n";
-    disassembleExceptionHandlers(funcId, OS);
   }
   disassembleRegexs(OS);
   bcProvider_->getDebugInfo()->disassemble(OS);

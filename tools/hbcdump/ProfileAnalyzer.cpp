@@ -464,7 +464,7 @@ class FunctionBasicBlockStatsVisitor : public hbc::PrettyDisassembleVisitor {
       uint64_t totalProfileRuntimeInstructionCount,
       FunctionRuntimeStatistics &funcStat,
       std::unordered_map<uint16_t, uint64_t> &funcExecInfo,
-      std::unordered_map<uint64_t, unsigned> &jumpTargets,
+      JumpTargetsTy &jumpTargets,
       llvm::raw_ostream &os)
       : PrettyDisassembleVisitor(bcProvider, jumpTargets, os),
         profileIndexMap_(profileIndexMap),
