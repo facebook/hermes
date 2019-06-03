@@ -411,8 +411,7 @@ CallResult<HermesValue> BoundFunction::create(
 
   if (argCountWithThis) {
     for (unsigned i = 0; i != argCountWithThis; ++i) {
-      ArrayStorage::push_back(
-          handle, runtime, runtime->makeHandle(argsWithThis[i]));
+      ArrayStorage::push_back(handle, runtime, Handle<>(&argsWithThis[i]));
     }
   } else {
     // Don't need to worry about resizing since it was created with a capacity
