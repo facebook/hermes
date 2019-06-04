@@ -430,8 +430,6 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
 }
 
 void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
-  // FIXME: catch exceptions and close the iterator.
-
   auto *function = Builder.getInsertionBlock()->getParent();
   auto *getNextBlock = Builder.createBasicBlock(function);
   auto *bodyBlock = Builder.createBasicBlock(function);
@@ -453,10 +451,36 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   Builder.setInsertionBlock(bodyBlock);
 
   auto *nextValue = emitIteratorValue(nextResult);
-  createLRef(forOfStmt->_left).emitStore(nextValue);
 
-  genStatement(forOfStmt->_body);
-  Builder.createBranchInst(getNextBlock);
+  emitTryCatchScaffolding(
+      getNextBlock,
+      // emitBody.
+      [this, forOfStmt, nextValue, &iteratorRecord]() {
+        // Generate IR for the body of Try
+        SurroundingTry thisTry{
+            curFunction(),
+            forOfStmt,
+            {},
+            [this, &iteratorRecord](ESTree::Node *, ControlFlowChange cfc) {
+              if (cfc == ControlFlowChange::Break)
+                emitIteratorClose(iteratorRecord, false);
+            }};
+
+        // Note: obtaing the value is not protected, but storing it is.
+        createLRef(forOfStmt->_left).emitStore(nextValue);
+
+        genStatement(forOfStmt->_body);
+        Builder.setLocation(SourceErrorManager::convertEndToLocation(
+            forOfStmt->_body->getSourceRange()));
+      },
+      // emitNormalCleanup.
+      []() {},
+      // emitHandler.
+      [this, &iteratorRecord](BasicBlock *) {
+        auto *catchReg = Builder.createCatchInst();
+        emitIteratorClose(iteratorRecord, true);
+        Builder.createThrowInst(catchReg);
+      });
 
   Builder.setInsertionBlock(exitBlock);
 }

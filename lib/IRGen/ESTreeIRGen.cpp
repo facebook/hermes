@@ -575,6 +575,47 @@ Value *ESTreeIRGen::emitIteratorValue(Value *iterResult) {
   return Builder.createLoadPropertyInst(iterResult, "value");
 }
 
+void ESTreeIRGen::emitIteratorClose(
+    hermes::irgen::ESTreeIRGen::IteratorRecord iteratorRecord,
+    bool ignoreInnerException) {
+  auto *haveReturn = Builder.createBasicBlock(Builder.getFunction());
+  auto *noReturn = Builder.createBasicBlock(Builder.getFunction());
+
+  auto *returnMethod =
+      Builder.createLoadPropertyInst(iteratorRecord.iterator, "return");
+  Builder.createCompareBranchInst(
+      returnMethod,
+      Builder.getLiteralUndefined(),
+      BinaryOperatorInst::OpKind::StrictlyEqualKind,
+      noReturn,
+      haveReturn);
+
+  Builder.setInsertionBlock(haveReturn);
+  if (ignoreInnerException) {
+    emitTryCatchScaffolding(
+        noReturn,
+        // emitBody.
+        [this, returnMethod, &iteratorRecord]() {
+          Builder.createCallInst(returnMethod, iteratorRecord.iterator, {});
+        },
+        // emitNormalCleanup.
+        []() {},
+        // emitHandler.
+        [this](BasicBlock *nextBlock) {
+          // We need to catch the exception, even if we don't used it.
+          Builder.createCatchInst();
+          Builder.createBranchInst(nextBlock);
+        });
+  } else {
+    auto *innerResult =
+        Builder.createCallInst(returnMethod, iteratorRecord.iterator, {});
+    emitEnsureObject(innerResult, "iterator.close() did not return an object");
+    Builder.createBranchInst(noReturn);
+  }
+
+  Builder.setInsertionBlock(noReturn);
+}
+
 void ESTreeIRGen::emitDestructuringAssignment(
     ESTree::PatternNode *target,
     Value *source) {

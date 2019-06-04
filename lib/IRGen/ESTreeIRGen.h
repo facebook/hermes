@@ -737,6 +737,16 @@ class ESTreeIRGen {
   /// \return \c iterResult.value
   Value *emitIteratorValue(Value *iterResult);
 
+  /// ES2018 7.4.6 IteratorClose
+  /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratorclose
+  ///
+  /// \param ignoreInnerException if set, exceptions thrown by the \c
+  ///     iterator.return() method will be ignored and its result will not be
+  ///     checked whether it is an object.
+  void emitIteratorClose(
+      IteratorRecord iteratorRecord,
+      bool ignoreInnerException);
+
   /// Generate code for destructuring assignment to ArrayPattern or
   /// ObjectPattern.
   void emitDestructuringAssignment(ESTree::PatternNode *target, Value *source);
