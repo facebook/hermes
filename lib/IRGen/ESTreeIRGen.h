@@ -514,6 +514,29 @@ class ESTreeIRGen {
   /// Generate IR for try/catch/finally statement.
   void genTryStatement(ESTree::TryStatementNode *tryStmt);
 
+  /// Emit the scaffoling for a try/catch block.
+  /// \param nextBlock is the block to branch to after the body and the
+  ///     finalizer. If nullptr, a new block is allocated. At the end the
+  ///     insertion point is set to the that block.
+  /// \param emitBody updates \c surroundingTry and emits the body of the block
+  ///     guarded by the \c try. Exceptions occurring in the body will be caught
+  ///     by the handler.
+  /// \param emitNormalCleanup emits the cleanup after exiting the try body
+  ///     normally (neither through an exception nor break/return/continue). It
+  ///     executes outside of the exception scope (exceptions here will not be
+  ///     caught by the handler).
+  /// \param emitHandler(BasicBlock *nextBlock) emits the code to execute when
+  ///     the exception is caught. It must emit a CatchInstu to clear the active
+  ///     exception, even if it ignores it. \p nextBlock is passed as a
+  ///     parameter.
+  /// \return the block used as \c nextBlock
+  template <typename EB, typename EF, typename EH>
+  BasicBlock *emitTryCatchScaffolding(
+      BasicBlock *nextBlock,
+      EB emitBody,
+      EF emitNormalCleanup,
+      EH emitHandler);
+
   /// Generate IR "catch (e)".
   CatchInst *prepareCatch(ESTree::NodePtr catchParam);
 
@@ -761,6 +784,44 @@ class ESTreeIRGen {
   /// Save all variables currently in scope, for lazy compilation.
   std::shared_ptr<SerializedScope> saveCurrentScope();
 };
+
+template <typename EB, typename EF, typename EH>
+BasicBlock *ESTreeIRGen::emitTryCatchScaffolding(
+    BasicBlock *nextBlock,
+    EB emitBody,
+    EF emitNormalCleanup,
+    EH emitHandler) {
+  auto *function = Builder.getFunction();
+
+  auto *catchBlock = Builder.createBasicBlock(function);
+  if (!nextBlock)
+    nextBlock = Builder.createBasicBlock(function);
+  auto *tryBodyBlock = Builder.createBasicBlock(function);
+
+  // Start with a TryStartInst, and transition to try body.
+  Builder.createTryStartInst(tryBodyBlock, catchBlock);
+  Builder.setInsertionBlock(tryBodyBlock);
+
+  // Generate IR for the body of Try
+  emitBody();
+
+  // Emit TryEnd in a new block.
+  auto *tryEndBlock = Builder.createBasicBlock(function);
+  Builder.createBranchInst(tryEndBlock);
+  Builder.setInsertionBlock(tryEndBlock);
+  Builder.createTryEndInst();
+
+  emitNormalCleanup();
+
+  Builder.createBranchInst(nextBlock);
+
+  // Generate the catch/finally block.
+  Builder.setInsertionBlock(catchBlock);
+
+  emitHandler(nextBlock);
+
+  return nextBlock;
+}
 
 } // namespace irgen
 } // namespace hermes
