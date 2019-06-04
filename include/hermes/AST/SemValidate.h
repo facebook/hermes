@@ -46,27 +46,13 @@ class FunctionInfo {
   /// Arguments object.
   bool containsArrowFunctionsUsingArguments = false;
 
-  /// Class that holds the target for a break/continue label, as well as the
-  /// depth of the nested try/catch/finally blocks where this label is defined.
-  class GotoLabel {
-   public:
-    /// The closest surrounding try statement.
-    ESTree::TryStatementNode *const surroundingTry;
-
-    explicit GotoLabel(ESTree::TryStatementNode *aSurroundingTry)
-        : surroundingTry(aSurroundingTry) {}
-  };
-
-  /// An array of labels defined in the function. The AST nodes (LoopStatement
-  /// and LabeledStatement) defining each label are decorated with
-  /// LabelDecorationBase refering to the label index in this array.
-  /// Break/continue AST nodes contain the index of the target label.
-  llvm::SmallVector<GotoLabel, 2> labels{};
+  /// Number of labels allocated so far. We use this counter to assign
+  /// consecutive index values to labels.
+  unsigned labelCount = 0;
 
   /// Allocate a new label and return its index.
-  unsigned allocateLabel(ESTree::TryStatementNode *surroundingTry) {
-    labels.emplace_back(surroundingTry);
-    return (unsigned)(labels.size() - 1);
+  unsigned allocateLabel() {
+    return labelCount++;
   }
 };
 

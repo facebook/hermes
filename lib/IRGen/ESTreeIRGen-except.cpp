@@ -6,6 +6,8 @@
  */
 #include "ESTreeIRGen.h"
 
+#include "llvm/Support/SaveAndRestore.h"
+
 namespace hermes {
 namespace irgen {
 
@@ -28,7 +30,10 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
   Builder.setInsertionBlock(tryBodyBlock);
 
   // Generate IR for the body of Try
-  genStatement(tryStmt->_block);
+  {
+    SurroundingTry thisTry{curFunction(), tryStmt, tryStmt->_finalizer};
+    genStatement(tryStmt->_block);
+  }
 
   // Emit TryEnd in a new block.
   Builder.setLocation(SourceErrorManager::convertEndToLocation(
@@ -110,11 +115,11 @@ CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
 }
 
 void ESTreeIRGen::genFinallyBeforeControlChange(
-    ESTree::TryStatementNode *sourceTry,
-    ESTree::TryStatementNode *targetTry) {
+    SurroundingTry *sourceTry,
+    SurroundingTry *targetTry) {
   // We walk the nested try statements starting from the source, until we reach
   // the target, generating the finally statements on the way.
-  for (; sourceTry != targetTry; sourceTry = sourceTry->surroundingTry) {
+  for (; sourceTry != targetTry; sourceTry = sourceTry->outer) {
     assert(sourceTry && "invalid try chain");
 
     // Emit an end of the try statement.
@@ -123,16 +128,20 @@ void ESTreeIRGen::genFinallyBeforeControlChange(
     Builder.setInsertionBlock(tryEndBlock);
 
     // Make sure we use the correct debug location for tryEndInst.
-    if (sourceTry->_finalizer) {
+    if (sourceTry->finalizer) {
       hermes::IRBuilder::ScopedLocationChange slc(
-          Builder, sourceTry->_finalizer->getDebugLoc());
+          Builder, sourceTry->finalizer->getDebugLoc());
       Builder.createTryEndInst();
     } else {
       Builder.createTryEndInst();
     }
 
-    if (sourceTry->_finalizer)
-      genStatement(sourceTry->_finalizer);
+    if (sourceTry->finalizer) {
+      // Recreate the state of the try stack on entrance to the finally block.
+      llvm::SaveAndRestore<SurroundingTry *> sr{curFunction()->surroundingTry,
+                                                sourceTry->outer};
+      genStatement(sourceTry->finalizer);
+    }
   }
 }
 

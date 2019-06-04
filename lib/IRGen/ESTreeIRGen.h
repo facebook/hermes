@@ -24,6 +24,7 @@ namespace hermes {
 namespace irgen {
 
 // Forward declarations
+class SurroundingTry;
 class ESTreeIRGen;
 
 //===----------------------------------------------------------------------===//
@@ -60,9 +61,16 @@ using NameTableScopeTy = hermes::ScopedHashTableScope<Identifier, Value *>;
 
 /// Holds the target basic block for a break and continue label.
 /// It has a 1-to-1 correspondence to SemInfoFunction::GotoLabel.
+/// Labels can be context dependent - one label can be initialized multiple
+/// times if it is defined inside a finally block, because the body of the
+/// finally block will be visited and compiled multiple times from different
+/// contexts (on normal exit, on exceptional exit, on break/return/etc).
 struct GotoLabel {
   BasicBlock *breakTarget = nullptr;
   BasicBlock *continueTarget = nullptr;
+  /// A record on the stack defining the closest surrounding try/catch
+  /// statement. We need this so we can call the finally handlers.
+  SurroundingTry *surroundingTry = nullptr;
 };
 
 /// Holds per-function state, specifically label tables. Should be constructed
@@ -82,13 +90,16 @@ class FunctionContext {
   /// here. It is automatically restored once we are done with the function.
   IRBuilder::SaveRestore builderSaveState_;
 
+  /// A vector of labels corresponding 1-to-1 to the labels defined in
+  /// \c semInfo_.
+  llvm::SmallVector<GotoLabel, 2> labels_;
+
  public:
   /// This is the actual function associated with this context.
   Function *const function;
 
-  /// A vector of labels corresponding 1-to-1 to the labels defined in
-  /// \c semInfo_.
-  llvm::SmallVector<GotoLabel, 2> labels;
+  /// The innermost surrounding try/catch node at any point.
+  SurroundingTry *surroundingTry = nullptr;
 
   /// A new variable scope that is used throughout the body of the function.
   NameTableScopeTy scope;
@@ -147,6 +158,64 @@ class FunctionContext {
   /// Generate a unique string that represents a temporary value. The string
   /// \p hint appears in the name.
   Identifier genAnonymousLabelName(StringRef const hint);
+
+  /// Initialize an empty goto label. All labels in JavaScript a structured, so
+  /// a label is guaranteed to be visited and initialized before it is used.
+  /// Perhaps surprisingly, a label will be initialized more than once if it is
+  /// defined in a finally block, since the statements inside the finally block
+  /// will be visited (and compiled) more than once.
+  void initLabel(
+      ESTree::LabelDecorationBase *LDB,
+      BasicBlock *breakTarget,
+      BasicBlock *continueTarget) {
+    auto &label = labels_[LDB->getLabelIndex()];
+    label.breakTarget = breakTarget;
+    label.continueTarget = continueTarget;
+    label.surroundingTry = surroundingTry;
+  }
+
+  /// Access an already initialized label.
+  const GotoLabel &label(ESTree::LabelDecorationBase *LDB) {
+    auto &label = labels_[LDB->getLabelIndex()];
+    assert(
+        (label.breakTarget || label.continueTarget) &&
+        "accessing an uninitialized label");
+    return label;
+  }
+};
+
+/// A link in the stack of surrounding try/catch statements we are maintaining
+/// at any time.
+class SurroundingTry {
+  FunctionContext *const functionContext_;
+
+ public:
+  /// The record of the outer (closest surrounding) try/catch.
+  SurroundingTry *const outer;
+  /// The ESTree node defining the try/catch. This is usually a
+  /// TryStatementNode, but in some cases that require internal try/catch
+  /// statements, it can be something different.
+  ESTree::Node *const node;
+  /// The optional finalizer statement that should be emitted whenever we are
+  /// crossing the scope of this try/catch.
+  ESTree::Node *const finalizer;
+
+  SurroundingTry(
+      FunctionContext *functionContext,
+      ESTree::Node *node,
+      ESTree::Node *finalizer)
+      : functionContext_(functionContext),
+        outer(functionContext->surroundingTry),
+        node(node),
+        finalizer(finalizer) {
+    // Push.
+    functionContext->surroundingTry = this;
+  }
+
+  ~SurroundingTry() {
+    // Pop.
+    functionContext_->surroundingTry = outer;
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -445,8 +514,8 @@ class ESTreeIRGen {
   ///   the goto (break, continue, return)
   /// \param targetTry  the try statement surrounding the AST node of the label.
   void genFinallyBeforeControlChange(
-      ESTree::TryStatementNode *sourceTry,
-      ESTree::TryStatementNode *targetTry);
+      SurroundingTry *sourceTry,
+      SurroundingTry *targetTry);
 
   /// @}
 

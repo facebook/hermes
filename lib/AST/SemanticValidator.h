@@ -219,8 +219,6 @@ class FunctionContext {
   /// The associated seminfo object
   sem::FunctionInfo *const semInfo;
 
-  /// The most nested active try statement.
-  TryStatementNode *activeTry = nullptr;
   /// The most nested active loop statement.
   LoopStatementNode *activeLoop = nullptr;
   /// The most nested active loop or switch statement.
@@ -246,7 +244,7 @@ class FunctionContext {
 
   /// Allocate a new label in the current context.
   unsigned allocateLabel() {
-    return semInfo->allocateLabel(activeTry);
+    return semInfo->allocateLabel();
   }
 };
 

@@ -273,11 +273,7 @@ class LabelDecorationBase {
 };
 
 /// A decoration for a break/continue statement.
-class GotoDecorationBase : public LabelDecorationBase {
- public:
-  /// The closest surrounding try statement.
-  TryStatementNode *surroundingTry = nullptr;
-};
+class GotoDecorationBase : public LabelDecorationBase {};
 
 /// Decoration for all statements.
 /// NOTE: This decoration is required by the Statement base node, so we need to
@@ -296,25 +292,7 @@ class SwitchStatementDecoration : public LabelDecorationBase {};
 class BreakStatementDecoration : public GotoDecorationBase {};
 class ContinueStatementDecoration : public GotoDecorationBase {};
 
-class ReturnStatementDecoration {
- public:
-  /// The closest surrounding try statement.
-  TryStatementNode *surroundingTry = nullptr;
-};
-
-class YieldExpressionDecoration {
- public:
-  /// The closest surrounding try statement.
-  TryStatementNode *surroundingTry = nullptr;
-};
-
 class LabeledStatementDecoration : public LabelDecorationBase {};
-
-class TryStatementDecoration {
- public:
-  /// The closest surrounding try statement.
-  TryStatementNode *surroundingTry = nullptr;
-};
 
 class BlockStatementDecoration {
  public:
@@ -367,10 +345,6 @@ struct DecoratorTrait<ContinueStatementNode> {
   using Type = ContinueStatementDecoration;
 };
 template <>
-struct DecoratorTrait<ReturnStatementNode> {
-  using Type = ReturnStatementDecoration;
-};
-template <>
 struct DecoratorTrait<SwitchStatementNode> {
   using Type = SwitchStatementDecoration;
 };
@@ -379,16 +353,8 @@ struct DecoratorTrait<LabeledStatementNode> {
   using Type = LabeledStatementDecoration;
 };
 template <>
-struct DecoratorTrait<TryStatementNode> {
-  using Type = TryStatementDecoration;
-};
-template <>
 struct DecoratorTrait<ProgramNode> {
   using Type = ProgramDecoration;
-};
-template <>
-struct DecoratorTrait<YieldExpressionNode> {
-  using Type = YieldExpressionDecoration;
 };
 
 } // namespace detail

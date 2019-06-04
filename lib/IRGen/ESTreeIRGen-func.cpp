@@ -34,7 +34,7 @@ FunctionContext::FunctionContext(
     // the AST before it is referenced (because of the nature of JavaScript), at
     // which point we will initialize the GotoLabel structure with basic blocks
     // targets.
-    labels.resize(semInfo_->labels.size());
+    labels_.resize(semInfo_->labelCount);
   }
 }
 

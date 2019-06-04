@@ -283,14 +283,7 @@ void SemanticValidator::visit(TryStatementNode *tryStatement) {
     tryStatement->_handler = nullptr;
   }
 
-  tryStatement->surroundingTry = curFunction()->activeTry;
-
-  {
-    SaveAndRestore<TryStatementNode *> saveTry(
-        curFunction()->activeTry, tryStatement);
-
-    visitESTreeNode(*this, tryStatement->_block, tryStatement);
-  }
+  visitESTreeNode(*this, tryStatement->_block, tryStatement);
   visitESTreeNode(*this, tryStatement->_handler, tryStatement);
   visitESTreeNode(*this, tryStatement->_finalizer, tryStatement);
 }
@@ -332,8 +325,6 @@ void SemanticValidator::visit(SwitchStatementNode *switchStmt) {
 }
 
 void SemanticValidator::visit(BreakStatementNode *breakStmt) {
-  breakStmt->surroundingTry = curFunction()->activeTry;
-
   if (auto id = cast_or_null<IdentifierNode>(breakStmt->_label)) {
     // A labeled break.
     // Find the label in the label map.
@@ -364,8 +355,6 @@ void SemanticValidator::visit(BreakStatementNode *breakStmt) {
 }
 
 void SemanticValidator::visit(ContinueStatementNode *continueStmt) {
-  continueStmt->surroundingTry = curFunction()->activeTry;
-
   if (auto id = cast_or_null<IdentifierNode>(continueStmt->_label)) {
     // A labeled continue.
     // Find the label in the label map.
@@ -403,16 +392,12 @@ void SemanticValidator::visit(ContinueStatementNode *continueStmt) {
 }
 
 void SemanticValidator::visit(ReturnStatementNode *returnStmt) {
-  returnStmt->surroundingTry = curFunction()->activeTry;
-
   if (curFunction()->isGlobalScope())
     sm_.error(returnStmt->getSourceRange(), "'return' not in a function");
   visitESTreeChildren(*this, returnStmt);
 }
 
 void SemanticValidator::visit(YieldExpressionNode *yieldExpr) {
-  yieldExpr->surroundingTry = curFunction()->activeTry;
-
   if (curFunction()->isGlobalScope())
     sm_.error(
         yieldExpr->getSourceRange(), "'yield' not in a generator function");
