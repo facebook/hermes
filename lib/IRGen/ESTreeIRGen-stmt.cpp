@@ -119,7 +119,9 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     assert(label.breakTarget && "breakTarget not set");
 
     genFinallyBeforeControlChange(
-        curFunction()->surroundingTry, label.surroundingTry);
+        curFunction()->surroundingTry,
+        label.surroundingTry,
+        ControlFlowChange::Break);
     Builder.createBranchInst(label.breakTarget);
 
     // Continue code generation for stuff that comes after the break statement
@@ -136,7 +138,9 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     assert(label.continueTarget && "continueTarget not set");
 
     genFinallyBeforeControlChange(
-        curFunction()->surroundingTry, label.surroundingTry);
+        curFunction()->surroundingTry,
+        label.surroundingTry,
+        ControlFlowChange::Continue);
     Builder.createBranchInst(label.continueTarget);
 
     // Continue code generation for stuff that comes after the break statement
@@ -469,7 +473,8 @@ void ESTreeIRGen::genReturnStatement(ESTree::ReturnStatementNode *RetStmt) {
     Value = Builder.getLiteralUndefined();
   }
 
-  genFinallyBeforeControlChange(curFunction()->surroundingTry, nullptr);
+  genFinallyBeforeControlChange(
+      curFunction()->surroundingTry, nullptr, ControlFlowChange::Break);
   Builder.createReturnInst(Value);
 
   // Code that comes after 'return' is dead code. Let's create a new un-linked

@@ -603,7 +603,8 @@ Value *ESTreeIRGen::genResumeGenerator(
 
   Builder.setInsertionBlock(retBB);
   if (yield) {
-    genFinallyBeforeControlChange(curFunction()->surroundingTry, nullptr);
+    genFinallyBeforeControlChange(
+        curFunction()->surroundingTry, nullptr, ControlFlowChange::Break);
   }
   Builder.createReturnInst(resume);
 

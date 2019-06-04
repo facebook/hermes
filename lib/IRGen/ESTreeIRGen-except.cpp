@@ -31,7 +31,20 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 
   // Generate IR for the body of Try
   {
-    SurroundingTry thisTry{curFunction(), tryStmt, tryStmt->_finalizer};
+    llvm::Optional<SurroundingTry> thisTry;
+
+    if (tryStmt->_finalizer) {
+      thisTry.emplace(
+          curFunction(),
+          tryStmt,
+          tryStmt->_finalizer->getDebugLoc(),
+          [this](ESTree::Node *node, ControlFlowChange) {
+            genStatement(cast<ESTree::TryStatementNode>(node)->_finalizer);
+          });
+    } else {
+      thisTry.emplace(curFunction(), tryStmt);
+    }
+
     genStatement(tryStmt->_block);
   }
 
@@ -116,7 +129,8 @@ CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
 
 void ESTreeIRGen::genFinallyBeforeControlChange(
     SurroundingTry *sourceTry,
-    SurroundingTry *targetTry) {
+    SurroundingTry *targetTry,
+    ControlFlowChange cfc) {
   // We walk the nested try statements starting from the source, until we reach
   // the target, generating the finally statements on the way.
   for (; sourceTry != targetTry; sourceTry = sourceTry->outer) {
@@ -128,19 +142,19 @@ void ESTreeIRGen::genFinallyBeforeControlChange(
     Builder.setInsertionBlock(tryEndBlock);
 
     // Make sure we use the correct debug location for tryEndInst.
-    if (sourceTry->finalizer) {
+    if (sourceTry->tryEndLoc.isValid()) {
       hermes::IRBuilder::ScopedLocationChange slc(
-          Builder, sourceTry->finalizer->getDebugLoc());
+          Builder, sourceTry->tryEndLoc);
       Builder.createTryEndInst();
     } else {
       Builder.createTryEndInst();
     }
 
-    if (sourceTry->finalizer) {
+    if (sourceTry->genFinalizer) {
       // Recreate the state of the try stack on entrance to the finally block.
       llvm::SaveAndRestore<SurroundingTry *> sr{curFunction()->surroundingTry,
                                                 sourceTry->outer};
-      genStatement(sourceTry->finalizer);
+      sourceTry->genFinalizer(sourceTry->node, cfc);
     }
   }
 }

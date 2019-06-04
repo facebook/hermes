@@ -184,6 +184,8 @@ class FunctionContext {
   }
 };
 
+enum class ControlFlowChange { Break, Continue };
+
 /// A link in the stack of surrounding try/catch statements we are maintaining
 /// at any time.
 class SurroundingTry {
@@ -196,18 +198,26 @@ class SurroundingTry {
   /// TryStatementNode, but in some cases that require internal try/catch
   /// statements, it can be something different.
   ESTree::Node *const node;
-  /// The optional finalizer statement that should be emitted whenever we are
-  /// crossing the scope of this try/catch.
-  ESTree::Node *const finalizer;
+  /// Optional debug location to be used for the TryEnd instruction.
+  SMLoc const tryEndLoc{};
+
+  using GenFinalizerCB =
+      std::function<void(ESTree::Node *, ControlFlowChange cfc)>;
+
+  /// An optional callback that will be invoked to generate the code for the
+  /// finalizer.
+  GenFinalizerCB genFinalizer{};
 
   SurroundingTry(
       FunctionContext *functionContext,
       ESTree::Node *node,
-      ESTree::Node *finalizer)
+      SMLoc tryEndLoc = {},
+      GenFinalizerCB genFinalizer = {})
       : functionContext_(functionContext),
         outer(functionContext->surroundingTry),
         node(node),
-        finalizer(finalizer) {
+        tryEndLoc(tryEndLoc),
+        genFinalizer(std::move(genFinalizer)) {
     // Push.
     functionContext->surroundingTry = this;
   }
@@ -513,9 +523,11 @@ class ESTreeIRGen {
   /// \param sourceTry  the try statement surrounding the AST node performing
   ///   the goto (break, continue, return)
   /// \param targetTry  the try statement surrounding the AST node of the label.
+  /// \param cfc indicates whether this is "continue" or "break".
   void genFinallyBeforeControlChange(
       SurroundingTry *sourceTry,
-      SurroundingTry *targetTry);
+      SurroundingTry *targetTry,
+      ControlFlowChange cfc);
 
   /// @}
 
