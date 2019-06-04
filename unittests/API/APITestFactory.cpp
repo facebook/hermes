@@ -5,7 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include <hermes/hermes.h>
-#include <jsi/testlib.h>
+#include <jsi/test/testlib.h>
 #include <jsi/threadsafe.h>
 
 using namespace facebook::hermes;
