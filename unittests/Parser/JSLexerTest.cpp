@@ -262,6 +262,36 @@ TEST(JSLexerTest, ZeroRadixTest) {
   ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
 }
 
+TEST(JSLexerTest, OctalLiteralTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  JSLexer lex("01 010 09 019", sm, alloc);
+
+  auto tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 1.0);
+
+  tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 8.0);
+
+  ASSERT_EQ(diag.getWarnCountClear(), 0);
+
+  tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 9.0);
+  ASSERT_EQ(diag.getWarnCountClear(), 1);
+
+  tok = lex.advance();
+  ASSERT_EQ(tok->getKind(), TokenKind::numeric_literal);
+  ASSERT_EQ(tok->getNumericLiteral(), 19.0);
+  ASSERT_EQ(diag.getWarnCountClear(), 1);
+
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+}
+
 #define LEX_EXPECT_IDENT(s, lex)                              \
   ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind()); \
   EXPECT_STREQ(s, lex.getCurToken()->getIdentifier()->c_str())

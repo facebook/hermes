@@ -924,6 +924,21 @@ end:
       val = std::numeric_limits<double>::quiet_NaN();
     } else {
       // Parse the rest of the number:
+      if (radix == 8) {
+        // ES6.0 B.1.1
+        // If we encounter a "legacy" octal number (starting with a '0') but it
+        // contains '8' or '9' we interpret it as decimal.
+        for (auto *scanPtr = start; scanPtr < curCharPtr_; ++scanPtr) {
+          if (LLVM_UNLIKELY(*scanPtr >= '8')) {
+            sm_.warning(
+                token_.getSourceRange(),
+                "Numeric literal starts with 0 but contains an 8 or 9 digit. "
+                "Interpreting as decimal (not octal).");
+            radix = 10;
+            break;
+          }
+        }
+      }
       auto parsedInt = parseIntWithRadix(
           llvm::ArrayRef<char>{start, (size_t)(curCharPtr_ - start)}, radix);
       if (!parsedInt) {
