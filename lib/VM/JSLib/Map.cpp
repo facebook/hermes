@@ -180,7 +180,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   dpf.writable = 1;
   dpf.configurable = 1;
 
-  auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed(
+  auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
       mapPrototype, runtime, Predefined::getSymbolID(Predefined::entries)));
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       mapPrototype,
@@ -227,7 +227,7 @@ mapConstructor(void *, Runtime *runtime, NativeArgs args) {
     return selfHandle.getHermesValue();
   }
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       selfHandle, runtime, Predefined::getSymbolID(Predefined::set));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -266,7 +266,7 @@ mapConstructor(void *, Runtime *runtime, NativeArgs args) {
       return selfHandle.getHermesValue();
     }
     pairHandle = vmcast<JSObject>(nextRes->getHermesValue());
-    auto nextItemRes = JSObject::getNamed(
+    auto nextItemRes = JSObject::getNamed_RJS(
         pairHandle, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -276,12 +276,12 @@ mapConstructor(void *, Runtime *runtime, NativeArgs args) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
     pairHandle = vmcast<JSObject>(*nextItemRes);
-    auto keyRes = JSObject::getComputed(pairHandle, runtime, zero);
+    auto keyRes = JSObject::getComputed_RJS(pairHandle, runtime, zero);
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
     keyHandle = *keyRes;
-    auto valueRes = JSObject::getComputed(pairHandle, runtime, one);
+    auto valueRes = JSObject::getComputed_RJS(pairHandle, runtime, one);
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }

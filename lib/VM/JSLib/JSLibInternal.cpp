@@ -352,7 +352,7 @@ CallResult<HermesValue> createDynamicFunction(
     auto marker = gcScope.createMarker();
     for (uint32_t i = 0; i < paramCount; ++i) {
       gcScope.flushToMarker(marker);
-      auto strRes = toString(runtime, args.getArgHandle(runtime, i));
+      auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, i));
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -362,7 +362,7 @@ CallResult<HermesValue> createDynamicFunction(
     }
 
     // Last parameter is the body.
-    auto strRes = toString(runtime, args.getArgHandle(runtime, paramCount));
+    auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, paramCount));
     if (strRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }

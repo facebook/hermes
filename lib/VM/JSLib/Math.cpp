@@ -49,7 +49,7 @@ namespace vm {
 // the first argument
 static CallResult<HermesValue>
 runContextFunc1Arg(void *ctx, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -63,13 +63,13 @@ runContextFunc1Arg(void *ctx, Runtime *runtime, NativeArgs args) {
 // it with the first two arguments
 static CallResult<HermesValue>
 runContextFunc2Arg(void *ctx, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   double arg0 = res->getNumber();
 
-  res = toNumber(runtime, args.getArgHandle(runtime, 1));
+  res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -116,7 +116,7 @@ mathMax(void *, Runtime *runtime, NativeArgs args) {
   GCScopeMarkerRAII marker{runtime};
   for (const Handle<> sarg : args.handles()) {
     marker.flush();
-    auto res = toNumber(runtime, sarg);
+    auto res = toNumber_RJS(runtime, sarg);
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -140,7 +140,7 @@ mathMin(void *, Runtime *runtime, NativeArgs args) {
   GCScopeMarkerRAII marker{runtime};
   for (const Handle<> sarg : args.handles()) {
     marker.flush();
-    auto res = toNumber(runtime, sarg);
+    auto res = toNumber_RJS(runtime, sarg);
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -160,13 +160,13 @@ mathMin(void *, Runtime *runtime, NativeArgs args) {
 // ES5.1 15.8.2.13
 static CallResult<HermesValue>
 mathPow(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   const double x = res->getNumber();
 
-  res = toNumber(runtime, args.getArgHandle(runtime, 1));
+  res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -219,7 +219,7 @@ static CallResult<HermesValue> mathFround(
     void *,
     Runtime *runtime,
     NativeArgs args) LLVM_NO_SANITIZE("float-cast-overflow") {
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -253,7 +253,7 @@ mathHypot(void *, Runtime *runtime, NativeArgs args) {
   auto marker = gcScope.createMarker();
   for (const Handle<> arg : args.handles()) {
     gcScope.flushToMarker(marker);
-    auto res = toNumber(runtime, arg);
+    auto res = toNumber_RJS(runtime, arg);
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -298,12 +298,12 @@ mathHypot(void *, Runtime *runtime, NativeArgs args) {
 // Integer multiplication.
 static CallResult<HermesValue>
 mathImul(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toUInt32(runtime, args.getArgHandle(runtime, 0));
+  auto res = toUInt32_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   uint32_t a = res->getNumber();
-  res = toUInt32(runtime, args.getArgHandle(runtime, 1));
+  res = toUInt32_RJS(runtime, args.getArgHandle(runtime, 1));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -320,7 +320,7 @@ mathImul(void *, Runtime *runtime, NativeArgs args) {
 // Count leading zeros on the 32-bit number.
 static CallResult<HermesValue>
 mathClz32(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toUInt32(runtime, args.getArgHandle(runtime, 0));
+  auto res = toUInt32_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -333,7 +333,7 @@ mathClz32(void *, Runtime *runtime, NativeArgs args) {
 // Get the sign of the input.
 static CallResult<HermesValue>
 mathSign(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

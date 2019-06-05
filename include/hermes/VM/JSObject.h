@@ -676,7 +676,7 @@ class JSObject : public GCCell {
   /// it is statically known that the SymbolID is not index-like.
   /// If \p cacheEntry is not null, and the result is suitable for use in a
   /// property cache, populate the cache.
-  static CallResult<HermesValue> getNamed(
+  static CallResult<HermesValue> getNamed_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -693,7 +693,7 @@ class JSObject : public GCCell {
 
   /// getComputed accesses a property with an arbitrary object key, implementing
   /// ES5.1 8.12.3 in full generality.
-  static CallResult<HermesValue> getComputed(
+  static CallResult<HermesValue> getComputed_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle);
@@ -721,7 +721,7 @@ class JSObject : public GCCell {
   /// The following three methods implement ES5.1 8.12.5.
   /// putNamed is an optimized path for setting a property with a SymbolID when
   /// it is statically known that the SymbolID is not index-like.
-  static CallResult<bool> putNamed(
+  static CallResult<bool> putNamed_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name,
@@ -737,7 +737,7 @@ class JSObject : public GCCell {
       PropOpFlags opFlags = PropOpFlags());
 
   /// putComputed sets a property with an arbitrary object key.
-  static CallResult<bool> putComputed(
+  static CallResult<bool> putComputed_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle,

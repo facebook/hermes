@@ -61,7 +61,7 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
   using namespace vm;
   std::string fileName;
   if (args.getArgCount() >= 1) {
-    auto res = toString(runtime, args.getArgHandle(runtime, 0));
+    auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -94,7 +94,7 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     runtime->raiseTypeError("First argument to loadSegment must be context");
   }
 
-  auto segmentRes = toUInt32(runtime, args.getArgHandle(runtime, 1));
+  auto segmentRes = toUInt32_RJS(runtime, args.getArgHandle(runtime, 1));
   if (LLVM_UNLIKELY(segmentRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

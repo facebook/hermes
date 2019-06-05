@@ -34,7 +34,7 @@ TEST_F(ArrayTest, CppAPITest) {
   ASSERT_FALSE(*array->getOwnComputedPrimitiveDescriptor(
       array, runtime, runtime->makeHandle(100.0_hd), desc));
   EXPECT_CALLRESULT_UNDEFINED(
-      array->getComputed(array, runtime, runtime->makeHandle(100.0_hd)));
+      array->getComputed_RJS(array, runtime, runtime->makeHandle(100.0_hd)));
 
 // Obtain the value a couple of different ways and check its value.
 #define EXPECT_INDEX_VALUE(value, array, index)                               \
@@ -48,7 +48,7 @@ TEST_F(ArrayTest, CppAPITest) {
       value, JSArray::getComputedPropertyValue(array, runtime, array, desc)); \
   EXPECT_CALLRESULT_VALUE(                                                    \
       value,                                                                  \
-      array->getComputed(                                                     \
+      array->getComputed_RJS(                                                 \
           array,                                                              \
           runtime,                                                            \
           runtime->makeHandle(HermesValue::encodeDoubleValue(index))));
@@ -98,7 +98,7 @@ TEST_F(ArrayTest, CppAPITest) {
   ASSERT_FALSE(*array->getOwnComputedPrimitiveDescriptor(
       array, runtime, runtime->makeHandle(106.0_hd), desc));
   EXPECT_CALLRESULT_UNDEFINED(
-      array->getComputed(array, runtime, runtime->makeHandle(106.0_hd)));
+      array->getComputed_RJS(array, runtime, runtime->makeHandle(106.0_hd)));
 
   // Increase to 107 again.
   JSArray::setStorageEndIndex(array, runtime, 107);
@@ -109,7 +109,7 @@ TEST_F(ArrayTest, CppAPITest) {
   ASSERT_FALSE(*array->getOwnComputedPrimitiveDescriptor(
       array, runtime, runtime->makeHandle(106.0_hd), desc));
   EXPECT_CALLRESULT_UNDEFINED(
-      array->getComputed(array, runtime, runtime->makeHandle(106.0_hd)));
+      array->getComputed_RJS(array, runtime, runtime->makeHandle(106.0_hd)));
 
   // array[106] = 70 again.
   JSArray::setElementAt(array, runtime, 106, runtime->makeHandle(70.0_hd));
@@ -130,17 +130,19 @@ TEST_F(ArrayTest, TestLength) {
 
   // Make sure the length is 10.
   ASSERT_EQ(10u, JSArray::getLength(array.get()));
-  EXPECT_CALLRESULT_DOUBLE(10.0, JSObject::getNamed(array, runtime, lengthID));
+  EXPECT_CALLRESULT_DOUBLE(
+      10.0, JSObject::getNamed_RJS(array, runtime, lengthID));
 
   // Change it to 5.0.
-  ASSERT_TRUE(*JSObject::putNamed(
+  ASSERT_TRUE(*JSObject::putNamed_RJS(
       array, runtime, lengthID, runtime->makeHandle(5.0_hd)));
   ASSERT_EQ(5u, JSArray::getLength(array.get()));
-  EXPECT_CALLRESULT_DOUBLE(5.0, JSObject::getNamed(array, runtime, lengthID));
+  EXPECT_CALLRESULT_DOUBLE(
+      5.0, JSObject::getNamed_RJS(array, runtime, lengthID));
 
   // Try setting it to an invalid value.
   {
-    auto res = JSObject::putNamed(
+    auto res = JSObject::putNamed_RJS(
         array, runtime, lengthID, runtime->makeHandle(5.1_hd));
     ASSERT_TRUE(res == ExecutionStatus::EXCEPTION);
     runtime->clearThrownValue();
@@ -148,6 +150,7 @@ TEST_F(ArrayTest, TestLength) {
 
   // Make sure it didn't change.
   ASSERT_EQ(5u, JSArray::getLength(array.get()));
-  EXPECT_CALLRESULT_DOUBLE(5.0, JSObject::getNamed(array, runtime, lengthID));
+  EXPECT_CALLRESULT_DOUBLE(
+      5.0, JSObject::getNamed_RJS(array, runtime, lengthID));
 }
 } // namespace

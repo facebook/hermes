@@ -132,7 +132,7 @@ CallResult<HermesValue> Interpreter::createGeneratorClosure(
       runtimeModule->getCodeBlockMayAllocate(funcIndex));
 }
 
-CallResult<HermesValue> Interpreter::createGenerator(
+CallResult<HermesValue> Interpreter::createGenerator_RJS(
     Runtime *runtime,
     RuntimeModule *runtimeModule,
     unsigned funcIndex,
@@ -152,7 +152,7 @@ CallResult<HermesValue> Interpreter::createGenerator(
   auto generatorFunction = runtime->makeHandle(vmcast<JSGeneratorFunction>(
       runtime->getCurrentFrame().getCalleeClosure()));
 
-  auto prototypeProp = JSObject::getNamed(
+  auto prototypeProp = JSObject::getNamed_RJS(
       generatorFunction,
       runtime,
       Predefined::getSymbolID(Predefined::prototype));
@@ -193,7 +193,7 @@ CallResult<HermesValue> Interpreter::reifyArgumentsSlowPath(
   return argRes;
 }
 
-CallResult<HermesValue> Interpreter::getArgumentsPropByValSlowPath(
+CallResult<HermesValue> Interpreter::getArgumentsPropByValSlowPath_RJS(
     Runtime *runtime,
     PinnedHermesValue *lazyReg,
     PinnedHermesValue *valueReg,
@@ -207,7 +207,7 @@ CallResult<HermesValue> Interpreter::getArgumentsPropByValSlowPath(
     // get.
     assert(lazyReg->isObject() && "arguments lazy register is not an object");
 
-    return JSObject::getComputed(
+    return JSObject::getComputed_RJS(
         Handle<JSObject>::vmcast(lazyReg), runtime, Handle<>(valueReg));
   }
 
@@ -215,7 +215,7 @@ CallResult<HermesValue> Interpreter::getArgumentsPropByValSlowPath(
     // Attempt a fast path in the case that the key is not a symbol.
     // If it is a symbol, force reification for now.
     // Convert the value to a string.
-    auto strRes = toString(runtime, Handle<>(valueReg));
+    auto strRes = toString_RJS(runtime, Handle<>(valueReg));
     if (strRes == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
     auto strPrim = toHandle(runtime, std::move(*strRes));
@@ -265,7 +265,7 @@ CallResult<HermesValue> Interpreter::getArgumentsPropByValSlowPath(
   *lazyReg = *argRes;
 
   // For simplicity, call ourselves again.
-  return getArgumentsPropByValSlowPath(
+  return getArgumentsPropByValSlowPath_RJS(
       runtime, lazyReg, valueReg, curFunction, strictMode);
 }
 
@@ -327,8 +327,10 @@ inline OptValue<HermesValue> Interpreter::tryGetPrimitiveOwnPropertyById(
   return llvm::None;
 }
 
-CallResult<HermesValue>
-Interpreter::getByIdTransient(Runtime *runtime, Handle<> base, SymbolID id) {
+CallResult<HermesValue> Interpreter::getByIdTransient_RJS(
+    Runtime *runtime,
+    Handle<> base,
+    SymbolID id) {
   // ES5.1 8.7.1 special [[Get]] internal method.
 
   // Spec steps #1 and #2 are optimized with fast path below.
@@ -402,8 +404,10 @@ OptValue<HermesValue> Interpreter::getByValTransientFast(
   return llvm::None;
 }
 
-CallResult<HermesValue>
-Interpreter::getByValTransient(Runtime *runtime, Handle<> base, Handle<> name) {
+CallResult<HermesValue> Interpreter::getByValTransient_RJS(
+    Runtime *runtime,
+    Handle<> base,
+    Handle<> name) {
   // ES5.1 8.7.1 special [[Get]] internal method.
 
   // Optimization: check fast path first.
@@ -452,7 +456,7 @@ Interpreter::getByValTransient(Runtime *runtime, Handle<> base, Handle<> name) {
       runtime->makeHandle(accessor->getter), runtime, base);
 }
 
-ExecutionStatus Interpreter::putByIdTransient(
+ExecutionStatus Interpreter::putByIdTransient_RJS(
     Runtime *runtime,
     Handle<> base,
     SymbolID id,
@@ -515,7 +519,7 @@ ExecutionStatus Interpreter::putByIdTransient(
       .getStatus();
 }
 
-ExecutionStatus Interpreter::putByValTransient(
+ExecutionStatus Interpreter::putByValTransient_RJS(
     Runtime *runtime,
     Handle<> base,
     Handle<> name,
@@ -525,7 +529,7 @@ ExecutionStatus Interpreter::putByValTransient(
   if (idRes == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
 
-  return putByIdTransient(runtime, base, **idRes, value, strictMode);
+  return putByIdTransient_RJS(runtime, base, **idRes, value, strictMode);
 }
 
 CallResult<HermesValue> Interpreter::createObjectFromBuffer(
@@ -1076,11 +1080,11 @@ tailCall:
         DISPATCH;                                                        \
       }                                                                  \
     }                                                                    \
-    res = toNumber(runtime, Handle<>(&O2REG(name)));                     \
+    res = toNumber_RJS(runtime, Handle<>(&O2REG(name)));                 \
     if (res == ExecutionStatus::EXCEPTION)                               \
       goto exception;                                                    \
     double left = res->getDouble();                                      \
-    res = toNumber(runtime, Handle<>(&O3REG(name)));                     \
+    res = toNumber_RJS(runtime, Handle<>(&O3REG(name)));                 \
     if (res == ExecutionStatus::EXCEPTION)                               \
       goto exception;                                                    \
     O1REG(name) =                                                        \
@@ -1118,7 +1122,7 @@ tailCall:
       goto exception;                                                     \
     }                                                                     \
     auto lnum = static_cast<lType>(res->getNumber());                     \
-    res = toUInt32(runtime, Handle<>(&O3REG(name)));                      \
+    res = toUInt32_RJS(runtime, Handle<>(&O3REG(name)));                  \
     if (res == ExecutionStatus::EXCEPTION) {                              \
       goto exception;                                                     \
     }                                                                     \
@@ -1145,12 +1149,12 @@ tailCall:
       ip = NEXTINST(name);                                                     \
       DISPATCH;                                                                \
     }                                                                          \
-    res = toInt32(runtime, Handle<>(&O2REG(name)));                            \
+    res = toInt32_RJS(runtime, Handle<>(&O2REG(name)));                        \
     if (res == ExecutionStatus::EXCEPTION) {                                   \
       goto exception;                                                          \
     }                                                                          \
     int32_t left = res->getNumberAs<int32_t>();                                \
-    res = toInt32(runtime, Handle<>(&O3REG(name)));                            \
+    res = toInt32_RJS(runtime, Handle<>(&O3REG(name)));                        \
     if (res == ExecutionStatus::EXCEPTION) {                                   \
       goto exception;                                                          \
     }                                                                          \
@@ -1249,7 +1253,7 @@ tailCall:
 /// \param falseDest  ip value if the conditional evaluates to false
 #define JCOND_EQ_IMPL(name, suffix, trueDest, falseDest) \
   CASE(name##suffix) {                                   \
-    res = abstractEqualityTest(                          \
+    res = abstractEqualityTest_RJS(                      \
         runtime,                                         \
         Handle<>(&O2REG(name##suffix)),                  \
         Handle<>(&O3REG(name##suffix)));                 \
@@ -1901,7 +1905,7 @@ tailCall:
       }
 
       CASE(CreateGenerator) {
-        res = createGenerator(
+        res = createGenerator_RJS(
             runtime,
             curCodeBlock->getRuntimeModule(),
             ip->iCreateGenerator.op3,
@@ -1916,7 +1920,7 @@ tailCall:
         DISPATCH;
       }
       CASE(CreateGeneratorLongIndex) {
-        res = createGenerator(
+        res = createGenerator_RJS(
             runtime,
             curCodeBlock->getRuntimeModule(),
             ip->iCreateGenerator.op3,
@@ -2180,7 +2184,7 @@ tailCall:
         (void)NumGetByIdNotFound;
 #endif
         if (LLVM_UNLIKELY(
-                (propRes = JSObject::getNamed(
+                (propRes = JSObject::getNamed_RJS(
                      Handle<JSObject>::vmcast(&O2REG(GetById)),
                      runtime,
                      id,
@@ -2196,7 +2200,7 @@ tailCall:
         assert(!tryProp && "TryGetById can only be used on the global object");
         /* Slow path. */
         if (LLVM_UNLIKELY(
-                (propRes = Interpreter::getByIdTransient(
+                (propRes = Interpreter::getByIdTransient_RJS(
                      runtime, Handle<>(&O2REG(GetById)), ID(idVal))) ==
                 ExecutionStatus::EXCEPTION)) {
           goto exception;
@@ -2278,7 +2282,7 @@ tailCall:
         }
 
         if (LLVM_UNLIKELY(
-                JSObject::putNamed(
+                JSObject::putNamed_RJS(
                     Handle<JSObject>::vmcast(&O1REG(PutById)),
                     runtime,
                     id,
@@ -2291,7 +2295,7 @@ tailCall:
       } else {
         ++NumPutByIdTransient;
         assert(!tryProp && "TryPutById can only be used on the global object");
-        if (Interpreter::putByIdTransient(
+        if (Interpreter::putByIdTransient_RJS(
                 runtime,
                 Handle<>(&O1REG(PutById)),
                 ID(idVal),
@@ -2309,7 +2313,7 @@ tailCall:
         CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
         if (LLVM_LIKELY(O2REG(GetByVal).isObject())) {
           if (LLVM_UNLIKELY(
-                  (propRes = JSObject::getComputed(
+                  (propRes = JSObject::getComputed_RJS(
                        Handle<JSObject>::vmcast(&O2REG(GetByVal)),
                        runtime,
                        Handle<>(&O3REG(GetByVal)))) ==
@@ -2319,7 +2323,7 @@ tailCall:
         } else {
           // This is the "slow path".
           if (LLVM_UNLIKELY(
-                  (propRes = Interpreter::getByValTransient(
+                  (propRes = Interpreter::getByValTransient_RJS(
                        runtime,
                        Handle<>(&O2REG(GetByVal)),
                        Handle<>(&O3REG(GetByVal)))) ==
@@ -2336,7 +2340,7 @@ tailCall:
       CASE(PutByVal) {
         if (LLVM_LIKELY(O1REG(PutByVal).isObject())) {
           if (LLVM_UNLIKELY(
-                  JSObject::putComputed(
+                  JSObject::putComputed_RJS(
                       Handle<JSObject>::vmcast(&O1REG(PutByVal)),
                       runtime,
                       Handle<>(&O2REG(PutByVal)),
@@ -2347,7 +2351,7 @@ tailCall:
         } else {
           // This is the "slow path".
           if (LLVM_UNLIKELY(
-                  Interpreter::putByValTransient(
+                  Interpreter::putByValTransient_RJS(
                       runtime,
                       Handle<>(&O1REG(PutByVal)),
                       Handle<>(&O2REG(PutByVal)),
@@ -2418,7 +2422,7 @@ tailCall:
           if (idx < size) {
             // We must return the property as a string
             if (tmpHandle->isNumber()) {
-              auto status = toString(runtime, tmpHandle);
+              auto status = toString_RJS(runtime, tmpHandle);
               assert(
                   status == ExecutionStatus::RETURNED &&
                   "toString on number cannot fail");
@@ -2441,7 +2445,7 @@ tailCall:
           O1REG(ToNumber) = O2REG(ToNumber);
           ip = NEXTINST(ToNumber);
         } else {
-          res = toNumber(runtime, Handle<>(&O2REG(ToNumber)));
+          res = toNumber_RJS(runtime, Handle<>(&O2REG(ToNumber)));
           if (res == ExecutionStatus::EXCEPTION)
             goto exception;
           gcScope.flushToSmallCount(KEEP_HANDLES);
@@ -2452,7 +2456,7 @@ tailCall:
       }
 
       CASE(ToInt32) {
-        res = toInt32(runtime, Handle<>(&O2REG(ToInt32)));
+        res = toInt32_RJS(runtime, Handle<>(&O2REG(ToInt32)));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
           goto exception;
         gcScope.flushToSmallCount(KEEP_HANDLES);
@@ -2466,12 +2470,12 @@ tailCall:
           O1REG(AddEmptyString) = O2REG(AddEmptyString);
           ip = NEXTINST(AddEmptyString);
         } else {
-          res = toPrimitive(
+          res = toPrimitive_RJS(
               runtime, Handle<>(&O2REG(AddEmptyString)), PreferredType::NONE);
           if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
             goto exception;
           tmpHandle = res.getValue();
-          auto strRes = toString(runtime, tmpHandle);
+          auto strRes = toString_RJS(runtime, tmpHandle);
           if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION))
             goto exception;
           tmpHandle.clear();
@@ -2543,7 +2547,7 @@ tailCall:
             DISPATCH;
           }
         }
-        res = addOp(runtime, Handle<>(&O2REG(Add)), Handle<>(&O3REG(Add)));
+        res = addOp_RJS(runtime, Handle<>(&O2REG(Add)), Handle<>(&O3REG(Add)));
         if (res == ExecutionStatus::EXCEPTION) {
           goto exception;
         }
@@ -2560,7 +2564,7 @@ tailCall:
           ip = NEXTINST(BitNot);
           DISPATCH;
         }
-        res = toInt32(runtime, Handle<>(&O2REG(BitNot)));
+        res = toInt32_RJS(runtime, Handle<>(&O2REG(BitNot)));
         if (res == ExecutionStatus::EXCEPTION) {
           goto exception;
         }
@@ -2584,7 +2588,7 @@ tailCall:
         assert(
             O2REG(GetArgumentsLength).isObject() &&
             "arguments lazy register is not an object");
-        res = JSObject::getNamed(
+        res = JSObject::getNamed_RJS(
             Handle<JSObject>::vmcast(&O2REG(GetArgumentsLength)),
             runtime,
             Predefined::getSymbolID(Predefined::length));
@@ -2612,7 +2616,7 @@ tailCall:
           }
         }
         // Slow path.
-        res = getArgumentsPropByValSlowPath(
+        res = getArgumentsPropByValSlowPath_RJS(
             runtime,
             &O3REG(GetArgumentsPropByVal),
             &O2REG(GetArgumentsPropByVal),
@@ -2788,7 +2792,7 @@ tailCall:
 
       CASE(Eq)
       CASE(Neq) {
-        res = abstractEqualityTest(
+        res = abstractEqualityTest_RJS(
             runtime, Handle<>(&O2REG(Eq)), Handle<>(&O3REG(Eq)));
         if (res == ExecutionStatus::EXCEPTION) {
           goto exception;
@@ -2822,7 +2826,7 @@ tailCall:
           O1REG(Negate) =
               HermesValue::encodeDoubleValue(-O2REG(Negate).getNumber());
         } else {
-          res = toNumber(runtime, Handle<>(&O2REG(Negate)));
+          res = toNumber_RJS(runtime, Handle<>(&O2REG(Negate)));
           if (res == ExecutionStatus::EXCEPTION)
             goto exception;
           gcScope.flushToSmallCount(KEEP_HANDLES);
@@ -2852,11 +2856,11 @@ tailCall:
           ip = NEXTINST(Mod);
           DISPATCH;
         }
-        res = toNumber(runtime, Handle<>(&O2REG(Mod)));
+        res = toNumber_RJS(runtime, Handle<>(&O2REG(Mod)));
         if (res == ExecutionStatus::EXCEPTION)
           goto exception;
         double left = res->getDouble();
-        res = toNumber(runtime, Handle<>(&O3REG(Mod)));
+        res = toNumber_RJS(runtime, Handle<>(&O3REG(Mod)));
         if (res == ExecutionStatus::EXCEPTION)
           goto exception;
         O1REG(Mod) =
@@ -2866,7 +2870,7 @@ tailCall:
         DISPATCH;
       }
       CASE(InstanceOf) {
-        auto result = instanceOfOperator(
+        auto result = instanceOfOperator_RJS(
             runtime,
             Handle<>(&O2REG(InstanceOf)),
             Handle<>(&O3REG(InstanceOf)));
@@ -3109,17 +3113,17 @@ tailCall:
       BITWISEBINOP(BitXor, ^);
       // For LShift, we need to use toUInt32 first because lshift on negative
       // numbers is undefined behavior in theory.
-      SHIFTOP(LShift, <<, toUInt32, uint32_t, int32_t);
-      SHIFTOP(RShift, >>, toInt32, int32_t, int32_t);
-      SHIFTOP(URshift, >>, toUInt32, uint32_t, uint32_t);
-      CONDOP(Less, <, lessOp);
-      CONDOP(LessEq, <=, lessEqualOp);
-      CONDOP(Greater, >, greaterOp);
-      CONDOP(GreaterEq, >=, greaterEqualOp);
-      JCOND(Less, <, lessOp);
-      JCOND(LessEqual, <=, lessEqualOp);
-      JCOND(Greater, >, greaterOp);
-      JCOND(GreaterEqual, >=, greaterEqualOp);
+      SHIFTOP(LShift, <<, toUInt32_RJS, uint32_t, int32_t);
+      SHIFTOP(RShift, >>, toInt32_RJS, int32_t, int32_t);
+      SHIFTOP(URshift, >>, toUInt32_RJS, uint32_t, uint32_t);
+      CONDOP(Less, <, lessOp_RJS);
+      CONDOP(LessEq, <=, lessEqualOp_RJS);
+      CONDOP(Greater, >, greaterOp_RJS);
+      CONDOP(GreaterEq, >=, greaterEqualOp_RJS);
+      JCOND(Less, <, lessOp_RJS);
+      JCOND(LessEqual, <=, lessEqualOp_RJS);
+      JCOND(Greater, >, greaterOp_RJS);
+      JCOND(GreaterEqual, >=, greaterEqualOp_RJS);
 
       JCOND_STRICT_EQ_IMPL(
           JStrictEqual, , IPADD(ip->iJStrictEqual.op1), NEXTINST(JStrictEqual));

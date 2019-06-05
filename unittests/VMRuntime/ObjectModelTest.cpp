@@ -68,10 +68,10 @@ TEST_F(ObjectModelTest, SmokeTest) {
   auto obj1 = toHandle(runtime, JSObject::create(runtime, nullObj));
 
   // Try to get a property which hasn't been defined and expect undefined.
-  EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed(obj1, runtime, *prop1ID));
+  EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed_RJS(obj1, runtime, *prop1ID));
 
   // Put obj1.prop1 = 3.14 .
-  cr = JSObject::putNamed(
+  cr = JSObject::putNamed_RJS(
       obj1,
       runtime,
       *prop1ID,
@@ -79,13 +79,14 @@ TEST_F(ObjectModelTest, SmokeTest) {
   ASSERT_TRUE(*cr);
 
   // Get obj1.prop1.
-  EXPECT_CALLRESULT_DOUBLE(3.14, JSObject::getNamed(obj1, runtime, *prop1ID));
+  EXPECT_CALLRESULT_DOUBLE(
+      3.14, JSObject::getNamed_RJS(obj1, runtime, *prop1ID));
 
   // Get obj1.prop2.
-  EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed(obj1, runtime, *prop2ID));
+  EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed_RJS(obj1, runtime, *prop2ID));
 
   // Set obj1.prop2 = true.
-  cr = JSObject::putNamed(
+  cr = JSObject::putNamed_RJS(
       obj1,
       runtime,
       *prop2ID,
@@ -93,10 +94,11 @@ TEST_F(ObjectModelTest, SmokeTest) {
   ASSERT_TRUE(*cr);
 
   // Get obj1.prop1.
-  EXPECT_CALLRESULT_DOUBLE(3.14, JSObject::getNamed(obj1, runtime, *prop1ID));
+  EXPECT_CALLRESULT_DOUBLE(
+      3.14, JSObject::getNamed_RJS(obj1, runtime, *prop1ID));
 
   // Get obj1.prop2.
-  EXPECT_CALLRESULT_BOOL(TRUE, JSObject::getNamed(obj1, runtime, *prop2ID));
+  EXPECT_CALLRESULT_BOOL(TRUE, JSObject::getNamed_RJS(obj1, runtime, *prop2ID));
 }
 
 /// Non-exhaustive test of prototype functionality.
@@ -111,13 +113,13 @@ TEST_F(ObjectModelTest, SimplePrototypeTest) {
   auto prototypeObj = toHandle(runtime, JSObject::create(runtime, nullObj));
 
   // prototypeObj.prop1 = 10;
-  ASSERT_TRUE(*JSObject::putNamed(
+  ASSERT_TRUE(*JSObject::putNamed_RJS(
       prototypeObj,
       runtime,
       *prop1ID,
       runtime->makeHandle(HermesValue::encodeDoubleValue(10.0))));
   // prototypeObj.prop2 = 20;
-  ASSERT_TRUE(*JSObject::putNamed(
+  ASSERT_TRUE(*JSObject::putNamed_RJS(
       prototypeObj,
       runtime,
       *prop2ID,
@@ -127,21 +129,24 @@ TEST_F(ObjectModelTest, SimplePrototypeTest) {
   auto obj = toHandle(runtime, JSObject::create(runtime, prototypeObj));
 
   // Read the inherited properties.
-  EXPECT_CALLRESULT_DOUBLE(10.0, JSObject::getNamed(obj, runtime, *prop1ID));
-  EXPECT_CALLRESULT_DOUBLE(20.0, JSObject::getNamed(obj, runtime, *prop2ID));
+  EXPECT_CALLRESULT_DOUBLE(
+      10.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
+  EXPECT_CALLRESULT_DOUBLE(
+      20.0, JSObject::getNamed_RJS(obj, runtime, *prop2ID));
 
   // obj.prop1 = 100;
-  ASSERT_TRUE(*JSObject::putNamed(
+  ASSERT_TRUE(*JSObject::putNamed_RJS(
       obj,
       runtime,
       *prop1ID,
       runtime->makeHandle(HermesValue::encodeDoubleValue(100.0))));
 
   // Check the inherited property for the right value.
-  EXPECT_CALLRESULT_DOUBLE(100.0, JSObject::getNamed(obj, runtime, *prop1ID));
+  EXPECT_CALLRESULT_DOUBLE(
+      100.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
   // But make sure the prototype value didn't change.
   EXPECT_CALLRESULT_DOUBLE(
-      10.0, JSObject::getNamed(prototypeObj, runtime, *prop1ID));
+      10.0, JSObject::getNamed_RJS(prototypeObj, runtime, *prop1ID));
 }
 
 TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
@@ -198,8 +203,9 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         *prop2ID,
         dpf,
         runtime->makeHandle(HermesValue::encodeDoubleValue(20.0))));
-    EXPECT_CALLRESULT_DOUBLE(20.0, JSObject::getNamed(obj, runtime, *prop1ID));
-    EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed(obj, runtime, *prop2ID));
+    EXPECT_CALLRESULT_DOUBLE(
+        20.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
+    EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed_RJS(obj, runtime, *prop2ID));
   }
 
   {
@@ -217,12 +223,13 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         *prop1ID,
         dpf,
         runtime->makeHandle(HermesValue::encodeDoubleValue(10.0))));
-    ASSERT_TRUE(*JSObject::putNamed(
+    ASSERT_TRUE(*JSObject::putNamed_RJS(
         obj,
         runtime,
         *prop1ID,
         runtime->makeHandle(HermesValue::encodeDoubleValue(11.0))));
-    EXPECT_CALLRESULT_DOUBLE(11.0, JSObject::getNamed(obj, runtime, *prop1ID));
+    EXPECT_CALLRESULT_DOUBLE(
+        11.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
     dpf.setWritable = 1;
     dpf.writable = 0;
     ASSERT_TRUE(*JSObject::defineOwnProperty(
@@ -231,7 +238,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         *prop1ID,
         dpf,
         runtime->makeHandle(HermesValue::encodeDoubleValue(20.0))));
-    ASSERT_FALSE(*JSObject::putNamed(
+    ASSERT_FALSE(*JSObject::putNamed_RJS(
         obj,
         runtime,
         *prop1ID,
@@ -282,7 +289,8 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         *prop1ID,
         dpf,
         runtime->makeHandle(HermesValue::encodeDoubleValue(10.0))));
-    EXPECT_CALLRESULT_DOUBLE(10.0, JSObject::getNamed(obj, runtime, *prop1ID));
+    EXPECT_CALLRESULT_DOUBLE(
+        10.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
     EXPECT_PROPERTY_FLAG(TRUE, obj, *prop1ID, writable);
     EXPECT_PROPERTY_FLAG(TRUE, obj, *prop1ID, enumerable);
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, configurable);
@@ -294,7 +302,8 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         *prop1ID,
         dpf,
         runtime->makeHandle(HermesValue::encodeDoubleValue(20.0))));
-    EXPECT_CALLRESULT_DOUBLE(20.0, JSObject::getNamed(obj, runtime, *prop1ID));
+    EXPECT_CALLRESULT_DOUBLE(
+        20.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, writable);
     EXPECT_PROPERTY_FLAG(TRUE, obj, *prop1ID, enumerable);
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, configurable);
@@ -307,7 +316,8 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         *prop1ID,
         dpf,
         runtime->makeHandle(HermesValue::encodeDoubleValue(20.0))));
-    EXPECT_CALLRESULT_DOUBLE(20.0, JSObject::getNamed(obj, runtime, *prop1ID));
+    EXPECT_CALLRESULT_DOUBLE(
+        20.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
     dpf.enumerable = 1;
 
     dpf.configurable = 1;
@@ -317,7 +327,8 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
         *prop1ID,
         dpf,
         runtime->makeHandle(HermesValue::encodeDoubleValue(40.0))));
-    EXPECT_CALLRESULT_DOUBLE(20.0, JSObject::getNamed(obj, runtime, *prop1ID));
+    EXPECT_CALLRESULT_DOUBLE(
+        20.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
 
     dpf.clear();
     dpf.setGetter = 1;
@@ -361,10 +372,11 @@ TEST_F(ObjectModelTest, SimpleReadOnlyTest) {
   ASSERT_TRUE(*cr);
 
   // Double-check the value of obj.prop1.
-  EXPECT_CALLRESULT_DOUBLE(10.0, JSObject::getNamed(obj, runtime, *prop1ID));
+  EXPECT_CALLRESULT_DOUBLE(
+      10.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
 
   // Try to modify it with doThrow=false;
-  cr = JSObject::putNamed(
+  cr = JSObject::putNamed_RJS(
       obj,
       runtime,
       *prop1ID,
@@ -373,22 +385,23 @@ TEST_F(ObjectModelTest, SimpleReadOnlyTest) {
   ASSERT_FALSE(cr.getValue());
 
   // Double-check the value of obj.prop1.
-  EXPECT_CALLRESULT_DOUBLE(10.0, JSObject::getNamed(obj, runtime, *prop1ID));
+  EXPECT_CALLRESULT_DOUBLE(
+      10.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
 
   // TODO: enable this when Runtime::raiseTypeError() is implemented.
   /*  // Try to modify it with doThrow=true.
-    cr = Object::putNamed(obj, runtime, prop1ID,
+    cr = Object::putNamed_RJS(obj, runtime, prop1ID,
     HermesValue::encodeDoubleValue(11.0), true);
     ASSERT_EQ(ExecutionStatus::EXCEPTION, cr.getStatus());
 
     // Double-check the value of obj.prop1.
-    ASSERT_EQ(ExecutionStatus::RETURNED, Object::getNamed(obj, runtime,
+    ASSERT_EQ(ExecutionStatus::RETURNED, Object::getNamed_RJS(obj, runtime,
     prop1ID));
     ASSERT_EQ(10.0, runtime->getReturnedValue().getDouble());*/
 
   // Define an ordinary property and then change it to read-only.
   // obj.prop2 = 20;
-  ASSERT_TRUE(*JSObject::putNamed(
+  ASSERT_TRUE(*JSObject::putNamed_RJS(
       obj,
       runtime,
       *prop2ID,
@@ -407,10 +420,11 @@ TEST_F(ObjectModelTest, SimpleReadOnlyTest) {
   ASSERT_TRUE(*cr);
 
   // Double-check the value of obj.prop2.
-  EXPECT_CALLRESULT_DOUBLE(20.0, JSObject::getNamed(obj, runtime, *prop2ID));
+  EXPECT_CALLRESULT_DOUBLE(
+      20.0, JSObject::getNamed_RJS(obj, runtime, *prop2ID));
 
   // Try to modify it with doThrow=false;
-  cr = JSObject::putNamed(
+  cr = JSObject::putNamed_RJS(
       obj,
       runtime,
       *prop2ID,
@@ -419,7 +433,8 @@ TEST_F(ObjectModelTest, SimpleReadOnlyTest) {
   ASSERT_FALSE(cr.getValue());
 
   // Double-check the value of obj.prop2.
-  EXPECT_CALLRESULT_DOUBLE(20.0, JSObject::getNamed(obj, runtime, *prop2ID));
+  EXPECT_CALLRESULT_DOUBLE(
+      20.0, JSObject::getNamed_RJS(obj, runtime, *prop2ID));
 }
 
 TEST_F(ObjectModelTest, SimpleDeleteTest) {
@@ -441,7 +456,7 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
   ASSERT_TRUE(*JSObject::deleteNamed(obj, runtime, *prop1ID));
 
   // ob1.prop1 = 10.0;
-  ASSERT_TRUE(*JSObject::putNamed(
+  ASSERT_TRUE(*JSObject::putNamed_RJS(
       obj,
       runtime,
       *prop1ID,
@@ -455,10 +470,11 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
   ASSERT_TRUE(*JSObject::deleteNamed(obj, runtime, *prop2ID));
 
   // Make sure obj.prop1 is still there.
-  EXPECT_CALLRESULT_DOUBLE(10.0, JSObject::getNamed(obj, runtime, *prop1ID));
+  EXPECT_CALLRESULT_DOUBLE(
+      10.0, JSObject::getNamed_RJS(obj, runtime, *prop1ID));
 
   // obj.prop2 = 20.0;
-  ASSERT_TRUE(*JSObject::putNamed(
+  ASSERT_TRUE(*JSObject::putNamed_RJS(
       obj,
       runtime,
       *prop2ID,
@@ -472,15 +488,16 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
   // Make sure it is deleted.
   ASSERT_EQ(
       nullptr, JSObject::getNamedDescriptor(obj, runtime, *prop1ID, desc));
-  EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed(obj, runtime, *prop1ID));
+  EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed_RJS(obj, runtime, *prop1ID));
 
   // Make sure obj.prop2 is still there.
-  EXPECT_CALLRESULT_DOUBLE(20.0, JSObject::getNamed(obj, runtime, *prop2ID));
+  EXPECT_CALLRESULT_DOUBLE(
+      20.0, JSObject::getNamed_RJS(obj, runtime, *prop2ID));
   ASSERT_TRUE(JSObject::getOwnNamedDescriptor(obj, runtime, *prop2ID, desc));
   ASSERT_EQ(1u, desc.slot);
 
   // obj.prop3 = 30.0;
-  ASSERT_TRUE(*JSObject::putNamed(
+  ASSERT_TRUE(*JSObject::putNamed_RJS(
       obj,
       runtime,
       *prop3ID,
@@ -494,10 +511,10 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
   // Make sure it is deleted.
   ASSERT_EQ(
       nullptr, JSObject::getNamedDescriptor(obj, runtime, *prop2ID, desc));
-  EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed(obj, runtime, *prop2ID));
+  EXPECT_CALLRESULT_UNDEFINED(JSObject::getNamed_RJS(obj, runtime, *prop2ID));
 
   // obj.prop4 = 40.0;
-  ASSERT_TRUE(*JSObject::putNamed(
+  ASSERT_TRUE(*JSObject::putNamed_RJS(
       obj,
       runtime,
       *prop4ID,
@@ -604,18 +621,18 @@ TEST_F(ObjectModelTest, NonArrayComputedTest) {
 
   // Use getComputed() to obtain the values.
   EXPECT_CALLRESULT_VALUE(
-      value10.get(), JSObject::getComputed(obj1, runtime, index5));
+      value10.get(), JSObject::getComputed_RJS(obj1, runtime, index5));
   EXPECT_CALLRESULT_VALUE(
-      value11.get(), JSObject::getComputed(obj1, runtime, prop1Name));
+      value11.get(), JSObject::getComputed_RJS(obj1, runtime, prop1Name));
   // Use getComputed() to obtain a missing property.
   EXPECT_CALLRESULT_VALUE(
       HermesValue::encodeUndefinedValue(),
-      JSObject::getComputed(obj1, runtime, index6));
+      JSObject::getComputed_RJS(obj1, runtime, index6));
 
   // Use putComputed() to update a value.
-  ASSERT_TRUE(*JSObject::putComputed(obj1, runtime, index5, value12));
+  ASSERT_TRUE(*JSObject::putComputed_RJS(obj1, runtime, index5, value12));
   EXPECT_CALLRESULT_VALUE(
-      value12.get(), JSObject::getComputed(obj1, runtime, index5));
+      value12.get(), JSObject::getComputed_RJS(obj1, runtime, index5));
 
   // Try to get missing properties.
   JSObject::getComputedPrimitiveDescriptor(
@@ -709,13 +726,13 @@ TEST_F(ObjectModelTest, NamedOrIndexed) {
   // We expect getNamed to access the non-index property in both objects, and
   // the index properties in the non-indexed object.
   EXPECT_CALLRESULT_DOUBLE(
-      101, JSObject::getNamed(indexObj, runtime, *nonIndexID));
+      101, JSObject::getNamed_RJS(indexObj, runtime, *nonIndexID));
   EXPECT_CALLRESULT_DOUBLE(
-      101, JSObject::getNamed(nonIndexObj, runtime, *nonIndexID));
+      101, JSObject::getNamed_RJS(nonIndexObj, runtime, *nonIndexID));
   EXPECT_CALLRESULT_DOUBLE(
-      102, JSObject::getNamed(nonIndexObj, runtime, *indexID1));
+      102, JSObject::getNamed_RJS(nonIndexObj, runtime, *indexID1));
   EXPECT_CALLRESULT_DOUBLE(
-      103, JSObject::getNamed(nonIndexObj, runtime, *indexID2));
+      103, JSObject::getNamed_RJS(nonIndexObj, runtime, *indexID2));
 
   // Create non-symbol versions of these symbols and then test with
   // getComputed().
@@ -725,15 +742,15 @@ TEST_F(ObjectModelTest, NamedOrIndexed) {
   auto indexId2Num =
       runtime->makeHandle(HermesValue::encodeNumberValue(100000000));
   EXPECT_CALLRESULT_DOUBLE(
-      101, JSObject::getComputed(indexObj, runtime, nonIndexIDString));
+      101, JSObject::getComputed_RJS(indexObj, runtime, nonIndexIDString));
   EXPECT_CALLRESULT_DOUBLE(
-      102, JSObject::getComputed(indexObj, runtime, indexId1Num));
+      102, JSObject::getComputed_RJS(indexObj, runtime, indexId1Num));
   EXPECT_CALLRESULT_DOUBLE(
-      103, JSObject::getComputed(indexObj, runtime, indexId2Num));
+      103, JSObject::getComputed_RJS(indexObj, runtime, indexId2Num));
   EXPECT_CALLRESULT_DOUBLE(
-      101, JSObject::getComputed(nonIndexObj, runtime, nonIndexIDString));
+      101, JSObject::getComputed_RJS(nonIndexObj, runtime, nonIndexIDString));
   EXPECT_CALLRESULT_DOUBLE(
-      102, JSObject::getComputed(nonIndexObj, runtime, indexId1Num));
+      102, JSObject::getComputed_RJS(nonIndexObj, runtime, indexId1Num));
 }
 
 /// Test hasNamed / hasNamedOrIndexed / hasComputed.
@@ -883,7 +900,7 @@ TEST_F(ObjectModelLargeHeapTest, LargeObjectThrowsRangeError) {
   MutableHandle<> i{runtime, HermesValue::encodeNumberValue(0)};
   while (true) {
     GCScopeMarkerRAII marker{gcScope};
-    CallResult<bool> res = JSObject::putComputed(obj, runtime, i, i);
+    CallResult<bool> res = JSObject::putComputed_RJS(obj, runtime, i, i);
     if (res == ExecutionStatus::EXCEPTION) {
       // Check that RangeError was thrown.
       auto *err = vmcast<JSObject>(runtime->getThrownValue());

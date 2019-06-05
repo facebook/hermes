@@ -29,7 +29,7 @@ class Interpreter {
 
   /// Allocate a generator for the specified function and the specified
   /// environment. \param funcIndex function index in the global function table.
-  static CallResult<HermesValue> createGenerator(
+  static CallResult<HermesValue> createGenerator_RJS(
       Runtime *runtime,
       RuntimeModule *runtimeModule,
       unsigned funcIndex,
@@ -66,7 +66,7 @@ class Interpreter {
   /// The FRAME in question is obtained from \p runtime, and the registers
   /// \p lazyReg and \p valueReg are passed directly to make this function
   /// easier to use outside the interpeter.
-  static CallResult<HermesValue> getArgumentsPropByValSlowPath(
+  static CallResult<HermesValue> getArgumentsPropByValSlowPath_RJS(
       Runtime *runtime,
       PinnedHermesValue *lazyReg,
       PinnedHermesValue *valueReg,
@@ -99,7 +99,7 @@ class Interpreter {
 
   /// Implement OpCode::GetById/TryGetById when the base is not an object.
   static CallResult<HermesValue>
-  getByIdTransient(Runtime *runtime, Handle<> base, SymbolID id);
+  getByIdTransient_RJS(Runtime *runtime, Handle<> base, SymbolID id);
 
   /// Fast path for getByValTransient() -- avoid boxing for \p base if it is
   /// string primitive and \p nameHandle is an array index.
@@ -108,10 +108,10 @@ class Interpreter {
 
   /// Implement OpCode::GetByVal when the base is not an object.
   static CallResult<HermesValue>
-  getByValTransient(Runtime *runtime, Handle<> base, Handle<> name);
+  getByValTransient_RJS(Runtime *runtime, Handle<> base, Handle<> name);
 
   /// Implement OpCode::PutById/TryPutById when the base is not an object.
-  static ExecutionStatus putByIdTransient(
+  static ExecutionStatus putByIdTransient_RJS(
       Runtime *runtime,
       Handle<> base,
       SymbolID id,
@@ -119,7 +119,7 @@ class Interpreter {
       bool strictMode);
 
   /// Implement OpCode::PutByVal when the base is not an object.
-  static ExecutionStatus putByValTransient(
+  static ExecutionStatus putByValTransient_RJS(
       Runtime *runtime,
       Handle<> base,
       Handle<> name,

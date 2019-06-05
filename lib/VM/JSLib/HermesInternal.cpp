@@ -812,7 +812,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   // TODO: we can't make HermesInternal.concat a static builtin method now
   // because this method should be called with a meaningful `this`, but
   // CallBuiltin instruction does not support it.
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       runtime->makeHandle<JSObject>(runtime->stringPrototype),
       runtime,
       Predefined::getSymbolID(Predefined::concat));

@@ -44,8 +44,8 @@ TEST(DiscoverBBTest, SmokeTest) {
       &runtime, createASCIIRef("bench"));
   ASSERT_EQ(ExecutionStatus::RETURNED, benchSym);
 
-  auto propRes =
-      JSObject::getNamed(runtime.getGlobal(), &runtime, *benchSym.getValue());
+  auto propRes = JSObject::getNamed_RJS(
+      runtime.getGlobal(), &runtime, *benchSym.getValue());
   ASSERT_EQ(ExecutionStatus::RETURNED, propRes.getStatus());
   auto *func = dyn_vmcast<JSFunction>(*propRes);
   ASSERT_TRUE(func);

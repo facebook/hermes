@@ -111,7 +111,7 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
     return selfHandle.getHermesValue();
   }
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       selfHandle, runtime, Predefined::getSymbolID(Predefined::set));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -145,7 +145,7 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
     if (!*nextRes) {
       return selfHandle.getHermesValue();
     }
-    auto nextItemRes = JSObject::getNamed(
+    auto nextItemRes = JSObject::getNamed_RJS(
         *nextRes, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -155,12 +155,12 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
     nextItem = vmcast<JSObject>(*nextItemRes);
-    auto keyRes = JSObject::getComputed(nextItem, runtime, zero);
+    auto keyRes = JSObject::getComputed_RJS(nextItem, runtime, zero);
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
     keyHandle = *keyRes;
-    auto valueRes = JSObject::getComputed(nextItem, runtime, one);
+    auto valueRes = JSObject::getComputed_RJS(nextItem, runtime, one);
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }

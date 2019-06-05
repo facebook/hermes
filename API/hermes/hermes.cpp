@@ -1364,7 +1364,7 @@ jsi::Value HermesRuntimeImpl::getProperty(
   ::hermes::instrumentation::PerfMarker m("jsi-hermes-getProperty-string");
   vm::GCScope gcScope(&runtime_);
   auto h = handle(obj);
-  auto res = h->getComputed(h, &runtime_, stringHandle(name));
+  auto res = h->getComputed_RJS(h, &runtime_, stringHandle(name));
   checkStatus(res.getStatus());
   return valueFromHermesValue(*res);
 }
@@ -1407,7 +1407,7 @@ void HermesRuntimeImpl::setPropertyValue(
     const jsi::Value &value) {
   vm::GCScope gcScope(&runtime_);
   auto h = handle(obj);
-  checkStatus(h->putComputed(
+  checkStatus(h->putComputed_RJS(
                    h,
                    &runtime_,
                    stringHandle(name),
@@ -1530,7 +1530,7 @@ jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
         ")");
   }
 
-  auto res = vm::JSObject::getComputed(
+  auto res = vm::JSObject::getComputed_RJS(
       arrayHandle(arr),
       &runtime_,
       runtime_.makeHandle(vm::HermesValue::encodeNumberValue(i)));
@@ -1654,7 +1654,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
   // 13.2.2.5:
   //    Let proto be the value of calling the [[Get]] internal property of
   //    F with argument "prototype"
-  auto protoRes = vm::JSObject::getNamed(
+  auto protoRes = vm::JSObject::getNamed_RJS(
       funcHandle,
       &runtime_,
       vm::Predefined::getSymbolID(vm::Predefined::prototype));
@@ -1729,7 +1729,7 @@ bool HermesRuntimeImpl::instanceOf(
     const jsi::Object &o,
     const jsi::Function &f) {
   vm::GCScope gcScope(&runtime_);
-  auto result = vm::instanceOfOperator(
+  auto result = vm::instanceOfOperator_RJS(
       &runtime_, runtime_.makeHandle(phv(o)), runtime_.makeHandle(phv(f)));
   checkStatus(result.getStatus());
   return *result;
@@ -1821,7 +1821,7 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
 }
 
 size_t HermesRuntimeImpl::getLength(vm::Handle<vm::ArrayImpl> arr) {
-  auto res = vm::JSObject::getNamed(
+  auto res = vm::JSObject::getNamed_RJS(
       arr, &runtime_, vm::Predefined::getSymbolID(vm::Predefined::length));
   checkStatus(res.getStatus());
   if (!res->isNumber()) {
@@ -1832,7 +1832,7 @@ size_t HermesRuntimeImpl::getLength(vm::Handle<vm::ArrayImpl> arr) {
 }
 
 size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSArrayBuffer> arr) {
-  auto res = vm::JSObject::getNamed(
+  auto res = vm::JSObject::getNamed_RJS(
       arr, &runtime_, vm::Predefined::getSymbolID(vm::Predefined::byteLength));
   checkStatus(res.getStatus());
   if (!res->isNumber()) {

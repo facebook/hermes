@@ -19,18 +19,18 @@ CallResult<HermesValue> slowPathToNumber(
     Runtime *runtime,
     PinnedHermesValue *src) {
   GCScopeMarkerRAII marker{runtime};
-  return toNumber(runtime, Handle<>(src));
+  return toNumber_RJS(runtime, Handle<>(src));
 }
 
 CallResult<HermesValue> slowPathAddEmptyString(
     Runtime *runtime,
     PinnedHermesValue *src) {
   GCScopeMarkerRAII marker{runtime};
-  auto prim = toPrimitive(runtime, Handle<>(src), PreferredType::NONE);
+  auto prim = toPrimitive_RJS(runtime, Handle<>(src), PreferredType::NONE);
   if (LLVM_UNLIKELY(prim == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   Handle<> tmpHandle(runtime, prim.getValue());
-  auto str = toString(runtime, tmpHandle);
+  auto str = toString_RJS(runtime, tmpHandle);
   if (LLVM_UNLIKELY(str == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   return str->getHermesValue();
@@ -133,7 +133,7 @@ ExecutionStatus externPutById(
       return ExecutionStatus::RETURNED;
     }
 
-    return JSObject::putNamed(
+    return JSObject::putNamed_RJS(
                Handle<JSObject>::vmcast(target),
                runtime,
                id,
@@ -141,7 +141,7 @@ ExecutionStatus externPutById(
                opFlags)
         .getStatus();
   } else {
-    return Interpreter::putByIdTransient(
+    return Interpreter::putByIdTransient_RJS(
         runtime,
         Handle<>(target),
         SymbolID::unsafeCreate(sid),
@@ -186,11 +186,11 @@ CallResult<HermesValue> externGetById(
       return JSObject::getNamedSlotValue(obj, desc);
     }
 
-    return JSObject::getNamed(
+    return JSObject::getNamed_RJS(
         Handle<JSObject>::vmcast(target), runtime, id, opFlags);
   } else {
     /* Slow path. */
-    return Interpreter::getByIdTransient(
+    return Interpreter::getByIdTransient_RJS(
         runtime, Handle<>(target), SymbolID::unsafeCreate(sid));
   }
 }
@@ -262,12 +262,12 @@ CallResult<HermesValue> externConstruct(
     GCScopeMarkerRAII marker{runtime};                                    \
                                                                           \
     CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};              \
-    if ((res = toNumber(runtime, Handle<>(op1))) ==                       \
+    if ((res = toNumber_RJS(runtime, Handle<>(op1))) ==                   \
         ExecutionStatus::EXCEPTION)                                       \
       return ExecutionStatus::EXCEPTION;                                  \
     double left = res->getDouble();                                       \
                                                                           \
-    if ((res = toNumber(runtime, Handle<>(op2))) ==                       \
+    if ((res = toNumber_RJS(runtime, Handle<>(op2))) ==                   \
         ExecutionStatus::EXCEPTION)                                       \
       return ExecutionStatus::EXCEPTION;                                  \
                                                                           \
@@ -335,12 +335,12 @@ HermesValue externTypeOf(Runtime *runtime, PinnedHermesValue *src) {
     return OpName(runtime, Handle<>(op1), Handle<>(op2));                 \
   }
 
-PROXY_EXTERN_CMP(slowPathLess, lessOp);
-PROXY_EXTERN_CMP(slowPathGreater, greaterOp);
-PROXY_EXTERN_CMP(slowPathLessEq, lessEqualOp);
-PROXY_EXTERN_CMP(slowPathGreaterEq, greaterEqualOp);
-PROXY_EXTERN_BIN_OP(slowPathAdd, addOp);
-PROXY_EXTERN_BIN_OP(externAbstractEqualityTest, abstractEqualityTest);
+PROXY_EXTERN_CMP(slowPathLess, lessOp_RJS);
+PROXY_EXTERN_CMP(slowPathGreater, greaterOp_RJS);
+PROXY_EXTERN_CMP(slowPathLessEq, lessEqualOp_RJS);
+PROXY_EXTERN_CMP(slowPathGreaterEq, greaterEqualOp_RJS);
+PROXY_EXTERN_BIN_OP(slowPathAdd, addOp_RJS);
+PROXY_EXTERN_BIN_OP(externAbstractEqualityTest, abstractEqualityTest_RJS);
 
 HermesValue externNewObject(Runtime *runtime) {
   GCScopeMarkerRAII marker{runtime};
@@ -445,11 +445,11 @@ CallResult<HermesValue> externGetByVal(
   GCScopeMarkerRAII marker{runtime};
 
   if (LLVM_LIKELY(target->isObject())) {
-    return JSObject::getComputed(
+    return JSObject::getComputed_RJS(
         Handle<JSObject>::vmcast(target), runtime, Handle<>(nameVal));
   } else {
     // This is the "slow path".
-    return Interpreter::getByValTransient(
+    return Interpreter::getByValTransient_RJS(
         runtime, Handle<>(target), Handle<>(nameVal));
   }
 }
@@ -463,7 +463,7 @@ ExecutionStatus externPutByVal(
   GCScopeMarkerRAII marker{runtime};
 
   if (LLVM_LIKELY(target->isObject())) {
-    return JSObject::putComputed(
+    return JSObject::putComputed_RJS(
                Handle<JSObject>::vmcast(target),
                runtime,
                Handle<>(nameVal),
@@ -472,7 +472,7 @@ ExecutionStatus externPutByVal(
         .getStatus();
   } else {
     // This is the "slow path".
-    return Interpreter::putByValTransient(
+    return Interpreter::putByValTransient_RJS(
         runtime,
         Handle<>(target),
         Handle<>(nameVal),
@@ -548,13 +548,13 @@ externMod(Runtime *runtime, PinnedHermesValue *op1, PinnedHermesValue *op2) {
 
   CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
   if (LLVM_UNLIKELY(
-          (res = toNumber(runtime, Handle<>(op1))) ==
+          (res = toNumber_RJS(runtime, Handle<>(op1))) ==
           ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   double left = res->getDouble();
 
   if (LLVM_UNLIKELY(
-          (res = toNumber(runtime, Handle<>(op2))) ==
+          (res = toNumber_RJS(runtime, Handle<>(op2))) ==
           ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   return HermesValue::encodeDoubleValue(std::fmod(left, res->getDouble()));
@@ -587,7 +587,7 @@ externMod(Runtime *runtime, PinnedHermesValue *op1, PinnedHermesValue *op2) {
     }                                                                        \
     auto lnum = static_cast<lType>(res->getNumber());                        \
     if (LLVM_UNLIKELY(                                                       \
-            (res = toUInt32(runtime, Handle<>(op2))) ==                      \
+            (res = toUInt32_RJS(runtime, Handle<>(op2))) ==                  \
             ExecutionStatus::EXCEPTION)) {                                   \
       return ExecutionStatus::EXCEPTION;                                     \
     }                                                                        \
@@ -596,9 +596,9 @@ externMod(Runtime *runtime, PinnedHermesValue *op1, PinnedHermesValue *op2) {
         static_cast<returnType>(lnum oper rnum));                            \
   }
 
-IMPLEMENT_SHIFT_OP(LShift, <<, toUInt32, uint32_t, int32_t);
-IMPLEMENT_SHIFT_OP(RShift, >>, toInt32, int32_t, int32_t);
-IMPLEMENT_SHIFT_OP(URshift, >>, toUInt32, uint32_t, uint32_t);
+IMPLEMENT_SHIFT_OP(LShift, <<, toUInt32_RJS, uint32_t, int32_t);
+IMPLEMENT_SHIFT_OP(RShift, >>, toInt32_RJS, int32_t, int32_t);
+IMPLEMENT_SHIFT_OP(URshift, >>, toUInt32_RJS, uint32_t, uint32_t);
 
 /// Implement a binary bitwise instruction with a fast path where both
 /// operands are numbers.
@@ -616,13 +616,13 @@ IMPLEMENT_SHIFT_OP(URshift, >>, toUInt32, uint32_t, uint32_t);
     GCScopeMarkerRAII marker{runtime};                                       \
     CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};                 \
     if (LLVM_UNLIKELY(                                                       \
-            (res = toInt32(runtime, Handle<>(op1))) ==                       \
+            (res = toInt32_RJS(runtime, Handle<>(op1))) ==                   \
             ExecutionStatus::EXCEPTION)) {                                   \
       return ExecutionStatus::EXCEPTION;                                     \
     }                                                                        \
     int32_t left = res->getNumberAs<int32_t>();                              \
     if (LLVM_UNLIKELY(                                                       \
-            (res = toInt32(runtime, Handle<>(op2))) ==                       \
+            (res = toInt32_RJS(runtime, Handle<>(op2))) ==                   \
             ExecutionStatus::EXCEPTION)) {                                   \
       return ExecutionStatus::EXCEPTION;                                     \
     }                                                                        \
@@ -670,7 +670,7 @@ CallResult<HermesValue> slowPathNegate(
     Runtime *runtime,
     PinnedHermesValue *op1) {
   GCScopeMarkerRAII marker{runtime};
-  auto res = toNumber(runtime, Handle<>(op1));
+  auto res = toNumber_RJS(runtime, Handle<>(op1));
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
 
@@ -706,7 +706,7 @@ HermesValue externGetNextPName(
   if (idx < size) {
     // We must return the property as a string
     if (scratch->isNumber()) {
-      auto status = toString(runtime, Handle<>(scratch));
+      auto status = toString_RJS(runtime, Handle<>(scratch));
       assert(
           status == ExecutionStatus::RETURNED &&
           "toString on number cannot fail");
@@ -742,7 +742,7 @@ CallResult<HermesValue> externSlowPathGetArgumentsPropByVal(
 
   StackFramePtr frame(currentFrame);
 
-  return Interpreter::getArgumentsPropByValSlowPath(
+  return Interpreter::getArgumentsPropByValSlowPath_RJS(
       runtime,
       lazyReg,
       valueReg,
@@ -755,7 +755,7 @@ CallResult<HermesValue> externSlowPathBitNot(
     PinnedHermesValue *op) {
   GCScopeMarkerRAII marker{runtime};
 
-  auto res = toInt32(runtime, Handle<>(op));
+  auto res = toInt32_RJS(runtime, Handle<>(op));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -768,7 +768,7 @@ CallResult<HermesValue> slowPathGetArgumentsLength(
     PinnedHermesValue *obj) {
   GCScopeMarkerRAII marker{runtime};
   assert(obj->isObject() && "arguments lazy register is not an object");
-  return JSObject::getNamed(
+  return JSObject::getNamed_RJS(
       Handle<JSObject>::vmcast(obj),
       runtime,
       Predefined::getSymbolID(Predefined::length));
@@ -804,7 +804,8 @@ CallResult<HermesValue> externInstanceOf(
     PinnedHermesValue *constructor) {
   GCScopeMarkerRAII marker{runtime};
 
-  auto res = instanceOfOperator(runtime, Handle<>(obj), Handle<>(constructor));
+  auto res =
+      instanceOfOperator_RJS(runtime, Handle<>(obj), Handle<>(constructor));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

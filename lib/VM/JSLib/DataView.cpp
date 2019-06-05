@@ -92,7 +92,7 @@ dataViewPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
   }
   auto byteOffset = res->getNumberAs<uint64_t>();
   auto littleEndian = toBoolean(args.getArg(2));
-  res = toNumber(runtime, args.getArgHandle(runtime, 1));
+  res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

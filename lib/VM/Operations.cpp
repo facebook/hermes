@@ -44,7 +44,7 @@ CallResult<Handle<SymbolID>> valueToSymbolID(
     return Handle<SymbolID>::vmcast(nameValHnd);
   }
   // Convert the value to a string.
-  auto res = toString(runtime, nameValHnd);
+  auto res = toString_RJS(runtime, nameValHnd);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
 
@@ -173,7 +173,7 @@ CallResult<HermesValue> ordinaryToPrimitive(
 
   for (int i = 0; i < 2; ++i) {
     if (preferredType == PreferredType::STRING) {
-      auto propRes = JSObject::getNamed(
+      auto propRes = JSObject::getNamed_RJS(
           selfHandle, runtime, Predefined::getSymbolID(Predefined::toString));
       if (propRes == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
@@ -190,7 +190,7 @@ CallResult<HermesValue> ordinaryToPrimitive(
       // This method failed. Try the other one.
       preferredType = PreferredType::NUMBER;
     } else {
-      auto propRes = JSObject::getNamed(
+      auto propRes = JSObject::getNamed_RJS(
           selfHandle, runtime, Predefined::getSymbolID(Predefined::valueOf));
       if (propRes == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
@@ -215,7 +215,7 @@ CallResult<HermesValue> ordinaryToPrimitive(
 
 /// ES5.1 9.1
 CallResult<HermesValue>
-toPrimitive(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
+toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
   switch (valueHandle->getTag()) {
     case EmptyTag:
       llvm_unreachable("empty value");
@@ -345,7 +345,7 @@ static CallResult<PseudoHandle<StringPrimitive>> numberToString(
   return createPseudoHandle(vmcast<StringPrimitive>(*result));
 }
 
-CallResult<PseudoHandle<StringPrimitive>> toString(
+CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
     Runtime *runtime,
     Handle<> valueHandle) {
   HermesValue value = valueHandle.get();
@@ -370,11 +370,11 @@ CallResult<PseudoHandle<StringPrimitive>> toString(
           : runtime->getPredefinedString(Predefined::falseStr);
       break;
     case ObjectTag: {
-      auto res = toPrimitive(runtime, valueHandle, PreferredType::STRING);
+      auto res = toPrimitive_RJS(runtime, valueHandle, PreferredType::STRING);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      return toString(runtime, runtime->makeHandle(res.getValue()));
+      return toString_RJS(runtime, runtime->makeHandle(res.getValue()));
     }
     case SymbolTag:
       return runtime->raiseTypeError("Cannot convert Symbol to string");
@@ -490,7 +490,7 @@ static inline double stringToNumber(
   return std::numeric_limits<double>::quiet_NaN();
 }
 
-CallResult<HermesValue> toNumber(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toNumber_RJS(Runtime *runtime, Handle<> valueHandle) {
   auto value = valueHandle.get();
   double result;
   switch (value.getTag()) {
@@ -499,11 +499,11 @@ CallResult<HermesValue> toNumber(Runtime *runtime, Handle<> valueHandle) {
     case NativeValueTag:
       llvm_unreachable("native value");
     case ObjectTag: {
-      auto res = toPrimitive(runtime, valueHandle, PreferredType::NUMBER);
+      auto res = toPrimitive_RJS(runtime, valueHandle, PreferredType::NUMBER);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      return toNumber(runtime, runtime->makeHandle(res.getValue()));
+      return toNumber_RJS(runtime, runtime->makeHandle(res.getValue()));
     }
     case StrTag:
       result =
@@ -570,7 +570,7 @@ CallResult<HermesValue> toIndex(Runtime *runtime, Handle<> valueHandle) {
 }
 
 CallResult<HermesValue> toInteger(Runtime *runtime, Handle<> valueHandle) {
-  auto res = toNumber(runtime, valueHandle);
+  auto res = toNumber_RJS(runtime, valueHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -591,7 +591,7 @@ template <typename T>
 static inline CallResult<HermesValue> toInt(
     Runtime *runtime,
     Handle<> valueHandle) {
-  auto res = toNumber(runtime, valueHandle);
+  auto res = toNumber_RJS(runtime, valueHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -608,7 +608,7 @@ CallResult<HermesValue> toInt16(Runtime *runtime, Handle<> valueHandle) {
   return toInt<int16_t>(runtime, valueHandle);
 }
 
-CallResult<HermesValue> toInt32(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toInt32_RJS(Runtime *runtime, Handle<> valueHandle) {
   return toInt<int32_t>(runtime, valueHandle);
 }
 
@@ -648,8 +648,8 @@ uint8_t toUInt8Clamp(double number) {
 }
 
 CallResult<HermesValue> toUInt8Clamp(Runtime *runtime, Handle<> valueHandle) {
-  // 1. Let number be ToNumber(argument)
-  auto res = toNumber(runtime, valueHandle);
+  // 1. Let number be toNumber_RJS(argument)
+  auto res = toNumber_RJS(runtime, valueHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     // 2. ReturnIfAbrupt(number)
     return ExecutionStatus::EXCEPTION;
@@ -661,7 +661,7 @@ CallResult<HermesValue> toUInt16(Runtime *runtime, Handle<> valueHandle) {
   return toInt<uint16_t>(runtime, valueHandle);
 }
 
-CallResult<HermesValue> toUInt32(Runtime *runtime, Handle<> valueHandle) {
+CallResult<HermesValue> toUInt32_RJS(Runtime *runtime, Handle<> valueHandle) {
   return toInt<uint32_t>(runtime, valueHandle);
 }
 
@@ -756,44 +756,45 @@ ExecutionStatus amendPropAccessErrorMsgWithPropName(
 /// is performed. Otherwise both operands are converted to numbers and the
 /// values are compared.
 /// \param oper is the comparison operator to use when comparing numbers.
-#define IMPLEMENT_COMPARISON_OP(name, oper)                                   \
-  CallResult<bool> name(                                                      \
-      Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle) {          \
-    auto resLeft = toPrimitive(runtime, leftHandle, PreferredType::NUMBER);   \
-    if (resLeft == ExecutionStatus::EXCEPTION)                                \
-      return ExecutionStatus::EXCEPTION;                                      \
-    MutableHandle<> left(runtime, resLeft.getValue());                        \
-                                                                              \
-    auto resRight = toPrimitive(runtime, rightHandle, PreferredType::NUMBER); \
-    if (resRight == ExecutionStatus::EXCEPTION)                               \
-      return ExecutionStatus::EXCEPTION;                                      \
-    MutableHandle<> right(runtime, resRight.getValue());                      \
-                                                                              \
-    /* If both are strings, we must do a string comparison.*/                 \
-    if (left->isString() && right->isString()) {                              \
-      return left->getString()->compare(right->getString()) oper 0;           \
-    }                                                                         \
-                                                                              \
-    /* Convert both to a number and compare the numbers. */                   \
-    resLeft = toNumber(runtime, left);                                        \
-    if (resLeft == ExecutionStatus::EXCEPTION)                                \
-      return ExecutionStatus::EXCEPTION;                                      \
-    left = resLeft.getValue();                                                \
-    resRight = toNumber(runtime, right);                                      \
-    if (resRight == ExecutionStatus::EXCEPTION)                               \
-      return ExecutionStatus::EXCEPTION;                                      \
-    right = resRight.getValue();                                              \
-                                                                              \
-    return left->getNumber() oper right->getNumber();                         \
+#define IMPLEMENT_COMPARISON_OP(name, oper)                           \
+  CallResult<bool> name(                                              \
+      Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle) {  \
+    auto resLeft =                                                    \
+        toPrimitive_RJS(runtime, leftHandle, PreferredType::NUMBER);  \
+    if (resLeft == ExecutionStatus::EXCEPTION)                        \
+      return ExecutionStatus::EXCEPTION;                              \
+    MutableHandle<> left(runtime, resLeft.getValue());                \
+                                                                      \
+    auto resRight =                                                   \
+        toPrimitive_RJS(runtime, rightHandle, PreferredType::NUMBER); \
+    if (resRight == ExecutionStatus::EXCEPTION)                       \
+      return ExecutionStatus::EXCEPTION;                              \
+    MutableHandle<> right(runtime, resRight.getValue());              \
+                                                                      \
+    /* If both are strings, we must do a string comparison.*/         \
+    if (left->isString() && right->isString()) {                      \
+      return left->getString()->compare(right->getString()) oper 0;   \
+    }                                                                 \
+                                                                      \
+    /* Convert both to a number and compare the numbers. */           \
+    resLeft = toNumber_RJS(runtime, left);                            \
+    if (resLeft == ExecutionStatus::EXCEPTION)                        \
+      return ExecutionStatus::EXCEPTION;                              \
+    left = resLeft.getValue();                                        \
+    resRight = toNumber_RJS(runtime, right);                          \
+    if (resRight == ExecutionStatus::EXCEPTION)                       \
+      return ExecutionStatus::EXCEPTION;                              \
+    right = resRight.getValue();                                      \
+                                                                      \
+    return left->getNumber() oper right->getNumber();                 \
   }
 
-IMPLEMENT_COMPARISON_OP(lessOp, <);
-IMPLEMENT_COMPARISON_OP(greaterOp, >);
-IMPLEMENT_COMPARISON_OP(lessEqualOp, <=);
-IMPLEMENT_COMPARISON_OP(greaterEqualOp, >=);
-
+IMPLEMENT_COMPARISON_OP(lessOp_RJS, <);
+IMPLEMENT_COMPARISON_OP(greaterOp_RJS, >);
+IMPLEMENT_COMPARISON_OP(lessEqualOp_RJS, <=);
+IMPLEMENT_COMPARISON_OP(greaterEqualOp_RJS, >=);
 CallResult<HermesValue>
-abstractEqualityTest(Runtime *runtime, Handle<> xHandle, Handle<> yHandle) {
+abstractEqualityTest_RJS(Runtime *runtime, Handle<> xHandle, Handle<> yHandle) {
   MutableHandle<> x{runtime, xHandle.get()};
   MutableHandle<> y{runtime, yHandle.get()};
 
@@ -883,7 +884,7 @@ abstractEqualityTailCall:
     case HermesValue::combineTags(StrTag, ObjectTag):
     case HermesValue::combineTags(SymbolTag, ObjectTag):
     case HermesValue::combineTags(NumberTag, ObjectTag): {
-      auto status = toPrimitive(runtime, y, PreferredType::NONE);
+      auto status = toPrimitive_RJS(runtime, y, PreferredType::NONE);
       if (status == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -893,7 +894,7 @@ abstractEqualityTailCall:
     case HermesValue::combineTags(ObjectTag, StrTag):
     case HermesValue::combineTags(ObjectTag, SymbolTag):
     case HermesValue::combineTags(ObjectTag, NumberTag): {
-      auto status = toPrimitive(runtime, x, PreferredType::NONE);
+      auto status = toPrimitive_RJS(runtime, x, PreferredType::NONE);
       if (status == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -939,14 +940,14 @@ bool strictEqualityTest(HermesValue x, HermesValue y) {
 }
 
 CallResult<HermesValue>
-addOp(Runtime *runtime, Handle<> xHandle, Handle<> yHandle) {
-  auto resX = toPrimitive(runtime, xHandle, PreferredType::NONE);
+addOp_RJS(Runtime *runtime, Handle<> xHandle, Handle<> yHandle) {
+  auto resX = toPrimitive_RJS(runtime, xHandle, PreferredType::NONE);
   if (resX == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   auto x = runtime->makeHandle(resX.getValue());
 
-  auto resY = toPrimitive(runtime, yHandle, PreferredType::NONE);
+  auto resY = toPrimitive_RJS(runtime, yHandle, PreferredType::NONE);
   if (resY == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -954,13 +955,13 @@ addOp(Runtime *runtime, Handle<> xHandle, Handle<> yHandle) {
 
   // If one of the values is a string, concatenate as strings.
   if (x->isString() || y->isString()) {
-    auto resX = toString(runtime, x);
+    auto resX = toString_RJS(runtime, x);
     if (resX == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     auto xStr = toHandle(runtime, std::move(*resX));
 
-    auto resY = toString(runtime, y);
+    auto resY = toString_RJS(runtime, y);
     if (resY == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -970,13 +971,13 @@ addOp(Runtime *runtime, Handle<> xHandle, Handle<> yHandle) {
   }
 
   // Add the numbers since neither are strings.
-  resX = toNumber(runtime, x);
+  resX = toNumber_RJS(runtime, x);
   if (LLVM_UNLIKELY(resX == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto xNum = resX.getValue().getNumber();
 
-  resY = toNumber(runtime, y);
+  resY = toNumber_RJS(runtime, y);
   if (LLVM_UNLIKELY(resY == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1144,7 +1145,7 @@ getMethod(Runtime *runtime, Handle<> O, Handle<> key) {
     return ExecutionStatus::EXCEPTION;
   }
   auto obj = runtime->makeHandle<JSObject>(*objRes);
-  auto funcRes = JSObject::getComputed(obj, runtime, key);
+  auto funcRes = JSObject::getComputed_RJS(obj, runtime, key);
   if (LLVM_UNLIKELY(funcRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1187,7 +1188,7 @@ CallResult<IteratorRecord> getIterator(
   }
   auto iterator = runtime->makeHandle<JSObject>(*iteratorRes);
 
-  auto nextMethodRes = JSObject::getNamed(
+  auto nextMethodRes = JSObject::getNamed_RJS(
       iterator, runtime, Predefined::getSymbolID(Predefined::next));
   if (LLVM_UNLIKELY(nextMethodRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1236,7 +1237,7 @@ CallResult<Handle<JSObject>> iteratorStep(
     return ExecutionStatus::EXCEPTION;
   }
   Handle<JSObject> result = toHandle(runtime, std::move(*resultRes));
-  auto completeRes = JSObject::getNamed(
+  auto completeRes = JSObject::getNamed_RJS(
       result, runtime, Predefined::getSymbolID(Predefined::done));
   if (LLVM_UNLIKELY(completeRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1313,7 +1314,7 @@ CallResult<Handle<Callable>> speciesConstructor(
     Handle<Callable> defaultConstructor) {
   // construct from the "constructor" property in self if that is defined, else
   // use the default one.
-  auto res = JSObject::getNamed(
+  auto res = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::constructor));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1390,7 +1391,7 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
   }
 
   // 4. Let P be Get(C, "prototype").
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       runtime->makeHandle(ctor),
       runtime,
       Predefined::getSymbolID(Predefined::prototype));
@@ -1420,8 +1421,10 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
   return false;
 }
 
-CallResult<bool>
-instanceOfOperator(Runtime *runtime, Handle<> object, Handle<> constructor) {
+CallResult<bool> instanceOfOperator_RJS(
+    Runtime *runtime,
+    Handle<> object,
+    Handle<> constructor) {
   // 1. If Type(C) is not Object, throw a TypeError exception.
   if (LLVM_UNLIKELY(!constructor->isObject())) {
     return runtime->raiseTypeError(
@@ -1436,7 +1439,7 @@ instanceOfOperator(Runtime *runtime, Handle<> object, Handle<> constructor) {
   }
 
   // 2. Let instOfHandler be GetMethod(C,@@hasInstance).
-  CallResult<HermesValue> instOfHandlerRes = JSObject::getNamed(
+  CallResult<HermesValue> instOfHandlerRes = JSObject::getNamed_RJS(
       Handle<JSObject>::vmcast(constructor),
       runtime,
       Predefined::getSymbolID(Predefined::SymbolHasInstance));
@@ -1479,7 +1482,7 @@ CallResult<bool> isRegExp(Runtime *runtime, Handle<> arg) {
   }
   Handle<JSObject> obj = Handle<JSObject>::vmcast(arg);
   // 2. Let isRegExp be Get(argument, @@match).
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       obj, runtime, Predefined::getSymbolID(Predefined::SymbolMatch));
   // 3. ReturnIfAbrupt(isRegExp).
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -1519,7 +1522,7 @@ CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value) {
     return false;
   }
 
-  CallResult<HermesValue> spreadable = JSObject::getNamed(
+  CallResult<HermesValue> spreadable = JSObject::getNamed_RJS(
       O,
       runtime,
       Predefined::getSymbolID(Predefined::SymbolIsConcatSpreadable));

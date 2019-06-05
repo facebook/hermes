@@ -250,7 +250,7 @@ int main(int argc, char **argv) {
   code.reserve(256);
 
   auto global = runtime->getGlobal();
-  auto propRes = vm::JSObject::getNamed(
+  auto propRes = vm::JSObject::getNamed_RJS(
       global, runtime.get(), vm::Predefined::getSymbolID(vm::Predefined::eval));
   if (propRes == vm::ExecutionStatus::EXCEPTION) {
     runtime->printException(

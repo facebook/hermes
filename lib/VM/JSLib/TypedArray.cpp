@@ -195,7 +195,7 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
   }
   auto arrayLike = runtime->makeHandle<JSObject>(objRes.getValue());
   // 6. Let len be ? ToLength(? Get(arrayLike, "length")).
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       arrayLike, runtime, Predefined::getSymbolID(Predefined::length));
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -222,9 +222,9 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
     // a. Let Pk be ! ToString(k).
     // b. Let kValue be ? Get(arrayLike, Pk).
     // c. Perform ? Set(O, Pk, kValue, true).
-    if ((propRes = JSObject::getComputed(arrayLike, runtime, i)) ==
+    if ((propRes = JSObject::getComputed_RJS(arrayLike, runtime, i)) ==
             ExecutionStatus::EXCEPTION ||
-        JSTypedArray<T, C>::putComputed(
+        JSTypedArray<T, C>::putComputed_RJS(
             ta, runtime, i, runtime->makeHandle(*propRes)) ==
             ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -302,7 +302,7 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
   }
   auto arrayLike = runtime->makeHandle<JSObject>(objRes.getValue());
   // 7. Let len be ? ToLength(? Get(arrayLike, "length")).
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       arrayLike, runtime, Predefined::getSymbolID(Predefined::length));
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -324,7 +324,7 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
        k = HermesValue::encodeNumberValue(k->getNumberAs<uint64_t>() + 1)) {
     GCScopeMarkerRAII marker{runtime};
     // a - b. Get the value of the property at k.
-    if ((propRes = JSObject::getComputed(arrayLike, runtime, k)) ==
+    if ((propRes = JSObject::getComputed_RJS(arrayLike, runtime, k)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -343,7 +343,7 @@ typedArrayFrom(void *, Runtime *runtime, NativeArgs args) {
     // d. Else, let mappedValue be kValue (already done by initializer).
     auto mappedValue = runtime->makeHandle(*propRes);
     // e. Perform ? Set(targetObj, Pk, mappedValue, true).
-    if (JSObject::putComputed(*targetObj, runtime, k, mappedValue) ==
+    if (JSObject::putComputed_RJS(*targetObj, runtime, k, mappedValue) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -385,7 +385,7 @@ typedArrayOf(void *, Runtime *runtime, NativeArgs args) {
     auto kValue = args.getArg(k->getNumberAs<uint64_t>());
     // b. Let Pk be ! ToString(k).
     // c. Perform ? Set(newObj, Pk, kValue, true).
-    if (JSObject::putComputed(
+    if (JSObject::putComputed_RJS(
             *newObj, runtime, k, runtime->makeHandle(kValue)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -606,7 +606,7 @@ typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
   auto len = static_cast<int64_t>(self->getLength());
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -923,7 +923,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
       ? runtime->makeHandle(HermesValue::encodeStringValue(
             runtime->getPredefinedString(Predefined::comma)))
       : args.getArgHandle(runtime, 0);
-  auto res = toString(runtime, separator);
+  auto res = toString_RJS(runtime, separator);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -963,7 +963,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
       GCScope gcScope(runtime);
       elem = JSObject::getOwnIndexed(*self, runtime, i);
 
-      auto res2 = toString(runtime, elem);
+      auto res2 = toString_RJS(runtime, elem);
       if (LLVM_UNLIKELY(res2 == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1145,13 +1145,13 @@ class TypedArraySortModel : public SortModel {
     }
     assert(compareFn_ && "Cannot use this version if the compareFn is null");
     // ES7 22.2.3.26 2a.
-    // Let v be ToNumber(Call(comparefn, undefined, x, y)).
+    // Let v be toNumber_RJS(Call(comparefn, undefined, x, y)).
     auto callRes = Callable::executeCall2(
         compareFn_, runtime_, runtime_->getUndefinedValue(), aVal, bVal);
     if (callRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto intRes = toNumber(runtime_, runtime_->makeHandle(*callRes));
+    auto intRes = toNumber_RJS(runtime_, runtime_->makeHandle(*callRes));
     if (intRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1208,7 +1208,7 @@ CallResult<HermesValue> typedArrayPrototypeSetObject(
     return ExecutionStatus::EXCEPTION;
   }
   auto src = runtime->makeHandle<JSObject>(objRes.getValue());
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       src, runtime, Predefined::getSymbolID(Predefined::length));
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1231,7 +1231,7 @@ CallResult<HermesValue> typedArrayPrototypeSetObject(
   auto marker = scope.createMarker();
   for (; k->getNumberAs<uint64_t>() < srcLength;
        k = HermesValue::encodeNumberValue(k->getNumberAs<uint64_t>() + 1)) {
-    if ((propRes = JSObject::getComputed(src, runtime, k)) ==
+    if ((propRes = JSObject::getComputed_RJS(src, runtime, k)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1459,7 +1459,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
     auto elementObj = runtime->makeHandle<JSObject>(objRes.getValue());
 
     // Retrieve the toLocaleString function.
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         elementObj,
         runtime,
         Predefined::getSymbolID(Predefined::toLocaleString));
@@ -1472,7 +1472,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto strRes = toString(runtime, runtime->makeHandle(*callRes));
+      auto strRes = toString_RJS(runtime, runtime->makeHandle(*callRes));
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1802,7 +1802,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
 
   // Use the same valuesMethod for Symbol.iterator.
   {
-    auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed(
+    auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
         proto, runtime, Predefined::getSymbolID(Predefined::values)));
     runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
         proto,
@@ -1813,7 +1813,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   }
 
   {
-    auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed(
+    auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
         Handle<JSArray>::vmcast(&runtime->arrayPrototype),
         runtime,
         Predefined::getSymbolID(Predefined::toString)));

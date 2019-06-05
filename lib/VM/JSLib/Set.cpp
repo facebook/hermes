@@ -158,7 +158,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
 
   // Use the same valuesMethod for both keys() and values().
   auto propValue = runtime->makeHandle<NativeFunction>(
-      runtime->ignoreAllocationFailure(JSObject::getNamed(
+      runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
           setPrototype, runtime, Predefined::getSymbolID(Predefined::values))));
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       setPrototype,
@@ -213,7 +213,7 @@ setConstructor(void *, Runtime *runtime, NativeArgs args) {
     return selfHandle.getHermesValue();
   }
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       selfHandle, runtime, Predefined::getSymbolID(Predefined::add));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -250,7 +250,7 @@ setConstructor(void *, Runtime *runtime, NativeArgs args) {
       return selfHandle.getHermesValue();
     }
     tmpHandle = vmcast<JSObject>(nextRes->getHermesValue());
-    auto nextValueRes = JSObject::getNamed(
+    auto nextValueRes = JSObject::getNamed_RJS(
         tmpHandle, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(nextValueRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;

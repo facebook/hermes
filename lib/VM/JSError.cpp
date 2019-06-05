@@ -115,7 +115,7 @@ ExecutionStatus JSError::setMessage(
     Handle<> message) {
   auto stringMessage = Handle<StringPrimitive>::dyn_vmcast(runtime, message);
   if (LLVM_UNLIKELY(!stringMessage)) {
-    auto strRes = toString(runtime, message);
+    auto strRes = toString_RJS(runtime, message);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -330,7 +330,7 @@ void JSError::constructStackTraceString(
     SmallU16String<32> &stack) {
   GCScope gcScope(runtime);
   // First of all, the stacktrace string starts with error.toString.
-  auto res = toString(runtime, selfHandle);
+  auto res = toString_RJS(runtime, selfHandle);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     // If toString throws an exception, we just use <error>.
     stack.append(u"<error>");

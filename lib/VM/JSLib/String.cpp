@@ -456,7 +456,7 @@ stringConstructor(void *, Runtime *runtime, NativeArgs args) {
     return str->getHermesValue();
   }
 
-  auto sRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto sRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (sRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -516,8 +516,8 @@ stringFromCodePoint(void *, Runtime *runtime, NativeArgs args) {
     marker.flush();
     // 5a. Let next be codePoints[nextIndex].
     next = args.getArg(nextIndex);
-    // 5b. Let nextCP be ToNumber(next).
-    auto nextCPRes = toNumber(runtime, next);
+    // 5b. Let nextCP be toNumber_RJS(next).
+    auto nextCPRes = toNumber_RJS(runtime, next);
     if (LLVM_UNLIKELY(nextCPRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -574,7 +574,7 @@ stringRaw(void *, Runtime *runtime, NativeArgs args) {
   auto cooked = runtime->makeHandle<JSObject>(*cookedRes);
 
   // 5. Let raw be ToObject(Get(cooked, "raw")).
-  auto getRes = JSObject::getNamed(
+  auto getRes = JSObject::getNamed_RJS(
       cooked, runtime, Predefined::getSymbolID(Predefined::raw));
   if (LLVM_UNLIKELY(getRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -586,7 +586,7 @@ stringRaw(void *, Runtime *runtime, NativeArgs args) {
   auto raw = runtime->makeHandle<JSObject>(*rawRes);
 
   // 7. Let literalSegments be ToLength(Get(raw, "length"))
-  auto lengthRes = JSObject::getNamed(
+  auto lengthRes = JSObject::getNamed_RJS(
       raw, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -618,12 +618,12 @@ stringRaw(void *, Runtime *runtime, NativeArgs args) {
   for (;; marker.flush()) {
     // 12. a. Let nextKey be ToString(nextIndex).
     // 12. b. Let nextSeg be ToString(Get(raw, nextKey)).
-    auto nextSegPropRes = JSObject::getComputed(raw, runtime, nextIndex);
+    auto nextSegPropRes = JSObject::getComputed_RJS(raw, runtime, nextIndex);
     if (LLVM_UNLIKELY(nextSegPropRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     tmpHandle = *nextSegPropRes;
-    auto nextSegRes = toString(runtime, tmpHandle);
+    auto nextSegRes = toString_RJS(runtime, tmpHandle);
     if (LLVM_UNLIKELY(nextSegRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -647,7 +647,7 @@ stringRaw(void *, Runtime *runtime, NativeArgs args) {
       // Add one to nextIndex to get index in substitutions.
       next = args.getArg(nextIndex->getNumberAs<int64_t>() + 1);
       // 12. h. Let nextSub be ToString(next).
-      auto nextSubRes = toString(runtime, next);
+      auto nextSubRes = toString_RJS(runtime, next);
       if (LLVM_UNLIKELY(nextSubRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -694,7 +694,7 @@ stringPrototypeCharAt(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strRes = toString(runtime, thisValue);
+  auto strRes = toString_RJS(runtime, thisValue);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -724,7 +724,7 @@ stringPrototypeCharCodeAt(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strRes = toString(runtime, thisValue);
+  auto strRes = toString_RJS(runtime, thisValue);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -752,7 +752,7 @@ stringPrototypeCodePointAt(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // 2. Let S be ToString(O).
-  auto strRes = toString(runtime, args.getThisHandle());
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -807,7 +807,7 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strRes = toString(runtime, args.getThisHandle());
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -826,7 +826,7 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   // Run toString on the arguments to figure out the final size.
   auto marker = gcScope.createMarker();
   for (uint32_t i = 0; i < argCount; ++i) {
-    auto strRes = toString(runtime, args.getArgHandle(runtime, i));
+    auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, i));
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -869,7 +869,7 @@ stringPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strRes = toString(runtime, args.getThisHandle());
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -949,7 +949,7 @@ CallResult<HermesValue> splitInternal(
     Handle<> string,
     Handle<> limit,
     Handle<> separator) {
-  auto strRes = toString(runtime, string);
+  auto strRes = toString_RJS(runtime, string);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -968,7 +968,7 @@ CallResult<HermesValue> splitInternal(
     // No limit supplied, make it max.
     lim = 0xffffffff; // 2 ^ 32 - 1
   } else {
-    auto intRes = toUInt32(runtime, limit);
+    auto intRes = toUInt32_RJS(runtime, limit);
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -980,7 +980,7 @@ CallResult<HermesValue> splitInternal(
   if (vmisa<JSRegExp>(separator.get())) {
     R = separator.get();
   } else {
-    auto strRes = toString(runtime, separator);
+    auto strRes = toString_RJS(runtime, separator);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1179,7 +1179,7 @@ stringPrototypeSubstring(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strRes = toString(runtime, args.getThisHandle());
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1302,7 +1302,7 @@ stringPrototypeToLowerCase(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto res = toString(runtime, args.getThisHandle());
+  auto res = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1316,7 +1316,7 @@ stringPrototypeToLocaleLowerCase(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto res = toString(runtime, args.getThisHandle());
+  auto res = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1330,7 +1330,7 @@ stringPrototypeToUpperCase(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto res = toString(runtime, args.getThisHandle());
+  auto res = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1344,7 +1344,7 @@ stringPrototypeToLocaleUpperCase(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto res = toString(runtime, args.getThisHandle());
+  auto res = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1357,7 +1357,7 @@ stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strRes = toString(runtime, args.getThisHandle());
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1431,7 +1431,7 @@ stringPrototypeTrim(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto res = toString(runtime, args.getThisHandle());
+  auto res = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1458,7 +1458,7 @@ stringPrototypeTrimLeft(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto res = toString(runtime, args.getThisHandle());
+  auto res = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1484,7 +1484,7 @@ stringPrototypeTrimRight(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto res = toString(runtime, args.getThisHandle());
+  auto res = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1523,13 +1523,13 @@ stringDirectedIndexOf(Runtime *runtime, NativeArgs args, bool reverse) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strRes = toString(runtime, thisValue);
+  auto strRes = toString_RJS(runtime, thisValue);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto S = toHandle(runtime, std::move(*strRes));
 
-  auto searchStrRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (searchStrRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1537,7 +1537,7 @@ stringDirectedIndexOf(Runtime *runtime, NativeArgs args, bool reverse) {
 
   double pos;
   if (reverse) {
-    auto intRes = toNumber(runtime, runtime->makeHandle(args.getArg(1)));
+    auto intRes = toNumber_RJS(runtime, runtime->makeHandle(args.getArg(1)));
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1610,13 +1610,13 @@ stringPrototypeLocaleCompare(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto sRes = toString(runtime, thisValue);
+  auto sRes = toString_RJS(runtime, thisValue);
   if (LLVM_UNLIKELY(sRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto S = toHandle(runtime, std::move(*sRes));
 
-  auto tRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto tRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(tRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1664,7 +1664,7 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
     }
   }
   // 4. Let S be ToString(O).
-  auto strRes = toString(runtime, O);
+  auto strRes = toString_RJS(runtime, O);
   // 5. ReturnIfAbrupt(S).
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1680,7 +1680,7 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
   Handle<JSRegExp> rx = regRes.getValue();
 
   // 8. Return Invoke(rx, @@match, «‍S»).
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       rx, runtime, Predefined::getSymbolID(Predefined::SymbolMatch));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1705,7 +1705,7 @@ stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   // 2. Let S be ToString(O).
-  auto sRes = toString(runtime, O);
+  auto sRes = toString_RJS(runtime, O);
   if (LLVM_UNLIKELY(sRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1718,7 +1718,7 @@ stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
     form = NormalizationForm::C;
   } else {
     // 5. Let f be ToString(form).
-    auto fRes = toString(runtime, args.getArgHandle(runtime, 0));
+    auto fRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
     if (LLVM_UNLIKELY(fRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1764,7 +1764,7 @@ stringPrototypePad(void *ctx, Runtime *runtime, NativeArgs args) {
   }
 
   // 2. Let S be ? ToString(O).
-  auto sRes = toString(runtime, O);
+  auto sRes = toString_RJS(runtime, O);
   if (LLVM_UNLIKELY(sRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1794,7 +1794,7 @@ stringPrototypePad(void *ctx, Runtime *runtime, NativeArgs args) {
     filler = runtime->getPredefinedString(Predefined::space);
   } else {
     // 7. Else, let filler be ? ToString(fillString).
-    auto fillerRes = toString(runtime, args.getArgHandle(runtime, 1));
+    auto fillerRes = toString_RJS(runtime, args.getArgHandle(runtime, 1));
     if (LLVM_UNLIKELY(fillerRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1870,7 +1870,7 @@ stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
   }
   // 2. Let S be ToString(O).
   // 3. ReturnIfAbrupt(S).
-  auto sRes = toString(runtime, O);
+  auto sRes = toString_RJS(runtime, O);
   if (LLVM_UNLIKELY(sRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1963,13 +1963,13 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
   }
   // 4. Let string be ToString(O).
   // 5. ReturnIfAbrupt(string).
-  auto stringRes = toString(runtime, O);
+  auto stringRes = toString_RJS(runtime, O);
   if (LLVM_UNLIKELY(stringRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto string = toHandle(runtime, std::move(*stringRes));
   // 6. Let searchString be ToString(searchValue).
-  auto searchStringRes = toString(runtime, searchValue);
+  auto searchStringRes = toString_RJS(runtime, searchValue);
   // 7. ReturnIfAbrupt(searchString).
   if (LLVM_UNLIKELY(searchStringRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1983,7 +1983,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
   if (!functionalReplace) {
     // a. Let replaceValue be ToString(replaceValue).
     // b. ReturnIfAbrupt(replaceValue).
-    auto replaceValueStrRes = toString(runtime, replaceValue);
+    auto replaceValueStrRes = toString_RJS(runtime, replaceValue);
     if (LLVM_UNLIKELY(replaceValueStrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2027,7 +2027,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
     }
     // b. Let replStr be ToString(replValue).
     auto replStrRes =
-        toString(runtime, runtime->makeHandle(callRes.getValue()));
+        toString_RJS(runtime, runtime->makeHandle(callRes.getValue()));
     // c. ReturnIfAbrupt(replStr).
     if (LLVM_UNLIKELY(replStrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -2094,7 +2094,7 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
   }
   // 4. Let string be ToString(O).
   // 5. ReturnIfAbrupt(string).
-  auto strRes = toString(runtime, O);
+  auto strRes = toString_RJS(runtime, O);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2109,7 +2109,7 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
   Handle<JSRegExp> rx = *regRes;
 
   // 8. Return Invoke(rx, @@search, «string»).
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       rx, runtime, Predefined::getSymbolID(Predefined::SymbolSearch));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -2132,7 +2132,7 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // 2. Let S be ToString(O).
-  auto strRes = toString(runtime, args.getThisHandle());
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2151,7 +2151,7 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // 7. Let searchStr be ToString(searchString).
-  auto searchStrRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(searchStrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2210,7 +2210,7 @@ static CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
   }
 
   // 2. Let S be ToString(O).
-  auto strRes = toString(runtime, args.getThisHandle());
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2229,7 +2229,7 @@ static CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
   }
 
   // 7. Let searchStr be ToString(searchString).
-  auto searchStrRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(searchStrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2287,7 +2287,7 @@ stringPrototypeSymbolIterator(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strRes = toString(runtime, thisValue);
+  auto strRes = toString_RJS(runtime, thisValue);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

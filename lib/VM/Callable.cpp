@@ -316,7 +316,7 @@ CallResult<HermesValue> Callable::executeConstruct1(
 CallResult<HermesValue> Callable::createThisForConstruct(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
-  auto prototypeProp = JSObject::getNamed(
+  auto prototypeProp = JSObject::getNamed_RJS(
       selfHandle, runtime, Predefined::getSymbolID(Predefined::prototype));
   if (LLVM_UNLIKELY(prototypeProp == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -469,7 +469,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
   }
 
   // Set the name by prepending "bound ".
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       target, runtime, Predefined::getSymbolID(Predefined::name));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -550,7 +550,7 @@ CallResult<HermesValue> BoundFunction::_newObjectImpl(
   // We must duplicate the [[Construct]] functionality here.
 
   // Obtain "target.prototype".
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       targetHandle, runtime, Predefined::getSymbolID(Predefined::prototype));
   if (propRes == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;

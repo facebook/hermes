@@ -462,7 +462,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
     return runtime_->raiseStackOverflow();
   }
 
-  auto propRes = JSObject::getComputed(holder, runtime_, property);
+  auto propRes = JSObject::getComputed_RJS(holder, runtime_, property);
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -497,7 +497,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   // We have delayed converting the property to a string if it was index.
   // Now we have to do it because we are passing it to the reviver.
   tmpHandle = *property;
-  auto strRes = toString(runtime_, tmpHandle);
+  auto strRes = toString_RJS(runtime_, tmpHandle);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -585,7 +585,8 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
 
     // Get the property value.
     tmpHandle_ = HermesValue::encodeDoubleValue(index);
-    auto propRes = JSObject::getComputed(replacerArray, runtime_, tmpHandle_);
+    auto propRes =
+        JSObject::getComputed_RJS(replacerArray, runtime_, tmpHandle_);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -596,7 +597,7 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
       tmpHandle_ = v;
     } else if (v.isNumber() || vmisa<JSNumber>(v) || vmisa<JSString>(v)) {
       tmpHandle_ = v;
-      auto strRes = toString(runtime_, tmpHandle_);
+      auto strRes = toString_RJS(runtime_, tmpHandle_);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -668,7 +669,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
 
   // Str.1: access holder[key].
   auto propRes =
-      JSObject::getComputed(operationStrHolder_, runtime_, tmpHandle_);
+      JSObject::getComputed_RJS(operationStrHolder_, runtime_, tmpHandle_);
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -679,7 +680,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     // Str.2.
     // Str.2.a: check if toJSON exists in value.
     if (LLVM_UNLIKELY(
-            (propRes = JSObject::getNamed(
+            (propRes = JSObject::getNamed_RJS(
                  valueObj,
                  runtime_,
                  Predefined::getSymbolID(Predefined::toJSON))) ==
@@ -691,7 +692,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
             runtime_, runtime_->makeHandle(*propRes))) {
       if (!tmpHandle_->isString()) {
         // Lazily convert key to a string.
-        auto status = toString(runtime_, tmpHandle_);
+        auto status = toString_RJS(runtime_, tmpHandle_);
         assert(
             status != ExecutionStatus::EXCEPTION &&
             "toString on a property cannot fail");
@@ -712,7 +713,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     // Str.3.a.
     if (!tmpHandle_->isString()) {
       // Lazily convert key to a string.
-      auto status = toString(runtime_, tmpHandle_);
+      auto status = toString_RJS(runtime_, tmpHandle_);
       assert(
           status != ExecutionStatus::EXCEPTION &&
           "toString on a property cannot fail");
@@ -765,7 +766,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
   // Str.9.
   if (operationStrValue_->isNumber()) {
     if (std::isfinite(operationStrValue_->getNumber())) {
-      auto status = toString(runtime_, operationStrValue_);
+      auto status = toString_RJS(runtime_, operationStrValue_);
       assert(
           status != ExecutionStatus::EXCEPTION &&
           "toString on a number cannot fail");
@@ -919,7 +920,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
       // with strings, numbers, and undefined only.
       // None of them are objects, so toString cannot throw.
       assert(!tmpHandle_->isObject() && "property name is an object");
-      auto status = toString(runtime_, tmpHandle_);
+      auto status = toString_RJS(runtime_, tmpHandle_);
       assert(
           status != ExecutionStatus::EXCEPTION &&
           "toString on a property cannot fail");

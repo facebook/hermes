@@ -137,7 +137,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   strBuf.append("function ");
 
   // Extract the name.
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       func, runtime, Predefined::getSymbolID(Predefined::name));
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -145,7 +145,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 
   // Convert the name to string, unless it is undefined.
   if (!propRes->isUndefined()) {
-    auto strRes = toString(runtime, runtime->makeHandle(*propRes));
+    auto strRes = toString_RJS(runtime, runtime->makeHandle(*propRes));
     if (strRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -202,12 +202,12 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
         "Can't apply() with non-object arguments list");
   }
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       argObj, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -240,7 +240,7 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
       iHandle = HermesValue::encodeDoubleValue(argIdx);
       gcScope.flushToMarker(marker);
       if (LLVM_UNLIKELY(
-              (propRes = JSObject::getComputed(argObj, runtime, iHandle)) ==
+              (propRes = JSObject::getComputed_RJS(argObj, runtime, iHandle)) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -252,7 +252,7 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
       iHandle = HermesValue::encodeNumberValue(argIdx);
       gcScope.flushToMarker(marker);
       if (LLVM_UNLIKELY(
-              (propRes = JSObject::getComputed(argObj, runtime, iHandle)) ==
+              (propRes = JSObject::getComputed_RJS(argObj, runtime, iHandle)) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }

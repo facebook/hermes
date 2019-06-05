@@ -146,7 +146,7 @@ CallResult<HermesValue> Runtime::getNamed(
     }
     return JSObject::getNamedSlotValue(*obj, desc);
   }
-  return JSObject::getNamed(obj, this, sym);
+  return JSObject::getNamed_RJS(obj, this, sym);
 }
 
 ExecutionStatus Runtime::putNamedThrowOnError(
@@ -173,7 +173,7 @@ ExecutionStatus Runtime::putNamedThrowOnError(
     JSObject::setNamedSlotValue(*obj, this, desc.slot, hv);
     return ExecutionStatus::RETURNED;
   }
-  return JSObject::putNamed(
+  return JSObject::putNamed_RJS(
              obj, this, sym, makeHandle(hv), PropOpFlags().plusThrowOnError())
       .getStatus();
 }
@@ -764,7 +764,7 @@ void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
   CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
   if (auto objHandle = Handle<JSObject>::dyn_vmcast(this, valueHandle)) {
     if (LLVM_UNLIKELY(
-            (propRes = JSObject::getNamed(
+            (propRes = JSObject::getNamed_RJS(
                  objHandle,
                  this,
                  Predefined::getSymbolID(Predefined::stack))) ==
@@ -777,7 +777,7 @@ void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
   if (LLVM_UNLIKELY(
           propRes == ExecutionStatus::EXCEPTION || propRes->isUndefined())) {
     // If stack trace is unavailable, we just print error.toString.
-    auto strRes = toString(this, valueHandle);
+    auto strRes = toString_RJS(this, valueHandle);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       os << "exception thrown in toString of original exception\n";
       return;
@@ -788,7 +788,7 @@ void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
     return;
   }
   // stack trace is available, try to convert it to string.
-  auto strRes = toString(this, makeHandle(*propRes));
+  auto strRes = toString_RJS(this, makeHandle(*propRes));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     os << "exception thrown in toString of stack trace\n";
     return;
@@ -798,7 +798,7 @@ void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
     str.invalidate();
     // If the final value is the empty string,
     // fall back to just printing the error.toString directly.
-    auto errToStringRes = toString(this, valueHandle);
+    auto errToStringRes = toString_RJS(this, valueHandle);
     if (LLVM_UNLIKELY(errToStringRes == ExecutionStatus::EXCEPTION)) {
       os << "exception thrown in toString of original exception\n";
       return;
@@ -1170,7 +1170,7 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
     auto objectName = (Predefined::Str)builtinMethods[methodIndex].object;
     if (objectName != lastObjectName) {
       auto objectID = Predefined::getSymbolID(objectName);
-      auto cr = JSObject::getNamed(getGlobal(), this, objectID);
+      auto cr = JSObject::getNamed_RJS(getGlobal(), this, objectID);
       assert(
           cr.getStatus() != ExecutionStatus::EXCEPTION &&
           "getNamed() of builtin object failed");
@@ -1205,7 +1205,7 @@ void Runtime::initBuiltinTable() {
                            Predefined::Str /* objectName */,
                            Handle<JSObject> &currentObject,
                            SymbolID methodID) {
-    auto cr = JSObject::getNamed(currentObject, this, methodID);
+    auto cr = JSObject::getNamed_RJS(currentObject, this, methodID);
     assert(
         cr.getStatus() != ExecutionStatus::EXCEPTION &&
         "getNamed() of builtin method failed");
@@ -1226,7 +1226,7 @@ ExecutionStatus Runtime::assertBuiltinsUnmodified() {
                             Predefined::Str /* objectName */,
                             Handle<JSObject> &currentObject,
                             SymbolID methodID) {
-    auto cr = JSObject::getNamed(currentObject, this, methodID);
+    auto cr = JSObject::getNamed_RJS(currentObject, this, methodID);
     assert(
         cr.getStatus() != ExecutionStatus::EXCEPTION &&
         "getNamed() of builtin method failed");

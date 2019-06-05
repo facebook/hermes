@@ -365,7 +365,7 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       arrayPrototypeIterator,
       0);
 
-  auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed(
+  auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
       arrayPrototype, runtime, Predefined::getSymbolID(Predefined::values)));
   runtime->arrayPrototypeValues = propValue;
 
@@ -548,7 +548,7 @@ arrayOf(void *, Runtime *runtime, NativeArgs args) {
 
   // 9. Let setStatus be Set(A, "length", len, true).
   // 10. ReturnIfAbrupt(setStatus).
-  auto setStatus = JSObject::putNamed(
+  auto setStatus = JSObject::putNamed_RJS(
       A,
       runtime,
       Predefined::getSymbolID(Predefined::length),
@@ -600,7 +600,7 @@ arrayPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   }
   auto array = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       array, runtime, Predefined::getSymbolID(Predefined::join));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -633,12 +633,12 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
     return emptyString.getHermesValue();
   }
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       array, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -669,7 +669,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   while (i->getNumber() < len) {
     gcScope.flushToMarker(marker);
     if (LLVM_UNLIKELY(
-            (propRes = JSObject::getComputed(array, runtime, i)) ==
+            (propRes = JSObject::getComputed_RJS(array, runtime, i)) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -686,7 +686,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
 
       // Retrieve the toLocaleString function.
       if (LLVM_UNLIKELY(
-              (propRes = JSObject::getNamed(
+              (propRes = JSObject::getNamed_RJS(
                    elementObj,
                    runtime,
                    Predefined::getSymbolID(Predefined::toLocaleString))) ==
@@ -699,7 +699,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
         if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
-        auto strRes = toString(runtime, runtime->makeHandle(*callRes));
+        auto strRes = toString_RJS(runtime, runtime->makeHandle(*callRes));
         if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -808,7 +808,7 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
         // Fast path: E is an array.
         len = JSArray::getLength(*arrHandle);
       } else {
-        CallResult<HermesValue> lengthRes = JSObject::getNamed(
+        CallResult<HermesValue> lengthRes = JSObject::getNamed_RJS(
             objHandle, runtime, Predefined::getSymbolID(Predefined::length));
         if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
@@ -943,7 +943,7 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   // Use doubles for all lengths and indices to allow for proper Infinity
   // handling, because ToInteger may return Infinity and we must do double
   // arithmetic.
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1053,7 +1053,7 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
       // iii. Let setStatus be Set(O, toKey, fromVal, true).
       // iv. ReturnIfAbrupt(setStatus).
       if (LLVM_UNLIKELY(
-              JSObject::putComputed(
+              JSObject::putComputed_RJS(
                   O,
                   runtime,
                   toHandle,
@@ -1106,12 +1106,12 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
     return emptyString.getHermesValue();
   }
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1122,7 +1122,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
       ? runtime->makeHandle(HermesValue::encodeStringValue(
             runtime->getPredefinedString(Predefined::comma)))
       : args.getArgHandle(runtime, 0);
-  auto strRes = toString(runtime, separator);
+  auto strRes = toString_RJS(runtime, separator);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1154,7 +1154,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
 
     GCScope gcScope2(runtime);
     if (LLVM_UNLIKELY(
-            (propRes = JSObject::getComputed(O, runtime, i)) ==
+            (propRes = JSObject::getComputed_RJS(O, runtime, i)) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1164,8 +1164,8 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
     if (elem->isUndefined() || elem->isNull()) {
       JSArray::setElementAt(strings, runtime, i->getNumber(), emptyString);
     } else {
-      // Otherwise, call toString() and push the result, incrementing size.
-      auto strRes = toString(runtime, elem);
+      // Otherwise, call toString_RJS() and push the result, incrementing size.
+      auto strRes = toString_RJS(runtime, elem);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1206,12 +1206,12 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
   }
   auto O = runtime->makeHandle<JSObject>(res.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1219,7 +1219,7 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
 
   if (len == 0) {
     if (LLVM_UNLIKELY(
-            JSObject::putNamed(
+            JSObject::putNamed_RJS(
                 O,
                 runtime,
                 Predefined::getSymbolID(Predefined::length),
@@ -1232,7 +1232,7 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
 
   auto idxVal = runtime->makeHandle(HermesValue::encodeDoubleValue(len - 1));
   if (LLVM_UNLIKELY(
-          (propRes = JSObject::getComputed(O, runtime, idxVal)) ==
+          (propRes = JSObject::getComputed_RJS(O, runtime, idxVal)) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1245,7 +1245,7 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
   }
 
   if (LLVM_UNLIKELY(
-          JSObject::putNamed(
+          JSObject::putNamed_RJS(
               O,
               runtime,
               Predefined::getSymbolID(Predefined::length),
@@ -1276,12 +1276,12 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
     n = HermesValue::encodeNumberValue(len);
   } else {
     // Slow path, used when pushing onto non-array objects.
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         O, runtime, Predefined::getSymbolID(Predefined::length));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+    auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1297,7 +1297,7 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
   // values for keys that haven't been inserted into O yet.
   for (auto arg : args.handles()) {
     if (LLVM_UNLIKELY(
-            JSObject::putComputed(
+            JSObject::putComputed_RJS(
                 O, runtime, n, arg, PropOpFlags().plusThrowOnError()) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1309,7 +1309,7 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
   // Spec requires that we do this after pushing the elements,
   // so if there's too many at the end, this may throw after modifying O.
   if (LLVM_UNLIKELY(
-          JSObject::putNamed(
+          JSObject::putNamed_RJS(
               O,
               runtime,
               Predefined::getSymbolID(Predefined::length),
@@ -1328,12 +1328,12 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1379,7 +1379,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
       }
       upperValue = propRes.getValue();
       if (LLVM_UNLIKELY(
-              JSObject::putComputed(
+              JSObject::putComputed_RJS(
                   O,
                   runtime,
                   lower,
@@ -1389,7 +1389,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
       if (LLVM_UNLIKELY(
-              JSObject::putComputed(
+              JSObject::putComputed_RJS(
                   O,
                   runtime,
                   upper,
@@ -1406,7 +1406,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
       }
       upperValue = propRes.getValue();
       if (LLVM_UNLIKELY(
-              JSObject::putComputed(
+              JSObject::putComputed_RJS(
                   O,
                   runtime,
                   lower,
@@ -1435,7 +1435,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
       if (LLVM_UNLIKELY(
-              JSObject::putComputed(
+              JSObject::putComputed_RJS(
                   O,
                   runtime,
                   upper,
@@ -1461,12 +1461,12 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1474,7 +1474,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
 
   if (len == 0) {
     // Need to set length to 0 per spec.
-    if (JSObject::putNamed(
+    if (JSObject::putNamed_RJS(
             O,
             runtime,
             Predefined::getSymbolID(Predefined::length),
@@ -1486,7 +1486,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
 
   auto idxVal = runtime->makeHandle(HermesValue::encodeDoubleValue(0));
   if (LLVM_UNLIKELY(
-          (propRes = JSObject::getComputed(O, runtime, idxVal)) ==
+          (propRes = JSObject::getComputed_RJS(O, runtime, idxVal)) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1519,7 +1519,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
       }
       fromVal = propRes.getValue();
       if (LLVM_UNLIKELY(
-              JSObject::putComputed(
+              JSObject::putComputed_RJS(
                   O, runtime, to, fromVal, PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -1550,7 +1550,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
 
   // Decrement length.
   if (LLVM_UNLIKELY(
-          JSObject::putNamed(
+          JSObject::putNamed_RJS(
               O,
               runtime,
               Predefined::getSymbolID(Predefined::length),
@@ -1575,12 +1575,12 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   }
   auto A = toHandle(runtime, std::move(*arrRes));
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1750,7 +1750,7 @@ class StandardSortModel : public SortModel {
 
     if (bDescObjHandle_) {
       if (LLVM_UNLIKELY(
-              JSObject::putComputed(
+              JSObject::putComputed_RJS(
                   obj_,
                   runtime_,
                   aHandle_,
@@ -1770,7 +1770,7 @@ class StandardSortModel : public SortModel {
 
     if (aDescObjHandle_) {
       if (LLVM_UNLIKELY(
-              JSObject::putComputed(
+              JSObject::putComputed_RJS(
                   obj_,
                   runtime_,
                   bHandle_,
@@ -1850,26 +1850,26 @@ class StandardSortModel : public SortModel {
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto intRes = toNumber(runtime_, runtime_->makeHandle(*callRes));
+      auto intRes = toNumber_RJS(runtime_, runtime_->makeHandle(*callRes));
       if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       return intRes->getNumber() < 0;
     } else {
       // Convert both arguments to strings and use the lessOp on them.
-      auto aValueRes = toString(runtime_, aValue_);
+      auto aValueRes = toString_RJS(runtime_, aValue_);
       if (LLVM_UNLIKELY(aValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       aValue_ = aValueRes->getHermesValue();
 
-      auto bValueRes = toString(runtime_, bValue_);
+      auto bValueRes = toString_RJS(runtime_, bValue_);
       if (LLVM_UNLIKELY(bValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       bValue_ = bValueRes->getHermesValue();
 
-      return lessOp(runtime_, aValue_, bValue_).getValue();
+      return lessOp_RJS(runtime_, aValue_, bValue_).getValue();
     }
   }
 };
@@ -1891,12 +1891,12 @@ arrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1929,12 +1929,12 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
   }
   auto A = toHandle(runtime, std::move(*arrRes));
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2039,7 +2039,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
         }
         fromValue = propRes.getValue();
         if (LLVM_UNLIKELY(
-                JSObject::putComputed(
+                JSObject::putComputed_RJS(
                     O,
                     runtime,
                     to,
@@ -2099,7 +2099,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
         }
         fromValue = propRes.getValue();
         if (LLVM_UNLIKELY(
-                JSObject::putComputed(
+                JSObject::putComputed_RJS(
                     O,
                     runtime,
                     to,
@@ -2128,7 +2128,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
     k = HermesValue::encodeDoubleValue(actualStart);
     for (size_t j = 2; j < argCount; ++j) {
       if (LLVM_UNLIKELY(
-              JSObject::putComputed(
+              JSObject::putComputed_RJS(
                   O,
                   runtime,
                   k,
@@ -2143,7 +2143,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
   }
 
   if (LLVM_UNLIKELY(
-          JSObject::putNamed(
+          JSObject::putNamed_RJS(
               O,
               runtime,
               Predefined::getSymbolID(Predefined::length),
@@ -2166,12 +2166,12 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2211,7 +2211,7 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
       }
       fromValue = propRes.getValue();
       if (LLVM_UNLIKELY(
-              JSObject::putComputed(
+              JSObject::putComputed_RJS(
                   O,
                   runtime,
                   to,
@@ -2235,7 +2235,7 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
   // Put the arguments into the beginning of the array.
   for (auto arg : args.handles()) {
     if (LLVM_UNLIKELY(
-            JSObject::putComputed(
+            JSObject::putComputed_RJS(
                 O, runtime, j, arg, PropOpFlags().plusThrowOnError()) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -2247,7 +2247,7 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
   // Increment length by argCount.
   auto newLen = HermesValue::encodeDoubleValue(len + argCount);
   if (LLVM_UNLIKELY(
-          JSObject::putNamed(
+          JSObject::putNamed_RJS(
               O,
               runtime,
               Predefined::getSymbolID(Predefined::length),
@@ -2268,12 +2268,12 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2374,12 +2374,12 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2466,12 +2466,12 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2533,12 +2533,12 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2609,12 +2609,12 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2694,7 +2694,7 @@ arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
   // Get the length.
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -2734,7 +2734,7 @@ arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   auto marker = gcScope.createMarker();
   while (k->getDouble() < actualEnd) {
     if (LLVM_UNLIKELY(
-            JSObject::putComputed(
+            JSObject::putComputed_RJS(
                 O, runtime, k, value, PropOpFlags().plusThrowOnError()) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -2756,7 +2756,7 @@ arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
   // Get the length.
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -2782,7 +2782,7 @@ arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
   while (kHandle->getNumber() < len) {
     gcScope.flushToMarker(marker);
     if (LLVM_UNLIKELY(
-            (propRes = JSObject::getComputed(O, runtime, kHandle)) ==
+            (propRes = JSObject::getComputed_RJS(O, runtime, kHandle)) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2823,12 +2823,12 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2962,7 +2962,7 @@ arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
   auto O = runtime->makeHandle<JSObject>(*oRes);
 
   // 2. Let len be ? ToLength(? Get(O, "length")).
-  auto lenPropRes = JSObject::getNamed(
+  auto lenPropRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(lenPropRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -3011,7 +3011,7 @@ arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
 
     // 7a. Let elementK be the result of ? Get(O, ! ToString(k)).
     kHandle = HermesValue::encodeNumberValue(k);
-    auto elementKRes = JSObject::getComputed(O, runtime, kHandle);
+    auto elementKRes = JSObject::getComputed_RJS(O, runtime, kHandle);
     if (LLVM_UNLIKELY(elementKRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -3131,7 +3131,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
         // 1. Let setStatus be Set(A, "length", k, true).
         // 2. ReturnIfAbrupt(setStatus).
         // 3. Return A.
-        auto setStatus = JSObject::putNamed(
+        auto setStatus = JSObject::putNamed_RJS(
             A,
             runtime,
             Predefined::getSymbolID(Predefined::length),
@@ -3144,7 +3144,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
       }
       // v. Let nextValue be IteratorValue(next).
       // vi. ReturnIfAbrupt(nextValue).
-      auto propRes = JSObject::getNamed(
+      auto propRes = JSObject::getNamed_RJS(
           *next, runtime, Predefined::getSymbolID(Predefined::value));
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -3194,7 +3194,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   auto arrayLike = runtime->makeHandle<JSObject>(objRes.getValue());
   // 10. Let len be ToLength(Get(arrayLike, "length")).
   // 11. ReturnIfAbrupt(len).
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       arrayLike, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -3242,7 +3242,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     }
     auto pkHandle = pkRes.getValue();
     // b. Let kValue be Get(arrayLike, Pk).
-    propRes = JSObject::getComputed(arrayLike, runtime, k);
+    propRes = JSObject::getComputed_RJS(arrayLike, runtime, k);
     // c. ReturnIfAbrupt(kValue).
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -3278,7 +3278,7 @@ arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     k = HermesValue::encodeNumberValue(k->getNumber() + 1);
   }
   // 17. Let setStatus be Set(A, "length", len, true).
-  auto setStatus = JSObject::putNamed(
+  auto setStatus = JSObject::putNamed_RJS(
       A,
       runtime,
       Predefined::getSymbolID(Predefined::length),

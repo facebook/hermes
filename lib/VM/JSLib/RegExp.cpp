@@ -293,14 +293,14 @@ static CallResult<Handle<JSRegExp>> regExpInitialize(
   MutableHandle<StringPrimitive> F = runtime->makeMutableHandle(
       runtime->getPredefinedString(Predefined::emptyString));
   if (!pattern->isUndefined()) {
-    auto strRes = toString(runtime, pattern);
+    auto strRes = toString_RJS(runtime, pattern);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     P = strRes->get();
   }
   if (!flags->isUndefined()) {
-    auto strRes = toString(runtime, flags);
+    auto strRes = toString_RJS(runtime, flags);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -341,7 +341,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
   // TODO: right now the NewTarget can only be the RegExp constructor itself,
   // after supporting subclassing, NewTarget could be the constructor of the
   // derived class.
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       runtime->getGlobal(),
       runtime,
       Predefined::getSymbolID(Predefined::RegExp));
@@ -359,7 +359,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
       // i. Let patternConstructor be Get(pattern, "constructor").
       // ii. ReturnIfAbrupt(patternConstructor).
       auto patternObj = Handle<JSObject>::vmcast(pattern);
-      auto patternConstructor = JSObject::getNamed(
+      auto patternConstructor = JSObject::getNamed_RJS(
           patternObj,
           runtime,
           Predefined::getSymbolID(Predefined::constructor));
@@ -400,7 +400,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
     //   a. Let P be Get(pattern, "source").
     //   b. ReturnIfAbrupt(P).
     Handle<JSObject> patternObj = Handle<JSObject>::vmcast(pattern);
-    propRes = JSObject::getNamed(
+    propRes = JSObject::getNamed_RJS(
         patternObj, runtime, Predefined::getSymbolID(Predefined::source));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -410,7 +410,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
     if (flags->isUndefined()) {
       //   i. Let F be Get(pattern, "flags").
       //   ii. ReturnIfAbrupt(F).
-      propRes = JSObject::getNamed(
+      propRes = JSObject::getNamed_RJS(
           patternObj, runtime, Predefined::getSymbolID(Predefined::flags));
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -627,8 +627,8 @@ static CallResult<HermesValue>
 regExpExec(Runtime *runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
   // 3. Let exec be Get(R, "exec").
   // 4. ReturnIfAbrupt(exec).
-  auto propRes =
-      JSObject::getNamed(R, runtime, Predefined::getSymbolID(Predefined::exec));
+  auto propRes = JSObject::getNamed_RJS(
+      R, runtime, Predefined::getSymbolID(Predefined::exec));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -674,7 +674,7 @@ regExpPrototypeExec(void *, Runtime *runtime, NativeArgs args) {
         "RegExp function called on non-RegExp object");
   }
 
-  auto strRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (strRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -717,24 +717,24 @@ regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // Let pattern be ToString(Get(R, "source"))
-  auto source = JSObject::getNamed(
+  auto source = JSObject::getNamed_RJS(
       regexp, runtime, Predefined::getSymbolID(Predefined::source));
   if (LLVM_UNLIKELY(source == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto patternRes = toString(runtime, runtime->makeHandle(*source));
+  auto patternRes = toString_RJS(runtime, runtime->makeHandle(*source));
   if (LLVM_UNLIKELY(patternRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   Handle<StringPrimitive> pattern = toHandle(runtime, std::move(*patternRes));
 
   // Let flags be ToString(Get(R, "flags"))
-  auto flagsObj = JSObject::getNamed(
+  auto flagsObj = JSObject::getNamed_RJS(
       regexp, runtime, Predefined::getSymbolID(Predefined::flags));
   if (LLVM_UNLIKELY(flagsObj == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto flagsRes = toString(runtime, runtime->makeHandle(*flagsObj));
+  auto flagsRes = toString_RJS(runtime, runtime->makeHandle(*flagsObj));
   if (LLVM_UNLIKELY(flagsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -844,7 +844,7 @@ regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   };
   for (FlagProp f : flagProps) {
     auto flagVal =
-        JSObject::getNamed(R, runtime, Predefined::getSymbolID(f.name));
+        JSObject::getNamed_RJS(R, runtime, Predefined::getSymbolID(f.name));
     if (LLVM_UNLIKELY(flagVal == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -991,14 +991,14 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   }
   // 3. Let S be ToString(string)
   // 4. ReturnIfAbrupt(S).
-  auto strRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (strRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   auto S = toHandle(runtime, std::move(*strRes));
   // 5. Let global be ToBoolean(Get(rx, "global")).
   // 6. ReturnIfAbrupt(global).
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       rx, runtime, Predefined::getSymbolID(Predefined::global));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1058,12 +1058,12 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
     auto resultObj = Handle<JSObject>::vmcast(result);
     // 1. Let matchStr be ToString(Get(result, "0")).
     // 2. ReturnIfAbrupt(matchStr).
-    auto propRes2 = JSObject::getComputed(resultObj, runtime, zeroHandle);
+    auto propRes2 = JSObject::getComputed_RJS(resultObj, runtime, zeroHandle);
     if (propRes2 == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     propValue = propRes2.getValue();
-    auto strRes2 = toString(runtime, propValue);
+    auto strRes2 = toString_RJS(runtime, propValue);
     if (strRes2 == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1120,7 +1120,7 @@ regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
   }
   // 3. Let S be ToString(string).
   // 4. ReturnIfAbrupt(S).
-  auto strRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1160,7 +1160,7 @@ regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!resultObj)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return JSObject::getNamed(
+  return JSObject::getNamed_RJS(
       resultObj, runtime, Predefined::getSymbolID(Predefined::index));
 }
 
@@ -1310,7 +1310,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   }
   // 3. Let S be ToString(string).
   // 4. ReturnIfAbrupt(S).
-  auto strRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1325,7 +1325,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   if (!replaceFn) {
     //   a. Let replaceValue be ToString(replaceValue).
     //   b. ReturnIfAbrupt(replaceValue).
-    auto strRes = toString(runtime, replaceValue);
+    auto strRes = toString_RJS(runtime, replaceValue);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1333,7 +1333,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   }
   // 8. Let global be ToBoolean(Get(rx, "global")).
   // 9. ReturnIfAbrupt(global).
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       rx, runtime, Predefined::getSymbolID(Predefined::global));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1401,12 +1401,12 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
       // iii. Else,
       // 1. Let matchStr be ToString(Get(result, "0")).
       // 2. ReturnIfAbrupt(matchStr).
-      propRes = JSObject::getComputed(result, runtime, zeroHandle);
+      propRes = JSObject::getComputed_RJS(result, runtime, zeroHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       propValue = propRes.getValue();
-      auto strRes = toString(runtime, propValue);
+      auto strRes = toString_RJS(runtime, propValue);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1454,7 +1454,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     result = vmcast<JSObject>(resultsHandle->at(i));
     // a. Let nCaptures be ToLength(Get(result, "length")).
     // b. ReturnIfAbrupt(nCaptures).
-    propRes = JSObject::getNamed(
+    propRes = JSObject::getNamed_RJS(
         result, runtime, Predefined::getSymbolID(Predefined::length));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1470,11 +1470,12 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     nCaptures = nCaptures > 0 ? nCaptures - 1 : 0;
     // d. Let matched be ToString(Get(result, "0")).
     // e. ReturnIfAbrupt(matched).
-    propRes = JSObject::getComputed(result, runtime, zeroHandle);
+    propRes = JSObject::getComputed_RJS(result, runtime, zeroHandle);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto strRes = toString(runtime, runtime->makeHandle(propRes.getValue()));
+    auto strRes =
+        toString_RJS(runtime, runtime->makeHandle(propRes.getValue()));
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1483,7 +1484,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     uint32_t matchLength = matched->getStringLength();
     // g. Let position be ToInteger(Get(result, "index")).
     // h. ReturnIfAbrupt(position).
-    propRes = JSObject::getNamed(
+    propRes = JSObject::getNamed_RJS(
         result, runtime, Predefined::getSymbolID(Predefined::index));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1516,7 +1517,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
       // i. Let capN be Get(result, ToString(n)).
       // ii. ReturnIfAbrupt(capN).
       nHandle = HermesValue::encodeNumberValue(n);
-      propRes = JSObject::getComputed(result, runtime, nHandle);
+      propRes = JSObject::getComputed_RJS(result, runtime, nHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1525,7 +1526,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
       if (!capN->isUndefined()) {
         // 1. Let capN be ToString(capN).
         // 2. ReturnIfAbrupt(capN).
-        auto strRes = toString(runtime, capN);
+        auto strRes = toString_RJS(runtime, capN);
         if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -1577,7 +1578,8 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
         }
       }
       // v. Let replacement be ToString(replValue).
-      auto strRes = toString(runtime, runtime->makeHandle(callRes.getValue()));
+      auto strRes =
+          toString_RJS(runtime, runtime->makeHandle(callRes.getValue()));
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }

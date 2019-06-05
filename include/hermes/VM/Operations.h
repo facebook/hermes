@@ -20,7 +20,7 @@ namespace vm {
 class Runtime;
 
 /// ES6.0 7.1.1
-/// Type hint passed to toPrimitive() instead of string values.
+/// Type hint passed to toPrimitive_RJS() instead of string values.
 enum class PreferredType {
   NONE,
   STRING,
@@ -29,7 +29,7 @@ enum class PreferredType {
 
 /// ES6.0 7.1.1
 CallResult<HermesValue>
-toPrimitive(Runtime *runtime, Handle<> valueHandle, PreferredType hint);
+toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint);
 
 /// ES6.0 7.1.1
 /// The OrdinaryToPrimitive operation does not attempt to use the exotic
@@ -43,7 +43,7 @@ CallResult<HermesValue> ordinaryToPrimitive(
 bool toBoolean(HermesValue value);
 
 /// ES5.1 9.3
-CallResult<HermesValue> toNumber(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toNumber_RJS(Runtime *runtime, Handle<> valueHandle);
 
 /// ES6 7.1.15
 CallResult<HermesValue> toLength(Runtime *runtime, Handle<> valueHandle);
@@ -61,7 +61,7 @@ CallResult<HermesValue> toInt8(Runtime *runtime, Handle<> valueHandle);
 CallResult<HermesValue> toInt16(Runtime *runtime, Handle<> valueHandle);
 
 /// ES5.1 9.5
-CallResult<HermesValue> toInt32(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toInt32_RJS(Runtime *runtime, Handle<> valueHandle);
 
 /// ES6 7.1.10
 CallResult<HermesValue> toUInt8(Runtime *runtime, Handle<> valueHandle);
@@ -74,10 +74,10 @@ CallResult<HermesValue> toUInt8Clamp(Runtime *runtime, Handle<> valueHandle);
 CallResult<HermesValue> toUInt16(Runtime *runtime, Handle<> valueHandle);
 
 /// ES5.1 9.6
-CallResult<HermesValue> toUInt32(Runtime *runtime, Handle<> valueHandle);
+CallResult<HermesValue> toUInt32_RJS(Runtime *runtime, Handle<> valueHandle);
 
 /// ES5.1 9.8
-CallResult<PseudoHandle<StringPrimitive>> toString(
+CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
     Runtime *runtime,
     Handle<> valueHandle);
 
@@ -91,7 +91,7 @@ inline CallResult<Handle<>> toPropertyKeyIfObject(
     Runtime *runtime,
     Handle<> valueHandle) {
   if (LLVM_UNLIKELY(valueHandle->isObject())) {
-    auto primRes = toPrimitive(runtime, valueHandle, PreferredType::STRING);
+    auto primRes = toPrimitive_RJS(runtime, valueHandle, PreferredType::STRING);
     if (LLVM_UNLIKELY(primRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -99,7 +99,7 @@ inline CallResult<Handle<>> toPropertyKeyIfObject(
     if (prim->isSymbol()) {
       return prim;
     }
-    auto res = toString(runtime, prim);
+    auto res = toString_RJS(runtime, prim);
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -147,20 +147,20 @@ bool isSameValueZero(HermesValue x, HermesValue y);
 
 /// ES5.1 11.8.1.
 CallResult<bool>
-lessOp(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
+lessOp_RJS(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
 /// ES5.1 11.8.2.
 CallResult<bool>
-greaterOp(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
+greaterOp_RJS(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
 /// ES5.1 11.8.3.
 CallResult<bool>
-lessEqualOp(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
+lessEqualOp_RJS(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
 /// ES5.1 11.8.4.
 CallResult<bool>
-greaterEqualOp(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
+greaterEqualOp_RJS(Runtime *runtime, Handle<> leftHandle, Handle<> rightHandle);
 
 /// ES5.1 11.9.3
 CallResult<HermesValue>
-abstractEqualityTest(Runtime *runtime, Handle<> xHandle, Handle<> yHandle);
+abstractEqualityTest_RJS(Runtime *runtime, Handle<> xHandle, Handle<> yHandle);
 
 /// ES5.1 11.9.6
 bool strictEqualityTest(HermesValue x, HermesValue y);
@@ -208,7 +208,7 @@ bool isPrimitive(HermesValue val);
 
 /// ES5.1 11.6.1
 CallResult<HermesValue>
-addOp(Runtime *runtime, Handle<> xHandle, Handle<> yHandle);
+addOp_RJS(Runtime *runtime, Handle<> xHandle, Handle<> yHandle);
 
 /// ES5.1 7.2
 inline bool isWhiteSpaceChar(char16_t c) {
@@ -349,7 +349,7 @@ inline uint32_t utf16Decode(char16_t lead, char16_t trail) {
 
 /// ES6.0 12.9.4
 CallResult<bool>
-instanceOfOperator(Runtime *runtime, Handle<> object, Handle<> constructor);
+instanceOfOperator_RJS(Runtime *runtime, Handle<> object, Handle<> constructor);
 
 /// ES6.0 19.4.3.2.1
 /// Returns "Symbol([description])" given a symbol.

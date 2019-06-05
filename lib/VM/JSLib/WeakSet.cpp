@@ -99,7 +99,7 @@ weakSetConstructor(void *, Runtime *runtime, NativeArgs args) {
     return selfHandle.getHermesValue();
   }
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       selfHandle, runtime, Predefined::getSymbolID(Predefined::add));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -129,7 +129,7 @@ weakSetConstructor(void *, Runtime *runtime, NativeArgs args) {
       // Done with iteration.
       return selfHandle.getHermesValue();
     }
-    auto nextValueRes = JSObject::getNamed(
+    auto nextValueRes = JSObject::getNamed_RJS(
         *nextRes, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(nextValueRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;

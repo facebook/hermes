@@ -197,7 +197,7 @@ symbolConstructor(void *, Runtime *runtime, NativeArgs args) {
     // If description is undefined, the descString will eventually be "".
     descString = runtime->getPredefinedString(Predefined::emptyString);
   } else {
-    auto descStringRes = toString(runtime, args.getArgHandle(runtime, 0));
+    auto descStringRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
     if (LLVM_UNLIKELY(descStringRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -215,7 +215,7 @@ symbolConstructor(void *, Runtime *runtime, NativeArgs args) {
 
 static CallResult<HermesValue>
 symbolFor(void *, Runtime *runtime, NativeArgs args) {
-  auto cr = toString(runtime, args.getArgHandle(runtime, 0));
+  auto cr = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

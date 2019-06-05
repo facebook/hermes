@@ -317,7 +317,7 @@ class JSArray final : public ArrayImpl {
       uint32_t newValue,
       PropOpFlags opFlags = PropOpFlags{}) {
     // TODO: optimize this now that we know the index of the property slot.
-    return putNamed(
+    return putNamed_RJS(
         selfHandle,
         runtime,
         Predefined::getSymbolID(Predefined::length),

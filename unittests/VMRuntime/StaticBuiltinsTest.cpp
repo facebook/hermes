@@ -48,7 +48,7 @@ static void verifyAllBuiltinsFrozen(Runtime *runtime) {
 #define BUILTIN_METHOD(object, method)                                \
   {                                                                   \
     auto objectID = Predefined::getSymbolID(Predefined::object);      \
-    auto cr = JSObject::getNamed(global, runtime, objectID);          \
+    auto cr = JSObject::getNamed_RJS(global, runtime, objectID);      \
     ASSERT_NE(cr, ExecutionStatus::EXCEPTION);                        \
     objHandle = vmcast<JSObject>(*cr);                                \
     auto methodID = Predefined::getSymbolID(Predefined::method);      \

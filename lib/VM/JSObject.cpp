@@ -567,15 +567,15 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertySymbols(
 /// \param nameValHandle [Handle<>] the value to convert
 /// \param str [MutableHandle<StringPrimitive>] the string is stored
 ///   there. Must be initialized to null initially.
-#define LAZY_TO_STRING(runtime, nameValHandle, str)   \
-  do {                                                \
-    if (!str) {                                       \
-      auto status = toString(runtime, nameValHandle); \
-      assert(                                         \
-          status != ExecutionStatus::EXCEPTION &&     \
-          "toString() of primitive cannot fail");     \
-      str = status->get();                            \
-    }                                                 \
+#define LAZY_TO_STRING(runtime, nameValHandle, str)       \
+  do {                                                    \
+    if (!str) {                                           \
+      auto status = toString_RJS(runtime, nameValHandle); \
+      assert(                                             \
+          status != ExecutionStatus::EXCEPTION &&         \
+          "toString() of primitive cannot fail");         \
+      str = status->get();                                \
+    }                                                     \
   } while (0)
 
 /// Convert a value to an identifier unless already converted
@@ -824,7 +824,7 @@ ExecutionStatus JSObject::getComputedDescriptor(
   return ExecutionStatus::RETURNED;
 }
 
-CallResult<HermesValue> JSObject::getNamed(
+CallResult<HermesValue> JSObject::getNamed_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -879,7 +879,7 @@ CallResult<HermesValue> JSObject::getNamedOrIndexed(
     const auto strView =
         runtime->getIdentifierTable().getStringView(runtime, name);
     if (auto nameAsIndex = toArrayIndex(strView)) {
-      return getComputed(
+      return getComputed_RJS(
           selfHandle,
           runtime,
           runtime->makeHandle(HermesValue::encodeNumberValue(*nameAsIndex)));
@@ -887,10 +887,10 @@ CallResult<HermesValue> JSObject::getNamedOrIndexed(
     // Here we have indexed properties but the symbol was not index-like.
     // Fall through to getNamed().
   }
-  return getNamed(selfHandle, runtime, name, opFlags);
+  return getNamed_RJS(selfHandle, runtime, name, opFlags);
 }
 
-CallResult<HermesValue> JSObject::getComputed(
+CallResult<HermesValue> JSObject::getComputed_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle) {
@@ -1037,7 +1037,7 @@ static ExecutionStatus raiseErrorForOverridingStaticBuiltin(
       TwineChar16(objName) + "." + TwineChar16(methodNameHnd.get()) + "'");
 }
 
-CallResult<bool> JSObject::putNamed(
+CallResult<bool> JSObject::putNamed_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
@@ -1159,7 +1159,7 @@ CallResult<bool> JSObject::putNamedOrIndexed(
     const auto strView =
         runtime->getIdentifierTable().getStringView(runtime, name);
     if (auto nameAsIndex = toArrayIndex(strView)) {
-      return putComputed(
+      return putComputed_RJS(
           selfHandle,
           runtime,
           runtime->makeHandle(HermesValue::encodeNumberValue(*nameAsIndex)),
@@ -1169,10 +1169,10 @@ CallResult<bool> JSObject::putNamedOrIndexed(
     // Here we have indexed properties but the symbol was not index-like.
     // Fall through to putNamed().
   }
-  return putNamed(selfHandle, runtime, name, valueHandle, opFlags);
+  return putNamed_RJS(selfHandle, runtime, name, valueHandle, opFlags);
 }
 
-CallResult<bool> JSObject::putComputed(
+CallResult<bool> JSObject::putComputed_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle,
@@ -1314,7 +1314,7 @@ CallResult<bool> JSObject::putComputed(
       // Check whether we need to update array's ".length" property.
       if (auto *array = dyn_vmcast<JSArray>(selfHandle.get())) {
         if (LLVM_UNLIKELY(*arrayIndex >= JSArray::getLength(array))) {
-          auto cr = putNamed(
+          auto cr = putNamed_RJS(
               selfHandle,
               runtime,
               Predefined::getSymbolID(Predefined::length),

@@ -856,9 +856,9 @@ HermesValue Debugger::getExceptionAsEvalResult(
   assert(!thrownValue->isEmpty() && "Runtime did not throw");
   runtime_->clearThrownValue();
 
-  // Set the exceptionDetails.text to toString() of the thrown value.
-  // TODO: rationalize what should happen if toString() itself throws.
-  auto res = toString(runtime_, thrownValue);
+  // Set the exceptionDetails.text to toString_RJS() of the thrown value.
+  // TODO: rationalize what should happen if toString_RJS() itself throws.
+  auto res = toString_RJS(runtime_, thrownValue);
   if (res != ExecutionStatus::EXCEPTION) {
     llvm::SmallVector<char16_t, 64> errorText;
     res->get()->copyUTF16String(errorText);

@@ -481,7 +481,7 @@ objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
       value = JSObject::getComputedSlotValue(O.get(), runtime, desc);
     } else {
       auto propRes =
-          JSObject::getComputed(O, runtime, args.getArgHandle(runtime, 1));
+          JSObject::getComputed_RJS(O, runtime, args.getArgHandle(runtime, 1));
       if (propRes == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -615,7 +615,7 @@ static CallResult<HermesValue> getOwnPropertyNamesAsStrings(
     }
     assert(prop->isNumber() && "Property name is either string or number");
     // Otherwise convert it to a string and replace the element.
-    auto status = toString(runtime, prop);
+    auto status = toString_RJS(runtime, prop);
     assert(
         status != ExecutionStatus::EXCEPTION &&
         "toString() on property name cannot fail");
@@ -678,7 +678,7 @@ static ExecutionStatus objectToPropertyDescriptor(
           runtime,
           Predefined::getSymbolID(Predefined::enumerable),
           desc)) {
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,
         Predefined::getSymbolID(Predefined::enumerable),
@@ -696,7 +696,7 @@ static ExecutionStatus objectToPropertyDescriptor(
           runtime,
           Predefined::getSymbolID(Predefined::configurable),
           desc)) {
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,
         Predefined::getSymbolID(Predefined::configurable),
@@ -714,7 +714,7 @@ static ExecutionStatus objectToPropertyDescriptor(
           runtime,
           Predefined::getSymbolID(Predefined::value),
           desc)) {
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,
         Predefined::getSymbolID(Predefined::value),
@@ -732,7 +732,7 @@ static ExecutionStatus objectToPropertyDescriptor(
           runtime,
           Predefined::getSymbolID(Predefined::writable),
           desc)) {
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,
         Predefined::getSymbolID(Predefined::writable),
@@ -751,7 +751,7 @@ static ExecutionStatus objectToPropertyDescriptor(
           runtime,
           Predefined::getSymbolID(Predefined::get),
           desc)) {
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,
         Predefined::getSymbolID(Predefined::get),
@@ -777,7 +777,7 @@ static ExecutionStatus objectToPropertyDescriptor(
           runtime,
           Predefined::getSymbolID(Predefined::set),
           desc)) {
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         attributes,
         runtime,
         Predefined::getSymbolID(Predefined::set),
@@ -888,7 +888,7 @@ objectDefinePropertiesInternal(Runtime *runtime, Handle<> obj, Handle<> props) {
       descriptors;
   for (unsigned i = 0, e = enumerablePropNames->getEndIndex(); i < e; ++i) {
     propName = enumerablePropNames->at(i);
-    auto propRes = JSObject::getComputed(propsHandle, runtime, propName);
+    auto propRes = JSObject::getComputed_RJS(propsHandle, runtime, propName);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1243,7 +1243,7 @@ objectAssign(void *, Runtime *runtime, NativeArgs args) {
       propValueHandle = propRes.getValue();
 
       // 5.c.iii.3. Let status be Set(to, nextKey, propValue, true).
-      auto statusCr = JSObject::putComputed(
+      auto statusCr = JSObject::putComputed_RJS(
           toHandle,
           runtime,
           nextKeyHandle,
@@ -1314,7 +1314,7 @@ CallResult<HermesValue> directObjectPrototypeToString(
 
     auto O = runtime->makeHandle<JSObject>(res.getValue());
     // 16. Let tag be Get (O, @@toStringTag).
-    auto tagRes = JSObject::getNamed(
+    auto tagRes = JSObject::getNamed_RJS(
         O, runtime, Predefined::getSymbolID(Predefined::SymbolToStringTag));
     if (LLVM_UNLIKELY(tagRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1391,7 +1391,7 @@ objectPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto selfHandle = runtime->makeHandle<JSObject>(objRes.getValue());
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       selfHandle, runtime, Predefined::getSymbolID(Predefined::toString));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

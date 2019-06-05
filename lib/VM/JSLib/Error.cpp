@@ -164,7 +164,7 @@ errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   }
   auto error = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       error, runtime, Predefined::getSymbolID(Predefined::name), PropOpFlags());
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -175,7 +175,7 @@ errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
     // If name is undefined, then let name be "Error"
     nameStr = runtime->getPredefinedString(Predefined::Error);
   } else {
-    auto strRes = toString(runtime, name);
+    auto strRes = toString_RJS(runtime, name);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -183,7 +183,7 @@ errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   }
 
   if (LLVM_UNLIKELY(
-          (propRes = JSObject::getNamed(
+          (propRes = JSObject::getNamed_RJS(
                error,
                runtime,
                Predefined::getSymbolID(Predefined::message),
@@ -196,7 +196,7 @@ errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
     // If msg is undefined, then let msg be the empty String.
     messageStr = runtime->getPredefinedString(Predefined::emptyString);
   } else {
-    auto strRes = toString(runtime, message);
+    auto strRes = toString_RJS(runtime, message);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

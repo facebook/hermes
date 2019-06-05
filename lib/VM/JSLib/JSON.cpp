@@ -65,7 +65,7 @@ Handle<JSObject> createJSONObject(Runtime *runtime) {
 
 static CallResult<HermesValue>
 jsonParse(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toString(runtime, args.getArgHandle(runtime, 0));
+  auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

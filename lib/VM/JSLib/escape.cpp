@@ -58,7 +58,7 @@ static inline int fromHexChar(char16_t c) {
 
 /// Convert the argument to string and escape unicode characters.
 CallResult<HermesValue> escape(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toString(runtime, args.getArgHandle(runtime, 0));
+  auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -91,7 +91,7 @@ CallResult<HermesValue> escape(void *, Runtime *runtime, NativeArgs args) {
 
 /// Convert the argument to string and unescape unicode characters.
 CallResult<HermesValue> unescape(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toString(runtime, args.getArgHandle(runtime, 0));
+  auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -223,7 +223,7 @@ static CallResult<Handle<StringPrimitive>> encode(
 }
 
 CallResult<HermesValue> encodeURI(void *, Runtime *runtime, NativeArgs args) {
-  auto strRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -236,7 +236,7 @@ CallResult<HermesValue> encodeURI(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 encodeURIComponent(void *, Runtime *runtime, NativeArgs args) {
-  auto strRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -351,7 +351,7 @@ static CallResult<Handle<StringPrimitive>> decode(
 }
 
 CallResult<HermesValue> decodeURI(void *, Runtime *runtime, NativeArgs args) {
-  auto strRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -364,7 +364,7 @@ CallResult<HermesValue> decodeURI(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 decodeURIComponent(void *, Runtime *runtime, NativeArgs args) {
-  auto strRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

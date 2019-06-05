@@ -395,7 +395,7 @@ CallResult<bool> JSTypedArray<T, C>::_setOwnIndexedImpl(
   auto typedArrayHandle = Handle<JSTypedArray>::vmcast(selfHandle);
   double x;
   if (LLVM_UNLIKELY(!value->isNumber())) {
-    auto res = toNumber(runtime, value);
+    auto res = toNumber_RJS(runtime, value);
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     x = res->getNumber();

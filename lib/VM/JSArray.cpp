@@ -502,7 +502,7 @@ CallResult<bool> JSArray::setLength(
   if (newLength->isNumber()) {
     d = newLength->getNumber();
   } else {
-    auto res = toNumber(runtime, newLength);
+    auto res = toNumber_RJS(runtime, newLength);
     if (res == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
     d = res->getNumber();
@@ -692,7 +692,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
   } else {
     // 9. Else,
     // a. Let len be ToLength(Get(a, "length")).
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         a, runtime, Predefined::getSymbolID(Predefined::length));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -727,7 +727,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
 
   // 13. Let elementKey be ToString(index).
   // 14. Let elementValue be Get(a, elementKey).
-  auto valueRes = JSObject::getComputed(a, runtime, indexHandle);
+  auto valueRes = JSObject::getComputed_RJS(a, runtime, indexHandle);
   if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

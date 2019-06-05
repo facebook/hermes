@@ -225,7 +225,7 @@ numberConstructor(void *, Runtime *runtime, NativeArgs args) {
   double value = +0.0;
 
   if (args.getArgCount() > 0) {
-    auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+    auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -374,7 +374,7 @@ numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // Radix 10 and non-finite values simply call toString.
-  auto resultRes = toString(
+  auto resultRes = toString_RJS(
       runtime, runtime->makeHandle(HermesValue::encodeNumberValue(number)));
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -400,7 +400,7 @@ numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
 
   // Call toString, as JSC does.
   // TODO: Format string according to locale.
-  auto res = toString(
+  auto res = toString_RJS(
       runtime, runtime->makeHandle(HermesValue::encodeNumberValue(number)));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -447,7 +447,7 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
   // Account for very large numbers.
   if (std::abs(x) >= 1e21) {
     // toString(x) if abs(x) >= 10^21.
-    auto resultRes = toString(
+    auto resultRes = toString_RJS(
         runtime, runtime->makeHandle(HermesValue::encodeDoubleValue(x)));
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -668,7 +668,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
 
   if (args.getArg(0).isUndefined()) {
     auto xHandle = runtime->makeHandle(HermesValue::encodeDoubleValue(x));
-    auto resultRes = toString(runtime, xHandle);
+    auto resultRes = toString_RJS(runtime, xHandle);
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

@@ -176,7 +176,7 @@ inline const GCConfig TestGCConfigFixedSize(
 /// Get a named value from an object.
 #define GET_VALUE(objHandle, predefinedId)                  \
   do {                                                      \
-    propRes = JSObject::getNamed(                           \
+    propRes = JSObject::getNamed_RJS(                       \
         objHandle,                                          \
         runtime,                                            \
         Predefined::getSymbolID(Predefined::predefinedId)); \

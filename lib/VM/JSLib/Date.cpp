@@ -443,7 +443,7 @@ static CallResult<double> makeTimeFromArgs(Runtime *runtime, NativeArgs args) {
 
   for (size_t i = 0; i < std::min(7u, argCount); ++i) {
     GCScopeMarkerRAII marker{runtime};
-    auto res = toNumber(runtime, args.getArgHandle(runtime, i));
+    auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, i));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -493,7 +493,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
         finalDate = JSDate::getPrimitiveValue(dateArg).getNumber();
       } else {
         // Parse the argument if it's a string, else just convert to number.
-        auto res = toPrimitive(
+        auto res = toPrimitive_RJS(
             runtime, args.getArgHandle(runtime, 0), PreferredType::NONE);
         if (res == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
@@ -505,7 +505,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
           finalDate = timeClip(parseDate(StringPrimitive::createStringView(
               runtime, Handle<StringPrimitive>::vmcast(v))));
         } else {
-          auto numRes = toNumber(runtime, v);
+          auto numRes = toNumber_RJS(runtime, v);
           if (numRes == ExecutionStatus::EXCEPTION) {
             return ExecutionStatus::EXCEPTION;
           }
@@ -552,7 +552,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
 
 static CallResult<HermesValue>
 dateParse(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toString(runtime, args.getArgHandle(runtime, 0));
+  auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -569,7 +569,7 @@ dateUTC(void *, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeNaNValue();
   }
   if (args.getArgCount() == 1) {
-    auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+    auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -725,7 +725,7 @@ datePrototypeSetTime(void *ctx, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Date.prototype.setTime() called on non-Date object");
   }
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -747,7 +747,7 @@ datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -778,14 +778,14 @@ datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double s = res->getNumber();
   double milli;
   if (args.getArgCount() >= 2) {
-    res = toNumber(runtime, args.getArgHandle(runtime, 1));
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -820,14 +820,14 @@ datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double m = res->getNumber();
   double s;
   if (args.getArgCount() >= 2) {
-    res = toNumber(runtime, args.getArgHandle(runtime, 1));
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -837,7 +837,7 @@ datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double milli;
   if (args.getArgCount() >= 3) {
-    res = toNumber(runtime, args.getArgHandle(runtime, 2));
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 2));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -871,14 +871,14 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double h = res->getNumber();
   double m;
   if (args.getArgCount() >= 2) {
-    res = toNumber(runtime, args.getArgHandle(runtime, 1));
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -888,7 +888,7 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double s;
   if (args.getArgCount() >= 3) {
-    res = toNumber(runtime, args.getArgHandle(runtime, 2));
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 2));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -898,7 +898,7 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double milli;
   if (args.getArgCount() >= 4) {
-    res = toNumber(runtime, args.getArgHandle(runtime, 3));
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 3));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -931,7 +931,7 @@ datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -962,14 +962,14 @@ datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double m = res->getNumber();
   double dt;
   if (args.getArgCount() >= 2) {
-    res = toNumber(runtime, args.getArgHandle(runtime, 1));
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1005,14 +1005,14 @@ datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
   if (std::isnan(t)) {
     t = 0;
   }
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double y = res->getNumber();
   double m;
   if (args.getArgCount() >= 2) {
-    res = toNumber(runtime, args.getArgHandle(runtime, 1));
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1022,7 +1022,7 @@ datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double dt;
   if (args.getArgCount() >= 3) {
-    res = toNumber(runtime, args.getArgHandle(runtime, 2));
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 2));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1056,7 +1056,7 @@ datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
   if (std::isnan(t)) {
     t = 0;
   }
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1083,7 +1083,7 @@ datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
-  auto propRes = toPrimitive(runtime, O, PreferredType::NUMBER);
+  auto propRes = toPrimitive_RJS(runtime, O, PreferredType::NUMBER);
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1091,7 +1091,7 @@ datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args) {
   if (tv.isNumber() && !std::isfinite(tv.getNumber())) {
     return HermesValue::encodeNullValue();
   }
-  if ((propRes = JSObject::getNamed(
+  if ((propRes = JSObject::getNamed_RJS(
            O, runtime, Predefined::getSymbolID(Predefined::toISOString))) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;

@@ -25,7 +25,7 @@ namespace vm {
 /// ES5.1 15.1.2.4
 static CallResult<HermesValue>
 isNaN(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -35,7 +35,7 @@ isNaN(void *, Runtime *runtime, NativeArgs args) {
 /// ES5.1 15.1.2.5
 static CallResult<HermesValue>
 isFinite(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -62,7 +62,7 @@ static bool isValidRadixChar(char16_t c, int radix) {
 static CallResult<HermesValue>
 parseInt(void *, Runtime *runtime, NativeArgs args) {
   // toString(arg0).
-  auto strRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -70,9 +70,9 @@ parseInt(void *, Runtime *runtime, NativeArgs args) {
 
   int radix = 10;
   bool stripPrefix = true;
-  // If radix (arg1) is present and not undefined, toInt32(arg1).
+  // If radix (arg1) is present and not undefined, toInt32_RJS(arg1).
   if (args.getArgCount() > 1 && !args.getArg(1).isUndefined()) {
-    auto intRes = toInt32(runtime, args.getArgHandle(runtime, 1));
+    auto intRes = toInt32_RJS(runtime, args.getArgHandle(runtime, 1));
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -150,7 +150,7 @@ static bool isPrefix(StringView str1, StringView str2) {
 static CallResult<HermesValue>
 parseFloat(void *, Runtime *runtime, NativeArgs args) {
   // toString(arg0).
-  auto res = toString(runtime, args.getArgHandle(runtime, 0));
+  auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

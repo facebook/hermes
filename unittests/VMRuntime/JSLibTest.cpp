@@ -64,7 +64,7 @@ TEST_F(JSLibTest, CreateObjectTest) {
 
 static Handle<JSObject> createObject(Runtime *runtime) {
   // Object constructor.
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       runtime->getGlobal(),
       runtime,
       Predefined::getSymbolID(Predefined::Object));
@@ -72,7 +72,7 @@ static Handle<JSObject> createObject(Runtime *runtime) {
   auto objectCons = runtime->makeHandle<Callable>(*propRes);
 
   // Object.prototype.
-  propRes = JSObject::getNamed(
+  propRes = JSObject::getNamed_RJS(
       objectCons, runtime, Predefined::getSymbolID(Predefined::prototype));
   assert(propRes == ExecutionStatus::RETURNED);
   auto prototype = runtime->makeHandle<JSObject>(*propRes);
@@ -92,7 +92,7 @@ static Handle<JSObject> createObject(Runtime *runtime) {
 TEST_F(JSLibTest, ObjectToStringTest) {
   // Check that "(new Object()).toString() is "[object Object]".
   auto obj = createObject(runtime);
-  auto propRes = JSObject::getNamed(
+  auto propRes = JSObject::getNamed_RJS(
       obj, runtime, Predefined::getSymbolID(Predefined::toString));
   ASSERT_RETURNED(propRes.getStatus());
   auto toStringFn = runtime->makeHandle<Callable>(*propRes);
@@ -114,7 +114,7 @@ TEST_F(JSLibTest, ObjectToStringTest) {
 
   // Check that Operations/toString does the right thing.
   EXPECT_STRINGPRIM(
-      "[object Object]", toString(runtime, obj)->getHermesValue());
+      "[object Object]", toString_RJS(runtime, obj)->getHermesValue());
 }
 
 TEST_F(JSLibTest, ObjectSealTest) {
@@ -125,13 +125,13 @@ TEST_F(JSLibTest, ObjectSealTest) {
   auto objectCons = runtime->makeHandle<JSObject>(*propRes);
 
   ASSERT_RETURNED(
-      (propRes = JSObject::getNamed(
+      (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::seal)))
           .getStatus());
   auto sealFn = runtime->makeHandle<Callable>(*propRes);
 
   ASSERT_RETURNED(
-      (propRes = JSObject::getNamed(
+      (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::isSealed)))
           .getStatus());
   auto isSealedFn = runtime->makeHandle<Callable>(*propRes);
@@ -140,7 +140,7 @@ TEST_F(JSLibTest, ObjectSealTest) {
   auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop1"));
   ASSERT_TRUE(
-      JSObject::putNamed(
+      JSObject::putNamed_RJS(
           obj,
           runtime,
           *prop1ID,
@@ -198,13 +198,13 @@ TEST_F(JSLibTest, ObjectFreezeTest) {
   auto objectCons = runtime->makeHandle<JSObject>(*propRes);
 
   ASSERT_RETURNED(
-      (propRes = JSObject::getNamed(
+      (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::freeze)))
           .getStatus());
   auto freezeFn = runtime->makeHandle<Callable>(*propRes);
 
   ASSERT_RETURNED(
-      (propRes = JSObject::getNamed(
+      (propRes = JSObject::getNamed_RJS(
            objectCons, runtime, Predefined::getSymbolID(Predefined::isFrozen)))
           .getStatus());
   auto isFrozenFn = runtime->makeHandle<Callable>(*propRes);
@@ -213,7 +213,7 @@ TEST_F(JSLibTest, ObjectFreezeTest) {
   auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop1"));
   ASSERT_TRUE(
-      JSObject::putNamed(
+      JSObject::putNamed_RJS(
           obj,
           runtime,
           *prop1ID,
@@ -272,14 +272,14 @@ TEST_F(JSLibTest, ObjectPreventExtensionsTest) {
   GET_GLOBAL(Object);
   auto objectCons = runtime->makeHandle<JSObject>(*propRes);
 
-  ASSERT_RETURNED((propRes = JSObject::getNamed(
+  ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::preventExtensions)))
                       .getStatus());
   auto preventExtensionsFn = runtime->makeHandle<Callable>(*propRes);
 
-  ASSERT_RETURNED((propRes = JSObject::getNamed(
+  ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::isExtensible)))
@@ -322,7 +322,7 @@ TEST_F(JSLibTest, ObjectGetPrototypeOfTest) {
   GET_GLOBAL(Object);
   auto objectCons = runtime->makeHandle<JSObject>(*propRes);
 
-  ASSERT_RETURNED((propRes = JSObject::getNamed(
+  ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::getPrototypeOf)))
@@ -342,7 +342,7 @@ TEST_F(JSLibTest, ObjectGetPrototypeOfTest) {
   auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop1"));
   ASSERT_TRUE(
-      JSObject::putNamed(
+      JSObject::putNamed_RJS(
           objProto,
           runtime,
           *prop1ID,
@@ -362,7 +362,7 @@ TEST_F(JSLibTest, ObjectGetPrototypeOfTest) {
 
   // Make sure that the new object's prototype is correct.
   EXPECT_CALLRESULT_DOUBLE(
-      10, JSObject::getNamed(obj2Proto, runtime, *prop1ID));
+      10, JSObject::getNamed_RJS(obj2Proto, runtime, *prop1ID));
 }
 
 TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
@@ -376,7 +376,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     auto objectCons = runtime->makeHandle<JSObject>(*propRes);
 
     ASSERT_RETURNED(
-        (propRes = JSObject::getNamed(
+        (propRes = JSObject::getNamed_RJS(
              objectCons,
              runtime,
              Predefined::getSymbolID(Predefined::getOwnPropertyDescriptor)))
@@ -387,7 +387,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     auto prop1ID = *runtime->getIdentifierTable().getSymbolHandle(
         runtime, createUTF16Ref(u"prop1"));
     ASSERT_TRUE(
-        JSObject::putNamed(
+        JSObject::putNamed_RJS(
             obj,
             runtime,
             *prop1ID,
@@ -407,19 +407,19 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
 
     EXPECT_CALLRESULT_BOOL(
         TRUE,
-        JSObject::getNamed(
+        JSObject::getNamed_RJS(
             desc, runtime, Predefined::getSymbolID(Predefined::writable)));
     EXPECT_CALLRESULT_BOOL(
         TRUE,
-        JSObject::getNamed(
+        JSObject::getNamed_RJS(
             desc, runtime, Predefined::getSymbolID(Predefined::enumerable)));
     EXPECT_CALLRESULT_BOOL(
         TRUE,
-        JSObject::getNamed(
+        JSObject::getNamed_RJS(
             desc, runtime, Predefined::getSymbolID(Predefined::configurable)));
     EXPECT_CALLRESULT_DOUBLE(
         10,
-        JSObject::getNamed(
+        JSObject::getNamed_RJS(
             desc, runtime, Predefined::getSymbolID(Predefined::value)));
   }
 
@@ -430,7 +430,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     auto objectCons = runtime->makeHandle<JSObject>(*propRes);
 
     ASSERT_RETURNED(
-        (propRes = JSObject::getNamed(
+        (propRes = JSObject::getNamed_RJS(
              objectCons,
              runtime,
              Predefined::getSymbolID(Predefined::getOwnPropertyDescriptor)))
@@ -486,19 +486,19 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
 
     EXPECT_CALLRESULT_BOOL(
         TRUE,
-        JSObject::getNamed(
+        JSObject::getNamed_RJS(
             desc, runtime, Predefined::getSymbolID(Predefined::enumerable)));
     EXPECT_CALLRESULT_BOOL(
         TRUE,
-        JSObject::getNamed(
+        JSObject::getNamed_RJS(
             desc, runtime, Predefined::getSymbolID(Predefined::configurable)));
     ASSERT_RETURNED(
-        (propRes = JSObject::getNamed(
+        (propRes = JSObject::getNamed_RJS(
              desc, runtime, Predefined::getSymbolID(Predefined::get)))
             .getStatus());
     EXPECT_EQ(getter.get(), propRes->getPointer());
     ASSERT_RETURNED(
-        (propRes = JSObject::getNamed(
+        (propRes = JSObject::getNamed_RJS(
              desc, runtime, Predefined::getSymbolID(Predefined::set)))
             .getStatus());
     EXPECT_EQ(setter.get(), propRes->getPointer());
@@ -514,7 +514,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
   auto objectCons = runtime->makeHandle<JSObject>(*propRes);
 
   // Get Object.defineProperty() function.
-  ASSERT_RETURNED((propRes = JSObject::getNamed(
+  ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::defineProperty),
@@ -525,14 +525,14 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
   {
     // Create a PropertyDescriptor object with enumerable and configurable set.
     auto attributes = createObject(runtime);
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     attributes,
                     runtime,
                     Predefined::getSymbolID(Predefined::enumerable),
                     runtime->makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     attributes,
                     runtime,
                     Predefined::getSymbolID(Predefined::configurable),
@@ -542,7 +542,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
 
     // Add value to the PropertyDescriptor.
     auto value = HermesValue::encodeDoubleValue(123);
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     attributes,
                     runtime,
                     Predefined::getSymbolID(Predefined::value),
@@ -575,7 +575,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
 
     EXPECT_CALLRESULT_DOUBLE(
         123,
-        JSObject::getNamed(
+        JSObject::getNamed_RJS(
             objectCons, runtime, *propID, PropOpFlags().plusMustExist()));
   }
 
@@ -583,13 +583,13 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
     // Test getter and setters in the attributes.
     // Use toString() as the setter and the getter.
     auto accessorAttributes = createObject(runtime);
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         accessorAttributes,
         runtime,
         Predefined::getSymbolID(Predefined::toString));
     ASSERT_RETURNED(propRes.getStatus());
     auto toStringFn = runtime->makeHandle<Callable>(*propRes);
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     accessorAttributes,
                     runtime,
                     Predefined::getSymbolID(Predefined::set),
@@ -597,7 +597,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
                     PropOpFlags().plusThrowOnError())
                     .getValue());
 
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     accessorAttributes,
                     runtime,
                     Predefined::getSymbolID(Predefined::get),
@@ -641,7 +641,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
 
     // Call the getter, it should return a string.
     ASSERT_RETURNED(
-        (propRes = JSObject::getNamed(
+        (propRes = JSObject::getNamed_RJS(
              objectCons, runtime, *propID, PropOpFlags().plusMustExist()))
             .getStatus());
     EXPECT_TRUE(propRes->isString());
@@ -671,14 +671,14 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
   // Create the first property descriptor object.
   {
     auto property1 = createObject(runtime);
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::enumerable),
                     runtime->makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::configurable),
@@ -686,14 +686,14 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     auto value1 = HermesValue::encodeDoubleValue(123);
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::value),
                     runtime->makeHandle(value1),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     properties,
                     runtime,
                     *id1,
@@ -704,7 +704,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
   // Create the second property descriptor object.
   {
     auto property2 = createObject(runtime);
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     property2,
                     runtime,
                     Predefined::getSymbolID(Predefined::writable),
@@ -712,14 +712,14 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     auto value2 = HermesValue::encodeNullValue();
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     property2,
                     runtime,
                     Predefined::getSymbolID(Predefined::value),
                     runtime->makeHandle(value2),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     properties,
                     runtime,
                     *id2,
@@ -732,7 +732,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
   auto objectCons = runtime->makeHandle<JSObject>(*propRes);
 
   // Get Object.defineProperties() function.
-  ASSERT_RETURNED((propRes = JSObject::getNamed(
+  ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::defineProperties),
@@ -797,14 +797,14 @@ TEST_F(JSLibTest, ObjectCreateTest) {
   // Create the first property descriptor object.
   {
     auto property1 = createObject(runtime);
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::enumerable),
                     runtime->makeHandle(HermesValue::encodeBoolValue(true)),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::configurable),
@@ -812,14 +812,14 @@ TEST_F(JSLibTest, ObjectCreateTest) {
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     auto value1 = HermesValue::encodeDoubleValue(123);
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     property1,
                     runtime,
                     Predefined::getSymbolID(Predefined::value),
                     runtime->makeHandle(value1),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     properties,
                     runtime,
                     *id1,
@@ -830,7 +830,7 @@ TEST_F(JSLibTest, ObjectCreateTest) {
   // Create the second property descriptor object.
   {
     auto property2 = createObject(runtime);
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     property2,
                     runtime,
                     Predefined::getSymbolID(Predefined::writable),
@@ -838,14 +838,14 @@ TEST_F(JSLibTest, ObjectCreateTest) {
                     PropOpFlags().plusThrowOnError())
                     .getValue());
     auto value2 = HermesValue::encodeNullValue();
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     property2,
                     runtime,
                     Predefined::getSymbolID(Predefined::value),
                     runtime->makeHandle(value2),
                     PropOpFlags().plusThrowOnError())
                     .getValue());
-    ASSERT_TRUE(JSObject::putNamed(
+    ASSERT_TRUE(JSObject::putNamed_RJS(
                     properties,
                     runtime,
                     *id2,
@@ -858,7 +858,7 @@ TEST_F(JSLibTest, ObjectCreateTest) {
   auto objectCons = runtime->makeHandle<JSObject>(*propRes);
 
   // Get Object.create() function.
-  ASSERT_RETURNED((propRes = JSObject::getNamed(
+  ASSERT_RETURNED((propRes = JSObject::getNamed_RJS(
                        objectCons,
                        runtime,
                        Predefined::getSymbolID(Predefined::create),
@@ -950,14 +950,14 @@ TEST_F(JSLibTest, MockedEnvironmentTest) {
 
   {
     // Call Math.random() and check that its output matches the one given.
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         runtime->getGlobal(),
         runtime,
         Predefined::getSymbolID(Predefined::Math));
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing Math on the global object";
     auto mathObj = runtime->makeHandle(vmcast<JSObject>(propRes.getValue()));
-    propRes = JSObject::getNamed(
+    propRes = JSObject::getNamed_RJS(
         mathObj, runtime, Predefined::getSymbolID(Predefined::random));
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing random on the Math object";
@@ -979,7 +979,7 @@ TEST_F(JSLibTest, MockedEnvironmentTest) {
   {
     // Call various Date functions and check that the output matches the ones
     // given.
-    auto propRes = JSObject::getNamed(
+    auto propRes = JSObject::getNamed_RJS(
         runtime->getGlobal(),
         runtime,
         Predefined::getSymbolID(Predefined::Date));
@@ -989,7 +989,7 @@ TEST_F(JSLibTest, MockedEnvironmentTest) {
     auto dateObj = runtime->makeHandle(vmcast<JSObject>(propRes.getValue()));
 
     // Call Date.now().
-    propRes = JSObject::getNamed(
+    propRes = JSObject::getNamed_RJS(
         dateObj, runtime, Predefined::getSymbolID(Predefined::now));
     ASSERT_NE(propRes, ExecutionStatus::EXCEPTION)
         << "Exception accessing now on the Date object";

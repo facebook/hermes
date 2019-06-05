@@ -22,7 +22,7 @@ CallResult<HermesValue> print(void *, Runtime *runtime, NativeArgs args) {
 
   for (Handle<> arg : args.handles()) {
     scope.flushToMarker(marker);
-    auto res = toString(runtime, arg);
+    auto res = toString_RJS(runtime, arg);
     if (res == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
 

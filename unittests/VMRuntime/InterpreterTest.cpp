@@ -71,7 +71,7 @@ print(void *, Runtime *runtime, NativeArgs args) {
   bool first = true;
 
   for (Handle<> arg : args.handles()) {
-    auto res = toString(runtime, arg);
+    auto res = toString_RJS(runtime, arg);
     if (res != ExecutionStatus::RETURNED)
       return ExecutionStatus::EXCEPTION;
 
@@ -189,7 +189,7 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
           runtime, nullptr, print, SymbolID{}, 0));
 
   // Define the 'print' function.
-  (void)JSObject::putNamed(
+  (void)JSObject::putNamed_RJS(
       runtime->getGlobal(),
       runtime,
       runtimeModule->getSymbolIDFromStringID(printID),
@@ -338,7 +338,7 @@ L1:
       codeBlock));
 
   // Define the 'fact' function.
-  (void)JSObject::putNamed(
+  (void)JSObject::putNamed_RJS(
       runtime->getGlobal(),
       runtime,
       runtimeModule->getSymbolIDFromStringID(factID),
@@ -458,7 +458,7 @@ TEST_F(InterpreterTest, FrameSizeTest) {
           runtime, nullptr, getSP, SymbolID{}, 0));
 
   // Define the 'getSP' function.
-  (void)JSObject::putNamed(
+  (void)JSObject::putNamed_RJS(
       runtime->getGlobal(),
       runtime,
       runtimeModule->getSymbolIDFromStringID(getSPID),

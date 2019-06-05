@@ -34,7 +34,7 @@ CallResult<HermesValue> runRequireCall(
   if (auto module = domain->getModule(cjsModuleOffset)) {
     assert(module.get() != nullptr);
     // Still initializing, so return the current state of module.exports.
-    return JSObject::getNamed(
+    return JSObject::getNamed_RJS(
         toHandle(runtime, std::move(module)),
         runtime,
         Predefined::getSymbolID(Predefined::exports));
@@ -45,7 +45,7 @@ CallResult<HermesValue> runRequireCall(
   Handle<JSObject> module = toHandle(runtime, JSObject::create(runtime));
   Handle<JSObject> exports = toHandle(runtime, JSObject::create(runtime));
   if (LLVM_UNLIKELY(
-          JSObject::putNamed(
+          JSObject::putNamed_RJS(
               module,
               runtime,
               Predefined::getSymbolID(Predefined::exports),
@@ -123,7 +123,7 @@ CallResult<HermesValue> runRequireCall(
 
   // The module.exports object may have been replaced during initialization,
   // so we have to run getNamed to ensure we pick up the changes.
-  auto exportsRes = JSObject::getNamed(
+  auto exportsRes = JSObject::getNamed_RJS(
       module, runtime, Predefined::getSymbolID(Predefined::exports));
   if (LLVM_UNLIKELY(exportsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -199,7 +199,7 @@ CallResult<HermesValue> require(void *, Runtime *runtime, NativeArgs args) {
   auto domain = runtime->makeHandle(RequireContext::getDomain(*requireContext));
   auto dirname =
       runtime->makeHandle(RequireContext::getDirname(*requireContext));
-  auto targetRes = toString(runtime, args.getArgHandle(runtime, 0));
+  auto targetRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(targetRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
