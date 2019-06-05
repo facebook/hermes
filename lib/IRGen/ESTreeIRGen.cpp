@@ -106,6 +106,10 @@ void LReference::emitStore(Value *value) {
   llvm_unreachable("invalid LReference kind");
 }
 
+bool LReference::canStoreWithoutSideEffects() const {
+  return kind_ == Kind::VarOrGlobal && isa<Variable>(base_);
+}
+
 Variable *LReference::castAsVariable() const {
   return kind_ == Kind::VarOrGlobal ? dyn_cast_or_null<Variable>(base_)
                                     : nullptr;
@@ -473,6 +477,17 @@ Value *ESTreeIRGen::genMemberExpressionProperty(
   return Builder.getLiteralString(fieldName);
 }
 
+bool ESTreeIRGen::canCreateLRefWithoutSideEffects(
+    hermes::ESTree::Node *target) {
+  // Check for an identifier bound to an existing local variable.
+  if (auto *iden = dyn_cast<ESTree::IdentifierNode>(target)) {
+    return dyn_cast_or_null<Variable>(
+        nameTable_.lookup(getNameFieldFromID(iden)));
+  }
+
+  return false;
+}
+
 LReference ESTreeIRGen::createLRef(ESTree::Node *node) {
   SMLoc sourceLoc = node->getDebugLoc();
   IRBuilder::ScopedLocationChange slc(Builder, sourceLoc);
@@ -642,14 +657,42 @@ void ESTreeIRGen::emitDestructuringArray(
   auto *value =
       Builder.createAllocStackInst(genAnonymousLabelName("iterValue"));
 
+  SharedExceptionHandler handler{};
+  handler.exc = Builder.createAllocStackInst(genAnonymousLabelName("exc"));
+  // All exception handlers branch to this block.
+  handler.exceptionBlock = Builder.createBasicBlock(Builder.getFunction());
+
   bool first = true;
+  bool emittedRest = false;
+  // The LReference created in the previous iteration of the destructuring
+  // loop. We need it because we want to put the previous store and the creation
+  // of the next LReference under one try block.
+  llvm::Optional<LReference> lref;
+
+  /// If the previous LReference is valid and non-empty, store "value" into
+  /// it and reset the LReference.
+  auto storePreviousValue = [&lref, &handler, this, value]() {
+    if (lref && !lref->isEmpty()) {
+      if (lref->canStoreWithoutSideEffects()) {
+        lref->emitStore(Builder.createLoadStackInst(value));
+      } else {
+        // If we can't store without side effects, wrap the store in try/catch.
+        emitTryWithSharedHandler(&handler, [this, &lref, value]() {
+          lref->emitStore(Builder.createLoadStackInst(value));
+        });
+      }
+      lref.reset();
+    }
+  };
 
   for (auto &elem : targetPat->_elements) {
     ESTree::Node *target = &elem;
     ESTree::Node *init = nullptr;
 
     if (auto *rest = dyn_cast<ESTree::RestElementNode>(target)) {
-      emitRestElement(rest, iteratorRecord, iteratorDone);
+      storePreviousValue();
+      emitRestElement(rest, iteratorRecord, iteratorDone, &handler);
+      emittedRest = true;
       break;
     }
 
@@ -659,7 +702,28 @@ void ESTreeIRGen::emitDestructuringArray(
       init = assign->_right;
     }
 
-    auto lref = createLRef(target);
+    // Can we create the new LReference without side effects and avoid a
+    // try/catch. The complexity comes from having to check whether the last
+    // LReference also can avoid a try/catch or not.
+    if (canCreateLRefWithoutSideEffects(target)) {
+      // We don't need a try/catch, but last lref might. Just let the routine
+      // do the right thing.
+      storePreviousValue();
+      lref = createLRef(target);
+    } else {
+      // We need a try/catch, but last lref might not. If it doesn't, emit it
+      // directly and clear it, so we won't do anything inside our try/catch.
+      if (lref && lref->canStoreWithoutSideEffects()) {
+        lref->emitStore(Builder.createLoadStackInst(value));
+        lref.reset();
+      }
+      emitTryWithSharedHandler(&handler, [this, &lref, value, target]() {
+        // Store the previous value, if we have one.
+        if (lref && !lref->isEmpty())
+          lref->emitStore(Builder.createLoadStackInst(value));
+        lref = createLRef(target);
+      });
+    }
 
     // Pseudocode of the algorithm for a step:
     //
@@ -736,22 +800,76 @@ void ESTreeIRGen::emitDestructuringArray(
       // storeBlock:
       Builder.setInsertionBlock(storeBlock);
     }
-    if (!lref.isEmpty())
-      lref.emitStore(Builder.createLoadStackInst(value));
+  }
+
+  storePreviousValue();
+
+  // If in the end the iterator is not done, close it. We only need to do
+  // that if we didn't end with a rest element because it would have exhausted
+  // the iterator.
+  if (!emittedRest) {
+    auto *notDoneBlock = Builder.createBasicBlock(Builder.getFunction());
+    auto *doneBlock = Builder.createBasicBlock(Builder.getFunction());
+    Builder.createCondBranchInst(
+        Builder.createLoadStackInst(iteratorDone), doneBlock, notDoneBlock);
+
+    Builder.setInsertionBlock(notDoneBlock);
+    emitIteratorClose(iteratorRecord, false);
+    Builder.createBranchInst(doneBlock);
+
+    Builder.setInsertionBlock(doneBlock);
+  }
+
+  // If we emitted at least one try block, generate the exception handler.
+  if (handler.emittedTry) {
+    IRBuilder::SaveRestore saveRestore{Builder};
+    Builder.setInsertionBlock(handler.exceptionBlock);
+
+    auto *notDoneBlock = Builder.createBasicBlock(Builder.getFunction());
+    auto *doneBlock = Builder.createBasicBlock(Builder.getFunction());
+
+    Builder.createCondBranchInst(
+        Builder.createLoadStackInst(iteratorDone), doneBlock, notDoneBlock);
+
+    Builder.setInsertionBlock(notDoneBlock);
+    emitIteratorClose(iteratorRecord, true);
+    Builder.createBranchInst(doneBlock);
+
+    Builder.setInsertionBlock(doneBlock);
+    Builder.createThrowInst(Builder.createLoadStackInst(handler.exc));
+  } else {
+    // If we didn't use the exception block, we need to delete it, otherwise
+    // it fails IR validation even though it will be never executed.
+    handler.exceptionBlock->eraseFromParent();
+
+    // Delete the not needed exception stack allocation. It would be optimized
+    // out later, but it is nice to produce cleaner non-optimized IR, if it is
+    // easy to do so.
+    assert(
+        !handler.exc->hasUsers() &&
+        "should not have any users if no try/catch was emitted");
+    handler.exc->eraseFromParent();
   }
 }
 
 void ESTreeIRGen::emitRestElement(
     ESTree::RestElementNode *rest,
     hermes::irgen::ESTreeIRGen::IteratorRecord iteratorRecord,
-    hermes::AllocStackInst *iteratorDone) {
+    hermes::AllocStackInst *iteratorDone,
+    SharedExceptionHandler *handler) {
   // 13.3.3.8 BindingRestElement:...BindingIdentifier
 
   auto *notDoneBlock = Builder.createBasicBlock(Builder.getFunction());
   auto *newValueBlock = Builder.createBasicBlock(Builder.getFunction());
   auto *doneBlock = Builder.createBasicBlock(Builder.getFunction());
 
-  auto lref = createLRef(rest->_argument);
+  llvm::Optional<LReference> lref;
+  if (canCreateLRefWithoutSideEffects(rest->_argument)) {
+    lref = createLRef(rest->_argument);
+  } else {
+    emitTryWithSharedHandler(
+        handler, [this, &lref, rest]() { lref = createLRef(rest->_argument); });
+  }
 
   auto *A = Builder.createAllocArrayInst({}, 0);
   auto *n = Builder.createAllocStackInst(genAnonymousLabelName("n"));
@@ -775,7 +893,14 @@ void ESTreeIRGen::emitRestElement(
   auto *nVal = Builder.createLoadStackInst(n);
   nVal->setType(Type::createNumber());
   // A[n] = stepValue;
-  Builder.createStorePropertyInst(stepValue, A, nVal);
+  // Unfortunately this can throw because our arrays can have limited range.
+  // The spec doesn't specify what to do in this case, but the reasonable thing
+  // to do is to what we would if this was a for-of loop doing the same thing.
+  // See section BindingRestElement:...BindingIdentifier, step f and g:
+  // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-destructuring-binding-patterns-runtime-semantics-iteratorbindinginitialization
+  emitTryWithSharedHandler(handler, [this, stepValue, A, nVal]() {
+    Builder.createStorePropertyInst(stepValue, A, nVal);
+  });
   // ++n;
   auto add = Builder.createBinaryOperatorInst(
       nVal, Builder.getLiteralNumber(1), BinaryOperatorInst::OpKind::AddKind);
@@ -785,7 +910,11 @@ void ESTreeIRGen::emitRestElement(
 
   // doneBlock:
   Builder.setInsertionBlock(doneBlock);
-  lref.emitStore(A);
+  if (lref->canStoreWithoutSideEffects()) {
+    lref->emitStore(A);
+  } else {
+    emitTryWithSharedHandler(handler, [&lref, A]() { lref->emitStore(A); });
+  }
 }
 
 void ESTreeIRGen::emitDestructuringObject(

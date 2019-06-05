@@ -58,45 +58,118 @@ var {a: [b = 1, e] = g} = x;
 //CHECK-NEXT:  %38 = AllocStackInst $?anon_1_iterDone
 //CHECK-NEXT:  %39 = StoreStackInst undefined : undefined, %38
 //CHECK-NEXT:  %40 = AllocStackInst $?anon_2_iterValue
-//CHECK-NEXT:  %41 = StoreStackInst undefined : undefined, %40
-//CHECK-NEXT:  %42 = BranchInst %BB5
-//CHECK-NEXT:%BB5:
-//CHECK-NEXT:  %43 = CallInst %37, %33
-//CHECK-NEXT:  %44 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-//CHECK-NEXT:  %45 = LoadPropertyInst %44, "ensureObject" : string
-//CHECK-NEXT:  %46 = CallInst %45, undefined : undefined, %43, "iterator.next() did not return an object" : string
-//CHECK-NEXT:  %47 = LoadPropertyInst %43, "done" : string
-//CHECK-NEXT:  %48 = StoreStackInst %47, %38
-//CHECK-NEXT:  %49 = CondBranchInst %47, %BB6, %BB7
+//CHECK-NEXT:  %41 = AllocStackInst $?anon_3_exc
+//CHECK-NEXT:  %42 = TryStartInst %BB5, %BB6
 //CHECK-NEXT:%BB7:
-//CHECK-NEXT:  %50 = LoadPropertyInst %43, "value" : string
-//CHECK-NEXT:  %51 = StoreStackInst %50, %40
-//CHECK-NEXT:  %52 = BranchInst %BB8
-//CHECK-NEXT:%BB8:
-//CHECK-NEXT:  %53 = LoadStackInst %40
-//CHECK-NEXT:  %54 = BinaryOperatorInst '!==', %53, undefined : undefined
-//CHECK-NEXT:  %55 = CondBranchInst %54, %BB9, %BB6
-//CHECK-NEXT:%BB6:
-//CHECK-NEXT:  %56 = StoreStackInst 1 : number, %40
-//CHECK-NEXT:  %57 = BranchInst %BB9
-//CHECK-NEXT:%BB9:
-//CHECK-NEXT:  %58 = LoadStackInst %40
-//CHECK-NEXT:  %59 = StorePropertyInst %58, globalObject : object, "b" : string
-//CHECK-NEXT:  %60 = StoreStackInst undefined : undefined, %40
-//CHECK-NEXT:  %61 = LoadStackInst %38
-//CHECK-NEXT:  %62 = CondBranchInst %61, %BB10, %BB11
-//CHECK-NEXT:%BB11:
-//CHECK-NEXT:  %63 = CallInst %37, %33
-//CHECK-NEXT:  %64 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-//CHECK-NEXT:  %65 = LoadPropertyInst %64, "ensureObject" : string
-//CHECK-NEXT:  %66 = CallInst %65, undefined : undefined, %63, "iterator.next() did not return an object" : string
-//CHECK-NEXT:  %67 = LoadPropertyInst %63, "done" : string
-//CHECK-NEXT:  %68 = StoreStackInst %67, %38
-//CHECK-NEXT:  %69 = CondBranchInst %67, %BB10, %BB12
-//CHECK-NEXT:%BB12:
-//CHECK-NEXT:  %70 = LoadPropertyInst %63, "value" : string
-//CHECK-NEXT:  %71 = StoreStackInst %70, %40
-//CHECK-NEXT:  %72 = BranchInst %BB10
+//CHECK-NEXT:  %43 = LoadStackInst %38
+//CHECK-NEXT:  %44 = CondBranchInst %43, %BB8, %BB9
+//CHECK-NEXT:%BB5:
+//CHECK-NEXT:  %45 = CatchInst
+//CHECK-NEXT:  %46 = StoreStackInst %45, %41
+//CHECK-NEXT:  %47 = BranchInst %BB7
 //CHECK-NEXT:%BB10:
-//CHECK-NEXT:  %73 = LoadStackInst %40
-//CHECK-NEXT:  %74 = StorePropertyInst %73, globalObject : object, "e" : string
+//CHECK-NEXT:  %48 = StoreStackInst undefined : undefined, %40
+//CHECK-NEXT:  %49 = BranchInst %BB11
+//CHECK-NEXT:%BB6:
+//CHECK-NEXT:  %50 = BranchInst %BB12
+//CHECK-NEXT:%BB12:
+//CHECK-NEXT:  %51 = TryEndInst
+//CHECK-NEXT:  %52 = BranchInst %BB10
+//CHECK-NEXT:%BB11:
+//CHECK-NEXT:  %53 = CallInst %37, %33
+//CHECK-NEXT:  %54 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+//CHECK-NEXT:  %55 = LoadPropertyInst %54, "ensureObject" : string
+//CHECK-NEXT:  %56 = CallInst %55, undefined : undefined, %53, "iterator.next() did not return an object" : string
+//CHECK-NEXT:  %57 = LoadPropertyInst %53, "done" : string
+//CHECK-NEXT:  %58 = StoreStackInst %57, %38
+//CHECK-NEXT:  %59 = CondBranchInst %57, %BB13, %BB14
+//CHECK-NEXT:%BB14:
+//CHECK-NEXT:  %60 = LoadPropertyInst %53, "value" : string
+//CHECK-NEXT:  %61 = StoreStackInst %60, %40
+//CHECK-NEXT:  %62 = BranchInst %BB15
+//CHECK-NEXT:%BB15:
+//CHECK-NEXT:  %63 = LoadStackInst %40
+//CHECK-NEXT:  %64 = BinaryOperatorInst '!==', %63, undefined : undefined
+//CHECK-NEXT:  %65 = CondBranchInst %64, %BB16, %BB13
+//CHECK-NEXT:%BB13:
+//CHECK-NEXT:  %66 = StoreStackInst 1 : number, %40
+//CHECK-NEXT:  %67 = BranchInst %BB16
+//CHECK-NEXT:%BB16:
+//CHECK-NEXT:  %68 = TryStartInst %BB17, %BB18
+//CHECK-NEXT:%BB17:
+//CHECK-NEXT:  %69 = CatchInst
+//CHECK-NEXT:  %70 = StoreStackInst %69, %41
+//CHECK-NEXT:  %71 = BranchInst %BB7
+//CHECK-NEXT:%BB19:
+//CHECK-NEXT:  %72 = StoreStackInst undefined : undefined, %40
+//CHECK-NEXT:  %73 = LoadStackInst %38
+//CHECK-NEXT:  %74 = CondBranchInst %73, %BB20, %BB21
+//CHECK-NEXT:%BB18:
+//CHECK-NEXT:  %75 = LoadStackInst %40
+//CHECK-NEXT:  %76 = StorePropertyInst %75, globalObject : object, "b" : string
+//CHECK-NEXT:  %77 = BranchInst %BB22
+//CHECK-NEXT:%BB22:
+//CHECK-NEXT:  %78 = TryEndInst
+//CHECK-NEXT:  %79 = BranchInst %BB19
+//CHECK-NEXT:%BB21:
+//CHECK-NEXT:  %80 = CallInst %37, %33
+//CHECK-NEXT:  %81 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+//CHECK-NEXT:  %82 = LoadPropertyInst %81, "ensureObject" : string
+//CHECK-NEXT:  %83 = CallInst %82, undefined : undefined, %80, "iterator.next() did not return an object" : string
+//CHECK-NEXT:  %84 = LoadPropertyInst %80, "done" : string
+//CHECK-NEXT:  %85 = StoreStackInst %84, %38
+//CHECK-NEXT:  %86 = CondBranchInst %84, %BB20, %BB23
+//CHECK-NEXT:%BB23:
+//CHECK-NEXT:  %87 = LoadPropertyInst %80, "value" : string
+//CHECK-NEXT:  %88 = StoreStackInst %87, %40
+//CHECK-NEXT:  %89 = BranchInst %BB20
+//CHECK-NEXT:%BB20:
+//CHECK-NEXT:  %90 = TryStartInst %BB24, %BB25
+//CHECK-NEXT:%BB24:
+//CHECK-NEXT:  %91 = CatchInst
+//CHECK-NEXT:  %92 = StoreStackInst %91, %41
+//CHECK-NEXT:  %93 = BranchInst %BB7
+//CHECK-NEXT:%BB26:
+//CHECK-NEXT:  %94 = LoadStackInst %38
+//CHECK-NEXT:  %95 = CondBranchInst %94, %BB27, %BB28
+//CHECK-NEXT:%BB25:
+//CHECK-NEXT:  %96 = LoadStackInst %40
+//CHECK-NEXT:  %97 = StorePropertyInst %96, globalObject : object, "e" : string
+//CHECK-NEXT:  %98 = BranchInst %BB29
+//CHECK-NEXT:%BB29:
+//CHECK-NEXT:  %99 = TryEndInst
+//CHECK-NEXT:  %100 = BranchInst %BB26
+//CHECK-NEXT:%BB28:
+//CHECK-NEXT:  %101 = LoadPropertyInst %33, "return" : string
+//CHECK-NEXT:  %102 = CompareBranchInst '===', %101, undefined : undefined, %BB30, %BB31
+//CHECK-NEXT:%BB27:
+//CHECK-NEXT:  %103 = LoadStackInst %0
+//CHECK-NEXT:  %104 = ReturnInst %103
+//CHECK-NEXT:%BB31:
+//CHECK-NEXT:  %105 = CallInst %101, %33
+//CHECK-NEXT:  %106 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+//CHECK-NEXT:  %107 = LoadPropertyInst %106, "ensureObject" : string
+//CHECK-NEXT:  %108 = CallInst %107, undefined : undefined, %105, "iterator.close() did not return an object" : string
+//CHECK-NEXT:  %109 = BranchInst %BB30
+//CHECK-NEXT:%BB30:
+//CHECK-NEXT:  %110 = BranchInst %BB27
+//CHECK-NEXT:%BB9:
+//CHECK-NEXT:  %111 = LoadPropertyInst %33, "return" : string
+//CHECK-NEXT:  %112 = CompareBranchInst '===', %111, undefined : undefined, %BB32, %BB33
+//CHECK-NEXT:%BB8:
+//CHECK-NEXT:  %113 = LoadStackInst %41
+//CHECK-NEXT:  %114 = ThrowInst %113
+//CHECK-NEXT:%BB33:
+//CHECK-NEXT:  %115 = TryStartInst %BB34, %BB35
+//CHECK-NEXT:%BB32:
+//CHECK-NEXT:  %116 = BranchInst %BB8
+//CHECK-NEXT:%BB34:
+//CHECK-NEXT:  %117 = CatchInst
+//CHECK-NEXT:  %118 = BranchInst %BB32
+//CHECK-NEXT:%BB35:
+//CHECK-NEXT:  %119 = CallInst %111, %33
+//CHECK-NEXT:  %120 = BranchInst %BB36
+//CHECK-NEXT:%BB36:
+//CHECK-NEXT:  %121 = TryEndInst
+//CHECK-NEXT:  %122 = BranchInst %BB32
+//CHECK-NEXT:function_end

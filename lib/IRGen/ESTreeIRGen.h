@@ -272,6 +272,11 @@ class LReference {
   Value *emitLoad();
   void emitStore(Value *value);
 
+  /// \return true if it is known that \c emitStore() will not have any side
+  ///   effects, including exceptions. This is not a sophisticated analysis,
+  ///   it only checks for a local variable.
+  bool canStoreWithoutSideEffects() const;
+
   Variable *castAsVariable() const;
   GlobalObjectProperty *castAsGlobalObjectProperty() const;
 
@@ -683,6 +688,12 @@ class ESTreeIRGen {
   /// The property field may be a string literal or some computed expression.
   Value *genMemberExpressionProperty(ESTree::MemberExpressionNode *Mem);
 
+  /// Check whether we know that an LReference to the specified AST node can
+  /// be created without any side effects, including throwing. This is not
+  /// supposed to perform a sophisticated analysis, just catch the obvious
+  /// cases. For now it only recognizes local non-const variables.
+  bool canCreateLRefWithoutSideEffects(ESTree::Node *target);
+
   /// Generates a left hand side reference from valid estree nodes
   /// that can be translated to lref.
   LReference createLRef(ESTree::Node *node);
@@ -756,10 +767,27 @@ class ESTreeIRGen {
       ESTree::ArrayPatternNode *targetPat,
       Value *source);
 
+  /// A record used by to describe a shared exception handler. Every individual
+  /// stores the caught exception in the specified location and branches to the
+  /// specified block.
+  struct SharedExceptionHandler {
+    /// Stack location to store the exception if it occurs.
+    AllocStackInst *exc = nullptr;
+    /// Branch to this block if an exception occurs.
+    BasicBlock *exceptionBlock = nullptr;
+    /// Set to true if at least one try/catch block was needed and emitted.
+    bool emittedTry = false;
+  };
+
   void emitRestElement(
       ESTree::RestElementNode *rest,
       IteratorRecord iteratorRecord,
-      AllocStackInst *iteratorDone);
+      AllocStackInst *iteratorDone,
+      SharedExceptionHandler *handler);
+
+  /// Emit an operation guarded by try with a shared exception handler.
+  template <typename EB>
+  void emitTryWithSharedHandler(SharedExceptionHandler *handler, EB emitBody);
 
   /// Generate code for destructuring assignment to ObjectPattern.
   void emitDestructuringObject(
@@ -831,6 +859,25 @@ BasicBlock *ESTreeIRGen::emitTryCatchScaffolding(
   emitHandler(nextBlock);
 
   return nextBlock;
+}
+
+template <typename EB>
+void ESTreeIRGen::emitTryWithSharedHandler(
+    hermes::irgen::ESTreeIRGen::SharedExceptionHandler *handler,
+    EB emitBody) {
+  emitTryCatchScaffolding(
+      nullptr,
+      // emitBody.
+      emitBody,
+      // emitNormalCleanup.
+      []() {},
+      // emitHandler.
+      [this, handler](BasicBlock *nextBlock) {
+        Builder.createStoreStackInst(Builder.createCatchInst(), handler->exc);
+        Builder.createBranchInst(handler->exceptionBlock);
+        Builder.setInsertionBlock(nextBlock);
+      });
+  handler->emittedTry = true;
 }
 
 } // namespace irgen
