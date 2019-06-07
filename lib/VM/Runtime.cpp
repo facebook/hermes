@@ -1326,6 +1326,17 @@ bool Runtime::symbolEqualsToStringPrim(SymbolID id, StringPrimitive *strPrim) {
   return strPrim->equals(view);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
+void Runtime::allocStack(uint32_t count, HermesValue initValue) {
+  // Note: it is important that allocStack be defined out-of-line. If inline,
+  // constants are propagated into initValue, which enables clang to use
+  // memset_pattern_16. This ends up being a significant loss as it is an
+  // indirect call.
+  allocUninitializedStack(count);
+  // Initialize the new registers.
+  std::uninitialized_fill_n(stackPointer_, count, initValue);
+}
+
 void Runtime::dumpCallFrames(llvm::raw_ostream &OS) {
   OS << "== Call Frames ==\n";
   const PinnedHermesValue *next = getStackPointer();

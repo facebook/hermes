@@ -318,8 +318,9 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
 
   /// Allocate stack space for \p registers and initialize them with
   /// \p initValue.
-  /// \return the new stack pointer.
-  inline PinnedHermesValue *allocStack(uint32_t count, HermesValue initValue);
+  /// See implementation for why this is not inlined.
+  LLVM_ATTRIBUTE_NOINLINE
+  void allocStack(uint32_t count, HermesValue initValue);
 
   /// Check whether <tt>count + STACK_RESERVE</tt> stack registers are available
   /// and allocate \p count registers.
@@ -1275,15 +1276,6 @@ inline bool Runtime::checkAvailableStack(uint32_t count) {
 inline PinnedHermesValue *Runtime::allocUninitializedStack(uint32_t count) {
   assert(availableStackSize() >= count && "register stack overflow");
   return stackPointer_ -= count;
-}
-
-inline PinnedHermesValue *Runtime::allocStack(
-    uint32_t count,
-    HermesValue initValue) {
-  allocUninitializedStack(count);
-  // Initialize the new registers.
-  std::uninitialized_fill(stackPointer_, stackPointer_ + count, initValue);
-  return stackPointer_;
 }
 
 inline bool Runtime::checkAndAllocStack(uint32_t count, HermesValue initValue) {
