@@ -605,7 +605,7 @@ typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
-  auto len = static_cast<int64_t>(self->getLength());
+  const double len = self->getLength();
   auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -615,7 +615,7 @@ typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  const int64_t relativeStart = res->getNumberAs<int64_t>();
+  const double relativeStart = res->getNumber();
   auto end = args.getArgHandle(runtime, 2);
   if (!end->isUndefined()) {
     res = toInteger(runtime, end);
@@ -623,9 +623,9 @@ typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
   }
-  const int64_t relativeEnd =
-      end->isUndefined() ? len : res->getNumberAs<int64_t>();
-  // To avoid casting for max/min.
+  const double relativeEnd = end->isUndefined() ? len : res->getNumber();
+  // At this point it is safe to convert to integers because the values will be
+  // in the range [0, len], and len is an integer.
   const int64_t k = convertNegativeBoundsRelativeToLength(relativeStart, len);
   const int64_t last = convertNegativeBoundsRelativeToLength(relativeEnd, len);
 

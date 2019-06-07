@@ -597,6 +597,18 @@ cons.forEach(function(TypedArray) {
   for (var i = 0; i < view.length; i++) {
     assert.equal(view[i], i < view.length - 2 || i >= view.length - 1 ? 0 : 1);
   }
+
+  view.fill(1);
+  // This should not fill any elements.
+  view.fill(0, Infinity);
+  for (var i = 0; i < view.length; i++) {
+    assert.equal(view[i], 1);
+  }
+  // This should fill all elements, Infinity is past the end.
+  view.fill(2, 0, Infinity);
+  for (var i = 0; i < view.length; i++) {
+    assert.equal(view[i], 2);
+  }
 });
 
 cons.forEach(function(TypedArray) {
