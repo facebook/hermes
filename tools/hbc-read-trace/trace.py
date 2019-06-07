@@ -49,6 +49,10 @@ MAX_LABEL_WIDTH = 25
 
 def display_brief(grouped_accesses, display_offsets, display_time):
     FMT = "{} -- \u03a3 = {}us"
+
+    def print_fmt(label, total):
+        print(FMT.format(label.ljust(MAX_LABEL_WIDTH), total).encode("utf-8"))
+
     for label, accesses in grouped_accesses:
         count = len(accesses)
         total = sum(time for _, time in accesses)
@@ -64,10 +68,10 @@ def display_brief(grouped_accesses, display_offsets, display_time):
             continue
 
         if len(label) <= MAX_LABEL_WIDTH:
-            print(FMT.format(label.ljust(MAX_LABEL_WIDTH), total))
+            print_fmt(label, total)
         else:
             print(label)
-            print(FMT.format("".ljust(MAX_LABEL_WIDTH), total))
+            print_fmt("", total)
 
 
 def display_all(grouped_accesses, display_offsets, display_time):
