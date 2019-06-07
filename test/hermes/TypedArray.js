@@ -609,6 +609,23 @@ cons.forEach(function(TypedArray) {
   for (var i = 0; i < view.length; i++) {
     assert.equal(view[i], 2);
   }
+
+  // Calling fill on a detached TypedArray should throw TypeError.
+  HermesInternal.detachArrayBuffer(view.buffer);
+  assert.throws(function() {
+    view.fill(0);
+  }, TypeError);
+
+  // Converting the first argument to a number can detach the TypedArray.
+  view = new TypedArray(4);
+  assert.throws(function() {
+    view.fill({
+      valueOf: function() {
+        HermesInternal.detachArrayBuffer(view.buffer);
+        return 1;
+      },
+    });
+  }, TypeError);
 });
 
 cons.forEach(function(TypedArray) {

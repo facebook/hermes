@@ -629,6 +629,12 @@ typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   const int64_t k = convertNegativeBoundsRelativeToLength(relativeStart, len);
   const int64_t last = convertNegativeBoundsRelativeToLength(relativeEnd, len);
 
+  // 9. If IsDetachedBuffer(O.[[ViewedArrayBuffer]]) is true, throw a TypeError
+  // exception.
+  if (!self->attached()) {
+    return runtime->raiseTypeError("Cannot fill a detached TypedArray");
+  }
+
   if (k >= last) {
     // Early return to avoid the case of zero requested fill space.
     return self.getHermesValue();
