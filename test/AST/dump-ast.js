@@ -758,18 +758,18 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:         "column": 1
 // CHECK-SOURCE-LOC:       },
 // CHECK-SOURCE-LOC:       "end": {
-// CHECK-SOURCE-LOC:         "line": 785,
-// CHECK-SOURCE-LOC:         "column": 1
+// CHECK-SOURCE-LOC:         "line": 18,
+// CHECK-SOURCE-LOC:         "column": 2
 // CHECK-SOURCE-LOC:       }
 // CHECK-SOURCE-LOC:     },
 // CHECK-SOURCE-LOC:     "range": [
 // CHECK-SOURCE-LOC:       301,
-// CHECK-SOURCE-LOC:       37099
+// CHECK-SOURCE-LOC:       472
 // CHECK-SOURCE-LOC:     ]
 // CHECK-SOURCE-LOC:   },
 // CHECK-SOURCE-LOC:   "loc": {
 // CHECK-SOURCE-LOC:     "start": {
-// CHECK-SOURCE-LOC:       "line": 5,
+// CHECK-SOURCE-LOC:       "line": 1,
 // CHECK-SOURCE-LOC:       "column": 1
 // CHECK-SOURCE-LOC:     },
 // CHECK-SOURCE-LOC:     "end": {
@@ -778,7 +778,7 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:     }
 // CHECK-SOURCE-LOC:   },
 // CHECK-SOURCE-LOC:   "range": [
-// CHECK-SOURCE-LOC:     301,
-// CHECK-SOURCE-LOC:     37099
+// CHECK-SOURCE-LOC:     0,
+// CHECK-SOURCE-LOC:     37094
 // CHECK-SOURCE-LOC:   ]
 // CHECK-SOURCE-LOC: }

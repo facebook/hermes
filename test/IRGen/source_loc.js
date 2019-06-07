@@ -12,7 +12,7 @@ function foo(a,b) {
 
 //CHECK-LABEL: function global()
 //CHECK-NEXT: frame = [], globals = [foo]
-//CHECK-NEXT: source location: [<stdin>:3:1 ... <stdin>:85:1)
+//CHECK-NEXT: source location: [<stdin>:3:1 ... <stdin>:11:2)
 //CHECK-NEXT: %BB0:
 //CHECK-NEXT: ; <stdin>:3:1
 //CHECK-NEXT:   %0 = CreateFunctionInst %foo()
@@ -24,7 +24,7 @@ function foo(a,b) {
 //CHECK-NEXT:   %3 = StoreStackInst undefined : undefined, %2
 //CHECK-NEXT: ; <stdin>:3:1
 //CHECK-NEXT:   %4 = LoadStackInst %2
-//CHECK-NEXT: ; <stdin>:84:27
+//CHECK-NEXT: ; <stdin>:11:1
 //CHECK-NEXT:   %5 = ReturnInst %4
 //CHECK-NEXT: function_end
 

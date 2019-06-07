@@ -223,11 +223,19 @@ Optional<ESTree::FileNode *> JSParserImpl::parseProgram() {
   if (!parseStatementList(Param{}, TokenKind::eof, true, stmtList))
     return None;
 
+  SMLoc endLoc = startLoc;
+  if (!stmtList.empty()) {
+    endLoc = stmtList.back().getEndLoc();
+  }
   auto *program = setLocation(
-      startLoc, tok_, new (context_) ESTree::ProgramNode(std::move(stmtList)));
+      startLoc,
+      endLoc,
+      new (context_) ESTree::ProgramNode(std::move(stmtList)));
   program->strictness = ESTree::makeStrictness(isStrictMode());
   return setLocation(
-      program, program, new (context_) ESTree::FileNode(program));
+      SMLoc::getFromPointer(lexer_.getBufferStart()),
+      SMLoc::getFromPointer(lexer_.getBufferEnd()),
+      new (context_) ESTree::FileNode(program));
 }
 
 Optional<ESTree::FunctionDeclarationNode *>

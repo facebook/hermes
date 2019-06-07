@@ -360,6 +360,16 @@ class JSLexer {
     return bufId_;
   }
 
+  /// \return a pointer to the beginning of the buffer.
+  const char *getBufferStart() const {
+    return bufferStart_;
+  }
+
+  /// \return a pointer to the end of the buffer.
+  const char *getBufferEnd() const {
+    return bufferEnd_;
+  }
+
  private:
   /// Initialize the storage with the characters between \p begin and \p end.
   inline void initStorageWith(const char *begin, const char *end);
