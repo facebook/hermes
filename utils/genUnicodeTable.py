@@ -194,7 +194,7 @@ def print_precanonicalizations(casemap):
     # Remove "obvious" entries that consist of exactly the character
     # and its lowercase form.
     for canon_cp in list(precanons.keys()):
-        trivial_precanons = set([canon_cp, casemap.tolower[canon_cp]])
+        trivial_precanons = {canon_cp, casemap.tolower[canon_cp]}
         if set(precanons[canon_cp]) == trivial_precanons:
             del precanons[canon_cp]
 

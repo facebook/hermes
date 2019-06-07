@@ -166,7 +166,7 @@ includesMatcher = re.compile(r"includes:\s*\[(.*)\]")
 # This regex works only because the few cases which use this pattern
 # only include one file.
 specialIncludesMatcher = re.compile(
-    "includes:\n" ".*-\s*(.*\.js)\n", re.MULTILINE | re.DOTALL
+    "includes:\n" r".*-\s*(.*\.js)" "\n", re.MULTILINE | re.DOTALL
 )
 
 
@@ -257,7 +257,13 @@ assignEvalMatcher = re.compile(r"=\s*eval\s*;")
 withMatcher = re.compile(r"\bwith\s*\(")
 constMatcher = re.compile(r"\bconst\b")
 negativeMatcher = re.compile(
-    r"/\*---.*" "negative:.*" "\n\s*phase:\s*(\S+).*" "\n\s*type:\s*(\S+).*" "\n---\*/",
+    r"/\*---.*"
+    "negative:.*\n"
+    r"\s*phase:\s*(\S+).*"
+    "\n"
+    r"\s*type:\s*(\S+).*"
+    "\n"
+    r"---\*/",
     re.MULTILINE | re.DOTALL,
 )
 flagsMatcher = re.compile(r"\s*flags:\s*\[(.*)\]")
@@ -411,7 +417,7 @@ ESPRIMA_TEST_STATUS_MAP = {
 
 def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner):
     """
-    Runs a single js test pointed by \p filename
+    Runs a single js test pointed by filename
     """
     baseFileName = basename(filename)
     suite = getSuite(filename)

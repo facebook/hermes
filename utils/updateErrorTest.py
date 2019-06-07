@@ -23,7 +23,7 @@ errors = []
 
 
 def parseErrorLine(line):
-    m = re.match(".*:(\d+):(\d+): (.*)", line)
+    m = re.match(r".*:(\d+):(\d+): (.*)", line)
     if not m:
         return None
     return (int(m.group(1)), int(m.group(2)), m.group(3))
@@ -34,13 +34,13 @@ def parseSource(lines):
     i = 0
     # Collect the commented out lines at the beginning.
     while i < len(lines):
-        if not re.match("^\s*//", lines[i]):
+        if not re.match(r"^\s*//", lines[i]):
             break
         headingLines.append(lines[i])
         i += 1
     # Collect the source, exlcuding // CHECK: and similar lines.
     while i < len(lines):
-        if not re.match("^\s*//\s*(\S+):", lines[i]):
+        if not re.match(r"^\s*//\s*(\S+):", lines[i]):
             if lines[i].strip():
                 sourceLines[i + 1] = lines[i]
                 lastSourceLine = i + 1

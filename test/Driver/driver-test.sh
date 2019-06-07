@@ -15,6 +15,7 @@ HERMES=$3
 Success=0
 InvalidFlags=1
 ParsingFailed=2
+# shellcheck disable=SC2034
 VerificationFailed=3
 LoadGlobalsFailed=4
 InputFileError=5
