@@ -202,7 +202,6 @@ void vm_unused(void *p, size_t sz) {
   assert(
       reinterpret_cast<intptr_t>(p) % PS == 0 &&
       "Precondition: pointer is page-aligned.");
-  assert(sz % PS == 0 && "Precondition: size is page-aligned.");
 #endif
 
 /// Change the flag we pass to \p madvise based on the platform, so that we are
@@ -251,6 +250,13 @@ bool vm_protect(void *p, size_t sz, ProtectMode) {
 }
 
 bool vm_madvise(void *p, size_t sz, MAdvice advice) {
+#ifndef NDEBUG
+  const size_t PS = page_size();
+  assert(
+      reinterpret_cast<intptr_t>(p) % PS == 0 &&
+      "Precondition: pointer is page-aligned.");
+#endif
+
   int param = MADV_NORMAL;
   switch (advice) {
     case MAdvice::Random:
