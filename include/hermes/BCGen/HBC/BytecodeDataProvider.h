@@ -251,6 +251,10 @@ class BCProviderBase {
   /// Issue an madvise call (only implemented for buffers).
   virtual void madvise(oscompat::MAdvice advice) {}
 
+  /// Advise the provider that string table metadata is going to be accessed
+  /// sequentially.  Only forwards this advice to the OS for buffers.
+  virtual void adviseStringTableSequential() {}
+
   /// Start tracking I/O (only implemented for buffers). Any access before this
   /// call (e.g. reading header to construct the provider) will not be recorded.
   virtual void startPageAccessTracker() {}
@@ -432,6 +436,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
   virtual void startWarmup(uint8_t percent);
 
   virtual void madvise(oscompat::MAdvice advice);
+  virtual void adviseStringTableSequential();
 
   virtual void startPageAccessTracker();
 

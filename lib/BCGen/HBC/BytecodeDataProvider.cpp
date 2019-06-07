@@ -9,6 +9,8 @@
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 
+#include "llvm/Support/MathExtras.h"
+
 namespace hermes {
 namespace hbc {
 
@@ -315,9 +317,68 @@ void BCProviderFromBuffer::startWarmup(uint8_t percent) {
   }
 }
 
+namespace {
+
+/// Cast a pointer of any type to a uint8_t pointer.
+template <typename T>
+constexpr uint8_t *rawptr_cast(T *p) {
+  return const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(p));
+}
+
+/// Align \p *ptr down to the start of the page it is pointing in to, and
+/// simultaneously adjust \p *byteLen up by the amount the ptr was shifted down
+/// by.
+inline void pageAlignDown(uint8_t **ptr, size_t *byteLen) {
+  const auto PS = oscompat::page_size();
+
+  auto orig = *ptr;
+  *ptr = reinterpret_cast<uint8_t *>(llvm::alignAddr(*ptr + 1, PS) - PS);
+  byteLen += orig - *ptr;
+}
+
+} // namespace
+
 void BCProviderFromBuffer::madvise(oscompat::MAdvice advice) {
   (void)oscompat::vm_madvise(
-      const_cast<uint8_t *>(buffer_->data()), buffer_->size(), advice);
+      rawptr_cast(buffer_->data()), buffer_->size(), advice);
+}
+
+void BCProviderFromBuffer::adviseStringTableSequential() {
+  auto *start = rawptr_cast(stringKinds_.data());
+  auto *end = rawptr_cast(stringStorage_.data());
+  size_t adviceLength = end - start;
+
+  assert(
+      rawptr_cast(stringKinds_.end()) <= end &&
+      "String Kinds not fully advised");
+
+  assert(
+      start <= rawptr_cast(identifierTranslations_.begin()) &&
+      rawptr_cast(identifierTranslations_.end()) <= end &&
+      "Identifier Translations not fully advised");
+
+  assert(
+      start <= rawptr_cast(stringTableEntries_) &&
+      rawptr_cast(stringTableEntries_ + stringCount_) <= end &&
+      "Small String Table Entries not fully advised");
+
+  assert(
+      start <= rawptr_cast(overflowStringTableEntries_.begin()) &&
+      rawptr_cast(overflowStringTableEntries_.end()) <= end &&
+      "Overflow String Table Entries not fully advised");
+
+#ifndef NDEBUG
+  size_t expectedLength = sizeof(StringKind::Entry) * stringKinds_.size() +
+      sizeof(uint32_t) * identifierTranslations_.size() +
+      sizeof(SmallStringTableEntry) * stringCount_ +
+      sizeof(OverflowStringTableEntry) * overflowStringTableEntries_.size();
+
+  assert(
+      expectedLength == adviceLength && "Mismatched length of advised region");
+#endif
+
+  pageAlignDown(&start, &adviceLength);
+  oscompat::vm_madvise(start, adviceLength, oscompat::MAdvice::Sequential);
 }
 
 void BCProviderFromBuffer::startPageAccessTracker() {
