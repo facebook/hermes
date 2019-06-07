@@ -381,6 +381,35 @@ void BCProviderFromBuffer::adviseStringTableSequential() {
   oscompat::vm_madvise(start, adviceLength, oscompat::MAdvice::Sequential);
 }
 
+void BCProviderFromBuffer::adviseStringTableRandom() {
+  // We only advise the small string table entries, overflow string table
+  // entries and storage.  We do not give advice about the identifier
+  // translations or string kinds because they are not referred to after
+  // initialisation.
+
+  auto *tableStart = rawptr_cast(stringTableEntries_);
+  auto *tableEnd = rawptr_cast(overflowStringTableEntries_.end());
+  size_t tableLength = tableEnd - tableStart;
+
+  auto *storageStart = rawptr_cast(stringStorage_.begin());
+  size_t storageLength = stringStorage_.size();
+
+#ifndef NDEBUG
+  size_t expectedTableLength = 0 +
+      sizeof(SmallStringTableEntry) * stringCount_ +
+      sizeof(OverflowStringTableEntry) * overflowStringTableEntries_.size();
+
+  assert(
+      expectedTableLength == tableLength &&
+      "Mismatched level of advised region");
+#endif
+
+  pageAlignDown(&tableStart, &tableLength);
+  pageAlignDown(&storageStart, &storageLength);
+  oscompat::vm_madvise(tableStart, tableLength, oscompat::MAdvice::Random);
+  oscompat::vm_madvise(storageStart, storageLength, oscompat::MAdvice::Random);
+}
+
 void BCProviderFromBuffer::startPageAccessTracker() {
   auto size = buffer_->size();
   if (!tracker_) {

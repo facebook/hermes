@@ -259,6 +259,10 @@ void RuntimeModule::importStringIDMap() {
     assert(trnID == translations.size() && "Should translate all identifiers.");
   }
 
+  if (runtime_->getVMExperimentFlags() & experiments::MAdviseStringsRandom) {
+    bcProvider_->adviseStringTableRandom();
+  }
+
   if (strTableSize == 0) {
     // If the string table turns out to be empty,
     // we always add one empty string to it.
