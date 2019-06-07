@@ -82,6 +82,9 @@ enum {
   FreezeBuiltinsAndFatalOnOverride = 1 << 1,
   MAdviseSequential = 1 << 2,
   MAdviseRandom = 1 << 3,
+  MAdviseStringsSequential = 1 << 4,
+  MAdviseStringsRandom = 1 << 5,
+  MAdviseStringsWillNeed = 1 << 6,
 };
 /// Set of flags for active VM experiments.
 using VMExperimentFlags = uint32_t;
