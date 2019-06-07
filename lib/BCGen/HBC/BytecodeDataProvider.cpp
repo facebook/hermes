@@ -336,6 +336,22 @@ inline void pageAlignDown(uint8_t **ptr, size_t *byteLen) {
   byteLen += orig - *ptr;
 }
 
+#ifndef NDEBUG
+
+/// Returns the total size of all array contents in bytes.
+constexpr size_t totalByteSize() {
+  return 0;
+}
+
+template <typename T, typename... Ts>
+constexpr size_t totalByteSize(
+    llvm::ArrayRef<T> arr,
+    llvm::ArrayRef<Ts>... rest) {
+  return sizeof(arr[0]) * arr.size() + totalByteSize(rest...);
+}
+
+#endif
+
 } // namespace
 
 void BCProviderFromBuffer::madvise(oscompat::MAdvice advice) {
@@ -343,45 +359,42 @@ void BCProviderFromBuffer::madvise(oscompat::MAdvice advice) {
       rawptr_cast(buffer_->data()), buffer_->size(), advice);
 }
 
+#define ASSERT_BOUNDED(LO, ARRAY, HI)                                       \
+  assert(                                                                   \
+      LO <= rawptr_cast(ARRAY.begin()) && rawptr_cast(ARRAY.end()) <= HI && \
+      #ARRAY " not fully contained.")
+
+#define ASSERT_TOTAL_ARRAY_LEN(LEN, ...) \
+  assert(LEN == totalByteSize(__VA_ARGS__) && "Mismatched length of region")
+
 void BCProviderFromBuffer::adviseStringTableSequential() {
-  auto *start = rawptr_cast(stringKinds_.data());
-  auto *end = rawptr_cast(stringStorage_.data());
+  llvm::ArrayRef<SmallStringTableEntry> smallStringTableEntries{
+      stringTableEntries_, stringCount_};
+
+  auto *start = rawptr_cast(stringKinds_.begin());
+  auto *end = rawptr_cast(stringStorage_.begin());
   size_t adviceLength = end - start;
 
-  assert(
-      rawptr_cast(stringKinds_.end()) <= end &&
-      "String Kinds not fully advised");
+  ASSERT_BOUNDED(start, stringKinds_, end);
+  ASSERT_BOUNDED(start, identifierTranslations_, end);
+  ASSERT_BOUNDED(start, smallStringTableEntries, end);
+  ASSERT_BOUNDED(start, overflowStringTableEntries_, end);
 
-  assert(
-      start <= rawptr_cast(identifierTranslations_.begin()) &&
-      rawptr_cast(identifierTranslations_.end()) <= end &&
-      "Identifier Translations not fully advised");
-
-  assert(
-      start <= rawptr_cast(stringTableEntries_) &&
-      rawptr_cast(stringTableEntries_ + stringCount_) <= end &&
-      "Small String Table Entries not fully advised");
-
-  assert(
-      start <= rawptr_cast(overflowStringTableEntries_.begin()) &&
-      rawptr_cast(overflowStringTableEntries_.end()) <= end &&
-      "Overflow String Table Entries not fully advised");
-
-#ifndef NDEBUG
-  size_t expectedLength = sizeof(StringKind::Entry) * stringKinds_.size() +
-      sizeof(uint32_t) * identifierTranslations_.size() +
-      sizeof(SmallStringTableEntry) * stringCount_ +
-      sizeof(OverflowStringTableEntry) * overflowStringTableEntries_.size();
-
-  assert(
-      expectedLength == adviceLength && "Mismatched length of advised region");
-#endif
+  ASSERT_TOTAL_ARRAY_LEN(
+      adviceLength,
+      stringKinds_,
+      identifierTranslations_,
+      smallStringTableEntries,
+      overflowStringTableEntries_);
 
   pageAlignDown(&start, &adviceLength);
   oscompat::vm_madvise(start, adviceLength, oscompat::MAdvice::Sequential);
 }
 
 void BCProviderFromBuffer::adviseStringTableRandom() {
+  llvm::ArrayRef<SmallStringTableEntry> smallStringTableEntries{
+      stringTableEntries_, stringCount_};
+
   // We only advise the small string table entries, overflow string table
   // entries and storage.  We do not give advice about the identifier
   // translations or string kinds because they are not referred to after
@@ -394,21 +407,20 @@ void BCProviderFromBuffer::adviseStringTableRandom() {
   auto *storageStart = rawptr_cast(stringStorage_.begin());
   size_t storageLength = stringStorage_.size();
 
-#ifndef NDEBUG
-  size_t expectedTableLength = 0 +
-      sizeof(SmallStringTableEntry) * stringCount_ +
-      sizeof(OverflowStringTableEntry) * overflowStringTableEntries_.size();
+  ASSERT_BOUNDED(tableStart, smallStringTableEntries, tableEnd);
+  ASSERT_BOUNDED(tableStart, overflowStringTableEntries_, tableEnd);
 
-  assert(
-      expectedTableLength == tableLength &&
-      "Mismatched level of advised region");
-#endif
+  ASSERT_TOTAL_ARRAY_LEN(
+      tableLength, smallStringTableEntries, overflowStringTableEntries_);
 
   pageAlignDown(&tableStart, &tableLength);
   pageAlignDown(&storageStart, &storageLength);
   oscompat::vm_madvise(tableStart, tableLength, oscompat::MAdvice::Random);
   oscompat::vm_madvise(storageStart, storageLength, oscompat::MAdvice::Random);
 }
+
+#undef ASSERT_BOUNDED
+#undef ASSERT_TOTAL_ARRAY_LEN
 
 void BCProviderFromBuffer::startPageAccessTracker() {
   auto size = buffer_->size();
