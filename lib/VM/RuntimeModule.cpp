@@ -221,6 +221,10 @@ void RuntimeModule::importStringIDMap() {
     bcProvider_->adviseStringTableSequential();
   }
 
+  if (runtime_->getVMExperimentFlags() & experiments::MAdviseStringsWillNeed) {
+    bcProvider_->willNeedStringTable();
+  }
+
   // Get the array of pre-computed translations from identifiers in the bytecode
   // to their runtime representation as SymbolIDs.
   auto kinds = bcProvider_->getStringKinds();

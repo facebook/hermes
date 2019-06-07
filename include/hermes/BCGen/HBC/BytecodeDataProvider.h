@@ -259,6 +259,10 @@ class BCProviderBase {
   /// in random order.  Only forwards this advice to the OS for buffers.
   virtual void adviseStringTableRandom() {}
 
+  /// Advise the provider that string table metadata is going to be accessed
+  /// soon.  Only forwards this information to the OS for buffers.
+  virtual void willNeedStringTable() {}
+
   /// Start tracking I/O (only implemented for buffers). Any access before this
   /// call (e.g. reading header to construct the provider) will not be recorded.
   virtual void startPageAccessTracker() {}
@@ -442,6 +446,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
   virtual void madvise(oscompat::MAdvice advice);
   virtual void adviseStringTableSequential();
   virtual void adviseStringTableRandom();
+  virtual void willNeedStringTable();
 
   virtual void startPageAccessTracker();
 

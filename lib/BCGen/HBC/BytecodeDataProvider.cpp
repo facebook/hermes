@@ -419,6 +419,30 @@ void BCProviderFromBuffer::adviseStringTableRandom() {
   oscompat::vm_madvise(storageStart, storageLength, oscompat::MAdvice::Random);
 }
 
+void BCProviderFromBuffer::willNeedStringTable() {
+  llvm::ArrayRef<SmallStringTableEntry> smallStringTableEntries{
+      stringTableEntries_, stringCount_};
+
+  auto *start = rawptr_cast(stringKinds_.begin());
+  auto *end = rawptr_cast(overflowStringTableEntries_.end());
+  size_t prefetchLength = end - start;
+
+  ASSERT_BOUNDED(start, stringKinds_, end);
+  ASSERT_BOUNDED(start, identifierTranslations_, end);
+  ASSERT_BOUNDED(start, smallStringTableEntries, end);
+  ASSERT_BOUNDED(start, overflowStringTableEntries_, end);
+
+  ASSERT_TOTAL_ARRAY_LEN(
+      prefetchLength,
+      stringKinds_,
+      identifierTranslations_,
+      smallStringTableEntries,
+      overflowStringTableEntries_);
+
+  pageAlignDown(&start, &prefetchLength);
+  oscompat::vm_prefetch(start, prefetchLength);
+}
+
 #undef ASSERT_BOUNDED
 #undef ASSERT_TOTAL_ARRAY_LEN
 
