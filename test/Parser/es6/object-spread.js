@@ -3,8 +3,6 @@
 
 ({a, ...foo(10), b, ...d})
 //CHECK:      {
-//CHECK-NEXT:   "type": "File",
-//CHECK-NEXT:   "program": {
 //CHECK-NEXT:     "type": "Program",
 //CHECK-NEXT:     "body": [
 //CHECK-NEXT:       {
@@ -71,4 +69,3 @@
 //CHECK-NEXT:       }
 //CHECK-NEXT:     ]
 //CHECK-NEXT:   }
-//CHECK-NEXT: }

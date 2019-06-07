@@ -335,7 +335,6 @@ ESTREE_NODE_1_ARGS(TypeAnnotation, Base, NodePtr, typeAnnotation, false)
 
 ESTREE_NODE_1_ARGS(Directive, Base, NodePtr, value, false)
 ESTREE_NODE_1_ARGS(DirectiveLiteral, Base, NodeLabel, value, false)
-ESTREE_NODE_1_ARGS(File, Base, NodePtr, program, false)
 
 ESTREE_NODE_2_ARGS(
     Identifier,

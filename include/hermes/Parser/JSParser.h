@@ -61,7 +61,7 @@ class JSParser {
   /// source.
   bool getUseStaticBuiltin() const;
 
-  llvm::Optional<ESTree::FileNode *> parse();
+  llvm::Optional<ESTree::ProgramNode *> parse();
 
   void seek(SMLoc startPos);
 

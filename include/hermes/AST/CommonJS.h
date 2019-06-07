@@ -24,7 +24,7 @@ namespace hermes {
 /// Ensures the result is non-null.
 ESTree::FunctionExpressionNode *wrapCJSModule(
     std::shared_ptr<Context> &context,
-    ESTree::FileNode *file);
+    ESTree::ProgramNode *program);
 
 } // namespace hermes
 

@@ -674,7 +674,7 @@ class ESTreeIRGen {
 
   /// Scan all the global declarations in the supplied declaration file and
   /// declare them as global properties.
-  void processDeclarationFile(ESTree::FileNode *fileNode);
+  void processDeclarationFile(ESTree::ProgramNode *programNode);
 
   /// This method ensures that a variable with the name \p name exists in the
   /// current scope. The method reports an error if the variable does not exist

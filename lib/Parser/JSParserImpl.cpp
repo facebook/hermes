@@ -71,7 +71,7 @@ void JSParserImpl::initializeIdentifiers() {
     tokenIdent_[i] = lexer_.getIdentifier(tokenKindStr((TokenKind)i));
 }
 
-Optional<ESTree::FileNode *> JSParserImpl::parse() {
+Optional<ESTree::ProgramNode *> JSParserImpl::parse() {
   PerfSection parsing("Parsing JavaScript");
   tok_ = lexer_.advance();
   auto res = parseProgram();
@@ -215,7 +215,7 @@ bool JSParserImpl::recursionDepthExceeded() {
   return true;
 }
 
-Optional<ESTree::FileNode *> JSParserImpl::parseProgram() {
+Optional<ESTree::ProgramNode *> JSParserImpl::parseProgram() {
   SMLoc startLoc = tok_->getStartLoc();
   SaveStrictMode saveStrict{this};
   ESTree::NodeList stmtList;
@@ -232,10 +232,7 @@ Optional<ESTree::FileNode *> JSParserImpl::parseProgram() {
       endLoc,
       new (context_) ESTree::ProgramNode(std::move(stmtList)));
   program->strictness = ESTree::makeStrictness(isStrictMode());
-  return setLocation(
-      SMLoc::getFromPointer(lexer_.getBufferStart()),
-      SMLoc::getFromPointer(lexer_.getBufferEnd()),
-      new (context_) ESTree::FileNode(program));
+  return program;
 }
 
 Optional<ESTree::FunctionDeclarationNode *>

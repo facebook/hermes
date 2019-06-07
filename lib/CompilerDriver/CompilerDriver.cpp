@@ -569,7 +569,7 @@ SourceErrorOutputOptions guessErrorOutputOptions() {
 /// \p sourceMap any parsed source map associated with \p fileBuf.
 /// \p sourceMapTranslator input source map coordinate translator.
 /// \return A pointer to the new validated AST, nullptr if parsing failed.
-/// If using CJS modules, return a FunctionExpressionNode, else a FileNode.
+/// If using CJS modules, return a FunctionExpressionNode, else a ProgramNode.
 ESTree::NodePtr parseJS(
     std::shared_ptr<Context> &context,
     sem::SemContext &semCtx,
@@ -599,7 +599,7 @@ ESTree::NodePtr parseJS(
     mode = parser::LazyParse;
   }
 
-  Optional<ESTree::FileNode *> parsedJs;
+  Optional<ESTree::ProgramNode *> parsedJs;
 
 #ifdef HERMES_USE_FLOWPARSER
   if (cl::FlowParser) {
@@ -625,7 +625,7 @@ ESTree::NodePtr parseJS(
 
   if (wrapCJSModule) {
     parsedAST =
-        hermes::wrapCJSModule(context, cast<ESTree::FileNode>(parsedAST));
+        hermes::wrapCJSModule(context, cast<ESTree::ProgramNode>(parsedAST));
     if (!parsedAST) {
       return nullptr;
     }

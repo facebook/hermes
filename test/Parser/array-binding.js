@@ -1,8 +1,6 @@
 // RUN: %hermesc -dump-ast -pretty-json %s | %FileCheck --match-full-lines %s
 
-//CHECK:      {
-//CHECK-NEXT:   "type": "File",
-//CHECK-NEXT:   "program": {
+//CHECK:        {
 //CHECK-NEXT:     "type": "Program",
 //CHECK-NEXT:     "body": [
 
@@ -133,4 +131,3 @@ var [a, [b = 1, c] = [,2]] = x;
 
 //CHECK-NEXT:     ]
 //CHECK-NEXT:   }
-//CHECK-NEXT: }

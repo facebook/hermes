@@ -3,8 +3,6 @@
 // Make sure we distinguish between div and regexp correctly.
 
 //CHECK:      {
-//CHECK-NEXT:   "type": "File",
-//CHECK-NEXT:   "program": {
 //CHECK-NEXT:     "type": "Program",
 //CHECK-NEXT:     "body": [
 
@@ -54,4 +52,3 @@
 
 //CHECK-NEXT:     ]
 //CHECK-NEXT:   }
-//CHECK-NEXT: }

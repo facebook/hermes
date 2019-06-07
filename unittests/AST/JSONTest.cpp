@@ -20,13 +20,10 @@ namespace {
 
 const char *JSONExample =
     "{"
-    "  \"type\": \"File\","
-    "  \"program\": {"
     "    \"type\": \"Program\","
     "    \"sourceType\": \"script\","
     "    \"body\": [], "
     "    \"directives\": []"
-    "  },  "
     "}";
 
 TEST(JSONParserTest, SimpleParserTest) {

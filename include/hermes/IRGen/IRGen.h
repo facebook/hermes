@@ -18,10 +18,9 @@ namespace hermes {
 namespace ESTree {
 class Node;
 using NodePtr = Node *;
-class FileNode;
 } // namespace ESTree
 
-using DeclarationFileListTy = std::vector<ESTree::FileNode *>;
+using DeclarationFileListTy = std::vector<ESTree::ProgramNode *>;
 
 namespace hbc {
 

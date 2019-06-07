@@ -1,8 +1,6 @@
 // RUN: %hermes -dump-ast --pretty-json %s | %FileCheck %s --match-full-lines
 
 //CHECK: {
-//CHECK-NEXT:  "type": "File",
-//CHECK-NEXT:  "program": {
 //CHECK-NEXT:    "type": "Program",
 //CHECK-NEXT:    "body": [
 
@@ -156,4 +154,3 @@ const a7 = 1;
 
 //CHECK-NEXT:    ]
 //CHECK-NEXT:  }
-//CHECK-NEXT:}

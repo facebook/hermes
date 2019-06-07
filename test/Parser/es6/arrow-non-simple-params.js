@@ -2,8 +2,6 @@
 
 let foo = (a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) => {}
 //CHECK:      {
-//CHECK-NEXT:   "type": "File",
-//CHECK-NEXT:   "program": {
 //CHECK-NEXT:     "type": "Program",
 //CHECK-NEXT:     "body": [
 //CHECK-NEXT:       {
@@ -146,4 +144,3 @@ let foo = (a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) => {}
 //CHECK-NEXT:       }
 //CHECK-NEXT:     ]
 //CHECK-NEXT:   }
-//CHECK-NEXT: }

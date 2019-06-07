@@ -29,11 +29,7 @@ namespace vm {
 namespace {
 #ifndef HERMESVM_LEAN
 bool isSingleFunctionExpression(ESTree::NodePtr ast) {
-  auto *file = dyn_cast<ESTree::FileNode>(ast);
-  if (!file) {
-    return false;
-  }
-  auto *prog = dyn_cast<ESTree::ProgramNode>(file->_program);
+  auto *prog = dyn_cast<ESTree::ProgramNode>(ast);
   if (!prog) {
     return false;
   }

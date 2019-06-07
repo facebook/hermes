@@ -10,9 +10,7 @@ namespace hermes {
 
 ESTree::FunctionExpressionNode *wrapCJSModule(
     std::shared_ptr<Context> &context,
-    ESTree::FileNode *file) {
-  ESTree::ProgramNode *program =
-      llvm::cast<ESTree::ProgramNode>(file->_program);
+    ESTree::ProgramNode *program) {
   auto *moduleBlock =
       new (*context) ESTree::BlockStatementNode(std::move(program->_body));
   moduleBlock->setSourceRange(program->getSourceRange());
@@ -34,8 +32,8 @@ ESTree::FunctionExpressionNode *wrapCJSModule(
   auto *wrappedFn = new (*context) ESTree::FunctionExpressionNode(
       nullptr, std::move(argNames), moduleBlock, false);
   wrappedFn->strictness = ESTree::Strictness::NonStrictMode;
-  wrappedFn->setSourceRange(file->getSourceRange());
-  wrappedFn->setDebugLoc(file->getDebugLoc());
+  wrappedFn->setSourceRange(program->getSourceRange());
+  wrappedFn->setDebugLoc(program->getDebugLoc());
 
   return wrappedFn;
 }

@@ -47,7 +47,7 @@ std::pair<std::string, std::string> genSplitCode(
     hermes::ESTree::NodePtr parsedAST = parsedJs.getValue();
     if (wrapCJSModule) {
       parsedAST = hermes::wrapCJSModule(
-          context, cast<hermes::ESTree::FileNode>(parsedAST));
+          context, cast<hermes::ESTree::ProgramNode>(parsedAST));
     }
     validateAST(*context, semCtx, parsedAST);
     return parsedAST;

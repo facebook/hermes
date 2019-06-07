@@ -39,7 +39,7 @@ bool JSParser::getUseStaticBuiltin() const {
   return impl_->getUseStaticBuiltin();
 }
 
-llvm::Optional<ESTree::FileNode *> JSParser::parse() {
+llvm::Optional<ESTree::ProgramNode *> JSParser::parse() {
   return impl_->parse();
 }
 

@@ -17,11 +17,9 @@ switch (foo()) {
     print(foo());
 }
 
-// CHECK: {"type":"File","program":{"type":"Program","body":[{"type":"FunctionDeclaration","id":{"type":"Identifier","name":"foo","typeAnnotation":null},"params":[],"body":{"type":"BlockStatement","body":[{"type":"ReturnStatement","argument":{"type":"CallExpression","callee":{"type":"MemberExpression","object":{"type":"Identifier","name":"Math","typeAnnotation":null},"property":{"type":"Identifier","name":"random","typeAnnotation":null},"computed":false},"arguments":[]}}]},"returnType":null,"generator":false},{"type":"SwitchStatement","discriminant":{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]},"cases":[{"type":"SwitchCase","test":{"type":"NumericLiteral","value":3},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"fizz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":{"type":"NumericLiteral","value":5},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"buzz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":null,"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]}]},"directive":null}]}]}]}}
+// CHECK: {"type":"Program","body":[{"type":"FunctionDeclaration","id":{"type":"Identifier","name":"foo","typeAnnotation":null},"params":[],"body":{"type":"BlockStatement","body":[{"type":"ReturnStatement","argument":{"type":"CallExpression","callee":{"type":"MemberExpression","object":{"type":"Identifier","name":"Math","typeAnnotation":null},"property":{"type":"Identifier","name":"random","typeAnnotation":null},"computed":false},"arguments":[]}}]},"returnType":null,"generator":false},{"type":"SwitchStatement","discriminant":{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]},"cases":[{"type":"SwitchCase","test":{"type":"NumericLiteral","value":3},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"fizz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":{"type":"NumericLiteral","value":5},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"buzz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":null,"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]}]},"directive":null}]}]}]}
 
-// CHECK-PRETTY: {
-// CHECK-PRETTY:   "type": "File",
-// CHECK-PRETTY:   "program": {
+// CHECK-PRETTY:   {
 // CHECK-PRETTY:     "type": "Program",
 // CHECK-PRETTY:     "body": [
 // CHECK-PRETTY:       {
@@ -168,11 +166,8 @@ switch (foo()) {
 // CHECK-PRETTY:       }
 // CHECK-PRETTY:     ]
 // CHECK-PRETTY:   }
-// CHECK-PRETTY: }
 
-// CHECK-SOURCE-LOC: {
-// CHECK-SOURCE-LOC:   "type": "File",
-// CHECK-SOURCE-LOC:   "program": {
+// CHECK-SOURCE-LOC:   {
 // CHECK-SOURCE-LOC:     "type": "Program",
 // CHECK-SOURCE-LOC:     "body": [
 // CHECK-SOURCE-LOC:       {
@@ -766,19 +761,4 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:       301,
 // CHECK-SOURCE-LOC:       472
 // CHECK-SOURCE-LOC:     ]
-// CHECK-SOURCE-LOC:   },
-// CHECK-SOURCE-LOC:   "loc": {
-// CHECK-SOURCE-LOC:     "start": {
-// CHECK-SOURCE-LOC:       "line": 1,
-// CHECK-SOURCE-LOC:       "column": 1
-// CHECK-SOURCE-LOC:     },
-// CHECK-SOURCE-LOC:     "end": {
-// CHECK-SOURCE-LOC:       "line": 785,
-// CHECK-SOURCE-LOC:       "column": 1
-// CHECK-SOURCE-LOC:     }
-// CHECK-SOURCE-LOC:   },
-// CHECK-SOURCE-LOC:   "range": [
-// CHECK-SOURCE-LOC:     0,
-// CHECK-SOURCE-LOC:     37094
-// CHECK-SOURCE-LOC:   ]
-// CHECK-SOURCE-LOC: }
+// CHECK-SOURCE-LOC:   }

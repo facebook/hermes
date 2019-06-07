@@ -48,9 +48,7 @@ TEST(JSParserTest, TestWith) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  auto *fileNode = dyn_cast<ESTree::FileNode>(parsed.getValue());
-  ASSERT_NE(nullptr, fileNode);
-  auto *programNode = dyn_cast<ESTree::ProgramNode>(fileNode->_program);
+  auto *programNode = dyn_cast<ESTree::ProgramNode>(parsed.getValue());
   ASSERT_NE(nullptr, programNode);
 
   ASSERT_TRUE(isa<ESTree::WithStatementNode>(programNode->_body.front()));
@@ -62,9 +60,7 @@ TEST(JSParserTest, TestSwitch) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  auto *fileNode = dyn_cast<ESTree::FileNode>(parsed.getValue());
-  ASSERT_NE(nullptr, fileNode);
-  auto *programNode = dyn_cast<ESTree::ProgramNode>(fileNode->_program);
+  auto *programNode = dyn_cast<ESTree::ProgramNode>(parsed.getValue());
   ASSERT_NE(nullptr, programNode);
 
   auto *switchNode =
@@ -88,9 +84,7 @@ TEST(JSParserTest, TestThrow) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  auto *fileNode = dyn_cast<ESTree::FileNode>(parsed.getValue());
-  ASSERT_NE(nullptr, fileNode);
-  auto *programNode = dyn_cast<ESTree::ProgramNode>(fileNode->_program);
+  auto *programNode = dyn_cast<ESTree::ProgramNode>(parsed.getValue());
   ASSERT_NE(nullptr, programNode);
 
   ASSERT_TRUE(isa<ESTree::ThrowStatementNode>(programNode->_body.front()));
@@ -110,9 +104,7 @@ TEST(JSParserTest, TestTry) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  auto *fileNode = dyn_cast<ESTree::FileNode>(parsed.getValue());
-  ASSERT_NE(nullptr, fileNode);
-  auto *programNode = dyn_cast<ESTree::ProgramNode>(fileNode->_program);
+  auto *programNode = dyn_cast<ESTree::ProgramNode>(parsed.getValue());
   ASSERT_NE(nullptr, programNode);
 
   ASSERT_TRUE(isa<ESTree::TryStatementNode>(programNode->_body.front()));
@@ -132,9 +124,7 @@ TEST(JSParserTest, TestDebugger) {
   auto parsed = parser.parse();
   ASSERT_TRUE(parsed.hasValue());
 
-  auto *fileNode = dyn_cast<ESTree::FileNode>(parsed.getValue());
-  ASSERT_NE(nullptr, fileNode);
-  auto *programNode = dyn_cast<ESTree::ProgramNode>(fileNode->_program);
+  auto *programNode = dyn_cast<ESTree::ProgramNode>(parsed.getValue());
   ASSERT_NE(nullptr, programNode);
 
   ASSERT_TRUE(isa<ESTree::DebuggerStatementNode>(programNode->_body.front()));

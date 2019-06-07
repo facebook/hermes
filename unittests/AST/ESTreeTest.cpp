@@ -22,8 +22,6 @@ namespace {
 
 const char *SimpleESTreeProgram =
     "  {"
-    "    \"type\": \"File\","
-    "    \"program\": {"
     "      \"type\": \"Program\","
     "      \"body\": ["
     "        {   "
@@ -40,7 +38,6 @@ const char *SimpleESTreeProgram =
     "          \"generator\": false"
     "        }   "
     "      ],  "
-    "    },  "
     "  }";
 
 TEST(ESTreeTest, EmptyTest) {
@@ -61,11 +58,10 @@ TEST(ESTreeTest, EmptyTest) {
   Node->visit(TT);
 
   EXPECT_EQ((int)TT.CurrDepth, 0);
-  EXPECT_EQ((int)TT.MaxDepth, 4);
-  EXPECT_EQ((int)TT.Count, 5);
+  EXPECT_EQ((int)TT.MaxDepth, 3);
+  EXPECT_EQ((int)TT.Count, 4);
 
-  auto FileBody = cast<ESTree::FileNode>(Node)->_program;
-  auto &ProgramBody = cast<ESTree::ProgramNode>(FileBody)->_body;
+  auto &ProgramBody = cast<ESTree::ProgramNode>(Node)->_body;
   auto FuncDecl = cast<ESTree::FunctionDeclarationNode>(&ProgramBody.front());
   auto Name = cast<ESTree::IdentifierNode>(FuncDecl->_id)->_name;
 

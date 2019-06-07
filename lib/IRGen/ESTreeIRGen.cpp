@@ -140,12 +140,7 @@ void ESTreeIRGen::doIt() {
 
   ESTree::ProgramNode *Program;
 
-  if (auto File = dyn_cast<ESTree::FileNode>(Root)) {
-    LLVM_DEBUG(dbgs() << "Found File decl.\n");
-    Program = dyn_cast<ESTree::ProgramNode>(File->_program);
-  } else {
-    Program = dyn_cast<ESTree::ProgramNode>(Root);
-  }
+  Program = dyn_cast<ESTree::ProgramNode>(Root);
 
   if (!Program) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
@@ -406,12 +401,8 @@ struct DeclHoisting {
 
 } // anonymous namespace.
 
-void ESTreeIRGen::processDeclarationFile(ESTree::FileNode *fileNode) {
-  auto File = dyn_cast_or_null<ESTree::FileNode>(fileNode);
-  if (!File)
-    return;
-
-  auto Program = dyn_cast_or_null<ESTree::ProgramNode>(File->_program);
+void ESTreeIRGen::processDeclarationFile(ESTree::ProgramNode *programNode) {
+  auto Program = dyn_cast_or_null<ESTree::ProgramNode>(programNode);
   if (!Program)
     return;
 

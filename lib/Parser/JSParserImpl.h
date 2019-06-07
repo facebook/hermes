@@ -106,7 +106,7 @@ class JSParserImpl {
     lexer_.setStrictMode(mode);
   }
 
-  Optional<ESTree::FileNode *> parse();
+  Optional<ESTree::ProgramNode *> parse();
 
   void seek(SMLoc startPos) {
     lexer_.seek(startPos);
@@ -357,7 +357,7 @@ class JSParserImpl {
   // productions, except in cases where the grammar is ambiguous, but even then
   // the name should be self-explanatory.
 
-  Optional<ESTree::FileNode *> parseProgram();
+  Optional<ESTree::ProgramNode *> parseProgram();
   /// Parse a function declaration, and optionally force an eager parse.
   /// Otherwise, the function will be skipped in lazy mode and a dummy returned.
   /// \param param [Yield]

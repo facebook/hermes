@@ -2,9 +2,7 @@
 
 // Transform (a, ...[b]) into (a, b)
 
-//CHECK:      {
-//CHECK-NEXT:   "type": "File",
-//CHECK-NEXT:   "program": {
+//CHECK:        {
 //CHECK-NEXT:     "type": "Program",
 //CHECK-NEXT:     "body": [
 
@@ -43,4 +41,3 @@ function foo(a, ...[b, c]) {}
 
 //CHECK-NEXT:     ]
 //CHECK-NEXT:   }
-//CHECK-NEXT: }

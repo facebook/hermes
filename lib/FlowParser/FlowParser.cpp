@@ -203,7 +203,7 @@ bool printErrors(Context &context, uint32_t bufferId, JSONValue *v) {
 
 } // anonymous namespace
 
-llvm::Optional<ESTree::FileNode *> parseFlowParser(
+llvm::Optional<ESTree::ProgramNode *> parseFlowParser(
     Context &context,
     uint32_t bufferId) {
   static const bool initFlowParser = (flowparser::init(), true);
@@ -232,15 +232,7 @@ llvm::Optional<ESTree::FileNode *> parseFlowParser(
 
   ESTree::Node *parsed = *parsedRes;
 
-  // If necessary, wrap it with a FileNode
-  if (auto *program = dyn_cast<ESTree::ProgramNode>(parsed)) {
-    auto *file = new (context) ESTree::FileNode(parsed);
-    file->setDebugLoc(program->getDebugLoc());
-    file->setSourceRange(program->getSourceRange());
-    parsed = file;
-  }
-
-  if (!isa<ESTree::FileNode>(parsed)) {
+  if (!isa<ESTree::ProgramNode>(parsed)) {
     context.getSourceErrorManager().error(
         SMLoc::getFromPointer(buffer->getBufferStart()), "Unexpected AST node");
     return llvm::None;
@@ -248,7 +240,7 @@ llvm::Optional<ESTree::FileNode *> parseFlowParser(
 
   LLVM_DEBUG(hermes::dumpESTreeJSON(llvm::dbgs(), parsed, true /* pretty */));
 
-  return cast<ESTree::FileNode>(parsed);
+  return cast<ESTree::ProgramNode>(parsed);
 }
 
 } // namespace parser
