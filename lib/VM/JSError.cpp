@@ -176,9 +176,9 @@ static Handle<PropStorage> getCallStackFunctionNames(
     } else if (cf.getCalleeClosureOrCBRef().isNativeValue()) {
       auto *cb =
           cf.getCalleeClosureOrCBRef().getNativePointer<const CodeBlock>();
-      if (cb->getName().isValid())
+      if (cb->getNameMayAllocate().isValid())
         name = HermesValue::encodeStringValue(
-            runtime->getStringPrimFromSymbolID(cb->getName()));
+            runtime->getStringPrimFromSymbolID(cb->getNameMayAllocate()));
     }
     if (PropStorage::resize(names, runtime, namesIndex + 1) ==
         ExecutionStatus::EXCEPTION) {
@@ -313,7 +313,7 @@ bool JSError::appendFunctionNameAtIndex(
     // string. If we have a code block, try its debug info.
     if (const CodeBlock *codeBlock =
             selfHandle->stacktrace_->at(index).codeBlock) {
-      name = idt.getStringPrim(runtime, codeBlock->getName());
+      name = idt.getStringPrim(runtime, codeBlock->getNameMayAllocate());
     }
   }
 

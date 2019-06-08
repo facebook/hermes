@@ -28,7 +28,7 @@ namespace detail {
 /// Unit tests need to call into this function. We cannot expose the
 /// templated version as its definition is in the cpp file, and will
 /// cause a link error.
-StringID mapString(RuntimeModule &module, const char *str);
+StringID mapStringMayAllocate(RuntimeModule &module, const char *str);
 } // namespace detail
 
 /// Flags supporting RuntimeModule.
@@ -66,7 +66,9 @@ union RuntimeModuleFlags {
 /// linked list which can be walked to perform memory management tasks.
 class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
  private:
-  friend StringID detail::mapString(RuntimeModule &module, const char *str);
+  friend StringID detail::mapStringMayAllocate(
+      RuntimeModule &module,
+      const char *str);
 
   /// The runtime this module is associated with.
   Runtime *runtime_;
@@ -181,19 +183,20 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// Initialize lazy modules created with \p createUninitialized.
   /// Calls `initialize` and does a bit of extra work.
   /// \param bytecode the bytecode data to initialize it with.
-  void initializeLazy(std::unique_ptr<hbc::BCProvider> bytecode);
+  void initializeLazyMayAllocate(std::unique_ptr<hbc::BCProvider> bytecode);
 #endif
 
   /// Initialize modules created with \p createUninitialized,
   /// but do not import the CJS module table, allowing us to always succeed.
   /// \param bytecode the bytecode data to initialize it with.
-  void initializeWithoutCJSModules(std::shared_ptr<hbc::BCProvider> &&bytecode);
+  void initializeWithoutCJSModulesMayAllocate(
+      std::shared_ptr<hbc::BCProvider> &&bytecode);
 
   /// Initialize modules created with \p createUninitialized and import the CJS
   /// module table from the provided bytecode file.
   /// \param bytecode the bytecode data to initialize it with.
   LLVM_NODISCARD ExecutionStatus
-  initialize(std::shared_ptr<hbc::BCProvider> &&bytecode);
+  initializeMayAllocate(std::shared_ptr<hbc::BCProvider> &&bytecode);
 
   /// Prepares this RuntimeModule for the systematic destruction of all modules.
   /// Normal destruction is reference counted, but when the Runtime shuts down,
@@ -214,12 +217,12 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// \return the \c SymbolID for a string by string index. The symbol may not
   /// already exist for this given string ID. Hence we may need to create it
   /// on the fly.
-  SymbolID getSymbolIDFromStringID(StringID stringID) {
+  SymbolID getSymbolIDFromStringIDMayAllocate(StringID stringID) {
     SymbolID id = stringIDMap_[stringID];
     if (LLVM_UNLIKELY(!id.isValid())) {
       // Materialize this lazily created symbol.
       auto entry = bcProvider_->getStringTableEntry(stringID);
-      id = createSymbolFromStringID(stringID, entry, llvm::None);
+      id = createSymbolFromStringIDMayAllocate(stringID, entry, llvm::None);
     }
     assert(id.isValid() && "Failed to create symbol for stringID");
     return id;
@@ -227,7 +230,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
 
   /// Gets the SymbolID and looks it up in the runtime's identifier table.
   /// \return the StringPrimitive for a string by string index.
-  StringPrimitive *getStringPrimFromStringID(StringID stringID);
+  StringPrimitive *getStringPrimFromStringIDMayAllocate(StringID stringID);
 
   /// \return the RegExp bytecode for a given regexp ID.
   llvm::ArrayRef<uint8_t> getRegExpBytecodeFromRegExpID(
@@ -352,7 +355,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
 
  private:
   /// Import the string table from the supplied module.
-  void importStringIDMap();
+  void importStringIDMapMayAllocate();
 
   /// Initialize functionMap_, without actually creating the code blocks.
   /// They will be created lazily when needed.
@@ -366,14 +369,15 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// identifier table, and \return the symbol ID.
   /// Computes the hash of the string when it's not supplied.
   template <typename T>
-  SymbolID mapString(llvm::ArrayRef<T> str, StringID stringID) {
-    return mapString(str, stringID, hermes::hashString(str));
+  SymbolID mapStringMayAllocate(llvm::ArrayRef<T> str, StringID stringID) {
+    return mapStringMayAllocate(str, stringID, hermes::hashString(str));
   }
 
   /// Map the supplied string to a given \p stringID, register it in the
   /// identifier table, and \return the symbol ID.
   template <typename T>
-  SymbolID mapString(llvm::ArrayRef<T> str, StringID stringID, uint32_t hash);
+  SymbolID
+  mapStringMayAllocate(llvm::ArrayRef<T> str, StringID stringID, uint32_t hash);
 
   /// Map the string at id \p stringID in the bytecode to \p rawSymbolID -- the
   /// ID for a predefined string.  If the symbol ID does not correspond to a
@@ -384,7 +388,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// string table, corresponding to the entry \p entry. If \p mhash is not
   /// None, use it as the hash; otherwise compute the hash from the string
   /// contents. \return the created symbol ID.
-  SymbolID createSymbolFromStringID(
+  SymbolID createSymbolFromStringIDMayAllocate(
       StringID stringID,
       const StringTableEntry &entry,
       OptValue<uint32_t> mhash);

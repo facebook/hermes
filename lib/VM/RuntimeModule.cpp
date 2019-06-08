@@ -34,7 +34,7 @@ RuntimeModule::RuntimeModule(
   Domain::addRuntimeModule(domain, runtime, this);
 }
 
-SymbolID RuntimeModule::createSymbolFromStringID(
+SymbolID RuntimeModule::createSymbolFromStringIDMayAllocate(
     StringID stringID,
     const StringTableEntry &entry,
     OptValue<uint32_t> mhash) {
@@ -46,13 +46,13 @@ SymbolID RuntimeModule::createSymbolFromStringID(
         (const char16_t *)(strStorage.begin() + entry.getOffset());
     UTF16Ref str{s, entry.getLength()};
     uint32_t hash = mhash ? *mhash : hashString(str);
-    return mapString(str, stringID, hash);
+    return mapStringMayAllocate(str, stringID, hash);
   } else {
     // ASCII.
     const char *s = strStorage.begin() + entry.getOffset();
     ASCIIRef str{s, entry.getLength()};
     uint32_t hash = mhash ? *mhash : hashString(str);
-    return mapString(str, stringID, hash);
+    return mapStringMayAllocate(str, stringID, hash);
   }
 }
 
@@ -87,24 +87,25 @@ CallResult<RuntimeModule *> RuntimeModule::create(
     llvm::StringRef sourceURL) {
   auto *result = new RuntimeModule(runtime, domain, flags, sourceURL);
   if (bytecode) {
-    if (result->initialize(std::move(bytecode)) == ExecutionStatus::EXCEPTION) {
+    if (result->initializeMayAllocate(std::move(bytecode)) ==
+        ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
   }
   return result;
 }
 
-void RuntimeModule::initializeWithoutCJSModules(
+void RuntimeModule::initializeWithoutCJSModulesMayAllocate(
     std::shared_ptr<hbc::BCProvider> &&bytecode) {
   assert(!bcProvider_ && "RuntimeModule already initialized");
   bcProvider_ = std::move(bytecode);
-  importStringIDMap();
+  importStringIDMapMayAllocate();
   initializeFunctionMap();
 }
 
-ExecutionStatus RuntimeModule::initialize(
+ExecutionStatus RuntimeModule::initializeMayAllocate(
     std::shared_ptr<hbc::BCProvider> &&bytecode) {
-  initializeWithoutCJSModules(std::move(bytecode));
+  initializeWithoutCJSModulesMayAllocate(std::move(bytecode));
   if (LLVM_UNLIKELY(importCJSModuleTable() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -157,8 +158,8 @@ RuntimeModule *RuntimeModule::createLazyModule(
   // The module doesn't have a string table until we've compiled the block,
   // so just add the string name as 0 in the mean time for f.name to work via
   // getLazyName(). Since it's in the stringIDMap_, it'll be correctly GC'd.
-  RM->stringIDMap_.push_back(
-      parent->getSymbolIDFromStringID(bcFunction->getHeader().functionName));
+  RM->stringIDMap_.push_back(parent->getSymbolIDFromStringIDMayAllocate(
+      bcFunction->getHeader().functionName));
 
   return RM;
 }
@@ -174,13 +175,14 @@ void RuntimeModule::addDependency(RuntimeModule *child) {
   dependentModules_.push_back(child);
 }
 
-void RuntimeModule::initializeLazy(std::unique_ptr<hbc::BCProvider> bytecode) {
+void RuntimeModule::initializeLazyMayAllocate(
+    std::unique_ptr<hbc::BCProvider> bytecode) {
   // Clear the old data provider first.
   bcProvider_ = nullptr;
 
   // Initialize without CJS module table because this compilation is done
   // separately, and the bytecode will not contain a module table.
-  initializeWithoutCJSModules(std::move(bytecode));
+  initializeWithoutCJSModulesMayAllocate(std::move(bytecode));
 
   // createLazyCodeBlock added a single codeblock as functionMap_[0]
   assert(functionMap_[0] && "Missing first entry");
@@ -200,7 +202,7 @@ void RuntimeModule::initializeLazy(std::unique_ptr<hbc::BCProvider> bytecode) {
 }
 #endif
 
-void RuntimeModule::importStringIDMap() {
+void RuntimeModule::importStringIDMapMayAllocate() {
   assert(bcProvider_ && "Uninitialized RuntimeModule");
   PerfSection perf("Import String ID Map");
   GCScope scope(runtime_);
@@ -244,7 +246,7 @@ void RuntimeModule::importStringIDMap() {
 
         case StringKind::Identifier:
           for (uint32_t i = 0; i < entry.count(); ++i, ++strID, ++trnID) {
-            createSymbolFromStringID(
+            createSymbolFromStringIDMayAllocate(
                 strID,
                 bcProvider_->getStringTableEntry(strID),
                 translations[trnID]);
@@ -279,7 +281,7 @@ void RuntimeModule::importStringIDMap() {
     // we need to add it manually and it will have index 0.
     ASCIIRef s;
     stringIDMap_.push_back({});
-    mapString(s, hashString(s));
+    mapStringMayAllocate(s, hashString(s));
   }
 }
 
@@ -297,8 +299,10 @@ ExecutionStatus RuntimeModule::importCJSModuleTable() {
       getDomain(runtime_), runtime_, this, bcProvider_->getCJSModuleOffset());
 }
 
-StringPrimitive *RuntimeModule::getStringPrimFromStringID(StringID stringID) {
-  return runtime_->getStringPrimFromSymbolID(getSymbolIDFromStringID(stringID));
+StringPrimitive *RuntimeModule::getStringPrimFromStringIDMayAllocate(
+    StringID stringID) {
+  return runtime_->getStringPrimFromSymbolID(
+      getSymbolIDFromStringIDMayAllocate(stringID));
 }
 
 llvm::ArrayRef<uint8_t> RuntimeModule::getRegExpBytecodeFromRegExpID(
@@ -310,7 +314,7 @@ llvm::ArrayRef<uint8_t> RuntimeModule::getRegExpBytecodeFromRegExpID(
 }
 
 template <typename T>
-SymbolID RuntimeModule::mapString(
+SymbolID RuntimeModule::mapStringMayAllocate(
     llvm::ArrayRef<T> str,
     StringID stringID,
     uint32_t hash) {
@@ -423,9 +427,10 @@ size_t RuntimeModule::additionalMemorySize() const {
 
 namespace detail {
 
-StringID mapString(RuntimeModule &module, const char *str) {
+StringID mapStringMayAllocate(RuntimeModule &module, const char *str) {
   module.stringIDMap_.push_back({});
-  module.mapString(createASCIIRef(str), module.stringIDMap_.size() - 1);
+  module.mapStringMayAllocate(
+      createASCIIRef(str), module.stringIDMap_.size() - 1);
   return module.stringIDMap_.size() - 1;
 }
 

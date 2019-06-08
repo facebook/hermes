@@ -454,7 +454,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     auto BFG = BytecodeFunctionGenerator::create(BMG, 1);
     BFG->emitLoadConstDouble(0, 18);
     BFG->emitRet(0);
-    auto codeBlock = createCodeBlock(runtimeModule, BFG.get());
+    auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
     auto getter = runtime->makeHandle<JSFunction>(*JSFunction::create(
         runtime,
         runtimeModule->getDomain(runtime),

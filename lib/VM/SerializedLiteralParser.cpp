@@ -55,7 +55,7 @@ HermesValue SerializedLiteralParser::get(Runtime *) {
       lastValue_ = runtimeModule_ == nullptr
           ? HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(val))
           : HermesValue::encodeStringValue(
-                runtimeModule_->getStringPrimFromStringID(val));
+                runtimeModule_->getStringPrimFromStringIDMayAllocate(val));
       currIdx_ += 1;
       break;
     }
@@ -65,7 +65,7 @@ HermesValue SerializedLiteralParser::get(Runtime *) {
       lastValue_ = runtimeModule_ == nullptr
           ? HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(val))
           : HermesValue::encodeStringValue(
-                runtimeModule_->getStringPrimFromStringID(val));
+                runtimeModule_->getStringPrimFromStringIDMayAllocate(val));
       currIdx_ += 2;
       break;
     }
@@ -75,7 +75,7 @@ HermesValue SerializedLiteralParser::get(Runtime *) {
       lastValue_ = runtimeModule_ == nullptr
           ? HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(val))
           : HermesValue::encodeStringValue(
-                runtimeModule_->getStringPrimFromStringID(val));
+                runtimeModule_->getStringPrimFromStringIDMayAllocate(val));
       currIdx_ += 4;
       break;
     }

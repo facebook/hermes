@@ -59,7 +59,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime *runtime) {
     auto cr = Callable::defineNameLengthAndPrototype(
         fn,
         runtime,
-        codeBlock->getName(),
+        codeBlock->getNameMayAllocate(),
         codeBlock->getParamCount() - 1,
         prototypeObjectHandle,
         Callable::WritablePrototype::Yes,

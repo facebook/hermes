@@ -189,7 +189,7 @@ class CodeBlock final
     return functionHeader_.flags().strictMode;
   }
 
-  SymbolID getName() const;
+  SymbolID getNameMayAllocate() const;
 
   const_iterator begin() const {
     return bytecode_;

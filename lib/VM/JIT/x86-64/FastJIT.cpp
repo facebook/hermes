@@ -1095,7 +1095,8 @@ Emitters FastJIT::compileLoadConstString(
       emit, codeBlock_->getRuntimeModule(), Reg::rsi);
 
   uint8_t *constAddr;
-  emit.slow = getConstant(emit.slow, (void *)externLoadConstString, constAddr);
+  emit.slow = getConstant(
+      emit.slow, (void *)externLoadConstStringMayAllocate, constAddr);
 
   emit.fast.callRM<ScaleRIPAddr32>(Reg::none, Reg::NoIndex, 0);
   applyRIP32Offset(emit.fast.current(), constAddr);
@@ -2203,8 +2204,8 @@ Emitters FastJIT::compileCreateRegExp(Emitters emit, const Inst *ip) {
   emit = loadConstantAddrIntoNativeReg(emit, codeBlock_, Reg::r8);
 
   uint8_t *externConstAddr;
-  emit.slow =
-      getConstant(emit.slow, (void *)externCreateRegExp, externConstAddr);
+  emit.slow = getConstant(
+      emit.slow, (void *)externCreateRegExpMayAllocate, externConstAddr);
   emit.fast =
       callExternal(emit.fast, externConstAddr, ip->iCreateRegExp.op1, ip);
   return emit;

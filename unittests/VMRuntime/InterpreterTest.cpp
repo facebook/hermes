@@ -109,7 +109,7 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
   CallResult<HermesValue> run() {
     assert(!hasRun);
     BFG->bytecodeGenerationComplete();
-    auto *codeBlock = createCodeBlock(runtimeModule, BFG.get());
+    auto *codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
     ScopedNativeCallFrame frame(
         runtime,
         0,
@@ -179,10 +179,10 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   BFG->setHighestWriteCacheIndex(0);
 
   BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, BFG.get());
+  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
 
-  ASSERT_EQ(detail::mapString(*runtimeModule, "print"), printID);
-  ASSERT_EQ(detail::mapString(*runtimeModule, "result="), resultID);
+  ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "print"), printID);
+  ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "result="), resultID);
 
   auto printFn = runtime->makeHandle<NativeFunction>(
       *NativeFunction::createWithoutPrototype(
@@ -192,7 +192,7 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   (void)JSObject::putNamed_RJS(
       runtime->getGlobal(),
       runtime,
-      runtimeModule->getSymbolIDFromStringID(printID),
+      runtimeModule->getSymbolIDFromStringIDMayAllocate(printID),
       printFn);
 
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
@@ -254,7 +254,7 @@ L2:
   auto BFG = BytecodeFunctionGenerator::create(BMG, 3);
   emit(*BFG, 1);
   BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, BFG.get());
+  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
 
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
@@ -274,7 +274,7 @@ L2:
 TEST_F(InterpreterTest, RecursiveFactorialTest) {
   auto runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
-  auto factID = detail::mapString(*runtimeModule, "fact");
+  auto factID = detail::mapStringMayAllocate(*runtimeModule, "fact");
 
   /*
    get_arg    reg0, 1           ; load n
@@ -328,7 +328,7 @@ L1:
   BFG->setHighestReadCacheIndex(255);
   BFG->setHighestWriteCacheIndex(255);
   BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, BFG.get());
+  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
 
   auto factFn = runtime->makeHandle<JSFunction>(*JSFunction::create(
       runtime,
@@ -341,7 +341,7 @@ L1:
   (void)JSObject::putNamed_RJS(
       runtime->getGlobal(),
       runtime,
-      runtimeModule->getSymbolIDFromStringID(factID),
+      runtimeModule->getSymbolIDFromStringIDMayAllocate(factID),
       factFn);
 
   {
@@ -449,9 +449,9 @@ TEST_F(InterpreterTest, FrameSizeTest) {
   BFG->setHighestWriteCacheIndex(0);
 
   BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, BFG.get());
+  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
 
-  ASSERT_EQ(detail::mapString(*runtimeModule, "getSP"), getSPID);
+  ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "getSP"), getSPID);
 
   auto getSPFn = runtime->makeHandle<NativeFunction>(
       *NativeFunction::createWithoutPrototype(
@@ -461,7 +461,7 @@ TEST_F(InterpreterTest, FrameSizeTest) {
   (void)JSObject::putNamed_RJS(
       runtime->getGlobal(),
       runtime,
-      runtimeModule->getSymbolIDFromStringID(getSPID),
+      runtimeModule->getSymbolIDFromStringIDMayAllocate(getSPID),
       getSPFn);
 
   ScopedNativeCallFrame frame(

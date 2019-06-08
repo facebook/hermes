@@ -146,7 +146,7 @@ TEST_F(ObjectBufferTest, TestNewObjectWithBuffer) {
 
   auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
-  runtimeModule->initializeWithoutCJSModules(
+  runtimeModule->initializeWithoutCJSModulesMayAllocate(
       BCProviderFromSrc::createBCProviderFromSrc(BMG.generate()));
 
   auto codeBlock = runtimeModule->getCodeBlockMayAllocate(0);

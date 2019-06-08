@@ -36,7 +36,7 @@ static inline bool shouldSingleStep(OpCode opCode) {
 static StringView getFunctionName(
     Runtime *runtime,
     const CodeBlock *codeBlock) {
-  auto functionName = codeBlock->getName();
+  auto functionName = codeBlock->getNameMayAllocate();
   if (functionName == Predefined::getSymbolID(Predefined::emptyString)) {
     functionName = Predefined::getSymbolID(Predefined::anonymous);
   }

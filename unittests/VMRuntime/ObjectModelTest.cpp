@@ -35,7 +35,7 @@ static inline Handle<Callable> makeSimpleJSFunction(
     auto BFG = BytecodeFunctionGenerator::create(BMG, 1);
     BFG->emitLoadConstDoubleDirect(0, 10.0);
     BFG->emitRet(0);
-    codeBlock = createCodeBlock(runtimeModule, BFG.get());
+    codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
   }
   return runtime->makeHandle<JSFunction>(*JSFunction::create(
       runtime,

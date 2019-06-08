@@ -170,7 +170,8 @@ ExecutionStatus Domain::importCJSModuleTable(
 
     // symbolId must not be inlined because getSymbolIDFromStringID allocates,
     // which can make self->cjsModuleTable_ stale.
-    SymbolID symbolId = runtimeModule->getSymbolIDFromStringID(pair.first);
+    SymbolID symbolId =
+        runtimeModule->getSymbolIDFromStringIDMayAllocate(pair.first);
     auto result = self->cjsModuleTable_.try_emplace(symbolId, startIndex);
     (void)result;
     assert(result.second && "Duplicate CJS modules");

@@ -278,11 +278,11 @@ IMPLEMENT_BIN_OP(Sub, -);
 IMPLEMENT_BIN_OP(Mul, *);
 IMPLEMENT_BIN_OP(Div, /);
 
-HermesValue externLoadConstString(
+HermesValue externLoadConstStringMayAllocate(
     uint32_t stringID,
     RuntimeModule *runtimeModule) {
   return HermesValue::encodeStringValue(
-      runtimeModule->getStringPrimFromStringID(stringID));
+      runtimeModule->getStringPrimFromStringIDMayAllocate(stringID));
 }
 
 HermesValue externTypeOf(Runtime *runtime, PinnedHermesValue *src) {
@@ -812,7 +812,7 @@ CallResult<HermesValue> externInstanceOf(
   return HermesValue::encodeBoolValue(*res);
 }
 
-CallResult<HermesValue> externCreateRegExp(
+CallResult<HermesValue> externCreateRegExpMayAllocate(
     Runtime *runtime,
     uint32_t patternIdx,
     uint32_t flagsIdx,
@@ -829,9 +829,11 @@ CallResult<HermesValue> externCreateRegExp(
   auto re = runtime->makeHandle<JSRegExp>(*regRes);
   // Initialize the regexp.
   auto pattern = runtime->makeHandle(
-      codeBlock->getRuntimeModule()->getStringPrimFromStringID(patternIdx));
+      codeBlock->getRuntimeModule()->getStringPrimFromStringIDMayAllocate(
+          patternIdx));
   auto flags = runtime->makeHandle(
-      codeBlock->getRuntimeModule()->getStringPrimFromStringID(flagsIdx));
+      codeBlock->getRuntimeModule()->getStringPrimFromStringIDMayAllocate(
+          flagsIdx));
   auto bytecode =
       codeBlock->getRuntimeModule()->getRegExpBytecodeFromRegExpID(bytecodeIdx);
   if (LLVM_UNLIKELY(

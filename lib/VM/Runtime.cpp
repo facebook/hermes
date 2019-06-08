@@ -258,7 +258,7 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
 
   // Explicitly initialize the specialCodeBlockRuntimeModule_ without CJS
   // modules.
-  specialCodeBlockRuntimeModule_->initializeWithoutCJSModules(
+  specialCodeBlockRuntimeModule_->initializeWithoutCJSModulesMayAllocate(
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
           generateSpecialRuntimeBytecode())
           .first);
@@ -1347,7 +1347,7 @@ void Runtime::dumpCallFrames(llvm::raw_ostream &OS) {
       OS << cellKindStr(closure->getKind()) << " ";
     }
     if (auto *cb = sf.getCalleeCodeBlock()) {
-      OS << formatSymbolID(cb->getName()) << " ";
+      OS << formatSymbolID(cb->getNameMayAllocate()) << " ";
     }
     dumpStackFrame(sf, OS, next);
     next = sf.ptr();

@@ -134,7 +134,7 @@ slowPathDiv(Runtime *runtime, PinnedHermesValue *op1, PinnedHermesValue *op2);
 /// which is allocated in the GC heap and cannot be pre-fetched at compile time.
 /// \param stringID the string table index of the constant string
 /// \param runtimeModule the runtime module of the current code block.
-HermesValue externLoadConstString(
+HermesValue externLoadConstStringMayAllocate(
     uint32_t stringID,
     RuntimeModule *runtimeModule);
 
@@ -385,7 +385,7 @@ CallResult<HermesValue> externInstanceOf(
 /// \param flagsIdx the string index of the flags.
 /// \param bytecodeIdx the regexp bytecode index in the regexp table.
 /// \param codeBlock the current code block.
-CallResult<HermesValue> externCreateRegExp(
+CallResult<HermesValue> externCreateRegExpMayAllocate(
     Runtime *runtime,
     uint32_t patternIdx,
     uint32_t flagsIdx,

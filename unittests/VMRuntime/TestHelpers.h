@@ -327,6 +327,7 @@ inline bool operator==(HermesValue a, HermesValue b) {
 /// runtimeModule.
 inline CodeBlock *createCodeBlock(
     RuntimeModule *runtimeModule,
+    Runtime *,
     hbc::BytecodeFunctionGenerator *BFG) {
   std::unique_ptr<hbc::BytecodeModule> BM(new hbc::BytecodeModule(1));
   BM->setFunction(
@@ -337,7 +338,7 @@ inline CodeBlock *createCodeBlock(
           true,
           0,
           0));
-  runtimeModule->initializeWithoutCJSModules(
+  runtimeModule->initializeWithoutCJSModulesMayAllocate(
       hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(BM)));
 
   return CodeBlock::createCodeBlock(

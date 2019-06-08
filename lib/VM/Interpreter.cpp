@@ -3035,12 +3035,14 @@ tailCall:
           }
           auto re = runtime->makeHandle<JSRegExp>(*res);
           // Initialize the regexp.
-          auto pattern = runtime->makeHandle(
-              curCodeBlock->getRuntimeModule()->getStringPrimFromStringID(
-                  ip->iCreateRegExp.op2));
-          auto flags = runtime->makeHandle(
-              curCodeBlock->getRuntimeModule()->getStringPrimFromStringID(
-                  ip->iCreateRegExp.op3));
+          auto pattern =
+              runtime->makeHandle(curCodeBlock->getRuntimeModule()
+                                      ->getStringPrimFromStringIDMayAllocate(
+                                          ip->iCreateRegExp.op2));
+          auto flags =
+              runtime->makeHandle(curCodeBlock->getRuntimeModule()
+                                      ->getStringPrimFromStringIDMayAllocate(
+                                          ip->iCreateRegExp.op3));
           auto bytecode =
               curCodeBlock->getRuntimeModule()->getRegExpBytecodeFromRegExpID(
                   ip->iCreateRegExp.op4);
@@ -3093,13 +3095,15 @@ tailCall:
       LOAD_CONST(
           LoadConstString,
           HermesValue::encodeStringValue(
-              curCodeBlock->getRuntimeModule()->getStringPrimFromStringID(
-                  ip->iLoadConstString.op2)));
+              curCodeBlock->getRuntimeModule()
+                  ->getStringPrimFromStringIDMayAllocate(
+                      ip->iLoadConstString.op2)));
       LOAD_CONST(
           LoadConstStringLongIndex,
           HermesValue::encodeStringValue(
-              curCodeBlock->getRuntimeModule()->getStringPrimFromStringID(
-                  ip->iLoadConstStringLongIndex.op2)));
+              curCodeBlock->getRuntimeModule()
+                  ->getStringPrimFromStringIDMayAllocate(
+                      ip->iLoadConstStringLongIndex.op2)));
       LOAD_CONST(LoadConstUndefined, HermesValue::encodeUndefinedValue());
       LOAD_CONST(LoadConstNull, HermesValue::encodeNullValue());
       LOAD_CONST(LoadConstTrue, HermesValue::encodeBoolValue(true));
