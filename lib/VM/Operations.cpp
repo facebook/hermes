@@ -1140,6 +1140,7 @@ numberToStringWithRadix(Runtime *runtime, double number, unsigned radix) {
 
 CallResult<PseudoHandle<>>
 getMethod(Runtime *runtime, Handle<> O, Handle<> key) {
+  GCScopeMarkerRAII gcScope{runtime};
   auto objRes = toObject(runtime, O);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
