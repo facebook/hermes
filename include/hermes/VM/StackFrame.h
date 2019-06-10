@@ -185,9 +185,6 @@ class StackFramePtrT {
   /// CodeBlock *.
   inline Handle<Callable> getCalleeClosureHandleUnsafe() const;
 
-  /// \return the callee cod
-  inline QualifiedCB *getCalleeCodeBlockUnsafe() const;
-
   /// \return a pointer to the callee closure, if we have it, or nullptr
   ///   if it is a CodeBlock.
   Callable *getCalleeClosure() const;

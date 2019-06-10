@@ -455,6 +455,7 @@ class NativeFunction : public Callable {
     }
 
     auto newFrame = runtime->setCurrentFrameToTopOfStack();
+    runtime->saveCallerIPInStackFrame();
     // Allocate the "reserved" registers in the new frame.
     runtime->allocStack(
         StackFrameLayout::CalleeExtraRegistersAtStart,
@@ -472,6 +473,7 @@ class NativeFunction : public Callable {
     ++self->callCount_;
 #endif
 
+    runtime->restoreCallerIPFromStackFrame();
     runtime->restoreStackAndPreviousFrame(newFrame);
     return res;
   }

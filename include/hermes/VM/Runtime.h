@@ -1019,6 +1019,54 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   /// Runtime. This is needed because the identifier table may contain pointers
   /// into bytecode, and so memory backing these must be preserved.
   std::vector<std::shared_ptr<hbc::BCProvider>> presistentBCProviders_;
+
+#ifdef HERMES_ENABLE_DEBUGGER
+ private:
+  /// This is used to store the last IP in the interpreter before making a call.
+  const inst::Inst *savedIP_{nullptr};
+
+ public:
+  /// Store the caller's IP before (possibly) making a call.
+  /// This should be called at every place that we could make a call.
+  void storeCallerIP(const inst::Inst *ip) {
+    savedIP_ = ip;
+  }
+
+  /// Clear the caller's return address. This needs to be called after
+  /// returning a call.
+  void clearCallerIP() {
+#ifndef NDEBUG
+    savedIP_ = nullptr;
+#endif
+  }
+
+  /// Save the return address in the caller in the stack frame.
+  /// This needs to be called at the beginning of a function call, after the
+  /// stack frame is set up.
+  void saveCallerIPInStackFrame() {
+    assert(
+        !currentFrame_.getSavedIP() ||
+        currentFrame_.getSavedIP() == savedIP_ &&
+            "The ip should either be null or already have the expected value");
+    currentFrame_.getSavedIPRef() = HermesValue::encodeNativePointer(savedIP_);
+    savedIP_ = nullptr;
+  }
+
+  /// Restore the caller's IP from the stack frame to savedIP_.
+  /// This needs to be called when a function returns.
+  void restoreCallerIPFromStackFrame() {
+    savedIP_ = getCurrentFrame().getSavedIP();
+  }
+#else
+ public:
+  void storeCallerIP(const inst::Inst *ip) {}
+
+  void clearCallerIP() {}
+
+  void saveCallerIPInStackFrame() {}
+
+  void restoreCallerIPFromStackFrame() {}
+#endif // HERMES_ENABLE_DEBUGGER
 };
 
 /// StackRuntime is meant to be used whenever a Runtime should be allocated on

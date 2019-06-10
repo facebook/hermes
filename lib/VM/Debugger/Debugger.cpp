@@ -682,19 +682,31 @@ void Debugger::breakpointCaller() {
   assert(callFrames.begin() != callFrames.end() && "empty call stack");
 
   // Go through the callStack backwards to find the first place we can break.
-  CodeBlock *codeBlock = nullptr;
+  auto frameIt = callFrames.begin();
   const Inst *ip = nullptr;
-  for (auto frameIt = callFrames.begin(); frameIt != callFrames.end();
-       ++frameIt) {
-    // Track the call stack depth that the breakpoint would be set on.
-    if (codeBlock) {
-      uint32_t offset = codeBlock->getNextOffset(codeBlock->getOffsetOf(ip));
-      setStepBreakpoint(codeBlock, offset, runtime_->calcFrameOffset(frameIt));
+  for (; frameIt != callFrames.end(); ++frameIt) {
+    ip = frameIt->getSavedIP();
+    if (ip) {
       break;
     }
-    codeBlock = frameIt->getSavedCodeBlock();
-    ip = frameIt->getSavedIP();
   }
+  if (!ip) {
+    return;
+  }
+  // If the ip was saved in the stack frame, the caller is the function
+  // that we want to return to. The code block might not be saved in this
+  // frame, so we need to find that in the frame below.
+  frameIt++;
+  assert(
+      frameIt != callFrames.end() &&
+      "The frame that has saved ip cannot be the bottom frame");
+  // In the frame below, the 'calleeClosureORCB' register contains
+  // the code block we need.
+  CodeBlock *codeBlock = frameIt->getCalleeCodeBlock();
+  assert(codeBlock && "The code block must exist since we have ip");
+  // Track the call stack depth that the breakpoint would be set on.
+  uint32_t offset = codeBlock->getNextOffset(codeBlock->getOffsetOf(ip));
+  setStepBreakpoint(codeBlock, offset, runtime_->calcFrameOffset(frameIt));
 }
 
 void Debugger::breakpointExceptionHandler(const InterpreterState &state) {
