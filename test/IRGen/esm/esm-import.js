@@ -1,5 +1,4 @@
-// RUN: %hermes -Xflow-parser -commonjs -dump-ir %s | %FileCheck --match-full-lines %s
-// REQUIRES: flowparser
+// RUN: %hermes -commonjs -dump-ir %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL: function cjs_module(exports, require, module)
 // CHECK-NEXT: frame = [Foo, defaultFoo, x, z, exports, require, module]

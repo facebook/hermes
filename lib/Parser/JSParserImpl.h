@@ -182,6 +182,8 @@ class JSParserImpl {
   UniqueString *letIdent_;
   UniqueString *ofIdent_;
   UniqueString *useStaticBuiltinIdent_;
+  UniqueString *fromIdent_;
+  UniqueString *asIdent_;
   /// String representation of all tokens.
   UniqueString *tokenIdent_[NUM_JS_TOKENS];
 
@@ -307,6 +309,9 @@ class JSParserImpl {
   /// Check whether the current token is the specified one and consume it if so.
   /// \returns true if the token matched.
   bool checkAndEat(TokenKind kind);
+  /// Check whether the current token is the specified identifier and consume it
+  /// if so. \returns true if the token matched.
+  bool checkAndEat(UniqueString *ident);
   /// Check whether the current token is the specified one. \returns true if it
   /// is.
   bool check(TokenKind kind) const {
@@ -381,6 +386,11 @@ class JSParserImpl {
   /// \param param [Yield, Return]
   Optional<ESTree::Node *> parseStatement(Param param);
 
+  enum class AllowImportExport {
+    No,
+    Yes,
+  };
+
   /// Parse a statement list.
   /// \param param [Yield]
   /// \param until stop parsing when this token is enountered
@@ -392,6 +402,7 @@ class JSParserImpl {
       Param param,
       TokenKind until,
       bool parseDirectives,
+      AllowImportExport allowImportExport,
       ESTree::NodeList &stmtList);
 
   /// Parse a statement block.
@@ -590,6 +601,15 @@ class JSParserImpl {
 
   Optional<ESTree::Node *> parseAssignmentExpression(Param param = ParamIn);
   Optional<ESTree::Node *> parseExpression(Param param = ParamIn);
+
+  /// Parse a FromClause and return the string literal representing the source.
+  Optional<ESTree::StringLiteralNode *> parseFromClause();
+
+  Optional<ESTree::Node *> parseImportDeclaration();
+  bool parseImportClause(ESTree::NodeList &specifiers);
+  Optional<ESTree::Node *> parseNameSpaceImport();
+  bool parseNamedImports(ESTree::NodeList &specifiers);
+  Optional<ESTree::ImportSpecifierNode *> parseImportSpecifier(SMLoc importLoc);
 
   /// If the current token can be recognised as a directive (ES5.1 14.1),
   /// process the directive and return the allocated directive statement.

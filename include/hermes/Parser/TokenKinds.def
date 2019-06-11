@@ -62,12 +62,13 @@ RESWORD(void)
 RESWORD(while)
 RESWORD(with)
 
+RESWORD(import)
+
 // Future reserved words
 RESWORD(class)
 RESWORD(enum)
 RESWORD(export)
 RESWORD(extends)
-RESWORD(import)
 RESWORD(super)
 
 // Strict mode future reserved words

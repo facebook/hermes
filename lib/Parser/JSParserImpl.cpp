@@ -65,6 +65,8 @@ void JSParserImpl::initializeIdentifiers() {
   letIdent_ = lexer_.getIdentifier("let");
   ofIdent_ = lexer_.getIdentifier("of");
   useStaticBuiltinIdent_ = lexer_.getIdentifier("use static builtin");
+  fromIdent_ = lexer_.getIdentifier("from");
+  asIdent_ = lexer_.getIdentifier("as");
 
   // Generate the string representation of all tokens.
   for (unsigned i = 0; i != NUM_JS_TOKENS; ++i)
@@ -167,6 +169,14 @@ bool JSParserImpl::checkAndEat(TokenKind kind) {
   return false;
 }
 
+bool JSParserImpl::checkAndEat(UniqueString *ident) {
+  if (check(ident)) {
+    advance();
+    return true;
+  }
+  return false;
+}
+
 bool JSParserImpl::checkAssign() const {
   return checkN(
       TokenKind::equal,
@@ -220,7 +230,8 @@ Optional<ESTree::ProgramNode *> JSParserImpl::parseProgram() {
   SaveStrictMode saveStrict{this};
   ESTree::NodeList stmtList;
 
-  if (!parseStatementList(Param{}, TokenKind::eof, true, stmtList))
+  if (!parseStatementList(
+          Param{}, TokenKind::eof, true, AllowImportExport::Yes, stmtList))
     return None;
 
   SMLoc endLoc = startLoc;
@@ -485,6 +496,7 @@ Optional<bool> JSParserImpl::parseStatementList(
     Param param,
     TokenKind until,
     bool parseDirectives,
+    AllowImportExport allowImportExport,
     ESTree::NodeList &stmtList) {
   if (parseDirectives) {
     ESTree::ExpressionStatementNode *dirStmt;
@@ -501,6 +513,19 @@ Optional<bool> JSParserImpl::parseStatementList(
         return None;
 
       stmtList.push_back(*decl.getValue());
+    } else if (tok_->getKind() == TokenKind::rw_import) {
+      auto importDecl = parseImportDeclaration();
+      if (!importDecl) {
+        return None;
+      }
+
+      if (allowImportExport == AllowImportExport::Yes) {
+        stmtList.push_back(*importDecl.getValue());
+      } else {
+        sm_.error(
+            importDecl.getValue()->getSourceRange(),
+            "import declaration must be at top level of module");
+      }
     } else {
       auto stmt = parseStatement(param.get(ParamYield, ParamReturn));
       if (!stmt)
@@ -524,7 +549,11 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseBlock(
   ESTree::NodeList stmtList;
 
   if (!parseStatementList(
-          param, TokenKind::r_brace, parseDirectives, stmtList)) {
+          param,
+          TokenKind::r_brace,
+          parseDirectives,
+          AllowImportExport::No,
+          stmtList)) {
     return None;
   }
 
@@ -2916,6 +2945,255 @@ Optional<ESTree::Node *> JSParserImpl::parseExpression(Param param) {
       firstExpr,
       lastExpr,
       new (context_) ESTree::SequenceExpressionNode(std::move(exprList)));
+}
+
+Optional<ESTree::StringLiteralNode *> JSParserImpl::parseFromClause() {
+  SMLoc startLoc = tok_->getStartLoc();
+
+  if (!checkAndEat(fromIdent_)) {
+    sm_.error(startLoc, "'from' expected");
+    return None;
+  }
+
+  if (!need(
+          TokenKind::string_literal,
+          "after 'from'",
+          "location of 'from'",
+          startLoc)) {
+    return None;
+  }
+
+  auto *source = setLocation(
+      tok_,
+      tok_,
+      new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+
+  advance();
+  return source;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseImportDeclaration() {
+  assert(
+      check(TokenKind::rw_import) &&
+      "import declaration must start with 'import'");
+  SMLoc startLoc = advance().Start;
+
+  if (check(TokenKind::string_literal)) {
+    // import ModuleSpecifier ;
+    // If the first token is a string literal, there are no specifiers,
+    // so the import clause should not be parsed.
+    auto *source = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+    auto endLoc = advance().End;
+    if (!eatSemi(endLoc)) {
+      return None;
+    }
+    return setLocation(
+        startLoc,
+        endLoc,
+        new (context_) ESTree::ImportDeclarationNode({}, source));
+  }
+
+  ESTree::NodeList specifiers;
+  if (!parseImportClause(specifiers)) {
+    return None;
+  }
+
+  auto optFromClause = parseFromClause();
+  if (!optFromClause) {
+    return None;
+  }
+
+  SMLoc endLoc = optFromClause.getValue()->getEndLoc();
+  if (!eatSemi(endLoc)) {
+    return None;
+  }
+
+  return setLocation(
+      startLoc,
+      endLoc,
+      new (context_)
+          ESTree::ImportDeclarationNode(std::move(specifiers), *optFromClause));
+}
+
+bool JSParserImpl::parseImportClause(ESTree::NodeList &specifiers) {
+  SMLoc startLoc = tok_->getStartLoc();
+  if (check(TokenKind::identifier)) {
+    // ImportedDefaultBinding
+    // ImportedDefaultBinding , NameSpaceImport
+    // ImportedDefaultBinding , NamedImports
+    auto optDefaultBinding = parseBindingIdentifier(Param{});
+    if (!optDefaultBinding) {
+      return false;
+    }
+    SMLoc endLoc = optDefaultBinding.getValue()->getEndLoc();
+    specifiers.push_back(*setLocation(
+        startLoc,
+        endLoc,
+        new (context_) ESTree::ImportDefaultSpecifierNode(*optDefaultBinding)));
+    if (!checkAndEat(TokenKind::comma)) {
+      // If there was no comma, there's no more bindings to parse,
+      // so return immediately.
+      return true;
+    }
+  }
+
+  // At this point, either:
+  // - the ImportedDefaultBinding was parsed and had a comma after it
+  // - there was no ImportedDefaultBinding and we simply continue
+
+  if (check(TokenKind::star)) {
+    // NameSpaceImport
+    auto optNsImport = parseNameSpaceImport();
+    if (!optNsImport) {
+      return false;
+    }
+    specifiers.push_back(*optNsImport.getValue());
+    return true;
+  }
+
+  // NamedImports is the only remaining possibility.
+  if (!need(
+          TokenKind::l_brace,
+          "in import specifier clause",
+          "location of import specifiers",
+          startLoc)) {
+    return false;
+  }
+
+  return parseNamedImports(specifiers);
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseNameSpaceImport() {
+  assert(check(TokenKind::star) && "import namespace must start with *");
+
+  SMLoc startLoc = advance().Start;
+  if (!checkAndEat(asIdent_)) {
+    sm_.error(tok_->getStartLoc(), "'as' expected");
+    return None;
+  }
+
+  if (!need(
+          TokenKind::identifier,
+          "in namespace import specifier",
+          "location of namespace import",
+          startLoc)) {
+    return None;
+  }
+
+  auto optLocal = parseBindingIdentifier(Param{});
+  if (!optLocal) {
+    return None;
+  }
+
+  return setLocation(
+      startLoc,
+      *optLocal,
+      new (context_) ESTree::ImportNamespaceSpecifierNode(*optLocal));
+}
+
+bool JSParserImpl::parseNamedImports(ESTree::NodeList &specifiers) {
+  assert(check(TokenKind::l_brace) && "named imports must start with {");
+  SMLoc startLoc = advance().Start;
+
+  // BoundNames to check for duplicate entries in ImportDeclaration.
+  // Values are the actual IdentifierNodes, used for error reporting.
+  llvm::DenseMap<UniqueString *, ESTree::IdentifierNode *> boundNames{};
+
+  while (!check(TokenKind::r_brace)) {
+    auto optSpecifier = parseImportSpecifier(startLoc);
+    if (!optSpecifier) {
+      return false;
+    }
+
+    // Check if the bound name was duplicated.
+    ESTree::IdentifierNode *localIdent =
+        cast<ESTree::IdentifierNode>(optSpecifier.getValue()->_local);
+    auto insertRes = boundNames.try_emplace(localIdent->_name, localIdent);
+    if (insertRes.second) {
+      specifiers.push_back(*optSpecifier.getValue());
+    } else {
+      // Report the error but continue parsing to see if there's any others.
+      sm_.error(
+          localIdent->getSourceRange(),
+          "Duplicate entry in import declaration list");
+      sm_.note(
+          insertRes.first->second->getSourceRange(), "first usage of name");
+    }
+
+    if (!checkAndEat(TokenKind::comma)) {
+      break;
+    }
+  }
+  if (!eat(
+          TokenKind::r_brace,
+          JSLexer::AllowDiv,
+          "at end of named imports",
+          "location of '{'",
+          startLoc)) {
+    return false;
+  }
+
+  return true;
+}
+
+Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
+    SMLoc importLoc) {
+  // ImportSpecifier:
+  //   ImportedBinding
+  //   IdentifierName as ImportedBinding
+  SMLoc startLoc = tok_->getStartLoc();
+
+  if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+    errorExpected(
+        TokenKind::identifier,
+        "in import specifier",
+        "specifiers start",
+        importLoc);
+    return None;
+  }
+  auto *imported = setLocation(
+      tok_,
+      tok_,
+      new (context_)
+          ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+  TokenKind localKind = tok_->getKind();
+
+  SMLoc endLoc = advance().End;
+  ESTree::IdentifierNode *local = imported;
+
+  if (checkAndEat(asIdent_)) {
+    if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+      errorExpected(
+          TokenKind::identifier,
+          "in import specifier",
+          "specifiers start",
+          importLoc);
+      return None;
+    }
+    local = setLocation(
+        tok_,
+        tok_,
+        new (context_)
+            ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
+    localKind = tok_->getKind();
+    endLoc = advance().End;
+  }
+
+  // Only the local name must be parsed as a binding identifier.
+  // We need to check for 'as' before knowing what the local name is.
+  // Thus, we need to validate the binding identifier for the local name
+  // after the fact.
+  if (!validateBindingIdentifier(Param{}, local->_name, localKind)) {
+    sm_.error(local->getSourceRange(), "Invalid local name for import");
+  }
+
+  return setLocation(
+      startLoc,
+      endLoc,
+      new (context_) ESTree::ImportSpecifierNode(imported, local));
 }
 
 ESTree::ExpressionStatementNode *JSParserImpl::parseDirective() {
