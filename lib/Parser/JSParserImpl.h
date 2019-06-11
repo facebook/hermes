@@ -337,6 +337,11 @@ class JSParserImpl {
   /// Check whether the current token is an assignment operator.
   bool checkAssign() const;
 
+  /// Check whether the current token begins a Declaration.
+  bool checkDeclaration() const {
+    return checkN(TokenKind::rw_function, letIdent_, TokenKind::rw_const);
+  }
+
   /// Performs automatic semicolon insertion and optionally reports an error
   /// if a semicolon is missing and cannot be inserted.
   /// \param endLoc is the previous end location before the semi. It will be
@@ -408,6 +413,10 @@ class JSParserImpl {
       bool eagerly,
       JSLexer::GrammarContext grammarContext = JSLexer::AllowRegExp,
       bool parseDirectives = false);
+
+  /// Parse a declaration.
+  /// \param param [Yield]
+  Optional<ESTree::Node *> parseDeclaration(Param param);
 
   /// ES 2015 12.1
   /// Does not generate an error. It is expected that the caller will do it.

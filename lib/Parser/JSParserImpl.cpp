@@ -459,6 +459,28 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
   return body;
 }
 
+Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
+  assert(checkDeclaration() && "invalid start for declaration");
+
+  if (tok_->getKind() == TokenKind::rw_function) {
+    auto fdecl = parseFunctionDeclaration(param.get(ParamYield));
+    if (!fdecl)
+      return None;
+
+    return *fdecl;
+  }
+
+  assert(
+      (check(TokenKind::rw_const) || check(letIdent_)) &&
+      "declaration can only be let or const");
+
+  auto optLexDecl = parseLexicalDeclaration(ParamIn + param.get(ParamYield));
+  if (!optLexDecl)
+    return None;
+
+  return *optLexDecl;
+}
+
 Optional<bool> JSParserImpl::parseStatementList(
     Param param,
     TokenKind until,
@@ -473,19 +495,12 @@ Optional<bool> JSParserImpl::parseStatementList(
   }
 
   while (!check(until, TokenKind::eof)) {
-    if (tok_->getKind() == TokenKind::rw_function) {
-      auto fdecl = parseFunctionDeclaration(param.get(ParamYield));
-      if (!fdecl)
+    if (checkDeclaration()) {
+      auto decl = parseDeclaration(param.get(ParamYield));
+      if (!decl)
         return None;
 
-      stmtList.push_back(*fdecl.getValue());
-    } else if (check(TokenKind::rw_const) || check(letIdent_)) {
-      auto optLexDecl =
-          parseLexicalDeclaration(ParamIn + param.get(ParamYield));
-      if (!optLexDecl)
-        return None;
-
-      stmtList.push_back(*optLexDecl.getValue());
+      stmtList.push_back(*decl.getValue());
     } else {
       auto stmt = parseStatement(param.get(ParamYield, ParamReturn));
       if (!stmt)
