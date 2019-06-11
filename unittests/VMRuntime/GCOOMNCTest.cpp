@@ -49,7 +49,7 @@ TEST(GCOOMFixedSizeDeathTest, Test) {
   ASSERT_LE(FixedCell::size(), kOGSizeHint);
 
   // Fixed size cells should not be too big to fit in the young gen.
-  EXPECT_DEATH({ FixedCell::create(rt); }, "OOM");
+  EXPECT_OOM(FixedCell::create(rt));
 }
 
 // Allocating a variable sized cell that is too big for the young gen (but fits
@@ -102,7 +102,7 @@ TEST(GCOOMFragmentationDeathTest, Test) {
 
   // Now there isn't a contiguous space big enough to fit an awkward cell, we
   // expect the GC to OOM when we try.
-  EXPECT_DEATH({ AwkwardCell::create(rt); }, "OOM");
+  EXPECT_OOM(AwkwardCell::create(rt));
 }
 
 TEST(GCEffectiveOOMDeathTest, UnitTest) {
@@ -131,7 +131,7 @@ TEST(GCEffectiveOOMDeathTest, UnitTest) {
   gc.collect(/* canEffectiveOOM */ false);
 
   // ...BOOM!
-  EXPECT_DEATH({ gc.collect(/* canEffectiveOOM */ true); }, "OOM");
+  EXPECT_OOM(gc.collect(/* canEffectiveOOM */ true));
 }
 
 TEST(GCEffectiveOOMDeathTest, IntegrationTest) {
@@ -176,7 +176,7 @@ TEST(GCEffectiveOOMDeathTest, IntegrationTest) {
   }
 
   // The last allocation should cause us to effectively OOM.
-  EXPECT_DEATH({ oneForOne(); }, "OOM");
+  EXPECT_OOM(oneForOne());
 }
 
 /// Even if we run out of virtual memory during a full collection, we should

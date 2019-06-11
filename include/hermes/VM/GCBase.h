@@ -647,6 +647,14 @@ class GCBase {
 #endif
 };
 
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+/// A std::runtime_error class for out-of-memory.
+class JSOutOfMemoryError : public std::runtime_error {
+ public:
+  JSOutOfMemoryError(const char *what_arg) : std::runtime_error(what_arg) {}
+};
+#endif
+
 // Utilities for formatting time durations and memory sizes.
 
 /// An object that, written to an ostream, formats the given # of

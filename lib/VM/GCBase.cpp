@@ -23,6 +23,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <inttypes.h>
+#include <stdexcept>
 #include <system_error>
 
 using llvm::dbgs;
@@ -298,9 +299,22 @@ uint64_t GCBase::nextObjectID() {
 #endif
 
 void GCBase::oom(std::error_code reason) {
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+  HeapInfo heapInfo;
+  getHeapInfo(heapInfo);
+  char detailBuffer[400];
+  snprintf(
+      detailBuffer,
+      sizeof(detailBuffer),
+      "Javascript heap memory exhausted: heap size = %d, allocated = %d.",
+      heapInfo.heapSize,
+      heapInfo.allocatedBytes);
+  // TODO(T44526436): get a stack trace.
+  throw JSOutOfMemoryError(detailBuffer);
+#else
   oomDetail(reason);
-
   hermes_fatal((llvm::Twine("OOM: ") + convert_error_to_message(reason)).str());
+#endif
 }
 
 void GCBase::oomDetail(std::error_code reason) {

@@ -186,7 +186,7 @@ TEST_F(GCLazySegmentNCDeathTest, FailToMaterialize) {
     rt.pointerRoots.push_back(&roots.back());
   }
 
-  EXPECT_DEATH({ SegmentCell::create(rt); }, "OOM");
+  EXPECT_OOM(SegmentCell::create(rt));
 }
 
 TEST_F(GCLazySegmentNCDeathTest, FailToMaterializeContinue) {

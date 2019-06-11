@@ -173,6 +173,23 @@ inline const GCConfig TestGCConfigFixedSize(
     EXPECT_EQ(v, res.getValue());     \
   } while (0)
 
+/// Some tests expect out of memory.  This may either be fatal, or throw
+/// exception; parameterize tests over this choice.
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+#define EXPECT_OOM(exp)                     \
+  {                                         \
+    bool exThrown = false;                  \
+    try {                                   \
+      exp;                                  \
+    } catch (const JSOutOfMemoryError &x) { \
+      exThrown = true;                      \
+    }                                       \
+    EXPECT_TRUE(exThrown);                  \
+  }
+#else
+#define EXPECT_OOM(exp) EXPECT_DEATH({ exp; }, "OOM")
+#endif
+
 /// Get a named value from an object.
 #define GET_VALUE(objHandle, predefinedId)                  \
   do {                                                      \

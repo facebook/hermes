@@ -60,6 +60,9 @@ set(HERMES_ENABLE_DEBUGGER OFF CACHE BOOL
 set(HERMES_FACEBOOK_BUILD OFF CACHE BOOL
     "Build Facebook (rather than open-source) version of Hermes")
 
+set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
+    "GC Out-of-memory raises an exception, rather than causing a crash")
+
 set(HERMESVM_JIT OFF CACHE BOOL
   "Enable the JIT")
 
@@ -169,6 +172,9 @@ if(HERMESVM_SANITIZE_HANDLES)
 endif()
 if(HERMES_FACEBOOK_BUILD)
     add_definitions(-DHERMES_FACEBOOK_BUILD)
+endif()
+if(HERMESVM_EXCEPTION_ON_OOM)
+    add_definitions(-DHERMESVM_EXCEPTION_ON_OOM)
 endif()
 if(HERMESVM_JIT)
   add_definitions(-DHERMESVM_JIT)
