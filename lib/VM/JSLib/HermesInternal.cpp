@@ -752,6 +752,60 @@ hermesInternalTTRCReached(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+/// HermesInternal.exportAll(exports, source) will copy exported named
+/// properties from `source` to `exports`, defining them on `exports` as
+/// non-configurable.
+/// Note that the default exported property on `source` is ignored,
+/// as are non-enumerable properties on `source`.
+CallResult<HermesValue>
+hermesInternalExportAll(void *, Runtime *runtime, NativeArgs args) {
+  Handle<JSObject> exports = args.dyncastArg<JSObject>(runtime, 0);
+  if (LLVM_UNLIKELY(!exports)) {
+    return runtime->raiseTypeError(
+        "exportAll() exports argument must be object");
+  }
+
+  Handle<JSObject> source = args.dyncastArg<JSObject>(runtime, 1);
+  if (LLVM_UNLIKELY(!source)) {
+    return runtime->raiseTypeError(
+        "exportAll() source argument must be object");
+  }
+
+  MutableHandle<> propertyHandle{runtime};
+
+  auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+  dpf.configurable = 0;
+
+  CallResult<bool> defineRes{ExecutionStatus::EXCEPTION};
+
+  // Iterate the named properties excluding those which use Symbols.
+  bool result = HiddenClass::forEachPropertyWhile(
+      runtime->makeHandle(source->getClass()),
+      runtime,
+      [&source, &exports, &propertyHandle, &dpf, &defineRes](
+          Runtime *runtime, SymbolID id, NamedPropertyDescriptor desc) {
+        if (!desc.flags.enumerable)
+          return true;
+
+        if (id == Predefined::getSymbolID(Predefined::defaultExport)) {
+          return true;
+        }
+
+        propertyHandle = JSObject::getNamedSlotValue(*source, desc);
+        defineRes = JSObject::defineOwnProperty(
+            exports, runtime, id, dpf, propertyHandle);
+        if (LLVM_UNLIKELY(defineRes == ExecutionStatus::EXCEPTION)) {
+          return false;
+        }
+
+        return true;
+      });
+  if (LLVM_UNLIKELY(!result)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return HermesValue::encodeUndefinedValue();
+}
+
 #ifdef HERMESVM_EXCEPTION_ON_OOM
 /// Gets the current call stack as a JS String value.  Intended (only)
 /// to allow testing of Runtime::callStack() from JS code.
@@ -823,6 +877,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(P::copyRestArgs, hermesInternalCopyRestArgs, 1);
   defineInternMethod(P::ttiReached, hermesInternalTTIReached);
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
+  defineInternMethod(P::exportAll, hermesInternalExportAll);
 #ifdef HERMESVM_EXCEPTION_ON_OOM
   defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
 #endif // HERMESVM_EXCEPTION_ON_OOM
