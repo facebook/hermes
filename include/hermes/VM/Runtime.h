@@ -1240,14 +1240,34 @@ inline void Runtime::addCustomRootsFunction(const F &markRootsFn) {
   customMarkRootFuncs_.push_back(markRootsFn);
 }
 
+/// If OOM exceptions are enabled, we need to catch the exception in
+/// Runtime::alloc, and rethrown, with a JS stack trace added.
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+#define OOM_EXCEPTION_RETHROW_START try {
+#define OOM_EXCEPTION_RETHROW_END                                           \
+  }                                                                         \
+  catch (const JSOutOfMemoryError &x) {                                     \
+    throw JSOutOfMemoryError(                                               \
+        (std::string(x.what()) + "\ncall stack:\n" + callStack()).c_str()); \
+  }
+
+#else
+#define OOM_EXCEPTION_RETHROW_START
+#define OOM_EXCEPTION_RETHROW_END
+#endif
+
 template <bool fixedSize, HasFinalizer hasFinalizer>
 inline void *Runtime::alloc(uint32_t sz) {
+  OOM_EXCEPTION_RETHROW_START;
   return heap_.alloc<fixedSize, hasFinalizer>(sz);
+  OOM_EXCEPTION_RETHROW_END;
 }
 
 template <HasFinalizer hasFinalizer>
 inline void *Runtime::allocLongLived(uint32_t size) {
+  OOM_EXCEPTION_RETHROW_START;
   return heap_.allocLongLived<hasFinalizer>(size);
+  OOM_EXCEPTION_RETHROW_END;
 }
 
 template <typename T>
