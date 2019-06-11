@@ -339,6 +339,12 @@ void ESTreeIRGen::emitFunctionPrologue(
   // them in the scope.
   emitParameters(funcNode);
 
+  // Generate the code for import declarations before generating the rest of the
+  // body.
+  for (auto importDecl : semInfo->imports) {
+    genImportDeclaration(importDecl);
+  }
+
   // Generate and initialize the code for the hoisted function declarations
   // before generating the rest of the body.
   for (auto funcDecl : semInfo->closures) {

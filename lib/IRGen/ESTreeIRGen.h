@@ -343,6 +343,9 @@ class ESTreeIRGen {
   /// Identifier representing the string "eval".
   const Identifier identEval_;
 
+  /// Identifier representing the string "?default".
+  const Identifier identDefaultExport_;
+
   /// Generate a unique string that represents a temporary value. The string \p
   /// hint appears in the name.
   Identifier genAnonymousLabelName(StringRef hint) {
@@ -437,6 +440,15 @@ class ESTreeIRGen {
   void genConstSwitchStmt(
       ESTree::SwitchStatementNode *switchStmt,
       llvm::SmallVectorImpl<Literal *> &caseLiterals);
+
+  void genImportDeclaration(ESTree::ImportDeclarationNode *importDecl);
+
+  void genExportNamedDeclaration(
+      ESTree::ExportNamedDeclarationNode *exportDecl);
+  void genExportDefaultDeclaration(
+      ESTree::ExportDefaultDeclarationNode *exportDecl);
+  void genExportAllDeclaration(ESTree::ExportAllDeclarationNode *exportDecl);
+
   /// @}
 
  private:

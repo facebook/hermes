@@ -428,6 +428,84 @@ void SemanticValidator::visit(SpreadElementNode *S, Node *parent) {
   visitESTreeChildren(*this, S);
 }
 
+void SemanticValidator::visit(ImportDeclarationNode *importDecl) {
+  // Like variable declarations, imported names must be hoisted.
+  if (!astContext_.getUseCJSModules()) {
+    sm_.error(
+        importDecl->getSourceRange(),
+        "'import' statement requires module mode");
+  }
+
+  curFunction()->semInfo->imports.push_back(importDecl);
+  visitESTreeChildren(*this, importDecl);
+}
+
+void SemanticValidator::visit(ImportDefaultSpecifierNode *importDecl) {
+  // import defaultProperty from 'file.js';
+  validateDeclarationNames(
+      importDecl->_local, &curFunction()->semInfo->varDecls);
+  visitESTreeChildren(*this, importDecl);
+}
+
+void SemanticValidator::visit(ImportNamespaceSpecifierNode *importDecl) {
+  // import * as File from 'file.js';
+  validateDeclarationNames(
+      importDecl->_local, &curFunction()->semInfo->varDecls);
+  visitESTreeChildren(*this, importDecl);
+}
+
+void SemanticValidator::visit(ImportSpecifierNode *importDecl) {
+  // import {x as y} as File from 'file.js';
+  // import {x} as File from 'file.js';
+  validateDeclarationNames(
+      importDecl->_local, &curFunction()->semInfo->varDecls);
+  visitESTreeChildren(*this, importDecl);
+}
+
+void SemanticValidator::visit(ExportNamedDeclarationNode *exportDecl) {
+  if (!astContext_.getUseCJSModules()) {
+    sm_.error(
+        exportDecl->getSourceRange(),
+        "'export' statement requires module mode");
+  }
+
+  visitESTreeChildren(*this, exportDecl);
+}
+
+void SemanticValidator::visit(ExportDefaultDeclarationNode *exportDecl) {
+  if (!astContext_.getUseCJSModules()) {
+    sm_.error(
+        exportDecl->getSourceRange(),
+        "'export' statement requires module mode");
+  }
+
+  if (auto *funcDecl =
+          dyn_cast<ESTree::FunctionDeclarationNode>(exportDecl->_declaration)) {
+    if (!funcDecl->_id) {
+      // If the default function declaration has no name, then change it to a
+      // FunctionExpression node for cleaner IRGen.
+      exportDecl->_declaration =
+          new (astContext_) ESTree::FunctionExpressionNode(
+              funcDecl->_id,
+              std::move(funcDecl->_params),
+              funcDecl->_body,
+              funcDecl->_generator);
+      exportDecl->_declaration->copyLocationFrom(funcDecl);
+    }
+  }
+
+  visitESTreeChildren(*this, exportDecl);
+}
+
+void SemanticValidator::visit(ExportAllDeclarationNode *exportDecl) {
+  if (!astContext_.getUseCJSModules()) {
+    sm_.error(
+        exportDecl->getSourceRange(),
+        "'export' statement requires CommonJS module mode");
+  }
+  visitESTreeChildren(*this, exportDecl);
+}
+
 void SemanticValidator::visit(CoverEmptyArgsNode *CEA) {
   sm_.error(CEA->getSourceRange(), "invalid empty parentheses '( )'");
 }

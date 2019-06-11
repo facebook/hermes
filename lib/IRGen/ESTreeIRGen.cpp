@@ -133,7 +133,8 @@ ESTreeIRGen::ESTreeIRGen(
       Root(root),
       DeclarationFileList(declFileList),
       lexicalScopeChain(resolveScopeIdentifiers(scopeChain)),
-      identEval_(Builder.createIdentifier("eval")) {}
+      identEval_(Builder.createIdentifier("eval")),
+      identDefaultExport_(Builder.createIdentifier("?default")) {}
 
 void ESTreeIRGen::doIt() {
   LLVM_DEBUG(dbgs() << "Processing top level program.\n");

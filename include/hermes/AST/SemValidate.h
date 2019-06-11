@@ -29,6 +29,11 @@ class FunctionInfo {
   /// can generate the rest of the function.
   llvm::SmallVector<ESTree::FunctionDeclarationNode *, 2> closures{};
 
+  /// A list of imports that need to be hoisted and materialized before we
+  /// can generate the rest of the function.
+  /// Any line of the file may use the imported values.
+  llvm::SmallVector<ESTree::ImportDeclarationNode *, 2> imports{};
+
   /// Whether this function references the "arguments" identifier. This is a
   /// conservative approximation of whether it tries to access the "arguments"
   /// object. Why "conservative"? Because in non-strict mode it is possible to

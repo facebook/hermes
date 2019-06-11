@@ -33,6 +33,13 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     return;
   }
 
+  if (/* auto *IS = */ dyn_cast<ESTree::ImportDeclarationNode>(stmt)) {
+    // Import has already been hoisted. Do nothing. But, keep this to
+    // match the AST structure, and we may want to do something in the
+    // future.
+    return;
+  }
+
   if (auto *IF = dyn_cast<ESTree::IfStatementNode>(stmt)) {
     return genIfStatement(IF);
   }
@@ -176,6 +183,22 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
   if (isa<ESTree::DebuggerStatementNode>(stmt)) {
     Builder.createDebuggerInst();
     return;
+  }
+
+  if (auto *importDecl = dyn_cast<ESTree::ImportDeclarationNode>(stmt)) {
+    return genImportDeclaration(importDecl);
+  }
+
+  if (auto *exportDecl = dyn_cast<ESTree::ExportNamedDeclarationNode>(stmt)) {
+    return genExportNamedDeclaration(exportDecl);
+  }
+
+  if (auto *exportDecl = dyn_cast<ESTree::ExportDefaultDeclarationNode>(stmt)) {
+    return genExportDefaultDeclaration(exportDecl);
+  }
+
+  if (auto *exportDecl = dyn_cast<ESTree::ExportAllDeclarationNode>(stmt)) {
+    return genExportAllDeclaration(exportDecl);
   }
 
   Builder.getModule()->getContext().getSourceErrorManager().error(
@@ -671,6 +694,185 @@ void ESTreeIRGen::genConstSwitchStmt(
 
   Builder.setInsertionBlock(exitBlock);
 };
+
+void ESTreeIRGen::genImportDeclaration(
+    ESTree::ImportDeclarationNode *importDecl) {
+  assert(
+      Mod->getContext().getUseCJSModules() &&
+      "import/export requires module mode");
+  // Modules have these arguments: (exports, require, module)
+  Parameter *require = Builder.getFunction()->getParameters()[1];
+  assert(
+      require->getName().str() == "require" &&
+      "CJS module second parameter must be 'require'");
+  auto *source = genExpression(importDecl->_source);
+  auto *exports =
+      Builder.createCallInst(require, Builder.getLiteralUndefined(), {source});
+  // An import declaration is a list of import specifiers.
+  for (ESTree::Node &spec : importDecl->_specifiers) {
+    if (auto *ids = dyn_cast<ESTree::ImportDefaultSpecifierNode>(&spec)) {
+      // import defaultProperty from 'file.js';
+      auto *local = nameTable_.lookup(getNameFieldFromID(ids->_local));
+      assert(local && "imported name should have been hoisted");
+      emitStore(
+          Builder,
+          Builder.createLoadPropertyInst(exports, identDefaultExport_),
+          local);
+    } else if (
+        auto *ins = dyn_cast<ESTree::ImportNamespaceSpecifierNode>(&spec)) {
+      // import * as File from 'file.js';
+      auto *local = nameTable_.lookup(getNameFieldFromID(ins->_local));
+      assert(local && "imported name should have been hoisted");
+      emitStore(Builder, exports, local);
+    } else {
+      // import {x as y} as File from 'file.js';
+      // import {x} as File from 'file.js';
+      auto *is = cast<ESTree::ImportSpecifierNode>(&spec);
+
+      // Store to a local variable with the name is->_local.
+      auto *local = nameTable_.lookup(getNameFieldFromID(is->_local));
+      assert(local && "imported name should have been hoisted");
+
+      // Get is->_imported from the exports object, because that's what the
+      // other file stored it as.
+      emitStore(
+          Builder,
+          Builder.createLoadPropertyInst(
+              exports, getNameFieldFromID(is->_imported)),
+          local);
+    }
+  }
+  return;
+}
+
+void ESTreeIRGen::genExportNamedDeclaration(
+    ESTree::ExportNamedDeclarationNode *exportDecl) {
+  assert(
+      Mod->getContext().getUseCJSModules() &&
+      "import/export requires module mode");
+  // Modules have these arguments: (exports, require, module)
+  Parameter *exports = Builder.getFunction()->getParameters()[0];
+  assert(
+      exports->getName().str() == "exports" &&
+      "CJS module first parameter must be 'exports'");
+  Parameter *require = Builder.getFunction()->getParameters()[1];
+  assert(
+      require->getName().str() == "require" &&
+      "CJS module second parameter must be 'require'");
+
+  // Generate IR for exports of declarations.
+  if (auto *decl = exportDecl->_declaration) {
+    // If we have a declaration, then we cannot have a source or specifiers.
+    // We can generate IR for the declaration and immediately return.
+    assert(
+        !exportDecl->_source &&
+        "ExportNamedDeclarationNode with Declaration cannot have a source");
+    assert(
+        exportDecl->_specifiers.empty() &&
+        "ExportNamedDeclarationNode with Declaration cannot have specifiers");
+    if (auto *varDecl = dyn_cast<ESTree::VariableDeclarationNode>(decl)) {
+      // export var x = 1, y = 2;
+      for (auto &declarator : varDecl->_declarations) {
+        auto *variableDeclarator =
+            cast<ESTree::VariableDeclaratorNode>(&declarator);
+        genVariableDeclarator(varDecl->_kind, variableDeclarator);
+        Identifier name = getNameFieldFromID(variableDeclarator->_id);
+
+        Builder.createStorePropertyInst(
+            emitLoad(Builder, nameTable_.lookup(name)), exports, name);
+      }
+    } else if (auto *classDecl = dyn_cast<ESTree::ClassDeclarationNode>(decl)) {
+      (void)classDecl;
+      // TODO: Support class declarations once we support class IRGen.
+      Builder.getModule()->getContext().getSourceErrorManager().error(
+          exportDecl->getSourceRange(),
+          Twine("class declaration exports are unsupported"));
+    } else {
+      auto *funDecl = dyn_cast<ESTree::FunctionDeclarationNode>(decl);
+      // export function x() {}
+      Identifier name = getNameFieldFromID(funDecl->_id);
+      auto *fun = emitLoad(Builder, nameTable_.lookup(name));
+      Builder.createStorePropertyInst(fun, exports, name);
+    }
+
+    return;
+  }
+
+  auto *source = exportDecl->_source ? Builder.createCallInst(
+                                           require,
+                                           Builder.getLiteralUndefined(),
+                                           {genExpression(exportDecl->_source)})
+                                     : nullptr;
+
+  for (ESTree::Node &spec : exportDecl->_specifiers) {
+    auto *es = cast<ESTree::ExportSpecifierNode>(&spec);
+    auto *localIdent = cast<ESTree::IdentifierNode>(es->_local);
+    auto *exportedIdent = cast<ESTree::IdentifierNode>(es->_exported);
+    // If we read from a source, load the property from the source exports
+    // object, else generate the IdentifierExpression and resolve the variable
+    // name.
+    auto *local = source
+        ? Builder.createLoadPropertyInst(source, getNameFieldFromID(localIdent))
+        : genIdentifierExpression(localIdent, false);
+    Builder.createStorePropertyInst(
+        local, exports, getNameFieldFromID(exportedIdent));
+  }
+}
+
+void ESTreeIRGen::genExportDefaultDeclaration(
+    ESTree::ExportDefaultDeclarationNode *exportDecl) {
+  // Modules have these arguments: (exports, require, module)
+  Parameter *exports = Builder.getFunction()->getParameters()[0];
+  assert(
+      exports->getName().str() == "exports" &&
+      "CJS module first parameter must be 'exports'");
+  auto *decl = exportDecl->_declaration;
+  if (auto *funDecl = dyn_cast<ESTree::FunctionDeclarationNode>(decl)) {
+    assert(
+        funDecl->_id &&
+        "SemanticValidator should change anonymous FunctionDeclaration");
+    // export default function foo() {}
+    // The function declaration should have been hoisted,
+    // so simply load it and store it in the default slot.
+    Identifier name = getNameFieldFromID(funDecl->_id);
+    auto *fun = emitLoad(Builder, nameTable_.lookup(name));
+    Builder.createStorePropertyInst(fun, exports, name);
+  } else if (auto *classDecl = dyn_cast<ESTree::ClassDeclarationNode>(decl)) {
+    (void)classDecl;
+    // TODO: Support default class declarations once we support class IRGen.
+    Builder.getModule()->getContext().getSourceErrorManager().error(
+        exportDecl->getSourceRange(),
+        "default class declaration exports are unsupported");
+  } else {
+    // export default {expression};
+    auto *value = genExpression(decl);
+    Builder.createStorePropertyInst(value, exports, identDefaultExport_);
+  }
+}
+
+void ESTreeIRGen::genExportAllDeclaration(
+    ESTree::ExportAllDeclarationNode *exportDecl) {
+  assert(
+      Mod->getContext().getUseCJSModules() &&
+      "import/export requires module mode");
+  // Modules have these arguments: (exports, require, module)
+  Parameter *exports = Builder.getFunction()->getParameters()[0];
+  assert(
+      exports->getName().str() == "exports" &&
+      "CJS module first parameter must be 'exports'");
+  Parameter *require = Builder.getFunction()->getParameters()[1];
+  assert(
+      require->getName().str() == "require" &&
+      "CJS module second parameter must be 'require'");
+  // export * from 'file.js';
+  auto *source = Builder.createCallInst(
+      require,
+      Builder.getLiteralUndefined(),
+      {genExpression(exportDecl->_source)});
+  // Copy all the re-exported properties from the source to the exports object.
+  genHermesInternalCall(
+      "exportAll", Builder.getLiteralUndefined(), {exports, source});
+}
 
 } // namespace irgen
 } // namespace hermes

@@ -126,6 +126,16 @@ class SemanticValidator {
   void visit(ArrayPatternNode *arrayPat);
 
   void visit(SpreadElementNode *S, Node *parent);
+
+  void visit(ImportDeclarationNode *importDecl);
+  void visit(ImportDefaultSpecifierNode *importDecl);
+  void visit(ImportNamespaceSpecifierNode *importDecl);
+  void visit(ImportSpecifierNode *importDecl);
+
+  void visit(ExportNamedDeclarationNode *exportDecl);
+  void visit(ExportDefaultDeclarationNode *exportDecl);
+  void visit(ExportAllDeclarationNode *exportDecl);
+
   void visit(CoverEmptyArgsNode *CEA);
   void visit(CoverTrailingCommaNode *CTC);
   void visit(CoverInitializerNode *CI);
