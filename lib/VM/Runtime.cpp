@@ -1464,5 +1464,48 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
   json.closeArray(); // frames
 }
 
+std::string Runtime::callStack() {
+  std::string res;
+  // We can't get the IP of the leaf frame.  For subsequent frames, we'll get
+  // the IP of the caller at the end of the iteration, so that it will be
+  // correct.
+  const Inst *ip = nullptr;
+  // Note that the order of iteration is youngest (leaf) frame to oldest.
+  for (auto frame : getStackFrames()) {
+    auto codeBlock = frame->getCalleeCodeBlock();
+    if (codeBlock) {
+      std::string funcName;
+      if (codeBlock->getNameString(this, funcName)) {
+        res += funcName;
+      } else {
+        res += "<UTF16 string>";
+      }
+      if (ip != nullptr) {
+        auto bytecodeOffs = codeBlock->getOffsetOf(ip);
+        auto blockSourceCode = codeBlock->getDebugSourceLocationsOffset();
+        if (blockSourceCode.hasValue()) {
+          auto debugInfo =
+              codeBlock->getRuntimeModule()->getBytecode()->getDebugInfo();
+          auto sourceLocation = debugInfo->getLocationForAddress(
+              blockSourceCode.getValue(), bytecodeOffs);
+          if (sourceLocation) {
+            auto file = debugInfo->getFilenameByID(sourceLocation->filenameId);
+            res += ": " + file + ":" +
+                oscompat::to_string(sourceLocation->line) + ":" +
+                oscompat::to_string(sourceLocation->column);
+          }
+        }
+      }
+      res += "\n";
+    } else {
+      res += "<Native code>\n";
+    }
+    // Get the ip of the caller frame -- which will then be correct for the
+    // next iteration.
+    ip = frame.getSavedIP();
+  }
+  return res;
+}
+
 } // namespace vm
 } // namespace hermes

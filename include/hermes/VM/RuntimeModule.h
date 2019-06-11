@@ -180,6 +180,11 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// Get the name symbol ID associated with the getOnlyLazyCodeBlock().
   SymbolID getLazyName();
 
+  /// If the name associated with the getOnlyLazyCodeBlock() is an
+  /// ASCII string, sets res to that string, and returns true.
+  /// Otherwise returns false.  Does no JS heap allocation.
+  bool getLazyNameString(Runtime *runtime, std::string &res) const;
+
   /// Initialize lazy modules created with \p createUninitialized.
   /// Calls `initialize` and does a bit of extra work.
   /// \param bytecode the bytecode data to initialize it with.
@@ -231,6 +236,11 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// Gets the SymbolID and looks it up in the runtime's identifier table.
   /// \return the StringPrimitive for a string by string index.
   StringPrimitive *getStringPrimFromStringIDMayAllocate(StringID stringID);
+
+  /// If the given \p stringID represents an ASCII string, return true
+  /// ands set res to that string.  Otherwise, return false.  Does no
+  /// JS heap allocation.
+  bool getStringFromStringID(StringID stringID, std::string &res);
 
   /// \return the RegExp bytecode for a given regexp ID.
   llvm::ArrayRef<uint8_t> getRegExpBytecodeFromRegExpID(

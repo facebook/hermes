@@ -231,7 +231,7 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   Handle<StringPrimitive> getPredefinedStringHandle(Predefined::Sym predefined);
 
   /// \return the \c StringPrimitive given a symbol ID \p id.
-  StringPrimitive *getStringPrimFromSymbolID(SymbolID id);
+  inline StringPrimitive *getStringPrimFromSymbolID(SymbolID id);
 
   /// \return true if a symbol specified by \p id has the same string content
   /// as a given string primitive \p strPrim.
@@ -709,6 +709,11 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
 
   // Return a reference to the runtime's CrashManager.
   inline CrashManager &getCrashManager();
+
+  /// Returns a string representation of the JS stack.  Does no operations
+  /// that allocate on the JS heap, so safe to use for an out-of-memory
+  /// exception.
+  std::string callStack();
 
  protected:
   /// Construct a Runtime on the stack.

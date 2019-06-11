@@ -14,6 +14,7 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/StringView.h"
 
 namespace hermes {
 namespace vm {
@@ -171,6 +172,21 @@ SymbolID RuntimeModule::getLazyName() {
   return this->stringIDMap_[0];
 }
 
+bool RuntimeModule::getLazyNameString(Runtime *runtime, std::string &res)
+    const {
+  assert(functionMap_.size() == 1 && "Not a lazy module?");
+  assert(stringIDMap_.size() == 1 && "Missing lazy function name symbol");
+  assert(this->stringIDMap_[0].isValid() && "Invalid function name symbol");
+  StringView strView = runtime->getIdentifierTable().getStringView(
+      runtime, this->stringIDMap_[0]);
+  if (strView.isASCII()) {
+    res = std::string(strView.begin(), strView.end());
+    return true;
+  } else {
+    return false;
+  }
+}
+
 void RuntimeModule::addDependency(RuntimeModule *child) {
   dependentModules_.push_back(child);
 }
@@ -303,6 +319,19 @@ StringPrimitive *RuntimeModule::getStringPrimFromStringIDMayAllocate(
     StringID stringID) {
   return runtime_->getStringPrimFromSymbolID(
       getSymbolIDFromStringIDMayAllocate(stringID));
+}
+
+bool RuntimeModule::getStringFromStringID(StringID stringID, std::string &res) {
+  auto entry = bcProvider_->getStringTableEntry(stringID);
+  if (entry.isUTF16()) {
+    return false;
+  } else {
+    // ASCII.
+    auto strStorage = bcProvider_->getStringStorage();
+    const char *s = strStorage.begin() + entry.getOffset();
+    res = std::string{s, entry.getLength()};
+    return true;
+  }
 }
 
 llvm::ArrayRef<uint8_t> RuntimeModule::getRegExpBytecodeFromRegExpID(

@@ -752,6 +752,16 @@ hermesInternalTTRCReached(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+/// Gets the current call stack as a JS String value.  Intended (only)
+/// to allow testing of Runtime::callStack() from JS code.
+CallResult<HermesValue>
+hermesInternalGetCallStack(void *, Runtime *runtime, NativeArgs args) {
+  std::string stack = runtime->callStack();
+  return StringPrimitive::create(runtime, ASCIIRef(stack.data(), stack.size()));
+}
+#endif // HERMESVM_EXCEPTION_ON_OOM
+
 } // namespace
 
 Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
@@ -778,6 +788,23 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
             constantDPF);
       };
 
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+  auto defineInternMethodAndSymbol =
+      [&](const char *name, NativeFunctionPtr func, uint8_t count = 0) {
+        ASCIIRef ref = createASCIIRef(name);
+        Handle<SymbolID> symHandle = runtime->ignoreAllocationFailure(
+            runtime->getIdentifierTable().getSymbolHandle(runtime, ref));
+        (void)defineMethod(
+            runtime,
+            intern,
+            *symHandle,
+            nullptr /* context */,
+            func,
+            count,
+            constantDPF);
+      };
+#endif
+
   // HermesInternal function properties
   namespace P = Predefined;
   defineInternMethod(P::detachArrayBuffer, hermesInternalDetachArrayBuffer, 1);
@@ -796,6 +823,9 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(P::copyRestArgs, hermesInternalCopyRestArgs, 1);
   defineInternMethod(P::ttiReached, hermesInternalTTIReached);
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
+#ifdef HERMESVM_EXCEPTION_ON_OOM
+  defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
+#endif // HERMESVM_EXCEPTION_ON_OOM
 
   // Define the 'requireFast' function, which takes a number argument.
   (void)defineMethod(

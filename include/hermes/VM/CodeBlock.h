@@ -191,6 +191,11 @@ class CodeBlock final
 
   SymbolID getNameMayAllocate() const;
 
+  /// If the name of the code  block is an ASCII string, sets res to
+  /// that string, and returns true.  Otherwise, returns false.  Does
+  /// no JS heap allocation.
+  bool getNameString(Runtime *runtime, std::string &res) const;
+
   const_iterator begin() const {
     return bytecode_;
   }
