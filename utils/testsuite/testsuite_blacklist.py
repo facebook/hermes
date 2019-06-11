@@ -1418,6 +1418,12 @@ BLACK_LIST = [
     "esprima/test_fixtures/statement/return/multiline_template.js",
     # array pattern
     "esprima/test_fixtures/statement/iteration/pattern-in-for-in.js",
+    # let and const
+    "esprima/test_fixtures/statement/iteration/invalid-strict-for-in-let.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0138.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0139.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0232.js",
+    "esprima/test_fixtures/invalid-syntax/migrated_0140.js",
     ## ES6 end ##
     # Hermes parser does not output tokens.
     "esprima/test_fixtures/tokenize/",
@@ -1434,26 +1440,20 @@ BLACK_LIST = [
     "esprima/test_fixtures/es2017/",
     "esprima/test_fixtures/es2018/",
     "esprima/test_fixtures/JSX/",
+    # Hermes doesn't support unicode regexp
+    "esprima/test_fixtures/expression/primary/literal/regular-expression/u-flag-valid-range.js",
+    "esprima/test_fixtures/expression/primary/literal/regular-expression/u-flag-surrogate-pair.js",
     # not sure why they fail yet
-    "esprima/test_fixtures/expression/postfix/migrated_0004.js",
-    "esprima/test_fixtures/expression/postfix/migrated_0005.js",
     "esprima/test_fixtures/statement/iteration/migrated_0003.js",
     "esprima/test_fixtures/expression/unary/migrated_0005.js",
     "esprima/test_fixtures/expression/unary/migrated_0004.js",
     "esprima/test_fixtures/expression/assignment/migrated_0002.js",
-    # not sure why fail yet; numeric
-    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0024.js",
-    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0021.js",
-    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0023.js",
-    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0022.js",
-    # not sure why fail yet; regexp
-    "esprima/test_fixtures/expression/primary/literal/regular-expression/u-flag-valid-range.js",
-    "esprima/test_fixtures/expression/primary/literal/regular-expression/u-flag-surrogate-pair.js",
     # function declaration vs expression
     "esprima/test_fixtures/statement/labelled/function-declaration.js",
     "esprima/test_fixtures/statement/if/migrated_0003.js",
+    # non-octal 09.5
+    "esprima/test_fixtures/expression/primary/literal/numeric/migrated_0024.js",
     # These should fail but aren't failing.
-    "esprima/test_fixtures/tolerant-parse/migrated_0049.js",
     "esprima/test_fixtures/statement/if/invalid-function-declaration3.js",
     "esprima/test_fixtures/statement/if/invalid-function-declaration1.js",
     "esprima/test_fixtures/invalid-syntax/migrated_0221.js",
