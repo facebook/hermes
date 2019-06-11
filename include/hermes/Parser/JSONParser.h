@@ -330,7 +330,7 @@ class JSONObject : public JSONValue {
   class iterator : public std::iterator<
                        std::bidirectional_iterator_tag,
                        std::pair<JSONString *, JSONValue *&>> {
-    JSONObject *const obj_;
+    JSONObject *obj_;
     size_t index_;
 
     iterator(JSONObject *obj, size_t index) : obj_(obj), index_(index) {}
