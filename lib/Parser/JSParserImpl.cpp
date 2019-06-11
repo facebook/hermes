@@ -544,18 +544,37 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseBlock(
   return body;
 }
 
-Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
-    Param param) {
-  UniqueString *id;
-  if (check(TokenKind::identifier)) {
-    id = tok_->getIdentifier();
-  } else if (check(TokenKind::rw_yield)) {
-    id = tok_->getResWordIdentifier();
-    if (isStrictMode() || param.has(ParamYield))
+bool JSParserImpl::validateBindingIdentifier(
+    Param param,
+    UniqueString *id,
+    TokenKind kind) {
+  if (kind == TokenKind::identifier) {
+    return true;
+  }
+
+  if (kind == TokenKind::rw_yield) {
+    if (isStrictMode() || param.has(ParamYield)) {
       lexer_.error(
           tok_->getSourceRange(),
           "Unexpected usage of 'yield' as an identifier");
-  } else {
+    }
+    return true;
+  }
+
+  return false;
+}
+
+Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
+    Param param) {
+  if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+    return None;
+  }
+
+  // If we have an identifier or reserved word, then store it and the kind,
+  // and pass it to the validateBindingIdentifier function.
+  UniqueString *id = tok_->getResWordOrIdentifier();
+  TokenKind kind = tok_->getKind();
+  if (!validateBindingIdentifier(param, id, kind)) {
     return None;
   }
 

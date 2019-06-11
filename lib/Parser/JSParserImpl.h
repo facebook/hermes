@@ -418,6 +418,15 @@ class JSParserImpl {
   /// \param param [Yield]
   Optional<ESTree::Node *> parseDeclaration(Param param);
 
+  /// Check if the provided string is a valid binding identifier.
+  /// Can be used to validate identifiers after we've passed lexing them.
+  /// The caller must report any errors if this function returns false.
+  /// \param param [Yield]
+  /// \param id the string to be validated.
+  /// \param kind the TokenKind provided when the string was lexed.
+  /// \return true if \param id is a valid binding identifier.
+  bool validateBindingIdentifier(Param param, UniqueString *id, TokenKind kind);
+
   /// ES 2015 12.1
   /// Does not generate an error. It is expected that the caller will do it.
   /// \param param [Yield]
