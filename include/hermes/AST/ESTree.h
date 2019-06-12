@@ -231,6 +231,8 @@ class FunctionLikeDecoration {
 
  public:
   Strictness strictness{Strictness::NotSet};
+  /// Whether this function was a getter/setter rather than using 'function'.
+  bool isPropertyAssignment{false};
 
   void setSemInfo(sem::FunctionInfo *semInfo) {
     assert(semInfo && "setting semInfo to null");

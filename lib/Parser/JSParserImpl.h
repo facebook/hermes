@@ -515,7 +515,7 @@ class JSParserImpl {
   Optional<ESTree::ArrayExpressionNode *> parseArrayLiteral();
   Optional<ESTree::ObjectExpressionNode *> parseObjectLiteral();
   Optional<ESTree::Node *> parseSpreadElement();
-  Optional<ESTree::Node *> parsePropertyAssignment();
+  Optional<ESTree::Node *> parsePropertyAssignment(bool eagerly);
 
   /// Parse a property key which is a string, number or identifier. If it is
   /// neither, reports an error.

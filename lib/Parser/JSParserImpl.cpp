@@ -1880,7 +1880,7 @@ Optional<ESTree::ObjectExpressionNode *> JSParserImpl::parseObjectLiteral() {
 
         elemList.push_back(**optSpread);
       } else {
-        auto prop = parsePropertyAssignment();
+        auto prop = parsePropertyAssignment(false);
         if (!prop)
           return None;
 
@@ -1923,7 +1923,7 @@ Optional<ESTree::Node *> JSParserImpl::parseSpreadElement() {
       new (context_) ESTree::SpreadElementNode(*optExpr));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
+Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   SMLoc startLoc = tok_->getStartLoc();
   ESTree::NodePtr key = nullptr;
 
@@ -1967,13 +1967,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
               "start of getter declaration",
               startLoc))
         return None;
-      auto block = parseBlock(ParamReturn, JSLexer::AllowRegExp, true);
+      auto block =
+          parseFunctionBody(ParamReturn, eagerly, JSLexer::AllowRegExp, true);
       if (!block)
         return None;
 
       auto *funcExpr = new (context_) ESTree::FunctionExpressionNode(
           nullptr, ESTree::NodeList{}, block.getValue(), false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
+      funcExpr->isPropertyAssignment = true;
       setLocation(startLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_)
@@ -2032,13 +2034,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment() {
               "start of setter declaration",
               startLoc))
         return None;
-      auto block = parseBlock(ParamReturn, JSLexer::AllowRegExp, true);
+      auto block =
+          parseFunctionBody(ParamReturn, eagerly, JSLexer::AllowRegExp, true);
       if (!block)
         return None;
 
       auto *funcExpr = new (context_) ESTree::FunctionExpressionNode(
           nullptr, std::move(params), block.getValue(), false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
+      funcExpr->isPropertyAssignment = true;
       setLocation(startLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_)
@@ -3260,6 +3264,19 @@ Optional<ESTree::NodePtr> JSParserImpl::parseLazyFunction(
 
     case ESTree::NodeKind::FunctionDeclaration:
       return castNode(parseFunctionDeclaration(ParamReturn, true));
+
+    case ESTree::NodeKind::Property: {
+      auto node = parsePropertyAssignment(true);
+      assert(node && "Reparsing of property assignment failed");
+      if (auto *prop = dyn_cast<ESTree::PropertyNode>(*node)) {
+        return prop->_value;
+      } else {
+        // This isn't technically (llvm_)unreachable, since it'll happen if you
+        // fudge the source buffer during execution. Assert and fail instead.
+        assert(false && "Expected a getter/setter function");
+        return None;
+      }
+    }
 
     default:
       llvm_unreachable("Asked to parse unexpected node type");

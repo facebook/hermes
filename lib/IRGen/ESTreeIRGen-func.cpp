@@ -146,6 +146,17 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
 }
 
 #ifndef HERMESVM_LEAN
+namespace {
+ESTree::NodeKind getLazyFunctionKind(ESTree::FunctionLikeNode *node) {
+  if (node->isPropertyAssignment) {
+    // This is not a regular function expression but getter/setter.
+    // If we want to reparse it later, we have to start from a
+    // 'get'/'set' and not from a 'function' keyword.
+    return ESTree::NodeKind::Property;
+  }
+  return node->getKind();
+}
+} // namespace
 Function *ESTreeIRGen::genES5Function(
     Identifier originalName,
     Variable *lazyClosureAlias,
@@ -179,7 +190,7 @@ Function *ESTreeIRGen::genES5Function(
       newFunction->setLazyScope(saveCurrentScope());
       auto &lazySource = newFunction->getLazySource();
       lazySource.bufferId = bodyBlock->bufferId;
-      lazySource.nodeKind = functionNode->getKind();
+      lazySource.nodeKind = getLazyFunctionKind(functionNode);
       lazySource.functionRange = functionNode->getSourceRange();
 
       // Give the stub parameters so that we'll know the function's .length .
