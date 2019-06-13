@@ -416,10 +416,10 @@ void YoungGen::debitExternalMemory(uint32_t size) {
 
 void YoungGen::updateEffectiveEndForExternalMemory() {
   assert(ownsAllocContext());
-  if (sizeDirect() >= externalMemory()) {
+  if (availableDirect() >= externalMemory()) {
     activeSegment().setEffectiveEnd(activeSegment().end() - externalMemory());
   } else {
-    activeSegment().setEffectiveEnd(activeSegment().start());
+    activeSegment().setEffectiveEnd(activeSegment().level());
   }
 }
 

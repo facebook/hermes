@@ -266,6 +266,44 @@ TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
   // situation -- this is a regression test.)
   gc.collect();
 }
+
+TEST(ExtMemNonParamDeathTest, SaturateYoungGen) {
+  // Fill the heap up to such an extent that the YoungGen is forced to hold a
+  // cell with an external allocation larger than the YoungGen's own size.
+
+  // The GC size is arranged so that the old gen is the smallest it can be for
+  // a young gen that is as large as it can be.
+  const auto kTotalSize = kMaxYoungGenSize * GC::kYoungGenFractionDenom;
+  const auto kYGSize = kMaxYoungGenSize;
+  const auto kOGSize = kTotalSize - kYGSize;
+
+  // A segment-sized cell, to fill out the generations.
+  using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+
+  // An external allocation size that will certainly saturate the young
+  // generation.
+  const auto kExtAllocSize = kOGSize - sizeof(ExtStringForTest);
+  ASSERT_GT(kExtAllocSize, kYGSize);
+
+  const auto gcConfig = TestGCConfigFixedSize(kTotalSize);
+  auto runtime = DummyRuntime::create(getMetadataTable(), gcConfig);
+  DummyRuntime &rt = *runtime;
+
+  std::deque<GCCell *> roots;
+
+  // Fill up the old generation.
+  for (size_t i = 0; i < GC::kYoungGenFractionDenom - 1; ++i) {
+    roots.push_back(SegmentCell::createLongLived(rt));
+    rt.pointerRoots.push_back(&roots.back());
+  }
+
+  // Saturate the young generation.
+  roots.push_back(ExtStringForTest::create(rt, kExtAllocSize));
+  rt.pointerRoots.push_back(&roots.back());
+
+  // Expect that a subsequent allocation should fail, with an OOM.
+  EXPECT_OOM(ExtStringForTest::create(rt, kExtAllocSize));
+}
 #endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
 
 } // namespace
