@@ -51,7 +51,6 @@ OrderedHashMap::OrderedHashMap(
       hashTable_(hashTableStorage.get(), &runtime->getHeap()) {
   ArrayStorage::resizeWithinCapacity(
       hashTableStorage, runtime, INITIAL_CAPACITY);
-  HERMES_EXTRA_DEBUG(ValidityChecker::check(this));
 }
 
 CallResult<HermesValue> OrderedHashMap::create(Runtime *runtime) {
@@ -105,18 +104,13 @@ ExecutionStatus OrderedHashMap::rehashIfNecessary(
     // Load factor is more than 0.75, need to increase the capacity.
     newCapacity = self->capacity_ * 2;
     if (LLVM_UNLIKELY(newCapacity > MAX_CAPACITY)) {
-      // Eventually, we should cap the max value at the
-      // largest power of two <= MAX_CAPACITY.
-      // For now, though leave the value capped at MAX_CAPACITY for
-      // now, in case that's connected to T42745080.
-      newCapacity = MAX_CAPACITY;
-      // Record the fact that this overflow occurred (in case
-      // it's correlated with crashes).
-      HERMES_EXTRA_DEBUG(if (!self->overflowRecorded_) {
-        runtime->getCrashManager().setCustomData(
-            "Hermes_OrderedHashMap_overflow", "1");
-        self->overflowRecorded_ = true;
-      });
+      // We maintain the invariant that the capacity_ is a power of two.
+      // Therefore, if doubling would exceed the max, we revert to the
+      // previous value.  (Assert the invariant to make it clear.)
+      assert(
+          (self->capacity_ & (self->capacity_ - 1)) == 0 &&
+          "capacity_ must be power of 2");
+      newCapacity = self->capacity_;
     }
   } else if (
       self->size_ * 4 < self->capacity_ && self->capacity_ > INITIAL_CAPACITY) {
@@ -207,7 +201,6 @@ ExecutionStatus OrderedHashMap::insert(
     Runtime *runtime,
     Handle<> key,
     Handle<> value) {
-  HERMES_EXTRA_DEBUG(ValidityChecker validCheck(self));
   uint32_t bucket = hashToBucket(self, runtime, key);
   if (auto *entry = self->lookupInBucket(bucket, key.getHermesValue())) {
     // Element already exists, update value and return.
@@ -261,7 +254,6 @@ bool OrderedHashMap::erase(
     Handle<OrderedHashMap> self,
     Runtime *runtime,
     Handle<> key) {
-  HERMES_EXTRA_DEBUG(ValidityChecker validCheck(self));
   uint32_t bucket = hashToBucket(self, runtime, key);
   HashMapEntry *prevEntry = nullptr;
   auto *entry = dyn_vmcast<HashMapEntry>(self->hashTable_->at(bucket));
@@ -323,7 +315,6 @@ HashMapEntry *OrderedHashMap::iteratorNext(HashMapEntry *entry) const {
 }
 
 void OrderedHashMap::clear(Runtime *runtime) {
-  HERMES_EXTRA_DEBUG(ValidityChecker validCheck(runtime->makeHandle(this)));
   if (!firstIterationEntry_) {
     // Empty set.
     return;
@@ -352,21 +343,6 @@ void OrderedHashMap::clear(Runtime *runtime) {
   firstIterationEntry_->prevIterationEntry = nullptr;
   size_ = 0;
 }
-
-#ifdef HERMES_EXTRA_DEBUG
-/*static*/
-void OrderedHashMap::ValidityChecker::check(const OrderedHashMap *self) {
-  if (!self->isValid(CellKind::OrderedHashMapKind)) {
-    hermes_fatal("OrderedHashMap has invalid vtable.");
-  }
-  if (self->capacity_ == 0) {
-    hermes_fatal("OrderedHashMap has zero capacity_.");
-  }
-  if (self->hashTable_.get() == nullptr) {
-    hermes_fatal("OrderedHashMap has null hashTable_.");
-  }
-}
-#endif
 
 } // namespace vm
 } // namespace hermes

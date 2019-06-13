@@ -133,33 +133,6 @@ class OrderedHashMap final : public GCCell {
   OrderedHashMap(Runtime *runtime, Handle<ArrayStorage> hashTableStorage);
 
  private:
-#ifdef HERMES_EXTRA_DEBUG
-  /// To help diagnose T42745080, this class enables some
-  /// extra validity checking on entry and exit to some methods.
-  class ValidityChecker {
-   public:
-    ValidityChecker(Handle<OrderedHashMap> self) : self_(self) {
-      check();
-    }
-    ~ValidityChecker() {
-      check();
-    }
-
-    /// Checks the validity of self, calling hermes_fatal with an appropriate
-    /// message if it is not valid.
-    static void check(const OrderedHashMap *self);
-
-   private:
-    /// Convenience: call check() on self_.
-    void check() {
-      check(self_.get());
-    }
-
-    /// Handle to the OrderedHashMap to check on destruction.
-    Handle<OrderedHashMap> self_;
-  };
-#endif
-
   /// The hashtable, with size always equal to capacity_. The number of
   /// reachable entries from hashTable_ should be equal to size_.
   GCPointer<ArrayStorage> hashTable_{nullptr};
@@ -187,11 +160,6 @@ class OrderedHashMap final : public GCCell {
 
   /// Number of alive entries in the storage.
   uint32_t size_{0};
-
-#ifdef HERMES_EXTRA_DEBUG
-  /// Whether we've informed the CrashManager of overflow.
-  bool overflowRecorded_{false};
-#endif
 
   /// Hash a HermesValue to an index to our hash table.
   static uint32_t
