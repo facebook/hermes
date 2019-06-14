@@ -22,7 +22,8 @@
 //CHECK-NEXT:                 "name": "a",
 //CHECK-NEXT:                 "typeAnnotation": null
 //CHECK-NEXT:               },
-//CHECK-NEXT:               "kind": "init"
+//CHECK-NEXT:               "kind": "init",
+//CHECK-NEXT:               "computed": false
 //CHECK-NEXT:             },
 //CHECK-NEXT:             {
 //CHECK-NEXT:               "type": "SpreadElement",
@@ -53,7 +54,8 @@
 //CHECK-NEXT:                 "name": "b",
 //CHECK-NEXT:                 "typeAnnotation": null
 //CHECK-NEXT:               },
-//CHECK-NEXT:               "kind": "init"
+//CHECK-NEXT:               "kind": "init",
+//CHECK-NEXT:               "computed": false
 //CHECK-NEXT:             },
 //CHECK-NEXT:             {
 //CHECK-NEXT:               "type": "SpreadElement",

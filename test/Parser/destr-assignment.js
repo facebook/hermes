@@ -58,7 +58,8 @@
 //CHECK-NEXT:                     "elements": []
 //CHECK-NEXT:                   }
 //CHECK-NEXT:                 },
-//CHECK-NEXT:                 "kind": "init"
+//CHECK-NEXT:                 "kind": "init",
+//CHECK-NEXT:                 "computed": false
 //CHECK-NEXT:               },
 //CHECK-NEXT:               {
 //CHECK-NEXT:                 "type": "Property",
@@ -72,7 +73,8 @@
 //CHECK-NEXT:                   "name": "b",
 //CHECK-NEXT:                   "typeAnnotation": null
 //CHECK-NEXT:                 },
-//CHECK-NEXT:                 "kind": "init"
+//CHECK-NEXT:                 "kind": "init",
+//CHECK-NEXT:                 "computed": false
 //CHECK-NEXT:               }
 //CHECK-NEXT:             ]
 //CHECK-NEXT:           },
@@ -113,7 +115,8 @@
 //CHECK-NEXT:                    "value": 10
 //CHECK-NEXT:                  }
 //CHECK-NEXT:                },
-//CHECK-NEXT:                "kind": "init"
+//CHECK-NEXT:                "kind": "init",
+//CHECK-NEXT:                "computed": false
 //CHECK-NEXT:              }
 //CHECK-NEXT:            ]
 //CHECK-NEXT:          },

@@ -20,7 +20,8 @@ var tmp = { a : 1, b, c };
 //CHECK-NEXT:                     "type": "NumericLiteral",
 //CHECK-NEXT:                     "value": 1
 //CHECK-NEXT:                   },
-//CHECK-NEXT:                   "kind": "init"
+//CHECK-NEXT:                   "kind": "init",
+//CHECK-NEXT:                   "computed": false
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 {
 //CHECK-NEXT:                   "type": "Property",
@@ -34,7 +35,8 @@ var tmp = { a : 1, b, c };
 //CHECK-NEXT:                     "name": "b",
 //CHECK-NEXT:                     "typeAnnotation": null
 //CHECK-NEXT:                   },
-//CHECK-NEXT:                   "kind": "init"
+//CHECK-NEXT:                   "kind": "init",
+//CHECK-NEXT:                   "computed": false
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 {
 //CHECK-NEXT:                   "type": "Property",
@@ -48,7 +50,8 @@ var tmp = { a : 1, b, c };
 //CHECK-NEXT:                     "name": "c",
 //CHECK-NEXT:                     "typeAnnotation": null
 //CHECK-NEXT:                   },
-//CHECK-NEXT:                   "kind": "init"
+//CHECK-NEXT:                   "kind": "init",
+//CHECK-NEXT:                   "computed": false
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             },
@@ -81,7 +84,8 @@ var tmp1 = { d };
 //CHECK-NEXT:                    "name": "d",
 //CHECK-NEXT:                    "typeAnnotation": null
 //CHECK-NEXT:                  },
-//CHECK-NEXT:                  "kind": "init"
+//CHECK-NEXT:                  "kind": "init",
+//CHECK-NEXT:                  "computed": false
 //CHECK-NEXT:                }
 //CHECK-NEXT:              ]
 //CHECK-NEXT:            },

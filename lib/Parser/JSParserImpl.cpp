@@ -949,7 +949,9 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
   }
 
   return setLocation(
-      key, value, new (context_) ESTree::PropertyNode(key, value, initIdent_));
+      key,
+      value,
+      new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseBindingRestProperty(
@@ -1979,7 +1981,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       setLocation(startLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_)
-          ESTree::PropertyNode(optKey.getValue(), funcExpr, getIdent_);
+          ESTree::PropertyNode(optKey.getValue(), funcExpr, getIdent_, false);
       return setLocation(startLoc, block.getValue(), node);
     }
   } else if (check(setIdent_)) {
@@ -2046,7 +2048,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       setLocation(startLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_)
-          ESTree::PropertyNode(optKey.getValue(), funcExpr, setIdent_);
+          ESTree::PropertyNode(optKey.getValue(), funcExpr, setIdent_, false);
       return setLocation(startLoc, block.getValue(), node);
     }
   } else if (check(TokenKind::identifier)) {
@@ -2062,7 +2064,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       return setLocation(
           startLoc,
           value,
-          new (context_) ESTree::PropertyNode(key, value, initIdent_));
+          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
     }
   } else {
     auto optKey = parsePropertyName();
@@ -2103,7 +2105,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   return setLocation(
       startLoc,
       value,
-      new (context_) ESTree::PropertyNode(key, value, initIdent_));
+      new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parsePropertyName() {
