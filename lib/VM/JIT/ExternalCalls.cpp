@@ -221,7 +221,10 @@ CallResult<HermesValue> externCall(
       argCount - 1,
       *callable,
       HermesValue::encodeUndefinedValue());
-  return Callable::call(Handle<Callable>::vmcast(callable), runtime);
+  runtime->storeCallerIP(ip);
+  auto res = Callable::call(Handle<Callable>::vmcast(callable), runtime);
+  runtime->clearCallerIP();
+  return res;
 }
 
 CallResult<HermesValue> externConstruct(
