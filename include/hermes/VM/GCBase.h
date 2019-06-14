@@ -706,18 +706,6 @@ class WeakRefBase {
 #endif
 };
 
-/// gcc 4.8 doesn't support std::aligned_alloc() so we have to do with regular
-/// plain old malloc(). It is guaranteed to align things suitably for double
-/// at least, which which satisfies our alignment requirements for now. Should
-/// our HeapAlign constant increase, we will need to upgrade to a newer version
-/// of gcc, or resort to other tricks.
-inline void *alignedMalloc(size_t size) {
-  static_assert(
-      hermes::vm::HeapAlign == alignof(double),
-      "System malloc() cannot guarantee required alignment");
-  return checkedMalloc(size);
-}
-
 } // namespace vm
 } // namespace hermes
 
