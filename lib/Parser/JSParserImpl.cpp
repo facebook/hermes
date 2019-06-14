@@ -1943,7 +1943,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           new (context_) ESTree::IdentifierNode(ident, nullptr));
     } else {
       // A getter method.
-      auto optKey = parsePropertyKey();
+      auto optKey = parsePropertyName();
       if (!optKey)
         return None;
 
@@ -1996,7 +1996,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           new (context_) ESTree::IdentifierNode(ident, nullptr));
     } else {
       // A setter method.
-      auto optKey = parsePropertyKey();
+      auto optKey = parsePropertyName();
       if (!optKey)
         return None;
 
@@ -2065,7 +2065,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           new (context_) ESTree::PropertyNode(key, value, initIdent_));
     }
   } else {
-    auto optKey = parsePropertyKey();
+    auto optKey = parsePropertyName();
     if (!optKey)
       return None;
 
@@ -2106,7 +2106,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       new (context_) ESTree::PropertyNode(key, value, initIdent_));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parsePropertyKey() {
+Optional<ESTree::Node *> JSParserImpl::parsePropertyName() {
   switch (tok_->getKind()) {
     case TokenKind::string_literal: {
       auto *res = setLocation(
@@ -3282,7 +3282,6 @@ Optional<ESTree::NodePtr> JSParserImpl::parseLazyFunction(
       llvm_unreachable("Asked to parse unexpected node type");
   }
 }
-
 }; // namespace detail
 }; // namespace parser
 }; // namespace hermes

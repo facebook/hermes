@@ -519,7 +519,7 @@ class JSParserImpl {
 
   /// Parse a property key which is a string, number or identifier. If it is
   /// neither, reports an error.
-  Optional<ESTree::Node *> parsePropertyKey();
+  Optional<ESTree::Node *> parsePropertyName();
 
   Optional<ESTree::FunctionExpressionNode *> parseFunctionExpression(
       bool forceEagerly = false);
