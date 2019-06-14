@@ -253,7 +253,10 @@ CallResult<HermesValue> externConstruct(
       argCount - 1,
       *callable,
       *callable);
-  return Callable::call(Handle<Callable>::vmcast(callable), runtime);
+  runtime->storeCallerIP(ip);
+  auto res = Callable::call(Handle<Callable>::vmcast(callable), runtime);
+  runtime->clearCallerIP();
+  return res;
 }
 
 /// Implement a slow path call for a binary operator.
