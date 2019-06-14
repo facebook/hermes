@@ -1770,14 +1770,19 @@ unsigned FastJIT::getCatchHandlerBBIndex(const Inst *ip) {
   // The offset between catch handler ip and codeBlock_->begin()
   int32_t handlerOffset = codeBlock_->findCatchTargetOffset(
       (const uint8_t *)ip - (const uint8_t *)codeBlock_->begin());
+  assert(
+      bcBasicBlocks_.size() > 0 &&
+      "We should at least have one BB which is epilogue.");
   if (handlerOffset == -1)
     return bcBasicBlocks_.size() - 1; // exit block
   else {
     // The last BB is the epilogue which could not be a catch handler BB.
     assert(
-        handlerOffset >= 0 &&
-        (uint32_t)handlerOffset < bcBasicBlocks_.size() - 1 &&
-        "The catch handler basic block index is out of bound.");
+        handlerOffset >= 0 && (uint32_t)handlerOffset < bcBasicBlocks_.back() &&
+        "The catch handler basic block offset is out of bound.");
+    assert(
+        bcLabels_.find(handlerOffset) != bcLabels_.end() &&
+        "handlerOffset not in bcLabels_");
     return bcLabels_[handlerOffset];
   }
 }
