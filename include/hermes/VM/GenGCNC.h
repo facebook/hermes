@@ -464,8 +464,11 @@ class GenGC final : public GCBase {
   inline void writeBarrierImpl(void *loc, void *value, bool hv);
 
   /// Returns the desired heap size for the given number of used bytes --
-  /// determined by the occupancyTarget() ratio and the max heap size.
-  gcheapsize_t usedToDesiredSize(gcheapsize_t usedBytes);
+  /// determined by the occupancyTarget() ratio and the max heap size
+  /// representable by gcheapsize_t.  Note that \p usedBytes is given as a
+  /// size_t because it can include sizes due to external memory allocations
+  /// which may in general exceed quantities representable by gcheapsize_t.
+  gcheapsize_t usedToDesiredSize(size_t usedBytes);
 
   /// Signal to the heap that it can now use around \p hint bytes of heap.
   void growTo(size_t hint);

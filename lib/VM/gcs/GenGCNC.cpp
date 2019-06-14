@@ -229,7 +229,7 @@ static_assert(
 
 } // namespace
 
-gcheapsize_t GenGC::usedToDesiredSize(gcheapsize_t usedBytes) {
+gcheapsize_t GenGC::usedToDesiredSize(size_t usedBytes) {
   double desiredSize = static_cast<double>(usedBytes) / occupancyTarget();
   // If occupancyTarget is small (close to 0), and/or usedBytes is large,
   // desiredSize could be too large to cast back into gcheapsize_t, below.
