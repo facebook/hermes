@@ -40,7 +40,7 @@ class CodeBlock final
   friend TrailingObjects;
   /// Points to the runtime module with the information required for this code
   /// block.
-  RuntimeModule *runtimeModule_;
+  RuntimeModule *const runtimeModule_;
 
   /// Pointer to the function header.
   hbc::RuntimeFunctionHeader functionHeader_;
