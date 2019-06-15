@@ -449,7 +449,6 @@ set(HERMES_LIT_TEST_PARAMS
   repl=${HERMES_BINARY_DIR}/bin/hermes-repl
   hbc-deltaprep=${HERMES_BINARY_DIR}/bin/hbc-deltaprep
   build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
-  is_handle_san=${HERMESVM_SANITIZE_HANDLES}
   )
 
 set(LLVM_LIT_ARGS "-sv")

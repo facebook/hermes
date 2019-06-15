@@ -1,5 +1,5 @@
-// RUN: %hermes -O %s | %FileCheck --match-full-lines %s
-// REQUIRES: not_handle_san
+// RUN: %hermes -O -gc-sanitize-handles=0 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes -gc-sanitize-handles=0 %t.hbc | %FileCheck --match-full-lines %s
 
 var arr = [];
 
@@ -26,7 +26,8 @@ catch( e )
 {
   // catch the range error and use a regex to pull out the max elements size
 
-  // RangeError: Requested an array size larger than the max allowable: Requested elements = 524288, max elements = 514045
+  // RangeError: Requested an array size larger than the max allowable:
+  // Requested elements = 524288, max elements = 514045
 
   arr.length = /max elements = ([\d]+)/.exec(e.message)[1];
 }
