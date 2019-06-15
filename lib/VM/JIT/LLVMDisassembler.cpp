@@ -8,7 +8,9 @@
 
 #include "hermes/VM/JIT/LLVMDisassembler.h"
 
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -86,7 +88,7 @@ LLVMDisassembler::Impl::Impl(
   // Note circular dependency between MOFI_ and ctx_.
   MOFI_.reset(new llvm::MCObjectFileInfo());
   ctx_.reset(new llvm::MCContext(MAI_.get(), MRI_.get(), MOFI_.get()));
-  MOFI_->InitMCObjectFileInfo(triple, true, llvm::CodeModel::Default, *ctx_);
+  MOFI_->InitMCObjectFileInfo(triple, true, *ctx_);
 
   MCII_.reset(target->createMCInstrInfo());
 
