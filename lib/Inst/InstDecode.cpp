@@ -132,6 +132,17 @@ DecodedInstruction decodeInstruction(const Inst *inst) {
     decoded.operandValue[4].set(inst->i##name.op5);                        \
     break;
 
+#define DEFINE_OPCODE_6(                                        \
+    name, op1type, op2type, op3type, op4type, op5type, op6type) \
+  case OpCode::name:                                            \
+    decoded.operandValue[0].set(inst->i##name.op1);             \
+    decoded.operandValue[1].set(inst->i##name.op2);             \
+    decoded.operandValue[2].set(inst->i##name.op3);             \
+    decoded.operandValue[3].set(inst->i##name.op4);             \
+    decoded.operandValue[4].set(inst->i##name.op5);             \
+    decoded.operandValue[5].set(inst->i##name.op6);             \
+    break;
+
 #include "hermes/BCGen/HBC/BytecodeList.def"
     default:
       llvm_unreachable("invalid instruction");
