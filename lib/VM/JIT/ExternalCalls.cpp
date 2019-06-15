@@ -172,7 +172,9 @@ CallResult<HermesValue> externGetById(
     }
     auto id = SymbolID::unsafeCreate(sid);
     NamedPropertyDescriptor desc;
-    if (LLVM_LIKELY(JSObject::tryGetOwnNamedDescriptorFast(obj, id, desc)) &&
+    OptValue<bool> fastPathResult =
+        JSObject::tryGetOwnNamedDescriptorFast(obj, id, desc);
+    if (LLVM_LIKELY(fastPathResult.hasValue() && fastPathResult.getValue()) &&
         !desc.flags.accessor) {
       // cacheIdx == 0 indicates no caching so don't update the cache in
       // those cases.
@@ -184,6 +186,21 @@ CallResult<HermesValue> externGetById(
       }
 
       return JSObject::getNamedSlotValue(obj, desc);
+    }
+
+    // The cache may also be populated via the prototype of the object.
+    // This value is only reliable if the fast path was a definite
+    // not-found.
+    if (fastPathResult.hasValue() && !fastPathResult.getValue()) {
+      JSObject *parent = obj->getParent();
+      // TODO: This isLazy check is because a lazy object is reported as
+      // having no properties and therefore cannot contain the property.
+      // This check does not belong here, it should be merged into
+      // tryGetOwnNamedDescriptorFast().
+      if (parent && cacheEntry->clazz == parent->getClass() &&
+          LLVM_LIKELY(!obj->isLazy())) {
+        return JSObject::getNamedSlotValue(parent, cacheEntry->slot);
+      }
     }
 
     return JSObject::getNamed_RJS(
