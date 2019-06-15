@@ -449,6 +449,7 @@ set(HERMES_LIT_TEST_PARAMS
   repl=${HERMES_BINARY_DIR}/bin/hermes-repl
   hbc-deltaprep=${HERMES_BINARY_DIR}/bin/hbc-deltaprep
   build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
+  exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
   )
 
 set(LLVM_LIT_ARGS "-sv")
