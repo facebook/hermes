@@ -309,13 +309,13 @@ TEST(x86_64_EmitterTest, Test) {
   CHECK("48 f7 c3 2c 01 00 00          testq $300, %rbx");
 
   emitter.testRmToReg<S::B>(Reg::rbx, Reg::NoIndex, 0, Reg::al);
-  CHECK("84 03                         testb (%rbx), %al");
+  CHECK("84 03                         testb %al, (%rbx)");
   emitter.testRmToReg<S::W>(Reg::rbx, Reg::NoIndex, 0, Reg::ax);
-  CHECK("66 85 03                      testw (%rbx), %ax");
+  CHECK("66 85 03                      testw %ax, (%rbx)");
   emitter.testRmToReg<S::L>(Reg::rbx, Reg::NoIndex, 0, Reg::eax);
-  CHECK("85 03                         testl (%rbx), %eax");
+  CHECK("85 03                         testl %eax, (%rbx)");
   emitter.testRmToReg<S::Q>(Reg::rbx, Reg::NoIndex, 0, Reg::rax);
-  CHECK("48 85 03                      testq (%rbx), %rax");
+  CHECK("48 85 03                      testq %rax, (%rbx)");
 
   emitter.testRegToReg<S::B>(Reg::bl, Reg::al);
   CHECK("84 d8                         testb %bl, %al");
