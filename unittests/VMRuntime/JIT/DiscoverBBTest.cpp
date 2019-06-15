@@ -18,11 +18,12 @@ using namespace hermes::vm;
 namespace {
 
 TEST(DiscoverBBTest, SmokeTest) {
-  Runtime runtime{kTestRTConfigLargeHeap};
+  auto rt = Runtime::create(kTestRTConfigLargeHeap);
+  Runtime &runtime = *rt;
 
   hermes::hbc::CompileFlags runFlags;
   runFlags.optimize = true;
-  runtime.run(
+  (void)runtime.run(
       "function bench (lc, fc) {\n"
       "    var n, fact;\n"
       "    var res = 0;\n"
