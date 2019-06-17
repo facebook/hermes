@@ -39,7 +39,11 @@ int32_t truncateToInt32SlowPath(double d) {
   if (exp >= 0) {
     // Check if the shift would push all bits out. Additionally this catches
     // Infinity and NaN.
-    return exp <= 31 ? sign * (int32_t)(m << exp) : 0;
+    // Cast to int64 here to avoid UB for the case where sign is negative one
+    // and m << exp is exactly INT32_MIN, since a 32-bit signed int cannot hold
+    // the resulting INT32_MAX + 1. When it is returned, it will be correctly
+    // set to 0.
+    return exp <= 31 ? sign * (int64_t)(m << exp) : 0;
   } else {
     // Check if the shift would push out the entire mantissa.
     // We need to use int64_t here in case we are multiplying

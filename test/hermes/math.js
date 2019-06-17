@@ -325,6 +325,8 @@ print(Math.imul(65536, 65535));
 // CHECK-NEXT: -65536
 print(Math.imul(65535, 65535));
 // CHECK-NEXT: -131071
+print(Math.imul(-1.3677434311116809e+25, 0));
+// CHECK-NEXT: 0
 
 print('clz32');
 // CHECK-LABEL: clz32
