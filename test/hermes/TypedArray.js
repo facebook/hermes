@@ -289,6 +289,12 @@ cons.forEach(function(TypedArray) {
   assert.equal(view[0], 2);
 })();
 
+(function checkFloatMaxValue() {
+  var view = new Float32Array(1);
+  view[0] = Number.MAX_VALUE;
+  assert.equal(view[0], Infinity);
+})();
+
 (function checkFloatSanitization() {
   // Check float is sanitized
   // Basis of this test is that in Hermes, a NaN can have a "payload" which
