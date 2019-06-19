@@ -480,7 +480,7 @@ TEST_F(InterpreterTest, FrameSizeTest) {
   // TODO(T42117517) Understand why stack frame size is large on Windows
   uintptr_t kStackFrameSizeLimit = 3000;
 #else
-  uintptr_t kStackFrameSizeLimit = 1024;
+  uintptr_t kStackFrameSizeLimit = 1440;
 #endif
   ASSERT_LE(outerStackPointer - innerStackPointer, kStackFrameSizeLimit);
 }
