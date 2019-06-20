@@ -71,9 +71,9 @@ cp build_release/github/hermes-cli-*-v*.tar.gz hermes/npm
 # 9. Clone react-native-hermes here
 git clone git@github.com:facebookexperimental/react-native-hermes.git
 
-# 10. Replace the RN template app version number (1000.0.0) with the path
+# 10. Replace the RN template app version number (0.60.0-rc.1) with the path
 #    to your react-native-hermes directory.
-printf '%s\n' "%s|1000.0.0|file://${HERMES_WS_DIR:?}/react-native-hermes" wq |
+printf '%s\n' "%s|0.60.0-rc.1|file://${HERMES_WS_DIR:?}/react-native-hermes" wq |
     ed react-native-hermes/template/package.json
 
 # 11. Fetch react-native-hermes' dependencies
