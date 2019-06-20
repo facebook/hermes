@@ -97,9 +97,11 @@ CallResult<HermesValue> evalInEnvironment(
   DeclarationFileListTy declFileList;
   hermes::generateIRFromESTree(ast, &M, declFileList, scopeChain);
 
+  auto bytecodeOptions = BytecodeGenerationOptions::defaults();
+  bytecodeOptions.verifyIR = runtime->verifyEvalIR;
   auto bytecode = hbc::BCProviderFromSrc::createBCProviderFromSrc(
       hbc::generateBytecodeModule(
-          &M, M.getTopLevelFunction(), BytecodeGenerationOptions::defaults()));
+          &M, M.getTopLevelFunction(), bytecodeOptions));
 
   // TODO: pass a sourceURL derived from a '//# sourceURL' comment.
   llvm::StringRef sourceURL{};

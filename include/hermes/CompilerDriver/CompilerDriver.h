@@ -92,5 +92,6 @@ namespace cl {
 /// The following flags are used by both the compiler and the VM driver.
 extern llvm::cl::opt<bool> BasicBlockProfiling;
 extern llvm::cl::opt<bool> EnableEval;
+extern llvm::cl::opt<bool> VerifyIR;
 } // namespace cl
 #endif

@@ -181,6 +181,7 @@ ExecutionStatus Runtime::putNamedThrowOnError(
 Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
     // The initial heap size can't be larger than the max.
     : enableEval(runtimeConfig.getEnableEval()),
+      verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
       heap_(
           getMetadataTable(),
           this,

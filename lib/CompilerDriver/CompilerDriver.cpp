@@ -242,6 +242,18 @@ opt<bool> BasicBlockProfiling(
 opt<bool>
     EnableEval("enable-eval", init(true), desc("Enable support for eval()"));
 
+// This is normally a compiler option, but it also applies to strings given
+// to eval or the Function constructor.
+opt<bool> VerifyIR(
+    "verify-ir",
+#ifdef HERMES_SLOW_DEBUG
+    init(true),
+#else
+    init(false),
+    Hidden,
+#endif
+    desc("Verify the IR after creating it"));
+
 static list<std::string> IncludeGlobals(
     "include-globals",
     desc("Include the definitions of global properties (can be "
@@ -419,16 +431,6 @@ static opt<std::string> BaseBytecodeFile(
     "base-bytecode",
     llvm::cl::desc("input base bytecode for delta optimizing mode"),
     llvm::cl::init(""));
-
-static opt<bool> VerifyIR(
-    "verify-ir",
-#ifdef HERMES_SLOW_DEBUG
-    init(true),
-#else
-    init(false),
-    Hidden,
-#endif
-    desc("Verify the IR after creating it"));
 
 static opt<unsigned> PadFunctionBodiesPercent(
     "pad-function-bodies-percent",
