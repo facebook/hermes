@@ -79,7 +79,7 @@ ProfilerID Runtime::getProfilerID(CodeBlock *block) {
     profilerID = nextProfilerId.fetch_add(1, std::memory_order_relaxed);
     functionInfo.emplace_back(
         profilerID,
-        block->getName(),
+        block->getNameMayAllocate(),
         block->getFunctionID(),
         block->getRuntimeModule()->getBytecodeSharedPtr());
   }
