@@ -819,9 +819,8 @@ regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   // If Type(R) is not Object, throw a TypeError exception
   Handle<JSObject> R = args.dyncastThis<JSObject>(runtime);
   if (!R) {
-    runtime->raiseTypeError(
+    return runtime->raiseTypeError(
         "RegExp.prototype.flags getter called on non-object");
-    return HermesValue::encodeEmptyValue();
   }
 
   // Let global be ToBoolean(Get(R, "global")).

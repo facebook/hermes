@@ -1517,7 +1517,11 @@ objectPrototypeProto_setter(void *, Runtime *runtime, NativeArgs args) {
   else
     return HermesValue::encodeUndefinedValue();
 
-  JSObject::setParent(vmcast<JSObject>(args.getThisArg()), runtime, protoPtr);
+  if (LLVM_UNLIKELY(
+          JSObject::setParent(
+              vmcast<JSObject>(args.getThisArg()), runtime, protoPtr) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
   return HermesValue::encodeUndefinedValue();
 }
 
