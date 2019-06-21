@@ -740,6 +740,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
   struct JsiProxy final : public JsiProxyBase {
     using JsiProxyBase::JsiProxyBase;
     vm::CallResult<vm::HermesValue> get(vm::SymbolID id) override {
+      auto &stats = rt_.runtime_.getRuntimeStats();
+      const vm::instrumentation::RAIITimer timer{
+          "HostObject.get", stats, stats.hostFunction};
       jsi::PropNameID sym =
           rt_.add<jsi::PropNameID>(vm::HermesValue::encodeSymbolValue(id));
       jsi::Value ret;
@@ -766,6 +769,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
     }
 
     vm::CallResult<bool> set(vm::SymbolID id, vm::HermesValue value) override {
+      auto &stats = rt_.runtime_.getRuntimeStats();
+      const vm::instrumentation::RAIITimer timer{
+          "HostObject.set", stats, stats.hostFunction};
       jsi::PropNameID sym =
           rt_.add<jsi::PropNameID>(vm::HermesValue::encodeSymbolValue(id));
       try {
@@ -790,6 +796,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
     }
 
     vm::CallResult<vm::Handle<vm::JSArray>> getHostPropertyNames() override {
+      auto &stats = rt_.runtime_.getRuntimeStats();
+      const vm::instrumentation::RAIITimer timer{
+          "HostObject.getHostPropertyNames", stats, stats.hostFunction};
       try {
         auto names = ho_->getPropertyNames(rt_);
 
