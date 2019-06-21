@@ -218,8 +218,11 @@ static CallResult<Handle<StringPrimitive>> encode(
     ++itr;
   }
 
-  return runtime->makeHandle<StringPrimitive>(
-      *StringPrimitive::create(runtime, R));
+  auto finalStr = StringPrimitive::create(runtime, R);
+  if (LLVM_UNLIKELY(finalStr == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return runtime->makeHandle<StringPrimitive>(*finalStr);
 }
 
 CallResult<HermesValue> encodeURI(void *, Runtime *runtime, NativeArgs args) {
