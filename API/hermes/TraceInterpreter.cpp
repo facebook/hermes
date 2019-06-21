@@ -685,7 +685,9 @@ std::string TraceInterpreter::execEntryFunction(
 #endif
 
 #ifdef HERMESVM_PROFILER_BB
-  rt.dumpBasicBlockProfileTrace(llvm::errs());
+  if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt)) {
+    hermesRuntime->dumpBasicBlockProfileTrace(llvm::errs());
+  }
 #endif
 
   // If this was a trace then stats were already collected.
