@@ -415,6 +415,9 @@ void RegisterAllocator::coalesce(
         if (map.count(mov))
           continue;
 
+        if (!hasInstructionNumber(mov))
+          continue;
+
         unsigned idx = getInstructionNumber(mov);
         instructionInterval_[phiNum].add(instructionInterval_[idx]);
 
@@ -781,6 +784,13 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
         if (!instOp)
           continue;
 
+        if (!hasInstructionNumber(instOp)) {
+          assert(
+              isa<PhiInst>(&it) &&
+              "Only PhiInst should reference values from dead code");
+          continue;
+        }
+
         auto operandIdx = getInstructionNumber(instOp);
         // Extend the lifetime of the interval to reach this instruction.
         // Include this instruction in the interval in order to make sure that
@@ -798,6 +808,12 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
       if (auto *P = dyn_cast<PhiInst>(&it)) {
         for (int i = 0, e = P->getNumEntries(); i < e; i++) {
           auto E = P->getEntry(i);
+          // PhiInsts may reference instructions from dead code blocks
+          // (which will be unnumbered and unallocated). Since the edge
+          // is necessarily also dead, we can just skip it.
+          if (!hasInstructionNumber(E.second->getTerminator()))
+            continue;
+
           unsigned termIdx = getInstructionNumber(E.second->getTerminator());
           Segment S(termIdx, termIdx + 1);
           instructionInterval_[instOffset].add(S);
