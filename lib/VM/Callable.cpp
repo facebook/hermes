@@ -796,18 +796,7 @@ Handle<NativeFunction> NativeFunction::create(
 CallResult<HermesValue> NativeFunction::_callImpl(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
-  assert(
-      runtime->getThrownValue().isEmpty() &&
-      "pending exception when calling native function");
-
-  auto result = _nativeCall(vmcast<NativeFunction>(selfHandle.get()), runtime);
-
-  // If there was an exception thrown during the call.
-  // TODO: T30015280
-  if (LLVM_UNLIKELY(!runtime->getThrownValue().isEmpty()))
-    return ExecutionStatus::EXCEPTION;
-
-  return result.getValue();
+  return _nativeCall(vmcast<NativeFunction>(selfHandle.get()), runtime);
 }
 
 CallResult<HermesValue> NativeFunction::_newObjectImpl(
