@@ -665,7 +665,7 @@ CallResult<HermesValue> Runtime::runBytecode(
 #endif
 
   if (flags.persistent) {
-    presistentBCProviders_.push_back(bytecode);
+    persistentBCProviders_.push_back(bytecode);
     if (bytecodeWarmupPercent_ > 0) {
       // Start the warmup thread for this bytecode if it's a buffer.
       bytecode->startWarmup(bytecodeWarmupPercent_);

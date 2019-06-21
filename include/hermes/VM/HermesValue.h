@@ -47,7 +47,7 @@
 /// Anything lower than 0xfff88 represents a real number,
 /// specifically 0xfff80 covers the "canonical quiet NaN".
 ///
-/// On 32-bit platforms clearly we have enough bits to encode eny pointer in
+/// On 32-bit platforms clearly we have enough bits to encode any pointer in
 /// the low word.
 ///
 /// On 64-bit platforms, we could always arrange our own heap to fit within the

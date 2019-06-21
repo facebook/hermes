@@ -1025,7 +1025,7 @@ class Runtime : public HandleRootOwner, private GCBase::GCCallbacks {
   /// Holds references to persistent BC providers for the lifetime of the
   /// Runtime. This is needed because the identifier table may contain pointers
   /// into bytecode, and so memory backing these must be preserved.
-  std::vector<std::shared_ptr<hbc::BCProvider>> presistentBCProviders_;
+  std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
 
 #ifdef HERMES_ENABLE_DEBUGGER
  private:
