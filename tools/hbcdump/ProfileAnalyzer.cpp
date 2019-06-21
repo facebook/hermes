@@ -334,12 +334,17 @@ void ProfileAnalyzer::dumpFunctionStats() {
         return x.second.instFrequency > y.second.instFrequency;
       });
 
-  int maxOutputCount = 50;
+  int maxOutputCount = 100;
   // Put function name as the last column because its length varies a lot.
-  os_ << llvm::left_justify("Inst(%)", 12) << llvm::left_justify("Inst(#)", 12)
-      << llvm::left_justify("Entry(#)", 12)
+  os_ << llvm::left_justify("Inst(%)", 12)
+      << llvm::left_justify("Inst Acc(%)", 12)
+      << llvm::left_justify("Inst(#)", 12) << llvm::left_justify("Entry(#)", 12)
+      << llvm::left_justify("Size", 12) << llvm::left_justify("Size Acc", 12)
       << llvm::left_justify("Function", 24) << "Source\n";
   std::shared_ptr<hbc::BCProvider> bcProvider = hbcParser_.getBCProvider();
+
+  float funcInstFreqPercentageAcc = 0.0;
+  uint32_t funcSizeAcc = 0;
   for (const auto &entry : sortedElements) {
     if (maxOutputCount-- == 0) {
       break;
@@ -352,15 +357,21 @@ void ProfileAnalyzer::dumpFunctionStats() {
     uint64_t funcInstFrequency = entry.second.instFrequency;
     std::string funcNameStr = getFunctionName(bcProvider, funcId);
 
+    double funcInstFreqPercentage =
+        100.0 * funcInstFrequency / this->totalRuntimeInstructionCount_;
+    funcInstFreqPercentageAcc += funcInstFreqPercentage;
     // Print instruction stats.
     os_ << llvm::left_justify(
-               formatString(
-                   "%.3f%%",
-                   100.0 * funcInstFrequency /
-                       this->totalRuntimeInstructionCount_),
-               12)
+               formatString("%.3f%%", funcInstFreqPercentage), 12)
+        << llvm::left_justify(
+               formatString("%.3f%%", funcInstFreqPercentageAcc), 12)
         << llvm::left_justify(std::to_string(funcInstFrequency), 12)
         << llvm::left_justify(std::to_string(entry.second.entryCount), 12);
+
+    auto funcSize = bcProvider->getFunctionHeader(funcId).bytecodeSizeInBytes();
+    funcSizeAcc += funcSize;
+    os_ << llvm::left_justify(std::to_string(funcSize), 12)
+        << llvm::left_justify(std::to_string(funcSizeAcc), 12);
 
     // Print function name/source.
     if (funcStartSourceLocOpt.hasValue()) {
