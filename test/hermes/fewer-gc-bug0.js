@@ -1,5 +1,6 @@
 // RUN: %hermes -O -gc-sanitize-handles=0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes -gc-sanitize-handles=0 %t.hbc | %FileCheck --match-full-lines %s
+// REQUIRES: !slow_debug
 
 var arr = [];
 
