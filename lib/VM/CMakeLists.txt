@@ -178,6 +178,7 @@ endif()
 add_llvm_library(hermesVMRuntime STATIC ${source_files}
     LINK_LIBS
     hermesInst
+    hermesInstrumentation
     hermesSupport
     hermesParser
     hermesPlatform

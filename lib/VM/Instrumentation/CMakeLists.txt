@@ -7,6 +7,7 @@ add_llvm_library(hermesInstrumentation
   STATIC
   PerfEventsLinux.cpp
   ProcessStats.cpp
+  RuntimeStats.cpp
   StatSamplingThread.cpp
   LINK_LIBS hermesSupport
 )

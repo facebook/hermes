@@ -10,6 +10,7 @@
 #include "hermes/Support/PerfSection.h"
 
 #include <stdint.h>
+#include <chrono>
 
 namespace hermes {
 namespace vm {
@@ -58,7 +59,7 @@ struct RuntimeStats {
   const bool shouldSample{false};
 
   /// Flush all timers pending in our timer stack.
-  inline void flushPendingTimers();
+  void flushPendingTimers();
 };
 
 /// An RAII-style class for updating a Statistic.
@@ -93,74 +94,22 @@ class RAIITimer {
   /// If sampling is enabled, collect the sampled stats and return them.
   /// If sampling is not enabled, or on error, returns default stats.
   /// \return the sampled or default results.
-  RuntimeStats::Sampled trySampling() const {
-    if (!runtimeStats_.shouldSample)
-      return {};
-
-    RuntimeStats::Sampled result{};
-    if (!oscompat::thread_page_fault_count(
-            &result.threadMinorFaults, &result.threadMajorFaults) ||
-        !oscompat::num_context_switches(
-            result.volCtxSwitches, result.involCtxSwitches))
-      return {};
-    return result;
-  }
+  RuntimeStats::Sampled trySampling() const;
 
  public:
   explicit RAIITimer(
       const char *name,
       RuntimeStats &runtimeStats,
-      RuntimeStats::Statistic &stat)
-      : perfSection_(name),
-        runtimeStats_(runtimeStats),
-        stat_(stat),
-        parent_(runtimeStats.timerStack),
-        wallTimeStart_(std::chrono::steady_clock::now()),
-        cpuTimeStart_(oscompat::thread_cpu_time()),
-        sampledStart_(trySampling()) {
-    runtimeStats.timerStack = this;
-    stat_.count += 1;
-  }
+      RuntimeStats::Statistic &stat);
 
   /// Flush the timer to the referenced statistic, resetting the start times.
   /// Note that 'count' is incremented when the RAIITimer is created and so is
   /// unaffected. This is invoked when the timer is destroyed, but also invoked
   /// when data is collected to include any aggregate data.
-  void flush() {
-    auto currentCPUTime = oscompat::thread_cpu_time();
-    auto currentWallTime = std::chrono::steady_clock::now();
-    auto currentSampled = trySampling();
-    stat_.wallDuration +=
-        std::chrono::duration<double>(currentWallTime - wallTimeStart_).count();
-    stat_.cpuDuration +=
-        std::chrono::duration<double>(currentCPUTime - cpuTimeStart_).count();
-    stat_.sampled.threadMinorFaults +=
-        currentSampled.threadMinorFaults - sampledStart_.threadMinorFaults;
-    stat_.sampled.threadMajorFaults +=
-        currentSampled.threadMajorFaults - sampledStart_.threadMajorFaults;
-    stat_.sampled.volCtxSwitches +=
-        currentSampled.volCtxSwitches - sampledStart_.volCtxSwitches;
-    stat_.sampled.involCtxSwitches +=
-        currentSampled.involCtxSwitches - sampledStart_.involCtxSwitches;
-    wallTimeStart_ = currentWallTime;
-    cpuTimeStart_ = currentCPUTime;
-    sampledStart_ = currentSampled;
-  }
+  void flush();
 
-  ~RAIITimer() {
-    flush();
-    assert(
-        runtimeStats_.timerStack == this &&
-        "Destroyed RAIITimer is not at top of stack");
-    runtimeStats_.timerStack = parent_;
-  }
+  ~RAIITimer();
 };
-
-void RuntimeStats::flushPendingTimers() {
-  for (auto cursor = timerStack; cursor != nullptr; cursor = cursor->parent_) {
-    cursor->flush();
-  }
-}
 
 } // namespace instrumentation
 } // namespace vm
