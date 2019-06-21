@@ -112,10 +112,14 @@ m.set(a, 10);
 print(m.get(a));
 // CHECK-NEXT: 10
 gc();
+m.set({}, 10);
 print(m.get(a));
 // CHECK-NEXT: 10
 gc();
+m.set({}, 10);
 print(m.get(a));
 // CHECK-NEXT: 10
-print(HermesInternal.getWeakSize(m));
-// CHECK-NEXT: 1
+
+// Ensure some reuse occurred.
+print(HermesInternal.getWeakSize(m) < 10000);
+// CHECK-NEXT: true

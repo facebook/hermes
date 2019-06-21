@@ -95,14 +95,31 @@ HermesValue JSWeakMapImplBase::getValue(
 /// Mark weak references and remove any invalid weak refs.
 void JSWeakMapImplBase::markWeakRefs(GC *gc) {
   for (auto it = map_.begin(); it != map_.end(); ++it) {
-    if (it->first.ref.isValid()) {
-      // If the reference is valid, then mark the weak ref.
-      gc->markWeakRef(it->first.ref);
-    } else {
-      // Otherwise, clear the value and remove the key from the map.
+    // We must mark the weak ref regardless of whether the ref is valid here,
+    // because JSWeakMapImplBase still has a pointer from map_ into the
+    // reference. If we were to skip marking this particular ref, it could be
+    // freed before we have a chance to remove the pointer from map_.
+    // Then, if the GC runs before we call deleteInternal on the ref,
+    // we would attempt to call markWeakRef on a freed ref, which is a violation
+    // of the markWeakRef contract.
+    gc->markWeakRef(it->first.ref);
+    if (!it->first.ref.isValid()) {
+      // Set the hasFreeableSlots_ to indicate that this slot can be
+      // cleaned up the next time we add an element to this map.
+      hasFreeableSlots_ = true;
+    }
+  }
+}
+
+/// Mark weak references and remove any invalid weak refs.
+void JSWeakMapImplBase::findAndDeleteFreeSlots() {
+  for (auto it = map_.begin(); it != map_.end(); ++it) {
+    if (!it->first.ref.isValid()) {
+      // If invalid, clear the value and remove the key from the map.
       deleteInternal(it);
     }
   }
+  hasFreeableSlots_ = false;
 }
 
 void JSWeakMapImplBase::deleteInternal(
@@ -117,10 +134,17 @@ void JSWeakMapImplBase::deleteInternal(
 CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
     Handle<JSWeakMapImplBase> self,
     Runtime *runtime) {
+  if (self->freeListHead_ == kFreeListInvalid && self->hasFreeableSlots_) {
+    // No elements in the free list and there are freeable slots.
+    // Try to find some.
+    self->findAndDeleteFreeSlots();
+  }
+
   // Index in valueStorage_ in which to place the new element.
   uint32_t i;
   // True if using the nextIndex field to get i.
   bool useNextIndex;
+
   if (self->freeListHead_ == kFreeListInvalid) {
     // No elements in the free list.
     i = self->nextIndex_;
@@ -152,7 +176,7 @@ CallResult<uint32_t> JSWeakMapImplBase::getFreeValueStorageIndex(
   } else {
     // Set the start of the free list to the next element.
     // If the next element is kFreeListInvalid, the free list is now empty.
-    self->freeListHead_ = self->valueStorage_->at(i).getNativeUInt32();
+    self->freeListHead_ = storageHandle->at(i).getNativeUInt32();
   }
 
   assert(i < storageHandle->size() && "invalid index");

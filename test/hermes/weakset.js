@@ -74,6 +74,7 @@ try { WeakSet.prototype.delete.call([], a) } catch(e) { print('caught', e.name, 
 print('gc');
 // CHECK-LABEL: gc
 var a = {};
+var c = {};
 var m = new WeakSet();
 m.add(a);
 (function() {
@@ -89,5 +90,9 @@ gc();
 gc();
 print(m.has(a));
 // CHECK-NEXT: true
+
+// Add element to clean up internal DenseMap.
+m.add(c);
+
 print(HermesInternal.getWeakSize(m));
-// CHECK-NEXT: 1
+// CHECK-NEXT: 2

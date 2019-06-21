@@ -174,8 +174,13 @@ class JSWeakMapImplBase : public JSObject {
     return map_.getMemorySize();
   }
 
-  /// Mark weak references and remove any invalid weak refs.
+  /// Mark weak references and set hasFreeableSlots_ if invalidated slots
+  /// were found.
   void markWeakRefs(GC *gc);
+
+  /// Iterate the slots in map_ and call deleteInternal on any invalid
+  /// references, adding all available slots to the free list.
+  void findAndDeleteFreeSlots();
 
   /// Erase the map entry and corresponding valueStorage entry
   /// pointed to by the iterator \p it.
@@ -211,6 +216,12 @@ class JSWeakMapImplBase : public JSObject {
 
   /// Next index to use when the free list runs out of elements.
   uint32_t nextIndex_{0};
+
+  /// This is set to true when markWeakRefs sees an invalid slot which can be
+  /// freed later.
+  /// When set to true, the WeakMap should look for free slots the next time
+  /// the user tries to add an element.
+  bool hasFreeableSlots_{false};
 };
 
 /// Underlying representation of the WeakMap and WeakSet objects.
