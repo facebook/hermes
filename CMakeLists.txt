@@ -407,6 +407,9 @@ if(HERMES_IS_ANDROID)
   endif()
   include_directories("${FBJNI_PATH}/cxx/")
   add_subdirectory(first-party/fbjni)
+
+  # JNI requires that JNI_OnLoad is (re-)exported for initialization.
+  set(OPTIONAL_JNI_ONLOAD "-Wl,--undefined=JNI_OnLoad")
 endif()
 
 add_subdirectory(tools)
