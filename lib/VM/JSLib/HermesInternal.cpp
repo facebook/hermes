@@ -205,7 +205,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
             stats.incomingFunction.sampled.threadMajorFaults));
   }
 
-  const auto &heap = runtime->getHeap();
+  auto &heap = runtime->getHeap();
   SET_PROP(P::js_numGCs, heap.getNumGCs());
   SET_PROP(P::js_gcCPUTime, heap.getGCCPUTime());
   SET_PROP(P::js_gcTime, heap.getGCTime());
@@ -232,6 +232,12 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;                       \
     }                                                          \
   } while (false)
+
+  {
+    GCBase::HeapInfo info;
+    heap.getHeapInfo(info);
+    SET_PROP_NEW("js_totalAllocatedBytes", info.totalAllocatedBytes);
+  }
 
   if (stats.shouldSample) {
     SET_PROP_NEW(
