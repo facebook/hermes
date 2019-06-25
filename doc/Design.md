@@ -71,9 +71,6 @@ emitting a dummy value and keeping a side-table that saves the location that we
 need to patch. When we finish emitting all of the opcodes we scan the side table
 and patch all of the locations that refer to previously unresolved addresses.
 
-Original post with pictures can be found at
-https://fb.facebook.com/groups/206529416410160/permalink/346044105792023/
-
 ### Hermes Bytecode Instructions
 
 Hermes bytecode adopts variable-length instructions. Each operand to a bytecode
