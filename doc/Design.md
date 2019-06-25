@@ -18,7 +18,7 @@ described in a separate document.
 The bytecode is a register-based bytecode. The number of registers is
 infinite, but there are some restrictions on the registers. For example,
 registers that are allocated to call instructions must be consecutive, and most
-instructions only accept an 8-bit register index 
+instructions only accept an 8-bit register index. 
 
 The first phase of bytecode generation is lowering of some instructions to
 target-specific instructions. Next, the register allocator allocates
@@ -87,9 +87,8 @@ here:
 - Registers: We discovered that in all of the Facebook mobile JS code as well as
 majority of external benchmarks, no function ever uses more than 256 registers.
 Hence we always use 1-byte to represent register index, which will be most
-efficient for the normal cases. We will likely implement some simple register
-spilling algorithm (does not need to be very efficient) to handle extreme cases
-where more registers are used.
+efficient for the normal cases. Spilling is implemented via MovLong which
+supports 32 bit register indices.
 - Constants: we achieve constant loading fully through instructions.
 For fixed-value constants such as undefined, null, true and false, we introduce
 a corresponding load opcode for each of them into a register (e.g.
@@ -99,8 +98,7 @@ doubles, we introduce LoadConstDouble, which takes a 8-bytes immediate value
 and load it into a register; finally for strings, we introduce LoadConstString,
 which takes an index to the string table from which to load into a register.
 Doing so can significantly reduce the size of the bytecode, however it does
-introduce a few more opcodes which could slow down the interpreter. We should
-keep the options on the table and benchmark later.
+introduce a few more opcodes which could slow down the interpreter.
 - Non-local Variable Access: Local variables are translated to registers.
 Non-local variables are variables from different scopes/environments. Without a
 compiler, accessing non-local variables in JavaScript usually means a scope
@@ -176,8 +174,8 @@ memory buffer from the file directly, without having to copy them too.
 
 ### Interaction with the VM
 
-At runtime, the VM will be deserializing the bytecode from the file and
-interpret it. A few components are involved:
+At runtime, the VM will deserialize the bytecode from the file and interpret
+it. A few components are involved:
 BytecodeModule: This is the in-memory representation of the whole bytecode
 file, containing all the bytecode functions. During both serialization and
 deserialization, this data structure is generated, as a static representation
@@ -188,6 +186,8 @@ bytecode.
 necessary runtime information for interpretation.
 - CodeBlock: This is the dynamic version of the bytecode function, containing
 necessary runtime information to execute a function.
+- Domain: A GC-managed proxy which references a set of RuntimeModules, acting as
+a bridge between the GC heap and the C++ heap.
 - JSFunction: This is the Function object in JavaScript.
 
 It is important (and tricky) to efficiently manage the memory and ownership of
@@ -198,28 +198,16 @@ special kind of ownership, which will be explained below. To summarize the
 ownership:
 - JSFunction is a JavaScript object, and hence managed by the heap/garbage
 collector directly.
-- JSFunction contains a pointer to the corresponding CodeBlock to execute.
+- JSFunction owns a GC-visible reference to a Domain, and a pointer to the
+corresponding CodeBlock to execute.
 - CodeBlock contains a pointer to both the RuntimeModule to access runtime
 information, as well as a pointer to the corresponding BytecodeFunction which
 contains the static function bytecode to execute.
 - BytecodeModule owns a list of BytecodeFunction.
 - RuntimeModule owns a list of CodeBlock, as well as the corresponding
 BytecodeModule.
-- Finally, JSFunction owns RuntimeModule indirectly and collectively. In concept,
-multiple JSFunctions share the same RuntimeModule, and if all the JSFunctions
-that share the RuntimeModule are dead, the RuntimeModule should also be freed.
-In that sense, JSFunction should have a shared_ptr to RuntimeModule. However
-there can be dozens of thousands of JSFunctions, and shared_ptr is kind of
-expensive (8 bytes each, adding up to several hundreds of KB in total). To
-avoid the overhead, since JSFunction already contains a pointer to the
-CodeBlock, which contains a pointer to RuntimeModule, it is practically easy to
-trace to the RuntimeModule from JSFunction without a direct link. To manage the
-shared RuntimeModule, we added a manual reference counter inside RuntimeModule.
-When a JSFunction is created, the counter increments; when a JSFunction is
-destroyed, the counter decrement. RuntimeModule is destroyed if the counter
-reaches 0. This is most efficient because even though there can be thousands of
-JSFunctions, they all share one RuntimeModule, and hence the space overhead is
-constant (4 bytes for the counter).
+- Domain owns one or more RuntimeModule. This is the mechanism by which an extant
+JSFunction keeps the backing bytecode alive.
 
 ## Interpreter
 
