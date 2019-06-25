@@ -25,6 +25,7 @@ trap finish EXIT
 #   BUILD_32BIT=1            Build 32-bit binaries on 64-bit systems
 #   LIBFUZZER_PATH=<..>      Path to libfuzzer
 #   ICU_ROOT=<..>            Path to ICU library
+#   ENABLE_WERROR=1          Build with warnings as errors
 
 # HERMES_WS_DIR is the root directory for LLVM checkout and build dirs.
 [ -z "$HERMES_WS_DIR" ] && echo "HERMES_WS_DIR must be set" >&2 && exit 1
@@ -127,6 +128,11 @@ fi
 if [ -n "$HERMESVM_PROFILER_BB" ]
 then
   FLAGS="$FLAGS -DHERMESVM_PROFILER_BB=ON"
+fi
+
+if [ -n "$ENABLE_WERROR" ]
+then
+  FLAGS="$FLAGS -DHERMES_ENABLE_WERROR=ON"
 fi
 
 if [ -n "$FBSOURCE_DIR" ]

@@ -78,6 +78,9 @@ set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
 set(HERMES_IS_ANDROID OFF CACHE BOOL
   "Building for Android")
 
+set(HERMES_ENABLE_WERROR OFF CACHE BOOL
+  "Whether the build should have -Werror enabled")
+
 set(ANDROID_LINUX_PERF_PATH ""
   CACHE STRING
   "If buildling for Android, full path to <linux/perf_events.h>")
@@ -200,13 +203,15 @@ if (POLICY CMP0054)
   cmake_policy(SET CMP0054 NEW)
 endif()
 
-# Turn all warnings into errors on some compilers:
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-set(LLVM_ENABLE_WERROR ON)
-elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-set(LLVM_ENABLE_WERROR ON)
-elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
-# Warn.
+if (HERMES_ENABLE_WERROR)
+  # Turn all warnings into errors on some compilers:
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set(LLVM_ENABLE_WERROR ON)
+  elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    set(LLVM_ENABLE_WERROR ON)
+  elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+    # Warn.
+  endif()
 endif()
 
 # Collect all header files and add them to the IDE.
