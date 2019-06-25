@@ -28,7 +28,7 @@ if [ ! -e 'llvm/hermes' ]
 then
   (
     cd llvm
-    git apply ../hermes/doc/android/llvm.patch
+    git apply ../hermes/facebook/android-cross-compile/llvm.patch
     echo "Patched by $0" > hermes
   )
 fi
