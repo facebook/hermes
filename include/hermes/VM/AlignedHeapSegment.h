@@ -156,7 +156,8 @@ class AlignedHeapSegment final {
 
   /// Returns the address at which the first allocation in this segment would
   /// occur.
-  inline char *start() const;
+  /// Disable UB sanitization because 'this' may be null during the tests.
+  inline char *start() const LLVM_NO_SANITIZE("undefined");
 
   /// Returns the first address after the region in which allocations can occur,
   /// taking external memory credits into a account (they decrease the effective
@@ -186,7 +187,8 @@ class AlignedHeapSegment final {
 
   /// Return a reference to the card table covering the memory region managed by
   /// this segment.
-  inline CardTable &cardTable() const;
+  /// Disable sanitization because 'this' may be null in the tests.
+  inline CardTable &cardTable() const LLVM_NO_SANITIZE("null");
 
   /// Return a reference to the mark bit array covering the memory region
   /// managed by this segment.
@@ -436,7 +438,7 @@ char *AlignedHeapSegment::hiLim() const {
   return storage_.hiLim();
 }
 
-char *AlignedHeapSegment::start() const LLVM_NO_SANITIZE("undefined") {
+char *AlignedHeapSegment::start() const {
   return contents()->allocRegion_;
 }
 
@@ -457,7 +459,7 @@ bool AlignedHeapSegment::containedInSame(const void *a, const void *b) {
   return AlignedStorage::containedInSame(a, b);
 }
 
-CardTable &AlignedHeapSegment::cardTable() const LLVM_NO_SANITIZE("null") {
+CardTable &AlignedHeapSegment::cardTable() const {
   return contents()->cardTable_;
 }
 

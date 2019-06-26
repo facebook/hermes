@@ -82,7 +82,7 @@ class CardTable {
   ///     addressToIndex(segment.hiLim()) <= kValidIndices
   ///
   /// no matter where in the segment the card table is initialised.
-  inline size_t addressToIndex(const void *addr) const;
+  inline size_t addressToIndex(const void *addr) const LLVM_NO_SANITIZE("null");
 
   /// Returns the address corresponding to the given card table
   /// index.
@@ -179,7 +179,7 @@ class CardTable {
   /// Note that the base address will be strictly less than the address
   /// corresponding to the start of the allocation region (by at least the width
   /// of the card table).
-  inline const char *base() const;
+  inline const char *base() const LLVM_NO_SANITIZE("null");
 
   /// The encoding scheme for the logarithmic-time object boundary queries for
   /// large objects.  encodeExp encodes an exponent to a (negative) table value,
@@ -236,8 +236,7 @@ inline const char *CardTable::Boundary::address() const {
 inline CardTable::Boundary::Boundary(size_t index, const char *address)
     : index_(index), address_(address) {}
 
-inline size_t CardTable::addressToIndex(const void *addr) const
-    LLVM_NO_SANITIZE("null") {
+inline size_t CardTable::addressToIndex(const void *addr) const {
   auto addrPtr = reinterpret_cast<const char *>(addr);
   assert(
       base() <= addrPtr && addrPtr <= AlignedStorage::end(base()) &&
@@ -287,7 +286,7 @@ inline CardTable::Boundary CardTable::nextBoundary(const char *level) const {
   return {ix, addr};
 }
 
-inline const char *CardTable::base() const LLVM_NO_SANITIZE("null") {
+inline const char *CardTable::base() const {
   // As we know the card table is laid out inline before the allocation region
   // of its aligned heap segment, we can use its own this pointer as the base
   // address.

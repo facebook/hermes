@@ -215,10 +215,10 @@ mathRandom(void *, Runtime *runtime, NativeArgs) {
 }
 
 // ES6.0 20.2.2.17
-static CallResult<HermesValue> mathFround(
-    void *,
-    Runtime *runtime,
-    NativeArgs args) LLVM_NO_SANITIZE("float-cast-overflow") {
+static CallResult<HermesValue> mathFround(void *, Runtime *, NativeArgs)
+    LLVM_NO_SANITIZE("float-cast-overflow");
+static CallResult<HermesValue>
+mathFround(void *, Runtime *runtime, NativeArgs args) {
   auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
