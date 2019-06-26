@@ -220,9 +220,9 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
             bcProvider, frame.jsFrame.functionId, frame.jsFrame.offset);
         if (sourceLocOpt.hasValue()) {
           // Bundle has debug info.
-          std::string fileNameStr =
-              bcProvider->getStringRefFromID(sourceLocOpt.getValue().filenameId)
-                  .str();
+          std::string fileNameStr = bcProvider->getDebugInfo()->getFilenameByID(
+              sourceLocOpt.getValue().filenameId);
+
           uint32_t line = sourceLocOpt.getValue().line;
           uint32_t column = sourceLocOpt.getValue().column;
           // format: frame_name(file:line:column)
