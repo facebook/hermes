@@ -717,7 +717,6 @@ BLACK_LIST = [
     "test262/test/built-ins/Array/prototype/slice/S15.4.4.10_A3_T1.js",
     "test262/test/built-ins/Array/prototype/unshift/S15.4.4.13_A3_T2.js",
     "test262/test/built-ins/Array/prototype/slice/S15.4.4.10_A3_T2.js",
-    "test262/test/built-ins/Array/prototype/shift/S15.4.4.9_A3_T3.js",
     "test262/test/built-ins/Array/prototype/sort/S15.4.4.11_A4_T3.js",
     "test262/test/built-ins/TypedArrays/buffer-arg-defined-negative-length.js",
     "test262/test/built-ins/Array/prototype/slice/create-non-array-invalid-len.js",
