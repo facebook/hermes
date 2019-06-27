@@ -2618,11 +2618,11 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint32_t len = intRes->getNumber();
+  uint64_t len = intRes->getNumber();
 
   auto callbackFn = args.dyncastArg<Callable>(runtime, 0);
   if (!callbackFn) {
@@ -2630,6 +2630,10 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
         "Array.prototype.filter() requires a callable argument");
   }
 
+  if (LLVM_UNLIKELY(len > 0xFFFFFFFFu)) {
+    return runtime->raiseRangeError(
+        "Cannot create an Array of length greater than 2^32 - 1.");
+  }
   auto arrRes = JSArray::create(runtime, len, 0);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
