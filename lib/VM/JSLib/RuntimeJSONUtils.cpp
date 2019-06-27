@@ -634,7 +634,9 @@ ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
     assert(
         intRes != ExecutionStatus::EXCEPTION &&
         "toInteger on a number cannot throw");
-    auto spaceCount = std::min(10, static_cast<int>(intRes->getNumber()));
+    // Clamp result to [0,10].
+    auto spaceCount =
+        static_cast<int>(std::max(0.0, std::min(10.0, intRes->getNumber())));
     if (spaceCount > 0) {
       // Construct a string with spaceCount spaces.
       llvm::SmallString<32> spaces;
