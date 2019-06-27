@@ -706,7 +706,6 @@ BLACK_LIST = [
     "test262/test/built-ins/Array/prototype/push/S15.4.4.7_A4_T1.js",
     "test262/test/built-ins/Array/prototype/splice/S15.4.4.12_A3_T1.js",
     "test262/test/built-ins/Array/prototype/splice/S15.4.4.12_A3_T3.js",
-    "test262/test/built-ins/Array/prototype/join/S15.4.4.5_A4_T3.js",
     "test262/test/built-ins/Array/prototype/indexOf/15.4.4.14-3-28.js",
     "test262/test/built-ins/Array/prototype/indexOf/15.4.4.14-3-25.js",
     "test262/test/built-ins/Array/prototype/indexOf/15.4.4.14-3-29.js",
