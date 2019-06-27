@@ -1211,11 +1211,11 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint32_t len = intRes->getNumber();
+  uint64_t len = intRes->getNumber();
 
   if (len == 0) {
     if (LLVM_UNLIKELY(
