@@ -1,0 +1,107 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+// This file defines all possible kinds of objects that are known to the
+// garbage collector.
+
+#ifndef CELL_KIND
+#define CELL_KIND(name)
+#endif
+
+#ifndef CELL_JS_NAME
+#define CELL_JS_NAME(name, jsClassName)
+#endif
+
+#ifndef CELL_RANGE
+#define CELL_RANGE(rangeName, first, last)
+#endif
+
+// Helper macro for defining a CellKind which 1:1 corresponds with a JS Class.
+// Defines both the kind and the JS Class name.
+#define CELL_CLASS(name, jsClassName) \
+  CELL_KIND(name)                     \
+  CELL_JS_NAME(name, jsClassName)
+
+CELL_KIND(Uninitialized)
+CELL_KIND(FillerCell)
+CELL_KIND(DynamicUTF16StringPrimitive)
+CELL_KIND(DynamicASCIIStringPrimitive)
+CELL_KIND(DynamicUniquedUTF16StringPrimitive)
+CELL_KIND(DynamicUniquedASCIIStringPrimitive)
+CELL_KIND(ExternalUTF16StringPrimitive)
+CELL_KIND(ExternalASCIIStringPrimitive)
+CELL_KIND(DictPropertyMap)
+CELL_KIND(Domain)
+CELL_KIND(HiddenClass)
+CELL_KIND(ArrayStorage)
+CELL_KIND(SegmentedArray)
+CELL_KIND(Segment)
+CELL_KIND(PropertyAccessor)
+CELL_KIND(Environment)
+CELL_KIND(HashMapEntry)
+CELL_KIND(OrderedHashMap)
+
+CELL_JS_NAME(Object, "Object")
+CELL_KIND(Object)
+CELL_KIND(HostObject)
+
+CELL_CLASS(Error, "Error")
+CELL_CLASS(Arguments, "Arguments")
+CELL_CLASS(Array, "Array")
+CELL_CLASS(ArrayBuffer, "ArrayBuffer")
+CELL_CLASS(DataView, "DataView")
+#define TYPED_ARRAY(name, type) CELL_CLASS(name##Array, #name "Array")
+#include "hermes/VM/TypedArrays.def"
+CELL_CLASS(ArrayIterator, "Array Iterator")
+CELL_CLASS(Set, "Set")
+CELL_CLASS(Map, "Map")
+CELL_CLASS(SetIterator, "Set Iterator")
+CELL_CLASS(MapIterator, "Map Iterator")
+CELL_CLASS(WeakMap, "WeakMap")
+CELL_CLASS(WeakSet, "WeakSet")
+CELL_CLASS(BooleanObject, "Boolean")
+CELL_CLASS(StringObject, "String")
+CELL_CLASS(NumberObject, "Number")
+CELL_CLASS(SymbolObject, "Symbol")
+CELL_CLASS(StringIterator, "String Iterator")
+CELL_CLASS(JSON, "JSON")
+CELL_CLASS(Math, "Math")
+CELL_CLASS(Date, "Date")
+CELL_CLASS(RegExp, "RegExp")
+CELL_CLASS(RequireContext, "RequireContext")
+CELL_CLASS(Generator, "Generator")
+
+CELL_JS_NAME(Function, "Function")
+CELL_KIND(BoundFunction)
+CELL_KIND(NativeFunction)
+CELL_KIND(NativeConstructor)
+CELL_KIND(FinalizableNativeFunction)
+CELL_KIND(GeneratorFunction)
+CELL_KIND(GeneratorInnerFunction)
+CELL_KIND(Function)
+
+// Update AllCells, below, if new CellKinds are added.
+// (AllCells is useful for checking that a CellKind is valid.)
+
+// Define inheritance ranges.
+CELL_RANGE(AllCells, Uninitialized, Function)
+CELL_RANGE(Object, Object, Function)
+CELL_RANGE(ArrayImpl, Arguments, Array)
+CELL_RANGE(Callable, BoundFunction, Function)
+CELL_RANGE(CodeBlockFunction, GeneratorFunction, Function)
+CELL_RANGE(NativeFunction, NativeFunction, FinalizableNativeFunction)
+CELL_RANGE(PrimitiveBox, BooleanObject, NumberObject)
+CELL_RANGE(TypedArrayBase, Int8Array, Float64Array)
+CELL_RANGE(WeakMapImplBase, WeakMap, WeakSet)
+CELL_RANGE(
+    StringPrimitive,
+    DynamicUTF16StringPrimitive,
+    ExternalASCIIStringPrimitive)
+
+#undef CELL_KIND
+#undef CELL_JS_NAME
+#undef CELL_RANGE
+#undef CELL_CLASS

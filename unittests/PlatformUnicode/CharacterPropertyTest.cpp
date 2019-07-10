@@ -1,0 +1,110 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+#include "hermes/Platform/Unicode/CharacterProperties.h"
+#include "hermes/Platform/Unicode/PlatformUnicode.h"
+#include "hermes/Regex/RegexTraits.h"
+
+#include "gtest/gtest.h"
+
+#include <limits>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+using namespace hermes;
+
+namespace {
+
+// This might look like a silly test, but it should be useful if we
+// need to add tricky optimizations to isUnicodeOnlySpace
+TEST(UnicodeTest, isUnicodeOnlySpace) {
+  for (uint32_t i = 1; i < 128; i++) {
+    EXPECT_FALSE(hermes::isUnicodeOnlySpace(i))
+        << "No ASCII character is a unicode-only space. (code: " << i << ")";
+  }
+
+  std::vector<uint32_t> unicode_space_cps{0x1680,
+                                          0x2000,
+                                          0x2001,
+                                          0x2002,
+                                          0x2003,
+                                          0x2004,
+                                          0x2005,
+                                          0x2006,
+                                          0x2007,
+                                          0x2008,
+                                          0x2009,
+                                          0x200A,
+                                          0x202F,
+                                          0x205F,
+                                          0x3000};
+
+  for (auto cp : unicode_space_cps) {
+    EXPECT_TRUE(hermes::isUnicodeOnlySpace(cp))
+        << "Code point " << cp << " is a unicode-only space.";
+  }
+
+  // Test for off-by-one errors.
+  std::vector<uint32_t> unicode_non_space_cps{0x167f,
+                                              0x1681,
+                                              0x1fff,
+                                              0x200B,
+                                              0x202E,
+                                              0x2030,
+                                              0x205E,
+                                              0x2060,
+                                              0x2fff,
+                                              0x3001};
+
+  for (auto cp : unicode_non_space_cps) {
+    EXPECT_FALSE(hermes::isUnicodeOnlySpace(cp))
+        << "Code point " << cp << " is not a unicode-only space.";
+  }
+}
+
+using CharSet = std::unordered_set<char16_t>;
+
+static CharSet getPrecanonicalizations(char16_t c) {
+  CharSet result = {c};
+  // Check for exceptional cases.
+  if (auto list = getExceptionalPrecanonicalizations(uint16_t(c))) {
+    // Build from the list. Note if the version of ICU on the system is earlier
+    // than the one used to build the table, some characters in the table will
+    // not be valid pre-canonicalizations. Thus we have to check. Also 0 is a
+    // placeholder meaning none, so skip any 0s.
+    for (char16_t pc : *list) {
+      if (pc && regex::canonicalizeToCase(pc, regex::CaseUpper) == c) {
+        result.insert(pc);
+      }
+    }
+  } else {
+    // Not exceptional; simply lowercase.
+    result.insert(regex::canonicalizeToCase(c, regex::CaseLower));
+  }
+  return result;
+}
+
+// Verify correct precanonicalization mappings. We do this by producing a
+// reverse canonicalization map the hard way, by canonicalizing every
+// character. We then compare it against what our getPrecanonicalizations()
+// function returns.
+TEST(UnicodeTest, PrecanonicalizationMapping) {
+  std::unordered_map<char16_t, CharSet> precanonMap;
+  for (uint32_t cp = 0; cp <= std::numeric_limits<char16_t>::max(); cp++) {
+    char16_t canon = regex::canonicalizeToCase(char16_t(cp), regex::CaseUpper);
+    precanonMap[canon].insert(cp);
+  }
+
+  for (const auto &kv : precanonMap) {
+    const CharSet &computed = kv.second;
+    CharSet lookedUp = getPrecanonicalizations(kv.first);
+    EXPECT_EQ(computed, lookedUp)
+        << "mismatch for character " << uint32_t(kv.first);
+  }
+}
+
+} // end anonymous namespace

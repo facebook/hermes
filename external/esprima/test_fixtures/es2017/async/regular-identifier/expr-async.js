@@ -1,0 +1,2 @@
+a = async
+function f(){}

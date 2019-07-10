@@ -1,0 +1,98 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+///===----------------------------------------------------------------------===
+/// \file
+/// Define global objects and methods which the compiler can assume have not
+/// been overwritten and can be treated as builtins.
+///
+/// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+/// IMPORTANT: DO NOT FORGET TO INCREASE THE BYTECODE FILE FORMAT VERSION IF
+/// YOU MODIFY THIS FILE.
+/// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+///===----------------------------------------------------------------------===
+
+#ifndef BUILTIN_OBJECT
+#define BUILTIN_OBJECT(object)
+#endif
+#ifndef BUILTIN_METHOD
+#define BUILTIN_METHOD(object, name)
+#endif
+
+BUILTIN_OBJECT(Array)
+// BUILTIN_METHOD(Array, from)
+BUILTIN_METHOD(Array, isArray)
+
+BUILTIN_OBJECT(ArrayBuffer)
+BUILTIN_METHOD(ArrayBuffer, isView)
+
+BUILTIN_OBJECT(Date)
+BUILTIN_METHOD(Date, UTC)
+BUILTIN_METHOD(Date, now)
+BUILTIN_METHOD(Date, parse)
+
+BUILTIN_OBJECT(HermesInternal)
+BUILTIN_METHOD(HermesInternal, getEpilogues)
+BUILTIN_METHOD(HermesInternal, silentSetPrototypeOf)
+BUILTIN_METHOD(HermesInternal, requireFast)
+BUILTIN_METHOD(HermesInternal, getTemplateObject)
+BUILTIN_METHOD(HermesInternal, ensureObject)
+BUILTIN_METHOD(HermesInternal, copyDataProperties)
+BUILTIN_METHOD(HermesInternal, copyRestArgs)
+BUILTIN_METHOD(HermesInternal, exportAll)
+
+BUILTIN_OBJECT(JSON)
+BUILTIN_METHOD(JSON, parse)
+BUILTIN_METHOD(JSON, stringify)
+
+BUILTIN_OBJECT(Math)
+BUILTIN_METHOD(Math, abs)
+BUILTIN_METHOD(Math, acos)
+BUILTIN_METHOD(Math, asin)
+BUILTIN_METHOD(Math, atan)
+BUILTIN_METHOD(Math, atan2)
+BUILTIN_METHOD(Math, ceil)
+BUILTIN_METHOD(Math, cos)
+BUILTIN_METHOD(Math, exp)
+BUILTIN_METHOD(Math, floor)
+BUILTIN_METHOD(Math, hypot)
+BUILTIN_METHOD(Math, imul)
+BUILTIN_METHOD(Math, log)
+BUILTIN_METHOD(Math, max)
+BUILTIN_METHOD(Math, min)
+BUILTIN_METHOD(Math, pow)
+BUILTIN_METHOD(Math, random)
+BUILTIN_METHOD(Math, round)
+BUILTIN_METHOD(Math, sin)
+BUILTIN_METHOD(Math, sqrt)
+BUILTIN_METHOD(Math, tan)
+BUILTIN_METHOD(Math, trunc)
+
+// BUILTIN_OBJECT(Number)
+// BUILTIN_METHOD(Number, isNaN)
+
+BUILTIN_OBJECT(Object)
+BUILTIN_METHOD(Object, create)
+BUILTIN_METHOD(Object, defineProperties)
+BUILTIN_METHOD(Object, defineProperty)
+// BUILTIN_METHOD(Object, entries)
+BUILTIN_METHOD(Object, freeze)
+BUILTIN_METHOD(Object, getOwnPropertyDescriptor)
+BUILTIN_METHOD(Object, getOwnPropertyNames)
+// BUILTIN_METHOD(Object, getOwnPropertySymbols)
+BUILTIN_METHOD(Object, getPrototypeOf)
+BUILTIN_METHOD(Object, isExtensible)
+BUILTIN_METHOD(Object, isFrozen)
+BUILTIN_METHOD(Object, keys)
+BUILTIN_METHOD(Object, seal)
+// BUILTIN_METHOD(Object, setPrototypeOf)
+// BUILTIN_METHOD(Object, values)
+
+BUILTIN_OBJECT(String)
+BUILTIN_METHOD(String, fromCharCode)
+
+#undef BUILTIN_OBJECT
+#undef BUILTIN_METHOD

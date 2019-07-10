@@ -1,0 +1,1143 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+//===----------------------------------------------------------------------===//
+/// \file
+/// ES5.1 15.9 Initialize the Date constructor.
+//===----------------------------------------------------------------------===//
+#include "JSLibInternal.h"
+
+#include "hermes/Support/OSCompat.h"
+#include "hermes/VM/HermesValue.h"
+#include "hermes/VM/JSLib/DateUtil.h"
+#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
+#include "hermes/VM/Operations.h"
+
+namespace hermes {
+namespace vm {
+
+/// @name Date
+/// @{
+
+/// ES5.1 15.9.2.1 and 15.3.3.1. Date() invoked as a function and as a
+/// constructor.
+static CallResult<HermesValue>
+dateConstructor(void *, Runtime *runtime, NativeArgs args);
+
+/// ES5.1 15.9.4.2
+static CallResult<HermesValue>
+dateParse(void *, Runtime *runtime, NativeArgs args);
+
+/// ES5.1 15.9.4.3
+static CallResult<HermesValue>
+dateUTC(void *, Runtime *runtime, NativeArgs args);
+
+/// ES5.1 15.9.4.4
+static CallResult<HermesValue>
+dateNow(void *, Runtime *runtime, NativeArgs args);
+
+/// @}
+
+/// @name Date.prototype
+/// @{
+
+/// ES5.1 15.9.5.2 - 15.9.5.7
+/// Take a \p ctx, a toString function for dates, and runs it on the current
+/// date, returning a string value that is the result of calling the function.
+/// Used to reduce code duplication between toString, toDateString, etc.
+static CallResult<HermesValue>
+datePrototypeToStringHelper(void *ctx, Runtime *runtime, NativeArgs args);
+static CallResult<HermesValue>
+datePrototypeToLocaleStringHelper(void *ctx, Runtime *runtime, NativeArgs args);
+
+/// ES5.1 15.9.5.8
+/// ES5.1 15.9.5.9 (valueOf() is identical to getTime())
+static CallResult<HermesValue>
+datePrototypeGetTime(void *, Runtime *runtime, NativeArgs args);
+
+/// ES5.1 15.9.5.10 - 15.9.5.25
+/// Takes a GetterOptions as the ctx, returns the value of the field.
+static CallResult<HermesValue>
+datePrototypeGetterHelper(void *ctx, Runtime *runtime, NativeArgs args);
+
+/// ES5.1 15.9.5.27
+static CallResult<HermesValue>
+datePrototypeSetTime(void *ctx, Runtime *runtime, NativeArgs args);
+
+/// ES5.1 15.9.5.28 - 15.9.5.35
+static CallResult<HermesValue>
+datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args);
+static CallResult<HermesValue>
+datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args);
+static CallResult<HermesValue>
+datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args);
+static CallResult<HermesValue>
+datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args);
+
+/// ES5.1 15.9.5.36 - 15.9.5.41
+static CallResult<HermesValue>
+datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args);
+static CallResult<HermesValue>
+datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args);
+static CallResult<HermesValue>
+datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args);
+static CallResult<HermesValue>
+datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args);
+
+/// ES5.1 15.9.5.44
+static CallResult<HermesValue>
+datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args);
+
+/// ES6.0 20.3.4.45
+static CallResult<HermesValue>
+datePrototypeSymbolToPrimitive(void *ctx, Runtime *runtime, NativeArgs args);
+
+/// @}
+
+//===----------------------------------------------------------------------===//
+/// Date.
+
+namespace {
+struct ToStringOptions {
+  /// Converts a time \p t that has been adjusted by \p tza from UTC,
+  /// and appends the resultant string into \p buf.
+  /// \param t the local time since Jan 1 1970 UTC.
+  /// \param tza the offset from UTC that \p t has been adjusted by.
+  /// \param buf[out] the buffer into which to output the result string.
+  void (*toStringFn)(double t, double tza, llvm::SmallVectorImpl<char> &buf);
+  bool isUTC;
+  /// Throw if the internal value of this Date is not finite.
+  bool throwOnError;
+};
+
+struct ToLocaleStringOptions {
+  /// Converts a time \p t that has been adjusted by \p tza from UTC,
+  /// and appends the resultant string into \p buf.
+  /// \param t the local time since Jan 1 1970 UTC.
+  /// \param locale the locale to convert in (the current locale).
+  /// \param buf[out] the buffer into which to output the result string.
+  void (*toStringFn)(double t, llvm::SmallVectorImpl<char16_t> &buf);
+};
+
+struct GetterOptions {
+  enum Field {
+    FULL_YEAR,
+    YEAR,
+    MONTH,
+    DATE,
+    DAY,
+    HOURS,
+    MINUTES,
+    SECONDS,
+    MILLISECONDS,
+    TIMEZONE_OFFSET,
+  };
+  Field field;
+  bool isUTC;
+};
+} // namespace
+
+static ToStringOptions optDatetimeToString{datetimeToISOString, false, false};
+static ToStringOptions optDateToString{dateToString, false, false};
+static ToStringOptions optTimeToString{timeToString, false, false};
+static ToStringOptions optISOToString{datetimeToISOString, true, true};
+static ToStringOptions optUTCToString{datetimeToUTCString, true, false};
+
+static ToLocaleStringOptions optDatetimeToLocaleString{datetimeToLocaleString};
+static ToLocaleStringOptions optDateToLocaleString{dateToLocaleString};
+static ToLocaleStringOptions optTimeToLocaleString{timeToLocaleString};
+
+static GetterOptions optFullYear{GetterOptions::Field::FULL_YEAR, false};
+static GetterOptions optYear{GetterOptions::Field::YEAR, false};
+static GetterOptions optMonth{GetterOptions::Field::MONTH, false};
+static GetterOptions optDate{GetterOptions::Field::DATE, false};
+static GetterOptions optDay{GetterOptions::Field::DAY, false};
+static GetterOptions optHours{GetterOptions::Field::HOURS, false};
+static GetterOptions optMinutes{GetterOptions::Field::MINUTES, false};
+static GetterOptions optSeconds{GetterOptions::Field::SECONDS, false};
+static GetterOptions optMilliseconds{GetterOptions::Field::MILLISECONDS, false};
+
+static GetterOptions optUTCFullYear{GetterOptions::Field::FULL_YEAR, true};
+static GetterOptions optUTCMonth{GetterOptions::Field::MONTH, true};
+static GetterOptions optUTCDate{GetterOptions::Field::DATE, true};
+static GetterOptions optUTCDay{GetterOptions::Field::DAY, true};
+static GetterOptions optUTCHours{GetterOptions::Field::HOURS, true};
+static GetterOptions optUTCMinutes{GetterOptions::Field::MINUTES, true};
+static GetterOptions optUTCSeconds{GetterOptions::Field::SECONDS, true};
+static GetterOptions optUTCMilliseconds{GetterOptions::Field::MILLISECONDS,
+                                        true};
+
+static GetterOptions optTimezoneOffset{GetterOptions::Field::TIMEZONE_OFFSET,
+                                       false};
+
+Handle<JSObject> createDateConstructor(Runtime *runtime) {
+  auto datePrototype = Handle<JSObject>::vmcast(&runtime->datePrototype);
+  auto cons = defineSystemConstructor<JSDate>(
+      runtime,
+      Predefined::getSymbolID(Predefined::Date),
+      dateConstructor,
+      datePrototype,
+      7,
+      CellKind::DateKind);
+
+  // Date.prototype.xxx() methods.
+  defineMethod(
+      runtime,
+      datePrototype,
+      Predefined::getSymbolID(Predefined::valueOf),
+      nullptr,
+      datePrototypeGetTime,
+      0);
+  defineMethod(
+      runtime,
+      datePrototype,
+      Predefined::getSymbolID(Predefined::getTime),
+      nullptr,
+      datePrototypeGetTime,
+      0);
+
+  auto defineToStringMethod = [&](SymbolID name, ToStringOptions &opts) {
+    defineMethod(
+        runtime,
+        datePrototype,
+        name,
+        reinterpret_cast<void *>(&opts),
+        datePrototypeToStringHelper,
+        0);
+  };
+
+  defineToStringMethod(
+      Predefined::getSymbolID(Predefined::toString), optDatetimeToString);
+  defineToStringMethod(
+      Predefined::getSymbolID(Predefined::toDateString), optDateToString);
+  defineToStringMethod(
+      Predefined::getSymbolID(Predefined::toTimeString), optTimeToString);
+  defineToStringMethod(
+      Predefined::getSymbolID(Predefined::toISOString), optISOToString);
+  defineToStringMethod(
+      Predefined::getSymbolID(Predefined::toUTCString), optUTCToString);
+  defineToStringMethod(
+      Predefined::getSymbolID(Predefined::toGMTString), optUTCToString);
+
+  auto defineToLocaleStringMethod = [&](SymbolID name,
+                                        ToLocaleStringOptions &opts) {
+    defineMethod(
+        runtime,
+        datePrototype,
+        name,
+        reinterpret_cast<void *>(&opts),
+        datePrototypeToLocaleStringHelper,
+        0);
+  };
+
+  defineToLocaleStringMethod(
+      Predefined::getSymbolID(Predefined::toLocaleString),
+      optDatetimeToLocaleString);
+  defineToLocaleStringMethod(
+      Predefined::getSymbolID(Predefined::toLocaleDateString),
+      optDateToLocaleString);
+  defineToLocaleStringMethod(
+      Predefined::getSymbolID(Predefined::toLocaleTimeString),
+      optTimeToLocaleString);
+
+  auto defineGetterMethod = [&](SymbolID name, GetterOptions &opts) {
+    defineMethod(
+        runtime,
+        datePrototype,
+        name,
+        reinterpret_cast<void *>(&opts),
+        datePrototypeGetterHelper,
+        0);
+  };
+
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getFullYear), optFullYear);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getYear), optYear);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getMonth), optMonth);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getDate), optDate);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getDay), optDay);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getHours), optHours);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getMinutes), optMinutes);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getSeconds), optSeconds);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getMilliseconds), optMilliseconds);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCFullYear), optUTCFullYear);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCMonth), optUTCMonth);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCDate), optUTCDate);
+  defineGetterMethod(Predefined::getSymbolID(Predefined::getUTCDay), optUTCDay);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCHours), optUTCHours);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCMinutes), optUTCMinutes);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCSeconds), optUTCSeconds);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCMilliseconds),
+      optUTCMilliseconds);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getTimezoneOffset),
+      optTimezoneOffset);
+
+  defineMethod(
+      runtime,
+      datePrototype,
+      Predefined::getSymbolID(Predefined::setTime),
+      nullptr,
+      datePrototypeSetTime,
+      1);
+
+  auto defineSetterMethod =
+      [&](SymbolID name, uint32_t length, bool isUTC, NativeFunctionPtr func) {
+        defineMethod(
+            runtime,
+            datePrototype,
+            name,
+            reinterpret_cast<void *>(isUTC),
+            func,
+            length);
+      };
+
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setMilliseconds),
+      1,
+      false,
+      datePrototypeSetMilliseconds);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setUTCMilliseconds),
+      1,
+      true,
+      datePrototypeSetMilliseconds);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setSeconds),
+      2,
+      false,
+      datePrototypeSetSeconds);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setUTCSeconds),
+      2,
+      true,
+      datePrototypeSetSeconds);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setMinutes),
+      3,
+      false,
+      datePrototypeSetMinutes);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setUTCMinutes),
+      3,
+      true,
+      datePrototypeSetMinutes);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setHours),
+      4,
+      false,
+      datePrototypeSetHours);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setUTCHours),
+      4,
+      true,
+      datePrototypeSetHours);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setDate),
+      1,
+      false,
+      datePrototypeSetDate);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setUTCDate),
+      1,
+      true,
+      datePrototypeSetDate);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setMonth),
+      2,
+      false,
+      datePrototypeSetMonth);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setUTCMonth),
+      2,
+      true,
+      datePrototypeSetMonth);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setFullYear),
+      3,
+      false,
+      datePrototypeSetFullYear);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setUTCFullYear),
+      3,
+      true,
+      datePrototypeSetFullYear);
+  defineSetterMethod(
+      Predefined::getSymbolID(Predefined::setYear),
+      1,
+      false,
+      datePrototypeSetYear);
+
+  defineMethod(
+      runtime,
+      datePrototype,
+      Predefined::getSymbolID(Predefined::toJSON),
+      nullptr,
+      datePrototypeToJSON,
+      1);
+
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+  dpf.writable = 0;
+  dpf.enumerable = 0;
+  (void)defineMethod(
+      runtime,
+      datePrototype,
+      Predefined::getSymbolID(Predefined::SymbolToPrimitive),
+      Predefined::getSymbolID(Predefined::squareSymbolToPrimitive),
+      nullptr,
+      datePrototypeSymbolToPrimitive,
+      1,
+      dpf);
+
+  // Date.xxx() methods.
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::parse),
+      nullptr,
+      dateParse,
+      1);
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::UTC),
+      nullptr,
+      dateUTC,
+      7);
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::now),
+      nullptr,
+      dateNow,
+      0);
+
+  return cons;
+}
+
+/// Takes \p args in UTC time of the form:
+/// (year, month, [, date [, hours [, minutes [, seconds [, ms]]]]])
+/// and returns the unclipped time in milliseconds since Jan 1 1970 UTC.
+static CallResult<double> makeTimeFromArgs(Runtime *runtime, NativeArgs args) {
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  auto argCount = args.getArgCount();
+
+  // General case: read all fields in and compute timestamp.
+  enum fieldname { y, m, dt, h, min, s, milli, yr, FIELD_COUNT };
+
+  // Initialize to default fields and update them in loop if necessary.
+  double fields[FIELD_COUNT] = {nan, nan, 1, 0, 0, 0, 0};
+
+  for (size_t i = 0; i < std::min(7u, argCount); ++i) {
+    GCScopeMarkerRAII marker{runtime};
+    auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, i));
+    if (res == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    fields[i] = res->getNumber();
+  }
+
+  // Years between 0 and 99 are treated as offsets from 1900.
+  double yint = oscompat::trunc(fields[y]);
+  if (!std::isnan(fields[y]) && 0 <= yint && yint <= 99) {
+    fields[yr] = 1900 + yint;
+  } else {
+    fields[yr] = fields[y];
+  }
+  return makeDate(
+      makeDay(fields[yr], fields[m], fields[dt]),
+      makeTime(fields[h], fields[min], fields[s], fields[milli]));
+}
+
+static CallResult<HermesValue>
+dateConstructor(void *, Runtime *runtime, NativeArgs args) {
+#if defined(HERMESVM_SYNTH_REPLAY) || defined(HERMESVM_API_TRACE)
+  auto *const storage = runtime->getCommonStorage();
+#endif
+  if (args.isConstructorCall()) {
+    auto self = args.vmcastThis<JSDate>();
+    uint32_t argCount = args.getArgCount();
+    double finalDate;
+
+    if (argCount == 0) {
+#ifdef HERMESVM_SYNTH_REPLAY
+      if (!storage->env.callsToNewDate.empty()) {
+        finalDate = storage->env.callsToNewDate.front();
+        storage->env.callsToNewDate.pop_front();
+      } else {
+#endif
+        // No arguments, just set it to the current time.
+        finalDate = curTime();
+#ifdef HERMESVM_SYNTH_REPLAY
+      }
+#endif
+#ifdef HERMESVM_API_TRACE
+      storage->tracedEnv.callsToNewDate.push_back(finalDate);
+#endif
+    } else if (argCount == 1) {
+      if (auto *dateArg = dyn_vmcast<JSDate>(args.getArg(0))) {
+        // No handle needed here because we just retrieve a double.
+        finalDate = JSDate::getPrimitiveValue(dateArg, runtime).getNumber();
+      } else {
+        // Parse the argument if it's a string, else just convert to number.
+        auto res = toPrimitive_RJS(
+            runtime, args.getArgHandle(runtime, 0), PreferredType::NONE);
+        if (res == ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        auto v = runtime->makeHandle(res.getValue());
+
+        if (v->isString()) {
+          // Call the String -> Date parsing function.
+          finalDate = timeClip(parseDate(StringPrimitive::createStringView(
+              runtime, Handle<StringPrimitive>::vmcast(v))));
+        } else {
+          auto numRes = toNumber_RJS(runtime, v);
+          if (numRes == ExecutionStatus::EXCEPTION) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          finalDate = timeClip(numRes->getNumber());
+        }
+      }
+    } else {
+      // General case: read all fields in and compute timestamp.
+      CallResult<double> cr{0};
+      cr = makeTimeFromArgs(runtime, args);
+      if (cr == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      // makeTimeFromArgs interprets arguments as UTC.
+      // We want them as local time, so pretend that they are,
+      // and call utcTime to get the final UTC value we want to store.
+      finalDate = timeClip(utcTime(*cr));
+    }
+
+    JSDate::setPrimitiveValue(
+        self.get(), runtime, HermesValue::encodeDoubleValue(finalDate));
+    return self.getHermesValue();
+  }
+
+  llvm::SmallString<32> str{};
+#ifdef HERMESVM_SYNTH_REPLAY
+  if (!storage->env.callsToDateAsFunction.empty()) {
+    str = storage->env.callsToDateAsFunction.front();
+    storage->env.callsToDateAsFunction.pop_front();
+  } else {
+#endif
+    double t = curTime();
+    double local = localTime(t);
+    datetimeToUTCString(local, local - t, str);
+#ifdef HERMESVM_SYNTH_REPLAY
+  }
+#endif
+#ifdef HERMESVM_API_TRACE
+  storage->tracedEnv.callsToDateAsFunction.push_back(std::string(str.c_str()));
+#endif
+  return runtime->ignoreAllocationFailure(
+      StringPrimitive::create(runtime, str));
+}
+
+static CallResult<HermesValue>
+dateParse(void *, Runtime *runtime, NativeArgs args) {
+  auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return HermesValue::encodeDoubleValue(
+      parseDate(StringPrimitive::createStringView(
+          runtime, toHandle(runtime, std::move(*res)))));
+}
+
+static CallResult<HermesValue>
+dateUTC(void *, Runtime *runtime, NativeArgs args) {
+  // With less than 2 arguments, this is implementation-dependent behavior.
+  // We define the behavior that test262 expects here.
+  if (args.getArgCount() == 0) {
+    return HermesValue::encodeNaNValue();
+  }
+  if (args.getArgCount() == 1) {
+    auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    double y = res->getNumber();
+    return HermesValue::encodeNumberValue(
+        timeClip(makeDate(makeDay(y, 0, 1), makeTime(0, 0, 0, 0))));
+  }
+  CallResult<double> cr{0};
+  cr = makeTimeFromArgs(runtime, args);
+  if (cr == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return HermesValue::encodeDoubleValue(timeClip(*cr));
+}
+
+static CallResult<HermesValue>
+dateNow(void *, Runtime *runtime, NativeArgs args) {
+  double t = curTime();
+#ifdef HERMESVM_SYNTH_REPLAY
+  auto *const storage = runtime->getCommonStorage();
+  if (!storage->env.callsToDateNow.empty()) {
+    t = storage->env.callsToDateNow.front();
+    storage->env.callsToDateNow.pop_front();
+  }
+#endif
+#ifdef HERMESVM_API_TRACE
+  runtime->getCommonStorage()->tracedEnv.callsToDateNow.push_back(t);
+#endif
+  return HermesValue::encodeDoubleValue(t);
+}
+
+static CallResult<HermesValue>
+datePrototypeToStringHelper(void *ctx, Runtime *runtime, NativeArgs args) {
+  auto opts = reinterpret_cast<ToStringOptions *>(ctx);
+  auto *date = dyn_vmcast<JSDate>(args.getThisArg());
+  if (!date) {
+    return runtime->raiseTypeError(
+        "Date.prototype.toString() called on non-Date object");
+  }
+  double t = JSDate::getPrimitiveValue(date, runtime).getNumber();
+  if (!std::isfinite(t)) {
+    if (opts->throwOnError) {
+      return runtime->raiseRangeError("Date value out of bounds");
+    }
+    // "Invalid Date" in non-finite or NaN cases.
+    return HermesValue::encodeStringValue(
+        runtime->getPredefinedString(Predefined::InvalidDate));
+  }
+  llvm::SmallString<32> str{};
+  if (!opts->isUTC) {
+    double local = localTime(t);
+    opts->toStringFn(local, local - t, str);
+  } else {
+    opts->toStringFn(t, 0, str);
+  }
+  return runtime->ignoreAllocationFailure(
+      StringPrimitive::create(runtime, str));
+}
+
+static CallResult<HermesValue> datePrototypeToLocaleStringHelper(
+    void *ctx,
+    Runtime *runtime,
+    NativeArgs args) {
+  auto opts = reinterpret_cast<ToLocaleStringOptions *>(ctx);
+  auto *date = dyn_vmcast<JSDate>(args.getThisArg());
+  if (!date) {
+    return runtime->raiseTypeError(
+        "Date.prototype.toString() called on non-Date object");
+  }
+  double t = JSDate::getPrimitiveValue(date, runtime).getNumber();
+  if (!std::isfinite(t)) {
+    // "Invalid Date" in non-finite or NaN cases.
+    return HermesValue::encodeStringValue(
+        runtime->getPredefinedString(Predefined::InvalidDate));
+  }
+  SmallU16String<128> str{};
+
+  opts->toStringFn(t, str);
+  return StringPrimitive::create(runtime, str);
+}
+
+static CallResult<HermesValue>
+datePrototypeGetTime(void *, Runtime *runtime, NativeArgs args) {
+  auto *date = dyn_vmcast<JSDate>(args.getThisArg());
+  if (!date) {
+    return runtime->raiseTypeError(
+        "Date.prototype.getTime() called on non-Date object");
+  }
+
+  return JSDate::getPrimitiveValue(date, runtime);
+}
+
+static CallResult<HermesValue>
+datePrototypeGetterHelper(void *ctx, Runtime *runtime, NativeArgs args) {
+  const GetterOptions *opts = reinterpret_cast<const GetterOptions *>(ctx);
+  auto *date = dyn_vmcast<JSDate>(args.getThisArg());
+  if (!date) {
+    return runtime->raiseTypeError(
+        "Date.prototype.toString() called on non-Date object");
+  }
+  double t = JSDate::getPrimitiveValue(date, runtime).getNumber();
+  if (std::isnan(t)) {
+    return HermesValue::encodeNaNValue();
+  }
+
+  // Store the original value of t to be used in offset calculations.
+  double utc = t;
+  if (!opts->isUTC) {
+    t = localTime(t);
+  }
+
+  double result{std::numeric_limits<double>::quiet_NaN()};
+  switch (opts->field) {
+    case GetterOptions::Field::FULL_YEAR:
+      result = yearFromTime(t);
+      break;
+    case GetterOptions::Field::YEAR:
+      result = yearFromTime(t) - 1900;
+      break;
+    case GetterOptions::Field::MONTH:
+      result = monthFromTime(t);
+      break;
+    case GetterOptions::Field::DATE:
+      result = dateFromTime(t);
+      break;
+    case GetterOptions::Field::DAY:
+      result = weekDay(t);
+      break;
+    case GetterOptions::Field::HOURS:
+      result = hourFromTime(t);
+      break;
+    case GetterOptions::Field::MINUTES:
+      result = minFromTime(t);
+      break;
+    case GetterOptions::Field::SECONDS:
+      result = secFromTime(t);
+      break;
+    case GetterOptions::Field::MILLISECONDS:
+      result = msFromTime(t);
+      break;
+    case GetterOptions::Field::TIMEZONE_OFFSET:
+      result = (utc - t) / MS_PER_MINUTE;
+      break;
+  }
+  return HermesValue::encodeDoubleValue(result);
+}
+
+/// Set the [[PrimitiveValue]] to the given time.
+static CallResult<HermesValue>
+datePrototypeSetTime(void *ctx, Runtime *runtime, NativeArgs args) {
+  auto self = args.dyncastThis<JSDate>(runtime);
+  if (!self) {
+    return runtime->raiseTypeError(
+        "Date.prototype.setTime() called on non-Date object");
+  }
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto v = HermesValue::encodeDoubleValue(timeClip(res->getNumber()));
+  JSDate::setPrimitiveValue(self.get(), runtime, v);
+  return v;
+}
+
+/// Set the milliseconds as provided and return the new time value.
+static CallResult<HermesValue>
+datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args) {
+  bool isUTC = static_cast<bool>(ctx);
+  auto self = args.dyncastThis<JSDate>(runtime);
+  if (!self) {
+    return runtime->raiseTypeError(
+        "Date.prototype.setMilliseconds() called on non-Date object");
+  }
+  double t = JSDate::getPrimitiveValue(self.get(), runtime).getNumber();
+  if (!isUTC) {
+    t = localTime(t);
+  }
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double ms = res->getNumber();
+  double date = makeDate(
+      day(t), makeTime(hourFromTime(t), minFromTime(t), secFromTime(t), ms));
+  PinnedHermesValue v;
+  if (!isUTC) {
+    v = HermesValue::encodeDoubleValue(timeClip(utcTime(date)));
+  } else {
+    v = HermesValue::encodeDoubleValue(timeClip(date));
+  }
+  JSDate::setPrimitiveValue(self.get(), runtime, v);
+  return v;
+}
+
+/// Takes 2 arguments: seconds, milliseconds.
+/// Set the seconds, optionally milliseconds, and return the new time.
+static CallResult<HermesValue>
+datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args) {
+  bool isUTC = static_cast<bool>(ctx);
+  auto self = args.dyncastThis<JSDate>(runtime);
+  if (!self) {
+    return runtime->raiseTypeError(
+        "Date.prototype.setSeconds() called on non-Date object");
+  }
+  double t = JSDate::getPrimitiveValue(self.get(), runtime).getNumber();
+  if (!isUTC) {
+    t = localTime(t);
+  }
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double s = res->getNumber();
+  double milli;
+  if (args.getArgCount() >= 2) {
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+    if (res == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    milli = res->getNumber();
+  } else {
+    milli = msFromTime(t);
+  }
+
+  double date =
+      makeDate(day(t), makeTime(hourFromTime(t), minFromTime(t), s, milli));
+  PinnedHermesValue v;
+  if (!isUTC) {
+    v = HermesValue::encodeDoubleValue(timeClip(utcTime(date)));
+  } else {
+    v = HermesValue::encodeDoubleValue(timeClip(date));
+  }
+  JSDate::setPrimitiveValue(self.get(), runtime, v);
+  return v;
+}
+
+/// Takes 3 arguments: minutes, seconds, milliseconds.
+/// Set the minutes, optionally seconds and milliseconds, return time.
+static CallResult<HermesValue>
+datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
+  bool isUTC = static_cast<bool>(ctx);
+  auto self = args.dyncastThis<JSDate>(runtime);
+  if (!self) {
+    return runtime->raiseTypeError(
+        "Date.prototype.setMinutes() called on non-Date object");
+  }
+  double t = JSDate::getPrimitiveValue(self.get(), runtime).getNumber();
+  if (!isUTC) {
+    t = localTime(t);
+  }
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double m = res->getNumber();
+  double s;
+  if (args.getArgCount() >= 2) {
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+    if (res == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    s = res->getNumber();
+  } else {
+    s = secFromTime(t);
+  }
+  double milli;
+  if (args.getArgCount() >= 3) {
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 2));
+    if (res == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    milli = res->getNumber();
+  } else {
+    milli = msFromTime(t);
+  }
+
+  double date = makeDate(day(t), makeTime(hourFromTime(t), m, s, milli));
+  PinnedHermesValue v;
+  if (!isUTC) {
+    v = HermesValue::encodeDoubleValue(timeClip(utcTime(date)));
+  } else {
+    v = HermesValue::encodeDoubleValue(timeClip(date));
+  }
+  JSDate::setPrimitiveValue(self.get(), runtime, v);
+  return v;
+}
+
+/// Takes 4 arguments: hours, minutes, seconds, milliseconds.
+/// Set the hours, optionally minutes, seconds, and milliseconds, return time.
+static CallResult<HermesValue>
+datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
+  bool isUTC = static_cast<bool>(ctx);
+  auto self = args.dyncastThis<JSDate>(runtime);
+  if (!self) {
+    return runtime->raiseTypeError(
+        "Date.prototype.setHours() called on non-Date object");
+  }
+  double t = JSDate::getPrimitiveValue(self.get(), runtime).getNumber();
+  if (!isUTC) {
+    t = localTime(t);
+  }
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double h = res->getNumber();
+  double m;
+  if (args.getArgCount() >= 2) {
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+    if (res == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    m = res->getNumber();
+  } else {
+    m = minFromTime(t);
+  }
+  double s;
+  if (args.getArgCount() >= 3) {
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 2));
+    if (res == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    s = res->getNumber();
+  } else {
+    s = secFromTime(t);
+  }
+  double milli;
+  if (args.getArgCount() >= 4) {
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 3));
+    if (res == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    milli = res->getNumber();
+  } else {
+    milli = msFromTime(t);
+  }
+
+  double date = makeDate(day(t), makeTime(h, m, s, milli));
+  PinnedHermesValue v;
+  if (!isUTC) {
+    v = HermesValue::encodeDoubleValue(timeClip(utcTime(date)));
+  } else {
+    v = HermesValue::encodeDoubleValue(timeClip(date));
+  }
+  JSDate::setPrimitiveValue(self.get(), runtime, v);
+  return v;
+}
+
+/// Set the date of the month and return the new time.
+static CallResult<HermesValue>
+datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args) {
+  bool isUTC = static_cast<bool>(ctx);
+  auto self = args.dyncastThis<JSDate>(runtime);
+  if (!self) {
+    return runtime->raiseTypeError(
+        "Date.prototype.setDate() called on non-Date object");
+  }
+  double t = JSDate::getPrimitiveValue(self.get(), runtime).getNumber();
+  if (!isUTC) {
+    t = localTime(t);
+  }
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double dt = res->getNumber();
+  double newDate = makeDate(
+      makeDay(yearFromTime(t), monthFromTime(t), dt), timeWithinDay(t));
+  PinnedHermesValue v;
+  if (!isUTC) {
+    v = HermesValue::encodeDoubleValue(timeClip(utcTime(newDate)));
+  } else {
+    v = HermesValue::encodeDoubleValue(timeClip(newDate));
+  }
+  JSDate::setPrimitiveValue(self.get(), runtime, v);
+  return v;
+}
+
+/// Takes 2 arguments: month and date.
+/// Set the month, optionally the date of the month, return the time.
+static CallResult<HermesValue>
+datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args) {
+  bool isUTC = static_cast<bool>(ctx);
+  auto self = args.dyncastThis<JSDate>(runtime);
+  if (!self) {
+    return runtime->raiseTypeError(
+        "Date.prototype.setMonth() called on non-Date object");
+  }
+  double t = JSDate::getPrimitiveValue(self.get(), runtime).getNumber();
+  if (!isUTC) {
+    t = localTime(t);
+  }
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double m = res->getNumber();
+  double dt;
+  if (args.getArgCount() >= 2) {
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+    if (res == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    dt = res->getNumber();
+  } else {
+    dt = dateFromTime(t);
+  }
+  double newDate = makeDate(makeDay(yearFromTime(t), m, dt), timeWithinDay(t));
+  PinnedHermesValue v;
+  if (!isUTC) {
+    v = HermesValue::encodeDoubleValue(timeClip(utcTime(newDate)));
+  } else {
+    v = HermesValue::encodeDoubleValue(timeClip(newDate));
+  }
+  JSDate::setPrimitiveValue(self.get(), runtime, v);
+  return v;
+}
+
+/// Takes 3 arguments: full year, month and date.
+/// Set the full year, optionally the month and date, return the time.
+static CallResult<HermesValue>
+datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
+  bool isUTC = static_cast<bool>(ctx);
+  auto self = args.dyncastThis<JSDate>(runtime);
+  if (!self) {
+    return runtime->raiseTypeError(
+        "Date.prototype.setFullYear() called on non-Date object");
+  }
+  double t = JSDate::getPrimitiveValue(self.get(), runtime).getNumber();
+  if (!isUTC) {
+    t = localTime(t);
+  }
+  if (std::isnan(t)) {
+    t = 0;
+  }
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double y = res->getNumber();
+  double m;
+  if (args.getArgCount() >= 2) {
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+    if (res == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    m = res->getNumber();
+  } else {
+    m = monthFromTime(t);
+  }
+  double dt;
+  if (args.getArgCount() >= 3) {
+    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 2));
+    if (res == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    dt = res->getNumber();
+  } else {
+    dt = dateFromTime(t);
+  }
+  double newDate = makeDate(makeDay(y, m, dt), timeWithinDay(t));
+  PinnedHermesValue v;
+  if (!isUTC) {
+    v = HermesValue::encodeDoubleValue(timeClip(utcTime(newDate)));
+  } else {
+    v = HermesValue::encodeDoubleValue(timeClip(newDate));
+  }
+  JSDate::setPrimitiveValue(self.get(), runtime, v);
+  return v;
+}
+
+/// Takes one argument: the partial (or full) year.
+/// Per spec, adds 1900 if the year is between 0 and 99.
+/// Sets the year to the new year and returns the time.
+static CallResult<HermesValue>
+datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
+  auto self = args.dyncastThis<JSDate>(runtime);
+  if (!self) {
+    return runtime->raiseTypeError(
+        "Date.prototype.setYear() called on non-Date object");
+  }
+  double t = JSDate::getPrimitiveValue(self.get(), runtime).getNumber();
+  t = localTime(t);
+  if (std::isnan(t)) {
+    t = 0;
+  }
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double y = res->getNumber();
+  if (std::isnan(y)) {
+    JSDate::setPrimitiveValue(
+        self.get(), runtime, HermesValue::encodeNaNValue());
+    return HermesValue::encodeNaNValue();
+  }
+  double yint = oscompat::trunc(y);
+  double yr = 0 <= yint && yint <= 99 ? yint + 1900 : y;
+  double date = utcTime(makeDate(
+      makeDay(yr, monthFromTime(t), dateFromTime(t)), timeWithinDay(t)));
+  auto v = HermesValue::encodeDoubleValue(timeClip(date));
+  JSDate::setPrimitiveValue(self.get(), runtime, v);
+  return v;
+}
+
+static CallResult<HermesValue>
+datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args) {
+  auto selfHandle = args.getThisHandle();
+  auto objRes = toObject(runtime, selfHandle);
+  if (objRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
+  auto propRes = toPrimitive_RJS(runtime, O, PreferredType::NUMBER);
+  if (propRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto tv = *propRes;
+  if (tv.isNumber() && !std::isfinite(tv.getNumber())) {
+    return HermesValue::encodeNullValue();
+  }
+  if ((propRes = JSObject::getNamed_RJS(
+           O, runtime, Predefined::getSymbolID(Predefined::toISOString))) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<Callable> toISO =
+      Handle<Callable>::dyn_vmcast(runtime, runtime->makeHandle(*propRes));
+  if (!toISO.get()) {
+    return runtime->raiseTypeError(
+        "toISOString is not callable in Date.prototype.toJSON()");
+  }
+  return Callable::executeCall0(toISO, runtime, O);
+}
+
+static CallResult<HermesValue>
+datePrototypeSymbolToPrimitive(void *, Runtime *runtime, NativeArgs args) {
+  auto O = args.dyncastThis<JSObject>(runtime);
+  if (LLVM_UNLIKELY(!O)) {
+    return runtime->raiseTypeError(
+        "Date[Symbol.toPrimitive]() must be called on an object");
+  }
+
+  auto hint = args.getArgHandle(runtime, 0);
+  if (LLVM_UNLIKELY(!hint->isString())) {
+    return runtime->raiseTypeError(
+        "Date[Symbol.toPrimitive]() argument must be a string");
+  }
+
+  PreferredType tryFirst;
+
+  if (runtime->symbolEqualsToStringPrim(
+          Predefined::getSymbolID(Predefined::string), hint->getString()) ||
+      runtime->symbolEqualsToStringPrim(
+          Predefined::getSymbolID(Predefined::defaultStr), hint->getString())) {
+    tryFirst = PreferredType::STRING;
+  } else if (runtime->symbolEqualsToStringPrim(
+                 Predefined::getSymbolID(Predefined::number),
+                 hint->getString())) {
+    tryFirst = PreferredType::NUMBER;
+  } else {
+    return runtime->raiseTypeError(
+        "Type hint to Date[Symbol.primitive] must be "
+        "'number', 'string', or 'default'");
+  }
+
+  return ordinaryToPrimitive(O, runtime, tryFirst);
+}
+
+} // namespace vm
+} // namespace hermes

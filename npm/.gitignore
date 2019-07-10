@@ -1,0 +1,6 @@
+*.tar.gz
+*.tgz
+android
+node_modules
+osx-bin
+package-lock.json

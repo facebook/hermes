@@ -1,0 +1,170 @@
+// For generating base bytecode for the string-function.js test in delta
+// optimizing mode. Adopted partly from the original string-function.js,
+// and partly from uri.js.
+
+"use strict";
+
+print('String');
+print('empty', String());
+print(String('asdf'), String('asdf').length);
+print(String(133));
+print(String(undefined));
+var s = new String('asdf');
+print(s, s.toString(), s.valueOf(), s.length, s.__proto__ === String.prototype);
+var desc = Object.getOwnPropertyDescriptor(s, 'length');
+print(desc.enumerable, desc.writable, desc.configurable);
+print(String('a') === String('a'), new String('a') === new String('a'));
+print('aaaa'.length, String('aaaa').length, (new String('aaaa')).length);
+
+print('fromCharCode');
+print('empty', String.fromCharCode());
+print(String.fromCharCode(0xff0048, 0xe8, 114, 109, 101, 115));
+
+print('charAt');
+print('abc'.charAt(0))
+print('abc'.charAt(1))
+print('empty', 'abc'.charAt(-1))
+print('empty', 'abc'.charAt(100))
+print('abc'.charAt(1.1))
+
+print('charCodeAt');
+print('abc'.charCodeAt(0))
+print('abc'.charCodeAt(1))
+print('abc'.charCodeAt(-1))
+print('abc'.charCodeAt(100))
+print('abc'.charCodeAt(1.1))
+print("Ж".charCodeAt(0))
+print("Ж".charCodeAt(1))
+print("💩".charCodeAt(0))
+print("💩".charCodeAt(1))
+
+print('concat');
+print('asdf'.concat());
+print('empty', ''.concat());
+print(''.concat('ghjkl'));
+print('asdf'.concat('ghjkl'));
+print('ab'.concat('cd', 'ef', 'gh'));
+print('abc'.concat(123));
+var x = 'asdf';
+print(x.concat(x));
+var a = 'a';
+for (i = 0; i < 28; ++i) {
+  a = a + a;
+}
+try {
+  a.concat(a);
+} catch (e) {
+  print(e.name);
+}
+
+print('slice');
+print('abcdcba'.slice());
+print('abcdcba'.slice(1));
+print('abcdcba'.slice(1, 4));
+print('abcdcba'.slice(-1));
+print('abcdcba'.slice(1, -1));
+print('empty', 'abcdcba'.slice(1000, 123892));
+print('empty', 'abcdcba'.slice(-1000, -123892));
+print('empty', ''.slice(-1000, -123892));
+print('abcdcba'.slice(-1000, 123892));
+var s = ''
+for (var i = 0; i < 10; ++i) {
+  s += 'asdf';
+}
+print(s.slice(1, 5));
+print('empty', 'asfdf'.slice(Infinity, NaN));
+
+print('split');
+print('abc,def,ghi'.split(','));
+print('abc,def,ghi'.split(',', 2));
+print('abc,def,ghi'.split(',', 0), 'empty');
+print('abc::ghi'.split(':'));
+print('abc'.split(''));
+print('ab'.split(/a*?/));
+print('helloworld'.split(/(hello)(world)/));
+print('AhelloworldB'.split(/(hello)(world)/));
+print(''.split('').length);
+print(''.split(/(?:)/).length);
+print(''.split('a').length);
+print(''.split(/a/).length);
+var result = 'ab'.split(/a*/);
+print(result, result.length, result[0].length);
+var result = "A<B>bold</B>and<CODE>coded</CODE>".split(/<(\/)?([^<>]+)>/);
+print(JSON.stringify(result));
+print(result[1], result[7]);
+
+print('substring');
+print('abcdcba'.substring());
+print('abcdcba'.substring(1));
+print('abcdcba'.substring(1, 4));
+print('abcdcba'.substring(4, 1));
+print('abcdcba'.substring(-1));
+print('abcdcba'.substring(1, -1));
+print('empty', 'abcdcba'.substring(1000, 123892));
+print('empty', 'abcdcba'.substring(-1000, -123892));
+print('abcdcba'.substring(-1000, 123892));
+print('abcdcba'.substring(23892, -1000));
+var s = ''
+for (var i = 0; i < 10; ++i) {
+  s += 'asdf';
+}
+print(s.substring(1, 5));
+
+print('toLowerCase');
+print('q'.toLowerCase());
+print('Q'.toLowerCase());
+print('|' + ' '.toLowerCase() + '|');
+print('ABC'.toLowerCase());
+print('abc'.toLowerCase());
+print('empty', ''.toLowerCase());
+print('a/B.c'.toLowerCase());
+print('ß'.toLowerCase());
+print('A\u180e\u03a3\u180e'.toLowerCase() === 'a\u180e\u03c2\u180e');
+print('A\u180e\u03a3\u180eB'.toLowerCase() === 'a\u180e\u03c3\u180eb');
+
+print('encodeURI');
+print(encodeURI('https://.com/#sec-15.1.3.3'));
+print(encodeURI('a b'));
+print(encodeURI('ϱ'));
+print(encodeURI('^\ud83d\udcd3$'));
+try { print(encodeURI('\udc23')); } catch (e) { print('caught', e) }
+try { print(encodeURI('\ud8d3\ud000')); } catch (e) { print('caught', e) }
+
+print('encodeURIComponent');
+print(encodeURIComponent('https://.com/#sec-15.1.3.3'));
+print(encodeURIComponent('a b'));
+print(encodeURIComponent('ϱ'));
+print(encodeURIComponent('^\ud83d\udcd3$'));
+try { print(encodeURIComponent('\udc23')); } catch (e) { print('caught', e) }
+try {print(encodeURIComponent('\ud8d3\ud000'));} catch (e) {print('caught', e)}
+
+print('decodeURI');
+print(decodeURI('https://.com/#sec-15.1.3.3?'));
+print(decodeURI('https://.com/%23sec-15.1.3.3%3f'));
+print(decodeURI('a%20b'));
+print(decodeURI('%CF%B1'));
+print(decodeURI('%00').charCodeAt(0));
+var x = decodeURI('%5E%F0%9F%93%93$');
+print(x);
+print(x.length);
+print(x.charCodeAt(0), x.charCodeAt(1), x.charCodeAt(2), x.charCodeAt(3));
+try { print(decodeURI('%NO')); } catch (e) { print('caught', e.name) }
+try { print(decodeURI('%fa')); } catch (e) { print('caught', e.name) }
+try { print(decodeURI('%c3%f0')); } catch (e) { print('caught', e.name) }
+try { print(decodeURI('%c3%NO')); } catch (e) { print('caught', e.name) }
+try { print(decodeURI('%'+String.fromCharCode(23)+'1')); }
+catch (e) { print('caught', e.name) }
+
+print('decodeURIComponent');
+print(decodeURIComponent('https://.com/%23sec-15.1.3.3'));
+print(decodeURIComponent('https://.com/%23sec-15.1.3.3%3f'));
+print(decodeURIComponent('a%20b'));
+print(decodeURIComponent('%CF%B1'));
+var x = decodeURIComponent('%5E%F0%9F%93%93%24');
+print(x);
+print(x.length);
+print(x.charCodeAt(0), x.charCodeAt(1), x.charCodeAt(2), x.charCodeAt(3));
+try { print(decodeURIComponent('%NO')); } catch (e) { print('caught', e) }
+try { print(decodeURIComponent('%fa')); } catch (e) { print('caught', e) }
+try { print(decodeURIComponent('%c3%f0')); } catch (e) { print('caught', e) }
+try { print(decodeURIComponent('%c3%NO')); } catch (e) { print('caught', e) }

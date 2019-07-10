@@ -1,0 +1,1 @@
+async while (1) {}

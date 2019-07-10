@@ -1,0 +1,33 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+// This file defines the opcodes that regex supports.
+// Clients are expected to #define the REOP macro, #include this file,
+// and then #undef the macro.
+
+REOP(Goal)
+REOP(LeftAnchor)
+REOP(RightAnchor)
+REOP(MatchAnyButNewline)
+REOP(MatchChar8)
+REOP(MatchChar16)
+REOP(MatchCharICase8)
+REOP(MatchCharICase16)
+REOP(Alternation)
+REOP(Jump32)
+REOP(Bracket)
+REOP(BeginMarkedSubexpression)
+REOP(EndMarkedSubexpression)
+REOP(BackRef)
+REOP(WordBoundary)
+REOP(Lookahead)
+REOP(BeginLoop)
+REOP(EndLoop)
+REOP(BeginSimpleLoop)
+REOP(EndSimpleLoop)
+REOP(Width1Loop)
+
+#undef REOP

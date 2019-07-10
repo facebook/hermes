@@ -1,0 +1,13 @@
+diff --git a/build.sh b/build.sh
+index 122f50e..b4df1cd 100755
+--- a/build.sh
++++ b/build.sh
+@@ -85,7 +85,7 @@ cd $BUILDDIR/$ARCH
+ 
+ 	# The ENVVAR LIBSUFFIX should add the suffix only to the libname and not to the symbols.
+ 	# ToDo: Find the right way in Swift to refer to an alternative library with symbol prefixing or any other method to remove this.
+-	if $[ -n "$LIBSUFFIX" ]; then
++	if [ -n "$LIBSUFFIX" ]; then
+ 		patch -p0 < ../patches/icu_suffix_only_on_libname.patch
+ 	fi
+ 

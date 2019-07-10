@@ -1,0 +1,8 @@
+---
+Checks:          '*,clang-diagnostic-*,clang-analyzer-*,-clang-analyzer-alpha*,-readability-named-parameter,-misc-unused-parameters,-google-runtime-references,-google-build-using-namespace,-cppcoreguidelines-pro-type-union-access,-google-readability-casting,-readability-implicit-bool-cast,-google-readability-todo,-readability-braces-around-statements,-google-readability-braces-around-statements,-performance-unnecessary-value-param,-misc-unused-using-decls,-modernize-pass-by-value,-modernize-raw-string-literal,-readability-else-after-return'
+WarningsAsErrors: ''
+HeaderFilterRegex: 'include/hermes'
+AnalyzeTemporaryDtors: false
+CheckOptions:
+...
+

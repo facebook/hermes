@@ -1,0 +1,150 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+#ifndef TOK
+#define TOK(name, str)
+#endif
+
+#ifndef RESWORD
+#define RESWORD(name) TOK(rw_##name, #name)
+#endif
+
+#ifndef PUNCTUATOR
+#define PUNCTUATOR(name, str) TOK(name, str)
+#endif
+
+#ifndef BINOP
+#define BINOP(name, str, precedence) PUNCTUATOR(name, str)
+#endif
+
+#ifndef RANGE_MARKER
+#define RANGE_MARKER(name) TOK(name, "<" #name ">")
+#endif
+
+// clang-format off
+
+TOK(none, "<none>")
+TOK(identifier, "identifier")
+
+RANGE_MARKER(_first_resword)
+RESWORD(function)
+RESWORD(for)
+RESWORD(if)
+RESWORD(in)
+RESWORD(var)
+RESWORD(break)
+RESWORD(continue)
+RESWORD(return)
+RESWORD(switch)
+RESWORD(this)
+
+RESWORD(true)
+RESWORD(false)
+RESWORD(null)
+RESWORD(case)
+RESWORD(catch)
+RESWORD(const)
+RESWORD(debugger)
+RESWORD(default)
+RESWORD(delete)
+RESWORD(do)
+RESWORD(else)
+RESWORD(finally)
+RESWORD(instanceof)
+RESWORD(new)
+RESWORD(throw)
+RESWORD(try)
+RESWORD(typeof)
+RESWORD(void)
+RESWORD(while)
+RESWORD(with)
+
+RESWORD(export)
+RESWORD(import)
+
+RESWORD(class)
+RESWORD(static)
+RESWORD(extends)
+RESWORD(super)
+
+// Future reserved words
+RESWORD(enum)
+
+// Strict mode future reserved words
+RESWORD(implements)
+RESWORD(interface)
+RESWORD(package)
+RESWORD(private)
+RESWORD(protected)
+RESWORD(public)
+RESWORD(yield)
+RANGE_MARKER(_last_resword)
+
+PUNCTUATOR(l_brace,             "{")
+PUNCTUATOR(r_brace,             "}")
+PUNCTUATOR(l_paren,             "(")
+PUNCTUATOR(r_paren,             ")")
+PUNCTUATOR(l_square,            "[")
+PUNCTUATOR(r_square,            "]")
+PUNCTUATOR(period,              ".")
+PUNCTUATOR(dotdotdot,           "...")
+PUNCTUATOR(semi,                ";")
+PUNCTUATOR(comma,               ",")
+PUNCTUATOR(plusplus,            "++")
+PUNCTUATOR(minusminus,          "--")
+RANGE_MARKER(_first_binary)
+BINOP(     star,                "*",   10)
+BINOP(     percent,             "%",   10)
+BINOP(     slash,               "/",   10)
+BINOP(     plus,                "+",    9)
+BINOP(     minus,               "-",    9)
+BINOP(     lessless,            "<<",   8)
+BINOP(     greatergreater,      ">>",   8)
+BINOP(     greatergreatergreater,">>>", 8)
+BINOP(     less,                "<",    7)
+BINOP(     greater,             ">",    7)
+BINOP(     lessequal,           "<=",   7)
+BINOP(     greaterequal,        ">=",   7)
+BINOP(     equalequal,          "==",   6)
+BINOP(     exclaimequal,        "!=",   6)
+BINOP(     equalequalequal,     "===",  6)
+BINOP(     exclaimequalequal,   "!==",  6)
+BINOP(     amp,                 "&",    5)
+BINOP(     caret,               "^",    4)
+BINOP(     pipe,                "|",    3)
+BINOP(     ampamp,              "&&",   2)
+BINOP(     pipepipe,            "||",   1)
+RANGE_MARKER(_last_binary)
+PUNCTUATOR(exclaim,             "!")
+PUNCTUATOR(tilde,               "~")
+PUNCTUATOR(question,            "?")
+PUNCTUATOR(colon,               ":")
+PUNCTUATOR(equal,               "=")
+PUNCTUATOR(plusequal,           "+=")
+PUNCTUATOR(minusequal,          "-=")
+PUNCTUATOR(starequal,           "*=")
+PUNCTUATOR(percentequal,        "%=")
+PUNCTUATOR(slashequal,          "/=")
+PUNCTUATOR(lesslessequal,       "<<=")
+PUNCTUATOR(greatergreaterequal, ">>=")
+PUNCTUATOR(greatergreatergreaterequal, ">>>=")
+PUNCTUATOR(ampequal,            "&=")
+PUNCTUATOR(pipeequal,           "|=")
+PUNCTUATOR(caretequal,          "^=")
+PUNCTUATOR(equalgreater,        "=>")
+
+TOK(numeric_literal, "number")
+TOK(string_literal, "string")
+TOK(regexp_literal, "regexp")
+
+TOK(eof, "<eof>")
+RANGE_MARKER(_last_token)
+
+#undef TOK
+#undef RESWORD
+#undef PUNCTUATOR
+#undef BINOP
+#undef RANGE_MARKER

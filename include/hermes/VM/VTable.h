@@ -1,0 +1,158 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+#ifndef HERMES_VM_VTABLE_H
+#define HERMES_VM_VTABLE_H
+
+#include "hermes/VM/CellKind.h"
+#include "hermes/VM/GCDecl.h"
+#include "hermes/VM/HeapAlign.h"
+#include "hermes/VM/Metadata.h"
+
+#include "llvm/Support/raw_ostream.h"
+
+#include <cstdint>
+
+namespace hermes {
+namespace vm {
+
+// Forward declarations.
+class GCCell;
+
+/// The "metadata" for an allocated GC cell: the kind of cell, and
+/// methods to "mark" (really, to invoke a GC callback on JS values in
+/// the block) and (optionally) finalize the cell.
+struct VTable {
+  // Value is 64 bits to make sure it can be used as a pointer in both 32 and
+  // 64-bit builds.
+  // "57ab1e" == "vtable".
+  // ff added at the beginning to make sure it's a kernel address (even in a
+  // 32-bit build).
+  static constexpr uint64_t kMagic{0xff57ab1eff57ab1e};
+  // This is used to ensure a VTable is valid and is not some other value.
+  // Notably, since VTable * can sometimes be a forwarding pointer, if a pointer
+  // to a VTable is accidentally used as a GCCell, it will try to use the first
+  // word as another VTable *. By putting in a magic number here, it will
+  // SIGSEGV on a specific address, which will make it easy to know exactly
+  // what went wrong.
+  // This is left on even in opt builds because VTable sizes are not
+  // particularly important.
+  const uint64_t magic_{kMagic};
+  /// The cell kind.
+  const CellKind kind;
+  /// `size` should be the size of the cell if it is fixed, or 0 if it is
+  /// variable sized.
+  /// If it is variable sized, it should inherit from \see
+  /// VariableSizeRuntimeCell.
+  const uint32_t size;
+  /// Called during GC when an object becomes unreachable. Must not perform any
+  /// allocations or access any garbage-collectable objects.  Unless an
+  /// operation is documented to be safe to call from a finalizer, it probably
+  /// isn't.
+  using FinalizeCallback = void(GCCell *, GC *gc);
+  FinalizeCallback *const finalize_;
+  /// Call gc functions on weak-reference-holding objects.
+  using MarkWeakCallback = void(GCCell *, GC *gc);
+  MarkWeakCallback *const markWeak_;
+  /// Report if there is any size contribution from an object beyond the GC.
+  /// Used to report any externally allocated memory for metric gathering.
+  using MallocSizeCallback = size_t(GCCell *);
+  MallocSizeCallback *const mallocSize_;
+  /// Ask the cell what its post-trimming size will be.
+  /// This should not modify the cell.
+  using TrimSizeCallback = gcheapsize_t(const GCCell *);
+  TrimSizeCallback *const trimSize_;
+  /// Trim the cell, decreasing any size-related fields inside the cell.
+  using TrimCallback = void(GCCell *);
+  TrimCallback *const trim_;
+
+  constexpr explicit VTable(
+      CellKind kind,
+      uint32_t size,
+      FinalizeCallback *finalize = nullptr,
+      MarkWeakCallback *markWeak = nullptr,
+      MallocSizeCallback *mallocSize = nullptr,
+      TrimSizeCallback *trimSize = nullptr,
+      TrimCallback *trim = nullptr)
+      : kind(kind),
+        size(heapAlignSize(size)),
+        finalize_(finalize),
+        markWeak_(markWeak),
+        mallocSize_(mallocSize),
+        trimSize_(trimSize),
+        trim_(trim) {}
+
+  bool isVariableSize() const {
+    return size == 0;
+  }
+
+  void finalizeIfExists(GCCell *cell, GC *gc) const {
+    assert(isValid());
+    if (finalize_) {
+      finalize_(cell, gc);
+    }
+  }
+
+  void finalize(GCCell *cell, GC *gc) const {
+    assert(isValid());
+    assert(
+        finalize_ &&
+        "Cannot unconditionally finalize if it doesn't have a finalize pointer");
+    finalize_(cell, gc);
+  }
+
+  void markWeakIfExists(GCCell *cell, GC *gc) const {
+    assert(isValid());
+    if (markWeak_) {
+      markWeak_(cell, gc);
+    }
+  }
+
+  size_t getMallocSize(GCCell *cell) const {
+    assert(isValid());
+    return mallocSize_ ? mallocSize_(cell) : 0;
+  }
+
+  bool canBeTrimmed() const {
+    assert(isValid());
+    return trim_;
+  }
+
+  /// Tell the \p cell to shrink itself, and return its new size. If the cell
+  /// doesn't have any shrinking to do, return the \p origSize.
+  gcheapsize_t getTrimmedSize(GCCell *cell, gcheapsize_t origSize) const {
+    assert(isValid());
+    return canBeTrimmed() ? heapAlignSize(trimSize_(cell)) : origSize;
+  }
+
+  void trim(GCCell *cell) const {
+    assert(isValid());
+    trim_(cell);
+  }
+
+  /// \return true iff this VTable is valid.
+  /// Validity is defined by:
+  ///   * The magic_ field has the expected value.
+  ///   * The kind that is within the range of valid CellKinds.
+  bool isValid() const {
+    return magic_ == kMagic &&
+        kindInRange(
+               kind, CellKind::AllCellsKind_first, CellKind::AllCellsKind_last);
+  }
+
+  /// \return true iff this VTable has the correct magic_ value, and has the
+  /// given \p expectedKind.
+  bool isValid(CellKind expectedKind) const {
+    return magic_ == kMagic && kind == expectedKind;
+  }
+};
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const VTable &vt);
+
+} // namespace vm
+} // namespace hermes
+
+#endif // HERMES_VM_VTABLE_H

@@ -1,0 +1,399 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the LICENSE
+ * file in the root directory of this source tree.
+ */
+#include "Array.h"
+#include "TestHelpers.h"
+#include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/GC.h"
+#include "hermes/VM/WeakRef.h"
+
+#include <functional>
+#include <new>
+#include <vector>
+
+#include "gtest/gtest.h"
+
+using namespace hermes::vm;
+using namespace hermes::unittest;
+
+namespace {
+
+struct Dummy final : public GCCell {
+  static const VTable vt;
+
+  static Dummy *create(DummyRuntime &runtime) {
+    return new (runtime.alloc(sizeof(Dummy))) Dummy(&runtime.getHeap());
+  }
+  static Dummy *createLongLived(DummyRuntime &runtime) {
+    return new (runtime.allocLongLived(sizeof(Dummy)))
+        Dummy(&runtime.getHeap());
+  }
+  static bool classof(const GCCell *cell) {
+    return cell->getVT() == &vt;
+  }
+
+  Dummy(GC *gc) : GCCell(gc, &vt) {}
+};
+
+size_t getExtraSize(GCCell *) {
+  return 1;
+}
+
+/// A virtual table without a finalizer or weak ref marker, with extra storage
+/// space.
+const VTable Dummy::vt{CellKind::UninitializedKind,
+                       sizeof(Dummy),
+                       nullptr,
+                       nullptr,
+                       getExtraSize};
+
+const MetadataTableForTests getMetadataTable() {
+  // It would seem that the full namespace qualification below would not be
+  // necessary, but without it the compiler is unable to properly infer a
+  // template argument.
+  static const Metadata storage[] = {
+      Metadata(),
+      buildMetadata(
+          CellKind::FillerCellKind, ::hermes::unittest::ArrayBuildMeta)};
+  return MetadataTableForTests(storage);
+}
+
+} // namespace
+
+namespace hermes {
+namespace vm {
+template <>
+struct IsGCObject<Array> : public std::true_type {};
+template <>
+struct IsGCObject<Dummy> : public std::true_type {};
+} // namespace vm
+} // namespace hermes
+
+namespace {
+
+struct GCBasicsTest : public ::testing::Test {
+  std::shared_ptr<DummyRuntime> runtime;
+  DummyRuntime &rt;
+  GCBasicsTest()
+      : runtime(DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall)),
+        rt(*runtime) {}
+};
+
+#ifndef NDEBUG
+TEST_F(GCBasicsTest, SmokeTest) {
+  auto &gc = rt.gc;
+  GCBase::HeapInfo info;
+  GCBase::DebugHeapInfo debugInfo;
+
+  // Verify the initial state.
+  gc.getHeapInfo(info);
+  gc.getDebugHeapInfo(debugInfo);
+  ASSERT_EQ(0u, debugInfo.numAllocatedObjects);
+  ASSERT_EQ(0u, debugInfo.numReachableObjects);
+  ASSERT_EQ(0u, debugInfo.numCollectedObjects);
+  ASSERT_EQ(0u, debugInfo.numFinalizedObjects);
+  ASSERT_EQ(0u, info.numCollections);
+  ASSERT_EQ(0u, info.allocatedBytes);
+
+  // Collect an empty heap.
+  gc.collect();
+  gc.getHeapInfo(info);
+  gc.getDebugHeapInfo(debugInfo);
+  ASSERT_EQ(0u, debugInfo.numAllocatedObjects);
+  ASSERT_EQ(0u, debugInfo.numReachableObjects);
+  ASSERT_EQ(0u, debugInfo.numCollectedObjects);
+  ASSERT_EQ(0u, debugInfo.numFinalizedObjects);
+  ASSERT_EQ(1u, info.numCollections);
+  ASSERT_EQ(0u, info.allocatedBytes);
+
+  // Allocate a single object without GC.
+  Dummy::create(rt);
+  gc.getHeapInfo(info);
+  gc.getDebugHeapInfo(debugInfo);
+  ASSERT_EQ(1u, debugInfo.numAllocatedObjects);
+  ASSERT_EQ(0u, debugInfo.numReachableObjects);
+  ASSERT_EQ(0u, debugInfo.numCollectedObjects);
+  ASSERT_EQ(0u, debugInfo.numFinalizedObjects);
+  ASSERT_EQ(1u, info.numCollections);
+  ASSERT_EQ(sizeof(Dummy), info.allocatedBytes);
+
+  // Now free the unreachable object.
+  gc.collect();
+  gc.getHeapInfo(info);
+  gc.getDebugHeapInfo(debugInfo);
+  ASSERT_EQ(0u, debugInfo.numAllocatedObjects);
+  ASSERT_EQ(0u, debugInfo.numReachableObjects);
+  ASSERT_EQ(1u, debugInfo.numCollectedObjects);
+  ASSERT_EQ(0u, debugInfo.numFinalizedObjects);
+  ASSERT_EQ(2u, info.numCollections);
+  ASSERT_EQ(0u, info.allocatedBytes);
+
+  // Allocate two objects.
+  Dummy::create(rt);
+  GCCell *o2 = Dummy::create(rt);
+  gc.getHeapInfo(info);
+  gc.getDebugHeapInfo(debugInfo);
+  ASSERT_EQ(2u, debugInfo.numAllocatedObjects);
+  ASSERT_EQ(0u, debugInfo.numReachableObjects);
+  ASSERT_EQ(1u, debugInfo.numCollectedObjects);
+  ASSERT_EQ(0u, debugInfo.numFinalizedObjects);
+  ASSERT_EQ(2u, info.numCollections);
+  ASSERT_EQ(2 * sizeof(Dummy), info.allocatedBytes);
+
+  // Make only the second object reachable and collect.
+  rt.pointerRoots.push_back(&o2);
+  gc.collect();
+  gc.getHeapInfo(info);
+  gc.getDebugHeapInfo(debugInfo);
+  ASSERT_EQ(1u, debugInfo.numAllocatedObjects);
+  ASSERT_EQ(1u, debugInfo.numReachableObjects);
+  ASSERT_EQ(1u, debugInfo.numCollectedObjects);
+  ASSERT_EQ(0u, debugInfo.numFinalizedObjects);
+  ASSERT_EQ(3u, info.numCollections);
+  ASSERT_EQ(sizeof(Dummy), info.allocatedBytes);
+}
+
+TEST_F(GCBasicsTest, MovedObjectTest) {
+  auto &gc = rt.gc;
+  GCBase::HeapInfo info;
+  GCBase::DebugHeapInfo debugInfo;
+
+  gcheapsize_t totalAlloc = 0;
+
+  Array::create(rt, 0);
+  totalAlloc += heapAlignSize(Array::allocSize(0));
+  auto *a1 = Array::create(rt, 3);
+  totalAlloc += heapAlignSize(Array::allocSize(3));
+  auto *a2 = Array::create(rt, 3);
+  totalAlloc += heapAlignSize(Array::allocSize(3));
+  // Verify the initial state.
+  gc.getHeapInfo(info);
+  gc.getDebugHeapInfo(debugInfo);
+  EXPECT_EQ(3u, debugInfo.numAllocatedObjects);
+  EXPECT_EQ(0u, debugInfo.numReachableObjects);
+  EXPECT_EQ(0u, debugInfo.numCollectedObjects);
+  EXPECT_EQ(0u, debugInfo.numFinalizedObjects);
+  EXPECT_EQ(0u, info.numCollections);
+  EXPECT_EQ(totalAlloc, info.allocatedBytes);
+
+  // Initialize a reachable graph.
+  rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&a2));
+  a2->values()[0].set(HermesValue::encodeObjectValue(a1), &gc);
+  a2->values()[2].set(HermesValue::encodeObjectValue(a2), &gc);
+  a1->values()[0].set(HermesValue::encodeObjectValue(a1), &gc);
+  a1->values()[1].set(HermesValue::encodeObjectValue(a2), &gc);
+
+  gc.collect();
+  totalAlloc -= heapAlignSize(Array::allocSize(0));
+  gc.getHeapInfo(info);
+  gc.getDebugHeapInfo(debugInfo);
+  EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
+  EXPECT_EQ(2u, debugInfo.numReachableObjects);
+  EXPECT_EQ(1u, debugInfo.numCollectedObjects);
+  EXPECT_EQ(1u, debugInfo.numFinalizedObjects);
+  EXPECT_EQ(1u, info.numCollections);
+  EXPECT_EQ(totalAlloc, info.allocatedBytes);
+
+  // Extract what we know was a pointer to a1.
+  a1 = reinterpret_cast<Array *>(a2->values()[0].getPointer());
+
+  // Ensure the contents of the objects changed.
+  EXPECT_EQ(a1, a2->values()[0].getPointer());
+  EXPECT_EQ(HermesValue::encodeEmptyValue(), a2->values()[1]);
+  EXPECT_EQ(a2, a2->values()[2].getPointer());
+  EXPECT_EQ(a1, a1->values()[0].getPointer());
+  EXPECT_EQ(a2, a1->values()[1].getPointer());
+  EXPECT_EQ(HermesValue::encodeEmptyValue(), a1->values()[2]);
+}
+
+TEST_F(GCBasicsTest, WeakRefTest) {
+  // This should match the one used by the GC.
+  // TODO This should be shared in GCBase, since all GCs use the same format.
+  enum WeakSlotState {
+    Unmarked,
+    Marked,
+    Free,
+  };
+  auto &gc = rt.gc;
+  GCBase::DebugHeapInfo debugInfo;
+
+  gc.getDebugHeapInfo(debugInfo);
+  EXPECT_EQ(0u, debugInfo.numAllocatedObjects);
+
+  auto *a1 = Array::create(rt, 10);
+  auto *a2 = Array::create(rt, 10);
+
+  gc.getDebugHeapInfo(debugInfo);
+  EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
+
+  WeakRef<Array> wr1{&gc, a1};
+  WeakRef<Array> wr2{&gc, a2};
+
+  ASSERT_TRUE(wr1.isValid());
+  ASSERT_TRUE(wr2.isValid());
+
+  ASSERT_EQ(a1, wr1.unsafeGetHermesValue().getPointer());
+  ASSERT_EQ(a2, wr2.unsafeGetHermesValue().getPointer());
+
+  // Test that freeing an object correctly "empties" the weak ref slot but
+  // preserves the other slot.
+  rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&a2));
+  rt.markExtra = [&](GC *gc, SlotAcceptor &) {
+    gc->markWeakRef(wr1);
+    gc->markWeakRef(wr2);
+  };
+
+  // a1 is supposed to be freed during the following collection, so clear
+  // the pointer to avoid mistakes.
+  a1 = nullptr;
+
+  gc.collect();
+  gc.getDebugHeapInfo(debugInfo);
+  EXPECT_EQ(1u, debugInfo.numAllocatedObjects);
+  ASSERT_FALSE(wr1.isValid());
+  ASSERT_TRUE(wr2.isValid());
+  ASSERT_EQ(a2, wr2.unsafeGetHermesValue().getPointer());
+
+  // Make the slot unreachable and test that it is freed.
+  rt.markExtra = [&](GC *gc, SlotAcceptor &) { gc->markWeakRef(wr2); };
+  gc.collect();
+
+  ASSERT_EQ(WeakSlotState::Free, wr1.getSlot()->extra);
+}
+
+#if defined(HERMESVM_GC_GENERATIONAL) || \
+    defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
+TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
+  // This should match the one used by the GC.
+  // TODO This should be shared in GCBase, since all GCs use the same format.
+  enum WeakSlotState {
+    Unmarked,
+    Marked,
+    Free,
+  };
+  auto &gc = rt.gc;
+  GCBase::DebugHeapInfo debugInfo;
+
+  gc.getDebugHeapInfo(debugInfo);
+  EXPECT_EQ(0u, debugInfo.numAllocatedObjects);
+
+  auto *d0 = Dummy::create(rt);
+  auto *d1 = Dummy::create(rt);
+  auto *dOld = Dummy::createLongLived(rt);
+
+  gc.getDebugHeapInfo(debugInfo);
+  EXPECT_EQ(3u, debugInfo.numAllocatedObjects);
+
+  WeakRef<Dummy> wr0{&gc, d0};
+  WeakRef<Dummy> wr1{&gc, d1};
+  WeakRef<Dummy> wrOld{&gc, dOld};
+
+  ASSERT_TRUE(wr0.isValid());
+  ASSERT_TRUE(wr1.isValid());
+  ASSERT_TRUE(wrOld.isValid());
+
+  ASSERT_EQ(d0, wr0.unsafeGetHermesValue().getPointer());
+  ASSERT_EQ(d1, wr1.unsafeGetHermesValue().getPointer());
+  ASSERT_EQ(dOld, wrOld.unsafeGetHermesValue().getPointer());
+
+  // Create a root for d0.  We'll only be doing young-gen collections, so
+  // we don't have to root dOld.
+  rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&d0));
+  rt.markExtra = [&](GC *gc, SlotAcceptor &) {
+    gc->markWeakRef(wr0);
+    gc->markWeakRef(wr1);
+    gc->markWeakRef(wrOld);
+  };
+
+  // d1 is supposed to be freed during the following collection, so clear
+  // the pointer to avoid mistakes.
+  d1 = nullptr;
+
+  gc.youngGenCollect();
+  gc.getDebugHeapInfo(debugInfo);
+  EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
+  ASSERT_TRUE(wr0.isValid());
+  ASSERT_FALSE(wr1.isValid());
+  ASSERT_TRUE(wrOld.isValid());
+  ASSERT_EQ(d0, wr0.unsafeGetHermesValue().getPointer());
+  ASSERT_EQ(dOld, wrOld.unsafeGetHermesValue().getPointer());
+}
+
+TEST_F(GCBasicsTest, TestYoungGenStats) {
+  auto &gc = rt.gc;
+
+  GCBase::DebugHeapInfo debugInfo;
+
+  gc.getDebugHeapInfo(debugInfo);
+  ASSERT_EQ(0u, gc.numGCs());
+  ASSERT_EQ(0u, debugInfo.numAllocatedObjects);
+  ASSERT_EQ(0u, debugInfo.numReachableObjects);
+  ASSERT_EQ(0u, debugInfo.numCollectedObjects);
+
+  GCCell *cell = Dummy::create(rt);
+  rt.pointerRoots.push_back(&cell);
+
+  Dummy::create(rt);
+
+  gc.getDebugHeapInfo(debugInfo);
+  ASSERT_EQ(0u, gc.numGCs());
+  EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
+
+  gc.youngGenCollect();
+
+  gc.getDebugHeapInfo(debugInfo);
+  EXPECT_EQ(1u, gc.numGCs());
+  EXPECT_EQ(1u, debugInfo.numAllocatedObjects);
+  EXPECT_EQ(1u, debugInfo.numReachableObjects);
+  EXPECT_EQ(1u, debugInfo.numCollectedObjects);
+}
+
+#endif // HERMES_GC_GENERATIONAL || HERMES_GC_NONCONTIG_GENERATIONAL
+#endif // !NDEBUG
+
+TEST_F(GCBasicsTest, VariableSizeRuntimeCellOffsetTest) {
+  auto *cell = Array::create(rt, 1);
+  EXPECT_EQ(cell->getAllocatedSize(), heapAlignSize(Array::allocSize(1)));
+}
+
+TEST_F(GCBasicsTest, TestFixedRuntimeCell) {
+  auto *cell = Dummy::create(rt);
+  EXPECT_EQ(cell->getAllocatedSize(), heapAlignSize(sizeof(Dummy)));
+}
+
+/// Test that the extra bytes in the heap are reported correctly.
+TEST_F(GCBasicsTest, ExtraBytes) {
+  auto &gc = rt.gc;
+
+  {
+    GCBase::HeapInfo info;
+    (void)Dummy::create(rt);
+    gc.getHeapInfoWithMallocSize(info);
+    // Since there have been no collections, and there is one Dummy in the heap,
+    // it should be exactly equal to the number returned by getExtraSize.
+    EXPECT_EQ(info.mallocSizeEstimate, getExtraSize(nullptr));
+  }
+
+  {
+    GCBase::HeapInfo info;
+    (void)Dummy::create(rt);
+    gc.getHeapInfoWithMallocSize(info);
+    EXPECT_EQ(info.mallocSizeEstimate, getExtraSize(nullptr) * 2);
+  }
+}
+
+#ifdef HERMESVM_GCCELL_ID
+/// Test that the id is set to a unique number for each allocated object.
+TEST_F(GCBasicsTest, TestIDExists) {
+  auto *cell = Dummy::create(rt);
+  auto id1 = cell->getDebugAllocationId();
+  cell = Dummy::create(rt);
+  auto id2 = cell->getDebugAllocationId();
+  EXPECT_NE(id1, id2);
+}
+#endif
+
+} // namespace

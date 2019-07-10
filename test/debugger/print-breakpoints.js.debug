@@ -1,0 +1,10 @@
+break print-breakpoints.js 13 3
+break print-breakpoints.js 14
+break 15 3
+disable 1
+disable 2
+info breakpoints
+delete 1
+delete 3
+info breakpoints
+continue
