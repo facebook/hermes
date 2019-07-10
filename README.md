@@ -1,9 +1,9 @@
-# Hermes JS VM
+# Hermes JS Engine
 [![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebook/hermes/blob/master/LICENSE)
 [![npm version](https://img.shields.io/npm/v/hermesvm.svg?style=flat)](https://www.npmjs.com/package/hermesvm)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/facebook/hermes/blob/master/CONTRIBUTING.md)
 
-Hermes is a JavaScript virtual machine optimized for fast start up of
+Hermes is a JavaScript engine optimized for fast start up of
 [React Native](https://facebook.github.io/react-native/) apps on Android.
 It features ahead-of-time static optimization and compact bytecode.
 
@@ -28,7 +28,7 @@ make changes to Hermes: adding features, fixing bugs, etc.
 
 ### Building compiler and REPL
 
-The following steps allow you to build and run Hermes on OS X and Linux.
+The following steps allow you to build and run Hermes on macOS and Linux.
 You will be able to run Hermes compiler and execute generated Hermes bytecode
 on the host platform (your computer). Later, we will describe how to build
 Hermes library that runs on Android.
@@ -59,9 +59,9 @@ follow the steps below:
 
 ### Running and testing compiler and REPL
 
-After compiling the project, the vm driver binary will be located in the `/bin`
+After compiling the project, the Hermes driver binary will be located in the `/bin`
 directory under the name `./bin/hermes`.  Run `./bin/hermes --help` to learn
-more about using the vm test driver.
+more about using the Hermes driver.
 
 To run the tests run the `check-hermes` target. If you are using the default
 build system, ninja, then the command to run the tests is `ninja check-hermes`.
@@ -155,4 +155,4 @@ Read our [contributing guide] to learn about our development process, how to pro
 
 ### License
 
-React is [MIT licensed](./LICENSE).
+Hermes is [MIT licensed](./LICENSE).

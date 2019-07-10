@@ -6,7 +6,7 @@ title: Design
 
 ## Hermes Design Document
 
-This is the design document for the Hermes VM.
+This is the design document for the Hermes Engine.
 
 ## JSON estree parser
 
@@ -24,7 +24,7 @@ described in a separate document.
 The bytecode is a register-based bytecode. The number of registers is
 infinite, but there are some restrictions on the registers. For example,
 registers that are allocated to call instructions must be consecutive, and most
-instructions only accept an 8-bit register index. 
+instructions only accept an 8-bit register index.
 
 The first phase of bytecode generation is lowering of some instructions to
 target-specific instructions. Next, the register allocator allocates
@@ -82,8 +82,8 @@ and patch all of the locations that refer to previously unresolved addresses.
 Hermes bytecode adopts variable-length instructions. Each operand to a bytecode
 instruction has a fixed-type and width, defined by the opcode. For instance,
 Jmp takes a 1-byte offset as the jump target, while JmpLong takes a 4-byte
-offset as the jump target.  Fixed-type/width instructions allow us to decode 
-them efficiently in the interpreter. 
+offset as the jump target.  Fixed-type/width instructions allow us to decode
+them efficiently in the interpreter.
 However we are trading off with an increasing number of
 opcodes to handle different operand widths (e.g. two Jmp opcodes instead of
 one). We believe that we are able to avoid opcode explosion by generating the
@@ -109,7 +109,7 @@ introduce a few more opcodes which could slow down the interpreter.
 Non-local variables are variables from different scopes/environments. Without a
 compiler, accessing non-local variables in JavaScript usually means a scope
 lookup (i.e. locating the closest scope in the scope chain that defines the
-variable), followed by a symbol lookup in that scope. 
+variable), followed by a symbol lookup in that scope.
 However with a compiler, it is possible to statically determine the scope of
 every variable, and hence there is no need for a real scope lookup. In Hermes
 backend, for each non-local variable access, we simply calculate the delta
@@ -218,4 +218,3 @@ JSFunction keeps the backing bytecode alive.
 ## Interpreter
 
 ## Garbage Collector
-

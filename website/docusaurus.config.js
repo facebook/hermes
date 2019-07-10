@@ -8,7 +8,7 @@
 module.exports = {
   title: 'Hermes',
   tagline: 'Hermes is a JavaScript engine optimized for React Native.',
-  url: 'https://hermesvm.io',
+  url: 'https://facebook.github.io/hermes',
   baseUrl: '/',
   favicon: 'img/favicon.ico',
   themeConfig: {
