@@ -42,6 +42,15 @@ module.exports = {
             },
           ],
         },
+        {
+          title: 'Social',
+          items: [
+            {
+              label: 'Twitter',
+              to: 'https://twitter.com/HermesEngine',
+            },
+          ],
+        },
       ],
       logo: {
         alt: 'Facebook Open Source Logo',
