@@ -1,0 +1,652 @@
+{
+  "entrypoints": [
+    "main"
+  ],
+  "origins": {
+    "vendors": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      0
+    ],
+    "@theme/BlogTagsPostsPage": [
+      0,
+      2,
+      3,
+      4,
+      1
+    ],
+    "@theme/BlogTagsListPage": [
+      0,
+      2,
+      3,
+      4,
+      1
+    ],
+    "@theme/BlogPostPage": [
+      0,
+      2,
+      3,
+      4,
+      1
+    ],
+    "@theme/DocPage": [
+      0,
+      2,
+      3,
+      4,
+      1
+    ],
+    "@theme/DocItem": [
+      0,
+      2,
+      3,
+      4,
+      1
+    ],
+    "@theme/BlogListPage": [
+      0,
+      2,
+      3,
+      4,
+      1
+    ],
+    "@theme/NotFound": [
+      0,
+      2,
+      3,
+      4,
+      1
+    ],
+    "react-helmet": [
+      0,
+      1,
+      3,
+      4,
+      2
+    ],
+    "prism-react-renderer": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "/Users/pca/github/hermes/website/src/pages/index.js": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "/Users/pca/github/hermes/website/blog/2019-05-28-hola.md": [
+      0,
+      5
+    ],
+    "/Users/pca/github/hermes/website/blog/2019-05-29-hello-world.md": [
+      0,
+      6
+    ],
+    "/Users/pca/github/hermes/website/blog/2019-05-30-welcome.md": [
+      0,
+      7
+    ],
+    "/Users/pca/github/hermes/website/blog/2019-05-29-hello-world.md?truncated=true": [
+      0,
+      8
+    ],
+    "/Users/pca/github/hermes/website/blog/2019-05-28-hola.md?truncated=true": [
+      0,
+      9
+    ],
+    "/Users/pca/github/hermes/website/blog/2019-05-30-welcome.md?truncated=true": [
+      0,
+      10
+    ],
+    "/Users/pca/github/hermes/doc/BuildingAndRunning.md": [
+      0,
+      11
+    ],
+    "/Users/pca/github/hermes/doc/CodingStandards.md": [
+      0,
+      12
+    ],
+    "/Users/pca/github/hermes/doc/Design.md": [
+      0,
+      13
+    ],
+    "/Users/pca/github/hermes/doc/Features.md": [
+      0,
+      14
+    ],
+    "/Users/pca/github/hermes/doc/IR.md": [
+      0,
+      15
+    ],
+    "/Users/pca/github/hermes/doc/Modules.md": [
+      0,
+      16
+    ],
+    "/Users/pca/github/hermes/doc/Optimizer.md": [
+      0,
+      17
+    ],
+    "/Users/pca/github/hermes/doc/ReactNativeIntegration.md": [
+      0,
+      18
+    ],
+    "/Users/pca/github/hermes/doc/Strings.md": [
+      0,
+      19
+    ],
+    "/Users/pca/github/hermes/doc/VM.md": [
+      0,
+      20
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-docs/docs-b5f.json": [
+      21
+    ],
+    "main": [
+      42,
+      22
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-pages/index.json": [
+      23
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-blog/blog-2019-05-30-welcome-4e0.json": [
+      24
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-blog/blog-c06.json": [
+      25
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-blog/blog-tags-docusaurus-0e0.json": [
+      26
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-blog/blog-tags-facebook-038.json": [
+      27
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-blog/blog-tags-hello-039.json": [
+      28
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-blog/blog-tags-hola-ea2.json": [
+      29
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-docs/docs-building-and-running-4ba.json": [
+      30
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-docs/docs-coding-standards-479.json": [
+      31
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-docs/docs-design-727.json": [
+      32
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-docs/docs-features-852.json": [
+      33
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-docs/docs-ir-69d.json": [
+      34
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-docs/docs-modules-27b.json": [
+      35
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-docs/docs-optimizer-d6a.json": [
+      36
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-docs/docs-react-native-integration-74c.json": [
+      37
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-docs/docs-strings-aec.json": [
+      38
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-docs/docs-vm-4ec.json": [
+      39
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-blog/blog-2019-05-28-hola-af7.json": [
+      40
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-blog/blog-2019-05-29-hello-world-826.json": [
+      41
+    ],
+    "runtime~main": [
+      22,
+      42
+    ],
+    "/Users/pca/github/hermes/website/.docusaurus/docusaurus-plugin-content-blog/blog-tags-tags-4c2.json": [
+      43
+    ]
+  },
+  "assets": {
+    "0": {
+      "js": [
+        {
+          "file": "vendors.e4e011503d47601f3e5c.js",
+          "hash": "e4e011503d47601f3e5c",
+          "publicPath": "/vendors.e4e011503d47601f3e5c.js"
+        }
+      ]
+    },
+    "1": {
+      "css": [
+        {
+          "file": "docusaurus.f92c01d92a44b700cc3d.css",
+          "hash": "f92c01d92a44b700cc3d",
+          "publicPath": "/docusaurus.f92c01d92a44b700cc3d.css"
+        }
+      ],
+      "js": [
+        {
+          "file": "docusaurus.f92c01d92a44b700cc3d.js",
+          "hash": "f92c01d92a44b700cc3d",
+          "publicPath": "/docusaurus.f92c01d92a44b700cc3d.js"
+        }
+      ]
+    },
+    "2": {
+      "js": [
+        {
+          "file": "react-helmet.082c2b7a403549d4d09f.js",
+          "hash": "082c2b7a403549d4d09f",
+          "publicPath": "/react-helmet.082c2b7a403549d4d09f.js"
+        }
+      ]
+    },
+    "3": {
+      "js": [
+        {
+          "file": "prism-react-renderer.738854e9c28f5bafcbc3.js",
+          "hash": "738854e9c28f5bafcbc3",
+          "publicPath": "/prism-react-renderer.738854e9c28f5bafcbc3.js"
+        }
+      ]
+    },
+    "4": {
+      "css": [
+        {
+          "file": "component---users-pca-github-hermes-website-src-pages-index-jse-4-e-0ed.3ec1b92966fb04f87afd.css",
+          "hash": "3ec1b92966fb04f87afd",
+          "publicPath": "/component---users-pca-github-hermes-website-src-pages-index-jse-4-e-0ed.3ec1b92966fb04f87afd.css"
+        }
+      ],
+      "js": [
+        {
+          "file": "component---users-pca-github-hermes-website-src-pages-index-jse-4-e-0ed.3ec1b92966fb04f87afd.js",
+          "hash": "3ec1b92966fb04f87afd",
+          "publicPath": "/component---users-pca-github-hermes-website-src-pages-index-jse-4-e-0ed.3ec1b92966fb04f87afd.js"
+        }
+      ]
+    },
+    "5": {
+      "js": [
+        {
+          "file": "content---blog-2019-05-28-hola-986-a15.c41fdd03ab984183139e.js",
+          "hash": "c41fdd03ab984183139e",
+          "publicPath": "/content---blog-2019-05-28-hola-986-a15.c41fdd03ab984183139e.js"
+        }
+      ]
+    },
+    "6": {
+      "js": [
+        {
+          "file": "content---blog-2019-05-29-hello-world-2-c-2-d4e.3c0d779d45bc004d49c7.js",
+          "hash": "3c0d779d45bc004d49c7",
+          "publicPath": "/content---blog-2019-05-29-hello-world-2-c-2-d4e.3c0d779d45bc004d49c7.js"
+        }
+      ]
+    },
+    "7": {
+      "js": [
+        {
+          "file": "content---blog-2019-05-30-welcome-00-c-d9e.33dd6101d655465c0734.js",
+          "hash": "33dd6101d655465c0734",
+          "publicPath": "/content---blog-2019-05-30-welcome-00-c-d9e.33dd6101d655465c0734.js"
+        }
+      ]
+    },
+    "8": {
+      "js": [
+        {
+          "file": "content---blog-341-9fb.dc4f2e90c05ed08475e7.js",
+          "hash": "dc4f2e90c05ed08475e7",
+          "publicPath": "/content---blog-341-9fb.dc4f2e90c05ed08475e7.js"
+        }
+      ]
+    },
+    "9": {
+      "js": [
+        {
+          "file": "content---blog-5-a-2-af2.cdd78b45f182e4ea815f.js",
+          "hash": "cdd78b45f182e4ea815f",
+          "publicPath": "/content---blog-5-a-2-af2.cdd78b45f182e4ea815f.js"
+        }
+      ]
+    },
+    "10": {
+      "js": [
+        {
+          "file": "content---blog-660-ca1.a0b0944234e47373c223.js",
+          "hash": "a0b0944234e47373c223",
+          "publicPath": "/content---blog-660-ca1.a0b0944234e47373c223.js"
+        }
+      ]
+    },
+    "11": {
+      "js": [
+        {
+          "file": "content---docs-building-and-runningf-5-f-f72.2be2cfe158f59dd3ef4a.js",
+          "hash": "2be2cfe158f59dd3ef4a",
+          "publicPath": "/content---docs-building-and-runningf-5-f-f72.2be2cfe158f59dd3ef4a.js"
+        }
+      ]
+    },
+    "12": {
+      "js": [
+        {
+          "file": "content---docs-coding-standards-69-e-28a.7b5fc9c91887ec9c8ca4.js",
+          "hash": "7b5fc9c91887ec9c8ca4",
+          "publicPath": "/content---docs-coding-standards-69-e-28a.7b5fc9c91887ec9c8ca4.js"
+        }
+      ]
+    },
+    "13": {
+      "js": [
+        {
+          "file": "content---docs-design-876-b60.c4fd7caa194aaf147cd0.js",
+          "hash": "c4fd7caa194aaf147cd0",
+          "publicPath": "/content---docs-design-876-b60.c4fd7caa194aaf147cd0.js"
+        }
+      ]
+    },
+    "14": {
+      "js": [
+        {
+          "file": "content---docs-featuresffe-991.baa9aaebfc1c5f132c73.js",
+          "hash": "baa9aaebfc1c5f132c73",
+          "publicPath": "/content---docs-featuresffe-991.baa9aaebfc1c5f132c73.js"
+        }
+      ]
+    },
+    "15": {
+      "js": [
+        {
+          "file": "content---docs-irfac-7ea.d0fe789815a3347256b0.js",
+          "hash": "d0fe789815a3347256b0",
+          "publicPath": "/content---docs-irfac-7ea.d0fe789815a3347256b0.js"
+        }
+      ]
+    },
+    "16": {
+      "js": [
+        {
+          "file": "content---docs-modules-7-aa-194.ecd01f599bf21cc2720b.js",
+          "hash": "ecd01f599bf21cc2720b",
+          "publicPath": "/content---docs-modules-7-aa-194.ecd01f599bf21cc2720b.js"
+        }
+      ]
+    },
+    "17": {
+      "js": [
+        {
+          "file": "content---docs-optimizer-7-a-9-a4c.f5d2442ad6823069e60c.js",
+          "hash": "f5d2442ad6823069e60c",
+          "publicPath": "/content---docs-optimizer-7-a-9-a4c.f5d2442ad6823069e60c.js"
+        }
+      ]
+    },
+    "18": {
+      "js": [
+        {
+          "file": "content---docs-react-native-integrationd-31-486.9d0696f55ced5ab061ea.js",
+          "hash": "9d0696f55ced5ab061ea",
+          "publicPath": "/content---docs-react-native-integrationd-31-486.9d0696f55ced5ab061ea.js"
+        }
+      ]
+    },
+    "19": {
+      "js": [
+        {
+          "file": "content---docs-strings-1-f-1-063.9d0e60a57c8420f4116d.js",
+          "hash": "9d0e60a57c8420f4116d",
+          "publicPath": "/content---docs-strings-1-f-1-063.9d0e60a57c8420f4116d.js"
+        }
+      ]
+    },
+    "20": {
+      "js": [
+        {
+          "file": "content---docs-vmc-44-de9.a6444390252a67a14823.js",
+          "hash": "a6444390252a67a14823",
+          "publicPath": "/content---docs-vmc-44-de9.a6444390252a67a14823.js"
+        }
+      ]
+    },
+    "21": {
+      "js": [
+        {
+          "file": "docsMetadata---docs-96-f-459.eea88a57a2229eba5c14.js",
+          "hash": "eea88a57a2229eba5c14",
+          "publicPath": "/docsMetadata---docs-96-f-459.eea88a57a2229eba5c14.js"
+        }
+      ]
+    },
+    "22": {
+      "css": [
+        {
+          "file": "main.71690cdf988dc3cc3d7c.css",
+          "hash": "71690cdf988dc3cc3d7c",
+          "publicPath": "/main.71690cdf988dc3cc3d7c.css"
+        }
+      ],
+      "js": [
+        {
+          "file": "main.71690cdf988dc3cc3d7c.js",
+          "hash": "71690cdf988dc3cc3d7c",
+          "publicPath": "/main.71690cdf988dc3cc3d7c.js"
+        }
+      ]
+    },
+    "23": {
+      "js": [
+        {
+          "file": "metadata---832-5a1.174db707948a601971e8.js",
+          "hash": "174db707948a601971e8",
+          "publicPath": "/metadata---832-5a1.174db707948a601971e8.js"
+        }
+      ]
+    },
+    "24": {
+      "js": [
+        {
+          "file": "metadata---blog-2019-05-30-welcome-00-e-176.ef2f171118487cf88ecb.js",
+          "hash": "ef2f171118487cf88ecb",
+          "publicPath": "/metadata---blog-2019-05-30-welcome-00-e-176.ef2f171118487cf88ecb.js"
+        }
+      ]
+    },
+    "25": {
+      "js": [
+        {
+          "file": "metadata---blog-8-a-9-3b4.a5800579197ec44df1b3.js",
+          "hash": "a5800579197ec44df1b3",
+          "publicPath": "/metadata---blog-8-a-9-3b4.a5800579197ec44df1b3.js"
+        }
+      ]
+    },
+    "26": {
+      "js": [
+        {
+          "file": "metadata---blog-tags-docusaurus-88-e-ec6.ddec69e0e45795e209f4.js",
+          "hash": "ddec69e0e45795e209f4",
+          "publicPath": "/metadata---blog-tags-docusaurus-88-e-ec6.ddec69e0e45795e209f4.js"
+        }
+      ]
+    },
+    "27": {
+      "js": [
+        {
+          "file": "metadata---blog-tags-facebook-3-dc-2a7.14274f9d18db526d0760.js",
+          "hash": "14274f9d18db526d0760",
+          "publicPath": "/metadata---blog-tags-facebook-3-dc-2a7.14274f9d18db526d0760.js"
+        }
+      ]
+    },
+    "28": {
+      "js": [
+        {
+          "file": "metadata---blog-tags-hello-5-e-9-a6f.ac44553b03d7435aad21.js",
+          "hash": "ac44553b03d7435aad21",
+          "publicPath": "/metadata---blog-tags-hello-5-e-9-a6f.ac44553b03d7435aad21.js"
+        }
+      ]
+    },
+    "29": {
+      "js": [
+        {
+          "file": "metadata---blog-tags-hola-16-c-449.c0619b9ecd018c113e6a.js",
+          "hash": "c0619b9ecd018c113e6a",
+          "publicPath": "/metadata---blog-tags-hola-16-c-449.c0619b9ecd018c113e6a.js"
+        }
+      ]
+    },
+    "30": {
+      "js": [
+        {
+          "file": "metadata---docs-building-and-running-2-e-7-aec.1f1e23970058426486d5.js",
+          "hash": "1f1e23970058426486d5",
+          "publicPath": "/metadata---docs-building-and-running-2-e-7-aec.1f1e23970058426486d5.js"
+        }
+      ]
+    },
+    "31": {
+      "js": [
+        {
+          "file": "metadata---docs-coding-standardscdf-f10.73c4859c845db96a02a6.js",
+          "hash": "73c4859c845db96a02a6",
+          "publicPath": "/metadata---docs-coding-standardscdf-f10.73c4859c845db96a02a6.js"
+        }
+      ]
+    },
+    "32": {
+      "js": [
+        {
+          "file": "metadata---docs-design-297-3f3.73e7c4b90d090a139115.js",
+          "hash": "73e7c4b90d090a139115",
+          "publicPath": "/metadata---docs-design-297-3f3.73e7c4b90d090a139115.js"
+        }
+      ]
+    },
+    "33": {
+      "js": [
+        {
+          "file": "metadata---docs-features-558-69b.840690062d226342beec.js",
+          "hash": "840690062d226342beec",
+          "publicPath": "/metadata---docs-features-558-69b.840690062d226342beec.js"
+        }
+      ]
+    },
+    "34": {
+      "js": [
+        {
+          "file": "metadata---docs-ir-1-a-3-52f.bf8e8518122779e3491c.js",
+          "hash": "bf8e8518122779e3491c",
+          "publicPath": "/metadata---docs-ir-1-a-3-52f.bf8e8518122779e3491c.js"
+        }
+      ]
+    },
+    "35": {
+      "js": [
+        {
+          "file": "metadata---docs-modules-568-6e2.e2e15f9683028de1b856.js",
+          "hash": "e2e15f9683028de1b856",
+          "publicPath": "/metadata---docs-modules-568-6e2.e2e15f9683028de1b856.js"
+        }
+      ]
+    },
+    "36": {
+      "js": [
+        {
+          "file": "metadata---docs-optimizer-682-a9e.c8afe54580d96b526a53.js",
+          "hash": "c8afe54580d96b526a53",
+          "publicPath": "/metadata---docs-optimizer-682-a9e.c8afe54580d96b526a53.js"
+        }
+      ]
+    },
+    "37": {
+      "js": [
+        {
+          "file": "metadata---docs-react-native-integration-083-b97.40f374553383f741d221.js",
+          "hash": "40f374553383f741d221",
+          "publicPath": "/metadata---docs-react-native-integration-083-b97.40f374553383f741d221.js"
+        }
+      ]
+    },
+    "38": {
+      "js": [
+        {
+          "file": "metadata---docs-stringse-6-c-887.0852dede0bc26f4b8d89.js",
+          "hash": "0852dede0bc26f4b8d89",
+          "publicPath": "/metadata---docs-stringse-6-c-887.0852dede0bc26f4b8d89.js"
+        }
+      ]
+    },
+    "39": {
+      "js": [
+        {
+          "file": "metadata---docs-vm-91-c-2d7.271c593fa0df84fc8f61.js",
+          "hash": "271c593fa0df84fc8f61",
+          "publicPath": "/metadata---docs-vm-91-c-2d7.271c593fa0df84fc8f61.js"
+        }
+      ]
+    },
+    "40": {
+      "js": [
+        {
+          "file": "nextItem---blog-2019-05-29-hello-world-892-9b0.509a4da9d4155f842589.js",
+          "hash": "509a4da9d4155f842589",
+          "publicPath": "/nextItem---blog-2019-05-29-hello-world-892-9b0.509a4da9d4155f842589.js"
+        }
+      ]
+    },
+    "41": {
+      "js": [
+        {
+          "file": "nextItem---blog-2019-05-30-welcome-0-b-2-d9f.c3838f4f9077ba370312.js",
+          "hash": "c3838f4f9077ba370312",
+          "publicPath": "/nextItem---blog-2019-05-30-welcome-0-b-2-d9f.c3838f4f9077ba370312.js"
+        }
+      ]
+    },
+    "42": {
+      "js": [
+        {
+          "file": "runtime~main.226376db23de8d5acb39.js",
+          "hash": "226376db23de8d5acb39",
+          "publicPath": "/runtime~main.226376db23de8d5acb39.js"
+        }
+      ]
+    },
+    "43": {
+      "js": [
+        {
+          "file": "tags---blog-tags-090-dbe.9b54e78f07c702d985ff.js",
+          "hash": "9b54e78f07c702d985ff",
+          "publicPath": "/tags---blog-tags-090-dbe.9b54e78f07c702d985ff.js"
+        }
+      ]
+    }
+  }
+}

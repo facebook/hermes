@@ -1,0 +1,1 @@
+(window.webpackJsonp=window.webpackJsonp||[]).push([[34],{64:function(e){e.exports={id:"ir",title:"IR",description:"## Design of the Hermes high-level IR",source:"/Users/pca/github/hermes/doc/IR.md",permalink:"/docs/ir"}}}]);

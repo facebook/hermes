@@ -1,0 +1,1 @@
+(window.webpackJsonp=window.webpackJsonp||[]).push([[35],{48:function(e){e.exports={id:"modules",title:"Modules",description:"# Hermes Modules",source:"/Users/pca/github/hermes/doc/Modules.md",permalink:"/docs/modules"}}}]);
