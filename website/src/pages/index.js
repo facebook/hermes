@@ -16,28 +16,31 @@ import styles from './styles.module.css';
 const features = [
   {
     title: <>Faster App Launch</>,
-    //imageUrl: 'img/undraw_docusaurus_mountain.svg',
+    imageUrl: 'img/undraw_fast_loading.svg',
     description: (
       <>
-        Hermes-powered apps launch faster, thanks to build-time precompilation of JavaScript into efficient bytecode.
+        Hermes-powered apps launch faster, thanks to build-time precompilation
+        of JavaScript into efficient bytecode.
       </>
     ),
   },
   {
     title: <>Optimized for Mobile</>,
-    //imageUrl: 'img/undraw_docusaurus_tree.svg',
+    imageUrl: 'img/undraw_order_confirmed.svg',
     description: (
       <>
-        Hermes is small in APK size, lean on memory, and starts instantly. It won't weigh your app down.
+        Hermes is small in APK size, lean on memory, and starts instantly. It
+        won't weigh your app down.
       </>
     ),
   },
   {
     title: <>Easy Integration</>,
-    //imageUrl: 'img/undraw_docusaurus_react.svg',
+    imageUrl: 'img/undraw_product_teardown.svg',
     description: (
       <>
-        It's simple to get started with Hermes in React Native apps. Hermes is open source and implements JavaScript standards.
+        It's simple to get started with Hermes in React Native apps. Hermes is
+        open source and implements JavaScript standards.
       </>
     ),
   },
@@ -45,11 +48,12 @@ const features = [
 
 function Home() {
   const context = useDocusaurusContext();
-  const {siteConfig = {}} = context;
+  const { siteConfig = {} } = context;
   return (
     <Layout
       title="Hermes"
-      description="JavaScript engine optimized for React Native">
+      description="JavaScript engine optimized for React Native"
+    >
       <header className={classnames('hero hero--primary', styles.heroBanner)}>
         <div className="container">
           <h1 className="hero__title">{siteConfig.title}</h1>
@@ -57,10 +61,11 @@ function Home() {
           <div className={styles.buttons}>
             <Link
               className={classnames(
-                'button button--outline button--secondary button--lg',
+                'button button--secondary button--lg',
                 styles.getStarted,
               )}
-              to={'https://facebook.github.io/react-native/docs/hermes'}>
+              to={'https://facebook.github.io/react-native/docs/hermes'}
+            >
               Start Using Hermes
             </Link>
           </div>
@@ -71,12 +76,13 @@ function Home() {
           <section className={styles.features}>
             <div className="container">
               <div className="row">
-                {features.map(({imageUrl, title, description}, idx) => (
+                {features.map(({ imageUrl, title, description }, idx) => (
                   <div
                     key={idx}
-                    className={classnames('col col--4', styles.feature)}>
+                    className={classnames('col col--4', styles.feature)}
+                  >
                     {imageUrl && (
-                      <div className="text--center">
+                      <div className="text--center margin-bottom--lg">
                         <img
                           className={styles.featureImage}
                           src={withBaseUrl(imageUrl)}
