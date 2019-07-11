@@ -48,6 +48,9 @@ CallResult<HermesValue> toNumber_RJS(Runtime *runtime, Handle<> valueHandle);
 /// ES6 7.1.15
 CallResult<HermesValue> toLength(Runtime *runtime, Handle<> valueHandle);
 
+// a variant of toLength which returns a uint64_t
+CallResult<uint64_t> toLengthU64(Runtime *runtime, Handle<> valueHandle);
+
 /// ES 2018 7.1.17
 CallResult<HermesValue> toIndex(Runtime *runtime, Handle<> valueHandle);
 

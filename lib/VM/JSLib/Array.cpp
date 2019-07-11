@@ -948,11 +948,11 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = lenRes->getNumber();
+  double len = *lenRes;
 
   // 5. Let relativeTarget be ToInteger(target).
   // 6. ReturnIfAbrupt(relativeTarget).
@@ -1111,11 +1111,11 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint64_t len = intRes->getNumber();
+  uint64_t len = *intRes;
 
   // Use comma for separator if the first argument is undefined.
   auto separator = args.getArg(0).isUndefined()
@@ -1214,11 +1214,11 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint64_t len = intRes->getNumber();
+  uint64_t len = *intRes;
 
   if (len == 0) {
     if (LLVM_UNLIKELY(
@@ -1469,11 +1469,11 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint64_t len = intRes->getNumber();
+  uint64_t len = *intRes;
 
   if (len == 0) {
     // Need to set length to 0 per spec.
@@ -1577,15 +1577,14 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = intRes->getNumber();
+  double len = *lenRes;
 
-  if (LLVM_UNLIKELY(
-          (intRes = toInteger(runtime, args.getArgHandle(runtime, 0))) ==
-          ExecutionStatus::EXCEPTION)) {
+  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   // Start index. If negative, then offset from the right side of the array.
@@ -1904,11 +1903,11 @@ arrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint64_t len = intRes->getNumber();
+  uint64_t len = *intRes;
 
   StandardSortModel sm(runtime, O, compareFn);
 
@@ -1935,15 +1934,14 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = intRes->getNumber();
+  double len = *lenRes;
 
-  if (LLVM_UNLIKELY(
-          (intRes = toInteger(runtime, args.getArgHandle(runtime, 0))) ==
-          ExecutionStatus::EXCEPTION)) {
+  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   double relativeStart = intRes->getNumber();
@@ -2209,11 +2207,11 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint64_t len = intRes->getNumber();
+  uint64_t len = *intRes;
   size_t argCount = args.getArgCount();
 
   // 4. If argCount > 0, then
@@ -2320,18 +2318,17 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = intRes->getNumber();
+  double len = *lenRes;
 
   // Relative index to start the search at.
+  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 1));
   double n;
   if (args.getArgCount() > 1) {
-    if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(runtime, 1))) ==
-            ExecutionStatus::EXCEPTION)) {
+    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     n = intRes->getNumber();
@@ -2426,11 +2423,11 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint64_t len = intRes->getNumber();
+  uint64_t len = *intRes;
 
   auto callbackFn = args.dyncastArg<Callable>(runtime, 0);
   if (!callbackFn) {
@@ -2518,11 +2515,11 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint64_t len = intRes->getNumber();
+  uint64_t len = *intRes;
 
   auto callbackFn = args.dyncastArg<Callable>(runtime, 0);
   if (!callbackFn) {
@@ -2585,11 +2582,11 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint64_t len = intRes->getNumber();
+  uint64_t len = *intRes;
 
   auto callbackFn = args.dyncastArg<Callable>(runtime, 0);
   if (!callbackFn) {
@@ -2664,11 +2661,11 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint64_t len = intRes->getNumber();
+  uint64_t len = *intRes;
 
   auto callbackFn = args.dyncastArg<Callable>(runtime, 0);
   if (!callbackFn) {
@@ -2752,17 +2749,16 @@ arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = intRes->getNumber();
+  double len = *lenRes;
   // Get the value to be filled.
   MutableHandle<> value(runtime, args.getArg(0));
   // Get the relative start and end.
-  if (LLVM_UNLIKELY(
-          (intRes = toInteger(runtime, args.getArgHandle(runtime, 1))) ==
-          ExecutionStatus::EXCEPTION)) {
+  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 1));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   double relativeStart = intRes->getNumber();
@@ -2814,11 +2810,11 @@ arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = intRes->getNumber();
+  double len = *intRes;
 
   auto predicate =
       Handle<Callable>::dyn_vmcast(runtime, args.getArgHandle(runtime, 0));
@@ -2881,11 +2877,11 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = intRes->getNumber();
+  double len = *intRes;
 
   size_t argCount = args.getArgCount();
 
@@ -3020,11 +3016,11 @@ arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(lenPropRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLength(runtime, runtime->makeHandle(*lenPropRes));
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*lenPropRes));
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = lenRes->getNumber();
+  double len = *lenRes;
 
   // 3. If len is 0, return false.
   if (len == 0) {

@@ -544,6 +544,22 @@ CallResult<HermesValue> toLength(Runtime *runtime, Handle<> valueHandle) {
   return HermesValue::encodeDoubleValue(len);
 }
 
+CallResult<uint64_t> toLengthU64(Runtime *runtime, Handle<> valueHandle) {
+  constexpr double highestIntegralDouble =
+      ((uint64_t)1 << std::numeric_limits<double>::digits) - 1;
+  auto res = toInteger(runtime, valueHandle);
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto len = res->getNumber();
+  if (len <= 0) {
+    len = 0;
+  } else if (len > highestIntegralDouble) {
+    len = highestIntegralDouble;
+  }
+  return len;
+}
+
 CallResult<HermesValue> toIndex(Runtime *runtime, Handle<> valueHandle) {
   auto value = (valueHandle->isUndefined())
       ? runtime->makeHandle(HermesValue::encodeDoubleValue(0))
