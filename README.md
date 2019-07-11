@@ -56,7 +56,7 @@ Facebook has adopted a [Code of Conduct](./CODE_OF_CONDUCT) that we expect proje
 
 ### Contributing Guide
 
-Read our [contributing guide] to learn about our development process, how to propose bugfixes and improvements, and how to build and test your changes to Hermes.
+Read our [contributing guide](CONTRIBUTING.md) to learn about our development process, how to propose bugfixes and improvements, and how to build and test your changes to Hermes.
 
 ### License
 
