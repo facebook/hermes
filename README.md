@@ -48,7 +48,7 @@ echo "'use strict'; function hello() { print('Hello World'); } hello();" | ./bin
 
 ## Contributing
 
-The main purpose of this repository is to continue to evolve Hermes, making it faster and more efficient. We are grateful to the community for contributing bugfixes and improvements. Read below to learn how you can take part in improving React.
+The main purpose of this repository is to continue to evolve Hermes, making it faster and more efficient. We are grateful to the community for contributing bugfixes and improvements. Read below to learn how you can take part in improving Hermes.
 
 ### Code of Conduct
 
