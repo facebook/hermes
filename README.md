@@ -3,142 +3,47 @@
 [![npm version](https://img.shields.io/npm/v/hermesvm.svg?style=flat)](https://www.npmjs.com/package/hermesvm)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/facebook/hermes/blob/master/CONTRIBUTING.md)
 
-Hermes is a JavaScript engine optimized for fast start up of
-[React Native](https://facebook.github.io/react-native/) apps on Android.
-It features ahead-of-time static optimization and compact bytecode.
+Hermes is a JavaScript engine optimized for fast start up of [React Native](https://facebook.github.io/react-native/) apps on Android. It features ahead-of-time static optimization and compact bytecode.
 
-## Using Hermes in React Native
+If you're only interested in using pre-built Hermes in a new or existing React Native app, you do not need to follow this guide or have direct access to the Hermes source. Instead, just follow [these instructions to enable Hermes](https://facebook.github.io/react-native/docs/hermes).
 
-Head over to [React Native](https://facebook.github.io/react-native/)
-if you are looking to build a React Native app powered by Hermes,
-or migrate an existing React Native app to Hermes. You can find some
-guides below.
+If you want to know how to build and hack on Hermes directly, and/or integrate Hermes built from source into a React Native app then read on.
 
-* [Create a new React Native app powered by Hermes]
-  * Do we want to be explicit here that the app will continue to use JSC on iOS?
-* [Migrate a React Native app to use Hermes]
-* [Debug JS code in a React Native app powered by Hermes]
+The instructions here very briefly cover steps to build the Hermes CLI. They assume you have typical native development tools setup for your OS, and support for cmake and Ninja. For more details of required dependencies, building Hermes with different options, etc. follow these links instead:
 
-## Hacking on Hermes
+* [Building and Running Hermes](doc/BuildingAndRunning.md)
+* [Using a custom Hermes build in a React Native app](doc/ReactNativeIntegration.md)
 
-This section describes how to build Hermes from source code.
-This is not needed if you are trying to build a React Native
-app using Hermes. You don't need to read this unless you are trying to
-make changes to Hermes: adding features, fixing bugs, etc.
+To build a local debug version of the Hermes CLI tools the following steps should get you started on macOS/Linux:
 
-### Building compiler and REPL
-
-The following steps allow you to build and run Hermes on macOS and Linux.
-You will be able to run Hermes compiler and execute generated Hermes bytecode
-on the host platform (your computer). Later, we will describe how to build
-Hermes library that runs on Android.
-
-Hermes compiler and REPL builds and runs on Windows as well. See [Windows build
-instructions] for details.
-Note that, with Windows, you will not be able to build Hermes library that runs on Android.
-
-System requirements:
-
-* The project depends on the tools that are required to build LLVM (a C++ compiler, CMake, Python, etc)
-* The REPL uses 'libreadline' for editing, if it is installed.
-* `ICU_ROOT`
-
-Create a base directory to work in, e.g. `~/workspace`, and `cd` into it. Then
-follow the steps below:
-
-1. `export HERMES_WS_DIR="$PWD"`.
-2. Set `ICU_ROOT` environment variable to the location of ICU:
-   `export ICU_ROOT=......`.
-3. Clone Hermes: `git clone git@github.com:facebook/hermes.git`.
-4. Run `./hermes/utils/build_llvm.py` to download and build LLVM dependency.
-   This may take a while.
-5. Configure the build for the Hermes compiler and REPL for the host platform:
-   `./hermes/utils/configure.sh`. Set up environment variable `DISTRIBUTE=1`
-   for release build.
-6. Build the compiler and REPL: `( cd build_release && ninja github-cli-release )`
-
-### Running and testing compiler and REPL
-
-After compiling the project, the Hermes driver binary will be located in the `/bin`
-directory under the name `./bin/hermes`.  Run `./bin/hermes --help` to learn
-more about using the Hermes driver.
-
-To run the tests run the `check-hermes` target. If you are using the default
-build system, ninja, then the command to run the tests is `ninja check-hermes`.
-
-The default compilation mode is `Debug`. This means that the compiler itself is
-easy to debug because it has debug info, lots of assertions, and the
-optimizations are disabled. If you wish to benchmark the compiler or release it
-then you should compile the compiler in Release mode.
-
-When configuring the project add the flag `-DCMAKE_BUILD_TYPE=Release`. Refer to
-the LLVM build instructions for more details:
-
-    http://llvm.org/docs/GettingStarted.html
-
-To enable an ASan build, configure the project with the flag
-`-DLLVM_USE_SANITIZER=Address`.
-
-### Building Hermes for React Native
-
-Make sure you have followed instructions in `Building Hermes on host`.
-
-First make sure that the Android SDK and NDK are installed, and that the
-environment variables `ANDROID_SDK` and `ANDROID_NDK` are set. Here's an
-example:
-
-```
-$ echo "$ANDROID_SDK"
-/opt/android_sdk
-
-$ echo "$ANDROID_NDK"
-/opt/android_ndk/r15c
+```shell
+mkdir hermes_workingdir
+cd hermes_workingdir
+export HERMES_WS_DIR="$PWD"
+git clone git@github.com:facebook/hermes.git
+hermes/utils/build_llvm.py llvm llvm_build
+hermes/utils/configure.sh
+cd build
+ninja
 ```
 
-You also need node.js and babel.
+Or if you're using Windows, the following should get you going in a Git Bash shell:
 
-1. Cross-compile LLVM dependencies for all Android ABIs: `hermes/utils/crosscompile_llvm.sh`
-2. Compile libhermes for Android: ( cd hermes/android && gradle githubRelease )
-3. Build the hermesvm npm
-
+```shell
+mkdir hermes_workingdir
+cd hermes_workingdir
+export HERMES_WS_DIR="$PWD"
+git -c core.autocrlf=false clone git@github.com:facebook/hermes.git
+BUILD_SYSTEM='Visual Studio 16 2019' CMAKE_FLAGS='-A x64' hermes/utils/build_llvm.py --distribute llvm llvm_build
+CMAKE_FLAGS='-A x64 -DLLVM_ENABLE_LTO=OFF' hermes/utils/configure.sh 'Visual Studio 16 2019'
+cd build
+MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
 ```
-cp build_android/distributions/hermes-runtime-android-v*.tar.gz hermes/npm
-cp build_release/github/hermes-cli-*-v*.tar.gz hermes/npm
-(cd hermes/npm && yarn && yarn run prepack-dev && yarn link)
 
-# for release build (this will not work with the private repo, unless
-# you add a personal access token <https://github.com/settings/tokens>
-# to the URLs in fetch.js, like ?access_token=...)
-(TODO: it seems the content below is for internal use only?)
-# Create a github release
-# Update the release_version number in hermes/CMakeLists.txt
-# Add files to the github release.  This will require building on more than one machine:
-#   build_android/distributions/hermes-runtime-android-v<version>.tar.gz
-#   build_release/github/hermes-cli-darwin-v<version>.tar.gz
-#   build_release/github/hermes-cli-linux-v<version>.tar.gz
-# Update the release version and file digests in hermes/npm/package.json
-# (cd hermes/npm && yarn pack)
-# TODO: have travis automate this
+You will now be in a directory with the output of building Hermes into CLI tools. From here you can run a piece of JavaScript as follows:
 
-# 9. Clone react-native-hermes here
-git clone git@github.com:facebookexperimental/react-native-hermes.git
-# 10. Replace the RN template app version number (0.60.0-rc.1) with the path
-#    to your react-native-hermes directory.
-printf '%s\n' "%s|0.60.0-rc.1|file://${HERMES_WS_DIR:?}/react-native-hermes" wq |
-    ed react-native-hermes/template/package.json
-# 11. Fetch react-native-hermes' dependencies
-( cd react-native-hermes && yarn install )
-# 12. Create a React Native demo project from the react-native-hermes template
-npx @react-native-community/cli@2.0.0-alpha.16 init AwesomeProject --template "file://${HERMES_WS_DIR:?}/react-native-hermes"
-( cd AwesomeProject/node_modules/react-native && yarn link hermesvm )
-# 13. Build and run the demo project
-( cd AwesomeProject && react-native start ) &
-( cd AwesomeProject && npx @react-native-community/cli@2.0.0-alpha.16 run-android )
-# 14. Verify that you are using Hermes by checking that `typeof(HermesInternal)`
-# is `"object"` (and not `"undefined"`) in JavaScript.
-# 15. If you want to build RNTester:
-( cd react-native-github && yarn link hermesvm )
-( cd react-native-github && ./gradlew RNTester:android:app:installDebug )
+```shell
+echo "'use strict'; function hello() { print('Hello World'); } hello();" | ./bin/hermes
 ```
 
 ## Contributing
