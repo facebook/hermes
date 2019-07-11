@@ -7,8 +7,8 @@
 
 module.exports = {
   title: 'Hermes',
-  tagline: 'Hermes is a JavaScript engine optimized for React Native.',
-  url: 'https://facebook.github.io/hermes',
+  tagline: 'JavaScript engine optimized for React Native',
+  url: 'https://hermesengine.dev',
   baseUrl: '/',
   favicon: 'img/favicon.ico',
   themeConfig: {
@@ -19,8 +19,8 @@ module.exports = {
         src: 'img/logo.svg',
       },
       links: [
-        { to: 'docs/', label: 'Docs', position: 'left' },
-        { to: 'blog', label: 'Blog', position: 'left' },
+        //{ to: 'docs/', label: 'Docs', position: 'left' },
+        //{ to: 'blog', label: 'Blog', position: 'left' },
         {
           href: 'https://github.com/facebook/hermes',
           label: 'GitHub',
@@ -35,50 +35,12 @@ module.exports = {
           title: 'Docs',
           items: [
             {
-              label: 'Coding Standards',
-              to: 'docs/coding-standards',
+              label: 'Using Hermes in a React Native app',
+              to: 'https://facebook.github.io/react-native/docs/hermes',
             },
             {
-              label: 'Design',
-              to: 'docs/design',
-            },
-            {
-              label: 'IR',
-              to: 'docs/ir',
-            },
-            {
-              label: 'Modules',
-              to: 'docs/modules',
-            },
-            {
-              label: 'Optimizer',
-              to: 'docs/optimizer',
-            },
-            {
-              label: 'VM',
-              to: 'docs/vm',
-            },
-            {
-              label: 'Strings',
-              to: 'docs/strings',
-            },
-          ],
-        },
-        {
-          title: 'Community',
-          items: [
-            {
-              label: 'Discord',
-              href: 'https://discordapp.com/invite/docusaurus',
-            },
-          ],
-        },
-        {
-          title: 'Social',
-          items: [
-            {
-              label: 'Blog',
-              to: 'blog',
+              label: 'Hermes Development',
+              to: 'https://github.com/facebook/hermes',
             },
           ],
         },
