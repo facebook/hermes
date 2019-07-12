@@ -15,6 +15,10 @@ endif()
 include(CheckCXXCompilerFlag)
 include(CheckCXXSourceCompiles)
 
+# This must be consistent with the release_version in
+# android/build.gradle and npm/package.json
+set(HERMES_RELEASE_VERSION 0.1.0)
+
 # Project options.
 set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
   CACHE STRING
@@ -159,6 +163,9 @@ else()
 endif()
 
 set(DEFAULT_GCCELL_ID $<$<CONFIG:Debug>:ON>$<$<NOT:$<CONFIG:Debug>>:OFF>)
+
+# Make the HERMES_RELEASE_VERSION accessible for version printing in C++.
+add_definitions(-DHERMES_RELEASE_VERSION="${HERMES_RELEASE_VERSION}")
 
 add_definitions(-DHERMESVM_GC_${HERMESVM_GCKIND})
 if(HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT)
@@ -499,10 +506,6 @@ add_lit_testsuite(check-hermes "Running the Hermes regression tests"
 set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
 
 # This is how github release files are built.
-
-# This must be consistent with the release_version in
-# android/build.gradle and npm/package.json
-set(HERMES_RELEASE_VERSION 0.1.0)
 
 set(HERMES_GITHUB_DIR ${HERMES_BINARY_DIR}/github)
 string(TOLOWER ${CMAKE_SYSTEM_NAME} HERMES_GITHUB_SYSTEM_NAME)

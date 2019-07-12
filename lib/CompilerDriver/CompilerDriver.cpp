@@ -1664,6 +1664,9 @@ void printHermesVersion(
     const char *vmStr = "",
     bool features = true) {
   s << "Hermes JavaScript compiler" << vmStr << ".\n"
+#ifdef HERMES_RELEASE_VERSION
+    << "  Hermes release version: " << HERMES_RELEASE_VERSION << "\n"
+#endif
     << "  HBC bytecode version: " << hermes::hbc::BYTECODE_VERSION << "\n"
     << "\n";
   if (features) {
