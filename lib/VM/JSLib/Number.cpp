@@ -417,9 +417,10 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
   }
   double fDouble = intRes->getNumber();
 
-  if (LLVM_UNLIKELY(fDouble < 0 || fDouble > 20)) {
+  // 3. If f < 0 or f > 100, throw a RangeError exception.
+  if (LLVM_UNLIKELY(fDouble < 0 || fDouble > 100)) {
     return runtime->raiseRangeError(
-        "toFixed argument must be between 0 and 20");
+        "toFixed argument must be between 0 and 100");
   }
   /// Number of digits after the decimal point.
   /// Because we checked, 0 <= f <= 20.
@@ -559,10 +560,11 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
         runtime->getPredefinedString(Predefined::NegativeInfinity));
   }
 
+  // 8. If f < 0 or f > 100, throw a RangeError exception.
   if (LLVM_UNLIKELY(
-          !args.getArg(0).isUndefined() && (fDouble < 0 || fDouble > 20))) {
+          !args.getArg(0).isUndefined() && (fDouble < 0 || fDouble > 100))) {
     return runtime->raiseRangeError(
-        "toFixed argument must be between 0 and 20");
+        "toExponential argument must be between 0 and 20");
   }
   /// Number of digits after the decimal point.
   /// Because we checked, 0 <= f <= 20.
@@ -694,9 +696,10 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
         runtime->getPredefinedString(Predefined::NegativeInfinity));
   }
 
-  if (pDouble < 1 || pDouble > 21) {
+  // 8. If p < 1 or p > 100, throw a RangeError exception.
+  if (pDouble < 1 || pDouble > 100) {
     return runtime->raiseRangeError(
-        "toPrecision argument must be between 1 and 21");
+        "toPrecision argument must be between 1 and 100");
   }
   /// Number of significant digits in the result.
   /// Because we checked, 1 <= p <= 21.

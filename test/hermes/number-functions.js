@@ -186,11 +186,13 @@ print((0.0005).toFixed(3));
 // CHECK-NEXT: 0.001
 print((1234.567).toFixed(20));
 // CHECK-NEXT: 1234.56700000000000727596
+print((1234.567).toFixed(25));
+// CHECK-NEXT: 1234.5670000000000072759576142
 print((1000000000000000128).toFixed(0));
 // CHECK-NEXT: 1000000000000000128
 print((1000000000000000128.19238).toFixed(1));
 // CHECK-NEXT: 1000000000000000128.0
-try {(123).toFixed(100);} catch (e) {print('caught', e)}
+try {(123).toFixed(101);} catch (e) {print('caught', e)}
 // CHECK-NEXT: caught RangeError: {{.*}}
 try {(123).toFixed(-1);} catch (e) {print('caught', e)}
 // CHECK-NEXT: caught RangeError: {{.*}}
@@ -253,6 +255,8 @@ print((-1234.567).toExponential(7));
 // CHECK-NEXT: -1.2345670e+3
 print((-1234.567).toExponential(20));
 // CHECK-NEXT: -1.23456700000000000728e+3
+print((-1234.567).toExponential(25));
+// CHECK-NEXT: -1.2345670000000000072759576e+3
 print((.0015).toExponential());
 // CHECK-NEXT: 1.5e-3
 print((.0015).toExponential(0));
@@ -263,9 +267,9 @@ print((.0015).toExponential(2));
 // CHECK-NEXT: 1.50e-3
 print((.0015).toExponential(3));
 // CHECK-NEXT: 1.500e-3
-print((.0015).toExponential(20));
-// CHECK-NEXT: 1.50000000000000003123e-3
-try {(123).toExponential(100);} catch (e) {print('caught', e)}
+print((.0015).toExponential(25));
+// CHECK-NEXT: 1.5000000000000000312250226e-3
+try {(123).toExponential(101);} catch (e) {print('caught', e)}
 // CHECK-NEXT: caught RangeError: {{.*}}
 try {(123).toExponential(-1);} catch (e) {print('caught', e)}
 // CHECK-NEXT: caught RangeError: {{.*}}
@@ -328,6 +332,8 @@ print((-1234.567).toPrecision(8));
 // CHECK-NEXT: -1234.5670
 print((-1234.567).toPrecision(21));
 // CHECK-NEXT: -1234.56700000000000728
+print((-1234.567).toPrecision(25));
+// CHECK-NEXT: -1234.567000000000007275958
 print((.0015).toPrecision(1));
 // CHECK-NEXT: 0.002
 print((.0015).toPrecision(2));
@@ -338,7 +344,7 @@ print((-.000000015).toPrecision(2));
 // CHECK-NEXT: -1.5e-8
 try {print((123).toPrecision(0));} catch (e) {print('caught', e);}
 // CHECK-NEXT: caught RangeError: {{.*}}
-try {print((123).toPrecision(22));} catch (e) {print('caught', e);}
+try {print((123).toPrecision(101));} catch (e) {print('caught', e);}
 // CHECK-NEXT: caught RangeError: {{.*}}
 
 print('isFinite');
