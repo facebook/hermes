@@ -476,7 +476,7 @@ SwitchInst | _
 Description | The ‘switch‘ instruction is used to transfer control to one of different places.
 Example |  %0 = SwitchInst %input, %default, [%val0, %block0], [%val1, %block1] ..
 Arguments | The instruction accepts an input, a default block, and one or more pairs of value-destination values. The value must be a primitive JS type, and the destination must be a basic block within the current function.
-Semantics | The semantic of the instruction is identical to a squence of 'if' statements that compare the value of the input to each of the case statements. Repeating the same value is not allowed.
+Semantics | The semantic of the instruction is identical to a sequence of 'if' statements that compare the value of the input to each of the case statements. Repeating the same value is not allowed.
 Effects | May read and write memory.
 
 ### GetPNamesInst
@@ -505,7 +505,7 @@ CatchInst | _
 Description | This instruction catches an exception, and returns that exception.
 Example | %0 = CatchInst
 Arguments | This instruction does not have arguments.
-Sementics | This instruction will be generated for each catch block and for each finally block. The current exception will be returned. CatchInst can only show up at the beginning of a basic block. The coverage and depth inforamtion for the CatchInst will be constructed dynamically later during bytecode generation.
+Semantics | This instruction will be generated for each catch block and for each finally block. The current exception will be returned. CatchInst can only show up at the beginning of a basic block. The coverage and depth information for the CatchInst will be constructed dynamically later during bytecode generation.
 Effects | May read and write memory.
 
 ### ThrowInst
