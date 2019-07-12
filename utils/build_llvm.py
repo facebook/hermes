@@ -122,7 +122,7 @@ def which(cmd):
                     ):
                         return os.path.realpath(p_and_extension)
             else:
-                if os.path.exists(p) and os.access(p, os.X_OK):
+                if os.path.isfile(p) and os.access(p, os.X_OK):
                     return os.path.realpath(p)
         raise Exception("{} not found on PATH".format(cmd))
 
