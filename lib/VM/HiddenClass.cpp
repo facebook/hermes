@@ -690,7 +690,7 @@ void HiddenClass::initializeMissingPropertyMap(
   }
 
   assert(
-      DictPropertyMap::wouldFit(entries.size()) &&
+      entries.size() <= DictPropertyMap::getMaxCapacity() &&
       "There shouldn't ever be this many properties");
   // Allocate the map with the correct size.
   auto res = DictPropertyMap::create(

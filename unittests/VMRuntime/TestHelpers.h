@@ -33,7 +33,7 @@ static constexpr uint32_t kMaxHeapSmall = 1 << 11;
 static constexpr uint32_t kInitHeapSize = 1 << 16;
 static constexpr uint32_t kMaxHeapSize = 1 << 19;
 static constexpr uint32_t kInitHeapLarge = 1 << 20;
-static constexpr uint32_t kMaxHeapLarge = 1 << 23;
+static constexpr uint32_t kMaxHeapLarge = 1 << 24;
 
 static const GCConfig::Builder kTestGCConfigBuilder =
     GCConfig::Builder()

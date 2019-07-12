@@ -14,6 +14,36 @@ HERMES_SLOW_STATISTIC(NumExtraHashProbes, "Number of extra hash probes");
 namespace hermes {
 namespace vm {
 
+struct DictPropertyMap::detail {
+  /// The upper bound of the search when trying to find the maximum capacity
+  /// of this object, given GC::maxAllocationSize().
+  /// It was chosen to be a value that is certain to not fit into an allocation;
+  /// at the same time we want to make it smaller, so/ we have arbitrarily
+  /// chosen to divide the max allocation size by two, which is still guaranteed
+  /// not to fit.
+  static constexpr uint32_t kSearchUpperBound = GC::maxAllocationSize() / 2;
+
+  static_assert(
+      !DictPropertyMap::constWouldFitAllocation(kSearchUpperBound),
+      "kSearchUpperBound should not fit into an allocation");
+
+  /// The maximum capacity of DictPropertyMap, given GC::maxAllocationSize().
+  static constexpr uint32_t kMaxCapacity =
+      DictPropertyMap::constFindMaxCapacity(0, kSearchUpperBound);
+
+  // Double-check that kMaxCapacity is reasonable.
+  static_assert(
+      DictPropertyMap::constApproxAllocSize64(kMaxCapacity) <=
+          GC::maxAllocationSize(),
+      "invalid kMaxCapacity");
+
+  // Ensure that it is safe to double capacities without checking for overflow
+  // until we exceed kMaxCapacity.
+  static_assert(
+      kMaxCapacity < (1u << 31),
+      "kMaxCapacity is unrealistically large");
+};
+
 VTable DictPropertyMap::vt{CellKind::DictPropertyMapKind, 0};
 
 void DictPropertyMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
@@ -22,6 +52,25 @@ void DictPropertyMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       self->getDescriptorPairs(),
       &self->numDescriptors_,
       sizeof(DictPropertyMap::DescriptorPair));
+}
+
+DictPropertyMap::size_type DictPropertyMap::getMaxCapacity() {
+  return detail::kMaxCapacity;
+}
+
+CallResult<PseudoHandle<DictPropertyMap>> DictPropertyMap::create(
+    Runtime *runtime,
+    size_type capacity) {
+  if (LLVM_UNLIKELY(capacity > detail::kMaxCapacity)) {
+    return runtime->raiseRangeError(
+        TwineChar16("Property storage exceeds ") + detail::kMaxCapacity +
+        " properties");
+  }
+  size_type hashCapacity = calcHashCapacity(capacity);
+  void *mem = runtime->alloc</*fixedSize*/ false>(
+      allocationSize(capacity, hashCapacity));
+  return createPseudoHandle(
+      new (mem) DictPropertyMap(runtime, capacity, hashCapacity));
 }
 
 std::pair<bool, DictPropertyMap::HashPair *> DictPropertyMap::lookupEntryFor(
@@ -152,13 +201,26 @@ DictPropertyMap::findOrAdd(
   // sufficient to only check for the latter.
 
   if (self->numDescriptors_ == self->descriptorCapacity_) {
+    size_type newCapacity;
+    if (self->numProperties_ == self->descriptorCapacity_) {
+      // Double the new capacity, up to kMaxCapacity. However make sure that
+      // we try to allocate at least one extra property. If we are already
+      // exactly at kMaxCapacity, there is nothing we can do, so grow() will
+      // simply fail.
+      newCapacity = self->numProperties_ * 2;
+      if (newCapacity > detail::kMaxCapacity)
+        newCapacity =
+            std::max(toRValue(detail::kMaxCapacity), self->numProperties_ + 1);
+    } else {
+      // Calculate the new capacity to be exactly as much as we need to
+      // accomodate the deleted list plus one extra property. It it happens
+      // to exceed kMaxCapacity, there is nothing we can do, so grow() will
+      // raise an exception.
+      newCapacity = self->numProperties_ + 1 + self->deletedListSize_;
+    }
+
     if (LLVM_UNLIKELY(
-            grow(
-                selfHandleRef,
-                runtime,
-                self->numProperties_ == self->descriptorCapacity_
-                    ? self->numProperties_ * 2
-                    : self->numProperties_ + 1 + self->deletedListSize_) ==
+            grow(selfHandleRef, runtime, newCapacity) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

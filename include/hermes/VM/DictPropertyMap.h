@@ -94,21 +94,13 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
     return cell->getKind() == CellKind::DictPropertyMapKind;
   }
 
+  /// Return the maximum possible capacity of DictPropMap.
+  static size_type getMaxCapacity();
+
   /// Create an instance of DictPropertyMap with the specified capacity.
   static CallResult<PseudoHandle<DictPropertyMap>> create(
       Runtime *runtime,
-      size_type capacity = DEFAULT_CAPACITY) {
-    if (LLVM_UNLIKELY(!wouldFit(capacity))) {
-      return runtime->raiseRangeError(
-          TwineChar16("Property storage can't accommodate ") + capacity +
-          " properties");
-    }
-    size_type hashCapacity = calcHashCapacity(capacity);
-    void *mem = runtime->alloc</*fixedSize*/ false>(
-        allocationSize(capacity, hashCapacity));
-    return createPseudoHandle(
-        new (mem) DictPropertyMap(runtime, capacity, hashCapacity));
-  }
+      size_type capacity = DEFAULT_CAPACITY);
 
   /// Return the number of non-deleted properties in the map.
   size_type size() const {
@@ -184,10 +176,6 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   /// which is the next slot at the end of the currently allocated storage.
   static SlotIndex allocatePropertySlot(DictPropertyMap *self);
 
-  /// \return true iff a DictPropertyMap of the given capacity would be too big
-  ///   to fit in the GC.
-  static bool wouldFit(size_type capacity);
-
   void dump();
 
  private:
@@ -221,10 +209,26 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   /// Number of entries in the deleted list.
   size_type deletedListSize_{0};
 
-  /// Derive the size of the hash table so it can hold \p c elements without
+  /// Derive the size of the hash table so it can hold \p cap elements without
   /// many collisions. The result must also be a power of 2.
-  static size_type calcHashCapacity(size_type c) {
-    return llvm::NextPowerOf2(c * 4 / 3 + 1);
+  static size_type calcHashCapacity(size_type cap) {
+    assert(
+        (cap <= std::numeric_limits<size_type>::max() / 4) &&
+        "size will cause integer overflow in calcHashCapacity");
+
+    return llvm::PowerOf2Ceil(cap * 4 / 3 + 1);
+  }
+
+  /// A const-expr version of \c calcHashCapacity() using 64-bit arithmetic.
+  /// NOTE: it must not be used at runtime since it might be slow.
+  static constexpr uint64_t constCalcHashCapacity64(uint64_t cap) {
+    return constPowerOf2Ceil(cap * 4 / 3 + 1);
+  }
+
+  /// A constexpr compatible version of llvm::PowerOf2Ceil().
+  /// NOTE: it must not be used at runtime since it might be slow.
+  static constexpr uint64_t constPowerOf2Ceil(uint64_t A, uint64_t ceil = 1) {
+    return ceil >= A ? ceil : constPowerOf2Ceil(A, ceil << 1);
   }
 
   /// Hash a symbol ID. For now it is the identity hash.
@@ -291,7 +295,8 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
       SymbolID symbolID);
 
   /// Allocate a new property map with the specified capacity, copy the existing
-  /// valid entries into it.
+  /// valid entries into it. If the specified capacity exceeds the maximum
+  /// possible capacity, an exception will be raised.
   /// \param[in,out] selfHandleRef the original object handle on input, the new
   ///   object handle on output.
   /// \param newCapacity the capacity of the new object's descriptor array.
@@ -307,6 +312,67 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
     return totalSizeToAlloc<DescriptorPair, HashPair>(
         descriptorCapacity, hashCapacity);
   }
+
+  /// Calculate the maximum capacity of DictPropertyMap at compile time using
+  /// binary search in the solution space, since we can't solve the equation
+  /// directly.
+  ///
+  /// Some of these constexpr functions can be made more readable and or more
+  /// efficient c++14 by using variables (T31421960).
+  /// @{
+
+  /// The maximum alignment padding a compiler might insert before a field or at
+  /// the end of a struct. We use this for a conservative (but reasonable)
+  /// estimate of the allocation size of the object.
+  static constexpr uint64_t kAlignPadding = alignof(std::max_align_t) - 1;
+
+  /// Calculate a conservative approximate size of DictPropertyMap in bytes,
+  /// given a capacity. The calculation is performed using 64-bit arithmetic to
+  /// avoid overflow.
+  /// NOTE: it must not be used at runtime since it might be slow.
+  static constexpr uint64_t constApproxAllocSize64(uint32_t cap) {
+    static_assert(
+        alignof(DictPropertyMap) <= kAlignPadding + 1,
+        "DictPropertyMap exceeds supported alignment");
+    static_assert(
+        alignof(DictPropertyMap::DescriptorPair) <= kAlignPadding + 1,
+        "DictPropertyMap::DescriptorPair exceeds supported alignment");
+    static_assert(
+        alignof(DictPropertyMap::HashPair) <= kAlignPadding + 1,
+        "DictPropertyMap::HashPair exceeds supported alignment");
+
+    return sizeof(DictPropertyMap) + kAlignPadding +
+        sizeof(DictPropertyMap::DescriptorPair) * (uint64_t)cap +
+        kAlignPadding +
+        sizeof(DictPropertyMap::HashPair) * constCalcHashCapacity64(cap) +
+        kAlignPadding;
+  }
+
+  /// Return true if DictPropertyMap with the specified capacity is guaranteed
+  /// to fit within the GC's maxumum allocation size. The check is conservative:
+  /// it might a few return false negatives at the end of the range.
+  /// NOTE: it must not be used at runtime since it might be slow.
+  static constexpr bool constWouldFitAllocation(uint32_t cap) {
+    return constApproxAllocSize64(cap) <= GC::maxAllocationSize();
+  }
+
+  /// In the range of capacity values [first ... first + len), find the largest
+  /// value for which wouldFitAllocation() returns true.
+  /// NOTE: it must not be used at runtime since it might be slow.
+  static constexpr uint32_t constFindMaxCapacity(uint32_t first, uint32_t len) {
+    return len == 0
+        ? first - 1
+        : (constWouldFitAllocation(first + len / 2)
+               ? constFindMaxCapacity(first + len / 2 + 1, len - len / 2 - 1)
+               : constFindMaxCapacity(first, len / 2));
+  }
+
+  /// A place to put things in order to avoid restructins on using constexpr
+  /// functions declared in the same class.
+  struct detail;
+  friend struct detail;
+
+  /// @}
 
  protected:
   size_t numTrailingObjects(OverloadToken<DescriptorPair>) const {
@@ -407,12 +473,6 @@ inline ExecutionStatus DictPropertyMap::add(
   assert(found->second && "trying to add an existing property");
   *found->first = desc;
   return ExecutionStatus::RETURNED;
-}
-
-/* static */
-inline bool DictPropertyMap::wouldFit(size_type capacity) {
-  return allocationSize(capacity, calcHashCapacity(capacity)) <=
-      GC::maxAllocationSize();
 }
 
 } // namespace vm
