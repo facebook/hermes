@@ -19,8 +19,6 @@ module.exports = {
         src: 'img/logo.svg',
       },
       links: [
-        //{ to: 'docs/', label: 'Docs', position: 'left' },
-        //{ to: 'blog', label: 'Blog', position: 'left' },
         {
           href: 'https://github.com/facebook/hermes',
           label: 'GitHub',
@@ -44,6 +42,15 @@ module.exports = {
             },
           ],
         },
+        {
+          title: 'Social',
+          items: [
+            {
+              label: 'Twitter',
+              to: 'https://twitter.com/HermesEngine',
+            },
+          ],
+        },
       ],
       logo: {
         alt: 'Facebook Open Source Logo',
@@ -56,10 +63,6 @@ module.exports = {
     [
       '@docusaurus/preset-classic',
       {
-        docs: {
-          sidebarPath: require.resolve('./sidebars.js'),
-          path: '../doc'
-        },
         pages: {
           path: 'src/pages',
         },
