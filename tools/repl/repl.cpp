@@ -9,6 +9,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "hermes/CompilerDriver/CompilerDriver.h"
 #include "hermes/ConsoleHost/ConsoleHost.h"
 #include "hermes/ConsoleHost/RuntimeFlags.h"
 #include "hermes/Parser/JSLexer.h"
@@ -226,6 +227,7 @@ int main(int argc, char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal("Hermes REPL");
   llvm::PrettyStackTraceProgram X(argc, argv);
   llvm::llvm_shutdown_obj Y;
+  llvm::cl::AddExtraVersionPrinter(driver::printHermesREPLVersion);
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes REPL driver\n");
 
   auto runtime = vm::Runtime::create(

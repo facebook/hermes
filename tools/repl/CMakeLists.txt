@@ -28,6 +28,7 @@ add_llvm_tool(hermes-repl
 
 target_link_libraries(hermes-repl
   hermesVMRuntime
+  hermesCompilerDriver
   hermesConsoleHost
   hermesAST
   hermesHBCBackend

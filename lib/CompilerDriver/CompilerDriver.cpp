@@ -1658,15 +1658,21 @@ CompileResult processSourceFiles(
 
 /// Print the Hermes version to the stream \p s, outputting the \p vmStr (which
 /// may be empty).
-void printHermesVersion(llvm::raw_ostream &s, const char *vmStr = "") {
+/// \param features when true, print the list of enabled features.
+void printHermesVersion(
+    llvm::raw_ostream &s,
+    const char *vmStr = "",
+    bool features = true) {
   s << "Hermes JavaScript compiler" << vmStr << ".\n"
     << "  HBC bytecode version: " << hermes::hbc::BYTECODE_VERSION << "\n"
-    << "\n"
-    << "  Features:\n"
+    << "\n";
+  if (features) {
+    s << "  Features:\n"
 #ifdef HERMES_ENABLE_DEBUGGER
-    << "    Debugger\n"
+      << "    Debugger\n"
 #endif
-    << "    Zip file input\n";
+      << "    Zip file input\n";
+  }
 }
 
 } // namespace
@@ -1679,6 +1685,9 @@ void printHermesCompilerVMVersion(llvm::raw_ostream &s) {
 }
 void printHermesCompilerVersion(llvm::raw_ostream &s) {
   printHermesVersion(s);
+}
+void printHermesREPLVersion(llvm::raw_ostream &s) {
+  printHermesVersion(s, " REPL", false);
 }
 
 CompileResult compileFromCommandLineOptions() {
