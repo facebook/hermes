@@ -564,7 +564,7 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
           !args.getArg(0).isUndefined() && (fDouble < 0 || fDouble > 100))) {
     return runtime->raiseRangeError(
-        "toExponential argument must be between 0 and 20");
+        "toExponential argument must be between 0 and 100");
   }
   /// Number of digits after the decimal point.
   /// Because we checked, 0 <= f <= 20.
