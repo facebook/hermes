@@ -14,6 +14,8 @@
 #include "hermes/BCGen/HBC/ISel.h"
 #include "hermes/BCGen/Lowering.h"
 
+#include "llvm/ADT/SetVector.h"
+
 #define DEBUG_TYPE "hbc-backend"
 
 namespace hermes {
@@ -401,7 +403,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
   // Specifically the case when `arguments[arguments]` is accessed.
   // Note that in such a case, a single LoadPropertyInst will appear twice in
   // the use list. Use a set so we only remove it once.
-  llvm::SmallDenseSet<Instruction *, 16> uniqueUsers;
+  llvm::SmallSetVector<Instruction *, 16> uniqueUsers;
   uniqueUsers.insert(
       createArguments->getUsers().begin(), createArguments->getUsers().end());
   for (Value *user : createArguments->getUsers()) {
