@@ -30,7 +30,7 @@ Ensure the following variables are present and set correctly in your environment
 
 * `ANDROID_NDK` - the root of your Android NDK install. E.g. "/opt/android_ndk/r15c".
 * `ANDROID_SDK`, `ANDROID_HOME`, and `ANDROID_SDK_ROOT` - the root of your Android SDK install. E.g. "/opt/android_sdk".
-* `JAVA_HOME` - the root of your Java Runtime Envrionment (JRE) install. Note a JRE instance is typically available in a sub-directory of a JDK install. E.g. "/opt/jdk-1.8/jre".
+* `JAVA_HOME` - the root of your Java Runtime Environment (JRE) install. Note a JRE instance is typically available in a sub-directory of a JDK install. E.g. "/opt/jdk-1.8/jre".
 * `HERMES_WS_DIR` - the same workspace used to make a build Hermes CLI tools.
 
 Make sure the `node`, `yarn`, and `gradle` binaries are available in your system PATH.
