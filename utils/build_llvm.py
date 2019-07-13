@@ -14,7 +14,12 @@ import subprocess
 import sys
 
 
+# It references the commit day so we can shallow clone
+# and still manage to checkout this specific revision.
+# NOTE: The revision date must be the day before the
+# actual commit date.
 _LLVM_REV = "c179d7b006348005d2da228aed4c3c251590baa3"
+_LLVM_REV_DATE = "2018-10-08" 
 
 
 def parse_args():
@@ -166,7 +171,7 @@ def main():
         print("Cloning LLVM into {}".format(args.llvm_src_dir))
         run_command(
             git
-            + ["clone", "https://github.com/llvm-mirror/llvm.git", args.llvm_src_dir]
+            + ["clone", "--shallow-since", _LLVM_REV_DATE, "https://github.com/llvm-mirror/llvm.git", args.llvm_src_dir]
         )
 
     # Checkout a specific revision in LLVM.
