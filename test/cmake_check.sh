@@ -23,6 +23,7 @@ do
         $hermes/facebook/*) continue;;
         $hermes/first-party/*) continue;;
         $hermes/API/hermes/synthtest/tests/*) continue;;
+        $hermes/build/*) continue;;
     esac
     base=$(basename "$path")
     if ! grep -Fq "$base" "$cm_lists"
