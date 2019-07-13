@@ -191,7 +191,8 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
   if (args.getArg(1).isNull() || args.getArg(1).isUndefined()) {
     ScopedNativeCallFrame newFrame{runtime, 0, *func, false, args.getArg(0)};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
-      return runtime->raiseStackOverflow();
+      return runtime->raiseStackOverflow(
+          Runtime::StackOverflowKind::NativeStack);
     return Callable::call(func, runtime);
   }
 
@@ -215,7 +216,7 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
 
   ScopedNativeCallFrame newFrame{runtime, n, *func, false, args.getArg(0)};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return runtime->raiseStackOverflow();
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
 
   // Initialize the arguments to undefined because we might allocate and cause
   // a gc while populating them.
@@ -275,7 +276,7 @@ functionPrototypeCall(void *, Runtime *runtime, NativeArgs args) {
   ScopedNativeCallFrame newFrame{
       runtime, argCount ? argCount - 1 : 0, *func, false, args.getArg(0)};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return runtime->raiseStackOverflow();
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   for (uint32_t i = 1; i < argCount; ++i) {
     newFrame->getArgRef(i - 1) = args.getArg(i);
   }

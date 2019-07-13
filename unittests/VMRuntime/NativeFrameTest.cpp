@@ -13,7 +13,7 @@ namespace {
 
 // This value matches the same field in Runtime, but we don't wish to make it
 // public in Runtime.
-constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH = 256;
+constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH = 384;
 
 // Count the number of native stack frames we can make before it reports
 // overflow. Also verify that our stack descends down.

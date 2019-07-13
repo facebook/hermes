@@ -454,7 +454,8 @@ class NativeFunction : public Callable {
       Runtime *runtime) {
     ScopedNativeDepthTracker depthTracker{runtime};
     if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-      return runtime->raiseStackOverflow();
+      return runtime->raiseStackOverflow(
+          Runtime::StackOverflowKind::NativeStack);
     }
 
     auto newFrame = runtime->setCurrentFrameToTopOfStack();

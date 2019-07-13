@@ -514,9 +514,21 @@ class Runtime : public HandleRootOwner,
   ExecutionStatus raiseURIError(const TwineChar16 &msg);
 
   /// Raise a stack overflow exception. This is special because constructing
-  /// the object must not execute any custom or JavaScript code.
+  /// the object must not execute any custom or JavaScript code.  The
+  /// argument influences the exception's message, to aid debugging.
   /// \return ExecutionStatus::EXCEPTION
-  ExecutionStatus raiseStackOverflow();
+  enum class StackOverflowKind {
+    // The JS register stack was exhausted.
+    JSRegisterStack,
+    // A limit on the number of native stack frames used in
+    // evaluation, intended to conservatively prevent native stack
+    // overflow, was exceeded.
+    NativeStack,
+    // RuntimeJSONParser has a maximum number of "nesting levels", and
+    // calls raiseStackOverflow if that is exceeded.
+    JSONParser,
+  };
+  ExecutionStatus raiseStackOverflow(StackOverflowKind kind);
 
   /// Raise an error for the quit function. This error is not catchable.
   ExecutionStatus raiseQuitError();
@@ -965,8 +977,11 @@ class Runtime : public HandleRootOwner,
   unsigned nativeCallFrameDepth_{0};
 
   /// A stack overflow exception is thrown when \c nativeCallFrameDepth_ exceeds
-  /// this threshold.
-  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH = 256;
+  /// this threshold.  (This depth limit was originally 256, and we
+  /// increased when an app violated it.  The new depth is 128
+  /// larger.  See T46966147 for measurements/calculations indicating
+  /// that this limit should still insulate us from native stack overflow.)
+  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH = 384;
 
   PinnedHermesValue thrownValue_{HermesValue::encodeEmptyValue()};
 

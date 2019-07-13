@@ -182,7 +182,7 @@ CallResult<HermesValue> Callable::executeCall0(
                                      : HermesValue::encodeUndefinedValue(),
                                  *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return runtime->raiseStackOverflow();
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   return call(selfHandle, runtime);
 }
 
@@ -202,7 +202,7 @@ CallResult<HermesValue> Callable::executeCall1(
                                      : HermesValue::encodeUndefinedValue(),
                                  *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return runtime->raiseStackOverflow();
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   newFrame->getArgRef(0) = param1;
   return call(selfHandle, runtime);
 }
@@ -224,7 +224,7 @@ CallResult<HermesValue> Callable::executeCall2(
                                      : HermesValue::encodeUndefinedValue(),
                                  *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return runtime->raiseStackOverflow();
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   newFrame->getArgRef(0) = param1;
   newFrame->getArgRef(1) = param2;
   return call(selfHandle, runtime);
@@ -248,7 +248,7 @@ CallResult<HermesValue> Callable::executeCall3(
                                      : HermesValue::encodeUndefinedValue(),
                                  *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return runtime->raiseStackOverflow();
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   newFrame->getArgRef(0) = param1;
   newFrame->getArgRef(1) = param2;
   newFrame->getArgRef(2) = param3;
@@ -274,7 +274,7 @@ CallResult<HermesValue> Callable::executeCall4(
                                      : HermesValue::encodeUndefinedValue(),
                                  *thisArgHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return runtime->raiseStackOverflow();
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   newFrame->getArgRef(0) = param1;
   newFrame->getArgRef(1) = param2;
   newFrame->getArgRef(2) = param3;
@@ -573,7 +573,7 @@ CallResult<HermesValue> BoundFunction::_boundCall(
     Runtime *runtime) {
   ScopedNativeDepthTracker depthTracker{runtime};
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-    return runtime->raiseStackOverflow();
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
 
   CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
@@ -618,7 +618,8 @@ CallResult<HermesValue> BoundFunction::_boundCall(
           runtime->getStackPointer() == originalCalleeFrame.ptr() &&
           "Stack wasn't restored properly");
 
-      runtime->raiseStackOverflow();
+      runtime->raiseStackOverflow(Runtime::StackOverflowKind::JSRegisterStack);
+
       res = ExecutionStatus::EXCEPTION;
       goto bail;
     }

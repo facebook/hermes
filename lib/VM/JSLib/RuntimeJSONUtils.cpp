@@ -263,7 +263,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
   llvm::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
                                                            remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
-    return runtime_->raiseStackOverflow();
+    return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
   }
 
   MutableHandle<> returnValue{runtime_};
@@ -459,7 +459,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   llvm::SaveAndRestore<decltype(remainingDepth_)> oldDepth{remainingDepth_,
                                                            remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
-    return runtime_->raiseStackOverflow();
+    return runtime_->raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
   }
 
   auto propRes = JSObject::getComputed_RJS(holder, runtime_, property);

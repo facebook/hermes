@@ -890,7 +890,7 @@ CallResult<HermesValue> Interpreter::interpretFunction(
 
   ScopedNativeDepthTracker depthTracker{runtime};
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-    return runtime->raiseStackOverflow();
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
 
   if (!SingleStep) {
@@ -3249,7 +3249,7 @@ tailCall:
 
   // We arrive here if we couldn't allocate the registers for the current frame.
   stackOverflow:
-    runtime->raiseStackOverflow();
+    runtime->raiseStackOverflow(Runtime::StackOverflowKind::JSRegisterStack);
 
   // We arrive here when we raised an exception in a callee, but we don't want
   // the callee to be able to handle it.

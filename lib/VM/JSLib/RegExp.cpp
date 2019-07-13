@@ -1549,14 +1549,16 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
         // Arguments: matched, captures, position, S.
         size_t replacerArgsCount = 1 + nCaptures + 2;
         if (LLVM_UNLIKELY(replacerArgsCount >= UINT32_MAX))
-          return runtime->raiseStackOverflow();
+          return runtime->raiseStackOverflow(
+              Runtime::StackOverflowKind::JSRegisterStack);
         ScopedNativeCallFrame newFrame{runtime,
                                        static_cast<uint32_t>(replacerArgsCount),
                                        *replaceFn,
                                        false,
                                        HermesValue::encodeUndefinedValue()};
         if (LLVM_UNLIKELY(newFrame.overflowed()))
-          return runtime->raiseStackOverflow();
+          return runtime->raiseStackOverflow(
+              Runtime::StackOverflowKind::NativeStack);
 
         uint32_t argIdx = 0;
         newFrame->getArgRef(argIdx++) = matched.getHermesValue();

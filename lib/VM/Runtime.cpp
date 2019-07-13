@@ -739,7 +739,7 @@ CallResult<HermesValue> Runtime::runBytecode(
     ScopedNativeCallFrame newFrame{
         this, 0, *funcRes, HermesValue::encodeUndefinedValue(), *thisArg};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
-      return raiseStackOverflow();
+      return raiseStackOverflow(StackOverflowKind::NativeStack);
     return shouldRandomizeMemoryLayout_
         ? interpretFunctionWithRandomStack(this, globalCode)
         : interpretFunction(globalCode);
@@ -983,11 +983,21 @@ ExecutionStatus Runtime::raiseURIError(const TwineChar16 &msg) {
       this, Handle<JSObject>::vmcast(&URIErrorPrototype), msg);
 }
 
-ExecutionStatus Runtime::raiseStackOverflow() {
+ExecutionStatus Runtime::raiseStackOverflow(StackOverflowKind kind) {
+  const char *msg;
+  switch (kind) {
+    case StackOverflowKind::JSRegisterStack:
+      msg = "Maximum call stack size exceeded";
+      break;
+    case StackOverflowKind::NativeStack:
+      msg = "Maximum call stack size exceeded (native stack depth)";
+      break;
+    case StackOverflowKind::JSONParser:
+      msg = "Maximum nesting level in JSON parser exceeded";
+      break;
+  }
   return raisePlaceholder(
-      this,
-      Handle<JSObject>::vmcast(&RangeErrorPrototype),
-      "Maximum call stack size exceeded");
+      this, Handle<JSObject>::vmcast(&RangeErrorPrototype), msg);
 }
 
 ExecutionStatus Runtime::raiseQuitError() {

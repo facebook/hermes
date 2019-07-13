@@ -1715,7 +1715,8 @@ jsi::Value HermesRuntimeImpl::call(
                                        vm::HermesValue::encodeUndefinedValue(),
                                        hvFromValue(jsThis)};
     if (LLVM_UNLIKELY(newFrame.overflowed())) {
-      checkStatus(runtime_.raiseStackOverflow());
+      checkStatus(runtime_.raiseStackOverflow(
+          ::hermes::vm::StackRuntime::StackOverflowKind::NativeStack));
     }
 
     for (uint32_t i = 0; i != count; ++i) {
@@ -1791,7 +1792,8 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
                                        funcHandle.getHermesValue(),
                                        objHandle.getHermesValue()};
     if (newFrame.overflowed()) {
-      checkStatus(runtime_.raiseStackOverflow());
+      checkStatus(runtime_.raiseStackOverflow(
+          ::hermes::vm::StackRuntime::StackOverflowKind::NativeStack));
     }
     for (uint32_t i = 0; i != count; ++i) {
       newFrame->getArgRef(i) = hvFromValue(args[i]);
