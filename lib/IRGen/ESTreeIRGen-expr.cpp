@@ -468,6 +468,12 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   auto Obj =
       Builder.createAllocObjectInst(propMap.size() + numComputed, objectParent);
 
+  // haveSeenComputedProp tracks whether we have processed a computed property.
+  // Once we do, for all future properties, we can no longer generate
+  // StoreNewOwnPropertyInst because the computed property could have already
+  // defined any property.
+  bool haveSeenComputedProp = false;
+
   // Initialize all properties. We check whether the value of each property
   // will be overwritten (by comparing against what we have saved in propMap).
   // In that case we still compute the value (it could have side effects), but
@@ -514,6 +520,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
         Builder.createStoreOwnPropertyInst(
             value, Obj, key, IRBuilder::PropEnumerable::Yes);
       }
+      haveSeenComputedProp = true;
       continue;
     }
 
@@ -585,8 +592,13 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
       // Only store the value if it won't be overwritten.
       if (propMap[keyStr].valueNode == prop->_value) {
-        Builder.createStoreNewOwnPropertyInst(
-            value, Obj, Key, IRBuilder::PropEnumerable::Yes);
+        if (haveSeenComputedProp) {
+          Builder.createStoreOwnPropertyInst(
+              value, Obj, Key, IRBuilder::PropEnumerable::Yes);
+        } else {
+          Builder.createStoreNewOwnPropertyInst(
+              value, Obj, Key, IRBuilder::PropEnumerable::Yes);
+        }
       } else {
         Builder.getModule()->getContext().getSourceErrorManager().warning(
             propMap[keyStr].getSourceRange(),

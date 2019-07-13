@@ -55,3 +55,18 @@ print(getset['x']);
 // CHECK-NEXT: 13
 getset['x'] = 101;
 // CHECK-NEXT: set 101
+
+var mixed_props = {
+  ['b']: 'b',
+  b: 'B',
+};
+
+print(Object.keys(mixed_props));
+// CHECK-NEXT: b
+
+var getters = {
+  get ['x']() {},
+  x: 3,
+};
+print(getters.x);
+// CHECK-NEXT: 3
