@@ -459,7 +459,8 @@ inline OptValue<bool> HiddenClass::tryFindPropertyFast(
     SymbolID name,
     NamedPropertyDescriptor &desc) {
   if (LLVM_LIKELY(self->propertyMap_)) {
-    auto found = DictPropertyMap::find(self->propertyMap_.getNonNull(runtime), name);
+    auto found =
+        DictPropertyMap::find(self->propertyMap_.getNonNull(runtime), name);
     if (LLVM_LIKELY(found)) {
       desc = DictPropertyMap::getDescriptorPair(
                  self->propertyMap_.getNonNull(runtime), *found)
