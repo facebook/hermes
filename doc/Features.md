@@ -31,7 +31,7 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - Realms
 - `with` statements
 - Local mode `eval()` (use and introduce local variables)
-- Unicode and sticky flags in `RegExp`
+- `/u` (Unicode) and `/y` (sticky) flags in `RegExp`
 - `Intl` API
 - `Symbol.species` and its interactions with JS library functions
 - `Symbol.unscopables` (Hermes does not support `with`)
