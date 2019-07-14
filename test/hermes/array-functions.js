@@ -858,29 +858,3 @@ print(Array.prototype.includes.call({length: 3, 0: 'a', 1: 'b', 2: 'c'}, 'a'));
 var o = {};
 print([,,,o,,,].includes(o));
 // CHECK-NEXT: true
-
-print('values');
-// CHECK-LABEL: values
-var a = [1,2,3,4];
-var iterator = a.values();
-print((typeof iterator[Symbol.iterator] === 'function'));
-// CHECK-NEXT: true
-var b = Array();
-for (var value of iterator) {
-  b.push(value);
-}
-print(b.length, b.toString());
-// CHECK-NEXT: 4 1,2,3,4
-
-print('keys');
-// CHECK-LABEL: keys
-var a = [1,2,3,4];
-var iterator = a.keys();
-print((typeof iterator[Symbol.iterator] === 'function'));
-// CHECK-NEXT: true
-var b = Array();
-for (var key of iterator) {
-  b.push(key);
-}
-print(b.length, b.toString());
-// CHECK-NEXT: 4 0,1,2,3

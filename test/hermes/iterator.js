@@ -23,6 +23,14 @@ print(Object.getPrototypeOf(
   Object.getPrototypeOf([].keys())
 )[Symbol.iterator].name);
 // CHECK-LABEL: [Symbol.iterator]
+print(Object.getPrototypeOf(
+    Object.getPrototypeOf([].values())
+)[Symbol.iterator].name);
+// CHECK-LABEL: [Symbol.iterator]
+print(Object.getPrototypeOf(
+    Object.getPrototypeOf([].entries())
+)[Symbol.iterator].name);
+// CHECK-LABEL: [Symbol.iterator]
 
 print('Array Iterator');
 // CHECK-LABEL: Array Iterator
