@@ -19,13 +19,13 @@ print(typeof strict, typeof nonStrict);
 // CHECK-NEXT: function function
 print(nonStrict.caller, nonStrict.arguments);
 // CHECK-NEXT: undefined undefined
-try { print(strict.caller); } catch(e) { print('caught', e.name); }
-// CHECK-NEXT: caught TypeError
-try { print(strict.arguments); } catch(e) { print('caught', e.name); }
-// CHECK-NEXT: caught TypeError
+try { print(strict.caller); } catch(e) { print('caught', e.name, e.message); }
+// CHECK-NEXT: caught TypeError Restricted in strict mode
+try { print(strict.arguments); } catch(e) { print('caught', e.name, e.message); }
+// CHECK-NEXT: caught TypeError Restricted in strict mode
 
 var bound = nonStrict.bind(42);
-try { print(bound.caller); } catch(e) { print('caught', e.name); }
-// CHECK-NEXT: caught TypeError
-try { print(bound.arguments); } catch(e) { print('caught', e.name); }
-// CHECK-NEXT: caught TypeError
+try { print(bound.caller); } catch(e) { print('caught', e.name, e.message); }
+// CHECK-NEXT: caught TypeError Restricted in strict mode
+try { print(bound.arguments); } catch(e) { print('caught', e.name, e.message); }
+// CHECK-NEXT: caught TypeError Restricted in strict mode

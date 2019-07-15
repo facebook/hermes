@@ -109,9 +109,7 @@ ExecutionStatus Domain::importCJSModuleTable(
     auto requireFn = NativeFunction::create(
         runtime,
         Handle<JSObject>::vmcast(&runtime->functionPrototype),
-        const_cast<void *>(
-            (const void
-                 *)"Dynamic requires are not allowed after static resolution"),
+        (void *)TypeErrorKind::InvalidDynamicRequire,
         throwTypeError,
         Predefined::getSymbolID(Predefined::emptyString),
         0,

@@ -57,6 +57,13 @@ CallResult<HermesValue> runRequireCall(
 CallResult<HermesValue>
 throwTypeError(void *, Runtime *runtime, NativeArgs args);
 
+enum class TypeErrorKind {
+  NonStrictOnly,
+  InvalidDynamicRequire,
+  // change this if more errors are added
+  NumKinds
+};
+
 } // namespace vm
 } // namespace hermes
 

@@ -244,9 +244,16 @@ static CallResult<HermesValue> gc(void *, Runtime *runtime, NativeArgs) {
 
 CallResult<HermesValue>
 throwTypeError(void *ctx, Runtime *runtime, NativeArgs) {
-  char *message = (char *)ctx;
-  assert(message != nullptr && "[[ThrowTypeError]] requires a message");
-  return runtime->raiseTypeError(TwineChar16(message));
+  static const char *TypeErrorMessage[] = {
+      "Restricted in strict mode",
+      "Dynamic requires are not allowed after static resolution",
+  };
+
+  uint64_t kind = (uint64_t)ctx;
+  assert(
+      kind < (uint64_t)TypeErrorKind::NumKinds &&
+      "[[ThrowTypeError]] wrong error kind passed as context");
+  return runtime->raiseTypeError(TypeErrorMessage[kind]);
 }
 
 // NOTE: when declaring more global symbols, don't forget to update
@@ -362,7 +369,7 @@ void initGlobalObject(Runtime *runtime) {
   auto throwTypeErrorFunction = NativeFunction::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
-      const_cast<void *>((const void *)"Restricted in strict mode"),
+      (void *)TypeErrorKind::NonStrictOnly,
       throwTypeError,
       Predefined::getSymbolID(Predefined::emptyString),
       0,
