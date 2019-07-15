@@ -15,6 +15,7 @@ enum class IterationKind {
   Key,
   Value,
   Entry,
+  NumKinds,
 };
 
 } // namespace vm

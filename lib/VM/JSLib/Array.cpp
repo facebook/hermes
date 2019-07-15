@@ -314,7 +314,7 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       arrayPrototype,
       Predefined::getSymbolID(Predefined::findIndex),
       // Pass a non-null pointer here to indicate we're finding the index.
-      reinterpret_cast<void *>(arrayPrototypeFind),
+      (void *)true,
       arrayPrototypeFind,
       1);
   defineMethod(
@@ -339,29 +339,25 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       arrayPrototypeIncludes,
       1);
 
-  static IterationKind iterationKindKey = IterationKind::Key;
-  static IterationKind iterationKindValue = IterationKind::Value;
-  static IterationKind iterationKindEntry = IterationKind::Entry;
-
   defineMethod(
       runtime,
       arrayPrototype,
       Predefined::getSymbolID(Predefined::keys),
-      &iterationKindKey,
+      (void *)IterationKind::Key,
       arrayPrototypeIterator,
       0);
   defineMethod(
       runtime,
       arrayPrototype,
       Predefined::getSymbolID(Predefined::values),
-      &iterationKindValue,
+      (void *)IterationKind::Value,
       arrayPrototypeIterator,
       0);
   defineMethod(
       runtime,
       arrayPrototype,
       Predefined::getSymbolID(Predefined::entries),
-      &iterationKindEntry,
+      (void *)IterationKind::Entry,
       arrayPrototypeIterator,
       0);
 
@@ -3080,13 +3076,16 @@ arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
 
 static CallResult<HermesValue>
 arrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
+  IterationKind kind = *reinterpret_cast<IterationKind *>(&ctx);
+  assert(
+      kind < IterationKind::NumKinds &&
+      "arrayPrototypeIterator with wrong kind");
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto obj = runtime->makeHandle<JSObject>(*objRes);
-  return JSArrayIterator::create(
-      runtime, obj, *reinterpret_cast<IterationKind *>(ctx));
+  return JSArrayIterator::create(runtime, obj, kind);
 }
 
 /// ES6.0 22.1.2.1 Array.from ( items [ , mapfn [ , thisArg ] ] )

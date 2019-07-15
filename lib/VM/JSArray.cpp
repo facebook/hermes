@@ -759,7 +759,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
       // 16. If itemKind is "value", let result be elementValue.
       return createIterResultObject(runtime, valueHandle, false)
           .getHermesValue();
-    case IterationKind::Entry:
+    case IterationKind::Entry: {
       // 17. b. Let result be CreateArrayFromList(«index, elementValue»).
       auto resultRes = JSArray::create(runtime, 2, 2);
       if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
@@ -770,6 +770,10 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
       JSArray::setElementAt(result, runtime, 1, valueHandle);
       // 18. Return CreateIterResultObject(result, false).
       return createIterResultObject(runtime, result, false).getHermesValue();
+    }
+    case IterationKind::NumKinds:
+      llvm_unreachable("Invalid iteration kind");
+      return HermesValue::encodeEmptyValue();
   }
 
   llvm_unreachable("Invalid iteration kind");

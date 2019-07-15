@@ -236,6 +236,9 @@ class JSMapIteratorImpl final : public JSObject {
             value = arrHandle.getHermesValue();
             break;
           };
+          case IterationKind::NumKinds:
+            llvm_unreachable("Invalid iteration kind");
+            return HermesValue::encodeEmptyValue();
         }
       } else {
         // If the next element in the iterator is invalid, we have
