@@ -41,18 +41,21 @@ static vm::CallResult<vm::HermesValue>
 createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
   using namespace vm;
   std::string fileName;
-  if (args.getArgCount() >= 1) {
-    auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
-    if (res == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
+  if (args.getArgCount() >= 1 && !args.getArg(0).isUndefined()) {
+    if (!args.getArg(0).isString()) {
+      return runtime->raiseTypeError("Filename argument must be a string");
     }
-    auto jsFileName = StringPrimitive::createStringView(
-        runtime, toHandle(runtime, std::move(*res)));
+    auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(runtime, 0));
+    auto jsFileName = StringPrimitive::createStringView(runtime, str);
     llvm::SmallVector<char16_t, 16> buf;
     convertUTF16ToUTF8WithReplacements(fileName, jsFileName.getUTF16Ref(buf));
   }
+
   if (fileName.empty()) {
-    return runtime->raiseTypeError("Must give a non-empty file name");
+    // "-" is recognized as stdout.
+    fileName = "-";
+  } else if (!llvm::StringRef{fileName}.endswith(".heapsnapshot")) {
+    return runtime->raiseTypeError("Filename must end in .heapsnapshot");
   }
   bool compact = args.getArgCount() >= 2 ? toBoolean(args.getArg(1)) : true;
   if (!runtime->getHeap().createSnapshotToFile(fileName, compact)) {

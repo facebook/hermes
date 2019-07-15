@@ -40,19 +40,6 @@ hermesInternalDetachArrayBuffer(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-/// An API for JS code to request a heap snapshot at any point of execution.
-/// This runs a garbage collection first, in order to not show any garbage in
-/// the snapshot.
-CallResult<HermesValue>
-hermesInternalCreateHeapSnapshot(void *, Runtime *runtime, NativeArgs args) {
-  bool compact = true;
-  if (args.getArgCount() >= 1) {
-    compact = toBoolean(args.getArg(0));
-  }
-  runtime->getHeap().createSnapshot(llvm::errs(), compact);
-  return HermesValue::encodeUndefinedValue();
-}
-
 CallResult<HermesValue>
 hermesInternalGetEpilogues(void *, Runtime *runtime, NativeArgs args) {
   // Create outer array with one element per module.
@@ -868,7 +855,6 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   // HermesInternal function properties
   namespace P = Predefined;
   defineInternMethod(P::detachArrayBuffer, hermesInternalDetachArrayBuffer, 1);
-  defineInternMethod(P::createHeapSnapshot, hermesInternalCreateHeapSnapshot);
   defineInternMethod(P::getEpilogues, hermesInternalGetEpilogues);
   defineInternMethod(P::silentSetPrototypeOf, silentObjectSetPrototypeOf, 2);
   defineInternMethod(P::getWeakSize, hermesInternalGetWeakSize);
