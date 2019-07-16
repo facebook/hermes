@@ -81,6 +81,7 @@ EXPECT("__lookupGetter__")
 EXPECT("__lookupSetter__")
 EXPECT("assign")
 EXPECT("raw")
+EXPECT("globalThis")
 
 EXPECT("String")
 EXPECT("fromCharCode")

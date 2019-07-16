@@ -85,6 +85,7 @@ STR(__lookupGetter__, "__lookupGetter__")
 STR(__lookupSetter__, "__lookupSetter__")
 STR(assign, "assign")
 STR(raw, "raw")
+STR(globalThis, "globalThis")
 
 STR(String, "String")
 STR(fromCharCode, "fromCharCode")

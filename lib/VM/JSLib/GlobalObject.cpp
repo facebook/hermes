@@ -690,6 +690,14 @@ void initGlobalObject(Runtime *runtime) {
       encodeURIComponent,
       1);
 
+  // Define the 'globalThis' property.
+  runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
+      runtime->getGlobal(),
+      runtime,
+      Predefined::getSymbolID(Predefined::globalThis),
+      normalDPF,
+      runtime->getGlobal()));
+
   // Define the 'require' function.
   runtime->requireFunction =
       NativeFunction::create(

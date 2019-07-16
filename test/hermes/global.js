@@ -5,6 +5,19 @@
 //
 // RUN: %hermes -non-strict -target=HBC %s | %FileCheck --match-full-lines %s
 // Make sure the global object has a prototype and prints as the correct class.
+// Also check that it can be accessed via globalThis.
 
 print(this);
 //CHECK: [object global]
+
+print(globalThis);
+//CHECK: [object global]
+
+(function() {
+print(globalThis);
+//CHECK: [object global]
+})();
+
+var desc = Object.getOwnPropertyDescriptor(globalThis, 'globalThis');
+print(desc.writable, desc.enumerable, desc.configurable);
+//CHECK: true false true
