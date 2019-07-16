@@ -1,4 +1,6 @@
+<div style="text-align:center"><img src="./hermes_logo.png" alt="Hermes logo - large H with wings" /></div>
 # Hermes JS Engine
+
 [![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebook/hermes/blob/master/LICENSE)
 [![npm version](https://img.shields.io/npm/v/hermesvm.svg?style=flat)](https://www.npmjs.com/package/hermesvm)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/facebook/hermes/blob/master/CONTRIBUTING.md)
