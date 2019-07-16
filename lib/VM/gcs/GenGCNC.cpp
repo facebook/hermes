@@ -1204,10 +1204,10 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
     if (const StringPrimitive *str = dyn_vmcast<StringPrimitive>(cell)) {
       strID = stringToID(converter(str));
     } else {
-      strID = stringToID("");
+      strID = stringToID(cellKindStr(cell->getKind()));
     }
     snap.addNode(V8HeapSnapshot::Node{
-        cell->getKind(),
+        V8HeapSnapshot::Node::cellKindToType(cell->getKind()),
         strID,
         static_cast<V8HeapSnapshot::Node::ID>(ptrToOffset(cell)),
         cell->getAllocatedSize(),
@@ -1215,13 +1215,11 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   };
   snap.beginNodes();
   markRoots(snapshotNodeAcceptor, true);
-  snap.addNode(V8HeapSnapshot::Node{CellKind::UninitializedKind,
+  snap.addNode(V8HeapSnapshot::Node{V8HeapSnapshot::Node::Type::Synthetic,
                                     stringToID("(GC Roots)"),
                                     0,
                                     0,
-                                    snapshotNodeAcceptor.resetEdgeCount()
-
-  });
+                                    snapshotNodeAcceptor.resetEdgeCount()});
   youngGen_.forAllObjs(writeNodesToSnapshot);
   oldGen_.forAllObjs(writeNodesToSnapshot);
   snap.endNodes();

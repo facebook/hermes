@@ -366,8 +366,10 @@ void V8HeapSnapshot::emitMeta() {
   json_.emitKey("node_types");
   json_.openArray();
   json_.openArray();
-#define CELL_KIND(name) json_.emitValue(cellKindStr(CellKind::name##Kind));
-#include "hermes/VM/CellKinds.def"
+  for (int objType = 0; objType < static_cast<int>(Node::Type::NumTypes);
+       objType++) {
+    json_.emitValue(Node::nodeTypeStr(static_cast<Node::Type>(objType)));
+  }
   json_.closeArray();
   json_.emitValues({"string", "number", "number", "number", "number"});
   json_.closeArray(); // node_types
@@ -518,6 +520,41 @@ uint32_t V8HeapSnapshot::nodeTypeIndex(V8HeapSnapshot::Node::Type type) {
 
 uint32_t V8HeapSnapshot::edgeTypeIndex(V8HeapSnapshot::Edge::Type type) {
   return static_cast<uint32_t>(type);
+}
+
+const char *V8HeapSnapshot::Node::nodeTypeStr(Node::Type type) {
+  static const char *strs[] = {
+      "hidden",
+      "array",
+      "string",
+      "object",
+      "code",
+      "closure",
+      "regexp",
+      "number",
+      "native",
+      "synthetic",
+      "concatenated string",
+      "sliced string",
+      "symbol",
+      "bigint",
+  };
+  return strs[static_cast<int>(type)];
+}
+
+V8HeapSnapshot::Node::Type V8HeapSnapshot::Node::cellKindToType(CellKind kind) {
+  if (kindInRange(
+          kind,
+          CellKind::StringPrimitiveKind_first,
+          CellKind::StringPrimitiveKind_last)) {
+    return Type::String;
+  } else if (kind == CellKind::ArrayStorageKind) {
+    // The array type is meant to be used by primitive internal array
+    // constructs. User-creatable arrays should be Object.
+    return Type::Array;
+  } else {
+    return Type::Object;
+  }
 }
 
 std::string escapeJSON(llvm::StringRef s) {

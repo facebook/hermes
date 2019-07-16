@@ -153,8 +153,30 @@ class V8HeapSnapshot {
  public:
   using StringID = uint32_t;
   struct Node {
+    /// The highest-level categorization of the type of an object.
+    /// NOTE: These types are chosen to align with v8's types, not what Hermes
+    /// actually uses.
+    enum class Type {
+      Hidden,
+      Array,
+      String,
+      Object,
+      Code,
+      Closure,
+      Regexp,
+      Number,
+      Native,
+      // Synthetic means it's not shown to the user, but only exists to meet the
+      // requirements of a graph (for example, the GC roots are synthetic).
+      Synthetic,
+      ConcatenatedString,
+      SlicedString,
+      Symbol,
+      BigInt,
+      NumTypes,
+    };
+
     using ID = uintptr_t;
-    using Type = CellKind;
     using Index = uint32_t;
 
     Type type;
@@ -177,6 +199,9 @@ class V8HeapSnapshot {
           selfSize(selfSize),
           edgeCount(edgeCount),
           traceNodeId(traceNodeId) {}
+
+    static const char *nodeTypeStr(Type type);
+    static Type cellKindToType(CellKind kind);
   };
 
   struct Edge {

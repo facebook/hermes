@@ -132,20 +132,8 @@ TEST(HeapSnapshotTest, SnapshotTest) {
       << "\"snapshot\":{"
       << "\"meta\":{"
       << "\"node_fields\":[\"type\",\"name\",\"id\",\"self_size\",\"edge_count\",\"trace_node_id\"],"
-      << "\"node_types\":["
-      << "[";
-  bool comma = false;
-#define CELL_KIND(name) \
-  if (comma) {          \
-    stream << ",";      \
-  }                     \
-  comma = true;         \
-  stream << "\"" << cellKindStr(CellKind::name##Kind) << "\"";
-#include "hermes/VM/CellKinds.def"
-  stream
-      << "]"
-      << ",\"string\",\"number\",\"number\",\"number\",\"number\""
-      << "],"
+      << R"("node_types":[["hidden","array","string","object","code","closure","regexp","number","native","synthetic","concatenated string","sliced string","symbol","bigint"])"
+      << ",\"string\",\"number\",\"number\",\"number\",\"number\"],"
       << "\"edge_fields\":[\"type\",\"name_or_index\",\"to_node\"],"
       << "\"edge_types\":["
       << "[\"context\",\"element\",\"property\",\"internal\",\"hidden\",\"shortcut\",\"weak\"],"
@@ -155,16 +143,17 @@ TEST(HeapSnapshotTest, SnapshotTest) {
       << "},"
       << "\"node_count\":0,\"edge_count\":0,\"trace_function_count\":0"
       << "},"
-      << "\"nodes\":[" << static_cast<size_t>(CellKind::UninitializedKind)
-      << ",0,0," << static_cast<size_t>(CellKind::UninitializedKind) << ",1,0,"
-      << static_cast<size_t>(CellKind::UninitializedKind) << ",1,"
+      << "\"nodes\":["
+      << static_cast<size_t>(V8HeapSnapshot::Node::Type::Synthetic) << ",0,0,"
+      << static_cast<size_t>(CellKind::UninitializedKind) << ",1,0,"
+      << static_cast<size_t>(V8HeapSnapshot::Node::Type::Object) << ",1,"
       << rootLocation << "," << blockSize << ",1,0,"
-      << static_cast<size_t>(CellKind::UninitializedKind) << ",1,"
+      << static_cast<size_t>(V8HeapSnapshot::Node::Type::Object) << ",1,"
       << secondBlock << "," << blockSize << ",0,0"
       << "],"
-      << "\"edges\":[3,1,6,3,2,12],"
+      << "\"edges\":[3,2,6,3,3,12],"
       << "\"trace_function_infos\":[],\"trace_tree\":[],\"samples\":[],\"locations\":[],"
-      << "\"strings\":[\"(GC Roots)\",\"\",\"@other\"]"
+      << R"#("strings":["(GC Roots)","Uninitialized","","@other"])#"
       << "}";
 
   std::string expected = stream.str();
