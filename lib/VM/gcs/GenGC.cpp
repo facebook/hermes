@@ -8,6 +8,7 @@
 // it is included only by GC.h.  (For example, it assumes GCBase is declared.)
 #include "hermes/VM/GC.h"
 
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/AllocSource.h"
@@ -18,7 +19,6 @@
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
-#include "hermes/VM/SnapshotAcceptor.h"
 #include "hermes/VM/Space-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SweepResult.h"
@@ -1000,66 +1000,7 @@ void GenGC::updateTotalAllocStats() {
 }
 
 void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
-  // We'll say we're in GC even though we're not, to avoid assertion failures.
-  GCCycle cycle{this};
-#ifdef HERMES_SLOW_DEBUG
-  checkWellFormedHeap();
-#endif
-  HeapInfo info;
-  getHeapInfo(info);
-  FacebookHeapSnapshot snap(os, compact, info.allocatedBytes);
-  auto ptrToOffset = [this](const void *ptr) -> uint64_t {
-    // This encodes all pointers as offsets from the start of the young
-    // generation. This relies on the assumption that the young gen always
-    // starts lower than the old gen.
-    auto comparablePtr = reinterpret_cast<uintptr_t>(ptr);
-    auto youngGenStart = reinterpret_cast<uintptr_t>(youngGen_.start());
-    assert(
-        comparablePtr >= youngGenStart &&
-        "Cannot convert to offset if it's not in the old gen");
-    return comparablePtr - youngGenStart;
-  };
-  SnapshotRootAcceptor rootSnapshotAcceptor(*this, &snap, ptrToOffset);
-  SnapshotAcceptor snapshotAcceptor(*this, &snap, ptrToOffset);
-  SlotVisitorWithNames<SnapshotAcceptor> visitor(snapshotAcceptor);
-
-  snap.beginRoots();
-  markRoots(rootSnapshotAcceptor, true);
-  snap.endRoots();
-  auto scanner =
-      [ptrToOffset, &snap, &visitor, this](ContigAllocGCSpace &space) {
-        for (const char *curr = space.start(); curr != space.level();) {
-          const auto *cell = reinterpret_cast<const GCCell *>(curr);
-          FacebookHeapSnapshot::Object obj(
-              ptrToOffset(cell), cell->getKind(), cell->getAllocatedSize());
-          // If the cell is a string, add a value to be printed.
-          // TODO: add other special types here.
-          if (const StringPrimitive *str = dyn_vmcast<StringPrimitive>(cell)) {
-            snap.startObjectWithValue(std::move(obj), str);
-          } else {
-            snap.startObject(std::move(obj));
-          }
-          GCBase::markCellWithNames(
-              visitor, const_cast<GCCell *>(cell), cell->getVT(), this);
-          snap.endObject();
-          curr += cell->getAllocatedSize();
-        }
-      };
-
-  snap.beginRefs();
-  scanner(youngGen_);
-  scanner(oldGen_);
-  snap.endRefs();
-
-  snap.beginIdTable();
-  gcCallbacks_->visitIdentifiers([&snap](UTF16Ref entry, uint32_t id) {
-    snap.addIdTableEntry(entry, id);
-  });
-  snap.endIdTable();
-
-#ifdef HERMES_SLOW_DEBUG
-  checkWellFormedHeap();
-#endif
+  hermes_fatal("No snapshots allowed with GenGC");
 }
 
 void GenGC::printStats(llvm::raw_ostream &os, bool trailingComma) {

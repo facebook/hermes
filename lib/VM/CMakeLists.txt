@@ -47,7 +47,6 @@ set(source_files
   SegmentedArray.cpp
   SerializedLiteralParser.cpp
   SingleObject.cpp
-  SnapshotAcceptor.cpp
   SnapshotEdgeAcceptor.cpp
   SnapshotNodeAcceptor.cpp
   StackFrame.cpp

@@ -5,6 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/Support/CheckedMalloc.h"
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
@@ -473,7 +474,7 @@ bool MallocGC::isMostRecentFinalizableObj(const GCCell *cell) const {
 #endif
 
 void MallocGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
-  llvm_unreachable("No snapshots allowed with MallocGC");
+  hermes_fatal("No snapshots allowed with MallocGC");
 }
 
 /// @name Forward instantiations

@@ -23,7 +23,6 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue-inline.h"
-#include "hermes/VM/SnapshotAcceptor.h"
 #include "hermes/VM/SnapshotEdgeAcceptor.h"
 #include "hermes/VM/SnapshotNodeAcceptor.h"
 #include "hermes/VM/StringPrimitive.h"
