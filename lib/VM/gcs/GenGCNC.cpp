@@ -1166,8 +1166,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
     youngGen_.forUsedSegments(registerSegment);
     oldGen_.forUsedSegments(registerSegment);
   }
-  HeapInfo info;
-  getHeapInfo(info);
+
   JSONEmitter json(os, !compact);
   V8HeapSnapshot snap(json);
   auto ptrToOffset = [&segmentAddressToIndex](const void *ptr) -> uintptr_t {
