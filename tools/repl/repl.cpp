@@ -46,6 +46,7 @@
 #define C_STRING(x) #x
 
 #define HISTORY_FILE ".hermes_history"
+#define HISTORY_MAX_ENTRIES 500
 
 using namespace hermes;
 
@@ -346,6 +347,7 @@ int main(int argc, char **argv) {
       // EOF or user exit on non-continuation line.
       llvm::outs() << '\n';
 #if HAVE_LIBREADLINE
+      ::stifle_history(HISTORY_MAX_ENTRIES);
       ::write_history(historyFile.c_str());
 #endif
       return 0;
