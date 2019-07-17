@@ -45,8 +45,8 @@
 
 #define C_STRING(x) #x
 
-#define HISTORY_FILE ".hermes_history"
-#define HISTORY_MAX_ENTRIES 500
+static const std::string historyFileBaseName = ".hermes_history";
+static const int historyMaxEntries = 500;
 
 using namespace hermes;
 
@@ -231,14 +231,12 @@ static bool needsAnotherLine(llvm::StringRef input) {
 #if HAVE_LIBREADLINE
 // Load history file or create it
 std::error_code loadOrCreateHistoryFile(llvm::SmallString<128>& historyFile) {
-  llvm::Twine baseHistoryFile = llvm::Twine(HISTORY_FILE);
-
   if (!llvm::sys::path::home_directory(historyFile)) {
     // Use ENOENT here since it could not found a home directory
     return std::error_code(ENOENT, std::system_category());
   }
 
-  llvm::sys::path::append(historyFile, baseHistoryFile);
+  llvm::sys::path::append(historyFile, historyFileBaseName);
 
   if (!llvm::sys::fs::exists(historyFile)) {
     int fd;
@@ -347,7 +345,7 @@ int main(int argc, char **argv) {
       // EOF or user exit on non-continuation line.
       llvm::outs() << '\n';
 #if HAVE_LIBREADLINE
-      ::stifle_history(HISTORY_MAX_ENTRIES);
+      ::stifle_history(historyMaxEntries);
       ::write_history(historyFile.c_str());
 #endif
       return 0;
