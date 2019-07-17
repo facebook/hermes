@@ -1,8 +1,8 @@
 {
-  "name": "hermesvm",
+  "name": "hermes-engine",
   "version": "0.1.0",
-  "private": true,
-  "description": "A JavaScript VM optimized for running React Native on Android",
+  "private": false,
+  "description": "A JavaScript engine optimized for running React Native on Android",
   "license": "MIT",
   "repository": {
     "type": "git",
