@@ -1173,8 +1173,8 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   auto ptrToOffset = [&segmentAddressToIndex](const void *ptr) -> uintptr_t {
     // Turn a pointer into the combo of its segment number, and its offset
     // within the segment.
-    // Since each segment is 8 MB, save 23 bits for the offset,
-    // and the high order bits for the segment number.
+    // Reserve enough low bits to store any offset in a segment, and store the
+    // segment number in the remaining high bits.
     char *p = const_cast<char *>(reinterpret_cast<const char *>(ptr));
     return segmentAddressToIndex[AlignedStorage::start(p)]
         << AlignedStorage::kLogSize |
