@@ -265,6 +265,47 @@
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
 
+class SemiClass {
+  ;
+  foo() {}
+  ;
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ClassDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "SemiClass",
+// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "superClass": null,
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "ClassBody",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "MethodDefinition",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "foo",
+// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "FunctionExpression",
+// CHECK-NEXT:               "id": null,
+// CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "body": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": []
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "method",
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": false
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 class DeclClass {
   foo() {}
 }

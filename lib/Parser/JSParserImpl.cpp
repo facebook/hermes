@@ -2806,6 +2806,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
     bool isStatic = false;
     switch (tok_->getKind()) {
       case TokenKind::semi:
+        advance();
         break;
 
       case TokenKind::rw_static:
