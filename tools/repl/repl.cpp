@@ -233,30 +233,30 @@ static bool needsAnotherLine(llvm::StringRef input) {
 std::error_code loadOrCreateHistoryFile(llvm::SmallString<128>& historyFile) {
   llvm::Twine baseHistoryFile = llvm::Twine(HISTORY_FILE);
 
-  if (llvm::sys::path::home_directory(historyFile)) {
-    llvm::sys::path::append(historyFile, baseHistoryFile);
-
-    if (!llvm::sys::fs::exists(historyFile)) {
-      int fd;
-      auto err = llvm::sys::fs::openFileForWrite(llvm::Twine(historyFile), fd);
-      if (err) {
-	return err;
-      }
-
-      llvm::sys::fs::closeFile(fd);
-    }
-
-    auto err = ::read_history(historyFile.c_str());
-    if (err != 0) {
-      // Return a error_code object from a errno enum
-      return std::error_code(err, std::system_category());
-    }
-
-    return std::error_code();
+  if (!llvm::sys::path::home_directory(historyFile)) {
+    // Use ENOENT here since it could not found a home directory
+    return std::error_code(ENOENT, std::system_category());
   }
 
-  // Use ENOENT here since it could not found a home directory
-  return std::error_code(ENOENT, std::system_category());
+  llvm::sys::path::append(historyFile, baseHistoryFile);
+
+  if (!llvm::sys::fs::exists(historyFile)) {
+    int fd;
+    auto err = llvm::sys::fs::openFileForWrite(llvm::Twine(historyFile), fd);
+    if (err) {
+      return err;
+    }
+
+    llvm::sys::fs::closeFile(fd);
+  }
+
+  auto err = ::read_history(historyFile.c_str());
+  if (err != 0) {
+    // Return a error_code object from a errno enum
+    return std::error_code(err, std::system_category());
+  }
+
+  return std::error_code();
 }
 #endif
 
