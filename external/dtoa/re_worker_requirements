@@ -1,0 +1,6 @@
+{
+    "dtoa-locksAndroid#android-armv7,static": {
+        "workerSize": "MEDIUM",
+        "platformType": "LINUX"
+    }
+}
