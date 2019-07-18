@@ -99,7 +99,27 @@ struct BracketInsn : public Insn {
   }
 };
 
-// See BytecodeFileFormatTest for details about bit field layouts
+struct MatchNChar8Insn : public Insn {
+  // number of 8-byte char following this instruction.
+  uint8_t charCount;
+
+  /// \return the width of this instruction plus its characters.
+  uint32_t totalWidth() const {
+    return sizeof(*this) + charCount * sizeof(char);
+  }
+};
+
+struct MatchNCharICase8Insn : public Insn {
+  // number of 8-byte char following this instruction.
+  uint8_t charCount;
+
+  /// \return the width of this instruction plus its characters.
+  uint32_t totalWidth() const {
+    return sizeof(*this) + charCount * sizeof(char);
+  }
+};
+
+// See BytecodeFileFormatTest for details about bit field layouts.
 static_assert(
     sizeof(BracketInsn) == 6,
     "BracketInsn should take up 6 byte total");
@@ -280,6 +300,11 @@ class RegexBytecodeStream {
   void emitBracketRange(BracketRange16 range) {
     const uint8_t *rangeBytes = reinterpret_cast<const uint8_t *>(&range);
     bytes_.insert(bytes_.end(), rangeBytes, rangeBytes + sizeof(range));
+  }
+
+  /// Emit a Char8 for use inside a MatchNChar8Insn or MatchNCharICase8Insn.
+  void emitChar8(char c) {
+    bytes_.push_back((uint8_t)c);
   }
 
   /// \return the current offset in the stream, which is where the next

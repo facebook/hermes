@@ -21,6 +21,7 @@
 
 #include "hermes/Regex/RegexBytecode.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -298,6 +299,16 @@ class Node {
     return false;
   }
 
+  /// Perform optimization on Node's contents.
+  virtual void optimizeNodeContents() {}
+
+  /// If this Node can be coalesced into a single MatchCharNode,
+  /// then add the node's characters to \p output and \return true.
+  /// Otherwise \return false.
+  virtual bool tryCoalesceCharacters(std::vector<char16_t> *output) const {
+    return false;
+  }
+
  protected:
   /// \return the match constraints for this node.
   /// This should be overridden by subclasses to report the constraints for that
@@ -311,6 +322,9 @@ class Node {
   /// The default emits nothing, so that base Node is just a no-op.
   virtual void emit(RegexBytecodeStream &bcs) const {}
 };
+
+/// Coalesce adjacent MatchCharNode in NodeList.
+static void coalesceCaseSensitiveASCIINodeList(NodeList &nodes);
 
 /// GoalNode is the terminal Node that represents successful execution.
 class GoalNode final : public Node {
@@ -382,6 +396,10 @@ class LoopNode final : public Node {
       result |= loopeeConstraints_;
     }
     return result | Super::matchConstraints();
+  }
+
+  virtual void optimizeNodeContents() override {
+    coalesceCaseSensitiveASCIINodeList(loopee_);
   }
 
  private:
@@ -479,6 +497,11 @@ class AlternationNode final : public Node {
   virtual MatchConstraintSet matchConstraints() const override {
     MatchConstraintSet result = firstConstraints_ & secondConstraints_;
     return result | Super::matchConstraints();
+  }
+
+  virtual void optimizeNodeContents() override {
+    coalesceCaseSensitiveASCIINodeList(first_);
+    coalesceCaseSensitiveASCIINodeList(second_);
   }
 
   void emit(RegexBytecodeStream &bcs) const override {
@@ -616,74 +639,138 @@ class MatchAnyButNewlineNode final : public Node {
   }
 };
 
-/// MatchChar matches a single character, specified as a parameter to the
+/// MatchChar matches one or more characters, specified as a parameter to the
 /// constructor.
-class MatchCharNode final : public Node {
+class MatchCharNodeBase : public Node {
   using Super = Node;
 
-  // The character we wish to match against.
-  char16_t c_;
-
  public:
-  MatchCharNode(char16_t c) : c_(c) {}
+  // The character literals we wish to match against.
+  llvm::SmallVector<char16_t, 10> literals_;
+
+  MatchCharNodeBase(char16_t c) : literals_{c} {}
+
+  MatchCharNodeBase(std::vector<char16_t> *chars) {
+    literals_.insert(literals_.begin(), chars->begin(), chars->end());
+  }
 
   virtual MatchConstraintSet matchConstraints() const override {
     MatchConstraintSet result = MatchConstraintNonEmpty;
     // If our character is not ASCII, then we cannot match pure-ASCII strings.
-    if (!isASCII(c_))
+    if (!isPureASCII()) {
       result |= MatchConstraintNonASCII;
+    }
     return result | Super::matchConstraints();
   }
 
   void emit(RegexBytecodeStream &bcs) const override {
-    if (isASCII(c_)) {
-      bcs.emit<MatchChar8Insn>()->c = c_;
+    // if size is 1, then NChar instruction is less efficient than singular.
+    if (isPureASCII() && literals_.size() > 1) {
+      emitPureASCIIImpl(bcs);
     } else {
-      bcs.emit<MatchChar16Insn>()->c = c_;
+      emitMixedASCIIImpl(bcs);
     }
   }
 
+ protected:
+  /// \return true if every character in literals_ is ASCII.
+  bool isPureASCII() const {
+    return std::all_of(literals_.begin(), literals_.end(), isASCII);
+  }
+
   virtual bool matchesExactlyOneCharacter() const override {
-    return true;
+    return literals_.size() == 1;
+  }
+
+  /// Implementation of emitPureASCII to avoid class templates.
+  virtual void emitPureASCIIImpl(RegexBytecodeStream &bcs) const = 0;
+  /// Compile node and all characters as ASCII to a bytecode stream \p bcs.
+  template <typename MatchNChar8InsnType>
+  void emitPureASCII(RegexBytecodeStream &bcs) const {
+    assert(
+        literals_.size() <= UINT8_MAX &&
+        "Literal count cannot exceed uint8 max");
+    auto insn = bcs.emit<MatchNChar8InsnType>();
+    insn->charCount = literals_.size();
+    for (const auto c : literals_) {
+      bcs.emitChar8(c);
+    }
+  }
+
+  /// Implementation of emitMixedASCII to avoid class templates.
+  virtual void emitMixedASCIIImpl(RegexBytecodeStream &bcs) const = 0;
+  /// Compile node and all characters to a bytecode stream \p bcs.
+  template <typename MatchChar8InsnType, typename MatchChar16InsnType>
+  void emitMixedASCII(RegexBytecodeStream &bcs) const {
+    for (const auto c : literals_) {
+      if (isASCII(c)) {
+        bcs.emit<MatchChar8InsnType>()->c = c;
+      } else {
+        bcs.emit<MatchChar16InsnType>()->c = c;
+      }
+    }
   }
 };
 
-/// MatchCharICase matches a single character, ignoring case.
+class MatchCharNode final : public MatchCharNodeBase {
+  using Super = MatchCharNodeBase;
+
+ public:
+  MatchCharNode(char16_t c) : Super(c) {}
+
+  MatchCharNode(std::vector<char16_t> *chars) : Super(chars) {}
+
+  virtual bool tryCoalesceCharacters(
+      std::vector<char16_t> *output) const override {
+    // Only coalesce pure ASCII characters.
+    if (!isPureASCII()) {
+      return false;
+    }
+    // Only coalesce if the size of the new vector can be represented as
+    // uint8_t in the corresponding instruction's charCount.
+    if (UINT8_MAX <= output->size() + literals_.size()) {
+      return false;
+    }
+    output->insert(output->end(), literals_.begin(), literals_.end());
+    return true;
+  }
+
+ private:
+  virtual void emitPureASCIIImpl(RegexBytecodeStream &bcs) const override {
+    return emitPureASCII<MatchNChar8Insn>(bcs);
+  };
+  virtual void emitMixedASCIIImpl(RegexBytecodeStream &bcs) const override {
+    return emitMixedASCII<MatchChar8Insn, MatchChar16Insn>(bcs);
+  }
+};
+
 template <class Traits>
-class MatchCharICaseNode : public Node {
-  using Super = Node;
-
-  // Traits used for case conversion.
+class MatchCharICaseNode final : public MatchCharNodeBase {
+  using Super = MatchCharNodeBase;
   const Traits &traits_;
-
-  // The character we wish to match against.
-  char16_t c_;
 
  public:
   MatchCharICaseNode(const Traits &traits, char16_t c)
-      : traits_(traits), c_(traits.caseFold(c)) {}
+      : Super(traits.caseFold(c)), traits_(traits) {}
 
-  virtual void emit(RegexBytecodeStream &bcs) const override {
-    if (isASCII(c_)) {
-      bcs.emit<MatchCharICase8Insn>()->c = c_;
-    } else {
-      bcs.emit<MatchCharICase16Insn>()->c = c_;
-    }
+  MatchCharICaseNode(const Traits &traits, std::vector<char16_t> *chars)
+      : Super(applyTraitsToAllChars(traits, chars)), traits_(traits) {}
+
+  /// \return pointer to chars after caseFolding every element.
+  std::vector<char16_t> *applyTraitsToAllChars(
+      const Traits &traits,
+      std::vector<char16_t> *chars) {
+    for (auto &c : *chars)
+      c = traits.caseFold(c);
+    return chars;
   }
 
-  virtual MatchConstraintSet matchConstraints() const override {
-    MatchConstraintSet result = MatchConstraintNonEmpty;
-    // If our character is not ASCII, then we cannot match pure-ASCII strings.
-    // Note this is true despite the fact that we are case-insensitive. For
-    // example, Turkish dotless i does not match ASCII i or I because the
-    // definition of canonicalize() forbids it (ES5.1 15.10.2.8).
-    if (!isASCII(c_))
-      result |= MatchConstraintNonASCII;
-    return result | Super::matchConstraints();
-  }
-
-  virtual bool matchesExactlyOneCharacter() const override {
-    return true;
+ private:
+  virtual void emitPureASCIIImpl(RegexBytecodeStream &bcs) const override {
+    return emitPureASCII<MatchNCharICase8Insn>(bcs);
+  };
+  virtual void emitMixedASCIIImpl(RegexBytecodeStream &bcs) const override {
+    return emitMixedASCII<MatchCharICase8Insn, MatchCharICase16Insn>(bcs);
   }
 };
 
@@ -957,7 +1044,6 @@ class Regex {
       ForwardIterator last,
       uint32_t backRefLimit,
       uint32_t *outMaxBackRef);
-
   void pushLeftAnchor();
   void pushRightAnchor();
   void pushMatchAnyButNewline();
@@ -1018,6 +1104,10 @@ class LookaheadNode : public Node {
       result |= expConstraints_;
     }
     return result | Super::matchConstraints();
+  }
+
+  virtual void optimizeNodeContents() override {
+    coalesceCaseSensitiveASCIINodeList(exp_);
   }
 
   // Override emit() to compile our lookahead expression.
@@ -1096,6 +1186,7 @@ ParseResult<ForwardIterator> Regex<Traits>::parseWithBackRefLimit(
   // If we succeeded, add a goal node as the last node.
   if (result) {
     nodes_.push_back(make_unique<GoalNode>());
+    coalesceCaseSensitiveASCIINodeList(nodes_);
   }
 
   // Compute any match constraints.
@@ -1193,6 +1284,37 @@ void Regex<Traits>::pushLookahead(
   appendNode<LookaheadNode>(move(exp), mexpBegin, mexpEnd, invert);
 }
 
+inline void coalesceCaseSensitiveASCIINodeList(NodeList &nodes) {
+  for (auto &node : nodes) {
+    node->optimizeNodeContents();
+  }
+
+  size_t clean = 0; // index tracking sub-vector of nodes not to delete
+  size_t start = 0; // index expoloring vector for nodes to coalesce
+  for (; start < nodes.size(); clean++, start++) {
+    std::vector<char16_t> chars;
+
+    if (nodes[start]->tryCoalesceCharacters(&chars)) {
+      size_t end = start + 1;
+      for (; end < nodes.size(); end++) { // See how many we can coalesce.
+        if (!nodes[end]->tryCoalesceCharacters(&chars)) {
+          break;
+        }
+      }
+
+      if (end - start >= 3) { // Coalesce if we get 3 or more chars.
+        start = end - 1;
+        nodes[start] = unique_ptr<MatchCharNode>(new MatchCharNode(&chars));
+      }
+    }
+    if (clean != start) { // updates to the clean node
+      iter_swap(nodes.begin() + clean, nodes.begin() + start);
+    }
+  }
+  if (clean < nodes.size()) { // erase all nodes after after clean index
+    nodes.erase(nodes.begin() + clean, nodes.end());
+  }
+}
 } // namespace regex
 } // namespace hermes
 

@@ -43,7 +43,7 @@ T aligner(T v) {
 }
 
 /// Helpers to compute the width of an instruction. All instructions are
-/// fixed-width, except for brackets.
+/// fixed-width, except for brackets, MatchNChar8Insn, and MatchNCharICase8Insn.
 template <typename Insn>
 uint32_t instructionWidth(const Insn *insn) {
   return sizeof *insn;
@@ -51,6 +51,18 @@ uint32_t instructionWidth(const Insn *insn) {
 
 template <>
 uint32_t instructionWidth<regex::BracketInsn>(const regex::BracketInsn *insn) {
+  return insn->totalWidth();
+}
+
+template <>
+uint32_t instructionWidth<regex::MatchNChar8Insn>(
+    const regex::MatchNChar8Insn *insn) {
+  return insn->totalWidth();
+}
+
+template <>
+uint32_t instructionWidth<regex::MatchNCharICase8Insn>(
+    const regex::MatchNCharICase8Insn *insn) {
   return insn->totalWidth();
 }
 
@@ -69,6 +81,40 @@ void dumpInstruction(
   OS << "MatchChar16: ";
   char16_t c = insn->c;
   OS << llvm::format_hex(c, 4);
+}
+
+void dumpInstruction(
+    const regex::MatchNChar8Insn *insn,
+    llvm::raw_ostream &OS) {
+  OS << "MatchNChar8: '";
+  const char *cPtr = reinterpret_cast<const char *>(insn + sizeof(regex::Insn));
+  for (uint32_t i = 0; i < insn->charCount; i++) {
+    char c = *cPtr;
+    if (std::isprint(c)) {
+      OS << llvm::format("%c", c);
+    } else {
+      OS << llvm::format_hex(c, 4);
+    }
+    cPtr++;
+  }
+  OS << "'";
+}
+
+void dumpInstruction(
+    const regex::MatchNCharICase8Insn *insn,
+    llvm::raw_ostream &OS) {
+  OS << "MatchNCharICase8: '";
+  const char *cPtr = reinterpret_cast<const char *>(insn + sizeof(regex::Insn));
+  for (uint32_t i = 0; i < insn->charCount; i++) {
+    char c = *cPtr;
+    if (std::isprint(c)) {
+      OS << llvm::format("%c", c);
+    } else {
+      OS << llvm::format_hex(c, 4);
+    }
+    cPtr++;
+  }
+  OS << "'";
 }
 
 void dumpInstruction(

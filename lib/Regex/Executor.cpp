@@ -302,6 +302,12 @@ struct Context {
   /// matches the instruction \p insn (with that opcode).
   template <Width1Opcode w1opcode>
   inline bool matchWidth1(const Insn *insn, CharT c) const;
+  /// \return true if all chars, stored in contiguous memory after \p insn,
+  /// match the chars in state \p s in the same order, case insensitive. Note
+  /// the count of chars is given in \p insn.
+  inline bool matchesNCharICase8(
+      const MatchNCharICase8Insn *insn,
+      State<Traits> &s);
 
   /// Execute the given Width1 instruction \p loopBody on string \p pos up to \p
   /// max times. \return the number of matches made, not to exceed \p max.
@@ -398,6 +404,37 @@ bool matchesRightAnchor(Context<Traits> &ctx, State<Traits> &s) {
     matchesAnchor = true;
   }
   return matchesAnchor;
+}
+
+/// \return true if all chars, stored in contiguous memory after \p insn,
+/// match the chars in state \p s in the same order. Note the count of chars
+/// is given in \p insn.
+template <class Traits>
+bool matchesNChar8(const MatchNChar8Insn *insn, State<Traits> &s) {
+  auto insnCharPtr = reinterpret_cast<const char *>(insn + 1);
+  auto charCount = insn->charCount;
+  for (int offset = 0; offset < charCount; offset++) {
+    if (s.current_[offset] != insnCharPtr[offset]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <class Traits>
+bool Context<Traits>::matchesNCharICase8(
+    const MatchNCharICase8Insn *insn,
+    State<Traits> &s) {
+  auto insnCharPtr = reinterpret_cast<const char *>(insn + 1);
+  auto charCount = insn->charCount;
+  for (int offset = 0; offset < charCount; offset++) {
+    char c = s.current_[offset];
+    char instC = insnCharPtr[offset];
+    if (c != instC && traits_.caseFold(c) != instC) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /// \return true if the character \p ch matches a bracket instruction \p insn,
@@ -771,6 +808,27 @@ auto Context<Traits>::match(
             BACKTRACK();
           s->current_++;
           s->ip_ += sizeof(MatchCharICase16Insn);
+          break;
+        }
+
+        case Opcode::MatchNChar8: {
+          const auto *insn = llvm::cast<MatchNChar8Insn>(base);
+
+          if (last_ - s->current_ < insn->charCount || !matchesNChar8(insn, *s))
+            BACKTRACK();
+          s->current_ += insn->charCount;
+          s->ip_ += insn->totalWidth();
+          break;
+        }
+
+        case Opcode::MatchNCharICase8: {
+          const auto *insn = llvm::cast<MatchNCharICase8Insn>(base);
+
+          if (last_ - s->current_ < insn->charCount ||
+              !matchesNCharICase8(insn, *s))
+            BACKTRACK();
+          s->current_ += insn->charCount;
+          s->ip_ += insn->totalWidth();
           break;
         }
 
