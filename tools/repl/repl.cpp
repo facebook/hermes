@@ -325,7 +325,7 @@ int main(int argc, char **argv) {
   runtime->getHeap().runtimeWillExecute();
 
 #if HAVE_LIBREADLINE
-  llvm::SmallString<128> historyFile = llvm::SmallString<128>();
+  llvm::SmallString<128> historyFile{};
   auto historyErr = loadOrCreateHistoryFile(historyFile);
   if (historyErr) {
     llvm::errs() << "Could not load history file: " << historyErr.message() << '\n';
