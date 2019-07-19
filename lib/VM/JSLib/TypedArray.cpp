@@ -555,14 +555,12 @@ typedArrayPrototypeLength(void *, Runtime *runtime, NativeArgs args) {
 }
 
 // ES6 22.2.3.7 and 22.2.3.25 (also see Array.prototype.every/some)
-CallResult<HermesValue> typedArrayPrototypeEverySome(
-    void *everyVoid,
-    Runtime *runtime,
-    NativeArgs args) {
+CallResult<HermesValue>
+typedArrayPrototypeEverySome(void *ctx, Runtime *runtime, NativeArgs args) {
   // NOTE: this was implemented as separate from Array.prototype.every to take
   // advantage of the known contiguous memory region.
   GCScope gcScope(runtime);
-  auto every = *static_cast<bool *>(everyVoid);
+  auto every = static_cast<bool>(ctx);
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -717,14 +715,12 @@ CallResult<HermesValue> mapFilterLoop(
   return HermesValue::encodeNumberValue(insert);
 }
 
-CallResult<HermesValue> typedArrayPrototypeMapFilter(
-    void *mapfilterctx,
-    Runtime *runtime,
-    NativeArgs args) {
+CallResult<HermesValue>
+typedArrayPrototypeMapFilter(void *ctx, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
   // Whether this call is "map" or "filter".
-  const bool map = *reinterpret_cast<bool *>(mapfilterctx);
+  bool map = static_cast<bool>(ctx);
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -779,7 +775,7 @@ CallResult<HermesValue> typedArrayPrototypeMapFilter(
 
 CallResult<HermesValue>
 typedArrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
-  bool index = *reinterpret_cast<bool *>(ctx);
+  bool index = static_cast<bool>(ctx);
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -849,11 +845,12 @@ typedArrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
 
 enum class IndexOfMode { includes, indexOf, lastIndexOf };
 CallResult<HermesValue>
-typedArrayPrototypeIndexOf(void *ctxVoid, Runtime *runtime, NativeArgs args) {
-  // Whether this call is "includes", "indexOf", or "lastIndexOf".
-  const auto ctx = *reinterpret_cast<const IndexOfMode *>(ctxVoid);
-  auto ret = [ctx](bool x = false, double y = -1) {
-    switch (ctx) {
+typedArrayPrototypeIndexOf(void *ctx, Runtime *runtime, NativeArgs args) {
+  const auto indexOfMode = *reinterpret_cast<const IndexOfMode *>(&ctx);
+  // indexOfMode stores Whether this call is "includes", "indexOf", or
+  // "lastIndexOf".
+  auto ret = [indexOfMode](bool x = false, double y = -1) {
+    switch (indexOfMode) {
       case IndexOfMode::includes:
         return HermesValue::encodeBoolValue(x);
       default:
@@ -877,7 +874,7 @@ typedArrayPrototypeIndexOf(void *ctxVoid, Runtime *runtime, NativeArgs args) {
   double fromIndex = 0;
   if (args.getArgCount() < 2) {
     // Zero default for forward, end default for backward.
-    if (ctx == IndexOfMode::lastIndexOf) {
+    if (indexOfMode == IndexOfMode::lastIndexOf) {
       fromIndex = len - 1;
     }
   } else {
@@ -892,14 +889,14 @@ typedArrayPrototypeIndexOf(void *ctxVoid, Runtime *runtime, NativeArgs args) {
     fromIndex = 0;
   }
   double k = 0;
-  if (ctx == IndexOfMode::lastIndexOf) {
+  if (indexOfMode == IndexOfMode::lastIndexOf) {
     k = fromIndex >= 0 ? std::min(fromIndex, len - 1) : len + fromIndex;
   } else {
     k = fromIndex >= 0 ? fromIndex : std::max(len + fromIndex, 0.0);
   }
-  auto delta = ctx == IndexOfMode::lastIndexOf ? -1 : 1;
-  auto inRange = [ctx](double k, double len) {
-    if (ctx == IndexOfMode::lastIndexOf) {
+  auto delta = indexOfMode == IndexOfMode::lastIndexOf ? -1 : 1;
+  auto inRange = [indexOfMode](double k, double len) {
+    if (indexOfMode == IndexOfMode::lastIndexOf) {
       return k >= 0;
     } else {
       return k < len;
@@ -907,7 +904,7 @@ typedArrayPrototypeIndexOf(void *ctxVoid, Runtime *runtime, NativeArgs args) {
   };
   for (; inRange(k, len); k += delta) {
     auto curr = JSObject::getOwnIndexed(*self, runtime, k);
-    bool comp = ctx == IndexOfMode::includes
+    bool comp = indexOfMode == IndexOfMode::includes
         ? isSameValueZero(curr, searchElement)
         : strictEqualityTest(curr, searchElement);
     if (comp) {
@@ -999,9 +996,9 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-typedArrayPrototypeReduce(void *rightctx, Runtime *runtime, NativeArgs args) {
+typedArrayPrototypeReduce(void *ctx, Runtime *runtime, NativeArgs args) {
   // Whether this call is "reduce" or "reduceRight".
-  bool right = *reinterpret_cast<bool *>(rightctx);
+  bool right = static_cast<bool>(ctx);
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1513,13 +1510,16 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 typedArrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
+  IterationKind kind = *reinterpret_cast<IterationKind *>(&ctx);
+  assert(
+      kind <= IterationKind::NumKinds &&
+      "typeArrayPrototypeIterator with wrong kind");
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
-  return JSArrayIterator::create(
-      runtime, self, *reinterpret_cast<IterationKind *>(ctx));
+  return JSArrayIterator::create(runtime, self, kind);
 }
 
 CallResult<HermesValue> typedArrayPrototypeSymbolToStringTag(
@@ -1577,12 +1577,6 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   assert(
       st != ExecutionStatus::EXCEPTION &&
       "defineNameLengthAndPrototype() failed");
-
-  static bool on = true;
-  static bool off = false;
-  static auto includes = IndexOfMode::includes;
-  static auto indexOf = IndexOfMode::indexOf;
-  static auto lastIndexOf = IndexOfMode::lastIndexOf;
 
   // TypedArrayBase.prototype.xxx().
   // Accessors.
@@ -1644,14 +1638,14 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::every),
-      &on,
+      (void *)true,
       typedArrayPrototypeEverySome,
       1);
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::some),
-      &off,
+      (void *)false,
       typedArrayPrototypeEverySome,
       1);
   defineMethod(
@@ -1665,21 +1659,21 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::filter),
-      &off,
+      (void *)false,
       typedArrayPrototypeMapFilter,
       1);
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::find),
-      &off,
+      (void *)false,
       typedArrayPrototypeFind,
       1);
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::findIndex),
-      &on,
+      (void *)true,
       typedArrayPrototypeFind,
       1);
   defineMethod(
@@ -1693,21 +1687,21 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::includes),
-      &includes,
+      (void *)IndexOfMode::includes,
       typedArrayPrototypeIndexOf,
       1);
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::indexOf),
-      &indexOf,
+      (void *)IndexOfMode::indexOf,
       typedArrayPrototypeIndexOf,
       1);
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::lastIndexOf),
-      &lastIndexOf,
+      (void *)IndexOfMode::lastIndexOf,
       typedArrayPrototypeIndexOf,
       1);
   defineMethod(
@@ -1721,21 +1715,21 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::map),
-      &on,
+      (void *)true,
       typedArrayPrototypeMapFilter,
       1);
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::reduce),
-      &off,
+      (void *)false,
       typedArrayPrototypeReduce,
       1);
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::reduceRight),
-      &on,
+      (void *)true,
       typedArrayPrototypeReduce,
       1);
   defineMethod(
@@ -1774,29 +1768,25 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
       typedArrayPrototypeSubarray,
       2);
 
-  static IterationKind iterationKindKey = IterationKind::Key;
-  static IterationKind iterationKindValue = IterationKind::Value;
-  static IterationKind iterationKindEntry = IterationKind::Entry;
-
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::keys),
-      &iterationKindKey,
+      (void *)IterationKind::Key,
       typedArrayPrototypeIterator,
       0);
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::values),
-      &iterationKindValue,
+      (void *)IterationKind::Value,
       typedArrayPrototypeIterator,
       0);
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::entries),
-      &iterationKindEntry,
+      (void *)IterationKind::Entry,
       typedArrayPrototypeIterator,
       0);
 
