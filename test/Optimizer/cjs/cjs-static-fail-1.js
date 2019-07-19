@@ -3,7 +3,7 @@
 // This source code is licensed under the MIT license found in the LICENSE
 // file in the root directory of this source tree.
 //
-// RUN: %hermesc -fstatic-require -commonjs -emit-binary -out=/dev/null %s 2>&1 | %FileCheck --match-full-lines %s
+// RUN: %hermesc -fstatic-require -commonjs -emit-binary %s 2>&1 > /dev/null | %FileCheck --match-full-lines %s
 
 foo(require);
 //CHECK: {{.*}}cjs-static-fail-1.js:8:4: warning: 'require' used as function call argument

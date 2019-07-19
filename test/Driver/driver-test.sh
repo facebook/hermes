@@ -35,10 +35,10 @@ expect() {
 }
 
 cd "${SRCDIR}" || exit 1
-expect "${Success}" "${HERMES}" test.js.in -target=HBC -emit-binary -out /dev/null
+expect "${Success}" "${HERMES}" test.js.in -target=HBC -emit-binary > /dev/null
 expect "${InvalidFlags}" "${HERMES}" -lazy -commonjs test.js.in
 expect "${InvalidFlags}" "${HERMES}" -nonsenseflag test.js.in
-expect "${ParsingFailed}" "${HERMES}" bogus.js.in -target=HBC -emit-binary -out /dev/null
-expect "${LoadGlobalsFailed}" "${HERMES}" test.js.in -include-globals bogus.js.in -emit-binary -target=HBC -out /dev/null
-expect "${InputFileError}" "${HERMES}" ./not/a/valid/path.js -target=HBC -emit-binary -out /dev/null
+expect "${ParsingFailed}" "${HERMES}" bogus.js.in -target=HBC -emit-binary > /dev/null
+expect "${LoadGlobalsFailed}" "${HERMES}" test.js.in -include-globals bogus.js.in -emit-binary -target=HBC > /dev/null
+expect "${InputFileError}" "${HERMES}" ./not/a/valid/path.js -target=HBC -emit-binary > /dev/null
 expect "${OutputFileError}" "${HERMES}" test.js.in -target=HBC -emit-binary -out ./not/a/valid/path.hbc

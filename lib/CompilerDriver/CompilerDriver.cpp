@@ -515,24 +515,92 @@ memoryBufferFromZipFile(zip_t *zip, const char *path, bool silent = false) {
   return buf;
 }
 
-/// Open the given file name \p fileName for writing. Print an error to
-/// llvm::errs() on failure. Specify \p openFlags as \p F_None or \p F_Text
-/// for binary file and text file, respectively.
-/// \return the raw stream, or none on failure.
-static std::unique_ptr<raw_fd_ostream> openFileForWrite(
-    llvm::Twine fileName,
-    llvm::sys::fs::OpenFlags openFlags) {
-  std::error_code EC;
-  llvm::SmallString<32> fileNameOut;
-  auto result = llvm::make_unique<raw_fd_ostream>(
-      fileName.toStringRef(fileNameOut), EC, openFlags);
-  if (EC) {
-    llvm::errs() << "Failed to open file " << fileName << ": " << EC.message()
-                 << '\n';
-    result.reset();
+/// Manage an output file safely.
+class OutputStream {
+ public:
+  /// Creates an empty object.
+  OutputStream() : os_(nullptr) {}
+  /// Create an object which initially holds the \p defaultStream.
+  OutputStream(llvm::raw_ostream &defaultStream) : os_(&defaultStream) {}
+
+  ~OutputStream() {
+    discard();
   }
-  return result;
-}
+
+  /// Replaces the stream with an open stream to a temporary file
+  /// named based on \p fileName.  This method will write error
+  /// messages, if any, to llvm::errs().  This method can only be
+  /// called once on an object.  \return true if the temp file was
+  /// created and false otherwise.  If the object is destroyed without
+  /// close() being called, the temp file is removed.
+  bool open(llvm::Twine fileName, llvm::sys::fs::OpenFlags openFlags) {
+    assert(!fdos_ && "OutputStream::open() can be called only once.");
+
+    // Newer versions of llvm have a safe createUniqueFile overload
+    // which takes OpenFlags.  Hermes's llvm doesn't, so we have to do
+    // it this way, which is a hypothetical race.
+    std::error_code EC = llvm::sys::fs::getPotentiallyUniqueFileName(
+        fileName + ".%%%%%%", tempName_);
+    if (EC) {
+      llvm::errs() << "Failed to get temp file for " << fileName << ": "
+                   << EC.message() << '\n';
+      return false;
+    }
+
+    fdos_ = llvm::make_unique<raw_fd_ostream>(tempName_, EC, openFlags);
+    if (EC) {
+      llvm::errs() << "Failed to open file " << tempName_ << ": "
+                   << EC.message() << '\n';
+      fdos_.reset();
+      return false;
+    }
+    os_ = fdos_.get();
+    fileName_ = fileName.str();
+    return true;
+  }
+
+  /// If a temporary file was created, it is renamed to \p fileName.
+  /// If renaming fails, it will be deleted.  This method will write
+  /// error messages, if any, to llvm::errs().  \return true if a temp
+  /// file was never created or was renamed here; or false otherwise.
+  bool close() {
+    if (!fdos_) {
+      return true;
+    }
+    fdos_->close();
+    fdos_.reset();
+    std::error_code EC = llvm::sys::fs::rename(tempName_, fileName_);
+    if (EC) {
+      llvm::errs() << "Failed to write file " << fileName_ << ": "
+                   << EC.message() << '\n';
+      llvm::sys::fs::remove(tempName_);
+      return false;
+    }
+    return true;
+  }
+
+  /// If a temporary file was created, it is deleted.
+  void discard() {
+    if (!fdos_) {
+      return;
+    }
+
+    fdos_->close();
+    fdos_.reset();
+    llvm::sys::fs::remove(tempName_);
+  }
+
+  raw_ostream &os() {
+    assert(os_ && "OutputStream never initialized");
+    return *os_;
+  }
+
+ private:
+  llvm::raw_ostream *os_;
+  llvm::SmallString<32> tempName_;
+  std::unique_ptr<raw_fd_ostream> fdos_;
+  std::string fileName_;
+};
 
 /// Loads global definitions from MemoryBuffer and adds the definitions to \p
 /// declFileList.
@@ -1241,20 +1309,20 @@ CompileResult disassembleBytecode(std::unique_ptr<hbc::BCProvider> bytecode) {
       cl::BytecodeFormat == cl::BytecodeFormatKind::HBC &&
       "validateFlags() should enforce only HBC files may be disassembled");
 
-  std::unique_ptr<raw_fd_ostream> fileOS;
-  if (!cl::BytecodeOutputFilename.empty()) {
-    fileOS = openFileForWrite(cl::BytecodeOutputFilename, F_Text);
-    if (!fileOS)
-      return InputFileError;
+  OutputStream fileOS(llvm::outs());
+  if (!cl::BytecodeOutputFilename.empty() &&
+      !fileOS.open(cl::BytecodeOutputFilename, F_Text)) {
+    return OutputFileError;
   }
 
   hbc::DisassemblyOptions disassemblyOptions = cl::PrettyDisassemble
       ? hbc::DisassemblyOptions::Pretty
       : hbc::DisassemblyOptions::None;
-  auto &OS = fileOS ? *fileOS : llvm::outs();
   hbc::BytecodeDisassembler disassembler(std::move(bytecode));
   disassembler.setOptions(disassemblyOptions);
-  disassembler.disassemble(OS);
+  disassembler.disassemble(fileOS.os());
+  if (!fileOS.close())
+    return OutputFileError;
   return Success;
 }
 
@@ -1568,17 +1636,14 @@ CompileResult processSourceFiles(
   }
 
   CompileResult result{Success};
-  std::unique_ptr<raw_fd_ostream> fileOS{};
   StringRef base = cl::BytecodeOutputFilename;
   if (context->getSegmentRanges().size() < 2) {
-    if (!base.empty()) {
-      fileOS = openFileForWrite(base, F_None);
-      if (!fileOS)
-        return OutputFileError;
+    OutputStream fileOS{llvm::outs()};
+    if (!base.empty() && !fileOS.open(base, F_None)) {
+      return OutputFileError;
     }
-    auto &OS = fileOS ? *fileOS : llvm::outs();
     auto result = generateBytecodeForSerialization(
-        OS,
+        fileOS.os(),
         M,
         genOptions,
         sourceHash,
@@ -1588,10 +1653,17 @@ CompileResult processSourceFiles(
     if (result.status != Success) {
       return result;
     }
+    if (!fileOS.close())
+      return OutputFileError;
   } else {
-    std::string manifestStr;
-    llvm::raw_string_ostream manifestOS{manifestStr};
-    JSONEmitter manifest{manifestOS, /* pretty */ true};
+    OutputStream manifestOS{llvm::nulls()};
+    if (!base.empty() && !cl::BytecodeManifestFilename.empty()) {
+      llvm::SmallString<32> manifestPath = llvm::sys::path::parent_path(base);
+      llvm::sys::path::append(manifestPath, cl::BytecodeManifestFilename);
+      if (!manifestOS.open(manifestPath, F_Text))
+        return OutputFileError;
+    }
+    JSONEmitter manifest{manifestOS.os(), /* pretty */ true};
     manifest.openArray();
 
     for (const auto &range : context->getSegmentRanges()) {
@@ -1601,14 +1673,12 @@ CompileResult processSourceFiles(
       }
       std::string flavor = "seg-" + oscompat::to_string(range.segment);
 
-      if (!base.empty()) {
-        fileOS = openFileForWrite(filename, F_None);
-        if (!fileOS)
-          return OutputFileError;
+      OutputStream fileOS{llvm::outs()};
+      if (!base.empty() && !fileOS.open(filename, F_None)) {
+        return OutputFileError;
       }
-      auto &OS = base.empty() ? llvm::outs() : *fileOS;
       auto segResult = generateBytecodeForSerialization(
-          OS,
+          fileOS.os(),
           M,
           genOptions,
           sourceHash,
@@ -1618,6 +1688,8 @@ CompileResult processSourceFiles(
       if (segResult.status != Success) {
         return segResult;
       }
+      if (!fileOS.close())
+        return OutputFileError;
 
       // Add to the manifest.
       manifest.openDict();
@@ -1627,18 +1699,10 @@ CompileResult processSourceFiles(
 
       manifest.closeDict();
     }
-
     manifest.closeArray();
 
-    // Only output to manifest file if we are actually generating binary
-    // bytecode.
-    if (!base.empty() && !cl::BytecodeManifestFilename.empty()) {
-      llvm::SmallString<32> manifestPath = llvm::sys::path::parent_path(base);
-      llvm::sys::path::append(manifestPath, cl::BytecodeManifestFilename);
-      fileOS = openFileForWrite(manifestPath, F_Text);
-      if (!fileOS)
-        return OutputFileError;
-      *fileOS << manifestOS.str();
+    if (!manifestOS.close()) {
+      return OutputFileError;
     }
 
     result = Success;
@@ -1646,11 +1710,12 @@ CompileResult processSourceFiles(
 
   // Output the source map if requested.
   if (cl::OutputSourceMap) {
-    std::string mapFilePath = base.str() + ".map";
-    auto OS = openFileForWrite(mapFilePath, F_Text);
-    if (!OS)
+    OutputStream OS;
+    if (!OS.open(base.str() + ".map", F_Text))
       return OutputFileError;
-    sourceMapGen->outputAsJSON(*OS);
+    sourceMapGen->outputAsJSON(OS.os());
+    if (!OS.close())
+      return OutputFileError;
   }
 
   return result;
