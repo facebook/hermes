@@ -132,6 +132,138 @@ void SwitchLowering::erasePhiTarget(BasicBlock *block, BasicBlock *toDelete) {
   }
 }
 
+/// LowerAllocObjectFuncContext allows us to walk down the dominance tree and
+/// process each basic block in the order of dominance relationship. This is
+/// required to achieve reliable lowering optimizations for object
+/// creations.
+class LowerAllocObjectFuncContext
+    : public DomTreeDFS::Visitor<
+          LowerAllocObjectFuncContext,
+          DomTreeDFS::StackNode<LowerAllocObjectFuncContext>> {
+ public:
+  LowerAllocObjectFuncContext(DominanceInfo &DI, AllocObjectInst *allocInst)
+      : DomTreeDFS::Visitor<
+            LowerAllocObjectFuncContext,
+            DomTreeDFS::StackNode<LowerAllocObjectFuncContext>>(DI),
+        allocInst_(allocInst) {
+    // The following loop constructs userBasicBlockMap_, by storing
+    // all users of allocInst keyed by Basic Block.
+    for (Instruction *I : allocInst->getUsers()) {
+      BasicBlock *BB = I->getParent();
+      userBasicBlockMap_[BB].insert(I);
+    }
+  }
+
+  llvm::SmallVector<StoreOwnPropertyInst *, 4> run() {
+    // First of all, get a list of basic blocks that contain users of
+    // allocInst_, sorted by dominance relationship.
+    DFS(DT_.getNode(allocInst_->getParent()));
+    // Extract instructions (users) from these basic blocks that meet
+    // the requirement of lowering.
+    return collectInstructions();
+  }
+
+ private:
+  // friend Visitor such that DFS can call processNode.
+  friend DomTreeDFS::Visitor<
+      LowerAllocObjectFuncContext,
+      DomTreeDFS::StackNode<LowerAllocObjectFuncContext>>;
+
+  /// Called by DFS recursively to process each node.
+  /// The outcome (sortedBasicBlocks_) we expect is the list of basic blocks
+  /// that contain users of allocInst_, that's strictly ordered by dominance
+  /// (i.e. every BB must dominate the next one on the list). One important
+  /// extra constraint is that the last BB in the list must also dominate all
+  /// other BBs that contains users of allocInst_ that's not in the basic block
+  /// list. The return value indicates whether this basic block is added to the
+  /// list. Note that the return value isn't actually used.
+  bool processNode(DomTreeDFS::StackNode<LowerAllocObjectFuncContext> *SN);
+
+  /// collectInstructions walks through sortedBasicBlocks_, extract instructions
+  /// that are users of allocInst_, ordered by dominance relationship.
+  /// We also look into the type of each user and decide when to stop the
+  /// lowering process. Specifically, we only process StoreOwnPropertyInst.
+  llvm::SmallVector<StoreOwnPropertyInst *, 4> collectInstructions() const;
+
+  /// The instruction that allocates the object.
+  AllocObjectInst *allocInst_;
+
+  /// Constructed from all users of allocInst_. Map from basic block to the set
+  /// of instructions in that basic block that are users of allocInst_. This
+  /// data structure is needed to speed up all the lookup operations during the
+  /// process.
+  llvm::DenseMap<BasicBlock *, llvm::DenseSet<Instruction *>>
+      userBasicBlockMap_{};
+
+  /// When we encounter branching, i.e. for a given basic block, if multiple of
+  /// the basic blocks dominated by that basic block all contain users of
+  /// allocInst_, we can not append any of those basic blocks to
+  /// sortedBasicBlocks_. Furthermore, we can not append any other basic blocks
+  /// to sortedBasicBlocks_ because the branch already exists.
+  bool stopAddingBasicBlock_{false};
+
+  /// List of basic blocks that contain users of allocInst_, ordered by
+  /// dominance relationship.
+  llvm::SmallVector<BasicBlock *, 4> sortedBasicBlocks_{};
+};
+
+bool LowerAllocObjectFuncContext::processNode(
+    DomTreeDFS::StackNode<LowerAllocObjectFuncContext> *SN) {
+  assert(!SN->isDone() && "Visiting same basic block twice");
+  SN->markDone();
+
+  BasicBlock *BB = SN->node()->getBlock();
+  if (!userBasicBlockMap_.count(BB)) {
+    // BB does not contain any users of allocInst_.
+    return false;
+  }
+  while (!sortedBasicBlocks_.empty() &&
+         !DT_.properlyDominates(sortedBasicBlocks_.back(), BB)) {
+    // If the last basic block in the list does not dominate BB,
+    // it means BB and that last basic block are in parallel branches
+    // of previous basic blocks. We cannot doing any lowering into
+    // any of these basic blocks. So we roll back one basic block,
+    // and mark the fact that we can no longer append any more basic blocks
+    // afterwards because of the existence of basic blocks.
+    // The DFS process needs to continue, as we may roll back even more
+    // basic blocks.
+    sortedBasicBlocks_.pop_back();
+    stopAddingBasicBlock_ = true;
+  }
+  if (!stopAddingBasicBlock_) {
+    sortedBasicBlocks_.push_back(BB);
+    return true;
+  }
+  return false;
+}
+
+llvm::SmallVector<StoreOwnPropertyInst *, 4>
+LowerAllocObjectFuncContext::collectInstructions() const {
+  llvm::SmallVector<StoreOwnPropertyInst *, 4> instrs;
+
+  for (BasicBlock *BB : sortedBasicBlocks_) {
+    bool terminate = false;
+    for (Instruction &I : *BB) {
+      if (!userBasicBlockMap_.find(BB)->second.count(&I)) {
+        // I is not a user of allocInst_, ignore it.
+        continue;
+      }
+      auto *SI = dyn_cast<StoreOwnPropertyInst>(&I);
+      if (!SI) {
+        // A user that's not a StoreOwnPropertyInst. We have to
+        // stop processing here.
+        terminate = true;
+        break;
+      }
+      instrs.push_back(SI);
+    }
+    if (terminate) {
+      break;
+    }
+  }
+  return instrs;
+}
+
 bool LowerAllocObject::runOnFunction(Function *F) {
   bool changed = false;
   llvm::SmallVector<AllocObjectInst *, 4> allocs;
