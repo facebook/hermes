@@ -220,7 +220,6 @@ class StackNode {
 /// bool processNode(StackNode &);
 template <typename Derived, typename StackNode>
 class Visitor {
-  DominanceInfo &DT_;
   llvm::RecyclingAllocator<llvm::BumpPtrAllocator, StackNode> nodeAllocator_;
 
   Derived *derived() {
@@ -237,15 +236,23 @@ class Visitor {
   }
 
  protected:
+  DominanceInfo &DT_;
+
   Visitor(DominanceInfo &DT) : DT_(DT) {}
 
+  /// Starting DFS from root node.
   bool DFS() {
+    return DFS(DT_.getRootNode());
+  }
+
+  /// Starting DFS from a specific node.
+  bool DFS(DominanceInfoNode *DIN) {
     llvm::SmallVector<StackNode *, 4> nodesToProcess;
 
     bool changed = false;
 
     // Process the root node.
-    nodesToProcess.push_back(newNode(DT_.getRootNode()));
+    nodesToProcess.push_back(newNode(DIN));
 
     // Process the stack.
     while (!nodesToProcess.empty()) {
