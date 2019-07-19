@@ -23,8 +23,6 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue-inline.h"
-#include "hermes/VM/SnapshotEdgeAcceptor.h"
-#include "hermes/VM/SnapshotNodeAcceptor.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/SymbolID.h"
@@ -1143,6 +1141,83 @@ void GenGC::claimAllocContext() {
   segmentMoved(&allocContext_.activeSegment);
   targetGen->setTrueAllocContext(&allocContext_);
 }
+
+namespace {
+
+// Abstract base class for all snapshot acceptors.
+struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
+  using SlotAcceptorWithNamesDefault::accept;
+  using SlotAcceptorWithNamesDefault::SlotAcceptorWithNamesDefault;
+
+  // Sub-classes must override this
+  void accept(void *&ptr, const char *name) override = 0;
+
+  void accept(HermesValue &hv, const char *name) override {
+    if (hv.isPointer()) {
+      auto ptr = hv.getPointer();
+      accept(ptr, name);
+    }
+  }
+
+  void accept(uint64_t, const char *) { /* nop */
+  }
+};
+
+struct SnapshotNodeAcceptor : public SnapshotAcceptor {
+  using SnapshotAcceptor::accept;
+  using SnapshotAcceptor::SnapshotAcceptor;
+
+  void accept(void *&ptr, const char *name) override {
+    if (ptr) {
+      edgeCount++;
+    }
+  }
+
+  unsigned resetEdgeCount() {
+    auto count = edgeCount;
+    edgeCount = 0;
+    return count;
+  }
+
+ private:
+  unsigned edgeCount = 0;
+};
+
+struct SnapshotEdgeAcceptor : public SnapshotAcceptor {
+  using SnapshotAcceptor::accept;
+  using PtrToOffset = std::function<uintptr_t(const void *)>;
+  using StringToID =
+      std::function<V8HeapSnapshot::StringID(llvm::StringRef str)>;
+
+  SnapshotEdgeAcceptor(
+      GC &gc,
+      V8HeapSnapshot &snap,
+      PtrToOffset ptrToOffset,
+      StringToID stringToID)
+      : SnapshotAcceptor(gc),
+        snap_(snap),
+        ptrToOffset_(ptrToOffset),
+        stringToID_(stringToID) {}
+
+  void accept(void *&ptr, const char *name) override {
+    if (!ptr) {
+      return;
+    }
+
+    snap_.addEdge(V8HeapSnapshot::Edge{
+        V8HeapSnapshot::Edge::Named{},
+        V8HeapSnapshot::Edge::Type::Internal,
+        static_cast<V8HeapSnapshot::Node::ID>(ptrToOffset_(ptr)),
+        stringToID_(name)});
+  }
+
+ private:
+  V8HeapSnapshot &snap_;
+  PtrToOffset ptrToOffset_;
+  StringToID stringToID_;
+};
+
+} // namespace
 
 void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   // We need to yield/claim at outer scope, to cover the calls to
