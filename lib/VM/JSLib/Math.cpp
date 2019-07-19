@@ -33,52 +33,6 @@ namespace vm {
 
 //===----------------------------------------------------------------------===//
 /// Math.
-/// The Math object has functions like sin, cos, exp, etc. Most take one
-/// argument, a few take two arguments, min() and max() may take any number
-/// of arguments, and random() takes none. We could provide a separate C
-/// function for each JS function. This would have the advantage of making the
-/// call into C a predictable jump, but at the cost of more space and memory.
-/// Instead, we  provide one C function for each arity, and store the underlying
-/// C function  in the ctx pointer. This results in an unpredictable indirect
-/// jump, but saves memory and disk space (a quick test showed disk savings of
-/// ~4k).
-/// TODO: re-evaluate this decision in light of benchmark results.
-
-// Implementation of 1-arg Math functions like sin or exp
-// Interprets the ctx pointer as a double->double function and invokes it with
-// the first argument
-static CallResult<HermesValue>
-runContextFunc1Arg(void *ctx, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double arg = res->getNumber();
-  auto func = reinterpret_cast<double (*)(double)>(ctx);
-  return HermesValue::encodeDoubleValue(func(arg));
-}
-
-// Implementation of 2-arg Math functions like pow and atan2
-// Interprets the ctx pointer as a (double, double)->double function and invokes
-// it with the first two arguments
-static CallResult<HermesValue>
-runContextFunc2Arg(void *ctx, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double arg0 = res->getNumber();
-
-  res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double arg1 = res->getNumber();
-
-  auto func = reinterpret_cast<double (*)(double, double)>(ctx);
-  return HermesValue::encodeDoubleValue(func(arg0, arg1));
-}
-
 // Implementation of Math.round(), following ES 5.1 15.8.2.15
 // This cannot be a simple call to std::round() because std::round() rounds
 // halfways away from zero, while Math.round must round towards positive
@@ -107,6 +61,76 @@ static double roundHalfwaysTowardsInfinity(double x) {
     // careful about -0.5, which must round to -0.
     return oscompat::copysign(std::floor(x + 0.5), x);
   }
+}
+
+/// The Math object has functions like sin, cos, exp, etc. Most take one
+/// argument, a few take two arguments, min() and max() may take any number
+/// of arguments, and random() takes none. Use context as a index to switch to
+/// the corresponding c function.
+enum class MathKind {
+#define MATHFUNC_1ARG(name, func) name,
+#include "hermes/VM/MathStdFunctions.def"
+#undef MATHFUNC_1ARG
+  Num1ArgKinds,
+#define MATHFUNC_2ARG(name, func) name,
+#include "hermes/VM/MathStdFunctions.def"
+#undef MATHFUNC_2ARG
+  Num2ArgKinds
+};
+// Implementation of 1-arg Math functions like sin or exp
+// Interprets the ctx pointer as an enum to invoke the
+// corresponding function with the first argument
+
+static CallResult<HermesValue>
+runContextFunc1Arg(void *ctx, Runtime *runtime, NativeArgs args) {
+  typedef double (*Math1ArgFuncPtr)(double);
+  static Math1ArgFuncPtr math1ArgFuncs[] = {
+#define MATHFUNC_1ARG(name, func) func,
+#include "hermes/VM/MathStdFunctions.def"
+#undef MATHFUNC_1ARG
+  };
+  assert(
+      (uint64_t)ctx < (uint64_t)MathKind::Num1ArgKinds &&
+      "runContextFunc1Arg with wrong kind");
+  Math1ArgFuncPtr func = math1ArgFuncs[(uint64_t)ctx];
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double arg = res->getNumber();
+  return HermesValue::encodeDoubleValue(func(arg));
+}
+
+// Implementation of 2-arg Math functions like pow and atan2
+// Interprets the ctx pointer as an enum and invoke corresponding
+// function with the first two arguments
+static CallResult<HermesValue>
+runContextFunc2Arg(void *ctx, Runtime *runtime, NativeArgs args) {
+  typedef double (*Math2ArgFuncPtr)(double, double);
+  static Math2ArgFuncPtr math2ArgFuncs[] = {
+#define MATHFUNC_2ARG(name, func) func,
+#include "hermes/VM/MathStdFunctions.def"
+#undef MATHFUNC_2ARG
+  };
+  assert(
+      (uint64_t)ctx > (uint64_t)MathKind::Num1ArgKinds &&
+      (uint64_t)ctx < (uint64_t)MathKind::Num2ArgKinds &&
+      "runContextFunc1Arg with wrong kind");
+  Math2ArgFuncPtr func =
+      math2ArgFuncs[(uint64_t)ctx - (uint64_t)MathKind::Num1ArgKinds - 1];
+  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double arg0 = res->getNumber();
+
+  res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double arg1 = res->getNumber();
+
+  return HermesValue::encodeDoubleValue(func(arg0, arg1));
 }
 
 // ES5.1 15.8.2.11
@@ -388,50 +412,36 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
   setMathValueProperty(Predefined::getSymbolID(Predefined::SQRT2), M_SQRT2);
 
   // ES5.1 15.8.2, Math function properties
-  auto setMathFunctionProperty1Arg = [=](SymbolID name,
-                                         double (*func)(double)) {
-    defineMethod(
-        runtime,
-        math,
-        name,
-        reinterpret_cast<void *>(func),
-        runContextFunc1Arg,
-        1);
+  auto setMathFunctionProperty1Arg = [=](SymbolID name, MathKind kind) {
+    defineMethod(runtime, math, name, (void *)kind, runContextFunc1Arg, 1);
   };
 
-  auto setMathFunctionProperty2Arg = [=](SymbolID name,
-                                         double (*func)(double, double)) {
-    defineMethod(
-        runtime,
-        math,
-        name,
-        reinterpret_cast<void *>(func),
-        runContextFunc2Arg,
-        2);
+  auto setMathFunctionProperty2Arg = [=](SymbolID name, MathKind kind) {
+    defineMethod(runtime, math, name, (void *)kind, runContextFunc2Arg, 2);
   };
 
   // We use the C versions of some of these functions from <math.h>
   // because on Android, the C++ <cmath> library doesn't have them.
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::abs), std::abs);
+      Predefined::getSymbolID(Predefined::abs), MathKind::abs);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::acos), std::acos);
+      Predefined::getSymbolID(Predefined::acos), MathKind::acos);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::acosh), ::acosh);
+      Predefined::getSymbolID(Predefined::acosh), MathKind::acosh);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::asin), std::asin);
+      Predefined::getSymbolID(Predefined::asin), MathKind::asin);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::asinh), ::asinh);
+      Predefined::getSymbolID(Predefined::asinh), MathKind::asinh);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::atan), std::atan);
+      Predefined::getSymbolID(Predefined::atan), MathKind::atan);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::atanh), ::atanh);
+      Predefined::getSymbolID(Predefined::atanh), MathKind::atanh);
   setMathFunctionProperty2Arg(
-      Predefined::getSymbolID(Predefined::atan2), std::atan2);
+      Predefined::getSymbolID(Predefined::atan2), MathKind::atan2);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::cbrt), ::cbrt);
+      Predefined::getSymbolID(Predefined::cbrt), MathKind::cbrt);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::ceil), std::ceil);
+      Predefined::getSymbolID(Predefined::ceil), MathKind::ceil);
   defineMethod(
       runtime,
       math,
@@ -440,15 +450,15 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
       mathClz32,
       1);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::cos), std::cos);
+      Predefined::getSymbolID(Predefined::cos), MathKind::cos);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::cosh), ::cosh);
+      Predefined::getSymbolID(Predefined::cosh), MathKind::cosh);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::exp), std::exp);
+      Predefined::getSymbolID(Predefined::exp), MathKind::exp);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::expm1), ::expm1);
+      Predefined::getSymbolID(Predefined::expm1), MathKind::expm1);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::floor), std::floor);
+      Predefined::getSymbolID(Predefined::floor), MathKind::floor);
   defineMethod(
       runtime,
       math,
@@ -464,15 +474,15 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
       mathHypot,
       2);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::log), std::log);
+      Predefined::getSymbolID(Predefined::log), MathKind::log);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::log10), std::log10);
+      Predefined::getSymbolID(Predefined::log10), MathKind::log10);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::log1p), ::log1p);
+      Predefined::getSymbolID(Predefined::log1p), MathKind::log1p);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::log2), oscompat::log2);
+      Predefined::getSymbolID(Predefined::log2), MathKind::log2);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::trunc), oscompat::trunc);
+      Predefined::getSymbolID(Predefined::trunc), MathKind::trunc);
   defineMethod(
       runtime,
       math,
@@ -509,7 +519,7 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
       mathRandom,
       0);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::round), roundHalfwaysTowardsInfinity);
+      Predefined::getSymbolID(Predefined::round), MathKind::round);
   defineMethod(
       runtime,
       math,
@@ -518,15 +528,15 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
       mathSign,
       1);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::sin), std::sin);
+      Predefined::getSymbolID(Predefined::sin), MathKind::sin);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::sinh), ::sinh);
+      Predefined::getSymbolID(Predefined::sinh), MathKind::sinh);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::sqrt), std::sqrt);
+      Predefined::getSymbolID(Predefined::sqrt), MathKind::sqrt);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::tan), std::tan);
+      Predefined::getSymbolID(Predefined::tan), MathKind::tan);
   setMathFunctionProperty1Arg(
-      Predefined::getSymbolID(Predefined::tanh), ::tanh);
+      Predefined::getSymbolID(Predefined::tanh), MathKind::tanh);
 
   auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
