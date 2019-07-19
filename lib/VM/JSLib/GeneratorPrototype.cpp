@@ -38,20 +38,18 @@ void populateGeneratorPrototype(Runtime *runtime) {
       generatorPrototypeNext,
       1);
 
-  static bool staticTrue = true;
-  static bool staticFalse = false;
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::returnStr),
-      /* isThrow */ (void *)&staticFalse,
+      /* isThrow */ (void *)false,
       generatorPrototypeReturnOrThrow,
       1);
   defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::throwStr),
-      /* isThrow */ (void *)&staticTrue,
+      /* isThrow */ (void *)true,
       generatorPrototypeReturnOrThrow,
       1);
 
@@ -178,7 +176,7 @@ static CallResult<Handle<JSObject>> generatorResumeAbrupt(
 
 static CallResult<HermesValue>
 generatorPrototypeReturnOrThrow(void *ctx, Runtime *runtime, NativeArgs args) {
-  bool isThrow = *reinterpret_cast<bool *>(ctx);
+  bool isThrow = static_cast<bool>(ctx);
 
   auto generatorRes = generatorValidate(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(generatorRes == ExecutionStatus::EXCEPTION)) {
