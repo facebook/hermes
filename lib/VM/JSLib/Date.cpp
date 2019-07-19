@@ -140,38 +140,43 @@ struct GetterOptions {
 };
 } // namespace
 
-static ToStringOptions optDatetimeToString{datetimeToISOString, false, false};
-static ToStringOptions optDateToString{dateToString, false, false};
-static ToStringOptions optTimeToString{timeToString, false, false};
-static ToStringOptions optISOToString{datetimeToISOString, true, true};
-static ToStringOptions optUTCToString{datetimeToUTCString, true, false};
+enum class ToStringKind {
+  DatetimeToString,
+  DateToString,
+  TimeToString,
+  ISOToString,
+  UTCToString,
+  NumKinds
+};
 
-static ToLocaleStringOptions optDatetimeToLocaleString{datetimeToLocaleString};
-static ToLocaleStringOptions optDateToLocaleString{dateToLocaleString};
-static ToLocaleStringOptions optTimeToLocaleString{timeToLocaleString};
+enum class ToLocaleStringKind {
+  DatetimeToLocaleString,
+  DateToLocaleString,
+  TimeToLocaleString,
+  NumKinds
+};
 
-static GetterOptions optFullYear{GetterOptions::Field::FULL_YEAR, false};
-static GetterOptions optYear{GetterOptions::Field::YEAR, false};
-static GetterOptions optMonth{GetterOptions::Field::MONTH, false};
-static GetterOptions optDate{GetterOptions::Field::DATE, false};
-static GetterOptions optDay{GetterOptions::Field::DAY, false};
-static GetterOptions optHours{GetterOptions::Field::HOURS, false};
-static GetterOptions optMinutes{GetterOptions::Field::MINUTES, false};
-static GetterOptions optSeconds{GetterOptions::Field::SECONDS, false};
-static GetterOptions optMilliseconds{GetterOptions::Field::MILLISECONDS, false};
-
-static GetterOptions optUTCFullYear{GetterOptions::Field::FULL_YEAR, true};
-static GetterOptions optUTCMonth{GetterOptions::Field::MONTH, true};
-static GetterOptions optUTCDate{GetterOptions::Field::DATE, true};
-static GetterOptions optUTCDay{GetterOptions::Field::DAY, true};
-static GetterOptions optUTCHours{GetterOptions::Field::HOURS, true};
-static GetterOptions optUTCMinutes{GetterOptions::Field::MINUTES, true};
-static GetterOptions optUTCSeconds{GetterOptions::Field::SECONDS, true};
-static GetterOptions optUTCMilliseconds{GetterOptions::Field::MILLISECONDS,
-                                        true};
-
-static GetterOptions optTimezoneOffset{GetterOptions::Field::TIMEZONE_OFFSET,
-                                       false};
+enum class GetterKind {
+  GetFullYear,
+  GetYear,
+  GetMonth,
+  GetDate,
+  GetDay,
+  GetHours,
+  GetMinutes,
+  GetSeconds,
+  GetMilliseconds,
+  GetUTCFullYear,
+  GetUTCMonth,
+  GetUTCDate,
+  GetUTCDay,
+  GetUTCHours,
+  GetUTCMinutes,
+  GetUTCSeconds,
+  GetUTCMilliseconds,
+  GetTimezoneOffset,
+  NumKinds
+};
 
 Handle<JSObject> createDateConstructor(Runtime *runtime) {
   auto datePrototype = Handle<JSObject>::vmcast(&runtime->datePrototype);
@@ -199,92 +204,111 @@ Handle<JSObject> createDateConstructor(Runtime *runtime) {
       datePrototypeGetTime,
       0);
 
-  auto defineToStringMethod = [&](SymbolID name, ToStringOptions &opts) {
+  auto defineToStringMethod = [&](SymbolID name, ToStringKind kind) {
     defineMethod(
         runtime,
         datePrototype,
         name,
-        reinterpret_cast<void *>(&opts),
+        (void *)kind,
         datePrototypeToStringHelper,
         0);
   };
 
   defineToStringMethod(
-      Predefined::getSymbolID(Predefined::toString), optDatetimeToString);
+      Predefined::getSymbolID(Predefined::toString),
+      ToStringKind::DatetimeToString);
   defineToStringMethod(
-      Predefined::getSymbolID(Predefined::toDateString), optDateToString);
+      Predefined::getSymbolID(Predefined::toDateString),
+      ToStringKind::DateToString);
   defineToStringMethod(
-      Predefined::getSymbolID(Predefined::toTimeString), optTimeToString);
+      Predefined::getSymbolID(Predefined::toTimeString),
+      ToStringKind::TimeToString);
   defineToStringMethod(
-      Predefined::getSymbolID(Predefined::toISOString), optISOToString);
+      Predefined::getSymbolID(Predefined::toISOString),
+      ToStringKind::ISOToString);
   defineToStringMethod(
-      Predefined::getSymbolID(Predefined::toUTCString), optUTCToString);
+      Predefined::getSymbolID(Predefined::toUTCString),
+      ToStringKind::UTCToString);
   defineToStringMethod(
-      Predefined::getSymbolID(Predefined::toGMTString), optUTCToString);
+      Predefined::getSymbolID(Predefined::toGMTString),
+      ToStringKind::UTCToString);
 
   auto defineToLocaleStringMethod = [&](SymbolID name,
-                                        ToLocaleStringOptions &opts) {
+                                        ToLocaleStringKind kind) {
     defineMethod(
         runtime,
         datePrototype,
         name,
-        reinterpret_cast<void *>(&opts),
+        (void *)kind,
         datePrototypeToLocaleStringHelper,
         0);
   };
 
   defineToLocaleStringMethod(
       Predefined::getSymbolID(Predefined::toLocaleString),
-      optDatetimeToLocaleString);
+      ToLocaleStringKind::DatetimeToLocaleString);
   defineToLocaleStringMethod(
       Predefined::getSymbolID(Predefined::toLocaleDateString),
-      optDateToLocaleString);
+      ToLocaleStringKind::DateToLocaleString);
   defineToLocaleStringMethod(
       Predefined::getSymbolID(Predefined::toLocaleTimeString),
-      optTimeToLocaleString);
+      ToLocaleStringKind::TimeToLocaleString);
 
-  auto defineGetterMethod = [&](SymbolID name, GetterOptions &opts) {
+  auto defineGetterMethod = [&](SymbolID name, GetterKind kind) {
     defineMethod(
         runtime,
         datePrototype,
         name,
-        reinterpret_cast<void *>(&opts),
+        (void *)kind,
         datePrototypeGetterHelper,
         0);
   };
 
   defineGetterMethod(
-      Predefined::getSymbolID(Predefined::getFullYear), optFullYear);
-  defineGetterMethod(Predefined::getSymbolID(Predefined::getYear), optYear);
-  defineGetterMethod(Predefined::getSymbolID(Predefined::getMonth), optMonth);
-  defineGetterMethod(Predefined::getSymbolID(Predefined::getDate), optDate);
-  defineGetterMethod(Predefined::getSymbolID(Predefined::getDay), optDay);
-  defineGetterMethod(Predefined::getSymbolID(Predefined::getHours), optHours);
+      Predefined::getSymbolID(Predefined::getFullYear),
+      GetterKind::GetFullYear);
   defineGetterMethod(
-      Predefined::getSymbolID(Predefined::getMinutes), optMinutes);
+      Predefined::getSymbolID(Predefined::getYear), GetterKind::GetYear);
   defineGetterMethod(
-      Predefined::getSymbolID(Predefined::getSeconds), optSeconds);
+      Predefined::getSymbolID(Predefined::getMonth), GetterKind::GetMonth);
   defineGetterMethod(
-      Predefined::getSymbolID(Predefined::getMilliseconds), optMilliseconds);
+      Predefined::getSymbolID(Predefined::getDate), GetterKind::GetDate);
   defineGetterMethod(
-      Predefined::getSymbolID(Predefined::getUTCFullYear), optUTCFullYear);
+      Predefined::getSymbolID(Predefined::getDay), GetterKind::GetDay);
   defineGetterMethod(
-      Predefined::getSymbolID(Predefined::getUTCMonth), optUTCMonth);
+      Predefined::getSymbolID(Predefined::getHours), GetterKind::GetHours);
   defineGetterMethod(
-      Predefined::getSymbolID(Predefined::getUTCDate), optUTCDate);
-  defineGetterMethod(Predefined::getSymbolID(Predefined::getUTCDay), optUTCDay);
+      Predefined::getSymbolID(Predefined::getMinutes), GetterKind::GetMinutes);
   defineGetterMethod(
-      Predefined::getSymbolID(Predefined::getUTCHours), optUTCHours);
+      Predefined::getSymbolID(Predefined::getSeconds), GetterKind::GetSeconds);
   defineGetterMethod(
-      Predefined::getSymbolID(Predefined::getUTCMinutes), optUTCMinutes);
+      Predefined::getSymbolID(Predefined::getMilliseconds),
+      GetterKind::GetMilliseconds);
   defineGetterMethod(
-      Predefined::getSymbolID(Predefined::getUTCSeconds), optUTCSeconds);
+      Predefined::getSymbolID(Predefined::getUTCFullYear),
+      GetterKind::GetUTCFullYear);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCMonth),
+      GetterKind::GetUTCMonth);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCDate), GetterKind::GetUTCDate);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCDay), GetterKind::GetUTCDay);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCHours),
+      GetterKind::GetUTCHours);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCMinutes),
+      GetterKind::GetUTCMinutes);
+  defineGetterMethod(
+      Predefined::getSymbolID(Predefined::getUTCSeconds),
+      GetterKind::GetUTCSeconds);
   defineGetterMethod(
       Predefined::getSymbolID(Predefined::getUTCMilliseconds),
-      optUTCMilliseconds);
+      GetterKind::GetUTCMilliseconds);
   defineGetterMethod(
       Predefined::getSymbolID(Predefined::getTimezoneOffset),
-      optTimezoneOffset);
+      GetterKind::GetTimezoneOffset);
 
   defineMethod(
       runtime,
@@ -603,7 +627,17 @@ dateNow(void *, Runtime *runtime, NativeArgs args) {
 
 static CallResult<HermesValue>
 datePrototypeToStringHelper(void *ctx, Runtime *runtime, NativeArgs args) {
-  auto opts = reinterpret_cast<ToStringOptions *>(ctx);
+  static ToStringOptions toStringOptions[] = {
+      {datetimeToISOString, false, false},
+      {dateToString, false, false},
+      {timeToString, false, false},
+      {datetimeToISOString, true, true},
+      {datetimeToUTCString, true, false},
+  };
+  assert(
+      (uint64_t)ctx < (uint64_t)ToStringKind::NumKinds &&
+      "dataPrototypeToString with wrong kind as context");
+  ToStringOptions *opts = &toStringOptions[(uint64_t)ctx];
   auto *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
     return runtime->raiseTypeError(
@@ -633,7 +667,15 @@ static CallResult<HermesValue> datePrototypeToLocaleStringHelper(
     void *ctx,
     Runtime *runtime,
     NativeArgs args) {
-  auto opts = reinterpret_cast<ToLocaleStringOptions *>(ctx);
+  static ToLocaleStringOptions toLocaleStringOptions[] = {
+      {datetimeToLocaleString},
+      {dateToLocaleString},
+      {timeToLocaleString},
+  };
+  assert(
+      (uint64_t)ctx < (uint64_t)ToLocaleStringKind::NumKinds &&
+      "dataPrototypeToLocaleString with wrong kind as context");
+  ToLocaleStringOptions *opts = &toLocaleStringOptions[(uint64_t)ctx];
   auto *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
     return runtime->raiseTypeError(
@@ -664,7 +706,30 @@ datePrototypeGetTime(void *, Runtime *runtime, NativeArgs args) {
 
 static CallResult<HermesValue>
 datePrototypeGetterHelper(void *ctx, Runtime *runtime, NativeArgs args) {
-  const GetterOptions *opts = reinterpret_cast<const GetterOptions *>(ctx);
+  static GetterOptions getterOptions[] = {
+      {GetterOptions::Field::FULL_YEAR, false},
+      {GetterOptions::Field::YEAR, false},
+      {GetterOptions::Field::MONTH, false},
+      {GetterOptions::Field::DATE, false},
+      {GetterOptions::Field::DAY, false},
+      {GetterOptions::Field::HOURS, false},
+      {GetterOptions::Field::MINUTES, false},
+      {GetterOptions::Field::SECONDS, false},
+      {GetterOptions::Field::MILLISECONDS, false},
+      {GetterOptions::Field::FULL_YEAR, true},
+      {GetterOptions::Field::MONTH, true},
+      {GetterOptions::Field::DATE, true},
+      {GetterOptions::Field::DAY, true},
+      {GetterOptions::Field::HOURS, true},
+      {GetterOptions::Field::MINUTES, true},
+      {GetterOptions::Field::SECONDS, true},
+      {GetterOptions::Field::MILLISECONDS, true},
+      {GetterOptions::Field::TIMEZONE_OFFSET, false},
+  };
+  assert(
+      (uint64_t)ctx < (uint64_t)GetterKind::NumKinds &&
+      "datePropertyGetterHelper with wrong kind as context");
+  GetterOptions *opts = &getterOptions[(uint64_t)ctx];
   auto *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
     return runtime->raiseTypeError(
