@@ -65,7 +65,7 @@ To use your custom Hermes npm package in an app, first make sure the app works w
 Next, link the Hermes npm package into the React Native package in your app. For example, assuming your project is in the directory `$AWESOME_PROJECT` you would run this command:
 
 ```shell
-(cd $AWESOME_PROJECT/node_modules/react-native && yarn link hermesvm)
+(cd $AWESOME_PROJECT/node_modules/react-native && yarn link hermes-engine)
 ```
 
 You can now develop your app in the normal way.

@@ -1,6 +1,6 @@
 # Hermes JS Engine
 [![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebook/hermes/blob/master/LICENSE)
-[![npm version](https://img.shields.io/npm/v/hermesvm.svg?style=flat)](https://www.npmjs.com/package/hermesvm)
+[![npm version](https://img.shields.io/npm/v/hermes-engine.svg?style=flat)](https://www.npmjs.com/package/hermes-engine)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/facebook/hermes/blob/master/CONTRIBUTING.md)
 <img src="./website/static/img/logo.svg" alt="Hermes logo - large H with wings" align="right" width="20%"/>
 
