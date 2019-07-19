@@ -6,7 +6,20 @@
 // RUN: %hermes --target=HBC -dump-lir -O %s | %FileCheck %s --match-full-lines --check-prefix=IRGEN
 // RUN: %hermes --target=HBC -dump-bytecode -O %s | %FileCheck %s --match-full-lines --check-prefix=BCGEN
 
+//IRGEN-LABEL:function global() : undefined
+//IRGEN-NEXT:frame = [], globals = [obj1, obj2, obj3, obj4]
+//IRGEN-NEXT:%BB0:
+
 var obj1 = {'a': 'hello', 'b': 1, 'c': null, 'd': undefined, 'e': true, 'f': function() {}, 'g': 2};
+//IRGEN-NEXT:  %0 = HBCLoadConstInst 1 : number
+//IRGEN-NEXT:  %1 = HBCAllocObjectFromBufferInst 7 : number, "a" : string, "hello" : string, "b" : string, 1 : number, "c" : string, null : null, "d" : string, null : null, "e" : string, true : boolean, "f" : string, null : null, "g" : string, 2 : number
+//IRGEN-NEXT:  %2 = HBCLoadConstInst undefined : undefined
+//IRGEN-NEXT:  %3 = StorePropertyInst %2 : undefined, %1 : object, "d" : string
+//IRGEN-NEXT:  %4 = HBCCreateEnvironmentInst
+//IRGEN-NEXT:  %5 = HBCCreateFunctionInst %f() : undefined, %4
+//IRGEN-NEXT:  %6 = StorePropertyInst %5 : closure, %1 : object, "f" : string
+//IRGEN-NEXT:  %7 = HBCGetGlobalObjectInst
+//IRGEN-NEXT:  %8 = StorePropertyInst %1 : object, %7 : object, "obj1" : string
 
 // Test the case when even we will save bytecode size if we serialize the object
 // into the buffer, we choose not to, because it will add too many placeholders.
@@ -30,52 +43,6 @@ var obj2 = {
   p : 1,
   q : 1,
 };
-
-// Cannot serialize undefined as placeholder when the property is a number.
-var obj3 = {
-  1 : undefined,
-  f : 1,
-  g : 1,
-  h : 1,
-  i : 1,
-  j : 1,
-  k : 1,
-  l : 1,
-  m : 1,
-  n : 1,
-  o : 1,
-  p : 1,
-  q : 1,
-}
-
-var obj4 = {
-  '1' : undefined,
-  f : 1,
-  g : 1,
-  h : 1,
-  i : 1,
-  j : 1,
-  k : 1,
-  l : 1,
-  m : 1,
-  n : 1,
-  o : 1,
-  p : 1,
-  q : 1,
-}
-
-//IRGEN-LABEL:function global() : undefined
-//IRGEN-NEXT:frame = [], globals = [obj1, obj2, obj3, obj4]
-//IRGEN-NEXT:%BB0:
-//IRGEN-NEXT:  %0 = HBCLoadConstInst 1 : number
-//IRGEN-NEXT:  %1 = HBCAllocObjectFromBufferInst 7 : number, "a" : string, "hello" : string, "b" : string, 1 : number, "c" : string, null : null, "d" : string, null : null, "e" : string, true : boolean, "f" : string, null : null, "g" : string, 2 : number
-//IRGEN-NEXT:  %2 = HBCLoadConstInst undefined : undefined
-//IRGEN-NEXT:  %3 = StorePropertyInst %2 : undefined, %1 : object, "d" : string
-//IRGEN-NEXT:  %4 = HBCCreateEnvironmentInst
-//IRGEN-NEXT:  %5 = HBCCreateFunctionInst %f() : undefined, %4
-//IRGEN-NEXT:  %6 = StorePropertyInst %5 : closure, %1 : object, "f" : string
-//IRGEN-NEXT:  %7 = HBCGetGlobalObjectInst
-//IRGEN-NEXT:  %8 = StorePropertyInst %1 : object, %7 : object, "obj1" : string
 //IRGEN-NEXT:  %9 = AllocObjectInst 18 : number, empty
 //IRGEN-NEXT:  %10 = StoreNewOwnPropertyInst %2 : undefined, %9 : object, "a" : string, true : boolean
 //IRGEN-NEXT:  %11 = StoreNewOwnPropertyInst %2 : undefined, %9 : object, "b" : string, true : boolean
@@ -96,6 +63,23 @@ var obj4 = {
 //IRGEN-NEXT:  %26 = StoreNewOwnPropertyInst %0 : number, %9 : object, "p" : string, true : boolean
 //IRGEN-NEXT:  %27 = StoreNewOwnPropertyInst %0 : number, %9 : object, "q" : string, true : boolean
 //IRGEN-NEXT:  %28 = StorePropertyInst %9 : object, %7 : object, "obj2" : string
+
+// Cannot serialize undefined as placeholder when the property is a number.
+var obj3 = {
+  1 : undefined,
+  f : 1,
+  g : 1,
+  h : 1,
+  i : 1,
+  j : 1,
+  k : 1,
+  l : 1,
+  m : 1,
+  n : 1,
+  o : 1,
+  p : 1,
+  q : 1,
+}
 //IRGEN-NEXT:  %29 = AllocObjectInst 13 : number, empty
 //IRGEN-NEXT:  %30 = StoreOwnPropertyInst %2 : undefined, %29 : object, 1 : number, true : boolean
 //IRGEN-NEXT:  %31 = StoreNewOwnPropertyInst %0 : number, %29 : object, "f" : string, true : boolean
@@ -111,6 +95,22 @@ var obj4 = {
 //IRGEN-NEXT:  %41 = StoreNewOwnPropertyInst %0 : number, %29 : object, "p" : string, true : boolean
 //IRGEN-NEXT:  %42 = StoreNewOwnPropertyInst %0 : number, %29 : object, "q" : string, true : boolean
 //IRGEN-NEXT:  %43 = StorePropertyInst %29 : object, %7 : object, "obj3" : string
+
+var obj4 = {
+  '1' : undefined,
+  f : 1,
+  g : 1,
+  h : 1,
+  i : 1,
+  j : 1,
+  k : 1,
+  l : 1,
+  m : 1,
+  n : 1,
+  o : 1,
+  p : 1,
+  q : 1,
+}
 //IRGEN-NEXT:  %44 = AllocObjectInst 13 : number, empty
 //IRGEN-NEXT:  %45 = StoreOwnPropertyInst %2 : undefined, %44 : object, 1 : number, true : boolean
 //IRGEN-NEXT:  %46 = StoreNewOwnPropertyInst %0 : number, %44 : object, "f" : string, true : boolean
