@@ -1195,11 +1195,10 @@ struct SnapshotEdgeAcceptor : public SnapshotAcceptor {
       return;
     }
 
-    snap_.addEdge(V8HeapSnapshot::Edge{
-        V8HeapSnapshot::Edge::Named{},
-        V8HeapSnapshot::Edge::Type::Internal,
-        static_cast<V8HeapSnapshot::Node::ID>(ptrToOffset_(ptr)),
-        name});
+    snap_.addNamedEdge(
+        V8HeapSnapshot::EdgeType::Internal,
+        llvm::StringRef::withNullAsEmpty(name),
+        ptrToOffset_(ptr));
   }
 
  private:
@@ -1262,20 +1261,22 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
     } else {
       str = cellKindStr(cell->getKind());
     }
-    snap.addNode(V8HeapSnapshot::Node{
-        V8HeapSnapshot::Node::cellKindToType(cell->getKind()),
+
+    snap.addNode(
+        V8HeapSnapshot::cellKindToNodeType(cell->getKind()),
         str,
-        static_cast<V8HeapSnapshot::Node::ID>(ptrToOffset(cell)),
+        ptrToOffset(cell),
         cell->getAllocatedSize(),
-        snapshotNodeAcceptor.resetEdgeCount()});
+        snapshotNodeAcceptor.resetEdgeCount());
   };
+
   snap.beginNodes();
   markRoots(snapshotNodeAcceptor, true);
-  snap.addNode(V8HeapSnapshot::Node{V8HeapSnapshot::Node::Type::Synthetic,
-                                    "(GC Roots)",
-                                    0,
-                                    0,
-                                    snapshotNodeAcceptor.resetEdgeCount()});
+
+  const auto numRoots = snapshotNodeAcceptor.resetEdgeCount();
+  snap.addNode(
+      V8HeapSnapshot::NodeType::Synthetic, "(GC Roots)", 0, 0, numRoots);
+
   youngGen_.forAllObjs(writeNodesToSnapshot);
   oldGen_.forAllObjs(writeNodesToSnapshot);
   snap.endNodes();

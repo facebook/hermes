@@ -13,9 +13,42 @@
 
 #include <iomanip>
 #include <sstream>
+#include <type_traits>
 
 namespace hermes {
 namespace vm {
+
+namespace {
+
+/// Lower an instance \p e of enumeration \p Enum to its underlying type.
+template <typename Enum>
+constexpr typename std::underlying_type<Enum>::type index(Enum e) {
+  return static_cast<typename std::underlying_type<Enum>::type>(e);
+}
+
+/// Converts a node type index \p type to its string representation, assuming
+/// it is the index of a valid node type.
+const char *nodeTypeStr(unsigned type) {
+  static const char *strs[] = {
+      "hidden",
+      "array",
+      "string",
+      "object",
+      "code",
+      "closure",
+      "regexp",
+      "number",
+      "native",
+      "synthetic",
+      "concatenated string",
+      "sliced string",
+      "symbol",
+      "bigint",
+  };
+  return strs[type];
+}
+
+} // namespace
 
 const uint32_t V8_SNAPSHOT_NODE_FIELD_COUNT = 6;
 
@@ -41,19 +74,27 @@ void V8HeapSnapshot::beginNodes() {
   json_.openArray();
 }
 
-void V8HeapSnapshot::addNode(Node &&node) {
+void V8HeapSnapshot::addNode(
+    NodeType type,
+    llvm::StringRef name,
+    NodeID id,
+    HeapSizeType selfSize,
+    HeapSizeType edgeCount,
+    HeapSizeType traceNodeID) {
   assert(currentSection_ == Section::Nodes);
-  auto res = nodeToIndex_.try_emplace(node.id, nodeCount_++);
+  auto res = nodeToIndex_.try_emplace(id, nodeCount_++);
   assert(res.second);
   (void)res;
-  json_.emitValue(nodeTypeIndex(node.type));
-  json_.emitValue(stringTable_.insert(node.name));
-  json_.emitValue(node.id);
-  json_.emitValue(node.selfSize);
-  json_.emitValue(node.edgeCount);
-  json_.emitValue(node.traceNodeId);
+
+  json_.emitValue(index(type));
+  json_.emitValue(stringTable_.insert(name));
+  json_.emitValue(id);
+  json_.emitValue(selfSize);
+  json_.emitValue(edgeCount);
+  json_.emitValue(traceNodeID);
+
 #ifndef NDEBUG
-  expectedEdges_ += node.edgeCount;
+  expectedEdges_ += edgeCount;
 #endif
 }
 
@@ -69,22 +110,35 @@ void V8HeapSnapshot::beginEdges() {
   json_.openArray();
 }
 
-void V8HeapSnapshot::addEdge(Edge &&edge) {
-  assert(edgeCount_ < expectedEdges_ && "Added more edges than were expected");
-#ifndef NDEBUG
-  edgeCount_++;
-#endif
+void V8HeapSnapshot::addNamedEdge(
+    EdgeType type,
+    llvm::StringRef name,
+    NodeID toNode) {
+  assert(
+      edgeCount_++ < expectedEdges_ && "Added more edges than were expected");
   assert(currentSection_ == Section::Edges);
-  json_.emitValue(edgeTypeIndex(edge.type));
-  switch (edge.pointerKind) {
-    case Edge::PKNamed:
-      json_.emitValue(stringTable_.insert(edge.name()));
-      break;
-    case Edge::PKUnnamed:
-      json_.emitValue(edge.index());
-      break;
-  }
-  auto nodeIt = nodeToIndex_.find(edge.toNode);
+
+  json_.emitValue(index(type));
+  json_.emitValue(stringTable_.insert(name));
+
+  auto nodeIt = nodeToIndex_.find(toNode);
+  assert(nodeIt != nodeToIndex_.end());
+  // Point to the beginning of the target node in the `nodes` flat array.
+  json_.emitValue(nodeIt->second * V8_SNAPSHOT_NODE_FIELD_COUNT);
+}
+
+void V8HeapSnapshot::addIndexedEdge(
+    EdgeType type,
+    EdgeIndex edgeIndex,
+    NodeID toNode) {
+  assert(
+      edgeCount_++ < expectedEdges_ && "Added more edges than were expected");
+  assert(currentSection_ == Section::Edges);
+
+  json_.emitValue(index(type));
+  json_.emitValue(edgeIndex);
+
+  auto nodeIt = nodeToIndex_.find(toNode);
   assert(nodeIt != nodeToIndex_.end());
   // Point to the beginning of the target node in the `nodes` flat array.
   json_.emitValue(nodeIt->second * V8_SNAPSHOT_NODE_FIELD_COUNT);
@@ -118,9 +172,8 @@ void V8HeapSnapshot::emitMeta() {
   json_.emitKey("node_types");
   json_.openArray();
   json_.openArray();
-  for (int objType = 0; objType < static_cast<int>(Node::Type::NumTypes);
-       objType++) {
-    json_.emitValue(Node::nodeTypeStr(static_cast<Node::Type>(objType)));
+  for (unsigned i = 0; i < index(NodeType::NumTypes); i++) {
+    json_.emitValue(nodeTypeStr(i));
   }
   json_.closeArray();
   json_.emitValues({"string", "number", "number", "number", "number"});
@@ -245,64 +298,32 @@ void V8HeapSnapshot::emitStrings() {
 
 void V8HeapSnapshot::beginSection(Section section) {
   assert(!currentSection_.hasValue());
-  assert(!sectionsWritten_[sectionIndex(section)]);
+  assert(!sectionsWritten_[index(section)]);
   currentSection_ = section;
 }
 
 void V8HeapSnapshot::endSection(Section section) {
   assert(currentSection_.hasValue() && currentSection_.getValue() == section);
   currentSection_ = llvm::None;
-  sectionsWritten_.set(sectionIndex(section));
+  sectionsWritten_.set(index(section));
 }
 
 bool V8HeapSnapshot::didWriteSection(Section section) const {
-  return sectionsWritten_[sectionIndex(section)];
+  return sectionsWritten_[index(section)];
 }
 
-size_t V8HeapSnapshot::sectionIndex(Section section) {
-  return static_cast<std::underlying_type<Section>::type>(section);
-}
-
-uint32_t V8HeapSnapshot::nodeTypeIndex(V8HeapSnapshot::Node::Type type) {
-  return static_cast<uint32_t>(type);
-}
-
-uint32_t V8HeapSnapshot::edgeTypeIndex(V8HeapSnapshot::Edge::Type type) {
-  return static_cast<uint32_t>(type);
-}
-
-const char *V8HeapSnapshot::Node::nodeTypeStr(Node::Type type) {
-  static const char *strs[] = {
-      "hidden",
-      "array",
-      "string",
-      "object",
-      "code",
-      "closure",
-      "regexp",
-      "number",
-      "native",
-      "synthetic",
-      "concatenated string",
-      "sliced string",
-      "symbol",
-      "bigint",
-  };
-  return strs[static_cast<int>(type)];
-}
-
-V8HeapSnapshot::Node::Type V8HeapSnapshot::Node::cellKindToType(CellKind kind) {
+V8HeapSnapshot::NodeType V8HeapSnapshot::cellKindToNodeType(CellKind kind) {
   if (kindInRange(
           kind,
           CellKind::StringPrimitiveKind_first,
           CellKind::StringPrimitiveKind_last)) {
-    return Type::String;
+    return NodeType::String;
   } else if (kind == CellKind::ArrayStorageKind) {
     // The array type is meant to be used by primitive internal array
     // constructs. User-creatable arrays should be Object.
-    return Type::Array;
+    return NodeType::Array;
   } else {
-    return Type::Object;
+    return NodeType::Object;
   }
 }
 

@@ -54,98 +54,45 @@ void rawHeapSnapshot(llvm::raw_ostream &os, const char *start, const char *end);
 
 class V8HeapSnapshot {
  public:
-  struct Node {
-    /// The highest-level categorization of the type of an object.
-    /// NOTE: These types are chosen to align with v8's types, not what Hermes
-    /// actually uses.
-    enum class Type {
-      Hidden,
-      Array,
-      String,
-      Object,
-      Code,
-      Closure,
-      Regexp,
-      Number,
-      Native,
-      // Synthetic means it's not shown to the user, but only exists to meet the
-      // requirements of a graph (for example, the GC roots are synthetic).
-      Synthetic,
-      ConcatenatedString,
-      SlicedString,
-      Symbol,
-      BigInt,
-      NumTypes,
-    };
-
-    using ID = uintptr_t;
-    using Index = uint32_t;
-
-    Type type;
-    llvm::StringRef name;
-    ID id;
-    HeapSizeType selfSize;
-    HeapSizeType edgeCount;
-    HeapSizeType traceNodeId;
-
-    explicit Node(
-        Type type,
-        llvm::StringRef name,
-        ID id,
-        HeapSizeType selfSize,
-        HeapSizeType edgeCount,
-        HeapSizeType traceNodeId = 0)
-        : type(type),
-          name(name),
-          id(id),
-          selfSize(selfSize),
-          edgeCount(edgeCount),
-          traceNodeId(traceNodeId) {}
-
-    static const char *nodeTypeStr(Type type);
-    static Type cellKindToType(CellKind kind);
+  /// The highest-level categorization of the type of an object.
+  /// NOTE: These types are chosen to align with v8's types, not what Hermes
+  /// actually uses.
+  enum class NodeType : unsigned {
+    Hidden,
+    Array,
+    String,
+    Object,
+    Code,
+    Closure,
+    Regexp,
+    Number,
+    Native,
+    // Synthetic means it's not shown to the user, but only exists to meet the
+    // requirements of a graph (for example, the GC roots are synthetic).
+    Synthetic,
+    ConcatenatedString,
+    SlicedString,
+    Symbol,
+    BigInt,
+    NumTypes,
   };
 
-  struct Edge {
-    enum class Type {
-      // NOTE: Keep this in sync with the list emitted in endMeta.
-      Context,
-      Element,
-      Property,
-      Internal,
-      Hidden,
-      Shortcut,
-      Weak
-    };
-    using Index = uint32_t;
-    // TODO: possibly kill PointerKind in favour of switching on type directly
-    enum PointerKind { PKNamed, PKUnnamed };
-    struct Named {};
-    struct Unnamed {};
-    Type type;
-    PointerKind pointerKind;
-    Node::ID toNode;
-
-    llvm::StringRef name() const {
-      assert(pointerKind == PKNamed);
-      return name_;
-    }
-
-    Index index() const {
-      assert(pointerKind == PKUnnamed);
-      return index_;
-    }
-
-    explicit Edge(Named tag, Type type, Node::ID toNode, llvm::StringRef name)
-        : type(type), pointerKind(PKNamed), toNode(toNode), name_(name) {}
-
-    explicit Edge(Unnamed tag, Type type, Node::ID toNode, Index index)
-        : type(type), pointerKind(PKUnnamed), toNode(toNode), index_(index) {}
-
-   private:
-    llvm::StringRef name_; // valid only if pointerKind == PKNamed
-    Index index_; // valid only if pointerKind == PKUnnamed
+  enum class EdgeType : unsigned {
+    // NOTE: Keep this in sync with the list emitted in endMeta.
+    Context,
+    Element,
+    Property,
+    Internal,
+    Hidden,
+    Shortcut,
+    Weak
   };
+
+  using NodeID = uintptr_t;
+  using NodeIndex = uint32_t;
+  using EdgeIndex = uint32_t;
+
+  static NodeType cellKindToNodeType(CellKind kind);
 
   explicit V8HeapSnapshot(JSONEmitter &json);
 
@@ -153,11 +100,20 @@ class V8HeapSnapshot {
   ~V8HeapSnapshot();
 
   void beginNodes();
-  void addNode(Node &&node);
+  void addNode(
+      NodeType type,
+      llvm::StringRef name,
+      NodeID id,
+      HeapSizeType selfSize,
+      HeapSizeType edgeCount,
+      HeapSizeType traceNodeID = 0);
   void endNodes();
 
   void beginEdges();
-  void addEdge(Edge &&edge);
+
+  void addNamedEdge(EdgeType type, llvm::StringRef name, NodeID toNode);
+  void addIndexedEdge(EdgeType type, EdgeIndex index, NodeID toNode);
+
   void endEdges();
 
   void emitMeta();
@@ -190,24 +146,20 @@ class V8HeapSnapshot {
   JSONEmitter &json_;
   std::bitset<8> sectionsWritten_;
   llvm::Optional<Section> currentSection_;
-  llvm::DenseMap<Node::ID, Node::Index> nodeToIndex_;
+  llvm::DenseMap<NodeID, NodeIndex> nodeToIndex_;
   StringSetVector stringTable_;
-  Node::Index nodeCount_{0};
+  NodeIndex nodeCount_{0};
 #ifndef NDEBUG
   /// How many edges have currently been added.
-  Edge::Index edgeCount_{0};
+  EdgeIndex edgeCount_{0};
   /// How many edges there are expected to be. Used for checking the correctness
   /// of the snapshot.
-  Edge::Index expectedEdges_{0};
+  EdgeIndex expectedEdges_{0};
 #endif
 
   void beginSection(Section section);
   void endSection(Section section);
   bool didWriteSection(Section section) const;
-
-  static size_t sectionIndex(Section section);
-  static uint32_t edgeTypeIndex(Edge::Type);
-  static uint32_t nodeTypeIndex(Node::Type);
 };
 
 } // namespace vm
