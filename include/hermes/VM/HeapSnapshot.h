@@ -54,38 +54,14 @@ void rawHeapSnapshot(llvm::raw_ostream &os, const char *start, const char *end);
 
 class V8HeapSnapshot {
  public:
-  /// The highest-level categorization of the type of an object.
-  /// NOTE: These types are chosen to align with v8's types, not what Hermes
-  /// actually uses.
   enum class NodeType : unsigned {
-    Hidden,
-    Array,
-    String,
-    Object,
-    Code,
-    Closure,
-    Regexp,
-    Number,
-    Native,
-    // Synthetic means it's not shown to the user, but only exists to meet the
-    // requirements of a graph (for example, the GC roots are synthetic).
-    Synthetic,
-    ConcatenatedString,
-    SlicedString,
-    Symbol,
-    BigInt,
-    NumTypes,
+#define V8_NODE_TYPE(enumerand, label) enumerand,
+#include "hermes/VM/HeapSnapshot.def"
   };
 
   enum class EdgeType : unsigned {
-    // NOTE: Keep this in sync with the list emitted in endMeta.
-    Context,
-    Element,
-    Property,
-    Internal,
-    Hidden,
-    Shortcut,
-    Weak
+#define V8_EDGE_TYPE(enumerand, label) enumerand,
+#include "hermes/VM/HeapSnapshot.def"
   };
 
   using NodeID = uintptr_t;

@@ -26,31 +26,13 @@ constexpr typename std::underlying_type<Enum>::type index(Enum e) {
   return static_cast<typename std::underlying_type<Enum>::type>(e);
 }
 
-/// Converts a node type index \p type to its string representation, assuming
-/// it is the index of a valid node type.
-const char *nodeTypeStr(unsigned type) {
-  static const char *strs[] = {
-      "hidden",
-      "array",
-      "string",
-      "object",
-      "code",
-      "closure",
-      "regexp",
-      "number",
-      "native",
-      "synthetic",
-      "concatenated string",
-      "sliced string",
-      "symbol",
-      "bigint",
-  };
-  return strs[type];
-}
+// The number of declared fields plus one for the type field.
+constexpr uint32_t V8_SNAPSHOT_NODE_FIELD_COUNT = 1
+#define V8_NODE_FIELD(label, type) +1
+#include "hermes/VM/HeapSnapshot.def"
+    ;
 
 } // namespace
-
-const uint32_t V8_SNAPSHOT_NODE_FIELD_COUNT = 6;
 
 V8HeapSnapshot::V8HeapSnapshot(JSONEmitter &json) : json_(json) {
   json_.openDict();
@@ -160,43 +142,48 @@ void V8HeapSnapshot::emitMeta() {
 
   json_.emitKey("node_fields");
   json_.openArray();
-  // NOTE: Keep this in sync with V8_SNAPSHOT_NODE_FIELD_COUNT.
-  json_.emitValue("type");
-  json_.emitValue("name");
-  json_.emitValue("id");
-  json_.emitValue("self_size");
-  json_.emitValue("edge_count");
-  json_.emitValue("trace_node_id");
+  json_.emitValues({
+      "type",
+#define V8_NODE_FIELD(label, type) #label,
+#include "hermes/VM/HeapSnapshot.def"
+  });
   json_.closeArray(); // node_fields
 
   json_.emitKey("node_types");
   json_.openArray();
   json_.openArray();
-  for (unsigned i = 0; i < index(NodeType::NumTypes); i++) {
-    json_.emitValue(nodeTypeStr(i));
-  }
+  json_.emitValues({
+#define V8_NODE_TYPE(enumerand, label) label,
+#include "hermes/VM/HeapSnapshot.def"
+  });
   json_.closeArray();
-  json_.emitValues({"string", "number", "number", "number", "number"});
+  json_.emitValues({
+#define V8_NODE_FIELD(label, type) #type,
+#include "hermes/VM/HeapSnapshot.def"
+  });
   json_.closeArray(); // node_types
 
   json_.emitKey("edge_fields");
   json_.openArray();
-  json_.emitValues({"type", "name_or_index", "to_node"});
+  json_.emitValues({
+      "type",
+#define V8_EDGE_FIELD(label, type) #label,
+#include "hermes/VM/HeapSnapshot.def"
+  });
   json_.closeArray(); // edge_fields
 
   json_.emitKey("edge_types");
   json_.openArray();
   json_.openArray();
-  // NOTE: Keep this in sync with the members of Edge::Type.
-  json_.emitValues({"context",
-                    "element",
-                    "property",
-                    "internal",
-                    "hidden",
-                    "shortcut",
-                    "weak"});
+  json_.emitValues({
+#define V8_EDGE_TYPE(enumerand, label) label,
+#include "hermes/VM/HeapSnapshot.def"
+  });
   json_.closeArray();
-  json_.emitValues({"string_or_number", "node"});
+  json_.emitValues({
+#define V8_EDGE_FIELD(label, type) #type,
+#include "hermes/VM/HeapSnapshot.def"
+  });
   json_.closeArray(); // edge_types
 
   json_.emitKey("trace_function_info_fields");
