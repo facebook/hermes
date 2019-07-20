@@ -6,6 +6,10 @@
  */
 /// Describes the structure of various parts of the V8 Heap Snapshot format
 
+#ifndef V8_SNAPSHOT_SECTION
+#define V8_SNAPSHOT_SECTION(enumerand, label)
+#endif
+
 #ifndef V8_NODE_TYPE
 #define V8_NODE_TYPE(enumerand, label)
 #endif
@@ -21,6 +25,21 @@
 #ifndef V8_EDGE_FIELD
 #define V8_EDGE_FIELD(label, type)
 #endif
+
+/// V8 Heap Snapshots look like JSON, but the parser expects fields in a
+/// specific order.  They are also all expected to exist, whether not they
+/// contain useful information.  The sections are given below in their expected
+/// order.
+V8_SNAPSHOT_SECTION(Nodes, "nodes")
+V8_SNAPSHOT_SECTION(Edges, "edges")
+V8_SNAPSHOT_SECTION(TraceFunctionInfos, "trace_function_infos")
+V8_SNAPSHOT_SECTION(TraceTree, "trace_tree")
+V8_SNAPSHOT_SECTION(Samples, "samples")
+V8_SNAPSHOT_SECTION(Locations, "locations")
+V8_SNAPSHOT_SECTION(Strings, "strings")
+
+/// Special sentinel end section (not emitted).
+V8_SNAPSHOT_SECTION(END, "__END__")
 
 /// The highest-level categorization of the type of an object.  Given in the
 /// order they will be emitted.
@@ -66,6 +85,7 @@ V8_EDGE_TYPE(Weak, "weak")
 V8_EDGE_FIELD(name_or_index, string_or_number)
 V8_EDGE_FIELD(to_node, node)
 
+#undef V8_SNAPSHOT_SECTION
 #undef V8_NODE_TYPE
 #undef V8_NODE_FIELD
 #undef V8_EDGE_TYPE

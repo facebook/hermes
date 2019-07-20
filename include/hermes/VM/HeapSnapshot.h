@@ -54,6 +54,11 @@ void rawHeapSnapshot(llvm::raw_ostream &os, const char *start, const char *end);
 
 class V8HeapSnapshot {
  public:
+  enum class Section : unsigned {
+#define V8_SNAPSHOT_SECTION(enumerand, label) enumerand,
+#include "hermes/VM/HeapSnapshot.def"
+  };
+
   enum class NodeType : unsigned {
 #define V8_NODE_TYPE(enumerand, label) enumerand,
 #include "hermes/VM/HeapSnapshot.def"
@@ -75,7 +80,22 @@ class V8HeapSnapshot {
   /// NOTE: this destructor writes to \p json.
   ~V8HeapSnapshot();
 
-  void beginNodes();
+  /// Opens \p section.  All sections between the next section to be closed
+  ///(inclusive) and this one (exclusive) will be skipped by implicitly opening
+  /// and closing them.
+  ///
+  /// \pre No other section is already open.
+  /// \pre \p section is not the special sentinel, END.
+  /// \pre This section has not already been closed (either explicitly, through
+  ///     a call to endSection, or implicitly because it was skipped).
+  void beginSection(Section section);
+
+  /// Closes \p section.
+  ///
+  /// \pre \p section is the currently opened section.
+  /// \pre \p section is not the END sentinel.
+  void endSection(Section section);
+
   void addNode(
       NodeType type,
       llvm::StringRef name,
@@ -83,45 +103,22 @@ class V8HeapSnapshot {
       HeapSizeType selfSize,
       HeapSizeType edgeCount,
       HeapSizeType traceNodeID = 0);
-  void endNodes();
-
-  void beginEdges();
 
   void addNamedEdge(EdgeType type, llvm::StringRef name, NodeID toNode);
   void addIndexedEdge(EdgeType type, EdgeIndex index, NodeID toNode);
 
-  void endEdges();
-
+ private:
   void emitMeta();
-
-  void beginTraceFunctionInfos();
-  void endTraceFunctionInfos();
-
-  void beginTraceTree();
-  void endTraceTree();
-
-  void beginSamples();
-  void endSamples();
-
-  void beginLocations();
-  void endLocations();
-
   void emitStrings();
 
- private:
-  enum class Section {
-    Nodes,
-    Edges,
-    TraceFunctionInfos,
-    TraceTree,
-    Samples,
-    Locations,
-    Strings
-  };
+  /// The next section to be closed.  This class guarantees that all previous
+  /// sections will have been written to the JSON emitter.
+  Section nextSection_{Section::Nodes};
+
+  /// Whether the nextSection_ has been opened already.
+  bool sectionOpened_{false};
 
   JSONEmitter &json_;
-  std::bitset<8> sectionsWritten_;
-  llvm::Optional<Section> currentSection_;
   llvm::DenseMap<NodeID, NodeIndex> nodeToIndex_;
   StringSetVector stringTable_;
   NodeIndex nodeCount_{0};
@@ -132,10 +129,6 @@ class V8HeapSnapshot {
   /// of the snapshot.
   EdgeIndex expectedEdges_{0};
 #endif
-
-  void beginSection(Section section);
-  void endSection(Section section);
-  bool didWriteSection(Section section) const;
 };
 
 } // namespace vm

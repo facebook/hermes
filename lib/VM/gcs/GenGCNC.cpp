@@ -1270,7 +1270,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
         snapshotNodeAcceptor.resetEdgeCount());
   };
 
-  snap.beginNodes();
+  snap.beginSection(V8HeapSnapshot::Section::Nodes);
   markRoots(snapshotNodeAcceptor, true);
 
   const auto numRoots = snapshotNodeAcceptor.resetEdgeCount();
@@ -1279,7 +1279,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
 
   youngGen_.forAllObjs(writeNodesToSnapshot);
   oldGen_.forAllObjs(writeNodesToSnapshot);
-  snap.endNodes();
+  snap.endSection(V8HeapSnapshot::Section::Nodes);
 
   SnapshotEdgeAcceptor snapshotEdgeAcceptor(*this, snap, ptrToOffset);
   SlotVisitorWithNames<SnapshotEdgeAcceptor> edgeVisitor(snapshotEdgeAcceptor);
@@ -1289,21 +1289,11 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
         edgeVisitor, const_cast<GCCell *>(cell), cell->getVT(), this);
   };
 
-  snap.beginEdges();
+  snap.beginSection(V8HeapSnapshot::Section::Edges);
   markRoots(snapshotEdgeAcceptor, true);
   youngGen_.forAllObjs(writeEdgesToSnapshot);
   oldGen_.forAllObjs(writeEdgesToSnapshot);
-  snap.endEdges();
-
-  snap.beginTraceFunctionInfos();
-  snap.endTraceFunctionInfos();
-  snap.beginTraceTree();
-  snap.endTraceTree();
-  snap.beginSamples();
-  snap.endSamples();
-  snap.beginLocations();
-  snap.endLocations();
-  snap.emitStrings();
+  snap.endSection(V8HeapSnapshot::Section::Edges);
 
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormedHeap();

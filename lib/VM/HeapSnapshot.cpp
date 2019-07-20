@@ -32,6 +32,11 @@ constexpr uint32_t V8_SNAPSHOT_NODE_FIELD_COUNT = 1
 #include "hermes/VM/HeapSnapshot.def"
     ;
 
+const char *kSectionLabels[] = {
+#define V8_SNAPSHOT_SECTION(enumerand, label) label,
+#include "hermes/VM/HeapSnapshot.def"
+};
+
 } // namespace
 
 V8HeapSnapshot::V8HeapSnapshot(JSONEmitter &json) : json_(json) {
@@ -40,20 +45,44 @@ V8HeapSnapshot::V8HeapSnapshot(JSONEmitter &json) : json_(json) {
 }
 
 V8HeapSnapshot::~V8HeapSnapshot() {
-  assert(didWriteSection(Section::Nodes));
-  assert(didWriteSection(Section::Edges));
-  assert(didWriteSection(Section::TraceFunctionInfos));
-  assert(didWriteSection(Section::TraceTree));
-  assert(didWriteSection(Section::Samples));
-  assert(didWriteSection(Section::Locations));
-  assert(didWriteSection(Section::Strings));
+  assert(
+      edgeCount_ == expectedEdges_ && "Fewer edges added than were expected");
+
+  emitStrings();
   json_.closeDict(); // top level
 }
 
-void V8HeapSnapshot::beginNodes() {
-  beginSection(Section::Nodes);
-  json_.emitKey("nodes");
+void V8HeapSnapshot::beginSection(Section section) {
+  auto i = index(nextSection_);
+
+  assert(!sectionOpened_ && "Sections must be explicitly close");
+  assert(section != Section::END && "Can't open the end section.");
+  assert(
+      i <= index(section) &&
+      "Trying to open a section after it has already been closed.  Are your "
+      "sections ordered correctly?");
+
+  for (; i < index(section); ++i) {
+    json_.emitKey(kSectionLabels[i]);
+    json_.openArray();
+    json_.closeArray();
+  }
+
+  json_.emitKey(kSectionLabels[i]);
   json_.openArray();
+
+  nextSection_ = section;
+  sectionOpened_ = true;
+}
+
+void V8HeapSnapshot::endSection(Section section) {
+  assert(sectionOpened_ && "No section to close");
+  assert(section != Section::END && "Can't close the end section.");
+  assert(nextSection_ == section && "Closing a different section.");
+
+  json_.closeArray();
+  nextSection_ = static_cast<Section>(index(section) + 1);
+  sectionOpened_ = false;
 }
 
 void V8HeapSnapshot::addNode(
@@ -63,7 +92,7 @@ void V8HeapSnapshot::addNode(
     HeapSizeType selfSize,
     HeapSizeType edgeCount,
     HeapSizeType traceNodeID) {
-  assert(currentSection_ == Section::Nodes);
+  assert(nextSection_ == Section::Nodes && sectionOpened_);
   auto res = nodeToIndex_.try_emplace(id, nodeCount_++);
   assert(res.second);
   (void)res;
@@ -80,25 +109,13 @@ void V8HeapSnapshot::addNode(
 #endif
 }
 
-void V8HeapSnapshot::endNodes() {
-  endSection(Section::Nodes);
-  json_.closeArray();
-}
-
-void V8HeapSnapshot::beginEdges() {
-  assert(didWriteSection(Section::Nodes));
-  beginSection(Section::Edges);
-  json_.emitKey("edges");
-  json_.openArray();
-}
-
 void V8HeapSnapshot::addNamedEdge(
     EdgeType type,
     llvm::StringRef name,
     NodeID toNode) {
   assert(
       edgeCount_++ < expectedEdges_ && "Added more edges than were expected");
-  assert(currentSection_ == Section::Edges);
+  assert(nextSection_ == Section::Edges && sectionOpened_);
 
   json_.emitValue(index(type));
   json_.emitValue(stringTable_.insert(name));
@@ -115,7 +132,7 @@ void V8HeapSnapshot::addIndexedEdge(
     NodeID toNode) {
   assert(
       edgeCount_++ < expectedEdges_ && "Added more edges than were expected");
-  assert(currentSection_ == Section::Edges);
+  assert(nextSection_ == Section::Edges && sectionOpened_);
 
   json_.emitValue(index(type));
   json_.emitValue(edgeIndex);
@@ -124,13 +141,6 @@ void V8HeapSnapshot::addIndexedEdge(
   assert(nodeIt != nodeToIndex_.end());
   // Point to the beginning of the target node in the `nodes` flat array.
   json_.emitValue(nodeIt->second * V8_SNAPSHOT_NODE_FIELD_COUNT);
-}
-
-void V8HeapSnapshot::endEdges() {
-  endSection(Section::Edges);
-  json_.closeArray();
-  assert(
-      edgeCount_ == expectedEdges_ && "Fewer edges added than were expected");
 }
 
 void V8HeapSnapshot::emitMeta() {
@@ -221,82 +231,14 @@ void V8HeapSnapshot::emitMeta() {
   json_.closeDict(); // "snapshot"
 }
 
-void V8HeapSnapshot::beginTraceFunctionInfos() {
-  assert(didWriteSection(Section::Edges));
-  beginSection(Section::TraceFunctionInfos);
-  json_.emitKey("trace_function_infos");
-  json_.openArray();
-}
-
-void V8HeapSnapshot::endTraceFunctionInfos() {
-  endSection(Section::TraceFunctionInfos);
-  json_.closeArray();
-}
-
-void V8HeapSnapshot::beginTraceTree() {
-  assert(didWriteSection(Section::TraceFunctionInfos));
-  beginSection(Section::TraceTree);
-  json_.emitKey("trace_tree");
-  json_.openArray();
-}
-
-void V8HeapSnapshot::endTraceTree() {
-  endSection(Section::TraceTree);
-  json_.closeArray();
-}
-
-void V8HeapSnapshot::beginSamples() {
-  assert(didWriteSection(Section::TraceTree));
-  beginSection(Section::Samples);
-  json_.emitKey("samples");
-  json_.openArray();
-}
-
-void V8HeapSnapshot::endSamples() {
-  endSection(Section::Samples);
-  json_.closeArray();
-}
-
-void V8HeapSnapshot::beginLocations() {
-  assert(didWriteSection(Section::Samples));
-  beginSection(Section::Locations);
-  json_.emitKey("locations");
-  json_.openArray();
-}
-
-void V8HeapSnapshot::endLocations() {
-  endSection(Section::Locations);
-  json_.closeArray();
-}
-
 void V8HeapSnapshot::emitStrings() {
-  assert(didWriteSection(Section::Locations));
   beginSection(Section::Strings);
-  json_.emitKey("strings");
-  json_.openArray();
 
   for (const auto &str : stringTable_) {
     json_.emitValue(str);
   }
 
   endSection(Section::Strings);
-  json_.closeArray();
-}
-
-void V8HeapSnapshot::beginSection(Section section) {
-  assert(!currentSection_.hasValue());
-  assert(!sectionsWritten_[index(section)]);
-  currentSection_ = section;
-}
-
-void V8HeapSnapshot::endSection(Section section) {
-  assert(currentSection_.hasValue() && currentSection_.getValue() == section);
-  currentSection_ = llvm::None;
-  sectionsWritten_.set(index(section));
-}
-
-bool V8HeapSnapshot::didWriteSection(Section section) const {
-  return sectionsWritten_[index(section)];
 }
 
 V8HeapSnapshot::NodeType V8HeapSnapshot::cellKindToNodeType(CellKind kind) {
