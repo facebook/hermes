@@ -47,7 +47,7 @@ void V8HeapSnapshot::addNode(Node &&node) {
   assert(res.second);
   (void)res;
   json_.emitValue(nodeTypeIndex(node.type));
-  json_.emitValue(node.name);
+  json_.emitValue(stringTable_.insert(node.name));
   json_.emitValue(node.id);
   json_.emitValue(node.selfSize);
   json_.emitValue(node.edgeCount);
@@ -78,7 +78,7 @@ void V8HeapSnapshot::addEdge(Edge &&edge) {
   json_.emitValue(edgeTypeIndex(edge.type));
   switch (edge.pointerKind) {
     case Edge::PKNamed:
-      json_.emitValue(edge.name());
+      json_.emitValue(stringTable_.insert(edge.name()));
       break;
     case Edge::PKUnnamed:
       json_.emitValue(edge.index());
@@ -229,19 +229,16 @@ void V8HeapSnapshot::endLocations() {
   json_.closeArray();
 }
 
-void V8HeapSnapshot::beginStrings() {
+void V8HeapSnapshot::emitStrings() {
   assert(didWriteSection(Section::Locations));
   beginSection(Section::Strings);
   json_.emitKey("strings");
   json_.openArray();
-}
 
-void V8HeapSnapshot::addString(llvm::StringRef str) {
-  assert(currentSection_ == Section::Strings);
-  json_.emitValue(str);
-}
+  for (const auto &str : stringTable_) {
+    json_.emitValue(str);
+  }
 
-void V8HeapSnapshot::endStrings() {
   endSection(Section::Strings);
   json_.closeArray();
 }

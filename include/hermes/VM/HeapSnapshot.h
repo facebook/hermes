@@ -9,6 +9,7 @@
 
 #include "hermes/Public/GCConfig.h"
 #include "hermes/Support/JSONEmitter.h"
+#include "hermes/Support/StringSetVector.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/StringRefUtils.h"
@@ -53,7 +54,6 @@ void rawHeapSnapshot(llvm::raw_ostream &os, const char *start, const char *end);
 
 class V8HeapSnapshot {
  public:
-  using StringID = uint32_t;
   struct Node {
     /// The highest-level categorization of the type of an object.
     /// NOTE: These types are chosen to align with v8's types, not what Hermes
@@ -82,7 +82,7 @@ class V8HeapSnapshot {
     using Index = uint32_t;
 
     Type type;
-    StringID name;
+    llvm::StringRef name;
     ID id;
     HeapSizeType selfSize;
     HeapSizeType edgeCount;
@@ -90,7 +90,7 @@ class V8HeapSnapshot {
 
     explicit Node(
         Type type,
-        StringID name,
+        llvm::StringRef name,
         ID id,
         HeapSizeType selfSize,
         HeapSizeType edgeCount,
@@ -126,7 +126,7 @@ class V8HeapSnapshot {
     PointerKind pointerKind;
     Node::ID toNode;
 
-    StringID name() const {
+    llvm::StringRef name() const {
       assert(pointerKind == PKNamed);
       return name_;
     }
@@ -136,14 +136,14 @@ class V8HeapSnapshot {
       return index_;
     }
 
-    explicit Edge(Named tag, Type type, Node::ID toNode, StringID name)
+    explicit Edge(Named tag, Type type, Node::ID toNode, llvm::StringRef name)
         : type(type), pointerKind(PKNamed), toNode(toNode), name_(name) {}
 
     explicit Edge(Unnamed tag, Type type, Node::ID toNode, Index index)
         : type(type), pointerKind(PKUnnamed), toNode(toNode), index_(index) {}
 
    private:
-    StringID name_; // valid only if pointerKind == PKNamed
+    llvm::StringRef name_; // valid only if pointerKind == PKNamed
     Index index_; // valid only if pointerKind == PKUnnamed
   };
 
@@ -174,9 +174,7 @@ class V8HeapSnapshot {
   void beginLocations();
   void endLocations();
 
-  void beginStrings();
-  void addString(llvm::StringRef str);
-  void endStrings();
+  void emitStrings();
 
  private:
   enum class Section {
@@ -193,6 +191,7 @@ class V8HeapSnapshot {
   std::bitset<8> sectionsWritten_;
   llvm::Optional<Section> currentSection_;
   llvm::DenseMap<Node::ID, Node::Index> nodeToIndex_;
+  StringSetVector stringTable_;
   Node::Index nodeCount_{0};
 #ifndef NDEBUG
   /// How many edges have currently been added.

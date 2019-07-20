@@ -1186,18 +1186,9 @@ struct SnapshotNodeAcceptor : public SnapshotAcceptor {
 struct SnapshotEdgeAcceptor : public SnapshotAcceptor {
   using SnapshotAcceptor::accept;
   using PtrToOffset = std::function<uintptr_t(const void *)>;
-  using StringToID =
-      std::function<V8HeapSnapshot::StringID(llvm::StringRef str)>;
 
-  SnapshotEdgeAcceptor(
-      GC &gc,
-      V8HeapSnapshot &snap,
-      PtrToOffset ptrToOffset,
-      StringToID stringToID)
-      : SnapshotAcceptor(gc),
-        snap_(snap),
-        ptrToOffset_(ptrToOffset),
-        stringToID_(stringToID) {}
+  SnapshotEdgeAcceptor(GC &gc, V8HeapSnapshot &snap, PtrToOffset ptrToOffset)
+      : SnapshotAcceptor(gc), snap_(snap), ptrToOffset_(ptrToOffset) {}
 
   void accept(void *&ptr, const char *name) override {
     if (!ptr) {
@@ -1208,13 +1199,12 @@ struct SnapshotEdgeAcceptor : public SnapshotAcceptor {
         V8HeapSnapshot::Edge::Named{},
         V8HeapSnapshot::Edge::Type::Internal,
         static_cast<V8HeapSnapshot::Node::ID>(ptrToOffset_(ptr)),
-        stringToID_(name)});
+        name});
   }
 
  private:
   V8HeapSnapshot &snap_;
   PtrToOffset ptrToOffset_;
-  StringToID stringToID_;
 };
 
 } // namespace
@@ -1254,12 +1244,6 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
         AlignedStorage::offset(p);
   };
 
-  StringSetVector snapshotStringTable;
-  auto stringToID =
-      [&snapshotStringTable](llvm::StringRef str) -> V8HeapSnapshot::StringID {
-    str = llvm::StringRef::withNullAsEmpty(str.data());
-    return snapshotStringTable.insert(str);
-  };
   SnapshotNodeAcceptor snapshotNodeAcceptor(*this);
   SlotVisitorWithNames<SnapshotNodeAcceptor> nodeVisitor(snapshotNodeAcceptor);
 
@@ -1267,21 +1251,20 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
                                &nodeVisitor,
                                &snapshotNodeAcceptor,
                                &ptrToOffset,
-                               &stringToID,
                                this](const GCCell *cell) {
     GCBase::markCellWithNames(
         nodeVisitor, const_cast<GCCell *>(cell), cell->getVT(), this);
-    V8HeapSnapshot::StringID strID;
+    std::string str;
     // If the cell is a string, add a value to be printed.
     // TODO: add other special types here.
-    if (const StringPrimitive *str = dyn_vmcast<StringPrimitive>(cell)) {
-      strID = stringToID(converter(str));
+    if (const StringPrimitive *sp = dyn_vmcast<StringPrimitive>(cell)) {
+      str = converter(sp);
     } else {
-      strID = stringToID(cellKindStr(cell->getKind()));
+      str = cellKindStr(cell->getKind());
     }
     snap.addNode(V8HeapSnapshot::Node{
         V8HeapSnapshot::Node::cellKindToType(cell->getKind()),
-        strID,
+        str,
         static_cast<V8HeapSnapshot::Node::ID>(ptrToOffset(cell)),
         cell->getAllocatedSize(),
         snapshotNodeAcceptor.resetEdgeCount()});
@@ -1289,7 +1272,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   snap.beginNodes();
   markRoots(snapshotNodeAcceptor, true);
   snap.addNode(V8HeapSnapshot::Node{V8HeapSnapshot::Node::Type::Synthetic,
-                                    stringToID("(GC Roots)"),
+                                    "(GC Roots)",
                                     0,
                                     0,
                                     snapshotNodeAcceptor.resetEdgeCount()});
@@ -1297,8 +1280,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   oldGen_.forAllObjs(writeNodesToSnapshot);
   snap.endNodes();
 
-  SnapshotEdgeAcceptor snapshotEdgeAcceptor(
-      *this, snap, ptrToOffset, stringToID);
+  SnapshotEdgeAcceptor snapshotEdgeAcceptor(*this, snap, ptrToOffset);
   SlotVisitorWithNames<SnapshotEdgeAcceptor> edgeVisitor(snapshotEdgeAcceptor);
 
   auto writeEdgesToSnapshot = [&edgeVisitor, this](const GCCell *cell) {
@@ -1320,12 +1302,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   snap.endSamples();
   snap.beginLocations();
   snap.endLocations();
-
-  snap.beginStrings();
-  for (const auto &str : snapshotStringTable) {
-    snap.addString(str);
-  }
-  snap.endStrings();
+  snap.emitStrings();
 
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormedHeap();
