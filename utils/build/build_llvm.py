@@ -9,9 +9,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse
 import os
 import platform
-import shutil
 import subprocess
 import sys
+
+from common import run_command, which, get_parser, build_dir_suffix, default_build_command
 
 
 # It references the commit day so we can shallow clone
@@ -19,67 +20,13 @@ import sys
 # NOTE: The revision date must be the day before the
 # actual commit date.
 _LLVM_REV = "c179d7b006348005d2da228aed4c3c251590baa3"
-_LLVM_REV_DATE = "2018-10-08" 
+_LLVM_REV_DATE = "2018-10-08"
 
 
 def parse_args():
-    if platform.system() == "Linux":
-        default_platform = "linux"
-    elif platform.system() == "macos":
-        default_platform = "macosx"
-    elif platform.system() == "Windows":
-        default_platform = "windows"
-    else:
-        default_platform = "unknown"
-
-    parser = argparse.ArgumentParser()
+    parser = get_parser()
     parser.add_argument("llvm_src_dir", type=str, nargs="?", default="llvm")
     parser.add_argument("llvm_build_dir", type=str, nargs="?", default="llvm_build")
-    parser.add_argument(
-        "--target-platform",
-        type=str,
-        dest="target_platform",
-        choices=["linux", "macosx", "windows", "iphoneos", "iphonesimulator"],
-        default=default_platform,
-    )
-    parser.add_argument(
-        "--build-system",
-        type=str,
-        dest="build_system",
-        default="Ninja",
-        help="Generator to pass into CMake",
-    )
-    parser.add_argument(
-        "--cmake-flags",
-        type=str,
-        dest="cmake_flags",
-        default="",
-        help="Additional flags to pass to CMake",
-    )
-    parser.add_argument(
-        "--build-type",
-        type=str,
-        dest="build_type",
-        choices=["MinSizeRel", "Debug"],
-        default=None,
-        help="Optimization level of build",
-    )
-    parser.add_argument(
-        "--build-command",
-        type=str,
-        dest="build_command",
-        default=None,
-        help="Command to run once cmake finishes",
-    )
-    parser.add_argument(
-        "--http-proxy",
-        type=str,
-        dest="http_proxy",
-        default=os.environ.get("HTTP_PROXY", ""),
-    )
-    parser.add_argument("--distribute", action="store_true")
-    parser.add_argument("--32-bit", dest="is_32_bit", action="store_true")
-    parser.add_argument("--enable-asan", dest="enable_asan", action="store_true")
     parser.add_argument(
         "--cross-compile-only", dest="cross_compile_only", action="store_true"
     )
@@ -87,49 +34,12 @@ def parse_args():
     args.llvm_src_dir = os.path.realpath(args.llvm_src_dir)
     args.llvm_build_dir = os.path.realpath(args.llvm_build_dir)
     if not args.build_command:
-        # Choose a default based on the build system chosen
-        if args.build_system == "Ninja":
-            args.build_command = "ninja"
-        elif args.build_system == "Unix Makefiles":
-            args.build_command = "make"
-        elif "Visual Studio" in args.build_system:
-            args.build_command = (
-                "MSBuild.exe LLVM.sln -target:build -maxcpucount -verbosity:normal"
-            )
-        else:
-            raise Exception("Unrecognized build system: {}".format(args.build_system))
-
+        args.build_command = default_build_command(args)
     if args.cross_compile_only:
         args.build_command += " " + os.path.join("bin", "llvm-tblgen")
     args.build_type = args.build_type or ("MinSizeRel" if args.distribute else "Debug")
-
+    args.llvm_build_dir += build_dir_suffix(args)
     return args
-
-
-def which(cmd):
-    if sys.version_info >= (3, 3):
-        # On Python 3.3 and above, use shutil.which for a quick error message.
-        resolved = shutil.which(cmd)
-        if not resolved:
-            raise Exception("{} not found on PATH".format(cmd))
-        return os.path.realpath(resolved)
-    else:
-        # Manually check PATH
-        for p in os.environ["PATH"].split(os.path.pathsep):
-            p = os.path.join(p, cmd)
-            if "PATHEXT" in os.environ:
-                # try out adding each extension to the PATH as well
-                for ext in os.environ["PATHEXT"].split(os.path.pathsep):
-                    # Add the extension.
-                    p_and_extension = p + ext
-                    if os.path.exists(p_and_extension) and os.access(
-                        p_and_extension, os.X_OK
-                    ):
-                        return os.path.realpath(p_and_extension)
-            else:
-                if os.path.isfile(p) and os.access(p, os.X_OK):
-                    return os.path.realpath(p)
-        raise Exception("{} not found on PATH".format(cmd))
 
 
 def build_git_command(http_proxy):
@@ -143,20 +53,8 @@ def build_git_command(http_proxy):
     return command
 
 
-def run_command(cmd, **kwargs):
-    print("+ " + " ".join(cmd))
-    return subprocess.check_call(cmd, stdout=sys.stdout, stderr=sys.stderr, **kwargs)
-
-
 def main():
     args = parse_args()
-    build_dir_suffix = ""
-    if args.enable_asan:
-        build_dir_suffix += "_asan"
-    if args.distribute:
-        build_dir_suffix += "_release"
-    if args.is_32_bit:
-        build_dir_suffix += "_32"
 
     print("Source Dir: {}".format(args.llvm_src_dir))
     print("Using Build system: {}".format(args.build_system))
@@ -171,7 +69,13 @@ def main():
         print("Cloning LLVM into {}".format(args.llvm_src_dir))
         run_command(
             git
-            + ["clone", "--shallow-since", _LLVM_REV_DATE, "https://github.com/llvm-mirror/llvm.git", args.llvm_src_dir]
+            + [
+                "clone",
+                "--shallow-since",
+                _LLVM_REV_DATE,
+                "https://github.com/llvm-mirror/llvm.git",
+                args.llvm_src_dir,
+            ]
         )
 
     # Checkout a specific revision in LLVM.
@@ -269,8 +173,8 @@ def main():
         [
             which("cmake"),
             "-G",
-            "{}".format(args.build_system),
-            "{}".format(args.llvm_src_dir),
+            args.build_system,
+            args.llvm_src_dir,
         ]
         + cmake_flags,
         env=os.environ,
