@@ -13,3 +13,6 @@ hermes/facebook/llvm/llvm_build*
 buck-out
 .buckd
 .buckconfig.local
+
+# Python bytecode caches
+*__pycache__
