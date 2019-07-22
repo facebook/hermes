@@ -171,7 +171,7 @@ protected:
   using detail::HybridTraits<Base>::CxxBase::CxxBase;
 
   static void registerHybrid(std::initializer_list<NativeMethod> methods) {
-    javaClassStatic()->registerNatives(methods);
+    javaClassLocal()->registerNatives(methods);
   }
 
   static local_ref<detail::HybridData> makeHybridData(std::unique_ptr<T> cxxPart) {
