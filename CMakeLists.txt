@@ -12,6 +12,8 @@ else()
   cmake_minimum_required(VERSION 3.6.0)
 endif()
 
+project(Hermes)
+
 include(CheckCXXCompilerFlag)
 include(CheckCXXSourceCompiles)
 
