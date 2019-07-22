@@ -1,1 +1,0 @@
-(window.webpackJsonp=window.webpackJsonp||[]).push([[38],{62:function(s){s.exports={id:"strings",title:"Strings",description:"# Strings",source:"/Users/pca/github/hermes/doc/Strings.md",permalink:"/docs/strings"}}}]);

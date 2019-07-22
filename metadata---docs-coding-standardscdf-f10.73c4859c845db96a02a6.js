@@ -1,1 +1,0 @@
-(window.webpackJsonp=window.webpackJsonp||[]).push([[31],{50:function(d){d.exports={id:"coding-standards",title:"Coding Standards",description:"## Hermes Coding Standards",source:"/Users/pca/github/hermes/doc/CodingStandards.md",permalink:"/docs/coding-standards"}}}]);

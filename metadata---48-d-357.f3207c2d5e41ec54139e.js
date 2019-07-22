@@ -1,0 +1,1 @@
+(window.webpackJsonp=window.webpackJsonp||[]).push([[3],{35:function(s){s.exports={permalink:"/",source:"/Users/yangshun/Developer/docusaurus-users/hermes/website/src/pages/index.js"}}}]);

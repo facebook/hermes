@@ -1,1 +1,0 @@
-(window.webpackJsonp=window.webpackJsonp||[]).push([[36],{54:function(i){i.exports={id:"optimizer",title:"Optimizer",description:"## Design of the Hermes Optimizer",source:"/Users/pca/github/hermes/doc/Optimizer.md",permalink:"/docs/optimizer"}}}]);
