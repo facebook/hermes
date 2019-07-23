@@ -27,9 +27,6 @@ namespace vm {
 using HeapSizeType = uint32_t;
 class StringPrimitive;
 
-/// Escapes the control characters in a UTF-8 string. Used for embedding an
-/// arbitrary string into JSON.
-std::string escapeJSON(llvm::StringRef s);
 /// @name Converters from arbitrary types to string
 /// @{
 std::string converter(const char *name);

@@ -256,43 +256,6 @@ V8HeapSnapshot::NodeType V8HeapSnapshot::cellKindToNodeType(CellKind kind) {
   }
 }
 
-std::string escapeJSON(llvm::StringRef s) {
-  std::ostringstream o;
-  for (const unsigned char c : s) {
-    switch (c) {
-      case '"':
-        o << "\\\"";
-        break;
-      case '\\':
-        o << "\\\\";
-        break;
-      case '\b':
-        o << "\\b";
-        break;
-      case '\f':
-        o << "\\f";
-        break;
-      case '\n':
-        o << "\\n";
-        break;
-      case '\r':
-        o << "\\r";
-        break;
-      case '\t':
-        o << "\\t";
-        break;
-      default:
-        if (c <= '\x1f') {
-          o << "\\u" << std::hex << std::setw(4) << std::setfill('0')
-            << static_cast<int>(c);
-        } else {
-          o << c;
-        }
-    }
-  }
-  return o.str();
-}
-
 std::string converter(const char *name) {
   return std::string(name);
 }
