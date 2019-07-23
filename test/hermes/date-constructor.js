@@ -191,6 +191,22 @@ print(Date.parse('2016T12:30:00.000-07:00'));
 // CHECK-NEXT: 1451676600000
 print(Date.parse('2016T12:30:47.123-07:00'));
 // CHECK-NEXT: 1451676647123
+print(Date.parse('Tue Jul 16 2019 13:15:25 GMT-0700 (Pacific Daylight Time)'));
+// CHECK-NEXT: 1563308125000
+print(Date.parse('Tue Jul 16 2019 13:15:25 GMT-0700'));
+// CHECK-NEXT: 1563308125000
+print(Date.parse('Tue Jul 16 2019 13:15:25 GMT'));
+// CHECK-NEXT: 1563282925000
+print(Date.parse('Tue, 16 Jul 2019 13:15:25 GMT-0700'));
+// CHECK-NEXT: 1563308125000
+print(Date.parse('Tue, 16 Jul 2019 13:15:25 GMT'));
+// CHECK-NEXT: 1563282925000
+print(Date.parse('Wat Jul 16 2019 13:15:25 GMT-0700'));
+// CHECK-NEXT: NaN
+print(Date.parse('Mon Jul 16 2019 13:1525 GMT-0700'));
+// CHECK-NEXT: NaN
+print(Date.parse('Mon Jul 16 2019 13:1525 GMT'));
+// CHECK-NEXT: NaN
 
 // Quick check that getters work; internal functions are unit tested instead.
 print('getters');

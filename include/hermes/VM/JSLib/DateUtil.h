@@ -221,6 +221,11 @@ void timeToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf);
 ///     - May be followed by a time zone: Z or [+-]HH:mm
 ///     - The Date may also be extended to 6 digits with a sign: [+-]YYYYYY
 ///   - ISO 8601 as above, but with a space instead of 'T' as a separator.
+///   - Full ES9.0 toString() format:
+///     - EEE is day of the week
+///     - EEE MMM DD YYYY HH:mm:ss GMT-HHmm
+///     - EEE, DD MMM YYYY HH:mm:ss GMT
+///     - Optionally followed by "(Timezone Description)"
 /// Note: the only requirements of parsing are that the 15.9.1.15 format works,
 /// and for a given Date x with a milliseconds value of 0, these are all equal:
 ///   - x.valueOf()

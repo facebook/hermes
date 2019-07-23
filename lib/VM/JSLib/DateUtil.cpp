@@ -580,6 +580,33 @@ void timeToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf) {
   return platform_unicode::dateFormat(t, false, true, buf);
 }
 
+// ES9.0 Table 46
+static const char *const weekdayNames[7]{
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+};
+
+// ES9.0 Table 47
+static const char *const monthNames[12]{
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+};
+
 //===----------------------------------------------------------------------===//
 // Date parsing
 
@@ -609,8 +636,8 @@ static bool scanInt(InputIter &it, const InputIter end, int32_t &x) {
   return !ref.getAsInteger(10, x);
 }
 
-double parseDate(StringView u16str) {
-  const double nan = std::numeric_limits<double>::quiet_NaN();
+static double parseISODate(StringView u16str) {
+  constexpr double nan = std::numeric_limits<double>::quiet_NaN();
 
   auto it = u16str.begin();
   auto end = u16str.end();
@@ -713,6 +740,169 @@ double parseDate(StringView u16str) {
 
   // Account for the fact that m was 1-indexed and the timezone offset.
   return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms));
+}
+
+static double parseESDate(StringView str) {
+  constexpr double nan = std::numeric_limits<double>::quiet_NaN();
+  StringView tok = str;
+
+  // Initialize these fields to their defaults.
+  int32_t y, m{1}, d{1}, h{0}, min{0}, s{0}, ms{0}, tzh{0}, tzm{0};
+  double sign = 1;
+
+  // Example strings to parse:
+  // Mon Jul 15 2019 14:33:22 GMT-0700 (PDT)
+  // Mon, 15 Jul 2019 14:33:22 GMT
+  // The comma, time zone adjustment, and description are optional,
+
+  // Current index we are parsing.
+  auto it = str.begin();
+  auto end = str.end();
+
+  /// Read a string starting at `it` into `tok`.
+  /// \param len the number of characters to scan in the string.
+  /// \return true if successful, false if failed.
+  auto scanStr = [&str, &tok, &it](int32_t len) -> bool {
+    if (it + len > str.end()) {
+      return false;
+    }
+    tok = str.slice(it, it + len);
+    it += len;
+    return true;
+  };
+
+  auto consume = [&](char16_t ch) {
+    if (it != str.end() && *it == ch) {
+      ++it;
+      return true;
+    }
+    return false;
+  };
+
+  // Weekday, optional comma, and following space.
+  if (!scanStr(3))
+    return nan;
+  bool foundWeekday = false;
+  for (const char *name : weekdayNames) {
+    if (tok.equals(llvm::arrayRefFromStringRef(name))) {
+      foundWeekday = true;
+      break;
+    }
+  }
+  if (!foundWeekday)
+    return nan;
+  consume(','); // Optional comma, disregard failure.
+  if (!consume(' '))
+    return nan;
+
+  // Day Month Year
+  // or
+  // Month Day Year
+  if (scanInt(it, end, d)) {
+    // Day Month
+    if (!consume(' '))
+      return nan;
+    if (!scanStr(3))
+      return nan;
+  } else {
+    // Month Day
+    if (!scanStr(3))
+      return nan;
+    if (!consume(' '))
+      return nan;
+    if (!scanInt(it, end, d))
+      return nan;
+  }
+  // tok is now set to the Month string.
+  bool foundMonth = false;
+  for (uint32_t i = 0; i < sizeof(monthNames) / sizeof(monthNames[0]); ++i) {
+    if (tok.equals(llvm::arrayRefFromStringRef(monthNames[i]))) {
+      // m is 1-indexed.
+      m = i + 1;
+      foundMonth = true;
+      break;
+    }
+  }
+  if (!foundMonth)
+    return nan;
+
+  // Year
+  if (!consume(' '))
+    return nan;
+  if (!scanInt(it, end, y))
+    return nan;
+
+  if (!consume(' '))
+    return nan;
+
+  // Hour:minute:second.
+  if (!scanInt(it, end, h))
+    return nan;
+  if (!consume(':'))
+    return nan;
+  if (!scanInt(it, end, min))
+    return nan;
+  if (!consume(':'))
+    return nan;
+  if (!scanInt(it, end, s))
+    return nan;
+
+  // Space and "GMT".
+  if (!consume(' '))
+    return nan;
+  if (!scanStr(3))
+    return nan;
+  if (!tok.equals(llvm::arrayRefFromStringRef("GMT")))
+    return nan;
+
+  if (it == end)
+    goto complete;
+
+  // Sign of the timezone adjustment.
+  if (consume('+'))
+    sign = 1;
+  else if (consume('-'))
+    sign = -1;
+  else
+    return nan;
+
+  // Hour and minute of timezone adjustment.
+  if (it > end - 4)
+    return nan;
+  if (!scanInt(it, it + 2, tzh))
+    return nan;
+  tzh *= sign;
+  if (!scanInt(it, it + 2, tzm))
+    return nan;
+  tzm *= sign;
+
+  if (it != end) {
+    // Optional parenthesized description of timezone (must be at the end).
+    if (!consume(' '))
+      return nan;
+    if (!consume('('))
+      return nan;
+    while (it != end && *it != ')')
+      ++it;
+    if (!consume(')'))
+      return nan;
+  }
+
+  if (it != end)
+    return nan;
+
+complete:
+  // Account for the fact that m was 1-indexed and the timezone offset.
+  return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms));
+}
+
+double parseDate(StringView str) {
+  double result = parseISODate(str);
+  if (!std::isnan(result)) {
+    return result;
+  }
+
+  return parseESDate(str);
 }
 
 } // namespace vm
