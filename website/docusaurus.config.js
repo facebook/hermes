@@ -8,6 +8,8 @@
 module.exports = {
   title: 'Hermes',
   tagline: 'JavaScript engine optimized for React Native',
+  organizationName: 'facebook',
+  projectName: 'hermes',
   url: 'https://hermesengine.dev',
   baseUrl: '/',
   favicon: 'img/favicon.ico',
