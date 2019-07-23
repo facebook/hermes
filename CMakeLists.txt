@@ -137,7 +137,8 @@ if ((NOT GENERATOR_IS_MULTI_CONFIG) AND CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 
 if (HERMES_STATIC_LINK)
-  SET(CMAKE_EXE_LINKER_FLAGS "-static")
+  set(CMAKE_EXE_LINKER_FLAGS "-static")
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 endif()
 
 CHECK_CXX_SOURCE_COMPILES(
@@ -333,9 +334,6 @@ if (NOT ICU_FOUND)
     list(REMOVE_DUPLICATES ICU_RPATH)
     message("icu dir: ${ICU_RPATH}")
     include_directories(${ICU_INCLUDE_DIRS})
-
-    # FindICU does not appear to support finding static libraries, so...
-    string(REPLACE .so .a ICU_STATIC_LIBRARIES "${ICU_LIBRARIES}")
   endif()
 endif()
 
@@ -364,10 +362,9 @@ endif()
 # This adds the correct -rpath link flag as necessary.
 function(hermes_link_icu target_name)
   get_target_property(target_type ${target_name} TYPE)
+  target_link_libraries(${target_name} PRIVATE ${ICU_LIBRARIES})
   if (HERMES_STATIC_LINK AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
-    target_link_libraries(${target_name} PRIVATE ${ICU_STATIC_LIBRARIES})
-  else()
-    target_link_libraries(${target_name} PRIVATE ${ICU_LIBRARIES})
+    target_link_libraries(${target_name} PRIVATE dl pthread)
   endif()
 
   if (ICU_RPATH)
