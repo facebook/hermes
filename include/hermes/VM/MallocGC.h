@@ -229,6 +229,11 @@ class MallocGC final : public GCBase {
   size_t countUsedWeakRefs() const;
 #endif
 
+  /// The largest the size of this heap could ever grow to.
+  size_t maxSize() const {
+    return maxSize_;
+  }
+
   /// @}
 
  private:
