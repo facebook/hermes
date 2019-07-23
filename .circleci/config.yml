@@ -1,0 +1,102 @@
+version: 2
+workflows:
+  version: 2
+  build:
+    jobs:
+      - android
+      - linux
+
+jobs:
+  android:
+    docker:
+      - image: circleci/android:api-28-ndk
+    environment:
+      - HERMES_WS_DIR: /tmp/hermes
+      - TERM: dumb
+    steps:
+      - checkout
+      - run:
+          name: Set up workspace and install dependencies
+          command: |
+            yes | sdkmanager "ndk-bundle"  &
+            yes | sdkmanager "cmake;3.6.4111459" &
+            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+            sudo apt-get update
+            sudo apt-get install -y cmake ninja-build
+            wait
+            # CircleCI machines advertise 36 cores but restrict memory.  It's
+            # annoying to configure each 'ninja' invocation, so just create a
+            # wrapper:
+            sudo cp /usr/bin/ninja /usr/bin/ninja.real
+            printf '%s\n' '#!/bin/sh' 'exec ninja.real -j4 "$@"' | sudo tee /usr/bin/ninja
+            ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.6.4111459/bin/ninja
+      - run:
+          name: Build LLVM
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build_llvm.py --cross-compile-only llvm llvm_build
+      - run:
+          name: Crosscompile LLVM
+          command: |
+            export ANDROID_SDK="$ANDROID_HOME"
+            export ANDROID_NDK="$ANDROID_HOME/ndk-bundle"
+            cd "$HERMES_WS_DIR" && hermes/utils/crosscompile_llvm.sh
+      - run:
+          name: Build Hermes for Android
+          command: |
+            export ANDROID_SDK="$ANDROID_HOME"
+            export ANDROID_NDK="$ANDROID_HOME/ndk-bundle"
+            cd "$HERMES_WS_DIR/hermes/android" && ./gradlew githubRelease
+      - run:
+          name: Copy artifacts
+          command: |
+            cd "$HERMES_WS_DIR"
+            cp "build_android/distributions"/hermes-runtime-android-*.tar.gz "output"
+      - store_artifacts:
+          path: /tmp/hermes/output/
+
+  linux:
+    docker:
+      - image: debian:stretch
+    environment:
+      - HERMES_WS_DIR: /tmp/hermes
+      - TERM: dumb
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            apt-get update
+            apt-get install -y \
+                sudo git openssh-client cmake ninja-build python \
+                build-essential libreadline-dev libicu-dev
+      - checkout
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+            # CircleCI machines advertise 36 cores but restrict memory.  It's
+            # annoying to configure each 'ninja' invocation, so just create a
+            # wrapper:
+            sudo cp /usr/bin/ninja /usr/bin/ninja.real
+            printf '%s\n' '#!/bin/sh' 'exec ninja.real -j4 "$@"' | sudo tee /usr/bin/ninja
+      - run:
+          name: Build LLVM
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build_llvm.py --distribute llvm llvm_build_release
+      - run:
+          name: Build Hermes for Linux
+          command: |
+            cd "$HERMES_WS_DIR"
+            STATIC_LINK=1 DISTRIBUTE=1 hermes/utils/configure.sh
+            cd build_release
+            ninja github-cli-release
+      - run:
+          name: Copy artifacts
+          command: |
+            cd "$HERMES_WS_DIR"
+            cp "build_release/github"/hermes-cli-*.tar.gz "output"
+      - store_artifacts:
+          path: /tmp/hermes/output/
