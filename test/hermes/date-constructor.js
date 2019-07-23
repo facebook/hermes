@@ -34,7 +34,8 @@ print(new Date(2017, 0, 0).getTime() === new Date(2016, 11, 31).getTime());
 print(new Date(2017, 0, 1).getTime() === new Date(2016, 12, 1).getTime());
 // CHECK-NEXT: true
 print(Date());
-// CHECK-NEXT:{{[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}-07:00}}
+// CHECK-NEXT: {{... ... .. .... ..:..:.. GMT.....}}
+// {{... ... [0-9]{2} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT[-+][0-9]{4} }}
 print(typeof Date());
 // CHECK-NEXT: string
 var lb = new Date().toString();
@@ -56,26 +57,26 @@ try {Date.prototype.setDate(123);} catch(e) {print('caught', e.name)}
 print('toString');
 // CHECK-LABEL: toString
 print(new Date(112).toString());
-// CHECK-NEXT: 1969-12-31T17:00:00.112-07:00
+// CHECK-NEXT: Wed Dec 31 1969 17:00:00 GMT-0700
 print(new Date(2017, 2, 15, 15, 1, 37, 243).toString());
-// CHECK-NEXT: 2017-03-15T15:01:37.243-07:00
+// CHECK-NEXT: Wed Mar 15 2017 15:01:37 GMT-0700
 print(new Date(123123, 2, 15, 15, 1, 37, 243).toString());
-// CHECK-NEXT: +123123-03-15T15:01:37.243-07:00
+// CHECK-NEXT: Thu Mar 15 123123 15:01:37 GMT-0700
 print(new Date(-1, 2, 15, 15, 1, 37, 243).toString());
-// CHECK-NEXT: -000001-03-15T15:01:37.243-07:00
+// CHECK-NEXT: Mon Mar 15 -001 15:01:37 GMT-0700
 print(new Date(NaN, 2, 15, 15, 1, 37, 243).toString());
 // CHECK-NEXT: Invalid Date
 print(new Date('2016T12:30').toString());
-// CHECK-NEXT: 2016-01-01T05:30:00.000-07:00
+// CHECK-NEXT: Fri Jan 01 2016 05:30:00 GMT-0700
 
 print('@@toPrimitive');
 // CHECK-LABEL: @@toPrimitive
 print('"' + new Date(112)[Symbol.toPrimitive].name + '"');
 // CHECK-NEXT: "[Symbol.toPrimitive]"
 print(new Date(112)[Symbol.toPrimitive]('string'));
-// CHECK-NEXT: 1969-12-31T17:00:00.112-07:00
+// CHECK-NEXT: Wed Dec 31 1969 17:00:00 GMT-0700
 print(new Date(112)[Symbol.toPrimitive]('default'));
-// CHECK-NEXT: 1969-12-31T17:00:00.112-07:00
+// CHECK-NEXT: Wed Dec 31 1969 17:00:00 GMT-0700
 print(new Date(112)[Symbol.toPrimitive]('number'));
 // CHECK-NEXT: 112
 try {
@@ -99,7 +100,7 @@ try {
 print('toUTCString');
 // CHECK-LABEL: toUTCString
 print(new Date(2017, 2, 15, 15, 1, 37, 243).toUTCString());
-// CHECK-NEXT: 2017-03-15 22:01:37.243Z
+// CHECK-NEXT: Wed, 15 Mar 2017 22:01:37 GMT
 
 print('toJSON');
 // CHECK-LABEL: toJSON
@@ -117,20 +118,20 @@ try {
 print('toDateString');
 // CHECK-LABEL: toDateString
 print(new Date(112).toDateString());
-// CHECK-NEXT: 1969-12-31
+// CHECK-NEXT: Wed Dec 31 1969
 print(new Date(2017, 2, 15, 15, 1, 37, 243).toDateString());
-// CHECK-NEXT: 2017-03-15
+// CHECK-NEXT: Wed Mar 15 2017
 print(new Date(123123, 2, 15, 15, 1, 37, 243).toDateString());
-// CHECK-NEXT: +123123-03-15
+// CHECK-NEXT: Thu Mar 15 123123
 print(new Date(-1, 2, 15, 15, 1, 37, 243).toDateString());
-// CHECK-NEXT: -000001-03-15
+// CHECK-NEXT: Mon Mar 15 -001
 
 print('toTimeString');
 // CHECK-LABEL: toTimeString
 print(new Date(112).toTimeString());
-// CHECK-NEXT: 17:00:00.112-07:00
+// CHECK-NEXT: 17:00:00 GMT-0700
 print(new Date(2017, 2, 15, 15, 1, 37, 243).toTimeString());
-// CHECK-NEXT: 15:01:37.243-07:00
+// CHECK-NEXT: 15:01:37 GMT-0700
 
 print('UTC');
 // CHECK-LABEL: UTC

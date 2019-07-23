@@ -563,7 +563,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
 #endif
     double t = curTime();
     double local = localTime(t);
-    datetimeToUTCString(local, local - t, str);
+    dateTimeString(local, local - t, str);
 #ifdef HERMESVM_SYNTH_REPLAY
   }
 #endif
@@ -628,11 +628,11 @@ dateNow(void *, Runtime *runtime, NativeArgs args) {
 static CallResult<HermesValue>
 datePrototypeToStringHelper(void *ctx, Runtime *runtime, NativeArgs args) {
   static ToStringOptions toStringOptions[] = {
-      {datetimeToISOString, false, false},
-      {dateToString, false, false},
-      {timeToString, false, false},
+      {dateTimeString, false, false},
+      {dateString, false, false},
+      {timeTZString, false, false},
       {datetimeToISOString, true, true},
-      {datetimeToUTCString, true, false},
+      {dateTimeUTCString, true, false},
   };
   assert(
       (uint64_t)ctx < (uint64_t)ToStringKind::NumKinds &&

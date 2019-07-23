@@ -199,7 +199,7 @@ double dateFromTime(double t) {
 //===----------------------------------------------------------------------===//
 // ES5.1 15.9.1.6
 
-double weekDay(double t) {
+int32_t weekDay(double t) {
   return posfmod((day(t) + 4), 7);
 }
 
@@ -502,7 +502,7 @@ double timeClip(double t) {
 //===----------------------------------------------------------------------===//
 // toString Functions
 
-void dateToString(double t, double, llvm::SmallVectorImpl<char> &buf) {
+void dateToISOString(double t, double, llvm::SmallVectorImpl<char> &buf) {
   llvm::raw_svector_ostream os{buf};
 
   /// Make these ints here because we're printing and we have bounds on
@@ -519,7 +519,7 @@ void dateToString(double t, double, llvm::SmallVectorImpl<char> &buf) {
   }
 }
 
-void timeToString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
+void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
   llvm::raw_svector_ostream os{buf};
 
   /// Make all of these ints here because we're printing and we have bounds on
@@ -544,28 +544,21 @@ void timeToString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
   }
 }
 
-static void datetimeToString(
+static void datetimeToISOString(
     double t,
     double tza,
     llvm::SmallVectorImpl<char> &buf,
     char separator) {
-  dateToString(t, tza, buf);
+  dateToISOString(t, tza, buf);
   buf.push_back(separator);
-  timeToString(t, tza, buf);
+  timeToISOString(t, tza, buf);
 }
 
 void datetimeToISOString(
     double t,
     double tza,
     llvm::SmallVectorImpl<char> &buf) {
-  return datetimeToString(t, tza, buf, 'T');
-}
-
-void datetimeToUTCString(
-    double t,
-    double tza,
-    llvm::SmallVectorImpl<char> &buf) {
-  return datetimeToString(t, tza, buf, ' ');
+  return datetimeToISOString(t, tza, buf, 'T');
 }
 
 void datetimeToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf) {
@@ -606,6 +599,105 @@ static const char *const monthNames[12]{
     "Nov",
     "Dec",
 };
+
+void dateString(double t, double, llvm::SmallVectorImpl<char> &buf) {
+  llvm::raw_svector_ostream os{buf};
+
+  // Make these ints here because we're printing and we have bounds on
+  // their values. Makes printing very easy.
+  int32_t y = yearFromTime(t);
+  int32_t m = monthFromTime(t); // monthFromTime(t) is 0-indexed.
+  int32_t d = dateFromTime(t);
+  int32_t wd = weekDay(t);
+
+  // 7. Return the string-concatenation of weekday, the code unit 0x0020
+  // (SPACE), month, the code unit 0x0020 (SPACE), day, the code unit 0x0020
+  // (SPACE), and year.
+  // Example: Mon Jul 22 2019
+  os << llvm::format("%s %s %02d %04d", weekdayNames[wd], monthNames[m], d, y);
+}
+
+void timeString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
+  llvm::raw_svector_ostream os{buf};
+
+  int32_t hour = hourFromTime(t);
+  int32_t minute = minFromTime(t);
+  int32_t second = secFromTime(t);
+
+  // Example: 15:50:49 GMT
+  os << llvm::format("%02d:%02d:%02d GMT", hour, minute, second);
+}
+
+void timeZoneString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
+  llvm::raw_svector_ostream os{buf};
+
+  // We've already computed the TZA, so use that as the offset.
+  double offset = tza;
+
+  // 4. If offset >= 0, let offsetSign be "+"; otherwise, let offsetSign be "-".
+  char offsetSign = offset >= 0 ? '+' : '-';
+
+  // 5. Let offsetMin be the String representation of MinFromTime(abs(offset)),
+  // formatted as a two-digit decimal number, padded to the left with a zero if
+  // necessary.
+  int32_t offsetMin = minFromTime(std::abs(offset));
+
+  // 6. Let offsetHour be the String representation of
+  // HourFromTime(abs(offset)), formatted as a two-digit decimal number, padded
+  // to the left with a zero if necessary.
+  int32_t offsetHour = hourFromTime(std::abs(offset));
+
+  // 7. Let tzName be an implementation-defined string that is either the empty
+  // string or the string-concatenation of the code unit 0x0020 (SPACE), the
+  // code unit 0x0028 (LEFT PARENTHESIS), an implementation-dependent timezone
+  // name, and the code unit 0x0029 (RIGHT PARENTHESIS).
+  // TODO: Make this something other than empty string.
+
+  // 8. Return the string-concatenation of offsetSign, offsetHour, offsetMin,
+  // and tzName.
+  // Example: -0700
+  os << llvm::format("%c%02d%02d", offsetSign, offsetHour, offsetMin);
+}
+
+void dateTimeString(double tv, double tza, llvm::SmallVectorImpl<char> &buf) {
+  llvm::raw_svector_ostream os{buf};
+  dateString(tv, tza, buf);
+  // Return the string-concatenation of DateString(t), the code unit 0x0020
+  // (SPACE), TimeString(t), and TimeZoneString(tv).
+  // Example: Mon Jul 22 2019 15:51:50 GMT-0700
+  os << " ";
+  timeString(tv, tza, buf);
+  timeZoneString(tv, tza, buf);
+}
+
+void dateTimeUTCString(
+    double tv,
+    double tza,
+    llvm::SmallVectorImpl<char> &buf) {
+  llvm::raw_svector_ostream os{buf};
+
+  // Make these ints here because we're printing and we have bounds on
+  // their values. Makes printing very easy.
+  int32_t y = yearFromTime(tv);
+  int32_t m = monthFromTime(tv); // monthFromTime(t) is 0-indexed.
+  int32_t d = dateFromTime(tv);
+  int32_t wd = weekDay(tv);
+
+  // 8. Return the string-concatenation of weekday, ",", the code unit 0x0020
+  // (SPACE), day, the code unit 0x0020 (SPACE), month, the code unit 0x0020
+  // (SPACE), year, the code unit 0x0020 (SPACE), and TimeString(tv).
+  // Example: Mon Jul 22 2019 15:51:50 GMT
+  os << llvm::format(
+      "%s, %02d %s %04d ", weekdayNames[wd], d, monthNames[m], y);
+  timeString(tv, tza, buf);
+}
+
+void timeTZString(double tv, double tza, llvm::SmallVectorImpl<char> &buf) {
+  // Return the string-concatenation of TimeString(t) and TimeZoneString(tv).
+  // Example: 15:51:50 GMT-0700
+  timeString(tv, tza, buf);
+  timeZoneString(tv, tza, buf);
+}
 
 //===----------------------------------------------------------------------===//
 // Date parsing
