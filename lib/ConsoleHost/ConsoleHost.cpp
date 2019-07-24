@@ -208,7 +208,6 @@ bool executeHBCBytecode(
 
   if (options.runtimeConfig.getEnableSampleProfiling()) {
     auto profiler = vm::SamplingProfiler::getInstance();
-    profiler->dumpSampledStack(llvm::errs());
     profiler->dumpChromeTrace(llvm::errs());
     profiler->disable();
   }
