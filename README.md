@@ -20,10 +20,9 @@ To build a local debug version of the Hermes CLI tools the following steps shoul
 ```shell
 mkdir hermes_workingdir
 cd hermes_workingdir
-export HERMES_WS_DIR="$PWD"
 git clone git@github.com:facebook/hermes.git
-hermes/utils/build_llvm.py llvm llvm_build
-hermes/utils/configure.sh
+hermes/utils/build/build_llvm.py
+hermes/utils/build/configure.py
 cd build
 ninja
 ```
@@ -33,10 +32,9 @@ Or if you're using Windows, the following should get you going in a Git Bash she
 ```shell
 mkdir hermes_workingdir
 cd hermes_workingdir
-export HERMES_WS_DIR="$PWD"
 git -c core.autocrlf=false clone git@github.com:facebook/hermes.git
-BUILD_SYSTEM='Visual Studio 16 2019' CMAKE_FLAGS='-A x64' hermes/utils/build_llvm.py --distribute llvm llvm_build
-CMAKE_FLAGS='-A x64 -DLLVM_ENABLE_LTO=OFF' hermes/utils/configure.sh 'Visual Studio 16 2019'
+hermes/utils/build/build_llvm.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64' --distribute
+hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64 -DLLVM_ENABLE_LTO=OFF' --distribute
 cd build
 MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
 ```

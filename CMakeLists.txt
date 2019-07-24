@@ -126,6 +126,8 @@ endif()
 #
 # cmake -G Ninja -DLLVM_BUILD_DIR=$XXX -DLLVM_SRC_DIR=$YYY
 #
+file(TO_CMAKE_PATH "${LLVM_BUILD_DIR}" LLVM_BUILD_DIR)
+file(TO_CMAKE_PATH "${LLVM_SRC_DIR}" LLVM_SRC_DIR)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_BUILD_DIR}/lib/cmake/llvm/")
 
 # Enable debug mode by default
