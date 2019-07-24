@@ -1250,7 +1250,17 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   V8HeapSnapshot::NodeID freshOffset = segmentAddressToIndex.size()
       << AlignedStorage::kLogSize;
 
-  auto writeNodesToSnapshot = [&snap, &ptrToOffset, this](GCCell *cell) {
+  snap.beginSection(V8HeapSnapshot::Section::Nodes);
+  SnapshotNodeAcceptor rootAcceptor(*this);
+  markRoots(rootAcceptor, true);
+  snap.addNode(
+      V8HeapSnapshot::NodeType::Synthetic,
+      "(GC Roots)",
+      freshOffset++,
+      0,
+      rootAcceptor.edgeCount());
+
+  forAllObjs([&snap, &ptrToOffset, this](GCCell *cell) {
     SnapshotNodeAcceptor acceptor(*this);
     SlotVisitorWithNames<SnapshotNodeAcceptor> visitor(acceptor);
 
@@ -1271,34 +1281,17 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
         ptrToOffset(cell),
         cell->getAllocatedSize(),
         acceptor.edgeCount());
-  };
-
-  snap.beginSection(V8HeapSnapshot::Section::Nodes);
-  SnapshotNodeAcceptor rootAcceptor(*this);
-  markRoots(rootAcceptor, true);
-
-  snap.addNode(
-      V8HeapSnapshot::NodeType::Synthetic,
-      "(GC Roots)",
-      freshOffset++,
-      0,
-      rootAcceptor.edgeCount());
-
-  youngGen_.forAllObjs(writeNodesToSnapshot);
-  oldGen_.forAllObjs(writeNodesToSnapshot);
+  });
   snap.endSection(V8HeapSnapshot::Section::Nodes);
 
   SnapshotEdgeAcceptor snapshotEdgeAcceptor(*this, snap, ptrToOffset);
   SlotVisitorWithNames<SnapshotEdgeAcceptor> edgeVisitor(snapshotEdgeAcceptor);
 
-  auto writeEdgesToSnapshot = [&edgeVisitor, this](GCCell *cell) {
-    GCBase::markCellWithNames(edgeVisitor, cell, this);
-  };
-
   snap.beginSection(V8HeapSnapshot::Section::Edges);
   markRoots(snapshotEdgeAcceptor, true);
-  youngGen_.forAllObjs(writeEdgesToSnapshot);
-  oldGen_.forAllObjs(writeEdgesToSnapshot);
+  forAllObjs([&edgeVisitor, this](GCCell *cell) {
+    GCBase::markCellWithNames(edgeVisitor, cell, this);
+  });
   snap.endSection(V8HeapSnapshot::Section::Edges);
 
 #ifdef HERMES_SLOW_DEBUG
