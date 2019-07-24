@@ -9,6 +9,8 @@
 
 #include "hermes/SourceMap/SourceMapGenerator.h"
 
+#include "llvm/Support/MemoryBuffer.h"
+
 namespace hermes {
 
 /// JavaScript version 3 source map parser.
@@ -16,9 +18,16 @@ namespace hermes {
 /// parses.
 class SourceMapParser {
  public:
+  /// Parse input \p sourceMap and return parsed SourceMap.
+  /// On failure if malformed, prints an error message and returns nullptr.
+  static std::unique_ptr<SourceMap> parse(llvm::MemoryBufferRef sourceMap);
+
   /// Parse input \p sourceMapContent and return parsed SourceMap.
-  /// Return nullptr on failure if malformed.
-  static std::unique_ptr<SourceMap> parse(llvm::StringRef sourceMapContent);
+  /// Set the filename of the map file to "<source map>".
+  /// On failure if malformed, prints an error message and returns nullptr.
+  static std::unique_ptr<SourceMap> parse(llvm::StringRef sourceMapContent) {
+    return parse(llvm::MemoryBufferRef(sourceMapContent, "<source map>"));
+  }
 
  private:
   /// Delta encoding state.
