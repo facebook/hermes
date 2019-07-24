@@ -145,6 +145,13 @@ class JSTypedArrayBase : public JSObject {
     return *(reinterpret_cast<T *>(src_) + i);
   }
 
+  /// Allocates a buffer using \p runtime with \p length number of
+  /// elements, each of \p byteWidth size in bytes.
+  static ExecutionStatus createBuffer(
+      Runtime *runtime,
+      Handle<JSTypedArrayBase> selfObj,
+      size_type length);
+
   /// Sets the current buffer to a copy of \p src starting from
   /// \p byteOffset and going for \p srcSize bytes total.
   /// \pre
@@ -203,13 +210,6 @@ class JSTypedArrayBase : public JSObject {
       const VTable *vt,
       JSObject *parent,
       HiddenClass *clazz);
-
-  /// Allocates a buffer using \p runtime with \p length number of
-  /// elements, each of \p byteWidth size in bytes.
-  static ExecutionStatus createBuffer(
-      Runtime *runtime,
-      Handle<JSTypedArrayBase> selfObj,
-      size_type length);
 
   /// Sets the current buffer's contents to the contents of a buffer from
   /// another TypedArray \p src.
