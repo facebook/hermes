@@ -475,7 +475,6 @@ class GCBase {
   static inline void markCellWithNames(
       SlotVisitorWithNames<Acceptor> &visitor,
       GCCell *cell,
-      const VTable *vt,
       GC *gc);
 
   /// @}

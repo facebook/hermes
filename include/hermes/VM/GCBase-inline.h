@@ -56,8 +56,8 @@ template <typename Acceptor>
 inline void GCBase::markCellWithNames(
     SlotVisitorWithNames<Acceptor> &visitor,
     GCCell *cell,
-    const VTable *vt,
     GC *gc) {
+  const VTable *vt = cell->getVT();
   visitor.visit(cell, gc->metaTable_[static_cast<size_t>(vt->kind)]);
   if (Acceptor::shouldMarkWeak) {
     vt->markWeakIfExists(cell, gc);

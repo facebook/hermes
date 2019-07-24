@@ -1250,9 +1250,8 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
                                &nodeVisitor,
                                &snapshotNodeAcceptor,
                                &ptrToOffset,
-                               this](const GCCell *cell) {
-    GCBase::markCellWithNames(
-        nodeVisitor, const_cast<GCCell *>(cell), cell->getVT(), this);
+                               this](GCCell *cell) {
+    GCBase::markCellWithNames(nodeVisitor, cell, this);
     std::string str;
     // If the cell is a string, add a value to be printed.
     // TODO: add other special types here.
@@ -1284,9 +1283,8 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   SnapshotEdgeAcceptor snapshotEdgeAcceptor(*this, snap, ptrToOffset);
   SlotVisitorWithNames<SnapshotEdgeAcceptor> edgeVisitor(snapshotEdgeAcceptor);
 
-  auto writeEdgesToSnapshot = [&edgeVisitor, this](const GCCell *cell) {
-    GCBase::markCellWithNames(
-        edgeVisitor, const_cast<GCCell *>(cell), cell->getVT(), this);
+  auto writeEdgesToSnapshot = [&edgeVisitor, this](GCCell *cell) {
+    GCBase::markCellWithNames(edgeVisitor, cell, this);
   };
 
   snap.beginSection(V8HeapSnapshot::Section::Edges);
