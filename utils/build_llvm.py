@@ -103,6 +103,12 @@ def parse_args():
         args.build_command += " " + os.path.join("bin", "llvm-tblgen")
     args.build_type = args.build_type or ("MinSizeRel" if args.distribute else "Debug")
 
+    if "Visual Studio" in args.build_system:
+        if args.build_type == "Debug":
+            args.build_command += " /p:Configuration=Debug"
+        else:
+            args.build_command += " /p:Configuration=MinSizeRel"
+
     return args
 
 

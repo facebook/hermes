@@ -156,6 +156,12 @@ def parse_args():
             raise Exception("Unrecognized build system: {}".format(args.build_system))
 
     args.build_type = args.build_type or ("MinSizeRel" if args.distribute else "Debug")
+
+    if args.build_type == "Debug":
+        args.build_command += " /p:Configuration=Debug"
+    else:
+        args.build_command += " /p:Configuration=MinSizeRel"
+
     return args
     
 def which(cmd):
