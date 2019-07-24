@@ -5,6 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "Array.h"
+#include "EmptyCell.h"
 #include "TestHelpers.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/GC.h"
@@ -20,6 +21,10 @@ using namespace hermes::vm;
 using namespace hermes::unittest;
 
 namespace {
+
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize(), true>;
+#endif
 
 struct Dummy final : public GCCell {
   static const VTable vt;
@@ -69,6 +74,10 @@ template <>
 struct IsGCObject<Array> : public std::true_type {};
 template <>
 struct IsGCObject<Dummy> : public std::true_type {};
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+template <>
+struct IsGCObject<SegmentCell> : public std::true_type {};
+#endif
 } // namespace vm
 } // namespace hermes
 
@@ -385,14 +394,71 @@ TEST_F(GCBasicsTest, ExtraBytes) {
   }
 }
 
-#ifdef HERMESVM_GCCELL_ID
+// ID tests aren't supported on GenGC.
+#ifndef HERMESVM_GC_GENERATIONAL
 /// Test that the id is set to a unique number for each allocated object.
-TEST_F(GCBasicsTest, TestIDExists) {
+TEST_F(GCBasicsTest, TestIDIsUnique) {
   auto *cell = Dummy::create(rt);
-  auto id1 = cell->getDebugAllocationId();
+  auto id1 = rt.getHeap().getObjectID(cell);
   cell = Dummy::create(rt);
-  auto id2 = cell->getDebugAllocationId();
+  auto id2 = rt.getHeap().getObjectID(cell);
   EXPECT_NE(id1, id2);
+}
+
+TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
+  GCScope scope{&rt};
+  auto handle = rt.makeHandle<Dummy>(Dummy::create(rt));
+  const auto idBefore = rt.getHeap().getObjectID(*handle);
+  rt.getHeap().collect();
+  const auto idAfter = rt.getHeap().getObjectID(*handle);
+  EXPECT_EQ(idBefore, idAfter);
+}
+#endif
+
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
+  constexpr size_t kHeapSizeHint =
+      AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
+
+  const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
+  auto runtime = DummyRuntime::create(getMetadataTable(), kGCConfig);
+  DummyRuntime &rt = *runtime;
+
+  GCScope scope{&rt};
+  auto handle = rt.makeHandle<SegmentCell>(SegmentCell::create(rt));
+  const auto originalID = rt.getHeap().getObjectID(*handle);
+  GC::HeapInfo originalHeapInfo;
+  rt.getHeap().getHeapInfo(originalHeapInfo);
+  // A second allocation should put the first object into the old gen.
+  auto handle2 = rt.makeHandle<SegmentCell>(SegmentCell::create(rt));
+  (void)handle2;
+  auto idAfter = rt.getHeap().getObjectID(*handle);
+  GC::HeapInfo afterHeapInfo;
+  rt.getHeap().getHeapInfo(afterHeapInfo);
+  EXPECT_EQ(originalID, idAfter);
+  // There should have been one young gen collection.
+  EXPECT_EQ(
+      afterHeapInfo.youngGenStats.numCollections,
+      originalHeapInfo.youngGenStats.numCollections + 1);
+  // Fill the old gen to force a collection.
+  auto N = rt.getHeap().maxSize() / SegmentCell::size() - 1;
+  std::deque<GCCell *> roots;
+  for (size_t i = 0; i < N - 1; ++i) {
+    roots.push_back(SegmentCell::create(rt));
+    rt.pointerRoots.push_back(&roots.back());
+  }
+  // Remove all the roots for the final allocation so that an old gen GC can
+  // occur.
+  rt.pointerRoots.clear();
+  roots.clear();
+  SegmentCell::create(rt);
+  idAfter = rt.getHeap().getObjectID(*handle);
+  rt.getHeap().getHeapInfo(afterHeapInfo);
+  EXPECT_EQ(originalID, idAfter);
+  // There should have been one old gen collection.
+  EXPECT_EQ(
+      afterHeapInfo.fullStats.numCollections,
+      originalHeapInfo.fullStats.numCollections + 1);
 }
 #endif
 

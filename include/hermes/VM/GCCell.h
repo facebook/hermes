@@ -29,9 +29,6 @@ class GCCell {
   static constexpr uint16_t kMagic{0xce11};
   // This is used to ensure a cell is valid and is not some other value.
   const uint16_t magic_{kMagic};
-#endif
-
-#ifdef HERMESVM_GCCELL_ID
   /// Semi-unique (until the global counter overflows) id associated with every
   /// allocation.
   uint64_t _debugAllocationId_;
@@ -179,7 +176,7 @@ class GCCell {
   /// \return a semi-unique (until the global counter overflows) id of this
   /// memory allocation.
   uint64_t getDebugAllocationId() const {
-#ifdef HERMESVM_GCCELL_ID
+#ifndef NDEBUG
     return _debugAllocationId_;
 #else
     return 0;
@@ -271,7 +268,7 @@ static_assert(
     alignof(GCCell) <= HeapAlign,
     "GCCell's alignment exceeds the alignment requirement of the heap");
 
-#if !defined(HERMESVM_GCCELL_ID) && defined(NDEBUG)
+#ifdef NDEBUG
 inline GCCell::GCCell(GC *gc, const VTable *vtp) : vtp_(vtp) {
   trackAlloc(gc, vtp);
 }

@@ -1068,8 +1068,8 @@ void HermesRuntime::loadSegment(
 }
 
 uint64_t HermesRuntime::getUniqueID(const jsi::Object &o) const {
-  return static_cast<vm::GCCell *>(impl(this)->phv(o).getObject())
-      ->getDebugAllocationId();
+  return impl(this)->runtime_.getHeap().getObjectID(
+      static_cast<vm::GCCell *>(impl(this)->phv(o).getObject()));
 }
 
 #ifdef HERMESVM_API_TRACE

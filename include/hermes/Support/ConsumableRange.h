@@ -21,8 +21,7 @@ class ConsumableRange {
  public:
   ConsumableRange(T begin, T end) : cur_(begin), end_(end) {}
 
-  /// Pass by value makes little sense for this class.
-  ConsumableRange(const ConsumableRange &other) = delete;
+  ConsumableRange(const ConsumableRange &other) = default;
   ConsumableRange &operator=(const ConsumableRange &other) = delete;
 
   ConsumableRange(ConsumableRange &&other) = default;

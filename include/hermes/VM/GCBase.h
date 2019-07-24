@@ -284,6 +284,40 @@ class GCBase {
   };
 #endif
 
+  class IDTracker final {
+   public:
+    explicit IDTracker() = default;
+
+    /// Return true if IDs are being tracked.
+    inline bool isTrackingIDs() const;
+
+    /// Get the unique object id of the given object.
+    /// If one does not yet exist, start tracking it.
+    inline uint64_t getObjectID(const void *cell);
+
+    /// Tell the tracker that an object has moved locations.
+    /// This must be called in a safe order, if A moves to B, and C moves to A,
+    /// the first move must be recorded before the second.
+    inline void moveObject(const void *oldLocation, const void *newLocation);
+
+    /// Remove the object from being tracked. This should be done to keep the
+    /// tracking working set small.
+    inline void untrackObject(const void *cell);
+
+   private:
+    /// Get the next unique object ID for a newly created object.
+    inline uint64_t nextObjectID();
+
+    /// The next available ID to assign to an object. Object IDs are not
+    /// recycled so that snapshots don't confuse two objects with each other.
+    uint64_t nextID_{0};
+
+    /// Map of object pointers to IDs. Only populated once the first heap
+    /// snapshot is requested, or the first time the memory profiler is turned
+    /// on.
+    llvm::DenseMap<const void *, uint64_t> objectIDMap_;
+  };
+
   GCBase(
       MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
@@ -450,8 +484,18 @@ class GCBase {
     return inGC_;
   }
 
-  /// Get the next unique object ID for a newly created object.
-  uint64_t nextObjectID();
+  IDTracker &getIDTracker() {
+    return idTracker_;
+  }
+
+  inline uint64_t getObjectID(const void *cell);
+
+#ifndef NDEBUG
+  /// \return The next debug allocation ID for embedding directly into a GCCell.
+  /// NOTE: This is not the same ID as is used for stable lifetime tracking, use
+  /// \p getObjectID for that.
+  inline uint64_t nextObjectID();
+#endif
 
   /// Get the instance of the memory event tracker. If memory
   /// profiling is not enabled this should return nullptr.
@@ -579,9 +623,7 @@ class GCBase {
   unsigned numHiddenClasses_{0};
   /// Number of "leaf" hidden classes alive after the last collection.
   unsigned numLeafHiddenClasses_{0};
-#endif
 
-#ifdef HERMESVM_GCCELL_ID
   /// Associate a semi-unique (until it overflows) id with every allocation
   /// for easier identification when debugging.
   uint64_t debugAllocationCounter_{0};
@@ -617,6 +659,10 @@ class GCBase {
 
   /// Name to indentify this heap in logs.
   std::string name_;
+
+  /// Tracks what objects need a stable identity for features such as heap
+  /// snapshots and the memory profiler.
+  IDTracker idTracker_;
 
  private:
 #ifdef HERMESVM_MEMORY_PROFILER
@@ -723,6 +769,65 @@ class WeakRefBase {
   };
 #endif
 };
+
+inline uint64_t GCBase::getObjectID(const void *cell) {
+  return idTracker_.getObjectID(cell);
+}
+
+#ifndef NDEBUG
+inline uint64_t GCBase::nextObjectID() {
+  return debugAllocationCounter_++;
+}
+#endif
+
+inline bool GCBase::IDTracker::isTrackingIDs() const {
+  return !objectIDMap_.empty();
+}
+
+inline uint64_t GCBase::IDTracker::getObjectID(const void *cell) {
+  auto iter = objectIDMap_.find(cell);
+  if (iter != objectIDMap_.end()) {
+    return iter->second;
+  }
+  // Else, assume it is an object that needs to be tracked and give it a new ID.
+  const auto objID = nextObjectID();
+  objectIDMap_[cell] = objID;
+  return objID;
+}
+
+inline void GCBase::IDTracker::moveObject(
+    const void *oldLocation,
+    const void *newLocation) {
+  if (oldLocation == newLocation) {
+    // Don't need to do anything if the object isn't moving anywhere. This can
+    // happen in old generations where it is compacted to the same location.
+    return;
+  }
+  auto old = objectIDMap_.find(oldLocation);
+  if (old == objectIDMap_.end()) {
+    // Avoid making new keys for objects that don't need to be tracked.
+    return;
+  }
+  const auto oldID = old->second;
+  assert(
+      objectIDMap_.count(newLocation) == 0 &&
+      "Moving to a location that is already tracked");
+  // Have to erase first, because any other access can invalidate the iterator.
+  objectIDMap_.erase(old);
+  objectIDMap_[newLocation] = oldID;
+}
+
+inline void GCBase::IDTracker::untrackObject(const void *cell) {
+  objectIDMap_.erase(cell);
+}
+
+inline uint64_t GCBase::IDTracker::nextObjectID() {
+  // This must be unique for most features that rely on it, check for overflow.
+  if (LLVM_UNLIKELY(nextID_ == std::numeric_limits<uint64_t>::max())) {
+    hermes_fatal("Overflowed the allocation counter");
+  }
+  return nextID_++;
+}
 
 } // namespace vm
 } // namespace hermes

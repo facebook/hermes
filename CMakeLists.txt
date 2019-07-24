@@ -48,9 +48,6 @@ set(HERMESVM_PROFILER_NATIVECALL OFF CACHE BOOL
 set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
   "Enable the indirect threaded interpreter")
 
-set(HERMESVM_GCCELL_ID ${DEFAULT_GCCELL_ID} CACHE BOOL
-  "Include a 64-bit id in every GCCell")
-
 set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
   "Enable compressed pointers. If this is on and the target is a 64-bit build, compressed pointers will be used.")
 
@@ -165,8 +162,6 @@ else()
   set(OPTIONAL_GC_SECTIONS "")
 endif()
 
-set(DEFAULT_GCCELL_ID $<$<CONFIG:Debug>:ON>$<$<NOT:$<CONFIG:Debug>>:OFF>)
-
 # Make the HERMES_RELEASE_VERSION accessible for version printing in C++.
 add_definitions(-DHERMES_RELEASE_VERSION="${HERMES_RELEASE_VERSION}")
 
@@ -188,9 +183,6 @@ if(HERMESVM_PROFILER_NATIVECALL)
 endif()
 if(HERMESVM_INDIRECT_THREADING)
     add_definitions(-DHERMESVM_INDIRECT_THREADING)
-endif()
-if(HERMESVM_GCCELL_ID)
-    add_definitions(-DHERMESVM_GCCELL_ID)
 endif()
 if(HERMESVM_SANITIZE_HANDLES)
     add_definitions(-DHERMESVM_SANITIZE_HANDLES)

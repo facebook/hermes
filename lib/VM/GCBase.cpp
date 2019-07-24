@@ -285,21 +285,6 @@ void GCBase::recordGCStats(
   recordGCStats(wallTime, cpuTime, finalHeapSize, &cumStats_);
 }
 
-#ifdef HERMESVM_GCCELL_ID
-uint64_t GCBase::nextObjectID() {
-#ifdef HERMESVM_API_TRACE
-  // This must be unique in order for the synthetic benchmarks to work, check
-  // for overflow and fail fast.
-  if (LLVM_UNLIKELY(
-          debugAllocationCounter_ == std::numeric_limits<uint64_t>::max())) {
-    hermes_fatal(
-        "Overflowed the allocation counter in a synthetic benchmark trace");
-  }
-#endif
-  return debugAllocationCounter_++;
-}
-#endif
-
 void GCBase::oom(std::error_code reason) {
 #ifdef HERMESVM_EXCEPTION_ON_OOM
   HeapInfo heapInfo;
