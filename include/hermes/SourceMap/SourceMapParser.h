@@ -30,6 +30,12 @@ class SourceMapParser {
   }
 
  private:
+  SourceMapParser() = delete;
+  SourceMapParser(SourceMapParser &) = delete;
+  SourceMapParser(SourceMapParser &&) = delete;
+  SourceMapParser &operator=(SourceMapParser &) = delete;
+  SourceMapParser &operator=(SourceMapParser &&) = delete;
+
   /// Delta encoding state.
   struct State {
     int32_t generatedColumn = 0;
