@@ -158,6 +158,8 @@ def main():
     if args.is_32_bit:
         build_dir_suffix += "_32"
 
+    args.llvm_build_dir += build_dir_suffix
+
     print("Source Dir: {}".format(args.llvm_src_dir))
     print("Using Build system: {}".format(args.build_system))
     print("Using Build command: {}".format(args.build_command))

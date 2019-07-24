@@ -61,7 +61,7 @@ def parse_args():
         type=str,
         dest="build_type",
         choices=["MinSizeRel", "Debug"],
-        default="Debug",
+        default="",
         help="Optimization level of build",
     )
 
@@ -93,7 +93,7 @@ def parse_args():
         "--libfuzzer-path",
         type=str,
         dest="libfuzzer_path",
-        default=None,
+        default="",
         help="libfuzzer path",
     )
 
@@ -125,7 +125,7 @@ def parse_args():
         "--fb-source_dir",
         type=str,
         dest="fb_source_dir",
-        default=None,
+        default="",
     )
     
     parser.add_argument(
@@ -141,8 +141,53 @@ def parse_args():
         "--cross-compile-only", dest="cross_compile_only", action="store_true"
     )
     args = parser.parse_args()
-    
 
+    if not args.build_command:
+        # Choose a default based on the build system chosen
+        if args.build_system == "Ninja":
+            args.build_command = "ninja"
+        elif args.build_system == "Unix Makefiles":
+            args.build_command = "make"
+        elif "Visual Studio" in args.build_system:
+            args.build_command = (
+                "MSBuild.exe Hermes.sln -target:build -maxcpucount -verbosity:normal"
+            )
+        else:
+            raise Exception("Unrecognized build system: {}".format(args.build_system))
+
+    args.build_type = args.build_type or ("MinSizeRel" if args.distribute else "Debug")
+    return args
+    
+def which(cmd):
+    if sys.version_info >= (3, 3):
+        # On Python 3.3 and above, use shutil.which for a quick error message.
+        resolved = shutil.which(cmd)
+        if not resolved:
+            raise Exception("{} not found on PATH".format(cmd))
+        return os.path.realpath(resolved)
+    else:
+        # Manually check PATH
+        for p in os.environ["PATH"].split(os.path.pathsep):
+            p = os.path.join(p, cmd)
+            if "PATHEXT" in os.environ:
+                # try out adding each extension to the PATH as well
+                for ext in os.environ["PATHEXT"].split(os.path.pathsep):
+                    # Add the extension.
+                    p_and_extension = p + ext
+                    if os.path.exists(p_and_extension) and os.access(
+                        p_and_extension, os.X_OK
+                    ):
+                        return os.path.realpath(p_and_extension)
+            else:
+                if os.path.isfile(p) and os.access(p, os.X_OK):
+                    return os.path.realpath(p)
+        raise Exception("{} not found on PATH".format(cmd))
+
+
+
+def run_command(cmd, **kwargs):
+    print("+ " + " ".join(cmd))
+    return subprocess.check_call(cmd, stdout=sys.stdout, stderr=sys.stderr, **kwargs)
 
 def main():
     args = parse_args()
@@ -160,87 +205,82 @@ def main():
 
     os.chdir(hermes_ws_dir)
 
-    build_system = args.build_system
-    if not build_system:
+    if not args.build_system:
         if args.target_platform == "windows":
-            build_system = "Visual Studio 15 2017 Win64"
+            args.build_system = "'Visual Studio 15 2017 Win64'"
         else:
-            build_system = Ninja
+            args.build_system = Ninja
 
     build_dir_suffix = ""
-    build_dir_suffix=build_dir_suffix + ("_asan" if args.enable-asan else "")
+    build_dir_suffix=build_dir_suffix + ("_asan" if args.enable_asan else "")
     build_dir_suffix = build_dir_suffix + ("_release" if args.distribute else "_debug")
-    build_dir_suffix = build_dir_suffix + ("_32" if build_type else "")
+    build_dir_suffix = build_dir_suffix + ("_32" if args.is_32_bit else "")
 
-    icu_root = args.icu_root
-    if not icu_root and args.platform == 'linux':
+    if not args.icu_root and args.target_platform == 'linux':
         guess_path="/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-4.8.1-glibc-2.17/c3f970a/"
-        icu_root = guess_path if os.isdir(guess_path) else None
+        args.icu_root = guess_path if os.isdir(guess_path) else None
             
-    build_type = args.build_type
-    if not build_type:
+    if not args.build_type:
         if args.distribute:
-            build_type = "MinSizeRel"
+            args.build_type = "MinSizeRel"
         else:
-            build_type = "Debug"
+            args.build_type = "Debug"
 
-    llvm_build_dir = args.llvm_build_dir
-    build_dir = args.build_dir
+    if not args.llvm_build_dir:
+        args.llvm_build_dir = os.path.join(hermes_ws_dir, "llvm_build" + build_dir_suffix);
 
-    if not llvm_build_dir:
-        llvm_build_dir = os.path.join(hermes_ws_dir, "llvm_build" + build_dir_suffix);
+    build_dir = os.path.join(hermes_ws_dir, "build" + build_dir_suffix);
 
-    if not build_dir:
-        build_dir = os.path.join(hermes_ws_dir, "build" + build_dir_suffix);
+    print("Building hermes using {} into {}".format(args.build_system, build_dir))
 
-    print("Building hermes using {} into {}".format(build_system, build_dir))
+    if not os.path.exists(build_dir):
+        os.mkdir(build_dir)
 
-    os.path.mkdir(build_dir)
-    os.path.chdir(build_dir)
+    os.chdir(build_dir)
 
     print("Hermes Path: {}".format(hermes_dir))
 
-    cmake_flags=args.cmake_flags
-    cmake_flags += " -DLLVM_BUILD_DIR=" + llvm_build_dir
-    cmake_flags += " -DLLVM_SRC_DIR=" + os.path.join(hermes_ws_dir, "llvm")
-    cmake_flags += " -DCMAKE_BUILD_TYPE=" + build_type
+    cmake_flags = args.cmake_flags.split()
+    cmake_flags += ["-DLLVM_BUILD_DIR=" + args.llvm_build_dir.replace('\\','/')]
+    cmake_flags += ["-DLLVM_SRC_DIR=" + os.path.join(hermes_ws_dir, "llvm").replace('\\','/')]
+    cmake_flags += ["-DCMAKE_BUILD_TYPE=" + args.build_type]
     
     if args.is_32_bit:
-        cmake_flags += " -DLLVM_BUILD_32_BITS=On"
+        cmake_flags += ["-DLLVM_BUILD_32_BITS=On"]
 
     if platform.machine().endswith('64'):
-        cmake_flags += " -Thost=x64"
+        cmake_flags += ["-Thost=x64"]
 
     if not args.distribute:
-        cmake_flags += " -DLLVM_ENABLE_ASSERTIONS=On"
+        cmake_flags += ["-DLLVM_ENABLE_ASSERTIONS=On"]
 
     enable_asan=args.enable_asan
-    if not args.libfuzzer_path:
-        cmake_flags += " -DLIBFUZZER_PATH=" + args.libfuzzer_path
-        enable_asan = true
+    if args.libfuzzer_path:
+        cmake_flags += ["-DLIBFUZZER_PATH=" + args.libfuzzer_path]
+        enable_asan = True
 
     if enable_asan:
-        cmake_flags += " -DLLVM_USE_SANITIZER=Address"
+        cmake_flags += ["-DLLVM_USE_SANITIZER=Address"]
 
     if args.hermesvm_opcode_stats:
-        cmake_flags += " -DHERMESVM_PROFILER_OPCODE=ON"
+        cmake_flags += ["-DHERMESVM_PROFILER_OPCODE=ON"]
 
     if args.hermesvm_profiler_bb:
-        cmake_flags += " -DHERMESVM_PROFILER_BB=ON"
+        cmake_flags += ["-DHERMESVM_PROFILER_BB=ON"]
 
     if args.enable_werror:
-        cmake_flags += " -DHERMES_ENABLE_WERROR=ON"
+        cmake_flags += ["-DHERMES_ENABLE_WERROR=ON"]
 
     if args.static_link:
-        cmake_flags += " -DHERMES_STATIC_LINK=ON"
+        cmake_flags += ["-DHERMES_STATIC_LINK=ON"]
 
-    if not args.fb_source_dir:
-        cmake_flags += " -DFBSOURCE_DIR=" + args.fb_source_dir
+    if args.fb_source_dir:
+        cmake_flags += ["-DFBSOURCE_DIR=" + args.fb_source_dir]
 
-    if icu_root:
-        cmake_flags += " -DICU_ROOT=" + icu_root
+    if args.icu_root:
+        cmake_flags += ["-DICU_ROOT=" + args.icu_root]
     else:
-        if platform not in ("macosx", "windows"):
+        if args.target_platform not in ("macosx", "windows"):
             raise Exception("No ICU path provided.")
 
     # TODO :: ICU & SANDCASTLE
@@ -251,20 +291,19 @@ def main():
     run_command(
         [
             which("cmake"),
-            "{}".format(hermes_dir),
             "-G",
-            "{}".format(build_system),
-            "{}".format(args.llvm_src_dir),
+            "{}".format(args.build_system),
+            "{}".format(hermes_dir),
         ]
         + cmake_flags,
         env=os.environ,
-        cwd=args.llvm_build_dir,
+        cwd=build_dir,
     )
 
     tries = 3 if "MSBuild" in args.build_command else 1
     for i in range(tries):
         try:
-            run_command(args.build_command.split(), cwd=args.llvm_build_dir)
+            run_command(args.build_command.split(), cwd=build_dir)
             break
         except subprocess.CalledProcessError as e:
             if i == tries - 1:
