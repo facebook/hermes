@@ -230,23 +230,13 @@ static bool needsAnotherLine(llvm::StringRef input) {
 
 #if HAVE_LIBREADLINE
 // Load history file or create it
-std::error_code loadOrCreateHistoryFile(llvm::SmallString<128>& historyFile) {
+std::error_code loadHistoryFile(llvm::SmallString<128>& historyFile) {
   if (!llvm::sys::path::home_directory(historyFile)) {
     // Use ENOENT here since it could not found a home directory
     return std::error_code(ENOENT, std::system_category());
   }
 
   llvm::sys::path::append(historyFile, historyFileBaseName);
-
-  if (!llvm::sys::fs::exists(historyFile)) {
-    int fd;
-    auto err = llvm::sys::fs::openFileForWrite(llvm::Twine(historyFile), fd);
-    if (err) {
-      return err;
-    }
-
-    llvm::sys::fs::closeFile(fd);
-  }
 
   auto err = ::read_history(historyFile.c_str());
   if (err != 0) {
@@ -326,8 +316,8 @@ int main(int argc, char **argv) {
 
 #if HAVE_LIBREADLINE
   llvm::SmallString<128> historyFile{};
-  auto historyErr = loadOrCreateHistoryFile(historyFile);
-  if (historyErr) {
+  auto historyErr = loadHistoryFile(historyFile);
+  if (historyErr && historyErr.value() != ENOENT) {
     llvm::errs() << "Could not load history file: " << historyErr.message() << '\n';
   }
 #endif
@@ -345,8 +335,10 @@ int main(int argc, char **argv) {
       // EOF or user exit on non-continuation line.
       llvm::outs() << '\n';
 #if HAVE_LIBREADLINE
-      ::stifle_history(historyMaxEntries);
-      ::write_history(historyFile.c_str());
+      if (history_length > 0) {
+	::stifle_history(historyMaxEntries);
+	::write_history(historyFile.c_str());
+      }
 #endif
       return 0;
     }
