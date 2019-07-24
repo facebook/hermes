@@ -1243,6 +1243,11 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
         AlignedStorage::offset(p);
   };
 
+  // This is the first offset that is guaranteed not to be used by any object
+  // in the heap snapshot being generated.
+  V8HeapSnapshot::NodeID freshOffset = segmentAddressToIndex.size()
+      << AlignedStorage::kLogSize;
+
   SnapshotNodeAcceptor snapshotNodeAcceptor(*this);
   SlotVisitorWithNames<SnapshotNodeAcceptor> nodeVisitor(snapshotNodeAcceptor);
 
@@ -1274,7 +1279,11 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
 
   const auto numRoots = snapshotNodeAcceptor.resetEdgeCount();
   snap.addNode(
-      V8HeapSnapshot::NodeType::Synthetic, "(GC Roots)", 0, 0, numRoots);
+      V8HeapSnapshot::NodeType::Synthetic,
+      "(GC Roots)",
+      freshOffset++,
+      0,
+      numRoots);
 
   youngGen_.forAllObjs(writeNodesToSnapshot);
   oldGen_.forAllObjs(writeNodesToSnapshot);

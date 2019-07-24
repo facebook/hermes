@@ -117,13 +117,15 @@ TEST(HeapSnapshotTest, SnapshotTest) {
 
   ASSERT_FALSE(result.empty());
 
-  auto blockSize = sizeof(DummyObject);
+  const auto blockSize = sizeof(DummyObject);
 
   uint64_t segmentNumber = 1;
   uint64_t offset = AlignedHeapSegment::offsetOfAllocRegion;
-  uint64_t rootLocation = segmentNumber << AlignedStorage::kLogSize | offset;
-  auto secondBlock =
-      segmentNumber << AlignedStorage::kLogSize | (offset + blockSize);
+  const uint64_t root = gc.segmentIndex().size() << AlignedStorage::kLogSize;
+  const uint64_t obj0 = segmentNumber << AlignedStorage::kLogSize | offset;
+
+  offset += blockSize;
+  const uint64_t obj1 = segmentNumber << AlignedStorage::kLogSize | offset;
 
   std::ostringstream stream;
 
@@ -144,12 +146,12 @@ TEST(HeapSnapshotTest, SnapshotTest) {
       << "\"node_count\":0,\"edge_count\":0,\"trace_function_count\":0"
       << "},"
       << "\"nodes\":["
-      << static_cast<size_t>(V8HeapSnapshot::NodeType::Synthetic) << ",0,0,"
-      << static_cast<size_t>(CellKind::UninitializedKind) << ",1,0,"
-      << static_cast<size_t>(V8HeapSnapshot::NodeType::Object) << ",1,"
-      << rootLocation << "," << blockSize << ",1,0,"
-      << static_cast<size_t>(V8HeapSnapshot::NodeType::Object) << ",1,"
-      << secondBlock << "," << blockSize << ",0,0"
+      << static_cast<size_t>(V8HeapSnapshot::NodeType::Synthetic) << ",0,"
+      << root << ",0,1,0,"
+      << static_cast<size_t>(V8HeapSnapshot::NodeType::Object) << ",1," << obj0
+      << "," << blockSize << ",1,0,"
+      << static_cast<size_t>(V8HeapSnapshot::NodeType::Object) << ",1," << obj1
+      << "," << blockSize << ",0,0"
       << "],"
       << "\"edges\":[3,2,6,3,3,12],"
       << "\"trace_function_infos\":[],\"trace_tree\":[],\"samples\":[],\"locations\":[],"
