@@ -1169,18 +1169,16 @@ struct SnapshotNodeAcceptor : public SnapshotAcceptor {
 
   void accept(void *&ptr, const char *name) override {
     if (ptr) {
-      edgeCount++;
+      edgeCount_++;
     }
   }
 
-  unsigned resetEdgeCount() {
-    auto count = edgeCount;
-    edgeCount = 0;
-    return count;
+  unsigned edgeCount() {
+    return edgeCount_;
   }
 
  private:
-  unsigned edgeCount = 0;
+  unsigned edgeCount_ = 0;
 };
 
 struct SnapshotEdgeAcceptor : public SnapshotAcceptor {
@@ -1212,11 +1210,14 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   // We need to yield/claim at outer scope, to cover the calls to
   // forUsedSegments below.
   AllocContextYieldThenClaim yielder(this);
+
   // We'll say we're in GC even though we're not, to avoid assertion failures.
   GCCycle cycle{this};
+
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormedHeap();
 #endif
+
   // Map from segment start address to segment number.
   std::unordered_map<const void *, uint64_t> segmentAddressToIndex;
   {
@@ -1232,6 +1233,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
 
   JSONEmitter json(os, !compact);
   V8HeapSnapshot snap(json);
+
   auto ptrToOffset = [&segmentAddressToIndex](const void *ptr) -> uintptr_t {
     // Turn a pointer into the combo of its segment number, and its offset
     // within the segment.
@@ -1248,15 +1250,12 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   V8HeapSnapshot::NodeID freshOffset = segmentAddressToIndex.size()
       << AlignedStorage::kLogSize;
 
-  SnapshotNodeAcceptor snapshotNodeAcceptor(*this);
-  SlotVisitorWithNames<SnapshotNodeAcceptor> nodeVisitor(snapshotNodeAcceptor);
+  auto writeNodesToSnapshot = [&snap, &ptrToOffset, this](GCCell *cell) {
+    SnapshotNodeAcceptor acceptor(*this);
+    SlotVisitorWithNames<SnapshotNodeAcceptor> visitor(acceptor);
 
-  auto writeNodesToSnapshot = [&snap,
-                               &nodeVisitor,
-                               &snapshotNodeAcceptor,
-                               &ptrToOffset,
-                               this](GCCell *cell) {
-    GCBase::markCellWithNames(nodeVisitor, cell, this);
+    GCBase::markCellWithNames(visitor, cell, this);
+
     std::string str;
     // If the cell is a string, add a value to be printed.
     // TODO: add other special types here.
@@ -1271,19 +1270,19 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
         str,
         ptrToOffset(cell),
         cell->getAllocatedSize(),
-        snapshotNodeAcceptor.resetEdgeCount());
+        acceptor.edgeCount());
   };
 
   snap.beginSection(V8HeapSnapshot::Section::Nodes);
-  markRoots(snapshotNodeAcceptor, true);
+  SnapshotNodeAcceptor rootAcceptor(*this);
+  markRoots(rootAcceptor, true);
 
-  const auto numRoots = snapshotNodeAcceptor.resetEdgeCount();
   snap.addNode(
       V8HeapSnapshot::NodeType::Synthetic,
       "(GC Roots)",
       freshOffset++,
       0,
-      numRoots);
+      rootAcceptor.edgeCount());
 
   youngGen_.forAllObjs(writeNodesToSnapshot);
   oldGen_.forAllObjs(writeNodesToSnapshot);
