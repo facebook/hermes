@@ -36,6 +36,7 @@ android {
   compileSdkVersion = 28
 
   defaultConfig {
+    minSdkVersion = 16
     externalNativeBuild {
       cmake {
         arguments "-DHERMES_IS_ANDROID=True"

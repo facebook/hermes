@@ -43,7 +43,7 @@ do
         cmake -G Ninja "$HERMES_WS_DIR/llvm"
           -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake"
           -DCMAKE_CXX_FLAGS="-fvisibility=hidden"
-          -DANDROID_PLATFORM="android-22"
+          -DANDROID_PLATFORM="android-16"
           -DANDROID_ABI="$abi"
           -DANDROID_NDK="$ANDROID_NDK"
           -DANDROID_STL="c++_shared"
@@ -52,7 +52,6 @@ do
           -DCMAKE_BUILD_TYPE=MinSizeRel
           -DLLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=Off
           -DLLVM_TABLEGEN="$HERMES_WS_DIR/llvm_build/bin/llvm-tblgen"
-          -DCLANG_TABLEGEN="$HERMES_WS_DIR/llvm_build/bin/clang-tblgen"
           )
 
       printf '%q ' "${cmd[@]}"
