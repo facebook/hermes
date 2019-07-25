@@ -1165,17 +1165,14 @@ struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
 
 struct EdgeAddingAcceptor : public SnapshotAcceptor {
   using SnapshotAcceptor::accept;
-  using PtrToOffset = std::function<uintptr_t(const void *)>;
 
   EdgeAddingAcceptor(
       GC &gc,
       V8HeapSnapshot &snap,
-      PtrToOffset ptrToOffset,
       bool filterDuplicates,
       bool count)
       : SnapshotAcceptor(gc),
         snap_(snap),
-        ptrToOffset_(ptrToOffset),
         filterDuplicates_(filterDuplicates),
         count_(count) {}
 
@@ -1183,19 +1180,19 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor {
     if (!ptr) {
       return;
     }
-    const auto offset = ptrToOffset_(ptr);
+    const auto id = gc.getObjectID(ptr);
 
-    if (!filterDuplicates_ || !seenOffsets_.count(offset)) {
+    if (!filterDuplicates_ || !seenIDs_.count(id)) {
       if (count_) {
         edgeCount_++;
       } else {
         snap_.addNamedEdge(
             V8HeapSnapshot::EdgeType::Internal,
             llvm::StringRef::withNullAsEmpty(name),
-            offset);
+            id);
       }
       if (filterDuplicates_) {
-        seenOffsets_.insert(offset);
+        seenIDs_.insert(id);
       }
     }
   }
@@ -1206,13 +1203,12 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor {
 
  private:
   V8HeapSnapshot &snap_;
-  PtrToOffset ptrToOffset_;
   bool filterDuplicates_;
   // If true, only count the edges, don't emit them.
   // If false, actually emit the edges.
   bool count_;
   unsigned edgeCount_{0};
-  llvm::DenseSet<uintptr_t> seenOffsets_;
+  llvm::DenseSet<uint64_t> seenIDs_;
 };
 
 } // namespace
@@ -1229,55 +1225,26 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   checkWellFormedHeap();
 #endif
 
-  // Map from segment start address to segment number.
-  std::unordered_map<const void *, uint64_t> segmentAddressToIndex;
-  {
-    uint64_t segmentNum = 0;
-    auto registerSegment = [&segmentAddressToIndex,
-                            &segmentNum](AlignedHeapSegment &seg) {
-      segmentAddressToIndex[seg.lowLim()] = segmentNum++;
-    };
-
-    youngGen_.forUsedSegments(registerSegment);
-    oldGen_.forUsedSegments(registerSegment);
-  }
-
   JSONEmitter json(os, !compact);
   V8HeapSnapshot snap(json);
-
-  auto ptrToOffset = [&segmentAddressToIndex](const void *ptr) -> uintptr_t {
-    // Turn a pointer into the combo of its segment number, and its offset
-    // within the segment.
-    // Reserve enough low bits to store any offset in a segment, and store the
-    // segment number in the remaining high bits.
-    char *p = const_cast<char *>(reinterpret_cast<const char *>(ptr));
-    return segmentAddressToIndex[AlignedStorage::start(p)]
-        << AlignedStorage::kLogSize |
-        AlignedStorage::offset(p);
-  };
-
-  // This is the first offset that is guaranteed not to be used by any object
-  // in the heap snapshot being generated.
-  V8HeapSnapshot::NodeID freshOffset = segmentAddressToIndex.size()
-      << AlignedStorage::kLogSize;
 
   snap.beginSection(V8HeapSnapshot::Section::Nodes);
 
   // Count the number of roots.
   EdgeAddingAcceptor rootAcceptor(
-      *this, snap, ptrToOffset, /*filterDuplicates*/ true, /*count*/ true);
+      *this, snap, /*filterDuplicates*/ true, /*count*/ true);
   markRoots(rootAcceptor, true);
   snap.addNode(
       V8HeapSnapshot::NodeType::Synthetic,
       "(GC Roots)",
-      freshOffset++,
+      static_cast<V8HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Roots),
       0,
       rootAcceptor.edgeCount());
 
   // Add a node for each object in the heap.
-  forAllObjs([&snap, &ptrToOffset, this](GCCell *cell) {
+  forAllObjs([&snap, this](GCCell *cell) {
     EdgeAddingAcceptor acceptor(
-        *this, snap, ptrToOffset, /*filterDuplicates*/ false, /*count*/ true);
+        *this, snap, /*filterDuplicates*/ false, /*count*/ true);
     SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
 
     GCBase::markCellWithNames(visitor, cell, this);
@@ -1294,16 +1261,16 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
     snap.addNode(
         V8HeapSnapshot::cellKindToNodeType(cell->getKind()),
         str,
-        ptrToOffset(cell),
+        getObjectID(cell),
         cell->getAllocatedSize(),
         acceptor.edgeCount());
   });
   snap.endSection(V8HeapSnapshot::Section::Nodes);
 
   EdgeAddingAcceptor rootEdgeAcceptor(
-      *this, snap, ptrToOffset, /*filterDuplicates*/ true, /*count*/ false);
+      *this, snap, /*filterDuplicates*/ true, /*count*/ false);
   EdgeAddingAcceptor edgeAcceptor(
-      *this, snap, ptrToOffset, /*filterDuplicates*/ false, /*count*/ false);
+      *this, snap, /*filterDuplicates*/ false, /*count*/ false);
   SlotVisitorWithNames<EdgeAddingAcceptor> edgeVisitor(edgeAcceptor);
 
   snap.beginSection(V8HeapSnapshot::Section::Edges);

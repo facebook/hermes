@@ -286,6 +286,15 @@ class GCBase {
 
   class IDTracker final {
    public:
+    /// These are IDs that are reserved for special objects.
+    enum class ReservedObjectID : uint64_t {
+      // For any object where an ID cannot be found.
+      NoID = 0,
+      // The ID for the initial "roots" object.
+      Roots,
+      NumReserved,
+    };
+
     explicit IDTracker() = default;
 
     /// Return true if IDs are being tracked.
@@ -310,7 +319,7 @@ class GCBase {
 
     /// The next available ID to assign to an object. Object IDs are not
     /// recycled so that snapshots don't confuse two objects with each other.
-    uint64_t nextID_{0};
+    uint64_t nextID_{static_cast<uint64_t>(ReservedObjectID::NumReserved)};
 
     /// Map of object pointers to IDs. Only populated once the first heap
     /// snapshot is requested, or the first time the memory profiler is turned
