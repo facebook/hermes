@@ -37,25 +37,29 @@ class SwitchLowering : public FunctionPass {
   void erasePhiTarget(BasicBlock *block, BasicBlock *toDelete);
 };
 
-/// Lowers AllocObjects and any PutNewOwnByIds which use literals
-/// to a single HBCAllocObjectFromBufferInst.
+/// Lowers AllocObjects and its associated StoreOwnPropertyInst with literals
+/// properties.
 class LowerAllocObject : public FunctionPass {
  public:
-  explicit LowerAllocObject(uint32_t maxSizeInclusive)
-      : FunctionPass("LowerAllocObject"), maxSize_(maxSizeInclusive) {}
+  explicit LowerAllocObject() : FunctionPass("LowerAllocObject") {}
   ~LowerAllocObject() override = default;
 
   bool runOnFunction(Function *F) override;
 
  private:
-  /// Serialize AllocObjects with literal and non-literals into object buffer;
-  /// non-literals will be placeholders and later overwritten by PutByIds.
+  /// Perform a series of lowerings for a given allocInst.
   bool lowerAlloc(AllocObjectInst *allocInst);
+  /// Serialize AllocObjects with literal property and value sets into object
+  /// buffer; non-literals values could also be set as placeholders and later
+  /// overwritten by PutByIds.
+  bool lowerAllocObjectBuffer(
+      AllocObjectInst *allocInst,
+      llvm::SmallVectorImpl<StoreOwnPropertyInst *> &users,
+      uint32_t maxSize);
   /// Estimate best number of elements to serialize into the buffer.
   /// Try optimizing for max bytecode size saving.
-  uint32_t estimateBestNumElemsToSerialize(AllocObjectInst *allocInst);
-
-  uint32_t maxSize_;
+  uint32_t estimateBestNumElemsToSerialize(
+      llvm::SmallVectorImpl<StoreOwnPropertyInst *> &users);
 };
 
 /// Lowers Store instructions down to MOVs after register allocation.
