@@ -157,8 +157,8 @@ JSArrayBuffer::createDataBlock(Runtime *runtime, size_type size, bool zero) {
 
   // Note that the result of calloc or malloc is immediately checked below, so
   // we don't use the checked versions.
-  data_ = zero ? static_cast<char *>(calloc(sizeof(char), size))
-               : static_cast<char *>(malloc(sizeof(char) * size));
+  data_ = zero ? static_cast<uint8_t *>(calloc(sizeof(uint8_t), size))
+               : static_cast<uint8_t *>(malloc(sizeof(uint8_t) * size));
   if (data_ == nullptr) {
     // Failed to allocate.
     return runtime->raiseRangeError(

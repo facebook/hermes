@@ -64,7 +64,7 @@ class JSArrayBuffer final : public JSObject {
   /// \return A pointer to the buffer owned by this object. This can be null
   ///   if the ArrayBuffer is empty.
   /// \pre attached() must be true
-  char *getDataBlock() {
+  uint8_t *getDataBlock() {
     assert(attached() && "Cannot get a data block from a detached ArrayBuffer");
     return data_;
   }
@@ -95,7 +95,7 @@ class JSArrayBuffer final : public JSObject {
   static size_t _mallocSizeImpl(GCCell *cell);
 
  private:
-  char *data_;
+  uint8_t *data_;
   size_type size_;
   bool attached_;
 

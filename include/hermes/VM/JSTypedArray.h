@@ -110,11 +110,11 @@ class JSTypedArrayBase : public JSObject {
     return buffer_.get(runtime);
   }
 
-  char *begin() {
+  uint8_t *begin() {
     assert(src_ && "Cannot get a nullptr");
     return src_;
   }
-  char *end() {
+  uint8_t *end() {
     assert(src_ && "Cannot get a nullptr");
     return src_ + getByteLength();
   }
@@ -203,7 +203,7 @@ class JSTypedArrayBase : public JSObject {
   /// It is sizeof(Typename).
   uint8_t byteWidth_;
   /// src_ is the pointer pointing directly into the buffer to be read from.
-  char *src_;
+  uint8_t *src_;
 
   explicit JSTypedArrayBase(
       Runtime *runtime,
