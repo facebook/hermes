@@ -1163,72 +1163,56 @@ struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
   }
 };
 
-struct EdgeCountingAcceptor : public SnapshotAcceptor {
-  using SnapshotAcceptor::accept;
-  using SnapshotAcceptor::SnapshotAcceptor;
-
-  void accept(void *&ptr, const char *name) override {
-    if (ptr) {
-      edgeCount_++;
-    }
-  }
-
-  unsigned edgeCount() {
-    return edgeCount_;
-  }
-
- private:
-  unsigned edgeCount_ = 0;
-};
-
-struct RootAddingAcceptor : public SnapshotAcceptor {
-  using SnapshotAcceptor::accept;
-
-  RootAddingAcceptor(
-      GC &gc,
-      V8HeapSnapshot &snap,
-      V8HeapSnapshot::NodeID &freshOffset)
-      : SnapshotAcceptor(gc), snap_(snap), freshOffset_(freshOffset) {}
-
-  void accept(void *&ptr, const char *name) {
-    if (!ptr) {
-      return;
-    }
-
-    snap_.addNode(
-        V8HeapSnapshot::NodeType::Synthetic,
-        llvm::StringRef::withNullAsEmpty(name),
-        /* id */ freshOffset_++,
-        /* selfSize */ 0,
-        /* edgeCount */ 1);
-  }
-
- private:
-  V8HeapSnapshot &snap_;
-  V8HeapSnapshot::NodeID &freshOffset_;
-};
-
 struct EdgeAddingAcceptor : public SnapshotAcceptor {
   using SnapshotAcceptor::accept;
   using PtrToOffset = std::function<uintptr_t(const void *)>;
 
-  EdgeAddingAcceptor(GC &gc, V8HeapSnapshot &snap, PtrToOffset ptrToOffset)
-      : SnapshotAcceptor(gc), snap_(snap), ptrToOffset_(ptrToOffset) {}
+  EdgeAddingAcceptor(
+      GC &gc,
+      V8HeapSnapshot &snap,
+      PtrToOffset ptrToOffset,
+      bool filterDuplicates,
+      bool count)
+      : SnapshotAcceptor(gc),
+        snap_(snap),
+        ptrToOffset_(ptrToOffset),
+        filterDuplicates_(filterDuplicates),
+        count_(count) {}
 
   void accept(void *&ptr, const char *name) override {
     if (!ptr) {
       return;
     }
+    const auto offset = ptrToOffset_(ptr);
 
-    snap_.addNamedEdge(
-        V8HeapSnapshot::EdgeType::Internal,
-        llvm::StringRef::withNullAsEmpty(name),
-        ptrToOffset_(ptr));
+    if (!filterDuplicates_ || !seenOffsets_.count(offset)) {
+      if (count_) {
+        edgeCount_++;
+      } else {
+        snap_.addNamedEdge(
+            V8HeapSnapshot::EdgeType::Internal,
+            llvm::StringRef::withNullAsEmpty(name),
+            offset);
+      }
+      if (filterDuplicates_) {
+        seenOffsets_.insert(offset);
+      }
+    }
+  }
+
+  unsigned edgeCount() const {
+    return edgeCount_;
   }
 
  private:
   V8HeapSnapshot &snap_;
   PtrToOffset ptrToOffset_;
+  bool filterDuplicates_;
+  // If true, only count the edges, don't emit them.
+  // If false, actually emit the edges.
+  bool count_;
+  unsigned edgeCount_{0};
+  llvm::DenseSet<uintptr_t> seenOffsets_;
 };
 
 } // namespace
@@ -1280,7 +1264,8 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   snap.beginSection(V8HeapSnapshot::Section::Nodes);
 
   // Count the number of roots.
-  EdgeCountingAcceptor rootAcceptor(*this);
+  EdgeAddingAcceptor rootAcceptor(
+      *this, snap, ptrToOffset, /*filterDuplicates*/ true, /*count*/ true);
   markRoots(rootAcceptor, true);
   snap.addNode(
       V8HeapSnapshot::NodeType::Synthetic,
@@ -1289,19 +1274,11 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
       0,
       rootAcceptor.edgeCount());
 
-  // Add a synthetic node for each root, whose name is the root name.
-  const V8HeapSnapshot::NodeID rootIDBegin = freshOffset;
-  const V8HeapSnapshot::NodeID rootIDEnd =
-      freshOffset + rootAcceptor.edgeCount();
-
-  RootAddingAcceptor rootAddingAcceptor(*this, snap, freshOffset);
-  markRoots(rootAddingAcceptor, true);
-  assert(freshOffset == rootIDEnd && "Didn't add the correct number of roots");
-
   // Add a node for each object in the heap.
   forAllObjs([&snap, &ptrToOffset, this](GCCell *cell) {
-    EdgeCountingAcceptor acceptor(*this);
-    SlotVisitorWithNames<EdgeCountingAcceptor> visitor(acceptor);
+    EdgeAddingAcceptor acceptor(
+        *this, snap, ptrToOffset, /*filterDuplicates*/ false, /*count*/ true);
+    SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
 
     GCBase::markCellWithNames(visitor, cell, this);
 
@@ -1323,18 +1300,16 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   });
   snap.endSection(V8HeapSnapshot::Section::Nodes);
 
-  EdgeAddingAcceptor edgeAcceptor(*this, snap, ptrToOffset);
+  EdgeAddingAcceptor rootEdgeAcceptor(
+      *this, snap, ptrToOffset, /*filterDuplicates*/ true, /*count*/ false);
+  EdgeAddingAcceptor edgeAcceptor(
+      *this, snap, ptrToOffset, /*filterDuplicates*/ false, /*count*/ false);
   SlotVisitorWithNames<EdgeAddingAcceptor> edgeVisitor(edgeAcceptor);
 
   snap.beginSection(V8HeapSnapshot::Section::Edges);
 
-  // Add an internal edge from the root object to each synthetic root node.
-  for (auto id = rootIDBegin; id < rootIDEnd; ++id) {
-    snap.addNamedEdge(V8HeapSnapshot::EdgeType::Internal, "", id);
-  }
-
   // Add an edge from each synthetic root node to the real object it refers to.
-  markRoots(edgeAcceptor, true);
+  markRoots(rootEdgeAcceptor, true);
 
   // Add edges between objects in the heap.
   forAllObjs([&edgeVisitor, this](GCCell *cell) {
