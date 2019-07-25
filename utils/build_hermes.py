@@ -24,6 +24,9 @@ def parse_args():
         default_platform = "unknown"
 
     parser = argparse.ArgumentParser()
+
+    parser.add_argument("hermes_src_dir", type=str, nargs="?", default=".")
+    parser.add_argument("hermes_build_dir", type=str, nargs="?", default="hermes_build")
     
     parser.add_argument(
         "--target-platform",
@@ -142,6 +145,9 @@ def parse_args():
     )
     args = parser.parse_args()
 
+    args.hermes_src_dir = os.path.realpath(args.hermes_src_dir)
+    args.hermes_build_dir = os.path.realpath(args.hermes_build_dir)
+
     if not args.build_command:
         # Choose a default based on the build system chosen
         if args.build_system == "Ninja":
@@ -198,18 +204,17 @@ def run_command(cmd, **kwargs):
 def main():
     args = parse_args()
 
-    hermes_ws_dir = os.environ.get("HERMES_WS_DIR", "")
-    if not os.path.isdir(hermes_ws_dir) or not os.path.isabs(hermes_ws_dir):
-        raise Exception("HERMES_WS_DIR:{} must exist and must be an absolute path.".format(hermes_ws_dir))
+    if not os.path.isdir(args.hermes_src_dir) or not os.path.isabs(args.hermes_src_dir):
+        raise Exception("Hermes source directory:{} - must exist and must be an absolute path.".format(args.hermes_src_dir))
 
-    hermes_dir = os.path.join(hermes_ws_dir, "hermes")
-    if not os.path.isfile(os.path.join(hermes_dir, "utils", "build_hermes.py")):
-        raise Exception("Could not detect source dir.")
+    # hermes_dir = os.path.join(hermes_ws_dir, "hermes")
+    # if not os.path.isfile(os.path.join(hermes_dir, "utils", "build_hermes.py")):
+    #    raise Exception("Could not detect source dir.")
 
     # Get the path without symlinks, as CMake doesn't handle symlink/.. correctly
-    hermes_dir = os.path.realpath(hermes_dir)
+    # hermes_dir = os.path.realpath(hermes_dir)
 
-    os.chdir(hermes_ws_dir)
+    # os.chdir(hermes_ws_dir)
 
     if not args.build_system:
         if args.target_platform == "windows":
@@ -217,10 +222,6 @@ def main():
         else:
             args.build_system = Ninja
 
-    build_dir_suffix = ""
-    build_dir_suffix=build_dir_suffix + ("_asan" if args.enable_asan else "")
-    build_dir_suffix = build_dir_suffix + ("_release" if args.distribute else "_debug")
-    build_dir_suffix = build_dir_suffix + ("_32" if args.is_32_bit else "")
 
     if not args.icu_root and args.target_platform == 'linux':
         guess_path="/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-4.8.1-glibc-2.17/c3f970a/"
@@ -232,23 +233,30 @@ def main():
         else:
             args.build_type = "Debug"
 
+    build_dir_suffix = ""
+    build_dir_suffix +=  ("_asan" if args.enable_asan else "")
+    build_dir_suffix +=  ("_release" if args.distribute else "_debug")
+    build_dir_suffix +=  ("_32" if args.is_32_bit else "")
+
+    args.hermes_build_dir += build_dir_suffix
+
     if not args.llvm_build_dir:
-        args.llvm_build_dir = os.path.join(hermes_ws_dir, "llvm_build" + build_dir_suffix);
+        args.llvm_build_dir = os.path.join(args.hermes_src_dir, "llvm_build" + build_dir_suffix);
 
-    build_dir = os.path.join(hermes_ws_dir, "build" + build_dir_suffix);
+    #build_dir = os.path.join(hermes_ws_dir, "build" + build_dir_suffix);
 
-    print("Building hermes using {} into {}".format(args.build_system, build_dir))
+    print("Building hermes using {} into {}".format(args.build_system, args.hermes_build_dir))
 
-    if not os.path.exists(build_dir):
-        os.mkdir(build_dir)
+    if not os.path.exists(args.hermes_build_dir):
+        os.mkdir(args.hermes_build_dir)
 
-    os.chdir(build_dir)
+    os.chdir(args.hermes_build_dir)
 
-    print("Hermes Path: {}".format(hermes_dir))
+    print("Hermes Path: {}".format(args.hermes_src_dir))
 
     cmake_flags = args.cmake_flags.split()
     cmake_flags += ["-DLLVM_BUILD_DIR=" + args.llvm_build_dir.replace('\\','/')]
-    cmake_flags += ["-DLLVM_SRC_DIR=" + os.path.join(hermes_ws_dir, "llvm").replace('\\','/')]
+    cmake_flags += ["-DLLVM_SRC_DIR=" + os.path.join(args.hermes_src_dir, "llvm").replace('\\','/')]
     cmake_flags += ["-DCMAKE_BUILD_TYPE=" + args.build_type]
     
     if args.is_32_bit:
@@ -299,17 +307,17 @@ def main():
             which("cmake"),
             "-G",
             "{}".format(args.build_system),
-            "{}".format(hermes_dir),
+            "{}".format(args.hermes_src_dir),
         ]
         + cmake_flags,
         env=os.environ,
-        cwd=build_dir,
+        cwd=args.hermes_build_dir,
     )
 
     tries = 3 if "MSBuild" in args.build_command else 1
     for i in range(tries):
         try:
-            run_command(args.build_command.split(), cwd=build_dir)
+            run_command(args.build_command.split(), cwd=args.hermes_build_dir)
             break
         except subprocess.CalledProcessError as e:
             if i == tries - 1:
