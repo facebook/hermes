@@ -357,10 +357,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
    public:
     /// Is this a getter/setter value.
     bool isAccessor = false;
-    /// Did we set the accessors of this property already. We need this because
-    /// accessors are two separate ObjectMethod nodes, but we can only set them
-    /// once.
-    bool accessorsGenerated = false;
+    /// Did we already generate IR to set this property.
+    bool isIRGenerated = false;
     /// The value, if this is a regular property
     ESTree::Node *valueNode{};
     /// Getter accessor, if this is an accessor property.
@@ -529,10 +527,31 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     auto *Key = Builder.getLiteralString(keyStr);
 
     if (prop->_kind->str() == "get" || prop->_kind->str() == "set") {
-      // If the property ended up not being a getter/setter, or if we already
-      // generated it, skip.
-      if (!propValue->isAccessor || propValue->accessorsGenerated)
+      // If  we already generated it, skip.
+      if (propValue->isIRGenerated)
         continue;
+
+      if (!propValue->isAccessor) {
+        // This property will be redefined in the end as non-accessor.
+        // We need to store this property now otherwise we would break
+        // the order of the properties. The only choice we have is to
+        // store a placeholder first here.
+        if (haveSeenComputedProp) {
+          Builder.createStoreOwnPropertyInst(
+              Builder.getLiteralUndefined(),
+              Obj,
+              Key,
+              IRBuilder::PropEnumerable::Yes);
+        } else {
+          Builder.createStoreNewOwnPropertyInst(
+              Builder.getLiteralUndefined(),
+              Obj,
+              Key,
+              IRBuilder::PropEnumerable::Yes);
+        }
+        propValue->isIRGenerated = true;
+        continue;
+      }
 
       Value *getter = Builder.getLiteralUndefined();
       Value *setter = Builder.getLiteralUndefined();
@@ -552,7 +571,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       Builder.createStoreGetterSetterInst(
           getter, setter, Obj, Key, IRBuilder::PropEnumerable::Yes);
 
-      propValue->accessorsGenerated = true;
+      propValue->isIRGenerated = true;
     } else {
       // The __proto__ property requires special handling.
       if (keyStr == "__proto__") {
@@ -592,20 +611,21 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
       // Only store the value if it won't be overwritten.
       if (propMap[keyStr].valueNode == prop->_value) {
-        if (haveSeenComputedProp) {
+        if (haveSeenComputedProp || propValue->isIRGenerated) {
           Builder.createStoreOwnPropertyInst(
               value, Obj, Key, IRBuilder::PropEnumerable::Yes);
         } else {
           Builder.createStoreNewOwnPropertyInst(
               value, Obj, Key, IRBuilder::PropEnumerable::Yes);
         }
+        propValue->isIRGenerated = true;
       } else {
         Builder.getModule()->getContext().getSourceErrorManager().warning(
             propMap[keyStr].getSourceRange(),
             Twine("the property \"") + keyStr +
                 "\" was set multiple times in the object definition.");
 
-        Builder.getModule()->getContext().getSourceErrorManager().note(
+        Builder.getModule()->getContext().getSourceErrorManager().warning(
             prop->getSourceRange(), "The first definition was here.");
       }
     }

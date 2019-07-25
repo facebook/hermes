@@ -29,7 +29,7 @@ function four() { with({}) {}; }
 //CHECK:{{.*}}warning: the property "color" was set multiple times in the object definition.
 //CHECK-NEXT:var x = { color: 10, color: 20 };
 //CHECK-NEXT:                            ^~
-//CHECK-NEXT:{{.*}} note: The first definition was here.
+//CHECK-NEXT:{{.*}} warning: The first definition was here.
 //CHECK-NEXT:var x = { color: 10, color: 20 };
 //CHECK-NEXT:          ^~~~~~~~~
 var x = { color: 10, color: 20 };
