@@ -17,6 +17,7 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
+#include "hermes/VM/TimeLimitMonitor.h"
 #include "hermes/VM/instrumentation/PerfEvents.h"
 
 namespace hermes {
@@ -170,6 +171,13 @@ bool executeHBCBytecode(
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
 
+#ifdef HERMESVM_TIMELIMIT
+  if (options.timeLimit > 0) {
+    vm::TimeLimitMonitor::getInstance().watchRuntime(
+        runtime.get(), options.timeLimit);
+  }
+#endif
+
   if (shouldRecordGCStats) {
     statSampler = llvm::make_unique<vm::StatSamplingThread>(
         std::chrono::milliseconds(100));
@@ -220,6 +228,12 @@ bool executeHBCBytecode(
     runtime->printException(
         llvm::errs(), runtime->makeHandle(runtime->getThrownValue()));
   }
+
+#ifdef HERMESVM_TIMELIMIT
+  if (options.timeLimit > 0) {
+    vm::TimeLimitMonitor::getInstance().unwatchRuntime(runtime.get());
+  }
+#endif
 
 #ifdef HERMESVM_PROFILER_OPCODE
   runtime->dumpOpcodeStats(llvm::outs());

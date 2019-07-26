@@ -254,6 +254,11 @@ opt<bool> VerifyIR(
 #endif
     desc("Verify the IR after creating it"));
 
+static opt<bool> EmitAsyncBreakCheck(
+    "emit-async-break-check",
+    desc("Emit instruction to check async break request"),
+    init(false));
+
 static list<std::string> IncludeGlobals(
     "include-globals",
     desc("Include the definitions of global properties (can be "
@@ -814,6 +819,10 @@ bool validateFlags() {
       err("You can only dump bytecode for HBC bytecode file.");
   }
 
+  if (cl::EmitDebugInfo && cl::EmitAsyncBreakCheck) {
+    err("Debugger and execution time limit can't be used at the same time");
+  }
+
   return !errored;
 }
 
@@ -894,6 +903,7 @@ std::shared_ptr<Context> createContext(
   } else {
     context->setDebugInfoSetting(DebugInfoSetting::THROWING);
   }
+  context->setCheckTimeLimit(cl::EmitAsyncBreakCheck);
   return context;
 }
 

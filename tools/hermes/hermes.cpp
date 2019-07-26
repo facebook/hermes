@@ -72,6 +72,10 @@ static opt<bool> GCPrintStats(
     cat(GCCategory),
     init(false));
 
+static opt<unsigned> ExecutionTimeLimit(
+    "time-limit",
+    llvm::cl::desc("Number of milliseconds after which to abort JS exeuction"),
+    llvm::cl::init(0));
 } // namespace cl
 
 /// Execute Hermes bytecode \p bytecode, respecting command line arguments.
@@ -115,6 +119,7 @@ static int executeHBCBytecodeFromCL(
   options.patchProfilerSymbols = cl::PatchProfilerSymbols;
   options.profilerSymbolsFile = cl::ProfilerSymbolsFile;
 #endif
+  options.timeLimit = cl::ExecutionTimeLimit;
   options.dumpJITCode = cl::DumpJITCode;
   options.jitCrashOnError = cl::JITCrashOnError;
   options.stopAfterInit = cl::StopAfterInit;

@@ -1485,13 +1485,13 @@ void HBCISel::generate(BasicBlock *BB, BasicBlock *next) {
     initialize();
   }
 
-  // Emit a debugger break check before the terminator if necessary.
+  // Emit an async break check before the terminator if necessary.
   // We do this at the end of the block so that we come after any
   // CreateEnvironment instruction.
-  const Instruction *debugBreakCheckLoc =
-      debuggerBreakCheckers_.count(BB) ? BB->getTerminator() : nullptr;
+  const Instruction *asyncBreakCheckLoc =
+      asyncBreakChecks_.count(BB) ? BB->getTerminator() : nullptr;
   for (auto &I : *BB) {
-    if (&I == debugBreakCheckLoc) {
+    if (&I == asyncBreakCheckLoc) {
       BCFGen_->emitAsyncBreakCheck();
     }
     generate(&I, next);
@@ -1548,12 +1548,13 @@ void HBCISel::generate(SourceMapGenerator *outSourceMap) {
   /// topological sort.
   llvm::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
 
-  // If we are compiling with debugger support, decide which blocks need
-  // debugger check breaks: blocks with backwards jumps, and the first block if
-  // this is a function (i.e. not the global scope).
-  if (F_->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL) {
-    debuggerBreakCheckers_ = basicBlocksWithBackwardSuccessors(order);
-    debuggerBreakCheckers_.insert(order.front());
+  // If we are compiling with debugger or time limit support, decide which
+  // blocks need runtime async break checks: blocks with backwards jumps, and
+  // the first block if this is a function (i.e. not the global scope).
+  if (F_->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL ||
+      F_->getContext().getCheckTimeLimit()) {
+    asyncBreakChecks_ = basicBlocksWithBackwardSuccessors(order);
+    asyncBreakChecks_.insert(order.front());
   }
 
   for (int i = 0, e = order.size(); i < e; ++i) {
