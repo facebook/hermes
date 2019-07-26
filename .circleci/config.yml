@@ -5,6 +5,7 @@ workflows:
     jobs:
       - android
       - linux
+      - macos
 
 jobs:
   android:
@@ -91,6 +92,43 @@ jobs:
           command: |
             cd "$HERMES_WS_DIR"
             hermes/utils/build/configure.py --static-link --distribute
+            cd build_release
+            ninja github-cli-release
+      - run:
+          name: Copy artifacts
+          command: |
+            cd "$HERMES_WS_DIR"
+            cp "build_release/github"/hermes-cli-*.tar.gz "output"
+      - store_artifacts:
+          path: /tmp/hermes/output/
+
+  macos:
+    macos:
+      xcode: "10.0.0"
+    environment:
+      - HERMES_WS_DIR: /tmp/hermes
+      - TERM: dumb
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+      - run:
+          name: Build LLVM
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/build_llvm.py --distribute llvm llvm_build
+      - run:
+          name: Build Hermes for macOS
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py --distribute
             cd build_release
             ninja github-cli-release
       - run:
