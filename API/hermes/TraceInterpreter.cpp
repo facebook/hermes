@@ -802,6 +802,17 @@ Value TraceInterpreter::execFunction(
               }
               markerFound = true;
             }
+            if (mr.tag_ == options.snapshotMarker && !snapshotMarkerFound) {
+              if (HermesRuntime *hermesRT =
+                      dynamic_cast<HermesRuntime *>(&rt)) {
+                hermesRT->instrumentation().createSnapshotToFile(
+                    options.snapshotMarkerFileName, true);
+              } else {
+                llvm::errs()
+                    << "Heap snapshot requested from non-Hermes runtime\n";
+              }
+              snapshotMarkerFound = true;
+            }
 #ifdef HERMESVM_API_TRACE
             // If tracing is on, assume the runtime is a tracing runtime and
             // re-emit the marker into the result stream.

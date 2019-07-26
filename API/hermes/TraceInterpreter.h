@@ -85,6 +85,9 @@ class TraceInterpreter final {
       std::unordered_map<SynthTrace::ObjectID, PropNameToCalls>;
 
   /// Options for executing the trace.
+  /// \param snapshotMarker If the given marker is seen, take a heap snapshot.
+  /// \param snapshotMarkerFileName If the marker given in snapshotMarker
+  ///   is seen, write the heap snapshot out to this file.
   /// \param warmupReps Number of initial executions whose stats are discarded.
   /// \param reps Number of repetitions of execution. Stats returned are those
   ///   for the rep with the median totalTime.
@@ -98,6 +101,8 @@ class TraceInterpreter final {
   ///   young generation, change back to young-gen allocation at TTI.
   struct ExecuteOptions {
     std::string marker;
+    std::string snapshotMarker;
+    std::string snapshotMarkerFileName;
     int warmupReps{0};
     int reps{1};
     ::hermes::vm::gcheapsize_t minHeapSize{0};
@@ -138,6 +143,8 @@ class TraceInterpreter final {
   std::string stats;
   /// Whether the marker was reached.
   bool markerFound{false};
+  /// Whether the snapshot marker was reached.
+  bool snapshotMarkerFound{false};
   /// Depth in the execution stack. Zero is the outermost function.
   uint64_t depth{0};
 
