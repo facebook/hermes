@@ -238,7 +238,10 @@ Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
         elements.push_back(value);
       } else {
         Builder.createStoreOwnPropertyInst(
-            value, allocArrayInst, count, IRBuilder::PropEnumerable::Yes);
+            value,
+            allocArrayInst,
+            Builder.getLiteralNumber(count),
+            IRBuilder::PropEnumerable::Yes);
       }
     }
     count++;

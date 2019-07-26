@@ -317,12 +317,6 @@ class IRBuilder {
       LiteralString *property,
       PropEnumerable isEnumerable);
 
-  StoreOwnPropertyInst *createStoreOwnPropertyInst(
-      Value *storedValue,
-      Value *object,
-      int index,
-      PropEnumerable isEnumerable);
-
   StoreGetterSetterInst *createStoreGetterSetterInst(
       Value *storedGetter,
       Value *storedSetter,
@@ -341,11 +335,6 @@ class IRBuilder {
       Value *storedValue,
       Value *object,
       StringRef property);
-  StoreOwnPropertyInst *createStoreOwnPropertyInst(
-      Value *storedValue,
-      Value *object,
-      StringRef property,
-      PropEnumerable isEnumerable);
 
   DeletePropertyInst *createDeletePropertyInst(
       Value *object,
@@ -362,11 +351,6 @@ class IRBuilder {
   TryStoreGlobalPropertyInst *createTryStoreGlobalPropertyInst(
       Value *storedValue,
       Identifier property);
-  StoreOwnPropertyInst *createStoreOwnPropertyInst(
-      Value *storedValue,
-      Value *object,
-      Identifier property,
-      PropEnumerable isEnumerable);
 
   AllocObjectInst *createAllocObjectInst(
       uint32_t size,
