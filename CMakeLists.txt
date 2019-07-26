@@ -19,7 +19,7 @@ include(CheckCXXSourceCompiles)
 
 # This must be consistent with the release_version in
 # android/build.gradle and npm/package.json
-set(HERMES_RELEASE_VERSION 0.1.0)
+set(HERMES_RELEASE_VERSION 0.1.1)
 
 # Project options.
 set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL

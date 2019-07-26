@@ -20,7 +20,7 @@ def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
 def hermes_ws = System.getenv("HERMES_WS_DIR")
 // This must be consistent with the release_version in npm/package.json
 // and the HERMES_RELEASE_VERSION in CMakeLists.txt
-def release_version = "0.1.0"
+def release_version = "0.1.1"
 
 // For Facebook internal use:
 def fbsource = System.getenv("FBSOURCE_DIR") ?:
