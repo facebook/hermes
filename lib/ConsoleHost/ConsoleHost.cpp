@@ -155,6 +155,31 @@ void installConsoleBindings(
       2);
 }
 
+// If a function body might throw C++ exceptions other than
+// jsi::JSError from Hermes, it should be wrapped in this form:
+//
+//   return maybeCatchException([&] { body })
+//
+// This will execute body; if exceptions are enabled, this execution
+// will be wrapped in a try/catch that catches those exceptions, report it then
+// exit.
+namespace {
+template <typename F>
+auto maybeCatchException(const F &f) -> decltype(f()) {
+#if defined(HERMESVM_EXCEPTION_ON_OOM) || defined(HERMESVM_TIMELIMIT)
+  try {
+    return f();
+  } catch (const std::exception &ex) {
+    // Report thrown exception and exit the process with failure code.
+    llvm::errs() << ex.what();
+    exit(1);
+  }
+#else // HERMESVM_EXCEPTION_ON_OOM || HERMESVM_TIMELIMIT
+  return f();
+#endif
+}
+} // namespace
+
 /// Executes the HBC bytecode provided in HermesVM.
 /// \return true on success, false on error.
 bool executeHBCBytecode(
@@ -207,12 +232,14 @@ bool executeHBCBytecode(
     vm::SamplingProfiler::getInstance()->enable();
   }
 
-  llvm::StringRef sourceURL{};
-  auto status = runtime->runBytecode(
-      std::move(bytecode),
-      flags,
-      sourceURL,
-      runtime->makeNullHandle<vm::Environment>());
+  vm::CallResult<vm::HermesValue> status = maybeCatchException([&] {
+    llvm::StringRef sourceURL{};
+    return runtime->runBytecode(
+        std::move(bytecode),
+        flags,
+        sourceURL,
+        runtime->makeNullHandle<vm::Environment>());
+  });
 
   if (options.runtimeConfig.getEnableSampleProfiling()) {
     auto profiler = vm::SamplingProfiler::getInstance();
