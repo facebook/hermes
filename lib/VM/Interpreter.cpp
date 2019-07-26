@@ -102,6 +102,10 @@ HERMES_SLOW_STATISTIC(
 PROFILER_SYMBOLS(INTERP_WRAPPER)
 #endif
 
+#if defined(HERMES_ENABLE_DEBUGGER) && defined(HERMESVM_TIMELIMIT)
+static_assert(false, "Debugger and TimeLimit can't be used at the same time");
+#endif
+
 namespace hermes {
 namespace vm {
 
@@ -1481,7 +1485,7 @@ tailCall:
     doCall : {
 #ifdef HERMES_ENABLE_DEBUGGER
       // Check for an async debugger request.
-      if (LLVM_UNLIKELY(runtime->testAndClearDebuggerRequest())) {
+      if (LLVM_UNLIKELY(runtime->testAndClearAsyncBreakRequest())) {
         if (runDebuggerUpdatingState(
                 Debugger::RunReason::AsyncBreak,
                 runtime,
@@ -1557,7 +1561,7 @@ tailCall:
       CASE(CallDirectLongIndex) {
 #ifdef HERMES_ENABLE_DEBUGGER
         // Check for an async debugger request.
-        if (LLVM_UNLIKELY(runtime->testAndClearDebuggerRequest())) {
+        if (LLVM_UNLIKELY(runtime->testAndClearAsyncBreakRequest())) {
           if (runDebuggerUpdatingState(
                   Debugger::RunReason::AsyncBreak,
                   runtime,
@@ -1712,7 +1716,7 @@ tailCall:
       CASE(Ret) {
 #ifdef HERMES_ENABLE_DEBUGGER
         // Check for an async debugger request.
-        if (LLVM_UNLIKELY(runtime->testAndClearDebuggerRequest())) {
+        if (LLVM_UNLIKELY(runtime->testAndClearAsyncBreakRequest())) {
           if (runDebuggerUpdatingState(
                   Debugger::RunReason::AsyncBreak,
                   runtime,
@@ -1854,8 +1858,9 @@ tailCall:
       }
 
       CASE(AsyncBreakCheck) {
+#if defined(HERMES_ENABLE_DEBUGGER) || defined(HERMESVM_TIMELIMIT)
+        if (LLVM_UNLIKELY(runtime->testAndClearAsyncBreakRequest())) {
 #ifdef HERMES_ENABLE_DEBUGGER
-        if (LLVM_UNLIKELY(runtime->testAndClearDebuggerRequest())) {
           if (runDebuggerUpdatingState(
                   Debugger::RunReason::AsyncBreak,
                   runtime,
@@ -1863,6 +1868,12 @@ tailCall:
                   ip,
                   frameRegs) == ExecutionStatus::EXCEPTION)
             goto exception;
+#endif
+
+#ifdef HERMESVM_TIMELIMIT
+          // notifyTimeout does not return.
+          notifyTimeout(runtime, ip);
+#endif
           gcScope.flushToSmallCount(KEEP_HANDLES);
         }
 #endif

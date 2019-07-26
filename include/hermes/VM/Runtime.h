@@ -104,6 +104,15 @@ enum class PropCacheID {
       _COUNT
 };
 
+#ifdef HERMESVM_TIMELIMIT
+/// A std::runtime_error wrapper class for execution timeout.
+class JSTimeoutError : public std::runtime_error {
+ public:
+  JSTimeoutError(const std::string &what_arg) : std::runtime_error(what_arg) {}
+  JSTimeoutError(const char *what_arg) : std::runtime_error(what_arg) {}
+};
+#endif
+
 /// The Runtime encapsulates the entire context of a VM. Multiple instances can
 /// exist and are completely independent from each other.
 class Runtime : public HandleRootOwner,
@@ -449,6 +458,14 @@ class Runtime : public HandleRootOwner,
     return commonStorage_.get();
   }
 
+#if defined(HERMES_ENABLE_DEBUGGER) || defined(HERMESVM_TIMELIMIT)
+  /// Request the interpreter loop to take an asynchronous break at a convenient
+  /// point. This may be called from any thread, or a signal handler.
+  void triggerAsyncBreak() {
+    asyncBreakRequestFlag_.store(1, std::memory_order_relaxed);
+  }
+#endif
+
 #ifdef HERMES_ENABLE_DEBUGGER
   /// Encapsulates useful information about a stack frame, needed by the
   /// debugger. It requres extra context and cannot be extracted from a
@@ -462,12 +479,6 @@ class Runtime : public HandleRootOwner,
   /// \param frameIdx a relative frame index where the top-most frame is 0.
   /// \return a populated StackFrameInfo, or llvm::None if the frame is invalid.
   llvm::Optional<StackFrameInfo> stackFrameInfoByIndex(uint32_t frameIdx) const;
-
-  /// Request the interpreter loop to invoke the debugger at a convenient point.
-  /// This may be called from any thread, or a signal handler.
-  void triggerAsyncDebuggerPause() {
-    debuggerRequestedFlag_.store(1, std::memory_order_relaxed);
-  }
 
   /// Calculate and \return the offset between the location of the specified
   /// frame and the start of the stack. This value increases with every nested
@@ -744,7 +755,15 @@ class Runtime : public HandleRootOwner,
   /// Returns a string representation of the JS stack.  Does no operations
   /// that allocate on the JS heap, so safe to use for an out-of-memory
   /// exception.
-  std::string getCallStackNoAlloc() override;
+  /// \p ip specifies the the IP of the leaf frame.
+  std::string getCallStackNoAlloc(const Inst *ip);
+
+  /// \return a string representation of the JS stack without knowing the leaf
+  /// frame ip.  Does no operations that allocate on the JS heap, so safe to use
+  /// for an out-of-memory exception.
+  std::string getCallStackNoAlloc() override {
+    return getCallStackNoAlloc(nullptr);
+  }
 
  protected:
   /// Construct a Runtime on the stack.
@@ -1031,27 +1050,43 @@ class Runtime : public HandleRootOwner,
   /// we are sure it's safe to unregisterRuntime in destructor.
   std::shared_ptr<SamplingProfiler> samplingProfiler_;
 
-#ifdef HERMES_ENABLE_DEBUGGER
-  Debugger debugger_{this};
-
+#if defined(HERMES_ENABLE_DEBUGGER) || defined(HERMESVM_TIMELIMIT)
   /// An atomic boolean set when an async pause is requested.
   /// This may be manipulated from multiple threads.
-  std::atomic<uint8_t> debuggerRequestedFlag_{0};
+  std::atomic<uint8_t> asyncBreakRequestFlag_{0};
 
   /// \return zero if no async pause was requsted, nonzero if an async pause was
   /// requested. If nonzero is returned, the flag is reset to 0.
-  uint8_t testAndClearDebuggerRequest() {
-    uint8_t flag = debuggerRequestedFlag_.load(std::memory_order_relaxed);
+  uint8_t testAndClearAsyncBreakRequest() {
+    uint8_t flag = asyncBreakRequestFlag_.load(std::memory_order_relaxed);
     if (LLVM_UNLIKELY(flag)) {
-      /// Note that while the requestDebuggerPause() function may be called from
+      /// Note that while the triggerAsyncBreak() function may be called from
       /// any thread, this one may only be called from within the Interpreter
       /// loop; thus there is no need for a compare-and-swap. We might race with
-      /// setting the flag again, but we cannot have two callers who both see a
-      /// true return from a single flag set.
-      debuggerRequestedFlag_.store(0, std::memory_order_relaxed);
+      /// setting the flag again, but currently we do not allow two callers who
+      /// both see a true return from a single flag set.
+      asyncBreakRequestFlag_.store(0, std::memory_order_relaxed);
     }
     return flag;
   }
+#endif
+
+#ifdef HERMESVM_TIMELIMIT
+  void notifyTimeout(const Inst *ip) {
+    char detailBuffer[400];
+    snprintf(
+        detailBuffer,
+        sizeof(detailBuffer),
+        // todo: include time out value.
+        "Javascript execution has timeout.");
+    throw JSTimeoutError(
+        std::string(detailBuffer) + "\ncall stack:\n" +
+        getCallStackNoAlloc(ip));
+  }
+#endif
+
+#ifdef HERMES_ENABLE_DEBUGGER
+  Debugger debugger_{this};
 #endif
 
   /// Holds references to persistent BC providers for the lifetime of the
