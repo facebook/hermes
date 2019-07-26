@@ -1492,7 +1492,7 @@ void HBCISel::generate(BasicBlock *BB, BasicBlock *next) {
       debuggerBreakCheckers_.count(BB) ? BB->getTerminator() : nullptr;
   for (auto &I : *BB) {
     if (&I == debugBreakCheckLoc) {
-      BCFGen_->emitDebuggerCheckBreak();
+      BCFGen_->emitAsyncBreakCheck();
     }
     generate(&I, next);
   }

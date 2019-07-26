@@ -1853,7 +1853,7 @@ tailCall:
 #endif
       }
 
-      CASE(DebuggerCheckBreak) {
+      CASE(AsyncBreakCheck) {
 #ifdef HERMES_ENABLE_DEBUGGER
         if (LLVM_UNLIKELY(runtime->testAndClearDebuggerRequest())) {
           if (runDebuggerUpdatingState(
@@ -1866,7 +1866,7 @@ tailCall:
           gcScope.flushToSmallCount(KEEP_HANDLES);
         }
 #endif
-        ip = NEXTINST(DebuggerCheckBreak);
+        ip = NEXTINST(AsyncBreakCheck);
         DISPATCH;
       }
 
