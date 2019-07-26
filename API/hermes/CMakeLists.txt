@@ -79,3 +79,9 @@ set_target_properties(libhermes PROPERTIES
   OUTPUT_NAME hermes
   )
 hermes_link_icu(libhermes)
+
+
+install(TARGETS libhermes hermesapi
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib/static)

@@ -35,6 +35,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("llvm_src_dir", type=str, nargs="?", default="llvm")
     parser.add_argument("llvm_build_dir", type=str, nargs="?", default="llvm_build")
+    
+    parser.add_argument("--use-existing-clone", dest="use_existing_clone", action="store_true")
+    
     parser.add_argument(
         "--target-platform",
         type=str,
@@ -77,6 +80,7 @@ def parse_args():
         dest="http_proxy",
         default=os.environ.get("HTTP_PROXY", ""),
     )
+    parser.add_argument("--configure-only", dest="configure_only", action="store_true")
     parser.add_argument("--distribute", action="store_true")
     parser.add_argument("--32-bit", dest="is_32_bit", action="store_true")
     parser.add_argument("--enable-asan", dest="enable_asan", action="store_true")
@@ -157,12 +161,14 @@ def run_command(cmd, **kwargs):
 def main():
     args = parse_args()
     build_dir_suffix = ""
-    if args.enable_asan:
-        build_dir_suffix += "_asan"
-    if args.distribute:
-        build_dir_suffix += "_release"
-    if args.is_32_bit:
-        build_dir_suffix += "_32"
+    
+    if not args.configure_only:
+        if args.enable_asan:
+            build_dir_suffix += "_asan"
+        if args.distribute:
+            build_dir_suffix += "_release"
+        if args.is_32_bit:
+            build_dir_suffix += "_32"
 
     args.llvm_build_dir += build_dir_suffix
 
@@ -172,53 +178,58 @@ def main():
     print("Build Dir: {}".format(args.llvm_build_dir))
     print("Build Type: {}".format(args.build_type))
 
-    git = build_git_command(args.http_proxy)
+    # if use_existing_clone is true, assume that the llvm source code is already cloned and prepared at args.llvm_src_dir
+    if not args.use_existing_clone:
 
-    if not os.path.exists(args.llvm_src_dir):
-        # If the directory doesn't exist, clone LLVM there.
-        print("Cloning LLVM into {}".format(args.llvm_src_dir))
+        git = build_git_command(args.http_proxy)
+
+        if not os.path.exists(args.llvm_src_dir):
+            # If the directory doesn't exist, clone LLVM there.
+            print("Cloning LLVM into {}".format(args.llvm_src_dir))
+            run_command(
+                git
+                + ["clone", "--shallow-since", _LLVM_REV_DATE, "https://github.com/llvm-mirror/llvm.git", args.llvm_src_dir]
+            )
+
+        # Checkout a specific revision in LLVM.
+        run_command(git + ["checkout", _LLVM_REV], cwd=args.llvm_src_dir)
+
+        # Apply small edits to LLVM from patch files.
+        # Check that the respository is clean.
+        try:
+            run_command(git + ["diff-index", "--quiet", "HEAD"], cwd=args.llvm_src_dir)
+        except subprocess.CalledProcessError:
+            raise Exception("llvm dir is dirty (contains uncommitted changes)")
+
         run_command(
             git
-            + ["clone", "--shallow-since", _LLVM_REV_DATE, "https://github.com/llvm-mirror/llvm.git", args.llvm_src_dir]
+            + [
+                "apply",
+                "--ignore-space-change",
+                "--ignore-whitespace",
+                os.path.realpath(
+                    os.path.join(__file__, "..", "llvm-changes-for-hermes.patch")
+                ),
+            ],
+            cwd=args.llvm_src_dir,
         )
 
-    # Checkout a specific revision in LLVM.
-    run_command(git + ["checkout", _LLVM_REV], cwd=args.llvm_src_dir)
+        run_command(
+            git
+            + [
+                "-c",
+                "user.name=nobody",
+                "-c",
+                "user.email='nobody@example.com'",
+                "commit",
+                "-a",
+                "-m",
+                "Patch by Hermes build script",
+            ],
+            cwd=args.llvm_src_dir,
+        )
 
-    # Apply small edits to LLVM from patch files.
-    # Check that the respository is clean.
-    try:
-        run_command(git + ["diff-index", "--quiet", "HEAD"], cwd=args.llvm_src_dir)
-    except subprocess.CalledProcessError:
-        raise Exception("llvm dir is dirty (contains uncommitted changes)")
-
-    run_command(
-        git
-        + [
-            "apply",
-            "--ignore-space-change",
-            "--ignore-whitespace",
-            os.path.realpath(
-                os.path.join(__file__, "..", "llvm-changes-for-hermes.patch")
-            ),
-        ],
-        cwd=args.llvm_src_dir,
-    )
-
-    run_command(
-        git
-        + [
-            "-c",
-            "user.name=nobody",
-            "-c",
-            "user.email='nobody@example.com'",
-            "commit",
-            "-a",
-            "-m",
-            "Patch by Hermes build script",
-        ],
-        cwd=args.llvm_src_dir,
-    )
+    # endif - not args.use_existing_clone:
 
     cmake_flags = args.cmake_flags.split() + [
         "-DLLVM_TARGETS_TO_BUILD=",
@@ -284,19 +295,21 @@ def main():
         env=os.environ,
         cwd=args.llvm_build_dir,
     )
-    # MSBuild needs retries to handle an unexplainable linker error: LNK1000.
-    tries = 3 if "MSBuild" in args.build_command else 1
-    for i in range(tries):
-        try:
-            run_command(args.build_command.split(), cwd=args.llvm_build_dir)
-            break
-        except subprocess.CalledProcessError as e:
-            if i == tries - 1:
-                # If all retries failed, re-throw the last exception
-                raise
-            else:
-                print("Exec failed: {}\nRetrying...".format(str(e)))
-                continue
+
+    if not args.configure_only:
+        # MSBuild needs retries to handle an unexplainable linker error: LNK1000.
+        tries = 3 if "MSBuild" in args.build_command else 1
+        for i in range(tries):
+            try:
+                run_command(args.build_command.split(), cwd=args.llvm_build_dir)
+                break
+            except subprocess.CalledProcessError as e:
+                if i == tries - 1:
+                    # If all retries failed, re-throw the last exception
+                    raise
+                else:
+                    print("Exec failed: {}\nRetrying...".format(str(e)))
+                    continue
 
 
 if __name__ == "__main__":
