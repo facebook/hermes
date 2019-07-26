@@ -73,26 +73,32 @@ int __llvm_profile_dump(void);
 //
 // This will execute body; if exceptions are enabled, this execution
 // will be wrapped in a try/catch that catches those exceptions, and
-// rethrows them as JSI exceptions.  Currently, the only
-// non-jsi::JSError exception thrown is the hermes
-// JSOutOfMemoryException, and only potentially allocating code can
-// throw that exceptions.  If other such exceptions are added in the
-// future, this code should be modified to cover them.  We convert the
-// hermes exception into a JSINativeException; JSError represents
+// rethrows them as JSI exceptions.
+// This function should be used to wrap any JSI APIs that may allocate
+// memory(for OOM) or may enter interpreter(call a VM API with _RJS postfix).
+// We convert the hermes exception into a JSINativeException; JSError represents
 // exceptions mandated by the spec, and JSINativeException covers all
 // other exceptions.
 namespace {
 template <typename F>
 auto maybeRethrow(const F &f) -> decltype(f()) {
-#ifdef HERMESVM_EXCEPTION_ON_OOM
+#if defined(HERMESVM_EXCEPTION_ON_OOM) || defined(HERMESVM_TIMELIMIT)
   try {
     return f();
+#ifdef HERMESVM_EXCEPTION_ON_OOM
   } catch (const ::hermes::vm::JSOutOfMemoryError &ex) {
     // We surface this as a JSINativeException -- the out of memory
     // exception is not part of the spec.
     throw ::facebook::jsi::JSINativeException(ex.what());
+#endif
+#ifdef HERMESVM_TIMELIMIT
+  } catch (const ::hermes::vm::JSTimeoutError &ex) {
+    // We surface this as a JSINativeException -- the timeout
+    // exception is not part of the spec.
+    throw ::facebook::jsi::JSINativeException(ex.what());
+#endif
   }
-#else
+#else // HERMESVM_EXCEPTION_ON_OOM || HERMESVM_TIMELIMIT
   return f();
 #endif
 }
@@ -1826,11 +1832,13 @@ bool HermesRuntimeImpl::strictEquals(const jsi::Object &a, const jsi::Object &b)
 bool HermesRuntimeImpl::instanceOf(
     const jsi::Object &o,
     const jsi::Function &f) {
-  vm::GCScope gcScope(&runtime_);
-  auto result = vm::instanceOfOperator_RJS(
-      &runtime_, runtime_.makeHandle(phv(o)), runtime_.makeHandle(phv(f)));
-  checkStatus(result.getStatus());
-  return *result;
+  return maybeRethrow([&] {
+    vm::GCScope gcScope(&runtime_);
+    auto result = vm::instanceOfOperator_RJS(
+        &runtime_, runtime_.makeHandle(phv(o)), runtime_.makeHandle(phv(f)));
+    checkStatus(result.getStatus());
+    return *result;
+  });
 }
 
 jsi::Runtime::ScopeState *HermesRuntimeImpl::pushScope() {
@@ -1918,26 +1926,30 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
 }
 
 size_t HermesRuntimeImpl::getLength(vm::Handle<vm::ArrayImpl> arr) {
-  auto res = vm::JSObject::getNamed_RJS(
-      arr, &runtime_, vm::Predefined::getSymbolID(vm::Predefined::length));
-  checkStatus(res.getStatus());
-  if (!res->isNumber()) {
-    throw jsi::JSError(*this, "getLength: property 'length' is not a number");
-  }
-
-  return static_cast<size_t>(res->getDouble());
+  return maybeRethrow([&] {
+    auto res = vm::JSObject::getNamed_RJS(
+        arr, &runtime_, vm::Predefined::getSymbolID(vm::Predefined::length));
+    checkStatus(res.getStatus());
+    if (!res->isNumber()) {
+      throw jsi::JSError(*this, "getLength: property 'length' is not a number");
+    }
+    return static_cast<size_t>(res->getDouble());
+  });
 }
 
 size_t HermesRuntimeImpl::getByteLength(vm::Handle<vm::JSArrayBuffer> arr) {
-  auto res = vm::JSObject::getNamed_RJS(
-      arr, &runtime_, vm::Predefined::getSymbolID(vm::Predefined::byteLength));
-  checkStatus(res.getStatus());
-  if (!res->isNumber()) {
-    throw jsi::JSError(
-        *this, "getLength: property 'byteLength' is not a number");
-  }
-
-  return static_cast<size_t>(res->getDouble());
+  return maybeRethrow([&] {
+    auto res = vm::JSObject::getNamed_RJS(
+        arr,
+        &runtime_,
+        vm::Predefined::getSymbolID(vm::Predefined::byteLength));
+    checkStatus(res.getStatus());
+    if (!res->isNumber()) {
+      throw jsi::JSError(
+          *this, "getLength: property 'byteLength' is not a number");
+    }
+    return static_cast<size_t>(res->getDouble());
+  });
 }
 
 namespace {

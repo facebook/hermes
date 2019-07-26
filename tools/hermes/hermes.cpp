@@ -155,6 +155,14 @@ int main(int argc, char **argv) {
 
   llvm::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
+
+  // Tell compiler to emit async break check if time-limit feature is enabled
+  // so that user can turn on this feature with single ExecutionTimeLimit
+  // option.
+  if (cl::ExecutionTimeLimit > 0) {
+    cl::EmitAsyncBreakCheck = true;
+  }
+
   // Make sure any allocated alt signal stack is deleted on exit.
   // (Initialize this here, after llvm stuff above -- captures current
   // alt signal stack.)

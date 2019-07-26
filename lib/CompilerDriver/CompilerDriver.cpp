@@ -254,7 +254,7 @@ opt<bool> VerifyIR(
 #endif
     desc("Verify the IR after creating it"));
 
-static opt<bool> EmitAsyncBreakCheck(
+opt<bool> EmitAsyncBreakCheck(
     "emit-async-break-check",
     desc("Emit instruction to check async break request"),
     init(false));
