@@ -573,6 +573,73 @@ TEST(JSLexerTest, normalizeUTF8) {
   ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
 }
 
+TEST(JSLexerTest, templateLiterals) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext ctx(sm);
+
+  {
+    JSLexer lex("`abc` `\\x41` `\\u0041` `\\\xe2\x80\xa8`", sm, alloc);
+
+    ASSERT_EQ(TokenKind::no_substitution_template, lex.advance()->getKind());
+    EXPECT_STREQ("abc", lex.getCurToken()->getTemplateValue()->c_str());
+    EXPECT_STREQ("abc", lex.getCurToken()->getTemplateRawValue()->c_str());
+
+    ASSERT_EQ(TokenKind::no_substitution_template, lex.advance()->getKind());
+    EXPECT_STREQ("\x41", lex.getCurToken()->getTemplateValue()->c_str());
+    EXPECT_STREQ("\\x41", lex.getCurToken()->getTemplateRawValue()->c_str());
+
+    ASSERT_EQ(TokenKind::no_substitution_template, lex.advance()->getKind());
+    EXPECT_STREQ("\u0041", lex.getCurToken()->getTemplateValue()->c_str());
+    EXPECT_STREQ("\\u0041", lex.getCurToken()->getTemplateRawValue()->c_str());
+
+    ASSERT_EQ(TokenKind::no_substitution_template, lex.advance()->getKind());
+    EXPECT_STREQ("", lex.getCurToken()->getTemplateValue()->c_str());
+    EXPECT_STREQ(
+        "\\\xe2\x80\xa8", lex.getCurToken()->getTemplateRawValue()->c_str());
+  }
+
+  {
+    JSLexer lex("`abc${x}def${y}ghi`", sm, alloc);
+
+    ASSERT_EQ(TokenKind::template_head, lex.advance()->getKind());
+    EXPECT_STREQ("abc", lex.getCurToken()->getTemplateValue()->c_str());
+    EXPECT_STREQ("abc", lex.getCurToken()->getTemplateRawValue()->c_str());
+
+    ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
+    EXPECT_STREQ("x", lex.getCurToken()->getIdentifier()->c_str());
+
+    ASSERT_EQ(TokenKind::r_brace, lex.advance()->getKind());
+    lex.rescanRBraceInTemplateLiteral();
+    ASSERT_EQ(TokenKind::template_middle, lex.getCurToken()->getKind());
+    EXPECT_STREQ("def", lex.getCurToken()->getTemplateValue()->c_str());
+    EXPECT_STREQ("def", lex.getCurToken()->getTemplateRawValue()->c_str());
+
+    ASSERT_EQ(TokenKind::identifier, lex.advance()->getKind());
+    EXPECT_STREQ("y", lex.getCurToken()->getIdentifier()->c_str());
+
+    ASSERT_EQ(TokenKind::r_brace, lex.advance()->getKind());
+    lex.rescanRBraceInTemplateLiteral();
+    ASSERT_EQ(TokenKind::template_tail, lex.getCurToken()->getKind());
+    EXPECT_STREQ("ghi", lex.getCurToken()->getTemplateValue()->c_str());
+    EXPECT_STREQ("ghi", lex.getCurToken()->getTemplateRawValue()->c_str());
+  }
+
+  {
+    JSLexer lex("`\\0`", sm, alloc);
+    ASSERT_EQ(TokenKind::no_substitution_template, lex.advance()->getKind());
+    EXPECT_STREQ("\0", lex.getCurToken()->getTemplateValue()->c_str());
+    EXPECT_STREQ("\\0", lex.getCurToken()->getTemplateRawValue()->c_str());
+  }
+
+  {
+    JSLexer lex("`\r\n \n \r`", sm, alloc);
+    ASSERT_EQ(TokenKind::no_substitution_template, lex.advance()->getKind());
+    EXPECT_STREQ("\n \n \n", lex.getCurToken()->getTemplateValue()->c_str());
+    EXPECT_STREQ("\n \n \n", lex.getCurToken()->getTemplateRawValue()->c_str());
+  }
+}
+
 TEST(JSLexerTest, reservedTokens) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;

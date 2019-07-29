@@ -398,6 +398,11 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         scanString();
         break;
 
+      case '`':
+        token_.setStart(curCharPtr_);
+        scanTemplateLiteral();
+        break;
+
       default_label:
       default: {
         token_.setStart(curCharPtr_);
@@ -546,6 +551,16 @@ bool JSLexer::isCurrentTokenADirective() {
   return true;
 }
 
+const Token *JSLexer::rescanRBraceInTemplateLiteral() {
+  assert(token_.getKind() == TokenKind::r_brace && "need } to rescan");
+  --curCharPtr_;
+  assert(*curCharPtr_ == '}' && "non-} was scanned as r_brace");
+  token_.setStart(curCharPtr_);
+  scanTemplateLiteral();
+  token_.setEnd(curCharPtr_);
+  return &token_;
+}
+
 uint32_t JSLexer::consumeUnicodeEscape() {
   assert(*curCharPtr_ == '\\');
   ++curCharPtr_;
@@ -571,6 +586,41 @@ uint32_t JSLexer::consumeUnicodeEscape() {
   auto cp = consumeHex(4);
   if (!cp)
     return UNICODE_REPLACEMENT_CHARACTER;
+
+  // We don't need t check for valid UTF-16. JavaScript allows invalid surrogate
+  // pairs, so we just encode every UTF-16 code into a UTF-8 sequence, even
+  // though theoretically it is not a valid UTF-8. (UTF-8 would be "valid" if we
+  // collected the surrogate pair, decoded it into UTF-32 and encoded that into
+  // UTF-16).
+  return cp.getValue();
+}
+
+llvm::Optional<uint32_t> JSLexer::consumeUnicodeEscapeOptional() {
+  const char *start = curCharPtr_;
+  assert(*curCharPtr_ == '\\');
+  ++curCharPtr_;
+
+  if (*curCharPtr_ != 'u') {
+    curCharPtr_ = start;
+    return llvm::None;
+  }
+  ++curCharPtr_;
+
+  if (*curCharPtr_ == '{') {
+    // Avoid reporting an error because we are consuming the escape optionally.
+    auto cp = consumeBracedCodePoint(false);
+    if (!cp) {
+      curCharPtr_ = start;
+      return llvm::None;
+    }
+    return *cp;
+  }
+
+  auto cp = consumeHex(4, false);
+  if (!cp) {
+    curCharPtr_ = start;
+    return llvm::None;
+  }
 
   // We don't need t check for valid UTF-16. JavaScript allows invalid surrogate
   // pairs, so we just encode every UTF-16 code into a UTF-8 sequence, even
@@ -678,7 +728,9 @@ unsigned char JSLexer::consumeOctal(unsigned maxLen) {
   return res;
 }
 
-llvm::Optional<uint32_t> JSLexer::consumeHex(unsigned requiredLen) {
+llvm::Optional<uint32_t> JSLexer::consumeHex(
+    unsigned requiredLen,
+    bool errorOnFail) {
   uint32_t cp = 0;
   for (unsigned i = 0; i != requiredLen; ++i) {
     int ch = *curCharPtr_ | 32;
@@ -687,7 +739,9 @@ llvm::Optional<uint32_t> JSLexer::consumeHex(unsigned requiredLen) {
     else if (ch >= 'a' && ch <= 'f')
       ch -= 'a' - 10;
     else {
-      error(SMLoc::getFromPointer(curCharPtr_), "invalid hex number");
+      if (errorOnFail) {
+        error(SMLoc::getFromPointer(curCharPtr_), "invalid hex number");
+      }
       return llvm::None;
     }
     cp = (cp << 4) + ch;
@@ -1247,6 +1301,257 @@ void JSLexer::scanString() {
   }
 breakLoop:
   token_.setStringLiteral(getStringLiteral(tmpStorage_.str()), escapes);
+}
+
+void JSLexer::scanTemplateLiteral() {
+  assert(*curCharPtr_ == '`' || *curCharPtr_ == '}');
+
+  // Whether the token will result in TemplateHead upon encountering ${.
+  // If we end the literal with `, then the result is NoSubstitutionTemplate,
+  // so this will be ignored.
+  bool isHead = *curCharPtr_ == '`';
+
+  // If the token ended with a ` then it's a tail (or NoSubstitutionTemplate),
+  // and if it ended with a ${ then it's not a tail.
+  bool isTail = false;
+
+  // Advance past the initial `.
+  ++curCharPtr_;
+
+  // Track whether we encounter any NotEscapeSequence instances,
+  // which will be used to error out on non-tagged sequences.
+  bool foundNotEscapeSequence = false;
+
+  // Store the Template Value (TV) in the tmpStorage_.
+  tmpStorage_.clear();
+
+  // Store the Template Raw Value (TRV) in the rawStorage_.
+  rawStorage_.clear();
+
+  /// \return the Template Raw Value (TRV) of character \p c.
+  /// The only time the TRV is different from c is when c is a <CR>.
+  /// In that case, this function will return 0x0a (LINE FEED).
+  const auto trv = [](char c) -> char {
+    if (c == '\r') {
+      // This case takes \r and \r\n into account.
+      // The code below which consumes line separators will skip the following
+      // \n if there is a \r\n.
+      // For the purposes of finding the TRV it doesn't matter.
+      return 0x0a;
+    }
+    return c;
+  };
+
+  for (;;) {
+    if (*curCharPtr_ == '`') {
+      isTail = true;
+      ++curCharPtr_;
+      break;
+    } else if (*curCharPtr_ == '$' && curCharPtr_[1] == '{') {
+      // End of the TemplateCharacters.
+      isTail = false;
+      curCharPtr_ += 2;
+      break;
+    } else if (*curCharPtr_ == '\\') {
+      rawStorage_.push_back(*curCharPtr_);
+      ++curCharPtr_;
+      rawStorage_.push_back(trv(*curCharPtr_));
+      switch ((unsigned char)*curCharPtr_) {
+        case '\'':
+        case '"':
+        case '\\':
+          tmpStorage_.push_back((unsigned char)*curCharPtr_++);
+          break;
+
+        case 'b':
+          ++curCharPtr_;
+          tmpStorage_.push_back(8);
+          break;
+        case 'f':
+          ++curCharPtr_;
+          tmpStorage_.push_back(12);
+          break;
+        case 'n':
+          ++curCharPtr_;
+          tmpStorage_.push_back(10);
+          break;
+        case 'r':
+          ++curCharPtr_;
+          tmpStorage_.push_back(13);
+          break;
+        case 't':
+          ++curCharPtr_;
+          tmpStorage_.push_back(9);
+          break;
+        case 'v':
+          ++curCharPtr_;
+          tmpStorage_.push_back(11);
+          break;
+
+        case '\0': // EOF?
+          if (curCharPtr_ == bufferEnd_) { // eof?
+            error(
+                SMLoc::getFromPointer(curCharPtr_),
+                "non-terminated template literal");
+            sm_.note(token_.getStartLoc(), "template literal started here");
+            goto breakLoop;
+          } else {
+            tmpStorage_.push_back((unsigned char)*curCharPtr_++);
+          }
+          break;
+
+        case '0':
+          // '\0' is only a valid escape sequence if not followed by a
+          // DecimalDigit.
+          if (!(curCharPtr_[1] >= '0' && curCharPtr_[1] <= '9')) {
+            ++curCharPtr_;
+            appendUnicodeToStorage(0);
+            break;
+          }
+          // fall-through
+
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+          // NotEscapeSequence :: DecimalDigit but not 0
+          // NotEscapeSequence :: 0 DecimalDigit
+          // Octal numbers are not supported in template strings,
+          // so leave the number in the raw storage (done above) and move on.
+          ++curCharPtr_;
+          foundNotEscapeSequence = true;
+          break;
+
+        case 'x': {
+          ++curCharPtr_;
+          rawStorage_.append({curCharPtr_, 2});
+          auto v = consumeHex(2, false);
+          if (!v) {
+            foundNotEscapeSequence = true;
+          }
+          appendUnicodeToStorage(v ? *v : 0);
+          break;
+        }
+
+        case 'u': {
+          // Pointer to the first character after the 'u', which is where we can
+          // continue scanning from if we fail to decode an escape.
+          const char *start = curCharPtr_ + 1;
+          // Reset the pointer to the '\' to scan the unicode escape.
+          --curCharPtr_;
+          assert(*curCharPtr_ == '\\' && "must have started with \\");
+          auto codepoint = consumeUnicodeEscapeOptional();
+          if (!codepoint) {
+            foundNotEscapeSequence = true;
+            curCharPtr_ = start;
+            break;
+          }
+          appendUnicodeToStorage(*codepoint);
+          rawStorage_.append({start, (size_t)(curCharPtr_ - start)});
+          break;
+        }
+
+        // Escaped line terminator. We just need to skip it, because it was
+        // added to the raw storage at the start of the switch statement.
+        case '\n':
+          ++curCharPtr_;
+          break;
+        case '\r':
+          ++curCharPtr_;
+          if (*curCharPtr_ == '\n') // skip CR LF
+            ++curCharPtr_;
+          break;
+        case UTF8_LINE_TERMINATOR_CHAR0: {
+          bool isLineTerminator =
+              matchUnicodeLineTerminatorOffset1(curCharPtr_);
+          uint32_t codepoint = _decodeUTF8SlowPath(curCharPtr_);
+          // Needs to be added to the rawStorage_ regardless,
+          // but we first need to pop off the byte that was added prior to the
+          // switch statement.
+          rawStorage_.pop_back();
+          appendUnicodeToStorage(codepoint, rawStorage_);
+          if (!isLineTerminator) {
+            // Only add the codepoint to the tmpStorage if it wasn't a line
+            // terminator.
+            appendUnicodeToStorage(codepoint);
+          }
+          break;
+        }
+
+        default:
+          if (LLVM_UNLIKELY(isUTF8Start(*curCharPtr_))) {
+            const char *start = curCharPtr_ + 1;
+            uint32_t codepoint = _decodeUTF8SlowPath(curCharPtr_);
+            appendUnicodeToStorage(codepoint);
+            rawStorage_.append({start, (size_t)(curCharPtr_ - start)});
+          } else {
+            // The TV of EscapeSequence is the SV of EscapeSequence.
+            tmpStorage_.push_back((unsigned char)*curCharPtr_++);
+          }
+          break;
+      }
+    } else if (LLVM_UNLIKELY(*curCharPtr_ == 0 && curCharPtr_ == bufferEnd_)) {
+      error(
+          SMLoc::getFromPointer(curCharPtr_),
+          "non-terminated template literal");
+      sm_.note(token_.getStartLoc(), "template literal started here");
+      break;
+    } else if (*curCharPtr_ == '\r') {
+      // The TV of LineTerminatorSequence is the TRV of LineTerminatorSequence.
+      // The only time this differs from the same characters as the bytes in the
+      // file is when the sequence begins with a <CR>.
+      tmpStorage_.push_back(trv(*curCharPtr_));
+      rawStorage_.push_back(trv(*curCharPtr_));
+      curCharPtr_++;
+      if (*curCharPtr_ == '\n') {
+        // Skip the <CR> <LF>
+        curCharPtr_++;
+      }
+    } else {
+      if (LLVM_UNLIKELY(isUTF8Start(*curCharPtr_))) {
+        // Decode and re-encode the character and append it to the string
+        // storage
+        uint32_t codepoint = _decodeUTF8SlowPath(curCharPtr_);
+        appendUnicodeToStorage(codepoint);
+        appendUnicodeToStorage(codepoint, rawStorage_);
+      } else {
+        rawStorage_.push_back(*curCharPtr_);
+        tmpStorage_.push_back(*curCharPtr_++);
+      }
+    }
+  }
+breakLoop:
+  // If the template literal is tagged and contains invalid escapes, then cooked
+  // should be null because there is no way to cook it, per the ESTree 2018
+  // spec.
+  // The parser will error when encountering an untagged literal with invalid
+  // escapes, so we place nullptr here.
+  UniqueString *cookedStr =
+      foundNotEscapeSequence ? nullptr : getStringLiteral(tmpStorage_.str());
+  UniqueString *rawStr = getStringLiteral(rawStorage_.str());
+  if (isHead) {
+    if (isTail) {
+      // ` characters `
+      token_.setTemplateLiteral(
+          TokenKind::no_substitution_template, cookedStr, rawStr);
+    } else {
+      // ` characters ${
+      token_.setTemplateLiteral(TokenKind::template_head, cookedStr, rawStr);
+    }
+  } else {
+    if (isTail) {
+      // } characters `
+      token_.setTemplateLiteral(TokenKind::template_tail, cookedStr, rawStr);
+    } else {
+      // } characters ${
+      token_.setTemplateLiteral(TokenKind::template_middle, cookedStr, rawStr);
+    }
+  }
 }
 
 /// TODO: this has to be implemented properly.

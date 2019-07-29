@@ -63,8 +63,18 @@ class Token {
   SMRange range_{};
   double numeric_{};
   UniqueString *ident_{nullptr};
+
+  /// Representation of the string literal for tokens that are strings.
+  /// If the current token is part of a template literal, this is null
+  /// when it contains a NotEscapeSequence. This is necessary for syntax errors
+  /// for NotEscapeSequence in untagged string literals.
   UniqueString *stringLiteral_{nullptr};
+
   RegExpLiteral *regExpLiteral_{nullptr};
+
+  /// The Template Raw Value (TRV) associated with the token if it represents
+  /// a part or whole of a template literal.
+  UniqueString *templateRawValue_{nullptr};
 
   /// If the current token is a string literal, this flag indicates whether it
   /// contains any escapes or new line continuations. We need this in order to
@@ -84,6 +94,12 @@ class Token {
   bool isResWord() const {
     return kind_ > TokenKind::_first_resword &&
         kind_ < TokenKind::_last_resword;
+  }
+  bool isTemplateLiteral() const {
+    return getKind() == TokenKind::no_substitution_template ||
+        getKind() == TokenKind::template_head ||
+        getKind() == TokenKind::template_middle ||
+        getKind() == TokenKind::template_tail;
   }
 
   SMLoc getStartLoc() const {
@@ -129,6 +145,24 @@ class Token {
     return stringLiteralContainsEscapes_;
   }
 
+  /// \return whether the template literal token contains a NotEscapeSequence,
+  /// as defined in the ES9.0 spec:
+  /// http://ecma-international.org/ecma-262/9.0/#prod-NotEscapeSequence
+  bool getTemplateLiteralContainsNotEscapes() const {
+    assert(isTemplateLiteral());
+    return stringLiteral_ == nullptr;
+  }
+
+  UniqueString *getTemplateValue() const {
+    assert(isTemplateLiteral());
+    return stringLiteral_;
+  }
+
+  UniqueString *getTemplateRawValue() const {
+    assert(isTemplateLiteral());
+    return templateRawValue_;
+  }
+
   RegExpLiteral *getRegExpLiteral() const {
     assert(getKind() == TokenKind::regexp_literal);
     return regExpLiteral_;
@@ -172,6 +206,17 @@ class Token {
     ident_ = ident;
   }
 
+  void
+  setTemplateLiteral(TokenKind kind, UniqueString *cooked, UniqueString *raw) {
+    assert(
+        kind == TokenKind::no_substitution_template ||
+        kind == TokenKind::template_head ||
+        kind == TokenKind::template_middle || kind == TokenKind::template_tail);
+    kind_ = kind;
+    stringLiteral_ = cooked;
+    templateRawValue_ = raw;
+  }
+
   friend class JSLexer;
 };
 
@@ -203,6 +248,9 @@ class JSLexer {
   bool newLineBeforeCurrentToken_ = false;
 
   llvm::SmallString<256> tmpStorage_;
+
+  /// Storage used for the Template Raw Value when scanning template literals.
+  llvm::SmallString<256> rawStorage_;
 
   /// Pre-allocated identifiers for all reserved words.
   UniqueString *resWordIdent_
@@ -312,6 +360,10 @@ class JSLexer {
   /// \return true if the token can be interpreted as a directive.
   bool isCurrentTokenADirective();
 
+  /// Rescan the } token as a TemplateMiddle or TemplateTail.
+  /// Should be called in the middle of parsing a template literal.
+  const Token *rescanRBraceInTemplateLiteral();
+
   /// Report an error for the range from startLoc to curCharPtr.
   bool errorRange(SMLoc startLoc, const llvm::Twine &msg) {
     return error({startLoc, SMLoc::getFromPointer(curCharPtr_)}, msg);
@@ -374,10 +426,19 @@ class JSLexer {
   /// Initialize the storage with the characters between \p begin and \p end.
   inline void initStorageWith(const char *begin, const char *end);
 
+  /// Encode a Unicode codepoint into a UTF8 sequence and append it to \p
+  /// storage. Code points above 0xFFFF are encoded into UTF16, and the
+  /// resulting surrogate pair values are encoded individually into UTF8.
+  static inline void appendUnicodeToStorage(
+      uint32_t cp,
+      llvm::SmallVectorImpl<char> &storage);
+
   /// Encode a Unicode codepoint into a UTF8 sequence and append it to \ref
   /// tmpStorage_. Code points above 0xFFFF are encoded into UTF16, and the
   /// resulting surrogate pair values are encoded individually into UTF8.
-  inline void appendUnicodeToStorage(uint32_t cp);
+  inline void appendUnicodeToStorage(uint32_t cp) {
+    appendUnicodeToStorage(cp, tmpStorage_);
+  }
 
   /// Decode a UTF8 sequence, advancing the current pointer and reporting
   /// errors.
@@ -417,6 +478,16 @@ class JSLexer {
   /// updated to point to the first character after the escape.
   uint32_t consumeUnicodeEscape();
 
+  /// Decode a unicode escape sequence in the form "\uXXXX".
+  /// Does not report any errors.
+  ///
+  /// \ref curCharPtr_  must point to the backslash of the escape. It will be
+  /// updated to point to the first character after the escape.
+  /// On failure, curCharPtr_ will be reset to where it was when the function
+  /// was called.
+  /// \return the resultant code point on success, None on error.
+  llvm::Optional<uint32_t> consumeUnicodeEscapeOptional();
+
   /// Decode an IdentifierStart production per ES5.1 7.6.
   /// \return whether an IdentifierStart was successfully decoded.
   bool consumeIdentifierStart();
@@ -434,7 +505,14 @@ class JSLexer {
   /// (but not consumed yet). \p maxLen is the maximum length including the
   /// first character.
   unsigned char consumeOctal(unsigned maxLen);
-  llvm::Optional<uint32_t> consumeHex(unsigned requiredLen);
+
+  /// Scan a hex number after the first character has been recognized but not
+  /// consumed.
+  /// \param requireLen is the number of digits in the hex literal.
+  /// \param err if true, report an error on failing to recognize a hex number.
+  llvm::Optional<uint32_t> consumeHex(
+      unsigned requiredLen,
+      bool errorOnFail = true);
 
   /// Scan a hex number inside the braces in \u{CodePoint}.
   /// \param errorOnFail whether to report error on failure.
@@ -471,6 +549,9 @@ class JSLexer {
   void scanString();
   void scanRegExp();
 
+  /// Attempt to scan a template literal starting at ` or at }.
+  void scanTemplateLiteral();
+
   /// Initialize the parser for a given source buffer id.
   void initializeWithBufferId(uint32_t bufId);
 
@@ -483,7 +564,9 @@ inline void JSLexer::initStorageWith(const char *begin, const char *end) {
   tmpStorage_.append(begin, end);
 }
 
-inline void JSLexer::appendUnicodeToStorage(uint32_t cp) {
+inline void JSLexer::appendUnicodeToStorage(
+    uint32_t cp,
+    llvm::SmallVectorImpl<char> &storage) {
   char buf[8];
   char *d = buf;
   // We need to normalize code points which would be encoded with a surrogate
@@ -496,7 +579,7 @@ inline void JSLexer::appendUnicodeToStorage(uint32_t cp) {
     hermes::encodeUTF8(d, UTF16_HIGH_SURROGATE + ((cp >> 10) & 0x3FF));
     hermes::encodeUTF8(d, UTF16_LOW_SURROGATE + (cp & 0x3FF));
   }
-  tmpStorage_.append(buf, d);
+  storage.append(buf, d);
 }
 
 inline uint32_t JSLexer::decodeUTF8() {
