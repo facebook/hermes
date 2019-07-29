@@ -503,7 +503,6 @@ add_lit_testsuite(check-hermes "Running the Hermes regression tests"
   DEPENDS ${HERMES_TEST_DEPS}
   ARGS ${HERMES_TEST_EXTRA_ARGS}
   )
-
 set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
 
 endif()

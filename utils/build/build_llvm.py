@@ -36,10 +36,7 @@ def parse_args():
 
     parser = get_parser()
     parser.add_argument("llvm_src_dir", type=str, nargs="?", default="llvm")
-    parser.add_argument("llvm_build_dir", type=str, nargs="?", default="llvm_build")
-    
-    parser.add_argument("--use-existing-clone", dest="use_existing_clone", action="store_true")
-    
+    parser.add_argument("llvm_build_dir", type=str, nargs="?", default="llvm_build")   
     parser.add_argument(
         "--build-command",
         type=str,
@@ -47,7 +44,6 @@ def parse_args():
         default=None,
         help="Command to run once cmake finishes",
     )
-    parser.add_argument(
     parser.add_argument("--configure-only", dest="configure_only", action="store_true")
     parser.add_argument("--32-bit", dest="is_32_bit", action="store_true")
     parser.add_argument(
@@ -151,6 +147,8 @@ def main():
     if args.is_32_bit:
         cmake_flags += ["-DLLVM_BUILD_32_BITS=On"]
     if platform.system() == "Windows":
+        if platform.machine().endswith("64"):
+            cmake_flags += ["-Thost=x64"]
         cmake_flags += ["-DLLVM_INCLUDE_EXAMPLES=Off"]
     if args.enable_asan:
         cmake_flags += ["-DLLVM_USE_SANITIZER=Address"]
