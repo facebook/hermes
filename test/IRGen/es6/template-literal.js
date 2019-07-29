@@ -38,11 +38,18 @@ function f3() {
 function f4() {
   return `${666}`;
 }
-//CHKIR-LABEL:function f4()
+//CHKIR-LABEL:function f4() : string
 //CHKIR-NEXT:frame = []
 //CHKIR-NEXT:%BB0:
-//CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-//CHKIR-NEXT:  %1 = LoadPropertyInst %0, "concat" : string
-//CHKIR-NEXT:  %2 = CallInst %1, "" : string, 666 : number
-//CHKIR-NEXT:  %3 = ReturnInst %2
+//CHKIR-NEXT:  %0 = ReturnInst "666" : string
+//CHKIR-NEXT:function_end
+
+function f5(x) {
+  return `${x}`;
+}
+//CHKIR-LABEL:function f5(x) : string
+//CHKIR-NEXT:frame = []
+//CHKIR-NEXT:%BB0:
+//CHKIR-NEXT:  %0 = AddEmptyStringInst %x
+//CHKIR-NEXT:  %1 = ReturnInst %0 : string
 //CHKIR-NEXT:function_end
