@@ -339,7 +339,7 @@ endif()
 if (NOT ICU_FOUND AND
     WIN32 AND # Windows 32 or 64 bit
     # At least Windows 10 version 1703 (aka Creators Update)
-    NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS "10.0.15063")
+    (NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS "10.0.15063" OR CMAKE_SYSTEM_NAME STREQUAL "WindowsStore"))
   add_definitions(-DUSE_WIN10_ICU)
   set(ICU_FOUND 1)
   set(ICU_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/external/icu_decls)

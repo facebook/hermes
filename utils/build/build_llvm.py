@@ -36,7 +36,7 @@ def parse_args():
 
     parser = get_parser()
     parser.add_argument("llvm_src_dir", type=str, nargs="?", default="llvm")
-    parser.add_argument("llvm_build_dir", type=str, nargs="?", default="llvm_build")   
+    parser.add_argument("llvm_build_dir", type=str, nargs="?", default="llvm_build")
     parser.add_argument(
         "--build-command",
         type=str,

@@ -15,6 +15,10 @@
 #include <hermes/Public/RuntimeConfig.h>
 #include <jsi/jsi.h>
 
+#ifndef HERMES_EXPORT
+#define HERMES_EXPORT __declspec(dllexport)
+#endif
+
 struct HermesTestHelper;
 
 namespace llvm {
@@ -158,10 +162,10 @@ class HermesRuntime : public jsi::Runtime {
   // class in the .cpp file.
 };
 
-__declspec(dllexport) std::unique_ptr<HermesRuntime> __cdecl makeHermesRuntime(
+HERMES_EXPORT std::unique_ptr<HermesRuntime> __cdecl makeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());
-__declspec(dllexport) std::unique_ptr<jsi::ThreadSafeRuntime> __cdecl makeThreadSafeHermesRuntime(
+HERMES_EXPORT std::unique_ptr<jsi::ThreadSafeRuntime> __cdecl makeThreadSafeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());
 } // namespace hermes
