@@ -16,7 +16,11 @@
 #include <jsi/jsi.h>
 
 #ifndef HERMES_EXPORT
+#ifdef _MSC_VER
 #define HERMES_EXPORT __declspec(dllexport)
+#else // _MSC_VER
+#define HERMES_EXPORT __attribute__((visibility("default")))
+#endif // _MSC_VER
 #endif
 
 struct HermesTestHelper;
