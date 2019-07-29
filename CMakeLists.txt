@@ -495,6 +495,10 @@ set(LLVM_LIT_ARGS "-sv")
 # LLVM_RUNTIME_OUTPUT_INTDIR to our own build dir.
 set(LLVM_LIT_OUTPUT_DIR ${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/bin)
 
+if (NOT WINDOWS_CROSSCOMPILE_TO_ARM)
+
+message(FATAL_ERROR "Setting up tests in windows crosscompile mode.")
+
 add_lit_testsuite(check-hermes "Running the Hermes regression tests"
   ${HERMES_SOURCE_DIR}/test
   ${HERMES_SOURCE_DIR}/unittests
@@ -502,7 +506,10 @@ add_lit_testsuite(check-hermes "Running the Hermes regression tests"
   DEPENDS ${HERMES_TEST_DEPS}
   ARGS ${HERMES_TEST_EXTRA_ARGS}
   )
+
 set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
+
+endif()
 
 # This is how github release files are built.
 

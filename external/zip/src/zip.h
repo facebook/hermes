@@ -22,13 +22,19 @@ extern "C" {
 #if !defined(_SSIZE_T_DEFINED) && !defined(_SSIZE_T_DEFINED_) &&               \
     !defined(_SSIZE_T) && !defined(_SSIZE_T_) && !defined(__ssize_t_defined)
 #define _SSIZE_T
+
+#ifdef _MSC_VER
 // 64-bit Windows is the only mainstream platform
 // where sizeof(long) != sizeof(void*)
 #ifdef _WIN64
-typedef long long  ssize_t;  /* byte count or error */
-#else
-typedef long  ssize_t;  /* byte count or error */
+typedef long long ssize_t; /* byte count or error */
+#else // WIN32 etc
+typedef signed int ssize_t; // llvm\include\llvm-c\DataTypes.h
 #endif
+#else // _MSC_VER
+typedef long ssize_t; /* byte count or error */
+#endif // _MSC_VER
+
 #endif
 
 #ifndef MAX_PATH
@@ -260,7 +266,7 @@ extern int
 zip_entry_extract(struct zip_t *zip,
                   size_t (*on_extract)(void *arg, unsigned long long offset,
                                        const void *data, size_t size),
-                  void *arg);
+    void *arg);
 
 /*
   Returns the number of all entries (files and directories) in the zip archive.
@@ -306,8 +312,8 @@ extern int zip_create(const char *zipname, const char *filenames[], size_t len);
     The return code - 0 on success, negative number (< 0) on error.
 */
 extern int zip_extract(const char *zipname, const char *dir,
-                       int (*on_extract_entry)(const char *filename, void *arg),
-                       void *arg);
+    int (*on_extract_entry)(const char *filename, void *arg),
+    void *arg);
 
 #ifdef __cplusplus
 }

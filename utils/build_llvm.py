@@ -238,8 +238,6 @@ def main():
     if args.is_32_bit:
         cmake_flags += ["-DLLVM_BUILD_32_BITS=On"]
     if platform.system() == "Windows":
-        if platform.machine().endswith("64"):
-            cmake_flags += ["-Thost=x64"]
         cmake_flags += ["-DLLVM_INCLUDE_EXAMPLES=Off"]
     if args.enable_asan:
         cmake_flags += ["-DLLVM_USE_SANITIZER=Address"]
