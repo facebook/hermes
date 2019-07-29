@@ -497,8 +497,6 @@ set(LLVM_LIT_OUTPUT_DIR ${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/bin)
 
 if (NOT WINDOWS_CROSSCOMPILE_TO_ARM)
 
-message(FATAL_ERROR "Setting up tests in windows crosscompile mode.")
-
 add_lit_testsuite(check-hermes "Running the Hermes regression tests"
   ${HERMES_SOURCE_DIR}/test
   ${HERMES_SOURCE_DIR}/unittests
