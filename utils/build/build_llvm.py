@@ -45,7 +45,6 @@ def parse_args():
         help="Command to run once cmake finishes",
     )
     parser.add_argument("--configure-only", dest="configure_only", action="store_true")
-    parser.add_argument("--32-bit", dest="is_32_bit", action="store_true")
     parser.add_argument(
         "--cross-compile-only", dest="cross_compile_only", action="store_true"
     )
