@@ -495,6 +495,7 @@ set(LLVM_LIT_ARGS "-sv")
 # LLVM_RUNTIME_OUTPUT_INTDIR to our own build dir.
 set(LLVM_LIT_OUTPUT_DIR ${LLVM_BUILD_DIR}/${CMAKE_CFG_INTDIR}/bin)
 
+# Currently, when cross compiling to ARM on Windows host, we don't build some of the tools required for running the tests.
 if (NOT WINDOWS_CROSSCOMPILE_TO_ARM)
 
 add_lit_testsuite(check-hermes "Running the Hermes regression tests"
@@ -538,5 +539,6 @@ add_custom_target(
   github-cli-release
   DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})
 
-install(DIRECTORY API/ DESTINATION include/hermes
-      FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY API/ public/
+  DESTINATION include/hermes
+  FILES_MATCHING PATTERN "*.h")
