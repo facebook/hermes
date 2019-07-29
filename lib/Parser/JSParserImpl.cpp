@@ -1876,6 +1876,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
       return optClass.getValue();
     }
 
+    case TokenKind::no_substitution_template:
+    case TokenKind::template_head: {
+      auto optTemplate = parseTemplateLiteral(Param{});
+      if (!optTemplate) {
+        return None;
+      }
+      return optTemplate.getValue();
+    }
+
     default:
       lexer_.error(tok_->getStartLoc(), "invalid expression");
       return None;
@@ -2275,6 +2284,80 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyName() {
   }
 }
 
+Optional<ESTree::Node *> JSParserImpl::parseTemplateLiteral(Param param) {
+  assert(checkTemplateLiteral() && "invalid template literal start");
+
+  SMLoc start = tok_->getStartLoc();
+
+  ESTree::NodeList quasis;
+  ESTree::NodeList expressions;
+
+  /// Push the current TemplateElement onto quasis and advance the lexer.
+  /// \param tail true if pushing the last element.
+  /// \return false on failure.
+  auto pushTemplateElement = [&quasis, &param, this](bool tail) -> bool {
+    if (tok_->getTemplateLiteralContainsNotEscapes() &&
+        !param.has(ParamTagged)) {
+      sm_.error(
+          tok_->getSourceRange(),
+          "untagged template literal contains invalid escape sequence");
+      return false;
+    }
+    auto *quasi = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::TemplateElementNode(
+            tail, tok_->getTemplateValue(), tok_->getTemplateRawValue()));
+    quasis.push_back(*quasi);
+    return true;
+  };
+
+  // TemplateSpans
+  while (
+      !check(TokenKind::no_substitution_template, TokenKind::template_tail)) {
+    // TemplateSpans
+    // Alternate TemplateMiddle and Expression until TemplateTail.
+    if (!check(TokenKind::template_head, TokenKind::template_middle)) {
+      sm_.error(tok_->getSourceRange(), "expected template literal");
+      return None;
+    }
+
+    // First, push the TemplateElement.
+    if (!pushTemplateElement(false))
+      return None;
+    SMLoc subStart = advance().Start;
+
+    // Parse the next expression and add it to the expressions.
+    auto optExpr = parseExpression(ParamIn);
+    if (!optExpr)
+      return None;
+    expressions.push_back(*optExpr.getValue());
+
+    if (!check(TokenKind::r_brace)) {
+      errorExpected(
+          TokenKind::r_brace,
+          "at end of substition in template literal",
+          "start of substitution",
+          subStart);
+      return None;
+    }
+
+    // The } at the end of the expression must be rescanned as a
+    // TemplateMiddle or TemplateTail.
+    lexer_.rescanRBraceInTemplateLiteral();
+  }
+
+  // TemplateTail or NoSubstitutionTemplate
+  if (!pushTemplateElement(true))
+    return None;
+
+  return setLocation(
+      start,
+      advance().End,
+      new (context_) ESTree::TemplateLiteralNode(
+          std::move(quasis), std::move(expressions)));
+}
+
 Optional<ESTree::FunctionExpressionNode *>
 JSParserImpl::parseFunctionExpression(bool forceEagerly) {
   auto optRes = parseFunctionHelper(Param{}, false, forceEagerly);
@@ -2294,13 +2377,30 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberExpressionExceptNew() {
   expr = primExpr.getValue();
 
   SMLoc objectLoc = startLoc;
-  while (check(TokenKind::l_square, TokenKind::period)) {
+  while (check(TokenKind::l_square, TokenKind::period) ||
+         checkTemplateLiteral()) {
     SMLoc nextObjectLoc = tok_->getStartLoc();
-    auto msel = parseMemberSelect(objectLoc, expr);
-    if (!msel)
-      return None;
-    objectLoc = nextObjectLoc;
-    expr = msel.getValue();
+    if (check(TokenKind::l_square, TokenKind::period)) {
+      // MemberExpression [ Expression ]
+      // MemberExpression . IdentifierName
+      auto msel = parseMemberSelect(objectLoc, expr);
+      if (!msel)
+        return None;
+      objectLoc = nextObjectLoc;
+      expr = msel.getValue();
+    } else {
+      assert(checkTemplateLiteral());
+      // MemberExpression TemplateLiteral
+      auto optTemplate = parseTemplateLiteral(ParamTagged);
+      if (!optTemplate)
+        return None;
+      expr = setLocation(
+          expr,
+          optTemplate.getValue(),
+          new (context_) ESTree::TaggedTemplateExpressionNode(
+              expr, optTemplate.getValue()));
+      objectLoc = nextObjectLoc;
+    }
   }
 
   return expr;
@@ -2394,7 +2494,10 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
 Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
     SMLoc startLoc,
     ESTree::NodePtr expr) {
-  assert(check(TokenKind::l_paren));
+  assert(checkN(
+      TokenKind::l_paren,
+      TokenKind::no_substitution_template,
+      TokenKind::template_head));
 
   for (;;) {
     if (check(TokenKind::l_paren)) {
@@ -2416,6 +2519,19 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
         return None;
       startLoc = nextStartLoc;
       expr = msel.getValue();
+    } else if (check(
+                   TokenKind::no_substitution_template,
+                   TokenKind::template_head)) {
+      auto debugLoc = tok_->getStartLoc();
+      auto optTemplate = parseTemplateLiteral(ParamTagged);
+      if (!optTemplate)
+        return None;
+      expr = setLocation(
+          expr,
+          optTemplate.getValue(),
+          debugLoc,
+          new (context_) ESTree::TaggedTemplateExpressionNode(
+              expr, optTemplate.getValue()));
     } else {
       break;
     }
@@ -2478,7 +2594,10 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
   auto *expr = optExpr.getValue();
 
   // Is this a CallExpression?
-  if (check(TokenKind::l_paren)) {
+  if (checkN(
+          TokenKind::l_paren,
+          TokenKind::no_substitution_template,
+          TokenKind::template_head)) {
     auto optCallExpr = parseCallExpression(startLoc, expr);
     if (!optCallExpr)
       return None;

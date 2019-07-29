@@ -3,9 +3,7 @@
 // This source code is licensed under the MIT license found in the LICENSE
 // file in the root directory of this source tree.
 //
-// RUN: %hermesc -Xflow-parser -O -target=HBC -dump-ir %s | %FileCheck --match-full-lines --check-prefix=CHKIR %s
-
-// REQUIRES: flowparser
+// RUN: %hermesc -O -dump-ir %s | %FileCheck --match-full-lines --check-prefix=CHKIR %s
 
 function f1() {
   return `hello${1 + 1}world`;

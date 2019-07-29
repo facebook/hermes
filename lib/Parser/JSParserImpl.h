@@ -70,6 +70,7 @@ class Param {
 static constexpr Param ParamIn{1 << 0};
 static constexpr Param ParamReturn{1 << 1};
 static constexpr Param ParamDefault{1 << 2};
+static constexpr Param ParamTagged{1 << 3};
 
 /// An EcmaScript 5.1 parser.
 /// It is a standard recursive descent LL(1) parser with no tricks. The only
@@ -365,6 +366,11 @@ class JSParserImpl {
         TokenKind::rw_class);
   }
 
+  /// Check whether the current token begins a template literal.
+  bool checkTemplateLiteral() const {
+    return check(TokenKind::no_substitution_template, TokenKind::template_head);
+  }
+
   /// Performs automatic semicolon insertion and optionally reports an error
   /// if a semicolon is missing and cannot be inserted.
   /// \param endLoc is the previous end location before the semi. It will be
@@ -538,6 +544,11 @@ class JSParserImpl {
   /// Parse a property key which is a string, number or identifier. If it is
   /// neither, reports an error.
   Optional<ESTree::Node *> parsePropertyName();
+
+  /// Parse a template literal starting at either TemplateHead or
+  /// NoSubstitutionTemplate.
+  /// \param param [Yield, Tagged]
+  Optional<ESTree::Node *> parseTemplateLiteral(Param param);
 
   Optional<ESTree::FunctionExpressionNode *> parseFunctionExpression(
       bool forceEagerly = false);

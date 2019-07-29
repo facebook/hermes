@@ -407,9 +407,11 @@ ESTREE_NODE_2_ARGS(TaggedTemplateExpression, Base,
 // In ESTree, it is defined as {tail : boolean,
 //                              value : {cooked : string, raw : string}},
 // we flatten the value field.
+// If the template literal is tagged and the text has an invalid escape,
+// cooked will be null.
 ESTREE_NODE_3_ARGS(TemplateElement, Base,
                    NodeBoolean, tail, false,
-                   NodeLabel, cooked, false,
+                   NodeLabel, cooked, true,
                    NodeLabel, raw, false)
 
 ESTREE_NODE_4_ARGS(

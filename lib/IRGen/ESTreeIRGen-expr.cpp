@@ -1095,7 +1095,12 @@ Value *ESTreeIRGen::genTaggedTemplateExpr(
   if (!dup) {
     for (auto &node : templateLit->_quasis) {
       auto *templateElt = cast<ESTree::TemplateElementNode>(&node);
-      argList.push_back(Builder.getLiteralString(templateElt->_cooked->str()));
+      if (templateElt->_cooked) {
+        argList.push_back(
+            Builder.getLiteralString(templateElt->_cooked->str()));
+      } else {
+        argList.push_back(Builder.getLiteralUndefined());
+      }
     }
   }
 

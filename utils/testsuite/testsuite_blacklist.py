@@ -210,8 +210,6 @@ BLACK_LIST = [
     "test262/test/language/expressions/new.target/",
     "test262/test/language/expressions/object/method-definition/",
     "test262/test/language/expressions/super/",
-    "test262/test/language/expressions/tagged-template/",
-    "test262/test/language/expressions/template-literal/",
     "test262/test/language/literals/numeric/binary.js",
     "test262/test/language/literals/numeric/octal.js",
     "test262/test/language/module-code/",
@@ -706,6 +704,9 @@ BLACK_LIST = [
     "test262/test/language/block-scope/syntax/redeclaration/function-declaration-attempt-to-redeclare-with-function-declaration.js",
     "test262/test/language/block-scope/syntax/redeclaration/function-declaration-attempt-to-redeclare-with-var-declaration.js",
     "test262/test/language/statements/switch/syntax/redeclaration/var-declaration-attempt-to-redeclare-with-function-declaration.js",
+    # Template cache in Hermes is per-module, not per-realm.
+    "test262/test/language/expressions/tagged-template/cache-differing-expressions-new-function.js",
+    "test262/test/language/expressions/tagged-template/cache-identical-source-new-function.js",
     # ToLength changes after ES5.1
     "test262/test/built-ins/TypedArray/prototype/byteLength/detached-buffer.js",
     "test262/test/built-ins/TypedArray/prototype/every/callbackfn-detachbuffer.js",
@@ -1522,7 +1523,6 @@ UNSUPPORTED_FEATURES = [
     "regexp-unicode-property-escapes",
     "super",
     "tail-call-optimization",
-    "template",
     "u180e",
 ]
 
