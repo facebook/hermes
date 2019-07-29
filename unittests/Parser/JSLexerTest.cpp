@@ -454,13 +454,38 @@ TEST(JSLexerTest, UnicodeEscapeTest) {
   SourceErrorManager sm;
   DiagContext diag(sm);
 
-  JSLexer lex("'\\u0f3b'", sm, alloc);
+  {
+    JSLexer lex("'\\u0f3b' '\\u{0f3b}' '\\u{0062}'", sm, alloc);
 
-  ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
-  ASSERT_EQ(0, diag.getErrCountClear());
-  EXPECT_STREQ("\xe0\xbc\xbb", lex.getCurToken()->getStringLiteral()->c_str());
+    ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+    ASSERT_EQ(0, diag.getErrCountClear());
+    EXPECT_STREQ(
+        "\xe0\xbc\xbb", lex.getCurToken()->getStringLiteral()->c_str());
 
-  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+    ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+    ASSERT_EQ(0, diag.getErrCountClear());
+    EXPECT_STREQ(
+        "\xe0\xbc\xbb", lex.getCurToken()->getStringLiteral()->c_str());
+
+    ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+    ASSERT_EQ(0, diag.getErrCountClear());
+    EXPECT_STREQ("\x62", lex.getCurToken()->getStringLiteral()->c_str());
+
+    ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+    ASSERT_EQ(0, diag.getErrCountClear());
+  }
+
+  {
+    JSLexer lex("'\\u{ffffffff}'", sm, alloc);
+    ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+    ASSERT_EQ(1, diag.getErrCountClear());
+  }
+
+  {
+    JSLexer lex("'\\u{}'", sm, alloc);
+    ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+    ASSERT_EQ(1, diag.getErrCountClear());
+  }
 }
 
 TEST(JSLexerTest, RegexpSmoke) {

@@ -436,6 +436,13 @@ class JSLexer {
   unsigned char consumeOctal(unsigned maxLen);
   llvm::Optional<uint32_t> consumeHex(unsigned requiredLen);
 
+  /// Scan a hex number inside the braces in \u{CodePoint}.
+  /// \param errorOnFail whether to report error on failure.
+  /// \ref curCharPtr_ must point to the opening { of the escape, and will
+  /// be updated to point after the closing }.
+  /// \return the resultant number on success, None on failure.
+  llvm::Optional<uint32_t> consumeBracedCodePoint(bool errorOnFail = true);
+
   /// Skip until after the end of the line terminaing the block comment.
   /// \return the updated source pointer.
   const char *skipLineComment(const char *start);

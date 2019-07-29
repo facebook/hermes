@@ -559,6 +559,15 @@ uint32_t JSLexer::consumeUnicodeEscape() {
   }
   ++curCharPtr_;
 
+  if (*curCharPtr_ == '{') {
+    auto cp = consumeBracedCodePoint();
+    if (!cp.hasValue()) {
+      // consumeBracedCodePoint has reported an error.
+      return UNICODE_REPLACEMENT_CHARACTER;
+    }
+    return *cp;
+  }
+
   auto cp = consumeHex(4);
   if (!cp)
     return UNICODE_REPLACEMENT_CHARACTER;
@@ -686,6 +695,73 @@ llvm::Optional<uint32_t> JSLexer::consumeHex(unsigned requiredLen) {
   }
 
   return cp;
+}
+
+llvm::Optional<uint32_t> JSLexer::consumeBracedCodePoint(bool errorOnFail) {
+  assert(*curCharPtr_ == '{' && "braced codepoint must begin with {");
+  ++curCharPtr_;
+  const char *start = curCharPtr_;
+
+  // Set to true if we failed to get a code point that is in bounds or saw
+  // an invalid character.
+  bool failed = false;
+
+  // Loop until we hit the } or eof, max out the value, or see an invalid char.
+  uint32_t cp = 0;
+  for (; *curCharPtr_ != '}'; ++curCharPtr_) {
+    int ch = *curCharPtr_;
+    if (ch >= '0' && ch <= '9') {
+      ch -= '0';
+    } else if (ch >= 'a' && ch <= 'f') {
+      ch -= 'a' - 10;
+    } else if (ch >= 'A' && ch <= 'F') {
+      ch -= 'A' - 10;
+    } else {
+      // The only way this can be the end of the buffer is if this is a \0.
+      // Check if this is the end of the buffer, else continue so that we
+      // may report more errors after this braced code point.
+      if (curCharPtr_ == bufferEnd_) {
+        if (!failed && errorOnFail) {
+          sm_.error(
+              SMLoc::getFromPointer(start),
+              "non-terminated unicode codepoint escape");
+        }
+        return llvm::None;
+      }
+      // Invalid character, set the failed flag and continue.
+      if (!failed && errorOnFail) {
+        sm_.error(
+            SMLoc::getFromPointer(curCharPtr_),
+            "invalid character in unicode codepoint escape");
+      }
+      failed = true;
+      continue;
+    }
+    cp = (cp << 4) + ch;
+    if (cp > UNICODE_MAX_VALUE) {
+      // Number grew too big, set the failed flag and continue.
+      if (!failed && errorOnFail) {
+        sm_.error(
+            SMLoc::getFromPointer(start),
+            "unicode codepoint escape is too large");
+      }
+      failed = true;
+    }
+  }
+
+  assert(curCharPtr_ < bufferEnd_ && "bufferEnd_ should cause early return");
+
+  // An empty escape sequence is invalid.
+  if (curCharPtr_ == start) {
+    if (!failed && errorOnFail) {
+      sm_.error(SMLoc::getFromPointer(start), "empty unicode codepoint escape");
+    }
+    failed = true;
+  }
+
+  // Consume the final } and return.
+  ++curCharPtr_;
+  return failed ? llvm::None : llvm::Optional<uint32_t>{cp};
 }
 
 const char *JSLexer::skipLineComment(const char *start) {
