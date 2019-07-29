@@ -567,6 +567,8 @@ inline void JSLexer::initStorageWith(const char *begin, const char *end) {
 inline void JSLexer::appendUnicodeToStorage(
     uint32_t cp,
     llvm::SmallVectorImpl<char> &storage) {
+  // Sized to allow for two 16-bit values to be encoded.
+  // A 16-bit value takes up to three bytes encoded in UTF-8.
   char buf[8];
   char *d = buf;
   // We need to normalize code points which would be encoded with a surrogate
