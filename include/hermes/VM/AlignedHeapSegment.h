@@ -333,6 +333,9 @@ class AlignedHeapSegment final {
   /// segment.
   inline Contents *contents() const;
 
+  void deleteDeadObjectIDs(GC *gc);
+  void updateObjectIDs(GC *gc, SweepResult::VTablesRemaining &vTables);
+
   AlignedStorage storage_;
 
   char *level_{start()};

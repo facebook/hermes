@@ -320,6 +320,11 @@ void YoungGen::collect() {
     nextGen_->youngGenTransitiveClosure(toScan, acceptor);
   }
 
+  if (gc_->getIDTracker().isTrackingIDs()) {
+    PerfSection fixupTrackedObjectsSystraceRegion("fixupTrackedObjects");
+    fixupTrackedObjects();
+  }
+
   // We've now determined reachability; find weak refs to young-gen
   // pointers that have become unreachable.
   auto updateWeakRefsStart = steady_clock::now();
@@ -473,6 +478,22 @@ GCCell *YoungGen::forwardPointer(GCCell *ptr) {
 
   // Update the source pointer.
   return newCell;
+}
+
+void YoungGen::fixupTrackedObjects() {
+  char *ptr = activeSegment().start();
+  char *lvl = activeSegment().level();
+  while (ptr < lvl) {
+    GCCell *cell = reinterpret_cast<GCCell *>(ptr);
+    if (cell->hasMarkedForwardingPointer()) {
+      auto *fptr = cell->getMarkedForwardingPointer();
+      gc_->getIDTracker().moveObject(cell, fptr);
+      ptr += reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
+    } else {
+      ptr += cell->getAllocatedSize();
+      gc_->getIDTracker().untrackObject(cell);
+    }
+  }
 }
 
 void YoungGen::finalizeUnreachableAndTransferReachableObjects() {

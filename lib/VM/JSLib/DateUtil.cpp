@@ -199,7 +199,7 @@ double dateFromTime(double t) {
 //===----------------------------------------------------------------------===//
 // ES5.1 15.9.1.6
 
-double weekDay(double t) {
+int32_t weekDay(double t) {
   return posfmod((day(t) + 4), 7);
 }
 
@@ -502,7 +502,7 @@ double timeClip(double t) {
 //===----------------------------------------------------------------------===//
 // toString Functions
 
-void dateToString(double t, double, llvm::SmallVectorImpl<char> &buf) {
+void dateToISOString(double t, double, llvm::SmallVectorImpl<char> &buf) {
   llvm::raw_svector_ostream os{buf};
 
   /// Make these ints here because we're printing and we have bounds on
@@ -519,7 +519,7 @@ void dateToString(double t, double, llvm::SmallVectorImpl<char> &buf) {
   }
 }
 
-void timeToString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
+void timeToISOString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
   llvm::raw_svector_ostream os{buf};
 
   /// Make all of these ints here because we're printing and we have bounds on
@@ -544,28 +544,21 @@ void timeToString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
   }
 }
 
-static void datetimeToString(
+static void datetimeToISOString(
     double t,
     double tza,
     llvm::SmallVectorImpl<char> &buf,
     char separator) {
-  dateToString(t, tza, buf);
+  dateToISOString(t, tza, buf);
   buf.push_back(separator);
-  timeToString(t, tza, buf);
+  timeToISOString(t, tza, buf);
 }
 
 void datetimeToISOString(
     double t,
     double tza,
     llvm::SmallVectorImpl<char> &buf) {
-  return datetimeToString(t, tza, buf, 'T');
-}
-
-void datetimeToUTCString(
-    double t,
-    double tza,
-    llvm::SmallVectorImpl<char> &buf) {
-  return datetimeToString(t, tza, buf, ' ');
+  return datetimeToISOString(t, tza, buf, 'T');
 }
 
 void datetimeToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf) {
@@ -578,6 +571,132 @@ void dateToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf) {
 
 void timeToLocaleString(double t, llvm::SmallVectorImpl<char16_t> &buf) {
   return platform_unicode::dateFormat(t, false, true, buf);
+}
+
+// ES9.0 Table 46
+static const char *const weekdayNames[7]{
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+};
+
+// ES9.0 Table 47
+static const char *const monthNames[12]{
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+};
+
+void dateString(double t, double, llvm::SmallVectorImpl<char> &buf) {
+  llvm::raw_svector_ostream os{buf};
+
+  // Make these ints here because we're printing and we have bounds on
+  // their values. Makes printing very easy.
+  int32_t y = yearFromTime(t);
+  int32_t m = monthFromTime(t); // monthFromTime(t) is 0-indexed.
+  int32_t d = dateFromTime(t);
+  int32_t wd = weekDay(t);
+
+  // 7. Return the string-concatenation of weekday, the code unit 0x0020
+  // (SPACE), month, the code unit 0x0020 (SPACE), day, the code unit 0x0020
+  // (SPACE), and year.
+  // Example: Mon Jul 22 2019
+  os << llvm::format("%s %s %02d %04d", weekdayNames[wd], monthNames[m], d, y);
+}
+
+void timeString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
+  llvm::raw_svector_ostream os{buf};
+
+  int32_t hour = hourFromTime(t);
+  int32_t minute = minFromTime(t);
+  int32_t second = secFromTime(t);
+
+  // Example: 15:50:49 GMT
+  os << llvm::format("%02d:%02d:%02d GMT", hour, minute, second);
+}
+
+void timeZoneString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {
+  llvm::raw_svector_ostream os{buf};
+
+  // We've already computed the TZA, so use that as the offset.
+  double offset = tza;
+
+  // 4. If offset >= 0, let offsetSign be "+"; otherwise, let offsetSign be "-".
+  char offsetSign = offset >= 0 ? '+' : '-';
+
+  // 5. Let offsetMin be the String representation of MinFromTime(abs(offset)),
+  // formatted as a two-digit decimal number, padded to the left with a zero if
+  // necessary.
+  int32_t offsetMin = minFromTime(std::abs(offset));
+
+  // 6. Let offsetHour be the String representation of
+  // HourFromTime(abs(offset)), formatted as a two-digit decimal number, padded
+  // to the left with a zero if necessary.
+  int32_t offsetHour = hourFromTime(std::abs(offset));
+
+  // 7. Let tzName be an implementation-defined string that is either the empty
+  // string or the string-concatenation of the code unit 0x0020 (SPACE), the
+  // code unit 0x0028 (LEFT PARENTHESIS), an implementation-dependent timezone
+  // name, and the code unit 0x0029 (RIGHT PARENTHESIS).
+  // TODO: Make this something other than empty string.
+
+  // 8. Return the string-concatenation of offsetSign, offsetHour, offsetMin,
+  // and tzName.
+  // Example: -0700
+  os << llvm::format("%c%02d%02d", offsetSign, offsetHour, offsetMin);
+}
+
+void dateTimeString(double tv, double tza, llvm::SmallVectorImpl<char> &buf) {
+  llvm::raw_svector_ostream os{buf};
+  dateString(tv, tza, buf);
+  // Return the string-concatenation of DateString(t), the code unit 0x0020
+  // (SPACE), TimeString(t), and TimeZoneString(tv).
+  // Example: Mon Jul 22 2019 15:51:50 GMT-0700
+  os << " ";
+  timeString(tv, tza, buf);
+  timeZoneString(tv, tza, buf);
+}
+
+void dateTimeUTCString(
+    double tv,
+    double tza,
+    llvm::SmallVectorImpl<char> &buf) {
+  llvm::raw_svector_ostream os{buf};
+
+  // Make these ints here because we're printing and we have bounds on
+  // their values. Makes printing very easy.
+  int32_t y = yearFromTime(tv);
+  int32_t m = monthFromTime(tv); // monthFromTime(t) is 0-indexed.
+  int32_t d = dateFromTime(tv);
+  int32_t wd = weekDay(tv);
+
+  // 8. Return the string-concatenation of weekday, ",", the code unit 0x0020
+  // (SPACE), day, the code unit 0x0020 (SPACE), month, the code unit 0x0020
+  // (SPACE), year, the code unit 0x0020 (SPACE), and TimeString(tv).
+  // Example: Mon Jul 22 2019 15:51:50 GMT
+  os << llvm::format(
+      "%s, %02d %s %04d ", weekdayNames[wd], d, monthNames[m], y);
+  timeString(tv, tza, buf);
+}
+
+void timeTZString(double tv, double tza, llvm::SmallVectorImpl<char> &buf) {
+  // Return the string-concatenation of TimeString(t) and TimeZoneString(tv).
+  // Example: 15:51:50 GMT-0700
+  timeString(tv, tza, buf);
+  timeZoneString(tv, tza, buf);
 }
 
 //===----------------------------------------------------------------------===//
@@ -609,8 +728,8 @@ static bool scanInt(InputIter &it, const InputIter end, int32_t &x) {
   return !ref.getAsInteger(10, x);
 }
 
-double parseDate(StringView u16str) {
-  const double nan = std::numeric_limits<double>::quiet_NaN();
+static double parseISODate(StringView u16str) {
+  constexpr double nan = std::numeric_limits<double>::quiet_NaN();
 
   auto it = u16str.begin();
   auto end = u16str.end();
@@ -713,6 +832,169 @@ double parseDate(StringView u16str) {
 
   // Account for the fact that m was 1-indexed and the timezone offset.
   return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms));
+}
+
+static double parseESDate(StringView str) {
+  constexpr double nan = std::numeric_limits<double>::quiet_NaN();
+  StringView tok = str;
+
+  // Initialize these fields to their defaults.
+  int32_t y, m{1}, d{1}, h{0}, min{0}, s{0}, ms{0}, tzh{0}, tzm{0};
+  double sign = 1;
+
+  // Example strings to parse:
+  // Mon Jul 15 2019 14:33:22 GMT-0700 (PDT)
+  // Mon, 15 Jul 2019 14:33:22 GMT
+  // The comma, time zone adjustment, and description are optional,
+
+  // Current index we are parsing.
+  auto it = str.begin();
+  auto end = str.end();
+
+  /// Read a string starting at `it` into `tok`.
+  /// \param len the number of characters to scan in the string.
+  /// \return true if successful, false if failed.
+  auto scanStr = [&str, &tok, &it](int32_t len) -> bool {
+    if (it + len > str.end()) {
+      return false;
+    }
+    tok = str.slice(it, it + len);
+    it += len;
+    return true;
+  };
+
+  auto consume = [&](char16_t ch) {
+    if (it != str.end() && *it == ch) {
+      ++it;
+      return true;
+    }
+    return false;
+  };
+
+  // Weekday, optional comma, and following space.
+  if (!scanStr(3))
+    return nan;
+  bool foundWeekday = false;
+  for (const char *name : weekdayNames) {
+    if (tok.equals(llvm::arrayRefFromStringRef(name))) {
+      foundWeekday = true;
+      break;
+    }
+  }
+  if (!foundWeekday)
+    return nan;
+  consume(','); // Optional comma, disregard failure.
+  if (!consume(' '))
+    return nan;
+
+  // Day Month Year
+  // or
+  // Month Day Year
+  if (scanInt(it, end, d)) {
+    // Day Month
+    if (!consume(' '))
+      return nan;
+    if (!scanStr(3))
+      return nan;
+  } else {
+    // Month Day
+    if (!scanStr(3))
+      return nan;
+    if (!consume(' '))
+      return nan;
+    if (!scanInt(it, end, d))
+      return nan;
+  }
+  // tok is now set to the Month string.
+  bool foundMonth = false;
+  for (uint32_t i = 0; i < sizeof(monthNames) / sizeof(monthNames[0]); ++i) {
+    if (tok.equals(llvm::arrayRefFromStringRef(monthNames[i]))) {
+      // m is 1-indexed.
+      m = i + 1;
+      foundMonth = true;
+      break;
+    }
+  }
+  if (!foundMonth)
+    return nan;
+
+  // Year
+  if (!consume(' '))
+    return nan;
+  if (!scanInt(it, end, y))
+    return nan;
+
+  if (!consume(' '))
+    return nan;
+
+  // Hour:minute:second.
+  if (!scanInt(it, end, h))
+    return nan;
+  if (!consume(':'))
+    return nan;
+  if (!scanInt(it, end, min))
+    return nan;
+  if (!consume(':'))
+    return nan;
+  if (!scanInt(it, end, s))
+    return nan;
+
+  // Space and "GMT".
+  if (!consume(' '))
+    return nan;
+  if (!scanStr(3))
+    return nan;
+  if (!tok.equals(llvm::arrayRefFromStringRef("GMT")))
+    return nan;
+
+  if (it == end)
+    goto complete;
+
+  // Sign of the timezone adjustment.
+  if (consume('+'))
+    sign = 1;
+  else if (consume('-'))
+    sign = -1;
+  else
+    return nan;
+
+  // Hour and minute of timezone adjustment.
+  if (it > end - 4)
+    return nan;
+  if (!scanInt(it, it + 2, tzh))
+    return nan;
+  tzh *= sign;
+  if (!scanInt(it, it + 2, tzm))
+    return nan;
+  tzm *= sign;
+
+  if (it != end) {
+    // Optional parenthesized description of timezone (must be at the end).
+    if (!consume(' '))
+      return nan;
+    if (!consume('('))
+      return nan;
+    while (it != end && *it != ')')
+      ++it;
+    if (!consume(')'))
+      return nan;
+  }
+
+  if (it != end)
+    return nan;
+
+complete:
+  // Account for the fact that m was 1-indexed and the timezone offset.
+  return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms));
+}
+
+double parseDate(StringView str) {
+  double result = parseISODate(str);
+  if (!std::isnan(result)) {
+    return result;
+  }
+
+  return parseESDate(str);
 }
 
 } // namespace vm

@@ -62,6 +62,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault {
       header->markWithForwardingPointer(newLocation);
       worklist_.push_back(newLocation);
       gc.newPointers_.insert(newLocation);
+      gc.idTracker_.moveObject(cell, newLocation->data());
       cell = newLocation->data();
     }
 #else
@@ -276,6 +277,7 @@ void MallocGC::collect() {
         }
 #endif
       }
+      idTracker_.untrackObject(cell);
 #ifndef NDEBUG
       // Before free'ing, fill with a dead value for debugging
       std::fill_n(reinterpret_cast<char *>(cell), freedSize, kInvalidHeapValue);

@@ -117,13 +117,7 @@ TEST(HeapSnapshotTest, SnapshotTest) {
 
   ASSERT_FALSE(result.empty());
 
-  auto blockSize = sizeof(DummyObject);
-
-  uint64_t segmentNumber = 1;
-  uint64_t offset = AlignedHeapSegment::offsetOfAllocRegion;
-  uint64_t rootLocation = segmentNumber << AlignedStorage::kLogSize | offset;
-  auto secondBlock =
-      segmentNumber << AlignedStorage::kLogSize | (offset + blockSize);
+  const auto blockSize = dummy->getAllocatedSize();
 
   std::ostringstream stream;
 
@@ -143,13 +137,22 @@ TEST(HeapSnapshotTest, SnapshotTest) {
       << "},"
       << "\"node_count\":0,\"edge_count\":0,\"trace_function_count\":0"
       << "},"
-      << "\"nodes\":["
-      << static_cast<size_t>(V8HeapSnapshot::NodeType::Synthetic) << ",0,0,"
-      << static_cast<size_t>(CellKind::UninitializedKind) << ",1,0,"
-      << static_cast<size_t>(V8HeapSnapshot::NodeType::Object) << ",1,"
-      << rootLocation << "," << blockSize << ",1,0,"
-      << static_cast<size_t>(V8HeapSnapshot::NodeType::Object) << ",1,"
-      << secondBlock << "," << blockSize << ",0,0"
+      << "\"nodes\":[";
+  // Synthetic node representing the root of all roots.
+  stream << static_cast<int>(V8HeapSnapshot::NodeType::Synthetic) << ",0,"
+         << static_cast<uint64_t>(GC::IDTracker::ReservedObjectID::Roots)
+         << ",0,1,0,";
+  // Normal node for the first dummy.
+  stream << static_cast<int>(V8HeapSnapshot::NodeType::Object) << ",1,"
+         << rt.getHeap().getObjectID(*dummy) << "," << blockSize << ",1,0,";
+  // Normal node for the second dummy, which is only reachable via the first
+  // dummy.
+  stream << static_cast<int>(V8HeapSnapshot::NodeType::Object) << ",1,"
+         << rt.getHeap().getObjectID(dummy->other.get(&rt)) << "," << blockSize
+         << ",0,0";
+  // The edges point from the root to the first dummy, and from the first dummy
+  // to the second dummy.
+  stream
       << "],"
       << "\"edges\":[3,2,6,3,3,12],"
       << "\"trace_function_infos\":[],\"trace_tree\":[],\"samples\":[],\"locations\":[],"

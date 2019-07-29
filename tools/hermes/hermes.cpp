@@ -72,6 +72,10 @@ static opt<bool> GCPrintStats(
     cat(GCCategory),
     init(false));
 
+static opt<unsigned> ExecutionTimeLimit(
+    "time-limit",
+    llvm::cl::desc("Number of milliseconds after which to abort JS exeuction"),
+    llvm::cl::init(0));
 } // namespace cl
 
 /// Execute Hermes bytecode \p bytecode, respecting command line arguments.
@@ -115,6 +119,7 @@ static int executeHBCBytecodeFromCL(
   options.patchProfilerSymbols = cl::PatchProfilerSymbols;
   options.profilerSymbolsFile = cl::ProfilerSymbolsFile;
 #endif
+  options.timeLimit = cl::ExecutionTimeLimit;
   options.dumpJITCode = cl::DumpJITCode;
   options.jitCrashOnError = cl::JITCrashOnError;
   options.stopAfterInit = cl::StopAfterInit;
@@ -150,6 +155,14 @@ int main(int argc, char **argv) {
 
   llvm::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
+
+  // Tell compiler to emit async break check if time-limit feature is enabled
+  // so that user can turn on this feature with single ExecutionTimeLimit
+  // option.
+  if (cl::ExecutionTimeLimit > 0) {
+    cl::EmitAsyncBreakCheck = true;
+  }
+
   // Make sure any allocated alt signal stack is deleted on exit.
   // (Initialize this here, after llvm stuff above -- captures current
   // alt signal stack.)

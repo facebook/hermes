@@ -19,7 +19,7 @@ include(CheckCXXSourceCompiles)
 
 # This must be consistent with the release_version in
 # android/build.gradle and npm/package.json
-set(HERMES_RELEASE_VERSION 0.1.0)
+set(HERMES_RELEASE_VERSION 0.1.1)
 
 # Project options.
 set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
@@ -45,11 +45,11 @@ set(HERMESVM_PROFILER_JSFUNCTION OFF CACHE BOOL
 set(HERMESVM_PROFILER_NATIVECALL OFF CACHE BOOL
   "Enable native call profiling in hermes VM")
 
+set(HERMESVM_TIMELIMIT OFF CACHE BOOL
+  "Enable time limit in hermes VM")
+
 set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
   "Enable the indirect threaded interpreter")
-
-set(HERMESVM_GCCELL_ID ${DEFAULT_GCCELL_ID} CACHE BOOL
-  "Include a 64-bit id in every GCCell")
 
 set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
   "Enable compressed pointers. If this is on and the target is a 64-bit build, compressed pointers will be used.")
@@ -129,6 +129,8 @@ endif()
 #
 # cmake -G Ninja -DLLVM_BUILD_DIR=$XXX -DLLVM_SRC_DIR=$YYY
 #
+file(TO_CMAKE_PATH "${LLVM_BUILD_DIR}" LLVM_BUILD_DIR)
+file(TO_CMAKE_PATH "${LLVM_SRC_DIR}" LLVM_SRC_DIR)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_BUILD_DIR}/lib/cmake/llvm/")
 
 # Enable debug mode by default
@@ -165,8 +167,6 @@ else()
   set(OPTIONAL_GC_SECTIONS "")
 endif()
 
-set(DEFAULT_GCCELL_ID $<$<CONFIG:Debug>:ON>$<$<NOT:$<CONFIG:Debug>>:OFF>)
-
 # Make the HERMES_RELEASE_VERSION accessible for version printing in C++.
 add_definitions(-DHERMES_RELEASE_VERSION="${HERMES_RELEASE_VERSION}")
 
@@ -188,9 +188,6 @@ if(HERMESVM_PROFILER_NATIVECALL)
 endif()
 if(HERMESVM_INDIRECT_THREADING)
     add_definitions(-DHERMESVM_INDIRECT_THREADING)
-endif()
-if(HERMESVM_GCCELL_ID)
-    add_definitions(-DHERMESVM_GCCELL_ID)
 endif()
 if(HERMESVM_SANITIZE_HANDLES)
     add_definitions(-DHERMESVM_SANITIZE_HANDLES)
@@ -487,6 +484,7 @@ set(HERMES_LIT_TEST_PARAMS
   hbc-deltaprep=${HERMES_BINARY_DIR}/bin/hbc-deltaprep
   build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
   exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
+  timelimit_enabled=${HERMESVM_TIMELIMIT}
   )
 
 set(LLVM_LIT_ARGS "-sv")

@@ -431,15 +431,6 @@ StoreNewOwnPropertyInst *IRBuilder::createStoreNewOwnPropertyInst(
   return inst;
 }
 
-StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
-    Value *storedValue,
-    Value *object,
-    int index,
-    PropEnumerable isEnumerable) {
-  return createStoreOwnPropertyInst(
-      storedValue, object, this->getLiteralNumber(index), isEnumerable);
-}
-
 StoreGetterSetterInst *IRBuilder::createStoreGetterSetterInst(
     Value *storedGetter,
     Value *storedSetter,
@@ -482,14 +473,6 @@ StorePropertyInst *IRBuilder::createStorePropertyInst(
   Identifier Iden = createIdentifier(property);
   return createStorePropertyInst(storedValue, object, Iden);
 }
-StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
-    Value *storedValue,
-    Value *object,
-    StringRef property,
-    PropEnumerable isEnumerable) {
-  Identifier Iden = createIdentifier(property);
-  return createStoreOwnPropertyInst(storedValue, object, Iden, isEnumerable);
-}
 
 LoadPropertyInst *IRBuilder::createLoadPropertyInst(
     Value *object,
@@ -528,15 +511,6 @@ TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
       storedValue, getGlobalObject(), getLiteralString(property));
   insert(inst);
   return inst;
-}
-
-StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
-    Value *storedValue,
-    Value *object,
-    Identifier property,
-    PropEnumerable isEnumerable) {
-  auto L = getLiteralString(property);
-  return createStoreOwnPropertyInst(storedValue, object, L, isEnumerable);
 }
 
 AllocObjectInst *IRBuilder::createAllocObjectInst(

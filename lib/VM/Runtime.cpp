@@ -1499,12 +1499,8 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
   json.closeArray(); // frames
 }
 
-std::string Runtime::getCallStackNoAlloc() {
+std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   std::string res;
-  // We can't get the IP of the leaf frame.  For subsequent frames, we'll get
-  // the IP of the caller at the end of the iteration, so that it will be
-  // correct.
-  const Inst *ip = nullptr;
   // Note that the order of iteration is youngest (leaf) frame to oldest.
   for (auto frame : getStackFrames()) {
     auto codeBlock = frame->getCalleeCodeBlock();

@@ -56,6 +56,9 @@ struct ExecuteOptions {
   std::string profilerSymbolsFile;
 #endif
 
+  /// Exectuion time limit.
+  uint32_t timeLimit{0};
+
   /// Dump JIT'ed code.
   bool dumpJITCode{false};
 

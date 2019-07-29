@@ -91,41 +91,43 @@ typedArrayBaseConstructor(void *, Runtime *runtime, NativeArgs) {
 template <typename T, CellKind C>
 CallResult<HermesValue> typedArrayConstructorFromLength(
     Runtime *runtime,
+    Handle<JSTypedArray<T, C>> self,
     Handle<> length) {
   auto resIndex = toIndex(runtime, length);
   if (resIndex == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto result = JSTypedArray<T, C>::allocate(
-      runtime, resIndex.getValue().getNumberAs<std::size_t>());
-  if (result.getStatus() == ExecutionStatus::EXCEPTION) {
+  if (JSTypedArray<T, C>::createBuffer(
+          runtime, self, resIndex.getValue().getNumberAs<std::size_t>()) ==
+      ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return result.getValue().getHermesValue();
+  return self.getHermesValue();
 }
 
 // ES6 22.2.1.3
 template <typename T, CellKind C>
 CallResult<HermesValue> typedArrayConstructorFromTypedArray(
     Runtime *runtime,
+    Handle<JSTypedArray<T, C>> self,
     Handle<JSTypedArrayBase> other) {
-  auto result = JSTypedArray<T, C>::allocate(runtime, other->getLength());
-  if (result.getStatus() == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto ta = result.getValue();
-  if (JSTypedArrayBase::setToCopyOfTypedArray(
-          runtime, ta, 0, other, 0, other->getLength()) ==
+  if (JSTypedArray<T, C>::createBuffer(runtime, self, other->getLength()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return ta.getHermesValue();
+  if (JSTypedArrayBase::setToCopyOfTypedArray(
+          runtime, self, 0, other, 0, other->getLength()) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return self.getHermesValue();
 }
 
 // ES6 22.2.1.5
 template <typename T, CellKind C>
 CallResult<HermesValue> typedArrayConstructorFromArrayBuffer(
     Runtime *runtime,
+    Handle<JSTypedArray<T, C>> self,
     Handle<JSArrayBuffer> buffer,
     Handle<> byteOffset,
     Handle<> length) {
@@ -172,20 +174,16 @@ CallResult<HermesValue> typedArrayConstructorFromArrayBuffer(
           "length * elementSize must be less than buffer.byteLength");
     }
   }
-  auto result = JSTypedArray<T, C>::allocate(runtime, 0);
-  if (result.getStatus() == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto ta = result.getValue();
   JSTypedArrayBase::setBuffer(
-      runtime, *ta, *buffer, offset, newByteLength, sizeof(T));
-  return ta.getHermesValue();
+      runtime, *self, *buffer, offset, newByteLength, sizeof(T));
+  return self.getHermesValue();
 }
 
 // ES7 22.2.4.4
 template <typename T, CellKind C>
 CallResult<HermesValue> typedArrayConstructorFromObject(
     Runtime *runtime,
+    Handle<JSTypedArray<T, C>> self,
     Handle<> obj) {
   // Steps 1 & 2 already covered by caller.
   // 5. Let arrayLike be ? IterableToArrayLike(object).
@@ -207,11 +205,10 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
   // 4. Let O be ? AllocateTypedArray(constructorName, NewTarget,
   // "%TypedArrayPrototype%").
   // 7. Perform ? AllocateTypedArrayBuffer(O, len).
-  auto result = JSTypedArray<T, C>::allocate(runtime, len);
-  if (result == ExecutionStatus::EXCEPTION) {
+  if (JSTypedArray<T, C>::createBuffer(runtime, self, len) ==
+      ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto ta = result.getValue();
   GCScope scope(runtime);
   // 8. Let k be 0.
   MutableHandle<HermesValue> i(runtime, HermesValue::encodeNumberValue(0));
@@ -225,7 +222,7 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
     if ((propRes = JSObject::getComputed_RJS(arrayLike, runtime, i)) ==
             ExecutionStatus::EXCEPTION ||
         JSTypedArray<T, C>::putComputed_RJS(
-            ta, runtime, i, runtime->makeHandle(*propRes)) ==
+            self, runtime, i, runtime->makeHandle(*propRes)) ==
             ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -233,7 +230,7 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
     // d. Increase k by 1.
   }
   // 10. Return O.
-  return ta.getHermesValue();
+  return self.getHermesValue();
 }
 
 template <typename T, CellKind C>
@@ -244,29 +241,31 @@ typedArrayConstructor(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "JSTypedArray() called in function context instead of constructor");
   }
+  auto self = args.vmcastThis<JSTypedArray<T, C>>();
   if (args.getArgCount() == 0) {
     // ES6 22.2.1.1
-    auto result = JSTypedArray<T, C>::allocate(runtime, 0);
-    if (result == ExecutionStatus::EXCEPTION) {
+    if (JSTypedArray<T, C>::createBuffer(runtime, self, 0) ==
+        ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    return result.getValue().getHermesValue();
+    return self.getHermesValue();
   }
   auto firstArg = args.getArgHandle(runtime, 0);
   if (!firstArg->isObject()) {
-    return typedArrayConstructorFromLength<T, C>(runtime, firstArg);
+    return typedArrayConstructorFromLength<T, C>(runtime, self, firstArg);
   }
   if (auto otherTA = Handle<JSTypedArrayBase>::dyn_vmcast(runtime, firstArg)) {
-    return typedArrayConstructorFromTypedArray<T, C>(runtime, otherTA);
+    return typedArrayConstructorFromTypedArray<T, C>(runtime, self, otherTA);
   }
   if (auto buffer = Handle<JSArrayBuffer>::dyn_vmcast(runtime, firstArg)) {
     return typedArrayConstructorFromArrayBuffer<T, C>(
         runtime,
+        self,
         buffer,
         args.getArgHandle(runtime, 1),
         args.getArgHandle(runtime, 2));
   }
-  return typedArrayConstructorFromObject<T, C>(runtime, firstArg);
+  return typedArrayConstructorFromObject<T, C>(runtime, self, firstArg);
 }
 
 /// ES7 22.2.2.1

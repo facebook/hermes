@@ -183,6 +183,14 @@ class Interpreter {
   }
 #endif
 
+#ifdef HERMESVM_TIMELIMIT
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  static inline void notifyTimeout(Runtime *runtime, const Inst *ip) {
+    runtime->notifyTimeout(ip);
+    llvm_unreachable("Timeout should terminate the execution.");
+  }
+#endif
+
   //===========================================================================
   // Out-of-line implementations of entire instructions.
 

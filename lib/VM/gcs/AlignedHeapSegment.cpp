@@ -202,8 +202,8 @@ void AlignedHeapSegment::completeMarking(GC *gc, CompleteMarkState *markState) {
 void AlignedHeapSegment::sweepAndInstallForwardingPointers(
     GC *gc,
     SweepResult *sweepResult) {
+  deleteDeadObjectIDs(gc);
   MarkBitArrayNC &markBits = markBitArray();
-
   char *ptr = start();
   size_t ind = markBits.addressToIndex(ptr);
   ind = markBits.findNextMarkedBitFrom(ind);
@@ -272,10 +272,55 @@ void AlignedHeapSegment::sweepAndInstallForwardingPointers(
   }
 }
 
+void AlignedHeapSegment::deleteDeadObjectIDs(GC *gc) {
+  GCBase::IDTracker &tracker = gc->getIDTracker();
+  if (tracker.isTrackingIDs()) {
+    MarkBitArrayNC &markBits = markBitArray();
+    // Separate out the delete tracking into a different loop in order to keep
+    // the normal case fast.
+    forAllObjs([&markBits, &tracker](const GCCell *cell) {
+      if (!markBits.at(markBits.addressToIndex(cell))) {
+        tracker.untrackObject(cell);
+      }
+    });
+  }
+}
+
+void AlignedHeapSegment::updateObjectIDs(
+    GC *gc,
+    SweepResult::VTablesRemaining &vTables) {
+  GCBase::IDTracker &tracker = gc->getIDTracker();
+  if (!tracker.isTrackingIDs()) {
+    // If ID tracking isn't on, there's nothing to do here.
+    return;
+  }
+
+  SweepResult::VTablesRemaining vTablesCopy{vTables};
+  MarkBitArrayNC &markBits = markBitArray();
+  char *ptr = start();
+  size_t ind = markBits.addressToIndex(ptr);
+  while (ptr < level()) {
+    if (markBits.at(ind)) {
+      auto *cell = reinterpret_cast<GCCell *>(ptr);
+      tracker.moveObject(cell, cell->getForwardingPointer());
+      const VTable *vtp = vTablesCopy.next();
+      auto cellSize = cell->getAllocatedSize(vtp);
+      ptr += cellSize;
+      ind += (cellSize >> LogHeapAlign);
+    } else {
+      auto *deadRegion = reinterpret_cast<DeadRegion *>(ptr);
+      ptr += deadRegion->size();
+      ind += (deadRegion->size() >> LogHeapAlign);
+    }
+  }
+}
+
 void AlignedHeapSegment::updateReferences(
     GC *gc,
     FullMSCUpdateAcceptor *acceptor,
     SweepResult::VTablesRemaining &vTables) {
+  updateObjectIDs(gc, vTables);
+
   MarkBitArrayNC &markBits = markBitArray();
   char *ptr = start();
   size_t ind = markBits.addressToIndex(ptr);

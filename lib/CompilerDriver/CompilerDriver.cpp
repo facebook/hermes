@@ -254,6 +254,11 @@ opt<bool> VerifyIR(
 #endif
     desc("Verify the IR after creating it"));
 
+opt<bool> EmitAsyncBreakCheck(
+    "emit-async-break-check",
+    desc("Emit instruction to check async break request"),
+    init(false));
+
 static list<std::string> IncludeGlobals(
     "include-globals",
     desc("Include the definitions of global properties (can be "
@@ -814,6 +819,10 @@ bool validateFlags() {
       err("You can only dump bytecode for HBC bytecode file.");
   }
 
+  if (cl::EmitDebugInfo && cl::EmitAsyncBreakCheck) {
+    err("Debugger and execution time limit can't be used at the same time");
+  }
+
   return !errored;
 }
 
@@ -894,6 +903,7 @@ std::shared_ptr<Context> createContext(
   } else {
     context->setDebugInfoSetting(DebugInfoSetting::THROWING);
   }
+  context->setCheckTimeLimit(cl::EmitAsyncBreakCheck);
   return context;
 }
 
@@ -1243,7 +1253,6 @@ bool generateIRForSourcesAsCJSModules(
   auto *globalAST = parseJS(context, semCtx, std::move(globalMemBuffer));
   generateIRFromESTree(globalAST, &M, declFileList, {});
 
-  SourceMapParser sourceMapParser{};
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
   inputSourceMaps.push_back(nullptr);
   std::vector<std::string> sources{"<global>"};
@@ -1276,13 +1285,9 @@ bool generateIRForSourcesAsCJSModules(
           topLevelFunction,
           declFileList);
       if (fileBufAndMap.sourceMap) {
-        auto inputMap =
-            sourceMapParser.parse(fileBufAndMap.sourceMap->getBuffer());
+        auto inputMap = SourceMapParser::parse(*fileBufAndMap.sourceMap);
         if (!inputMap) {
-          // parse() returns nullptr on failure.
-          llvm::errs() << "Error: Invalid source map: "
-                       << fileBufAndMap.sourceMap->getBufferIdentifier()
-                       << '\n';
+          // parse() returns nullptr on failure and reports its own errors.
           return false;
         }
         inputSourceMaps.push_back(std::move(inputMap));
@@ -1526,12 +1531,10 @@ CompileResult processSourceFiles(
 
     auto &mainFileBuf = fileBufs[0][0];
     std::unique_ptr<SourceMap> sourceMap{nullptr};
-    if (mainFileBuf.sourceMap != nullptr) {
-      sourceMap = SourceMapParser::parse(mainFileBuf.sourceMap->getBuffer());
+    if (mainFileBuf.sourceMap) {
+      sourceMap = SourceMapParser::parse(*mainFileBuf.sourceMap);
       if (!sourceMap) {
-        // parse() returns nullptr on failure.
-        llvm::errs() << "Error: Invalid source map: "
-                     << fileBufs[0][0].sourceMap->getBufferIdentifier() << '\n';
+        // parse() returns nullptr on failure and reports its own errors.
         return InputFileError;
       }
     }

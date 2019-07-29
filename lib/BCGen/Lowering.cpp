@@ -282,6 +282,19 @@ bool LowerAllocObject::runOnFunction(Function *F) {
   return changed;
 }
 
+bool LowerAllocObject::lowerAlloc(AllocObjectInst *allocInst) {
+  Function *F = allocInst->getParent()->getParent();
+  DominanceInfo DI(F);
+  LowerAllocObjectFuncContext ctx(DI, allocInst);
+  llvm::SmallVector<StoreOwnPropertyInst *, 4> users = ctx.run();
+  if (users.empty()) {
+    return false;
+  }
+
+  bool changed = lowerAllocObjectBuffer(allocInst, users, UINT16_MAX);
+  return changed;
+}
+
 // Number of bytes saved for serializing a literal into the buffer.
 // Estimated with the example of an integer. Substract the cost of serializing
 // the int and a 1-byte tag.
@@ -297,127 +310,124 @@ static constexpr int32_t kNonLiteralCostBytes = static_cast<int32_t>(
 // for most cases.
 static constexpr uint32_t kNonLiteralPlaceholderLimit = 3;
 
-uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
-    AllocObjectInst *allocInst) {
-  uint32_t elemCount = 0;
-  // We want to track savingSoFar to avoid serializing too many place holders
-  // which ends up causing a big size regression.
-  // We set savingSoFar to be the delta of the size of two instructions to avoid
-  // serializing a literal object with only one entry, which turns out to
-  // significantly increase bytecode size.
-  int32_t savingSoFar = static_cast<int32_t>(sizeof(inst::NewObjectInst)) -
-      static_cast<int32_t>(sizeof(inst::NewObjectWithBufferInst));
-  int32_t maxSaving = 0;
-  uint32_t elemNumForMaxSaving = 0;
-  uint32_t nonLiteralsSoFar = 0;
-  for (Instruction *u : allocInst->getUsers()) {
-    // Stop when we see a getter/setter.
-    if (isa<StoreGetterSetterInst>(u)) {
-      break;
-    } else if (auto *put = dyn_cast<StoreOwnPropertyInst>(u)) {
-      // Skip if the instruction is storing the object itself into another
-      // object.
-      if (put->getStoredValue() == dyn_cast<Value>(allocInst) &&
-          put->getObject() != allocInst) {
-        continue;
-      }
-      elemCount++;
-      if (elemCount > maxSize_) {
-        break;
-      }
-      auto *loadInst = dyn_cast<HBCLoadConstInst>(put->getStoredValue());
-      // Not counting undefined as literal since the parser doesn't
-      // support it.
-      if (loadInst &&
-          loadInst->getSingleOperand()->getKind() !=
-              ValueKind::LiteralUndefinedKind) {
-        savingSoFar += kLiteralSavedBytes;
-        if (savingSoFar > maxSaving) {
-          maxSaving = savingSoFar;
-          elemNumForMaxSaving = elemCount;
-        }
-      } else {
-        // If the key is a number, we can't overwrite with PutById, so stop.
-        if (isa<LiteralNumber>(put->getProperty())) {
-          break;
-        }
-        nonLiteralsSoFar++;
-        if (nonLiteralsSoFar > kNonLiteralPlaceholderLimit) {
-          // Stop when we serialize too many placeholders.
-          break;
-        }
-        savingSoFar -= kNonLiteralCostBytes;
-      }
-    } else {
-      // Stop when we reach an unsupported instruction.
-      break;
-    }
-  }
-  return elemNumForMaxSaving;
-}
-
-bool LowerAllocObject::lowerAlloc(AllocObjectInst *allocInst) {
-  // First pass to compute best number of properties to serialize.
-  uint32_t elemNumForMaxSaving = estimateBestNumElemsToSerialize(allocInst);
-  if (elemNumForMaxSaving == 0) {
+/// Whether the given value \v V can be serialized into the object literal
+/// buffer.
+static bool canSerialize(Value *V) {
+  if (!V) {
     return false;
   }
+  auto *L = dyn_cast<HBCLoadConstInst>(V);
+  // We also need to check undefined because we cannot encode undefined
+  // in the object literal buffer.
+  return L && !isa<LiteralUndefined>(L->getConst());
+};
 
-  IRBuilder builder(allocInst->getParent()->getParent());
-  HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map;
-  uint32_t elemCountSoFar = 0;
-  // Since instructions are created sequentially, and since Users
-  // are added when an instruction is created, getUsers() preserves
-  // insertion order.
-  std::vector<Instruction *> users(
-      allocInst->getUsers().begin(), allocInst->getUsers().end());
-  for (Instruction *u : users) {
-    if (auto *put = dyn_cast<StoreOwnPropertyInst>(u)) {
-      // Skip if the property name isn't a LiteralString or a valid array index.
-      Literal *propLiteral = nullptr;
-      if (auto *LN = dyn_cast<LiteralNumber>(put->getProperty())) {
-        if (LN->convertToArrayIndex())
-          propLiteral = LN;
-      } else {
-        propLiteral = dyn_cast<LiteralString>(put->getProperty());
-      }
-      if (!propLiteral)
-        continue;
+uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
+    llvm::SmallVectorImpl<StoreOwnPropertyInst *> &users) {
+  // We want to track curSaving to avoid serializing too many place holders
+  // which ends up causing a big size regression.
+  // We set curSaving to be the delta of the size of two instructions to avoid
+  // serializing a literal object with only one entry, which turns out to
+  // significantly increase bytecode size.
+  int32_t curSaving = static_cast<int32_t>(sizeof(inst::NewObjectInst)) -
+      static_cast<int32_t>(sizeof(inst::NewObjectWithBufferInst));
+  int32_t maxSaving = 0;
+  uint32_t optimumStopIndex = 0;
+  uint32_t nonLiteralPlaceholderCount = 0;
 
-      // Skip if the instruction is storing the object itself into another
-      // object.
-      if (put->getStoredValue() == dyn_cast<Value>(allocInst) &&
-          put->getObject() != allocInst) {
-        continue;
-      }
-      elemCountSoFar++;
-      if (elemCountSoFar > elemNumForMaxSaving) {
-        break;
-      }
-      auto *loadInst = dyn_cast<HBCLoadConstInst>(put->getStoredValue());
-      // Not counting undefined as literal since the parser doesn't
-      // support it.
-      if (loadInst &&
-          loadInst->getSingleOperand()->getKind() !=
-              ValueKind::LiteralUndefinedKind) {
-        prop_map.push_back(
-            std::pair<Literal *, Literal *>(propLiteral, loadInst->getConst()));
-        put->eraseFromParent();
-      } else {
-        // In the case of non-literal, use null as placeholder, and
-        // later a PutById instruction will overwrite it with correct value.
-        prop_map.push_back(std::pair<Literal *, Literal *>(
-            propLiteral, builder.getLiteralNull()));
-        builder.setLocation(put->getLocation());
-        builder.setInsertionPoint(put);
-        auto *newPut = builder.createStorePropertyInst(
-            put->getStoredValue(), put->getObject(), put->getProperty());
-        put->replaceAllUsesWith(newPut);
-        put->eraseFromParent();
+  uint32_t curSize = 0;
+  for (StoreOwnPropertyInst *I : users) {
+    ++curSize;
+    auto *prop = I->getProperty();
+    if (!isa<LiteralString>(prop) && !isa<LiteralNumber>(prop)) {
+      // Computed property, stop here.
+      break;
+    }
+    if (canSerialize(I->getStoredValue())) {
+      // Property Value is a literal that's not undefined.
+      curSaving += kLiteralSavedBytes;
+      if (curSaving > maxSaving) {
+        maxSaving = curSaving;
+        optimumStopIndex = curSize;
       }
     } else {
-      // Stop when we reach an unsupported instruction.
-      break;
+      // Property Value is computed. we could try to store a null as
+      // placeholder, and set the proper value latter.
+      if (isa<LiteralNumber>(I->getProperty())) {
+        // If the key is a number, we can't set it latter with PutById, so
+        // have to skip it. We only need to check if it's an instance of
+        // LiteralNumber because LowerNumericProperties must have lowered any
+        // number-like property to LiteralNumber.
+        // We don't need to stop the whole process because a numeric literal
+        // property can be inserted in any order. So it's safe to skip it
+        // in the lowering.
+        continue;
+      }
+      if (nonLiteralPlaceholderCount == kNonLiteralPlaceholderLimit) {
+        // We have reached the maximum number of place holders we can put.
+        break;
+      }
+      nonLiteralPlaceholderCount++;
+      curSaving -= kNonLiteralCostBytes;
+    }
+  }
+  return optimumStopIndex;
+}
+
+bool LowerAllocObject::lowerAllocObjectBuffer(
+    AllocObjectInst *allocInst,
+    llvm::SmallVectorImpl<StoreOwnPropertyInst *> &users,
+    uint32_t maxSize) {
+  auto size = estimateBestNumElemsToSerialize(users);
+  if (size == 0) {
+    return false;
+  }
+  size = std::min(maxSize, size);
+
+  Function *F = allocInst->getParent()->getParent();
+  IRBuilder builder(F);
+  HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map;
+  for (uint32_t i = 0; i < size; ++i) {
+    StoreOwnPropertyInst *I = users[i];
+    Literal *propLiteral = nullptr;
+    // Property name can be either a LiteralNumber or a LiteralString.
+    if (auto *LN = dyn_cast<LiteralNumber>(I->getProperty())) {
+      assert(
+          LN->convertToArrayIndex() &&
+          "LiteralNumber can be a property name only if it can be converted to array index.");
+      propLiteral = LN;
+    } else {
+      propLiteral = cast<LiteralString>(I->getProperty());
+    }
+
+    auto *loadInst = dyn_cast<HBCLoadConstInst>(I->getStoredValue());
+    // Not counting undefined as literal since the parser doesn't
+    // support it.
+    if (canSerialize(loadInst)) {
+      prop_map.push_back(
+          std::pair<Literal *, Literal *>(propLiteral, loadInst->getConst()));
+      I->eraseFromParent();
+    } else if (isa<LiteralString>(propLiteral)) {
+      // If prop is a literal number, there is no need to put it into the
+      // buffer or change the instruction.
+      // Otherwise, use null as placeholder, and
+      // later a PutById instruction will overwrite it with correct value.
+      prop_map.push_back(std::pair<Literal *, Literal *>(
+          propLiteral, builder.getLiteralNull()));
+
+      assert(
+          isa<StoreOwnPropertyInst>(I) &&
+          "Expecting a StoreOwnPropertyInst when storing a literal property.");
+      // Since we will be defining this property twice, once in the buffer
+      // once setting the correct value latter, we can no longer use
+      // StoreNewOwnPropertyInst. Replace this instruction with
+      // StorePropertyInst.
+      builder.setLocation(I->getLocation());
+      builder.setInsertionPoint(I);
+      auto *NI = builder.createStorePropertyInst(
+          I->getStoredValue(), I->getObject(), I->getProperty());
+      I->replaceAllUsesWith(NI);
+      I->eraseFromParent();
     }
   }
 

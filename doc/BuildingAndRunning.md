@@ -21,14 +21,14 @@ On Mac via Homebrew:
 
 ## Building on Linux and macOS
 
-Hermes will place its build files in a directory given by the `HERMES_WS_DIR` environment variable. Note that Hermes will download and build LLVM as part of its own build.
+Hermes will place its build files in the current directory by default. Note that Hermes will download and build LLVM as part of its own build.
+You can also give explicit source and build directories, use `--help` on the build scripts to see how.
 
 Create a base directory to work in, e.g. ~/workspace, and cd into it. Follow the steps below to build LLVM and generate the Hermes build system:
 
-    export HERMES_WS_DIR="$PWD"
     git clone git@github.com:facebook/hermes.git
-    hermes/utils/build_llvm.py
-    hermes/utils/configure.sh
+    hermes/utils/build/build_llvm.py
+    hermes/utils/build/configure.py
 
 The build system has now been generated in the `build` directory. To perform the build:
 
@@ -38,11 +38,9 @@ The build system has now been generated in the `build` directory. To perform the
 
 The Windows build depends on which particular combination of GitBash/Cygwin/WSL and Visual Studio is used.
 
-    export HERMES_WS_DIR='c:/ws'
-    cd "$HERMES_WS_DIR"
     git -c core.autocrlf=false clone git@github.com:facebook/hermes.git
-    BUILD_SYSTEM='Visual Studio 16 2019' CMAKE_FLAGS='-A x64' DISTRIBUTE=1 hermes/utils/build_llvm.py
-    CMAKE_FLAGS='-A x64 -DLLVM_ENABLE_LTO=OFF' DISTRIBUTE=1 hermes/utils/configure.sh 'Visual Studio 16 2019'
+    hermes/utils/build/build_llvm.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64' --distribute
+    hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64 -DLLVM_ENABLE_LTO=OFF' --distribute
     cd build_release && MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
 
 ## Running Hermes
@@ -68,10 +66,10 @@ To run the Hermes test suite:
 
 ## Release Build
 
-The above instructions create an unoptimized debug build. The `DISTRIBUTE=1` environment variable will enable a release build, in the `build_release` directory. Example:
+The above instructions create an unoptimized debug build. The `--distribute` flag will enable a release build, in the `build_release` directory. Example:
 
-    env DISTRIBUTE=1 hermes/utils/build_llvm.py
-    env DISTRIBUTE=1 hermes/utils/configure.sh
+    hermes/utils/build/build_llvm.py --distribute
+    hermes/utils/build/configure.py --distribute
     cd build_release && ninja
 
 ### Other Tools

@@ -69,7 +69,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   if (options.optimizationEnabled) {
     // Lowers AllocObjects and its sequential literal properties into a single
     // HBCAllocObjectFromBufferInst
-    PM.addPass(new LowerAllocObject(UINT16_MAX));
+    PM.addPass(new LowerAllocObject());
     // Reduce comparison and conditional jump to single comparison jump
     PM.addPass(new LowerCondBranch());
     // Turn Calls into CallNs.

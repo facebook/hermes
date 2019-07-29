@@ -10,19 +10,14 @@
 namespace hermes {
 namespace vm {
 
-#if defined(HERMESVM_GCCELL_ID) || !defined(NDEBUG)
+#ifndef NDEBUG
 GCCell::GCCell(GC *gc, const VTable *vtp)
     : GCCell(gc, vtp, GCCell::AllocEventOption::DoNotEmit) {
   trackAlloc(gc, vtp);
 }
 
 GCCell::GCCell(GC *gc, const VTable *vtp, AllocEventOption doNotEmit)
-    : vtp_(vtp)
-#ifdef HERMESVM_GCCELL_ID
-      ,
-      _debugAllocationId_(gc->nextObjectID())
-#endif
-{
+    : vtp_(vtp), _debugAllocationId_(gc->nextObjectID()) {
   // If the vtp has a finalizer, then it should be the most recent thing
   // added to the finalizer list.
   assert(

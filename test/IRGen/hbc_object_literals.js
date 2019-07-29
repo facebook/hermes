@@ -80,21 +80,9 @@ var obj3 = {
   p : 1,
   q : 1,
 }
-//IRGEN-NEXT:  %29 = AllocObjectInst 13 : number, empty
+//IRGEN-NEXT:  %29 = HBCAllocObjectFromBufferInst 13 : number, "f" : string, 1 : number, "g" : string, 1 : number, "h" : string, 1 : number, "i" : string, 1 : number, "j" : string, 1 : number, "k" : string, 1 : number, "l" : string, 1 : number, "m" : string, 1 : number, "n" : string, 1 : number, "o" : string, 1 : number, "p" : string, 1 : number, "q" : string, 1 : number
 //IRGEN-NEXT:  %30 = StoreOwnPropertyInst %2 : undefined, %29 : object, 1 : number, true : boolean
-//IRGEN-NEXT:  %31 = StoreNewOwnPropertyInst %0 : number, %29 : object, "f" : string, true : boolean
-//IRGEN-NEXT:  %32 = StoreNewOwnPropertyInst %0 : number, %29 : object, "g" : string, true : boolean
-//IRGEN-NEXT:  %33 = StoreNewOwnPropertyInst %0 : number, %29 : object, "h" : string, true : boolean
-//IRGEN-NEXT:  %34 = StoreNewOwnPropertyInst %0 : number, %29 : object, "i" : string, true : boolean
-//IRGEN-NEXT:  %35 = StoreNewOwnPropertyInst %0 : number, %29 : object, "j" : string, true : boolean
-//IRGEN-NEXT:  %36 = StoreNewOwnPropertyInst %0 : number, %29 : object, "k" : string, true : boolean
-//IRGEN-NEXT:  %37 = StoreNewOwnPropertyInst %0 : number, %29 : object, "l" : string, true : boolean
-//IRGEN-NEXT:  %38 = StoreNewOwnPropertyInst %0 : number, %29 : object, "m" : string, true : boolean
-//IRGEN-NEXT:  %39 = StoreNewOwnPropertyInst %0 : number, %29 : object, "n" : string, true : boolean
-//IRGEN-NEXT:  %40 = StoreNewOwnPropertyInst %0 : number, %29 : object, "o" : string, true : boolean
-//IRGEN-NEXT:  %41 = StoreNewOwnPropertyInst %0 : number, %29 : object, "p" : string, true : boolean
-//IRGEN-NEXT:  %42 = StoreNewOwnPropertyInst %0 : number, %29 : object, "q" : string, true : boolean
-//IRGEN-NEXT:  %43 = StorePropertyInst %29 : object, %7 : object, "obj3" : string
+//IRGEN-NEXT:  %31 = StorePropertyInst %29 : object, %7 : object, "obj3" : string
 
 var obj4 = {
   '1' : undefined,
@@ -111,22 +99,11 @@ var obj4 = {
   p : 1,
   q : 1,
 }
-//IRGEN-NEXT:  %44 = AllocObjectInst 13 : number, empty
-//IRGEN-NEXT:  %45 = StoreOwnPropertyInst %2 : undefined, %44 : object, 1 : number, true : boolean
-//IRGEN-NEXT:  %46 = StoreNewOwnPropertyInst %0 : number, %44 : object, "f" : string, true : boolean
-//IRGEN-NEXT:  %47 = StoreNewOwnPropertyInst %0 : number, %44 : object, "g" : string, true : boolean
-//IRGEN-NEXT:  %48 = StoreNewOwnPropertyInst %0 : number, %44 : object, "h" : string, true : boolean
-//IRGEN-NEXT:  %49 = StoreNewOwnPropertyInst %0 : number, %44 : object, "i" : string, true : boolean
-//IRGEN-NEXT:  %50 = StoreNewOwnPropertyInst %0 : number, %44 : object, "j" : string, true : boolean
-//IRGEN-NEXT:  %51 = StoreNewOwnPropertyInst %0 : number, %44 : object, "k" : string, true : boolean
-//IRGEN-NEXT:  %52 = StoreNewOwnPropertyInst %0 : number, %44 : object, "l" : string, true : boolean
-//IRGEN-NEXT:  %53 = StoreNewOwnPropertyInst %0 : number, %44 : object, "m" : string, true : boolean
-//IRGEN-NEXT:  %54 = StoreNewOwnPropertyInst %0 : number, %44 : object, "n" : string, true : boolean
-//IRGEN-NEXT:  %55 = StoreNewOwnPropertyInst %0 : number, %44 : object, "o" : string, true : boolean
-//IRGEN-NEXT:  %56 = StoreNewOwnPropertyInst %0 : number, %44 : object, "p" : string, true : boolean
-//IRGEN-NEXT:  %57 = StoreNewOwnPropertyInst %0 : number, %44 : object, "q" : string, true : boolean
-//IRGEN-NEXT:  %58 = StorePropertyInst %44 : object, %7 : object, "obj4" : string
-//IRGEN-NEXT:  %59 = ReturnInst %2 : undefined
+//IRGEN-NEXT:  %32 = HBCAllocObjectFromBufferInst 13 : number, "f" : string, 1 : number, "g" : string, 1 : number, "h" : string, 1 : number, "i" : string, 1 : number, "j" : string, 1 : number, "k" : string, 1 : number, "l" : string, 1 : number, "m" : string, 1 : number, "n" : string, 1 : number, "o" : string, 1 : number, "p" : string, 1 : number, "q" : string, 1 : number
+//IRGEN-NEXT:  %33 = StoreOwnPropertyInst %2 : undefined, %32 : object, 1 : number, true : boolean
+//IRGEN-NEXT:  %34 = StorePropertyInst %32 : object, %7 : object, "obj4" : string
+
+//IRGEN-NEXT:  %35 = ReturnInst %2 : undefined
 //IRGEN-NEXT:function_end
 
 //BCGEN-LABEL:Global String Table:
@@ -147,11 +124,35 @@ var obj4 = {
 //BCGEN-NEXT:[String 12]
 //BCGEN-NEXT:[String 13]
 //BCGEN-NEXT:[String 2]
-//BCGEN-NEXT:Object Value Buffer:
-//BCGEN-NEXT:[String 1]
-//BCGEN-NEXT:[int 1]
-//BCGEN-NEXT:null
-//BCGEN-NEXT:null
-//BCGEN-NEXT:true
-//BCGEN-NEXT:null
-//BCGEN-NEXT:[int 2]
+//BCGEN-NEXT:[String 13]
+//BCGEN-NEXT:[String 2]
+//BCGEN-NEXT:[String 5]
+//BCGEN-NEXT:[String 14]
+//BCGEN-NEXT:[String 8]
+//BCGEN-NEXT:[String 15]
+//BCGEN-NEXT:[String 4]
+//BCGEN-NEXT:[String 16]
+//BCGEN-NEXT:[String 17]
+//BCGEN-NEXT:[String 6]
+//BCGEN-NEXT:[String 21]
+//BCGEN-NEXT:[String 22]
+//BCGEN-LABEL:Object Value Buffer:
+//BCGEN-LABEL:[String 1]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:null
+//BCGEN-LABEL:null
+//BCGEN-LABEL:true
+//BCGEN-LABEL:null
+//BCGEN-LABEL:[int 2]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:[int 1]
+//BCGEN-LABEL:[int 1]

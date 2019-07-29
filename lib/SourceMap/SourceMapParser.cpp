@@ -17,11 +17,11 @@ using namespace hermes::parser;
 namespace hermes {
 
 std::unique_ptr<SourceMap> SourceMapParser::parse(
-    llvm::StringRef sourceMapContent) {
+    llvm::MemoryBufferRef sourceMap) {
   parser::JSLexer::Allocator alloc;
   parser::JSONFactory factory(alloc);
   SourceErrorManager sm;
-  parser::JSONParser jsonParser(factory, sourceMapContent, sm);
+  parser::JSONParser jsonParser(factory, sourceMap, sm);
 
   llvm::Optional<JSONValue *> parsedMap = jsonParser.parse();
   if (!parsedMap.hasValue()) {

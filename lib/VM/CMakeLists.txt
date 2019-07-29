@@ -52,6 +52,7 @@ set(source_files
   StringPrimitive.cpp
   StringView.cpp
   SymbolRegistry.cpp
+  TimeLimitMonitor.cpp
   TwineChar16.cpp
   StringRefUtils.cpp
   VTable.cpp

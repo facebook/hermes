@@ -39,6 +39,11 @@ static opt<std::string> Marker("marker", desc("marker to stop at"), init(""));
 static llvm::cl::alias
     MarkerA("m", desc("alias for -marker"), llvm::cl::aliasopt(Marker));
 
+static opt<std::string> SnapshotMarker(
+    "snapshot-at-marker",
+    desc("Take a snapshot at the given marker"),
+    init(""));
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
 static opt<bool>
     PrintStats("print-stats", desc("Print statistics"), init(false));
@@ -92,6 +97,15 @@ int main(int argc, char **argv) {
   try {
     TraceInterpreter::ExecuteOptions options;
     options.marker = cl::Marker;
+    std::string snapshotMarkerFileName;
+    if (!cl::SnapshotMarker.empty()) {
+      llvm::SmallVector<char, 16> tmpfile;
+      llvm::sys::fs::createTemporaryFile(
+          cl::SnapshotMarker, "heapsnapshot", tmpfile);
+      snapshotMarkerFileName = std::string{tmpfile.begin(), tmpfile.end()};
+      options.snapshotMarker = cl::SnapshotMarker;
+      options.snapshotMarkerFileName = snapshotMarkerFileName;
+    }
     options.reps = cl::Reps;
     options.minHeapSize = cl::MinHeapSize.bytes;
     options.maxHeapSize = cl::MaxHeapSize.bytes;
@@ -122,6 +136,10 @@ int main(int argc, char **argv) {
     if (cl::PrintStats)
       llvm::PrintStatistics(llvm::outs());
 #endif
+    if (!cl::SnapshotMarker.empty()) {
+      llvm::outs() << "Wrote heap snapshot for marker \"" << cl::SnapshotMarker
+                   << "\" to " << snapshotMarkerFileName << "\n";
+    }
     return 0;
   } catch (const std::invalid_argument &e) {
     std::cerr << "Invalid argument: " << e.what() << std::endl;

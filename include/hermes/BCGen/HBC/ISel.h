@@ -80,8 +80,8 @@ class HBCISel {
   /// targets and exception handler table.
   DenseMap<BasicBlock *, std::pair<offset_t, BasicBlock *>> basicBlockMap_{};
 
-  /// The set of BasicBlocks that require a debugger break check prefix.
-  DenseSet<const BasicBlock *> debuggerBreakCheckers_{};
+  /// The set of BasicBlocks that require an async break check prefix.
+  DenseSet<const BasicBlock *> asyncBreakChecks_{};
 
   /// The list of all jump instructions and jump targets that require
   /// relocation and address resolution.

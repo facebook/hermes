@@ -395,10 +395,6 @@ class JSArrayIterator : public JSObject {
  public:
   static ObjectVTable vt;
 
-  // We need one more slot for the [[IteratedObject]] property.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::ArrayIteratorKind;
   }

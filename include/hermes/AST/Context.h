@@ -173,6 +173,9 @@ class Context {
   /// Whether we should emit debug information. Default to false.
   DebugInfoSetting debugInfoSetting_{DebugInfoSetting::THROWING};
 
+  /// Whether to enforce runtime execution time limit or not.
+  bool checkTimeLimit_{false};
+
   CodeGenerationSettings codeGenerationSettings_;
 
   TypeCheckerSettings typeCheckerSettings_;
@@ -273,6 +276,13 @@ class Context {
   }
   DebugInfoSetting getDebugInfoSetting() const {
     return debugInfoSetting_;
+  }
+
+  void setCheckTimeLimit(bool check) {
+    checkTimeLimit_ = check;
+  }
+  bool getCheckTimeLimit() const {
+    return checkTimeLimit_;
   }
 
   void setUseCJSModules(bool useCJSModules) {

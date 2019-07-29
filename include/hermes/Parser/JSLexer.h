@@ -236,7 +236,7 @@ class JSLexer {
       StringTable *strTab = nullptr,
       bool strictMode = true)
       : JSLexer(
-            llvm::MemoryBuffer::getMemBuffer(input, "json"),
+            llvm::MemoryBuffer::getMemBuffer(input, "JavaScript"),
             sm,
             allocator,
             strTab,

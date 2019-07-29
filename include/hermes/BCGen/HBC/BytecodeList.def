@@ -489,8 +489,8 @@ DEFINE_OPCODE_1(ThrowIfUndefinedInst, Reg8)
 /// Implementation dependent debugger action.
 DEFINE_OPCODE_0(Debugger)
 
-/// Fast check for a debugger break request.
-DEFINE_OPCODE_0(DebuggerCheckBreak)
+/// Fast check for an async interrupt request.
+DEFINE_OPCODE_0(AsyncBreakCheck)
 
 /// Define a profile point.
 /// Arg1 is the function local profile point index. The first one will have the

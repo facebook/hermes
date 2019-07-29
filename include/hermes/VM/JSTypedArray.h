@@ -110,11 +110,11 @@ class JSTypedArrayBase : public JSObject {
     return buffer_.get(runtime);
   }
 
-  char *begin() {
+  uint8_t *begin() {
     assert(src_ && "Cannot get a nullptr");
     return src_;
   }
-  char *end() {
+  uint8_t *end() {
     assert(src_ && "Cannot get a nullptr");
     return src_ + getByteLength();
   }
@@ -144,6 +144,13 @@ class JSTypedArrayBase : public JSObject {
     assert(i < getLength() && "That index is out of bounds of this TypedArray");
     return *(reinterpret_cast<T *>(src_) + i);
   }
+
+  /// Allocates a buffer using \p runtime with \p length number of
+  /// elements, each of \p byteWidth size in bytes.
+  static ExecutionStatus createBuffer(
+      Runtime *runtime,
+      Handle<JSTypedArrayBase> selfObj,
+      size_type length);
 
   /// Sets the current buffer to a copy of \p src starting from
   /// \p byteOffset and going for \p srcSize bytes total.
@@ -196,20 +203,13 @@ class JSTypedArrayBase : public JSObject {
   /// It is sizeof(Typename).
   uint8_t byteWidth_;
   /// src_ is the pointer pointing directly into the buffer to be read from.
-  char *src_;
+  uint8_t *src_;
 
   explicit JSTypedArrayBase(
       Runtime *runtime,
       const VTable *vt,
       JSObject *parent,
       HiddenClass *clazz);
-
-  /// Allocates a buffer using \p runtime with \p length number of
-  /// elements, each of \p byteWidth size in bytes.
-  static ExecutionStatus createBuffer(
-      Runtime *runtime,
-      Handle<JSTypedArrayBase> selfObj,
-      size_type length);
 
   /// Sets the current buffer's contents to the contents of a buffer from
   /// another TypedArray \p src.
