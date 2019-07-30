@@ -13,14 +13,6 @@ namespace vm {
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
-/// DebuggerInternal.isDebuggerAttached getter.
-static CallResult<HermesValue>
-isDebuggerAttached(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// DebuggerInternal.shouldPauseOnThrow getter.
-static CallResult<HermesValue>
-shouldPauseOnThrow(void *ctx, Runtime *runtime, NativeArgs args);
-
 Handle<JSObject> createDebuggerInternalObject(Runtime *runtime) {
   Handle<JSObject> intern = toHandle(runtime, JSObject::create(runtime));
 
@@ -56,13 +48,13 @@ Handle<JSObject> createDebuggerInternalObject(Runtime *runtime) {
   return intern;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 isDebuggerAttached(void *ctx, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(
       runtime->getDebugger().getIsDebuggerAttached());
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 shouldPauseOnThrow(void *ctx, Runtime *runtime, NativeArgs args) {
   bool shouldPauseOnThrow = runtime->getDebugger().getPauseOnThrowMode() !=
       facebook::hermes::debugger::PauseOnThrowMode::None;

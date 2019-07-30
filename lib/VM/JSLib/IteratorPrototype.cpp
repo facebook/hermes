@@ -15,10 +15,6 @@
 namespace hermes {
 namespace vm {
 
-/// ES6.0 25.1.2.1.
-static CallResult<HermesValue>
-iteratorPrototypeIterator(void *, Runtime *runtime, NativeArgs args);
-
 void populateIteratorPrototype(Runtime *runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime->iteratorPrototype);
 
@@ -38,7 +34,7 @@ void populateIteratorPrototype(Runtime *runtime) {
       runtime->makeHandle<NativeFunction>(*iteratorFunc));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 iteratorPrototypeIterator(void *, Runtime *runtime, NativeArgs args) {
   return args.getThisArg();
 }

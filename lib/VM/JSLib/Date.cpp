@@ -19,84 +19,6 @@
 namespace hermes {
 namespace vm {
 
-/// @name Date
-/// @{
-
-/// ES5.1 15.9.2.1 and 15.3.3.1. Date() invoked as a function and as a
-/// constructor.
-static CallResult<HermesValue>
-dateConstructor(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.9.4.2
-static CallResult<HermesValue>
-dateParse(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.9.4.3
-static CallResult<HermesValue>
-dateUTC(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.9.4.4
-static CallResult<HermesValue>
-dateNow(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
-/// @name Date.prototype
-/// @{
-
-/// ES5.1 15.9.5.2 - 15.9.5.7
-/// Take a \p ctx, a toString function for dates, and runs it on the current
-/// date, returning a string value that is the result of calling the function.
-/// Used to reduce code duplication between toString, toDateString, etc.
-static CallResult<HermesValue>
-datePrototypeToStringHelper(void *ctx, Runtime *runtime, NativeArgs args);
-static CallResult<HermesValue>
-datePrototypeToLocaleStringHelper(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.9.5.8
-/// ES5.1 15.9.5.9 (valueOf() is identical to getTime())
-static CallResult<HermesValue>
-datePrototypeGetTime(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.9.5.10 - 15.9.5.25
-/// Takes a GetterOptions as the ctx, returns the value of the field.
-static CallResult<HermesValue>
-datePrototypeGetterHelper(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.9.5.27
-static CallResult<HermesValue>
-datePrototypeSetTime(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.9.5.28 - 15.9.5.35
-static CallResult<HermesValue>
-datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args);
-static CallResult<HermesValue>
-datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args);
-static CallResult<HermesValue>
-datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args);
-static CallResult<HermesValue>
-datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.9.5.36 - 15.9.5.41
-static CallResult<HermesValue>
-datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args);
-static CallResult<HermesValue>
-datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args);
-static CallResult<HermesValue>
-datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args);
-static CallResult<HermesValue>
-datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.9.5.44
-static CallResult<HermesValue>
-datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 20.3.4.45
-static CallResult<HermesValue>
-datePrototypeSymbolToPrimitive(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// @}
-
 //===----------------------------------------------------------------------===//
 /// Date.
 
@@ -486,7 +408,7 @@ static CallResult<double> makeTimeFromArgs(Runtime *runtime, NativeArgs args) {
       makeTime(fields[h], fields[min], fields[s], fields[milli]));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 dateConstructor(void *, Runtime *runtime, NativeArgs args) {
 #if defined(HERMESVM_SYNTH_REPLAY) || defined(HERMESVM_API_TRACE)
   auto *const storage = runtime->getCommonStorage();
@@ -574,8 +496,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
       StringPrimitive::create(runtime, str));
 }
 
-static CallResult<HermesValue>
-dateParse(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> dateParse(void *, Runtime *runtime, NativeArgs args) {
   auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -585,8 +506,7 @@ dateParse(void *, Runtime *runtime, NativeArgs args) {
           runtime, toHandle(runtime, std::move(*res)))));
 }
 
-static CallResult<HermesValue>
-dateUTC(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> dateUTC(void *, Runtime *runtime, NativeArgs args) {
   // With less than 2 arguments, this is implementation-dependent behavior.
   // We define the behavior that test262 expects here.
   if (args.getArgCount() == 0) {
@@ -609,8 +529,7 @@ dateUTC(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeDoubleValue(timeClip(*cr));
 }
 
-static CallResult<HermesValue>
-dateNow(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> dateNow(void *, Runtime *runtime, NativeArgs args) {
   double t = curTime();
 #ifdef HERMESVM_SYNTH_REPLAY
   auto *const storage = runtime->getCommonStorage();
@@ -625,7 +544,7 @@ dateNow(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeDoubleValue(t);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeToStringHelper(void *ctx, Runtime *runtime, NativeArgs args) {
   static ToStringOptions toStringOptions[] = {
       {dateTimeString, false, false},
@@ -663,7 +582,7 @@ datePrototypeToStringHelper(void *ctx, Runtime *runtime, NativeArgs args) {
       StringPrimitive::create(runtime, str));
 }
 
-static CallResult<HermesValue> datePrototypeToLocaleStringHelper(
+CallResult<HermesValue> datePrototypeToLocaleStringHelper(
     void *ctx,
     Runtime *runtime,
     NativeArgs args) {
@@ -693,7 +612,7 @@ static CallResult<HermesValue> datePrototypeToLocaleStringHelper(
   return StringPrimitive::create(runtime, str);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeGetTime(void *, Runtime *runtime, NativeArgs args) {
   auto *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
@@ -704,7 +623,7 @@ datePrototypeGetTime(void *, Runtime *runtime, NativeArgs args) {
   return JSDate::getPrimitiveValue(date, runtime);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeGetterHelper(void *ctx, Runtime *runtime, NativeArgs args) {
   static GetterOptions getterOptions[] = {
       {GetterOptions::Field::FULL_YEAR, false},
@@ -783,7 +702,7 @@ datePrototypeGetterHelper(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 /// Set the [[PrimitiveValue]] to the given time.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeSetTime(void *ctx, Runtime *runtime, NativeArgs args) {
   auto self = args.dyncastThis<JSDate>(runtime);
   if (!self) {
@@ -800,7 +719,7 @@ datePrototypeSetTime(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 /// Set the milliseconds as provided and return the new time value.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>(runtime);
@@ -831,7 +750,7 @@ datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args) {
 
 /// Takes 2 arguments: seconds, milliseconds.
 /// Set the seconds, optionally milliseconds, and return the new time.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>(runtime);
@@ -873,7 +792,7 @@ datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args) {
 
 /// Takes 3 arguments: minutes, seconds, milliseconds.
 /// Set the minutes, optionally seconds and milliseconds, return time.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>(runtime);
@@ -924,7 +843,7 @@ datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
 
 /// Takes 4 arguments: hours, minutes, seconds, milliseconds.
 /// Set the hours, optionally minutes, seconds, and milliseconds, return time.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>(runtime);
@@ -984,7 +903,7 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 /// Set the date of the month and return the new time.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>(runtime);
@@ -1015,7 +934,7 @@ datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args) {
 
 /// Takes 2 arguments: month and date.
 /// Set the month, optionally the date of the month, return the time.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>(runtime);
@@ -1055,7 +974,7 @@ datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args) {
 
 /// Takes 3 arguments: full year, month and date.
 /// Set the full year, optionally the month and date, return the time.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>(runtime);
@@ -1109,7 +1028,7 @@ datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
 /// Takes one argument: the partial (or full) year.
 /// Per spec, adds 1900 if the year is between 0 and 99.
 /// Sets the year to the new year and returns the time.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
   auto self = args.dyncastThis<JSDate>(runtime);
   if (!self) {
@@ -1140,7 +1059,7 @@ datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
   return v;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.getThisHandle();
   auto objRes = toObject(runtime, selfHandle);
@@ -1170,7 +1089,7 @@ datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args) {
   return Callable::executeCall0(toISO, runtime, O);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 datePrototypeSymbolToPrimitive(void *, Runtime *runtime, NativeArgs args) {
   auto O = args.dyncastThis<JSObject>(runtime);
   if (LLVM_UNLIKELY(!O)) {

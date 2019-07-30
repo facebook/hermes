@@ -13,10 +13,6 @@
 namespace hermes {
 namespace vm {
 
-/// ES6.0 25.2.1.1
-static CallResult<HermesValue>
-generatorFunctionConstructor(void *, Runtime *runtime, NativeArgs args);
-
 Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype);
 
@@ -75,7 +71,7 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
   return cons;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 generatorFunctionConstructor(void *, Runtime *runtime, NativeArgs args) {
   return createDynamicFunction(runtime, args, true);
 }

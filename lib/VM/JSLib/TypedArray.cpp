@@ -71,19 +71,6 @@ CallResult<Handle<JSTypedArrayBase>> typedArrayCreate(
   return newTypedArray;
 }
 
-/// @}
-
-/// @name TypedArrayBase
-/// @{
-
-CallResult<HermesValue>
-typedArrayBaseConstructor(void *, Runtime *runtime, NativeArgs) {
-  return runtime->raiseTypeError(
-      "TypedArray is abstract, it cannot be constructed");
-}
-
-/// @}
-
 /// @name %JSTypedArray%
 /// @{
 
@@ -232,6 +219,256 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
   // 10. Return O.
   return self.getHermesValue();
 }
+
+/// Implements the loop for map and filter. Template parameter \p MapOrFilter
+/// should be true for map, and false for filter.
+template <bool MapOrFilter>
+CallResult<HermesValue> mapFilterLoop(
+    Runtime *runtime,
+    Handle<JSTypedArrayBase> self,
+    Handle<Callable> callbackfn,
+    Handle<> thisArg,
+    Handle<JSArray> values,
+    JSTypedArrayBase::size_type insert,
+    JSTypedArrayBase::size_type len) {
+  MutableHandle<> storage(runtime);
+  GCScopeMarkerRAII marker{runtime};
+  for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
+    if (!self->attached(runtime)) {
+      // If the callback detached this TypedArray, raise a TypeError and don't
+      // continue.
+      return runtime->raiseTypeError("Detached the TypedArray in the callback");
+    }
+    auto val = JSObject::getOwnIndexed(*self, runtime, i);
+    auto callRes = Callable::executeCall3(
+        callbackfn,
+        runtime,
+        thisArg,
+        val,
+        HermesValue::encodeNumberValue(i),
+        self.getHermesValue());
+    if (callRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (MapOrFilter) {
+      // Map adds the result of the callback onto the array.
+      storage = *callRes;
+      JSArray::setElementAt(values, runtime, insert++, storage);
+    } else if (toBoolean(*callRes)) {
+      storage = val;
+      JSArray::setElementAt(values, runtime, insert++, storage);
+    }
+    marker.flush();
+  }
+  return HermesValue::encodeNumberValue(insert);
+}
+
+/// This is the sort model for use with TypedArray.prototype.sort.
+/// template param \p WithCompareFn should be true if the compare function is
+/// a valid callback to call, and false if it is null or undefined.
+template <bool WithCompareFn>
+class TypedArraySortModel : public SortModel {
+ protected:
+  /// Runtime to sort in.
+  Runtime *runtime_;
+
+  /// Scope to allocate handles in, gets destroyed with this.
+  GCScope gcScope_;
+
+  /// JS comparison function, return -1 for less, 0 for equal, 1 for greater.
+  /// If null, then use the built in < operator.
+  Handle<Callable> compareFn_;
+
+  /// Object to sort.
+  Handle<JSTypedArrayBase> self_;
+
+  MutableHandle<HermesValue> aHandle_;
+  MutableHandle<HermesValue> bHandle_;
+
+  /// Marker created after initializing all fields so handles allocated later
+  /// can be flushed.
+  GCScope::Marker gcMarker_;
+
+ public:
+  TypedArraySortModel(
+      Runtime *runtime,
+      Handle<JSTypedArrayBase> obj,
+      Handle<Callable> compareFn)
+      : runtime_(runtime),
+        gcScope_(runtime),
+        compareFn_(compareFn),
+        self_(obj),
+        aHandle_(runtime),
+        bHandle_(runtime),
+        gcMarker_(gcScope_.createMarker()) {}
+
+  // Swap elements at indices a and b.
+  virtual ExecutionStatus swap(uint32_t a, uint32_t b) override {
+    aHandle_ = JSObject::getOwnIndexed(*self_, runtime_, a);
+    bHandle_ = JSObject::getOwnIndexed(*self_, runtime_, b);
+    if (JSObject::setOwnIndexed(self_, runtime_, a, bHandle_) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (JSObject::setOwnIndexed(self_, runtime_, b, aHandle_) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return ExecutionStatus::RETURNED;
+  }
+
+  // Compare elements at index a and at index b.
+  virtual CallResult<bool> less(uint32_t a, uint32_t b) override {
+    GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
+    HermesValue aVal = JSObject::getOwnIndexed(*self_, runtime_, a);
+    HermesValue bVal = JSObject::getOwnIndexed(*self_, runtime_, b);
+    if (!WithCompareFn) {
+      return aVal.getNumber() < bVal.getNumber();
+    }
+    assert(compareFn_ && "Cannot use this version if the compareFn is null");
+    // ES7 22.2.3.26 2a.
+    // Let v be toNumber_RJS(Call(comparefn, undefined, x, y)).
+    auto callRes = Callable::executeCall2(
+        compareFn_, runtime_, runtime_->getUndefinedValue(), aVal, bVal);
+    if (callRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto intRes = toNumber_RJS(runtime_, runtime_->makeHandle(*callRes));
+    if (intRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // ES7 22.2.3.26 2b.
+    // If IsDetachedBuffer(buffer) is true, throw a TypeError exception.
+    if (LLVM_UNLIKELY(!self_->attached(runtime_))) {
+      return runtime_->raiseTypeError("Callback to sort() detached the array");
+    }
+    return intRes->getNumber() < 0;
+  }
+};
+
+// ES7 22.2.3.23.1
+CallResult<HermesValue> typedArrayPrototypeSetObject(
+    Runtime *runtime,
+    Handle<JSTypedArrayBase> self,
+    Handle<> obj,
+    double offset) {
+  double targetLength = self->getLength();
+  auto objRes = toObject(runtime, obj);
+  if (objRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto src = runtime->makeHandle<JSObject>(objRes.getValue());
+  auto propRes = JSObject::getNamed_RJS(
+      src, runtime, Predefined::getSymbolID(Predefined::length));
+  if (propRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
+  if (intRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint64_t srcLength = intRes->getNumberAs<uint64_t>();
+  if (srcLength + offset > targetLength) {
+    return runtime->raiseRangeError(
+        "The sum of the length of the given object "
+        "and the offset cannot be greater than the length "
+        "of this TypedArray");
+  }
+  // Read everything from the other array and write it into self starting from
+  // offset.
+  GCScope scope(runtime);
+  MutableHandle<> k(runtime, HermesValue::encodeNumberValue(0));
+  auto marker = scope.createMarker();
+  for (; k->getNumberAs<uint64_t>() < srcLength;
+       k = HermesValue::encodeNumberValue(k->getNumberAs<uint64_t>() + 1)) {
+    if ((propRes = JSObject::getComputed_RJS(src, runtime, k)) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto kValue = runtime->makeHandle(*propRes);
+    if (JSObject::setOwnIndexed(self, runtime, offset++, kValue) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    scope.flushToMarker(marker);
+  }
+  return HermesValue::encodeUndefinedValue();
+}
+
+// ES7 22.2.3.23.2
+CallResult<HermesValue> typedArrayPrototypeSetTypedArray(
+    Runtime *runtime,
+    Handle<JSTypedArrayBase> self,
+    Handle<JSTypedArrayBase> src,
+    double offset) {
+  if (!src->attached(runtime)) {
+    return runtime->raiseTypeError(
+        "The src TypedArray must be attached in order to use set()");
+  }
+  const JSTypedArrayBase::size_type srcLength = src->getLength();
+  if (static_cast<double>(srcLength) + offset > self->getLength()) {
+    return runtime->raiseRangeError(
+        "The sum of the length of the given TypedArray "
+        "and the offset cannot be greater than the length "
+        "of this TypedArray");
+  }
+  // Since `src` is immutable, put the rest of the function into a continuation
+  // to be called with a different `src` parameter.
+  if (self->getBuffer(runtime)->getDataBlock() !=
+      src->getBuffer(runtime)->getDataBlock()) {
+    if (JSTypedArrayBase::setToCopyOfTypedArray(
+            runtime, self, offset, src, 0, srcLength) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return HermesValue::encodeUndefinedValue();
+  }
+  // 23. If SameValue(srcBuffer, targetBuffer) is true, then
+  // a. Let srcBuffer be ? CloneArrayBuffer(targetBuffer, srcByteOffset,
+  // %ArrayBuffer%).
+  // If the two arrays have overlapping storage, make a copy of the source
+  // array.
+  // TODO: This could be implemented via a directional copy which either
+  // copies forwards or backwards depending on how the regions overlap.
+  auto possibleTA = JSTypedArrayBase::allocate(src, runtime, srcLength);
+  if (possibleTA == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto newSrc = possibleTA.getValue();
+  if (JSTypedArrayBase::setToCopyOfBuffer(
+          runtime,
+          newSrc,
+          0,
+          runtime->makeHandle(src->getBuffer(runtime)),
+          src->getByteOffset(runtime),
+          src->getByteLength()) == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Now copy from newSrc into self.
+  if (JSTypedArrayBase::setToCopyOfTypedArray(
+          runtime, self, offset, newSrc, 0, srcLength) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return HermesValue::encodeUndefinedValue();
+}
+
+/// @}
+
+} // namespace
+
+/// @}
+
+/// @name TypedArrayBase
+/// @{
+
+CallResult<HermesValue>
+typedArrayBaseConstructor(void *, Runtime *runtime, NativeArgs) {
+  return runtime->raiseTypeError(
+      "TypedArray is abstract, it cannot be constructed");
+}
+
+/// @}
 
 template <typename T, CellKind C>
 CallResult<HermesValue>
@@ -422,7 +659,7 @@ typedArrayPrototypeByteLength(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// ES6 22.2.3.3
-static CallResult<HermesValue>
+CallResult<HermesValue>
 typedArrayPrototypeByteOffset(void *, Runtime *runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
@@ -436,7 +673,7 @@ typedArrayPrototypeByteOffset(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// ES6 22.2.3.5
-static CallResult<HermesValue>
+CallResult<HermesValue>
 typedArrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), true) == ExecutionStatus::EXCEPTION) {
@@ -540,17 +777,6 @@ typedArrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   }
 
   return O.getHermesValue();
-}
-
-/// ES6 22.2.3.17
-CallResult<HermesValue>
-typedArrayPrototypeLength(void *, Runtime *runtime, NativeArgs args) {
-  if (JSTypedArrayBase::validateTypedArray(
-          runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto self = args.vmcastThis<JSTypedArrayBase>();
-  return HermesValue::encodeNumberValue(self->getLength());
 }
 
 // ES6 22.2.3.7 and 22.2.3.25 (also see Array.prototype.every/some)
@@ -669,107 +895,6 @@ typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
       break;
   }
   return self.getHermesValue();
-}
-
-/// Implements the loop for map and filter. Template parameter \p MapOrFilter
-/// should be true for map, and false for filter.
-template <bool MapOrFilter>
-CallResult<HermesValue> mapFilterLoop(
-    Runtime *runtime,
-    Handle<JSTypedArrayBase> self,
-    Handle<Callable> callbackfn,
-    Handle<> thisArg,
-    Handle<JSArray> values,
-    JSTypedArrayBase::size_type insert,
-    JSTypedArrayBase::size_type len) {
-  MutableHandle<> storage(runtime);
-  GCScopeMarkerRAII marker{runtime};
-  for (JSTypedArrayBase::size_type i = 0; i < len; ++i) {
-    if (!self->attached(runtime)) {
-      // If the callback detached this TypedArray, raise a TypeError and don't
-      // continue.
-      return runtime->raiseTypeError("Detached the TypedArray in the callback");
-    }
-    auto val = JSObject::getOwnIndexed(*self, runtime, i);
-    auto callRes = Callable::executeCall3(
-        callbackfn,
-        runtime,
-        thisArg,
-        val,
-        HermesValue::encodeNumberValue(i),
-        self.getHermesValue());
-    if (callRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if (MapOrFilter) {
-      // Map adds the result of the callback onto the array.
-      storage = *callRes;
-      JSArray::setElementAt(values, runtime, insert++, storage);
-    } else if (toBoolean(*callRes)) {
-      storage = val;
-      JSArray::setElementAt(values, runtime, insert++, storage);
-    }
-    marker.flush();
-  }
-  return HermesValue::encodeNumberValue(insert);
-}
-
-CallResult<HermesValue>
-typedArrayPrototypeMapFilter(void *ctx, Runtime *runtime, NativeArgs args) {
-  GCScope gcScope{runtime};
-
-  // Whether this call is "map" or "filter".
-  bool map = static_cast<bool>(ctx);
-  if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
-      ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto self = args.vmcastThis<JSTypedArrayBase>();
-  JSTypedArrayBase::size_type len = self->getLength();
-  auto callbackfn = args.dyncastArg<Callable>(runtime, 0);
-  if (!callbackfn) {
-    return runtime->raiseTypeError("callbackfn must be a Callable");
-  }
-  auto thisArg = args.getArgHandle(runtime, 1);
-  // Can't use a vector since this could store an unbounded number of handles.
-  auto arrRes = JSArray::create(runtime, len, 0);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto values = toHandle(runtime, std::move(*arrRes));
-  JSTypedArrayBase::size_type insert = 0;
-  CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
-  if (map) {
-    if ((res = mapFilterLoop<true>(
-             runtime, self, callbackfn, thisArg, values, insert, len)) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-  } else {
-    if ((res = mapFilterLoop<false>(
-             runtime, self, callbackfn, thisArg, values, insert, len)) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-  }
-  insert = res->getNumberAs<JSTypedArrayBase::size_type>();
-  // Now create a new TypedArray of the same kind and fill it with the values.
-  auto result = JSTypedArrayBase::allocateSpecies(runtime, self, insert);
-  if (result == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto TA = result.getValue();
-  MutableHandle<> storage(runtime);
-  auto marker = gcScope.createMarker();
-  for (JSTypedArrayBase::size_type i = 0; i < insert; ++i) {
-    storage = values->at(runtime, i);
-    if (JSObject::setOwnIndexed(TA, runtime, i, storage) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    gcScope.flushToMarker(marker);
-  }
-  return TA.getHermesValue();
 }
 
 CallResult<HermesValue>
@@ -911,6 +1036,89 @@ typedArrayPrototypeIndexOf(void *ctx, Runtime *runtime, NativeArgs args) {
     }
   }
   return ret();
+}
+
+CallResult<HermesValue>
+typedArrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
+  IterationKind kind = *reinterpret_cast<IterationKind *>(&ctx);
+  assert(
+      kind <= IterationKind::NumKinds &&
+      "typeArrayPrototypeIterator with wrong kind");
+  if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto self = args.vmcastThis<JSTypedArrayBase>();
+  return JSArrayIterator::create(runtime, self, kind);
+}
+
+CallResult<HermesValue>
+typedArrayPrototypeMapFilter(void *ctx, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // Whether this call is "map" or "filter".
+  bool map = static_cast<bool>(ctx);
+  if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto self = args.vmcastThis<JSTypedArrayBase>();
+  JSTypedArrayBase::size_type len = self->getLength();
+  auto callbackfn = args.dyncastArg<Callable>(runtime, 0);
+  if (!callbackfn) {
+    return runtime->raiseTypeError("callbackfn must be a Callable");
+  }
+  auto thisArg = args.getArgHandle(runtime, 1);
+  // Can't use a vector since this could store an unbounded number of handles.
+  auto arrRes = JSArray::create(runtime, len, 0);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto values = toHandle(runtime, std::move(*arrRes));
+  JSTypedArrayBase::size_type insert = 0;
+  CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
+  if (map) {
+    if ((res = mapFilterLoop<true>(
+             runtime, self, callbackfn, thisArg, values, insert, len)) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    if ((res = mapFilterLoop<false>(
+             runtime, self, callbackfn, thisArg, values, insert, len)) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  insert = res->getNumberAs<JSTypedArrayBase::size_type>();
+  // Now create a new TypedArray of the same kind and fill it with the values.
+  auto result = JSTypedArrayBase::allocateSpecies(runtime, self, insert);
+  if (result == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto TA = result.getValue();
+  MutableHandle<> storage(runtime);
+  auto marker = gcScope.createMarker();
+  for (JSTypedArrayBase::size_type i = 0; i < insert; ++i) {
+    storage = values->at(runtime, i);
+    if (JSObject::setOwnIndexed(TA, runtime, i, storage) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    gcScope.flushToMarker(marker);
+  }
+  return TA.getHermesValue();
+}
+
+/// ES6 22.2.3.17
+CallResult<HermesValue>
+typedArrayPrototypeLength(void *, Runtime *runtime, NativeArgs args) {
+  if (JSTypedArrayBase::validateTypedArray(
+          runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto self = args.vmcastThis<JSTypedArrayBase>();
+  return HermesValue::encodeNumberValue(self->getLength());
 }
 
 CallResult<HermesValue>
@@ -1085,89 +1293,6 @@ typedArrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
   return self.getHermesValue();
 }
 
-/// This is the sort model for use with TypedArray.prototype.sort.
-/// template param \p WithCompareFn should be true if the compare function is
-/// a valid callback to call, and false if it is null or undefined.
-template <bool WithCompareFn>
-class TypedArraySortModel : public SortModel {
- protected:
-  /// Runtime to sort in.
-  Runtime *runtime_;
-
-  /// Scope to allocate handles in, gets destroyed with this.
-  GCScope gcScope_;
-
-  /// JS comparison function, return -1 for less, 0 for equal, 1 for greater.
-  /// If null, then use the built in < operator.
-  Handle<Callable> compareFn_;
-
-  /// Object to sort.
-  Handle<JSTypedArrayBase> self_;
-
-  MutableHandle<HermesValue> aHandle_;
-  MutableHandle<HermesValue> bHandle_;
-
-  /// Marker created after initializing all fields so handles allocated later
-  /// can be flushed.
-  GCScope::Marker gcMarker_;
-
- public:
-  TypedArraySortModel(
-      Runtime *runtime,
-      Handle<JSTypedArrayBase> obj,
-      Handle<Callable> compareFn)
-      : runtime_(runtime),
-        gcScope_(runtime),
-        compareFn_(compareFn),
-        self_(obj),
-        aHandle_(runtime),
-        bHandle_(runtime),
-        gcMarker_(gcScope_.createMarker()) {}
-
-  // Swap elements at indices a and b.
-  virtual ExecutionStatus swap(uint32_t a, uint32_t b) override {
-    aHandle_ = JSObject::getOwnIndexed(*self_, runtime_, a);
-    bHandle_ = JSObject::getOwnIndexed(*self_, runtime_, b);
-    if (JSObject::setOwnIndexed(self_, runtime_, a, bHandle_) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if (JSObject::setOwnIndexed(self_, runtime_, b, aHandle_) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return ExecutionStatus::RETURNED;
-  }
-
-  // Compare elements at index a and at index b.
-  virtual CallResult<bool> less(uint32_t a, uint32_t b) override {
-    GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
-    HermesValue aVal = JSObject::getOwnIndexed(*self_, runtime_, a);
-    HermesValue bVal = JSObject::getOwnIndexed(*self_, runtime_, b);
-    if (!WithCompareFn) {
-      return aVal.getNumber() < bVal.getNumber();
-    }
-    assert(compareFn_ && "Cannot use this version if the compareFn is null");
-    // ES7 22.2.3.26 2a.
-    // Let v be toNumber_RJS(Call(comparefn, undefined, x, y)).
-    auto callRes = Callable::executeCall2(
-        compareFn_, runtime_, runtime_->getUndefinedValue(), aVal, bVal);
-    if (callRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto intRes = toNumber_RJS(runtime_, runtime_->makeHandle(*callRes));
-    if (intRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    // ES7 22.2.3.26 2b.
-    // If IsDetachedBuffer(buffer) is true, throw a TypeError exception.
-    if (LLVM_UNLIKELY(!self_->attached(runtime_))) {
-      return runtime_->raiseTypeError("Callback to sort() detached the array");
-    }
-    return intRes->getNumber() < 0;
-  }
-};
-
 /// ES7 22.2.3.26
 CallResult<HermesValue>
 typedArrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
@@ -1198,113 +1323,6 @@ typedArrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
   }
   return self.getHermesValue();
-}
-
-// ES7 22.2.3.23.1
-CallResult<HermesValue> typedArrayPrototypeSetObject(
-    Runtime *runtime,
-    Handle<JSTypedArrayBase> self,
-    Handle<> obj,
-    double offset) {
-  double targetLength = self->getLength();
-  auto objRes = toObject(runtime, obj);
-  if (objRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto src = runtime->makeHandle<JSObject>(objRes.getValue());
-  auto propRes = JSObject::getNamed_RJS(
-      src, runtime, Predefined::getSymbolID(Predefined::length));
-  if (propRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto intRes = toLength(runtime, runtime->makeHandle(*propRes));
-  if (intRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  uint64_t srcLength = intRes->getNumberAs<uint64_t>();
-  if (srcLength + offset > targetLength) {
-    return runtime->raiseRangeError(
-        "The sum of the length of the given object "
-        "and the offset cannot be greater than the length "
-        "of this TypedArray");
-  }
-  // Read everything from the other array and write it into self starting from
-  // offset.
-  GCScope scope(runtime);
-  MutableHandle<> k(runtime, HermesValue::encodeNumberValue(0));
-  auto marker = scope.createMarker();
-  for (; k->getNumberAs<uint64_t>() < srcLength;
-       k = HermesValue::encodeNumberValue(k->getNumberAs<uint64_t>() + 1)) {
-    if ((propRes = JSObject::getComputed_RJS(src, runtime, k)) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto kValue = runtime->makeHandle(*propRes);
-    if (JSObject::setOwnIndexed(self, runtime, offset++, kValue) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    scope.flushToMarker(marker);
-  }
-  return HermesValue::encodeUndefinedValue();
-}
-
-// ES7 22.2.3.23.2
-CallResult<HermesValue> typedArrayPrototypeSetTypedArray(
-    Runtime *runtime,
-    Handle<JSTypedArrayBase> self,
-    Handle<JSTypedArrayBase> src,
-    double offset) {
-  if (!src->attached(runtime)) {
-    return runtime->raiseTypeError(
-        "The src TypedArray must be attached in order to use set()");
-  }
-  const JSTypedArrayBase::size_type srcLength = src->getLength();
-  if (static_cast<double>(srcLength) + offset > self->getLength()) {
-    return runtime->raiseRangeError(
-        "The sum of the length of the given TypedArray "
-        "and the offset cannot be greater than the length "
-        "of this TypedArray");
-  }
-  // Since `src` is immutable, put the rest of the function into a continuation
-  // to be called with a different `src` parameter.
-  if (self->getBuffer(runtime)->getDataBlock() !=
-      src->getBuffer(runtime)->getDataBlock()) {
-    if (JSTypedArrayBase::setToCopyOfTypedArray(
-            runtime, self, offset, src, 0, srcLength) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return HermesValue::encodeUndefinedValue();
-  }
-  // 23. If SameValue(srcBuffer, targetBuffer) is true, then
-  // a. Let srcBuffer be ? CloneArrayBuffer(targetBuffer, srcByteOffset,
-  // %ArrayBuffer%).
-  // If the two arrays have overlapping storage, make a copy of the source
-  // array.
-  // TODO: This could be implemented via a directional copy which either
-  // copies forwards or backwards depending on how the regions overlap.
-  auto possibleTA = JSTypedArrayBase::allocate(src, runtime, srcLength);
-  if (possibleTA == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto newSrc = possibleTA.getValue();
-  if (JSTypedArrayBase::setToCopyOfBuffer(
-          runtime,
-          newSrc,
-          0,
-          runtime->makeHandle(src->getBuffer(runtime)),
-          src->getByteOffset(runtime),
-          src->getByteLength()) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  // Now copy from newSrc into self.
-  if (JSTypedArrayBase::setToCopyOfTypedArray(
-          runtime, self, offset, newSrc, 0, srcLength) ==
-      ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  return HermesValue::encodeUndefinedValue();
 }
 
 // ES7 22.2.3.23
@@ -1420,6 +1438,27 @@ typedArrayPrototypeSubarray(void *, Runtime *runtime, NativeArgs args) {
   return result.getValue().getHermesValue();
 }
 
+CallResult<HermesValue> typedArrayPrototypeSymbolToStringTag(
+    void *,
+    Runtime *runtime,
+    NativeArgs args) {
+  auto O = args.dyncastThis<JSObject>(runtime);
+  if (!O) {
+    return HermesValue::encodeUndefinedValue();
+  }
+
+  // 4. Let name be the value of O’s [[TypedArrayName]] internal slot.
+#define TYPED_ARRAY(name, type)                                               \
+  if (vmisa<JSTypedArray<type, CellKind::name##ArrayKind>>(*O)) {             \
+    return HermesValue::encodeStringValue(runtime->getStringPrimFromSymbolID( \
+        JSTypedArray<type, CellKind::name##ArrayKind>::getName(runtime)));    \
+  }
+#include "hermes/VM/TypedArrays.def"
+
+  // 3. If O does not have a [[TypedArrayName]] internal slot, return undefined.
+  return HermesValue::encodeUndefinedValue();
+}
+
 CallResult<HermesValue>
 typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
@@ -1506,45 +1545,6 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   }
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
-
-CallResult<HermesValue>
-typedArrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
-  IterationKind kind = *reinterpret_cast<IterationKind *>(&ctx);
-  assert(
-      kind <= IterationKind::NumKinds &&
-      "typeArrayPrototypeIterator with wrong kind");
-  if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
-      ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto self = args.vmcastThis<JSTypedArrayBase>();
-  return JSArrayIterator::create(runtime, self, kind);
-}
-
-CallResult<HermesValue> typedArrayPrototypeSymbolToStringTag(
-    void *,
-    Runtime *runtime,
-    NativeArgs args) {
-  auto O = args.dyncastThis<JSObject>(runtime);
-  if (!O) {
-    return HermesValue::encodeUndefinedValue();
-  }
-
-  // 4. Let name be the value of O’s [[TypedArrayName]] internal slot.
-#define TYPED_ARRAY(name, type)                                               \
-  if (vmisa<JSTypedArray<type, CellKind::name##ArrayKind>>(*O)) {             \
-    return HermesValue::encodeStringValue(runtime->getStringPrimFromSymbolID( \
-        JSTypedArray<type, CellKind::name##ArrayKind>::getName(runtime)));    \
-  }
-#include "hermes/VM/TypedArrays.def"
-
-  // 3. If O does not have a [[TypedArrayName]] internal slot, return undefined.
-  return HermesValue::encodeUndefinedValue();
-}
-
-/// @}
-
-} // namespace
 
 Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime->typedArrayBasePrototype);

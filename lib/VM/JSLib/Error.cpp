@@ -17,27 +17,6 @@
 namespace hermes {
 namespace vm {
 
-/// @name Error
-/// @{
-
-/// ES5.1 15.11.1 and 15.11.2. Error() invoked as a function and as a
-/// constructor.
-/// Also define all the ES5.1 15.11.6 native error types constructors.
-#define ALL_ERROR_TYPE(name)                        \
-  static CallResult<HermesValue> name##Constructor( \
-      void *, Runtime *runtime, NativeArgs args);
-#include "hermes/VM/NativeErrorTypes.def"
-
-/// @}
-
-/// @name Error.prototype
-/// @{
-
-/// 15.11.4.4
-static CallResult<HermesValue>
-errorPrototypeToString(void *, Runtime *runtime, NativeArgs args);
-/// @}
-
 //===----------------------------------------------------------------------===//
 /// ErrorObject.
 
@@ -147,7 +126,7 @@ static CallResult<HermesValue> constructErrorObject(
 // native calls, and their interface are restricted. No extra parameters
 // can be passed in.
 #define ALL_ERROR_TYPE(name)                                      \
-  static CallResult<HermesValue> name##Constructor(               \
+  CallResult<HermesValue> name##Constructor(                      \
       void *, Runtime *runtime, NativeArgs args) {                \
     return constructErrorObject(                                  \
         runtime,                                                  \
@@ -156,7 +135,7 @@ static CallResult<HermesValue> constructErrorObject(
   }
 #include "hermes/VM/NativeErrorTypes.def"
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 errorPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {

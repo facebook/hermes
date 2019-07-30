@@ -19,74 +19,6 @@
 namespace hermes {
 namespace vm {
 
-/// @name RegExp
-/// @{
-
-/// ES5.1 15.10.3 and 15.10.4 The RegExp constructor called as a function and
-/// constructor.
-static CallResult<HermesValue>
-regExpConstructor(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
-/// @name RegExp.protoype
-/// @{
-
-/// ES5.1 15.10.6.1 - 15.10.6.3 Properties of RegExp prototype object
-static CallResult<HermesValue>
-regExpPrototypeExec(void *, Runtime *runtime, NativeArgs args);
-
-static CallResult<HermesValue>
-regExpPrototypeTest(void *, Runtime *runtime, NativeArgs args);
-
-static CallResult<HermesValue>
-regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6 21.2.5.10
-/// RegExp.source getter.
-static CallResult<HermesValue>
-regExpSourceGetter(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// ES6 21.2.5.3
-/// RegExp.flags getter.
-static CallResult<HermesValue>
-regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// RegExp getters for flags properties: global, multiline, ignoreCase
-/// ES6 21.2.5.4, 21.2.5.5, 21.2.5.7
-static CallResult<HermesValue>
-regExpFlagPropertyGetter(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// RegExp.$1-$9 getter.
-static CallResult<HermesValue>
-regExpDollarNumberGetter(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// RegExp.leftContext getter.
-static CallResult<HermesValue>
-regExpLeftContextGetter(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// RegExp.rightContext getter.
-static CallResult<HermesValue>
-regExpRightContextGetter(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// RegExp.input getter.
-static CallResult<HermesValue>
-regExpInputGetter(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// RegExp.lastMatch getter.
-static CallResult<HermesValue>
-regExpLastMatchGetter(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// RegExp.lastParen getter.
-static CallResult<HermesValue>
-regExpLastParenGetter(void *ctx, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 21.2.5.6
-static CallResult<HermesValue>
-regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
 /// Internal methods
 /// {@
 
@@ -118,20 +50,6 @@ static uint64_t advanceStringIndex(
     PseudoHandle<StringPrimitive> /* S */,
     uint64_t index,
     bool unicode);
-
-/// ES6.0 21.2.5.9
-static CallResult<HermesValue>
-regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 21.2.5.8
-static CallResult<HermesValue>
-regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 21.2.5.11
-/// Note: this implementation does not fully observe ES6 spec behaviors because
-/// of lack of support for sticky matching and species constructors.
-static CallResult<HermesValue>
-regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args);
 
 /// @}
 
@@ -325,7 +243,7 @@ regExpCreate(Runtime *runtime, Handle<> P, Handle<> F) {
       runtime, runtime->makeHandle(objRes.getValue()), P, F);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
   Handle<> pattern = args.getArgHandle(runtime, 0);
   Handle<> flags = args.getArgHandle(runtime, 1);
@@ -666,7 +584,7 @@ regExpExec(Runtime *runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
 
 /// Implementation of RegExp.prototype.exec
 /// Returns an Array if a match is found, null if no match is found
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpPrototypeExec(void *, Runtime *runtime, NativeArgs args) {
   Handle<JSRegExp> regexp = args.dyncastThis<JSRegExp>(runtime);
   if (!regexp) {
@@ -696,7 +614,7 @@ regExpPrototypeExec(void *, Runtime *runtime, NativeArgs args) {
 /// Returns true if a match is found, false otherwise
 /// TODO optimization: avoid constructing the submatch array. Instead simply
 /// check for a match.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpPrototypeTest(void *context, Runtime *runtime, NativeArgs args) {
   CallResult<HermesValue> res = regExpPrototypeExec(context, runtime, args);
   if (res == ExecutionStatus::EXCEPTION)
@@ -708,7 +626,7 @@ regExpPrototypeTest(void *context, Runtime *runtime, NativeArgs args) {
 
 // ES6 21.2.5.14
 // Note there is no requirement that 'this' be a RegExp object.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   Handle<JSObject> regexp = args.dyncastThis<JSObject>(runtime);
   if (!regexp) {
@@ -755,7 +673,7 @@ regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 
 /// Return the ith capture group in the most recent succesful RegExp search.
 /// If there was no ith capture group, return "".
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpDollarNumberGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   size_t i = reinterpret_cast<size_t>(ctx);
 
@@ -779,7 +697,7 @@ regExpDollarNumberGetter(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 // ES8 21.2.5.10
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpSourceGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   // "If Type(R) is not Object, throw a TypeError exception"
   if (!args.dyncastThis<JSObject>(runtime)) {
@@ -813,7 +731,7 @@ regExpSourceGetter(void *ctx, Runtime *runtime, NativeArgs args) {
 
 // ES8 21.2.5.3
 // Note that we don't yet support unicode or sticky.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   // Let R be the this value.
   // If Type(R) is not Object, throw a TypeError exception
@@ -855,7 +773,7 @@ regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 // ES8 21.2.5.4, 21.2.5.5, 21.2.5.7
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpFlagPropertyGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   // Note in ES8, the standard specifies that the RegExp prototype object is not
   // a RegExp but that these accessors check for it as a special case.
@@ -891,7 +809,7 @@ regExpFlagPropertyGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   }
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpLeftContextGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   auto match = runtime->regExpLastMatch;
   if (match.size() >= 1 && vmisa<StringPrimitive>(runtime->regExpLastInput)) {
@@ -907,7 +825,7 @@ regExpLeftContextGetter(void *ctx, Runtime *runtime, NativeArgs args) {
       runtime->getPredefinedString(Predefined::emptyString));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpRightContextGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   auto match = runtime->regExpLastMatch;
   if (match.size() >= 1 && vmisa<StringPrimitive>(runtime->regExpLastInput)) {
@@ -927,7 +845,7 @@ regExpRightContextGetter(void *ctx, Runtime *runtime, NativeArgs args) {
       runtime->getPredefinedString(Predefined::emptyString));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpInputGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   if (vmisa<StringPrimitive>(runtime->regExpLastInput)) {
     return runtime->regExpLastInput;
@@ -937,7 +855,7 @@ regExpInputGetter(void *ctx, Runtime *runtime, NativeArgs args) {
       runtime->getPredefinedString(Predefined::emptyString));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpLastMatchGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   auto match = runtime->regExpLastMatch;
   if (match.size() >= 1 && vmisa<StringPrimitive>(runtime->regExpLastInput)) {
@@ -954,7 +872,7 @@ regExpLastMatchGetter(void *ctx, Runtime *runtime, NativeArgs args) {
       runtime->getPredefinedString(Predefined::emptyString));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpLastParenGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   auto match = runtime->regExpLastMatch;
   if (match.size() >= 2 && vmisa<StringPrimitive>(runtime->regExpLastInput)) {
@@ -976,7 +894,7 @@ regExpLastParenGetter(void *ctx, Runtime *runtime, NativeArgs args) {
 
 // TODO: consider writing this in JS.
 /// ES6.0 21.2.5.6
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
@@ -1106,7 +1024,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// ES6.0 21.2.5.9
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
@@ -1296,7 +1214,7 @@ CallResult<HermesValue> getSubstitution(
 }
 
 /// ES6.0 21.2.5.8
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
@@ -1631,7 +1549,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
 /// of lack of support for sticky matching and species constructors.
 // TODO(T35212035): make this ES6 compliant once we support sticky matching and
 // species constructor.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
   // 2. If Type(rx) is not Object, throw a TypeError exception.
   if (LLVM_UNLIKELY(!vmisa<JSObject>(args.getThisArg()))) {

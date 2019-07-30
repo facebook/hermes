@@ -17,29 +17,6 @@
 namespace hermes {
 namespace vm {
 
-/// @name Boolean
-/// @{
-
-/// ES5.1 15.6.1.1 and 15.6.2.1. Boolean() invoked as a function and as a
-/// constructor.
-static CallResult<HermesValue>
-booleanConstructor(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
-/// @name Boolean.prototype
-/// @{
-
-/// ES5.1 15.6.4.2.
-static CallResult<HermesValue>
-booleanPrototypeToString(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.6.4.3.
-static CallResult<HermesValue>
-booleanPrototypeValueOf(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
 Handle<JSObject> createBooleanConstructor(Runtime *runtime) {
   auto booleanPrototype = Handle<JSBoolean>::vmcast(&runtime->booleanPrototype);
 
@@ -70,7 +47,7 @@ Handle<JSObject> createBooleanConstructor(Runtime *runtime) {
   return cons;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 booleanConstructor(void *, Runtime *runtime, NativeArgs args) {
   bool value = toBoolean(args.getArg(0));
 
@@ -84,7 +61,7 @@ booleanConstructor(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(value);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 booleanPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   bool value;
   if (args.getThisArg().isBool()) {
@@ -102,7 +79,7 @@ booleanPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
             : runtime->getPredefinedString(Predefined::falseStr));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 booleanPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
   if (args.getThisArg().isBool()) {
     return args.getThisArg();

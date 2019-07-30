@@ -23,8 +23,7 @@ namespace hermes {
 namespace vm {
 
 /// ES5.1 15.1.2.4
-static CallResult<HermesValue>
-isNaN(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> isNaN(void *, Runtime *runtime, NativeArgs args) {
   auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -33,8 +32,7 @@ isNaN(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// ES5.1 15.1.2.5
-static CallResult<HermesValue>
-isFinite(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> isFinite(void *, Runtime *runtime, NativeArgs args) {
   auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -44,7 +42,7 @@ isFinite(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// Needed to construct Function.prototype.
-static CallResult<HermesValue> emptyFunction(void *, Runtime *, NativeArgs) {
+CallResult<HermesValue> emptyFunction(void *, Runtime *, NativeArgs) {
   return HermesValue::encodeUndefinedValue();
 }
 
@@ -59,8 +57,7 @@ static bool isValidRadixChar(char16_t c, int radix) {
 }
 
 /// ES5.1 15.1.2.2 parseInt(string, radix)
-static CallResult<HermesValue>
-parseInt(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> parseInt(void *, Runtime *runtime, NativeArgs args) {
   // toString(arg0).
   auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
@@ -147,8 +144,7 @@ static bool isPrefix(StringView str1, StringView str2) {
 }
 
 /// ES5.1 15.1.2.3 parseFloat(string)
-static CallResult<HermesValue>
-parseFloat(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> parseFloat(void *, Runtime *runtime, NativeArgs args) {
   // toString(arg0).
   auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -237,7 +233,7 @@ parseFloat(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// Customized global function. gc() forces a GC collect.
-static CallResult<HermesValue> gc(void *, Runtime *runtime, NativeArgs) {
+CallResult<HermesValue> gc(void *, Runtime *runtime, NativeArgs) {
   runtime->collect();
   return HermesValue::encodeUndefinedValue();
 }

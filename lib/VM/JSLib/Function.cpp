@@ -20,41 +20,6 @@
 namespace hermes {
 namespace vm {
 
-/// @name Function
-/// @{
-
-/// ES5.1 15.3.1.1 and 15.3.2.1. Function() invoked as a function and as a
-/// constructor.
-static CallResult<HermesValue>
-functionConstructor(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
-/// @name Function.prototype
-/// @{
-
-/// ES5.1 15.3.4.2.
-static CallResult<HermesValue>
-functionPrototypeToString(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.3.4.3.
-static CallResult<HermesValue>
-functionPrototypeApply(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.3.4.4.
-static CallResult<HermesValue>
-functionPrototypeCall(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.3.4.5.
-static CallResult<HermesValue>
-functionPrototypeBind(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 19.2.3.6.
-static CallResult<HermesValue>
-functionPrototypeSymbolHasInstance(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
 //===----------------------------------------------------------------------===//
 /// Function.
 
@@ -118,12 +83,12 @@ Handle<JSObject> createFunctionConstructor(Runtime *runtime) {
   return cons;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 functionConstructor(void *, Runtime *runtime, NativeArgs args) {
   return createDynamicFunction(runtime, args, false);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
@@ -180,7 +145,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   return StringPrimitive::create(runtime, strBuf);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto func = args.dyncastThis<Callable>(runtime);
@@ -265,7 +230,7 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
   return Callable::call(func, runtime);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 functionPrototypeCall(void *, Runtime *runtime, NativeArgs args) {
   auto func = args.dyncastThis<Callable>(runtime);
   if (LLVM_UNLIKELY(!func)) {
@@ -283,7 +248,7 @@ functionPrototypeCall(void *, Runtime *runtime, NativeArgs args) {
   return Callable::call(func, runtime);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 functionPrototypeBind(void *, Runtime *runtime, NativeArgs args) {
   auto target = Handle<Callable>::dyn_vmcast(runtime, args.getThisHandle());
   if (!target) {
@@ -294,7 +259,7 @@ functionPrototypeBind(void *, Runtime *runtime, NativeArgs args) {
       runtime, target, args.getArgCount(), args.begin());
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 functionPrototypeSymbolHasInstance(void *, Runtime *runtime, NativeArgs args) {
   /// 1. Let F be the this value.
   auto F = args.getThisHandle();

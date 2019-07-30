@@ -13,22 +13,6 @@
 namespace hermes {
 namespace vm {
 
-/// ES6.0 23.4.1.1
-static CallResult<HermesValue>
-weakSetConstructor(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.4.3.1
-static CallResult<HermesValue>
-weakSetPrototypeAdd(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.4.3.3
-static CallResult<HermesValue>
-weakSetPrototypeDelete(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.4.3.4
-static CallResult<HermesValue>
-weakSetPrototypeHas(void *, Runtime *runtime, NativeArgs args);
-
 Handle<JSObject> createWeakSetConstructor(Runtime *runtime) {
   auto weakSetPrototype = Handle<JSObject>::vmcast(&runtime->weakSetPrototype);
 
@@ -84,7 +68,7 @@ Handle<JSObject> createWeakSetConstructor(Runtime *runtime) {
   return cons;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 weakSetConstructor(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
@@ -145,7 +129,7 @@ weakSetConstructor(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 weakSetPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
   auto M = args.dyncastThis<JSWeakSet>(runtime);
   if (LLVM_UNLIKELY(!M)) {
@@ -167,7 +151,7 @@ weakSetPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
   return M.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 weakSetPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
   auto M = args.dyncastThis<JSWeakSet>(runtime);
   if (LLVM_UNLIKELY(!M)) {
@@ -183,7 +167,7 @@ weakSetPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(JSWeakSet::deleteValue(M, runtime, key));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 weakSetPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
   auto M = args.dyncastThis<JSWeakSet>(runtime);
   if (LLVM_UNLIKELY(!M)) {

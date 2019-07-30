@@ -13,8 +13,6 @@
 namespace hermes {
 namespace vm {
 
-namespace {
-
 /// @name DataView.prototype
 /// @{
 
@@ -172,8 +170,6 @@ dataViewConstructor(void *, Runtime *runtime, NativeArgs args) {
   self->setBuffer(runtime, *buffer, offset, viewByteLength);
   return self.getHermesValue();
 }
-
-} // namespace
 
 Handle<JSObject> createDataViewConstructor(Runtime *runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime->dataViewPrototype);

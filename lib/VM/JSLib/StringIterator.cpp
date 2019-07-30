@@ -17,10 +17,6 @@
 namespace hermes {
 namespace vm {
 
-/// ES6.0 21.1.5.2.1
-static CallResult<HermesValue>
-stringIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args);
-
 void populateStringIteratorPrototype(Runtime *runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime->stringIteratorPrototype);
 
@@ -43,7 +39,7 @@ void populateStringIteratorPrototype(Runtime *runtime) {
       dpf);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 stringIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
   auto O = args.dyncastThis<JSStringIterator>(runtime);
   if (LLVM_UNLIKELY(!O)) {

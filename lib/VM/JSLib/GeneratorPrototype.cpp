@@ -17,16 +17,6 @@
 namespace hermes {
 namespace vm {
 
-/// ES6.0 25.3.1.2.
-static CallResult<HermesValue>
-generatorPrototypeNext(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 25.3.1.3.
-/// ES6.0 25.3.1.4.
-/// \param ctx (isThrow) if true, throw(). If false, return().
-static CallResult<HermesValue>
-generatorPrototypeReturnOrThrow(void *ctx, Runtime *runtime, NativeArgs args);
-
 void populateGeneratorPrototype(Runtime *runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime->generatorPrototype);
 
@@ -115,7 +105,7 @@ static CallResult<Handle<JSObject>> generatorResume(
       generator->getState() == GeneratorInnerFunction::State::Completed);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 generatorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
   auto generatorRes = generatorValidate(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(generatorRes == ExecutionStatus::EXCEPTION)) {
@@ -174,7 +164,7 @@ static CallResult<Handle<JSObject>> generatorResumeAbrupt(
       generator->getState() == GeneratorInnerFunction::State::Completed);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 generatorPrototypeReturnOrThrow(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isThrow = static_cast<bool>(ctx);
 

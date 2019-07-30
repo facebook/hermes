@@ -16,75 +16,6 @@
 namespace hermes {
 namespace vm {
 
-/// @name Map
-/// @{
-
-/// ES6.0 23.1.1  Mep() invoked as a function and as a constructor.
-static CallResult<HermesValue>
-mapConstructor(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
-/// @name Map.prototype
-/// @{
-
-// TODO: Implement ES6.0 23.1.2.2: get Map [ @@species ]
-
-/// ES6.0 23.1.3.1.
-static CallResult<HermesValue>
-mapPrototypeClear(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.1.3.3.
-static CallResult<HermesValue>
-mapPrototypeDelete(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.1.3.4.
-static CallResult<HermesValue>
-mapPrototypeEntries(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.1.3.5.
-static CallResult<HermesValue>
-mapPrototypeForEach(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.1.3.6.
-static CallResult<HermesValue>
-mapPrototypeGet(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.1.3.7.
-static CallResult<HermesValue>
-mapPrototypeHas(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.1.3.8.
-static CallResult<HermesValue>
-mapPrototypeKeys(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.1.3.9.
-static CallResult<HermesValue>
-mapPrototypeSet(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.1.3.10.
-static CallResult<HermesValue>
-mapPrototypeSizeGetter(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.1.3.11.
-static CallResult<HermesValue>
-mapPrototypeValues(void *, Runtime *runtime, NativeArgs args);
-
-// TODO: Implement ES6.0 23.1.3.12: Map.prototype [ @@iterator ]()
-
-// TODO: Implement ES6.0 23.1.3.13: Map.prototype [ @@toStringTag ]
-
-/// @}
-
-/// @name MapIterator.prototype
-/// @{
-
-/// ES6.0 23.1.5.2.1.
-static CallResult<HermesValue>
-mapIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
 Handle<JSObject> createMapConstructor(Runtime *runtime) {
   auto mapPrototype = Handle<JSMap>::vmcast(&runtime->mapPrototype);
 
@@ -210,7 +141,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
   return cons;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapConstructor(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
   if (LLVM_UNLIKELY(!args.isConstructorCall())) {
@@ -300,7 +231,7 @@ mapConstructor(void *, Runtime *runtime, NativeArgs args) {
   return selfHandle.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapPrototypeClear(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSMap>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -315,7 +246,7 @@ mapPrototypeClear(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSMap>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -330,7 +261,7 @@ mapPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
       JSMap::deleteKey(selfHandle, runtime, args.getArgHandle(runtime, 0)));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSMap>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -351,7 +282,7 @@ mapPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
   return iterator.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSMap>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -374,7 +305,7 @@ mapPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapPrototypeGet(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSMap>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -388,7 +319,7 @@ mapPrototypeGet(void *, Runtime *runtime, NativeArgs args) {
   return JSMap::getValue(selfHandle, runtime, args.getArgHandle(runtime, 0));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSMap>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -403,7 +334,7 @@ mapPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
       JSMap::hasKey(selfHandle, runtime, args.getArgHandle(runtime, 0)));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapPrototypeKeys(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSMap>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -425,7 +356,7 @@ mapPrototypeKeys(void *, Runtime *runtime, NativeArgs args) {
   return iterator.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSMap>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -444,7 +375,7 @@ mapPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
   return selfHandle.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapPrototypeSizeGetter(void *, Runtime *runtime, NativeArgs args) {
   auto self = dyn_vmcast<JSMap>(args.getThisArg());
   if (LLVM_UNLIKELY(!self)) {
@@ -458,7 +389,7 @@ mapPrototypeSizeGetter(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeNumberValue(JSMap::getSize(self, runtime));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapPrototypeValues(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSMap>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -505,7 +436,7 @@ Handle<JSObject> createMapIteratorPrototype(Runtime *runtime) {
   return parentHandle;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 mapIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSMapIterator>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {

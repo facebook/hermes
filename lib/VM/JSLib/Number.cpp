@@ -23,60 +23,6 @@
 namespace hermes {
 namespace vm {
 
-/// @name Number
-/// @{
-
-/// ES5.1 15.7.1.1 and 15.7.2.1. Number() invoked as a function and as a
-/// constructor.
-static CallResult<HermesValue>
-numberConstructor(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6 20.1.2.2
-static CallResult<HermesValue>
-numberIsFinite(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6 20.1.2.3
-static CallResult<HermesValue>
-numberIsInteger(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6 20.1.2.4
-static CallResult<HermesValue>
-numberIsNaN(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6 20.1.2.5
-static CallResult<HermesValue>
-numberIsSafeInteger(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
-/// @name Number.prototype
-/// @{
-
-/// ES5.1 15.5.4.4.
-static CallResult<HermesValue>
-numberPrototypeValueOf(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.7.4.2.
-static CallResult<HermesValue>
-numberPrototypeToString(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.7.4.3.
-static CallResult<HermesValue>
-numberPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.7.4.5.
-static CallResult<HermesValue>
-numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.7.4.6.
-static CallResult<HermesValue>
-numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.7.4.7.
-static CallResult<HermesValue>
-numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args);
-/// @}
-
 Handle<JSObject> createNumberConstructor(Runtime *runtime) {
   auto numberPrototype = Handle<JSNumber>::vmcast(&runtime->numberPrototype);
 
@@ -220,7 +166,7 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
   return cons;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 numberConstructor(void *, Runtime *runtime, NativeArgs args) {
   double value = +0.0;
 
@@ -242,7 +188,7 @@ numberConstructor(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeDoubleValue(value);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 numberIsFinite(void *, Runtime *runtime, NativeArgs args) {
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
@@ -254,7 +200,7 @@ numberIsFinite(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(std::isfinite(number));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 numberIsInteger(void *, Runtime *runtime, NativeArgs args) {
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
@@ -276,8 +222,7 @@ numberIsInteger(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(integer == number);
 }
 
-static CallResult<HermesValue>
-numberIsNaN(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> numberIsNaN(void *, Runtime *runtime, NativeArgs args) {
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
     return HermesValue::encodeBoolValue(false);
@@ -288,7 +233,7 @@ numberIsNaN(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(std::isnan(number));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 numberIsSafeInteger(void *, Runtime *runtime, NativeArgs args) {
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
@@ -317,7 +262,7 @@ numberIsSafeInteger(void *, Runtime *runtime, NativeArgs args) {
       std::abs(integer) <= ((double)((uint64_t)1 << 53)) - 1);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 numberPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
   if (args.getThisArg().isNumber()) {
     return args.getThisArg();
@@ -330,7 +275,7 @@ numberPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
   return JSNumber::getPrimitiveValue(numPtr, runtime);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   const size_t MIN_RADIX = 2;
   const size_t MAX_RADIX = 36;
@@ -382,7 +327,7 @@ numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   return resultRes->getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
   double number;
 
@@ -409,7 +354,7 @@ numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
   return res->getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
   auto intRes = toInteger(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
@@ -526,7 +471,7 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
   return StringPrimitive::create(runtime, m);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
   // The number to make a string toExponential.
   double x;
@@ -653,7 +598,7 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
   return runtime->ignoreAllocationFailure(StringPrimitive::create(runtime, n));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
   // The number to make a string toPrecision.
   double x;

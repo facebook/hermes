@@ -22,34 +22,6 @@ namespace vm {
 using std::max;
 using std::min;
 
-/// @name ArrayBuffer
-/// @{
-
-/// ES 2018 24.1.2 The ArrayBuffer Constructor
-/// ES 2018 24.1.2.1 ArrayBuffer(length)
-static CallResult<HermesValue>
-arrayBufferConstructor(void *, Runtime *, NativeArgs);
-
-/// ES6 24.1.3.1 ArrayBuffer.isView(arg)
-static CallResult<HermesValue> arrayBufferIsView(void *, Runtime *, NativeArgs);
-
-/// @}
-
-/// @name ArrayBuffer.prototype
-/// @{
-
-/// ES6 24.1.4 Properties of the ArrayBuffer Prototype Object
-
-/// ES6 24.1.4.1 get ArrayBuffer.prototype.byteLength
-static CallResult<HermesValue>
-arrayBufferPrototypeByteLength(void *, Runtime *, NativeArgs);
-
-/// ES6 24.1.4.3 ArrayBuffer.prototype.slice (start, end)
-static CallResult<HermesValue>
-arrayBufferPrototypeSlice(void *, Runtime *, NativeArgs);
-
-/// @}
-
 /// @name Implementation
 /// @{
 

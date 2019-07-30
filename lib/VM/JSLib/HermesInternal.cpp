@@ -17,8 +17,6 @@
 namespace hermes {
 namespace vm {
 
-namespace {
-
 /// \return a SymbolID  for a given C string \p s.
 static inline CallResult<Handle<SymbolID>> symbolForCStr(
     Runtime *rt,
@@ -808,8 +806,6 @@ hermesInternalGetCallStack(void *, Runtime *runtime, NativeArgs args) {
   return StringPrimitive::create(runtime, ASCIIRef(stack.data(), stack.size()));
 }
 #endif // HERMESVM_EXCEPTION_ON_OOM
-
-} // namespace
 
 Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   Handle<JSObject> intern = toHandle(runtime, JSObject::create(runtime));

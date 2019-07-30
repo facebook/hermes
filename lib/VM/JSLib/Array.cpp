@@ -19,135 +19,6 @@
 namespace hermes {
 namespace vm {
 
-/// @name Array
-/// @{
-
-/// ES5.1 15.4.1 and 15.4.2. Array() invoked as a function and as a
-/// constructor.
-static CallResult<HermesValue>
-arrayConstructor(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.3.2 Array.isArray ( arg )
-static CallResult<HermesValue>
-arrayIsArray(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 22.1.2.3
-static CallResult<HermesValue>
-arrayOf(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 22.1.2.1 Array.from ( items [ , mapfn [ , thisArg ] ] )
-static CallResult<HermesValue>
-arrayFrom(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
-/// @name Array.prototype
-/// @{
-
-/// ES5.1 15.4.4.3.
-static CallResult<HermesValue>
-arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.4.
-static CallResult<HermesValue>
-arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 22.1.3.3.
-static CallResult<HermesValue>
-arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.5.
-static CallResult<HermesValue>
-arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.6.
-static CallResult<HermesValue>
-arrayPrototypePop(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.7.
-static CallResult<HermesValue>
-arrayPrototypePush(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.8.
-static CallResult<HermesValue>
-arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.9.
-static CallResult<HermesValue>
-arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.10.
-static CallResult<HermesValue>
-arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.11.
-static CallResult<HermesValue>
-arrayPrototypeSort(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.12.
-static CallResult<HermesValue>
-arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.13.
-static CallResult<HermesValue>
-arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.14.
-static CallResult<HermesValue>
-arrayPrototypeIndexOf(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.15.
-static CallResult<HermesValue>
-arrayPrototypeLastIndexOf(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.16.
-static CallResult<HermesValue>
-arrayPrototypeEvery(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.17.
-static CallResult<HermesValue>
-arrayPrototypeSome(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.18.
-static CallResult<HermesValue>
-arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.19.
-static CallResult<HermesValue>
-arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.20.
-static CallResult<HermesValue>
-arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6 22.1.3.6.
-static CallResult<HermesValue>
-arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6 22.1.3.9.
-/// ES6 22.1.3.10.
-static CallResult<HermesValue>
-arrayPrototypeFind(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.21.
-static CallResult<HermesValue>
-arrayPrototypeReduce(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.4.4.22.
-static CallResult<HermesValue>
-arrayPrototypeReduceRight(void *, Runtime *runtime, NativeArgs args);
-
-/// ES8.0 22.1.3.11
-static CallResult<HermesValue>
-arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 22.1.3.29.
-/// Array.prototype.entries/keys/values.
-static CallResult<HermesValue>
-arrayPrototypeIterator(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
 //===----------------------------------------------------------------------===//
 /// Array.
 
@@ -417,7 +288,7 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   return cons;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayConstructor(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<JSArray> selfHandle{runtime};
 
@@ -471,13 +342,11 @@ arrayConstructor(void *, Runtime *runtime, NativeArgs args) {
   return selfHandle.getHermesValue();
 }
 
-static CallResult<HermesValue>
-arrayIsArray(void *, Runtime *, NativeArgs args) {
+CallResult<HermesValue> arrayIsArray(void *, Runtime *, NativeArgs args) {
   return HermesValue::encodeBoolValue(vmisa<JSArray>(args.getArg(0)));
 }
 
-static CallResult<HermesValue>
-arrayOf(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> arrayOf(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
   // 1. Let len be the actual number of arguments passed to this function.
@@ -612,7 +481,7 @@ arrayPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   return Callable::executeCall0(func, runtime, array);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -732,7 +601,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -922,7 +791,7 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   return A.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
@@ -1085,7 +954,7 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// ES5.1 15.4.4.5.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -1196,7 +1065,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto res = toObject(runtime, args.getThisHandle());
@@ -1254,7 +1123,7 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
   return element.get();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -1318,7 +1187,7 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
   return n.get();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -1451,7 +1320,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
   return O.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -1559,7 +1428,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
   return first.get();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -1879,7 +1748,7 @@ class StandardSortModel : public SortModel {
 } // anonymous namespace
 
 /// ES5.1 15.4.4.11.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
   // Null if not a callable compareFn.
   auto compareFn =
@@ -1916,7 +1785,7 @@ arrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
   return O.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -2189,7 +2058,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
   return A.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -2393,12 +2262,12 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   return HermesValue::encodeDoubleValue(-1);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeIndexOf(void *, Runtime *runtime, NativeArgs args) {
   return indexOfHelper(runtime, args, false);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeLastIndexOf(void *, Runtime *runtime, NativeArgs args) {
   return indexOfHelper(runtime, args, true);
 }
@@ -2487,17 +2356,17 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
   return HermesValue::encodeBoolValue(every);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeEvery(void *, Runtime *runtime, NativeArgs args) {
   return everySomeHelper(runtime, args, true);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeSome(void *, Runtime *runtime, NativeArgs args) {
   return everySomeHelper(runtime, args, false);
 }
 
-static inline CallResult<HermesValue>
+inline CallResult<HermesValue>
 arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -2564,7 +2433,7 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -2643,7 +2512,7 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
   return A.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -2731,7 +2600,7 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
   return A.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -2790,7 +2659,7 @@ arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   return O.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
   bool findIndex = ctx != nullptr;
@@ -2985,17 +2854,17 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   return accumulator.get();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeReduce(void *, Runtime *runtime, NativeArgs args) {
   return reduceHelper(runtime, args, false);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeReduceRight(void *, Runtime *runtime, NativeArgs args) {
   return reduceHelper(runtime, args, true);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
@@ -3074,7 +2943,7 @@ arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(false);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 arrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
   IterationKind kind = *reinterpret_cast<IterationKind *>(&ctx);
   assert(
@@ -3089,8 +2958,7 @@ arrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 /// ES6.0 22.1.2.1 Array.from ( items [ , mapfn [ , thisArg ] ] )
-static CallResult<HermesValue>
-arrayFrom(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   GCScopeMarkerRAII gcScope{runtime};
   auto itemsHandle = args.getArgHandle(runtime, 0);
   // 1. Let C be the this value.

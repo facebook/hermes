@@ -37,6 +37,92 @@ void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@domains", &self->domains_);
 }
 
+CallResult<HermesValue>
+errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
+  auto selfHandle = args.dyncastThis<JSError>(runtime);
+  if (!selfHandle) {
+    return runtime->raiseTypeError(
+        "Error.stack accessor 'this' must be an instance of 'Error'");
+  }
+
+  if (!selfHandle->stacktrace_) {
+    // Stacktrace has not been set, we simply return empty string.
+    // This is different from other VMs where stacktrace is created when
+    // the error object is created. We only set it when the error
+    // is raised.
+    return HermesValue::encodeStringValue(
+        runtime->getPredefinedString(Predefined::emptyString));
+  }
+  SmallU16String<32> stack;
+  if (JSError::constructStackTraceString(runtime, selfHandle, stack) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+// After the stacktrace string is constructed, only the debugger may want the
+// internal stacktrace_; if there is no debugger it can be freed. We no longer
+// need the accessor. Redefines the stack property to a regular property.
+#ifndef HERMES_ENABLE_DEBUGGER
+  selfHandle->stacktrace_.reset();
+#endif
+
+  MutableHandle<> stacktraceStr{runtime};
+  auto strRes = StringPrimitive::create(runtime, stack);
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    // StringPrimitive creation can throw if the stacktrace string is too long.
+    // In that case, we replace it with a predefined string.
+    stacktraceStr = HermesValue::encodeStringValue(
+        runtime->getPredefinedString(Predefined::stacktraceTooLong));
+    runtime->clearThrownValue();
+  } else {
+    stacktraceStr = *strRes;
+  }
+
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+  dpf.setEnumerable = 1;
+  dpf.enumerable = 0;
+  if (JSObject::defineOwnProperty(
+          selfHandle,
+          runtime,
+          Predefined::getSymbolID(Predefined::stack),
+          dpf,
+          stacktraceStr) == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return stacktraceStr.getHermesValue();
+}
+
+CallResult<HermesValue>
+errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
+  if (auto *errorObject = dyn_vmcast<JSError>(args.getThisArg())) {
+    auto &stacktrace = errorObject->stacktrace_;
+    if (stacktrace) {
+      // Release stacktrace_ if it's already set.
+      stacktrace.reset();
+    }
+  }
+  auto res = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto selfHandle = runtime->makeHandle<JSObject>(res.getValue());
+
+  // Redefines the stack property to a regular property.
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+  dpf.setEnumerable = 1;
+  dpf.enumerable = 0;
+  if (JSObject::defineOwnProperty(
+          selfHandle,
+          runtime,
+          Predefined::getSymbolID(Predefined::stack),
+          dpf,
+          args.getArgHandle(runtime, 0)) == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return HermesValue::encodeUndefinedValue();
+}
+
 CallResult<HermesValue> JSError::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
@@ -77,7 +163,7 @@ ExecutionStatus JSError::setupStack(
         runtime,
         Handle<JSObject>::vmcast(&runtime->functionPrototype),
         nullptr,
-        JSError::errorStackGetter,
+        errorStackGetter,
         SymbolID{},
         0,
         runtime->makeNullHandle<JSObject>());
@@ -86,7 +172,7 @@ ExecutionStatus JSError::setupStack(
         runtime,
         Handle<JSObject>::vmcast(&runtime->functionPrototype),
         nullptr,
-        JSError::errorStackSetter,
+        errorStackSetter,
         SymbolID{},
         1,
         runtime->makeNullHandle<JSObject>());
@@ -476,92 +562,6 @@ ExecutionStatus JSError::constructStackTraceString(
     stack.push_back(u')');
   }
   return ExecutionStatus::RETURNED;
-}
-
-CallResult<HermesValue>
-JSError::errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSError>(runtime);
-  if (!selfHandle) {
-    return runtime->raiseTypeError(
-        "Error.stack accessor 'this' must be an instance of 'Error'");
-  }
-
-  if (!selfHandle->stacktrace_) {
-    // Stacktrace has not been set, we simply return empty string.
-    // This is different from other VMs where stacktrace is created when
-    // the error object is created. We only set it when the error
-    // is raised.
-    return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::emptyString));
-  }
-  SmallU16String<32> stack;
-  if (constructStackTraceString(runtime, selfHandle, stack) ==
-      ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-// After the stacktrace string is constructed, only the debugger may want the
-// internal stacktrace_; if there is no debugger it can be freed. We no longer
-// need the accessor. Redefines the stack property to a regular property.
-#ifndef HERMES_ENABLE_DEBUGGER
-  selfHandle->stacktrace_.reset();
-#endif
-
-  MutableHandle<> stacktraceStr{runtime};
-  auto strRes = StringPrimitive::create(runtime, stack);
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    // StringPrimitive creation can throw if the stacktrace string is too long.
-    // In that case, we replace it with a predefined string.
-    stacktraceStr = HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::stacktraceTooLong));
-    runtime->clearThrownValue();
-  } else {
-    stacktraceStr = *strRes;
-  }
-
-  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-  dpf.setEnumerable = 1;
-  dpf.enumerable = 0;
-  if (JSObject::defineOwnProperty(
-          selfHandle,
-          runtime,
-          Predefined::getSymbolID(Predefined::stack),
-          dpf,
-          stacktraceStr) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  return stacktraceStr.getHermesValue();
-}
-
-CallResult<HermesValue>
-JSError::errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
-  if (auto *errorObject = dyn_vmcast<JSError>(args.getThisArg())) {
-    auto &stacktrace = errorObject->stacktrace_;
-    if (stacktrace) {
-      // Release stacktrace_ if it's already set.
-      stacktrace.reset();
-    }
-  }
-  auto res = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto selfHandle = runtime->makeHandle<JSObject>(res.getValue());
-
-  // Redefines the stack property to a regular property.
-  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-  dpf.setEnumerable = 1;
-  dpf.enumerable = 0;
-  if (JSObject::defineOwnProperty(
-          selfHandle,
-          runtime,
-          Predefined::getSymbolID(Predefined::stack),
-          dpf,
-          args.getArgHandle(runtime, 0)) == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  return HermesValue::encodeUndefinedValue();
 }
 
 void JSError::_finalizeImpl(GCCell *cell, GC *) {

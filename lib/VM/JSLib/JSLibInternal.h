@@ -11,6 +11,7 @@
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSMapImpl.h"
+#include "hermes/VM/JSNativeFunctions.h"
 #include "hermes/VM/JSRegExp.h"
 
 namespace hermes {
@@ -319,11 +320,6 @@ CallResult<HermesValue> splitInternal(
 /// \return the global Function constructor.
 Handle<JSObject> createArrayConstructor(Runtime *runtime);
 
-/// ES5.1 15.4.4.2.
-/// Used by Array and TypedArray.
-CallResult<HermesValue>
-arrayPrototypeToString(void *, Runtime *runtime, NativeArgs args);
-
 Handle<JSObject> createArrayBufferConstructor(Runtime *runtime);
 
 Handle<JSObject> createDataViewConstructor(Runtime *runtime);
@@ -371,13 +367,12 @@ void populateStringIteratorPrototype(Runtime *runtime);
 /// Create the %GeneratorPrototype%.
 void populateGeneratorPrototype(Runtime *runtime);
 
-/// A preliminary quick&dirty implementation of the 'print' global function.
-/// Prints all arguments using 'toString()'.
-CallResult<HermesValue> print(void *, Runtime *runtime, NativeArgs args);
-
-/// A preliminary quick&dirty implementation of the 'eval' global function.
-/// Runs the Hermes compiler and returns a value.
-CallResult<HermesValue> eval(void *, Runtime *runtime, NativeArgs args);
+/// ES19.2.1.1.1. Create a new function given arguments and a body.
+/// \param isGeneratorFunction when true, make a generator with "function*".
+CallResult<HermesValue> createDynamicFunction(
+    Runtime *runtime,
+    NativeArgs args,
+    bool isGeneratorFunction);
 
 /// A direct passthrough to call eval() on \p str.
 CallResult<HermesValue> directEval(
@@ -385,59 +380,6 @@ CallResult<HermesValue> directEval(
     Handle<StringPrimitive> str,
     const ScopeChain &scopeChain,
     bool singleFunction = false);
-
-/// The 'escape' global function.
-/// ES5.1 B.2.1
-CallResult<HermesValue> escape(void *, Runtime *runtime, NativeArgs args);
-
-/// The 'unescape' global function.
-/// ES5.1 B.2.2
-CallResult<HermesValue> unescape(void *, Runtime *runtime, NativeArgs args);
-
-/// The 'decodeURI' global function.
-/// ES5.1 15.1.3.1
-CallResult<HermesValue> decodeURI(void *, Runtime *runtime, NativeArgs args);
-
-/// The 'decodeURIComponent' global function.
-/// ES5.1 15.1.3.2
-CallResult<HermesValue>
-decodeURIComponent(void *, Runtime *runtime, NativeArgs args);
-
-/// The 'encodeURI' global function.
-/// ES5.1 15.1.3.3
-CallResult<HermesValue> encodeURI(void *, Runtime *runtime, NativeArgs args);
-
-/// The 'encodeURIComponent' global function.
-/// ES5.1 15.1.3.4
-CallResult<HermesValue>
-encodeURIComponent(void *, Runtime *runtime, NativeArgs args);
-
-/// The require() function.
-/// Given a string containing a relative path to a module,
-/// require first checks the CommonJS module table to see if the module
-/// has begun initialization yet.
-/// If it has begun initialization, require immediately returns the
-/// module.exports property of the module.
-/// If it has not begun initialization, require constructs a module
-/// object with "exports" property set to a new Object,
-/// then executes the function in the CommonJS module table to populate it,
-/// passing the function (module, require, exports) as arguments.
-/// The require argument is the global require function
-/// with the current directory name bound to the `this` argument.
-/// Use the `this` argument as the current directory name.
-CallResult<HermesValue> require(void *, Runtime *runtime, NativeArgs args);
-
-/// The "fast" version of the require() function.
-/// \pre the first argument must be a resolved integer module ID.
-/// Performs the rest of the require() as the normal require function does.
-CallResult<HermesValue> requireFast(void *, Runtime *runtime, NativeArgs args);
-
-/// ES19.2.1.1.1. Create a new function given arguments and a body.
-/// \param isGeneratorFunction when true, make a generator with "function*".
-CallResult<HermesValue> createDynamicFunction(
-    Runtime *runtime,
-    NativeArgs args,
-    bool isGeneratorFunction);
 
 } // namespace vm
 } // namespace hermes

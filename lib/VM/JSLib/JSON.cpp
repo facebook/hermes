@@ -16,18 +16,6 @@
 namespace hermes {
 namespace vm {
 
-/// @name JSON
-/// @{
-
-/// 15.12.2 parse(text[, reviver])
-static CallResult<HermesValue>
-jsonParse(void *, Runtime *runtime, NativeArgs args);
-
-/// 15.12.3 stringify(value[, replacer[, space]])
-static CallResult<HermesValue>
-jsonStringify(void *, Runtime *runtime, NativeArgs args);
-/// @}
-
 Handle<JSObject> createJSONObject(Runtime *runtime) {
   auto objRes = JSJSON::create(
       runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype));
@@ -63,8 +51,7 @@ Handle<JSObject> createJSONObject(Runtime *runtime) {
   return json;
 }
 
-static CallResult<HermesValue>
-jsonParse(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> jsonParse(void *, Runtime *runtime, NativeArgs args) {
   auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -75,7 +62,7 @@ jsonParse(void *, Runtime *runtime, NativeArgs args) {
       Handle<Callable>::dyn_vmcast(runtime, args.getArgHandle(runtime, 1)));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 jsonStringify(void *, Runtime *runtime, NativeArgs args) {
   return runtimeJSONStringify(
       runtime,

@@ -99,13 +99,13 @@ class JSError final : public JSObject {
   /// Upon called, construct the stacktrace string based on
   /// the value of stacktrace_, and reset the stack property to the
   /// stacktrace string.
-  static CallResult<HermesValue>
+  friend CallResult<HermesValue>
   errorStackGetter(void *, Runtime *runtime, NativeArgs args);
 
   /// This is called when someone manually set the stack property to
   /// an error object, which should happen rarely. It destroys the
   /// stack access and replace it with a regular property.
-  static CallResult<HermesValue>
+  friend CallResult<HermesValue>
   errorStackSetter(void *, Runtime *runtime, NativeArgs args);
 
  protected:

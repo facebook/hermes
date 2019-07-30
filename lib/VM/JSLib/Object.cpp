@@ -18,144 +18,12 @@
 namespace hermes {
 namespace vm {
 
-/// @name Object
-/// {@
-
-/// ES5.1 15.2.1.1 and 15.2.2.1. Object() invoked as a function and as a
-/// constructor.
-static CallResult<HermesValue>
-objectConstructor(void *, Runtime *runtime, NativeArgs args);
-
 /// Initialize a freshly created instance of Object.
 static inline HermesValue objectInitInstance(
     Handle<JSObject> thisHandle,
     Runtime *) {
   return thisHandle.getHermesValue();
 }
-
-/// ES5.1 15.2.3.2: Object.getPrototypeOf(O).
-static CallResult<HermesValue>
-objectGetPrototypeOf(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.3.3: Object.getOwnPropertyDescriptor(O, P).
-static CallResult<HermesValue>
-objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.3.4 Object.getOwnPropertyNames ( O )
-static CallResult<HermesValue>
-objectGetOwnPropertyNames(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 19.1.2.8 Object.getOwnPropertySymbols ( O )
-static CallResult<HermesValue>
-objectGetOwnPropertySymbols(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.3.5: Object.create(O, [, Properties]).
-static CallResult<HermesValue>
-objectCreate(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.3.6: Object.defineProperty(O, P, Attributes).
-static CallResult<HermesValue>
-objectDefineProperty(void *, Runtime *runtime, NativeArgs args);
-
-// ES5.1 15.2.3.7: Object.defineProperties (O, Properties).
-static CallResult<HermesValue>
-objectDefineProperties(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.3.8: Object.seal(O).
-static CallResult<HermesValue>
-objectSeal(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.3.9: Object.freeze(O).
-static CallResult<HermesValue>
-objectFreeze(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.3.10: Object.preventExtensions(O).
-static CallResult<HermesValue>
-objectPreventExtensions(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 19.1.2.10
-static CallResult<HermesValue>
-objectIs(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.3.11: Object.isSealed(O).
-static CallResult<HermesValue>
-objectIsSealed(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.3.12: Object.isFrozen(O).
-static CallResult<HermesValue>
-objectIsFrozen(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.3.13: Object.isExtensible(O).
-static CallResult<HermesValue>
-objectIsExtensible(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.3.14 Object.keys(O).
-static CallResult<HermesValue>
-objectKeys(void *, Runtime *runtime, NativeArgs args);
-
-/// ES8.0 19.1.2.21
-static CallResult<HermesValue>
-objectValues(void *, Runtime *runtime, NativeArgs args);
-
-/// ES8.0 19.1.2.5.
-static CallResult<HermesValue>
-objectEntries(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6 19.1.2.1 Object.assign
-static CallResult<HermesValue>
-objectAssign(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6 19.1.2.18 Object.setPrototypeOf(O, proto).
-static CallResult<HermesValue>
-objectSetPrototypeOf(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
-/// @name Object.prototype
-/// @{
-
-/// ES5.1 15.2.4.2.
-static CallResult<HermesValue>
-objectPrototypeToString(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.4.3.
-static CallResult<HermesValue>
-objectPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args);
-
-/// ES55.1 15.2.4.4 Object.prototype.valueOf.
-static CallResult<HermesValue>
-objectPrototypeValueOf(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.4.5.
-static CallResult<HermesValue>
-objectPrototypeHasOwnProperty(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.4.6 Object.prototype.isPrototypeOf(V).
-static CallResult<HermesValue>
-objectPrototypeIsPrototypeOf(void *, Runtime *runtime, NativeArgs args);
-
-/// ES5.1 15.2.4.7 Object.prototype.propertyIsEnumerable(V).
-static CallResult<HermesValue>
-objectPrototypePropertyIsEnumerable(void *, Runtime *runtime, NativeArgs args);
-
-/// A getter implementing the '__proto__' property.
-static CallResult<HermesValue>
-objectPrototypeProto_getter(void *, Runtime *runtime, NativeArgs args);
-/// A setter implementing the '__proto__' property.
-static CallResult<HermesValue>
-objectPrototypeProto_setter(void *, Runtime *runtime, NativeArgs args);
-
-/// ES2018 B.2.2.2 - B.2.2.5
-static CallResult<HermesValue>
-objectPrototypeDefineGetter(void *, Runtime *runtime, NativeArgs args);
-static CallResult<HermesValue>
-objectPrototypeDefineSetter(void *, Runtime *runtime, NativeArgs args);
-static CallResult<HermesValue>
-objectPrototypeLookupGetter(void *, Runtime *runtime, NativeArgs args);
-static CallResult<HermesValue>
-objectPrototypeLookupSetter(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
 
 //===----------------------------------------------------------------------===//
 /// Object.
@@ -392,7 +260,7 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
 
 /// ES5.1 15.2.1.1 and 15.2.2.1. Object() invoked as a function and as a
 /// constructor.
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectConstructor(void *, Runtime *runtime, NativeArgs args) {
   auto arg0 = args.getArgHandle(runtime, 0);
 
@@ -421,7 +289,7 @@ objectConstructor(void *, Runtime *runtime, NativeArgs args) {
   return objectInitInstance(thisHandle, runtime);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectGetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
   auto res = toObject(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -435,7 +303,7 @@ objectGetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
                 : HermesValue::encodeNullValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
   auto objRes = toObject(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
@@ -627,7 +495,7 @@ static CallResult<HermesValue> getOwnPropertyNamesAsStrings(
   return array.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectGetOwnPropertyNames(void *, Runtime *runtime, NativeArgs args) {
   auto objRes = toObject(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
@@ -642,7 +510,7 @@ objectGetOwnPropertyNames(void *, Runtime *runtime, NativeArgs args) {
   return *cr;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectGetOwnPropertySymbols(void *, Runtime *runtime, NativeArgs args) {
   auto objRes = toObject(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
@@ -818,7 +686,7 @@ static ExecutionStatus objectToPropertyDescriptor(
   return ExecutionStatus::RETURNED;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectDefineProperty(void *, Runtime *runtime, NativeArgs args) {
   auto O = args.dyncastArg<JSObject>(runtime, 0);
   // Verify this method is called on an object.
@@ -924,7 +792,7 @@ objectDefinePropertiesInternal(Runtime *runtime, Handle<> obj, Handle<> props) {
   return objHandle.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectCreate(void *, Runtime *runtime, NativeArgs args) {
   // Verify this method is called with an object or with 'null'.
   auto obj = args.dyncastArg<JSObject>(runtime, 0);
@@ -948,7 +816,7 @@ objectCreate(void *, Runtime *runtime, NativeArgs args) {
   return *cr;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectDefineProperties(void *, Runtime *runtime, NativeArgs args) {
   auto cr = objectDefinePropertiesInternal(
       runtime, args.getArgHandle(runtime, 0), args.getArgHandle(runtime, 1));
@@ -958,8 +826,7 @@ objectDefineProperties(void *, Runtime *runtime, NativeArgs args) {
   return *cr;
 }
 
-static CallResult<HermesValue>
-objectSeal(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> objectSeal(void *, Runtime *runtime, NativeArgs args) {
   auto objHandle = args.dyncastArg<JSObject>(runtime, 0);
 
   if (!objHandle) {
@@ -970,7 +837,7 @@ objectSeal(void *, Runtime *runtime, NativeArgs args) {
   return objHandle.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectFreeze(void *, Runtime *runtime, NativeArgs args) {
   auto objHandle = args.dyncastArg<JSObject>(runtime, 0);
 
@@ -982,7 +849,7 @@ objectFreeze(void *, Runtime *runtime, NativeArgs args) {
   return objHandle.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPreventExtensions(void *, Runtime *runtime, NativeArgs args) {
   auto *obj = dyn_vmcast<JSObject>(args.getArg(0));
 
@@ -994,13 +861,12 @@ objectPreventExtensions(void *, Runtime *runtime, NativeArgs args) {
   return args.getArg(0);
 }
 
-static CallResult<HermesValue>
-objectIs(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> objectIs(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(
       isSameValue(args.getArg(0), args.getArg(1)));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectIsSealed(void *, Runtime *runtime, NativeArgs args) {
   auto objHandle = args.dyncastArg<JSObject>(runtime, 0);
 
@@ -1012,7 +878,7 @@ objectIsSealed(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(JSObject::isSealed(objHandle, runtime));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectIsFrozen(void *, Runtime *runtime, NativeArgs args) {
   auto objHandle = args.dyncastArg<JSObject>(runtime, 0);
 
@@ -1024,7 +890,7 @@ objectIsFrozen(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(JSObject::isFrozen(objHandle, runtime));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectIsExtensible(void *, Runtime *runtime, NativeArgs args) {
   auto *obj = dyn_vmcast<JSObject>(args.getArg(0));
 
@@ -1144,25 +1010,24 @@ static CallResult<HermesValue> enumerableOwnProperties(
   return properties.getHermesValue();
 }
 
-static CallResult<HermesValue>
-objectKeys(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> objectKeys(void *, Runtime *runtime, NativeArgs args) {
   return enumerableOwnProperties(
       runtime, args, EnumerableOwnPropertiesKind::Key);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectValues(void *, Runtime *runtime, NativeArgs args) {
   return enumerableOwnProperties(
       runtime, args, EnumerableOwnPropertiesKind::Value);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectEntries(void *, Runtime *runtime, NativeArgs args) {
   return enumerableOwnProperties(
       runtime, args, EnumerableOwnPropertiesKind::KeyValue);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectAssign(void *, Runtime *runtime, NativeArgs args) {
   vm::GCScope gcScope(runtime);
 
@@ -1262,7 +1127,7 @@ objectAssign(void *, Runtime *runtime, NativeArgs args) {
   return toHandle.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectSetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
   Handle<> O = args.getArgHandle(runtime, 0);
   Handle<> proto = args.getArgHandle(runtime, 1);
@@ -1380,12 +1245,12 @@ CallResult<HermesValue> directObjectPrototypeToString(
   return HermesValue::encodeStringValue(str);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   return directObjectPrototypeToString(runtime, args.getThisHandle());
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
@@ -1405,7 +1270,7 @@ objectPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   return runtime->raiseTypeError("toString must be callable");
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -1414,7 +1279,7 @@ objectPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
   return res;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypeHasOwnProperty(void *, Runtime *runtime, NativeArgs args) {
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -1446,7 +1311,7 @@ objectPrototypeHasOwnProperty(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(false);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypeIsPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!args.getArg(0).isObject())) {
     // If arg[0] is not an object, return false.
@@ -1466,7 +1331,7 @@ objectPrototypeIsPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(false);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypePropertyIsEnumerable(void *, Runtime *runtime, NativeArgs args) {
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -1485,7 +1350,7 @@ objectPrototypePropertyIsEnumerable(void *, Runtime *runtime, NativeArgs args) {
       status.getValue() && desc.flags.enumerable);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypeProto_getter(void *, Runtime *runtime, NativeArgs args) {
   // thisArg = toObject(thisArg).
   auto res = toObject(runtime, args.getThisHandle());
@@ -1499,7 +1364,7 @@ objectPrototypeProto_getter(void *, Runtime *runtime, NativeArgs args) {
                 : HermesValue::encodeNullValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypeProto_setter(void *, Runtime *runtime, NativeArgs args) {
   // thisArg must be coercible to Object.
   if (args.getThisArg().isNull() || args.getThisArg().isUndefined()) {
@@ -1527,7 +1392,7 @@ objectPrototypeProto_setter(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypeDefineGetter(void *, Runtime *runtime, NativeArgs args) {
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
@@ -1568,7 +1433,7 @@ objectPrototypeDefineGetter(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypeDefineSetter(void *, Runtime *runtime, NativeArgs args) {
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
@@ -1609,7 +1474,7 @@ objectPrototypeDefineSetter(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypeLookupGetter(void *, Runtime *runtime, NativeArgs args) {
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -1638,7 +1503,7 @@ objectPrototypeLookupGetter(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 objectPrototypeLookupSetter(void *, Runtime *runtime, NativeArgs args) {
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {

@@ -18,35 +18,6 @@
 
 namespace hermes {
 namespace vm {
-/// @name Symbol
-/// @{
-
-/// ES6.0 19.4.1. Symbol([description]).
-static CallResult<HermesValue>
-symbolConstructor(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 19.4.2.1. Symbol.for.
-static CallResult<HermesValue>
-symbolFor(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 19.4.2.1. Symbol.keyFor.
-static CallResult<HermesValue>
-symbolKeyFor(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
-/// @name Symbol.prototype
-/// @{
-
-/// ES6.0 19.4.3.2.
-static CallResult<HermesValue>
-symbolPrototypeToString(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 19.4.3.3.
-static CallResult<HermesValue>
-symbolPrototypeValueOf(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
 
 Handle<JSObject> createSymbolConstructor(Runtime *runtime) {
   auto symbolPrototype = Handle<JSObject>::vmcast(&runtime->symbolPrototype);
@@ -186,7 +157,7 @@ Handle<JSObject> createSymbolConstructor(Runtime *runtime) {
   return cons;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 symbolConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (args.isConstructorCall()) {
     return runtime->raiseTypeError("Symbol is not a constructor");
@@ -213,8 +184,7 @@ symbolConstructor(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeSymbolValue(*symbolRes);
 }
 
-static CallResult<HermesValue>
-symbolFor(void *, Runtime *runtime, NativeArgs args) {
+CallResult<HermesValue> symbolFor(void *, Runtime *runtime, NativeArgs args) {
   auto cr = toString_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -228,7 +198,7 @@ symbolFor(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeSymbolValue(*symbolRes);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 symbolKeyFor(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!args.getArg(0).isSymbol())) {
     return runtime->raiseTypeError(
@@ -245,7 +215,7 @@ symbolKeyFor(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 symbolPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<SymbolID> sym{runtime};
   if (args.getThisArg().isSymbol()) {
@@ -264,7 +234,7 @@ symbolPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   return str->getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 symbolPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
   if (args.getThisArg().isSymbol()) {
     return args.getThisArg();

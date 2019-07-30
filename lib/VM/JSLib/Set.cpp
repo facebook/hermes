@@ -16,67 +16,6 @@
 namespace hermes {
 namespace vm {
 
-/// @name Set
-/// @{
-
-/// ES6.0 23.2.1  Set() invoked as a function and as a constructor.
-static CallResult<HermesValue>
-setConstructor(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
-/// @name Set.prototype
-/// @{
-
-/// ES6.0 23.2.3.1.
-static CallResult<HermesValue>
-setPrototypeAdd(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.2.3.2.
-static CallResult<HermesValue>
-setPrototypeClear(void *, Runtime *runtime, NativeArgs args);
-
-// TODO: Implement ES6.0 23.2.3.3: get Set [ @@species ]
-
-/// ES6.0 23.2.3.4.
-static CallResult<HermesValue>
-setPrototypeDelete(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.2.3.5.
-static CallResult<HermesValue>
-setPrototypeEntries(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.2.3.6.
-static CallResult<HermesValue>
-setPrototypeForEach(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.2.3.7.
-static CallResult<HermesValue>
-setPrototypeHas(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.2.3.9.
-static CallResult<HermesValue>
-setPrototypeSizeGetter(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.2.3.10.
-static CallResult<HermesValue>
-setPrototypeValues(void *, Runtime *runtime, NativeArgs args);
-
-// TODO: Implement ES6.0 23.2.3.11: Set.prototype [ @@iterator ]()
-
-// TODO: Implement ES6.0 23.2.3.12: Set.prototype [ @@toStringTag ]
-
-/// @}
-
-/// @name SetIterator.prototype
-/// @{
-
-/// ES6.0 23.2.5.2.1.
-static CallResult<HermesValue>
-setIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args);
-
-/// @}
-
 Handle<JSObject> createSetConstructor(Runtime *runtime) {
   auto setPrototype = Handle<JSSet>::vmcast(&runtime->setPrototype);
 
@@ -194,7 +133,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
   return cons;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 setConstructor(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
   if (LLVM_UNLIKELY(!args.isConstructorCall())) {
@@ -266,7 +205,7 @@ setConstructor(void *, Runtime *runtime, NativeArgs args) {
   return selfHandle.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 setPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -282,7 +221,7 @@ setPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
   return selfHandle.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 setPrototypeClear(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -297,7 +236,7 @@ setPrototypeClear(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 setPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -312,7 +251,7 @@ setPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
       JSSet::deleteKey(selfHandle, runtime, args.getArgHandle(runtime, 0)));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 setPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -333,7 +272,7 @@ setPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
   return iterator.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 setPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -357,7 +296,7 @@ setPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 setPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -372,7 +311,7 @@ setPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
       JSSet::hasKey(selfHandle, runtime, args.getArgHandle(runtime, 0)));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 setPrototypeSizeGetter(void *, Runtime *runtime, NativeArgs args) {
   auto self = dyn_vmcast<JSSet>(args.getThisArg());
   if (LLVM_UNLIKELY(!self)) {
@@ -386,7 +325,7 @@ setPrototypeSizeGetter(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeNumberValue(JSSet::getSize(self, runtime));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 setPrototypeValues(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -433,7 +372,7 @@ Handle<JSObject> createSetIteratorPrototype(Runtime *runtime) {
   return parentHandle;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 setIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSetIterator>(runtime);
   if (LLVM_UNLIKELY(!selfHandle)) {

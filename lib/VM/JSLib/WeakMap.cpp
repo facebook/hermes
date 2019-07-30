@@ -13,26 +13,6 @@
 namespace hermes {
 namespace vm {
 
-/// ES6.0 23.3.1.1
-static CallResult<HermesValue>
-weakMapConstructor(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.3.3.2
-static CallResult<HermesValue>
-weakMapPrototypeDelete(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.3.3.3
-static CallResult<HermesValue>
-weakMapPrototypeGet(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.3.3.4
-static CallResult<HermesValue>
-weakMapPrototypeHas(void *, Runtime *runtime, NativeArgs args);
-
-/// ES6.0 23.3.3.5
-static CallResult<HermesValue>
-weakMapPrototypeSet(void *, Runtime *runtime, NativeArgs args);
-
 Handle<JSObject> createWeakMapConstructor(Runtime *runtime) {
   auto weakMapPrototype = Handle<JSObject>::vmcast(&runtime->weakMapPrototype);
 
@@ -96,7 +76,7 @@ Handle<JSObject> createWeakMapConstructor(Runtime *runtime) {
   return cons;
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
@@ -179,7 +159,7 @@ weakMapConstructor(void *, Runtime *runtime, NativeArgs args) {
   return selfHandle.getHermesValue();
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 weakMapPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
   auto M = args.dyncastThis<JSWeakMap>(runtime);
   if (LLVM_UNLIKELY(!M)) {
@@ -195,7 +175,7 @@ weakMapPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(JSWeakMap::deleteValue(M, runtime, key));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 weakMapPrototypeGet(void *, Runtime *runtime, NativeArgs args) {
   auto M = args.dyncastThis<JSWeakMap>(runtime);
   if (LLVM_UNLIKELY(!M)) {
@@ -211,7 +191,7 @@ weakMapPrototypeGet(void *, Runtime *runtime, NativeArgs args) {
   return JSWeakMap::getValue(M, runtime, key);
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 weakMapPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
   auto M = args.dyncastThis<JSWeakMap>(runtime);
   if (LLVM_UNLIKELY(!M)) {
@@ -227,7 +207,7 @@ weakMapPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(JSWeakMap::hasValue(M, runtime, key));
 }
 
-static CallResult<HermesValue>
+CallResult<HermesValue>
 weakMapPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
   auto M = args.dyncastThis<JSWeakMap>(runtime);
   if (LLVM_UNLIKELY(!M)) {
