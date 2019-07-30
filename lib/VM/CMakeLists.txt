@@ -41,6 +41,7 @@ set(source_files
   Profiler.cpp
   Runtime.cpp Runtime-profilers.cpp
   RuntimeModule.cpp
+  RuntimeStats.cpp
   Profiler/ChromeTraceSerializerPosix.cpp
   Profiler/SamplingProfilerWindows.cpp
   Profiler/SamplingProfilerPosix.cpp
@@ -178,7 +179,6 @@ endif()
 add_llvm_library(hermesVMRuntime STATIC ${source_files}
     LINK_LIBS
     hermesInst
-    hermesInstrumentation
     hermesSupport
     hermesParser
     hermesPlatform

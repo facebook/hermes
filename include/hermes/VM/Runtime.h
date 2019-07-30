@@ -31,10 +31,10 @@
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/RuntimeModule.h"
+#include "hermes/VM/RuntimeStats.h"
 #include "hermes/VM/StackFrame.h"
 #include "hermes/VM/SymbolRegistry.h"
 #include "hermes/VM/TwineChar16.h"
-#include "hermes/VM/instrumentation/RuntimeStats.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <atomic>
