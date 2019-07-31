@@ -4,7 +4,10 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -41,6 +44,11 @@
 #define DEBUG_TYPE "hermes-repl"
 
 #define C_STRING(x) #x
+
+#if HAVE_LIBREADLINE
+static const std::string kHistoryFileBaseName = ".hermes_history";
+static const int kHistoryMaxEntries = 500;
+#endif
 
 using namespace hermes;
 
@@ -222,6 +230,26 @@ static bool needsAnotherLine(llvm::StringRef input) {
   return !stack.empty();
 }
 
+#if HAVE_LIBREADLINE
+// Load history file or create it
+static std::error_code loadHistoryFile(llvm::SmallString<128> &historyFile) {
+  if (!llvm::sys::path::home_directory(historyFile)) {
+    // Use ENOENT here since it could not found a home directory
+    return std::error_code(ENOENT, std::system_category());
+  }
+
+  llvm::sys::path::append(historyFile, kHistoryFileBaseName);
+
+  auto err = ::read_history(historyFile.c_str());
+  if (err != 0) {
+    // Return a error_code object from a errno enum
+    return std::error_code(err, std::system_category());
+  }
+
+  return std::error_code();
+}
+#endif
+
 // This is the vm driver.
 int main(int argc, char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal("Hermes REPL");
@@ -288,6 +316,15 @@ int main(int argc, char **argv) {
 
   runtime->getHeap().runtimeWillExecute();
 
+#if HAVE_LIBREADLINE
+  llvm::SmallString<128> historyFile{};
+  auto historyErr = loadHistoryFile(historyFile);
+  if (historyErr && historyErr.value() != ENOENT) {
+    llvm::errs() << "Could not load history file: " << historyErr.message()
+                 << '\n';
+  }
+#endif
+
   // SetUnbuffered because there is no explicit flush after prompt (>>).
   // There is also no explicitly flush at end of line. (An automatic flush
   // mechanism is not guaranteed to be present, from my experiment on Windows)
@@ -300,6 +337,12 @@ int main(int argc, char **argv) {
         (readResult == ReadResult::INTERRUPT && code.empty())) {
       // EOF or user exit on non-continuation line.
       llvm::outs() << '\n';
+#if HAVE_LIBREADLINE
+      if (history_length > 0) {
+        ::stifle_history(kHistoryMaxEntries);
+        ::write_history(historyFile.c_str());
+      }
+#endif
       return 0;
     }
 
