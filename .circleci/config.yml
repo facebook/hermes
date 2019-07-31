@@ -65,6 +65,14 @@ jobs:
           command: |
             cd "$HERMES_WS_DIR"
             cp "build_android/distributions"/hermes-runtime-android-*.tar.gz "output"
+      - run:
+          name: Checksum artifacts
+          command: |
+            cd "$HERMES_WS_DIR/output"
+            for file in *
+            do
+              sha256sum "$file" > "$file.sha256"
+            done
       - store_artifacts:
           path: /tmp/hermes/output/
       - persist_to_workspace:
@@ -114,6 +122,14 @@ jobs:
           command: |
             cd "$HERMES_WS_DIR"
             cp "build_release/github"/hermes-cli-*.tar.gz "output"
+      - run:
+          name: Checksum artifacts
+          command: |
+            cd "$HERMES_WS_DIR/output"
+            for file in *
+            do
+              sha256sum "$file" > "$file.sha256"
+            done
       - store_artifacts:
           path: /tmp/hermes/output/
       - persist_to_workspace:
@@ -155,6 +171,14 @@ jobs:
           command: |
             cd "$HERMES_WS_DIR"
             cp "build_release/github"/hermes-cli-*.tar.gz "output"
+      - run:
+          name: Checksum artifacts
+          command: |
+            cd "$HERMES_WS_DIR/output"
+            for file in *
+            do
+              shasum -a 256 "$file" > "$file.sha256"
+            done
       - store_artifacts:
           path: /tmp/hermes/output/
       - persist_to_workspace:
@@ -245,6 +269,16 @@ jobs:
             Copy-Item -Path "build_release\github\hermes-cli-*.tar.gz" -Destination "output"
             if (-not $?) { throw "Copy failed" }
 
+      - run:
+          name: Checksum artifacts
+          command: |
+            cd $Env:HERMES_WS_DIR\output
+            foreach($file in Get-ChildItem) {
+              $hash = Get-FileHash -Path $file -Algorithm SHA256
+              Write-Output ($hash.Hash + "  " + $file.Name) |
+                  Out-File -Encoding ASCII -FilePath ($file.Name +".sha256")
+            }
+
       - store_artifacts:
           path: c:\tmp\hermes\output
 
@@ -267,29 +301,38 @@ jobs:
             apt-get install -y ca-certificates
 
       - attach_workspace:
-          at: /tmp/hermes/output
+          at: /tmp/hermes/input
 
       - run:
-          name: Install dependencies
+          name: Install dependencies and set up
           command: |
+            mkdir -p /tmp/hermes/output
             apt-get install -y git npm yarnpkg
 
       - checkout
 
       - run:
-          name: Install yarn dependencies
-          command: |
-            cd npm
-            $yarn install
-
-      - run:
           name: Build NPM
           command: |
             cd npm
+            cp /tmp/hermes/input/* .
             $yarn install
-            cp /tmp/hermes/output/* .
-            $yarn pack --dev
+            $yarn pack
+
+      - run:
+          name: Copy artifacts
+          command: |
+            cd npm
             cp hermes-engine-*.tgz /tmp/hermes/output
+
+      - run:
+          name: Checksum artifacts
+          command: |
+            cd /tmp/hermes/output
+            for file in *
+            do
+              sha256sum "$file" > "$file.sha256"
+            done
 
       - store_artifacts:
           path: /tmp/hermes/output
