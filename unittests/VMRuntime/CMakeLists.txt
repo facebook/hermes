@@ -50,6 +50,7 @@ set(RTSources
   JSLibTest.cpp
   LogSuccessStorageProvider.cpp
   NativeFrameTest.cpp
+  NativeFunctionNameTest.cpp
   MarkBitArrayNCTest.cpp
   MemoryEventTrackerTest.cpp
   ObjectBufferTest.cpp

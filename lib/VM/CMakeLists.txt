@@ -31,6 +31,7 @@ set(source_files
   JSObject.cpp
   JSRegExp.cpp
   JSMapImpl.cpp
+  JSNativeFunctions.cpp
   JSTypedArray.cpp
   JSWeakMapImpl.cpp
   LimitedStorageProvider.cpp
