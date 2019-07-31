@@ -528,9 +528,11 @@ class JSLexer {
   /// \return the updated source pointer.
   const char *skipBlockComment(const char *start);
 
-  /// Check if a source mapping URL resides at \p ptr,
-  /// and store it in the SourceErrorManager if it does.
-  void tryRecordSourceMappingUrl(const char *ptr);
+  /// Try to read a "magic comment" of the form `//# name=value` at \p ptr.
+  /// \return the value encoded in the comment if found, None otherwise.
+  llvm::Optional<StringRef> tryReadMagicComment(
+      llvm::StringRef name,
+      const char *ptr);
 
   void scanNumber();
 

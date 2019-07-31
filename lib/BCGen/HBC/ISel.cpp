@@ -215,7 +215,7 @@ bool HBCISel::getDebugSourceLocation(
     if (!buffer)
       return false;
 
-    StringRef filename = buffer->getBufferIdentifier();
+    StringRef filename = manager.getSourceUrl(coords.bufId);
     debugIdCache_.currentFilenameId = BCFGen_->addFilename(filename);
 
     auto sourceMappingUrl = manager.getSourceMappingUrl(coords.bufId);

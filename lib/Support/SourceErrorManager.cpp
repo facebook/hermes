@@ -283,9 +283,7 @@ void SourceErrorManager::dumpCoords(
     llvm::raw_ostream &OS,
     const SourceCoords &coords) {
   if (coords.isValid()) {
-    auto &srcBuffer = sm_.getBufferInfo(coords.bufId);
-    OS << srcBuffer.Buffer->getBufferIdentifier() << ":" << coords.line << ","
-       << coords.col;
+    OS << getSourceUrl(coords.bufId) << ":" << coords.line << "," << coords.col;
   } else {
     OS << "none:0,0";
   }

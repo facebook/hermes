@@ -269,8 +269,14 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       case '/':
         if (curCharPtr_[1] == '/') { // Line comment?
           if (LLVM_UNLIKELY(curCharPtr_[2] == '#')) {
-            // Could be a sourceMappingURL, try to read that.
-            tryRecordSourceMappingUrl(curCharPtr_);
+            if (auto sourceMappingUrl =
+                    tryReadMagicComment("sourceMappingURL", curCharPtr_)) {
+              sm_.setSourceMappingUrl(bufId_, sourceMappingUrl.getValue());
+            } else if (
+                auto sourceUrl =
+                    tryReadMagicComment("sourceURL", curCharPtr_)) {
+              sm_.setSourceUrl(bufId_, sourceUrl.getValue());
+            }
           }
           curCharPtr_ = skipLineComment(curCharPtr_);
           continue;
@@ -916,23 +922,26 @@ endLoop:
   return start;
 }
 
-void JSLexer::tryRecordSourceMappingUrl(const char *ptr) {
+llvm::Optional<StringRef> JSLexer::tryReadMagicComment(
+    llvm::StringRef name,
+    const char *ptr) {
   assert(
       ptr[0] == '/' && ptr[1] == '/' && ptr[2] == '#' &&
-      "Invalid comment to check sourceMappingUrl");
+      "Invalid start of magic comment");
 
   llvm::StringRef str{ptr, static_cast<size_t>(bufferEnd_ - ptr)};
 
-  // Syntax is //# sourceMappingURL=$url
-  auto isSourceMappingUrl = str.consume_front("//# sourceMappingURL=");
-  if (!isSourceMappingUrl) {
-    return;
+  // Syntax is //# name=value
+  auto isMatch = str.consume_front("//# ") && str.consume_front(name) &&
+      str.consume_front("=");
+  if (!isMatch) {
+    return llvm::None;
   }
 
   // Read until the next newline.
-  llvm::StringRef sourceMappingUrl =
+  llvm::StringRef value =
       str.take_while([](char c) -> bool { return c != '\n' && c != '\r'; });
-  sm_.setSourceMappingUrl(bufId_, sourceMappingUrl);
+  return value;
 }
 
 void JSLexer::scanNumber() {

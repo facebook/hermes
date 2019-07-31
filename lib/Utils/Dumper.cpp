@@ -275,7 +275,7 @@ void IRPrinter::printSourceLocation(SMLoc loc) {
   if (!sm_.findBufferLineAndLoc(loc, coords))
     return;
 
-  os << sm_.getBufferIdentifier(coords.bufId) << ":" << coords.line << ":"
+  os << sm_.getSourceUrl(coords.bufId) << ":" << coords.line << ":"
      << coords.col;
 }
 
@@ -285,9 +285,9 @@ void IRPrinter::printSourceLocation(SMRange rng) {
       !sm_.findBufferLineAndLoc(rng.End, end))
     return;
 
-  os << "[" << sm_.getBufferIdentifier(start.bufId) << ":" << start.line << ":"
-     << start.col << " ... " << sm_.getBufferIdentifier(end.bufId) << ":"
-     << end.line << ":" << end.col << ")";
+  os << "[" << sm_.getSourceUrl(start.bufId) << ":" << start.line << ":"
+     << start.col << " ... " << sm_.getSourceUrl(end.bufId) << ":" << end.line
+     << ":" << end.col << ")";
 }
 
 void IRPrinter::visitModule(const Module &M) {

@@ -127,6 +127,10 @@ class SourceErrorManager {
   /// If an entry doesn't exist, then there is no source mapping URL.
   llvm::DenseMap<uint32_t, std::string> sourceMappingUrls_{};
 
+  /// Map of bufId to user-specified source URLs.
+  /// If an entry doesn't exist, then there is no user-specified source URL.
+  llvm::DenseMap<uint32_t, std::string> sourceUrls_{};
+
   /// If larger than zero, messages are buffered and not immediately displayed.
   /// They will be displayed once the counter falls back to zero.
   unsigned bufferingEnabled_{0};
@@ -274,6 +278,12 @@ class SourceErrorManager {
     return it->second;
   }
 
+  /// Set the user-specified source URL for the buffer \p bufId.
+  /// If one was already set, overwrite it.
+  void setSourceUrl(uint32_t bufId, llvm::StringRef url) {
+    sourceUrls_[bufId] = url;
+  }
+
   /// Find the bufferId, line and column of the specified location \p loc.
   /// \return true on success, false if could not be found, in which case
   ///     result.isValid() would also return false.
@@ -295,8 +305,18 @@ class SourceErrorManager {
 
   /// Return an identifier for this buffer, typically the filename it was read
   /// from.
-  llvm::StringRef getBufferIdentifier(unsigned bufId) {
+  llvm::StringRef getOriginalBufferIdentifier(unsigned bufId) const {
     return sm_.getMemoryBuffer(bufId)->getBufferIdentifier();
+  }
+
+  /// Get the user-specified source URL for this buffer, or a default identifier
+  /// for it (typically the filename it was read from).
+  llvm::StringRef getSourceUrl(unsigned bufId) const {
+    const auto it = sourceUrls_.find(bufId);
+    if (it != sourceUrls_.end()) {
+      return it->second;
+    }
+    return getOriginalBufferIdentifier(bufId);
   }
 
   /// Print the passed source coordinates in human readable form for debugging.
