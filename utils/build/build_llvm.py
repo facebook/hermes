@@ -30,7 +30,10 @@ def parse_args():
         elif args.build_system == "Unix Makefiles":
             return "make"
         elif "Visual Studio" in args.build_system:
-            return "MSBuild.exe LLVM.sln -target:build -maxcpucount -verbosity:normal"
+            cmd = "MSBuild.exe LLVM.sln -target:build -maxcpucount -verbosity:normal"
+            if args.distribute:
+                cmd += " /p:Configuration=Release"
+            return cmd
         else:
             raise Exception("Unrecognized build system: {}".format(args.build_system))
 

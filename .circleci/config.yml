@@ -1,4 +1,8 @@
-version: 2
+version: 2.1
+
+orbs:
+  win: circleci/windows-tools@0.0.4
+
 workflows:
   version: 2
   build:
@@ -6,6 +10,7 @@ workflows:
       - android
       - linux
       - macos
+      - windows
 
 jobs:
   android:
@@ -138,3 +143,89 @@ jobs:
             cp "build_release/github"/hermes-cli-*.tar.gz "output"
       - store_artifacts:
           path: /tmp/hermes/output/
+
+  windows:
+    executor:
+      name: win/preview-default
+      shell: powershell.exe
+    environment:
+      - HERMES_WS_DIR: 'C:\tmp\hermes'
+      - ICU_URL: 'https://github.com/unicode-org/icu/releases/download/release-64-2/icu4c-64_2-Win64-MSVC2017.zip'
+      - MSBUILD_DIR: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin'
+      - CMAKE_DIR: 'C:\Program Files\CMake\bin'
+    steps:
+      - checkout
+
+      - run:
+          name: Set up workspace
+          command: |
+            New-Item -ItemType Directory $Env:HERMES_WS_DIR
+            New-Item -ItemType Directory $Env:HERMES_WS_DIR\icu
+            New-Item -ItemType Directory $Env:HERMES_WS_DIR\output
+            New-Item -ItemType SymbolicLink -Target . -Path $Env:HERMES_WS_DIR -Name hermes
+
+      - run:
+          name: Download ICU
+          command: |
+            cd $Env:HERMES_WS_DIR\icu
+            # If Invoke-WebRequest shows a progress bar, it will fail with
+            #   Win32 internal error "Access is denied" 0x5 occurred [...]
+            $progressPreference = 'silentlyContinue'
+            Invoke-WebRequest -Uri "$Env:ICU_URL" -OutFile "icu.zip"
+            if (-not $?) { throw "Failed to download ICU from $Env:ICU_URL" }
+            Expand-Archive -Path "icu.zip" -DestinationPath "."
+            if (-not $?) { throw "Failed to unzip ICU" }
+
+      - run:
+          name: Install dependencies
+          command: |
+            choco install --no-progress cmake
+            if (-not $?) { throw "Failed to install CMake" }
+            choco install --no-progress python3
+            if (-not $?) { throw "Failed to install Python" }
+            # Choco installs of VS2019 are so slow that CircleCI times it out
+            # after 10 minutes of perceived inactivity. There's no verbose flag,
+            # so we'll just print something occasionally to bump the timer.
+            $install = Start-Job {
+              choco install visualstudio2019buildtools --package-parameters "--allWorkloads --includeRecommended --passive --locale en-US"
+            }
+            $eta = 12
+            while ($install.State -eq "Running") {
+                Write-Host "Waiting for visualstudio2019buildtools. ETA $eta minutes..."
+                $install | Wait-Job -timeout 60
+                $eta -= 1
+            }
+            $install | Receive-Job
+            if (-not $?) { throw "Failed to install visualstudio2019buildtools" }
+            choco install visualstudio2019-workload-vctools
+            if (-not $?) { throw "Failed to install visualstudio2019-workload-vctools" }
+
+      - run:
+          name: Build LLVM
+          command: |
+            $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
+            cd $Env:HERMES_WS_DIR
+            hermes\utils\build\build_llvm.py --build-system='Visual Studio 16 2019' --distribute llvm llvm_build
+            if (-not $?) { throw "Failed to build LLVM" }
+
+      - run:
+          name: Build Hermes for Windows
+          command: |
+            $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
+            $Env:ICU_ROOT = "$Env:HERMES_WS_DIR\icu"
+            cd $Env:HERMES_WS_DIR
+            hermes\utils\build\configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-DLLVM_ENABLE_LTO=OFF -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF' --distribute
+            if (-not $?) { throw "Failed to configure Hermes" }
+            cd build_release
+            cmake --build . --target github-cli-release --config Release
+            if (-not $?) { throw "Failed to build Hermes" }
+
+      - run:
+          name: Copy artifacts
+          command: |
+            cd $Env:HERMES_WS_DIR
+            Copy-Item -Path "build_release\github\hermes-cli-*.tar.gz" -Destination "output"
+            if (-not $?) { throw "Copy failed" }
+
+      - store_artifacts:
+          path: c:\tmp\hermes\output

@@ -95,6 +95,9 @@ set(HERMES_IS_ANDROID OFF CACHE BOOL
 set(HERMES_ENABLE_WERROR OFF CACHE BOOL
   "Whether the build should have -Werror enabled")
 
+set(HERMES_ENABLE_WIN10_ICU_FALLBACK ON CACHE BOOL
+  "Whether to allow falling back on Win10 ICU")
+
 set(ANDROID_LINUX_PERF_PATH ""
   CACHE STRING
   "If buildling for Android, full path to <linux/perf_events.h>")
@@ -336,7 +339,7 @@ endif()
 
 # ICU is available on Windows, but only since Windows 10 v1703.
 # Therefore, use it only as fallback.
-if (NOT ICU_FOUND AND
+if (NOT ICU_FOUND AND HERMES_ENABLE_WIN10_ICU_FALLBACK AND
     WIN32 AND # Windows 32 or 64 bit
     # At least Windows 10 version 1703 (aka Creators Update)
     NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS "10.0.15063")
