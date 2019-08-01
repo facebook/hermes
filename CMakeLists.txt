@@ -13,7 +13,14 @@ else()
 endif()
 
 # Set the VERSION variables based on the project command
-cmake_policy(SET CMP0048 NEW)
+if (POLICY CMP0048)
+  cmake_policy(SET CMP0048 NEW)
+endif()
+
+# Include file check macros honor CMAKE_REQUIRED_LIBRARIES.
+if (POLICY CMP0075)
+  cmake_policy(SET CMP0075 NEW)
+endif()
 
 # This must be consistent with the release_version in
 # android/build.gradle and npm/package.json
