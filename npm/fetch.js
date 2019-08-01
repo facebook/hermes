@@ -101,15 +101,20 @@ async function unpack(tarball, destdir) {
       // In dev mode, it's likely cli tarballs for other platforms will
       // be missing.  Just log it and move on.
       console.warn("Ignoring missing tarball in dev mode", err);
-      return;
+      return false;
     } else {
       throw err;
     }
   }
+  return true;
 };
 
 async function unpackAll(files) {
-  await Promise.all(files.map(x => unpack(x.name, x.dest)));
+  var results = await Promise.all(files.map(x => unpack(x.name, x.dest)));
+  if (!results.some(c => c)) {
+    var names = inputs.map(c => c.name).join(", ");
+    throw "No tarballs found. Please build or download at least one of: " + names;
+  }
 }
 
 var inputs = [
