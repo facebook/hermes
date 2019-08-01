@@ -109,6 +109,7 @@ class TraceInterpreter final {
     ::hermes::vm::gcheapsize_t maxHeapSize{0};
     bool allocInYoung{true};
     bool revertToYGAtTTI{true};
+    bool forceGCBeforeStats{false};
     bool shouldPrintGCStats{false};
     bool shouldTrackIO{false};
     uint8_t bytecodeWarmupPercent{0};

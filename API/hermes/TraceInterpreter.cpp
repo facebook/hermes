@@ -1179,6 +1179,9 @@ void TraceInterpreter::addObjectToDefs(
 }
 
 std::string TraceInterpreter::printStats() {
+  if (options.forceGCBeforeStats) {
+    rt.instrumentation().collectGarbage();
+  }
   std::string stats = rt.instrumentation().getRecordedGCStats();
   ::hermes::vm::instrumentation::PerfEvents::endAndInsertStats(stats);
 #ifdef HERMESVM_PROFILER_OPCODE

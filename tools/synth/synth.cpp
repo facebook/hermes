@@ -80,6 +80,12 @@ static opt<bool> GCRevertToYGAtTTI(
     cat(GCCategory),
     init(true));
 
+static opt<bool> GCBeforeStats(
+    "gc-before-stats",
+    desc("Perform a full GC just before printing statistics at exit"),
+    cat(GCCategory),
+    init(false));
+
 static opt<bool> GCPrintStats(
     "gc-print-stats",
     desc("Output summary garbage collection statistics at exit"),
@@ -111,7 +117,8 @@ int main(int argc, char **argv) {
     options.maxHeapSize = cl::MaxHeapSize.bytes;
     options.allocInYoung = cl::GCAllocYoung;
     options.revertToYGAtTTI = cl::GCRevertToYGAtTTI;
-    options.shouldPrintGCStats = cl::GCPrintStats;
+    options.forceGCBeforeStats = cl::GCBeforeStats;
+    options.shouldPrintGCStats = cl::GCPrintStats || cl::GCBeforeStats;
     options.shouldTrackIO = cl::TrackBytecodeIO;
     options.bytecodeWarmupPercent = cl::BytecodeWarmupPercent;
     options.sanitizeRate = cl::GCSanitizeRate;

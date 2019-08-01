@@ -286,6 +286,9 @@ bool executeHBCBytecode(
     llvm::errs() << "Process stats:\n";
     statSampler->stop().printJSON(llvm::errs());
 
+    if (options.forceGCBeforeStats) {
+      runtime->collect();
+    }
     printStats(runtime.get(), llvm::errs());
   }
 

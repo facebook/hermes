@@ -64,6 +64,9 @@ struct ExecuteOptions {
 
   /// Fatally crash on any JIT compilation error.
   bool jitCrashOnError{false};
+
+  /// Perform a full GC just before printing any statistics.
+  bool forceGCBeforeStats{false};
 };
 
 /// Executes the HBC bytecode provided in HermesVM.

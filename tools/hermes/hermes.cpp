@@ -66,6 +66,12 @@ static opt<bool> GCRevertToYGAtTTI(
     cat(GCCategory),
     init(false));
 
+static opt<bool> GCBeforeStats(
+    "gc-before-stats",
+    desc("Perform a full GC just before printing statistics at exit"),
+    cat(GCCategory),
+    init(false));
+
 static opt<bool> GCPrintStats(
     "gc-print-stats",
     desc("Output summary garbage collection statistics at exit"),
@@ -97,7 +103,7 @@ static int executeHBCBytecodeFromCL(
                           .withRandomSeed(cl::GCSanitizeRandomSeed)
                           .build())
                   .withShouldRandomizeAllocSpace(cl::GCRandomizeAllocSpace)
-                  .withShouldRecordStats(cl::GCPrintStats)
+                  .withShouldRecordStats(cl::GCPrintStats || cl::GCBeforeStats)
                   .withShouldReleaseUnused(false)
                   .withAllocInYoung(cl::GCAllocYoung)
                   .withRevertToYGAtTTI(cl::GCRevertToYGAtTTI)
@@ -123,6 +129,7 @@ static int executeHBCBytecodeFromCL(
   options.dumpJITCode = cl::DumpJITCode;
   options.jitCrashOnError = cl::JITCrashOnError;
   options.stopAfterInit = cl::StopAfterInit;
+  options.forceGCBeforeStats = cl::GCBeforeStats;
 
   bool success;
   if (cl::Repeat <= 1) {
