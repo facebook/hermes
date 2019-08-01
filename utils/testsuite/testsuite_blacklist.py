@@ -692,13 +692,6 @@ BLACK_LIST = [
     "test262/test/language/arguments-object/mapped/nonconfigurable-nonwritable-descriptors-set-by-param.js",
     "test262/test/language/arguments-object/mapped/nonconfigurable-nonenumerable-nonwritable-descriptors-set-by-arguments.js",
     "test262/test/language/arguments-object/mapped/nonconfigurable-nonenumerable-nonwritable-descriptors-set-by-param.js",
-    # date formats not in the spec
-    "test262/test/built-ins/Date/prototype/toDateString/format.js",
-    "test262/test/built-ins/Date/prototype/toString/format.js",
-    "test262/test/built-ins/Date/prototype/toUTCString/format.js",
-    "test262/test/built-ins/Date/prototype/toTimeString/format.js",
-    "test262/test/built-ins/Date/prototype/toUTCString/day-names.js",
-    "test262/test/built-ins/Date/prototype/toUTCString/month-names.js",
     # redeclaration
     "test262/test/language/block-scope/syntax/redeclaration/var-declaration-attempt-to-redeclare-with-function-declaration.js",
     "test262/test/language/block-scope/syntax/redeclaration/function-declaration-attempt-to-redeclare-with-function-declaration.js",
