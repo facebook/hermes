@@ -36,7 +36,7 @@ set(HERMES_RELEASE_VERSION PROJECT_VERSION)
 # Project options.
 set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
   CACHE STRING
-  "HermesVM GC type: either GENERATIONAL, NONCONTIG_GENERATIONAL, or MALLOC")
+  "HermesVM GC type: either NONCONTIG_GENERATIONAL or MALLOC")
 set(HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT OFF
   CACHE BOOL
   "HermesVM GC: only allocate into the old generation, mimicking a Mark-Sweep-Compact collector")

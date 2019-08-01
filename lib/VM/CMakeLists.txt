@@ -133,13 +133,7 @@ set(LLVM_OPTIONAL_SOURCES
   ${jit_files}
 )
 
-if (${HERMESVM_GCKIND} STREQUAL "GENERATIONAL")
-  list(APPEND source_files detail/gcs/BackingStorage.cpp gcs/CardObjectTable.cpp
-                           gcs/CardTable.cpp gcs/CompleteMarkState.cpp
-                           gcs/DependentMemoryRegion.cpp gcs/FillerCell.cpp
-                           gcs/GenGC.cpp gcs/MarkBitArray.cpp gcs/OldGen.cpp
-                           gcs/Space.cpp gcs/YoungGen.cpp)
-elseif (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
+if (${HERMESVM_GCKIND} STREQUAL "NONCONTIG_GENERATIONAL")
   list(APPEND source_files gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
                            gcs/CardTableNC.cpp gcs/FillerCell.cpp
                            gcs/CompleteMarkState.cpp gcs/GCGeneration.cpp

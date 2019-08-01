@@ -13,9 +13,6 @@ namespace vm {
 #if defined(HERMESVM_GC_MALLOC)
 class MallocGC;
 using GC = MallocGC;
-#elif defined(HERMESVM_GC_GENERATIONAL)
-class GenGC;
-using GC = GenGC;
 #elif defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
 class GenGC;
 using GC = GenGC;
