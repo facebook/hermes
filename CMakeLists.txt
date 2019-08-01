@@ -12,14 +12,19 @@ else()
   cmake_minimum_required(VERSION 3.6.0)
 endif()
 
-project(Hermes)
+# Set the VERSION variables based on the project command
+cmake_policy(SET CMP0048 NEW)
+
+# This must be consistent with the release_version in
+# android/build.gradle and npm/package.json
+project(Hermes
+        VERSION 0.1.1
+        LANGUAGES C CXX)
 
 include(CheckCXXCompilerFlag)
 include(CheckCXXSourceCompiles)
 
-# This must be consistent with the release_version in
-# android/build.gradle and npm/package.json
-set(HERMES_RELEASE_VERSION 0.1.1)
+set(HERMES_RELEASE_VERSION PROJECT_VERSION)
 
 # Project options.
 set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
