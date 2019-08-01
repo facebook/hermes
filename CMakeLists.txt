@@ -31,7 +31,7 @@ project(Hermes
 include(CheckCXXCompilerFlag)
 include(CheckCXXSourceCompiles)
 
-set(HERMES_RELEASE_VERSION PROJECT_VERSION)
+set(HERMES_RELEASE_VERSION ${PROJECT_VERSION})
 
 # Project options.
 set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
