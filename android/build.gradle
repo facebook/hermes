@@ -3,74 +3,31 @@
 // This source code is licensed under the MIT license found in the LICENSE
 // file in the root directory of this source tree.
 //
-buildscript {
-  repositories {
-    jcenter()
-    google()
-  }
-  dependencies {
-    classpath 'com.android.tools.build:gradle:3.3.0'
-  }
-}
 
-apply plugin: 'com.android.library'
-
-def facebookBuild = System.getenv("FACEBOOK") ?: "0"
-def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
-def hermes_ws = System.getenv("HERMES_WS_DIR")
 // This must be consistent with the release_version in npm/package.json
 // and the HERMES_RELEASE_VERSION in CMakeLists.txt
 def release_version = "0.1.1"
 
-// For Facebook internal use:
-def fbsource = System.getenv("FBSOURCE_DIR") ?:
-    System.getenv("HOME") + "/fbsource"
+buildscript {
+  ext {
+    hermes_ws = System.getenv("HERMES_WS_DIR")
+    if (hermes_ws == null || hermes_ws == "") {
+      throw new InvalidUserDataException("HERMES_WS_DIR is not set")
+    }
+    outputDir = file("${hermes_ws}/build_android/outputs")
+    outputDir.mkdirs()
+    file("${outputDir}/aar").mkdirs()
 
-if (hermes_ws == null || hermes_ws == "") {
-  throw new InvalidUserDataException("HERMES_WS_DIR is not set")
-}
-buildDir = "${hermes_ws}/build_android"
-buildDir.mkdirs()
-
-android {
-  compileSdkVersion = 28
-
-  defaultConfig {
     minSdkVersion = 16
-    externalNativeBuild {
-      cmake {
-        arguments "-DHERMES_IS_ANDROID=True"
-        arguments "-DHERMES_FACEBOOK_BUILD=${facebookBuild}"
-        arguments "-DANDROID_STL=c++_shared"
-        arguments "-DANDROID_PIE=True"
-        arguments "-DLLVM_BUILD_BASE=${hermes_ws}/llvm"
-        arguments "-DLLVM_SRC_DIR=${hermes_ws}/llvm"
-        arguments "-DFBSOURCE_DIR=${fbsource}"
-        targets "libhermes"
-      }
-    }
-    ndk {
-      abiFilters (*abis)
-    }
+    compileSdkVersion = 28
+    abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
   }
-
-  externalNativeBuild {
-    cmake {
-      version "3.6.0"
-      path "../CMakeLists.txt"
-      buildStagingDirectory = "${hermes_ws}/staging"
-      buildStagingDirectory.mkdirs()
-    }
+  repositories {
+    google()
+    jcenter()
   }
-
-  buildTypes {
-    debug {
-      externalNativeBuild {
-        cmake {
-          arguments "-DHERMES_ENABLE_DEBUGGER=True"
-        }
-      }
-    }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:3.3.0'
   }
 }
 
@@ -79,43 +36,28 @@ allprojects {
     google()
     jcenter()
   }
-
-  afterEvaluate {
-    // Gradle 4/5.0 outputs android-debug.aar and android-release.aar
-    // Gradle 5.1 outputs android.aar for both
-    // Unify the two by renaming the files afterwards.
-    // Neither appear to care whether the original filename actually exists.
-    def aarDir = "$buildDir/outputs/aar/"
-    tasks.named("assembleDebug").configure {
-      doLast {
-        file("$aarDir/android-debug.aar").renameTo("$aarDir/hermes-debug.aar")
-        file("$aarDir/android.aar").renameTo("$aarDir/hermes-debug.aar")
-      }
-    }
-    tasks.named("assembleRelease").configure {
-      doLast {
-        file("$aarDir/android-release.aar").renameTo("$aarDir/hermes-release.aar")
-        file("$aarDir/android.aar").renameTo("$aarDir/hermes-release.aar")
-      }
-    }
-  }
 }
+
+
+buildDir = "${hermes_ws}/build_android"
 
 task copyApiHeaders(type: Copy) {
   from "$projectDir/../API/hermes"
   include '**/*.h'
-  into "$buildDir/outputs/aar/include/hermes"
+  into "$outputDir/include/hermes"
 }
+
 task copyPublicHeaders(type: Copy) {
   from "$projectDir/../public/hermes/Public"
   include '**/*.h'
-  into "$buildDir/outputs/aar/include/hermes/Public"
+  into "$outputDir/include/hermes/Public"
 }
 
-task githubRelease(dependsOn: ['build', 'copyApiHeaders', 'copyPublicHeaders'], type: Tar) {
+task githubRelease(dependsOn: ['hermes:build', 'cppruntime:build', 'copyApiHeaders', 'copyPublicHeaders'], type: Tar) {
   baseName = "hermes-runtime-android"
   version = "v" + release_version
   extension = "tar.gz"
   compression = Compression.GZIP
-  from "$buildDir/outputs/aar"
+  destinationDirectory = file("${hermes_ws}/build_android/distributions")
+  from "$outputDir"
 }
