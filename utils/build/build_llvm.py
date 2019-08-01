@@ -11,7 +11,7 @@ import platform
 import subprocess
 import sys
 
-from common import build_dir_suffix, get_parser, run_command, which
+from common import build_dir_suffix, get_parser, is_visual_studio, run_command, which
 
 
 # It references the commit day so we can shallow clone
@@ -23,40 +23,13 @@ _LLVM_REV_DATE = "2018-10-08"
 
 
 def parse_args():
-    def default_build_command(args):
-        # Choose a default based on the build system chosen
-        if args.build_system == "Ninja":
-            return "ninja"
-        elif args.build_system == "Unix Makefiles":
-            return "make"
-        elif "Visual Studio" in args.build_system:
-            cmd = "MSBuild.exe LLVM.sln -target:build -maxcpucount -verbosity:normal"
-            if args.distribute:
-                cmd += " /p:Configuration=Release"
-            return cmd
-        else:
-            raise Exception("Unrecognized build system: {}".format(args.build_system))
-
     parser = get_parser()
     parser.add_argument("llvm_src_dir", type=str, nargs="?", default="llvm")
     parser.add_argument("llvm_build_dir", type=str, nargs="?", default="llvm_build")
-    parser.add_argument(
-        "--build-command",
-        type=str,
-        dest="build_command",
-        default=None,
-        help="Command to run once cmake finishes",
-    )
-    parser.add_argument(
-        "--cross-compile-only", dest="cross_compile_only", action="store_true"
-    )
+    parser.add_argument("--target", "-t", action="append", default=[])
     args = parser.parse_args()
     args.llvm_src_dir = os.path.realpath(args.llvm_src_dir)
     args.llvm_build_dir = os.path.realpath(args.llvm_build_dir)
-    if not args.build_command:
-        args.build_command = default_build_command(args)
-    if args.cross_compile_only:
-        args.build_command += " " + os.path.join("bin", "llvm-tblgen")
     args.build_type = args.build_type or ("MinSizeRel" if args.distribute else "Debug")
     args.llvm_build_dir += build_dir_suffix(args)
     return args
@@ -135,7 +108,6 @@ def main():
 
     print("Source Dir: {}".format(args.llvm_src_dir))
     print("Using Build system: {}".format(args.build_system))
-    print("Using Build command: {}".format(args.build_command))
     print("Build Dir: {}".format(args.llvm_build_dir))
     print("Build Type: {}".format(args.build_type))
 
@@ -148,7 +120,7 @@ def main():
     if args.is_32_bit:
         cmake_flags += ["-DLLVM_BUILD_32_BITS=On"]
     if platform.system() == "Windows":
-        if platform.machine().endswith("64"):
+        if platform.machine().endswith("64") and is_visual_studio(args.build_system):
             cmake_flags += ["-Thost=x64"]
         cmake_flags += ["-DLLVM_INCLUDE_EXAMPLES=Off"]
     if args.enable_asan:
@@ -194,16 +166,30 @@ def main():
         pass
 
     print("CMake flags: {}".format(" ".join(cmake_flags)))
+    cmake = which("cmake")
+    # Print the CMake version to assist in diagnosing issues.
+    print(
+        "CMake version:\n{}".format(
+            subprocess.check_output([cmake, "--version"], stderr=subprocess.STDOUT)
+        )
+    )
+
     run_command(
-        [which("cmake"), "-G", args.build_system, args.llvm_src_dir] + cmake_flags,
+        [cmake, "-G", args.build_system, args.llvm_src_dir] + cmake_flags,
         env=os.environ,
         cwd=args.llvm_build_dir,
     )
     # MSBuild needs retries to handle an unexplainable linker error: LNK1000.
-    tries = 3 if "MSBuild" in args.build_command else 1
+    # Retry the build in case of failures.
+    tries = 3
     for i in range(tries):
         try:
-            run_command(args.build_command.split(), cwd=args.llvm_build_dir)
+            build_cmd = [cmake, "--build", args.llvm_build_dir]
+            for target in args.target:
+                build_cmd += ["--target", target]
+            if args.distribute and is_visual_studio(args.build_system):
+                build_cmd += ["--config", "Release"]
+            run_command(build_cmd, env=os.environ)
             break
         except subprocess.CalledProcessError as e:
             if i == tries - 1:

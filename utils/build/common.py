@@ -66,6 +66,10 @@ def get_parser():
     return parser
 
 
+def is_visual_studio(build_system):
+    return "Visual Studio" in build_system
+
+
 def run_command(cmd, **kwargs):
     print("+ " + " ".join(cmd))
     return subprocess.check_call(cmd, stdout=sys.stdout, stderr=sys.stderr, **kwargs)

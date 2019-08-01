@@ -8,8 +8,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os
 import platform
+import subprocess
 
-from common import build_dir_suffix, get_parser, run_command, which
+from common import build_dir_suffix, get_parser, is_visual_studio, run_command, which
 
 
 def parse_args():
@@ -78,9 +79,8 @@ def main():
     if (
         platform.system() == "Windows"
         and platform.machine().endswith("64")
-        and "Visual Studio" in args.build_system
+        and is_visual_studio(args.build_system)
     ):
-        print(args.build_system)
         cmake_flags += ["-Thost=x64"]
     if not args.distribute:
         cmake_flags += ["-DLLVM_ENABLE_ASSERTIONS=On"]
@@ -112,8 +112,16 @@ def main():
     # If this file is moved, make sure to update this.
     for _ in range(3):
         hermes_src_dir = os.path.dirname(hermes_src_dir)
+
+    cmake = which("cmake")
+    # Print the CMake version to assist in diagnosing issues.
+    print(
+        "CMake version:\n{}".format(
+            subprocess.check_output([cmake, "--version"], stderr=subprocess.STDOUT)
+        )
+    )
     run_command(
-        [which("cmake"), hermes_src_dir, "-G", args.build_system] + cmake_flags,
+        [cmake, hermes_src_dir, "-G", args.build_system] + cmake_flags,
         env=os.environ,
         cwd=args.hermes_build_dir,
     )

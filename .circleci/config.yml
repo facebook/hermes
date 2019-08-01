@@ -41,7 +41,7 @@ jobs:
           name: Build LLVM
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/build_llvm.py --cross-compile-only llvm llvm_build
+            hermes/utils/build/build_llvm.py --target llvm-tblgen llvm llvm_build
       - run:
           name: Crosscompile LLVM
           command: |
