@@ -7,8 +7,10 @@
 #ifndef HERMES_SUPPORT_SOURCEMAP_H
 #define HERMES_SUPPORT_SOURCEMAP_H
 
+#include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/OptValue.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <vector>
@@ -86,21 +88,32 @@ class SourceMap {
     Segment() = default;
   };
   using SegmentList = std::vector<Segment>;
+  using MetadataEntry = parser::JSONSharedValue;
+  using MetadataList = std::vector<llvm::Optional<MetadataEntry>>;
 
   SourceMap(
       const std::string &sourceRoot,
       std::vector<std::string> &&sources,
-      std::vector<SegmentList> &&lines)
+      std::vector<SegmentList> &&lines,
+      MetadataList &&sourcesMetadata)
       : sourceRoot_(sourceRoot),
         sources_(std::move(sources)),
-        lines_(std::move(lines)) {}
+        lines_(std::move(lines)),
+        sourcesMetadata_(std::move(sourcesMetadata)) {}
 
   /// Query source map text location for \p line and \p column.
-  /// In both the input and output of this function, Line and column numbers
+  /// In both the input and output of this function, line and column numbers
   /// are 1-based.
   llvm::Optional<SourceMapTextLocation> getLocationForAddress(
       uint32_t line,
-      uint32_t column);
+      uint32_t column) const;
+
+  /// Query source map segment for \p line and \p column.
+  /// The line and column arguments are 1-based (but note that the return value
+  /// has 0-based line and column indices).
+  llvm::Optional<SourceMap::Segment> getSegmentForAddress(
+      uint32_t line,
+      uint32_t column) const;
 
   /// \return a list of original sources used by “mappings” entry.
   /// For testing.
@@ -112,12 +125,19 @@ class SourceMap {
     return sourceFullPath;
   }
 
- private:
   /// \return source file path with root combined for source \p index.
   std::string getSourceFullPath(uint32_t index) const {
     assert(index < sources_.size() && "index out-of-range for sources_");
     // TODO: more sophisticated path concat handling.
     return sourceRoot_ + sources_[index];
+  }
+
+  /// \return metadata for source \p index, if we have any.
+  llvm::Optional<MetadataEntry> getSourceMetadata(uint32_t index) const {
+    if (index >= sourcesMetadata_.size()) {
+      return llvm::None;
+    }
+    return sourcesMetadata_[index];
   }
 
  private:
@@ -132,6 +152,10 @@ class SourceMap {
 
   /// The list of segments in VLQ scheme.
   std::vector<SegmentList> lines_;
+
+  /// Metadata for each source keyed by source index. Represents the
+  /// x_facebook_sources field in the JSON source map.
+  MetadataList sourcesMetadata_;
 };
 
 } // namespace hermes

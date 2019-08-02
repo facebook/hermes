@@ -46,10 +46,12 @@ class SourceMapGenerator {
   }
 
   /// Adds the source filename to filenameTable_ if it doesn't already exist.
+  /// If \p metadata is provided and is non-null, it becomes the metadata entry
+  /// associated with this source (even if the source existed previously).
   /// \return the index of \p filename in filenameTable_.
-  uint32_t addSource(llvm::StringRef filename) {
-    return filenameTable_.insert(filename);
-  }
+  uint32_t addSource(
+      llvm::StringRef filename,
+      llvm::Optional<SourceMap::MetadataEntry> metadata = llvm::None);
 
   /// Output the given source map as JSON.
   void outputAsJSON(llvm::raw_ostream &OS) const;
@@ -93,26 +95,20 @@ class SourceMapGenerator {
   /// and return a new generator which contains a merged representation.
   SourceMapGenerator mergedWithInputSourceMaps() const;
 
-  /// \return the input source map location for \p seg if the input source map
+  /// \return the input source map segment for \p seg if the input source map
   /// exists and has a valid location for \p seg, else return llvm::None.
-  llvm::Optional<SourceMapTextLocation> getInputLocationForSegment(
-      const SourceMap::Segment &seg) const {
-    if (seg.representedLocation.hasValue()) {
-      assert(
-          seg.representedLocation->sourceIndex >= 0 && "Negative source index");
-    }
-    // True iff inputSourceMaps_ has a valid source map for
-    // seg.representedLocation->sourceIndex.
-    bool hasInput = seg.representedLocation.hasValue() &&
-        (uint32_t)seg.representedLocation->sourceIndex <
-            inputSourceMaps_.size() &&
-        inputSourceMaps_[seg.representedLocation->sourceIndex] != nullptr;
+  llvm::Optional<std::pair<SourceMap::Segment, const SourceMap *>>
+  getInputSegmentForSegment(const SourceMap::Segment &seg) const;
 
-    return hasInput ? inputSourceMaps_[seg.representedLocation->sourceIndex]
-                          ->getLocationForAddress(
-                              seg.representedLocation->lineIndex + 1,
-                              seg.representedLocation->columnIndex + 1)
-                    : llvm::None;
+  bool hasSourcesMetadata() const;
+
+  /// \return metadata for source \index, if we have any.
+  llvm::Optional<SourceMap::MetadataEntry> getSourceMetadata(
+      uint32_t index) const {
+    if (index >= sourcesMetadata_.size()) {
+      return llvm::None;
+    }
+    return sourcesMetadata_[index];
   }
 
   /// The list of symbol names, populating the names field.
@@ -128,6 +124,10 @@ class SourceMapGenerator {
 
   /// Map from {filename => source index}.
   StringSetVector filenameTable_{};
+
+  /// Metadata for each source keyed by source index. Represents the
+  /// x_facebook_sources field in the JSON source map.
+  SourceMap::MetadataList sourcesMetadata_;
 };
 
 } // namespace hermes

@@ -27,6 +27,60 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, VLQ vlq) {
 }
 } // namespace
 
+uint32_t SourceMapGenerator::addSource(
+    llvm::StringRef filename,
+    llvm::Optional<SourceMap::MetadataEntry> metadata) {
+  uint32_t index = filenameTable_.insert(filename);
+  if (sourcesMetadata_.size() <= index) {
+    sourcesMetadata_.resize(index + 1);
+  }
+  if (metadata.hasValue() &&
+      metadata.getValue()->getKind() != parser::JSONKind::Null) {
+    sourcesMetadata_[index] = metadata.getValue();
+  }
+  return index;
+}
+
+llvm::Optional<std::pair<SourceMap::Segment, const SourceMap *>>
+SourceMapGenerator::getInputSegmentForSegment(
+    const SourceMap::Segment &seg) const {
+  if (seg.representedLocation.hasValue()) {
+    assert(
+        seg.representedLocation->sourceIndex >= 0 && "Negative source index");
+  }
+  // True iff inputSourceMaps_ has a valid source map for
+  // seg.representedLocation->sourceIndex.
+  bool hasInput = seg.representedLocation.hasValue() &&
+      (uint32_t)seg.representedLocation->sourceIndex <
+          inputSourceMaps_.size() &&
+      inputSourceMaps_[seg.representedLocation->sourceIndex] != nullptr;
+
+  if (!hasInput) {
+    return llvm::None;
+  }
+
+  const SourceMap *inputMap =
+      inputSourceMaps_[seg.representedLocation->sourceIndex].get();
+  auto inputSeg = inputMap->getSegmentForAddress(
+      seg.representedLocation->lineIndex + 1,
+      seg.representedLocation->columnIndex + 1);
+  if (!inputSeg.hasValue()) {
+    return llvm::None;
+  }
+
+  return std::make_pair(inputSeg.getValue(), inputMap);
+}
+
+bool SourceMapGenerator::hasSourcesMetadata() const {
+  for (const auto &entry : sourcesMetadata_) {
+    if (entry.hasValue() &&
+        entry.getValue()->getKind() != parser::JSONKind::Null) {
+      return true;
+    }
+  }
+  return false;
+}
+
 SourceMapGenerator::State SourceMapGenerator::encodeSourceLocations(
     const SourceMapGenerator::State &lastState,
     llvm::ArrayRef<SourceMap::Segment> segments,
@@ -93,24 +147,36 @@ SourceMapGenerator SourceMapGenerator::mergedWithInputSourceMaps() const {
 
     for (const auto &seg : lines_[i]) {
       SourceMap::Segment newSeg = seg;
+      newSeg.representedLocation = llvm::None;
 
-      if (auto loc = getInputLocationForSegment(seg)) {
+      if (auto pair = getInputSegmentForSegment(seg)) {
         // We have an input source map and were able to find a merged source
         // location.
-        assert(loc->line >= 1 && "line numbers in debug info must be 1-based");
-        assert(
-            loc->column >= 1 && "column numbers in debug info must be 1-based");
-        newSeg.representedLocation = SourceMap::Segment::SourceLocation(
-            merged.addSource(loc->fileName), loc->line - 1, loc->column - 1
-            // TODO: Handle name index
-        );
-      } else {
+        auto inputSeg = pair->first;
+        auto inputMap = pair->second;
+        if (inputSeg.representedLocation.hasValue()) {
+          auto loc = inputSeg.representedLocation.getValue();
+          // Our _output_ sourceRoot is empty, so make sure to canonicalize
+          // the path based on the input map's sourceRoot.
+          std::string filename = inputMap->getSourceFullPath(loc.sourceIndex);
+
+          newSeg.representedLocation = SourceMap::Segment::SourceLocation(
+              merged.addSource(
+                  filename, inputMap->getSourceMetadata(loc.sourceIndex)),
+              loc.lineIndex,
+              loc.columnIndex
+              // TODO: Handle name index
+          );
+        }
+      }
+      if (!newSeg.representedLocation.hasValue() &&
+          seg.representedLocation.hasValue()) {
         // Failed to find a merge location. Use the existing location,
         // but copy over the source file name.
-        if (seg.representedLocation.hasValue()) {
-          newSeg.representedLocation->sourceIndex =
-              merged.addSource(sources[seg.representedLocation->sourceIndex]);
-        }
+        newSeg.representedLocation = seg.representedLocation;
+        newSeg.representedLocation->sourceIndex = merged.addSource(
+            sources[seg.representedLocation->sourceIndex],
+            getSourceMetadata(seg.representedLocation->sourceIndex));
       }
 
       newLine.push_back(std::move(newSeg));
@@ -141,6 +207,19 @@ void SourceMapGenerator::outputAsJSONImpl(llvm::raw_ostream &OS) const {
   json.openArray();
   json.emitValues(llvm::makeArrayRef(getSources()));
   json.closeArray();
+
+  if (hasSourcesMetadata()) {
+    json.emitKey("x_facebook_sources");
+    json.openArray();
+    for (const auto &source : sourcesMetadata_) {
+      if (source.hasValue()) {
+        source.getValue()->emitInto(json);
+      } else {
+        json.emitNullValue();
+      }
+    }
+    json.closeArray();
+  }
 
   json.emitKeyValue("mappings", getVLQMappingsString());
   json.closeDict();

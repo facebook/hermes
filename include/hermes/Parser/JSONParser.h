@@ -12,6 +12,7 @@
 #include <functional>
 #include <iterator>
 #include <map>
+#include <memory>
 #include <utility>
 
 #include "hermes/Parser/JSLexer.h"
@@ -651,6 +652,30 @@ class JSONParser {
   llvm::Optional<JSONValue *> parseValue();
   llvm::Optional<JSONValue *> parseArray();
   llvm::Optional<JSONValue *> parseObject();
+};
+
+/// A holder class for a JSONValue backed by a shared allocator.
+class JSONSharedValue {
+ public:
+  using Allocator = hermes::BumpPtrAllocator;
+
+ private:
+  const JSONValue *value_;
+  std::shared_ptr<const Allocator> allocator_;
+
+ public:
+  JSONSharedValue(
+      const JSONValue *value,
+      std::shared_ptr<const Allocator> allocator)
+      : value_(value), allocator_(std::move(allocator)) {}
+
+  const JSONValue *operator*() const {
+    return value_;
+  }
+
+  const JSONValue *operator->() const {
+    return value_;
+  }
 };
 
 }; // namespace parser

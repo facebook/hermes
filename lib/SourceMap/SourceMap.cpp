@@ -12,7 +12,27 @@ namespace hermes {
 
 llvm::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
     uint32_t line,
-    uint32_t column) {
+    uint32_t column) const {
+  auto seg = this->getSegmentForAddress(line, column);
+  // Unmapped location
+  if (!seg.hasValue() || !seg->representedLocation.hasValue()) {
+    return llvm::None;
+  }
+  // parseSegment() should have validated this.
+  assert(
+      (size_t)seg->representedLocation->sourceIndex < sources_.size() &&
+      "SourceIndex is out-of-range.");
+  std::string fileName =
+      getSourceFullPath(seg->representedLocation->sourceIndex);
+  return SourceMapTextLocation{
+      std::move(fileName),
+      (uint32_t)seg->representedLocation->lineIndex + 1,
+      (uint32_t)seg->representedLocation->columnIndex + 1};
+}
+
+llvm::Optional<SourceMap::Segment> SourceMap::getSegmentForAddress(
+    uint32_t line,
+    uint32_t column) const {
   if (line == 0 || line > lines_.size()) {
     return llvm::None;
   }
@@ -37,27 +57,14 @@ llvm::Optional<SourceMapTextLocation> SourceMap::getLocationForAddress(
       [](uint32_t column, const Segment &seg) {
         return column < (uint32_t)seg.generatedColumn;
       });
-  // The found sentinal segment is the first one. No covering segment.
+  // The found sentinel segment is the first one. No covering segment.
   if (segIter == segments.begin()) {
     return llvm::None;
   }
   // Move back one slot.
   const Segment &target =
       segIter == segments.end() ? segments.back() : *(--segIter);
-  // Unmapped location
-  if (!target.representedLocation.hasValue()) {
-    return llvm::None;
-  }
-  // parseSegment() should have validated this.
-  assert(
-      (size_t)target.representedLocation->sourceIndex < sources_.size() &&
-      "SourceIndex is out-of-range.");
-  std::string fileName =
-      getSourceFullPath(target.representedLocation->sourceIndex);
-  return SourceMapTextLocation{
-      std::move(fileName),
-      (uint32_t)target.representedLocation->lineIndex + 1,
-      (uint32_t)target.representedLocation->columnIndex + 1};
+  return target;
 }
 
 } // namespace hermes

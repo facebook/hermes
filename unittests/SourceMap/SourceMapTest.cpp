@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
+#include "hermes/Parser/JSONParser.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Base64vlq.h"
@@ -14,6 +15,7 @@
 #include "gtest/gtest.h"
 
 using namespace hermes;
+using namespace hermes::parser;
 
 namespace {
 
@@ -372,6 +374,123 @@ TEST(SourceMap, MergedWithInputSourceMaps) {
     verifySegment(
         *sourceMap, /*generatedLine*/ 1, expectedSources, expectedSegments[i]);
   }
+}
+
+class SimpleJSONParser {
+  std::shared_ptr<JSLexer::Allocator> alloc_;
+  JSONFactory factory_;
+  SourceErrorManager sm_;
+  JSONParser parser_;
+  JSONValue *value_;
+
+ public:
+  const JSONValue *getValue() const {
+    return value_;
+  }
+
+  JSONSharedValue getSharedValue() const {
+    return JSONSharedValue(getValue(), alloc_);
+  }
+
+  SimpleJSONParser(llvm::StringRef input)
+      : alloc_(std::make_shared<JSLexer::Allocator>()),
+        factory_(*alloc_),
+        parser_(factory_, input, sm_) {
+    value_ = parser_.parse().getValue();
+  }
+};
+
+TEST(SourceMap, PropagateFbMetadataFromInputs) {
+  SourceMapGenerator gen;
+
+  static const char file1MapJson[] =
+      R"#({
+             "version": 3,
+             "sources": ["file1orig"],
+             "x_facebook_sources": [[{
+               "names": ["FILE1ORIG"],
+               "mappings": "AAA,AAA"
+             }]],
+             "mappings": "CAAA"
+          })#";
+
+  static const char file2MapJson[] =
+      R"#({
+            "version": 3,
+            "sourceRoot": "/foo/",
+            "sources": ["file2orig"],
+            "x_facebook_sources": [[{
+              "names": ["FILE2ORIG"],
+              "mappings": "AAA"
+            }]],
+            "mappings": "CACA,KACC"
+          })#";
+
+  SimpleJSONParser file2MetadataJson(
+      R"#([{
+             "names": ["FILE2"],
+             "mappings": "AAA"
+           }, 42])#");
+
+  std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
+  inputSourceMaps.push_back(SourceMapParser::parse(file1MapJson));
+  inputSourceMaps.push_back(SourceMapParser::parse(file2MapJson));
+
+  SourceMap::SegmentList segments = {
+      loc(0, 0, 1, 0), // addr 1:0 -> file1:1:0   (unmapped in file1orig)
+      loc(2, 0, 1, 1), // addr 1:2 -> file1:1:1 -> file1orig:1:0
+      loc(3, 0, 1, 4), // addr 1:3 -> file1:1:4 -> file1orig:1:0
+      loc(4, 0, 2, 0), // addr 1:4 -> file1:2:0   (unmapped in file1orig)
+      loc(5), //          addr 1:5 -> unmapped
+      loc(6, 1, 1, 0), // addr 1:6 -> file2:1:0   (unmapped in file2orig)
+      loc(7, 1, 1, 1), // addr 1:7 -> file2:1:1 -> file2orig:2:0
+      loc(8, 1, 1, 4), // addr 1:8 -> file2:1:4 -> file2orig:2:0
+      loc(9, 1, 1, 6), // addr 1:9 -> file2:1:6 -> file2orig:3:1
+  };
+
+  gen.addSource("file1", llvm::None);
+  gen.addSource("file2", file2MetadataJson.getSharedValue());
+  gen.setInputSourceMaps(std::move(inputSourceMaps));
+  gen.addMappingsLine(segments, 0);
+
+  std::string storage;
+  llvm::raw_string_ostream OS(storage);
+  gen.outputAsJSON(OS);
+  EXPECT_EQ(
+      OS.str(),
+      R"#({"version":3,"sources":["file1","file1orig","file2","\/foo\/file2orig"],)#"
+      R"#("x_facebook_sources":[null,[{"mappings":"AAA,AAA","names":["FILE1ORIG"]}],)#"
+      R"#([{"mappings":"AAA","names":["FILE2"]},42],[{"mappings":"AAA","names":["FILE2ORIG"]}]],)#"
+      R"#("mappings":"AAAA,ECAA,CAAA,CDCA,C,CEDA,CCCA,CAAA,CACC;"})#");
+}
+
+/// Test that we output the x_facebook_sources field if we have data for it
+TEST(SourceMap, GenerateWithFbMetadata) {
+  SourceMapGenerator gen;
+
+  SimpleJSONParser file2MetadataJson(
+      R"#([{
+             "names": ["<global>"],
+             "mappings": "AAA"
+           }, 42])#");
+
+  SourceMap::SegmentList segments = {
+      loc(0, 0, 1, 0), // addr 1:0 -> file1:1:0
+      loc(1, 1, 1, 0), // addr 1:1 -> file2:1:0
+  };
+
+  gen.addSource("file1", llvm::None);
+  gen.addSource("file2", file2MetadataJson.getSharedValue());
+  gen.addMappingsLine(segments, 0);
+
+  std::string storage;
+  llvm::raw_string_ostream OS(storage);
+  gen.outputAsJSON(OS);
+  EXPECT_EQ(
+      OS.str(),
+      R"#({"version":3,"sources":["file1","file2"],"x_facebook_sources":)#"
+      R"#([null,[{"mappings":"AAA","names":["<global>"]},42]],"mappings":)#"
+      R"#("AAAA,CCAA;"})#");
 }
 
 /// Test to make sure we can properly parse empty lines.

@@ -10,6 +10,7 @@
 #include "hermes/Support/Base64vlq.h"
 
 #include <algorithm>
+#include <memory>
 
 using namespace hermes;
 using namespace hermes::parser;
@@ -18,8 +19,9 @@ namespace hermes {
 
 std::unique_ptr<SourceMap> SourceMapParser::parse(
     llvm::MemoryBufferRef sourceMap) {
-  parser::JSLexer::Allocator alloc;
-  parser::JSONFactory factory(alloc);
+  std::shared_ptr<parser::JSLexer::Allocator> alloc =
+      std::make_shared<parser::JSLexer::Allocator>();
+  parser::JSONFactory factory(*alloc);
   SourceErrorManager sm;
   parser::JSONParser jsonParser(factory, sourceMap, sm);
 
@@ -60,12 +62,21 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
   if (sourcesJson == nullptr) {
     return nullptr;
   }
+  auto *fbSourcesJson =
+      llvm::dyn_cast_or_null<JSONArray>(json->get("x_facebook_sources"));
+  unsigned fbSourcesSize = fbSourcesJson ? fbSourcesJson->size() : 0;
 
   std::vector<std::string> sources(sourcesJson->size());
+  SourceMap::MetadataList sourcesMetadata(fbSourcesSize);
   for (unsigned i = 0, e = sources.size(); i < e; ++i) {
     auto *file = llvm::dyn_cast_or_null<JSONString>(sourcesJson->at(i));
     if (file == nullptr) {
       return nullptr;
+    }
+    const JSONValue *metadata = nullptr;
+    if (fbSourcesJson && (i < fbSourcesSize)) {
+      metadata = fbSourcesJson->at(i);
+      sourcesMetadata[i] = JSONSharedValue(metadata, alloc);
     }
     sources[i] = file->str();
   }
@@ -81,7 +92,10 @@ std::unique_ptr<SourceMap> SourceMapParser::parse(
     return nullptr;
   }
   return llvm::make_unique<SourceMap>(
-      sourceRoot, std::move(sources), std::move(lines));
+      sourceRoot,
+      std::move(sources),
+      std::move(lines),
+      std::move(sourcesMetadata));
 }
 
 bool SourceMapParser::parseMappings(

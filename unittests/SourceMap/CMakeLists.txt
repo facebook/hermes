@@ -12,5 +12,6 @@ add_hermes_unittest(HermesSourceMapTests
   )
 
 target_link_libraries(HermesSourceMapTests
+ hermesParser
  hermesSourceMap
  )
