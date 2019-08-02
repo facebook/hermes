@@ -666,11 +666,11 @@ void GenGC::markSymbol(SymbolID symbolID) {
 #endif
 }
 
-void GenGC::markWeakRef(const WeakRefBase &wr) {
+void GenGC::markWeakRef(WeakRefBase &wr) {
   assert(
-      wr.slot_->extra <= WeakSlotState::Marked &&
+      wr.unsafeGetSlot()->extra <= WeakSlotState::Marked &&
       "marking a freed weak ref slot");
-  wr.slot_->extra = WeakSlotState::Marked;
+  wr.unsafeGetSlot()->extra = WeakSlotState::Marked;
 }
 
 #ifdef HERMES_SLOW_DEBUG

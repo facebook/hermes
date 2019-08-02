@@ -270,7 +270,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   rt.markExtra = [&](GC *gc, SlotAcceptor &) { gc->markWeakRef(wr2); };
   gc.collect();
 
-  ASSERT_EQ(WeakSlotState::Free, wr1.getSlot()->extra);
+  ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot()->extra);
 }
 
 #if defined(HERMESVM_GC_GENERATIONAL) || \

@@ -295,7 +295,7 @@ class GenGC final : public GCBase {
   inline size_t maxSize() const;
 
   /// Mark a weak reference as being used.
-  void markWeakRef(const WeakRefBase &wr);
+  void markWeakRef(WeakRefBase &wr);
 #ifndef NDEBUG
   /// \return Number of weak ref slots currently in use.
   /// Inefficient. For testing/debugging.

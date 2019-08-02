@@ -22,7 +22,7 @@ void HandleRootOwner::markGCScopes(SlotAcceptor &acceptor) {
 }
 
 void HandleRootOwner::markWeakRefs(GC *gc) {
-  for (const auto &weakRef : weakRefs_) {
+  for (auto &weakRef : weakRefs_) {
     gc->markWeakRef(weakRef);
   }
 }

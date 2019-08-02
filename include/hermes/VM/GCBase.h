@@ -765,17 +765,37 @@ struct WeakRefSlot {
 /// functions in GC.
 class WeakRefBase {
  protected:
-  friend GC;
-
   WeakRefSlot *slot_;
   WeakRefBase(WeakRefSlot *slot) : slot_(slot) {}
 
-#ifdef UNIT_TEST
  public:
-  const WeakRefSlot *getSlot() const {
+  /// \return true if the referenced object hasn't been freed.
+  bool isValid() const {
+    return !slot_->value.isEmpty();
+  }
+
+  /// \return true if the given slot stores a non-empty value.
+  static bool isSlotValid(const WeakRefSlot *slot) {
+    assert(slot && "slot must not be null");
+    return !slot->value.isEmpty();
+  }
+
+  /// \return a pointer to the slot used by this WeakRef.
+  /// Used primarily when populating a DenseMap with WeakRef keys.
+  WeakRefSlot *unsafeGetSlot() {
     return slot_;
-  };
-#endif
+  }
+  const WeakRefSlot *unsafeGetSlot() const {
+    return slot_;
+  }
+
+  /// \return the stored HermesValue.
+  /// The weak ref may be invalid, in which case an "empty" value is returned.
+  /// This is an unsafe function since the referenced object may be freed any
+  /// time that GC occurs.
+  HermesValue unsafeGetHermesValue() const {
+    return slot_->value;
+  }
 };
 
 inline uint64_t GCBase::getObjectID(const void *cell) {

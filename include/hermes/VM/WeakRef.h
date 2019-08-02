@@ -54,31 +54,6 @@ class WeakRef : public WeakRefBase {
     return slot_ == other.unsafeGetSlot();
   }
 
-  /// \return true if the referenced object hasn't been freed.
-  bool isValid() const {
-    return !slot_->value.isEmpty();
-  }
-
-  /// \return true if the given slot stores a non-empty value.
-  static bool isSlotValid(const WeakRefSlot *slot) {
-    assert(slot && "slot must not be null");
-    return !slot->value.isEmpty();
-  }
-
-  /// \return a pointer to the slot used by this WeakRef.
-  /// Used primarily when populating a DenseMap with WeakRef keys.
-  WeakRefSlot *unsafeGetSlot() const {
-    return slot_;
-  }
-
-  /// \return the stored HermesValue.
-  /// The weak ref may be invalid, in which case an "empty" value is returned.
-  /// This is an unsafe function since the referenced object may be freed any
-  /// time that GC occurs.
-  HermesValue unsafeGetHermesValue() const {
-    return slot_->value;
-  }
-
   /// \return the stored value.
   /// The weak ref may be invalid, in which case an "empty" value is returned.
   /// This is an unsafe function since the referenced object may be freed any
@@ -103,7 +78,7 @@ class WeakRef : public WeakRefBase {
   }
 
   template <class U>
-  static WeakRef<T> vmcast(const WeakRef<U> &other) {
+  static WeakRef<T> vmcast(WeakRef<U> other) {
     assert(vmisa<T>(other.unsafeGetSlot()->value) && "invalid WeakRef cast");
     return WeakRef<T>(other.unsafeGetSlot());
   }

@@ -444,8 +444,8 @@ WeakRefSlot *MallocGC::allocWeakSlot(HermesValue init) {
   return &weakPointers_.back();
 }
 
-void MallocGC::markWeakRef(const WeakRefBase &wr) {
-  wr.slot_->extra = static_cast<unsigned>(WeakSlotState::Marked);
+void MallocGC::markWeakRef(WeakRefBase &wr) {
+  wr.unsafeGetSlot()->extra = static_cast<unsigned>(WeakSlotState::Marked);
 }
 
 void MallocGC::freeWeakSlot(WeakRefSlot *slot) {

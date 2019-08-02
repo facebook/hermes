@@ -222,7 +222,7 @@ class MallocGC final : public GCBase {
   WeakRefSlot *allocWeakSlot(HermesValue init);
 
   /// Marks a weak reference as being in use.
-  void markWeakRef(const WeakRefBase &wr);
+  void markWeakRef(WeakRefBase &wr);
 #ifndef NDEBUG
   /// \return Number of weak ref slots currently in use.
   /// Inefficient. For testing/debugging.
