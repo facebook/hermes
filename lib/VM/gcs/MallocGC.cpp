@@ -253,7 +253,7 @@ void MallocGC::collect() {
     markWeakRoots(nameWeakAcceptor);
 
     // Update and remove weak references.
-    updateWeakReferences(acceptor);
+    updateWeakReferences();
     // Free the unused symbols.
     gcCallbacks_->freeSymbols(acceptor.markedSymbols_);
     // By the end of the marking loop, all pointers left in pointers_ are dead.
@@ -401,7 +401,7 @@ void MallocGC::resetWeakReferences() {
   }
 }
 
-void MallocGC::updateWeakReferences(MarkingAcceptor &acceptor) {
+void MallocGC::updateWeakReferences() {
   for (auto &slot : weakPointers_) {
     switch (static_cast<WeakSlotState>(slot.extra)) {
       case WeakSlotState::Free:

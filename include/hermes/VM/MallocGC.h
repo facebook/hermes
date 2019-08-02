@@ -274,7 +274,7 @@ class MallocGC final : public GCBase {
 
   /// Update all of the weak references and invalidate the ones that point to
   /// dead objects.
-  void updateWeakReferences(MarkingAcceptor &acceptor);
+  void updateWeakReferences();
 };
 
 /// @name Free standing functions
