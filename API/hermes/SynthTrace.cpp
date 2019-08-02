@@ -365,14 +365,7 @@ SynthTrace::TraceValue SynthTrace::encodeNumber(double value) {
 }
 
 SynthTrace::TraceValue SynthTrace::encodeString(const std::string &value) {
-  auto it = std::find(stringTable_.begin(), stringTable_.end(), value);
-  uint64_t idx = 0;
-  if (it == stringTable_.end()) {
-    stringTable_.push_back(value);
-    idx = stringTable_.size() - 1;
-  } else {
-    idx = std::distance(stringTable_.begin(), it);
-  }
+  auto idx = stringTable_.insert(value);
   // Fake a HermesValue string with a non-pointer. Don't use this value in a
   // GC or it will think the index is a pointer.
   return TraceValue::encodeStringValue(
@@ -380,7 +373,7 @@ SynthTrace::TraceValue SynthTrace::encodeString(const std::string &value) {
 }
 
 const std::string &SynthTrace::decodeString(TraceValue value) const {
-  return stringTable_.at(reinterpret_cast<uint64_t>(value.getString()));
+  return stringTable_[reinterpret_cast<uintptr_t>(value.getString())];
 }
 
 SynthTrace::TraceValue SynthTrace::encodeObject(ObjectID objID) {

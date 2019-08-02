@@ -43,7 +43,7 @@ struct StringSetVector final {
 
   /// Return a reference to the \p i'th string inserted into this set vector.
   /// Assumes \pre i < size().
-  inline llvm::StringRef operator[](size_t i) const;
+  inline const std::string &operator[](size_t i) const;
 
   inline size_t size() const;
   inline bool empty() const;
@@ -97,7 +97,7 @@ inline StringSetVector::const_iterator StringSetVector::find(
   return const_cast<StringSetVector *>(this)->find(str);
 }
 
-inline llvm::StringRef StringSetVector::operator[](size_t i) const {
+inline const std::string &StringSetVector::operator[](size_t i) const {
   return stringsStorage_[i];
 }
 

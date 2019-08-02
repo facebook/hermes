@@ -9,6 +9,7 @@
 
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/JSONEmitter.h"
+#include "hermes/Support/StringSetVector.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/MockedEnvironment.h"
 #include "hermes/VM/Operations.h"
@@ -213,7 +214,7 @@ class SynthTrace {
   /// the IdentifierTable, except it doesn't need to be collected (it stores
   /// strings forever).
   /// Strings are stored in the trace objects as an index into this table.
-  std::vector<std::string> stringTable_;
+  ::hermes::StringSetVector stringTable_;
 
   /// The version of the Synth Benchmark
   constexpr static uint32_t synthVersion() {
