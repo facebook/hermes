@@ -24,10 +24,11 @@ enum ExecutionStatus {
   LoadFileFailed,
 };
 
-static std::array<const char *, 14> sectionNames = {
+static std::array<const char *, 15> sectionNames = {
     {"Total",
      "Function headers",
-     "String table",
+     "Small string table",
+     "Overflow string table",
      "String storage",
      "Array buffer",
      "Object key buffer",
@@ -135,7 +136,11 @@ static ExecutionStatus diffFiles(
     auto debugInfoStart = fileHeader->debugInfoOffset;
     fileSizes[i].push_back(debugInfoStart - funcInfoStart);
     fileSizes[i].push_back(fileHeader->fileLength - debugInfoStart);
-    assert(fileSizes[i].size() == sectionNames.size());
+
+    if (fileSizes[i].size() != sectionNames.size()) {
+      llvm::errs() << "Mismatch between size data and size section count\n";
+      return ExecutionFailed;
+    }
 
     hbc::BCProvider *raw_bc = bytecode.get();
     hbc::BytecodeDisassembler disas(std::move(bytecode));

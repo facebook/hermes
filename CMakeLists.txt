@@ -500,6 +500,7 @@ set(HERMES_LIT_TEST_PARAMS
   hbcdump=${HERMES_BINARY_DIR}/bin/hbcdump
   repl=${HERMES_BINARY_DIR}/bin/hermes-repl
   hbc-deltaprep=${HERMES_BINARY_DIR}/bin/hbc-deltaprep
+  hbc-diff=${HERMES_BINARY_DIR}/bin/hbc-diff
   build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
   exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
   timelimit_enabled=${HERMESVM_TIMELIMIT}
