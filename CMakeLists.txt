@@ -110,6 +110,9 @@ set(HERMES_ENABLE_WERROR OFF CACHE BOOL
 set(HERMES_ENABLE_WIN10_ICU_FALLBACK ON CACHE BOOL
   "Whether to allow falling back on Win10 ICU")
 
+set(HERMES_GITHUB_RESOURCE_DIR "" CACHE STRING
+  "A directory with additional files to bundle in the GitHub release")
+
 set(ANDROID_LINUX_PERF_PATH ""
   CACHE STRING
   "If buildling for Android, full path to <linux/perf_events.h>")
@@ -524,6 +527,17 @@ string(TOLOWER ${CMAKE_SYSTEM_NAME} HERMES_GITHUB_SYSTEM_NAME)
 set(HERMES_CLI_GITHUB_FILE hermes-cli-${HERMES_GITHUB_SYSTEM_NAME}-v${HERMES_RELEASE_VERSION}.tar.gz)
 set(HERMES_GITHUB_BUNDLE_DIR ${HERMES_BINARY_DIR}/bundle)
 
+# If the github release should include extra files (like dlls)
+if (HERMES_GITHUB_RESOURCE_DIR STREQUAL "")
+  set(HERMES_GITHUB_EXTRAS "")
+else()
+  if (IS_DIRECTORY ${HERMES_GITHUB_RESOURCE_DIR})
+    file(GLOB HERMES_GITHUB_EXTRAS "${HERMES_GITHUB_RESOURCE_DIR}/*")
+  else()
+    message(FATAL_ERROR "Extra resource dir not found: ${HERMES_GITHUB_RESOURCE_DIR}")
+  endif()
+endif()
+
 # We need this as a separate target because Ninja doesn't run PRE_BUILD/PRE_LINKs in time
 add_custom_command(
   OUTPUT ${HERMES_GITHUB_BUNDLE_DIR}
@@ -537,7 +551,7 @@ add_custom_command(
   VERBATIM
   COMMAND
     # We need bin/hermes or Release/bin/hermes.exe in a predictable location
-    ${CMAKE_COMMAND} -E copy $<TARGET_FILE:hermes> $<TARGET_FILE:hermes-repl> .
+    ${CMAKE_COMMAND} -E copy $<TARGET_FILE:hermes> $<TARGET_FILE:hermes-repl> ${HERMES_GITHUB_EXTRAS} .
   COMMAND
     ${CMAKE_COMMAND} -E tar zcf ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE} .
 )

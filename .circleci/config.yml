@@ -204,6 +204,7 @@ jobs:
             New-Item -ItemType Directory $Env:HERMES_WS_DIR
             New-Item -ItemType Directory $Env:HERMES_WS_DIR\icu
             New-Item -ItemType Directory $Env:HERMES_WS_DIR\output
+            New-Item -ItemType Directory $Env:HERMES_WS_DIR\deps
             New-Item -ItemType SymbolicLink -Target . -Path $Env:HERMES_WS_DIR -Name hermes
 
       - run:
@@ -214,9 +215,7 @@ jobs:
             #   Win32 internal error "Access is denied" 0x5 occurred [...]
             $progressPreference = 'silentlyContinue'
             Invoke-WebRequest -Uri "$Env:ICU_URL" -OutFile "icu.zip"
-            if (-not $?) { throw "Failed to download ICU from $Env:ICU_URL" }
             Expand-Archive -Path "icu.zip" -DestinationPath "."
-            if (-not $?) { throw "Failed to unzip ICU" }
 
       - run:
           name: Install dependencies
@@ -251,12 +250,18 @@ jobs:
             if (-not $?) { throw "Failed to build LLVM" }
 
       - run:
+          name: Assemble Windows runtime dependencies
+          command: |
+            cd $Env:HERMES_WS_DIR
+            Copy-Item -Path "icu\bin64\icu*.dll" -Destination "deps"
+
+      - run:
           name: Build Hermes for Windows
           command: |
             $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
             $Env:ICU_ROOT = "$Env:HERMES_WS_DIR\icu"
             cd $Env:HERMES_WS_DIR
-            hermes\utils\build\configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-DLLVM_ENABLE_LTO=OFF -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF' --distribute
+            hermes\utils\build\configure.py --build-system='Visual Studio 16 2019' --cmake-flags="-DLLVM_ENABLE_LTO=OFF -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF -DHERMES_GITHUB_RESOURCE_DIR=$Env:HERMES_WS_DIR\deps" --distribute
             if (-not $?) { throw "Failed to configure Hermes" }
             cd build_release
             cmake --build . --target github-cli-release --config Release
@@ -267,7 +272,6 @@ jobs:
           command: |
             cd $Env:HERMES_WS_DIR
             Copy-Item -Path "build_release\github\hermes-cli-*.tar.gz" -Destination "output"
-            if (-not $?) { throw "Copy failed" }
 
       - run:
           name: Checksum artifacts
