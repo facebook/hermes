@@ -323,8 +323,8 @@ class Node {
   virtual void emit(RegexBytecodeStream &bcs) const {}
 };
 
-/// Coalesce adjacent MatchCharNode in NodeList.
-static void coalesceCaseSensitiveASCIINodeList(NodeList &nodes);
+/// Perform optimizations on the given node list \p nodes.
+inline void optimizeNodeList(NodeList &nodes);
 
 /// GoalNode is the terminal Node that represents successful execution.
 class GoalNode final : public Node {
@@ -399,7 +399,7 @@ class LoopNode final : public Node {
   }
 
   virtual void optimizeNodeContents() override {
-    coalesceCaseSensitiveASCIINodeList(loopee_);
+    optimizeNodeList(loopee_);
   }
 
  private:
@@ -500,8 +500,8 @@ class AlternationNode final : public Node {
   }
 
   virtual void optimizeNodeContents() override {
-    coalesceCaseSensitiveASCIINodeList(first_);
-    coalesceCaseSensitiveASCIINodeList(second_);
+    optimizeNodeList(first_);
+    optimizeNodeList(second_);
   }
 
   void emit(RegexBytecodeStream &bcs) const override {
@@ -1066,7 +1066,7 @@ class LookaheadNode : public Node {
   }
 
   virtual void optimizeNodeContents() override {
-    coalesceCaseSensitiveASCIINodeList(exp_);
+    optimizeNodeList(exp_);
   }
 
   // Override emit() to compile our lookahead expression.
@@ -1142,10 +1142,11 @@ ParseResult<ForwardIterator> Regex<Traits>::parseWithBackRefLimit(
   nodes_.push_back(make_unique<Node>());
   auto result = parseRegex(first, last, this, backRefLimit, outMaxBackRef);
 
-  // If we succeeded, add a goal node as the last node.
+  // If we succeeded, add a goal node as the last node and perform optimizations
+  // on the list.
   if (result) {
     nodes_.push_back(make_unique<GoalNode>());
-    coalesceCaseSensitiveASCIINodeList(nodes_);
+    optimizeNodeList(nodes_);
   }
 
   // Compute any match constraints.
@@ -1241,41 +1242,44 @@ void Regex<Traits>::pushLookahead(
   appendNode<LookaheadNode>(move(exp), mexpBegin, mexpEnd, invert);
 }
 
-inline void coalesceCaseSensitiveASCIINodeList(NodeList &nodes) {
+inline void optimizeNodeList(NodeList &nodes) {
+  // Recursively optimize child nodes.
   for (auto &node : nodes) {
     node->optimizeNodeContents();
   }
 
-  size_t clean = 0; // index tracking sub-vector of nodes not to delete
-  size_t start = 0; // index expoloring vector for nodes to coalesce
-  for (; start < nodes.size(); clean++, start++) {
+  // Merge adjacent runs of char nodes.
+  // For example, [CharNode('a') CharNode('b') CharNode('c')] becomes
+  // [CharNode('abc')].
+  for (size_t idx = 0, max = nodes.size(); idx < max; idx++) {
+    // Get the range of nodes that can be successfully coalesced.
     std::vector<char16_t> chars;
-
-    if (nodes[start]->tryCoalesceCharacters(&chars)) {
-      size_t end = start + 1;
-      for (; end < nodes.size(); end++) { // See how many we can coalesce.
-        if (!nodes[end]->tryCoalesceCharacters(&chars)) {
-          break;
-        }
-      }
-
-      if (end - start >= 3) { // Coalesce if we get 3 or more chars.
-        start = end - 1;
-        // Only case insensitive nodes may be coalesced, so we know the nodes
-        // are not case sensitive.
-        bool icase = false;
-        nodes[start] =
-            unique_ptr<MatchCharNode>(new MatchCharNode(&chars, icase));
+    size_t rangeStart = idx;
+    size_t rangeEnd = idx;
+    for (; rangeEnd < max; rangeEnd++) {
+      if (!nodes[rangeEnd]->tryCoalesceCharacters(&chars)) {
+        break;
       }
     }
-    if (clean != start) { // updates to the clean node
-      iter_swap(nodes.begin() + clean, nodes.begin() + start);
+    if (rangeEnd - rangeStart >= 3) {
+      // We successfully coalesced some nodes.
+      // Replace the range with a new node.
+      // Note only case sensitive nodes may be coalesced, so we know the new
+      // node should be case sensitive.
+      bool icase = false;
+      nodes[rangeStart] =
+          unique_ptr<MatchCharNode>(new MatchCharNode(&chars, icase));
+      // Fill the remainder of the range with null (we'll clean them up after
+      // the loop) and skip to the end of the range.
+      std::fill(&nodes[rangeStart + 1], &nodes[rangeEnd], nullptr);
+      idx = rangeEnd - 1;
     }
   }
-  if (clean < nodes.size()) { // erase all nodes after after clean index
-    nodes.erase(nodes.begin() + clean, nodes.end());
-  }
+
+  // Remove any nulls that we introduced.
+  nodes.erase(std::remove(nodes.begin(), nodes.end(), nullptr), nodes.end());
 }
+
 } // namespace regex
 } // namespace hermes
 
