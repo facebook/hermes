@@ -716,9 +716,7 @@ class MatchCharNode final : public MatchCharNodeBase {
   using Super = MatchCharNodeBase;
 
  public:
-  MatchCharNode(char16_t c) : Super(c) {}
-
-  MatchCharNode(std::vector<char16_t> *chars) : Super(chars) {}
+  using MatchCharNodeBase::MatchCharNodeBase;
 
   virtual bool tryCoalesceCharacters(
       std::vector<char16_t> *output) const override {
@@ -744,26 +742,9 @@ class MatchCharNode final : public MatchCharNodeBase {
   }
 };
 
-template <class Traits>
 class MatchCharICaseNode final : public MatchCharNodeBase {
-  using Super = MatchCharNodeBase;
-  const Traits &traits_;
-
  public:
-  MatchCharICaseNode(const Traits &traits, char16_t c)
-      : Super(traits.caseFold(c)), traits_(traits) {}
-
-  MatchCharICaseNode(const Traits &traits, std::vector<char16_t> *chars)
-      : Super(applyTraitsToAllChars(traits, chars)), traits_(traits) {}
-
-  /// \return pointer to chars after caseFolding every element.
-  std::vector<char16_t> *applyTraitsToAllChars(
-      const Traits &traits,
-      std::vector<char16_t> *chars) {
-    for (auto &c : *chars)
-      c = traits.caseFold(c);
-    return chars;
-  }
+  using MatchCharNodeBase::MatchCharNodeBase;
 
  private:
   virtual void emitPureASCIIImpl(RegexBytecodeStream &bcs) const override {
@@ -1215,7 +1196,7 @@ void Regex<Traits>::pushLoop(
 template <class Traits>
 void Regex<Traits>::pushChar(CharT c) {
   if (flags() & constants::icase)
-    appendNode<MatchCharICaseNode<Traits>>(traits_, c);
+    appendNode<MatchCharICaseNode>(traits_.caseFold(c));
   else
     appendNode<MatchCharNode>(c);
 }
