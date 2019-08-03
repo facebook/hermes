@@ -536,6 +536,6 @@ add_custom_target(
   github-cli-release
   DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})
 
-install(DIRECTORY API/hermes API/jsi public
+install(DIRECTORY API/hermes API/jsi/jsi public/hermes
   DESTINATION include/hermes
   FILES_MATCHING PATTERN "*.h")
