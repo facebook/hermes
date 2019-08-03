@@ -294,13 +294,19 @@ class Node {
     return result;
   }
 
+  /// Perform optimizations on the given node list \p nodes, subject to the
+  /// given \p flags.
+  inline static void optimizeNodeList(
+      NodeList &nodes,
+      constants::SyntaxFlags flags);
+
   /// \return whether the node always matches exactly one character.
   virtual bool matchesExactlyOneCharacter() const {
     return false;
   }
 
-  /// Perform optimization on Node's contents.
-  virtual void optimizeNodeContents() {}
+  /// Perform optimization on Node's contents, subject to the given \p flags.
+  virtual void optimizeNodeContents(constants::SyntaxFlags flags) {}
 
   /// If this Node can be coalesced into a single MatchCharNode,
   /// then add the node's characters to \p output and \return true.
@@ -322,9 +328,6 @@ class Node {
   /// The default emits nothing, so that base Node is just a no-op.
   virtual void emit(RegexBytecodeStream &bcs) const {}
 };
-
-/// Perform optimizations on the given node list \p nodes.
-inline void optimizeNodeList(NodeList &nodes);
 
 /// GoalNode is the terminal Node that represents successful execution.
 class GoalNode final : public Node {
@@ -398,8 +401,8 @@ class LoopNode final : public Node {
     return result | Super::matchConstraints();
   }
 
-  virtual void optimizeNodeContents() override {
-    optimizeNodeList(loopee_);
+  virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
+    optimizeNodeList(loopee_, flags);
   }
 
  private:
@@ -499,9 +502,9 @@ class AlternationNode final : public Node {
     return result | Super::matchConstraints();
   }
 
-  virtual void optimizeNodeContents() override {
-    optimizeNodeList(first_);
-    optimizeNodeList(second_);
+  virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
+    optimizeNodeList(first_, flags);
+    optimizeNodeList(second_, flags);
   }
 
   void emit(RegexBytecodeStream &bcs) const override {
@@ -681,10 +684,6 @@ class MatchCharNode final : public Node {
   }
 
   bool tryCoalesceCharacters(CharListT *output) const override {
-    // Coalescing case-insensitive or U16 characters is not yet supported.
-    if (icase_) {
-      return false;
-    }
     output->append(chars_.begin(), chars_.end());
     return true;
   }
@@ -1082,8 +1081,8 @@ class LookaheadNode : public Node {
     return result | Super::matchConstraints();
   }
 
-  virtual void optimizeNodeContents() override {
-    optimizeNodeList(exp_);
+  virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
+    optimizeNodeList(exp_, flags);
   }
 
   // Override emit() to compile our lookahead expression.
@@ -1163,7 +1162,7 @@ ParseResult<ForwardIterator> Regex<Traits>::parseWithBackRefLimit(
   // on the list.
   if (result) {
     nodes_.push_back(make_unique<GoalNode>());
-    optimizeNodeList(nodes_);
+    Node::optimizeNodeList(nodes_, flags_);
   }
 
   // Compute any match constraints.
@@ -1261,10 +1260,10 @@ void Regex<Traits>::pushLookahead(
   appendNode<LookaheadNode>(move(exp), mexpBegin, mexpEnd, invert);
 }
 
-inline void optimizeNodeList(NodeList &nodes) {
+void Node::optimizeNodeList(NodeList &nodes, constants::SyntaxFlags flags) {
   // Recursively optimize child nodes.
   for (auto &node : nodes) {
-    node->optimizeNodeContents();
+    node->optimizeNodeContents(flags);
   }
 
   // Merge adjacent runs of char nodes.
@@ -1283,9 +1282,7 @@ inline void optimizeNodeList(NodeList &nodes) {
     if (rangeEnd - rangeStart >= 3) {
       // We successfully coalesced some nodes.
       // Replace the range with a new node.
-      // Note only case sensitive nodes may be coalesced, so we know the new
-      // node should be case sensitive.
-      bool icase = false;
+      bool icase = flags & constants::icase;
       nodes[rangeStart] =
           unique_ptr<MatchCharNode>(new MatchCharNode(std::move(chars), icase));
       // Fill the remainder of the range with null (we'll clean them up after

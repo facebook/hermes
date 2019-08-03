@@ -71,20 +71,15 @@ print(/\b\B/);
 // CHECK-NEXT:    0004  Goal
 
 print(/abc(?=^)(?!def)/i);
-// CHECK:       6: /abc(?=^)(?!def)/i
-// CHECK-NEXT:    Header: marked: 0 loops: 0 flags: 1 constraints: 6
-// CHECK-NEXT:    0000  MatchCharICase8: 'A'
-// CHECK-NEXT:    0002  MatchCharICase8: 'B'
-// CHECK-NEXT:    0004  MatchCharICase8: 'C'
-// CHECK-NEXT:    0006  Lookahead: = (constraints: 2, marked expressions=[0,0), continuation 0x13)
-// CHECK-NEXT:    0011  LeftAnchor
-// CHECK-NEXT:    0012  Goal
-// CHECK-NEXT:    0013  Lookahead: ! (constraints: 4, marked expressions=[0,0), continuation 0x25)
-// CHECK-NEXT:    001e  MatchCharICase8: 'D'
-// CHECK-NEXT:    0020  MatchCharICase8: 'E'
-// CHECK-NEXT:    0022  MatchCharICase8: 'F'
-// CHECK-NEXT:    0024  Goal
-// CHECK-NEXT:    0025  Goal
+// CHECK: Header: marked: 0 loops: 0 flags: 1 constraints: 6
+// CHECK-NEXT: 0000  MatchNCharICase8: 'ABC'
+// CHECK-NEXT: 0005  Lookahead: = (constraints: 2, marked expressions=[0,0), continuation 0x12)
+// CHECK-NEXT: 0010  LeftAnchor
+// CHECK-NEXT: 0011  Goal
+// CHECK-NEXT: 0012  Lookahead: ! (constraints: 4, marked expressions=[0,0), continuation 0x23)
+// CHECK-NEXT: 001d  MatchNCharICase8: 'DEF'
+// CHECK-NEXT: 0022  Goal
+// CHECK-NEXT: 0023  Goal
 
 print(/ab*c+d{3,5}/);
 // CHECK:        7: /ab*c+d{3,5}/
@@ -208,4 +203,11 @@ print(/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 // CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 0 constraints: 4
 // CHECK-NEXT:   0000  MatchNChar8: {{'a{255}'}}
 // CHECK-NEXT:   0101  MatchNChar8: 'overflow'
+// CHECK-NEXT:   010b  Goal
+
+print(/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaoverflow/i);
+// CHECK:        20: /{{a{255}overflow}}/i
+// CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 1 constraints: 4
+// CHECK-NEXT:   0000  MatchNCharICase8: {{'A{255}'}}
+// CHECK-NEXT:   0101  MatchNCharICase8: 'OVERFLOW'
 // CHECK-NEXT:   010b  Goal
