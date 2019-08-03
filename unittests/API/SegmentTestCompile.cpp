@@ -30,11 +30,10 @@ std::pair<std::string, std::string> genSplitCode(
   };
 
   hermes::CodeGenerationSettings codeGenOpts;
-  hermes::TypeCheckerSettings typeCheckerOpts;
   hermes::OptimizationSettings optimizationOpts;
 
   auto context = std::make_shared<hermes::Context>(
-      codeGenOpts, typeCheckerOpts, optimizationOpts, nullptr, ranges);
+      codeGenOpts, optimizationOpts, nullptr, ranges);
   context->setUseCJSModules(true);
 
   hermes::Module M(context);

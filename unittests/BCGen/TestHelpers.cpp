@@ -30,8 +30,7 @@ std::vector<uint8_t> hermes::bytecodeForSource(
   codeGenOpts.unlimitedRegisters = false;
   OptimizationSettings optSettings;
   optSettings.staticBuiltins = flags.staticBuiltins;
-  auto context = std::make_shared<Context>(
-      sm, codeGenOpts, TypeCheckerSettings(), optSettings);
+  auto context = std::make_shared<Context>(sm, codeGenOpts, optSettings);
   parser::JSParser jsParser(*context, source);
   auto parsed = jsParser.parse();
   assert(parsed.hasValue() && "Failed to parse source");

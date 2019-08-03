@@ -86,8 +86,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
       ? compileFlags.staticBuiltins.getValue()
       : false;
 
-  auto context = std::make_shared<Context>(
-      codeGenOpts, TypeCheckerSettings(), optSettings);
+  auto context = std::make_shared<Context>(codeGenOpts, optSettings);
   SimpleDiagHandlerRAII outputManager{context->getSourceErrorManager()};
 
   // To avoid frequent source buffer rescans, avoid emitting warnings about

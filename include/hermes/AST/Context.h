@@ -38,8 +38,6 @@ struct CodeGenerationSettings {
   bool dumpIRBetweenPasses{false};
 };
 
-struct TypeCheckerSettings {};
-
 struct OutliningSettings {
   /// If true, place outlined functions near one of their callers. Otherwise,
   /// put them all together at the end of the module.
@@ -175,8 +173,6 @@ class Context {
 
   CodeGenerationSettings codeGenerationSettings_;
 
-  TypeCheckerSettings typeCheckerSettings_;
-
   OptimizationSettings optimizationSettings_;
 
   /// The HBC backend context. We use a shared pointer to avoid any dependencies
@@ -187,7 +183,6 @@ class Context {
   explicit Context(
       SourceErrorManager &sm,
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
-      TypeCheckerSettings typeCheckOpts = TypeCheckerSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
       std::vector<SegmentRange> segmentRanges = {})
@@ -195,12 +190,10 @@ class Context {
         resolutionTable_(std::move(resolutionTable)),
         segmentRanges_(std::move(segmentRanges)),
         codeGenerationSettings_(std::move(codeGenOpts)),
-        typeCheckerSettings_(std::move(typeCheckOpts)),
         optimizationSettings_(std::move(optimizationOpts)) {}
 
   explicit Context(
       CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
-      TypeCheckerSettings typeCheckOpts = TypeCheckerSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
       std::vector<SegmentRange> segmentRanges = {})
@@ -209,7 +202,6 @@ class Context {
         resolutionTable_(std::move(resolutionTable)),
         segmentRanges_(std::move(segmentRanges)),
         codeGenerationSettings_(std::move(codeGenOpts)),
-        typeCheckerSettings_(std::move(typeCheckOpts)),
         optimizationSettings_(std::move(optimizationOpts)) {}
 
   Context(const Context &) = delete;
@@ -307,10 +299,6 @@ class Context {
 
   const CodeGenerationSettings &getCodeGenerationSettings() const {
     return codeGenerationSettings_;
-  }
-
-  const TypeCheckerSettings &getTypeCheckerSettings() const {
-    return typeCheckerSettings_;
   }
 
   const OptimizationSettings &getOptimizationSettings() const {

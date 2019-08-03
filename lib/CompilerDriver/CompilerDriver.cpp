@@ -826,8 +826,6 @@ bool validateFlags() {
 std::shared_ptr<Context> createContext(
     std::unique_ptr<Context::ResolutionTable> resolutionTable,
     std::vector<Context::SegmentRange> segmentRanges) {
-  TypeCheckerSettings typeCheckerOpts;
-
   CodeGenerationSettings codeGenOpts;
   codeGenOpts.enableTDZ = cl::EnableTDZ;
   codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
@@ -870,7 +868,6 @@ std::shared_ptr<Context> createContext(
 
   auto context = std::make_shared<Context>(
       codeGenOpts,
-      typeCheckerOpts,
       optimizationOpts,
       std::move(resolutionTable),
       std::move(segmentRanges));
