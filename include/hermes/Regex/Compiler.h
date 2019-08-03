@@ -641,16 +641,19 @@ class MatchAnyButNewlineNode final : public Node {
 
 /// MatchChar matches one or more characters, specified as a parameter to the
 /// constructor.
-class MatchCharNodeBase : public Node {
+class MatchCharNode final : public Node {
   using Super = Node;
 
  public:
   // The character literals we wish to match against.
   llvm::SmallVector<char16_t, 10> literals_;
 
-  MatchCharNodeBase(char16_t c) : literals_{c} {}
+  /// Whether we are case insensitive (true) or case sensitive (false).
+  const bool icase_;
 
-  MatchCharNodeBase(std::vector<char16_t> *chars) {
+  MatchCharNode(char16_t c, bool icase) : literals_{c}, icase_(icase) {}
+
+  MatchCharNode(std::vector<char16_t> *chars, bool icase) : icase_(icase) {
     literals_.insert(literals_.begin(), chars->begin(), chars->end());
   }
 
@@ -666,10 +669,25 @@ class MatchCharNodeBase : public Node {
   void emit(RegexBytecodeStream &bcs) const override {
     // if size is 1, then NChar instruction is less efficient than singular.
     if (isPureASCII() && literals_.size() > 1) {
-      emitPureASCIIImpl(bcs);
+      emitPureASCII(bcs);
     } else {
-      emitMixedASCIIImpl(bcs);
+      emitMixedASCII(bcs);
     }
+  }
+
+  bool tryCoalesceCharacters(std::vector<char16_t> *output) const override {
+    // Coalescing case-insensitive or U16 characters is not yet supported.
+    if (icase_ || !isPureASCII()) {
+      return false;
+    }
+
+    // Only coalesce if the size of the new vector can be represented as
+    // uint8_t in the corresponding instruction's charCount.
+    if (UINT8_MAX <= output->size() + literals_.size()) {
+      return false;
+    }
+    output->insert(output->end(), literals_.begin(), literals_.end());
+    return true;
   }
 
  protected:
@@ -682,76 +700,36 @@ class MatchCharNodeBase : public Node {
     return literals_.size() == 1;
   }
 
-  /// Implementation of emitPureASCII to avoid class templates.
-  virtual void emitPureASCIIImpl(RegexBytecodeStream &bcs) const = 0;
   /// Compile node and all characters as ASCII to a bytecode stream \p bcs.
-  template <typename MatchNChar8InsnType>
   void emitPureASCII(RegexBytecodeStream &bcs) const {
     assert(
         literals_.size() <= UINT8_MAX &&
         "Literal count cannot exceed uint8 max");
-    auto insn = bcs.emit<MatchNChar8InsnType>();
+    assert(!icase_ && "String must not be case insensitive");
+    auto insn = bcs.emit<MatchNChar8Insn>();
     insn->charCount = literals_.size();
     for (const auto c : literals_) {
       bcs.emitChar8(c);
     }
   }
 
-  /// Implementation of emitMixedASCII to avoid class templates.
-  virtual void emitMixedASCIIImpl(RegexBytecodeStream &bcs) const = 0;
   /// Compile node and all characters to a bytecode stream \p bcs.
-  template <typename MatchChar8InsnType, typename MatchChar16InsnType>
   void emitMixedASCII(RegexBytecodeStream &bcs) const {
     for (const auto c : literals_) {
-      if (isASCII(c)) {
-        bcs.emit<MatchChar8InsnType>()->c = c;
+      bool ascii = isASCII(c);
+      if (ascii && icase_) {
+        bcs.emit<MatchCharICase8Insn>()->c = c;
+      } else if (ascii && !icase_) {
+        bcs.emit<MatchChar8Insn>()->c = c;
+      } else if (!ascii && icase_) {
+        bcs.emit<MatchCharICase16Insn>()->c = c;
       } else {
-        bcs.emit<MatchChar16InsnType>()->c = c;
+        assert(
+            !ascii && !icase_ &&
+            "Character must not be ascii or case insensitive");
+        bcs.emit<MatchChar16Insn>()->c = c;
       }
     }
-  }
-};
-
-class MatchCharNode final : public MatchCharNodeBase {
-  using Super = MatchCharNodeBase;
-
- public:
-  using MatchCharNodeBase::MatchCharNodeBase;
-
-  virtual bool tryCoalesceCharacters(
-      std::vector<char16_t> *output) const override {
-    // Only coalesce pure ASCII characters.
-    if (!isPureASCII()) {
-      return false;
-    }
-    // Only coalesce if the size of the new vector can be represented as
-    // uint8_t in the corresponding instruction's charCount.
-    if (UINT8_MAX <= output->size() + literals_.size()) {
-      return false;
-    }
-    output->insert(output->end(), literals_.begin(), literals_.end());
-    return true;
-  }
-
- private:
-  virtual void emitPureASCIIImpl(RegexBytecodeStream &bcs) const override {
-    return emitPureASCII<MatchNChar8Insn>(bcs);
-  };
-  virtual void emitMixedASCIIImpl(RegexBytecodeStream &bcs) const override {
-    return emitMixedASCII<MatchChar8Insn, MatchChar16Insn>(bcs);
-  }
-};
-
-class MatchCharICaseNode final : public MatchCharNodeBase {
- public:
-  using MatchCharNodeBase::MatchCharNodeBase;
-
- private:
-  virtual void emitPureASCIIImpl(RegexBytecodeStream &bcs) const override {
-    return emitPureASCII<MatchNCharICase8Insn>(bcs);
-  };
-  virtual void emitMixedASCIIImpl(RegexBytecodeStream &bcs) const override {
-    return emitMixedASCII<MatchCharICase8Insn, MatchCharICase16Insn>(bcs);
   }
 };
 
@@ -1195,10 +1173,8 @@ void Regex<Traits>::pushLoop(
 
 template <class Traits>
 void Regex<Traits>::pushChar(CharT c) {
-  if (flags() & constants::icase)
-    appendNode<MatchCharICaseNode>(traits_.caseFold(c));
-  else
-    appendNode<MatchCharNode>(c);
+  bool icase = flags() & constants::icase;
+  appendNode<MatchCharNode>(icase ? traits_.caseFold(c) : c, icase);
 }
 
 template <class Traits>
@@ -1285,7 +1261,11 @@ inline void coalesceCaseSensitiveASCIINodeList(NodeList &nodes) {
 
       if (end - start >= 3) { // Coalesce if we get 3 or more chars.
         start = end - 1;
-        nodes[start] = unique_ptr<MatchCharNode>(new MatchCharNode(&chars));
+        // Only case insensitive nodes may be coalesced, so we know the nodes
+        // are not case sensitive.
+        bool icase = false;
+        nodes[start] =
+            unique_ptr<MatchCharNode>(new MatchCharNode(&chars, icase));
       }
     }
     if (clean != start) { // updates to the clean node
