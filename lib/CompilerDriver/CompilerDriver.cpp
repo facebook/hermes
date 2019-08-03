@@ -301,11 +301,6 @@ static opt<bool> DumpOperandRegisters(
     "dump-operand-registers",
     desc("Dump registers assigned to instruction operands"));
 
-static opt<bool> EnableClosureAnalysis(
-    "enable-cla",
-    desc("Enable closure analysis-based type inference"),
-    init(false));
-
 static opt<bool> DumpUseList(
     "dump-instr-uselist",
     desc("Print the use list if the instruction has any users."),
@@ -832,7 +827,6 @@ std::shared_ptr<Context> createContext(
     std::unique_ptr<Context::ResolutionTable> resolutionTable,
     std::vector<Context::SegmentRange> segmentRanges) {
   TypeCheckerSettings typeCheckerOpts;
-  typeCheckerOpts.closureAnalysis = cl::EnableClosureAnalysis;
 
   CodeGenerationSettings codeGenOpts;
   codeGenOpts.enableTDZ = cl::EnableTDZ;

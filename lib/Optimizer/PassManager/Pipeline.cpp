@@ -8,7 +8,6 @@
 
 #include "hermes/Optimizer/PassManager/PassManager.h"
 #include "hermes/Optimizer/Scalar/Auditor.h"
-#include "hermes/Optimizer/Scalar/ClosureAnalysis.h"
 #include "hermes/Optimizer/Scalar/DCE.h"
 #include "hermes/Optimizer/Scalar/SimplifyCFG.h"
 #include "hermes/Optimizer/Scalar/StackPromotion.h"
@@ -68,10 +67,6 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addCSE();
   PM.addTDZDedup();
   PM.addSimplifyCFG();
-
-  PM.addTypeInferenceWithCLA();
-  PM.addConstantPropertyOpts();
-  PM.addUncalledMethodOpts();
 
   PM.addInstSimplify();
   PM.addFuncSigOpts();

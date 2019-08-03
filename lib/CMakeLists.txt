@@ -18,15 +18,11 @@ add_llvm_library(hermesOptimizer
   Optimizer/Scalar/InstSimplify.cpp
   Optimizer/Scalar/Auditor.cpp
   Optimizer/Scalar/SimpleCallGraphProvider.cpp
-  Optimizer/Scalar/ClosureAnalysis.cpp
   Optimizer/Scalar/ResolveStaticRequire.cpp
-  Optimizer/Scalar/SetConstraintAnalysisProblem.cpp
   Optimizer/Scalar/SimpleCallGraphProvider.cpp
   Optimizer/Scalar/FuncSigOpts.cpp
   Optimizer/Scalar/BundlerUtils.cpp
   Optimizer/Scalar/Utils.cpp
-  Optimizer/Scalar/ConstantPropertyOpts.cpp
-  Optimizer/Scalar/UncalledMethodOpts.cpp
   Optimizer/Scalar/Inlining.cpp
   Optimizer/Scalar/HoistStartGenerator.cpp
   Optimizer/Scalar/InstructionEscapeAnalysis.cpp

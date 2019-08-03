@@ -11,8 +11,6 @@
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
-#include "hermes/Optimizer/Scalar/CLACallGraphProvider.h"
-#include "hermes/Optimizer/Scalar/ClosureAnalysis.h"
 #include "hermes/Optimizer/Scalar/SimpleCallGraphProvider.h"
 #include "hermes/Support/Statistic.h"
 
@@ -59,7 +57,7 @@ class TypeInferenceImpl {
   bool runOnFunction(Function *F);
 
  public:
-  bool runOnModule(Module *M, bool doCLA);
+  bool runOnModule(Module *M);
 };
 
 } // anonymous namespace.
@@ -681,74 +679,24 @@ bool TypeInferenceImpl::runOnFunction(Function *F) {
   return changed;
 }
 
-bool TypeInferenceImpl::runOnModule(Module *M, bool doCLA) {
+bool TypeInferenceImpl::runOnModule(Module *M) {
   bool changed = false;
 
   LLVM_DEBUG(dbgs() << "\nStart Type Inference on Module\n");
 
-  auto typeCheckerOpts = M->getContext().getTypeCheckerSettings();
-  if (!doCLA || !typeCheckerOpts.closureAnalysis) {
-    for (auto &F : *M) {
-      SimpleCallGraphProvider scgp(&F);
-      cgp_ = &scgp;
-      changed |= runOnFunction(&F);
-    }
-    return changed;
-  }
-
-  // Perform the closure analysis based call graph.
-
-  ClosureAnalysis CA;
-  CA.analyzeModule(M);
-
-  // Process the top-level function.
-  // Occasionally, there may be some functions that did not get
-  // accounted for in any analysis root. Process them here as well?
-  Function *top = M->getTopLevelFunction();
-  SimpleCallGraphProvider scgp(top);
-  cgp_ = &scgp;
-  changed |= runOnFunction(top);
-
-  // Process the function nests nested in the top level.
-  for (auto &R : CA.analysisRoots_) {
-    LLVM_DEBUG(
-        dbgs() << "Working with root " << R->getInternalName().c_str() << "\n");
-
-    auto analysis = CA.analysisMap_.find(R);
-    assert(analysis != CA.analysisMap_.end());
-
-    auto nested = CA.nestedMap_.find(R);
-    assert(nested != CA.nestedMap_.end());
-
-    // If this analysis root was not analyzed (for size reasons) then
-    if (analysis->second == nullptr) {
-      // do the simple CG based analysis on each function in this nest.
-      for (auto &G : nested->second) {
-        SimpleCallGraphProvider nestedScgp(G);
-        cgp_ = &nestedScgp;
-        changed |= runOnFunction(G);
-      }
-      // Otherwise, do the CLA CG based analysis.
-    } else {
-      CLACallGraphProvider cgp(analysis->second);
-      cgp_ = &cgp;
-      for (auto &G : nested->second) {
-        changed |= runOnFunction(G);
-      }
-    }
+  for (auto &F : *M) {
+    SimpleCallGraphProvider scgp(&F);
+    cgp_ = &scgp;
+    changed |= runOnFunction(&F);
   }
   return changed;
 }
 
 bool TypeInference::runOnModule(Module *M) {
   TypeInferenceImpl impl{};
-  return impl.runOnModule(M, doCLA_);
+  return impl.runOnModule(M);
 }
 
 Pass *hermes::createTypeInference() {
-  return new TypeInference(false);
-}
-
-Pass *hermes::createTypeInferenceWithCLA() {
-  return new TypeInference(true);
+  return new TypeInference();
 }

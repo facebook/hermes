@@ -38,10 +38,7 @@ struct CodeGenerationSettings {
   bool dumpIRBetweenPasses{false};
 };
 
-struct TypeCheckerSettings {
-  /// Enable closure analysis.
-  bool closureAnalysis{false};
-};
+struct TypeCheckerSettings {};
 
 struct OutliningSettings {
   /// If true, place outlined functions near one of their callers. Otherwise,
