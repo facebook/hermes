@@ -202,6 +202,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 /// exceptional execution status will be propogated to the outer function.
 #define SET_PROP_NEW(KEY, VALUE)                               \
   do {                                                         \
+    GCScopeMarkerRAII marker{gcScope};                         \
     auto keySym = symbolForCStr(runtime, KEY);                 \
     if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) { \
       return ExecutionStatus::EXCEPTION;                       \
@@ -222,6 +223,10 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     GCBase::HeapInfo info;
     heap.getHeapInfo(info);
     SET_PROP_NEW("js_totalAllocatedBytes", info.totalAllocatedBytes);
+    SET_PROP_NEW("js_allocatedBytes", info.allocatedBytes);
+    SET_PROP_NEW("js_heapSize", info.heapSize);
+    SET_PROP_NEW("js_mallocSizeEstimate", info.mallocSizeEstimate);
+    SET_PROP_NEW("js_vaSize", info.va);
   }
 
   if (stats.shouldSample) {
