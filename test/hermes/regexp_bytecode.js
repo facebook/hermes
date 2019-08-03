@@ -202,9 +202,10 @@ print(/(a)(?=(.))/i);
 // CHECK-NEXT:   001a  Goal
 // CHECK-NEXT:   001b  Goal
 
-print(/___________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________256overflow/);
-// CHECK:        19: /___________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________256overflow/
+// There are 255 'a's here.
+print(/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaoverflow/);
+// CHECK:        19: /{{a{255}overflow}}/
 // CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 0 constraints: 4
-// CHECK-NEXT:   0000  MatchNChar8: '___________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________256'
-// CHECK-NEXT:   0100  MatchNChar8: 'overflow'
-// CHECK-NEXT:   010a  Goal
+// CHECK-NEXT:   0000  MatchNChar8: {{'a{255}'}}
+// CHECK-NEXT:   0101  MatchNChar8: 'overflow'
+// CHECK-NEXT:   010b  Goal

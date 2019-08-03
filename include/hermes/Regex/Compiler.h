@@ -272,8 +272,8 @@ class Node {
   Node &operator=(Node &&) = delete;
 
   using CharT = char16_t;
+  using CharListT = llvm::SmallVector<CharT, 5>;
 
- public:
   /// Default constructor and destructor.
   Node() = default;
   virtual ~Node() = default;
@@ -305,7 +305,7 @@ class Node {
   /// If this Node can be coalesced into a single MatchCharNode,
   /// then add the node's characters to \p output and \return true.
   /// Otherwise \return false.
-  virtual bool tryCoalesceCharacters(std::vector<char16_t> *output) const {
+  virtual bool tryCoalesceCharacters(CharListT *output) const {
     return false;
   }
 
@@ -643,94 +643,111 @@ class MatchAnyButNewlineNode final : public Node {
 /// constructor.
 class MatchCharNode final : public Node {
   using Super = Node;
+  using Super::CharListT;
+
+  /// The minimum number of characters we will output in a MatchCharN
+  /// instruction.
+  static constexpr size_t kMinMatchCharNCount = 3;
+
+  /// The maximum number of characters supported in a MatchCharN instruction.
+  static constexpr size_t kMaxMatchCharNCount = UINT8_MAX;
 
  public:
-  // The character literals we wish to match against.
-  llvm::SmallVector<char16_t, 10> literals_;
-
-  /// Whether we are case insensitive (true) or case sensitive (false).
-  const bool icase_;
-
-  MatchCharNode(char16_t c, bool icase) : literals_{c}, icase_(icase) {}
-
-  MatchCharNode(std::vector<char16_t> *chars, bool icase) : icase_(icase) {
-    literals_.insert(literals_.begin(), chars->begin(), chars->end());
-  }
+  MatchCharNode(CharListT chars, bool icase)
+      : chars_(std::move(chars)), icase_(icase) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
     MatchConstraintSet result = MatchConstraintNonEmpty;
     // If our character is not ASCII, then we cannot match pure-ASCII strings.
-    if (!isPureASCII()) {
+    if (!std::all_of(chars_.begin(), chars_.end(), isASCII)) {
       result |= MatchConstraintNonASCII;
     }
     return result | Super::matchConstraints();
   }
 
   void emit(RegexBytecodeStream &bcs) const override {
-    // if size is 1, then NChar instruction is less efficient than singular.
-    if (isPureASCII() && literals_.size() > 1) {
-      emitPureASCII(bcs);
-    } else {
-      emitMixedASCII(bcs);
+    llvm::ArrayRef<char16_t> remaining{chars_};
+    while (!remaining.empty()) {
+      // Output any run (possibly empty) of ASCII chars.
+      auto asciis = remaining.take_while(isASCII);
+      emitASCIIList(asciis, bcs);
+      remaining = remaining.drop_front(asciis.size());
+
+      // Output any run (possibly empty) of non-ASCII char16.
+      auto char16s = remaining.take_until(isASCII);
+      emitChar16List(char16s, bcs);
+      remaining = remaining.drop_front(char16s.size());
     }
   }
 
-  bool tryCoalesceCharacters(std::vector<char16_t> *output) const override {
+  bool tryCoalesceCharacters(CharListT *output) const override {
     // Coalescing case-insensitive or U16 characters is not yet supported.
-    if (icase_ || !isPureASCII()) {
+    if (icase_) {
       return false;
     }
-
-    // Only coalesce if the size of the new vector can be represented as
-    // uint8_t in the corresponding instruction's charCount.
-    if (UINT8_MAX <= output->size() + literals_.size()) {
-      return false;
-    }
-    output->insert(output->end(), literals_.begin(), literals_.end());
+    output->append(chars_.begin(), chars_.end());
     return true;
   }
 
  protected:
-  /// \return true if every character in literals_ is ASCII.
-  bool isPureASCII() const {
-    return std::all_of(literals_.begin(), literals_.end(), isASCII);
-  }
-
   virtual bool matchesExactlyOneCharacter() const override {
-    return literals_.size() == 1;
+    return chars_.size() == 1;
   }
 
-  /// Compile node and all characters as ASCII to a bytecode stream \p bcs.
-  void emitPureASCII(RegexBytecodeStream &bcs) const {
+  /// Emit a list of ASCII characters into bytecode stream \p bcs.
+  void emitASCIIList(llvm::ArrayRef<char16_t> chars, RegexBytecodeStream &bcs)
+      const {
     assert(
-        literals_.size() <= UINT8_MAX &&
-        "Literal count cannot exceed uint8 max");
-    assert(!icase_ && "String must not be case insensitive");
-    auto insn = bcs.emit<MatchNChar8Insn>();
-    insn->charCount = literals_.size();
-    for (const auto c : literals_) {
-      bcs.emitChar8(c);
+        std::all_of(chars.begin(), chars.end(), isASCII) &&
+        "All characters should be ASCII");
+
+    // Output groups of at least kMinMatchCharNCount, but no more than
+    // kMaxMatchCharNCount.
+    auto remaining = chars;
+    while (remaining.size() >= kMinMatchCharNCount) {
+      size_t groupLen = std::min((size_t)kMaxMatchCharNCount, remaining.size());
+      auto group = remaining.take_front(groupLen);
+      remaining = remaining.drop_front(groupLen);
+
+      if (icase_) {
+        bcs.emit<MatchNCharICase8Insn>()->charCount = groupLen;
+      } else {
+        bcs.emit<MatchNChar8Insn>()->charCount = groupLen;
+      }
+      for (char c : group) {
+        bcs.emitChar8(c);
+      }
+    }
+
+    // Output any remaining as individual characters.
+    for (char16_t c : remaining) {
+      if (icase_) {
+        bcs.emit<MatchCharICase8Insn>()->c = c;
+      } else {
+        bcs.emit<MatchChar8Insn>()->c = c;
+      }
     }
   }
 
-  /// Compile node and all characters to a bytecode stream \p bcs.
-  void emitMixedASCII(RegexBytecodeStream &bcs) const {
-    for (const auto c : literals_) {
-      bool ascii = isASCII(c);
-      if (ascii && icase_) {
-        bcs.emit<MatchCharICase8Insn>()->c = c;
-      } else if (ascii && !icase_) {
-        bcs.emit<MatchChar8Insn>()->c = c;
-      } else if (!ascii && icase_) {
+  /// Emit a list of 16 bit characters into bytecode stream \p
+  /// bcs.
+  void emitChar16List(llvm::ArrayRef<char16_t> chars, RegexBytecodeStream &bcs)
+      const {
+    for (char16_t c : chars) {
+      if (icase_) {
         bcs.emit<MatchCharICase16Insn>()->c = c;
       } else {
-        assert(
-            !ascii && !icase_ &&
-            "Character must not be ascii or case insensitive");
         bcs.emit<MatchChar16Insn>()->c = c;
       }
     }
   }
+
+ private:
+  // The character literals we wish to match against.
+  const CharListT chars_;
+
+  /// /// Whether we are case insensitive (true) or case sensitive (false).
+  const bool icase_;
 };
 
 // BracketNode represents a character class: /[a-zA-Z]/...
@@ -1175,7 +1192,9 @@ void Regex<Traits>::pushLoop(
 template <class Traits>
 void Regex<Traits>::pushChar(CharT c) {
   bool icase = flags() & constants::icase;
-  appendNode<MatchCharNode>(icase ? traits_.caseFold(c) : c, icase);
+  if (icase)
+    c = traits_.caseFold(c);
+  appendNode<MatchCharNode>(Node::CharListT{c}, icase);
 }
 
 template <class Traits>
@@ -1253,7 +1272,7 @@ inline void optimizeNodeList(NodeList &nodes) {
   // [CharNode('abc')].
   for (size_t idx = 0, max = nodes.size(); idx < max; idx++) {
     // Get the range of nodes that can be successfully coalesced.
-    std::vector<char16_t> chars;
+    Node::CharListT chars;
     size_t rangeStart = idx;
     size_t rangeEnd = idx;
     for (; rangeEnd < max; rangeEnd++) {
@@ -1268,7 +1287,7 @@ inline void optimizeNodeList(NodeList &nodes) {
       // node should be case sensitive.
       bool icase = false;
       nodes[rangeStart] =
-          unique_ptr<MatchCharNode>(new MatchCharNode(&chars, icase));
+          unique_ptr<MatchCharNode>(new MatchCharNode(std::move(chars), icase));
       // Fill the remainder of the range with null (we'll clean them up after
       // the loop) and skip to the end of the range.
       std::fill(&nodes[rangeStart + 1], &nodes[rangeEnd], nullptr);
