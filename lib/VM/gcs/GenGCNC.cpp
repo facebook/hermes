@@ -1180,21 +1180,22 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor {
     if (!ptr) {
       return;
     }
-    const auto id = gc.getObjectID(ptr);
 
-    if (!filterDuplicates_ || !seenIDs_.count(id)) {
-      if (count_) {
-        edgeCount_++;
-      } else {
-        snap_.addNamedEdge(
-            V8HeapSnapshot::EdgeType::Internal,
-            llvm::StringRef::withNullAsEmpty(name),
-            id);
-      }
-      if (filterDuplicates_) {
-        seenIDs_.insert(id);
-      }
+    const auto id = gc.getObjectID(ptr);
+    if (filterDuplicates_ && !seenIDs_.insert(id).second) {
+      // Already seen this node, don't add another edge.
+      return;
     }
+
+    if (count_) {
+      edgeCount_++;
+      return;
+    }
+
+    snap_.addNamedEdge(
+        V8HeapSnapshot::EdgeType::Internal,
+        llvm::StringRef::withNullAsEmpty(name),
+        id);
   }
 
   unsigned edgeCount() const {
