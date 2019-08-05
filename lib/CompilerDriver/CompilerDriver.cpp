@@ -1092,20 +1092,20 @@ bool readBaseBytecodeFromDirectoryOrZip(
       llvm::errs() << "Each segment entry must be a JSON object.\n";
       return false;
     }
+    llvm::StringRef prefix{"hbc-seg-"};
     auto *flavor =
         llvm::dyn_cast_or_null<parser::JSONString>(segment->get("flavor"));
-    if (!flavor || flavor->str().size() <= 4 ||
-        !flavor->str().startswith("seg-")) {
-      llvm::errs()
-          << "flavor must be a string that prefix a number with seg-.\n";
+    if (!flavor || flavor->str().size() <= prefix.size() ||
+        !flavor->str().startswith(prefix)) {
+      llvm::errs() << "flavor must be a string that prefix a number with "
+                   << prefix << ".\n";
       return false;
     }
     uint32_t segmentID;
-    if (flavor->str().substr(4).getAsInteger(10, segmentID)) {
+    if (flavor->str().substr(prefix.size()).getAsInteger(10, segmentID)) {
       // getAsInteger returns true to signal error.
-      llvm::errs()
-          << "flavor must be a string that prefix a number with seg-. Found "
-          << flavor->str() << '\n';
+      llvm::errs() << "flavor must be a string that prefix a number with "
+                   << prefix << ". Found " << flavor->str() << '\n';
       return false;
     }
 
@@ -1665,7 +1665,7 @@ CompileResult processSourceFiles(
       if (range.segment != 0) {
         filename += "." + oscompat::to_string(range.segment);
       }
-      std::string flavor = "seg-" + oscompat::to_string(range.segment);
+      std::string flavor = "hbc-seg-" + oscompat::to_string(range.segment);
 
       OutputStream fileOS{llvm::outs()};
       if (!base.empty() && !fileOS.open(filename, F_None)) {

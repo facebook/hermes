@@ -42,12 +42,12 @@ print(require('./cjs-subdir-2.js').alpha);
 // MANIFEST-LABEL: [
 // MANIFEST-NEXT:   {
 // MANIFEST-NEXT:     "resource": "test.hbc",
-// MANIFEST-NEXT:     "flavor": "seg-0",
+// MANIFEST-NEXT:     "flavor": "hbc-seg-0",
 // MANIFEST-NEXT:     "location": "test.hbc"
 // MANIFEST-NEXT:   },
 // MANIFEST-NEXT:   {
 // MANIFEST-NEXT:     "resource": "test.hbc",
-// MANIFEST-NEXT:     "flavor": "seg-1",
+// MANIFEST-NEXT:     "flavor": "hbc-seg-1",
 // MANIFEST-NEXT:     "location": "test.hbc.1"
 // MANIFEST-NEXT:   }
 // MANIFEST-NEXT: ]
