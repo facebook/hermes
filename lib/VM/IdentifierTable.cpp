@@ -366,14 +366,6 @@ void IdentifierTable::freeID(uint32_t id) {
   lookupVector_[id].free(firstFreeID_);
   firstFreeID_ = id;
   LLVM_DEBUG(llvm::dbgs() << "Freeing ID " << id << "\n");
-
-  // In the unlikely event that we freed the last element in the vector,
-  // shrink the vector.
-  while (firstFreeID_ != IdentTableLookupEntry::FREE_LIST_END &&
-         (unsigned)firstFreeID_ == lookupVector_.size() - 1) {
-    firstFreeID_ = lookupVector_[firstFreeID_].getNextFreeSlot();
-    lookupVector_.pop_back();
-  }
 }
 
 void IdentifierTable::freeUnmarkedSymbols(
