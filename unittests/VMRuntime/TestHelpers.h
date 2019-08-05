@@ -267,22 +267,9 @@ struct DummyRuntime final : public HandleRootOwner,
     return gc;
   }
 
-  void markRoots(GC *gc, SlotAcceptorWithNames &acceptor, bool) override {
-    markGCScopes(acceptor);
-    for (GCCell **pp : pointerRoots)
-      acceptor.acceptPtr(*pp);
-    for (HermesValue *pp : valueRoots)
-      acceptor.accept(*pp);
+  void markRoots(SlotAcceptorWithNames &acceptor, bool) override;
 
-    if (markExtra)
-      markExtra(gc, acceptor);
-  }
-
-  void markWeakRoots(GCBase *gc, SlotAcceptorWithNames &acceptor) override {
-    for (void **ptr : weakRoots) {
-      acceptor.accept(*ptr);
-    }
-  }
+  void markWeakRoots(SlotAcceptorWithNames &acceptor) override;
 
   unsigned int getSymbolsEnd() const override {
     return 0;

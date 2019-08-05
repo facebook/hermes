@@ -585,17 +585,6 @@ class GenGC final : public GCBase {
 
   void sizeDiagnosticCensus();
 
-  /// Convenience method to invoke the mark roots function provided at
-  /// initialization, using the context provided then (on this heap).
-  /// The \p markLongLived argument indicates whether root data structures
-  /// containing only pointers to objects allocated via allocLongLived
-  /// are required to be marked.  In this collector, such objects will
-  /// be allocated in the old gen, and references to them need not be
-  /// marked during young-gen collection.
-  void markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
-    gcCallbacks_->markRoots(this, acceptor, markLongLived);
-  }
-
   /// Mark/Sweep/Compact GC:
 
   /// The individual phases of Mark/Sweep/Compact GC.

@@ -179,13 +179,12 @@ class GCBase {
     /// via allocLongLived) are required to be scanned.  A generational
     /// collector, for example, might take advantage of this.
     virtual void markRoots(
-        GC *gc,
         SlotAcceptorWithNames &acceptor,
         bool markLongLived = true) = 0;
 
     /// Callback that will be invoked by the GC to mark all weak roots in the
     /// beginning of every GC.
-    virtual void markWeakRoots(GCBase *gc, SlotAcceptorWithNames &acceptor) = 0;
+    virtual void markWeakRoots(SlotAcceptorWithNames &acceptor) = 0;
 
     /// \return one higher than the largest symbol in the identifier table. This
     /// enables the GC to size its internal structures for symbol marking.
@@ -564,10 +563,21 @@ class GCBase {
     return 0;
   }
 
+  /// Convenience method to invoke the mark roots function provided at
+  /// initialization, using the context provided then (on this heap).
+  /// The \p markLongLived argument indicates whether root data structures
+  /// containing only pointers to objects allocated via allocLongLived
+  /// are required to be marked.  In this collector, such objects will
+  /// be allocated in the old gen, and references to them need not be
+  /// marked during young-gen collection.
+  void markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
+    gcCallbacks_->markRoots(acceptor, markLongLived);
+  }
+
   /// Convenience method to invoke the mark weak roots function provided at
   /// initialization, using the context provided then (on this heap).
   void markWeakRoots(SlotAcceptorWithNames &acceptor) {
-    gcCallbacks_->markWeakRoots(this, acceptor);
+    gcCallbacks_->markWeakRoots(acceptor);
   }
 
   /// Print the cumulative statistics.

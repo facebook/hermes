@@ -353,10 +353,7 @@ class Runtime::MarkRootsPhaseTimer {
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
-void Runtime::markRoots(
-    GC *gc,
-    SlotAcceptorWithNames &acceptor,
-    bool markLongLived) {
+void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
   // The body of markRoots should be sequence of blocks, each of which
   // starts with the declaration of an appropriate MarkRootsPhase
   // instance.
@@ -476,7 +473,7 @@ void Runtime::markRoots(
 
   {
     MarkRootsPhaseTimer timer(this, MarkRootsPhase::WeakRefs);
-    markWeakRefs(gc);
+    markWeakRefs(&getHeap());
   }
 
   {
@@ -494,11 +491,11 @@ void Runtime::markRoots(
   {
     MarkRootsPhaseTimer timer(this, MarkRootsPhase::Custom);
     for (auto &fn : customMarkRootFuncs_)
-      fn(gc, acceptor);
+      fn(&getHeap(), acceptor);
   }
 }
 
-void Runtime::markWeakRoots(GCBase *gc, SlotAcceptorWithNames &acceptor) {
+void Runtime::markWeakRoots(SlotAcceptorWithNames &acceptor) {
   for (auto &rm : runtimeModuleList_)
     rm.markWeakRoots(acceptor);
 }

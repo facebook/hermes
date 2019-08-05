@@ -208,7 +208,7 @@ void MallocGC::checkWellFormed() {
   GCCycle cycle{this};
   CheckHeapWellFormedAcceptor acceptor(*this);
   DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
-  markRoots(nameAcceptor);
+  markRoots(nameAcceptor, true);
   markWeakRoots(nameAcceptor);
   for (CellHeader *header : pointers_) {
     GCCell *cell = header->data();
@@ -235,7 +235,7 @@ void MallocGC::collect() {
     GCCycle cycle{this};
     MarkingAcceptor acceptor(*this);
     DroppingAcceptor<MarkingAcceptor> nameAcceptor{acceptor};
-    markRoots(nameAcceptor);
+    markRoots(nameAcceptor, true);
     while (!acceptor.worklist_.empty()) {
       CellHeader *header = acceptor.worklist_.back();
       acceptor.worklist_.pop_back();
@@ -451,10 +451,6 @@ void MallocGC::markWeakRef(WeakRefBase &wr) {
 void MallocGC::freeWeakSlot(WeakRefSlot *slot) {
   slot->value = HermesValue::encodeEmptyValue();
   slot->extra = static_cast<unsigned>(WeakSlotState::Free);
-}
-
-void MallocGC::markRoots(SlotAcceptorWithNames &acceptor) {
-  gcCallbacks_->markRoots(this, acceptor);
 }
 
 #ifndef NDEBUG

@@ -76,5 +76,22 @@ std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider(
 #endif
 }
 
+void DummyRuntime::markRoots(SlotAcceptorWithNames &acceptor, bool) {
+  markGCScopes(acceptor);
+  for (GCCell **pp : pointerRoots)
+    acceptor.acceptPtr(*pp);
+  for (HermesValue *pp : valueRoots)
+    acceptor.accept(*pp);
+
+  if (markExtra)
+    markExtra(&getHeap(), acceptor);
+}
+
+void DummyRuntime::markWeakRoots(SlotAcceptorWithNames &acceptor) {
+  for (void **ptr : weakRoots) {
+    acceptor.accept(*ptr);
+  }
+}
+
 } // namespace vm
 } // namespace hermes

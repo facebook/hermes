@@ -788,12 +788,11 @@ class Runtime : public HandleRootOwner,
   /// indicates whether root data structures that contain only
   /// references to long-lived objects (allocated via allocLongLived)
   /// are required to be scanned.
-  void markRoots(GC *gc, SlotAcceptorWithNames &acceptor, bool markLongLived)
-      override;
+  void markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) override;
 
   /// Called by the GC at the beginning of a collection. This method informs
   /// the GC of all runtime weak roots.
-  void markWeakRoots(GCBase *gc, SlotAcceptorWithNames &acceptor) override;
+  void markWeakRoots(SlotAcceptorWithNames &acceptor) override;
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for

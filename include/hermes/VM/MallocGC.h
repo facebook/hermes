@@ -254,9 +254,6 @@ class MallocGC final : public GCBase {
   /// Initialize a cell with the required basic data for any cell.
   inline void initCell(GCCell *cell, uint32_t size);
 
-  /// Mark the roots of the GC heap.
-  void markRoots(SlotAcceptorWithNames &acceptor);
-
   /// Free a weak pointer slot, which invalidates it.
   void freeWeakSlot(WeakRefSlot *slot);
 
