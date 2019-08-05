@@ -18,7 +18,7 @@
 namespace hermes {
 namespace vm {
 
-IdentifierTable::IdentTableLookupEntry::IdentTableLookupEntry(
+IdentifierTable::LookupEntry::LookupEntry(
     StringPrimitive *str,
     bool isNotUniqued)
     : strPrim_(str),
@@ -234,7 +234,7 @@ uint32_t IdentifierTable::allocIDAndInsert(
   // We must assign strPrim to the lookupVector before inserting to
   // hashTable_, because inserting to hashTable_ could trigger a grow/rehash,
   // which requires accessing the newly inserted string primitive.
-  new (&lookupVector_[nextId]) IdentTableLookupEntry(strPrim);
+  new (&lookupVector_[nextId]) LookupEntry(strPrim);
 
   hashTable_.insert(hashTableIndex, symbolId);
 
@@ -286,7 +286,7 @@ SymbolID IdentifierTable::registerLazyIdentifierImpl(
   uint32_t nextId = allocNextID();
   SymbolID symbolId = SymbolID::unsafeCreate(nextId);
   assert(lookupVector_[nextId].isFreeSlot() && "Allocated a non-free slot");
-  new (&lookupVector_[nextId]) IdentTableLookupEntry(str, hash);
+  new (&lookupVector_[nextId]) LookupEntry(str, hash);
   hashTable_.insert(idx, symbolId);
   LLVM_DEBUG(
       llvm::dbgs() << "Allocated lazy identifier: " << nextId << " " << str
@@ -337,9 +337,9 @@ void IdentifierTable::freeSymbol(uint32_t index) {
 
 uint32_t IdentifierTable::allocNextID() {
   // If the free list is empty, grow the array.
-  if (firstFreeID_ == IdentTableLookupEntry::FREE_LIST_END) {
+  if (firstFreeID_ == LookupEntry::FREE_LIST_END) {
     uint32_t newID = lookupVector_.size();
-    if (LLVM_UNLIKELY(newID > IdentTableLookupEntry::MAX_IDENTIFIER)) {
+    if (LLVM_UNLIKELY(newID > LookupEntry::MAX_IDENTIFIER)) {
       hermes_fatal("Failed to allocate Identifier: IdentifierTable is full");
     }
     lookupVector_.emplace_back();
@@ -383,7 +383,7 @@ void IdentifierTable::freeUnmarkedSymbols(
 
 SymbolID IdentifierTable::createNotUniquedLazySymbol(ASCIIRef desc) {
   uint32_t nextID = allocNextID();
-  new (&lookupVector_[nextID]) IdentTableLookupEntry(desc, 0, true);
+  new (&lookupVector_[nextID]) LookupEntry(desc, 0, true);
   return SymbolID::unsafeCreateNotUniqued(nextID);
 }
 
@@ -406,15 +406,14 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
     if (LLVM_UNLIKELY(longLivedStr == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    new (&lookupVector_[nextID])
-        IdentTableLookupEntry(longLivedStr->get(), true);
+    new (&lookupVector_[nextID]) LookupEntry(longLivedStr->get(), true);
   } else {
     // Description is already in the old gen, just point to it.
-    new (&lookupVector_[nextID]) IdentTableLookupEntry(*desc, true);
+    new (&lookupVector_[nextID]) LookupEntry(*desc, true);
   }
 #else
   // No concept of generations, so there's no need to allocLongLived.
-  new (&lookupVector_[nextID]) IdentTableLookupEntry(*desc, true);
+  new (&lookupVector_[nextID]) LookupEntry(*desc, true);
 #endif
 
   return SymbolID::unsafeCreateNotUniqued(nextID);

@@ -186,7 +186,7 @@ class IdentifierTable {
   ///   the next free slot (FREE_LIST_END means the end of free list).
   ///   Note that FREE_LIST_END is not a unique value, but it should only
   ///   be used when the union is nullptr, so that's not a problem.
-  class IdentTableLookupEntry {
+  class LookupEntry {
     static constexpr uint32_t LAZY_STRING_PRIM_TAG = (uint32_t)(1 << 30) - 1;
     static constexpr uint32_t NON_LAZY_STRING_PRIM_TAG =
         LAZY_STRING_PRIM_TAG - 1;
@@ -216,37 +216,32 @@ class IdentifierTable {
     uint32_t hash_{};
 
    public:
-    explicit IdentTableLookupEntry(ASCIIRef str, bool isNotUniqued = false)
+    explicit LookupEntry(ASCIIRef str, bool isNotUniqued = false)
         : asciiPtr_(str.data()),
           isUTF16_(false),
           isNotUniqued_(isNotUniqued),
           num_(str.size()),
           hash_(hermes::hashString(str)) {}
-    explicit IdentTableLookupEntry(
-        ASCIIRef str,
-        uint32_t hash,
-        bool isNotUniqued = false)
+    explicit LookupEntry(ASCIIRef str, uint32_t hash, bool isNotUniqued = false)
         : asciiPtr_(str.data()),
           isUTF16_(false),
           isNotUniqued_(isNotUniqued),
           num_(str.size()),
           hash_(hash) {}
-    explicit IdentTableLookupEntry(UTF16Ref str)
+    explicit LookupEntry(UTF16Ref str)
         : utf16Ptr_(str.data()),
           isUTF16_(true),
           isNotUniqued_(false),
           num_(str.size()),
           hash_(hermes::hashString(str)) {}
-    explicit IdentTableLookupEntry(UTF16Ref str, uint32_t hash)
+    explicit LookupEntry(UTF16Ref str, uint32_t hash)
         : utf16Ptr_(str.data()),
           isUTF16_(true),
           isNotUniqued_(false),
           num_(str.size()),
           hash_(hash) {}
-    explicit IdentTableLookupEntry(
-        StringPrimitive *str,
-        bool isNotUniqued = false);
-    explicit IdentTableLookupEntry(
+    explicit LookupEntry(StringPrimitive *str, bool isNotUniqued = false);
+    explicit LookupEntry(
         StringPrimitive *str,
         uint32_t hash,
         bool isNotUniqued = false)
@@ -259,7 +254,7 @@ class IdentifierTable {
     }
 
     /// Initialized as a free slot.
-    IdentTableLookupEntry() : strPrim_(nullptr), num_(FREE_LIST_END) {}
+    LookupEntry() : strPrim_(nullptr), num_(FREE_LIST_END) {}
 
     bool isLazyASCII() const {
       return asciiPtr_ && !isUTF16_;
@@ -324,32 +319,30 @@ class IdentifierTable {
     }
   };
 
-  using IdentTableLookupVector = std::vector<IdentTableLookupEntry>;
-
   /// Stores all the entries referenced from the hash table, plus
   /// free slots.
-  IdentTableLookupVector lookupVector_;
+  std::vector<LookupEntry> lookupVector_;
 
   /// The hash table.
   detail::IdentifierHashTable hashTable_{};
 
   /// Index of the first free index in lookupVector_.
-  uint32_t firstFreeID_{IdentTableLookupEntry::FREE_LIST_END};
+  uint32_t firstFreeID_{LookupEntry::FREE_LIST_END};
 
-  IdentTableLookupEntry &getLookupTableEntry(SymbolID id) {
+  LookupEntry &getLookupTableEntry(SymbolID id) {
     return getLookupTableEntry(id.unsafeGetIndex());
   }
 
-  const IdentTableLookupEntry &getLookupTableEntry(SymbolID id) const {
+  const LookupEntry &getLookupTableEntry(SymbolID id) const {
     return getLookupTableEntry(id.unsafeGetIndex());
   }
 
-  IdentTableLookupEntry &getLookupTableEntry(uint32_t id) {
+  LookupEntry &getLookupTableEntry(uint32_t id) {
     assert(id < lookupVector_.size() && "Identifier ID out of bound");
     return lookupVector_[id];
   }
 
-  const IdentTableLookupEntry &getLookupTableEntry(uint32_t id) const {
+  const LookupEntry &getLookupTableEntry(uint32_t id) const {
     assert(id < lookupVector_.size() && "Identifier ID out of bound");
     return lookupVector_[id];
   }
