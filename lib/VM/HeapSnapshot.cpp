@@ -85,27 +85,38 @@ void V8HeapSnapshot::endSection(Section section) {
   sectionOpened_ = false;
 }
 
-void V8HeapSnapshot::addNode(
+void V8HeapSnapshot::beginNode() {
+  if (nextSection_ == Section::Edges) {
+    // If the edges are being emitted, ignore node output.
+    return;
+  }
+  assert(nextSection_ == Section::Nodes && sectionOpened_);
+  // Reset the edge counter.
+  currEdgeCount_ = 0;
+}
+
+void V8HeapSnapshot::endNode(
     NodeType type,
     llvm::StringRef name,
     NodeID id,
     HeapSizeType selfSize,
-    HeapSizeType edgeCount,
     HeapSizeType traceNodeID) {
+  if (nextSection_ == Section::Edges) {
+    // If the edges are being emitted, ignore node output.
+    return;
+  }
   assert(nextSection_ == Section::Nodes && sectionOpened_);
   auto res = nodeToIndex_.try_emplace(id, nodeCount_++);
   assert(res.second);
   (void)res;
-
   json_.emitValue(index(type));
   json_.emitValue(stringTable_.insert(name));
   json_.emitValue(id);
   json_.emitValue(selfSize);
-  json_.emitValue(edgeCount);
+  json_.emitValue(currEdgeCount_);
   json_.emitValue(traceNodeID);
-
 #ifndef NDEBUG
-  expectedEdges_ += edgeCount;
+  expectedEdges_ += currEdgeCount_;
 #endif
 }
 
@@ -113,6 +124,12 @@ void V8HeapSnapshot::addNamedEdge(
     EdgeType type,
     llvm::StringRef name,
     NodeID toNode) {
+  if (nextSection_ == Section::Nodes) {
+    // If we're emitting nodes, only count the number of edges being processed,
+    // but don't actually emit them.
+    currEdgeCount_++;
+    return;
+  }
   assert(
       edgeCount_++ < expectedEdges_ && "Added more edges than were expected");
   assert(nextSection_ == Section::Edges && sectionOpened_);
@@ -130,6 +147,12 @@ void V8HeapSnapshot::addIndexedEdge(
     EdgeType type,
     EdgeIndex edgeIndex,
     NodeID toNode) {
+  if (nextSection_ == Section::Nodes) {
+    // If we're emitting nodes, only count the number of edges being processed,
+    // but don't actually emit them.
+    currEdgeCount_++;
+    return;
+  }
   assert(
       edgeCount_++ < expectedEdges_ && "Added more edges than were expected");
   assert(nextSection_ == Section::Edges && sectionOpened_);
@@ -239,21 +262,6 @@ void V8HeapSnapshot::emitStrings() {
   }
 
   endSection(Section::Strings);
-}
-
-V8HeapSnapshot::NodeType V8HeapSnapshot::cellKindToNodeType(CellKind kind) {
-  if (kindInRange(
-          kind,
-          CellKind::StringPrimitiveKind_first,
-          CellKind::StringPrimitiveKind_last)) {
-    return NodeType::String;
-  } else if (kind == CellKind::ArrayStorageKind) {
-    // The array type is meant to be used by primitive internal array
-    // constructs. User-creatable arrays should be Object.
-    return NodeType::Array;
-  } else {
-    return NodeType::Object;
-  }
 }
 
 std::string converter(const char *name) {

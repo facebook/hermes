@@ -13,7 +13,6 @@
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
-#include "hermes/Support/StringSetVector.h"
 #include "hermes/VM/AllocSource.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
@@ -1166,15 +1165,10 @@ struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
 struct EdgeAddingAcceptor : public SnapshotAcceptor {
   using SnapshotAcceptor::accept;
 
-  EdgeAddingAcceptor(
-      GC &gc,
-      V8HeapSnapshot &snap,
-      bool filterDuplicates,
-      bool count)
+  EdgeAddingAcceptor(GC &gc, V8HeapSnapshot &snap, bool filterDuplicates)
       : SnapshotAcceptor(gc),
         snap_(snap),
-        filterDuplicates_(filterDuplicates),
-        count_(count) {}
+        filterDuplicates_(filterDuplicates) {}
 
   void accept(void *&ptr, const char *name) override {
     if (!ptr) {
@@ -1187,28 +1181,15 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor {
       return;
     }
 
-    if (count_) {
-      edgeCount_++;
-      return;
-    }
-
     snap_.addNamedEdge(
         V8HeapSnapshot::EdgeType::Internal,
         llvm::StringRef::withNullAsEmpty(name),
         id);
   }
 
-  unsigned edgeCount() const {
-    return edgeCount_;
-  }
-
  private:
   V8HeapSnapshot &snap_;
   bool filterDuplicates_;
-  // If true, only count the edges, don't emit them.
-  // If false, actually emit the edges.
-  bool count_;
-  unsigned edgeCount_{0};
   llvm::DenseSet<uint64_t> seenIDs_;
 };
 
@@ -1232,57 +1213,47 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   snap.beginSection(V8HeapSnapshot::Section::Nodes);
 
   // Count the number of roots.
-  EdgeAddingAcceptor rootAcceptor(
-      *this, snap, /*filterDuplicates*/ true, /*count*/ true);
-  markRoots(rootAcceptor, true);
-  snap.addNode(
-      V8HeapSnapshot::NodeType::Synthetic,
-      "(GC Roots)",
-      static_cast<V8HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Roots),
-      0,
-      rootAcceptor.edgeCount());
+  {
+    // Use a separate root acceptor for the first pass and the second pass so
+    // that the duplicate filter isn't shared.
+    EdgeAddingAcceptor rootAcceptor(*this, snap, /*filterDuplicates*/ true);
+    snap.beginNode();
+    markRoots(rootAcceptor, true);
+    snap.endNode(
+        V8HeapSnapshot::NodeType::Synthetic,
+        "(GC Roots)",
+        static_cast<V8HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Roots),
+        0);
+  }
+
+  // Edges in the normal heap don't need to be de-duplicated.
+  EdgeAddingAcceptor acceptor(*this, snap, /*filterDuplicates*/ false);
+  SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
 
   // Add a node for each object in the heap.
-  forAllObjs([&snap, this](GCCell *cell) {
-    EdgeAddingAcceptor acceptor(
-        *this, snap, /*filterDuplicates*/ false, /*count*/ true);
-    SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
-
+  const auto snapshotForObject = [&snap, &visitor, this](GCCell *cell) {
+    snap.beginNode();
+    // Add all internal edges first.
     GCBase::markCellWithNames(visitor, cell, this);
-
-    std::string str;
-    // If the cell is a string, add a value to be printed.
-    // TODO: add other special types here.
-    if (const StringPrimitive *sp = dyn_vmcast<StringPrimitive>(cell)) {
-      str = converter(sp);
-    } else {
-      str = cellKindStr(cell->getKind());
-    }
-
-    snap.addNode(
-        V8HeapSnapshot::cellKindToNodeType(cell->getKind()),
-        str,
+    // Allow customization, adding special non-internal edges.
+    cell->getVT()->snapshotMetaData.addEdges(cell, this, snap);
+    snap.endNode(
+        cell->getVT()->snapshotMetaData.nodeType(),
+        cell->getVT()->snapshotMetaData.nameForNode(cell, this),
         getObjectID(cell),
-        cell->getAllocatedSize(),
-        acceptor.edgeCount());
-  });
+        cell->getAllocatedSize());
+  };
+  forAllObjs(snapshotForObject);
   snap.endSection(V8HeapSnapshot::Section::Nodes);
 
-  EdgeAddingAcceptor rootEdgeAcceptor(
-      *this, snap, /*filterDuplicates*/ true, /*count*/ false);
-  EdgeAddingAcceptor edgeAcceptor(
-      *this, snap, /*filterDuplicates*/ false, /*count*/ false);
-  SlotVisitorWithNames<EdgeAddingAcceptor> edgeVisitor(edgeAcceptor);
-
   snap.beginSection(V8HeapSnapshot::Section::Edges);
-
-  // Add an edge from each synthetic root node to the real object it refers to.
-  markRoots(rootEdgeAcceptor, true);
-
+  {
+    // Make a new root acceptor so that edges aren't filtered a second time.
+    EdgeAddingAcceptor rootAcceptor(*this, snap, /*filterDuplicates*/ true);
+    markRoots(rootAcceptor, true);
+  }
   // Add edges between objects in the heap.
-  forAllObjs([&edgeVisitor, this](GCCell *cell) {
-    GCBase::markCellWithNames(edgeVisitor, cell, this);
-  });
+  forAllObjs(snapshotForObject);
   snap.endSection(V8HeapSnapshot::Section::Edges);
 
 #ifdef HERMES_SLOW_DEBUG

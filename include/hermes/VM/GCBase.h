@@ -496,6 +496,7 @@ class GCBase {
   }
 
   inline uint64_t getObjectID(const void *cell);
+  inline uint64_t getObjectID(const GCPointerBase &cell);
 
 #ifndef NDEBUG
   /// \return The next debug allocation ID for embedding directly into a GCCell.
@@ -809,7 +810,13 @@ class WeakRefBase {
 };
 
 inline uint64_t GCBase::getObjectID(const void *cell) {
+  assert(cell && "Called getObjectID on a null pointer");
   return idTracker_.getObjectID(cell);
+}
+
+inline uint64_t GCBase::getObjectID(const GCPointerBase &cell) {
+  assert(cell && "Called getObjectID on a null pointer");
+  return getObjectID(cell.get(pointerBase_));
 }
 
 #ifndef NDEBUG

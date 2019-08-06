@@ -10,7 +10,9 @@
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/HeapAlign.h"
+#include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/Metadata.h"
+#include "hermes/VM/PointerBase.h"
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -26,6 +28,39 @@ class GCCell;
 /// methods to "mark" (really, to invoke a GC callback on JS values in
 /// the block) and (optionally) finalize the cell.
 struct VTable {
+  class HeapSnapshotMetadata final {
+   private:
+    using NameCallback = std::string(GCCell *, GC *);
+    using AddEdgesCallback = void(GCCell *, GC *, V8HeapSnapshot &);
+
+   public:
+    /// Construct a HeapSnapshotMetadata, that is used by the GC to decide how
+    /// to print an object and add edges from it to other objects.
+    ///
+    /// \param name Returns the name that should be displayed in heap snapshots.
+    ///   If not provided, or if the function returns an empty string, a name
+    ///   based on the cell kind will be used instead.
+    /// \param addEdges Adds any non-internal edges to this node. Can be used to
+    ///   add custom edges that aren't well-represented by internal pointers, or
+    ///   should be user-visible.
+    constexpr explicit HeapSnapshotMetadata(
+        V8HeapSnapshot::NodeType nodeType,
+        NameCallback *name,
+        AddEdgesCallback *addEdges)
+        : nodeType_(nodeType), name_(name), addEdges_(addEdges) {}
+
+    V8HeapSnapshot::NodeType nodeType() const {
+      return nodeType_;
+    }
+    std::string nameForNode(GCCell *cell, GC *gc) const;
+    void addEdges(GCCell *cell, GC *gc, V8HeapSnapshot &snap) const;
+
+   private:
+    const V8HeapSnapshot::NodeType nodeType_;
+    NameCallback *const name_;
+    AddEdgesCallback *const addEdges_;
+  };
+
   // Value is 64 bits to make sure it can be used as a pointer in both 32 and
   // 64-bit builds.
   // "57ab1e" == "vtable".
@@ -68,6 +103,8 @@ struct VTable {
   /// Trim the cell, decreasing any size-related fields inside the cell.
   using TrimCallback = void(GCCell *);
   TrimCallback *const trim_;
+  /// Any metadata associated with heap snapshots.
+  const HeapSnapshotMetadata snapshotMetaData;
 
   constexpr explicit VTable(
       CellKind kind,
@@ -76,14 +113,19 @@ struct VTable {
       MarkWeakCallback *markWeak = nullptr,
       MallocSizeCallback *mallocSize = nullptr,
       TrimSizeCallback *trimSize = nullptr,
-      TrimCallback *trim = nullptr)
+      TrimCallback *trim = nullptr,
+      HeapSnapshotMetadata snapshotMetaData =
+          HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Object,
+                               nullptr,
+                               nullptr})
       : kind(kind),
         size(heapAlignSize(size)),
         finalize_(finalize),
         markWeak_(markWeak),
         mallocSize_(mallocSize),
         trimSize_(trimSize),
-        trim_(trim) {}
+        trim_(trim),
+        snapshotMetaData(snapshotMetaData) {}
 
   bool isVariableSize() const {
     return size == 0;

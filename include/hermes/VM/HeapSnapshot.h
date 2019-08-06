@@ -70,8 +70,6 @@ class V8HeapSnapshot {
   using NodeIndex = uint32_t;
   using EdgeIndex = uint32_t;
 
-  static NodeType cellKindToNodeType(CellKind kind);
-
   explicit V8HeapSnapshot(JSONEmitter &json);
 
   /// NOTE: this destructor writes to \p json.
@@ -93,12 +91,12 @@ class V8HeapSnapshot {
   /// \pre \p section is not the END sentinel.
   void endSection(Section section);
 
-  void addNode(
+  void beginNode();
+  void endNode(
       NodeType type,
       llvm::StringRef name,
       NodeID id,
       HeapSizeType selfSize,
-      HeapSizeType edgeCount,
       HeapSizeType traceNodeID = 0);
 
   void addNamedEdge(EdgeType type, llvm::StringRef name, NodeID toNode);
@@ -119,6 +117,7 @@ class V8HeapSnapshot {
   llvm::DenseMap<NodeID, NodeIndex> nodeToIndex_;
   StringSetVector stringTable_;
   NodeIndex nodeCount_{0};
+  HeapSizeType currEdgeCount_{0};
 #ifndef NDEBUG
   /// How many edges have currently been added.
   EdgeIndex edgeCount_{0};
