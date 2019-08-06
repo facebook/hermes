@@ -156,6 +156,10 @@ class ArrayImpl : public JSObject {
             indexedStorage,
             GCPointerBase::YesBarriers()) {}
 
+  /// Adds the special indexed element edges from this array to its backing
+  /// storage.
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, V8HeapSnapshot &snap);
+
   /// Check whether property with index \p index exists in indexed storage and
   /// \return true if it does.
   static bool

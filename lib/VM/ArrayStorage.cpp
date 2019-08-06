@@ -21,7 +21,10 @@ VTable ArrayStorage::vt(
     nullptr,
     nullptr,
     _trimSizeCallback,
-    _trimCallback);
+    _trimCallback,
+    VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Array,
+                                 nullptr,
+                                 nullptr});
 
 void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const ArrayStorage *>(cell);

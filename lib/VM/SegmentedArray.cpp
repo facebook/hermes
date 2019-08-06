@@ -14,7 +14,15 @@ namespace vm {
 
 VTable SegmentedArray::Segment::vt(
     CellKind::SegmentKind,
-    sizeof(SegmentedArray::Segment));
+    sizeof(SegmentedArray::Segment),
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Array,
+                                 nullptr,
+                                 nullptr});
 
 void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const SegmentedArray::Segment *>(cell);
@@ -49,7 +57,10 @@ VTable SegmentedArray::vt(
     nullptr,
     nullptr,
     _trimSizeCallback,
-    _trimCallback);
+    _trimCallback,
+    VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Array,
+                                 nullptr,
+                                 nullptr});
 
 void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const SegmentedArray *>(cell);

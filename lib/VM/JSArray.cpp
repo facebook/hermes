@@ -21,7 +21,32 @@ namespace vm {
 void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const ArrayImpl *>(cell);
-  mb.addField("@indexedStorage", &self->indexedStorage_);
+  // This edge has to be called "elements" in order for Chrome to attribute
+  // the size of the indexed storage as part of total usage of "JS Arrays".
+  mb.addField("elements", &self->indexedStorage_);
+}
+
+void ArrayImpl::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    V8HeapSnapshot &snap) {
+  auto *const self = vmcast<ArrayImpl>(cell);
+  if (!self->indexedStorage_) {
+    return;
+  }
+  auto *const indexedStorage =
+      self->indexedStorage_.getNonNull(gc->getPointerBase());
+  const auto len = self->endIndex_ - self->beginIndex_;
+  for (uint32_t i = 0; i < len; i++) {
+    const auto &elem = indexedStorage->at(i);
+    if (!elem.isPointer()) {
+      continue;
+    }
+    if (auto *p = elem.getPointer()) {
+      snap.addIndexedEdge(
+          V8HeapSnapshot::EdgeType::Element, i, gc->getObjectID(p));
+    }
+  }
 }
 
 bool ArrayImpl::_haveOwnIndexedImpl(
@@ -309,7 +334,17 @@ bool ArrayImpl::_checkAllOwnIndexedImpl(
 // class Arguments
 
 ObjectVTable Arguments::vt{
-    VTable(CellKind::ArgumentsKind, sizeof(Arguments)),
+    VTable(
+        CellKind::ArgumentsKind,
+        sizeof(Arguments),
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Object,
+                                     nullptr,
+                                     Arguments::_snapshotAddEdgesImpl}),
     Arguments::_getOwnIndexedRangeImpl,
     Arguments::_haveOwnIndexedImpl,
     Arguments::_getOwnIndexedPropertyFlagsImpl,
@@ -414,7 +449,17 @@ CallResult<HermesValue> Arguments::create(
 // class JSArray
 
 ObjectVTable JSArray::vt{
-    VTable(CellKind::ArrayKind, sizeof(JSArray)),
+    VTable(
+        CellKind::ArrayKind,
+        sizeof(JSArray),
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Object,
+                                     nullptr,
+                                     JSArray::_snapshotAddEdgesImpl}),
     JSArray::_getOwnIndexedRangeImpl,
     JSArray::_haveOwnIndexedImpl,
     JSArray::_getOwnIndexedPropertyFlagsImpl,
