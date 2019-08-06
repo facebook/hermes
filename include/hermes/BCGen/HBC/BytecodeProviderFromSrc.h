@@ -43,7 +43,7 @@ class BCProviderFromSrc final : public BCProviderBase {
 
   /// No need to do anything since it's already created as part of
   /// BytecodeModule and set to the local member.
-  void createDebugInfo() {}
+  void createDebugInfo() override {}
 
  public:
   static std::unique_ptr<BCProviderFromSrc> createBCProviderFromSrc(
@@ -86,33 +86,33 @@ class BCProviderFromSrc final : public BCProviderBase {
       std::unique_ptr<SourceMap> sourceMap,
       const CompileFlags &compileFlags);
 
-  RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const {
+  RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const override {
     return RuntimeFunctionHeader(&module_->getFunction(functionID).getHeader());
   }
 
-  StringTableEntry getStringTableEntry(uint32_t index) const {
+  StringTableEntry getStringTableEntry(uint32_t index) const override {
     assert(index < stringCount_ && "invalid string table index");
     return module_->getStringTable()[index];
   }
 
-  const uint8_t *getBytecode(uint32_t functionID) const {
+  const uint8_t *getBytecode(uint32_t functionID) const override {
     return module_->getFunction(functionID).getOpcodeArray().data();
   }
 
   llvm::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
-      uint32_t functionID) const {
+      uint32_t functionID) const override {
     return module_->getFunction(functionID).getExceptionHandlers();
   }
 
-  const hbc::DebugOffsets *getDebugOffsets(uint32_t functionID) const {
+  const hbc::DebugOffsets *getDebugOffsets(uint32_t functionID) const override {
     return module_->getFunction(functionID).getDebugOffsets();
   }
 
-  bool isFunctionLazy(uint32_t functionID) const {
+  bool isFunctionLazy(uint32_t functionID) const override {
     return module_->getFunction(functionID).isLazy();
   }
 
-  bool isLazy() const {
+  bool isLazy() const override {
     return false;
   }
 
@@ -131,7 +131,7 @@ class BCProviderLazy final : public BCProviderBase {
   explicit BCProviderLazy(hbc::BytecodeFunction *bytecodeFunction);
 
   /// No debug information will be available without compiling it.
-  void createDebugInfo() {
+  void createDebugInfo() override {
     llvm_unreachable("Accessing debug info from a lazy module");
   }
 
@@ -142,32 +142,32 @@ class BCProviderLazy final : public BCProviderBase {
         new BCProviderLazy(bytecodeFunction));
   }
 
-  RuntimeFunctionHeader getFunctionHeader(uint32_t) const {
+  RuntimeFunctionHeader getFunctionHeader(uint32_t) const override {
     return RuntimeFunctionHeader(&bytecodeFunction_->getHeader());
   }
 
-  StringTableEntry getStringTableEntry(uint32_t index) const {
+  StringTableEntry getStringTableEntry(uint32_t index) const override {
     llvm_unreachable("Accessing string table from a lazy module");
   }
 
-  const uint8_t *getBytecode(uint32_t) const {
+  const uint8_t *getBytecode(uint32_t) const override {
     llvm_unreachable("Accessing bytecode from a lazy module");
   }
 
   llvm::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
-      uint32_t) const {
+      uint32_t) const override {
     llvm_unreachable("Accessing exception info from a lazy module");
   }
 
-  const hbc::DebugOffsets *getDebugOffsets(uint32_t) const {
+  const hbc::DebugOffsets *getDebugOffsets(uint32_t) const override {
     llvm_unreachable("Accessing debug offsets from a lazy module");
   }
 
-  bool isFunctionLazy(uint32_t) const {
+  bool isFunctionLazy(uint32_t) const override {
     return true;
   }
 
-  bool isLazy() const {
+  bool isLazy() const override {
     return true;
   }
 

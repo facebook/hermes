@@ -329,7 +329,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
 
   explicit BCProviderFromBuffer(std::unique_ptr<const Buffer> buffer);
 
-  void createDebugInfo();
+  void createDebugInfo() override;
 
   /// Helper function to fetch the exception table data given \p functionID.
   /// \returns the ArrayRef to the exception table data, along with a pointer
@@ -388,7 +388,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
         functionHeaders_, functionCount_);
   }
 
-  RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const {
+  RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const override {
     const hbc::SmallFuncHeader &smallHeader = functionHeaders_[functionID];
     if (LLVM_UNLIKELY(smallHeader.flags.overflowed)) {
       auto large = reinterpret_cast<const hbc::FunctionHeader *>(
@@ -412,7 +412,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
     return overflowStringTableEntries_;
   }
 
-  StringTableEntry getStringTableEntry(uint32_t index) const {
+  StringTableEntry getStringTableEntry(uint32_t index) const override {
     auto &smallHeader = stringTableEntries_[index];
     if (LLVM_UNLIKELY(smallHeader.isOverflowed())) {
       auto overflow = overflowStringTableEntries_[smallHeader.offset];
@@ -425,36 +425,36 @@ class BCProviderFromBuffer final : public BCProviderBase {
     return entry;
   }
 
-  const uint8_t *getBytecode(uint32_t functionID) const {
+  const uint8_t *getBytecode(uint32_t functionID) const override {
     return bufferPtr_ + getFunctionHeader(functionID).offset();
   }
 
   llvm::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
-      uint32_t functionID) const {
+      uint32_t functionID) const override {
     return getExceptionTableAndDebugOffsets(functionID).first;
   }
 
-  const hbc::DebugOffsets *getDebugOffsets(uint32_t functionID) const {
+  const hbc::DebugOffsets *getDebugOffsets(uint32_t functionID) const override {
     return getExceptionTableAndDebugOffsets(functionID).second;
   }
 
-  virtual llvm::ArrayRef<uint8_t> getEpilogue() const;
-  virtual SHA1 getSourceHash() const;
+  llvm::ArrayRef<uint8_t> getEpilogue() const override;
+  SHA1 getSourceHash() const override;
 
-  virtual void startWarmup(uint8_t percent);
+  void startWarmup(uint8_t percent) override;
 
-  virtual void madvise(oscompat::MAdvice advice);
-  virtual void adviseStringTableSequential();
-  virtual void adviseStringTableRandom();
-  virtual void willNeedStringTable();
+  void madvise(oscompat::MAdvice advice) override;
+  void adviseStringTableSequential() override;
+  void adviseStringTableRandom() override;
+  void willNeedStringTable() override;
 
-  virtual void startPageAccessTracker();
+  void startPageAccessTracker() override;
 
-  virtual volatile PageAccessTracker *getPageAccessTracker() {
+  volatile PageAccessTracker *getPageAccessTracker() override {
     return tracker_.get();
   }
 
-  virtual llvm::ArrayRef<uint8_t> getRawBuffer() const {
+  llvm::ArrayRef<uint8_t> getRawBuffer() const override {
     return llvm::ArrayRef<uint8_t>(bufferPtr_, buffer_->size());
   }
 
@@ -463,11 +463,11 @@ class BCProviderFromBuffer final : public BCProviderBase {
     delete debugInfo_;
   }
 
-  bool isFunctionLazy(uint32_t functionID) const {
+  bool isFunctionLazy(uint32_t functionID) const override {
     return false;
   }
 
-  bool isLazy() const {
+  bool isLazy() const override {
     return false;
   }
 };
