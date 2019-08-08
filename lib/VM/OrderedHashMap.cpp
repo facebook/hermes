@@ -48,9 +48,33 @@ void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@lastIterationEntry", &self->lastIterationEntry_);
 }
 
-void OrderedHashMapSerialize(Serializer &s, const GCCell *cell) {}
+OrderedHashMap::OrderedHashMap(Deserializer &d)
+    : GCCell(&d.getRuntime()->getHeap(), &vt) {
+  d.readRelocation(&hashTable_, RelocationKind::GCPointer);
+  d.readRelocation(&firstIterationEntry_, RelocationKind::GCPointer);
+  d.readRelocation(&lastIterationEntry_, RelocationKind::GCPointer);
+  capacity_ = d.readInt<uint32_t>();
+  size_ = d.readInt<uint32_t>();
+}
 
-void OrderedHashMapDeserialize(Deserializer &d, CellKind kind) {}
+void OrderedHashMapSerialize(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const OrderedHashMap>(cell);
+  s.writeRelocation(self->hashTable_.get(s.getRuntime()));
+  s.writeRelocation(self->firstIterationEntry_.get(s.getRuntime()));
+  s.writeRelocation(self->lastIterationEntry_.get(s.getRuntime()));
+  s.writeInt<uint32_t>(self->capacity_);
+  s.writeInt<uint32_t>(self->size_);
+
+  s.endObject(cell);
+}
+
+void OrderedHashMapDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::OrderedHashMapKind && "ExpectedOrderedHashMap");
+  void *mem = d.getRuntime()->alloc(sizeof(OrderedHashMap));
+  auto *cell = new (mem) OrderedHashMap(d);
+
+  d.endObject(cell);
+}
 
 OrderedHashMap::OrderedHashMap(
     Runtime *runtime,
