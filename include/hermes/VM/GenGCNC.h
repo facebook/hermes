@@ -46,6 +46,7 @@ using namespace detail;
 class WeakRefBase;
 template <class T>
 class WeakRef;
+class Serializer;
 
 /// A simple two-generation GC.
 ///
@@ -318,6 +319,12 @@ class GenGC final : public GCBase {
   /// Creates a snapshot of the heap, which includes information about what
   /// objects exist, their sizes, and what they point to.
   virtual void createSnapshot(llvm::raw_ostream &os, bool compact) override;
+
+  /// Serialize WeakRefs.
+  virtual void serializeWeakRefs(Serializer &s) override;
+
+  /// Deserialize WeakRefs.
+  virtual void deserializeWeakRefs(Deserializer &d) override;
 
   /// Returns the number of bytes allocated allocated since the last GC.
   gcheapsize_t bytesAllocatedSinceLastGC() const override;

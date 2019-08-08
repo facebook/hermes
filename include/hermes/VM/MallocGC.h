@@ -211,6 +211,12 @@ class MallocGC final : public GCBase {
   /// Same as in superclass GCBase.
   virtual void createSnapshot(llvm::raw_ostream &os, bool compact) override;
 
+  /// Same as in superclass GCBase.
+  virtual void serializeWeakRefs(Serializer &s) override;
+
+  /// Same as in superclass GCBase.
+  virtual void deserializeWeakRefs(Deserializer &d) override;
+
   void getHeapInfo(HeapInfo &info) override;
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
 

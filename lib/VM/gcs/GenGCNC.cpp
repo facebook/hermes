@@ -18,10 +18,12 @@
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/CompactionResult-inline.h"
 #include "hermes/VM/CompleteMarkState-inline.h"
+#include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue-inline.h"
+#include "hermes/VM/Serializer.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/SymbolID.h"
@@ -1259,6 +1261,49 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormedHeap();
 #endif
+}
+
+void GenGC::serializeWeakRefs(Serializer &s) {
+  int numWeakRefSlots = weakSlots_.size();
+  s.writeInt<uint32_t>(numWeakRefSlots);
+  for (auto &slot : weakSlots_) {
+    // Serialize WeakRefSlot slot.
+    s.writeInt<uint32_t>(slot.extra);
+    // If slot is free, the value field is used to store a native pointer to
+    // the next free slot.
+    s.writeHermesValue(
+        slot.value, slot.extra == WeakSlotState::Free ? true : false);
+    // Call endObject() for slot because another free WeakSlot may have a
+    // pointer to &slot.
+    s.endObject(&slot);
+  }
+  bool writeFreeWeak = firstFreeWeak_ != nullptr;
+  s.writeInt<uint8_t>(writeFreeWeak);
+  if (writeFreeWeak) {
+    s.writeRelocation(firstFreeWeak_);
+  }
+}
+
+void GenGC::deserializeWeakRefs(Deserializer &d) {
+  if (weakSlots_.size() != 0) {
+    hermes_fatal(
+        "must deserialize WeakRefs before there are weak refs in heap");
+  }
+
+  uint32_t numWeakRefSlots = d.readInt<uint32_t>();
+  weakSlots_.resize(numWeakRefSlots);
+  for (auto &slot : weakSlots_) {
+    // Deserialize this WeakRefSlot.
+    slot.extra = d.readInt<uint32_t>();
+    d.readHermesValue(
+        &slot.value, slot.extra == WeakSlotState::Free ? true : false);
+    d.endObject(&slot);
+  }
+
+  bool writeFreeWeak = d.readInt<uint8_t>();
+  if (writeFreeWeak) {
+    d.readRelocation(&firstFreeWeak_, RelocationKind::NativePointer);
+  }
 }
 
 void GenGC::printStats(llvm::raw_ostream &os, bool trailingComma) {
