@@ -42,6 +42,17 @@ void CallableBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@environment", &self->environment_);
 }
 
+Callable::Callable(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
+  // JSObject constructor already reads JSObject fields.
+  d.readRelocation(&environment_, RelocationKind::GCPointer);
+}
+
+void serializeCallableImpl(Serializer &s, const GCCell *cell) {
+  JSObject::serializeObjectImpl(s, cell);
+  auto *self = vmcast<const Callable>(cell);
+  s.writeRelocation(self->environment_.get(s.getRuntime()));
+}
+
 CallResult<HermesValue> Callable::_newObjectImpl(
     Handle<Callable> /*selfHandle*/,
     Runtime *runtime,
@@ -738,9 +749,50 @@ void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   CallableBuildMeta(cell, mb);
 }
 
-void NativeFunctionSerialize(Serializer &s, const GCCell *cell) {}
+NativeFunction::NativeFunction(
+    Deserializer &d,
+    const VTable *vt,
+    void *context,
+    NativeFunctionPtr functionPtr)
+    : Callable(d, vt), context_(context), functionPtr_(functionPtr) {}
 
-void NativeFunctionDeserialize(Deserializer &d, CellKind kind) {}
+static void serializeNativeFunctionImpl(Serializer &s, const GCCell *cell) {
+  serializeCallableImpl(s, cell);
+}
+
+void NativeFunctionSerialize(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const NativeFunction>(cell);
+  // Write context_ here as a value directly since it is used as a value for
+  // NativeFunctions.
+  // Note: This is only true if we don't have to serialize after user code,
+  // where we don't have FinalizableNativeFunction. Also before this goes into
+  // production we should make sure there is a way to prevent functions from
+  // being added that rely on a non-serializable ctx.
+  s.writeInt<uint64_t>((uint64_t)self->context_);
+  // The relocation is already there as Serializer is constructed and
+  // we map func to an id based on NativeFunc.def.
+  assert(
+      s.objectInTable((void *)self->functionPtr_) &&
+      "functionPtr not in relocation map");
+  s.writeRelocation((const void *)self->functionPtr_);
+
+  serializeNativeFunctionImpl(s, cell);
+  s.endObject(cell);
+}
+
+void NativeFunctionDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::NativeFunctionKind && "Expected NativeFunction");
+  void *context = (void *)d.readInt<uint64_t>();
+  void *functionPtr = d.ptrRelocationOrNull(d.readInt<uint32_t>());
+  assert(functionPtr && "functionPtr not in relocation map");
+  void *mem = d.getRuntime()->alloc(sizeof(NativeFunction));
+  auto *cell = new (mem) NativeFunction(
+      d,
+      &NativeFunction::vt.base.base,
+      context,
+      (NativeFunctionPtr)functionPtr);
+  d.endObject(cell);
+}
 
 Handle<NativeFunction> NativeFunction::create(
     Runtime *runtime,
@@ -843,9 +895,63 @@ void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   NativeFunctionBuildMeta(cell, mb);
 }
 
-void NativeConstructorSerialize(Serializer &s, const GCCell *cell) {}
+NativeConstructor::NativeConstructor(
+    Deserializer &d,
+    void *context,
+    NativeFunctionPtr functionPtr,
+    CellKind targetKind,
+    CreatorFunction *creatorFunction)
+    : NativeFunction(d, &vt.base.base, context, functionPtr),
+#ifndef NDEBUG
+      targetKind_(targetKind),
+#endif
+      creator_(creatorFunction) {
+}
 
-void NativeConstructorDeserialize(Deserializer &d, CellKind kind) {}
+void NativeConstructorSerialize(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const NativeConstructor>(cell);
+  // Write context_ here as a value directly since it is used as a value for
+  // NativeFunctions.
+  s.writeInt<uint64_t>((uint64_t)self->context_);
+  assert(
+      s.objectInTable((void *)self->functionPtr_) &&
+      "functionPtr_ not in relocation map");
+  s.writeRelocation((const void *)self->functionPtr_);
+#ifndef NDEBUG
+  // CellKind is less than 255. 1 Byte is enough.
+  s.writeInt<uint8_t>((uint8_t)self->targetKind_);
+#endif
+  assert(
+      s.objectInTable((void *)self->creator_) &&
+      "creator funtion not in relocation table");
+  s.writeRelocation((void *)self->creator_);
+  serializeNativeFunctionImpl(s, cell);
+  s.endObject(cell);
+}
+
+void NativeConstructorDeserialize(Deserializer &d, CellKind kind) {
+  using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
+  assert(
+      kind == CellKind::NativeConstructorKind && "Expected NativeConstructor");
+  void *context = (void *)d.readInt<uint64_t>();
+  void *functionPtr = d.ptrRelocationOrNull(d.readInt<uint32_t>());
+  assert(functionPtr && "functionPtr not in relocation map");
+  CellKind targetKind = CellKind::UninitializedKind;
+#ifndef NDEBUG
+  // CellKind is less than 255. 1 Byte is enough
+  targetKind = (CellKind)d.readInt<uint8_t>();
+#endif
+  void *creatorPtr = d.ptrRelocationOrNull(d.readInt<uint32_t>());
+  assert(creatorPtr && "funtion pointer must have been mapped already");
+  void *mem = d.getRuntime()->alloc(sizeof(NativeConstructor));
+  auto *cell = new (mem) NativeConstructor(
+      d,
+      context,
+      (NativeFunctionPtr)functionPtr,
+      targetKind,
+      (CreatorFunction *)creatorPtr);
+  d.endObject(cell);
+}
 
 #ifndef NDEBUG
 CallResult<HermesValue> NativeConstructor::_callImpl(
