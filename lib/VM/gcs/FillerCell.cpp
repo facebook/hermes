@@ -19,11 +19,19 @@ void FillerCellBuildMeta(const GCCell *, Metadata::Builder &) {}
 
 void UninitializedSerialize(Serializer &s, const GCCell *cell) {}
 
-void FillerCellSerialize(Serializer &s, const GCCell *cell) {}
-
 void UninitializedDeserialize(Deserializer &d, CellKind kind) {}
+void FillerCellSerialize(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const FillerCell>(cell);
+  s.writeInt<uint32_t>(self->getSize());
+  s.endObject(self);
+}
 
-void FillerCellDeserialize(Deserializer &d, CellKind kind) {}
+void FillerCellDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::FillerCellKind && "Expected FillerCell");
+  uint32_t size = d.readInt<uint32_t>();
+  FillerCell *cell = FillerCell::create(d.getRuntime(), size);
+  d.endObject((void *)cell);
+}
 
 } // namespace vm
 } // namespace hermes
