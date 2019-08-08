@@ -273,8 +273,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot()->extra);
 }
 
-#if defined(HERMESVM_GC_GENERATIONAL) || \
-    defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   // This should match the one used by the GC.
   // TODO This should be shared in GCBase, since all GCs use the same format.
@@ -394,8 +393,6 @@ TEST_F(GCBasicsTest, ExtraBytes) {
   }
 }
 
-// ID tests aren't supported on GenGC.
-#ifndef HERMESVM_GC_GENERATIONAL
 /// Test that the id is set to a unique number for each allocated object.
 TEST_F(GCBasicsTest, TestIDIsUnique) {
   auto *cell = Dummy::create(rt);
@@ -413,7 +410,6 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
   const auto idAfter = rt.getHeap().getObjectID(*handle);
   EXPECT_EQ(idBefore, idAfter);
 }
-#endif
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {

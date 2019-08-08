@@ -9,9 +9,7 @@
 
 #include "EmptyCell.h"
 #include "TestHelpers.h"
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 #include "hermes/VM/AlignedHeapSegment.h"
-#endif
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/HeapAlign.h"

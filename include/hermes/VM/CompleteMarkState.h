@@ -9,11 +9,7 @@
 
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 #include "hermes/VM/MarkBitArrayNC.h"
-#else
-#include "hermes/VM/MarkBitArray.h"
-#endif
 
 #include <vector>
 
@@ -27,39 +23,20 @@ struct CompleteMarkState {
   /// Forward declaration of the Acceptor used to mark fields of marked objects.
   struct FullMSCMarkTransitiveAcceptor;
 
-#ifndef HERMESVM_GC_NONCONTIG_GENERATIONAL
-
   /// The mark behavior used during completeMarking:
   /// \pre The object at ptr has been found to be reachable.
   /// \post Its mark bit is set.  If it had been unmarked before, the
   /// object is made gray (i.e., by pushing it on the mark stack if ptr
   /// is not guaranteed to be visited on the current mark bit array
   /// traversal).
-  void markTransitive(void *ptr, MarkBitArray *markBits);
+  void markTransitive(void *ptr);
 
   /// Continually pops elements from the mark stack and scans their pointer
   /// fields.  If such a field points to an unmarked object, mark it and push it
   /// on the mark stack.  If such a push would overflow the mark stack, sets a
   /// flag on this CompleteMarkState to indicate this.  Returns if this overflow
   /// happens, or when the mark stack is empty.
-  void drainMarkStack(
-      GC *gc,
-      MarkBitArray *markBits,
-      FullMSCMarkTransitiveAcceptor &acceptor);
-#else // !HERMESVM_GC_NONCONTIG_GENERATIONAL
-
-  /// @name HERMESVM_GC_NONCONTIG_GENERATIONAL
-  /// These have the same specifications as the GenGC versions defined above,
-  /// but do not take MarkBitarray* arguments.  Instead, they find the
-  /// appropriate per-segment mark bit array and use that.
-
-  /// @{
-  void markTransitive(void *ptr);
-
   void drainMarkStack(GC *gc, FullMSCMarkTransitiveAcceptor &acceptor);
-  /// @}
-
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
 
   /// The maximum size of the mark stack.
   static const size_t kMarkStackLimit = 1000;

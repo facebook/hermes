@@ -11,9 +11,6 @@
 #endif
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/GC.h"
-#ifdef HERMESVM_GC_GENERATIONAL
-#include "hermes/Support/OSCompat.h"
-#endif
 
 #include "gtest/gtest.h"
 
@@ -54,8 +51,7 @@ struct GCSizingTest : public ::testing::Test {
         rt(*runtime) {}
 };
 
-#if defined(HERMESVM_GC_GENERATIONAL) || \
-    defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 // At present, this test only applies to the Generational collector.
 
 TEST_F(GCSizingTest, TestOccupancyTarget) {
@@ -139,11 +135,7 @@ TEST_F(GCSizingTest, TestOccupancyTarget) {
       // The actual size may be rounded up by different amounts, depending on
       // the collector type: GenGC by page sizes, but GenGC can round by as much
       // as a full segment size.
-#ifdef HERMESVM_GC_GENERATIONAL
-      const size_t kRoundAmount = hermes::oscompat::page_size();
-#elif defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
       const size_t kRoundAmount = AlignedHeapSegment::maxSize();
-#endif
       if (info.heapSize >= (2 * kRoundAmount)) {
         // Take the page size and heap size into account.  We round to the
         // page size, so the "true" desired heap size might be as much

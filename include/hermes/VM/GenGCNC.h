@@ -17,7 +17,6 @@
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/CompleteMarkState.h"
-#include "hermes/VM/DependentMemoryRegion.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/GCPointer.h"
@@ -39,8 +38,6 @@
 
 namespace hermes {
 namespace vm {
-
-using namespace detail;
 
 // External forward declarations.
 class WeakRefBase;

@@ -16,42 +16,6 @@
 namespace hermes {
 namespace vm {
 
-#ifndef HERMESVM_GC_NONCONTIG_GENERATIONAL
-
-struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
-    : public SlotAcceptorDefault {
-  MarkBitArray *markBits;
-  CompleteMarkState *markState;
-  FullMSCMarkTransitiveAcceptor(
-      GC &gc,
-      MarkBitArray *markBits,
-      CompleteMarkState *markState)
-      : SlotAcceptorDefault(gc), markBits(markBits), markState(markState) {}
-
-  using SlotAcceptorDefault::accept;
-
-  void accept(void *&ptr) override {
-    if (gc.contains(ptr)) {
-      markState->markTransitive(ptr, markBits);
-    }
-  }
-
-  void accept(HermesValue &hv) override {
-    if (hv.isPointer()) {
-      void *cell = hv.getPointer();
-      accept(cell);
-    } else if (hv.isSymbol()) {
-      accept(hv.getSymbol());
-    }
-  }
-
-  void accept(SymbolID sym) override {
-    gc.markSymbol(sym);
-  }
-};
-
-#else // !HERMESVM_GC_NONCONTIG_GENERATIONAL
-
 struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
     : public SlotAcceptorDefault {
   CompleteMarkState *markState;
@@ -79,13 +43,8 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
   }
 };
 
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
-
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 /// This acceptor is used for updating pointers via forwarding pointers
 /// in mark/sweep/compact.
-/// (In GenGC, this is defined in Space-inline.h, and doesn't use
-/// "dbgContains".)
 struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault {
   static constexpr bool shouldMarkWeak = false;
 
@@ -138,7 +97,6 @@ struct FullMSCUpdateWeakRootsAcceptor final : public SlotAcceptorDefault {
     hv.setInGC(hv.updatePointer(ptr), &gc);
   }
 };
-#endif
 
 } // namespace vm
 } // namespace hermes

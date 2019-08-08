@@ -4,16 +4,14 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#if defined(HERMESVM_GC_NONCONTIG_GENERATIONAL) || \
-    defined(HERMESVM_GC_GENERATIONAL)
+#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
+
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
 #include "ExtStringForTest.h"
 #include "TestHelpers.h"
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 #include "hermes/VM/AlignedHeapSegment.h"
-#endif
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCCell.h"
 
@@ -38,11 +36,7 @@ MetadataTableForTests getMetadataTable() {
 }
 
 namespace {
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 const size_t kMaxYoungGenSize = AlignedHeapSegment::maxSize();
-#else
-const size_t kMaxYoungGenSize = GC::kMaxYoungGenSize;
-#endif
 } // namespace
 
 /// A parameterized test class, for a set of tests that allocate
@@ -218,7 +212,6 @@ TEST_P(ExtMemTests, ExtMemInOldDirectTest) {
 
 INSTANTIATE_TEST_CASE_P(ExtMemTests, ExtMemTests, testing::Bool());
 
-#ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 TEST(ExtMemNonParamTests, ExtMemDoesNotBreakFullGC) {
   // Ensure that the initial heap will be big enough for the young gen
   // to accommodate its full size, and the old gen is
@@ -304,7 +297,6 @@ TEST(ExtMemNonParamDeathTest, SaturateYoungGen) {
   // Expect that a subsequent allocation should fail, with an OOM.
   EXPECT_OOM(ExtStringForTest::create(rt, kExtAllocSize));
 }
-#endif // HERMESVM_GC_NONCONTIG_GENERATIONAL
 
 } // namespace
 

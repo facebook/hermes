@@ -21,12 +21,10 @@ set(RTSources
   CastingTest.cpp
   CopyableVectorTest.cpp
   DateUtilTest.cpp
-  DependentMemoryRegionTest.cpp
   DictPropertyMapTest.cpp
   ExtStringForTest.cpp
   ExternalMemAccountingTest.cpp
   Footprint.cpp
-  GCBackingStorageTest.cpp
   GCBasicsTest.cpp
   GCFinalizerTest.cpp
   GCFragmentationNCTest.cpp
@@ -36,7 +34,6 @@ set(RTSources
   GCObjectIterationTest.cpp
   GCOOMNCTest.cpp
   GCReturnUnusedMemoryNCTest.cpp
-  GCReturnUnusedMemoryTest.cpp
   GCSanitizeHandlesTest.cpp
   GCSegmentAddressIndexTest.cpp
   GCSegmentRangeTest.cpp

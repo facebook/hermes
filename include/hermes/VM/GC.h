@@ -9,8 +9,6 @@
 
 #if defined(HERMESVM_GC_MALLOC)
 #include "hermes/VM/MallocGC.h"
-#elif defined(HERMESVM_GC_GENERATIONAL)
-#include "hermes/VM/GenGC.h"
 #elif defined(HERMESVM_GC_NONCONTIG_GENERATIONAL)
 #include "hermes/VM/GenGCNC.h"
 #else

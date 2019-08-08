@@ -114,7 +114,6 @@ set(jit_files
   )
 
 set(LLVM_OPTIONAL_SOURCES
-  gcs/DependentMemoryRegion.cpp
   gcs/FillerCell.cpp
   gcs/GenGC.cpp
   gcs/MallocGC.cpp
