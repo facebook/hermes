@@ -26,6 +26,7 @@ class WeakValueMap {
   /// hash table always stores instances of WeakRefBase.
   using DenseMapT = llvm::SmallDenseMap<KeyT, WeakRef<ValueT>, 2>;
   using InternalIterator = typename DenseMapT::iterator;
+  using const_iterator = typename DenseMapT::const_iterator;
 
  public:
   using key_type = typename DenseMapT::mapped_type;
@@ -53,6 +54,16 @@ class WeakValueMap {
   }
   iterator end() {
     return makeIterator(map_.end());
+  }
+
+  /// Read only iterator. Don't skip or erase invalid entries.
+  const_iterator const_begin() const {
+    return map_.begin();
+  }
+
+  /// Read only iterator. Don't skip or erase invalid entries.
+  const_iterator const_end() const {
+    return map_.end();
   }
 
   /// Lookup a value by key. The returned iterator must be used right away,
@@ -95,6 +106,15 @@ class WeakValueMap {
       return false;
     pruneInvalid();
     return true;
+  }
+
+  /// Insert key/value into the map. Used by deserialization.
+  /// Use WeakRefSlot* to initialize WeakRefs directly. Don't prune entries.
+  void insertUnsafe(GC *gc, const KeyT &key, WeakRefSlot *ptr) {
+    auto res = map_.try_emplace(key, WeakRef<ValueT>(ptr)).second;
+    if (!res) {
+      hermes_fatal("shouldn't fail to insert during deserialization");
+    }
   }
 
   /// This method should be invoked during garbage collection. It calls

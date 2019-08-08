@@ -35,9 +35,83 @@ void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@forInCache", &self->forInCache_);
 }
 
-void HiddenClassSerialize(Serializer &s, const GCCell *cell) {}
+void HiddenClassSerialize(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const HiddenClass>(cell);
+  // Write fields to pass to constructor first.
+  s.writeInt<uint32_t>(self->symbolID_.unsafeGetRaw());
+  s.writeData(&self->propertyFlags_, sizeof(PropertyFlags));
+  s.writeData(&self->flags_, sizeof(ClassFlags));
+  s.writeInt<uint32_t>(self->numProperties_);
 
-void HiddenClassDeserialize(Deserializer &d, CellKind kind) {}
+  // Serialize other fields.
+  s.writeRelocation(self->parent_.get(s.getRuntime()));
+  s.writeRelocation(self->family_.get(s.getRuntime()));
+  s.writeRelocation(self->propertyMap_.get(s.getRuntime()));
+  s.writeRelocation(self->forInCache_.get(s.getRuntime()));
+
+  // Serialize WeakValueMap<Transition, HiddenClass> transitionMap_;
+  // Only serialize/deserialize valid entries. We don't know how many valid
+  // entries are in the map beforehand. Therefore, we will use a sentinel
+  // WeakRef (nullptr) to show we finish all entries. As a result, for each
+  // valid entry, we write WeakRef<HiddenClass> first, them we write the key.
+  for (auto it = self->transitionMap_.const_begin();
+       it != self->transitionMap_.const_end();
+       it++) {
+    if (it->second.isValid()) {
+      // Write value (WeakRef<HiddenClass>)
+      s.writeRelocation(it->second.unsafeGetSlot());
+      // Write key (Transition: SymbolID, PropertyFlags)
+      s.writeInt<uint32_t>(it->first.symbolID.unsafeGetRaw());
+      s.writeData(&it->first.propertyFlags, sizeof(PropertyFlags));
+    }
+  }
+  // Write an end here
+  s.writeRelocation(nullptr);
+
+  s.endObject(cell);
+}
+
+void HiddenClassDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::HiddenClassKind && "Expected HiddenClass");
+  SymbolID symbolID = SymbolID::unsafeCreate(d.readInt<uint32_t>());
+  PropertyFlags propertyFlags;
+  d.readData(&propertyFlags, sizeof(PropertyFlags));
+  ClassFlags classFlags;
+  d.readData(&classFlags, sizeof(ClassFlags));
+  unsigned numProperties = d.readInt<uint32_t>();
+
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      sizeof(HiddenClass));
+  auto *cell = new (mem) HiddenClass(
+      d.getRuntime(),
+      classFlags,
+      d.getRuntime()->makeNullHandle<HiddenClass>(),
+      symbolID,
+      propertyFlags,
+      numProperties);
+
+  d.readRelocation(&cell->parent_, RelocationKind::GCPointer);
+  d.readRelocation(&cell->family_, RelocationKind::GCPointer);
+  d.readRelocation(&cell->propertyMap_, RelocationKind::GCPointer);
+  d.readRelocation(&cell->forInCache_, RelocationKind::GCPointer);
+
+  uint32_t relocationId = d.readInt<uint32_t>();
+  while (relocationId != 0) {
+    void *ptr = d.ptrRelocationOrNull(relocationId);
+    // weakSlots has been deserialized already, this must be true.
+    assert(ptr && "weak reference has not been deserialized");
+    SymbolID tid = SymbolID::unsafeCreate(d.readInt<uint32_t>());
+    PropertyFlags tflags;
+    d.readData(&tflags, sizeof(PropertyFlags));
+    cell->transitionMap_.insertUnsafe(
+        &d.getRuntime()->getHeap(),
+        HiddenClass::Transition(tid, tflags),
+        (WeakRefSlot *)ptr);
+    relocationId = d.readInt<uint32_t>();
+  }
+
+  d.endObject(cell);
+}
 
 void HiddenClass::_markWeakImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast_during_gc<HiddenClass>(cell, gc);

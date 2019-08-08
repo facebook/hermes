@@ -9,6 +9,8 @@
 
 #include <cstdint>
 
+#include "hermes/VM/Deserializer.h"
+
 namespace hermes {
 namespace vm {
 
@@ -60,6 +62,11 @@ union PropertyFlags {
   /// Clear all flags on construction.
   PropertyFlags() {
     _flags = 0;
+  }
+
+  /// Fast constructor used by Deserializer. Read data from the stream directly.
+  PropertyFlags(Deserializer &d) {
+    d.readData(&_flags, sizeof(PropertyFlags));
   }
 
   void clear() {
