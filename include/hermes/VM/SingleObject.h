@@ -18,6 +18,9 @@ class SingleObject final : public JSObject {
  public:
   using Super = JSObject;
   static const ObjectVTable vt;
+
+  SingleObject(Deserializer &d, const VTable *vt);
+
   static bool classof(const GCCell *cell) {
     return cell->getKind() == kind;
   }

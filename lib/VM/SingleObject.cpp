@@ -17,13 +17,34 @@ void JSONBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
-void MathSerialize(Serializer &s, const GCCell *cell) {}
+template <CellKind kind>
+SingleObject<kind>::SingleObject(Deserializer &d, const VTable *vt)
+    : JSObject(d, vt) {}
 
-void JSONSerialize(Serializer &s, const GCCell *cell) {}
+void MathSerialize(Serializer &s, const GCCell *cell) {
+  JSObject::serializeObjectImpl(s, cell);
+  s.endObject(cell);
+}
 
-void JSONDeserialize(Deserializer &d, CellKind kind) {}
+void JSONSerialize(Serializer &s, const GCCell *cell) {
+  JSObject::serializeObjectImpl(s, cell);
+  s.endObject(cell);
+}
 
-void MathDeserialize(Deserializer &d, CellKind kind) {}
+void JSONDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::JSONKind && "Expected JSON");
+  void *mem = d.getRuntime()->alloc(sizeof(JSJSON));
+  auto *cell = new (mem) JSJSON(d, &JSJSON::vt.base);
+
+  d.endObject(cell);
+}
+
+void MathDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::MathKind && "Expected Math");
+  void *mem = d.getRuntime()->alloc(sizeof(JSMath));
+  auto *cell = new (mem) JSMath(d, &JSMath::vt.base);
+  d.endObject(cell);
+}
 
 } // namespace vm
 } // namespace hermes
