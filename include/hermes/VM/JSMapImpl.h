@@ -24,6 +24,8 @@ class JSMapImpl final : public JSObject {
   using Super = JSObject;
 
  public:
+  JSMapImpl(Deserializer &d, const VTable *vt);
+
   static const ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
@@ -138,6 +140,8 @@ class JSMapImpl final : public JSObject {
 
   /// Build the metadata for this map implementation, and store it into \p mb.
   static void MapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+
+  static void serializeMapOrSetImpl(Serializer &s, const GCCell *cell);
 
  protected:
   JSMapImpl(Runtime *runtime, JSObject *parent, HiddenClass *clazz)

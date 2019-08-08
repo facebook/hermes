@@ -32,13 +32,41 @@ void SetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapImpl<CellKind::SetKind>::MapOrSetBuildMeta(cell, mb);
 }
 
-void MapSerialize(Serializer &s, const GCCell *cell) {}
+template <CellKind C>
+void JSMapImpl<C>::serializeMapOrSetImpl(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const JSMapImpl<C>>(cell);
+  JSObject::serializeObjectImpl(s, cell);
+  s.writeRelocation(self->storage_.get(s.getRuntime()));
+}
 
-void SetSerialize(Serializer &s, const GCCell *cell) {}
+template <CellKind C>
+JSMapImpl<C>::JSMapImpl(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
+  d.readRelocation(&storage_, RelocationKind::GCPointer);
+}
 
-void MapDeserialize(Deserializer &d, CellKind kind) {}
+void MapSerialize(Serializer &s, const GCCell *cell) {
+  JSMap::serializeMapOrSetImpl(s, cell);
+  s.endObject(cell);
+}
 
-void SetDeserialize(Deserializer &d, CellKind kind) {}
+void SetSerialize(Serializer &s, const GCCell *cell) {
+  JSSet::serializeMapOrSetImpl(s, cell);
+  s.endObject(cell);
+}
+
+void MapDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::MapKind && "Expected Map");
+  void *mem = d.getRuntime()->alloc(sizeof(JSMap));
+  auto *cell = new (mem) JSMap(d, &JSMap::vt.base);
+  d.endObject(cell);
+}
+
+void SetDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::SetKind && "Expected Set");
+  void *mem = d.getRuntime()->alloc(sizeof(JSSet));
+  auto *cell = new (mem) JSSet(d, &JSSet::vt.base);
+  d.endObject(cell);
+}
 
 template <CellKind C>
 const ObjectVTable JSMapImpl<C>::vt{
