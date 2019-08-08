@@ -34,9 +34,34 @@ void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       "@storage", self->data(), &self->size_, sizeof(GCHermesValue));
 }
 
-void ArrayStorageSerialize(Serializer &s, const GCCell *cell) {}
+void ArrayStorageSerialize(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const ArrayStorage>(cell);
+  s.writeInt<uint32_t>(self->capacity_);
+  s.writeInt<uint32_t>(self->size_);
 
-void ArrayStorageDeserialize(Deserializer &d, CellKind kind) {}
+  // Serialize HermesValue in storage
+  for (size_t i = 0; i < self->size_; i++) {
+    s.writeHermesValue(self->data()[i]);
+  }
+  s.endObject(cell);
+}
+
+void ArrayStorageDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::ArrayStorageKind && "Expected ArrayStorage");
+  uint32_t capacity = d.readInt<uint32_t>();
+  assert(capacity <= ArrayStorage::maxElements() && "invalid capacity");
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
+      ArrayStorage::allocationSize(capacity));
+  auto *cell = new (mem) ArrayStorage(d.getRuntime(), capacity);
+  cell->size_ = d.readInt<uint32_t>();
+  assert(cell->size_ <= capacity && "size cannot be greater than capacity");
+  // Read the storage
+  for (size_t i = 0; i < cell->size_; i++) {
+    d.readHermesValue(&cell->at(i));
+  }
+
+  d.endObject(cell);
+}
 
 ExecutionStatus ArrayStorage::ensureCapacity(
     MutableHandle<ArrayStorage> &selfHandle,

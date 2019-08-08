@@ -187,6 +187,9 @@ class ArrayStorage final
     self->size_ = newSize;
   }
 
+  friend void ArrayStorageSerialize(Serializer &s, const GCCell *cell);
+  friend void ArrayStorageDeserialize(Deserializer &d, CellKind kind);
+
  private:
   /// The capacity is the maximum number of elements this array can ever
   /// contain. The capacity is constant after creation, with the exception of
