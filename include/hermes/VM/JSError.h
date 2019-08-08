@@ -40,7 +40,11 @@ using StackTracePtr = std::unique_ptr<StackTrace>;
 
 /// Error Object.
 class JSError final : public JSObject {
+  friend void ErrorSerialize(Serializer &s, const GCCell *cell);
+
  public:
+  JSError(Deserializer &d);
+
   using Super = JSObject;
   static ObjectVTable vt;
   static bool classof(const GCCell *cell) {
