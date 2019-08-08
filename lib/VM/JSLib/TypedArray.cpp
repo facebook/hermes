@@ -440,7 +440,7 @@ CallResult<HermesValue> typedArrayPrototypeSetTypedArray(
           newSrc,
           0,
           runtime->makeHandle(src->getBuffer(runtime)),
-          src->getByteOffset(runtime),
+          src->getByteOffset(),
           src->getByteLength()) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -667,9 +667,8 @@ typedArrayPrototypeByteOffset(void *, Runtime *runtime, NativeArgs args) {
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
   return HermesValue::encodeNumberValue(
-      self->attached(runtime) && self->getLength() != 0
-          ? self->getByteOffset(runtime)
-          : 0);
+      self->attached(runtime) && self->getLength() != 0 ? self->getByteOffset()
+                                                        : 0);
 }
 
 /// ES6 22.2.3.5
@@ -762,7 +761,7 @@ typedArrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
           "Underlying ArrayBuffer detached after calling copyWithin");     \
     }                                                                      \
     while (count > 0) {                                                    \
-      arr->at<type>(runtime, to) = arr->at<type>(runtime, from);           \
+      arr->at(runtime, to) = arr->at(runtime, from);                       \
       from += direction;                                                   \
       to += direction;                                                     \
       --count;                                                             \
@@ -870,23 +869,24 @@ typedArrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto elementSize = self->getByteWidth();
+  uint8_t *begin = self->begin(runtime);
   // Fill with the same raw bytes as the first one.
   switch (elementSize) {
     case 1:
-      std::fill(self->begin() + k, self->begin() + last, *(self->begin() + k));
+      std::fill(begin + k, begin + last, *(begin + k));
       break;
     case 2: {
-      auto *src = reinterpret_cast<uint16_t *>(self->begin());
+      auto *src = reinterpret_cast<uint16_t *>(begin);
       std::fill(src + k, src + last, *(src + k));
       break;
     }
     case 4: {
-      auto *src = reinterpret_cast<uint32_t *>(self->begin());
+      auto *src = reinterpret_cast<uint32_t *>(begin);
       std::fill(src + k, src + last, *(src + k));
       break;
     }
     case 8: {
-      auto *src = reinterpret_cast<uint64_t *>(self->begin());
+      auto *src = reinterpret_cast<uint64_t *>(begin);
       std::fill(src + k, src + last, *(src + k));
       break;
     }

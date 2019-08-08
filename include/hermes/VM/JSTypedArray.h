@@ -110,13 +110,11 @@ class JSTypedArrayBase : public JSObject {
     return buffer_.get(runtime);
   }
 
-  uint8_t *begin() {
-    assert(src_ && "Cannot get a nullptr");
-    return src_;
+  uint8_t *begin(PointerBase *base) {
+    return buffer_.getNonNull(base)->getDataBlock() + offset_;
   }
-  uint8_t *end() {
-    assert(src_ && "Cannot get a nullptr");
-    return src_ + getByteLength();
+  uint8_t *end(PointerBase *base) {
+    return begin(base) + length_;
   }
 
   /// \return Whether this JSTypedArrayBase is attached to some buffer.
@@ -126,23 +124,8 @@ class JSTypedArrayBase : public JSObject {
 
   /// \return The offset from the beginning of the buffer this typed array
   /// is looking into.
-  JSArrayBuffer::size_type getByteOffset(Runtime *runtime) const {
-    if (!src_ || !buffer_) {
-      // For a non-attached TypedArray, report its byte offset as 0.
-      return 0;
-    }
-    return src_ - buffer_.get(runtime)->getDataBlock();
-  }
-
-  /// Retrieve the \p i'th element of the buffer.
-  /// \pre
-  ///   This cannot be called on a detached TypedArray.
-  ///   i must be less than the length of the TypedArray.
-  template <typename T>
-  T &at(Runtime *runtime, size_type i) const {
-    assert(attached(runtime) && "at() requires a JSArrayBuffer");
-    assert(i < getLength() && "That index is out of bounds of this TypedArray");
-    return *(reinterpret_cast<T *>(src_) + i);
+  JSArrayBuffer::size_type getByteOffset() const {
+    return offset_;
   }
 
   /// Allocates a buffer using \p runtime with \p length number of
@@ -202,8 +185,8 @@ class JSTypedArrayBase : public JSObject {
   /// byteWidth_ is the number of bytes a specific type needs to be stored.
   /// It is sizeof(Typename).
   uint8_t byteWidth_;
-  /// src_ is the pointer pointing directly into the buffer to be read from.
-  uint8_t *src_;
+  /// offset_ is the offset to start reading from in the underlying ArrayBuffer.
+  size_type offset_;
 
   explicit JSTypedArrayBase(
       Runtime *runtime,
@@ -275,12 +258,23 @@ class JSTypedArray final : public JSTypedArrayBase {
       Runtime *runtime,
       Handle<JSObject> prototype);
 
-  iterator begin() {
-    return reinterpret_cast<T *>(src_);
-  };
-  iterator end() {
-    return reinterpret_cast<T *>(src_) + length_;
-  };
+  iterator begin(PointerBase *base) {
+    return reinterpret_cast<T *>(
+        buffer_.getNonNull(base)->getDataBlock() + offset_);
+  }
+  iterator end(PointerBase *base) {
+    return begin(base) + length_;
+  }
+
+  /// Retrieve the \p i'th element of the buffer.
+  /// \pre
+  ///   This cannot be called on a detached TypedArray.
+  ///   i must be less than the length of the TypedArray.
+  T &at(Runtime *runtime, size_type i) {
+    assert(attached(runtime) && "at() requires a JSArrayBuffer");
+    assert(i < getLength() && "That index is out of bounds of this TypedArray");
+    return begin(runtime)[i];
+  }
 
   static Handle<JSObject> getPrototype(const Runtime *runtime);
   static Handle<Callable> getConstructor(const Runtime *runtime);

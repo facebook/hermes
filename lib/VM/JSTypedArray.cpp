@@ -27,7 +27,7 @@ JSTypedArrayBase::JSTypedArrayBase(
       buffer_(nullptr),
       length_(0),
       byteWidth_(0),
-      src_(nullptr) {
+      offset_(0) {
   flags_.indexedStorage = true;
   flags_.fastIndexProperties = true;
 }
@@ -132,7 +132,7 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArrayBase::allocateToSameBuffer(
       runtime,
       *newArr,
       src->getBuffer(runtime),
-      beginScaled + src->getByteOffset(runtime),
+      beginScaled + src->getByteOffset(),
       endScaled - beginScaled,
       src->getByteWidth());
   return Handle<JSTypedArrayBase>::vmcast(newArr);
@@ -235,9 +235,9 @@ void JSTypedArrayBase::setToCopyOfBytes(
       "Cannot write that many elements to dest ");
   JSArrayBuffer::copyDataBlockBytes(
       dst->getBuffer(runtime),
-      dstIndex * dst->getByteWidth() + dst->getByteOffset(runtime),
+      dstIndex * dst->getByteWidth() + dst->getByteOffset(),
       src->getBuffer(runtime),
-      srcIndex * src->getByteWidth() + src->getByteOffset(runtime),
+      srcIndex * src->getByteWidth() + src->getByteOffset(),
       count * dst->getByteWidth());
 }
 
@@ -257,9 +257,7 @@ void JSTypedArrayBase::setBuffer(
       self->getByteWidth() == byteWidth &&
       "Cannot set to a buffer of a different byte width");
   self->buffer_.set(runtime, buf, &runtime->getHeap());
-  self->src_ = buf->attached() && buf->size() != 0
-      ? buf->getDataBlock() + offset
-      : nullptr;
+  self->offset_ = offset;
   self->length_ = size / byteWidth;
 }
 
@@ -407,7 +405,7 @@ HermesValue JSTypedArray<T, C>::_getOwnIndexedImpl(
     return HermesValue::encodeNumberValue(0);
   }
   if (LLVM_LIKELY(index < self->getLength())) {
-    return SafeNumericEncoder<T>::encode(self->template at<T>(runtime, index));
+    return SafeNumericEncoder<T>::encode(self->at(runtime, index));
   }
   return HermesValue::encodeUndefinedValue();
 }
@@ -433,8 +431,7 @@ CallResult<bool> JSTypedArray<T, C>::_setOwnIndexedImpl(
         "Cannot set a value into a detached ArrayBuffer");
   }
   if (LLVM_LIKELY(index < typedArrayHandle->getLength())) {
-    typedArrayHandle->template at<T>(runtime, index) =
-        JSTypedArray<T, C>::toDestType(x);
+    typedArrayHandle->at(runtime, index) = JSTypedArray<T, C>::toDestType(x);
   }
   return true;
 }
