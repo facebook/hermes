@@ -1535,5 +1535,142 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   return res;
 }
 
+void Runtime::serializeRuntimeFields(Serializer &s) {
+  // Serialize all HermesValue
+#define RUNTIME_HV_FIELD(name) s.writeHermesValue(name);
+#include "hermes/VM/RuntimeHermesValueFields.def"
+#undef RUNTIME_HV_FIELD
+
+  // Do not Serialize any raw pointers. Get those pointers after relocation
+  // finishes.
+
+  // RegExpMatch regExpLastMatch{};
+  // Ignore for now since we only serialize/deserialize after global object
+  // initialization.
+  // TODO: serialize/deserialize this to be able to serialize/deserialize after
+  // user code.
+
+#ifndef NDEBUG
+  s.writeInt<uint8_t>(enableEval);
+  s.writeInt<uint8_t>(verifyEvalIR);
+#endif
+
+  // TODO: ignore all fields from runtimeConfig, about frames, stacks etc.
+  // come back later to check again from heap_ to nativeCallFrameDepth_.
+
+  // TODO: for now we record specialCodeBlockDomain_ and create
+  // runtimemodule later. Need to revisit this later.
+
+  // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
+  // Ignore for now.
+  // TODO: come back later.
+
+  // Field std::vector<PinnedHermesValue> charStrings_{};
+  s.writeInt<uint32_t>(charStrings_.size());
+  for (auto &str : charStrings_) {
+    s.writeHermesValue(str);
+  }
+
+  // Field std::vector<NativeFunction *> builtins_{};
+  s.writeInt<uint32_t>(builtins_.size());
+  for (auto *nativeFunction : builtins_) {
+    s.writeRelocation(nativeFunction);
+  }
+
+  s.writeInt<uint8_t>(builtinsFrozen_);
+
+  // TODO: Come back later. serialize/deserialize this to be able to
+  // serialize/deserialize after user code.
+  // Field const CrashManager::CallbackKey crashCallbackKey_;
+  // Field std::shared_ptr<SamplingProfiler> samplingProfiler_;
+
+#ifdef HERMES_ENABLE_DEBUGGER
+  // TODO: serialize/deserialize this to be able to serialize/deserialize after
+  // user code.
+  // Field Debugger debugger_{this};
+  // Field std::atomic<uint8_t> debuggerRequestedFlag_{0};
+#endif
+  // TODO: serialize/deserialize this to be able to serialize/deserialize after
+  // user code.
+  // Field std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
+
+#ifdef HERMES_ENABLE_DEBUGGER
+  // Field const inst::Inst *savedIP_{nullptr};
+  // TODO: serialize/deserialize this to be able to serialize/deserialize after
+  // user code.
+#else
+#endif // HERMES_ENABLE_DEBUGGER
+}
+
+void Runtime::deserializeRuntimeFields(Deserializer &d) {
+  // Deserialize all HermesValue
+#define RUNTIME_HV_FIELD(name) d.readHermesValue(&name);
+#include "hermes/VM/RuntimeHermesValueFields.def"
+#undef RUNTIME_HV_FIELD
+
+  // Do not Deserialize any raw pointers now. Get those pointers after
+  // relocation finishes.
+
+  // Field RegExpMatch regExpLastMatch{};
+  // Ignore for now since we only serialize/deserialize after global object
+  // initialization.
+  // TODO: serialize/deserialize this to be able to serialize/deserialize after
+  // user code.
+
+#ifndef NDEBUG
+  assert(enableEval == (bool)d.readInt<uint8_t>());
+  assert(verifyEvalIR == (bool)d.readInt<uint8_t>());
+#endif
+
+  // TODO: Ignore all fields from runtimeConfig, about frames, stacks etc for
+  // now. Come back later to check again from heap_ to nativeCallFrameDepth_.
+
+  // TODO: For now we record specialCodeBlockDomain_ and create
+  // runtimemodule later. Need to revisit this later to serialize/deserialize
+  // user code.
+
+  // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
+  // Ignore for now.
+  // TODO: come back later.
+
+  // Field std::vector<PinnedHermesValue> charStrings_{};
+  size_t size = d.readInt<uint32_t>();
+  charStrings_.resize(size);
+  for (auto &str : charStrings_) {
+    d.readHermesValue(&str);
+  }
+
+  // Field std::vector<NativeFunction *> builtins_{};
+  size = d.readInt<uint32_t>();
+  builtins_.resize(size);
+  for (auto *&nativeFunction : builtins_) {
+    d.readRelocation(&nativeFunction, RelocationKind::NativePointer);
+  }
+
+  builtinsFrozen_ = d.readInt<uint8_t>();
+
+  // TODO: Come back later. Serialize/deserialize this to be able to
+  // serialize/deserialize after user code.
+  // Field const CrashManager::CallbackKey crashCallbackKey_;
+  // Field std::shared_ptr<SamplingProfiler> samplingProfiler_;
+
+#ifdef HERMES_ENABLE_DEBUGGER
+  // TODO: serialize/deserialize this to be able to serialize/deserialize after
+  // user code.
+  // Field Debugger debugger_{this}; Field std::atomic<uint8_t>
+  // debuggerRequestedFlag_{0};
+#endif
+  // TODO: serialize/deserialize this to be able to serialize/deserialize after
+  // user code.
+  // Field std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
+
+#ifdef HERMES_ENABLE_DEBUGGER
+  // Field const inst::Inst *savedIP_{nullptr};
+  // TODO: serialize/deserialize this to be able to serialize/deserialize after
+  // user code.
+#else
+#endif // HERMES_ENABLE_DEBUGGER
+}
+
 } // namespace vm
 } // namespace hermes
