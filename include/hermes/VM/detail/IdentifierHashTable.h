@@ -19,8 +19,10 @@ namespace vm {
 class IdentifierTable;
 
 class StringPrimitive;
+#ifdef HERMESVM_SERIALIZE
 class Serializer;
 class Deserializer;
+#endif
 
 namespace detail {
 
@@ -230,9 +232,11 @@ class IdentifierHashTable {
     return storage_.end();
   }
 
+#ifdef HERMESVM_SERIALIZE
   void serialize(Serializer &s);
 
   void deserialize(Deserializer &d);
+#endif
 };
 
 } // namespace detail

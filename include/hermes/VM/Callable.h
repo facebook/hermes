@@ -118,14 +118,17 @@ struct CallableVTable {
 class Callable : public JSObject {
   using Super = JSObject;
   friend void CallableBuildMeta(const GCCell *cell, Metadata::Builder &mb);
-  friend void serializeCallableImpl(Serializer &s, const GCCell *cell);
 
   /// Environment containing all captured variables for the function.
   GCPointer<Environment> environment_{};
 
  public:
+#ifdef HERMESVM_SERIALIZE
   /// Fast constructor used by deserializer.
   Callable(Deserializer &d, const VTable *vt);
+
+  friend void serializeCallableImpl(Serializer &s, const GCCell *cell);
+#endif
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -398,11 +401,6 @@ typedef CallResult<HermesValue> (
 /// This class represents a native function callable from JavaScript with
 /// context and the JavaScript arguments.
 class NativeFunction : public Callable {
-  /// Common logic of S/D callCount_ and callDuration_. context_ and
-  /// functionPtr_ are not handled here because they are const and need to be
-  /// initialized first.
-  friend void NativeFunctionSerialize(Serializer &s, const GCCell *cell);
-
  protected:
   /// Context to be passed to the native function.
   void *const context_;
@@ -417,11 +415,15 @@ class NativeFunction : public Callable {
 #endif
 
  public:
+#ifdef HERMESVM_SERIALIZE
   NativeFunction(
       Deserializer &d,
       const VTable *vt,
       void *context,
       NativeFunctionPtr functionPtr);
+
+  friend void NativeFunctionSerialize(Serializer &s, const GCCell *cell);
+#endif
 
   using Super = Callable;
   static CallableVTable vt;
@@ -612,17 +614,19 @@ class NativeFunction : public Callable {
 /// A NativeFunction to be used as a constructor for native objects other than
 /// Object.
 class NativeConstructor final : public NativeFunction {
-  friend void NativeConstructorSerialize(Serializer &s, const GCCell *cell);
-
  public:
   using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
 
+#ifdef HERMESVM_SERIALIZE
   NativeConstructor(
       Deserializer &d,
       void *context,
       NativeFunctionPtr functionPtr,
       CellKind targetKind,
       CreatorFunction *creatorFunction);
+
+  friend void NativeConstructorSerialize(Serializer &s, const GCCell *cell);
+#endif
 
   static const CallableVTable vt;
 

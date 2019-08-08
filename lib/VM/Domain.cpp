@@ -29,6 +29,7 @@ void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@throwingRequire", &self->throwingRequire_);
 }
 
+#ifdef HERMESVM_SERIALIZE
 Domain::Domain(Deserializer &d) : GCCell(&d.getRuntime()->getHeap(), &vt) {
   d.readRelocation(&cjsModules_, RelocationKind::GCPointer);
   // Field llvm::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
@@ -76,6 +77,7 @@ void DomainDeserialize(Deserializer &d, CellKind kind) {
   samplingProfiler->increaseDomainCount();
   d.endObject(cell);
 }
+#endif
 
 PseudoHandle<Domain> Domain::create(Runtime *runtime) {
   void *mem =
@@ -254,6 +256,7 @@ void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void RequireContextSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs()
@@ -265,6 +268,7 @@ void RequireContextDeserialize(Deserializer &d, CellKind kind) {
       llvm::dbgs()
       << "Deserialize function not implemented for RequireContext\n");
 }
+#endif
 
 Handle<RequireContext> RequireContext::create(
     Runtime *runtime,

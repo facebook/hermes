@@ -382,9 +382,10 @@ class HiddenClass final : public GCCell {
   /// is assumed to be a HiddenClass.
   static size_t _mallocSizeImpl(GCCell *cell);
 
+#ifdef HERMESVM_SERIALIZE
   friend void HiddenClassSerialize(Serializer &s, const GCCell *cell);
   friend void HiddenClassDeserialize(Deserializer &d, CellKind kind);
-
+#endif
  private:
   /// Flags associated with this hidden class.
   ClassFlags flags_{};

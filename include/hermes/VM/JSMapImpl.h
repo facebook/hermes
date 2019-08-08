@@ -24,7 +24,11 @@ class JSMapImpl final : public JSObject {
   using Super = JSObject;
 
  public:
+#ifdef HERMESVM_SERIALIZE
   JSMapImpl(Deserializer &d, const VTable *vt);
+
+  static void serializeMapOrSetImpl(Serializer &s, const GCCell *cell);
+#endif
 
   static const ObjectVTable vt;
 
@@ -140,8 +144,6 @@ class JSMapImpl final : public JSObject {
 
   /// Build the metadata for this map implementation, and store it into \p mb.
   static void MapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
-
-  static void serializeMapOrSetImpl(Serializer &s, const GCCell *cell);
 
  protected:
   JSMapImpl(Runtime *runtime, JSObject *parent, HiddenClass *clazz)

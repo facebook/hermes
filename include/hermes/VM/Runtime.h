@@ -800,6 +800,7 @@ class Runtime : public HandleRootOwner,
   /// Write a JS stack trace as part of a \c crashCallback() run.
   void crashWriteCallStack(JSONEmitter &json);
 
+#ifdef HERMESVM_SERIALIZE
   /// Serialize the VM state into \p O.
   void serialize(llvm::raw_ostream &O);
 
@@ -819,6 +820,7 @@ class Runtime : public HandleRootOwner,
   void deserializeImpl(
       std::shared_ptr<llvm::MemoryBuffer> inputFile,
       bool currentlyInYoung);
+#endif
 
  private:
   GC heap_;

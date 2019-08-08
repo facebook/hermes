@@ -14,8 +14,10 @@ using namespace hermes::vm::detail;
 // In GCC/CLANG, method definitions can refer to ancestor namespaces of
 // the namespace that the class is declared in without namespace qualifiers.
 // This is not allowed in MSVC.
+#ifdef HERMESVM_SERIALIZE
 using hermes::vm::Deserializer;
 using hermes::vm::Serializer;
+#endif
 using hermes::vm::StringPrimitive;
 using hermes::vm::SymbolID;
 
@@ -167,6 +169,7 @@ void IdentifierHashTable::growAndRehash(uint32_t newCapacity) {
   nonEmptyEntryCount_ = size_;
 }
 
+#ifdef HERMESVM_SERIALIZE
 void IdentifierHashTable::serialize(Serializer &s) {
   // Serialize uint32_t size_{0};
   s.writeInt<uint32_t>(size_);
@@ -197,3 +200,4 @@ void IdentifierHashTable::deserialize(Deserializer &d) {
     storage_[i].index = d.readInt<uint32_t>();
   }
 }
+#endif

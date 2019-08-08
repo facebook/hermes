@@ -37,6 +37,7 @@ void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs() << "Serialize function not implemented for ArrayBuffer\n");
@@ -46,6 +47,7 @@ void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(
       llvm::dbgs() << "Deserialize function not implemented for ArrayBuffer\n");
 }
+#endif
 
 CallResult<HermesValue> JSArrayBuffer::create(
     Runtime *runtime,

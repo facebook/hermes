@@ -211,6 +211,7 @@ class MallocGC final : public GCBase {
   /// Same as in superclass GCBase.
   virtual void createSnapshot(llvm::raw_ostream &os, bool compact) override;
 
+#ifdef HERMESVM_SERIALIZE
   /// Same as in superclass GCBase.
   virtual void serializeWeakRefs(Serializer &s) override;
 
@@ -228,6 +229,7 @@ class MallocGC final : public GCBase {
 
   /// Signal GC we are serializing.
   virtual void deserializeEnd() override;
+#endif
 
   void getHeapInfo(HeapInfo &info) override;
   void getHeapInfoWithMallocSize(HeapInfo &info) override;

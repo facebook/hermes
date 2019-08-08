@@ -13,10 +13,12 @@
 
 #include <memory>
 
+#ifdef HERMESVM_SERIALIZE
 namespace llvm {
 class MemoryBuffer;
 class raw_ostream;
 } // namespace llvm
+#endif
 
 namespace hermes {
 namespace vm {
@@ -24,7 +26,7 @@ namespace vm {
 class PinnedHermesValue;
 
 // Parameters for Runtime initialisation.  Check documentation in README.md
-#define RUNTIME_FIELDS(F)                                              \
+#define RUNTIME_FIELDS_BASE(F)                                         \
   /* Parameters to be passed on to the GC. */                          \
   F(vm::GCConfig, GCConfig)                                            \
                                                                        \
@@ -52,12 +54,6 @@ class PinnedHermesValue;
   /* Whether to enable sampling profiler */                            \
   F(bool, EnableSampleProfiling, false)                                \
                                                                        \
-  /* Should serialize after initialization */                          \
-  F(std::shared_ptr<llvm::raw_ostream>, SerializeFile, nullptr)        \
-                                                                       \
-  /* Should deserialize instead of initialization */                   \
-  F(std::shared_ptr<llvm::MemoryBuffer>, DeserializeFile, nullptr)     \
-                                                                       \
   /* Whether to randomize stack placement etc. */                      \
   F(bool, RandomizeMemoryLayout, false)                                \
                                                                        \
@@ -74,6 +70,20 @@ class PinnedHermesValue;
   /* The flags passed from a VM experiment */                          \
   F(uint32_t, VMExperimentFlags, 0)                                    \
   /* RUNTIME_FIELDS END */
+
+#define RUNTIME_FIELDS_SD(F)                                    \
+  /* Should serialize after initialization */                   \
+  F(std::shared_ptr<llvm::raw_ostream>, SerializeFile, nullptr) \
+  /* Should deserialize instead of initialization */            \
+  F(std::shared_ptr<llvm::MemoryBuffer>, DeserializeFile, nullptr)
+
+#ifdef HERMESVM_SERIALIZE
+#define RUNTIME_FIELDS(F) \
+  RUNTIME_FIELDS_BASE(F)  \
+  RUNTIME_FIELDS_SD(F)
+#else // ifndef HERMESVM_SERIALIZE
+#define RUNTIME_FIELDS(F) RUNTIME_FIELDS_BASE(F)
+#endif // HERMESVM_SERIALIZE
 
 _HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {});
 

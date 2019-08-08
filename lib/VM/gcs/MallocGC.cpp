@@ -475,6 +475,7 @@ void MallocGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   hermes_fatal("No snapshots allowed with MallocGC");
 }
 
+#ifdef HERMESVM_SERIALIZE
 void MallocGC::serializeWeakRefs(Serializer &s) {
   hermes_fatal("serializeWeakRefs not implemented for current GC");
 }
@@ -498,6 +499,7 @@ void MallocGC::deserializeStart() {
 void MallocGC::deserializeEnd() {
   hermes_fatal("Serialization/Deserialization not allowed with MallocGC");
 }
+#endif
 
 /// @name Forward instantiations
 /// @{

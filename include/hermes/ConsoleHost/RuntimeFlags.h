@@ -87,6 +87,7 @@ static opt<bool> SampleProfiling(
     init(false),
     desc("Enable sampling profiler"));
 
+#ifdef HERMESVM_SERIALIZE
 static opt<std::string> SerializeFile(
     "serialize-file",
     desc("Serialize vm status after initialization, output to file"),
@@ -96,6 +97,7 @@ static opt<std::string> DeserializeFile(
     "deserialize-file",
     desc("Deserialize vm from a previous serialized file"),
     init(""));
+#endif // HERMESVM_SERIALIZE
 
 static opt<MemorySize, false, MemorySizeParser> MaxHeapSize(
     "gc-max-heap",

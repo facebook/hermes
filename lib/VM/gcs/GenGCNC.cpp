@@ -1263,6 +1263,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
 #endif
 }
 
+#ifdef HERMESVM_SERIALIZE
 void GenGC::serializeWeakRefs(Serializer &s) {
   int numWeakRefSlots = weakSlots_.size();
   s.writeInt<uint32_t>(numWeakRefSlots);
@@ -1358,6 +1359,7 @@ void GenGC::deserializeEnd() {
   allocContextFromYG_ = true;
   claimAllocContext();
 }
+#endif
 
 void GenGC::printStats(llvm::raw_ostream &os, bool trailingComma) {
   if (!recordGcStats_) {

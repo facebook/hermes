@@ -59,6 +59,7 @@ CallResult<SymbolID> SymbolRegistry::getSymbolForKey(
   return symbol.get();
 }
 
+#ifdef HERMESVM_SERIALIZE
 void SymbolRegistry::serialize(Serializer &s) {
   s.writeHermesValue(stringMap_);
   size_t size = registeredSymbols_.size();
@@ -81,6 +82,7 @@ void SymbolRegistry::deserialize(Deserializer &d) {
       registeredSymbols_.size() == size &&
       "deserialized ids not equal to size");
 }
+#endif
 
 } // namespace vm
 } // namespace hermes

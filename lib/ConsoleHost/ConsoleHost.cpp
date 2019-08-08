@@ -192,6 +192,7 @@ bool executeHBCBytecode(
     vm::instrumentation::PerfEvents::begin();
   }
 
+#ifdef HERMESVM_SERIALIZE
   // Handle Serialization/Deserialization options
   std::shared_ptr<llvm::raw_ostream> serializeFile = nullptr;
   std::shared_ptr<llvm::MemoryBuffer> deserializeFile = nullptr;
@@ -220,12 +221,17 @@ bool executeHBCBytecode(
     }
     deserializeFile = std::move(*inputFileOrErr);
   }
+#endif
 
   std::unique_ptr<vm::StatSamplingThread> statSampler;
+#ifdef HERMESVM_SERIALIZE
   auto runtime = vm::Runtime::create(options.runtimeConfig.rebuild()
                                          .withSerializeFile(serializeFile)
                                          .withDeserializeFile(deserializeFile)
                                          .build());
+#else
+  auto runtime = vm::Runtime::create(options.runtimeConfig);
+#endif
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
 

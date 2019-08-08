@@ -24,6 +24,7 @@ void DynamicUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {}
 
+#ifdef HERMESVM_SERIALIZE
 template <typename T, bool Uniqued>
 void serializeDynamicStringImpl(Serializer &s, const GCCell *cell) {
   const auto *self = vmcast<const DynamicStringPrimitive<T, Uniqued>>(cell);
@@ -107,6 +108,7 @@ void DynamicUniquedUTF16StringPrimitiveDeserialize(
       "Expected DynamicUniquedUTF16StringPrimitive");
   deserializeDynamicStringImpl<char16_t, true>(d);
 }
+#endif
 
 /// There is no SymbolStringPrimitiveCellKind, but we factor this into a
 /// function so that the subclasses can share it and so only one friend
@@ -140,6 +142,7 @@ void ExternalUTF16StringPrimitiveBuildMeta(
   symbolStringPrimitiveBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 template <typename T>
 void serializeExternalStringImpl(Serializer &s, const GCCell *cell) {
   const auto *self = vmcast<const ExternalStringPrimitive<T>>(cell);
@@ -210,6 +213,7 @@ void ExternalUTF16StringPrimitiveDeserialize(Deserializer &d, CellKind kind) {
       "Expected ExternalUTF16StringPrimitive");
   deserializeExternalStringImpl<char16_t>(d);
 }
+#endif
 
 template <typename T>
 CallResult<HermesValue> StringPrimitive::createEfficientImpl(

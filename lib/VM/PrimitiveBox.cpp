@@ -29,14 +29,15 @@ ObjectVTable JSString::vt{
     JSString::_checkAllOwnIndexedImpl,
 };
 
+void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  ObjectBuildMeta(cell, mb);
+}
+
+#ifdef HERMESVM_SERIALIZE
 PrimitiveBox::PrimitiveBox(Deserializer &d, const VTable *vt)
     : JSObject(d, vt) {}
 
 JSString::JSString(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
-
-void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  ObjectBuildMeta(cell, mb);
-}
 
 void StringObjectSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(s, cell);
@@ -50,6 +51,7 @@ void StringObjectDeserialize(Deserializer &d, CellKind kind) {
 
   d.endObject(cell);
 }
+#endif
 
 CallResult<HermesValue> JSString::create(
     Runtime *runtime,
@@ -204,6 +206,7 @@ void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@iteratedString", &self->iteratedString_);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void StringIteratorSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs()
@@ -215,6 +218,7 @@ void StringIteratorDeserialize(Deserializer &d, CellKind kind) {
       llvm::dbgs()
       << "Deserialize function not implemented for StringIterator\n");
 }
+#endif
 
 CallResult<HermesValue> JSStringIterator::create(
     Runtime *runtime,
@@ -310,6 +314,7 @@ void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 JSNumber::JSNumber(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
 
 void NumberObjectSerialize(Serializer &s, const GCCell *cell) {
@@ -323,6 +328,7 @@ void NumberObjectDeserialize(Deserializer &d, CellKind kind) {
   auto *cell = new (mem) JSNumber(d, &JSNumber::vt.base);
   d.endObject(cell);
 }
+#endif
 
 CallResult<HermesValue> JSNumber::create(
     Runtime *runtime,
@@ -363,6 +369,7 @@ void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 JSBoolean::JSBoolean(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
 
 void BooleanObjectSerialize(Serializer &s, const GCCell *cell) {
@@ -376,6 +383,7 @@ void BooleanObjectDeserialize(Deserializer &d, CellKind kind) {
   auto *cell = new (mem) JSBoolean(d, &JSBoolean::vt.base);
   d.endObject(cell);
 }
+#endif
 
 CallResult<HermesValue>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
@@ -410,6 +418,7 @@ void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs() << "Serialize function not implemented for SymbolObject\n");
@@ -420,6 +429,7 @@ void SymbolObjectDeserialize(Deserializer &d, CellKind kind) {
       llvm::dbgs()
       << "Deserialize function not implemented for SymbolObject\n");
 }
+#endif
 
 CallResult<HermesValue> JSSymbol::create(
     Runtime *runtime,

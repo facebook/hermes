@@ -7,6 +7,7 @@
 #ifndef HERMES_VM_SERIALIZER_H
 #define HERMES_VM_SERIALIZER_H
 
+#ifdef HERMESVM_SERIALIZE
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/SerializeHeader.h"
 #include "hermes/VM/StringRefUtils.h"
@@ -231,4 +232,5 @@ class Serializer {
 } // namespace vm
 } // namespace hermes
 
+#endif // HERMESVM_SERIALIZE
 #endif

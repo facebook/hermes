@@ -17,6 +17,7 @@ void JSONBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 template <CellKind kind>
 SingleObject<kind>::SingleObject(Deserializer &d, const VTable *vt)
     : JSObject(d, vt) {}
@@ -45,6 +46,7 @@ void MathDeserialize(Deserializer &d, CellKind kind) {
   auto *cell = new (mem) JSMath(d, &JSMath::vt.base);
   d.endObject(cell);
 }
+#endif
 
 } // namespace vm
 } // namespace hermes

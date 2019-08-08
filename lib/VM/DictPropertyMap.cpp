@@ -73,6 +73,7 @@ CallResult<PseudoHandle<DictPropertyMap>> DictPropertyMap::create(
       new (mem) DictPropertyMap(runtime, capacity, hashCapacity));
 }
 
+#ifdef HERMESVM_SERIALIZE
 void DictPropertyMapSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const DictPropertyMap>(cell);
   s.writeInt<uint32_t>(self->descriptorCapacity_);
@@ -130,6 +131,7 @@ void DictPropertyMapDeserialize(Deserializer &d, CellKind kind) {
 
   d.endObject(cell);
 }
+#endif
 
 std::pair<bool, DictPropertyMap::HashPair *> DictPropertyMap::lookupEntryFor(
     DictPropertyMap *self,

@@ -34,6 +34,7 @@ void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       "@storage", self->data(), &self->size_, sizeof(GCHermesValue));
 }
 
+#ifdef HERMESVM_SERIALIZE
 void ArrayStorageSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const ArrayStorage>(cell);
   s.writeInt<uint32_t>(self->capacity_);
@@ -62,6 +63,7 @@ void ArrayStorageDeserialize(Deserializer &d, CellKind kind) {
 
   d.endObject(cell);
 }
+#endif
 
 ExecutionStatus ArrayStorage::ensureCapacity(
     MutableHandle<ArrayStorage> &selfHandle,

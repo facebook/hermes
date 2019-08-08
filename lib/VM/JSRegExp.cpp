@@ -39,6 +39,7 @@ void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void RegExpSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(llvm::dbgs() << "Serialize function not implemented for RegExp\n");
 }
@@ -47,6 +48,7 @@ void RegExpDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(
       llvm::dbgs() << "Deserialize function not implemented for RegExp\n");
 }
+#endif
 
 CallResult<HermesValue> JSRegExp::create(
     Runtime *runtime,

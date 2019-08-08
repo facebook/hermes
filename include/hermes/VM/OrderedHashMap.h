@@ -80,12 +80,15 @@ class OrderedHashMap final : public GCCell {
   friend void OrderedHashMapBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
-  friend void OrderedHashMapSerialize(Serializer &s, const GCCell *cell);
 
  public:
   static VTable vt;
 
+#ifdef HERMESVM_SERIALIZE
   OrderedHashMap(Deserializer &d);
+
+  friend void OrderedHashMapSerialize(Serializer &s, const GCCell *cell);
+#endif
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::OrderedHashMapKind;

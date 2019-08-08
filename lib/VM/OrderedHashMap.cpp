@@ -30,6 +30,7 @@ void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@nextEntryInBucket", &self->nextEntryInBucket);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void HashMapEntrySerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs() << "Serialize function not implemented for HashMapEntry\n");
@@ -40,6 +41,7 @@ void HashMapEntryDeserialize(Deserializer &d, CellKind kind) {
       llvm::dbgs()
       << "Deserialize function not implemented for HashMapEntry\n");
 }
+#endif
 
 CallResult<HermesValue> HashMapEntry::create(Runtime *runtime) {
   void *mem = runtime->alloc(sizeof(HashMapEntry));
@@ -58,6 +60,7 @@ void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@lastIterationEntry", &self->lastIterationEntry_);
 }
 
+#ifdef HERMESVM_SERIALIZE
 OrderedHashMap::OrderedHashMap(Deserializer &d)
     : GCCell(&d.getRuntime()->getHeap(), &vt) {
   d.readRelocation(&hashTable_, RelocationKind::GCPointer);
@@ -85,6 +88,7 @@ void OrderedHashMapDeserialize(Deserializer &d, CellKind kind) {
 
   d.endObject(cell);
 }
+#endif
 
 OrderedHashMap::OrderedHashMap(
     Runtime *runtime,

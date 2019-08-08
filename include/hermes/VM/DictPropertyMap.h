@@ -71,9 +71,16 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   using HashPair = std::pair<SymbolID, uint32_t>;
 
  public:
+  using size_type = uint32_t;
+#ifdef HERMESVM_SERIALIZE
+  /// Fast constructor used by deserializer.
+  DictPropertyMap(Deserializer &d, size_type capacity, size_type hashCapacity);
+  friend void DictPropertyMapSerialize(Serializer &s, const GCCell *cell);
+  friend void DictPropertyMapDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   using DescriptorPair = std::pair<SymbolID, NamedPropertyDescriptor>;
 
-  using size_type = uint32_t;
   static const size_type DEFAULT_CAPACITY = 2;
 
   /// An opaque class representing a reference to a valid property in the
@@ -177,9 +184,6 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   static SlotIndex allocatePropertySlot(DictPropertyMap *self);
 
   void dump();
-
-  friend void DictPropertyMapSerialize(Serializer &s, const GCCell *cell);
-  friend void DictPropertyMapDeserialize(Deserializer &d, CellKind kind);
 
  private:
   /// Total size of the descriptor array.

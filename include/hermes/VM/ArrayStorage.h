@@ -32,6 +32,11 @@ class ArrayStorage final
 
   static VTable vt;
 
+#ifdef HERMESVM_SERIALIZE
+  friend void ArrayStorageSerialize(Serializer &s, const GCCell *cell);
+  friend void ArrayStorageDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   /// Gets the amount of memory used by this object for a given \p capacity.
   static constexpr uint32_t allocationSize(size_type capacity) {
     return totalSizeToAlloc<GCHermesValue>(capacity);
@@ -186,9 +191,6 @@ class ArrayStorage final
     }
     self->size_ = newSize;
   }
-
-  friend void ArrayStorageSerialize(Serializer &s, const GCCell *cell);
-  friend void ArrayStorageDeserialize(Deserializer &d, CellKind kind);
 
  private:
   /// The capacity is the maximum number of elements this array can ever

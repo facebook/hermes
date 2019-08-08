@@ -17,7 +17,9 @@ class PrimitiveBox : public JSObject {
  public:
   using Super = JSObject;
 
+#ifdef HERMESVM_SERIALIZE
   PrimitiveBox(Deserializer &d, const VTable *vt);
+#endif
 
   // We need one slot for the boxed value.
   static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
@@ -59,7 +61,9 @@ class JSString final : public PrimitiveBox {
  public:
   using Super = PrimitiveBox;
 
+#ifdef HERMESVM_SERIALIZE
   JSString(Deserializer &d, const VTable *vt);
+#endif
 
   // We need one more slot for the length property.
   static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
@@ -201,7 +205,9 @@ class JSNumber final : public PrimitiveBox {
  public:
   static ObjectVTable vt;
 
+#ifdef HERMESVM_SERIALIZE
   JSNumber(Deserializer &d, const VTable *vt);
+#endif
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::NumberObjectKind;
@@ -226,7 +232,9 @@ class JSBoolean final : public PrimitiveBox {
  public:
   static ObjectVTable vt;
 
+#ifdef HERMESVM_SERIALIZE
   JSBoolean(Deserializer &d, const VTable *vt);
+#endif
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::BooleanObjectKind;

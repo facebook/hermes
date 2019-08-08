@@ -198,9 +198,6 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       trackIO_(runtimeConfig.getTrackIO()),
       vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
-#ifdef HERMESVM_SERIALIZE
-      maxNumRegisters_(runtimeConfig.getMaxNumRegisters()),
-#endif
       runtimeStats_(runtimeConfig.getEnableSampledStats()),
       commonStorage_(createRuntimeCommonStorage()),
       stackPointer_(),
@@ -1639,13 +1636,6 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
   // TODO: for now we record specialCodeBlockDomain_ and create
   // runtimemodule later. Need to revisit this later.
 
-  // Field RuntimeModuleList runtimeModuleList_{}. We don't
-  // Serialize/Deserialize RuntimeModules here because Runtime doesn't own the
-  // runtime Modules, Domain owns them, so they will be Serialized/Deserialized
-  // with the Domain. We also don't do relocation for the pointers, instead,
-  // RuntimeModules will add them to runtimeModuleList_ when they are
-  // deserialized.
-
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.
   // TODO: come back later.
@@ -1708,13 +1698,6 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
   // TODO: For now we record specialCodeBlockDomain_ and create
   // runtimemodule later. Need to revisit this later to serialize/deserialize
   // user code.
-
-  // Field RuntimeModuleList runtimeModuleList_{}. We don't
-  // Serialize/Deserialize RuntimeModules here because Runtime doesn't own the
-  // runtime Modules, Domain owns them, so they will be Serialized/Deserialized
-  // with the Domain. We also don't do relocation for the pointers, instead,
-  // RuntimeModules will add them to runtimeModuleList_ when they are
-  // deserialized.
 
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.
@@ -1806,32 +1789,6 @@ void Runtime::deserializeImpl(
     // Only switch back now if the config says allocInYoung. Otherwise
     // wait until tti.
     heap_.deserializeEnd();
-  }
-}
-
-void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
-  header.maxNumRegisters = maxNumRegisters_;
-  header.enableEval = enableEval;
-  header.hasES6Symbol = hasES6Symbol_;
-  header.bytecodeWarmupPercent = bytecodeWarmupPercent_;
-  header.trackIO = trackIO_;
-}
-
-void Runtime::checkHeaderRuntimeConfig(SerializeHeader &header) const {
-  if (header.maxNumRegisters != maxNumRegisters_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match");
-  }
-  if (header.enableEval != enableEval) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match");
-  }
-  if (header.hasES6Symbol != hasES6Symbol_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match");
-  }
-  if (header.bytecodeWarmupPercent != bytecodeWarmupPercent_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match");
-  }
-  if (header.trackIO != trackIO_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match");
   }
 }
 #endif

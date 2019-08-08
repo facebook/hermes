@@ -35,6 +35,7 @@ void SetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapImpl<CellKind::SetKind>::MapOrSetBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 template <CellKind C>
 void JSMapImpl<C>::serializeMapOrSetImpl(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSMapImpl<C>>(cell);
@@ -70,6 +71,7 @@ void SetDeserialize(Deserializer &d, CellKind kind) {
   auto *cell = new (mem) JSSet(d, &JSSet::vt.base);
   d.endObject(cell);
 }
+#endif
 
 template <CellKind C>
 const ObjectVTable JSMapImpl<C>::vt{
@@ -122,6 +124,7 @@ void SetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void MapIteratorSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs() << "Serialize function not implemented for MapIterator\n");
@@ -141,6 +144,7 @@ void SetIteratorDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(
       llvm::dbgs() << "Deserialize function not implemented for SetIterator\n");
 }
+#endif
 
 template <CellKind C>
 const ObjectVTable JSMapIteratorImpl<C>::vt = {

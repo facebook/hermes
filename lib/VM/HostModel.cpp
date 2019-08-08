@@ -40,6 +40,7 @@ void FinalizableNativeFunctionBuildMeta(
   NativeFunctionBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void FinalizableNativeFunctionSerialize(Serializer &s, const GCCell *cell) {
   llvm::outs()
       << "Serialize function not implemented for FinalizableNativeFunction\n";
@@ -49,6 +50,7 @@ void FinalizableNativeFunctionDeserialize(Deserializer &d, CellKind kind) {
   llvm::outs()
       << "Deserialize function not implemented for FinalizableNativeFunction\n";
 }
+#endif
 
 CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
     Runtime *runtime,
@@ -106,6 +108,7 @@ void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void HostObjectSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs() << "Serialize function not implemented for HostObject\n");
@@ -115,6 +118,7 @@ void HostObjectDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(
       llvm::dbgs() << "Deserialize function not implemented for HostObject\n");
 }
+#endif
 
 CallResult<HermesValue> HostObject::createWithoutPrototype(
     Runtime *runtime,

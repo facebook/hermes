@@ -18,10 +18,13 @@ namespace vm {
 class ArrayImpl : public JSObject {
   using Super = JSObject;
   friend void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb);
-  friend void serializeArrayImpl(Serializer &s, const GCCell *cell);
 
  public:
+#ifdef HERMESVM_SERIALIZE
   ArrayImpl(Deserializer &d, const VTable *vt);
+
+  friend void serializeArrayImpl(Serializer &s, const GCCell *cell);
+#endif
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -264,10 +267,13 @@ class Arguments final : public ArrayImpl {
 
 class JSArray final : public ArrayImpl {
   using Super = ArrayImpl;
-  friend void ArraySerialize(Serializer &s, const GCCell *cell);
 
  public:
+#ifdef HERMESVM_SERIALIZE
   JSArray(Deserializer &d, const VTable *vt);
+
+  friend void ArraySerialize(Serializer &s, const GCCell *cell);
+#endif
 
   static ObjectVTable vt;
 

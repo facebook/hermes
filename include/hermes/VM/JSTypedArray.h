@@ -249,8 +249,10 @@ class JSTypedArrayBase : public JSObject {
       const GCCell *cell,
       Metadata::Builder &mb);
 
+#ifdef HERMESVM_SERIALIZE
   friend void TypedArrayBaseSerialize(Serializer &s, const GCCell *cell);
   friend void TypedArrayBaseDeserialize(Deserializer &s, CellKind kind);
+#endif
 };
 
 /// JSTypedArray is a collection with array semantics (random access indexing),

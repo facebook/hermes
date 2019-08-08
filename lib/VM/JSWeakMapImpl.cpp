@@ -209,6 +209,7 @@ void WeakSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSWeakMapImpl<CellKind::WeakSetKind>::WeakMapOrSetBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void WeakMapSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs() << "Serialize function not implemented for WeakMap\n");
@@ -228,6 +229,7 @@ void WeakSetDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(
       llvm::dbgs() << "Deserialize function not implemented for WeakSet\n");
 }
+#endif
 
 template <CellKind C>
 const ObjectVTable JSWeakMapImpl<C>::vt{

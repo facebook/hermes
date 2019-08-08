@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
+#ifdef HERMESVM_SERIALIZE
 #include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/GCPointer.h"
@@ -215,3 +216,4 @@ void Deserializer::updateAddress(
 
 } // namespace vm
 } // namespace hermes
+#endif

@@ -33,6 +33,7 @@ IdentifierTable::LookupEntry::LookupEntry(
   hash_ = hermes::hashString(llvm::ArrayRef<char16_t>(storage));
 }
 
+#ifdef HERMESVM_SERIALIZE
 enum class EntryKind { ASCII, UFT16, StrPrim, Free };
 
 void IdentifierTable::LookupEntry::serialize(Serializer &s) {
@@ -96,6 +97,7 @@ void IdentifierTable::LookupEntry::deserialize(Deserializer &d) {
       llvm_unreachable("wrong EntryKind");
   }
 }
+#endif
 
 IdentifierTable::IdentifierTable() {
   hashTable_.setIdentifierTable(this);
@@ -496,6 +498,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SymbolID symbolID) {
               << symbolID.unsafeGetIndex() << ")";
 }
 
+#ifdef HERMESVM_SERIALIZE
 void IdentifierTable::serialize(Serializer &s) {
   // Serialize uint32_t firstFreeID_;
   s.writeInt<uint32_t>(firstFreeID_);
@@ -521,6 +524,7 @@ void IdentifierTable::deserialize(Deserializer &d) {
 
   hashTable_.deserialize(d);
 }
+#endif
 
 } // namespace vm
 } // namespace hermes

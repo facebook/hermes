@@ -68,11 +68,13 @@ struct ExecuteOptions {
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};
 
+#ifdef HERMESVM_SERIALIZE
   /// Serialize VM state to file.
   std::string SerializeFile;
 
   /// Deserialize VM state from file.
   std::string DeserializeFile;
+#endif // HERMESVM_SERIALIZE
 };
 
 /// Executes the HBC bytecode provided in HermesVM.

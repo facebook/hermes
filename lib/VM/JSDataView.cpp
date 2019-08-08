@@ -31,6 +31,7 @@ void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@buffer", &self->buffer_);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void DataViewSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs() << "Serialize function not implemented for DataView\n");
@@ -40,6 +41,7 @@ void DataViewDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(
       llvm::dbgs() << "Deserialize function not implemented for DataView\n");
 }
+#endif
 
 CallResult<HermesValue> JSDataView::create(
     Runtime *runtime,

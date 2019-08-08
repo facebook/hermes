@@ -37,6 +37,7 @@ void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@domains", &self->domains_);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void ErrorSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(s, cell);
   // TODO: Finish serialize/deserialize stacktrace if we want to
@@ -63,6 +64,7 @@ JSError::JSError(Deserializer &d) : JSObject(d, &vt.base) {
   d.readRelocation(&funcNames_, RelocationKind::GCPointer);
   catchable_ = d.readInt<uint8_t>();
 }
+#endif
 
 CallResult<HermesValue>
 errorStackGetter(void *, Runtime *runtime, NativeArgs args) {

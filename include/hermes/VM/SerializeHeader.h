@@ -7,6 +7,7 @@
 #ifndef HERMES_VM_SERIALIZEHEADER_H
 #define HERMES_VM_SERIALIZEHEADER_H
 
+#ifdef HERMESVM_SERIALIZE
 #include "hermes/Support/Compiler.h"
 
 namespace hermes {
@@ -46,4 +47,5 @@ static_assert(
 } // namespace vm
 } // namespace hermes
 
+#endif // HERMESVM_SERIALIZE
 #endif

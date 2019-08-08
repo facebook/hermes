@@ -385,11 +385,13 @@ class DynamicStringPrimitive final
   }
 
  public:
+#ifdef HERMESVM_SERIALIZE
   template <typename, bool>
   friend void serializeDynamicStringImpl(Serializer &s, const GCCell *cell);
 
   template <typename, bool>
   friend void deserializeDynamicStringImpl(Deserializer &d);
+#endif
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == DynamicStringPrimitive::getCellKind();
@@ -488,15 +490,17 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   }
 
  public:
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == ExternalStringPrimitive::getCellKind();
-  }
-
+#ifdef HERMESVM_SERIALIZE
   template <typename>
   friend void serializeExternalStringImpl(Serializer &s, const GCCell *cell);
 
   template <typename>
   friend void deserializeExternalStringImpl(Deserializer &d);
+#endif
+
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == ExternalStringPrimitive::getCellKind();
+  }
 
  private:
   static const VTable vt;

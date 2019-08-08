@@ -34,6 +34,7 @@ void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@innerFunction", &self->innerFunction_);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void GeneratorSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs() << "Serialize function not implemented for Generator\n");
@@ -43,6 +44,7 @@ void GeneratorDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(
       llvm::dbgs() << "Deserialize function not implemented for Generator\n");
 }
+#endif
 
 CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
     Runtime *runtime,

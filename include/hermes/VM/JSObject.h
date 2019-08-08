@@ -306,8 +306,12 @@ class JSObject : public GCCell {
       : JSObject(runtime, vtp, parent, clazz, GCPointerBase::NoBarriers()) {}
 
  public:
+#ifdef HERMESVM_SERIALIZE
   /// A constructor used by deserializeion which performs no GC allocation.
   JSObject(Deserializer &d, const VTable *vtp);
+
+  static void serializeObjectImpl(Serializer &s, const GCCell *cell);
+#endif
 
   static ObjectVTable vt;
 
@@ -943,8 +947,6 @@ class JSObject : public GCCell {
       const IndexedCB &indexedCB,
       const NamedCB &namedCB);
 
-  static void serializeObjectImpl(Serializer &s, const GCCell *cell);
-
  protected:
   /// @name Virtual function implementations
   /// @{
@@ -1170,9 +1172,11 @@ class PropertyAccessor final : public GCCell {
         setter(runtime, setter, &runtime->getHeap()) {}
 
  public:
+#ifdef HERMESVM_SERIALIZE
   /// Fast constructor used by deserialization. Don't do any GC allocation. Only
   /// calls super Constructor.
   PropertyAccessor(Deserializer &d);
+#endif
 
   static VTable vt;
 

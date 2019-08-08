@@ -20,6 +20,7 @@ const VTable FillerCell::vt{CellKind::FillerCellKind, 0};
 void UninitializedBuildMeta(const GCCell *, Metadata::Builder &) {}
 void FillerCellBuildMeta(const GCCell *, Metadata::Builder &) {}
 
+#ifdef HERMESVM_SERIALIZE
 void UninitializedSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs() << "Serialize function not implemented for Uinitialized\n");
@@ -43,6 +44,7 @@ void FillerCellDeserialize(Deserializer &d, CellKind kind) {
   FillerCell *cell = FillerCell::create(d.getRuntime(), size);
   d.endObject((void *)cell);
 }
+#endif
 
 } // namespace vm
 } // namespace hermes

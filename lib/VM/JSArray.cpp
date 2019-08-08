@@ -361,6 +361,7 @@ void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ArrayImplBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void ArgumentsSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs() << "Serialize function not implemented for Arguments\n");
@@ -370,6 +371,7 @@ void ArgumentsDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(
       llvm::dbgs() << "Deserialize function not implemented for Arguments\n");
 }
+#endif
 
 CallResult<HermesValue> Arguments::create(
     Runtime *runtime,
@@ -486,6 +488,7 @@ void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ArrayImplBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 ArrayImpl::ArrayImpl(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
   beginIndex_ = d.readInt<uint32_t>();
   endIndex_ = d.readInt<uint32_t>();
@@ -517,6 +520,7 @@ void ArrayDeserialize(Deserializer &d, CellKind kind) {
   auto *cell = new (mem) JSArray(d, &JSArray::vt.base);
   d.endObject(cell);
 }
+#endif
 
 Handle<HiddenClass> JSArray::createClass(
     Runtime *runtime,
@@ -759,6 +763,7 @@ void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@iteratedObject", &self->iteratedObject_);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(
       llvm::dbgs() << "Serialize function not implemented for ArrayIterator\n");
@@ -769,6 +774,7 @@ void ArrayIteratorDeserialize(Deserializer &d, CellKind kind) {
       llvm::dbgs()
       << "Deserialize function not implemented for ArrayIterator\n");
 }
+#endif
 
 CallResult<HermesValue> JSArrayIterator::create(
     Runtime *runtime,

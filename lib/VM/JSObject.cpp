@@ -76,6 +76,7 @@ void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       self->directProps_, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void JSObject::serializeObjectImpl(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSObject>(cell);
   s.writeData(&self->flags_, sizeof(ObjectFlags));
@@ -112,6 +113,7 @@ JSObject::JSObject(Deserializer &d, const VTable *vtp)
     d.readHermesValue(&directProps_[i]);
   }
 }
+#endif
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
@@ -2525,6 +2527,7 @@ void PropertyAccessorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@setter", &self->setter);
 }
 
+#ifdef HERMESVM_SERIALIZE
 PropertyAccessor::PropertyAccessor(Deserializer &d)
     : GCCell(&d.getRuntime()->getHeap(), &vt) {
   d.readRelocation(&getter, RelocationKind::GCPointer);
@@ -2544,6 +2547,7 @@ void PropertyAccessorDeserialize(Deserializer &d, CellKind kind) {
   auto *cell = new (mem) PropertyAccessor(d);
   d.endObject(cell);
 }
+#endif
 
 CallResult<HermesValue> PropertyAccessor::create(
     Runtime *runtime,

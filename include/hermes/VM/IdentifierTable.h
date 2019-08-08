@@ -168,9 +168,11 @@ class IdentifierTable {
       Runtime *runtime,
       Handle<StringPrimitive> desc);
 
+#ifdef HERMESVM_SERIALIZE
   void serialize(Serializer &s);
 
   void deserialize(Deserializer &d);
+#endif
 
  private:
   /// Entry in the lookup vector. An entry can represent 5 different types:
@@ -322,9 +324,11 @@ class IdentifierTable {
       return hash_;
     }
 
+#ifdef HERMESVM_SERIALIZE
     void serialize(Serializer &s);
 
     void deserialize(Deserializer &d);
+#endif
   };
 
   /// Stores all the entries referenced from the hash table, plus

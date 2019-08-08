@@ -35,6 +35,7 @@ void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@forInCache", &self->forInCache_);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void HiddenClassSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const HiddenClass>(cell);
   // Write fields to pass to constructor first.
@@ -112,6 +113,7 @@ void HiddenClassDeserialize(Deserializer &d, CellKind kind) {
 
   d.endObject(cell);
 }
+#endif
 
 void HiddenClass::_markWeakImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast_during_gc<HiddenClass>(cell, gc);

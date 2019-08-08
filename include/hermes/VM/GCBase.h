@@ -45,8 +45,10 @@ namespace hermes {
 namespace vm {
 
 class GCCell;
+#ifdef HERMESVM_SERIALIZE
 class Serializer;
 class Deserializer;
+#endif
 
 // A specific GC class extend GCBase, and override its virtual functions.
 // In addition, it must implement the following methods:
@@ -425,6 +427,7 @@ class GCBase {
   /// objects exist, their sizes, and what they point to.
   virtual void createSnapshot(llvm::raw_ostream &os, bool compact) = 0;
 
+#ifdef HERMESVM_SERIALIZE
   /// Serialize WeakRefs.
   virtual void serializeWeakRefs(Serializer &s) = 0;
 
@@ -443,6 +446,7 @@ class GCBase {
 
   /// Signal GC we are serializing. Switch to youngGen if necessary
   virtual void deserializeEnd() = 0;
+#endif
 
   /// Default implementations for the external memory credit/debit APIs: do
   /// nothing.

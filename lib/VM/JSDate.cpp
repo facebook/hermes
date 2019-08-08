@@ -32,6 +32,7 @@ void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+#ifdef HERMESVM_SERIALIZE
 void DateSerialize(Serializer &s, const GCCell *cell) {
   LLVM_DEBUG(llvm::dbgs() << "Serialize function not implemented for Date\n");
 }
@@ -39,6 +40,7 @@ void DateSerialize(Serializer &s, const GCCell *cell) {
 void DateDeserialize(Deserializer &d, CellKind kind) {
   LLVM_DEBUG(llvm::dbgs() << "Deserialize function not implemented for Date\n");
 }
+#endif
 
 CallResult<HermesValue>
 JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
