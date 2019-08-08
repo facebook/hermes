@@ -26,13 +26,27 @@ ObjectVTable JSString::vt{
     JSString::_checkAllOwnIndexedImpl,
 };
 
+PrimitiveBox::PrimitiveBox(Deserializer &d, const VTable *vt)
+    : JSObject(d, vt) {}
+
+JSString::JSString(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
+
 void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
-void StringObjectSerialize(Serializer &s, const GCCell *cell) {}
+void StringObjectSerialize(Serializer &s, const GCCell *cell) {
+  JSObject::serializeObjectImpl(s, cell);
+  s.endObject(cell);
+}
 
-void StringObjectDeserialize(Deserializer &d, CellKind kind) {}
+void StringObjectDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::StringObjectKind && "Expected StringObject");
+  void *mem = d.getRuntime()->alloc(sizeof(JSString));
+  auto *cell = new (mem) JSString(d, &JSString::vt.base);
+
+  d.endObject(cell);
+}
 
 CallResult<HermesValue> JSString::create(
     Runtime *runtime,
@@ -285,9 +299,19 @@ void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
-void NumberObjectSerialize(Serializer &s, const GCCell *cell) {}
+JSNumber::JSNumber(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
 
-void NumberObjectDeserialize(Deserializer &d, CellKind kind) {}
+void NumberObjectSerialize(Serializer &s, const GCCell *cell) {
+  JSObject::serializeObjectImpl(s, cell);
+  s.endObject(cell);
+}
+
+void NumberObjectDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::NumberObjectKind && "Expected NumberObject");
+  void *mem = d.getRuntime()->alloc(sizeof(JSNumber));
+  auto *cell = new (mem) JSNumber(d, &JSNumber::vt.base);
+  d.endObject(cell);
+}
 
 CallResult<HermesValue> JSNumber::create(
     Runtime *runtime,
@@ -328,9 +352,19 @@ void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
-void BooleanObjectSerialize(Serializer &s, const GCCell *cell) {}
+JSBoolean::JSBoolean(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
 
-void BooleanObjectDeserialize(Deserializer &d, CellKind kind) {}
+void BooleanObjectSerialize(Serializer &s, const GCCell *cell) {
+  JSObject::serializeObjectImpl(s, cell);
+  s.endObject(cell);
+}
+
+void BooleanObjectDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::BooleanObjectKind && "Expected BooleanObject");
+  void *mem = d.getRuntime()->alloc(sizeof(JSBoolean));
+  auto *cell = new (mem) JSBoolean(d, &JSBoolean::vt.base);
+  d.endObject(cell);
+}
 
 CallResult<HermesValue>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
