@@ -62,9 +62,10 @@ void encodeUTF8(char *&dst, uint32_t cp) {
   dst = d;
 }
 
-void convertUTF16ToUTF8WithReplacements(
+bool convertUTF16ToUTF8WithReplacements(
     std::string &out,
-    llvm::ArrayRef<char16_t> input) {
+    llvm::ArrayRef<char16_t> input,
+    size_t maxCharacters) {
   auto isHighSurrogate = [](char16_t c) {
     return UNICODE_SURROGATE_FIRST <= c && c < UTF16_LOW_SURROGATE;
   };
@@ -75,7 +76,15 @@ void convertUTF16ToUTF8WithReplacements(
 
   out.clear();
   out.reserve(input.size());
-  for (auto cur = input.begin(), end = input.end(); cur < end; ++cur) {
+  // Stop early if we've reached currNumCharacters worth of UTF-8 characters.
+  size_t currNumCharacters = 0;
+  if (!maxCharacters) {
+    // Condition checks are easier if this number is set to the max value.
+    maxCharacters = std::numeric_limits<size_t>::max();
+  }
+  for (auto cur = input.begin(), end = input.end();
+       cur < end && currNumCharacters < maxCharacters;
+       ++cur, ++currNumCharacters) {
     char16_t c = cur[0];
     // ASCII fast-path.
     if (LLVM_LIKELY(c <= 0x7F)) {
@@ -108,6 +117,7 @@ void convertUTF16ToUTF8WithReplacements(
     encodeUTF8(ptr, c32);
     out.insert(out.end(), buff, ptr);
   }
+  return currNumCharacters < maxCharacters;
 }
 
 void convertUTF16ToUTF8WithSingleSurrogates(

@@ -56,6 +56,15 @@ TEST(StringTest, UTF16ToUTF8StringWithReplacements) {
     convertUTF16ToUTF8WithReplacements(out, cs);
     return std::vector<char>(out.begin(), out.end());
   };
+  auto convertWithMaxChars =
+      [](std::initializer_list<char16_t> cs,
+         size_t maxChars) -> std::pair<std::vector<char>, bool> {
+    std::string out;
+    std::vector<char16_t> vec(cs);
+    bool fullyWritten = convertUTF16ToUTF8WithReplacements(out, cs, maxChars);
+    return std::make_pair(
+        std::vector<char>(out.begin(), out.end()), fullyWritten);
+  };
   auto bytes =
       [](std::initializer_list<unsigned char> cs) -> std::vector<char> {
     return std::vector<char>(cs.begin(), cs.end());
@@ -78,6 +87,24 @@ TEST(StringTest, UTF16ToUTF8StringWithReplacements) {
   // Unpaired trailing surrogate halves
   EXPECT_EQ(bytes({'a', 0xEF, 0xBF, 0xBD}), convert({'a', 0xD83D}));
   EXPECT_EQ(bytes({'a', 0xEF, 0xBF, 0xBD}), convert({'a', 0xDE39}));
+
+  // Check that strings are truncated when maxChars is specified.
+  // First with normal ASCII strings.
+  auto strAndFullyWritten = convertWithMaxChars({'a', 'b', 'c', 0, 'd'}, 3);
+  EXPECT_EQ(bytes({'a', 'b', 'c'}), strAndFullyWritten.first);
+  EXPECT_EQ(false, strAndFullyWritten.second);
+
+  // Check when maxCharacters is higher than the number of available characters,
+  // that it only writes out the max string.
+  strAndFullyWritten = convertWithMaxChars({'a', 'b', 'c', 0, 'd'}, 6);
+  EXPECT_EQ(bytes({'a', 'b', 'c', 0, 'd'}), strAndFullyWritten.first);
+  EXPECT_EQ(true, strAndFullyWritten.second);
+
+  // Make sure it counts the number of Unicode code points, not the number of
+  // individual octets.
+  strAndFullyWritten = convertWithMaxChars({0xD83D, 0xDE39, 0xD83D, 0xDE39}, 1);
+  EXPECT_EQ(bytes({0xF0, 0x9F, 0x98, 0xB9}), strAndFullyWritten.first);
+  EXPECT_EQ(false, strAndFullyWritten.second);
 }
 
 TEST(StringTest, IsAllASCIITest) {

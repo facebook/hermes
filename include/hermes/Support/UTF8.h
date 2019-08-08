@@ -224,9 +224,14 @@ void convertUTF16ToUTF8WithSingleSurrogates(
 
 /// Convert a UTF-16 encoded string \p input to UTF-8 stored in \p dest,
 /// replacing unpaired surrogates halves with the Unicode replacement character.
-void convertUTF16ToUTF8WithReplacements(
+/// \param maxCharacters If non-zero, the maximum number of characters to
+///   convert.
+/// \return false if the string was truncated, true if the whole string was
+///   written out successfully.
+bool convertUTF16ToUTF8WithReplacements(
     std::string &dest,
-    llvm::ArrayRef<char16_t> input);
+    llvm::ArrayRef<char16_t> input,
+    size_t maxCharacters = 0);
 
 }; // namespace hermes
 
