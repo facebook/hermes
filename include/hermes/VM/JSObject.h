@@ -506,14 +506,14 @@ class JSObject : public GCCell {
   ///   PropStorage::kValueToSegmentThreshold.
   template <PropStorage::Inline inl = PropStorage::Inline::No>
   static GCHermesValue &
-  namedSlotRef(JSObject *self, Runtime *runtime, SlotIndex index);
+  namedSlotRef(JSObject *self, PointerBase *runtime, SlotIndex index);
 
   /// Load a value from the "named value" storage space by \p index.
   /// \pre inl == PropStorage::Inline::Yes -> index <
   /// PropStorage::kValueToSegmentThreshold.
   template <PropStorage::Inline inl = PropStorage::Inline::No>
   static HermesValue
-  getNamedSlotValue(JSObject *self, Runtime *runtime, SlotIndex index) {
+  getNamedSlotValue(JSObject *self, PointerBase *runtime, SlotIndex index) {
     return namedSlotRef<inl>(self, runtime, index);
   }
 
@@ -1261,7 +1261,7 @@ inline T *JSObject::allocateSmallPropStorage(T *self) {
 
 template <PropStorage::Inline inl>
 inline GCHermesValue &
-JSObject::namedSlotRef(JSObject *self, Runtime *runtime, SlotIndex index) {
+JSObject::namedSlotRef(JSObject *self, PointerBase *runtime, SlotIndex index) {
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
     return self->directProps_[index];
 
