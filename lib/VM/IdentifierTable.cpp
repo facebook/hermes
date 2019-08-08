@@ -9,6 +9,8 @@
 
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/CallResult.h"
+#include "hermes/VM/Deserializer.h"
+#include "hermes/VM/Serializer.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
@@ -29,6 +31,70 @@ IdentifierTable::LookupEntry::LookupEntry(
   llvm::SmallVector<char16_t, 32> storage{};
   str->copyUTF16String(storage);
   hash_ = hermes::hashString(llvm::ArrayRef<char16_t>(storage));
+}
+
+enum class EntryKind { ASCII, UFT16, StrPrim, Free };
+
+void IdentifierTable::LookupEntry::serialize(Serializer &s) {
+  // Common for every type.
+  s.writeInt<uint8_t>(isNotUniqued_);
+  s.writeInt<uint32_t>(hash_);
+  if (isStringPrim()) {
+    // Actual StringPrimitive pointed to should be on the heap, will be
+    // serialized later.
+    // Write the following data for this entry:
+    // [STRPRIM, num_, strPrim_(relocation)].
+    s.writeInt<uint8_t>((uint8_t)EntryKind::StrPrim);
+    s.writeInt<uint32_t>(num_);
+    s.writeRelocation(strPrim_);
+  } else if (isLazyASCII()) {
+    // Pointer to an ASCII string literal.
+    // Write the following data for this entry: [ASCII, num, str(offset)].
+    s.writeInt<uint8_t>((uint8_t)EntryKind::ASCII);
+    s.writeInt<uint32_t>(num_);
+    s.writeCharStr(getLazyASCIIRef());
+  } else if (isLazyUTF16()) {
+    // Pointer to an UTF16 string literal.
+    // Write the following data for this entry: [UTF16, num, str(offset)].
+    s.writeInt<uint8_t>((uint8_t)EntryKind::UFT16);
+    s.writeInt<uint32_t>(num_);
+    s.writeChar16Str(getLazyUTF16Ref());
+  } else {
+    // A free entry. Write the following data for this entry: [FREE, num_].
+    assert(isFreeSlot() && "invalid entry kind");
+    s.writeInt<uint8_t>((uint8_t)EntryKind::Free);
+    s.writeInt<uint32_t>(num_);
+  }
+}
+
+void IdentifierTable::LookupEntry::deserialize(Deserializer &d) {
+  isNotUniqued_ = d.readInt<uint8_t>();
+  hash_ = d.readInt<uint32_t>();
+  EntryKind kind = (EntryKind)d.readInt<uint8_t>();
+  switch (kind) {
+    case EntryKind::ASCII: {
+      num_ = d.readInt<uint32_t>();
+      asciiPtr_ = d.readCharStr();
+      isUTF16_ = false;
+      break;
+    }
+    case EntryKind::UFT16: {
+      num_ = d.readInt<uint32_t>();
+      utf16Ptr_ = d.readChar16Str();
+      isUTF16_ = true;
+      break;
+    }
+    case EntryKind::StrPrim: {
+      num_ = d.readInt<uint32_t>();
+      d.readRelocation(&strPrim_, RelocationKind::NativePointer);
+      break;
+    }
+    case EntryKind::Free: {
+      num_ = d.readInt<uint32_t>();
+    }
+    default:
+      llvm_unreachable("wrong EntryKind");
+  }
 }
 
 IdentifierTable::IdentifierTable() {
@@ -428,6 +494,32 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SymbolID symbolID) {
     return OS << "SymbolID("
               << (symbolID.isUniqued() ? "(Uniqued)" : "(Not Uniqued)")
               << symbolID.unsafeGetIndex() << ")";
+}
+
+void IdentifierTable::serialize(Serializer &s) {
+  // Serialize uint32_t firstFreeID_;
+  s.writeInt<uint32_t>(firstFreeID_);
+  // Serialize IdentTableLookupVector lookupVector_;
+  size_t size = lookupVector_.size();
+  s.writeInt<uint32_t>(size);
+  for (size_t i = 0; i < size; i++) {
+    lookupVector_[i].serialize(s);
+  }
+  s.endObject(&lookupVector_);
+  // Serialize detail::IdentifierHashTable hashTable_;
+  hashTable_.serialize(s);
+}
+
+void IdentifierTable::deserialize(Deserializer &d) {
+  firstFreeID_ = d.readInt<uint32_t>();
+  size_t size = d.readInt<uint32_t>();
+  lookupVector_.resize(size);
+  for (auto &entry : lookupVector_) {
+    entry.deserialize(d);
+  }
+  d.endObject(&lookupVector_);
+
+  hashTable_.deserialize(d);
 }
 
 } // namespace vm

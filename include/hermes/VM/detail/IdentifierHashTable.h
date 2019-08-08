@@ -19,6 +19,8 @@ namespace vm {
 class IdentifierTable;
 
 class StringPrimitive;
+class Serializer;
+class Deserializer;
 
 namespace detail {
 
@@ -227,6 +229,10 @@ class IdentifierHashTable {
   std::vector<HashTableEntry>::iterator end() {
     return storage_.end();
   }
+
+  void serialize(Serializer &s);
+
+  void deserialize(Deserializer &d);
 };
 
 } // namespace detail

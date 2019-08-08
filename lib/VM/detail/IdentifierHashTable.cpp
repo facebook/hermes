@@ -6,12 +6,16 @@
  */
 #include "hermes/VM/detail/IdentifierHashTable.h"
 
+#include "hermes/VM/Deserializer.h"
+#include "hermes/VM/Serializer.h"
 #include "hermes/VM/StringPrimitive.h"
 
 using namespace hermes::vm::detail;
 // In GCC/CLANG, method definitions can refer to ancestor namespaces of
 // the namespace that the class is declared in without namespace qualifiers.
 // This is not allowed in MSVC.
+using hermes::vm::Deserializer;
+using hermes::vm::Serializer;
 using hermes::vm::StringPrimitive;
 using hermes::vm::SymbolID;
 
@@ -161,4 +165,35 @@ void IdentifierHashTable::growAndRehash(uint32_t newCapacity) {
     storage_[idx] = entry;
   }
   nonEmptyEntryCount_ = size_;
+}
+
+void IdentifierHashTable::serialize(Serializer &s) {
+  // Serialize uint32_t size_{0};
+  s.writeInt<uint32_t>(size_);
+
+  // Serialize uint32_t nonEmptyEntryCount_{0};
+  s.writeInt<uint32_t>(nonEmptyEntryCount_);
+
+  // We don't serialize IdentifierTable *identifierTable_{};
+  // It is set by constructor, don't need to change.
+
+  // Serialize std::vector<HashTableEntry> storage_{};
+  size_t size = storage_.size();
+  s.writeInt<uint32_t>(size);
+  for (size_t i = 0; i < size; i++) {
+    // Serialize each entry.
+    s.writeInt<uint32_t>(storage_[i].index);
+  }
+}
+
+void IdentifierHashTable::deserialize(Deserializer &d) {
+  size_ = d.readInt<uint32_t>();
+  nonEmptyEntryCount_ = d.readInt<uint32_t>();
+
+  size_t size = d.readInt<uint32_t>();
+  storage_.resize(size);
+  for (size_t i = 0; i < size; i++) {
+    // Deserialize each entry.
+    storage_[i].index = d.readInt<uint32_t>();
+  }
 }

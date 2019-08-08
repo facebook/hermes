@@ -168,6 +168,10 @@ class IdentifierTable {
       Runtime *runtime,
       Handle<StringPrimitive> desc);
 
+  void serialize(Serializer &s);
+
+  void deserialize(Deserializer &d);
+
  private:
   /// Entry in the lookup vector. An entry can represent 5 different types:
   /// 1. A lazy ASCII identifier: asciiPtr_ will be set to a pointer to
@@ -317,6 +321,10 @@ class IdentifierTable {
     uint32_t getHash() const {
       return hash_;
     }
+
+    void serialize(Serializer &s);
+
+    void deserialize(Deserializer &d);
   };
 
   /// Stores all the entries referenced from the hash table, plus
