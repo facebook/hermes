@@ -178,6 +178,9 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
 
   void dump();
 
+  friend void DictPropertyMapSerialize(Serializer &s, const GCCell *cell);
+  friend void DictPropertyMapDeserialize(Deserializer &d, CellKind kind);
+
  private:
   /// Total size of the descriptor array.
   const size_type descriptorCapacity_;
