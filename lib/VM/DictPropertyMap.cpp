@@ -72,6 +72,9 @@ CallResult<PseudoHandle<DictPropertyMap>> DictPropertyMap::create(
   return createPseudoHandle(
       new (mem) DictPropertyMap(runtime, capacity, hashCapacity));
 }
+void DictPropertyMapSerialize(Serializer &s, const GCCell *cell) {}
+
+void DictPropertyMapDeserialize(Deserializer &d, CellKind kind) {}
 
 std::pair<bool, DictPropertyMap::HashPair *> DictPropertyMap::lookupEntryFor(
     DictPropertyMap *self,

@@ -37,6 +37,10 @@ void FinalizableNativeFunctionBuildMeta(
   NativeFunctionBuildMeta(cell, mb);
 }
 
+void FinalizableNativeFunctionSerialize(Serializer &s, const GCCell *cell) {}
+
+void FinalizableNativeFunctionDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
     Runtime *runtime,
     void *context,
@@ -92,6 +96,10 @@ ObjectVTable HostObject::vt{
 void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
+
+void HostObjectSerialize(Serializer &s, const GCCell *cell) {}
+
+void HostObjectDeserialize(Deserializer &d, CellKind kind) {}
 
 CallResult<HermesValue> HostObject::createWithoutPrototype(
     Runtime *runtime,

@@ -34,6 +34,10 @@ void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       "@storage", self->data(), &self->size_, sizeof(GCHermesValue));
 }
 
+void ArrayStorageSerialize(Serializer &s, const GCCell *cell) {}
+
+void ArrayStorageDeserialize(Deserializer &d, CellKind kind) {}
+
 ExecutionStatus ArrayStorage::ensureCapacity(
     MutableHandle<ArrayStorage> &selfHandle,
     Runtime *runtime,

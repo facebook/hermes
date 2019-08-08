@@ -217,6 +217,12 @@ class MallocGC final : public GCBase {
   /// Same as in superclass GCBase.
   virtual void deserializeWeakRefs(Deserializer &d) override;
 
+  /// Serialze all heap objects to a stream.
+  virtual void serializeHeap(Serializer &s) override;
+
+  /// Deserialize heap objects.
+  virtual void deserializeHeap(Deserializer &d) override;
+
   void getHeapInfo(HeapInfo &info) override;
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
 

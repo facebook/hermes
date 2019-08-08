@@ -123,6 +123,10 @@ errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+void ErrorSerialize(Serializer &s, const GCCell *cell) {}
+
+void ErrorDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue> JSError::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {

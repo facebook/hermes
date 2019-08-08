@@ -206,6 +206,14 @@ void WeakSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSWeakMapImpl<CellKind::WeakSetKind>::WeakMapOrSetBuildMeta(cell, mb);
 }
 
+void WeakMapSerialize(Serializer &s, const GCCell *cell) {}
+
+void WeakSetSerialize(Serializer &s, const GCCell *cell) {}
+
+void WeakMapDeserialize(Deserializer &d, CellKind kind) {}
+
+void WeakSetDeserialize(Deserializer &d, CellKind kind) {}
+
 template <CellKind C>
 const ObjectVTable JSWeakMapImpl<C>::vt{
     VTable(

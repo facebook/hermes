@@ -29,6 +29,10 @@ void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+void DateSerialize(Serializer &s, const GCCell *cell) {}
+
+void DateDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue>
 JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc(sizeof(JSDate));

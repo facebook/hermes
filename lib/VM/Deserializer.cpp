@@ -16,8 +16,16 @@
 namespace hermes {
 namespace vm {
 
+using DeserializeCallBack = void(Deserializer &d, CellKind kind);
+
+static DeserializeCallBack *deserializeImpl[] = {
+#define CELL_KIND(name) name##Deserialize,
+#include "hermes/VM/CellKinds.def"
+#undef CELL_KIND
+};
+
 void Deserializer::deserializeCell(uint8_t kind) {
-  // TODO: later
+  deserializeImpl[kind](*this, (CellKind)kind);
 }
 
 void Deserializer::endObject(void *object) {

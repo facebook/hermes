@@ -358,6 +358,10 @@ void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ArrayImplBuildMeta(cell, mb);
 }
 
+void ArgumentsSerialize(Serializer &s, const GCCell *cell) {}
+
+void ArgumentsDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue> Arguments::create(
     Runtime *runtime,
     size_type length,
@@ -472,6 +476,10 @@ ObjectVTable JSArray::vt{
 void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ArrayImplBuildMeta(cell, mb);
 }
+
+void ArraySerialize(Serializer &s, const GCCell *cell) {}
+
+void ArrayDeserialize(Deserializer &d, CellKind kind) {}
 
 Handle<HiddenClass> JSArray::createClass(
     Runtime *runtime,
@@ -713,6 +721,10 @@ void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const JSArrayIterator *>(cell);
   mb.addField("@iteratedObject", &self->iteratedObject_);
 }
+
+void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {}
+
+void ArrayIteratorDeserialize(Deserializer &d, CellKind kind) {}
 
 CallResult<HermesValue> JSArrayIterator::create(
     Runtime *runtime,

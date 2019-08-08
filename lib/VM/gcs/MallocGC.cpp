@@ -483,6 +483,14 @@ void MallocGC::deserializeWeakRefs(Deserializer &d) {
   hermes_fatal("deserializeWeakRefs not implemented for current GC");
 }
 
+void MallocGC::serializeHeap(Serializer &s) {
+  hermes_fatal("serializeHeap not implemented for current GC");
+}
+
+void MallocGC::deserializeHeap(Deserializer &d) {
+  hermes_fatal("serializeHeap not implemented for current GC");
+}
+
 /// @name Forward instantiations
 /// @{
 

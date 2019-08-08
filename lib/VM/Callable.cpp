@@ -29,6 +29,10 @@ void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       self->getSlots(), &self->size_, sizeof(GCHermesValue));
 }
 
+void EnvironmentSerialize(Serializer &s, const GCCell *cell) {}
+
+void EnvironmentDeserialize(Deserializer &d, CellKind kind) {}
+
 //===----------------------------------------------------------------------===//
 // class Callable
 
@@ -381,6 +385,10 @@ void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@argStorage", &self->argStorage_);
 }
 
+void BoundFunctionSerialize(Serializer &s, const GCCell *cell) {}
+
+void BoundFunctionDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue> BoundFunction::create(
     Runtime *runtime,
     Handle<Callable> target,
@@ -730,6 +738,10 @@ void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   CallableBuildMeta(cell, mb);
 }
 
+void NativeFunctionSerialize(Serializer &s, const GCCell *cell) {}
+
+void NativeFunctionDeserialize(Deserializer &d, CellKind kind) {}
+
 Handle<NativeFunction> NativeFunction::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle,
@@ -831,6 +843,10 @@ void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   NativeFunctionBuildMeta(cell, mb);
 }
 
+void NativeConstructorSerialize(Serializer &s, const GCCell *cell) {}
+
+void NativeConstructorDeserialize(Deserializer &d, CellKind kind) {}
+
 #ifndef NDEBUG
 CallResult<HermesValue> NativeConstructor::_callImpl(
     Handle<Callable> selfHandle,
@@ -871,6 +887,10 @@ void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addNonPointerField("@codeBlock", &self->codeBlock_);
   mb.addField("@domain", &self->domain_);
 }
+
+void FunctionSerialize(Serializer &s, const GCCell *cell) {}
+
+void FunctionDeserialize(Deserializer &d, CellKind kind) {}
 
 CallResult<HermesValue> JSFunction::create(
     Runtime *runtime,
@@ -920,6 +940,10 @@ CallableVTable JSGeneratorFunction::vt{
 void GeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   FunctionBuildMeta(cell, mb);
 }
+
+void GeneratorFunctionSerialize(Serializer &s, const GCCell *cell) {}
+
+void GeneratorFunctionDeserialize(Deserializer &d, CellKind kind) {}
 
 CallResult<HermesValue> JSGeneratorFunction::create(
     Runtime *runtime,
@@ -971,6 +995,10 @@ void GeneratorInnerFunctionBuildMeta(
   mb.addNonPointerField("@nextIPOffset", &self->nextIPOffset_);
   mb.addNonPointerField("@action", &self->action_);
 }
+
+void GeneratorInnerFunctionSerialize(Serializer &s, const GCCell *cell) {}
+
+void GeneratorInnerFunctionDeserialize(Deserializer &d, CellKind kind) {}
 
 CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
     Runtime *runtime,

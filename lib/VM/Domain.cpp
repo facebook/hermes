@@ -26,6 +26,10 @@ void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@throwingRequire", &self->throwingRequire_);
 }
 
+void DomainSerialize(Serializer &s, const GCCell *cell) {}
+
+void DomainDeserialize(Deserializer &d, CellKind kind) {}
+
 PseudoHandle<Domain> Domain::create(Runtime *runtime) {
   void *mem =
       runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(Domain));
@@ -202,6 +206,10 @@ ObjectVTable RequireContext::vt{
 void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
+
+void RequireContextSerialize(Serializer &s, const GCCell *cell) {}
+
+void RequireContextDeserialize(Deserializer &d, CellKind kind) {}
 
 Handle<RequireContext> RequireContext::create(
     Runtime *runtime,

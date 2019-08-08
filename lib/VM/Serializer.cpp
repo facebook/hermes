@@ -16,6 +16,14 @@
 namespace hermes {
 namespace vm {
 
+using SerializeCallBack = void(Serializer &s, const GCCell *cell);
+
+static SerializeCallBack *serializeImpl[] = {
+#define CELL_KIND(name) name##Serialize,
+#include "hermes/VM/CellKinds.def"
+#undef CELL_KIND
+};
+
 Serializer::Serializer(llvm::raw_ostream &OS, Runtime *runtime)
     : os_(OS), runtime_(runtime) {
   //  Write the header here.
@@ -58,7 +66,7 @@ void Serializer::flushCharBufs() {
 }
 
 void Serializer::serializeCell(const GCCell *cell) {
-  // TODO: later
+  serializeImpl[(uint8_t)cell->getKind()](*this, cell);
 }
 
 void Serializer::writeHeader() {

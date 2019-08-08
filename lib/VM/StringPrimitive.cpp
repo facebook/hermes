@@ -24,6 +24,30 @@ void DynamicUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {}
 
+void DynamicASCIIStringPrimitiveSerialize(Serializer &s, const GCCell *cell) {}
+
+void DynamicUTF16StringPrimitiveSerialize(Serializer &s, const GCCell *cell) {}
+
+void DynamicUniquedASCIIStringPrimitiveSerialize(
+    Serializer &s,
+    const GCCell *cell) {}
+
+void DynamicUniquedUTF16StringPrimitiveSerialize(
+    Serializer &s,
+    const GCCell *cell) {}
+
+void DynamicASCIIStringPrimitiveDeserialize(Deserializer &d, CellKind kind) {}
+
+void DynamicUTF16StringPrimitiveDeserialize(Deserializer &d, CellKind kind) {}
+
+void DynamicUniquedASCIIStringPrimitiveDeserialize(
+    Deserializer &d,
+    CellKind kind) {}
+
+void DynamicUniquedUTF16StringPrimitiveDeserialize(
+    Deserializer &d,
+    CellKind kind) {}
+
 /// There is no SymbolStringPrimitiveCellKind, but we factor this into a
 /// function so that the subclasses can share it and so only one friend
 /// declaration is required.
@@ -55,6 +79,14 @@ void ExternalUTF16StringPrimitiveBuildMeta(
     Metadata::Builder &mb) {
   symbolStringPrimitiveBuildMeta(cell, mb);
 }
+
+void ExternalASCIIStringPrimitiveSerialize(Serializer &s, const GCCell *cell) {}
+
+void ExternalUTF16StringPrimitiveSerialize(Serializer &s, const GCCell *cell) {}
+
+void ExternalASCIIStringPrimitiveDeserialize(Deserializer &d, CellKind kind) {}
+
+void ExternalUTF16StringPrimitiveDeserialize(Deserializer &d, CellKind kind) {}
 
 template <typename T>
 CallResult<HermesValue> StringPrimitive::createEfficientImpl(

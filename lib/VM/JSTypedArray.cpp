@@ -268,7 +268,9 @@ JSTypedArrayBase::JSTypedArrayVTable JSTypedArray<T, C>::vt{
 #define TYPED_ARRAY(name, type)                                          \
   void name##ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) { \
     TypedArrayBaseBuildMeta(cell, mb);                                   \
-  }
+  }                                                                      \
+  void name##ArraySerialize(Serializer &s, const GCCell *cell) {}        \
+  void name##ArrayDeserialize(Deserializer &d, CellKind kind) {}
 #include "hermes/VM/TypedArrays.def"
 
 template <typename T, CellKind C>

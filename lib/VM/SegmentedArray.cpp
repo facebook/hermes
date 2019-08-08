@@ -31,6 +31,10 @@ void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       "@data", &self->data_, &self->length_, sizeof(GCHermesValue));
 }
 
+void SegmentSerialize(Serializer &s, const GCCell *cell) {}
+
+void SegmentDeserialize(Deserializer &d, CellKind kind) {}
+
 PseudoHandle<SegmentedArray::Segment> SegmentedArray::Segment::create(
     Runtime *runtime) {
   // NOTE: This needs to live in the cpp file instead of the header because it
@@ -72,6 +76,10 @@ void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       &self->numSlotsUsed_,
       sizeof(GCHermesValue));
 }
+
+void SegmentedArraySerialize(Serializer &s, const GCCell *cell) {}
+
+void SegmentedArrayDeserialize(Deserializer &d, CellKind kind) {}
 
 CallResult<HermesValue> SegmentedArray::create(
     Runtime *runtime,

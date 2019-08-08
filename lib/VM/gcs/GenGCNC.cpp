@@ -1306,6 +1306,41 @@ void GenGC::deserializeWeakRefs(Deserializer &d) {
   }
 }
 
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "serialize"
+void GenGC::serializeHeap(Serializer &s) {
+  // We need to yield/claim at outer scope, to cover the calls to
+  // forUsedSegments below.
+  AllocContextYieldThenClaim yielder(this);
+  // We'll say we're in GC even though we're not, to avoid assertion failures.
+  GCCycle cycle{this};
+
+  auto serializeObject = [&s](const GCCell *cell) {
+    s.writeInt<uint8_t>((uint8_t)cell->getKind());
+    LLVM_DEBUG(
+        llvm::dbgs() << "Heap Serialize Cell " << cellKindStr(cell->getKind())
+                     << ", id " << cell->getDebugAllocationId() << "\n");
+    s.serializeCell(cell);
+  };
+
+  oldGen_.forAllObjs(serializeObject);
+
+  // Write a 255 at the end to signal that we finish serializing heap objects.
+  s.writeInt<uint8_t>(255);
+}
+
+void GenGC::deserializeHeap(Deserializer &d) {
+  uint8_t kind;
+  while ((kind = d.readInt<uint8_t>()) != 255) {
+    LLVM_DEBUG(
+        llvm::dbgs() << "Heap Deserialize Cell " << cellKindStr((CellKind)kind)
+                     << "\n");
+    d.deserializeCell(kind);
+  }
+}
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "gc"
+
 void GenGC::printStats(llvm::raw_ostream &os, bool trailingComma) {
   if (!recordGcStats_) {
     return;

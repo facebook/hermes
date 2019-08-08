@@ -35,6 +35,10 @@ void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@forInCache", &self->forInCache_);
 }
 
+void HiddenClassSerialize(Serializer &s, const GCCell *cell) {}
+
+void HiddenClassDeserialize(Deserializer &d, CellKind kind) {}
+
 void HiddenClass::_markWeakImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast_during_gc<HiddenClass>(cell, gc);
   self->transitionMap_.markWeakRefs(gc);

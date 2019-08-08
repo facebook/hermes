@@ -30,6 +30,10 @@ void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+void StringObjectSerialize(Serializer &s, const GCCell *cell) {}
+
+void StringObjectDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue> JSString::create(
     Runtime *runtime,
     Handle<StringPrimitive> value,
@@ -183,6 +187,10 @@ void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@iteratedString", &self->iteratedString_);
 }
 
+void StringIteratorSerialize(Serializer &s, const GCCell *cell) {}
+
+void StringIteratorDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue> JSStringIterator::create(
     Runtime *runtime,
     Handle<StringPrimitive> string) {
@@ -277,6 +285,10 @@ void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+void NumberObjectSerialize(Serializer &s, const GCCell *cell) {}
+
+void NumberObjectDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue> JSNumber::create(
     Runtime *runtime,
     double value,
@@ -316,6 +328,10 @@ void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+void BooleanObjectSerialize(Serializer &s, const GCCell *cell) {}
+
+void BooleanObjectDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc(sizeof(JSBoolean));
@@ -348,6 +364,10 @@ ObjectVTable JSSymbol::vt{
 void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
+
+void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {}
+
+void SymbolObjectDeserialize(Deserializer &d, CellKind kind) {}
 
 CallResult<HermesValue> JSSymbol::create(
     Runtime *runtime,

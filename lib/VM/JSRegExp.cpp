@@ -36,6 +36,10 @@ void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+void RegExpSerialize(Serializer &s, const GCCell *cell) {}
+
+void RegExpDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue> JSRegExp::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {

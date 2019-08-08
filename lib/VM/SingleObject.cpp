@@ -16,5 +16,14 @@ void MathBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 void JSONBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
+
+void MathSerialize(Serializer &s, const GCCell *cell) {}
+
+void JSONSerialize(Serializer &s, const GCCell *cell) {}
+
+void JSONDeserialize(Deserializer &d, CellKind kind) {}
+
+void MathDeserialize(Deserializer &d, CellKind kind) {}
+
 } // namespace vm
 } // namespace hermes

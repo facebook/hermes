@@ -27,6 +27,10 @@ void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@nextEntryInBucket", &self->nextEntryInBucket);
 }
 
+void HashMapEntrySerialize(Serializer &s, const GCCell *cell) {}
+
+void HashMapEntryDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue> HashMapEntry::create(Runtime *runtime) {
   void *mem = runtime->alloc(sizeof(HashMapEntry));
   return HermesValue::encodeObjectValue(new (mem) HashMapEntry(runtime));
@@ -43,6 +47,10 @@ void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@firstIterationEntry", &self->firstIterationEntry_);
   mb.addField("@lastIterationEntry", &self->lastIterationEntry_);
 }
+
+void OrderedHashMapSerialize(Serializer &s, const GCCell *cell) {}
+
+void OrderedHashMapDeserialize(Deserializer &d, CellKind kind) {}
 
 OrderedHashMap::OrderedHashMap(
     Runtime *runtime,

@@ -34,6 +34,10 @@ void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
+void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {}
+
+void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue> JSArrayBuffer::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {

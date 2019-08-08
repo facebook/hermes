@@ -17,5 +17,13 @@ const VTable FillerCell::vt{CellKind::FillerCellKind, 0};
 void UninitializedBuildMeta(const GCCell *, Metadata::Builder &) {}
 void FillerCellBuildMeta(const GCCell *, Metadata::Builder &) {}
 
+void UninitializedSerialize(Serializer &s, const GCCell *cell) {}
+
+void FillerCellSerialize(Serializer &s, const GCCell *cell) {}
+
+void UninitializedDeserialize(Deserializer &d, CellKind kind) {}
+
+void FillerCellDeserialize(Deserializer &d, CellKind kind) {}
+
 } // namespace vm
 } // namespace hermes

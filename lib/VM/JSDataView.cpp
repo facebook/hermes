@@ -28,6 +28,10 @@ void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@buffer", &self->buffer_);
 }
 
+void DataViewSerialize(Serializer &s, const GCCell *cell) {}
+
+void DataViewDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<HermesValue> JSDataView::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {

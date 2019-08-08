@@ -76,6 +76,10 @@ void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       self->directProps_, mb);
 }
 
+void ObjectSerialize(Serializer &s, const GCCell *cell) {}
+
+void ObjectDeserialize(Deserializer &d, CellKind kind) {}
+
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
@@ -2487,6 +2491,10 @@ void PropertyAccessorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@getter", &self->getter);
   mb.addField("@setter", &self->setter);
 }
+
+void PropertyAccessorSerialize(Serializer &s, const GCCell *cell) {}
+
+void PropertyAccessorDeserialize(Deserializer &d, CellKind kind) {}
 
 CallResult<HermesValue> PropertyAccessor::create(
     Runtime *runtime,

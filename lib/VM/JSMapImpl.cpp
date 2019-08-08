@@ -32,6 +32,14 @@ void SetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapImpl<CellKind::SetKind>::MapOrSetBuildMeta(cell, mb);
 }
 
+void MapSerialize(Serializer &s, const GCCell *cell) {}
+
+void SetSerialize(Serializer &s, const GCCell *cell) {}
+
+void MapDeserialize(Deserializer &d, CellKind kind) {}
+
+void SetDeserialize(Deserializer &d, CellKind kind) {}
+
 template <CellKind C>
 const ObjectVTable JSMapImpl<C>::vt{
     VTable(C, sizeof(JSMapImpl<C>)),
@@ -82,6 +90,14 @@ void SetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSMapIteratorImpl<CellKind::SetIteratorKind>::MapOrSetIteratorBuildMeta(
       cell, mb);
 }
+
+void MapIteratorSerialize(Serializer &s, const GCCell *cell) {}
+
+void SetIteratorSerialize(Serializer &s, const GCCell *cell) {}
+
+void MapIteratorDeserialize(Deserializer &d, CellKind kind) {}
+
+void SetIteratorDeserialize(Deserializer &d, CellKind kind) {}
 
 template <CellKind C>
 const ObjectVTable JSMapIteratorImpl<C>::vt = {

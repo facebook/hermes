@@ -326,6 +326,12 @@ class GenGC final : public GCBase {
   /// Deserialize WeakRefs.
   virtual void deserializeWeakRefs(Deserializer &d) override;
 
+  /// Serialize heap objects.
+  virtual void serializeHeap(Serializer &s) override;
+
+  /// Deserialize heap objects.
+  virtual void deserializeHeap(Deserializer &d) override;
+
   /// Returns the number of bytes allocated allocated since the last GC.
   gcheapsize_t bytesAllocatedSinceLastGC() const override;
 

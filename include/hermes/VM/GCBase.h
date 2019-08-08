@@ -431,6 +431,12 @@ class GCBase {
   /// Deserialize WeakRefs
   virtual void deserializeWeakRefs(Deserializer &d) = 0;
 
+  /// Serialze all heap objects to a stream.
+  virtual void serializeHeap(Serializer &s) = 0;
+
+  /// Deserialize heap objects.
+  virtual void deserializeHeap(Deserializer &d) = 0;
+
   /// Default implementations for the external memory credit/debit APIs: do
   /// nothing.
   void creditExternalMemory(GCCell *alloc, uint32_t size) {}

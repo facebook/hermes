@@ -31,6 +31,10 @@ void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@innerFunction", &self->innerFunction_);
 }
 
+void GeneratorSerialize(Serializer &s, const GCCell *cell) {}
+
+void GeneratorDeserialize(Deserializer &d, CellKind kind) {}
+
 CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
     Runtime *runtime,
     Handle<GeneratorInnerFunction> innerFunction,
