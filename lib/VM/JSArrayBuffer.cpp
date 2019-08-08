@@ -23,7 +23,13 @@ ObjectVTable JSArrayBuffer::vt{
         sizeof(JSArrayBuffer),
         _finalizeImpl,
         nullptr,
-        _mallocSizeImpl),
+        _mallocSizeImpl,
+        nullptr,
+        nullptr,
+        VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Object,
+                                     nullptr,
+                                     _snapshotAddEdgesImpl,
+                                     _snapshotAddNodesImpl}),
     _getOwnIndexedRangeImpl,
     _haveOwnIndexedImpl,
     _getOwnIndexedPropertyFlagsImpl,
@@ -131,6 +137,8 @@ JSArrayBuffer::~JSArrayBuffer() {
 
 void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast<JSArrayBuffer>(cell);
+  // Need to untrack the native memory that may have been tracked by snapshots.
+  gc->getIDTracker().untrackNative(self->data_);
   self->detach(gc);
   self->~JSArrayBuffer();
 }
@@ -138,6 +146,34 @@ void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC *gc) {
 size_t JSArrayBuffer::_mallocSizeImpl(GCCell *cell) {
   const auto *buffer = static_cast<JSArrayBuffer *>(cell);
   return buffer->size_;
+}
+
+void JSArrayBuffer::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    V8HeapSnapshot &snap) {
+  auto *const self = vmcast<JSArrayBuffer>(cell);
+  // While this is an internal edge, it is to a native node which is not
+  // automatically added by the metadata.
+  snap.addNamedEdge(
+      V8HeapSnapshot::EdgeType::Internal,
+      "backingStore",
+      gc->getNativeID(self->data_));
+  // The backing store just has numbers, so there's no edges to add here.
+}
+
+void JSArrayBuffer::_snapshotAddNodesImpl(
+    GCCell *cell,
+    GC *gc,
+    V8HeapSnapshot &snap) {
+  auto *const self = vmcast<JSArrayBuffer>(cell);
+  // Add the native node before the JSArrayBuffer node.
+  snap.beginNode();
+  snap.endNode(
+      V8HeapSnapshot::NodeType::Native,
+      "JSArrayBufferData",
+      gc->getNativeID(self->data_),
+      self->size_);
 }
 
 void JSArrayBuffer::detach(GC *gc) {

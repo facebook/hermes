@@ -32,6 +32,7 @@ struct VTable {
    private:
     using NameCallback = std::string(GCCell *, GC *);
     using AddEdgesCallback = void(GCCell *, GC *, V8HeapSnapshot &);
+    using AddNodesCallback = void(GCCell *, GC *, V8HeapSnapshot &);
 
    public:
     /// Construct a HeapSnapshotMetadata, that is used by the GC to decide how
@@ -46,19 +47,25 @@ struct VTable {
     constexpr explicit HeapSnapshotMetadata(
         V8HeapSnapshot::NodeType nodeType,
         NameCallback *name,
-        AddEdgesCallback *addEdges)
-        : nodeType_(nodeType), name_(name), addEdges_(addEdges) {}
+        AddEdgesCallback *addEdges,
+        AddNodesCallback *addNodes)
+        : nodeType_(nodeType),
+          name_(name),
+          addEdges_(addEdges),
+          addNodes_(addNodes) {}
 
     V8HeapSnapshot::NodeType nodeType() const {
       return nodeType_;
     }
     std::string nameForNode(GCCell *cell, GC *gc) const;
     void addEdges(GCCell *cell, GC *gc, V8HeapSnapshot &snap) const;
+    void addNodes(GCCell *cell, GC *gc, V8HeapSnapshot &snap) const;
 
    private:
     const V8HeapSnapshot::NodeType nodeType_;
     NameCallback *const name_;
     AddEdgesCallback *const addEdges_;
+    AddNodesCallback *const addNodes_;
   };
 
   // Value is 64 bits to make sure it can be used as a pointer in both 32 and
@@ -116,6 +123,7 @@ struct VTable {
       TrimCallback *trim = nullptr,
       HeapSnapshotMetadata snapshotMetaData =
           HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Object,
+                               nullptr,
                                nullptr,
                                nullptr})
       : kind(kind),

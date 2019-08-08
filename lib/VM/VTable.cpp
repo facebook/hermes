@@ -32,6 +32,15 @@ void VTable::HeapSnapshotMetadata::addEdges(
   }
 }
 
+void VTable::HeapSnapshotMetadata::addNodes(
+    GCCell *cell,
+    GC *gc,
+    V8HeapSnapshot &snap) const {
+  if (addNodes_) {
+    addNodes_(cell, gc, snap);
+  }
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const VTable &vt) {
   return os << "VTable: {\n\tsize: " << vt.size
             << ", finalize: " << reinterpret_cast<void *>(vt.finalize_)

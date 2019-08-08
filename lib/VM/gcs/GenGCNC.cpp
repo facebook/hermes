@@ -1234,10 +1234,12 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
 
   // Add a node for each object in the heap.
   const auto snapshotForObject = [&snap, &visitor, this](GCCell *cell) {
+    // Allow nodes to add extra nodes not in the JS heap.
+    cell->getVT()->snapshotMetaData.addNodes(cell, this, snap);
     snap.beginNode();
     // Add all internal edges first.
     GCBase::markCellWithNames(visitor, cell, this);
-    // Allow customization, adding special non-internal edges.
+    // Allow nodes to add custom edges not represented by metadata.
     cell->getVT()->snapshotMetaData.addEdges(cell, this, snap);
     snap.endNode(
         cell->getVT()->snapshotMetaData.nodeType(),

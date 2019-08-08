@@ -294,8 +294,8 @@ class GCBase {
       // For any object where an ID cannot be found.
       NoID = 0,
       // The ID for the initial "roots" object.
-      Roots,
-      NumReserved,
+      Roots = 2,
+      FirstNonReservedObjectID = 4,
     };
 
     explicit IDTracker() = default;
@@ -306,6 +306,9 @@ class GCBase {
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
     inline uint64_t getObjectID(const void *cell);
+    /// Get the unique object id of the given native memory (non-JS-heap).
+    /// If one does not yet exist, start tracking it.
+    inline uint64_t getNativeID(const void *mem);
 
     /// Tell the tracker that an object has moved locations.
     /// This must be called in a safe order, if A moves to B, and C moves to A,
@@ -316,17 +319,32 @@ class GCBase {
     /// tracking working set small.
     inline void untrackObject(const void *cell);
 
+    /// Remove the native memory from being tracked. This should be done to keep
+    /// the tracking working set small.
+    inline void untrackNative(const void *mem);
+
    private:
     /// Get the next unique object ID for a newly created object.
     inline uint64_t nextObjectID();
+    /// Get the next unique native ID for a chunk of native memory.
+    inline uint64_t nextNativeID();
+
+    /// JS heap nodes are represented by even-numbered IDs, while native nodes
+    /// are represented with odd-numbered IDs. This is not a guarantee of the
+    /// system, but an implementation detail.
+    static constexpr uint64_t kIDStep = 2;
 
     /// The next available ID to assign to an object. Object IDs are not
     /// recycled so that snapshots don't confuse two objects with each other.
-    uint64_t nextID_{static_cast<uint64_t>(ReservedObjectID::NumReserved)};
+    uint64_t nextID_{
+        static_cast<uint64_t>(ReservedObjectID::FirstNonReservedObjectID)};
+    /// The next available native ID to assign to a chunk of native memory.
+    uint64_t nextNativeID_{1};
 
     /// Map of object pointers to IDs. Only populated once the first heap
     /// snapshot is requested, or the first time the memory profiler is turned
     /// on.
+    /// NOTE: The same map is used for both JS heap and native heap IDs.
     llvm::DenseMap<const void *, uint64_t> objectIDMap_;
   };
 
@@ -522,6 +540,7 @@ class GCBase {
 
   inline uint64_t getObjectID(const void *cell);
   inline uint64_t getObjectID(const GCPointerBase &cell);
+  inline uint64_t getNativeID(const void *mem);
 
 #ifndef NDEBUG
   /// \return The next debug allocation ID for embedding directly into a GCCell.
@@ -844,6 +863,11 @@ inline uint64_t GCBase::getObjectID(const GCPointerBase &cell) {
   return getObjectID(cell.get(pointerBase_));
 }
 
+inline uint64_t GCBase::getNativeID(const void *mem) {
+  assert(mem && "Called getNativeID on a null pointer");
+  return idTracker_.getNativeID(mem);
+}
+
 #ifndef NDEBUG
 inline uint64_t GCBase::nextObjectID() {
   return debugAllocationCounter_++;
@@ -862,6 +886,18 @@ inline uint64_t GCBase::IDTracker::getObjectID(const void *cell) {
   // Else, assume it is an object that needs to be tracked and give it a new ID.
   const auto objID = nextObjectID();
   objectIDMap_[cell] = objID;
+  return objID;
+}
+
+inline uint64_t GCBase::IDTracker::getNativeID(const void *mem) {
+  auto iter = objectIDMap_.find(mem);
+  if (iter != objectIDMap_.end()) {
+    return iter->second;
+  }
+  // Else, assume it is a piece of native memory that needs to be tracked and
+  // give it a new ID.
+  const auto objID = nextNativeID();
+  objectIDMap_[mem] = objID;
   return objID;
 }
 
@@ -891,12 +927,28 @@ inline void GCBase::IDTracker::untrackObject(const void *cell) {
   objectIDMap_.erase(cell);
 }
 
+inline void GCBase::IDTracker::untrackNative(const void *mem) {
+  // Since native memory and heap memory share the same map, this is the same
+  // as untracking an object.
+  untrackObject(mem);
+}
+
 inline uint64_t GCBase::IDTracker::nextObjectID() {
   // This must be unique for most features that rely on it, check for overflow.
-  if (LLVM_UNLIKELY(nextID_ == std::numeric_limits<uint64_t>::max())) {
-    hermes_fatal("Overflowed the allocation counter");
+  if (LLVM_UNLIKELY(
+          nextID_ >= std::numeric_limits<uint64_t>::max() - kIDStep)) {
+    hermes_fatal("Ran out of object IDs");
   }
-  return nextID_++;
+  return nextID_ += kIDStep;
+}
+
+inline uint64_t GCBase::IDTracker::nextNativeID() {
+  // This must be unique for most features that rely on it, check for overflow.
+  if (LLVM_UNLIKELY(
+          nextNativeID_ >= std::numeric_limits<uint64_t>::max() - kIDStep)) {
+    hermes_fatal("Ran out of native IDs");
+  }
+  return nextNativeID_ += kIDStep;
 }
 
 } // namespace vm
