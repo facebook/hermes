@@ -26,9 +26,53 @@ void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@throwingRequire", &self->throwingRequire_);
 }
 
-void DomainSerialize(Serializer &s, const GCCell *cell) {}
+Domain::Domain(Deserializer &d) : GCCell(&d.getRuntime()->getHeap(), &vt) {
+  d.readRelocation(&cjsModules_, RelocationKind::GCPointer);
+  // Field llvm::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
+  // Deserializing the CommonJS module table is unnecessary to deserialize
+  // global object initialization.
+  // TODO: Once we deserialize arbitrary JS heap state, begin deserializing this
+  // field.
 
-void DomainDeserialize(Deserializer &d, CellKind kind) {}
+  // Field CopyableVector<RuntimeModule *> runtimeModules_{};
+  // Deserializing the runtime Modules list is unnecessary to deserialize
+  // global object initialization.
+  // TODO: Once we deserialize arbitrary JS heap state, begin deserializing this
+  // field.
+
+  d.readRelocation(&throwingRequire_, RelocationKind::GCPointer);
+}
+
+void DomainSerialize(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const Domain>(cell);
+  s.writeRelocation(self->cjsModules_.get(s.getRuntime()));
+  // Field llvm::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
+  // Serializing the CommonJS module table is unnecessary to serialize global
+  // object initialization.
+  // TODO: Once we serialize arbitrary JS heap state, begin serializing this
+  // field.
+  assert(
+      self->cjsModuleTable_.size() == 0 &&
+      "Shouldn't have cjsModules at this point.");
+  // Field CopyableVector<RuntimeModule *> runtimeModules_{};
+  // Serializing runtime Modules list is unnecessary to serialize global
+  // object initialization.
+  // TODO: Once we serialize arbitrary JS heap state, begin serializing this
+  // field.
+
+  s.writeRelocation(self->throwingRequire_.get(s.getRuntime()));
+  s.endObject(cell);
+}
+
+void DomainDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::DomainKind && "Expected Domain");
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      sizeof(Domain));
+  auto *cell = new (mem) Domain(d);
+  auto &samplingProfiler = SamplingProfiler::getInstance();
+  samplingProfiler->increaseDomainCount();
+  d.endObject(cell);
+}
 
 PseudoHandle<Domain> Domain::create(Runtime *runtime) {
   void *mem =

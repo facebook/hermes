@@ -41,6 +41,7 @@ namespace vm {
 class Domain final : public GCCell {
   using Super = GCCell;
   friend void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void DomainSerialize(Serializer &s, const GCCell *cell);
 
   static VTable vt;
 
@@ -98,6 +99,9 @@ class Domain final : public GCCell {
   GCPointer<NativeFunction> throwingRequire_{};
 
  public:
+  /// Fast constructor used by Deserializer. Do not do heap allocation.
+  Domain(Deserializer &d);
+
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DomainKind;
   }
