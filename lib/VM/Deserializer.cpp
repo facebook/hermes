@@ -7,7 +7,15 @@
 #include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/GCPointer.h"
+#include "hermes/VM/JSArrayBuffer.h"
+#include "hermes/VM/JSDataView.h"
+#include "hermes/VM/JSNativeFunctions.h"
+#include "hermes/VM/JSTypedArray.h"
+#include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/Runtime.h"
+
+#include "JSLib/JSLibInternal.h"
 
 #include "llvm/Support/Debug.h"
 
@@ -87,6 +95,54 @@ void Deserializer::init() {
 
   // Map nullptr to 0.
   objectTable_[0] = 0;
+
+  // Populate relocation table for native functions and constructors.
+  size_t idx = 1;
+#define NATIVE_FUNCTION(func)                                                \
+  assert(!objectTable_[idx]);                                                \
+  objectTable_[idx] = (void *)func;                                          \
+  LLVM_DEBUG(                                                                \
+      llvm::dbgs() << idx << ", " << #func << ", " << (void *)func << "\n"); \
+  idx++;
+
+#define NATIVE_FUNCTION_TYPED(func, type)                           \
+  assert(!objectTable_[idx]);                                       \
+  objectTable_[idx] = (void *)func<type>;                           \
+  LLVM_DEBUG(                                                       \
+      llvm::dbgs() << idx << ", " << #func << "<" << #type << ">, " \
+                   << (void *)func<type> << "\n");                  \
+  idx++;
+
+#define NATIVE_FUNCTION_TYPED_2(func, type, type2)                           \
+  assert(!objectTable_[idx]);                                                \
+  objectTable_[idx] = (void *)func<type, type2>;                             \
+  LLVM_DEBUG(                                                                \
+      llvm::dbgs() << idx << ", " << #func << "<" << #type << ", " << #type2 \
+                   << ">, " << ((void *)func<type, type2>) << "\n");         \
+  idx++;
+
+  using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
+  CreatorFunction *funcPtr;
+#define NATIVE_CONSTRUCTOR(func)                                      \
+  funcPtr = func;                                                     \
+  assert(!objectTable_[idx]);                                         \
+  objectTable_[idx] = (void *)funcPtr;                                \
+  LLVM_DEBUG(                                                         \
+      llvm::dbgs() << idx << ", " << #func << ", " << (void *)funcPtr \
+                   << "\n");                                          \
+  idx++;
+
+#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func)            \
+  funcPtr = classname<type, type2>::func;                                 \
+  assert(!objectTable_[idx]);                                             \
+  objectTable_[idx] = (void *)funcPtr;                                    \
+  LLVM_DEBUG(                                                             \
+      llvm::dbgs() << idx << ", " << #classname << "<" << #type << ", "   \
+                   << #type2 << ">::" << #func << ", " << (void *)funcPtr \
+                   << "\n");                                              \
+  idx++;
+#include "hermes/VM/NativeFunctions.def"
+#undef NATIVE_CONSTRUCTOR
 }
 
 void Deserializer::readHeader() {
@@ -98,6 +154,9 @@ void Deserializer::readHeader() {
   }
   if (readHeader.version != SD_HEADER_VERSION) {
     hermes_fatal("Serialize header versions do not match");
+  }
+  if (readHeader.nativeFunctionTableVersion != NATIVE_FUNCTION_VERSION) {
+    hermes_fatal("Native function table versions do not match");
   }
   if (runtime_->getHeap().maxSize() < readHeader.maxHeapSize) {
     hermes_fatal(

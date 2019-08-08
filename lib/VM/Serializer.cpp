@@ -7,7 +7,15 @@
 #include "hermes/VM/Serializer.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/GCPointer.h"
+#include "hermes/VM/JSArrayBuffer.h"
+#include "hermes/VM/JSDataView.h"
+#include "hermes/VM/JSNativeFunctions.h"
+#include "hermes/VM/JSTypedArray.h"
+#include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/Runtime.h"
+
+#include "JSLib/JSLibInternal.h"
 
 #include "llvm/Support/Debug.h"
 
@@ -31,6 +39,61 @@ Serializer::Serializer(llvm::raw_ostream &OS, Runtime *runtime)
 
   // Always map nullptr to 0, so it can be changed back when deserialize.
   relocationMap_[0] = 0;
+
+  // Assign relocation id for all native function without template function
+  // pointers.
+#define NATIVE_FUNCTION(func)                                             \
+  assert(relocationMap_.count((void *)func) == 0);                        \
+  LLVM_DEBUG(                                                             \
+      llvm::dbgs() << currentId_ << ", " << #func << ", " << (void *)func \
+                   << "\n");                                              \
+  relocationMap_[(void *)func] = currentId_++;
+
+  // Assign relocation id for native functions with template of one type
+  // function pointers.
+#define NATIVE_FUNCTION_TYPED(func, type)                                  \
+  assert(relocationMap_.count((void *)func<type>) == 0);                   \
+  relocationMap_[(void *)func<type>] = currentId_;                         \
+  LLVM_DEBUG(                                                              \
+      llvm::dbgs() << currentId_ << ", " << #func << "<" << #type << ">, " \
+                   << (void *)func<type> << "\n");                         \
+  currentId_++;
+
+  // Assign relocation id for native functions with template of two types.
+  // function pointers.
+#define NATIVE_FUNCTION_TYPED_2(func, type, type2)                             \
+  assert(relocationMap_.count((void *)func<type, type2>) == 0);                \
+  relocationMap_[(void *)func<type, type2>] = currentId_;                      \
+  LLVM_DEBUG(                                                                  \
+      llvm::dbgs() << currentId_ << ", " << #func << "<" << #type << ", "      \
+                   << #type2 << ">, " << ((void *)func<type, type2>) << "\n"); \
+  currentId_++;
+
+  // Assign relocation id for all constructor function without template function
+  // pointers.
+  using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
+  CreatorFunction *funcPtr;
+#define NATIVE_CONSTRUCTOR(func)                                             \
+  funcPtr = func;                                                            \
+  assert(relocationMap_.count((void *)funcPtr) == 0);                        \
+  relocationMap_[(void *)funcPtr] = currentId_;                              \
+  LLVM_DEBUG(                                                                \
+      llvm::dbgs() << currentId_ << ", " << #func << ", " << (void *)funcPtr \
+                   << "\n");                                                 \
+  currentId_++;
+
+  // Assign relocation id for constructor functions with template,
+#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func)                 \
+  funcPtr = classname<type, type2>::func;                                      \
+  assert(relocationMap_.count((void *)funcPtr) == 0);                          \
+  relocationMap_[(void *)funcPtr] = currentId_;                                \
+  LLVM_DEBUG(                                                                  \
+      llvm::dbgs() << currentId_ << ", " << #classname << "<" << #type << ", " \
+                   << #type2 << "::" << #func << ", " << (void *)funcPtr       \
+                   << "\n");                                                   \
+  currentId_++;
+
+#include "hermes/VM/NativeFunctions.def"
 }
 
 uint32_t Serializer::endObject(const void *object) {
