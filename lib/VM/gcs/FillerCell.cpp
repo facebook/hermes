@@ -8,6 +8,9 @@
 
 #include "hermes/VM/BuildMetadata.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -17,13 +20,21 @@ const VTable FillerCell::vt{CellKind::FillerCellKind, 0};
 void UninitializedBuildMeta(const GCCell *, Metadata::Builder &) {}
 void FillerCellBuildMeta(const GCCell *, Metadata::Builder &) {}
 
-void UninitializedSerialize(Serializer &s, const GCCell *cell) {}
+void UninitializedSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for Uinitialized\n");
+}
 
-void UninitializedDeserialize(Deserializer &d, CellKind kind) {}
 void FillerCellSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const FillerCell>(cell);
   s.writeInt<uint32_t>(self->getSize());
   s.endObject(self);
+}
+
+void UninitializedDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Deserialize function not implemented for Uninitialized\n");
 }
 
 void FillerCellDeserialize(Deserializer &d, CellKind kind) {

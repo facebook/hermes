@@ -11,6 +11,9 @@
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -251,9 +254,17 @@ void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
-void RequireContextSerialize(Serializer &s, const GCCell *cell) {}
+void RequireContextSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Serialize function not implemented for RequireContext\n");
+}
 
-void RequireContextDeserialize(Deserializer &d, CellKind kind) {}
+void RequireContextDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Deserialize function not implemented for RequireContext\n");
+}
 
 Handle<RequireContext> RequireContext::create(
     Runtime *runtime,

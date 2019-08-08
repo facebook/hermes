@@ -8,6 +8,9 @@
 
 #include "hermes/VM/BuildMetadata.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -37,9 +40,15 @@ void FinalizableNativeFunctionBuildMeta(
   NativeFunctionBuildMeta(cell, mb);
 }
 
-void FinalizableNativeFunctionSerialize(Serializer &s, const GCCell *cell) {}
+void FinalizableNativeFunctionSerialize(Serializer &s, const GCCell *cell) {
+  llvm::outs()
+      << "Serialize function not implemented for FinalizableNativeFunction\n";
+}
 
-void FinalizableNativeFunctionDeserialize(Deserializer &d, CellKind kind) {}
+void FinalizableNativeFunctionDeserialize(Deserializer &d, CellKind kind) {
+  llvm::outs()
+      << "Deserialize function not implemented for FinalizableNativeFunction\n";
+}
 
 CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
     Runtime *runtime,
@@ -97,9 +106,15 @@ void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
-void HostObjectSerialize(Serializer &s, const GCCell *cell) {}
+void HostObjectSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for HostObject\n");
+}
 
-void HostObjectDeserialize(Deserializer &d, CellKind kind) {}
+void HostObjectDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for HostObject\n");
+}
 
 CallResult<HermesValue> HostObject::createWithoutPrototype(
     Runtime *runtime,

@@ -248,6 +248,9 @@ class JSTypedArrayBase : public JSObject {
   friend void TypedArrayBaseBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
+
+  friend void TypedArrayBaseSerialize(Serializer &s, const GCCell *cell);
+  friend void TypedArrayBaseDeserialize(Deserializer &s, CellKind kind);
 };
 
 /// JSTypedArray is a collection with array semantics (random access indexing),

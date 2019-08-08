@@ -9,6 +9,9 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/StringPrimitive.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -201,9 +204,17 @@ void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@iteratedString", &self->iteratedString_);
 }
 
-void StringIteratorSerialize(Serializer &s, const GCCell *cell) {}
+void StringIteratorSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Serialize function not implemented for StringIterator\n");
+}
 
-void StringIteratorDeserialize(Deserializer &d, CellKind kind) {}
+void StringIteratorDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Deserialize function not implemented for StringIterator\n");
+}
 
 CallResult<HermesValue> JSStringIterator::create(
     Runtime *runtime,
@@ -399,9 +410,16 @@ void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
-void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {}
+void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for SymbolObject\n");
+}
 
-void SymbolObjectDeserialize(Deserializer &d, CellKind kind) {}
+void SymbolObjectDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Deserialize function not implemented for SymbolObject\n");
+}
 
 CallResult<HermesValue> JSSymbol::create(
     Runtime *runtime,

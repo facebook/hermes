@@ -11,6 +11,9 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Operations.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 //===----------------------------------------------------------------------===//
@@ -27,9 +30,16 @@ void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@nextEntryInBucket", &self->nextEntryInBucket);
 }
 
-void HashMapEntrySerialize(Serializer &s, const GCCell *cell) {}
+void HashMapEntrySerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for HashMapEntry\n");
+}
 
-void HashMapEntryDeserialize(Deserializer &d, CellKind kind) {}
+void HashMapEntryDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Deserialize function not implemented for HashMapEntry\n");
+}
 
 CallResult<HermesValue> HashMapEntry::create(Runtime *runtime) {
   void *mem = runtime->alloc(sizeof(HashMapEntry));

@@ -14,6 +14,9 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -29,10 +32,15 @@ void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       self->getSlots(), &self->size_, sizeof(GCHermesValue));
 }
 
-void EnvironmentSerialize(Serializer &s, const GCCell *cell) {}
+void EnvironmentSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for Environment\n");
+}
 
-void EnvironmentDeserialize(Deserializer &d, CellKind kind) {}
-
+void EnvironmentDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for Environment\n");
+}
 //===----------------------------------------------------------------------===//
 // class Callable
 
@@ -396,9 +404,16 @@ void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@argStorage", &self->argStorage_);
 }
 
-void BoundFunctionSerialize(Serializer &s, const GCCell *cell) {}
+void BoundFunctionSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for BoundFunction\n");
+}
 
-void BoundFunctionDeserialize(Deserializer &d, CellKind kind) {}
+void BoundFunctionDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Deserialize function not implemented for BoundFunction\n");
+}
 
 CallResult<HermesValue> BoundFunction::create(
     Runtime *runtime,
@@ -994,9 +1009,15 @@ void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@domain", &self->domain_);
 }
 
-void FunctionSerialize(Serializer &s, const GCCell *cell) {}
+void FunctionSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for Function\n");
+}
 
-void FunctionDeserialize(Deserializer &d, CellKind kind) {}
+void FunctionDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for Function\n");
+}
 
 CallResult<HermesValue> JSFunction::create(
     Runtime *runtime,
@@ -1047,9 +1068,16 @@ void GeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   FunctionBuildMeta(cell, mb);
 }
 
-void GeneratorFunctionSerialize(Serializer &s, const GCCell *cell) {}
+void GeneratorFunctionSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Serialize function not implemented for GeneratorFunction\n");
+}
 
-void GeneratorFunctionDeserialize(Deserializer &d, CellKind kind) {}
+void GeneratorFunctionDeserialize(Deserializer &d, CellKind kind) {
+  llvm::outs()
+      << "Deserialize function not implemented for GeneratorFunction\n";
+}
 
 CallResult<HermesValue> JSGeneratorFunction::create(
     Runtime *runtime,
@@ -1102,9 +1130,15 @@ void GeneratorInnerFunctionBuildMeta(
   mb.addNonPointerField("@action", &self->action_);
 }
 
-void GeneratorInnerFunctionSerialize(Serializer &s, const GCCell *cell) {}
+void GeneratorInnerFunctionSerialize(Serializer &s, const GCCell *cell) {
+  llvm::outs()
+      << "Serialize function not implemented for GeneratorInnerFunction\n";
+}
 
-void GeneratorInnerFunctionDeserialize(Deserializer &d, CellKind kind) {}
+void GeneratorInnerFunctionDeserialize(Deserializer &d, CellKind kind) {
+  llvm::outs()
+      << "Deserialize function not implemented for GeneratorInnerFunction\n";
+}
 
 CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
     Runtime *runtime,

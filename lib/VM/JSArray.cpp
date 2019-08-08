@@ -12,6 +12,9 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringView.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -358,9 +361,15 @@ void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ArrayImplBuildMeta(cell, mb);
 }
 
-void ArgumentsSerialize(Serializer &s, const GCCell *cell) {}
+void ArgumentsSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for Arguments\n");
+}
 
-void ArgumentsDeserialize(Deserializer &d, CellKind kind) {}
+void ArgumentsDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for Arguments\n");
+}
 
 CallResult<HermesValue> Arguments::create(
     Runtime *runtime,
@@ -750,9 +759,16 @@ void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@iteratedObject", &self->iteratedObject_);
 }
 
-void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {}
+void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for ArrayIterator\n");
+}
 
-void ArrayIteratorDeserialize(Deserializer &d, CellKind kind) {}
+void ArrayIteratorDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Deserialize function not implemented for ArrayIterator\n");
+}
 
 CallResult<HermesValue> JSArrayIterator::create(
     Runtime *runtime,

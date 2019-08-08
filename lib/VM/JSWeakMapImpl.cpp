@@ -8,6 +8,9 @@
 
 #include "hermes/VM/WeakRefHolder.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -206,13 +209,25 @@ void WeakSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   JSWeakMapImpl<CellKind::WeakSetKind>::WeakMapOrSetBuildMeta(cell, mb);
 }
 
-void WeakMapSerialize(Serializer &s, const GCCell *cell) {}
+void WeakMapSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for WeakMap\n");
+}
 
-void WeakSetSerialize(Serializer &s, const GCCell *cell) {}
+void WeakSetSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for WeakSet\n");
+}
 
-void WeakMapDeserialize(Deserializer &d, CellKind kind) {}
+void WeakMapDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for WeakMap\n");
+}
 
-void WeakSetDeserialize(Deserializer &d, CellKind kind) {}
+void WeakSetDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for WeakSet\n");
+}
 
 template <CellKind C>
 const ObjectVTable JSWeakMapImpl<C>::vt{

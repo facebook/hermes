@@ -8,6 +8,9 @@
 
 #include "hermes/VM/BuildMetadata.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -34,9 +37,15 @@ void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
-void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {}
+void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for ArrayBuffer\n");
+}
 
-void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {}
+void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for ArrayBuffer\n");
+}
 
 CallResult<HermesValue> JSArrayBuffer::create(
     Runtime *runtime,

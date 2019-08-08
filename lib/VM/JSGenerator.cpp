@@ -8,6 +8,9 @@
 
 #include "hermes/VM/BuildMetadata.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -31,9 +34,15 @@ void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@innerFunction", &self->innerFunction_);
 }
 
-void GeneratorSerialize(Serializer &s, const GCCell *cell) {}
+void GeneratorSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for Generator\n");
+}
 
-void GeneratorDeserialize(Deserializer &d, CellKind kind) {}
+void GeneratorDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for Generator\n");
+}
 
 CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
     Runtime *runtime,

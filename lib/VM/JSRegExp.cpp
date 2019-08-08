@@ -15,6 +15,9 @@
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/StringView.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -36,9 +39,14 @@ void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
 }
 
-void RegExpSerialize(Serializer &s, const GCCell *cell) {}
+void RegExpSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(llvm::dbgs() << "Serialize function not implemented for RegExp\n");
+}
 
-void RegExpDeserialize(Deserializer &d, CellKind kind) {}
+void RegExpDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for RegExp\n");
+}
 
 CallResult<HermesValue> JSRegExp::create(
     Runtime *runtime,

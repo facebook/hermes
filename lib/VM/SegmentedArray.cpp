@@ -9,6 +9,9 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -31,9 +34,15 @@ void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       "@data", &self->data_, &self->length_, sizeof(GCHermesValue));
 }
 
-void SegmentSerialize(Serializer &s, const GCCell *cell) {}
+void SegmentSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for Segment\n");
+}
 
-void SegmentDeserialize(Deserializer &d, CellKind kind) {}
+void SegmentDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for Segment\n");
+}
 
 PseudoHandle<SegmentedArray::Segment> SegmentedArray::Segment::create(
     Runtime *runtime) {
@@ -77,9 +86,17 @@ void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       sizeof(GCHermesValue));
 }
 
-void SegmentedArraySerialize(Serializer &s, const GCCell *cell) {}
+void SegmentedArraySerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Serialize function not implemented for SegmentedArray\n");
+}
 
-void SegmentedArrayDeserialize(Deserializer &d, CellKind kind) {}
+void SegmentedArrayDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs()
+      << "Deserialize function not implemented for SegmentedArray\n");
+}
 
 CallResult<HermesValue> SegmentedArray::create(
     Runtime *runtime,

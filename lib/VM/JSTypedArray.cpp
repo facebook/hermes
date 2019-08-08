@@ -9,6 +9,9 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -40,6 +43,16 @@ std::pair<uint32_t, uint32_t> JSTypedArrayBase::_getOwnIndexedRangeImpl(
     Runtime *) {
   auto *self = vmcast<JSTypedArrayBase>(selfObj);
   return {0, self->getLength()};
+}
+
+void TypedArrayBaseSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for TypedArray\n");
+}
+
+void TypedArrayBaseDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for TypedArray\n");
 }
 
 bool JSTypedArrayBase::_haveOwnIndexedImpl(JSObject *, Runtime *, uint32_t) {
@@ -269,8 +282,12 @@ JSTypedArrayBase::JSTypedArrayVTable JSTypedArray<T, C>::vt{
   void name##ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) { \
     TypedArrayBaseBuildMeta(cell, mb);                                   \
   }                                                                      \
-  void name##ArraySerialize(Serializer &s, const GCCell *cell) {}        \
-  void name##ArrayDeserialize(Deserializer &d, CellKind kind) {}
+  void name##ArraySerialize(Serializer &s, const GCCell *cell) {         \
+    TypedArrayBaseSerialize(s, cell);                                    \
+  }                                                                      \
+  void name##ArrayDeserialize(Deserializer &d, CellKind kind) {          \
+    TypedArrayBaseDeserialize(d, kind);                                  \
+  }
 #include "hermes/VM/TypedArrays.def"
 
 template <typename T, CellKind C>

@@ -9,6 +9,9 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Operations.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -119,13 +122,25 @@ void SetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       cell, mb);
 }
 
-void MapIteratorSerialize(Serializer &s, const GCCell *cell) {}
+void MapIteratorSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for MapIterator\n");
+}
 
-void SetIteratorSerialize(Serializer &s, const GCCell *cell) {}
+void SetIteratorSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for SetIterator\n");
+}
 
-void MapIteratorDeserialize(Deserializer &d, CellKind kind) {}
+void MapIteratorDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for MapIterator\n");
+}
 
-void SetIteratorDeserialize(Deserializer &d, CellKind kind) {}
+void SetIteratorDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for SetIterator\n");
+}
 
 template <CellKind C>
 const ObjectVTable JSMapIteratorImpl<C>::vt = {

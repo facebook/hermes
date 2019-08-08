@@ -8,6 +8,9 @@
 
 #include "hermes/VM/BuildMetadata.h"
 
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "serialize"
+
 namespace hermes {
 namespace vm {
 
@@ -28,9 +31,15 @@ void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@buffer", &self->buffer_);
 }
 
-void DataViewSerialize(Serializer &s, const GCCell *cell) {}
+void DataViewSerialize(Serializer &s, const GCCell *cell) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Serialize function not implemented for DataView\n");
+}
 
-void DataViewDeserialize(Deserializer &d, CellKind kind) {}
+void DataViewDeserialize(Deserializer &d, CellKind kind) {
+  LLVM_DEBUG(
+      llvm::dbgs() << "Deserialize function not implemented for DataView\n");
+}
 
 CallResult<HermesValue> JSDataView::create(
     Runtime *runtime,
