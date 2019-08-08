@@ -76,9 +76,42 @@ void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       self->directProps_, mb);
 }
 
-void ObjectSerialize(Serializer &s, const GCCell *cell) {}
+void JSObject::serializeObjectImpl(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const JSObject>(cell);
+  s.writeData(&self->flags_, sizeof(ObjectFlags));
+  s.writeRelocation(self->parent_.get(s.getRuntime()));
+  s.writeRelocation(self->clazz_.get(s.getRuntime()));
+  s.writeRelocation(self->propStorage_.get(s.getRuntime()));
 
-void ObjectDeserialize(Deserializer &d, CellKind kind) {}
+  for (size_t i = 0; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
+    s.writeHermesValue(self->directProps_[i]);
+  }
+}
+
+void ObjectSerialize(Serializer &s, const GCCell *cell) {
+  JSObject::serializeObjectImpl(s, cell);
+  s.endObject(cell);
+}
+
+void ObjectDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::ObjectKind && "Expected JSObject");
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true>(sizeof(JSObject));
+  auto *obj = new (mem) JSObject(d, &JSObject::vt.base);
+
+  d.endObject(obj);
+}
+
+JSObject::JSObject(Deserializer &d, const VTable *vtp)
+    : GCCell(&d.getRuntime()->getHeap(), vtp) {
+  d.readData(&flags_, sizeof(ObjectFlags));
+  d.readRelocation(&parent_, RelocationKind::GCPointer);
+  d.readRelocation(&clazz_, RelocationKind::GCPointer);
+  d.readRelocation(&propStorage_, RelocationKind::GCPointer);
+
+  for (size_t i = 0; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
+    d.readHermesValue(&directProps_[i]);
+  }
+}
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,

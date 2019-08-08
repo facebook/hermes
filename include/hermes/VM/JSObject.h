@@ -306,6 +306,9 @@ class JSObject : public GCCell {
       : JSObject(runtime, vtp, parent, clazz, GCPointerBase::NoBarriers()) {}
 
  public:
+  /// A constructor used by deserializeion which performs no GC allocation.
+  JSObject(Deserializer &d, const VTable *vtp);
+
   static ObjectVTable vt;
 
   /// Default capacity of indirect property storage.
@@ -939,6 +942,8 @@ class JSObject : public GCCell {
       Runtime *runtime,
       const IndexedCB &indexedCB,
       const NamedCB &namedCB);
+
+  static void serializeObjectImpl(Serializer &s, const GCCell *cell);
 
  protected:
   /// @name Virtual function implementations
