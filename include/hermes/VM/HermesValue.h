@@ -273,6 +273,16 @@ class HermesValue {
     return V;
   }
 
+  /// Update a HermesValue to encode \p ptr. Used by Deserializer.
+  /// We need to have this function instead of using \p updatePointer because
+  /// we also want to be able to update \p NativePointer HermesValue, which
+  /// will fail the \p isPointer check in \p updatePointer.
+  /// \param ptr pointer value to encode.
+  inline void unsafeUpdatePointer(void *ptr) {
+    raw_ = (uint64_t)(safeTypeCast<void *, uintptr_t>(ptr)) |
+        (uint64_t)getTag() << kNumDataBits;
+  }
+
   inline bool isNull() const {
     return getTag() == NullTag;
   }

@@ -61,6 +61,7 @@ set(RTSources
   HandleTest.cpp
   RuntimeConfigTest.cpp
   SegmentedArrayTest.cpp
+  SerializerTest.cpp
   SmallXStringTest.cpp
   StaticBuiltinsTest.cpp
   StorageProviderTest.cpp
