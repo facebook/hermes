@@ -2525,9 +2525,25 @@ void PropertyAccessorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("@setter", &self->setter);
 }
 
-void PropertyAccessorSerialize(Serializer &s, const GCCell *cell) {}
+PropertyAccessor::PropertyAccessor(Deserializer &d)
+    : GCCell(&d.getRuntime()->getHeap(), &vt) {
+  d.readRelocation(&getter, RelocationKind::GCPointer);
+  d.readRelocation(&setter, RelocationKind::GCPointer);
+}
 
-void PropertyAccessorDeserialize(Deserializer &d, CellKind kind) {}
+void PropertyAccessorSerialize(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const PropertyAccessor>(cell);
+  s.writeRelocation(self->getter.get(s.getRuntime()));
+  s.writeRelocation(self->setter.get(s.getRuntime()));
+  s.endObject(cell);
+}
+
+void PropertyAccessorDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::PropertyAccessorKind && "Expected PropertyAccessor");
+  void *mem = d.getRuntime()->alloc(sizeof(PropertyAccessor));
+  auto *cell = new (mem) PropertyAccessor(d);
+  d.endObject(cell);
+}
 
 CallResult<HermesValue> PropertyAccessor::create(
     Runtime *runtime,

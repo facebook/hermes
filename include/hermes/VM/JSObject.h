@@ -1170,6 +1170,10 @@ class PropertyAccessor final : public GCCell {
         setter(runtime, setter, &runtime->getHeap()) {}
 
  public:
+  /// Fast constructor used by deserialization. Don't do any GC allocation. Only
+  /// calls super Constructor.
+  PropertyAccessor(Deserializer &d);
+
   static VTable vt;
 
   static bool classof(const GCCell *cell) {
