@@ -13,6 +13,11 @@
 
 #include <memory>
 
+namespace llvm {
+class MemoryBuffer;
+class raw_ostream;
+} // namespace llvm
+
 namespace hermes {
 namespace vm {
 
@@ -46,6 +51,12 @@ class PinnedHermesValue;
                                                                        \
   /* Whether to enable sampling profiler */                            \
   F(bool, EnableSampleProfiling, false)                                \
+                                                                       \
+  /* Should serialize after initialization */                          \
+  F(std::shared_ptr<llvm::raw_ostream>, SerializeFile, nullptr)        \
+                                                                       \
+  /* Should deserialize instead of initialization */                   \
+  F(std::shared_ptr<llvm::MemoryBuffer>, DeserializeFile, nullptr)     \
                                                                        \
   /* Whether to randomize stack placement etc. */                      \
   F(bool, RandomizeMemoryLayout, false)                                \

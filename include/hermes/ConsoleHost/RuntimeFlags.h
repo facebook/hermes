@@ -87,6 +87,16 @@ static opt<bool> SampleProfiling(
     init(false),
     desc("Enable sampling profiler"));
 
+static opt<std::string> SerializeFile(
+    "serialize-file",
+    desc("Serialize vm status after initialization, output to file"),
+    init(""));
+
+static opt<std::string> DeserializeFile(
+    "deserialize-file",
+    desc("Deserialize vm from a previous serialized file"),
+    init(""));
+
 static opt<MemorySize, false, MemorySizeParser> MaxHeapSize(
     "gc-max-heap",
     desc("Max heap size.  Format: <unsigned>{K,M,G}{iB}"),

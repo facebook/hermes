@@ -191,8 +191,41 @@ bool executeHBCBytecode(
   if (shouldRecordGCStats) {
     vm::instrumentation::PerfEvents::begin();
   }
+
+  // Handle Serialization/Deserialization options
+  std::shared_ptr<llvm::raw_ostream> serializeFile = nullptr;
+  std::shared_ptr<llvm::MemoryBuffer> deserializeFile = nullptr;
+  if (!options.SerializeFile.empty()) {
+    if (!options.DeserializeFile.empty()) {
+      llvm::errs()
+          << "Cannot serialize and deserialize in the same execution\n";
+      return false;
+    }
+    std::error_code EC;
+    serializeFile = std::make_shared<llvm::raw_fd_ostream>(
+        llvm::StringRef(options.SerializeFile), EC);
+    if (EC) {
+      llvm::errs() << "Failed to read Serialize file: " << options.SerializeFile
+                   << "\n";
+      return false;
+    }
+  }
+
+  if (options.DeserializeFile != "") {
+    auto inputFileOrErr = llvm::MemoryBuffer::getFile(options.DeserializeFile);
+    if (!inputFileOrErr) {
+      llvm::errs() << "Failed to read Deserialize file: "
+                   << options.DeserializeFile << '\n';
+      return false;
+    }
+    deserializeFile = std::move(*inputFileOrErr);
+  }
+
   std::unique_ptr<vm::StatSamplingThread> statSampler;
-  auto runtime = vm::Runtime::create(options.runtimeConfig);
+  auto runtime = vm::Runtime::create(options.runtimeConfig.rebuild()
+                                         .withSerializeFile(serializeFile)
+                                         .withDeserializeFile(deserializeFile)
+                                         .build());
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
 

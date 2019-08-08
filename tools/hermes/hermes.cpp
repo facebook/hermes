@@ -130,6 +130,8 @@ static int executeHBCBytecodeFromCL(
   options.jitCrashOnError = cl::JITCrashOnError;
   options.stopAfterInit = cl::StopAfterInit;
   options.forceGCBeforeStats = cl::GCBeforeStats;
+  options.SerializeFile = cl::SerializeFile;
+  options.DeserializeFile = cl::DeserializeFile;
 
   bool success;
   if (cl::Repeat <= 1) {

@@ -223,6 +223,12 @@ class MallocGC final : public GCBase {
   /// Deserialize heap objects.
   virtual void deserializeHeap(Deserializer &d) override;
 
+  /// Signal GC we are deserializing.
+  virtual void deserializeStart() override;
+
+  /// Signal GC we are serializing.
+  virtual void deserializeEnd() override;
+
   void getHeapInfo(HeapInfo &info) override;
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
 

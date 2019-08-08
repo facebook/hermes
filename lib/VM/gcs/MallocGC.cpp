@@ -491,6 +491,14 @@ void MallocGC::deserializeHeap(Deserializer &d) {
   hermes_fatal("serializeHeap not implemented for current GC");
 }
 
+void MallocGC::deserializeStart() {
+  hermes_fatal("Serialization/Deserialization not allowed with MallocGC");
+}
+
+void MallocGC::deserializeEnd() {
+  hermes_fatal("Serialization/Deserialization not allowed with MallocGC");
+}
+
 /// @name Forward instantiations
 /// @{
 

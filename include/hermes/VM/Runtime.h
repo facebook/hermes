@@ -800,11 +800,25 @@ class Runtime : public HandleRootOwner,
   /// Write a JS stack trace as part of a \c crashCallback() run.
   void crashWriteCallStack(JSONEmitter &json);
 
+  /// Serialize the VM state into \p O.
+  void serialize(llvm::raw_ostream &O);
+
+  void serializeIdentifierTable(Serializer &s);
+
   /// Serialize Runtime fields.
   void serializeRuntimeFields(Serializer &s);
 
   /// Deserialize Runtime fields.
   void deserializeRuntimeFields(Deserializer &d);
+
+  /// Deserialize the VM state.
+  /// \param inputFile MemoryBuffer to read from.
+  /// \param currentlyInYoung Whether we are allocating from the young gen
+  /// before deserialization starts and should we go back to allocating from the
+  /// young gen after deserialziation.
+  void deserializeImpl(
+      std::shared_ptr<llvm::MemoryBuffer> inputFile,
+      bool currentlyInYoung);
 
  private:
   GC heap_;

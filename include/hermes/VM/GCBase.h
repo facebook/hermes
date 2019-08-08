@@ -437,6 +437,13 @@ class GCBase {
   /// Deserialize heap objects.
   virtual void deserializeHeap(Deserializer &d) = 0;
 
+  /// Signal GC we are deserializing. Switch to oldgen if necessary for GenGC
+  /// Otherwise do nothing.
+  virtual void deserializeStart() = 0;
+
+  /// Signal GC we are serializing. Switch to youngGen if necessary
+  virtual void deserializeEnd() = 0;
+
   /// Default implementations for the external memory credit/debit APIs: do
   /// nothing.
   void creditExternalMemory(GCCell *alloc, uint32_t size) {}

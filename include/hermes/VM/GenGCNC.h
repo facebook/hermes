@@ -332,6 +332,12 @@ class GenGC final : public GCBase {
   /// Deserialize heap objects.
   virtual void deserializeHeap(Deserializer &d) override;
 
+  /// See GCBase documentation for this function.
+  virtual void deserializeStart() override;
+
+  /// See GCBase documentation for this function.
+  virtual void deserializeEnd() override;
+
   /// Returns the number of bytes allocated allocated since the last GC.
   gcheapsize_t bytesAllocatedSinceLastGC() const override;
 

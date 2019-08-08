@@ -198,6 +198,9 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
       trackIO_(runtimeConfig.getTrackIO()),
       vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
+#ifdef HERMESVM_SERIALIZE
+      maxNumRegisters_(runtimeConfig.getMaxNumRegisters()),
+#endif
       runtimeStats_(runtimeConfig.getEnableSampledStats()),
       commonStorage_(createRuntimeCommonStorage()),
       stackPointer_(),
@@ -239,10 +242,51 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       StackFrameLayout::CalleeExtraRegistersAtStart,
       HermesValue::encodeUndefinedValue());
 
+#ifdef HERMESVM_SERIALIZE
+  if (runtimeConfig.getDeserializeFile()) {
+    // If there is a serialized heap file available, use that to initialize
+    // Runtime instead of re-creating the Runtime.
+    deserializeImpl(
+        runtimeConfig.getDeserializeFile(),
+        runtimeConfig.getGCConfig().getAllocInYoung());
+
+    // Initialize special code blocks pointing to their own runtime module.
+    // specialCodeBlockRuntimeModule_ will be owned by runtimeModuleList_.
+    // Current serialization/deserialization do not serialize/deserialize
+    // RuntimeModules, so let's create specialCodeBlockRuntimeModule_ directly
+    // here.
+    RuntimeModuleFlags flags;
+    flags.hidesEpilogue = true;
+    specialCodeBlockRuntimeModule_ = RuntimeModule::createUninitialized(
+        this, Handle<Domain>::vmcast(&specialCodeBlockDomain_), flags);
+    assert(
+        &runtimeModuleList_.back() == specialCodeBlockRuntimeModule_ &&
+        "specialCodeBlockRuntimeModule_ not added to runtimeModuleList_");
+
+    // Explicitly initialize the specialCodeBlockRuntimeModule_ without CJS
+    // modules.
+    specialCodeBlockRuntimeModule_->initializeWithoutCJSModulesMayAllocate(
+        hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+            generateSpecialRuntimeBytecode())
+            .first);
+
+    emptyCodeBlock_ =
+        specialCodeBlockRuntimeModule_->getCodeBlockMayAllocate(0);
+    returnThisCodeBlock_ =
+        specialCodeBlockRuntimeModule_->getCodeBlockMayAllocate(1);
+
+    LLVM_DEBUG(llvm::dbgs() << "Runtime initialized\n");
+
+    samplingProfiler_ = SamplingProfiler::getInstance();
+    samplingProfiler_->registerRuntime(this);
+
+    return;
+  }
+#endif // HERMESVM_SERIALIZE
+
   // Initialize Predefined Strings.
   // This function does not do any allocations.
   initPredefinedStrings();
-
   // Initialize special code blocks pointing to their own runtime module.
   // specialCodeBlockRuntimeModule_ will be owned by runtimeModuleList_.
   RuntimeModuleFlags flags;
@@ -294,6 +338,12 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       vmcast<JSObject>(global_), this, vmcast<JSObject>(objectPrototype)));
 
   symbolRegistry_.init(this);
+
+#ifdef HERMESVM_SERIALIZE
+  if (runtimeConfig.getSerializeFile()) {
+    serialize(*runtimeConfig.getSerializeFile());
+  }
+#endif // HERMESVM_SERIALIZE
 
   LLVM_DEBUG(llvm::dbgs() << "Runtime initialized\n");
 
@@ -1535,6 +1585,39 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   return res;
 }
 
+#ifdef HERMESVM_SERIALIZE
+void Runtime::serialize(llvm::raw_ostream &O) {
+  Serializer s(O, this);
+  // Full GC here.
+  heap_.collect();
+
+  s.writeCurrentOffset();
+  heap_.serializeWeakRefs(s);
+
+  s.writeCurrentOffset();
+  serializeIdentifierTable(s);
+
+  s.writeCurrentOffset();
+  symbolRegistry_.serialize(s);
+
+  s.writeCurrentOffset();
+  serializeRuntimeFields(s);
+
+  s.writeCurrentOffset();
+  heap_.serializeHeap(s);
+
+  // In the end record the size of the object table and flush the string
+  // buffers, so the deserializer can read it. TODO: perhaps seek to the
+  // beginning and record there.
+  s.writeCurrentOffset();
+  s.writeEpilogue();
+  return;
+}
+
+void Runtime::serializeIdentifierTable(Serializer &s) {
+  identifierTable_.serialize(s);
+}
+
 void Runtime::serializeRuntimeFields(Serializer &s) {
   // Serialize all HermesValue
 #define RUNTIME_HV_FIELD(name) s.writeHermesValue(name);
@@ -1550,16 +1633,18 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
   // TODO: serialize/deserialize this to be able to serialize/deserialize after
   // user code.
 
-#ifndef NDEBUG
-  s.writeInt<uint8_t>(enableEval);
-  s.writeInt<uint8_t>(verifyEvalIR);
-#endif
-
   // TODO: ignore all fields from runtimeConfig, about frames, stacks etc.
   // come back later to check again from heap_ to nativeCallFrameDepth_.
 
   // TODO: for now we record specialCodeBlockDomain_ and create
   // runtimemodule later. Need to revisit this later.
+
+  // Field RuntimeModuleList runtimeModuleList_{}. We don't
+  // Serialize/Deserialize RuntimeModules here because Runtime doesn't own the
+  // runtime Modules, Domain owns them, so they will be Serialized/Deserialized
+  // with the Domain. We also don't do relocation for the pointers, instead,
+  // RuntimeModules will add them to runtimeModuleList_ when they are
+  // deserialized.
 
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.
@@ -1617,17 +1702,19 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
   // TODO: serialize/deserialize this to be able to serialize/deserialize after
   // user code.
 
-#ifndef NDEBUG
-  assert(enableEval == (bool)d.readInt<uint8_t>());
-  assert(verifyEvalIR == (bool)d.readInt<uint8_t>());
-#endif
-
   // TODO: Ignore all fields from runtimeConfig, about frames, stacks etc for
   // now. Come back later to check again from heap_ to nativeCallFrameDepth_.
 
   // TODO: For now we record specialCodeBlockDomain_ and create
   // runtimemodule later. Need to revisit this later to serialize/deserialize
   // user code.
+
+  // Field RuntimeModuleList runtimeModuleList_{}. We don't
+  // Serialize/Deserialize RuntimeModules here because Runtime doesn't own the
+  // runtime Modules, Domain owns them, so they will be Serialized/Deserialized
+  // with the Domain. We also don't do relocation for the pointers, instead,
+  // RuntimeModules will add them to runtimeModuleList_ when they are
+  // deserialized.
 
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.
@@ -1671,6 +1758,83 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
 #else
 #endif // HERMES_ENABLE_DEBUGGER
 }
+
+void Runtime::deserializeImpl(
+    std::shared_ptr<llvm::MemoryBuffer> inputFile,
+    bool currentlyInYoung) {
+  if (currentlyInYoung) {
+    heap_.deserializeStart();
+  }
+
+  GCScope scope(this);
+
+  Deserializer d(std::move(inputFile), this);
+
+  d.readAndCheckOffset();
+  heap_.deserializeWeakRefs(d);
+
+  d.readAndCheckOffset();
+  identifierTable_.deserialize(d);
+
+  d.readAndCheckOffset();
+  symbolRegistry_.deserialize(d);
+
+  d.readAndCheckOffset();
+  deserializeRuntimeFields(d);
+
+  d.readAndCheckOffset();
+  heap_.deserializeHeap(d);
+
+  d.readAndCheckOffset();
+  d.flushRelocationQueue();
+
+  // Now update the runtime pointer to prototypes.
+  // JSObject *objectPrototypeRawPtr{};
+  objectPrototypeRawPtr = vmcast<JSObject>(objectPrototype);
+  // JSObject *functionPrototypeRawPtr{};
+  functionPrototypeRawPtr = vmcast<NativeFunction>(functionPrototype);
+  // JSObject *arrayPrototypeRawPtr{};
+  arrayPrototypeRawPtr = vmcast<JSObject>(arrayPrototype);
+  // HiddenClass *arrayClassRawPtr{};
+  arrayClassRawPtr = vmcast<HiddenClass>(arrayClass);
+  // HiddenClass *rootClazzRawPtr_{};
+  rootClazzRawPtr_ = vmcast<HiddenClass>(rootClazz_);
+
+  LLVM_DEBUG(llvm::dbgs() << "Finish deserializing\n");
+
+  if (currentlyInYoung) {
+    // Only switch back now if the config says allocInYoung. Otherwise
+    // wait until tti.
+    heap_.deserializeEnd();
+  }
+}
+
+void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
+  header.maxNumRegisters = maxNumRegisters_;
+  header.enableEval = enableEval;
+  header.hasES6Symbol = hasES6Symbol_;
+  header.bytecodeWarmupPercent = bytecodeWarmupPercent_;
+  header.trackIO = trackIO_;
+}
+
+void Runtime::checkHeaderRuntimeConfig(SerializeHeader &header) const {
+  if (header.maxNumRegisters != maxNumRegisters_) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+  }
+  if (header.enableEval != enableEval) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+  }
+  if (header.hasES6Symbol != hasES6Symbol_) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+  }
+  if (header.bytecodeWarmupPercent != bytecodeWarmupPercent_) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+  }
+  if (header.trackIO != trackIO_) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+  }
+}
+#endif
 
 } // namespace vm
 } // namespace hermes
