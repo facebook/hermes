@@ -71,6 +71,10 @@ class SymbolRegistry {
   bool hasSymbol(SymbolID symbol) const {
     return registeredSymbols_.find(symbol) != registeredSymbols_.end();
   }
+
+  void serialize(Serializer &s);
+
+  void deserialize(Deserializer &d);
 };
 
 } // namespace vm

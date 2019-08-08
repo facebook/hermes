@@ -6,12 +6,14 @@
  */
 #include "hermes/VM/SymbolRegistry.h"
 
+#include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/Handle-inline.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/OrderedHashMap.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/Serializer.h"
 #include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/StringPrimitive.h"
 
@@ -55,6 +57,29 @@ CallResult<SymbolID> SymbolRegistry::getSymbolForKey(
 
   registeredSymbols_.insert(symbol.get());
   return symbol.get();
+}
+
+void SymbolRegistry::serialize(Serializer &s) {
+  s.writeHermesValue(stringMap_);
+  size_t size = registeredSymbols_.size();
+  s.writeInt<uint32_t>(size);
+  uint32_t count = 0;
+  for (auto &id : registeredSymbols_) {
+    s.writeInt<uint32_t>(id.unsafeGetRaw());
+    count++;
+  }
+  assert(count == size && "serialized ids not equal to size.");
+}
+
+void SymbolRegistry::deserialize(Deserializer &d) {
+  d.readHermesValue(&stringMap_);
+  size_t size = d.readInt<uint32_t>();
+  for (size_t i = 0; i < size; i++) {
+    registeredSymbols_.insert(SymbolID::unsafeCreate(d.readInt<uint32_t>()));
+  }
+  assert(
+      registeredSymbols_.size() == size &&
+      "deserialized ids not equal to size");
 }
 
 } // namespace vm
