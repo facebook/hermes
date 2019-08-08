@@ -477,9 +477,37 @@ void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ArrayImplBuildMeta(cell, mb);
 }
 
-void ArraySerialize(Serializer &s, const GCCell *cell) {}
+ArrayImpl::ArrayImpl(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
+  beginIndex_ = d.readInt<uint32_t>();
+  endIndex_ = d.readInt<uint32_t>();
+  d.readRelocation(&indexedStorage_, RelocationKind::GCPointer);
+}
 
-void ArrayDeserialize(Deserializer &d, CellKind kind) {}
+void serializeArrayImpl(Serializer &s, const GCCell *cell) {
+  auto *self = static_cast<const ArrayImpl *>(cell);
+  JSObject::serializeObjectImpl(s, cell);
+  s.writeInt<uint32_t>(self->beginIndex_);
+  s.writeInt<uint32_t>(self->endIndex_);
+  s.writeRelocation(self->indexedStorage_.get(s.getRuntime()));
+}
+
+JSArray::JSArray(Deserializer &d, const VTable *vt) : ArrayImpl(d, vt) {
+  shadowLength_ = d.readInt<uint32_t>();
+}
+
+void ArraySerialize(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const JSArray>(cell);
+  serializeArrayImpl(s, cell);
+  s.writeInt<uint32_t>(self->shadowLength_);
+  s.endObject(cell);
+}
+
+void ArrayDeserialize(Deserializer &d, CellKind kind) {
+  assert(kind == CellKind::ArrayKind && "Expected Array");
+  void *mem = d.getRuntime()->alloc(sizeof(JSArray));
+  auto *cell = new (mem) JSArray(d, &JSArray::vt.base);
+  d.endObject(cell);
+}
 
 Handle<HiddenClass> JSArray::createClass(
     Runtime *runtime,
