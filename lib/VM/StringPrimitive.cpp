@@ -24,29 +24,89 @@ void DynamicUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {}
 
-void DynamicASCIIStringPrimitiveSerialize(Serializer &s, const GCCell *cell) {}
+template <typename T, bool Uniqued>
+void serializeDynamicStringImpl(Serializer &s, const GCCell *cell) {
+  const auto *self = vmcast<const DynamicStringPrimitive<T, Uniqued>>(cell);
+  // Write string length.
+  s.writeInt<uint32_t>(self->getStringLength());
+  if (Uniqued) {
+    // If isUniqued, also writes SymbolID.
+    s.writeInt<uint32_t>(self->getUniqueID().unsafeGetRaw());
+  }
+  // Writes the actual string.
+  s.writeData(self->getRawPointer(), self->getStringLength() * sizeof(T));
+  s.endObject(cell);
+}
 
-void DynamicUTF16StringPrimitiveSerialize(Serializer &s, const GCCell *cell) {}
+template <typename T, bool Uniqued>
+void deserializeDynamicStringImpl(Deserializer &d) {
+  uint32_t length = d.readInt<uint32_t>();
+  SymbolID uniqueID{};
+  if (Uniqued) {
+    auto rawUniqueID = d.readInt<uint32_t>();
+    uniqueID = SymbolID::unsafeCreate(rawUniqueID);
+  }
+
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
+      DynamicStringPrimitive<T, Uniqued>::allocationSize(length));
+  auto *cell = new (mem)
+      DynamicStringPrimitive<T, Uniqued>(d.getRuntime(), length, uniqueID);
+  d.readData(cell->getRawPointerForWrite(), length * sizeof(T));
+
+  d.endObject(cell);
+}
+
+void DynamicASCIIStringPrimitiveSerialize(Serializer &s, const GCCell *cell) {
+  serializeDynamicStringImpl<char, false>(s, cell);
+}
+
+void DynamicUTF16StringPrimitiveSerialize(Serializer &s, const GCCell *cell) {
+  serializeDynamicStringImpl<char16_t, false>(s, cell);
+}
 
 void DynamicUniquedASCIIStringPrimitiveSerialize(
     Serializer &s,
-    const GCCell *cell) {}
+    const GCCell *cell) {
+  serializeDynamicStringImpl<char, true>(s, cell);
+}
 
 void DynamicUniquedUTF16StringPrimitiveSerialize(
     Serializer &s,
-    const GCCell *cell) {}
+    const GCCell *cell) {
+  serializeDynamicStringImpl<char16_t, true>(s, cell);
+}
 
-void DynamicASCIIStringPrimitiveDeserialize(Deserializer &d, CellKind kind) {}
+void DynamicASCIIStringPrimitiveDeserialize(Deserializer &d, CellKind kind) {
+  assert(
+      kind == CellKind::DynamicASCIIStringPrimitiveKind &&
+      "Expected DynamicASCIIStringPrimitive");
+  deserializeDynamicStringImpl<char, false>(d);
+}
 
-void DynamicUTF16StringPrimitiveDeserialize(Deserializer &d, CellKind kind) {}
+void DynamicUTF16StringPrimitiveDeserialize(Deserializer &d, CellKind kind) {
+  assert(
+      kind == CellKind::DynamicUTF16StringPrimitiveKind &&
+      "Expected DynamicUTF16StringPrimitive");
+  deserializeDynamicStringImpl<char16_t, false>(d);
+}
 
 void DynamicUniquedASCIIStringPrimitiveDeserialize(
     Deserializer &d,
-    CellKind kind) {}
+    CellKind kind) {
+  assert(
+      kind == CellKind::DynamicUniquedASCIIStringPrimitiveKind &&
+      "Expected DynamicUniquedASCIIStringPrimitive");
+  deserializeDynamicStringImpl<char, true>(d);
+}
 
 void DynamicUniquedUTF16StringPrimitiveDeserialize(
     Deserializer &d,
-    CellKind kind) {}
+    CellKind kind) {
+  assert(
+      kind == CellKind::DynamicUniquedUTF16StringPrimitiveKind &&
+      "Expected DynamicUniquedUTF16StringPrimitive");
+  deserializeDynamicStringImpl<char16_t, true>(d);
+}
 
 /// There is no SymbolStringPrimitiveCellKind, but we factor this into a
 /// function so that the subclasses can share it and so only one friend
@@ -80,13 +140,76 @@ void ExternalUTF16StringPrimitiveBuildMeta(
   symbolStringPrimitiveBuildMeta(cell, mb);
 }
 
-void ExternalASCIIStringPrimitiveSerialize(Serializer &s, const GCCell *cell) {}
+template <typename T>
+void serializeExternalStringImpl(Serializer &s, const GCCell *cell) {
+  const auto *self = vmcast<const ExternalStringPrimitive<T>>(cell);
+  s.writeInt<uint32_t>(self->getStringLength());
+  s.writeInt<uint8_t>(self->isUniqued());
+  if (self->isUniqued()) {
+    // If isUniqued, also writes SymbolID.
+    s.writeInt<uint32_t>(self->getUniqueID().unsafeGetRaw());
+  }
+  // Writes the actual string.
+  s.writeData(self->getRawPointer(), self->getStringLength() * sizeof(T));
 
-void ExternalUTF16StringPrimitiveSerialize(Serializer &s, const GCCell *cell) {}
+  s.endObject(cell);
+}
 
-void ExternalASCIIStringPrimitiveDeserialize(Deserializer &d, CellKind kind) {}
+template <typename T>
+void deserializeExternalStringImpl(Deserializer &d) {
+  // Deserialize the data.
+  uint32_t length = d.readInt<uint32_t>();
+  assert(
+      ExternalStringPrimitive<T>::isExternalLength(length) &&
+      "length should be external");
+  if (LLVM_UNLIKELY(length > ExternalStringPrimitive<T>::MAX_STRING_LENGTH))
+    hermes_fatal("String length exceeds limit");
+  uint32_t allocSize = length * sizeof(T);
+  if (LLVM_UNLIKELY(
+          !d.getRuntime()->getHeap().canAllocExternalMemory(allocSize))) {
+    hermes_fatal("Cannot allocate an external string primitive.");
+  }
 
-void ExternalUTF16StringPrimitiveDeserialize(Deserializer &d, CellKind kind) {}
+  bool uniqued = d.readInt<uint8_t>();
+  SymbolID uniqueID{};
+  if (uniqued) {
+    auto rawUniqueID = d.readInt<uint32_t>();
+    uniqueID = SymbolID::unsafeCreate(rawUniqueID);
+  }
+  std::basic_string<T> contents(length, '\0');
+  d.readData(&contents[0], length * sizeof(T));
+
+  // Construct an ExternalStringPrimitive from what we deserialized.
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      sizeof(ExternalStringPrimitive<T>));
+  auto *cell = new (mem)
+      ExternalStringPrimitive<T>(d.getRuntime(), std::move(contents), uniqued);
+  d.getRuntime()->getHeap().creditExternalMemory(
+      cell, cell->getStringLength() * sizeof(T));
+  d.endObject(cell);
+}
+
+void ExternalASCIIStringPrimitiveSerialize(Serializer &s, const GCCell *cell) {
+  serializeExternalStringImpl<char>(s, cell);
+}
+
+void ExternalUTF16StringPrimitiveSerialize(Serializer &s, const GCCell *cell) {
+  serializeExternalStringImpl<char16_t>(s, cell);
+}
+
+void ExternalASCIIStringPrimitiveDeserialize(Deserializer &d, CellKind kind) {
+  assert(
+      kind == CellKind::ExternalASCIIStringPrimitiveKind &&
+      "Expected ExternalASCIIStringPrimitive");
+  deserializeExternalStringImpl<char>(d);
+}
+
+void ExternalUTF16StringPrimitiveDeserialize(Deserializer &d, CellKind kind) {
+  assert(
+      kind == CellKind::ExternalUTF16StringPrimitiveKind &&
+      "Expected ExternalUTF16StringPrimitive");
+  deserializeExternalStringImpl<char16_t>(d);
+}
 
 template <typename T>
 CallResult<HermesValue> StringPrimitive::createEfficientImpl(

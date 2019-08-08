@@ -385,6 +385,12 @@ class DynamicStringPrimitive final
   }
 
  public:
+  template <typename, bool>
+  friend void serializeDynamicStringImpl(Serializer &s, const GCCell *cell);
+
+  template <typename, bool>
+  friend void deserializeDynamicStringImpl(Deserializer &d);
+
   static bool classof(const GCCell *cell) {
     return cell->getKind() == DynamicStringPrimitive::getCellKind();
   }
@@ -485,6 +491,12 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   static bool classof(const GCCell *cell) {
     return cell->getKind() == ExternalStringPrimitive::getCellKind();
   }
+
+  template <typename>
+  friend void serializeExternalStringImpl(Serializer &s, const GCCell *cell);
+
+  template <typename>
+  friend void deserializeExternalStringImpl(Deserializer &d);
 
  private:
   static const VTable vt;
