@@ -206,7 +206,7 @@ DEFINE_PRIMITIVE_METHODS(jdouble, Double, double)
 
 namespace detail {
 
-detail::BaseHybridClass* HybridDestructor::getNativePointer() {
+detail::BaseHybridClass* HybridDestructor::getNativePointer() const {
   static auto pointerField = javaClassStatic()->getField<jlong>("mNativePointer");
   auto* value = reinterpret_cast<detail::BaseHybridClass*>(getFieldValue(pointerField));
   if (!value) {

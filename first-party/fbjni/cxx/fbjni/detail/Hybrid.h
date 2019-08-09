@@ -40,7 +40,7 @@ class HybridDestructor : public JavaClass<HybridDestructor> {
   public:
     static auto constexpr kJavaDescriptor = "Lcom/facebook/jni/HybridData$Destructor;";
 
-  detail::BaseHybridClass* getNativePointer();
+  detail::BaseHybridClass* getNativePointer() const;
 
   void setNativePointer(std::unique_ptr<detail::BaseHybridClass> new_value);
 };
@@ -143,7 +143,7 @@ public:
 
     // This will reach into the java object and extract the C++ instance from
     // the mHybridData and return it.
-    T* cthis();
+    T* cthis() const;
 
     friend class HybridClass;
     friend T;
@@ -250,7 +250,7 @@ public:
 };
 
 template <typename T, typename B>
-inline T* HybridClass<T, B>::JavaPart::cthis() {
+inline T* HybridClass<T, B>::JavaPart::cthis() const {
   detail::BaseHybridClass* result = 0;
   static bool isHybrid = detail::HybridClassBase::isHybridClassBase(this->getClass());
   if (isHybrid) {
