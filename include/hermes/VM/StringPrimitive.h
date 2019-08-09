@@ -310,6 +310,8 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// \return the unique id.
   /// This requires and asserts that the string is uniqued.
   SymbolID getUniqueID() const;
+
+  static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
 };
 
 /// A subclass of StringPrimitive which stores a SymbolID.
@@ -582,6 +584,9 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// assumed to be an ExternalStringPrimitive.
   static size_t _mallocSizeImpl(GCCell *cell);
 
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, V8HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, V8HeapSnapshot &snap);
+
   /// The backing storage of this string. Note that the string's length is fixed
   /// and must always be equal to StringPrimitive::getStringLength().
   StdString contents_{};
@@ -592,7 +597,15 @@ const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     DynamicStringPrimitive<T, Uniqued>::getCellKind(),
     0,
     nullptr,
-    nullptr);
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    VTable::HeapSnapshotMetadata{
+        V8HeapSnapshot::NodeType::String,
+        DynamicStringPrimitive<T, Uniqued>::_snapshotNameImpl,
+        nullptr,
+        nullptr});
 
 using DynamicUTF16StringPrimitive =
     DynamicStringPrimitive<char16_t, false /* not Uniqued */>;
@@ -609,7 +622,14 @@ const VTable ExternalStringPrimitive<T>::vt = VTable(
     sizeof(ExternalStringPrimitive<T>),
     ExternalStringPrimitive<T>::_finalizeImpl,
     nullptr, // markWeak.
-    ExternalStringPrimitive<T>::_mallocSizeImpl);
+    ExternalStringPrimitive<T>::_mallocSizeImpl,
+    nullptr,
+    nullptr,
+    VTable::HeapSnapshotMetadata{
+        V8HeapSnapshot::NodeType::String,
+        ExternalStringPrimitive<T>::_snapshotNameImpl,
+        ExternalStringPrimitive<T>::_snapshotAddEdgesImpl,
+        ExternalStringPrimitive<T>::_snapshotAddNodesImpl});
 
 using ExternalUTF16StringPrimitive = ExternalStringPrimitive<char16_t>;
 using ExternalASCIIStringPrimitive = ExternalStringPrimitive<char>;

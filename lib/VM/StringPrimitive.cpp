@@ -420,6 +420,30 @@ StringView StringPrimitive::createStringViewMustBeFlat(
   return StringView(self);
 }
 
+std::string StringPrimitive::_snapshotNameImpl(GCCell *cell, GC *gc) {
+  auto *const self = vmcast<StringPrimitive>(cell);
+  // Only convert up to EXTERNAL_STRING_THRESHOLD characters, because large
+  // strings can cause crashes in the snapshot visualizer.
+  std::string out;
+  bool fullyWritten = true;
+  if (self->isASCII()) {
+    auto ref = self->castToASCIIRef();
+    out = std::string{ref.begin(),
+                      std::min(
+                          static_cast<uint32_t>(ref.size()),
+                          toRValue(EXTERNAL_STRING_THRESHOLD))};
+    fullyWritten = ref.size() <= EXTERNAL_STRING_THRESHOLD;
+  } else {
+    fullyWritten = convertUTF16ToUTF8WithReplacements(
+        out, self->castToUTF16Ref(), EXTERNAL_STRING_THRESHOLD);
+  }
+  if (!fullyWritten) {
+    // The string was truncated, add a truncation message
+    out += "...(truncated by snapshot)...";
+  }
+  return out;
+}
+
 template <typename T, bool Uniqued>
 DynamicStringPrimitive<T, Uniqued>::DynamicStringPrimitive(
     Runtime *runtime,
@@ -538,6 +562,9 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
 template <typename T>
 void ExternalStringPrimitive<T>::_finalizeImpl(GCCell *cell, GC *gc) {
   ExternalStringPrimitive<T> *self = vmcast<ExternalStringPrimitive<T>>(cell);
+  // Remove the external string from the snapshot tracking system if it's being
+  // tracked.
+  gc->getIDTracker().untrackNative(self->contents_.data());
   gc->debitExternalMemory(self, self->getStringByteSize());
   self->~ExternalStringPrimitive<T>();
 }
@@ -546,6 +573,32 @@ template <typename T>
 size_t ExternalStringPrimitive<T>::_mallocSizeImpl(GCCell *cell) {
   ExternalStringPrimitive<T> *self = vmcast<ExternalStringPrimitive<T>>(cell);
   return self->getStringByteSize();
+}
+
+template <typename T>
+void ExternalStringPrimitive<T>::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    V8HeapSnapshot &snap) {
+  auto *const self = vmcast<ExternalStringPrimitive<T>>(cell);
+  snap.addNamedEdge(
+      V8HeapSnapshot::EdgeType::Internal,
+      "externalString",
+      gc->getNativeID(self->contents_.data()));
+}
+
+template <typename T>
+void ExternalStringPrimitive<T>::_snapshotAddNodesImpl(
+    GCCell *cell,
+    GC *gc,
+    V8HeapSnapshot &snap) {
+  auto *const self = vmcast<ExternalStringPrimitive<T>>(cell);
+  snap.beginNode();
+  snap.endNode(
+      V8HeapSnapshot::NodeType::Native,
+      "ExternalStringPrimitive",
+      gc->getNativeID(self->contents_.data()),
+      self->contents_.size());
 }
 
 template class ExternalStringPrimitive<char16_t>;
