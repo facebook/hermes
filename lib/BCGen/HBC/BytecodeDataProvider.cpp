@@ -28,6 +28,15 @@ static bool sanityCheck(
     return false;
   }
 
+  // Ensure the data is aligned to be able to read an int from the start.
+  if (llvm::alignAddr(aref.data(), BYTECODE_ALIGNMENT) !=
+      (uintptr_t)aref.data()) {
+    if (errorMessage) {
+      *errorMessage = "Buffer misaligned.";
+    }
+    return false;
+  }
+
   const auto *header =
       reinterpret_cast<const hbc::BytecodeFileHeader *>(aref.data());
 
@@ -59,10 +68,11 @@ static bool sanityCheck(
 /// pointer to T. \return the pointer to T.
 template <typename T>
 const T *alignCheckCast(const uint8_t *buf) {
-  // We pad the offset of each data structure by 4 bytes, hence we cannot
-  // support casting to any data structure that requires more than 4 bytes
-  // alignment, which may lead to undefined behavior.
-  static_assert(alignof(T) <= 4, "Cannot handle the alignment");
+  // We pad the offset of each data structure by BYTECODE_ALIGNMENT bytes, hence
+  // we cannot support casting to any data structure that requires more than 4
+  // bytes alignment, which may lead to undefined behavior.
+  static_assert(
+      alignof(T) <= BYTECODE_ALIGNMENT, "Cannot handle the alignment");
   assert(
       (llvm::alignAddr(buf, alignof(T)) == (uintptr_t)buf) &&
       "buf is not properly aligned");
@@ -72,7 +82,8 @@ const T *alignCheckCast(const uint8_t *buf) {
 /// Variant of alignCheckCast() for non-const pointers.
 template <typename T>
 T *alignCheckCast(uint8_t *buf) {
-  static_assert(alignof(T) <= 4, "Cannot handle the alignment");
+  static_assert(
+      alignof(T) <= BYTECODE_ALIGNMENT, "Cannot handle the alignment");
   assert(
       (llvm::alignAddr(buf, alignof(T)) == (uintptr_t)buf) &&
       "buf is not properly aligned");
@@ -115,12 +126,12 @@ llvm::MutableArrayRef<T> castArrayRef(uint8_t *&buf, size_t size) {
 
 /// Align \p buf with the \p alignment.
 /// \p buf is passed by pointer reference and will be modified.
-void align(const uint8_t *&buf, uint32_t alignment = 4) {
+void align(const uint8_t *&buf, uint32_t alignment = BYTECODE_ALIGNMENT) {
   buf = (const uint8_t *)llvm::alignAddr(buf, alignment);
 }
 
 /// Variant of align() for non-const pointers.
-void align(uint8_t *&buf, uint32_t alignment = 4) {
+void align(uint8_t *&buf, uint32_t alignment = BYTECODE_ALIGNMENT) {
   buf = (uint8_t *)llvm::alignAddr(buf, alignment);
 }
 

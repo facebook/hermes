@@ -34,6 +34,9 @@ const static uint32_t BYTECODE_VERSION = 61;
 /// Property cache index which indicates no caching.
 static constexpr uint8_t PROPERTY_CACHING_DISABLED = 0;
 
+/// Alignment of data structures of in file.
+static constexpr size_t BYTECODE_ALIGNMENT = alignof(uint32_t);
+
 /// Bytecode forms
 enum class BytecodeForm {
   /// Execution form (the default) is the bytecode prepared for execution.

@@ -74,7 +74,7 @@ void BytecodeSerializer::serializeFunctionTable(BytecodeModule &BM) {
 
 // ========================== DebugInfo ==========================
 void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   const DebugInfo &info = BM.getDebugInfo();
   debugInfoOffset_ = loc_;
 
@@ -107,7 +107,7 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
 
 // ===================== CommonJS Module Table ======================
 void BytecodeSerializer::serializeCJSModuleTable(BytecodeModule &BM) {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
 
   for (const auto &it : BM.getCJSModuleTable()) {
     writeBinary(it.first);
@@ -226,22 +226,22 @@ void BytecodeSerializer::serializeFunctionInfo(BytecodeFunction &BF) {
 }
 
 void BytecodeSerializer::visitFunctionHeaders() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   serializeFunctionTable(*bytecodeModule_);
 }
 
 void BytecodeSerializer::visitStringKinds() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   writeBinaryArray(bytecodeModule_->getStringKinds());
 }
 
 void BytecodeSerializer::visitIdentifierTranslations() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   writeBinaryArray(bytecodeModule_->getIdentifierTranslations());
 }
 
 void BytecodeSerializer::visitSmallStringTable() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   uint32_t overflowCount = 0;
   for (auto &entry : bytecodeModule_->getStringTable()) {
     SmallStringTableEntry small(entry, overflowCount);
@@ -252,7 +252,7 @@ void BytecodeSerializer::visitSmallStringTable() {
 }
 
 void BytecodeSerializer::visitOverflowStringTable() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   llvm::SmallVector<OverflowStringTableEntry, 64> overflow;
   for (auto &entry : bytecodeModule_->getStringTable()) {
     SmallStringTableEntry small(entry, overflow.size());
@@ -264,38 +264,38 @@ void BytecodeSerializer::visitOverflowStringTable() {
 }
 
 void BytecodeSerializer::visitStringStorage() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   writeBinaryArray(bytecodeModule_->getStringStorage());
 }
 
 void BytecodeSerializer::visitArrayBuffer() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   serializeArrayBuffer(*bytecodeModule_);
 }
 
 void BytecodeSerializer::visitObjectKeyBuffer() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   auto objectKeyValBufferPair = bytecodeModule_->getObjectBuffer();
   writeBinaryArray(objectKeyValBufferPair.first);
 }
 
 void BytecodeSerializer::visitObjectValueBuffer() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   auto objectKeyValBufferPair = bytecodeModule_->getObjectBuffer();
   writeBinaryArray(objectKeyValBufferPair.second);
 }
 
 void BytecodeSerializer::visitRegExpTable() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   writeBinaryArray(bytecodeModule_->getRegExpTable());
 }
 
 void BytecodeSerializer::visitRegExpStorage() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   writeBinaryArray(bytecodeModule_->getRegExpStorage());
 }
 
 void BytecodeSerializer::visitCJSModuleTable() {
-  pad(4);
+  pad(BYTECODE_ALIGNMENT);
   serializeCJSModuleTable(*bytecodeModule_);
 }
