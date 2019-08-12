@@ -168,6 +168,10 @@ struct ComputedPropertyDescriptor : public PropertyDescriptor {
   }
 };
 
+inline bool operator==(PropertyDescriptor a, PropertyDescriptor b) {
+  return a.flags == b.flags && a.slot == b.slot;
+}
+
 /// @}
 
 } // namespace vm

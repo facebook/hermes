@@ -190,6 +190,15 @@ class HiddenClass final : public GCCell {
       Runtime *runtime,
       const CallbackFunction &callback);
 
+  /// Same as \p forEachProperty, but the callback cannot do any GC operations,
+  /// such as allocating objects, modifying objects, or creating handles.
+  /// \p forEachProperty is allowed to allocate, and thus can steal and cache
+  /// the property map for the next query, so it is preferred.
+  static void forEachPropertyNoAlloc(
+      HiddenClass *self,
+      PointerBase *base,
+      std::function<void(SymbolID, NamedPropertyDescriptor)> callback);
+
   /// Same as forEachProperty() but the callback returns true to continue or
   /// false to stop immediately.
   /// A marker for the current gcScope is obtained in the beginning and the

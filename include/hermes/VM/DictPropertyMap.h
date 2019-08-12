@@ -126,6 +126,15 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
       Runtime *runtime,
       const CallbackFunction &callback);
 
+  /// Same as \p forEachProperty, but the callback cannot do anything that
+  /// affects heap state such as allocate objects or handles.
+  /// If your callback doesn't need to do any allocations or modify heap state
+  /// this is slightly faster than \p forEachProperty.
+  template <typename CallbackFunction>
+  static void forEachPropertyNoAlloc(
+      DictPropertyMap *self,
+      const CallbackFunction &callback);
+
   /// Same as forEachProperty() but the callback returns true to continue or
   /// false to stop immediately.
   /// A marker for the current gcScope is obtained in the beginning and the
@@ -401,6 +410,18 @@ void DictPropertyMap::forEachProperty(
     if (descPair->first.isValid()) {
       callback(descPair->first, descPair->second);
       gcMarker.flush();
+    }
+  }
+}
+
+template <typename CallbackFunction>
+void DictPropertyMap::forEachPropertyNoAlloc(
+    DictPropertyMap *self,
+    const CallbackFunction &callback) {
+  for (size_type i = 0, e = self->numDescriptors_; i != e; ++i) {
+    auto const *descPair = self->getDescriptorPairs() + i;
+    if (descPair->first.isValid()) {
+      callback(descPair->first, descPair->second);
     }
   }
 }

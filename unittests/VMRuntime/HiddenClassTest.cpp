@@ -400,4 +400,58 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   ASSERT_NE(*addRes->first, *partlyFrozenSingleton);
   ASSERT_EQ(addRes->first->getNumProperties(), 4);
 }
+
+TEST_F(HiddenClassTest, ForEachProperty) {
+  MutableHandle<HiddenClass> clazz{
+      runtime,
+      vmcast<HiddenClass>(
+          runtime->ignoreAllocationFailure(HiddenClass::createRoot(runtime)))};
+
+  auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
+      runtime, createUTF16Ref(u"a"));
+  auto bHnd = *runtime->getIdentifierTable().getSymbolHandle(
+      runtime, createUTF16Ref(u"b"));
+
+  {
+    // clazz.a
+    auto addRes = HiddenClass::addProperty(
+        clazz, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(0u, addRes->second);
+    clazz = *addRes->first;
+  }
+  {
+    // clazz.b
+    auto addRes = HiddenClass::addProperty(
+        clazz, runtime, *bHnd, PropertyFlags::defaultNewNamedPropertyFlags());
+    ASSERT_RETURNED(addRes);
+    ASSERT_EQ(1u, addRes->second);
+    clazz = *addRes->first;
+  }
+
+  std::vector<std::pair<SymbolID, NamedPropertyDescriptor>> expectedProperties{
+      {aHnd.get(),
+       NamedPropertyDescriptor{PropertyFlags::defaultNewNamedPropertyFlags(),
+                               0}},
+      {bHnd.get(),
+       NamedPropertyDescriptor{PropertyFlags::defaultNewNamedPropertyFlags(),
+                               1}}};
+
+  std::vector<std::pair<SymbolID, NamedPropertyDescriptor>> properties;
+  HiddenClass::forEachProperty(
+      clazz, runtime, [&properties](SymbolID id, NamedPropertyDescriptor desc) {
+        properties.emplace_back(id, desc);
+      });
+  EXPECT_EQ(expectedProperties, properties);
+
+  std::vector<std::pair<SymbolID, NamedPropertyDescriptor>> propertiesNoAlloc;
+  HiddenClass::forEachPropertyNoAlloc(
+      clazz.get(),
+      runtime,
+      [&propertiesNoAlloc](SymbolID id, NamedPropertyDescriptor desc) {
+        propertiesNoAlloc.emplace_back(id, desc);
+      });
+  EXPECT_EQ(expectedProperties, propertiesNoAlloc);
+}
+
 } // namespace

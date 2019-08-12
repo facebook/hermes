@@ -186,6 +186,39 @@ Handle<HiddenClass> HiddenClass::convertToDictionary(
   return newClassHandle;
 }
 
+void HiddenClass::forEachPropertyNoAlloc(
+    HiddenClass *self,
+    PointerBase *base,
+    std::function<void(SymbolID, NamedPropertyDescriptor)> callback) {
+  std::vector<std::pair<SymbolID, NamedPropertyDescriptor>> properties;
+  HiddenClass *curr = self;
+  while (curr && !curr->propertyMap_) {
+    properties.emplace_back(
+        curr->symbolID_,
+        NamedPropertyDescriptor{curr->propertyFlags_,
+                                curr->numProperties_ - 1});
+    curr = curr->parent_.get(base);
+  }
+
+  // Either we reached the root hidden class and never found a property
+  // map, or we found a property map somewhere in the HiddenClass chain.
+  if (curr) {
+    assert(
+        curr->propertyMap_ &&
+        "If it's not the root class, it must have a property map");
+    // The DPM exists, and it can be iterated over to find some properties.
+    DictPropertyMap::forEachPropertyNoAlloc(
+        self->propertyMap_.getNonNull(base), callback);
+  }
+  // Add any iterated properties at the end.
+  // Since we moved backwards through HiddenClasses, the properties are in
+  // reverse order. Iterate backwards through properties to get the original
+  // order.
+  for (auto it = properties.rbegin(); it != properties.rend(); ++it) {
+    callback(it->first, it->second);
+  }
+}
+
 OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
     PseudoHandle<HiddenClass> self,
     Runtime *runtime,
