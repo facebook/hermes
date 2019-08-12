@@ -34,6 +34,8 @@ void ArrayImpl::_snapshotAddEdgesImpl(
     GC *gc,
     V8HeapSnapshot &snap) {
   auto *const self = vmcast<ArrayImpl>(cell);
+  // Add the super type's edges too.
+  JSObject::_snapshotAddEdgesImpl(self, gc, snap);
   if (!self->indexedStorage_) {
     return;
   }

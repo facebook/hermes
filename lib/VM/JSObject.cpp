@@ -21,7 +21,18 @@ namespace hermes {
 namespace vm {
 
 ObjectVTable JSObject::vt{
-    VTable(CellKind::ObjectKind, sizeof(JSObject)),
+    VTable(
+        CellKind::ObjectKind,
+        sizeof(JSObject),
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Object,
+                                     nullptr,
+                                     JSObject::_snapshotAddEdgesImpl,
+                                     nullptr}),
     JSObject::_getOwnIndexedRangeImpl,
     JSObject::_haveOwnIndexedImpl,
     JSObject::_getOwnIndexedPropertyFlagsImpl,
@@ -67,7 +78,7 @@ void addDirectPropertyFields<0>(const GCHermesValue *, Metadata::Builder &) {}
 
 void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const JSObject *>(cell);
-  mb.addField("@__proto__", &self->parent_);
+  mb.addField("@parent", &self->parent_);
   mb.addField("@class", &self->clazz_);
   mb.addField("@propStorage", &self->propStorage_);
 
@@ -1858,6 +1869,49 @@ CallResult<bool> JSObject::defineOwnComputed(
     return ExecutionStatus::EXCEPTION;
   return defineOwnComputedPrimitive(
       selfHandle, runtime, *converted, dpFlags, valueOrAccessor, opFlags);
+}
+
+void JSObject::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    V8HeapSnapshot &snap) {
+  auto *const self = vmcast<JSObject>(cell);
+
+  // Add the prototype as a property edge, so it's easy for JS developers to
+  // walk the prototype chain on their own.
+  if (self->parent_) {
+    snap.addNamedEdge(
+        V8HeapSnapshot::EdgeType::Property,
+        // __proto__ chosen for similarity to V8.
+        "__proto__",
+        gc->getObjectID(self->parent_));
+  }
+
+  HiddenClass::forEachPropertyNoAlloc(
+      self->clazz_.get(gc->getPointerBase()),
+      gc->getPointerBase(),
+      [self, gc, &snap](SymbolID id, NamedPropertyDescriptor desc) {
+        GCHermesValue &prop =
+            namedSlotRef(self, gc->getPointerBase(), desc.slot);
+        if (prop.isPointer()) {
+          std::string propName = gc->convertSymbolToUTF8(id);
+          // If the property name is a valid array index, display it as an
+          // "element" instead of a "property". This will put square brackets
+          // around the number and sort it numerically rather than
+          // alphabetically.
+          if (auto index = ::hermes::toArrayIndex(propName)) {
+            snap.addIndexedEdge(
+                V8HeapSnapshot::EdgeType::Element,
+                index.getValue(),
+                gc->getObjectID(prop.getPointer()));
+          } else {
+            snap.addNamedEdge(
+                V8HeapSnapshot::EdgeType::Property,
+                propName,
+                gc->getObjectID(prop.getPointer()));
+          }
+        }
+      });
 }
 
 std::pair<uint32_t, uint32_t> JSObject::_getOwnIndexedRangeImpl(
