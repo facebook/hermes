@@ -30,7 +30,7 @@ ObjectVTable JSObject::vt{
         nullptr,
         nullptr,
         VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Object,
-                                     nullptr,
+                                     JSObject::_snapshotNameImpl,
                                      JSObject::_snapshotAddEdgesImpl,
                                      nullptr}),
     JSObject::_getOwnIndexedRangeImpl,
@@ -1869,6 +1869,40 @@ CallResult<bool> JSObject::defineOwnComputed(
     return ExecutionStatus::EXCEPTION;
   return defineOwnComputedPrimitive(
       selfHandle, runtime, *converted, dpFlags, valueOrAccessor, opFlags);
+}
+
+std::string JSObject::getHeuristicTypeName(PointerBase *base) {
+  if (auto constructorVal = tryGetNamedNoAlloc(
+          this, base, Predefined::getSymbolID(Predefined::constructor))) {
+    if (constructorVal->isObject()) {
+      if (auto *constructor = dyn_vmcast<JSObject>(*constructorVal)) {
+        auto name = constructor->getNameIfExists(base);
+        if (!name.empty())
+          return name;
+      }
+    }
+  }
+  // TODO: Add other object name estimates such as a serialization of property
+  // names for non-named objects.
+  return "";
+}
+
+std::string JSObject::getNameIfExists(PointerBase *base) {
+  if (auto nameVal = tryGetNamedNoAlloc(
+          this, base, Predefined::getSymbolID(Predefined::name))) {
+    if (nameVal->isString()) {
+      if (auto *name = dyn_vmcast<StringPrimitive>(*nameVal)) {
+        return converter(name);
+      }
+    }
+  }
+  // There is no other way to access the "name" property on an object.
+  return "";
+}
+
+std::string JSObject::_snapshotNameImpl(GCCell *cell, GC *gc) {
+  auto *const self = vmcast<JSObject>(cell);
+  return self->getHeuristicTypeName(gc->getPointerBase());
 }
 
 void JSObject::_snapshotAddEdgesImpl(

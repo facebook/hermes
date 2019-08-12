@@ -955,9 +955,22 @@ class JSObject : public GCCell {
       const IndexedCB &indexedCB,
       const NamedCB &namedCB);
 
+  /// Return the type name of this object, if it can be found heuristically.
+  /// There is no one definitive type name for an object. If no heuristic is
+  /// able to produce a name, the empty string is returned.
+  std::string getHeuristicTypeName(PointerBase *base);
+
+  /// Accesses the name property on an object, returns the empty string if it
+  /// doesn't exist or isn't a string.
+  std::string getNameIfExists(PointerBase *base);
+
  protected:
   /// @name Virtual function implementations
   /// @{
+
+  /// Add an estimate of the type name for this object as the name in heap
+  /// snapshots.
+  static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
 
   /// Add user-visible property names to a snapshot.
   static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, V8HeapSnapshot &snap);
