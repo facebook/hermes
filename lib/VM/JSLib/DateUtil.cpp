@@ -791,9 +791,19 @@ static double parseISODate(StringView u16str) {
         return nan;
       }
       if (consume(u'.')) {
-        // Try to read milliseconds.
-        if (!scanInt(it, end, ms)) {
+        // Try to read fraction of a second.
+        if (it == end || !isDigit(*it)) {
           return nan;
+        }
+
+        // Position of the milliseconds counter.
+        // Start at the 100s place and discard anything after the third digit by
+        // dividing by 10 every iteration.
+        int32_t pos = 100;
+
+        for (; it != end && isDigit(*it); ++it) {
+          ms += pos * (*it - '0');
+          pos /= 10;
         }
       }
     }

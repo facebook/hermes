@@ -190,8 +190,18 @@ print(Date.parse('2016T12:30'));
 // CHECK-NEXT: 1451651400000
 print(Date.parse('2016T12:30:00.000-07:00'));
 // CHECK-NEXT: 1451676600000
+print(Date.parse('2016T12:30:47.1-07:00'));
+// CHECK-NEXT: 1451676647100
+print(Date.parse('2016T12:30:47.12-07:00'));
+// CHECK-NEXT: 1451676647120
 print(Date.parse('2016T12:30:47.123-07:00'));
 // CHECK-NEXT: 1451676647123
+print(Date.parse('2016T12:30:47.1234-07:00'));
+// CHECK-NEXT: 1451676647123
+print(Date.parse('2016T12:30:47.760738998-07:00'));
+// CHECK-NEXT: 1451676647760
+print(Date.parse('2016T12:30:47.760-07:00') === Date.parse('2016T12:30:47.760738998-07:00'));
++// CHECK-NEXT: true
 print(Date.parse('Tue Jul 16 2019 13:15:25 GMT-0700 (Pacific Daylight Time)'));
 // CHECK-NEXT: 1563308125000
 print(Date.parse('Tue Jul 16 2019 13:15:25 GMT-0700'));
