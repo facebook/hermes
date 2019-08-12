@@ -89,9 +89,7 @@ void ChromeTraceSerializer::serializeProcessName(JSONEmitter &json) const {
     json.emitKeyValue("cat", "__metadata");
     json.emitKeyValue("pid", static_cast<double>(pid));
     // Use first event time for process_name time.
-    json.emitKeyValue(
-        "ts",
-        oscompat::to_string(firstEventTimeStamp_.time_since_epoch().count()));
+    json.emitKeyValue("ts", getSerializedTimeStamp(firstEventTimeStamp_));
     // process_name event has no real tid.
     json.emitKeyValue("tid", "-1");
 
@@ -121,9 +119,7 @@ void ChromeTraceSerializer::serializeThreads(JSONEmitter &json) const {
       json.emitKeyValue("cat", "__metadata");
       json.emitKeyValue("pid", static_cast<double>(pid));
       // Use first event time for thread_name time.
-      json.emitKeyValue(
-          "ts",
-          oscompat::to_string(firstEventTimeStamp_.time_since_epoch().count()));
+      json.emitKeyValue("ts", getSerializedTimeStamp(firstEventTimeStamp_));
       json.emitKeyValue("tid", oscompat::to_string(tid));
 
       json.emitKey("args");
@@ -144,9 +140,7 @@ void ChromeTraceSerializer::serializeThreads(JSONEmitter &json) const {
               ChromeEventType::Completed)]);
       json.emitKeyValue("dur", 0.0);
       json.emitKeyValue("pid", static_cast<double>(pid));
-      json.emitKeyValue(
-          "ts",
-          oscompat::to_string(firstEventTimeStamp_.time_since_epoch().count()));
+      json.emitKeyValue("ts", getSerializedTimeStamp(firstEventTimeStamp_));
       json.emitKeyValue("tid", oscompat::to_string(tid));
 
       json.emitKey("args");
@@ -164,8 +158,7 @@ void ChromeTraceSerializer::serializeSampledEvents(JSONEmitter &json) const {
     json.openDict();
     json.emitKeyValue("cpu", oscompat::to_string(sample.getCpu()));
     json.emitKeyValue("name", "");
-    uint64_t timeStamp = sample.getTimeStamp().time_since_epoch().count();
-    json.emitKeyValue("ts", oscompat::to_string(timeStamp));
+    json.emitKeyValue("ts", getSerializedTimeStamp(sample.getTimeStamp()));
     json.emitKeyValue("pid", static_cast<double>(pid));
     json.emitKeyValue("tid", oscompat::to_string(sample.getTid()));
     json.emitKeyValue("weight", oscompat::to_string(sample.getWeight()));
@@ -311,6 +304,14 @@ void ChromeTraceSerializer::serialize(llvm::raw_ostream &OS) const {
   json.closeDict(); // stackFrames.
 
   json.closeDict(); // Whole trace.
+}
+
+/*static*/ std::string ChromeTraceSerializer::getSerializedTimeStamp(
+    SamplingProfiler::TimeStampType timeStamp) {
+  return oscompat::to_string(
+      std::chrono::duration_cast<std::chrono::microseconds>(
+          timeStamp.time_since_epoch())
+          .count());
 }
 
 } // namespace vm

@@ -195,6 +195,10 @@ class ChromeTraceSerializer {
   // Emit "stackFrames" entries.
   void serializeStackFrames(JSONEmitter &json) const;
 
+  // \return a serializable timeStamp string.
+  static std::string getSerializedTimeStamp(
+      SamplingProfiler::TimeStampType timeStamp);
+
  public:
   explicit ChromeTraceSerializer(ChromeTraceFormat &&chromeTrace);
 
