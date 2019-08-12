@@ -261,6 +261,33 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
   return *found;
 }
 
+llvm::Optional<NamedPropertyDescriptor> HiddenClass::findPropertyNoAlloc(
+    HiddenClass *self,
+    PointerBase *base,
+    SymbolID name) {
+  for (HiddenClass *curr = self; curr; curr = curr->parent_.get(base)) {
+    if (curr->propertyMap_) {
+      // If a property map exists, just search this hidden class
+      auto found =
+          DictPropertyMap::find(curr->propertyMap_.getNonNull(base), name);
+      if (found) {
+        return DictPropertyMap::getDescriptorPair(
+                   curr->propertyMap_.getNonNull(base), *found)
+            ->second;
+      }
+    }
+    // Else, no property map exists. Check the current hidden class before
+    // moving up.
+    if (curr->symbolID_ == name) {
+      return NamedPropertyDescriptor{curr->propertyFlags_,
+                                     curr->numProperties_ - 1};
+    }
+  }
+  // Reached the root hidden class without finding a property map or the
+  // matching symbol, this property doesn't exist.
+  return llvm::None;
+}
+
 bool HiddenClass::debugIsPropertyDefined(
     HiddenClass *self,
     Runtime *runtime,

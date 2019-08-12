@@ -407,8 +407,8 @@ class JSObject : public GCCell {
   }
 
   /// \return the hidden class of this object.
-  HiddenClass *getClass(Runtime *runtime) const {
-    return clazz_.getNonNull(runtime);
+  HiddenClass *getClass(PointerBase *base) const {
+    return clazz_.getNonNull(base);
   }
 
   /// \return the object ID. Assign one if not yet exist. This ID can be used
@@ -612,6 +612,14 @@ class JSObject : public GCCell {
       Runtime *runtime,
       SymbolID name,
       NamedPropertyDescriptor &desc);
+
+  /// Tries to get a property without doing any allocation, while searching the
+  /// prototype chain.
+  /// If the property cannot be found on this object or any of its prototypes,
+  /// or if this object's HiddenClass has an uninitialized property map, returns
+  /// \p llvm::None.
+  static OptValue<HermesValue>
+  tryGetNamedNoAlloc(JSObject *self, PointerBase *base, SymbolID name);
 
   /// ES5.1 8.12.1.
   /// \param nameValHandle the name of the property. It must be a primitive.
@@ -1337,6 +1345,20 @@ inline OptValue<bool> JSObject::tryGetOwnNamedDescriptorFast(
     NamedPropertyDescriptor &desc) {
   return HiddenClass::tryFindPropertyFast(
       self->clazz_.getNonNull(runtime), runtime, name, desc);
+}
+
+inline OptValue<HermesValue>
+JSObject::tryGetNamedNoAlloc(JSObject *self, PointerBase *base, SymbolID name) {
+  for (JSObject *curr = self; curr; curr = curr->parent_.get(base)) {
+    auto found =
+        HiddenClass::findPropertyNoAlloc(curr->getClass(base), base, name);
+    if (found) {
+      return getNamedSlotValue(curr, base, found.getValue().slot);
+    }
+  }
+  // It wasn't found on any of the parents of this object, declare it
+  // un-findable.
+  return llvm::None;
 }
 
 inline JSObject *JSObject::getNamedDescriptor(

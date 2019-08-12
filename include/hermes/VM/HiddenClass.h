@@ -223,6 +223,12 @@ class HiddenClass final : public GCCell {
       PropertyFlags expectedFlags,
       NamedPropertyDescriptor &desc);
 
+  /// Same operation as \p findProperty, but does not do any allocations.
+  /// This is slower than \p findProperty because it needs to traverse the full
+  /// hidden class chain in the worst case.
+  static llvm::Optional<NamedPropertyDescriptor>
+  findPropertyNoAlloc(HiddenClass *self, PointerBase *base, SymbolID name);
+
   /// An optimistic fast path for \c findProperty(). If there is an allocated
   /// property map, this will return an OptValue containing either true or
   /// false. If there was no allocated property map, this returns llvm::None. If
