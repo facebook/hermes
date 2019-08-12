@@ -230,7 +230,7 @@ class HiddenClass final : public GCCell {
   /// must be used.
   static OptValue<bool> tryFindPropertyFast(
       const HiddenClass *self,
-      Runtime *runtime,
+      PointerBase *base,
       SymbolID name,
       NamedPropertyDescriptor &desc);
 
@@ -468,15 +468,15 @@ bool HiddenClass::forEachPropertyWhile(
 
 inline OptValue<bool> HiddenClass::tryFindPropertyFast(
     const HiddenClass *self,
-    Runtime *runtime,
+    PointerBase *base,
     SymbolID name,
     NamedPropertyDescriptor &desc) {
   if (LLVM_LIKELY(self->propertyMap_)) {
     auto found =
-        DictPropertyMap::find(self->propertyMap_.getNonNull(runtime), name);
+        DictPropertyMap::find(self->propertyMap_.getNonNull(base), name);
     if (LLVM_LIKELY(found)) {
       desc = DictPropertyMap::getDescriptorPair(
-                 self->propertyMap_.getNonNull(runtime), *found)
+                 self->propertyMap_.getNonNull(base), *found)
                  ->second;
     }
     return found.hasValue();

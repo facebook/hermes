@@ -521,7 +521,7 @@ class JSObject : public GCCell {
   /// the property descriptor \p desc.
   static HermesValue getNamedSlotValue(
       JSObject *self,
-      Runtime *runtime,
+      PointerBase *runtime,
       NamedPropertyDescriptor desc) {
     return getNamedSlotValue(self, runtime, desc.slot);
   }
