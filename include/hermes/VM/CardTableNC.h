@@ -7,6 +7,7 @@
 #ifndef HERMES_VM_CARDTABLE_H
 #define HERMES_VM_CARDTABLE_H
 
+#include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/GCCell.h"
@@ -155,6 +156,15 @@ class CardTable {
   /// with the given index.  (If an object is allocated at a card boundary, that
   /// is the first object.)
   GCCell *firstObjForCard(unsigned index) const;
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// Temporary debugging hack: yield the numeric value of the boundaries_ array
+  /// for the given \p index.
+  /// TODO(T48709128): remove this when the problem is diagnosed.
+  int8_t cardObjectTableValue(unsigned index) const {
+    return boundaries_[index];
+  }
+#endif // HERMES_EXTRA_DEBUG
 
 #ifdef HERMES_SLOW_DEBUG
   /// Asserts that for every card covering [start, level), what we believe to
