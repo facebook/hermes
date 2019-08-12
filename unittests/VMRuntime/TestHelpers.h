@@ -285,6 +285,8 @@ struct DummyRuntime final : public HandleRootOwner,
     acceptor(createUTF16Ref(u"DummyIdTableEntry1"), 1);
   }
 
+  std::string convertSymbolToUTF8(SymbolID) override;
+
   std::string getCallStackNoAlloc() override {
     return "<dummy runtime has no call stack>";
   }

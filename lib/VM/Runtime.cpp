@@ -552,6 +552,10 @@ void Runtime::visitIdentifiers(
   identifierTable_.visitIdentifiers(acceptor);
 }
 
+std::string Runtime::convertSymbolToUTF8(SymbolID id) {
+  return identifierTable_.convertSymbolToUTF8(id);
+}
+
 void Runtime::printRuntimeGCStats(llvm::raw_ostream &os) const {
   const unsigned kNumPhases = static_cast<unsigned>(MarkRootsPhase::NumPhases);
 #define MARK_ROOTS_PHASE(phase) "MarkRoots_" #phase,
@@ -1456,11 +1460,8 @@ llvm::raw_ostream &operator<<(
      << (format.symbolID.isNotUniqued() ? "(External)" : "(Internal)")
      << format.symbolID.unsafeGetIndex() << " \"";
 
-  llvm::SmallString<16> buf;
-  format.runtime->getIdentifierTable().debugGetSymbolName(
-      format.runtime, format.symbolID, buf);
-
-  OS << buf;
+  OS << format.runtime->getIdentifierTable().convertSymbolToUTF8(
+      format.symbolID);
   return OS << "\")";
 }
 

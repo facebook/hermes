@@ -114,12 +114,10 @@ class IdentifierTable {
   /// that getIdentifier(str) == id.
   StringView getStringView(Runtime *runtime, SymbolID id) const;
 
-  /// Extract a symbol's name into an ASCII character buffer without performing
-  /// any GC operations. This is used for debugging and logging only.
-  void debugGetSymbolName(
-      Runtime *runtime,
-      SymbolID id,
-      llvm::SmallVectorImpl<char> &buffer);
+  /// Convert a SymbolID into the name it represents, encoded as UTF-8.
+  /// This function does not perform any GC operations, such as allocations,
+  /// mutating the heap, or making handles.
+  std::string convertSymbolToUTF8(SymbolID id);
 
   /// Reserve enough space in the hash table to contain \p count identifiers.
   void reserve(uint32_t count) {

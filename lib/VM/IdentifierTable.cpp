@@ -188,22 +188,28 @@ StringView IdentifierTable::getStringView(Runtime *runtime, SymbolID id) const {
   return StringView(entry.getLazyUTF16Ref());
 }
 
-void IdentifierTable::debugGetSymbolName(
-    Runtime *runtime,
-    SymbolID id,
-    llvm::SmallVectorImpl<char> &buffer) {
-  GCScope gcScope{runtime};
-  StringView view = getStringView(runtime, id);
-  buffer.reserve(buffer.size() + view.length());
-  for (char16_t ch : view) {
-    if (ch > 32 && ch < 128)
-      buffer.push_back((char)ch);
-    else {
-      char cvtbuf[8];
-      ::snprintf(cvtbuf, sizeof(cvtbuf), "\\u%04x", ch);
-      buffer.append(cvtbuf, cvtbuf + 6);
-    }
+std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
+  auto &vectorEntry = getLookupTableEntry(id);
+  if (vectorEntry.isStringPrim()) {
+    const StringPrimitive *stringPrim = vectorEntry.getStringPrim();
+    llvm::SmallVector<char16_t, 16> tmp;
+    stringPrim->copyUTF16String(tmp);
+    std::string out;
+    convertUTF16ToUTF8WithReplacements(out, UTF16Ref{tmp});
+    return out;
+  } else if (vectorEntry.isLazyASCII()) {
+    auto asciiRef = vectorEntry.getLazyASCIIRef();
+    return std::string{asciiRef.begin(), asciiRef.end()};
+  } else if (vectorEntry.isLazyUTF16()) {
+    auto ref = vectorEntry.getLazyUTF16Ref();
+    std::string out;
+    convertUTF16ToUTF8WithReplacements(out, ref);
+    return out;
+  } else {
+    llvm_unreachable("Invalid symbol given");
   }
+  // To avoid compiler warnings.
+  return "";
 }
 
 void IdentifierTable::markIdentifiers(SlotAcceptorWithNames &acceptor, GC *gc) {

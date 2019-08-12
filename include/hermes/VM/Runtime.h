@@ -718,6 +718,9 @@ class Runtime : public HandleRootOwner,
   void visitIdentifiers(
       const std::function<void(UTF16Ref, uint32_t id)> &acceptor) override;
 
+  /// Convert the given symbol into its UTF-8 string representation.
+  std::string convertSymbolToUTF8(SymbolID id) override;
+
   /// Prints any statistics maintained in the Runtime about GC to \p
   /// os.  At present, this means the breakdown of markRoots time by
   /// "phase" within markRoots.

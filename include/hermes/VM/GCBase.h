@@ -215,6 +215,12 @@ class GCBase {
     virtual void visitIdentifiers(
         const std::function<void(UTF16Ref, uint32_t id)> &acceptor) = 0;
 
+    /// Convert the given symbol into its UTF-8 string representation.
+    /// \post The implementation of this function must not perform any GC
+    ///   operations, such as allocations, mutating values in the heap, or
+    ///   making handles.
+    virtual std::string convertSymbolToUTF8(SymbolID id) = 0;
+
     /// Returns the current stack as a string. This function will not cause
     /// any allocs in the GC.
     virtual std::string getCallStackNoAlloc() = 0;
@@ -385,6 +391,12 @@ class GCBase {
   /// Runtime. In those cases use this function.
   PointerBase *getPointerBase() const {
     return pointerBase_;
+  }
+
+  /// Forwards to the GC callback \p convertSymbolToUTF8, see documentation
+  /// for that function.
+  std::string convertSymbolToUTF8(SymbolID id) {
+    return gcCallbacks_->convertSymbolToUTF8(id);
   }
 
   /// Called by the Runtime to inform the GC that it is about to execute JS for
