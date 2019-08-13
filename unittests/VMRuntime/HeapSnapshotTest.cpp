@@ -140,7 +140,8 @@ TEST(HeapSnapshotTest, SnapshotTest) {
       << "\"nodes\":[";
   // Synthetic node representing the root of all roots.
   stream << static_cast<int>(V8HeapSnapshot::NodeType::Synthetic) << ",0,"
-         << static_cast<uint64_t>(GC::IDTracker::ReservedObjectID::Roots)
+         << static_cast<V8HeapSnapshot::NodeID>(
+                GC::IDTracker::ReservedObjectID::Roots)
          << ",0,1,0,";
   // Normal node for the first dummy.
   stream << static_cast<int>(V8HeapSnapshot::NodeType::Object) << ",1,"
