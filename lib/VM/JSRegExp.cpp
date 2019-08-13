@@ -25,7 +25,18 @@ namespace vm {
 // class JSRegExp
 
 ObjectVTable JSRegExp::vt{
-    VTable(CellKind::RegExpKind, sizeof(JSRegExp), JSRegExp::_finalizeImpl),
+    VTable(
+        CellKind::RegExpKind,
+        sizeof(JSRegExp),
+        JSRegExp::_finalizeImpl,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Regexp,
+                                     JSRegExp::_snapshotNameImpl,
+                                     JSRegExp::_snapshotAddEdgesImpl,
+                                     JSRegExp::_snapshotAddNodesImpl}),
     JSRegExp::_getOwnIndexedRangeImpl,
     JSRegExp::_haveOwnIndexedImpl,
     JSRegExp::_getOwnIndexedPropertyFlagsImpl,
@@ -278,6 +289,34 @@ CallResult<RegExpMatch> JSRegExp::search(
 void JSRegExp::_finalizeImpl(GCCell *cell, GC *) {
   JSRegExp *self = vmcast<JSRegExp>(cell);
   self->~JSRegExp();
+}
+
+std::string JSRegExp::_snapshotNameImpl(GCCell *cell, GC *gc) {
+  auto *const self = vmcast<JSRegExp>(cell);
+  return converter(getPattern(self, gc->getPointerBase()).get());
+}
+
+void JSRegExp::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
+  auto *const self = vmcast<JSRegExp>(cell);
+  // Call the super type to add any other custom edges.
+  JSObject::_snapshotAddEdgesImpl(self, gc, snap);
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "bytecode",
+      gc->getNativeID(self->bytecode_.begin()));
+}
+
+void JSRegExp::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
+  auto *const self = vmcast<JSRegExp>(cell);
+  // Add a native node for regex bytecode, to account for native size directly
+  // owned by the regex.
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "RegExpBytecode",
+      // begin is the internal pointer stored by CopyableVector.
+      gc->getNativeID(self->bytecode_.begin()),
+      self->bytecode_.capacity() * sizeof(uint8_t));
 }
 
 /// \return an escaped string equivalent to \p pattern.

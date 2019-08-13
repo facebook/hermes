@@ -116,6 +116,10 @@ class JSRegExp final : public JSObject {
   // Finalizer to clean up stored native regex
   static void _finalizeImpl(GCCell *cell, GC *gc);
 
+  static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+
   // Property storage slots.
   enum RegExpSlotIndexes { pattern, lastIndex, COUNT };
   static constexpr SlotIndex sourceValueIndex = 0;
