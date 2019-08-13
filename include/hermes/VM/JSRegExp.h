@@ -74,9 +74,9 @@ class JSRegExp final : public JSObject {
   /// \return the pattern string used to initialize this RegExp.
   /// Note this is not suitable for interpolation between //, nor for
   /// implementation of toString(). See 'escapePattern' to properly escape it.
-  static Handle<StringPrimitive> getPattern(
-      Handle<JSRegExp> selfHandle,
-      Runtime *runtime);
+  static PseudoHandle<StringPrimitive> getPattern(
+      JSRegExp *self,
+      PointerBase *base);
 
   /// \return An escaped version of the regexp pattern per ES6 21.2.3.2.4, or an
   /// exception if the string could not be created.

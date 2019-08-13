@@ -174,12 +174,11 @@ OptValue<JSRegExp::FlagBits> JSRegExp::FlagBits::fromString(StringView str) {
   return ret;
 }
 
-Handle<StringPrimitive> JSRegExp::getPattern(
-    Handle<JSRegExp> selfHandle,
-    Runtime *runtime) {
-  return runtime->makeHandle(
-      JSObject::getInternalProperty(
-          selfHandle.get(), runtime, RegExpSlotIndexes::pattern)
+PseudoHandle<StringPrimitive> JSRegExp::getPattern(
+    JSRegExp *self,
+    PointerBase *base) {
+  return createPseudoHandle(
+      JSObject::getInternalProperty(self, base, RegExpSlotIndexes::pattern)
           .getString());
 }
 

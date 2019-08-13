@@ -299,7 +299,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
   // slot, then
   if (auto patternAsRegExp = Handle<JSRegExp>::dyn_vmcast(runtime, pattern)) {
     // a. Let P be the value of pattern’s [[OriginalSource]] internal slot.
-    P = JSRegExp::getPattern(patternAsRegExp, runtime).getHermesValue();
+    P = JSRegExp::getPattern(patternAsRegExp.get(), runtime).getHermesValue();
     // b. If flags is undefined, let F be the value of pattern’s
     // [[OriginalFlags]] internal slot.
     if (flags->isUndefined()) {
@@ -726,7 +726,8 @@ regExpSourceGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   // Note that ES6 specifies that we provide the flags to EscapeRegExpPattern,
   // however this is only to distinguish a Unicode from a non-Unicode regexp.
   // Beacuse we do not yet support Unicode regexps we can omit the flags.
-  return JSRegExp::escapePattern(JSRegExp::getPattern(R, runtime), runtime);
+  return JSRegExp::escapePattern(
+      toHandle(runtime, JSRegExp::getPattern(R.get(), runtime)), runtime);
 }
 
 // ES8 21.2.5.3

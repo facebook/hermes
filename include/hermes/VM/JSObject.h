@@ -463,12 +463,12 @@ class JSObject : public GCCell {
 
   /// Return a reference to an internal property slot.
   static GCHermesValue &
-  internalPropertyRef(JSObject *self, Runtime *runtime, SlotIndex index) {
+  internalPropertyRef(JSObject *self, PointerBase *runtime, SlotIndex index) {
     return namedSlotRef<PropStorage::Inline::Yes>(self, runtime, index);
   }
 
   static HermesValue
-  getInternalProperty(JSObject *self, Runtime *runtime, SlotIndex index) {
+  getInternalProperty(JSObject *self, PointerBase *runtime, SlotIndex index) {
     return internalPropertyRef(self, runtime, index);
   }
 
