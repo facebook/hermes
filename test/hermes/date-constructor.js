@@ -206,9 +206,13 @@ print(Date.parse('Tue Jul 16 2019 13:15:25 GMT-0700 (Pacific Daylight Time)'));
 // CHECK-NEXT: 1563308125000
 print(Date.parse('Tue Jul 16 2019 13:15:25 GMT-0700'));
 // CHECK-NEXT: 1563308125000
+print(Date.parse('Tue Jul 16 2019 13:15:25 -0700'));
+// CHECK-NEXT: 1563308125000
 print(Date.parse('Tue Jul 16 2019 13:15:25 GMT'));
 // CHECK-NEXT: 1563282925000
 print(Date.parse('Tue, 16 Jul 2019 13:15:25 GMT-0700'));
+// CHECK-NEXT: 1563308125000
+print(Date.parse('Tue, 16 Jul 2019 13:15:25 -0700'));
 // CHECK-NEXT: 1563308125000
 print(Date.parse('Tue, 16 Jul 2019 13:15:25 GMT'));
 // CHECK-NEXT: 1563282925000

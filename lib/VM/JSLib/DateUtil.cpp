@@ -952,10 +952,13 @@ static double parseESDate(StringView str) {
   // Space and "GMT".
   if (!consume(' '))
     return nan;
-  if (!scanStr(3))
-    return nan;
-  if (!tok.equals(llvm::arrayRefFromStringRef("GMT")))
-    return nan;
+  if (*it == 'G') {
+    // "GMT" is optional, but if there is a G, it is the only option.
+    if (!scanStr(3))
+      return nan;
+    if (!tok.equals(llvm::arrayRefFromStringRef("GMT")))
+      return nan;
+  }
 
   if (it == end)
     goto complete;
