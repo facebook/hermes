@@ -32,8 +32,7 @@ struct Metadata final {
   /// an object.
   struct Fields {
     Fields() = default;
-    explicit Fields(size_t numFields)
-        : offsets(numFields), names(numFields), sizes(numFields) {}
+    explicit Fields(size_t numFields) : offsets(numFields), names(numFields) {}
 
     size_t size() const {
       return offsets.size();
@@ -50,8 +49,6 @@ struct Metadata final {
     OwningArray<offset_t> offsets;
     /// The names of the fields, only used in snapshots.
     OwningArray<const char *> names;
-    /// The size, in bytes, of each field within an object.
-    OwningArray<size_t> sizes;
   };
 
   /// The information about an array for an object.
@@ -105,12 +102,6 @@ struct Metadata final {
     /// Adds a \c Symbol field.
     void addField(const SymbolID *fieldLocation);
     void addField(const char *name, const SymbolID *fieldLocation);
-    /// Adds a field which has no meaning to the GC, like an integer or non-GC
-    /// pointer.
-    template <typename T>
-    inline void addNonPointerField(const T *field);
-    template <typename T>
-    inline void addNonPointerField(const char *name, const T *field);
 
     /// @}
 
@@ -142,7 +133,6 @@ struct Metadata final {
     std::map<offset_t, std::pair<const char *, size_t>> pointers_;
     std::map<offset_t, std::pair<const char *, size_t>> values_;
     std::map<offset_t, std::pair<const char *, size_t>> symbols_;
-    std::map<offset_t, std::pair<const char *, size_t>> nonPointerFields_;
     /// An optional array for an object to contain.
     OptValue<ArrayData> array_;
 
@@ -162,8 +152,6 @@ struct Metadata final {
   Fields pointers_;
   Fields values_;
   Fields symbols_;
-  /// Fields that are not pointers that have special meaning to the GC.
-  Fields nonPointerFields_;
 
   /// The optional array for this object to hold.
   /// NOTE: this format currently does not support multiple arrays.
@@ -183,27 +171,6 @@ llvm::raw_ostream &operator<<(
 
 /// @name Inline implementations
 /// @{
-
-template <typename T>
-inline void Metadata::Builder::addNonPointerField(const T *field) {
-  addNonPointerField(nullptr, field);
-}
-
-template <typename T>
-inline void Metadata::Builder::addNonPointerField(
-    const char *name,
-    const T *field) {
-  // Metadata currently only allows unsigned 32 and 64 bit integers.
-  // This is because for each size the visitor that uses this metadata needs
-  // a unique size in order to determine how to interpret a type.
-  // In order to expand this, there would need to be a concept of unique type
-  // tags.
-  static_assert(
-      sizeof(T) == sizeof(std::uint32_t) || sizeof(T) == sizeof(std::uint64_t),
-      "field must be either 4 or 8 bytes");
-  const auto key = reinterpret_cast<const char *>(field) - base_;
-  nonPointerFields_[key] = std::make_pair(name, sizeof(T));
-}
 
 template <Metadata::ArrayData::ArrayType type, typename SizeType>
 inline void Metadata::Builder::addArray(

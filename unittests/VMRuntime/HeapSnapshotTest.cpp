@@ -83,8 +83,6 @@ static void DummyObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("HermesEmpty", &self->hvEmpty);
   mb.addField("HermesNative", &self->hvNative);
   mb.addField("HermesNull", &self->hvNull);
-  mb.addNonPointerField("x", &self->x);
-  mb.addNonPointerField(&self->y);
   mb.addField("other", &self->other);
 }
 

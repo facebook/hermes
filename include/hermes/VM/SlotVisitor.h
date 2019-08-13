@@ -265,12 +265,6 @@ struct SlotVisitorWithNames final : BaseVisitor {
         base, meta.pointers_.offsets, meta.pointers_.names);
     visitSlots<HermesValue>(base, meta.values_.offsets, meta.values_.names);
     visitSlots<SymbolID>(base, meta.symbols_.offsets, meta.symbols_.names);
-
-    visitSlotsWithSizes(
-        base,
-        meta.nonPointerFields_.offsets,
-        meta.nonPointerFields_.names,
-        meta.nonPointerFields_.sizes);
   }
 
   template <typename T>
@@ -284,29 +278,6 @@ struct SlotVisitorWithNames final : BaseVisitor {
           reinterpret_cast<uintptr_t>(curr) % alignof(T) == 0 &&
           "Should be aligned to the same alignment as T");
       acceptor_.accept(*reinterpret_cast<T *>(curr), names[i]);
-    }
-  }
-
-  void visitSlotsWithSizes(
-      char *base,
-      llvm::ArrayRef<Metadata::offset_t> offsets,
-      llvm::ArrayRef<const char *> names,
-      llvm::ArrayRef<size_t> sizes) {
-    for (decltype(offsets.size()) i = 0; i < offsets.size(); ++i) {
-      char *curr = base + offsets[i];
-      // Based on the size, decide the type.
-      switch (sizes[i]) {
-        case sizeof(uint32_t):
-          acceptor_.accept(*reinterpret_cast<uint32_t *>(curr), names[i]);
-          break;
-        case sizeof(uint64_t):
-          acceptor_.accept(*reinterpret_cast<uint64_t *>(curr), names[i]);
-          break;
-        default:
-          assert(
-              false &&
-              "Should never have a size that is not either 4 or 8 bytes");
-      }
     }
   }
 };

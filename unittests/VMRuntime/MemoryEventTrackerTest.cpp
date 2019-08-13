@@ -55,9 +55,8 @@ class DummyMemoryEventTracker : public MemoryEventTracker {
 /// allocations.
 struct DummyObject final : public GCCell {
   static const VTable vt;
-  const uint32_t dummyInt;
 
-  DummyObject(GC *gc) : GCCell(gc, &vt), dummyInt(0) {}
+  DummyObject(GC *gc) : GCCell(gc, &vt) {}
 
   static DummyObject *create(DummyRuntime &runtime) {
     return new (runtime.alloc(sizeof(DummyObject)))
@@ -73,7 +72,6 @@ const VTable DummyObject::vt{CellKind::UninitializedKind, sizeof(DummyObject)};
 
 static void DummyObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const DummyObject *>(cell);
-  mb.addNonPointerField("dummyInt", &self->dummyInt);
 }
 
 static MetadataTableForTests getMetadataTable() {

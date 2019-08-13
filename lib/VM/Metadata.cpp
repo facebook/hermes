@@ -18,7 +18,6 @@ Metadata::Metadata(Builder &&mb)
     : pointers_(mb.pointers_.size()),
       values_(mb.values_.size()),
       symbols_(mb.symbols_.size()),
-      nonPointerFields_(mb.nonPointerFields_.size()),
       array_(std::move(mb.array_)) {
   auto copier =
       [](const std::map<offset_t, std::pair<const char *, size_t>> &map,
@@ -33,23 +32,16 @@ Metadata::Metadata(Builder &&mb)
             map.cend(),
             std::begin(insertionPoint.names),
             [](const OffsetAndNameAndSize &p) { return p.second.first; });
-        std::transform(
-            map.cbegin(),
-            map.cend(),
-            std::begin(insertionPoint.sizes),
-            [](const OffsetAndNameAndSize &p) { return p.second.second; });
       };
   copier(mb.pointers_, pointers_);
   copier(mb.values_, values_);
   copier(mb.symbols_, symbols_);
-  copier(mb.nonPointerFields_, nonPointerFields_);
 }
 
 Metadata::Metadata(Metadata &&that)
     : pointers_(std::move(that.pointers_)),
       values_(std::move(that.values_)),
       symbols_(std::move(that.symbols_)),
-      nonPointerFields_(std::move(that.nonPointerFields_)),
       array_(std::move(that.array_)) {}
 
 Metadata::Builder::Builder(const void *base)
@@ -57,7 +49,6 @@ Metadata::Builder::Builder(const void *base)
       pointers_(),
       values_(),
       symbols_(),
-      nonPointerFields_(),
       array_() {}
 
 void Metadata::Builder::addField(const GCPointerBase *fieldLocation) {
@@ -121,7 +112,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Metadata &meta) {
   printOffsetAndNameAndSizes(os, meta.pointers_);
   printOffsetAndNameAndSizes(os, meta.values_);
   printOffsetAndNameAndSizes(os, meta.symbols_);
-  printOffsetAndNameAndSizes(os, meta.nonPointerFields_);
   os << "]";
   if (meta.array_) {
     os << ",\n\tarray: " << *meta.array_ << ",\n";

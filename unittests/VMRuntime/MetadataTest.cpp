@@ -18,9 +18,9 @@ struct DummyCell final {
  public:
   static void buildMeta(const GCCell *cell, Metadata::Builder &mb);
 
-  std::uint32_t x_;
-  std::uint32_t y_;
-  std::uint64_t z_;
+  GCPointerBase x_;
+  GCPointerBase y_;
+  GCPointerBase z_;
 };
 
 static_assert(
@@ -29,9 +29,9 @@ static_assert(
 
 void DummyCell::buildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = reinterpret_cast<const DummyCell *>(cell);
-  mb.addNonPointerField("x", &self->x_);
-  mb.addNonPointerField("y", &self->y_);
-  mb.addNonPointerField("z", &self->z_);
+  mb.addField("x", &self->x_);
+  mb.addField("y", &self->y_);
+  mb.addField("z", &self->z_);
 }
 
 struct DummyArrayCell {
@@ -56,7 +56,7 @@ TEST(MetadataTest, TestNormalFields) {
   const auto meta =
       buildMetadata(CellKind::UninitializedKind, DummyCell::buildMeta);
   ASSERT_FALSE(meta.array_);
-  auto &fields = meta.nonPointerFields_;
+  auto &fields = meta.pointers_;
   ASSERT_EQ(fields.size(), 3u);
   EXPECT_STREQ(fields.names[0], "x");
   EXPECT_STREQ(fields.names[1], "y");
@@ -66,11 +66,7 @@ TEST(MetadataTest, TestNormalFields) {
   EXPECT_EQ(fields.offsets[1], offsetof(DummyCell, y_));
   EXPECT_EQ(fields.offsets[2], offsetof(DummyCell, z_));
 
-  EXPECT_EQ(fields.sizes[0], sizeof(uint32_t));
-  EXPECT_EQ(fields.sizes[1], sizeof(uint32_t));
-  EXPECT_EQ(fields.sizes[2], sizeof(uint64_t));
-
-  EXPECT_EQ(meta.pointers_.size(), 0u);
+  EXPECT_EQ(meta.pointers_.size(), 3u);
   EXPECT_EQ(meta.values_.size(), 0u);
   EXPECT_EQ(meta.symbols_.size(), 0u);
 }

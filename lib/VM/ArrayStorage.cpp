@@ -29,8 +29,6 @@ VTable ArrayStorage::vt(
 
 void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const ArrayStorage *>(cell);
-  mb.addNonPointerField("capacity", &self->capacity_);
-  mb.addNonPointerField("size", &self->size_);
   mb.addArray<Metadata::ArrayData::ArrayType::HermesValue>(
       "storage", self->data(), &self->size_, sizeof(GCHermesValue));
 }
