@@ -1921,6 +1921,11 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
       self->clazz_.get(gc->getPointerBase()),
       gc->getPointerBase(),
       [self, gc, &snap](SymbolID id, NamedPropertyDescriptor desc) {
+        if (InternalProperty::isInternal(id)) {
+          // Internal properties aren't user-visible, skip them.
+          return;
+        }
+        // Else, it's a user-visible property.
         GCHermesValue &prop =
             namedSlotRef(self, gc->getPointerBase(), desc.slot);
         if (prop.isPointer()) {
