@@ -29,7 +29,7 @@ ObjectVTable JSObject::vt{
         nullptr,
         nullptr,
         nullptr,
-        VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Object,
+        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                      JSObject::_snapshotNameImpl,
                                      JSObject::_snapshotAddEdgesImpl,
                                      nullptr}),
@@ -1905,17 +1905,14 @@ std::string JSObject::_snapshotNameImpl(GCCell *cell, GC *gc) {
   return self->getHeuristicTypeName(gc->getPointerBase());
 }
 
-void JSObject::_snapshotAddEdgesImpl(
-    GCCell *cell,
-    GC *gc,
-    V8HeapSnapshot &snap) {
+void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
   auto *const self = vmcast<JSObject>(cell);
 
   // Add the prototype as a property edge, so it's easy for JS developers to
   // walk the prototype chain on their own.
   if (self->parent_) {
     snap.addNamedEdge(
-        V8HeapSnapshot::EdgeType::Property,
+        HeapSnapshot::EdgeType::Property,
         // __proto__ chosen for similarity to V8.
         "__proto__",
         gc->getObjectID(self->parent_));
@@ -1935,12 +1932,12 @@ void JSObject::_snapshotAddEdgesImpl(
           // alphabetically.
           if (auto index = ::hermes::toArrayIndex(propName)) {
             snap.addIndexedEdge(
-                V8HeapSnapshot::EdgeType::Element,
+                HeapSnapshot::EdgeType::Element,
                 index.getValue(),
                 gc->getObjectID(prop.getPointer()));
           } else {
             snap.addNamedEdge(
-                V8HeapSnapshot::EdgeType::Property,
+                HeapSnapshot::EdgeType::Property,
                 propName,
                 gc->getObjectID(prop.getPointer()));
           }

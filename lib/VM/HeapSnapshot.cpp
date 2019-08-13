@@ -39,12 +39,12 @@ const char *kSectionLabels[] = {
 
 } // namespace
 
-V8HeapSnapshot::V8HeapSnapshot(JSONEmitter &json) : json_(json) {
+HeapSnapshot::HeapSnapshot(JSONEmitter &json) : json_(json) {
   json_.openDict();
   emitMeta();
 }
 
-V8HeapSnapshot::~V8HeapSnapshot() {
+HeapSnapshot::~HeapSnapshot() {
   assert(
       edgeCount_ == expectedEdges_ && "Fewer edges added than were expected");
 
@@ -52,7 +52,7 @@ V8HeapSnapshot::~V8HeapSnapshot() {
   json_.closeDict(); // top level
 }
 
-void V8HeapSnapshot::beginSection(Section section) {
+void HeapSnapshot::beginSection(Section section) {
   auto i = index(nextSection_);
 
   assert(!sectionOpened_ && "Sections must be explicitly close");
@@ -75,7 +75,7 @@ void V8HeapSnapshot::beginSection(Section section) {
   sectionOpened_ = true;
 }
 
-void V8HeapSnapshot::endSection(Section section) {
+void HeapSnapshot::endSection(Section section) {
   assert(sectionOpened_ && "No section to close");
   assert(section != Section::END && "Can't close the end section.");
   assert(nextSection_ == section && "Closing a different section.");
@@ -85,7 +85,7 @@ void V8HeapSnapshot::endSection(Section section) {
   sectionOpened_ = false;
 }
 
-void V8HeapSnapshot::beginNode() {
+void HeapSnapshot::beginNode() {
   if (nextSection_ == Section::Edges) {
     // If the edges are being emitted, ignore node output.
     return;
@@ -95,7 +95,7 @@ void V8HeapSnapshot::beginNode() {
   currEdgeCount_ = 0;
 }
 
-void V8HeapSnapshot::endNode(
+void HeapSnapshot::endNode(
     NodeType type,
     llvm::StringRef name,
     NodeID id,
@@ -120,7 +120,7 @@ void V8HeapSnapshot::endNode(
 #endif
 }
 
-void V8HeapSnapshot::addNamedEdge(
+void HeapSnapshot::addNamedEdge(
     EdgeType type,
     llvm::StringRef name,
     NodeID toNode) {
@@ -143,7 +143,7 @@ void V8HeapSnapshot::addNamedEdge(
   json_.emitValue(nodeIt->second * V8_SNAPSHOT_NODE_FIELD_COUNT);
 }
 
-void V8HeapSnapshot::addIndexedEdge(
+void HeapSnapshot::addIndexedEdge(
     EdgeType type,
     EdgeIndex edgeIndex,
     NodeID toNode) {
@@ -166,7 +166,7 @@ void V8HeapSnapshot::addIndexedEdge(
   json_.emitValue(nodeIt->second * V8_SNAPSHOT_NODE_FIELD_COUNT);
 }
 
-void V8HeapSnapshot::emitMeta() {
+void HeapSnapshot::emitMeta() {
   json_.emitKey("snapshot");
   json_.openDict();
 
@@ -254,7 +254,7 @@ void V8HeapSnapshot::emitMeta() {
   json_.closeDict(); // "snapshot"
 }
 
-void V8HeapSnapshot::emitStrings() {
+void HeapSnapshot::emitStrings() {
   beginSection(Section::Strings);
 
   for (const auto &str : stringTable_) {

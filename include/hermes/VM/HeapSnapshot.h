@@ -49,7 +49,7 @@ std::string converter(UTF16Ref ref);
 ///   Something which enables these should be implemented in the future.
 void rawHeapSnapshot(llvm::raw_ostream &os, const char *start, const char *end);
 
-class V8HeapSnapshot {
+class HeapSnapshot {
  public:
   enum class Section : unsigned {
 #define V8_SNAPSHOT_SECTION(enumerand, label) enumerand,
@@ -70,10 +70,10 @@ class V8HeapSnapshot {
   using NodeIndex = uint32_t;
   using EdgeIndex = uint32_t;
 
-  explicit V8HeapSnapshot(JSONEmitter &json);
+  explicit HeapSnapshot(JSONEmitter &json);
 
   /// NOTE: this destructor writes to \p json.
-  ~V8HeapSnapshot();
+  ~HeapSnapshot();
 
   /// Opens \p section.  All sections between the next section to be closed
   ///(inclusive) and this one (exclusive) will be skipped by implicitly opening

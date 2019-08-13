@@ -26,7 +26,7 @@ std::string VTable::HeapSnapshotMetadata::nameForNode(GCCell *cell, GC *gc)
 void VTable::HeapSnapshotMetadata::addEdges(
     GCCell *cell,
     GC *gc,
-    V8HeapSnapshot &snap) const {
+    HeapSnapshot &snap) const {
   if (addEdges_) {
     addEdges_(cell, gc, snap);
   }
@@ -35,7 +35,7 @@ void VTable::HeapSnapshotMetadata::addEdges(
 void VTable::HeapSnapshotMetadata::addNodes(
     GCCell *cell,
     GC *gc,
-    V8HeapSnapshot &snap) const {
+    HeapSnapshot &snap) const {
   if (addNodes_) {
     addNodes_(cell, gc, snap);
   }

@@ -296,7 +296,7 @@ class GCBase {
   class IDTracker final {
    public:
     /// These are IDs that are reserved for special objects.
-    enum class ReservedObjectID : V8HeapSnapshot::NodeID {
+    enum class ReservedObjectID : HeapSnapshot::NodeID {
       // For any object where an ID cannot be found.
       NoID = 0,
       // The ID for the initial "roots" object.
@@ -311,10 +311,10 @@ class GCBase {
 
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
-    inline V8HeapSnapshot::NodeID getObjectID(const void *cell);
+    inline HeapSnapshot::NodeID getObjectID(const void *cell);
     /// Get the unique object id of the given native memory (non-JS-heap).
     /// If one does not yet exist, start tracking it.
-    inline V8HeapSnapshot::NodeID getNativeID(const void *mem);
+    inline HeapSnapshot::NodeID getNativeID(const void *mem);
 
     /// Tell the tracker that an object has moved locations.
     /// This must be called in a safe order, if A moves to B, and C moves to A,
@@ -331,27 +331,27 @@ class GCBase {
 
    private:
     /// Get the next unique object ID for a newly created object.
-    inline V8HeapSnapshot::NodeID nextObjectID();
+    inline HeapSnapshot::NodeID nextObjectID();
     /// Get the next unique native ID for a chunk of native memory.
-    inline V8HeapSnapshot::NodeID nextNativeID();
+    inline HeapSnapshot::NodeID nextNativeID();
 
     /// JS heap nodes are represented by even-numbered IDs, while native nodes
     /// are represented with odd-numbered IDs. This is not a guarantee of the
     /// system, but an implementation detail.
-    static constexpr V8HeapSnapshot::NodeID kIDStep = 2;
+    static constexpr HeapSnapshot::NodeID kIDStep = 2;
 
     /// The next available ID to assign to an object. Object IDs are not
     /// recycled so that snapshots don't confuse two objects with each other.
-    V8HeapSnapshot::NodeID nextID_{static_cast<V8HeapSnapshot::NodeID>(
+    HeapSnapshot::NodeID nextID_{static_cast<HeapSnapshot::NodeID>(
         ReservedObjectID::FirstNonReservedObjectID)};
     /// The next available native ID to assign to a chunk of native memory.
-    V8HeapSnapshot::NodeID nextNativeID_{1};
+    HeapSnapshot::NodeID nextNativeID_{1};
 
     /// Map of object pointers to IDs. Only populated once the first heap
     /// snapshot is requested, or the first time the memory profiler is turned
     /// on.
     /// NOTE: The same map is used for both JS heap and native heap IDs.
-    llvm::DenseMap<const void *, V8HeapSnapshot::NodeID> objectIDMap_;
+    llvm::DenseMap<const void *, HeapSnapshot::NodeID> objectIDMap_;
   };
 
   GCBase(
@@ -550,9 +550,9 @@ class GCBase {
     return idTracker_;
   }
 
-  inline V8HeapSnapshot::NodeID getObjectID(const void *cell);
-  inline V8HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
-  inline V8HeapSnapshot::NodeID getNativeID(const void *mem);
+  inline HeapSnapshot::NodeID getObjectID(const void *cell);
+  inline HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
+  inline HeapSnapshot::NodeID getNativeID(const void *mem);
 
 #ifndef NDEBUG
   /// \return The next debug allocation ID for embedding directly into a GCCell.
@@ -865,17 +865,17 @@ class WeakRefBase {
   }
 };
 
-inline V8HeapSnapshot::NodeID GCBase::getObjectID(const void *cell) {
+inline HeapSnapshot::NodeID GCBase::getObjectID(const void *cell) {
   assert(cell && "Called getObjectID on a null pointer");
   return idTracker_.getObjectID(cell);
 }
 
-inline V8HeapSnapshot::NodeID GCBase::getObjectID(const GCPointerBase &cell) {
+inline HeapSnapshot::NodeID GCBase::getObjectID(const GCPointerBase &cell) {
   assert(cell && "Called getObjectID on a null pointer");
   return getObjectID(cell.get(pointerBase_));
 }
 
-inline V8HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
+inline HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
   assert(mem && "Called getNativeID on a null pointer");
   return idTracker_.getNativeID(mem);
 }
@@ -890,7 +890,7 @@ inline bool GCBase::IDTracker::isTrackingIDs() const {
   return !objectIDMap_.empty();
 }
 
-inline V8HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(const void *cell) {
+inline HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(const void *cell) {
   auto iter = objectIDMap_.find(cell);
   if (iter != objectIDMap_.end()) {
     return iter->second;
@@ -901,7 +901,7 @@ inline V8HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(const void *cell) {
   return objID;
 }
 
-inline V8HeapSnapshot::NodeID GCBase::IDTracker::getNativeID(const void *mem) {
+inline HeapSnapshot::NodeID GCBase::IDTracker::getNativeID(const void *mem) {
   auto iter = objectIDMap_.find(mem);
   if (iter != objectIDMap_.end()) {
     return iter->second;
@@ -945,21 +945,21 @@ inline void GCBase::IDTracker::untrackNative(const void *mem) {
   untrackObject(mem);
 }
 
-inline V8HeapSnapshot::NodeID GCBase::IDTracker::nextObjectID() {
+inline HeapSnapshot::NodeID GCBase::IDTracker::nextObjectID() {
   // This must be unique for most features that rely on it, check for overflow.
   if (LLVM_UNLIKELY(
           nextID_ >=
-          std::numeric_limits<V8HeapSnapshot::NodeID>::max() - kIDStep)) {
+          std::numeric_limits<HeapSnapshot::NodeID>::max() - kIDStep)) {
     hermes_fatal("Ran out of object IDs");
   }
   return nextID_ += kIDStep;
 }
 
-inline V8HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
+inline HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
   // This must be unique for most features that rely on it, check for overflow.
   if (LLVM_UNLIKELY(
           nextNativeID_ >=
-          std::numeric_limits<V8HeapSnapshot::NodeID>::max() - kIDStep)) {
+          std::numeric_limits<HeapSnapshot::NodeID>::max() - kIDStep)) {
     hermes_fatal("Ran out of native IDs");
   }
   return nextNativeID_ += kIDStep;

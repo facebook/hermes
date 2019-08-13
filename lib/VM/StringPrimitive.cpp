@@ -579,10 +579,10 @@ template <typename T>
 void ExternalStringPrimitive<T>::_snapshotAddEdgesImpl(
     GCCell *cell,
     GC *gc,
-    V8HeapSnapshot &snap) {
+    HeapSnapshot &snap) {
   auto *const self = vmcast<ExternalStringPrimitive<T>>(cell);
   snap.addNamedEdge(
-      V8HeapSnapshot::EdgeType::Internal,
+      HeapSnapshot::EdgeType::Internal,
       "externalString",
       gc->getNativeID(self->contents_.data()));
 }
@@ -591,11 +591,11 @@ template <typename T>
 void ExternalStringPrimitive<T>::_snapshotAddNodesImpl(
     GCCell *cell,
     GC *gc,
-    V8HeapSnapshot &snap) {
+    HeapSnapshot &snap) {
   auto *const self = vmcast<ExternalStringPrimitive<T>>(cell);
   snap.beginNode();
   snap.endNode(
-      V8HeapSnapshot::NodeType::Native,
+      HeapSnapshot::NodeType::Native,
       "ExternalStringPrimitive",
       gc->getNativeID(self->contents_.data()),
       self->contents_.size());

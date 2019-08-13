@@ -584,8 +584,8 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// assumed to be an ExternalStringPrimitive.
   static size_t _mallocSizeImpl(GCCell *cell);
 
-  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, V8HeapSnapshot &snap);
-  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, V8HeapSnapshot &snap);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
   /// The backing storage of this string. Note that the string's length is fixed
   /// and must always be equal to StringPrimitive::getStringLength().
@@ -602,7 +602,7 @@ const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     nullptr,
     nullptr,
     VTable::HeapSnapshotMetadata{
-        V8HeapSnapshot::NodeType::String,
+        HeapSnapshot::NodeType::String,
         DynamicStringPrimitive<T, Uniqued>::_snapshotNameImpl,
         nullptr,
         nullptr});
@@ -626,7 +626,7 @@ const VTable ExternalStringPrimitive<T>::vt = VTable(
     nullptr,
     nullptr,
     VTable::HeapSnapshotMetadata{
-        V8HeapSnapshot::NodeType::String,
+        HeapSnapshot::NodeType::String,
         ExternalStringPrimitive<T>::_snapshotNameImpl,
         ExternalStringPrimitive<T>::_snapshotAddEdgesImpl,
         ExternalStringPrimitive<T>::_snapshotAddNodesImpl});

@@ -1167,7 +1167,7 @@ struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
 struct EdgeAddingAcceptor : public SnapshotAcceptor {
   using SnapshotAcceptor::accept;
 
-  EdgeAddingAcceptor(GC &gc, V8HeapSnapshot &snap, bool filterDuplicates)
+  EdgeAddingAcceptor(GC &gc, HeapSnapshot &snap, bool filterDuplicates)
       : SnapshotAcceptor(gc),
         snap_(snap),
         filterDuplicates_(filterDuplicates) {}
@@ -1184,13 +1184,13 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor {
     }
 
     snap_.addNamedEdge(
-        V8HeapSnapshot::EdgeType::Internal,
+        HeapSnapshot::EdgeType::Internal,
         llvm::StringRef::withNullAsEmpty(name),
         id);
   }
 
  private:
-  V8HeapSnapshot &snap_;
+  HeapSnapshot &snap_;
   bool filterDuplicates_;
   llvm::DenseSet<uint64_t> seenIDs_;
 };
@@ -1210,9 +1210,9 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
 #endif
 
   JSONEmitter json(os, !compact);
-  V8HeapSnapshot snap(json);
+  HeapSnapshot snap(json);
 
-  snap.beginSection(V8HeapSnapshot::Section::Nodes);
+  snap.beginSection(HeapSnapshot::Section::Nodes);
 
   // Count the number of roots.
   {
@@ -1222,9 +1222,9 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
     snap.beginNode();
     markRoots(rootAcceptor, true);
     snap.endNode(
-        V8HeapSnapshot::NodeType::Synthetic,
+        HeapSnapshot::NodeType::Synthetic,
         "(GC Roots)",
-        static_cast<V8HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Roots),
+        static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Roots),
         0);
   }
 
@@ -1248,9 +1248,9 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
         cell->getAllocatedSize());
   };
   forAllObjs(snapshotForObject);
-  snap.endSection(V8HeapSnapshot::Section::Nodes);
+  snap.endSection(HeapSnapshot::Section::Nodes);
 
-  snap.beginSection(V8HeapSnapshot::Section::Edges);
+  snap.beginSection(HeapSnapshot::Section::Edges);
   {
     // Make a new root acceptor so that edges aren't filtered a second time.
     EdgeAddingAcceptor rootAcceptor(*this, snap, /*filterDuplicates*/ true);
@@ -1258,7 +1258,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   }
   // Add edges between objects in the heap.
   forAllObjs(snapshotForObject);
-  snap.endSection(V8HeapSnapshot::Section::Edges);
+  snap.endSection(HeapSnapshot::Section::Edges);
 
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormedHeap();

@@ -164,7 +164,7 @@ class ArrayImpl : public JSObject {
 
   /// Adds the special indexed element edges from this array to its backing
   /// storage.
-  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, V8HeapSnapshot &snap);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
   /// Check whether property with index \p index exists in indexed storage and
   /// \return true if it does.

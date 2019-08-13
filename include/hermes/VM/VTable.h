@@ -31,8 +31,8 @@ struct VTable {
   class HeapSnapshotMetadata final {
    private:
     using NameCallback = std::string(GCCell *, GC *);
-    using AddEdgesCallback = void(GCCell *, GC *, V8HeapSnapshot &);
-    using AddNodesCallback = void(GCCell *, GC *, V8HeapSnapshot &);
+    using AddEdgesCallback = void(GCCell *, GC *, HeapSnapshot &);
+    using AddNodesCallback = void(GCCell *, GC *, HeapSnapshot &);
 
    public:
     /// Construct a HeapSnapshotMetadata, that is used by the GC to decide how
@@ -45,7 +45,7 @@ struct VTable {
     ///   add custom edges that aren't well-represented by internal pointers, or
     ///   should be user-visible.
     constexpr explicit HeapSnapshotMetadata(
-        V8HeapSnapshot::NodeType nodeType,
+        HeapSnapshot::NodeType nodeType,
         NameCallback *name,
         AddEdgesCallback *addEdges,
         AddNodesCallback *addNodes)
@@ -54,15 +54,15 @@ struct VTable {
           addEdges_(addEdges),
           addNodes_(addNodes) {}
 
-    V8HeapSnapshot::NodeType nodeType() const {
+    HeapSnapshot::NodeType nodeType() const {
       return nodeType_;
     }
     std::string nameForNode(GCCell *cell, GC *gc) const;
-    void addEdges(GCCell *cell, GC *gc, V8HeapSnapshot &snap) const;
-    void addNodes(GCCell *cell, GC *gc, V8HeapSnapshot &snap) const;
+    void addEdges(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
+    void addNodes(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
 
    private:
-    const V8HeapSnapshot::NodeType nodeType_;
+    const HeapSnapshot::NodeType nodeType_;
     NameCallback *const name_;
     AddEdgesCallback *const addEdges_;
     AddNodesCallback *const addNodes_;
@@ -122,7 +122,7 @@ struct VTable {
       TrimSizeCallback *trimSize = nullptr,
       TrimCallback *trim = nullptr,
       HeapSnapshotMetadata snapshotMetaData =
-          HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Object,
+          HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                nullptr,
                                nullptr,
                                nullptr})

@@ -139,16 +139,16 @@ TEST(HeapSnapshotTest, SnapshotTest) {
       << "},"
       << "\"nodes\":[";
   // Synthetic node representing the root of all roots.
-  stream << static_cast<int>(V8HeapSnapshot::NodeType::Synthetic) << ",0,"
-         << static_cast<V8HeapSnapshot::NodeID>(
+  stream << static_cast<int>(HeapSnapshot::NodeType::Synthetic) << ",0,"
+         << static_cast<HeapSnapshot::NodeID>(
                 GC::IDTracker::ReservedObjectID::Roots)
          << ",0,1,0,";
   // Normal node for the first dummy.
-  stream << static_cast<int>(V8HeapSnapshot::NodeType::Object) << ",1,"
+  stream << static_cast<int>(HeapSnapshot::NodeType::Object) << ",1,"
          << rt.getHeap().getObjectID(*dummy) << "," << blockSize << ",1,0,";
   // Normal node for the second dummy, which is only reachable via the first
   // dummy.
-  stream << static_cast<int>(V8HeapSnapshot::NodeType::Object) << ",1,"
+  stream << static_cast<int>(HeapSnapshot::NodeType::Object) << ",1,"
          << rt.getHeap().getObjectID(dummy->other.get(&rt)) << "," << blockSize
          << ",0,0";
   // The edges point from the root to the first dummy, and from the first dummy

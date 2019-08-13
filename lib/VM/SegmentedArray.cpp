@@ -23,7 +23,7 @@ VTable SegmentedArray::Segment::vt(
     nullptr,
     nullptr,
     nullptr,
-    VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Array,
+    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
                                  nullptr,
                                  nullptr,
                                  nullptr});
@@ -74,7 +74,7 @@ VTable SegmentedArray::vt(
     nullptr,
     _trimSizeCallback,
     _trimCallback,
-    VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Array,
+    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
                                  nullptr,
                                  nullptr,
                                  nullptr});

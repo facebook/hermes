@@ -32,7 +32,7 @@ void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 void ArrayImpl::_snapshotAddEdgesImpl(
     GCCell *cell,
     GC *gc,
-    V8HeapSnapshot &snap) {
+    HeapSnapshot &snap) {
   auto *const self = vmcast<ArrayImpl>(cell);
   // Add the super type's edges too.
   JSObject::_snapshotAddEdgesImpl(self, gc, snap);
@@ -49,7 +49,7 @@ void ArrayImpl::_snapshotAddEdgesImpl(
     }
     if (auto *p = elem.getPointer()) {
       snap.addIndexedEdge(
-          V8HeapSnapshot::EdgeType::Element, i, gc->getObjectID(p));
+          HeapSnapshot::EdgeType::Element, i, gc->getObjectID(p));
     }
   }
 }
@@ -347,7 +347,7 @@ ObjectVTable Arguments::vt{
         nullptr,
         nullptr,
         nullptr,
-        VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Object,
+        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                      nullptr,
                                      Arguments::_snapshotAddEdgesImpl,
                                      nullptr}),
@@ -475,7 +475,7 @@ ObjectVTable JSArray::vt{
         nullptr,
         nullptr,
         nullptr,
-        VTable::HeapSnapshotMetadata{V8HeapSnapshot::NodeType::Object,
+        VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                      nullptr,
                                      JSArray::_snapshotAddEdgesImpl,
                                      nullptr}),
