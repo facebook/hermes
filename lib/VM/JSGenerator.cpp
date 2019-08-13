@@ -31,7 +31,7 @@ const ObjectVTable JSGenerator::vt{
 void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSGenerator *>(cell);
-  mb.addField("@innerFunction", &self->innerFunction_);
+  mb.addField("innerFunction", &self->innerFunction_);
 }
 
 #ifdef HERMESVM_SERIALIZE

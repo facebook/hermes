@@ -47,15 +47,14 @@ ObjectVTable JSObject::vt{
 namespace {
 
 /// Add \p N fields to the metadata builder \p mb starting from offset
-/// \p props and using the name "@directPropX".
+/// \p props and using the name "directPropX".
 template <int N>
 void addDirectPropertyFields(
     const GCHermesValue *props,
     Metadata::Builder &mb) {
   // Make sure the property number fits in a single ASCII digit.
   static_assert(N <= 10, "only up to 10 direct properties are supported");
-  static const char propName[] = {'@',
-                                  'd',
+  static const char propName[] = {'d',
                                   'i',
                                   'r',
                                   'e',
@@ -78,9 +77,9 @@ void addDirectPropertyFields<0>(const GCHermesValue *, Metadata::Builder &) {}
 
 void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const JSObject *>(cell);
-  mb.addField("@parent", &self->parent_);
-  mb.addField("@class", &self->clazz_);
-  mb.addField("@propStorage", &self->propStorage_);
+  mb.addField("parent", &self->parent_);
+  mb.addField("class", &self->clazz_);
+  mb.addField("propStorage", &self->propStorage_);
 
   // Declare the direct properties.
   addDirectPropertyFields<JSObject::DIRECT_PROPERTY_SLOTS>(
@@ -2608,8 +2607,8 @@ VTable PropertyAccessor::vt{CellKind::PropertyAccessorKind,
 
 void PropertyAccessorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const PropertyAccessor *>(cell);
-  mb.addField("@getter", &self->getter);
-  mb.addField("@setter", &self->setter);
+  mb.addField("getter", &self->getter);
+  mb.addField("setter", &self->setter);
 }
 
 #ifdef HERMESVM_SERIALIZE

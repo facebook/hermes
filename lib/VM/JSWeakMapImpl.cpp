@@ -19,7 +19,7 @@ void JSWeakMapImplBase::WeakMapImplBaseBuildMeta(
     Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSWeakMapImplBase *>(cell);
-  mb.addField("@valueStorage", &self->valueStorage_);
+  mb.addField("valueStorage", &self->valueStorage_);
 }
 
 /// Set a key/value, overwriting the previous value at that key,

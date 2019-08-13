@@ -35,7 +35,7 @@ JSTypedArrayBase::JSTypedArrayBase(
 void TypedArrayBaseBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSTypedArrayBase *>(cell);
-  mb.addField("@buffer", &self->buffer_);
+  mb.addField("buffer", &self->buffer_);
 }
 
 std::pair<uint32_t, uint32_t> JSTypedArrayBase::_getOwnIndexedRangeImpl(

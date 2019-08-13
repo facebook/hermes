@@ -24,7 +24,7 @@ void JSMapImpl<C>::MapOrSetBuildMeta(
     Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSMapImpl<C> *>(cell);
-  mb.addField("@storage", &self->storage_);
+  mb.addField("storage", &self->storage_);
 }
 
 void MapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
@@ -110,8 +110,8 @@ void JSMapIteratorImpl<C>::MapOrSetIteratorBuildMeta(
     Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSMapIteratorImpl<C> *>(cell);
-  mb.addField("@data", &self->data_);
-  mb.addField("@itr", &self->itr_);
+  mb.addField("data", &self->data_);
+  mb.addField("itr", &self->itr_);
 }
 
 void MapIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {

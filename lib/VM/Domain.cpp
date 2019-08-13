@@ -25,8 +25,8 @@ VTable Domain::vt{CellKind::DomainKind,
 
 void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Domain *>(cell);
-  mb.addField("@cjsModules", &self->cjsModules_);
-  mb.addField("@throwingRequire", &self->throwingRequire_);
+  mb.addField("cjsModules", &self->cjsModules_);
+  mb.addField("throwingRequire", &self->throwingRequire_);
 }
 
 #ifdef HERMESVM_SERIALIZE

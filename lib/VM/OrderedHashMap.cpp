@@ -23,11 +23,11 @@ VTable HashMapEntry::vt{CellKind::HashMapEntryKind, sizeof(HashMapEntry)};
 
 void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HashMapEntry *>(cell);
-  mb.addField("@key", &self->key);
-  mb.addField("@value", &self->value);
-  mb.addField("@prevIterationEntry", &self->prevIterationEntry);
-  mb.addField("@nextIterationEntry", &self->nextIterationEntry);
-  mb.addField("@nextEntryInBucket", &self->nextEntryInBucket);
+  mb.addField("key", &self->key);
+  mb.addField("value", &self->value);
+  mb.addField("prevIterationEntry", &self->prevIterationEntry);
+  mb.addField("nextIterationEntry", &self->nextIterationEntry);
+  mb.addField("nextEntryInBucket", &self->nextEntryInBucket);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -55,9 +55,9 @@ VTable OrderedHashMap::vt{CellKind::OrderedHashMapKind, sizeof(OrderedHashMap)};
 
 void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const OrderedHashMap *>(cell);
-  mb.addField("@hashTable", &self->hashTable_);
-  mb.addField("@firstIterationEntry", &self->firstIterationEntry_);
-  mb.addField("@lastIterationEntry", &self->lastIterationEntry_);
+  mb.addField("hashTable", &self->hashTable_);
+  mb.addField("firstIterationEntry", &self->firstIterationEntry_);
+  mb.addField("lastIterationEntry", &self->lastIterationEntry_);
 }
 
 #ifdef HERMESVM_SERIALIZE

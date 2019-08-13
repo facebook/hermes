@@ -28,7 +28,7 @@ ObjectVTable JSDataView::vt{
 void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSDataView *>(cell);
-  mb.addField("@buffer", &self->buffer_);
+  mb.addField("buffer", &self->buffer_);
 }
 
 #ifdef HERMESVM_SERIALIZE

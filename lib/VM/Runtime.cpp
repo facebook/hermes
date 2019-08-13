@@ -412,14 +412,14 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
 
   {
     MarkRootsPhaseTimer timer(this, MarkRootsPhase::RuntimeInstanceVars);
-    acceptor.accept(thrownValue_, "@thrownValue");
-    acceptor.accept(nullPointer_, "@nullPointer");
-    acceptor.accept(rootClazz_, "@rootClass");
-    acceptor.acceptPtr(rootClazzRawPtr_, "@rootClass");
-    acceptor.accept(stringCycleCheckVisited_, "@stringCycleCheckVisited");
-    acceptor.accept(global_, "@global");
+    acceptor.accept(thrownValue_, "thrownValue");
+    acceptor.accept(nullPointer_, "nullPointer");
+    acceptor.accept(rootClazz_, "rootClass");
+    acceptor.acceptPtr(rootClazzRawPtr_, "rootClass");
+    acceptor.accept(stringCycleCheckVisited_, "stringCycleCheckVisited");
+    acceptor.accept(global_, "global");
 #ifdef HERMES_ENABLE_DEBUGGER
-    acceptor.accept(debuggerInternalObject_, "@debuggerInternal");
+    acceptor.accept(debuggerInternalObject_, "debuggerInternal");
 #endif // HERMES_ENABLE_DEBUGGER
   }
 
@@ -450,21 +450,21 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
 #ifdef MARK
 #error "Shouldn't have defined mark already"
 #endif
-#define MARK(field) acceptor.accept((field), "@" #field)
+#define MARK(field) acceptor.accept((field), #field)
   {
     MarkRootsPhaseTimer timer(this, MarkRootsPhase::Prototypes);
     // Prototypes.
     MARK(objectPrototype);
-    acceptor.acceptPtr(objectPrototypeRawPtr, "@objectPrototype");
+    acceptor.acceptPtr(objectPrototypeRawPtr, "objectPrototype");
     MARK(functionPrototype);
-    acceptor.acceptPtr(functionPrototypeRawPtr, "@functionPrototype");
+    acceptor.acceptPtr(functionPrototypeRawPtr, "functionPrototype");
     MARK(stringPrototype);
     MARK(numberPrototype);
     MARK(booleanPrototype);
     MARK(symbolPrototype);
     MARK(datePrototype);
     MARK(arrayPrototype);
-    acceptor.acceptPtr(arrayPrototypeRawPtr, "@arrayPrototype");
+    acceptor.acceptPtr(arrayPrototypeRawPtr, "arrayPrototype");
     MARK(arrayBufferPrototype);
     MARK(dataViewPrototype);
     MARK(typedArrayBasePrototype);
@@ -482,7 +482,7 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
     MARK(regExpLastRegExp);
     MARK(throwTypeErrorAccessor);
     MARK(arrayClass);
-    acceptor.acceptPtr(arrayClassRawPtr, "@arrayClass");
+    acceptor.acceptPtr(arrayClassRawPtr, "arrayClass");
     MARK(iteratorPrototype);
     MARK(arrayIteratorPrototype);
     MARK(arrayPrototypeValues);
@@ -494,14 +494,14 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
     MARK(parseFloatFunction);
     MARK(requireFunction);
 
-#define TYPED_ARRAY(name, type)                                      \
-  acceptor.accept(name##ArrayPrototype, "@" #name "ArrayPrototype"); \
-  acceptor.accept(name##ArrayConstructor, "@" #name "ArrayConstructor");
+#define TYPED_ARRAY(name, type)                                  \
+  acceptor.accept(name##ArrayPrototype, #name "ArrayPrototype"); \
+  acceptor.accept(name##ArrayConstructor, #name "ArrayConstructor");
 #include "hermes/VM/TypedArrays.def"
 
     MARK(errorConstructor);
 #define ALL_ERROR_TYPE(name) \
-  acceptor.accept(name##Prototype, "@" #name "Prototype");
+  acceptor.accept(name##Prototype, #name "Prototype");
 #include "hermes/VM/NativeErrorTypes.def"
 #undef MARK
   }

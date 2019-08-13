@@ -33,8 +33,8 @@ ObjectVTable JSError::vt{
 void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSError *>(cell);
-  mb.addField("@funcNames", &self->funcNames_);
-  mb.addField("@domains", &self->domains_);
+  mb.addField("funcNames", &self->funcNames_);
+  mb.addField("domains", &self->domains_);
 }
 
 #ifdef HERMESVM_SERIALIZE

@@ -764,7 +764,7 @@ ObjectVTable JSArrayIterator::vt{
 void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSArrayIterator *>(cell);
-  mb.addField("@iteratedObject", &self->iteratedObject_);
+  mb.addField("iteratedObject", &self->iteratedObject_);
 }
 
 #ifdef HERMESVM_SERIALIZE

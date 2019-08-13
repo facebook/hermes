@@ -63,7 +63,7 @@ const VTable DummyObject::vt(CellKind::UninitializedKind, sizeof(DummyObject));
 
 static void DummyObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const DummyObject *>(cell);
-  mb.addField("@pointer", &self->pointer);
+  mb.addField("pointer", &self->pointer);
 }
 
 static MetadataTableForTests getMetadataTable() {

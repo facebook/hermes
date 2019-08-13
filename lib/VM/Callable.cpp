@@ -27,7 +27,7 @@ VTable Environment::vt{CellKind::EnvironmentKind, 0};
 
 void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const Environment *>(cell);
-  mb.addField("@parentEnvironment", &self->parentEnvironment_);
+  mb.addField("parentEnvironment", &self->parentEnvironment_);
   mb.addArray<Metadata::ArrayData::ArrayType::HermesValue>(
       self->getSlots(), &self->size_, sizeof(GCHermesValue));
 }
@@ -49,7 +49,7 @@ void EnvironmentDeserialize(Deserializer &d, CellKind kind) {
 void CallableBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const Callable *>(cell);
-  mb.addField("@environment", &self->environment_);
+  mb.addField("environment", &self->environment_);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -404,8 +404,8 @@ CallableVTable BoundFunction::vt{
 void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const BoundFunction *>(cell);
-  mb.addField("@target", &self->target_);
-  mb.addField("@argStorage", &self->argStorage_);
+  mb.addField("target", &self->target_);
+  mb.addField("argStorage", &self->argStorage_);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1015,8 +1015,8 @@ CallableVTable JSFunction::vt{
 void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const JSFunction *>(cell);
-  mb.addNonPointerField("@codeBlock", &self->codeBlock_);
-  mb.addField("@domain", &self->domain_);
+  mb.addNonPointerField("codeBlock", &self->codeBlock_);
+  mb.addField("domain", &self->domain_);
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -1136,12 +1136,12 @@ void GeneratorInnerFunctionBuildMeta(
     Metadata::Builder &mb) {
   FunctionBuildMeta(cell, mb);
   const auto *self = static_cast<const GeneratorInnerFunction *>(cell);
-  mb.addNonPointerField("@state", &self->state_);
-  mb.addNonPointerField("@argCount", &self->argCount_);
-  mb.addField("@savedContext", &self->savedContext_);
-  mb.addField("@result", &self->result_);
-  mb.addNonPointerField("@nextIPOffset", &self->nextIPOffset_);
-  mb.addNonPointerField("@action", &self->action_);
+  mb.addNonPointerField("state", &self->state_);
+  mb.addNonPointerField("argCount", &self->argCount_);
+  mb.addField("savedContext", &self->savedContext_);
+  mb.addField("result", &self->result_);
+  mb.addNonPointerField("nextIPOffset", &self->nextIPOffset_);
+  mb.addNonPointerField("action", &self->action_);
 }
 
 #ifdef HERMESVM_SERIALIZE

@@ -83,9 +83,9 @@ static void DummyObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("HermesEmpty", &self->hvEmpty);
   mb.addField("HermesNative", &self->hvNative);
   mb.addField("HermesNull", &self->hvNull);
-  mb.addNonPointerField("@x", &self->x);
+  mb.addNonPointerField("x", &self->x);
   mb.addNonPointerField(&self->y);
-  mb.addField("@other", &self->other);
+  mb.addField("other", &self->other);
 }
 
 static MetadataTableForTests getMetadataTable() {
@@ -157,7 +157,7 @@ TEST(HeapSnapshotTest, SnapshotTest) {
       << "],"
       << "\"edges\":[3,2,6,3,3,12],"
       << "\"trace_function_infos\":[],\"trace_tree\":[],\"samples\":[],\"locations\":[],"
-      << R"#("strings":["(GC Roots)","Uninitialized","","@other"])#"
+      << R"#("strings":["(GC Roots)","Uninitialized","","other"])#"
       << "}";
 
   std::string expected = stream.str();

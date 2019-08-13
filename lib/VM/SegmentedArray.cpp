@@ -30,9 +30,9 @@ VTable SegmentedArray::Segment::vt(
 
 void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const SegmentedArray::Segment *>(cell);
-  mb.addNonPointerField("@length", &self->length_);
+  mb.addNonPointerField("length", &self->length_);
   mb.addArray<Metadata::ArrayData::ArrayType::HermesValue>(
-      "@data", &self->data_, &self->length_, sizeof(GCHermesValue));
+      "data", &self->data_, &self->length_, sizeof(GCHermesValue));
 }
 
 #ifdef HERMESVM_SERIALIZE
@@ -81,10 +81,10 @@ VTable SegmentedArray::vt(
 
 void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const SegmentedArray *>(cell);
-  mb.addNonPointerField("@slotCapacity", &self->slotCapacity_);
-  mb.addNonPointerField("@numSlotsUsed", &self->numSlotsUsed_);
+  mb.addNonPointerField("slotCapacity", &self->slotCapacity_);
+  mb.addNonPointerField("numSlotsUsed", &self->numSlotsUsed_);
   mb.addArray<Metadata::ArrayData::ArrayType::HermesValue>(
-      "@slots",
+      "slots",
       self->inlineStorage(),
       &self->numSlotsUsed_,
       sizeof(GCHermesValue));

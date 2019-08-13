@@ -203,7 +203,7 @@ ObjectVTable JSStringIterator::vt{
 void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSStringIterator *>(cell);
-  mb.addField("@iteratedString", &self->iteratedString_);
+  mb.addField("iteratedString", &self->iteratedString_);
 }
 
 #ifdef HERMESVM_SERIALIZE

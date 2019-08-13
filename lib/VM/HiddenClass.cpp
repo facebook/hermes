@@ -29,10 +29,10 @@ VTable HiddenClass::vt{CellKind::HiddenClassKind,
 void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HiddenClass *>(cell);
   mb.addField(&self->symbolID_);
-  mb.addField("@parent", &self->parent_);
-  mb.addField("@family", &self->family_);
-  mb.addField("@propertyMap", &self->propertyMap_);
-  mb.addField("@forInCache", &self->forInCache_);
+  mb.addField("parent", &self->parent_);
+  mb.addField("family", &self->family_);
+  mb.addField("propertyMap", &self->propertyMap_);
+  mb.addField("forInCache", &self->forInCache_);
 }
 
 #ifdef HERMESVM_SERIALIZE
