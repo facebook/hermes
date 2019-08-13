@@ -23,6 +23,12 @@ class WeakRefBase;
 struct SlotAcceptor {
   static constexpr bool shouldMarkWeak = true;
 
+  enum class RootSection {
+#define ROOT_SECTION(name) name,
+#include "hermes/VM/RootSections.def"
+    NumSections,
+  };
+
   virtual ~SlotAcceptor() {}
   virtual void accept(void *&ptr) = 0;
   virtual void accept(BasedPointer &ptr) = 0;

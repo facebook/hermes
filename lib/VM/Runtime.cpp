@@ -373,9 +373,9 @@ Runtime::~Runtime() {
 /// Runtime::totalMarkRootsTime.
 class Runtime::MarkRootsPhaseTimer {
  public:
-  MarkRootsPhaseTimer(Runtime *rt, Runtime::MarkRootsPhase phase)
-      : rt_(rt), phase_(phase), start_(std::chrono::steady_clock::now()) {
-    if (static_cast<unsigned>(phase) == 0) {
+  MarkRootsPhaseTimer(Runtime *rt, SlotAcceptor::RootSection section)
+      : rt_(rt), section_(section), start_(std::chrono::steady_clock::now()) {
+    if (static_cast<unsigned>(section) == 0) {
       // The first phase; record the start as the start of markRoots.
       rt_->startOfMarkRoots_ = start_;
     }
@@ -384,10 +384,10 @@ class Runtime::MarkRootsPhaseTimer {
     auto tp = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed = (tp - start_);
     start_ = tp;
-    unsigned index = static_cast<unsigned>(phase_);
+    unsigned index = static_cast<unsigned>(section_);
     rt_->markRootsPhaseTimes_[index] += elapsed.count();
     if (index + 1 ==
-        static_cast<unsigned>(Runtime::MarkRootsPhase::NumPhases)) {
+        static_cast<unsigned>(SlotAcceptor::RootSection::NumSections)) {
       std::chrono::duration<double> totalElapsed =
           (tp - rt_->startOfMarkRoots_);
       rt_->totalMarkRootsTime_ += totalElapsed.count();
@@ -396,22 +396,22 @@ class Runtime::MarkRootsPhaseTimer {
 
  private:
   Runtime *rt_;
-  MarkRootsPhase phase_;
+  SlotAcceptor::RootSection section_;
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
 void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
-  // The body of markRoots should be sequence of blocks, each of which
-  // starts with the declaration of an appropriate MarkRootsPhase
-  // instance.
+  // The body of markRoots should be sequence of blocks, each of which starts
+  // with the declaration of an appropriate RootSection instance.
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::Registers);
+    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::Registers);
     for (auto *p = stackPointer_, *e = registerStackEnd_; p != e; ++p)
       acceptor.accept(*p);
   }
 
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::RuntimeInstanceVars);
+    MarkRootsPhaseTimer timer(
+        this, SlotAcceptor::RootSection::RuntimeInstanceVars);
     acceptor.accept(thrownValue_, "thrownValue");
     acceptor.accept(nullPointer_, "nullPointer");
     acceptor.accept(rootClazz_, "rootClass");
@@ -424,7 +424,7 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
   }
 
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::RuntimeModules);
+    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::RuntimeModules);
     acceptor.accept(specialCodeBlockDomain_);
     for (auto &rm : runtimeModuleList_)
       rm.markRoots(acceptor, markLongLived);
@@ -434,7 +434,7 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
   }
 
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::CharStrings);
+    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::CharStrings);
     if (markLongLived) {
       for (auto &hv : charStrings_)
         acceptor.accept(hv);
@@ -442,7 +442,7 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
   }
 
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::Builtins);
+    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::Builtins);
     for (NativeFunction *&nf : builtins_)
       acceptor.accept((void *&)nf);
   }
@@ -452,7 +452,7 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
 #endif
 #define MARK(field) acceptor.accept((field), #field)
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::Prototypes);
+    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::Prototypes);
     // Prototypes.
     MARK(objectPrototype);
     acceptor.acceptPtr(objectPrototypeRawPtr, "objectPrototype");
@@ -507,42 +507,44 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
   }
 
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::IdentifierTable);
+    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::IdentifierTable);
     if (markLongLived) {
       identifierTable_.markIdentifiers(acceptor, &getHeap());
     }
   }
 
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::GCScopes);
+    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::GCScopes);
     markGCScopes(acceptor);
   }
 
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::WeakRefs);
+    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::WeakRefs);
     markWeakRefs(&getHeap());
   }
 
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::SymbolRegistry);
+    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::SymbolRegistry);
     symbolRegistry_.markRoots(acceptor);
   }
 
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::SamplingProfiler);
+    MarkRootsPhaseTimer timer(
+        this, SlotAcceptor::RootSection::SamplingProfiler);
     if (samplingProfiler_) {
       samplingProfiler_->markRoots(acceptor);
     }
   }
 
   {
-    MarkRootsPhaseTimer timer(this, MarkRootsPhase::Custom);
+    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::Custom);
     for (auto &fn : customMarkRootFuncs_)
       fn(&getHeap(), acceptor);
   }
 }
 
 void Runtime::markWeakRoots(SlotAcceptorWithNames &acceptor) {
+  MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::WeakRefs);
   for (auto &rm : runtimeModuleList_)
     rm.markWeakRoots(acceptor);
 }
@@ -557,12 +559,13 @@ std::string Runtime::convertSymbolToUTF8(SymbolID id) {
 }
 
 void Runtime::printRuntimeGCStats(llvm::raw_ostream &os) const {
-  const unsigned kNumPhases = static_cast<unsigned>(MarkRootsPhase::NumPhases);
-#define MARK_ROOTS_PHASE(phase) "MarkRoots_" #phase,
+  const unsigned kNumPhases =
+      static_cast<unsigned>(SlotAcceptor::RootSection::NumSections);
+#define ROOT_SECTION(phase) "MarkRoots_" #phase,
   static const char *markRootsPhaseNames[kNumPhases] = {
-#include "hermes/VM/MarkRootsPhases.def"
+#include "hermes/VM/RootSections.def"
   };
-#undef MARK_ROOTS_PHASE
+#undef ROOT_SECTION
   os << "\t\"runtime\": {\n";
   os << "\t\t\"totalMarkRootsTime\": " << formatSecs(totalMarkRootsTime_).secs
      << ",\n";

@@ -864,19 +864,12 @@ class Runtime : public HandleRootOwner,
 
   class MarkRootsPhaseTimer;
 
-  /// A convenience enum indexing the individual root marking phases.
-  enum class MarkRootsPhase {
-#define MARK_ROOTS_PHASE(phase) phase,
-#include "hermes/VM/MarkRootsPhases.def"
-    NumPhases
-  };
-
   /// Whenever we pass through the first phase, we record the current time here,
   /// so we can calculate the total time after we pass through the last phase.
   std::chrono::time_point<std::chrono::steady_clock> startOfMarkRoots_;
   /// The duration of each GC root marking phase is accumulated here.
   double markRootsPhaseTimes_[static_cast<unsigned>(
-      MarkRootsPhase::NumPhases)] = {};
+      SlotAcceptor::RootSection::NumSections)] = {};
   /// The duration of the all root makring is accumulated here.
   double totalMarkRootsTime_ = 0.0;
 
