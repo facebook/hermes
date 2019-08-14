@@ -422,19 +422,24 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
 #ifdef HERMES_EXTRA_DEBUG
       // We seem to have a bug where firstObjForCard yields an invalid object.
       // Gather extra debug information in that case.
+      // Note: the predicate carefully checks first whether the segment contains
+      // the firstObj; if not, we probably don't want to dereference it, which
+      // the VTable validity check does.
       // TODO(T48709128): remove this when the problem is diagnosed.
-      if (LLVM_UNLIKELY(!firstObj->getVT()->isValid())) {
-        char detailBuffer[400];
+      if (LLVM_UNLIKELY(!seg->contains(firstObj) || !firstObj->isValid())) {
+        static unsigned numInvalid = 0;
+        char detailBuffer[200];
         snprintf(
             detailBuffer,
             sizeof(detailBuffer),
-            "CardObjectTable leads to bad first object: seg = [0x%p, 0x%p), "
-            "CT index = %zu, CT value = %d, firstObj = 0x%p",
+            "CardObjectTable leads to bad first object: seg = [%p, %p), "
+            "CT index = %zu, CT value = %d, firstObj = %p.  Num fails = %d.",
             seg->lowLim(),
             seg->hiLim(),
             iBegin,
             cardTable.cardObjectTableValue(iBegin),
-            firstObj);
+            firstObj,
+            ++numInvalid);
         hermesLog("HermesGC", "OOM: %s.", detailBuffer);
         // Record the OOM custom data with the crash manager.
         gc_->crashMgr_->setCustomData("HermesGCBadCOTCalc", detailBuffer);
