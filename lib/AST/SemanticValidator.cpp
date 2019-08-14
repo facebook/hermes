@@ -99,6 +99,15 @@ void SemanticValidator::visit(MetaPropertyNode *metaProp) {
   auto *property = cast<IdentifierNode>(metaProp->_property);
 
   if (meta->_name->str() == "new" && property->_name->str() == "target") {
+    if (curFunction()->isGlobalScope()) {
+      // ES9.0 15.1.1:
+      // It is a Syntax Error if StatementList Contains NewTarget unless the
+      // source code containing NewTarget is eval code that is being processed
+      // by a direct eval.
+      // Hermes does not support local eval, so we assume that this is not
+      // inside a local eval call.
+      sm_.error(metaProp->getSourceRange(), "'new.target' not in a function");
+    }
     return;
   }
 
