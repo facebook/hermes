@@ -15,3 +15,12 @@
 // CHECK: {{.*}}:9:3: note: first constructor definition
 // CHECK:   'constructor'() {}
 // CHECK:   ^~~~~~~~~~~~~~~~~~
+
+(class Foo {
+  constructor() {
+    super`asdf`;
+  }
+});
+// CHECK: {{.*}}:21:5: error: invalid use of 'super' as a template literal tag
+// CHECK:     super`asdf`;
+// CHECK:     ^~~~~

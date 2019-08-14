@@ -196,6 +196,149 @@
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
 
+class UseSuperProps {
+  constructor() {
+    super();
+  }
+
+  foo() {
+    return super.x.y;
+  }
+
+  bar() {
+    return super['x'];
+  }
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ClassDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "UseSuperProps",
+// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "superClass": null,
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "ClassBody",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "MethodDefinition",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "constructor",
+// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "FunctionExpression",
+// CHECK-NEXT:               "id": null,
+// CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "body": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "ExpressionStatement",
+// CHECK-NEXT:                     "expression": {
+// CHECK-NEXT:                       "type": "CallExpression",
+// CHECK-NEXT:                       "callee": {
+// CHECK-NEXT:                         "type": "Super"
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "arguments": []
+// CHECK-NEXT:                     },
+// CHECK-NEXT:                     "directive": null
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 ]
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "constructor",
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": false
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "MethodDefinition",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "foo",
+// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "FunctionExpression",
+// CHECK-NEXT:               "id": null,
+// CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "body": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "ReturnStatement",
+// CHECK-NEXT:                     "argument": {
+// CHECK-NEXT:                       "type": "MemberExpression",
+// CHECK-NEXT:                       "object": {
+// CHECK-NEXT:                         "type": "MemberExpression",
+// CHECK-NEXT:                         "object": {
+// CHECK-NEXT:                           "type": "Super"
+// CHECK-NEXT:                         },
+// CHECK-NEXT:                         "property": {
+// CHECK-NEXT:                           "type": "Identifier",
+// CHECK-NEXT:                           "name": "x",
+// CHECK-NEXT:                           "typeAnnotation": null
+// CHECK-NEXT:                         },
+// CHECK-NEXT:                         "computed": false
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "property": {
+// CHECK-NEXT:                         "type": "Identifier",
+// CHECK-NEXT:                         "name": "y",
+// CHECK-NEXT:                         "typeAnnotation": null
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "computed": false
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 ]
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "method",
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": false
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "MethodDefinition",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "bar",
+// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "FunctionExpression",
+// CHECK-NEXT:               "id": null,
+// CHECK-NEXT:               "params": [],
+// CHECK-NEXT:               "body": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "ReturnStatement",
+// CHECK-NEXT:                     "argument": {
+// CHECK-NEXT:                       "type": "MemberExpression",
+// CHECK-NEXT:                       "object": {
+// CHECK-NEXT:                         "type": "Super"
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "property": {
+// CHECK-NEXT:                         "type": "StringLiteral",
+// CHECK-NEXT:                         "value": "x"
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "computed": true
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 ]
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "method",
+// CHECK-NEXT:             "computed": false,
+// CHECK-NEXT:             "static": false
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
 (class ConsProperty {
   get ['constructor']() {}
   set ['constructor'](val) {}

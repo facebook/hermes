@@ -2372,11 +2372,20 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberExpressionExceptNew() {
   SMLoc startLoc = tok_->getStartLoc();
 
   ESTree::NodePtr expr;
+  bool allowTemplateLiteral = true;
 
-  auto primExpr = parsePrimaryExpression();
-  if (!primExpr)
-    return None;
-  expr = primExpr.getValue();
+  if (check(TokenKind::rw_super)) {
+    // SuperProperty can be used the same way as PrimaryExpression, but
+    // must not have a TemplateLiteral immediately after the `super` keyword.
+    expr = setLocation(tok_, tok_, new (context_) ESTree::SuperNode());
+    advance();
+    allowTemplateLiteral = false;
+  } else {
+    auto primExpr = parsePrimaryExpression();
+    if (!primExpr)
+      return None;
+    expr = primExpr.getValue();
+  }
 
   SMLoc objectLoc = startLoc;
   while (check(TokenKind::l_square, TokenKind::period) ||
@@ -2392,6 +2401,12 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberExpressionExceptNew() {
       expr = msel.getValue();
     } else {
       assert(checkTemplateLiteral());
+      if (!allowTemplateLiteral) {
+        sm_.error(
+            expr->getSourceRange(),
+            "invalid use of 'super' as a template literal tag");
+        return None;
+      }
       // MemberExpression TemplateLiteral
       auto optTemplate = parseTemplateLiteral(ParamTagged);
       if (!optTemplate)
@@ -2403,6 +2418,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberExpressionExceptNew() {
               expr, optTemplate.getValue()));
       objectLoc = nextObjectLoc;
     }
+    allowTemplateLiteral = true;
   }
 
   return expr;
@@ -2547,7 +2563,6 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrMemberExpression() {
     return parseMemberExpressionExceptNew();
 
   SMRange newRange = advance();
-  SMLoc startLoc = newRange.Start;
 
   if (checkAndEat(TokenKind::period)) {
     // NewTarget: new . target
@@ -2555,7 +2570,7 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrMemberExpression() {
     if (!check(targetIdent_)) {
       sm_.error(
           tok_->getSourceRange(), "'target' expected in member expression");
-      sm_.note(startLoc, "start of member expression");
+      sm_.note(newRange.Start, "start of member expression");
       return None;
     }
     auto *meta = setLocation(
@@ -2580,7 +2595,7 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrMemberExpression() {
   // was a 'new MemberExpression(args)', otherwise it is a NewExpression
   if (!check(TokenKind::l_paren)) {
     return setLocation(
-        startLoc,
+        newRange,
         expr,
         new (context_) ESTree::NewExpressionNode(expr, ESTree::NodeList{}));
   }
@@ -2592,12 +2607,12 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrMemberExpression() {
     return None;
 
   expr = setLocation(
-      startLoc,
+      newRange,
       endLoc,
       debugLoc,
       new (context_) ESTree::NewExpressionNode(expr, std::move(argList)));
 
-  SMLoc objectLoc = startLoc;
+  SMLoc objectLoc = newRange.Start;
   while (check(TokenKind::l_square, TokenKind::period)) {
     SMLoc nextObjectLoc = tok_->getStartLoc();
     auto optMSel = parseMemberSelect(objectLoc, expr);
