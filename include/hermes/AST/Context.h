@@ -89,7 +89,16 @@ struct OptimizationSettings {
 };
 
 enum class DebugInfoSetting {
+  /// Only emit source locations for instructions that may throw, as required
+  /// for generating error stack traces.
   THROWING,
+
+  /// Emit source locations for all instructions, as required for generating
+  /// a source map.
+  SOURCE_MAP,
+
+  /// Emit full debug info, including source locations for all instructions,
+  /// lexical scope info, async break check instructions, etc.
   ALL,
 };
 
@@ -165,7 +174,8 @@ class Context {
   /// the result bundle.
   const std::vector<SegmentRange> segmentRanges_;
 
-  /// Whether we should emit debug information. Default to false.
+  /// The level of debug information we should emit. Defaults to
+  /// DebugInfoSetting::THROWING.
   DebugInfoSetting debugInfoSetting_{DebugInfoSetting::THROWING};
 
   /// Whether to enforce runtime execution time limit or not.

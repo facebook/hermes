@@ -47,7 +47,14 @@ void BytecodeFunctionGenerator::addExceptionHandler(
 
 void BytecodeFunctionGenerator::addDebugSourceLocation(
     const DebugSourceLocation &info) {
-  debugLocations_.push_back(info);
+  // If an address is repeated, it means no actual bytecode was emitted for the
+  // previous source location.
+  if (!debugLocations_.empty() &&
+      debugLocations_.back().address == info.address) {
+    debugLocations_.back() = info;
+  } else {
+    debugLocations_.push_back(info);
+  }
 }
 
 void BytecodeFunctionGenerator::setJumpTable(

@@ -240,7 +240,8 @@ bool HBCISel::getDebugSourceLocation(
 
 void HBCISel::addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap) {
   bool needDebugStatementNo =
-      F_->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL;
+      F_->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL ||
+      F_->getContext().getDebugInfoSetting() == DebugInfoSetting::SOURCE_MAP;
   auto &manager = F_->getContext().getSourceErrorManager();
   IRBuilder builder(F_);
 
@@ -1521,6 +1522,7 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
         break;
       }
     // Falls through - if ii can execute.
+    case DebugInfoSetting::SOURCE_MAP:
     case DebugInfoSetting::ALL:
       if (ii->hasLocation()) {
         relocations_.push_back({BCFGen_->getCurrentLocation(),

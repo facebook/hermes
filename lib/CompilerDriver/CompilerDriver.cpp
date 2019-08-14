@@ -891,6 +891,8 @@ std::shared_ptr<Context> createContext(
 
   if (cl::EmitDebugInfo) {
     context->setDebugInfoSetting(DebugInfoSetting::ALL);
+  } else if (cl::OutputSourceMap) {
+    context->setDebugInfoSetting(DebugInfoSetting::SOURCE_MAP);
   } else {
     context->setDebugInfoSetting(DebugInfoSetting::THROWING);
   }
