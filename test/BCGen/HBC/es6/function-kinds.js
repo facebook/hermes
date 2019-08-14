@@ -3,8 +3,7 @@
 // This source code is licensed under the MIT license found in the LICENSE
 // file in the root directory of this source tree.
 //
-// RUN: %hermes -Xflow-parser -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines %s
-// REQUIRES: flowparser
+// RUN: %hermes -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines %s
 
 function normal() {}
 //CHECK-LABEL:Function<normal>(1 params, {{.*}}):

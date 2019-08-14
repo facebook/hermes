@@ -79,6 +79,8 @@ void JSParserImpl::initializeIdentifiers() {
   methodIdent_ = lexer_.getIdentifier("method");
   constructorIdent_ = lexer_.getIdentifier("constructor");
   yieldIdent_ = lexer_.getIdentifier("yield");
+  newIdent_ = lexer_.getIdentifier("new");
+  targetIdent_ = lexer_.getIdentifier("target");
 
   // Generate the string representation of all tokens.
   for (unsigned i = 0; i != NUM_JS_TOKENS; ++i)
@@ -2544,7 +2546,30 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrMemberExpression() {
   if (!check(TokenKind::rw_new))
     return parseMemberExpressionExceptNew();
 
-  SMLoc startLoc = advance().Start;
+  SMRange newRange = advance();
+  SMLoc startLoc = newRange.Start;
+
+  if (checkAndEat(TokenKind::period)) {
+    // NewTarget: new . target
+    //                  ^
+    if (!check(targetIdent_)) {
+      sm_.error(
+          tok_->getSourceRange(), "'target' expected in member expression");
+      sm_.note(startLoc, "start of member expression");
+      return None;
+    }
+    auto *meta = setLocation(
+        newRange,
+        newRange,
+        new (context_) ESTree::IdentifierNode(newIdent_, nullptr));
+    auto *prop = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::IdentifierNode(targetIdent_, nullptr));
+    advance();
+    return setLocation(
+        meta, prop, new (context_) ESTree::MetaPropertyNode(meta, prop));
+  }
 
   auto optExpr = parseNewExpressionOrMemberExpression();
   if (!optExpr)

@@ -199,6 +199,8 @@ class JSParserImpl {
   UniqueString *methodIdent_;
   UniqueString *constructorIdent_;
   UniqueString *yieldIdent_;
+  UniqueString *newIdent_;
+  UniqueString *targetIdent_;
   /// String representation of all tokens.
   UniqueString *tokenIdent_[NUM_JS_TOKENS];
 
