@@ -164,6 +164,11 @@ class CardTable {
   int8_t cardObjectTableValue(unsigned index) const {
     return boundaries_[index];
   }
+
+  /// Treat the portion of the card boundary table corresponding to the given
+  /// limits as a string, and return the hash of that string.
+  /// TODO(T48709128): remove this when the problem is diagnosed.
+  size_t summarizeBoundaries(char *start, char *end) const;
 #endif // HERMES_EXTRA_DEBUG
 
 #ifdef HERMES_SLOW_DEBUG

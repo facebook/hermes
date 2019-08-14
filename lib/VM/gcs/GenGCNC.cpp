@@ -273,6 +273,12 @@ void GenGC::collect(bool canEffectiveOOM) {
   if (canEffectiveOOM && ++consecFullGCs_ >= oomThreshold_)
     oom(make_error_code(OOMError::Effective));
 
+#ifdef HERMES_EXTRA_DEBUG
+  /// Check the card table boundary summary, to detect possible mutator writes.
+  /// TODO(T48709128): remove these when the problem is diagnosed.
+  oldGen_.checkSummarizedCardTableBoundaries();
+#endif
+
   /// Yield, then reclaim, the allocation context.  (This is a noop
   /// if the context has already been yielded.)
   AllocContextYieldThenClaim yielder(this);
@@ -367,6 +373,12 @@ void GenGC::collect(bool canEffectiveOOM) {
   checkTripwire(usedAfter, steady_clock::now());
 #ifdef HERMESVM_SIZE_DIAGNOSTIC
   sizeDiagnosticCensus();
+#endif
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// Summarize the card table boundaries, to detect possible mutator writes.
+  /// TODO(T48709128): remove these when the problem is diagnosed.
+  oldGen_.summarizeCardTableBoundaries();
 #endif
 }
 

@@ -200,6 +200,23 @@ class AlignedHeapSegment final {
   ///     this \c AlignedHeapSegment.
   inline bool contains(const void *ptr) const;
 
+#ifdef HERMES_EXTRA_DEBUG
+  /// Extra debugging: at the end of GC we "summarize" the card
+  /// boundary table.  That is, treat the portion currently in use as
+  /// a string, and takes its hash.  The card boundary table below the
+  /// card corresponding to "level()" should not change during mutator
+  /// operation, so at the beginning of the next GC, we verify that
+  /// this has is the same.
+  /// TODO(T48709128): remove these when the problem is diagnosed.
+
+  /// Summarize the card boundary table, and save the results.
+  void summarizeCardTableBoundaries();
+
+  /// Resummarize the card boundary table, and return whether the
+  /// result is the same.
+  bool checkSummarizedCardTableBoundaries() const;
+#endif
+
   /// Assumes that the segment's card object boundaries may not have been
   /// maintained, and recreates it, ensuring that it's valid.
   void recreateCardTableBoundaries();
@@ -351,6 +368,17 @@ class AlignedHeapSegment final {
 
   /// Pointer to the generation that owns this segment.
   GCGeneration *generation_{nullptr};
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// Support summarization of the boundary table.
+  /// TODO(T48709128): remove this when the problem is diagnosed.
+
+  /// The level at the time we last summarized, or start(), if we
+  /// haven't previously summarized.
+  char *lastBoundarySummaryLevel_{start()};
+  /// The value of the last summary, or else 0 if there has been no summary.
+  size_t lastBoundarySummary_{0};
+#endif
 };
 
 AllocResult AlignedHeapSegment::alloc(uint32_t size) {

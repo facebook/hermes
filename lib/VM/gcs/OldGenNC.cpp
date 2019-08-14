@@ -798,6 +798,35 @@ void OldGen::checkWellFormed(const GC *gc) const {
 }
 #endif
 
+#ifdef HERMES_EXTRA_DEBUG
+void OldGen::summarizeCardTableBoundaries() {
+  forUsedSegments([](AlignedHeapSegment &segment) {
+    segment.summarizeCardTableBoundaries();
+  });
+}
+
+void OldGen::checkSummarizedCardTableBoundaries() const {
+  static unsigned numSummaryErrors = 0;
+  forUsedSegments([this](const AlignedHeapSegment &segment) {
+    if (!segment.checkSummarizedCardTableBoundaries()) {
+      numSummaryErrors++;
+      char detailBuffer[100];
+      snprintf(
+          detailBuffer,
+          sizeof(detailBuffer),
+          "CardObjectTable summary changed since last GC for "
+          "[%p, %p).  (Last of %d errors)",
+          segment.lowLim(),
+          segment.hiLim(),
+          numSummaryErrors);
+      hermesLog("HermesGC", "Error: %s.", detailBuffer);
+      // Record the OOM custom data with the crash manager.
+      gc_->crashMgr_->setCustomData("HermesGCBadCOTSummary", detailBuffer);
+    }
+  });
+}
+#endif
+
 void OldGen::didFinishGC() {
   levelAtEndOfLastGC_ = levelDirect();
 }

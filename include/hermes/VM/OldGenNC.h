@@ -280,6 +280,17 @@ class OldGen : public GCGeneration {
   void checkWellFormed(const GC *gc) const;
 #endif
 
+#ifdef HERMES_EXTRA_DEBUG
+  /// Summarize the card boundary tables of all segments, saving the results.
+  /// TODO(T48709128): remove this when the problem is diagnosed.
+  void summarizeCardTableBoundaries();
+
+  /// For every segment, summarize up to the level when we last summarized, and
+  /// make sure the summary is the same.
+  /// TODO(T48709128): remove this when the problem is diagnosed.
+  void checkSummarizedCardTableBoundaries() const;
+#endif
+
   /// Static override of GCGeneration::didFinishGC().
   /// Records the level at the end of a GC.  At the start of next
   /// young-gen GC, objects at addresses at or greater than this were

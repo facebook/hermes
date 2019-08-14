@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <functional>
 
 namespace hermes {
 namespace vm {
@@ -131,6 +132,28 @@ GCCell *CardTable::firstObjForCard(unsigned index) const {
   char *resPtr = boundary - (val << LogHeapAlign);
   return reinterpret_cast<GCCell *>(resPtr);
 }
+
+#ifdef HERMES_EXTRA_DEBUG
+size_t CardTable::summarizeBoundaries(char *start, char *end) const {
+  size_t startInd = addressToIndex(start);
+  size_t endInd = addressToIndex(end);
+  // If end is exactly at the boundary, we will not have set the
+  // boundary entry for endInd.  If end has crossed the boundary, we
+  // will.  Make endInd the non-inclusive uppert bound.
+  if (indexToAddress(endInd) != end) {
+    endInd++;
+  }
+  if (endInd == startInd) {
+    // We return zero in this case -- this matches the initial value of
+    // the summary.  So if nothing is allocated, the summary remains zero.
+    return 0;
+  }
+  std::hash<std::string> stringHash;
+  return stringHash(std::string(
+      reinterpret_cast<const char *>(&boundaries_[startInd]),
+      endInd - startInd));
+}
+#endif // HERMES_EXTRA_DEBUG
 
 #ifdef HERMES_SLOW_DEBUG
 void CardTable::verifyBoundaries(char *start, char *level) const {

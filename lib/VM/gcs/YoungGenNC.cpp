@@ -268,6 +268,12 @@ AllocResult YoungGen::fullCollectThenAlloc(
 void YoungGen::collect() {
   GenGC::CollectionSection ygCollection(gc_, "YoungGen collection");
 
+#ifdef HERMES_EXTRA_DEBUG
+  /// Check the card table boundary summary, to detect possible mutator writes.
+  /// TODO(T48709128): remove these when the problem is diagnosed.
+  nextGen_->checkSummarizedCardTableBoundaries();
+#endif
+
   // Reset the number of consecutive full GCs, because we're about to do a young
   // gen collection.
   gc_->consecFullGCs_ = 0;
@@ -406,6 +412,12 @@ void YoungGen::collect() {
       numAllocatedObjectsBefore - info.numReachableObjects ==
           info.numCollectedObjects &&
       "collected objects computed incorrectly");
+#endif
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// Summarize the card table boundaries, to detect possible mutator writes.
+  /// TODO(T48709128): remove these when the problem is diagnosed.
+  nextGen_->summarizeCardTableBoundaries();
 #endif
 }
 

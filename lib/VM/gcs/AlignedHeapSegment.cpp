@@ -442,6 +442,18 @@ void AlignedHeapSegment::recreateCardTableBoundaries() {
   }
 }
 
+#ifdef HERMES_EXTRA_DEBUG
+void AlignedHeapSegment::summarizeCardTableBoundaries() {
+  lastBoundarySummary_ = cardTable().summarizeBoundaries(start(), level());
+  lastBoundarySummaryLevel_ = level();
+}
+
+bool AlignedHeapSegment::checkSummarizedCardTableBoundaries() const {
+  return lastBoundarySummary_ ==
+      cardTable().summarizeBoundaries(start(), lastBoundarySummaryLevel_);
+}
+#endif
+
 #ifndef NDEBUG
 bool AlignedHeapSegment::dbgContainsLevel(const void *lvl) const {
   return contains(lvl) || lvl == hiLim();
