@@ -193,10 +193,13 @@ void HiddenClass::forEachPropertyNoAlloc(
   std::vector<std::pair<SymbolID, NamedPropertyDescriptor>> properties;
   HiddenClass *curr = self;
   while (curr && !curr->propertyMap_) {
-    properties.emplace_back(
-        curr->symbolID_,
-        NamedPropertyDescriptor{curr->propertyFlags_,
-                                curr->numProperties_ - 1});
+    // Skip invalid symbols stored in the hidden class chain.
+    if (curr->symbolID_.isValid()) {
+      properties.emplace_back(
+          curr->symbolID_,
+          NamedPropertyDescriptor{curr->propertyFlags_,
+                                  curr->numProperties_ - 1});
+    }
     curr = curr->parent_.get(base);
   }
 
