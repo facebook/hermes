@@ -211,7 +211,7 @@ void HiddenClass::forEachPropertyNoAlloc(
         "If it's not the root class, it must have a property map");
     // The DPM exists, and it can be iterated over to find some properties.
     DictPropertyMap::forEachPropertyNoAlloc(
-        self->propertyMap_.getNonNull(base), callback);
+        curr->propertyMap_.getNonNull(base), callback);
   }
   // Add any iterated properties at the end.
   // Since we moved backwards through HiddenClasses, the properties are in
