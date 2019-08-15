@@ -395,6 +395,14 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
         i == originalLevel.segmentNum ? originalLevel.ptr : seg->level();
 
     auto &cardTable = seg->cardTable();
+#ifdef HERMES_EXTRA_DEBUG
+    // Capture the bounds of the segment at the start.  If seg points to the
+    // active segment, and we allocate a new active segment *seg, can change, so
+    // don't access after this.
+    // TODO(T48709128): remove this when the problem is diagnosed.
+    const char *segLo = seg->lowLim();
+    const char *segHi = seg->hiLim();
+#endif
 
     size_t from = cardTable.addressToIndex(seg->start());
     size_t to = cardTable.addressToIndex(origSegLevel - 1) + 1;
@@ -426,22 +434,25 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
       // the firstObj; if not, we probably don't want to dereference it, which
       // the VTable validity check does.
       // TODO(T48709128): remove this when the problem is diagnosed.
-      if (LLVM_UNLIKELY(!seg->contains(firstObj) || !firstObj->isValid())) {
+      const char *firstObjCharStar = reinterpret_cast<const char *>(firstObj);
+      if (LLVM_UNLIKELY(
+              !(segLo <= firstObjCharStar && firstObjCharStar < segHi) ||
+              !firstObj->isValid())) {
         static unsigned numInvalid = 0;
         char detailBuffer[200];
         snprintf(
             detailBuffer,
             sizeof(detailBuffer),
             "CardObjectTable leads to bad first object: seg = [%p, %p), "
-            "CT index = %zu, CT value = %d, firstObj = %p.  Num fails = %d.",
-            seg->lowLim(),
-            seg->hiLim(),
+            "CT index = %zu, CT value = %d, firstObj = %p.  Num fails = %d",
+            segLo,
+            segHi,
             iBegin,
             cardTable.cardObjectTableValue(iBegin),
             firstObj,
             ++numInvalid);
-        hermesLog("HermesGC", "OOM: %s.", detailBuffer);
-        // Record the OOM custom data with the crash manager.
+        hermesLog("HermesGC", "Error: %s.", detailBuffer);
+        // Record the custom data with the crash manager.
         gc_->crashMgr_->setCustomData("HermesGCBadCOTCalc", detailBuffer);
       }
 #endif
