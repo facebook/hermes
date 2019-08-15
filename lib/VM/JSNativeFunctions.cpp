@@ -64,8 +64,13 @@ static llvm::DenseMap<void *, std::string> funcNames() {
 
 static std::string getFunctionNameImpl(void *func) {
   static auto map = funcNames();
-  assert(map.count(func) > 0 && "Function not in the map.");
-  return map[func];
+  auto it = map.find(func);
+  if (it == map.end()) {
+    // This function's name isn't in the map, which is possible for some
+    // functions defined only in ConsoleHost.
+    return "";
+  }
+  return it->second;
 }
 
 std::string getFunctionName(NativeFunctionPtr func) {
