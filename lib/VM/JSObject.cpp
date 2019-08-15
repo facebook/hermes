@@ -1901,7 +1901,12 @@ std::string JSObject::getNameIfExists(PointerBase *base) {
 
 std::string JSObject::_snapshotNameImpl(GCCell *cell, GC *gc) {
   auto *const self = vmcast<JSObject>(cell);
-  return self->getHeuristicTypeName(gc->getPointerBase());
+  std::string optionalTypeName =
+      self->getHeuristicTypeName(gc->getPointerBase());
+  if (!optionalTypeName.empty()) {
+    return optionalTypeName;
+  }
+  return cellKindStr(self->getKind());
 }
 
 void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
