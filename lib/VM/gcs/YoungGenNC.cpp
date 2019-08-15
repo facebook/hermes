@@ -419,6 +419,10 @@ void YoungGen::collect() {
   /// TODO(T48709128): remove these when the problem is diagnosed.
   nextGen_->summarizeCardTableBoundaries();
 #endif
+
+  CrashManager::HeapInformation crashHeapInfo;
+  gc_->getCrashManagerHeapInfo(crashHeapInfo);
+  gc_->crashMgr_->setHeapInfo(crashHeapInfo);
 }
 
 void YoungGen::creditExternalMemory(uint32_t size) {

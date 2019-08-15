@@ -382,6 +382,12 @@ void MallocGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   }
 }
 
+void MallocGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {
+  info.used_ = allocatedBytes_;
+  // MallocGC does not have a heap size.
+  info.size_ = 0;
+}
+
 #ifndef NDEBUG
 size_t MallocGC::countUsedWeakRefs() const {
   size_t count = 0;

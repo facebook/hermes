@@ -435,6 +435,9 @@ class GCBase {
   /// Same as \c getHeapInfo, and it adds the amount of malloc memory in use.
   virtual void getHeapInfoWithMallocSize(HeapInfo &info) = 0;
 
+  /// Populate \p info with crash manager information about the heap
+  virtual void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) = 0;
+
 #ifndef NDEBUG
   /// Populate \p info with more detailed information about the heap that is
   /// too expensive to know during production builds.

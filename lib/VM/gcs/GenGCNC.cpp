@@ -915,6 +915,10 @@ void GenGC::updateHeapSize() {
     // size().
     shrinkTo(usedToDesiredSize(static_cast<gcheapsize_t>(weightedUsed_)));
   }
+
+  CrashManager::HeapInformation info;
+  getCrashManagerHeapInfo(info);
+  crashMgr_->setHeapInfo(info);
 }
 
 void GenGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
@@ -1056,6 +1060,11 @@ void GenGC::getHeapInfo(HeapInfo &info) {
   info.va = segmentIndex_.size() * AlignedStorage::size();
   info.fullStats = fullCollectionCumStats_;
   info.youngGenStats = youngGenCollectionCumStats_;
+}
+
+void GenGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {
+  info.size_ = size();
+  info.used_ = used();
 }
 
 void GenGC::getHeapInfoWithMallocSize(HeapInfo &info) {

@@ -303,6 +303,9 @@ class GenGC final : public GCBase {
   void getHeapInfo(HeapInfo &info) override;
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
 
+  /// Populate \p info with crash manager information about the heap
+  void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;
+
 #ifndef NDEBUG
   void getDebugHeapInfo(DebugHeapInfo &info) override;
 #endif

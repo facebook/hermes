@@ -54,6 +54,19 @@ class CrashManager {
   /// CrashManager during a crash.
   virtual void unregisterCallback(CallbackKey key) = 0;
 
+  /// the heap information.
+  struct HeapInformation {
+    /// The amount of memory that is currently in use
+    size_t used_{0};
+    /// The amount of memory that can currently be allocated
+    ///   before a full GC is triggered.
+    size_t size_{0};
+  };
+
+  /// Record the heap information.
+  /// \param heapInfo The current heap information
+  virtual void setHeapInfo(const HeapInformation &heapInfo) = 0;
+
   virtual ~CrashManager() {}
 };
 
@@ -67,6 +80,8 @@ class NopCrashManager final : public CrashManager {
     return 0;
   }
   void unregisterCallback(CallbackKey /*key*/) override {}
+  void setHeapInfo(const HeapInformation & /*heapInfo*/) override {}
+
   ~NopCrashManager() {}
 };
 
