@@ -7,6 +7,7 @@
 #include "hermes/VM/Callable.h"
 
 #include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/JSNativeFunctions.h"
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -64,6 +65,15 @@ void serializeCallableImpl(Serializer &s, const GCCell *cell) {
   s.writeRelocation(self->environment_.get(s.getRuntime()));
 }
 #endif
+
+std::string Callable::_snapshotNameImpl(GCCell *cell, GC *gc) {
+  auto *const self = reinterpret_cast<Callable *>(cell);
+  std::string funcName = self->getNameIfExists(gc->getPointerBase());
+  if (!funcName.empty()) {
+    return funcName;
+  }
+  return cellKindStr(self->getKind());
+}
 
 CallResult<HermesValue> Callable::_newObjectImpl(
     Handle<Callable> /*selfHandle*/,
@@ -389,7 +399,18 @@ CallResult<double> Callable::extractOwnLengthProperty(
 
 CallableVTable BoundFunction::vt{
     {
-        VTable(CellKind::BoundFunctionKind, sizeof(BoundFunction)),
+        VTable(
+            CellKind::BoundFunctionKind,
+            sizeof(BoundFunction),
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Closure,
+                                         BoundFunction::_snapshotNameImpl,
+                                         BoundFunction::_snapshotAddEdgesImpl,
+                                         nullptr}),
         BoundFunction::_getOwnIndexedRangeImpl,
         BoundFunction::_haveOwnIndexedImpl,
         BoundFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -754,7 +775,18 @@ CallResult<HermesValue> BoundFunction::_callImpl(
 
 CallableVTable NativeFunction::vt{
     {
-        VTable(CellKind::NativeFunctionKind, sizeof(NativeFunction)),
+        VTable(
+            CellKind::NativeFunctionKind,
+            sizeof(NativeFunction),
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Closure,
+                                         NativeFunction::_snapshotNameImpl,
+                                         NativeFunction::_snapshotAddEdgesImpl,
+                                         nullptr}),
         NativeFunction::_getOwnIndexedRangeImpl,
         NativeFunction::_haveOwnIndexedImpl,
         NativeFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -816,6 +848,15 @@ void NativeFunctionDeserialize(Deserializer &d, CellKind kind) {
   d.endObject(cell);
 }
 #endif
+
+std::string NativeFunction::_snapshotNameImpl(GCCell *cell, GC *gc) {
+  auto *const self = reinterpret_cast<NativeFunction *>(cell);
+  std::string funcName = getFunctionName(self->functionPtr_);
+  if (!funcName.empty()) {
+    return funcName;
+  }
+  return cellKindStr(self->getKind());
+}
 
 Handle<NativeFunction> NativeFunction::create(
     Runtime *runtime,
@@ -902,7 +943,19 @@ CallResult<HermesValue> NativeFunction::_newObjectImpl(
 
 const CallableVTable NativeConstructor::vt{
     {
-        VTable(CellKind::NativeConstructorKind, sizeof(NativeConstructor)),
+        VTable(
+            CellKind::NativeConstructorKind,
+            sizeof(NativeConstructor),
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                NativeConstructor::_snapshotNameImpl,
+                NativeConstructor::_snapshotAddEdgesImpl,
+                nullptr}),
         NativeConstructor::_getOwnIndexedRangeImpl,
         NativeConstructor::_haveOwnIndexedImpl,
         NativeConstructor::_getOwnIndexedPropertyFlagsImpl,
@@ -1000,7 +1053,18 @@ CallResult<HermesValue> NativeConstructor::_callImpl(
 
 CallableVTable JSFunction::vt{
     {
-        VTable(CellKind::FunctionKind, sizeof(JSFunction)),
+        VTable(
+            CellKind::FunctionKind,
+            sizeof(JSFunction),
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Closure,
+                                         JSFunction::_snapshotNameImpl,
+                                         JSFunction::_snapshotAddEdgesImpl,
+                                         nullptr}),
         JSFunction::_getOwnIndexedRangeImpl,
         JSFunction::_haveOwnIndexedImpl,
         JSFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -1063,7 +1127,19 @@ CallResult<HermesValue> JSFunction::_callImpl(
 
 CallableVTable JSGeneratorFunction::vt{
     {
-        VTable(CellKind::GeneratorFunctionKind, sizeof(JSGeneratorFunction)),
+        VTable(
+            CellKind::GeneratorFunctionKind,
+            sizeof(JSGeneratorFunction),
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                JSGeneratorFunction::_snapshotNameImpl,
+                JSGeneratorFunction::_snapshotAddEdgesImpl,
+                nullptr}),
         JSGeneratorFunction::_getOwnIndexedRangeImpl,
         JSGeneratorFunction::_haveOwnIndexedImpl,
         JSGeneratorFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -1118,7 +1194,17 @@ CallableVTable GeneratorInnerFunction::vt{
     {
         VTable(
             CellKind::GeneratorInnerFunctionKind,
-            sizeof(GeneratorInnerFunction)),
+            sizeof(GeneratorInnerFunction),
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                GeneratorInnerFunction::_snapshotNameImpl,
+                GeneratorInnerFunction::_snapshotAddEdgesImpl,
+                nullptr}),
         GeneratorInnerFunction::_getOwnIndexedRangeImpl,
         GeneratorInnerFunction::_haveOwnIndexedImpl,
         GeneratorInnerFunction::_getOwnIndexedPropertyFlagsImpl,

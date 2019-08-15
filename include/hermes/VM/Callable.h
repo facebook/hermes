@@ -287,6 +287,8 @@ class Callable : public JSObject {
       HiddenClass *clazz)
       : JSObject(runtime, vt, parent, clazz), environment_() {}
 
+  static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
+
   /// Create a an instance of Object to be passed as the 'this' argument when
   /// invoking the constructor.
   static CallResult<HermesValue> _newObjectImpl(
@@ -597,6 +599,8 @@ class NativeFunction : public Callable {
       : Callable(runtime, vtp, parent, clazz, environment),
         context_(context),
         functionPtr_(functionPtr) {}
+
+  static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
 
   /// Call the native function with arguments already on the stack.
   static CallResult<HermesValue> _callImpl(
