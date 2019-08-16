@@ -19,8 +19,8 @@
 namespace hermes {
 namespace vm {
 
-static llvm::DenseMap<void *, std::string> funcNames() {
-  llvm::DenseMap<void *, std::string> map;
+static llvm::DenseMap<void *, const char *> funcNames() {
+  llvm::DenseMap<void *, const char *> map;
 #define NATIVE_FUNCTION(func)                   \
   assert(                                       \
       map.count((void *)func) == 0 &&           \
@@ -31,14 +31,13 @@ static llvm::DenseMap<void *, std::string> funcNames() {
   assert(                                       \
       map.count((void *)func<type>) == 0 &&     \
       "A function should only be mapped once"); \
-  map[(void *)func<type>] = std::string(#func) + "<" + #type + ">";
+  map[(void *)func<type>] = #func "<" #type ">";
 
 #define NATIVE_FUNCTION_TYPED_2(func, type, type2) \
   assert(                                          \
       map.count((void *)func<type, type2>) == 0 && \
       "A function should only be mapped once");    \
-  map[(void *)func<type, type2>] =                 \
-      std::string(#func) + "<" + #type + ", " + #type2 + ">";
+  map[(void *)func<type, type2>] = #func "<" #type ", " #type2 ">";
 
   // Creator functions are overloaded, we have to cast them to CreatorFunciton *
   // first.
@@ -55,14 +54,13 @@ static llvm::DenseMap<void *, std::string> funcNames() {
   assert(                                                      \
       map.count((void *)funcPtr) == 0 &&                       \
       "A function should only be mapped once");                \
-  map[(void *)funcPtr] =                                       \
-      std::string(#classname) + "<" + #type + ", " + #type2 + ">::" + #func;
+  map[(void *)funcPtr] = #classname "<" #type ", " #type2 ">::" #func;
 #include "hermes/VM/NativeFunctions.def"
 
   return map;
 }
 
-static std::string getFunctionNameImpl(void *func) {
+static const char *getFunctionNameImpl(void *func) {
   static auto map = funcNames();
   auto it = map.find(func);
   if (it == map.end()) {
@@ -73,11 +71,11 @@ static std::string getFunctionNameImpl(void *func) {
   return it->second;
 }
 
-std::string getFunctionName(NativeFunctionPtr func) {
+const char *getFunctionName(NativeFunctionPtr func) {
   return getFunctionNameImpl((void *)func);
 }
 
-std::string getFunctionName(CreatorFunction *func) {
+const char *getFunctionName(CreatorFunction *func) {
   return getFunctionNameImpl((void *)func);
 }
 

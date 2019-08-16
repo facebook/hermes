@@ -16,21 +16,21 @@ using namespace hermes::vm;
 namespace {
 
 TEST(NativeFunctionNameTest, SmokeTest) {
-  ASSERT_EQ("print", getFunctionName(print));
-  ASSERT_EQ(
+  EXPECT_STREQ("print", getFunctionName(print));
+  EXPECT_STREQ(
       "dataViewPrototypeGet<int8_t>",
       getFunctionName(dataViewPrototypeGet<int8_t>));
-  ASSERT_EQ(
+  EXPECT_STREQ(
       "dataViewPrototypeSet<int8_t, CellKind::Int8ArrayKind>",
       getFunctionName(dataViewPrototypeSet<int8_t, CellKind::Int8ArrayKind>));
 
   using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
   CreatorFunction *func;
   func = JSError::create;
-  ASSERT_EQ("JSError::create", getFunctionName(func));
+  EXPECT_STREQ("JSError::create", getFunctionName(func));
 
   func = JSTypedArray<int16_t, CellKind::Int16ArrayKind>::create;
-  ASSERT_EQ(
+  EXPECT_STREQ(
       "JSTypedArray<int16_t, CellKind::Int16ArrayKind>::create",
       getFunctionName(func));
 }

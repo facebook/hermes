@@ -27,8 +27,8 @@ namespace vm {
 
 using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
 /// Get a human-readable name of a native function.
-std::string getFunctionName(NativeFunctionPtr);
-std::string getFunctionName(CreatorFunction *);
+const char *getFunctionName(NativeFunctionPtr);
+const char *getFunctionName(CreatorFunction *);
 
 } // namespace vm
 } // namespace hermes
