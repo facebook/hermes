@@ -8,6 +8,7 @@
 #ifdef HERMESVM_API_TRACE
 
 #include <hermes/SynthTrace.h>
+#include <hermes/Parser/JSONParser.h>
 #include <hermes/TracingRuntime.h>
 
 #include <gmock/gmock.h>
@@ -20,6 +21,7 @@
 
 using namespace facebook::hermes::tracing;
 using namespace facebook::hermes;
+using namespace ::hermes::parser;
 namespace jsi = facebook::jsi;
 
 namespace {
@@ -650,25 +652,57 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
     auto value = obj.getProperty(*rt, "a");
     ASSERT_TRUE(value.isUndefined());
   }
-  std::string expected;
-  llvm::raw_string_ostream expectedStream{expected};
-  expectedStream
-      << R"(\{"version":2)"
-      << R"(,"globalObjID":)" << globalObjID
-      << R"(,"sourceHash":"[0-9]{40}","gcConfig":\{"initHeapSize":[0-9]+,"maxHeapSize":[0-9]+\})"
-      << R"(,"env":\{"mathRandomSeed":[0-9]+,"callsToDateNow":\[\],)"
-      << R"("callsToNewDate":\[\],"callsToDateAsFunction":\[\]\},)"
-      << R"("trace":\[\{"type":"CreateObjectRecord","time":[0-9]+,"objID":)"
-      << objID << R"(\},\{"type":"GetPropertyRecord","time":[0-9]+,"objID":)"
-      << objID << R"(,"propName":"a","value":"undefined:"\}\]\})";
-  expectedStream.flush();
 
   std::string result;
   llvm::raw_string_ostream resultStream{result};
   rt->writeTrace(resultStream);
   resultStream.flush();
 
-  EXPECT_THAT(result, ::testing::MatchesRegex(expected));
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  hermes::SourceErrorManager sm;
+  JSONParser parser{jsonFactory, result, sm};
+  auto optTrace = parser.parse();
+  ASSERT_TRUE(optTrace) << "Trace file is not valid JSON:\n" << result << "\n";
+
+  // Too verbose to check every key, so let llvm::cast do the checks.
+  JSONObject *root = llvm::cast<JSONObject>(optTrace.getValue());
+  EXPECT_EQ(2, llvm::cast<JSONNumber>(root->at("version"))->getValue());
+  EXPECT_EQ(
+      globalObjID, llvm::cast<JSONNumber>(root->at("globalObjID"))->getValue());
+  EXPECT_THAT(
+      llvm::cast<JSONString>(root->at("sourceHash"))->str(),
+      ::testing::MatchesRegex("[0-9]{40}"));
+
+  JSONObject *gcConfig = llvm::cast<JSONObject>(root->at("gcConfig"));
+  EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("initHeapSize")));
+  EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("maxHeapSize")));
+
+  JSONObject *environment = llvm::cast<JSONObject>(root->at("env"));
+  EXPECT_TRUE(llvm::isa<JSONNumber>(environment->at("mathRandomSeed")));
+  EXPECT_EQ(
+      0, llvm::cast<JSONArray>(environment->at("callsToDateNow"))->size());
+  EXPECT_EQ(
+      0, llvm::cast<JSONArray>(environment->at("callsToNewDate"))->size());
+  EXPECT_EQ(
+      0,
+      llvm::cast<JSONArray>(environment->at("callsToDateAsFunction"))->size());
+
+  JSONArray *records = llvm::cast<JSONArray>(root->at("trace"));
+
+  const JSONObject *record = llvm::cast<JSONObject>(records->at(0));
+  EXPECT_EQ(
+      "CreateObjectRecord", llvm::cast<JSONString>(record->at("type"))->str());
+  EXPECT_TRUE(llvm::isa<JSONNumber>(record->at("time")));
+  EXPECT_EQ(objID, llvm::cast<JSONNumber>(record->at("objID"))->getValue());
+
+  record = llvm::cast<JSONObject>(records->at(1));
+  EXPECT_EQ(
+      "GetPropertyRecord", llvm::cast<JSONString>(record->at("type"))->str());
+  EXPECT_TRUE(llvm::isa<JSONNumber>(record->at("time")));
+  EXPECT_EQ(objID, llvm::cast<JSONNumber>(record->at("objID"))->getValue());
+  EXPECT_EQ("a", llvm::cast<JSONString>(record->at("propName"))->str());
+  EXPECT_EQ("undefined:", llvm::cast<JSONString>(record->at("value"))->str());
 }
 
 TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
@@ -693,28 +727,52 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
                   .asNumber();
     dateAsFunc = dateFunc.call(*rt).asString(*rt).utf8(*rt);
   }
-  std::string expected;
-  llvm::raw_string_ostream expectedStream{expected};
-  expectedStream
-      << R"(\{"version":2)"
-      << R"(,"globalObjID":)" << globalObjID
-      << R"(,"sourceHash":"[0-9]{40}","gcConfig":\{"initHeapSize":)"
-      << conf.getGCConfig().getInitHeapSize() << R"(,"maxHeapSize":)"
-      << conf.getGCConfig().getMaxHeapSize()
-      << R"(\},"env":\{"mathRandomSeed":[0-9]+,"callsToDateNow":\[)" << dateNow
-      << R"(\],"callsToNewDate":\[)" << newDate
-      << R"(\],"callsToDateAsFunction":\[")"
-      << dateAsFunc
-      // Ignore the elements inside the trace, those are tested elsewhere.
-      << R"("\]\},.*)";
-  expectedStream.flush();
 
   std::string result;
   llvm::raw_string_ostream resultStream{result};
   rt->writeTrace(resultStream);
   resultStream.flush();
 
-  EXPECT_THAT(result, ::testing::MatchesRegex(expected));
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  hermes::SourceErrorManager sm;
+  JSONParser parser{jsonFactory, result, sm};
+  auto optTrace = parser.parse();
+  ASSERT_TRUE(optTrace) << "Trace file is not valid JSON:\n" << result << "\n";
+
+  // Too verbose to check every key, so let llvm::cast do the checks.
+  JSONObject *root = llvm::cast<JSONObject>(optTrace.getValue());
+  EXPECT_EQ(2, llvm::cast<JSONNumber>(root->at("version"))->getValue());
+  EXPECT_EQ(
+      globalObjID, llvm::cast<JSONNumber>(root->at("globalObjID"))->getValue());
+  EXPECT_THAT(
+      llvm::cast<JSONString>(root->at("sourceHash"))->str(),
+      ::testing::MatchesRegex("[0-9]{40}"));
+
+  JSONObject *gcConfig = llvm::cast<JSONObject>(root->at("gcConfig"));
+  EXPECT_EQ(
+      conf.getGCConfig().getInitHeapSize(),
+      llvm::cast<JSONNumber>(gcConfig->at("initHeapSize"))->getValue());
+  EXPECT_EQ(
+      conf.getGCConfig().getMaxHeapSize(),
+      llvm::cast<JSONNumber>(gcConfig->at("maxHeapSize"))->getValue());
+
+  JSONObject *environment = llvm::cast<JSONObject>(root->at("env"));
+  EXPECT_TRUE(llvm::isa<JSONNumber>(environment->at("mathRandomSeed")));
+  JSONArray *callsToDateNow =
+      llvm::cast<JSONArray>(environment->at("callsToDateNow"));
+  JSONArray *callsToNewDate =
+      llvm::cast<JSONArray>(environment->at("callsToNewDate"));
+  JSONArray *callsToDateAsFunction =
+      llvm::cast<JSONArray>(environment->at("callsToDateAsFunction"));
+  EXPECT_EQ(1, callsToDateNow->size());
+  EXPECT_EQ(dateNow, llvm::cast<JSONNumber>(callsToDateNow->at(0))->getValue());
+  EXPECT_EQ(1, callsToNewDate->size());
+  EXPECT_EQ(newDate, llvm::cast<JSONNumber>(callsToNewDate->at(0))->getValue());
+  EXPECT_EQ(1, callsToDateAsFunction->size());
+  EXPECT_EQ(
+      dateAsFunc, llvm::cast<JSONString>(callsToDateAsFunction->at(0))->str());
+  // Ignore the elements inside the trace, those are tested elsewhere.
 }
 
 struct SynthTraceParseTest : public ::testing::Test {
