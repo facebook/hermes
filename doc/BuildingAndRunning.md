@@ -26,7 +26,7 @@ You can also give explicit source and build directories, use `--help` on the bui
 
 Create a base directory to work in, e.g. ~/workspace, and cd into it. Follow the steps below to build LLVM and generate the Hermes build system:
 
-    git clone git@github.com:facebook/hermes.git
+    git clone https://github.com/facebook/hermes.git
     hermes/utils/build/build_llvm.py
     hermes/utils/build/configure.py
 
@@ -38,7 +38,7 @@ The build system has now been generated in the `build` directory. To perform the
 
 The Windows build depends on which particular combination of GitBash/Cygwin/WSL and Visual Studio is used.
 
-    git -c core.autocrlf=false clone git@github.com:facebook/hermes.git
+    git -c core.autocrlf=false clone https://github.com/facebook/hermes.git
     hermes/utils/build/build_llvm.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64' --distribute
     hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64 -DLLVM_ENABLE_LTO=OFF' --distribute
     cd build_release && MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
