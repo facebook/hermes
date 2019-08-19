@@ -412,20 +412,18 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
   {
     MarkRootsPhaseTimer timer(
         this, SlotAcceptor::RootSection::RuntimeInstanceVars);
-    acceptor.accept(thrownValue_, "thrownValue");
     acceptor.accept(nullPointer_, "nullPointer");
-    acceptor.accept(rootClazz_, "rootClass");
     acceptor.acceptPtr(rootClazzRawPtr_, "rootClass");
-    acceptor.accept(stringCycleCheckVisited_, "stringCycleCheckVisited");
-    acceptor.accept(global_, "global");
-#ifdef HERMES_ENABLE_DEBUGGER
-    acceptor.accept(debuggerInternalObject_, "debuggerInternal");
-#endif // HERMES_ENABLE_DEBUGGER
+#define RUNTIME_HV_FIELD_INSTANCE(name) acceptor.accept((name), #name);
+#include "hermes/VM/RuntimeHermesValueFields.def"
+#undef RUNTIME_HV_FIELD_INSTANCE
   }
 
   {
     MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::RuntimeModules);
-    acceptor.accept(specialCodeBlockDomain_);
+#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) acceptor.accept(name);
+#include "hermes/VM/RuntimeHermesValueFields.def"
+#undef RUNTIME_HV_FIELD_RUNTIMEMODULE
     for (auto &rm : runtimeModuleList_)
       rm.markRoots(acceptor, markLongLived);
     for (auto &entry : fixedPropCache_) {
@@ -454,55 +452,13 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
   {
     MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::Prototypes);
     // Prototypes.
-    MARK(objectPrototype);
+#define RUNTIME_HV_FIELD_PROTOTYPE(name) MARK(name);
+#include "hermes/VM/RuntimeHermesValueFields.def"
+#undef RUNTIME_HV_FIELD_PROTOTYPE
     acceptor.acceptPtr(objectPrototypeRawPtr, "objectPrototype");
-    MARK(functionPrototype);
     acceptor.acceptPtr(functionPrototypeRawPtr, "functionPrototype");
-    MARK(stringPrototype);
-    MARK(numberPrototype);
-    MARK(booleanPrototype);
-    MARK(symbolPrototype);
-    MARK(datePrototype);
-    MARK(arrayPrototype);
     acceptor.acceptPtr(arrayPrototypeRawPtr, "arrayPrototype");
-    MARK(arrayBufferPrototype);
-    MARK(dataViewPrototype);
-    MARK(typedArrayBasePrototype);
-    MARK(setPrototype);
-    MARK(setIteratorPrototype);
-    MARK(mapPrototype);
-    MARK(mapIteratorPrototype);
-    MARK(weakMapPrototype);
-    MARK(weakSetPrototype);
-    MARK(regExpPrototype);
-    // Constructors.
-    MARK(typedArrayBaseConstructor);
-    // Miscellaneous.
-    MARK(regExpLastInput);
-    MARK(regExpLastRegExp);
-    MARK(throwTypeErrorAccessor);
-    MARK(arrayClass);
     acceptor.acceptPtr(arrayClassRawPtr, "arrayClass");
-    MARK(iteratorPrototype);
-    MARK(arrayIteratorPrototype);
-    MARK(arrayPrototypeValues);
-    MARK(stringIteratorPrototype);
-    MARK(generatorFunctionPrototype);
-    MARK(generatorPrototype);
-    MARK(jsErrorStackAccessor);
-    MARK(parseIntFunction);
-    MARK(parseFloatFunction);
-    MARK(requireFunction);
-
-#define TYPED_ARRAY(name, type)                                  \
-  acceptor.accept(name##ArrayPrototype, #name "ArrayPrototype"); \
-  acceptor.accept(name##ArrayConstructor, #name "ArrayConstructor");
-#include "hermes/VM/TypedArrays.def"
-
-    MARK(errorConstructor);
-#define ALL_ERROR_TYPE(name) \
-  acceptor.accept(name##Prototype, #name "Prototype");
-#include "hermes/VM/NativeErrorTypes.def"
 #undef MARK
   }
 
@@ -1622,6 +1578,9 @@ void Runtime::serializeIdentifierTable(Serializer &s) {
 void Runtime::serializeRuntimeFields(Serializer &s) {
   // Serialize all HermesValue
 #define RUNTIME_HV_FIELD(name) s.writeHermesValue(name);
+#define RUNTIME_HV_FIELD_PROTOTYPE(name) RUNTIME_HV_FIELD(name)
+#define RUNTIME_HV_FIELD_INSTANCE(name) RUNTIME_HV_FIELD(name)
+#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
 
@@ -1684,6 +1643,9 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
 void Runtime::deserializeRuntimeFields(Deserializer &d) {
   // Deserialize all HermesValue
 #define RUNTIME_HV_FIELD(name) d.readHermesValue(&name);
+#define RUNTIME_HV_FIELD_PROTOTYPE(name) RUNTIME_HV_FIELD(name)
+#define RUNTIME_HV_FIELD_INSTANCE(name) RUNTIME_HV_FIELD(name)
+#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
 

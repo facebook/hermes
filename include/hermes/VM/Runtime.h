@@ -575,6 +575,9 @@ class Runtime : public HandleRootOwner,
   /// @}
 
 #define RUNTIME_HV_FIELD(name) PinnedHermesValue name{};
+#define RUNTIME_HV_FIELD_PROTOTYPE(name) RUNTIME_HV_FIELD(name)
+#define RUNTIME_HV_FIELD_INSTANCE(name) RUNTIME_HV_FIELD(name)
+#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
 
