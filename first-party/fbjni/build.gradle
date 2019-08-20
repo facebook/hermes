@@ -1,0 +1,66 @@
+// Copyright (c) Facebook, Inc. and its affiliates.
+//
+// This source code is licensed under the Apache-2 license found in the
+// LICENSE file in the root directory of this source tree.
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.4.2'
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'maven'
+
+repositories {
+    google()
+    jcenter()
+}
+
+android {
+    compileSdkVersion 28
+    buildToolsVersion '29.0.1'
+
+    defaultConfig {
+        minSdkVersion 15
+        targetSdkVersion 28
+        buildConfigField "boolean", "IS_INTERNAL_BUILD", 'true'
+
+        sourceSets {
+            main {
+                manifest.srcFile 'java/com/facebook/jni/AndroidManifest.xml'
+                java.srcDir 'java'
+            }
+        }
+
+        ndk {
+            abiFilters 'x86', 'armeabi-v7a', 'x86_64', 'arm64-v8a'
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_TOOLCHAIN=clang', '-DANDROID_STL=c++_shared'
+                targets 'fbjni'
+            }
+        }
+    }
+}
+
+dependencies {
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.1'
+    implementation 'com.facebook.soloader:soloader:0.6.0'
+}
+
+// apply from: rootProject.file('gradle/release.gradle')
+
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+
+artifacts.add('archives', sourcesJar)
