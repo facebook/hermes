@@ -527,7 +527,7 @@ void FREE_DTOA_LOCK(int);
 #define Kmax 7
 
 #ifdef __cplusplus
-extern "C" double g_strtod(const char *s00, char **se);
+extern "C" double hermes_g_strtod(const char *s00, char **se);
 extern "C" char *g_dtoa(double d, int mode, int ndigits,
 			int *decpt, int *sign, char **rve);
 #endif
@@ -2489,7 +2489,7 @@ retlow1:
 #endif /* NO_STRTOD_BIGCOMP */
 
  double
-g_strtod
+hermes_g_strtod
 #ifdef KR_headers
 	(s00, se) CONST char *s00; char **se;
 #else

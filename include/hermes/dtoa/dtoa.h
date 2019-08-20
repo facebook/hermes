@@ -43,7 +43,7 @@ void g_freedtoa(char *);
 void freedtoa_fixedpoint(char *);
 
 char *g_fmt(char *, double);
-double g_strtod(const char *s00, char **se);
+double hermes_g_strtod(const char *s00, char **se);
 
 #ifdef __cplusplus
 }

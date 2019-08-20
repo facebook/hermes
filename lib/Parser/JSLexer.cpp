@@ -1035,13 +1035,13 @@ end:
     error(token_.getSourceRange(), "invalid numeric literal");
     val = std::numeric_limits<double>::quiet_NaN();
   } else if (real || radix == 10) {
-    // We need a zero-terminated buffer for g_strtod().
+    // We need a zero-terminated buffer for hermes_g_strtod().
     llvm::SmallString<32> buf;
     buf.reserve(curCharPtr_ - start + 1);
     buf.append(start, curCharPtr_);
     buf.push_back(0);
     char *endPtr;
-    val = ::g_strtod(buf.data(), &endPtr);
+    val = ::hermes_g_strtod(buf.data(), &endPtr);
     if (endPtr != &buf.back()) {
       error(token_.getSourceRange(), "invalid numeric literal");
       val = std::numeric_limits<double>::quiet_NaN();

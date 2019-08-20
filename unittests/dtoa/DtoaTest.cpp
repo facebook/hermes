@@ -16,12 +16,12 @@ TEST(DtoaTest, SmokeTest) {
   EXPECT_STREQ("3.14", buf);
 
   char *se;
-  double val = g_strtod(buf, &se);
+  double val = hermes_g_strtod(buf, &se);
   ASSERT_EQ(0, *se);
   ASSERT_EQ(3.14, val);
 
   const char *inv = "asdf";
-  val = g_strtod(inv, &se);
+  val = hermes_g_strtod(inv, &se);
   ASSERT_EQ(inv, se);
   ASSERT_EQ(0, val);
 

@@ -215,21 +215,21 @@ CallResult<HermesValue> parseFloat(void *, Runtime *runtime, NativeArgs args) {
     // Empty string.
     return HermesValue::encodeNaNValue();
   }
-  // Use g_strtod to figure out the longest prefix that's still valid.
-  // g_strtod will try to convert the string to int for as long as it can,
+  // Use hermes_g_strtod to figure out the longest prefix that's still valid.
+  // hermes_g_strtod will try to convert the string to int for as long as it can,
   // and set endPtr to the last location where the prefix so far is still
   // a valid integer.
   len = i;
   str8[len] = '\0';
   char *endPtr;
-  ::g_strtod(str8.data(), &endPtr);
+  ::hermes_g_strtod(str8.data(), &endPtr);
   if (endPtr == str8.data()) {
     // Empty string.
     return HermesValue::encodeNaNValue();
   }
   // Now we know the prefix untill endPtr is a valid int.
   *endPtr = '\0';
-  return HermesValue::encodeDoubleValue(::g_strtod(str8.data(), &endPtr));
+  return HermesValue::encodeDoubleValue(::hermes_g_strtod(str8.data(), &endPtr));
 }
 
 /// Customized global function. gc() forces a GC collect.

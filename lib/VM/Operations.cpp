@@ -482,7 +482,7 @@ static inline double stringToNumber(
   }
   str8[len] = '\0';
   char *endPtr;
-  double result = ::g_strtod(str8.data(), &endPtr);
+  double result = ::hermes_g_strtod(str8.data(), &endPtr);
   if (endPtr == str8.data() + len) {
     return result;
   }

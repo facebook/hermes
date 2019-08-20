@@ -110,13 +110,13 @@ ExecutionStatus JSONLexer::scanNumber() {
     return errorWithChar(u"Unexpected token in number: ", *(start + 1));
   }
 
-  // copy 16 bit chars into 8 bit chars and call g_strtod.
+  // copy 16 bit chars into 8 bit chars and call hermes_g_strtod.
   llvm::SmallVector<char, 32> str8;
   str8.insert(str8.begin(), start, start + len);
   str8.push_back('\0');
 
   char *endPtr;
-  double value = ::g_strtod(str8.data(), &endPtr);
+  double value = ::hermes_g_strtod(str8.data(), &endPtr);
   if (endPtr != str8.data() + len) {
     return errorWithChar(
         u"Unexpected token in number: ", *(start + (endPtr - str8.data())));
