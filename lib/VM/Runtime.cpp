@@ -11,6 +11,7 @@
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/HBC.h"
+#include "hermes/BCGen/HBC/PredefinedStringIDs.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IRGen/IRGen.h"
@@ -1076,26 +1077,13 @@ std::unique_ptr<Buffer> Runtime::generateSpecialRuntimeBytecode() {
 void Runtime::initPredefinedStrings() {
   assert(!getTopGCScope() && "There shouldn't be any handles allocated yet");
 
-  /// Create a buffer containing all strings.
-  /// This ensures that all the strings live together in memory,
-  /// and that we don't touch multiple separate pages to run this.
-  static const char buffer[] =
-#define STR(name, string) string
-#include "hermes/VM/PredefinedStrings.def"
-#define SYM(name, desc) desc
-#include "hermes/VM/PredefinedSymbols.def"
-      ;
-  static const uint8_t strLengths[] = {
-#define STR(name, string) sizeof(string) - 1,
-#include "hermes/VM/PredefinedStrings.def"
-  };
+  auto buffer = hermes::hbc::predefStringAndSymbolChars;
+  auto strLengths = hermes::hbc::predefStringLengths;
+  auto symLengths = hermes::hbc::predefSymbolLengths;
+
   static const uint32_t hashes[] = {
 #define STR(name, string) constexprHashString(string),
 #include "hermes/VM/PredefinedStrings.def"
-  };
-  static const uint8_t symLengths[] = {
-#define SYM(name, desc) sizeof(desc) - 1,
-#include "hermes/VM/PredefinedSymbols.def"
   };
 
   uint32_t offset = 0;
@@ -1108,9 +1096,9 @@ void Runtime::initPredefinedStrings() {
     (void)sym;
   }
 
-  constexpr uint32_t strCount = sizeof strLengths / sizeof strLengths[0];
-  static_assert(
-      strCount == sizeof hashes / sizeof hashes[0],
+  const uint32_t strCount = Predefined::NumStrings;
+  assert(
+      strCount == sizeof hashes / sizeof hashes[0] &&
       "Arrays should have same length");
   for (uint32_t idx = 0; idx < strCount; idx++) {
     SymbolID sym = identifierTable_.registerLazyIdentifier(
@@ -1122,7 +1110,7 @@ void Runtime::initPredefinedStrings() {
     offset += strLengths[idx];
   }
 
-  constexpr uint32_t symCount = sizeof symLengths / sizeof symLengths[0];
+  const uint32_t symCount = Predefined::NumSymbols;
   for (uint32_t idx = 0; idx < symCount; ++idx) {
     SymbolID sym = identifierTable_.createNotUniquedLazySymbol(
         ASCIIRef{&buffer[offset], symLengths[idx]});

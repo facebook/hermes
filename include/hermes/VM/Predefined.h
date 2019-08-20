@@ -26,6 +26,7 @@ enum Str {
 #include "PredefinedStrings.def"
   _STRING_AFTER_LAST
 };
+constexpr size_t NumStrings = _STRING_AFTER_LAST - _STRING_BEFORE_FIRST - 1;
 
 enum Sym {
   _SYMBOL_BEFORE_FIRST = _STRING_AFTER_LAST - 1,
@@ -33,6 +34,7 @@ enum Sym {
 #include "PredefinedSymbols.def"
   _SYMBOL_AFTER_LAST
 };
+constexpr size_t NumSymbols = _SYMBOL_AFTER_LAST - _SYMBOL_BEFORE_FIRST - 1;
 
 /// \return a \c SymbolID of a predefined symbol.
 constexpr SymbolID getSymbolID(IProp predefined) {
