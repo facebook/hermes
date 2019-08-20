@@ -69,11 +69,11 @@ static double roundHalfwaysTowardsInfinity(double x) {
 /// the corresponding c function.
 enum class MathKind {
 #define MATHFUNC_1ARG(name, func) name,
-#include "hermes/VM/MathStdFunctions.def"
+#include "MathStdFunctions.def"
 #undef MATHFUNC_1ARG
   Num1ArgKinds,
 #define MATHFUNC_2ARG(name, func) name,
-#include "hermes/VM/MathStdFunctions.def"
+#include "MathStdFunctions.def"
 #undef MATHFUNC_2ARG
   Num2ArgKinds
 };
@@ -86,7 +86,7 @@ runContextFunc1Arg(void *ctx, Runtime *runtime, NativeArgs args) {
   typedef double (*Math1ArgFuncPtr)(double);
   static Math1ArgFuncPtr math1ArgFuncs[] = {
 #define MATHFUNC_1ARG(name, func) func,
-#include "hermes/VM/MathStdFunctions.def"
+#include "MathStdFunctions.def"
 #undef MATHFUNC_1ARG
   };
   assert(
@@ -109,7 +109,7 @@ runContextFunc2Arg(void *ctx, Runtime *runtime, NativeArgs args) {
   typedef double (*Math2ArgFuncPtr)(double, double);
   static Math2ArgFuncPtr math2ArgFuncs[] = {
 #define MATHFUNC_2ARG(name, func) func,
-#include "hermes/VM/MathStdFunctions.def"
+#include "MathStdFunctions.def"
 #undef MATHFUNC_2ARG
   };
   assert(
