@@ -164,6 +164,7 @@ void installConsoleBindings(
 // will be wrapped in a try/catch that catches those exceptions, report it then
 // exit.
 namespace {
+
 template <typename F>
 auto maybeCatchException(const F &f) -> decltype(f()) {
 #if defined(HERMESVM_EXCEPTION_ON_OOM) || defined(HERMESVM_TIMELIMIT)
@@ -178,11 +179,8 @@ auto maybeCatchException(const F &f) -> decltype(f()) {
   return f();
 #endif
 }
-} // namespace
 
-/// Executes the HBC bytecode provided in HermesVM.
-/// \return true on success, false on error.
-bool executeHBCBytecode(
+bool executeHBCBytecodeImpl(
     std::shared_ptr<hbc::BCProvider> &&bytecode,
     const ExecuteOptions &options,
     const std::string *filename) {
@@ -271,14 +269,12 @@ bool executeHBCBytecode(
     vm::SamplingProfiler::getInstance()->enable();
   }
 
-  vm::CallResult<vm::HermesValue> status = maybeCatchException([&] {
-    llvm::StringRef sourceURL{};
-    return runtime->runBytecode(
-        std::move(bytecode),
-        flags,
-        sourceURL,
-        runtime->makeNullHandle<vm::Environment>());
-  });
+  llvm::StringRef sourceURL{};
+  vm::CallResult<vm::HermesValue> status = runtime->runBytecode(
+      std::move(bytecode),
+      flags,
+      sourceURL,
+      runtime->makeNullHandle<vm::Environment>());
 
   if (options.runtimeConfig.getEnableSampleProfiling()) {
     auto profiler = vm::SamplingProfiler::getInstance();
@@ -338,6 +334,19 @@ bool executeHBCBytecode(
 #endif
 
   return !threwException;
+}
+
+} // namespace
+
+/// Executes the HBC bytecode provided in HermesVM.
+/// \return true on success, false on error.
+bool executeHBCBytecode(
+    std::shared_ptr<hbc::BCProvider> &&bytecode,
+    const ExecuteOptions &options,
+    const std::string *filename) {
+  return maybeCatchException([&] {
+    return executeHBCBytecodeImpl(std::move(bytecode), options, filename);
+  });
 }
 
 } // namespace hermes
