@@ -1680,6 +1680,14 @@ class StandardSortModel : public SortModel {
       return false;
     }
 
+    auto propRes = JSObject::getComputedPropertyValue(
+        obj_, runtime_, aDescObjHandle_, aDesc);
+    if (propRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    aValue_ = propRes.getValue();
+    assert(!aValue_->isEmpty());
+
     ComputedPropertyDescriptor bDesc;
     JSObject::getComputedPrimitiveDescriptor(
         obj_, runtime_, bHandle_, bDescObjHandle_, bDesc);
@@ -1688,19 +1696,13 @@ class StandardSortModel : public SortModel {
       return true;
     }
 
-    auto propRes = JSObject::getComputedPropertyValue(
-        obj_, runtime_, aDescObjHandle_, aDesc);
-    if (propRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    aValue_ = propRes.getValue();
-
     if ((propRes = JSObject::getComputedPropertyValue(
              obj_, runtime_, bDescObjHandle_, bDesc)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     bValue_ = propRes.getValue();
+    assert(!bValue_->isEmpty());
 
     if (aValue_->isUndefined()) {
       // Spec defines undefined as greater than everything.

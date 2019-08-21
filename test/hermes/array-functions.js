@@ -458,6 +458,11 @@ try { [].sort(true); } catch(e) { print('caught', e.name); }
 // CHECK-NEXT: caught TypeError
 try { [1,2,3].sort({}); } catch(e) { print('caught', e.name); }
 // CHECK-NEXT: caught TypeError
+var a = [{}, {}];
+a.__defineGetter__(1, function() { a.length = 0; return 0; });
+a.sort();
+print('sorting', a, 'did not crash');
+// CHECK-NEXT: sorting  did not crash
 
 print('splice');
 // CHECK-LABEL: splice
