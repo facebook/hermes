@@ -406,7 +406,7 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
   llvm::SmallSetVector<Instruction *, 16> uniqueUsers;
   uniqueUsers.insert(
       createArguments->getUsers().begin(), createArguments->getUsers().end());
-  for (Value *user : createArguments->getUsers()) {
+  for (Value *user : uniqueUsers) {
     auto *load = dyn_cast<LoadPropertyInst>(user);
     if (load && load->getObject() == createArguments) {
       builder.setInsertionPoint(load);

@@ -54,3 +54,9 @@ modifyArgs(1, 20, 30);
 //CHECK-NEXT:30
 //CHECK-NEXT:4
 //CHECK-NEXT:bar
+
+function argsInArgs() {
+    print(arguments[arguments]);
+}
+argsInArgs();
+//CHECK-NEXT:undefined
