@@ -91,7 +91,9 @@ bool PerfCounter::endAndInsertStats(std::string &jsonStats) {
     return false;
   uint64_t count = 0;
   ioctl(fd_, PERF_EVENT_IOC_DISABLE, 0);
-  read(fd_, &count, sizeof(count));
+  auto res = read(fd_, &count, sizeof(count));
+  if (res <= 0)
+    return false;
   std::string stats;
   llvm::raw_string_ostream os{stats};
   os << "\"perfEvent_" << name_ << "\": " << count << ",\n\t\t";
