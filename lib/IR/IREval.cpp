@@ -93,6 +93,7 @@ Literal *hermes::evalUnaryOperator(
       break;
     case UnaryOperatorInst::OpKind::TypeofKind:
       switch (operand->getKind()) {
+        case ValueKind::GlobalObjectKind:
         case ValueKind::LiteralNullKind:
           return builder.getLiteralString("object");
         case ValueKind::LiteralUndefinedKind:

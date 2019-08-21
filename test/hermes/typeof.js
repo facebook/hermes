@@ -55,3 +55,6 @@ print(type_of_number(4));
 
 print(type_of_object(4));
 //CHECK: object
+
+print(typeof((function () { return this; })()));
+//CHECK: object
