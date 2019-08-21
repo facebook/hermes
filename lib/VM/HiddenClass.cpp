@@ -130,6 +130,15 @@ size_t HiddenClass::_mallocSizeImpl(GCCell *cell) {
   return self->transitionMap_.getMemorySize();
 }
 
+std::string HiddenClass::_snapshotNameImpl(GCCell *cell, GC *gc) {
+  auto *const self = vmcast<HiddenClass>(cell);
+  std::string name{cellKindStr(self->getKind())};
+  if (self->isDictionary()) {
+    return name + "(Dictionary)";
+  }
+  return name;
+}
+
 CallResult<HermesValue> HiddenClass::createRoot(Runtime *runtime) {
   return create(
       runtime,

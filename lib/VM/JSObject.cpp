@@ -1881,9 +1881,14 @@ std::string JSObject::getHeuristicTypeName(PointerBase *base) {
       }
     }
   }
+  // A constructor's name was not found, check if the object is in dictionary
+  // mode.
+  if (getClass(base)->isDictionary()) {
+    return std::string{cellKindStr(getKind())} + "(Dictionary)";
+  }
   // TODO: Add other object name estimates such as a serialization of property
   // names for non-named objects.
-  return "";
+  return cellKindStr(getKind());
 }
 
 std::string JSObject::getNameIfExists(PointerBase *base) {
@@ -1901,12 +1906,7 @@ std::string JSObject::getNameIfExists(PointerBase *base) {
 
 std::string JSObject::_snapshotNameImpl(GCCell *cell, GC *gc) {
   auto *const self = vmcast<JSObject>(cell);
-  std::string optionalTypeName =
-      self->getHeuristicTypeName(gc->getPointerBase());
-  if (!optionalTypeName.empty()) {
-    return optionalTypeName;
-  }
-  return cellKindStr(self->getKind());
+  return self->getHeuristicTypeName(gc->getPointerBase());
 }
 
 void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {

@@ -397,6 +397,8 @@ class HiddenClass final : public GCCell {
   /// is assumed to be a HiddenClass.
   static size_t _mallocSizeImpl(GCCell *cell);
 
+  static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
+
 #ifdef HERMESVM_SERIALIZE
   friend void HiddenClassSerialize(Serializer &s, const GCCell *cell);
   friend void HiddenClassDeserialize(Deserializer &d, CellKind kind);
