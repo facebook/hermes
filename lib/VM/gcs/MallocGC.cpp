@@ -110,7 +110,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault {
 /// forwarding pointers; otherwise, they are reset to nullptr.
 struct MallocGC::FullMSCUpdateWeakRootsAcceptor final
     : public SlotAcceptorDefault {
-  static constexpr bool shouldMarkWeak = false;
+  static constexpr bool shouldMarkWeak = true;
 
   using SlotAcceptorDefault::accept;
   using SlotAcceptorDefault::SlotAcceptorDefault;
@@ -135,6 +135,10 @@ struct MallocGC::FullMSCUpdateWeakRootsAcceptor final
     void *ptr = hv.getPointer();
     accept(ptr);
     hv.setInGC(hv.updatePointer(ptr), &gc);
+  }
+
+  void accept(WeakRefBase &wr) override {
+    gc.markWeakRef(wr);
   }
 };
 

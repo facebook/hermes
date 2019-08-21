@@ -125,11 +125,17 @@ class Runtime : public HandleRootOwner,
 
   ~Runtime();
 
-  /// Add a custom function that should match the signature \c void(GC*). It
-  /// will be executed at the start of every garbage collection to mark
-  /// additional GC roots that may not be known to the Runtime.
-  template <typename F>
-  void addCustomRootsFunction(const F &markRootsFn);
+  /// Add a custom function that will be executed at the start of every garbage
+  /// collection to mark additional GC roots that may not be known to the
+  /// Runtime.
+  void addCustomRootsFunction(
+      std::function<void(GC *, SlotAcceptor &)> markRootsFn);
+
+  /// Add a custom function that will be executed sometime during garbage
+  /// collection to mark additional weak GC roots that may not be known to the
+  /// Runtime.
+  void addCustomWeakRootsFunction(
+      std::function<void(GC *, SlotAcceptor &)> markRootsFn);
 
   /// Make the runtime read from \p env to replay its environment-dependent
   /// behavior.
@@ -710,8 +716,8 @@ class Runtime : public HandleRootOwner,
   /// are required to be scanned.
   void markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) override;
 
-  /// Called by the GC at the beginning of a collection. This method informs
-  /// the GC of all runtime weak roots.
+  /// Called by the GC during collections that may reset weak references. This
+  /// method informs the GC of all runtime weak roots.
   void markWeakRoots(SlotAcceptorWithNames &acceptor) override;
 
   /// Visits every entry in the identifier table and calls acceptor with
@@ -831,6 +837,8 @@ class Runtime : public HandleRootOwner,
  private:
   GC heap_;
   std::vector<std::function<void(GC *, SlotAcceptor &)>> customMarkRootFuncs_;
+  std::vector<std::function<void(GC *, SlotAcceptor &)>>
+      customMarkWeakRootFuncs_;
 
   /// All state related to JIT compilation.
   JITContext jitContext_;
@@ -1224,9 +1232,14 @@ class ScopedNativeCallFrame {
 //===----------------------------------------------------------------------===//
 // Runtime inline methods.
 
-template <typename F>
-inline void Runtime::addCustomRootsFunction(const F &markRootsFn) {
-  customMarkRootFuncs_.push_back(markRootsFn);
+inline void Runtime::addCustomRootsFunction(
+    std::function<void(GC *, SlotAcceptor &)> markRootsFn) {
+  customMarkRootFuncs_.emplace_back(std::move(markRootsFn));
+}
+
+inline void Runtime::addCustomWeakRootsFunction(
+    std::function<void(GC *, SlotAcceptor &)> markRootsFn) {
+  customMarkWeakRootFuncs_.emplace_back(std::move(markRootsFn));
 }
 
 template <bool fixedSize, HasFinalizer hasFinalizer>

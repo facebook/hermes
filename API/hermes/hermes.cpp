@@ -290,26 +290,30 @@ class HermesRuntimeImpl final : public HermesRuntime,
     // Register the memory for the runtime if it isn't stored on the stack.
     crashMgr_->registerMemory(&runtime_, sizeof(vm::Runtime));
 #endif
-    runtime_.addCustomRootsFunction([this](
-                                        vm::GC *, vm::SlotAcceptor &acceptor) {
-      for (auto it = hermesValues_->begin(); it != hermesValues_->end();) {
-        if (it->get() == 0) {
-          it = hermesValues_->erase(it);
-        } else {
-          acceptor.accept(const_cast<vm::PinnedHermesValue &>(it->phv));
-          ++it;
-        }
-      }
-      for (auto it = weakHermesValues_->begin();
-           it != weakHermesValues_->end();) {
-        if (it->get() == 0) {
-          it = weakHermesValues_->erase(it);
-        } else {
-          acceptor.accept(const_cast<vm::WeakRef<vm::HermesValue> &>(it->wr));
-          ++it;
-        }
-      }
-    });
+    runtime_.addCustomRootsFunction(
+        [this](vm::GC *, vm::SlotAcceptor &acceptor) {
+          for (auto it = hermesValues_->begin(); it != hermesValues_->end();) {
+            if (it->get() == 0) {
+              it = hermesValues_->erase(it);
+            } else {
+              acceptor.accept(const_cast<vm::PinnedHermesValue &>(it->phv));
+              ++it;
+            }
+          }
+        });
+    runtime_.addCustomWeakRootsFunction(
+        [this](vm::GC *, vm::SlotAcceptor &acceptor) {
+          for (auto it = weakHermesValues_->begin();
+               it != weakHermesValues_->end();) {
+            if (it->get() == 0) {
+              it = weakHermesValues_->erase(it);
+            } else {
+              acceptor.accept(
+                  const_cast<vm::WeakRef<vm::HermesValue> &>(it->wr));
+              ++it;
+            }
+          }
+        });
   }
 
  public:

@@ -73,7 +73,7 @@ struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault {
 /// If the target GCCell is still alive the weak roots are updated using
 /// forwarding pointers; otherwise, they are reset to nullptr.
 struct FullMSCUpdateWeakRootsAcceptor final : public SlotAcceptorDefault {
-  static constexpr bool shouldMarkWeak = false;
+  static constexpr bool shouldMarkWeak = true;
 
   using SlotAcceptorDefault::accept;
   using SlotAcceptorDefault::SlotAcceptorDefault;
@@ -95,6 +95,9 @@ struct FullMSCUpdateWeakRootsAcceptor final : public SlotAcceptorDefault {
     void *ptr = hv.getPointer();
     accept(ptr);
     hv.setInGC(hv.updatePointer(ptr), &gc);
+  }
+  void accept(WeakRefBase &wr) override {
+    gc.markWeakRef(wr);
   }
 };
 

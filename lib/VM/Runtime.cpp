@@ -476,11 +476,6 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
   }
 
   {
-    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::WeakRefs);
-    markWeakRefs(&getHeap());
-  }
-
-  {
     MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::SymbolRegistry);
     symbolRegistry_.markRoots(acceptor);
   }
@@ -504,6 +499,9 @@ void Runtime::markWeakRoots(SlotAcceptorWithNames &acceptor) {
   MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::WeakRefs);
   for (auto &rm : runtimeModuleList_)
     rm.markWeakRoots(acceptor);
+  markWeakRefs(&getHeap());
+  for (auto &fn : customMarkWeakRootFuncs_)
+    fn(&getHeap(), acceptor);
 }
 
 void Runtime::visitIdentifiers(
