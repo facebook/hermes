@@ -26,12 +26,6 @@ android {
     compileSdkVersion 28
     buildToolsVersion '29.0.1'
 
-    externalNativeBuild {
-        cmake {
-            path 'CMakeLists.txt'
-        }
-    }
-
     defaultConfig {
         minSdkVersion 15
         targetSdkVersion 28
