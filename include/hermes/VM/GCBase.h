@@ -183,12 +183,12 @@ class GCBase {
     /// via allocLongLived) are required to be scanned.  A generational
     /// collector, for example, might take advantage of this.
     virtual void markRoots(
-        SlotAcceptorWithNames &acceptor,
+        RootAcceptor &acceptor,
         bool markLongLived = true) = 0;
 
     /// Callback that will be invoked by the GC to mark all weak roots in the
     /// beginning of every GC.
-    virtual void markWeakRoots(SlotAcceptorWithNames &acceptor) = 0;
+    virtual void markWeakRoots(RootAcceptor &acceptor) = 0;
 
     /// \return one higher than the largest symbol in the identifier table. This
     /// enables the GC to size its internal structures for symbol marking.
@@ -299,9 +299,11 @@ class GCBase {
     enum class ReservedObjectID : HeapSnapshot::NodeID {
       // For any object where an ID cannot be found.
       NoID = 0,
-      // The ID for the initial "roots" object.
-      Roots = 2,
-      FirstNonReservedObjectID = 4,
+      // The ID for the super root object.
+      Root,
+#define ROOT_SECTION(name) name,
+#include "hermes/VM/RootSections.def"
+      FirstNonReservedID,
     };
 
     explicit IDTracker() = default;
@@ -342,10 +344,13 @@ class GCBase {
 
     /// The next available ID to assign to an object. Object IDs are not
     /// recycled so that snapshots don't confuse two objects with each other.
-    HeapSnapshot::NodeID nextID_{static_cast<HeapSnapshot::NodeID>(
-        ReservedObjectID::FirstNonReservedObjectID)};
+    /// NOTE: Need to ensure that this starts on an even number, so check if
+    /// the first non-reserved ID is even, if not add one.
+    uint64_t nextID_{
+        static_cast<uint64_t>(ReservedObjectID::FirstNonReservedID) +
+        static_cast<uint64_t>(ReservedObjectID::FirstNonReservedID) % 2};
     /// The next available native ID to assign to a chunk of native memory.
-    HeapSnapshot::NodeID nextNativeID_{1};
+    HeapSnapshot::NodeID nextNativeID_{nextID_ + 1};
 
     /// Map of object pointers to IDs. Only populated once the first heap
     /// snapshot is requested, or the first time the memory profiler is turned
@@ -630,13 +635,13 @@ class GCBase {
   /// are required to be marked.  In this collector, such objects will
   /// be allocated in the old gen, and references to them need not be
   /// marked during young-gen collection.
-  void markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
+  void markRoots(RootAcceptor &acceptor, bool markLongLived) {
     gcCallbacks_->markRoots(acceptor, markLongLived);
   }
 
   /// Convenience method to invoke the mark weak roots function provided at
   /// initialization, using the context provided then (on this heap).
-  void markWeakRoots(SlotAcceptorWithNames &acceptor) {
+  void markWeakRoots(RootAcceptor &acceptor) {
     gcCallbacks_->markWeakRoots(acceptor);
   }
 

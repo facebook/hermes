@@ -76,7 +76,10 @@ std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider(
 #endif
 }
 
-void DummyRuntime::markRoots(SlotAcceptorWithNames &acceptor, bool) {
+void DummyRuntime::markRoots(RootAcceptor &acceptor, bool) {
+  // DummyRuntime doesn't care what root section it is, but it needs one for
+  // snapshot tests.
+  acceptor.beginRootSection(RootAcceptor::Section::Custom);
   markGCScopes(acceptor);
   for (GCCell **pp : pointerRoots)
     acceptor.acceptPtr(*pp);
@@ -85,9 +88,10 @@ void DummyRuntime::markRoots(SlotAcceptorWithNames &acceptor, bool) {
 
   if (markExtra)
     markExtra(&getHeap(), acceptor);
+  acceptor.endRootSection();
 }
 
-void DummyRuntime::markWeakRoots(SlotAcceptorWithNames &acceptor) {
+void DummyRuntime::markWeakRoots(RootAcceptor &acceptor) {
   for (void **ptr : weakRoots) {
     acceptor.accept(*ptr);
   }

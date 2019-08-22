@@ -1166,6 +1166,16 @@ void GenGC::claimAllocContext() {
 
 namespace {
 
+constexpr GCBase::IDTracker::ReservedObjectID objectIDForRootSection(
+    RootAcceptor::Section section) {
+  // Since root sections start at zero, and in IDTracker the root sections
+  // start one past the reserved super root, this number can be added to
+  // do conversions.
+  return static_cast<GCBase::IDTracker::ReservedObjectID>(
+      static_cast<uint64_t>(GCBase::IDTracker::ReservedObjectID::Root) + 1 +
+      static_cast<uint64_t>(section));
+}
+
 // Abstract base class for all snapshot acceptors.
 struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
   using SlotAcceptorWithNamesDefault::accept;
@@ -1188,32 +1198,113 @@ struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
 struct EdgeAddingAcceptor : public SnapshotAcceptor {
   using SnapshotAcceptor::accept;
 
-  EdgeAddingAcceptor(GC &gc, HeapSnapshot &snap, bool filterDuplicates)
-      : SnapshotAcceptor(gc),
-        snap_(snap),
-        filterDuplicates_(filterDuplicates) {}
+  EdgeAddingAcceptor(GC &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc), snap_(snap) {}
 
   void accept(void *&ptr, const char *name) override {
     if (!ptr) {
       return;
     }
-
-    const auto id = gc.getObjectID(ptr);
-    if (filterDuplicates_ && !seenIDs_.insert(id).second) {
-      // Already seen this node, don't add another edge.
-      return;
-    }
-
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Internal,
         llvm::StringRef::withNullAsEmpty(name),
-        id);
+        gc.getObjectID(ptr));
   }
 
  private:
   HeapSnapshot &snap_;
-  bool filterDuplicates_;
+};
+
+struct SnapshotRootSectionAcceptor : public SnapshotAcceptor {
+  using SnapshotAcceptor::accept;
+
+  SnapshotRootSectionAcceptor(GC &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc), snap_(snap) {}
+
+  void accept(void *&, const char *) override {
+    // While adding edges to root sections, there's no need to do anything for
+    // pointers.
+  }
+
+  void beginRootSection(Section section) override {
+    // Make an element edge from the super root to each root section.
+    snap_.addIndexedEdge(
+        HeapSnapshot::EdgeType::Element,
+        rootSectionNum_++,
+        static_cast<HeapSnapshot::NodeID>(objectIDForRootSection(section)));
+  }
+
+  void endRootSection() override {
+    // Do nothing for the end of the root section.
+  }
+
+ private:
+  HeapSnapshot &snap_;
+  // v8's roots start numbering at 1.
+  int rootSectionNum_{1};
+};
+
+struct SnapshotRootAcceptor : public SnapshotAcceptor {
+  using SnapshotAcceptor::accept;
+
+  SnapshotRootAcceptor(GC &gc, HeapSnapshot &snap)
+      : SnapshotAcceptor(gc), snap_(snap) {}
+
+  void accept(void *&ptr, const char *name) override {
+    assert(
+        currentSection_ != Section::InvalidSection &&
+        "accept called outside of begin/end root section pair");
+    if (!ptr) {
+      return;
+    }
+
+    const auto id = gc.getObjectID(ptr);
+    if (!seenIDs_.insert(id).second) {
+      // Already seen this node, don't add another edge.
+      return;
+    }
+    auto nameRef = llvm::StringRef::withNullAsEmpty(name);
+    if (!nameRef.empty()) {
+      snap_.addNamedEdge(HeapSnapshot::EdgeType::Internal, nameRef, id);
+    } else {
+      // Unnamed edges get indices.
+      snap_.addIndexedEdge(HeapSnapshot::EdgeType::Element, nextEdge_++, id);
+    }
+  }
+
+  void beginRootSection(Section section) override {
+    assert(
+        currentSection_ == Section::InvalidSection &&
+        "beginRootSection called while previous section is open");
+    snap_.beginNode();
+    currentSection_ = section;
+  }
+
+  void endRootSection() override {
+    // A root section creates a synthetic node with that name and makes edges
+    // come from that root.
+    static const char *rootNames[] = {
+// Parentheses around the name is adopted from V8's roots.
+#define ROOT_SECTION(name) "(" #name ")",
+#include "hermes/VM/RootSections.def"
+    };
+    snap_.endNode(
+        HeapSnapshot::NodeType::Synthetic,
+        rootNames[static_cast<unsigned>(currentSection_)],
+        static_cast<HeapSnapshot::NodeID>(
+            objectIDForRootSection(currentSection_)),
+        // The heap visualizer doesn't like it when these synthetic nodes have a
+        // size (it describes them as living in the heap).
+        0);
+    currentSection_ = Section::InvalidSection;
+  }
+
+ private:
+  HeapSnapshot &snap_;
   llvm::DenseSet<uint64_t> seenIDs_;
+  // For unnamed edges, use indices instead.
+  unsigned nextEdge_{1};
+  Section currentSection_{Section::InvalidSection};
 };
 
 } // namespace
@@ -1233,26 +1324,28 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   JSONEmitter json(os, !compact);
   HeapSnapshot snap(json);
 
-  snap.beginSection(HeapSnapshot::Section::Nodes);
-
-  // Count the number of roots.
-  {
-    // Use a separate root acceptor for the first pass and the second pass so
-    // that the duplicate filter isn't shared.
-    EdgeAddingAcceptor rootAcceptor(*this, snap, /*filterDuplicates*/ true);
+  const auto rootScan = [this, &snap]() {
+    // Make the super root node and add edges to each root section.
+    SnapshotRootSectionAcceptor rootSectionAcceptor(*this, snap);
     snap.beginNode();
-    markRoots(rootAcceptor, true);
+    markRoots(rootSectionAcceptor, true);
     snap.endNode(
         HeapSnapshot::NodeType::Synthetic,
         "(GC Roots)",
-        static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Roots),
+        static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Root),
         0);
-  }
+    // Make a node for each root section and add edges into the actual heap.
+    // Within a root section, there might be duplicates. The root acceptor
+    // filters out duplicate edges because there cannot be duplicate edges to
+    // nodes reachable from the super root.
+    SnapshotRootAcceptor rootAcceptor(*this, snap);
+    markRoots(rootAcceptor, true);
+  };
 
-  // Edges in the normal heap don't need to be de-duplicated.
-  EdgeAddingAcceptor acceptor(*this, snap, /*filterDuplicates*/ false);
+  snap.beginSection(HeapSnapshot::Section::Nodes);
+  rootScan();
+  EdgeAddingAcceptor acceptor(*this, snap);
   SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
-
   // Add a node for each object in the heap.
   const auto snapshotForObject = [&snap, &visitor, this](GCCell *cell) {
     // Allow nodes to add extra nodes not in the JS heap.
@@ -1272,11 +1365,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   snap.endSection(HeapSnapshot::Section::Nodes);
 
   snap.beginSection(HeapSnapshot::Section::Edges);
-  {
-    // Make a new root acceptor so that edges aren't filtered a second time.
-    EdgeAddingAcceptor rootAcceptor(*this, snap, /*filterDuplicates*/ true);
-    markRoots(rootAcceptor, true);
-  }
+  rootScan();
   // Add edges between objects in the heap.
   forAllObjs(snapshotForObject);
   snap.endSection(HeapSnapshot::Section::Edges);

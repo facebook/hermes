@@ -267,9 +267,9 @@ struct DummyRuntime final : public HandleRootOwner,
     return gc;
   }
 
-  void markRoots(SlotAcceptorWithNames &acceptor, bool) override;
+  void markRoots(RootAcceptor &acceptor, bool) override;
 
-  void markWeakRoots(SlotAcceptorWithNames &acceptor) override;
+  void markWeakRoots(RootAcceptor &acceptor) override;
 
   unsigned int getSymbolsEnd() const override {
     return 0;

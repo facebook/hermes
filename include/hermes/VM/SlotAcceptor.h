@@ -23,12 +23,6 @@ class WeakRefBase;
 struct SlotAcceptor {
   static constexpr bool shouldMarkWeak = true;
 
-  enum class RootSection {
-#define ROOT_SECTION(name) name,
-#include "hermes/VM/RootSections.def"
-    NumSections,
-  };
-
   virtual ~SlotAcceptor() {}
   virtual void accept(void *&ptr) = 0;
   virtual void accept(BasedPointer &ptr) = 0;
@@ -100,8 +94,21 @@ struct SlotAcceptorWithNames : public SlotAcceptor {
   }
 };
 
+struct RootAcceptor : public SlotAcceptorWithNames {
+  enum class Section {
+#define ROOT_SECTION(name) name,
+#include "hermes/VM/RootSections.def"
+    NumSections,
+    // Sentinel value to be used to represent an invalid section.
+    InvalidSection,
+  };
+
+  virtual void beginRootSection(Section section) {}
+  virtual void endRootSection() {}
+};
+
 template <typename Acceptor>
-struct DroppingAcceptor final : public SlotAcceptorWithNames {
+struct DroppingAcceptor final : public RootAcceptor {
   static_assert(
       std::is_base_of<SlotAcceptor, Acceptor>::value,
       "Can only use this with a subclass of SlotAcceptor");

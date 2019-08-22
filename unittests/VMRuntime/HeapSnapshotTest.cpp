@@ -138,24 +138,46 @@ TEST(HeapSnapshotTest, SnapshotTest) {
       << "\"nodes\":[";
   // Synthetic node representing the root of all roots.
   stream << static_cast<int>(HeapSnapshot::NodeType::Synthetic) << ",0,"
-         << static_cast<HeapSnapshot::NodeID>(
-                GC::IDTracker::ReservedObjectID::Roots)
+         << static_cast<uint64_t>(GC::IDTracker::ReservedObjectID::Root)
+         // There's one edge to the Custom root section.
          << ",0,1,0,";
+  // Synthetic node for the root section defined by DummyRuntime (which is
+  // "Custom").
+  stream << static_cast<int>(HeapSnapshot::NodeType::Synthetic) << ",1,"
+         << static_cast<uint64_t>(GC::IDTracker::ReservedObjectID::Custom)
+         << ",0," <<
+      // There's only one root into the system, so say that this node has one
+      // edge.
+      1 << ",0,";
   // Normal node for the first dummy.
-  stream << static_cast<int>(HeapSnapshot::NodeType::Object) << ",1,"
+  stream << static_cast<int>(HeapSnapshot::NodeType::Object) << ",2,"
          << rt.getHeap().getObjectID(*dummy) << "," << blockSize << ",1,0,";
   // Normal node for the second dummy, which is only reachable via the first
   // dummy.
-  stream << static_cast<int>(HeapSnapshot::NodeType::Object) << ",1,"
+  stream << static_cast<int>(HeapSnapshot::NodeType::Object) << ",2,"
          << rt.getHeap().getObjectID(dummy->other.get(&rt)) << "," << blockSize
          << ",0,0";
   // The edges point from the root to the first dummy, and from the first dummy
   // to the second dummy.
   stream
       << "],"
-      << "\"edges\":[3,2,6,3,3,12],"
+      << "\"edges\":["
+      // Edge from super root to custom root section
+      << static_cast<int>(HeapSnapshot::EdgeType::Element) << "," << 1 << ","
+      << /* Custom root section begins at index 6 in the nodes array */ 6
+      << ","
+      // Edge from custom root section to dummy.
+      << static_cast<int>(HeapSnapshot::EdgeType::Element) << "," << 1 << ","
+      << /* The first dummy node starts at index 12 */ 12
+      << ","
+      // Edge from dummy to dummy2.
+      << static_cast<int>(HeapSnapshot::EdgeType::Internal) << ","
+      << /*@other*/ 3 << ","
+      << /* The second dummy node starts at index 12 */ 18
+      // End of edges.
+      << "],"
       << "\"trace_function_infos\":[],\"trace_tree\":[],\"samples\":[],\"locations\":[],"
-      << R"#("strings":["(GC Roots)","Uninitialized","","other"])#"
+      << R"#("strings":["(GC Roots)","(Custom)","Uninitialized","other"])#"
       << "}";
 
   std::string expected = stream.str();

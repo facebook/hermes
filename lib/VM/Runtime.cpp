@@ -374,7 +374,7 @@ Runtime::~Runtime() {
 /// Runtime::totalMarkRootsTime.
 class Runtime::MarkRootsPhaseTimer {
  public:
-  MarkRootsPhaseTimer(Runtime *rt, SlotAcceptor::RootSection section)
+  MarkRootsPhaseTimer(Runtime *rt, RootAcceptor::Section section)
       : rt_(rt), section_(section), start_(std::chrono::steady_clock::now()) {
     if (static_cast<unsigned>(section) == 0) {
       // The first phase; record the start as the start of markRoots.
@@ -388,7 +388,7 @@ class Runtime::MarkRootsPhaseTimer {
     unsigned index = static_cast<unsigned>(section_);
     rt_->markRootsPhaseTimes_[index] += elapsed.count();
     if (index + 1 ==
-        static_cast<unsigned>(SlotAcceptor::RootSection::NumSections)) {
+        static_cast<unsigned>(RootAcceptor::Section::NumSections)) {
       std::chrono::duration<double> totalElapsed =
           (tp - rt_->startOfMarkRoots_);
       rt_->totalMarkRootsTime_ += totalElapsed.count();
@@ -397,31 +397,35 @@ class Runtime::MarkRootsPhaseTimer {
 
  private:
   Runtime *rt_;
-  SlotAcceptor::RootSection section_;
+  RootAcceptor::Section section_;
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
-void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
+void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
   // The body of markRoots should be sequence of blocks, each of which starts
   // with the declaration of an appropriate RootSection instance.
   {
-    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::Registers);
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Registers);
+    acceptor.beginRootSection(RootAcceptor::Section::Registers);
     for (auto *p = stackPointer_, *e = registerStackEnd_; p != e; ++p)
       acceptor.accept(*p);
+    acceptor.endRootSection();
   }
 
   {
-    MarkRootsPhaseTimer timer(
-        this, SlotAcceptor::RootSection::RuntimeInstanceVars);
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::RuntimeInstanceVars);
+    acceptor.beginRootSection(RootAcceptor::Section::RuntimeInstanceVars);
     acceptor.accept(nullPointer_, "nullPointer");
     acceptor.acceptPtr(rootClazzRawPtr_, "rootClass");
 #define RUNTIME_HV_FIELD_INSTANCE(name) acceptor.accept((name), #name);
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD_INSTANCE
+    acceptor.endRootSection();
   }
 
   {
-    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::RuntimeModules);
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::RuntimeModules);
+    acceptor.beginRootSection(RootAcceptor::Section::RuntimeModules);
 #define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) acceptor.accept(name);
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD_RUNTIMEMODULE
@@ -430,20 +434,25 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
     for (auto &entry : fixedPropCache_) {
       acceptor.acceptPtr(entry.clazz);
     }
+    acceptor.endRootSection();
   }
 
   {
-    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::CharStrings);
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::CharStrings);
+    acceptor.beginRootSection(RootAcceptor::Section::CharStrings);
     if (markLongLived) {
       for (auto &hv : charStrings_)
         acceptor.accept(hv);
     }
+    acceptor.endRootSection();
   }
 
   {
-    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::Builtins);
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Builtins);
+    acceptor.beginRootSection(RootAcceptor::Section::Builtins);
     for (NativeFunction *&nf : builtins_)
       acceptor.accept((void *&)nf);
+    acceptor.endRootSection();
   }
 
 #ifdef MARK
@@ -451,7 +460,8 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
 #endif
 #define MARK(field) acceptor.accept((field), #field)
   {
-    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::Prototypes);
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Prototypes);
+    acceptor.beginRootSection(RootAcceptor::Section::Prototypes);
     // Prototypes.
 #define RUNTIME_HV_FIELD_PROTOTYPE(name) MARK(name);
 #include "hermes/VM/RuntimeHermesValueFields.def"
@@ -461,47 +471,59 @@ void Runtime::markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) {
     acceptor.acceptPtr(arrayPrototypeRawPtr, "arrayPrototype");
     acceptor.acceptPtr(arrayClassRawPtr, "arrayClass");
 #undef MARK
+    acceptor.endRootSection();
   }
 
   {
-    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::IdentifierTable);
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::IdentifierTable);
+    acceptor.beginRootSection(RootAcceptor::Section::IdentifierTable);
     if (markLongLived) {
       identifierTable_.markIdentifiers(acceptor, &getHeap());
     }
+    acceptor.endRootSection();
   }
 
   {
-    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::GCScopes);
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::GCScopes);
+    acceptor.beginRootSection(RootAcceptor::Section::GCScopes);
     markGCScopes(acceptor);
+    acceptor.endRootSection();
   }
 
   {
-    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::SymbolRegistry);
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::SymbolRegistry);
+    acceptor.beginRootSection(RootAcceptor::Section::SymbolRegistry);
     symbolRegistry_.markRoots(acceptor);
+    acceptor.endRootSection();
   }
 
   {
-    MarkRootsPhaseTimer timer(
-        this, SlotAcceptor::RootSection::SamplingProfiler);
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::SamplingProfiler);
+    acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);
     if (samplingProfiler_) {
       samplingProfiler_->markRoots(acceptor);
     }
+    acceptor.endRootSection();
   }
 
   {
-    MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::Custom);
+    MarkRootsPhaseTimer timer(this, RootAcceptor::Section::Custom);
+    acceptor.beginRootSection(RootAcceptor::Section::Custom);
     for (auto &fn : customMarkRootFuncs_)
       fn(&getHeap(), acceptor);
+    acceptor.endRootSection();
   }
 }
 
-void Runtime::markWeakRoots(SlotAcceptorWithNames &acceptor) {
-  MarkRootsPhaseTimer timer(this, SlotAcceptor::RootSection::WeakRefs);
+void Runtime::markWeakRoots(RootAcceptor &acceptor) {
+  MarkRootsPhaseTimer timer(this, RootAcceptor::Section::WeakRefs);
+  acceptor.beginRootSection(RootAcceptor::Section::WeakRefs);
   for (auto &rm : runtimeModuleList_)
     rm.markWeakRoots(acceptor);
   markWeakRefs(&getHeap());
   for (auto &fn : customMarkWeakRootFuncs_)
     fn(&getHeap(), acceptor);
+  acceptor.endRootSection();
 }
 
 void Runtime::visitIdentifiers(
@@ -515,7 +537,7 @@ std::string Runtime::convertSymbolToUTF8(SymbolID id) {
 
 void Runtime::printRuntimeGCStats(llvm::raw_ostream &os) const {
   const unsigned kNumPhases =
-      static_cast<unsigned>(SlotAcceptor::RootSection::NumSections);
+      static_cast<unsigned>(RootAcceptor::Section::NumSections);
 #define ROOT_SECTION(phase) "MarkRoots_" #phase,
   static const char *markRootsPhaseNames[kNumPhases] = {
 #include "hermes/VM/RootSections.def"

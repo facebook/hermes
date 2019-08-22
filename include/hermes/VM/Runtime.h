@@ -714,11 +714,11 @@ class Runtime : public HandleRootOwner,
   /// indicates whether root data structures that contain only
   /// references to long-lived objects (allocated via allocLongLived)
   /// are required to be scanned.
-  void markRoots(SlotAcceptorWithNames &acceptor, bool markLongLived) override;
+  void markRoots(RootAcceptor &acceptor, bool markLongLived) override;
 
   /// Called by the GC during collections that may reset weak references. This
   /// method informs the GC of all runtime weak roots.
-  void markWeakRoots(SlotAcceptorWithNames &acceptor) override;
+  void markWeakRoots(RootAcceptor &acceptor) override;
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for
@@ -880,7 +880,7 @@ class Runtime : public HandleRootOwner,
   std::chrono::time_point<std::chrono::steady_clock> startOfMarkRoots_;
   /// The duration of each GC root marking phase is accumulated here.
   double markRootsPhaseTimes_[static_cast<unsigned>(
-      SlotAcceptor::RootSection::NumSections)] = {};
+      RootAcceptor::Section::NumSections)] = {};
   /// The duration of the all root makring is accumulated here.
   double totalMarkRootsTime_ = 0.0;
 

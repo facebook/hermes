@@ -42,7 +42,7 @@ struct SlotAcceptorDefault : public SlotAcceptor {
 
 /// A SlotAcceptorWithNamesDefault is similar to a SlotAcceptorDefault, except
 /// it provides an overload for the named acceptor of GCPointers.
-struct SlotAcceptorWithNamesDefault : public SlotAcceptorWithNames {
+struct SlotAcceptorWithNamesDefault : public RootAcceptor {
   GC &gc;
   SlotAcceptorWithNamesDefault(GC &gc) : gc(gc) {}
 
