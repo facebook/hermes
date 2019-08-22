@@ -156,6 +156,8 @@ class MallocGC final : public GCBase {
       std::shared_ptr<CrashManager> crashMgr,
       StorageProvider *provider);
 
+  ~MallocGC();
+
   /// Allocate an object in the GC controlled heap with the size to allocate
   /// given by \p size.
   template <

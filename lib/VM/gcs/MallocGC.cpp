@@ -171,6 +171,12 @@ MallocGC::MallocGC(
       maxSize_(Size(gcConfig).max()),
       sizeLimit_(gcConfig.getInitHeapSize()) {}
 
+MallocGC::~MallocGC() {
+  for (CellHeader *header : pointers_) {
+    free(header);
+  }
+}
+
 void MallocGC::collectBeforeAlloc(uint32_t size) {
   const auto growSizeLimit = [this, size](gcheapsize_t sizeLimit) {
     // Either double the size limit, or increase to size, at a max of maxSize_.
