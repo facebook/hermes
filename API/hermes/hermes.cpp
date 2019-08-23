@@ -39,6 +39,7 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
+#include "hermes/VM/TimeLimitMonitor.h"
 
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -286,6 +287,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
         runtime_(*rt_),
 #endif
         crashMgr_(runtimeConfig.getCrashMgr()) {
+    compileFlags_.optimize = false;
+#ifdef HERMES_ENABLE_DEBUGGER
+    compileFlags_.debug = true;
+#endif
+
 #ifndef HERMESJSI_ON_STACK
     // Register the memory for the runtime if it isn't stored on the stack.
     crashMgr_->registerMemory(&runtime_, sizeof(vm::Runtime));
@@ -975,6 +981,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
   std::unique_ptr<debugger::Debugger> debugger_;
 #endif
   std::shared_ptr<vm::CrashManager> crashMgr_;
+
+  /// Compilation flags used by prepareJavaScript().
+  ::hermes::hbc::CompileFlags compileFlags_{};
 };
 
 namespace {
@@ -1143,6 +1152,18 @@ void HermesRuntime::unregisterForProfiling() {
       &(impl(this)->runtime_));
 }
 
+void HermesRuntime::watchTimeLimit(uint32_t timeoutInMs) {
+  impl(this)->compileFlags_.emitAsyncBreakCheck = true;
+  ::hermes::vm::TimeLimitMonitor::getInstance().watchRuntime(
+      &(impl(this)->runtime_), timeoutInMs);
+}
+
+void HermesRuntime::unwatchTimeLimit() {
+  impl(this)->compileFlags_.emitAsyncBreakCheck = false;
+  ::hermes::vm::TimeLimitMonitor::getInstance().unwatchRuntime(
+      &(impl(this)->runtime_));
+}
+
 size_t HermesRuntime::rootsListLength() const {
   return impl(this)->hermesValues_->size();
 }
@@ -1199,17 +1220,12 @@ HermesRuntimeImpl::prepareJavaScript(
     bcErr = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
         std::move(buffer));
   } else {
-    hbc::CompileFlags compileFlags{};
-    compileFlags.optimize = false;
-    compileFlags.lazy = (buffer->size() >= kMinimumLazySize);
-#ifdef HERMES_ENABLE_DEBUGGER
-    compileFlags.debug = true;
-#endif
+    compileFlags_.lazy = (buffer->size() >= kMinimumLazySize);
 #if defined(HERMESVM_LEAN)
     bcErr.second = "prepareJavaScript source compilation not supported";
 #else
     bcErr = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-        std::move(buffer), sourceURL, compileFlags);
+        std::move(buffer), sourceURL, compileFlags_);
 #endif
   }
   if (!bcErr.first) {
