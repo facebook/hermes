@@ -96,6 +96,8 @@ using VMExperimentFlags = uint32_t;
 /// Type used to assign object unique integer identifiers.
 using ObjectID = uint32_t;
 
+using DestructionCallback = std::function<void(Runtime *)>;
+
 #define PROP_CACHE_IDS(V) V(RegExpLastIndex, Predefined::lastIndex)
 
 /// Fixed set of ids used by the property cache in Runtime.
@@ -473,6 +475,12 @@ class Runtime : public HandleRootOwner,
     asyncBreakRequestFlag_.store(1, std::memory_order_relaxed);
   }
 #endif
+
+  /// Register \p callback which will be called
+  /// during runtime destruction.
+  void registerDestructionCallback(DestructionCallback callback) {
+    destructionCallbacks_.emplace_back(callback);
+  }
 
 #ifdef HERMES_ENABLE_DEBUGGER
   /// Encapsulates useful information about a stack frame, needed by the
@@ -977,6 +985,9 @@ class Runtime : public HandleRootOwner,
   /// Keep a strong reference to the SamplingProfiler so that
   /// we are sure it's safe to unregisterRuntime in destructor.
   std::shared_ptr<SamplingProfiler> samplingProfiler_;
+
+  /// A list of callbacks to call before runtime destruction.
+  std::vector<DestructionCallback> destructionCallbacks_;
 
 #if defined(HERMES_ENABLE_DEBUGGER) || defined(HERMESVM_TIMELIMIT)
   /// An atomic boolean set when an async pause is requested.

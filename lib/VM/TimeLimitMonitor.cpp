@@ -89,13 +89,20 @@ void TimeLimitMonitor::watchRuntime(Runtime *runtime, int timeoutInMs) {
         std::chrono::milliseconds(timeoutInMs);
     timeoutMap_[runtime] = deadline;
   }
+
+  runtime->registerDestructionCallback(
+      [this](Runtime *runtime) { this->unwatchRuntime(runtime); });
+
   // There is only one thread anyway.
   newRequestCond_.notify_one();
 }
 
 void TimeLimitMonitor::unwatchRuntime(Runtime *runtime) {
   std::lock_guard<std::mutex> lock(timeoutMapMtx_);
-  timeoutMap_.erase(runtime);
+  // unwatchRuntime() may be called multiple times for the same runtime.
+  if (timeoutMap_.find(runtime) != timeoutMap_.end()) {
+    timeoutMap_.erase(runtime);
+  }
 }
 
 } // namespace vm

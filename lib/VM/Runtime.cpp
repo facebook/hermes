@@ -367,6 +367,10 @@ Runtime::~Runtime() {
     // Calling delete will automatically remove it from the list.
     delete &runtimeModuleList_.back();
   }
+
+  for (auto callback : destructionCallbacks_) {
+    callback(this);
+  }
 }
 
 /// A helper class used to measure the duration of GC marking different roots.
