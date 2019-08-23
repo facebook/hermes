@@ -4,8 +4,6 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#ifdef HERMESVM_TIMELIMIT
-
 #include "hermes/VM/TimeLimitMonitor.h"
 
 namespace hermes {
@@ -107,5 +105,3 @@ void TimeLimitMonitor::unwatchRuntime(Runtime *runtime) {
 
 } // namespace vm
 } // namespace hermes
-
-#endif // HERMESVM_TIMELIMIT

@@ -813,11 +813,6 @@ bool validateFlags() {
     if (cl::DumpTarget != DumpBytecode)
       err("You can only dump bytecode for HBC bytecode file.");
   }
-
-  if (cl::EmitDebugInfo && cl::EmitAsyncBreakCheck) {
-    err("Debugger and execution time limit can't be used at the same time");
-  }
-
   return !errored;
 }
 

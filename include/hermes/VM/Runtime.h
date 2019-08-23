@@ -108,15 +108,6 @@ enum class PropCacheID {
       _COUNT
 };
 
-#ifdef HERMESVM_TIMELIMIT
-/// A std::runtime_error wrapper class for execution timeout.
-class JSTimeoutError : public std::runtime_error {
- public:
-  JSTimeoutError(const std::string &what_arg) : std::runtime_error(what_arg) {}
-  JSTimeoutError(const char *what_arg) : std::runtime_error(what_arg) {}
-};
-#endif
-
 /// The Runtime encapsulates the entire context of a VM. Multiple instances can
 /// exist and are completely independent from each other.
 class Runtime : public HandleRootOwner,
@@ -468,13 +459,21 @@ class Runtime : public HandleRootOwner,
     return commonStorage_.get();
   }
 
-#if defined(HERMES_ENABLE_DEBUGGER) || defined(HERMESVM_TIMELIMIT)
+#if defined(HERMES_ENABLE_DEBUGGER)
   /// Request the interpreter loop to take an asynchronous break at a convenient
-  /// point. This may be called from any thread, or a signal handler.
-  void triggerAsyncBreak() {
-    asyncBreakRequestFlag_.store(1, std::memory_order_relaxed);
+  /// point due to debugger UI request. This may be called from any thread, or a
+  /// signal handler.
+  void triggerDebuggerAsyncBreak() {
+    triggerAsyncBreak(AsyncBreakReasonBits::Debugger);
   }
 #endif
+
+  /// Request the interpreter loop to take an asynchronous break at a convenient
+  /// point due to previous registered timeout. This may be called from any
+  /// thread, or a signal handler.
+  void triggerTimeoutAsyncBreak() {
+    triggerAsyncBreak(AsyncBreakReasonBits::Timeout);
+  }
 
   /// Register \p callback which will be called
   /// during runtime destruction.
@@ -559,6 +558,12 @@ class Runtime : public HandleRootOwner,
 
   /// Raise an error for the quit function. This error is not catchable.
   ExecutionStatus raiseQuitError();
+
+  /// Raise an error for execution timeout. This error is not catchable.
+  ExecutionStatus raiseTimeoutError();
+
+  /// Utility function to raise a catchable JS error with \p errMessage.
+  ExecutionStatus raiseUncatchableError(llvm::StringRef errMessage);
 
   /// Interpret the current function until it returns or throws and return
   /// CallResult<HermesValue> or the thrown object in 'thrownObject'.
@@ -989,44 +994,66 @@ class Runtime : public HandleRootOwner,
   /// A list of callbacks to call before runtime destruction.
   std::vector<DestructionCallback> destructionCallbacks_;
 
-#if defined(HERMES_ENABLE_DEBUGGER) || defined(HERMESVM_TIMELIMIT)
-  /// An atomic boolean set when an async pause is requested.
+  /// Bit flags for async break request reasons.
+  enum class AsyncBreakReasonBits : uint8_t {
+    Debugger = 0x1,
+    Timeout = 0x2,
+  };
+
+  /// An atomic flag set when an async pause is requested.
+  /// It is a bits flag with each bit reserved for different clients
+  /// defined by AsyncBreakReasonBits.
   /// This may be manipulated from multiple threads.
   std::atomic<uint8_t> asyncBreakRequestFlag_{0};
 
-  /// \return zero if no async pause was requsted, nonzero if an async pause was
-  /// requested. If nonzero is returned, the flag is reset to 0.
-  uint8_t testAndClearAsyncBreakRequest() {
-    uint8_t flag = asyncBreakRequestFlag_.load(std::memory_order_relaxed);
-    if (LLVM_UNLIKELY(flag)) {
-      /// Note that while the triggerAsyncBreak() function may be called from
-      /// any thread, this one may only be called from within the Interpreter
-      /// loop; thus there is no need for a compare-and-swap. We might race with
-      /// setting the flag again, but currently we do not allow two callers who
-      /// both see a true return from a single flag set.
-      asyncBreakRequestFlag_.store(0, std::memory_order_relaxed);
-    }
-    return flag;
+#if defined(HERMES_ENABLE_DEBUGGER)
+  /// \return zero if no debugger async pause was requested, nonzero if an async
+  /// pause was requested. If nonzero is returned, the flag is reset to 0.
+  bool testAndClearDebuggerAsyncBreakRequest() {
+    return testAndClearAsyncBreakRequest(AsyncBreakReasonBits::Debugger);
   }
-#endif
 
-#ifdef HERMESVM_TIMELIMIT
-  void notifyTimeout(const Inst *ip) {
-    char detailBuffer[400];
-    snprintf(
-        detailBuffer,
-        sizeof(detailBuffer),
-        // todo: include time out value.
-        "Javascript execution has timeout.");
-    throw JSTimeoutError(
-        std::string(detailBuffer) + "\ncall stack:\n" +
-        getCallStackNoAlloc(ip));
-  }
-#endif
-
-#ifdef HERMES_ENABLE_DEBUGGER
   Debugger debugger_{this};
 #endif
+
+  /// \return whether any async break is requested or not.
+  bool hasAsyncBreak() const {
+    return asyncBreakRequestFlag_.load(std::memory_order_relaxed) != 0;
+  }
+
+  /// \return whether async break was requested or not for \p reasonBit. Clear
+  /// \p reasonBit request bit afterward.
+  bool testAndClearAsyncBreakRequest(AsyncBreakReasonBits reasonBit) {
+    /// Note that while the triggerTimeoutAsyncBreak() function may be called
+    /// from any thread, this one may only be called from within the Interpreter
+    /// loop.
+    uint8_t flag = asyncBreakRequestFlag_.load(std::memory_order_relaxed);
+    if (LLVM_LIKELY((flag & (uint8_t)reasonBit) == 0)) {
+      // Fast path.
+      return false;
+    }
+    // Clear the flag using CAS.
+    uint8_t oldFlag = asyncBreakRequestFlag_.fetch_and(
+        ~(uint8_t)reasonBit, std::memory_order_relaxed);
+    assert(oldFlag != 0 && "Why is oldFlag zero?");
+    (void)oldFlag;
+    return true;
+  }
+
+  /// \return whether timeout async break was requsted or not. Clear the
+  /// timeout request bit afterward.
+  bool testAndClearTimeoutAsyncBreakRequest() {
+    return testAndClearAsyncBreakRequest(AsyncBreakReasonBits::Timeout);
+  }
+
+  /// Request the interpreter loop to take an asynchronous break
+  /// at a convenient point.
+  void triggerAsyncBreak(AsyncBreakReasonBits reason) {
+    asyncBreakRequestFlag_.fetch_or((uint8_t)reason, std::memory_order_relaxed);
+  }
+
+  /// Notify runtime execution has timeout.
+  ExecutionStatus notifyTimeout();
 
   /// Holds references to persistent BC providers for the lifetime of the
   /// Runtime. This is needed because the identifier table may contain pointers

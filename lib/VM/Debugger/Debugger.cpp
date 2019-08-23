@@ -87,7 +87,7 @@ static llvm::Optional<ScopeChain> scopeChainForBlock(
 }
 
 void Debugger::triggerAsyncPause() {
-  runtime_->triggerAsyncBreak();
+  runtime_->triggerDebuggerAsyncBreak();
 }
 
 void Debugger::breakAtJumpTarget(InterpreterState &state) {

@@ -167,7 +167,7 @@ namespace {
 
 template <typename F>
 auto maybeCatchException(const F &f) -> decltype(f()) {
-#if defined(HERMESVM_EXCEPTION_ON_OOM) || defined(HERMESVM_TIMELIMIT)
+#if defined(HERMESVM_EXCEPTION_ON_OOM)
   try {
     return f();
   } catch (const std::exception &ex) {
@@ -175,7 +175,7 @@ auto maybeCatchException(const F &f) -> decltype(f()) {
     llvm::errs() << ex.what();
     exit(1);
   }
-#else // HERMESVM_EXCEPTION_ON_OOM || HERMESVM_TIMELIMIT
+#else // HERMESVM_EXCEPTION_ON_OOM
   return f();
 #endif
 }
@@ -233,12 +233,10 @@ bool executeHBCBytecodeImpl(
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
 
-#ifdef HERMESVM_TIMELIMIT
   if (options.timeLimit > 0) {
     vm::TimeLimitMonitor::getInstance().watchRuntime(
         runtime.get(), options.timeLimit);
   }
-#endif
 
   if (shouldRecordGCStats) {
     statSampler = llvm::make_unique<vm::StatSamplingThread>(
@@ -291,11 +289,9 @@ bool executeHBCBytecodeImpl(
         llvm::errs(), runtime->makeHandle(runtime->getThrownValue()));
   }
 
-#ifdef HERMESVM_TIMELIMIT
   if (options.timeLimit > 0) {
     vm::TimeLimitMonitor::getInstance().unwatchRuntime(runtime.get());
   }
-#endif
 
 #ifdef HERMESVM_PROFILER_OPCODE
   runtime->dumpOpcodeStats(llvm::outs());

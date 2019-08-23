@@ -1033,13 +1033,22 @@ ExecutionStatus Runtime::raiseStackOverflow(StackOverflowKind kind) {
 }
 
 ExecutionStatus Runtime::raiseQuitError() {
+  return raiseUncatchableError("Quit");
+}
+
+ExecutionStatus Runtime::raiseTimeoutError() {
+  return raiseUncatchableError("Javascript execution has timeout.");
+}
+
+ExecutionStatus Runtime::raiseUncatchableError(llvm::StringRef errMessage) {
   auto res = JSError::createUncatchable(
       this, Handle<JSObject>::vmcast(&ErrorPrototype));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   auto err = makeHandle<JSError>(*res);
-  res = StringPrimitive::create(this, llvm::ASCIIRef{"Quit"});
+  res = StringPrimitive::create(
+      this, llvm::ASCIIRef{errMessage.begin(), errMessage.end()});
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1770,6 +1779,11 @@ void Runtime::deserializeImpl(
   }
 }
 #endif
+
+ExecutionStatus Runtime::notifyTimeout() {
+  // TODO: allow a vector of callbacks.
+  return raiseTimeoutError();
+}
 
 } // namespace vm
 } // namespace hermes

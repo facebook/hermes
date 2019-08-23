@@ -4,8 +4,6 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#ifdef HERMESVM_TIMELIMIT
-
 #ifndef HERMES_VM_TIMELIMITMONITOR_H
 #define HERMES_VM_TIMELIMITMONITOR_H
 
@@ -60,7 +58,7 @@ class TimeLimitMonitor {
 
   /// Notify \p runtime to check timeout.
   void notifyRuntimeTimeout(Runtime *runtime) {
-    runtime->triggerAsyncBreak();
+    runtime->triggerTimeoutAsyncBreak();
   }
 
  private:
@@ -84,5 +82,3 @@ class TimeLimitMonitor {
 } // namespace hermes
 
 #endif // HERMES_VM_TIMELIMITMONITOR_H
-
-#endif // HERMESVM_TIMELIMIT
