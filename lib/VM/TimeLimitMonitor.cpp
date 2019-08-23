@@ -27,7 +27,9 @@ TimeLimitMonitor::~TimeLimitMonitor() {
   newRequestCond_.notify_one();
   // Since newRequestCond_  may still be used by worker thread, wait it to die
   // before destroying member fields.
-  timerThread_.join();
+  if (timerThread_.joinable()) {
+    timerThread_.join();
+  }
 }
 
 std::chrono::steady_clock::time_point TimeLimitMonitor::getNextDeadline() {

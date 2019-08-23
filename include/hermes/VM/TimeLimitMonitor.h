@@ -50,9 +50,8 @@ class TimeLimitMonitor {
 
   /// Lazily creates the timer loop worker thread.
   void createTimerLoopIfNeeded() {
-    if (!loopCreated_) {
+    if (!timerThread_.joinable()) {
       timerThread_ = std::thread(&TimeLimitMonitor::timerLoop, this);
-      loopCreated_ = true;
     }
   }
 
@@ -62,13 +61,11 @@ class TimeLimitMonitor {
   }
 
  private:
-  /// Mutex that protects timeoutMap_, loopCreated_ and shouldExit_.
+  /// Mutex that protects timeoutMap_, and shouldExit_.
   std::mutex timeoutMapMtx_;
   /// Map from runtime to its deadline time point.
   std::unordered_map<Runtime *, std::chrono::steady_clock::time_point>
       timeoutMap_;
-  /// Whether timer loop has been created or not.
-  bool loopCreated_{false};
   /// Whether worker thread should exit or not.
   bool shouldExit_{false};
 
