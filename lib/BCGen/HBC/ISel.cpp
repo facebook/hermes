@@ -1550,11 +1550,12 @@ void HBCISel::generate(SourceMapGenerator *outSourceMap) {
   /// topological sort.
   llvm::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
 
-  // If we are compiling with debugger or time limit support, decide which
-  // blocks need runtime async break checks: blocks with backwards jumps, and
-  // the first block if this is a function (i.e. not the global scope).
+  // If we are compiling with debugger or otherwise need async break checks,
+  // decide which blocks need runtime async break checks: blocks with backwards
+  // jumps, and the first block if this is a function (i.e. not the
+  // global scope).
   if (F_->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL ||
-      F_->getContext().getCheckTimeLimit()) {
+      F_->getContext().getEmitAsyncBreakCheck()) {
     asyncBreakChecks_ = basicBlocksWithBackwardSuccessors(order);
     asyncBreakChecks_.insert(order.front());
   }

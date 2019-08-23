@@ -178,8 +178,8 @@ class Context {
   /// DebugInfoSetting::THROWING.
   DebugInfoSetting debugInfoSetting_{DebugInfoSetting::THROWING};
 
-  /// Whether to enforce runtime execution time limit or not.
-  bool checkTimeLimit_{false};
+  /// Whether to emit async break check instruction or not.
+  bool emitAsyncBreakCheck_{false};
 
   CodeGenerationSettings codeGenerationSettings_;
 
@@ -277,11 +277,11 @@ class Context {
     return debugInfoSetting_;
   }
 
-  void setCheckTimeLimit(bool check) {
-    checkTimeLimit_ = check;
+  void setEmitAsyncBreakCheck(bool check) {
+    emitAsyncBreakCheck_ = check;
   }
-  bool getCheckTimeLimit() const {
-    return checkTimeLimit_;
+  bool getEmitAsyncBreakCheck() const {
+    return emitAsyncBreakCheck_;
   }
 
   void setUseCJSModules(bool useCJSModules) {

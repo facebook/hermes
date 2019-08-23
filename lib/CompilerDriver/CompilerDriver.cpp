@@ -896,7 +896,7 @@ std::shared_ptr<Context> createContext(
   } else {
     context->setDebugInfoSetting(DebugInfoSetting::THROWING);
   }
-  context->setCheckTimeLimit(cl::EmitAsyncBreakCheck);
+  context->setEmitAsyncBreakCheck(cl::EmitAsyncBreakCheck);
   return context;
 }
 
