@@ -27,6 +27,11 @@ struct CompileFlags {
   /// accordingly.
   llvm::Optional<bool> staticBuiltins;
   bool verifyIR{false};
+  /// If set, the compiler emits async break check instructions.  These may be
+  /// used for several purposes, for example, to enforce a time limit on
+  /// execution.  Other flags may also cause these instructions to be emitted,
+  /// for example debugging.
+  bool emitAsyncBreakCheck{false};
 };
 
 #ifndef HERMESVM_LEAN

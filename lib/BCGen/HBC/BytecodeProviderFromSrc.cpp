@@ -103,6 +103,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
 #else
   context->setDebugInfoSetting(DebugInfoSetting::THROWING);
 #endif
+  context->setEmitAsyncBreakCheck(compileFlags.emitAsyncBreakCheck);
 
   // Populate the declFileList.
   DeclarationFileListTy declFileList;
