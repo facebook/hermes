@@ -1037,7 +1037,7 @@ ExecutionStatus Runtime::raiseQuitError() {
 }
 
 ExecutionStatus Runtime::raiseTimeoutError() {
-  return raiseUncatchableError("Javascript execution has timeout.");
+  return raiseUncatchableError("Javascript execution has timed out.");
 }
 
 ExecutionStatus Runtime::raiseUncatchableError(llvm::StringRef errMessage) {
