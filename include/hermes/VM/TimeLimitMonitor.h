@@ -54,6 +54,7 @@ class TimeLimitMonitor {
   void createTimerLoopIfNeeded() {
     if (!loopCreated_) {
       timerThread_ = std::thread(&TimeLimitMonitor::timerLoop, this);
+      loopCreated_ = true;
     }
   }
 
