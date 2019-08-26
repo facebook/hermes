@@ -137,7 +137,7 @@ void Serializer::writeHeader() {
   // Default value all false.
   SerializeHeader header;
 
-  header.maxHeapSize = runtime_->getHeap().maxSize();
+  header.heapSize = runtime_->getHeap().size();
 
 #ifndef NDEBUG
   header.isDebug = true;

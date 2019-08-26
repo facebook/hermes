@@ -159,9 +159,12 @@ void Deserializer::readHeader() {
   if (readHeader.nativeFunctionTableVersion != NATIVE_FUNCTION_VERSION) {
     hermes_fatal("Native function table versions do not match");
   }
-  if (runtime_->getHeap().maxSize() < readHeader.maxHeapSize) {
+  if (runtime_->getHeap().size() < readHeader.heapSize) {
     hermes_fatal(
-        "Deserialize heap size less than Serialize heap size, not supported");
+        (llvm::Twine("Deserialize heap size less than Serialize heap size(") +
+         llvm::StringRef(std::to_string(readHeader.heapSize)) +
+         llvm::Twine(" bytes), try increase initial heap size"))
+            .str());
   }
 
 #define CHECK_HEADER_SET(header, field)                         \

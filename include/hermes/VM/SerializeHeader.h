@@ -29,7 +29,7 @@ struct SerializeHeader {
   uint32_t magic = SD_MAGIC;
   uint32_t version = SD_HEADER_VERSION;
   uint32_t nativeFunctionTableVersion = NATIVE_FUNCTION_VERSION;
-  uint32_t maxHeapSize = 0;
+  uint32_t heapSize = 0;
 
   /// Set if debug build.
   bool isDebug = false;
