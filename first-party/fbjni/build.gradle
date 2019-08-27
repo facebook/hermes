@@ -10,8 +10,13 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.4.2'
+        classpath 'com.android.tools.build:gradle:3.5.0'
     }
+}
+
+plugins {
+    id 'com.github.dcendents.android-maven' version '2.1'
+    id 'com.jfrog.bintray' version '1.8.4'
 }
 
 apply plugin: 'com.android.library'
@@ -62,7 +67,7 @@ dependencies {
     implementation 'com.facebook.soloader:soloader:0.6.0'
 }
 
-// apply from: rootProject.file('gradle/release.gradle')
+apply from: rootProject.file('gradle/release.gradle')
 
 task sourcesJar(type: Jar) {
     from android.sourceSets.main.java.srcDirs
