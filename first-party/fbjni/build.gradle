@@ -68,29 +68,3 @@ dependencies {
 }
 
 apply from: rootProject.file('gradle/release.gradle')
-
-task sourcesJar(type: Jar) {
-    from android.sourceSets.main.java.srcDirs
-    classifier = 'sources'
-}
-
-task bundleHeaderFilesIntoAAR(type: Zip) {
-    baseName = "${project.name}-release-with-headers"
-    version = version
-    extension = 'aar'
-    destinationDir = file("$buildDir/outputs/aar/")
-
-    from zipTree("$buildDir/outputs/aar/" + project.name + "-release.aar")
-    from("cxx") {
-        include("**/*.h")
-        into('include')
-    }
-}
-
-tasks.whenTaskAdded { task ->
-    if (task.name.startsWith('assembleRelease')) {
-        task.finalizedBy(bundleHeaderFilesIntoAAR)
-    }
-}
-
-artifacts.add('archives', sourcesJar)

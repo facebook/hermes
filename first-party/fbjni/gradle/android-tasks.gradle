@@ -33,6 +33,13 @@ afterEvaluate { project ->
             from android.sourceSets.main.java.srcDirs
         }
 
+        task headersJar(type: Jar) {
+            archiveClassifier.set('headers')
+            from("$rootDir/cxx/") {
+                include '**/*.h'
+            }
+        }
+
         android.libraryVariants.all { variant ->
             def name = variant.name.capitalize()
             task "jar${name}"(type: Jar, dependsOn: variant.javaCompileProvider) {
@@ -63,6 +70,7 @@ afterEvaluate { project ->
 
         artifacts.add('archives', androidJavadocJar)
         artifacts.add('archives', androidSourcesJar)
+        artifacts.add('archives', headersJar)
     }
 
     if (POM_PACKAGING == 'jar') {
