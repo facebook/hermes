@@ -184,7 +184,7 @@ inline void JClass::registerNatives(std::initializer_list<NativeMethod> methods)
     jnimethods[i].fnPtr = reinterpret_cast<void*>(it->wrapper);
   }
 
-  auto result = env->RegisterNatives(self(), jnimethods, methods.size());
+  auto result = env->RegisterNatives(self(), jnimethods, static_cast<int>(methods.size()));
   FACEBOOK_JNI_THROW_EXCEPTION_IF(result != JNI_OK);
 }
 
