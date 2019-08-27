@@ -57,6 +57,9 @@ set(HERMESVM_PROFILER_JSFUNCTION OFF CACHE BOOL
 set(HERMESVM_PROFILER_NATIVECALL OFF CACHE BOOL
   "Enable native call profiling in hermes VM")
 
+set(HERMESVM_SERIALIZE OFF CACHE BOOL
+  "Enable heap serialization and deserialization")
+
 set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
   "Enable the indirect threaded interpreter")
 
@@ -504,6 +507,7 @@ set(HERMES_LIT_TEST_PARAMS
   hbc_diff=${HERMES_BINARY_DIR}/bin/hbc-diff
   build_mode=${HERMES_ASSUMED_BUILD_MODE_IN_LIT_TEST}
   exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
+  serialize_enabled=${HERMESVM_SERIALIZE}
   )
 
 set(LLVM_LIT_ARGS "-sv")
