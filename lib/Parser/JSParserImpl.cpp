@@ -235,7 +235,9 @@ void JSParserImpl::processDirective(UniqueString *directive) {
 bool JSParserImpl::recursionDepthExceeded() {
   if (recursionDepth_ < MAX_RECURSION_DEPTH)
     return false;
-  lexer_.error(tok_->getStartLoc(), "Too many nested expressions/statements");
+  lexer_.error(
+      tok_->getStartLoc(),
+      "Too many nested expressions/statements/declarations");
   return true;
 }
 
@@ -498,6 +500,8 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
+  CHECK_RECURSION;
+
   assert(checkDeclaration() && "invalid start for declaration");
 
   if (tok_->getKind() == TokenKind::rw_function) {
