@@ -200,7 +200,8 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       trackIO_(runtimeConfig.getTrackIO()),
       vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
       runtimeStats_(runtimeConfig.getEnableSampledStats()),
-      commonStorage_(createRuntimeCommonStorage()),
+      commonStorage_(createRuntimeCommonStorage(
+          runtimeConfig.getTraceEnvironmentInteractions())),
       stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
       crashCallbackKey_(

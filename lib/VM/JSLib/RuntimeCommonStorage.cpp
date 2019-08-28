@@ -13,11 +13,13 @@
 namespace hermes {
 namespace vm {
 
-std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage() {
-  return std::make_shared<RuntimeCommonStorage>();
+std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage(
+    bool shouldTrace) {
+  return std::make_shared<RuntimeCommonStorage>(shouldTrace);
 }
 
-RuntimeCommonStorage::RuntimeCommonStorage() {}
+RuntimeCommonStorage::RuntimeCommonStorage(bool shouldTrace)
+    : shouldTrace(shouldTrace) {}
 RuntimeCommonStorage::~RuntimeCommonStorage() {}
 
 #ifdef __APPLE__

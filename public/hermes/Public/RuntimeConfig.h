@@ -48,6 +48,9 @@ class PinnedHermesValue;
   /* Support for ES6 Symbol. */                                        \
   F(bool, ES6Symbol, true)                                             \
                                                                        \
+  /* Trace non-deterministic JS behavior */                            \
+  F(bool, TraceEnvironmentInteractions, false)                         \
+                                                                       \
   /* Enable sampling certain statistics. */                            \
   F(bool, EnableSampledStats, false)                                   \
                                                                        \

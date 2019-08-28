@@ -28,7 +28,8 @@ struct RuntimeCommonStorage;
 
 void initGlobalObject(Runtime *runtime);
 
-std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage();
+std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage(
+    bool shouldTrace);
 
 /// eval() entry point. Evaluate the given source \p utf8code within the given
 /// \p environment, using the given \p scopeChain to resolve identifiers.

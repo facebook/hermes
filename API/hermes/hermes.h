@@ -97,11 +97,9 @@ class HermesRuntime : public jsi::Runtime {
   /// values.
   uint64_t getUniqueID(const jsi::Object &o) const;
 
-#ifdef HERMESVM_API_TRACE
   /// Get a structure representing the enviroment-dependent behavior, so
   /// it can be written into the trace for later replay.
   const ::hermes::vm::MockedEnvironment &getMockedEnvironment() const;
-#endif
 
 #ifdef HERMESVM_SYNTH_REPLAY
   /// Make the runtime read from \p env to replay its environment-dependent

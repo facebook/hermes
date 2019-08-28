@@ -706,7 +706,10 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
 }
 
 TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
-  const ::hermes::vm::RuntimeConfig conf;
+  const ::hermes::vm::RuntimeConfig conf =
+      ::hermes::vm::RuntimeConfig::Builder()
+          .withTraceEnvironmentInteractions(true)
+          .build();
   std::unique_ptr<TracingHermesRuntime> rt(
       makeTracingHermesRuntime(makeHermesRuntime(conf), conf));
 

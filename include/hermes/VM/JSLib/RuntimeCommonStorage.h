@@ -11,9 +11,7 @@
 #if __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
 #endif
-#if defined(HERMESVM_SYNTH_REPLAY) || defined(HERMESVM_API_TRACE)
 #include "hermes/VM/MockedEnvironment.h"
-#endif
 
 namespace hermes {
 namespace vm {
@@ -21,12 +19,14 @@ namespace vm {
 /// This struct provides a shared location for per-Runtime storage needs of
 /// JSLib. Runtime owns and provides access to an instance of this class.
 struct RuntimeCommonStorage {
-  RuntimeCommonStorage();
+  RuntimeCommonStorage(bool shouldTrace);
   ~RuntimeCommonStorage();
 
   /// RuntimeCommonStorage is tied to a single Runtime, and should not be copied
   RuntimeCommonStorage(const RuntimeCommonStorage &) = delete;
   void operator=(const RuntimeCommonStorage &) = delete;
+
+  bool shouldTrace = false;
 
 #ifdef HERMESVM_SYNTH_REPLAY
   /// An environment to replay instead of executing environment-dependent
@@ -34,11 +34,9 @@ struct RuntimeCommonStorage {
   /// change from one run of JS to another.
   MockedEnvironment env;
 #endif
-#ifdef HERMESVM_API_TRACE
   /// An environment to record environment-dependent behavior (as a sequence of
   /// results of calls to functions).
   MockedEnvironment tracedEnv;
-#endif
 
   /// PRNG used by Math.random()
   std::minstd_rand randomEngine_;

@@ -1091,7 +1091,6 @@ uint64_t HermesRuntime::getUniqueID(const jsi::Object &o) const {
       static_cast<vm::GCCell *>(impl(this)->phv(o).getObject()));
 }
 
-#ifdef HERMESVM_API_TRACE
 /// Get a structure representing the enviroment-dependent behavior, so
 /// it can be written into the trace for later replay.
 const ::hermes::vm::MockedEnvironment &HermesRuntime::getMockedEnvironment()
@@ -1100,7 +1099,6 @@ const ::hermes::vm::MockedEnvironment &HermesRuntime::getMockedEnvironment()
       ->runtime_.getCommonStorage()
       ->tracedEnv;
 }
-#endif
 
 #ifdef HERMESVM_SYNTH_REPLAY
 void HermesRuntime::setMockedEnvironment(

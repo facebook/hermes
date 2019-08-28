@@ -410,9 +410,7 @@ static CallResult<double> makeTimeFromArgs(Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 dateConstructor(void *, Runtime *runtime, NativeArgs args) {
-#if defined(HERMESVM_SYNTH_REPLAY) || defined(HERMESVM_API_TRACE)
   auto *const storage = runtime->getCommonStorage();
-#endif
   if (args.isConstructorCall()) {
     auto self = args.vmcastThis<JSDate>();
     uint32_t argCount = args.getArgCount();
@@ -430,9 +428,9 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
 #ifdef HERMESVM_SYNTH_REPLAY
       }
 #endif
-#ifdef HERMESVM_API_TRACE
-      storage->tracedEnv.callsToNewDate.push_back(finalDate);
-#endif
+      if (LLVM_UNLIKELY(storage->shouldTrace)) {
+        storage->tracedEnv.callsToNewDate.push_back(finalDate);
+      }
     } else if (argCount == 1) {
       if (auto *dateArg = dyn_vmcast<JSDate>(args.getArg(0))) {
         // No handle needed here because we just retrieve a double.
@@ -489,9 +487,10 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
 #ifdef HERMESVM_SYNTH_REPLAY
   }
 #endif
-#ifdef HERMESVM_API_TRACE
-  storage->tracedEnv.callsToDateAsFunction.push_back(std::string(str.c_str()));
-#endif
+  if (LLVM_UNLIKELY(storage->shouldTrace)) {
+    storage->tracedEnv.callsToDateAsFunction.push_back(
+        std::string(str.c_str()));
+  }
   return runtime->ignoreAllocationFailure(
       StringPrimitive::create(runtime, str));
 }
@@ -531,16 +530,16 @@ CallResult<HermesValue> dateUTC(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue> dateNow(void *, Runtime *runtime, NativeArgs args) {
   double t = curTime();
-#ifdef HERMESVM_SYNTH_REPLAY
   auto *const storage = runtime->getCommonStorage();
+#ifdef HERMESVM_SYNTH_REPLAY
   if (!storage->env.callsToDateNow.empty()) {
     t = storage->env.callsToDateNow.front();
     storage->env.callsToDateNow.pop_front();
   }
 #endif
-#ifdef HERMESVM_API_TRACE
-  runtime->getCommonStorage()->tracedEnv.callsToDateNow.push_back(t);
-#endif
+  if (LLVM_UNLIKELY(storage->shouldTrace)) {
+    storage->tracedEnv.callsToDateNow.push_back(t);
+  }
   return HermesValue::encodeDoubleValue(t);
 }
 

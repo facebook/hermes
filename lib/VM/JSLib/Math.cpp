@@ -224,11 +224,11 @@ CallResult<HermesValue> mathRandom(void *, Runtime *runtime, NativeArgs) {
 #endif
     storage->randomEngine_.seed(seed);
     storage->randomEngineSeeded_ = true;
-#ifdef HERMESVM_API_TRACE
-    // Math.random() is a source of unpredictable behavior in JS, which needs to
-    // be mocked for synthetic benchmarks.
-    storage->tracedEnv.mathRandomSeed = seed;
-#endif
+    if (LLVM_UNLIKELY(storage->shouldTrace)) {
+      // Math.random() is a source of unpredictable behavior in JS, which needs
+      // to be mocked for synthetic benchmarks.
+      storage->tracedEnv.mathRandomSeed = seed;
+    }
   }
   std::uniform_real_distribution<> dist(0.0, 1.0);
   return HermesValue::encodeDoubleValue(dist(storage->randomEngine_));

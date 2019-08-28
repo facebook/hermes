@@ -931,7 +931,17 @@ TEST_F(JSLibTest, CreateStringTest) {
 }
 
 #ifdef HERMESVM_SYNTH_REPLAY
-TEST_F(JSLibTest, MockedEnvironmentTest) {
+
+class JSLibMockedEnvironmentTest : public RuntimeTestFixtureBase {
+ public:
+  JSLibMockedEnvironmentTest()
+      : RuntimeTestFixtureBase(RuntimeConfig::Builder()
+                                   .withGCConfig(kTestGCConfig)
+                                   .withTraceEnvironmentInteractions(true)
+                                   .build()) {}
+};
+
+TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
   GCScope scope(runtime);
 
   const std::minstd_rand::result_type mathRandomSeed = 123;
@@ -1033,7 +1043,6 @@ TEST_F(JSLibTest, MockedEnvironmentTest) {
     EXPECT_EQ(str, dateAsFuncU16);
   }
 
-#ifdef HERMESVM_API_TRACE
   // If the tracing mode is also engaged, ensure that the same values were
   // traced as well.
   auto *storage = runtime->getCommonStorage();
@@ -1041,7 +1050,6 @@ TEST_F(JSLibTest, MockedEnvironmentTest) {
   EXPECT_EQ(dateNowColl, storage->tracedEnv.callsToDateNow);
   EXPECT_EQ(newDateColl, storage->tracedEnv.callsToNewDate);
   EXPECT_EQ(dateAsFuncColl, storage->tracedEnv.callsToDateAsFunction);
-#endif
 }
 #endif
 
