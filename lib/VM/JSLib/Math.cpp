@@ -179,7 +179,7 @@ CallResult<HermesValue> mathMin(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeDoubleValue(result);
 }
 
-// ES5.1 15.8.2.13
+// ES9.0 20.2.2.26
 CallResult<HermesValue> mathPow(void *, Runtime *runtime, NativeArgs args) {
   auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -193,23 +193,7 @@ CallResult<HermesValue> mathPow(void *, Runtime *runtime, NativeArgs args) {
   }
   const double y = res->getNumber();
 
-  const double nan = std::numeric_limits<double>::quiet_NaN();
-
-  double result;
-
-  // Handle special cases that std::pow handles differently.
-  if (std::isnan(y)) {
-    result = nan;
-  } else if (y == 0) {
-    result = 1;
-  } else if (std::abs(x) == 1 && std::isinf(y)) {
-    result = nan;
-  } else {
-    // std::pow handles the other edge cases as ES5.1 specifies.
-    result = std::pow(x, y);
-  }
-
-  return HermesValue::encodeNumberValue(result);
+  return HermesValue::encodeNumberValue(expOp(x, y));
 }
 
 // ES5.1 15.8.2.14

@@ -213,6 +213,23 @@ bool isPrimitive(HermesValue val);
 CallResult<HermesValue>
 addOp_RJS(Runtime *runtime, Handle<> xHandle, Handle<> yHandle);
 
+/// ES9.0 12.6.4
+inline double expOp(double x, double y) {
+  constexpr double nan = std::numeric_limits<double>::quiet_NaN();
+
+  // Handle special cases that std::pow handles differently.
+  if (std::isnan(y)) {
+    return nan;
+  } else if (y == 0) {
+    return 1;
+  } else if (std::abs(x) == 1 && std::isinf(y)) {
+    return nan;
+  }
+
+  // std::pow handles the other edge cases as the ES9.0 spec requires.
+  return std::pow(x, y);
+}
+
 /// ES5.1 7.2
 inline bool isWhiteSpaceChar(char16_t c) {
   return c == u'\u0009' || c == u'\u000B' || c == u'\u000C' || c == u'\u0020' ||
