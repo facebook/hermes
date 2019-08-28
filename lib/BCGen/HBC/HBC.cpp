@@ -53,7 +53,10 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
     // OptEnvironmentInit needs to run before LowerConstants.
     PM.addPass(new OptEnvironmentInit());
   }
-  /// LowerBuiltinCalls needs to run before the rest of the lowering.
+  // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
+  // it introduces calls to HermesInternal.
+  PM.addPass(new LowerExponentiationOperator());
+  // LowerBuiltinCalls needs to run before the rest of the lowering.
   PM.addPass(new LowerBuiltinCalls());
   // It is important to run LowerNumericProperties before LoadConstants
   // as LowerNumericProperties could generate new constants.

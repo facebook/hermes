@@ -206,7 +206,6 @@ BLACK_LIST = [
     "test262/test/language/expressions/await/",
     "test262/test/language/expressions/class/",
     "test262/test/language/expressions/assignment/destructuring/",
-    "test262/test/language/expressions/exponentiation/",
     "test262/test/language/expressions/new.target/",
     "test262/test/language/expressions/object/method-definition/",
     "test262/test/language/expressions/super/",

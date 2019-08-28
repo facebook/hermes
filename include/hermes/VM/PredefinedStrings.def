@@ -391,6 +391,7 @@ STR(ensureObject, "ensureObject")
 STR(copyDataProperties, "copyDataProperties")
 STR(copyRestArgs, "copyRestArgs")
 STR(exportAll, "exportAll")
+STR(exponentiationOperator, "exponentiationOperator")
 
 STR(require, "require")
 STR(requireFast, "requireFast")

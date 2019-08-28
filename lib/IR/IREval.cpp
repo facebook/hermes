@@ -6,6 +6,7 @@
  */
 #include "hermes/IR/IREval.h"
 #include "hermes/IR/IRBuilder.h"
+#include "hermes/Support/Math.h"
 
 #include "llvm/ADT/SmallString.h"
 
@@ -548,6 +549,12 @@ Literal *hermes::evalBinaryOperator(
             std::fmod(leftLiteralNum->getValue(), rightLiteralNum->getValue()));
       }
 
+      break;
+    case OpKind::ExponentiationKind: // ** (**=)
+      if (leftLiteralNum && rightLiteralNum) {
+        return builder.getLiteralNumber(hermes::expOp(
+            leftLiteralNum->getValue(), rightLiteralNum->getValue()));
+      }
       break;
     case OpKind::OrKind: // |   (|=)
       if (leftLiteralNum && rightLiteralNum) {

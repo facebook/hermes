@@ -43,6 +43,7 @@ BUILTIN_METHOD(HermesInternal, ensureObject)
 BUILTIN_METHOD(HermesInternal, copyDataProperties)
 BUILTIN_METHOD(HermesInternal, copyRestArgs)
 BUILTIN_METHOD(HermesInternal, exportAll)
+BUILTIN_METHOD(HermesInternal, exponentiationOperator)
 
 BUILTIN_OBJECT(JSON)
 BUILTIN_METHOD(JSON, parse)

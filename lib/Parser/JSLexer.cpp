@@ -207,11 +207,28 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       PUNC_L2_3('&', TokenKind::amp,   '&', TokenKind::ampamp,     '=', TokenKind::ampequal);
       PUNC_L2_3('|', TokenKind::pipe,  '|', TokenKind::pipepipe,   '=', TokenKind::pipeequal);
 
+      // * *= ** **=
+      case '*':
+        token_.setStart(curCharPtr_);
+        if (curCharPtr_[1] == '=') {
+          token_.setPunctuator(TokenKind::starequal);
+          curCharPtr_ += 2;
+        } else if (curCharPtr_[1] != '*') {
+          token_.setPunctuator(TokenKind::star);
+          curCharPtr_ += 1;
+        } else if (curCharPtr_[2] == '=') {
+          token_.setPunctuator(TokenKind::starstarequal);
+          curCharPtr_ += 3;
+        } else {
+          token_.setPunctuator(TokenKind::starstar);
+          curCharPtr_ += 2;
+        }
+        break;
+
       // * *=
       // % %=
       // ^ ^=
       // / /=
-      PUNC_L2_2('*', TokenKind::star, '=', TokenKind::starequal);
       PUNC_L2_2('%', TokenKind::percent, '=', TokenKind::percentequal);
       PUNC_L2_2('^', TokenKind::caret, '=', TokenKind::caretequal);
 

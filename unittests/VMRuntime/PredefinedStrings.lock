@@ -413,6 +413,7 @@ EXPECT("ensureObject")
 EXPECT("copyDataProperties")
 EXPECT("copyRestArgs")
 EXPECT("exportAll")
+EXPECT("exponentiationOperator")
 
 EXPECT("require")
 EXPECT("requireFast")

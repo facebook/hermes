@@ -55,12 +55,13 @@ const char *UnaryOperatorInst::opStringRepr[] =
     {"delete", "void", "typeof", "+", "-", "~", "!"};
 
 const char *BinaryOperatorInst::opStringRepr[] = {
-    "",    "==", "!=", "===", "!==", "<", "<=", ">", ">=", "<<", ">>",
-    ">>>", "+",  "-",  "*",   "/",   "%", "|",  "^", "&",  "in", "instanceof"};
+    "",   "==", "!=", "===", "!==", "<",  "<=",        ">",
+    ">=", "<<", ">>", ">>>", "+",   "-",  "*",         "/",
+    "%",  "|",  "^",  "&",   "**",  "in", "instanceof"};
 
 const char *BinaryOperatorInst::assignmentOpStringRepr[] = {
-    "=",    "",   "",   "",   "",   "",   "",   "",   "",   "<<=", ">>=",
-    ">>>=", "+=", "-=", "*=", "/=", "%=", "|=", "^=", "&=", "",    ""};
+    "=",  "",   "",   "",   "",   "",   "",   "",   "",    "<<=", ">>=", ">>>=",
+    "+=", "-=", "*=", "/=", "%=", "|=", "^=", "&=", "**=", "",    ""};
 
 UnaryOperatorInst::OpKind UnaryOperatorInst::parseOperator(StringRef op) {
   for (int i = 0; i < static_cast<int>(BinaryOperatorInst::OpKind::LAST_OPCODE);

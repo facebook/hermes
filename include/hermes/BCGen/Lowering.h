@@ -121,6 +121,25 @@ class LowerCondBranch : public FunctionPass {
   static bool isOperatorSupported(BinaryOperatorInst::OpKind op);
 };
 
+/// Iterates over all instructions and performs lowering on exponentiation
+/// operators to turn them into HermesInternal calls.
+/// NOTE: It may be possible in the future to extend this pass to allow for
+/// other lowering operations on single instructions.
+class LowerExponentiationOperator : public FunctionPass {
+ public:
+  explicit LowerExponentiationOperator()
+      : FunctionPass("LowerExponentiationOperator") {}
+  ~LowerExponentiationOperator() override = default;
+  bool runOnFunction(Function *F) override;
+
+ private:
+  /// Changes the binary exponentiation operator \p inst into a call to
+  /// HermesInternal.exponentiationOperator.
+  static bool lowerExponentiationOperator(
+      IRBuilder &builder,
+      BinaryOperatorInst *inst);
+};
+
 } // namespace hermes
 
 #endif

@@ -19,6 +19,7 @@
 #include <float.h>
 #include <math.h>
 #include <random>
+#include "hermes/Support/Math.h"
 #include "hermes/Support/OSCompat.h"
 
 #include "llvm/Support/MathExtras.h"

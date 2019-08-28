@@ -599,12 +599,14 @@ function equality(x, y) {
 //CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
 //CHECK-NEXT:  %1 = CallInst %0, undefined : undefined, 4 : number
 //CHECK-NEXT:  %2 = CallInst %0, undefined : undefined, 8 : number
-//CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+//CHECK-NEXT:  %3 = CallInst %0, undefined : undefined, 64 : number
+//CHECK-NEXT:  %4 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
 function arith() {
   var sink = print;
   sink(2 * 2)
   sink(2 * 4)
+  sink(2 ** 6)
 }
 
 

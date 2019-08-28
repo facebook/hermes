@@ -678,3 +678,46 @@ bool LowerCondBranch::runOnFunction(Function *F) {
   }
   return changed;
 }
+
+bool LowerExponentiationOperator::runOnFunction(Function *F) {
+  IRBuilder builder{F};
+  llvm::DenseSet<Instruction *> toTransform{};
+  bool changed = false;
+
+  for (BasicBlock &bb : *F) {
+    for (auto it = bb.begin(), e = bb.end(); it != e; /* empty */) {
+      auto *inst = &*it;
+      // Increment iterator before potentially erasing inst and invalidating
+      // iteration.
+      ++it;
+      if (auto *binOp = dyn_cast<BinaryOperatorInst>(inst)) {
+        if (binOp->getOperatorKind() ==
+            BinaryOperatorInst::OpKind::ExponentiationKind) {
+          changed |= lowerExponentiationOperator(builder, binOp);
+        }
+      }
+    }
+  }
+
+  return changed;
+}
+
+bool LowerExponentiationOperator::lowerExponentiationOperator(
+    IRBuilder &builder,
+    BinaryOperatorInst *binOp) {
+  assert(
+      binOp->getOperatorKind() ==
+          BinaryOperatorInst::OpKind::ExponentiationKind &&
+      "lowerExponentiationOperator must take a ** operator");
+  // Replace a ** b with HermesInternal.exponentiationOperator(a, b)
+  builder.setInsertionPoint(binOp);
+  auto *result = builder.createCallInst(
+      builder.createLoadPropertyInst(
+          builder.createTryLoadGlobalPropertyInst("HermesInternal"),
+          "exponentiationOperator"),
+      builder.getLiteralUndefined(),
+      {binOp->getLeftHandSide(), binOp->getRightHandSide()});
+  binOp->replaceAllUsesWith(result);
+  binOp->eraseFromParent();
+  return true;
+}

@@ -518,6 +518,9 @@ void HBCISel::generateBinaryOperatorInst(
         BCFGen_->emitDiv(res, left, right);
       }
       break;
+    case OpKind::ExponentiationKind: // ** (**=)
+      llvm_unreachable("ExponentiationKind emits a HermesInternal call");
+      break;
     case OpKind::ModuloKind: // %   (%=)
       BCFGen_->emitMod(res, left, right);
       break;

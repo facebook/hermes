@@ -871,6 +871,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(P::ttiReached, hermesInternalTTIReached);
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
   defineInternMethod(P::exportAll, hermesInternalExportAll);
+  defineInternMethod(P::exponentiationOperator, mathPow);
 #ifdef HERMESVM_EXCEPTION_ON_OOM
   defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
 #endif // HERMESVM_EXCEPTION_ON_OOM

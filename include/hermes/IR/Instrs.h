@@ -1599,6 +1599,7 @@ class BinaryOperatorInst : public Instruction {
     OrKind, // |   (|=)
     XorKind, // ^   (^=)
     AndKind, // &   (^=)
+    ExponentiationKind, // ** (**=)
     InKind, // "in"
     InstanceOfKind, // instanceof
     LAST_OPCODE

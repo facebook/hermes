@@ -15,6 +15,8 @@ using llvm::StringRef;
 
 class Function;
 class Module;
+class Instruction;
+class IRBuilder;
 
 /// This class represents a pass, which is a transformation of the IR. Passes
 /// are either Function passes, which transform one function, and are not

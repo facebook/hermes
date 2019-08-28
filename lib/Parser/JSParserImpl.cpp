@@ -202,6 +202,7 @@ bool JSParserImpl::checkAssign() const {
       TokenKind::lesslessequal,
       TokenKind::greatergreaterequal,
       TokenKind::greatergreatergreaterequal,
+      TokenKind::starstarequal,
       TokenKind::ampequal,
       TokenKind::caretequal,
       TokenKind::pipeequal);
@@ -2688,6 +2689,15 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
       if (!expr)
         return None;
 
+      if (check(TokenKind::starstar)) {
+        // ExponentiationExpression only allows UpdateExpressionNode on the
+        // left. The simplest way to enforce that the left operand is not
+        // an unparenthesized UnaryExpression is to check here.
+        sm_.error(
+            {startLoc, tok_->getEndLoc()},
+            "Unary operator before ** must use parens to disambiguate");
+      }
+
       return setLocation(
           startLoc,
           expr.getValue(),
@@ -2738,6 +2748,11 @@ inline unsigned getPrecedence(TokenKind kind) {
   return precedence[static_cast<unsigned>(kind)];
 }
 
+/// \return true if \p kind is left associative, false if right associative.
+inline bool isLeftAssoc(TokenKind kind) {
+  return kind != TokenKind::starstar;
+}
+
 /// Return the precedence of \p kind unless it happens to be equal to \p except,
 /// in which case return 0.
 inline unsigned getPrecedenceExcept(TokenKind kind, TokenKind except) {
@@ -2770,9 +2785,16 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   // While the current token is a binary operator.
   while (unsigned precedence =
              getPrecedenceExcept(tok_->getKind(), exceptKind)) {
-    // If the next operator has lower precedence than the operator on the stack,
-    // pop the stack, creating a new binary expression.
+    // If the next operator has no greater precedence than the operator on the
+    // stack, pop the stack, creating a new binary expression.
     while (sp != STACK_SIZE && precedence <= getPrecedence(opStack[sp])) {
+      if (precedence == getPrecedence(opStack[sp]) &&
+          !isLeftAssoc(opStack[sp])) {
+        // If the precedences are equal, then we avoid popping for
+        // right-associative operators to allow for the entire right-associative
+        // expression to be built from the right.
+        break;
+      }
       topExpr = newBinNode(valueStack[sp], opStack[sp], topExpr);
       ++sp;
     }
