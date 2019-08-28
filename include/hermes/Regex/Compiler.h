@@ -1287,7 +1287,9 @@ void Node::optimizeNodeList(NodeList &nodes, constants::SyntaxFlags flags) {
           unique_ptr<MatchCharNode>(new MatchCharNode(std::move(chars), icase));
       // Fill the remainder of the range with null (we'll clean them up after
       // the loop) and skip to the end of the range.
-      std::fill(&nodes[rangeStart + 1], &nodes[rangeEnd], nullptr);
+      // Note that rangeEnd may be one past the last valid element.
+      std::fill(
+          nodes.begin() + (rangeStart + 1), nodes.begin() + rangeEnd, nullptr);
       idx = rangeEnd - 1;
     }
   }
