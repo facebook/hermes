@@ -5,6 +5,8 @@
 
 # RUN: sh %s %S %T %hermes
 # RUN: sh %s %S %T %hermesc
+# TODO(T53144040) Fix LIT tests on Windows
+# XFAIL: windows
 # shellcheck disable=SC2148
 
 SRCDIR=$1

@@ -10,6 +10,8 @@ RUN: LC_ALL=tr_TR.UTF-8 _HERMES_TEST_LOCALE=tr_TR.UTF-8 %hermes -O -target=HBC %
 RUN:            | %FileCheck --match-full-lines -check-prefix TR %s
 RUN: LC_ALL=UTF-8 _HERMES_TEST_LOCALE=UTF-8 %hermes -O -target=HBC %s \
 RUN:            | %FileCheck --match-full-lines -check-prefix NO %s
+TODO(T53144040) Fix LIT tests on Windows
+XFAIL: windows
 */
 "use strict";
 

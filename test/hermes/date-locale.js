@@ -10,6 +10,8 @@ RUN: TZ=EST+5 LC_ALL=tr_TR _HERMES_TEST_LOCALE=tr_TR %hermes -O -target=HBC %s \
 RUN:            | %FileCheck --match-full-lines -check-prefix TR %s
 RUN: TZ=EST+5 %hermes -O -target=HBC %s \
 RUN:            | %FileCheck --match-full-lines -check-prefix NO %s
+TODO(T53144040) Fix LIT tests on Windows
+XFAIL: windows
 */
 "use strict";
 
