@@ -4,7 +4,7 @@
 // file in the root directory of this source tree.
 //
 // RUN: (! %hermesc -commonjs -pretty-json %s 2>&1 ) | %FileCheck --match-full-lines %s
-
+'use strict';
 import { foo , foo } from 'foo.js';
 // CHECK: {{.*}}/import-error.js:8:16: error: Duplicate entry in import declaration list
 // CHECK-NEXT: import { foo , foo } from 'foo.js';
@@ -25,3 +25,8 @@ import { invalid as catch } from 'invalid.js';
 // CHECK: {{.*}}/import-error.js:24:21: error: Invalid local name for import
 // CHECK-NEXT: import { invalid as catch } from 'invalid.js';
 // CHECK-NEXT:                     ^~~~~
+
+import * as protected from 'ns.js';
+// CHECK: {{.*}}:29:13: error: 'identifier' expected in namespace import
+// CHECK-NEXT: import * as protected from 'ns.js';
+// CHECK-NEXT:        ~~~~~^

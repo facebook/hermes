@@ -2939,8 +2939,14 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
 
   if (!check(TokenKind::rw_extends, TokenKind::l_brace)) {
     auto optName = parseBindingIdentifier(Param{});
-    if (!optName)
+    if (!optName) {
+      errorExpected(
+          TokenKind::identifier,
+          "in class declaration",
+          "location of 'class'",
+          startLoc);
       return None;
+    }
     name = *optName;
   } else if (param.has(ParamDefault)) {
     errorExpected(
@@ -2976,8 +2982,14 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
     // Try to parse a BindingIdentifier if we did not see a ClassHeritage
     // or a '{'.
     auto optName = parseBindingIdentifier(Param{});
-    if (!optName)
+    if (!optName) {
+      errorExpected(
+          TokenKind::identifier,
+          "in class expression",
+          "location of 'class'",
+          start);
       return None;
+    }
     name = *optName;
   }
 
@@ -3715,6 +3727,11 @@ bool JSParserImpl::parseImportClause(ESTree::NodeList &specifiers) {
     // ImportedDefaultBinding , NamedImports
     auto optDefaultBinding = parseBindingIdentifier(Param{});
     if (!optDefaultBinding) {
+      errorExpected(
+          TokenKind::identifier,
+          "in import clause",
+          "start of import clause",
+          startLoc);
       return false;
     }
     SMLoc endLoc = optDefaultBinding.getValue()->getEndLoc();
@@ -3764,16 +3781,13 @@ Optional<ESTree::Node *> JSParserImpl::parseNameSpaceImport() {
     return None;
   }
 
-  if (!need(
-          TokenKind::identifier,
-          "in namespace import specifier",
-          "location of namespace import",
-          startLoc)) {
-    return None;
-  }
-
   auto optLocal = parseBindingIdentifier(Param{});
   if (!optLocal) {
+    errorExpected(
+        TokenKind::identifier,
+        "in namespace import",
+        "location of namespace import",
+        startLoc);
     return None;
   }
 
