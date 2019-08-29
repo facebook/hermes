@@ -684,6 +684,7 @@ JSParserImpl::parseLexicalDeclaration(Param param) {
       (check(TokenKind::rw_var) || check(TokenKind::rw_const) ||
        check(letIdent_)) &&
       "parseLexicalDeclaration() expects var/const/let");
+  bool isConst = check(TokenKind::rw_const);
   auto kindIdent = tok_->getResWordOrIdentifier();
 
   SMLoc startLoc = advance().Start;
@@ -695,6 +696,24 @@ JSParserImpl::parseLexicalDeclaration(Param param) {
   auto endLoc = declList.back().getEndLoc();
   if (!eatSemi(endLoc))
     return None;
+
+  if (isConst) {
+    for (const ESTree::Node &decl : declList) {
+      const auto *varDecl = cast<ESTree::VariableDeclaratorNode>(&decl);
+      if (!varDecl->_init) {
+        // ES9.0 13.3.1.1
+        // LexicalBinding : BindingIdentifier Initializer
+        // It is a Syntax Error if Initializer is not present and
+        // IsConstantDeclaration of the LexicalDeclaration containing this
+        // LexicalBinding is true.
+        // Note that we don't perform this check in the SemanticValidator
+        // because `const` declarations in `for` loops don't need initializers.
+        sm_.error(
+            varDecl->getSourceRange(),
+            "missing initializer in const declaration");
+      }
+    }
+  }
 
   auto *res = setLocation(
       startLoc,
