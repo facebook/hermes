@@ -452,12 +452,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsInfo.setProperty(*this, "hermes_" #NAME, static_cast<TYPE>(HOLDER.NAME))
 
     BRIDGE_INFO(int, info, numCollections);
-    BRIDGE_INFO(int, info, totalAllocatedBytes);
-    BRIDGE_INFO(int, info, allocatedBytes);
-    BRIDGE_INFO(int, info, heapSize);
-    BRIDGE_INFO(int, info, va);
+    BRIDGE_INFO(double, info, totalAllocatedBytes);
+    BRIDGE_INFO(double, info, allocatedBytes);
+    BRIDGE_INFO(double, info, heapSize);
+    BRIDGE_INFO(double, info, va);
     if (includeExpensive) {
-      BRIDGE_INFO(int, info, mallocSizeEstimate);
+      BRIDGE_INFO(double, info, mallocSizeEstimate);
     }
 
 #ifndef NDEBUG
