@@ -117,7 +117,13 @@ int pages_in_ram(
 
 /// Resident set size (RSS), in bytes: the amount of RAM used by the process.
 /// It excludes virtual memory that has been paged out or was never loaded.
+/// \return Peak RSS usage throughout this process's history.
 uint64_t peak_rss();
+
+/// Resident set size (RSS), in bytes: the amount of RAM used by the process.
+/// It excludes virtual memory that has been paged out or was never loaded.
+/// \return Current RSS usage.
+uint64_t current_rss();
 
 /// Get the number of \p voluntary and \p involuntary context switches the
 /// process has made so far, or return false if unsupported.

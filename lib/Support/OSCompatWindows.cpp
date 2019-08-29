@@ -318,6 +318,16 @@ uint64_t peak_rss() {
   return pmc.PeakWorkingSetSize;
 }
 
+uint64_t current_rss() {
+  PROCESS_MEMORY_COUNTERS pmc;
+  auto ret = GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+  if (ret != 0) {
+    // failed
+    return 0;
+  }
+  return pmc.WorkingSetSize;
+}
+
 bool num_context_switches(long &voluntary, long &involuntary) {
   // Not yet supported.
   voluntary = involuntary = -1;

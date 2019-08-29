@@ -14,6 +14,7 @@ set(SupportSources
   JSONEmitterTest.cpp
   LEB128Test.cpp
   OptValueTest.cpp
+  OSCompatTest.cpp
   PageAccessTrackerTest.cpp
   PlatformLoggingTest.cpp
   RegexTest.cpp

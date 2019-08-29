@@ -224,6 +224,7 @@ void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
      << ",\n"
 #endif
      << "\t\t\"Peak RSS\": " << oscompat::peak_rss() << ",\n"
+     << "\t\t\"Current RSS\": " << oscompat::current_rss() << ",\n"
      << "\t\t\"Heap size\": " << info.heapSize << ",\n"
      << "\t\t\"Allocated bytes\": " << info.allocatedBytes << ",\n"
      << "\t\t\"Num collections\": " << info.numCollections << ",\n"

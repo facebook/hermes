@@ -316,9 +316,39 @@ uint64_t peak_rss() {
   }
   uint64_t rss = ru.ru_maxrss;
 #if !defined(__APPLE__) || !defined(__MACH__)
+  // Linux maxrss is in kilobytes, expand into bytes.
   rss *= 1024;
 #endif
   return rss;
+}
+
+uint64_t current_rss() {
+#if defined(__APPLE__) && defined(__MACH__)
+  struct mach_task_basic_info info;
+  mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
+  if (task_info(
+          mach_task_self(),
+          MACH_TASK_BASIC_INFO,
+          (task_info_t)&info,
+          &infoCount) != KERN_SUCCESS)
+    return 0;
+  return info.resident_size * page_size_real();
+#else
+  FILE *fp = fopen("/proc/self/statm", "r");
+  if (!fp) {
+    return 0;
+  }
+  long rss = 0;
+  // The first field is total program size, second field is resident set size.
+  if (fscanf(fp, "%*ld %ld", &rss) != 1) {
+    fclose(fp);
+    return 0;
+  }
+  fclose(fp);
+  // The RSS number from from statm is in number of pages. Multiply by the real
+  // page size to get the number in bytes.
+  return rss * page_size_real();
+#endif
 }
 
 bool num_context_switches(long &voluntary, long &involuntary) {
