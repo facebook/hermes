@@ -153,6 +153,9 @@ void JSArrayBuffer::_snapshotAddEdgesImpl(
     GC *gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
+  if (!self->data_) {
+    return;
+  }
   // While this is an internal edge, it is to a native node which is not
   // automatically added by the metadata.
   snap.addNamedEdge(
@@ -167,6 +170,9 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
     GC *gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
+  if (!self->data_) {
+    return;
+  }
   // Add the native node before the JSArrayBuffer node.
   snap.beginNode();
   snap.endNode(
