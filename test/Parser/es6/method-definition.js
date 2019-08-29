@@ -120,7 +120,7 @@
 // CHECK-NEXT:             "computed": false
 // CHECK-NEXT:           },
 
-  *gen() {},
+  *gen() { yield* 3 },
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
@@ -134,7 +134,20 @@
 // CHECK-NEXT:               "params": [],
 // CHECK-NEXT:               "body": {
 // CHECK-NEXT:                 "type": "BlockStatement",
-// CHECK-NEXT:                 "body": []
+// CHECK-NEXT:                 "body": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "ExpressionStatement",
+// CHECK-NEXT:                     "expression": {
+// CHECK-NEXT:                       "type": "YieldExpression",
+// CHECK-NEXT:                       "argument": {
+// CHECK-NEXT:                         "type": "NumericLiteral",
+// CHECK-NEXT:                         "value": 3
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "delegate": true
+// CHECK-NEXT:                     },
+// CHECK-NEXT:                     "directive": null
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "generator": true
 // CHECK-NEXT:             },

@@ -339,6 +339,101 @@ class UseSuperProps {
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
+(class Gens {
+  *foo() {
+    yield 1;
+  }
+  *bar() {
+    yield* 2;
+  }
+});
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "ClassExpression",
+// CHECK-NEXT:         "id": {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "Gens",
+// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "superClass": null,
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "ClassBody",
+// CHECK-NEXT:           "body": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "MethodDefinition",
+// CHECK-NEXT:               "key": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "foo",
+// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "FunctionExpression",
+// CHECK-NEXT:                 "id": null,
+// CHECK-NEXT:                 "params": [],
+// CHECK-NEXT:                 "body": {
+// CHECK-NEXT:                   "type": "BlockStatement",
+// CHECK-NEXT:                   "body": [
+// CHECK-NEXT:                     {
+// CHECK-NEXT:                       "type": "ExpressionStatement",
+// CHECK-NEXT:                       "expression": {
+// CHECK-NEXT:                         "type": "YieldExpression",
+// CHECK-NEXT:                         "argument": {
+// CHECK-NEXT:                           "type": "NumericLiteral",
+// CHECK-NEXT:                           "value": 1
+// CHECK-NEXT:                         },
+// CHECK-NEXT:                         "delegate": false
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "directive": null
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   ]
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "generator": true
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "kind": "method",
+// CHECK-NEXT:               "computed": false,
+// CHECK-NEXT:               "static": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "MethodDefinition",
+// CHECK-NEXT:               "key": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "bar",
+// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "FunctionExpression",
+// CHECK-NEXT:                 "id": null,
+// CHECK-NEXT:                 "params": [],
+// CHECK-NEXT:                 "body": {
+// CHECK-NEXT:                   "type": "BlockStatement",
+// CHECK-NEXT:                   "body": [
+// CHECK-NEXT:                     {
+// CHECK-NEXT:                       "type": "ExpressionStatement",
+// CHECK-NEXT:                       "expression": {
+// CHECK-NEXT:                         "type": "YieldExpression",
+// CHECK-NEXT:                         "argument": {
+// CHECK-NEXT:                           "type": "NumericLiteral",
+// CHECK-NEXT:                           "value": 2
+// CHECK-NEXT:                         },
+// CHECK-NEXT:                         "delegate": true
+// CHECK-NEXT:                       },
+// CHECK-NEXT:                       "directive": null
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   ]
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "generator": true
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "kind": "method",
+// CHECK-NEXT:               "computed": false,
+// CHECK-NEXT:               "static": false
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
 (class ConsProperty {
   get ['constructor']() {}
   set ['constructor'](val) {}

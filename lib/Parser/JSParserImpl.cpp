@@ -2236,6 +2236,9 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     // PropertyName "(" UniqueFormalParameters ")" "{" FunctionBody "}"
     //               ^
     SMLoc endLoc = tok_->getEndLoc();
+
+    llvm::SaveAndRestore<bool> oldParamYield(paramYield_, generator);
+
     ESTree::NodeList args{};
     if (!parseArguments(args, endLoc))
       return None;
@@ -3161,6 +3164,9 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
       return None;
     prop = *optProp;
   }
+
+  llvm::SaveAndRestore<bool> oldParamYield(
+      paramYield_, special == SpecialKind::Generator);
 
   // Store the propName for comparisons, used for SyntaxErrors.
   UniqueString *propName = nullptr;
