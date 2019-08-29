@@ -532,12 +532,62 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
   return *optLexDecl;
 }
 
+bool JSParserImpl::parseStatementListItem(
+    Param param,
+    bool parseDirectives,
+    AllowImportExport allowImportExport,
+    ESTree::NodeList &stmtList) {
+  if (checkDeclaration()) {
+    auto decl = parseDeclaration(Param{});
+    if (!decl)
+      return false;
+
+    stmtList.push_back(*decl.getValue());
+  } else if (tok_->getKind() == TokenKind::rw_import) {
+    auto importDecl = parseImportDeclaration();
+    if (!importDecl) {
+      return false;
+    }
+
+    if (allowImportExport == AllowImportExport::Yes) {
+      stmtList.push_back(*importDecl.getValue());
+    } else {
+      sm_.error(
+          importDecl.getValue()->getSourceRange(),
+          "import declaration must be at top level of module");
+    }
+  } else if (tok_->getKind() == TokenKind::rw_export) {
+    auto exportDecl = parseExportDeclaration();
+    if (!exportDecl) {
+      return false;
+    }
+
+    if (allowImportExport == AllowImportExport::Yes) {
+      stmtList.push_back(**exportDecl);
+    } else {
+      sm_.error(
+          exportDecl.getValue()->getSourceRange(),
+          "export declaration must be at top level of module");
+    }
+  } else {
+    auto stmt = parseStatement(param.get(ParamReturn));
+    if (!stmt)
+      return false;
+
+    stmtList.push_back(*stmt.getValue());
+  }
+
+  return true;
+}
+
+template <typename... Tail>
 Optional<bool> JSParserImpl::parseStatementList(
     Param param,
     TokenKind until,
     bool parseDirectives,
     AllowImportExport allowImportExport,
-    ESTree::NodeList &stmtList) {
+    ESTree::NodeList &stmtList,
+    Tail... otherUntil) {
   if (parseDirectives) {
     ESTree::ExpressionStatementNode *dirStmt;
     while (check(TokenKind::string_literal) &&
@@ -546,45 +596,10 @@ Optional<bool> JSParserImpl::parseStatementList(
     }
   }
 
-  while (!check(until, TokenKind::eof)) {
-    if (checkDeclaration()) {
-      auto decl = parseDeclaration(Param{});
-      if (!decl)
-        return None;
-
-      stmtList.push_back(*decl.getValue());
-    } else if (tok_->getKind() == TokenKind::rw_import) {
-      auto importDecl = parseImportDeclaration();
-      if (!importDecl) {
-        return None;
-      }
-
-      if (allowImportExport == AllowImportExport::Yes) {
-        stmtList.push_back(*importDecl.getValue());
-      } else {
-        sm_.error(
-            importDecl.getValue()->getSourceRange(),
-            "import declaration must be at top level of module");
-      }
-    } else if (tok_->getKind() == TokenKind::rw_export) {
-      auto exportDecl = parseExportDeclaration();
-      if (!exportDecl) {
-        return None;
-      }
-
-      if (allowImportExport == AllowImportExport::Yes) {
-        stmtList.push_back(**exportDecl);
-      } else {
-        sm_.error(
-            exportDecl.getValue()->getSourceRange(),
-            "export declaration must be at top level of module");
-      }
-    } else {
-      auto stmt = parseStatement(param.get(ParamReturn));
-      if (!stmt)
-        return None;
-
-      stmtList.push_back(*stmt.getValue());
+  while (!check(TokenKind::eof) && !checkN(until, otherUntil...)) {
+    if (!parseStatementListItem(
+            param, parseDirectives, allowImportExport, stmtList)) {
+      return None;
     }
   }
 
@@ -1577,13 +1592,17 @@ Optional<ESTree::SwitchStatementNode *> JSParserImpl::parseSwitchStatement(
             caseLoc))
       return None;
 
-    while (!checkN(
-        TokenKind::rw_default, TokenKind::rw_case, TokenKind::r_brace)) {
-      auto optStmt = parseStatement(param.get(ParamReturn));
-      if (!optStmt)
-        return None;
-      stmtList.push_back(*optStmt.getValue());
-    }
+    /// case Expression : StatementList[opt]
+    ///                   ^
+    if (!parseStatementList(
+            param.get(ParamReturn),
+            TokenKind::rw_default,
+            false,
+            AllowImportExport::No,
+            stmtList,
+            TokenKind::rw_case,
+            TokenKind::r_brace))
+      return None;
 
     if (!ignoreClause) {
       auto clauseEndLoc =

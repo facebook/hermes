@@ -424,9 +424,17 @@ class JSParserImpl {
   ///   the block. Specifically, it will recognize "use strict" and enable
   ///   strict mode.
   /// \return a dummy value for consistency.
+  template <typename... Tail>
   Optional<bool> parseStatementList(
       Param param,
       TokenKind until,
+      bool parseDirectives,
+      AllowImportExport allowImportExport,
+      ESTree::NodeList &stmtList,
+      Tail... otherUntil);
+
+  bool parseStatementListItem(
+      Param param,
       bool parseDirectives,
       AllowImportExport allowImportExport,
       ESTree::NodeList &stmtList);

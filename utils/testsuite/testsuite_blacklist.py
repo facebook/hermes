@@ -339,6 +339,7 @@ BLACK_LIST = [
     "test262/test/language/statements/for-in/head-let-destructuring.js",
     "test262/test/language/statements/for-in/head-let-fresh-binding-per-iteration.js",
     "test262/test/language/statements/for/head-let-destructuring.js",
+    "test262/test/language/statements/switch/syntax/redeclaration/",
     "test262/test/language/global-code/block-decl-strict.js",
     "test262/test/language/function-code/block-decl-strict.js",
     # let/const temporarily disabled
@@ -1461,6 +1462,10 @@ PERMANENT_BLACK_LIST = [
     "test262/test/annexB/language/expressions/object/__proto__-duplicate-computed.js",
     "test262/test/annexB/language/literals/numeric/non-octal-decimal-integer.js",
     "test262/test/annexB/language/literals/regexp/class-escape.js",
+    "test262/test/language/function-code/switch-case-decl-strict.js",
+    "test262/test/language/function-code/switch-dflt-decl-strict.js",
+    "test262/test/language/global-code/switch-case-decl-strict.js",
+    "test262/test/language/global-code/switch-dflt-decl-strict.js",
     # Testing whole feature sets that Hermes doesn't support.
     "test262/test/built-ins/Atomics/",
     "test262/test/built-ins/Proxy/",
