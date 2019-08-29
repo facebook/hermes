@@ -655,6 +655,21 @@ bool JSParserImpl::validateBindingIdentifier(
     }
   }
 
+  if (isStrictMode() && id == letIdent_) {
+    // ES9.0 12.1.1
+    // BindingIdentifier : Identifier
+    // Identifier : IdentifierName (but not ReservedWord)
+    // It is a Syntax Error if this phrase is contained in strict mode code
+    // and the StringValue of IdentifierName is: "implements", "interface",
+    // "let", "package", "private", "protected", "public", "static", or
+    // "yield".
+    // NOTE: All except 'let' are scanned as reserved words instead of
+    // identifiers, so we only check for `let` here.
+    lexer_.error(
+        tok_->getSourceRange(),
+        "Invalid use of strict mode reserved word as binding identifier");
+  }
+
   return kind == TokenKind::identifier || kind == TokenKind::rw_yield;
 }
 
