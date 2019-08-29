@@ -33,8 +33,19 @@ using BigStorage = SegmentedArray;
 /// Flags associated with a hidden class.
 struct ClassFlags {
   /// This class is in dictionary mode, meaning that adding and removing fields
-  /// doesn't cause transitions but simply updates the property map.
+  /// doesn't cause transitions but simply updates the property map.  (We may
+  /// still change hidden classes; see dictionaryNoCacheMode, below).
   uint32_t dictionaryMode : 1;
+
+  /// If dictionaryMode is set, this indicates whether the hidden class can
+  /// be used as the key in inline caches.  If we delete properties, or update
+  /// properties, we create a new hidden class for the owning object
+  /// (to invalidate any inline caches referencing the old hidden
+  /// class).  We may decide to limit the number of hidden classes
+  /// created this way (currently we allow just one).  To do this, we
+  /// set this property of the hidden class property, so that the new
+  /// hidden class is never added to an inline cache.
+  uint32_t dictionaryNoCacheMode : 1;
 
   /// Set when we have index-like named properties (e.g. "0", "1", etc) defined
   /// using defineOwnProperty. Array accesses will have to check the named
@@ -145,9 +156,20 @@ class HiddenClass final : public GCCell {
   }
 
   /// \return true if this class is in "dictionary mode" - i.e. changes to it
-  /// don't result in creation of new classes.
+  /// don't (normally) result in creation of new classes.
   bool isDictionary() const {
     return flags_.dictionaryMode;
+  }
+
+  /// \return true if this class is in "non-cachable dictionary mode"
+  /// - it is a dictionary, and the owning object has been modified in
+  /// a way since becoming a dictionary that precludes inline caching
+  /// (for example, a property has been deleted or updated).
+  bool isDictionaryNoCache() const {
+    assert(
+        (!flags_.dictionaryNoCacheMode || flags_.dictionaryMode) &&
+        "dictionaryNoCacheMode should only be set if dictionaryMode is set.");
+    return flags_.dictionaryNoCacheMode;
   }
 
   bool getHasIndexLikeProperties() const {
@@ -356,15 +378,20 @@ class HiddenClass final : public GCCell {
       PropertyFlags propertyFlags,
       unsigned numProperties);
 
-  /// Create a copy of this \c HiddenClass and switch the copy to dictionary
-  /// mode. If the current class has a property map, it will be moved to the
-  /// new class. Otherwise a new property map will be created for the new class.
-  /// In either case, the current class will have no property map and the new
-  /// class will have one.
-  /// \return the new class.
-  static Handle<HiddenClass> convertToDictionary(
+  /// Create a copy of this \c HiddenClass and ensure that the copy is
+  /// in dictionary mode.  Requires that the current \C HiddenClass
+  /// does not have the dictionaryNoCacheMode flag set; such
+  /// dictionaries may not be copied.  If the current class has a
+  /// property map, it will be moved to the new class. Otherwise a new
+  /// property map will be created for the new class. In either case,
+  /// the current class will have no property map and the new class
+  /// will have one.  The \p noCache argument indicates whether the
+  /// new dictionary \c HiddenClass's dictionaryNoCacheMode flag will
+  /// be set.  \return the new class.
+  static Handle<HiddenClass> copyToNewDictionary(
       Handle<HiddenClass> selfHandle,
-      Runtime *runtime);
+      Runtime *runtime,
+      bool noCache = false);
 
   /// Add a new property pair (\p name and \p desc) to the property map (which
   /// must have been initialized).

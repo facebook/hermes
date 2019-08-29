@@ -901,7 +901,7 @@ CallResult<HermesValue> JSObject::getNamed_RJS(
 
   if (LLVM_LIKELY(!desc.flags.accessor && !desc.flags.hostObject)) {
     // Populate the cache if requested.
-    if (cacheEntry && !propObj->getClass(runtime)->isDictionary()) {
+    if (cacheEntry && !propObj->getClass(runtime)->isDictionaryNoCache()) {
       cacheEntry->clazz = propObj->getClass(runtime);
       cacheEntry->slot = desc.slot;
     }

@@ -161,13 +161,19 @@ CallResult<HermesValue> HiddenClass::create(
       runtime, flags, parent, symbolID, propertyFlags, numProperties));
 }
 
-Handle<HiddenClass> HiddenClass::convertToDictionary(
+Handle<HiddenClass> HiddenClass::copyToNewDictionary(
     Handle<HiddenClass> selfHandle,
-    Runtime *runtime) {
-  assert(!selfHandle->isDictionary() && "class already in dictionary mode");
+    Runtime *runtime,
+    bool noCache) {
+  assert(
+      !selfHandle->isDictionaryNoCache() && "class already in no-cache mode");
 
   auto newFlags = selfHandle->flags_;
   newFlags.dictionaryMode = true;
+  // If the requested, transition to no-cache mode.
+  if (noCache) {
+    newFlags.dictionaryNoCacheMode = true;
+  }
 
   /// Allocate a new class without a parent.
   auto newClassHandle = runtime->makeHandle<HiddenClass>(
@@ -321,8 +327,11 @@ Handle<HiddenClass> HiddenClass::deleteProperty(
     Handle<HiddenClass> selfHandle,
     Runtime *runtime,
     PropertyPos pos) {
-  auto newHandle = LLVM_UNLIKELY(!selfHandle->flags_.dictionaryMode)
-      ? convertToDictionary(selfHandle, runtime)
+  // We convert to dictionary if we're not yet a dictionary
+  // (transition to a cacheable dictionary), or if we are, but not yet
+  // in no-cache mode (transition to no-cache mode).
+  auto newHandle = LLVM_UNLIKELY(!selfHandle->isDictionaryNoCache())
+      ? copyToNewDictionary(selfHandle, runtime, selfHandle->isDictionary())
       : selfHandle;
 
   --newHandle->numProperties_;
@@ -415,7 +424,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
   // Do we need to convert to dictionary?
   if (LLVM_UNLIKELY(selfHandle->numProperties_ == kDictionaryThreshold)) {
     // Do it.
-    auto childHandle = convertToDictionary(selfHandle, runtime);
+    auto childHandle = copyToNewDictionary(selfHandle, runtime);
 
     if (toArrayIndex(
             runtime->getIdentifierTable().getStringView(runtime, name))) {
@@ -504,13 +513,17 @@ Handle<HiddenClass> HiddenClass::updateProperty(
   assert(newFlags.isValid() && "newFlags must be valid");
 
   // In dictionary mode we simply update our map (which must exist).
-  if (LLVM_UNLIKELY(selfHandle->flags_.dictionaryMode)) {
+  if (LLVM_UNLIKELY(selfHandle->isDictionary())) {
     assert(
         selfHandle->propertyMap_ &&
         "propertyMap must exist in dictionary mode");
     DictPropertyMap::getDescriptorPair(
         selfHandle->propertyMap_.get(runtime), pos)
         ->second.flags = newFlags;
+    // If it's still cacheable, make it non-cacheable.
+    if (!selfHandle->isDictionaryNoCache()) {
+      selfHandle = copyToNewDictionary(selfHandle, runtime, /*noCache*/ true);
+    }
     return selfHandle;
   }
 

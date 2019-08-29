@@ -2181,7 +2181,7 @@ tailCall:
 
           // cacheIdx == 0 indicates no caching so don't update the cache in
           // those cases.
-          if (LLVM_LIKELY(!clazz->isDictionary()) &&
+          if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
               LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
 #ifdef HERMES_SLOW_DEBUG
             if (cacheEntry->clazz && cacheEntry->clazz != clazz)
