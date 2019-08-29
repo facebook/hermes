@@ -692,6 +692,17 @@ void SemanticValidator::validateDeclarationNames(
           "cannot declare '" + cast<IdentifierNode>(node)->_name->str() + "'");
     }
 
+    if (declKind != FunctionInfo::VarDecl::Kind::Var &&
+        idNode->_name == kw_.identLet) {
+      // ES9.0 13.3.1.1
+      // LexicalDeclaration : LetOrConst BindingList
+      // It is a Syntax Error if the BoundNames of BindingList
+      // contains "let".
+      sm_.error(
+          node->getSourceRange(),
+          "'let' is disallowed as a lexically bound name");
+    }
+
     return;
   }
 
