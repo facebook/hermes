@@ -555,7 +555,7 @@ TEST_F(SynthTraceSerializationTest, Return) {
 
 TEST_F(SynthTraceSerializationTest, ReturnEncodeUTF8String) {
   // "namaste" in Hindi, encoded as UTF-8.
-  std::string namaste = u8"नमस्ते";
+  std::string namaste = u8"\u0928\u092e\u0938\u094d\u0924\u0947";
   EXPECT_EQ(
       R"({"type":"ReturnFromNativeRecord","time":0,"retval":"string:\u0928\u092e\u0938\u094d\u0924\u0947"})",
       to_string(SynthTrace::ReturnFromNativeRecord{
