@@ -5,6 +5,8 @@
 //
 // RUN: %hermes -commonjs %S -O -fstatic-require -fstatic-builtins | %FileCheck --match-full-lines %s
 // RUN: cd %S && zip %T/subdir.zip metadata.json cjs-subdir-main.js cjs-subdir-2.js foo/cjs-subdir-foo.js bar/cjs-subdir-bar.js && %hermes -commonjs %T/subdir.zip -O -fstatic-builtins -fstatic-require | %FileCheck --match-full-lines %s
+// TODO(T53144040) Fix LIT tests on Windows
+// XFAIL: windows
 
 // Use directory and Zip inputs to allow for metadata.json resolution.
 
