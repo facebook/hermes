@@ -269,9 +269,6 @@ void CodeBlock::lazyCompileImpl(Runtime *runtime) {
   functionHeader_ =
       runtimeModule_->getBytecode()->getFunctionHeader(functionID_);
   bytecode_ = runtimeModule_->getBytecode()->getBytecode(functionID_);
-#ifdef HERMES_ENABLE_DEBUGGER
-  runtime->getDebugger().resolveBreakpoints(this);
-#endif
 }
 #endif // HERMESVM_LEAN
 
