@@ -151,6 +151,10 @@ std::string thread_name();
 template <typename T>
 inline ::std::string to_string(T value);
 
+/// Same API as std::isxdigit. Windows does not have isxdigit in its standard
+/// library.
+inline bool isxdigit(unsigned char c);
+
 /// The following functions are defined in Android's standard library, but not
 /// in the \c std namespace.
 inline double log2(double n);
@@ -163,6 +167,11 @@ inline ::std::string to_string(T value) {
   ::std::ostringstream os;
   os << +value;
   return os.str();
+}
+
+inline bool isxdigit(unsigned char c) {
+  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+      (c >= 'A' && c <= 'F');
 }
 
 inline double log2(double n) {

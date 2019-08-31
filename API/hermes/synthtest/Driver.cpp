@@ -48,8 +48,6 @@ class SynthBenchmarkTestFixture : public ::testing::TestWithParam<ParamType> {
 };
 
 TEST_P(SynthBenchmarkTestFixture, CanRunWithoutException) {
-  std::string outTrace;
-  llvm::raw_string_ostream outTraceStream{outTrace};
   tracing::TraceInterpreter::ExecuteOptions options;
   // Use options from the trace.
   options.minHeapSize = 0;
@@ -59,7 +57,7 @@ TEST_P(SynthBenchmarkTestFixture, CanRunWithoutException) {
         llvm::MemoryBuffer::getMemBuffer(trace_),
         llvm::MemoryBuffer::getMemBuffer(source_),
         options,
-        outTraceStream);
+        nullptr);
   }) << "Failed on test: "
      << testName_;
 }

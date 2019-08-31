@@ -120,9 +120,7 @@ class TraceInterpreter final {
  private:
   jsi::Runtime &rt;
   ExecuteOptions options;
-#ifdef HERMESVM_API_TRACE
-  std::function<void()> &writeTrace;
-#endif
+  llvm::raw_ostream *outTrace;
   std::unique_ptr<const jsi::Buffer> bundle;
   const SynthTrace &trace;
   const std::unordered_map<SynthTrace::ObjectID, DefAndUse> &globalDefsAndUses;
@@ -173,17 +171,19 @@ class TraceInterpreter final {
       const ExecuteOptions &options,
       llvm::raw_ostream &outTrace);
 
+  /// \param outTrace If non-null, write a trace of the execution into this
+  /// stream.
   static std::string execFromMemoryBuffer(
       std::unique_ptr<llvm::MemoryBuffer> traceBuf,
       std::unique_ptr<llvm::MemoryBuffer> codeBuf,
       const ExecuteOptions &options,
-      llvm::raw_ostream &outTrace);
+      llvm::raw_ostream *outTrace);
 
  private:
   TraceInterpreter(
       jsi::Runtime &rt,
       const ExecuteOptions &options,
-      std::function<void()> &writeTrace,
+      llvm::raw_ostream *outTrace,
       const SynthTrace &trace,
       std::unique_ptr<const jsi::Buffer> bundle,
       const std::unordered_map<SynthTrace::ObjectID, DefAndUse>
@@ -195,14 +195,14 @@ class TraceInterpreter final {
       const std::string &traceFile,
       const std::string &bytecodeFile,
       const ExecuteOptions &options,
-      llvm::raw_ostream &outTrace);
+      llvm::raw_ostream *outTrace);
 
   static std::string exec(
       jsi::Runtime &rt,
       const ExecuteOptions &options,
       const SynthTrace &trace,
       std::unique_ptr<const jsi::Buffer> bundle,
-      std::function<void()> &writeTrace);
+      llvm::raw_ostream *outTrace);
 
   jsi::Function createHostFunction(
       SynthTrace::ObjectID funcID,

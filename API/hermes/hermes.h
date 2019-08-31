@@ -92,9 +92,6 @@ class HermesRuntime : public jsi::Runtime {
 
   /// Gets a guaranteed unique id for an object, which is assigned at
   /// allocation time and is static throughout that object's lifetime.
-  /// This is mainly useful for tracing and debugging use cases, so in
-  /// some optimized builds, this may not actually return unique
-  /// values.
   uint64_t getUniqueID(const jsi::Object &o) const;
 
   /// Get a structure representing the enviroment-dependent behavior, so

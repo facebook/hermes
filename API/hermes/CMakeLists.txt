@@ -16,16 +16,7 @@ set(LLVM_OPTIONAL_SOURCES
 set(api_sources
   hermes.cpp
   DebuggerAPI.cpp
-  hermes_tracing.cpp
   )
-
-if (HERMESVM_SYNTH_REPLAY)
-  list(APPEND api_sources
-    SynthTrace.cpp
-    TraceInterpreter.cpp
-    TracingRuntime.cpp
-  )
-endif()
 
 add_llvm_library(hermesapi
         ${api_sources}

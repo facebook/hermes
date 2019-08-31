@@ -4,9 +4,6 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-// This test only makes sense if the tracing mode is turned on.
-#ifdef HERMESVM_API_TRACE
-
 #include <hermes/SynthTrace.h>
 #include <hermes/Parser/JSONParser.h>
 #include <hermes/TracingRuntime.h>
@@ -27,13 +24,15 @@ namespace jsi = facebook::jsi;
 namespace {
 
 struct SynthTraceTest : public ::testing::Test {
+  ::hermes::vm::RuntimeConfig config =
+      ::hermes::vm::RuntimeConfig::Builder()
+          .withTraceEnvironmentInteractions(true)
+          .build();
   std::unique_ptr<TracingHermesRuntime> rt;
   SynthTrace::TimeSinceStart dummyTime{SynthTrace::TimeSinceStart::zero()};
 
   SynthTraceTest()
-      : rt(makeTracingHermesRuntime(
-            makeHermesRuntime(::hermes::vm::RuntimeConfig()),
-            ::hermes::vm::RuntimeConfig())) {}
+      : rt(makeTracingHermesRuntime(makeHermesRuntime(config), config)) {}
 
   template <typename T>
   void expectEqual(
@@ -411,7 +410,8 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       *records.at(9));
 }
 
-#ifdef EXPECT_DEATH
+// These tests fail on Windows.
+#if defined(EXPECT_DEATH) && !defined(_WINDOWS)
 TEST_F(SynthTraceTest, HostFunctionThrowsExceptionFails) {
   // TODO (T28293178) Remove this once exceptions are supported.
   jsi::Function throwingFunc = jsi::Function::createFromHostFunction(
@@ -670,9 +670,13 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   EXPECT_EQ(2, llvm::cast<JSONNumber>(root->at("version"))->getValue());
   EXPECT_EQ(
       globalObjID, llvm::cast<JSONNumber>(root->at("globalObjID"))->getValue());
-  EXPECT_THAT(
-      llvm::cast<JSONString>(root->at("sourceHash"))->str(),
-      ::testing::MatchesRegex("[0-9]{40}"));
+  // SHA-1 should be 40 characters long, and only hex digits.
+  std::string sourceHash =
+      llvm::cast<JSONString>(root->at("sourceHash"))->str();
+  EXPECT_EQ(sourceHash.length(), 40);
+  for (auto c : sourceHash) {
+    EXPECT_TRUE(hermes::oscompat::isxdigit(c));
+  }
 
   JSONObject *gcConfig = llvm::cast<JSONObject>(root->at("gcConfig"));
   EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("initHeapSize")));
@@ -748,9 +752,13 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
   EXPECT_EQ(2, llvm::cast<JSONNumber>(root->at("version"))->getValue());
   EXPECT_EQ(
       globalObjID, llvm::cast<JSONNumber>(root->at("globalObjID"))->getValue());
-  EXPECT_THAT(
-      llvm::cast<JSONString>(root->at("sourceHash"))->str(),
-      ::testing::MatchesRegex("[0-9]{40}"));
+  // SHA-1 should be 40 characters long, and only hex digits.
+  std::string sourceHash =
+      llvm::cast<JSONString>(root->at("sourceHash"))->str();
+  EXPECT_EQ(sourceHash.length(), 40);
+  for (auto c : sourceHash) {
+    EXPECT_TRUE(hermes::oscompat::isxdigit(c));
+  }
 
   JSONObject *gcConfig = llvm::cast<JSONObject>(root->at("gcConfig"));
   EXPECT_EQ(
@@ -891,5 +899,3 @@ TEST_F(SynthTraceParseTest, SynthMissingVersion) {
 /// @}
 
 } // namespace
-
-#endif

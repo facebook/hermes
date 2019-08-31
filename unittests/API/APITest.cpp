@@ -74,12 +74,9 @@ TEST_F(HermesRuntimeTest, ArrayBufferTest) {
   auto arrayBuffer = object.getArrayBuffer(*rt);
   EXPECT_EQ(arrayBuffer.size(*rt), 16);
 
-#ifndef HERMESVM_API_TRACE
-  // Since synthetic benchmarks disallow raw memory access, don't do this test.
   int32_t *buffer = reinterpret_cast<int32_t *>(arrayBuffer.data(*rt));
   EXPECT_EQ(buffer[0], 1234);
   EXPECT_EQ(buffer[1], 5678);
-#endif
 }
 
 TEST_F(HermesRuntimeTest, BytecodeTest) {

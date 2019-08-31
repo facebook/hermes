@@ -39,7 +39,6 @@ add_hermes_unittest(APITests
   APILeanTest.cpp
   DebuggerTest.cpp
   SegmentTest.cpp
-  SynthTraceTest.cpp
 )
 
 include_directories(${HERMES_SOURCE_DIR}/API)

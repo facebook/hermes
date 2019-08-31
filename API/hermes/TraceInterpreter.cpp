@@ -419,7 +419,7 @@ static std::string mergeGCStats(const std::vector<std::string> &repGCStats) {
 TraceInterpreter::TraceInterpreter(
     jsi::Runtime &rt,
     const ExecuteOptions &options,
-    std::function<void()> &writeTrace,
+    llvm::raw_ostream *outTrace,
     const SynthTrace &trace,
     std::unique_ptr<const Buffer> bundle,
     const std::unordered_map<ObjectID, TraceInterpreter::DefAndUse>
@@ -428,9 +428,7 @@ TraceInterpreter::TraceInterpreter(
     const HostObjectToCalls &hostObjectCalls)
     : rt(rt),
       options(options),
-#ifdef HERMESVM_API_TRACE
-      writeTrace(writeTrace),
-#endif
+      outTrace(outTrace),
       bundle(std::move(bundle)),
       trace(trace),
       globalDefsAndUses(globalDefsAndUses),
@@ -441,9 +439,6 @@ TraceInterpreter::TraceInterpreter(
       hostObjects(),
       hostObjectsCallCount(),
       gom() {
-#ifdef HERMESVM_API_TRACE
-  assert(writeTrace && "writeTrace must be non-empty");
-#endif
   // Add the global object to the global object map
   gom.emplace(trace.globalObjID(), rt.global());
 }
@@ -454,7 +449,7 @@ void TraceInterpreter::exec(
     const std::string &bytecodeFile,
     const ExecuteOptions &options) {
   // If there is a trace, don't write it out, not used here.
-  execFromFileNames(traceFile, bytecodeFile, options, llvm::nulls());
+  execFromFileNames(traceFile, bytecodeFile, options, nullptr);
 }
 
 /* static */
@@ -463,7 +458,7 @@ std::string TraceInterpreter::execAndGetStats(
     const std::string &bytecodeFile,
     const ExecuteOptions &options) {
   // If there is a trace, don't write it out, not used here.
-  return execFromFileNames(traceFile, bytecodeFile, options, llvm::nulls());
+  return execFromFileNames(traceFile, bytecodeFile, options, nullptr);
 }
 
 /* static */
@@ -472,7 +467,7 @@ void TraceInterpreter::execAndTrace(
     const std::string &bytecodeFile,
     const ExecuteOptions &options,
     llvm::raw_ostream &outTrace) {
-  execFromFileNames(traceFile, bytecodeFile, options, outTrace);
+  execFromFileNames(traceFile, bytecodeFile, options, &outTrace);
 }
 
 /* static */
@@ -480,7 +475,7 @@ std::string TraceInterpreter::execFromFileNames(
     const std::string &traceFile,
     const std::string &bytecodeFile,
     const ExecuteOptions &options,
-    llvm::raw_ostream &outTrace) {
+    llvm::raw_ostream *outTrace) {
   auto errorOrFile = llvm::MemoryBuffer::getFile(traceFile);
   if (!errorOrFile) {
     throw std::system_error(errorOrFile.getError());
@@ -501,7 +496,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     std::unique_ptr<llvm::MemoryBuffer> traceBuf,
     std::unique_ptr<llvm::MemoryBuffer> codeBuf,
     const ExecuteOptions &options,
-    llvm::raw_ostream &outTrace) {
+    llvm::raw_ostream *outTrace) {
   auto traceAndConfigAndEnv = SynthTrace::parse(std::move(traceBuf));
   const auto &trace = std::get<0>(traceAndConfigAndEnv);
   const bool codeIsMmapped =
@@ -523,6 +518,10 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   rtConfigBuilder.withBytecodeWarmupPercent(options.bytecodeWarmupPercent);
   rtConfigBuilder.withTrackIO(
       options.shouldTrackIO && isBytecode && codeIsMmapped);
+  if (outTrace) {
+    // If an out trace is requested, turn on tracing in the VM as well.
+    rtConfigBuilder.withTraceEnvironmentInteractions(true);
+  }
   ::hermes::vm::GCConfig::Builder gcConfigBuilder =
       rtConfig.getGCConfig().rebuild();
   gcConfigBuilder.withShouldRecordStats(options.shouldPrintGCStats);
@@ -549,22 +548,17 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   std::vector<std::string> repGCStats(options.reps);
   for (int rep = -options.warmupReps; rep < options.reps; ++rep) {
     ::hermes::vm::instrumentation::PerfEvents::begin();
-#ifdef HERMESVM_API_TRACE
-    std::unique_ptr<TracingHermesRuntime> rt =
-        makeTracingHermesRuntime(makeHermesRuntime(rtConfig), rtConfig);
-
+    std::unique_ptr<jsi::Runtime> rt;
+    std::unique_ptr<HermesRuntime> hermesRuntime = makeHermesRuntime(rtConfig);
     // Set up the mocks for environment-dependent JS behavior
-    rt->hermesRuntime().setMockedEnvironment(std::get<2>(traceAndConfigAndEnv));
-    std::function<void()> writeTrace = [&rt, &outTrace] {
-      rt->writeTrace(outTrace);
-    };
-#else
-    std::unique_ptr<HermesRuntime> rt = makeHermesRuntime(rtConfig);
-    rt->setMockedEnvironment(std::get<2>(traceAndConfigAndEnv));
-    std::function<void()> writeTrace = nullptr;
-#endif
+    hermesRuntime->setMockedEnvironment(std::get<2>(traceAndConfigAndEnv));
+    if (outTrace) {
+      rt = makeTracingHermesRuntime(std::move(hermesRuntime), rtConfig);
+    } else {
+      rt = std::move(hermesRuntime);
+    }
     auto stats =
-        exec(*rt, options, trace, bufView(codeFileBuffer.get()), writeTrace);
+        exec(*rt, options, trace, bufView(codeFileBuffer.get()), outTrace);
     // If we're not warming up, save the stats.
     if (rep >= 0) {
       repGCStats[rep] = stats;
@@ -579,7 +573,7 @@ std::string TraceInterpreter::exec(
     const ExecuteOptions &options,
     const SynthTrace &trace,
     std::unique_ptr<const jsi::Buffer> bundle,
-    std::function<void()> &writeTrace) {
+    llvm::raw_ostream *outTrace) {
   if (!HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
     llvm::errs()
         << "Note: You are running from source code, not HBC bytecode.\n"
@@ -602,7 +596,7 @@ std::string TraceInterpreter::exec(
   TraceInterpreter interpreter(
       rt,
       options,
-      writeTrace,
+      outTrace,
       trace,
       std::move(bundle),
       globalDefsAndUses,
@@ -679,10 +673,10 @@ Object TraceInterpreter::createHostObject(
 std::string TraceInterpreter::execEntryFunction(
     const TraceInterpreter::Call &entryFunc) {
   execFunction(entryFunc, Value::undefined(), nullptr, 0);
-#ifdef HERMESVM_API_TRACE
-  // If tracing is also turned on, write out the trace to the given stream.
-  writeTrace();
-#endif
+  if (outTrace) {
+    // If tracing is also turned on, write out the trace to the given stream.
+    dynamic_cast<TracingRuntime &>(rt).writeTrace(*outTrace);
+  }
 
 #ifdef HERMESVM_PROFILER_BB
   if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt)) {
@@ -813,12 +807,12 @@ Value TraceInterpreter::execFunction(
               }
               snapshotMarkerFound = true;
             }
-#ifdef HERMESVM_API_TRACE
-            // If tracing is on, assume the runtime is a tracing runtime and
-            // re-emit the marker into the result stream.
-            // If the current runtime is not a tracing runtime this will throw.
-            dynamic_cast<TracingRuntime &>(rt).addMarker(mr.tag_);
-#endif
+            if (auto *tracingRT = dynamic_cast<TracingRuntime *>(&rt)) {
+              // If tracing is on, re-emit the marker into the result stream.
+              // This way, the trace emitted from replay will be the same as the
+              // trace input.
+              tracingRT->addMarker(mr.tag_);
+            }
             break;
           }
           case RecordType::CreateObject: {
@@ -1098,15 +1092,13 @@ Value TraceInterpreter::execFunction(
             << "An exception occurred while running the benchmark:\nAt record number "
             << globalRecordNum << ":\n"
             << e.what() << "\n";
-#ifdef HERMESVM_API_TRACE
-        llvm::errs() << "Writing out the trace\n";
-        writeTrace();
-        llvm::errs() << "\n";
-#else
-        llvm::errs()
-            << "Rebuild and rerun with @fbsource//xplat/mode/hermes/trace to get a trace "
-               "for comparison\n";
-#endif
+        if (outTrace) {
+          llvm::errs() << "Writing out the trace\n";
+          dynamic_cast<TracingRuntime &>(rt).writeTrace(*outTrace);
+          llvm::errs() << "\n";
+        } else {
+          llvm::errs() << "Pass --trace to get a trace for comparison\n";
+        }
         // Do not re-throw, since that will pass back and forth between JS and
         // Native, causing more perturbations to the state of this interpreter,
         // which will cause an assertion to fire.

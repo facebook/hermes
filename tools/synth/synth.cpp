@@ -44,6 +44,12 @@ static opt<std::string> SnapshotMarker(
     desc("Take a snapshot at the given marker"),
     init(""));
 
+static opt<std::string> Trace(
+    "trace",
+    desc(
+        "Take a trace of the synthetic benchmark running. Can be used to verify that the replay made the same trace again. Outputs to the file given"),
+    init(""));
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
 static opt<bool>
     PrintStats("print-stats", desc("Print statistics"), init(false));
@@ -127,18 +133,25 @@ int main(int argc, char **argv) {
     if (cl::PrintStats)
       llvm::EnableStatistics();
 #endif
-#ifdef HERMESVM_API_TRACE
-    // If this is tracing mode, get the trace instead of the stats.
-    options.shouldPrintGCStats = false;
-    options.shouldTrackIO = false;
-    TraceInterpreter::execAndTrace(
-        cl::TraceFile, cl::BytecodeFile, options, llvm::outs());
-    llvm::outs() << "\n";
-#else
-    llvm::outs() << TraceInterpreter::execAndGetStats(
-                        cl::TraceFile, cl::BytecodeFile, options)
-                 << "\n";
-#endif
+
+    if (!cl::Trace.empty()) {
+      // If this is tracing mode, get the trace instead of the stats.
+      options.shouldPrintGCStats = false;
+      options.shouldTrackIO = false;
+      std::error_code ec;
+      llvm::raw_fd_ostream os(cl::Trace.c_str(), ec, llvm::sys::fs::F_Text);
+      if (ec) {
+        throw std::system_error(ec);
+      }
+      TraceInterpreter::execAndTrace(
+          cl::TraceFile, cl::BytecodeFile, options, os);
+      llvm::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
+    } else {
+      llvm::outs() << TraceInterpreter::execAndGetStats(
+                          cl::TraceFile, cl::BytecodeFile, options)
+                   << "\n";
+    }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
     if (cl::PrintStats)
       llvm::PrintStatistics(llvm::outs());
