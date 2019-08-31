@@ -83,23 +83,15 @@ int __llvm_profile_dump(void);
 namespace {
 template <typename F>
 auto maybeRethrow(const F &f) -> decltype(f()) {
-#if defined(HERMESVM_EXCEPTION_ON_OOM) || defined(HERMESVM_TIMELIMIT)
+#ifdef HERMESVM_EXCEPTION_ON_OOM
   try {
     return f();
-#ifdef HERMESVM_EXCEPTION_ON_OOM
   } catch (const ::hermes::vm::JSOutOfMemoryError &ex) {
     // We surface this as a JSINativeException -- the out of memory
     // exception is not part of the spec.
     throw ::facebook::jsi::JSINativeException(ex.what());
-#endif
-#ifdef HERMESVM_TIMELIMIT
-  } catch (const ::hermes::vm::JSTimeoutError &ex) {
-    // We surface this as a JSINativeException -- the timeout
-    // exception is not part of the spec.
-    throw ::facebook::jsi::JSINativeException(ex.what());
-#endif
   }
-#else // HERMESVM_EXCEPTION_ON_OOM || HERMESVM_TIMELIMIT
+#else // HERMESVM_EXCEPTION_ON_OOM
   return f();
 #endif
 }
