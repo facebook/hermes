@@ -279,6 +279,12 @@ class RequireContext final : public JSObject {
   }
 
  private:
+#ifdef HERMESVM_SERIALIZE
+  explicit RequireContext(Deserializer &d);
+
+  friend void RequireContextDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   RequireContext(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
       : JSObject(runtime, &vt.base, parent, clazz) {}
 };

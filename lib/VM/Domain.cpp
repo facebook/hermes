@@ -314,16 +314,19 @@ void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+RequireContext::RequireContext(Deserializer &d) : JSObject(d, &vt.base) {}
+
 void RequireContextSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs()
-      << "Serialize function not implemented for RequireContext\n");
+  JSObject::serializeObjectImpl(s, cell);
+  s.endObject(cell);
 }
 
 void RequireContextDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs()
-      << "Deserialize function not implemented for RequireContext\n");
+  assert(kind == CellKind::RequireContextKind && "Expected RequireContext");
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::No>(
+      sizeof(RequireContext));
+  auto *cell = new (mem) RequireContext(d);
+  d.endObject(cell);
 }
 #endif
 
