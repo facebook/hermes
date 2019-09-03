@@ -35,13 +35,30 @@ void EnvironmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 #ifdef HERMESVM_SERIALIZE
 void EnvironmentSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for Environment\n");
+  auto *self = vmcast<const Environment>(cell);
+  s.writeInt<uint32_t>(self->size_);
+  s.writeRelocation(self->parentEnvironment_.get(s.getRuntime()));
+  // Write Trailing GCHermesValue
+  for (uint32_t i = 0; i < self->size_; i++) {
+    s.writeHermesValue(self->getSlots()[i]);
+  }
+
+  s.endObject(cell);
 }
 
 void EnvironmentDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for Environment\n");
+  assert(kind == CellKind::EnvironmentKind && "Expected Environment");
+  uint32_t size = d.readInt<uint32_t>();
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
+      Environment::allocationSize(size));
+  auto *cell = new (mem) Environment(d.getRuntime(), size);
+  d.readRelocation(&cell->parentEnvironment_, RelocationKind::GCPointer);
+  // Update Traling GCHermesValue
+  for (uint32_t i = 0; i < size; i++) {
+    d.readHermesValue(&cell->slot(i));
+  }
+
+  d.endObject(cell);
 }
 #endif
 //===----------------------------------------------------------------------===//

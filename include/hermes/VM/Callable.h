@@ -30,6 +30,11 @@ class Environment final
   const uint32_t size_;
 
  public:
+#ifdef HERMESVM_SERIALIZE
+  friend void EnvironmentSerialize(Serializer &s, const GCCell *cell);
+  friend void EnvironmentDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   static VTable vt;
 
   static bool classof(const GCCell *cell) {
@@ -62,6 +67,11 @@ class Environment final
     return getSlots()[index];
   }
 
+  /// Gets the amount of memory required by this object for a given size.
+  static uint32_t allocationSize(uint32_t size) {
+    return totalSizeToAlloc<GCHermesValue>(size);
+  }
+
  private:
   /// \param parentEnvironment the parent lexical environment, or nullptr if the
   ///   parent is the global scope.
@@ -81,17 +91,20 @@ class Environment final
         getSlots(), getSlots() + size, HermesValue::encodeUndefinedValue());
   }
 
+#ifdef HERMESVM_SERIALIZE
+  /// Fast constructor used by Deserializer, do not take \p parentEnvironment as
+  /// an argument. Don't initialize slots.
+  Environment(Runtime *runtime, uint32_t size)
+      : VariableSizeRuntimeCell(&runtime->getHeap(), &vt, allocationSize(size)),
+        size_(size) {}
+#endif
+
   /// \return a pointer to the array of HermesValue.
   GCHermesValue *getSlots() {
     return getTrailingObjects<GCHermesValue>();
   }
   const GCHermesValue *getSlots() const {
     return getTrailingObjects<GCHermesValue>();
-  }
-
-  /// Gets the amount of memory required by this object for a given size.
-  static uint32_t allocationSize(uint32_t size) {
-    return totalSizeToAlloc<GCHermesValue>(size);
   }
 };
 
