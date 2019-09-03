@@ -231,14 +231,14 @@ class Serializer {
   /// flushed to the end of the serialized stream.
   std::vector<char> charBuf_;
 
-  /// Offset for the next string to be put into charBuf_.
+  /// Index into charBuf_ for the next string to be put into charBuf_.
   uint32_t charBufOffset_{0};
 
   /// Buffer to store static char16_t* string literals during serialization,
   /// will be flushed to the end of the serialized stream.
   std::vector<char16_t> char16Buf_;
 
-  /// Offset for the next string to be put into char16Buf_.
+  /// Index into char16Buf_ for the next string to be put into char16Buf_.
   uint32_t char16BufOffset_{0};
 };
 

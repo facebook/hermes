@@ -13,6 +13,7 @@ var sym2 = Symbol();
 var sym3 = Symbol(undefined);
 var sym4 = Symbol('asdf');
 var sym5 = Symbol({toString: function() {return 'asdf'}})
+var sym_føø = Symbol('føø');
 
 var obj = {};
 var a = Symbol('x');
@@ -41,6 +42,8 @@ serializeVM(function() {
   // CHECK-NEXT: Symbol(asdf)
   print(sym5.toString());
   // CHECK-NEXT: Symbol(asdf)
+  print(sym_føø.toString());
+  // CHECK-NEXT: Symbol(føø)
 
   print(syms.length, String(syms[0]), String(syms[1]));
   // CHECK-NEXT: 2 Symbol(x) Symbol(y)

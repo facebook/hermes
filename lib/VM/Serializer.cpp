@@ -124,14 +124,15 @@ void Serializer::flushCharBufs() {
   if (char16BufOffset_ > 0) {
     // Write char16Buf_.
     assert(
-        char16BufOffset_ == char16Buf_.size() * 2 &&
+        char16BufOffset_ == char16Buf_.size() &&
         "Illegal offset for string buffer");
     os_.write(
-        reinterpret_cast<char *>(char16Buf_.data()), char16BufOffset_ * 2);
-    writtenBytes_ += char16BufOffset_ * 2;
+        reinterpret_cast<char *>(char16Buf_.data()),
+        char16BufOffset_ * sizeof(char16_t));
+    writtenBytes_ += char16BufOffset_ * sizeof(char16_t);
   }
   // Write size of char16Buf_.
-  writeInt<uint32_t>(char16BufOffset_ * 2);
+  writeInt<uint32_t>(char16BufOffset_ * sizeof(char16_t));
 }
 
 void Serializer::serializeCell(const GCCell *cell) {
