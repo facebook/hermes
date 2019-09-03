@@ -38,9 +38,9 @@ class TestCell final : public GCCell {
         TestCell(&runtime.getHeap(), numMarkWeakCalls);
   }
 
-  static void _markWeakImpl(GCCell *cell, GC *gc) {
-    auto *self = vmcast_during_gc<TestCell>(cell, gc);
-    gc->markWeakRef(self->weak);
+  static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
+    auto *self = reinterpret_cast<TestCell *>(cell);
+    acceptor.accept(self->weak);
     ++*self->numMarkWeakCalls;
   }
 

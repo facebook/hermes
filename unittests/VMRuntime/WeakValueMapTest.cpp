@@ -28,7 +28,7 @@ TEST_F(WeakValueMapTest, SmokeTest) {
   WeakValueMap<int, JSNumber> wvp{};
 
   runtime->addCustomWeakRootsFunction(
-      [&](GC *gc, WeakRefAcceptor &) { wvp.markWeakRefs(gc); });
+      [&](GC *, WeakRefAcceptor &acceptor) { wvp.markWeakRefs(acceptor); });
 
   auto makeNumber = [&](int n) -> JSNumber * {
     auto numRes = JSNumber::create(

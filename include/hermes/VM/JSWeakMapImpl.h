@@ -159,10 +159,9 @@ class JSWeakMapImplBase : public JSObject {
     self->~JSWeakMapImplBase();
   }
 
-  static void _markWeakImpl(GCCell *cell, GC *gc) {
-    auto *self = vmcast_during_gc<JSWeakMapImplBase>(cell, gc);
-    self->markWeakRefs(gc);
-  }
+  /// Mark weak references and set hasFreeableSlots_ if invalidated slots
+  /// were found.
+  static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
 
   static size_t _mallocSizeImpl(GCCell *cell) {
     auto *self = vmcast<JSWeakMapImplBase>(cell);
@@ -173,10 +172,6 @@ class JSWeakMapImplBase : public JSObject {
   size_t getMallocSize() const {
     return map_.getMemorySize();
   }
-
-  /// Mark weak references and set hasFreeableSlots_ if invalidated slots
-  /// were found.
-  void markWeakRefs(GC *gc);
 
   /// Iterate the slots in map_ and call deleteInternal on any invalid
   /// references, adding all available slots to the free list.

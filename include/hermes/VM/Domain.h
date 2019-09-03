@@ -223,13 +223,13 @@ class Domain final : public GCCell {
   static void _finalizeImpl(GCCell *cell, GC *gc);
 
   /// Mark all the weak references for an object.
-  static void _markWeakImpl(GCCell *cell, GC *gc);
+  static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
 
   /// \return the amount of non-GC memory being used by the given \p cell.
   static size_t _mallocSizeImpl(GCCell *cell);
 
   /// Mark the WeakRefs in associated RuntimeModules which point to this Domain.
-  void markWeakRefs(GC *gc);
+  void markWeakRefs(WeakRefAcceptor &acceptor);
 };
 
 /// The context used as the "this" value for require() calls, to allow the

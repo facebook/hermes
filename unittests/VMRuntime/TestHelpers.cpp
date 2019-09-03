@@ -85,9 +85,6 @@ void DummyRuntime::markRoots(RootAcceptor &acceptor, bool) {
     acceptor.acceptPtr(*pp);
   for (HermesValue *pp : valueRoots)
     acceptor.accept(*pp);
-
-  if (markExtra)
-    markExtra(&getHeap(), acceptor);
   acceptor.endRootSection();
 }
 
@@ -95,6 +92,8 @@ void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor) {
   for (void **ptr : weakRoots) {
     acceptor.acceptWeak(*ptr);
   }
+  if (markExtraWeak)
+    markExtraWeak(acceptor);
 }
 
 std::string DummyRuntime::convertSymbolToUTF8(SymbolID) {

@@ -99,9 +99,9 @@ HermesValue JSWeakMapImplBase::getValue(
   return self->valueStorage_.get(runtime)->at(it->second);
 }
 
-/// Mark weak references and remove any invalid weak refs.
-void JSWeakMapImplBase::markWeakRefs(GC *gc) {
-  for (auto it = map_.begin(); it != map_.end(); ++it) {
+void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
+  auto *self = reinterpret_cast<JSWeakMapImplBase *>(cell);
+  for (auto it = self->map_.begin(); it != self->map_.end(); ++it) {
     // We must mark the weak ref regardless of whether the ref is valid here,
     // because JSWeakMapImplBase still has a pointer from map_ into the
     // reference. If we were to skip marking this particular ref, it could be
@@ -109,11 +109,11 @@ void JSWeakMapImplBase::markWeakRefs(GC *gc) {
     // Then, if the GC runs before we call deleteInternal on the ref,
     // we would attempt to call markWeakRef on a freed ref, which is a violation
     // of the markWeakRef contract.
-    gc->markWeakRef(it->first.ref);
+    acceptor.accept(it->first.ref);
     if (!it->first.ref.isValid()) {
       // Set the hasFreeableSlots_ to indicate that this slot can be
       // cleaned up the next time we add an element to this map.
-      hasFreeableSlots_ = true;
+      self->hasFreeableSlots_ = true;
     }
   }
 }

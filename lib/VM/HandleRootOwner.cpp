@@ -21,9 +21,9 @@ void HandleRootOwner::markGCScopes(SlotAcceptor &acceptor) {
     gcScope->mark(acceptor);
 }
 
-void HandleRootOwner::markWeakRefs(GC *gc) {
+void HandleRootOwner::markWeakRefs(WeakRefAcceptor &acceptor) {
   for (auto &weakRef : weakRefs_) {
-    gc->markWeakRef(weakRef);
+    acceptor.accept(weakRef);
   }
 }
 

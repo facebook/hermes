@@ -15,16 +15,11 @@ namespace vm {
 
 template <typename Acceptor>
 void GCBase::markWeakRefsIfNecessary(
-    GC *gc,
     GCCell *cell,
     const VTable *vt,
     Acceptor &acceptor) {
   markWeakRefsIfNecessary(
-      gc,
-      cell,
-      vt,
-      acceptor,
-      std::is_convertible<Acceptor &, WeakRefAcceptor &>{});
+      cell, vt, acceptor, std::is_convertible<Acceptor &, WeakRefAcceptor &>{});
 }
 
 template <typename Acceptor>
@@ -46,7 +41,7 @@ inline void GCBase::markCell(
     const VTable *vt,
     GC *gc) {
   visitor.visit(cell, gc->metaTable_[static_cast<size_t>(vt->kind)]);
-  markWeakRefsIfNecessary(gc, cell, vt, visitor.acceptor_);
+  markWeakRefsIfNecessary(cell, vt, visitor.acceptor_);
 }
 
 template <typename Acceptor>
@@ -59,7 +54,7 @@ inline void GCBase::markCellWithinRange(
     const char *end) {
   visitor.visitWithinRange(
       cell, gc->metaTable_[static_cast<size_t>(vt->kind)], begin, end);
-  markWeakRefsIfNecessary(gc, cell, vt, visitor.acceptor_);
+  markWeakRefsIfNecessary(cell, vt, visitor.acceptor_);
 }
 
 template <typename Acceptor>
@@ -69,7 +64,7 @@ inline void GCBase::markCellWithNames(
     GC *gc) {
   const VTable *vt = cell->getVT();
   visitor.visit(cell, gc->metaTable_[static_cast<size_t>(vt->kind)]);
-  markWeakRefsIfNecessary(gc, cell, vt, visitor.acceptor_);
+  markWeakRefsIfNecessary(cell, vt, visitor.acceptor_);
 }
 
 } // namespace vm

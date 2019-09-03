@@ -101,14 +101,14 @@ Domain::~Domain() {
   }
 }
 
-void Domain::_markWeakImpl(GCCell *cell, GC *gc) {
-  auto *self = vmcast_during_gc<Domain>(cell, gc);
-  self->markWeakRefs(gc);
+void Domain::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
+  auto *self = reinterpret_cast<Domain *>(cell);
+  self->markWeakRefs(acceptor);
 }
 
-void Domain::markWeakRefs(GC *gc) {
+void Domain::markWeakRefs(WeakRefAcceptor &acceptor) {
   for (RuntimeModule *rm : runtimeModules_) {
-    rm->markDomainRef(gc);
+    rm->markDomainRef(acceptor);
   }
 }
 

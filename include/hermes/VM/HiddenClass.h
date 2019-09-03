@@ -418,7 +418,7 @@ class HiddenClass final : public GCCell {
   static void _finalizeImpl(GCCell *cell, GC *gc);
 
   /// Mark all the weak references for an object.
-  static void _markWeakImpl(GCCell *cell, GC *gc);
+  static void _markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor);
 
   /// \return the amount of non-GC memory being used by the given \p cell, which
   /// is assumed to be a HiddenClass.

@@ -115,9 +115,9 @@ void HiddenClassDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-void HiddenClass::_markWeakImpl(GCCell *cell, GC *gc) {
-  auto *self = vmcast_during_gc<HiddenClass>(cell, gc);
-  self->transitionMap_.markWeakRefs(gc);
+void HiddenClass::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
+  auto *self = reinterpret_cast<HiddenClass *>(cell);
+  self->transitionMap_.markWeakRefs(acceptor);
 }
 
 void HiddenClass::_finalizeImpl(GCCell *cell, GC *) {

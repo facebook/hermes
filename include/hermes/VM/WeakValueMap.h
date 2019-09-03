@@ -119,10 +119,10 @@ class WeakValueMap {
 
   /// This method should be invoked during garbage collection. It calls
   /// gc->markWeakRef() with every valid WeakRef in the map.
-  void markWeakRefs(GC *gc) {
+  void markWeakRefs(WeakRefAcceptor &acceptor) {
     for (auto it = map_.begin(), e = map_.end(); it != e; ++it) {
       if (it->second.isValid())
-        gc->markWeakRef(it->second);
+        acceptor.accept(it->second);
       else
         map_.erase(it);
     }

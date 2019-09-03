@@ -396,8 +396,8 @@ void RuntimeModule::markWeakRoots(WeakRefAcceptor &acceptor) {
   }
 }
 
-void RuntimeModule::markDomainRef(GC *gc) {
-  gc->markWeakRef(domain_);
+void RuntimeModule::markDomainRef(WeakRefAcceptor &acceptor) {
+  acceptor.accept(domain_);
 }
 
 llvm::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(

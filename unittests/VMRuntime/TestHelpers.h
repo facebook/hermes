@@ -225,7 +225,7 @@ struct DummyRuntime final : public HandleRootOwner,
   std::vector<GCCell **> pointerRoots{};
   std::vector<HermesValue *> valueRoots{};
   std::vector<void **> weakRoots{};
-  std::function<void(GC *, SlotAcceptor &)> markExtra{};
+  std::function<void(WeakRefAcceptor &)> markExtraWeak{};
 
   /// Create a DummyRuntime with the default parameters.
   static std::shared_ptr<DummyRuntime> create(

@@ -13,6 +13,7 @@
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/Metadata.h"
 #include "hermes/VM/PointerBase.h"
+#include "hermes/VM/SlotAcceptor.h"
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -97,7 +98,7 @@ struct VTable {
   using FinalizeCallback = void(GCCell *, GC *gc);
   FinalizeCallback *const finalize_;
   /// Call gc functions on weak-reference-holding objects.
-  using MarkWeakCallback = void(GCCell *, GC *gc);
+  using MarkWeakCallback = void(GCCell *, WeakRefAcceptor &);
   MarkWeakCallback *const markWeak_;
   /// Report if there is any size contribution from an object beyond the GC.
   /// Used to report any externally allocated memory for metric gathering.
@@ -154,10 +155,10 @@ struct VTable {
     finalize_(cell, gc);
   }
 
-  void markWeakIfExists(GCCell *cell, GC *gc) const {
+  void markWeakIfExists(GCCell *cell, WeakRefAcceptor &acceptor) const {
     assert(isValid());
     if (markWeak_) {
-      markWeak_(cell, gc);
+      markWeak_(cell, acceptor);
     }
   }
 

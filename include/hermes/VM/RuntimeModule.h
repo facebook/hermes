@@ -313,7 +313,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   void markWeakRoots(WeakRefAcceptor &acceptor);
 
   /// Mark the weak reference to the Domain which owns this RuntimeModule.
-  void markDomainRef(GC *gc);
+  void markDomainRef(WeakRefAcceptor &acceptor);
 
   /// \return an estimate of the size of additional memory used by this
   /// RuntimeModule.

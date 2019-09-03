@@ -525,7 +525,7 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor) {
   acceptor.beginRootSection(RootAcceptor::Section::WeakRefs);
   for (auto &rm : runtimeModuleList_)
     rm.markWeakRoots(acceptor);
-  markWeakRefs(&getHeap());
+  markWeakRefs(acceptor);
   for (auto &fn : customMarkWeakRootFuncs_)
     fn(&getHeap(), acceptor);
   acceptor.endRootSection();

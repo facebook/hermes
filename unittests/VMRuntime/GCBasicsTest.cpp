@@ -250,9 +250,9 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   // Test that freeing an object correctly "empties" the weak ref slot but
   // preserves the other slot.
   rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&a2));
-  rt.markExtra = [&](GC *gc, SlotAcceptor &) {
-    gc->markWeakRef(wr1);
-    gc->markWeakRef(wr2);
+  rt.markExtraWeak = [&](WeakRefAcceptor &acceptor) {
+    acceptor.accept(wr1);
+    acceptor.accept(wr2);
   };
 
   // a1 is supposed to be freed during the following collection, so clear
@@ -267,7 +267,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   ASSERT_EQ(a2, wr2.unsafeGetHermesValue().getPointer());
 
   // Make the slot unreachable and test that it is freed.
-  rt.markExtra = [&](GC *gc, SlotAcceptor &) { gc->markWeakRef(wr2); };
+  rt.markExtraWeak = [&](WeakRefAcceptor &acceptor) { acceptor.accept(wr2); };
   gc.collect();
 
   ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot()->extra);
@@ -310,10 +310,10 @@ TEST_F(GCBasicsTest, WeakRefYoungGenCollectionTest) {
   // Create a root for d0.  We'll only be doing young-gen collections, so
   // we don't have to root dOld.
   rt.pointerRoots.push_back(reinterpret_cast<GCCell **>(&d0));
-  rt.markExtra = [&](GC *gc, SlotAcceptor &) {
-    gc->markWeakRef(wr0);
-    gc->markWeakRef(wr1);
-    gc->markWeakRef(wrOld);
+  rt.markExtraWeak = [&](WeakRefAcceptor &acceptor) {
+    acceptor.accept(wr0);
+    acceptor.accept(wr1);
+    acceptor.accept(wrOld);
   };
 
   // d1 is supposed to be freed during the following collection, so clear

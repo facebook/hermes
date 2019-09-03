@@ -120,7 +120,7 @@ class HandleRootOwner {
   void markGCScopes(SlotAcceptor &acceptor);
 
   /// Mark the WeakRefs in the weakRefs_ list.
-  void markWeakRefs(GC *gc);
+  void markWeakRefs(WeakRefAcceptor &acceptor);
 
  private:
   friend class GCScope;
