@@ -54,6 +54,10 @@ void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
   size_t size = d.readInt<size_t>();
   bytecode_ = d.readArrayRef<uint8_t>(size);
+  // bytecode_.begin() is tracked by IDTracker for heapsnapshot. We should do
+  // relocation for it.
+  d.endObject(bytecode_.begin());
+
   d.readData(&flagBits_, sizeof(flagBits_));
 }
 
@@ -62,6 +66,10 @@ void RegExpSerialize(Serializer &s, const GCCell *cell) {
   JSObject::serializeObjectImpl(s, cell);
   s.writeInt<size_t>(self->bytecode_.size());
   s.writeData(self->bytecode_.begin(), self->bytecode_.size());
+  // bytecode_.begin() is tracked by IDTracker for heapsnapshot. We should do
+  // relocation for it.
+  s.endObject(self->bytecode_.begin());
+
   s.writeData(&self->flagBits_, sizeof(self->flagBits_));
 
   s.endObject(cell);

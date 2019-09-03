@@ -1590,6 +1590,9 @@ void Runtime::serialize(Serializer &s) {
   s.writeCurrentOffset();
   heap_.serializeHeap(s);
 
+  s.writeCurrentOffset();
+  heap_.getIDTracker().serialize(s);
+
   // In the end record the size of the object table and flush the string
   // buffers, so the deserializer can read it. TODO: perhaps seek to the
   // beginning and record there.
@@ -1787,6 +1790,9 @@ void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
 
   d.readAndCheckOffset();
   heap_.deserializeHeap(d);
+
+  d.readAndCheckOffset();
+  heap_.getIDTracker().deserialize(d);
 
   d.readAndCheckOffset();
   d.flushRelocationQueue();

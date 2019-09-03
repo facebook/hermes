@@ -331,6 +331,14 @@ class GCBase {
     /// the tracking working set small.
     inline void untrackNative(const void *mem);
 
+#ifdef HERMESVM_SERIALIZE
+    /// Serialize this IDTracker to the output stream.
+    void serialize(Serializer &s) const;
+
+    /// Deserialize IDTracker from the MemoryBuffer.
+    void deserialize(Deserializer &d);
+#endif
+
    private:
     /// Get the next unique object ID for a newly created object.
     inline HeapSnapshot::NodeID nextObjectID();

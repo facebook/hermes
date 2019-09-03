@@ -390,5 +390,32 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const SizeFormatObj &sfo) {
 
 GCBase::GCCallbacks::~GCCallbacks() {}
 
+#ifdef HERMESVM_SERIALIZE
+void GCBase::IDTracker::serialize(Serializer &s) const {
+  s.writeInt<HeapSnapshot::NodeID>(nextID_);
+  s.writeInt<HeapSnapshot::NodeID>(nextNativeID_);
+  s.writeInt<size_t>(objectIDMap_.size());
+  for (auto it = objectIDMap_.begin(); it != objectIDMap_.end(); it++) {
+    s.writeRelocation(it->first);
+    s.writeInt<HeapSnapshot::NodeID>(it->second);
+  }
+}
+
+void GCBase::IDTracker::deserialize(Deserializer &d) {
+  nextID_ = d.readInt<HeapSnapshot::NodeID>();
+  nextNativeID_ = d.readInt<HeapSnapshot::NodeID>();
+  size_t size = d.readInt<size_t>();
+  for (size_t i = 0; i < size; i++) {
+    // Heap must have been deserialized before this function. All deserialized
+    // pointer must be non-null at this time.
+    const void *ptr = d.getNonNullPtr();
+    auto res =
+        objectIDMap_.try_emplace(ptr, d.readInt<HeapSnapshot::NodeID>()).second;
+    (void)res;
+    assert(res && "Shouldn't fail to insert during deserialization");
+  }
+}
+#endif
+
 } // namespace vm
 } // namespace hermes

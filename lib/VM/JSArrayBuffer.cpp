@@ -60,6 +60,9 @@ JSArrayBuffer::JSArrayBuffer(Deserializer &d)
   }
   if (size != 0) {
     d.readData(data_, size);
+    // data_ is tracked by IDTracker for heapsnapshot. We should do relocation
+    // for it.
+    d.endObject(data_);
   }
 }
 
@@ -71,6 +74,9 @@ void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
   // Only serialize data_ when attached_.
   if (self->attached_ && self->size_ != 0) {
     s.writeData(self->data_, self->size_);
+    // data_ is tracked by IDTracker for heapsnapshot. We should do relocation
+    // for it.
+    s.endObject(self->data_);
   }
 
   s.endObject(cell);

@@ -154,6 +154,9 @@ void serializeExternalStringImpl(Serializer &s, const GCCell *cell) {
   }
   // Writes the actual string.
   s.writeData(self->getRawPointer(), self->getStringLength() * sizeof(T));
+  // contents_.data() is tracked by IDTracker for heapsnapshot. We should do
+  // relocation for it.
+  s.endObject((void *)self->contents_.data());
 
   s.endObject(cell);
 }
@@ -187,6 +190,11 @@ void deserializeExternalStringImpl(Deserializer &d) {
       sizeof(ExternalStringPrimitive<T>));
   auto *cell = new (mem)
       ExternalStringPrimitive<T>(d.getRuntime(), std::move(contents), uniqued);
+
+  // contents_.data() is tracked by IDTracker for heapsnapshot. We should do
+  // relocation for it.
+  d.endObject((void *)cell->contents_.data());
+
   d.getRuntime()->getHeap().creditExternalMemory(
       cell, cell->getStringLength() * sizeof(T));
   d.endObject(cell);

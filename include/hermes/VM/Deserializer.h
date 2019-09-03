@@ -181,6 +181,16 @@ class Deserializer {
     return objectTable_[id];
   }
 
+  /// Return the new pointer of the next id in the serialized data. Assert the
+  /// id must have been materialized already.
+  void *getNonNullPtr() {
+    uint32_t id = readInt<uint32_t>();
+    assert(id < objectTable_.size() && "invalid relocation id");
+    void *ptr = objectTable_[id];
+    assert(ptr && "ptr is not non-null");
+    return ptr;
+  }
+
   /// Deserialize a GCCell which has CellKind \p kind.
   void deserializeCell(uint8_t kind);
 
