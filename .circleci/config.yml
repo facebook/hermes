@@ -224,6 +224,11 @@ jobs:
             if (-not $?) { throw "Failed to install CMake" }
             choco install --no-progress python3
             if (-not $?) { throw "Failed to install Python" }
+
+            # dotnetfx-4.8.0 requires a reboot, so pin an earlier version
+            choco install --no-progress dotnetfx --version 4.7.2.20180712
+            if (-not $?) { throw "Failed to install dotnetfx" }
+
             # Choco installs of VS2019 are so slow that CircleCI times it out
             # after 10 minutes of perceived inactivity. There's no verbose flag,
             # so we'll just print something occasionally to bump the timer.
