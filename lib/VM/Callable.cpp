@@ -430,15 +430,36 @@ void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+BoundFunction::BoundFunction(Deserializer &d) : Callable(d, &vt.base.base) {
+  d.readRelocation(&target_, RelocationKind::GCPointer);
+  if (d.readInt<uint8_t>()) {
+    argStorage_.set(
+        d.getRuntime(),
+        ArrayStorage::deserializeArrayStorage(d),
+        &d.getRuntime()->getHeap());
+  }
+}
+
 void BoundFunctionSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for BoundFunction\n");
+  auto *self = vmcast<BoundFunction>(cell);
+  serializeCallableImpl(s, cell);
+  s.writeRelocation(self->target_.get(s.getRuntime()));
+  bool hasArray = (bool)self->argStorage_;
+  s.writeInt<uint8_t>(hasArray);
+  if (hasArray) {
+    ArrayStorage::serializeArrayStorage(
+        s, self->argStorage_.get(s.getRuntime()));
+  }
+
+  s.endObject(cell);
 }
 
 void BoundFunctionDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs()
-      << "Deserialize function not implemented for BoundFunction\n");
+  assert(kind == CellKind::BoundFunctionKind && "Expected BoundFunction");
+  void *mem = d.getRuntime()->alloc(sizeof(BoundFunction));
+  void *cell = new (mem) BoundFunction(d);
+
+  d.endObject(cell);
 }
 #endif
 
@@ -1083,14 +1104,29 @@ void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+void serializeFunctionImpl(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const JSFunction>(cell);
+  serializeCallableImpl(s, cell);
+  s.writeRelocation(self->codeBlock_);
+  s.writeRelocation(self->domain_.get(s.getRuntime()));
+}
+
+JSFunction::JSFunction(Deserializer &d, const VTable *vt) : Callable(d, vt) {
+  d.readRelocation(&codeBlock_, RelocationKind::NativePointer);
+  d.readRelocation(&domain_, RelocationKind::GCPointer);
+}
+
 void FunctionSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for Function\n");
+  serializeFunctionImpl(s, cell);
+  s.endObject(cell);
 }
 
 void FunctionDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for Function\n");
+  assert(kind == CellKind::FunctionKind && "Expected Function");
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::No>(
+      sizeof(JSFunction));
+  auto *cell = new (mem) JSFunction(d, &JSFunction::vt.base.base);
+  d.endObject(cell);
 }
 #endif
 
@@ -1156,15 +1192,22 @@ void GeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+JSGeneratorFunction::JSGeneratorFunction(Deserializer &d)
+    : JSFunction(d, &vt.base.base) {}
+
 void GeneratorFunctionSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs()
-      << "Serialize function not implemented for GeneratorFunction\n");
+  // No additional fields compared to JSFunction.
+  serializeFunctionImpl(s, cell);
+  s.endObject(cell);
 }
 
 void GeneratorFunctionDeserialize(Deserializer &d, CellKind kind) {
-  llvm::outs()
-      << "Deserialize function not implemented for GeneratorFunction\n";
+  assert(
+      kind == CellKind::GeneratorFunctionKind && "Expected GeneratorFunction");
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::No>(
+      sizeof(JSFunction));
+  auto *cell = new (mem) JSGeneratorFunction(d);
+  d.endObject(cell);
 }
 #endif
 
@@ -1226,14 +1269,45 @@ void GeneratorInnerFunctionBuildMeta(
 }
 
 #ifdef HERMESVM_SERIALIZE
+GeneratorInnerFunction::GeneratorInnerFunction(Deserializer &d)
+    : JSFunction(d, &vt.base.base) {
+  state_ = (State)d.readInt<uint8_t>();
+  argCount_ = d.readInt<uint32_t>();
+  if (d.readInt<uint8_t>()) {
+    savedContext_.set(
+        d.getRuntime(),
+        ArrayStorage::deserializeArrayStorage(d),
+        &d.getRuntime()->getHeap());
+  }
+  d.readHermesValue(&result_);
+  nextIPOffset_ = d.readInt<uint32_t>();
+  action_ = (Action)d.readInt<uint8_t>();
+}
+
 void GeneratorInnerFunctionSerialize(Serializer &s, const GCCell *cell) {
-  llvm::outs()
-      << "Serialize function not implemented for GeneratorInnerFunction\n";
+  auto *self = vmcast<const GeneratorInnerFunction>(cell);
+  serializeFunctionImpl(s, cell);
+  s.writeInt<uint8_t>((uint8_t)self->state_);
+  s.writeInt<uint32_t>(self->argCount_);
+  bool hasArray = (bool)self->savedContext_;
+  s.writeInt<uint8_t>(hasArray);
+  if (hasArray) {
+    ArrayStorage::serializeArrayStorage(
+        s, self->savedContext_.get(s.getRuntime()));
+  }
+  s.writeHermesValue(self->result_);
+  s.writeInt<uint32_t>(self->nextIPOffset_);
+  s.writeInt<uint8_t>((uint8_t)self->action_);
+  s.endObject(cell);
 }
 
 void GeneratorInnerFunctionDeserialize(Deserializer &d, CellKind kind) {
-  llvm::outs()
-      << "Deserialize function not implemented for GeneratorInnerFunction\n";
+  assert(
+      kind == CellKind::GeneratorInnerFunctionKind &&
+      "Expected GeneratorInnerFunction");
+  void *mem = d.getRuntime()->alloc(sizeof(GeneratorInnerFunction));
+  auto *cell = new (mem) GeneratorInnerFunction(d);
+  d.endObject(cell);
 }
 #endif
 

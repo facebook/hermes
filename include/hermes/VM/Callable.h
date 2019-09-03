@@ -368,6 +368,13 @@ class BoundFunction final : public Callable {
   }
 
  private:
+#ifdef HERMESVM_SERIALIZE
+  explicit BoundFunction(Deserializer &d);
+
+  friend void BoundFunctionSerialize(Serializer &s, const GCCell *cell);
+  friend void BoundFunctionDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   BoundFunction(
       Runtime *runtime,
       JSObject *parent,
@@ -772,6 +779,13 @@ class JSFunction : public Callable {
   GCPointer<Domain> domain_;
 
  protected:
+#ifdef HERMESVM_SERIALIZE
+  JSFunction(Deserializer &d, const VTable *vt);
+
+  friend void serializeFunctionImpl(Serializer &s, const GCCell *cell);
+  friend void FunctionDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   JSFunction(
       Runtime *runtime,
       const VTable *vtp,
@@ -892,6 +906,12 @@ class JSGeneratorFunction final : public JSFunction {
   }
 
  protected:
+#ifdef HERMESVM_SERIALIZE
+  explicit JSGeneratorFunction(Deserializer &d);
+
+  friend void GeneratorFunctionDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   JSGeneratorFunction(
       Runtime *runtime,
       const VTable *vtp,
@@ -1049,6 +1069,15 @@ class GeneratorInnerFunction final : public JSFunction {
   }
 
  protected:
+#ifdef HERMESVM_SERIALIZE
+  explicit GeneratorInnerFunction(Deserializer &d);
+
+  friend void GeneratorInnerFunctionSerialize(
+      Serializer &s,
+      const GCCell *cell);
+  friend void GeneratorInnerFunctionDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   GeneratorInnerFunction(
       Runtime *runtime,
       Domain *domain,
