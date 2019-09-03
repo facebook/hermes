@@ -59,11 +59,7 @@ static void verifyAllBuiltinsFrozen(Runtime *runtime) {
 
 class StaticBuiltinsTest : public RuntimeTestFixture {
  public:
-  StaticBuiltinsTest()
-      // TODO(T35544739): clean up the experiment after we are done.
-      // When we are doing the experiment, set this flag to ensure the default
-      // behavior.
-      : RuntimeTestFixture(experiments::FreezeBuiltinsAndThrowOnOverride) {}
+  StaticBuiltinsTest() {}
 };
 
 TEST_F(StaticBuiltinsTest, FreezeBuiltins) {

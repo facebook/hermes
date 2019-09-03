@@ -1149,19 +1149,8 @@ CallResult<bool> JSObject::putNamed_RJS(
 
     if (LLVM_UNLIKELY(!desc.flags.writable)) {
       if (desc.flags.staticBuiltin) {
-#ifdef NDEBUG
-        // TODO(T35544739): clean up the experiment after we are done.
-        auto experimentFlags = runtime->getVMExperimentFlags();
-        if (experimentFlags & experiments::FreezeBuiltinsAndFatalOnOverride) {
-          hermes_fatal("Attempting to override a static builtin.");
-        } else {
-          return raiseErrorForOverridingStaticBuiltin(
-              selfHandle, runtime, runtime->makeHandle(name));
-        }
-#else
         return raiseErrorForOverridingStaticBuiltin(
             selfHandle, runtime, runtime->makeHandle(name));
-#endif
       }
       if (opFlags.getThrowOnError()) {
         return runtime->raiseTypeError(
@@ -1314,25 +1303,11 @@ CallResult<bool> JSObject::putComputed_RJS(
 
     if (LLVM_UNLIKELY(!desc.flags.writable)) {
       if (desc.flags.staticBuiltin) {
-#ifdef NDEBUG
-        // TODO(T35544739): clean up the experiment after we are done.
-        auto experimentFlags = runtime->getVMExperimentFlags();
-        if (experimentFlags & experiments::FreezeBuiltinsAndFatalOnOverride) {
-          hermes_fatal("Attempting to override a static builtin.");
-        } else {
-          MutableHandle<StringPrimitive> strPrim{runtime};
-          SymbolID id{};
-          LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
-          return raiseErrorForOverridingStaticBuiltin(
-              selfHandle, runtime, runtime->makeHandle(id));
-        }
-#else
         MutableHandle<StringPrimitive> strPrim{runtime};
         SymbolID id{};
         LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
         return raiseErrorForOverridingStaticBuiltin(
             selfHandle, runtime, runtime->makeHandle(id));
-#endif
       }
       if (opFlags.getThrowOnError()) {
         // TODO: better message.

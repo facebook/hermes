@@ -689,23 +689,13 @@ CallResult<HermesValue> Runtime::runBytecode(
 
   auto globalFunctionIndex = bytecode->getGlobalFunctionIndex();
 
-// TODO(T35544739): clean up the experiment after we are done.
-// In non-debug builds, only freeze builtins when we are in experimental groups.
-#ifdef NDEBUG
-  if (vmExperimentFlags_ &
-      (experiments::FreezeBuiltinsAndFatalOnOverride |
-       experiments::FreezeBuiltinsAndThrowOnOverride)) {
-#endif
-    if (bytecode->getBytecodeOptions().staticBuiltins && !builtinsFrozen_) {
-      if (assertBuiltinsUnmodified() == ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      freezeBuiltins();
-      assert(builtinsFrozen_ && "Builtins must be frozen by now.");
+  if (bytecode->getBytecodeOptions().staticBuiltins && !builtinsFrozen_) {
+    if (assertBuiltinsUnmodified() == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
     }
-#ifdef NDEBUG
+    freezeBuiltins();
+    assert(builtinsFrozen_ && "Builtins must be frozen by now.");
   }
-#endif
 
   if (flags.persistent) {
     persistentBCProviders_.push_back(bytecode);

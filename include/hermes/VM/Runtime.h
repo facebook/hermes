@@ -81,8 +81,6 @@ static const unsigned STACK_RESERVE = 32;
 namespace experiments {
 enum {
   Default = 0,
-  FreezeBuiltinsAndThrowOnOverride = 1 << 0,
-  FreezeBuiltinsAndFatalOnOverride = 1 << 1,
   MAdviseSequential = 1 << 2,
   MAdviseRandom = 1 << 3,
   MAdviseStringsSequential = 1 << 4,
