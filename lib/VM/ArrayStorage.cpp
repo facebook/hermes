@@ -35,32 +35,43 @@ void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 #ifdef HERMESVM_SERIALIZE
 void ArrayStorageSerialize(Serializer &s, const GCCell *cell) {
-  auto *self = vmcast<const ArrayStorage>(cell);
-  s.writeInt<uint32_t>(self->capacity_);
-  s.writeInt<uint32_t>(self->size_);
-
-  // Serialize HermesValue in storage
-  for (size_t i = 0; i < self->size_; i++) {
-    s.writeHermesValue(self->data()[i]);
-  }
-  s.endObject(cell);
+  hermes_fatal("ArrayStorage should be serialized with its owner");
 }
 
 void ArrayStorageDeserialize(Deserializer &d, CellKind kind) {
-  assert(kind == CellKind::ArrayStorageKind && "Expected ArrayStorage");
-  uint32_t capacity = d.readInt<uint32_t>();
+  hermes_fatal("ArrayStorage should be deserialized with its owner");
+}
+
+void ArrayStorage::serializeArrayStorage(
+    Serializer &s,
+    const ArrayStorage *cell) {
+  s.writeInt<size_type>(cell->capacity_);
+  s.writeInt<size_type>(cell->size_);
+
+  // Serialize HermesValue in storage. There is no native pointer.
+  for (size_type i = 0; i < cell->size_; i++) {
+    s.writeHermesValue(cell->data()[i]);
+  }
+
+  s.endObject(cell);
+}
+
+ArrayStorage *ArrayStorage::deserializeArrayStorage(Deserializer &d) {
+  uint32_t capacity = d.readInt<size_type>();
   assert(capacity <= ArrayStorage::maxElements() && "invalid capacity");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
       ArrayStorage::allocationSize(capacity));
   auto *cell = new (mem) ArrayStorage(d.getRuntime(), capacity);
-  cell->size_ = d.readInt<uint32_t>();
   assert(cell->size_ <= capacity && "size cannot be greater than capacity");
-  // Read the storage
-  for (size_t i = 0; i < cell->size_; i++) {
-    d.readHermesValue(&cell->at(i));
+  cell->size_ = d.readInt<size_type>();
+
+  // Deserialize HermesValue in storage. There are no native pointers.
+  for (size_type i = 0; i < cell->size_; i++) {
+    d.readHermesValue(&cell->data()[i]);
   }
 
   d.endObject(cell);
+  return cell;
 }
 #endif
 

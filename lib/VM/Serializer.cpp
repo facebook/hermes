@@ -123,6 +123,9 @@ void Serializer::flushCharBufs() {
 }
 
 void Serializer::serializeCell(const GCCell *cell) {
+  assert(
+      (CellKind)cell->getKind() != CellKind::ArrayStorageKind &&
+      "ArrayStorage should be serialized and deserialized with its owner.");
   serializeImpl[(uint8_t)cell->getKind()](*this, cell);
 }
 

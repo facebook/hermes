@@ -92,7 +92,14 @@ void JSObject::serializeObjectImpl(Serializer &s, const GCCell *cell) {
   s.writeData(&self->flags_, sizeof(ObjectFlags));
   s.writeRelocation(self->parent_.get(s.getRuntime()));
   s.writeRelocation(self->clazz_.get(s.getRuntime()));
-  s.writeRelocation(self->propStorage_.get(s.getRuntime()));
+  // propStorage_ : GCPointer<PropStorage> is also ArrayStorage. Serialize
+  // *propStorage_ with this JSObject.
+  bool hasArray = (bool)self->propStorage_;
+  s.writeInt<uint8_t>(hasArray);
+  if (hasArray) {
+    ArrayStorage::serializeArrayStorage(
+        s, self->propStorage_.get(s.getRuntime()));
+  }
 
   for (size_t i = 0; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
     s.writeHermesValue(self->directProps_[i]);
@@ -117,7 +124,12 @@ JSObject::JSObject(Deserializer &d, const VTable *vtp)
   d.readData(&flags_, sizeof(ObjectFlags));
   d.readRelocation(&parent_, RelocationKind::GCPointer);
   d.readRelocation(&clazz_, RelocationKind::GCPointer);
-  d.readRelocation(&propStorage_, RelocationKind::GCPointer);
+  if (d.readInt<uint8_t>()) {
+    propStorage_.set(
+        d.getRuntime(),
+        ArrayStorage::deserializeArrayStorage(d),
+        &d.getRuntime()->getHeap());
+  }
 
   for (size_t i = 0; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
     d.readHermesValue(&directProps_[i]);

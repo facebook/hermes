@@ -63,7 +63,13 @@ void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 #ifdef HERMESVM_SERIALIZE
 OrderedHashMap::OrderedHashMap(Deserializer &d)
     : GCCell(&d.getRuntime()->getHeap(), &vt) {
-  d.readRelocation(&hashTable_, RelocationKind::GCPointer);
+  if (d.readInt<uint8_t>()) {
+    hashTable_.set(
+        d.getRuntime(),
+        ArrayStorage::deserializeArrayStorage(d),
+        &d.getRuntime()->getHeap());
+  }
+
   d.readRelocation(&firstIterationEntry_, RelocationKind::GCPointer);
   d.readRelocation(&lastIterationEntry_, RelocationKind::GCPointer);
   capacity_ = d.readInt<uint32_t>();
@@ -72,7 +78,15 @@ OrderedHashMap::OrderedHashMap(Deserializer &d)
 
 void OrderedHashMapSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const OrderedHashMap>(cell);
-  s.writeRelocation(self->hashTable_.get(s.getRuntime()));
+  // If we have an ArrayStorage, it doesn't store any native pointers. Serialize
+  // it here.
+  bool hasArray = (bool)self->hashTable_;
+  s.writeInt<uint8_t>(hasArray);
+  if (hasArray) {
+    ArrayStorage::serializeArrayStorage(
+        s, self->hashTable_.get(s.getRuntime()));
+  }
+
   s.writeRelocation(self->firstIterationEntry_.get(s.getRuntime()));
   s.writeRelocation(self->lastIterationEntry_.get(s.getRuntime()));
   s.writeInt<uint32_t>(self->capacity_);

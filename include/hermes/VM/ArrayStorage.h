@@ -20,6 +20,10 @@ namespace vm {
 /// values in objects and also indexed property values in arrays. It supports
 /// resizing on both ends which is necessary for the simplest implementation of
 /// JavaScript arrays (using a base offset and length).
+/// Note: ArrayStorage does not support direct serialization as a heap object.
+/// However a convenience method is provided to serialize an ArrayStorage, as
+/// part of the record of its owning object. In this case the ArrayStorage must
+/// not contain any native pointers.
 class ArrayStorage final
     : public VariableSizeRuntimeCell,
       private llvm::TrailingObjects<ArrayStorage, GCHermesValue> {
@@ -33,8 +37,13 @@ class ArrayStorage final
   static VTable vt;
 
 #ifdef HERMESVM_SERIALIZE
-  friend void ArrayStorageSerialize(Serializer &s, const GCCell *cell);
-  friend void ArrayStorageDeserialize(Deserializer &d, CellKind kind);
+  /// A convinience method to serialize an ArrayStorage which does not contain
+  /// any native pointers.
+  static void serializeArrayStorage(Serializer &s, const ArrayStorage *cell);
+
+  /// A convinience method to deserialize an ArrayStorage which does not contain
+  /// any native pointers.
+  static ArrayStorage *deserializeArrayStorage(Deserializer &d);
 #endif
 
   /// Gets the amount of memory used by this object for a given \p capacity.

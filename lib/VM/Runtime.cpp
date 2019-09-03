@@ -1606,6 +1606,16 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
 
+  // stringCycleCheckVisited_ owns an ArrayStorage. This is managed via a RAII
+  // so it will never be cleared when deserialized if we serialize it. We will
+  // not serialize the contents of this storage but only do relocation for the
+  // ArrayStorage *.
+  bool hasArray = (bool)vmcast<ArrayStorage>(stringCycleCheckVisited_);
+  s.writeInt<uint8_t>(hasArray);
+  if (hasArray) {
+    s.endObject(vmcast<ArrayStorage>(stringCycleCheckVisited_));
+  }
+
   // Do not Serialize any raw pointers. Get those pointers after relocation
   // finishes.
 
@@ -1672,6 +1682,14 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
 #define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
+
+  // stringCycleCheckVisited_ owns an ArrayStorage. It is managed via a RAII so
+  // we don't serialize the contents of the storage. Create an empty
+  // ArrayStorage here if needed to handle relocation.
+  if (d.readInt<uint8_t>()) {
+    auto arrRes = this->ignoreAllocationFailure(ArrayStorage::create(this, 0));
+    d.endObject(vmcast<ArrayStorage>(arrRes));
+  }
 
   // Do not Deserialize any raw pointers now. Get those pointers after
   // relocation finishes.

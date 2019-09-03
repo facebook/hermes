@@ -31,7 +31,12 @@ void DomainBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 #ifdef HERMESVM_SERIALIZE
 Domain::Domain(Deserializer &d) : GCCell(&d.getRuntime()->getHeap(), &vt) {
-  d.readRelocation(&cjsModules_, RelocationKind::GCPointer);
+  if (d.readInt<uint8_t>()) {
+    cjsModules_.set(
+        d.getRuntime(),
+        Domain::deserializeArrayStorage(d),
+        &d.getRuntime()->getHeap());
+  }
   // Field llvm::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
   // Deserializing the CommonJS module table is unnecessary to deserialize
   // global object initialization.
@@ -49,7 +54,12 @@ Domain::Domain(Deserializer &d) : GCCell(&d.getRuntime()->getHeap(), &vt) {
 
 void DomainSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const Domain>(cell);
-  s.writeRelocation(self->cjsModules_.get(s.getRuntime()));
+  // If we have an ArrayStorage serialize it here.
+  bool hasArray = (bool)self->cjsModules_;
+  s.writeInt<uint8_t>(hasArray);
+  if (hasArray) {
+    Domain::serializeArrayStorage(s, self->cjsModules_.get(s.getRuntime()));
+  }
   // Field llvm::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
   // Serializing the CommonJS module table is unnecessary to serialize global
   // object initialization.
@@ -76,6 +86,41 @@ void DomainDeserialize(Deserializer &d, CellKind kind) {
   auto &samplingProfiler = SamplingProfiler::getInstance();
   samplingProfiler->increaseDomainCount();
   d.endObject(cell);
+}
+
+void Domain::serializeArrayStorage(Serializer &s, const ArrayStorage *cell) {
+  assert(
+      cell->size() % runtimeModuleOffset == 0 && "Invalid ArrayStorage size");
+  s.writeInt<ArrayStorage::size_type>(cell->capacity());
+  s.writeInt<ArrayStorage::size_type>(cell->size());
+  for (ArrayStorage::size_type i = 0; i < cell->size(); i += CJSModuleSize) {
+    s.writeHermesValue(cell->data()[i + CachedExportsOffset]);
+    s.writeHermesValue(cell->data()[i + ModuleOffset]);
+    s.writeHermesValue(cell->data()[i + FunctionIndexOffset]);
+    s.writeHermesValue(
+        cell->data()[i + runtimeModuleOffset], /* nativePointer */ true);
+  }
+  s.endObject(cell);
+}
+
+ArrayStorage *Domain::deserializeArrayStorage(Deserializer &d) {
+  ArrayStorage::size_type capacity = d.readInt<ArrayStorage::size_type>();
+  ArrayStorage::size_type size = d.readInt<ArrayStorage::size_type>();
+  assert(size % runtimeModuleOffset == 0 && "Invalid ArrayStorage size");
+  auto cjsModulesRes = ArrayStorage::create(d.getRuntime(), capacity, size);
+  if (LLVM_UNLIKELY(cjsModulesRes == ExecutionStatus::EXCEPTION)) {
+    hermes_fatal("fail to allocate memory for CJSModules");
+  }
+  auto *cell = vmcast<ArrayStorage>(*cjsModulesRes);
+  for (ArrayStorage::size_type i = 0; i < cell->size(); i += CJSModuleSize) {
+    d.readHermesValue(&cell->data()[i + CachedExportsOffset]);
+    d.readHermesValue(&cell->data()[i + ModuleOffset]);
+    d.readHermesValue(&cell->data()[i + FunctionIndexOffset]);
+    d.readHermesValue(
+        &cell->data()[i + runtimeModuleOffset], /* nativePointer */ true);
+  }
+  d.endObject(cell);
+  return cell;
 }
 #endif
 

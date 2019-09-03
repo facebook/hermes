@@ -44,8 +44,22 @@ void ErrorSerialize(Serializer &s, const GCCell *cell) {
   // serialize/deserialize after user code.
 
   auto *self = vmcast<const JSError>(cell);
-  s.writeRelocation(self->domains_.get(s.getRuntime()));
-  s.writeRelocation(self->funcNames_.get(s.getRuntime()));
+  // If we have an ArrayStorage, it doesn't store any native pointers. Serialize
+  // it here.
+  bool hasArray = (bool)self->domains_;
+  s.writeInt<uint8_t>(hasArray);
+  if (hasArray) {
+    ArrayStorage::serializeArrayStorage(s, self->domains_.get(s.getRuntime()));
+  }
+
+  // funcNames_ : GCPointer<PropStorage> is also ArrayStorage. Serialize it with
+  // JSError.
+  hasArray = (bool)self->funcNames_;
+  s.writeInt<uint8_t>(hasArray);
+  if (hasArray) {
+    ArrayStorage::serializeArrayStorage(
+        s, self->funcNames_.get(s.getRuntime()));
+  }
   s.writeInt<uint8_t>(self->catchable_);
   s.endObject(cell);
 }
@@ -60,8 +74,22 @@ void ErrorDeserialize(Deserializer &d, CellKind kind) {
 }
 
 JSError::JSError(Deserializer &d) : JSObject(d, &vt.base) {
-  d.readRelocation(&domains_, RelocationKind::GCPointer);
-  d.readRelocation(&funcNames_, RelocationKind::GCPointer);
+  // Deserialize domains.
+  if (d.readInt<uint8_t>()) {
+    domains_.set(
+        d.getRuntime(),
+        ArrayStorage::deserializeArrayStorage(d),
+        &d.getRuntime()->getHeap());
+  }
+
+  // Deserialize funcNames_.
+  if (d.readInt<uint8_t>()) {
+    funcNames_.set(
+        d.getRuntime(),
+        ArrayStorage::deserializeArrayStorage(d),
+        &d.getRuntime()->getHeap());
+  }
+
   catchable_ = d.readInt<uint8_t>();
 }
 #endif

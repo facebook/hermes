@@ -1423,11 +1423,20 @@ void GenGC::serializeHeap(Serializer &s) {
   GCCycle cycle{this};
 
   auto serializeObject = [&s](const GCCell *cell) {
-    s.writeInt<uint8_t>((uint8_t)cell->getKind());
-    LLVM_DEBUG(
-        llvm::dbgs() << "Heap Serialize Cell " << cellKindStr(cell->getKind())
-                     << ", id " << cell->getDebugAllocationId() << "\n");
-    s.serializeCell(cell);
+    // ArrayStorage will be serialized/deserialized with its "owner" because
+    // only its owner knows if this ArrayStorage has native pointer in it.
+    if (cell->getKind() != CellKind::ArrayStorageKind) {
+      LLVM_DEBUG(
+          llvm::dbgs() << "Heap Serialize Cell " << cellKindStr(cell->getKind())
+                       << ", id " << cell->getDebugAllocationId() << "\n");
+      s.writeInt<uint8_t>((uint8_t)cell->getKind());
+      s.serializeCell(cell);
+    } else {
+      LLVM_DEBUG(
+          llvm::dbgs() << "Heap Serialize Skipped Cell "
+                       << cellKindStr(cell->getKind()) << ", id "
+                       << cell->getDebugAllocationId() << "\n");
+    }
   };
 
   oldGen_.forAllObjs(serializeObject);
@@ -1442,6 +1451,11 @@ void GenGC::deserializeHeap(Deserializer &d) {
     LLVM_DEBUG(
         llvm::dbgs() << "Heap Deserialize Cell " << cellKindStr((CellKind)kind)
                      << "\n");
+    // ArrayStorage will be serialized/deserialized with its "owner" because
+    // only its owner knows if this ArrayStorage has native pointer in it.
+    assert(
+        (CellKind)kind != CellKind::ArrayStorageKind &&
+        "ArrayStorage should be deserialized with owner.");
     d.deserializeCell(kind);
   }
 }
