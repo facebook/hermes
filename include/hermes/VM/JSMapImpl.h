@@ -263,6 +263,15 @@ class JSMapIteratorImpl final : public JSObject {
       Metadata::Builder &mb);
 
  protected:
+#ifdef HERMESVM_SERIALIZE
+  explicit JSMapIteratorImpl(Deserializer &d);
+
+  template <CellKind>
+  friend void serializeMapOrSetIteratorImpl(Serializer &s, const GCCell *cell);
+  friend void MapIteratorDeserialize(Deserializer &d, CellKind kind);
+  friend void SetIteratorDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   JSMapIteratorImpl(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
       : JSObject(runtime, &vt.base, parent, clazz) {}
 

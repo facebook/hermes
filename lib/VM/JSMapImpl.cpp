@@ -125,24 +125,45 @@ void SetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+template <CellKind C>
+void serializeMapOrSetIteratorImpl(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const JSMapIteratorImpl<C>>(cell);
+  JSObject::serializeObjectImpl(s, cell);
+  s.writeRelocation(self->data_.get(s.getRuntime()));
+  s.writeRelocation(self->itr_.get(s.getRuntime()));
+  s.writeInt<uint8_t>((uint8_t)self->iterationKind_);
+  s.writeInt<uint8_t>(self->iterationFinished_);
+}
+
+template <CellKind C>
+JSMapIteratorImpl<C>::JSMapIteratorImpl(Deserializer &d)
+    : JSObject(d, &vt.base) {
+  d.readRelocation(&data_, RelocationKind::GCPointer);
+  d.readRelocation(&itr_, RelocationKind::GCPointer);
+  iterationKind_ = (IterationKind)d.readInt<uint8_t>();
+  iterationFinished_ = d.readInt<uint8_t>();
+}
+
 void MapIteratorSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for MapIterator\n");
+  serializeMapOrSetIteratorImpl<CellKind::MapIteratorKind>(s, cell);
+  s.endObject(cell);
 }
 
 void SetIteratorSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for SetIterator\n");
+  serializeMapOrSetIteratorImpl<CellKind::SetIteratorKind>(s, cell);
+  s.endObject(cell);
 }
 
 void MapIteratorDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for MapIterator\n");
+  void *mem = d.getRuntime()->alloc(sizeof(JSMapIterator));
+  auto *cell = new (mem) JSMapIterator(d);
+  d.endObject(cell);
 }
 
 void SetIteratorDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for SetIterator\n");
+  void *mem = d.getRuntime()->alloc(sizeof(JSSetIterator));
+  auto *cell = new (mem) JSSetIterator(d);
+  d.endObject(cell);
 }
 #endif
 
