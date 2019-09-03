@@ -35,14 +35,22 @@ void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+JSGenerator::JSGenerator(Deserializer &d) : JSObject(d, &vt.base) {
+  d.readRelocation(&innerFunction_, RelocationKind::GCPointer);
+}
+
 void GeneratorSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for Generator\n");
+  auto *self = vmcast<const JSGenerator>(cell);
+  JSObject::serializeObjectImpl(s, cell);
+  s.writeRelocation(self->innerFunction_.get(s.getRuntime()));
+  s.endObject(cell);
 }
 
 void GeneratorDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for Generator\n");
+  assert(kind == CellKind::GeneratorKind && "Expected Generator");
+  void *mem = d.getRuntime()->alloc(sizeof(JSGenerator));
+  auto *cell = new (mem) JSGenerator(d);
+  d.endObject(cell);
 }
 #endif
 
