@@ -94,6 +94,13 @@ class JSDataView final : public JSObject {
   }
 
  private:
+#ifdef HERMESVM_SERIALIZE
+  explicit JSDataView(Deserializer &d);
+
+  friend void DataViewSerialize(Serializer &s, const GCCell *cell);
+  friend void DataViewDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   friend void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   /// buffer_ is the underlying storage of the bytes for a DataView.

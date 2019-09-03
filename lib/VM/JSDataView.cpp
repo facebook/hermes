@@ -32,14 +32,27 @@ void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+JSDataView::JSDataView(Deserializer &d) : JSObject(d, &vt.base) {
+  d.readRelocation(&buffer_, RelocationKind::GCPointer);
+  offset_ = d.readInt<size_type>();
+  length_ = d.readInt<size_type>();
+}
+
 void DataViewSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for DataView\n");
+  auto *self = vmcast<const JSDataView>(cell);
+  JSObject::serializeObjectImpl(s, cell);
+  s.writeRelocation(self->buffer_.get(s.getRuntime()));
+  s.writeInt<JSDataView::size_type>(self->offset_);
+  s.writeInt<JSDataView::size_type>(self->length_);
+
+  s.endObject(cell);
 }
 
 void DataViewDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for DataView\n");
+  assert(kind == CellKind::DataViewKind && "Expected DataView");
+  void *mem = d.getRuntime()->alloc(sizeof(JSDataView));
+  auto *cell = new (mem) JSDataView(d);
+  d.endObject(cell);
 }
 #endif
 
