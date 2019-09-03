@@ -1779,6 +1779,28 @@ void Runtime::deserializeImpl(
     heap_.deserializeEnd();
   }
 }
+
+void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
+  header.enableEval = enableEval;
+  header.hasES6Symbol = hasES6Symbol_;
+  header.bytecodeWarmupPercent = bytecodeWarmupPercent_;
+  header.trackIO = trackIO_;
+}
+
+void Runtime::checkHeaderRuntimeConfig(SerializeHeader &header) const {
+  if (header.enableEval != enableEval) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+  }
+  if (header.hasES6Symbol != hasES6Symbol_) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+  }
+  if (header.bytecodeWarmupPercent != bytecodeWarmupPercent_) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+  }
+  if (header.trackIO != trackIO_) {
+    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+  }
+}
 #endif
 
 ExecutionStatus Runtime::notifyTimeout() {

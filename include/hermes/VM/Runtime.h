@@ -704,6 +704,18 @@ class Runtime : public HandleRootOwner,
     return getCallStackNoAlloc(nullptr);
   }
 
+#ifdef HERMESVM_SERIALIZE
+  /// Fill the header with current Runtime config
+  void populateHeaderRuntimeConfig(SerializeHeader &header);
+
+  /// Check if the SerializeHeader read from the file matches Runtime config of
+  /// current run.
+  void checkHeaderRuntimeConfig(SerializeHeader &header) const;
+
+  /// Serialize the VM state.
+  void serialize(llvm::raw_ostream &O);
+#endif
+
  protected:
   /// Construct a Runtime on the stack.
   /// NOTE: This should only be used by StackRuntime. All other uses should use
@@ -826,9 +838,6 @@ class Runtime : public HandleRootOwner,
   void crashWriteCallStack(JSONEmitter &json);
 
 #ifdef HERMESVM_SERIALIZE
-  /// Serialize the VM state into \p O.
-  void serialize(llvm::raw_ostream &O);
-
   void serializeIdentifierTable(Serializer &s);
 
   /// Serialize Runtime fields.

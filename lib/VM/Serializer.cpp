@@ -145,6 +145,8 @@ void Serializer::writeHeader() {
 #ifdef HERMES_ENABLE_DEBUGGER
   header.isEnableDebugger = true;
 #endif
+
+  runtime_->populateHeaderRuntimeConfig(header);
   writeData(&header, sizeof(SerializeHeader));
 }
 

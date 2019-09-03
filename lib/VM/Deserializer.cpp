@@ -188,6 +188,8 @@ void Deserializer::readHeader() {
 #else
   CHECK_HEADER_UNSET(readHeader, isEnableDebugger);
 #endif
+
+  runtime_->checkHeaderRuntimeConfig(readHeader);
 }
 
 void Deserializer::readAndCheckOffset() {

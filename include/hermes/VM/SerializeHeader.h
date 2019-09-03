@@ -35,6 +35,20 @@ struct SerializeHeader {
   bool isDebug = false;
   /// Set if HERMES_ENABLE_DEBUGGER.
   bool isEnableDebugger = false;
+
+  /// Runtime const fields. S/D works under the assumption that Serialize
+  /// Runtime has the same runtime config as the Deserialize system. Write those
+  /// flags that affects S/D in the header so we can check them too.
+  bool enableEval;
+  bool hasES6Symbol;
+  uint8_t bytecodeWarmupPercent;
+  bool trackIO;
+  /// Note: The following fields are not being checked right now because they
+  /// should't affect the correctness of the current stage of S/D:
+  /// const bool verifyEvalIR;
+  /// const bool shouldRandomizeMemoryLayout_;
+  /// const uint8_t bytecodeWarmupPercent_;
+  /// experiments::VMExperimentFlags vmExperimentFlags;
 };
 
 static_assert(
