@@ -144,7 +144,10 @@ class Serializer {
 
   /// Called after serializng any object. Calls \p writeReloation to get/ assign
   /// an ID for \p object and writes the id to the stream.
-  uint32_t endObject(const void *object);
+  uint32_t endObject(const void *object) {
+    uint32_t res = writeRelocation(object);
+    return res;
+  }
 
   /// Called at the end of serialization. Write string buffers to the stream as
   /// well as totoal relocation map size.
@@ -166,6 +169,19 @@ class Serializer {
   /// \return whether \p object already have a relocation id.
   bool objectInTable(void *object) {
     return relocationMap_.count(object) > 0;
+  }
+
+  /// Padding the binary according to the \p alignment.
+  void pad(uint32_t alignment = hbc::BYTECODE_ALIGNMENT) {
+    // Support alignment as many as 8 bytes.
+    assert(
+        alignment > 0 && alignment <= 8 &&
+        ((alignment & (alignment - 1)) == 0) && "Unsupported alignment.");
+    if (writtenBytes_ % alignment == 0)
+      return;
+    while (writtenBytes_ % alignment) {
+      writeInt<uint8_t>(0);
+    }
   }
 
  private:

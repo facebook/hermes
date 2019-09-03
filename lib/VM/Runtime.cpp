@@ -1618,8 +1618,10 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
   // TODO: ignore all fields from runtimeConfig, about frames, stacks etc.
   // come back later to check again from heap_ to nativeCallFrameDepth_.
 
-  // TODO: for now we record specialCodeBlockDomain_ and create
-  // runtimemodule later. Need to revisit this later.
+  /// Field RuntimeModuleList runtimeModuleList_{}. We don't S/D the list of
+  /// Runtimemodules now because Runtime doesn't own them, Domain owns them, so
+  /// they will be Serialized/Deserialized with Domain. When new RuntimeModules
+  /// are deserialized, they will add themselves to this list.
 
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.
@@ -1683,9 +1685,10 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
   // TODO: Ignore all fields from runtimeConfig, about frames, stacks etc for
   // now. Come back later to check again from heap_ to nativeCallFrameDepth_.
 
-  // TODO: For now we record specialCodeBlockDomain_ and create
-  // runtimemodule later. Need to revisit this later to serialize/deserialize
-  // user code.
+  /// Field RuntimeModuleList runtimeModuleList_{}. We don't S/D the list of
+  /// Runtimemodules now because Runtime doesn't own them, Domain owns them, so
+  /// they will be Serialized/Deserialized with Domain. When new RuntimeModules
+  /// are deserialized, they will add themselves to this list.
 
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.

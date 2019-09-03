@@ -97,13 +97,6 @@ Serializer::Serializer(llvm::raw_ostream &OS, Runtime *runtime)
 #include "hermes/VM/NativeFunctions.def"
 }
 
-uint32_t Serializer::endObject(const void *object) {
-  uint32_t res = writeRelocation(object);
-  LLVM_DEBUG(
-      llvm::dbgs() << "[endObject] " << object << ", id " << res << "\n");
-  return res;
-}
-
 void Serializer::flushCharBufs() {
   if (charBufOffset_ > 0) {
     // Write charBuf_.

@@ -8,8 +8,15 @@
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
+#include "hermes/VM/Deserializer.h"
+#include "hermes/VM/Serializer.h"
 
 #include "llvm/Support/MathExtras.h"
+
+#ifdef HERMESVM_SERIALIZE
+using hermes::vm::Deserializer;
+using hermes::vm::Serializer;
+#endif
 
 namespace hermes {
 namespace hbc {
@@ -634,6 +641,33 @@ bool BCProviderFromBuffer::bytecodeStreamSanityCheck(
     std::string *errorMessage) {
   return sanityCheck(aref, BytecodeForm::Execution, errorMessage);
 }
+
+#ifdef HERMESVM_SERIALIZE
+void BCProviderFromBuffer::serialize(Serializer &s) const {
+  // For BCProviderFromBuffer, serialize the buffer directly.
+  // TODO: As an optimization, we may be able to only serialize filename and a
+  // hash and later use the filename directly for deserialization and use hash
+  // as a sanity check.
+
+  s.writeInt<size_t>(buffer_->size());
+  s.pad();
+  s.writeData(buffer_->data(), buffer_->size());
+  s.endObject(this);
+}
+
+std::unique_ptr<BCProviderFromBuffer> BCProviderFromBuffer::deserialize(
+    Deserializer &d) {
+  size_t size = d.readInt<size_t>();
+  d.align();
+  auto ret = createBCProviderFromBuffer(d.readBuffer(size)).first;
+  if (!ret) {
+    hermes_fatal("Error deserializing bytecode");
+  }
+  d.endObject(ret.get());
+  return ret;
+}
+
+#endif
 
 } // namespace hbc
 } // namespace hermes

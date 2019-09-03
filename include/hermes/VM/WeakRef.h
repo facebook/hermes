@@ -7,6 +7,7 @@
 #ifndef HERMES_VM_WEAKREF_H
 #define HERMES_VM_WEAKREF_H
 
+#include "hermes/VM/Deserializer.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/Handle.h"
 

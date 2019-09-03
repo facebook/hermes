@@ -8,6 +8,7 @@
 #define HERMES_VM_SERIALIZEHEADER_H
 
 #ifdef HERMESVM_SERIALIZE
+#include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/Support/Compiler.h"
 
 namespace hermes {

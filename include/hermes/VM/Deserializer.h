@@ -12,7 +12,7 @@
 #include "hermes/VM/SerializeHeader.h"
 #include "hermes/VM/StringRefUtils.h"
 
-#include "llvm/Support/MemoryBuffer.h"
+#include "hermes/Support/MemoryBuffer.h"
 
 using llvm::ArrayRef;
 namespace hermes {
@@ -145,7 +145,14 @@ class Deserializer {
   /// Do this after object creation instead of before because there may
   /// be some variable length objects.
   /// \param object The object to end and relocate.
-  void endObject(void *object);
+  void endObject(void *object) {
+    uint32_t id = readInt<uint32_t>();
+    assert(id < objectTable_.size() && "invalid relocation id");
+    assert(
+        (!objectTable_[id] || objectTable_[id] == object) &&
+        "shouldn't map relocation id to different pointer values");
+    objectTable_[id] = object;
+  }
 
   Runtime *getRuntime() {
     return runtime_;
@@ -169,6 +176,33 @@ class Deserializer {
   /// many bytes we should have read at this time from the stream. Compare with
   /// curret offset to see if we are in sync with Serialzier until this point.
   void readAndCheckOffset();
+
+  /// Return the next \p size bytes as an unique_ptr<const Buffer>. Increase
+  /// offset by \p size.
+  std::unique_ptr<const BufferFromSharedBuffer> readBuffer(size_t size) {
+    assert(offset_ + size >= offset_ && "Read overflowed");
+    assert(
+        buffer_->getBufferStart() + offset_ + size < buffer_->getBufferEnd() &&
+        "Deserialize read out of range");
+    auto resPtr = std::make_unique<const BufferFromSharedBuffer>(
+        reinterpret_cast<const uint8_t *>(buffer_->getBufferStart()) + offset_,
+        size,
+        buffer_);
+    offset_ += size;
+    return resPtr;
+  }
+
+  /// Align offset_ with \p alignment.
+  /// Default alignment set to the same as in BytecodeDataProvider.cpp.
+  void align(uint32_t alignment = hbc::BYTECODE_ALIGNMENT) {
+    // Support alignment as many as 8 bytes.
+    assert(
+        alignment > 0 && alignment <= 8 &&
+        ((alignment & (alignment - 1)) == 0) && "Unsupported alignment.");
+    if (offset_ % alignment == 0)
+      return;
+    offset_ += alignment - offset_ % alignment;
+  }
 
  private:
   /// Extract relocation id from a read serialized HermesValue.

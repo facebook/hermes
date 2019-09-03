@@ -122,6 +122,17 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
       RuntimeModuleFlags flags,
       llvm::StringRef sourceURL);
 
+#ifdef HERMESVM_SERIALIZE
+  /// Constructor used when deserializing.
+  /// Note that this function does NOT add the new RumtimeModule to Domain's
+  /// list, unlike the common constructor. This function also adds the newly
+  /// created RuntimeModule to Runtime's runtimeModuleList_. Although we may not
+  /// have a valid RuntimeModule at this time (contains forward references that
+  /// needs to be relocated later), it is still OK to push to the list now
+  /// because we are pushing the reference.
+  explicit RuntimeModule(Runtime *runtime, WeakRefSlot *domainRef);
+#endif
+
   CodeBlock *getCodeBlockSlowPath(unsigned index);
 
  public:
@@ -354,6 +365,16 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
     templateMap_[templateObjID] = templateObj.get();
   }
 
+#ifdef HERMESVM_SERIALIZE
+  /// Serialize this RuntimeModule.
+  void serialize(Serializer &s);
+
+  /// Read data from serialize stream and create a RuntimeModule. Returns
+  /// pointer to the newly created object. Note that the newly created
+  /// RuntimeModule will adds itself to Runtime's runtimeModuleList_ when it
+  /// is constructed.
+  static RuntimeModule *deserialize(Deserializer &d);
+#endif
  private:
   /// Import the string table from the supplied module.
   void importStringIDMapMayAllocate();

@@ -124,6 +124,11 @@ class BCProviderFromSrc final : public BCProviderBase {
   hbc::BytecodeModule *getBytecodeModule() {
     return module_.get();
   }
+
+#ifdef HERMESVM_SERIALIZE
+  /// Serialize this BCProviderFromSrc.
+  void serialize(vm::Serializer &s) const override;
+#endif
 };
 
 /// BCProviderLazy is used during lazy compilation. When a function is created
@@ -180,6 +185,11 @@ class BCProviderLazy final : public BCProviderBase {
   hbc::BytecodeFunction *getBytecodeFunction() {
     return bytecodeFunction_;
   }
+
+#ifdef HERMESVM_SERIALIZE
+  /// Serialize this BCProviderLazy.
+  void serialize(vm::Serializer &s) const override;
+#endif
 };
 #endif // HERMESVM_LEAN
 } // namespace hbc

@@ -37,16 +37,6 @@ void Deserializer::deserializeCell(uint8_t kind) {
   deserializeImpl[kind](*this, (CellKind)kind);
 }
 
-void Deserializer::endObject(void *object) {
-  uint32_t id = readInt<uint32_t>();
-  assert(id < objectTable_.size() && "invalid relocation id");
-  assert(
-      (!objectTable_[id] || objectTable_[id] == object) &&
-      "shouldn't map relocation id to different pointer values");
-  objectTable_[id] = object;
-  LLVM_DEBUG(llvm::dbgs() << "[endobject] " << object << ", id " << id << "\n");
-}
-
 void Deserializer::flushRelocationQueue() {
   while (!relocationQueue_.empty()) {
     auto entry = relocationQueue_.front();
