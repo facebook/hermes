@@ -210,24 +210,84 @@ void WeakSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+void serializeJSWeakMapBase(Serializer &s, const GCCell *cell) {
+  JSObject::serializeObjectImpl(s, cell);
+  auto *self = vmcast<const JSWeakMapImplBase>(cell);
+  // Serialize llvm::DenseMap<WeakRefKey, uint32_t, detail::WeakRefInfo> map_.
+  // We write all entries in Densemap. It's OK for us to serialize/deserialize
+  // everything now because we serialize/deserialize every WeakRef too.
+  // TODO: Ideally, we would want to compact the map and delete invalid entries
+  // by calling findAndDeleteFreeSlots, but we can't do that now because \p cell
+  // is \p const and also because compact the map would also change \p
+  // BigStorage. See if there is a way to add an additional pass before
+  // Serialize to compact all cells.
+  s.writeInt<unsigned>(self->map_.size());
+  for (auto it = self->map_.begin(); it != self->map_.end(); it++) {
+    // Write it->first: WeakRefKey.
+    s.writeRelocation(it->first.ref.unsafeGetSlot());
+    s.writeInt<uint32_t>(it->first.hash);
+    // Write it->second: uint32_t
+    s.writeInt<uint32_t>(it->second);
+  }
+
+  // Serialize other fields.
+  s.writeRelocation(self->valueStorage_.get(s.getRuntime()));
+  s.writeInt<uint32_t>(self->freeListHead_);
+  s.writeInt<uint32_t>(self->nextIndex_);
+  s.writeInt<uint8_t>(self->hasFreeableSlots_);
+}
+
+JSWeakMapImplBase::JSWeakMapImplBase(Deserializer &d, const VTable *vt)
+    : JSObject(d, vt) {
+  unsigned size = d.readInt<unsigned>();
+  for (unsigned i = 0; i < size; i++) {
+    WeakRefSlot *slotPtr =
+        (WeakRefSlot *)d.ptrRelocationOrNull(d.readInt<uint32_t>());
+    assert(slotPtr && "WeakRef should have been deserialized.");
+    // Note: it's ok to use \p key as DenseMap key because relocation has
+    // finished for \p ref.
+    WeakRefKey key(WeakRef<JSObject>(slotPtr), d.readInt<uint32_t>());
+    auto res = map_.try_emplace(key, d.readInt<uint32_t>()).second;
+    if (LLVM_UNLIKELY(!res)) {
+      hermes_fatal("shouldn't fail to insert during deserialization");
+    }
+  }
+
+  // Deserialize other fields.
+  d.readRelocation(&valueStorage_, RelocationKind::GCPointer);
+  freeListHead_ = d.readInt<uint32_t>();
+  nextIndex_ = d.readInt<uint32_t>();
+  hasFreeableSlots_ = d.readInt<uint8_t>();
+}
+
 void WeakMapSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for WeakMap\n");
+  serializeJSWeakMapBase(s, cell);
+  s.endObject(cell);
 }
 
 void WeakSetSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for WeakSet\n");
+  serializeJSWeakMapBase(s, cell);
+  s.endObject(cell);
 }
 
+template <CellKind C>
+JSWeakMapImpl<C>::JSWeakMapImpl(Deserializer &d)
+    : JSWeakMapImplBase(d, &vt.base) {}
+
 void WeakMapDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for WeakMap\n");
+  assert(kind == CellKind::WeakMapKind && "Expected WeakMap.");
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      sizeof(JSWeakMap));
+  auto *cell = new (mem) JSWeakMap(d);
+  d.endObject(cell);
 }
 
 void WeakSetDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for WeakSet\n");
+  assert(kind == CellKind::WeakSetKind && "Expected WeakSet.");
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      sizeof(JSWeakSet));
+  auto *cell = new (mem) JSWeakSet(d);
+  d.endObject(cell);
 }
 #endif
 

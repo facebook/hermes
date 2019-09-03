@@ -96,6 +96,12 @@ class JSWeakMapImplBase : public JSObject {
   using DenseMapT = llvm::DenseMap<WeakRefKey, uint32_t, detail::WeakRefInfo>;
 
  protected:
+#ifdef HERMESVM_SERIALIZE
+  JSWeakMapImplBase(Deserializer &d, const VTable *vt);
+
+  friend void serializeJSWeakMapBase(Serializer &s, const GCCell *cell);
+#endif
+
   JSWeakMapImplBase(
       Runtime *runtime,
       const VTable *vtp,
@@ -256,6 +262,13 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
   static void WeakMapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  protected:
+#ifdef HERMESVM_SERIALIZE
+  explicit JSWeakMapImpl(Deserializer &d);
+
+  friend void WeakMapDeserialize(Deserializer &d, CellKind kind);
+  friend void WeakSetDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   JSWeakMapImpl(
       Runtime *runtime,
       JSObject *parent,
