@@ -46,14 +46,21 @@ std::pair<uint32_t, uint32_t> JSTypedArrayBase::_getOwnIndexedRangeImpl(
 }
 
 #ifdef HERMESVM_SERIALIZE
-void TypedArrayBaseSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for TypedArray\n");
+JSTypedArrayBase::JSTypedArrayBase(Deserializer &d, const VTable *vt)
+    : JSObject(d, vt) {
+  d.readRelocation(&buffer_, RelocationKind::GCPointer);
+  length_ = d.readInt<JSTypedArrayBase::size_type>();
+  byteWidth_ = d.readInt<uint8_t>();
+  offset_ = d.readInt<size_type>();
 }
 
-void TypedArrayBaseDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for TypedArray\n");
+void serializeTypedArrayBase(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const JSTypedArrayBase>(cell);
+  JSObject::serializeObjectImpl(s, cell);
+  s.writeRelocation(self->buffer_.get(s.getRuntime()));
+  s.writeInt<JSTypedArrayBase::size_type>(self->length_);
+  s.writeInt<uint8_t>(self->byteWidth_);
+  s.writeInt<JSTypedArrayBase::size_type>(self->offset_);
 }
 #endif
 
@@ -279,15 +286,27 @@ JSTypedArrayBase::JSTypedArrayVTable JSTypedArray<T, C>::vt{
     _allocateSpeciesImpl};
 
 #ifdef HERMESVM_SERIALIZE
+template <typename T, CellKind C>
+JSTypedArray<T, C>::JSTypedArray(Deserializer &d)
+    : JSTypedArrayBase(d, &vt.base.base) {}
+
+template <typename T, CellKind C>
+void deserializeTypedArray(Deserializer &d, CellKind kind) {
+  void *mem = d.getRuntime()->alloc(sizeof(JSTypedArray<T, C>));
+  auto *cell = new (mem) JSTypedArray<T, C>(d);
+  d.endObject(cell);
+}
+
 #define TYPED_ARRAY(name, type)                                          \
   void name##ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) { \
     TypedArrayBaseBuildMeta(cell, mb);                                   \
   }                                                                      \
   void name##ArraySerialize(Serializer &s, const GCCell *cell) {         \
-    TypedArrayBaseSerialize(s, cell);                                    \
+    serializeTypedArrayBase(s, cell);                                    \
+    s.endObject(cell);                                                   \
   }                                                                      \
   void name##ArrayDeserialize(Deserializer &d, CellKind kind) {          \
-    TypedArrayBaseDeserialize(d, kind);                                  \
+    deserializeTypedArray<type, CellKind::name##ArrayKind>(d, kind);     \
   }
 #else
 #define TYPED_ARRAY(name, type)                                          \

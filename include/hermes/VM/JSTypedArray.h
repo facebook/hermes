@@ -177,6 +177,12 @@ class JSTypedArrayBase : public JSObject {
       uint8_t byteWidth);
 
  protected:
+#ifdef HERMESVM_SERIALIZE
+  JSTypedArrayBase(Deserializer &d, const VTable *vt);
+
+  friend void serializeTypedArrayBase(Serializer &s, const GCCell *cell);
+#endif
+
   /// buffer_ is the underlying buffer which holds the data to be viewed.
   /// This buffer may be shared with other JSTypedArray instantiations.
   GCPointer<JSArrayBuffer> buffer_;
@@ -231,11 +237,6 @@ class JSTypedArrayBase : public JSObject {
   friend void TypedArrayBaseBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
-
-#ifdef HERMESVM_SERIALIZE
-  friend void TypedArrayBaseSerialize(Serializer &s, const GCCell *cell);
-  friend void TypedArrayBaseDeserialize(Deserializer &s, CellKind kind);
-#endif
 };
 
 /// JSTypedArray is a collection with array semantics (random access indexing),
@@ -310,6 +311,13 @@ class JSTypedArray final : public JSTypedArrayBase {
       Handle<> value);
 
  private:
+#ifdef HERMESVM_SERIALIZE
+  explicit JSTypedArray(Deserializer &d);
+
+  template <typename, CellKind>
+  friend void deserializeTypedArray(Deserializer &d, CellKind kind);
+#endif
+
   explicit JSTypedArray(Runtime *runtime, JSObject *parent, HiddenClass *clazz);
 };
 
