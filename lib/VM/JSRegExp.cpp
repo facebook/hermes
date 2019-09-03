@@ -51,13 +51,28 @@ void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
+  size_t size = d.readInt<size_t>();
+  bytecode_ = d.readArrayRef<uint8_t>(size);
+  d.readData(&flagBits_, sizeof(flagBits_));
+}
+
 void RegExpSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(llvm::dbgs() << "Serialize function not implemented for RegExp\n");
+  auto *self = vmcast<const JSRegExp>(cell);
+  JSObject::serializeObjectImpl(s, cell);
+  s.writeInt<size_t>(self->bytecode_.size());
+  s.writeData(self->bytecode_.begin(), self->bytecode_.size());
+  s.writeData(&self->flagBits_, sizeof(self->flagBits_));
+
+  s.endObject(cell);
 }
 
 void RegExpDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for RegExp\n");
+  assert(kind == CellKind::RegExpKind && "Expected RegExp");
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      sizeof(JSRegExp));
+  auto *cell = new (mem) JSRegExp(d);
+  d.endObject(cell);
 }
 #endif
 

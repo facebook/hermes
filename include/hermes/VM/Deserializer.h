@@ -73,6 +73,19 @@ class Deserializer {
     offset_ += size;
   }
 
+  /// Read serialize data and return as an ArrayRef<T>. Read in total \p size
+  /// elements of type T and increase the offset accordingly.
+  template <typename T>
+  ArrayRef<T> readArrayRef(size_t size) {
+    assert(offset_ + size >= offset_ && "Read overflowed");
+    assert(
+        buffer_->getBufferStart() + offset_ + size < buffer_->getBufferEnd() &&
+        "Deserialize read out of range");
+    ArrayRef<T> res((const T *)buffer_->getBufferStart() + offset_, size);
+    offset_ += size * sizeof(T);
+    return res;
+  }
+
   template <typename T>
   T readInt() {
     static_assert(std::is_integral<T>::value, "T must be integral for readInt");

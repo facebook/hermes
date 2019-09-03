@@ -106,6 +106,13 @@ class JSRegExp final : public JSObject {
       uint32_t searchStartOffset);
 
  private:
+#ifdef HERMESVM_SERIALIZE
+  explicit JSRegExp(Deserializer &d);
+
+  friend void RegExpSerialize(Serializer &s, const GCCell *cell);
+  friend void RegExpDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   JSRegExp(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
       : JSObject(runtime, &vt.base, parent, clazz) {}
 
