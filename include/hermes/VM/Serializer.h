@@ -67,7 +67,10 @@ class Runtime;
 /// perform this check, we check SerializeHeader before deserializing anything.
 class Serializer {
  public:
-  Serializer(llvm::raw_ostream &OS, Runtime *runtime);
+  Serializer(
+      llvm::raw_ostream &OS,
+      Runtime *runtime,
+      ExternalPointersVectorFunction *externalPointersVectorCallBack);
 
   Runtime *getRuntime() {
     return runtime_;

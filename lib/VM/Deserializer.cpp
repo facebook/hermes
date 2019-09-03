@@ -51,7 +51,8 @@ void Deserializer::flushRelocationQueue() {
   }
 }
 
-void Deserializer::init() {
+void Deserializer::init(
+    ExternalPointersVectorFunction *externalPointersVectorCallBack) {
   // Do the sanity check of the header first.
   readHeader();
 
@@ -137,6 +138,13 @@ void Deserializer::init() {
   idx++;
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_CONSTRUCTOR
+
+  // Map external function pointers.
+  for (auto *ptr : externalPointersVectorCallBack()) {
+    assert(!objectTable_[idx] && "External pointer should only be mapped once");
+    objectTable_[idx] = ptr;
+    idx++;
+  }
 }
 
 void Deserializer::readHeader() {
@@ -186,8 +194,8 @@ void Deserializer::readHeader() {
 }
 
 void Deserializer::readAndCheckOffset() {
-  uint32_t currentOffset = offset_;
-  uint32_t bytes = readInt<uint32_t>();
+  size_t currentOffset = offset_;
+  size_t bytes = readInt<size_t>();
   if (currentOffset != bytes) {
     hermes_fatal("Deserializer sanity check failed: offset don't match");
   }

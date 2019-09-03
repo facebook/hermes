@@ -14,6 +14,8 @@
 #include <memory>
 
 #ifdef HERMESVM_SERIALIZE
+#include <vector>
+
 namespace llvm {
 class MemoryBuffer;
 class raw_ostream;
@@ -24,6 +26,10 @@ namespace hermes {
 namespace vm {
 
 class PinnedHermesValue;
+#ifdef HERMESVM_SERIALIZE
+class Serializer;
+class Deserializer;
+#endif
 
 // Parameters for Runtime initialisation.  Check documentation in README.md
 #define RUNTIME_FIELDS_BASE(F)                                         \
@@ -74,13 +80,17 @@ class PinnedHermesValue;
   F(uint32_t, VMExperimentFlags, 0)                                    \
   /* RUNTIME_FIELDS END */
 
-#define RUNTIME_FIELDS_SD(F)                                    \
-  /* Should serialize after initialization */                   \
-  F(std::shared_ptr<llvm::raw_ostream>, SerializeFile, nullptr) \
-  /* Should deserialize instead of initialization */            \
-  F(std::shared_ptr<llvm::MemoryBuffer>, DeserializeFile, nullptr)
-
 #ifdef HERMESVM_SERIALIZE
+using ExternalPointersVectorFunction = std::vector<void *>();
+#define RUNTIME_FIELDS_SD(F)                                       \
+  /* Should serialize after initialization */                      \
+  F(std::shared_ptr<llvm::raw_ostream>, SerializeFile, nullptr)    \
+  /* Should deserialize instead of initialization */               \
+  F(std::shared_ptr<llvm::MemoryBuffer>, DeserializeFile, nullptr) \
+  /* A function to get pointer values not visible to Runtime. e.g. \
+   * function pointers defined in ConsoleHost*/                    \
+  F(ExternalPointersVectorFunction *, ExternalPointersVectorCallBack, nullptr)
+
 #define RUNTIME_FIELDS(F) \
   RUNTIME_FIELDS_BASE(F)  \
   RUNTIME_FIELDS_SD(F)

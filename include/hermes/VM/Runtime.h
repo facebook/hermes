@@ -713,7 +713,16 @@ class Runtime : public HandleRootOwner,
   void checkHeaderRuntimeConfig(SerializeHeader &header) const;
 
   /// Serialize the VM state.
-  void serialize(llvm::raw_ostream &O);
+  void serialize(Serializer &s);
+
+  /// Set the closure function to execute after deserialization.
+  void setSerializeClosure(Handle<JSFunction> function) {
+    serializeClosure = function.getHermesValue();
+  }
+
+  HermesValue getSerializeClosure() {
+    return serializeClosure;
+  }
 #endif
 
  protected:
@@ -851,9 +860,7 @@ class Runtime : public HandleRootOwner,
   /// \param currentlyInYoung Whether we are allocating from the young gen
   /// before deserialization starts and should we go back to allocating from the
   /// young gen after deserialziation.
-  void deserializeImpl(
-      std::shared_ptr<llvm::MemoryBuffer> inputFile,
-      bool currentlyInYoung);
+  void deserializeImpl(Deserializer &d, bool currentlyInYoung);
 #endif
 
  private:

@@ -55,9 +55,12 @@ class Deserializer {
  public:
   /// Note: it is the caller's responsibility to make sure that MemoryBuffer
   /// can outlive the Runtime that we are deserializing.
-  Deserializer(std::shared_ptr<llvm::MemoryBuffer> buffer, Runtime *runtime)
+  Deserializer(
+      std::shared_ptr<llvm::MemoryBuffer> buffer,
+      Runtime *runtime,
+      ExternalPointersVectorFunction *externalPointersVectorCallBack)
       : runtime_(runtime), buffer_(std::move(buffer)) {
-    init();
+    init(externalPointersVectorCallBack);
   }
 
   /// Read data from the MemoryBuffer. We use memcpy for unaligned read. We also
@@ -225,7 +228,7 @@ class Deserializer {
 
   /// Initialize data structures for deserialization. Read map size and resize
   /// relocation map. Reconstruct string literal buffers.
-  void init();
+  void init(ExternalPointersVectorFunction *externalPointersVectorCallBack);
 
   /// Check if an id is materialized. If so update value at \p address
   /// according to \p kind. Otherwise recode in relocationQueue_.

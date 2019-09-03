@@ -33,7 +33,10 @@ static SerializeCallBack *serializeImpl[] = {
 #undef CELL_KIND
 };
 
-Serializer::Serializer(llvm::raw_ostream &OS, Runtime *runtime)
+Serializer::Serializer(
+    llvm::raw_ostream &OS,
+    Runtime *runtime,
+    ExternalPointersVectorFunction *externalPointersVectorCallBack)
     : os_(OS), runtime_(runtime) {
   //  Write the header here.
   writeHeader();
@@ -95,6 +98,15 @@ Serializer::Serializer(llvm::raw_ostream &OS, Runtime *runtime)
   currentId_++;
 
 #include "hermes/VM/NativeFunctions.def"
+
+  // Map external pointers.
+  for (auto *ptr : externalPointersVectorCallBack()) {
+    assert(
+        relocationMap_.count(ptr) == 0 &&
+        "External pointer should only be mapped once");
+    relocationMap_[ptr] = currentId_;
+    currentId_++;
+  }
 }
 
 void Serializer::flushCharBufs() {
@@ -147,7 +159,7 @@ void Serializer::writeHeader() {
 }
 
 void Serializer::writeCurrentOffset() {
-  writeInt<uint32_t>(writtenBytes_);
+  writeInt<size_t>(writtenBytes_);
 }
 
 } // namespace vm

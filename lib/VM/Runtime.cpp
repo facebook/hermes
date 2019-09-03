@@ -243,11 +243,16 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
 
 #ifdef HERMESVM_SERIALIZE
   if (runtimeConfig.getDeserializeFile()) {
+    assert(
+        runtimeConfig.getExternalPointersVectorCallBack() &&
+        "missing function pointer to map external pointers.");
     // If there is a serialized heap file available, use that to initialize
     // Runtime instead of re-creating the Runtime.
-    deserializeImpl(
+    Deserializer d(
         runtimeConfig.getDeserializeFile(),
-        runtimeConfig.getGCConfig().getAllocInYoung());
+        this,
+        runtimeConfig.getExternalPointersVectorCallBack());
+    deserializeImpl(d, runtimeConfig.getGCConfig().getAllocInYoung());
 
     LLVM_DEBUG(llvm::dbgs() << "Runtime initialized\n");
 
@@ -315,7 +320,14 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
 
 #ifdef HERMESVM_SERIALIZE
   if (runtimeConfig.getSerializeFile()) {
-    serialize(*runtimeConfig.getSerializeFile());
+    assert(
+        runtimeConfig.getExternalPointersVectorCallBack() &&
+        "missing function pointer to map external pointers.");
+    Serializer s(
+        *runtimeConfig.getSerializeFile(),
+        this,
+        runtimeConfig.getExternalPointersVectorCallBack());
+    serialize(s);
   }
 #endif // HERMESVM_SERIALIZE
 
@@ -655,6 +667,25 @@ CallResult<HermesValue> Runtime::runBytecode(
     Handle<Environment> environment,
     Handle<> thisArg) {
   clearThrownValue();
+
+#ifdef HERMESVM_SERIALIZE
+  // If we are constructed from serialize data with a ClosureFunction, execute
+  // the function.
+  if (!serializeClosure.isUndefined()) {
+    ScopedNativeCallFrame newFrame{this,
+                                   0,
+                                   serializeClosure,
+                                   HermesValue::encodeUndefinedValue(),
+                                   *thisArg};
+    if (LLVM_UNLIKELY(newFrame.overflowed()))
+      return raiseStackOverflow(StackOverflowKind::NativeStack);
+    return shouldRandomizeMemoryLayout_
+        ? interpretFunctionWithRandomStack(
+              this, vmcast<JSFunction>(serializeClosure)->getCodeBlock())
+        : interpretFunction(
+              vmcast<JSFunction>(serializeClosure)->getCodeBlock());
+  }
+#endif
 
   auto globalFunctionIndex = bytecode->getGlobalFunctionIndex();
 
@@ -1540,8 +1571,7 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
 }
 
 #ifdef HERMESVM_SERIALIZE
-void Runtime::serialize(llvm::raw_ostream &O) {
-  Serializer s(O, this);
+void Runtime::serialize(Serializer &s) {
   // Full GC here.
   heap_.collect();
 
@@ -1565,7 +1595,6 @@ void Runtime::serialize(llvm::raw_ostream &O) {
   // beginning and record there.
   s.writeCurrentOffset();
   s.writeEpilogue();
-  return;
 }
 
 void Runtime::serializeIdentifierTable(Serializer &s) {
@@ -1737,16 +1766,12 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
 #endif // HERMES_ENABLE_DEBUGGER
 }
 
-void Runtime::deserializeImpl(
-    std::shared_ptr<llvm::MemoryBuffer> inputFile,
-    bool currentlyInYoung) {
+void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
   if (currentlyInYoung) {
     heap_.deserializeStart();
   }
 
   GCScope scope(this);
-
-  Deserializer d(std::move(inputFile), this);
 
   d.readAndCheckOffset();
   heap_.deserializeWeakRefs(d);

@@ -59,6 +59,8 @@ static_assert(
     IsTriviallyCopyable<SerializeHeader, true>::value,
     "SerializeHeader should be trivially copyable");
 
+using ExternalPointersVectorFunction = std::vector<void *>();
+
 } // namespace vm
 } // namespace hermes
 
