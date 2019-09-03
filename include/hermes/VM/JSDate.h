@@ -52,6 +52,12 @@ class JSDate final : public JSObject {
   }
 
  protected:
+#ifdef HERMESVM_SERIALIZE
+  explicit JSDate(Deserializer &d);
+
+  friend void DateDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   JSDate(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
       : JSObject(runtime, &vt.base, parent, clazz) {}
 

@@ -33,12 +33,18 @@ void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+JSDate::JSDate(Deserializer &d) : JSObject(d, &vt.base) {}
+
 void DateSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(llvm::dbgs() << "Serialize function not implemented for Date\n");
+  JSObject::serializeObjectImpl(s, cell);
+  s.endObject(cell);
 }
 
 void DateDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(llvm::dbgs() << "Deserialize function not implemented for Date\n");
+  assert(kind == CellKind::DateKind && "Expected Date");
+  void *mem = d.getRuntime()->alloc(sizeof(JSDate));
+  auto *cell = new (mem) JSDate(d);
+  d.endObject(cell);
 }
 #endif
 
