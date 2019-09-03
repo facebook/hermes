@@ -257,6 +257,12 @@ class Arguments final : public ArrayImpl {
       bool strictMode);
 
  private:
+#ifdef HERMESVM_SERIALIZE
+  explicit Arguments(Deserializer &d);
+
+  friend void ArgumentsDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   Arguments(
       Runtime *runtime,
       JSObject *parent,
@@ -424,6 +430,13 @@ class JSArrayIterator : public JSObject {
       Runtime *runtime);
 
  private:
+#ifdef HERMESVM_SERIALIZE
+  explicit JSArrayIterator(Deserializer &d);
+
+  friend void ArrayIteratorSerialize(Serializer &s, const GCCell *cell);
+  friend void ArrayIteratorDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   JSArrayIterator(
       Runtime *runtime,
       JSObject *parent,

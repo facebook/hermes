@@ -54,6 +54,22 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   }
 }
 
+#ifdef HERMESVM_SERIALIZE
+ArrayImpl::ArrayImpl(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
+  beginIndex_ = d.readInt<uint32_t>();
+  endIndex_ = d.readInt<uint32_t>();
+  d.readRelocation(&indexedStorage_, RelocationKind::GCPointer);
+}
+
+void serializeArrayImpl(Serializer &s, const GCCell *cell) {
+  auto *self = vmcast<const ArrayImpl>(cell);
+  JSObject::serializeObjectImpl(s, cell);
+  s.writeInt<uint32_t>(self->beginIndex_);
+  s.writeInt<uint32_t>(self->endIndex_);
+  s.writeRelocation(self->indexedStorage_.get(s.getRuntime()));
+}
+#endif
+
 bool ArrayImpl::_haveOwnIndexedImpl(
     JSObject *selfObj,
     Runtime *runtime,
@@ -365,14 +381,18 @@ void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+Arguments::Arguments(Deserializer &d) : ArrayImpl(d, &vt.base) {}
+
 void ArgumentsSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for Arguments\n");
+  serializeArrayImpl(s, cell);
+  s.endObject(cell);
 }
 
 void ArgumentsDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for Arguments\n");
+  assert(kind == CellKind::ArgumentsKind && "Expected Arguments");
+  void *mem = d.getRuntime()->alloc(sizeof(Arguments));
+  auto *cell = new (mem) Arguments(d);
+  d.endObject(cell);
 }
 #endif
 
@@ -493,20 +513,6 @@ void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
-ArrayImpl::ArrayImpl(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
-  beginIndex_ = d.readInt<uint32_t>();
-  endIndex_ = d.readInt<uint32_t>();
-  d.readRelocation(&indexedStorage_, RelocationKind::GCPointer);
-}
-
-void serializeArrayImpl(Serializer &s, const GCCell *cell) {
-  auto *self = static_cast<const ArrayImpl *>(cell);
-  JSObject::serializeObjectImpl(s, cell);
-  s.writeInt<uint32_t>(self->beginIndex_);
-  s.writeInt<uint32_t>(self->endIndex_);
-  s.writeRelocation(self->indexedStorage_.get(s.getRuntime()));
-}
-
 JSArray::JSArray(Deserializer &d, const VTable *vt) : ArrayImpl(d, vt) {
   shadowLength_ = d.readInt<uint32_t>();
 }
@@ -768,15 +774,26 @@ void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+JSArrayIterator::JSArrayIterator(Deserializer &d) : JSObject(d, &vt.base) {
+  d.readRelocation(&iteratedObject_, RelocationKind::GCPointer);
+  nextIndex_ = d.readInt<uint64_t>();
+  iterationKind_ = (IterationKind)d.readInt<uint8_t>();
+}
+
 void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for ArrayIterator\n");
+  auto *self = vmcast<const JSArrayIterator>(cell);
+  JSObject::serializeObjectImpl(s, cell);
+  s.writeRelocation(self->iteratedObject_.get(s.getRuntime()));
+  s.writeInt<uint64_t>(self->nextIndex_);
+  s.writeInt<uint8_t>((uint8_t)self->iterationKind_);
+  s.endObject(cell);
 }
 
 void ArrayIteratorDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs()
-      << "Deserialize function not implemented for ArrayIterator\n");
+  assert(kind == CellKind::ArrayIteratorKind && "Expected ArrayIterator");
+  void *mem = d.getRuntime()->alloc(sizeof(JSArrayIterator));
+  auto *cell = new (mem) JSArrayIterator(d);
+  d.endObject(cell);
 }
 #endif
 
