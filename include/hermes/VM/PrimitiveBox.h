@@ -183,6 +183,13 @@ class JSStringIterator : public JSObject {
       Runtime *runtime);
 
  private:
+#ifdef HERMESVM_SERIALIZE
+  explicit JSStringIterator(Deserializer &d);
+
+  friend void StringIteratorSerialize(Serializer &s, const GCCell *cell);
+  friend void StringIteratorDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   JSStringIterator(
       Runtime *runtime,
       JSObject *parent,
@@ -281,6 +288,12 @@ class JSSymbol final : public PrimitiveBox {
   }
 
  protected:
+#ifdef HERMESVM_SERIALIZE
+  explicit JSSymbol(Deserializer &d);
+
+  friend void SymbolObjectDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   JSSymbol(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
       : PrimitiveBox(runtime, &vt.base, parent, clazz) {}
 };

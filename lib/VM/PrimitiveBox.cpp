@@ -207,16 +207,24 @@ void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+JSStringIterator::JSStringIterator(Deserializer &d) : JSObject(d, &vt.base) {
+  d.readRelocation(&iteratedString_, RelocationKind::GCPointer);
+  nextIndex_ = d.readInt<uint32_t>();
+}
+
 void StringIteratorSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs()
-      << "Serialize function not implemented for StringIterator\n");
+  auto *self = vmcast<const JSStringIterator>(cell);
+  JSObject::serializeObjectImpl(s, cell);
+  s.writeRelocation(self->iteratedString_.get(s.getRuntime()));
+  s.writeInt<uint32_t>(self->nextIndex_);
+  s.endObject(cell);
 }
 
 void StringIteratorDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs()
-      << "Deserialize function not implemented for StringIterator\n");
+  assert(kind == CellKind::StringIteratorKind && "Expected StringIterator");
+  void *mem = d.getRuntime()->alloc(sizeof(JSStringIterator));
+  auto *cell = new (mem) JSStringIterator(d);
+  d.endObject(cell);
 }
 #endif
 
@@ -419,15 +427,18 @@ void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+JSSymbol::JSSymbol(Deserializer &d) : PrimitiveBox(d, &vt.base) {}
+
 void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for SymbolObject\n");
+  JSObject::serializeObjectImpl(s, cell);
+  s.endObject(cell);
 }
 
 void SymbolObjectDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs()
-      << "Deserialize function not implemented for SymbolObject\n");
+  assert(kind == CellKind::SymbolObjectKind && "Expected SymbolObject");
+  void *mem = d.getRuntime()->alloc(sizeof(JSSymbol));
+  auto *cell = new (mem) JSSymbol(d);
+  d.endObject(cell);
 }
 #endif
 
