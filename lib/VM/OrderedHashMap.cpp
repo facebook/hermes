@@ -31,15 +31,30 @@ void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+HashMapEntry::HashMapEntry(Deserializer &d)
+    : GCCell(&d.getRuntime()->getHeap(), &vt) {
+  d.readHermesValue(&key);
+  d.readHermesValue(&value);
+  d.readRelocation(&prevIterationEntry, RelocationKind::GCPointer);
+  d.readRelocation(&nextIterationEntry, RelocationKind::GCPointer);
+  d.readRelocation(&nextEntryInBucket, RelocationKind::GCPointer);
+}
+
 void HashMapEntrySerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for HashMapEntry\n");
+  auto *self = vmcast<const HashMapEntry>(cell);
+  s.writeHermesValue(self->key);
+  s.writeHermesValue(self->value);
+  s.writeRelocation(self->prevIterationEntry.get(s.getRuntime()));
+  s.writeRelocation(self->nextIterationEntry.get(s.getRuntime()));
+  s.writeRelocation(self->nextEntryInBucket.get(s.getRuntime()));
+  s.endObject(cell);
 }
 
 void HashMapEntryDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs()
-      << "Deserialize function not implemented for HashMapEntry\n");
+  assert(kind == CellKind::HashMapEntryKind && "Expected HashMapEntry");
+  void *mem = d.getRuntime()->alloc(sizeof(HashMapEntry));
+  auto *cell = new (mem) HashMapEntry(d);
+  d.endObject(cell);
 }
 #endif
 

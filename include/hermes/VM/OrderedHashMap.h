@@ -58,6 +58,12 @@ class HashMapEntry final : public GCCell {
   }
 
  protected:
+#ifdef HERMESVM_SERIALIZE
+  explicit HashMapEntry(Deserializer &d);
+
+  friend void HashMapEntryDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   HashMapEntry(Runtime *runtime) : GCCell(&runtime->getHeap(), &vt) {}
 }; // HashMapEntry
 
