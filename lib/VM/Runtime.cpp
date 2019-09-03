@@ -249,31 +249,6 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
         runtimeConfig.getDeserializeFile(),
         runtimeConfig.getGCConfig().getAllocInYoung());
 
-    // Initialize special code blocks pointing to their own runtime module.
-    // specialCodeBlockRuntimeModule_ will be owned by runtimeModuleList_.
-    // Current serialization/deserialization do not serialize/deserialize
-    // RuntimeModules, so let's create specialCodeBlockRuntimeModule_ directly
-    // here.
-    RuntimeModuleFlags flags;
-    flags.hidesEpilogue = true;
-    specialCodeBlockRuntimeModule_ = RuntimeModule::createUninitialized(
-        this, Handle<Domain>::vmcast(&specialCodeBlockDomain_), flags);
-    assert(
-        &runtimeModuleList_.back() == specialCodeBlockRuntimeModule_ &&
-        "specialCodeBlockRuntimeModule_ not added to runtimeModuleList_");
-
-    // Explicitly initialize the specialCodeBlockRuntimeModule_ without CJS
-    // modules.
-    specialCodeBlockRuntimeModule_->initializeWithoutCJSModulesMayAllocate(
-        hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-            generateSpecialRuntimeBytecode())
-            .first);
-
-    emptyCodeBlock_ =
-        specialCodeBlockRuntimeModule_->getCodeBlockMayAllocate(0);
-    returnThisCodeBlock_ =
-        specialCodeBlockRuntimeModule_->getCodeBlockMayAllocate(1);
-
     LLVM_DEBUG(llvm::dbgs() << "Runtime initialized\n");
 
     samplingProfiler_ = SamplingProfiler::getInstance();
@@ -1616,8 +1591,8 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
     s.endObject(vmcast<ArrayStorage>(stringCycleCheckVisited_));
   }
 
-  // Do not Serialize any raw pointers. Get those pointers after relocation
-  // finishes.
+  // Do not Serialize any raw pointers of HermesValue fields. Get those pointers
+  // after relocation finishes.
 
   // RegExpMatch regExpLastMatch{};
   // Ignore for now since we only serialize/deserialize after global object
@@ -1628,10 +1603,15 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
   // TODO: ignore all fields from runtimeConfig, about frames, stacks etc.
   // come back later to check again from heap_ to nativeCallFrameDepth_.
 
+  s.writeRelocation(emptyCodeBlock_);
+  s.writeRelocation(returnThisCodeBlock_);
+
+  /// Field specialCodeBlockRuntimeModule_;
   /// Field RuntimeModuleList runtimeModuleList_{}. We don't S/D the list of
   /// Runtimemodules now because Runtime doesn't own them, Domain owns them, so
   /// they will be Serialized/Deserialized with Domain. When new RuntimeModules
   /// are deserialized, they will add themselves to this list.
+  s.writeRelocation(specialCodeBlockRuntimeModule_);
 
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.
@@ -1691,8 +1671,8 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
     d.endObject(vmcast<ArrayStorage>(arrRes));
   }
 
-  // Do not Deserialize any raw pointers now. Get those pointers after
-  // relocation finishes.
+  // Do not Deserialize any raw pointers of HermesValue fields. Get those
+  // pointers after relocation finishes.
 
   // Field RegExpMatch regExpLastMatch{};
   // Ignore for now since we only serialize/deserialize after global object
@@ -1703,10 +1683,16 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
   // TODO: Ignore all fields from runtimeConfig, about frames, stacks etc for
   // now. Come back later to check again from heap_ to nativeCallFrameDepth_.
 
+  d.readRelocation(&emptyCodeBlock_, RelocationKind::NativePointer);
+  d.readRelocation(&returnThisCodeBlock_, RelocationKind::NativePointer);
+
+  /// Field specialCodeBlockRuntimeModule_;
   /// Field RuntimeModuleList runtimeModuleList_{}. We don't S/D the list of
   /// Runtimemodules now because Runtime doesn't own them, Domain owns them, so
   /// they will be Serialized/Deserialized with Domain. When new RuntimeModules
   /// are deserialized, they will add themselves to this list.
+  d.readRelocation(
+      &specialCodeBlockRuntimeModule_, RelocationKind::NativePointer);
 
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.

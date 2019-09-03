@@ -38,16 +38,24 @@ Domain::Domain(Deserializer &d) : GCCell(&d.getRuntime()->getHeap(), &vt) {
         &d.getRuntime()->getHeap());
   }
   // Field llvm::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
-  // Deserializing the CommonJS module table is unnecessary to deserialize
-  // global object initialization.
-  // TODO: Once we deserialize arbitrary JS heap state, begin deserializing this
-  // field.
+  size_t size = d.readInt<size_t>();
+  for (size_t i = 0; i < size; i++) {
+    auto res = cjsModuleTable_
+                   .try_emplace(
+                       SymbolID::unsafeCreate(d.readInt<uint32_t>()),
+                       d.readInt<uint32_t>())
+                   .second;
+    if (!res) {
+      hermes_fatal("Shouldn't fail to insert during deserialization");
+    }
+  }
 
   // Field CopyableVector<RuntimeModule *> runtimeModules_{};
-  // Deserializing the runtime Modules list is unnecessary to deserialize
-  // global object initialization.
-  // TODO: Once we deserialize arbitrary JS heap state, begin deserializing this
-  // field.
+  size = d.readInt<size_t>();
+  for (size_t i = 0; i < size; i++) {
+    runtimeModules_.push_back(
+        RuntimeModule::deserialize(d), &d.getRuntime()->getHeap());
+  }
 
   d.readRelocation(&throwingRequire_, RelocationKind::GCPointer);
 }
@@ -61,18 +69,22 @@ void DomainSerialize(Serializer &s, const GCCell *cell) {
     Domain::serializeArrayStorage(s, self->cjsModules_.get(s.getRuntime()));
   }
   // Field llvm::DenseMap<SymbolID, uint32_t> cjsModuleTable_{};
-  // Serializing the CommonJS module table is unnecessary to serialize global
-  // object initialization.
-  // TODO: Once we serialize arbitrary JS heap state, begin serializing this
-  // field.
-  assert(
-      self->cjsModuleTable_.size() == 0 &&
-      "Shouldn't have cjsModules at this point.");
+  size_t size = self->cjsModuleTable_.size();
+  s.writeInt<size_t>(size);
+  for (auto it = self->cjsModuleTable_.begin();
+       it != self->cjsModuleTable_.end();
+       it++) {
+    s.writeInt<uint32_t>(it->first.unsafeGetRaw());
+    s.writeInt<uint32_t>(it->second);
+  }
+
   // Field CopyableVector<RuntimeModule *> runtimeModules_{};
-  // Serializing runtime Modules list is unnecessary to serialize global
-  // object initialization.
-  // TODO: Once we serialize arbitrary JS heap state, begin serializing this
-  // field.
+  // Domain owns RuntimeModules. Call serialize funtion for them here.
+  size = self->runtimeModules_.size();
+  s.writeInt<size_t>(size);
+  for (size_t i = 0; i < size; i++) {
+    self->runtimeModules_[i]->serialize(s);
+  }
 
   s.writeRelocation(self->throwingRequire_.get(s.getRuntime()));
   s.endObject(cell);
