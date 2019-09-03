@@ -62,6 +62,14 @@ class SegmentedArray final
       return data_[index];
     }
 
+    /// \p const version of \p at.
+    const GCHermesValue &at(uint32_t index) const {
+      assert(
+          index < length_ &&
+          "Cannot get an index outside of the length of a segment");
+      return data_[index];
+    }
+
     uint32_t length() const {
       return length_;
     }
@@ -81,6 +89,13 @@ class SegmentedArray final
     }
 
    private:
+#ifdef HERMESVM_SERIALIZE
+    explicit Segment(Deserializer &d);
+
+    friend void SegmentSerialize(Serializer &s, const GCCell *cell);
+    friend void SegmentDeserialize(Deserializer &d, CellKind kind);
+#endif
+
     friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
     static VTable vt;
 
@@ -207,12 +222,20 @@ class SegmentedArray final
         return owner_->segmentAt(toSegment(index_))->at(toInterior(index_));
       }
     }
+
     pointer operator->() {
       return &**this;
     }
   };
 
  public:
+#ifdef HERMESVM_SERIALIZE
+  friend void SegmentSerialize(Serializer &s, const GCCell *cell);
+  friend void SegmentDeserialize(Deserializer &d, CellKind kind);
+  friend void SegmentedArraySerialize(Serializer &s, const GCCell *cell);
+  friend void SegmentedArrayDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   static constexpr size_type maxElements();
 
   /// Creates a new SegmentedArray that has space for at least the requested \p
@@ -237,6 +260,16 @@ class SegmentedArray final
       return inlineStorage()[index];
     } else {
       return *(begin() + index);
+    }
+  }
+
+  /// Get the element located at \p index. \p const function for read.
+  const GCHermesValue &at(size_type index) const {
+    assert(index < size() && "Invalid index.");
+    if (index < kValueToSegmentThreshold) {
+      return inlineStorage()[index];
+    } else {
+      return segmentAt(toSegment(index))->at(toInterior(index));
     }
   }
 
@@ -331,6 +364,23 @@ class SegmentedArray final
             allocationSizeForCapacity(capacity)),
         slotCapacity_(numSlotsForCapacity(capacity)),
         numSlotsUsed_(0) {}
+
+#ifdef HERMESVM_SERIALIZE
+  /// Constructor used during deserialization. Takes argument \p slotCapacity
+  /// instead of \p capacity like in common constructor.
+  /// \param slotCapacity The number of slots for either inline storage or
+  /// segments that this SegmentedArray can hold.
+  SegmentedArray(
+      Runtime *runtime,
+      size_type slotCapacity,
+      size_type numSlotsUsed)
+      : VariableSizeRuntimeCell(
+            &runtime->getHeap(),
+            &vt,
+            allocationSizeForSlots(slotCapacity)),
+        slotCapacity_(slotCapacity),
+        numSlotsUsed_(numSlotsUsed) {}
+#endif
 
   /// Throws a RangeError with a descriptive message describing the attempted
   /// capacity allocated, and the max that is allowed.

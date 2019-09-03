@@ -35,14 +35,28 @@ void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+SegmentedArray::Segment::Segment(Deserializer &d)
+    : GCCell(&d.getRuntime()->getHeap(), &vt) {
+  length_ = d.readInt<uint32_t>();
+  for (uint32_t i = 0; i < length_; i++) {
+    d.readHermesValue(&data_[i]);
+  }
+}
+
 void SegmentSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for Segment\n");
+  auto *self = vmcast<const SegmentedArray::Segment>(cell);
+  s.writeInt<uint32_t>(self->length_);
+  for (uint32_t i = 0; i < self->length_; i++) {
+    s.writeHermesValue(self->data_[i]);
+  }
+  s.endObject(cell);
 }
 
 void SegmentDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for Segment\n");
+  assert(kind == CellKind::SegmentKind && "Expected Segment");
+  void *mem = d.getRuntime()->alloc(sizeof(SegmentedArray::Segment));
+  auto *cell = new (mem) SegmentedArray::Segment(d);
+  d.endObject(cell);
 }
 #endif
 
@@ -89,15 +103,31 @@ void SegmentedArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 #ifdef HERMESVM_SERIALIZE
 void SegmentedArraySerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs()
-      << "Serialize function not implemented for SegmentedArray\n");
+  auto *self = vmcast<const SegmentedArray>(cell);
+  s.writeInt<SegmentedArray::size_type>(self->slotCapacity_);
+  s.writeInt<SegmentedArray::size_type>(self->numSlotsUsed_);
+
+  for (uint32_t i = 0; i < self->numSlotsUsed_; i++) {
+    s.writeHermesValue(self->at(i));
+  }
+
+  s.endObject(cell);
 }
 
 void SegmentedArrayDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs()
-      << "Deserialize function not implemented for SegmentedArray\n");
+  assert(kind == CellKind::SegmentedArrayKind && "Expected SegmentedArray");
+  SegmentedArray::size_type slotCapacity =
+      d.readInt<SegmentedArray::size_type>();
+  SegmentedArray::size_type numSlotsUsed =
+      d.readInt<SegmentedArray::size_type>();
+  void *mem = d.getRuntime()->alloc<false /*fixedSize*/>(
+      SegmentedArray::allocationSizeForSlots(slotCapacity));
+  auto *cell =
+      new (mem) SegmentedArray(d.getRuntime(), slotCapacity, numSlotsUsed);
+  for (auto it = cell->begin(); it != cell->end(); ++it) {
+    d.readHermesValue(&*it);
+  }
+  d.endObject(cell);
 }
 #endif
 
