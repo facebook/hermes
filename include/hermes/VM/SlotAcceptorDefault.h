@@ -38,6 +38,12 @@ struct SlotAcceptorDefault : public SlotAcceptor {
   void accept(GCPointerBase &ptr) override final {
     accept(ptr.getLoc(&gc));
   }
+
+  void accept(SymbolID sym) override {
+    // By default, symbol processing is a noop. Only a handful of acceptors
+    // need to override it.
+    // Not final because sometimes custom behavior is desired.
+  }
 };
 
 /// A SlotAcceptorWithNamesDefault is similar to a SlotAcceptorDefault, except
@@ -62,6 +68,12 @@ struct SlotAcceptorWithNamesDefault : public RootAcceptor {
 
   void accept(GCPointerBase &ptr, const char *name) override final {
     accept(ptr.getLoc(&gc), name);
+  }
+
+  void accept(SymbolID sym, const char *name) override {
+    // By default, symbol processing is a noop. Only a handful of acceptors
+    // need to override it.
+    // Not final because sometimes custom behavior is desired.
   }
 };
 

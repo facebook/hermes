@@ -128,7 +128,7 @@ class Runtime : public HandleRootOwner,
   /// collection to mark additional weak GC roots that may not be known to the
   /// Runtime.
   void addCustomWeakRootsFunction(
-      std::function<void(GC *, SlotAcceptor &)> markRootsFn);
+      std::function<void(GC *, WeakRefAcceptor &)> markRootsFn);
 
   /// Make the runtime read from \p env to replay its environment-dependent
   /// behavior.
@@ -731,7 +731,7 @@ class Runtime : public HandleRootOwner,
 
   /// Called by the GC during collections that may reset weak references. This
   /// method informs the GC of all runtime weak roots.
-  void markWeakRoots(RootAcceptor &acceptor) override;
+  void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for
@@ -850,7 +850,7 @@ class Runtime : public HandleRootOwner,
  private:
   GC heap_;
   std::vector<std::function<void(GC *, SlotAcceptor &)>> customMarkRootFuncs_;
-  std::vector<std::function<void(GC *, SlotAcceptor &)>>
+  std::vector<std::function<void(GC *, WeakRefAcceptor &)>>
       customMarkWeakRootFuncs_;
 
   /// All state related to JIT compilation.
@@ -1276,7 +1276,7 @@ inline void Runtime::addCustomRootsFunction(
 }
 
 inline void Runtime::addCustomWeakRootsFunction(
-    std::function<void(GC *, SlotAcceptor &)> markRootsFn) {
+    std::function<void(GC *, WeakRefAcceptor &)> markRootsFn) {
   customMarkWeakRootFuncs_.emplace_back(std::move(markRootsFn));
 }
 

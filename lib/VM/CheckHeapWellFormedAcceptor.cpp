@@ -18,10 +18,28 @@ void CheckHeapWellFormedAcceptor::accept(void *&ptr) {
       (!ptr || gc.validPointer(ptr)) &&
       "A pointer is pointing outside of the valid region");
 }
+
+void CheckHeapWellFormedAcceptor::acceptWeak(void *&ptr) {
+  // A weak pointer has the same well-formed-ness checks as a normal pointer.
+  accept(ptr);
+}
+
 void CheckHeapWellFormedAcceptor::accept(HermesValue &hv) {
   assert(!hv.isInvalid() && "HermesValue with InvalidTag encountered by GC.");
   if (hv.isPointer()) {
     void *cell = hv.getPointer();
+    accept(cell);
+  }
+}
+
+void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {
+  // Cannot check if the weak ref is valid, since it is allowed to mark an
+  // empty weak ref.
+  const WeakRefSlot *slot = wr.unsafeGetSlot();
+  const PinnedHermesValue &phv = slot->value;
+  // If the weak value is a pointer, check that it's within the valid region.
+  if (phv.isPointer()) {
+    void *cell = phv.getPointer();
     accept(cell);
   }
 }

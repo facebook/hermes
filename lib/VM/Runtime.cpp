@@ -520,7 +520,7 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
   }
 }
 
-void Runtime::markWeakRoots(RootAcceptor &acceptor) {
+void Runtime::markWeakRoots(WeakRootAcceptor &acceptor) {
   MarkRootsPhaseTimer timer(this, RootAcceptor::Section::WeakRefs);
   acceptor.beginRootSection(RootAcceptor::Section::WeakRefs);
   for (auto &rm : runtimeModuleList_)

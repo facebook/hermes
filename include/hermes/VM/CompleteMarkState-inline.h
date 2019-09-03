@@ -45,9 +45,8 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
 
 /// This acceptor is used for updating pointers via forwarding pointers
 /// in mark/sweep/compact.
-struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault {
-  static constexpr bool shouldMarkWeak = false;
-
+struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault,
+                                     public WeakRootAcceptor {
   using SlotAcceptorDefault::accept;
   using SlotAcceptorDefault::SlotAcceptorDefault;
   void accept(void *&ptr) override {
@@ -57,27 +56,8 @@ struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault {
       ptr = cell->getForwardingPointer();
     }
   }
-  void accept(HermesValue &hv) override {
-    if (hv.isPointer()) {
-      auto *ptr = reinterpret_cast<GCCell *>(hv.getPointer());
-      if (ptr) {
-        assert(gc.dbgContains(ptr) && "ptr not in heap");
-        hv.setInGC(hv.updatePointer(ptr->getForwardingPointer()), &gc);
-      }
-    }
-  }
-};
 
-/// This acceptor is used for updating weak roots pointers via
-/// forwarding pointers in mark/sweep/compact.
-/// If the target GCCell is still alive the weak roots are updated using
-/// forwarding pointers; otherwise, they are reset to nullptr.
-struct FullMSCUpdateWeakRootsAcceptor final : public SlotAcceptorDefault {
-  static constexpr bool shouldMarkWeak = true;
-
-  using SlotAcceptorDefault::accept;
-  using SlotAcceptorDefault::SlotAcceptorDefault;
-  void accept(void *&ptr) override {
+  void acceptWeak(void *&ptr) override {
     if (ptr == nullptr) {
       return;
     }
@@ -88,15 +68,20 @@ struct FullMSCUpdateWeakRootsAcceptor final : public SlotAcceptorDefault {
         ? cell->getForwardingPointer()
         : nullptr;
   }
+
   void accept(HermesValue &hv) override {
-    if (!hv.isPointer()) {
-      return;
+    if (hv.isPointer()) {
+      auto *ptr = reinterpret_cast<GCCell *>(hv.getPointer());
+      if (ptr) {
+        assert(gc.dbgContains(ptr) && "ptr not in heap");
+        hv.setInGC(hv.updatePointer(ptr->getForwardingPointer()), &gc);
+      }
     }
-    void *ptr = hv.getPointer();
-    accept(ptr);
-    hv.setInGC(hv.updatePointer(ptr), &gc);
   }
+
   void accept(WeakRefBase &wr) override {
+    // This acceptor is used once it is known where all live data is, so now is
+    // the time to mark whether a weak ref is known.
     gc.markWeakRef(wr);
   }
 };

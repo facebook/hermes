@@ -507,9 +507,6 @@ void GenGC::markPhase() {
     void accept(SymbolID sym) override {
       gc.markSymbol(sym);
     }
-    void accept(WeakRefBase &wr) override {
-      gc.markWeakRef(wr);
-    }
   };
   markedSymbols_.clear();
   markedSymbols_.resize(gcCallbacks_->getSymbolsEnd(), false);
@@ -595,11 +592,7 @@ void GenGC::updateReferences(const SweepResult &sweepResult) {
       getFullMSCUpdateAcceptor(*this);
   DroppingAcceptor<SlotAcceptor> nameAcceptor{*acceptor};
   markRoots(nameAcceptor, /*markLongLived*/ true);
-
-  // Update weak roots references.
-  FullMSCUpdateWeakRootsAcceptor weakAcceptor(*this);
-  DroppingAcceptor<SlotAcceptor> nameWeakAcceptor{weakAcceptor};
-  markWeakRoots(nameWeakAcceptor);
+  markWeakRoots(*acceptor);
 
   SweepResult::VTablesRemaining vTables(
       sweepResult.displacedVtablePtrs.begin(),
@@ -696,6 +689,7 @@ void GenGC::checkWellFormedHeap() const {
   CheckHeapWellFormedAcceptor acceptor(*gc);
   DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
   gc->markRoots(nameAcceptor, /*markLongLived*/ true);
+  gc->markWeakRoots(acceptor);
   youngGen_.checkWellFormed(gc);
   oldGen_.checkWellFormed(gc);
 }

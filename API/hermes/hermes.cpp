@@ -300,7 +300,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
           }
         });
     runtime_.addCustomWeakRootsFunction(
-        [this](vm::GC *, vm::SlotAcceptor &acceptor) {
+        [this](vm::GC *, vm::WeakRefAcceptor &acceptor) {
           for (auto it = weakHermesValues_->begin();
                it != weakHermesValues_->end();) {
             if (it->get() == 0) {

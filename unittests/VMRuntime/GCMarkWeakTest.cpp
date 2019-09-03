@@ -66,6 +66,15 @@ MetadataTableForTests getMetadataTable() {
 }
 
 TEST(GCMarkWeakTest, MarkWeak) {
+  constexpr int checkHeapOn =
+#ifdef HERMES_SLOW_DEBUG
+      // In slow debug modes, there are calls to check that weak refs are valid
+      // before and after a collection.
+      1
+#else
+      0
+#endif
+      ;
   int numMarkWeakCalls = 0;
   auto runtime = DummyRuntime::create(getMetadataTable(), kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
@@ -82,13 +91,15 @@ TEST(GCMarkWeakTest, MarkWeak) {
   HermesValue hv = t->weak.unsafeGetHermesValue();
   EXPECT_TRUE(t == hv.getObject());
   // Exactly one call to _markWeakImpl
-  EXPECT_EQ(1, numMarkWeakCalls);
+  EXPECT_EQ(1 + 2 * checkHeapOn, numMarkWeakCalls);
   EXPECT_EQ(initUsedWeak + 1, gc.countUsedWeakRefs());
 
   rt.pointerRoots.pop_back();
   gc.collect();
-  // No new calls to _markWeakImpl
-  EXPECT_EQ(1, numMarkWeakCalls);
+  // The weak ref is live at the beginning of the collection, but not by the
+  // end, so the call in updateReferences isn't run, nor the second
+  // checkHeapWellFormed.
+  EXPECT_EQ(1 + 3 * checkHeapOn, numMarkWeakCalls);
   EXPECT_EQ(initUsedWeak, gc.countUsedWeakRefs());
 }
 

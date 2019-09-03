@@ -91,9 +91,9 @@ void DummyRuntime::markRoots(RootAcceptor &acceptor, bool) {
   acceptor.endRootSection();
 }
 
-void DummyRuntime::markWeakRoots(RootAcceptor &acceptor) {
+void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor) {
   for (void **ptr : weakRoots) {
-    acceptor.accept(*ptr);
+    acceptor.acceptWeak(*ptr);
   }
 }
 

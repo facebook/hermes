@@ -269,7 +269,7 @@ struct DummyRuntime final : public HandleRootOwner,
 
   void markRoots(RootAcceptor &acceptor, bool) override;
 
-  void markWeakRoots(RootAcceptor &acceptor) override;
+  void markWeakRoots(WeakRootAcceptor &weakAcceptor) override;
 
   unsigned int getSymbolsEnd() const override {
     return 0;

@@ -21,21 +21,12 @@ class WeakRefBase;
 /// an object, and tell the GC that they exist, updating if necessary.
 /// This is used by a visitor, see \c SlotVisitor.
 struct SlotAcceptor {
-  static constexpr bool shouldMarkWeak = true;
-
   virtual ~SlotAcceptor() {}
   virtual void accept(void *&ptr) = 0;
   virtual void accept(BasedPointer &ptr) = 0;
   virtual void accept(GCPointerBase &ptr) = 0;
   virtual void accept(HermesValue &hv) = 0;
-  virtual void accept(SymbolID sym) {
-    // By default, symbol processing is a noop.  Only a handful of acceptors
-    // need to override it.
-  }
-  virtual void accept(WeakRefBase &wr) {
-    // By default, weak reference processing is a noop.  Only a handful of
-    // acceptors need to override it.
-  }
+  virtual void accept(SymbolID sym) = 0;
 
   /// When we want to call an acceptor on "raw" root pointers of
   /// some JSObject subtype T, this method does the necessary
@@ -45,6 +36,16 @@ struct SlotAcceptor {
   void acceptPtr(T *&ptr) {
     accept(reinterpret_cast<void *&>(ptr));
   }
+};
+
+/// Weak references are typically slower to find, and need to be done separately
+/// from normal references.
+struct WeakRefAcceptor {
+  virtual ~WeakRefAcceptor() {}
+  /// NOTE: This is called acceptWeak in order to avoid clashing with \p
+  /// accept(void *&) from SlotAcceptor, for classes that inherit from both.
+  virtual void acceptWeak(void *&ptr) = 0;
+  virtual void accept(WeakRefBase &wr) = 0;
 };
 
 struct SlotAcceptorWithNames : public SlotAcceptor {
@@ -75,18 +76,7 @@ struct SlotAcceptorWithNames : public SlotAcceptor {
   void accept(SymbolID sym) override final {
     accept(sym, nullptr);
   }
-  virtual void accept(SymbolID sym, const char *name) {
-    // By default, symbol processing is a noop.  Only a handful of acceptors
-    // need to override it.
-  }
-
-  void accept(WeakRefBase &wr) override final {
-    accept(wr, nullptr);
-  }
-  virtual void accept(WeakRefBase &wr, const char *name) {
-    // By default, weak reference processing is a noop.  Only a handful of
-    // acceptors need to override it.
-  }
+  virtual void accept(SymbolID sym, const char *name) = 0;
 
   template <typename T>
   void acceptPtr(T *&ptr, const char *name) {
@@ -94,7 +84,9 @@ struct SlotAcceptorWithNames : public SlotAcceptor {
   }
 };
 
-struct RootAcceptor : public SlotAcceptorWithNames {
+struct RootSectionAcceptor {
+  virtual ~RootSectionAcceptor() = default;
+
   enum class Section {
 #define ROOT_SECTION(name) name,
 #include "hermes/VM/RootSections.def"
@@ -106,6 +98,9 @@ struct RootAcceptor : public SlotAcceptorWithNames {
   virtual void beginRootSection(Section section) {}
   virtual void endRootSection() {}
 };
+
+struct RootAcceptor : public SlotAcceptorWithNames, RootSectionAcceptor {};
+struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {};
 
 template <typename Acceptor>
 struct DroppingAcceptor final : public RootAcceptor {
@@ -136,10 +131,6 @@ struct DroppingAcceptor final : public RootAcceptor {
 
   void accept(SymbolID sym, const char *) override {
     acceptor.accept(sym);
-  }
-
-  void accept(WeakRefBase &wr, const char *) override {
-    acceptor.accept(wr);
   }
 };
 

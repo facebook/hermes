@@ -272,11 +272,11 @@ void CodeBlock::lazyCompileImpl(Runtime *runtime) {
 }
 #endif // HERMESVM_LEAN
 
-void CodeBlock::markCachedHiddenClasses(SlotAcceptor &acceptor) {
+void CodeBlock::markCachedHiddenClasses(WeakRefAcceptor &acceptor) {
   for (auto &prop :
        llvm::makeMutableArrayRef(propertyCache(), propertyCacheSize_)) {
     if (prop.clazz) {
-      acceptor.accept(reinterpret_cast<void *&>(prop.clazz));
+      acceptor.acceptWeak(reinterpret_cast<void *&>(prop.clazz));
     }
   }
 }

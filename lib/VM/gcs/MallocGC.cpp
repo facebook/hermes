@@ -22,7 +22,8 @@
 namespace hermes {
 namespace vm {
 
-struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault {
+struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
+                                         public WeakRootAcceptor {
   std::vector<CellHeader *> worklist_;
 
   /// markedSymbols_ represents which symbols have been proven live so far in
@@ -79,6 +80,21 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault {
 #endif
   }
 
+  void acceptWeak(void *&ptr) override {
+    if (ptr == nullptr) {
+      return;
+    }
+    auto *cell = reinterpret_cast<GCCell *>(ptr);
+    CellHeader *header = CellHeader::from(cell);
+
+    // Reset weak root if target GCCell is dead.
+#ifdef HERMESVM_SANITIZE_HANDLES
+    ptr = header->isMarked() ? header->getForwardingPointer()->data() : nullptr;
+#else
+    ptr = header->isMarked() ? ptr : nullptr;
+#endif
+  }
+
   void accept(HermesValue &hv) override {
     if (hv.isPointer()) {
       void *ptr = hv.getPointer();
@@ -97,44 +113,6 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault {
         sym.unsafeGetIndex() < markedSymbols_.size() &&
         "Tried to mark a symbol not in range");
     markedSymbols_[sym.unsafeGetIndex()] = true;
-  }
-
-  void accept(WeakRefBase &wr) override {
-    gc.markWeakRef(wr);
-  }
-};
-
-/// This acceptor is used for updating weak roots pointers via
-/// forwarding pointers in mark/sweep/compact.
-/// If the target GCCell is still alive the weak roots are updated using
-/// forwarding pointers; otherwise, they are reset to nullptr.
-struct MallocGC::FullMSCUpdateWeakRootsAcceptor final
-    : public SlotAcceptorDefault {
-  static constexpr bool shouldMarkWeak = true;
-
-  using SlotAcceptorDefault::accept;
-  using SlotAcceptorDefault::SlotAcceptorDefault;
-  void accept(void *&ptr) override {
-    if (ptr == nullptr) {
-      return;
-    }
-    auto *cell = reinterpret_cast<GCCell *>(ptr);
-    CellHeader *header = CellHeader::from(cell);
-
-    // Reset weak root if target GCCell is dead.
-#ifdef HERMESVM_SANITIZE_HANDLES
-    ptr = header->isMarked() ? header->getForwardingPointer()->data() : nullptr;
-#else
-    ptr = header->isMarked() ? ptr : nullptr;
-#endif
-  }
-  void accept(HermesValue &hv) override {
-    if (!hv.isPointer()) {
-      return;
-    }
-    void *ptr = hv.getPointer();
-    accept(ptr);
-    hv.setInGC(hv.updatePointer(ptr), &gc);
   }
 
   void accept(WeakRefBase &wr) override {
@@ -219,7 +197,7 @@ void MallocGC::checkWellFormed() {
   CheckHeapWellFormedAcceptor acceptor(*this);
   DroppingAcceptor<CheckHeapWellFormedAcceptor> nameAcceptor{acceptor};
   markRoots(nameAcceptor, true);
-  markWeakRoots(nameAcceptor);
+  markWeakRoots(acceptor);
   for (CellHeader *header : pointers_) {
     GCCell *cell = header->data();
     assert(cell->isValid() && "Invalid cell encountered in heap");
@@ -258,9 +236,7 @@ void MallocGC::collect() {
     }
 
     // Update weak roots references.
-    MallocGC::FullMSCUpdateWeakRootsAcceptor weakAcceptor(*this);
-    DroppingAcceptor<SlotAcceptor> nameWeakAcceptor{weakAcceptor};
-    markWeakRoots(nameWeakAcceptor);
+    markWeakRoots(acceptor);
 
     // Update and remove weak references.
     updateWeakReferences();

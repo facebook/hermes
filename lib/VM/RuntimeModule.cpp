@@ -381,7 +381,7 @@ void RuntimeModule::markRoots(SlotAcceptor &acceptor, bool markLongLived) {
   }
 }
 
-void RuntimeModule::markWeakRoots(SlotAcceptor &acceptor) {
+void RuntimeModule::markWeakRoots(WeakRefAcceptor &acceptor) {
   for (auto &cbPtr : functionMap_) {
     // Only mark a CodeBlock is its non-null, and has not been scanned
     // previously in this top-level markRoots invocation.
@@ -391,7 +391,7 @@ void RuntimeModule::markWeakRoots(SlotAcceptor &acceptor) {
   }
   for (auto &entry : objectLiteralHiddenClasses_) {
     if (entry.second) {
-      acceptor.accept(reinterpret_cast<void *&>(entry.second));
+      acceptor.acceptWeak(reinterpret_cast<void *&>(entry.second));
     }
   }
 }

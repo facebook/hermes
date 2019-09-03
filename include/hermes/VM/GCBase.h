@@ -188,7 +188,7 @@ class GCBase {
 
     /// Callback that will be invoked by the GC to mark all weak roots in the
     /// beginning of every GC.
-    virtual void markWeakRoots(RootAcceptor &acceptor) = 0;
+    virtual void markWeakRoots(WeakRootAcceptor &weakAcceptor) = 0;
 
     /// \return one higher than the largest symbol in the identifier table. This
     /// enables the GC to size its internal structures for symbol marking.
@@ -641,7 +641,7 @@ class GCBase {
 
   /// Convenience method to invoke the mark weak roots function provided at
   /// initialization, using the context provided then (on this heap).
-  void markWeakRoots(RootAcceptor &acceptor) {
+  void markWeakRoots(WeakRootAcceptor &acceptor) {
     gcCallbacks_->markWeakRoots(acceptor);
   }
 
@@ -678,6 +678,44 @@ class GCBase {
       const std::vector<GCCell *> &finalizables,
       const GCCell *cell);
 #endif
+
+  /// If a cell has any weak references to mark, and the acceptor supports
+  /// marking them, mark those weak references.
+  template <typename Acceptor>
+  static void markWeakRefsIfNecessary(
+      GC *gc,
+      GCCell *cell,
+      const VTable *vt,
+      Acceptor &acceptor);
+
+  /// Overload of \p markWeakRefsIfNecessary for acceptors that support marking
+  /// weak references.
+  /// Don't call this directly, use the three-argument variant instead.
+  template <typename Acceptor>
+  static void markWeakRefsIfNecessary(
+      GC *gc,
+      GCCell *cell,
+      const VTable *vt,
+      Acceptor &acceptor,
+      std::true_type) {
+    // Not used yet.
+    (void)acceptor;
+    // In C++17, we could implement this via "constexpr if" rather than
+    // overloads with std::true_type.
+    // Once C++17 is available, switch to using that.
+    vt->markWeakIfExists(cell, gc);
+  }
+
+  /// Overload of \p markWeakRefsIfNecessary for acceptors that do not support
+  /// marking weak references.
+  /// Don't call this directly, use the three-argument variant instead.
+  template <typename Acceptor>
+  static void markWeakRefsIfNecessary(
+      GC *,
+      GCCell *,
+      const VTable *,
+      Acceptor &,
+      std::false_type) {}
 
   /// Number of finalized objects in the last collection.
   unsigned numFinalizedObjects_{0};
