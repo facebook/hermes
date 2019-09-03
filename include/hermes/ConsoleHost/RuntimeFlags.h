@@ -88,14 +88,19 @@ static opt<bool> SampleProfiling(
     desc("Enable sampling profiler"));
 
 #ifdef HERMESVM_SERIALIZE
-static opt<std::string> SerializeFile(
-    "serialize-file",
+static opt<std::string> SerializeAfterInitFile(
+    "serialize-after-init-file",
     desc("Serialize vm status after initialization, output to file"),
     init(""));
 
 static opt<std::string> DeserializeFile(
     "deserialize-file",
     desc("Deserialize vm from a previous serialized file"),
+    init(""));
+
+static opt<std::string> SerializeVMPath(
+    "serializevm-path",
+    desc("Path to serialize VM state to when serializeVM() is called"),
     init(""));
 #endif // HERMESVM_SERIALIZE
 

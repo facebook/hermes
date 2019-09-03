@@ -82,13 +82,13 @@ class Deserializer;
 
 #ifdef HERMESVM_SERIALIZE
 using ExternalPointersVectorFunction = std::vector<void *>();
-#define RUNTIME_FIELDS_SD(F)                                       \
-  /* Should serialize after initialization */                      \
-  F(std::shared_ptr<llvm::raw_ostream>, SerializeFile, nullptr)    \
-  /* Should deserialize instead of initialization */               \
-  F(std::shared_ptr<llvm::MemoryBuffer>, DeserializeFile, nullptr) \
-  /* A function to get pointer values not visible to Runtime. e.g. \
-   * function pointers defined in ConsoleHost*/                    \
+#define RUNTIME_FIELDS_SD(F)                                             \
+  /* Should serialize after initialization */                            \
+  F(std::shared_ptr<llvm::raw_ostream>, SerializeAfterInitFile, nullptr) \
+  /* Should deserialize instead of initialization */                     \
+  F(std::shared_ptr<llvm::MemoryBuffer>, DeserializeFile, nullptr)       \
+  /* A function to get pointer values not visible to Runtime. e.g.       \
+   * function pointers defined in ConsoleHost*/                          \
   F(ExternalPointersVectorFunction *, ExternalPointersVectorCallBack, nullptr)
 
 #define RUNTIME_FIELDS(F) \

@@ -3,8 +3,8 @@
 // This source code is licensed under the MIT license found in the LICENSE
 // file in the root directory of this source tree.
 //
-// RUN: LC_ALL=C.UTF-8 %hermes -O -serialize-file=%t.sd.dat -target=HBC %s | %FileCheck --match-full-lines %s
-// RUN: LC_ALL=C.UTF-8 %hermes -O -deserialize-file=%t.sd.dat -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: LC_ALL=C.UTF-8 %hermes -O -serialize-after-init-file=%t -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: LC_ALL=C.UTF-8 %hermes -O -deserialize-file=%t -target=HBC %s | %FileCheck --match-full-lines %s
 // REQUIRES: serializer
 "use strict";
 

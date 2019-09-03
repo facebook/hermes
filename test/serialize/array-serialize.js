@@ -3,8 +3,8 @@
 // This source code is licensed under the MIT license found in the LICENSE
 // file in the root directory of this source tree.
 //
-// RUN: %hermes -O -serialize-file=%t.sd.dat -target=HBC %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -O -deserialize-file=%t.sd.dat -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -serialize-after-init-file=%t -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -deserialize-file=%t -target=HBC %s | %FileCheck --match-full-lines %s
 // REQUIRES: serializer
 "use strict";
 

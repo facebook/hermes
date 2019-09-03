@@ -110,43 +110,58 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
 #ifdef HERMESVM_SERIALIZE
 static std::vector<void *> getNativeFunctionPtrs();
 
-/// serializeVM(filename, funciton() {/*resumed*/}) will serialize the VM state
-/// to file \p filename. When deserialize from the file, we will continue to
-/// execute the closure funciton provided.
+/// serializeVM(funciton() {/*resumed*/}, [filename]) will serialize the VM
+/// state to a file. When deserialize from the file, we will continue to execute
+/// the closure funciton provided. Serialize filename is specified by
+/// -serializevm-path when provided, otherwise we will use the second argument.
 static vm::CallResult<vm::HermesValue>
-serializeVM(void *, vm::Runtime *runtime, vm::NativeArgs args) {
+serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
   using namespace vm;
-  std::string fileName;
-  if (!args.getArg(0).isString()) {
-    return runtime->raiseTypeError(
-        "Missing filename argument or filename argument not a string");
-  }
 
-  if (!args.getArg(1).isObject()) {
+  if (!args.getArg(0).isObject()) {
     return runtime->raiseTypeError("Invalid/Missing function argument");
   }
 
-  // In the rare events where we have a UTF16 string, convert it to ASCII.
-  auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(runtime, 0));
-  auto jsFileName = StringPrimitive::createStringView(runtime, str);
-  llvm::SmallVector<char16_t, 16> buf;
-  convertUTF16ToUTF8WithReplacements(fileName, jsFileName.getUTF16Ref(buf));
+  std::unique_ptr<llvm::raw_ostream> serializeStream = nullptr;
+  if (ctx) {
+    const auto *fileName = reinterpret_cast<std::string *>(ctx);
+    std::error_code EC;
+    serializeStream =
+        std::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(*fileName), EC);
+    if (EC) {
+      return runtime->raiseTypeError(
+          TwineChar16("Could not write to file located at ") +
+          llvm::StringRef(*fileName));
+    }
+  } else {
+    // See if filename is provided as an argument.
+    if (!args.getArg(1).isString()) {
+      return runtime->raiseTypeError(
+          "Missing filename argument or filename argument not a string");
+    }
+    std::string fileName;
 
-  if (fileName.empty()) {
-    return runtime->raiseTypeError("Filename must not be empty");
-  }
+    // In the rare events where we have a UTF16 string, convert it to ASCII.
+    auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(runtime, 1));
+    auto jsFileName = StringPrimitive::createStringView(runtime, str);
+    llvm::SmallVector<char16_t, 16> buf;
+    convertUTF16ToUTF8WithReplacements(fileName, jsFileName.getUTF16Ref(buf));
 
-  std::error_code EC;
-  std::unique_ptr<llvm::raw_ostream> serializeStream =
-      std::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(fileName), EC);
-  if (EC) {
-    return runtime->raiseTypeError(
-        TwineChar16("Could not write to file located at ") +
-        llvm::StringRef(fileName));
+    if (fileName.empty()) {
+      return runtime->raiseTypeError("Filename must not be empty");
+    }
+    std::error_code EC;
+    serializeStream =
+        std::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(fileName), EC);
+    if (EC) {
+      return runtime->raiseTypeError(
+          TwineChar16("Could not write to file located at ") +
+          llvm::StringRef(fileName));
+    }
   }
 
   auto closureFunction =
-      Handle<JSFunction>::vmcast(args.getArgHandle(runtime, 1));
+      Handle<JSFunction>::vmcast(args.getArgHandle(runtime, 0));
 
   Serializer s(*serializeStream, runtime, getNativeFunctionPtrs);
   runtime->setSerializeClosure(closureFunction);
@@ -168,6 +183,9 @@ static std::vector<void *> getNativeFunctionPtrs() {
 void installConsoleBindings(
     vm::Runtime *runtime,
     vm::StatSamplingThread *statSampler,
+#ifdef HERMESVM_SERIALIZE
+    const std::string *serializePath,
+#endif
     const std::string *filename) {
   vm::DefinePropertyFlags normalDPF{};
   normalDPF.setEnumerable = 1;
@@ -219,8 +237,8 @@ void installConsoleBindings(
                   runtime, llvm::createASCIIRef("serializeVM")))
           .get(),
       serializeVM,
-      nullptr,
-      2);
+      reinterpret_cast<void *>(const_cast<std::string *>(serializePath)),
+      1);
 #endif
 
   // Define the 'loadSegment' function.
@@ -274,7 +292,7 @@ bool executeHBCBytecodeImpl(
   // Handle Serialization/Deserialization options
   std::shared_ptr<llvm::raw_ostream> serializeFile = nullptr;
   std::shared_ptr<llvm::MemoryBuffer> deserializeFile = nullptr;
-  if (!options.SerializeFile.empty()) {
+  if (!options.SerializeAfterInitFile.empty()) {
     if (!options.DeserializeFile.empty()) {
       llvm::errs()
           << "Cannot serialize and deserialize in the same execution\n";
@@ -282,10 +300,10 @@ bool executeHBCBytecodeImpl(
     }
     std::error_code EC;
     serializeFile = std::make_shared<llvm::raw_fd_ostream>(
-        llvm::StringRef(options.SerializeFile), EC);
+        llvm::StringRef(options.SerializeAfterInitFile), EC);
     if (EC) {
-      llvm::errs() << "Failed to read Serialize file: " << options.SerializeFile
-                   << "\n";
+      llvm::errs() << "Failed to read Serialize file: "
+                   << options.SerializeAfterInitFile << "\n";
       return false;
     }
   }
@@ -305,7 +323,7 @@ bool executeHBCBytecodeImpl(
 #ifdef HERMESVM_SERIALIZE
   auto runtime = vm::Runtime::create(
       options.runtimeConfig.rebuild()
-          .withSerializeFile(serializeFile)
+          .withSerializeAfterInitFile(serializeFile)
           .withDeserializeFile(deserializeFile)
           .withExternalPointersVectorCallBack(getNativeFunctionPtrs)
           .build());
@@ -326,7 +344,13 @@ bool executeHBCBytecodeImpl(
   }
 
   vm::GCScope scope(runtime.get());
-  installConsoleBindings(runtime.get(), statSampler.get(), filename);
+  installConsoleBindings(
+      runtime.get(),
+      statSampler.get(),
+#ifdef HERMESVM_SERIALIZE
+      options.SerializeVMPath.empty() ? nullptr : &options.SerializeVMPath,
+#endif
+      filename);
 
   vm::RuntimeModuleFlags flags;
   flags.persistent = true;

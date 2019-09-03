@@ -131,8 +131,9 @@ static int executeHBCBytecodeFromCL(
   options.stopAfterInit = cl::StopAfterInit;
   options.forceGCBeforeStats = cl::GCBeforeStats;
 #ifdef HERMESVM_SERIALIZE
-  options.SerializeFile = cl::SerializeFile;
+  options.SerializeAfterInitFile = cl::SerializeAfterInitFile;
   options.DeserializeFile = cl::DeserializeFile;
+  options.SerializeVMPath = cl::SerializeVMPath;
 #endif
 
   bool success;

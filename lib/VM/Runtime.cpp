@@ -319,12 +319,12 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
   symbolRegistry_.init(this);
 
 #ifdef HERMESVM_SERIALIZE
-  if (runtimeConfig.getSerializeFile()) {
+  if (runtimeConfig.getSerializeAfterInitFile()) {
     assert(
         runtimeConfig.getExternalPointersVectorCallBack() &&
         "missing function pointer to map external pointers.");
     Serializer s(
-        *runtimeConfig.getSerializeFile(),
+        *runtimeConfig.getSerializeAfterInitFile(),
         this,
         runtimeConfig.getExternalPointersVectorCallBack());
     serialize(s);

@@ -35,6 +35,9 @@ class Runtime;
 void installConsoleBindings(
     vm::Runtime *runtime,
     vm::StatSamplingThread *statSampler = nullptr,
+#ifdef HERMESVM_SERIALIZE
+    const std::string *serializePath = nullptr,
+#endif
     const std::string *filename = nullptr);
 
 /// Options for executing an HBC bundle.
@@ -69,11 +72,14 @@ struct ExecuteOptions {
   bool forceGCBeforeStats{false};
 
 #ifdef HERMESVM_SERIALIZE
-  /// Serialize VM state to file.
-  std::string SerializeFile;
+  /// Serialize VM state after global object initialization to file.
+  std::string SerializeAfterInitFile;
 
   /// Deserialize VM state from file.
   std::string DeserializeFile;
+
+  /// File to serialize VM state to when serializeVM is called.
+  std::string SerializeVMPath;
 #endif // HERMESVM_SERIALIZE
 };
 
