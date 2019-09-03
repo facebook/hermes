@@ -44,14 +44,43 @@ void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 }
 
 #ifdef HERMESVM_SERIALIZE
+JSArrayBuffer::JSArrayBuffer(Deserializer &d)
+    : JSObject(d, &vt.base), data_(nullptr), size_(0), attached_(false) {
+  size_type size = d.readInt<size_type>();
+  attached_ = d.readInt<uint8_t>();
+  if (!attached_) {
+    return;
+  }
+  // Don't need to zero out the data since we'll be copying into it immediately.
+  // This call sets size_, data_, and attached_.
+  if (LLVM_UNLIKELY(
+          createDataBlock(d.getRuntime(), size, false) ==
+          ExecutionStatus::EXCEPTION)) {
+    hermes_fatal("Fail to malloc storage for ArrayBuffer");
+  }
+  if (size != 0) {
+    d.readData(data_, size);
+  }
+}
+
 void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Serialize function not implemented for ArrayBuffer\n");
+  auto *self = vmcast<const JSArrayBuffer>(cell);
+  JSObject::serializeObjectImpl(s, cell);
+  s.writeInt<JSArrayBuffer::size_type>(self->size_);
+  s.writeInt<uint8_t>((uint8_t)self->attached_);
+  // Only serialize data_ when attached_.
+  if (self->attached_ && self->size_ != 0) {
+    s.writeData(self->data_, self->size_);
+  }
+
+  s.endObject(cell);
 }
 
 void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
-  LLVM_DEBUG(
-      llvm::dbgs() << "Deserialize function not implemented for ArrayBuffer\n");
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      sizeof(JSArrayBuffer));
+  auto *cell = new (mem) JSArrayBuffer(d);
+  d.endObject(cell);
 }
 #endif
 

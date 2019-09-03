@@ -101,6 +101,13 @@ class JSArrayBuffer final : public JSObject {
   size_type size_;
   bool attached_;
 
+#ifdef HERMESVM_SERIALIZE
+  explicit JSArrayBuffer(Deserializer &d);
+
+  friend void ArrayBufferSerialize(Serializer &s, const GCCell *cell);
+  friend void ArrayBufferDeserialize(Deserializer &d, CellKind kind);
+#endif
+
   JSArrayBuffer(Runtime *runtime, JSObject *parent, HiddenClass *clazz);
 
   ~JSArrayBuffer();
