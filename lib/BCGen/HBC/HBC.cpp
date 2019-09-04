@@ -47,6 +47,9 @@ const unsigned kFastRegisterAllocationThreshold = 250;
 const uint64_t kRegisterAllocationMemoryLimit = 10L * 1024 * 1024;
 
 void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
+  if (M->isLowered())
+    return;
+
   PassManager PM;
   PM.addPass(new LowerLoadStoreFrameInst());
   if (options.optimizationEnabled) {
@@ -89,6 +92,7 @@ void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
   PM.addHoistStartGenerator();
 
   PM.run(M);
+  M->setLowered(true);
 
   if (options.verifyIR &&
       verifyModule(*M, &llvm::errs(), VerificationMode::IR_VALID)) {

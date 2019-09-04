@@ -1743,6 +1743,9 @@ class Module : public Value {
   std::unordered_map<RawStringList, uint32_t, HashRawStrings>
       templateObjectIDMap_;
 
+  /// Set to true when lowerIR has been called on this Module.
+  bool isLowered_{false};
+
  public:
   explicit Module(std::shared_ptr<Context> ctx)
       : Value(ValueKind::ModuleKind), Ctx(std::move(ctx)) {}
@@ -1893,6 +1896,14 @@ class Module : public Value {
 
   /// Given a list of raw strings from a template literal, get its unique id.
   uint32_t getTemplateObjectID(RawStringList &&rawStrings);
+
+  bool isLowered() const {
+    return isLowered_;
+  }
+
+  void setLowered(bool isLowered) {
+    isLowered_ = isLowered;
+  }
 
   inline iterator begin() {
     return FunctionList.begin();
