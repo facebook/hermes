@@ -7,6 +7,7 @@
 #include <hermes/TraceInterpreter.h>
 
 #include <hermes/Support/SHA1.h>
+#include <hermes/SynthTraceParser.h>
 #include <hermes/TracingRuntime.h>
 #include <hermes/VM/instrumentation/PerfEvents.h>
 #include <jsi/instrumentation.h>
@@ -497,7 +498,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     std::unique_ptr<llvm::MemoryBuffer> codeBuf,
     const ExecuteOptions &options,
     llvm::raw_ostream *outTrace) {
-  auto traceAndConfigAndEnv = SynthTrace::parse(std::move(traceBuf));
+  auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
   const auto &trace = std::get<0>(traceAndConfigAndEnv);
   const bool codeIsMmapped =
       codeBuf->getBufferKind() == llvm::MemoryBuffer::MemoryBuffer_MMap;

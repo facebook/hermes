@@ -191,18 +191,10 @@ class SynthTrace {
     return x.getRaw() == y.getRaw();
   }
 
-  /// Parse a trace from a JSON string.
-  static std::tuple<
-      SynthTrace,
-      ::hermes::vm::RuntimeConfig,
-      ::hermes::vm::MockedEnvironment>
-  parse(std::unique_ptr<llvm::MemoryBuffer> trace);
-
-  static std::tuple<
-      SynthTrace,
-      ::hermes::vm::RuntimeConfig,
-      ::hermes::vm::MockedEnvironment>
-  parse(const std::string &tracefile);
+  /// The version of the Synth Benchmark
+  constexpr static uint32_t synthVersion() {
+    return 2;
+  }
 
  private:
   std::vector<std::unique_ptr<Record>> records_;
@@ -215,11 +207,6 @@ class SynthTrace {
   /// strings forever).
   /// Strings are stored in the trace objects as an index into this table.
   ::hermes::StringSetVector stringTable_;
-
-  /// The version of the Synth Benchmark
-  constexpr static uint32_t synthVersion() {
-    return 2;
-  }
 
  public:
   /// @name Record classes

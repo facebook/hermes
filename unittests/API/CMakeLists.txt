@@ -16,6 +16,7 @@ set(LLVM_OPTIONAL_SOURCES
   SegmentTest.cpp
   SegmentTestCompile.cpp
   SynthTraceTest.cpp
+  SynthTraceParserTest.cpp
   )
 
 set(LLVM_LINK_COMPONENTS

@@ -8,6 +8,7 @@ set(LLVM_OPTIONAL_SOURCES
   hermes_tracing.cpp
   DebuggerAPI.cpp
   SynthTrace.cpp
+  SynthTraceParser.cpp
   TraceInterpreter.cpp
   TracingRuntime.cpp
   CompileJS.cpp
