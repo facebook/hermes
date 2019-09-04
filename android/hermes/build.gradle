@@ -29,6 +29,7 @@ android {
         arguments "-DLLVM_BUILD_BASE=${hermes_ws}/llvm"
         arguments "-DLLVM_SRC_DIR=${hermes_ws}/llvm"
         arguments "-DFBSOURCE_DIR=${fbsource}"
+        arguments "-DHERMES_SLOW_DEBUG=False"
         targets "libhermes"
       }
     }

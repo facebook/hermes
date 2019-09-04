@@ -130,7 +130,7 @@ if (HERMES_IS_ANDROID)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
 
   # JS developers aren't VM developers. Give them a faster build.
-  set(CMAKE_CXX_FLAGS_DEBUG "-O3 -g")
+  set(CMAKE_CXX_FLAGS_DEBUG "-O3 -g -DNDEBUG")
 
   # The release build can focus on size.
   set(CMAKE_CXX_FLAGS_RELEASE "-Os -DNDEBUG")
