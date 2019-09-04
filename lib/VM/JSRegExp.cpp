@@ -323,23 +323,27 @@ void JSRegExp::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
   auto *const self = vmcast<JSRegExp>(cell);
   // Call the super type to add any other custom edges.
   JSObject::_snapshotAddEdgesImpl(self, gc, snap);
-  snap.addNamedEdge(
-      HeapSnapshot::EdgeType::Internal,
-      "bytecode",
-      gc->getNativeID(self->bytecode_.begin()));
+  if (!self->bytecode_.empty()) {
+    snap.addNamedEdge(
+        HeapSnapshot::EdgeType::Internal,
+        "bytecode",
+        gc->getNativeID(self->bytecode_.begin()));
+  }
 }
 
 void JSRegExp::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
   auto *const self = vmcast<JSRegExp>(cell);
-  // Add a native node for regex bytecode, to account for native size directly
-  // owned by the regex.
-  snap.beginNode();
-  snap.endNode(
-      HeapSnapshot::NodeType::Native,
-      "RegExpBytecode",
-      // begin is the internal pointer stored by CopyableVector.
-      gc->getNativeID(self->bytecode_.begin()),
-      self->bytecode_.capacity() * sizeof(uint8_t));
+  if (!self->bytecode_.empty()) {
+    // Add a native node for regex bytecode, to account for native size directly
+    // owned by the regex.
+    snap.beginNode();
+    snap.endNode(
+        HeapSnapshot::NodeType::Native,
+        "RegExpBytecode",
+        // begin is the internal pointer stored by CopyableVector.
+        gc->getNativeID(self->bytecode_.begin()),
+        self->bytecode_.capacity() * sizeof(uint8_t));
+  }
 }
 
 /// \return an escaped string equivalent to \p pattern.
