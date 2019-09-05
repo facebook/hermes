@@ -142,6 +142,23 @@ var alert = print;
 """
 
 
+# Colors for stdout.
+@enum.unique
+class Color(enum.Enum):
+    RESET = enum.auto()
+    RED = enum.auto()
+    GREEN = enum.auto()
+
+    def __str__(self):
+        if not sys.stdout.isatty():
+            return ""
+        return {
+            Color.RESET.value: "\033[0m",
+            Color.RED.value: "\033[31m",
+            Color.GREEN.value: "\033[32m",
+        }[self.value]
+
+
 # These flags indicate the status of a job.
 @enum.unique
 class TestFlag(enum.Enum):
@@ -984,10 +1001,15 @@ def run(
     else:
         passRate = "--"
 
+    if (eligible - resultsHist[TestFlag.TEST_PASSED]) > 0:
+        resultStr = "{}FAIL{}".format(Color.RED, Color.RESET)
+    else:
+        resultStr = "{}PASS{}".format(Color.GREEN, Color.RESET)
+
     # Turn off formatting so that the table looks nice in source code.
     # fmt: off
     print("-----------------------------------")
-    print("| Results              |          |")
+    print("| Results              |   {}   |".format(resultStr))
     print("|----------------------+----------|")
     print("| Total                | {:>8} |".format(total))
     print("| Pass                 | {:>8} |".format(resultsHist[TestFlag.TEST_PASSED]))
