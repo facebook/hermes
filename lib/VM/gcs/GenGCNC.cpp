@@ -274,9 +274,9 @@ void GenGC::collect(bool canEffectiveOOM) {
     oom(make_error_code(OOMError::Effective));
 
 #ifdef HERMES_EXTRA_DEBUG
-  /// Check the card table boundary summary, to detect possible mutator writes.
+  /// Unprotect the card table boundary table, so we can updated it.
   /// TODO(T48709128): remove these when the problem is diagnosed.
-  oldGen_.checkSummarizedCardTableBoundaries();
+  oldGen_.unprotectCardTableBoundaries();
 #endif
 
   /// Yield, then reclaim, the allocation context.  (This is a noop
@@ -376,9 +376,10 @@ void GenGC::collect(bool canEffectiveOOM) {
 #endif
 
 #ifdef HERMES_EXTRA_DEBUG
-  /// Summarize the card table boundaries, to detect possible mutator writes.
+  /// Protect the card table boundary table, to detect corrupting mutator
+  /// writes.
   /// TODO(T48709128): remove these when the problem is diagnosed.
-  oldGen_.summarizeCardTableBoundaries();
+  oldGen_.protectCardTableBoundaries();
 #endif
 }
 

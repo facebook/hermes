@@ -794,6 +794,24 @@ AllocResult OldGen::allocRawSlow(uint32_t size, HasFinalizer hasFinalizer) {
   return allocRaw(size, hasFinalizer);
 }
 
+void OldGen::updateBoundariesAfterAlloc(char *alloc, char *nextAlloc) {
+#ifdef HERMES_EXTRA_DEBUG
+  // The allocation may update the boundary table of the old gen's
+  // active segment, so unprotect it (and reprotect below).
+  bool doUnprotect = !gc_->inGC();
+  if (doUnprotect) {
+    unprotectActiveSegCardTableBoundaries();
+  }
+#endif
+  activeSegment().cardTable().updateBoundaries(
+      &cardBoundary_, alloc, nextAlloc);
+#ifdef HERMES_EXTRA_DEBUG
+  if (doUnprotect) {
+    protectActiveSegCardTableBoundaries();
+  }
+#endif
+}
+
 #ifdef HERMES_SLOW_DEBUG
 void OldGen::checkWellFormed(const GC *gc) const {
   uint64_t totalExtSize = 0;
@@ -810,31 +828,24 @@ void OldGen::checkWellFormed(const GC *gc) const {
 #endif
 
 #ifdef HERMES_EXTRA_DEBUG
-void OldGen::summarizeCardTableBoundaries() {
+void OldGen::protectCardTableBoundaries() {
   forUsedSegments([](AlignedHeapSegment &segment) {
-    segment.summarizeCardTableBoundaries();
+    segment.cardTable().protectBoundaryTable();
   });
 }
 
-void OldGen::checkSummarizedCardTableBoundaries() const {
-  static unsigned numSummaryErrors = 0;
-  forUsedSegments([this](const AlignedHeapSegment &segment) {
-    if (!segment.checkSummarizedCardTableBoundaries()) {
-      numSummaryErrors++;
-      char detailBuffer[100];
-      snprintf(
-          detailBuffer,
-          sizeof(detailBuffer),
-          "CardObjectTable summary changed since last GC for "
-          "[%p, %p).  (Last of %d errors)",
-          segment.lowLim(),
-          segment.hiLim(),
-          numSummaryErrors);
-      hermesLog("HermesGC", "Error: %s.", detailBuffer);
-      // Record the OOM custom data with the crash manager.
-      gc_->crashMgr_->setCustomData("HermesGCBadCOTSummary", detailBuffer);
-    }
+void OldGen::unprotectCardTableBoundaries() {
+  forUsedSegments([](AlignedHeapSegment &segment) {
+    segment.cardTable().unprotectBoundaryTable();
   });
+}
+
+void OldGen::protectActiveSegCardTableBoundaries() {
+  activeSegment().cardTable().protectBoundaryTable();
+}
+
+void OldGen::unprotectActiveSegCardTableBoundaries() {
+  activeSegment().cardTable().unprotectBoundaryTable();
 }
 #endif
 

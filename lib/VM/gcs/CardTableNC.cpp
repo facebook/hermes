@@ -8,6 +8,8 @@
 
 #include "hermes/VM/CardTableNC.h"
 
+#include "hermes/Support/OSCompat.h"
+
 #include <string.h>
 #include <algorithm>
 #include <cassert>
@@ -134,24 +136,23 @@ GCCell *CardTable::firstObjForCard(unsigned index) const {
 }
 
 #ifdef HERMES_EXTRA_DEBUG
-size_t CardTable::summarizeBoundaries(char *start, char *end) const {
-  size_t startInd = addressToIndex(start);
-  size_t endInd = addressToIndex(end);
-  // If end is exactly at the boundary, we will not have set the
-  // boundary entry for endInd.  If end has crossed the boundary, we
-  // will.  Make endInd the non-inclusive uppert bound.
-  if (indexToAddress(endInd) != end) {
-    endInd++;
-  }
-  if (endInd == startInd) {
-    // We return zero in this case -- this matches the initial value of
-    // the summary.  So if nothing is allocated, the summary remains zero.
-    return 0;
-  }
-  std::hash<std::string> stringHash;
-  return stringHash(std::string(
-      reinterpret_cast<const char *>(&boundaries_[startInd]),
-      endInd - startInd));
+static void
+protectBoundaryTableWork(void *table, size_t sz, oscompat::ProtectMode mode) {
+  assert((reinterpret_cast<uintptr_t>(table) % oscompat::page_size()) == 0);
+  assert((sz % oscompat::page_size()) == 0);
+  bool res = oscompat::vm_protect(table, sz, mode);
+  (void)res;
+  assert(res);
+}
+
+void CardTable::protectBoundaryTable() {
+  protectBoundaryTableWork(
+      &boundaries_[0], kValidIndices, oscompat::ProtectMode::None);
+}
+
+void CardTable::unprotectBoundaryTable() {
+  protectBoundaryTableWork(
+      &boundaries_[0], kValidIndices, oscompat::ProtectMode::ReadWrite);
 }
 #endif // HERMES_EXTRA_DEBUG
 

@@ -203,6 +203,11 @@ class OldGen : public GCGeneration {
     }
   };
 
+  /// An allocation yielded \p alloc, and \p nextAlloc is one byte after the
+  /// end of the allocated object.  This allocation extended into a new card.
+  /// Update the card boundary table.
+  void updateBoundariesAfterAlloc(char *alloc, char *nextAlloc);
+
   /// The current allocation position.  The first version may be used always;
   /// the availableDirect version may only be used when the generation owns its
   /// allocation context, but is faster.
@@ -281,14 +286,23 @@ class OldGen : public GCGeneration {
 #endif
 
 #ifdef HERMES_EXTRA_DEBUG
-  /// Summarize the card boundary tables of all segments, saving the results.
+  /// These methods protect and unprotect, respectively, the memory
+  /// that comprises the card boundary tables of all the segments in
+  /// the old generation.  They require that the starts of the
+  /// boundary tables are page-aligned, and the table size is a
+  /// multiple of the page size.
   /// TODO(T48709128): remove this when the problem is diagnosed.
-  void summarizeCardTableBoundaries();
+  void protectCardTableBoundaries();
+  void unprotectCardTableBoundaries();
 
-  /// For every segment, summarize up to the level when we last summarized, and
-  /// make sure the summary is the same.
+  /// These methods protect and unprotect, respectively, the memory
+  /// that comprises the card boundary table of the active segment of
+  /// the old generation.  They require that the start of the boundary
+  /// tables are page-aligned, and the table size is a multiple of the
+  /// page size.
   /// TODO(T48709128): remove this when the problem is diagnosed.
-  void checkSummarizedCardTableBoundaries() const;
+  void protectActiveSegCardTableBoundaries();
+  void unprotectActiveSegCardTableBoundaries();
 #endif
 
   /// Static override of GCGeneration::didFinishGC().
@@ -444,8 +458,7 @@ AllocResult OldGen::allocRaw(uint32_t size, HasFinalizer hasFinalizer) {
   char *resPtr = reinterpret_cast<char *>(result.ptr);
   char *nextAllocPtr = activeSegment().level();
   if (cardBoundary_.address() < nextAllocPtr) {
-    activeSegment().cardTable().updateBoundaries(
-        &cardBoundary_, resPtr, nextAllocPtr);
+    updateBoundariesAfterAlloc(resPtr, nextAllocPtr);
   }
 
   return {result.ptr, true};

@@ -165,10 +165,13 @@ class CardTable {
     return boundaries_[index];
   }
 
-  /// Treat the portion of the card boundary table corresponding to the given
-  /// limits as a string, and return the hash of that string.
+  /// These methods protect and unprotect, respectively, the memory
+  /// that comprises the card boundary table.  They require that the
+  /// start of the boundary table is page-aligned, and its size is a
+  /// multiple of the page size.
   /// TODO(T48709128): remove this when the problem is diagnosed.
-  size_t summarizeBoundaries(char *start, char *end) const;
+  void protectBoundaryTable();
+  void unprotectBoundaryTable();
 #endif // HERMES_EXTRA_DEBUG
 
 #ifdef HERMES_SLOW_DEBUG
