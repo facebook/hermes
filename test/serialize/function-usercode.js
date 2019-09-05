@@ -52,11 +52,11 @@ serializeVM(function() {
   print('toString');
   // CHECK-LABEL: toString
   print(F2);
-  // CHECK-NEXT: function F2(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10) { [ native code ] }
+  // CHECK-NEXT: function F2(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10) { [bytecode] }
 
   // Non-string .length
   print(foo);
-  // CHECK-NEXT: function badlength() { [ native code ] }
+  // CHECK-NEXT: function badlength() { [bytecode] }
 
   print('call');
   // CHECK-LABEL: call

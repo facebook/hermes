@@ -18,7 +18,7 @@ null
 "asdf"
 // CHECK-NEXT: "asdf"
 (function(){})
-// CHECK-NEXT: function () { [ native code ] }
+// CHECK-NEXT: function () { [bytecode] }
 
 a = [1,2, function(){}, null]
 // CHECK-NEXT: [ 1, 2, [Function], null, [length]: 4 ]
@@ -61,7 +61,7 @@ a.arr.cycle = a;
 // CHECK-NEXT: { x: 1, [z]: 3, arr: [ "foo", 4, [length]: 2, cycle: [cyclic] ] }
 
 a = function foo() {}
-// CHECK-NEXT: function foo() { [ native code ] }
+// CHECK-NEXT: function foo() { [bytecode] }
 a = [function foo() {}]
 // CHECK-NEXT: [ [Function foo], [length]: 1 ]
 

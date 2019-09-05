@@ -46,19 +46,21 @@ print(f.__proto__ === F.prototype, f.constructor === F, f.prop1);
 print('toString');
 // CHECK-LABEL: toString
 print(function (){});
-// CHECK-NEXT: function () { [ native code ] }
+// CHECK-NEXT: function () { [bytecode] }
 print(function foo(){});
-// CHECK-NEXT: function foo() { [ native code ] }
+// CHECK-NEXT: function foo() { [bytecode] }
 print(function(a,b,c){});
-// CHECK-NEXT: function (a0, a1, a2) { [ native code ] }
+// CHECK-NEXT: function (a0, a1, a2) { [bytecode] }
 print(function(a,b,c,d,e,f,g,h,i,j,k){});
-// CHECK-NEXT: function (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10) { [ native code ] }
+// CHECK-NEXT: function (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10) { [bytecode] }
+print(Map.toString());
+// CHECK-NEXT: function Map() { [native code] }
 
 // Non-string .length
 var foo = function badlength(a, b, c){};
 Object.defineProperty(foo, "length", {value:"aa"});
 print(foo);
-// CHECK-NEXT: function badlength() { [ native code ] }
+// CHECK-NEXT: function badlength() { [bytecode] }
 
 print('call');
 // CHECK-LABEL: call

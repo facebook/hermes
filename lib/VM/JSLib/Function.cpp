@@ -138,8 +138,16 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // The rest of the body.
-  // http://tc39.github.io/Function-prototype-toString-revision
-  strBuf.append(") { [ native code ] }");
+  if (vmisa<NativeFunction>(*func)) {
+    // Use [native code] here because we want to work with tools like
+    // Babel which detect the string [native code] and use it to alter
+    // behavior during the class transform.
+    strBuf.append(") { [native code] }");
+  } else {
+    // Avoid using the [native code] string to prevent extra wrapping overhead
+    // in, e.g., Babel's class extension mechanism.
+    strBuf.append(") { [bytecode] }");
+  }
 
   // Finally allocate a StringPrimitive.
   return StringPrimitive::create(runtime, strBuf);

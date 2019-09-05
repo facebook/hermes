@@ -29,14 +29,14 @@ func1();
 // CHECK-NEXT: 0: elem = a
 // CHECK-NEXT: 1: var1_0 = 10
 // CHECK-NEXT: 1: var1_1 = 11
-// CHECK-NEXT: 1: func2 = function func2(a0) { [ native code ] }
+// CHECK-NEXT: 1: func2 = function func2(a0) { [bytecode] }
 // CHECK-NEXT: Selected frame 1
 // CHECK-NEXT: this = a,b
 // CHECK-NEXT: Selected frame 2
 // CHECK-NEXT: this = undefined
 // CHECK-NEXT: 0: var1_0 = 10
 // CHECK-NEXT: 0: var1_1 = 11
-// CHECK-NEXT: 0: func2 = function func2(a0) { [ native code ] }
+// CHECK-NEXT: 0: func2 = function func2(a0) { [bytecode] }
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: Break on 'debugger' statement in func2: {{.*}}
 // CHECK-NEXT: Selected frame 0
@@ -45,12 +45,12 @@ func1();
 // CHECK-NEXT: 0: elem = b
 // CHECK-NEXT: 1: var1_0 = 10
 // CHECK-NEXT: 1: var1_1 = 11
-// CHECK-NEXT: 1: func2 = function func2(a0) { [ native code ] }
+// CHECK-NEXT: 1: func2 = function func2(a0) { [bytecode] }
 // CHECK-NEXT: Selected frame 1
 // CHECK-NEXT: this = a,b
 // CHECK-NEXT: Selected frame 2
 // CHECK-NEXT: this = undefined
 // CHECK-NEXT: 0:     var1_0 = 10
 // CHECK-NEXT: 0:     var1_1 = 11
-// CHECK-NEXT: 0: func2 = function func2(a0) { [ native code ] }
+// CHECK-NEXT: 0: func2 = function func2(a0) { [bytecode] }
 // CHECK-NEXT: Continuing execution

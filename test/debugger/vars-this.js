@@ -26,10 +26,10 @@ foo.f1();
 // CHECK-NEXT: Break on 'debugger' statement in f3: {{.*}}
 // CHECK-NEXT: Selected frame 0
 // CHECK-NEXT: this = 412
-// CHECK-NEXT: 1: f3 = function f3() { [ native code ] }
+// CHECK-NEXT: 1: f3 = function f3() { [bytecode] }
 // CHECK-NEXT: Selected frame 2
 // CHECK-NEXT: this = [object Object]
-// CHECK-NEXT: 0: f3 = function f3() { [ native code ] }
+// CHECK-NEXT: 0: f3 = function f3() { [bytecode] }
 // CHECK-NEXT: Selected frame 3
 // CHECK-NEXT: this = [object Object]
 // CHECK-NEXT: Selected frame 4

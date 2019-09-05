@@ -34,12 +34,12 @@ func1();
 // CHECK-NEXT: 0: var333 = c
 // CHECK-NEXT: 1: var1 = 5
 // CHECK-NEXT: 1: var22 = 17
-// CHECK-NEXT: 1: func2 = function func2() { [ native code ] }
+// CHECK-NEXT: 1: func2 = function func2() { [bytecode] }
 // CHECK-NEXT: Selected frame 1
 // CHECK-NEXT: this = undefined
 // CHECK-NEXT: 0: var1 = 5
 // CHECK-NEXT: 0: var22 = 17
-// CHECK-NEXT: 0: func2 = function func2() { [ native code ] }
+// CHECK-NEXT: 0: func2 = function func2() { [bytecode] }
 // CHECK-NEXT: Selected frame 2
 // CHECK-NEXT: this = [object global]
 // CHECK-NEXT: Stepped to func2: {{.*}}
@@ -48,13 +48,13 @@ func1();
 // CHECK-NEXT: this = undefined
 // CHECK-NEXT: 0: var1 = 5
 // CHECK-NEXT: 0: var22 = 17
-// CHECK-NEXT: 0: func2 = function func2() { [ native code ] }
+// CHECK-NEXT: 0: func2 = function func2() { [bytecode] }
 // CHECK-NEXT: Selected frame 1
 // CHECK-NEXT: this = undefined
 // CHECK-NEXT: 0: var333 = c
 // CHECK-NEXT: 1: var1 = 5
 // CHECK-NEXT: 1: var22 = 17
-// CHECK-NEXT: 1: func2 = function func2() { [ native code ] }
+// CHECK-NEXT: 1: func2 = function func2() { [bytecode] }
 // CHECK-NEXT: Selected frame 0
 // CHECK-NEXT: this = undefined
 // CHECK-NEXT: 0: var0 = undefined
