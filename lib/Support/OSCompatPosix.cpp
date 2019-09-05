@@ -244,8 +244,12 @@ void vm_name(void *p, size_t sz, const char *name) {
 #endif // __ANDROID__
 }
 
-bool vm_protect(void *p, size_t sz, ProtectMode) {
-  int err = mprotect(p, sz, PROT_WRITE | PROT_READ);
+bool vm_protect(void *p, size_t sz, ProtectMode mode) {
+  auto prot = PROT_NONE;
+  if (mode == ProtectMode::ReadWrite) {
+    prot = PROT_WRITE | PROT_READ;
+  }
+  int err = mprotect(p, sz, prot);
   return err != -1;
 }
 

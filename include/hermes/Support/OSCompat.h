@@ -91,7 +91,9 @@ void vm_prefetch(void *p, size_t sz);
 /// for a process (e.g. by /proc/<pid>/maps).
 void vm_name(void *p, size_t sz, const char *name);
 
-enum class ProtectMode { ReadWrite };
+/// None indicates no access; ReadWrite allows reading and writing.
+/// (We can add finer granularity, like read-only, if required.)
+enum class ProtectMode { ReadWrite, None };
 
 /// Set the \p sz byte region of memory starting at \p p to the specified
 /// \p mode. \p p must be page-aligned. \return true if successful,

@@ -292,9 +292,13 @@ void vm_name(void *p, size_t sz, const char *name) {
   (void)name;
 }
 
-bool vm_protect(void *p, size_t sz, ProtectMode) {
+bool vm_protect(void *p, size_t sz, ProtectMode mode) {
   DWORD oldProtect;
-  BOOL err = VirtualProtect(p, sz, PAGE_READWRITE, &oldProtect);
+  DWORD newProtect = PAGE_NOACCESS;
+  if (mode == ProtectMode::ReadWrite) {
+    newProtect = PAGE_READWRITE;
+  }
+  BOOL err = VirtualProtect(p, sz, newProtect, &oldProtect);
   return err != 0;
 }
 
