@@ -121,13 +121,15 @@ class IdentifierTable {
 
   /// Reserve enough space in the hash table to contain \p count identifiers.
   void reserve(uint32_t count) {
+    lookupVector_.reserve(count);
     hashTable_.reserve(count);
   }
 
   /// \return an estimate of the size of additional memory used by this
   /// IdentifierTable.
   size_t additionalMemorySize() const {
-    return hashTable_.additionalMemorySize();
+    return lookupVector_.capacity() * sizeof(LookupEntry) +
+        hashTable_.additionalMemorySize();
   }
 
   /// Mark all identifiers with the garbage collector \p gc.

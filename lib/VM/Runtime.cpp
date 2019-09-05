@@ -1119,6 +1119,9 @@ void Runtime::initPredefinedStrings() {
   uint32_t offset = 0;
   uint32_t registered = 0;
   (void)registered;
+  const uint32_t strCount = Predefined::NumStrings;
+  const uint32_t symCount = Predefined::NumSymbols;
+  identifierTable_.reserve(Predefined::_IPROP_AFTER_LAST + strCount + symCount);
 
   for (uint32_t idx = 0; idx < Predefined::_IPROP_AFTER_LAST; ++idx) {
     SymbolID sym = identifierTable_.createNotUniquedLazySymbol("");
@@ -1126,7 +1129,6 @@ void Runtime::initPredefinedStrings() {
     (void)sym;
   }
 
-  const uint32_t strCount = Predefined::NumStrings;
   assert(
       strCount == sizeof hashes / sizeof hashes[0] &&
       "Arrays should have same length");
@@ -1140,7 +1142,6 @@ void Runtime::initPredefinedStrings() {
     offset += strLengths[idx];
   }
 
-  const uint32_t symCount = Predefined::NumSymbols;
   for (uint32_t idx = 0; idx < symCount; ++idx) {
     SymbolID sym = identifierTable_.createNotUniquedLazySymbol(
         ASCIIRef{&buffer[offset], symLengths[idx]});
