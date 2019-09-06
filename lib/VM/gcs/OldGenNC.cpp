@@ -621,6 +621,9 @@ void OldGen::moveHeap(GC *gc, ptrdiff_t moveHeapDelta) {
 }
 
 void OldGen::updateCardTablesAfterCompaction(bool youngIsEmpty) {
+#ifdef HERMES_EXTRA_DEBUG
+  unprotectCardTableBoundaries();
+#endif
   forUsedSegments([youngIsEmpty](AlignedHeapSegment &segment) {
     if (youngIsEmpty) {
       segment.cardTable().clear();
@@ -631,6 +634,9 @@ void OldGen::updateCardTablesAfterCompaction(bool youngIsEmpty) {
 
 #ifdef HERMES_SLOW_DEBUG
   verifyCardTableBoundaries();
+#endif
+#ifdef HERMES_EXTRA_DEBUG
+  protectCardTableBoundaries();
 #endif
 }
 
