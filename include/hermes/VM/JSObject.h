@@ -958,7 +958,7 @@ class JSObject : public GCCell {
   /// Return the type name of this object, if it can be found heuristically.
   /// There is no one definitive type name for an object. If no heuristic is
   /// able to produce a name, the empty string is returned.
-  std::string getHeuristicTypeName(PointerBase *base);
+  std::string getHeuristicTypeName(GC *gc);
 
   /// Accesses the name property on an object, returns the empty string if it
   /// doesn't exist or isn't a string.
