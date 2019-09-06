@@ -622,10 +622,9 @@ bool loadGlobalDefinition(
 SourceErrorOutputOptions guessErrorOutputOptions() {
   SourceErrorOutputOptions result;
 
-  result.showColors = false;
+  result.showColors = oscompat::should_color(STDERR_FILENO);
   result.preferredMaxErrorWidth = SourceErrorOutputOptions::UnlimitedWidth;
   if (oscompat::isatty(STDERR_FILENO)) {
-    result.showColors = true;
     result.preferredMaxErrorWidth = llvm::sys::Process::StandardErrColumns();
   }
 

@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
   llvm::StringRef evaluateLineString =
 #include "evaluate-line.js"
       ;
-  bool hasColors = oscompat::isatty(STDOUT_FILENO);
+  bool hasColors = oscompat::should_color(STDOUT_FILENO);
 
   auto callRes = evalFn->executeCall1(
       evalFn,

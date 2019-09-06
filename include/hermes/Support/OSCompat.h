@@ -203,11 +203,23 @@ inline int isatty(int fd) {
   return ::_isatty(fd);
 }
 
+inline bool should_color(int fd) {
+  return false;
+}
+
 #else
 
 /// \return whether fd refers to a terminal / character device
 inline int isatty(int fd) {
   return ::isatty(fd);
+}
+
+inline bool should_color(int fd) {
+  char *term = getenv("TERM");
+  if (term == nullptr || strcmp("dumb", term) == 0) {
+    return false;
+  }
+  return isatty(fd);
 }
 
 #endif
