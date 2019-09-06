@@ -34,7 +34,12 @@ void decodeOperand(const uint8_t *operandBuf, T *val) {
   for (unsigned i = 0; i < sizeof(T); ++i) {
     ret |= ((param_t)operandBuf[i]) << (i * 8);
   }
-  *val = ret;
+
+  if (std::is_same<T, double>::value) {
+    *val = safeTypeCast<param_t, double>(ret);
+  } else {
+    *val = ret;
+  }
 }
 
 template <typename... Ts>
