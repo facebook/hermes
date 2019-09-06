@@ -309,6 +309,13 @@ jobs:
             apt-get update
             apt-get install -y ca-certificates
 
+      - run:
+          name: Temporarily work around CircleCI workspace attachment bug
+          command: |
+            # As of 2019-09-10, CircleCI fails to attach Windows workspaces without this hack
+            cp /usr/bin/tar /usr/bin/tar.real
+            printf '%s\n' '#!/bin/sh' 'exec tar.real --no-same-owner "$@"' > /usr/bin/tar
+
       - attach_workspace:
           at: /tmp/hermes/input
 
