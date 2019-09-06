@@ -224,14 +224,6 @@ class IdentifierHashTable {
   /// exisiting identifier, and hence the str must not be a rope.
   void remove(const StringPrimitive *str);
 
-  std::vector<HashTableEntry>::iterator begin() {
-    return storage_.begin();
-  }
-
-  std::vector<HashTableEntry>::iterator end() {
-    return storage_.end();
-  }
-
 #ifdef HERMESVM_SERIALIZE
   void serialize(Serializer &s);
 
