@@ -47,8 +47,18 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef HERMESVM_PROFILER_BB
+#include "hermes/VM/IterationKind.h"
+#include "hermes/VM/JSArray.h"
+#include "llvm/ADT/DenseMap.h"
+#endif
+
 namespace hermes {
 namespace vm {
+
+#ifdef HERMESVM_PROFILER_BB
+using DebugId = Runtime::DebugId;
+#endif
 
 namespace {
 
@@ -335,6 +345,11 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
 
   samplingProfiler_ = SamplingProfiler::getInstance();
   samplingProfiler_->registerRuntime(this);
+
+#ifdef HERMESVM_PROFILER_BB
+  cachedHiddenClassesRawPtr_ =
+      ignoreAllocationFailure(JSArray::create(this, 4, 4)).get();
+#endif
 }
 
 Runtime::~Runtime() {
@@ -495,6 +510,9 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
     if (samplingProfiler_) {
       samplingProfiler_->markRoots(acceptor);
     }
+#ifdef HERMESVM_PROFILER_BB
+    acceptor.acceptPtr(cachedHiddenClassesRawPtr_, "");
+#endif
     acceptor.endRootSection();
   }
 
@@ -1560,6 +1578,38 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   }
   return res;
 }
+
+#ifdef HERMESVM_PROFILER_BB
+void Runtime::preventHCGC(HiddenClass *hc) {
+  auto ret = debugIdToIdx_.insert(
+      std::pair<DebugId, uint32_t>(heap_.getObjectID(hc), hcIdx_));
+  if (ret.second) {
+    JSArray::setElementAt(
+        makeHandle(cachedHiddenClassesRawPtr_), this, hcIdx_++, makeHandle(hc));
+  }
+}
+
+void Runtime::recordHiddenClass(
+    CodeBlock *codeBlock,
+    const Inst *cacheMissInst,
+    SymbolID symbolID,
+    HiddenClass *objectHiddenClass,
+    HiddenClass *cachedHiddenClass) {
+  if (objectHiddenClass != nullptr) {
+    preventHCGC(objectHiddenClass);
+  }
+  if (cachedHiddenClass != nullptr) {
+    preventHCGC(cachedHiddenClass);
+  }
+}
+
+HiddenClass *Runtime::resolveHCDebugId(DebugId debugId) {
+  auto hcHermesVal =
+      cachedHiddenClassesRawPtr_->at(this, debugIdToIdx_[debugId]);
+  return vmcast<HiddenClass>(hcHermesVal);
+}
+
+#endif
 
 #ifdef HERMESVM_SERIALIZE
 void Runtime::serialize(Serializer &s) {

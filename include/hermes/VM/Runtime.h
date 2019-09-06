@@ -37,6 +37,7 @@
 #include "hermes/VM/StackFrame.h"
 #include "hermes/VM/SymbolRegistry.h"
 #include "hermes/VM/TwineChar16.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <atomic>
@@ -71,6 +72,10 @@ struct RuntimeOffsets;
 class ScopedNativeDepthTracker;
 class ScopedNativeCallFrame;
 class SamplingProfiler;
+
+#ifdef HERMESVM_PROFILER_BB
+class JSArray;
+#endif
 
 /// Number of stack words after the top of frame that we always ensure are
 /// available. This is necessary so we can perform native calls with small
@@ -723,6 +728,25 @@ class Runtime : public HandleRootOwner,
   }
 #endif
 
+#ifdef HERMESVM_PROFILER_BB
+  /// Inserts the Hidden class as a root to prevent it from being garbage
+  /// collected.
+  void preventHCGC(HiddenClass *hc);
+
+  /// Inserts Hidden Classes into InlineCacheProfiler
+  void recordHiddenClass(
+      CodeBlock *codeBlock,
+      const Inst *cacheMissInst,
+      SymbolID symbolID,
+      HiddenClass *objectHiddenClass,
+      HiddenClass *cachedHiddenClass);
+
+  using DebugId = uint64_t;
+
+  /// Resolves HiddenClass pointers from its DebugId.
+  HiddenClass *resolveHCDebugId(DebugId debugId);
+#endif
+
  protected:
   /// Construct a Runtime on the stack.
   /// NOTE: This should only be used by StackRuntime. All other uses should use
@@ -995,6 +1019,18 @@ class Runtime : public HandleRootOwner,
 
 #ifdef HERMESVM_PROFILER_BB
   BasicBlockExecutionInfo basicBlockExecInfo_;
+
+  /// Keep track of the current index of the hidden class array.
+  /// used by the inline caching profiler
+  uint32_t hcIdx_{0};
+
+  /// Store an array of hidden classes that will be used
+  /// by inline caching profiler.
+  JSArray *cachedHiddenClassesRawPtr_;
+
+  /// Store a map from object Id to array index in the array
+  /// referenced by cachedHiddenClassesRawPtr_.
+  llvm::DenseMap<DebugId, int32_t> debugIdToIdx_;
 #endif
 
   /// Store a key for the function that is executed if a crash occurs.
