@@ -834,24 +834,34 @@ void OldGen::checkWellFormed(const GC *gc) const {
 #endif
 
 #ifdef HERMES_EXTRA_DEBUG
+/// For all of these, we're commenting out the bodies until we can figure
+/// out the crashes that the extra diasnostic code seems to have caused.
 void OldGen::protectCardTableBoundaries() {
+#if 0
   forUsedSegments([](AlignedHeapSegment &segment) {
     segment.cardTable().protectBoundaryTable();
   });
+#endif
 }
 
 void OldGen::unprotectCardTableBoundaries() {
+#if 0
   forUsedSegments([](AlignedHeapSegment &segment) {
     segment.cardTable().unprotectBoundaryTable();
   });
+#endif
 }
 
 void OldGen::protectActiveSegCardTableBoundaries() {
+#if 0
   activeSegment().cardTable().protectBoundaryTable();
+#endif
 }
 
 void OldGen::unprotectActiveSegCardTableBoundaries() {
+#if 0
   activeSegment().cardTable().unprotectBoundaryTable();
+#endif
 }
 #endif
 
