@@ -95,6 +95,15 @@ runIterator(a.values());
 runIterator(a.entries());
 // CHECK-NEXT: [object Array Iterator]
 // CHECK-NEXT: undefined true
+try {
+  var a = new Uint8Array([1,2,3]);
+  for (var i of a.keys()) {
+    HermesInternal.detachArrayBuffer(a.buffer);
+  }
+} catch (e) {
+  print("caught", e.name);
+}
+// CHECK-NEXT: caught TypeError
 
 print('String Iterator');
 // CHECK-LABEL: String Iterator

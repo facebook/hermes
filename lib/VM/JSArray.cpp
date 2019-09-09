@@ -833,7 +833,12 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
   uint64_t len;
   if (auto ta = Handle<JSTypedArrayBase>::dyn_vmcast(runtime, a)) {
     // 8. If a has a [[TypedArrayName]] internal slot, then
-    // a. Let len be the value of O’s [[ArrayLength]] internal slot.
+    // a. If IsDetachedBuffer(a.[[ViewedArrayBuffer]]) is true,
+    //    throw a TypeError exception.
+    // b. Let len be the value of O’s [[ArrayLength]] internal slot.
+    if (LLVM_UNLIKELY(!ta->attached(runtime))) {
+      return runtime->raiseTypeError("TypedArray detached during iteration");
+    }
     len = ta->getLength();
   } else {
     // 9. Else,

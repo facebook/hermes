@@ -656,7 +656,6 @@ BLACK_LIST = [
     "mjsunit/es6/string-replace.js",
     "mjsunit/es6/tail-call.js",
     "mjsunit/modules-exports2.js",
-    "test262/test/built-ins/ArrayIteratorPrototype/next/detach-typedarray-in-progress.js",
     "test262/test/language/expressions/tagged-template/invalid-escape-sequences.js",
     "test262/test/harness/verifyProperty-restore-accessor.js",
     "test262/test/harness/detachArrayBuffer-host-detachArrayBuffer.js",
