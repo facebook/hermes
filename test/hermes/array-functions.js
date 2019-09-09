@@ -339,6 +339,9 @@ a[10000] = 'x2';
 print(a.push('last'), a[0], a[10000], a[10001]);
 // CHECK-NEXT: 10002 x1 x2 last
 a = null;
+var a = {length: 2**53 - 1};
+try { a.push(1); } catch (e) { print('caught', e.name) }
+// CHECK-NEXT: caught TypeError
 
 print('reverse');
 // CHECK-LABEL: reverse

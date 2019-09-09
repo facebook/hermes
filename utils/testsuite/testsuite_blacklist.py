@@ -525,10 +525,7 @@ BLACK_LIST = [
     # exp operator
     "test262/test/built-ins/Array/prototype/reverse/length-exceeding-integer-limit-with-proxy.js",
     "test262/test/built-ins/Array/prototype/reverse/length-exceeding-integer-limit-with-object.js",
-    "test262/test/built-ins/Array/prototype/push/throws-if-integer-limit-exceeded.js",
-    "test262/test/built-ins/Array/prototype/push/clamps-to-integer-limit.js",
     "test262/test/built-ins/Array/prototype/splice/clamps-length-to-integer-limit.js",
-    "test262/test/built-ins/Array/prototype/push/length-near-integer-limit.js",
     "test262/test/built-ins/Array/prototype/splice/length-exceeding-integer-limit-shrink-array.js",
     "test262/test/built-ins/Array/prototype/splice/throws-if-integer-limit-exceeded.js",
     "test262/test/built-ins/Array/prototype/splice/length-and-deleteCount-exceeding-integer-limit.js",

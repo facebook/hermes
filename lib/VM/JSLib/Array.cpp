@@ -1123,25 +1123,25 @@ arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
   return element.get();
 }
 
+/// ES9.0 22.1.3.18.
 CallResult<HermesValue>
 arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
+
+  // 1. Let O be ? ToObject(this value).
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
-  // Index at which to insert the next element.
-  // Will be initialized to O.length.
-  MutableHandle<> n{runtime};
+  MutableHandle<> len{runtime};
 
-  // Attempt to take a fast path for actual arrays.
+  // 2. Let len be ? ToLength(? Get(O, "length")).
   Handle<JSArray> arr = Handle<JSArray>::dyn_vmcast(runtime, O);
   if (LLVM_LIKELY(arr)) {
     // Fast path for getting the length.
-    uint32_t len = JSArray::getLength(arr.get());
-    n = HermesValue::encodeNumberValue(len);
+    len = HermesValue::encodeNumberValue(JSArray::getLength(arr.get()));
   } else {
     // Slow path, used when pushing onto non-array objects.
     auto propRes = JSObject::getNamed_RJS(
@@ -1149,42 +1149,60 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
-    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+    auto lenRes = toLength(runtime, runtime->makeHandle(*propRes));
+    if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    n = intRes.getValue();
+    len = lenRes.getValue();
+  }
+
+  // 3. Let items be a List whose elements are, in left to right order, the
+  // arguments that were passed to this function invocation.
+  // 4. Let argCount be the number of elements in items.
+  uint32_t argCount = args.getArgCount();
+
+  // 5. If len + argCount > 2**53-1, throw a TypeError exception.
+  if (len->getNumber() + (double)argCount > std::pow(2.0, 53) - 1) {
+    return runtime->raiseTypeError("Array length exceeded in push()");
   }
 
   auto marker = gcScope.createMarker();
-  // If the prototype has an index-like non-writable property at index n,
-  // we have to fail to push.
-  // If the prototype has an index-like accessor at index n,
-  // then we have to attempt to call the setter.
-  // Must call putComputed because the array prototype could have
-  // values for keys that haven't been inserted into O yet.
+  // 6. Repeat, while items is not empty
   for (auto arg : args.handles()) {
+    // a. Remove the first element from items and let E be the value of the
+    // element.
+    // b. Perform ? Set(O, ! ToString(len), E, true).
+    // NOTE: If the prototype has an index-like non-writable property at
+    // index n, we have to fail to push.
+    // If the prototype has an index-like accessor at index n,
+    // then we have to attempt to call the setter.
+    // Must call putComputed because the array prototype could have values for
+    // keys that haven't been inserted into O yet.
     if (LLVM_UNLIKELY(
             JSObject::putComputed_RJS(
-                O, runtime, n, arg, PropOpFlags().plusThrowOnError()) ==
+                O, runtime, len, arg, PropOpFlags().plusThrowOnError()) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     gcScope.flushToMarker(marker);
-    n = HermesValue::encodeDoubleValue(n->getNumber() + 1);
+    // c. Let len be len+1.
+    len = HermesValue::encodeDoubleValue(len->getNumber() + 1);
   }
 
-  // Spec requires that we do this after pushing the elements,
-  // so if there's too many at the end, this may throw after modifying O.
+  // 7. Perform ? Set(O, "length", len, true).
   if (LLVM_UNLIKELY(
           JSObject::putNamed_RJS(
               O,
               runtime,
               Predefined::getSymbolID(Predefined::length),
-              n,
-              PropOpFlags().plusThrowOnError()) == ExecutionStatus::EXCEPTION))
+              len,
+              PropOpFlags().plusThrowOnError()) ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
-  return n.get();
+  }
+
+  // 8. Return len.
+  return len.get();
 }
 
 CallResult<HermesValue>
