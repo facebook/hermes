@@ -1205,6 +1205,7 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
   return len.get();
 }
 
+/// ES10.0 22.1.3.23.
 CallResult<HermesValue>
 arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
@@ -1244,26 +1245,29 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor lowerDesc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, lower, lowerDescObjHandle, lowerDesc);
-
-    ComputedPropertyDescriptor upperDesc;
-    JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, upper, upperDescObjHandle, upperDesc);
-
-    // Handle cases in which lower/upper do/don't exist.
-    // Only read lowerValue and upperValue if they exist.
-    if (lowerDescObjHandle && upperDescObjHandle) {
+    if (lowerDescObjHandle) {
       if ((propRes = JSObject::getComputedPropertyValue(
                O, runtime, lowerDescObjHandle, lowerDesc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
       lowerValue = propRes.getValue();
+    }
+
+    ComputedPropertyDescriptor upperDesc;
+    JSObject::getComputedPrimitiveDescriptor(
+        O, runtime, upper, upperDescObjHandle, upperDesc);
+    if (upperDescObjHandle) {
       if ((propRes = JSObject::getComputedPropertyValue(
                O, runtime, upperDescObjHandle, upperDesc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
       upperValue = propRes.getValue();
+    }
+
+    // Handle cases in which lower/upper do/don't exist.
+    if (lowerDescObjHandle && upperDescObjHandle) {
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
                   O,
@@ -1285,12 +1289,6 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
     } else if (upperDescObjHandle) {
-      if ((propRes = JSObject::getComputedPropertyValue(
-               O, runtime, upperDescObjHandle, upperDesc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      upperValue = propRes.getValue();
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
                   O,
@@ -1308,12 +1306,6 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
     } else if (lowerDescObjHandle) {
-      if ((propRes = JSObject::getComputedPropertyValue(
-               O, runtime, lowerDescObjHandle, lowerDesc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      lowerValue = propRes.getValue();
       if (LLVM_UNLIKELY(
               JSObject::deleteComputed(
                   O, runtime, lower, PropOpFlags().plusThrowOnError()) ==

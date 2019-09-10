@@ -366,6 +366,76 @@ a.length = 6;
 Array.prototype.reverse.call(a);
 print(a[0], a[4], a[5]);
 // CHECK-NEXT: c b a
+var a = [0, 1, 2, 3];
+Object.defineProperty(a, 3, {
+  get: function() {
+    delete a[1];
+    return -1;
+  },
+  set: function() { print('setter'); }
+});
+a.reverse();
+print(a);
+// CHECK-NEXT: setter
+// CHECK-NEXT: -1,2,,-1
+var a = [0, 1];
+Object.defineProperty(a, 0, {
+  get: function() {
+    a.pop();
+    return -1;
+  }
+});
+a.reverse();
+print(a);
+// CHECK-NEXT: ,-1
+var a = [];
+Object.defineProperties(a, {
+  '0': {
+    get: function() {
+      print('getter 0');
+      return a.val_0;
+    },
+    set: function(v) { a.val_0 = v; }
+  },
+  '1': {
+    get: function() {
+      print('getter 1');
+      return a.val_1;
+    },
+    set: function(v) { a.val_1 = v; }
+  },
+});
+a[0] = 0;
+a[1] = 1;
+a.reverse();
+print(a);
+// CHECK-NEXT: getter 0
+// CHECK-NEXT: getter 1
+// CHECK-NEXT: getter 0
+// CHECK-NEXT: getter 1
+// CHECK-NEXT: 1,0
+var a = [0, 1, 2, 3, 4, 5, 6];
+Object.defineProperties(a, {
+  '0': {
+    get: function() {
+      a.pop();
+      return -1;
+    }
+  },
+  '1': {
+    set: function() { a.push('a'); }
+  },
+  '2': {
+    get: function() {
+      a.push('b');
+      return -2;
+    },
+    set: function() { a.pop(); }
+  }
+});
+a.reverse();
+print(a);
+// CHECK-NEXT: ,,-2,3,-2,,-1,a
 
 print('shift');
 // CHECK-LABEL: shift
