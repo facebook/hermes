@@ -54,4 +54,20 @@ TEST(CompactArrayTest, Values) {
   }
 }
 
+TEST(CompactTableTest, Basic) {
+  CompactTable t(1);
+  EXPECT_TRUE(t.isEmpty(0));
+
+  t.set(0, 123456);
+  EXPECT_TRUE(t.isValid(0));
+  EXPECT_EQ(123456, t.get(0));
+
+  t.markAsDeleted(0);
+  EXPECT_TRUE(t.isDeleted(0));
+
+  t.set(0, 654321);
+  EXPECT_TRUE(t.isValid(0));
+  EXPECT_EQ(654321, t.get(0));
+}
+
 } // namespace

@@ -100,6 +100,46 @@ class CompactArray {
   char *raw_;
 };
 
+/// CompactArray but elements are EMPTY, DELETED, or valid number in [0, 2^32-2)
+/// and elements always transition EMPTY -> valid -> DELETED -> valid -> ...
+class CompactTable : private CompactArray {
+ public:
+  using CompactArray::CompactArray;
+  using CompactArray::getCurrentScale;
+  using CompactArray::size;
+  void swap(CompactTable &other) {
+    CompactArray::swap(other);
+  }
+  bool isEmpty(uint32_t idx) const {
+    return CompactArray::get(idx) == EMPTY;
+  }
+  bool isDeleted(uint32_t idx) const {
+    return CompactArray::get(idx) == DELETED;
+  }
+  bool isValid(uint32_t idx) const {
+    return CompactArray::get(idx) >= FIRST_VALID;
+  }
+  uint32_t get(uint32_t idx) const {
+    assert(isValid(idx));
+    return CompactArray::get(idx) - FIRST_VALID;
+  }
+  void set(uint32_t idx, uint32_t value) {
+    assert(!isValid(idx));
+    CompactArray::set(idx, value + FIRST_VALID);
+    /// Checks for overflow.
+    assert(isValid(idx));
+  }
+  void markAsDeleted(uint32_t idx) {
+    assert(isValid(idx));
+    CompactArray::set(idx, DELETED);
+  }
+
+ private:
+  /// Invalid values at the bottom, to make good use of underlying CompactArray.
+  /// Empty is 0 so that the initial state is all empty.
+  enum { EMPTY = 0, DELETED, FIRST_VALID };
+};
+
 } // namespace hermes
 
 #endif // HERMES_SUPPORT_COMPACTARRAY_H
