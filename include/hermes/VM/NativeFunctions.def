@@ -74,16 +74,17 @@ NATIVE_FUNCTION(dataViewPrototypeByteOffset)
 
 // NATIVE_FUNCTION_TYPED for template with one type.
 // NATIVE_FUNCTION_TYPED_2 for template with two types.
-#define TYPED_ARRAY(name, type)                              \
-  NATIVE_FUNCTION_TYPED(dataViewPrototypeGet, type)                \
+#define TYPED_ARRAY(name, type)                     \
+  NATIVE_FUNCTION_TYPED(dataViewPrototypeGet, type) \
   NATIVE_FUNCTION_TYPED_2(dataViewPrototypeSet, type, CellKind::name##ArrayKind)
 #define TYPED_ARRAY_NO_CLAMP
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 #undef TYPED_ARRAY_NO_CLAMP
 
-#define TYPED_ARRAY(name, type)                              \
-  NATIVE_FUNCTION_TYPED_2(typedArrayConstructor, type, CellKind::name##ArrayKind)
+#define TYPED_ARRAY(name, type) \
+  NATIVE_FUNCTION_TYPED_2(      \
+      typedArrayConstructor, type, CellKind::name##ArrayKind)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 
@@ -131,7 +132,7 @@ NATIVE_FUNCTION(hermesInternalEnsureObject)
 NATIVE_FUNCTION(hermesInternalExportAll)
 
 #ifdef HERMESVM_EXCEPTION_ON_OOM
-  NATIVE_FUNCTION(hermesInternalGetCallStack)
+NATIVE_FUNCTION(hermesInternalGetCallStack)
 #endif // HERMESVM_EXCEPTION_ON_OOM
 
 NATIVE_FUNCTION(hermesInternalGetEpilogues)
@@ -143,8 +144,8 @@ NATIVE_FUNCTION(hermesInternalTTIReached)
 NATIVE_FUNCTION(hermesInternalTTRCReached)
 
 #ifdef HERMES_ENABLE_DEBUGGER
-  NATIVE_FUNCTION(isDebuggerAttached)
-  NATIVE_FUNCTION(shouldPauseOnThrow)
+NATIVE_FUNCTION(isDebuggerAttached)
+NATIVE_FUNCTION(shouldPauseOnThrow)
 #endif // HERMES_ENABLE_DEBUGGER
 
 NATIVE_FUNCTION(isFinite)
@@ -328,7 +329,7 @@ NATIVE_FUNCTION(weakSetPrototypeDelete)
 NATIVE_FUNCTION(weakSetPrototypeHas)
 
 #define ALL_ERROR_TYPE(name) NATIVE_FUNCTION(name##Constructor)
-  #include "hermes/VM/NativeErrorTypes.def"
+#include "hermes/VM/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE
 
 // NativeConstructor
@@ -337,7 +338,7 @@ NATIVE_FUNCTION(weakSetPrototypeHas)
 NATIVE_CONSTRUCTOR(JSObject::createWithException)
 NATIVE_CONSTRUCTOR(JSFunction::createWithNewDomain)
 
-//NativeClass::create
+// NativeClass::create
 NATIVE_CONSTRUCTOR(JSArrayBuffer::create)
 NATIVE_CONSTRUCTOR(JSError::create)
 NATIVE_CONSTRUCTOR(JSBoolean::create)
@@ -353,12 +354,11 @@ NATIVE_CONSTRUCTOR(JSString::create)
 NATIVE_CONSTRUCTOR(JSDataView::create)
 NATIVE_CONSTRUCTOR(JSWeakSet::create)
 
-
-#define TYPED_ARRAY(name, type)                              \
-  NATIVE_CONSTRUCTOR_TYPED(JSTypedArray, type, CellKind::name##ArrayKind, create)
+#define TYPED_ARRAY(name, type) \
+  NATIVE_CONSTRUCTOR_TYPED(     \
+      JSTypedArray, type, CellKind::name##ArrayKind, create)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
-
 
 #undef NATIVE_FUNCTION
 #undef NATIVE_CONSTRUCTOR
