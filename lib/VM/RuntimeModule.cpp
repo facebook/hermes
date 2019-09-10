@@ -221,10 +221,6 @@ void RuntimeModule::importStringIDMapMayAllocate() {
   // Populate the string ID map with empty identifiers.
   stringIDMap_.resize(strTableSize, SymbolID::empty());
 
-  // Preallocate enough space to store all identifiers to prevent
-  // unnecessary allocations.
-  runtime_->getIdentifierTable().reserve(strTableSize);
-
   if (runtime_->getVMExperimentFlags() &
       experiments::MAdviseStringsSequential) {
     bcProvider_->adviseStringTableSequential();
@@ -241,6 +237,11 @@ void RuntimeModule::importStringIDMapMayAllocate() {
   assert(
       translations.size() <= strTableSize &&
       "Should not have more strings than identifiers");
+
+  // Preallocate enough space to store all identifiers to prevent
+  // unnecessary allocations. NOTE: If this module is not the first module,
+  // then this is an underestimate.
+  runtime_->getIdentifierTable().reserve(translations.size());
   {
     StringID strID = 0;
     uint32_t trnID = 0;
