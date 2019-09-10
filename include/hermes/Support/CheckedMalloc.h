@@ -31,6 +31,10 @@ checkedMalloc2(size_t count, size_t size) {
   return checkedMalloc(totalSize);
 }
 
+/// Like checkedMalloc2, but zero-initializes the allocation.
+LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ATTRIBUTE_RETURNS_NOALIAS void *
+checkedCalloc(size_t count, size_t size);
+
 } // namespace hermes
 
 #endif // HERMES_SUPPORT_CHECKEDMALLOC_H

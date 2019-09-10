@@ -19,9 +19,12 @@ TEST(CheckedMalloc, Death) {
   // These products are too big to fit into a size_t.
   EXPECT_DEATH_IF_SUPPORTED({ checkedMalloc2(size_max, 2); }, "malloc");
   EXPECT_DEATH_IF_SUPPORTED({ checkedMalloc2(2, size_max - 1); }, "malloc");
+  EXPECT_DEATH_IF_SUPPORTED({ checkedCalloc(2, size_max - 1); }, "malloc");
   // Allocating size 0 should not crash.
   free(checkedMalloc2(0, size_max));
   free(checkedMalloc2(0, size_max));
+  free(checkedCalloc(0, size_max));
+  free(checkedCalloc(0, size_max));
   free(checkedMalloc(0));
 }
 } // namespace
