@@ -973,10 +973,10 @@ class Runtime : public HandleRootOwner,
   PinnedHermesValue *registerStack_;
   PinnedHermesValue *registerStackEnd_;
   PinnedHermesValue *stackPointer_;
-  /// True if we need to free the memory for the register stack on destruction.
-  /// When set to false, the register stack is not allocated
+  /// Bytes of register stack to unmap on destruction.
+  /// When set to zero, the register stack is not allocated
   /// by the runtime itself.
-  bool freeRegisterStack_{true};
+  uint32_t registerStackBytesToUnmap_{0};
   /// Manages data to be used in the case of a crash.
   std::shared_ptr<CrashManager> crashMgr_;
   /// Points to the last register in the callers frame. The current frame (the

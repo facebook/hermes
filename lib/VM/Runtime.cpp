@@ -225,15 +225,20 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
   }
   registerStack_ = runtimeConfig.getRegisterStack();
   if (!registerStack_) {
-    // registerStack_ should be allocated with malloc instead of new so that the
-    // default constructors don't run for the whole stack space.
-    const auto numBytesForRegisters =
-        sizeof(PinnedHermesValue) * maxNumRegisters;
-    registerStack_ =
-        static_cast<PinnedHermesValue *>(checkedMalloc(numBytesForRegisters));
+    // registerStack_ should not be allocated with new, because then
+    // default constructors would run for the whole stack space.
+    // Round up to page size as required by vm_allocate.
+    const auto numBytesForRegisters = llvm::alignTo(
+        sizeof(PinnedHermesValue) * maxNumRegisters, oscompat::page_size());
+    auto result = oscompat::vm_allocate(numBytesForRegisters);
+    if (!result) {
+      hermes_fatal("failed to allocate register stack");
+    }
+    registerStack_ = static_cast<PinnedHermesValue *>(result.get());
+    registerStackBytesToUnmap_ = numBytesForRegisters;
     crashMgr_->registerMemory(registerStack_, numBytesForRegisters);
   } else {
-    freeRegisterStack_ = false;
+    registerStackBytesToUnmap_ = 0;
   }
 
   registerStackEnd_ = registerStack_ + maxNumRegisters;
@@ -357,9 +362,9 @@ Runtime::~Runtime() {
 
   heap_.finalizeAll();
   crashMgr_->unregisterCallback(crashCallbackKey_);
-  if (freeRegisterStack_) {
+  if (registerStackBytesToUnmap_ > 0) {
     crashMgr_->unregisterMemory(registerStack_);
-    ::free(registerStack_);
+    oscompat::vm_free(registerStack_, registerStackBytesToUnmap_);
   }
   // Remove inter-module dependencies so we can delete them in any order.
   for (auto &module : runtimeModuleList_) {
@@ -591,8 +596,8 @@ void Runtime::freeSymbols(const std::vector<bool> &markedSymbols) {
 size_t Runtime::mallocSize() const {
   size_t totalSize = 0;
 
-  // Capacity of the register stack.
-  totalSize += sizeof(*registerStack_) * (registerStackEnd_ - registerStack_);
+  // Register stack uses mmap.
+
   // IdentifierTable size
   totalSize +=
       sizeof(IdentifierTable) + identifierTable_.additionalMemorySize();
