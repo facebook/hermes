@@ -16,6 +16,7 @@ add_llvm_library(hermesSupport
         Allocator.cpp
         Base64vlq.cpp
         CheckedMalloc.cpp
+        CompactArray.cpp
         Conversions.cpp
         ErrorHandling.cpp
         JSONEmitter.cpp
