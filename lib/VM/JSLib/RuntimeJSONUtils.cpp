@@ -468,7 +468,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   }
   auto valHandle = runtime_->makeHandle(*propRes);
   MutableHandle<> tmpHandle{runtime_};
-  if (auto scopedArray = Handle<JSArray>::dyn_vmcast(runtime_, valHandle)) {
+  if (auto scopedArray = Handle<JSArray>::dyn_vmcast(valHandle)) {
     for (uint32_t index = 0, e = JSArray::getLength(scopedArray.get());
          index < e;
          ++index) {
@@ -479,8 +479,7 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
         return ExecutionStatus::EXCEPTION;
       }
     }
-  } else if (
-      auto scopedObject = Handle<JSObject>::dyn_vmcast(runtime_, valHandle)) {
+  } else if (auto scopedObject = Handle<JSObject>::dyn_vmcast(valHandle)) {
     auto cr = JSObject::getOwnPropertyNames(scopedObject, runtime_, true);
     if (cr == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -550,7 +549,7 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     return ExecutionStatus::RETURNED;
   // replacer is not a callable.
 
-  auto replacerArray = Handle<JSArray>::dyn_vmcast(runtime_, replacer);
+  auto replacerArray = Handle<JSArray>::dyn_vmcast(replacer);
   if (!replacerArray)
     return ExecutionStatus::RETURNED;
   // replacer is an array.
@@ -652,8 +651,7 @@ ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
       }
       gap_ = strRes->getString();
     }
-  } else if (
-      auto str = Handle<StringPrimitive>::dyn_vmcast(runtime_, tmpHandle_)) {
+  } else if (auto str = Handle<StringPrimitive>::dyn_vmcast(tmpHandle_)) {
     if (str->getStringLength() > 10) {
       auto strRes = StringPrimitive::slice(runtime_, str, 0, 10);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
@@ -680,8 +678,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
   }
   operationStrValue_.set(*propRes);
 
-  if (auto valueObj =
-          Handle<JSObject>::dyn_vmcast(runtime_, operationStrValue_)) {
+  if (auto valueObj = Handle<JSObject>::dyn_vmcast(operationStrValue_)) {
     // Str.2.
     // Str.2.a: check if toJSON exists in value.
     if (LLVM_UNLIKELY(
@@ -693,8 +690,8 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
       return ExecutionStatus::EXCEPTION;
     }
     // Str.2.b: check if toJSON is a Callable.
-    if (auto toJSON = Handle<Callable>::dyn_vmcast(
-            runtime_, runtime_->makeHandle(*propRes))) {
+    if (auto toJSON =
+            Handle<Callable>::dyn_vmcast(runtime_->makeHandle(*propRes))) {
       if (!tmpHandle_->isString()) {
         // Lazily convert key to a string.
         auto status = toString_RJS(runtime_, tmpHandle_);

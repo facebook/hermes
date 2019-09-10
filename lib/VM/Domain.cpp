@@ -223,7 +223,7 @@ ExecutionStatus Domain::importCJSModuleTable(
         throwTypeError,
         Predefined::getSymbolID(Predefined::emptyString),
         0,
-        runtime->makeNullHandle<JSObject>());
+        Runtime::makeNullHandle<JSObject>());
 
     auto context = RequireContext::create(
         runtime,

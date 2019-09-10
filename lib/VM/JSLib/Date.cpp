@@ -389,7 +389,7 @@ static CallResult<double> makeTimeFromArgs(Runtime *runtime, NativeArgs args) {
 
   for (size_t i = 0; i < std::min(7u, argCount); ++i) {
     GCScopeMarkerRAII marker{runtime};
-    auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, i));
+    auto res = toNumber_RJS(runtime, args.getArgHandle(i));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -437,8 +437,8 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
         finalDate = JSDate::getPrimitiveValue(dateArg, runtime).getNumber();
       } else {
         // Parse the argument if it's a string, else just convert to number.
-        auto res = toPrimitive_RJS(
-            runtime, args.getArgHandle(runtime, 0), PreferredType::NONE);
+        auto res =
+            toPrimitive_RJS(runtime, args.getArgHandle(0), PreferredType::NONE);
         if (res == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -496,7 +496,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue> dateParse(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -512,7 +512,7 @@ CallResult<HermesValue> dateUTC(void *, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeNaNValue();
   }
   if (args.getArgCount() == 1) {
-    auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+    auto res = toNumber_RJS(runtime, args.getArgHandle(0));
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -703,12 +703,12 @@ datePrototypeGetterHelper(void *ctx, Runtime *runtime, NativeArgs args) {
 /// Set the [[PrimitiveValue]] to the given time.
 CallResult<HermesValue>
 datePrototypeSetTime(void *ctx, Runtime *runtime, NativeArgs args) {
-  auto self = args.dyncastThis<JSDate>(runtime);
+  auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime->raiseTypeError(
         "Date.prototype.setTime() called on non-Date object");
   }
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -721,7 +721,7 @@ datePrototypeSetTime(void *ctx, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
-  auto self = args.dyncastThis<JSDate>(runtime);
+  auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime->raiseTypeError(
         "Date.prototype.setMilliseconds() called on non-Date object");
@@ -730,7 +730,7 @@ datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -752,7 +752,7 @@ datePrototypeSetMilliseconds(void *ctx, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
-  auto self = args.dyncastThis<JSDate>(runtime);
+  auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime->raiseTypeError(
         "Date.prototype.setSeconds() called on non-Date object");
@@ -761,14 +761,14 @@ datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double s = res->getNumber();
   double milli;
   if (args.getArgCount() >= 2) {
-    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+    res = toNumber_RJS(runtime, args.getArgHandle(1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -794,7 +794,7 @@ datePrototypeSetSeconds(void *ctx, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
-  auto self = args.dyncastThis<JSDate>(runtime);
+  auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime->raiseTypeError(
         "Date.prototype.setMinutes() called on non-Date object");
@@ -803,14 +803,14 @@ datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double m = res->getNumber();
   double s;
   if (args.getArgCount() >= 2) {
-    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+    res = toNumber_RJS(runtime, args.getArgHandle(1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -820,7 +820,7 @@ datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double milli;
   if (args.getArgCount() >= 3) {
-    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 2));
+    res = toNumber_RJS(runtime, args.getArgHandle(2));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -845,7 +845,7 @@ datePrototypeSetMinutes(void *ctx, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
-  auto self = args.dyncastThis<JSDate>(runtime);
+  auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime->raiseTypeError(
         "Date.prototype.setHours() called on non-Date object");
@@ -854,14 +854,14 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double h = res->getNumber();
   double m;
   if (args.getArgCount() >= 2) {
-    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+    res = toNumber_RJS(runtime, args.getArgHandle(1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -871,7 +871,7 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double s;
   if (args.getArgCount() >= 3) {
-    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 2));
+    res = toNumber_RJS(runtime, args.getArgHandle(2));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -881,7 +881,7 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double milli;
   if (args.getArgCount() >= 4) {
-    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 3));
+    res = toNumber_RJS(runtime, args.getArgHandle(3));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -905,7 +905,7 @@ datePrototypeSetHours(void *ctx, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
-  auto self = args.dyncastThis<JSDate>(runtime);
+  auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime->raiseTypeError(
         "Date.prototype.setDate() called on non-Date object");
@@ -914,7 +914,7 @@ datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -936,7 +936,7 @@ datePrototypeSetDate(void *ctx, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
-  auto self = args.dyncastThis<JSDate>(runtime);
+  auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime->raiseTypeError(
         "Date.prototype.setMonth() called on non-Date object");
@@ -945,14 +945,14 @@ datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args) {
   if (!isUTC) {
     t = localTime(t);
   }
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double m = res->getNumber();
   double dt;
   if (args.getArgCount() >= 2) {
-    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+    res = toNumber_RJS(runtime, args.getArgHandle(1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -976,7 +976,7 @@ datePrototypeSetMonth(void *ctx, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
   bool isUTC = static_cast<bool>(ctx);
-  auto self = args.dyncastThis<JSDate>(runtime);
+  auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime->raiseTypeError(
         "Date.prototype.setFullYear() called on non-Date object");
@@ -988,14 +988,14 @@ datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
   if (std::isnan(t)) {
     t = 0;
   }
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   double y = res->getNumber();
   double m;
   if (args.getArgCount() >= 2) {
-    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+    res = toNumber_RJS(runtime, args.getArgHandle(1));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1005,7 +1005,7 @@ datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double dt;
   if (args.getArgCount() >= 3) {
-    res = toNumber_RJS(runtime, args.getArgHandle(runtime, 2));
+    res = toNumber_RJS(runtime, args.getArgHandle(2));
     if (res == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1029,7 +1029,7 @@ datePrototypeSetFullYear(void *ctx, Runtime *runtime, NativeArgs args) {
 /// Sets the year to the new year and returns the time.
 CallResult<HermesValue>
 datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
-  auto self = args.dyncastThis<JSDate>(runtime);
+  auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime->raiseTypeError(
         "Date.prototype.setYear() called on non-Date object");
@@ -1039,7 +1039,7 @@ datePrototypeSetYear(void *ctx, Runtime *runtime, NativeArgs args) {
   if (std::isnan(t)) {
     t = 0;
   }
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1080,7 +1080,7 @@ datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   Handle<Callable> toISO =
-      Handle<Callable>::dyn_vmcast(runtime, runtime->makeHandle(*propRes));
+      Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes));
   if (!toISO.get()) {
     return runtime->raiseTypeError(
         "toISOString is not callable in Date.prototype.toJSON()");
@@ -1090,13 +1090,13 @@ datePrototypeToJSON(void *ctx, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 datePrototypeSymbolToPrimitive(void *, Runtime *runtime, NativeArgs args) {
-  auto O = args.dyncastThis<JSObject>(runtime);
+  auto O = args.dyncastThis<JSObject>();
   if (LLVM_UNLIKELY(!O)) {
     return runtime->raiseTypeError(
         "Date[Symbol.toPrimitive]() must be called on an object");
   }
 
-  auto hint = args.getArgHandle(runtime, 0);
+  auto hint = args.getArgHandle(0);
   if (LLVM_UNLIKELY(!hint->isString())) {
     return runtime->raiseTypeError(
         "Date[Symbol.toPrimitive]() argument must be a string");

@@ -171,7 +171,7 @@ numberConstructor(void *, Runtime *runtime, NativeArgs args) {
   double value = +0.0;
 
   if (args.getArgCount() > 0) {
-    auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+    auto res = toNumber_RJS(runtime, args.getArgHandle(0));
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -299,7 +299,7 @@ numberPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
     radix = 10;
   else {
     // ToInteger(arg0).
-    auto intRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+    auto intRes = toInteger(runtime, args.getArgHandle(0));
     if (intRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -356,7 +356,7 @@ numberPrototypeToLocaleString(void *ctx, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
-  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  auto intRes = toInteger(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -377,7 +377,7 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
   if (args.getThisArg().isNumber()) {
     x = args.getThisArg().getNumber();
   } else {
-    auto numPtr = Handle<JSNumber>::dyn_vmcast(runtime, args.getThisHandle());
+    auto numPtr = Handle<JSNumber>::dyn_vmcast(args.getThisHandle());
     if (LLVM_UNLIKELY(!numPtr)) {
       return runtime->raiseTypeError(
           "Number.prototype.toFixed() can only be used on Number");
@@ -478,7 +478,7 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
   if (args.getThisArg().isNumber()) {
     x = args.getThisArg().getNumber();
   } else {
-    auto numPtr = Handle<JSNumber>::dyn_vmcast(runtime, args.getThisHandle());
+    auto numPtr = Handle<JSNumber>::dyn_vmcast(args.getThisHandle());
     if (LLVM_UNLIKELY(!numPtr)) {
       return runtime->raiseTypeError(
           "Number.prototype.toExponential() can only be used on Number");
@@ -486,7 +486,7 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
     x = JSNumber::getPrimitiveValue(numPtr.get(), runtime).getNumber();
   }
 
-  auto res = toInteger(runtime, args.getArgHandle(runtime, 0));
+  auto res = toInteger(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -605,7 +605,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
   if (args.getThisArg().isNumber()) {
     x = args.getThisArg().getNumber();
   } else {
-    auto numPtr = Handle<JSNumber>::dyn_vmcast(runtime, args.getThisHandle());
+    auto numPtr = Handle<JSNumber>::dyn_vmcast(args.getThisHandle());
     if (LLVM_UNLIKELY(!numPtr)) {
       return runtime->raiseTypeError(
           "Number.prototype.toPrecision() can only be used on Number");
@@ -622,7 +622,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
     return resultRes->getHermesValue();
   }
 
-  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  auto intRes = toInteger(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

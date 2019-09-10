@@ -132,7 +132,7 @@ CallResult<HermesValue> directEval(
   return evalInEnvironment(
       runtime,
       code,
-      runtime->makeNullHandle<Environment>(),
+      Runtime::makeNullHandle<Environment>(),
       scopeChain,
       runtime->getGlobal(),
       singleFunction);
@@ -145,8 +145,7 @@ CallResult<HermesValue> eval(void *, Runtime *runtime, NativeArgs args) {
     return args.getArg(0);
   }
 
-  return directEval(
-      runtime, args.dyncastArg<StringPrimitive>(runtime, 0), {}, false);
+  return directEval(runtime, args.dyncastArg<StringPrimitive>(0), {}, false);
 }
 
 } // namespace vm

@@ -88,9 +88,9 @@ class NativeArgs final {
   /// If 'thisArg' is an instance of T, wrap it into a Handle<T> and return
   /// it, otherwise return Handle<>(nullptr).
   template <class T>
-  Handle<T> dyncastThis(HandleRootOwner *runtime) const {
+  Handle<T> dyncastThis() const {
     return vmisa<T>(getThisArg()) ? Handle<T>::vmcast(&getThisArg())
-                                  : runtime->makeNullHandle<T>();
+                                  : HandleRootOwner::makeNullHandle<T>();
   }
 
   // Assert that 'thisArg' is an instance of T and return it as a Handle.
@@ -109,9 +109,9 @@ class NativeArgs final {
   /// Efficiently wrap the specified argument by index starting from 0 (and
   /// excluding 'this') into a Handle<>. If there is no such argument,
   /// 'undefined' is wrapped.
-  Handle<> getArgHandle(HandleRootOwner *runtime, unsigned index) const {
+  Handle<> getArgHandle(unsigned index) const {
     return index < argCount_ ? Handle<>(argPtr(index))
-                             : runtime->getUndefinedValue();
+                             : HandleRootOwner::getUndefinedValue();
   }
 
   /// If argument with index \p index (starting from 0 and excluding `thisArg`)
@@ -119,10 +119,10 @@ class NativeArgs final {
   /// otherwise return a Handle<T>(nullptr).
   /// This is a very efficient operation - it never allocates a new handle.
   template <class T>
-  Handle<T> dyncastArg(HandleRootOwner *runtime, unsigned index) const {
+  Handle<T> dyncastArg(unsigned index) const {
     return index < argCount_ && vmisa<T>(*argPtr(index))
         ? Handle<T>::vmcast(argPtr(index))
-        : runtime->makeNullHandle<T>();
+        : HandleRootOwner::makeNullHandle<T>();
   }
 
   /// An iterator returning Handle<>() for each argument. Since arguments

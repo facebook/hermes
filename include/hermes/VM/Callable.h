@@ -863,7 +863,7 @@ class JSFunction : public Callable {
         runtime,
         domain,
         parentHandle,
-        runtime->makeNullHandle<Environment>(),
+        Runtime::makeNullHandle<Environment>(),
         runtime->getEmptyCodeBlock());
   }
 

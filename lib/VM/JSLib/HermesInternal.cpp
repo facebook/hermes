@@ -27,7 +27,7 @@ static inline CallResult<Handle<SymbolID>> symbolForCStr(
 // ES7 24.1.1.3
 CallResult<HermesValue>
 hermesInternalDetachArrayBuffer(void *, Runtime *runtime, NativeArgs args) {
-  auto buffer = args.dyncastArg<JSArrayBuffer>(runtime, 0);
+  auto buffer = args.dyncastArg<JSArrayBuffer>(0);
   if (!buffer) {
     return runtime->raiseTypeError(
         "Cannot use detachArrayBuffer on something which "
@@ -99,12 +99,12 @@ silentObjectSetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
 /// are in the given WeakMap or WeakSet.
 CallResult<HermesValue>
 hermesInternalGetWeakSize(void *, Runtime *runtime, NativeArgs args) {
-  auto M = args.dyncastArg<JSWeakMap>(runtime, 0);
+  auto M = args.dyncastArg<JSWeakMap>(0);
   if (M) {
     return HermesValue::encodeNumberValue(JSWeakMap::debugGetSize(*M));
   }
 
-  auto S = args.dyncastArg<JSWeakSet>(runtime, 0);
+  auto S = args.dyncastArg<JSWeakSet>(0);
   if (S) {
     return HermesValue::encodeNumberValue(JSWeakSet::debugGetSize(*S));
   }
@@ -489,7 +489,7 @@ hermesInternalGetTemplateObject(void *, Runtime *runtime, NativeArgs args) {
       runtime,
       Predefined::getSymbolID(Predefined::length),
       readOnlyDPF,
-      runtime->getUndefinedValue(),
+      Runtime::getUndefinedValue(),
       PropOpFlags().plusThrowOnError());
   if (LLVM_UNLIKELY(readOnlyRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -521,7 +521,7 @@ hermesInternalGetTemplateObject(void *, Runtime *runtime, NativeArgs args) {
       runtime,
       Predefined::getSymbolID(Predefined::length),
       readOnlyDPF,
-      runtime->getUndefinedValue(),
+      Runtime::getUndefinedValue(),
       PropOpFlags().plusThrowOnError());
   if (LLVM_UNLIKELY(readOnlyRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -549,7 +549,7 @@ hermesInternalEnsureObject(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_LIKELY(args.getArg(0).isObject()))
     return HermesValue::encodeUndefinedValue();
 
-  return runtime->raiseTypeError(args.getArgHandle(runtime, 1));
+  return runtime->raiseTypeError(args.getArgHandle(1));
 }
 
 /// \code
@@ -565,12 +565,12 @@ CallResult<HermesValue>
 hermesInternalCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
-  Handle<JSObject> target = args.dyncastArg<JSObject>(runtime, 0);
+  Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   // To be safe, ignore non-objects.
   if (!target)
     return HermesValue::encodeUndefinedValue();
 
-  Handle<> untypedSource = args.getArgHandle(runtime, 1);
+  Handle<> untypedSource = args.getArgHandle(1);
   if (untypedSource->isNull() || untypedSource->isUndefined())
     return target.getHermesValue();
 
@@ -578,7 +578,7 @@ hermesInternalCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
       ? Handle<JSObject>::vmcast(untypedSource)
       : Handle<JSObject>::vmcast(
             runtime->makeHandle(*toObject(runtime, untypedSource)));
-  Handle<JSObject> excludedItems = args.dyncastArg<JSObject>(runtime, 2);
+  Handle<JSObject> excludedItems = args.dyncastArg<JSObject>(2);
 
   MutableHandle<> nameHandle{runtime};
   MutableHandle<> valueHandle{runtime};
@@ -755,13 +755,13 @@ hermesInternalTTRCReached(void *, Runtime *runtime, NativeArgs args) {
 /// as are non-enumerable properties on `source`.
 CallResult<HermesValue>
 hermesInternalExportAll(void *, Runtime *runtime, NativeArgs args) {
-  Handle<JSObject> exports = args.dyncastArg<JSObject>(runtime, 0);
+  Handle<JSObject> exports = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!exports)) {
     return runtime->raiseTypeError(
         "exportAll() exports argument must be object");
   }
 
-  Handle<JSObject> source = args.dyncastArg<JSObject>(runtime, 1);
+  Handle<JSObject> source = args.dyncastArg<JSObject>(1);
   if (LLVM_UNLIKELY(!source)) {
     return runtime->raiseTypeError(
         "exportAll() source argument must be object");

@@ -32,7 +32,7 @@ TEST_F(WeakValueMapTest, SmokeTest) {
 
   auto makeNumber = [&](int n) -> JSNumber * {
     auto numRes = JSNumber::create(
-        runtime, (double)n, runtime->makeNullHandle<JSObject>());
+        runtime, (double)n, Runtime::makeNullHandle<JSObject>());
     assert(numRes != ExecutionStatus::EXCEPTION);
     return (JSNumber *)numRes->getPointer();
   };

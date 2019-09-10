@@ -94,7 +94,7 @@ runContextFunc1Arg(void *ctx, Runtime *runtime, NativeArgs args) {
       (uint64_t)ctx < (uint64_t)MathKind::Num1ArgKinds &&
       "runContextFunc1Arg with wrong kind");
   Math1ArgFuncPtr func = math1ArgFuncs[(uint64_t)ctx];
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -119,13 +119,13 @@ runContextFunc2Arg(void *ctx, Runtime *runtime, NativeArgs args) {
       "runContextFunc1Arg with wrong kind");
   Math2ArgFuncPtr func =
       math2ArgFuncs[(uint64_t)ctx - (uint64_t)MathKind::Num1ArgKinds - 1];
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   double arg0 = res->getNumber();
 
-  res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+  res = toNumber_RJS(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -182,13 +182,13 @@ CallResult<HermesValue> mathMin(void *, Runtime *runtime, NativeArgs args) {
 
 // ES9.0 20.2.2.26
 CallResult<HermesValue> mathPow(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   const double x = res->getNumber();
 
-  res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+  res = toNumber_RJS(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -221,7 +221,7 @@ CallResult<HermesValue> mathRandom(void *, Runtime *runtime, NativeArgs) {
 
 CallResult<HermesValue> mathFround(void *, Runtime *runtime, NativeArgs args)
     LLVM_NO_SANITIZE("float-cast-overflow") {
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -298,12 +298,12 @@ CallResult<HermesValue> mathHypot(void *, Runtime *runtime, NativeArgs args) {
 // ES6.0 20.2.2.19
 // Integer multiplication.
 CallResult<HermesValue> mathImul(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toUInt32_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toUInt32_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   uint32_t a = res->getNumber();
-  res = toUInt32_RJS(runtime, args.getArgHandle(runtime, 1));
+  res = toUInt32_RJS(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -319,7 +319,7 @@ CallResult<HermesValue> mathImul(void *, Runtime *runtime, NativeArgs args) {
 // ES6.0 20.2.2.11
 // Count leading zeros on the 32-bit number.
 CallResult<HermesValue> mathClz32(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toUInt32_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toUInt32_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -331,7 +331,7 @@ CallResult<HermesValue> mathClz32(void *, Runtime *runtime, NativeArgs args) {
 // ES6.0 20.2.2.29
 // Get the sign of the input.
 CallResult<HermesValue> mathSign(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

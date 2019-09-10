@@ -19,7 +19,7 @@ namespace vm {
 // ES6 24.2.4.1
 CallResult<HermesValue>
 dataViewPrototypeBuffer(void *, Runtime *runtime, NativeArgs args) {
-  auto self = args.dyncastThis<JSDataView>(runtime);
+  auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime->raiseTypeError(
         "DataView.prototype.buffer called on a non DataView object");
@@ -30,7 +30,7 @@ dataViewPrototypeBuffer(void *, Runtime *runtime, NativeArgs args) {
 // ES6 24.2.4.2
 CallResult<HermesValue>
 dataViewPrototypeByteLength(void *, Runtime *runtime, NativeArgs args) {
-  auto self = args.dyncastThis<JSDataView>(runtime);
+  auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime->raiseTypeError(
         "DataView.prototype.byteLength called on a non DataView object");
@@ -41,7 +41,7 @@ dataViewPrototypeByteLength(void *, Runtime *runtime, NativeArgs args) {
 // ES6 24.2.4.3
 CallResult<HermesValue>
 dataViewPrototypeByteOffset(void *, Runtime *runtime, NativeArgs args) {
-  auto self = args.dyncastThis<JSDataView>(runtime);
+  auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime->raiseTypeError(
         "DataView.prototype.byteOffset called on a non DataView object");
@@ -53,12 +53,12 @@ dataViewPrototypeByteOffset(void *, Runtime *runtime, NativeArgs args) {
 template <typename T>
 CallResult<HermesValue>
 dataViewPrototypeGet(void *, Runtime *runtime, NativeArgs args) {
-  auto self = args.dyncastThis<JSDataView>(runtime);
+  auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime->raiseTypeError(
         "DataView.prototype.get<Type>() called on a non DataView object");
   }
-  auto res = toIndex(runtime, args.getArgHandle(runtime, 0));
+  auto res = toIndex(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -80,18 +80,18 @@ dataViewPrototypeGet(void *, Runtime *runtime, NativeArgs args) {
 template <typename T, CellKind C>
 CallResult<HermesValue>
 dataViewPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
-  auto self = args.dyncastThis<JSDataView>(runtime);
+  auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime->raiseTypeError(
         "DataView.prototype.set<Type>() called on a non DataView object");
   }
-  auto res = toIndex(runtime, args.getArgHandle(runtime, 0));
+  auto res = toIndex(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   auto byteOffset = res->getNumberAs<uint64_t>();
   auto littleEndian = toBoolean(args.getArg(2));
-  res = toNumber_RJS(runtime, args.getArgHandle(runtime, 1));
+  res = toNumber_RJS(runtime, args.getArgHandle(1));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -120,8 +120,8 @@ dataViewConstructor(void *, Runtime *runtime, NativeArgs args) {
         "DataView() called in function context instead of constructor");
   }
   auto self = args.vmcastThis<JSDataView>();
-  auto buffer = args.dyncastArg<JSArrayBuffer>(runtime, 0);
-  auto byteLength = args.getArgHandle(runtime, 2);
+  auto buffer = args.dyncastArg<JSArrayBuffer>(0);
+  auto byteLength = args.getArgHandle(2);
   // 2. If Type(buffer) is not Object, throw a TypeError exception
   // 3. If buffer does not have an [[ArrayBufferData]] internal slot, throw a
   // TypeError exception.
@@ -132,7 +132,7 @@ dataViewConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // 4. Let offset be ToIndex(byteOffset).
-  auto res = toIndex(runtime, args.getArgHandle(runtime, 1));
+  auto res = toIndex(runtime, args.getArgHandle(1));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

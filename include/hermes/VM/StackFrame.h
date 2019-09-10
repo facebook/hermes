@@ -149,8 +149,7 @@ class StackFramePtrT {
   /// possible if we are early in the code block, or with optimized code. This
   /// is stored in the call frame so that the debugger can gain access to the
   /// Environment at arbitrary frames. Note this is managed by the GC.
-  inline Handle<Environment> getDebugEnvironmentHandle(
-      HandleRootOwner *runtime) const;
+  inline Handle<Environment> getDebugEnvironmentHandle() const;
 
   /// \return the callee debug environment.
   /// The environment associated with the callee's stack frame, that is, the

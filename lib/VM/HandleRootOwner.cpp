@@ -16,6 +16,16 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class HandleRootOwner
 
+PinnedHermesValue HandleRootOwner::nullPointer_{
+    HermesValue::encodeNullptrObjectValue()};
+PinnedHermesValue HandleRootOwner::undefinedValue_{
+    HermesValue::encodeUndefinedValue()};
+PinnedHermesValue HandleRootOwner::nullValue_{HermesValue::encodeNullValue()};
+PinnedHermesValue HandleRootOwner::trueValue_{
+    HermesValue::encodeBoolValue(true)};
+PinnedHermesValue HandleRootOwner::falseValue_{
+    HermesValue::encodeBoolValue(false)};
+
 void HandleRootOwner::markGCScopes(SlotAcceptor &acceptor) {
   for (GCScope *gcScope = topGCScope_; gcScope; gcScope = gcScope->prevScope_)
     gcScope->mark(acceptor);

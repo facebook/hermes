@@ -168,7 +168,7 @@ symbolConstructor(void *, Runtime *runtime, NativeArgs args) {
     // If description is undefined, the descString will eventually be "".
     descString = runtime->getPredefinedString(Predefined::emptyString);
   } else {
-    auto descStringRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+    auto descStringRes = toString_RJS(runtime, args.getArgHandle(0));
     if (LLVM_UNLIKELY(descStringRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -185,7 +185,7 @@ symbolConstructor(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue> symbolFor(void *, Runtime *runtime, NativeArgs args) {
-  auto cr = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto cr = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -205,7 +205,7 @@ symbolKeyFor(void *, Runtime *runtime, NativeArgs args) {
         "Symbol.keyFor() requires a symbol argument");
   }
 
-  auto sym = Handle<SymbolID>::vmcast(args.getArgHandle(runtime, 0));
+  auto sym = Handle<SymbolID>::vmcast(args.getArgHandle(0));
 
   if (runtime->getSymbolRegistry().hasSymbol(sym.get())) {
     return HermesValue::encodeStringValue(
@@ -220,7 +220,7 @@ symbolPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<SymbolID> sym{runtime};
   if (args.getThisArg().isSymbol()) {
     sym = args.vmcastThis<SymbolID>().get();
-  } else if (auto symHandle = args.dyncastThis<JSSymbol>(runtime)) {
+  } else if (auto symHandle = args.dyncastThis<JSSymbol>()) {
     sym = JSSymbol::getPrimitiveSymbol(*symHandle, runtime).get();
   } else {
     return runtime->raiseTypeError(
@@ -240,7 +240,7 @@ symbolPrototypeValueOf(void *, Runtime *runtime, NativeArgs args) {
     return args.getThisArg();
   }
 
-  if (auto jsSymbol = args.dyncastThis<JSSymbol>(runtime)) {
+  if (auto jsSymbol = args.dyncastThis<JSSymbol>()) {
     return JSSymbol::getPrimitiveSymbol(*jsSymbol, runtime).getHermesValue();
   }
 

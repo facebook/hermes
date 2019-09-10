@@ -96,7 +96,7 @@ JSError::JSError(Deserializer &d) : JSObject(d, &vt.base) {
 
 CallResult<HermesValue>
 errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSError>(runtime);
+  auto selfHandle = args.dyncastThis<JSError>();
   if (!selfHandle) {
     return runtime->raiseTypeError(
         "Error.stack accessor 'this' must be an instance of 'Error'");
@@ -173,7 +173,7 @@ errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
           runtime,
           Predefined::getSymbolID(Predefined::stack),
           dpf,
-          args.getArgHandle(runtime, 0)) == ExecutionStatus::EXCEPTION) {
+          args.getArgHandle(0)) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -223,7 +223,7 @@ ExecutionStatus JSError::setupStack(
         errorStackGetter,
         SymbolID{},
         0,
-        runtime->makeNullHandle<JSObject>());
+        Runtime::makeNullHandle<JSObject>());
 
     auto setter = NativeFunction::create(
         runtime,
@@ -232,7 +232,7 @@ ExecutionStatus JSError::setupStack(
         errorStackSetter,
         SymbolID{},
         1,
-        runtime->makeNullHandle<JSObject>());
+        Runtime::makeNullHandle<JSObject>());
 
     auto crtRes = PropertyAccessor::create(runtime, getter, setter);
     if (crtRes == ExecutionStatus::EXCEPTION) {
@@ -270,7 +270,7 @@ ExecutionStatus JSError::setMessage(
     Handle<JSError> selfHandle,
     Runtime *runtime,
     Handle<> message) {
-  auto stringMessage = Handle<StringPrimitive>::dyn_vmcast(runtime, message);
+  auto stringMessage = Handle<StringPrimitive>::dyn_vmcast(message);
   if (LLVM_UNLIKELY(!stringMessage)) {
     auto strRes = toString_RJS(runtime, message);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
@@ -305,7 +305,7 @@ static Handle<PropStorage> getCallStackFunctionNames(
   auto arrRes = PropStorage::create(runtime, sizeHint);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     runtime->clearThrownValue();
-    return runtime->makeNullHandle<PropStorage>();
+    return Runtime::makeNullHandle<PropStorage>();
   }
   MutableHandle<PropStorage> names{runtime, vmcast<PropStorage>(*arrRes)};
 
@@ -321,7 +321,7 @@ static Handle<PropStorage> getCallStackFunctionNames(
 
     name = HermesValue::encodeUndefinedValue();
     if (auto callableHandle = Handle<Callable>::dyn_vmcast(
-            runtime, Handle<>(&cf.getCalleeClosureOrCBRef()))) {
+            Handle<>(&cf.getCalleeClosureOrCBRef()))) {
       NamedPropertyDescriptor desc;
       JSObject *propObj = JSObject::getNamedDescriptor(
           callableHandle,
@@ -340,7 +340,7 @@ static Handle<PropStorage> getCallStackFunctionNames(
     if (PropStorage::resize(names, runtime, namesIndex + 1) ==
         ExecutionStatus::EXCEPTION) {
       runtime->clearThrownValue();
-      return runtime->makeNullHandle<PropStorage>();
+      return Runtime::makeNullHandle<PropStorage>();
     }
     names->at(namesIndex).set(name.getHermesValue(), &runtime->getHeap());
     ++namesIndex;

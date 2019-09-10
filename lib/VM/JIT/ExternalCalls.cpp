@@ -56,7 +56,7 @@ ExecutionStatus externCallDeclareGlobalVar(
                  ->getRuntimeModule()
                  ->getSymbolIDMustExist(stringID),
              dpf,
-             runtime->getUndefinedValue(),
+             Runtime::getUndefinedValue(),
              PropOpFlags().plusThrowOnError())
       .getStatus();
 }
@@ -74,7 +74,7 @@ CallResult<HermesValue> externCreateEnvironment(
       runtime,
       frame.getScratchRef().getPointer()
           ? Handle<Environment>::vmcast(&frame.getScratchRef())
-          : runtime->makeNullHandle<Environment>(),
+          : Runtime::makeNullHandle<Environment>(),
       envSize);
 }
 

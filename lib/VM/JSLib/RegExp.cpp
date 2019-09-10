@@ -56,7 +56,7 @@ static uint64_t advanceStringIndex(
 // Several RegExp accessors are defined to do particular things when passed the
 // RegExp object (which is not itself a RegExp). Centralize that logic here.
 static inline bool thisIsRegExpProto(Runtime *runtime, NativeArgs args) {
-  return args.dyncastThis<JSObject>(runtime).get() ==
+  return args.dyncastThis<JSObject>().get() ==
       vmcast<JSObject>(runtime->regExpPrototype);
 }
 
@@ -202,7 +202,7 @@ static CallResult<Handle<JSRegExp>> regExpInitialize(
     Handle<> obj,
     Handle<> pattern,
     Handle<> flags) {
-  auto regExpObj = Handle<JSRegExp>::dyn_vmcast(runtime, obj);
+  auto regExpObj = Handle<JSRegExp>::dyn_vmcast(obj);
   if (LLVM_UNLIKELY(!regExpObj)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -245,8 +245,8 @@ regExpCreate(Runtime *runtime, Handle<> P, Handle<> F) {
 
 CallResult<HermesValue>
 regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
-  Handle<> pattern = args.getArgHandle(runtime, 0);
-  Handle<> flags = args.getArgHandle(runtime, 1);
+  Handle<> pattern = args.getArgHandle(0);
+  Handle<> flags = args.getArgHandle(1);
   // 1. Let patternIsRegExp be IsRegExp(pattern).
   // 2. ReturnIfAbrupt(patternIsRegExp).
   auto callRes = isRegExp(runtime, pattern);
@@ -297,7 +297,7 @@ regExpConstructor(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> F{runtime};
   // 5. If Type(pattern) is Object and pattern has a [[RegExpMatcher]] internal
   // slot, then
-  if (auto patternAsRegExp = Handle<JSRegExp>::dyn_vmcast(runtime, pattern)) {
+  if (auto patternAsRegExp = Handle<JSRegExp>::dyn_vmcast(pattern)) {
     // a. Let P be the value of pattern’s [[OriginalSource]] internal slot.
     P = JSRegExp::getPattern(patternAsRegExp.get(), runtime).getHermesValue();
     // b. If flags is undefined, let F be the value of pattern’s
@@ -423,7 +423,7 @@ CallResult<Handle<JSArray>> directRegExpExec(
             setLastIndex(regexp, runtime, 0) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return runtime->makeNullHandle<JSArray>();
+    return Runtime::makeNullHandle<JSArray>();
   }
 
   // We have a match!
@@ -484,7 +484,7 @@ CallResult<Handle<JSArray>> directRegExpExec(
     gcScope.flushToMarker(marker);
     if (!mg) {
       // Match groups that did not match anything become undefined.
-      JSArray::setElementAt(A, runtime, idx, runtime->getUndefinedValue());
+      JSArray::setElementAt(A, runtime, idx, Runtime::getUndefinedValue());
     } else {
       assert(
           mg->location + mg->length >= mg->location &&
@@ -552,7 +552,7 @@ regExpExec(Runtime *runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
   }
   auto exec = runtime->makeHandle(propRes.getValue());
   // 5. If IsCallable(exec) is true, then
-  if (auto execCallable = Handle<Callable>::dyn_vmcast(runtime, exec)) {
+  if (auto execCallable = Handle<Callable>::dyn_vmcast(exec)) {
     // a. Let result be Call(exec, R, «S»).
     // b. ReturnIfAbrupt(result).
     auto callRes =
@@ -573,7 +573,7 @@ regExpExec(Runtime *runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
   // exception.
   // In our implementation, having a [[RegExpMatcher]] internal slot is
   // equivalent to being a JSRegExp class instance.
-  auto regExpObj = Handle<JSRegExp>::dyn_vmcast(runtime, R);
+  auto regExpObj = Handle<JSRegExp>::dyn_vmcast(R);
   if (LLVM_UNLIKELY(!regExpObj)) {
     return runtime->raiseTypeError(
         "Failed to execute an invalid regular expression object.");
@@ -586,13 +586,13 @@ regExpExec(Runtime *runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
 /// Returns an Array if a match is found, null if no match is found
 CallResult<HermesValue>
 regExpPrototypeExec(void *, Runtime *runtime, NativeArgs args) {
-  Handle<JSRegExp> regexp = args.dyncastThis<JSRegExp>(runtime);
+  Handle<JSRegExp> regexp = args.dyncastThis<JSRegExp>();
   if (!regexp) {
     return runtime->raiseTypeError(
         "RegExp function called on non-RegExp object");
   }
 
-  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (strRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -628,7 +628,7 @@ regExpPrototypeTest(void *context, Runtime *runtime, NativeArgs args) {
 // Note there is no requirement that 'this' be a RegExp object.
 CallResult<HermesValue>
 regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
-  Handle<JSObject> regexp = args.dyncastThis<JSObject>(runtime);
+  Handle<JSObject> regexp = args.dyncastThis<JSObject>();
   if (!regexp) {
     return runtime->raiseTypeError(
         "RegExp.prototype.toString() called on non-object");
@@ -700,12 +700,12 @@ regExpDollarNumberGetter(void *ctx, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 regExpSourceGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   // "If Type(R) is not Object, throw a TypeError exception"
-  if (!args.dyncastThis<JSObject>(runtime)) {
+  if (!args.dyncastThis<JSObject>()) {
     return runtime->raiseTypeError(
         "RegExp.prototype.source getter called on non-RegExp");
   }
 
-  Handle<JSRegExp> R = args.dyncastThis<JSRegExp>(runtime);
+  Handle<JSRegExp> R = args.dyncastThis<JSRegExp>();
   if (!R) {
     // "If SameValue(R, %RegExpPrototype%) is true, return "(?:)". Otherwise,
     // throw a TypeError exception.
@@ -736,7 +736,7 @@ CallResult<HermesValue>
 regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   // Let R be the this value.
   // If Type(R) is not Object, throw a TypeError exception
-  Handle<JSObject> R = args.dyncastThis<JSObject>(runtime);
+  Handle<JSObject> R = args.dyncastThis<JSObject>();
   if (!R) {
     return runtime->raiseTypeError(
         "RegExp.prototype.flags getter called on non-object");
@@ -783,7 +783,7 @@ regExpFlagPropertyGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   // "If Type(R) is not Object, throw a TypeError exception."
   // "If R does not have an [[OriginalFlags]] internal slot, throw a TypeError
   // exception." (Combine these two checks into a dyncast to JSRegExp).
-  Handle<JSRegExp> R = args.dyncastThis<JSRegExp>(runtime);
+  Handle<JSRegExp> R = args.dyncastThis<JSRegExp>();
   if (!R) {
     // "If SameValue(R, %RegExpPrototype%) is true, return undefined. Otherwise,
     // throw a TypeError exception"
@@ -900,7 +900,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
   // 1. Let rx be the this value.
-  Handle<JSObject> rx = args.dyncastThis<JSObject>(runtime);
+  Handle<JSObject> rx = args.dyncastThis<JSObject>();
 
   // 2. If Type(rx) is not Object, throw a TypeError exception.
   if (LLVM_UNLIKELY(!rx)) {
@@ -909,7 +909,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   }
   // 3. Let S be ToString(string)
   // 4. ReturnIfAbrupt(S).
-  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (strRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1031,14 +1031,14 @@ regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
 
   // 1. Let rx be the this value.
   // 2. If Type(rx) is not Object, throw a TypeError exception.
-  Handle<JSObject> rx = args.dyncastThis<JSObject>(runtime);
+  Handle<JSObject> rx = args.dyncastThis<JSObject>();
   if (!rx) {
     return runtime->raiseTypeError(
         "Calling regExp.prototype[@@search] on a non-object.");
   }
   // 3. Let S be ToString(string).
   // 4. ReturnIfAbrupt(S).
-  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1074,7 +1074,7 @@ regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeNumberValue(-1);
   }
   // 14. Return Get(result, "index").
-  auto resultObj = Handle<JSObject>::dyn_vmcast(runtime, result);
+  auto resultObj = Handle<JSObject>::dyn_vmcast(result);
   if (LLVM_UNLIKELY(!resultObj)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1221,14 +1221,14 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
 
   // 1. Let rx be the this value.
   // 2. If Type(rx) is not Object, throw a TypeError exception.
-  Handle<JSObject> rx = args.dyncastThis<JSObject>(runtime);
+  Handle<JSObject> rx = args.dyncastThis<JSObject>();
   if (LLVM_UNLIKELY(!rx)) {
     return runtime->raiseTypeError(
         "RegExp.prototype[@@replace] called on a non-object.");
   }
   // 3. Let S be ToString(string).
   // 4. ReturnIfAbrupt(S).
-  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1236,9 +1236,9 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   // 5. Let lengthS be the number of code unit elements in S.
   uint32_t lengthS = S->getStringLength();
   // 6. Let functionalReplace be IsCallable(replaceValue).
-  Handle<> replaceValue = args.getArgHandle(runtime, 1);
+  Handle<> replaceValue = args.getArgHandle(1);
   MutableHandle<StringPrimitive> replaceValueStr{runtime};
-  auto replaceFn = Handle<Callable>::dyn_vmcast(runtime, replaceValue);
+  auto replaceFn = Handle<Callable>::dyn_vmcast(replaceValue);
   // 7. If functionalReplace is false, then
   if (!replaceFn) {
     //   a. Let replaceValue be ToString(replaceValue).
@@ -1565,8 +1565,8 @@ regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
   }
   return splitInternal(
       runtime,
-      args.getArgHandle(runtime, 0),
-      args.getArgHandle(runtime, 1),
+      args.getArgHandle(0),
+      args.getArgHandle(1),
       args.getThisHandle());
 }
 

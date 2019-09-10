@@ -24,7 +24,7 @@ namespace vm {
 
 /// ES5.1 15.1.2.4
 CallResult<HermesValue> isNaN(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -33,7 +33,7 @@ CallResult<HermesValue> isNaN(void *, Runtime *runtime, NativeArgs args) {
 
 /// ES5.1 15.1.2.5
 CallResult<HermesValue> isFinite(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toNumber_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -59,7 +59,7 @@ static bool isValidRadixChar(char16_t c, int radix) {
 /// ES5.1 15.1.2.2 parseInt(string, radix)
 CallResult<HermesValue> parseInt(void *, Runtime *runtime, NativeArgs args) {
   // toString(arg0).
-  auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -69,7 +69,7 @@ CallResult<HermesValue> parseInt(void *, Runtime *runtime, NativeArgs args) {
   bool stripPrefix = true;
   // If radix (arg1) is present and not undefined, toInt32_RJS(arg1).
   if (args.getArgCount() > 1 && !args.getArg(1).isUndefined()) {
-    auto intRes = toInt32_RJS(runtime, args.getArgHandle(runtime, 1));
+    auto intRes = toInt32_RJS(runtime, args.getArgHandle(1));
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -146,7 +146,7 @@ static bool isPrefix(StringView str1, StringView str2) {
 /// ES5.1 15.1.2.3 parseFloat(string)
 CallResult<HermesValue> parseFloat(void *, Runtime *runtime, NativeArgs args) {
   // toString(arg0).
-  auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -216,8 +216,8 @@ CallResult<HermesValue> parseFloat(void *, Runtime *runtime, NativeArgs args) {
     return HermesValue::encodeNaNValue();
   }
   // Use hermes_g_strtod to figure out the longest prefix that's still valid.
-  // hermes_g_strtod will try to convert the string to int for as long as it can,
-  // and set endPtr to the last location where the prefix so far is still
+  // hermes_g_strtod will try to convert the string to int for as long as it
+  // can, and set endPtr to the last location where the prefix so far is still
   // a valid integer.
   len = i;
   str8[len] = '\0';
@@ -229,7 +229,8 @@ CallResult<HermesValue> parseFloat(void *, Runtime *runtime, NativeArgs args) {
   }
   // Now we know the prefix untill endPtr is a valid int.
   *endPtr = '\0';
-  return HermesValue::encodeDoubleValue(::hermes_g_strtod(str8.data(), &endPtr));
+  return HermesValue::encodeDoubleValue(
+      ::hermes_g_strtod(str8.data(), &endPtr));
 }
 
 /// Customized global function. gc() forces a GC collect.
@@ -324,7 +325,7 @@ void initGlobalObject(Runtime *runtime) {
   // later.
 
   runtime->objectPrototype =
-      JSObject::create(runtime, runtime->makeNullHandle<JSObject>())
+      JSObject::create(runtime, Runtime::makeNullHandle<JSObject>())
           .getHermesValue();
   runtime->objectPrototypeRawPtr = vmcast<JSObject>(runtime->objectPrototype);
 
@@ -351,7 +352,7 @@ void initGlobalObject(Runtime *runtime) {
       emptyFunction,
       SymbolID{},
       0,
-      runtime->makeNullHandle<JSObject>());
+      Runtime::makeNullHandle<JSObject>());
   runtime->functionPrototype = funcRes.getHermesValue();
   runtime->functionPrototypeRawPtr = funcRes.get();
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
@@ -359,7 +360,7 @@ void initGlobalObject(Runtime *runtime) {
       runtime,
       Predefined::getSymbolID(Predefined::length),
       clearConfigurableDPF,
-      runtime->getUndefinedValue()));
+      Runtime::getUndefinedValue()));
 
   // [[ThrowTypeError]].
   auto throwTypeErrorFunction = NativeFunction::create(
@@ -369,13 +370,13 @@ void initGlobalObject(Runtime *runtime) {
       throwTypeError,
       Predefined::getSymbolID(Predefined::emptyString),
       0,
-      runtime->makeNullHandle<JSObject>());
+      Runtime::makeNullHandle<JSObject>());
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       throwTypeErrorFunction,
       runtime,
       Predefined::getSymbolID(Predefined::length),
       clearConfigurableDPF,
-      runtime->getUndefinedValue()));
+      Runtime::getUndefinedValue()));
   runtime->throwTypeErrorAccessor =
       runtime->ignoreAllocationFailure(PropertyAccessor::create(
           runtime, throwTypeErrorFunction, throwTypeErrorFunction));
@@ -703,7 +704,7 @@ void initGlobalObject(Runtime *runtime) {
           require,
           Predefined::getSymbolID(Predefined::require),
           1,
-          runtime->makeNullHandle<JSObject>())
+          Runtime::makeNullHandle<JSObject>())
           .getHermesValue();
 
   // Define the 'gc' function.

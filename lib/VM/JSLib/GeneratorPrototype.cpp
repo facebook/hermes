@@ -68,7 +68,7 @@ void populateGeneratorPrototype(Runtime *runtime) {
 static CallResult<Handle<JSGenerator>> generatorValidate(
     Runtime *runtime,
     Handle<> value) {
-  auto generator = Handle<JSGenerator>::dyn_vmcast(runtime, value);
+  auto generator = Handle<JSGenerator>::dyn_vmcast(value);
   if (!generator) {
     return runtime->raiseTypeError(
         "Generator functions must be called on generators");
@@ -91,7 +91,7 @@ static CallResult<Handle<JSObject>> generatorResume(
     Handle<GeneratorInnerFunction> generator,
     Handle<> value) {
   if (generator->getState() == GeneratorInnerFunction::State::Completed) {
-    return createIterResultObject(runtime, runtime->getUndefinedValue(), true);
+    return createIterResultObject(runtime, Runtime::getUndefinedValue(), true);
   }
   auto valueRes = GeneratorInnerFunction::callInnerFunction(
       generator, runtime, value, GeneratorInnerFunction::Action::Next);
@@ -116,7 +116,7 @@ generatorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
       runtime,
       toHandle(
           runtime, JSGenerator::getInnerFunction(runtime, generatorRes->get())),
-      args.getArgHandle(runtime, 0));
+      args.getArgHandle(0));
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -177,7 +177,7 @@ generatorPrototypeReturnOrThrow(void *ctx, Runtime *runtime, NativeArgs args) {
       runtime,
       toHandle(
           runtime, JSGenerator::getInnerFunction(runtime, generatorRes->get())),
-      args.getArgHandle(runtime, 0),
+      args.getArgHandle(0),
       isThrow);
   if (result == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;

@@ -101,7 +101,7 @@ CallResult<HermesValue> Callable::_newObjectImpl(
 
 void Callable::defineLazyProperties(Handle<Callable> fn, Runtime *runtime) {
   // lazy functions can be Bound or JS Functions.
-  if (auto jsFun = Handle<JSFunction>::dyn_vmcast(runtime, fn)) {
+  if (auto jsFun = Handle<JSFunction>::dyn_vmcast(fn)) {
     const CodeBlock *codeBlock = jsFun->getCodeBlock();
     // Create empty object for prototype.
     auto prototypeParent = vmisa<JSGeneratorFunction>(*jsFun)
@@ -516,7 +516,7 @@ CallResult<HermesValue> BoundFunction::create(
   } else {
     // Don't need to worry about resizing since it was created with a capacity
     // of at least 1.
-    ArrayStorage::push_back(handle, runtime, runtime->getUndefinedValue());
+    ArrayStorage::push_back(handle, runtime, Runtime::getUndefinedValue());
   }
   // Update the storage pointer in case push_back() needed to reallocate.
   selfHandle->argStorage_.set(runtime, *handle, &runtime->getHeap());

@@ -1782,7 +1782,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   // This is a new property with an index-like name.
   // Check whether we need to update array's ".length" property.
   bool updateLength = false;
-  if (auto arrayHandle = Handle<JSArray>::dyn_vmcast(runtime, selfHandle)) {
+  if (auto arrayHandle = Handle<JSArray>::dyn_vmcast(selfHandle)) {
     if (LLVM_UNLIKELY(*arrayIndex >= JSArray::getLength(*arrayHandle))) {
       NamedPropertyDescriptor lengthDesc;
       bool lengthPresent = getOwnNamedDescriptor(
@@ -1811,7 +1811,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
         selfHandle,
         runtime,
         *arrayIndex,
-        dpFlags.setValue ? valueOrAccessor : runtime->getUndefinedValue());
+        dpFlags.setValue ? valueOrAccessor : Runtime::getUndefinedValue());
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     if (!*result) {

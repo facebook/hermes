@@ -147,7 +147,7 @@ mapConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!args.isConstructorCall())) {
     return runtime->raiseTypeError("Constructor Map requires 'new'");
   }
-  auto selfHandle = args.dyncastThis<JSMap>(runtime);
+  auto selfHandle = args.dyncastThis<JSMap>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Map Constructor only applies to Map object");
@@ -165,13 +165,12 @@ mapConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // ES6.0 23.1.1.1.7: Cache adder across all iterations of the loop.
-  auto adder =
-      Handle<Callable>::dyn_vmcast(runtime, runtime->makeHandle(*propRes));
+  auto adder = Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes));
   if (!adder) {
     return runtime->raiseTypeError("Property 'set' for Map is not callable");
   }
 
-  auto iterRes = getIterator(runtime, args.getArgHandle(runtime, 0));
+  auto iterRes = getIterator(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -233,7 +232,7 @@ mapConstructor(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 mapPrototypeClear(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMap>(runtime);
+  auto selfHandle = args.dyncastThis<JSMap>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Map object called on Map.prototype.clear");
@@ -248,7 +247,7 @@ mapPrototypeClear(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 mapPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMap>(runtime);
+  auto selfHandle = args.dyncastThis<JSMap>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Map object called on Map.prototype.delete");
@@ -258,12 +257,12 @@ mapPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
         "Method Map.prototype.delete called on incompatible receiver");
   }
   return HermesValue::encodeBoolValue(
-      JSMap::deleteKey(selfHandle, runtime, args.getArgHandle(runtime, 0)));
+      JSMap::deleteKey(selfHandle, runtime, args.getArgHandle(0)));
 }
 
 CallResult<HermesValue>
 mapPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMap>(runtime);
+  auto selfHandle = args.dyncastThis<JSMap>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Map object called on Map.prototype.entries");
@@ -284,7 +283,7 @@ mapPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 mapPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMap>(runtime);
+  auto selfHandle = args.dyncastThis<JSMap>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Map object called on Map.prototype.forEach");
@@ -293,12 +292,12 @@ mapPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Method Map.prototype.forEach called on incompatible receiver");
   }
-  auto callbackfn = args.dyncastArg<Callable>(runtime, 0);
+  auto callbackfn = args.dyncastArg<Callable>(0);
   if (LLVM_UNLIKELY(!callbackfn)) {
     return runtime->raiseTypeError(
         "callbackfn must be Callable in Map.prototype.forEach");
   }
-  auto thisArg = args.getArgHandle(runtime, 1);
+  auto thisArg = args.getArgHandle(1);
   if (JSMap::forEach(selfHandle, runtime, callbackfn, thisArg) ==
       ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
@@ -307,7 +306,7 @@ mapPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 mapPrototypeGet(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMap>(runtime);
+  auto selfHandle = args.dyncastThis<JSMap>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Map object called on Map.prototype.get");
@@ -316,12 +315,12 @@ mapPrototypeGet(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Method Map.prototype.get called on incompatible receiver");
   }
-  return JSMap::getValue(selfHandle, runtime, args.getArgHandle(runtime, 0));
+  return JSMap::getValue(selfHandle, runtime, args.getArgHandle(0));
 }
 
 CallResult<HermesValue>
 mapPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMap>(runtime);
+  auto selfHandle = args.dyncastThis<JSMap>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Map object called on Map.prototype.has");
@@ -331,12 +330,12 @@ mapPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
         "Method Map.prototype.has called on incompatible receiver");
   }
   return HermesValue::encodeBoolValue(
-      JSMap::hasKey(selfHandle, runtime, args.getArgHandle(runtime, 0)));
+      JSMap::hasKey(selfHandle, runtime, args.getArgHandle(0)));
 }
 
 CallResult<HermesValue>
 mapPrototypeKeys(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMap>(runtime);
+  auto selfHandle = args.dyncastThis<JSMap>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Map object called on Map.prototype.keys");
@@ -358,7 +357,7 @@ mapPrototypeKeys(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 mapPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMap>(runtime);
+  auto selfHandle = args.dyncastThis<JSMap>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Map object called on Map.prototype.set");
@@ -368,10 +367,7 @@ mapPrototypeSet(void *, Runtime *runtime, NativeArgs args) {
         "Method Map.prototype.set called on incompatible receiver");
   }
   JSMap::addValue(
-      selfHandle,
-      runtime,
-      args.getArgHandle(runtime, 0),
-      args.getArgHandle(runtime, 1));
+      selfHandle, runtime, args.getArgHandle(0), args.getArgHandle(1));
   return selfHandle.getHermesValue();
 }
 
@@ -391,7 +387,7 @@ mapPrototypeSizeGetter(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 mapPrototypeValues(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMap>(runtime);
+  auto selfHandle = args.dyncastThis<JSMap>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Map object called on Map.prototype.values");
@@ -438,7 +434,7 @@ Handle<JSObject> createMapIteratorPrototype(Runtime *runtime) {
 
 CallResult<HermesValue>
 mapIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMapIterator>(runtime);
+  auto selfHandle = args.dyncastThis<JSMapIterator>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-MapIterator object called on MapIterator.prototype.next");

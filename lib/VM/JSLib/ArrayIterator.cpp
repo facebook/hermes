@@ -41,7 +41,7 @@ void populateArrayIteratorPrototype(Runtime *runtime) {
 
 CallResult<HermesValue>
 arrayIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
-  auto O = args.dyncastThis<JSArrayIterator>(runtime);
+  auto O = args.dyncastThis<JSArrayIterator>();
   if (LLVM_UNLIKELY(!O)) {
     return runtime->raiseTypeError(
         "ArrayIteratorPrototype.next requires that 'this' be an Array Iterator");

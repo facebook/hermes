@@ -470,8 +470,7 @@ arrayPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto func =
-      Handle<Callable>::dyn_vmcast(runtime, runtime->makeHandle(*propRes));
+  auto func = Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes));
 
   if (!func) {
     // If not callable, set func to be Object.prototype.toString.
@@ -558,8 +557,8 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      if (auto func = Handle<Callable>::dyn_vmcast(
-              runtime, runtime->makeHandle(*propRes))) {
+      if (auto func =
+              Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes))) {
         auto callRes = Callable::executeCall0(func, runtime, elementObj);
         if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
@@ -821,7 +820,7 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
 
   // 5. Let relativeTarget be ToInteger(target).
   // 6. ReturnIfAbrupt(relativeTarget).
-  auto relativeTargetRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  auto relativeTargetRes = toInteger(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(relativeTargetRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -834,7 +833,7 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
 
   // 8. Let relativeStart be ToInteger(start).
   // 9. ReturnIfAbrupt(relativeStart).
-  auto relativeStartRes = toInteger(runtime, args.getArgHandle(runtime, 1));
+  auto relativeStartRes = toInteger(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(relativeStartRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -852,7 +851,7 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   if (args.getArg(2).isUndefined()) {
     relativeEnd = len;
   } else {
-    auto relativeEndRes = toInteger(runtime, args.getArgHandle(runtime, 2));
+    auto relativeEndRes = toInteger(runtime, args.getArgHandle(2));
     if (LLVM_UNLIKELY(relativeEndRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -986,7 +985,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   auto separator = args.getArg(0).isUndefined()
       ? runtime->makeHandle(HermesValue::encodeStringValue(
             runtime->getPredefinedString(Predefined::comma)))
-      : args.getArgHandle(runtime, 0);
+      : args.getArgHandle(0);
   auto strRes = toString_RJS(runtime, separator);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1138,7 +1137,7 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> len{runtime};
 
   // 2. Let len be ? ToLength(? Get(O, "length")).
-  Handle<JSArray> arr = Handle<JSArray>::dyn_vmcast(runtime, O);
+  Handle<JSArray> arr = Handle<JSArray>::dyn_vmcast(O);
   if (LLVM_LIKELY(arr)) {
     // Fast path for getting the length.
     len = HermesValue::encodeNumberValue(JSArray::getLength(arr.get()));
@@ -1458,7 +1457,7 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   }
   double len = *lenRes;
 
-  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  auto intRes = toInteger(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1477,7 +1476,7 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
     relativeEnd = len;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(runtime, 1))) ==
+            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1728,7 +1727,7 @@ class StandardSortModel : public SortModel {
       auto callRes = Callable::executeCall2(
           compareFn_,
           runtime_,
-          runtime_->getUndefinedValue(),
+          Runtime::getUndefinedValue(),
           aValue_.get(),
           bValue_.get());
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
@@ -1763,8 +1762,7 @@ class StandardSortModel : public SortModel {
 CallResult<HermesValue>
 arrayPrototypeSort(void *, Runtime *runtime, NativeArgs args) {
   // Null if not a callable compareFn.
-  auto compareFn =
-      Handle<Callable>::dyn_vmcast(runtime, args.getArgHandle(runtime, 0));
+  auto compareFn = Handle<Callable>::dyn_vmcast(args.getArgHandle(0));
   if (!args.getArg(0).isUndefined() && !compareFn) {
     return runtime->raiseTypeError("Array sort argument must be callable");
   }
@@ -1817,7 +1815,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
   }
   double len = *lenRes;
 
-  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  auto intRes = toInteger(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1844,7 +1842,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
     default:
       // Otherwise, use the specified delete count.
       if (LLVM_UNLIKELY(
-              (intRes = toInteger(runtime, args.getArgHandle(runtime, 1))) ==
+              (intRes = toInteger(runtime, args.getArgHandle(1))) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -2045,7 +2043,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
                   O,
                   runtime,
                   k,
-                  args.getArgHandle(runtime, j),
+                  args.getArgHandle(j),
                   PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -2202,7 +2200,7 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   double len = *lenRes;
 
   // Relative index to start the search at.
-  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 1));
+  auto intRes = toInteger(runtime, args.getArgHandle(1));
   double n;
   if (args.getArgCount() > 1) {
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
@@ -2237,7 +2235,7 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   MutableHandle<JSObject> descObjHandle{runtime};
 
   // Search for the element.
-  auto searchElement = args.getArgHandle(runtime, 0);
+  auto searchElement = args.getArgHandle(0);
   auto marker = gcScope.createMarker();
   while (true) {
     gcScope.flushToMarker(marker);
@@ -2306,7 +2304,7 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
   }
   uint64_t len = *intRes;
 
-  auto callbackFn = args.dyncastArg<Callable>(runtime, 0);
+  auto callbackFn = args.dyncastArg<Callable>(0);
   if (!callbackFn) {
     return runtime->raiseTypeError(
         "Array.prototype.every() requires a callable argument");
@@ -2339,7 +2337,7 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
       auto callRes = Callable::executeCall3(
           callbackFn,
           runtime,
-          args.getArgHandle(runtime, 1),
+          args.getArgHandle(1),
           kValue.get(),
           k.get(),
           O.getHermesValue());
@@ -2398,7 +2396,7 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   }
   uint64_t len = *intRes;
 
-  auto callbackFn = args.dyncastArg<Callable>(runtime, 0);
+  auto callbackFn = args.dyncastArg<Callable>(0);
   if (!callbackFn) {
     return runtime->raiseTypeError(
         "Array.prototype.forEach() requires a callable argument");
@@ -2431,7 +2429,7 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
               Callable::executeCall3(
                   callbackFn,
                   runtime,
-                  args.getArgHandle(runtime, 1),
+                  args.getArgHandle(1),
                   kValue,
                   k.get(),
                   O.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
@@ -2465,7 +2463,7 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
   }
   uint64_t len = *intRes;
 
-  auto callbackFn = args.dyncastArg<Callable>(runtime, 0);
+  auto callbackFn = args.dyncastArg<Callable>(0);
   if (!callbackFn) {
     return runtime->raiseTypeError(
         "Array.prototype.map() requires a callable argument");
@@ -2507,7 +2505,7 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
       auto callRes = Callable::executeCall3(
           callbackFn,
           runtime,
-          args.getArgHandle(runtime, 1),
+          args.getArgHandle(1),
           kValue,
           k.get(),
           O.getHermesValue());
@@ -2544,7 +2542,7 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
   }
   uint64_t len = *intRes;
 
-  auto callbackFn = args.dyncastArg<Callable>(runtime, 0);
+  auto callbackFn = args.dyncastArg<Callable>(0);
   if (!callbackFn) {
     return runtime->raiseTypeError(
         "Array.prototype.filter() requires a callable argument");
@@ -2588,7 +2586,7 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
       auto callRes = Callable::executeCall3(
           callbackFn,
           runtime,
-          args.getArgHandle(runtime, 1),
+          args.getArgHandle(1),
           kValue.get(),
           k.get(),
           O.getHermesValue());
@@ -2634,7 +2632,7 @@ arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
   // Get the value to be filled.
   MutableHandle<> value(runtime, args.getArg(0));
   // Get the relative start and end.
-  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 1));
+  auto intRes = toInteger(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2647,7 +2645,7 @@ arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
     relativeEnd = len;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(runtime, 2))) ==
+            (intRes = toInteger(runtime, args.getArgHandle(2))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2693,14 +2691,13 @@ arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
   }
   double len = *intRes;
 
-  auto predicate =
-      Handle<Callable>::dyn_vmcast(runtime, args.getArgHandle(runtime, 0));
+  auto predicate = args.dyncastArg<Callable>(0);
   if (!predicate) {
     return runtime->raiseTypeError("Find argument must be a function");
   }
 
   // "this" argument to the callback function.
-  auto T = args.getArgHandle(runtime, 1);
+  auto T = args.getArgHandle(1);
 
   MutableHandle<> kHandle{runtime, HermesValue::encodeNumberValue(0)};
   MutableHandle<> kValue{runtime};
@@ -2762,7 +2759,7 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
 
   size_t argCount = args.getArgCount();
 
-  auto callbackFn = args.dyncastArg<Callable>(runtime, 0);
+  auto callbackFn = args.dyncastArg<Callable>(0);
   if (!callbackFn) {
     return runtime->raiseTypeError(
         "Array.prototype.reduce() requires a callable argument");
@@ -2850,7 +2847,7 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
       auto callRes = Callable::executeCall4(
           callbackFn,
           runtime,
-          runtime->getUndefinedValue(),
+          Runtime::getUndefinedValue(),
           accumulator.get(),
           kValue,
           k.get(),
@@ -2906,7 +2903,7 @@ arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
 
   // 4. Let n be ? ToInteger(fromIndex).
   // (If fromIndex is undefined, this step produces the value 0.)
-  auto nRes = toInteger(runtime, args.getArgHandle(runtime, 1));
+  auto nRes = toInteger(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2972,7 +2969,7 @@ arrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
 /// ES6.0 22.1.2.1 Array.from ( items [ , mapfn [ , thisArg ] ] )
 CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
   GCScopeMarkerRAII gcScope{runtime};
-  auto itemsHandle = args.getArgHandle(runtime, 0);
+  auto itemsHandle = args.getArgHandle(0);
   // 1. Let C be the this value.
   auto C = args.getThisHandle();
   // 2. If mapfn is undefined, let mapping be false.
@@ -3029,9 +3026,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
     // have thrown.
     // e. ReturnIfAbrupt(iterator).
     auto iterRes = getIterator(
-        runtime,
-        args.getArgHandle(runtime, 0),
-        Handle<Callable>::vmcast(usingIterator));
+        runtime, args.getArgHandle(0), Handle<Callable>::vmcast(usingIterator));
     if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

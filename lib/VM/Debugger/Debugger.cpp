@@ -881,7 +881,7 @@ HermesValue Debugger::getExceptionAsEvalResult(
   // Try to fetch the stack trace. It may not exist; for example, if the
   // exception was a parse error in eval(), then the exception will be set
   // directly and the stack trace will not be collected.
-  if (auto errorHandle = Handle<JSError>::dyn_vmcast(runtime_, thrownValue)) {
+  if (auto errorHandle = Handle<JSError>::dyn_vmcast(thrownValue)) {
     if (auto stackTracePtr = errorHandle->getStackTrace()) {
       // Copy the stack trace to ensure it's not moved out from under us.
       const auto stackTraceCopy = *stackTracePtr;
@@ -912,8 +912,7 @@ HermesValue Debugger::evalInFrame(
   bool singleFunction = false;
 
   // Environment may be undefined if it has not been created yet.
-  Handle<Environment> env =
-      frameInfo->frame->getDebugEnvironmentHandle(runtime_);
+  Handle<Environment> env = frameInfo->frame->getDebugEnvironmentHandle();
   if (!env) {
     // TODO: this comes about when we break in a function before its environment
     // has been created. What we would like to do here is synthesize an

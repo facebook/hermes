@@ -978,14 +978,14 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
         << "Exception accessing random on the Math object";
     auto randomFunc = runtime->makeHandle(vmcast<Callable>(propRes.getValue()));
     auto val = Callable::executeCall0(
-        randomFunc, runtime, runtime->getUndefinedValue());
+        randomFunc, runtime, Runtime::getUndefinedValue());
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Math.random()";
     EXPECT_EQ(val.getValue().getNumber(), mathRandom);
 
     // Make sure the second call gets the second value.
     val = Callable::executeCall0(
-        randomFunc, runtime, runtime->getUndefinedValue());
+        randomFunc, runtime, Runtime::getUndefinedValue());
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Math.random()";
     EXPECT_EQ(val.getValue().getNumber(), secondMathRandom);
@@ -1010,13 +1010,13 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
         << "Exception accessing now on the Date object";
     auto nowFunc = runtime->makeHandle(vmcast<Callable>(propRes.getValue()));
     auto val =
-        Callable::executeCall0(nowFunc, runtime, runtime->getUndefinedValue());
+        Callable::executeCall0(nowFunc, runtime, Runtime::getUndefinedValue());
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Date.now()";
     EXPECT_EQ(val.getValue().getNumberAs<uint64_t>(), dateNow);
     // Call a second time, which will fall back to the original implementation.
     val =
-        Callable::executeCall0(nowFunc, runtime, runtime->getUndefinedValue());
+        Callable::executeCall0(nowFunc, runtime, Runtime::getUndefinedValue());
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Date.now()";
     // Store that in the calls list for a comparison.
@@ -1034,7 +1034,7 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
 
     // Call Date()
     val =
-        Callable::executeCall0(dateFunc, runtime, runtime->getUndefinedValue());
+        Callable::executeCall0(dateFunc, runtime, Runtime::getUndefinedValue());
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Date()";
     SmallU16String<32> tmp;

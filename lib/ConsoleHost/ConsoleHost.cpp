@@ -46,7 +46,7 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
     if (!args.getArg(0).isString()) {
       return runtime->raiseTypeError("Filename argument must be a string");
     }
-    auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(runtime, 0));
+    auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(0));
     auto jsFileName = StringPrimitive::createStringView(runtime, str);
     llvm::SmallVector<char16_t, 16> buf;
     convertUTF16ToUTF8WithReplacements(fileName, jsFileName.getUTF16Ref(buf));
@@ -74,12 +74,12 @@ loadSegment(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
   using namespace hermes::vm;
   const auto *baseFilename = reinterpret_cast<std::string *>(ctx);
 
-  auto requireContext = args.dyncastArg<RequireContext>(runtime, 0);
+  auto requireContext = args.dyncastArg<RequireContext>(0);
   if (!requireContext) {
     runtime->raiseTypeError("First argument to loadSegment must be context");
   }
 
-  auto segmentRes = toUInt32_RJS(runtime, args.getArgHandle(runtime, 1));
+  auto segmentRes = toUInt32_RJS(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(segmentRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -142,7 +142,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     std::string fileName;
 
     // In the rare events where we have a UTF16 string, convert it to ASCII.
-    auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(runtime, 1));
+    auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(1));
     auto jsFileName = StringPrimitive::createStringView(runtime, str);
     llvm::SmallVector<char16_t, 16> buf;
     convertUTF16ToUTF8WithReplacements(fileName, jsFileName.getUTF16Ref(buf));
@@ -160,8 +160,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     }
   }
 
-  auto closureFunction =
-      Handle<JSFunction>::vmcast(args.getArgHandle(runtime, 0));
+  auto closureFunction = Handle<JSFunction>::vmcast(args.getArgHandle(0));
 
   Serializer s(*serializeStream, runtime, getNativeFunctionPtrs);
   runtime->setSerializeClosure(closureFunction);
@@ -378,7 +377,7 @@ bool executeHBCBytecodeImpl(
       std::move(bytecode),
       flags,
       sourceURL,
-      runtime->makeNullHandle<vm::Environment>());
+      vm::Runtime::makeNullHandle<vm::Environment>());
 
   if (options.runtimeConfig.getEnableSampleProfiling()) {
     auto profiler = vm::SamplingProfiler::getInstance();

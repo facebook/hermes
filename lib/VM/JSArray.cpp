@@ -820,7 +820,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
     Runtime *runtime) {
   if (!self->iteratedObject_) {
     // 5. If a is undefined, return CreateIterResultObject(undefined, true).
-    return createIterResultObject(runtime, runtime->getUndefinedValue(), true)
+    return createIterResultObject(runtime, Runtime::getUndefinedValue(), true)
         .getHermesValue();
   }
 
@@ -831,7 +831,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
   uint64_t index = self->nextIndex_;
 
   uint64_t len;
-  if (auto ta = Handle<JSTypedArrayBase>::dyn_vmcast(runtime, a)) {
+  if (auto ta = Handle<JSTypedArrayBase>::dyn_vmcast(a)) {
     // 8. If a has a [[TypedArrayName]] internal slot, then
     // a. If IsDetachedBuffer(a.[[ViewedArrayBuffer]]) is true,
     //    throw a TypeError exception.
@@ -861,7 +861,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
     // undefined.
     self->iteratedObject_ = nullptr;
     // b. Return CreateIterResultObject(undefined, true).
-    return createIterResultObject(runtime, runtime->getUndefinedValue(), true)
+    return createIterResultObject(runtime, Runtime::getUndefinedValue(), true)
         .getHermesValue();
   }
 

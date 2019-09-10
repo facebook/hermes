@@ -306,14 +306,14 @@ stringConstructor(void *, Runtime *runtime, NativeArgs args) {
 
   if (!args.isConstructorCall() && args.getArg(0).isSymbol()) {
     auto str = symbolDescriptiveString(
-        runtime, Handle<SymbolID>::vmcast(args.getArgHandle(runtime, 0)));
+        runtime, Handle<SymbolID>::vmcast(args.getArgHandle(0)));
     if (LLVM_UNLIKELY(str == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     return str->getHermesValue();
   }
 
-  auto sRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto sRes = toString_RJS(runtime, args.getArgHandle(0));
   if (sRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -341,7 +341,7 @@ stringFromCharCode(void *, Runtime *runtime, NativeArgs args) {
   }
   for (unsigned i = 0; i < n; ++i) {
     // Call a function that may throw, let the runtime record it.
-    auto res = toUInt16(runtime, args.getArgHandle(runtime, i));
+    auto res = toUInt16(runtime, args.getArgHandle(i));
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -423,7 +423,7 @@ CallResult<HermesValue> stringRaw(void *, Runtime *runtime, NativeArgs args) {
       args.getArgCount() < 2 ? 0 : args.getArgCount() - 1;
 
   // 3. Let cooked be ToObject(template).
-  auto cookedRes = toObject(runtime, args.getArgHandle(runtime, 0));
+  auto cookedRes = toObject(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(cookedRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -615,7 +615,7 @@ stringPrototypeCodePointAt(void *, Runtime *runtime, NativeArgs args) {
   auto S = toHandle(runtime, std::move(*strRes));
 
   // 4. Let position be ToInteger(pos).
-  auto positionRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  auto positionRes = toInteger(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(positionRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -682,7 +682,7 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   // Run toString on the arguments to figure out the final size.
   auto marker = gcScope.createMarker();
   for (uint32_t i = 0; i < argCount; ++i) {
-    auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, i));
+    auto strRes = toString_RJS(runtime, args.getArgHandle(i));
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -732,7 +732,7 @@ stringPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   auto S = toHandle(runtime, std::move(*strRes));
   double len = S->getStringLength();
 
-  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  auto intRes = toInteger(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -743,7 +743,7 @@ stringPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
     intEnd = len;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(runtime, 1))) ==
+            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -769,12 +769,12 @@ static CallResult<RegExpMatch> splitMatch(
     Handle<StringPrimitive> S,
     uint32_t q,
     Handle<> R) {
-  if (auto regexp = Handle<JSRegExp>::dyn_vmcast(runtime, R)) {
+  if (auto regexp = Handle<JSRegExp>::dyn_vmcast(R)) {
     return JSRegExp::search(regexp, runtime, S, q);
   }
 
   // Not searching for a RegExp, manually do string matching.
-  auto RHandle = Handle<StringPrimitive>::dyn_vmcast(runtime, R);
+  auto RHandle = Handle<StringPrimitive>::dyn_vmcast(R);
   assert(RHandle && "SplitMatch() called without RegExp or String");
 
   auto SStr = StringPrimitive::createStringView(runtime, S);
@@ -943,7 +943,7 @@ CallResult<HermesValue> splitInternal(
         const auto &range = match[i];
         if (!range) {
           JSArray::setElementAt(
-              A, runtime, lengthA, runtime->getUndefinedValue());
+              A, runtime, lengthA, Runtime::getUndefinedValue());
         } else {
           if (LLVM_UNLIKELY(
                   (strRes = StringPrimitive::slice(
@@ -1001,7 +1001,7 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   // 3. If separator is neither undefined nor null, then
-  auto separator = args.getArgHandle(runtime, 0);
+  auto separator = args.getArgHandle(0);
   if (!separator->isUndefined() && !separator->isNull()) {
     // a. Let splitter be GetMethod(separator, @@split).
     auto methodRes = getMethod(
@@ -1024,8 +1024,8 @@ stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
   return splitInternal(
       runtime,
       args.getThisHandle(),
-      args.getArgHandle(runtime, 1),
-      args.getArgHandle(runtime, 0));
+      args.getArgHandle(1),
+      args.getArgHandle(0));
 }
 
 CallResult<HermesValue>
@@ -1042,7 +1042,7 @@ stringPrototypeSubstring(void *, Runtime *runtime, NativeArgs args) {
   auto S = toHandle(runtime, std::move(*strRes));
   double len = S->getStringLength();
 
-  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  auto intRes = toInteger(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1053,7 +1053,7 @@ stringPrototypeSubstring(void *, Runtime *runtime, NativeArgs args) {
     intEnd = len;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(runtime, 1))) ==
+            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1220,7 +1220,7 @@ stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
   auto S = toHandle(runtime, std::move(*strRes));
   double stringLen = S->getStringLength();
 
-  auto intRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  auto intRes = toInteger(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1231,7 +1231,7 @@ stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
     length = stringLen;
   } else {
     if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(runtime, 1))) ==
+            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1385,7 +1385,7 @@ stringDirectedIndexOf(Runtime *runtime, NativeArgs args, bool reverse) {
   }
   auto S = toHandle(runtime, std::move(*strRes));
 
-  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(0));
   if (searchStrRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1472,7 +1472,7 @@ stringPrototypeLocaleCompare(void *, Runtime *runtime, NativeArgs args) {
   }
   auto S = toHandle(runtime, std::move(*sRes));
 
-  auto tRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto tRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(tRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1499,7 +1499,7 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   // 3. If regexp is neither undefined nor null, then
-  auto regexp = args.getArgHandle(runtime, 0);
+  auto regexp = args.getArgHandle(0);
   if (!regexp->isUndefined() && !regexp->isNull()) {
     // a. Let matcher be GetMethod(regexp, @@match).
     auto methodRes = getMethod(
@@ -1529,7 +1529,7 @@ stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
 
   // 6. Let rx be RegExpCreate(regexp, undefined) (see 21.2.3.2.3).
   // 7. ReturnIfAbrupt(rx).
-  auto regRes = regExpCreate(runtime, regexp, runtime->getUndefinedValue());
+  auto regRes = regExpCreate(runtime, regexp, Runtime::getUndefinedValue());
   if (regRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1574,7 +1574,7 @@ stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
     form = NormalizationForm::C;
   } else {
     // 5. Let f be ToString(form).
-    auto fRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+    auto fRes = toString_RJS(runtime, args.getArgHandle(0));
     if (LLVM_UNLIKELY(fRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1627,7 +1627,7 @@ stringPrototypePad(void *ctx, Runtime *runtime, NativeArgs args) {
   auto S = toHandle(runtime, std::move(*sRes));
 
   // 3. Let intMaxLength be ? ToLength(maxLength).
-  auto intMaxLengthRes = toLength(runtime, args.getArgHandle(runtime, 0));
+  auto intMaxLengthRes = toLength(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intMaxLengthRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1650,7 +1650,7 @@ stringPrototypePad(void *ctx, Runtime *runtime, NativeArgs args) {
     filler = runtime->getPredefinedString(Predefined::space);
   } else {
     // 7. Else, let filler be ? ToString(fillString).
-    auto fillerRes = toString_RJS(runtime, args.getArgHandle(runtime, 1));
+    auto fillerRes = toString_RJS(runtime, args.getArgHandle(1));
     if (LLVM_UNLIKELY(fillerRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1734,7 +1734,7 @@ stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
 
   // 4. Let n be ToInteger(count).
   // 5. ReturnIfAbrupt(n).
-  auto nRes = toInteger(runtime, args.getArgHandle(runtime, 0));
+  auto nRes = toInteger(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1790,8 +1790,8 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   // 3. If searchValue is neither undefined nor null, then
-  auto searchValue = args.getArgHandle(runtime, 0);
-  auto replaceValue = args.getArgHandle(runtime, 1);
+  auto searchValue = args.getArgHandle(0);
+  auto replaceValue = args.getArgHandle(1);
   if (!searchValue->isUndefined() && !searchValue->isNull()) {
     // a. Let replacer be GetMethod(searchValue, @@replace).
     auto methodRes = getMethod(
@@ -1832,7 +1832,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
   }
   auto searchString = toHandle(runtime, std::move(*searchStringRes));
   // 8. Let functionalReplace be IsCallable(replaceValue).
-  auto replaceFn = Handle<Callable>::dyn_vmcast(runtime, replaceValue);
+  auto replaceFn = Handle<Callable>::dyn_vmcast(replaceValue);
   MutableHandle<StringPrimitive> replaceValueStr{runtime};
   bool functionalReplace = !!replaceFn;
   // 9. If functionalReplace is false, then
@@ -1874,7 +1874,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
     auto callRes = Callable::executeCall3(
         replaceFn,
         runtime,
-        runtime->getUndefinedValue(),
+        Runtime::getUndefinedValue(),
         searchString.getHermesValue(),
         HermesValue::encodeNumberValue(pos),
         string.getHermesValue());
@@ -1892,7 +1892,7 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
   } else {
     // 12. Else,
     // a. Let captures be an empty List.
-    auto nullHandle = runtime->makeNullHandle<ArrayStorage>();
+    auto nullHandle = Runtime::makeNullHandle<ArrayStorage>();
     // b. Let replStr be GetSubstitution(matched, string, pos, captures,
     // replaceValue).
     auto callRes = getSubstitution(
@@ -1927,7 +1927,7 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   // 3. If regexp is neither undefined nor null, then
-  auto regexp = args.getArgHandle(runtime, 0);
+  auto regexp = args.getArgHandle(0);
   if (!regexp->isUndefined() && !regexp->isNull()) {
     // a. Let searcher be GetMethod(regexp, @@search).
     auto methodRes = getMethod(
@@ -1958,7 +1958,7 @@ stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
 
   // 6. Let rx be RegExpCreate(regexp, undefined) (see 21.2.3.2.3).
   // 7. ReturnIfAbrupt(rx).
-  auto regRes = regExpCreate(runtime, regexp, runtime->getUndefinedValue());
+  auto regRes = regExpCreate(runtime, regexp, Runtime::getUndefinedValue());
   if (regRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1995,7 +1995,7 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
   auto S = toHandle(runtime, std::move(*strRes));
 
   // 4. Let isRegExp be IsRegExp(searchString).
-  auto isRegExpRes = isRegExp(runtime, args.getArgHandle(runtime, 0));
+  auto isRegExpRes = isRegExp(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(isRegExpRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2007,7 +2007,7 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // 7. Let searchStr be ToString(searchString).
-  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(searchStrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2022,7 +2022,7 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
   if (args.getArg(1).isUndefined()) {
     pos = len;
   } else {
-    auto posRes = toInteger(runtime, args.getArgHandle(runtime, 1));
+    auto posRes = toInteger(runtime, args.getArgHandle(1));
     if (LLVM_UNLIKELY(posRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -2074,7 +2074,7 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
 
   // 4. Let isRegExp be IsRegExp(searchString).
   // 6. If isRegExp is true, throw a TypeError exception.
-  auto isRegExpRes = isRegExp(runtime, args.getArgHandle(runtime, 0));
+  auto isRegExpRes = isRegExp(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(isRegExpRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2085,7 +2085,7 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
   }
 
   // 7. Let searchStr be ToString(searchString).
-  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(searchStrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2093,7 +2093,7 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
 
   // 9. Let pos be ToInteger(position).
   // (If position is undefined, this step produces the value 0).
-  auto posRes = toInteger(runtime, args.getArgHandle(runtime, 1));
+  auto posRes = toInteger(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(posRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

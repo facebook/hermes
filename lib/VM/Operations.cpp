@@ -178,8 +178,8 @@ CallResult<HermesValue> ordinaryToPrimitive(
           selfHandle, runtime, Predefined::getSymbolID(Predefined::toString));
       if (propRes == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
-      if (auto funcHandle = Handle<Callable>::dyn_vmcast(
-              runtime, runtime->makeHandle(*propRes))) {
+      if (auto funcHandle =
+              Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes))) {
         auto callRes =
             funcHandle->executeCall0(funcHandle, runtime, selfHandle);
         if (callRes == ExecutionStatus::EXCEPTION)
@@ -195,8 +195,8 @@ CallResult<HermesValue> ordinaryToPrimitive(
           selfHandle, runtime, Predefined::getSymbolID(Predefined::valueOf));
       if (propRes == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
-      if (auto funcHandle = Handle<Callable>::dyn_vmcast(
-              runtime, runtime->makeHandle(*propRes))) {
+      if (auto funcHandle =
+              Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes))) {
         auto callRes =
             funcHandle->executeCall0(funcHandle, runtime, selfHandle);
         if (callRes == ExecutionStatus::EXCEPTION)
@@ -1261,7 +1261,7 @@ CallResult<Handle<JSObject>> iteratorStep(
     return ExecutionStatus::EXCEPTION;
   }
   if (toBoolean(*completeRes)) {
-    return runtime->makeNullHandle<JSObject>();
+    return Runtime::makeNullHandle<JSObject>();
   }
   return result;
 }
@@ -1333,7 +1333,7 @@ createIterResultObject(Runtime *runtime, Handle<> value, bool done) {
       runtime,
       Predefined::getSymbolID(Predefined::done),
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
-      runtime->getBoolValue(done));
+      Runtime::getBoolValue(done));
   assert(
       status != ExecutionStatus::EXCEPTION && *status &&
       "put own value property cannot fail");
@@ -1549,7 +1549,7 @@ CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
 }
 
 CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value) {
-  auto O = Handle<JSObject>::dyn_vmcast(runtime, value);
+  auto O = Handle<JSObject>::dyn_vmcast(value);
   if (!O) {
     return false;
   }

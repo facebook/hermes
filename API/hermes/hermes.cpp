@@ -608,11 +608,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   vm::Handle<> vmHandleFromValue(const jsi::Value &value) {
     if (value.isUndefined()) {
-      return runtime_.getUndefinedValue();
+      return vm::Runtime::getUndefinedValue();
     } else if (value.isNull()) {
-      return runtime_.getNullValue();
+      return vm::Runtime::getNullValue();
     } else if (value.isBool()) {
-      return runtime_.getBoolValue(value.getBool());
+      return vm::Runtime::getBoolValue(value.getBool());
     } else if (value.isNumber()) {
       return runtime_.makeHandle(
           vm::HermesValue::encodeNumberValue(value.getNumber()));
@@ -1067,7 +1067,7 @@ void HermesRuntime::loadSegment(
   }
 
   auto requireContext = vm::Handle<vm::RequireContext>::dyn_vmcast(
-      &impl(this)->runtime_, impl(this)->vmHandleFromValue(context));
+      impl(this)->vmHandleFromValue(context));
   if (!requireContext) {
     throw jsi::JSINativeException("Error loading segment: Invalid context");
   }
@@ -1242,7 +1242,7 @@ jsi::Value HermesRuntimeImpl::evaluatePreparedJavaScript(
         hermesPrep->bytecodeProvider(),
         hermesPrep->runtimeFlags(),
         hermesPrep->sourceURL(),
-        runtime_.makeNullHandle<vm::Environment>());
+        vm::Runtime::makeNullHandle<vm::Environment>());
     checkStatus(res.getStatus());
     return valueFromHermesValue(*res);
   });

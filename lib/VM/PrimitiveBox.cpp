@@ -250,7 +250,7 @@ CallResult<HermesValue> JSStringIterator::nextElement(
   auto s = runtime->makeHandle(self->iteratedString_);
   if (!s) {
     // 5. If s is undefined, return CreateIterResultObject(undefined, true).
-    return createIterResultObject(runtime, runtime->getUndefinedValue(), true)
+    return createIterResultObject(runtime, Runtime::getUndefinedValue(), true)
         .getHermesValue();
   }
 
@@ -265,7 +265,7 @@ CallResult<HermesValue> JSStringIterator::nextElement(
     // undefined.
     self->iteratedString_ = nullptr;
     // 8b. Return CreateIterResultObject(undefined, true).
-    return createIterResultObject(runtime, runtime->getUndefinedValue(), true)
+    return createIterResultObject(runtime, Runtime::getUndefinedValue(), true)
         .getHermesValue();
   }
 
@@ -404,7 +404,7 @@ JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
               runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 
   JSObject::addInternalProperties(
-      selfHandle, runtime, 1, runtime->getBoolValue(value));
+      selfHandle, runtime, 1, Runtime::getBoolValue(value));
   return selfHandle.getHermesValue();
 }
 

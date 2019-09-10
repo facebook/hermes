@@ -108,7 +108,7 @@ CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandle(
     UTF16Ref str,
     uint32_t hash) {
   auto cr = getOrCreateIdentifier(
-      runtime, str, runtime->makeNullHandle<StringPrimitive>(), hash);
+      runtime, str, Runtime::makeNullHandle<StringPrimitive>(), hash);
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   return runtime->makeHandle(*cr);
@@ -119,7 +119,7 @@ CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandle(
     ASCIIRef str,
     uint32_t hash) {
   auto cr = getOrCreateIdentifier(
-      runtime, str, runtime->makeNullHandle<StringPrimitive>(), hash);
+      runtime, str, Runtime::makeNullHandle<StringPrimitive>(), hash);
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   return runtime->makeHandle(*cr);
@@ -380,12 +380,12 @@ StringPrimitive *IdentifierTable::materializeLazyIdentifier(
       entry.isLazyASCII() ? allocateDynamicString(
                                 runtime,
                                 entry.getLazyASCIIRef(),
-                                runtime->makeNullHandle<StringPrimitive>(),
+                                Runtime::makeNullHandle<StringPrimitive>(),
                                 id)
                           : allocateDynamicString(
                                 runtime,
                                 entry.getLazyUTF16Ref(),
-                                runtime->makeNullHandle<StringPrimitive>(),
+                                Runtime::makeNullHandle<StringPrimitive>(),
                                 id));
   LLVM_DEBUG(llvm::dbgs() << "Materializing lazy identifier " << id << "\n");
   entry.materialize(strPrim.get());

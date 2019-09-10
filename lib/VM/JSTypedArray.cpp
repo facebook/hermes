@@ -106,7 +106,7 @@ ExecutionStatus JSTypedArrayBase::validateTypedArray(
     Runtime *runtime,
     Handle<> thisArg,
     bool checkAttached) {
-  auto self = Handle<JSTypedArrayBase>::dyn_vmcast(runtime, thisArg);
+  auto self = Handle<JSTypedArrayBase>::dyn_vmcast(thisArg);
   if (!self) {
     return runtime->raiseTypeError(
         "A TypedArray function was called on a non TypedArray");

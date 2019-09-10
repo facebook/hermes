@@ -143,7 +143,7 @@ CallResult<HermesValue> HiddenClass::createRoot(Runtime *runtime) {
   return create(
       runtime,
       ClassFlags{},
-      runtime->makeNullHandle<HiddenClass>(),
+      Runtime::makeNullHandle<HiddenClass>(),
       SymbolID{},
       PropertyFlags{},
       0);
@@ -180,7 +180,7 @@ Handle<HiddenClass> HiddenClass::copyToNewDictionary(
       runtime->ignoreAllocationFailure(HiddenClass::create(
           runtime,
           newFlags,
-          runtime->makeNullHandle<HiddenClass>(),
+          Runtime::makeNullHandle<HiddenClass>(),
           SymbolID{},
           PropertyFlags{},
           selfHandle->numProperties_)));
@@ -728,7 +728,7 @@ Handle<HiddenClass> HiddenClass::updatePropertyFlagsWithoutTransitions(
         runtime->ignoreAllocationFailure(HiddenClass::create(
             runtime,
             selfHandle->flags_,
-            runtime->makeNullHandle<HiddenClass>(),
+            Runtime::makeNullHandle<HiddenClass>(),
             SymbolID{},
             PropertyFlags{},
             selfHandle->numProperties_)));

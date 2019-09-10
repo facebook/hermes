@@ -84,7 +84,7 @@ arrayBufferConstructor(void *, Runtime *runtime, NativeArgs args) {
         "ArrayBuffer() called in function context instead of constructor");
   }
   auto self = args.vmcastThis<JSArrayBuffer>();
-  auto length = args.getArgHandle(runtime, 0);
+  auto length = args.getArgHandle(0);
 
   // 2. Let byteLength be ToIndex(length).
   auto res = toIndex(runtime, length);
@@ -122,7 +122,7 @@ arrayBufferIsView(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 arrayBufferPrototypeByteLength(void *, Runtime *runtime, NativeArgs args) {
-  auto self = args.dyncastThis<JSArrayBuffer>(runtime);
+  auto self = args.dyncastThis<JSArrayBuffer>();
   if (!self) {
     return runtime->raiseTypeError(
         "byteLength called on a non ArrayBuffer object");
@@ -132,10 +132,10 @@ arrayBufferPrototypeByteLength(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 arrayBufferPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
-  auto start = args.getArgHandle(runtime, 0);
-  auto end = args.getArgHandle(runtime, 1);
+  auto start = args.getArgHandle(0);
+  auto end = args.getArgHandle(1);
   // 1. Let O be the this value.
-  auto self = args.dyncastThis<JSArrayBuffer>(runtime);
+  auto self = args.dyncastThis<JSArrayBuffer>();
   // 2. If Type(O) is not Object, throw a TypeError exception.
   // 3. If O does not have an [[ArrayBufferData]] internal slot, throw a
   // TypeError exception. 4. If IsDetachedBuffer(O) is true, throw a TypeError

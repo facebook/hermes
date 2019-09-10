@@ -819,7 +819,7 @@ void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
 
   // Try to fetch the stack trace.
   CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
-  if (auto objHandle = Handle<JSObject>::dyn_vmcast(this, valueHandle)) {
+  if (auto objHandle = Handle<JSObject>::dyn_vmcast(valueHandle)) {
     if (LLVM_UNLIKELY(
             (propRes = JSObject::getNamed_RJS(
                  objHandle,

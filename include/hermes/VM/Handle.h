@@ -278,9 +278,7 @@ class Handle : public HandleBase {
     return Handle<T>(other, true);
   }
 
-  static Handle<T> dyn_vmcast(
-      HandleRootOwner *runtime,
-      const HandleBase &other);
+  static Handle<T> dyn_vmcast(const HandleBase &other);
 
   /// Create a handle based on a potentially invalid address.
   /// For example, this is used in CallResult for exception values.

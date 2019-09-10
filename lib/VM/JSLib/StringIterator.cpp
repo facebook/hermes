@@ -41,7 +41,7 @@ void populateStringIteratorPrototype(Runtime *runtime) {
 
 CallResult<HermesValue>
 stringIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
-  auto O = args.dyncastThis<JSStringIterator>(runtime);
+  auto O = args.dyncastThis<JSStringIterator>();
   if (LLVM_UNLIKELY(!O)) {
     return runtime->raiseTypeError(
         "StringIteratorPrototype.next requires 'this' is a String Iterator");

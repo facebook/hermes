@@ -166,7 +166,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
     auto obj = toHandle(runtime, JSObject::create(runtime, nullObj));
     DefinePropertyFlags dpf{};
     ASSERT_TRUE(*JSObject::defineOwnProperty(
-        obj, runtime, *prop1ID, dpf, runtime->getUndefinedValue()));
+        obj, runtime, *prop1ID, dpf, Runtime::getUndefinedValue()));
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, writable);
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, enumerable);
     EXPECT_PROPERTY_FLAG(FALSE, obj, *prop1ID, configurable);
@@ -342,7 +342,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
     dpf.setWritable = 1;
     dpf.writable = 1;
     ASSERT_FALSE(*JSObject::defineOwnProperty(
-        obj, runtime, *prop1ID, dpf, runtime->getUndefinedValue()));
+        obj, runtime, *prop1ID, dpf, Runtime::getUndefinedValue()));
   }
 }
 
@@ -549,14 +549,14 @@ TEST_F(ObjectModelTest, NativeConstructorTest) {
       runtime,
       NativeConstructor::create(
           runtime,
-          runtime->makeNullHandle<JSObject>(),
+          Runtime::makeNullHandle<JSObject>(),
           nullptr,
           nullptr,
           0,
           JSDate::create,
           CellKind::FunctionKind));
   auto crtRes = dateCons->newObject(
-      dateCons, runtime, runtime->makeNullHandle<JSObject>());
+      dateCons, runtime, Runtime::makeNullHandle<JSObject>());
   ASSERT_EQ(ExecutionStatus::RETURNED, crtRes.getStatus());
 
   ASSERT_TRUE(dyn_vmcast<JSDate>(*crtRes));
@@ -800,7 +800,7 @@ TEST_F(ObjectModelTest, HasProperty) {
 
   DefinePropertyFlags dpf{};
   ASSERT_TRUE(*JSObject::defineOwnProperty(
-      self, runtime, *indexID2, dpf, runtime->getUndefinedValue()));
+      self, runtime, *indexID2, dpf, Runtime::getUndefinedValue()));
 
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, indexIDNum));
@@ -828,19 +828,19 @@ TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {
       runtime,
       *aHnd,
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
-      runtime->getUndefinedValue()));
+      Runtime::getUndefinedValue()));
   ASSERT_TRUE(*JSObject::defineOwnProperty(
       obj,
       runtime,
       *bHnd,
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
-      runtime->getUndefinedValue()));
+      Runtime::getUndefinedValue()));
   ASSERT_TRUE(*JSObject::defineOwnProperty(
       obj,
       runtime,
       *cHnd,
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
-      runtime->getUndefinedValue()));
+      Runtime::getUndefinedValue()));
 
   // Only freeze obj.a and obj.c.
   std::vector<SymbolID> propsToFreeze;

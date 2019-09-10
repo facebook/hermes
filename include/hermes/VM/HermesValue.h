@@ -159,6 +159,9 @@ class HermesValue {
     return ((a & kTagMask) << kTagWidth) | (b & kTagMask);
   }
 
+  constexpr inline static HermesValue encodeNullptrObjectValue() {
+    return HermesValue(0, ObjectTag);
+  }
   inline static HermesValue encodeObjectValue(void *val) {
     validatePointer(val);
     HermesValue RV(safeTypeCast<void *, uintptr_t>(val), ObjectTag);
@@ -206,10 +209,8 @@ class HermesValue {
     return RV;
   }
 
-  inline static HermesValue encodeBoolValue(bool val) {
-    HermesValue RV((uint64_t)(val), BoolTag);
-    assert(RV.isBool());
-    return RV;
+  constexpr inline static HermesValue encodeBoolValue(bool val) {
+    return HermesValue((uint64_t)(val), BoolTag);
   }
 
   inline static constexpr HermesValue encodeNullValue() {
@@ -438,9 +439,10 @@ static_assert(
 /// garbage collector.
 class PinnedHermesValue : public HermesValue {
  public:
-  PinnedHermesValue() : HermesValue(HermesValue::encodeUndefinedValue()) {}
-  PinnedHermesValue(HermesValue v) : HermesValue(v) {}
-  PinnedHermesValue(const PinnedHermesValue &) = default;
+  constexpr PinnedHermesValue()
+      : HermesValue(HermesValue::encodeUndefinedValue()) {}
+  constexpr PinnedHermesValue(HermesValue v) : HermesValue(v) {}
+  constexpr PinnedHermesValue(const PinnedHermesValue &) = default;
   PinnedHermesValue &operator=(const PinnedHermesValue &phv) {
     setNoBarrier(phv);
     return *this;

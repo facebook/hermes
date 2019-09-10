@@ -99,7 +99,7 @@ CallResult<HermesValue> runRequireCall(
       runtime,
       domain,
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
-      runtime->makeNullHandle<Environment>(),
+      Runtime::makeNullHandle<Environment>(),
       codeBlock);
   if (LLVM_UNLIKELY(funcRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -117,7 +117,7 @@ CallResult<HermesValue> runRequireCall(
     // If initialization of the module throws, reset it so that calling require
     // again may succeed.
     domain->setModule(
-        cjsModuleOffset, runtime, runtime->makeNullHandle<JSObject>());
+        cjsModuleOffset, runtime, Runtime::makeNullHandle<JSObject>());
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -153,7 +153,7 @@ CallResult<HermesValue> requireFast(void *, Runtime *runtime, NativeArgs args) {
   }
   return runRequireCall(
       runtime,
-      runtime->makeNullHandle<RequireContext>(),
+      Runtime::makeNullHandle<RequireContext>(),
       domain,
       *cjsModuleOffset);
 }
@@ -201,7 +201,7 @@ CallResult<HermesValue> require(void *, Runtime *runtime, NativeArgs args) {
       runtime->makeHandle(RequireContext::getDomain(runtime, *requireContext));
   auto dirname =
       runtime->makeHandle(RequireContext::getDirname(runtime, *requireContext));
-  auto targetRes = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto targetRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(targetRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

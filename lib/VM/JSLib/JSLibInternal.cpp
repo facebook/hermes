@@ -87,7 +87,7 @@ CallResult<HermesValue> defineMethod(
       nativeFunctionPtr,
       methodName,
       paramCount,
-      runtime->makeNullHandle<JSObject>());
+      Runtime::makeNullHandle<JSObject>());
 
   auto res = JSObject::defineOwnProperty(
       objectHandle, runtime, propertyName, dpf, method);
@@ -183,7 +183,7 @@ void defineAccessor(
         getterFunc,
         getterFuncName,
         0,
-        runtime->makeNullHandle<JSObject>());
+        Runtime::makeNullHandle<JSObject>());
     getter = funcRes.get();
   }
 
@@ -211,7 +211,7 @@ void defineAccessor(
         setterFunc,
         setterFuncName,
         1,
-        runtime->makeNullHandle<JSObject>());
+        Runtime::makeNullHandle<JSObject>());
     setter = funcRes.get();
   }
 
@@ -357,7 +357,7 @@ CallResult<HermesValue> createDynamicFunction(
     auto marker = gcScope.createMarker();
     for (uint32_t i = 0; i < paramCount; ++i) {
       gcScope.flushToMarker(marker);
-      auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, i));
+      auto strRes = toString_RJS(runtime, args.getArgHandle(i));
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -367,7 +367,7 @@ CallResult<HermesValue> createDynamicFunction(
     }
 
     // Last parameter is the body.
-    auto strRes = toString_RJS(runtime, args.getArgHandle(runtime, paramCount));
+    auto strRes = toString_RJS(runtime, args.getArgHandle(paramCount));
     if (strRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }

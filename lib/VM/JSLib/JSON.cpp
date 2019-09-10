@@ -52,23 +52,23 @@ Handle<JSObject> createJSONObject(Runtime *runtime) {
 }
 
 CallResult<HermesValue> jsonParse(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toString_RJS(runtime, args.getArgHandle(runtime, 0));
+  auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return runtimeJSONParse(
       runtime,
       toHandle(runtime, std::move(*res)),
-      Handle<Callable>::dyn_vmcast(runtime, args.getArgHandle(runtime, 1)));
+      Handle<Callable>::dyn_vmcast(args.getArgHandle(1)));
 }
 
 CallResult<HermesValue>
 jsonStringify(void *, Runtime *runtime, NativeArgs args) {
   return runtimeJSONStringify(
       runtime,
-      args.getArgHandle(runtime, 0),
-      args.getArgHandle(runtime, 1),
-      args.getArgHandle(runtime, 2));
+      args.getArgHandle(0),
+      args.getArgHandle(1),
+      args.getArgHandle(2));
 }
 
 } // namespace vm

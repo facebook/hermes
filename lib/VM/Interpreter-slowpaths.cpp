@@ -42,7 +42,7 @@ ExecutionStatus Interpreter::caseDirectEval(
       auto evalRes = existingEvalCallable->executeCall1(
           runtime->makeHandle<Callable>(existingEvalCallable),
           runtime,
-          runtime->getUndefinedValue(),
+          Runtime::getUndefinedValue(),
           *input);
       if (LLVM_UNLIKELY(evalRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;

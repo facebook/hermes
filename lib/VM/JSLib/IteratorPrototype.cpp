@@ -25,7 +25,7 @@ void populateIteratorPrototype(Runtime *runtime) {
       iteratorPrototypeIterator,
       Predefined::getSymbolID(Predefined::squareSymbolIterator),
       0,
-      runtime->makeNullHandle<JSObject>());
+      Runtime::makeNullHandle<JSObject>());
 
   defineProperty(
       runtime,

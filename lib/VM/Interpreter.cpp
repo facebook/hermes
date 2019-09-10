@@ -2093,7 +2093,7 @@ tailCall:
                 runtime,
                 ID(ip->iDeclareGlobalVar.op1),
                 dpf,
-                runtime->getUndefinedValue(),
+                Runtime::getUndefinedValue(),
                 PropOpFlags().plusThrowOnError()) ==
             ExecutionStatus::EXCEPTION) {
           // If the property already exists, this should be a noop.
@@ -2745,7 +2745,7 @@ tailCall:
                 O2REG(NewObjectWithParent).isObject()
                     ? Handle<JSObject>::vmcast(&O2REG(NewObjectWithParent))
                     : O2REG(NewObjectWithParent).isNull()
-                        ? runtime->makeNullHandle<JSObject>()
+                        ? Runtime::makeNullHandle<JSObject>()
                         : Handle<JSObject>::vmcast(&runtime->objectPrototype))
                 .getHermesValue();
         assert(

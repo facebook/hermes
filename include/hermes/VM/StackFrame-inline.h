@@ -43,10 +43,10 @@ inline Callable *StackFramePtrT<isConst>::getCalleeClosure() const {
 }
 
 template <bool isConst>
-inline Handle<Environment> StackFramePtrT<isConst>::getDebugEnvironmentHandle(
-    HandleRootOwner *runtime) const {
+inline Handle<Environment> StackFramePtrT<isConst>::getDebugEnvironmentHandle()
+    const {
   return getDebugEnvironmentRef().isUndefined()
-      ? runtime->makeNullHandle<Environment>()
+      ? HandleRootOwner::makeNullHandle<Environment>()
       : Handle<Environment>::vmcast_or_null(&getDebugEnvironmentRef());
 }
 

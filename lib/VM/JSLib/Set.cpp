@@ -139,7 +139,7 @@ setConstructor(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!args.isConstructorCall())) {
     return runtime->raiseTypeError("Constructor Set requires 'new'");
   }
-  auto selfHandle = args.dyncastThis<JSSet>(runtime);
+  auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Set Constructor only applies to Set object");
@@ -159,13 +159,12 @@ setConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   // ES6.0 23.2.1.1.7: Cache adder across all iterations of the loop.
-  auto adder =
-      Handle<Callable>::dyn_vmcast(runtime, runtime->makeHandle(*propRes));
+  auto adder = Handle<Callable>::dyn_vmcast(runtime->makeHandle(*propRes));
   if (!adder) {
     return runtime->raiseTypeError("Property 'add' for Set is not callable");
   }
 
-  auto iterRes = getIterator(runtime, args.getArgHandle(runtime, 0));
+  auto iterRes = getIterator(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -207,7 +206,7 @@ setConstructor(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 setPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSSet>(runtime);
+  auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.add");
@@ -216,14 +215,14 @@ setPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Method Set.prototype.add called on incompatible receiver");
   }
-  auto valueHandle = args.getArgHandle(runtime, 0);
+  auto valueHandle = args.getArgHandle(0);
   JSSet::addValue(selfHandle, runtime, valueHandle, valueHandle);
   return selfHandle.getHermesValue();
 }
 
 CallResult<HermesValue>
 setPrototypeClear(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSSet>(runtime);
+  auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.clear");
@@ -238,7 +237,7 @@ setPrototypeClear(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 setPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSSet>(runtime);
+  auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.delete");
@@ -248,12 +247,12 @@ setPrototypeDelete(void *, Runtime *runtime, NativeArgs args) {
         "Method Set.prototype.delete called on incompatible receiver");
   }
   return HermesValue::encodeBoolValue(
-      JSSet::deleteKey(selfHandle, runtime, args.getArgHandle(runtime, 0)));
+      JSSet::deleteKey(selfHandle, runtime, args.getArgHandle(0)));
 }
 
 CallResult<HermesValue>
 setPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSSet>(runtime);
+  auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.entries");
@@ -274,7 +273,7 @@ setPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 setPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSSet>(runtime);
+  auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.forEach");
@@ -283,12 +282,12 @@ setPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Method Set.prototype.forEach called on incompatible receiver");
   }
-  auto callbackfn = args.dyncastArg<Callable>(runtime, 0);
+  auto callbackfn = args.dyncastArg<Callable>(0);
   if (LLVM_UNLIKELY(!callbackfn)) {
     return runtime->raiseTypeError(
         "callbackfn must be Callable inSet.prototype.forEach");
   }
-  auto thisArg = args.getArgHandle(runtime, 1);
+  auto thisArg = args.getArgHandle(1);
   if (LLVM_UNLIKELY(
           JSSet::forEach(selfHandle, runtime, callbackfn, thisArg) ==
           ExecutionStatus::EXCEPTION))
@@ -298,7 +297,7 @@ setPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 setPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSSet>(runtime);
+  auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.has");
@@ -308,7 +307,7 @@ setPrototypeHas(void *, Runtime *runtime, NativeArgs args) {
         "Method Set.prototype.has called on incompatible receiver");
   }
   return HermesValue::encodeBoolValue(
-      JSSet::hasKey(selfHandle, runtime, args.getArgHandle(runtime, 0)));
+      JSSet::hasKey(selfHandle, runtime, args.getArgHandle(0)));
 }
 
 CallResult<HermesValue>
@@ -327,7 +326,7 @@ setPrototypeSizeGetter(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 setPrototypeValues(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSSet>(runtime);
+  auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-Set object called on Set.prototype.values");
@@ -374,7 +373,7 @@ Handle<JSObject> createSetIteratorPrototype(Runtime *runtime) {
 
 CallResult<HermesValue>
 setIteratorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSSetIterator>(runtime);
+  auto selfHandle = args.dyncastThis<JSSetIterator>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime->raiseTypeError(
         "Non-SetIterator object called on SetIterator.prototype.next");

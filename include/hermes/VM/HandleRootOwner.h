@@ -76,16 +76,16 @@ class HandleRootOwner {
   /// Make a null pointer of the specified type. This is more efficient that
   /// other methods because it doesn't allocate a handle.
   template <class T>
-  Handle<T> makeNullHandle();
+  static Handle<T> makeNullHandle();
 
   /// An efficient way to pass undefined to a function accepting Handle.
-  Handle<HermesValue> getUndefinedValue();
+  static Handle<HermesValue> getUndefinedValue();
 
   /// An efficient way to pass null to a function accepting Handle.
-  Handle<HermesValue> getNullValue();
+  static Handle<HermesValue> getNullValue();
 
   /// An efficient way to pass bools to a function accepting Handle.
-  Handle<HermesValue> getBoolValue(bool b);
+  static Handle<HermesValue> getBoolValue(bool b);
 
   /// Return the top-most \c GCScope.
   GCScope *getTopGCScope() {
@@ -108,14 +108,14 @@ class HandleRootOwner {
 
  protected:
   /// Used for efficient construction of Handle<>(..., nullptr).
-  PinnedHermesValue nullPointer_{HermesValue::encodeObjectValue(nullptr)};
+  static PinnedHermesValue nullPointer_;
   /// Used for efficient construction of Handle(undefined).
-  PinnedHermesValue undefinedValue_{HermesValue::encodeUndefinedValue()};
+  static PinnedHermesValue undefinedValue_;
   /// Used for efficient construction of Handle(null).
-  PinnedHermesValue nullValue_{HermesValue::encodeNullValue()};
+  static PinnedHermesValue nullValue_;
   /// Used for efficient construction of Handle(bool).
-  PinnedHermesValue trueValue_{HermesValue::encodeBoolValue(true)};
-  PinnedHermesValue falseValue_{HermesValue::encodeBoolValue(false)};
+  static PinnedHermesValue trueValue_;
+  static PinnedHermesValue falseValue_;
 
   void markGCScopes(SlotAcceptor &acceptor);
 
