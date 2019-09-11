@@ -705,8 +705,8 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
 
   // Try the fast paths first if we have "fast" index properties and the
   // property name is an obvious index.
-  if (selfHandle->flags_.fastIndexProperties) {
-    if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
+  if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
+    if (selfHandle->flags_.fastIndexProperties) {
       auto res =
           getOwnIndexedPropertyFlags(selfHandle.get(), runtime, *arrayIndex);
       if (res) {
@@ -719,6 +719,14 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
 
       // This a valid array index, but we don't have it in our indexed storage,
       // and we don't have index-like named properties.
+      return false;
+    }
+
+    if (!selfHandle->getClass(runtime)->getHasIndexLikeProperties() &&
+        !selfHandle->flags_.hostObject && !selfHandle->flags_.lazyObject) {
+      // Early return to handle the case where an object definitely has no
+      // index-like properties. This avoids allocating a new StringPrimitive and
+      // uniquing it below.
       return false;
     }
   }
