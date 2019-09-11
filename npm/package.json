@@ -10,8 +10,8 @@
   },
   "files": [
     "README.md",
-    "android/hermes-debug.aar",
-    "android/hermes-release.aar",
+    "android/aar/hermes-debug.aar",
+    "android/aar/hermes-release.aar",
     "android/include/**/*.h",
     "osx-bin/hermes",
     "osx-bin/hermes-repl",
