@@ -90,8 +90,11 @@ else
 fi
 
 for f in "${files[@]}"; do
-  "$clang_format" -i -style=file "$f"
+  before=$(date -r "$f")
+  "$clang_format" --verbose -i -style=file "$f" 2>&1 | tr -d "\n"
+  echo -n '...'
+  after=$(date -r "$f")
+  test "$before" = "$after" && echo "ok" || echo "reformatted"
 done
 echo
 echo "Done"
-
