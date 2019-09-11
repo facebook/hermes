@@ -6,7 +6,7 @@
 
 // This must be consistent with the release_version in npm/package.json
 // and the HERMES_RELEASE_VERSION in CMakeLists.txt
-def release_version = "0.1.1"
+def release_version = "0.2.0"
 
 buildscript {
   ext {
