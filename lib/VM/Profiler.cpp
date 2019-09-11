@@ -60,7 +60,10 @@ void patchProfilerSymbols(Runtime *runtime) {
   // Not allowed to write self while running, so replace self with copy.
   char selfName[PATH_MAX];
   memset(selfName, 0, sizeof(selfName));
-  readlink("/proc/self/exe", selfName, sizeof(selfName));
+  ssize_t readlinkLen = readlink("/proc/self/exe", selfName, sizeof(selfName));
+  if (readlinkLen < 0) {
+    hermes_fatal("Couldn't determine the executable path.");
+  }
   int srcFile = open(selfName, O_RDONLY);
   struct stat srcStat;
   fstat(srcFile, &srcStat);
@@ -68,7 +71,10 @@ void patchProfilerSymbols(Runtime *runtime) {
   lseek(srcFile, 0, SEEK_SET);
   unlink(selfName);
   int dstFile = open(selfName, O_RDWR | O_CREAT, srcStat.st_mode);
-  ftruncate(dstFile, size);
+  int truncRes = ftruncate(dstFile, size);
+  if (truncRes < 0) {
+    hermes_fatal("Unable to truncate file.");
+  }
   const auto srcBytes =
       (char *)mmap(nullptr, size, PROT_READ, MAP_SHARED, srcFile, 0);
   const auto dstBytes = (char *)mmap(
