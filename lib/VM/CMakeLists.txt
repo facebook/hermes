@@ -45,6 +45,7 @@ set(source_files
   RuntimeModule.cpp
   RuntimeStats.cpp
   Profiler/ChromeTraceSerializerPosix.cpp
+  Profiler/InlineCacheProfiler.cpp
   Profiler/SamplingProfilerWindows.cpp
   Profiler/SamplingProfilerPosix.cpp
   Serializer.cpp

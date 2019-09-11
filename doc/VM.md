@@ -101,7 +101,7 @@ Objects have a special `ObjectVTable`.
 
 ### Objects
 
-Each JS object is represented by `Object` (or a class derived from `Object).
+Each JS object is represented by `Object` (or a class derived from `Object`).
 JS objects have a set of name/value pairs, and some optional "indexed storage".
 Read more about how `Object` works in `ObjectModel.h`.
 The Runtime contains a global object which is used to store in global scope.

@@ -50,15 +50,12 @@
 #ifdef HERMESVM_PROFILER_BB
 #include "hermes/VM/IterationKind.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/Profiler/InlineCacheProfiler.h"
 #include "llvm/ADT/DenseMap.h"
 #endif
 
 namespace hermes {
 namespace vm {
-
-#ifdef HERMESVM_PROFILER_BB
-using DebugId = Runtime::DebugId;
-#endif
 
 namespace {
 
@@ -352,8 +349,8 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
   samplingProfiler_->registerRuntime(this);
 
 #ifdef HERMESVM_PROFILER_BB
-  cachedHiddenClassesRawPtr_ =
-      ignoreAllocationFailure(JSArray::create(this, 4, 4)).get();
+  inlineCacheProfiler_.setHiddenClassArray(
+      ignoreAllocationFailure(JSArray::create(this, 4, 4)).get());
 #endif
 }
 
@@ -516,7 +513,9 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
       samplingProfiler_->markRoots(acceptor);
     }
 #ifdef HERMESVM_PROFILER_BB
-    acceptor.acceptPtr(cachedHiddenClassesRawPtr_, "");
+    auto *hiddenCalssArray = inlineCacheProfiler_.getHiddenClassArray();
+    acceptor.acceptPtr(hiddenCalssArray, "");
+    inlineCacheProfiler_.setHiddenClassArray(hiddenCalssArray);
 #endif
     acceptor.endRootSection();
   }
@@ -1586,11 +1585,14 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
 
 #ifdef HERMESVM_PROFILER_BB
 void Runtime::preventHCGC(HiddenClass *hc) {
-  auto ret = debugIdToIdx_.insert(
-      std::pair<DebugId, uint32_t>(heap_.getObjectID(hc), hcIdx_));
+  auto &classIdToIdxMap = inlineCacheProfiler_.getClassIdtoIndexMap();
+  auto &hcIdx = inlineCacheProfiler_.getHiddenClassArrayIndex();
+  auto ret = classIdToIdxMap.insert(
+      std::pair<ClassId, uint32_t>(heap_.getObjectID(hc), hcIdx));
   if (ret.second) {
+    auto *hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
     JSArray::setElementAt(
-        makeHandle(cachedHiddenClassesRawPtr_), this, hcIdx_++, makeHandle(hc));
+        makeHandle(hiddenClassArray), this, hcIdx++, makeHandle(hc));
   }
 }
 
@@ -1600,17 +1602,30 @@ void Runtime::recordHiddenClass(
     SymbolID symbolID,
     HiddenClass *objectHiddenClass,
     HiddenClass *cachedHiddenClass) {
-  if (objectHiddenClass != nullptr) {
+  auto offset = codeBlock->getOffsetOf(cacheMissInst);
+  ClassId noId =
+      static_cast<ClassId>(GCBase::IDTracker::ReservedObjectID::NoID);
+  ClassId objectHiddenClassId = noId;
+  ClassId cachedHiddenClassId = noId;
+  if (objectHiddenClass) {
     preventHCGC(objectHiddenClass);
+    objectHiddenClassId = heap_.getObjectID(objectHiddenClass);
   }
-  if (cachedHiddenClass != nullptr) {
+  if (cachedHiddenClass) {
     preventHCGC(cachedHiddenClass);
+    cachedHiddenClassId = heap_.getObjectID(cachedHiddenClass);
   }
+  inlineCacheProfiler_.insertICMiss(
+      codeBlock, offset, symbolID, objectHiddenClassId, cachedHiddenClassId);
 }
 
-HiddenClass *Runtime::resolveHCDebugId(DebugId debugId) {
-  auto hcHermesVal =
-      cachedHiddenClassesRawPtr_->at(this, debugIdToIdx_[debugId]);
+HiddenClass *Runtime::resolveHiddenClassId(ClassId classId) {
+  if (classId == 0) {
+    return nullptr;
+  }
+  auto &classIdToIdxMap = inlineCacheProfiler_.getClassIdtoIndexMap();
+  auto *hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
+  auto hcHermesVal = hiddenClassArray->at(this, classIdToIdxMap[classId]);
   return vmcast<HiddenClass>(hcHermesVal);
 }
 

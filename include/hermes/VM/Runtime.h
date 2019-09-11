@@ -37,6 +37,11 @@
 #include "hermes/VM/StackFrame.h"
 #include "hermes/VM/SymbolRegistry.h"
 #include "hermes/VM/TwineChar16.h"
+
+#ifdef HERMESVM_PROFILER_BB
+#include "hermes/VM/Profiler/InlineCacheProfiler.h"
+#endif
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -729,6 +734,8 @@ class Runtime : public HandleRootOwner,
 #endif
 
 #ifdef HERMESVM_PROFILER_BB
+  using ClassId = InlineCacheProfiler::ClassId;
+
   /// Inserts the Hidden class as a root to prevent it from being garbage
   /// collected.
   void preventHCGC(HiddenClass *hc);
@@ -741,10 +748,8 @@ class Runtime : public HandleRootOwner,
       HiddenClass *objectHiddenClass,
       HiddenClass *cachedHiddenClass);
 
-  using DebugId = uint64_t;
-
-  /// Resolves HiddenClass pointers from its DebugId.
-  HiddenClass *resolveHCDebugId(DebugId debugId);
+  /// Resolve HiddenClass pointers from its hidden class Id.
+  HiddenClass *resolveHiddenClassId(ClassId classId);
 #endif
 
  protected:
@@ -1020,17 +1025,8 @@ class Runtime : public HandleRootOwner,
 #ifdef HERMESVM_PROFILER_BB
   BasicBlockExecutionInfo basicBlockExecInfo_;
 
-  /// Keep track of the current index of the hidden class array.
-  /// used by the inline caching profiler
-  uint32_t hcIdx_{0};
-
-  /// Store an array of hidden classes that will be used
-  /// by inline caching profiler.
-  JSArray *cachedHiddenClassesRawPtr_;
-
-  /// Store a map from object Id to array index in the array
-  /// referenced by cachedHiddenClassesRawPtr_.
-  llvm::DenseMap<DebugId, int32_t> debugIdToIdx_;
+  /// Store all inline caching miss information.
+  InlineCacheProfiler inlineCacheProfiler_;
 #endif
 
   /// Store a key for the function that is executed if a crash occurs.

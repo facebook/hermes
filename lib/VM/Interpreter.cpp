@@ -2171,6 +2171,13 @@ tailCall:
           DISPATCH;
         }
         auto id = ID(idVal);
+#ifdef HERMESVM_PROFILER_BB
+        if (LLVM_LIKELY(cacheEntry->clazz && cacheEntry->clazz != clazz)) {
+          runtime->recordHiddenClass(
+              curCodeBlock, ip, id, clazz, cacheEntry->clazz);
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+        }
+#endif
         NamedPropertyDescriptor desc;
         OptValue<bool> fastPathResult =
             JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
@@ -2304,6 +2311,14 @@ tailCall:
           DISPATCH;
         }
         auto id = ID(idVal);
+
+#ifdef HERMESVM_PROFILER_BB
+        if (LLVM_LIKELY(cacheEntry->clazz && cacheEntry->clazz != clazz)) {
+          runtime->recordHiddenClass(
+              curCodeBlock, ip, id, clazz, cacheEntry->clazz);
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+        }
+#endif
         NamedPropertyDescriptor desc;
         OptValue<bool> hasOwnProp =
             JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
