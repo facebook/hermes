@@ -332,8 +332,8 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
       "StringPrimitive must be flat");
 
   auto idx = hashTable_.lookupString(str, hash);
-  if (hashTable_.at(idx).isValid()) {
-    return SymbolID::unsafeCreate(hashTable_.at(idx).index);
+  if (hashTable_.isValid(idx)) {
+    return SymbolID::unsafeCreate(hashTable_.get(idx));
   }
 
   CallResult<PseudoHandle<StringPrimitive>> cr = allocateDynamicString(
@@ -352,9 +352,9 @@ SymbolID IdentifierTable::registerLazyIdentifierImpl(
     llvm::ArrayRef<T> str,
     uint32_t hash) {
   auto idx = hashTable_.lookupString(str, hash);
-  if (hashTable_.at(idx).isValid()) {
+  if (hashTable_.isValid(idx)) {
     // If the string is already in the table, return it.
-    return SymbolID::unsafeCreate(hashTable_.at(idx).index);
+    return SymbolID::unsafeCreate(hashTable_.get(idx));
   }
   uint32_t nextId = allocNextID();
   SymbolID symbolId = SymbolID::unsafeCreate(nextId);

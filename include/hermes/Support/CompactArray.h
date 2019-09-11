@@ -14,6 +14,11 @@
 
 namespace hermes {
 
+namespace vm {
+class Deserializer;
+class Serializer;
+} // namespace vm
+
 /// Array of uint32_t, but size-optimized for small values.
 ///
 /// The underlying storage type is automatically scaled up to accommodate
@@ -63,6 +68,9 @@ class CompactArray {
   Scale getCurrentScale() const {
     return scale_;
   }
+  size_t additionalMemorySize() const {
+    return size_ << scale_;
+  }
 
  private:
   template <typename T>
@@ -104,9 +112,11 @@ class CompactArray {
 /// and elements always transition EMPTY -> valid -> DELETED -> valid -> ...
 class CompactTable : private CompactArray {
  public:
+  using CompactArray::additionalMemorySize;
   using CompactArray::CompactArray;
   using CompactArray::getCurrentScale;
   using CompactArray::size;
+
   void swap(CompactTable &other) {
     CompactArray::swap(other);
   }
@@ -135,6 +145,14 @@ class CompactTable : private CompactArray {
   }
 
  private:
+  /// (De)serialization reads/writes the underlying CompactArray.
+  friend class vm::Deserializer;
+  friend class vm::Serializer;
+
+  CompactArray &asArray() {
+    return *this;
+  }
+
   /// Invalid values at the bottom, to make good use of underlying CompactArray.
   /// Empty is 0 so that the initial state is all empty.
   enum { EMPTY = 0, DELETED, FIRST_VALID };

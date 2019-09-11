@@ -6,6 +6,7 @@
  */
 #ifdef HERMESVM_SERIALIZE
 #include "hermes/VM/Deserializer.h"
+#include "hermes/Support/CompactArray.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/JSArrayBuffer.h"
@@ -38,6 +39,15 @@ void Deserializer::deserializeCell(uint8_t kind) {
       (CellKind)kind != CellKind::ArrayStorageKind &&
       "ArrayStorage should be serialized/deserialized with its owner.");
   deserializeImpl[kind](*this, (CellKind)kind);
+}
+
+void Deserializer::deserializeCompactTable(CompactTable &table) {
+  auto size = readInt<uint32_t>();
+  auto scale = (CompactArray::Scale)readInt<uint8_t>();
+  CompactArray tmp(size, scale);
+  for (uint32_t idx = 0; idx < size; ++idx)
+    tmp.set(idx, readInt<uint32_t>());
+  table.asArray().swap(tmp);
 }
 
 void Deserializer::flushRelocationQueue() {

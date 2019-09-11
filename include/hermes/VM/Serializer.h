@@ -13,6 +13,9 @@
 #include "hermes/VM/StringRefUtils.h"
 
 namespace hermes {
+
+class CompactTable;
+
 namespace vm {
 
 class Runtime;
@@ -161,6 +164,9 @@ class Serializer {
 
   /// Serialize a GCCell \p on the heap.
   void serializeCell(const GCCell *cell);
+
+  /// Serialize a CompactTable.
+  void serializeCompactTable(CompactTable &table);
 
   /// Write serialize header so deserialize can sanity check.
   void writeHeader();

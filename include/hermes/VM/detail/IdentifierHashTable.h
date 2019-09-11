@@ -7,6 +7,7 @@
 #ifndef HERMES_VM_IDENTIFIERHASHTABLE_H
 #define HERMES_VM_IDENTIFIERHASHTABLE_H
 
+#include "hermes/Support/CompactArray.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/SymbolID.h"
@@ -30,44 +31,11 @@ namespace detail {
 /// to index in the lookup vector. Use quadratic probing for conflicts.
 /// Automatically grow when the size is beyond 0.75 of capacity.
 class IdentifierHashTable {
-  /// HashTable Entry.
-  struct HashTableEntry {
-    static constexpr uint32_t INVALID_ID = SymbolID::EMPTY_ID;
-    static constexpr uint32_t DELETED_ID = SymbolID::DELETED_ID;
-
-    /// Index to the lookupVector_.
-    uint32_t index{INVALID_ID};
-
-    HashTableEntry(uint32_t id) : index(id) {}
-
-    HashTableEntry() = default;
-
-    /// Whether this entry is empty (i.e. not occupied.)
-    bool isEmpty() const {
-      return index == INVALID_ID;
-    }
-
-    /// Whether this entry has been deleted.
-    bool isDeleted() const {
-      return index == DELETED_ID;
-    }
-
-    /// Whether this entry is valid and alive.
-    bool isValid() const {
-      return index < SymbolID::FIRST_INVALID_ID;
-    }
-
-    /// Mark this entry as deleted.
-    void markAsDeleted() {
-      index = SymbolID::DELETED_ID;
-    }
-  };
-
   /// Initial capacity of the hash table.
   static constexpr uint32_t INITIAL_CAPACITY = 1024;
 
   /// The hash table storage.
-  std::vector<HashTableEntry> storage_{};
+  CompactTable table_;
 
   /// Pointer to the identifier table that uses this hash table. We need it
   /// because we need to access the lookup vectors there.
@@ -123,9 +91,8 @@ class IdentifierHashTable {
   };
 
  public:
-  explicit IdentifierHashTable(uint32_t capacity = INITIAL_CAPACITY) {
-    storage_.resize(capacity);
-  }
+  explicit IdentifierHashTable(uint32_t capacity = INITIAL_CAPACITY)
+      : table_(capacity) {}
 
   /// Set the identifier table pointer.
   void setIdentifierTable(IdentifierTable *table) {
@@ -139,13 +106,13 @@ class IdentifierHashTable {
 
   /// \return the capacity of the hash table.
   uint32_t capacity() const {
-    return storage_.size();
+    return table_.size();
   }
 
   /// \return an estimate of the size of additional memory used by this
   /// IdentifierHashTable.
   size_t additionalMemorySize() const {
-    return storage_.capacity() * sizeof(HashTableEntry);
+    return table_.additionalMemorySize();
   }
 
   /// Prepare the hash table to have sufficient capacity to contain \p count
@@ -195,10 +162,14 @@ class IdentifierHashTable {
       uint32_t hash,
       bool mustBeNew = false) const;
 
-  /// \return a const reference to the hash table storage given \p index.
-  const HashTableEntry &at(uint32_t index) const {
-    assert(index < capacity() && "Index out of bound");
-    return storage_[index];
+  /// Whether there is a valid entry at given index.
+  bool isValid(uint32_t index) const {
+    return table_.isValid(index);
+  }
+
+  /// Get a valid entry at given index.
+  uint32_t get(uint32_t index) const {
+    return table_.get(index);
   }
 
   /// Insert an entry into index \p idx, with IdentifierID \p id.
@@ -207,8 +178,7 @@ class IdentifierHashTable {
 
   /// Given the index to the storage \idx, delete it.
   void remove(uint32_t idx) {
-    assert(storage_[idx].isValid() && "Deleting an invalid entry");
-    storage_[idx].markAsDeleted();
+    table_.markAsDeleted(idx);
     size_--;
   }
 

@@ -6,6 +6,7 @@
  */
 #ifdef HERMESVM_SERIALIZE
 #include "hermes/VM/Serializer.h"
+#include "hermes/Support/CompactArray.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/JSArrayBuffer.h"
@@ -140,6 +141,14 @@ void Serializer::serializeCell(const GCCell *cell) {
       (CellKind)cell->getKind() != CellKind::ArrayStorageKind &&
       "ArrayStorage should be serialized and deserialized with its owner.");
   serializeImpl[(uint8_t)cell->getKind()](*this, cell);
+}
+
+void Serializer::serializeCompactTable(CompactTable &table) {
+  auto size = table.size();
+  writeInt<uint32_t>(size);
+  writeInt<uint8_t>(table.getCurrentScale());
+  for (uint32_t idx = 0; idx < size; ++idx)
+    writeInt<uint32_t>(table.asArray().get(idx));
 }
 
 void Serializer::writeHeader() {

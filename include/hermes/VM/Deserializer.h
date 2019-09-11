@@ -16,6 +16,9 @@
 
 using llvm::ArrayRef;
 namespace hermes {
+
+class CompactTable;
+
 namespace vm {
 
 class Runtime;
@@ -193,6 +196,9 @@ class Deserializer {
 
   /// Deserialize a GCCell which has CellKind \p kind.
   void deserializeCell(uint8_t kind);
+
+  /// Deserialize a CompactTable (replacing any previous contents).
+  void deserializeCompactTable(CompactTable &table);
 
   /// Read serialize data header and check to see if we have the same configs as
   /// the serializing machine.

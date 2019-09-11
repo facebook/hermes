@@ -43,13 +43,11 @@ uint32_t IdentifierHashTable::lookupString(
   OptValue<uint32_t> deletedIndex;
   // The loop will always terminate as long as the hash table is not full.
   while (1) {
-    auto &entry = storage_[idx];
-    if (entry.isEmpty()) {
+    if (table_.isEmpty(idx)) {
       // Found an empty entry, meaning that str does not exist in the table.
       // If deletedIndex is available, return it, otherwise return idx.
       return deletedIndex ? *deletedIndex : idx;
-    }
-    if (entry.isDeleted()) {
+    } else if (table_.isDeleted(idx)) {
       assert(
           !mustBeNew &&
           "mustBeNew should never be set if there are deleted entries");
@@ -59,7 +57,7 @@ uint32_t IdentifierHashTable::lookupString(
       // There is no need to compare.
 
       auto &lookupTableEntry =
-          identifierTable_->getLookupTableEntry(entry.index);
+          identifierTable_->getLookupTableEntry(table_.get(idx));
       if (lookupTableEntry.getHash() == hash) {
         if (lookupTableEntry.isStringPrim()) {
           const StringPrimitive *strPrim = lookupTableEntry.getStringPrim();
@@ -127,8 +125,7 @@ uint32_t IdentifierHashTable::lookupString(
 }
 
 void IdentifierHashTable::insert(uint32_t idx, SymbolID id) {
-  assert(!storage_[idx].isValid() && "Cannot insert into a valid entry");
-  new (&storage_[idx]) HashTableEntry(id.unsafeGetIndex());
+  table_.set(idx, id.unsafeGetIndex());
   ++size_;
   ++nonEmptyEntryCount_;
 
@@ -147,15 +144,16 @@ void IdentifierHashTable::remove(const StringPrimitive *str) {
 
 void IdentifierHashTable::growAndRehash(uint32_t newCapacity) {
   assert(llvm::isPowerOf2_32(newCapacity) && "capacity must be power of 2");
-  std::vector<HashTableEntry> tmpTable(newCapacity);
-  std::swap(storage_, tmpTable);
-  for (auto &entry : tmpTable) {
-    if (!entry.isValid()) {
+  CompactTable tmpTable(newCapacity, table_.getCurrentScale());
+  tmpTable.swap(table_);
+  for (uint32_t oldIdx = 0; oldIdx < tmpTable.size(); ++oldIdx) {
+    if (!tmpTable.isValid(oldIdx)) {
       continue;
     }
     // Pass true as second argument as we know this string is not in the table.
     uint32_t idx = 0;
-    auto &lookupTableEntry = identifierTable_->getLookupTableEntry(entry.index);
+    uint32_t oldVal = tmpTable.get(oldIdx);
+    auto &lookupTableEntry = identifierTable_->getLookupTableEntry(oldVal);
     uint32_t hash = lookupTableEntry.getHash();
     if (lookupTableEntry.isStringPrim()) {
       idx = lookupString(lookupTableEntry.getStringPrim(), hash, true);
@@ -164,7 +162,7 @@ void IdentifierHashTable::growAndRehash(uint32_t newCapacity) {
     } else if (lookupTableEntry.isLazyUTF16()) {
       idx = lookupString(lookupTableEntry.getLazyUTF16Ref(), hash, true);
     }
-    storage_[idx] = entry;
+    table_.set(idx, oldVal);
   }
   nonEmptyEntryCount_ = size_;
 }
@@ -180,24 +178,13 @@ void IdentifierHashTable::serialize(Serializer &s) {
   // We don't serialize IdentifierTable *identifierTable_{};
   // It is set by constructor, don't need to change.
 
-  // Serialize std::vector<HashTableEntry> storage_{};
-  size_t size = storage_.size();
-  s.writeInt<uint32_t>(size);
-  for (size_t i = 0; i < size; i++) {
-    // Serialize each entry.
-    s.writeInt<uint32_t>(storage_[i].index);
-  }
+  // Serialize CompactTable table_;
+  s.serializeCompactTable(table_);
 }
 
 void IdentifierHashTable::deserialize(Deserializer &d) {
   size_ = d.readInt<uint32_t>();
   nonEmptyEntryCount_ = d.readInt<uint32_t>();
-
-  size_t size = d.readInt<uint32_t>();
-  storage_.resize(size);
-  for (size_t i = 0; i < size; i++) {
-    // Deserialize each entry.
-    storage_[i].index = d.readInt<uint32_t>();
-  }
+  d.deserializeCompactTable(table_);
 }
 #endif
