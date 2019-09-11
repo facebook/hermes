@@ -1,6 +1,6 @@
 {
   "name": "hermes-engine",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": false,
   "description": "A JavaScript engine optimized for running React Native on Android",
   "license": "MIT",
@@ -12,6 +12,8 @@
     "README.md",
     "android/hermes-debug.aar",
     "android/hermes-release.aar",
+    "android/hermes-cppruntime-debug.aar",
+    "android/hermes-cppruntime-release.aar",
     "android/include/**/*.h",
     "osx-bin/hermes",
     "osx-bin/hermes-repl",

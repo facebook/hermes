@@ -115,6 +115,20 @@ async function unpackAll(files) {
     var names = inputs.map(c => c.name).join(", ");
     throw "No tarballs found. Please build or download at least one of: " + names;
   }
+
+  verifyManifest();
+}
+
+function verifyManifest() {
+  if (options.dev) return;
+
+  // TODO: Handle globs
+  const files = npmjson.files.filter(s => s.indexOf("*") === -1);
+  for (const file of files) {
+    if (!fs.existsSync(file)) {
+      throw `File missing from manifest: ${file}`
+    }
+  }
 }
 
 var inputs = [
