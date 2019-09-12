@@ -192,7 +192,75 @@ function *f1() {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "returnType": null,
 // CHECK-NEXT:      "generator": true
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+
+function *yieldInExpr() {
+  x ? yield : y;
+  (yield);
+  [yield];
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "FunctionDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "yieldInExpr",
+// CHECK-NEXT:         "typeAnnotation": null
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "params": [],
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "BlockStatement",
+// CHECK-NEXT:         "body": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ExpressionStatement",
+// CHECK-NEXT:             "expression": {
+// CHECK-NEXT:               "type": "ConditionalExpression",
+// CHECK-NEXT:               "test": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "x",
+// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "alternate": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "y",
+// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "consequent": {
+// CHECK-NEXT:                 "type": "YieldExpression",
+// CHECK-NEXT:                 "argument": null,
+// CHECK-NEXT:                 "delegate": false
+// CHECK-NEXT:               }
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "directive": null
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ExpressionStatement",
+// CHECK-NEXT:             "expression": {
+// CHECK-NEXT:               "type": "YieldExpression",
+// CHECK-NEXT:               "argument": null,
+// CHECK-NEXT:               "delegate": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "directive": null
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "ExpressionStatement",
+// CHECK-NEXT:             "expression": {
+// CHECK-NEXT:               "type": "ArrayExpression",
+// CHECK-NEXT:               "elements": [
+// CHECK-NEXT:                 {
+// CHECK-NEXT:                   "type": "YieldExpression",
+// CHECK-NEXT:                   "argument": null,
+// CHECK-NEXT:                   "delegate": false
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               ],
+// CHECK-NEXT:               "trailingComma": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "directive": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "returnType": null,
+// CHECK-NEXT:       "generator": true
+// CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]
 // CHECK-NEXT: }

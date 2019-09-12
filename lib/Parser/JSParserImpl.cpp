@@ -208,6 +208,19 @@ bool JSParserImpl::checkAssign() const {
       TokenKind::pipeequal);
 }
 
+bool JSParserImpl::checkEndAssignmentExpression() const {
+  return checkN(
+             TokenKind::rw_in,
+             TokenKind::r_paren,
+             TokenKind::r_brace,
+             TokenKind::r_square,
+             TokenKind::comma,
+             TokenKind::semi,
+             TokenKind::colon,
+             TokenKind::eof) ||
+      lexer_.isNewLineBeforeCurrentToken();
+}
+
 bool JSParserImpl::eatSemi(SMLoc &endLoc, bool optional) {
   if (tok_->getKind() == TokenKind::semi) {
     endLoc = tok_->getEndLoc();
@@ -2967,7 +2980,7 @@ Optional<ESTree::YieldExpressionNode *> JSParserImpl::parseYieldExpression(
       "yield expression must start with 'yield'");
   SMRange yieldLoc = advance();
 
-  if (eatSemi(yieldLoc.End, true))
+  if (eatSemi(yieldLoc.End, true) || checkEndAssignmentExpression())
     return setLocation(
         yieldLoc,
         yieldLoc,
@@ -2978,11 +2991,10 @@ Optional<ESTree::YieldExpressionNode *> JSParserImpl::parseYieldExpression(
   auto optArg = parseAssignmentExpression();
   if (!optArg)
     return None;
-  ESTree::Node *arg = optArg.getValue();
 
   return setLocation(
       yieldLoc,
-      arg,
+      optArg.getValue(),
       new (context_) ESTree::YieldExpressionNode(optArg.getValue(), delegate));
 }
 
@@ -3625,6 +3637,9 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
     auto optYieldExpr = parseYieldExpression();
     if (!optYieldExpr)
       return None;
+    assert(
+        checkEndAssignmentExpression() &&
+        "invalid end token in AssignmentExpression");
     return *optYieldExpr;
   }
 
@@ -3657,6 +3672,9 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
   if (!optRightExpr)
     return None;
 
+  assert(
+      checkEndAssignmentExpression() &&
+      "invalid end token in AssignmentExpression");
   return setLocation(
       optLeftExpr.getValue(),
       optRightExpr.getValue(),

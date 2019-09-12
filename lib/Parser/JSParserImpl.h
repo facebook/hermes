@@ -373,6 +373,10 @@ class JSParserImpl {
     return check(TokenKind::no_substitution_template, TokenKind::template_head);
   }
 
+  /// Check whether the current token can be the token after the end of an
+  /// AssignmentExpression.
+  bool checkEndAssignmentExpression() const;
+
   /// Performs automatic semicolon insertion and optionally reports an error
   /// if a semicolon is missing and cannot be inserted.
   /// \param endLoc is the previous end location before the semi. It will be
