@@ -48,7 +48,8 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "right": {
 //CHECK-NEXT:               "type": "ArrayExpression",
-//CHECK-NEXT:               "elements": []
+//CHECK-NEXT:               "elements": [],
+//CHECK-NEXT:               "trailingComma": false
 //CHECK-NEXT:             }
 //CHECK-NEXT:           },
 //CHECK-NEXT:           {

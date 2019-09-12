@@ -203,7 +203,9 @@ ESTREE_NODE_0_ARGS(ThisExpression, Base)
 ESTREE_NODE_0_ARGS(Super, Base)
 ESTREE_NODE_1_ARGS(SequenceExpression, Base, NodeList, expressions, false)
 ESTREE_NODE_1_ARGS(ObjectExpression, Base, NodeList, properties, false)
-ESTREE_NODE_1_ARGS(ArrayExpression, Base, NodeList, elements, false)
+ESTREE_NODE_2_ARGS(ArrayExpression, Base,
+    NodeList, elements, false,
+    NodeBoolean, trailingComma, false)
 
 ESTREE_NODE_1_ARGS(
     SpreadElement, Base,

@@ -1975,6 +1975,8 @@ Optional<ESTree::ArrayExpressionNode *> JSParserImpl::parseArrayLiteral() {
 
   ESTree::NodeList elemList;
 
+  bool trailingComma = false;
+
   if (!check(TokenKind::r_square)) {
     for (;;) {
       // Elision.
@@ -1997,8 +1999,11 @@ Optional<ESTree::ArrayExpressionNode *> JSParserImpl::parseArrayLiteral() {
 
       if (!checkAndEat(TokenKind::comma))
         break;
-      if (check(TokenKind::r_square)) // Check for ",]".
+      if (check(TokenKind::r_square)) {
+        // Check for ",]".
+        trailingComma = true;
         break;
+      }
     }
   }
 
@@ -2014,7 +2019,8 @@ Optional<ESTree::ArrayExpressionNode *> JSParserImpl::parseArrayLiteral() {
   return setLocation(
       startLoc,
       endLoc,
-      new (context_) ESTree::ArrayExpressionNode(std::move(elemList)));
+      new (context_)
+          ESTree::ArrayExpressionNode(std::move(elemList), trailingComma));
 }
 
 Optional<ESTree::ObjectExpressionNode *> JSParserImpl::parseObjectLiteral() {
@@ -3443,8 +3449,15 @@ Optional<ESTree::Node *> JSParserImpl::reparseArrayAsignmentPattern(
     ESTree::Node *elem = &*it++;
     AEN->_elements.remove(*elem);
 
+    // Every element in the array assignment pattern is optional,
+    // because we can parse the Elision production.
+    if (auto *empty = dyn_cast<ESTree::EmptyNode>(elem)) {
+      elements.push_back(*elem);
+      continue;
+    }
+
     if (auto *spread = dyn_cast<ESTree::SpreadElementNode>(elem)) {
-      if (it != e) {
+      if (it != e || AEN->_trailingComma) {
         lexer_.error(spread->getSourceRange(), "rest element must be last");
         continue;
       }

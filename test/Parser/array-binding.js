@@ -63,7 +63,8 @@ var [a, [b = 1, c] = [,2]] = x;
 //CHECK-NEXT:                         "type": "NumericLiteral",
 //CHECK-NEXT:                         "value": 2
 //CHECK-NEXT:                       }
-//CHECK-NEXT:                     ]
+//CHECK-NEXT:                     ],
+//CHECK-NEXT:                     "trailingComma": false
 //CHECK-NEXT:                   }
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
@@ -120,7 +121,8 @@ var [a, [b = 1, c] = [,2]] = x;
 //CHECK-NEXT:                       "type": "NumericLiteral",
 //CHECK-NEXT:                       "value": 2
 //CHECK-NEXT:                     }
-//CHECK-NEXT:                   ]
+//CHECK-NEXT:                   ],
+//CHECK-NEXT:                   "trailingComma": false
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               }
 //CHECK-NEXT:             ]

@@ -5,11 +5,12 @@
 //
 // RUN: %hermesc --dump-ast --pretty-json %s | %FileCheck --match-full-lines %s
 
-let foo = (a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) => {}
 //CHECK:      {
 //CHECK-NEXT:     "type": "Program",
 //CHECK-NEXT:     "body": [
 //CHECK-NEXT:       {
+
+let foo = (a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) => {}
 //CHECK-NEXT:         "type": "VariableDeclaration",
 //CHECK-NEXT:         "kind": "let",
 //CHECK-NEXT:         "declarations": [
@@ -50,7 +51,8 @@ let foo = (a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) => {}
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "right": {
 //CHECK-NEXT:                     "type": "ArrayExpression",
-//CHECK-NEXT:                     "elements": []
+//CHECK-NEXT:                     "elements": [],
+//CHECK-NEXT:                     "trailingComma": false
 //CHECK-NEXT:                   }
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 {
@@ -149,6 +151,45 @@ let foo = (a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) => {}
 //CHECK-NEXT:             }
 //CHECK-NEXT:           }
 //CHECK-NEXT:         ]
-//CHECK-NEXT:       }
+//CHECK-NEXT:       },
+
+let bar = ([,,]) => {}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "VariableDeclaration",
+// CHECK-NEXT:       "kind": "let",
+// CHECK-NEXT:       "declarations": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "VariableDeclarator",
+// CHECK-NEXT:           "init": {
+// CHECK-NEXT:             "type": "ArrowFunctionExpression",
+// CHECK-NEXT:             "id": null,
+// CHECK-NEXT:             "params": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "ArrayPattern",
+// CHECK-NEXT:                 "elements": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "Empty"
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "Empty"
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 ]
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ],
+// CHECK-NEXT:             "body": {
+// CHECK-NEXT:               "type": "BlockStatement",
+// CHECK-NEXT:               "body": []
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "expression": false
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "bar",
+// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ]
+// CHECK-NEXT:     }
+
 //CHECK-NEXT:     ]
 //CHECK-NEXT:   }

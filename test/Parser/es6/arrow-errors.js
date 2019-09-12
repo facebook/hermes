@@ -37,3 +37,6 @@ trycode("var t1 = (a,1) => 1;");
 
 trycode("var t1 = ((a),b) => 1;");
 //CHECK-NEXT: caught: 1:12:parentheses are not allowed around parameters
+
+trycode("var t1 = ([a,b,...c,]) => 1;");
+//CHECK-NEXT: caught: 1:16:rest element must be last

@@ -60,7 +60,8 @@
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "right": {
 //CHECK-NEXT:                     "type": "ArrayExpression",
-//CHECK-NEXT:                     "elements": []
+//CHECK-NEXT:                     "elements": [],
+//CHECK-NEXT:                     "trailingComma": false
 //CHECK-NEXT:                   }
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "kind": "init",

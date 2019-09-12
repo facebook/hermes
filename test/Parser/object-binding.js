@@ -308,7 +308,8 @@ var {a: [b] = [1]} = x;
 //CHECK-NEXT:                           "type": "NumericLiteral",
 //CHECK-NEXT:                           "value": 1
 //CHECK-NEXT:                         }
-//CHECK-NEXT:                       ]
+//CHECK-NEXT:                       ],
+//CHECK-NEXT:                       "trailingComma": false
 //CHECK-NEXT:                     }
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
@@ -368,7 +369,8 @@ var {a: [b = 2] = [1]} = x;
 //CHECK-NEXT:                           "type": "NumericLiteral",
 //CHECK-NEXT:                           "value": 1
 //CHECK-NEXT:                         }
-//CHECK-NEXT:                       ]
+//CHECK-NEXT:                       ],
+//CHECK-NEXT:                       "trailingComma": false
 //CHECK-NEXT:                     }
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
