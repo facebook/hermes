@@ -1734,17 +1734,24 @@ Optional<ESTree::TryStatementNode *> JSParserImpl::parseTryStatement(
             handlerStartLoc))
       return None;
 
-    if (!need(
+    ESTree::Node *catchParam;
+    if (check(TokenKind::l_square, TokenKind::l_brace)) {
+      auto optPattern = parseBindingPattern(Param{});
+      if (!optPattern)
+        return None;
+      catchParam = *optPattern;
+    } else {
+      auto optIdent = parseBindingIdentifier(Param{});
+      if (!optIdent) {
+        errorExpected(
             TokenKind::identifier,
             "inside catch list",
             "location of 'catch'",
-            handlerStartLoc))
-      return None;
-    auto *identifier = setLocation(
-        tok_,
-        tok_,
-        new (context_) ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
-    advance();
+            handlerStartLoc);
+        return None;
+      }
+      catchParam = *optIdent;
+    }
 
     if (!eat(
             TokenKind::r_paren,
@@ -1768,7 +1775,7 @@ Optional<ESTree::TryStatementNode *> JSParserImpl::parseTryStatement(
         handlerStartLoc,
         optCatchBody.getValue(),
         new (context_)
-            ESTree::CatchClauseNode(identifier, optCatchBody.getValue()));
+            ESTree::CatchClauseNode(catchParam, optCatchBody.getValue()));
   }
 
   // Parse the optional 'finally' handler.

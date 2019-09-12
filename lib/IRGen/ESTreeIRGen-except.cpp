@@ -89,8 +89,15 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
   auto catchInst = Builder.createCatchInst();
 
+  if (!isa<ESTree::IdentifierNode>(catchParam)) {
+    Builder.getModule()->getContext().getSourceErrorManager().error(
+        catchParam->getSourceRange(),
+        Twine("Destructuring in catch parameters is currently unsupported"));
+    return nullptr;
+  }
+
   auto catchVariableName =
-      getNameFieldFromID(dyn_cast<ESTree::IdentifierNode>(catchParam));
+      getNameFieldFromID(cast<ESTree::IdentifierNode>(catchParam));
 
   // Generate a unique catch variable name and use this name for IRGen purpose
   // only. The variable lookup in the catch clause will continue to be done
