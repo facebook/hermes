@@ -47,14 +47,14 @@ android {
     def aarDir = "$buildDir/outputs/aar"
     tasks.named("assembleDebug").configure {
       doLast {
-        file("$aarDir/cppruntime-debug.aar").renameTo("${rootProject.ext.outputDir}/aar/hermes-cppruntime-debug.aar")
-        file("$aarDir/cppruntime.aar").renameTo("${rootProject.ext.outputDir}/aar/hermes-cppruntime-debug.aar")
+        file("$aarDir/cppruntime-debug.aar").renameTo("${rootProject.ext.outputDir}/hermes-cppruntime-debug.aar")
+        file("$aarDir/cppruntime.aar").renameTo("${rootProject.ext.outputDir}/hermes-cppruntime-debug.aar")
       }
     }
     tasks.named("assembleRelease").configure {
       doLast {
-        file("$aarDir/cppruntime-release.aar").renameTo("${rootProject.ext.outputDir}/aar/hermes-cppruntime-release.aar")
-        file("$aarDir/cppruntime.aar").renameTo("${rootProject.ext.outputDir}/aar/hermes-cppruntime-release.aar")
+        file("$aarDir/cppruntime-release.aar").renameTo("${rootProject.ext.outputDir}/hermes-cppruntime-release.aar")
+        file("$aarDir/cppruntime.aar").renameTo("${rootProject.ext.outputDir}/hermes-cppruntime-release.aar")
       }
     }
   }

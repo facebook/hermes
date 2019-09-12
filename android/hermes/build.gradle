@@ -69,14 +69,14 @@ android {
     def aarDir = "$buildDir/outputs/aar"
     tasks.named("assembleDebug").configure {
       doLast {
-        file("$aarDir/hermes-debug.aar").renameTo("${rootProject.ext.outputDir}/aar/hermes-debug.aar")
-        file("$aarDir/hermes.aar").renameTo("${rootProject.ext.outputDir}/aar/hermes-debug.aar")
+        file("$aarDir/hermes-debug.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
+        file("$aarDir/hermes.aar").renameTo("${rootProject.ext.outputDir}/hermes-debug.aar")
       }
     }
     tasks.named("assembleRelease").configure {
       doLast {
-        file("$aarDir/hermes-release.aar").renameTo("${rootProject.ext.outputDir}/aar/hermes-release.aar")
-        file("$aarDir/hermes.aar").renameTo("${rootProject.ext.outputDir}/aar/hermes-release.aar")
+        file("$aarDir/hermes-release.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
+        file("$aarDir/hermes.aar").renameTo("${rootProject.ext.outputDir}/hermes-release.aar")
       }
     }
   }
