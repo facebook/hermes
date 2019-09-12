@@ -12,6 +12,8 @@
     "README.md",
     "android/hermes-debug.aar",
     "android/hermes-release.aar",
+    "android/hermes-cppruntime-debug.aar",
+    "android/hermes-cppruntime-release.aar",
     "android/include/**/*.h",
     "osx-bin/hermes",
     "osx-bin/hermes-repl",
