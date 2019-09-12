@@ -6,6 +6,7 @@
 set(LLVM_OPTIONAL_SOURCES
   hermes.cpp
   hermes_tracing.cpp
+  hermes_tracing_compat.cpp
   DebuggerAPI.cpp
   SynthTrace.cpp
   SynthTraceParser.cpp
@@ -17,6 +18,7 @@ set(LLVM_OPTIONAL_SOURCES
 set(api_sources
   hermes.cpp
   DebuggerAPI.cpp
+  hermes_tracing_compat.cpp
   )
 
 add_llvm_library(hermesapi
