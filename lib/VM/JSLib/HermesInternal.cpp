@@ -700,7 +700,7 @@ hermesInternalCopyRestArgs(void *, Runtime *runtime, NativeArgs args) {
 }
 
 #ifdef HERMESVM_PLATFORM_LOGGING
-void logGCStats(Runtime *runtime, const char *msg) {
+static void logGCStats(Runtime *runtime, const char *msg) {
   // The GC stats can exceed the android logcat length limit, of
   // 1024 bytes.  Break it up.
   std::string stats;

@@ -89,6 +89,9 @@ set(HERMES_FACEBOOK_BUILD OFF CACHE BOOL
 set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
     "GC Out-of-memory raises an exception, rather than causing a crash")
 
+set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
+    "hermesLog(...) is enabled, using the platform's logging mechanism")
+
 set(HERMESVM_JIT OFF CACHE BOOL
   "Enable the JIT")
 
@@ -218,6 +221,9 @@ if(HERMES_FACEBOOK_BUILD)
 endif()
 if(HERMESVM_EXCEPTION_ON_OOM)
     add_definitions(-DHERMESVM_EXCEPTION_ON_OOM)
+endif()
+if(HERMESVM_PLATFORM_LOGGING)
+    add_definitions(-DHERMESVM_PLATFORM_LOGGING)
 endif()
 if(HERMESVM_JIT)
   add_definitions(-DHERMESVM_JIT)
