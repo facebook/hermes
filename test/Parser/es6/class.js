@@ -496,6 +496,8 @@ class UseSuperProps {
 (class ConsProperty {
   get ['constructor']() {}
   set ['constructor'](val) {}
+  static constructor() {}
+  static constructor() {}
 });
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ExpressionStatement",
@@ -555,6 +557,48 @@ class UseSuperProps {
 // CHECK-NEXT:               "kind": "set",
 // CHECK-NEXT:               "computed": true,
 // CHECK-NEXT:               "static": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "MethodDefinition",
+// CHECK-NEXT:               "key": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "constructor",
+// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "FunctionExpression",
+// CHECK-NEXT:                 "id": null,
+// CHECK-NEXT:                 "params": [],
+// CHECK-NEXT:                 "body": {
+// CHECK-NEXT:                   "type": "BlockStatement",
+// CHECK-NEXT:                   "body": []
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "kind": "method",
+// CHECK-NEXT:               "computed": false,
+// CHECK-NEXT:               "static": true
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "MethodDefinition",
+// CHECK-NEXT:               "key": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "constructor",
+// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "FunctionExpression",
+// CHECK-NEXT:                 "id": null,
+// CHECK-NEXT:                 "params": [],
+// CHECK-NEXT:                 "body": {
+// CHECK-NEXT:                   "type": "BlockStatement",
+// CHECK-NEXT:                   "body": []
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "kind": "method",
+// CHECK-NEXT:               "computed": false,
+// CHECK-NEXT:               "static": true
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         }

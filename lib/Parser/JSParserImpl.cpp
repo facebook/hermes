@@ -3260,7 +3260,7 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
     propName = str->_value;
   }
   bool isConstructor =
-      propName && !computed && propName->str() == "constructor";
+      !isStatic && !computed && propName && propName->str() == "constructor";
 
   // (
   if (!need(
