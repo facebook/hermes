@@ -2131,7 +2131,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     advance();
 
     // This could either be a getter, or a property named 'get'.
-    if (check(TokenKind::colon)) {
+    if (check(TokenKind::colon, TokenKind::l_paren)) {
       // This is just a property.
       key = setLocation(
           identRng,
@@ -2185,7 +2185,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     advance();
 
     // This could either be a setter, or a property named 'set'.
-    if (check(TokenKind::colon)) {
+    if (check(TokenKind::colon, TokenKind::l_paren)) {
       // This is just a property.
       key = setLocation(
           identRng,
