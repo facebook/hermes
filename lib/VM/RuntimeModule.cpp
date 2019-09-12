@@ -289,7 +289,7 @@ void RuntimeModule::importStringIDMapMayAllocate() {
     // we need to add it manually and it will have index 0.
     ASCIIRef s;
     stringIDMap_.push_back({});
-    mapStringMayAllocate(s, hashString(s));
+    mapStringMayAllocate(s, 0, hashString(s));
   }
 }
 
