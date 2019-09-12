@@ -633,6 +633,7 @@ class JSParserImpl {
 
   Optional<ESTree::MethodDefinitionNode *> parseMethodDefinition(
       bool isStatic,
+      SMRange startRange,
       bool eagerly = false);
 
   /// Reparse the specified node as arrow function parameter list and store the

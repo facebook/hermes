@@ -16,6 +16,7 @@
   static sFun() { return 10; }
   get myGetter() { return 1; }
   *gen() {}
+  static() {}
   rest(a, ...b) {}
 });
 // CHECK-NEXT:     {
@@ -186,6 +187,27 @@
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "generator": true
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "kind": "method",
+// CHECK-NEXT:               "computed": false,
+// CHECK-NEXT:               "static": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "MethodDefinition",
+// CHECK-NEXT:               "key": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "static",
+// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "FunctionExpression",
+// CHECK-NEXT:                 "id": null,
+// CHECK-NEXT:                 "params": [],
+// CHECK-NEXT:                 "body": {
+// CHECK-NEXT:                   "type": "BlockStatement",
+// CHECK-NEXT:                   "body": []
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "generator": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,

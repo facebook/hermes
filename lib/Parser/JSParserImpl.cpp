@@ -3132,6 +3132,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
   ESTree::NodeList body{};
   while (!check(TokenKind::r_brace)) {
     bool isStatic = false;
+    SMRange startRange = tok_->getSourceRange();
     switch (tok_->getKind()) {
       case TokenKind::semi:
         advance();
@@ -3144,7 +3145,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
         // intentional fallthrough
       default: {
         // MethodDefinition
-        auto optMethod = parseMethodDefinition(isStatic);
+        auto optMethod = parseMethodDefinition(isStatic, startRange);
         if (!optMethod)
           return None;
         ESTree::MethodDefinitionNode *method = *optMethod;
@@ -3183,6 +3184,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
 
 Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
     bool isStatic,
+    SMRange startRange,
     bool eagerly) {
   SMLoc startLoc = tok_->getStartLoc();
 
@@ -3229,6 +3231,16 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
     }
   } else if (checkAndEat(TokenKind::star)) {
     special = SpecialKind::Generator;
+  } else if (check(TokenKind::l_paren) && isStatic) {
+    // We've already parsed 'static', but there is nothing between 'static'
+    // and the '(', so it must be used as the PropertyName and not as an
+    // indicator for a static function.
+    prop = setLocation(
+        startRange,
+        startRange,
+        new (context_) ESTree::IdentifierNode(staticIdent_, nullptr));
+    isStatic = false;
+    doParsePropertyName = false;
   }
 
   bool computed = false;
