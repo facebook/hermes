@@ -16,6 +16,7 @@
   static sFun() { return 10; }
   get myGetter() { return 1; }
   *gen() {}
+  rest(a, ...b) {}
 });
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ExpressionStatement",
@@ -189,7 +190,43 @@
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
 // CHECK-NEXT:               "static": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "MethodDefinition",
+// CHECK-NEXT:               "key": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "rest",
+// CHECK-NEXT:                 "typeAnnotation": null
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "FunctionExpression",
+// CHECK-NEXT:                 "id": null,
+// CHECK-NEXT:                 "params": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "Identifier",
+// CHECK-NEXT:                     "name": "a",
+// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                     "type": "RestElement",
+// CHECK-NEXT:                     "argument": {
+// CHECK-NEXT:                       "type": "Identifier",
+// CHECK-NEXT:                       "name": "b",
+// CHECK-NEXT:                       "typeAnnotation": null
+// CHECK-NEXT:                     }
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 ],
+// CHECK-NEXT:                 "body": {
+// CHECK-NEXT:                   "type": "BlockStatement",
+// CHECK-NEXT:                   "body": []
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "kind": "method",
+// CHECK-NEXT:               "computed": false,
+// CHECK-NEXT:               "static": false
 // CHECK-NEXT:             }
+
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },

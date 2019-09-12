@@ -413,6 +413,14 @@ class JSParserImpl {
       Param param,
       bool isDeclaration,
       bool forceEagerly = false);
+
+  /// Parse FormalParameters or UniqueFormalParameters with the leading '(' and
+  /// the trailing ')'.
+  /// \pre the current token must be '('.
+  /// \param[out] paramList populated with the FormalParameters.
+  /// \return true on success, false on failure.
+  bool parseFormalParameters(Param param, ESTree::NodeList &paramList);
+
   /// \param param [Yield, Return]
   Optional<ESTree::Node *> parseStatement(Param param);
 

@@ -317,10 +317,8 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   }
 
   // (
-  SMLoc lparenLoc = tok_->getStartLoc();
-  if (!eat(
+  if (!need(
           TokenKind::l_paren,
-          JSLexer::AllowRegExp,
           "at start of function parameter list",
           isDeclaration ? "function declaration starts here"
                         : "function expression starts here",
@@ -333,42 +331,8 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   llvm::SaveAndRestore<bool> saveArgsAndBodyParamYield(
       paramYield_, isGenerator);
 
-  if (!check(TokenKind::r_paren)) {
-    for (;;) {
-      if (check(TokenKind::dotdotdot)) {
-        // BindingRestElement.
-        auto optRestElem = parseBindingRestElement(param);
-        if (!optRestElem)
-          return None;
-        paramList.push_back(*optRestElem.getValue());
-        break;
-      }
-
-      // BindingElement.
-      auto optElem = parseBindingElement(param);
-      if (!optElem)
-        return None;
-
-      paramList.push_back(**optElem);
-
-      if (!checkAndEat(TokenKind::comma))
-        break;
-
-      // Check for ",)".
-      if (check(TokenKind::r_paren))
-        break;
-    }
-  }
-
-  // )
-  if (!eat(
-          TokenKind::r_paren,
-          JSLexer::AllowRegExp,
-          "at end of function parameter list",
-          "start of parameter list",
-          lparenLoc)) {
+  if (!parseFormalParameters(param, paramList))
     return None;
-  }
 
   // {
   if (!need(
@@ -440,6 +404,47 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     node = expr;
   }
   return setLocation(startLoc, body, node);
+}
+
+bool JSParserImpl::parseFormalParameters(
+    Param param,
+    ESTree::NodeList &paramList) {
+  assert(check(TokenKind::l_paren) && "FormalParameters must start with '('");
+  // (
+  SMLoc lparenLoc = advance().Start;
+
+  while (!check(TokenKind::r_paren)) {
+    if (check(TokenKind::dotdotdot)) {
+      // BindingRestElement.
+      auto optRestElem = parseBindingRestElement(param);
+      if (!optRestElem)
+        return false;
+      paramList.push_back(*optRestElem.getValue());
+      break;
+    }
+
+    // BindingElement.
+    auto optElem = parseBindingElement(param);
+    if (!optElem)
+      return false;
+
+    paramList.push_back(*optElem.getValue());
+
+    if (!checkAndEat(TokenKind::comma))
+      break;
+  }
+
+  // )
+  if (!eat(
+          TokenKind::r_paren,
+          JSLexer::AllowRegExp,
+          "at end of function parameter list",
+          "start of parameter list",
+          lparenLoc)) {
+    return false;
+  }
+
+  return true;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseStatement(Param param) {
@@ -2288,12 +2293,18 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     // MethodDefinition:
     // PropertyName "(" UniqueFormalParameters ")" "{" FunctionBody "}"
     //               ^
-    SMLoc endLoc = tok_->getEndLoc();
-
     llvm::SaveAndRestore<bool> oldParamYield(paramYield_, generator);
 
+    // (
+    if (!need(
+            TokenKind::l_paren,
+            "in method definition",
+            "start of method definition",
+            startLoc))
+      return None;
+
     ESTree::NodeList args{};
-    if (!parseArguments(args, endLoc))
+    if (!parseFormalParameters(Param{}, args))
       return None;
 
     if (!need(
@@ -3228,9 +3239,6 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
     prop = *optProp;
   }
 
-  llvm::SaveAndRestore<bool> oldParamYield(
-      paramYield_, special == SpecialKind::Generator);
-
   // Store the propName for comparisons, used for SyntaxErrors.
   UniqueString *propName = nullptr;
   if (auto *id = dyn_cast<ESTree::IdentifierNode>(prop)) {
@@ -3241,17 +3249,19 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
   bool isConstructor =
       propName && !computed && propName->str() == "constructor";
 
-  SMLoc endLoc = tok_->getEndLoc();
-  ESTree::NodeList args{};
-
+  // (
   if (!need(
           TokenKind::l_paren,
           "in method definition",
           "start of method definition",
           startLoc))
     return None;
+  ESTree::NodeList args{};
 
-  if (!parseArguments(args, endLoc))
+  llvm::SaveAndRestore<bool> saveArgsAndBodyParamYield(
+      paramYield_, special == SpecialKind::Generator);
+
+  if (!parseFormalParameters(Param{}, args))
     return None;
 
   if (!need(
@@ -3260,6 +3270,7 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
           "start of method definition",
           startLoc))
     return None;
+
   auto optBody =
       parseFunctionBody(ParamReturn, eagerly, JSLexer::AllowRegExp, true);
   if (!optBody)
