@@ -2523,10 +2523,21 @@ Optional<const char *> JSParserImpl::parseArguments(
   SMLoc startLoc = advance().Start;
   if (!check(TokenKind::r_paren)) {
     for (;;) {
+      SMLoc argStart = tok_->getStartLoc();
+      bool isSpread = checkAndEat(TokenKind::dotdotdot);
+
       auto arg = parseAssignmentExpression();
       if (!arg)
         return None;
-      argList.push_back(*arg.getValue());
+
+      if (isSpread) {
+        argList.push_back(*setLocation(
+            argStart,
+            arg.getValue(),
+            new (context_) ESTree::SpreadElementNode(arg.getValue())));
+      } else {
+        argList.push_back(*arg.getValue());
+      }
 
       if (!checkAndEat(TokenKind::comma))
         break;
