@@ -1462,6 +1462,7 @@ PERMANENT_BLACK_LIST = [
     "test262/test/language/function-code/switch-dflt-decl-strict.js",
     "test262/test/language/global-code/switch-case-decl-strict.js",
     "test262/test/language/global-code/switch-dflt-decl-strict.js",
+    "test262/test/annexB/language/statements/labeled/function-declaration.js",
     # Testing whole feature sets that Hermes doesn't support.
     "test262/test/built-ins/Atomics/",
     "test262/test/built-ins/Proxy/",

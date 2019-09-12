@@ -14,3 +14,8 @@ function *bar() { var yield = 1; }
 // CHECK:{{.*}}:{{.*}}:23: error: Unexpected usage of 'yield' as an identifier
 // CHECK-NEXT:function *bar() { var yield = 1; }
 // CHECK-NEXT:                      ^~~~~
+
+a: function *labeled() {}
+// CHECK: {{.*}}:18:4: error: Function declaration not allowed as body of labeled statement
+// CHECK-NEXT: a: function *labeled() {}
+// CHECK-NEXT:    ^

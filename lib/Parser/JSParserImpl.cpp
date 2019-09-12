@@ -1119,14 +1119,32 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
       checkAndEat(TokenKind::colon)) {
     auto *id = cast<ESTree::IdentifierNode>(optExpr.getValue());
 
-    auto optBody = parseStatement(param.get(ParamReturn));
-    if (!optBody)
-      return None;
+    ESTree::Node *body = nullptr;
+    if (check(TokenKind::rw_function)) {
+      auto optFunc = parseFunctionDeclaration(param);
+      if (!optFunc)
+        return None;
+      /// ES9.0 13.13.1
+      /// It is a Syntax Error if any source text matches this rule.
+      /// LabelledItem : FunctionDeclaration
+      /// NOTE: GeneratorDeclarations are disallowed as part of the grammar
+      /// as well, so all FunctionDeclarations are disallowed as labeled
+      /// items, except via an AnnexB extension which is unsupported in
+      /// Hermes.
+      sm_.error(
+          optFunc.getValue()->getSourceRange().Start,
+          "Function declaration not allowed as body of labeled statement");
+      body = optFunc.getValue();
+    } else {
+      // Statement
+      auto optBody = parseStatement(param.get(ParamReturn));
+      if (!optBody)
+        return None;
+      body = optBody.getValue();
+    }
 
     return setLocation(
-        id,
-        optBody.getValue(),
-        new (context_) ESTree::LabeledStatementNode(id, optBody.getValue()));
+        id, body, new (context_) ESTree::LabeledStatementNode(id, body));
   } else {
     auto endLoc = optExpr.getValue()->getEndLoc();
     if (!eatSemi(endLoc))
