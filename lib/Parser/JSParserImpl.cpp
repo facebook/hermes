@@ -294,6 +294,14 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
 
   bool isGenerator = checkAndEat(TokenKind::star);
 
+  // newParamYield setting per the grammar:
+  // FunctionDeclaration: BindingIdentifier[?Yield]
+  // FunctionExpression: BindingIdentifier[~Yield]
+  // GeneratorFunctionDeclaration: BindingIdentifier[?Yield]
+  // GeneratorFunctionExpression: BindingIdentifier[+Yield]
+  bool nameParamYield = isDeclaration ? paramYield_ : isGenerator;
+  llvm::SaveAndRestore<bool> saveNameParamYield(paramYield_, nameParamYield);
+
   // identifier
   auto optId = parseBindingIdentifier(Param{});
   // If this is a default function declaration, then we can match
@@ -308,8 +316,6 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     return None;
   }
 
-  llvm::SaveAndRestore<bool> oldParamYield(paramYield_, isGenerator);
-
   // (
   SMLoc lparenLoc = tok_->getStartLoc();
   if (!eat(
@@ -323,6 +329,9 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   }
 
   ESTree::NodeList paramList;
+
+  llvm::SaveAndRestore<bool> saveArgsAndBodyParamYield(
+      paramYield_, isGenerator);
 
   if (!check(TokenKind::r_paren)) {
     for (;;) {
@@ -3426,6 +3435,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   ESTree::Node *body;
   bool expression;
 
+  llvm::SaveAndRestore<bool> oldParamYield(paramYield_, false);
   if (check(TokenKind::l_brace)) {
     auto optBody = parseFunctionBody(Param{}, true, JSLexer::AllowDiv, true);
     if (!optBody)
