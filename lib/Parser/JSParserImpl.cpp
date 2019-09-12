@@ -3040,7 +3040,8 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
       return None;
     }
     name = *optName;
-  } else if (param.has(ParamDefault)) {
+  } else if (!param.has(ParamDefault)) {
+    // Identifier is required unless we have +Default parameter.
     errorExpected(
         TokenKind::identifier,
         "after 'class'",
