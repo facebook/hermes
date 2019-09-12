@@ -1597,6 +1597,8 @@ GenGC::CollectionSection::~CollectionSection() {
       gc_->getName().c_str(),
       wallElapsedSecs_ * 1000.0,
       cpuElapsedSecs_ * 1000.0);
+  hermesLog(
+      "HermesGC", "    used = %zu, heap size = %zu.", gc_->used(), gc_->size());
 #endif
 }
 
