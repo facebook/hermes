@@ -1200,9 +1200,9 @@ jboolean testAssignmentAndCopyCrossTypes(JNIEnv*, jobject self) {
     // alias = weak; // Should not compile
   }
 
-  FBJNI_LOGE("locals: %d, expected: %d", g_reference_stats.locals_deleted.load(), locals);
-  FBJNI_LOGE("globals: %d, expected: %d", g_reference_stats.globals_deleted.load(), globals);
-  FBJNI_LOGE("weaks: %d, expected: %d", g_reference_stats.weaks_deleted.load(), weaks);
+  FBJNI_LOGE("locals: %d, expected: %zd", g_reference_stats.locals_deleted.load(), locals);
+  FBJNI_LOGE("globals: %d, expected: %zd", g_reference_stats.globals_deleted.load(), globals);
+  FBJNI_LOGE("weaks: %d, expected: %zd", g_reference_stats.weaks_deleted.load(), weaks);
 
   EXPECT(g_reference_stats.locals_deleted == locals &&
         g_reference_stats.globals_deleted == globals &&

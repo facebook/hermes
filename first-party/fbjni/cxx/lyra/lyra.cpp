@@ -161,7 +161,7 @@ void logStackTrace(const vector<StackTraceElement>& trace) {
   FBJNI_LOGE("Backtrace:");
   for (auto& elm : trace) {
     if (!elm.functionName().empty()) {
-      FBJNI_LOGE("    #%02d |lyra|{dso=%s offset=%#x func=%s+%#x build-id=%s}",
+      FBJNI_LOGE("    #%02d |lyra|{dso=%s offset=%#tx func=%s+%#x build-id=%s}",
           i++,
           elm.libraryName().c_str(),
           elm.libraryOffset(),
@@ -169,7 +169,7 @@ void logStackTrace(const vector<StackTraceElement>& trace) {
           elm.functionOffset(),
           elm.buildId().c_str());
     } else {
-      FBJNI_LOGE("    #%02d |lyra|{dso=%s offset=%#x build-id=%s}",
+      FBJNI_LOGE("    #%02d |lyra|{dso=%s offset=%#tx build-id=%s}",
           i++,
           elm.libraryName().c_str(),
           elm.libraryOffset(),
