@@ -77,7 +77,7 @@ jint initialize(JavaVM*, std::function<void()>&&) noexcept;
 namespace internal {
 
 // Define to get extremely verbose logging of references and to enable reference stats
-#ifdef FBJNI_DEBUG_REFS
+#ifdef FBJNI_DEBUG_LOG_REFS
 template<typename... Args>
 inline void dbglog(const char* msg, Args... args) {
 # ifdef __ANDROID__
