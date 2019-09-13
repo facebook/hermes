@@ -442,6 +442,18 @@ class GenGC final : public GCBase {
   /// Mark a symbol id as being used.
   void markSymbol(SymbolID symbolID);
 
+  /// This enum describes the states of a weak reference slot.
+  struct WeakSlotState {
+    enum {
+      /// Valid but still not marked as reachable.
+      Unmarked,
+      /// Valid and marked as reachable.
+      Marked,
+      /// Available for reuse.
+      Free,
+    };
+  };
+
  protected:
   /// Do any additional GC-specific logging that is useful before dying with
   /// out-of-memory.
@@ -704,18 +716,6 @@ class GenGC final : public GCBase {
   /// Update all the weak references' pointers in response to the GC's heap
   /// having moved.
   void moveWeakReferences(ptrdiff_t delta);
-
-  /// This enum describes the states of a weak reference slot.
-  struct WeakSlotState {
-    enum {
-      /// Valid but still not marked as reachable.
-      Unmarked,
-      /// Valid and marked as reachable.
-      Marked,
-      /// Available for reuse.
-      Free,
-    };
-  };
 
   /// Update all weak reference slots: update the pointers of live objects and
   /// clear the pointers of freed objects. Additionally, free all weak slots

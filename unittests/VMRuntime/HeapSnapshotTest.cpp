@@ -167,7 +167,7 @@ TEST(HeapSnapshotTest, SnapshotTest) {
       << /* Custom root section begins at index 6 in the nodes array */ 6
       << ","
       // Edge from custom root section to dummy.
-      << static_cast<int>(HeapSnapshot::EdgeType::Element) << "," << 1 << ","
+      << static_cast<int>(HeapSnapshot::EdgeType::Element) << "," << 0 << ","
       << /* The first dummy node starts at index 12 */ 12
       << ","
       // Edge from dummy to dummy2.

@@ -1190,7 +1190,7 @@ struct SnapshotAcceptor : public SlotAcceptorWithNamesDefault {
   }
 };
 
-struct EdgeAddingAcceptor : public SnapshotAcceptor {
+struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
   using SnapshotAcceptor::accept;
 
   EdgeAddingAcceptor(GC &gc, HeapSnapshot &snap)
@@ -1206,11 +1206,33 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor {
         gc.getObjectID(ptr));
   }
 
+  void accept(WeakRefBase &wr) override {
+    WeakRefSlot *slot = wr.unsafeGetSlot();
+    if (slot->extra == GC::WeakSlotState::Free) {
+      // If the slot is free, there's no edge to add.
+      return;
+    }
+    PinnedHermesValue &hv = slot->value;
+    if (!hv.isPointer()) {
+      // Filter out non-pointers from adding edges.
+      return;
+    }
+    // Assume all weak pointers have no names, and are stored in an array-like
+    // structure.
+    std::string indexName = oscompat::to_string(nextEdge_++);
+    snap_.addNamedEdge(
+        HeapSnapshot::EdgeType::Weak,
+        indexName,
+        gc.getObjectID(hv.getPointer()));
+  }
+
  private:
   HeapSnapshot &snap_;
+  // For unnamed edges, use indices instead.
+  unsigned nextEdge_{0};
 };
 
-struct SnapshotRootSectionAcceptor : public SnapshotAcceptor {
+struct SnapshotRootSectionAcceptor : public SnapshotAcceptor, WeakRootAcceptor {
   using SnapshotAcceptor::accept;
 
   SnapshotRootSectionAcceptor(GC &gc, HeapSnapshot &snap)
@@ -1219,6 +1241,14 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor {
   void accept(void *&, const char *) override {
     // While adding edges to root sections, there's no need to do anything for
     // pointers.
+  }
+
+  void accept(WeakRefBase &wr) override {
+    // Same goes for weak refs.
+  }
+
+  void acceptWeak(void *&ptr) override {
+    // Same goes for weak pointers.
   }
 
   void beginRootSection(Section section) override {
@@ -1239,32 +1269,32 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor {
   int rootSectionNum_{1};
 };
 
-struct SnapshotRootAcceptor : public SnapshotAcceptor {
+struct SnapshotRootAcceptor : public SnapshotAcceptor, public WeakRootAcceptor {
   using SnapshotAcceptor::accept;
 
   SnapshotRootAcceptor(GC &gc, HeapSnapshot &snap)
       : SnapshotAcceptor(gc), snap_(snap) {}
 
   void accept(void *&ptr, const char *name) override {
-    assert(
-        currentSection_ != Section::InvalidSection &&
-        "accept called outside of begin/end root section pair");
-    if (!ptr) {
-      return;
-    }
+    pointerAccept(ptr, name, false);
+  }
 
-    const auto id = gc.getObjectID(ptr);
-    if (!seenIDs_.insert(id).second) {
-      // Already seen this node, don't add another edge.
+  void acceptWeak(void *&ptr) override {
+    pointerAccept(ptr, nullptr, true);
+  }
+
+  void accept(WeakRefBase &wr) override {
+    WeakRefSlot *slot = wr.unsafeGetSlot();
+    if (slot->extra == GC::WeakSlotState::Free) {
+      // If the slot is free, there's no edge to add.
       return;
     }
-    auto nameRef = llvm::StringRef::withNullAsEmpty(name);
-    if (!nameRef.empty()) {
-      snap_.addNamedEdge(HeapSnapshot::EdgeType::Internal, nameRef, id);
-    } else {
-      // Unnamed edges get indices.
-      snap_.addIndexedEdge(HeapSnapshot::EdgeType::Element, nextEdge_++, id);
+    PinnedHermesValue &hv = slot->value;
+    if (!hv.isPointer()) {
+      // Filter out non-pointers from adding edges.
+      return;
     }
+    pointerAccept(hv.getPointer(), nullptr, true);
   }
 
   void beginRootSection(Section section) override {
@@ -1298,8 +1328,37 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor {
   HeapSnapshot &snap_;
   llvm::DenseSet<uint64_t> seenIDs_;
   // For unnamed edges, use indices instead.
-  unsigned nextEdge_{1};
+  unsigned nextEdge_{0};
   Section currentSection_{Section::InvalidSection};
+
+  void pointerAccept(void *ptr, const char *name, bool weak) {
+    assert(
+        currentSection_ != Section::InvalidSection &&
+        "accept called outside of begin/end root section pair");
+    if (!ptr) {
+      return;
+    }
+
+    const auto id = gc.getObjectID(ptr);
+    if (!seenIDs_.insert(id).second) {
+      // Already seen this node, don't add another edge.
+      return;
+    }
+    auto nameRef = llvm::StringRef::withNullAsEmpty(name);
+    if (!nameRef.empty()) {
+      snap_.addNamedEdge(
+          weak ? HeapSnapshot::EdgeType::Weak
+               : HeapSnapshot::EdgeType::Internal,
+          nameRef,
+          id);
+    } else if (weak) {
+      std::string numericName = oscompat::to_string(nextEdge_++);
+      snap_.addNamedEdge(HeapSnapshot::EdgeType::Weak, numericName.c_str(), id);
+    } else {
+      // Unnamed edges get indices.
+      snap_.addIndexedEdge(HeapSnapshot::EdgeType::Element, nextEdge_++, id);
+    }
+  }
 };
 
 } // namespace
@@ -1324,6 +1383,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
     SnapshotRootSectionAcceptor rootSectionAcceptor(*this, snap);
     snap.beginNode();
     markRoots(rootSectionAcceptor, true);
+    markWeakRoots(rootSectionAcceptor);
     snap.endNode(
         HeapSnapshot::NodeType::Synthetic,
         "(GC Roots)",
@@ -1335,14 +1395,15 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
     // nodes reachable from the super root.
     SnapshotRootAcceptor rootAcceptor(*this, snap);
     markRoots(rootAcceptor, true);
+    markWeakRoots(rootAcceptor);
   };
 
   snap.beginSection(HeapSnapshot::Section::Nodes);
   rootScan();
-  EdgeAddingAcceptor acceptor(*this, snap);
-  SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
   // Add a node for each object in the heap.
-  const auto snapshotForObject = [&snap, &visitor, this](GCCell *cell) {
+  const auto snapshotForObject = [&snap, this](GCCell *cell) {
+    EdgeAddingAcceptor acceptor(*this, snap);
+    SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
     // Allow nodes to add extra nodes not in the JS heap.
     cell->getVT()->snapshotMetaData.addNodes(cell, this, snap);
     snap.beginNode();
