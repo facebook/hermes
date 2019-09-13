@@ -321,7 +321,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   void markRoots(SlotAcceptor &acceptor, bool markLongLived);
 
   /// Mark the weak roots owned by this RuntimeModule.
-  void markWeakRoots(WeakRefAcceptor &acceptor);
+  void markWeakRoots(WeakRootAcceptor &acceptor);
 
   /// Mark the weak reference to the Domain which owns this RuntimeModule.
   void markDomainRef(WeakRefAcceptor &acceptor);
