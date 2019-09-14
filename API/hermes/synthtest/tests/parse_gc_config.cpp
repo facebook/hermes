@@ -15,9 +15,11 @@ const char *parseGCConfigTrace() {
 {
   "version": 2,
   "globalObjID": 0,
-  "gcConfig": {
-    "initHeapSize": 100,
-    "maxHeapSize": 16777216
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 100,
+      "maxHeapSize": 16777216
+    }
   },
   "env": {
     "mathRandomSeed": 0,

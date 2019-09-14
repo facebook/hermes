@@ -431,14 +431,23 @@ llvm::raw_ostream &operator<<(
     json.emitKeyValue(
         "sourceHash", ::hermes::hashAsString(tracePrinter.trace.sourceHash()));
 
-    // GCConfig section.
+    // RuntimeConfig section.
     {
-      json.emitKey("gcConfig");
+      json.emitKey("runtimeConfig");
       json.openDict();
+      {
+        json.emitKey("gcConfig");
+        json.openDict();
+        json.emitKeyValue(
+            "minHeapSize", tracePrinter.conf.getGCConfig().getMinHeapSize());
+        json.emitKeyValue(
+            "initHeapSize", tracePrinter.conf.getGCConfig().getInitHeapSize());
+        json.emitKeyValue(
+            "maxHeapSize", tracePrinter.conf.getGCConfig().getMaxHeapSize());
+        json.closeDict();
+      }
       json.emitKeyValue(
-          "initHeapSize", tracePrinter.conf.getGCConfig().getInitHeapSize());
-      json.emitKeyValue(
-          "maxHeapSize", tracePrinter.conf.getGCConfig().getMaxHeapSize());
+          "enableSampledStats", tracePrinter.conf.getEnableSampledStats());
       json.closeDict();
     }
 

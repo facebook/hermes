@@ -678,7 +678,9 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
     EXPECT_TRUE(hermes::oscompat::isxdigit(c));
   }
 
-  JSONObject *gcConfig = llvm::cast<JSONObject>(root->at("gcConfig"));
+  JSONObject *rtConfig = llvm::cast<JSONObject>(root->at("runtimeConfig"));
+  JSONObject *gcConfig = llvm::cast<JSONObject>(rtConfig->at("gcConfig"));
+  EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("minHeapSize")));
   EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("initHeapSize")));
   EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("maxHeapSize")));
 
@@ -760,7 +762,11 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
     EXPECT_TRUE(hermes::oscompat::isxdigit(c));
   }
 
-  JSONObject *gcConfig = llvm::cast<JSONObject>(root->at("gcConfig"));
+  JSONObject *rtConfig = llvm::cast<JSONObject>(root->at("runtimeConfig"));
+  JSONObject *gcConfig = llvm::cast<JSONObject>(rtConfig->at("gcConfig"));
+  EXPECT_EQ(
+      conf.getGCConfig().getMinHeapSize(),
+      llvm::cast<JSONNumber>(gcConfig->at("minHeapSize"))->getValue());
   EXPECT_EQ(
       conf.getGCConfig().getInitHeapSize(),
       llvm::cast<JSONNumber>(gcConfig->at("initHeapSize"))->getValue());

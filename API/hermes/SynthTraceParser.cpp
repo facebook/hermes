@@ -70,27 +70,54 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   }
 }
 
+::hermes::vm::GCConfig getGCConfig(JSONObject *rtConfig) {
+  ::hermes::vm::GCConfig::Builder gcconf;
+  auto *val = rtConfig->get("gcConfig");
+  if (!val) {
+    return gcconf.build();
+  }
+  if (val->getKind() != JSONKind::Object) {
+    throw std::invalid_argument("gcConfig should be an object");
+  }
+  auto *gcConfig = llvm::cast<JSONObject>(val);
+  if (auto *sz = gcConfig->get("minHeapSize")) {
+    gcconf.withMinHeapSize(getNumberAs<::hermes::vm::gcheapsize_t>(sz));
+  }
+  if (auto *sz = gcConfig->get("initHeapSize")) {
+    gcconf.withInitHeapSize(getNumberAs<::hermes::vm::gcheapsize_t>(sz));
+  }
+  if (auto *sz = gcConfig->get("maxHeapSize")) {
+    gcconf.withMaxHeapSize(getNumberAs<::hermes::vm::gcheapsize_t>(sz));
+  }
+  return gcconf.build();
+}
+
 ::hermes::vm::RuntimeConfig getRuntimeConfig(JSONObject *root) {
-  auto *val = root->get("gcConfig");
+  JSONValue *val = root->get("runtimeConfig");
   ::hermes::vm::RuntimeConfig::Builder conf;
   if (!val) {
     // If the config doesn't exist, return some default values.
     return conf.build();
   }
   if (val->getKind() != JSONKind::Object) {
-    throw std::invalid_argument("gcConfig should be an object");
+    throw std::invalid_argument("runtimeConfig should be an object");
   }
-  auto *gcConfig = llvm::cast<JSONObject>(val);
-  ::hermes::vm::GCConfig::Builder gcconf;
-  if (auto sz = getNumberAs<::hermes::vm::gcheapsize_t>(
-          gcConfig->get("initHeapSize"))) {
-    gcconf.withInitHeapSize(sz);
+  auto *rtConfig = llvm::cast<JSONObject>(val);
+
+  conf.withGCConfig(getGCConfig(rtConfig));
+
+  val = rtConfig->get("enableSampledStats");
+  if (!val) {
+    // Default to false if it isn't specified.
+    conf.withEnableSampledStats(false);
+  } else {
+    if (val->getKind() != JSONKind::Boolean) {
+      throw std::invalid_argument("enableSampledStats should be a boolean");
+    }
+    conf.withEnableSampledStats(llvm::cast<JSONBoolean>(val)->getValue());
   }
-  if (auto sz = getNumberAs<::hermes::vm::gcheapsize_t>(
-          gcConfig->get("maxHeapSize"))) {
-    gcconf.withMaxHeapSize(sz);
-  }
-  return conf.withGCConfig(gcconf.build()).build();
+
+  return conf.build();
 }
 
 ::hermes::vm::MockedEnvironment getMockedEnvironment(JSONObject *env) {

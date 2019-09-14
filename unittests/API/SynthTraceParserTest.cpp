@@ -25,9 +25,13 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   "version": 2,
   "globalObjID": 258,
   "sourceHash": "6440b537af26795e5f452bcd320faccb02055a4f",
-  "gcConfig": {
-    "initHeapSize": 33554432,
-    "maxHeapSize": 536870912
+  "runtimeConfig": {
+    "gcConfig": {
+      "minHeapSize": 1000,
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    },
+    "enableSampledStats": true
   },
   "env": {
     "mathRandomSeed": 123,
@@ -49,13 +53,40 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   EXPECT_EQ(trace.sourceHash(), expectedHash);
   EXPECT_EQ(trace.records().size(), 0);
 
+  EXPECT_EQ(rtconf.getGCConfig().getMinHeapSize(), 1000);
   EXPECT_EQ(rtconf.getGCConfig().getInitHeapSize(), 33554432);
   EXPECT_EQ(rtconf.getGCConfig().getMaxHeapSize(), 536870912);
+  EXPECT_TRUE(rtconf.getEnableSampledStats());
 
   EXPECT_EQ(env.mathRandomSeed, 123);
   EXPECT_EQ(env.callsToDateNow.size(), 0);
   EXPECT_EQ(env.callsToNewDate.size(), 0);
   EXPECT_EQ(env.callsToDateAsFunction.size(), 0);
+}
+
+TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
+  const char *src = R"(
+{
+  "version": 2,
+  "globalObjID": 258,
+  "sourceHash": "6440b537af26795e5f452bcd320faccb02055a4f",
+  "runtimeConfig": {},
+  "env": {
+    "mathRandomSeed": 123,
+    "callsToDateNow": [],
+    "callsToNewDate": [],
+    "callsToDateAsFunction": [],
+  },
+  "trace": []
+}
+  )";
+  auto result = parseSynthTrace(bufFromStr(src));
+  const hermes::vm::RuntimeConfig &rtconf = std::get<1>(result);
+
+  EXPECT_EQ(rtconf.getGCConfig().getMinHeapSize(), 0);
+  EXPECT_EQ(rtconf.getGCConfig().getInitHeapSize(), 33554432);
+  EXPECT_EQ(rtconf.getGCConfig().getMaxHeapSize(), 536870912);
+  EXPECT_FALSE(rtconf.getEnableSampledStats());
 }
 
 TEST_F(SynthTraceParserTest, SynthVersionMismatch) {
@@ -64,9 +95,11 @@ TEST_F(SynthTraceParserTest, SynthVersionMismatch) {
   "version": 0,
   "globalObjID": 258,
   "sourceHash": "6440b537af26795e5f452bcd320faccb02055a4f",
-  "gcConfig": {
-    "initHeapSize": 33554432,
-    "maxHeapSize": 536870912
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
   },
   "env": {
     "mathRandomSeed": 123,
@@ -86,9 +119,11 @@ TEST_F(SynthTraceParserTest, SynthVersionInvalidKind) {
   "version": true,
   "globalObjID": 258,
   "sourceHash": "6440b537af26795e5f452bcd320faccb02055a4f",
-  "gcConfig": {
-    "initHeapSize": 33554432,
-    "maxHeapSize": 536870912
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
   },
   "env": {
     "mathRandomSeed": 123,
@@ -107,9 +142,7 @@ TEST_F(SynthTraceParserTest, SynthMissingVersion) {
 {
   "globalObjID": 258,
   "sourceHash": "6440b537af26795e5f452bcd320faccb02055a4f",
-  "gcConfig": {
-    "initHeapSize": 33554432,
-    "maxHeapSize": 536870912
+  "runtimeConfig": {
   },
   "env": {
     "mathRandomSeed": 123,
