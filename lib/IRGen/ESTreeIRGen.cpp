@@ -1074,12 +1074,13 @@ Value *ESTreeIRGen::emitOptionalInitialization(
   // getDefaultBlock:
   Builder.setInsertionBlock(getDefaultBlock);
   auto *defaultValue = genExpression(init);
+  auto *defaultResultBlock = Builder.getInsertionBlock();
   Builder.createBranchInst(storeBlock);
 
   // storeBlock:
   Builder.setInsertionBlock(storeBlock);
   return Builder.createPhiInst(
-      {value, defaultValue}, {currentBlock, getDefaultBlock});
+      {value, defaultValue}, {currentBlock, defaultResultBlock});
 }
 
 std::shared_ptr<SerializedScope> ESTreeIRGen::resolveScopeIdentifiers(
