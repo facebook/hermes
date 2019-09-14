@@ -426,7 +426,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
-  jsi::Value getHeapInfo(bool includeExpensive) override {
+  std::unordered_map<std::string, int64_t> getHeapInfo(
+      bool includeExpensive) override {
     vm::GCBase::HeapInfo info;
     if (includeExpensive) {
       runtime_.getHeap().getHeapInfoWithMallocSize(info);
@@ -438,10 +439,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
     runtime_.getHeap().getDebugHeapInfo(debugInfo);
 #endif
 
-    auto jsInfo = createObject();
+    std::unordered_map<std::string, int64_t> jsInfo;
 
 #define BRIDGE_INFO(TYPE, HOLDER, NAME) \
-  jsInfo.setProperty(*this, "hermes_" #NAME, static_cast<TYPE>(HOLDER.NAME))
+  jsInfo["hermes_" #NAME] = static_cast<TYPE>(HOLDER.NAME);
 
     BRIDGE_INFO(int, info, numCollections);
     BRIDGE_INFO(double, info, totalAllocatedBytes);
@@ -464,11 +465,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
 #undef BRIDGE_INFO
 
-#define BRIDGE_GEN_INFO(NAME, STAT_EXPR, FACTOR)                      \
-  jsInfo.setProperty(                                                 \
-      *this, "hermes_full_" #NAME, info.fullStats.STAT_EXPR *FACTOR); \
-  jsInfo.setProperty(                                                 \
-      *this, "hermes_yg_" #NAME, info.youngGenStats.STAT_EXPR *FACTOR)
+#define BRIDGE_GEN_INFO(NAME, STAT_EXPR, FACTOR)                    \
+  jsInfo["hermes_full_" #NAME] = info.fullStats.STAT_EXPR * FACTOR; \
+  jsInfo["hermes_yg_" #NAME] = info.youngGenStats.STAT_EXPR * FACTOR;
 
     BRIDGE_GEN_INFO(numCollections, numCollections, 1.0);
     // Times are converted from seconds to milliseconds for the logging pipeline
@@ -483,7 +482,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
 #undef BRIDGE_GEN_INFO
 
-    return std::move(jsInfo);
+    return jsInfo;
   }
 
   // Overridden from jsi::Instrumentation
