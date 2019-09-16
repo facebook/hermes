@@ -20,6 +20,38 @@ using llvm::dbgs;
 namespace hermes {
 namespace vm {
 
+namespace detail {
+
+void TransitionMap::insertUnsafe(const Transition &key, WeakRefSlot *ptr) {
+  if (isClean()) {
+    smallKey_ = key;
+    smallValue() = WeakRef<HiddenClass>(ptr);
+    return;
+  }
+  if (!isLarge())
+    uncleanMakeLarge();
+  large()->insertUnsafe(key, ptr);
+}
+
+size_t TransitionMap::getMemorySize() const {
+  // Inline slot is not counted here (it counts as part of the HiddenClass).
+  return isLarge() ? sizeof(*large()) + large()->getMemorySize() : 0;
+}
+
+void TransitionMap::uncleanMakeLarge() {
+  assert(!isClean() && "must not still be clean");
+  assert(!isLarge() && "must not yet be large");
+  auto large = new WeakValueMap<Transition, HiddenClass>();
+  // Move any valid entry into the allocated map.
+  if (smallValue().isValid())
+    large->insertUnsafe(smallKey_, smallValue().unsafeGetSlot());
+  u.large_ = large;
+  smallKey_.symbolID = SymbolID::deleted();
+  assert(isLarge());
+}
+
+} // namespace detail
+
 VTable HiddenClass::vt{CellKind::HiddenClassKind,
                        sizeof(HiddenClass),
                        _finalizeImpl,
@@ -55,17 +87,17 @@ void HiddenClassSerialize(Serializer &s, const GCCell *cell) {
   // entries are in the map beforehand. Therefore, we will use a sentinel
   // WeakRef (nullptr) to show we finish all entries. As a result, for each
   // valid entry, we write WeakRef<HiddenClass> first, them we write the key.
-  for (auto it = self->transitionMap_.const_begin();
-       it != self->transitionMap_.const_end();
-       it++) {
-    if (it->second.isValid()) {
+  self->transitionMap_.forEachEntry([&s](
+                                        const HiddenClass::Transition &key,
+                                        const WeakRef<HiddenClass> &value) {
+    if (value.isValid()) {
       // Write value (WeakRef<HiddenClass>)
-      s.writeRelocation(it->second.unsafeGetSlot());
+      s.writeRelocation(value.unsafeGetSlot());
       // Write key (Transition: SymbolID, PropertyFlags)
-      s.writeInt<uint32_t>(it->first.symbolID.unsafeGetRaw());
-      s.writeData(&it->first.propertyFlags, sizeof(PropertyFlags));
+      s.writeInt<uint32_t>(key.symbolID.unsafeGetRaw());
+      s.writeData(&key.propertyFlags, sizeof(PropertyFlags));
     }
-  }
+  });
   // Write an end here
   s.writeRelocation(nullptr);
 
@@ -105,7 +137,6 @@ void HiddenClassDeserialize(Deserializer &d, CellKind kind) {
     PropertyFlags tflags;
     d.readData(&tflags, sizeof(PropertyFlags));
     cell->transitionMap_.insertUnsafe(
-        &d.getRuntime()->getHeap(),
         HiddenClass::Transition(tid, tflags),
         (WeakRefSlot *)ptr);
     relocationId = d.readInt<uint32_t>();
@@ -250,15 +281,15 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
     // indicates that this is a new property and we don't have to build the map
     // in order to look for it (since we wouldn't find it anyway).
     if (expectedFlags.isValid()) {
-      auto it = self->transitionMap_.find({name, expectedFlags});
-
-      if (it != self->transitionMap_.end()) {
+      Transition t{name, expectedFlags};
+      if (self->transitionMap_.containsKey(t)) {
         LLVM_DEBUG(
             dbgs() << "Property " << runtime->formatSymbolID(name)
                    << " NOT FOUND in Class:" << self->getDebugAllocationId()
                    << " due to existing transition to Class:"
-                   << it->second.get(runtime)->getDebugAllocationId() << "\n");
-
+                   << (*self->transitionMap_.lookup(runtime, t))
+                          ->getDebugAllocationId()
+                   << "\n");
         return llvm::None;
       }
     }

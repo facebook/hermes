@@ -24,7 +24,7 @@ class WeakValueMap {
   /// TODO: this is wasteful in terms of code size because it will be
   /// specialized for different kinds of ValueT while technically the underlying
   /// hash table always stores instances of WeakRefBase.
-  using DenseMapT = llvm::SmallDenseMap<KeyT, WeakRef<ValueT>, 2>;
+  using DenseMapT = llvm::SmallDenseMap<KeyT, WeakRef<ValueT>, 8>;
   using InternalIterator = typename DenseMapT::iterator;
   using const_iterator = typename DenseMapT::const_iterator;
 
@@ -66,10 +66,23 @@ class WeakValueMap {
     return map_.end();
   }
 
+  /// Invoke \p callback on each (const) key and value. Values may be invalid.
+  template <typename CallbackFunction>
+  void forEachEntry(const CallbackFunction &callback) const {
+    for (auto it = const_begin(); it != const_end(); it++) {
+      callback(it->first, it->second);
+    }
+  }
+
   /// Lookup a value by key. The returned iterator must be used right away,
   /// either to access the found element or to erase it.
   iterator find(const KeyT &key) {
     return makeIterator(internalFind(key));
+  }
+
+  /// Return true if there is an entry with the given key and a valid value.
+  bool containsKey(const KeyT &key) {
+    return find(key) != end();
   }
 
   /// Look for a key and return the value as Handle<T> if found or llvm::None if
@@ -110,7 +123,7 @@ class WeakValueMap {
 
   /// Insert key/value into the map. Used by deserialization.
   /// Use WeakRefSlot* to initialize WeakRefs directly. Don't prune entries.
-  void insertUnsafe(GC *gc, const KeyT &key, WeakRefSlot *ptr) {
+  void insertUnsafe(const KeyT &key, WeakRefSlot *ptr) {
     auto res = map_.try_emplace(key, WeakRef<ValueT>(ptr)).second;
     if (!res) {
       hermes_fatal("shouldn't fail to insert during deserialization");

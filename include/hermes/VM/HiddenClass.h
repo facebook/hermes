@@ -124,10 +124,146 @@ struct ClassFlags {
 /// The desired effect is that only "leaf" classes have property maps and normal
 /// property assignment doesn't create a map at all in the intermediate states
 /// (except the first time).
+class HiddenClass;
+namespace detail {
+/// Encode a transition from a hidden class to a child, keyed on the
+/// name of the property and its property flags.
+/// This is an internal type but has to be made public so we can define
+/// a llvm::DenseMapInfo<> trait for it.
+class Transition {
+ public:
+  SymbolID symbolID;
+  PropertyFlags propertyFlags;
+
+  /// An explicit constructor for creating DenseMap sentinel values.
+  explicit Transition(SymbolID symbolID)
+      : symbolID(symbolID), propertyFlags() {}
+  Transition(SymbolID symbolID, PropertyFlags flags)
+      : symbolID(symbolID), propertyFlags(flags) {}
+
+  bool operator==(const Transition &a) const {
+    return symbolID == a.symbolID && propertyFlags == a.propertyFlags;
+  }
+};
+
+/// A front for WeakValueMap<Transition, HiddenClass> that is space-optimized
+/// for the common case of 0 or 1 entry. See WeakValueMap for more details.
+class TransitionMap {
+ public:
+  ~TransitionMap() {
+    if (isLarge())
+      delete large();
+  }
+
+  /// Return true if there is an entry with the given key and a valid value.
+  bool containsKey(const Transition &key) {
+    return (smallKey_ == key && smallValue().isValid()) ||
+        (isLarge() && large()->containsKey(key));
+  }
+
+  /// Look for key and return the value as Handle<T> if found or None if not.
+  llvm::Optional<Handle<HiddenClass>> lookup(
+      HandleRootOwner *runtime,
+      const Transition &key) {
+    if (smallKey_ == key) {
+      if (smallValue().isValid())
+        return smallValue().get(runtime);
+      else
+        return llvm::None;
+    } else if (isLarge()) {
+      return large()->lookup(runtime, key);
+    } else {
+      return llvm::None;
+    }
+  }
+
+  /// Insert a key/value into the map if the key is not already there.
+  /// \return true if it was inserted, false if the key was already there.
+  bool insertNew(GC *gc, const Transition &key, Handle<HiddenClass> value) {
+    if (isClean()) {
+      smallKey_ = key;
+      smallValue() = WeakRef<HiddenClass>(gc, value);
+      return true;
+    } else if (smallKey_ == key && smallValue().isValid()) {
+      return false;
+    }
+    if (!isLarge())
+      uncleanMakeLarge();
+    return large()->insertNew(gc, key, value);
+  }
+
+  /// Insert key/value into the map. Used by deserialization.
+  void insertUnsafe(const Transition &key, WeakRefSlot *ptr);
+
+  /// Accepts every valid WeakRef in the map.
+  void markWeakRefs(WeakRefAcceptor &acceptor) {
+    if (isLarge()) {
+      large()->markWeakRefs(acceptor);
+    } else if (!isClean()) {
+      acceptor.accept(smallValue());
+    }
+  }
+
+  /// \return estimated dynamically allocated memory owned by this map.
+  size_t getMemorySize() const;
+
+  /// \return true if the map is known to be empty. May have false negatives.
+  bool isKnownEmpty() const {
+    return isClean() || (isLarge() && large()->isKnownEmpty());
+  }
+
+  /// Invoke \p callback on each (const) key and value. Values may be invalid.
+  template <typename CallbackFunction>
+  void forEachEntry(const CallbackFunction &callback) const {
+    if (smallKey_.symbolID.isValid()) {
+      callback(smallKey_, smallValue());
+    } else if (isLarge()) {
+      large()->forEachEntry(callback);
+    }
+  }
+
+ private:
+  /// Clean = no transition has been inserted since construction.
+  bool isClean() const {
+    return smallKey_.symbolID == SymbolID::empty();
+  }
+
+  /// Large = allocated WeakValueMap contains any/all entries.
+  bool isLarge() const {
+    return smallKey_.symbolID == SymbolID::deleted();
+  }
+
+  /// Expand to large mode, assuming already unclean.
+  void uncleanMakeLarge();
+
+  /// Accessors for each union member after asserting it's active.
+  WeakRef<HiddenClass> &smallValue() {
+    assert(!isLarge());
+    return u.smallValue_;
+  }
+  const WeakRef<HiddenClass> &smallValue() const {
+    assert(!isLarge());
+    return u.smallValue_;
+  }
+  WeakValueMap<Transition, HiddenClass> *large() const {
+    assert(isLarge());
+    return u.large_;
+  }
+
+  Transition smallKey_{SymbolID::empty()};
+  union U {
+    U() : smallValue_((WeakRefSlot *)nullptr) {}
+    WeakRef<HiddenClass> smallValue_;
+    WeakValueMap<Transition, HiddenClass> *large_;
+  } u;
+};
+
+} // namespace detail
+
 class HiddenClass final : public GCCell {
   friend void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb);
-
  public:
+  using Transition = detail::Transition;
   /// Adding more than this number of properties will switch to "dictionary
   /// mode".
   static constexpr unsigned kDictionaryThreshold = 64;
@@ -331,26 +467,6 @@ class HiddenClass final : public GCCell {
   /// \return true if all properties are non-writable and non-configurable
   static bool areAllReadOnly(Handle<HiddenClass> selfHandle, Runtime *runtime);
 
-  /// Encode a transition from this hidden class to a child, keyed on the
-  /// name of the property and its property flags.
-  /// This is an internal type but has to be made public so we can define
-  /// a llvm::DenseMapInfo<> trait for it.
-  class Transition {
-   public:
-    SymbolID symbolID;
-    PropertyFlags propertyFlags;
-
-    /// An explicit constructor for creating DenseMap sentinel values.
-    explicit Transition(SymbolID symbolID)
-        : symbolID(symbolID), propertyFlags() {}
-    Transition(SymbolID symbolID, PropertyFlags flags)
-        : symbolID(symbolID), propertyFlags(flags) {}
-
-    bool operator==(const Transition &a) const {
-      return symbolID == a.symbolID && propertyFlags == a.propertyFlags;
-    }
-  };
-
  private:
   HiddenClass(
       Runtime *runtime,
@@ -467,7 +583,7 @@ class HiddenClass final : public GCCell {
 
   /// This hash table encodes the transitions from this class to child classes
   /// keyed on the property being added (or updated) and its flags.
-  WeakValueMap<Transition, HiddenClass> transitionMap_;
+  detail::TransitionMap transitionMap_;
 
   /// Cache that contains for-in property names for objects of this class.
   /// Never used in dictionary mode.
