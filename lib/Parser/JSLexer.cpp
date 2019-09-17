@@ -1455,12 +1455,13 @@ void JSLexer::scanTemplateLiteral() {
 
         case 'x': {
           ++curCharPtr_;
-          rawStorage_.append({curCharPtr_, 2});
+          const char *start = curCharPtr_;
           auto v = consumeHex(2, false);
           if (!v) {
             foundNotEscapeSequence = true;
           }
           appendUnicodeToStorage(v ? *v : 0);
+          rawStorage_.append({start, (size_t)(curCharPtr_ - start)});
           break;
         }
 

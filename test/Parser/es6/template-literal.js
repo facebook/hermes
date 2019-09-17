@@ -291,6 +291,50 @@ new tag`abc`;
 // CHECK-NEXT:        "directive": null
 // CHECK-NEXT:      },
 
+`\x41\x42`;
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "type": "ExpressionStatement",
+// CHECK-NEXT:        "expression": {
+// CHECK-NEXT:          "type": "TemplateLiteral",
+// CHECK-NEXT:          "quasis": [
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "type": "TemplateElement",
+// CHECK-NEXT:              "tail": true,
+// CHECK-NEXT:              "cooked": "AB",
+// CHECK-NEXT:              "raw": "\\x41\\x42"
+// CHECK-NEXT:            }
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "expressions": []
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "directive": null
+// CHECK-NEXT:      },
+
+tag`\xyz`;
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "type": "ExpressionStatement",
+// CHECK-NEXT:        "expression": {
+// CHECK-NEXT:          "type": "TaggedTemplateExpression",
+// CHECK-NEXT:          "tag": {
+// CHECK-NEXT:            "type": "Identifier",
+// CHECK-NEXT:            "name": "tag",
+// CHECK-NEXT:            "typeAnnotation": null
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "quasi": {
+// CHECK-NEXT:            "type": "TemplateLiteral",
+// CHECK-NEXT:            "quasis": [
+// CHECK-NEXT:              {
+// CHECK-NEXT:                "type": "TemplateElement",
+// CHECK-NEXT:                "tail": true,
+// CHECK-NEXT:                "cooked": null,
+// CHECK-NEXT:                "raw": "\\xyz"
+// CHECK-NEXT:              }
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "expressions": []
+// CHECK-NEXT:          }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "directive": null
+// CHECK-NEXT:      },
+
 tag`\unicode`;
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "type": "ExpressionStatement",
