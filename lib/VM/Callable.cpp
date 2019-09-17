@@ -580,10 +580,16 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
   auto nameView = StringPrimitive::createStringView(runtime, nameHandle);
   llvm::SmallU16String<32> boundName{"bound "};
   boundName.append(nameView.begin(), nameView.end());
-  auto strRes = StringPrimitive::create(runtime, boundName);
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+  // Share name strings for repeatedly bound functions by using the
+  // identifier table. If a new symbol is created, it will disappear
+  // after the name string dies, since nothing else refers to it.
+  auto &identifierTable = runtime->getIdentifierTable();
+  auto boundNameSym = identifierTable.getSymbolHandle(runtime, boundName);
+  if (LLVM_UNLIKELY(boundNameSym == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+  Handle<StringPrimitive> boundNameHandle(
+      runtime, identifierTable.getStringPrim(runtime, **boundNameSym));
   DefinePropertyFlags dpf{};
   dpf.setWritable = 1;
   dpf.writable = 0;
@@ -599,7 +605,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
               runtime,
               Predefined::getSymbolID(Predefined::name),
               dpf,
-              runtime->makeHandle(*strRes)) == ExecutionStatus::EXCEPTION)) {
+              boundNameHandle) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
