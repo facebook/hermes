@@ -3706,9 +3706,16 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
   if (!optRightExpr)
     return None;
 
-  assert(
-      checkEndAssignmentExpression() &&
-      "invalid end token in AssignmentExpression");
+  if (!checkEndAssignmentExpression()) {
+    // Note: We don't assert the valid end of an AssignmentExpression here
+    // because we do not know yet whether the entire file is well-formed.
+    // This check errors here to ensure that we still catch missing elements
+    // in `checkEndAssignmentExpression` while allowing us to avoid actually
+    // asserting and crashing.
+    sm_.error(
+        tok_->getStartLoc(), "unexpected token after assignment expression");
+    return None;
+  }
   return setLocation(
       optLeftExpr.getValue(),
       optRightExpr.getValue(),
