@@ -1404,6 +1404,8 @@ CallResult<HermesValue> GeneratorInnerFunction::callInnerFunction(
                               selfHandle.getHermesValue(),
                               newTarget,
                               ctx->at(0)};
+  if (LLVM_UNLIKELY(frame.overflowed()))
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   for (ArrayStorage::size_type i = 0, e = argCount; i < e; ++i) {
     frame->getArgRef(i) = ctx->at(i + 1);
   }
