@@ -19,7 +19,7 @@ using StringViewTest = RuntimeTestFixture;
 
 TEST_F(StringViewTest, Construction) {
   // Test createStringView
-  UTF16Ref str1 = createUTF16Ref(u"abcdefg");
+  UTF16Ref str1 = createUTF16Ref(u"abcdef\x100");
   auto strPrim1 = StringPrimitive::createNoThrow(runtime, str1);
   StringView view1 = StringPrimitive::createStringView(runtime, strPrim1);
   EXPECT_TRUE(!view1.isASCII());

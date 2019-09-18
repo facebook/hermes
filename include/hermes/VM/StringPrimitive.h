@@ -46,6 +46,10 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       llvm::ArrayRef<T> str,
       std::basic_string<T> *optStorage = nullptr);
 
+  /// Create a new DynamicASCIIStringPrimitive if str is all ASCII, otherwise
+  /// create a new DynamicUTF16StringPrimitive.
+  static CallResult<HermesValue> createDynamic(Runtime *runtime, UTF16Ref str);
+
   /// The following private overloads are to prevent creation of a
   /// StringPrimitive from a string literal. Naively allowing this would invoke
   /// ArrayRef's array template constructor, which would include the terminating
@@ -706,7 +710,7 @@ inline CallResult<HermesValue> StringPrimitive::create(
       EXTERNAL_STRING_THRESHOLD < MAX_STRING_LENGTH,
       "External string threshold should be smaller than max string size.");
   if (LLVM_LIKELY(!isExternalLength(str.size()))) {
-    return DynamicUTF16StringPrimitive::create(runtime, str);
+    return createDynamic(runtime, str);
   } else {
     return ExternalStringPrimitive<char16_t>::create(
         runtime, arrayToString(str));

@@ -294,6 +294,23 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
       runtime, llvm::makeArrayRef(str.data(), str.size()), &str);
 }
 
+CallResult<HermesValue> StringPrimitive::createDynamic(
+    Runtime *runtime,
+    UTF16Ref str) {
+  if (LLVM_LIKELY(isAllASCII(str.begin(), str.end()))) {
+    auto res = DynamicASCIIStringPrimitive::create(runtime, str.size());
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // Copy directly into the StringPrimitive storage.
+    std::copy(
+        str.begin(), str.end(), res->getString()->castToASCIIPointerForWrite());
+    return res;
+  } else {
+    return DynamicUTF16StringPrimitive::create(runtime, str);
+  }
+}
+
 bool StringPrimitive::sliceEquals(
     uint32_t start,
     uint32_t length,

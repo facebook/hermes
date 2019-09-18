@@ -79,11 +79,11 @@ TEST_F(StringBuilderTest, AbnormalBuildTest) {
   ASSERT_NE(builder, ExecutionStatus::EXCEPTION);
   builder->appendASCIIRef(createASCIIRef("abc"));
   builder->appendStringPrim(
-      StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"defgh")));
+      StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"defg\x100")));
   auto result3 = builder->getStringPrimitive();
   ASSERT_FALSE(result3->isASCII());
   ASSERT_EQ(result3->getStringLength(), 8u);
   auto view3 = StringPrimitive::createStringView(runtime, result3);
-  ASSERT_TRUE(view3.equals(createUTF16Ref(u"abcdefgh")));
+  ASSERT_TRUE(view3.equals(createUTF16Ref(u"abcdefg\x100")));
 }
 } // namespace
