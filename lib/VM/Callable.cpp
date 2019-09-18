@@ -1351,11 +1351,10 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
       codeBlock,
       args.getArgCount()));
 
-  // The frame size to save goes from the stack pointer all the way to
-  // the final local. Multiply by StackIncrement to account for the fact that
-  // the local offsets may be negative.
-  const int32_t frameSize = StackFrameLayout::StackIncrement *
-      StackFrameLayout::localOffset(codeBlock->getFrameSize());
+  // We must store the entire frame, including the extra registers the callee
+  // had to allocate at the start.
+  const uint32_t frameSize =
+      codeBlock->getFrameSize() + StackFrameLayout::CalleeExtraRegistersAtStart;
 
   // Size needed to store the complete context:
   // - "this"
@@ -1419,6 +1418,12 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
   PinnedHermesValue *dst = StackFrameLayout::StackIncrement > 0
       ? runtime->getCurrentFrame().ptr()
       : runtime->getCurrentFrame().ptr() - frameSize;
+  assert(
+      (StackFrameLayout::StackIncrement > 0 &&
+       dst + frameSize <= runtime->getStackPointer()) ||
+      (StackFrameLayout::StackIncrement < 0 &&
+       dst >= runtime->getStackPointer()) &&
+          "reading off the end of the stack");
   const GCHermesValue *src = &savedContext_.get(runtime)->at(frameOffset);
   std::memcpy(dst, src, frameSize * sizeof(PinnedHermesValue));
 }
@@ -1430,6 +1435,12 @@ void GeneratorInnerFunction::saveStack(Runtime *runtime) {
   PinnedHermesValue *first = StackFrameLayout::StackIncrement > 0
       ? runtime->getCurrentFrame().ptr()
       : runtime->getCurrentFrame().ptr() - frameSize;
+  assert(
+      (StackFrameLayout::StackIncrement > 0 &&
+       first + frameSize <= runtime->getStackPointer()) ||
+      (StackFrameLayout::StackIncrement < 0 &&
+       first >= runtime->getStackPointer()) &&
+          "reading off the end of the stack");
   // Use GCHermesValue::copy to ensure write barriers are executed.
   GCHermesValue::copy(
       first,
