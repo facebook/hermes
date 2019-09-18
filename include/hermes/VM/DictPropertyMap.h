@@ -16,16 +16,20 @@
 namespace hermes {
 namespace vm {
 
-/// This class provides simple property metadata storage for JavaScript
+/// DictPropertyMap provides simple property metadata storage for JavaScript
 /// objects. It maps from SymbolID to PropertyDescriptor and provides
 /// iteration in insertion order.
 ///
 /// The object contains two data structures:
 /// - an open addressing hash table mapping from SymbolID to an integer index.
 /// - a descriptor array containing pairs of SymbolID and PropertyDescriptor.
+/// The layout in memory is actually the opposite order (because it simplifies
+/// iteration over the symbols).
 ///
-/// Fast property lookup is supported by the hash table - it maps from a
-/// SymbolID to an index in the descriptor array.
+/// Fast property lookup is supported by the hash table - it conceptually maps
+/// from a SymbolID to an index in the descriptor array. To save memory, only
+/// part of the SymbolID is stored in the hash table itself, so the SymbolID
+/// in the descriptor array entry is also checked on a match.
 ///
 /// New properties are inserted in the hash table and appended sequentially to
 /// the end of the descriptor array, thus encoding the original insertion order.
@@ -58,17 +62,95 @@ namespace vm {
 ///  - "invalid". It contains SymbolID::empty(). It used to be "deleted"
 ///  but its slot was re-used by a new property.
 ///
+namespace detail {
+
+/// A valid entry in the hash table holds an index into the descriptor array
+/// and part of the SymbolID (for filtering). Entries transition as follows:
+/// empty -> valid -> deleted -> valid -> ...
+class DPMHashPair {
+ public:
+  DPMHashPair() : idpart_(0), desc_(0) {}
+  bool isEmpty() const {
+    return desc_ == EMPTY;
+  }
+  bool isDeleted() const {
+    return desc_ == DELETED;
+  }
+  bool isValid() const {
+    return desc_ >= FIRST_VALID;
+  }
+  uint32_t getDescIndex() const {
+    assert(isValid() && "asked for descriptor of invalid pair");
+    return desc_ - FIRST_VALID;
+  }
+  /// Returns false if this entry does not match \p id.
+  bool mayBe(SymbolID id) const {
+    assert(isValid() && "tried to match invalid pair");
+    return idpart_ == (id.unsafeGetRaw() & ID_MASK);
+  }
+  /// (Re)initialize an empty or deleted hash table entry.
+  /// Returns true iff the previous state was deleted.
+  bool setDescIndex(uint32_t idx, SymbolID id) {
+    assert(!isValid() && "overwriting a valid entry");
+    assert(canStore(idx) && "impossibly large descriptor index");
+    bool ret = isDeleted();
+    desc_ = idx + FIRST_VALID;
+    idpart_ = (id.unsafeGetRaw() & ID_MASK);
+    assert(isValid() && "failed to make a valid entry");
+    return ret;
+  }
+  /// Mark a valid hash table position as deleted.
+  /// Returns the descriptor index it held.
+  uint32_t setDeleted() {
+    assert(isValid() && "tried to delete an empty/deleted entry");
+    uint32_t ret = getDescIndex();
+    desc_ = DELETED;
+    return ret;
+  }
+  /// Returns true if idx is small enough to be stored as a descriptor index
+  /// in this class.
+  static constexpr bool canStore(uint32_t idx) {
+    return idx < ((1 << DESC_BITS) - FIRST_VALID);
+  }
+
+ private:
+  /// Encoding of desc_. Empty is 0 so that zeroed memory means all empty.
+  enum { EMPTY = 0, DELETED, FIRST_VALID };
+
+  /// Number of bits of SymbolID to store. A static_assert checks that
+  /// the max possible descriptor index can be stored in the other bits.
+#ifdef HERMESVM_GC_MALLOC
+  /// MallocGC supports allocations up to 4 GB. Each descriptor consumes at
+  /// least 16 bytes. Thus at least log(16) = 4 bits remain for the ID.
+  static constexpr size_t ID_BITS = 4;
+#else
+  /// Could be slightly higher, but single byte is efficient to access.
+  static constexpr size_t ID_BITS = 8;
+#endif
+  static constexpr size_t ID_MASK = (1 << ID_BITS) - 1;
+
+  /// Bits that can hold (max possible descriptor index + FIRST_VALID).
+  static constexpr size_t DESC_BITS = 32 - ID_BITS;
+
+  struct {
+    /// Part of a SymbolID.
+    uint32_t idpart_ : ID_BITS;
+    /// Encoded descriptor index (or EMPTY/DELETED).
+    uint32_t desc_ : DESC_BITS;
+  };
+};
+
+} // namespace detail
+
 class DictPropertyMap final : public VariableSizeRuntimeCell,
                               private llvm::TrailingObjects<
                                   DictPropertyMap,
                                   std::pair<SymbolID, NamedPropertyDescriptor>,
-                                  std::pair<SymbolID, uint32_t>> {
+                                  detail::DPMHashPair> {
   friend TrailingObjects;
   friend void DictPropertyMapBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
-
-  using HashPair = std::pair<SymbolID, uint32_t>;
 
  public:
   using size_type = uint32_t;
@@ -195,6 +277,8 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   void dump();
 
  private:
+  using HashPair = detail::DPMHashPair;
+
   /// Total size of the descriptor array.
   const size_type descriptorCapacity_;
   /// Total size of the hash table. It will always be a power of 2.
@@ -263,7 +347,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
         descriptorCapacity_(descriptorCapacity),
         hashCapacity_(hashCapacity) {
     // Clear the hash table.
-    std::fill_n(getHashPairs(), hashCapacity_, HashPair{SymbolID::empty(), 0});
+    std::fill_n(getHashPairs(), hashCapacity_, HashPair{});
   }
 
   DescriptorPair *getDescriptorPairs() {
@@ -309,6 +393,12 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   std::pair<bool, HashPair *> static lookupEntryFor(
       DictPropertyMap *self,
       SymbolID symbolID);
+
+  /// Given a valid HashPair, return whether it's an entry for the given ID.
+  bool isMatch(const HashPair *entry, SymbolID symbolID) const {
+    return entry->mayBe(symbolID) &&
+        getDescriptorPairs()[entry->getDescIndex()].first == symbolID;
+  }
 
   /// Allocate a new property map with the specified capacity, copy the existing
   /// valid entries into it. If the specified capacity exceeds the maximum
@@ -463,15 +553,11 @@ inline DictPropertyMap::DescriptorPair *DictPropertyMap::getDescriptorPair(
       pos.hashPairIndex < self->hashCapacity_ && "property pos out of range");
 
   auto *hashPair = self->getHashPairs() + pos.hashPairIndex;
-  assert(hashPair->first.isValid() && "accessing invalid property");
-
-  auto descIndex = hashPair->second;
+  auto descIndex = hashPair->getDescIndex();
   assert(descIndex < self->numDescriptors_ && "descriptor index out of range");
 
   auto *res = self->getDescriptorPairs() + descIndex;
-  assert(
-      res->first == hashPair->first && "accessing incorrect descriptor pair");
-
+  assert(hashPair->mayBe(res->first) && "accessing incorrect descriptor pair");
   return res;
 }
 

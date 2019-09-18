@@ -42,6 +42,10 @@ struct DictPropertyMap::detail {
   static_assert(
       kMaxCapacity < (1u << 31),
       "kMaxCapacity is unrealistically large");
+
+  static_assert(
+      DictPropertyMap::HashPair::canStore(kMaxCapacity),
+      "too few bits to store max possible descriptor index");
 };
 
 VTable DictPropertyMap::vt{CellKind::DictPropertyMapKind, 0};
@@ -153,19 +157,21 @@ std::pair<bool, DictPropertyMap::HashPair *> DictPropertyMap::lookupEntryFor(
   for (;;) {
     HashPair *curEntry = tableStart + index;
 
-    // Did we find it?
-    if (curEntry->first == symbolID)
-      return {true, curEntry};
+    if (curEntry->isValid()) {
+      if (self->isMatch(curEntry, symbolID))
+        return {true, curEntry};
+    } else if (curEntry->isEmpty()) {
+      // If we encountered an empty pair, the search is over - we failed.
+      // Return either this entry or a deleted one, if we encountered one.
 
-    // If we encountered an empty pair, the search is over - we failed.
-    // Return either this entry or a deleted one, if we encountered one.
-    if (curEntry->first == SymbolID::empty())
       return {false, deleted ? deleted : curEntry};
-
-    // The first time we encounter a deleted entry, record it so we can
-    // potentially reuse it for insertion.
-    if (curEntry->first == SymbolID::deleted() && !deleted)
-      deleted = curEntry;
+    } else {
+      assert(curEntry->isDeleted() && "unexpected HashPair state");
+      // The first time we encounter a deleted entry, record it so we can
+      // potentially reuse it for insertion.
+      if (!deleted)
+        deleted = curEntry;
+    }
 
     ++NumExtraHashProbes;
     index = (index + step) & mask;
@@ -202,8 +208,7 @@ ExecutionStatus DictPropertyMap::grow(
 
     auto result = lookupEntryFor(newSelf, key);
     assert(!result.first && "found duplicate entry while growing");
-    result.second->first = key;
-    result.second->second = count;
+    result.second->setDescIndex(count, key);
 
     ++dst;
     ++count;
@@ -252,7 +257,8 @@ DictPropertyMap::findOrAdd(
   auto found = lookupEntryFor(self, id);
   if (found.first) {
     return std::make_pair(
-        &self->getDescriptorPairs()[found.second->second].second, false);
+        &self->getDescriptorPairs()[found.second->getDescIndex()].second,
+        false);
   }
 
   // We want to grow the hash table if the number of occupied hash entries
@@ -291,11 +297,10 @@ DictPropertyMap::findOrAdd(
   }
 
   ++self->numProperties_;
-  if (found.second->first == SymbolID::deleted())
+  if (found.second->isDeleted())
     self->decDeletedHashCount();
 
-  found.second->first = id;
-  found.second->second = self->numDescriptors_;
+  found.second->setDescIndex(self->numDescriptors_, id);
 
   auto *descPair = self->getDescriptorPairs() + self->numDescriptors_;
 
@@ -307,9 +312,7 @@ DictPropertyMap::findOrAdd(
 
 void DictPropertyMap::erase(DictPropertyMap *self, PropertyPos pos) {
   auto *hashPair = self->getHashPairs() + pos.hashPairIndex;
-  assert(hashPair->first.isValid() && "erasing invalid property");
-
-  auto descIndex = hashPair->second;
+  auto descIndex = hashPair->getDescIndex();
   assert(descIndex < self->numDescriptors_ && "descriptor index out of range");
 
   auto *descPair = self->getDescriptorPairs() + descIndex;
@@ -317,7 +320,7 @@ void DictPropertyMap::erase(DictPropertyMap *self, PropertyPos pos) {
       descPair->first != SymbolID::empty() &&
       "accessing deleted descriptor pair");
 
-  hashPair->first = SymbolID::deleted();
+  hashPair->setDeleted();
   descPair->first = SymbolID::deleted();
   // Add the descriptor to the deleted list.
   setNextDeletedIndex(descPair, self->deletedListHead_);
@@ -357,7 +360,14 @@ void DictPropertyMap::dump() {
   OS << "  HashPairs[" << hashCapacity_ << "]:\n";
   for (unsigned i = 0; i < hashCapacity_; ++i) {
     auto *pair = getHashPairs() + i;
-    OS << "    (" << pair->first << ", " << pair->second << ")\n";
+    if (pair->isValid()) {
+      OS << "    " << pair->getDescIndex() << "\n";
+    } else if (pair->isEmpty()) {
+      OS << "    (empty)\n";
+    } else {
+      assert(pair->isDeleted());
+      OS << "    (deleted)\n";
+    }
   }
   OS << "  Descriptors[" << descriptorCapacity_ << "]:\n";
   for (unsigned i = 0; i < descriptorCapacity_; ++i) {
