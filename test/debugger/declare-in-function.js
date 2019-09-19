@@ -19,7 +19,7 @@ print("prop =", this.prop);
 print("end")
 
 //CHECK:start
-//CHECK-NEXT:Break on 'debugger' statement in foo: {{.*}}declare-in-function.js[1]:12:3
+//CHECK-NEXT:Break on 'debugger' statement in foo: {{.*}}declare-in-function.js[2]:12:3
 //CHECK-NEXT:10
 //CHECK-NEXT:11
 //CHECK-NEXT:undefined

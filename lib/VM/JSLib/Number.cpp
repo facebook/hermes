@@ -116,13 +116,6 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
   setNumberValueProperty(
       Predefined::getSymbolID(Predefined::EPSILON),
       std::numeric_limits<double>::epsilon());
-  // ES6.0 20.1.2.6
-  constexpr double kMaxSafeInteger = 9007199254740991;
-  setNumberValueProperty(
-      Predefined::getSymbolID(Predefined::MAX_SAFE_INTEGER), kMaxSafeInteger);
-  // ES6.0 20.1.2.8
-  setNumberValueProperty(
-      Predefined::getSymbolID(Predefined::MIN_SAFE_INTEGER), -kMaxSafeInteger);
 
   defineMethod(
       runtime,
@@ -162,7 +155,6 @@ Handle<JSObject> createNumberConstructor(Runtime *runtime) {
       cons,
       Predefined::getSymbolID(Predefined::parseFloat),
       Handle<>(&runtime->parseFloatFunction));
-
   return cons;
 }
 
