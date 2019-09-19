@@ -417,15 +417,30 @@ STR(squareSymbolSplit, "[Symbol.split]")
   STR(squareObject_##name, "[object " jsClassName "]")
 #include "hermes/VM/CellKinds.def"
 
-#ifdef HERMES_RESERVED_STRINGS_FILE
-#define STR_TOKEN(s) #s
-#define STR_MACRO(s) STR_TOKEN(s)
-
-#define RESERVED(name, str) STR(name, str)
-#include STR_MACRO(HERMES_RESERVED_STRINGS_FILE)
-
-#undef STR_TOKEN
-#undef STR_MACRO
-#endif
+// These strings are the same ones that RN adds to the Runtime before
+// executing bytecode. They are added here because it may provide
+// a performance benefit.
+STR(__rnReserved00, "nativePerformanceNow")
+STR(__rnReserved01, "nativeLoggingHook")
+STR(__rnReserved02, "nativeQPLMarkerPoint")
+STR(__rnReserved03, "jsEngine")
+STR(__rnReserved04, "nativeCallSyncHook")
+STR(__rnReserved05, "nativeFlushQueueImmediate")
+STR(__rnReserved06, "nativeTraceBeginSection")
+STR(__rnReserved07, "nativeTraceEndSection")
+STR(__rnReserved08, "nativeTraceBeginAsyncSection")
+STR(__rnReserved09, "nativeTraceEndAsyncSection")
+STR(__rnReserved10, "nativeTraceCounter")
+STR(__rnReserved11, "nativeModuleProxy")
+STR(__rnReserved12, "nativeGetThreadCpuTimeMillis")
+STR(__rnReserved13, "nativeQPLTimestamp")
+STR(__rnReserved14, "nativeQPLMarkerStart")
+STR(__rnReserved15, "nativeQPLMarkerEnd")
+STR(__rnReserved16, "nativeQPLMarkerNote")
+STR(__rnReserved17, "nativeQPLMarkerTag")
+STR(__rnReserved18, "nativeQPLMarkerAnnotate")
+STR(__rnReserved19, "nativeQPLMarkerCancel")
+STR(__rnReserved20, "nativeGetThreadMajorPageFaults")
+STR(__rnReserved21, "__jsiExecutorDescription")
 
 #undef STR

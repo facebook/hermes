@@ -30,20 +30,7 @@ TEST(PredefinedStringsTest, UpdateBytecodeVersion) {
 #include "hermes/VM/PredefinedStrings.def"
   };
 
-  static constexpr uint32_t NumReservedStrings = 0
-#ifdef HERMES_RESERVED_STRINGS_FILE
-#define STR_TOKEN(s) #s
-#define STR_MACRO(s) STR_TOKEN(s)
-
-#define RESERVED(name, str) +1
-#include STR_MACRO(HERMES_RESERVED_STRINGS_FILE)
-
-#undef STR_TOKEN
-#undef STR_MACRO
-#endif
-      ;
-
-  EXPECT_EQ(expected.size() + NumReservedStrings, actual.size())
+  EXPECT_EQ(expected.size(), actual.size())
       << updateBytecodeVersionMsg << "\n"
       << "Number of predefined strings differs.";
 
