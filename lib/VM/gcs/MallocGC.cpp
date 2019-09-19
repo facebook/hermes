@@ -351,6 +351,7 @@ void MallocGC::resetStats() {
   numLeafHiddenClasses_ = 0;
 #endif
   allocatedBytes_ = 0;
+  numFinalizedObjects_ = 0;
 }
 
 void MallocGC::getHeapInfo(HeapInfo &info) {

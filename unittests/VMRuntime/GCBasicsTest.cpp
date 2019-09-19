@@ -30,10 +30,11 @@ struct Dummy final : public GCCell {
   static const VTable vt;
 
   static Dummy *create(DummyRuntime &runtime) {
-    return new (runtime.alloc(sizeof(Dummy))) Dummy(&runtime.getHeap());
+    return new (runtime.allocWithFinalizer(sizeof(Dummy)))
+        Dummy(&runtime.getHeap());
   }
   static Dummy *createLongLived(DummyRuntime &runtime) {
-    return new (runtime.allocLongLived(sizeof(Dummy)))
+    return new (runtime.allocLongLived<HasFinalizer::Yes>(sizeof(Dummy)))
         Dummy(&runtime.getHeap());
   }
   static bool classof(const GCCell *cell) {
@@ -47,11 +48,13 @@ size_t getExtraSize(GCCell *) {
   return 1;
 }
 
-/// A virtual table without a finalizer or weak ref marker, with extra storage
-/// space.
+void finalize(GCCell *, GC *) {}
+
+/// A virtual table with extra storage space, hence also a (dummy) finalizer,
+/// but no weak ref marker.
 const VTable Dummy::vt{CellKind::UninitializedKind,
                        sizeof(Dummy),
-                       nullptr,
+                       finalize,
                        nullptr,
                        getExtraSize};
 
@@ -136,7 +139,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(0u, debugInfo.numAllocatedObjects);
   ASSERT_EQ(0u, debugInfo.numReachableObjects);
   ASSERT_EQ(1u, debugInfo.numCollectedObjects);
-  ASSERT_EQ(0u, debugInfo.numFinalizedObjects);
+  ASSERT_EQ(1u, debugInfo.numFinalizedObjects);
   ASSERT_EQ(2u, info.numCollections);
   ASSERT_EQ(0u, info.allocatedBytes);
 
@@ -148,7 +151,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(2u, debugInfo.numAllocatedObjects);
   ASSERT_EQ(0u, debugInfo.numReachableObjects);
   ASSERT_EQ(1u, debugInfo.numCollectedObjects);
-  ASSERT_EQ(0u, debugInfo.numFinalizedObjects);
+  ASSERT_EQ(1u, debugInfo.numFinalizedObjects);
   ASSERT_EQ(2u, info.numCollections);
   ASSERT_EQ(2 * sizeof(Dummy), info.allocatedBytes);
 
@@ -160,7 +163,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
   ASSERT_EQ(1u, debugInfo.numAllocatedObjects);
   ASSERT_EQ(1u, debugInfo.numReachableObjects);
   ASSERT_EQ(1u, debugInfo.numCollectedObjects);
-  ASSERT_EQ(0u, debugInfo.numFinalizedObjects);
+  ASSERT_EQ(1u, debugInfo.numFinalizedObjects);
   ASSERT_EQ(3u, info.numCollections);
   ASSERT_EQ(sizeof(Dummy), info.allocatedBytes);
 }
