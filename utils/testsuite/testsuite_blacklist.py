@@ -29,6 +29,13 @@ BLACK_LIST = [
     "test262/test/language/white-space/mongolian-vowel-separator.js",
     "test262/test/language/literals/regexp/mongolian-vowel-separator.js",
     "test262/test/language/literals/string/mongolian-vowel-separator.js",
+    "esprima/test_fixtures/ES6/identifier/estimated.js",
+    "esprima/test_fixtures/ES6/identifier/weierstrass.js",
+    "esprima/test_fixtures/ES6/identifier/invalid_function_await.module.js",
+    "esprima/test_fixtures/ES6/identifier/dakuten_handakuten.js",
+    "esprima/test_fixtures/ES6/identifier/weierstrass_weierstrass.js",
+    "esprima/test_fixtures/ES6/identifier/ethiopic_digits.js",
+    "esprima/test_fixtures/ES6/identifier/module_await.js",
     # R-value assignment detected at compile time.
     "mjsunit/serialize-embedded-error.js",
     "mjsunit/regress/regress-crbug-412208.js",
@@ -1321,10 +1328,28 @@ BLACK_LIST = [
     "mjsunit/verify-check-false.js",
     ### Unsupported Esprima tests ###
     ## select ES6 features ##
-    # TODO: de-blacklist the ES6 tests after we have parser support
-    "esprima/test_fixtures/ES6/",
-    # template literal
-    "esprima/test_fixtures/statement/return/multiline_template.js",
+    "esprima/test_fixtures/ES6/octal-integer-literal/",
+    "esprima/test_fixtures/ES6/binary-integer-literal/",
+    # ESPrima incorrect handling of \r\n TRV.
+    "esprima/test_fixtures/ES6/template-literals/line-terminators.source.js",
+    "esprima/test_fixtures/ES6/template-literals/escape-sequences.source.js",
+    "esprima/test_fixtures/ES6/template-literals/literal-escape-sequences.source.js",
+    # ESPrima incorrect handling of let early errors.
+    "esprima/test_fixtures/ES6/binding-pattern/array-pattern/for-let-let.js",
+    "esprima/test_fixtures/ES6/binding-pattern/object-pattern/for-let-let.js",
+    # ESPrima incorrect handling illegal yield.
+    "esprima/test_fixtures/ES6/yield/yield-generator-default-parameter.js",
+    "esprima/test_fixtures/ES6/yield/yield-generator-arrow-default.js",
+    "esprima/test_fixtures/ES6/yield/invalid-yield-object-property-getter.js",
+    "esprima/test_fixtures/ES6/yield/invalid-yield-object-property-setter.js",
+    # ESPrima incorrect handling of exporting reserved words.
+    "esprima/test_fixtures/ES6/export-declaration/export-named-keyword-specifier.js",
+    "esprima/test_fixtures/ES6/export-declaration/export-named-keyword-as-specifier.js",
+    # ESPrima incorrect handling of invalid class properties.
+    "esprima/test_fixtures/ES6/class/migrated_0021.js",
+    # "use strict" inside a function must apply to the name
+    "esprima/test_fixtures/ES6/yield/invalid-yield-strict-function-expression.js",
+    "esprima/test_fixtures/ES6/yield/invalid-yield-strict-function-declaration.js",
     # array pattern
     "esprima/test_fixtures/statement/iteration/pattern-in-for-in.js",
     # let and const
@@ -1378,6 +1403,7 @@ BLACK_LIST = [
     "esprima/test_fixtures/invalid-syntax/migrated_0187.js",
     "esprima/test_fixtures/invalid-syntax/migrated_0222.js",
     "esprima/test_fixtures/expression/primary/keyword/invalid-escaped-true.js",
+    "esprima/test_fixtures/expression/primary/keyword/invalid-escaped-null.js",
     "esprima/test_fixtures/declaration/function/invalid-strict-labelled-function-declaration.js",
     "esprima/test_fixtures/invalid-syntax/migrated_0043.source.js",
     "esprima/test_fixtures/invalid-syntax/migrated_0044.source.js",
