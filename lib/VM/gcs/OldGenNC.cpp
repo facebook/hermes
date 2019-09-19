@@ -91,6 +91,10 @@ OldGen::OldGen(GenGC *gc, Size sz, bool releaseUnused)
   // Record the initial level, as if we had done a GC before starting.
   didFinishGC();
   updateCardTableBoundary();
+#ifdef HERMES_EXTRA_DEBUG
+  // Protect the initial active segment.
+  protectActiveSegCardTableBoundaries();
+#endif
 }
 
 size_t OldGen::available() const {
@@ -635,6 +639,7 @@ void OldGen::updateCardTablesAfterCompaction(bool youngIsEmpty) {
 }
 
 void OldGen::recreateCardTableBoundaries() {
+  assert(!gc_->allocContext_.activeSegment);
 #ifdef HERMES_EXTRA_DEBUG
   unprotectCardTableBoundaries();
 #endif
@@ -711,6 +716,11 @@ bool OldGen::materializeNextSegment() {
   // The active segment has changed, so we need to update the next card table
   // boundary to align with the start of its allocation region.
   updateCardTableBoundary();
+#ifdef HERMES_EXTRA_DEBUG
+  if (!gc_->inGC()) {
+    protectActiveSegCardTableBoundaries();
+  }
+#endif
   usedInFilledSegments_ += usedInFilledSeg;
   filledSegSlot->clearExternalMemoryCharge();
 
@@ -801,6 +811,11 @@ AllocResult OldGen::allocRawSlow(uint32_t size, HasFinalizer hasFinalizer) {
 }
 
 void OldGen::updateBoundariesAfterAlloc(char *alloc, char *nextAlloc) {
+  // If we're allocating directly in the OG, we don't need to update the
+  // boundaries.
+  if (!gc_->allocContextFromYG_)
+    return;
+
 #ifdef HERMES_EXTRA_DEBUG
   // The allocation may update the boundary table of the old gen's
   // active segment, so unprotect it (and reprotect below).
@@ -837,31 +852,45 @@ void OldGen::checkWellFormed(const GC *gc) const {
 /// For all of these, we're commenting out the bodies until we can figure
 /// out the crashes that the extra diasnostic code seems to have caused.
 void OldGen::protectCardTableBoundaries() {
-#if 0
-  forUsedSegments([](AlignedHeapSegment &segment) {
-    segment.cardTable().protectBoundaryTable();
-  });
-#endif
+  if (gc_->doMetadataProtection_) {
+    forUsedSegments([this](AlignedHeapSegment &segment) {
+      segment.cardTable().protectBoundaryTable();
+      auto res = protectedCardTables_.insert(&segment.cardTable());
+      (void)res;
+      assert(res.second);
+    });
+  }
 }
 
 void OldGen::unprotectCardTableBoundaries() {
-#if 0
-  forUsedSegments([](AlignedHeapSegment &segment) {
-    segment.cardTable().unprotectBoundaryTable();
-  });
-#endif
+  if (gc_->doMetadataProtection_) {
+    forUsedSegments([this](AlignedHeapSegment &segment) {
+      assert(
+          protectedCardTables_.find(&segment.cardTable()) !=
+          protectedCardTables_.end());
+      segment.cardTable().unprotectBoundaryTable();
+      protectedCardTables_.erase(&segment.cardTable());
+    });
+  }
 }
 
 void OldGen::protectActiveSegCardTableBoundaries() {
-#if 0
-  activeSegment().cardTable().protectBoundaryTable();
-#endif
+  if (gc_->doMetadataProtection_) {
+    activeSegment().cardTable().protectBoundaryTable();
+    auto res = protectedCardTables_.insert(&activeSegment().cardTable());
+    (void)res;
+    assert(res.second);
+  }
 }
 
 void OldGen::unprotectActiveSegCardTableBoundaries() {
-#if 0
-  activeSegment().cardTable().unprotectBoundaryTable();
-#endif
+  if (gc_->doMetadataProtection_) {
+    assert(
+        protectedCardTables_.find(&activeSegment().cardTable()) !=
+        protectedCardTables_.end());
+    activeSegment().cardTable().unprotectBoundaryTable();
+    protectedCardTables_.erase(&activeSegment().cardTable());
+  }
 }
 #endif
 

@@ -764,6 +764,15 @@ class GenGC final : public GCBase {
   /// The sizes of each generation.
   Size generationSizes_;
 
+#ifdef HERMES_EXTRA_DEBUG
+  /// Whether we should do metadata protection -- mprotect GC data
+  /// structures when not in use (e.g., between GCs), in order to
+  /// detect corrupting writes.  (Note: must declare/define before
+  /// youngGen_/oldGen_, because may be accessed in the ctors of the
+  /// generations.)
+  bool doMetadataProtection_;
+#endif
+
   /// The generations that make up the heap.
   /// Note: these must be declared and initialized in this order; the OldGen's
   /// max size is calculated based on the YoungGen's max size.

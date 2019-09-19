@@ -7,8 +7,12 @@
 #ifndef HERMES_VM_MARKBITARRAYNC_H
 #define HERMES_VM_MARKBITARRAYNC_H
 
+#include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedStorage.h"
+#include "hermes/VM/ExpectedPageSize.h"
 #include "hermes/VM/HeapAlign.h"
+
+#include "llvm/Support/MathExtras.h"
 
 namespace hermes {
 namespace vm {
@@ -94,9 +98,12 @@ class MarkBitArrayNC {
   static constexpr size_t kValidIndices =
       AlignedStorage::size() >> LogHeapAlign;
 
-  /// Number of elements in the bit array (values, not bits).
-  static constexpr size_t kBitArraySize =
-      ((kValidIndices - 1) >> kLogBitsPerVal) + 1;
+  /// Number of elements in the bit array (values, not bits).  Round up to the
+  /// platform-specific maximum page size.
+  static constexpr size_t kValsPerMaxPage =
+      pagesize::kExpectedPageSize / sizeof(size_t);
+  static constexpr size_t kBitArraySize = llvm::alignTo<kValsPerMaxPage>(
+      ((kValidIndices - 1) >> kLogBitsPerVal) + 1);
 
   /// The inline array holding the contents of the mark bit array.
   size_t bitArray_[kBitArraySize]{};

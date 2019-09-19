@@ -39,7 +39,7 @@ void set_test_page_size(size_t pageSz);
 void reset_test_page_size();
 #endif // !NDEBUG
 
-// Returns the current page size.
+/// Returns the current page size.
 size_t page_size();
 
 #ifndef NDEBUG

@@ -8,9 +8,13 @@
 #define HERMES_VM_CARDTABLE_H
 
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/AlignedStorage.h"
+#include "hermes/VM/ExpectedPageSize.h"
 #include "hermes/VM/GCCell.h"
+
+#include "llvm/Support/MathExtras.h"
 
 #include <cassert>
 
@@ -61,6 +65,10 @@ class CardTable {
   /// The number of valid indices into the card table.
   static constexpr size_t kValidIndices =
       AlignedStorage::size() >> kLogCardSize;
+
+  /// The size of the card table: round up to the maximum page size.
+  static constexpr size_t kCardTableSize =
+      llvm::alignTo<pagesize::kExpectedPageSize>(kValidIndices);
 
   CardTable() = default;
 
@@ -222,7 +230,7 @@ class CardTable {
 
   void cleanOrDirtyRange(size_t from, size_t to, CardStatus cleanOrDirty);
 
-  CardStatus cards_[kValidIndices]{};
+  CardStatus cards_[kCardTableSize]{};
 
   /// Each card has a corresponding signed byte in the boundaries_ table.  A
   /// non-negative entry, K, indicates that the crossing object starts K *
@@ -234,7 +242,7 @@ class CardTable {
   /// time:  If we allocate a large object that crosses many cards, the first
   /// crossed cards gets a non-negative value, and each subsequent one uses the
   /// maximum exponent that stays within the card range for the object.
-  int8_t boundaries_[kValidIndices];
+  int8_t boundaries_[kCardTableSize];
 };
 
 /// Implementations of inlines.

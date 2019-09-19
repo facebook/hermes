@@ -21,6 +21,7 @@
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/YoungGenNC.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/iterator_range.h"
 
 #include <cstddef>
@@ -424,6 +425,13 @@ class OldGen : public GCGeneration {
 
   /// Whether to return unused memory to OS.
   bool releaseUnused_;
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// The set of addresses of card tables whose boundary tables have been
+  /// protected.
+  /// TODO(T48709128): remove this when the problem is diagnosed.
+  llvm::DenseSet<void *> protectedCardTables_;
+#endif
 };
 
 size_t OldGen::Size::maxSegments() const {
@@ -461,7 +469,7 @@ AllocResult OldGen::allocRaw(uint32_t size, HasFinalizer hasFinalizer) {
     updateBoundariesAfterAlloc(resPtr, nextAllocPtr);
   }
 
-  return {result.ptr, true};
+  return {resPtr, true};
 }
 
 size_t OldGen::used() const {

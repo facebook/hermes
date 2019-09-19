@@ -19,6 +19,7 @@
 #include "hermes/VM/CompactionResult-inline.h"
 #include "hermes/VM/CompleteMarkState-inline.h"
 #include "hermes/VM/Deserializer.h"
+#include "hermes/VM/ExpectedPageSize.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HeapSnapshot.h"
@@ -92,6 +93,11 @@ GenGC::GenGC(
           provider),
       storageProvider_(provider),
       generationSizes_(Size(gcConfig)),
+      // OSCompat.h defines a static value for the expected page size,
+      // which we use in sizing and aligning the metadata components
+      // of segments. Only do memory protection of those components if
+      // the expected value is accurate wrt the dynamic actual value.
+      doMetadataProtection_(pagesize::expectedPageSizeIsSafe()),
       youngGen_(this, generationSizes_.youngGenSize(), &oldGen_),
       oldGen_(
           this,
@@ -273,18 +279,18 @@ void GenGC::collect(bool canEffectiveOOM) {
   if (canEffectiveOOM && ++consecFullGCs_ >= oomThreshold_)
     oom(make_error_code(OOMError::Effective));
 
-#ifdef HERMES_EXTRA_DEBUG
-  /// Unprotect the card table boundary table, so we can updated it.
-  /// TODO(T48709128): remove these when the problem is diagnosed.
-  oldGen_.unprotectCardTableBoundaries();
-#endif
-
   /// Yield, then reclaim, the allocation context.  (This is a noop
   /// if the context has already been yielded.)
   AllocContextYieldThenClaim yielder(this);
 
   // Make sure the AllocContext been yielded back to its owner.
   assert(!allocContext_.activeSegment);
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// Unprotect the card table boundary table, so we can update it.
+  /// TODO(T48709128): remove these when the problem is diagnosed.
+  oldGen_.unprotectCardTableBoundaries();
+#endif
 
   const size_t usedBefore = used();
   const size_t sizeBefore = size();
