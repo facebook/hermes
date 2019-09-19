@@ -20,7 +20,12 @@ namespace vm {
 // class JSError
 
 ObjectVTable JSError::vt{
-    VTable(CellKind::ErrorKind, sizeof(JSError), JSError::_finalizeImpl),
+    VTable(
+        CellKind::ErrorKind,
+        sizeof(JSError),
+        JSError::_finalizeImpl,
+        nullptr,
+        JSError::_mallocSizeImpl),
     JSError::_getOwnIndexedRangeImpl,
     JSError::_haveOwnIndexedImpl,
     JSError::_getOwnIndexedPropertyFlagsImpl,
@@ -624,6 +629,14 @@ ExecutionStatus JSError::constructStackTraceString(
 void JSError::_finalizeImpl(GCCell *cell, GC *) {
   JSError *self = vmcast<JSError>(cell);
   self->~JSError();
+}
+
+size_t JSError::_mallocSizeImpl(GCCell *cell) {
+  JSError *self = vmcast<JSError>(cell);
+  auto stacktrace = self->stacktrace_.get();
+  return stacktrace ? sizeof(StackTrace) +
+          stacktrace->capacity() * sizeof(StackTrace::value_type)
+                    : 0;
 }
 
 } // namespace vm

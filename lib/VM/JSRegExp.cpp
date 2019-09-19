@@ -30,7 +30,7 @@ ObjectVTable JSRegExp::vt{
         sizeof(JSRegExp),
         JSRegExp::_finalizeImpl,
         nullptr,
-        nullptr,
+        JSRegExp::_mallocSizeImpl,
         nullptr,
         nullptr,
         VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Regexp,
@@ -312,6 +312,11 @@ CallResult<RegExpMatch> JSRegExp::search(
 void JSRegExp::_finalizeImpl(GCCell *cell, GC *) {
   JSRegExp *self = vmcast<JSRegExp>(cell);
   self->~JSRegExp();
+}
+
+size_t JSRegExp::_mallocSizeImpl(GCCell *cell) {
+  auto *self = vmcast<JSRegExp>(cell);
+  return self->bytecode_.capacity_in_bytes();
 }
 
 std::string JSRegExp::_snapshotNameImpl(GCCell *cell, GC *gc) {

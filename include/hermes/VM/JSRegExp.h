@@ -122,6 +122,7 @@ class JSRegExp final : public JSObject {
 
   // Finalizer to clean up stored native regex
   static void _finalizeImpl(GCCell *cell, GC *gc);
+  static size_t _mallocSizeImpl(GCCell *cell);
 
   static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
   static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);

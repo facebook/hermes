@@ -128,6 +128,7 @@ class JSError final : public JSObject {
 
   friend void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   static void _finalizeImpl(GCCell *cell, GC *gc);
+  static size_t _mallocSizeImpl(GCCell *cell);
 
   static CallResult<HermesValue>
   create(Runtime *runtime, Handle<JSObject> prototype, bool catchable);
