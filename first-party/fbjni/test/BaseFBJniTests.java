@@ -2,7 +2,8 @@
 
 package com.facebook.jni;
 
-import com.facebook.soloader.SoLoader;
+import com.facebook.soloader.nativeloader.NativeLoader;
+import com.facebook.soloader.nativeloader.SystemDelegate;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
@@ -12,8 +13,11 @@ public class BaseFBJniTests {
 
   @BeforeClass
   public static void setup() {
+    if (!NativeLoader.isInitialized()) {
+      NativeLoader.init(new SystemDelegate());
+    }
     // Explicitly load fbjni to ensure that its JNI_OnLoad is run.
-    SoLoader.loadLibrary("fbjni");
-    SoLoader.loadLibrary("fbjni-tests");
+    NativeLoader.loadLibrary("fbjni");
+    NativeLoader.loadLibrary("fbjni-tests");
   }
 }

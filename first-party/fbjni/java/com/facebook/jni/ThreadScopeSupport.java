@@ -14,12 +14,12 @@
 package com.facebook.jni;
 
 import com.facebook.jni.annotations.DoNotStrip;
-import com.facebook.soloader.SoLoader;
+import com.facebook.soloader.nativeloader.NativeLoader;
 
 @DoNotStrip
 public class ThreadScopeSupport {
   static {
-    SoLoader.loadLibrary("fbjni");
+    NativeLoader.loadLibrary("fbjni");
   }
 
   // This is just used for ThreadScope::withClassLoader to have a java function
