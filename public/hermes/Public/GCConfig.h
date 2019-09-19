@@ -101,6 +101,9 @@ _HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {});
   /* Whether to revert, if necessary, to young-gen allocation at TTI. */   \
   F(bool, RevertToYGAtTTI, false)                                          \
                                                                            \
+  /* Whether to use mprotect on GC metadata between GCs. */                \
+  F(bool, ProtectMetadata, true)                                           \
+                                                                           \
   /* Pointer to the memory profiler (Memory Event Tracker). */             \
   F(std::shared_ptr<MemoryEventTracker>, MemEventTracker, nullptr)         \
   /* GC_FIELDS END */

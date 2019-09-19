@@ -93,11 +93,12 @@ GenGC::GenGC(
           provider),
       storageProvider_(provider),
       generationSizes_(Size(gcConfig)),
-      // OSCompat.h defines a static value for the expected page size,
+      // ExpectedPageSize.h defines a static value for the expected page size,
       // which we use in sizing and aligning the metadata components
       // of segments. Only do memory protection of those components if
-      // the expected value is accurate wrt the dynamic actual value.
-      doMetadataProtection_(pagesize::expectedPageSizeIsSafe()),
+      // the expected value is accurate wrt the dynamic value.
+      doMetadataProtection_(
+          gcConfig.getProtectMetadata() && pagesize::expectedPageSizeIsSafe()),
       youngGen_(this, generationSizes_.youngGenSize(), &oldGen_),
       oldGen_(
           this,
