@@ -68,6 +68,19 @@ show(it.next());
 show(it.next());
 // CHECK-NEXT: undefined | true
 
+function *args() {
+  yield arguments[0];
+  yield arguments[1];
+}
+
+var it = args(184, 457);
+show(it.next());
+// CHECK-NEXT: 184 | false
+show(it.next());
+// CHECK-NEXT: 457 | false
+show(it.next());
+// CHECK-NEXT: undefined | true
+
 function* thrower(x, y) {
   try {
     print('in try');

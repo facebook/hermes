@@ -521,9 +521,18 @@ void Verifier::visitCreateArgumentsInst(const CreateArgumentsInst &Inst) {
   functionState->createArgumentsEncountered = true;
 
   BasicBlock *BB = Inst.getParent();
-  Assert(
-      BB == &*BB->getParent()->begin(),
-      "CreateArgumentsInst must be in the first basic block");
+  Function *F = BB->getParent();
+  if (isa<GeneratorInnerFunction>(F)) {
+    auto secondBB = F->begin();
+    ++secondBB;
+    Assert(
+        BB == &*secondBB,
+        "CreateArgumentsInst must be in the second basic block in generators");
+  } else {
+    Assert(
+        BB == &*F->begin(),
+        "CreateArgumentsInst must be in the first basic block");
+  }
 }
 
 void Verifier::visitCreateRegExpInst(CreateRegExpInst const &Inst) {

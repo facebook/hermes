@@ -376,10 +376,21 @@ bool LowerLoadStoreFrameInst::runOnFunction(Function *F) {
 }
 
 CreateArgumentsInst *LowerArgumentsArray::getCreateArgumentsInst(Function *F) {
-  // CreateArgumentsInst is always in the first block
-  for (auto &inst : F->front()) {
-    if (auto *target = dyn_cast<CreateArgumentsInst>(&inst)) {
-      return target;
+  // CreateArgumentsInst is always in the first block in normal functions,
+  // but is in the second block in GeneratorInnerFunctions.
+  if (isa<GeneratorInnerFunction>(F)) {
+    for (BasicBlock *succ : F->front().getTerminator()->successors()) {
+      for (auto &inst : *succ) {
+        if (auto *target = dyn_cast<CreateArgumentsInst>(&inst)) {
+          return target;
+        }
+      }
+    }
+  } else {
+    for (auto &inst : F->front()) {
+      if (auto *target = dyn_cast<CreateArgumentsInst>(&inst)) {
+        return target;
+      }
     }
   }
   return nullptr;
