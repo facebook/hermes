@@ -1077,9 +1077,13 @@ void GenGC::getHeapInfoWithMallocSize(HeapInfo &info) {
   // First add the usage by the runtime's roots.
   info.mallocSizeEstimate += gcCallbacks_->mallocSize();
 
-  // Then add the contributions from all segments.
-  for (auto *segment : segmentIndex_) {
-    info.mallocSizeEstimate += segment->countMallocSize();
+  {
+    /// Yield, then reclaim, the allocation context.  (This is a noop
+    /// if the context has already been yielded.)
+    AllocContextYieldThenClaim yielder(this);
+    // Add all usage from both generations of the heap.
+    info.mallocSizeEstimate += oldGen_.mallocSizeFromFinalizerList();
+    info.mallocSizeEstimate += youngGen_.mallocSizeFromFinalizerList();
   }
 
   // Assume that the vector implementation doesn't use a separate bool for each

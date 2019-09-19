@@ -287,10 +287,6 @@ class AlignedHeapSegment final {
   /// (indicated by incrementing *vTableBegin).
   void compact(SweepResult::VTablesRemaining &vTables);
 
-  /// \return the sum of all the malloc sizes reported by objects in this
-  ///     segment.
-  size_t countMallocSize() const;
-
   /// TODO (T25573911): the next two methods are usually debug-only; exposed
   /// in opt for temporary old-to-young pointer traversal.
 

@@ -296,6 +296,11 @@ class GCGeneration {
   /// external memory.
   uint64_t extSizeFromFinalizerList() const;
 
+  /// Assumes objects with associated malloc memory are on the generation's
+  /// finalizer list (GCCell asserts this). Iterates over that list, summing
+  /// and returning the malloc memory.
+  uint64_t mallocSizeFromFinalizerList() const;
+
   /// Returns a reference to the generation's allocation context.
   inline AllocContext &allocContext();
   inline const AllocContext &allocContext() const;

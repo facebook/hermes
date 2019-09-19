@@ -48,6 +48,14 @@ uint64_t GCGeneration::extSizeFromFinalizerList() const {
   return extSize;
 }
 
+uint64_t GCGeneration::mallocSizeFromFinalizerList() const {
+  uint64_t mallocSize = 0;
+  for (const auto cell : cellsWithFinalizers()) {
+    mallocSize += cell->getVT()->getMallocSize(cell);
+  }
+  return mallocSize;
+}
+
 #ifdef HERMES_SLOW_DEBUG
 void GCGeneration::checkFinalizableObjectsListWellFormed() const {
   for (GCCell *cell : cellsWithFinalizers()) {

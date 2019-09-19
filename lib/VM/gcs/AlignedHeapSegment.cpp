@@ -394,16 +394,6 @@ void AlignedHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
   }
 }
 
-size_t AlignedHeapSegment::countMallocSize() const {
-  size_t sum = 0;
-  for (char *ptr = start(); ptr < level();) {
-    GCCell *cell = reinterpret_cast<GCCell *>(ptr);
-    sum += cell->getVT()->getMallocSize(cell);
-    ptr += cell->getAllocatedSize();
-  }
-  return sum;
-}
-
 void AlignedHeapSegment::forObjsInRange(
     const std::function<void(GCCell *)> &callback,
     char *low,
