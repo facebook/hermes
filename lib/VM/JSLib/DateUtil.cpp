@@ -614,7 +614,7 @@ void dateString(double t, double, llvm::SmallVectorImpl<char> &buf) {
   // (SPACE), month, the code unit 0x0020 (SPACE), day, the code unit 0x0020
   // (SPACE), and year.
   // Example: Mon Jul 22 2019
-  os << llvm::format("%s %s %02d %04d", weekdayNames[wd], monthNames[m], d, y);
+  os << llvm::format("%s %s %02d %0.4d", weekdayNames[wd], monthNames[m], d, y);
 }
 
 void timeString(double t, double tza, llvm::SmallVectorImpl<char> &buf) {

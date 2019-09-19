@@ -63,7 +63,7 @@ print(new Date(2017, 2, 15, 15, 1, 37, 243).toString());
 print(new Date(123123, 2, 15, 15, 1, 37, 243).toString());
 // CHECK-NEXT: Thu Mar 15 123123 15:01:37 GMT-0700
 print(new Date(-1, 2, 15, 15, 1, 37, 243).toString());
-// CHECK-NEXT: Mon Mar 15 -001 15:01:37 GMT-0700
+// CHECK-NEXT: Mon Mar 15 -0001 15:01:37 GMT-0700
 print(new Date(NaN, 2, 15, 15, 1, 37, 243).toString());
 // CHECK-NEXT: Invalid Date
 print(new Date('2016T12:30').toString());
@@ -124,7 +124,7 @@ print(new Date(2017, 2, 15, 15, 1, 37, 243).toDateString());
 print(new Date(123123, 2, 15, 15, 1, 37, 243).toDateString());
 // CHECK-NEXT: Thu Mar 15 123123
 print(new Date(-1, 2, 15, 15, 1, 37, 243).toDateString());
-// CHECK-NEXT: Mon Mar 15 -001
+// CHECK-NEXT: Mon Mar 15 -0001
 
 print('toTimeString');
 // CHECK-LABEL: toTimeString
