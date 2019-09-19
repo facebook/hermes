@@ -195,14 +195,9 @@ Function *ESTreeIRGen::genES5Function(
       lazySource.nodeKind = getLazyFunctionKind(functionNode);
       lazySource.functionRange = functionNode->getSourceRange();
 
-      // Give the stub parameters so that we'll know the function's .length .
-      Builder.createParameter(newFunction, "this");
-      for (auto &param : ESTree::getParams(functionNode)) {
-        auto idenNode = cast<ESTree::IdentifierNode>(&param);
-        Identifier paramName = getNameFieldFromID(idenNode);
-        Builder.createParameter(newFunction, paramName);
-      }
-
+      // Set the function's .length.
+      newFunction->setExpectedParamCountIncludingThis(
+          countExpectedArgumentsIncludingThis(functionNode));
       return newFunction;
     }
   }
@@ -420,6 +415,23 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
     createLRef(param, true)
         .emitStore(emitOptionalInitialization(formalParam, init));
   }
+
+  newFunc->setExpectedParamCountIncludingThis(
+      countExpectedArgumentsIncludingThis(funcNode));
+}
+
+uint32_t ESTreeIRGen::countExpectedArgumentsIncludingThis(
+    ESTree::FunctionLikeNode *funcNode) {
+  // Start at 1 to account for "this".
+  uint32_t count = 1;
+  for (auto &param : ESTree::getParams(funcNode)) {
+    if (llvm::isa<ESTree::AssignmentPatternNode>(param)) {
+      // Found an initializer, stop counting expected arguments.
+      break;
+    }
+    ++count;
+  }
+  return count;
 }
 
 void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {

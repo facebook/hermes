@@ -667,6 +667,12 @@ class ESTreeIRGen {
   /// prologue.
   void emitParameters(ESTree::FunctionLikeNode *funcNode);
 
+  /// Count number of expected arguments, including "this".
+  /// Only parameters up to the first parameter with an initializer are counted.
+  /// See ES14.1.7 for details.
+  uint32_t countExpectedArgumentsIncludingThis(
+      ESTree::FunctionLikeNode *funcNode);
+
   /// Optionally emit a return value and perform cleanup after emission of the
   /// current function is finished. Specifically it attempts to merge the entry
   /// and the next block in order to create less "noise".

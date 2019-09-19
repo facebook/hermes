@@ -251,7 +251,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
         F->getDefinitionKind(),
         F->getKind(),
         F->isStrictMode(),
-        F->getParamCountIncludingThis(),
+        F->getExpectedParamCountIncludingThis(),
         F->getFunctionScope()->getVariables().size(),
         functionNameId);
 

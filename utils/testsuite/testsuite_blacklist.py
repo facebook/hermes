@@ -560,7 +560,6 @@ BLACK_LIST = [
     # trailing comma
     re.compile("test262/.*args-trailing-comma-.*.js"),
     "test262/test/language/expressions/function/dflt-params-trailing-comma.js",
-    "test262/test/language/statements/function/dflt-params-trailing-comma.js",
     # classes and methods
     "mjsunit/accessors-no-prototype.js",
     "mjsunit/array-functions-prototype-misc.js",

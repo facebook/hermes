@@ -1315,6 +1315,13 @@ class Function : public ilist_node_with_parent<Function, Module>, public Value {
 
   /// The "this" parameter.
   Parameter *thisParameter{};
+
+  /// The number of expected arguments, derived from the formal parameters given
+  /// in the function signature.
+  /// Only parameters up to the first parameter with an initializer are counted.
+  /// See ES14.1.7 for details.
+  uint32_t expectedParamCountIncludingThis_{0};
+
   /// The current statement count in this function.
   /// If statementCount_ > 0, it represents the current statement being
   /// generated.
@@ -1480,9 +1487,12 @@ class Function : public ilist_node_with_parent<Function, Module>, public Value {
     return Parameters;
   }
 
-  /// Return number of parameters including "this" parameter.
-  uint32_t getParamCountIncludingThis() const {
-    return Parameters.size() + 1;
+  void setExpectedParamCountIncludingThis(uint32_t count) {
+    expectedParamCountIncludingThis_ = count;
+  }
+
+  uint32_t getExpectedParamCountIncludingThis() const {
+    return expectedParamCountIncludingThis_;
   }
 
   void setThisParameter(Parameter *thisParam) {
