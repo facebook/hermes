@@ -1584,6 +1584,27 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
 }
 
 #ifdef HERMESVM_PROFILER_BB
+
+llvm::Optional<std::tuple<std::string, uint32_t, uint32_t>>
+Runtime::getIPSourceLocation(const CodeBlock *codeBlock, const Inst *ip) {
+  auto bytecodeOffs = codeBlock->getOffsetOf(ip);
+  auto blockSourceCode = codeBlock->getDebugSourceLocationsOffset();
+
+  if (!blockSourceCode) {
+    return llvm::None;
+  }
+  auto debugInfo = codeBlock->getRuntimeModule()->getBytecode()->getDebugInfo();
+  auto sourceLocation = debugInfo->getLocationForAddress(
+      blockSourceCode.getValue(), bytecodeOffs);
+  if (!sourceLocation) {
+    return llvm::None;
+  }
+  auto filename = debugInfo->getFilenameByID(sourceLocation->filenameId);
+  auto line = sourceLocation->line;
+  auto col = sourceLocation->column;
+  return std::make_tuple(filename, line, col);
+}
+
 void Runtime::preventHCGC(HiddenClass *hc) {
   auto &classIdToIdxMap = inlineCacheProfiler_.getClassIdtoIndexMap();
   auto &hcIdx = inlineCacheProfiler_.getHiddenClassArrayIndex();
@@ -1603,24 +1624,37 @@ void Runtime::recordHiddenClass(
     HiddenClass *objectHiddenClass,
     HiddenClass *cachedHiddenClass) {
   auto offset = codeBlock->getOffsetOf(cacheMissInst);
-  ClassId noId =
-      static_cast<ClassId>(GCBase::IDTracker::ReservedObjectID::NoID);
-  ClassId objectHiddenClassId = noId;
-  ClassId cachedHiddenClassId = noId;
-  if (objectHiddenClass) {
-    preventHCGC(objectHiddenClass);
-    objectHiddenClassId = heap_.getObjectID(objectHiddenClass);
+
+  // inline caching hit
+  if (objectHiddenClass == cachedHiddenClass) {
+    inlineCacheProfiler_.insertICHit(codeBlock, offset);
+    return;
   }
-  if (cachedHiddenClass) {
+
+  // inline caching miss
+  assert(objectHiddenClass != nullptr && "object hidden class should exist");
+  // prevent object hidden class from being GC-ed
+  preventHCGC(objectHiddenClass);
+  ClassId objectHiddenClassId = heap_.getObjectID(objectHiddenClass);
+  // prevent cached hidden class from being GC-ed
+  ClassId cachedHiddenClassId =
+      static_cast<ClassId>(GCBase::IDTracker::ReservedObjectID::NoID);
+  if (cachedHiddenClass != nullptr) {
     preventHCGC(cachedHiddenClass);
     cachedHiddenClassId = heap_.getObjectID(cachedHiddenClass);
   }
+  // add the record to inline caching profiler
   inlineCacheProfiler_.insertICMiss(
       codeBlock, offset, symbolID, objectHiddenClassId, cachedHiddenClassId);
 }
 
+void Runtime::getInlineCacheProfilerInfo(llvm::raw_ostream &ostream) {
+  inlineCacheProfiler_.dumpRankedInlineCachingMisses(this, ostream);
+}
+
 HiddenClass *Runtime::resolveHiddenClassId(ClassId classId) {
-  if (classId == 0) {
+  if (classId ==
+      static_cast<ClassId>(GCBase::IDTracker::ReservedObjectID::NoID)) {
     return nullptr;
   }
   auto &classIdToIdxMap = inlineCacheProfiler_.getClassIdtoIndexMap();

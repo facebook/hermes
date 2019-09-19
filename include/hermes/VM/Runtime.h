@@ -736,6 +736,11 @@ class Runtime : public HandleRootOwner,
 #ifdef HERMESVM_PROFILER_BB
   using ClassId = InlineCacheProfiler::ClassId;
 
+  /// Get filename, line number, and column number from
+  /// code block and instruction pointer. It returns true if it succeeds.
+  llvm::Optional<std::tuple<std::string, uint32_t, uint32_t>>
+  getIPSourceLocation(const CodeBlock *codeBlock, const Inst *ip);
+
   /// Inserts the Hidden class as a root to prevent it from being garbage
   /// collected.
   void preventHCGC(HiddenClass *hc);
@@ -750,6 +755,9 @@ class Runtime : public HandleRootOwner,
 
   /// Resolve HiddenClass pointers from its hidden class Id.
   HiddenClass *resolveHiddenClassId(ClassId classId);
+
+  /// Dumps inline cache profiler info.
+  void getInlineCacheProfilerInfo(llvm::raw_ostream &ostream);
 #endif
 
  protected:
@@ -788,9 +796,13 @@ class Runtime : public HandleRootOwner,
   void visitIdentifiers(
       const std::function<void(UTF16Ref, uint32_t id)> &acceptor) override;
 
+#ifdef HERMESVM_PROFILER_BB
+ public:
+#endif
   /// Convert the given symbol into its UTF-8 string representation.
   std::string convertSymbolToUTF8(SymbolID id) override;
 
+ private:
   /// Prints any statistics maintained in the Runtime about GC to \p
   /// os.  At present, this means the breakdown of markRoots time by
   /// "phase" within markRoots.

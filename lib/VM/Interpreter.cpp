@@ -2160,6 +2160,14 @@ tailCall:
         auto cacheIdx = ip->iGetById.op3;
         auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
 
+#ifdef HERMESVM_PROFILER_BB
+        HERMES_SLOW_ASSERT(
+            gcScope.getHandleCountDbg() == KEEP_HANDLES &&
+            "unaccounted handles were created");
+        runtime->recordHiddenClass(
+            curCodeBlock, ip, ID(idVal), clazz, cacheEntry->clazz);
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+#endif
         // If we have a cache hit, reuse the cached offset and immediately
         // return the property.
         if (LLVM_LIKELY(cacheEntry->clazz == clazz)) {
@@ -2171,13 +2179,6 @@ tailCall:
           DISPATCH;
         }
         auto id = ID(idVal);
-#ifdef HERMESVM_PROFILER_BB
-        if (LLVM_LIKELY(cacheEntry->clazz && cacheEntry->clazz != clazz)) {
-          runtime->recordHiddenClass(
-              curCodeBlock, ip, id, clazz, cacheEntry->clazz);
-          gcScope.flushToSmallCount(KEEP_HANDLES);
-        }
-#endif
         NamedPropertyDescriptor desc;
         OptValue<bool> fastPathResult =
             JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
@@ -2301,6 +2302,14 @@ tailCall:
         auto cacheIdx = ip->iPutById.op3;
         auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
 
+#ifdef HERMESVM_PROFILER_BB
+        HERMES_SLOW_ASSERT(
+            gcScope.getHandleCountDbg() == KEEP_HANDLES &&
+            "unaccounted handles were created");
+        runtime->recordHiddenClass(
+            curCodeBlock, ip, ID(idVal), clazz, cacheEntry->clazz);
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+#endif
         // If we have a cache hit, reuse the cached offset and immediately
         // return the property.
         if (LLVM_LIKELY(cacheEntry->clazz == clazz)) {
@@ -2311,14 +2320,6 @@ tailCall:
           DISPATCH;
         }
         auto id = ID(idVal);
-
-#ifdef HERMESVM_PROFILER_BB
-        if (LLVM_LIKELY(cacheEntry->clazz && cacheEntry->clazz != clazz)) {
-          runtime->recordHiddenClass(
-              curCodeBlock, ip, id, clazz, cacheEntry->clazz);
-          gcScope.flushToSmallCount(KEEP_HANDLES);
-        }
-#endif
         NamedPropertyDescriptor desc;
         OptValue<bool> hasOwnProp =
             JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
