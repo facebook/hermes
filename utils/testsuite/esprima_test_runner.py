@@ -47,8 +47,8 @@ ESPRIMA_OMITTED_KEYS = {
     # TODO: remember to update or remove them once we update the parser.
     "FunctionDeclaration": {"async", "expression"},
     "FunctionExpression": {"async", "expression"},
-    "ArrowFunctionExpression": {"async", "expression"},
-    "Property": {"computed", "method", "shorthand"},
+    "ArrowFunctionExpression": {"async", "generator"},
+    "Property": {"method", "shorthand"},
     "ForInStatement": {"each"},
 }
 
@@ -122,6 +122,13 @@ class EsprimaTestRunner:
             # Hermes does not have it.
             if "type" in ast and ast["type"] == "Literal" and "regex" in ast:
                 del ast["value"]
+            # If it is a template literal, the 'value' field contains
+            # the 'cooked' and 'raw' strings, which should be moved.
+            if "type" in ast and ast["type"] == "TemplateLiteral" and "quasis" in ast:
+                for quasi in ast["quasis"]:
+                    quasi["cooked"] = quasi["value"]["cooked"]
+                    quasi["raw"] = quasi["value"]["raw"]
+                    del quasi["value"]
         return ast
 
     def should_omit_esprima_key(self, node, key):
@@ -148,6 +155,7 @@ class EsprimaTestRunner:
         node1 = self.process_hermes_ast(node1)
         node2 = self.process_esprima_ast(node2)
         if type(node1) != type(node2):
+            self.printDebug("Expected {}, found {}".format(type(node2), type(node1)))
             return False
         if isinstance(node1, dict):
             expected_count = 0
@@ -155,6 +163,7 @@ class EsprimaTestRunner:
                 if self.should_omit_esprima_key(node2, key):
                     continue
                 if key not in node1:
+                    self.printDebug("{} missing property: {}", node1["type"], key)
                     return False
                 expected_count += 1
                 if not self.compare_nodes(node1[key], val):
@@ -162,18 +171,28 @@ class EsprimaTestRunner:
             # check if key-val pair counts match
             real_count = len(node1) - self.hermes_should_omit_keys_count(node1)
             if real_count != expected_count:
-                self.printDebug("ast node element count mistmatch")
+                self.printDebug(
+                    "AST node element count mismatch in {}".format(node1["type"])
+                )
+                self.printDebug("Hermes count:   {}".format(real_count, node1))
+                self.printDebug("Expected count: {}".format(expected_count))
                 return False
             return True
         elif isinstance(node1, list):
             if len(node1) != len(node2):
+                self.printDebug(
+                    "List expected {} elements, found {}".format(len(node2), len(node1))
+                )
                 return False
             for i in range(len(node1)):
                 if not self.compare_nodes(node1[i], node2[i]):
                     return False
             return True
         else:
-            return node1 == node2
+            if node1 != node2:
+                self.printDebug("Expected {}, found {}".format(node2, node1))
+                return False
+            return True
 
     # Remove nodes that should be omitted when diffing the outputs.
     # For debugging purposes.
