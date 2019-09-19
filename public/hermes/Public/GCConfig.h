@@ -102,7 +102,7 @@ _HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {});
   F(bool, RevertToYGAtTTI, false)                                          \
                                                                            \
   /* Whether to use mprotect on GC metadata between GCs. */                \
-  F(bool, ProtectMetadata, true)                                           \
+  F(bool, ProtectMetadata, false)                                          \
                                                                            \
   /* Pointer to the memory profiler (Memory Event Tracker). */             \
   F(std::shared_ptr<MemoryEventTracker>, MemEventTracker, nullptr)         \
