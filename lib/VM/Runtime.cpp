@@ -1520,9 +1520,9 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
       auto bytecodeOffs = codeBlock->getOffsetOf(frame.getSavedIP());
       json.emitKeyValue("ByteCodeOffset", bytecodeOffs);
       auto blockSourceCode = codeBlock->getDebugSourceLocationsOffset();
+      const RuntimeModule *runtimeModule = codeBlock->getRuntimeModule();
       if (blockSourceCode.hasValue()) {
-        auto debugInfo =
-            codeBlock->getRuntimeModule()->getBytecode()->getDebugInfo();
+        auto debugInfo = runtimeModule->getBytecode()->getDebugInfo();
         auto sourceLocation = debugInfo->getLocationForAddress(
             blockSourceCode.getValue(), bytecodeOffs);
         if (sourceLocation) {
@@ -1536,6 +1536,11 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
                   .toStringRef(srcLocStorage));
         }
       }
+      uint32_t cjsModuleOffset =
+          runtimeModule->getBytecode()->getCJSModuleOffset();
+      llvm::StringRef sourceURL = runtimeModule->getSourceURL();
+      json.emitKeyValue("CJSModuleOffset", cjsModuleOffset);
+      json.emitKeyValue("SourceURL", sourceURL);
     } else {
       json.emitKeyValue("NativeCode", true);
     }
