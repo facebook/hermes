@@ -66,6 +66,9 @@ class SemanticValidator {
   /// The current function context.
   FunctionContext *funcCtx_{};
 
+  /// True if we are validating a formal parameter list.
+  bool isFormalParams_{false};
+
 #ifndef NDEBUG
   /// Our parser detects strictness and initializes the flag in every node,
   /// but if we are reading an external AST, we must look for "use strict" and
@@ -213,6 +216,10 @@ class SemanticValidator {
   /// Collapse array pattern rest elements into their parent:
   /// [a, ...[b, c]] => [a, b, c].
   static void collapseNestedAP(NodeList &elements);
+
+  /// Visit the parameters and body of \p node, setting isFormalParams_
+  /// correctly.
+  void visitParamsAndBody(FunctionLikeNode *node);
 };
 
 //===----------------------------------------------------------------------===//

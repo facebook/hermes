@@ -425,6 +425,16 @@ void SemanticValidator::visit(YieldExpressionNode *yieldExpr) {
   if (curFunction()->isGlobalScope())
     sm_.error(
         yieldExpr->getSourceRange(), "'yield' not in a generator function");
+
+  if (isFormalParams_) {
+    // For generators functions (the only time YieldExpression is parsed):
+    // It is a Syntax Error if UniqueFormalParameters Contains YieldExpression
+    // is true.
+    sm_.error(
+        yieldExpr->getSourceRange(),
+        "'yield' not allowed in a formal parameter");
+  }
+
   visitESTreeChildren(*this, yieldExpr);
 }
 
@@ -570,6 +580,13 @@ void SemanticValidator::visitFunction(
   FunctionContext newFuncCtx{
       this, haveActiveContext() && curFunction()->strictMode, node};
 
+  // It is a Syntax Error if UniqueFormalParameters Contains YieldExpression
+  // is true.
+  // NOTE: isFormalParams_ is reset to false on encountering a new function,
+  // because the semantics for "x Contains y" always return `false` when "x" is
+  // a function definition.
+  llvm::SaveAndRestore<bool> oldIsFormalParamsFn{isFormalParams_, false};
+
   Node *useStrictNode = nullptr;
 
   // Note that body might me empty (for lazy functions) or an expression (for
@@ -616,7 +633,45 @@ void SemanticValidator::visitFunction(
 
   collapseNestedAP(params);
 
-  visitESTreeChildren(*this, node);
+  visitParamsAndBody(node);
+}
+
+void SemanticValidator::visitParamsAndBody(FunctionLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::FunctionExpression: {
+      auto *fe = cast<ESTree::FunctionExpressionNode>(node);
+      visitESTreeNode(*this, fe->_id, fe);
+      for (auto &param : fe->_params) {
+        llvm::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
+        visitESTreeNode(*this, &param, fe);
+      }
+      visitESTreeNode(*this, fe->_body, fe);
+      break;
+    }
+    case NodeKind::ArrowFunctionExpression: {
+      auto *fe = cast<ESTree::ArrowFunctionExpressionNode>(node);
+      visitESTreeNode(*this, fe->_id, fe);
+      for (auto &param : fe->_params) {
+        llvm::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
+        visitESTreeNode(*this, &param, fe);
+      }
+      visitESTreeNode(*this, fe->_body, fe);
+      break;
+    }
+    case NodeKind::FunctionDeclaration: {
+      auto *fe = cast<ESTree::FunctionDeclarationNode>(node);
+      visitESTreeNode(*this, fe->_id, fe);
+      for (auto &param : fe->_params) {
+        llvm::SaveAndRestore<bool> oldIsFormalParams{isFormalParams_, true};
+        visitESTreeNode(*this, &param, fe);
+      }
+      visitESTreeNode(*this, fe->_body, fe);
+      visitESTreeNode(*this, fe->_returnType, fe);
+      break;
+    }
+    default:
+      visitESTreeChildren(*this, node);
+  }
 }
 
 Node *SemanticValidator::scanDirectivePrologue(NodeList &body) {
