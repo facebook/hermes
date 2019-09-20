@@ -332,6 +332,11 @@ uint64_t current_rss() {
   return pmc.WorkingSetSize;
 }
 
+uint64_t current_private_dirty() {
+  // Not yet supported.
+  return 0;
+}
+
 bool num_context_switches(long &voluntary, long &involuntary) {
   // Not yet supported.
   voluntary = involuntary = -1;

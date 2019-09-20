@@ -355,6 +355,23 @@ uint64_t current_rss() {
 #endif
 }
 
+uint64_t current_private_dirty() {
+#if defined(__linux__)
+  uint64_t sum = 0;
+  FILE *fp = fopen("/proc/self/smaps", "r");
+  static const char kPrefix[] = "Private_Dirty:";
+  constexpr size_t kPrefixLen = sizeof(kPrefix) - 1;
+  char buf[128]; // Just needs to fit the lines we care about.
+  while (fgets(buf, sizeof(buf), fp))
+    if (strncmp(buf, kPrefix, kPrefixLen) == 0)
+      sum += atoll(buf + kPrefixLen);
+  fclose(fp);
+  return sum * 1024;
+#else
+  return 0;
+#endif
+}
+
 bool num_context_switches(long &voluntary, long &involuntary) {
   voluntary = involuntary = -1;
   rusage ru;

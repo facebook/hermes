@@ -127,6 +127,10 @@ uint64_t peak_rss();
 /// \return Current RSS usage.
 uint64_t current_rss();
 
+/// Private dirty bytes for the process, which is a subset of the RSS. This
+/// excludes pages that could be paged out (e.g. a mapped readonly file).
+uint64_t current_private_dirty();
+
 /// Get the number of \p voluntary and \p involuntary context switches the
 /// process has made so far, or return false if unsupported.
 bool num_context_switches(long &voluntary, long &involuntary);
