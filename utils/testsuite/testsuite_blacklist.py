@@ -706,7 +706,6 @@ BLACK_LIST = [
     "test262/test/built-ins/TypedArray/prototype/byteLength/detached-buffer.js",
     "test262/test/built-ins/TypedArray/prototype/every/callbackfn-detachbuffer.js",
     "test262/test/built-ins/TypedArray/prototype/length/detached-buffer.js",
-    "test262/test/built-ins/Array/prototype/reverse/S15.4.4.8_A3_T3.js",
     "test262/test/built-ins/Array/prototype/push/S15.4.4.7_A2_T2.js",
     "test262/test/built-ins/Array/prototype/push/S15.4.4.7_A4_T3.js",
     "test262/test/built-ins/Array/prototype/push/S15.4.4.7_A4_T1.js",
