@@ -12,7 +12,7 @@
 #include "expect.h"
 #include "no_rtti.h"
 
-#include <jni/tests/inter_dso_exception_test_2/Test.h>
+#include "inter_dso_exception_test_2/Test.h"
 
 #define EXPECT_SAME(A, B, C) EXPECT((A) == (B) && (B) == (C) && (C) == (A))
 

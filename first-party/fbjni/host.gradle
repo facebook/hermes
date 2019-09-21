@@ -1,0 +1,30 @@
+// Copyright (c) Facebook, Inc. and its affiliates.
+//
+// This source code is licensed under the Apache-2 license found in the
+// LICENSE file in the root directory of this source tree.
+
+plugins {
+    id 'java-library'
+}
+
+repositories {
+    mavenLocal()
+    jcenter()
+}
+
+sourceSets {
+    main {
+        java.srcDir 'java'
+    }
+    test {
+        java.srcDir 'test'
+    }
+}
+
+dependencies {
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.1'
+    implementation 'com.facebook.soloader:nativeloader:0.8.0'
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.easytesting:fest-assert-core:2.0M10'
+    testImplementation 'org.mockito:mockito-core:2.28.2'
+}
