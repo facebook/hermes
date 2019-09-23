@@ -627,9 +627,18 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
 
 ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
   tmpHandle_ = *space;
-  if (vmisa<JSNumber>(*tmpHandle_) || vmisa<JSString>(*tmpHandle_)) {
-    tmpHandle_ = PrimitiveBox::getPrimitiveValue(
-        vmcast<JSObject>(*tmpHandle_), runtime_);
+  if (vmisa<JSNumber>(*tmpHandle_)) {
+    auto numRes = toNumber_RJS(runtime_, tmpHandle_);
+    if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    tmpHandle_ = *numRes;
+  } else if (vmisa<JSString>(*tmpHandle_)) {
+    auto strRes = toString_RJS(runtime_, tmpHandle_);
+    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    tmpHandle_ = strRes->getHermesValue();
   }
   if (tmpHandle_->isNumber()) {
     auto intRes = toInteger(runtime_, tmpHandle_);
@@ -736,9 +745,27 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
   }
 
   // Str.4: unbox value if necessary.
-  if (vmisa<PrimitiveBox>(*operationStrValue_)) {
-    operationStrValue_ = PrimitiveBox::getPrimitiveValue(
-        vmcast<JSObject>(*operationStrValue_), runtime_);
+  // If Type(value) is Object, then
+  if (vmisa<JSNumber>(*operationStrValue_)) {
+    //  If value has a [[NumberData]] internal slot, then
+    //      Set value to ? ToNumber(value).
+    auto numRes = toNumber_RJS(runtime_, operationStrValue_);
+    if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    operationStrValue_ = *numRes;
+  } else if (vmisa<JSString>(*operationStrValue_)) {
+    //  Else if value has a [[StringData]] internal slot, then
+    //      Set value to ? ToString(value).
+    auto strRes = toString_RJS(runtime_, operationStrValue_);
+    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    operationStrValue_ = strRes->getHermesValue();
+  } else if (auto *jsBool = dyn_vmcast<JSBoolean>(*operationStrValue_)) {
+    //  Else if value has a [[BooleanData]] internal slot, then
+    //      Set value to value.[[BooleanData]].
+    operationStrValue_ = PrimitiveBox::getPrimitiveValue(jsBool, runtime_);
   }
 
   // Str.5.

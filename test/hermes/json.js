@@ -147,6 +147,20 @@ print(JSON.stringify([]));
 print(JSON.stringify({}));
 //CHECK-NEXT: {}
 
+var obj = new Number(5);
+obj.valueOf = () => 10;
+print(JSON.stringify(obj));
+//CHECK-NEXT: 10
+
+var obj = new String('asdf');
+obj.toString = () => 'qwerty';
+print(JSON.stringify(obj));
+//CHECK-NEXT: "qwerty"
+
+var obj = new Boolean(false);
+print(JSON.stringify(obj));
+//CHECK-NEXT: false
+
 var obj = {
   "a": [1, true, false, "a", undefined, null, [], {}],
   "b": {
@@ -174,6 +188,25 @@ print(JSON.stringify(obj, undefined, 4));
 //CHECK-NEXT:     "b": {
 //CHECK-NEXT:         "c": "d"
 //CHECK-NEXT:     }
+//CHECK-NEXT: }
+
+var space = new String("x")
+space.toString = () => "y";
+print(JSON.stringify(obj, undefined, space));
+//CHECK-NEXT: {
+//CHECK-NEXT: y"a": [
+//CHECK-NEXT: yy1,
+//CHECK-NEXT: yytrue,
+//CHECK-NEXT: yyfalse,
+//CHECK-NEXT: yy"a",
+//CHECK-NEXT: yynull,
+//CHECK-NEXT: yynull,
+//CHECK-NEXT: yy[],
+//CHECK-NEXT: yy{}
+//CHECK-NEXT: y],
+//CHECK-NEXT: y"b": {
+//CHECK-NEXT: yy"c": "d"
+//CHECK-NEXT: y}
 //CHECK-NEXT: }
 
 // Replacer
