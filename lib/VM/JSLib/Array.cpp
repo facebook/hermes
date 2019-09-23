@@ -1219,14 +1219,14 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  uint64_t len = *lenRes;
+  uint32_t len = intRes->getNumber();
 
   // Indices used in the reversal process.
-  uint64_t middle = len / 2;
+  uint32_t middle = len / 2;
   MutableHandle<> lower{runtime, HermesValue::encodeDoubleValue(0)};
   MutableHandle<> upper{runtime};
 

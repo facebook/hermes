@@ -1056,15 +1056,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   }
 #endif
 
-  // Iterate backwards through runtime modules, under the assumption that
-  // modules at the end of the list were added more recently, and are more
-  // likely to match the user's intention.
-  // Specifically, this will check any user source before runtime modules loaded
-  // by the VM.
-  for (auto it = runtime_->getRuntimeModules().rbegin();
-       it != runtime_->getRuntimeModules().rend();
-       ++it) {
-    auto &runtimeModule = *it;
+  for (auto &runtimeModule : runtime_->getRuntimeModules()) {
     GCScope gcScope{runtime_};
 
     if (!runtimeModule.isInitialized()) {

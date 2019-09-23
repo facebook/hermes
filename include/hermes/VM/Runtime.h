@@ -199,9 +199,6 @@ class Runtime : public HandleRootOwner,
       Handle<RequireContext> requireContext,
       RuntimeModuleFlags flags = {});
 
-  /// Runs the internal bytecode. This is called once during initialization.
-  void runInternalBytecode();
-
   /// A convenience function to print an exception to a stream.
   void printException(llvm::raw_ostream &os, Handle<> valueHandle);
 

@@ -180,7 +180,6 @@ add_llvm_library(hermesVMRuntime STATIC ${source_files}
     hermesParser
     hermesPlatform
     hermesHBCBackend
-    hermesInternalBytecode
     dtoa
     ${CORE_FOUNDATION}
 )
