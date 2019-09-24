@@ -688,7 +688,7 @@ void dateTimeUTCString(
   // (SPACE), year, the code unit 0x0020 (SPACE), and TimeString(tv).
   // Example: Mon Jul 22 2019 15:51:50 GMT
   os << llvm::format(
-      "%s, %02d %s %04d ", weekdayNames[wd], d, monthNames[m], y);
+      "%s, %02d %s %0.4d ", weekdayNames[wd], d, monthNames[m], y);
   timeString(tv, tza, buf);
 }
 

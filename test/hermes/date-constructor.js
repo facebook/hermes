@@ -101,6 +101,8 @@ print('toUTCString');
 // CHECK-LABEL: toUTCString
 print(new Date(2017, 2, 15, 15, 1, 37, 243).toUTCString());
 // CHECK-NEXT: Wed, 15 Mar 2017 22:01:37 GMT
+print(new Date(-1, 0, 0, 0, 0, 0).toUTCString());
+// CHECK-NEXT: Thu, 31 Dec -0002 07:00:00 GMT
 
 print('toJSON');
 // CHECK-LABEL: toJSON
