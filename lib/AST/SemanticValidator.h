@@ -54,6 +54,9 @@ class SemanticValidator {
   /// A copy of Context::getSM() for easier access.
   SourceErrorManager &sm_;
 
+  /// Buffer all generated messages and print them sorted in the end.
+  SourceErrorManager::SaveAndBufferMessages bufferMessages_;
+
   /// All semantic tables are persisted here.
   SemContext &semCtx_;
 

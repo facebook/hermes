@@ -46,6 +46,7 @@ SemanticValidator::SemanticValidator(
     sem::SemContext &semCtx)
     : astContext_(astContext),
       sm_(astContext.getSourceErrorManager()),
+      bufferMessages_{&sm_},
       semCtx_(semCtx),
       initialErrorCount_(sm_.getErrorCount()),
       kw_(astContext) {}
