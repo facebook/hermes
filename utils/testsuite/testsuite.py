@@ -287,14 +287,24 @@ assignEvalMatcher = re.compile(r"=\s*eval\s*;")
 withMatcher = re.compile(r"\bwith\s*\(")
 constMatcher = re.compile(r"\bconst\b")
 negativeMatcher = re.compile(
-    r"/\*---.*"
-    "negative:.*\n"
-    r"\s*phase:\s*(\S+).*"
-    "\n"
-    r"\s*type:\s*(\S+).*"
-    "\n"
-    r"---\*/",
-    re.MULTILINE | re.DOTALL,
+    r"""
+    /\*---.*
+    negative:.*\n
+    \s*phase:\s*(\S+).*\n
+    \s*type:\s*(\S+).*\n
+    ---\*/
+    """,
+    re.MULTILINE | re.DOTALL | re.VERBOSE,
+)
+negativeMatcher2 = re.compile(
+    r"""
+    /\*---.*
+    negative:.*\n
+    \s*type:\s*(\S+).*\n
+    \s*phase:\s*(\S+).*\n
+    ---\*/
+    """,
+    re.MULTILINE | re.DOTALL | re.VERBOSE,
 )
 flagsMatcher = re.compile(r"\s*flags:\s*\[(.*)\]")
 featuresMatcher = re.compile(r"\s*features:\s*\[(.*)\]")
@@ -537,8 +547,14 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
             return (skippedType, "", 0)
 
     # Check if the test is expected to fail, and how.
+    negativePhase = ""
     m = negativeMatcher.search(content)
-    negativePhase = m.group(1) if m else ""
+    if m:
+        negativePhase = m.group(1)
+    else:
+        m = negativeMatcher2.search(content)
+        if m:
+            negativePhase = m.group(2)
 
     # Report the max duration of any successful run for the variants of a test.
     # Unsuccessful runs are ignored for simplicity.
