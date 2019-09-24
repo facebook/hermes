@@ -123,6 +123,10 @@ class SourceErrorManager {
   /// If set, all messages are ignored.
   bool suppressMessages_{false};
 
+  /// Set to true if the last message was suppressed. Any following DK_Note
+  /// messages will be automatically suppressed.
+  bool lastMessageSuppressed_{false};
+
   /// Map of bufId to source mapping URLs.
   /// If an entry doesn't exist, then there is no source mapping URL.
   llvm::DenseMap<uint32_t, std::string> sourceMappingUrls_{};
@@ -135,15 +139,16 @@ class SourceErrorManager {
   /// They will be displayed once the counter falls back to zero.
   unsigned bufferingEnabled_{0};
 
-  /// An instance of a buffered message, which will be printed later.
-  struct BufferedMessage {
+  /// Data for a single message.
+  class MessageData {
+   public:
     DiagKind dk;
     SMLoc loc;
     SMRange sm;
     std::string msg;
     SourceCoords coords;
 
-    BufferedMessage(
+    MessageData(
         DiagKind dk,
         SMLoc loc,
         SMRange sm,
@@ -152,8 +157,35 @@ class SourceErrorManager {
         : dk(dk), loc(loc), sm(sm), msg(std::move(msg)), coords(coords) {}
   };
 
+  /// An instance of a buffered message, which will be printed later.
+  class BufferedMessage : public MessageData {
+   public:
+    using MessageData::MessageData;
+
+    /// Associate a note with a message.
+    void addNote(
+        std::vector<MessageData> &bufferedNotes,
+        DiagKind dk,
+        SMLoc loc,
+        SMRange sm,
+        std::string &&msg,
+        const SourceCoords &coords);
+
+    llvm::iterator_range<const MessageData *> notes(
+        const std::vector<MessageData> &bufferedNotes) const;
+
+   private:
+    /// Number of notes associated with this message.
+    unsigned noteCount_ = 0;
+    /// Index of the first associated note in the \c bufferedNotes_ vector.
+    unsigned firstNote_;
+  };
+
   /// All buffered messages. This is empty if \c bufferingEnabled_ is zero.
   std::vector<BufferedMessage> bufferedMessages_{};
+
+  /// The notes associated with the buffered messages.
+  std::vector<MessageData> bufferedNotes_{};
 
   /// Diagnostic printer appropriate for setting via SourceMgr.setDiagHandler
   static void printDiagnostic(const llvm::SMDiagnostic &, void *ctx);
@@ -326,6 +358,7 @@ class SourceErrorManager {
   /// form.
   void dumpCoords(llvm::raw_ostream &OS, SMLoc loc);
 
+  void message(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg, Warning w);
   void message(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
   void message(DiagKind dk, SMRange sm, const Twine &msg);
   void message(DiagKind dk, SMLoc loc, const Twine &msg);
@@ -337,9 +370,7 @@ class SourceErrorManager {
     warning(Warning::Misc, loc, rng, msg);
   }
   void warning(Warning w, SMLoc loc, SMRange rng, const llvm::Twine &msg) {
-    if (isWarningEnabled(w)) {
-      message(DK_Warning, loc, rng, msg);
-    }
+    message(DK_Warning, loc, rng, msg, w);
   }
   void note(SMLoc loc, SMRange rng, const llvm::Twine &msg) {
     message(DK_Note, loc, rng, msg);
@@ -352,9 +383,7 @@ class SourceErrorManager {
     warning(Warning::Misc, rng, msg);
   }
   void warning(Warning w, SMRange rng, const llvm::Twine &msg) {
-    if (isWarningEnabled(w)) {
-      message(DK_Warning, rng, msg);
-    }
+    message(DK_Warning, rng.Start, rng, msg, w);
   }
   void note(SMRange rng, const llvm::Twine &msg) {
     message(DK_Note, rng, msg);
@@ -367,9 +396,7 @@ class SourceErrorManager {
     warning(Warning::Misc, loc, msg);
   }
   void warning(Warning w, SMLoc loc, const llvm::Twine &msg) {
-    if (isWarningEnabled(w)) {
-      message(DK_Warning, loc, msg);
-    }
+    message(DK_Warning, loc, SMRange{}, msg, w);
   }
   void note(SMLoc loc, const llvm::Twine &msg) {
     message(DK_Note, loc, msg);

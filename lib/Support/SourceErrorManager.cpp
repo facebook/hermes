@@ -12,6 +12,8 @@
 
 namespace hermes {
 
+static const char sTooManyErrors[] = "too many errors emitted";
+
 namespace {
 
 /// The location cache of a single memory buffer. Locations are cached in an
@@ -245,6 +247,29 @@ SourceErrorManager::SourceErrorManager()
   sm_.setDiagHandler(SourceErrorManager::printDiagnostic, this);
 }
 
+void SourceErrorManager::BufferedMessage::addNote(
+    std::vector<MessageData> &bufferedNotes,
+    DiagKind dk,
+    SMLoc loc,
+    SMRange sm,
+    std::string &&msg,
+    const SourceCoords &coords) {
+  bufferedNotes.emplace_back(dk, loc, sm, std::move(msg), coords);
+
+  if (!noteCount_)
+    firstNote_ = bufferedNotes.size() - 1;
+  ++noteCount_;
+}
+
+llvm::iterator_range<const SourceErrorManager::MessageData *>
+SourceErrorManager::BufferedMessage::notes(
+    const std::vector<MessageData> &bufferedNotes) const {
+  if (!noteCount_)
+    return {nullptr, nullptr};
+  return {bufferedNotes.data() + firstNote_,
+          bufferedNotes.data() + firstNote_ + noteCount_};
+}
+
 void SourceErrorManager::enableBuffering() {
   ++bufferingEnabled_;
   assert(bufferingEnabled_ != 0 && "unsigned counter overflow");
@@ -261,16 +286,24 @@ void SourceErrorManager::disableBuffering() {
       bufferedMessages_.begin(),
       bufferedMessages_.end(),
       [](const BufferedMessage &a, const BufferedMessage &b) {
+        // Make sure the "too many errors" message is always last.
+        if (a.dk == DK_Error && !a.coords.isValid() && a.msg == sTooManyErrors)
+          return false;
+        if (b.dk == DK_Error && !b.coords.isValid() && b.msg == sTooManyErrors)
+          return true;
         return a.coords.less(b.coords);
       });
 
   // Print them.
   for (const auto &bm : bufferedMessages_) {
     doPrintMessage(bm.dk, bm.loc, bm.sm, bm.msg);
+    for (const auto &note : bm.notes(bufferedNotes_))
+      doPrintMessage(note.dk, note.loc, note.sm, note.msg);
   }
 
   // Clean the buffer.
   bufferedMessages_.clear();
+  bufferedNotes_.clear();
 }
 
 uint32_t SourceErrorManager::addNewVirtualSourceBuffer(
@@ -303,7 +336,16 @@ void SourceErrorManager::doGenMessage(
   if (bufferingEnabled_) {
     SourceCoords coords;
     findBufferLineAndLoc(loc, coords);
-    bufferedMessages_.emplace_back(dk, loc, sm, msg.str(), coords);
+
+    // If this message is a note, try to associate it with the last message.
+    // Note that theoretically the first buffered message could be a note, so
+    // we play it safe here (even though it should never happen).
+    if (dk == DK_Note && !bufferedMessages_.empty()) {
+      bufferedMessages_.back().addNote(
+          bufferedNotes_, dk, loc, sm, msg.str(), coords);
+    } else {
+      bufferedMessages_.emplace_back(dk, loc, sm, msg.str(), coords);
+    }
   } else {
     doPrintMessage(dk, loc, sm, msg);
   }
@@ -325,27 +367,44 @@ void SourceErrorManager::doPrintMessage(
 }
 
 void SourceErrorManager::message(
-    DiagKind dk,
-    SMLoc loc,
-    SMRange sm,
-    const Twine &msg) {
+    hermes::SourceErrorManager::DiagKind dk,
+    llvm::SMLoc loc,
+    llvm::SMRange sm,
+    llvm::Twine const &msg,
+    hermes::Warning w) {
   assert(dk <= DK_Note);
   if (suppressMessages_)
     return;
-  upgradeDiag(dk);
-  assert(static_cast<unsigned>(dk) < kMessageCountSize && "bounds check");
-
-  // Supress all messages once the error limit has been reached.
+  // Suppress all messages once the error limit has been reached.
   if (LLVM_UNLIKELY(errorLimitReached_))
     return;
+  if (dk == DK_Warning && !isWarningEnabled(w)) {
+    lastMessageSuppressed_ = true;
+    return;
+  }
+  // Automatically suppress notes if the last message was suppressed.
+  if (dk == DK_Note && lastMessageSuppressed_)
+    return;
+  lastMessageSuppressed_ = false;
+
+  upgradeDiag(dk);
+  assert(static_cast<unsigned>(dk) < kMessageCountSize && "bounds check");
 
   ++messageCount_[dk];
   doGenMessage(dk, loc, sm, msg);
 
   if (LLVM_UNLIKELY(dk == DK_Error && messageCount_[DK_Error] == errorLimit_)) {
     errorLimitReached_ = true;
-    doGenMessage(DK_Error, {}, {}, "too many errors emitted");
+    doGenMessage(DK_Error, {}, {}, sTooManyErrors);
   }
+}
+
+void SourceErrorManager::message(
+    DiagKind dk,
+    SMLoc loc,
+    SMRange sm,
+    const Twine &msg) {
+  message(dk, loc, sm, msg, Warning::NoWarning);
 }
 
 void SourceErrorManager::message(DiagKind dk, SMRange sm, const Twine &msg) {
