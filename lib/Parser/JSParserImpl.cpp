@@ -211,6 +211,7 @@ bool JSParserImpl::checkAssign() const {
 bool JSParserImpl::checkEndAssignmentExpression() const {
   return checkN(
              TokenKind::rw_in,
+             ofIdent_,
              TokenKind::r_paren,
              TokenKind::r_brace,
              TokenKind::r_square,
