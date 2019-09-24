@@ -522,23 +522,14 @@ bool unset_env(const char *name) {
   return unsetenv(name) == 0;
 }
 
-SigAltStackDeleter::SigAltStackDeleter() {
-#ifndef __APPLE__
+/*static*/
+void *SigAltStackLeakSuppressor::stackRoot_{nullptr};
+
+SigAltStackLeakSuppressor::~SigAltStackLeakSuppressor() {
   stack_t oldAltStack;
   if (sigaltstack(nullptr, &oldAltStack) == 0) {
-    origStack_ = oldAltStack.ss_sp;
+    stackRoot_ = oldAltStack.ss_sp;
   }
-#endif
-}
-
-SigAltStackDeleter::~SigAltStackDeleter() {
-#ifndef __APPLE__
-  stack_t oldAltStack;
-  if (sigaltstack(nullptr, &oldAltStack) == 0 && oldAltStack.ss_sp != nullptr &&
-      oldAltStack.ss_sp == origStack_) {
-    free(oldAltStack.ss_sp);
-  }
-#endif
 }
 
 } // namespace oscompat

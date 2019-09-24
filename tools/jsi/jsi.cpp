@@ -70,10 +70,8 @@ int main(int argc, char **argv) {
 
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes JSI\n");
 
-  // Make sure any allocated alt signal stack is deleted on exit.
-  // (Initialize this here, after llvm stuff above -- captures current
-  // alt signal stack.)
-  ::hermes::oscompat::SigAltStackDeleter sigAltDeleter;
+  // Suppress any ASAN leak complaints for the alt signal stack on exit.
+  ::hermes::oscompat::SigAltStackLeakSuppressor sigAltLeakSuppressor;
 
   if (!EvalScript.empty() && InputFilename != "-") {
     llvm::errs() << "Cannot use both --eval <script> and <file>" << '\n';

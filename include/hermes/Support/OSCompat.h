@@ -241,15 +241,24 @@ bool unset_env(const char *name);
 
 /// LLVM sets up an alternate signal stack.  By default, the stack is
 /// never deleted, and is reported as a leak.  The destructor of this
-/// class deletes the alt signal stack, if one was installed.
-class SigAltStackDeleter {
+/// class makes a static variable point to the stack (if one exists).
+/// ASAN does a limited reachability analysis: blocks directly
+/// reachable from global variables (conservatively treating all
+/// aligned bit patterns as possible pointers) are not considered
+/// leaks.  The intended usages is that the main function of an
+/// executable will create a local variable of this type in its main
+/// function, so that the destructor will be executed before the
+/// process completes.  The general requirement is that the destructor
+/// of some instance be executed after the alternate signal stack gets
+/// its last value.
+class SigAltStackLeakSuppressor {
  public:
-  SigAltStackDeleter();
-  ~SigAltStackDeleter();
-#if !defined(__APPLE__) && !defined(_WINDOWS)
+  SigAltStackLeakSuppressor() = default;
+  ~SigAltStackLeakSuppressor();
+
  private:
-  void *origStack_{nullptr};
-#endif
+  /// The static variable that will root the alternate stack.
+  static void *stackRoot_;
 };
 
 } // namespace oscompat

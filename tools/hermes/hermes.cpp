@@ -175,10 +175,9 @@ int main(int argc, char **argv) {
     cl::EmitAsyncBreakCheck = true;
   }
 
-  // Make sure any allocated alt signal stack is deleted on exit.
-  // (Initialize this here, after llvm stuff above -- captures current
-  // alt signal stack.)
-  oscompat::SigAltStackDeleter sigAltDeleter;
+  // Make sure any allocated alt signal stack is not considered a leak
+  // by ASAN.
+  oscompat::SigAltStackLeakSuppressor sigAltLeakSuppressor;
   driver::CompileResult res = driver::compileFromCommandLineOptions();
   if (res.bytecodeProvider) {
     auto ret = executeHBCBytecodeFromCL(
