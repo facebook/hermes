@@ -593,7 +593,7 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                     args, timeout=TIMEOUT_COMPILER, stderr=subprocess.STDOUT
                 )
 
-                if negativePhase == "early":
+                if negativePhase == "early" or negativePhase == "parse":
                     run_vm = False
                     printVerbose(
                         "FAIL: Compilation failure expected on {} with Hermes".format(
@@ -610,7 +610,7 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                     )
             except subprocess.CalledProcessError as e:
                 run_vm = False
-                if negativePhase != "early":
+                if negativePhase != "early" and negativePhase != "parse":
                     printVerbose(
                         "FAIL: Compilation failed on {} with Hermes".format(
                             baseFileName
