@@ -28,14 +28,15 @@ BytecodeFunction &BytecodeModule::getFunction(unsigned index) {
 void BytecodeModule::populateSourceMap(SourceMapGenerator *sourceMap) const {
   /// Construct a list of virtual function offsets, and pass it to DebugInfo to
   /// help it populate the source map.
-  llvm::SmallVector<uint32_t, 64> functionOffsets;
+  std::vector<uint32_t> functionOffsets;
   functionOffsets.reserve(functions_.size());
   uint32_t offset = 0;
   for (const auto &func : functions_) {
     functionOffsets.push_back(offset);
     offset += func->getHeader().bytecodeSizeInBytes;
   }
-  debugInfo_.populateSourceMap(sourceMap, functionOffsets, cjsModuleOffset_);
+  debugInfo_.populateSourceMap(
+      sourceMap, std::move(functionOffsets), cjsModuleOffset_);
 }
 
 void BytecodeModule::inlineJumpTables() {

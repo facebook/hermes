@@ -292,9 +292,10 @@ void DebugInfo::disassembleLexicalData(llvm::raw_ostream &OS) const {
   }
 }
 
+#ifndef HERMESVM_LEAN
 void DebugInfo::populateSourceMap(
     SourceMapGenerator *sourceMap,
-    llvm::ArrayRef<uint32_t> functionOffsets,
+    std::vector<uint32_t> &&functionOffsets,
     uint32_t cjsModuleOffset) const {
   // Since our bytecode is not JavaScript, we interpret the source map in a
   // creative way: each bytecode module is represented as a line, and bytecode
@@ -329,7 +330,9 @@ void DebugInfo::populateSourceMap(
     offset = fdid.getOffset();
   }
   sourceMap->addMappingsLine(std::move(segments), cjsModuleOffset);
+  sourceMap->addFunctionOffsets(std::move(functionOffsets), cjsModuleOffset);
 }
+#endif
 
 uint32_t DebugInfoGenerator::appendSourceLocations(
     const DebugSourceLocation &start,

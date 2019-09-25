@@ -139,12 +139,16 @@ TEST(SourceMap, Basic) {
   EXPECT_EQ(map.getMappingsLines()[0].size(), 5u);
   EXPECT_EQ(map.getMappingsLines()[1].size(), 4u);
 
+  std::vector<uint32_t> functionOffsets1 = {20, 23, 50, 789};
+  std::vector<uint32_t> functionOffsets2 = {1, 255, 300, 500};
+  map.addFunctionOffsets(std::move(functionOffsets1), 0);
+  map.addFunctionOffsets(std::move(functionOffsets2), 1);
   std::string storage;
   llvm::raw_string_ostream OS(storage);
   map.outputAsJSON(OS);
   EXPECT_EQ(
       OS.str(),
-      R"#({"version":3,"sources":["file1","file2"],"mappings":"AAAC,EACA,CACA,C,CAAC;ACGI,CACJ,EAAC,EACF;"})#");
+      R"#({"version":3,"sources":["file1","file2"],"mappings":"AAAC,EACA,CACA,C,CAAC;ACGI,CACJ,EAAC,EACF;","x_hermes_function_offsets":[[20,23,50,789],[1,255,300,500]]})#");
 
   std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(storage);
   for (uint32_t line = 0; line < sizeof(segmentsList) / sizeof(segmentsList[0]);

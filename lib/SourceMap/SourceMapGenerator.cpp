@@ -222,8 +222,28 @@ void SourceMapGenerator::outputAsJSONImpl(llvm::raw_ostream &OS) const {
   }
 
   json.emitKeyValue("mappings", getVLQMappingsString());
+
+  if (!functionOffsets_.empty()) {
+    json.emitKey("x_hermes_function_offsets");
+    json.openArray();
+    for (const auto &segmentFunctionOffsets : functionOffsets_) {
+      json.openArray();
+      json.emitValues((llvm::ArrayRef<uint32_t>)segmentFunctionOffsets);
+      json.closeArray();
+    }
+    json.closeArray();
+  }
   json.closeDict();
   OS.flush();
+}
+
+void SourceMapGenerator::addFunctionOffsets(
+    std::vector<uint32_t> &&functionOffsets,
+    uint32_t cjsModuleOffset) {
+  if (cjsModuleOffset >= functionOffsets_.size()) {
+    functionOffsets_.resize(cjsModuleOffset + 1);
+  }
+  functionOffsets_.at(cjsModuleOffset) = std::move(functionOffsets);
 }
 
 } // namespace hermes
