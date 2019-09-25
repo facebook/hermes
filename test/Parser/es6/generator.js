@@ -86,7 +86,8 @@ function *foo() {
 // CHECK-NEXT:              "type": "ExpressionStatement",
 // CHECK-NEXT:              "expression": {
 // CHECK-NEXT:                "type": "NumericLiteral",
-// CHECK-NEXT:                "value": 1
+// CHECK-NEXT:                "value": 1,
+// CHECK-NEXT:                "raw": "1"
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "directive": null
 // CHECK-NEXT:            },
@@ -96,7 +97,8 @@ function *foo() {
 // CHECK-NEXT:                "type": "YieldExpression",
 // CHECK-NEXT:                "argument": {
 // CHECK-NEXT:                  "type": "NumericLiteral",
-// CHECK-NEXT:                  "value": 1
+// CHECK-NEXT:                  "value": 1,
+// CHECK-NEXT:                  "raw": "1"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "delegate": false
 // CHECK-NEXT:              },
@@ -108,7 +110,8 @@ function *foo() {
 // CHECK-NEXT:                "type": "YieldExpression",
 // CHECK-NEXT:                "argument": {
 // CHECK-NEXT:                  "type": "NumericLiteral",
-// CHECK-NEXT:                  "value": 1
+// CHECK-NEXT:                  "value": 1,
+// CHECK-NEXT:                  "raw": "1"
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "delegate": true
 // CHECK-NEXT:              },
@@ -158,7 +161,8 @@ function *f1() {
 // CHECK-NEXT:                      "type": "VariableDeclarator",
 // CHECK-NEXT:                      "init": {
 // CHECK-NEXT:                        "type": "NumericLiteral",
-// CHECK-NEXT:                        "value": 3
+// CHECK-NEXT:                        "value": 3,
+// CHECK-NEXT:                        "raw": "3"
 // CHECK-NEXT:                      },
 // CHECK-NEXT:                      "id": {
 // CHECK-NEXT:                        "type": "Identifier",

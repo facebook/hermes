@@ -146,7 +146,8 @@ const a7 = 1;
 //CHECK-NEXT:            "type": "VariableDeclarator",
 //CHECK-NEXT:            "init": {
 //CHECK-NEXT:              "type": "NumericLiteral",
-//CHECK-NEXT:              "value": 1
+//CHECK-NEXT:              "value": 1,
+//CHECK-NEXT:              "raw": "1"
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",

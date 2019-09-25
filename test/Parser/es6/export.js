@@ -36,7 +36,8 @@ export default function myFun() { return 3; }
 // CHECK-NEXT:                 "type": "ReturnStatement",
 // CHECK-NEXT:                 "argument": {
 // CHECK-NEXT:                   "type": "NumericLiteral",
-// CHECK-NEXT:                   "value": 3
+// CHECK-NEXT:                   "value": 3,
+// CHECK-NEXT:                   "raw": "3"
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               }
 // CHECK-NEXT:             ]
@@ -57,7 +58,8 @@ export var abc = 3;
 // CHECK-NEXT:               "type": "VariableDeclarator",
 // CHECK-NEXT:               "init": {
 // CHECK-NEXT:                 "type": "NumericLiteral",
-// CHECK-NEXT:                 "value": 3
+// CHECK-NEXT:                 "value": 3,
+// CHECK-NEXT:                 "raw": "3"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "id": {
 // CHECK-NEXT:                 "type": "Identifier",
@@ -104,7 +106,8 @@ export let letValue = 123;
 // CHECK-NEXT:               "type": "VariableDeclarator",
 // CHECK-NEXT:               "init": {
 // CHECK-NEXT:                 "type": "NumericLiteral",
-// CHECK-NEXT:                 "value": 123
+// CHECK-NEXT:                 "value": 123,
+// CHECK-NEXT:                 "raw": "123"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "id": {
 // CHECK-NEXT:                 "type": "Identifier",
@@ -129,7 +132,8 @@ export const constValue = 321;
 // CHECK-NEXT:               "type": "VariableDeclarator",
 // CHECK-NEXT:               "init": {
 // CHECK-NEXT:                 "type": "NumericLiteral",
-// CHECK-NEXT:                 "value": 321
+// CHECK-NEXT:                 "value": 321,
+// CHECK-NEXT:                 "raw": "321"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "id": {
 // CHECK-NEXT:                 "type": "Identifier",

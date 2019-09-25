@@ -23,7 +23,8 @@
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "NumericLiteral",
-// CHECK-NEXT:               "value": 3
+// CHECK-NEXT:               "value": 3,
+// CHECK-NEXT:               "raw": "3"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": true
@@ -52,7 +53,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "value": {
 // CHECK-NEXT:                   "type": "NumericLiteral",
-// CHECK-NEXT:                   "value": 3
+// CHECK-NEXT:                   "value": 3,
+// CHECK-NEXT:                   "raw": "3"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "kind": "init",
 // CHECK-NEXT:                 "computed": false
@@ -119,7 +121,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "NumericLiteral",
-// CHECK-NEXT:                 "value": 3
+// CHECK-NEXT:                 "value": 3,
+// CHECK-NEXT:                 "raw": "3"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "init",
 // CHECK-NEXT:               "computed": false

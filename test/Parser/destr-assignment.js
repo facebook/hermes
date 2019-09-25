@@ -53,7 +53,8 @@
 //CHECK-NEXT:                         },
 //CHECK-NEXT:                         "right": {
 //CHECK-NEXT:                           "type": "NumericLiteral",
-//CHECK-NEXT:                           "value": 1
+//CHECK-NEXT:                           "value": 1,
+//CHECK-NEXT:                           "raw": "1"
 //CHECK-NEXT:                         }
 //CHECK-NEXT:                       }
 //CHECK-NEXT:                     ]
@@ -118,7 +119,8 @@
 //CHECK-NEXT:                  },
 //CHECK-NEXT:                  "right": {
 //CHECK-NEXT:                    "type": "NumericLiteral",
-//CHECK-NEXT:                    "value": 10
+//CHECK-NEXT:                    "value": 10,
+//CHECK-NEXT:                    "raw": "10"
 //CHECK-NEXT:                  }
 //CHECK-NEXT:                },
 //CHECK-NEXT:                "kind": "init",
@@ -182,7 +184,8 @@
 // CHECK-NEXT:               "type": "Property",
 // CHECK-NEXT:               "key": {
 // CHECK-NEXT:                 "type": "NumericLiteral",
-// CHECK-NEXT:                 "value": 1
+// CHECK-NEXT:                 "value": 1,
+// CHECK-NEXT:                 "raw": "1"
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "value": {
 // CHECK-NEXT:                 "type": "Identifier",

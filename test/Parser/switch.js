@@ -25,7 +25,8 @@ switch (x) {
 // CHECK-NEXT:           "type": "SwitchCase",
 // CHECK-NEXT:           "test": {
 // CHECK-NEXT:             "type": "NumericLiteral",
-// CHECK-NEXT:             "value": 0
+// CHECK-NEXT:             "value": 0,
+// CHECK-NEXT:             "raw": "0"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "consequent": [
 // CHECK-NEXT:             {
@@ -53,7 +54,8 @@ switch (x) {
 // CHECK-NEXT:           "type": "SwitchCase",
 // CHECK-NEXT:           "test": {
 // CHECK-NEXT:             "type": "NumericLiteral",
-// CHECK-NEXT:             "value": 1
+// CHECK-NEXT:             "value": 1,
+// CHECK-NEXT:             "raw": "1"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "consequent": [
 // CHECK-NEXT:             {
@@ -67,7 +69,8 @@ switch (x) {
 // CHECK-NEXT:                       "type": "VariableDeclarator",
 // CHECK-NEXT:                       "init": {
 // CHECK-NEXT:                         "type": "NumericLiteral",
-// CHECK-NEXT:                         "value": 3
+// CHECK-NEXT:                         "value": 3,
+// CHECK-NEXT:                         "raw": "3"
 // CHECK-NEXT:                       },
 // CHECK-NEXT:                       "id": {
 // CHECK-NEXT:                         "type": "Identifier",
@@ -88,7 +91,8 @@ switch (x) {
 // CHECK-NEXT:           "type": "SwitchCase",
 // CHECK-NEXT:           "test": {
 // CHECK-NEXT:             "type": "NumericLiteral",
-// CHECK-NEXT:             "value": 2
+// CHECK-NEXT:             "value": 2,
+// CHECK-NEXT:             "raw": "2"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "consequent": [
 // CHECK-NEXT:             {

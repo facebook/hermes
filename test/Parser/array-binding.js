@@ -43,7 +43,8 @@ var [a, [b = 1, c] = [,2]] = x;
 //CHECK-NEXT:                         },
 //CHECK-NEXT:                         "right": {
 //CHECK-NEXT:                           "type": "NumericLiteral",
-//CHECK-NEXT:                           "value": 1
+//CHECK-NEXT:                           "value": 1,
+//CHECK-NEXT:                           "raw": "1"
 //CHECK-NEXT:                         }
 //CHECK-NEXT:                       },
 //CHECK-NEXT:                       {
@@ -61,7 +62,8 @@ var [a, [b = 1, c] = [,2]] = x;
 //CHECK-NEXT:                       },
 //CHECK-NEXT:                       {
 //CHECK-NEXT:                         "type": "NumericLiteral",
-//CHECK-NEXT:                         "value": 2
+//CHECK-NEXT:                         "value": 2,
+//CHECK-NEXT:                         "raw": "2"
 //CHECK-NEXT:                       }
 //CHECK-NEXT:                     ],
 //CHECK-NEXT:                     "trailingComma": false
@@ -101,7 +103,8 @@ var [a, [b = 1, c] = [,2]] = x;
 //CHECK-NEXT:                       },
 //CHECK-NEXT:                       "right": {
 //CHECK-NEXT:                         "type": "NumericLiteral",
-//CHECK-NEXT:                         "value": 1
+//CHECK-NEXT:                         "value": 1,
+//CHECK-NEXT:                         "raw": "1"
 //CHECK-NEXT:                       }
 //CHECK-NEXT:                     },
 //CHECK-NEXT:                     {
@@ -119,7 +122,8 @@ var [a, [b = 1, c] = [,2]] = x;
 //CHECK-NEXT:                     },
 //CHECK-NEXT:                     {
 //CHECK-NEXT:                       "type": "NumericLiteral",
-//CHECK-NEXT:                       "value": 2
+//CHECK-NEXT:                       "value": 2,
+//CHECK-NEXT:                       "raw": "2"
 //CHECK-NEXT:                     }
 //CHECK-NEXT:                   ],
 //CHECK-NEXT:                   "trailingComma": false

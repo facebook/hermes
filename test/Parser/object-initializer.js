@@ -23,7 +23,8 @@ var tmp = { a : 1, b, c };
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "value": {
 //CHECK-NEXT:                     "type": "NumericLiteral",
-//CHECK-NEXT:                     "value": 1
+//CHECK-NEXT:                     "value": 1,
+//CHECK-NEXT:                     "raw": "1"
 //CHECK-NEXT:                   },
 //CHECK-NEXT:                   "kind": "init",
 //CHECK-NEXT:                   "computed": false

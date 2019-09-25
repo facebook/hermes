@@ -71,7 +71,8 @@
 // CHECK-NEXT:                       "type": "ReturnStatement",
 // CHECK-NEXT:                       "argument": {
 // CHECK-NEXT:                         "type": "NumericLiteral",
-// CHECK-NEXT:                         "value": 1
+// CHECK-NEXT:                         "value": 1,
+// CHECK-NEXT:                         "raw": "1"
 // CHECK-NEXT:                       }
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
@@ -131,7 +132,8 @@
 // CHECK-NEXT:                       "type": "ReturnStatement",
 // CHECK-NEXT:                       "argument": {
 // CHECK-NEXT:                         "type": "NumericLiteral",
-// CHECK-NEXT:                         "value": 10
+// CHECK-NEXT:                         "value": 10,
+// CHECK-NEXT:                         "raw": "10"
 // CHECK-NEXT:                       }
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
@@ -160,7 +162,8 @@
 // CHECK-NEXT:                       "type": "ReturnStatement",
 // CHECK-NEXT:                       "argument": {
 // CHECK-NEXT:                         "type": "NumericLiteral",
-// CHECK-NEXT:                         "value": 1
+// CHECK-NEXT:                         "value": 1,
+// CHECK-NEXT:                         "raw": "1"
 // CHECK-NEXT:                       }
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
@@ -439,7 +442,8 @@ class UseSuperProps {
 // CHECK-NEXT:                         "type": "YieldExpression",
 // CHECK-NEXT:                         "argument": {
 // CHECK-NEXT:                           "type": "NumericLiteral",
-// CHECK-NEXT:                           "value": 1
+// CHECK-NEXT:                           "value": 1,
+// CHECK-NEXT:                           "raw": "1"
 // CHECK-NEXT:                         },
 // CHECK-NEXT:                         "delegate": false
 // CHECK-NEXT:                       },
@@ -473,7 +477,8 @@ class UseSuperProps {
 // CHECK-NEXT:                         "type": "YieldExpression",
 // CHECK-NEXT:                         "argument": {
 // CHECK-NEXT:                           "type": "NumericLiteral",
-// CHECK-NEXT:                           "value": 2
+// CHECK-NEXT:                           "value": 2,
+// CHECK-NEXT:                           "raw": "2"
 // CHECK-NEXT:                         },
 // CHECK-NEXT:                         "delegate": true
 // CHECK-NEXT:                       },

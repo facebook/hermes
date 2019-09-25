@@ -42,7 +42,8 @@
 //CHECK-NEXT:                 "arguments": [
 //CHECK-NEXT:                   {
 //CHECK-NEXT:                     "type": "NumericLiteral",
-//CHECK-NEXT:                     "value": 10
+//CHECK-NEXT:                     "value": 10,
+//CHECK-NEXT:                     "raw": "10"
 //CHECK-NEXT:                   }
 //CHECK-NEXT:                 ]
 //CHECK-NEXT:               }

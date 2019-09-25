@@ -16,11 +16,13 @@
 // CHECK-NEXT:         "type": "BinaryExpression",
 // CHECK-NEXT:         "left": {
 // CHECK-NEXT:           "type": "NumericLiteral",
-// CHECK-NEXT:           "value": 2
+// CHECK-NEXT:           "value": 2,
+// CHECK-NEXT:           "raw": "2"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "right": {
 // CHECK-NEXT:           "type": "NumericLiteral",
-// CHECK-NEXT:           "value": 3
+// CHECK-NEXT:           "value": 3,
+// CHECK-NEXT:           "raw": "3"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "operator": "**"
 // CHECK-NEXT:       },
@@ -34,17 +36,20 @@
 // CHECK-NEXT:         "type": "BinaryExpression",
 // CHECK-NEXT:         "left": {
 // CHECK-NEXT:           "type": "NumericLiteral",
-// CHECK-NEXT:           "value": 2
+// CHECK-NEXT:           "value": 2,
+// CHECK-NEXT:           "raw": "2"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "right": {
 // CHECK-NEXT:           "type": "BinaryExpression",
 // CHECK-NEXT:           "left": {
 // CHECK-NEXT:             "type": "NumericLiteral",
-// CHECK-NEXT:             "value": 3
+// CHECK-NEXT:             "value": 3,
+// CHECK-NEXT:             "raw": "3"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "right": {
 // CHECK-NEXT:             "type": "NumericLiteral",
-// CHECK-NEXT:             "value": 4
+// CHECK-NEXT:             "value": 4,
+// CHECK-NEXT:             "raw": "4"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "operator": "**"
 // CHECK-NEXT:         },
@@ -62,17 +67,20 @@
 // CHECK-NEXT:           "type": "BinaryExpression",
 // CHECK-NEXT:           "left": {
 // CHECK-NEXT:             "type": "NumericLiteral",
-// CHECK-NEXT:             "value": 2
+// CHECK-NEXT:             "value": 2,
+// CHECK-NEXT:             "raw": "2"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "right": {
 // CHECK-NEXT:             "type": "BinaryExpression",
 // CHECK-NEXT:             "left": {
 // CHECK-NEXT:               "type": "NumericLiteral",
-// CHECK-NEXT:               "value": 3
+// CHECK-NEXT:               "value": 3,
+// CHECK-NEXT:               "raw": "3"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "right": {
 // CHECK-NEXT:               "type": "NumericLiteral",
-// CHECK-NEXT:               "value": 4
+// CHECK-NEXT:               "value": 4,
+// CHECK-NEXT:               "raw": "4"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "operator": "**"
 // CHECK-NEXT:           },
@@ -80,7 +88,8 @@
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "right": {
 // CHECK-NEXT:           "type": "NumericLiteral",
-// CHECK-NEXT:           "value": 1
+// CHECK-NEXT:           "value": 1,
+// CHECK-NEXT:           "raw": "1"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "operator": "+"
 // CHECK-NEXT:       },
@@ -94,23 +103,27 @@
 // CHECK-NEXT:         "type": "BinaryExpression",
 // CHECK-NEXT:         "left": {
 // CHECK-NEXT:           "type": "NumericLiteral",
-// CHECK-NEXT:           "value": 1
+// CHECK-NEXT:           "value": 1,
+// CHECK-NEXT:           "raw": "1"
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "right": {
 // CHECK-NEXT:           "type": "BinaryExpression",
 // CHECK-NEXT:           "left": {
 // CHECK-NEXT:             "type": "NumericLiteral",
-// CHECK-NEXT:             "value": 2
+// CHECK-NEXT:             "value": 2,
+// CHECK-NEXT:             "raw": "2"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "right": {
 // CHECK-NEXT:             "type": "BinaryExpression",
 // CHECK-NEXT:             "left": {
 // CHECK-NEXT:               "type": "NumericLiteral",
-// CHECK-NEXT:               "value": 3
+// CHECK-NEXT:               "value": 3,
+// CHECK-NEXT:               "raw": "3"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "right": {
 // CHECK-NEXT:               "type": "NumericLiteral",
-// CHECK-NEXT:               "value": 4
+// CHECK-NEXT:               "value": 4,
+// CHECK-NEXT:               "raw": "4"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "operator": "**"
 // CHECK-NEXT:           },

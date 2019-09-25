@@ -102,7 +102,8 @@
 // CHECK-NEXT:              "expressions": [
 // CHECK-NEXT:                {
 // CHECK-NEXT:                  "type": "NumericLiteral",
-// CHECK-NEXT:                  "value": 3
+// CHECK-NEXT:                  "value": 3,
+// CHECK-NEXT:                  "raw": "3"
 // CHECK-NEXT:                }
 // CHECK-NEXT:              ]
 // CHECK-NEXT:            }

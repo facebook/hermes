@@ -27,7 +27,8 @@
 //CHECK-NEXT:                   "type": "ReturnStatement",
 //CHECK-NEXT:                   "argument": {
 //CHECK-NEXT:                     "type": "NumericLiteral",
-//CHECK-NEXT:                     "value": 1
+//CHECK-NEXT:                     "value": 1,
+//CHECK-NEXT:                     "raw": "1"
 //CHECK-NEXT:                   }
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]

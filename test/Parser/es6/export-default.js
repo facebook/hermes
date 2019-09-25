@@ -16,11 +16,13 @@ export default 2 + 2;
 // CHECK-NEXT:           "type": "BinaryExpression",
 // CHECK-NEXT:           "left": {
 // CHECK-NEXT:             "type": "NumericLiteral",
-// CHECK-NEXT:             "value": 2
+// CHECK-NEXT:             "value": 2,
+// CHECK-NEXT:             "raw": "2"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "right": {
 // CHECK-NEXT:             "type": "NumericLiteral",
-// CHECK-NEXT:             "value": 2
+// CHECK-NEXT:             "value": 2,
+// CHECK-NEXT:             "raw": "2"
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "operator": "+"
 // CHECK-NEXT:         }

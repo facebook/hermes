@@ -28,7 +28,8 @@ var t1 = a => 1;
 //CHECK-NEXT:              ],
 //CHECK-NEXT:              "body": {
 //CHECK-NEXT:                "type": "NumericLiteral",
-//CHECK-NEXT:                "value": 1
+//CHECK-NEXT:                "value": 1,
+//CHECK-NEXT:                "raw": "1"
 //CHECK-NEXT:              },
 //CHECK-NEXT:              "expression": true
 //CHECK-NEXT:            },
@@ -60,7 +61,8 @@ var t2 = (a) => 1;
 //CHECK-NEXT:              ],
 //CHECK-NEXT:              "body": {
 //CHECK-NEXT:                "type": "NumericLiteral",
-//CHECK-NEXT:                "value": 1
+//CHECK-NEXT:                "value": 1,
+//CHECK-NEXT:                "raw": "1"
 //CHECK-NEXT:              },
 //CHECK-NEXT:              "expression": true
 //CHECK-NEXT:            },
@@ -97,7 +99,8 @@ var t3 = a => { return 20; }
 //CHECK-NEXT:                    "type": "ReturnStatement",
 //CHECK-NEXT:                    "argument": {
 //CHECK-NEXT:                      "type": "NumericLiteral",
-//CHECK-NEXT:                      "value": 20
+//CHECK-NEXT:                      "value": 20,
+//CHECK-NEXT:                      "raw": "20"
 //CHECK-NEXT:                    }
 //CHECK-NEXT:                  }
 //CHECK-NEXT:                ]
@@ -169,7 +172,8 @@ var t5 = () => 3;
 //CHECK-NEXT:              "params": [],
 //CHECK-NEXT:              "body": {
 //CHECK-NEXT:                "type": "NumericLiteral",
-//CHECK-NEXT:                "value": 3
+//CHECK-NEXT:                "value": 3,
+//CHECK-NEXT:                "raw": "3"
 //CHECK-NEXT:              },
 //CHECK-NEXT:              "expression": true
 //CHECK-NEXT:            },
@@ -201,7 +205,8 @@ var t6 = (a,) => 3;
 //CHECK-NEXT:              ],
 //CHECK-NEXT:              "body": {
 //CHECK-NEXT:                "type": "NumericLiteral",
-//CHECK-NEXT:                "value": 3
+//CHECK-NEXT:                "value": 3,
+//CHECK-NEXT:                "raw": "3"
 //CHECK-NEXT:              },
 //CHECK-NEXT:              "expression": true
 //CHECK-NEXT:            },

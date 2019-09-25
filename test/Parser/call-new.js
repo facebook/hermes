@@ -158,7 +158,8 @@ new new x[10];
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "property": {
 //CHECK-NEXT:                 "type": "NumericLiteral",
-//CHECK-NEXT:                 "value": 10
+//CHECK-NEXT:                 "value": 10,
+//CHECK-NEXT:                 "raw": "10"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "computed": true
 //CHECK-NEXT:             },
@@ -187,7 +188,8 @@ new x()[10]();
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "property": {
 //CHECK-NEXT:               "type": "NumericLiteral",
-//CHECK-NEXT:               "value": 10
+//CHECK-NEXT:               "value": 10,
+//CHECK-NEXT:               "raw": "10"
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "computed": true
 //CHECK-NEXT:           },
@@ -212,7 +214,8 @@ new new x[10];
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "property": {
 //CHECK-NEXT:                 "type": "NumericLiteral",
-//CHECK-NEXT:                 "value": 10
+//CHECK-NEXT:                 "value": 10,
+//CHECK-NEXT:                 "raw": "10"
 //CHECK-NEXT:               },
 //CHECK-NEXT:               "computed": true
 //CHECK-NEXT:             },

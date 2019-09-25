@@ -46,7 +46,8 @@
 // CHECK-NEXT:                     "type": "ReturnStatement",
 // CHECK-NEXT:                     "argument": {
 // CHECK-NEXT:                       "type": "NumericLiteral",
-// CHECK-NEXT:                       "value": 3
+// CHECK-NEXT:                       "value": 3,
+// CHECK-NEXT:                       "raw": "3"
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ]
@@ -104,7 +105,8 @@
 // CHECK-NEXT:             "type": "Property",
 // CHECK-NEXT:             "key": {
 // CHECK-NEXT:               "type": "NumericLiteral",
-// CHECK-NEXT:               "value": 123
+// CHECK-NEXT:               "value": 123,
+// CHECK-NEXT:               "raw": "123"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "FunctionExpression",
@@ -141,7 +143,8 @@
 // CHECK-NEXT:                       "type": "YieldExpression",
 // CHECK-NEXT:                       "argument": {
 // CHECK-NEXT:                         "type": "NumericLiteral",
-// CHECK-NEXT:                         "value": 3
+// CHECK-NEXT:                         "value": 3,
+// CHECK-NEXT:                         "raw": "3"
 // CHECK-NEXT:                       },
 // CHECK-NEXT:                       "delegate": true
 // CHECK-NEXT:                     },

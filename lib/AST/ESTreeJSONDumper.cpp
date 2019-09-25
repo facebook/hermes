@@ -78,6 +78,21 @@ class ESTreeJSONDumper {
     json_.closeDict();
   }
 
+  void visit(NumericLiteralNode *node, StringRef type) {
+    json_.openDict();
+    json_.emitKeyValue("type", type);
+    dumpChildren(node);
+    SMRange sr = node->getSourceRange();
+    if (sr.isValid()) {
+      json_.emitKeyValue(
+          "raw",
+          StringRef{sr.Start.getPointer(),
+                    (size_t)(sr.End.getPointer() - sr.Start.getPointer())});
+    }
+    printSourceLocation(node);
+    json_.closeDict();
+  }
+
   void dumpNode(NodeList &list) {
     json_.openArray();
     for (auto &node : list) {

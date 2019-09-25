@@ -22,7 +22,7 @@ switch (foo()) {
     print(foo());
 }
 
-// CHECK: {"type":"Program","body":[{"type":"FunctionDeclaration","id":{"type":"Identifier","name":"foo","typeAnnotation":null},"params":[],"body":{"type":"BlockStatement","body":[{"type":"ReturnStatement","argument":{"type":"CallExpression","callee":{"type":"MemberExpression","object":{"type":"Identifier","name":"Math","typeAnnotation":null},"property":{"type":"Identifier","name":"random","typeAnnotation":null},"computed":false},"arguments":[]}}]},"returnType":null,"generator":false},{"type":"SwitchStatement","discriminant":{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]},"cases":[{"type":"SwitchCase","test":{"type":"NumericLiteral","value":3},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"fizz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":{"type":"NumericLiteral","value":5},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"buzz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":null,"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]}]},"directive":null}]}]}]}
+// CHECK: {"type":"Program","body":[{"type":"FunctionDeclaration","id":{"type":"Identifier","name":"foo","typeAnnotation":null},"params":[],"body":{"type":"BlockStatement","body":[{"type":"ReturnStatement","argument":{"type":"CallExpression","callee":{"type":"MemberExpression","object":{"type":"Identifier","name":"Math","typeAnnotation":null},"property":{"type":"Identifier","name":"random","typeAnnotation":null},"computed":false},"arguments":[]}}]},"returnType":null,"generator":false},{"type":"SwitchStatement","discriminant":{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]},"cases":[{"type":"SwitchCase","test":{"type":"NumericLiteral","value":3,"raw":"3"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"fizz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":{"type":"NumericLiteral","value":5,"raw":"5"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"buzz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":null,"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]}]},"directive":null}]}]}]}
 
 // CHECK-PRETTY:   {
 // CHECK-PRETTY:     "type": "Program",
@@ -80,7 +80,8 @@ switch (foo()) {
 // CHECK-PRETTY:             "type": "SwitchCase",
 // CHECK-PRETTY:             "test": {
 // CHECK-PRETTY:               "type": "NumericLiteral",
-// CHECK-PRETTY:               "value": 3
+// CHECK-PRETTY:               "value": 3,
+// CHECK-PRETTY:               "raw": "3"
 // CHECK-PRETTY:             },
 // CHECK-PRETTY:             "consequent": [
 // CHECK-PRETTY:               {
@@ -111,7 +112,8 @@ switch (foo()) {
 // CHECK-PRETTY:             "type": "SwitchCase",
 // CHECK-PRETTY:             "test": {
 // CHECK-PRETTY:               "type": "NumericLiteral",
-// CHECK-PRETTY:               "value": 5
+// CHECK-PRETTY:               "value": 5,
+// CHECK-PRETTY:               "raw": "5"
 // CHECK-PRETTY:             },
 // CHECK-PRETTY:             "consequent": [
 // CHECK-PRETTY:               {
@@ -369,6 +371,7 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:             "test": {
 // CHECK-SOURCE-LOC:               "type": "NumericLiteral",
 // CHECK-SOURCE-LOC:               "value": 3,
+// CHECK-SOURCE-LOC:               "raw": "3",
 // CHECK-SOURCE-LOC:               "loc": {
 // CHECK-SOURCE-LOC:                 "start": {
 // CHECK-SOURCE-LOC:                   "line": 15,
@@ -498,6 +501,7 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:             "test": {
 // CHECK-SOURCE-LOC:               "type": "NumericLiteral",
 // CHECK-SOURCE-LOC:               "value": 5,
+// CHECK-SOURCE-LOC:               "raw": "5",
 // CHECK-SOURCE-LOC:               "loc": {
 // CHECK-SOURCE-LOC:                 "start": {
 // CHECK-SOURCE-LOC:                   "line": 18,
