@@ -178,7 +178,7 @@ Handle<JSObject> createDataViewConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::DataView),
       dataViewConstructor,
       proto,
-      3,
+      1,
       CellKind::DataViewKind);
 
   // DataView.prototype.xxx() methods.

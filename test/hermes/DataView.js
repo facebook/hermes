@@ -6,6 +6,11 @@
 // RUN: %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -target=HBC -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 
+print("Check .length");
+// CHECK-LABEL: Check .length
+print(DataView.length);
+// CHECK-NEXT: 1
+
 var view = new DataView(new ArrayBuffer(8));
 
 print("Check .buffer");

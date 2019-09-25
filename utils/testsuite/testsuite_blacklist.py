@@ -839,6 +839,8 @@ BLACK_LIST = [
     # t19359477
     "mjsunit/regress/regress-3976.js",
     "mjsunit/string-replace-gc.js",
+    # T54585052
+    "test262/test/built-ins/DataView/length.js",
     # Time out. # T20489563
     "mjsunit/regress/regress-crbug-482998.js",
     # Different time out: # T23228706
