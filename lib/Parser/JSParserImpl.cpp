@@ -1128,8 +1128,6 @@ Optional<ESTree::EmptyStatementNode *> JSParserImpl::parseEmptyStatement() {
       setLocation(tok_, tok_, new (context_) ESTree::EmptyStatementNode());
   advance();
 
-  std::string s;
-  s.data();
   return empty;
 }
 
