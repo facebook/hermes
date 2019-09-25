@@ -70,105 +70,13 @@ class ESTreeJSONDumper {
     json_.closeArray();
   }
 
-/// Visitor functions for each node type.
-#define ESTREE_NODE_0_ARGS(NAME, BASE) \
-  void visit(NAME##Node *node) {       \
-    json_.openDict();                  \
-    json_.emitKeyValue("type", #NAME); \
-    dumpChildren(node);                \
-    printSourceLocation(node);         \
-    json_.closeDict();                 \
+  void visit(Node *node, StringRef type) {
+    json_.openDict();
+    json_.emitKeyValue("type", type);
+    dumpChildren(node);
+    printSourceLocation(node);
+    json_.closeDict();
   }
-
-#define ESTREE_NODE_1_ARGS(NAME, BASE, ARG0TY, ARG0NM, ARG0OPT) \
-  void visit(NAME##Node *node) {                                \
-    json_.openDict();                                           \
-    json_.emitKeyValue("type", #NAME);                          \
-    dumpChildren(node);                                         \
-    printSourceLocation(node);                                  \
-    json_.closeDict();                                          \
-  }
-
-#define ESTREE_NODE_2_ARGS(                                       \
-    NAME, BASE, ARG0TY, ARG0NM, ARG0OPT, ARG1TY, ARG1NM, ARG1OPT) \
-  void visit(NAME##Node *node) {                                  \
-    json_.openDict();                                             \
-    json_.emitKeyValue("type", #NAME);                            \
-    dumpChildren(node);                                           \
-    printSourceLocation(node);                                    \
-    json_.closeDict();                                            \
-  }
-
-#define ESTREE_NODE_3_ARGS(            \
-    NAME,                              \
-    BASE,                              \
-    ARG0TY,                            \
-    ARG0NM,                            \
-    ARG0OPT,                           \
-    ARG1TY,                            \
-    ARG1NM,                            \
-    ARG1OPT,                           \
-    ARG2TY,                            \
-    ARG2NM,                            \
-    ARG2OPT)                           \
-  void visit(NAME##Node *node) {       \
-    json_.openDict();                  \
-    json_.emitKeyValue("type", #NAME); \
-    dumpChildren(node);                \
-    printSourceLocation(node);         \
-    json_.closeDict();                 \
-  }
-
-#define ESTREE_NODE_4_ARGS(            \
-    NAME,                              \
-    BASE,                              \
-    ARG0TY,                            \
-    ARG0NM,                            \
-    ARG0OPT,                           \
-    ARG1TY,                            \
-    ARG1NM,                            \
-    ARG1OPT,                           \
-    ARG2TY,                            \
-    ARG2NM,                            \
-    ARG2OPT,                           \
-    ARG3TY,                            \
-    ARG3NM,                            \
-    ARG3OPT)                           \
-  void visit(NAME##Node *node) {       \
-    json_.openDict();                  \
-    json_.emitKeyValue("type", #NAME); \
-    dumpChildren(node);                \
-    printSourceLocation(node);         \
-    json_.closeDict();                 \
-  }
-
-#define ESTREE_NODE_5_ARGS(            \
-    NAME,                              \
-    BASE,                              \
-    ARG0TY,                            \
-    ARG0NM,                            \
-    ARG0OPT,                           \
-    ARG1TY,                            \
-    ARG1NM,                            \
-    ARG1OPT,                           \
-    ARG2TY,                            \
-    ARG2NM,                            \
-    ARG2OPT,                           \
-    ARG3TY,                            \
-    ARG3NM,                            \
-    ARG3OPT,                           \
-    ARG4TY,                            \
-    ARG4NM,                            \
-    ARG4OPT)                           \
-  void visit(NAME##Node *node) {       \
-    json_.openDict();                  \
-    json_.emitKeyValue("type", #NAME); \
-    dumpChildren(node);                \
-    printSourceLocation(node);         \
-    json_.closeDict();                 \
-  }
-
-#include "hermes/AST/ESTree.def"
 
   void dumpNode(NodeList &list) {
     json_.openArray();
@@ -207,7 +115,7 @@ class ESTreeJSONDumper {
 
 #define VISIT(NAME)    \
   case NodeKind::NAME: \
-    return visit(cast<NAME##Node>(node));
+    return visit(cast<NAME##Node>(node), #NAME);
 
 #define ESTREE_NODE_0_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_1_ARGS(NAME, ...) VISIT(NAME)
