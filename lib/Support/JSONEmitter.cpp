@@ -64,11 +64,14 @@ void JSONEmitter::emitValue(unsigned long long val) {
 }
 
 void JSONEmitter::emitValue(double val) {
-  assert(std::isfinite(val) && "Value is not finite");
   willEmitValue();
-  char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
-  (void)hermes::numberToString(val, buf8, sizeof(buf8));
-  OS << buf8;
+  if (std::isfinite(val)) {
+    char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
+    (void)hermes::numberToString(val, buf8, sizeof(buf8));
+    OS << buf8;
+  } else {
+    OS << "null";
+  }
 }
 
 void JSONEmitter::emitValue(llvm::StringRef val) {

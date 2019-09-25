@@ -180,4 +180,18 @@ TEST(JSONEmitterTest, PrettyPrint) {
   EXPECT_EQ(OS.str(), expected);
 }
 
+TEST(JSONEmitterTest, NonFinite) {
+  std::string storage;
+  llvm::raw_string_ostream OS(storage);
+  JSONEmitter json(OS);
+
+  json.openArray();
+  json.emitValues({INFINITY, -INFINITY, NAN});
+  json.closeArray();
+
+  // This intermediate variable is necessary because
+  // MSVC's macro preprocessor does not behave as expected with R-literals.
+  const char *expected = R"#([null,null,null])#";
+  EXPECT_EQ(OS.str(), expected);
+}
 }; // anonymous namespace
