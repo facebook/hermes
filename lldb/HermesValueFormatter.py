@@ -46,7 +46,7 @@ POINTER_TAGS = [NATIVE_VALUE_TAG, STR_TAG, OBJECT_TAG]
 def __lldb_init_module(debugger, _):
     """Installs a new debugger handle for formatting hermes values"""
     debugger.HandleCommand(
-        'type summary add "hermes::vm::HermesValue" -w hermes -F HermesValueFormatter.hv_format'
+        b'type summary add "hermes::vm::HermesValue" -w hermes -F HermesValueFormatter.hv_format'
     )
 
 
