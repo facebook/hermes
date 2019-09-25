@@ -685,6 +685,24 @@ std::string TraceInterpreter::execEntryFunction(
   }
 #endif
 
+  if (options.snapshotMarker == "end") {
+    // Take a snapshot at the end if requested.
+    if (HermesRuntime *hermesRT = dynamic_cast<HermesRuntime *>(&rt)) {
+      hermesRT->instrumentation().createSnapshotToFile(
+          options.snapshotMarkerFileName, true);
+    } else {
+      llvm::errs() << "Heap snapshot requested from non-Hermes runtime\n";
+    }
+    snapshotMarkerFound = true;
+  }
+
+  if (!options.snapshotMarker.empty() && !snapshotMarkerFound) {
+    // Snapshot was requested at a marker but that marker wasn't found.
+    throw std::runtime_error(
+        std::string("Requested a heap snapshot at \"") +
+        options.snapshotMarker + "\", but that marker wasn't reached\n");
+  }
+
   // If this was a trace then stats were already collected.
   if (options.marker.empty()) {
     return printStats();
