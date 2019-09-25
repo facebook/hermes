@@ -151,7 +151,6 @@ TEST_F(HiddenClassTest, SmokeTest) {
     auto newClz = HiddenClass::updateProperty(x, runtime, *found, desc.flags);
     ASSERT_NE(*x, *newClz);
     ASSERT_EQ(x->getNumProperties(), newClz->getNumProperties());
-    ASSERT_EQ(*x, newClz->getFamily(runtime));
     x = *newClz;
 
     found = HiddenClass::findProperty(

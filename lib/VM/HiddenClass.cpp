@@ -62,7 +62,6 @@ void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HiddenClass *>(cell);
   mb.addField(&self->symbolID_);
   mb.addField("parent", &self->parent_);
-  mb.addField("family", &self->family_);
   mb.addField("propertyMap", &self->propertyMap_);
   mb.addField("forInCache", &self->forInCache_);
 }
@@ -78,7 +77,6 @@ void HiddenClassSerialize(Serializer &s, const GCCell *cell) {
 
   // Serialize other fields.
   s.writeRelocation(self->parent_.get(s.getRuntime()));
-  s.writeRelocation(self->family_.get(s.getRuntime()));
   s.writeRelocation(self->propertyMap_.get(s.getRuntime()));
   s.writeRelocation(self->forInCache_.get(s.getRuntime()));
 
@@ -124,7 +122,6 @@ void HiddenClassDeserialize(Deserializer &d, CellKind kind) {
       numProperties);
 
   d.readRelocation(&cell->parent_, RelocationKind::GCPointer);
-  d.readRelocation(&cell->family_, RelocationKind::GCPointer);
   d.readRelocation(&cell->propertyMap_, RelocationKind::GCPointer);
   d.readRelocation(&cell->forInCache_, RelocationKind::GCPointer);
 
@@ -616,10 +613,6 @@ Handle<HiddenClass> HiddenClass::updateProperty(
           name,
           transitionFlags,
           selfHandle->numProperties_)));
-
-  // The child has the same "shape" as we do, because it has the same fields.
-  childHandle->family_.set(
-      runtime, selfHandle->family_.get(runtime), &runtime->getHeap());
 
   // Add it to the transition table.
   auto inserted = selfHandle->transitionMap_.insertNew(

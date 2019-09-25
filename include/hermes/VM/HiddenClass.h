@@ -312,13 +312,6 @@ class HiddenClass final : public GCCell {
     return flags_.hasIndexLikeProperties;
   }
 
-  /// \return a hidden class that we originated from entirely by using "flag
-  /// transitions", in other words, one that has exactly the same fields in the
-  /// same order as this class, but possibly different property flags.
-  const HiddenClass *getFamily(Runtime *runtime) const {
-    return family_.get(runtime);
-  }
-
   /// \return The for-in cache if one has been set, otherwise nullptr.
   BigStorage *getForInCache(Runtime *runtime) const {
     return forInCache_.get(runtime);
@@ -478,7 +471,6 @@ class HiddenClass final : public GCCell {
       : GCCell(&runtime->getHeap(), &vt),
         flags_(flags),
         parent_(runtime, *parent, &runtime->getHeap()),
-        family_(runtime, this, &runtime->getHeap()),
         symbolID_(symbolID),
         propertyFlags_(propertyFlags),
         numProperties_(numProperties) {
@@ -554,13 +546,6 @@ class HiddenClass final : public GCCell {
   /// one keyed on \c symbolID_+propertyFlags_. It can be null if there is no
   /// parent.
   GCPointer<HiddenClass> parent_;
-
-  /// A hidden class that we originated from entirely by using "flag
-  /// transitions", in other words, one that has exactly the same fields in the
-  /// same order as this class, but possibly different property flags.
-  /// By default it points to its own class.
-  /// It is supposed to be used when caching property reads.
-  GCPointer<HiddenClass> family_;
 
   /// The symbol that was added when transitioning to this hidden class.
   const SymbolID symbolID_;
