@@ -35,7 +35,7 @@ struct ClassFlags {
   /// This class is in dictionary mode, meaning that adding and removing fields
   /// doesn't cause transitions but simply updates the property map.  (We may
   /// still change hidden classes; see dictionaryNoCacheMode, below).
-  uint32_t dictionaryMode : 1;
+  uint8_t dictionaryMode : 1;
 
   /// If dictionaryMode is set, this indicates whether the hidden class can
   /// be used as the key in inline caches.  If we delete properties, or update
@@ -45,25 +45,25 @@ struct ClassFlags {
   /// created this way (currently we allow just one).  To do this, we
   /// set this property of the hidden class property, so that the new
   /// hidden class is never added to an inline cache.
-  uint32_t dictionaryNoCacheMode : 1;
+  uint8_t dictionaryNoCacheMode : 1;
 
   /// Set when we have index-like named properties (e.g. "0", "1", etc) defined
   /// using defineOwnProperty. Array accesses will have to check the named
   /// properties first. The absence of this flag is important as it indicates
   /// that named properties whose name is an integer index don't need to be
   /// searched for - they don't exist.
-  uint32_t hasIndexLikeProperties : 1;
+  uint8_t hasIndexLikeProperties : 1;
 
   /// All properties in this class are non-configurable. This flag can sometimes
   /// be set lazily, after we have checked whether all properties are non-
   /// configurable.
-  uint32_t allNonConfigurable : 1;
+  uint8_t allNonConfigurable : 1;
 
   /// All properties in this class are both non-configurable and non-writable.
   /// It imples that \c allNonConfigurable is also set.
   /// This flag can sometimes be set lazily, after we have checked whether all
   /// properties are "read-only".
-  uint32_t allReadOnly : 1;
+  uint8_t allReadOnly : 1;
 
   ClassFlags() {
     ::memset(this, 0, sizeof(*this));
@@ -469,11 +469,11 @@ class HiddenClass final : public GCCell {
       PropertyFlags propertyFlags,
       unsigned numProperties)
       : GCCell(&runtime->getHeap(), &vt),
-        flags_(flags),
-        parent_(runtime, *parent, &runtime->getHeap()),
         symbolID_(symbolID),
         propertyFlags_(propertyFlags),
-        numProperties_(numProperties) {
+        flags_(flags),
+        numProperties_(numProperties),
+        parent_(runtime, *parent, &runtime->getHeap()) {
     assert(propertyFlags.isValid() && "propertyFlags must be valid");
   }
 
@@ -539,18 +539,13 @@ class HiddenClass final : public GCCell {
   friend void HiddenClassDeserialize(Deserializer &d, CellKind kind);
 #endif
  private:
-  /// Flags associated with this hidden class.
-  ClassFlags flags_{};
-
-  /// The parent hidden class which contains a transition from itself to this
-  /// one keyed on \c symbolID_+propertyFlags_. It can be null if there is no
-  /// parent.
-  GCPointer<HiddenClass> parent_;
-
   /// The symbol that was added when transitioning to this hidden class.
   const SymbolID symbolID_;
   /// The flags of the added symbol.
   const PropertyFlags propertyFlags_;
+
+  /// Flags associated with this hidden class.
+  ClassFlags flags_{};
 
   /// Total number of properties encoded in the entire chain from this class
   /// to the root. Note that some transitions do not introduce a new property,
@@ -569,6 +564,11 @@ class HiddenClass final : public GCCell {
   /// This hash table encodes the transitions from this class to child classes
   /// keyed on the property being added (or updated) and its flags.
   detail::TransitionMap transitionMap_;
+
+  /// The parent hidden class which contains a transition from itself to this
+  /// one keyed on \c symbolID_+propertyFlags_. It can be null if there is no
+  /// parent.
+  GCPointer<HiddenClass> parent_;
 
   /// Cache that contains for-in property names for objects of this class.
   /// Never used in dictionary mode.

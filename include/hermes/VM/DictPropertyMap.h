@@ -295,15 +295,15 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
   static constexpr size_type END_OF_LIST =
       std::numeric_limits<size_type>::max();
 
-  // Ensure that we can overload PropertyFlags::_flags to store the next
-  // deleted index.
+  // Ensure that we can overload NamedPropertyDescriptor::_altFlags to store
+  // the next deleted index.
   static_assert(
-      std::is_same<decltype(PropertyFlags::_flags), size_type>::value,
-      "size_type must correspond to PropertyFlags::_flags");
+      std::is_same<decltype(NamedPropertyDescriptor::_altFlags), size_type>::
+          value,
+      "size_type must correspond to NamedPropertyDescriptor::_altFlags");
 
-  /// Index of the most recently deleted PropertyDescriptor. Its
-  /// PropertyFlags::_flags field contains the index of the next deleted and so
-  /// on.
+  /// Index of the most recently deleted NamedPropertyDescriptor. Its
+  /// _altFlags field contains the index of the next deleted and so on.
   size_type deletedListHead_{END_OF_LIST};
 
   /// Number of entries in the deleted list.
@@ -368,7 +368,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
     assert(
         descPair->first == SymbolID::deleted() &&
         "Descriptor pair is not deleted");
-    descPair->second.flags._flags = nextIndex;
+    descPair->second._altFlags = nextIndex;
   }
 
   /// Obtain the previous deleted index from a deleted descriptor pair. The
@@ -377,7 +377,7 @@ class DictPropertyMap final : public VariableSizeRuntimeCell,
     assert(
         descPair->first == SymbolID::deleted() &&
         "Descriptor pair is not deleted");
-    return descPair->second.flags._flags;
+    return descPair->second._altFlags;
   }
 
   /// A placeholder function to keep track of the number of deleted entries
