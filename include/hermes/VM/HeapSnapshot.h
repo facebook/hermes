@@ -66,6 +66,18 @@ class HeapSnapshot {
 #include "hermes/VM/HeapSnapshot.def"
   };
 
+  // The number of declared fields plus one for the type field.
+  static constexpr uint32_t V8_SNAPSHOT_NODE_FIELD_COUNT = 1
+#define V8_NODE_FIELD(label, type) +1
+#include "hermes/VM/HeapSnapshot.def"
+      ;
+
+  // The number of declared fields plus one for the type field.
+  static constexpr uint32_t V8_SNAPSHOT_EDGE_FIELD_COUNT = 1
+#define V8_EDGE_FIELD(label, type) +1
+#include "hermes/VM/HeapSnapshot.def"
+      ;
+
   using NodeID = uint64_t;
   using NodeIndex = uint32_t;
   using EdgeIndex = uint32_t;

@@ -26,12 +26,6 @@ constexpr typename std::underlying_type<Enum>::type index(Enum e) {
   return static_cast<typename std::underlying_type<Enum>::type>(e);
 }
 
-// The number of declared fields plus one for the type field.
-constexpr uint32_t V8_SNAPSHOT_NODE_FIELD_COUNT = 1
-#define V8_NODE_FIELD(label, type) +1
-#include "hermes/VM/HeapSnapshot.def"
-    ;
-
 const char *kSectionLabels[] = {
 #define V8_SNAPSHOT_SECTION(enumerand, label) label,
 #include "hermes/VM/HeapSnapshot.def"
