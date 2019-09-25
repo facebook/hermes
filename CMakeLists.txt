@@ -98,9 +98,6 @@ set(HERMESVM_JIT OFF CACHE BOOL
 set(HERMESVM_JIT_DISASSEMBLER OFF CACHE BOOL
   "Enable the JIT disassembler")
 
-set(HERMESVM_SYNTH_REPLAY OFF CACHE BOOL
-  "Enable native JSI function recording")
-
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
   "Use libflowparser for parsing es6")
 
@@ -230,9 +227,6 @@ if(HERMESVM_JIT)
 endif()
 if(HERMESVM_JIT_DISASSEMBLER)
   add_definitions(-DHERMESVM_JIT_DISASSEMBLER)
-endif()
-if(HERMESVM_SYNTH_REPLAY)
-  add_definitions(-DHERMESVM_SYNTH_REPLAY)
 endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")

@@ -1091,12 +1091,10 @@ const ::hermes::vm::MockedEnvironment &HermesRuntime::getMockedEnvironment()
       ->tracedEnv;
 }
 
-#ifdef HERMESVM_SYNTH_REPLAY
 void HermesRuntime::setMockedEnvironment(
     const ::hermes::vm::MockedEnvironment &env) {
   static_cast<HermesRuntimeImpl *>(this)->runtime_.setMockedEnvironment(env);
 }
-#endif
 
 #ifdef HERMESVM_PROFILER_BB
 void HermesRuntime::dumpBasicBlockProfileTrace(llvm::raw_ostream &os) const {

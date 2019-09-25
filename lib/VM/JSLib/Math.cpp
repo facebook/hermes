@@ -202,11 +202,8 @@ CallResult<HermesValue> mathPow(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue> mathRandom(void *, Runtime *runtime, NativeArgs) {
   RuntimeCommonStorage *storage = runtime->getCommonStorage();
   if (!storage->randomEngineSeeded_) {
-#ifdef HERMESVM_SYNTH_REPLAY
-    std::minstd_rand::result_type seed = storage->env.mathRandomSeed;
-#else
-    std::minstd_rand::result_type seed = std::random_device()();
-#endif
+    std::minstd_rand::result_type seed =
+        storage->env ? storage->env->mathRandomSeed : std::random_device()();
     storage->randomEngine_.seed(seed);
     storage->randomEngineSeeded_ = true;
     if (LLVM_UNLIKELY(storage->shouldTrace)) {

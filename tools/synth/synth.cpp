@@ -4,9 +4,6 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#ifdef HERMESVM_SYNTH_REPLAY
-// Only run this file with replay mode on
-
 #include <hermes/ConsoleHost/RuntimeFlags.h>
 #include <hermes/Support/MemoryBuffer.h>
 #include <hermes/TraceInterpreter.h>
@@ -168,14 +165,3 @@ int main(int argc, char **argv) {
   }
   return 1;
 }
-
-#else
-
-#include <iostream>
-
-int main() {
-  std::cerr << "Build this with @fbsource//xplat/mode/hermes/synth instead"
-            << std::endl;
-  return 1;
-}
-#endif

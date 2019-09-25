@@ -6,10 +6,6 @@
  */
 #pragma once
 
-#ifndef HERMESVM_SYNTH_REPLAY
-#error TraceInterpreter can only be used with synth mode on.
-#endif
-
 #include <hermes/Public/RuntimeConfig.h>
 #include <hermes/SynthTrace.h>
 

@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-#ifdef HERMESVM_SYNTH_REPLAY
 #include <hermes/TraceInterpreter.h>
 #include <hermes/hermes.h>
 
@@ -71,5 +70,3 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::ValuesIn(testGenerator()));
 
 } // namespace
-
-#endif

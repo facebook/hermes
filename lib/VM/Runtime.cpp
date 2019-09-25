@@ -616,9 +616,7 @@ void Runtime::potentiallyMoveHeap() {
 #endif
 
 void Runtime::setMockedEnvironment(const MockedEnvironment &env) {
-#ifdef HERMESVM_SYNTH_REPLAY
   getCommonStorage()->env = env;
-#endif
 }
 
 LLVM_ATTRIBUTE_NOINLINE

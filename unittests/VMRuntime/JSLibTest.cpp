@@ -930,8 +930,6 @@ TEST_F(JSLibTest, CreateStringTest) {
       Callable::executeCall0(stringCons, runtime, newStr, true).getStatus());
 }
 
-#ifdef HERMESVM_SYNTH_REPLAY
-
 class JSLibMockedEnvironmentTest : public RuntimeTestFixtureBase {
  public:
   JSLibMockedEnvironmentTest()
@@ -1051,6 +1049,5 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
   EXPECT_EQ(newDateColl, storage->tracedEnv.callsToNewDate);
   EXPECT_EQ(dateAsFuncColl, storage->tracedEnv.callsToDateAsFunction);
 }
-#endif
 
 } // anonymous namespace

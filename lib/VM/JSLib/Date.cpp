@@ -417,17 +417,13 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
     double finalDate;
 
     if (argCount == 0) {
-#ifdef HERMESVM_SYNTH_REPLAY
-      if (!storage->env.callsToNewDate.empty()) {
-        finalDate = storage->env.callsToNewDate.front();
-        storage->env.callsToNewDate.pop_front();
+      if (storage->env && !storage->env->callsToNewDate.empty()) {
+        finalDate = storage->env->callsToNewDate.front();
+        storage->env->callsToNewDate.pop_front();
       } else {
-#endif
         // No arguments, just set it to the current time.
         finalDate = curTime();
-#ifdef HERMESVM_SYNTH_REPLAY
       }
-#endif
       if (LLVM_UNLIKELY(storage->shouldTrace)) {
         storage->tracedEnv.callsToNewDate.push_back(finalDate);
       }
@@ -475,18 +471,14 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   llvm::SmallString<32> str{};
-#ifdef HERMESVM_SYNTH_REPLAY
-  if (!storage->env.callsToDateAsFunction.empty()) {
-    str = storage->env.callsToDateAsFunction.front();
-    storage->env.callsToDateAsFunction.pop_front();
+  if (storage->env && !storage->env->callsToDateAsFunction.empty()) {
+    str = storage->env->callsToDateAsFunction.front();
+    storage->env->callsToDateAsFunction.pop_front();
   } else {
-#endif
     double t = curTime();
     double local = localTime(t);
     dateTimeString(local, local - t, str);
-#ifdef HERMESVM_SYNTH_REPLAY
   }
-#endif
   if (LLVM_UNLIKELY(storage->shouldTrace)) {
     storage->tracedEnv.callsToDateAsFunction.push_back(
         std::string(str.c_str()));
@@ -531,12 +523,10 @@ CallResult<HermesValue> dateUTC(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue> dateNow(void *, Runtime *runtime, NativeArgs args) {
   double t = curTime();
   auto *const storage = runtime->getCommonStorage();
-#ifdef HERMESVM_SYNTH_REPLAY
-  if (!storage->env.callsToDateNow.empty()) {
-    t = storage->env.callsToDateNow.front();
-    storage->env.callsToDateNow.pop_front();
+  if (storage->env && !storage->env->callsToDateNow.empty()) {
+    t = storage->env->callsToDateNow.front();
+    storage->env->callsToDateNow.pop_front();
   }
-#endif
   if (LLVM_UNLIKELY(storage->shouldTrace)) {
     storage->tracedEnv.callsToDateNow.push_back(t);
   }

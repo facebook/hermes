@@ -98,11 +98,9 @@ class HermesRuntime : public jsi::Runtime {
   /// it can be written into the trace for later replay.
   const ::hermes::vm::MockedEnvironment &getMockedEnvironment() const;
 
-#ifdef HERMESVM_SYNTH_REPLAY
   /// Make the runtime read from \p env to replay its environment-dependent
   /// behavior.
   void setMockedEnvironment(const ::hermes::vm::MockedEnvironment &env);
-#endif
 
 #ifdef HERMESVM_PROFILER_BB
   /// Write the trace to the given stream.

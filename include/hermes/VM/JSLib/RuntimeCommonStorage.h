@@ -13,6 +13,8 @@
 #endif
 #include "hermes/VM/MockedEnvironment.h"
 
+#include "llvm/ADT/Optional.h"
+
 namespace hermes {
 namespace vm {
 
@@ -28,12 +30,11 @@ struct RuntimeCommonStorage {
 
   bool shouldTrace = false;
 
-#ifdef HERMESVM_SYNTH_REPLAY
   /// An environment to replay instead of executing environment-dependent
   /// behavior. This should be used for any circumstance where a result can
   /// change from one run of JS to another.
-  MockedEnvironment env;
-#endif
+  llvm::Optional<MockedEnvironment> env;
+
   /// An environment to record environment-dependent behavior (as a sequence of
   /// results of calls to functions).
   MockedEnvironment tracedEnv;
