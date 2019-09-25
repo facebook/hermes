@@ -1304,8 +1304,7 @@ Optional<ESTree::DoWhileStatementNode *> JSParserImpl::parseDoWhileStatement(
           whileLoc))
     return None;
 
-  if (!eatSemi(endLoc))
-    return None;
+  eatSemi(endLoc, true);
 
   return setLocation(
       startLoc,
