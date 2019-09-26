@@ -519,16 +519,16 @@ void GenGC::markPhase() {
   markedSymbols_.clear();
   markedSymbols_.resize(gcCallbacks_->getSymbolsEnd(), false);
 
-  // We compute full reachability during marking, so determine reachability of
-  // WeakRef slots.
-  unmarkWeakReferences();
-
   FullMSCMarkInitialAcceptor acceptor(*this);
   DroppingAcceptor<FullMSCMarkInitialAcceptor> nameAcceptor{acceptor};
   clearMarkBits();
 
 #ifdef HERMES_SLOW_DEBUG
   {
+    // Weak ref slots should have been unmarked at end of previous collection.
+    for (auto slot : weakSlots_)
+      assert(slot.extra != WeakSlotState::Marked);
+
     // We want to guarantee that markRoots doesn't invoke acceptors on
     // locations more than once.
     FullMSCDuplicateRootsDetectorAcceptor dupDetector(*this);
@@ -615,6 +615,7 @@ void GenGC::updateReferences(const SweepResult &sweepResult) {
   updateWeakReferences(/*fullGC*/ true);
   updateReferencesSecs_ +=
       GCBase::clockDiffSeconds(updateRefsStart, steady_clock::now());
+  unmarkWeakReferences();
 }
 
 void GenGC::compact(const SweepResult &sweepResult) {

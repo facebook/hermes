@@ -216,7 +216,6 @@ void MallocGC::collect() {
   const auto cpuStart = oscompat::thread_cpu_time();
 
   resetStats();
-  resetWeakReferences();
 
   // Begin the collection phases.
   {
@@ -240,6 +239,7 @@ void MallocGC::collect() {
 
     // Update and remove weak references.
     updateWeakReferences();
+    resetWeakReferences();
     // Free the unused symbols.
     gcCallbacks_->freeSymbols(acceptor.markedSymbols_);
     // By the end of the marking loop, all pointers left in pointers_ are dead.
@@ -389,8 +389,10 @@ size_t MallocGC::countUsedWeakRefs() const {
 
 void MallocGC::resetWeakReferences() {
   for (auto &slot : weakPointers_) {
-    // Set all slots to unmarked.
-    slot.extra = static_cast<unsigned>(WeakSlotState::Unmarked);
+    // Set all allocated slots to unmarked.
+    if (slot.extra == static_cast<unsigned>(WeakSlotState::Marked)) {
+      slot.extra = static_cast<unsigned>(WeakSlotState::Unmarked);
+    }
   }
 }
 
