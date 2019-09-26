@@ -260,16 +260,6 @@ class MallocGC final : public GCBase {
   /// @}
 
  private:
-  /// WeakSlotState is the current state of a weak pointer. It is either:
-  ///   Unmarked: It is unknown if it is in use by the program.
-  ///   Marked: It is proven to be in use by the program.
-  ///   Free: It is proven to NOT be in use by the program.
-  enum class WeakSlotState {
-    Unmarked,
-    Marked,
-    Free,
-  };
-
 #ifdef HERMES_SLOW_DEBUG
   void checkWellFormed();
 #endif

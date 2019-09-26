@@ -222,13 +222,6 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
 }
 
 TEST_F(GCBasicsTest, WeakRefTest) {
-  // This should match the one used by the GC.
-  // TODO This should be shared in GCBase, since all GCs use the same format.
-  enum WeakSlotState {
-    Unmarked,
-    Marked,
-    Free,
-  };
   auto &gc = rt.gc;
   GCBase::DebugHeapInfo debugInfo;
 

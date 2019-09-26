@@ -870,10 +870,16 @@ inline SizeFormatObj formatSize(gcheapsize_t size) {
 /// will make sure it is updated when the object is moved; it the object is
 /// freed, the value will be set to empty.
 struct WeakRefSlot {
+  /// State of this slot for the purpose of reusing slots.
+  enum State {
+    Unmarked = 0, /// Unknown whether this slot is in use by the mutator.
+    Marked, /// Proven to be in use by the mutator.
+    Free /// Proven to NOT be in use by the mutator.
+  };
   PinnedHermesValue value;
-  /// Extra data for use by the GC.
-  unsigned extra;
+  State extra;
 };
+using WeakSlotState = WeakRefSlot::State;
 
 /// This is a concrete base of \c WeakRef<T> that can be passed to concrete
 /// functions in GC.

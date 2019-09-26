@@ -1220,7 +1220,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
 
   void accept(WeakRefBase &wr) override {
     WeakRefSlot *slot = wr.unsafeGetSlot();
-    if (slot->extra == GC::WeakSlotState::Free) {
+    if (slot->extra == WeakSlotState::Free) {
       // If the slot is free, there's no edge to add.
       return;
     }
@@ -1297,7 +1297,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor, public WeakRootAcceptor {
 
   void accept(WeakRefBase &wr) override {
     WeakRefSlot *slot = wr.unsafeGetSlot();
-    if (slot->extra == GC::WeakSlotState::Free) {
+    if (slot->extra == WeakSlotState::Free) {
       // If the slot is free, there's no edge to add.
       return;
     }
@@ -1475,7 +1475,7 @@ void GenGC::deserializeWeakRefs(Deserializer &d) {
   weakSlots_.resize(numWeakRefSlots);
   for (auto &slot : weakSlots_) {
     // Deserialize this WeakRefSlot.
-    slot.extra = d.readInt<uint32_t>();
+    slot.extra = static_cast<WeakSlotState>(d.readInt<uint32_t>());
     d.readHermesValue(
         &slot.value, slot.extra == WeakSlotState::Free ? true : false);
     d.endObject(&slot);

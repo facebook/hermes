@@ -442,18 +442,6 @@ class GenGC final : public GCBase {
   /// Mark a symbol id as being used.
   void markSymbol(SymbolID symbolID);
 
-  /// This enum describes the states of a weak reference slot.
-  struct WeakSlotState {
-    enum {
-      /// Valid but still not marked as reachable.
-      Unmarked,
-      /// Valid and marked as reachable.
-      Marked,
-      /// Available for reuse.
-      Free,
-    };
-  };
-
  protected:
   /// Do any additional GC-specific logging that is useful before dying with
   /// out-of-memory.

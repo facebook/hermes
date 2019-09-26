@@ -379,7 +379,7 @@ void MallocGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {
 size_t MallocGC::countUsedWeakRefs() const {
   size_t count = 0;
   for (auto &slot : weakPointers_) {
-    if (static_cast<WeakSlotState>(slot.extra) != WeakSlotState::Free) {
+    if (slot.extra != WeakSlotState::Free) {
       ++count;
     }
   }
@@ -390,15 +390,15 @@ size_t MallocGC::countUsedWeakRefs() const {
 void MallocGC::resetWeakReferences() {
   for (auto &slot : weakPointers_) {
     // Set all allocated slots to unmarked.
-    if (slot.extra == static_cast<unsigned>(WeakSlotState::Marked)) {
-      slot.extra = static_cast<unsigned>(WeakSlotState::Unmarked);
+    if (slot.extra == WeakSlotState::Marked) {
+      slot.extra = WeakSlotState::Unmarked;
     }
   }
 }
 
 void MallocGC::updateWeakReferences() {
   for (auto &slot : weakPointers_) {
-    switch (static_cast<WeakSlotState>(slot.extra)) {
+    switch (slot.extra) {
       case WeakSlotState::Free:
         break;
       case WeakSlotState::Unmarked:
@@ -434,18 +434,17 @@ void MallocGC::updateWeakReferences() {
 }
 
 WeakRefSlot *MallocGC::allocWeakSlot(HermesValue init) {
-  weakPointers_.push_back(
-      {init, static_cast<unsigned>(WeakSlotState::Unmarked)});
+  weakPointers_.push_back({init, WeakSlotState::Unmarked});
   return &weakPointers_.back();
 }
 
 void MallocGC::markWeakRef(WeakRefBase &wr) {
-  wr.unsafeGetSlot()->extra = static_cast<unsigned>(WeakSlotState::Marked);
+  wr.unsafeGetSlot()->extra = WeakSlotState::Marked;
 }
 
 void MallocGC::freeWeakSlot(WeakRefSlot *slot) {
   slot->value = HermesValue::encodeEmptyValue();
-  slot->extra = static_cast<unsigned>(WeakSlotState::Free);
+  slot->extra = WeakSlotState::Free;
 }
 
 #ifndef NDEBUG
