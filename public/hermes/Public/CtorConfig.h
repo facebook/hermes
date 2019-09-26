@@ -99,40 +99,49 @@
 
 /// Helper Macros
 
-#define _HERMES_CTORCONFIG_FIELD_DECL(TYPE, NAME, ...) \
+#define _HERMES_CTORCONFIG_FIELD_DECL(CX, TYPE, NAME, ...) \
   TYPE NAME##_{__VA_ARGS__};
 
 /// This ignores the first and trailing arguments, and defines a member
 /// indicating whether field NAME was set explicitly.
-#define _HERMES_CTORCONFIG_FIELD_EXPLICIT_BOOL_DECL(TYPE, NAME, ...) \
+#define _HERMES_CTORCONFIG_FIELD_EXPLICIT_BOOL_DECL(CX, TYPE, NAME, ...) \
   bool NAME##Explicit_{false};
 
 /// This defines an accessor for the "Explicit_" fields defined above.
-#define _HERMES_CTORCONFIG_FIELD_EXPLICIT_BOOL_ACCESSOR(TYPE, NAME, ...) \
-  bool has##NAME() const {                                               \
-    return NAME##Explicit_;                                              \
+#define _HERMES_CTORCONFIG_FIELD_EXPLICIT_BOOL_ACCESSOR(CX, TYPE, NAME, ...) \
+  bool has##NAME() const {                                                   \
+    return NAME##Explicit_;                                                  \
   }
 
-#define _HERMES_CTORCONFIG_GETTER(TYPE, NAME, ...) \
-  inline TYPE get##NAME() const {                  \
-    return NAME##_;                                \
+/// Placeholder token for fields whose defaults are not constexpr, to make the
+/// listings more readable.
+#define HERMES_NON_CONSTEXPR
+
+#define _HERMES_CTORCONFIG_GETTER(CX, TYPE, NAME, ...) \
+  inline TYPE get##NAME() const {                      \
+    return NAME##_;                                    \
+  }                                                    \
+  static CX TYPE getDefault##NAME() {                  \
+    /* Instead of parens around TYPE (non-standard) */ \
+    using TypeAsSingleToken = TYPE;                    \
+    return TypeAsSingleToken{__VA_ARGS__};             \
   }
 
-#define _HERMES_CTORCONFIG_SETTER(TYPE, NAME, ...)     \
+#define _HERMES_CTORCONFIG_SETTER(CX, TYPE, NAME, ...) \
   inline auto with##NAME(TYPE NAME)->decltype(*this) { \
     config_.NAME##_ = std::move(NAME);                 \
     NAME##Explicit_ = true;                            \
     return *this;                                      \
   }
 
-#define _HERMES_CTORCONFIG_BUILDER_GETTER(TYPE, NAME, ...) \
-  TYPE get##NAME() const {                                 \
-    return config_.NAME##_;                                \
+#define _HERMES_CTORCONFIG_BUILDER_GETTER(CX, TYPE, NAME, ...) \
+  TYPE get##NAME() const {                                     \
+    return config_.NAME##_;                                    \
   }
 
-#define _HERMES_CTORCONFIG_UPDATE(TYPE, NAME, ...) \
-  if (newConfig.has##NAME()) {                     \
-    with##NAME(newConfig.config_.get##NAME());     \
+#define _HERMES_CTORCONFIG_UPDATE(CX, TYPE, NAME, ...) \
+  if (newConfig.has##NAME()) {                         \
+    with##NAME(newConfig.config_.get##NAME());         \
   }
 
 #endif //  HERMES_PUBLIC_CTORCONFIG_H

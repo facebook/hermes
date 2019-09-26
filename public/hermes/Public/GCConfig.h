@@ -34,14 +34,17 @@ using gcheapsize_t = uint32_t;
 /// README.md
 #define GC_TRIPWIRE_FIELDS(F)                                                  \
   /* Minimum time to wait between tripwire trigger events. */                  \
-  F(std::chrono::hours, Cooldown, 24)                                          \
+  F(constexpr, std::chrono::hours, Cooldown, 24)                               \
                                                                                \
   /* If the heap size is above this threshold after a collection, the tripwire \
    * is triggered. */                                                          \
-  F(gcheapsize_t, Limit, std::numeric_limits<gcheapsize_t>::max())             \
+  F(constexpr, gcheapsize_t, Limit, std::numeric_limits<gcheapsize_t>::max())  \
                                                                                \
   /* The callback to call when the tripwire is considered triggered. */        \
-  F(std::function<void(GCTripwireContext &)>, Callback, nullptr)               \
+  F(HERMES_NON_CONSTEXPR,                                                      \
+    std::function<void(GCTripwireContext &)>,                                  \
+    Callback,                                                                  \
+    nullptr)                                                                   \
   /* GC_TRIPWIRE_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, GC_TRIPWIRE_FIELDS, {});
@@ -51,11 +54,11 @@ _HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, GC_TRIPWIRE_FIELDS, {});
 #define GC_HANDLESAN_FIELDS(F)                                        \
   /* The probability with which the GC should keep moving the heap */ \
   /* to detect stale GC handles. */                                   \
-  F(double, SanitizeRate, 0.0)                                        \
+  F(constexpr, double, SanitizeRate, 0.0)                             \
   /* Random seed to use for basis of decisions whether or not to */   \
   /* sanitize. A negative value will mean a seed will be chosen at */ \
   /* random. */                                                       \
-  F(int64_t, RandomSeed, -1)                                          \
+  F(constexpr, int64_t, RandomSeed, -1)                               \
   /* GC_HANDLESAN_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {});
@@ -63,49 +66,56 @@ _HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {});
 #undef GC_HANDLESAN_FIELDS
 
 /// Parameters for GC Initialisation.  Check documentation in README.md
-#define GC_FIELDS(F)                                                       \
-  /* Minimum heap size hint. */                                            \
-  F(gcheapsize_t, MinHeapSize, 0)                                          \
-                                                                           \
-  /* Initial heap size hint. */                                            \
-  F(gcheapsize_t, InitHeapSize, 32 << 20)                                  \
-                                                                           \
-  /* Maximum heap size hint. */                                            \
-  F(gcheapsize_t, MaxHeapSize, 512 << 20)                                  \
-                                                                           \
-  /* Number of consecutive full collections considered to be an OOM. */    \
-  F(unsigned, EffectiveOOMThreshold, std::numeric_limits<unsigned>::max()) \
-                                                                           \
-  /* Sanitizer configuration for the GC. */                                \
-  F(GCSanitizeConfig, SanitizeConfig)                                      \
-                                                                           \
-  /* Whether the GC should spread allocations across all its "spaces". */  \
-  F(bool, ShouldRandomizeAllocSpace, false)                                \
-                                                                           \
-  /* Whether to Keep track of GC Statistics. */                            \
-  F(bool, ShouldRecordStats, false)                                        \
-                                                                           \
-  /* Whether to return unused memory to the OS. */                         \
-  F(bool, ShouldReleaseUnused, true)                                       \
-                                                                           \
-  /* Name for this heap in logs. */                                        \
-  F(std::string, Name, "HermesRuntime")                                    \
-                                                                           \
-  /* Configuration for the Heap Tripwire. */                               \
-  F(GCTripwireConfig, TripwireConfig)                                      \
-                                                                           \
-  /* Whether to (initially) allocate from the young gen (true) or the */   \
-  /* old gen (false). */                                                   \
-  F(bool, AllocInYoung, true)                                              \
-                                                                           \
-  /* Whether to revert, if necessary, to young-gen allocation at TTI. */   \
-  F(bool, RevertToYGAtTTI, false)                                          \
-                                                                           \
-  /* Whether to use mprotect on GC metadata between GCs. */                \
-  F(bool, ProtectMetadata, false)                                          \
-                                                                           \
-  /* Pointer to the memory profiler (Memory Event Tracker). */             \
-  F(std::shared_ptr<MemoryEventTracker>, MemEventTracker, nullptr)         \
+/// constexpr indicates that the default value is constexpr.
+#define GC_FIELDS(F)                                                      \
+  /* Minimum heap size hint. */                                           \
+  F(constexpr, gcheapsize_t, MinHeapSize, 0)                              \
+                                                                          \
+  /* Initial heap size hint. */                                           \
+  F(constexpr, gcheapsize_t, InitHeapSize, 32 << 20)                      \
+                                                                          \
+  /* Maximum heap size hint. */                                           \
+  F(constexpr, gcheapsize_t, MaxHeapSize, 512 << 20)                      \
+                                                                          \
+  /* Number of consecutive full collections considered to be an OOM. */   \
+  F(constexpr,                                                            \
+    unsigned,                                                             \
+    EffectiveOOMThreshold,                                                \
+    std::numeric_limits<unsigned>::max())                                 \
+                                                                          \
+  /* Sanitizer configuration for the GC. */                               \
+  F(constexpr, GCSanitizeConfig, SanitizeConfig)                          \
+                                                                          \
+  /* Whether the GC should spread allocations across all its "spaces". */ \
+  F(constexpr, bool, ShouldRandomizeAllocSpace, false)                    \
+                                                                          \
+  /* Whether to Keep track of GC Statistics. */                           \
+  F(constexpr, bool, ShouldRecordStats, false)                            \
+                                                                          \
+  /* Whether to return unused memory to the OS. */                        \
+  F(constexpr, bool, ShouldReleaseUnused, true)                           \
+                                                                          \
+  /* Name for this heap in logs. */                                       \
+  F(HERMES_NON_CONSTEXPR, std::string, Name, "HermesRuntime")             \
+                                                                          \
+  /* Configuration for the Heap Tripwire. */                              \
+  F(HERMES_NON_CONSTEXPR, GCTripwireConfig, TripwireConfig)               \
+                                                                          \
+  /* Whether to (initially) allocate from the young gen (true) or the */  \
+  /* old gen (false). */                                                  \
+  F(constexpr, bool, AllocInYoung, true)                                  \
+                                                                          \
+  /* Whether to revert, if necessary, to young-gen allocation at TTI. */  \
+  F(constexpr, bool, RevertToYGAtTTI, false)                              \
+                                                                          \
+  /* Whether to use mprotect on GC metadata between GCs. */               \
+  F(constexpr, bool, ProtectMetadata, false)                              \
+                                                                          \
+  /* Pointer to the memory profiler (Memory Event Tracker). */            \
+  F(HERMES_NON_CONSTEXPR,                                                 \
+    std::shared_ptr<MemoryEventTracker>,                                  \
+    MemEventTracker,                                                      \
+    nullptr)                                                              \
   /* GC_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(GCConfig, GC_FIELDS, {

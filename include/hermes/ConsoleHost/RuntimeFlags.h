@@ -12,6 +12,7 @@
 
 #include "hermes/ConsoleHost/MemorySizeParser.h"
 #include "hermes/ConsoleHost/RandomSeedParser.h"
+#include "hermes/Public/RuntimeConfig.h"
 
 #include <string>
 
@@ -29,6 +30,8 @@ using llvm::cl::opt;
 using llvm::cl::Option;
 using llvm::cl::OptionCategory;
 using llvm::cl::parser;
+
+using hermes::vm::RuntimeConfig;
 
 static OptionCategory GCCategory(
     "Garbage Collector Options",
@@ -124,8 +127,10 @@ static opt<std::string> ProfilerSymbolsFile(
     init("symbol_dump.map"));
 #endif
 
-static opt<bool>
-    ES6Symbol("Xes6-symbol", desc("Enable support for ES6 Symbol"), init(true));
+static opt<bool> ES6Symbol(
+    "Xes6-symbol",
+    desc("Enable support for ES6 Symbol"),
+    init(RuntimeConfig::getDefaultES6Symbol()));
 
 static llvm::cl::opt<bool> StopAfterInit(
     "stop-after-module-init",

@@ -10,15 +10,22 @@
 
 namespace {
 
-#define TEST_FIELDS(F)        \
-  F(int, AAA, 0)              \
-                              \
-  F(bool, BBB, false)         \
-                              \
-  F(const char *, CCC, "abc") \
+#define TEST_FIELDS(F)           \
+  F(constexpr, int, AAA, 0)      \
+                                 \
+  F(constexpr, bool, BBB, false) \
+                                 \
+  F(, const char *, CCC, "abc")  \
   /* TEST_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(TestConfig, TEST_FIELDS, {})
+
+TEST(CtorConfigTest, testDefaults) {
+  static_assert(TestConfig::getDefaultAAA() == 0, "unexpected default");
+  static_assert(TestConfig::getDefaultBBB() == false, "unexpected default");
+  // Not constexpr.
+  EXPECT_STREQ("abc", TestConfig::getDefaultCCC());
+}
 
 TEST(CtorConfigTest, testBasic) {
   TestConfig testConfig =
@@ -39,10 +46,10 @@ TEST(CtorConfigTest, testOverride) {
   EXPECT_STREQ("xyz", testConfig.getCCC());
 }
 
-#define TEST_FIELDS2(F)       \
-  F(int, MMM, 100)            \
-                              \
-  F(TestConfig, NestedConfig) \
+#define TEST_FIELDS2(F)         \
+  F(constexpr, int, MMM, 100)   \
+                                \
+  F(, TestConfig, NestedConfig) \
   /* TEST_FIELDS2 END */
 
 _HERMES_CTORCONFIG_STRUCT(TestConfigWithNesting, TEST_FIELDS2, {})
