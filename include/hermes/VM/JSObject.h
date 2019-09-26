@@ -783,19 +783,13 @@ class JSObject : public GCCell {
       Handle<> nameValHandle,
       PropOpFlags opFlags = PropOpFlags());
 
-  /// Obtain an element from the "indexed storage" of this object. The storage
-  /// itself is implementation dependent.
-  /// \return the value of the element or "empty" if there is no such element.
+  /// Calls ObjectVTable::getOwnIndexed.
   static HermesValue
   getOwnIndexed(JSObject *self, Runtime *runtime, uint32_t index) {
     return self->getVT()->getOwnIndexed(self, runtime, index);
   }
 
-  /// Set an element in the "indexed storage" of this object. Depending on the
-  /// semantics of the "indexed storage" the storage capacity may need to be
-  /// expanded (e.g. affecting Array.length), or the write may simply be ignored
-  /// (in the case of typed arrays).
-  /// \return true if the write succeeded, or false if it was ignored.
+  /// Calls ObjectVTable::setOwnIndexed.
   static CallResult<bool> setOwnIndexed(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
@@ -805,11 +799,7 @@ class JSObject : public GCCell {
         selfHandle, runtime, index, value);
   }
 
-  /// Delete an element in the "indexed storage". It does affect the array's
-  /// length.
-  /// \return 'true' if the element was successfully deleted, or if it was
-  ///     outside of the storage range. 'false' if this storage doesn't support
-  ///     "holes"/deletion (e.g. typed arrays).
+  /// Calls ObjectVTable::deleteOwnIndexed.
   static bool deleteOwnIndexed(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
@@ -817,9 +807,7 @@ class JSObject : public GCCell {
     return selfHandle->getVT()->deleteOwnIndexed(selfHandle, runtime, index);
   }
 
-  /// Check whether all indexed properties satisfy the requirement specified by
-  /// \p mode. Either whether they are all non-configurable, or whether they are
-  /// all both non-configurable and non-writable.
+  /// Calls ObjectVTable::checkAllOwnIndexed.
   static bool checkAllOwnIndexed(
       JSObject *self,
       Runtime *runtime,
@@ -1129,19 +1117,15 @@ class JSObject : public GCCell {
       Handle<> valueOrAccessor,
       PropOpFlags opFlags);
 
-  /// \return the range of indexes (end-exclusive) stored in indexed storage.
+  /// Calls ObjectVTable::getOwnIndexedRange.
   static std::pair<uint32_t, uint32_t> getOwnIndexedRange(
       JSObject *self,
       Runtime *runtime);
 
-  /// Check whether property with index \p index exists in indexed storage and
-  /// \return true if it does.
+  /// Calls ObjectVTable::haveOwnIndexed.
   static bool haveOwnIndexed(JSObject *self, Runtime *runtime, uint32_t index);
 
-  /// Check whether property with index \p index exists in indexed storage and
-  /// extract its \c PropertyFlags (if necessary checking whether the object is
-  /// frozen or sealed).
-  /// \return PropertyFlags if the property exists.
+  /// Calls ObjectVTable::getOwnIndexedPropertyFlags.
   static OptValue<PropertyFlags>
   getOwnIndexedPropertyFlags(JSObject *self, Runtime *runtime, uint32_t index);
 
