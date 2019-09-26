@@ -15,3 +15,24 @@ var obj =  { get p() { return 42; }  };
 Object.defineProperty(obj, 'p', {enumerable: false });
 print(obj.p);
 //CHECK-NEXT: 42
+
+// Check converting from accessor to data property by setting writable to false
+obj = {};
+Object.defineProperty(obj, "prop", {
+    get:function() {return 10;},
+    set: undefined,
+    enumerable: false,
+    configurable: true
+});
+var desc = Object.getOwnPropertyDescriptor(obj, 'prop');
+print(desc.writable, typeof desc.get);
+//CHECK-NEXT: undefined function
+print(obj.prop);
+//CHECK-NEXT: 10
+
+Object.defineProperty(obj, 'prop', { writable: false, configurable: false });
+desc = Object.getOwnPropertyDescriptor(obj, 'prop');
+print(desc.writable, typeof desc.get);
+//CHECK-NEXT: false undefined
+print(obj.prop);
+//CHECK-NEXT: undefined

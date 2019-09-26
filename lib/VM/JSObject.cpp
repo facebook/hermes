@@ -2257,8 +2257,14 @@ CallResult<bool> JSObject::updateOwnProperty(
     else
       return internalSetter(
           selfHandle, runtime, name, desc, valueOrAccessor, opFlags);
-  } else if (dpFlags.isAccessor())
+  } else if (dpFlags.isAccessor()) {
     setNamedSlotValue(selfHandle.get(), runtime, desc, valueOrAccessor.get());
+  } else {
+    // If checkPropertyUpdate() returned needSet, but there is no value or
+    // accessor, clear the value.
+    setNamedSlotValue(
+        selfHandle.get(), runtime, desc, HermesValue::encodeUndefinedValue());
+  }
 
   return true;
 }
@@ -2360,6 +2366,11 @@ JSObject::checkPropertyUpdate(
     // If it's the other way around, since the accessor doesn't have the
     // [[Writable]] attribute, do nothing.
     newFlags.writable = 0;
+
+    // If we are changing from accessor to non-accessor, we must set a new
+    // value.
+    if (!dpFlags.isAccessor())
+      dpFlags.setValue = 1;
   }
   // 8.12.9 [10] if both are data descriptors.
   else if (!currentFlags.accessor) {
