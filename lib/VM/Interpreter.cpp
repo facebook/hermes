@@ -2161,11 +2161,17 @@ tailCall:
         auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
 
 #ifdef HERMESVM_PROFILER_BB
-        HERMES_SLOW_ASSERT(
-            gcScope.getHandleCountDbg() == KEEP_HANDLES &&
-            "unaccounted handles were created");
-        runtime->recordHiddenClass(
-            curCodeBlock, ip, ID(idVal), clazz, cacheEntry->clazz);
+        {
+          HERMES_SLOW_ASSERT(
+              gcScope.getHandleCountDbg() == KEEP_HANDLES &&
+              "unaccounted handles were created");
+          auto objHandle = runtime->makeHandle(obj);
+          runtime->recordHiddenClass(
+              curCodeBlock, ip, ID(idVal), clazz, cacheEntry->clazz);
+          // obj may be moved by GC due to recordHiddenClass
+          obj = objHandle.get();
+          clazz = obj->getClass(runtime);
+        }
         gcScope.flushToSmallCount(KEEP_HANDLES);
 #endif
         // If we have a cache hit, reuse the cached offset and immediately
@@ -2303,11 +2309,17 @@ tailCall:
         auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
 
 #ifdef HERMESVM_PROFILER_BB
-        HERMES_SLOW_ASSERT(
-            gcScope.getHandleCountDbg() == KEEP_HANDLES &&
-            "unaccounted handles were created");
-        runtime->recordHiddenClass(
-            curCodeBlock, ip, ID(idVal), clazz, cacheEntry->clazz);
+        {
+          HERMES_SLOW_ASSERT(
+              gcScope.getHandleCountDbg() == KEEP_HANDLES &&
+              "unaccounted handles were created");
+          auto objHandle = runtime->makeHandle(obj);
+          runtime->recordHiddenClass(
+              curCodeBlock, ip, ID(idVal), clazz, cacheEntry->clazz);
+          // obj may be moved by GC due to recordHiddenClass
+          obj = objHandle.get();
+          clazz = obj->getClass(runtime);
+        }
         gcScope.flushToSmallCount(KEEP_HANDLES);
 #endif
         // If we have a cache hit, reuse the cached offset and immediately

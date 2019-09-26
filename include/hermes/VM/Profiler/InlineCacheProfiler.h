@@ -89,7 +89,7 @@ class InlineCacheProfiler {
 
   /// Get a JS array containing all hidden classes that shouldn't be
   /// garbage collected.
-  JSArray *getHiddenClassArray();
+  JSArray *&getHiddenClassArray();
 
   /// Set a JS array containing all hidden classes that shouldn't be
   /// garbage collected.

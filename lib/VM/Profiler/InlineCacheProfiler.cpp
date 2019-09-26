@@ -66,7 +66,7 @@ bool InlineCacheProfiler::insertICHit(
   return true;
 }
 
-JSArray *InlineCacheProfiler::getHiddenClassArray() {
+JSArray *&InlineCacheProfiler::getHiddenClassArray() {
   return cachedHiddenClassesRawPtr_;
 }
 
