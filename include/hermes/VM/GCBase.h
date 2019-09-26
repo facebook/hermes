@@ -884,7 +884,7 @@ class WeakRefSlot {
     reset(v);
   }
 
-#if 0
+#if 1
   /// Tagged pointer implementation. Only supports HermesValues with object tag.
 
   bool hasValue() const {
