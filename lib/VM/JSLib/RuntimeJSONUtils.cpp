@@ -50,7 +50,7 @@ class RuntimeJSONParser {
  public:
   explicit RuntimeJSONParser(
       Runtime *runtime,
-      Handle<StringPrimitive> jsonString,
+      UTF16Ref jsonString,
       Handle<Callable> reviver)
       : runtime_(runtime),
         lexer_(runtime, jsonString),
@@ -536,7 +536,18 @@ CallResult<HermesValue> runtimeJSONParse(
     Runtime *runtime,
     Handle<StringPrimitive> jsonString,
     Handle<Callable> reviver) {
-  RuntimeJSONParser parser{runtime, jsonString, reviver};
+  // Our parser requires UTF16 data that does not move during GCs, so
+  // in most cases we'll need to copy, except for external 16-bit strings.
+  UTF16Ref ref;
+  SmallU16String<32> storage;
+  if (LLVM_UNLIKELY(jsonString->isExternal() && !jsonString->isASCII())) {
+    ref = jsonString->getStringRef<char16_t>();
+  } else {
+    StringPrimitive::createStringView(runtime, jsonString)
+        .copyUTF16String(storage);
+    ref = storage;
+  }
+  RuntimeJSONParser parser{runtime, ref, reviver};
   return parser.parse();
 }
 

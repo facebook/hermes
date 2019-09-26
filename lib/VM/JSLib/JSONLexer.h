@@ -98,9 +98,6 @@ class JSONToken {
 
 class JSONLexer {
  private:
-  /// A non-movable copy of the input.
-  SmallU16String<32> buffer_{};
-
   const char16_t *curCharPtr_{nullptr};
 
   const char16_t *bufferEnd_{nullptr};
@@ -110,12 +107,10 @@ class JSONLexer {
   JSONToken token_;
 
  public:
-  JSONLexer(Runtime *runtime, Handle<StringPrimitive> inputHandle)
+  JSONLexer(Runtime *runtime, UTF16Ref buffer)
       : runtime_(runtime), token_(runtime) {
-    StringPrimitive::createStringView(runtime, inputHandle)
-        .copyUTF16String(buffer_);
-    curCharPtr_ = buffer_.data();
-    bufferEnd_ = buffer_.data() + buffer_.size();
+    curCharPtr_ = buffer.data();
+    bufferEnd_ = buffer.data() + buffer.size();
   }
 
   /// \return the current token.
