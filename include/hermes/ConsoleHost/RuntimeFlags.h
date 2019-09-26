@@ -31,6 +31,7 @@ using llvm::cl::Option;
 using llvm::cl::OptionCategory;
 using llvm::cl::parser;
 
+using hermes::vm::GCConfig;
 using hermes::vm::RuntimeConfig;
 
 static OptionCategory GCCategory(
@@ -84,6 +85,12 @@ static opt<MemorySize, false, MemorySizeParser> InitHeapSize(
     desc("Initial heap size.  Format: <unsigned>{{K,M,G}{iB}"),
     cat(GCCategory),
     init(MemorySize{1024 * 1024}));
+
+static opt<double> OccupancyTarget(
+    "occupancy-target",
+    desc("Sizing heuristic: fraction of heap to be occupied by live data."),
+    cat(GCCategory),
+    init(GCConfig::getDefaultOccupancyTarget()));
 
 static opt<bool> SampleProfiling(
     "sample-profiling",

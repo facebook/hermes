@@ -532,6 +532,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   if (options.maxHeapSize != 0) {
     gcConfigBuilder.withMaxHeapSize(options.maxHeapSize);
   }
+  gcConfigBuilder.withOccupancyTarget(options.occupancyTarget);
   gcConfigBuilder.withAllocInYoung(options.allocInYoung);
   gcConfigBuilder.withRevertToYGAtTTI(options.revertToYGAtTTI);
   gcConfigBuilder.withSanitizeConfig(

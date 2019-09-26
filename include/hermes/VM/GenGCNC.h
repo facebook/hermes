@@ -250,8 +250,7 @@ class GenGC final : public GCBase {
   /// The occupancy target guides heap sizing -- the fraction of the heap
   /// that is intended to be occupied by live data.
   double occupancyTarget() const {
-    // TODO: make this settable on the command line.
-    return 0.5;
+    return occupancyTarget_;
   }
 
   /// Run the finalizers for all heap objects.
@@ -784,6 +783,9 @@ class GenGC final : public GCBase {
 #ifndef NDEBUG
   bool allocInYoung_{true};
 #endif
+
+  /// Fraction of the heap that is intended to be occupied by live data.
+  double occupancyTarget_;
 
   /// The number of consecutive full collections we consider to be an "Effective
   /// OOM".

@@ -77,6 +77,9 @@ _HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {});
   /* Maximum heap size hint. */                                           \
   F(constexpr, gcheapsize_t, MaxHeapSize, 512 << 20)                      \
                                                                           \
+  /* Sizing heuristic: fraction of heap to be occupied by live data. */   \
+  F(constexpr, double, OccupancyTarget, 0.5)                              \
+                                                                          \
   /* Number of consecutive full collections considered to be an OOM. */   \
   F(constexpr,                                                            \
     unsigned,                                                             \

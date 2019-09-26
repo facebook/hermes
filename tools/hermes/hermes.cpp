@@ -97,6 +97,7 @@ static int executeHBCBytecodeFromCL(
                   .withMinHeapSize(cl::MinHeapSize.bytes)
                   .withInitHeapSize(cl::InitHeapSize.bytes)
                   .withMaxHeapSize(cl::MaxHeapSize.bytes)
+                  .withOccupancyTarget(cl::OccupancyTarget)
                   .withSanitizeConfig(
                       vm::GCSanitizeConfig::Builder()
                           .withSanitizeRate(cl::GCSanitizeRate)

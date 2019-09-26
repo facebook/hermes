@@ -106,6 +106,7 @@ GenGC::GenGC(
           gcConfig.getShouldReleaseUnused()),
       allocContextFromYG_(gcConfig.getAllocInYoung()),
       revertToYGAtTTI_(gcConfig.getRevertToYGAtTTI()),
+      occupancyTarget_(gcConfig.getOccupancyTarget()),
       oomThreshold_(gcConfig.getEffectiveOOMThreshold()),
       weightedUsed_(static_cast<double>(gcConfig.getInitHeapSize())) {
   growTo(gcConfig.getInitHeapSize());
