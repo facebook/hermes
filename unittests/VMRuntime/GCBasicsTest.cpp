@@ -221,6 +221,47 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
   EXPECT_EQ(HermesValue::encodeEmptyValue(), a1->values()[2]);
 }
 
+TEST_F(GCBasicsTest, WeakRefSlotTest) {
+  // WeakRefSlot can hold any 4-byte aligned pointer.
+  auto obj = (void *)0x12345670;
+  HermesValue hv = HermesValue::encodeObjectValue(obj);
+
+  WeakRefSlot s(hv);
+  EXPECT_EQ(WeakSlotState::Unmarked, s.state());
+  EXPECT_TRUE(s.hasPointer());
+  EXPECT_EQ(hv, s.value());
+  EXPECT_EQ(obj, s.getPointer());
+
+  // Update pointer of unmarked slot.
+  auto obj2 = (void *)0x76543210;
+  s.setPointer(obj2);
+  EXPECT_EQ(WeakSlotState::Unmarked, s.state());
+  EXPECT_TRUE(s.hasPointer());
+  EXPECT_EQ(obj2, s.getPointer());
+
+  // Marked slot.
+  s.mark();
+  EXPECT_EQ(WeakSlotState::Marked, s.state());
+  EXPECT_TRUE(s.hasPointer());
+  EXPECT_EQ(obj2, s.getPointer());
+  s.setPointer(obj);
+  EXPECT_EQ(WeakSlotState::Marked, s.state());
+  EXPECT_TRUE(s.hasPointer());
+  EXPECT_EQ(obj, s.getPointer());
+
+  s.clearPointer();
+  EXPECT_EQ(WeakSlotState::Marked, s.state());
+  EXPECT_FALSE(s.hasPointer());
+
+  // Unmark and free.
+  s.unmark();
+  EXPECT_EQ(WeakSlotState::Unmarked, s.state());
+  auto nextFree = (WeakRefSlot *)0xffee10;
+  s.free(nextFree);
+  EXPECT_EQ(WeakSlotState::Free, s.state());
+  EXPECT_EQ(nextFree, s.nextFree());
+}
+
 TEST_F(GCBasicsTest, WeakRefTest) {
   auto &gc = rt.gc;
   GCBase::DebugHeapInfo debugInfo;
@@ -259,6 +300,8 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(1u, debugInfo.numAllocatedObjects);
   ASSERT_FALSE(wr1.isValid());
+  // Though the slot is empty, it's still reachable, so must not be freed yet.
+  ASSERT_NE(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
   ASSERT_TRUE(wr2.isValid());
   ASSERT_EQ(a2, wr2.unsafeGetHermesValue().getPointer());
 
@@ -266,7 +309,14 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   rt.markExtraWeak = [&](WeakRefAcceptor &acceptor) { acceptor.accept(wr2); };
   gc.collect();
 
-  ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot()->extra);
+  ASSERT_EQ(WeakSlotState::Free, wr1.unsafeGetSlot()->state());
+
+  // Create a new weak ref, possibly reusing the just freed slot.
+  auto *a3 = Array::create(rt, 10);
+  WeakRef<Array> wr3{&gc, a3};
+
+  ASSERT_TRUE(wr3.isValid());
+  ASSERT_EQ(a3, wr3.unsafeGetHermesValue().getPointer());
 }
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL

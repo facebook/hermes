@@ -71,7 +71,7 @@ struct WeakRefInfo {
     // isValid needs to be checked to avoid an invalid vmcast.
     return WeakRef<JSObject>::isSlotValid(aSlot) &&
         WeakRef<JSObject>::isSlotValid(bSlot) &&
-        vmcast<JSObject>(aSlot->value) == vmcast<JSObject>(bSlot->value);
+        vmcast<JSObject>(aSlot->value()) == vmcast<JSObject>(bSlot->value());
   }
 
  private:

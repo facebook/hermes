@@ -379,7 +379,7 @@ void MallocGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {
 size_t MallocGC::countUsedWeakRefs() const {
   size_t count = 0;
   for (auto &slot : weakPointers_) {
-    if (slot.extra != WeakSlotState::Free) {
+    if (slot.state() != WeakSlotState::Free) {
       ++count;
     }
   }
@@ -390,15 +390,14 @@ size_t MallocGC::countUsedWeakRefs() const {
 void MallocGC::resetWeakReferences() {
   for (auto &slot : weakPointers_) {
     // Set all allocated slots to unmarked.
-    if (slot.extra == WeakSlotState::Marked) {
-      slot.extra = WeakSlotState::Unmarked;
-    }
+    if (slot.state() == WeakSlotState::Marked)
+      slot.unmark();
   }
 }
 
 void MallocGC::updateWeakReferences() {
   for (auto &slot : weakPointers_) {
-    switch (slot.extra) {
+    switch (slot.state()) {
       case WeakSlotState::Free:
         break;
       case WeakSlotState::Unmarked:
@@ -406,10 +405,10 @@ void MallocGC::updateWeakReferences() {
         break;
       case WeakSlotState::Marked:
         // If it's not a pointer, nothing to do.
-        if (!slot.value.isPointer()) {
+        if (!slot.hasPointer()) {
           break;
         }
-        auto *cell = reinterpret_cast<GCCell *>(slot.value.getPointer());
+        auto *cell = reinterpret_cast<GCCell *>(slot.getPointer());
         assert(
             validPointer(cell) &&
             "Got a pointer out of a weak reference slot that is not owned by "
@@ -417,7 +416,7 @@ void MallocGC::updateWeakReferences() {
         CellHeader *header = CellHeader::from(cell);
         if (!header->isMarked()) {
           // This pointer is no longer live, zero it out
-          freeWeakSlot(&slot);
+          slot.clearPointer();
         } else {
 #ifdef HERMESVM_SANITIZE_HANDLES
           // Update the value to point to the new location
@@ -425,7 +424,7 @@ void MallocGC::updateWeakReferences() {
           assert(
               validPointer(cell) &&
               "Forwarding weak ref must be to a valid cell");
-          slot.value = HermesValue::encodeObjectValue(nextCell);
+          slot.setPointer(nextCell);
 #endif
         }
         break;
@@ -434,17 +433,16 @@ void MallocGC::updateWeakReferences() {
 }
 
 WeakRefSlot *MallocGC::allocWeakSlot(HermesValue init) {
-  weakPointers_.push_back({init, WeakSlotState::Unmarked});
+  weakPointers_.push_back({init});
   return &weakPointers_.back();
 }
 
 void MallocGC::markWeakRef(WeakRefBase &wr) {
-  wr.unsafeGetSlot()->extra = WeakSlotState::Marked;
+  wr.unsafeGetSlot()->mark();
 }
 
 void MallocGC::freeWeakSlot(WeakRefSlot *slot) {
-  slot->value = HermesValue::encodeEmptyValue();
-  slot->extra = WeakSlotState::Free;
+  slot->free(nullptr);
 }
 
 #ifndef NDEBUG

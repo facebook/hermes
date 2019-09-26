@@ -30,7 +30,7 @@ class WeakRef : public WeakRefBase {
       GC *gc,
       typename Traits::value_type value = Traits::defaultValue())
       : WeakRefBase(gc->allocWeakSlot(Traits::encode(value))) {
-    HermesValueCast<T>::assertValid(slot_->value);
+    HermesValueCast<T>::assertValid(slot_->value());
   }
 
   explicit WeakRef(GC *gc, Handle<T> handle) : WeakRef(gc, *handle) {}
@@ -60,7 +60,7 @@ class WeakRef : public WeakRefBase {
   /// This is an unsafe function since the referenced object may be freed any
   /// time that GC occurs.
   OptValue<typename Traits::value_type> unsafeGetOptional() const {
-    return isValid() ? Traits::decode(slot_->value) : llvm::None;
+    return isValid() ? Traits::decode(slot_->value()) : llvm::None;
   }
 
   /// Before calling this function the user must check whether weak reference is
@@ -69,7 +69,7 @@ class WeakRef : public WeakRefBase {
   /// handle is alive.
   Handle<T> get(HandleRootOwner *runtime) const {
     assert(isValid() && "this WeakRef references a freed object");
-    return Handle<T>::vmcast(runtime, slot_->value);
+    return Handle<T>::vmcast(runtime, slot_->value());
   }
 
   /// If the reference is valid, returns a new handle protecting the object;
@@ -80,7 +80,7 @@ class WeakRef : public WeakRefBase {
 
   template <class U>
   static WeakRef<T> vmcast(WeakRef<U> other) {
-    assert(vmisa<T>(other.unsafeGetSlot()->value) && "invalid WeakRef cast");
+    assert(vmisa<T>(other.unsafeGetSlot()->value()) && "invalid WeakRef cast");
     return WeakRef<T>(other.unsafeGetSlot());
   }
 };

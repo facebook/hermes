@@ -36,10 +36,9 @@ void CheckHeapWellFormedAcceptor::accept(WeakRefBase &wr) {
   // Cannot check if the weak ref is valid, since it is allowed to mark an
   // empty weak ref.
   const WeakRefSlot *slot = wr.unsafeGetSlot();
-  const PinnedHermesValue &phv = slot->value;
   // If the weak value is a pointer, check that it's within the valid region.
-  if (phv.isPointer()) {
-    void *cell = phv.getPointer();
+  if (slot->state() != WeakSlotState::Free && slot->hasPointer()) {
+    void *cell = slot->getPointer();
     accept(cell);
   }
 }

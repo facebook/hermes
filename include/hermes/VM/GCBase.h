@@ -23,6 +23,7 @@
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue.h"
+#include "hermes/VM/SerializeHeader.h"
 #include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/SlotVisitor.h"
 #include "hermes/VM/StorageProvider.h"
@@ -865,19 +866,206 @@ inline SizeFormatObj formatSize(gcheapsize_t size) {
   return {size};
 }
 
-/// This is a single slot in the weak reference table. It contains a
-/// \c HermesValue which may refer to a GC managed object. If it does, the GC
-/// will make sure it is updated when the object is moved; it the object is
-/// freed, the value will be set to empty.
-struct WeakRefSlot {
+/// This is a single slot in the weak reference table. It contains a pointer to
+/// a GC managed object. The GC will make sure it is updated when the object is
+/// moved; if the object is garbage-collected, the pointer will be cleared.
+class WeakRefSlot {
+ public:
   /// State of this slot for the purpose of reusing slots.
   enum State {
     Unmarked = 0, /// Unknown whether this slot is in use by the mutator.
     Marked, /// Proven to be in use by the mutator.
     Free /// Proven to NOT be in use by the mutator.
   };
-  PinnedHermesValue value;
-  State extra;
+
+  // Mutator methods.
+
+  WeakRefSlot(HermesValue v) {
+    reset(v);
+  }
+
+#if 0
+  /// Tagged pointer implementation. Only supports HermesValues with object tag.
+
+  bool hasValue() const {
+    return hasPointer();
+  }
+
+  /// Return the object as a HermesValue.
+  const HermesValue value() const {
+    assert(state() == Unmarked && "unclean GC mark state");
+    assert(hasPointer() && "tried to access collected referent");
+    static_assert(Unmarked == 0, "unmarked state should not need untagging");
+    return HermesValue::encodeObjectValue(tagged_);
+  }
+
+  // GC methods to update slot when referent moves/dies.
+
+  /// Return the pointer to a GCCell, whether or not this slot is marked.
+  void *getPointer() const {
+    assert(state() != Free && "use nextFree instead");
+    return tagged_ - state();
+  }
+
+  /// Update the stored pointer (because the object moved).
+  void setPointer(void *newPtr) {
+    assert(state() != Free && "tried to update unallocated slot");
+    tagged_ = (char *)newPtr + (ptrdiff_t)state();
+  }
+
+  /// Clear the pointer (because the object died).
+  void clearPointer() {
+    tagged_ = (char *)state();
+  }
+
+  // GC methods to recycle slots.
+
+  /// Return true if this slot stores a non-null pointer to something. For any
+  /// slot reachable by the mutator, that something is a GCCell.
+  bool hasPointer() const {
+    return reinterpret_cast<uintptr_t>(tagged_) > Free;
+  }
+
+  State state() const {
+    return static_cast<State>((reinterpret_cast<uintptr_t>(tagged_) & 3));
+  }
+
+  void mark() {
+    assert(state() == Unmarked && "already marked");
+    tagged_ += Marked;
+  }
+
+  void unmark() {
+    assert(state() == Marked && "not yet marked");
+    tagged_ -= Marked;
+  }
+
+  void free(WeakRefSlot *nextFree) {
+    assert(state() == Unmarked && "cannot free a reachable slot");
+    tagged_ = (char *)nextFree;
+    tagged_ += Free;
+    assert(state() == Free);
+  }
+
+  WeakRefSlot *nextFree() const {
+    assert(state() == Free);
+    return (WeakRefSlot *)(tagged_ - Free);
+  }
+
+  /// Re-initialize a freed slot.
+  void reset(HermesValue v) {
+    assert(v.isObject() && "Weak ref must be to object");
+    static_assert(Unmarked == 0, "unmarked state should not need tagging");
+    tagged_ = (char *)v.getObject();
+    assert(state() == Unmarked && "initial state should be unmarked");
+  }
+
+#ifdef HERMESVM_SERIALIZE
+  // Deserialization methods.
+  WeakRefSlot() : tagged_{nullptr} {}
+  // RelocationKind::NativePointer is kind of a misnomer: it really refers
+  // to the kind of pointer - a raw pointer, as opposed to HermesValue or
+  // GCPointer - not the type of the pointee (in this case, a GCCell).
+  static constexpr RelocationKind kRelocKind = RelocationKind::NativePointer;
+  void *deserializeAddr() {
+    return &tagged_;
+  }
+#endif // HERMESVM_SERIALIZE
+
+ private:
+  /// Tagged pointer to either a GCCell or another WeakRefSlot (if the slot has
+  /// been freed for reuse). Typed as char* to simplify tagging/untagging.
+  /// The low two bits encode the integer value of the state.
+  char *tagged_;
+
+#else
+  /// HermesValue implementation. Supports any value as referent.
+
+  bool hasValue() const {
+    return !value_.isEmpty();
+  }
+
+  /// Return the object as a HermesValue.
+  const HermesValue value() const {
+    assert(state() == Unmarked && "unclean GC mark state");
+    assert(hasValue() && "tried to access collected referent");
+    return value_;
+  }
+
+  // GC methods to update slot when referent moves/dies.
+
+  /// Return true if this slot stores a non-null pointer to something. For any
+  /// slot reachable by the mutator, that something is a GCCell.
+  bool hasPointer() const {
+    return value_.isPointer();
+  }
+
+  /// Return the pointer to a GCCell, whether or not this slot is marked.
+  void *getPointer() const {
+    assert(state() != Free && "use nextFree instead");
+    return value_.getPointer();
+  }
+
+  /// Update the stored pointer (because the object moved).
+  void setPointer(void *newPtr) {
+    assert(state() != Free && "tried to update unallocated slot");
+    value_ = value_.updatePointer(newPtr);
+  }
+
+  /// Clear the pointer (because the object died).
+  void clearPointer() {
+    value_ = HermesValue::encodeEmptyValue();
+  }
+
+  // GC methods to recycle slots.
+
+  State state() const {
+    return state_;
+  }
+
+  void mark() {
+    assert(state() == Unmarked && "already marked");
+    state_ = Marked;
+  }
+
+  void unmark() {
+    assert(state() == Marked && "not yet marked");
+    state_ = Unmarked;
+  }
+
+  void free(WeakRefSlot *nextFree) {
+    assert(state() == Unmarked && "cannot free a reachable slot");
+    state_ = Free;
+    value_ = HermesValue::encodeNativePointer(nextFree);
+    assert(state() == Free);
+  }
+
+  WeakRefSlot *nextFree() const {
+    assert(state() == Free);
+    return value_.getNativePointer<WeakRefSlot>();
+  }
+
+  /// Re-initialize a freed slot.
+  void reset(HermesValue v) {
+    static_assert(Unmarked == 0, "unmarked state should not need tagging");
+    state_ = Unmarked;
+    value_ = v;
+    assert(state() == Unmarked && "initial state should be unmarked");
+  }
+
+#ifdef HERMESVM_SERIALIZE
+  // Deserialization methods.
+  WeakRefSlot() : value_{HermesValue::encodeEmptyValue()}, state_{Unmarked} {}
+  static constexpr RelocationKind kRelocKind = RelocationKind::HermesValue;
+  void *deserializeAddr() {
+    return &value_;
+  }
+#endif // HERMESVM_SERIALIZE
+ private:
+  PinnedHermesValue value_;
+  State state_;
+#endif
+  // End of split between tagged pointer/HermesValue implementations.
 };
 using WeakSlotState = WeakRefSlot::State;
 
@@ -891,13 +1079,13 @@ class WeakRefBase {
  public:
   /// \return true if the referenced object hasn't been freed.
   bool isValid() const {
-    return !slot_->value.isEmpty();
+    return slot_->hasValue();
   }
 
   /// \return true if the given slot stores a non-empty value.
   static bool isSlotValid(const WeakRefSlot *slot) {
     assert(slot && "slot must not be null");
-    return !slot->value.isEmpty();
+    return slot->hasValue();
   }
 
   /// \return a pointer to the slot used by this WeakRef.
@@ -914,7 +1102,7 @@ class WeakRefBase {
   /// This is an unsafe function since the referenced object may be freed any
   /// time that GC occurs.
   HermesValue unsafeGetHermesValue() const {
-    return slot_->value;
+    return slot_->value();
   }
 };
 

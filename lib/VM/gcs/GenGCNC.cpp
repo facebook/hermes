@@ -527,7 +527,7 @@ void GenGC::markPhase() {
   {
     // Weak ref slots should have been unmarked at end of previous collection.
     for (auto slot : weakSlots_)
-      assert(slot.extra != WeakSlotState::Marked);
+      assert(slot.state() != WeakSlotState::Marked);
 
     // We want to guarantee that markRoots doesn't invoke acceptors on
     // locations more than once.
@@ -683,9 +683,9 @@ void GenGC::markSymbol(SymbolID symbolID) {
 
 void GenGC::markWeakRef(WeakRefBase &wr) {
   assert(
-      wr.unsafeGetSlot()->extra <= WeakSlotState::Marked &&
+      wr.unsafeGetSlot()->state() != WeakSlotState::Free &&
       "marking a freed weak ref slot");
-  wr.unsafeGetSlot()->extra = WeakSlotState::Marked;
+  wr.unsafeGetSlot()->mark();
 }
 
 #ifdef HERMES_SLOW_DEBUG
@@ -714,11 +714,11 @@ void GenGC::forgetSegments(const std::vector<const char *> &lowLims) {
 
 void GenGC::moveWeakReferences(ptrdiff_t delta) {
   for (auto &slot : weakSlots_) {
-    if (slot.extra == WeakSlotState::Free || !slot.value.isPointer())
+    if (slot.state() == WeakSlotState::Free || !slot.hasPointer())
       continue;
 
-    auto cell = reinterpret_cast<char *>(slot.value.getPointer());
-    slot.value = slot.value.updatePointer(cell + delta);
+    auto cell = reinterpret_cast<char *>(slot.getPointer());
+    slot.setPointer(cell + delta);
   }
 }
 
@@ -754,7 +754,7 @@ void GenGC::shrinkTo(size_t hint) {
 size_t GenGC::countUsedWeakRefs() const {
   size_t count = 0;
   for (auto &slot : weakSlots_) {
-    if (slot.extra != WeakSlotState::Free) {
+    if (slot.state() != WeakSlotState::Free) {
       ++count;
     }
   }
@@ -764,53 +764,52 @@ size_t GenGC::countUsedWeakRefs() const {
 
 void GenGC::unmarkWeakReferences() {
   for (auto &slot : weakSlots_) {
-    if (slot.extra == WeakSlotState::Marked) {
-      slot.extra = WeakSlotState::Unmarked;
+    if (slot.state() == WeakSlotState::Marked) {
+      slot.unmark();
     }
   }
 }
 
 void GenGC::updateWeakReference(WeakRefSlot *slotPtr, bool fullGC) {
   // Skip free slots.
-  if (slotPtr->extra == WeakSlotState::Free) {
+  if (slotPtr->state() == WeakSlotState::Free) {
     return;
   }
 
   // TODO: re-enable this for young-gen collection.  See T21007593.
   if (fullGC) {
     // A slot which is no longer reachable. Add it to the free list.
-    if (slotPtr->extra == WeakSlotState::Unmarked) {
+    if (slotPtr->state() == WeakSlotState::Unmarked) {
       freeWeakSlot(slotPtr);
       return;
     }
 
     assert(
-        slotPtr->extra == WeakSlotState::Marked && "invalid marked slot state");
+        slotPtr->state() == WeakSlotState::Marked &&
+        "invalid marked slot state");
   }
 
-  // Skip non-pointer slots.
-  if (!slotPtr->value.isPointer()) {
+  // Skip empty slots.
+  if (!slotPtr->hasPointer()) {
     return;
   }
 
-  GCCell *cell = (GCCell *)slotPtr->value.getPointer();
+  GCCell *cell = (GCCell *)slotPtr->getPointer();
 
   if (fullGC) {
     if (AlignedHeapSegment::getCellMarkBit(cell)) {
-      slotPtr->value =
-          slotPtr->value.updatePointer(cell->getForwardingPointer());
+      slotPtr->setPointer(cell->getForwardingPointer());
     } else {
-      slotPtr->value = HermesValue::encodeEmptyValue();
+      slotPtr->clearPointer();
     }
   } else {
     // Young-gen collection.  If the cell is in the young gen, see if
     // it survived collection.  If so, update the slot.
     if (youngGen_.contains(cell)) {
       if (cell->hasMarkedForwardingPointer()) {
-        slotPtr->value =
-            slotPtr->value.updatePointer(cell->getMarkedForwardingPointer());
+        slotPtr->setPointer(cell->getMarkedForwardingPointer());
       } else {
-        slotPtr->value = HermesValue::encodeEmptyValue();
+        slotPtr->clearPointer();
       }
     }
   }
@@ -836,8 +835,8 @@ void GenGC::updateWeakReferences(bool fullGC) {
   for (unsigned i = 0; i < numSlots; i++) {
     // Since numSlots is the size() of the vector, i is definitely in range.
     auto slotPtr = weakRefSlotsWithPossibleYoungReferent_[i];
-    if (slotPtr->value.isPointer()) {
-      if (youngGen_.contains(slotPtr->value.getPointer())) {
+    if (slotPtr->state() != WeakSlotState::Free && slotPtr->hasPointer()) {
+      if (youngGen_.contains(slotPtr->getPointer())) {
         weakRefSlotsWithPossibleYoungReferent_[retainedIndex] = slotPtr;
         retainedIndex++;
       }
@@ -853,21 +852,16 @@ void GenGC::updateWeakReferences(bool fullGC) {
 }
 
 WeakRefSlot *GenGC::allocWeakSlot(HermesValue init) {
-  assert(
-      !init.isNativeValue() && !init.isEmpty() &&
-      "Cannot set a weak reference to empty or native value");
-
   WeakRefSlot *res;
   if (firstFreeWeak_) {
     assert(
-        firstFreeWeak_->extra == WeakSlotState::Free &&
+        firstFreeWeak_->state() == WeakSlotState::Free &&
         "invalid free slot state");
     res = firstFreeWeak_;
-    firstFreeWeak_ = firstFreeWeak_->value.getNativePointer<WeakRefSlot>();
-    res->value = init;
-    res->extra = WeakSlotState::Unmarked;
+    firstFreeWeak_ = firstFreeWeak_->nextFree();
+    res->reset(init);
   } else {
-    weakSlots_.push_back({init, WeakSlotState::Unmarked});
+    weakSlots_.push_back({init});
     res = &weakSlots_.back();
   }
   weakRefSlotsWithPossibleYoungReferent_.push_back(res);
@@ -875,15 +869,14 @@ WeakRefSlot *GenGC::allocWeakSlot(HermesValue init) {
 }
 
 void GenGC::freeWeakSlot(WeakRefSlot *slot) {
-  slot->value = HermesValue::encodeNativePointer(firstFreeWeak_);
-  slot->extra = WeakSlotState::Free;
+  slot->free(firstFreeWeak_);
   firstFreeWeak_ = slot;
 }
 
 void GenGC::shrinkWeakSlots() {
   // Opportunistically shrink the deque if free slots are found at the end.
   while (!weakSlots_.empty() && firstFreeWeak_ == &weakSlots_.back()) {
-    firstFreeWeak_ = firstFreeWeak_->value.getNativePointer<WeakRefSlot>();
+    firstFreeWeak_ = firstFreeWeak_->nextFree();
     weakSlots_.pop_back();
   }
 
@@ -1220,13 +1213,12 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
 
   void accept(WeakRefBase &wr) override {
     WeakRefSlot *slot = wr.unsafeGetSlot();
-    if (slot->extra == WeakSlotState::Free) {
+    if (slot->state() == WeakSlotState::Free) {
       // If the slot is free, there's no edge to add.
       return;
     }
-    PinnedHermesValue &hv = slot->value;
-    if (!hv.isPointer()) {
-      // Filter out non-pointers from adding edges.
+    if (!slot->hasPointer()) {
+      // Filter out empty refs from adding edges.
       return;
     }
     // Assume all weak pointers have no names, and are stored in an array-like
@@ -1235,7 +1227,7 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
     snap_.addNamedEdge(
         HeapSnapshot::EdgeType::Weak,
         indexName,
-        gc.getObjectID(hv.getPointer()));
+        gc.getObjectID(slot->getPointer()));
   }
 
  private:
@@ -1297,16 +1289,15 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor, public WeakRootAcceptor {
 
   void accept(WeakRefBase &wr) override {
     WeakRefSlot *slot = wr.unsafeGetSlot();
-    if (slot->extra == WeakSlotState::Free) {
+    if (slot->state() == WeakSlotState::Free) {
       // If the slot is free, there's no edge to add.
       return;
     }
-    PinnedHermesValue &hv = slot->value;
-    if (!hv.isPointer()) {
-      // Filter out non-pointers from adding edges.
+    if (!slot->hasPointer()) {
+      // Filter out empty refs from adding edges.
       return;
     }
-    pointerAccept(hv.getPointer(), nullptr, true);
+    pointerAccept(slot->getPointer(), nullptr, true);
   }
 
   void beginRootSection(Section section) override {
@@ -1449,19 +1440,22 @@ void GenGC::serializeWeakRefs(Serializer &s) {
   s.writeInt<uint32_t>(numWeakRefSlots);
   for (auto &slot : weakSlots_) {
     // Serialize WeakRefSlot slot.
-    s.writeInt<uint32_t>(slot.extra);
-    // If slot is free, the value field is used to store a native pointer to
-    // the next free slot.
-    s.writeHermesValue(
-        slot.value, slot.extra == WeakSlotState::Free ? true : false);
+    auto state = slot.state();
+    s.writeInt<uint32_t>(state);
+    // Should not be serializing in the middle of GC.
+    assert(state != WeakSlotState::Marked && "marked state would be lost");
+    if (state != WeakSlotState::Free) {
+      assert(state == WeakSlotState::Unmarked);
+      if (WeakRefSlot::kRelocKind == RelocationKind::HermesValue) {
+        s.writeHermesValue(
+            slot.hasValue() ? slot.value() : HermesValue::encodeEmptyValue());
+      } else {
+        s.writeRelocation(slot.getPointer());
+      }
+    }
     // Call endObject() for slot because another free WeakSlot may have a
     // pointer to &slot.
     s.endObject(&slot);
-  }
-  bool writeFreeWeak = firstFreeWeak_ != nullptr;
-  s.writeInt<uint8_t>(writeFreeWeak);
-  if (writeFreeWeak) {
-    s.writeRelocation(firstFreeWeak_);
   }
 }
 
@@ -1475,15 +1469,19 @@ void GenGC::deserializeWeakRefs(Deserializer &d) {
   weakSlots_.resize(numWeakRefSlots);
   for (auto &slot : weakSlots_) {
     // Deserialize this WeakRefSlot.
-    slot.extra = static_cast<WeakSlotState>(d.readInt<uint32_t>());
-    d.readHermesValue(
-        &slot.value, slot.extra == WeakSlotState::Free ? true : false);
+    auto state = d.readInt<uint32_t>();
+    if (state == WeakSlotState::Free) {
+      freeWeakSlot(&slot);
+    } else {
+      assert(state == WeakSlotState::Unmarked);
+      if (WeakRefSlot::kRelocKind == RelocationKind::HermesValue) {
+        d.readHermesValue(
+            reinterpret_cast<HermesValue *>(slot.deserializeAddr()));
+      } else {
+        d.readRelocation(slot.deserializeAddr(), WeakRefSlot::kRelocKind);
+      }
+    }
     d.endObject(&slot);
-  }
-
-  bool writeFreeWeak = d.readInt<uint8_t>();
-  if (writeFreeWeak) {
-    d.readRelocation(&firstFreeWeak_, RelocationKind::NativePointer);
   }
 }
 
