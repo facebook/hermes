@@ -13,7 +13,6 @@ namespace synthtest {
 const char *nativeSetsConstantTrace() {
   return R"###(
 {
-  "version": 2,
   "globalObjID": 1,
   "env": {
     "mathRandomSeed": 0,

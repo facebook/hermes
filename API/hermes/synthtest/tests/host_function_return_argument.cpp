@@ -13,7 +13,6 @@ namespace synthtest {
 const char *hostFunctionReturnArgumentTrace() {
   return R"###(
 {
-  "version": 2,
   "globalObjID": 1,
   "env": {
     "mathRandomSeed": 0,

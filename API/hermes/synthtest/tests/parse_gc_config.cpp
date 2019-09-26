@@ -13,7 +13,6 @@ namespace synthtest {
 const char *parseGCConfigTrace() {
   return R"###(
 {
-  "version": 2,
   "globalObjID": 0,
   "runtimeConfig": {
     "gcConfig": {
