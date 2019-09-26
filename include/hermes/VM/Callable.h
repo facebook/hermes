@@ -236,8 +236,7 @@ class Callable : public JSObject {
       HermesValue param4,
       bool construct = false);
 
-  /// Create a new object instance to be passed as the 'this' argument when
-  /// invoking the constructor.
+  /// Calls CallableVTable::newObject.
   static CallResult<HermesValue> newObject(
       Handle<Callable> selfHandle,
       Runtime *runtime,
@@ -245,7 +244,7 @@ class Callable : public JSObject {
     return selfHandle->getVT()->newObject(selfHandle, runtime, parentHandle);
   }
 
-  /// Call the callable with arguments already on the stack.
+  /// Calls CallableVTable::call.
   static CallResult<HermesValue> call(
       Handle<Callable> selfHandle,
       Runtime *runtime) {
