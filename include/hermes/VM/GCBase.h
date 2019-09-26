@@ -248,18 +248,18 @@ class GCBase {
   };
 
   struct HeapInfo {
-    /// Number of collections occurred.
+    /// Number of garbage collections (of any kind) since creation.
     unsigned numCollections{0};
-    /// Total number of bytes allocated since the beginning of runtime
-    /// execution.
+    /// Total (cumulative) bytes allocated within the JS heap since creation.
     unsigned totalAllocatedBytes{0};
-    /// Number of currently allocated bytes in the heap. Some may be
-    /// unreachable.
+    /// Number of currently allocated bytes within the JS heap. Some may be
+    /// in unreachable objects (unless a full collection just occurred).
     gcheapsize_t allocatedBytes{0};
-    /// Size of the active heap (doesn't include the "to-space").
+    /// Current capacity of the JS heap, in bytes.
     gcheapsize_t heapSize{0};
-    /// Estimate of amount of malloc space used by objects in the heap.
-    /// Calculated by querying each object to report its malloc usage.
+    /// Estimate of amount of current malloc space used by the runtime and any
+    /// auxiliary allocations owned by heap objects. (Calculated by querying
+    /// each finalizable object to report its malloc usage.)
     unsigned mallocSizeEstimate{0};
     /// The total amount of Virtual Address space (VA) that the GC is using.
     uint64_t va{0};

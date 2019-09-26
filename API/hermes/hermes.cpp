@@ -426,6 +426,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
+  // See include/hermes/VM/GCBase.h for documentation of the fields
   std::unordered_map<std::string, int64_t> getHeapInfo(
       bool includeExpensive) override {
     vm::GCBase::HeapInfo info;
