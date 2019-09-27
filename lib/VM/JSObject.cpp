@@ -1326,18 +1326,31 @@ CallResult<bool> JSObject::putComputed_RJS(
 
     // If it is a property in this object.
     if (propObj == selfHandle) {
-      if (LLVM_UNLIKELY(desc.flags.hostObject)) {
-        MutableHandle<StringPrimitive> strPrim{runtime};
-        SymbolID id{};
-        LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
+      if (LLVM_LIKELY(!desc.flags.internalSetter && !desc.flags.hostObject)) {
+        if (LLVM_UNLIKELY(
+                setComputedSlotValue(selfHandle, runtime, desc, valueHandle) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        return true;
+      }
+
+      MutableHandle<StringPrimitive> strPrim{runtime};
+      SymbolID id{};
+      LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
+
+      if (desc.flags.internalSetter) {
+        return internalSetter(
+            selfHandle,
+            runtime,
+            id,
+            desc.castToNamedPropertyDescriptorRef(),
+            valueHandle,
+            opFlags);
+      } else {
+        assert(desc.flags.hostObject && "descriptor flags are impossible");
         return vmcast<HostObject>(selfHandle.get())->set(id, *valueHandle);
       }
-      if (LLVM_UNLIKELY(
-              setComputedSlotValue(selfHandle, runtime, desc, valueHandle) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      return true;
     }
   }
 

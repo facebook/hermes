@@ -85,3 +85,15 @@ var a = [];
 Object.defineProperty(a, "length", {value:2, writable: false});
 print(a.length);
 //CHECK-NEXT: 2
+
+// Make sure that setting length as a computed property works.
+var a = [1, 2, 3, 4, 5]
+print(a);
+//CHECK-NEXT: 1,2,3,4,5
+var t = "length";
+a[t] = 3;
+print(a);
+//CHECK-NEXT: 1,2,3
+a[t] = 5;
+print(a);
+//CHECK-NEXT: 1,2,3,,
