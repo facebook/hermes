@@ -19,5 +19,5 @@ jobs:
         ./gradlew assembleDebug
     - name: Run tests
       run: |
-        source scripts/android-setup.sh && installsdk 'cmake;3.10.2.4988404'
+        source scripts/android-setup.sh && installAndroidSDK && installsdk 'cmake;3.10.2.4988404'
         scripts/run-host-tests.sh
