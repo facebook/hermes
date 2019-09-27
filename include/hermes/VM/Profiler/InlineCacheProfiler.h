@@ -117,7 +117,7 @@ class InlineCacheProfiler {
 
   /// Store an array of hidden classes that will be used
   /// by inline caching profiler.
-  JSArray *cachedHiddenClassesRawPtr_;
+  JSArray *cachedHiddenClassesRawPtr_{nullptr};
 
   /// Store a map from object Id to array index in the array
   /// referenced by cachedHiddenClassesRawPtr_.

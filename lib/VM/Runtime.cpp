@@ -513,7 +513,10 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
       samplingProfiler_->markRoots(acceptor);
     }
 #ifdef HERMESVM_PROFILER_BB
-    acceptor.acceptPtr(inlineCacheProfiler_.getHiddenClassArray());
+    auto *&hiddenClassArray = inlineCacheProfiler_.getHiddenClassArray();
+    if (hiddenClassArray) {
+      acceptor.acceptPtr(hiddenClassArray);
+    }
 #endif
     acceptor.endRootSection();
   }
