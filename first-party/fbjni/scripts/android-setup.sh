@@ -23,7 +23,7 @@ function installsdk() {
     PROXY_ARGS="--proxy=http --proxy_host=$PROXY_HOST --proxy_port=$PROXY_PORT"
   fi
 
-  echo y | "$ANDROID_HOME/tools/bin/sdkmanager" $PROXY_ARGS "$@"
+  echo y | "$ANDROID_HOME/tools/bin/sdkmanager" $PROXY_ARGS "$@" > /dev/null
 }
 
 function getAndroidSDK {
@@ -35,7 +35,7 @@ function getAndroidSDK {
 }
 
 function installAndroidSDK {
-  export ANDROID_HOME=$USER/android_sdk
+  export ANDROID_HOME="$HOME/android_sdk"
   getAndroidSDK
   export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$PATH"
 
