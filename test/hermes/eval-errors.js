@@ -23,3 +23,12 @@ try{ global.eval("throw new Error()\n//# sourceURL=foo"); } catch (e) {
 }
 //CHECK-NEXT: Error
 //CHECK-NEXT:   at global (foo:1:16)
+
+try {
+    var f = new Function(" 'use strict'; var o = {}; with (o) {}; ");
+} catch (e) {
+    print(e.stack);
+}
+//CHECK: SyntaxError: 1:41:invalid statement encountered.
+//CHECK-NEXT:     at Function (native)
+//CHECK-NEXT:     at global ({{.*}}eval-errors.js:{{.*}}:25)

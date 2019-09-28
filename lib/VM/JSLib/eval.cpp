@@ -70,6 +70,13 @@ CallResult<HermesValue> evalInEnvironment(
   context->setStrictMode(false);
   context->setEnableEval(true);
 
+  auto reportError = [&, runtime]() {
+    const auto &msg = evalOutputManager.getFirstMessage();
+    return runtime->raiseSyntaxError(
+        TwineChar16(msg.getLineNo()) + ":" + (msg.getColumnNo() + 1) + ":" +
+        msg.getMessage());
+  };
+
 // Generate full debug info if the debugger is present, otherwise generate
 // enough for backtraces.
 #ifdef HERMES_ENABLE_DEBUGGER
@@ -80,28 +87,35 @@ CallResult<HermesValue> evalInEnvironment(
   sem::SemContext semCtx{};
   hermes::parser::JSParser jsParser(*context, utf8code);
   auto parsed = jsParser.parse();
-  if (!parsed || !validateAST(*context, semCtx, *parsed)) {
-    auto msg = evalOutputManager.getFirstMessage();
-    return runtime->raiseSyntaxError(
-        TwineChar16(msg.getLineNo()) + ":" + (msg.getColumnNo() + 1) + ":" +
-        msg.getMessage());
-  }
-  auto *ast = parsed.getValue();
+  if (!parsed || !validateAST(*context, semCtx, *parsed))
+    return reportError();
+
+  ESTree::Node *ast = parsed.getValue();
+
   // Check to see if we're only allowed to have a single function.
-  if (singleFunction && !isSingleFunctionExpression(ast)) {
+  if (singleFunction && !isSingleFunctionExpression(ast))
     return runtime->raiseSyntaxError("Invalid function expression");
-  }
 
   Module M(context);
 
   DeclarationFileListTy declFileList;
   hermes::generateIRFromESTree(ast, &M, declFileList, scopeChain);
 
+  if (evalOutputManager.haveErrors())
+    return reportError();
+
   auto bytecodeOptions = BytecodeGenerationOptions::defaults();
   bytecodeOptions.verifyIR = runtime->verifyEvalIR;
-  auto bytecode = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-      hbc::generateBytecodeModule(
-          &M, M.getTopLevelFunction(), bytecodeOptions));
+  auto module =
+      hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), bytecodeOptions);
+  if (evalOutputManager.haveErrors())
+    return reportError();
+
+  auto bytecode =
+      hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(module));
+
+  if (evalOutputManager.haveErrors())
+    return reportError();
 
   // TODO: pass a sourceURL derived from a '//# sourceURL' comment.
   llvm::StringRef sourceURL{};

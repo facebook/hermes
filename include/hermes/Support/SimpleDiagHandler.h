@@ -19,12 +19,13 @@ class SimpleDiagHandler {
   void installInto(SourceErrorManager &sm);
 
   /// \return true if an error message has been tracked.
-  bool hasFirstMessage() const {
+  bool haveErrors() const {
     return !firstMessage_.getMessage().empty();
   }
 
   /// \return the first error message received.
   const llvm::SMDiagnostic &getFirstMessage() const {
+    assert(haveErrors() && "getFirstMessage() called without errors");
     return firstMessage_;
   }
 

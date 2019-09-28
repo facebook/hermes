@@ -19,7 +19,7 @@ void SimpleDiagHandler::installInto(hermes::SourceErrorManager &sm) {
 void SimpleDiagHandler::handler(const llvm::SMDiagnostic &msg, void *ctx) {
   auto *mgr = static_cast<SimpleDiagHandler *>(ctx);
   if (msg.getKind() == llvm::SourceMgr::DK_Error) {
-    if (!mgr->hasFirstMessage()) {
+    if (!mgr->haveErrors()) {
       mgr->firstMessage_ = msg;
     }
   }

@@ -23,6 +23,8 @@ BLACK_LIST = [
     "CVEs/CVE-2013-6632.js",
     # Constructs an enormous regexp leading to stack overflow: T28044592.
     "CVEs/CVE-2017-11890.js",
+    # Uses "with".
+    "CVEs/CVE-2016-1665.js",
     # Unicode identifiers.
     "test262/test/language/identifiers/vals-rus-alpha-lower-via-escape-hex4.js",
     "test262/test/language/identifiers/vals-rus-alpha-upper-via-escape-hex4.js",
