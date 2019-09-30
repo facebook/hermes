@@ -34,6 +34,7 @@
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
+#include "hermes/VM/JSLib/RuntimeJSONUtils.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/Runtime.h"
@@ -677,6 +678,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::String createStringFromAscii(const char *str, size_t length) override;
   jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
   std::string utf8(const jsi::String &) override;
+
+  jsi::Value createValueFromJsonUtf8(const uint8_t *json, size_t length)
+      override;
 
   jsi::Object createObject() override;
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override;
@@ -1414,6 +1418,43 @@ std::string HermesRuntimeImpl::utf8(const jsi::String &str) {
   });
 }
 
+static void
+convertUtf8ToUtf16(const uint8_t *utf8, size_t length, std::u16string &out) {
+  // length is the number of input bytes
+  out.resize(length);
+  const llvm::UTF8 *sourceStart = (const llvm::UTF8 *)utf8;
+  const llvm::UTF8 *sourceEnd = sourceStart + length;
+  llvm::UTF16 *targetStart = (llvm::UTF16 *)&out[0];
+  llvm::UTF16 *targetEnd = targetStart + out.size();
+  llvm::ConversionResult cRes;
+  cRes = ConvertUTF8toUTF16(
+      &sourceStart,
+      sourceEnd,
+      &targetStart,
+      targetEnd,
+      llvm::lenientConversion);
+  (void)cRes;
+  assert(
+      cRes != llvm::ConversionResult::targetExhausted &&
+      "not enough space allocated for UTF16 conversion");
+  out.resize((char16_t *)targetStart - &out[0]);
+}
+
+jsi::Value HermesRuntimeImpl::createValueFromJsonUtf8(
+    const uint8_t *json,
+    size_t length) {
+  return maybeRethrow([&] {
+    vm::GCScope gcScope(&runtime_);
+
+    std::u16string out;
+    convertUtf8ToUtf16(json, length, out);
+    auto res = runtimeJSONParseRef(
+        &runtime_, llvm::ArrayRef<char16_t>(out.data(), out.size()));
+    checkStatus(res.getStatus());
+    return valueFromHermesValue(*res);
+  });
+}
+
 jsi::Object HermesRuntimeImpl::createObject() {
   vm::GCScope gcScope(&runtime_);
   return maybeRethrow([&] {
@@ -1909,24 +1950,7 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
     return stringHVFromAscii((const char *)utf8, length);
   }
   std::u16string out;
-  out.resize(length);
-  const llvm::UTF8 *sourceStart = (const llvm::UTF8 *)utf8;
-  const llvm::UTF8 *sourceEnd = sourceStart + length;
-  llvm::UTF16 *targetStart = (llvm::UTF16 *)&out[0];
-  llvm::UTF16 *targetEnd = targetStart + out.capacity();
-  llvm::ConversionResult cRes;
-  cRes = ConvertUTF8toUTF16(
-      &sourceStart,
-      sourceEnd,
-      &targetStart,
-      targetEnd,
-      llvm::lenientConversion);
-  (void)cRes;
-  assert(
-      cRes != llvm::ConversionResult::targetExhausted &&
-      "not enough space allocated for UTF16 conversion");
-  out.resize((char16_t *)targetStart - &out[0]);
-
+  convertUtf8ToUtf16(utf8, length, out);
   auto strRes = vm::StringPrimitive::createEfficient(&runtime_, std::move(out));
   checkStatus(strRes.getStatus());
 

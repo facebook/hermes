@@ -18,6 +18,9 @@ CallResult<HermesValue> runtimeJSONParse(
     Handle<StringPrimitive> jsonString,
     Handle<Callable> reviver);
 
+/// Alternative interface to runtimeJSONParse for strings outside the JS heap.
+CallResult<HermesValue> runtimeJSONParseRef(Runtime *runtime, UTF16Ref ref);
+
 /// Returns a String in JSON format representing an ECMAScript value,
 /// according to 15.12.3.
 CallResult<HermesValue> runtimeJSONStringify(

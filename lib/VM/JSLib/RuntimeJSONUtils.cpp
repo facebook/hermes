@@ -551,6 +551,11 @@ CallResult<HermesValue> runtimeJSONParse(
   return parser.parse();
 }
 
+CallResult<HermesValue> runtimeJSONParseRef(Runtime *runtime, UTF16Ref ref) {
+  RuntimeJSONParser parser{runtime, ref, Runtime::makeNullHandle<Callable>()};
+  return parser.parse();
+}
+
 ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
   if (!vmisa<JSObject>(*replacer))
     return ExecutionStatus::RETURNED;
