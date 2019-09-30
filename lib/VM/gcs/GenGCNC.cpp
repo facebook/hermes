@@ -362,6 +362,7 @@ void GenGC::collect(bool canEffectiveOOM) {
     }
 
     usedAfter = usedDirect();
+    const size_t usedAfterYG = youngGen_.usedDirect();
     sizeAfter = sizeDirect();
     cumPostBytes_ += usedAfter;
 
@@ -372,6 +373,7 @@ void GenGC::collect(bool canEffectiveOOM) {
     fullCollection.recordGCStats(sizeDirect(), &fullCollectionCumStats_);
 
     fullCollection.addArg("fullGCUsedAfter", usedAfter);
+    fullCollection.addArg("fullGCUsedAfterYG", usedAfterYG);
     fullCollection.addArg("fullGCSizeAfter", sizeAfter);
     fullCollection.addArg("fullGCNum", fullCollectionCumStats_.numCollections);
 
