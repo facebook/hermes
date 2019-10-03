@@ -8,6 +8,7 @@
 #define HERMES_SUPPORT_COMPACTARRAY_H
 
 #include "hermes/Support/CheckedMalloc.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include <cassert>
 #include <limits>
@@ -54,6 +55,7 @@ class CompactArray {
       case UINT32:
         return Fixed<uint32_t>::get(raw_, idx);
     }
+    llvm_unreachable("impossible scale");
   }
   /// Set the element at index \p idx to \p value.
   void set(uint32_t idx, uint32_t value) {
@@ -99,6 +101,7 @@ class CompactArray {
       case UINT32:
         return Fixed<uint32_t>::trySet(raw_, idx, value);
     }
+    llvm_unreachable("impossible scale");
   }
   /// Number of elements.
   uint32_t size_;
