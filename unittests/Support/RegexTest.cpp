@@ -15,7 +15,7 @@ using namespace hermes::regex;
 
 namespace {
 
-using cregex = Regex<U16RegexTraits>;
+using cregex = Regex<UTF16RegexTraits>;
 using cmatch = MatchResults<const char16_t *>;
 
 bool search(

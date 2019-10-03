@@ -79,7 +79,7 @@ void dumpInstruction(
     const regex::MatchChar16Insn *insn,
     llvm::raw_ostream &OS) {
   OS << "MatchChar16: ";
-  char16_t c = insn->c;
+  char32_t c = insn->c;
   OS << llvm::format_hex(c, 4);
 }
 
@@ -132,7 +132,7 @@ void dumpInstruction(
     const regex::MatchCharICase16Insn *insn,
     llvm::raw_ostream &OS) {
   OS << "MatchCharICase16: ";
-  char16_t c = insn->c;
+  char32_t c = insn->c;
   OS << llvm::format_hex(c, 4);
 }
 
@@ -166,15 +166,15 @@ void dumpInstruction(const regex::BracketInsn *insn, llvm::raw_ostream &OS) {
   if (insn->negativeCharClasses & CharacterClass::Words)
     OS << "\\W";
 
-  auto output1Char = [&OS](char16_t c) {
+  auto output1Char = [&OS](uint32_t c) {
     if (c <= 127 && std::isprint(c))
       OS << char(c);
     else
       OS << llvm::format_hex(c, 4);
   };
-  // BracketRanges16 immediately follow insn.
-  const BracketRange16 *range =
-      reinterpret_cast<const BracketRange16 *>(1 + insn);
+  // BracketRange32 immediately follow insn.
+  const BracketRange32 *range =
+      reinterpret_cast<const BracketRange32 *>(1 + insn);
   for (uint32_t i = 0; i < insn->rangeCount; i++) {
     output1Char(range->start);
     if (range->end > range->start) {
@@ -323,7 +323,7 @@ llvm::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
 
   // Build and compile the regexp.
   auto re =
-      regex::Regex<regex::U16RegexTraits>(re16.begin(), re16.end(), sflags);
+      regex::Regex<regex::UTF16RegexTraits>(re16.begin(), re16.end(), sflags);
   if (!re.valid()) {
     if (outError)
       *outError = messageForError(re.getError());

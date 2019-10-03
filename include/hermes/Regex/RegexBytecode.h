@@ -46,6 +46,8 @@ struct MatchAnyButNewlineInsn : public Insn {};
 struct MatchChar8Insn : public Insn {
   char c;
 };
+
+// Matches a 16 bit character without attempting to interpret surrogate pairs.
 struct MatchChar16Insn : public Insn {
   char16_t c;
 };
@@ -54,9 +56,12 @@ struct MatchChar16Insn : public Insn {
 struct MatchCharICase8Insn : public Insn {
   char c;
 };
+
+// Matches a 16 bit character without attempting to interpret surrogate pairs.
 struct MatchCharICase16Insn : public Insn {
   char16_t c;
 };
+
 struct AlternationInsn : public Insn {
   /// The primary branch is the Insn following the alternation, while the
   /// secondary branch is at the secondaryBranch jump target. Both branches have
@@ -71,18 +76,18 @@ struct Jump32Insn : public Insn {
 
 /// A BracketRange represents an inclusive range of characters in a bracket,
 /// such as /[a-z]/. Singletons like /[a]/ are represented as the range a-a.
-struct BracketRange16 {
-  char16_t start;
-  char16_t end;
+struct BracketRange32 {
+  uint32_t start;
+  uint32_t end;
 };
 struct BackRefInsn : public Insn {
   uint16_t mexp;
 };
 
 /// BracketInsn is a variable-width instruction. Each BracketInsn is followed by
-/// a sequence of BracketRange16 in the bytecode stream.
+/// a sequence of BracketRange32 in the bytecode stream.
 struct BracketInsn : public Insn {
-  /// Number of BracketRange16s following this instruction.
+  /// Number of BracketRange32s following this instruction.
   uint32_t rangeCount;
   /// Whether the bracket is negated (leading ^).
   uint8_t negate : 1;
@@ -95,7 +100,7 @@ struct BracketInsn : public Insn {
 
   /// \return the width of this instruction plus its bracket ranges.
   uint32_t totalWidth() const {
-    return sizeof(*this) + rangeCount * sizeof(BracketRange16);
+    return sizeof(*this) + rangeCount * sizeof(BracketRange32);
   }
 };
 
@@ -296,8 +301,8 @@ class RegexBytecodeStream {
     return InstructionWrapper<Instruction>(&bytes_, startSize);
   }
 
-  /// Emit a BracketRange16.
-  void emitBracketRange(BracketRange16 range) {
+  /// Emit a BracketRange32.
+  void emitBracketRange(BracketRange32 range) {
     const uint8_t *rangeBytes = reinterpret_cast<const uint8_t *>(&range);
     bytes_.insert(bytes_.end(), rangeBytes, rangeBytes + sizeof(range));
   }

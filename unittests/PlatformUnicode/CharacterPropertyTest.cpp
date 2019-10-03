@@ -69,7 +69,7 @@ TEST(UnicodeTest, isUnicodeOnlySpace) {
 
 // Verify some correct canonicalizations.
 TEST(UnicodeTest, LegacyU16Canonicalization) {
-  regex::U16RegexTraits traits;
+  regex::UTF16RegexTraits traits;
   EXPECT_EQ('A', traits.canonicalize('a'));
   EXPECT_EQ('/', traits.canonicalize('/'));
   EXPECT_EQ(

@@ -165,7 +165,7 @@ ExecutionStatus JSRegExp::initialize(
     patternText.copyUTF16String(patternText16);
 
     // Build the regex.
-    regex::Regex<regex::U16RegexTraits> regex(
+    regex::Regex<regex::UTF16RegexTraits> regex(
         patternText16.begin(), patternText16.end(), nativeFlags);
 
     if (!regex.valid()) {
@@ -306,7 +306,7 @@ CallResult<RegExpMatch> JSRegExp::search(
         searchStartOffset,
         matchFlags);
   } else {
-    matchResult = performSearch<char16_t, regex::U16RegexTraits>(
+    matchResult = performSearch<char16_t, regex::UTF16RegexTraits>(
         runtime,
         selfHandle->bytecode_,
         input.castToChar16Ptr(),

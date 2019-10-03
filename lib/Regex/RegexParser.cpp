@@ -18,11 +18,6 @@ class Parser {
   // The character type that we are parsing.
   using CharT = typename std::iterator_traits<ForwardIterator>::value_type;
 
-  /// Simple type representing a list of characters.
-  /// Size of 2 because we use this to collect the start and end of char class
-  /// ranges, like /[a-z]/.
-  using CharList = llvm::SmallVector<char16_t, 2>;
-
   // The type of a node in our regex.
   using Node = typename RegexType::Node;
 
@@ -744,11 +739,11 @@ constants::ErrorType parseRegex(
   return result;
 }
 
-// Explicitly instantiate this for U16RegexTraits only.
+// Explicitly instantiate this for UTF16RegexTraits only.
 template constants::ErrorType parseRegex(
     const char16_t *start,
     const char16_t *end,
-    Regex<U16RegexTraits> *receiver,
+    Regex<UTF16RegexTraits> *receiver,
     uint32_t backRefLimit,
     uint32_t *outMaxBackRef);
 

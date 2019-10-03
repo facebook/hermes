@@ -212,8 +212,8 @@ enum MatchConstraintFlags : uint8_t {
   MatchConstraintNonEmpty = 1 << 2,
 };
 
-/// \return whether a character \p c is ASCII.
-inline bool isASCII(char16_t c) {
+/// \return whether a code point \p cp is ASCII.
+inline bool isASCII(uint32_t c) {
   return c <= 127;
 }
 
@@ -256,8 +256,8 @@ class Node {
   Node(Node &&) = delete;
   Node &operator=(Node &&) = delete;
 
-  using CharT = char16_t;
-  using CharListT = llvm::SmallVector<CharT, 5>;
+  using CodePoint = uint32_t;
+  using CodePointList = llvm::SmallVector<CodePoint, 5>;
 
   /// Default constructor and destructor.
   Node() = default;
@@ -296,7 +296,7 @@ class Node {
   /// If this Node can be coalesced into a single MatchCharNode,
   /// then add the node's characters to \p output and \return true.
   /// Otherwise \return false.
-  virtual bool tryCoalesceCharacters(CharListT *output) const {
+  virtual bool tryCoalesceCharacters(CodePointList *output) const {
     return false;
   }
 
@@ -631,7 +631,7 @@ class MatchAnyButNewlineNode final : public Node {
 /// constructor.
 class MatchCharNode final : public Node {
   using Super = Node;
-  using Super::CharListT;
+  using Super::CodePointList;
 
   /// The minimum number of characters we will output in a MatchCharN
   /// instruction.
@@ -641,7 +641,7 @@ class MatchCharNode final : public Node {
   static constexpr size_t kMaxMatchCharNCount = UINT8_MAX;
 
  public:
-  MatchCharNode(CharListT chars, bool icase)
+  MatchCharNode(CodePointList chars, bool icase)
       : chars_(std::move(chars)), icase_(icase) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
@@ -654,21 +654,21 @@ class MatchCharNode final : public Node {
   }
 
   void emit(RegexBytecodeStream &bcs) const override {
-    llvm::ArrayRef<char16_t> remaining{chars_};
+    llvm::ArrayRef<CodePoint> remaining{chars_};
     while (!remaining.empty()) {
       // Output any run (possibly empty) of ASCII chars.
       auto asciis = remaining.take_while(isASCII);
       emitASCIIList(asciis, bcs);
       remaining = remaining.drop_front(asciis.size());
 
-      // Output any run (possibly empty) of non-ASCII char16.
-      auto char16s = remaining.take_until(isASCII);
-      emitChar16List(char16s, bcs);
-      remaining = remaining.drop_front(char16s.size());
+      // Output any run (possibly empty) of non-ASCII chars.
+      auto nonAsciis = remaining.take_until(isASCII);
+      emitNonASCIIList(nonAsciis, bcs);
+      remaining = remaining.drop_front(nonAsciis.size());
     }
   }
 
-  bool tryCoalesceCharacters(CharListT *output) const override {
+  bool tryCoalesceCharacters(CodePointList *output) const override {
     output->append(chars_.begin(), chars_.end());
     return true;
   }
@@ -679,7 +679,7 @@ class MatchCharNode final : public Node {
   }
 
   /// Emit a list of ASCII characters into bytecode stream \p bcs.
-  void emitASCIIList(llvm::ArrayRef<char16_t> chars, RegexBytecodeStream &bcs)
+  void emitASCIIList(llvm::ArrayRef<CodePoint> chars, RegexBytecodeStream &bcs)
       const {
     assert(
         std::all_of(chars.begin(), chars.end(), isASCII) &&
@@ -704,7 +704,7 @@ class MatchCharNode final : public Node {
     }
 
     // Output any remaining as individual characters.
-    for (char16_t c : remaining) {
+    for (CodePoint c : remaining) {
       if (icase_) {
         bcs.emit<MatchCharICase8Insn>()->c = c;
       } else {
@@ -713,11 +713,11 @@ class MatchCharNode final : public Node {
     }
   }
 
-  /// Emit a list of 16 bit characters into bytecode stream \p
-  /// bcs.
-  void emitChar16List(llvm::ArrayRef<char16_t> chars, RegexBytecodeStream &bcs)
-      const {
-    for (char16_t c : chars) {
+  /// Emit a list of non-ASCII characters into bytecode stream \p bcs.
+  void emitNonASCIIList(
+      llvm::ArrayRef<CodePoint> chars,
+      RegexBytecodeStream &bcs) const {
+    for (CodePoint c : chars) {
       if (icase_) {
         bcs.emit<MatchCharICase16Insn>()->c = c;
       } else {
@@ -727,8 +727,8 @@ class MatchCharNode final : public Node {
   }
 
  private:
-  // The character literals we wish to match against.
-  const CharListT chars_;
+  // The code points we wish to match against.
+  const CodePointList chars_;
 
   /// /// Whether we are case insensitive (true) or case sensitive (false).
   const bool icase_;
@@ -738,7 +738,7 @@ class MatchCharNode final : public Node {
 template <class Traits>
 class BracketNode : public Node {
   using Super = Node;
-  using CharT = typename Super::CharT;
+  using Super::CodePoint;
 
   const Traits &traits_;
   CodePointSet codePointSet_;
@@ -789,11 +789,11 @@ class BracketNode : public Node {
   BracketNode(const Traits &traits, bool negate, bool icase)
       : traits_(traits), negate_(negate), icase_(icase) {}
 
-  void addChar(char16_t c) {
+  void addChar(CodePoint c) {
     codePointSet_.add(c);
   }
 
-  void addRange(char16_t a, char16_t b) {
+  void addRange(CodePoint a, CodePoint b) {
     assert(a <= b && "Invalid range");
     uint32_t length = b - a + 1;
     codePointSet_.add(CodePointRange{a, length});
@@ -829,8 +829,8 @@ class BracketNode : public Node {
     CodePointSet cps =
         icase_ ? makeCanonicallyEquivalent(codePointSet_) : codePointSet_;
     for (const auto &range : cps.ranges()) {
-      bcs.emitBracketRange(BracketRange16{
-          (char16_t)range.first, (char16_t)(range.first + range.length - 1)});
+      bcs.emitBracketRange(
+          BracketRange32{range.first, range.first + range.length - 1});
     }
     insn->rangeCount = cps.ranges().size();
   }
@@ -850,7 +850,8 @@ class Regex {
   template <class A, class B>
   friend class Parser;
 
-  using CharT = typename Traits::char_type;
+  using CharT = typename Traits::CodeUnit;
+  using CodePoint = typename Traits::CodePoint;
   using Node = regex::Node;
   using BracketNode = regex::BracketNode<Traits>;
 
@@ -1007,7 +1008,7 @@ class Regex {
       uint32_t mexp_begin,
       bool greedy);
   BracketNode *startBracketList(bool negate);
-  void pushChar(CharT c);
+  void pushChar(CodePoint c);
   void pushCharClass(CharacterClass c);
   void pushBackRef(uint32_t i);
   void pushAlternation(NodeList left, NodeList right);
@@ -1167,11 +1168,11 @@ void Regex<Traits>::pushLoop(
 }
 
 template <class Traits>
-void Regex<Traits>::pushChar(CharT c) {
+void Regex<Traits>::pushChar(CodePoint c) {
   bool icase = flags() & constants::icase;
   if (icase)
     c = traits_.canonicalize(c);
-  appendNode<MatchCharNode>(Node::CharListT{c}, icase);
+  appendNode<MatchCharNode>(Node::CodePointList{c}, icase);
 }
 
 template <class Traits>
@@ -1248,7 +1249,7 @@ void Node::optimizeNodeList(NodeList &nodes, constants::SyntaxFlags flags) {
   // [CharNode('abc')].
   for (size_t idx = 0, max = nodes.size(); idx < max; idx++) {
     // Get the range of nodes that can be successfully coalesced.
-    Node::CharListT chars;
+    Node::CodePointList chars;
     size_t rangeStart = idx;
     size_t rangeEnd = idx;
     for (; rangeEnd < max; rangeEnd++) {

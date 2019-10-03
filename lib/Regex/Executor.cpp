@@ -83,7 +83,7 @@ struct LoopData {
 /// A Context records global information about a match attempt.
 template <class Traits>
 struct Context {
-  using CharT = typename Traits::char_type;
+  using CodeUnit = typename Traits::CodeUnit;
 
   /// The set of backtracking opcodes. These are interpreted by the backtrack()
   /// function.
@@ -136,7 +136,7 @@ struct Context {
     struct {
       BacktrackOp op;
       uint32_t ip; /// Instruction pointer to set.
-      const CharT *value; /// Input string position to set.
+      const CodeUnit *value; /// Input string position to set.
     } setPosition;
 
     /// Fields used by EnterNonGreedyLoop instruction.
@@ -151,8 +151,8 @@ struct Context {
     struct {
       BacktrackOp op; /// The opcode.
       uint32_t continuation; /// The ip for the not-taken branch of the loop.
-      const CharT *min; /// The minimum possible match position.
-      const CharT *max; /// The maximum possible match position.
+      const CodeUnit *min; /// The minimum possible match position.
+      const CodeUnit *max; /// The maximum possible match position.
     } width1Loop;
 
     /* implicit */ BacktrackInsn(BacktrackOp op) : op(op) {}
@@ -176,7 +176,9 @@ struct Context {
     }
 
     /// \return a SetPosition instruction.
-    static BacktrackInsn makeSetPosition(uint32_t ip, const CharT *inputPos) {
+    static BacktrackInsn makeSetPosition(
+        uint32_t ip,
+        const CodeUnit *inputPos) {
       BacktrackInsn result = BacktrackOp::SetPosition;
       result.setPosition.ip = ip;
       result.setPosition.value = inputPos;
@@ -213,10 +215,10 @@ struct Context {
   constants::SyntaxFlags syntaxFlags_;
 
   /// The first character in the input string.
-  const CharT *first_;
+  const CodeUnit *first_;
 
   /// The end of the input string (one-past the last).
-  const CharT *last_;
+  const CodeUnit *last_;
 
   /// Count of submatches.
   uint32_t markedCount_;
@@ -234,8 +236,8 @@ struct Context {
       llvm::ArrayRef<uint8_t> bytecodeStream,
       constants::MatchFlagType flags,
       constants::SyntaxFlags syntaxFlags,
-      const CharT *first,
-      const CharT *last,
+      const CodeUnit *first,
+      const CodeUnit *last,
       uint32_t markedCount,
       uint32_t loopCount)
       : bytecodeStream_(bytecodeStream),
@@ -254,7 +256,8 @@ struct Context {
   /// if it fails. If the match succeeds, populates \p state with the state of
   /// the successful match; on failure the state's contents are undefined.
   /// Note the end of the match can be recovered as state->current_.
-  const CharT *match(State<Traits> *state, const CharT *pos, bool onlyAtStart);
+  const CodeUnit *
+  match(State<Traits> *state, const CodeUnit *pos, bool onlyAtStart);
 
   /// Backtrack the given state \p s with the backtrack stack \p bts.
   /// \return true if we backatracked, false if we exhausted the stack.
@@ -301,7 +304,7 @@ struct Context {
   /// Given a Width1Opcode \p w1opcode, return true if the given char \p c
   /// matches the instruction \p insn (with that opcode).
   template <Width1Opcode w1opcode>
-  inline bool matchWidth1(const Insn *insn, CharT c) const;
+  inline bool matchWidth1(const Insn *insn, CodeUnit c) const;
   /// \return true if all chars, stored in contiguous memory after \p insn,
   /// match the chars in state \p s in the same order, case insensitive. Note
   /// the count of chars is given in \p insn.
@@ -313,7 +316,7 @@ struct Context {
   /// max times. \return the number of matches made, not to exceed \p max.
   template <Width1Opcode w1opcode>
   inline uint32_t
-  matchWidth1LoopBody(const Insn *loopBody, const CharT *pos, uint32_t max);
+  matchWidth1LoopBody(const Insn *loopBody, const CodeUnit *pos, uint32_t max);
 };
 
 /// We store loop and captured range data contiguously in a single allocation at
@@ -328,7 +331,7 @@ union LoopOrCapturedRange {
 /// with the IP and input position.
 template <typename Traits>
 struct State {
-  using CharT = typename Traits::char_type;
+  using CharT = typename Traits::CodeUnit;
 
   /// The current character in the input string.
   const CharT *current_ = nullptr;
@@ -430,7 +433,7 @@ bool Context<Traits>::matchesNCharICase8(
   for (int offset = 0; offset < charCount; offset++) {
     char c = s.current_[offset];
     char instC = insnCharPtr[offset];
-    if (c != instC && traits_.canonicalize(c) != instC) {
+    if (c != instC && (char32_t)traits_.canonicalize(c) != (char32_t)instC) {
       return false;
     }
   }
@@ -444,7 +447,7 @@ template <class Traits>
 bool bracketMatchesChar(
     const Context<Traits> &ctx,
     const BracketInsn *insn,
-    const BracketRange16 *ranges,
+    const BracketRange32 *ranges,
     char16_t ch) {
   const auto &traits = ctx.traits_;
   // Note that if the bracket is negated /[^abc]/, we want to return true if we
@@ -583,7 +586,7 @@ bool Context<Traits>::backtrack(BacktrackStack &bts, State<Traits> *s) {
 
 template <class Traits>
 template <Width1Opcode w1opcode>
-bool Context<Traits>::matchWidth1(const Insn *base, CharT c) const {
+bool Context<Traits>::matchWidth1(const Insn *base, CodeUnit c) const {
   // Note this switch should resolve at compile time.
   assert(
       base->opcode == static_cast<Opcode>(w1opcode) &&
@@ -601,22 +604,24 @@ bool Context<Traits>::matchWidth1(const Insn *base, CharT c) const {
 
     case Width1Opcode::MatchCharICase8: {
       const auto *insn = llvm::cast<MatchCharICase8Insn>(base);
-      return c == insn->c || traits_.canonicalize(c) == insn->c;
+      return c == insn->c ||
+          (char32_t)traits_.canonicalize(c) == (char32_t)insn->c;
     }
 
     case Width1Opcode::MatchCharICase16: {
       const auto *insn = llvm::cast<MatchCharICase16Insn>(base);
-      return c == insn->c || traits_.canonicalize(c) == insn->c;
+      return c == insn->c ||
+          (char32_t)traits_.canonicalize(c) == (char32_t)insn->c;
     }
 
     case Width1Opcode::MatchAnyButNewline:
       return !isLineTerminator(c);
 
     case Width1Opcode::Bracket: {
-      // BracketInsn is followed by a list of BracketRange16s.
+      // BracketInsn is followed by a list of BracketRange32s.
       const BracketInsn *insn = llvm::cast<BracketInsn>(base);
-      const BracketRange16 *ranges =
-          reinterpret_cast<const BracketRange16 *>(insn + 1);
+      const BracketRange32 *ranges =
+          reinterpret_cast<const BracketRange32 *>(insn + 1);
       return bracketMatchesChar<Traits>(*this, insn, ranges, c);
     }
   }
@@ -627,7 +632,7 @@ template <class Traits>
 template <Width1Opcode w1opcode>
 uint32_t Context<Traits>::matchWidth1LoopBody(
     const Insn *insn,
-    const CharT *pos,
+    const CodeUnit *pos,
     uint32_t max) {
   uint32_t iters = 0;
   for (; iters < max; iters++) {
@@ -642,7 +647,7 @@ bool Context<Traits>::matchWidth1Loop(
     const Width1LoopInsn *insn,
     State<Traits> *s,
     BacktrackStack &bts) {
-  const CharT *pos = s->current_;
+  const CodeUnit *pos = s->current_;
   uint32_t matched = 0, minMatch = insn->min, maxMatch = insn->max;
 
   // Limit our max to the smaller of the maximum in the loop and number of
@@ -690,8 +695,8 @@ bool Context<Traits>::matchWidth1Loop(
 
   // Now we know the valid match range.
   // Compute the beginning and end pointers in this range.
-  const CharT *minPos = pos + minMatch;
-  const CharT *maxPos = pos + matched;
+  const CodeUnit *minPos = pos + minMatch;
+  const CodeUnit *maxPos = pos + matched;
 
   // If min == max (e.g. /a{3}/) then no backtracking is possible. If min < max,
   // backtracking is possible and we need to add a backtracking instruction.
@@ -715,8 +720,8 @@ bool Context<Traits>::matchWidth1Loop(
 template <class Traits>
 auto Context<Traits>::match(
     State<Traits> *s,
-    const CharT *startLoc,
-    bool onlyAtStart) -> const CharT * {
+    const CodeUnit *startLoc,
+    bool onlyAtStart) -> const CodeUnit * {
   using State = State<Traits>;
   BacktrackStack backtrackStack;
 
@@ -739,7 +744,7 @@ auto Context<Traits>::match(
   } while (0)
 
   for (size_t locIndex = 0; locIndex < locsToCheckCount; locIndex++) {
-    const CharT *potentialMatchLocation = startLoc + locIndex;
+    const CodeUnit *potentialMatchLocation = startLoc + locIndex;
     s->current_ = potentialMatchLocation;
     s->ip_ = startIp;
   backtrackingSucceeded:
@@ -938,7 +943,7 @@ auto Context<Traits>::match(
                 first_ + cr.start,
                 first_ + cr.end,
                 s->current_,
-                [&](CharT a, CharT b) {
+                [&](CodeUnit a, CodeUnit b) {
                   return traits_.canonicalize(a) == traits_.canonicalize(b);
                 });
           } else {
@@ -1209,7 +1214,7 @@ MatchRuntimeResult searchWithBytecode(
     const char16_t *last,
     MatchResults<const char16_t *> &m,
     constants::MatchFlagType matchFlags) {
-  return searchWithBytecodeImpl<char16_t, U16RegexTraits>(
+  return searchWithBytecodeImpl<char16_t, UTF16RegexTraits>(
       bytecode, first, last, m, matchFlags);
 }
 

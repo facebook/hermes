@@ -24,8 +24,8 @@ namespace regex {
 /// \return whether any range in \p ranges contains the character \p c,
 /// inclusive of both ends.
 inline bool anyRangeContainsChar(
-    llvm::ArrayRef<BracketRange16> ranges,
-    char16_t c) {
+    llvm::ArrayRef<BracketRange32> ranges,
+    uint32_t c) {
   for (const auto &r : ranges) {
     if (r.start <= c && c <= r.end) {
       return true;
@@ -34,27 +34,34 @@ inline bool anyRangeContainsChar(
   return false;
 }
 
-/// Implementation of regex::Traits for char16_t
-struct U16RegexTraits {
-  /// ES5.1 7.2
-  static bool isWhiteSpaceChar(char16_t c) {
+/// Implementation of regex::Traits for UTF-16.
+struct UTF16RegexTraits {
+  /// A CodePoint is a 24-bit Unicode code point.
+  using CodePoint = uint32_t;
+
+  /// A CodeUnit is either a CodePoint or half of a UTF-16 surrogate pair.
+  using CodeUnit = char16_t;
+
+ private:
+  using CanonicalizeCache = llvm::SmallDenseMap<CodePoint, CodePoint, 16>;
+  mutable CanonicalizeCache toUpperCache_;
+
+  /// ES9 11.2
+  static bool isWhiteSpaceChar(CodePoint c) {
     return c == u'\u0009' || c == u'\u000B' || c == u'\u000C' ||
         c == u'\u0020' || c == u'\u00A0' || c == u'\uFEFF' || c == u'\u1680' ||
         (c >= u'\u2000' && c <= u'\u200A') || c == u'\u202F' ||
         c == u'\u205F' || c == u'\u3000';
   }
 
-  /// ES5.1 7.3
-  static bool isLineTerminatorChar(char16_t c) {
+  /// ES9 11.3
+  static bool isLineTerminatorChar(CodePoint c) {
     return c == u'\u000A' || c == u'\u000D' || c == u'\u2028' || c == u'\u2029';
   }
 
  public:
-  using char_type = char16_t;
-  using CharT = char_type;
-
   /// \return whether the character \p c has the character type \p type.
-  bool characterHasType(char_type c, regex::CharacterClass::Type type) const {
+  bool characterHasType(CodePoint c, regex::CharacterClass::Type type) const {
     switch (type) {
       case regex::CharacterClass::Digits:
         return u'0' <= c && c <= u'9';
@@ -69,10 +76,10 @@ struct U16RegexTraits {
 
   /// \return the case-insensitive equivalence key for \p c.
   /// Our implementation follows ES5.1 15.10.2.8.
-  static char_type canonicalize(char_type c) {
+  static CodePoint canonicalize(CodePoint c) {
     static_assert(
-        std::numeric_limits<char_type>::min() == 0,
-        "char_type must be unsigned");
+        std::numeric_limits<CodePoint>::min() == 0,
+        "CodePoint must be unsigned");
     if (c <= 127) {
       // ASCII fast path. Uppercase by clearing bit 5.
       if ('a' <= c && c <= 'z') {
@@ -86,16 +93,18 @@ struct U16RegexTraits {
   /// \return whether the character c is contained within the range [first,
   /// last]. If ICase is set, perform a canonicalizing membership test as
   /// specified in "CharacterSetMatcher" ES5.1 15.10.2.8.
-  bool rangesContain(llvm::ArrayRef<BracketRange16> ranges, char16_t c) const {
+  bool rangesContain(llvm::ArrayRef<BracketRange32> ranges, CodePoint c) const {
     return anyRangeContainsChar(ranges, c);
   }
 };
 
 /// Implementation of regex::Traits for 7-bit ASCII.
 struct ASCIIRegexTraits {
-  using char_type = char;
+  /// CodePoint and CodeUnits are both 7-bit ASCII values.
+  using CodePoint = uint8_t;
+  using CodeUnit = char;
 
-  bool characterHasType(char c, regex::CharacterClass::Type type) const {
+  bool characterHasType(CodePoint c, regex::CharacterClass::Type type) const {
     switch (type) {
       case regex::CharacterClass::Digits:
         return '0' <= c && c <= '9';
@@ -118,15 +127,15 @@ struct ASCIIRegexTraits {
     llvm_unreachable("Unknown character type");
   }
 
-  static char canonicalize(char c) {
+  static CodePoint canonicalize(CodePoint c) {
     if ('a' <= c && c <= 'z')
       c &= ~('a' ^ 'A'); // toupper
     return c;
   }
 
   /// \return whether any of a list of ranges contains \p c.
-  /// Note that our ranges contain char16_t, but we test chars for membership.
-  bool rangesContain(llvm::ArrayRef<BracketRange16> ranges, char16_t c) const {
+  /// Note that our ranges contain uint32_t, but we test chars for membership.
+  bool rangesContain(llvm::ArrayRef<BracketRange32> ranges, char16_t c) const {
     return anyRangeContainsChar(ranges, c);
   }
 };

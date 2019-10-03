@@ -39,11 +39,11 @@ print(/^a|b/);
 print(/[a-z][^A-Z0-9_\d][\s][abc]/);
 // CHECK:       3: /[a-z][^A-Z0-9_\d][\s][abc]/
 // CHECK-NEXT:    Header: marked: 0 loops: 0 flags: 0 constraints: 4
-// CHECK-NEXT:    0000  Bracket: [a-z]
-// CHECK-NEXT:    000a Bracket: [^\d0-9A-Z_]
-// CHECK-NEXT:    001c  Bracket: [\s]
-// CHECK-NEXT:    0022  Bracket: [a-c]
-// CHECK-NEXT:    002c  Goal
+// CHECK-NEXT:  0000  Bracket: [a-z]
+// CHECK-NEXT:  000e  Bracket: [^\d0-9A-Z_]
+// CHECK-NEXT:  002c  Bracket: [\s]
+// CHECK-NEXT:  0032  Bracket: [a-c]
+// CHECK-NEXT:  0040  Goal
 
 print(/a(b(c)(d))e\1\2/);
 // CHECK:       4: /a(b(c)(d))e\1\2/
@@ -129,7 +129,7 @@ print(/[\u017f]/i);
 // CHECK:        10: /[\u017f]/i
 // CHECK-NEXT:    Header: marked: 0 loops: 0 flags: 1 constraints: 5
 // CHECK-NEXT:     0000  Bracket: [0x17f]
-// CHECK-NEXT:     000a  Goal
+// CHECK-NEXT:     000e  Goal
 
 print(/a*/);
 // CHECK:        11: /a*/
@@ -168,7 +168,7 @@ print(/[a-zA-Z]*/);
 // CHECK-NEXT:    Header: marked: 0 loops: 1 flags: 0 constraints: 0
 // CHECK-NEXT:     0000  Width1Loop: 0 greedy {0, 4294967295}
 // CHECK-NEXT:     0012  Bracket: [A-Za-z]
-// CHECK-NEXT:     0020  Goal
+// CHECK-NEXT:     0028  Goal
 
 print(/.*/);
 // CHECK:        16: /.*/

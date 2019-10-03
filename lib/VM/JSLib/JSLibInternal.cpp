@@ -286,7 +286,7 @@ ExecutionStatus iteratorCloseAndRethrow(
 static std::vector<uint8_t> getReturnThisRegexBytecode() {
   const char16_t *returnThisRE = uR"X(^\s*return[ \t]+this\s*;?\s*$)X";
   regex::constants::SyntaxFlags nativeFlags = {};
-  return regex::Regex<regex::U16RegexTraits>(returnThisRE, nativeFlags)
+  return regex::Regex<regex::UTF16RegexTraits>(returnThisRE, nativeFlags)
       .compile();
 }
 
