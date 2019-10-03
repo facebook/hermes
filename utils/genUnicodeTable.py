@@ -48,8 +48,24 @@ def print_header(unicodedata_sha1, specialcasing_sha1):
 // SpecialCasing.txt SHA1: ${specialcasing_sha1}
 // *** DO NOT EDIT BY HAND ***
 
+/// An inclusive range of Unicode characters.
 struct UnicodeRange { uint32_t first; uint32_t second; };
 
+/// A UnicodeTransformRange expresses a mapping such as case folding.
+/// A character cp is mapped to cp + delta if cp is 0 for the given modulus.
+struct UnicodeTransformRange {
+    /// The first codepoint of the range.
+    unsigned start:24;
+
+    /// The number of characters in the range.
+    unsigned count:8;
+
+    /// The signed delta amount.
+    int delta:24;
+
+    /// The modulo amount.
+    unsigned modulo:8;
+};
 """,
         today=str(datetime.date.today()),
         unicodedata_sha1=unicodedata_sha1,
@@ -112,6 +128,58 @@ def print_categories(unicode_data_lines):
     ]
     for cat in categories:
         run_interval(unicode_data_lines, cat.split())
+
+
+def stride_from(p1, p2):
+    return p2[0] - p1[0]
+
+
+def delta_within(p):
+    return p[1] - p[0]
+
+
+def as_hex(cp):
+    return "0x%.4X" % cp
+
+
+class DeltaMapBlock(object):
+    def __init__(self):
+        self.pairs = []
+
+    def stride(self):
+        return stride_from(self.pairs[0], self.pairs[1])
+
+    def delta(self):
+        return delta_within(self.pairs[0])
+
+    def can_append(self, pair):
+        if not self.pairs:
+            return True
+        if pair[0] - self.pairs[0][0] >= 256:
+            return False
+        if self.delta() != delta_within(pair):
+            return False
+        return len(self.pairs) < 2 or self.stride() == stride_from(self.pairs[-1], pair)
+
+    @staticmethod
+    def append_to_list(blocks, p):
+        if not blocks or not blocks[-1].can_append(p):
+            blocks.append(DeltaMapBlock())
+        blocks[-1].pairs.append(p)
+
+    def output(self):
+        pairs = self.pairs
+        if not pairs:
+            return ""
+
+        first = pairs[0][0]
+        last = pairs[-1][0]
+        modulo = self.stride() if len(pairs) >= 2 else 1
+        delta = self.delta()
+        code = Template("{$first, $count, $delta, $modulo}").substitute(
+            first=as_hex(first), count=last - first + 1, delta=delta, modulo=modulo
+        )
+        return code.strip()
 
 
 class CaseMap(object):
@@ -184,6 +252,29 @@ class CaseMap(object):
         if upper_ch < 128 and ch >= 128:
             return ch
         return upper_ch
+
+
+def print_canonicalizations(casemap):
+    blocks = []
+    for cp in casemap.codepoints:
+        # legacy does not decode surrogate pairs, so we can skip large code points.
+        if cp > 0xFFFF:
+            continue
+        canon_cp = casemap.canonicalize(cp)
+        if cp != canon_cp:
+            DeltaMapBlock.append_to_list(blocks, (cp, canon_cp))
+
+    print_template(
+        """
+// static constexpr uint32_t ${name}_SIZE = ${entry_count};
+static constexpr UnicodeTransformRange ${name}[] = {
+${entry_text}
+};
+""",
+        name="LEGACY_CANONS",
+        entry_count=len(blocks),
+        entry_text=",\n".join(b.output() for b in blocks),
+    )
 
 
 def print_precanonicalizations(casemap):
@@ -265,5 +356,9 @@ if __name__ == "__main__":
     )
     udata_lines = unicode_data.decode("utf-8").splitlines()
     special_lines = special_casing.decode("utf-8").splitlines()
+    casemap = CaseMap(
+        unicode_data_lines=udata_lines, special_casing_lines=special_lines
+    )
     print_categories(udata_lines)
-    print_precanonicalizations(CaseMap(udata_lines, special_lines))
+    print_precanonicalizations(casemap)
+    print_canonicalizations(casemap)
