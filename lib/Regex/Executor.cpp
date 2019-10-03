@@ -1027,36 +1027,55 @@ auto Context<Traits>::match(
           assert(
               cr.start != kNotMatched &&
               "capture group exited but not entered");
-          // Check to see if we have enough space left in the string.
-          const uint32_t length = cr.end - cr.start;
-          if (uint32_t(last_ - s->current_) < length)
-            BACKTRACK();
+          // TODO: this can be optimized by hoisting the branches out of the
+          // loop.
+          bool icase = syntaxFlags_ & constants::icase;
+          bool unicode = syntaxFlags_ & constants::unicode;
+          auto cursor1 = s->current_;
+          auto cursor2 = first_ + cr.start;
+          auto cursor2end = first_ + cr.end;
+          bool matched = true;
+          while (matched && cursor2 < cursor2end) {
+            if (cursor1 >= last_) {
+              matched = false;
+            } else if (!icase) {
+              // Direct comparison. Here we don't need to decode surrogate
+              // pairs.
+              matched = (*cursor1++ == *cursor2++);
+            } else if (!unicode) {
+              // Case-insensitive non-Unicode comparison, no decoding of
+              // surrogate pairs.
+              auto c1 = *cursor1++;
+              auto c2 = *cursor2++;
+              matched =
+                  (c1 == c2 ||
+                   traits_.canonicalize(c1, unicode) ==
+                       traits_.canonicalize(c2, unicode));
+            } else {
+              // Unicode: we do need to decode surrogate pairs.
+              CodePoint cp1;
+              bool decode1 = Traits::decodeUTF16(cursor1, last_, &cp1);
 
-          // Check to see if the captured input string matches the current
-          // string.
-          bool matches;
-          if (syntaxFlags_ & constants::icase) {
-            // Case-insensitive comparison.
-            bool unicode = syntaxFlags_ & constants::unicode;
-            matches = std::equal(
-                first_ + cr.start,
-                first_ + cr.end,
-                s->current_,
-                [&](CodeUnit a, CodeUnit b) {
-                  return a == b ||
-                      traits_.canonicalize(a, unicode) ==
-                      traits_.canonicalize(b, unicode);
-                });
-          } else {
-            // Direct comparison.
-            matches =
-                std::equal(first_ + cr.start, first_ + cr.end, s->current_);
+              CodePoint cp2;
+              bool decode2 = Traits::decodeUTF16(cursor2, cursor2end, &cp2);
+
+              assert(
+                  decode1 && decode2 &&
+                  "Should always successfully decode due to prior bounds checks");
+              (void)decode1;
+              (void)decode2;
+
+              matched =
+                  (cp1 == cp2 ||
+                   traits_.canonicalize(cp1, unicode) ==
+                       traits_.canonicalize(cp2, unicode));
+            }
           }
-          if (!matches)
+          if (!matched) {
             BACKTRACK();
-
+          }
           s->ip_ += sizeof(BackRefInsn);
-          s->current_ += length;
+          s->current_ = cursor1;
           break;
         }
 
