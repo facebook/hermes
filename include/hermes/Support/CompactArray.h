@@ -33,7 +33,7 @@ class CompactArray {
   CompactArray(uint32_t count, Scale initScale = UINT8)
       : size_(count),
         scale_(initScale),
-        raw_(static_cast<char *>(checkedCalloc(count, 1 << initScale))) {}
+        raw_(static_cast<char *>(checkedCalloc(count, 1ULL << initScale))) {}
   ~CompactArray() {
     ::free(raw_);
   }
