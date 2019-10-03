@@ -6,7 +6,6 @@
  */
 #include "hermes/Regex/Executor.h"
 #include "hermes/Regex/RegexTraits.h"
-#include "hermes/Support/ErrorHandling.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -307,6 +306,7 @@ struct Context {
   /// matches the instruction \p insn (with that opcode).
   template <Width1Opcode w1opcode>
   inline bool matchWidth1(const Insn *insn, CodeUnit c) const;
+
   /// \return true if all chars, stored in contiguous memory after \p insn,
   /// match the chars in state \p s in the same order, case insensitive. Note
   /// the count of chars is given in \p insn.
@@ -450,7 +450,7 @@ bool bracketMatchesChar(
     const Context<Traits> &ctx,
     const BracketInsn *insn,
     const BracketRange32 *ranges,
-    char16_t ch) {
+    typename Traits::CodePoint ch) {
   const auto &traits = ctx.traits_;
   // Note that if the bracket is negated /[^abc]/, we want to return true if we
   // do not match, false if we do. Implement this by xor with the negate flag.
@@ -777,10 +777,13 @@ auto Context<Traits>::match(
           s->ip_ += sizeof(MatchAnyButNewlineInsn);
           break;
 
-        case Opcode::U16MatchAnyButNewline: {
-          hermes_fatal("Unimplemented");
+        case Opcode::U16MatchAnyButNewline:
+          CodePoint cp;
+          if (!Traits::decodeUTF16(s->current_, last_, &cp)) {
+            BACKTRACK();
+          }
+          s->ip_ += sizeof(U16MatchAnyButNewlineInsn);
           break;
-        }
 
         case Opcode::MatchChar8: {
           if (s->current_ == last_ ||
@@ -801,7 +804,13 @@ auto Context<Traits>::match(
         }
 
         case Opcode::U16MatchChar32: {
-          hermes_fatal("Unimplemented");
+          const auto *insn = llvm::cast<U16MatchChar32Insn>(base);
+          CodePoint cp;
+          if (!Traits::decodeUTF16(s->current_, last_, &cp) ||
+              cp != (CodePoint)insn->c) {
+            BACKTRACK();
+          }
+          s->ip_ += sizeof(U16MatchChar32Insn);
           break;
         }
 
@@ -824,7 +833,14 @@ auto Context<Traits>::match(
         }
 
         case Opcode::U16MatchCharICase32: {
-          hermes_fatal("Unimplemented");
+          const auto *insn = llvm::cast<U16MatchCharICase32Insn>(base);
+          assert(insn->c >= 0x010000 && "Character should be astral");
+          CodePoint cp;
+          if (!Traits::decodeUTF16(s->current_, last_, &cp) ||
+              traits_.canonicalize(cp) != (CodePoint)insn->c) {
+            BACKTRACK();
+          }
+          s->ip_ += sizeof(U16MatchCharICase32Insn);
           break;
         }
 
@@ -891,8 +907,20 @@ auto Context<Traits>::match(
         }
 
         case Opcode::U16Bracket: {
-          llvm_unreachable("Unimplemented");
-          abort();
+          bool matched = false;
+          CodePoint cp;
+          const U16BracketInsn *insn = llvm::cast<U16BracketInsn>(base);
+          if (Traits::decodeUTF16(s->current_, last_, &cp)) {
+            // U16BracketInsn is followed by a list of BracketRange32s.
+            const BracketRange32 *ranges =
+                reinterpret_cast<const BracketRange32 *>(insn + 1);
+            matched = bracketMatchesChar<Traits>(*this, insn, ranges, cp);
+          }
+          if (!matched)
+            BACKTRACK();
+
+          s->ip_ += insn->totalWidth();
+          break;
         }
 
         case Opcode::WordBoundary: {

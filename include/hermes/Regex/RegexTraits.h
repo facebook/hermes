@@ -96,6 +96,26 @@ struct UTF16RegexTraits {
   bool rangesContain(llvm::ArrayRef<BracketRange32> ranges, CodePoint c) const {
     return anyRangeContainsChar(ranges, c);
   }
+
+  /// Decode a UTF16 character from a string \p s which ends at \p end.
+  /// Place the character in \p cp and advance \p s by the number of code units
+  /// decoded. If the character is an unpaired surrogate, return that surrogate.
+  /// \return true if a character was decoded, false if not (which can only
+  /// occur if the string is empty).
+  static bool
+  decodeUTF16(const CodeUnit *&s, const CodeUnit *end, CodePoint *cp) {
+    if (s == end) {
+      return false;
+    }
+    if (s + 1 < end && isHighSurrogate(s[0]) && isLowSurrogate(s[1])) {
+      *cp = decodeSurrogatePair(s[0], s[1]);
+      s += 2;
+    } else {
+      *cp = s[0];
+      s += 1;
+    }
+    return true;
+  }
 };
 
 /// Implementation of regex::Traits for 7-bit ASCII.
@@ -137,6 +157,18 @@ struct ASCIIRegexTraits {
   /// Note that our ranges contain uint32_t, but we test chars for membership.
   bool rangesContain(llvm::ArrayRef<BracketRange32> ranges, char16_t c) const {
     return anyRangeContainsChar(ranges, c);
+  }
+
+  /// Decode a UTF16 character from a string \p s which ends at \p end,
+  /// advancing \p s by the number of code units decoded.
+  /// \return the character in \p cp.
+  static bool
+  decodeUTF16(const CodeUnit *&s, const CodeUnit *end, CodePoint *cp) {
+    // ASCII does not support surrogates so the implementation is trivial.
+    if (s == end)
+      return false;
+    *cp = *s++;
+    return true;
   }
 };
 
