@@ -1178,7 +1178,12 @@ MatchRuntimeResult searchWithBytecodeImpl(
       header->markedCount,
       header->loopCount);
   State<Traits> state{markedCount, loopCount};
-  bool onlyAtStart = header->constraints & MatchConstraintAnchoredAtStart;
+
+  // We check only one location if either the regex pattern constrains us to, or
+  // the flags request it (via the sticky flag 'y').
+  bool onlyAtStart = (header->constraints & MatchConstraintAnchoredAtStart) ||
+      (matchFlags & constants::matchOnlyAtStart);
+
   auto result = MatchRuntimeResult::NoMatch;
   if (const CharT *matchStartLoc = ctx.match(&state, ctx.first_, onlyAtStart)) {
     // Match succeeded.

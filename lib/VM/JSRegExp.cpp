@@ -115,10 +115,11 @@ ExecutionStatus JSRegExp::initialize(
       pattern && flags &&
       "Null pattern and/or flags passed to initializeWithPatternAndFlags");
 
-  // Validate flags
+  // Validate flags.
+  // TODO: Unicode is not yet implemented.
   auto flagsView = StringPrimitive::createStringView(runtime, flags);
   auto fbits = FlagBits::fromString(flagsView);
-  if (!fbits) {
+  if (!fbits || fbits->unicode) {
     runtime->raiseSyntaxError("Invalid flags passed to RegExp");
     return ExecutionStatus::EXCEPTION;
   }
@@ -201,6 +202,16 @@ OptValue<JSRegExp::FlagBits> JSRegExp::FlagBits::fromString(StringView str) {
           return error;
         ret.global = 1;
         break;
+      case u'u':
+        if (ret.unicode)
+          return error;
+        ret.unicode = 1;
+        break;
+      case u'y':
+        if (ret.sticky)
+          return error;
+        ret.sticky = 1;
+        break;
       default:
         return error;
     }
@@ -276,6 +287,12 @@ CallResult<RegExpMatch> JSRegExp::search(
   auto matchFlags = regex::constants::matchDefault;
   if (searchStartOffset > 0) {
     matchFlags |= regex::constants::matchPreviousCharAvailable;
+  }
+
+  // Respect the sticky flag, which forces us to match only at the given
+  // location.
+  if (selfHandle->flagBits_.sticky) {
+    matchFlags |= regex::constants::matchOnlyAtStart;
   }
 
   CallResult<RegExpMatch> matchResult = RegExpMatch{};

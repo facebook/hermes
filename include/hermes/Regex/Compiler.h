@@ -91,7 +91,10 @@ enum MatchFlagType {
   matchPreviousCharAvailable = 1 << 2,
 
   /// Hint that the input is composed entirely of ASCII characters.
-  matchInputAllAscii = 1 << 3
+  matchInputAllAscii = 1 << 3,
+
+  /// Do not search for a match past the search start location.
+  matchOnlyAtStart = 1 << 4,
 };
 
 inline constexpr MatchFlagType operator~(MatchFlagType x) {

@@ -31,19 +31,25 @@ class JSRegExp final : public JSObject {
     uint8_t ignoreCase : 1;
     uint8_t multiline : 1;
     uint8_t global : 1;
+    uint8_t sticky : 1;
+    uint8_t unicode : 1;
 
     /// \return a string representing the flags
-    /// The characters are returned in the order given in ES 5.1 15.10.6.4
-    /// (specifically global, ignoreCase, multiline)
+    /// The characters are returned in the order given in ES 6 21.2.5.3
+    /// (specifically global, ignoreCase, multiline, unicode, sticky)
     /// Note this may differ in order from the string passed in construction
-    llvm::SmallString<3> toString() const {
-      llvm::SmallString<3> result;
+    llvm::SmallString<5> toString() const {
+      llvm::SmallString<5> result;
       if (global)
         result.push_back('g');
       if (ignoreCase)
         result.push_back('i');
       if (multiline)
         result.push_back('m');
+      if (unicode)
+        result.push_back('u');
+      if (sticky)
+        result.push_back('y');
       return result;
     }
 

@@ -23,6 +23,8 @@ print((new RegExp("abc", "mg")).toString());
 // CHECK-NEXT: /abc/gm
 print((new RegExp("abc", "mig")).toString());
 // CHECK-NEXT: /abc/gim
+print((new RegExp("abc", "yi")).toString());
+// CHECK-NEXT: /abc/iy
 try { RegExp.prototype.toString.call(undefined); } catch (err) { print(err.name); }
 // CHECK-NEXT: TypeError
 print(RegExp.prototype.toString.call({source: "lol"}));
@@ -153,7 +155,7 @@ print(re.lastIndex);
 re.lastIndex = -1000;
 re.exec("aab");
 print(re.lastIndex);
-// CHECK-NEXT: 0
+// CHECK-NEXT: 1
 re.lastIndex = 1;
 re.exec("aab");
 print(re.lastIndex);
@@ -187,19 +189,21 @@ print(re.lastIndex);
 (function() {
 "use strict";
 re = RegExp("abc", "")
-print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
-// CHECK-NEXT: false false false 0
-re = RegExp("abc", "igm")
-print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
-// CHECK-NEXT: true true true 0
+print(re.global, re.ignoreCase, re.multiline, re.sticky, re.lastIndex);
+// CHECK-NEXT: false false false false 0
+re = RegExp("abc", "igym")
+print(re.global, re.ignoreCase, re.multiline, re.sticky, re.lastIndex);
+// CHECK-NEXT: true true true true 0
 re = RegExp("abc", "gi")
-print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
-// CHECK-NEXT: true true false 0
+print(re.global, re.ignoreCase, re.multiline, re.sticky, re.lastIndex);
+// CHECK-NEXT: true true false false 0
 try { re.global = false; } catch (err) { print(err.name); } // not writable
 // CHECK-NEXT: TypeError
 try { re.ignoreCase = false; } catch (err) { print(err.name); } // not writable
 // CHECK-NEXT: TypeError
 try { re.multiline = false; } catch (err) { print(err.name); } // not writable
+// CHECK-NEXT: TypeError
+try { re.sticky = false; } catch (err) { print(err.name); } // not writable
 // CHECK-NEXT: TypeError
 re.lastIndex = 42; // yes writable
 print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
@@ -209,11 +213,14 @@ print(re.global, re.ignoreCase, re.multiline, re.lastIndex);
 var globalGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'global').get;
 var ignoreCaseGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'ignoreCase').get;
 var multilineGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'multiline').get;
+var stickyGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'sticky').get;
 print(globalGetter.call(/abc/g), globalGetter.call(/abc/), globalGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 print(ignoreCaseGetter.call(/abc/i), ignoreCaseGetter.call(/abc/), ignoreCaseGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 print(multilineGetter.call(/abc/m), multilineGetter.call(/abc/), multilineGetter.call(RegExp.prototype));
+// CHECK-NEXT: true false undefined
+print(stickyGetter.call(/abc/y), stickyGetter.call(/abc/), stickyGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 try { multilineGetter.call({}); } catch (err) { print(err.name); }
 // CHECK-NEXT: TypeError
@@ -224,8 +231,8 @@ try { multilineGetter.call(undefined); } catch (err) { print(err.name); }
 // Flags accessor support
 print(/aaa/.flags.length);
 // CHECK-NEXT: 0
-print(/aaa/mi.flags, /aaa/im.flags, /aaa/ig.flags, /aaa/gi.flags, /aaa/gim.flags, /aaa/mgi.flags, /aaa/m.flags, /aaa/g.flags, /aaa/i.flags);
-// CHECK-NEXT: im im gi gi gim gim m g i
+print(/aaa/mi.flags, /aaa/im.flags, /aaa/ig.flags, /aaa/gi.flags, /aaa/gim.flags, /aaa/mgi.flags, /aaa/m.flags, /aaa/g.flags, /aaa/i.flags, /aaa/y.flags);
+// CHECK-NEXT: im im gi gi gim gim m g i y
 
 var flagsGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'flags').get;
 print(flagsGetter.call({multiline: 1, global: 0, ignoreCase: "yep"}));
@@ -301,6 +308,12 @@ print('hello world'.replace(/\B/g, '!'));
 // CHECK-NEXT: h!e!l!l!o w!o!r!l!d
 print('hello world'.replace(/\B|\b/g, '!'));
 // CHECK-NEXT: !h!e!l!l!o! !w!o!r!l!d!
+
+// Sticky support
+print(/abc/y.exec("abc"));
+// CHECK-NEXT: abc
+print(/abc/y.exec("dabc"));
+// CHECK-NEXT: null
 
 print((new RegExp("5{").exec("abc5{,}def")));
 // CHECK-NEXT: 5{

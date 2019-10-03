@@ -14,9 +14,9 @@ var pi = 'π';
 var sigma = '𝚺';
 var invalid_surrogate_pair = '\ud8d3\ud000';
 var invalid_single_surrogate = '\ud800';
-var obj = {'key11': 'val1', 'key2': '再见'};
-var unicode = '\u7231\u9a6c\u4ed5';
-var unicode2 = '\u8138\u4e66';
+var obj = { 'key11': 'val1', 'key2': '再见' };
+var Unicode = '\u7231\u9a6c\u4ed5';
+var Unicode2 = '\u8138\u4e66';
 var ascii = 'hello how are you';
 
 //CHECK-LABEL:Global String Table:
@@ -42,8 +42,8 @@ var ascii = 'hello how are you';
 //CHECK-NEXT:  s19[UTF-16, {{[0-9]+}}..{{[0-9]+}}]: \x8D\x51\xC1\x89
 //CHECK-NEXT:  s20[UTF-16, {{[0-9]+}}..{{[0-9]+}}]: \x31\x72\x6C\x9A\xD5\x4E
 //CHECK-NEXT:  s21[UTF-16, {{[0-9]+}}..{{[0-9]+}}]: \x38\x81\x66\x4E
-//CHECK-NEXT:  i22[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: unicode
-//CHECK-NEXT:  i23[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: unicode2
+//CHECK-NEXT:  i22[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: Unicode
+//CHECK-NEXT:  i23[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: Unicode2
 //CHECK-NEXT:  i24[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: ascii
 //CHECK-NEXT:  i25[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: c
 //CHECK-NEXT:  i26[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: key11
