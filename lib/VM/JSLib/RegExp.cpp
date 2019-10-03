@@ -401,8 +401,11 @@ CallResult<Handle<JSArray>> directRegExpExec(
 
   // If flags contains "g", let global be true, else let global be false
   // If flags contains "y", let sticky be true, else let sticky be false.
+  // If flags contains "u", let fullUnicode be true, else let fullUnicode be
+  // false.
   const bool global = flags.global;
   const bool sticky = flags.sticky;
+  const bool fullUnicode = flags.unicode;
 
   // If global is false and sticky is false, set lastIndex to 0.
   if (!global && !sticky) {
@@ -455,6 +458,21 @@ CallResult<Handle<JSArray>> directRegExpExec(
   if (global || sticky) {
     auto totalMatch = *match.front();
     uint32_t e = totalMatch.location + totalMatch.length;
+
+    // If fullUnicode is true, then:
+    // a. e is an index into the Input character list, derived from S, matched
+    // by matcher. Let eUTF be the smallest index into S that corresponds to the
+    // character at element e of Input. If e is greater than or equal to the
+    // number of elements in Input, then eUTF is the number of code units in S.
+    // b. set e to eUTF.
+    // This is a longwinded way of saying that we don't set lastIndex to match
+    // the trailing member of a surrogate pair.
+    if (fullUnicode && e > 0 && e < S->getStringLength()) {
+      if (isHighSurrogate(S->at(e - 1)) && isLowSurrogate(S->at(e))) {
+        e -= 1;
+      }
+    }
+
     if (LLVM_UNLIKELY(
             setLastIndex(regexp, runtime, e) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -549,16 +567,15 @@ static CallResult<HermesValue> regExpBuiltinExec(
 }
 
 /// ES6.0 21.2.5.2.3
-/// TODO: before supporting unicode regexp, all this function does is
-/// incrementing the index by 1.
 static uint64_t advanceStringIndex(
     Runtime *runtime,
-    PseudoHandle<StringPrimitive> /* S */,
+    PseudoHandle<StringPrimitive> S,
     uint64_t index,
     bool unicode) {
-  // TODO: before implementing unicode regexp, the function can only be called
-  // with unicode = false.
-  assert(!unicode && "unicode regexp is not supported.");
+  if (unicode && index + 1 < S->getStringLength() &&
+      isHighSurrogate(S->at(index)) && isLowSurrogate(S->at(index + 1))) {
+    return index + 2;
+  }
   return index + 1;
 }
 
@@ -946,8 +963,15 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
     return regExpExec(runtime, rx, S);
   }
   // 8. Else global is true,
-  // TODO: regexp does not have unicode support yet.
-  // Skipping 8.a-b, and assume fullUnicode is always false.
+  // a. Let fullUnicode be ToBoolean(Get(rx, "unicode"))
+  // b. ReturnIfAbrupt(fullUnicode)
+  auto unicodePropRes = JSObject::getNamed_RJS(
+      rx, runtime, Predefined::getSymbolID(Predefined::unicode));
+  if (LLVM_UNLIKELY(unicodePropRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  bool fullUnicode = toBoolean(unicodePropRes.getValue());
+
   // c. Let setStatus be Set(rx, "lastIndex", 0, true).
   // d. ReturnIfAbrupt(setStatus).
   Handle<HermesValue> zeroHandle =
@@ -1021,13 +1045,8 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
       // c. Let nextIndex be AdvanceStringIndex(S, thisIndex, fullUnicode).
-      // TODO: regexp doesn't have unicode support yet, so fullUnicode is always
-      // false.
       double nextIndex = advanceStringIndex(
-          runtime,
-          S,
-          thisIndex->getNumberAs<uint64_t>(),
-          false /* fullUnicode */);
+          runtime, S, thisIndex->getNumberAs<uint64_t>(), fullUnicode);
       // d. Let setStatus be Set(rx, "lastIndex", nextIndex, true).
       auto setStatus = setLastIndex(rx, runtime, nextIndex);
       // e. ReturnIfAbrupt(setStatus).
@@ -1275,12 +1294,22 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   bool global = toBoolean(propRes.getValue());
+
+  // Note: fullUnicode is only used if global is set.
+  bool fullUnicode = false;
+
   // 10. If global is true, then
   Handle<> zeroHandle = runtime->makeHandle(HermesValue::encodeNumberValue(0));
   if (global) {
     //   a. Let fullUnicode be ToBoolean(Get(rx, "unicode")).
     //   b. ReturnIfAbrupt(fullUnicode).
-    // TODO: skip above two steps since we don't support unicode regexp yet.
+    auto unicodePropRes = JSObject::getNamed_RJS(
+        rx, runtime, Predefined::getSymbolID(Predefined::unicode));
+    if (LLVM_UNLIKELY(unicodePropRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    fullUnicode = toBoolean(unicodePropRes.getValue());
+
     //   c. Let setStatus be Set(rx, "lastIndex", 0, true).
     auto setStatus = setLastIndex(rx, runtime, *zeroHandle);
     //   d. ReturnIfAbrupt(setStatus).
@@ -1361,13 +1390,8 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
           return ExecutionStatus::EXCEPTION;
         }
         // c. Let nextIndex be AdvanceStringIndex(S, thisIndex, fullUnicode).
-        // TODO: regexp doesn't have unicode support yet, so fullUnicode is
-        // always false.
         nextIndex = HermesValue::encodeDoubleValue(advanceStringIndex(
-            runtime,
-            S,
-            thisIndex->getNumberAs<uint64_t>(),
-            false /* fullUnicode */));
+            runtime, S, thisIndex->getNumberAs<uint64_t>(), fullUnicode));
         // d. Let setStatus be Set(rx, "lastIndex", nextIndex, true).
         auto setStatus = setLastIndex(rx, runtime, *nextIndex);
         // e. ReturnIfAbrupt(setStatus).

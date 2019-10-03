@@ -83,3 +83,28 @@ print(!! /\uDE42/u.exec("\uD83D\uDE42ZZZ"));
 // CHECK-NEXT: false
 print(!! /\uDE42/.exec("\uD83D\uDE42ZZZ"));
 // CHECK-NEXT: true
+
+// Unicode regexps do not allow lastIndex to end on a low surrogate pair.
+var ure = /(?:)/gu;
+ure.exec("\ud800\udc00");
+print(ure.lastIndex);
+// CHECK-NEXT: 0
+ure.lastIndex = 1;
+ure.exec("\ud800\udc00");
+print(ure.lastIndex);
+// CHECK-NEXT: 0
+
+// Non-Unicode regexps don't care.
+var nure = /(?:)/g;
+nure.exec("\ud800\udc00");
+print(nure.lastIndex);
+// CHECK-NEXT: 0
+nure.lastIndex = 1;
+nure.exec("\ud800\udc00");
+print(nure.lastIndex);
+// CHECK-NEXT: 1
+
+ure = /(?:)/gu;
+ure.lastIndex = 1;
+print("\ud800\udc00\ud800\udc00".replace(ure, "!").length);
+// CHECK-NEXT: 7
