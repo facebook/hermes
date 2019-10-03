@@ -277,71 +277,6 @@ ${entry_text}
     )
 
 
-def print_precanonicalizations(casemap):
-    """Print a table of pre-canonicalizations.
-
-    For each canonicalized code point, print the list of code points
-    that canonicalize to it (its "pre-canonicalizations"). However do
-    not print entries for characters whose pre-canonicalizations are
-    only the character and its lowercase form.
-
-    """
-    # Get the simple case mappings, then build an inverted table for
-    # canonicalizations.
-    precanons = {}
-    for cp in casemap.codepoints:
-        canon_cp = casemap.canonicalize(cp)
-        precanons.setdefault(canon_cp, []).append(cp)
-
-    # Remove "obvious" entries that consist of exactly the character
-    # and its lowercase form.
-    for canon_cp in list(precanons.keys()):
-        trivial_precanons = {canon_cp, casemap.tolower[canon_cp]}
-        if set(precanons[canon_cp]) == trivial_precanons:
-            del precanons[canon_cp]
-
-    # Construct the entries.
-    # Each entry leads with the canonicalized codepoint, then the codepoints
-    # that canonicalize to it. Example: {0x1c4, {0x1c4, 0x1c5, 0x1c6}}
-    def as_hex(cp):
-        return "0x{:04X}".format(cp)
-
-    entries = []
-    for canon_cp in sorted(precanons.keys()):
-        cps_strs = [as_hex(cp) for cp in precanons[canon_cp] if cp != canon_cp]
-        entries.append("{%s, {%s}}" % (as_hex(canon_cp), ", ".join(cps_strs)))
-
-    # Print the table.
-    print_template(
-        """
-struct UnicodePrecanonicalizationMapping {
-    /// The canonicalized form of the character.
-    uint16_t canonicalized;
-
-    /// A list of up to 3 characters which canonicalize to this character.
-    /// The value 3 is significant because it is the maximum number of
-    /// pre-canonicalizations of any character.
-    /// 0 (NUL) is used to indicate none.
-    uint16_t forms[3];
-};
-
-// The precanonicalizations is a list of exceptional canocializations.
-// That is, each canonicalized input character maps to a list of forms that
-// canonicalize to it, per the algorithm given in ES5 15.10.2.8. However, if a
-// character is only canonicalized to by itself and its lowercase variant, that
-// is omitted from the table; this helps keep the table small. Note some
-// entries are empty; this indicates that c != uppercase(lowercase(c)). Note
-// also this table is sorted.
-static constexpr uint32_t UNICODE_PRECANONS_SIZE = $entry_count;
-static constexpr UnicodePrecanonicalizationMapping UNICODE_PRECANONS[] = {
-$entries
-};
-    """,
-        entry_count=len(entries),
-        entries=",\n".join(entries),
-    )
-
-
 if __name__ == "__main__":
     print("Fetching %s..." % UNICODE_DATA_URL, file=sys.stderr)
     with urllib.request.urlopen(UNICODE_DATA_URL) as f:
@@ -360,5 +295,4 @@ if __name__ == "__main__":
         unicode_data_lines=udata_lines, special_casing_lines=special_lines
     )
     print_categories(udata_lines)
-    print_precanonicalizations(casemap)
     print_canonicalizations(casemap)

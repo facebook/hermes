@@ -92,19 +92,6 @@ bool isUnicodeConnectorPunctuation(uint32_t cp) {
   return cp == '_' || lookup(UNICODE_CONNECTOR_PUNCTUATION, cp);
 }
 
-// Predicate used to enable binary search on mappings.
-static bool operator<(const UnicodePrecanonicalizationMapping &m, uint16_t cp) {
-  return m.canonicalized < cp;
-}
-
-const PrecanonicalizationList *getExceptionalPrecanonicalizations(uint16_t cp) {
-  auto iter = std::lower_bound(
-      std::begin(UNICODE_PRECANONS), std::end(UNICODE_PRECANONS), cp);
-  if (iter != std::end(UNICODE_PRECANONS) && iter->canonicalized == cp)
-    return &iter->forms;
-  return nullptr;
-}
-
 static uint32_t applyTransform(const UnicodeTransformRange &r, uint32_t cp) {
   assert(
       r.start <= cp && cp < r.start + r.count &&

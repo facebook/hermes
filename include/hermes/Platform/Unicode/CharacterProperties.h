@@ -77,18 +77,6 @@ bool isUnicodeDigit(uint32_t cp);
 /// \return true if the codepoint is in the Connector Punctuation category.
 bool isUnicodeConnectorPunctuation(uint32_t cp);
 
-/// PrecanonicalizationList is a pointer to an array of precanonicalization
-/// forms. A 0 value indicates no entry. We use uint16 instead of uint32 because
-/// RegExp is cast in terms of 16-bit UCS-2, and because there are no
-/// exceptional precanonicalizations outside of the BMP (that is, all astral
-/// character canonicalizations use simple case mapping).
-using PrecanonicalizationList = uint16_t[UNICODE_MAX_PRECANONICALIZATIONS];
-
-/// \return a pointer to the exceptional precanonicalization list for a given
-/// character, or nullptr if the character's precanonicalization is given by its
-/// case mapping.
-const PrecanonicalizationList *getExceptionalPrecanonicalizations(uint16_t cp);
-
 /// \return the canonicalized value of \p cp, following ES5 15.10.2.8.
 uint32_t canonicalize(uint32_t cp);
 
