@@ -17,8 +17,8 @@ from string import Template
 
 
 UNICODE_DATA_URL = "ftp://ftp.unicode.org/Public/UNIDATA/UnicodeData.txt"
-
 UNICODE_SPECIAL_CASING_URL = "ftp://ftp.unicode.org/Public/UNIDATA/SpecialCasing.txt"
+UNICODE_CASE_FOLDING_URL = "ftp://ftp.unicode.org/Public/UNIDATA/CaseFolding.txt"
 
 
 # Unicode data field indexes. See UnicodeData.txt.
@@ -38,7 +38,7 @@ def print_template(s, **kwargs):
     print("")
 
 
-def print_header(unicodedata_sha1, specialcasing_sha1):
+def print_header(unicodedata_sha1, specialcasing_sha1, casefolding_sha1):
     print_template(
         """
 //
@@ -46,6 +46,7 @@ def print_header(unicodedata_sha1, specialcasing_sha1):
 // using Unicode data files downloaded on ${today}
 // UnicodeData.txt SHA1:   ${unicodedata_sha1}
 // SpecialCasing.txt SHA1: ${specialcasing_sha1}
+// CaseFolding.txt SHA1:   ${casefolding_sha1}
 // *** DO NOT EDIT BY HAND ***
 
 /// An inclusive range of Unicode characters.
@@ -70,6 +71,7 @@ struct UnicodeTransformRange {
         today=str(datetime.date.today()),
         unicodedata_sha1=unicodedata_sha1,
         specialcasing_sha1=specialcasing_sha1,
+        casefolding_sha1=casefolding_sha1,
     )
 
 
@@ -190,7 +192,7 @@ class CaseMap(object):
 
     """
 
-    def __init__(self, unicode_data_lines, special_casing_lines):
+    def __init__(self, unicode_data_lines, special_casing_lines, casefolding_lines):
         """Construct with the lines from UnicodeData and SpecialCasing."""
         self.toupper = {}
         self.tolower = {}
@@ -223,6 +225,20 @@ class CaseMap(object):
             if not condition.strip():
                 self.__set_casemap(cps, upper=upper, lower=lower)
 
+        # Characters default to folding to themselves.
+        self.folds = {cp: cp for cp in self.codepoints}
+
+        # Parse case folds.
+        for line in casefolding_lines:
+            fields = line.split("#")[0].split(";")
+            if len(fields) != 4:
+                continue
+            orig, status, folded, _ = map(str.strip, fields)
+            # We are only interested in common and simple case foldings.
+            if status not in ["C", "S"]:
+                continue
+            self.folds[int(orig, 16)] = int(folded, 16)
+
     def __set_casemap(self, cp, upper, lower):
         """Set a case mapping.
 
@@ -241,26 +257,29 @@ class CaseMap(object):
         self.toupper[cp] = int(upper, 16) if upper and len(upper.split()) == 1 else cp
         self.tolower[cp] = int(lower, 16) if lower and len(lower.split()) == 1 else cp
 
-    def canonicalize(self, ch):
-        """Canonicalize a character per ES5.1 15.10.2.8."""
-        upper_ch = self.toupper[ch]
-        # "If u does not consist of a single character, return ch"
-        # We only store 1-1 mappings.
-        # "If ch's code unit value is greater than or equal to decimal 128
-        # and cu's code unit value is less than decimal 128, then return ch"
-        # That is, only ASCII may canonicalize to ASCII.
-        if upper_ch < 128 and ch >= 128:
-            return ch
-        return upper_ch
+    def canonicalize(self, ch, unicode):
+        """Canonicalize a character per ES9 21.2.2.8.2."""
+        if unicode:
+            return self.folds[ch]
+        else:
+            upper_ch = self.toupper[ch]
+            # "If u does not consist of a single character, return ch"
+            # We only store 1-1 mappings.
+            # "If ch's code unit value is greater than or equal to decimal 128
+            # and cu's code unit value is less than decimal 128, then return ch"
+            # That is, only ASCII may canonicalize to ASCII.
+            if upper_ch < 128 and ch >= 128:
+                return ch
+            return upper_ch
 
 
-def print_canonicalizations(casemap):
+def print_canonicalizations(casemap, unicode):
     blocks = []
     for cp in casemap.codepoints:
         # legacy does not decode surrogate pairs, so we can skip large code points.
-        if cp > 0xFFFF:
+        if not unicode and cp > 0xFFFF:
             continue
-        canon_cp = casemap.canonicalize(cp)
+        canon_cp = casemap.canonicalize(cp, unicode)
         if cp != canon_cp:
             DeltaMapBlock.append_to_list(blocks, (cp, canon_cp))
 
@@ -271,7 +290,7 @@ static constexpr UnicodeTransformRange ${name}[] = {
 ${entry_text}
 };
 """,
-        name="LEGACY_CANONS",
+        name="UNICODE_FOLDS" if unicode else "LEGACY_CANONS",
         entry_count=len(blocks),
         entry_text=",\n".join(b.output() for b in blocks),
     )
@@ -286,13 +305,23 @@ if __name__ == "__main__":
     with urllib.request.urlopen(UNICODE_SPECIAL_CASING_URL) as f:
         special_casing = f.read()
 
+    print("Fetching %s..." % UNICODE_CASE_FOLDING_URL, file=sys.stderr)
+    with urllib.request.urlopen(UNICODE_CASE_FOLDING_URL) as f:
+        case_folding = f.read()
+
     print_header(
-        hashlib.sha1(unicode_data).hexdigest(), hashlib.sha1(special_casing).hexdigest()
+        hashlib.sha1(unicode_data).hexdigest(),
+        hashlib.sha1(special_casing).hexdigest(),
+        hashlib.sha1(case_folding).hexdigest(),
     )
     udata_lines = unicode_data.decode("utf-8").splitlines()
     special_lines = special_casing.decode("utf-8").splitlines()
+    casefolding_lines = case_folding.decode("utf-8").splitlines()
     casemap = CaseMap(
-        unicode_data_lines=udata_lines, special_casing_lines=special_lines
+        unicode_data_lines=udata_lines,
+        special_casing_lines=special_lines,
+        casefolding_lines=casefolding_lines,
     )
     print_categories(udata_lines)
-    print_canonicalizations(casemap)
+    print_canonicalizations(casemap, unicode=True)
+    print_canonicalizations(casemap, unicode=False)
