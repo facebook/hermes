@@ -99,7 +99,11 @@ GenGC::GenGC(
       // the expected value is accurate wrt the dynamic value.
       doMetadataProtection_(
           gcConfig.getProtectMetadata() && pagesize::expectedPageSizeIsSafe()),
-      youngGen_(this, generationSizes_.youngGenSize(), &oldGen_),
+      youngGen_(
+          this,
+          generationSizes_.youngGenSize(),
+          &oldGen_,
+          gcConfig.getShouldReleaseUnused()),
       oldGen_(
           this,
           generationSizes_.oldGenSize(),

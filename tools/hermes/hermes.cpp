@@ -105,7 +105,7 @@ static int executeHBCBytecodeFromCL(
                           .build())
                   .withShouldRandomizeAllocSpace(cl::GCRandomizeAllocSpace)
                   .withShouldRecordStats(cl::GCPrintStats || cl::GCBeforeStats)
-                  .withShouldReleaseUnused(false)
+                  .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                   .withAllocInYoung(cl::GCAllocYoung)
                   .withRevertToYGAtTTI(cl::GCRevertToYGAtTTI)
                   .build())

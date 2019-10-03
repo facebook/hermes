@@ -80,8 +80,15 @@ gcheapsize_t YoungGen::Size::minStorageFootprint() const {
   return llvm::alignTo(clamped, HeapAlign);
 }
 
-YoungGen::YoungGen(GenGC *gc, Size sz, OldGen *nextGen)
-    : GCGeneration(gc), sz_(sz), nextGen_(nextGen) {
+YoungGen::YoungGen(
+    GenGC *gc,
+    Size sz,
+    OldGen *nextGen,
+    ReleaseUnused releaseUnused)
+    : GCGeneration(gc),
+      sz_(sz),
+      nextGen_(nextGen),
+      releaseUnused_(releaseUnused) {
   auto result =
       AlignedStorage::create(&gc_->storageProvider_, "hermes-younggen-segment");
   if (!result) {
@@ -141,8 +148,14 @@ void YoungGen::compactFinalizableObjectList() {
 
 void YoungGen::recordLevelAfterCompaction(
     CompactionResult::ChunksRemaining &chunks) {
+  const bool release = releaseUnused_ >= kReleaseUnusedYoungOnFull;
+
   if (!chunks.hasNext()) {
-    activeSegment().resetLevel();
+    if (release) {
+      activeSegment().resetLevel<AdviseUnused::Yes>();
+    } else {
+      activeSegment().resetLevel();
+    }
     return;
   }
 
@@ -150,8 +163,11 @@ void YoungGen::recordLevelAfterCompaction(
   assert(
       this == chunk.generation() &&
       "Chunk does not correspond to YoungGen's segment.");
-
-  chunk.recordLevel(&activeSegment());
+  if (release) {
+    chunk.recordLevel<AdviseUnused::Yes>(&activeSegment());
+  } else {
+    chunk.recordLevel(&activeSegment());
+  }
 }
 
 #ifdef HERMES_SLOW_DEBUG
@@ -350,7 +366,11 @@ void YoungGen::collect() {
   auto finalizersEnd = steady_clock::now();
 
   // Restart allocation at the bottom of the space.
-  activeSegment().resetLevel();
+  if (releaseUnused_ >= kReleaseUnusedYoungAlways) {
+    activeSegment().resetLevel<AdviseUnused::Yes>();
+  } else {
+    activeSegment().resetLevel();
+  }
 
 #ifndef NDEBUG
   // Update statistics:

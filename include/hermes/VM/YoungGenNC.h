@@ -68,7 +68,7 @@ class YoungGen : public GCGeneration {
   /// Initialize the YoungGen as a generation in the given GenGC, with a minimum
   /// and maximum allocation region size (in bytes) given by \p sz, and a later
   /// generation \p nextGen.
-  YoungGen(GenGC *gc, Size sz, OldGen *nextGen);
+  YoungGen(GenGC *gc, Size sz, OldGen *nextGen, ReleaseUnused releaseUnused);
 
   /// @name GCGeneration API Begins
   /// @{
@@ -251,6 +251,9 @@ class YoungGen : public GCGeneration {
   /// GC.  At the start of a young-gen GC, objects at addresses at or greater
   /// than this were allocated directly in the generation since the last GC.
   char *levelAtEndOfLastGC_;
+
+  /// How aggressively to return unused memory to the OS.
+  ReleaseUnused releaseUnused_;
 
   /// Cumulative by-phase times within young-gen collection.
   double markOldToYoungSecs_ = 0.0;

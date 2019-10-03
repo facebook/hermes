@@ -65,6 +65,14 @@ _HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {});
 
 #undef GC_HANDLESAN_FIELDS
 
+/// How aggressively to return unused memory to the OS.
+enum ReleaseUnused {
+  kReleaseUnusedNone = 0, /// Don't try to release unused memory.
+  kReleaseUnusedOld, /// Only old gen, on full collections.
+  kReleaseUnusedYoungOnFull, /// Also young gen, but only on full collections.
+  kReleaseUnusedYoungAlways /// Also young gen, also on young gen collections.
+};
+
 /// Parameters for GC Initialisation.  Check documentation in README.md
 /// constexpr indicates that the default value is constexpr.
 #define GC_FIELDS(F)                                                      \
@@ -95,8 +103,8 @@ _HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {});
   /* Whether to Keep track of GC Statistics. */                           \
   F(constexpr, bool, ShouldRecordStats, false)                            \
                                                                           \
-  /* Whether to return unused memory to the OS. */                        \
-  F(constexpr, bool, ShouldReleaseUnused, true)                           \
+  /* How aggressively to return unused memory to the OS. */               \
+  F(constexpr, ReleaseUnused, ShouldReleaseUnused, kReleaseUnusedOld)     \
                                                                           \
   /* Name for this heap in logs. */                                       \
   F(HERMES_NON_CONSTEXPR, std::string, Name, "HermesRuntime")             \

@@ -104,6 +104,8 @@ class TraceInterpreter final {
     ::hermes::vm::gcheapsize_t minHeapSize{0};
     ::hermes::vm::gcheapsize_t maxHeapSize{0};
     double occupancyTarget{::hermes::vm::GCConfig::getDefaultOccupancyTarget()};
+    ::hermes::vm::ReleaseUnused shouldReleaseUnused{
+        ::hermes::vm::GCConfig::getDefaultShouldReleaseUnused()};
     bool allocInYoung{true};
     bool revertToYGAtTTI{true};
     bool forceGCBeforeStats{false};

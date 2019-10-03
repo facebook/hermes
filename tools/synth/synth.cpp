@@ -95,6 +95,28 @@ static opt<bool> GCPrintStats(
     cat(GCCategory),
     init(true));
 
+static opt<::hermes::vm::ReleaseUnused> ShouldReleaseUnused(
+    "release-unused",
+    desc("How aggressively to return unused memory to the OS."),
+    init(GCConfig::getDefaultShouldReleaseUnused()),
+    llvm::cl::values(
+        clEnumValN(
+            ::hermes::vm::kReleaseUnusedNone,
+            "none",
+            "Don't try to release unused memory."),
+        clEnumValN(
+            ::hermes::vm::kReleaseUnusedOld,
+            "old",
+            "Only old gen, on full collections."),
+        clEnumValN(
+            ::hermes::vm::kReleaseUnusedYoungOnFull,
+            "young-on-full",
+            "Also young gen, but only on full collections."),
+        clEnumValN(
+            ::hermes::vm::kReleaseUnusedYoungAlways,
+            "young-always",
+            "Also young gen, also on young gen collections")));
+
 /// @}
 
 } // namespace cl
@@ -119,6 +141,7 @@ int main(int argc, char **argv) {
     options.minHeapSize = cl::MinHeapSize.bytes;
     options.maxHeapSize = cl::MaxHeapSize.bytes;
     options.occupancyTarget = cl::OccupancyTarget;
+    options.shouldReleaseUnused = cl::ShouldReleaseUnused;
     options.allocInYoung = cl::GCAllocYoung;
     options.revertToYGAtTTI = cl::GCRevertToYGAtTTI;
     options.forceGCBeforeStats = cl::GCBeforeStats;

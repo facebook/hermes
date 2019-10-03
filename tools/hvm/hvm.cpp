@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
                           .build())
                   .withShouldRandomizeAllocSpace(cl::GCRandomizeAllocSpace)
                   .withShouldRecordStats(GCPrintStats)
-                  .withShouldReleaseUnused(false)
+                  .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                   .withName("hvm")
                   .build())
           .withES6Symbol(cl::ES6Symbol)
