@@ -217,17 +217,19 @@ C_STRING((function() {
       // Input consists only of a comment, return early.
       return undefined;
     }
+    // Use (1, eval) to run indirect eval (global eval) and allow
+    // var declaration.
     if (trimmed[0] === '{' && trimmed[trimmed.length - 1] === '}') {
       try {
         // The input starts with { and ends with }, so try wrap with ( and ).
-        output = eval('(' + input + ')');
+        output = (1, eval)('(' + input + ')');
       } catch (e) {
         // Wrapping the input failed, so just fall back to regular eval.
-        output = eval(input);
+        output = (1, eval)(input);
       }
     } else {
       // Can't be mistaken for a block, so just use regular eval.
-      output = eval(input);
+      output = (1, eval)(input);
     }
 
     // Otherwise, just run eval directly.

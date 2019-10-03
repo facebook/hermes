@@ -13,3 +13,7 @@ y = x + 1
 // CHECK-NEXT: 2
 y = x / 2
 // CHECK-NEXT: 0.5
+var z = 3
+// CHECK-NEXT: undefined
+z
+// CHECK-NEXT: 3

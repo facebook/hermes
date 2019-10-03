@@ -7,5 +7,6 @@
 
 throw new SyntaxError();
 // CHECK: SyntaxError
-// CHECK-NEXT: at eval {{.*}}
+// CHECK-NEXT: at global ({{.*}})
+// CHECK-NEXT: at eval (native)
 // CHECK-NEXT: at evaluateLine {{.*}}
