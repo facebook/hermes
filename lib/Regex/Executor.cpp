@@ -319,6 +319,15 @@ struct Context {
   template <Width1Opcode w1opcode>
   inline uint32_t
   matchWidth1LoopBody(const Insn *loopBody, const CodeUnit *pos, uint32_t max);
+
+  /// ES6 21.2.5.2.3 AdvanceStringIndex.
+  /// Return the index of the next character to check.
+  /// This is typically just the index + 1, except if Unicode is enabled we need
+  /// to skip surrogate pairs.
+  inline size_t advanceStringIndex(
+      const CodeUnit *start,
+      size_t index,
+      size_t lastIndex) const;
 };
 
 /// We store loop and captured range data contiguously in a single allocation at
@@ -719,6 +728,37 @@ bool Context<Traits>::matchWidth1Loop(
   return true;
 }
 
+/// ES6 21.2.5.2.3. Effectively this skips surrogate pairs if the regexp has the
+/// Unicode flag set.
+template <class Traits>
+inline size_t Context<Traits>::advanceStringIndex(
+    const CodeUnit *start,
+    size_t index,
+    size_t lastIndex) const {
+  if (sizeof(CodeUnit) == 1) {
+    // The input string is ASCII and therefore cannot have surrogate pairs.
+    return index + 1;
+  }
+  // "If unicode is false, return index+1."
+  // "If index+1 >= length, return index+1."
+  if (LLVM_LIKELY(!(syntaxFlags_ & constants::unicode)) ||
+      (index + 1 >= lastIndex))
+    return index + 1;
+
+  // Let first be the code unit value at index index in S
+  // If first < 0xD800 or first > 0xDBFF, return index+1
+  // Let second be the code unit value at index index+1 in S.
+  // If second < 0xDC00 or second > 0xDFFF, return index+1.
+  CodeUnit first = start[index];
+  CodeUnit second = start[index + 1];
+  if (LLVM_LIKELY(!isHighSurrogate(first)) ||
+      LLVM_LIKELY(!isLowSurrogate(second))) {
+    return index + 1;
+  }
+  // Return index+2.
+  return index + 2;
+}
+
 template <class Traits>
 auto Context<Traits>::match(
     State<Traits> *s,
@@ -733,7 +773,7 @@ auto Context<Traits>::match(
   // Save the incoming IP in case we have to loop.
   const auto startIp = s->ip_;
 
-  // Check how many locations we'll need to check.
+  // Decide how many locations we'll need to check.
   // Note that we do want to check the empty range [last_, last_)
   const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + (last_ - startLoc);
 
@@ -745,7 +785,8 @@ auto Context<Traits>::match(
     goto backtrackingExhausted;       \
   } while (0)
 
-  for (size_t locIndex = 0; locIndex < locsToCheckCount; locIndex++) {
+  for (size_t locIndex = 0; locIndex < locsToCheckCount;
+       locIndex = advanceStringIndex(startLoc, locIndex, locsToCheckCount)) {
     const CodeUnit *potentialMatchLocation = startLoc + locIndex;
     s->current_ = potentialMatchLocation;
     s->ip_ = startIp;

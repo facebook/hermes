@@ -64,3 +64,10 @@ print(!! /^..$/u.exec("\u{1F600}"));
 // CHECK-NEXT: false
 print(!! /^.$/u.exec("\u{1F600}"));
 // CHECK-NEXT: true
+
+// Test advanceStringIndex.
+// We should not match a low surrogate in a Unicode regexp.
+print(!! /\uDE42/u.exec("\uD83D\uDE42ZZZ"));
+// CHECK-NEXT: false
+print(!! /\uDE42/.exec("\uD83D\uDE42ZZZ"));
+// CHECK-NEXT: true
