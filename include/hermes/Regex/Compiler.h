@@ -22,7 +22,6 @@
 #include "hermes/Regex/RegexBytecode.h"
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <initializer_list>
@@ -224,27 +223,6 @@ struct CharacterClass {
 
   CharacterClass(Type type, bool invert) : type_(type), inverted_(invert) {}
 };
-
-template <typename T>
-class ParseResult : public llvm::ErrorOr<T> {
-  using Super = llvm::ErrorOr<T>;
-
- public:
-  // Construct from a T.
-  /* implicit */ ParseResult(T v) : Super(std::move(v)) {}
-
-  // Construct a failing result from an error code.
-  /* implicit */ ParseResult(constants::ErrorType err)
-      : Super(std::error_code(static_cast<int>(err), std::generic_category())) {
-  }
-
-  // \p return the error code, or None if no error.
-  constants::ErrorType regexError() const {
-    if (*this)
-      return constants::ErrorType::None;
-    return static_cast<constants::ErrorType>(Super::getError().value());
-  }
-} HERMES_ATTRIBUTE_WARN_UNUSED_RESULT_TYPE;
 
 class Node;
 
@@ -872,6 +850,7 @@ class Regex {
 
   using CharT = typename Traits::char_type;
   using Node = regex::Node;
+  using BracketNode = regex::BracketNode<Traits>;
 
  private:
   Traits traits_;
@@ -967,7 +946,7 @@ class Regex {
 
   Regex(const CharT *first, const CharT *last, constants::SyntaxFlags f = {})
       : flags_(f) {
-    error_ = parse(first, last).regexError();
+    error_ = parse(first, last);
   }
 
   // Disallow copy-assignment and copy-construction.
@@ -1003,18 +982,15 @@ class Regex {
 
  private:
   template <class ForwardIterator>
-  ParseResult<ForwardIterator> parse(
-      ForwardIterator first,
-      ForwardIterator last);
+  constants::ErrorType parse(ForwardIterator first, ForwardIterator last);
 
   /// Attempt to parse the regex from the range [\p first, \p last), using
   /// \p backRefLimit as the maximum decimal escape to interpret as a
   /// backreference.  The maximum backreference that was in fact encountered
   /// is returned by reference in \p out_max_back_ref, if that is larger than
-  /// its current value. \return a ParseResult containing the new position, or
-  /// error.
+  /// its current value. \return an error code.
   template <class ForwardIterator>
-  ParseResult<ForwardIterator> parseWithBackRefLimit(
+  constants::ErrorType parseWithBackRefLimit(
       ForwardIterator first,
       ForwardIterator last,
       uint32_t backRefLimit,
@@ -1028,7 +1004,7 @@ class Regex {
       NodeList loopedList,
       uint32_t mexp_begin,
       bool greedy);
-  BracketNode<Traits> *startBracketList(bool negate);
+  BracketNode *startBracketList(bool negate);
   void pushChar(CharT c);
   void pushCharClass(CharacterClass c);
   void pushBackRef(uint32_t i);
@@ -1098,7 +1074,7 @@ class LookaheadNode : public Node {
 };
 
 template <typename Receiver>
-ParseResult<const char16_t *> parseRegex(
+constants::ErrorType parseRegex(
     const char16_t *start,
     const char16_t *end,
     Receiver *receiver,
@@ -1107,7 +1083,7 @@ ParseResult<const char16_t *> parseRegex(
 
 template <class Traits>
 template <class ForwardIterator>
-ParseResult<ForwardIterator> Regex<Traits>::parse(
+constants::ErrorType Regex<Traits>::parse(
     ForwardIterator first,
     ForwardIterator last) {
   uint32_t maxBackRef = 0;
@@ -1127,7 +1103,7 @@ ParseResult<ForwardIterator> Regex<Traits>::parse(
   // value DecimalEscape is <= NCapturingParens". Now that we know the true
   // capture group count, re-parse with that as the limit so overlarge decimal
   // escapes will be ignored.
-  if (result && maxBackRef > markedCount_) {
+  if (result == constants::ErrorType::None && maxBackRef > markedCount_) {
     uint32_t backRefLimit = markedCount_;
     uint32_t reparsedMaxBackRef = 0;
     loopCount_ = 0;
@@ -1136,7 +1112,7 @@ ParseResult<ForwardIterator> Regex<Traits>::parse(
     result =
         parseWithBackRefLimit(first, last, backRefLimit, &reparsedMaxBackRef);
     assert(
-        result &&
+        result == constants::ErrorType::None &&
         "regex reparsing should never fail if the first parse succeeded");
     assert(
         reparsedMaxBackRef <= backRefLimit &&
@@ -1148,7 +1124,7 @@ ParseResult<ForwardIterator> Regex<Traits>::parse(
 
 template <class Traits>
 template <class ForwardIterator>
-ParseResult<ForwardIterator> Regex<Traits>::parseWithBackRefLimit(
+constants::ErrorType Regex<Traits>::parseWithBackRefLimit(
     ForwardIterator first,
     ForwardIterator last,
     uint32_t backRefLimit,
@@ -1160,7 +1136,7 @@ ParseResult<ForwardIterator> Regex<Traits>::parseWithBackRefLimit(
 
   // If we succeeded, add a goal node as the last node and perform optimizations
   // on the list.
-  if (result) {
+  if (result == constants::ErrorType::None) {
     nodes_.push_back(make_unique<GoalNode>());
     Node::optimizeNodeList(nodes_, flags_);
   }
@@ -1246,8 +1222,7 @@ void Regex<Traits>::pushAlternation(NodeList left, NodeList right) {
 
 template <class Traits>
 BracketNode<Traits> *Regex<Traits>::startBracketList(bool negate) {
-  return appendNode<BracketNode<Traits>>(
-      traits_, negate, flags() & constants::icase);
+  return appendNode<BracketNode>(traits_, negate, flags() & constants::icase);
 }
 
 template <class Traits>
