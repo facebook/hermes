@@ -45,7 +45,8 @@ namespace constants {
 enum SyntaxFlags : uint8_t {
   icase = 1 << 0,
   nosubs = 1 << 1,
-  multiline = 1 << 2
+  multiline = 1 << 2,
+  unicode = 1 << 3,
 };
 
 inline constexpr SyntaxFlags operator~(SyntaxFlags x) {
@@ -142,6 +143,9 @@ enum class ErrorType {
   /// incomplete escape: new RegExp("\\")
   EscapeIncomplete,
 
+  /// Invalid escape: new RegExp("\\123", "u")
+  EscapeInvalid,
+
   /// Mismatched [ and ].
   UnbalancedBracket,
 
@@ -168,6 +172,8 @@ inline const char *messageForError(ErrorType error) {
       return "Escaped value too large";
     case ErrorType::EscapeIncomplete:
       return "Incomplete escape";
+    case ErrorType::EscapeInvalid:
+      return "Invalid escape";
     case ErrorType::UnbalancedBracket:
       return "Character class not closed";
     case ErrorType::UnbalancedParenthesis:
@@ -1081,6 +1087,7 @@ constants::ErrorType parseRegex(
     const char16_t *start,
     const char16_t *end,
     Receiver *receiver,
+    constants::SyntaxFlags flags,
     uint32_t backRefLimit,
     uint32_t *outMaxBackRef);
 
@@ -1104,9 +1111,13 @@ constants::ErrorType Regex<Traits>::parse(
   // the limit. Now we know that we wrongly interpreted a decimal escape as a
   // backreference. See ES6 Annex B.1.4 DecimalEscape "but only if the integer
   // value DecimalEscape is <= NCapturingParens". Now that we know the true
-  // capture group count, re-parse with that as the limit so overlarge decimal
-  // escapes will be ignored.
+  // capture group count, either produce an error (if Unicode) or re-parse with
+  // that as the limit so overlarge decimal escapes will be ignored.
   if (result == constants::ErrorType::None && maxBackRef > markedCount_) {
+    if (flags_ & constants::SyntaxFlags::unicode) {
+      return constants::ErrorType::EscapeInvalid;
+    }
+
     uint32_t backRefLimit = markedCount_;
     uint32_t reparsedMaxBackRef = 0;
     loopCount_ = 0;
@@ -1135,7 +1146,8 @@ constants::ErrorType Regex<Traits>::parseWithBackRefLimit(
   // Initialize our node list with a single no-op node (it must never be empty.)
   nodes_.clear();
   nodes_.push_back(make_unique<Node>());
-  auto result = parseRegex(first, last, this, backRefLimit, outMaxBackRef);
+  auto result =
+      parseRegex(first, last, this, flags_, backRefLimit, outMaxBackRef);
 
   // If we succeeded, add a goal node as the last node and perform optimizations
   // on the list.

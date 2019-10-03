@@ -84,6 +84,7 @@ struct LoopData {
 template <class Traits>
 struct Context {
   using CodeUnit = typename Traits::CodeUnit;
+  using CodePoint = typename Traits::CodePoint;
 
   /// The set of backtracking opcodes. These are interpreted by the backtrack()
   /// function.
@@ -604,8 +605,8 @@ bool Context<Traits>::matchWidth1(const Insn *base, CodeUnit c) const {
 
     case Width1Opcode::MatchCharICase8: {
       const auto *insn = llvm::cast<MatchCharICase8Insn>(base);
-      return c == insn->c ||
-          (char32_t)traits_.canonicalize(c) == (char32_t)insn->c;
+      return c == (CodePoint)insn->c ||
+          (CodePoint)traits_.canonicalize(c) == (CodePoint)insn->c;
     }
 
     case Width1Opcode::MatchCharICase16: {

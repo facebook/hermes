@@ -18,6 +18,9 @@ class Parser {
   // The character type that we are parsing.
   using CharT = typename std::iterator_traits<ForwardIterator>::value_type;
 
+  // A Unicode code point.
+  using CodePoint = uint32_t;
+
   // The type of a node in our regex.
   using Node = typename RegexType::Node;
 
@@ -34,6 +37,9 @@ class Parser {
 
   // The error that was set, if any.
   constants::ErrorType error_ = constants::ErrorType::None;
+
+  // Flags for the regex.
+  const constants::SyntaxFlags flags_;
 
   // See comment --DecimalEscape--.
   const uint32_t backRefLimit_;
@@ -236,8 +242,12 @@ class Parser {
         }
 
         default: {
-          // Ordinary char.
-          re_->pushChar(consume(c));
+          // Ordinary character or surrogate pair.
+          if (auto cp = tryConsumeSurrogatePair()) {
+            re_->pushChar(*cp);
+          } else {
+            re_->pushChar(consume(c));
+          }
           break;
         }
       }
@@ -251,6 +261,20 @@ class Parser {
         applyQuantifier(quant);
       }
     }
+  }
+
+  /// If Unicode is set, try to consume a surrogate pair.
+  Optional<CodePoint> tryConsumeSurrogatePair() {
+    if (!(flags_ & constants::SyntaxFlags::unicode))
+      return llvm::None;
+    auto saved = current_;
+    auto hi = consumeCharIf(isHighSurrogate);
+    auto lo = consumeCharIf(isLowSurrogate);
+    if (hi && lo) {
+      return decodeSurrogatePair(*hi, *lo);
+    }
+    current_ = saved;
+    return llvm::None;
   }
 
   /// ES6 21.2.2.7 Quantifier.
@@ -393,7 +417,7 @@ class Parser {
     return false;
   }
 
-  Optional<char16_t> tryConsumeBracketNonClassAtom() {
+  Optional<CodePoint> tryConsumeBracketNonClassAtom() {
     if (current_ == end_) {
       return llvm::None;
     }
@@ -441,16 +465,19 @@ class Parser {
       }
 
       default: {
-        // Ordinary character.
-        consume(c);
-        return c;
+        // Ordinary character or surrogate pair.
+        if (auto cp = tryConsumeSurrogatePair()) {
+          return cp;
+        } else {
+          return consume(c);
+        }
       }
     }
   }
 
   // ES6 B.1.2 LegacyOctalEscapeSequence
   // Note this is required by Annex B for regexp even in strict mode.
-  char16_t consumeLegacyOctalEscapeSequence() {
+  CodePoint consumeLegacyOctalEscapeSequence() {
     // LegacyOctalEscapeSequence:
     //   OctalDigit [lookahead not OctalDigit]
     //   ZeroToThree OctalDigit [lookahead not OctalDigit]
@@ -476,7 +503,7 @@ class Parser {
   /// ES6 11.8.3 DecimalIntegerLiteral .
   /// If the value would overflow, uint32_t::max() is returned.
   /// All decimal digits are consumed regardless.
-  uint32_t consumeDecimalIntegerLiteral() {
+  CodePoint consumeDecimalIntegerLiteral() {
     auto decimalDigit = [](CharT c) { return '0' <= c && c <= '9'; };
     assert(
         current_ != end_ && decimalDigit(*current_) &&
@@ -494,7 +521,7 @@ class Parser {
   }
 
   /// ES6 11.8.3 DecimalIntegerLiteral .
-  Optional<uint32_t> tryConsumeDecimalIntegerLiteral() {
+  Optional<CodePoint> tryConsumeDecimalIntegerLiteral() {
     if (current_ != end_ && '0' <= *current_ && *current_ <= '9')
       return consumeDecimalIntegerLiteral();
     return llvm::None;
@@ -502,7 +529,7 @@ class Parser {
 
   /// ES6 11.8.3 HexDigit .
   /// \return a uint derived from exactly \p count hex digits, or None.
-  Optional<uint32_t> tryConsumeHexDigits(uint32_t count) {
+  Optional<CodePoint> tryConsumeHexDigits(uint32_t count) {
     auto hexDigitValue = [](CharT c) -> Optional<uint32_t> {
       if ('0' <= c && c <= '9')
         return c - '0';
@@ -531,7 +558,7 @@ class Parser {
   /// character, consume the next character as a CharacterEscape. \return the
   /// escaped character. Note this cannot fail as IdentityEscape is a fallback
   /// (e.g. /\q/ is the same as /q/).
-  char16_t consumeCharacterEscape() {
+  CodePoint consumeCharacterEscape() {
     if (current_ == end_) {
       setError(constants::ErrorType::EscapeIncomplete);
       return 0;
@@ -562,8 +589,7 @@ class Parser {
         if (auto cc = consumeCharIf(isControlLetter)) {
           return *cc % 32;
         } else {
-          // IdentityEscape.
-          return 'c';
+          return identityEscape('c');
         }
       }
 
@@ -589,26 +615,111 @@ class Parser {
         return consumeLegacyOctalEscapeSequence();
       }
 
-      case 'x':
       case 'u': {
-        // x is two-char hex escape, u is four-char Unicode escape.
-        uint32_t digitCount = (c == 'x' ? 2 : 4);
+        if (auto ret = tryConsumeUnicodeEscapeSequence()) {
+          return *ret;
+        } else {
+          // IdentityEscape
+          return identityEscape(consume(c));
+        }
+      }
+
+      case 'x': {
         consume(c);
-        if (auto ret = tryConsumeHexDigits(digitCount)) {
+        if (auto ret = tryConsumeHexDigits(2)) {
           return *ret;
         } else {
           // Not followed by sufficient hex digits.
           // Note this is not an error; for example /\x1Z/ matches "x1Z" via
           // IdentityEscape.
-          return c;
+          return identityEscape(c);
         }
       }
 
       default: {
         // IdentityEscape
-        return consume(c);
+        return identityEscape(consume(c));
       }
     }
+  }
+
+  /// ES6 21.2.1 IdentityEscape
+  CodePoint identityEscape(CharT c) {
+    // In Unicode regexps, only syntax characters and '/' may be escaped.
+    if (flags_ & constants::SyntaxFlags::unicode) {
+      if (c == 0 || c > 127 || !strchr("^$\\.*+?()[]{}|/", c)) {
+        setError(constants::ErrorType::EscapeInvalid);
+      }
+    }
+    // TODO: disallow "UnicodeIDContinue".
+    return c;
+  }
+
+  /// ES6 21.2.2.10 RegExpUnicodeEscapeSequence
+  Optional<CodePoint> tryConsumeUnicodeEscapeSequence() {
+    auto saved = current_;
+    if (!consume('u')) {
+      return llvm::None;
+    }
+
+    // Non-unicode path only supports \uABCD style escapes.
+    if (!(flags_ & constants::SyntaxFlags::unicode)) {
+      if (auto ret = tryConsumeHexDigits(4)) {
+        return *ret;
+      }
+      current_ = saved;
+      return llvm::None;
+    }
+
+    // Unicode path.
+    // Check for \u{ABCD123} style escapes.
+    // It is an error if the escape is incomplete: /\u{123/, or empty: /\u{}/
+    if (tryConsume('{')) {
+      uint32_t result = 0;
+      size_t digitCount = 0;
+      while (auto digit = tryConsumeHexDigits(1)) {
+        digitCount++;
+        result = result * 16 + *digit;
+        // 21.2.1.1: It is a Syntax Error if the MV of HexDigits > 1114111
+        if (result > 1114111) {
+          setError(constants::ErrorType::EscapeOverflow);
+          current_ = saved;
+          return llvm::None;
+        }
+      }
+      if (!tryConsume('}')) {
+        setError(constants::ErrorType::EscapeInvalid);
+        return llvm::None;
+      }
+      if (digitCount == 0) {
+        // input was like \u{}
+        setError(constants::ErrorType::EscapeInvalid);
+        return 0;
+      }
+      return result;
+    }
+
+    // Check for \uABCD style escapes.
+    if (auto hi = tryConsumeHexDigits(4)) {
+      if (isHighSurrogate(*hi)) {
+        // This is a leading surrogate.
+        // Look for a trailing surrogate.
+        auto saved2 = current_;
+        if (tryConsume("\\u")) {
+          if (auto lo = tryConsumeHexDigits(4)) {
+            if (isLowSurrogate(*lo)) {
+              return decodeSurrogatePair(*hi, *lo);
+            }
+          }
+        }
+        // No trailing surrogate.
+        current_ = saved2;
+      }
+      return *hi;
+    }
+
+    current_ = saved;
+    return llvm::None;
   }
 
   /// ES6 21.2.2.6 Assertion.
@@ -669,23 +780,25 @@ class Parser {
       case '7':
       case '8':
       case '9': {
-        // This may be a backreference, in which case we parse it via decimal.
-        // Otherwise, this is an octal escape unless our value is not octal
-        // (>= 8). Otherwise this is identity escape.
+        // In Unicode mode, this is always a backreference.
+        // In non-unicode mode, this is a backreference if its value does not
+        // exceed the number of capture groups. Otherwise it is an octal escape
+        // if its value is octal. Otherwise it is IdentityEscape.
         auto saved = current_;
         uint32_t decimal = consumeDecimalIntegerLiteral();
-        if (decimal <= backRefLimit_) {
+        bool unicode = flags_ & constants::SyntaxFlags::unicode;
+        if (unicode || decimal <= backRefLimit_) {
           // Backreference.
           maxBackRef_ = std::max(maxBackRef_, decimal);
           re_->pushBackRef(decimal);
-        } else if (c < '8') {
+        } else if (c < '8' && !unicode) {
           // Octal.
           current_ = saved;
           re_->pushChar(consumeLegacyOctalEscapeSequence());
         } else {
           // IdentityEscape.
           current_ = saved;
-          re_->pushChar(consume(c));
+          re_->pushChar(identityEscape(consume(c)));
         }
         break;
       }
@@ -705,8 +818,13 @@ class Parser {
       RegexType *re,
       ForwardIterator start,
       ForwardIterator end,
+      constants::SyntaxFlags flags,
       uint32_t backRefLimit)
-      : re_(re), current_(start), end_(end), backRefLimit_(backRefLimit) {}
+      : re_(re),
+        current_(start),
+        end_(end),
+        flags_(flags),
+        backRefLimit_(backRefLimit) {}
 
   constants::ErrorType performParse() {
     consumeDisjunction();
@@ -731,9 +849,11 @@ constants::ErrorType parseRegex(
     const char16_t *start,
     const char16_t *end,
     Receiver *receiver,
+    constants::SyntaxFlags flags,
     uint32_t backRefLimit,
     uint32_t *outMaxBackRef) {
-  Parser<Receiver, const char16_t *> parser(receiver, start, end, backRefLimit);
+  Parser<Receiver, const char16_t *> parser(
+      receiver, start, end, flags, backRefLimit);
   auto result = parser.performParse();
   *outMaxBackRef = parser.maxBackRef();
   return result;
@@ -744,6 +864,7 @@ template constants::ErrorType parseRegex(
     const char16_t *start,
     const char16_t *end,
     Regex<UTF16RegexTraits> *receiver,
+    constants::SyntaxFlags flags,
     uint32_t backRefLimit,
     uint32_t *outMaxBackRef);
 

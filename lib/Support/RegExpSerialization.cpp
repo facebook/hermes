@@ -320,6 +320,8 @@ llvm::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
     sflags |= icase;
   if (flags.contains('m'))
     sflags |= multiline;
+  if (flags.contains('u'))
+    sflags |= unicode;
 
   // Build and compile the regexp.
   auto re =

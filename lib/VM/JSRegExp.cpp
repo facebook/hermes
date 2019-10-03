@@ -116,10 +116,9 @@ ExecutionStatus JSRegExp::initialize(
       "Null pattern and/or flags passed to initializeWithPatternAndFlags");
 
   // Validate flags.
-  // TODO: Unicode is not yet implemented.
   auto flagsView = StringPrimitive::createStringView(runtime, flags);
   auto fbits = FlagBits::fromString(flagsView);
-  if (!fbits || fbits->unicode) {
+  if (!fbits) {
     runtime->raiseSyntaxError("Invalid flags passed to RegExp");
     return ExecutionStatus::EXCEPTION;
   }
@@ -159,6 +158,8 @@ ExecutionStatus JSRegExp::initialize(
       nativeFlags |= regex::constants::icase;
     if (fbits->multiline)
       nativeFlags |= regex::constants::multiline;
+    if (fbits->unicode)
+      nativeFlags |= regex::constants::unicode;
 
     auto patternText = StringPrimitive::createStringView(runtime, pattern);
     llvm::SmallVector<char16_t, 16> patternText16;
