@@ -47,6 +47,18 @@ try { new RegExp("\\uZZZZ", "u"); } catch (e) { print(e.message); }
 try { new RegExp("\\u{FFFFFFFFF}", "u"); } catch (e) { print(e.message); }
 // CHECK-NEXT: Invalid RegExp pattern: Escaped value too large
 
+try { new RegExp("{", "u"); } catch (e) { print(e.message); }
+// CHECK-NEXT: Invalid RegExp pattern: Invalid quantifier bracket
+
+try { new RegExp("}", "u"); } catch (e) { print(e.message); }
+// CHECK-NEXT: Invalid RegExp pattern: Invalid quantifier bracket
+
+print((new RegExp("{", "")).source);
+// CHECK-NEXT: {
+
+print((new RegExp("}", "")).source);
+// CHECK-NEXT: }
+
 print(/\u{1F600}/.exec("\u{1F600}"));
 // CHECK-NEXT: null
 

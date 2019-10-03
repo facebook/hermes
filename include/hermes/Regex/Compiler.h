@@ -158,6 +158,9 @@ enum class ErrorType {
   /// Invalid character range, such as [b-a].
   CharacterRange,
 
+  /// A lone { or } was found.
+  InvalidQuantifierBracket,
+
   /// One of *?+{ was not preceded by a valid regular expression.
   InvalidRepeat,
 
@@ -182,6 +185,8 @@ inline const char *messageForError(ErrorType error) {
       return "Quantifier range out of order";
     case ErrorType::CharacterRange:
       return "Character class range out of order";
+    case ErrorType::InvalidQuantifierBracket:
+      return "Invalid quantifier bracket";
     case ErrorType::InvalidRepeat:
       return "Quantifier has nothing to repeat";
     case ErrorType::PatternExceedsParseLimits:
@@ -637,7 +642,8 @@ class MatchAnyButNewlineNode final : public Node {
   }
 
   virtual bool matchesExactlyOneCharacter() const override {
-    return true;
+    // In Unicode we may match a surrogate pair.
+    return !unicode_;
   }
 
  private:

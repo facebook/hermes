@@ -198,9 +198,13 @@ class Parser {
         case '(': {
           if (tryConsume("(?=")) {
             // Positive lookahead.
+            // Unicode prohibits these from being quantified.
+            quantifierAllowed = !(flags_ & constants::unicode);
             consumeLookaheadAssertion(false /* negate */);
           } else if (tryConsume("(?!")) {
             // Negative lookahead.
+            // Unicode prohibits these from being quantified.
+            quantifierAllowed = !(flags_ & constants::unicode);
             consumeLookaheadAssertion(true /* negate */);
           } else if (tryConsume("(?:")) {
             // Non-capturing group.
@@ -233,10 +237,14 @@ class Parser {
         }
 
         case '{': {
-          // If this is a valid quantifier, it is an error.
+          // Under Unicode, this is always an error.
+          // Without Unicode, it is an error if it is a valid quantifier.
           Quantifier tmp;
           if (tryConsumeQuantifier(&tmp)) {
             setError(constants::ErrorType::InvalidRepeat);
+            return;
+          } else if (flags_ & constants::SyntaxFlags::unicode) {
+            setError(constants::ErrorType::InvalidQuantifierBracket);
             return;
           }
           re_->pushChar(consume('{'));
@@ -248,6 +256,21 @@ class Parser {
           // End of the disjunction or group.
           return;
         }
+
+        case '}':
+        case ']': {
+          // These syntax characters are allowed as atoms in
+          // ExtendedPatternCharacter production of ES9 Annex B 1.4.
+          // However they are disallowed under Unicode, where Annex B does not
+          // apply.
+          if (flags_ & constants::SyntaxFlags::unicode) {
+            setError(
+                c == '}' ? constants::ErrorType::InvalidQuantifierBracket
+                         : constants::ErrorType::UnbalancedBracket);
+            return;
+          }
+        }
+          // Fall-through
 
         default: {
           // Ordinary character or surrogate pair.
@@ -505,6 +528,11 @@ class Parser {
     //   FourToSeven OctalDigit
     //   ZeroToThree OctalDigit OctalDigit
     // We implement this more directly.
+    // Note this is forbidden in Unicode.
+    if (flags_ & constants::SyntaxFlags::unicode) {
+      setError(constants::ErrorType::EscapeInvalid);
+      return 0;
+    }
     auto isOctalDigit = [](CharT c) { return '0' <= c && c <= '7'; };
     assert(
         current_ != end_ && isOctalDigit(*current_) &&
