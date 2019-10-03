@@ -70,39 +70,35 @@ TEST(UnicodeTest, isUnicodeOnlySpace) {
 // Verify some correct canonicalizations.
 TEST(UnicodeTest, LegacyU16Canonicalization) {
   regex::UTF16RegexTraits traits;
-  EXPECT_EQ('A', traits.canonicalize('a'));
-  EXPECT_EQ('/', traits.canonicalize('/'));
-  EXPECT_EQ(
-      0x053D, traits.canonicalize(0x053D)); // "ARMENIAN CAPITAL LETTER XEH"
-  EXPECT_EQ(0x053D, traits.canonicalize(0x056D)); // "ARMENIAN SMALL LETTER XEH"
-  EXPECT_EQ(
-      0xA78D, traits.canonicalize(0x0265)); // "LATIN CAPITAL LETTER TURNED H"
-  EXPECT_EQ(
-      0x042A,
-      traits.canonicalize(0x042A)); // "CYRILLIC CAPITAL LETTER HARD SIGN"
-  EXPECT_EQ(
-      0x042A,
-      traits.canonicalize(0x1C86)); // "CYRILLIC SMALL LETTER TALL HARD SIGN"
-  EXPECT_EQ(
-      0x042A, traits.canonicalize(0x044A)); // "CYRILLIC SMALL LETTER HARD SIGN"
-  EXPECT_EQ(
-      0x0422, traits.canonicalize(0x1C85)); // "CYRILLIC CAPITAL LETTER TE"
-  EXPECT_EQ(
-      0x0422, traits.canonicalize(0x1C84)); // "CYRILLIC CAPITAL LETTER TE"
-  EXPECT_EQ(0x0422, traits.canonicalize(0x0442)); // "CYRILLIC SMALL LETTER TE"
-  EXPECT_EQ(0x01CA, traits.canonicalize(0x01CA)); // "LATIN CAPITAL LETTER NJ"
+  auto canon = [&traits](char16_t c) {
+    return traits.canonicalize(c, false /* not unicode */);
+  };
+  EXPECT_EQ('A', canon('a'));
+  EXPECT_EQ('/', canon('/'));
+  EXPECT_EQ(0x053D, canon(0x053D)); // "ARMENIAN CAPITAL LETTER XEH"
+  EXPECT_EQ(0x053D, canon(0x056D)); // "ARMENIAN SMALL LETTER XEH"
+  EXPECT_EQ(0xA78D, canon(0x0265)); // "LATIN CAPITAL LETTER TURNED H"
+  EXPECT_EQ(0x042A,
+            canon(0x042A)); // "CYRILLIC CAPITAL LETTER HARD SIGN"
+  EXPECT_EQ(0x042A, canon(0x1C86)); // "CYRILLIC SMALL LETTER TALL HARD SIGN"
+  EXPECT_EQ(0x042A, canon(0x044A)); // "CYRILLIC SMALL LETTER HARD SIGN"
+  EXPECT_EQ(0x0422, canon(0x1C85)); // "CYRILLIC CAPITAL LETTER TE"
+  EXPECT_EQ(0x0422, canon(0x1C84)); // "CYRILLIC CAPITAL LETTER TE"
+  EXPECT_EQ(0x0422, canon(0x0442)); // "CYRILLIC SMALL LETTER TE"
+  EXPECT_EQ(0x01CA, canon(0x01CA)); // "LATIN CAPITAL LETTER NJ"
   EXPECT_EQ(
       0x01CA,
-      traits.canonicalize(
-          0x01CB)); // "LATIN CAPITAL LETTER N WITH SMALL LETTER J"
-  EXPECT_EQ(0x01CA, traits.canonicalize(0x01CC)); // "LATIN SMALL LETTER NJ"
-  EXPECT_EQ(0x212B, traits.canonicalize(0x212B)); // "ANGSTROM SIGN"
+      canon(0x01CB)); // "LATIN CAPITAL LETTER N WITH SMALL LETTER J"
+  EXPECT_EQ(0x01CA, canon(0x01CC)); // "LATIN SMALL LETTER NJ"
+  EXPECT_EQ(0x212B, canon(0x212B)); // "ANGSTROM SIGN"
 }
 
 TEST(UnicodeTest, ASCIICanonicalization) {
   regex::ASCIIRegexTraits traits;
   for (int c = 0; c <= 127; c++) {
-    EXPECT_EQ(toupper(c), traits.canonicalize((char)c));
+    EXPECT_EQ(
+        toupper(c), traits.canonicalize((char)c, false /* not Unicode */));
+    EXPECT_EQ(tolower(c), traits.canonicalize((char)c, true /* Unicode */));
   }
 }
 

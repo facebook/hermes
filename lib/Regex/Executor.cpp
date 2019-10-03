@@ -441,10 +441,12 @@ bool Context<Traits>::matchesNCharICase8(
     State<Traits> &s) {
   auto insnCharPtr = reinterpret_cast<const char *>(insn + 1);
   auto charCount = insn->charCount;
+  bool unicode = syntaxFlags_ & constants::unicode;
   for (int offset = 0; offset < charCount; offset++) {
     char c = s.current_[offset];
     char instC = insnCharPtr[offset];
-    if (c != instC && (char32_t)traits_.canonicalize(c) != (char32_t)instC) {
+    if (c != instC &&
+        (char32_t)traits_.canonicalize(c, unicode) != (char32_t)instC) {
       return false;
     }
   }
@@ -616,13 +618,15 @@ bool Context<Traits>::matchWidth1(const Insn *base, CodeUnit c) const {
     case Width1Opcode::MatchCharICase8: {
       const auto *insn = llvm::cast<MatchCharICase8Insn>(base);
       return c == (CodePoint)insn->c ||
-          (CodePoint)traits_.canonicalize(c) == (CodePoint)insn->c;
+          (CodePoint)traits_.canonicalize(
+              c, syntaxFlags_ & constants::unicode) == (CodePoint)insn->c;
     }
 
     case Width1Opcode::MatchCharICase16: {
       const auto *insn = llvm::cast<MatchCharICase16Insn>(base);
       return c == insn->c ||
-          (char32_t)traits_.canonicalize(c) == (char32_t)insn->c;
+          (char32_t)traits_.canonicalize(
+              c, syntaxFlags_ & constants::unicode) == (char32_t)insn->c;
     }
 
     case Width1Opcode::MatchAnyButNewline:
@@ -630,6 +634,9 @@ bool Context<Traits>::matchWidth1(const Insn *base, CodeUnit c) const {
 
     case Width1Opcode::Bracket: {
       // BracketInsn is followed by a list of BracketRange32s.
+      assert(
+          !(syntaxFlags_ & constants::unicode) &&
+          "Unicode should not be set for Width 1 brackets");
       const BracketInsn *insn = llvm::cast<BracketInsn>(base);
       const BracketRange32 *ranges =
           reinterpret_cast<const BracketRange32 *>(insn + 1);
@@ -878,7 +885,7 @@ auto Context<Traits>::match(
           assert(insn->c >= 0x010000 && "Character should be astral");
           CodePoint cp;
           if (!Traits::decodeUTF16(s->current_, last_, &cp) ||
-              traits_.canonicalize(cp) != (CodePoint)insn->c) {
+              traits_.canonicalize(cp, true) != (CodePoint)insn->c) {
             BACKTRACK();
           }
           s->ip_ += sizeof(U16MatchCharICase32Insn);
@@ -1030,12 +1037,15 @@ auto Context<Traits>::match(
           bool matches;
           if (syntaxFlags_ & constants::icase) {
             // Case-insensitive comparison.
+            bool unicode = syntaxFlags_ & constants::unicode;
             matches = std::equal(
                 first_ + cr.start,
                 first_ + cr.end,
                 s->current_,
                 [&](CodeUnit a, CodeUnit b) {
-                  return traits_.canonicalize(a) == traits_.canonicalize(b);
+                  return a == b ||
+                      traits_.canonicalize(a, unicode) ==
+                      traits_.canonicalize(b, unicode);
                 });
           } else {
             // Direct comparison.

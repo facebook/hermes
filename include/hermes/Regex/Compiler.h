@@ -839,7 +839,7 @@ class BracketNode : public Node {
 
     // Canonicalize our code point set if needed.
     CodePointSet cps = icase_
-        ? makeCanonicallyEquivalent(codePointSet_, false /* TODO: unicode */)
+        ? makeCanonicallyEquivalent(codePointSet_, unicode_)
         : codePointSet_;
     for (const CodePointRange &range : cps.ranges()) {
       assert(range.length > 0 && "Ranges should never be empty");
@@ -1232,7 +1232,7 @@ template <class Traits>
 void Regex<Traits>::pushChar(CodePoint c) {
   bool icase = flags() & constants::icase;
   if (icase)
-    c = traits_.canonicalize(c);
+    c = traits_.canonicalize(c, flags() & constants::unicode);
   appendNode<MatchCharNode>(Node::CodePointList{c}, icase);
 }
 

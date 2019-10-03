@@ -74,20 +74,26 @@ struct UTF16RegexTraits {
     llvm_unreachable("Unknown character type");
   }
 
-  /// \return the case-insensitive equivalence key for \p c.
-  /// Our implementation follows ES5.1 15.10.2.8.
-  static CodePoint canonicalize(CodePoint c) {
+  /// ES9 21.2.2.8.2
+  /// \return the canonicalized form of \p c, following either the unicode or
+  /// non-unicode algorithm according to \p unicode.
+  static CodePoint canonicalize(CodePoint c, bool unicode) {
     static_assert(
         std::numeric_limits<CodePoint>::min() == 0,
         "CodePoint must be unsigned");
-    if (c <= 127) {
-      // ASCII fast path. Uppercase by clearing bit 5.
-      if ('a' <= c && c <= 'z') {
-        c &= ~(1 << 5);
+    // If we are unicode, we want to case-fold, which is effectively lowercase
+    // form. If we are non-Unicode, we need the uppercase form.
+    if (LLVM_LIKELY(c <= 127)) {
+      // ASCII fast path.
+      if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')) {
+        // It's a letter. Make it lowercase (uppercase) if Unicode is set
+        // (unset).
+        c &= ~(1u << 5); // uppercase
+        c |= ((uint32_t)unicode << 5); // lowercase if Unicode is set.
       }
       return c;
     }
-    return hermes::canonicalize(c, false /* TODO: unicode */);
+    return hermes::canonicalize(c, unicode);
   }
 
   /// \return whether the character c is contained within the range [first,
@@ -147,9 +153,14 @@ struct ASCIIRegexTraits {
     llvm_unreachable("Unknown character type");
   }
 
-  static CodePoint canonicalize(CodePoint c) {
-    if ('a' <= c && c <= 'z')
-      c &= ~('a' ^ 'A'); // toupper
+  /// ES6 21.2.2.8.2
+  /// The Unicode path is lowercase; the non-Unicode path is uppercase.
+  static CodePoint canonicalize(CodePoint c, bool unicode) {
+    if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')) {
+      // It's a letter. Make it lowercase (uppercase) if Unicode is set (unset).
+      c &= ~(1u << 5); // uppercase
+      c |= ((uint32_t)unicode << 5); // lowercase if Unicode is set.
+    }
     return c;
   }
 
