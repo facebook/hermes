@@ -89,6 +89,14 @@ using PrecanonicalizationList = uint16_t[UNICODE_MAX_PRECANONICALIZATIONS];
 /// case mapping.
 const PrecanonicalizationList *getExceptionalPrecanonicalizations(uint16_t cp);
 
+/// \return the canonicalized value of \p cp, following ES5 15.10.2.8.
+uint32_t canonicalize(uint32_t cp);
+
+/// \return a set containing all characters which are canonically equivalent to
+/// any character in \p set, following ES5 15.10.2.8.
+class CodePointSet;
+CodePointSet makeCanonicallyEquivalent(const CodePointSet &set);
+
 }; // namespace hermes
 
 #endif // HERMES_PLATFORMUNICODE_CHARACTERPROPERTIES_H

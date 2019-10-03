@@ -5,6 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/Platform/Unicode/CharacterProperties.h"
+#include "hermes/Platform/Unicode/CodePointSet.h"
 
 #include <algorithm>
 #include <climits>
@@ -102,6 +103,117 @@ const PrecanonicalizationList *getExceptionalPrecanonicalizations(uint16_t cp) {
   if (iter != std::end(UNICODE_PRECANONS) && iter->canonicalized == cp)
     return &iter->forms;
   return nullptr;
+}
+
+static uint32_t applyTransform(const UnicodeTransformRange &r, uint32_t cp) {
+  assert(
+      r.start <= cp && cp < r.start + r.count &&
+      "range does not contain this cp");
+  assert(cp <= INT32_MAX && "cp is too big");
+  // Check if our code point has a mod of 0.
+  if ((cp - r.start) % r.modulo == 0) {
+    int32_t cps = static_cast<int32_t>(cp) + r.delta;
+    assert(cps >= 0 && "delta underflowed");
+    return static_cast<uint32_t>(cps);
+  }
+  return cp;
+}
+
+// Predicate used to enable binary search on UnicodeTransformRange.
+// Here we return true if the last element of the range is < cp, so <= is
+// correct.
+static bool operator<(const UnicodeTransformRange &m, uint32_t cp) {
+  return m.start + m.count <= cp;
+}
+
+/// Find all code points which canonicalize to a value in \p range, and add them
+/// to \p receiver. This is a slow linear search across all ranges.
+static void addPrecanonicalCharacters(
+    CodePointRange range,
+    CodePointSet *receiver) {
+  if (range.length == 0)
+    return;
+  // TODO: if range is ASCII, we can stop the search after the ASCII part as
+  // nothing outside ASCII can canonicalize to an ASCII character.
+  const auto start = std::begin(LEGACY_CANONS);
+  const auto end = std::end(LEGACY_CANONS);
+  for (auto iter = start; iter != end; ++iter) {
+    const UnicodeTransformRange &transform = *iter;
+    // Get the range of transformed-from and transformed-to characters.
+    CodePointRange fromRange{transform.start, transform.count};
+    CodePointRange toRange = fromRange;
+    toRange.first += transform.delta;
+
+    // See if some character in our range will be transformed-to.
+    if (!range.overlaps(toRange))
+      continue;
+
+    // Looks like it. Add everything.
+    for (uint32_t cp = fromRange.first; cp < fromRange.end(); cp++) {
+      uint32_t tcp = applyTransform(transform, cp);
+      if (tcp != cp && range.first <= tcp && tcp < range.end()) {
+        receiver->add(cp);
+      }
+    }
+  }
+}
+
+/// For each code point in \p range, canonicalize it and add the canonicalized
+/// values to \p receiver.
+static void canonicalizeRange(CodePointRange range, CodePointSet *receiver) {
+  assert(range.length > 0 && "Range should never be empty");
+
+  /// Find the first transform that contains or starts after our range.
+  const auto start = std::begin(LEGACY_CANONS);
+  const auto end = std::end(LEGACY_CANONS);
+  auto transform = std::lower_bound(start, end, range.first);
+
+  uint32_t curcp = range.first;
+  uint32_t endcp = range.end();
+  while (curcp < endcp && transform != end) {
+    uint32_t transformEnd = transform->start + transform->count;
+    assert(transformEnd > curcp && "transform should end after our current cp");
+    if (transform->start > curcp) {
+      // Our transform started after the current value, so skip to the
+      // transform.
+      curcp = transform->start;
+    } else {
+      // Apply this transform for the code points that are in the transform and
+      // also in our range.
+      for (; curcp < transformEnd && curcp < endcp; curcp++) {
+        receiver->add(applyTransform(*transform, curcp));
+      }
+      // We have now exhausted this transform; go to the next one.
+      ++transform;
+    }
+  }
+}
+
+CodePointSet makeCanonicallyEquivalent(const CodePointSet &set) {
+  // Canonicalize all characters in the set, and then find all characters which
+  // canonicalize to some element in the set.
+  CodePointSet canonicalized = set;
+  for (const auto &range : set.ranges()) {
+    canonicalizeRange(range, &canonicalized);
+  }
+
+  CodePointSet result = canonicalized;
+  for (const auto &range : canonicalized.ranges()) {
+    addPrecanonicalCharacters(range, &result);
+  }
+  return result;
+}
+
+uint32_t canonicalize(uint32_t cp) {
+  const auto start = std::begin(LEGACY_CANONS);
+  const auto end = std::end(LEGACY_CANONS);
+  auto where = std::lower_bound(start, end, cp);
+  if (where != end && where->start <= cp && cp < where->start + where->count) {
+    return applyTransform(*where, cp);
+  } else {
+    // No transform for this character, so it canonicalizes to itself.
+    return cp;
+  }
 }
 
 }; // namespace hermes

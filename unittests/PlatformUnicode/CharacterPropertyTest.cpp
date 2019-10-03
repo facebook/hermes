@@ -108,6 +108,13 @@ TEST(UnicodeTest, PrecanonicalizationMapping) {
   }
 }
 
+TEST(UnicodeTest, ASCIICanonicalization) {
+  regex::ASCIIRegexTraits traits;
+  for (int c = 0; c <= 127; c++) {
+    EXPECT_EQ(toupper(c), traits.caseFold((char)c));
+  }
+}
+
 static std::string flatten(const CodePointSet &cps) {
   std::string result;
   for (const auto &range : cps.ranges()) {
@@ -144,6 +151,26 @@ TEST(UnicodeTest, CodePointSet) {
 
   cps.add(CodePointRange{0, 1001});
   EXPECT_EQ("0-1000", flatten(cps));
+}
+
+TEST(UnicodeTest, AddCanonicalEquivalentCharacters) {
+  auto flattenCanonically = [](const CodePointSet &cps) {
+    return flatten(makeCanonicallyEquivalent(cps));
+  };
+
+  CodePointSet cps;
+  cps.add('&');
+  EXPECT_EQ("38-38", flattenCanonically(cps));
+  cps.add('A');
+  EXPECT_EQ("38-38, 65-65, 97-97", flattenCanonically(cps));
+  cps.add(CodePointRange{'A', 'Z' - 'A' + 1});
+  EXPECT_EQ("38-38, 65-90, 97-122", flattenCanonically(cps));
+  cps.add(0x01DF); // 479
+  cps.add(0x01E3); // 483
+  cps.add(0x01E6); // 486
+  EXPECT_EQ(
+      "38-38, 65-90, 97-122, 478-479, 482-483, 486-487",
+      flattenCanonically(cps));
 }
 
 } // end anonymous namespace
