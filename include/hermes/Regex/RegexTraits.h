@@ -87,7 +87,7 @@ struct UTF16RegexTraits {
       }
       return c;
     }
-    return hermes::canonicalize(c);
+    return hermes::canonicalize(c, false /* TODO: unicode */);
   }
 
   /// \return whether the character c is contained within the range [first,

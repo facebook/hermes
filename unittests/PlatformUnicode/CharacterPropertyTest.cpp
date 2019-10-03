@@ -144,9 +144,9 @@ TEST(UnicodeTest, CodePointSet) {
   EXPECT_EQ("0-1000", flatten(cps));
 }
 
-TEST(UnicodeTest, AddCanonicalEquivalentCharacters) {
+TEST(UnicodeTest, AddLegacyCanonicalEquivalentCharacters) {
   auto flattenCanonically = [](const CodePointSet &cps) {
-    return flatten(makeCanonicallyEquivalent(cps));
+    return flatten(makeCanonicallyEquivalent(cps, false /* not unicode */));
   };
 
   CodePointSet cps;
@@ -161,6 +161,27 @@ TEST(UnicodeTest, AddCanonicalEquivalentCharacters) {
   cps.add(0x01E6); // 486
   EXPECT_EQ(
       "38-38, 65-90, 97-122, 478-479, 482-483, 486-487",
+      flattenCanonically(cps));
+}
+
+TEST(UnicodeTest, AddUnicodeCanonicalEquivalentCharacters) {
+  auto flattenCanonically = [](const CodePointSet &cps) {
+    return flatten(makeCanonicallyEquivalent(cps, true /* unicode */));
+  };
+
+  CodePointSet cps;
+  cps.add('&');
+  EXPECT_EQ("38-38", flattenCanonically(cps));
+  cps.add('A');
+  EXPECT_EQ("38-38, 65-65, 97-97", flattenCanonically(cps));
+  cps.add(CodePointRange{'A', 'Z' - 'A' + 1});
+  EXPECT_EQ(
+      "38-38, 65-90, 97-122, 383-383, 8490-8490", flattenCanonically(cps));
+  cps.add(0x01DF); // 479
+  cps.add(0x01E3); // 483
+  cps.add(0x01E6); // 486
+  EXPECT_EQ(
+      "38-38, 65-90, 97-122, 383-383, 478-479, 482-483, 486-487, 8490-8490",
       flattenCanonically(cps));
 }
 

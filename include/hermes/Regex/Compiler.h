@@ -838,8 +838,9 @@ class BracketNode : public Node {
     }
 
     // Canonicalize our code point set if needed.
-    CodePointSet cps =
-        icase_ ? makeCanonicallyEquivalent(codePointSet_) : codePointSet_;
+    CodePointSet cps = icase_
+        ? makeCanonicallyEquivalent(codePointSet_, false /* TODO: unicode */)
+        : codePointSet_;
     for (const CodePointRange &range : cps.ranges()) {
       assert(range.length > 0 && "Ranges should never be empty");
       bcs.emitBracketRange(

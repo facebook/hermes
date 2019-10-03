@@ -117,13 +117,16 @@ static bool operator<(const UnicodeTransformRange &m, uint32_t cp) {
 /// to \p receiver. This is a slow linear search across all ranges.
 static void addPrecanonicalCharacters(
     CodePointRange range,
-    CodePointSet *receiver) {
+    CodePointSet *receiver,
+    bool unicode) {
   if (range.length == 0)
     return;
-  // TODO: if range is ASCII, we can stop the search after the ASCII part as
-  // nothing outside ASCII can canonicalize to an ASCII character.
-  const auto start = std::begin(LEGACY_CANONS);
-  const auto end = std::end(LEGACY_CANONS);
+  // TODO: if range is ASCII and unicode is not set, we can stop the search
+  // after the ASCII part as nothing outside ASCII can canonicalize to an ASCII
+  // character.
+  const auto start =
+      unicode ? std::begin(UNICODE_FOLDS) : std::begin(LEGACY_CANONS);
+  const auto end = unicode ? std::end(UNICODE_FOLDS) : std::end(LEGACY_CANONS);
   for (auto iter = start; iter != end; ++iter) {
     const UnicodeTransformRange &transform = *iter;
     // Get the range of transformed-from and transformed-to characters.
@@ -147,12 +150,14 @@ static void addPrecanonicalCharacters(
 
 /// For each code point in \p range, canonicalize it and add the canonicalized
 /// values to \p receiver.
-static void canonicalizeRange(CodePointRange range, CodePointSet *receiver) {
+static void
+canonicalizeRange(CodePointRange range, CodePointSet *receiver, bool unicode) {
   assert(range.length > 0 && "Range should never be empty");
 
   /// Find the first transform that contains or starts after our range.
-  const auto start = std::begin(LEGACY_CANONS);
-  const auto end = std::end(LEGACY_CANONS);
+  const auto start =
+      unicode ? std::begin(UNICODE_FOLDS) : std::begin(LEGACY_CANONS);
+  const auto end = unicode ? std::end(UNICODE_FOLDS) : std::end(LEGACY_CANONS);
   auto transform = std::lower_bound(start, end, range.first);
 
   uint32_t curcp = range.first;
@@ -176,24 +181,25 @@ static void canonicalizeRange(CodePointRange range, CodePointSet *receiver) {
   }
 }
 
-CodePointSet makeCanonicallyEquivalent(const CodePointSet &set) {
+CodePointSet makeCanonicallyEquivalent(const CodePointSet &set, bool unicode) {
   // Canonicalize all characters in the set, and then find all characters which
   // canonicalize to some element in the set.
   CodePointSet canonicalized = set;
   for (const auto &range : set.ranges()) {
-    canonicalizeRange(range, &canonicalized);
+    canonicalizeRange(range, &canonicalized, unicode);
   }
 
   CodePointSet result = canonicalized;
   for (const auto &range : canonicalized.ranges()) {
-    addPrecanonicalCharacters(range, &result);
+    addPrecanonicalCharacters(range, &result, unicode);
   }
   return result;
 }
 
-uint32_t canonicalize(uint32_t cp) {
-  const auto start = std::begin(LEGACY_CANONS);
-  const auto end = std::end(LEGACY_CANONS);
+uint32_t canonicalize(uint32_t cp, bool unicode) {
+  const auto start =
+      unicode ? std::begin(UNICODE_FOLDS) : std::begin(LEGACY_CANONS);
+  const auto end = unicode ? std::end(UNICODE_FOLDS) : std::end(LEGACY_CANONS);
   auto where = std::lower_bound(start, end, cp);
   if (where != end && where->start <= cp && cp < where->start + where->count) {
     return applyTransform(*where, cp);

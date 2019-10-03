@@ -77,13 +77,13 @@ bool isUnicodeDigit(uint32_t cp);
 /// \return true if the codepoint is in the Connector Punctuation category.
 bool isUnicodeConnectorPunctuation(uint32_t cp);
 
-/// \return the canonicalized value of \p cp, following ES5 15.10.2.8.
-uint32_t canonicalize(uint32_t cp);
+/// \return the canonicalized value of \p cp, following ES9 21.2.2.8.2.
+uint32_t canonicalize(uint32_t cp, bool unicode);
 
 /// \return a set containing all characters which are canonically equivalent to
-/// any character in \p set, following ES5 15.10.2.8.
+/// any character in \p set, following ES9 21.2.2.8.2.
 class CodePointSet;
-CodePointSet makeCanonicallyEquivalent(const CodePointSet &set);
+CodePointSet makeCanonicallyEquivalent(const CodePointSet &set, bool unicode);
 
 }; // namespace hermes
 
