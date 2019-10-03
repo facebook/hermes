@@ -7,6 +7,7 @@
 #ifndef HERMES_PLATFORMUNICODE_CHARACTERPROPERTIES_H
 #define HERMES_PLATFORMUNICODE_CHARACTERPROPERTIES_H
 
+#include <cassert>
 #include <cstdint>
 
 namespace hermes {
@@ -19,6 +20,8 @@ const uint32_t UNICODE_SURROGATE_LAST = 0xDFFF;
 const uint32_t UTF16_HIGH_SURROGATE = 0xD800;
 const uint32_t UTF16_LOW_SURROGATE = 0xDC00;
 const uint32_t UNICODE_REPLACEMENT_CHARACTER = 0xFFFD;
+/// The last member of the BMP.
+const uint32_t UNICODE_LAST_BMP = 0xFFFF;
 
 const uint32_t UNICODE_LINE_SEPARATOR = 0x2028;
 const uint32_t UNICODE_PARAGRAPH_SEPARATOR = 0x2029;
@@ -37,6 +40,29 @@ inline bool isValidCodePoint(uint32_t cp) {
   return !(
       (cp >= UNICODE_SURROGATE_FIRST && cp <= UNICODE_SURROGATE_LAST) ||
       cp > UNICODE_MAX_VALUE);
+}
+
+/// \return whether \p cp is part of the Basic Multilingual Plane.
+/// Surrogate characters are considered part of the BMP.
+inline bool isMemberOfBMP(uint32_t cp) {
+  return cp <= UNICODE_LAST_BMP;
+}
+
+/// \return whether cp is a high surrogate.
+inline bool isHighSurrogate(uint32_t cp) {
+  return UNICODE_SURROGATE_FIRST <= cp && cp < UTF16_LOW_SURROGATE;
+}
+
+/// \return whether cp is a low surrogate.
+inline bool isLowSurrogate(uint32_t cp) {
+  return UTF16_LOW_SURROGATE <= cp && cp <= UNICODE_SURROGATE_LAST;
+}
+
+/// Decode a surrogate pair [\p hi, \p lo] into a code point.
+inline uint32_t decodeSurrogatePair(uint32_t hi, uint32_t lo) {
+  assert(isHighSurrogate(hi) && isLowSurrogate(lo) && "Not a surrogate pair");
+  return ((hi - UTF16_HIGH_SURROGATE) << 10) + (lo - UTF16_LOW_SURROGATE) +
+      0x10000;
 }
 
 /// \return true if the codepoint is not ASCII and is a Unicode letter.
