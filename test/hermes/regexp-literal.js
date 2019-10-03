@@ -23,7 +23,3 @@ print(/\w (\d+)/.exec("abc def"));
 // CHECK-NEXT: null
 print(/\w (\d+)/.exec("abc 1234"));
 // CHECK-NEXT: c 1234,1234
-
-// Ensure that escapes are not interpreted in regexp flags.
-try { print(/a/\u0067); } catch(e) { print('Caught', e.name); }
-// CHECK-NEXT: Caught SyntaxError

@@ -1653,18 +1653,31 @@ exitLoop:
   UniqueString *body = getStringLiteral(tmpStorage_.str());
 
   // Scan the flags. We must not interpret escape sequences.
-  // ES 5.1 7.8.5: "The Strings of characters comprising the
+  // E6 5.1 7.8.5: "The Strings of characters comprising the
   // RegularExpressionBody and the RegularExpressionFlags are passed
   // uninterpreted to the regular expression constructor"
   tmpStorage_.clear();
+  bool escapingBackslash = false;
   for (;;) {
-    if (consumeOneIdentifierPartNoEscape())
+    if (consumeOneIdentifierPartNoEscape()) {
+      escapingBackslash = false;
       continue;
-    else if (*curCharPtr_ == '\\')
+    } else if (*curCharPtr_ == '\\') {
       tmpStorage_.push_back(*curCharPtr_++);
-    else
+
+      // ES6 11.8.5.1: It is a Syntax Error if IdentifierPart contains a Unicode
+      // escape sequence.
+      escapingBackslash = !escapingBackslash;
+      if (escapingBackslash && *curCharPtr_ == 'u') {
+        error(
+            SMLoc::getFromPointer(curCharPtr_),
+            "Unicode escape sequences are not allowed in regular expression flags");
+      }
+    } else {
       break;
+    }
   }
+
   UniqueString *flags = getStringLiteral(tmpStorage_.str());
 
   token_.setRegExpLiteral(new (allocator_.Allocate<RegExpLiteral>(1))
