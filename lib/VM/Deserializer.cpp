@@ -75,17 +75,25 @@ void Deserializer::init(
   size = readBackwards(ptr);
   objectTable_.resize(size);
 
-  // Read size of char16Buf_
+  // Read size of char16Buf_.
+  // Note this is the total size of the buffer and may include padding.
   size = readBackwards(ptr);
   // Move ptr to the beginning of char16Buf_.
   ptr -= size;
   if (size > 0) {
     // Has char16Buf_, reconstruct the buffer here.
     assert(ptr >= buffer_->getBufferStart() && "wrong char16Buf_ size");
-    // \p size is buffer size in bytes. Let's calculate the end first before
+    // size is buffer size in bytes. Let's calculate the end first before
     // casting to char16_t *.
+    // Ensure we are aligned.
+    uint32_t aligningOffset = llvm::alignTo(size, alignof(char16_t)) - size;
+    assert(aligningOffset <= size && "aligning offset should not exceed size");
+    assert(
+        (intptr_t)(ptr + aligningOffset) % alignof(char16_t) == 0 &&
+        "Pointer should be aligned for char16");
     char16Buf_ = ArrayRef<char16_t>(
-        (const char16_t *)ptr, (const char16_t *)(ptr + size));
+        (const char16_t *)(ptr + aligningOffset),
+        (const char16_t *)(ptr + size - aligningOffset));
   }
 
   // Read size of charBuf_.

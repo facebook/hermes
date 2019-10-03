@@ -122,7 +122,13 @@ void Serializer::flushCharBufs() {
   // Write size of charBuf_.
   writeInt<uint32_t>(charBufOffset_);
 
+  // Hack: we may be misaligned. If so we will need to insert a padding byte
+  // before the char16 buffer, but because we read backwards we will not know if
+  // a padding byte was inserted. Therefore we will add it to the recorded size,
+  // and upon deserialization we will take it into account.
+  const auto bytesBeforeChar16Buffer = writtenBytes_;
   if (char16BufOffset_ > 0) {
+    pad(alignof(char16_t));
     // Write char16Buf_.
     assert(
         char16BufOffset_ == char16Buf_.size() &&
@@ -132,8 +138,8 @@ void Serializer::flushCharBufs() {
         char16BufOffset_ * sizeof(char16_t));
     writtenBytes_ += char16BufOffset_ * sizeof(char16_t);
   }
-  // Write size of char16Buf_.
-  writeInt<uint32_t>(char16BufOffset_ * sizeof(char16_t));
+  // Record the (possibly padded) char16 buffer size.
+  writeInt<uint32_t>(writtenBytes_ - bytesBeforeChar16Buffer);
 }
 
 void Serializer::serializeCell(const GCCell *cell) {
