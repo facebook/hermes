@@ -5,6 +5,7 @@
  * file in the root directory of this source tree.
  */
 #include "hermes/Platform/Unicode/CharacterProperties.h"
+#include "hermes/Platform/Unicode/CodePointSet.h"
 #include "hermes/Platform/Unicode/PlatformUnicode.h"
 #include "hermes/Regex/RegexTraits.h"
 
@@ -105,6 +106,44 @@ TEST(UnicodeTest, PrecanonicalizationMapping) {
     EXPECT_EQ(computed, lookedUp)
         << "mismatch for character " << uint32_t(kv.first);
   }
+}
+
+static std::string flatten(const CodePointSet &cps) {
+  std::string result;
+  for (const auto &range : cps.ranges()) {
+    EXPECT_GT(range.length, 0u);
+    if (!result.empty())
+      result += ", ";
+    result += std::to_string(range.first);
+    result += '-';
+    result += std::to_string(range.end() - 1);
+  }
+  return result;
+}
+
+TEST(UnicodeTest, CodePointSet) {
+  EXPECT_EQ(flatten(CodePointSet{}), flatten(CodePointSet{}));
+
+  CodePointSet cps;
+  cps.add(10);
+  EXPECT_EQ("10-10", flatten(cps));
+  cps.add(5);
+  EXPECT_EQ("5-5, 10-10", flatten(cps));
+
+  cps.add(CodePointRange{2, 2});
+  EXPECT_EQ("2-3, 5-5, 10-10", flatten(cps));
+
+  cps.add(CodePointRange{3, 4});
+  EXPECT_EQ("2-6, 10-10", flatten(cps));
+
+  cps.add(CodePointRange{100, 1});
+  EXPECT_EQ("2-6, 10-10, 100-100", flatten(cps));
+
+  cps.add(CodePointRange{101, 1});
+  EXPECT_EQ("2-6, 10-10, 100-101", flatten(cps));
+
+  cps.add(CodePointRange{0, 1001});
+  EXPECT_EQ("0-1000", flatten(cps));
 }
 
 } // end anonymous namespace
