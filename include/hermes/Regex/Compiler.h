@@ -17,6 +17,7 @@
 #ifndef HERMES_REGEX_COMPILER_H
 #define HERMES_REGEX_COMPILER_H
 
+#include "hermes/Platform/Unicode/CodePointSet.h"
 #include "hermes/Support/Compiler.h"
 
 #include "hermes/Regex/RegexBytecode.h"
@@ -737,8 +738,7 @@ class BracketNode : public Node {
   using CharT = typename Super::CharT;
 
   const Traits &traits_;
-  vector<char16_t> chars_;
-  vector<std::pair<char16_t, char16_t>> ranges_;
+  CodePointSet codePointSet_;
   vector<CharacterClass> classes_;
   bool negate_;
   bool icase_;
@@ -754,8 +754,8 @@ class BracketNode : public Node {
     // If we are negated, look only for the range [0, 127] in ranges. We don't
     // bother to check for the more elaborate cases.
     if (negate_) {
-      for (const std::pair<char16_t, char16_t> &range : ranges_) {
-        if (range.first == 0 && range.second >= 127) {
+      for (const CodePointRange &range : codePointSet_.ranges()) {
+        if (range.first == 0 && range.length > 127) {
           // We are an inverted class containing the range [0, 127] or a
           // super-range; we cannot match ASCII.
           return false;
@@ -769,14 +769,10 @@ class BracketNode : public Node {
       if (!classes_.empty())
         return true;
 
-      // See if we have any ASCII singletons.
-      if (std::any_of(chars_.begin(), chars_.end(), isASCII))
-        return true;
-
       // Check ranges. It is sufficient to check the start of the range; the end
       // is necessarily larger than the start, so the end cannot be ASCII unless
       // the start is.
-      for (const std::pair<char16_t, char16_t> &range : ranges_) {
+      for (const CodePointRange &range : codePointSet_.ranges()) {
         if (isASCII(range.first))
           return true;
       }
@@ -792,14 +788,15 @@ class BracketNode : public Node {
 
   void addChar(char16_t c) {
     if (icase_)
-      chars_.push_back(traits_.caseFold(c));
+      codePointSet_.add(traits_.caseFold(c));
     else
-      chars_.push_back(c);
+      codePointSet_.add(c);
   }
 
   void addRange(char16_t a, char16_t b) {
     assert(a <= b && "Invalid range");
-    ranges_.push_back(std::make_pair(a, b));
+    uint32_t length = b - a + 1;
+    codePointSet_.add(CodePointRange{a, length});
   }
 
   void addClass(CharacterClass cls) {
@@ -811,7 +808,7 @@ class BracketNode : public Node {
     if (!canMatchASCII())
       result |= MatchConstraintNonASCII;
 
-    if (!(ranges_.empty() && chars_.empty() && classes_.empty()))
+    if (!(codePointSet_.ranges().empty() && classes_.empty()))
       result |= MatchConstraintNonEmpty;
 
     return result | Super::matchConstraints();
@@ -827,13 +824,11 @@ class BracketNode : public Node {
         insn->negativeCharClasses |= cc.type_;
       }
     }
-    for (const std::pair<char16_t, char16_t> &range : ranges_) {
-      bcs.emitBracketRange(BracketRange16{range.first, range.second});
+    for (const auto &range : codePointSet_.ranges()) {
+      bcs.emitBracketRange(BracketRange16{
+          (char16_t)range.first, (char16_t)(range.first + range.length - 1)});
     }
-    for (char16_t singleton : chars_) {
-      bcs.emitBracketRange(BracketRange16{singleton, singleton});
-    }
-    insn->rangeCount = ranges_.size() + chars_.size();
+    insn->rangeCount = codePointSet_.ranges().size();
   }
 
   virtual bool matchesExactlyOneCharacter() const override {
