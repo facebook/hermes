@@ -44,13 +44,6 @@ static CallResult<HermesValue> regExpBuiltinExec(
     Handle<JSRegExp> R,
     Handle<StringPrimitive> S);
 
-/// ES6.0 21.2.5.2.3
-static uint64_t advanceStringIndex(
-    Runtime *runtime,
-    PseudoHandle<StringPrimitive> /* S */,
-    uint64_t index,
-    bool unicode);
-
 /// @}
 
 // Several RegExp accessors are defined to do particular things when passed the
@@ -567,11 +560,8 @@ static CallResult<HermesValue> regExpBuiltinExec(
 }
 
 /// ES6.0 21.2.5.2.3
-static uint64_t advanceStringIndex(
-    Runtime *runtime,
-    PseudoHandle<StringPrimitive> S,
-    uint64_t index,
-    bool unicode) {
+uint64_t
+advanceStringIndex(const StringPrimitive *S, uint64_t index, bool unicode) {
   if (unicode && index + 1 < S->getStringLength() &&
       isHighSurrogate(S->at(index)) && isLowSurrogate(S->at(index + 1))) {
     return index + 2;
@@ -1046,7 +1036,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
       }
       // c. Let nextIndex be AdvanceStringIndex(S, thisIndex, fullUnicode).
       double nextIndex = advanceStringIndex(
-          runtime, S, thisIndex->getNumberAs<uint64_t>(), fullUnicode);
+          S.get(), thisIndex->getNumberAs<uint64_t>(), fullUnicode);
       // d. Let setStatus be Set(rx, "lastIndex", nextIndex, true).
       auto setStatus = setLastIndex(rx, runtime, nextIndex);
       // e. ReturnIfAbrupt(setStatus).
@@ -1391,7 +1381,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
         }
         // c. Let nextIndex be AdvanceStringIndex(S, thisIndex, fullUnicode).
         nextIndex = HermesValue::encodeDoubleValue(advanceStringIndex(
-            runtime, S, thisIndex->getNumberAs<uint64_t>(), fullUnicode));
+            S.get(), thisIndex->getNumberAs<uint64_t>(), fullUnicode));
         // d. Let setStatus be Set(rx, "lastIndex", nextIndex, true).
         auto setStatus = setLastIndex(rx, runtime, *nextIndex);
         // e. ReturnIfAbrupt(setStatus).

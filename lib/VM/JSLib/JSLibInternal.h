@@ -315,6 +315,13 @@ CallResult<HermesValue> splitInternal(
     Handle<> limit,
     Handle<> separator);
 
+/// ES6.0 21.2.5.2.3
+/// If \p unicode is set and the character at \p index in \S is the start of a
+/// surrogate pair, \return index + 2. Otherwise \return index + 1.
+/// Note that this function does not allocate.
+uint64_t
+advanceStringIndex(const StringPrimitive *S, uint64_t index, bool unicode);
+
 /// Create and initialize the global Function constructor. Populate the methods
 /// of Function and Function.prototype.
 /// \return the global Function constructor.
