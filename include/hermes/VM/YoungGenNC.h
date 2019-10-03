@@ -193,6 +193,12 @@ class YoungGen : public GCGeneration {
   /// GC.
   void moveHeap(GC *gc, ptrdiff_t moveHeapDelta);
 
+  /// Update the extents of the young-gen segments with \p crashMgr.  Labels
+  /// the crash manager key with the given \p runtimeName.
+  void updateCrashManagerHeapExtents(
+      const std::string &runtimeName,
+      CrashManager *crashMgr);
+
   /// Forward declaration of the acceptor used to evacuate the young generation.
   struct EvacAcceptor;
 
@@ -267,6 +273,10 @@ class YoungGen : public GCGeneration {
   /// the former will yield the survival rate.
   gcheapsize_t cumPreBytes_ = 0;
   gcheapsize_t cumPromotedBytes_ = 0;
+
+  /// The number of young-gen segments recorded with the crash
+  /// manager.  (Will only ever be 0 or 1.)
+  unsigned crashMgrRecordedSegments_{0};
 };
 
 size_t YoungGen::size() const {

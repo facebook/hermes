@@ -115,6 +115,7 @@ GenGC::GenGC(
       weightedUsed_(static_cast<double>(gcConfig.getInitHeapSize())) {
   growTo(gcConfig.getInitHeapSize());
   claimAllocContext();
+  updateCrashManagerHeapExtents();
 }
 
 #ifndef NDEBUG
@@ -383,6 +384,9 @@ void GenGC::collect(bool canEffectiveOOM) {
 
     checkInvariants(numAllocatedObjectsBefore, usedBefore);
   }
+
+  /// Update the heap's segments extents in the crash manager data.
+  updateCrashManagerHeapExtents();
 
   checkTripwire(usedAfter, steady_clock::now());
 #ifdef HERMESVM_SIZE_DIAGNOSTIC
@@ -922,6 +926,12 @@ void GenGC::updateHeapSize() {
   CrashManager::HeapInformation info;
   getCrashManagerHeapInfo(info);
   crashMgr_->setHeapInfo(info);
+}
+
+void GenGC::updateCrashManagerHeapExtents() {
+  AllocContextYieldThenClaim yielder(this);
+  youngGen_.updateCrashManagerHeapExtents(name_, crashMgr_.get());
+  oldGen_.updateCrashManagerHeapExtents(name_, crashMgr_.get());
 }
 
 void GenGC::forAllObjs(const std::function<void(GCCell *)> &callback) {

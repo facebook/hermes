@@ -562,6 +562,27 @@ void YoungGen::didFinishGC() {
   levelAtEndOfLastGC_ = activeSegment().level();
 }
 
+void YoungGen::updateCrashManagerHeapExtents(
+    const std::string &runtimeName,
+    CrashManager *crashMgr) {
+  if (crashMgrRecordedSegments_ == 1) {
+    return;
+  }
+
+  std::string key = runtimeName + ":HeapSegments_YG";
+  const unsigned N = 1000;
+  char valueBuffer[N];
+  char *buf = &valueBuffer[0];
+  int sz = N;
+  activeSegment().addExtentToString(&buf, &sz);
+  crashMgr->setCustomData(key.c_str(), valueBuffer);
+#ifdef HERMESVM_PLATFORM_LOGGING
+  hermesLog(
+      "HermesGC", "Added YG heap extent: %s = %s", key.c_str(), valueBuffer);
+#endif
+  crashMgrRecordedSegments_ = 1;
+}
+
 gcheapsize_t YoungGen::bytesAllocatedSinceLastGC() const {
   return trueActiveSegment().level() - levelAtEndOfLastGC_;
 }

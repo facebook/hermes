@@ -30,6 +30,7 @@ set(RTSources
   GCFragmentationNCTest.cpp
   GCInitTest.cpp
   GCLazySegmentNCTest.cpp
+  GCHeapExtentsInCrashManagerTest.cpp
   GCMarkWeakTest.cpp
   GCObjectIterationTest.cpp
   GCOOMNCTest.cpp

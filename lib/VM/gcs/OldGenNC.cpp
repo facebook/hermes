@@ -730,6 +730,9 @@ bool OldGen::materializeNextSegment() {
   // the effective end of the generation.
   updateEffectiveEndForExternalMemory();
 
+  /// Update the old-gen segment extents recorded in the crash manager.
+  updateCrashManagerHeapExtents(gc_->name_, gc_->crashMgr_.get());
+
   return true;
 }
 
@@ -896,6 +899,88 @@ void OldGen::unprotectActiveSegCardTableBoundaries() {
 
 void OldGen::didFinishGC() {
   levelAtEndOfLastGC_ = levelDirect();
+}
+
+void OldGen::updateCrashManagerHeapExtents(
+    const std::string &runtimeName,
+    CrashManager *crashMgr) {
+  /// The number of segments we describe with a single key.
+  constexpr unsigned kSegmentsPerKey = 10;
+  constexpr unsigned N = 1000;
+  char keyBuffer[N];
+  char valueBuffer[N];
+  /// +1 for the active segment.
+  unsigned numCurSegments = filledSegments_.size() + 1;
+
+  const char *kOgKeyFormat = "%s:HeapSegments_OG:%d";
+
+  // First erase any keys that are no longer necessary, if the old gen shrank.
+  // (This will only happen after a full GC, and the segments that
+  // remain will retain their recorded extents.)
+  if (numCurSegments < crashMgrRecordedSegments_) {
+    for (unsigned toDel = llvm::alignTo(numCurSegments, kSegmentsPerKey);
+         toDel < crashMgrRecordedSegments_;
+         toDel += kSegmentsPerKey) {
+      (void)snprintf(keyBuffer, N, kOgKeyFormat, runtimeName.c_str(), toDel);
+      crashMgr->removeCustomData(keyBuffer);
+#ifdef HERMESVM_PLATFORM_LOGGING
+      hermesLog("HermesGC", "Removed OG heap extents for %d", toDel);
+#endif
+    }
+  }
+
+  // Now redo any keys whose segment sequences might have changed.
+  // (They might have gotten smaller, because of GC, or larger, because
+  // of segment allocation.)
+  const unsigned firstKeyWithPossiblyChangedSegments = llvm::alignDown(
+      std::min(numCurSegments, crashMgrRecordedSegments_), kSegmentsPerKey);
+  for (unsigned toRedo = firstKeyWithPossiblyChangedSegments;
+       toRedo < numCurSegments;
+       toRedo += kSegmentsPerKey) {
+    (void)snprintf(keyBuffer, N, kOgKeyFormat, runtimeName.c_str(), toRedo);
+    char *buf = valueBuffer;
+    buf[0] = '\0';
+    int sz = N;
+    bool first = true;
+    {
+      int n = snprintf(buf, sz, "[");
+      buf += n;
+      sz -= n;
+    }
+    for (unsigned segIndex = toRedo;
+         segIndex < std::min(numCurSegments, toRedo + kSegmentsPerKey);
+         segIndex++) {
+      if (first) {
+        first = false;
+      } else {
+        int n = snprintf(buf, sz, ",");
+        buf += n;
+        sz -= n;
+      }
+      if (segIndex < filledSegments_.size()) {
+        filledSegments_[segIndex].addExtentToString(&buf, &sz);
+      } else {
+        assert(
+            segIndex == filledSegments_.size() &&
+            "segIndex should only go one past filledSegments_, to activeSegment()");
+        activeSegment().addExtentToString(&buf, &sz);
+      }
+    }
+    {
+      int n = snprintf(buf, sz, "]");
+      buf += n;
+      sz -= n;
+    }
+    crashMgr->setCustomData(keyBuffer, valueBuffer);
+#ifdef HERMESVM_PLATFORM_LOGGING
+    hermesLog(
+        "HermesGC",
+        "Added OG heap extent: %s = %s",
+        &keyBuffer[0],
+        &valueBuffer[0]);
+#endif
+  }
+  crashMgrRecordedSegments_ = numCurSegments;
 }
 
 } // namespace vm

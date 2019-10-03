@@ -413,6 +413,12 @@ void AlignedHeapSegment::forAllObjs(
   forObjsInRange(callback, start(), level());
 }
 
+void AlignedHeapSegment::addExtentToString(char **buf, int *sz) {
+  int n = snprintf(*buf, *sz, "{lo: \"%p\", hi: \"%p\"}", lowLim(), hiLim());
+  *buf += n;
+  *sz -= n;
+}
+
 void AlignedHeapSegment::recreateCardTableBoundaries() {
   const char *ptr = start();
   const char *const lim = level();

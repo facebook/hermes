@@ -232,13 +232,16 @@ struct DummyRuntime final : public HandleRootOwner,
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig);
 
-  /// Use a custom storage provider.
+  /// Use a custom storage provider and/or a custom crash manager.
   /// \param provider A pointer to a StorageProvider. It *must* use
   ///   StorageProvider::defaultProvider eventually or the test will fail.
+  /// \param crashMgr
   static std::shared_ptr<DummyRuntime> create(
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig,
-      std::shared_ptr<StorageProvider> provider);
+      std::shared_ptr<StorageProvider> provider,
+      std::shared_ptr<CrashManager> crashMgr =
+          std::make_shared<NopCrashManager>());
 
   /// Provide the correct storage provider based on build modes.
   /// All decorator StorageProviders must wrap the one returned from this
@@ -300,7 +303,8 @@ struct DummyRuntime final : public HandleRootOwner,
   DummyRuntime(
       MetadataTableForTests metaTable,
       const GCConfig &gcConfig,
-      std::shared_ptr<StorageProvider> storageProvider);
+      std::shared_ptr<StorageProvider> storageProvider,
+      std::shared_ptr<CrashManager> crashMgr);
 };
 
 /// A DummyRuntimeTestFixtureBase should be used by any test that requires a

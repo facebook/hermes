@@ -312,6 +312,12 @@ class OldGen : public GCGeneration {
   /// allocated directly in the OldGen.
   void didFinishGC();
 
+  /// Update the extents of the old-gen segments with \p crashMgr.  Labels
+  /// the crash manager key with the given \p runtimeName.
+  void updateCrashManagerHeapExtents(
+      const std::string &runtimeName,
+      CrashManager *crashMgr);
+
  private:
   friend class OldGenFilledSegmentRange;
   friend class OldGenMaterializingRange;
@@ -425,6 +431,9 @@ class OldGen : public GCGeneration {
 
   /// Whether to return unused memory to OS.
   bool releaseUnused_;
+
+  /// The number of old-gen segments recorded with the crash manager.
+  unsigned crashMgrRecordedSegments_{0};
 
 #ifdef HERMES_EXTRA_DEBUG
   /// The set of addresses of card tables whose boundary tables have been

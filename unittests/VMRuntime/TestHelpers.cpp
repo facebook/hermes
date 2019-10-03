@@ -14,24 +14,15 @@ namespace vm {
 DummyRuntime::DummyRuntime(
     MetadataTableForTests metaTable,
     const GCConfig &gcConfig,
-    std::shared_ptr<StorageProvider> storageProvider)
-    : gc{metaTable,
-         this,
-         this,
-         gcConfig,
-         std::shared_ptr<CrashManager>(new NopCrashManager),
-         storageProvider.get()} {}
-
-std::shared_ptr<DummyRuntime> DummyRuntime::create(
-    MetadataTableForTests metaTable,
-    const GCConfig &gcConfig) {
-  return create(metaTable, gcConfig, defaultProvider(gcConfig));
-}
+    std::shared_ptr<StorageProvider> storageProvider,
+    std::shared_ptr<CrashManager> crashMgr)
+    : gc{metaTable, this, this, gcConfig, crashMgr, storageProvider.get()} {}
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(
     MetadataTableForTests metaTable,
     const GCConfig &gcConfig,
-    std::shared_ptr<StorageProvider> provider) {
+    std::shared_ptr<StorageProvider> provider,
+    std::shared_ptr<CrashManager> crashMgr) {
   // This should mimic the structure of Runtime::create if compressed pointers
   // are active.
 #ifdef HERMESVM_COMPRESSED_POINTERS
@@ -43,16 +34,22 @@ std::shared_ptr<DummyRuntime> DummyRuntime::create(
             .str());
   }
   DummyRuntime *rt =
-      new (storage.get()) DummyRuntime(metaTable, gcConfig, provider);
+      new (storage.get()) DummyRuntime(metaTable, gcConfig, provider, crashMgr);
   return std::shared_ptr<DummyRuntime>{rt, [provider](DummyRuntime *dr) {
                                          dr->~DummyRuntime();
                                          provider->deleteStorage(dr);
                                        }};
 #else
-  DummyRuntime *rt = new DummyRuntime(metaTable, gcConfig, provider);
+  DummyRuntime *rt = new DummyRuntime(metaTable, gcConfig, provider, crashMgr);
   return std::shared_ptr<DummyRuntime>{
       rt, [provider](DummyRuntime *runtime) { delete runtime; }};
 #endif
+}
+
+std::shared_ptr<DummyRuntime> DummyRuntime::create(
+    MetadataTableForTests metaTable,
+    const GCConfig &gcConfig) {
+  return create(metaTable, gcConfig, defaultProvider(gcConfig));
 }
 
 std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider(

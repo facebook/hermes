@@ -738,6 +738,9 @@ class GenGC final : public GCBase {
   /// GCGeneration*.
   inline GCGeneration *targetGeneration();
 
+  /// Change the heap extents recorded via the crash manager's custom data.
+  void updateCrashManagerHeapExtents();
+
   template <class T>
   friend class WeakRef;
 
