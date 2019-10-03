@@ -55,6 +55,12 @@ uint32_t instructionWidth<regex::BracketInsn>(const regex::BracketInsn *insn) {
 }
 
 template <>
+uint32_t instructionWidth<regex::U16BracketInsn>(
+    const regex::U16BracketInsn *insn) {
+  return insn->totalWidth();
+}
+
+template <>
 uint32_t instructionWidth<regex::MatchNChar8Insn>(
     const regex::MatchNChar8Insn *insn) {
   return insn->totalWidth();
@@ -166,7 +172,8 @@ void dumpInstruction(
 
 void dumpInstruction(const regex::BracketInsn *insn, llvm::raw_ostream &OS) {
   using namespace regex;
-  OS << "Bracket: [";
+  OS << (insn->opcode == Opcode::U16Bracket ? "U16Bracket" : "Bracket")
+     << ": [";
   if (insn->negate)
     OS << '^';
   if (insn->positiveCharClasses & CharacterClass::Digits)

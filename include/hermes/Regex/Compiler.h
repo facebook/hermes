@@ -777,10 +777,14 @@ class BracketNode : public Node {
   /// \return whether this bracket can match an ASCII character.
   bool canMatchASCII() const {
     // Note we don't have to be concerned with case-insensitive ranges here,
-    // because the ES canonicalize() function disallows non-ASCII characters
+    // except in the Unicode path.
+    // The ES canonicalize() function disallows non-ASCII characters
     // from being canonicalized to ASCII. That is, a non-ASCII character in a
     // regexp may never match an ASCII input character even in a
-    // case-insensitive regex.
+    // case-insensitive regex, unless the unicode flag is set.
+    // If we are case-sensitive and unicode, just pessimistically return true.
+    if (icase_ && unicode_)
+      return true;
 
     // If we are negated, look only for the range [0, 127] in ranges. We don't
     // bother to check for the more elaborate cases.
@@ -811,6 +815,31 @@ class BracketNode : public Node {
       // None of our components can match ASCII.
       return false;
     }
+  }
+
+  /// Helper implementation of emit(). Given that we have emitted an instruction
+  /// \p insn (which is either BracketInsn or U16BracketInsn), emit our bracket
+  /// ranges and populate the instruction's fields.
+  template <typename Insn>
+  void populateInstruction(RegexBytecodeStream &bcs, Insn insn) const {
+    insn->negate = negate_;
+    for (CharacterClass cc : classes_) {
+      if (!cc.inverted_) {
+        insn->positiveCharClasses |= cc.type_;
+      } else {
+        insn->negativeCharClasses |= cc.type_;
+      }
+    }
+
+    // Canonicalize our code point set if needed.
+    CodePointSet cps =
+        icase_ ? makeCanonicallyEquivalent(codePointSet_) : codePointSet_;
+    for (const CodePointRange &range : cps.ranges()) {
+      assert(range.length > 0 && "Ranges should never be empty");
+      bcs.emitBracketRange(
+          BracketRange32{range.first, range.first + range.length - 1});
+    }
+    insn->rangeCount = cps.ranges().size();
   }
 
  public:
@@ -846,28 +875,16 @@ class BracketNode : public Node {
   }
 
   virtual void emit(RegexBytecodeStream &bcs) const override {
-    auto insn = bcs.emit<BracketInsn>();
-    insn->negate = negate_;
-    for (CharacterClass cc : classes_) {
-      if (!cc.inverted_) {
-        insn->positiveCharClasses |= cc.type_;
-      } else {
-        insn->negativeCharClasses |= cc.type_;
-      }
+    if (unicode_) {
+      populateInstruction(bcs, bcs.emit<U16BracketInsn>());
+    } else {
+      populateInstruction(bcs, bcs.emit<BracketInsn>());
     }
-
-    // Canonicalize our code point set if needed.
-    CodePointSet cps =
-        icase_ ? makeCanonicallyEquivalent(codePointSet_) : codePointSet_;
-    for (const auto &range : cps.ranges()) {
-      bcs.emitBracketRange(
-          BracketRange32{range.first, range.first + range.length - 1});
-    }
-    insn->rangeCount = cps.ranges().size();
   }
 
   virtual bool matchesExactlyOneCharacter() const override {
-    return true;
+    // A unicode bracket may match a surrogate pair.
+    return !unicode_;
   }
 };
 
@@ -1262,7 +1279,7 @@ void Regex<Traits>::pushAlternation(NodeList left, NodeList right) {
 
 template <class Traits>
 BracketNode<Traits> *Regex<Traits>::startBracketList(bool negate) {
-  return appendNode<BracketNode>(traits_, negate, flags() & constants::icase);
+  return appendNode<BracketNode>(traits_, negate, flags_);
 }
 
 template <class Traits>

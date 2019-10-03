@@ -890,6 +890,11 @@ auto Context<Traits>::match(
           break;
         }
 
+        case Opcode::U16Bracket: {
+          llvm_unreachable("Unimplemented");
+          abort();
+        }
+
         case Opcode::WordBoundary: {
           const WordBoundaryInsn *insn = llvm::cast<WordBoundaryInsn>(base);
           bool prevIsWordchar = false;

@@ -117,6 +117,10 @@ struct BracketInsn : public Insn {
   }
 };
 
+/// U16BracketInsn is a variant of BracketInsn used in Unicode regular
+/// expressions. It differs in that surrogate characters are decoded.
+struct U16BracketInsn : public BracketInsn {};
+
 struct MatchNChar8Insn : public Insn {
   // number of 8-byte char following this instruction.
   uint8_t charCount;
