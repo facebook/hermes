@@ -315,7 +315,7 @@ void GCBase::oomDetail(std::error_code reason) {
   snprintf(
       detailBuffer,
       sizeof(detailBuffer),
-      "[%.20s] reason = %150s (%d from category: %50s), numCollections = %d, heapSize = %d, allocated = %d, va = %" PRIu64,
+      "[%.20s] reason = %.150s (%d from category: %.50s), numCollections = %d, heapSize = %d, allocated = %d, va = %" PRIu64,
       name_.c_str(),
       reason.message().c_str(),
       reason.value(),
