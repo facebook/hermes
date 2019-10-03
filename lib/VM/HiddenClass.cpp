@@ -134,8 +134,7 @@ void HiddenClassDeserialize(Deserializer &d, CellKind kind) {
     PropertyFlags tflags;
     d.readData(&tflags, sizeof(PropertyFlags));
     cell->transitionMap_.insertUnsafe(
-        HiddenClass::Transition(tid, tflags),
-        (WeakRefSlot *)ptr);
+        HiddenClass::Transition(tid, tflags), (WeakRefSlot *)ptr);
     relocationId = d.readInt<uint32_t>();
   }
 

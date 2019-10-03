@@ -262,6 +262,7 @@ class TransitionMap {
 
 class HiddenClass final : public GCCell {
   friend void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+
  public:
   using Transition = detail::Transition;
   /// Adding more than this number of properties will switch to "dictionary
