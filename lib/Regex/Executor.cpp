@@ -430,7 +430,7 @@ bool Context<Traits>::matchesNCharICase8(
   for (int offset = 0; offset < charCount; offset++) {
     char c = s.current_[offset];
     char instC = insnCharPtr[offset];
-    if (c != instC && traits_.caseFold(c) != instC) {
+    if (c != instC && traits_.canonicalize(c) != instC) {
       return false;
     }
   }
@@ -440,7 +440,7 @@ bool Context<Traits>::matchesNCharICase8(
 /// \return true if the character \p ch matches a bracket instruction \p insn,
 /// containing the bracket ranges \p ranges. Note the count of ranges is given
 /// in \p insn.
-template <class Traits, bool ICase>
+template <class Traits>
 bool bracketMatchesChar(
     const Context<Traits> &ctx,
     const BracketInsn *insn,
@@ -467,8 +467,8 @@ bool bracketMatchesChar(
     }
   }
 
-  bool contained = traits.template rangesContain<ICase>(
-      llvm::makeArrayRef(ranges, insn->rangeCount), ch);
+  bool contained =
+      traits.rangesContain(llvm::makeArrayRef(ranges, insn->rangeCount), ch);
   return contained ^ insn->negate;
 }
 
@@ -601,12 +601,12 @@ bool Context<Traits>::matchWidth1(const Insn *base, CharT c) const {
 
     case Width1Opcode::MatchCharICase8: {
       const auto *insn = llvm::cast<MatchCharICase8Insn>(base);
-      return c == insn->c || traits_.caseFold(c) == insn->c;
+      return c == insn->c || traits_.canonicalize(c) == insn->c;
     }
 
     case Width1Opcode::MatchCharICase16: {
       const auto *insn = llvm::cast<MatchCharICase16Insn>(base);
-      return c == insn->c || traits_.caseFold(c) == insn->c;
+      return c == insn->c || traits_.canonicalize(c) == insn->c;
     }
 
     case Width1Opcode::MatchAnyButNewline:
@@ -617,12 +617,7 @@ bool Context<Traits>::matchWidth1(const Insn *base, CharT c) const {
       const BracketInsn *insn = llvm::cast<BracketInsn>(base);
       const BracketRange16 *ranges =
           reinterpret_cast<const BracketRange16 *>(insn + 1);
-      bool icase = syntaxFlags_ & constants::icase;
-      if (icase) {
-        return bracketMatchesChar<Traits, true>(*this, insn, ranges, c);
-      } else {
-        return bracketMatchesChar<Traits, false>(*this, insn, ranges, c);
-      }
+      return bracketMatchesChar<Traits>(*this, insn, ranges, c);
     }
   }
   llvm_unreachable("Invalid width 1 opcode");
@@ -944,7 +939,7 @@ auto Context<Traits>::match(
                 first_ + cr.end,
                 s->current_,
                 [&](CharT a, CharT b) {
-                  return traits_.caseFold(a) == traits_.caseFold(b);
+                  return traits_.canonicalize(a) == traits_.canonicalize(b);
                 });
           } else {
             // Direct comparison.

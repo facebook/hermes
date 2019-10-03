@@ -22,6 +22,9 @@
 
 #include "hermes/Regex/RegexBytecode.h"
 
+#include "hermes/Platform/Unicode/CharacterProperties.h"
+#include "hermes/Platform/Unicode/CodePointSet.h"
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -787,10 +790,7 @@ class BracketNode : public Node {
       : traits_(traits), negate_(negate), icase_(icase) {}
 
   void addChar(char16_t c) {
-    if (icase_)
-      codePointSet_.add(traits_.caseFold(c));
-    else
-      codePointSet_.add(c);
+    codePointSet_.add(c);
   }
 
   void addRange(char16_t a, char16_t b) {
@@ -824,11 +824,15 @@ class BracketNode : public Node {
         insn->negativeCharClasses |= cc.type_;
       }
     }
-    for (const auto &range : codePointSet_.ranges()) {
+
+    // Canonicalize our code point set if needed.
+    CodePointSet cps =
+        icase_ ? makeCanonicallyEquivalent(codePointSet_) : codePointSet_;
+    for (const auto &range : cps.ranges()) {
       bcs.emitBracketRange(BracketRange16{
           (char16_t)range.first, (char16_t)(range.first + range.length - 1)});
     }
-    insn->rangeCount = codePointSet_.ranges().size();
+    insn->rangeCount = cps.ranges().size();
   }
 
   virtual bool matchesExactlyOneCharacter() const override {
@@ -1166,7 +1170,7 @@ template <class Traits>
 void Regex<Traits>::pushChar(CharT c) {
   bool icase = flags() & constants::icase;
   if (icase)
-    c = traits_.caseFold(c);
+    c = traits_.canonicalize(c);
   appendNode<MatchCharNode>(Node::CharListT{c}, icase);
 }
 

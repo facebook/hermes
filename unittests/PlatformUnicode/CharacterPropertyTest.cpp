@@ -67,51 +67,42 @@ TEST(UnicodeTest, isUnicodeOnlySpace) {
   }
 }
 
-using CharSet = std::unordered_set<char16_t>;
-
-static CharSet getPrecanonicalizations(char16_t c) {
-  CharSet result = {c};
-  // Check for exceptional cases.
-  if (auto list = getExceptionalPrecanonicalizations(uint16_t(c))) {
-    // Build from the list. Note if the version of ICU on the system is earlier
-    // than the one used to build the table, some characters in the table will
-    // not be valid pre-canonicalizations. Thus we have to check. Also 0 is a
-    // placeholder meaning none, so skip any 0s.
-    for (char16_t pc : *list) {
-      if (pc && regex::canonicalizeToCase(pc, regex::CaseUpper) == c) {
-        result.insert(pc);
-      }
-    }
-  } else {
-    // Not exceptional; simply lowercase.
-    result.insert(regex::canonicalizeToCase(c, regex::CaseLower));
-  }
-  return result;
-}
-
-// Verify correct precanonicalization mappings. We do this by producing a
-// reverse canonicalization map the hard way, by canonicalizing every
-// character. We then compare it against what our getPrecanonicalizations()
-// function returns.
-TEST(UnicodeTest, PrecanonicalizationMapping) {
-  std::unordered_map<char16_t, CharSet> precanonMap;
-  for (uint32_t cp = 0; cp <= std::numeric_limits<char16_t>::max(); cp++) {
-    char16_t canon = regex::canonicalizeToCase(char16_t(cp), regex::CaseUpper);
-    precanonMap[canon].insert(cp);
-  }
-
-  for (const auto &kv : precanonMap) {
-    const CharSet &computed = kv.second;
-    CharSet lookedUp = getPrecanonicalizations(kv.first);
-    EXPECT_EQ(computed, lookedUp)
-        << "mismatch for character " << uint32_t(kv.first);
-  }
+// Verify some correct canonicalizations.
+TEST(UnicodeTest, LegacyU16Canonicalization) {
+  regex::U16RegexTraits traits;
+  EXPECT_EQ('A', traits.canonicalize('a'));
+  EXPECT_EQ('/', traits.canonicalize('/'));
+  EXPECT_EQ(
+      0x053D, traits.canonicalize(0x053D)); // "ARMENIAN CAPITAL LETTER XEH"
+  EXPECT_EQ(0x053D, traits.canonicalize(0x056D)); // "ARMENIAN SMALL LETTER XEH"
+  EXPECT_EQ(
+      0xA78D, traits.canonicalize(0x0265)); // "LATIN CAPITAL LETTER TURNED H"
+  EXPECT_EQ(
+      0x042A,
+      traits.canonicalize(0x042A)); // "CYRILLIC CAPITAL LETTER HARD SIGN"
+  EXPECT_EQ(
+      0x042A,
+      traits.canonicalize(0x1C86)); // "CYRILLIC SMALL LETTER TALL HARD SIGN"
+  EXPECT_EQ(
+      0x042A, traits.canonicalize(0x044A)); // "CYRILLIC SMALL LETTER HARD SIGN"
+  EXPECT_EQ(
+      0x0422, traits.canonicalize(0x1C85)); // "CYRILLIC CAPITAL LETTER TE"
+  EXPECT_EQ(
+      0x0422, traits.canonicalize(0x1C84)); // "CYRILLIC CAPITAL LETTER TE"
+  EXPECT_EQ(0x0422, traits.canonicalize(0x0442)); // "CYRILLIC SMALL LETTER TE"
+  EXPECT_EQ(0x01CA, traits.canonicalize(0x01CA)); // "LATIN CAPITAL LETTER NJ"
+  EXPECT_EQ(
+      0x01CA,
+      traits.canonicalize(
+          0x01CB)); // "LATIN CAPITAL LETTER N WITH SMALL LETTER J"
+  EXPECT_EQ(0x01CA, traits.canonicalize(0x01CC)); // "LATIN SMALL LETTER NJ"
+  EXPECT_EQ(0x212B, traits.canonicalize(0x212B)); // "ANGSTROM SIGN"
 }
 
 TEST(UnicodeTest, ASCIICanonicalization) {
   regex::ASCIIRegexTraits traits;
   for (int c = 0; c <= 127; c++) {
-    EXPECT_EQ(toupper(c), traits.caseFold((char)c));
+    EXPECT_EQ(toupper(c), traits.canonicalize((char)c));
   }
 }
 
