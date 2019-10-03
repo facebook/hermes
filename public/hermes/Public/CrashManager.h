@@ -41,6 +41,10 @@ class CrashManager {
   /// \param val The value to store for the given key.
   virtual void setCustomData(const char *key, const char *val) = 0;
 
+  /// If the given \p key has an associated custom data string, remove the
+  /// association.
+  virtual void removeCustomData(const char *key) = 0;
+
   /// Registers a function to be called after a crash has occurred. This
   /// function can examine memory and serialize this to a JSON output stream.
   /// Implmentations decide where the stream is routed to.
@@ -76,6 +80,7 @@ class NopCrashManager final : public CrashManager {
   void registerMemory(void *, size_t) override {}
   void unregisterMemory(void *) override {}
   void setCustomData(const char *, const char *) override {}
+  void removeCustomData(const char *) override {}
   CallbackKey registerCallback(CallbackFunc /*callback*/) override {
     return 0;
   }
