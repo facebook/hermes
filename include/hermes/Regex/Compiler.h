@@ -751,6 +751,7 @@ class BracketNode : public Node {
   vector<CharacterClass> classes_;
   bool negate_;
   bool icase_;
+  bool unicode_;
 
   /// \return whether this bracket can match an ASCII character.
   bool canMatchASCII() const {
@@ -792,8 +793,11 @@ class BracketNode : public Node {
   }
 
  public:
-  BracketNode(const Traits &traits, bool negate, bool icase)
-      : traits_(traits), negate_(negate), icase_(icase) {}
+  BracketNode(const Traits &traits, bool negate, constants::SyntaxFlags flags)
+      : traits_(traits),
+        negate_(negate),
+        icase_(flags & constants::SyntaxFlags::icase),
+        unicode_(flags & constants::SyntaxFlags::unicode) {}
 
   void addChar(CodePoint c) {
     codePointSet_.add(c);

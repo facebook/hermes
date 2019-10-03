@@ -24,8 +24,16 @@ class Parser {
   // The type of a node in our regex.
   using Node = typename RegexType::Node;
 
-  // The type of a bracket node in particular.
-  using BracketNode = typename RegexType::BracketNode;
+  // An element of a class ranges.
+  // This may be either a code point, or a CharacterClass.
+  struct ClassAtom {
+    CodePoint codePoint = -1;
+    llvm::Optional<CharacterClass> charClass{};
+
+    explicit ClassAtom(CodePoint cp) : codePoint(cp) {}
+    ClassAtom(CharacterClass::Type cc, bool invert)
+        : charClass(CharacterClass(cc, invert)) {}
+  };
 
   // The regexp that we are building. This receives the results of our
   // productions. This may be a real regex or a dummy regex.
@@ -342,8 +350,19 @@ class Parser {
   /// ES6 21.2.2.13 CharacterClass.
   void consumeCharacterClass() {
     consume('[');
+    bool unicode = flags_ & constants::SyntaxFlags::unicode;
     bool negate = tryConsume('^');
     auto bracket = re_->startBracketList(negate);
+
+    // Helper to add a ClassAtom to our bracket.
+    auto addClassAtom = [&bracket](const ClassAtom &atom) {
+      if (atom.charClass) {
+        bracket->addClass(*atom.charClass);
+      } else {
+        bracket->addChar(atom.codePoint);
+      }
+    };
+
     for (;;) {
       if (current_ == end_) {
         setError(constants::ErrorType::UnbalancedBracket);
@@ -355,69 +374,60 @@ class Parser {
         return;
       }
 
-      // Specially handle character class escapes like \d or \D.
-      // These cannot participate in ranges.
-      if (tryConsumeCharacterClassEscape(bracket)) {
+      // Parse a code point or character class.
+      Optional<ClassAtom> first = tryConsumeBracketClassAtom();
+      if (!first)
+        continue;
+
+      // See if we have a dash.
+      if (!tryConsume('-')) {
+        addClassAtom(*first);
         continue;
       }
 
-      // We may have a single atom like [abc], or a range like [a-c]
-      auto first = tryConsumeBracketNonClassAtom();
-      assert(first && "Should always have a left atom");
-      if (!tryConsume('-')) {
-        // The atom was not followed by a range.
-        bracket->addChar(*first);
-      } else if (auto second = tryConsumeBracketNonClassAtom()) {
-        // Range like [a-c].
-        // ES6 21.2.2.15.1 "If i > j, throw a SyntaxError exception"
-        if (*first > *second) {
+      // We have a dash; we may have a range.
+      Optional<ClassAtom> second = tryConsumeBracketClassAtom();
+      if (!second) {
+        // No second atom. For example: [a-].
+        addClassAtom(*first);
+        addClassAtom(ClassAtom('-'));
+        continue;
+      }
+
+      // We have a range like [a-z].
+      // Ranges can't contain character classes: [\d-z] is invalid.
+      if (first->charClass || second->charClass) {
+        if (unicode) {
+          // The unicode path is an error.
           setError(constants::ErrorType::CharacterRange);
           return;
+        } else {
+          // The non-unicode path just pretends the range doesn't exist.
+          // /[\d-A]/ is the same as /[\dA-]/.
+          // Note we still have to process all three characters. For
+          // example:
+          // [\d-a-z] contains the atoms \d, -, a, -, z.
+          // It does NOT contain the range a-z.
+          addClassAtom(*first);
+          addClassAtom(ClassAtom('-'));
+          addClassAtom(*second);
+          continue;
         }
-        bracket->addRange(*first, *second);
-      } else {
-        // We found a dash but not a range. Examples:
-        // [a-] (dash is last)
-        // [a-\w] (character class)
-        // Here the dash is just an ordinary character.
-        bracket->addChar(*first);
-        bracket->addChar('-');
       }
+
+      // Here we know it's a real range: [a-z] and not [\d-f].
+      // However it could be out of order: [z-a]
+      // ES6 21.2.2.15.1 "If i > j, throw a SyntaxError exception"
+      if (first->codePoint > second->codePoint) {
+        setError(constants::ErrorType::CharacterRange);
+        return;
+      }
+      // This range has been validated.
+      bracket->addRange(first->codePoint, second->codePoint);
     }
   }
 
-  /// ES6 21.2.2.12 CharacterClassEscape.
-  /// Note this is used inside brackets only, like /[\d]/.
-  bool tryConsumeCharacterClassEscape(BracketNode *bracket) {
-    if (current_ != end_ && *current_ == '\\') {
-      auto next = current_ + 1;
-      if (next != end_) {
-        CharT c = *next;
-        switch (c) {
-          case 'd':
-          case 'D':
-            current_ = next + 1;
-            bracket->addClass({CharacterClass::Digits, c == 'D' /* invert */});
-            return true;
-
-          case 's':
-          case 'S':
-            current_ = next + 1;
-            bracket->addClass({CharacterClass::Spaces, c == 'S' /* invert */});
-            return true;
-
-          case 'w':
-          case 'W':
-            current_ = next + 1;
-            bracket->addClass({CharacterClass::Words, c == 'W' /* invert */});
-            return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  Optional<CodePoint> tryConsumeBracketNonClassAtom() {
+  Optional<ClassAtom> tryConsumeBracketClassAtom() {
     if (current_ == end_) {
       return llvm::None;
     }
@@ -429,7 +439,6 @@ class Parser {
       }
 
       case '\\': {
-        auto saved = current_;
         consume('\\');
         if (current_ == end_) {
           setError(constants::ErrorType::EscapeIncomplete);
@@ -437,29 +446,41 @@ class Parser {
         }
         CharT ec = *current_;
         switch (ec) {
+            /// ES6 21.2.2.12 CharacterClassEscape.
+            /// Note this is used inside brackets only, like /[\d]/.
           case 'd':
-          case 'D':
+          case 'D': {
+            consume(ec);
+            return ClassAtom(CharacterClass::Digits, ec == 'D' /* invert */);
+          }
           case 's':
-          case 'S':
+          case 'S': {
+            consume(ec);
+            return ClassAtom(CharacterClass::Spaces, ec == 'S' /* invert */);
+          }
           case 'w':
           case 'W': {
-            // Character classes get handled in
-            // tryConsumeCharacterClassEscape. We need to handle these here so
-            // that they do not become parts of ranges, e.g. /[a-\d]/ should
-            // be the same as /[\da-]/.
-            current_ = saved;
-            return llvm::None;
+            consume(ec);
+            return ClassAtom(CharacterClass::Words, ec == 'W' /* invert */);
           }
 
           case 'b': {
             // "Return the CharSet containing the single character <BS>
             // U+0008 (BACKSPACE)"
             consume('b');
-            return 0x08;
+            return ClassAtom(0x08);
           }
 
+          case '-':
+            // ES6 21.2.1 ClassEscape: \- escapes -, in Unicode expressions
+            // only.
+            if ((flags_ & constants::SyntaxFlags::unicode) && tryConsume('-')) {
+              return ClassAtom('-');
+            }
+            // fallthrough
+
           default: {
-            return consumeCharacterEscape();
+            return ClassAtom(consumeCharacterEscape());
           }
         }
       }
@@ -467,9 +488,9 @@ class Parser {
       default: {
         // Ordinary character or surrogate pair.
         if (auto cp = tryConsumeSurrogatePair()) {
-          return cp;
+          return ClassAtom(*cp);
         } else {
-          return consume(c);
+          return ClassAtom(consume(c));
         }
       }
     }
