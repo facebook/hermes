@@ -800,6 +800,7 @@ static CallResult<RegExpMatch> splitMatch(
   return match;
 }
 
+// TODO: implement this following ES6 21.2.5.11.
 CallResult<HermesValue> splitInternal(
     Runtime *runtime,
     Handle<> string,
@@ -832,9 +833,13 @@ CallResult<HermesValue> splitInternal(
   }
 
   // The pattern which we want to separate on. Can be a JSRegExp or a string.
+  // TODO: implement sticky ('y') flag behavior.
+  bool unicodeMatching = false;
   MutableHandle<> R{runtime};
   if (vmisa<JSRegExp>(separator.get())) {
     R = separator.get();
+    unicodeMatching =
+        JSRegExp::getFlagBits(vmcast<JSRegExp>(separator.get())).unicode;
   } else {
     auto strRes = toString_RJS(runtime, separator);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
@@ -914,7 +919,9 @@ CallResult<HermesValue> splitInternal(
       // so we matched with the empty string.
       // We don't want to match the empty string at this location again,
       // so increment q in order to start the next search at the next position.
-      ++q;
+      // ES6 21.2.5.11:
+      // If e = p, let q be AdvanceStringIndex(S, q, unicodeMatching).
+      q = advanceStringIndex(S.get(), q, unicodeMatching);
     } else {
       // Found a non-empty string match.
       // Add everything from the last match to the current one to A.
