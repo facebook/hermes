@@ -203,7 +203,6 @@ BLACK_LIST = [
     "test262/test/built-ins/Function/prototype/toString/",
     "test262/test/built-ins/Object/getOwnPropertyDescriptors/",
     "test262/test/built-ins/Promise/",
-    "test262/test/built-ins/RegExp/prototype/unicode/",
     "test262/test/built-ins/String/raw/",
     "test262/test/language/block-scope/",
     "test262/test/language/computed-property-names/",
@@ -527,7 +526,6 @@ BLACK_LIST = [
     "test262/test/language/future-reserved-words/package-strict-escaped.js",
     "test262/test/language/statements/labeled/value-yield-strict-escaped.js",
     "test262/test/language/expressions/new.target/escaped-new.js",
-    "test262/test/language/literals/regexp/early-err-flags-unicode-escape.js",
     "test262/test/language/future-reserved-words/interface-strict-escaped.js",
     "test262/test/language/statements/try/catch-parameter-boundnames-restriction-eval-negative-early.js",
     # exp operator
@@ -712,42 +710,12 @@ BLACK_LIST = [
     "test262/test/built-ins/Array/prototype/push/S15.4.4.7_A4_T3.js",
     "test262/test/built-ins/Array/prototype/push/S15.4.4.7_A4_T1.js",
     # RegExp changes
+    # regexp-flags appears to loop forever even in d8.
     "mjsunit/es6/regexp-flags.js",
+    # unicode-regexp-ignore-case-noi18n is an incorrect test: it falsely
+    # asserts that U+212B (Angstrom Sign) and U+00E5 (A with ring) are not
+    # equal under case folding.
     "mjsunit/es6/unicode-regexp-ignore-case-noi18n.js",
-    "mjsunit/es6/unicode-regexp-ignore-case.js",
-    "mjsunit/es6/unicode-regexp-restricted-syntax.js",
-    "mjsunit/es6/unicode-regexp-zero-length.js",
-    "test262/test/built-ins/RegExp/prototype/exec/u-",
-    "test262/test/built-ins/RegExp/valid-flags-y.js",
-    "test262/test/language/literals/regexp/u-",
-    "test262/test/language/literals/regexp/y-",
-    "test262/test/built-ins/RegExp/prototype/exec/failure-lastindex-access.js",
-    "test262/test/built-ins/RegExp/prototype/flags/coercion-unicode.js",
-    "test262/test/built-ins/RegExp/prototype/unicode/length.js",
-    "test262/test/built-ins/RegExp/unicode_identity_escape.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/y-",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/builtin-coerce-lastindex.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/builtin-failure-y-set-lastindex.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/builtin-y-coerce-lastindex-err.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/get-unicode-error.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/builtin-failure-y-set-lastindex-err.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/builtin-success-y-set-lastindex.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/builtin-success-u-return-val-groups.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/u-",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/builtin-failure-y-return-val.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/builtin-infer-unicode.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.match/builtin-success-y-set-lastindex-err.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.search/y-fail-return.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.search/u-lastindex-advance.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/u-advance-after-empty.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/y-set-lastindex.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/y-fail-lastindex-no-write.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/y-fail-return.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/y-fail-global-return.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/y-fail-lastindex.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/y-init-lastindex.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/coerce-unicode.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.replace/get-unicode-error.js",
     # This tests behavior in ES2018.
     "test262/test/built-ins/RegExp/prototype/Symbol.search/lastindex-no-restore.js",
     # species constructors
@@ -759,9 +727,6 @@ BLACK_LIST = [
     "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor-species-undef.js",
     "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor-y.js",
     "test262/test/built-ins/RegExp/prototype/Symbol.split/species-ctor.js",
-    # Unsupported flags.
-    "test262/test/built-ins/RegExp/prototype/Symbol.split/u-lastindex-adv-thru-match.js",
-    "test262/test/built-ins/RegExp/prototype/Symbol.split/u-lastindex-adv-thru-failure.js",
     # Implementation specific
     "test262/test/built-ins/RegExp/prototype/Symbol.split/get-flags-err.js",
     "test262/test/built-ins/RegExp/prototype/Symbol.split/coerce-flags-err.js",
@@ -937,9 +902,11 @@ BLACK_LIST = [
     "mjsunit/es6/rest-params-lazy-parsing.js",
     "mjsunit/es6/throw-type-error-function-restrictions.js",
     "mjsunit/es6/typedarray.js",
+    # unicode-character-ranges tests lookbehind assertions
     "mjsunit/es6/unicode-character-ranges.js",
+    # unicode-escapes-in-regexps.js creates invalid regexp literals which
+    # Hermes refuses to compile.
     "mjsunit/es6/unicode-escapes-in-regexps.js",
-    "mjsunit/es6/unicode-escapes.js",
     "mjsunit/field-type-tracking.js",
     "mjsunit/fixed-context-shapes-when-recompiling.js",
     "mjsunit/for-in-opt.js",
@@ -1373,9 +1340,6 @@ BLACK_LIST = [
     "esprima/test_fixtures/es2017/",
     "esprima/test_fixtures/es2018/",
     "esprima/test_fixtures/JSX/",
-    # Hermes doesn't support unicode regexp
-    "esprima/test_fixtures/expression/primary/literal/regular-expression/u-flag-valid-range.js",
-    "esprima/test_fixtures/expression/primary/literal/regular-expression/u-flag-surrogate-pair.js",
     # not sure why they fail yet
     "esprima/test_fixtures/statement/iteration/migrated_0003.js",
     "esprima/test_fixtures/expression/unary/migrated_0005.js",
