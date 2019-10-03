@@ -84,6 +84,14 @@ void dumpInstruction(
 }
 
 void dumpInstruction(
+    const regex::U16MatchChar32Insn *insn,
+    llvm::raw_ostream &OS) {
+  OS << "U16MatchChar32: ";
+  uint32_t c = insn->c;
+  OS << llvm::format_hex(c, 6);
+}
+
+void dumpInstruction(
     const regex::MatchNChar8Insn *insn,
     llvm::raw_ostream &OS) {
   OS << "MatchNChar8: '";
@@ -134,6 +142,14 @@ void dumpInstruction(
   OS << "MatchCharICase16: ";
   char32_t c = insn->c;
   OS << llvm::format_hex(c, 4);
+}
+
+void dumpInstruction(
+    const regex::U16MatchCharICase32Insn *insn,
+    llvm::raw_ostream &OS) {
+  OS << "U16MatchCharICase32: ";
+  uint32_t c = insn->c;
+  OS << llvm::format_hex(c, 6);
 }
 
 void dumpInstruction(const regex::Jump32Insn *insn, llvm::raw_ostream &OS) {

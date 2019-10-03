@@ -620,17 +620,28 @@ class MatchAnyButNewlineNode final : public Node {
   using Super = Node;
 
  public:
+  /// Construct a MatchAnyButNewLine. If \p unicode is set, emit bytecode that
+  /// treats surrogate pairs as a single character.
+  explicit MatchAnyButNewlineNode(bool unicode) : unicode_(unicode) {}
+
   virtual MatchConstraintSet matchConstraints() const override {
     return MatchConstraintNonEmpty | Super::matchConstraints();
   }
 
   void emit(RegexBytecodeStream &bcs) const override {
-    bcs.emit<MatchAnyButNewlineInsn>();
+    if (unicode_) {
+      bcs.emit<U16MatchAnyButNewlineInsn>();
+    } else {
+      bcs.emit<MatchAnyButNewlineInsn>();
+    }
   }
 
   virtual bool matchesExactlyOneCharacter() const override {
     return true;
   }
+
+ private:
+  bool unicode_;
 };
 
 /// MatchChar matches one or more characters, specified as a parameter to the
@@ -681,7 +692,9 @@ class MatchCharNode final : public Node {
 
  protected:
   virtual bool matchesExactlyOneCharacter() const override {
-    return chars_.size() == 1;
+    // If our character is astral it will need to match a surrogate pair, which
+    // requires two characters.
+    return chars_.size() == 1 && isMemberOfBMP(chars_.front());
   }
 
   /// Emit a list of ASCII characters into bytecode stream \p bcs.
@@ -723,11 +736,19 @@ class MatchCharNode final : public Node {
   void emitNonASCIIList(
       llvm::ArrayRef<CodePoint> chars,
       RegexBytecodeStream &bcs) const {
-    for (CodePoint c : chars) {
-      if (icase_) {
-        bcs.emit<MatchCharICase16Insn>()->c = c;
+    for (uint32_t c : chars) {
+      if (!isMemberOfBMP(c)) {
+        if (icase_) {
+          bcs.emit<U16MatchCharICase32Insn>()->c = c;
+        } else {
+          bcs.emit<U16MatchChar32Insn>()->c = c;
+        }
       } else {
-        bcs.emit<MatchChar16Insn>()->c = c;
+        if (icase_) {
+          bcs.emit<MatchCharICase16Insn>()->c = c;
+        } else {
+          bcs.emit<MatchChar16Insn>()->c = c;
+        }
       }
     }
   }
@@ -1221,7 +1242,7 @@ void Regex<Traits>::pushRightAnchor() {
 
 template <class Traits>
 void Regex<Traits>::pushMatchAnyButNewline() {
-  appendNode<MatchAnyButNewlineNode>();
+  appendNode<MatchAnyButNewlineNode>(flags_ & constants::unicode);
 }
 
 template <class Traits>

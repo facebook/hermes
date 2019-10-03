@@ -694,7 +694,8 @@ class Parser {
 
     // Unicode path.
     // Check for \u{ABCD123} style escapes.
-    // It is an error if the escape is incomplete: /\u{123/, or empty: /\u{}/
+    // Note that all \u in Unicode regexps must result in a valid escape; there
+    // is no fallback to IdentityEscape. This means we must not return None.
     if (tryConsume('{')) {
       uint32_t result = 0;
       size_t digitCount = 0;
@@ -704,13 +705,12 @@ class Parser {
         // 21.2.1.1: It is a Syntax Error if the MV of HexDigits > 1114111
         if (result > 1114111) {
           setError(constants::ErrorType::EscapeOverflow);
-          current_ = saved;
-          return llvm::None;
+          return 0;
         }
       }
       if (!tryConsume('}')) {
         setError(constants::ErrorType::EscapeInvalid);
-        return llvm::None;
+        return 0;
       }
       if (digitCount == 0) {
         // input was like \u{}
@@ -739,8 +739,9 @@ class Parser {
       return *hi;
     }
 
-    current_ = saved;
-    return llvm::None;
+    // All \u failed escapes in Unicode regexps are an error.
+    setError(constants::ErrorType::EscapeInvalid);
+    return 0;
   }
 
   /// ES6 21.2.2.6 Assertion.

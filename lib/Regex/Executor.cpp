@@ -6,6 +6,7 @@
  */
 #include "hermes/Regex/Executor.h"
 #include "hermes/Regex/RegexTraits.h"
+#include "hermes/Support/ErrorHandling.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -776,6 +777,11 @@ auto Context<Traits>::match(
           s->ip_ += sizeof(MatchAnyButNewlineInsn);
           break;
 
+        case Opcode::U16MatchAnyButNewline: {
+          hermes_fatal("Unimplemented");
+          break;
+        }
+
         case Opcode::MatchChar8: {
           if (s->current_ == last_ ||
               !matchWidth1<Width1Opcode::MatchChar8>(base, *s->current_))
@@ -794,6 +800,11 @@ auto Context<Traits>::match(
           break;
         }
 
+        case Opcode::U16MatchChar32: {
+          hermes_fatal("Unimplemented");
+          break;
+        }
+
         case Opcode::MatchCharICase8: {
           if (s->current_ == last_ ||
               !matchWidth1<Width1Opcode::MatchCharICase8>(base, *s->current_))
@@ -809,6 +820,11 @@ auto Context<Traits>::match(
             BACKTRACK();
           s->current_++;
           s->ip_ += sizeof(MatchCharICase16Insn);
+          break;
+        }
+
+        case Opcode::U16MatchCharICase32: {
+          hermes_fatal("Unimplemented");
           break;
         }
 

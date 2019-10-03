@@ -43,6 +43,7 @@ struct GoalInsn : public Insn {};
 struct LeftAnchorInsn : public Insn {};
 struct RightAnchorInsn : public Insn {};
 struct MatchAnyButNewlineInsn : public Insn {};
+struct U16MatchAnyButNewlineInsn : public Insn {};
 struct MatchChar8Insn : public Insn {
   char c;
 };
@@ -50,6 +51,11 @@ struct MatchChar8Insn : public Insn {
 // Matches a 16 bit character without attempting to interpret surrogate pairs.
 struct MatchChar16Insn : public Insn {
   char16_t c;
+};
+
+// Matches a code point, decoding a surrogate pair if necessary.
+struct U16MatchChar32Insn : public Insn {
+  uint32_t c;
 };
 
 // Instructions for case-insensitive matching. c is already case-folded.
@@ -60,6 +66,12 @@ struct MatchCharICase8Insn : public Insn {
 // Matches a 16 bit character without attempting to interpret surrogate pairs.
 struct MatchCharICase16Insn : public Insn {
   char16_t c;
+};
+
+// Matches a code point (case insensitive), decoding a surrogate pair if
+// necessary.
+struct U16MatchCharICase32Insn : public Insn {
+  uint32_t c;
 };
 
 struct AlternationInsn : public Insn {
@@ -74,14 +86,15 @@ struct Jump32Insn : public Insn {
   JumpTarget32 target;
 };
 
+struct BackRefInsn : public Insn {
+  uint16_t mexp;
+};
+
 /// A BracketRange represents an inclusive range of characters in a bracket,
 /// such as /[a-z]/. Singletons like /[a]/ are represented as the range a-a.
 struct BracketRange32 {
   uint32_t start;
   uint32_t end;
-};
-struct BackRefInsn : public Insn {
-  uint16_t mexp;
 };
 
 /// BracketInsn is a variable-width instruction. Each BracketInsn is followed by
