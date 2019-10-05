@@ -9,6 +9,7 @@
 
 #include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
+#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/PredefinedStringIDs.h"
@@ -16,10 +17,12 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Inst/Builtins.h"
+#include "hermes/InternalBytecode/InternalBytecode.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/Support/CheckedMalloc.h"
+#include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/AlignedStorage.h"
@@ -342,6 +345,9 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
     serialize(s);
   }
 #endif // HERMESVM_SERIALIZE
+
+  // Execute our internal bytecode.
+  runInternalBytecode();
 
   LLVM_DEBUG(llvm::dbgs() << "Runtime initialized\n");
 
@@ -810,6 +816,29 @@ ExecutionStatus Runtime::loadSegment(
   }
 
   return ExecutionStatus::RETURNED;
+}
+
+void Runtime::runInternalBytecode() {
+#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+  auto module = getInternalBytecode();
+  auto bcProvider = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+                        llvm::make_unique<Buffer>(module.data(), module.size()))
+                        .first;
+  assert(bcProvider && "Failed to decode internal bytecode");
+  // The bytes backing our buffer are immortal, so we can be persistent.
+  RuntimeModuleFlags flags;
+  flags.persistent = true;
+  flags.hidesEpilogue = true;
+  auto res = runBytecode(
+      std::move(bcProvider),
+      flags,
+      /*sourceURL*/ "",
+      makeNullHandle<Environment>());
+  // It is a fatal error for the internal bytecode to throw an exception.
+  assert(
+      res != ExecutionStatus::EXCEPTION && "Internal bytecode threw exception");
+  (void)res;
+#endif
 }
 
 void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {

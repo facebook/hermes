@@ -47,13 +47,21 @@ jobs:
           name: Build LLVM
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/build_llvm.py --target llvm-tblgen llvm llvm_build
+            hermes/utils/build/build_llvm.py llvm llvm_build
       - run:
           name: Crosscompile LLVM
           command: |
             export ANDROID_SDK="$ANDROID_HOME"
             export ANDROID_NDK="$ANDROID_HOME/ndk-bundle"
             cd "$HERMES_WS_DIR" && hermes/utils/crosscompile_llvm.sh
+      - run:
+          name: Build Hermes Compiler
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py ./build ./llvm_build ./llvm
+            # Build the Hermes compiler so that the cross compiler build can
+            # access it to build the VM
+            cmake --build ./build --target hermesc
       - run:
           name: Build Hermes for Android
           command: |

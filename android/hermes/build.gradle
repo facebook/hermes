@@ -7,6 +7,7 @@
 apply plugin: 'com.android.library'
 
 def facebookBuild = System.getenv("FACEBOOK") ?: "0"
+def hermesHostBuild = System.getenv("HERMES_WS_DIR")
 
 // For Facebook internal use:
 def fbsource = System.getenv("FBSOURCE_DIR") ?:
@@ -14,6 +15,13 @@ def fbsource = System.getenv("FBSOURCE_DIR") ?:
 
 buildDir = "${rootProject.ext.hermes_ws}/build_android/hermes"
 buildDir.mkdirs()
+
+preBuild.doFirst {
+  // The Hermes compiler cmake file is required to exist before
+  // cross-compilation can happen.
+  assert hermesHostBuild != null
+  assert file("${hermesHostBuild}/build/ImportHermesc.cmake").exists()
+}
 
 android {
   compileSdkVersion = rootProject.ext.compileSdkVersion
@@ -26,6 +34,7 @@ android {
         arguments "-DHERMES_FACEBOOK_BUILD=${facebookBuild}"
         arguments "-DANDROID_STL=c++_shared"
         arguments "-DANDROID_PIE=True"
+        arguments "-DIMPORT_HERMESC=${hermesHostBuild}/build/ImportHermesc.cmake"
         arguments "-DLLVM_BUILD_BASE=${hermes_ws}/llvm"
         arguments "-DLLVM_SRC_DIR=${hermes_ws}/llvm"
         arguments "-DFBSOURCE_DIR=${fbsource}"

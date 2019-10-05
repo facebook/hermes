@@ -44,9 +44,9 @@ foo();
 // CHECK-NEXT: Set breakpoint 2 at {{.*}}:27:5
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: foo called
-// CHECK-NEXT: Break on breakpoint 1 in bar: {{.*}}lazy-break-nested.js[1]:18:5
+// CHECK-NEXT: Break on breakpoint 1 in bar: {{.*}}lazy-break-nested.js[{{[0-9]+}}]:18:5
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: bar called
-// CHECK-NEXT: Break on breakpoint 2 in baz: {{.*}}lazy-break-nested.js[1]:27:5
+// CHECK-NEXT: Break on breakpoint 2 in baz: {{.*}}lazy-break-nested.js[{{[0-9]+}}]:27:5
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: baz called

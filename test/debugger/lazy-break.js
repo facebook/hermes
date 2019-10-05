@@ -17,11 +17,11 @@ function foo() {
 debugger;
 foo();
 
-// CHECK: Break on 'debugger' statement in global: {{.*}}[1]:17:1
+// CHECK: Break on 'debugger' statement in global: {{.*}}lazy-break.js[{{[0-9]+}}]:17:1
 // CHECK-NEXT: Set breakpoint 1 at {{.*}}:10:3
 // CHECK-NEXT: 1 E {{.*}}:10:3
 // CHECK-NEXT: Continuing execution
-// CHECK-NEXT: Break on breakpoint 1 in foo: {{.*}}lazy-break.js[1]:10:3
+// CHECK-NEXT: Break on breakpoint 1 in foo: {{.*}}lazy-break.js[{{[0-9]+}}]:10:3
 // CHECK-NEXT: 1 E {{.*}}:10:3
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: foo called

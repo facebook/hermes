@@ -13,13 +13,13 @@ function foo(x) {
   print(x);
 }
 
-print("start");
+print('start');
 foo();
-print("prop =", this.prop);
-print("end")
+print('prop =', this.prop);
+print('end');
 
 //CHECK:start
-//CHECK-NEXT:Break on 'debugger' statement in foo: {{.*}}declare-in-function.js[1]:12:3
+//CHECK-NEXT:Break on 'debugger' statement in foo: {{.*}}declare-in-function.js[{{[0-9]+}}]:12:3
 //CHECK-NEXT:10
 //CHECK-NEXT:11
 //CHECK-NEXT:undefined

@@ -27,3 +27,11 @@ target_link_libraries(hermesc
 )
 
 hermes_link_icu(hermesc)
+
+# The Hermes compiler is used as part of the build of the VM.
+# During cross-compilation, the compiler needs to be built for the host system,
+# then used to build the VM for the target system.
+if(NOT CMAKE_CROSSCOMPILING)
+  # Namespace added to avoid clashing the host binary with the target binary.
+  export(TARGETS hermesc FILE ${CMAKE_BINARY_DIR}/ImportHermesc.cmake NAMESPACE native-)
+endif()
