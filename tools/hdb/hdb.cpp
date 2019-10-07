@@ -463,6 +463,11 @@ struct HDBDebugger : public debugger::EventObserver {
         }
       } else if (request == "variables" || request == "v") {
         printVariables(debugger.getProgramState());
+      } else {
+        std::cout << "Not a valid info sub-command. See below for list of"
+                  << "info sub-commands.\n\n"
+                  << "info breakpoints\n"
+                  << "info variables\n";
       }
     } else if (command == "backtrace" || command == "bt") {
       printStackTrace(debugger.getProgramState().getStackTrace(), frame_);
