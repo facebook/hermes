@@ -183,6 +183,9 @@ CallResult<HermesValue> HiddenClass::create(
     SymbolID symbolID,
     PropertyFlags propertyFlags,
     unsigned numProperties) {
+  assert(
+      (flags.dictionaryMode || numProperties == 0 || *parent) &&
+      "non-empty non-dictionary orphan");
   void *mem = runtime->allocLongLived<HasFinalizer::Yes>(sizeof(HiddenClass));
   return HermesValue::encodeObjectValue(new (mem) HiddenClass(
       runtime, flags, parent, symbolID, propertyFlags, numProperties));
@@ -737,28 +740,12 @@ Handle<HiddenClass> HiddenClass::updatePropertyFlagsWithoutTransitions(
     PropertyFlags flagsToClear,
     PropertyFlags flagsToSet,
     OptValue<llvm::ArrayRef<SymbolID>> props) {
-  // Allocate the property map.
-  if (LLVM_UNLIKELY(!selfHandle->propertyMap_))
-    initializeMissingPropertyMap(selfHandle, runtime);
-
+  // Result must be in dictionary mode, since it's a non-empty orphan.
   MutableHandle<HiddenClass> classHandle{runtime};
   if (selfHandle->isDictionary()) {
     classHandle = *selfHandle;
   } else {
-    // To create an orphan hidden class with updated properties, first clone the
-    // old one, and make it a root.
-    classHandle = vmcast<HiddenClass>(
-        runtime->ignoreAllocationFailure(HiddenClass::create(
-            runtime,
-            selfHandle->flags_,
-            Runtime::makeNullHandle<HiddenClass>(),
-            SymbolID{},
-            PropertyFlags{},
-            selfHandle->numProperties_)));
-    // Move the property map to the new hidden class.
-    classHandle->propertyMap_.set(
-        runtime, selfHandle->propertyMap_.get(runtime), &runtime->getHeap());
-    selfHandle->propertyMap_ = nullptr;
+    classHandle = *copyToNewDictionary(selfHandle, runtime);
   }
 
   auto mapHandle =

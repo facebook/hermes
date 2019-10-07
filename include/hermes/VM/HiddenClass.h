@@ -436,7 +436,7 @@ class HiddenClass final : public GCCell {
 
   /// Update the flags for the properties in the list \p props with \p
   /// flagsToClear and \p flagsToSet. If in dictionary mode, the properties are
-  /// updated on the hidden class directly; otherwise, create only one new
+  /// updated on the hidden class directly; otherwise, create a new dictionary
   /// hidden class as result. Updating the properties mutates the property map
   /// directly without creating transitions.
   /// \p flagsToClear and \p flagsToSet are masks for updating the property

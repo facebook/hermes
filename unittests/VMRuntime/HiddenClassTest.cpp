@@ -311,7 +311,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
       y, runtime, clearFlags, setFlags, llvm::None);
   ASSERT_NE(*y, *yClone);
   ASSERT_EQ(y->getNumProperties(), yClone->getNumProperties());
-  ASSERT_FALSE(yClone->isDictionary());
+  ASSERT_TRUE(yClone->isDictionary());
   // Check each property
   auto found = HiddenClass::findProperty(
       yClone, runtime, *aHnd, PropertyFlags::invalid(), desc);
@@ -365,7 +365,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
 
   ASSERT_NE(*y, *partlyFrozenSingleton);
   ASSERT_EQ(y->getNumProperties(), partlyFrozenSingleton->getNumProperties());
-  ASSERT_FALSE(partlyFrozenSingleton->isDictionary());
+  ASSERT_TRUE(partlyFrozenSingleton->isDictionary());
   // Check each property
   found = HiddenClass::findProperty(
       partlyFrozenSingleton, runtime, *aHnd, PropertyFlags::invalid(), desc);
@@ -396,7 +396,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
       PropertyFlags::defaultNewNamedPropertyFlags());
   ASSERT_RETURNED(addRes);
   ASSERT_EQ(3u, addRes->second);
-  ASSERT_NE(*addRes->first, *partlyFrozenSingleton);
+  ASSERT_EQ(*addRes->first, *partlyFrozenSingleton);
   ASSERT_EQ(addRes->first->getNumProperties(), 4);
 }
 
