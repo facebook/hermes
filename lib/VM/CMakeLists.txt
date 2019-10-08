@@ -159,6 +159,16 @@ list(APPEND source_files
 # HostModel.cpp must be compiled -frtti, unlike most of the VM.
 set_source_files_properties(HostModel.cpp PROPERTIES COMPILE_FLAGS -frtti)
 
+set(link_libs
+  hermesInst
+  hermesSupport
+  hermesParser
+  hermesPlatform
+  hermesHBCBackend
+  dtoa
+  ${CORE_FOUNDATION}
+)
+
 if(HERMESVM_JIT)
   list(APPEND source_files ${jit_files})
 
@@ -173,16 +183,13 @@ if(HERMESVM_JIT)
   )
 endif()
 
+if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
+  list(APPEND link_libs hermesInternalBytecode)
+endif()
+
 add_llvm_library(hermesVMRuntime STATIC ${source_files}
     LINK_LIBS
-    hermesInst
-    hermesSupport
-    hermesParser
-    hermesPlatform
-    hermesHBCBackend
-    hermesInternalBytecode
-    dtoa
-    ${CORE_FOUNDATION}
+    ${link_libs}
 )
 
 hermes_link_icu(hermesVMRuntime)
