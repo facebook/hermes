@@ -207,6 +207,7 @@ void MallocGC::checkWellFormed() {
 #endif
 
 void MallocGC::collect() {
+  assert(noAllocLevel_ == 0 && "no GC allowed right now");
   using std::chrono::steady_clock;
   LLVM_DEBUG(llvm::dbgs() << "Beginning collection");
 #ifdef HERMES_SLOW_DEBUG

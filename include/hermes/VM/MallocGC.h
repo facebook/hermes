@@ -302,6 +302,7 @@ ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
 
 template <bool fixedSizeIgnored, HasFinalizer hasFinalizer>
 inline void *MallocGC::alloc(uint32_t size) {
+  assert(noAllocLevel_ == 0 && "no alloc allowed right now");
   size = heapAlignSize(size);
   // Use subtraction to prevent overflow.
   if (LLVM_UNLIKELY(

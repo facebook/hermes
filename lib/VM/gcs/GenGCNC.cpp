@@ -121,6 +121,7 @@ GenGC::GenGC(
 #ifndef NDEBUG
 AllocResult
 GenGC::debugAlloc(uint32_t sz, HasFinalizer hasFinalizer, bool fixedSize) {
+  assert(noAllocLevel_ == 0 && "no alloc allowed right now");
   AllocResult res;
   // Only variable-sized objects may be allocated in both generations.
   if (shouldRandomizeAllocSpace()) {
@@ -283,6 +284,7 @@ void GenGC::ttiReached() {
 }
 
 void GenGC::collect(bool canEffectiveOOM) {
+  assert(noAllocLevel_ == 0 && "no GC allowed right now");
   if (canEffectiveOOM && ++consecFullGCs_ >= oomThreshold_)
     oom(make_error_code(OOMError::Effective));
 

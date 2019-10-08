@@ -787,6 +787,13 @@ class GCBase {
   /// snapshots and the memory profiler.
   IDTracker idTracker_;
 
+#ifndef NDEBUG
+  /// The number of reasons why no allocation is allowed in this heap right now.
+  uint32_t noAllocLevel_{0};
+
+  friend class NoAllocScope;
+#endif
+
  private:
 #ifdef HERMESVM_MEMORY_PROFILER
   /// Memory event tracker for the memory profiler

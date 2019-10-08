@@ -282,6 +282,7 @@ AllocResult YoungGen::fullCollectThenAlloc(
 }
 
 void YoungGen::collect() {
+  assert(gc_->noAllocLevel_ == 0 && "no GC allowed right now");
   GenGC::CollectionSection ygCollection(gc_, "YoungGen collection");
 
 #ifdef HERMES_EXTRA_DEBUG

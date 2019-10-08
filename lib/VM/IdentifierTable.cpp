@@ -284,6 +284,7 @@ IdentifierTable::allocateDynamicString(
         DynamicStringPrimitive<T, Unique>::allocationSize((uint32_t)length));
     // Since we keep a raw pointer to mem, no more JS heap allocations after
     // this point.
+    NoAllocScope _(runtime);
     if (primHandle) {
       str = primHandle->getStringRef<T>();
     }
@@ -487,6 +488,7 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
               runtime, desc->castToUTF16Ref(), desc, SymbolID::empty());
     // Since we keep a raw pointer to mem, no more JS heap allocations after
     // this point.
+    NoAllocScope _(runtime);
     if (LLVM_UNLIKELY(longLivedStr == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

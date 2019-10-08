@@ -1328,6 +1328,37 @@ class ScopedNativeCallFrame {
   }
 };
 
+/// RAII class to temporarily disallow allocation.
+/// Enforced by the GC in slow debug mode only.
+class NoAllocScope {
+ public:
+#ifdef NDEBUG
+  explicit NoAllocScope(Runtime *runtime) {}
+  void release() {}
+#else
+  explicit NoAllocScope(Runtime *runtime)
+      : noAllocLevel_(&runtime->getHeap().noAllocLevel_) {
+    ++*noAllocLevel_;
+  }
+
+  ~NoAllocScope() {
+    if (noAllocLevel_)
+      release();
+  }
+
+  /// End this scope early. May only be called once.
+  void release() {
+    assert(noAllocLevel_ && "already released");
+    assert(*noAllocLevel_ > 0 && "unbalanced no alloc");
+    --*noAllocLevel_;
+    noAllocLevel_ = nullptr;
+  }
+
+ private:
+  uint32_t *noAllocLevel_;
+#endif
+};
+
 //===----------------------------------------------------------------------===//
 // Runtime inline methods.
 
