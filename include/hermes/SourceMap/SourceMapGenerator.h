@@ -8,10 +8,11 @@
 #define HERMES_SUPPORT_SOURCEMAPGENERATOR_H
 
 #include "hermes/SourceMap/SourceMap.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/StringSetVector.h"
-
 #include "llvm/ADT/ArrayRef.h"
 
+#include <llvm/ADT/DenseMap.h>
 #include <vector>
 
 namespace hermes {
@@ -59,7 +60,7 @@ class SourceMapGenerator {
   void outputAsJSON(llvm::raw_ostream &OS) const;
 
   /// Adds a list of function offsets indexed by function ID for a given
-  /// bytecode segment. This list will be printed as an element of
+  /// bytecode segment. This list will be printed under
   /// x_hermes_function_offsets in the output of
   /// SourceMapGenerator::outputAsJSON.
   void addFunctionOffsets(
@@ -139,9 +140,9 @@ class SourceMapGenerator {
   /// x_facebook_sources field in the JSON source map.
   SourceMap::MetadataList sourcesMetadata_;
 
-  ///  vector that contains lists of functions offsets indexed by
-  /// CJSModuleOffset. Each function offset is indexed by its function id.
-  std::vector<std::vector<uint32_t>> functionOffsets_{};
+  ///  Maps cjsModuleOffset to a vector of function offsets indexed by their
+  /// function id.
+  llvm::DenseMap<uint32_t, std::vector<uint32_t>> functionOffsets_{};
 };
 
 } // namespace hermes

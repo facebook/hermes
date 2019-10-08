@@ -148,7 +148,7 @@ TEST(SourceMap, Basic) {
   map.outputAsJSON(OS);
   EXPECT_EQ(
       OS.str(),
-      R"#({"version":3,"sources":["file1","file2"],"mappings":"AAAC,EACA,CACA,C,CAAC;ACGI,CACJ,EAAC,EACF;","x_hermes_function_offsets":[[20,23,50,789],[1,255,300,500]]})#");
+      R"#({"version":3,"sources":["file1","file2"],"mappings":"AAAC,EACA,CACA,C,CAAC;ACGI,CACJ,EAAC,EACF;","x_hermes_function_offsets":{"0":[20,23,50,789],"1":[1,255,300,500]}})#");
 
   std::unique_ptr<SourceMap> sourceMap = SourceMapParser::parse(storage);
   for (uint32_t line = 0; line < sizeof(segmentsList) / sizeof(segmentsList[0]);
