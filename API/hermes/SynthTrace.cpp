@@ -416,6 +416,38 @@ void SynthTrace::SetPropertyNativeRecord::toJSONInternal(
   json.emitKeyValue("value", trace.encode(value_));
 }
 
+const char *SynthTrace::Printable::nameFromReleaseUnused(
+    ::hermes::vm::ReleaseUnused ru) {
+  switch (ru) {
+    case ::hermes::vm::ReleaseUnused::kReleaseUnusedNone:
+      return "none";
+    case ::hermes::vm::ReleaseUnused::kReleaseUnusedOld:
+      return "old";
+    case ::hermes::vm::ReleaseUnused::kReleaseUnusedYoungOnFull:
+      return "youngOnFull";
+    case ::hermes::vm::ReleaseUnused::kReleaseUnusedYoungAlways:
+      return "youngAlways";
+  }
+}
+
+::hermes::vm::ReleaseUnused SynthTrace::Printable::releaseUnusedFromName(
+    const char *rawName) {
+  std::string name{rawName};
+  if (name == "none") {
+    return ::hermes::vm::ReleaseUnused::kReleaseUnusedNone;
+  }
+  if (name == "old") {
+    return ::hermes::vm::ReleaseUnused::kReleaseUnusedOld;
+  }
+  if (name == "youngOnFull") {
+    return ::hermes::vm::ReleaseUnused::kReleaseUnusedYoungOnFull;
+  }
+  if (name == "youngAlways") {
+    return ::hermes::vm::ReleaseUnused::kReleaseUnusedYoungAlways;
+  }
+  throw std::invalid_argument("Name for RelaseUnused not recognized");
+}
+
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os,
     const SynthTrace::Printable &tracePrinter) {
@@ -444,10 +476,31 @@ llvm::raw_ostream &operator<<(
             "initHeapSize", tracePrinter.conf.getGCConfig().getInitHeapSize());
         json.emitKeyValue(
             "maxHeapSize", tracePrinter.conf.getGCConfig().getMaxHeapSize());
+        json.emitKeyValue(
+            "occupancyTarget",
+            tracePrinter.conf.getGCConfig().getOccupancyTarget());
+        json.emitKeyValue(
+            "effectiveOOMThreshold",
+            tracePrinter.conf.getGCConfig().getEffectiveOOMThreshold());
+        json.emitKeyValue(
+            "shouldReleaseUnused",
+            SynthTrace::Printable::nameFromReleaseUnused(
+                tracePrinter.conf.getGCConfig().getShouldReleaseUnused()));
+        json.emitKeyValue("name", tracePrinter.conf.getGCConfig().getName());
+        json.emitKeyValue(
+            "allocInYoung", tracePrinter.conf.getGCConfig().getAllocInYoung());
+        json.emitKeyValue(
+            "revertToYGAtTTI",
+            tracePrinter.conf.getGCConfig().getRevertToYGAtTTI());
         json.closeDict();
       }
       json.emitKeyValue(
+          "maxNumRegisters", tracePrinter.conf.getMaxNumRegisters());
+      json.emitKeyValue("ES6Symbol", tracePrinter.conf.getES6Symbol());
+      json.emitKeyValue(
           "enableSampledStats", tracePrinter.conf.getEnableSampledStats());
+      json.emitKeyValue(
+          "vmExperimentFlags", tracePrinter.conf.getVMExperimentFlags());
       json.closeDict();
     }
 

@@ -29,9 +29,17 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
     "gcConfig": {
       "minHeapSize": 1000,
       "initHeapSize": 33554432,
-      "maxHeapSize": 536870912
+      "maxHeapSize": 536870912,
+      "occupancyTarget": 0.75,
+      "effectiveOOMThreshold": 20,
+      "shouldReleaseUnused": "none",
+      "name": "foo",
+      "allocInYoung": false,
     },
-    "enableSampledStats": true
+    "maxNumRegisters": 100,
+    "ES6Symbol": false,
+    "enableSampledStats": true,
+    "vmExperimentFlags": 123
   },
   "env": {
     "mathRandomSeed": 123,
@@ -41,7 +49,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   },
   "trace": []
 }
-  )";
+)";
   auto result = parseSynthTrace(bufFromStr(src));
   const SynthTrace &trace = std::get<0>(result);
   const hermes::vm::RuntimeConfig &rtconf = std::get<1>(result);
@@ -53,10 +61,20 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   EXPECT_EQ(trace.sourceHash(), expectedHash);
   EXPECT_EQ(trace.records().size(), 0);
 
-  EXPECT_EQ(rtconf.getGCConfig().getMinHeapSize(), 1000);
-  EXPECT_EQ(rtconf.getGCConfig().getInitHeapSize(), 33554432);
-  EXPECT_EQ(rtconf.getGCConfig().getMaxHeapSize(), 536870912);
+  const ::hermes::vm::GCConfig &gcconf = rtconf.getGCConfig();
+  EXPECT_EQ(gcconf.getMinHeapSize(), 1000);
+  EXPECT_EQ(gcconf.getInitHeapSize(), 33554432);
+  EXPECT_EQ(gcconf.getMaxHeapSize(), 536870912);
+  EXPECT_EQ(gcconf.getOccupancyTarget(), 0.75);
+  EXPECT_EQ(gcconf.getEffectiveOOMThreshold(), 20);
+  EXPECT_FALSE(gcconf.getShouldReleaseUnused());
+  EXPECT_EQ(gcconf.getName(), "foo");
+  EXPECT_FALSE(gcconf.getAllocInYoung());
+
+  EXPECT_EQ(rtconf.getMaxNumRegisters(), 100);
+  EXPECT_FALSE(rtconf.getES6Symbol());
   EXPECT_TRUE(rtconf.getEnableSampledStats());
+  EXPECT_EQ(rtconf.getVMExperimentFlags(), 123);
 
   EXPECT_EQ(env.mathRandomSeed, 123);
   EXPECT_EQ(env.callsToDateNow.size(), 0);

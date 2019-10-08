@@ -44,6 +44,9 @@ class SynthTrace {
         const ::hermes::vm::MockedEnvironment &env,
         const ::hermes::vm::RuntimeConfig &conf)
         : trace(trace), env(env), conf(conf) {}
+
+    static const char *nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru);
+    static ::hermes::vm::ReleaseUnused releaseUnusedFromName(const char *name);
   };
 
   using ObjectID = uint64_t;

@@ -637,12 +637,87 @@ TEST_F(SynthTraceSerializationTest, EndExecHasRetval) {
           SynthTrace::EndExecJSRecord(dummyTime, SynthTrace::encodeNull())));
 }
 
-TEST_F(SynthTraceSerializationTest, FullTrace) {
+TEST_F(SynthTraceSerializationTest, TraceHeader) {
   const ::hermes::vm::RuntimeConfig conf;
   std::unique_ptr<TracingHermesRuntime> rt(
       makeTracingHermesRuntime(makeHermesRuntime(conf), conf));
 
   SynthTrace::ObjectID globalObjID = rt->getUniqueID(rt->global());
+
+  std::string result;
+  llvm::raw_string_ostream resultStream{result};
+  rt->writeTrace(resultStream);
+  resultStream.flush();
+
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  hermes::SourceErrorManager sm;
+  JSONParser parser{jsonFactory, result, sm};
+  auto optTrace = parser.parse();
+  ASSERT_TRUE(optTrace) << "Trace file is not valid JSON:\n" << result << "\n";
+
+  JSONObject *root = llvm::cast<JSONObject>(optTrace.getValue());
+  EXPECT_EQ(2, llvm::cast<JSONNumber>(root->at("version"))->getValue());
+  EXPECT_EQ(
+      globalObjID, llvm::cast<JSONNumber>(root->at("globalObjID"))->getValue());
+  // SHA-1 should be 40 characters long, and only hex digits.
+  std::string sourceHash =
+      llvm::cast<JSONString>(root->at("sourceHash"))->str();
+  EXPECT_EQ(sourceHash.length(), 40);
+  for (auto c : sourceHash) {
+    EXPECT_TRUE(hermes::oscompat::isxdigit(c));
+  }
+
+  JSONObject *rtConfig = llvm::cast<JSONObject>(root->at("runtimeConfig"));
+
+  JSONObject *gcConfig = llvm::cast<JSONObject>(rtConfig->at("gcConfig"));
+  EXPECT_EQ(
+      conf.getGCConfig().getMinHeapSize(),
+      llvm::cast<JSONNumber>(gcConfig->at("minHeapSize"))->getValue());
+  EXPECT_EQ(
+      conf.getGCConfig().getInitHeapSize(),
+      llvm::cast<JSONNumber>(gcConfig->at("initHeapSize"))->getValue());
+  EXPECT_EQ(
+      conf.getGCConfig().getMaxHeapSize(),
+      llvm::cast<JSONNumber>(gcConfig->at("maxHeapSize"))->getValue());
+  EXPECT_EQ(
+      conf.getGCConfig().getOccupancyTarget(),
+      llvm::cast<JSONNumber>(gcConfig->at("occupancyTarget"))->getValue());
+  EXPECT_EQ(
+      conf.getGCConfig().getEffectiveOOMThreshold(),
+      llvm::cast<JSONNumber>(gcConfig->at("effectiveOOMThreshold"))
+          ->getValue());
+  EXPECT_EQ(
+      conf.getGCConfig().getShouldReleaseUnused(),
+      SynthTrace::Printable::releaseUnusedFromName(
+          llvm::cast<JSONString>(gcConfig->at("shouldReleaseUnused"))
+              ->c_str()));
+  EXPECT_EQ(
+      conf.getGCConfig().getName(),
+      llvm::cast<JSONString>(gcConfig->at("name"))->str());
+  EXPECT_EQ(
+      conf.getGCConfig().getAllocInYoung(),
+      llvm::cast<JSONBoolean>(gcConfig->at("allocInYoung"))->getValue());
+
+  EXPECT_EQ(
+      conf.getMaxNumRegisters(),
+      llvm::cast<JSONNumber>(rtConfig->at("maxNumRegisters"))->getValue());
+  EXPECT_EQ(
+      conf.getES6Symbol(),
+      llvm::cast<JSONBoolean>(rtConfig->at("ES6Symbol"))->getValue());
+  EXPECT_EQ(
+      conf.getEnableSampledStats(),
+      llvm::cast<JSONBoolean>(rtConfig->at("enableSampledStats"))->getValue());
+  EXPECT_EQ(
+      conf.getVMExperimentFlags(),
+      llvm::cast<JSONNumber>(rtConfig->at("vmExperimentFlags"))->getValue());
+}
+
+TEST_F(SynthTraceSerializationTest, FullTrace) {
+  const ::hermes::vm::RuntimeConfig conf;
+  std::unique_ptr<TracingHermesRuntime> rt(
+      makeTracingHermesRuntime(makeHermesRuntime(conf), conf));
+
   SynthTrace::ObjectID objID;
   {
     auto obj = jsi::Object(*rt);
@@ -667,22 +742,6 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
 
   // Too verbose to check every key, so let llvm::cast do the checks.
   JSONObject *root = llvm::cast<JSONObject>(optTrace.getValue());
-  EXPECT_EQ(2, llvm::cast<JSONNumber>(root->at("version"))->getValue());
-  EXPECT_EQ(
-      globalObjID, llvm::cast<JSONNumber>(root->at("globalObjID"))->getValue());
-  // SHA-1 should be 40 characters long, and only hex digits.
-  std::string sourceHash =
-      llvm::cast<JSONString>(root->at("sourceHash"))->str();
-  EXPECT_EQ(sourceHash.length(), 40);
-  for (auto c : sourceHash) {
-    EXPECT_TRUE(hermes::oscompat::isxdigit(c));
-  }
-
-  JSONObject *rtConfig = llvm::cast<JSONObject>(root->at("runtimeConfig"));
-  JSONObject *gcConfig = llvm::cast<JSONObject>(rtConfig->at("gcConfig"));
-  EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("minHeapSize")));
-  EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("initHeapSize")));
-  EXPECT_TRUE(llvm::isa<JSONNumber>(gcConfig->at("maxHeapSize")));
 
   JSONObject *environment = llvm::cast<JSONObject>(root->at("env"));
   EXPECT_TRUE(llvm::isa<JSONNumber>(environment->at("mathRandomSeed")));
@@ -719,7 +778,6 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
   std::unique_ptr<TracingHermesRuntime> rt(
       makeTracingHermesRuntime(makeHermesRuntime(conf), conf));
 
-  SynthTrace::ObjectID globalObjID = rt->getUniqueID(rt->global());
   uint64_t dateNow = 0;
   uint64_t newDate = 0;
   std::string dateAsFunc;
@@ -751,28 +809,6 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
 
   // Too verbose to check every key, so let llvm::cast do the checks.
   JSONObject *root = llvm::cast<JSONObject>(optTrace.getValue());
-  EXPECT_EQ(2, llvm::cast<JSONNumber>(root->at("version"))->getValue());
-  EXPECT_EQ(
-      globalObjID, llvm::cast<JSONNumber>(root->at("globalObjID"))->getValue());
-  // SHA-1 should be 40 characters long, and only hex digits.
-  std::string sourceHash =
-      llvm::cast<JSONString>(root->at("sourceHash"))->str();
-  EXPECT_EQ(sourceHash.length(), 40);
-  for (auto c : sourceHash) {
-    EXPECT_TRUE(hermes::oscompat::isxdigit(c));
-  }
-
-  JSONObject *rtConfig = llvm::cast<JSONObject>(root->at("runtimeConfig"));
-  JSONObject *gcConfig = llvm::cast<JSONObject>(rtConfig->at("gcConfig"));
-  EXPECT_EQ(
-      conf.getGCConfig().getMinHeapSize(),
-      llvm::cast<JSONNumber>(gcConfig->at("minHeapSize"))->getValue());
-  EXPECT_EQ(
-      conf.getGCConfig().getInitHeapSize(),
-      llvm::cast<JSONNumber>(gcConfig->at("initHeapSize"))->getValue());
-  EXPECT_EQ(
-      conf.getGCConfig().getMaxHeapSize(),
-      llvm::cast<JSONNumber>(gcConfig->at("maxHeapSize"))->getValue());
 
   JSONObject *environment = llvm::cast<JSONObject>(root->at("env"));
   EXPECT_TRUE(llvm::isa<JSONNumber>(environment->at("mathRandomSeed")));

@@ -71,6 +71,8 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
 }
 
 ::hermes::vm::GCConfig getGCConfig(JSONObject *rtConfig) {
+  // This function should extract all fields from GCConfig that can affect
+  // performance metrics. Configs for debugging can be ignored.
   ::hermes::vm::GCConfig::Builder gcconf;
   auto *val = rtConfig->get("gcConfig");
   if (!val) {
@@ -89,6 +91,26 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   if (auto *sz = gcConfig->get("maxHeapSize")) {
     gcconf.withMaxHeapSize(getNumberAs<::hermes::vm::gcheapsize_t>(sz));
   }
+  if (auto *occupancy = gcConfig->get("occupancyTarget")) {
+    gcconf.withOccupancyTarget(getNumberAs<double>(occupancy));
+  }
+  if (auto *threshold = gcConfig->get("effectiveOOMThreshold")) {
+    gcconf.withEffectiveOOMThreshold(getNumberAs<unsigned>(threshold));
+  }
+  if (auto *shouldRelease = gcConfig->get("shouldReleaseUnused")) {
+    gcconf.withShouldReleaseUnused(SynthTrace::Printable::releaseUnusedFromName(
+        llvm::cast<JSONString>(shouldRelease)->c_str()));
+  }
+  if (auto *name = gcConfig->get("name")) {
+    gcconf.withName(llvm::cast<JSONString>(name)->str());
+  }
+  if (auto *allocInYoung = gcConfig->get("allocInYoung")) {
+    gcconf.withAllocInYoung(llvm::cast<JSONBoolean>(allocInYoung)->getValue());
+  }
+  if (auto *revertAtTTI = gcConfig->get("revertToYGAtTTI")) {
+    gcconf.withRevertToYGAtTTI(
+        llvm::cast<JSONBoolean>(revertAtTTI)->getValue());
+  }
   return gcconf.build();
 }
 
@@ -106,15 +128,18 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
 
   conf.withGCConfig(getGCConfig(rtConfig));
 
-  val = rtConfig->get("enableSampledStats");
-  if (!val) {
-    // Default to false if it isn't specified.
-    conf.withEnableSampledStats(false);
-  } else {
-    if (val->getKind() != JSONKind::Boolean) {
-      throw std::invalid_argument("enableSampledStats should be a boolean");
-    }
-    conf.withEnableSampledStats(llvm::cast<JSONBoolean>(val)->getValue());
+  if (auto *maxNumRegisters = rtConfig->get("maxNumRegisters")) {
+    conf.withMaxNumRegisters(getNumberAs<unsigned>(maxNumRegisters));
+  }
+  if (auto *symbol = rtConfig->get("ES6Symbol")) {
+    conf.withES6Symbol(llvm::cast<JSONBoolean>(symbol)->getValue());
+  }
+  if (auto *enableSampledStats = rtConfig->get("enableSampledStats")) {
+    conf.withEnableSampledStats(
+        llvm::cast<JSONBoolean>(enableSampledStats)->getValue());
+  }
+  if (auto *vmExperimentFlags = rtConfig->get("vmExperimentFlags")) {
+    conf.withVMExperimentFlags(getNumberAs<uint32_t>(vmExperimentFlags));
   }
 
   return conf.build();
