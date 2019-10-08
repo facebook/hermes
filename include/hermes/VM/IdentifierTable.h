@@ -90,6 +90,12 @@ class IdentifierTable {
     return getSymbolHandle(runtime, str, hermes::hashString(str));
   }
 
+  /// Given a UTF16 string \p str, if an equal string is already in the table,
+  /// return it as a StringPrimitive, otherwise return nullptr.
+  StringPrimitive *getExistingStringPrimitiveOrNull(
+      Runtime *runtime,
+      llvm::ArrayRef<char16_t> str);
+
   /// Register a lazy ASCII identifier from a bytecode module or as predefined
   /// identifier.
   /// This function should only be called during initialization of a module.

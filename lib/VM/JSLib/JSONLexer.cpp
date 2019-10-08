@@ -133,12 +133,19 @@ ExecutionStatus JSONLexer::scanString() {
   while (curCharPtr_ < bufferEnd_) {
     if (*curCharPtr_ == '"') {
       // End of string.
+      ++curCharPtr_;
+      // If the string exists in the identifier table, use that one.
+      if (auto existing =
+              runtime_->getIdentifierTable().getExistingStringPrimitiveOrNull(
+                  runtime_, tmpStorage.arrayRef())) {
+        token_.setString(runtime_->makeHandle<StringPrimitive>(existing));
+        return ExecutionStatus::RETURNED;
+      }
       auto strRes = StringPrimitive::create(runtime_, tmpStorage.arrayRef());
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       token_.setString(runtime_->makeHandle<StringPrimitive>(*strRes));
-      ++curCharPtr_;
       return ExecutionStatus::RETURNED;
     } else if (*curCharPtr_ <= '\u001F') {
       return error(u"U+0000 thru U+001F is not allowed in string");

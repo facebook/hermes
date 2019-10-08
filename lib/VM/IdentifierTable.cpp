@@ -347,6 +347,18 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
   return SymbolID::unsafeCreate(allocIDAndInsert(idx, cr->get()));
 }
 
+StringPrimitive *IdentifierTable::getExistingStringPrimitiveOrNull(
+    Runtime *runtime,
+    llvm::ArrayRef<char16_t> str) {
+  auto idx = hashTable_.lookupString(str, hashString(str));
+  if (!hashTable_.isValid(idx)) {
+    return nullptr;
+  }
+  // Use a handle since getStringPrim may need to materialize the string.
+  Handle<SymbolID> sym(runtime, SymbolID::unsafeCreate(hashTable_.get(idx)));
+  return getStringPrim(runtime, *sym);
+}
+
 template <typename T>
 SymbolID IdentifierTable::registerLazyIdentifierImpl(
     llvm::ArrayRef<T> str,
