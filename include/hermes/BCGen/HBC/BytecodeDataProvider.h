@@ -272,6 +272,10 @@ class BCProviderBase {
   /// soon.  Only forwards this information to the OS for buffers.
   virtual void willNeedStringTable() {}
 
+  /// Advise the provider that identifier translations are no longer needed.
+  /// Only forwards this information to the OS for buffers.
+  virtual void dontNeedIdentifierTranslations() {}
+
   /// Start tracking I/O (only implemented for buffers). Any access before this
   /// call (e.g. reading header to construct the provider) will not be recorded.
   virtual void startPageAccessTracker() {}
@@ -461,6 +465,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
   void adviseStringTableSequential() override;
   void adviseStringTableRandom() override;
   void willNeedStringTable() override;
+  void dontNeedIdentifierTranslations() override;
 
   void startPageAccessTracker() override;
 

@@ -291,6 +291,9 @@ void RuntimeModule::importStringIDMapMayAllocate() {
     stringIDMap_.push_back({});
     mapStringMayAllocate(s, 0, hashString(s));
   }
+
+  // Done with translations, so advise them out if possible.
+  bcProvider_->dontNeedIdentifierTranslations();
 }
 
 void RuntimeModule::initializeFunctionMap() {

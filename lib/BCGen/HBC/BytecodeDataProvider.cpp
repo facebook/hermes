@@ -461,6 +461,17 @@ void BCProviderFromBuffer::willNeedStringTable() {
   oscompat::vm_prefetch(start, prefetchLength);
 }
 
+void BCProviderFromBuffer::dontNeedIdentifierTranslations() {
+  auto start = reinterpret_cast<uintptr_t>(identifierTranslations_.begin());
+  auto end = reinterpret_cast<uintptr_t>(identifierTranslations_.end());
+  const size_t PS = oscompat::page_size();
+  start = llvm::alignTo(start, PS);
+  end = llvm::alignDown(end, PS);
+  if (start < end) {
+    oscompat::vm_unused(reinterpret_cast<void *>(start), end - start);
+  }
+}
+
 #undef ASSERT_BOUNDED
 #undef ASSERT_TOTAL_ARRAY_LEN
 
