@@ -11,6 +11,7 @@
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"
+#include "hermes/VM/Operations.h"
 
 #include <random>
 
@@ -812,6 +813,37 @@ hermesInternalGetCallStack(void *, Runtime *runtime, NativeArgs args) {
 }
 #endif // HERMESVM_EXCEPTION_ON_OOM
 
+#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+/// \code
+///   HermesInternal.toInteger = function (arg) {}
+/// \encode
+/// Converts arg to an integer
+CallResult<HermesValue>
+hermesInternalToInteger(void *, Runtime *runtime, NativeArgs args) {
+  return toInteger(runtime, args.getArgHandle(0));
+}
+
+/// \code
+///   HermesInternal.toLength function (arg) {}
+/// \encode
+/// Converts arg to an integer suitable for use as the length of an array-like
+/// object. Return value is an an integer in the range[0, 2^53 - 1].
+CallResult<HermesValue>
+hermesInternalToLength(void *, Runtime *runtime, NativeArgs args) {
+  return toLength(runtime, args.getArgHandle(0));
+}
+
+/// \code
+///   HermesInternal.toObject function (arg) {}
+/// \encode
+/// Converts arg to an object if possible.
+/// TypeError if arg is null or undefined.
+CallResult<HermesValue>
+hermesInternalToObject(void *, Runtime *runtime, NativeArgs args) {
+  return toObject(runtime, args.getArgHandle(0));
+}
+#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+
 Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   Handle<JSObject> intern = toHandle(runtime, JSObject::create(runtime));
 
@@ -836,7 +868,6 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
             constantDPF);
       };
 
-#ifdef HERMESVM_EXCEPTION_ON_OOM
   auto defineInternMethodAndSymbol =
       [&](const char *name, NativeFunctionPtr func, uint8_t count = 0) {
         ASCIIRef ref = createASCIIRef(name);
@@ -851,7 +882,9 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
             count,
             constantDPF);
       };
-#endif
+
+  // suppress unused-variable warning
+  (void)defineInternMethodAndSymbol;
 
   // HermesInternal function properties
   namespace P = Predefined;
@@ -872,6 +905,11 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
   defineInternMethod(P::exportAll, hermesInternalExportAll);
   defineInternMethod(P::exponentiationOperator, mathPow);
+#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+  defineInternMethodAndSymbol("toInteger", hermesInternalToInteger);
+  defineInternMethodAndSymbol("toLength", hermesInternalToLength);
+  defineInternMethodAndSymbol("toObject", hermesInternalToObject);
+#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 #ifdef HERMESVM_EXCEPTION_ON_OOM
   defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
 #endif // HERMESVM_EXCEPTION_ON_OOM

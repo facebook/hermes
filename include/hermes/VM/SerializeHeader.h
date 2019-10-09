@@ -22,7 +22,7 @@ constexpr uint32_t SD_MAGIC = 0xad082463;
 constexpr uint32_t SD_HEADER_VERSION = 1;
 
 /// Bump this version number up whenever NativeFunctions.def is changed.
-constexpr uint32_t NATIVE_FUNCTION_VERSION = 1;
+constexpr uint32_t NATIVE_FUNCTION_VERSION = 2;
 
 /// Serialize data header. Used to sanity check serialize data and make sure
 /// that serializer and deserializer are consistent.

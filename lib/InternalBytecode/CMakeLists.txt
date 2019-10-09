@@ -35,10 +35,16 @@ else()
   set(concatenate "type")
 endif()
 
+set(js_lib_sources
+  header.js
+  Number.js
+  footer.js
+  )
+
 add_custom_command(
   OUTPUT JSLib.js
-  COMMAND ${concatenate} Number.js > ${CMAKE_CURRENT_BINARY_DIR}/JSLib.js
-  DEPENDS Number.js
+  COMMAND ${concatenate} ${js_lib_sources} > ${CMAKE_CURRENT_BINARY_DIR}/JSLib.js
+  DEPENDS ${js_lib_sources}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
 )

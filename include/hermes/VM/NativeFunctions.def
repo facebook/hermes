@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the LICENSE
  * file in the root directory of this source tree.
  */
-// NATIVE_FUNCTION_VERSION = 1. Updated July 29th, 2019
+// NATIVE_FUNCTION_VERSION = 2. Updated Oct 07, 2019
 // Bump this version in SerializeHeader.h whenever we change this file.
 
 #ifndef NATIVE_FUNCTION
@@ -140,6 +140,13 @@ NATIVE_FUNCTION(hermesInternalGetInstrumentedStats)
 NATIVE_FUNCTION(hermesInternalGetRuntimeProperties)
 NATIVE_FUNCTION(hermesInternalGetTemplateObject)
 NATIVE_FUNCTION(hermesInternalGetWeakSize)
+
+#ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+NATIVE_FUNCTION(hermesInternalToInteger)
+NATIVE_FUNCTION(hermesInternalToLength)
+NATIVE_FUNCTION(hermesInternalToObject)
+#endif
+
 NATIVE_FUNCTION(hermesInternalTTIReached)
 NATIVE_FUNCTION(hermesInternalTTRCReached)
 
