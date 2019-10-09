@@ -8,6 +8,8 @@
 
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/Support/Base64vlq.h"
+#include "hermes/VM/Callable.h"
+#include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"
@@ -815,6 +817,48 @@ hermesInternalGetCallStack(void *, Runtime *runtime, NativeArgs args) {
 
 #ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 /// \code
+///   HermesInternal.executeCall = function (func, thisArg, ...params) {}
+/// \encode
+/// Invoke func with `this` context set to thisArg, and parameters param1,
+/// param2, and param3
+CallResult<HermesValue>
+hermesInternalExecuteCall(void *, Runtime *runtime, NativeArgs args) {
+  auto func = args.dyncastArg<Callable>(0);
+  if (!func) {
+    return runtime->raiseTypeError("Non-callable value passed to executeCall");
+  }
+
+  const unsigned offset = 2; // number of args before the params
+  unsigned numParam = args.getArgCount() - offset;
+  ScopedNativeCallFrame newFrame{runtime,
+                                 numParam,
+                                 func.getHermesValue(),
+                                 HermesValue::encodeUndefinedValue(),
+                                 args.getArg(1)};
+  if (LLVM_UNLIKELY(newFrame.overflowed()))
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+
+  for (unsigned i = 0; i < numParam; i++) {
+    newFrame->getArgRef(i) = args.getArg(i + offset);
+  }
+  return Callable::call(func, runtime);
+}
+
+/// \code
+///   HermesInternal.jsArraySetElementAt = function (array, index, val) {}
+/// \encode
+/// Set array[index] to val without triggering the setter.
+CallResult<HermesValue>
+hermesInternalJSArraySetElementAt(void *, Runtime *runtime, NativeArgs args) {
+  JSArray::setElementAt(
+      args.dyncastArg<ArrayImpl>(0),
+      runtime,
+      args.getArg(1).getDouble(),
+      args.getArgHandle(2));
+  return HermesValue::encodeUndefinedValue();
+}
+
+/// \code
 ///   HermesInternal.toInteger = function (arg) {}
 /// \encode
 /// Converts arg to an integer
@@ -906,6 +950,9 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(P::exportAll, hermesInternalExportAll);
   defineInternMethod(P::exponentiationOperator, mathPow);
 #ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+  defineInternMethodAndSymbol("executeCall", hermesInternalExecuteCall);
+  defineInternMethodAndSymbol(
+      "jsArraySetElementAt", hermesInternalJSArraySetElementAt);
   defineInternMethodAndSymbol("toInteger", hermesInternalToInteger);
   defineInternMethodAndSymbol("toLength", hermesInternalToLength);
   defineInternMethodAndSymbol("toObject", hermesInternalToObject);

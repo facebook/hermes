@@ -50,16 +50,10 @@ NATIVE_FUNCTION(arrayPrototypeIndexOf)
 NATIVE_FUNCTION(arrayPrototypeIterator)
 NATIVE_FUNCTION(arrayPrototypeJoin)
 NATIVE_FUNCTION(arrayPrototypeLastIndexOf)
-NATIVE_FUNCTION(arrayPrototypeMap)
 NATIVE_FUNCTION(arrayPrototypePop)
 NATIVE_FUNCTION(arrayPrototypePush)
 NATIVE_FUNCTION(arrayPrototypeReduce)
 NATIVE_FUNCTION(arrayPrototypeReduceRight)
-
-#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
-NATIVE_FUNCTION(arrayPrototypeReverse)
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
-
 NATIVE_FUNCTION(arrayPrototypeShift)
 NATIVE_FUNCTION(arrayPrototypeSlice)
 NATIVE_FUNCTION(arrayPrototypeSome)
@@ -68,6 +62,12 @@ NATIVE_FUNCTION(arrayPrototypeSplice)
 NATIVE_FUNCTION(arrayPrototypeToLocaleString)
 NATIVE_FUNCTION(arrayPrototypeToString)
 NATIVE_FUNCTION(arrayPrototypeUnshift)
+
+#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+NATIVE_FUNCTION(arrayPrototypeMap)
+NATIVE_FUNCTION(arrayPrototypeReverse)
+#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+
 NATIVE_FUNCTION(booleanConstructor)
 NATIVE_FUNCTION(booleanPrototypeToString)
 NATIVE_FUNCTION(booleanPrototypeValueOf)
@@ -146,6 +146,8 @@ NATIVE_FUNCTION(hermesInternalGetTemplateObject)
 NATIVE_FUNCTION(hermesInternalGetWeakSize)
 
 #ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+NATIVE_FUNCTION(hermesInternalExecuteCall)
+NATIVE_FUNCTION(hermesInternalJSArraySetElementAt)
 NATIVE_FUNCTION(hermesInternalToInteger)
 NATIVE_FUNCTION(hermesInternalToLength)
 NATIVE_FUNCTION(hermesInternalToObject)
