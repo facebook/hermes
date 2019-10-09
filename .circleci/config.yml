@@ -1,5 +1,16 @@
 version: 2.1
 
+# Many of these jobs include hacks and flags that restricts parallelism, and
+# re-try with less parallelism on failure.
+#
+# This is because CircleCI machines have a high CPU to RAM ratio. If left
+# unchecked, tools will start 36 jobs that fight over 68GB of apparently
+# overprovisioned RAM. The result is being slowed to a crawl until things OOM.
+# Even four jobs can be too many if those four happen to be large LLVM link
+# jobs. A serial retry is better than a flaky build, so that's what we do.
+#
+# Comments saying "see top comment" refer to this.
+
 orbs:
   win: circleci/windows-tools@0.0.4
 
@@ -17,6 +28,14 @@ workflows:
             - linux
             - macos
             - windows
+      - test-linux
+      - test-macos
+      - test-react-native-linux:
+          requires:
+            - npm
+      - test-react-native-windows:
+          requires:
+            - npm
 
 jobs:
   android:
@@ -37,11 +56,9 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y cmake ninja-build
             wait
-            # CircleCI machines advertise 36 cores but restrict memory.  It's
-            # annoying to configure each 'ninja' invocation, so just create a
-            # wrapper:
             sudo cp /usr/bin/ninja /usr/bin/ninja.real
-            printf '%s\n' '#!/bin/sh' 'exec ninja.real -j4 "$@"' | sudo tee /usr/bin/ninja
+            # See top comment
+            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
             ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.6.4111459/bin/ninja
       - run:
           name: Build LLVM
@@ -108,11 +125,9 @@ jobs:
           command: |
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
-            # CircleCI machines advertise 36 cores but restrict memory.  It's
-            # annoying to configure each 'ninja' invocation, so just create a
-            # wrapper:
             sudo cp /usr/bin/ninja /usr/bin/ninja.real
-            printf '%s\n' '#!/bin/sh' 'exec ninja.real -j4 "$@"' | sudo tee /usr/bin/ninja
+            # See top comment
+            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
       - run:
           name: Build LLVM
           command: |
@@ -144,6 +159,45 @@ jobs:
           root: /tmp/hermes/output/
           paths:
             - .
+
+  test-linux:
+    # execution-time-limit.js and sampling-profiler.js segfault in statically
+    # linked release mode, so this job is just a duplicate of the Linux job
+    # that builds in dynamically linked debug mode
+    docker:
+      - image: debian:stretch
+    environment:
+      - HERMES_WS_DIR: /tmp/hermes
+      - TERM: dumb
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            apt-get update
+            apt-get install -y \
+                sudo git openssh-client cmake ninja-build python \
+                build-essential libreadline-dev libicu-dev zip python3
+      - checkout
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+            sudo cp /usr/bin/ninja /usr/bin/ninja.real
+            # See top comment
+            printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
+      - run:
+          name: Build LLVM in debug mode
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/build_llvm.py llvm llvm_build
+      - run:
+          name: Run Hermes regression tests
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py
+            cd build
+            ninja check-hermes
 
   macos:
     macos:
@@ -194,6 +248,37 @@ jobs:
           paths:
             - .
 
+  test-macos:
+    # CheckedMalloc.Death fails in release mode, so build a debug version
+    macos:
+      xcode: "10.0.0"
+    environment:
+      - HERMES_WS_DIR: /tmp/hermes
+      - TERM: dumb
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            brew install cmake ninja
+      - run:
+          name: Set up workspace
+          command: |
+            mkdir -p "$HERMES_WS_DIR"
+            ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
+      - run:
+          name: Build LLVM in debug mode
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/build_llvm.py llvm llvm_build
+      - run:
+          name: Run MacOS regression tests in debug mode
+          command: |
+            cd "$HERMES_WS_DIR"
+            hermes/utils/build/configure.py
+            cd build
+            ninja check-hermes
+
   windows:
     executor:
       name: win/preview-default
@@ -243,7 +328,7 @@ jobs:
             $install = Start-Job {
               choco install visualstudio2019buildtools --package-parameters "--allWorkloads --includeRecommended --passive --locale en-US"
             }
-            $eta = 12
+            $eta = 15
             while ($install.State -eq "Running") {
                 Write-Host "Waiting for visualstudio2019buildtools. ETA $eta minutes..."
                 $install | Wait-Job -timeout 60
@@ -348,6 +433,9 @@ jobs:
           command: |
             cd npm
             cp hermes-engine-*.tgz /tmp/hermes/output
+            # Also copy the other packages for the sole purpose of not having
+            # to visit multiple jobs pages to download all release artifacts
+            cp hermes-cli-*.tar.gz /tmp/hermes/output
 
       - run:
           name: Checksum artifacts
@@ -365,3 +453,86 @@ jobs:
           root: /tmp/hermes/output
           paths:
             - .
+
+  test-react-native-linux:
+    docker:
+      - image: circleci/android:api-28-ndk
+    environment:
+      - TERM: dumb
+    steps:
+      - run:
+          name: Set up workspace and install dependencies
+          command: |
+            yes | sdkmanager "ndk-bundle"  &
+            sudo apt-get update
+            sudo apt-get install -y nodejs npm rsync
+            wait
+
+      - attach_workspace:
+          at: /tmp/hermes/input
+
+      - run:
+          name: Check out React Native tree
+          command: |
+            git clone https://github.com/facebook/react-native .
+
+      - run:
+          name: Install NPMs including new hermes-engine
+          command: |
+            npm install
+            npm install /tmp/hermes/input/hermes-engine-*.tgz
+
+      # Optimally we'd run the RN E2E tests, but they've been disabled for a
+      # while and have bitrotted. RNTester Release is the only thing that is
+      # continuously built for Android, so that's really the only thing we can
+      # reliably build at this time.
+      - run:
+          name: Build RNTester with Hermes in Release mode
+          command: |
+            # See top comment
+            ./gradlew -Pjobs=4 --max-workers=1 ":RNTester:android:app:assembleHermesRelease"
+
+
+  test-react-native-windows:
+    executor:
+      name: win/preview-default
+      shell: powershell.exe
+    environment:
+      - TERM: dumb
+    steps:
+      - run:
+          name: Set up workspace and install dependencies
+          command: |
+            # Install node 10 because 12.11.1 triggers a bug:
+            # https://github.com/facebook/react-native/issues/26598
+            choco install nodejs-lts
+            # The jdk11 choco package is broken as of 2019-10-02
+            choco install jdk8
+            choco install android-sdk
+            choco install python3
+            choco install vcredist2015
+            refreshenv
+            sdkmanager "ndk-bundle"
+
+      - attach_workspace:
+          at: c:\tmp\hermes\input
+
+      - run:
+          name: Check out React Native tree
+          command: |
+            git clone https://github.com/facebook/react-native .
+
+      - run:
+          name: Install NPMs including new hermes-engine
+          command: |
+            npm install
+            npm install (Get-Item c:\tmp\hermes\input\hermes-engine-*.tgz)
+
+      # RN e2e tests didn't run on Windows even when they worked, so just make
+      # sure we can build RNTester and invoke the Windows cli compiler.
+      - run:
+          name: Build RNTester with Hermes in Release mode
+          command: |
+            # Run without daemon, since it'll keep the job alive
+            .\gradlew --no-daemon ":RNTester:android:app:assembleHermesRelease"
+            if (-not $?) { throw "Failed to build RNTester" }

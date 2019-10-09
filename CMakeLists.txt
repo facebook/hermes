@@ -120,6 +120,9 @@ set(ANDROID_LINUX_PERF_PATH ""
   CACHE STRING
   "If buildling for Android, full path to <linux/perf_events.h>")
 
+set(HERMES_MSVC_MP ON CACHE STRING
+  "Enable /MP in MSVC for parallel builds")
+
 # On Android we need an ABI specific version of LLVM.
 # Unfortunately, the build system doesn't allow setting the
 # LLVM_BUILD_DIR per ABI, so we do it here instead.
@@ -319,6 +322,10 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4068")
   # C4201 nonstandard extension used: nameless struct/union
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4201")
+  # Parallelize build
+  if (HERMES_MSVC_MP)
+    add_definitions( /MP )
+  endif()
 endif()
 
 # Export a JSON file with the compilation commands that external tools can use
