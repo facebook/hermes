@@ -157,7 +157,12 @@ list(APPEND source_files
 # This can be (and is) implemented by code which uses rtti, and
 # therefore expects the base class to have typeinfo, so
 # HostModel.cpp must be compiled -frtti, unlike most of the VM.
-set_source_files_properties(HostModel.cpp PROPERTIES COMPILE_FLAGS -frtti)
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
+    "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  set_source_files_properties(HostModel.cpp PROPERTIES COMPILE_FLAGS -frtti)
+elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+  set_source_files_properties(HostModel.cpp PROPERTIES COMPILE_FLAGS /GR)
+endif()
 
 set(link_libs
   hermesInst

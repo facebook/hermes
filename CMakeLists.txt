@@ -320,6 +320,8 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   # C4068 unknown pragma
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4068")
+  # C4200 nonstandard extension used: zero-sized array in struct/union
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4200")
   # C4201 nonstandard extension used: nameless struct/union
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4201")
   # Parallelize build
