@@ -1578,6 +1578,7 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
 }
 
 std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
+  NoAllocScope noAlloc(this);
   std::string res;
   // Note that the order of iteration is youngest (leaf) frame to oldest.
   for (auto frame : getStackFrames()) {

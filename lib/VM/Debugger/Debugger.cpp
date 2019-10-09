@@ -243,11 +243,13 @@ ExecutionStatus Debugger::runDebugger(
         // and no allocations should occur until then.
         HermesValue conditionResult =
             evalInFrame(args, condition, state, &metadata);
+        NoAllocScope noAlloc(runtime_);
         if (metadata.isException) {
           // Ignore exceptions.
           // Cleanup is done by evalInFrame.
           return false;
         }
+        noAlloc.release();
         return toBoolean(conditionResult);
       };
 

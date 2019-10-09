@@ -430,6 +430,7 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
     } else if (argCount == 1) {
       if (auto *dateArg = dyn_vmcast<JSDate>(args.getArg(0))) {
         // No handle needed here because we just retrieve a double.
+        NoAllocScope noAlloc(runtime);
         finalDate = JSDate::getPrimitiveValue(dateArg, runtime).getNumber();
       } else {
         // Parse the argument if it's a string, else just convert to number.
