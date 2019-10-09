@@ -1,13 +1,12 @@
 version: 2.1
 
-# Many of these jobs include hacks and flags that restricts parallelism, and
-# re-try with less parallelism on failure.
+# The Linux jobs include hacks and flags that restricts parallelism, and re-try
+# with less parallelism on failure.
 #
-# This is because CircleCI machines have a high CPU to RAM ratio. If left
-# unchecked, tools will start 36 jobs that fight over 68GB of apparently
-# overprovisioned RAM. The result is being slowed to a crawl until things OOM.
-# Even four jobs can be too many if those four happen to be large LLVM link
-# jobs. A serial retry is better than a flaky build, so that's what we do.
+# This is because CircleCI Linux jobs have 2 CPUs and 4GB RAM allocated via
+# cgroups, but run on machines that advertise 36 CPUs and 68GB RAM. This means
+# that most build tools will spawn 36 jobs and quickly choke to death. Even
+# with just 4 jobs, 4GB may be too little, so we retry serially on failure.
 #
 # Comments saying "see top comment" refer to this.
 
@@ -226,8 +225,7 @@ jobs:
           command: |
             cd "$HERMES_WS_DIR"
             hermes/utils/build/configure.py --distribute
-            cd build_release
-            ninja github-cli-release
+            cmake --build ./build_release --target github-cli-release
       - run:
           name: Copy artifacts
           command: |
@@ -276,8 +274,7 @@ jobs:
           command: |
             cd "$HERMES_WS_DIR"
             hermes/utils/build/configure.py
-            cd build
-            ninja check-hermes
+            cmake --build ./build --target check-hermes
 
   windows:
     executor:
