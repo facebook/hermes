@@ -54,7 +54,7 @@ jobs:
             mkdir -p "$HERMES_WS_DIR" "$HERMES_WS_DIR/output"
             ln -sf "$PWD" "$HERMES_WS_DIR/hermes"
             sudo apt-get update
-            sudo apt-get install -y cmake ninja-build
+            sudo apt-get install -y cmake ninja-build libicu-dev
             wait
             sudo cp /usr/bin/ninja /usr/bin/ninja.real
             # See top comment
