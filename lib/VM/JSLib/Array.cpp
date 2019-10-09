@@ -75,6 +75,7 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       nullptr,
       arrayPrototypePush,
       1);
+#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineMethod(
       runtime,
       arrayPrototype,
@@ -82,6 +83,7 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       nullptr,
       arrayPrototypeReverse,
       0);
+#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineMethod(
       runtime,
       arrayPrototype,
@@ -1204,6 +1206,7 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
   return len.get();
 }
 
+#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 /// ES10.0 22.1.3.23.
 CallResult<HermesValue>
 arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
@@ -1328,6 +1331,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
 
   return O.getHermesValue();
 }
+#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
 CallResult<HermesValue>
 arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {

@@ -55,7 +55,11 @@ NATIVE_FUNCTION(arrayPrototypePop)
 NATIVE_FUNCTION(arrayPrototypePush)
 NATIVE_FUNCTION(arrayPrototypeReduce)
 NATIVE_FUNCTION(arrayPrototypeReduceRight)
+
+#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 NATIVE_FUNCTION(arrayPrototypeReverse)
+#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+
 NATIVE_FUNCTION(arrayPrototypeShift)
 NATIVE_FUNCTION(arrayPrototypeSlice)
 NATIVE_FUNCTION(arrayPrototypeSome)

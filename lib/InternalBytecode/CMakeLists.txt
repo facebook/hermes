@@ -38,8 +38,9 @@ endif()
 set(js_lib_sources
   header.js
   Number.js
+  Array.js
   footer.js
-  )
+)
 
 add_custom_command(
   OUTPUT JSLib.js
