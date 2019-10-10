@@ -113,20 +113,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      Predefined::getSymbolID(Predefined::indexOf),
-      nullptr,
-      arrayPrototypeIndexOf,
-      1);
-  defineMethod(
-      runtime,
-      arrayPrototype,
-      Predefined::getSymbolID(Predefined::lastIndexOf),
-      nullptr,
-      arrayPrototypeLastIndexOf,
-      1);
-  defineMethod(
-      runtime,
-      arrayPrototype,
       Predefined::getSymbolID(Predefined::every),
       nullptr,
       arrayPrototypeEvery,
@@ -218,6 +204,20 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       arrayPrototypeIterator,
       0);
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::indexOf),
+      nullptr,
+      arrayPrototypeIndexOf,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::lastIndexOf),
+      nullptr,
+      arrayPrototypeLastIndexOf,
+      1);
   defineMethod(
       runtime,
       arrayPrototype,
@@ -2054,111 +2054,6 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
   return newLen;
 }
 
-/// Used to help with indexOf and lastIndexOf.
-/// \p reverse true if searching in reverse (lastIndexOf), false otherwise.
-static inline CallResult<HermesValue>
-indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
-  GCScope gcScope(runtime);
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
-
-  auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double len = *lenRes;
-
-  // Relative index to start the search at.
-  auto intRes = toInteger(runtime, args.getArgHandle(1));
-  double n;
-  if (args.getArgCount() > 1) {
-    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    n = intRes->getNumber();
-    if (LLVM_UNLIKELY(n == 0)) {
-      // To handle the special case when n is -0, we need to make sure it's 0.
-      n = 0;
-    }
-  } else {
-    n = !reverse ? 0 : len - 1;
-  }
-
-  // Actual index to start the search at.
-  MutableHandle<> k{runtime};
-  if (!reverse) {
-    if (n >= 0) {
-      k = HermesValue::encodeDoubleValue(n);
-    } else {
-      // If len - abs(n) < 0, set k=0. Otherwise set k = len - abs(n).
-      k = HermesValue::encodeDoubleValue(std::max(len - std::abs(n), 0.0));
-    }
-  } else {
-    if (n >= 0) {
-      k = HermesValue::encodeDoubleValue(std::min(n, len - 1));
-    } else {
-      k = HermesValue::encodeDoubleValue(len - std::abs(n));
-    }
-  }
-
-  MutableHandle<JSObject> descObjHandle{runtime};
-
-  // Search for the element.
-  auto searchElement = args.getArgHandle(0);
-  auto marker = gcScope.createMarker();
-  while (true) {
-    gcScope.flushToMarker(marker);
-    // Check that we're not done yet.
-    if (!reverse) {
-      if (k->getDouble() >= len) {
-        break;
-      }
-    } else {
-      if (k->getDouble() < 0) {
-        break;
-      }
-    }
-    ComputedPropertyDescriptor desc;
-    JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, desc);
-    if (descObjHandle) {
-      // kPresent is true, see if it's the element we're looking for.
-      if ((propRes = JSObject::getComputedPropertyValue(
-               O, runtime, descObjHandle, desc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      auto elementK = propRes.getValue();
-      if (strictEqualityTest(searchElement.get(), elementK)) {
-        return k.get();
-      }
-    }
-    // Update the index based on the direction of the search.
-    k = HermesValue::encodeDoubleValue(k->getDouble() + (reverse ? -1 : 1));
-  }
-
-  // Not found, return -1.
-  return HermesValue::encodeDoubleValue(-1);
-}
-
-CallResult<HermesValue>
-arrayPrototypeIndexOf(void *, Runtime *runtime, NativeArgs args) {
-  return indexOfHelper(runtime, args, false);
-}
-
-CallResult<HermesValue>
-arrayPrototypeLastIndexOf(void *, Runtime *runtime, NativeArgs args) {
-  return indexOfHelper(runtime, args, true);
-}
-
 /// Helper function for every/some.
 /// \param every true if calling every(), false if calling some().
 static inline CallResult<HermesValue>
@@ -3013,6 +2908,111 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
 }
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+/// Used to help with indexOf and lastIndexOf.
+/// \p reverse true if searching in reverse (lastIndexOf), false otherwise.
+static inline CallResult<HermesValue>
+indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
+  GCScope gcScope(runtime);
+  auto objRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
+
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double len = *lenRes;
+
+  // Relative index to start the search at.
+  auto intRes = toInteger(runtime, args.getArgHandle(1));
+  double n;
+  if (args.getArgCount() > 1) {
+    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    n = intRes->getNumber();
+    if (LLVM_UNLIKELY(n == 0)) {
+      // To handle the special case when n is -0, we need to make sure it's 0.
+      n = 0;
+    }
+  } else {
+    n = !reverse ? 0 : len - 1;
+  }
+
+  // Actual index to start the search at.
+  MutableHandle<> k{runtime};
+  if (!reverse) {
+    if (n >= 0) {
+      k = HermesValue::encodeDoubleValue(n);
+    } else {
+      // If len - abs(n) < 0, set k=0. Otherwise set k = len - abs(n).
+      k = HermesValue::encodeDoubleValue(std::max(len - std::abs(n), 0.0));
+    }
+  } else {
+    if (n >= 0) {
+      k = HermesValue::encodeDoubleValue(std::min(n, len - 1));
+    } else {
+      k = HermesValue::encodeDoubleValue(len - std::abs(n));
+    }
+  }
+
+  MutableHandle<JSObject> descObjHandle{runtime};
+
+  // Search for the element.
+  auto searchElement = args.getArgHandle(0);
+  auto marker = gcScope.createMarker();
+  while (true) {
+    gcScope.flushToMarker(marker);
+    // Check that we're not done yet.
+    if (!reverse) {
+      if (k->getDouble() >= len) {
+        break;
+      }
+    } else {
+      if (k->getDouble() < 0) {
+        break;
+      }
+    }
+    ComputedPropertyDescriptor desc;
+    JSObject::getComputedPrimitiveDescriptor(
+        O, runtime, k, descObjHandle, desc);
+    if (descObjHandle) {
+      // kPresent is true, see if it's the element we're looking for.
+      if ((propRes = JSObject::getComputedPropertyValue(
+               O, runtime, descObjHandle, desc)) ==
+          ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto elementK = propRes.getValue();
+      if (strictEqualityTest(searchElement.get(), elementK)) {
+        return k.get();
+      }
+    }
+    // Update the index based on the direction of the search.
+    k = HermesValue::encodeDoubleValue(k->getDouble() + (reverse ? -1 : 1));
+  }
+
+  // Not found, return -1.
+  return HermesValue::encodeDoubleValue(-1);
+}
+
+CallResult<HermesValue>
+arrayPrototypeIndexOf(void *, Runtime *runtime, NativeArgs args) {
+  return indexOfHelper(runtime, args, false);
+}
+
+CallResult<HermesValue>
+arrayPrototypeLastIndexOf(void *, Runtime *runtime, NativeArgs args) {
+  return indexOfHelper(runtime, args, true);
+}
+
 CallResult<HermesValue>
 arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
