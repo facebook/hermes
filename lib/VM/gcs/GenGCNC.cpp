@@ -1863,39 +1863,33 @@ void GenGC::sizeDiagnosticCensus() {
         "\t\t%-25s : %'10" PRIdPTR " [%'10" PRIdPTR " B | %4.1f%%]",
         "\t\t\t%-25s : %'10" PRIdPTR " [%'10" PRIdPTR " B | %4.1f%%]"};
 
-    void rootsDiagnosticFrame(size_t bytesHV, size_t bytesGCPointer) const {
+    void rootsDiagnosticFrame() const {
       // Use this to print commas on large numbers
       char *currentLocale = std::setlocale(LC_NUMERIC, nullptr);
       std::setlocale(LC_NUMERIC, "");
 
-      size_t rootSize = hv.count * bytesHV + numPointer * bytesGCPointer +
-          numSymbol * sizeof(SymbolID);
-      hermesLog(
-          "HermesGC",
-          "Root size with %" PRIdPTR "-byte GCPointer: %'7" PRIdPTR " B",
-          bytesGCPointer,
-          rootSize);
+      size_t rootSize = hv.count * sizeof(HermesValue) +
+          numPointer * sizeof(GCPointerBase) + numSymbol * sizeof(SymbolID);
+      hermesLog("HermesGC", "Root size: %'7" PRIdPTR " B", rootSize);
 
-      hermesValueDiagnostic(bytesHV, rootSize);
-      gcPointerDiagnostic(bytesGCPointer, rootSize);
+      hermesValueDiagnostic(rootSize);
+      gcPointerDiagnostic(rootSize);
       symbolDiagnostic(rootSize);
 
       std::setlocale(LC_NUMERIC, currentLocale);
     }
 
-    void sizeDiagnosticFrame(
-        size_t bytesHV,
-        size_t bytesGCPointer,
-        size_t heapSize) const {
+    void sizeDiagnosticFrame(size_t heapSize) const {
       // Use this to print commas on large numbers
       char *currentLocale = std::setlocale(LC_NUMERIC, nullptr);
       std::setlocale(LC_NUMERIC, "");
 
+      hermesLog("HermesGC", "Heap size: %'7" PRIdPTR " B", heapSize);
+      hermesLog("HermesGC", "\tTotal cells: %'7" PRIdPTR, numCell);
       hermesLog(
           "HermesGC",
-          "Heap size with %" PRIdPTR "-byte GCPointer: %'7" PRIdPTR " B",
-          bytesGCPointer,
-          heapSize);
+          "\tNum variable size cells: %'7" PRIdPTR,
+          numVariableSizedObject);
 
       // In theory should use sizeof(VariableSizeRuntimeCell), but that includes
       // padding sometimes. To be conservative, use the field it contains
@@ -1911,8 +1905,8 @@ void GenGC::sizeDiagnosticCensus() {
           headerSize,
           getPercent(headerSize, heapSize));
 
-      hermesValueDiagnostic(bytesHV, heapSize);
-      gcPointerDiagnostic(bytesGCPointer, heapSize);
+      hermesValueDiagnostic(heapSize);
+      gcPointerDiagnostic(heapSize);
       symbolDiagnostic(heapSize);
 
       {
@@ -1963,8 +1957,8 @@ void GenGC::sizeDiagnosticCensus() {
         }
       }
 
-      size_t leftover = heapSize - (hv.count * bytesHV) -
-          (numPointer * bytesGCPointer) - (asciiStr.totalChars * 2) -
+      size_t leftover = heapSize - (hv.count * sizeof(HermesValue)) -
+          (numPointer * sizeof(GCPointerBase)) - (asciiStr.totalChars * 2) -
           utf16Str.totalChars - headerSize;
       hermesLog(
           "HermesGC",
@@ -1978,7 +1972,8 @@ void GenGC::sizeDiagnosticCensus() {
     }
 
    private:
-    void hermesValueDiagnostic(size_t bytesHV, size_t heapSize) const {
+    void hermesValueDiagnostic(size_t heapSize) const {
+      constexpr size_t bytesHV = sizeof(HermesValue);
       hermesLog(
           "HermesGC",
           fmts[0],
@@ -2094,14 +2089,14 @@ void GenGC::sizeDiagnosticCensus() {
           getPercent(hv.numObject, hv.count));
     }
 
-    void gcPointerDiagnostic(size_t bytesGCPointer, size_t heapSize) const {
+    void gcPointerDiagnostic(size_t heapSize) const {
       hermesLog(
           "HermesGC",
           fmts[0],
           "GCPointer",
           numPointer,
-          numPointer * bytesGCPointer,
-          getPercent(numPointer * bytesGCPointer, heapSize));
+          numPointer * sizeof(GCPointerBase),
+          getPercent(numPointer * sizeof(GCPointerBase), heapSize));
     }
 
     void symbolDiagnostic(size_t heapSize) const {
@@ -2195,22 +2190,11 @@ void GenGC::sizeDiagnosticCensus() {
     }
   };
 
-  const size_t ogBytesHV = 8;
-  const size_t normalGCPointerSize = sizeof(void *);
-  const size_t bigGCPointerSize = sizeof(uint64_t);
-  const size_t smallGCPointerSize = sizeof(uint32_t);
-  const size_t oppositeGCPointerSize = normalGCPointerSize == bigGCPointerSize
-      ? smallGCPointerSize
-      : bigGCPointerSize;
-  const size_t ogHeapSize = this->used();
-
-  hermesLog(
-      "HermesGC", "GCPointers are %" PRIdPTR "-bytes long", sizeof(void *));
   hermesLog("HermesGC", "%s:", "Roots");
   HeapSizeDiagnosticAcceptor rootAcceptor;
   DroppingAcceptor<HeapSizeDiagnosticAcceptor> namedRootAcceptor{rootAcceptor};
   markRoots(namedRootAcceptor, /* markLongLived */ true);
-  rootAcceptor.diagnostic.rootsDiagnosticFrame(ogBytesHV, normalGCPointerSize);
+  rootAcceptor.diagnostic.rootsDiagnosticFrame();
 
   hermesLog("HermesGC", "%s:", "Heap contents");
   HeapSizeDiagnosticAcceptor acceptor;
@@ -2243,14 +2227,7 @@ void GenGC::sizeDiagnosticCensus() {
     }
   });
 
-  acceptor.diagnostic.sizeDiagnosticFrame(
-      ogBytesHV, normalGCPointerSize, ogHeapSize);
-  acceptor.diagnostic.sizeDiagnosticFrame(
-      ogBytesHV,
-      oppositeGCPointerSize,
-      // Adjust the heap size to account for a different GCPointer.
-      ogHeapSize - acceptor.diagnostic.numPointer * normalGCPointerSize +
-          acceptor.diagnostic.numPointer * oppositeGCPointerSize);
+  acceptor.diagnostic.sizeDiagnosticFrame(used());
 }
 
 void GenGC::oomDetail(std::error_code reason) {
