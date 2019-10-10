@@ -326,6 +326,13 @@ class HiddenClass final : public GCCell {
     forInCache_ = nullptr;
   }
 
+  /// Reset the property map, unless this class is in dictionary mode.
+  /// May be called by the GC for any HiddenClass not in a Handle.
+  void clearPropertyMap() {
+    if (!isDictionary())
+      propertyMap_ = nullptr;
+  }
+
   /// An opaque class representing a reference to a valid property in the
   /// property map.
   using PropertyPos = DictPropertyMap::PropertyPos;
@@ -560,6 +567,8 @@ class HiddenClass final : public GCCell {
   /// parent_->parent_->symbolID_ and so on (in reverse order).
   /// It is constructed lazily when needed, or is "stolen" from the parent class
   /// when a transition is performed from the parent class to this one.
+  ///
+  /// NOTE: May be cleared by the GC for any HiddenClass not in a Handle.
   GCPointer<DictPropertyMap> propertyMap_{};
 
   /// This hash table encodes the transitions from this class to child classes

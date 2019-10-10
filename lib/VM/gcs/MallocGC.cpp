@@ -11,6 +11,7 @@
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
+#include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include "llvm/Support/Debug.h"
@@ -204,6 +205,13 @@ void MallocGC::checkWellFormed() {
     GCBase::markCell(cell, this, acceptor);
   }
 }
+
+void MallocGC::clearUnmarkedPropertyMaps() {
+  for (CellHeader *header : pointers_)
+    if (!header->isMarked())
+      if (auto hc = dyn_vmcast<HiddenClass>(header->data()))
+        hc->clearPropertyMap();
+}
 #endif
 
 void MallocGC::collect() {
@@ -225,6 +233,9 @@ void MallocGC::collect() {
     MarkingAcceptor acceptor(*this);
     DroppingAcceptor<MarkingAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);
+#ifdef HERMES_SLOW_DEBUG
+    clearUnmarkedPropertyMaps();
+#endif
     while (!acceptor.worklist_.empty()) {
       CellHeader *header = acceptor.worklist_.back();
       acceptor.worklist_.pop_back();

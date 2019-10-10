@@ -301,6 +301,9 @@ class GCGeneration {
   /// and returning the malloc memory.
   uint64_t mallocSizeFromFinalizerList() const;
 
+  /// For each unmarked HiddenClass, reset its property map if possible.
+  void clearUnmarkedPropertyMaps();
+
   /// Returns a reference to the generation's allocation context.
   inline AllocContext &allocContext();
   inline const AllocContext &allocContext() const;

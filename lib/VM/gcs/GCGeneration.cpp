@@ -56,6 +56,13 @@ uint64_t GCGeneration::mallocSizeFromFinalizerList() const {
   return mallocSize;
 }
 
+void GCGeneration::clearUnmarkedPropertyMaps() {
+  for (auto cell : cellsWithFinalizers())
+    if (!AlignedHeapSegment::getCellMarkBit(cell))
+      if (auto hc = dyn_vmcast<HiddenClass>(cell))
+        hc->clearPropertyMap();
+}
+
 #ifdef HERMES_SLOW_DEBUG
 void GCGeneration::checkFinalizableObjectsListWellFormed() const {
   for (GCCell *cell : cellsWithFinalizers()) {

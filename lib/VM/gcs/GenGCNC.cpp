@@ -557,6 +557,13 @@ void GenGC::markPhase() {
     PerfSection fullGCMarkRootsSystraceRegion("fullGCMarkRoots");
     markRoots(nameAcceptor, /*markLongLived*/ true);
   }
+
+  // Clear property maps of hidden classes, to reduce memory usage. But exclude
+  // any classes that were marked as roots above, to simplify the Handle-based
+  // implementation of HiddenClass.
+  youngGen_.clearUnmarkedPropertyMaps();
+  oldGen_.clearUnmarkedPropertyMaps();
+
   auto completeMarkingStart = steady_clock::now();
   {
     PerfSection fullGCCompleteMarkingSystraceRegion("fullGCCompleteMarking");

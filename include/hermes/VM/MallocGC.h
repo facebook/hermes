@@ -262,6 +262,7 @@ class MallocGC final : public GCBase {
  private:
 #ifdef HERMES_SLOW_DEBUG
   void checkWellFormed();
+  void clearUnmarkedPropertyMaps();
 #endif
 
   /// Initialize a cell with the required basic data for any cell.

@@ -857,11 +857,15 @@ void HiddenClass::initializeMissingPropertyMap(
   using MapEntry = std::pair<SymbolID, PropertyFlags>;
   llvm::SmallVector<MapEntry, 4> entries;
   entries.reserve(selfHandle->numProperties_);
-  for (auto *cur = *selfHandle; cur->numProperties_ > 0;
-       cur = cur->parent_.get(runtime)) {
-    auto tmpFlags = cur->propertyFlags_;
-    tmpFlags.flagsTransition = 0;
-    entries.emplace_back(cur->symbolID_, tmpFlags);
+  {
+    // Walk chain of parents using raw pointers.
+    NoAllocScope _(runtime);
+    for (auto *cur = *selfHandle; cur->numProperties_ > 0;
+         cur = cur->parent_.get(runtime)) {
+      auto tmpFlags = cur->propertyFlags_;
+      tmpFlags.flagsTransition = 0;
+      entries.emplace_back(cur->symbolID_, tmpFlags);
+    }
   }
 
   assert(
@@ -899,6 +903,8 @@ void HiddenClass::initializeMissingPropertyMap(
 void HiddenClass::stealPropertyMapFromParent(
     Handle<HiddenClass> selfHandle,
     Runtime *runtime) {
+  // Most of this method uses raw pointers.
+  NoAllocScope noAlloc(runtime);
   auto *self = *selfHandle;
   assert(
       self->parent_ && self->parent_.get(runtime)->propertyMap_ &&
@@ -926,26 +932,28 @@ void HiddenClass::stealPropertyMapFromParent(
         "new prop transition");
 
     // Create a descriptor for our property.
-    NamedPropertyDescriptor desc{selfHandle->propertyFlags_,
-                                 selfHandle->numProperties_ - 1};
+    NamedPropertyDescriptor desc{self->propertyFlags_,
+                                 self->numProperties_ - 1};
+    // Return to handle mode to add the property.
+    noAlloc.release();
     addToPropertyMap(selfHandle, runtime, selfHandle->symbolID_, desc);
-  } else {
-    // Our class is updating the flags of an existing property. So we need
-    // to find it and update it.
-
-    assert(
-        self->numProperties_ == self->propertyMap_.get(runtime)->size() &&
-        "propertyMap->size() must match HiddenClass::numProperties in "
-        "flag update transition");
-
-    auto pos =
-        DictPropertyMap::find(self->propertyMap_.get(runtime), self->symbolID_);
-    assert(pos && "property must exist in flag update transition");
-    auto tmpFlags = self->propertyFlags_;
-    tmpFlags.flagsTransition = 0;
-    DictPropertyMap::getDescriptorPair(self->propertyMap_.get(runtime), *pos)
-        ->second.flags = tmpFlags;
+    return;
   }
+  // Our class is updating the flags of an existing property. So we need
+  // to find it and update it.
+
+  assert(
+      self->numProperties_ == self->propertyMap_.get(runtime)->size() &&
+      "propertyMap->size() must match HiddenClass::numProperties in "
+      "flag update transition");
+
+  auto pos =
+      DictPropertyMap::find(self->propertyMap_.get(runtime), self->symbolID_);
+  assert(pos && "property must exist in flag update transition");
+  auto tmpFlags = self->propertyFlags_;
+  tmpFlags.flagsTransition = 0;
+  DictPropertyMap::getDescriptorPair(self->propertyMap_.get(runtime), *pos)
+      ->second.flags = tmpFlags;
 }
 
 } // namespace vm
