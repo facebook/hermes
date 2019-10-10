@@ -113,20 +113,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      Predefined::getSymbolID(Predefined::every),
-      nullptr,
-      arrayPrototypeEvery,
-      1);
-  defineMethod(
-      runtime,
-      arrayPrototype,
-      Predefined::getSymbolID(Predefined::some),
-      nullptr,
-      arrayPrototypeSome,
-      1);
-  defineMethod(
-      runtime,
-      arrayPrototype,
       Predefined::getSymbolID(Predefined::forEach),
       nullptr,
       arrayPrototypeForEach,
@@ -217,6 +203,20 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::lastIndexOf),
       nullptr,
       arrayPrototypeLastIndexOf,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::every),
+      nullptr,
+      arrayPrototypeEvery,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::some),
+      nullptr,
+      arrayPrototypeSome,
       1);
   defineMethod(
       runtime,
@@ -2054,100 +2054,6 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
   return newLen;
 }
 
-/// Helper function for every/some.
-/// \param every true if calling every(), false if calling some().
-static inline CallResult<HermesValue>
-everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
-  GCScope gcScope(runtime);
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
-
-  auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  uint64_t len = *intRes;
-
-  auto callbackFn = args.dyncastArg<Callable>(0);
-  if (!callbackFn) {
-    return runtime->raiseTypeError(
-        "Array.prototype.every() requires a callable argument");
-  }
-
-  // Index to check the callback on.
-  MutableHandle<> k{runtime, HermesValue::encodeDoubleValue(0)};
-
-  // Value at index k;
-  MutableHandle<JSObject> descObjHandle{runtime};
-  MutableHandle<> kValue{runtime};
-
-  // Loop through and run the callback.
-  auto marker = gcScope.createMarker();
-  while (k->getDouble() < len) {
-    gcScope.flushToMarker(marker);
-
-    ComputedPropertyDescriptor desc;
-    JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, desc);
-
-    if (descObjHandle) {
-      // kPresent is true, call the callback on the kth element.
-      if ((propRes = JSObject::getComputedPropertyValue(
-               O, runtime, descObjHandle, desc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      kValue = propRes.getValue();
-      auto callRes = Callable::executeCall3(
-          callbackFn,
-          runtime,
-          args.getArgHandle(1),
-          kValue.get(),
-          k.get(),
-          O.getHermesValue());
-      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      auto testResult = *callRes;
-      if (every) {
-        // Done if one is false.
-        if (!toBoolean(testResult)) {
-          return HermesValue::encodeBoolValue(false);
-        }
-      } else {
-        // Done if one is true.
-        if (toBoolean(testResult)) {
-          return HermesValue::encodeBoolValue(true);
-        }
-      }
-    }
-
-    k = HermesValue::encodeDoubleValue(k->getDouble() + 1);
-  }
-
-  // If we're looking for every, then we finished without returning true.
-  // If we're looking for some, then we finished without returning false.
-  return HermesValue::encodeBoolValue(every);
-}
-
-CallResult<HermesValue>
-arrayPrototypeEvery(void *, Runtime *runtime, NativeArgs args) {
-  return everySomeHelper(runtime, args, true);
-}
-
-CallResult<HermesValue>
-arrayPrototypeSome(void *, Runtime *runtime, NativeArgs args) {
-  return everySomeHelper(runtime, args, false);
-}
-
 inline CallResult<HermesValue>
 arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
@@ -3011,6 +2917,100 @@ arrayPrototypeIndexOf(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 arrayPrototypeLastIndexOf(void *, Runtime *runtime, NativeArgs args) {
   return indexOfHelper(runtime, args, true);
+}
+
+/// Helper function for every/some.
+/// \param every true if calling every(), false if calling some().
+static inline CallResult<HermesValue>
+everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
+  GCScope gcScope(runtime);
+  auto objRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
+
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint64_t len = *intRes;
+
+  auto callbackFn = args.dyncastArg<Callable>(0);
+  if (!callbackFn) {
+    return runtime->raiseTypeError(
+        "Array.prototype.every() requires a callable argument");
+  }
+
+  // Index to check the callback on.
+  MutableHandle<> k{runtime, HermesValue::encodeDoubleValue(0)};
+
+  // Value at index k;
+  MutableHandle<JSObject> descObjHandle{runtime};
+  MutableHandle<> kValue{runtime};
+
+  // Loop through and run the callback.
+  auto marker = gcScope.createMarker();
+  while (k->getDouble() < len) {
+    gcScope.flushToMarker(marker);
+
+    ComputedPropertyDescriptor desc;
+    JSObject::getComputedPrimitiveDescriptor(
+        O, runtime, k, descObjHandle, desc);
+
+    if (descObjHandle) {
+      // kPresent is true, call the callback on the kth element.
+      if ((propRes = JSObject::getComputedPropertyValue(
+               O, runtime, descObjHandle, desc)) ==
+          ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      kValue = propRes.getValue();
+      auto callRes = Callable::executeCall3(
+          callbackFn,
+          runtime,
+          args.getArgHandle(1),
+          kValue.get(),
+          k.get(),
+          O.getHermesValue());
+      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto testResult = *callRes;
+      if (every) {
+        // Done if one is false.
+        if (!toBoolean(testResult)) {
+          return HermesValue::encodeBoolValue(false);
+        }
+      } else {
+        // Done if one is true.
+        if (toBoolean(testResult)) {
+          return HermesValue::encodeBoolValue(true);
+        }
+      }
+    }
+
+    k = HermesValue::encodeDoubleValue(k->getDouble() + 1);
+  }
+
+  // If we're looking for every, then we finished without returning true.
+  // If we're looking for some, then we finished without returning false.
+  return HermesValue::encodeBoolValue(every);
+}
+
+CallResult<HermesValue>
+arrayPrototypeEvery(void *, Runtime *runtime, NativeArgs args) {
+  return everySomeHelper(runtime, args, true);
+}
+
+CallResult<HermesValue>
+arrayPrototypeSome(void *, Runtime *runtime, NativeArgs args) {
+  return everySomeHelper(runtime, args, false);
 }
 
 CallResult<HermesValue>
