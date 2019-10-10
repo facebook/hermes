@@ -405,7 +405,11 @@ void YoungGen::collect() {
   resetNumAllHiddenClasses();
 #endif // !NDEBUG
 
-  ygCollection.recordGCStats(sizeDirect(), &gc_->youngGenCollectionCumStats_);
+  ygCollection.recordGCStats(
+      sizeDirect(),
+      youngGenUsedBefore,
+      usedDirect(),
+      &gc_->youngGenCollectionCumStats_);
 
   markOldToYoungSecs_ +=
       GCBase::clockDiffSeconds(markOldToYoungStart, markRootsStart);

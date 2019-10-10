@@ -215,6 +215,7 @@ void MallocGC::collect() {
 #endif
   const auto wallStart = steady_clock::now();
   const auto cpuStart = oscompat::thread_cpu_time();
+  auto allocatedBefore = allocatedBytes_;
 
   resetStats();
 
@@ -315,7 +316,12 @@ void MallocGC::collect() {
 
   double wallElapsedSecs = GCBase::clockDiffSeconds(wallStart, wallEnd);
   double cpuElapsedSecs = GCBase::clockDiffSeconds(cpuStart, cpuEnd);
-  recordGCStats(wallElapsedSecs, cpuElapsedSecs, allocatedBytes_);
+  recordGCStats(
+      wallElapsedSecs,
+      cpuElapsedSecs,
+      allocatedBytes_,
+      allocatedBefore,
+      allocatedBytes_);
   checkTripwire(allocatedBytes_, wallEnd);
 }
 

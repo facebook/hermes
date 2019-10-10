@@ -377,7 +377,8 @@ void GenGC::collect(bool canEffectiveOOM) {
     const unsigned numAllocatedObjectsBefore =
         recordStatsNC(sweepResult.compactionResult);
 
-    fullCollection.recordGCStats(sizeDirect(), &fullCollectionCumStats_);
+    fullCollection.recordGCStats(
+        sizeDirect(), usedBefore, usedAfter, &fullCollectionCumStats_);
 
     fullCollection.addArg("fullGCUsedAfter", usedAfter);
     fullCollection.addArg("fullGCUsedAfterYG", usedAfterYG);
@@ -1655,6 +1656,7 @@ GenGC::CollectionSection::CollectionSection(GenGC *gc, const char *name)
       cycle_(gc),
       wallStart_(steady_clock::now()),
       cpuStart_(oscompat::thread_cpu_time()),
+      gcUsedBefore_(gc->usedDirect()),
       yielder_(gc) {
 #ifdef HERMES_SLOW_DEBUG
   gc_->checkWellFormedHeap();
@@ -1694,6 +1696,8 @@ GenGC::CollectionSection::~CollectionSection() {
 
 void GenGC::CollectionSection::recordGCStats(
     size_t regionSize,
+    size_t usedBefore,
+    size_t usedAfter,
     CumulativeHeapStats *regionStats) {
   const TimePoint wallEnd = steady_clock::now();
   wallElapsedSecs_ = GCBase::clockDiffSeconds(wallStart_, wallEnd);
@@ -1704,10 +1708,20 @@ void GenGC::CollectionSection::recordGCStats(
   addArgD("gcCPUTime", cpuElapsedSecs_);
 
   // Record as an overall collection.
-  gc_->recordGCStats(wallElapsedSecs_, cpuElapsedSecs_, gc_->sizeDirect());
+  gc_->recordGCStats(
+      wallElapsedSecs_,
+      cpuElapsedSecs_,
+      gc_->sizeDirect(),
+      gcUsedBefore_,
+      gc_->usedDirect());
   // Also record as a region-specific collection.
   gc_->recordGCStats(
-      wallElapsedSecs_, cpuElapsedSecs_, regionSize, regionStats);
+      wallElapsedSecs_,
+      cpuElapsedSecs_,
+      regionSize,
+      usedBefore,
+      usedAfter,
+      regionStats);
 
   LLVM_DEBUG(
       dbgs() << "End garbage collection. numCollected="

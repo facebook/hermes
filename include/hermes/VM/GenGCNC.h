@@ -567,15 +567,22 @@ class GenGC final : public GCBase {
     /// for young gen collections, and the entire heap for full collections).
     ///
     /// \p regionSize The size of the region after the last GC.
+    /// \p usedBefore The number of bytes allocated just before the GC.
+    /// \p usedAfter The number of bytes live after the GC.
     /// \p regionStats A pointer to the cumulative statistics struct for the
     ///     region.
-    void recordGCStats(size_t regionSize, CumulativeHeapStats *regionStats);
+    void recordGCStats(
+        size_t regionSize,
+        size_t usedBefore,
+        size_t usedAfter,
+        CumulativeHeapStats *regionStats);
 
    private:
     GenGC *gc_;
     GCCycle cycle_;
     TimePoint wallStart_;
     std::chrono::microseconds cpuStart_;
+    size_t gcUsedBefore_;
     // Initial value indicates unset.
     double wallElapsedSecs_{-1.0};
     double cpuElapsedSecs_{-1.0};

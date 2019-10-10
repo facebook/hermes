@@ -259,6 +259,10 @@ void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
      << ",\n"
      << "\t\t\"finalHeapSize\": " << formatSize(cumStats_.finalHeapSize).bytes
      << ",\n"
+     << "\t\t\"peakAllocatedBytes\": "
+     << formatSize(cumStats_.usedBefore.max()).bytes << ",\n"
+     << "\t\t\"peakLiveAfterGC\": "
+     << formatSize(cumStats_.usedAfter.max()).bytes << ",\n"
      << "\t\t\"totalAllocatedBytes\": "
      << formatSize(info.totalAllocatedBytes).bytes << "\n"
      << "\t}";
@@ -273,18 +277,25 @@ void GCBase::recordGCStats(
     double wallTime,
     double cpuTime,
     gcheapsize_t finalHeapSize,
+    gcheapsize_t usedBefore,
+    gcheapsize_t usedAfter,
     CumulativeHeapStats *stats) {
   stats->gcWallTime.record(wallTime);
   stats->gcCPUTime.record(cpuTime);
   stats->finalHeapSize = finalHeapSize;
+  stats->usedBefore.record(usedBefore);
+  stats->usedAfter.record(usedAfter);
   stats->numCollections++;
 }
 
 void GCBase::recordGCStats(
     double wallTime,
     double cpuTime,
+    gcheapsize_t usedBefore,
+    gcheapsize_t usedAfter,
     gcheapsize_t finalHeapSize) {
-  recordGCStats(wallTime, cpuTime, finalHeapSize, &cumStats_);
+  recordGCStats(
+      wallTime, cpuTime, finalHeapSize, usedBefore, usedAfter, &cumStats_);
 }
 
 void GCBase::oom(std::error_code reason) {

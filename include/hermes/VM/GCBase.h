@@ -245,6 +245,12 @@ class GCBase {
     StatsAccumulator<double> gcCPUTime;
 
     gcheapsize_t finalHeapSize{0};
+
+    /// Bytes allocated just before a collection.
+    StatsAccumulator<gcheapsize_t, uint64_t> usedBefore;
+
+    /// Bytes alive after a collection.
+    StatsAccumulator<gcheapsize_t, uint64_t> usedAfter;
   };
 
   struct HeapInfo {
@@ -442,6 +448,11 @@ class GCBase {
   /// Total CPU time in seconds of all pauses due to collections so far.
   double getGCCPUTime() const {
     return cumStats_.gcCPUTime.sum();
+  }
+
+  /// Cumulative stats over time so far.
+  CumulativeHeapStats getCumulativeHeapStats() const {
+    return cumStats_;
   }
 
   /// Populate \p info with information about the heap.
@@ -667,13 +678,19 @@ class GCBase {
       double wallTime,
       double cpuTime,
       gcheapsize_t finalHeapSize,
+      gcheapsize_t usedBefore,
+      gcheapsize_t usedAfter,
       CumulativeHeapStats *stats);
 
   /// Record statistics from a single GC, which took \p wallTime seconds wall
   /// time and \p cpuTime seconds CPU time to run the gc and left the heap size
   /// at the given \p finalHeapSize, in the overall cumulative stats struct.
-  void
-  recordGCStats(double wallTime, double cpuTime, gcheapsize_t finalHeapSize);
+  void recordGCStats(
+      double wallTime,
+      double cpuTime,
+      gcheapsize_t finalHeapSize,
+      gcheapsize_t usedBefore,
+      gcheapsize_t usedAfter);
 
   /// Do any additional GC-specific logging that is useful before dying with
   /// out-of-memory.
