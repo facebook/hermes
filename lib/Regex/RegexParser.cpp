@@ -200,12 +200,21 @@ class Parser {
             // Positive lookahead.
             // Unicode prohibits these from being quantified.
             quantifierAllowed = !(flags_ & constants::unicode);
-            consumeLookaheadAssertion(false /* negate */);
+            consumeLookaroundAssertion(false /* negate */, true /* forwards */);
           } else if (tryConsume("(?!")) {
             // Negative lookahead.
             // Unicode prohibits these from being quantified.
             quantifierAllowed = !(flags_ & constants::unicode);
-            consumeLookaheadAssertion(true /* negate */);
+            consumeLookaroundAssertion(true /* negate */, true /* forwards */);
+          } else if (tryConsume("(?<=")) {
+            // Positive lookbehind.
+            quantifierAllowed = !(flags_ & constants::unicode);
+            consumeLookaroundAssertion(
+                false /* negate */, false /* forwards */);
+          } else if (tryConsume("(?<!")) {
+            // Negative lookbehind.
+            quantifierAllowed = !(flags_ & constants::unicode);
+            consumeLookaroundAssertion(true /* negate */, false /* forwards */);
           } else if (tryConsume("(?:")) {
             // Non-capturing group.
             consumeDisjunction();
@@ -777,14 +786,14 @@ class Parser {
   /// This implements positive and negative lookaheads.
   /// We will have consumed the leading paren; the cursor is at the
   /// disjunction.
-  void consumeLookaheadAssertion(bool negate) {
+  void consumeLookaroundAssertion(bool negate, bool forwards) {
     // Parse a disjunction, then splice it out from our list.
     auto mexpBegin = re_->markedCount();
     auto exprStart = re_->currentNode();
     consumeDisjunction();
     auto mexpEnd = re_->markedCount();
     auto expr = re_->spliceOut(exprStart);
-    re_->pushLookahead(move(expr), mexpBegin, mexpEnd, negate);
+    re_->pushLookaround(move(expr), mexpBegin, mexpEnd, negate, forwards);
   }
 
   /// 21.2.2.9 AtomEscape.

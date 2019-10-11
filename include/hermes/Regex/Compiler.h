@@ -1090,36 +1090,45 @@ class Regex {
   void pushAlternation(NodeList left, NodeList right);
   void pushMarkedSubexpression(NodeList, uint32_t mexp);
   void pushWordBoundary(bool);
-  void pushLookahead(NodeList, uint16_t, uint16_t, bool);
+  void pushLookaround(NodeList, uint16_t, uint16_t, bool, bool);
 };
 
-/// Node for lookahead assertions like (?=...) and (?!...)
-class LookaheadNode : public Node {
+/// Node for lookaround assertions like (?=...) and (?!...)
+class LookaroundNode : public Node {
   using Super = Node;
 
-  /// The contained expression representing our lookahead assertion.
+  /// The contained expression representing our lookaround assertion.
   NodeList exp_;
 
   /// Match constraints for our contained expression.
   MatchConstraintSet expConstraints_;
 
-  /// Whether the lookahead assertion is negative (?!) or positive (?=).
-  bool invert_;
+  /// Whether the lookaround assertion is negative (?!) or positive (?=).
+  const bool invert_;
 
-  /// The marked subexpressions contained within this lookahead
+  /// Whether the lookaround is forwards (true) or backwards (false).
+  const bool forwards_;
+
+  /// The marked subexpressions contained within this lookaround.
   uint16_t mexpBegin_;
   uint16_t mexpEnd_;
 
  public:
-  LookaheadNode(NodeList exp, uint32_t mexpBegin, uint32_t mexpEnd, bool invert)
+  LookaroundNode(
+      NodeList exp,
+      uint32_t mexpBegin,
+      uint32_t mexpEnd,
+      bool invert,
+      bool forwards)
       : exp_(move(exp)),
         expConstraints_(matchConstraintsForList(exp_)),
         invert_(invert),
+        forwards_(forwards),
         mexpBegin_(mexpBegin),
         mexpEnd_(mexpEnd) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
-    // Positive lookaheads apply their match constraints.
+    // Positive lookarounds apply their match constraints.
     // e.g. if our assertion is anchored at the start, so are we.
     MatchConstraintSet result = 0;
     if (!invert_) {
@@ -1136,6 +1145,8 @@ class LookaheadNode : public Node {
   virtual void emit(RegexBytecodeStream &bcs) const override {
     auto lookaround = bcs.emit<LookaroundInsn>();
     lookaround->invert = invert_;
+    // TODO: forwards_ is not yet implemented by the executor.
+    (void)forwards_;
     lookaround->constraints = expConstraints_;
     lookaround->mexpBegin = mexpBegin_;
     lookaround->mexpEnd = mexpEnd_;
@@ -1296,13 +1307,14 @@ BracketNode<Traits> *Regex<Traits>::startBracketList(bool negate) {
 }
 
 template <class Traits>
-void Regex<Traits>::pushLookahead(
+void Regex<Traits>::pushLookaround(
     NodeList exp,
     uint16_t mexpBegin,
     uint16_t mexpEnd,
-    bool invert) {
+    bool invert,
+    bool forwards) {
   exp.push_back(make_unique<GoalNode>());
-  appendNode<LookaheadNode>(move(exp), mexpBegin, mexpEnd, invert);
+  appendNode<LookaroundNode>(move(exp), mexpBegin, mexpEnd, invert, forwards);
 }
 
 void Node::optimizeNodeList(NodeList &nodes, constants::SyntaxFlags flags) {
