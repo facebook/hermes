@@ -282,6 +282,10 @@ class Node {
     return result;
   }
 
+  /// Reverse the order of the node list \p nodes, and recursively ask each node
+  /// to reverse the order of its children.
+  inline static void reverseNodeList(NodeList &nodes);
+
   /// Perform optimizations on the given node list \p nodes, subject to the
   /// given \p flags.
   inline static void optimizeNodeList(
@@ -311,6 +315,16 @@ class Node {
     return 0;
   }
 
+  /// \return whether this is a goal node.
+  virtual bool isGoal() const {
+    return false;
+  }
+
+  /// Reverse the order of children of this node. The default implementation
+  /// does nothing, but nodes which store a child list should reverse the order
+  /// of that list and then recurse.
+  virtual void reverseChildren() {}
+
   /// Emit this node into the bytecode compiler \p bcs. This is an overrideable
   /// function - subclasses should override this to emit node-specific bytecode.
   /// The default emits nothing, so that base Node is just a no-op.
@@ -322,6 +336,11 @@ class GoalNode final : public Node {
  public:
   void emit(RegexBytecodeStream &bcs) const override {
     bcs.emit<GoalInsn>();
+  }
+
+ protected:
+  bool isGoal() const override {
+    return true;
   }
 };
 
@@ -391,6 +410,11 @@ class LoopNode final : public Node {
 
   virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
     optimizeNodeList(loopee_, flags);
+  }
+
+ protected:
+  void reverseChildren() override {
+    reverseNodeList(loopee_);
   }
 
  private:
@@ -510,6 +534,11 @@ class AlternationNode final : public Node {
     compile(second_, bcs);
     firstBranchCont->target = bcs.currentOffset();
   }
+
+  void reverseChildren() override {
+    reverseNodeList(first_);
+    reverseNodeList(second_);
+  }
 };
 
 /// MarkedSubexpressionNode is a capture group.
@@ -537,6 +566,10 @@ class MarkedSubexpressionNode final : public Node {
     bcs.emit<BeginMarkedSubexpressionInsn>()->mexp = mexp16;
     compile(contents_, bcs);
     bcs.emit<EndMarkedSubexpressionInsn>()->mexp = mexp16;
+  }
+
+  void reverseChildren() override {
+    reverseNodeList(contents_);
   }
 
   virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
@@ -687,6 +720,10 @@ class MatchCharNode final : public Node {
     }
   }
 
+  void reverseChildren() override {
+    std::reverse(chars_.begin(), chars_.end());
+  }
+
   bool tryCoalesceCharacters(CodePointList *output) const override {
     output->append(chars_.begin(), chars_.end());
     return true;
@@ -774,7 +811,7 @@ class MatchCharNode final : public Node {
 
  private:
   // The code points we wish to match against.
-  const CodePointList chars_;
+  CodePointList chars_;
 
   /// Whether we are case insensitive (true) or case sensitive (false).
   const bool icase_;
@@ -1313,8 +1350,33 @@ void Regex<Traits>::pushLookaround(
     uint16_t mexpEnd,
     bool invert,
     bool forwards) {
+  if (!forwards) {
+    Node::reverseNodeList(exp);
+  }
   exp.push_back(make_unique<GoalNode>());
   appendNode<LookaroundNode>(move(exp), mexpBegin, mexpEnd, invert, forwards);
+}
+
+void Node::reverseNodeList(NodeList &nodes) {
+  // If we have a goal node it must come at the end.
+#ifndef NDEBUG
+  for (const auto &node : nodes) {
+    assert(
+        !node->isGoal() ||
+        (node == nodes.back()) && "Goal node should only be at end");
+  }
+#endif
+
+  // Reverse this list, excluding any terminating goal.
+  if (!nodes.empty()) {
+    bool hasGoal = nodes.back()->isGoal();
+    std::reverse(nodes.begin(), nodes.end() - (hasGoal ? 1 : 0));
+  }
+
+  // Recursively reverse child nodes.
+  for (auto &node : nodes) {
+    node->reverseChildren();
+  }
 }
 
 void Node::optimizeNodeList(NodeList &nodes, constants::SyntaxFlags flags) {
