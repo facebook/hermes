@@ -1180,6 +1180,8 @@ class LookaroundNode : public Node {
     if (!invert_) {
       result |= expConstraints_;
     }
+    // Lookarounds match an empty string even if their contents do not.
+    result &= ~MatchConstraintNonEmpty;
     return result | Super::matchConstraints();
   }
 

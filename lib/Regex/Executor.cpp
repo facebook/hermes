@@ -1389,8 +1389,12 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           // Since this is a simple loop, we'll always need to explore both
           // exiting the loop at this point and continuing to loop.
           // Note simple loops are always greedy.
-          backtrackStack.push_back(BacktrackInsn::makeSetPosition(
-              loop->notTakenTarget, c.currentPointer()));
+          if (!pushBacktrack(
+                  backtrackStack,
+                  BacktrackInsn::makeSetPosition(
+                      loop->notTakenTarget, c.currentPointer()))) {
+            return nullptr;
+          }
           s->ip_ += sizeof(BeginSimpleLoopInsn);
           break;
         }
