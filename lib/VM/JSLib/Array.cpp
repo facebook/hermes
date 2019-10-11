@@ -120,13 +120,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      Predefined::getSymbolID(Predefined::filter),
-      nullptr,
-      arrayPrototypeFilter,
-      1);
-  defineMethod(
-      runtime,
-      arrayPrototype,
       Predefined::getSymbolID(Predefined::find),
       nullptr,
       arrayPrototypeFind,
@@ -217,6 +210,13 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::map),
       nullptr,
       arrayPrototypeMap,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::filter),
+      nullptr,
+      arrayPrototypeFilter,
       1);
   defineMethod(
       runtime,
@@ -2122,94 +2122,6 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
-  GCScope gcScope(runtime);
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
-
-  auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  uint64_t len = *intRes;
-
-  auto callbackFn = args.dyncastArg<Callable>(0);
-  if (!callbackFn) {
-    return runtime->raiseTypeError(
-        "Array.prototype.filter() requires a callable argument");
-  }
-
-  if (LLVM_UNLIKELY(len > JSArray::StorageType::maxElements())) {
-    return runtime->raiseRangeError("Out of memory for array elements.");
-  }
-  auto arrRes = JSArray::create(runtime, len, 0);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto A = toHandle(runtime, std::move(*arrRes));
-
-  // Index in the original array.
-  MutableHandle<> k{runtime, HermesValue::encodeDoubleValue(0)};
-  // Index to copy to in the new array.
-  uint32_t to = 0;
-
-  // Value at index k.
-  MutableHandle<JSObject> descObjHandle{runtime};
-  MutableHandle<> kValue{runtime};
-
-  auto marker = gcScope.createMarker();
-  while (k->getDouble() < len) {
-    gcScope.flushToMarker(marker);
-
-    ComputedPropertyDescriptor desc;
-    JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, desc);
-
-    if (descObjHandle) {
-      // kPresent is true
-      if ((propRes = JSObject::getComputedPropertyValue(
-               O, runtime, descObjHandle, desc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      kValue = propRes.getValue();
-      // Call the callback.
-      auto callRes = Callable::executeCall3(
-          callbackFn,
-          runtime,
-          args.getArgHandle(1),
-          kValue.get(),
-          k.get(),
-          O.getHermesValue());
-      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      if (toBoolean(*callRes)) {
-        // Add the element to the array if it passes the callback.
-        JSArray::setElementAt(A, runtime, to, kValue);
-        ++to;
-      }
-    }
-
-    k = HermesValue::encodeDoubleValue(k->getDouble() + 1);
-  }
-
-  if (LLVM_UNLIKELY(
-          JSArray::setLengthProperty(A, runtime, to) ==
-          ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-  return A.getHermesValue();
-}
-
-CallResult<HermesValue>
 arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
   bool findIndex = ctx != nullptr;
@@ -3030,6 +2942,94 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
     k = HermesValue::encodeDoubleValue(k->getDouble() + 1);
   }
 
+  return A.getHermesValue();
+}
+
+CallResult<HermesValue>
+arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope(runtime);
+  auto objRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
+
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint64_t len = *intRes;
+
+  auto callbackFn = args.dyncastArg<Callable>(0);
+  if (!callbackFn) {
+    return runtime->raiseTypeError(
+        "Array.prototype.filter() requires a callable argument");
+  }
+
+  if (LLVM_UNLIKELY(len > JSArray::StorageType::maxElements())) {
+    return runtime->raiseRangeError("Out of memory for array elements.");
+  }
+  auto arrRes = JSArray::create(runtime, len, 0);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = toHandle(runtime, std::move(*arrRes));
+
+  // Index in the original array.
+  MutableHandle<> k{runtime, HermesValue::encodeDoubleValue(0)};
+  // Index to copy to in the new array.
+  uint32_t to = 0;
+
+  // Value at index k.
+  MutableHandle<JSObject> descObjHandle{runtime};
+  MutableHandle<> kValue{runtime};
+
+  auto marker = gcScope.createMarker();
+  while (k->getDouble() < len) {
+    gcScope.flushToMarker(marker);
+
+    ComputedPropertyDescriptor desc;
+    JSObject::getComputedPrimitiveDescriptor(
+        O, runtime, k, descObjHandle, desc);
+
+    if (descObjHandle) {
+      // kPresent is true
+      if ((propRes = JSObject::getComputedPropertyValue(
+               O, runtime, descObjHandle, desc)) ==
+          ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      kValue = propRes.getValue();
+      // Call the callback.
+      auto callRes = Callable::executeCall3(
+          callbackFn,
+          runtime,
+          args.getArgHandle(1),
+          kValue.get(),
+          k.get(),
+          O.getHermesValue());
+      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (toBoolean(*callRes)) {
+        // Add the element to the array if it passes the callback.
+        JSArray::setElementAt(A, runtime, to, kValue);
+        ++to;
+      }
+    }
+
+    k = HermesValue::encodeDoubleValue(k->getDouble() + 1);
+  }
+
+  if (LLVM_UNLIKELY(
+          JSArray::setLengthProperty(A, runtime, to) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
   return A.getHermesValue();
 }
 
