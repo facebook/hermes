@@ -127,13 +127,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      Predefined::getSymbolID(Predefined::fill),
-      nullptr,
-      arrayPrototypeFill,
-      1);
-  defineMethod(
-      runtime,
-      arrayPrototype,
       Predefined::getSymbolID(Predefined::find),
       nullptr,
       arrayPrototypeFind,
@@ -224,6 +217,13 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::map),
       nullptr,
       arrayPrototypeMap,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::fill),
+      nullptr,
+      arrayPrototypeFill,
       1);
   defineMethod(
       runtime,
@@ -2210,65 +2210,6 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
-  GCScope gcScope(runtime);
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
-  // Get the length.
-  auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double len = *lenRes;
-  // Get the value to be filled.
-  MutableHandle<> value(runtime, args.getArg(0));
-  // Get the relative start and end.
-  auto intRes = toInteger(runtime, args.getArgHandle(1));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double relativeStart = intRes->getNumber();
-  // Index to start the deletion/insertion at.
-  double actualStart = relativeStart < 0 ? std::max(len + relativeStart, 0.0)
-                                         : std::min(relativeStart, len);
-  double relativeEnd;
-  if (args.getArg(2).isUndefined()) {
-    relativeEnd = len;
-  } else {
-    if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(2))) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    relativeEnd = intRes->getNumber();
-  }
-  // Actual end index.
-  double actualEnd = relativeEnd < 0 ? std::max(len + relativeEnd, 0.0)
-                                     : std::min(relativeEnd, len);
-  MutableHandle<> k(runtime, HermesValue::encodeDoubleValue(actualStart));
-  auto marker = gcScope.createMarker();
-  while (k->getDouble() < actualEnd) {
-    if (LLVM_UNLIKELY(
-            JSObject::putComputed_RJS(
-                O, runtime, k, value, PropOpFlags().plusThrowOnError()) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    k.set(HermesValue::encodeDoubleValue(k->getDouble() + 1));
-    gcScope.flushToMarker(marker);
-  }
-  return O.getHermesValue();
-}
-
-CallResult<HermesValue>
 arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
   bool findIndex = ctx != nullptr;
@@ -3090,6 +3031,65 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
   }
 
   return A.getHermesValue();
+}
+
+CallResult<HermesValue>
+arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope(runtime);
+  auto objRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
+  // Get the length.
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double len = *lenRes;
+  // Get the value to be filled.
+  MutableHandle<> value(runtime, args.getArg(0));
+  // Get the relative start and end.
+  auto intRes = toInteger(runtime, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double relativeStart = intRes->getNumber();
+  // Index to start the deletion/insertion at.
+  double actualStart = relativeStart < 0 ? std::max(len + relativeStart, 0.0)
+                                         : std::min(relativeStart, len);
+  double relativeEnd;
+  if (args.getArg(2).isUndefined()) {
+    relativeEnd = len;
+  } else {
+    if (LLVM_UNLIKELY(
+            (intRes = toInteger(runtime, args.getArgHandle(2))) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    relativeEnd = intRes->getNumber();
+  }
+  // Actual end index.
+  double actualEnd = relativeEnd < 0 ? std::max(len + relativeEnd, 0.0)
+                                     : std::min(relativeEnd, len);
+  MutableHandle<> k(runtime, HermesValue::encodeDoubleValue(actualStart));
+  auto marker = gcScope.createMarker();
+  while (k->getDouble() < actualEnd) {
+    if (LLVM_UNLIKELY(
+            JSObject::putComputed_RJS(
+                O, runtime, k, value, PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    k.set(HermesValue::encodeDoubleValue(k->getDouble() + 1));
+    gcScope.flushToMarker(marker);
+  }
+  return O.getHermesValue();
 }
 
 /// ES10.0 22.1.3.23.
