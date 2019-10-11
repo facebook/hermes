@@ -1548,6 +1548,7 @@ tailCall:
       SLOW_DEBUG(
           dbgs() << "native return value r" << (unsigned)ip->iCall.op1 << "="
                  << DumpHermesValue(O1REG(Call)) << "\n");
+      runtime->clearCallerIP();
       gcScope.flushToSmallCount(KEEP_HANDLES);
       ip = nextIP;
       DISPATCH;
