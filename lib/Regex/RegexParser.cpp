@@ -212,10 +212,11 @@ class Parser {
           } else {
             // Capturing group.
             consume('(');
-            re_->pushBeginMarkedSubexpression();
-            auto mexp = re_->markedCount();
+            uint32_t mexp = re_->incrementMarkedCount();
+            auto exprStart = re_->currentNode();
             consumeDisjunction();
-            re_->pushEndMarkedSubexpression(mexp);
+            auto expr = re_->spliceOut(exprStart);
+            re_->pushMarkedSubexpression(move(expr), mexp);
           }
           if (!tryConsume(')')) {
             setError(constants::ErrorType::UnbalancedParenthesis);

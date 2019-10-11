@@ -512,37 +512,39 @@ class AlternationNode final : public Node {
   }
 };
 
-/// BeginMarkedSubexpression is the entry point for a capture group.
-class BeginMarkedSubexpressionNode final : public Node {
+/// MarkedSubexpressionNode is a capture group.
+class MarkedSubexpressionNode final : public Node {
   using Super = Node;
 
+  // The contents of our expression.
+  NodeList contents_;
+
+  // Match constraints for our contents.
+  MatchConstraintSet contentsConstraints_;
+
   // The index of the marked subexpression.
-  unsigned mexp_;
+  uint32_t mexp_;
 
  public:
-  explicit BeginMarkedSubexpressionNode(unsigned mexp) : mexp_(mexp) {}
+  explicit MarkedSubexpressionNode(NodeList contents, uint32_t mexp)
+      : contents_(std::move(contents)),
+        contentsConstraints_(matchConstraintsForList(contents_)),
+        mexp_(mexp) {}
 
   virtual void emit(RegexBytecodeStream &bcs) const override {
-    assert(static_cast<uint16_t>(mexp_) == mexp_ && "Subexpression too large");
-    bcs.emit<BeginMarkedSubexpressionInsn>()->mexp =
-        static_cast<uint16_t>(mexp_);
+    uint16_t mexp16 = static_cast<uint16_t>(mexp_);
+    assert(mexp16 == mexp_ && "Subexpression too large");
+    bcs.emit<BeginMarkedSubexpressionInsn>()->mexp = mexp16;
+    compile(contents_, bcs);
+    bcs.emit<EndMarkedSubexpressionInsn>()->mexp = mexp16;
   }
-};
 
-/// EndMarkedSubexpression is the exit point for a capture group.
-/// It updates the captured value for a State.
-class EndMarkedSubexpressionNode final : public Node {
-  using Super = Node;
+  virtual void optimizeNodeContents(constants::SyntaxFlags flags) override {
+    optimizeNodeList(contents_, flags);
+  }
 
-  // The index of the marked subexpression.
-  unsigned mexp_;
-
- public:
-  explicit EndMarkedSubexpressionNode(unsigned mexp) : mexp_(mexp) {}
-
-  virtual void emit(RegexBytecodeStream &bcs) const override {
-    assert(static_cast<uint16_t>(mexp_) == mexp_ && "Subexpression too large");
-    bcs.emit<EndMarkedSubexpressionInsn>()->mexp = static_cast<uint16_t>(mexp_);
+  virtual MatchConstraintSet matchConstraints() const override {
+    return contentsConstraints_ | Super::matchConstraints();
   }
 };
 
@@ -972,6 +974,11 @@ class Regex {
     return markedCount_;
   }
 
+  /// \increment the number of marked subexpressions and return the value.
+  uint32_t incrementMarkedCount() {
+    return ++markedCount_;
+  }
+
   /// Given that the node \p splicePoint is in our node list, remove all nodes
   /// after it. \return a list of the removed nodes.
   NodeList spliceOut(Node *splicePoint) {
@@ -1081,8 +1088,7 @@ class Regex {
   void pushCharClass(CharacterClass c);
   void pushBackRef(uint32_t i);
   void pushAlternation(NodeList left, NodeList right);
-  void pushBeginMarkedSubexpression();
-  void pushEndMarkedSubexpression(unsigned);
+  void pushMarkedSubexpression(NodeList, uint32_t mexp);
   void pushWordBoundary(bool);
   void pushLookahead(NodeList, uint16_t, uint16_t, bool);
 };
@@ -1250,13 +1256,8 @@ void Regex<Traits>::pushCharClass(CharacterClass c) {
 }
 
 template <class Traits>
-void Regex<Traits>::pushBeginMarkedSubexpression() {
-  appendNode<BeginMarkedSubexpressionNode>(++markedCount_);
-}
-
-template <class Traits>
-void Regex<Traits>::pushEndMarkedSubexpression(unsigned sub) {
-  appendNode<EndMarkedSubexpressionNode>(sub);
+void Regex<Traits>::pushMarkedSubexpression(NodeList nodes, uint32_t mexp) {
+  appendNode<MarkedSubexpressionNode>(std::move(nodes), mexp);
 }
 
 template <class Traits>
