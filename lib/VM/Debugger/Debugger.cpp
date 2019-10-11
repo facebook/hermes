@@ -491,8 +491,21 @@ auto Debugger::getStackTrace(InterpreterState state) const -> StackTrace {
   uint32_t ipOffset = state.offset;
   for (auto cf : runtime_->getStackFrames()) {
     frames.push_back(getCallFrameInfo(codeBlock, ipOffset));
+
     codeBlock = cf.getSavedCodeBlock();
-    ipOffset = codeBlock ? codeBlock->getOffsetOf(cf->getSavedIP()) : 0;
+    const Inst *const savedIP = cf.getSavedIP();
+    if (!codeBlock && savedIP) {
+      // If we have a saved IP but no saved code block, this was a bound call.
+      // Go up one frame and get the callee code block but use the current
+      // frame's saved IP.
+      StackFramePtr prev = cf->getPreviousFrame();
+      assert(prev && "bound function calls must have a caller");
+      if (CodeBlock *parentCB = prev->getCalleeCodeBlock()) {
+        codeBlock = parentCB;
+      }
+    }
+
+    ipOffset = (codeBlock && savedIP) ? codeBlock->getOffsetOf(savedIP) : 0;
   }
   return StackTrace(std::move(frames));
 }

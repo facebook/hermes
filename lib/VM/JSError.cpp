@@ -408,18 +408,31 @@ ExecutionStatus JSError::recordStackTrace(
     }
   }
 
+  const StackFramePtr framesEnd = *runtime->getStackFrames().end();
+
   // Fill in the call stack.
   // Each stack frame tracks information about the caller.
   for (StackFramePtr cf : runtime->getStackFrames()) {
-    auto *savedCodeBlock = cf.getSavedCodeBlock();
-    stack->emplace_back(
-        savedCodeBlock,
-        savedCodeBlock ? savedCodeBlock->getOffsetOf(cf.getSavedIP()) : 0);
-    if (savedCodeBlock) {
+    CodeBlock *savedCodeBlock = cf.getSavedCodeBlock();
+    const Inst *const savedIP = cf.getSavedIP();
+    // Go up one frame and get the callee code block but use the current
+    // frame's saved IP. This also allows us to account for bound functions,
+    // which have savedCodeBlock == nullptr in order to allow proper returns in
+    // the interpreter.
+    StackFramePtr prev = cf->getPreviousFrame();
+    if (prev && prev != framesEnd) {
+      if (CodeBlock *parentCB = prev->getCalleeCodeBlock()) {
+        savedCodeBlock = parentCB;
+      }
+    }
+    if (savedCodeBlock && savedIP) {
+      stack->emplace_back(savedCodeBlock, savedCodeBlock->getOffsetOf(savedIP));
       if (LLVM_UNLIKELY(
               addDomain(savedCodeBlock) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
+    } else {
+      stack->emplace_back(nullptr, 0);
     }
   }
   selfHandle->domains_.set(runtime, domains.get(), &runtime->getHeap());

@@ -99,6 +99,10 @@ struct StackFrameLayout {
     /// Saved caller instruction pointer.
     SavedIP = 1,
     /// Saved caller CodeBlock.
+    /// NOTE: If SavedCodeBlock is null but SavedIP is non-null, the current
+    /// frame is the result of a bound function call - the SavedCodeBlock can be
+    /// found using CalleeClosureOrCB on the previous call frame, but the
+    /// SavedIP should have been saved by the bound call in the current frame.
     SavedCodeBlock = 2,
     /// Number of JavaScript arguments passed to the callee excluding "this".
     ArgCount = 3,

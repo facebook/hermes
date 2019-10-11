@@ -302,6 +302,7 @@ ExecutionStatus Interpreter::handleGetPNameList(
 
 CallResult<HermesValue> Interpreter::handleCallSlowPath(
     Runtime *runtime,
+    const Inst *ip,
     PinnedHermesValue *callTarget) {
   if (auto *native = dyn_vmcast<NativeFunction>(*callTarget)) {
     ++NumNativeFunctionCalls;
@@ -310,7 +311,7 @@ CallResult<HermesValue> Interpreter::handleCallSlowPath(
   } else if (auto *bound = dyn_vmcast<BoundFunction>(*callTarget)) {
     ++NumBoundFunctionCalls;
     // Call the bound function.
-    return BoundFunction::_boundCall(bound, runtime);
+    return BoundFunction::_boundCall(bound, ip, runtime);
   } else {
     return runtime->raiseTypeErrorForValue(
         Handle<>(callTarget), " is not a function");
@@ -1540,7 +1541,7 @@ tailCall:
         goto tailCall;
 #endif
       }
-      res = Interpreter::handleCallSlowPath(runtime, &O2REG(Call));
+      res = Interpreter::handleCallSlowPath(runtime, ip, &O2REG(Call));
       if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
         goto exception;
       }

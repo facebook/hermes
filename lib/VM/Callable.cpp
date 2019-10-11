@@ -675,6 +675,7 @@ CallResult<HermesValue> BoundFunction::_newObjectImpl(
 
 CallResult<HermesValue> BoundFunction::_boundCall(
     BoundFunction *self,
+    const Inst *ip,
     Runtime *runtime) {
   ScopedNativeDepthTracker depthTracker{runtime};
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
@@ -766,7 +767,7 @@ CallResult<HermesValue> BoundFunction::_boundCall(
     auto newCalleeFrame = StackFramePtr::initFrame(
         stack,
         runtime->getCurrentFrame(),
-        nullptr,
+        ip,
         nullptr,
         totalArgCount,
         HermesValue::encodeObjectValue(self->getTarget(runtime)),
@@ -795,7 +796,7 @@ bail:
   StackFramePtr::initFrame(
       originalCalleeFrame.ptr(),
       StackFramePtr{},
-      nullptr,
+      ip,
       nullptr,
       0,
       nullptr,
@@ -811,7 +812,9 @@ bail:
 CallResult<HermesValue> BoundFunction::_callImpl(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
-  return _boundCall(vmcast<BoundFunction>(selfHandle.get()), runtime);
+  // Pass `nullptr` as the IP because this function is never called
+  // from the interpreter, which should use `_boundCall` directly.
+  return _boundCall(vmcast<BoundFunction>(selfHandle.get()), nullptr, runtime);
 }
 
 //===----------------------------------------------------------------------===//

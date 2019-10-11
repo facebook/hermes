@@ -362,9 +362,10 @@ class BoundFunction final : public Callable {
   /// Perform the actual call. This is a light-weight handler which is part of
   /// the private API - it is only used internally and by the interpreter.
   /// Other users of this class must use \c Callable::call().
-  static CallResult<HermesValue> _boundCall(
-      BoundFunction *self,
-      Runtime *runtime);
+  /// \param ip the caller's IP at the point of the call (used for preserving
+  /// stack traces).
+  static CallResult<HermesValue>
+  _boundCall(BoundFunction *self, const Inst *ip, Runtime *runtime);
 
   /// Intialize the length and name and property of a lazily created bound
   /// function.

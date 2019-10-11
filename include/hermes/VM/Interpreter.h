@@ -84,9 +84,11 @@ class Interpreter {
   /// This handles the rest of the cases (native function, bound funcation, and
   /// not even a function).
   /// \param callTarget the register containing the function object
+  /// \param ip the current IP before the call (for preserving stack traces).
   /// \return ExecutionStatus::EXCEPTION if the call threw.
   static CallResult<HermesValue> handleCallSlowPath(
       Runtime *runtime,
+      const Inst *ip,
       PinnedHermesValue *callTarget);
 
   /// Fast path to get primitive value \p base's own properties by name \p id

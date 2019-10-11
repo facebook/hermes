@@ -33,6 +33,9 @@ StackFramePtrT<isConst>::getCalleeCodeBlock() const {
     else
       return nullptr;
   } else {
+    assert(
+        ref.isNativeValue() &&
+        "getCalleeClosureOrCBRef must be NativeValue or Object");
     return ref.template getNativePointer<CodeBlock>();
   }
 }
