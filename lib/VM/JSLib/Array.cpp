@@ -120,21 +120,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      Predefined::getSymbolID(Predefined::find),
-      nullptr,
-      arrayPrototypeFind,
-      1);
-  defineMethod(
-      runtime,
-      arrayPrototype,
-      Predefined::getSymbolID(Predefined::findIndex),
-      // Pass a non-null pointer here to indicate we're finding the index.
-      (void *)true,
-      arrayPrototypeFind,
-      1);
-  defineMethod(
-      runtime,
-      arrayPrototype,
       Predefined::getSymbolID(Predefined::reduce),
       nullptr,
       arrayPrototypeReduce,
@@ -224,6 +209,21 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::fill),
       nullptr,
       arrayPrototypeFill,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::find),
+      nullptr,
+      arrayPrototypeFind,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::findIndex),
+      // Pass a non-null pointer here to indicate we're finding the index.
+      (void *)true,
+      arrayPrototypeFind,
       1);
   defineMethod(
       runtime,
@@ -2121,72 +2121,6 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
-  GCScope gcScope{runtime};
-  bool findIndex = ctx != nullptr;
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
-
-  // Get the length.
-  auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double len = *intRes;
-
-  auto predicate = args.dyncastArg<Callable>(0);
-  if (!predicate) {
-    return runtime->raiseTypeError("Find argument must be a function");
-  }
-
-  // "this" argument to the callback function.
-  auto T = args.getArgHandle(1);
-
-  MutableHandle<> kHandle{runtime, HermesValue::encodeNumberValue(0)};
-  MutableHandle<> kValue{runtime};
-  auto marker = gcScope.createMarker();
-  while (kHandle->getNumber() < len) {
-    gcScope.flushToMarker(marker);
-    if (LLVM_UNLIKELY(
-            (propRes = JSObject::getComputed_RJS(O, runtime, kHandle)) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    kValue = *propRes;
-    auto callRes = Callable::executeCall3(
-        predicate,
-        runtime,
-        T,
-        kValue.getHermesValue(),
-        kHandle.getHermesValue(),
-        O.getHermesValue());
-    if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    bool testResult = toBoolean(*callRes);
-    if (testResult) {
-      // If this is Array.prototype.findIndex, then return the index k.
-      // Else, return the value at the index k.
-      return findIndex ? kHandle.getHermesValue() : kValue.getHermesValue();
-    }
-    kHandle = HermesValue::encodeNumberValue(kHandle->getNumber() + 1);
-  }
-
-  // Failure case for Array.prototype.findIndex is -1.
-  // Failure case for Array.prototype.find is undefined.
-  return findIndex ? HermesValue::encodeNumberValue(-1)
-                   : HermesValue::encodeUndefinedValue();
-}
-
 /// Helper for reduce and reduceRight.
 /// \param reverse set to true to reduceRight, false to reduce from the left.
 static inline CallResult<HermesValue>
@@ -3031,6 +2965,72 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   return A.getHermesValue();
+}
+
+CallResult<HermesValue>
+arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+  bool findIndex = ctx != nullptr;
+  auto objRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
+
+  // Get the length.
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double len = *intRes;
+
+  auto predicate = args.dyncastArg<Callable>(0);
+  if (!predicate) {
+    return runtime->raiseTypeError("Find argument must be a function");
+  }
+
+  // "this" argument to the callback function.
+  auto T = args.getArgHandle(1);
+
+  MutableHandle<> kHandle{runtime, HermesValue::encodeNumberValue(0)};
+  MutableHandle<> kValue{runtime};
+  auto marker = gcScope.createMarker();
+  while (kHandle->getNumber() < len) {
+    gcScope.flushToMarker(marker);
+    if (LLVM_UNLIKELY(
+            (propRes = JSObject::getComputed_RJS(O, runtime, kHandle)) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    kValue = *propRes;
+    auto callRes = Callable::executeCall3(
+        predicate,
+        runtime,
+        T,
+        kValue.getHermesValue(),
+        kHandle.getHermesValue(),
+        O.getHermesValue());
+    if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    bool testResult = toBoolean(*callRes);
+    if (testResult) {
+      // If this is Array.prototype.findIndex, then return the index k.
+      // Else, return the value at the index k.
+      return findIndex ? kHandle.getHermesValue() : kValue.getHermesValue();
+    }
+    kHandle = HermesValue::encodeNumberValue(kHandle->getNumber() + 1);
+  }
+
+  // Failure case for Array.prototype.findIndex is -1.
+  // Failure case for Array.prototype.find is undefined.
+  return findIndex ? HermesValue::encodeNumberValue(-1)
+                   : HermesValue::encodeUndefinedValue();
 }
 
 CallResult<HermesValue>
