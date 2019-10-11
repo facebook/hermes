@@ -17,6 +17,7 @@
 #ifndef HERMES_REGEX_COMPILER_H
 #define HERMES_REGEX_COMPILER_H
 
+#include "hermes/Platform/Unicode/CharacterProperties.h"
 #include "hermes/Platform/Unicode/CodePointSet.h"
 #include "hermes/Support/Compiler.h"
 
@@ -664,8 +665,10 @@ class MatchCharNode final : public Node {
   static constexpr size_t kMaxMatchCharNCount = UINT8_MAX;
 
  public:
-  MatchCharNode(CodePointList chars, bool icase)
-      : chars_(std::move(chars)), icase_(icase) {}
+  MatchCharNode(CodePointList chars, constants::SyntaxFlags flags)
+      : chars_(std::move(chars)),
+        icase_(flags & constants::icase),
+        unicode_(flags & constants::unicode) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
     MatchConstraintSet result = MatchConstraintNonEmpty;
@@ -696,11 +699,28 @@ class MatchCharNode final : public Node {
     return true;
   }
 
+  /// \return whether matching the code point \p cp may require
+  /// decoding a surrogate pair from the input string.
+  bool mayRequireDecodingSurrogatePair(uint32_t cp) const {
+    if (!isMemberOfBMP(cp)) {
+      return true;
+    }
+    if (unicode_ && (isHighSurrogate(cp) || isLowSurrogate(cp))) {
+      // We have been asked to emit a literal surrogate into a Unicode string.
+      // This can only match against an unpaired surrogate in the input string.
+      // Thus ensure we emit a full 32 bit match, so that we decode surrogate
+      // pairs from the input.
+      return true;
+    }
+    return false;
+  }
+
  protected:
   virtual bool matchesExactlyOneCharacter() const override {
     // If our character is astral it will need to match a surrogate pair, which
     // requires two characters.
-    return chars_.size() == 1 && isMemberOfBMP(chars_.front());
+    return chars_.size() == 1 &&
+        !mayRequireDecodingSurrogatePair(chars_.front());
   }
 
   /// Emit a list of ASCII characters into bytecode stream \p bcs.
@@ -743,7 +763,7 @@ class MatchCharNode final : public Node {
       llvm::ArrayRef<CodePoint> chars,
       RegexBytecodeStream &bcs) const {
     for (uint32_t c : chars) {
-      if (!isMemberOfBMP(c)) {
+      if (mayRequireDecodingSurrogatePair(c)) {
         if (icase_) {
           bcs.emit<U16MatchCharICase32Insn>()->c = c;
         } else {
@@ -763,8 +783,11 @@ class MatchCharNode final : public Node {
   // The code points we wish to match against.
   const CodePointList chars_;
 
-  /// /// Whether we are case insensitive (true) or case sensitive (false).
+  /// Whether we are case insensitive (true) or case sensitive (false).
   const bool icase_;
+
+  /// Whether the unicode flag is set.
+  const bool unicode_;
 };
 
 // BracketNode represents a character class: /[a-zA-Z]/...
@@ -1233,7 +1256,7 @@ void Regex<Traits>::pushChar(CodePoint c) {
   bool icase = flags() & constants::icase;
   if (icase)
     c = traits_.canonicalize(c, flags() & constants::unicode);
-  appendNode<MatchCharNode>(Node::CodePointList{c}, icase);
+  appendNode<MatchCharNode>(Node::CodePointList{c}, flags());
 }
 
 template <class Traits>
@@ -1321,9 +1344,8 @@ void Node::optimizeNodeList(NodeList &nodes, constants::SyntaxFlags flags) {
     if (rangeEnd - rangeStart >= 3) {
       // We successfully coalesced some nodes.
       // Replace the range with a new node.
-      bool icase = flags & constants::icase;
       nodes[rangeStart] =
-          unique_ptr<MatchCharNode>(new MatchCharNode(std::move(chars), icase));
+          unique_ptr<MatchCharNode>(new MatchCharNode(std::move(chars), flags));
       // Fill the remainder of the range with null (we'll clean them up after
       // the loop) and skip to the end of the range.
       // Note that rangeEnd may be one past the last valid element.

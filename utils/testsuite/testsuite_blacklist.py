@@ -904,9 +904,6 @@ BLACK_LIST = [
     "mjsunit/es6/typedarray.js",
     # unicode-character-ranges tests lookbehind assertions
     "mjsunit/es6/unicode-character-ranges.js",
-    # unicode-escapes-in-regexps.js creates invalid regexp literals which
-    # Hermes refuses to compile.
-    "mjsunit/es6/unicode-escapes-in-regexps.js",
     "mjsunit/field-type-tracking.js",
     "mjsunit/fixed-context-shapes-when-recompiling.js",
     "mjsunit/for-in-opt.js",
