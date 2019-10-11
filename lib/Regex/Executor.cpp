@@ -80,6 +80,106 @@ struct LoopData {
   uint32_t entryPosition;
 };
 
+/// Cursor is a lightweight value type which allows tracking a character pointer
+/// 'current' within a range 'first' to 'last'.
+/// The cursor location begins at 'first' and proceeds to 'last'; it is
+/// prohibited to access the cursor if it is at the end.
+template <class Traits>
+class Cursor {
+  using CodeUnit = typename Traits::CodeUnit;
+  using CodePoint = typename Traits::CodePoint;
+
+ public:
+  /// Construct with the range \p first and \p last, setting the current
+  /// position to \p first. Note that the \p last is one past the last valid
+  /// character.
+  Cursor(const CodeUnit *first, const CodeUnit *last)
+      : first_(first), last_(last), current_(first) {
+    assert(first_ <= last_ && "first and last out of order");
+  }
+
+  /// \return the number of code units remaining.
+  uint32_t remaining() const {
+    return last_ - current_;
+  }
+
+  /// \return whether we are at the end of the range.
+  bool atEnd() const {
+    return current_ == last_;
+  }
+
+  /// \return the number of code units consumed from the leftmost character.
+  /// This is called "offsetFromLeft" and not "offsetFromStart" to indicate that
+  /// it does not change under backwards tracking.
+  uint32_t offsetFromLeft() const {
+    return current_ - first_;
+  }
+
+  /// \return whether we are at the leftmost position.
+  /// This does not change under backwards tracking.
+  bool atLeft() const {
+    return current_ == first_;
+  }
+
+  /// \return whether we are at the rightmost position.
+  /// This does not change under backwards tracking.
+  bool atRight() const {
+    return current_ == last_;
+  }
+
+  /// \return the current code unit.
+  CodeUnit current() const {
+    assert(!atEnd() && "Cursor is at end");
+    return current_[0];
+  }
+
+  /// \return the current cursor position.
+  const CodeUnit *currentPointer() const {
+    return current_;
+  }
+
+  /// Set the current cursor position to \p current.
+  void setCurrentPointer(const CodeUnit *current) {
+    assert(first_ <= current && current <= last_ && "Current not in range");
+    current_ = current;
+  }
+
+  /// \return the current code unit, advancing the cursor by 1.
+  CodeUnit consume() {
+    CodeUnit result = current();
+    current_ += 1;
+    return result;
+  }
+
+  /// \return a code point decoded from the code units under the cursor,
+  /// possibly by decoding surrogates. Advances the cursor by the number of code
+  /// units consumed.
+  CodePoint consumeUTF16() {
+    assert(!atEnd() && "At end");
+
+    // In ASCII we have no surrogates.
+    if (sizeof(CodeUnit) >= 2 && remaining() >= 2) {
+      CodeUnit hi = current_[0];
+      CodeUnit lo = current_[1];
+      if (isHighSurrogate(hi) && isLowSurrogate(lo)) {
+        current_ += 2;
+        return decodeSurrogatePair(hi, lo);
+      }
+    }
+    return consume();
+  }
+
+ private:
+  // The first code unit in the string.
+  const CodeUnit *first_;
+
+  // One past the last code unit in the string.
+  const CodeUnit *last_;
+
+  // A pointer to the current code unit.
+  const CodeUnit *current_;
+};
+
 /// A Context records global information about a match attempt.
 template <class Traits>
 struct Context {
@@ -249,16 +349,16 @@ struct Context {
         markedCount_(markedCount),
         loopCount_(loopCount) {}
 
-  /// Run the given State \p state, by starting at \p pos and acting on its
+  /// Run the given State \p state, by starting at its cursor and acting on its
   /// ip_ until the match succeeds or fails. If \p onlyAtStart is set, only
   /// test the match at \pos; otherwise test all successive input positions from
   /// pos_ through last_.
   /// \return a pointer to the start of the match if the match succeeds, nullptr
   /// if it fails. If the match succeeds, populates \p state with the state of
   /// the successful match; on failure the state's contents are undefined.
-  /// Note the end of the match can be recovered as state->current_.
-  const CodeUnit *
-  match(State<Traits> *state, const CodeUnit *pos, bool onlyAtStart);
+  /// Note the end of the match can be recovered as
+  /// state->cursor_.currentPointer().
+  const CodeUnit *match(State<Traits> *state, bool onlyAtStart);
 
   /// Backtrack the given state \p s with the backtrack stack \p bts.
   /// \return true if we backatracked, false if we exhausted the stack.
@@ -314,11 +414,12 @@ struct Context {
       const MatchNCharICase8Insn *insn,
       State<Traits> &s);
 
-  /// Execute the given Width1 instruction \p loopBody on string \p pos up to \p
+  /// Execute the given Width1 instruction \p loopBody on cursor \p c up to \p
   /// max times. \return the number of matches made, not to exceed \p max.
+  /// Note we deliberately accept \p c by value.
   template <Width1Opcode w1opcode>
   inline uint32_t
-  matchWidth1LoopBody(const Insn *loopBody, const CodeUnit *pos, uint32_t max);
+  matchWidth1LoopBody(const Insn *loopBody, Cursor<Traits> c, uint32_t max);
 
   /// ES6 21.2.5.2.3 AdvanceStringIndex.
   /// Return the index of the next character to check.
@@ -344,8 +445,8 @@ template <typename Traits>
 struct State {
   using CharT = typename Traits::CodeUnit;
 
-  /// The current character in the input string.
-  const CharT *current_ = nullptr;
+  /// The cursor in the input string.
+  Cursor<Traits> cursor_;
 
   /// The instruction pointer position in the bytecode stream.
   uint32_t ip_ = 0;
@@ -371,10 +472,11 @@ struct State {
     return capturedRanges_[idx];
   }
 
-  /// Construct a state that can hold \p markedCount submatches and \p loopCount
-  /// loop datas.
-  State(uint32_t markedCount, uint32_t loopCount)
-      : capturedRanges_(markedCount, {kNotMatched, kNotMatched}),
+  /// Construct a state which with the given \p cursor, which can hold \p
+  /// markedCount submatches and \p loopCount loop datas.
+  State(Cursor<Traits> cursor, uint32_t markedCount, uint32_t loopCount)
+      : cursor_(cursor),
+        capturedRanges_(markedCount, {kNotMatched, kNotMatched}),
         loopDatas_(loopCount, {0, 0}) {}
 
   State(const State &) = default;
@@ -392,15 +494,14 @@ bool isLineTerminator(CharT c) {
 template <class Traits>
 bool matchesLeftAnchor(Context<Traits> &ctx, State<Traits> &s) {
   bool matchesAnchor = false;
-  if (s.current_ == ctx.first_ &&
-      !(ctx.flags_ & constants::matchPreviousCharAvailable)) {
+  const Cursor<Traits> &c = s.cursor_;
+  if (c.atLeft() && !(ctx.flags_ & constants::matchPreviousCharAvailable)) {
     // Beginning of text.
     matchesAnchor = true;
   } else if (
       (ctx.syntaxFlags_ & constants::multiline) &&
-      (s.current_ > ctx.first_ ||
-       (ctx.flags_ & constants::matchPreviousCharAvailable)) &&
-      isLineTerminator(s.current_[-1])) {
+      (!c.atLeft() || (ctx.flags_ & constants::matchPreviousCharAvailable)) &&
+      isLineTerminator(c.currentPointer()[-1])) {
     // Multiline and after line terminator.
     matchesAnchor = true;
   }
@@ -410,11 +511,12 @@ bool matchesLeftAnchor(Context<Traits> &ctx, State<Traits> &s) {
 template <class Traits>
 bool matchesRightAnchor(Context<Traits> &ctx, State<Traits> &s) {
   bool matchesAnchor = false;
-  if (s.current_ == ctx.last_ && !(ctx.flags_ & constants::matchNotEndOfLine)) {
+  const Cursor<Traits> &c = s.cursor_;
+  if (c.atEnd() && !(ctx.flags_ & constants::matchNotEndOfLine)) {
     matchesAnchor = true;
   } else if (
-      (ctx.syntaxFlags_ & constants::multiline) && (s.current_ < ctx.last_) &&
-      isLineTerminator(s.current_[0])) {
+      (ctx.syntaxFlags_ & constants::multiline) && (!c.atEnd()) &&
+      isLineTerminator(c.current())) {
     matchesAnchor = true;
   }
   return matchesAnchor;
@@ -425,10 +527,11 @@ bool matchesRightAnchor(Context<Traits> &ctx, State<Traits> &s) {
 /// is given in \p insn.
 template <class Traits>
 bool matchesNChar8(const MatchNChar8Insn *insn, State<Traits> &s) {
+  Cursor<Traits> &c = s.cursor_;
   auto insnCharPtr = reinterpret_cast<const char *>(insn + 1);
   auto charCount = insn->charCount;
-  for (int offset = 0; offset < charCount; offset++) {
-    if (s.current_[offset] != insnCharPtr[offset]) {
+  for (int idx = 0; idx < charCount; idx++) {
+    if (c.consume() != insnCharPtr[idx]) {
       return false;
     }
   }
@@ -439,14 +542,15 @@ template <class Traits>
 bool Context<Traits>::matchesNCharICase8(
     const MatchNCharICase8Insn *insn,
     State<Traits> &s) {
+  Cursor<Traits> &c = s.cursor_;
   auto insnCharPtr = reinterpret_cast<const char *>(insn + 1);
   auto charCount = insn->charCount;
   bool unicode = syntaxFlags_ & constants::unicode;
-  for (int offset = 0; offset < charCount; offset++) {
-    char c = s.current_[offset];
-    char instC = insnCharPtr[offset];
-    if (c != instC &&
-        (char32_t)traits_.canonicalize(c, unicode) != (char32_t)instC) {
+  for (int idx = 0; idx < charCount; idx++) {
+    auto c1 = c.consume();
+    char instC = insnCharPtr[idx];
+    if (c1 != instC &&
+        (char32_t)traits_.canonicalize(c1, unicode) != (char32_t)instC) {
       return false;
     }
   }
@@ -503,7 +607,7 @@ bool Context<Traits>::prepareToEnterLoopBody(
     return false;
   }
   loopData.iterations++;
-  loopData.entryPosition = s->current_ - first_;
+  loopData.entryPosition = s->cursor_.offsetFromLeft();
 
   // Backtrack and reset contained capture groups.
   for (uint32_t mexp = loop->mexpBegin; mexp != loop->mexpEnd; mexp++) {
@@ -530,7 +634,7 @@ bool Context<Traits>::performEnterNonGreedyLoop(
   // Set the IP and input position, and initialize the state for entering the
   // loop.
   s->ip_ = bodyIp;
-  s->current_ = first_ + loopData.entryPosition;
+  s->cursor_.setCurrentPointer(first_ + loopData.entryPosition);
   prepareToEnterLoopBody(s, loop, backtrackStack);
   return true;
 }
@@ -552,7 +656,7 @@ bool Context<Traits>::backtrack(BacktrackStack &bts, State<Traits> *s) {
         break;
 
       case BacktrackOp::SetPosition:
-        s->current_ = binsn.setPosition.value;
+        s->cursor_.setCurrentPointer(binsn.setPosition.value);
         s->ip_ = binsn.setPosition.ip;
         bts.pop_back();
         return true;
@@ -583,10 +687,10 @@ bool Context<Traits>::backtrack(BacktrackStack &bts, State<Traits> *s) {
         }
         if (binsn.op == BacktrackOp::GreedyWidth1Loop) {
           binsn.width1Loop.max--;
-          s->current_ = binsn.width1Loop.max;
+          s->cursor_.setCurrentPointer(binsn.width1Loop.max);
         } else {
           binsn.width1Loop.min++;
-          s->current_ = binsn.width1Loop.min;
+          s->cursor_.setCurrentPointer(binsn.width1Loop.min);
         }
         s->ip_ = binsn.width1Loop.continuation;
         return true;
@@ -650,11 +754,11 @@ template <class Traits>
 template <Width1Opcode w1opcode>
 uint32_t Context<Traits>::matchWidth1LoopBody(
     const Insn *insn,
-    const CodeUnit *pos,
+    Cursor<Traits> c,
     uint32_t max) {
   uint32_t iters = 0;
   for (; iters < max; iters++) {
-    if (!matchWidth1<w1opcode>(insn, pos[iters]))
+    if (!matchWidth1<w1opcode>(insn, c.consume()))
       break;
   }
   return iters;
@@ -665,14 +769,14 @@ bool Context<Traits>::matchWidth1Loop(
     const Width1LoopInsn *insn,
     State<Traits> *s,
     BacktrackStack &bts) {
-  const CodeUnit *pos = s->current_;
+  // Note we copy the cursor here.
+  Cursor<Traits> c = s->cursor_;
   uint32_t matched = 0, minMatch = insn->min, maxMatch = insn->max;
 
   // Limit our max to the smaller of the maximum in the loop and number of
   // number of characters remaining. This allows us to avoid having to test for
   // end of input in the loop body.
-  uint32_t remaining = last_ - pos;
-  maxMatch = std::min(remaining, maxMatch);
+  maxMatch = std::min(c.remaining(), maxMatch);
 
   // The loop body follows the loop instruction.
   const Insn *body = static_cast<const Insn *>(&insn[1]);
@@ -683,23 +787,22 @@ bool Context<Traits>::matchWidth1Loop(
   using W1 = Width1Opcode;
   switch (static_cast<Width1Opcode>(body->opcode)) {
     case W1::MatchChar8:
-      matched = matchWidth1LoopBody<W1::MatchChar8>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::MatchChar8>(body, c, maxMatch);
       break;
     case W1::MatchChar16:
-      matched = matchWidth1LoopBody<W1::MatchChar16>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::MatchChar16>(body, c, maxMatch);
       break;
     case W1::MatchCharICase8:
-      matched = matchWidth1LoopBody<W1::MatchCharICase8>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::MatchCharICase8>(body, c, maxMatch);
       break;
     case W1::MatchCharICase16:
-      matched = matchWidth1LoopBody<W1::MatchCharICase16>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::MatchCharICase16>(body, c, maxMatch);
       break;
     case W1::MatchAnyButNewline:
-      matched =
-          matchWidth1LoopBody<W1::MatchAnyButNewline>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::MatchAnyButNewline>(body, c, maxMatch);
       break;
     case W1::Bracket:
-      matched = matchWidth1LoopBody<W1::Bracket>(body, pos, maxMatch);
+      matched = matchWidth1LoopBody<W1::Bracket>(body, c, maxMatch);
       break;
   }
 
@@ -713,6 +816,8 @@ bool Context<Traits>::matchWidth1Loop(
 
   // Now we know the valid match range.
   // Compute the beginning and end pointers in this range.
+
+  const CodeUnit *pos = s->cursor_.currentPointer();
   const CodeUnit *minPos = pos + minMatch;
   const CodeUnit *maxPos = pos + matched;
 
@@ -730,7 +835,7 @@ bool Context<Traits>::matchWidth1Loop(
   }
   // Set the state's current position to either the minimum or maximum location,
   // and point it to the exit of the loop.
-  s->current_ = insn->greedy ? maxPos : minPos;
+  s->cursor_.setCurrentPointer(insn->greedy ? maxPos : minPos);
   s->ip_ = insn->notTakenTarget;
   return true;
 }
@@ -767,18 +872,21 @@ inline size_t Context<Traits>::advanceStringIndex(
 }
 
 template <class Traits>
-auto Context<Traits>::match(
-    State<Traits> *s,
-    const CodeUnit *startLoc,
-    bool onlyAtStart) -> const CodeUnit * {
+auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
+    -> const CodeUnit * {
   using State = State<Traits>;
   BacktrackStack backtrackStack;
+
+  // We'll refer to the cursor often.
+  Cursor<Traits> &c = s->cursor_;
 
   // Pull out the instruction portion of the bytecode, following the header.
   const uint8_t *const bytecode = &bytecodeStream_[sizeof(RegexBytecodeHeader)];
 
   // Save the incoming IP in case we have to loop.
   const auto startIp = s->ip_;
+
+  const CodeUnit *const startLoc = c.currentPointer();
 
   // Decide how many locations we'll need to check.
   // Note that we do want to check the empty range [last_, last_)
@@ -795,7 +903,7 @@ auto Context<Traits>::match(
   for (size_t locIndex = 0; locIndex < locsToCheckCount;
        locIndex = advanceStringIndex(startLoc, locIndex, locsToCheckCount)) {
     const CodeUnit *potentialMatchLocation = startLoc + locIndex;
-    s->current_ = potentialMatchLocation;
+    c.setCurrentPointer(potentialMatchLocation);
     s->ip_ = startIp;
   backtrackingSucceeded:
     for (;;) {
@@ -817,65 +925,55 @@ auto Context<Traits>::match(
           break;
 
         case Opcode::MatchAnyButNewline:
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::MatchAnyButNewline>(
-                  base, *s->current_))
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchAnyButNewline>(base, c.consume()))
             BACKTRACK();
-          s->current_++;
           s->ip_ += sizeof(MatchAnyButNewlineInsn);
           break;
 
         case Opcode::U16MatchAnyButNewline:
-          CodePoint cp;
-          if (!Traits::decodeUTF16(s->current_, last_, &cp)) {
+          if (c.atEnd())
             BACKTRACK();
-          }
+          c.consumeUTF16();
           s->ip_ += sizeof(U16MatchAnyButNewlineInsn);
           break;
 
         case Opcode::MatchChar8: {
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::MatchChar8>(base, *s->current_))
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchChar8>(base, c.consume()))
             BACKTRACK();
-          s->current_++;
           s->ip_ += sizeof(MatchChar8Insn);
           break;
         }
 
         case Opcode::MatchChar16: {
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::MatchChar16>(base, *s->current_))
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchChar16>(base, c.consume()))
             BACKTRACK();
-          s->current_++;
           s->ip_ += sizeof(MatchChar16Insn);
           break;
         }
 
         case Opcode::U16MatchChar32: {
           const auto *insn = llvm::cast<U16MatchChar32Insn>(base);
-          CodePoint cp;
-          if (!Traits::decodeUTF16(s->current_, last_, &cp) ||
-              cp != (CodePoint)insn->c) {
+          if (c.atEnd() || c.consumeUTF16() != (CodePoint)insn->c)
             BACKTRACK();
-          }
           s->ip_ += sizeof(U16MatchChar32Insn);
           break;
         }
 
         case Opcode::MatchCharICase8: {
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::MatchCharICase8>(base, *s->current_))
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchCharICase8>(base, c.consume()))
             BACKTRACK();
-          s->current_++;
           s->ip_ += sizeof(MatchCharICase8Insn);
           break;
         }
 
         case Opcode::MatchCharICase16: {
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::MatchCharICase16>(base, *s->current_))
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchCharICase16>(base, c.consume()))
             BACKTRACK();
-          s->current_++;
           s->ip_ += sizeof(MatchCharICase16Insn);
           break;
         }
@@ -883,32 +981,31 @@ auto Context<Traits>::match(
         case Opcode::U16MatchCharICase32: {
           const auto *insn = llvm::cast<U16MatchCharICase32Insn>(base);
           assert(insn->c >= 0x010000 && "Character should be astral");
-          CodePoint cp;
-          if (!Traits::decodeUTF16(s->current_, last_, &cp) ||
-              traits_.canonicalize(cp, true) != (CodePoint)insn->c) {
-            BACKTRACK();
+          bool matched = false;
+          if (!c.atEnd()) {
+            CodePoint cp = c.consumeUTF16();
+            matched =
+                (cp == (CodePoint)insn->c ||
+                 traits_.canonicalize(cp, true) == (CodePoint)insn->c);
           }
+          if (!matched)
+            BACKTRACK();
           s->ip_ += sizeof(U16MatchCharICase32Insn);
           break;
         }
 
         case Opcode::MatchNChar8: {
           const auto *insn = llvm::cast<MatchNChar8Insn>(base);
-
-          if (last_ - s->current_ < insn->charCount || !matchesNChar8(insn, *s))
+          if (c.remaining() < insn->charCount || !matchesNChar8(insn, *s))
             BACKTRACK();
-          s->current_ += insn->charCount;
           s->ip_ += insn->totalWidth();
           break;
         }
 
         case Opcode::MatchNCharICase8: {
           const auto *insn = llvm::cast<MatchNCharICase8Insn>(base);
-
-          if (last_ - s->current_ < insn->charCount ||
-              !matchesNCharICase8(insn, *s))
+          if (c.remaining() < insn->charCount || !matchesNCharICase8(insn, *s))
             BACKTRACK();
-          s->current_ += insn->charCount;
           s->ip_ += insn->totalWidth();
           break;
         }
@@ -928,7 +1025,7 @@ auto Context<Traits>::match(
             if (!pushBacktrack(
                     backtrackStack,
                     BacktrackInsn::makeSetPosition(
-                        alt->secondaryBranch, s->current_))) {
+                        alt->secondaryBranch, c.currentPointer()))) {
               return nullptr;
             }
           } else if (primaryViable) {
@@ -946,27 +1043,22 @@ auto Context<Traits>::match(
           break;
 
         case Opcode::Bracket: {
-          if (s->current_ == last_ ||
-              !matchWidth1<Width1Opcode::Bracket>(base, *s->current_))
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::Bracket>(base, c.consume()))
             BACKTRACK();
-          s->current_++;
           s->ip_ += llvm::cast<BracketInsn>(base)->totalWidth();
           break;
         }
 
         case Opcode::U16Bracket: {
-          bool matched = false;
-          CodePoint cp;
           const U16BracketInsn *insn = llvm::cast<U16BracketInsn>(base);
-          if (Traits::decodeUTF16(s->current_, last_, &cp)) {
-            // U16BracketInsn is followed by a list of BracketRange32s.
-            const BracketRange32 *ranges =
-                reinterpret_cast<const BracketRange32 *>(insn + 1);
-            matched = bracketMatchesChar<Traits>(*this, insn, ranges, cp);
-          }
-          if (!matched)
+          // U16BracketInsn is followed by a list of BracketRange32s.
+          const BracketRange32 *ranges =
+              reinterpret_cast<const BracketRange32 *>(insn + 1);
+          if (c.atEnd() ||
+              !bracketMatchesChar<Traits>(
+                  *this, insn, ranges, c.consumeUTF16()))
             BACKTRACK();
-
           s->ip_ += insn->totalWidth();
           break;
         }
@@ -974,15 +1066,14 @@ auto Context<Traits>::match(
         case Opcode::WordBoundary: {
           const WordBoundaryInsn *insn = llvm::cast<WordBoundaryInsn>(base);
           bool prevIsWordchar = false;
-          if (s->current_ != first_ ||
-              (flags_ & constants::matchPreviousCharAvailable))
+          if (!c.atLeft() || (flags_ & constants::matchPreviousCharAvailable))
             prevIsWordchar = traits_.characterHasType(
-                s->current_[-1], CharacterClass::Words);
+                c.currentPointer()[-1], CharacterClass::Words);
 
           bool currentIsWordchar = false;
-          if (s->current_ != last_)
+          if (!c.atEnd())
             currentIsWordchar =
-                traits_.characterHasType(s->current_[0], CharacterClass::Words);
+                traits_.characterHasType(c.current(), CharacterClass::Words);
           bool isWordBoundary = (prevIsWordchar != currentIsWordchar);
           if (isWordBoundary ^ insn->invert)
             s->ip_ += sizeof(WordBoundaryInsn);
@@ -999,14 +1090,14 @@ auto Context<Traits>::match(
                       insn->mexp - 1, {kNotMatched, kNotMatched}))) {
             return nullptr;
           }
-          s->getCapturedRange(insn->mexp - 1).start = s->current_ - first_;
+          s->getCapturedRange(insn->mexp - 1).start = c.offsetFromLeft();
           s->ip_ += sizeof(BeginMarkedSubexpressionInsn);
           break;
         }
 
         case Opcode::EndMarkedSubexpression: {
           const auto *insn = llvm::cast<EndMarkedSubexpressionInsn>(base);
-          s->getCapturedRange(insn->mexp - 1).end = s->current_ - first_;
+          s->getCapturedRange(insn->mexp - 1).end = c.offsetFromLeft();
           s->ip_ += sizeof(EndMarkedSubexpressionInsn);
           break;
         }
@@ -1031,40 +1122,29 @@ auto Context<Traits>::match(
           // loop.
           bool icase = syntaxFlags_ & constants::icase;
           bool unicode = syntaxFlags_ & constants::unicode;
-          auto cursor1 = s->current_;
-          auto cursor2 = first_ + cr.start;
-          auto cursor2end = first_ + cr.end;
+          Cursor<Traits> cursor1 = c;
+          Cursor<Traits> cursor2(first_ + cr.start, first_ + cr.end);
           bool matched = true;
-          while (matched && cursor2 < cursor2end) {
-            if (cursor1 >= last_) {
+          while (matched && !cursor2.atEnd()) {
+            if (cursor1.atEnd()) {
               matched = false;
             } else if (!icase) {
               // Direct comparison. Here we don't need to decode surrogate
               // pairs.
-              matched = (*cursor1++ == *cursor2++);
+              matched = (cursor1.consume() == cursor2.consume());
             } else if (!unicode) {
               // Case-insensitive non-Unicode comparison, no decoding of
               // surrogate pairs.
-              auto c1 = *cursor1++;
-              auto c2 = *cursor2++;
+              auto c1 = cursor1.consume();
+              auto c2 = cursor2.consume();
               matched =
                   (c1 == c2 ||
                    traits_.canonicalize(c1, unicode) ==
                        traits_.canonicalize(c2, unicode));
             } else {
               // Unicode: we do need to decode surrogate pairs.
-              CodePoint cp1;
-              bool decode1 = Traits::decodeUTF16(cursor1, last_, &cp1);
-
-              CodePoint cp2;
-              bool decode2 = Traits::decodeUTF16(cursor2, cursor2end, &cp2);
-
-              assert(
-                  decode1 && decode2 &&
-                  "Should always successfully decode due to prior bounds checks");
-              (void)decode1;
-              (void)decode2;
-
+              auto cp1 = cursor1.consumeUTF16();
+              auto cp2 = cursor2.consumeUTF16();
               matched =
                   (cp1 == cp2 ||
                    traits_.canonicalize(cp1, unicode) ==
@@ -1075,7 +1155,7 @@ auto Context<Traits>::match(
             BACKTRACK();
           }
           s->ip_ += sizeof(BackRefInsn);
-          s->current_ = cursor1;
+          c.setCurrentPointer(cursor1.currentPointer());
           break;
         }
 
@@ -1091,8 +1171,8 @@ auto Context<Traits>::match(
             // Save and restore the position because lookaheads do not consume
             // anything.
             s->ip_ += sizeof(LookaheadInsn);
-            matched = this->match(s, s->current_, true /* onlyAtStart */);
-            s->current_ = savedState.current_;
+            matched = this->match(s, true /* onlyAtStart */);
+            c.setCurrentPointer(savedState.cursor_.currentPointer());
 
             // Restore capture groups unless we are a positive lookahead that
             // successfully matched. If we are a successfully matching positive
@@ -1177,7 +1257,7 @@ auto Context<Traits>::match(
           // expansions of Atom that match the empty character sequence are
           // not considered for further repetitions."
           if (iteration > loop->min &&
-              first_ + loopData.entryPosition == s->current_)
+              loopData.entryPosition == c.offsetFromLeft())
             BACKTRACK();
 
           if (!doLoopBody && !doNotTaken) {
@@ -1194,7 +1274,7 @@ auto Context<Traits>::match(
                 "Must be exploring loop not taken and body");
             if (!loop->greedy) {
               // Backtrack by entering this non-greedy loop.
-              loopData.entryPosition = s->current_ - first_;
+              loopData.entryPosition = c.offsetFromLeft();
               if (!pushBacktrack(
                       backtrackStack,
                       BacktrackInsn::makeEnterNonGreedyLoop(
@@ -1208,7 +1288,7 @@ auto Context<Traits>::match(
               if (!pushBacktrack(
                       backtrackStack,
                       BacktrackInsn::makeSetPosition(
-                          loopNotTakenIp, s->current_))) {
+                          loopNotTakenIp, c.currentPointer()))) {
                 error_ = MatchRuntimeErrorType::MaxStackDepth;
                 return nullptr;
               }
@@ -1245,7 +1325,7 @@ auto Context<Traits>::match(
           // exiting the loop at this point and continuing to loop.
           // Note simple loops are always greedy.
           backtrackStack.push_back(BacktrackInsn::makeSetPosition(
-              loop->notTakenTarget, s->current_));
+              loop->notTakenTarget, c.currentPointer()));
           s->ip_ += sizeof(BeginSimpleLoopInsn);
           break;
         }
@@ -1297,7 +1377,8 @@ MatchRuntimeResult searchWithBytecodeImpl(
       last,
       header->markedCount,
       header->loopCount);
-  State<Traits> state{markedCount, loopCount};
+  Cursor<Traits> cursor{first, last};
+  State<Traits> state{cursor, markedCount, loopCount};
 
   // We check only one location if either the regex pattern constrains us to, or
   // the flags request it (via the sticky flag 'y').
@@ -1305,11 +1386,11 @@ MatchRuntimeResult searchWithBytecodeImpl(
       (matchFlags & constants::matchOnlyAtStart);
 
   auto result = MatchRuntimeResult::NoMatch;
-  if (const CharT *matchStartLoc = ctx.match(&state, ctx.first_, onlyAtStart)) {
+  if (const CharT *matchStartLoc = ctx.match(&state, onlyAtStart)) {
     // Match succeeded.
     m.resize(1 + markedCount);
     m[0].first = matchStartLoc;
-    m[0].second = state.current_;
+    m[0].second = state.cursor_.currentPointer();
     m[0].matched = true;
     for (uint32_t idx = 0; idx < markedCount; idx++) {
       CapturedRange cr = state.getCapturedRange(idx);

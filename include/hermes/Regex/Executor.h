@@ -45,13 +45,13 @@ class SubMatch {
   }
 };
 
-/// Entry point for searching a string via regex compiled bytecode.
-/// Given the bytecode \p bytecode, search the range starting at \p first up to
-/// (not including) \p last with the flags \p matchFlags. If the search
-/// succeeds, poopulate MatchResults with the capture groups. \return true if
-/// some portion of the string matched the regex represented by the bytecode,
-/// false otherwise.
-/// char16_t overload.
+/// Given a string \p first with end \p last, look for regex matches.
+/// Search using the compiled regex represented by \p bytecode with the flags \p
+/// matchFlags. If the search succeeds, populate \p m with the capture
+/// groups.
+/// \return true if some portion of the string matched the regex represented by
+/// the bytecode, false otherwise.
+/// This is the char16_t overload.
 MatchRuntimeResult searchWithBytecode(
     llvm::ArrayRef<uint8_t> bytecode,
     const char16_t *first,
@@ -59,7 +59,7 @@ MatchRuntimeResult searchWithBytecode(
     MatchResults<const char16_t *> &m,
     constants::MatchFlagType matchFlags);
 
-/// ASCII overload.
+/// This is the ASCII overload.
 MatchRuntimeResult searchWithBytecode(
     llvm::ArrayRef<uint8_t> bytecode,
     const char *first,

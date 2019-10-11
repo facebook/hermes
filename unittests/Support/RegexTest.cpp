@@ -1003,15 +1003,6 @@ TEST(Regex, LineStartAnchoring) {
   EXPECT_FALSE(regexIsAnchored(u"abc^|^def|\\w"));
   EXPECT_FALSE(regexIsAnchored(u"abc^", constants::multiline));
   EXPECT_FALSE(regexIsAnchored(u"abc", constants::multiline));
-
-  // Test with an u"infinite" string: an iterator range where incrementing the
-  // first never reaches this second. If this were not anchored, we would
-  // traverse forever and we would crash.
-  cregex anchored(u"abc^|(d*)^e|(?=^fgh)");
-  ASSERT_TRUE(anchored.matchConstraints() & MatchConstraintAnchoredAtStart);
-  MatchResults<const char16_t *> m;
-  EXPECT_FALSE(
-      search(u"1234", static_cast<const char16_t *>(nullptr), m, anchored));
 }
 
 TEST(Regex, NonASCII) {
