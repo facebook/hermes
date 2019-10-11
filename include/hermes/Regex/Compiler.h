@@ -1182,8 +1182,7 @@ class LookaroundNode : public Node {
   virtual void emit(RegexBytecodeStream &bcs) const override {
     auto lookaround = bcs.emit<LookaroundInsn>();
     lookaround->invert = invert_;
-    // TODO: forwards_ is not yet implemented by the executor.
-    (void)forwards_;
+    lookaround->forwards = forwards_;
     lookaround->constraints = expConstraints_;
     lookaround->mexpBegin = mexpBegin_;
     lookaround->mexpEnd = mexpEnd_;

@@ -309,6 +309,16 @@ print('hello world'.replace(/\B/g, '!'));
 print('hello world'.replace(/\B|\b/g, '!'));
 // CHECK-NEXT: !h!e!l!l!o! !w!o!r!l!d!
 
+// Lookbehind assertions.
+print(/(?<=efg)../.exec("abcdefghijk123456"))
+// CHECK-NEXT: hi
+print(/(?<=\d{3}).*/.exec("abcdefghijk123456"))
+// CHECK-NEXT: 456
+print(/(?<![a-z])../.exec("abcdefghijk123456"))
+// CHECK-NEXT: ab
+print(/(?<![a-z])\d{2}/.exec("abcdefghijk123456"))
+// CHECK-NEXT: 23
+
 // Sticky support
 print(/abc/y.exec("abc"));
 // CHECK-NEXT: abc

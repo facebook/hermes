@@ -166,6 +166,8 @@ struct EndMarkedSubexpressionInsn : public Insn {
 struct LookaroundInsn : public Insn {
   /// Whether we are inverted: (?!...) instead of (?=...).
   bool invert;
+  /// Whether we are forwards: (?=...) instead of (?<=...).
+  bool forwards;
   /// Constraints on what can match the contained expression.
   MatchConstraintSet constraints;
   // The subexpression marked regions we want to be able to backtrack.

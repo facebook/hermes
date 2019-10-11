@@ -73,13 +73,13 @@ print(/\b\B/);
 print(/abc(?=^)(?!def)/i);
 // CHECK: Header: marked: 0 loops: 0 flags: 1 constraints: 6
 // CHECK-NEXT: 0000  MatchNCharICase8: 'ABC'
-// CHECK-NEXT: 0005  Lookaround: = (constraints: 2, marked expressions=[0,0), continuation 0x12)
-// CHECK-NEXT: 0010  LeftAnchor
-// CHECK-NEXT: 0011  Goal
-// CHECK-NEXT: 0012  Lookaround: ! (constraints: 4, marked expressions=[0,0), continuation 0x23)
-// CHECK-NEXT: 001d  MatchNCharICase8: 'DEF'
-// CHECK-NEXT: 0022  Goal
-// CHECK-NEXT: 0023  Goal
+// CHECK-NEXT: 0005  Lookaround: = (constraints: 2, marked expressions=[0,0), continuation 0x13)
+// CHECK-NEXT: 0011  LeftAnchor
+// CHECK-NEXT: 0012  Goal
+// CHECK-NEXT: 0013  Lookaround: ! (constraints: 4, marked expressions=[0,0), continuation 0x25)
+// CHECK-NEXT: 001f  MatchNCharICase8: 'DEF'
+// CHECK-NEXT: 0024  Goal
+// CHECK-NEXT: 0025  Goal
 
 print(/ab*c+d{3,5}/);
 // CHECK:        7: /ab*c+d{3,5}/
@@ -190,23 +190,37 @@ print(/(a)(?=(.))/i);
 // CHECK-NEXT:   0000  BeginMarkedSubexpression: 1
 // CHECK-NEXT:   0003  MatchCharICase8: 'A'
 // CHECK-NEXT:   0005  EndMarkedSubexpression: 1
-// CHECK-NEXT:   0008  Lookaround: = (constraints: 4, marked expressions=[1,2), continuation 0x1b)
-// CHECK-NEXT:   0013  BeginMarkedSubexpression: 2
-// CHECK-NEXT:   0016  MatchAnyButNewline
-// CHECK-NEXT:   0017  EndMarkedSubexpression: 2
-// CHECK-NEXT:   001a  Goal
+// CHECK-NEXT:   0008  Lookaround: = (constraints: 4, marked expressions=[1,2), continuation 0x1c)
+// CHECK-NEXT:   0014  BeginMarkedSubexpression: 2
+// CHECK-NEXT:   0017  MatchAnyButNewline
+// CHECK-NEXT:   0018  EndMarkedSubexpression: 2
 // CHECK-NEXT:   001b  Goal
+// CHECK-NEXT:   001c  Goal
+
+print(/(a)(?<!(.))/i);
+// CHECK:        19: /(a)(?<!(.))/i
+// CHECK-NEXT:   Header: marked: 2 loops: 0 flags: 1 constraints: 4
+// CHECK-NEXT:   0000  BeginMarkedSubexpression: 1
+// CHECK-NEXT:   0003  MatchCharICase8: 'A'
+// CHECK-NEXT:   0005  EndMarkedSubexpression: 1
+// CHECK-NEXT:   0008  Lookaround: <! (constraints: 4, marked expressions=[1,2), continuation 0x1c)
+// CHECK-NEXT:   0014  BeginMarkedSubexpression: 2
+// CHECK-NEXT:   0017  MatchAnyButNewline
+// CHECK-NEXT:   0018  EndMarkedSubexpression: 2
+// CHECK-NEXT:   001b  Goal
+// CHECK-NEXT:   001c  Goal
+
 
 // There are 255 'a's here.
 print(/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaoverflow/);
-// CHECK:        19: /{{a{255}overflow}}/
+// CHECK:        20: /{{a{255}overflow}}/
 // CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 0 constraints: 4
 // CHECK-NEXT:   0000  MatchNChar8: {{'a{255}'}}
 // CHECK-NEXT:   0101  MatchNChar8: 'overflow'
 // CHECK-NEXT:   010b  Goal
 
 print(/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaoverflow/i);
-// CHECK:        20: /{{a{255}overflow}}/i
+// CHECK:        21: /{{a{255}overflow}}/i
 // CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 1 constraints: 4
 // CHECK-NEXT:   0000  MatchNCharICase8: {{'A{255}'}}
 // CHECK-NEXT:   0101  MatchNCharICase8: 'OVERFLOW'

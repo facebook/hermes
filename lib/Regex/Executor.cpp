@@ -53,8 +53,11 @@ struct LoopData {
 
 /// Cursor is a lightweight value type which allows tracking a character pointer
 /// 'current' within a range 'first' to 'last'.
-/// The cursor location begins at 'first' and proceeds to 'last'; it is
-/// prohibited to access the cursor if it is at the end.
+/// A cursor may either be forwards, in which case it proceeds from 'first' to
+/// 'last'. It may also (in the case of lookbehind assertions) be backwards, in
+/// which case the cursor proceeds from 'last' to 'first'. The terms "begin" and
+/// "end" denote tracking in the direction of the cursor, while "left" and
+/// "right" are direction independent.
 template <class Traits>
 class Cursor {
   using CodeUnit = typename Traits::CodeUnit;
@@ -63,23 +66,43 @@ class Cursor {
  public:
   /// Construct with the range \p first and \p last, setting the current
   /// position to \p first. Note that the \p last is one past the last valid
-  /// character.
-  Cursor(const CodeUnit *first, const CodeUnit *current, const CodeUnit *last)
-      : first_(first), last_(last), current_(current) {
+  /// character. \p forwards decides whether the current pointer advances
+  /// towards last_ (true) or first_ (false).
+  Cursor(
+      const CodeUnit *first,
+      const CodeUnit *current,
+      const CodeUnit *last,
+      bool forwards)
+      : first_(first),
+        last_(last),
+        current_(current),
+        end_(forwards ? last : first),
+        forwards_(forwards) {
     assert(first_ <= last_ && "first and last out of order");
     assert(
         first_ <= current_ && current <= last_ &&
         "current pointer not in range");
   }
 
+  /// \return whether this cursor advances forwards.
+  bool forwards() const {
+    return forwards_;
+  }
+
+  /// Set whether this cursor advances forwards to \p flag.
+  void setForwards(bool flag) {
+    forwards_ = flag;
+    end_ = forwards_ ? last_ : first_;
+  }
+
   /// \return the number of code units remaining.
   uint32_t remaining() const {
-    return last_ - current_;
+    return forwards_ ? last_ - current_ : current_ - first_;
   }
 
   /// \return whether we are at the end of the range.
   bool atEnd() const {
-    return current_ == last_;
+    return current_ == end_;
   }
 
   /// \return the number of code units consumed from the leftmost character.
@@ -103,8 +126,9 @@ class Cursor {
 
   /// \return the current code unit.
   CodeUnit current() const {
+    // Access the character at index 0 if forwards, -1 if backwards.
     assert(!atEnd() && "Cursor is at end");
-    return current_[0];
+    return current_[(int)forwards_ - 1];
   }
 
   /// \return the current cursor position.
@@ -121,7 +145,7 @@ class Cursor {
   /// \return the current code unit, advancing the cursor by 1.
   CodeUnit consume() {
     CodeUnit result = current();
-    current_ += 1;
+    current_ += forwards_ ? 1 : -1;
     return result;
   }
 
@@ -133,10 +157,10 @@ class Cursor {
 
     // In ASCII we have no surrogates.
     if (sizeof(CodeUnit) >= 2 && remaining() >= 2) {
-      CodeUnit hi = current_[0];
-      CodeUnit lo = current_[1];
+      CodeUnit hi = forwards_ ? current_[0] : current_[-2];
+      CodeUnit lo = forwards_ ? current_[1] : current_[-1];
       if (isHighSurrogate(hi) && isLowSurrogate(lo)) {
-        current_ += 2;
+        current_ += forwards_ ? 2 : -2;
         return decodeSurrogatePair(hi, lo);
       }
     }
@@ -163,8 +187,17 @@ class Cursor {
   // One past the last code unit in the string.
   const CodeUnit *last_;
 
-  // A pointer to the current code unit.
+  // Our position between first_ and last_.
+  // If we are forwards, then the current character is current_[0].
+  // If we are backwards, then the current character is current_[-1].
   const CodeUnit *current_;
+
+  // A pointer to the end. This is either last (if forwards) or first (if not
+  // forwards). If our current cursor reaches this value, we are done.
+  const CodeUnit *end_;
+
+  // Whether we are tracking forwards or backwards.
+  bool forwards_;
 };
 
 /// A Context records global information about a match attempt.
@@ -875,8 +908,15 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
   const CodeUnit *const startLoc = c.currentPointer();
 
   // Decide how many locations we'll need to check.
-  // Note that we do want to check the empty range [last_, last_)
-  const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + (last_ - startLoc);
+  // Note that we do want to check the empty range at the end, so add one to
+  // remaining().
+  const size_t locsToCheckCount = onlyAtStart ? 1 : 1 + c.remaining();
+
+  // If we are tracking backwards, we should only ever have one potential match
+  // location. This is because advanceStringIndex only ever tracks forwards.
+  assert(
+      (c.forwards() || locsToCheckCount == 1) &&
+      "Can only check one location when cursor is backwards");
 
   // Macro used when a state fails to match.
 #define BACKTRACK()                   \
@@ -1108,9 +1148,14 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           // loop.
           bool icase = syntaxFlags_ & constants::icase;
           bool unicode = syntaxFlags_ & constants::unicode;
-          Cursor<Traits> cursor1 = c;
+          auto capturedStart = first_ + cr.start;
+          auto capturedEnd = first_ + cr.end;
           Cursor<Traits> cursor2(
-              first_ + cr.start, first_ + cr.start, first_ + cr.end);
+              capturedStart,
+              c.forwards() ? capturedStart : capturedEnd,
+              capturedEnd,
+              c.forwards());
+          Cursor<Traits> cursor1 = c;
           bool matched = true;
           while (matched && !cursor2.atEnd()) {
             if (cursor1.atEnd()) {
@@ -1154,12 +1199,16 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
             // inverted) we need to restore its capture groups.
             State savedState{*s};
 
+            // Set the direction of the cursor.
+            c.setForwards(insn->forwards);
+
             // Invoke match() recursively with our expression.
             // Save and restore the position because lookaheads do not consume
             // anything.
             s->ip_ += sizeof(LookaroundInsn);
             matched = this->match(s, true /* onlyAtStart */);
             c.setCurrentPointer(savedState.cursor_.currentPointer());
+            c.setForwards(savedState.cursor_.forwards());
 
             // Restore capture groups unless we are a positive lookaround that
             // successfully matched. If we are a successfully matching positive
@@ -1352,7 +1401,8 @@ MatchRuntimeResult searchWithBytecodeImpl(
   auto header = reinterpret_cast<const RegexBytecodeHeader *>(bytecode.data());
 
   // Check for match impossibility before doing anything else.
-  Cursor<Traits> cursor{first, first + start, first + length};
+  Cursor<Traits> cursor{
+      first, first + start, first + length, true /* forwards */};
   if (!cursor.satisfiesConstraints(matchFlags, header->constraints))
     return MatchRuntimeResult::NoMatch;
 
