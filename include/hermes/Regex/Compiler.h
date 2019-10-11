@@ -1162,7 +1162,16 @@ class LookaroundNode : public Node {
         invert_(invert),
         forwards_(forwards),
         mexpBegin_(mexpBegin),
-        mexpEnd_(mexpEnd) {}
+        mexpEnd_(mexpEnd) {
+    // Clear AnchoredAtStart for lookbehind assertions.
+    // For example:
+    //    /(?<=^abc)def/.exec("abcdef")
+    // this matches the substring "def", even though that substring is not
+    // anchored at the start.
+    if (!forwards_) {
+      expConstraints_ &= ~MatchConstraintAnchoredAtStart;
+    }
+  }
 
   virtual MatchConstraintSet matchConstraints() const override {
     // Positive lookarounds apply their match constraints.
