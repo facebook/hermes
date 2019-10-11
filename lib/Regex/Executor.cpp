@@ -350,6 +350,10 @@ struct Context {
   /// Traits used for canonicalization.
   Traits traits_;
 
+  /// The remaining number of times we will attempt to backtrack.
+  /// This is effectively a timeout on the regexp execution.
+  uint32_t backtracksRemaining_ = kBacktrackLimit;
+
   /// Whether an error occurred during the regex matching.
   MatchRuntimeErrorType error_ = MatchRuntimeErrorType::None;
 
@@ -397,10 +401,12 @@ struct Context {
   /// \return true on success, false if we overflow.
   bool pushBacktrack(BacktrackStack &bts, BacktrackInsn insn) {
     bts.push_back(insn);
-    if (bts.size() > kMaxBacktrackDepth) {
+    if (LLVM_UNLIKELY(bts.size() > kMaxBacktrackDepth) ||
+        LLVM_UNLIKELY(backtracksRemaining_ == 0)) {
       error_ = MatchRuntimeErrorType::MaxStackDepth;
       return false;
     }
+    backtracksRemaining_--;
     return true;
   }
 
