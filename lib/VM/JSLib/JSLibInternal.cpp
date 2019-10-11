@@ -303,24 +303,22 @@ static bool isReturnThis(Handle<StringPrimitive> str, Runtime *runtime) {
   static auto bytecode = getReturnThisRegexBytecode();
   auto result = regex::MatchRuntimeResult::NoMatch;
   if (input.isASCII()) {
-    regex::MatchResults<const char *> results;
     const char *begin = input.castToCharPtr();
     result = regex::searchWithBytecode(
         bytecode,
         begin,
         0,
         input.length(),
-        results,
+        nullptr,
         regex::constants::matchDefault | regex::constants::matchInputAllAscii);
   } else {
-    regex::MatchResults<const char16_t *> results;
     const char16_t *begin = input.castToChar16Ptr();
     result = regex::searchWithBytecode(
         bytecode,
         begin,
         0,
         input.length(),
-        results,
+        nullptr,
         regex::constants::matchDefault);
   }
   return result == regex::MatchRuntimeResult::Match;

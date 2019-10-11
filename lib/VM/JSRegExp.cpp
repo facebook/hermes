@@ -236,13 +236,13 @@ CallResult<RegExpMatch> performSearch(
     uint32_t stringLength,
     uint32_t searchStartOffset,
     regex::constants::MatchFlagType matchFlags) {
-  regex::MatchResults<const CharT *> nativeMatchRanges;
+  std::vector<regex::CapturedRange> nativeMatchRanges;
   auto matchResult = regex::searchWithBytecode(
       bytecode,
       start,
       searchStartOffset,
       stringLength,
-      nativeMatchRanges,
+      &nativeMatchRanges,
       matchFlags);
   if (matchResult == regex::MatchRuntimeResult::StackOverflow) {
     runtime->raiseRangeError("Maximum regex stack depth reached");
@@ -256,13 +256,12 @@ CallResult<RegExpMatch> performSearch(
   match.reserve(matchRangeCount);
   for (size_t i = 0; i < matchRangeCount; i++) {
     const auto &submatch = nativeMatchRanges[i];
-    if (!submatch.matched) {
+    if (!submatch.matched()) {
       assert(i > 0 && "match_result[0] should always match");
       match.push_back(llvm::None);
     } else {
-      assert(submatch.first >= start && "Match occurred before start");
-      uint32_t pos = submatch.first - start;
-      uint32_t length = submatch.length();
+      uint32_t pos = submatch.start;
+      uint32_t length = submatch.end - submatch.start;
       match.push_back(RegExpMatchRange{pos, length});
     }
   }

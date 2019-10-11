@@ -41,19 +41,6 @@ enum class Width1Opcode : uint8_t {
   Bracket = (uint8_t)Opcode::Bracket,
 };
 
-/// A CapturedRange represents a range of the input string captured by a capture
-/// group. A CaptureGroup may also not have matched, in which case its start is
-/// set to kNotMatched. Note that an unmatched capture group is different than a
-/// capture group that matched an empty string.
-static constexpr uint32_t kNotMatched = UINT32_MAX;
-struct CapturedRange {
-  /// Index of the first captured character, or kNotMatched if not matched.
-  uint32_t start;
-
-  /// One past the index of the last captured character.
-  uint32_t end;
-};
-
 /// LoopData tracks information about a loop during a match attempt. Each State
 /// has one LoopData per loop.
 struct LoopData {
@@ -1358,7 +1345,7 @@ MatchRuntimeResult searchWithBytecodeImpl(
     const CharT *first,
     uint32_t start,
     uint32_t length,
-    MatchResults<const CharT *> &m,
+    std::vector<CapturedRange> *m,
     constants::MatchFlagType matchFlags) {
   assert(
       bytecode.size() >= sizeof(RegexBytecodeHeader) && "Bytecode too small");
@@ -1389,17 +1376,16 @@ MatchRuntimeResult searchWithBytecodeImpl(
 
   auto result = MatchRuntimeResult::NoMatch;
   if (const CharT *matchStartLoc = ctx.match(&state, onlyAtStart)) {
-    // Match succeeded.
-    m.resize(1 + markedCount);
-    m[0].first = matchStartLoc;
-    m[0].second = state.cursor_.currentPointer();
-    m[0].matched = true;
-    for (uint32_t idx = 0; idx < markedCount; idx++) {
-      CapturedRange cr = state.getCapturedRange(idx);
-      bool matched = (cr.start != kNotMatched);
-      m[idx + 1].first = matched ? ctx.first_ + cr.start : ctx.last_;
-      m[idx + 1].second = matched ? ctx.first_ + cr.end : ctx.last_;
-      m[idx + 1].matched = matched;
+    // Match succeeded. Return captured ranges. The first range is the total
+    // match, followed by any capture groups.
+    if (m != nullptr) {
+      uint32_t totalStart = static_cast<uint32_t>(matchStartLoc - first);
+      uint32_t totalEnd =
+          static_cast<uint32_t>(state.cursor_.currentPointer() - first);
+      m->clear();
+      m->push_back(CapturedRange{totalStart, totalEnd});
+      std::copy_n(
+          state.capturedRanges_.begin(), markedCount, std::back_inserter(*m));
     }
     result = MatchRuntimeResult::Match;
   }
@@ -1416,7 +1402,7 @@ MatchRuntimeResult searchWithBytecode(
     const char16_t *first,
     uint32_t start,
     uint32_t length,
-    MatchResults<const char16_t *> &m,
+    std::vector<CapturedRange> *m,
     constants::MatchFlagType matchFlags) {
   return searchWithBytecodeImpl<char16_t, UTF16RegexTraits>(
       bytecode, first, start, length, m, matchFlags);
@@ -1427,7 +1413,7 @@ MatchRuntimeResult searchWithBytecode(
     const char *first,
     uint32_t start,
     uint32_t length,
-    MatchResults<const char *> &m,
+    std::vector<CapturedRange> *m,
     constants::MatchFlagType matchFlags) {
   return searchWithBytecodeImpl<char, ASCIIRegexTraits>(
       bytecode, first, start, length, m, matchFlags);

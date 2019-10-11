@@ -242,12 +242,6 @@ struct CharacterClass {
 
 class Node;
 
-template <class BidirectionalIterator>
-class SubMatch;
-
-template <class BidirectionalIterator>
-using MatchResults = std::vector<SubMatch<BidirectionalIterator>>;
-
 /// A NodeList is list of owned Nodes. Note it is move-only.
 using NodeList = std::vector<std::unique_ptr<Node>>;
 
@@ -1091,13 +1085,6 @@ class Regex {
   void pushEndMarkedSubexpression(unsigned);
   void pushWordBoundary(bool);
   void pushLookahead(NodeList, uint16_t, uint16_t, bool);
-
- public:
-  bool search(
-      const CharT *first,
-      const CharT *last,
-      MatchResults<const CharT *> &m,
-      constants::MatchFlagType flags) const;
 };
 
 /// Node for lookahead assertions like (?=...) and (?!...)

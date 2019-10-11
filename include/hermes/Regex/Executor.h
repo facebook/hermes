@@ -24,31 +24,33 @@ enum class MatchRuntimeResult {
 
   /// Stack overflow during match attempt.
   StackOverflow,
-
 };
 
-template <class BidirectionalIterator>
-class SubMatch {
- public:
-  typedef typename iterator_traits<BidirectionalIterator>::value_type CharT;
-  typedef basic_string<CharT> StringT;
+/// A constant used inside a capture group to indicate that the capture group
+/// did not match.
+constexpr uint32_t kNotMatched = UINT32_MAX;
 
-  BidirectionalIterator first{};
-  BidirectionalIterator second{};
-  bool matched = false;
+/// A CapturedRange represents a range of the input string captured by a capture
+/// group. A CaptureGroup may also not have matched, in which case its start is
+/// set to kNotMatched. Note that an unmatched capture group is different than a
+/// capture group that matched an empty string.
+struct CapturedRange {
+  /// Index of the first captured character, or kNotMatched if not matched.
+  uint32_t start;
 
-  size_t length() const {
-    return matched ? distance(this->first, this->second) : 0;
-  }
-  StringT str() const {
-    return matched ? StringT(this->first, this->second) : StringT();
+  /// One past the index of the last captured character.
+  uint32_t end;
+
+  /// \return whether this range was a successful match.
+  bool matched() const {
+    return start != kNotMatched;
   }
 };
 
 /// Given a string \p first with length \p length, look for regex matches
 /// starting at offset \p start. We must have 0 <= start <= length.
 /// Search using the compiled regex represented by \p bytecode with the flags \p
-/// matchFlags. If the search succeeds, populate \p m with the capture
+/// matchFlags. If the search succeeds, populate \p captures with the capture
 /// groups.
 /// \return true if some portion of the string matched the regex represented by
 /// the bytecode, false otherwise.
@@ -58,7 +60,7 @@ MatchRuntimeResult searchWithBytecode(
     const char16_t *first,
     uint32_t start,
     uint32_t length,
-    MatchResults<const char16_t *> &m,
+    std::vector<CapturedRange> *captures,
     constants::MatchFlagType matchFlags);
 
 /// This is the ASCII overload.
@@ -67,7 +69,7 @@ MatchRuntimeResult searchWithBytecode(
     const char *first,
     uint32_t start,
     uint32_t length,
-    MatchResults<const char *> &m,
+    std::vector<CapturedRange> *captures,
     constants::MatchFlagType matchFlags);
 
 } // namespace regex

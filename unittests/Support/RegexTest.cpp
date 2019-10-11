@@ -16,7 +16,7 @@ using namespace hermes::regex;
 namespace {
 
 using cregex = Regex<UTF16RegexTraits>;
-using cmatch = MatchResults<const char16_t *>;
+using cmatch = std::vector<CapturedRange>;
 
 bool search(
     const char16_t *start,
@@ -24,7 +24,7 @@ bool search(
     cmatch &m,
     const cregex &cr,
     constants::MatchFlagType flags = constants::matchDefault) {
-  return searchWithBytecode(cr.compile(), start, 0, end - start, m, flags) ==
+  return searchWithBytecode(cr.compile(), start, 0, end - start, &m, flags) ==
       MatchRuntimeResult::Match;
 }
 
@@ -45,30 +45,38 @@ bool search(
   return search(text.c_str(), m, cr, flags);
 }
 
+// Flatten a list of captured ranges into a string representation like:
+// "(0-5) (1-3)"
+std::string flatten(const std::vector<CapturedRange> &ranges) {
+  std::string result;
+  for (const auto &range : ranges) {
+    if (!result.empty())
+      result += " ";
+    if (!range.matched()) {
+      result += "nm";
+    } else {
+      result += '(';
+      result += std::to_string(range.start);
+      result += '-';
+      result += std::to_string(range.end);
+      result += ')';
+    }
+  }
+  return result;
+}
+
 TEST(Regex, Short) {
   std::u16string pattern = u"a([0-9]+)b";
   cregex reg(pattern.c_str());
-  MatchResults<const char16_t *> matchRanges;
+  std::vector<CapturedRange> matchRanges;
 
   const std::u16string text1 = u"a0b";
   EXPECT_TRUE(search(text1, matchRanges, reg, constants::matchDefault));
-  EXPECT_EQ(matchRanges.size(), 2U);
-  EXPECT_EQ(matchRanges[0].length(), text1.size());
-  EXPECT_EQ(matchRanges[0].first, &(text1.front()));
-  EXPECT_EQ(matchRanges[0].second, &(text1.back()) + 1);
-  EXPECT_EQ(matchRanges[1].length(), 1u);
-  EXPECT_EQ(matchRanges[1].first, &(text1.front()) + 1);
-  EXPECT_EQ(matchRanges[1].second, &(text1.back()));
+  EXPECT_EQ("(0-3) (1-2)", flatten(matchRanges));
 
   const std::u16string text2 = u"a1234b";
   EXPECT_TRUE(search(text2, matchRanges, reg, constants::matchDefault));
-  EXPECT_EQ(matchRanges.size(), 2U);
-  EXPECT_EQ(matchRanges[0].length(), text2.size());
-  EXPECT_EQ(matchRanges[0].first, &(text2.front()));
-  EXPECT_EQ(matchRanges[0].second, &(text2.back()) + 1);
-  EXPECT_EQ(matchRanges[1].length(), 4u);
-  EXPECT_EQ(matchRanges[1].first, &(text2.front()) + 1);
-  EXPECT_EQ(matchRanges[1].second, &(text2.back()));
+  EXPECT_EQ("(0-6) (1-5)", flatten(matchRanges));
 }
 
 /* The following tests are adapted from re.alg.search/ecma.pass.cpp in libc++ */
@@ -77,375 +85,261 @@ TEST(Regex, FromLibCXX) {
     cmatch m;
     const char16_t s[] = u"a";
     EXPECT_TRUE(search(s, m, cregex(u"a")));
-    EXPECT_EQ(m.size(), 1U);
-    EXPECT_FALSE(m.empty());
-    EXPECT_EQ(m[0].length(), 1u);
-    EXPECT_EQ(m[0].first, s);
-    EXPECT_EQ(m[0].str(), u"a");
+    EXPECT_EQ("(0-1)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"ab";
     EXPECT_TRUE(search(s, m, cregex(u"ab")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 2u);
-    EXPECT_EQ(m[0].first, s);
-    EXPECT_EQ(m[0].str(), u"ab");
+    EXPECT_EQ("(0-2)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"ab";
     EXPECT_FALSE(search(s, m, cregex(u"ba")));
-    EXPECT_EQ(m.size(), 0u);
-    EXPECT_TRUE(m.empty());
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"aab";
     EXPECT_TRUE(search(s, m, cregex(u"ab")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 2u);
-    EXPECT_EQ(m[0].first, s + 1);
-    EXPECT_EQ(m[0].str(), u"ab");
+    EXPECT_EQ("(1-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abcd";
     EXPECT_TRUE(search(s, m, cregex(u"bc")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 2u);
-    EXPECT_EQ(m[0].first, s + 1);
-    EXPECT_EQ(m[0].str(), u"bc");
+    EXPECT_EQ("(1-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbc";
     EXPECT_TRUE(search(s, m, cregex(u"ab*c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-4)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"ababc";
     EXPECT_TRUE(search(s, m, cregex(u"(ab)*c")));
-    EXPECT_EQ(m.size(), 2u);
-    EXPECT_EQ(m[0].length(), 5u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
-    EXPECT_EQ(m[1].length(), 2u);
-    EXPECT_EQ(m[1].first, s + 2);
-    EXPECT_EQ(m[1].str(), u"ab");
+    EXPECT_EQ("(0-5) (2-4)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abcdefghijk";
     EXPECT_TRUE(search(s, m, cregex(u"cd((e)fg)hi")));
-    EXPECT_EQ(m.size(), 3u);
-    EXPECT_EQ(m[0].length(), 7u);
-    EXPECT_EQ(m[0].first, s + 2);
-    EXPECT_EQ(m[0].str(), u"cdefghi");
-    EXPECT_EQ(m[1].length(), 3u);
-    EXPECT_EQ(m[1].first, s + 4);
-    EXPECT_EQ(m[1].str(), u"efg");
-    EXPECT_EQ(m[2].length(), 1u);
-    EXPECT_EQ(m[2].first, s + 4);
-    EXPECT_EQ(m[2].str(), u"e");
+    EXPECT_EQ("(2-9) (4-7) (4-5)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abc";
     EXPECT_TRUE(search(s, m, cregex(u"^abc")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abcd";
     EXPECT_TRUE(search(s, m, cregex(u"^abc")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"abc");
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"aabc";
     EXPECT_FALSE(search(s, m, cregex(u"^abc")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abc";
     EXPECT_TRUE(search(s, m, cregex(u"abc$")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"efabc";
     EXPECT_TRUE(search(s, m, cregex(u"abc$")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 2);
-    EXPECT_EQ(m[0].str(), s + 2);
+    EXPECT_EQ("(2-5)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"efabcg";
     EXPECT_FALSE(search(s, m, cregex(u"abc$")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abc";
     EXPECT_TRUE(search(s, m, cregex(u"a.c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"acc";
     EXPECT_TRUE(search(s, m, cregex(u"a.c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"acc";
     EXPECT_TRUE(search(s, m, cregex(u"a.c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abcdef";
     EXPECT_TRUE(search(s, m, cregex(u"(.*).*")));
-    EXPECT_EQ(m.size(), 2u);
-    EXPECT_EQ(m[0].length(), 6u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
-    EXPECT_EQ(m[1].length(), 6u);
-    EXPECT_EQ(m[1].first, s + 0);
-    EXPECT_EQ(m[1].str(), s);
+    EXPECT_EQ("(0-6) (0-6)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"bc";
     EXPECT_TRUE(search(s, m, cregex(u"(a*)*")));
-    EXPECT_EQ(m.size(), 2u);
-    EXPECT_EQ(m[0].length(), 0u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"");
-    EXPECT_EQ(m[1].length(), 0u);
-    EXPECT_EQ(m[1].str(), u"");
+    EXPECT_EQ("(0-0) nm", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbc";
     EXPECT_FALSE(search(s, m, cregex(u"ab{3,5}c")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbbc";
     EXPECT_TRUE(search(s, m, cregex(u"ab{3,5}c")));
     EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-5)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbbbc";
     EXPECT_TRUE(search(s, m, cregex(u"ab{3,5}c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-6)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbbbbc";
     EXPECT_TRUE(search(s, m, cregex(u"ab{3,5}c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-7)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adefc";
     EXPECT_FALSE(search(s, m, cregex(u"ab{3,5}c")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbbbbbc";
     EXPECT_FALSE(search(s, m, cregex(u"ab{3,5}c")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adec";
     EXPECT_FALSE(search(s, m, cregex(u"a.{3,5}c")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adefc";
     EXPECT_TRUE(search(s, m, cregex(u"a.{3,5}c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-5)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adefgc";
     EXPECT_TRUE(search(s, m, cregex(u"a.{3,5}c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-6)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adefghc";
     EXPECT_TRUE(search(s, m, cregex(u"a.{3,5}c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-7)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adefghic";
     EXPECT_FALSE(search(s, m, cregex(u"a.{3,5}c")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"tournament";
     EXPECT_TRUE(search(s, m, cregex(u"tour|to|tournament")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"tour");
+    EXPECT_EQ("(0-4)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"tournamenttotour";
     EXPECT_TRUE(
         search(s, m, cregex(u"(tour|to|tournament)+", constants::nosubs)));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"tour");
+    EXPECT_EQ("(0-4)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"ttotour";
     EXPECT_TRUE(search(s, m, cregex(u"(tour|to|t)+")));
-    EXPECT_EQ(m.size(), 2u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
-    EXPECT_EQ(m[1].length(), 4u);
-    EXPECT_EQ(m[1].first, s + 3);
-    EXPECT_EQ(m[1].str(), u"tour");
+    EXPECT_EQ("(0-7) (3-7)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"-ab,ab-";
     EXPECT_FALSE(search(s, m, cregex(u"-(.*),\1-")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"-ab,ab-";
     EXPECT_TRUE(search(s, m, cregex(u"-.*,.*-")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-7)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"a";
     EXPECT_TRUE(search(s, m, cregex(u"^[a]$")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 1u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"a");
+    EXPECT_EQ("(0-1)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"a";
     EXPECT_TRUE(search(s, m, cregex(u"^[ab]$")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 1u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"a");
+    EXPECT_EQ("(0-1)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"c";
     EXPECT_TRUE(search(s, m, cregex(u"^[a-f]$")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 1u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-1)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"g";
     EXPECT_FALSE(search(s, m, cregex(u"^[a-f]$")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"Iraqi";
     EXPECT_TRUE(search(s, m, cregex(u"q[^u]")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 2u);
-    EXPECT_EQ(m[0].first, s + 3);
-    EXPECT_EQ(m[0].str(), u"qi");
+    EXPECT_EQ("(3-5)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"Iraq";
     EXPECT_FALSE(search(s, m, cregex(u"q[^u]")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"01a45cef9";
     EXPECT_TRUE(search(s, m, cregex(u"[ace1-9]*")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 0u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"");
+    EXPECT_EQ("(0-0)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"01a45cef9";
     EXPECT_TRUE(search(s, m, cregex(u"[ace1-9]+")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 6u);
-    EXPECT_EQ(m[0].first, s + 1);
-    EXPECT_EQ(m[0].str(), u"1a45ce");
+    EXPECT_EQ("(1-7)", flatten(m));
   }
   {
     const char16_t r[] = u"^[-+]?[0-9]+[CF]$";
@@ -453,416 +347,289 @@ TEST(Regex, FromLibCXX) {
     using FI = const char16_t *;
     using BI = const char16_t *;
     cregex regex(FI(r), FI(r + sr));
-    MatchResults<BI> m;
+    cmatch m;
     const char16_t s[] = u"-40C";
     std::ptrdiff_t ss = std::char_traits<char16_t>::length(s);
     EXPECT_TRUE(search(BI(s), BI(s + ss), m, regex));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-4)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"Jeff Jeffs u";
     EXPECT_TRUE(search(s, m, cregex(u"Jeff(?=s\\b)")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 5);
-    EXPECT_EQ(m[0].str(), u"Jeff");
+    EXPECT_EQ("(5-9)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"Jeffs Jeff";
     EXPECT_TRUE(search(s, m, cregex(u"Jeff(?!s\\b)")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 6);
-    EXPECT_EQ(m[0].str(), u"Jeff");
+    EXPECT_EQ("(6-10)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"5%k";
     EXPECT_TRUE(search(s, m, cregex(u"\\d[\\W]k")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
 
   {
     cmatch m;
     const char16_t s[] = u"a";
     EXPECT_TRUE(search(s, m, cregex(u"a")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_FALSE(m.empty());
-    EXPECT_EQ(m[0].length(), 1u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"a");
+    EXPECT_EQ("(0-1)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"ab";
     EXPECT_TRUE(search(s, m, cregex(u"ab")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 2u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"ab");
+    EXPECT_EQ("(0-2)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"ab";
     EXPECT_FALSE(search(s, m, cregex(u"ba")));
-    EXPECT_EQ(m.size(), 0u);
-    EXPECT_TRUE(m.empty());
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"aab";
     EXPECT_TRUE(search(s, m, cregex(u"ab")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 2u);
-    EXPECT_EQ(m[0].first, s + 1);
-    EXPECT_EQ(m[0].str(), u"ab");
+    EXPECT_EQ("(1-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abcd";
     EXPECT_TRUE(search(s, m, cregex(u"bc")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 2u);
-    EXPECT_EQ(m[0].first, s + 1);
-    EXPECT_EQ(m[0].str(), u"bc");
+    EXPECT_EQ("(1-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbc";
     EXPECT_TRUE(search(s, m, cregex(u"ab*c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-4)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"ababc";
     EXPECT_TRUE(search(s, m, cregex(u"(ab)*c")));
-    EXPECT_EQ(m.size(), 2u);
-    EXPECT_EQ(m[0].length(), 5u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
-    EXPECT_EQ(m[1].length(), 2u);
-    EXPECT_EQ(m[1].first, s + 2);
-    EXPECT_EQ(m[1].str(), u"ab");
+    EXPECT_EQ("(0-5) (2-4)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abcdefghijk";
     EXPECT_TRUE(search(s, m, cregex(u"cd((e)fg)hi")));
-    EXPECT_EQ(m.size(), 3u);
-    EXPECT_EQ(m[0].length(), 7u);
-    EXPECT_EQ(m[0].first, s + 2);
-    EXPECT_EQ(m[0].str(), u"cdefghi");
-    EXPECT_EQ(m[1].length(), 3u);
-    EXPECT_EQ(m[1].first, s + 4);
-    EXPECT_EQ(m[1].str(), u"efg");
-    EXPECT_EQ(m[2].length(), 1u);
-    EXPECT_EQ(m[2].first, s + 4);
-    EXPECT_EQ(m[2].str(), u"e");
+    EXPECT_EQ("(2-9) (4-7) (4-5)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abc";
     EXPECT_TRUE(search(s, m, cregex(u"^abc")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abcd";
     EXPECT_TRUE(search(s, m, cregex(u"^abc")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"abc");
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"aabc";
     EXPECT_FALSE(search(s, m, cregex(u"^abc")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abc";
     EXPECT_TRUE(search(s, m, cregex(u"abc$")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"efabc";
     EXPECT_TRUE(search(s, m, cregex(u"abc$")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 2);
-    EXPECT_EQ(m[0].str(), s + 2);
+    EXPECT_EQ("(2-5)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"efabcg";
     EXPECT_FALSE(search(s, m, cregex(u"abc$")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abc";
     EXPECT_TRUE(search(s, m, cregex(u"a.c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"acc";
     EXPECT_TRUE(search(s, m, cregex(u"a.c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"acc";
     EXPECT_TRUE(search(s, m, cregex(u"a.c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 3u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abcdef";
     EXPECT_TRUE(search(s, m, cregex(u"(.*).*")));
-    EXPECT_EQ(m.size(), 2u);
-    EXPECT_EQ(m[0].length(), 6u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
-    EXPECT_EQ(m[1].length(), 6u);
-    EXPECT_EQ(m[1].first, s + 0);
-    EXPECT_EQ(m[1].str(), s);
+    EXPECT_EQ("(0-6) (0-6)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"bc";
     EXPECT_TRUE(search(s, m, cregex(u"(a*)*")));
-    EXPECT_EQ(m.size(), 2u);
-    EXPECT_EQ(m[0].length(), 0u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"");
-    EXPECT_EQ(m[1].length(), 0u);
-    EXPECT_EQ(m[1].str(), u"");
+    EXPECT_EQ("(0-0) nm", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbc";
     EXPECT_FALSE(search(s, m, cregex(u"ab{3,5}c")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbbc";
     EXPECT_TRUE(search(s, m, cregex(u"ab{3,5}c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-5)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbbbc";
     EXPECT_TRUE(search(s, m, cregex(u"ab{3,5}c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-6)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbbbbc";
     EXPECT_TRUE(search(s, m, cregex(u"ab{3,5}c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-7)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adefc";
     EXPECT_FALSE(search(s, m, cregex(u"ab{3,5}c")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"abbbbbbc";
     EXPECT_FALSE(search(s, m, cregex(u"ab{3,5}c")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adec";
     EXPECT_FALSE(search(s, m, cregex(u"a.{3,5}c")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adefc";
     EXPECT_TRUE(search(s, m, cregex(u"a.{3,5}c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-5)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adefgc";
     EXPECT_TRUE(search(s, m, cregex(u"a.{3,5}c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-6)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adefghc";
     EXPECT_TRUE(search(s, m, cregex(u"a.{3,5}c")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-7)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"adefghic";
     EXPECT_FALSE(search(s, m, cregex(u"a.{3,5}c")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"tournament";
     EXPECT_TRUE(search(s, m, cregex(u"tour|to|tournament")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"tour");
+    EXPECT_EQ("(0-4)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"tournamenttotour";
     EXPECT_TRUE(
         search(s, m, cregex(u"(tour|to|tournament)+", constants::nosubs)));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"tour");
+    EXPECT_EQ("(0-4)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"ttotour";
     EXPECT_TRUE(search(s, m, cregex(u"(tour|to|t)+")));
-    EXPECT_EQ(m.size(), 2u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
-    EXPECT_EQ(m[1].length(), 4u);
-    EXPECT_EQ(m[1].first, s + 3);
-    EXPECT_EQ(m[1].str(), u"tour");
+    EXPECT_EQ("(0-7) (3-7)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"-ab,ab-";
     EXPECT_FALSE(search(s, m, cregex(u"-(.*),\1-")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"-ab,ab-";
     EXPECT_TRUE(search(s, m, cregex(u"-.*,.*-")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-7)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"a";
     EXPECT_TRUE(search(s, m, cregex(u"^[a]$")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 1u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"a");
+    EXPECT_EQ("(0-1)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"a";
     EXPECT_TRUE(search(s, m, cregex(u"^[ab]$")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 1u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"a");
+    EXPECT_EQ("(0-1)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"c";
     EXPECT_TRUE(search(s, m, cregex(u"^[a-f]$")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 1u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-1)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"g";
     EXPECT_FALSE(search(s, m, cregex(u"^[a-f]$")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"Iraqi";
     EXPECT_TRUE(search(s, m, cregex(u"q[^u]")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 2u);
-    EXPECT_EQ(m[0].first, s + 3);
-    EXPECT_EQ(m[0].str(), u"qi");
+    EXPECT_EQ("(3-5)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"Iraq";
     EXPECT_FALSE(search(s, m, cregex(u"q[^u]")));
-    EXPECT_EQ(m.size(), 0u);
+    EXPECT_EQ("", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"01a45cef9";
     EXPECT_TRUE(search(s, m, cregex(u"[ace1-9]*")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 0u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), u"");
+    EXPECT_EQ("(0-0)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"01a45cef9";
     EXPECT_TRUE(search(s, m, cregex(u"[ace1-9]+")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 6u);
-    EXPECT_EQ(m[0].first, s + 1);
-    EXPECT_EQ(m[0].str(), u"1a45ce");
+    EXPECT_EQ("(1-7)", flatten(m));
   }
   {
     const char16_t r[] = u"^[-+]?[0-9]+[CF]$";
@@ -870,41 +637,29 @@ TEST(Regex, FromLibCXX) {
     using FI = const char16_t *;
     using BI = const char16_t *;
     cregex regex(FI(r), FI(r + sr));
-    MatchResults<BI> m;
+    cmatch m;
     const char16_t s[] = u"-40C";
     std::ptrdiff_t ss = std::char_traits<char16_t>::length(s);
     EXPECT_TRUE(search(BI(s), BI(s + ss), m, regex));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-4)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"Jeff Jeffs u";
     EXPECT_TRUE(search(s, m, cregex(u"Jeff(?=s\\b)")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 5);
-    EXPECT_EQ(m[0].str(), u"Jeff");
+    EXPECT_EQ("(5-9)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"Jeffs Jeff";
     EXPECT_TRUE(search(s, m, cregex(u"Jeff(?!s\\b)")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), 4u);
-    EXPECT_EQ(m[0].first, s + 6);
-    EXPECT_EQ(m[0].str(), u"Jeff");
+    EXPECT_EQ("(6-10)", flatten(m));
   }
   {
     cmatch m;
     const char16_t s[] = u"5%k";
     EXPECT_TRUE(search(s, m, cregex(u"\\d[\\W]k")));
-    EXPECT_EQ(m.size(), 1u);
-    EXPECT_EQ(m[0].length(), std::char_traits<char16_t>::length(s));
-    EXPECT_EQ(m[0].first, s + 0);
-    EXPECT_EQ(m[0].str(), s);
+    EXPECT_EQ("(0-3)", flatten(m));
   }
 }
 
@@ -1021,7 +776,7 @@ TEST(Regex, NonASCII) {
   // optimization.
 
   const std::u16string ascii = u"This is a pretty long all-ASCII string";
-  MatchResults<const char16_t *> matchRanges;
+  cmatch matchRanges;
   EXPECT_FALSE(search(
       ascii,
       matchRanges,
