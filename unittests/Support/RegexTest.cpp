@@ -24,7 +24,7 @@ bool search(
     cmatch &m,
     const cregex &cr,
     constants::MatchFlagType flags = constants::matchDefault) {
-  return searchWithBytecode(cr.compile(), start, end, m, flags) ==
+  return searchWithBytecode(cr.compile(), start, 0, end - start, m, flags) ==
       MatchRuntimeResult::Match;
 }
 

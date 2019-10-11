@@ -305,19 +305,23 @@ static bool isReturnThis(Handle<StringPrimitive> str, Runtime *runtime) {
   if (input.isASCII()) {
     regex::MatchResults<const char *> results;
     const char *begin = input.castToCharPtr();
-    const char *end = begin + input.length();
     result = regex::searchWithBytecode(
         bytecode,
         begin,
-        end,
+        0,
+        input.length(),
         results,
         regex::constants::matchDefault | regex::constants::matchInputAllAscii);
   } else {
     regex::MatchResults<const char16_t *> results;
     const char16_t *begin = input.castToChar16Ptr();
-    const char16_t *end = begin + input.length();
     result = regex::searchWithBytecode(
-        bytecode, begin, end, results, regex::constants::matchDefault);
+        bytecode,
+        begin,
+        0,
+        input.length(),
+        results,
+        regex::constants::matchDefault);
   }
   return result == regex::MatchRuntimeResult::Match;
 }

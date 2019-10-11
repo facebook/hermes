@@ -93,9 +93,12 @@ class Cursor {
   /// Construct with the range \p first and \p last, setting the current
   /// position to \p first. Note that the \p last is one past the last valid
   /// character.
-  Cursor(const CodeUnit *first, const CodeUnit *last)
-      : first_(first), last_(last), current_(first) {
+  Cursor(const CodeUnit *first, const CodeUnit *current, const CodeUnit *last)
+      : first_(first), last_(last), current_(current) {
     assert(first_ <= last_ && "first and last out of order");
+    assert(
+        first_ <= current_ && current <= last_ &&
+        "current pointer not in range");
   }
 
   /// \return the number of code units remaining.
@@ -1123,7 +1126,8 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           bool icase = syntaxFlags_ & constants::icase;
           bool unicode = syntaxFlags_ & constants::unicode;
           Cursor<Traits> cursor1 = c;
-          Cursor<Traits> cursor2(first_ + cr.start, first_ + cr.end);
+          Cursor<Traits> cursor2(
+              first_ + cr.start, first_ + cr.start, first_ + cr.end);
           bool matched = true;
           while (matched && !cursor2.atEnd()) {
             if (cursor1.atEnd()) {
@@ -1356,7 +1360,8 @@ template <typename CharT, class Traits>
 MatchRuntimeResult searchWithBytecodeImpl(
     llvm::ArrayRef<uint8_t> bytecode,
     const CharT *first,
-    const CharT *last,
+    uint32_t start,
+    uint32_t length,
     MatchResults<const CharT *> &m,
     constants::MatchFlagType matchFlags) {
   assert(
@@ -1374,10 +1379,10 @@ MatchRuntimeResult searchWithBytecodeImpl(
       matchFlags,
       static_cast<constants::SyntaxFlags>(header->syntaxFlags),
       first,
-      last,
+      first + length,
       header->markedCount,
       header->loopCount);
-  Cursor<Traits> cursor{first, last};
+  Cursor<Traits> cursor{first, first + start, first + length};
   State<Traits> state{cursor, markedCount, loopCount};
 
   // We check only one location if either the regex pattern constrains us to, or
@@ -1412,21 +1417,23 @@ MatchRuntimeResult searchWithBytecodeImpl(
 MatchRuntimeResult searchWithBytecode(
     llvm::ArrayRef<uint8_t> bytecode,
     const char16_t *first,
-    const char16_t *last,
+    uint32_t start,
+    uint32_t length,
     MatchResults<const char16_t *> &m,
     constants::MatchFlagType matchFlags) {
   return searchWithBytecodeImpl<char16_t, UTF16RegexTraits>(
-      bytecode, first, last, m, matchFlags);
+      bytecode, first, start, length, m, matchFlags);
 }
 
 MatchRuntimeResult searchWithBytecode(
     llvm::ArrayRef<uint8_t> bytecode,
     const char *first,
-    const char *last,
+    uint32_t start,
+    uint32_t length,
     MatchResults<const char *> &m,
     constants::MatchFlagType matchFlags) {
   return searchWithBytecodeImpl<char, ASCIIRegexTraits>(
-      bytecode, first, last, m, matchFlags);
+      bytecode, first, start, length, m, matchFlags);
 }
 
 } // namespace regex

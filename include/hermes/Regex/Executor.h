@@ -45,7 +45,8 @@ class SubMatch {
   }
 };
 
-/// Given a string \p first with end \p last, look for regex matches.
+/// Given a string \p first with length \p length, look for regex matches
+/// starting at offset \p start. We must have 0 <= start <= length.
 /// Search using the compiled regex represented by \p bytecode with the flags \p
 /// matchFlags. If the search succeeds, populate \p m with the capture
 /// groups.
@@ -55,7 +56,8 @@ class SubMatch {
 MatchRuntimeResult searchWithBytecode(
     llvm::ArrayRef<uint8_t> bytecode,
     const char16_t *first,
-    const char16_t *last,
+    uint32_t start,
+    uint32_t length,
     MatchResults<const char16_t *> &m,
     constants::MatchFlagType matchFlags);
 
@@ -63,7 +65,8 @@ MatchRuntimeResult searchWithBytecode(
 MatchRuntimeResult searchWithBytecode(
     llvm::ArrayRef<uint8_t> bytecode,
     const char *first,
-    const char *last,
+    uint32_t start,
+    uint32_t length,
     MatchResults<const char *> &m,
     constants::MatchFlagType matchFlags);
 

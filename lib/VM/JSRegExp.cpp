@@ -239,8 +239,9 @@ CallResult<RegExpMatch> performSearch(
   regex::MatchResults<const CharT *> nativeMatchRanges;
   auto matchResult = regex::searchWithBytecode(
       bytecode,
-      start + searchStartOffset,
-      start + stringLength,
+      start,
+      searchStartOffset,
+      stringLength,
       nativeMatchRanges,
       matchFlags);
   if (matchResult == regex::MatchRuntimeResult::StackOverflow) {
