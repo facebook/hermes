@@ -902,8 +902,6 @@ BLACK_LIST = [
     "mjsunit/es6/rest-params-lazy-parsing.js",
     "mjsunit/es6/throw-type-error-function-restrictions.js",
     "mjsunit/es6/typedarray.js",
-    # unicode-character-ranges tests lookbehind assertions
-    "mjsunit/es6/unicode-character-ranges.js",
     "mjsunit/field-type-tracking.js",
     "mjsunit/fixed-context-shapes-when-recompiling.js",
     "mjsunit/for-in-opt.js",
@@ -1383,8 +1381,6 @@ PERMANENT_BLACK_LIST = [
     "mjsunit/html-string-funcs.js",
     # Tests v8-specific error messages.
     "mjsunit/function-call.js",
-    # Tests v8-specific extension of lookbehinds, not part of ES6.
-    "mjsunit/harmony/regexp-lookbehind.js",
     # Tests v8-specific extension of named capture groups, not part of ES6.
     "mjsunit/harmony/regexp-named-captures.js",
     # Tests v8-specific extension of Unicode property classes, not part of ES6.
@@ -1497,7 +1493,6 @@ UNSUPPORTED_FEATURES = [
     "object-spread",
     "optional-catch-binding",
     "regexp-dotall",
-    "regexp-lookbehind",
     "regexp-named-groups",
     "regexp-unicode-property-escapes",
     "super",
