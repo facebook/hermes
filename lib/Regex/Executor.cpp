@@ -1146,8 +1146,8 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           break;
         }
 
-        case Opcode::Lookahead: {
-          const LookaheadInsn *insn = llvm::cast<LookaheadInsn>(base);
+        case Opcode::Lookaround: {
+          const LookaroundInsn *insn = llvm::cast<LookaroundInsn>(base);
           bool matched = false;
           if (c.satisfiesConstraints(flags_, insn->constraints)) {
             // Copy the state. This is because if the match fails (or if we are
@@ -1157,15 +1157,15 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
             // Invoke match() recursively with our expression.
             // Save and restore the position because lookaheads do not consume
             // anything.
-            s->ip_ += sizeof(LookaheadInsn);
+            s->ip_ += sizeof(LookaroundInsn);
             matched = this->match(s, true /* onlyAtStart */);
             c.setCurrentPointer(savedState.cursor_.currentPointer());
 
-            // Restore capture groups unless we are a positive lookahead that
+            // Restore capture groups unless we are a positive lookaround that
             // successfully matched. If we are a successfully matching positive
-            // lookahead, set up backtracking to reset the capture groups. Note
+            // lookaround, set up backtracking to reset the capture groups. Note
             // we never backtrack INTO a successfully matched lookahead:
-            // once a lookahead finds a match it forgets all other ways it Could
+            // once a lookahead finds a match it forgets all other ways it could
             // have matched. (ES 5.1 15.10.2.8 Note 2).
             if (matched && !insn->invert) {
               // Backtrack capture groups in the lookahead expression.

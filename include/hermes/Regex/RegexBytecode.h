@@ -161,9 +161,9 @@ struct EndMarkedSubexpressionInsn : public Insn {
   uint16_t mexp;
 };
 
-/// A LookaheadInsn is immediately followed by bytecode for its contained
+/// A LookaroundInsn is immediately followed by bytecode for its contained
 /// expression. It has a jump target to its continuation.
-struct LookaheadInsn : public Insn {
+struct LookaroundInsn : public Insn {
   /// Whether we are inverted: (?!...) instead of (?=...).
   bool invert;
   /// Constraints on what can match the contained expression.

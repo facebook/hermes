@@ -73,10 +73,10 @@ print(/\b\B/);
 print(/abc(?=^)(?!def)/i);
 // CHECK: Header: marked: 0 loops: 0 flags: 1 constraints: 6
 // CHECK-NEXT: 0000  MatchNCharICase8: 'ABC'
-// CHECK-NEXT: 0005  Lookahead: = (constraints: 2, marked expressions=[0,0), continuation 0x12)
+// CHECK-NEXT: 0005  Lookaround: = (constraints: 2, marked expressions=[0,0), continuation 0x12)
 // CHECK-NEXT: 0010  LeftAnchor
 // CHECK-NEXT: 0011  Goal
-// CHECK-NEXT: 0012  Lookahead: ! (constraints: 4, marked expressions=[0,0), continuation 0x23)
+// CHECK-NEXT: 0012  Lookaround: ! (constraints: 4, marked expressions=[0,0), continuation 0x23)
 // CHECK-NEXT: 001d  MatchNCharICase8: 'DEF'
 // CHECK-NEXT: 0022  Goal
 // CHECK-NEXT: 0023  Goal
@@ -190,7 +190,7 @@ print(/(a)(?=(.))/i);
 // CHECK-NEXT:   0000  BeginMarkedSubexpression: 1
 // CHECK-NEXT:   0003  MatchCharICase8: 'A'
 // CHECK-NEXT:   0005  EndMarkedSubexpression: 1
-// CHECK-NEXT:   0008  Lookahead: = (constraints: 4, marked expressions=[1,2), continuation 0x1b)
+// CHECK-NEXT:   0008  Lookaround: = (constraints: 4, marked expressions=[1,2), continuation 0x1b)
 // CHECK-NEXT:   0013  BeginMarkedSubexpression: 2
 // CHECK-NEXT:   0016  MatchAnyButNewline
 // CHECK-NEXT:   0017  EndMarkedSubexpression: 2

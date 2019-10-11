@@ -231,8 +231,8 @@ void dumpInstruction(const regex::BackRefInsn *insn, llvm::raw_ostream &OS) {
   OS << "BackRefInsn: " << insn->mexp;
 }
 
-void dumpInstruction(const regex::LookaheadInsn *insn, llvm::raw_ostream &OS) {
-  OS << "Lookahead: " << (insn->invert ? '!' : '=')
+void dumpInstruction(const regex::LookaroundInsn *insn, llvm::raw_ostream &OS) {
+  OS << "Lookaround: " << (insn->invert ? '!' : '=')
      << " (constraints: " << unsigned(insn->constraints)
      << ", marked expressions=[" << insn->mexpBegin << "," << insn->mexpEnd
      << "), continuation " << llvm::format_hex(insn->continuation, 4) << ')';

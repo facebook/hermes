@@ -1134,13 +1134,13 @@ class LookaheadNode : public Node {
 
   // Override emit() to compile our lookahead expression.
   virtual void emit(RegexBytecodeStream &bcs) const override {
-    auto lookahead = bcs.emit<LookaheadInsn>();
-    lookahead->invert = invert_;
-    lookahead->constraints = expConstraints_;
-    lookahead->mexpBegin = mexpBegin_;
-    lookahead->mexpEnd = mexpEnd_;
+    auto lookaround = bcs.emit<LookaroundInsn>();
+    lookaround->invert = invert_;
+    lookaround->constraints = expConstraints_;
+    lookaround->mexpBegin = mexpBegin_;
+    lookaround->mexpEnd = mexpEnd_;
     compile(exp_, bcs);
-    lookahead->continuation = bcs.currentOffset();
+    lookaround->continuation = bcs.currentOffset();
   }
 };
 
