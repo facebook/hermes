@@ -1074,6 +1074,11 @@ void GenGC::writeBarrierRangeFill(
   }
 }
 
+size_t GenGC::getPeakLiveAfterGC() const {
+  // "live" must only be measured after full GCs.
+  return fullCollectionCumStats_.usedAfter.max();
+}
+
 void GenGC::getHeapInfo(HeapInfo &info) {
   AllocContextYieldThenClaim yielder(this);
   GCBase::getHeapInfo(info);

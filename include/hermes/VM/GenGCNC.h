@@ -298,6 +298,9 @@ class GenGC final : public GCBase {
   size_t countUsedWeakRefs() const;
 #endif
 
+  /// Cumulative stats over time so far.
+  size_t getPeakLiveAfterGC() const override;
+
   /// Populate \p info with information about the heap.
   void getHeapInfo(HeapInfo &info) override;
   void getHeapInfoWithMallocSize(HeapInfo &info) override;

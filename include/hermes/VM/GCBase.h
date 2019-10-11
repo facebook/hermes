@@ -451,8 +451,11 @@ class GCBase {
   }
 
   /// Cumulative stats over time so far.
-  CumulativeHeapStats getCumulativeHeapStats() const {
-    return cumStats_;
+  virtual size_t getPeakAllocatedBytes() const {
+    return cumStats_.usedBefore.max();
+  }
+  virtual size_t getPeakLiveAfterGC() const {
+    return cumStats_.usedAfter.max();
   }
 
   /// Populate \p info with information about the heap.

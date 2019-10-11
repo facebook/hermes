@@ -436,8 +436,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
     } else {
       runtime_.getHeap().getHeapInfo(info);
     }
-    vm::GCBase::CumulativeHeapStats cumStats =
-        runtime_.getHeap().getCumulativeHeapStats();
 #ifndef NDEBUG
     vm::GCBase::DebugHeapInfo debugInfo;
     runtime_.getHeap().getDebugHeapInfo(debugInfo);
@@ -469,8 +467,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
 #undef BRIDGE_INFO
 
-    jsInfo["hermes_peakAllocatedBytes"] = cumStats.usedBefore.max();
-    jsInfo["hermes_peakLiveAfterGC"] = cumStats.usedAfter.max();
+    jsInfo["hermes_peakAllocatedBytes"] =
+        runtime_.getHeap().getPeakAllocatedBytes();
+    jsInfo["hermes_peakLiveAfterGC"] = runtime_.getHeap().getPeakLiveAfterGC();
 
 #define BRIDGE_GEN_INFO(NAME, STAT_EXPR, FACTOR)                    \
   jsInfo["hermes_full_" #NAME] = info.fullStats.STAT_EXPR * FACTOR; \

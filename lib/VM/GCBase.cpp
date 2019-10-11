@@ -260,9 +260,9 @@ void GCBase::printStats(llvm::raw_ostream &os, bool trailingComma) {
      << "\t\t\"finalHeapSize\": " << formatSize(cumStats_.finalHeapSize).bytes
      << ",\n"
      << "\t\t\"peakAllocatedBytes\": "
-     << formatSize(cumStats_.usedBefore.max()).bytes << ",\n"
-     << "\t\t\"peakLiveAfterGC\": "
-     << formatSize(cumStats_.usedAfter.max()).bytes << ",\n"
+     << formatSize(getPeakAllocatedBytes()).bytes << ",\n"
+     << "\t\t\"peakLiveAfterGC\": " << formatSize(getPeakLiveAfterGC()).bytes
+     << ",\n"
      << "\t\t\"totalAllocatedBytes\": "
      << formatSize(info.totalAllocatedBytes).bytes << "\n"
      << "\t}";
