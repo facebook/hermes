@@ -299,15 +299,19 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
     self = selfHandle;
   }
 
-  auto found =
-      DictPropertyMap::find(self->propertyMap_.getNonNull(runtime), name);
-  if (!found)
-    return llvm::None;
-
-  desc = DictPropertyMap::getDescriptorPair(
-             self->propertyMap_.get(runtime), *found)
-             ->second;
-  return *found;
+  auto *propMap = self->propertyMap_.getNonNull(runtime);
+  {
+    // propMap is a raw pointer.  We assume that find does no allocation.
+    NoAllocScope noAlloc(runtime);
+    auto found = DictPropertyMap::find(propMap, name);
+    if (!found)
+      return llvm::None;
+    // Technically, the last use of propMap occurs before the call here, so
+    // it would be legal for the call to allocate.  If that were ever the case,
+    // we would move "found" out of scope, and terminate the NoAllocScope here.
+    desc = DictPropertyMap::getDescriptorPair(propMap, *found)->second;
+    return *found;
+  }
 }
 
 llvm::Optional<NamedPropertyDescriptor> HiddenClass::findPropertyNoAlloc(
