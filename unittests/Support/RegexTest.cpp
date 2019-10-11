@@ -271,9 +271,8 @@ TEST(Regex, FromLibCXX) {
   {
     cmatch m;
     const char16_t s[] = u"tournamenttotour";
-    EXPECT_TRUE(
-        search(s, m, cregex(u"(tour|to|tournament)+", constants::nosubs)));
-    EXPECT_EQ("(0-4)", flatten(m));
+    EXPECT_TRUE(search(s, m, cregex(u"(tour|to|tournament)+")));
+    EXPECT_EQ("(0-4) (0-4)", flatten(m));
   }
   {
     cmatch m;
@@ -561,9 +560,8 @@ TEST(Regex, FromLibCXX) {
   {
     cmatch m;
     const char16_t s[] = u"tournamenttotour";
-    EXPECT_TRUE(
-        search(s, m, cregex(u"(tour|to|tournament)+", constants::nosubs)));
-    EXPECT_EQ("(0-4)", flatten(m));
+    EXPECT_TRUE(search(s, m, cregex(u"(tour|to|tournament)+")));
+    EXPECT_EQ("(0-4) (0-4)", flatten(m));
   }
   {
     cmatch m;

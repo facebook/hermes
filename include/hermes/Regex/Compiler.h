@@ -42,10 +42,10 @@ using namespace std;
 namespace constants {
 
 // SyntaxFlags
-
+// Note these are encoded into bytecode files, so changing their values is a
+// breaking change.
 enum SyntaxFlags : uint8_t {
   icase = 1 << 0,
-  nosubs = 1 << 1,
   multiline = 1 << 2,
   unicode = 1 << 3,
 };
@@ -1251,14 +1251,12 @@ void Regex<Traits>::pushCharClass(CharacterClass c) {
 
 template <class Traits>
 void Regex<Traits>::pushBeginMarkedSubexpression() {
-  if (!(flags_ & constants::nosubs))
-    appendNode<BeginMarkedSubexpressionNode>(++markedCount_);
+  appendNode<BeginMarkedSubexpressionNode>(++markedCount_);
 }
 
 template <class Traits>
 void Regex<Traits>::pushEndMarkedSubexpression(unsigned sub) {
-  if (!(flags_ & constants::nosubs))
-    appendNode<EndMarkedSubexpressionNode>(sub);
+  appendNode<EndMarkedSubexpressionNode>(sub);
 }
 
 template <class Traits>
