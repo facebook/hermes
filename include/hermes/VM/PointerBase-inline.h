@@ -28,6 +28,8 @@ namespace vm {
 /// @name Inline implementations
 /// @{
 
+inline BasedPointer::BasedPointer(std::nullptr_t) : segAndOffset_(0) {}
+
 inline BasedPointer::BasedPointer(void *heapAddr)
     : segAndOffset_(computeSegmentAndOffset(heapAddr)) {}
 

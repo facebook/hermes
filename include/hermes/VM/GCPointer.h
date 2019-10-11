@@ -50,6 +50,9 @@ class GCPointerBase {
   /// \param gc Used for write barriers.
   void set(PointerBase *base, void *ptr, GC *gc);
 
+  /// Get the underlying StorageType representation.
+  StorageType getStorageType() const;
+
   /// Get the location of the pointer. Should only be used within the
   /// implementation of garbage collection.
   /// \param gc Used to assert that this is only used within the implementation
@@ -66,6 +69,14 @@ class GCPointerBase {
 
   bool operator!=(const GCPointerBase &other) const {
     return !(*this == other);
+  }
+
+  static void *storageTypeToPointer(StorageType st, PointerBase *base) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+    return base->basedToPointer(st);
+#else
+    return st;
+#endif
   }
 };
 
@@ -99,6 +110,7 @@ class GCPointer : public GCPointerBase {
   /// We are not allowed to copy-construct or assign GCPointers.
   GCPointer(const GCPointerBase &) = delete;
   GCPointer &operator=(const GCPointerBase &) = delete;
+  GCPointer &operator=(const GCPointer<T> &) = delete;
 
   /// We can assign null without a barrier.  NB: this is true for the
   /// generational collection remembered-set write barrier.  It may not be

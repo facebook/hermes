@@ -411,6 +411,11 @@ class JSObject : public GCCell {
     return clazz_.getNonNull(base);
   }
 
+  /// \return the hidden class of this object.
+  const GCPointer<HiddenClass> &getClassGCPtr() const {
+    return clazz_;
+  }
+
   /// \return the object ID. Assign one if not yet exist. This ID can be used
   /// in Set or Map where hashing is required. We don't assign object an ID
   /// until we actually need it. An exception is lazily created objects where

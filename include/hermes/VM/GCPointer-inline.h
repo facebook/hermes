@@ -77,6 +77,10 @@ inline void GCPointerBase::set(PointerBase *base, void *ptr, GC *gc) {
   gc->writeBarrier(&ptr_, ptr);
 }
 
+inline GCPointerBase::StorageType GCPointerBase::getStorageType() const {
+  return ptr_;
+}
+
 inline GCPointerBase::StorageType &GCPointerBase::getLoc(GC *gc) {
   assert(gc->inGC() && "Can only use GCPointer::getLoc within GC.");
   return ptr_;

@@ -105,16 +105,17 @@ ExecutionStatus externPutById(
 
   if (LLVM_LIKELY(target->isObject())) {
     auto *obj = vmcast<JSObject>(*target);
-    auto *clazz = obj->getClass(runtime);
+    auto clazzGCPtr = obj->getClassGCPtr();
     auto *cacheEntry = codeBlock->getWriteCacheEntry(cacheIdx);
 
     // If we have a cache hit, reuse the cached offset and immediately
     // return the property.
-    if (LLVM_LIKELY(cacheEntry->clazz == clazz)) {
+    if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
       JSObject::setNamedSlotValue<PropStorage::Inline::Yes>(
           obj, runtime, cacheEntry->slot, *prop);
       return ExecutionStatus::RETURNED;
     }
+    auto *clazz = clazzGCPtr.getNonNull(runtime);
     auto id = SymbolID::unsafeCreate(sid);
     NamedPropertyDescriptor desc;
     if (LLVM_LIKELY(
@@ -126,7 +127,7 @@ ExecutionStatus externPutById(
       if (LLVM_LIKELY(!clazz->isDictionary()) &&
           LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
         // Cache the class and property slot.
-        cacheEntry->clazz = clazz;
+        cacheEntry->clazz = clazzGCPtr.getStorageType();
         cacheEntry->slot = desc.slot;
       }
 
@@ -162,12 +163,12 @@ CallResult<HermesValue> externGetById(
 
   if (LLVM_LIKELY(target->isObject())) {
     auto *obj = vmcast<JSObject>(*target);
-    auto *clazz = obj->getClass(runtime);
+    auto clazzGCPtr = obj->getClassGCPtr();
     auto *cacheEntry = codeBlock->getReadCacheEntry(cacheIdx);
 
     // If we have a cache hit, reuse the cached offset and immediately
     // return the property.
-    if (LLVM_LIKELY(cacheEntry->clazz == clazz)) {
+    if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
       return JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
           obj, runtime, cacheEntry->slot);
     }
@@ -175,6 +176,7 @@ CallResult<HermesValue> externGetById(
     NamedPropertyDescriptor desc;
     OptValue<bool> fastPathResult =
         JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
+    auto *clazz = clazzGCPtr.getNonNull(runtime);
     if (LLVM_LIKELY(fastPathResult.hasValue() && fastPathResult.getValue()) &&
         !desc.flags.accessor) {
       // cacheIdx == 0 indicates no caching so don't update the cache in
@@ -182,7 +184,7 @@ CallResult<HermesValue> externGetById(
       if (LLVM_LIKELY(!clazz->isDictionary()) &&
           LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
         // Cache the class, id and property slot.
-        cacheEntry->clazz = clazz;
+        cacheEntry->clazz = clazzGCPtr.getStorageType();
         cacheEntry->slot = desc.slot;
       }
 
@@ -198,7 +200,8 @@ CallResult<HermesValue> externGetById(
       // having no properties and therefore cannot contain the property.
       // This check does not belong here, it should be merged into
       // tryGetOwnNamedDescriptorFast().
-      if (parent && cacheEntry->clazz == parent->getClass(runtime) &&
+      if (parent &&
+          cacheEntry->clazz == parent->getClassGCPtr().getStorageType() &&
           LLVM_LIKELY(!obj->isLazy())) {
         return JSObject::getNamedSlotValue(parent, runtime, cacheEntry->slot);
       }

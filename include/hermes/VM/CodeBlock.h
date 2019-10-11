@@ -334,7 +334,7 @@ class CodeBlock final
   }
 
   // Mark all hidden classes in the property cache as roots.
-  void markCachedHiddenClasses(WeakRootAcceptor &acceptor);
+  void markCachedHiddenClasses(Runtime *runtime, WeakRootAcceptor &acceptor);
 
   static CodeBlock *createCodeBlock(
       RuntimeModule *runtimeModule,

@@ -390,7 +390,7 @@ void RuntimeModule::markWeakRoots(WeakRootAcceptor &acceptor) {
     // Only mark a CodeBlock is its non-null, and has not been scanned
     // previously in this top-level markRoots invocation.
     if (cbPtr != nullptr && cbPtr->getRuntimeModule() == this) {
-      cbPtr->markCachedHiddenClasses(acceptor);
+      cbPtr->markCachedHiddenClasses(runtime_, acceptor);
     }
   }
   for (auto &entry : objectLiteralHiddenClasses_) {

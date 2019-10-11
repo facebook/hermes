@@ -20,6 +20,10 @@ class WeakRefBase;
 /// the heap.
 /// An acceptor should accept all of the pointers and other markable fields in
 /// an object, and tell the GC that they exist, updating if necessary.
+/// (The accept methods should make no assumptions about the address of the
+/// slot; in some cases, an adaptor class may store a pointer in a local, call
+/// the acceptor on the local, and then write the local back into the
+/// pointer.  For example, if the pointer is in compressed form.)
 /// This is used by a visitor, see \c SlotVisitor.
 struct SlotAcceptor {
   virtual ~SlotAcceptor() {}
@@ -108,6 +112,12 @@ struct WeakRootAcceptor : public WeakRefAcceptor, RootSectionAcceptor {
   /// NOTE: This is called acceptWeak in order to avoid clashing with \p
   /// accept(void *&) from SlotAcceptor, for classes that inherit from both.
   virtual void acceptWeak(void *&ptr) = 0;
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  /// This gets a default implementation: extract the real pointer to a local,
+  /// call acceptWeak on that, write the result back as a BasedPointer.
+  virtual void acceptWeak(BasedPointer &ptr) = 0;
+#endif
 };
 
 template <typename Acceptor>

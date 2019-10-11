@@ -13,6 +13,9 @@ namespace vm {
 
 #ifdef HERMES_SLOW_DEBUG
 
+CheckHeapWellFormedAcceptor::CheckHeapWellFormedAcceptor(GC &gc)
+    : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
+
 void CheckHeapWellFormedAcceptor::accept(void *&ptr) {
   assert(
       (!ptr || gc.validPointer(ptr)) &&

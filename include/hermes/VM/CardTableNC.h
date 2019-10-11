@@ -13,6 +13,7 @@
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/ExpectedPageSize.h"
 #include "hermes/VM/GCCell.h"
+#include "hermes/VM/PointerBase.h"
 
 #include "llvm/Support/MathExtras.h"
 

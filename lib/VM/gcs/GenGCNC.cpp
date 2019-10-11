@@ -25,6 +25,7 @@
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/Serializer.h"
+#include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SweepResultNC.h"
 #include "hermes/VM/SymbolID.h"
@@ -1268,11 +1269,13 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor, public WeakRefAcceptor {
   unsigned nextEdge_{0};
 };
 
-struct SnapshotRootSectionAcceptor : public SnapshotAcceptor, WeakRootAcceptor {
+struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
+                                     public WeakRootAcceptorDefault {
   using SnapshotAcceptor::accept;
+  using WeakRootAcceptor::acceptWeak;
 
   SnapshotRootSectionAcceptor(GC &gc, HeapSnapshot &snap)
-      : SnapshotAcceptor(gc), snap_(snap) {}
+      : SnapshotAcceptor(gc), WeakRootAcceptorDefault(gc), snap_(snap) {}
 
   void accept(void *&, const char *) override {
     // While adding edges to root sections, there's no need to do anything for
@@ -1305,11 +1308,13 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor, WeakRootAcceptor {
   int rootSectionNum_{1};
 };
 
-struct SnapshotRootAcceptor : public SnapshotAcceptor, public WeakRootAcceptor {
+struct SnapshotRootAcceptor : public SnapshotAcceptor,
+                              public WeakRootAcceptorDefault {
   using SnapshotAcceptor::accept;
+  using WeakRootAcceptor::acceptWeak;
 
   SnapshotRootAcceptor(GC &gc, HeapSnapshot &snap)
-      : SnapshotAcceptor(gc), snap_(snap) {}
+      : SnapshotAcceptor(gc), WeakRootAcceptorDefault(gc), snap_(snap) {}
 
   void accept(void *&ptr, const char *name) override {
     pointerAccept(ptr, name, false);

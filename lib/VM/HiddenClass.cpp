@@ -8,6 +8,7 @@
 #include "hermes/VM/HiddenClass.h"
 
 #include "hermes/VM/ArrayStorage.h"
+#include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/Operations.h"

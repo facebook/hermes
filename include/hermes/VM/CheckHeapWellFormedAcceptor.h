@@ -18,9 +18,11 @@ namespace vm {
 /// An acceptor for checking that the heap is full of valid objects, with
 /// pointers to valid objects.
 struct CheckHeapWellFormedAcceptor final : public SlotAcceptorDefault,
-                                           public WeakRootAcceptor {
+                                           public WeakRootAcceptorDefault {
   using SlotAcceptorDefault::accept;
-  using SlotAcceptorDefault::SlotAcceptorDefault;
+  using WeakRootAcceptorDefault::acceptWeak;
+
+  CheckHeapWellFormedAcceptor(GC &gc);
 
   void accept(void *&ptr) override;
   void acceptWeak(void *&ptr) override;

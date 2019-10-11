@@ -14,6 +14,7 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
+#include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/SerializedLiteralParser.h"
@@ -272,11 +273,13 @@ void CodeBlock::lazyCompileImpl(Runtime *runtime) {
 }
 #endif // HERMESVM_LEAN
 
-void CodeBlock::markCachedHiddenClasses(WeakRootAcceptor &acceptor) {
+void CodeBlock::markCachedHiddenClasses(
+    Runtime *runtime,
+    WeakRootAcceptor &acceptor) {
   for (auto &prop :
        llvm::makeMutableArrayRef(propertyCache(), propertyCacheSize_)) {
     if (prop.clazz) {
-      acceptor.acceptWeak(reinterpret_cast<void *&>(prop.clazz));
+      acceptor.acceptWeak(prop.clazz);
     }
   }
 }

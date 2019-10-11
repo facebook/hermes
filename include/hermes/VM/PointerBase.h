@@ -31,7 +31,12 @@ class BasedPointer final {
 
   bool operator==(BasedPointer other) const;
 
-  explicit BasedPointer() : segAndOffset_(0) {}
+  bool operator!=(BasedPointer other) const;
+
+  BasedPointer() = default;
+
+  /// Efficiently yields the representation of a null pointer.
+  explicit BasedPointer(std::nullptr_t);
 
   inline uint32_t getSegmentIndex() const;
 
@@ -44,7 +49,7 @@ class BasedPointer final {
 
   // The low AlignedStorage::kLogSize bits are the offset, and the
   // remaining upper bits are the segment index.
-  uint32_t segAndOffset_;
+  uint32_t segAndOffset_{0};
 
   inline explicit BasedPointer(void *heapAddr);
 
@@ -136,6 +141,10 @@ inline BasedPointer::operator bool() const {
 
 inline bool BasedPointer::operator==(BasedPointer other) const {
   return segAndOffset_ == other.segAndOffset_;
+}
+
+inline bool BasedPointer::operator!=(BasedPointer other) const {
+  return !(segAndOffset_ == other.segAndOffset_);
 }
 
 inline PointerBase::PointerBase() {

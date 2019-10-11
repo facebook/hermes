@@ -11,7 +11,7 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
-#include "hermes/VM/SlotAcceptorDefault.h"
+#include "hermes/VM/SlotAcceptorDefault-inline.h"
 
 namespace hermes {
 namespace vm {
@@ -46,9 +46,13 @@ struct CompleteMarkState::FullMSCMarkTransitiveAcceptor final
 /// This acceptor is used for updating pointers via forwarding pointers
 /// in mark/sweep/compact.
 struct FullMSCUpdateAcceptor final : public SlotAcceptorDefault,
-                                     public WeakRootAcceptor {
+                                     public WeakRootAcceptorDefault {
   using SlotAcceptorDefault::accept;
-  using SlotAcceptorDefault::SlotAcceptorDefault;
+  using WeakRootAcceptorDefault::acceptWeak;
+
+  FullMSCUpdateAcceptor(GC &gc)
+      : SlotAcceptorDefault(gc), WeakRootAcceptorDefault(gc) {}
+
   void accept(void *&ptr) override {
     if (ptr) {
       assert(gc.dbgContains(ptr) && "ptr not in heap");

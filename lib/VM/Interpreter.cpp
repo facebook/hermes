@@ -2158,7 +2158,6 @@ tailCall:
       CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
       if (LLVM_LIKELY(O2REG(GetById).isObject())) {
         auto *obj = vmcast<JSObject>(O2REG(GetById));
-        auto *clazz = obj->getClass(runtime);
         auto cacheIdx = ip->iGetById.op3;
         auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
 
@@ -2168,17 +2167,19 @@ tailCall:
               gcScope.getHandleCountDbg() == KEEP_HANDLES &&
               "unaccounted handles were created");
           auto objHandle = runtime->makeHandle(obj);
+          auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
+              GCPointerBase::storageTypeToPointer(cacheEntry->clazz, runtime)));
           runtime->recordHiddenClass(
-              curCodeBlock, ip, ID(idVal), clazz, cacheEntry->clazz);
+              curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr);
           // obj may be moved by GC due to recordHiddenClass
           obj = objHandle.get();
-          clazz = obj->getClass(runtime);
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
 #endif
+        auto clazzGCPtr = obj->getClassGCPtr();
         // If we have a cache hit, reuse the cached offset and immediately
         // return the property.
-        if (LLVM_LIKELY(cacheEntry->clazz == clazz)) {
+        if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
           ++NumGetByIdCacheHits;
           O1REG(GetById) =
               JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
@@ -2197,16 +2198,18 @@ tailCall:
 
           // cacheIdx == 0 indicates no caching so don't update the cache in
           // those cases.
+          auto *clazz = clazzGCPtr.getNonNull(runtime);
           if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
               LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
 #ifdef HERMES_SLOW_DEBUG
-            if (cacheEntry->clazz && cacheEntry->clazz != clazz)
+            if (cacheEntry->clazz &&
+                cacheEntry->clazz != clazzGCPtr.getStorageType())
               ++NumGetByIdCacheEvicts;
 #else
             (void)NumGetByIdCacheEvicts;
 #endif
             // Cache the class, id and property slot.
-            cacheEntry->clazz = clazz;
+            cacheEntry->clazz = clazzGCPtr.getStorageType();
             cacheEntry->slot = desc.slot;
           }
 
@@ -2224,7 +2227,8 @@ tailCall:
           // having no properties and therefore cannot contain the property.
           // This check does not belong here, it should be merged into
           // tryGetOwnNamedDescriptorFast().
-          if (parent && cacheEntry->clazz == parent->getClass(runtime) &&
+          if (parent &&
+              cacheEntry->clazz == parent->getClassGCPtr().getStorageType() &&
               LLVM_LIKELY(!obj->isLazy())) {
             ++NumGetByIdProtoHits;
             O1REG(GetById) =
@@ -2306,7 +2310,6 @@ tailCall:
       ++NumPutById;
       if (LLVM_LIKELY(O1REG(PutById).isObject())) {
         auto *obj = vmcast<JSObject>(O1REG(PutById));
-        auto *clazz = obj->getClass(runtime);
         auto cacheIdx = ip->iPutById.op3;
         auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
 
@@ -2316,17 +2319,19 @@ tailCall:
               gcScope.getHandleCountDbg() == KEEP_HANDLES &&
               "unaccounted handles were created");
           auto objHandle = runtime->makeHandle(obj);
+          auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
+              GCPointerBase::storageTypeToPointer(cacheEntry->clazz, runtime)));
           runtime->recordHiddenClass(
-              curCodeBlock, ip, ID(idVal), clazz, cacheEntry->clazz);
+              curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr);
           // obj may be moved by GC due to recordHiddenClass
           obj = objHandle.get();
-          clazz = obj->getClass(runtime);
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
 #endif
+        auto clazzGCPtr = obj->getClassGCPtr();
         // If we have a cache hit, reuse the cached offset and immediately
         // return the property.
-        if (LLVM_LIKELY(cacheEntry->clazz == clazz)) {
+        if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
           ++NumPutByIdCacheHits;
           JSObject::setNamedSlotValue<PropStorage::Inline::Yes>(
               obj, runtime, cacheEntry->slot, O2REG(PutById));
@@ -2344,16 +2349,18 @@ tailCall:
 
           // cacheIdx == 0 indicates no caching so don't update the cache in
           // those cases.
+          auto *clazz = clazzGCPtr.getNonNull(runtime);
           if (LLVM_LIKELY(!clazz->isDictionary()) &&
               LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
 #ifdef HERMES_SLOW_DEBUG
-            if (cacheEntry->clazz && cacheEntry->clazz != clazz)
+            if (cacheEntry->clazz &&
+                cacheEntry->clazz != clazzGCPtr.getStorageType())
               ++NumPutByIdCacheEvicts;
 #else
             (void)NumPutByIdCacheEvicts;
 #endif
             // Cache the class and property slot.
-            cacheEntry->clazz = clazz;
+            cacheEntry->clazz = clazzGCPtr.getStorageType();
             cacheEntry->slot = desc.slot;
           }
 

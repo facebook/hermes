@@ -102,9 +102,9 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
 CallResult<HermesValue> Runtime::getNamed(
     Handle<JSObject> obj,
     PropCacheID id) {
-  auto *clazz = obj->getClass(this);
+  auto clazzGCPtr = obj->getClassGCPtr();
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
-  if (LLVM_LIKELY(cacheEntry->clazz == clazz)) {
+  if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
     return JSObject::getNamedSlotValue<PropStorage::Inline::Yes>(
         *obj, this, cacheEntry->slot);
   }
@@ -116,9 +116,10 @@ CallResult<HermesValue> Runtime::getNamed(
           JSObject::tryGetOwnNamedDescriptorFast(*obj, this, sym, desc)) &&
       !desc.flags.accessor && desc.flags.writable &&
       !desc.flags.internalSetter) {
+    auto *clazz = clazzGCPtr.getNonNull(this);
     if (LLVM_LIKELY(!clazz->isDictionary())) {
       // Cache the class, id and property slot.
-      cacheEntry->clazz = clazz;
+      cacheEntry->clazz = clazzGCPtr.getStorageType();
       cacheEntry->slot = desc.slot;
     }
     return JSObject::getNamedSlotValue(*obj, this, desc);
@@ -130,9 +131,9 @@ ExecutionStatus Runtime::putNamedThrowOnError(
     Handle<JSObject> obj,
     PropCacheID id,
     HermesValue hv) {
-  auto *clazz = obj->getClass(this);
+  auto clazzGCPtr = obj->getClassGCPtr();
   auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
-  if (LLVM_LIKELY(cacheEntry->clazz == clazz)) {
+  if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
     JSObject::setNamedSlotValue<PropStorage::Inline::Yes>(
         *obj, this, cacheEntry->slot, hv);
     return ExecutionStatus::RETURNED;
@@ -143,9 +144,10 @@ ExecutionStatus Runtime::putNamedThrowOnError(
           JSObject::tryGetOwnNamedDescriptorFast(*obj, this, sym, desc)) &&
       !desc.flags.accessor && desc.flags.writable &&
       !desc.flags.internalSetter) {
+    auto *clazz = clazzGCPtr.getNonNull(this);
     if (LLVM_LIKELY(!clazz->isDictionary())) {
       // Cache the class and property slot.
-      cacheEntry->clazz = clazz;
+      cacheEntry->clazz = clazzGCPtr.getStorageType();
       cacheEntry->slot = desc.slot;
     }
     JSObject::setNamedSlotValue(*obj, this, desc.slot, hv);
@@ -411,7 +413,7 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
     for (auto &rm : runtimeModuleList_)
       rm.markRoots(acceptor, markLongLived);
     for (auto &entry : fixedPropCache_) {
-      acceptor.acceptPtr(entry.clazz);
+      acceptor.accept(entry.clazz);
     }
     acceptor.endRootSection();
   }

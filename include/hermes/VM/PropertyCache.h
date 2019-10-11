@@ -7,6 +7,7 @@
 #ifndef PROJECT_PROPERTYCACHE_H
 #define PROJECT_PROPERTYCACHE_H
 
+#include "hermes/VM/GCPointer.h"
 #include "hermes/VM/SymbolID.h"
 
 namespace hermes {
@@ -21,7 +22,7 @@ class HiddenClass;
 /// non-accessor property.
 struct PropertyCacheEntry {
   /// Cached class.
-  HiddenClass *clazz{nullptr};
+  GCPointer<HiddenClass>::StorageType clazz{nullptr};
 
   /// Cached property index.
   SlotIndex slot{0};
