@@ -260,6 +260,7 @@ CallResult<RegExpMatch> performSearch(
       assert(i > 0 && "match_result[0] should always match");
       match.push_back(llvm::None);
     } else {
+      assert(submatch.first >= start && "Match occurred before start");
       uint32_t pos = submatch.first - start;
       uint32_t length = submatch.length();
       match.push_back(RegExpMatchRange{pos, length});
@@ -283,13 +284,7 @@ CallResult<RegExpMatch> JSRegExp::search(
     return RegExpMatch{}; // no match possible
   }
 
-  // Tell the regex if the previous character is available
-  // This is important to ensure that ^ does not match in the middle of the
-  // string, among other reasons.
   auto matchFlags = regex::constants::matchDefault;
-  if (searchStartOffset > 0) {
-    matchFlags |= regex::constants::matchPreviousCharAvailable;
-  }
 
   // Respect the sticky flag, which forces us to match only at the given
   // location.

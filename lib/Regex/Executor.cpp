@@ -18,22 +18,6 @@ namespace regex {
 template <class Traits>
 struct State;
 
-/// \return whether a regex match performed using the given \p flags can
-/// possibly match the given \p constraints.
-inline bool flagsSatisfyConstraints(
-    constants::MatchFlagType flags,
-    MatchConstraintSet constraints) {
-  if ((constraints & MatchConstraintNonASCII) &&
-      (flags & constants::matchInputAllAscii))
-    return false;
-
-  if ((constraints & MatchConstraintAnchoredAtStart) &&
-      (flags & constants::matchPreviousCharAvailable))
-    return false;
-
-  return true;
-}
-
 /// The kind of error that occurred when trying to find a match.
 enum class MatchRuntimeErrorType {
   /// No error occurred.
@@ -170,6 +154,19 @@ class Cursor {
       }
     }
     return consume();
+  }
+
+  /// \return whether a regex match performed using the given \p flags can
+  /// possibly match the given \p constraints.
+  bool satisfiesConstraints(
+      constants::MatchFlagType flags,
+      MatchConstraintSet constraints) const {
+    if ((constraints & MatchConstraintNonASCII) &&
+        (flags & constants::matchInputAllAscii))
+      return false;
+    if ((constraints & MatchConstraintAnchoredAtStart) && current_ != first_)
+      return false;
+    return true;
   }
 
  private:
@@ -498,12 +495,11 @@ template <class Traits>
 bool matchesLeftAnchor(Context<Traits> &ctx, State<Traits> &s) {
   bool matchesAnchor = false;
   const Cursor<Traits> &c = s.cursor_;
-  if (c.atLeft() && !(ctx.flags_ & constants::matchPreviousCharAvailable)) {
+  if (c.atLeft()) {
     // Beginning of text.
     matchesAnchor = true;
   } else if (
-      (ctx.syntaxFlags_ & constants::multiline) &&
-      (!c.atLeft() || (ctx.flags_ & constants::matchPreviousCharAvailable)) &&
+      (ctx.syntaxFlags_ & constants::multiline) && !c.atLeft() &&
       isLineTerminator(c.currentPointer()[-1])) {
     // Multiline and after line terminator.
     matchesAnchor = true;
@@ -1018,9 +1014,9 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           // branches are viable. If both are, we have to split our state.
           const AlternationInsn *alt = llvm::cast<AlternationInsn>(base);
           bool primaryViable =
-              flagsSatisfyConstraints(flags_, alt->primaryConstraints);
+              c.satisfiesConstraints(flags_, alt->primaryConstraints);
           bool secondaryViable =
-              flagsSatisfyConstraints(flags_, alt->secondaryConstraints);
+              c.satisfiesConstraints(flags_, alt->secondaryConstraints);
           if (primaryViable && secondaryViable) {
             // We need to explore both branches. Explore the primary branch
             // first, backtrack to the secondary one.
@@ -1069,7 +1065,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         case Opcode::WordBoundary: {
           const WordBoundaryInsn *insn = llvm::cast<WordBoundaryInsn>(base);
           bool prevIsWordchar = false;
-          if (!c.atLeft() || (flags_ & constants::matchPreviousCharAvailable))
+          if (!c.atLeft())
             prevIsWordchar = traits_.characterHasType(
                 c.currentPointer()[-1], CharacterClass::Words);
 
@@ -1166,7 +1162,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
         case Opcode::Lookahead: {
           const LookaheadInsn *insn = llvm::cast<LookaheadInsn>(base);
           bool matched = false;
-          if (flagsSatisfyConstraints(flags_, insn->constraints)) {
+          if (c.satisfiesConstraints(flags_, insn->constraints)) {
             // Copy the state. This is because if the match fails (or if we are
             // inverted) we need to restore its capture groups.
             State savedState{*s};
@@ -1225,7 +1221,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           // just skip to the not-taken target. Note that this is a static
           // property of the loop so we don't need to check it on every
           // iteration, only the first one.
-          if (!flagsSatisfyConstraints(flags_, loop->loopeeConstraints)) {
+          if (!c.satisfiesConstraints(flags_, loop->loopeeConstraints)) {
             if (loop->min > 0) {
               BACKTRACK();
             } else {
@@ -1309,7 +1305,7 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           const BeginSimpleLoopInsn *loop =
               llvm::cast<BeginSimpleLoopInsn>(base);
 
-          if (!flagsSatisfyConstraints(flags_, loop->loopeeConstraints)) {
+          if (!c.satisfiesConstraints(flags_, loop->loopeeConstraints)) {
             s->ip_ = loop->notTakenTarget;
             break;
           }
@@ -1369,8 +1365,10 @@ MatchRuntimeResult searchWithBytecodeImpl(
   auto header = reinterpret_cast<const RegexBytecodeHeader *>(bytecode.data());
 
   // Check for match impossibility before doing anything else.
-  if (!flagsSatisfyConstraints(matchFlags, header->constraints))
+  Cursor<Traits> cursor{first, first + start, first + length};
+  if (!cursor.satisfiesConstraints(matchFlags, header->constraints))
     return MatchRuntimeResult::NoMatch;
+
   auto markedCount = header->markedCount;
   auto loopCount = header->loopCount;
 
@@ -1382,7 +1380,6 @@ MatchRuntimeResult searchWithBytecodeImpl(
       first + length,
       header->markedCount,
       header->loopCount);
-  Cursor<Traits> cursor{first, first + start, first + length};
   State<Traits> state{cursor, markedCount, loopCount};
 
   // We check only one location if either the regex pattern constrains us to, or
