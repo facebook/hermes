@@ -314,10 +314,20 @@ print(/(?<=efg)../.exec("abcdefghijk123456"))
 // CHECK-NEXT: hi
 print(/(?<=\d{3}).*/.exec("abcdefghijk123456"))
 // CHECK-NEXT: 456
+print(!! /(?<=\d{3}.*)/.exec("abcdefghijk123456"))
+// CHECK-NEXT: true
 print(/(?<![a-z])../.exec("abcdefghijk123456"))
 // CHECK-NEXT: ab
 print(/(?<![a-z])\d{2}/.exec("abcdefghijk123456"))
 // CHECK-NEXT: 23
+print(/(?<=x{3,4})\d/.exec("1yxx2xxx3xxxx4xxxxx5xxxxxx6xxxxxxx7xxxxxxxx8"));
+// CHECK-NEXT: 3
+print(/(?<=(?:xx){3})\d/.exec("1yxx2xxx3xxxx4xxxxx5xxxxxx6xxxxxxx7xxxxxxxx8"));
+// CHECK-NEXT: 6
+print(/(?<=(x*))\1$/.exec("xxxxxxxx"));
+// CHECK-NEXT: xxxx,xxxx
+print(/(?<!(x*))\1$/.exec("xxxxxxxx"));
+// CHECK-NEXT: null
 
 // Sticky support
 print(/abc/y.exec("abc"));

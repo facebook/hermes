@@ -531,11 +531,11 @@ template <class Traits>
 bool matchesRightAnchor(Context<Traits> &ctx, State<Traits> &s) {
   bool matchesAnchor = false;
   const Cursor<Traits> &c = s.cursor_;
-  if (c.atEnd() && !(ctx.flags_ & constants::matchNotEndOfLine)) {
+  if (c.atRight() && !(ctx.flags_ & constants::matchNotEndOfLine)) {
     matchesAnchor = true;
   } else if (
-      (ctx.syntaxFlags_ & constants::multiline) && (!c.atEnd()) &&
-      isLineTerminator(c.current())) {
+      (ctx.syntaxFlags_ & constants::multiline) && (!c.atRight()) &&
+      isLineTerminator(c.currentPointer()[0])) {
     matchesAnchor = true;
   }
   return matchesAnchor;
@@ -695,20 +695,24 @@ bool Context<Traits>::backtrack(BacktrackStack &bts, State<Traits> *s) {
         // (if we are greedy) or the min location (nongreedy). Backtrack by
         // decrementing the max (incrementing the min) if we are greedy
         // (nongreedy), setting the IP to that location, and jumping to the loop
-        // exit.
+        // exit. Note that if we are tracking backwards (lookbehind assertion)
+        // our maximum is before our minimum, so we have to reverse the
+        // direction of increment/decrement.
+        bool forwards = s->cursor_.forwards();
         assert(
-            binsn.width1Loop.min <= binsn.width1Loop.max &&
-            "Loop min should be <= max");
+            (forwards ? binsn.width1Loop.min <= binsn.width1Loop.max
+                      : binsn.width1Loop.min >= binsn.width1Loop.max) &&
+            "Loop min should be <= max (or >= max if backwards)");
         if (binsn.width1Loop.min == binsn.width1Loop.max) {
           // We have backtracked as far as possible. Give up.
           bts.pop_back();
           break;
         }
         if (binsn.op == BacktrackOp::GreedyWidth1Loop) {
-          binsn.width1Loop.max--;
+          binsn.width1Loop.max += forwards ? -1 : 1;
           s->cursor_.setCurrentPointer(binsn.width1Loop.max);
         } else {
-          binsn.width1Loop.min++;
+          binsn.width1Loop.min += forwards ? 1 : -1;
           s->cursor_.setCurrentPointer(binsn.width1Loop.min);
         }
         s->ip_ = binsn.width1Loop.continuation;
@@ -835,14 +839,14 @@ bool Context<Traits>::matchWidth1Loop(
 
   // Now we know the valid match range.
   // Compute the beginning and end pointers in this range.
-
+  bool forwards = s->cursor_.forwards();
   const CodeUnit *pos = s->cursor_.currentPointer();
-  const CodeUnit *minPos = pos + minMatch;
-  const CodeUnit *maxPos = pos + matched;
+  const CodeUnit *minPos = forwards ? pos + minMatch : pos - minMatch;
+  const CodeUnit *maxPos = forwards ? pos + matched : pos - matched;
 
   // If min == max (e.g. /a{3}/) then no backtracking is possible. If min < max,
   // backtracking is possible and we need to add a backtracking instruction.
-  if (minPos < maxPos) {
+  if (minMatch < matched) {
     BacktrackInsn backtrack{insn->greedy ? BacktrackOp::GreedyWidth1Loop
                                          : BacktrackOp::NongreedyWidth1Loop};
     backtrack.width1Loop.continuation = insn->notTakenTarget;
@@ -1091,15 +1095,18 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
 
         case Opcode::WordBoundary: {
           const WordBoundaryInsn *insn = llvm::cast<WordBoundaryInsn>(base);
+          const auto *charPointer = c.currentPointer();
+
           bool prevIsWordchar = false;
           if (!c.atLeft())
             prevIsWordchar = traits_.characterHasType(
-                c.currentPointer()[-1], CharacterClass::Words);
+                charPointer[-1], CharacterClass::Words);
 
           bool currentIsWordchar = false;
-          if (!c.atEnd())
+          if (!c.atRight())
             currentIsWordchar =
-                traits_.characterHasType(c.current(), CharacterClass::Words);
+                traits_.characterHasType(charPointer[0], CharacterClass::Words);
+
           bool isWordBoundary = (prevIsWordchar != currentIsWordchar);
           if (isWordBoundary ^ insn->invert)
             s->ip_ += sizeof(WordBoundaryInsn);
@@ -1116,14 +1123,30 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
                       insn->mexp - 1, {kNotMatched, kNotMatched}))) {
             return nullptr;
           }
-          s->getCapturedRange(insn->mexp - 1).start = c.offsetFromLeft();
+          // When tracking backwards (in a lookbehind assertion) we traverse our
+          // input backwards, so set the end before the start.
+          auto &range = s->getCapturedRange(insn->mexp - 1);
+          if (c.forwards()) {
+            range.start = c.offsetFromLeft();
+          } else {
+            range.end = c.offsetFromLeft();
+          }
           s->ip_ += sizeof(BeginMarkedSubexpressionInsn);
           break;
         }
 
         case Opcode::EndMarkedSubexpression: {
           const auto *insn = llvm::cast<EndMarkedSubexpressionInsn>(base);
-          s->getCapturedRange(insn->mexp - 1).end = c.offsetFromLeft();
+          auto &range = s->getCapturedRange(insn->mexp - 1);
+          if (c.forwards()) {
+            assert(
+                range.start != kNotMatched && "Capture group was not entered");
+            range.end = c.offsetFromLeft();
+          } else {
+            assert(range.end != kNotMatched && "Capture group was not entered");
+            range.start = c.offsetFromLeft();
+          }
+          assert(range.start <= range.end && "Captured range end before start");
           s->ip_ += sizeof(EndMarkedSubexpressionInsn);
           break;
         }
