@@ -140,12 +140,13 @@ class HermesValue {
 #endif
   }
 
- public:
+  using RawType = uint64_t;
+
   HermesValue() = default;
 
-  constexpr explicit HermesValue(uint64_t val) : raw_(val) {}
-  constexpr explicit HermesValue(uint64_t val, TagKind tag)
-      : raw_(val | ((uint64_t)tag << kNumDataBits)) {}
+  constexpr inline static HermesValue fromRaw(RawType raw) {
+    return HermesValue(raw);
+  }
 
   /// Dump the contents to stderr.
   void dump(llvm::raw_ostream &stream = llvm::errs()) const;
@@ -274,7 +275,7 @@ class HermesValue {
     return V;
   }
 
-  /// Update a HermesValue to encode \p ptr. Used by Deserializer.
+  /// Update a HermesValue to encode \p ptr. Used by (de)seserializer.
   /// We need to have this function instead of using \p updatePointer because
   /// we also want to be able to update \p NativePointer HermesValue, which
   /// will fail the \p isPointer check in \p updatePointer.
@@ -323,7 +324,7 @@ class HermesValue {
     return isDouble();
   }
 
-  inline uint64_t getRaw() const {
+  inline RawType getRaw() const {
     return raw_;
   }
 
@@ -425,6 +426,11 @@ class HermesValue {
   void setNoBarrier(HermesValue hv) {
     raw_ = hv.raw_;
   }
+
+ private:
+  constexpr explicit HermesValue(uint64_t val) : raw_(val) {}
+  constexpr explicit HermesValue(uint64_t val, TagKind tag)
+      : raw_(val | ((uint64_t)tag << kNumDataBits)) {}
 
   // 64 raw bits stored and reinterpreted as necessary.
   uint64_t raw_;

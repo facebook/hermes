@@ -1046,7 +1046,7 @@ tailCall:
       // to. It is meant to be used only for very short durations, in the
       // dispatch of call instructions, when there is definitely no possibility
       // of a GC.
-      uint64_t callNewTarget;
+      HermesValue::RawType callNewTarget;
 
 /// Handle an opcode \p name with an out-of-line implementation in a function
 ///   ExecutionStatus caseName(
@@ -1505,7 +1505,7 @@ tailCall:
           curCodeBlock,
           callArgCount - 1,
           O2REG(Call),
-          HermesValue{callNewTarget});
+          HermesValue::fromRaw(callNewTarget));
       (void)newFrame;
 
       SLOW_DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));

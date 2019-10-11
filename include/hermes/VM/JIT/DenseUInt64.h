@@ -45,7 +45,7 @@ class DenseUInt64 {
     assert(
         keyType_ == MapKeyType::valid &&
         "attempting to get the value of tombstone/empty entry");
-    return HermesValue(rawValue_);
+    return HermesValue::fromRaw(rawValue_);
   }
   void *valueAsAddr() const {
     assert(

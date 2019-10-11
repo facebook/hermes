@@ -208,7 +208,9 @@ class Serializer {
 
   /// Replace pointer in \p hv with the relocation id.
   HermesValue updateRelocationID(HermesValue hv, uint32_t id) {
-    return HermesValue(id, hv.getTag());
+    hv.unsafeUpdatePointer(
+        reinterpret_cast<void *>(static_cast<uintptr_t>(id)));
+    return hv;
   }
 
   /// Write string buffers and their sizes to the stream.
