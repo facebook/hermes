@@ -18,6 +18,7 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/MarkBitArrayNC.h"
+#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/SweepResultNC.h"
 
 #include "llvm/Support/MathExtras.h"
@@ -73,6 +74,14 @@ class AlignedHeapSegment final {
 
   ~AlignedHeapSegment();
 
+  /// The very beginning of a segment contains this small structure, which can
+  /// contain segment-specific information.
+  struct SegmentInfo {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+    unsigned index;
+#endif
+  };
+
   /// Contents of the memory region managed by this segment.
   class Contents {
     friend class AlignedHeapSegment;
@@ -110,6 +119,13 @@ class AlignedHeapSegment final {
   /// a pointer to the AlignedHeapSegment::Contents laid out in that storage,
   /// assuming it exists.
   inline static Contents *contents(void *lowLim);
+  inline static const Contents *contents(const void *lowLim);
+
+  /// Given the \p lowLim of some valid AlignedStorage's memory region, returns
+  /// a pointer to the AlignedHeapSegment::SegmentInfo laid out in that storage,
+  /// assuming it exists.
+  inline static SegmentInfo *segmentInfo(void *lowLim);
+  inline static const SegmentInfo *segmentInfo(const void *lowLim);
 
   /// Given a \p ptr into the memory region of some valid AlignedStorage \c s,
   /// returns a pointer to the CardTable covering the segment containing the
@@ -117,6 +133,20 @@ class AlignedHeapSegment final {
   ///
   /// \pre There exists a currently alive heap that claims to contain \c ptr.
   inline static CardTable *cardTableCovering(const void *ptr);
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  /// Returns the index of the segment containing \p ptr.
+  inline static unsigned segmentIndex(const void *ptr);
+
+  /// Returns the index of the segment containing \p ptr, which is required to
+  /// be the start of its containing segment.  (This can allow extra efficiency,
+  /// in cases where the segment start has already been computed.)
+  inline static unsigned segmentIndexFromStart(const void *ptr);
+
+  /// Requires that \p segStart is the start address of a segment, and sets
+  /// that segment's index to \p index.
+  inline static void setSegmentIndexFromStart(void *segStart, unsigned index);
+#endif // HERMESVM_COMPRESSED_POINTERS
 
   /// Given a \p ptr into the memory region of some valid AlignedStorage \c s,
   /// returns a pointer to the MarkBitArrayNC covering the segment containing
@@ -416,9 +446,46 @@ bool AlignedHeapSegment::getCellMarkBit(const GCCell *cell) {
   return reinterpret_cast<Contents *>(lowLim);
 }
 
+/* static */ const AlignedHeapSegment::Contents *AlignedHeapSegment::contents(
+    const void *lowLim) {
+  return reinterpret_cast<const Contents *>(lowLim);
+}
+
+/* static */ AlignedHeapSegment::SegmentInfo *AlignedHeapSegment::segmentInfo(
+    void *lowLim) {
+  static_assert(
+      sizeof(SegmentInfo) < CardTable::kUnusedPrefixSize,
+      "SegmentInfo does not fit in available unused CardTable space.");
+  return reinterpret_cast<SegmentInfo *>(lowLim);
+}
+
+/* static */ const AlignedHeapSegment::SegmentInfo *
+AlignedHeapSegment::segmentInfo(const void *lowLim) {
+  return reinterpret_cast<const SegmentInfo *>(lowLim);
+}
+
 /* static */ CardTable *AlignedHeapSegment::cardTableCovering(const void *ptr) {
   return &AlignedHeapSegment::contents(AlignedStorage::start(ptr))->cardTable_;
 }
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+/* static */ unsigned AlignedHeapSegment::segmentIndex(const void *ptr) {
+  return segmentIndexFromStart(AlignedStorage::start(ptr));
+}
+
+/* static */ unsigned AlignedHeapSegment::segmentIndexFromStart(
+    const void *ptr) {
+  assert(ptr == AlignedStorage::start(ptr) && "Precondition.");
+  return AlignedHeapSegment::segmentInfo(ptr)->index;
+}
+
+/* static */ void AlignedHeapSegment::setSegmentIndexFromStart(
+    void *segStart,
+    unsigned index) {
+  assert(segStart == AlignedStorage::start(segStart) && "Precondition.");
+  AlignedHeapSegment::segmentInfo(segStart)->index = index;
+}
+#endif // HERMESVM_COMPRESSED_POINTERS
 
 /* static */ constexpr size_t AlignedHeapSegment::maxSize() {
   return AlignedStorage::size() - offsetof(Contents, allocRegion_);

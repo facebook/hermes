@@ -83,41 +83,6 @@ static const Predefined::Str fixedPropCacheNames[(size_t)PropCacheID::_COUNT] =
 std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
   const GCConfig &gcConfig = runtimeConfig.getGCConfig();
   GC::Size sz{gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()};
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  if (sizeof(void *) != sizeof(uint64_t)) {
-    hermes_fatal("Non-64 bit build with contiguous backing storage on");
-  }
-  // TODO(T31421960): This can become a unique_ptr with C++14 lambda
-  // initializers.
-  auto storageResult = StorageProvider::preAllocatedProvider(
-      sz.storageFootprint(), sz.minStorageFootprint(), sizeof(Runtime));
-  if (!storageResult) {
-    hermes_fatal((llvm::Twine("Could not allocate backing storage for heap: ") +
-                  convert_error_to_message(storageResult.getError()) +
-                  ", requested size: " + llvm::Twine(sz.storageFootprint()))
-                     .str());
-  }
-  std::shared_ptr<StorageProvider> provider{std::move(storageResult.get())};
-  // Place Runtime in the first allocated storage.
-  static_assert(
-      sizeof(Runtime) <= AlignedStorage::size(),
-      "Runtime must fit into a single storage");
-  auto result = provider->newStorage("hermes-runtime-segment");
-  if (!result) {
-    hermes_fatal(
-        (llvm::Twine("Could not allocate initial storage for Runtime: ") +
-         convert_error_to_message(result.getError()))
-            .str());
-  }
-  void *storage = *result;
-  Runtime *rt = new (storage) Runtime(provider.get(), runtimeConfig);
-  // Return a shared pointer with a custom deleter to delete the underlying
-  // storage of the runtime.
-  return std::shared_ptr<Runtime>{rt, [provider](Runtime *runtime) {
-                                    runtime->~Runtime();
-                                    provider->deleteStorage(runtime);
-                                  }};
-#else
   // TODO(T31421960): This can become a unique_ptr with C++14 lambda
   // initializers.
   std::shared_ptr<StorageProvider> provider{StorageProvider::mmapProvider()};
@@ -132,7 +97,6 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
                                     // deleted.
                                     (void)provider;
                                   }};
-#endif
 }
 
 CallResult<HermesValue> Runtime::getNamed(

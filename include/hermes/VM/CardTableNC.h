@@ -70,7 +70,36 @@ class CardTable {
   static constexpr size_t kCardTableSize =
       llvm::alignTo<pagesize::kExpectedPageSize>(kValidIndices);
 
-  CardTable() = default;
+  /// A prefix of every segment is occupied by auxilary data
+  /// structures.  The card table is the first such data structure.
+  /// The card table maps to the segment.  Only the suffix of the card
+  /// table that maps to the suffix of entire segment that is used for
+  /// allocation is ever used; the prefix that maps to the card table
+  /// itself is not used.  (Nor is the portion that of the card table
+  /// that maps to the other auxiliary data structure, the mark bit
+  /// array, but we don't attempt to calculate that here.)
+  /// It is useful to know the size of this unused region of
+  /// the card table, so it can be used for other purposes.
+  /// Note that the total size of the card table is 2 times
+  /// kCardTableSize, since the CardTable contains two byte arrays of
+  /// that size (cards_ and _boundaries_).
+  static constexpr size_t kUnusedPrefixSize =
+      (2 * kCardTableSize) >> kLogCardSize;
+
+  /// It is sometimes more clear to name the value above as the first valid
+  /// index of the card table.  The translation from size to index assumes that
+  /// card table entries are one byte; this assumption is validated by a
+  /// static_assert in the ctor below.
+  static constexpr size_t kFirstUsedIndex = kUnusedPrefixSize;
+
+  /// Default ctor; has a body just to allow static asserts.
+  CardTable() {
+    // See the comment on kFirstUsedIndex, above, for why this assert
+    // is necessary.
+    static_assert(
+        sizeof(cards_[0]) == 1,
+        "Validate assumption that card table entries are one byte");
+  }
 
   /// CardTable is not copyable or movable: It must be constructed in-place.
   CardTable(const CardTable &) = delete;

@@ -36,7 +36,7 @@ OptValue<size_t> CardTable::findNextCardWithStatus(
 }
 
 void CardTable::clear() {
-  cleanRange(0, kValidIndices - 1);
+  cleanRange(kFirstUsedIndex, kValidIndices - 1);
 }
 
 void CardTable::updateAfterCompaction(const void *newLevel) {
@@ -55,7 +55,7 @@ void CardTable::updateAfterCompaction(const void *newLevel) {
 
   // Dirty the occupied cards (below the level), and clean the cards above the
   // level.
-  dirtyRange(0, lastDirtyCardIndex);
+  dirtyRange(kFirstUsedIndex, lastDirtyCardIndex);
   cleanRange(lastDirtyCardIndex + 1, kValidIndices - 1);
 }
 

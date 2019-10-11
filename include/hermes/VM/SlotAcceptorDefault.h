@@ -22,6 +22,7 @@ struct SlotAcceptorDefault : public SlotAcceptor {
 
   using SlotAcceptor::accept;
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptr) override {
     if (!ptr) {
       return;
@@ -34,6 +35,7 @@ struct SlotAcceptorDefault : public SlotAcceptor {
     // Assign back to the based pointer.
     ptr = base->pointerToBasedNonNull(actualizedPointer);
   }
+#endif
 
   void accept(GCPointerBase &ptr) override final {
     accept(ptr.getLoc(&gc));
@@ -54,6 +56,7 @@ struct SlotAcceptorWithNamesDefault : public RootAcceptor {
 
   using SlotAcceptorWithNames::accept;
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
   void accept(BasedPointer &ptr, const char *name) override {
     // See comments in SlotAcceptorDefault::accept(BasedPointer &) for
     // explanation.
@@ -65,6 +68,7 @@ struct SlotAcceptorWithNamesDefault : public RootAcceptor {
     accept(actualizedPointer, name);
     ptr = base->pointerToBasedNonNull(actualizedPointer);
   }
+#endif
 
   void accept(GCPointerBase &ptr, const char *name) override final {
     accept(ptr.getLoc(&gc), name);

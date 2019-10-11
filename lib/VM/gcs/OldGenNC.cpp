@@ -17,6 +17,7 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/GCSegmentRange-inline.h"
 #include "hermes/VM/GCSegmentRange.h"
+#include "hermes/VM/PointerBase.h"
 #include "hermes/VM/YoungGenNC-inline.h"
 
 #include "llvm/Support/Debug.h"
@@ -88,6 +89,11 @@ OldGen::OldGen(GenGC *gc, Size sz, bool releaseUnused)
     gc_->oom(result.getError());
   }
   exchangeActiveSegment({std::move(result.get()), this});
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  // The initial active segment gets the first OG index.
+  gc->pointerBase_->setSegment(
+      PointerBase::kFirstOGSegmentIndex, activeSegment().lowLim());
+#endif
   // Record the initial level, as if we had done a GC before starting.
   didFinishGC();
   updateCardTableBoundary();
@@ -318,6 +324,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
                    ->isCardForAddressDirty(locPtr));
       }
     }
+#ifdef HERMESVM_COMPRESSED_POINTERS
     void accept(BasedPointer &ptr) override {
       // Don't use the default from SlotAcceptorDefault since the address of the
       // reference is used.
@@ -330,6 +337,7 @@ void OldGen::markYoungGenPointers(OldGen::Location originalLevel) {
                    ->isCardForAddressDirty(locPtr));
       }
     }
+#endif
     void accept(HermesValue &hv) override {
       if (!hv.isPointer()) {
         return;
@@ -712,6 +720,11 @@ bool OldGen::materializeNextSegment() {
     exchangeActiveSegment({std::move(result.get()), this}, filledSegSlot);
     activeSegment().growToLimit();
   }
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  gc_->pointerBase_->setSegment(
+      filledSegments_.size() + PointerBase::kFirstOGSegmentIndex,
+      activeSegment().lowLim());
+#endif
 
   // The active segment has changed, so we need to update the next card table
   // boundary to align with the start of its allocation region.

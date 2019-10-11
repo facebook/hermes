@@ -100,6 +100,10 @@ YoungGen::YoungGen(
   lowLim_ = activeSegment().lowLim();
   hiLim_ = activeSegment().hiLim();
 
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  gc_->pointerBase_->setSegment(PointerBase::kYGSegmentIndex, lowLim_);
+#endif
+
   // Record the initial level, as if we had done a GC before starting.
   didFinishGC();
 }

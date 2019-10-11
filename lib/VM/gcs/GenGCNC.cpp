@@ -2139,9 +2139,11 @@ void GenGC::sizeDiagnosticCensus() {
     void accept(void *&ptr) override {
       diagnostic.numPointer++;
     }
+#ifdef HERMESVM_COMPRESSED_POINTERS
     void accept(BasedPointer &ptr) override {
       diagnostic.numPointer++;
     }
+#endif
     void accept(GCPointerBase &ptr) override {
       diagnostic.numPointer++;
     }

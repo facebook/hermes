@@ -55,7 +55,10 @@ void CardTableNCTest::dirtyRangeTest(
 }
 
 CardTableNCTest::CardTableNCTest() {
-  auto first = as.lowLim();
+  // For purposes of this test, we'll assume the first writeable byte of
+  // the segment comes just after the card table (which is at the
+  // start of the segment).
+  auto first = as.lowLim() + sizeof(CardTable);
   auto last = reinterpret_cast<char *>(llvm::alignDown(
       reinterpret_cast<uintptr_t>(as.hiLim() - 1), CardTable::kCardSize));
 
@@ -74,7 +77,12 @@ TEST_F(CardTableNCTest, AddressToIndex) {
   // Expected indices in the card table corresponding to the probe
   // addresses into the storage.
   const size_t lastIx = CardTable::kValidIndices - 1;
-  std::vector<size_t> indices{0, 1, 42, lastIx - 42, lastIx - 1, lastIx};
+  std::vector<size_t> indices{CardTable::kFirstUsedIndex,
+                              CardTable::kFirstUsedIndex + 1,
+                              CardTable::kFirstUsedIndex + 42,
+                              lastIx - 42,
+                              lastIx - 1,
+                              lastIx};
 
   for (unsigned i = 0; i < addrs.size(); i++) {
     char *addr = addrs.at(i);

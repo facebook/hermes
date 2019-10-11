@@ -10,10 +10,41 @@
 #include "hermes/VM/GCPointer.h"
 
 #include "hermes/VM/GC.h"
+#include "hermes/VM/PointerBase-inline.h"
 #include "hermes/VM/PointerBase.h"
 
 namespace hermes {
 namespace vm {
+
+inline GCPointerBase::GCPointerBase(PointerBase *base, void *ptr)
+    : ptr_(
+#ifdef HERMESVM_COMPRESSED_POINTERS
+          base->pointerToBased(ptr)
+#else
+          ptr
+#endif
+      ) {
+  // In some build configurations this parameter is unused.
+  (void)base;
+}
+
+inline void *GCPointerBase::get(PointerBase *base) const {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  return base->basedToPointer(ptr_);
+#else
+  (void)base;
+  return ptr_;
+#endif
+}
+
+inline void *GCPointerBase::getNonNull(PointerBase *base) const {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  return base->basedToPointerNonNull(ptr_);
+#else
+  (void)base;
+  return ptr_;
+#endif
+}
 
 template <typename T>
 template <typename NeedsBarriers>
