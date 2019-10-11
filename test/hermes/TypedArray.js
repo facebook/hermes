@@ -934,6 +934,14 @@ cons.forEach(function(ta) {
     });
   }, TypeError);
 });
+
+(function negativeZeroSort() {
+  var x = new Float64Array([+0, -0]);
+  x.sort();
+  assert.equal(1 / x[0], -Infinity);
+  assert.equal(1 / x[1], +Infinity);
+})();
+
 /// @}
 
 /// @name TypedArray.prototype.set

@@ -323,7 +323,14 @@ class TypedArraySortModel : public SortModel {
     HermesValue aVal = JSObject::getOwnIndexed(*self_, runtime_, a);
     HermesValue bVal = JSObject::getOwnIndexed(*self_, runtime_, b);
     if (!WithCompareFn) {
-      return aVal.getNumber() < bVal.getNumber();
+      double a = aVal.getNumber();
+      double b = bVal.getNumber();
+      if (LLVM_UNLIKELY(a == 0) && LLVM_UNLIKELY(b == 0) &&
+          LLVM_UNLIKELY(std::signbit(a)) && LLVM_UNLIKELY(!std::signbit(b))) {
+        // -0 < +0, according to the spec.
+        return true;
+      }
+      return a < b;
     }
     assert(compareFn_ && "Cannot use this version if the compareFn is null");
     // ES7 22.2.3.26 2a.
