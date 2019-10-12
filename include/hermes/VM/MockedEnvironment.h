@@ -21,10 +21,21 @@ namespace vm {
 /// passed into the Runtime so it returns the same sequence of values for the
 /// specified calls.
 struct MockedEnvironment final {
-  std::minstd_rand::result_type mathRandomSeed;
+  std::minstd_rand::result_type mathRandomSeed{0};
   std::deque<uint64_t> callsToDateNow;
   std::deque<uint64_t> callsToNewDate;
   std::deque<std::string> callsToDateAsFunction;
+
+  MockedEnvironment() = default;
+  explicit MockedEnvironment(
+      std::minstd_rand::result_type mathRandomSeed,
+      const std::deque<uint64_t> &callsToDateNow,
+      const std::deque<uint64_t> &callsToNewDate,
+      const std::deque<std::string> &callsToDateAsFunction)
+      : mathRandomSeed(mathRandomSeed),
+        callsToDateNow(callsToDateNow),
+        callsToNewDate(callsToNewDate),
+        callsToDateAsFunction(callsToDateAsFunction) {}
 };
 
 } // namespace vm
