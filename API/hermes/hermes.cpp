@@ -512,8 +512,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   void writeBridgeTrafficTraceToFile(
       const std::string &fileName) const override {
     throw std::logic_error(
-        "Bridge traffic trace is only supported for React Native, when Hermes is "
-        "built with @fbsource//xplat/mode/hermes/trace");
+        "Bridge traffic trace is only supported by TracingRuntime");
   }
 
   // Overridden from jsi::Instrumentation
