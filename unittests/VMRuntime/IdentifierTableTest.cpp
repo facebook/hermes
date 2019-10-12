@@ -116,9 +116,8 @@ TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
   // A string of this size is definitely too big to be allocated.
   ASSERT_FALSE(runtime->getHeap().canAllocExternalMemory(extSize));
 
-  auto buf = reinterpret_cast<char *>(malloc(extSize));
-  ASSERT_NE(nullptr, buf);
-  ASCIIRef ref{buf, extSize};
+  std::string buf(extSize, '\0');
+  ASCIIRef ref{buf.data(), extSize};
 
   SymbolID symbol = idTable.registerLazyIdentifier(ref);
 
