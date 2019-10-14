@@ -1134,6 +1134,31 @@ Optional<ESTree::EmptyStatementNode *> JSParserImpl::parseEmptyStatement() {
 Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
     Param param) {
   bool startsWithIdentifier = check(TokenKind::identifier);
+
+  // ES9.0 13.5
+  // Lookahead cannot be any of: {, function, async function, class, let [
+  // Allow execution to continue because the expression may be parsed,
+  // but report an error because it will be ambiguous whether the parse was
+  // correct.
+  if (checkN(TokenKind::l_brace, TokenKind::rw_function, TokenKind::rw_class)) {
+    // There's no need to stop reporting errors.
+    sm_.error(
+        tok_->getSourceRange(),
+        "declaration not allowed as expression statement");
+  }
+
+  if (check(letIdent_)) {
+    SMLoc letLoc = advance().Start;
+    if (check(TokenKind::l_square)) {
+      // let [
+      sm_.error(
+          {letLoc, tok_->getEndLoc()},
+          "ambiguous 'let [': either a 'let' binding or a member expression");
+    }
+    lexer_.seek(letLoc);
+    advance();
+  }
+
   auto optExpr = parseExpression();
   if (!optExpr)
     return None;

@@ -1405,6 +1405,7 @@ PERMANENT_BLACK_LIST = [
     # annexB
     "mjsunit/es6/string-html.js",
     "mjsunit/function-names.js",
+    "mjsunit/regress/regress-536751.js",
     "test262/test/annexB/built-ins/Date/prototype/toGMTString/value.js",
     "test262/test/annexB/built-ins/String/prototype/anchor/",
     "test262/test/annexB/built-ins/String/prototype/big/",
