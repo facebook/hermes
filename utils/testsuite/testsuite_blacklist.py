@@ -223,7 +223,6 @@ BLACK_LIST = [
     "test262/test/language/rest-parameters/",
     "test262/test/language/statements/async-function/",
     "test262/test/language/statements/class/",
-    "test262/test/language/statements/for-of/",
     "test262/test/language/statements/labeled/",
     "test262/test/language/statements/let/",
     # Unsupported mjsunit features
@@ -347,6 +346,7 @@ BLACK_LIST = [
     "test262/test/language/statements/for-in/head-let-destructuring.js",
     "test262/test/language/statements/for-in/head-let-fresh-binding-per-iteration.js",
     "test262/test/language/statements/for/head-let-destructuring.js",
+    "test262/test/language/statements/for-of/head-let-",
     "test262/test/language/statements/switch/syntax/redeclaration/",
     "test262/test/language/global-code/block-decl-strict.js",
     "test262/test/language/function-code/block-decl-strict.js",
@@ -398,6 +398,7 @@ BLACK_LIST = [
     "mjsunit/array-join.js",
     "mjsunit/es6/instanceof-proxies.js",
     "mjsunit/es6/classof-proxy.js",
+    "test262/test/language/statements/for-of/iterator-next-result-type.js",
     "test262/test/annexB/built-ins/Object/prototype/__proto__/set-cycle-shadowed.js",
     # Use of "constructor" property
     "test262/test/built-ins/Array/prototype/concat/create-ctor-poisoned.js",
@@ -526,6 +527,7 @@ BLACK_LIST = [
     "test262/test/language/future-reserved-words/yield-strict-escaped.js",
     "test262/test/language/future-reserved-words/package-strict-escaped.js",
     "test262/test/language/statements/labeled/value-yield-strict-escaped.js",
+    "test262/test/language/statements/for-of/escaped-of.js",
     "test262/test/language/expressions/new.target/escaped-new.js",
     "test262/test/language/future-reserved-words/interface-strict-escaped.js",
     "test262/test/language/statements/try/catch-parameter-boundnames-restriction-eval-negative-early.js",
@@ -694,6 +696,7 @@ BLACK_LIST = [
     "test262/test/language/arguments-object/mapped/nonconfigurable-nonwritable-descriptors-set-by-param.js",
     "test262/test/language/arguments-object/mapped/nonconfigurable-nonenumerable-nonwritable-descriptors-set-by-arguments.js",
     "test262/test/language/arguments-object/mapped/nonconfigurable-nonenumerable-nonwritable-descriptors-set-by-param.js",
+    "test262/test/language/statements/for-of/arguments-mapped-aliasing.js",
     # redeclaration
     "test262/test/language/block-scope/syntax/redeclaration/var-declaration-attempt-to-redeclare-with-function-declaration.js",
     "test262/test/language/block-scope/syntax/redeclaration/function-declaration-attempt-to-redeclare-with-function-declaration.js",
@@ -1486,7 +1489,6 @@ UNSUPPORTED_FEATURES = [
     "default-arg",
     "default-parameters",
     "destructuring-binding",
-    "for-of",
     "generators",
     "let",
     "new.target",
