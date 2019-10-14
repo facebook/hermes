@@ -64,13 +64,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      Predefined::getSymbolID(Predefined::pop),
-      nullptr,
-      arrayPrototypePop,
-      0);
-  defineMethod(
-      runtime,
-      arrayPrototype,
       Predefined::getSymbolID(Predefined::push),
       nullptr,
       arrayPrototypePush,
@@ -161,6 +154,13 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       arrayPrototypeIterator,
       0);
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::pop),
+      nullptr,
+      arrayPrototypePop,
+      0);
   defineMethod(
       runtime,
       arrayPrototype,
@@ -1064,64 +1064,6 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
     builder->appendStringPrim(element);
   }
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
-}
-
-CallResult<HermesValue>
-arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
-  GCScope gcScope(runtime);
-  auto res = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto O = runtime->makeHandle<JSObject>(res.getValue());
-
-  auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  uint64_t len = *intRes;
-
-  if (len == 0) {
-    if (LLVM_UNLIKELY(
-            JSObject::putNamed_RJS(
-                O,
-                runtime,
-                Predefined::getSymbolID(Predefined::length),
-                runtime->makeHandle(HermesValue::encodeDoubleValue(0)),
-                PropOpFlags().plusThrowOnError()) ==
-            ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
-    return HermesValue::encodeUndefinedValue();
-  }
-
-  auto idxVal = runtime->makeHandle(HermesValue::encodeDoubleValue(len - 1));
-  if (LLVM_UNLIKELY(
-          (propRes = JSObject::getComputed_RJS(O, runtime, idxVal)) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto element = runtime->makeHandle(*propRes);
-  if (LLVM_UNLIKELY(
-          JSObject::deleteComputed(
-              O, runtime, idxVal, PropOpFlags().plusThrowOnError()) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  if (LLVM_UNLIKELY(
-          JSObject::putNamed_RJS(
-              O,
-              runtime,
-              Predefined::getSymbolID(Predefined::length),
-              runtime->makeHandle(HermesValue::encodeDoubleValue(len - 1)),
-              PropOpFlags().plusThrowOnError()) == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-  return element.get();
 }
 
 /// ES9.0 22.1.3.18.
@@ -2601,6 +2543,64 @@ CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
 }
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+CallResult<HermesValue>
+arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope(runtime);
+  auto res = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(res.getValue());
+
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint64_t len = *intRes;
+
+  if (len == 0) {
+    if (LLVM_UNLIKELY(
+            JSObject::putNamed_RJS(
+                O,
+                runtime,
+                Predefined::getSymbolID(Predefined::length),
+                runtime->makeHandle(HermesValue::encodeDoubleValue(0)),
+                PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    return HermesValue::encodeUndefinedValue();
+  }
+
+  auto idxVal = runtime->makeHandle(HermesValue::encodeDoubleValue(len - 1));
+  if (LLVM_UNLIKELY(
+          (propRes = JSObject::getComputed_RJS(O, runtime, idxVal)) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto element = runtime->makeHandle(*propRes);
+  if (LLVM_UNLIKELY(
+          JSObject::deleteComputed(
+              O, runtime, idxVal, PropOpFlags().plusThrowOnError()) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  if (LLVM_UNLIKELY(
+          JSObject::putNamed_RJS(
+              O,
+              runtime,
+              Predefined::getSymbolID(Predefined::length),
+              runtime->makeHandle(HermesValue::encodeDoubleValue(len - 1)),
+              PropOpFlags().plusThrowOnError()) == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  return element.get();
+}
+
 /// Used to help with indexOf and lastIndexOf.
 /// \p reverse true if searching in reverse (lastIndexOf), false otherwise.
 static inline CallResult<HermesValue>
