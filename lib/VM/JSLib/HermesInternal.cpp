@@ -14,6 +14,7 @@
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/StackFrame-inline.h"
 
 #include <random>
 
@@ -555,6 +556,32 @@ hermesInternalEnsureObject(void *, Runtime *runtime, NativeArgs args) {
   return runtime->raiseTypeError(args.getArgHandle(1));
 }
 
+/// Throw a type error with the argument as a message.
+///
+/// \code
+///   HermesInternal.throwTypeError = function(errorMessage) {...}
+/// \endcode
+CallResult<HermesValue>
+hermesInternalThrowTypeError(void *, Runtime *runtime, NativeArgs args) {
+  return runtime->raiseTypeError(args.getArgHandle(0));
+}
+
+/// Set the isDelegated flag on the GeneratorInnerFunction which calls
+/// this function.
+/// \pre the caller must be an interpreted GeneratorInnerFunction
+/// \return `undefined`
+CallResult<HermesValue>
+hermesInternalGeneratorSetDelegated(void *, Runtime *runtime, NativeArgs args) {
+  auto *gen = dyn_vmcast_or_null<GeneratorInnerFunction>(
+      runtime->getCurrentFrame().getPreviousFrame().getCalleeClosure());
+  if (!gen) {
+    return runtime->raiseTypeError(
+        "generatorSetDelegated can only be called as part of yield*");
+  }
+  gen->setIsDelegated(true);
+  return HermesValue::encodeUndefinedValue();
+}
+
 /// \code
 ///   HermesInternal.copyDataProperties =
 ///         function (target, source, excludedItems) {}
@@ -942,6 +969,9 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
       P::getRuntimeProperties, hermesInternalGetRuntimeProperties);
   defineInternMethod(P::getTemplateObject, hermesInternalGetTemplateObject);
   defineInternMethod(P::ensureObject, hermesInternalEnsureObject, 2);
+  defineInternMethod(P::throwTypeError, hermesInternalThrowTypeError, 1);
+  defineInternMethod(
+      P::generatorSetDelegated, hermesInternalGeneratorSetDelegated, 1);
   defineInternMethod(
       P::copyDataProperties, hermesInternalCopyDataProperties, 3);
   defineInternMethod(P::copyRestArgs, hermesInternalCopyRestArgs, 1);

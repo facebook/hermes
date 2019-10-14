@@ -1065,6 +1065,14 @@ class GeneratorInnerFunction final : public JSFunction {
     return result_;
   }
 
+  bool isDelegated() const {
+    return isDelegated_;
+  }
+
+  void setIsDelegated(bool isDelegated) {
+    isDelegated_ = isDelegated;
+  }
+
   /// Restores the stack variables needed to resume execution from a
   /// SuspendedYield state.
   void restoreStack(Runtime *runtime);
@@ -1138,6 +1146,10 @@ class GeneratorInnerFunction final : public JSFunction {
 
   /// The action requested by the user by the way the generator is invoked.
   Action action_;
+
+  /// If true, currently running a yield* expression, and results of yielding
+  /// should not be rewrapped using createIterResultObject.
+  bool isDelegated_{false};
 
  private:
   /// \return the offset of the frame registers in the stored context.

@@ -134,6 +134,8 @@ NATIVE_FUNCTION(hermesInternalCopyRestArgs)
 NATIVE_FUNCTION(hermesInternalDetachArrayBuffer)
 NATIVE_FUNCTION(hermesInternalEnsureObject)
 NATIVE_FUNCTION(hermesInternalExportAll)
+NATIVE_FUNCTION(hermesInternalThrowTypeError)
+NATIVE_FUNCTION(hermesInternalGeneratorSetDelegated)
 
 #ifdef HERMESVM_EXCEPTION_ON_OOM
 NATIVE_FUNCTION(hermesInternalGetCallStack)

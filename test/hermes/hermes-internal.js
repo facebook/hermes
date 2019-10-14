@@ -26,3 +26,10 @@ try {
   print('caught', e.name);
 }
 // CHECK-NEXT: caught TypeError
+
+try {
+  HermesInternal.throwTypeError('myError');
+} catch (e) {
+  print('caught', e.name, e.message);
+}
+// CHECK-NEXT: caught TypeError myError
