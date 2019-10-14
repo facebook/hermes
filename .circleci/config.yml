@@ -349,6 +349,9 @@ jobs:
           command: |
             cd $Env:HERMES_WS_DIR
             Copy-Item -Path "icu\bin64\icu*.dll" -Destination "deps"
+            # Include MSVC++ 2015 redistributables
+            Copy-Item -Path "c:\windows\system32\msvcp140.dll" -Destination "deps"
+            Copy-Item -Path "c:\windows\system32\vcruntime140.dll" -Destination "deps"
 
       - run:
           name: Build Hermes for Windows
