@@ -1888,6 +1888,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
     }
 
     case TokenKind::identifier: {
+      if (check(yieldIdent_)) {
+        // yield is only allowed as an IdentifierReference when ParamYield is
+        // false.
+        if (paramYield_) {
+          lexer_.error(
+              tok_->getSourceRange(),
+              "Unexpected usage of 'yield' as an identifier reference");
+        }
+      }
       auto *res = setLocation(
           tok_,
           tok_,

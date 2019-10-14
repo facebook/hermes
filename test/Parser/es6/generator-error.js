@@ -19,3 +19,8 @@ a: function *labeled() {}
 // CHECK: {{.*}}:18:4: error: Function declaration not allowed as body of labeled statement
 // CHECK-NEXT: a: function *labeled() {}
 // CHECK-NEXT:    ^
+
+function *g() { void yield }
+// CHECK:{{.*}}:23:22: error: Unexpected usage of 'yield' as an identifier reference
+// CHECK-NEXT:function *g() { void yield }
+// CHECK-NEXT:                     ^~~~~
