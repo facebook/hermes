@@ -113,20 +113,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      Predefined::getSymbolID(Predefined::reduce),
-      nullptr,
-      arrayPrototypeReduce,
-      1);
-  defineMethod(
-      runtime,
-      arrayPrototype,
-      Predefined::getSymbolID(Predefined::reduceRight),
-      nullptr,
-      arrayPrototypeReduceRight,
-      1);
-  defineMethod(
-      runtime,
-      arrayPrototype,
       Predefined::getSymbolID(Predefined::includes),
       nullptr,
       arrayPrototypeIncludes,
@@ -224,6 +210,20 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       // Pass a non-null pointer here to indicate we're finding the index.
       (void *)true,
       arrayPrototypeFind,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::reduce),
+      nullptr,
+      arrayPrototypeReduce,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::reduceRight),
+      nullptr,
+      arrayPrototypeReduceRight,
       1);
   defineMethod(
       runtime,
@@ -2063,144 +2063,6 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-/// Helper for reduce and reduceRight.
-/// \param reverse set to true to reduceRight, false to reduce from the left.
-static inline CallResult<HermesValue>
-reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
-  GCScope gcScope(runtime);
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
-
-  auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double len = *intRes;
-
-  size_t argCount = args.getArgCount();
-
-  auto callbackFn = args.dyncastArg<Callable>(0);
-  if (!callbackFn) {
-    return runtime->raiseTypeError(
-        "Array.prototype.reduce() requires a callable argument");
-  }
-
-  // Can't reduce an empty array without an initial value.
-  if (len == 0 && argCount < 2) {
-    return runtime->raiseTypeError(
-        "Array.prototype.reduce() requires an intial value with empty array");
-  }
-
-  // Current index in the reduction iteration.
-  MutableHandle<> k{runtime,
-                    HermesValue::encodeDoubleValue(reverse ? len - 1 : 0)};
-  MutableHandle<JSObject> kDescObjHandle{runtime};
-
-  MutableHandle<> accumulator{runtime};
-
-  auto marker = gcScope.createMarker();
-
-  // How much to increment k by each iteration of a loop.
-  double increment = reverse ? -1 : 1;
-
-  // Initialize the accumulator to either the intialValue arg or the first value
-  // of the array.
-  if (argCount >= 2) {
-    accumulator = args.getArg(1);
-  } else {
-    bool kPresent = false;
-    while (!kPresent) {
-      gcScope.flushToMarker(marker);
-      if (!reverse) {
-        if (k->getDouble() >= len) {
-          break;
-        }
-      } else {
-        if (k->getDouble() < 0) {
-          break;
-        }
-      }
-      ComputedPropertyDescriptor kDesc;
-      JSObject::getComputedPrimitiveDescriptor(
-          O, runtime, k, kDescObjHandle, kDesc);
-      kPresent = !!kDescObjHandle;
-      if (kPresent) {
-        if ((propRes = JSObject::getComputedPropertyValue(
-                 O, runtime, kDescObjHandle, kDesc)) ==
-            ExecutionStatus::EXCEPTION) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        accumulator = propRes.getValue();
-      }
-      k = HermesValue::encodeDoubleValue(k->getDouble() + increment);
-    }
-    if (!kPresent) {
-      return runtime->raiseTypeError(
-          "Array.prototype.reduce() requires an intial value with empty array");
-    }
-  }
-
-  // Perform the reduce.
-  while (true) {
-    gcScope.flushToMarker(marker);
-    if (!reverse) {
-      if (k->getDouble() >= len) {
-        break;
-      }
-    } else {
-      if (k->getDouble() < 0) {
-        break;
-      }
-    }
-
-    ComputedPropertyDescriptor kDesc;
-    JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, kDescObjHandle, kDesc);
-    if (kDescObjHandle) {
-      // kPresent is true, run the accumulation step.
-      if ((propRes = JSObject::getComputedPropertyValue(
-               O, runtime, kDescObjHandle, kDesc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      auto kValue = propRes.getValue();
-      auto callRes = Callable::executeCall4(
-          callbackFn,
-          runtime,
-          Runtime::getUndefinedValue(),
-          accumulator.get(),
-          kValue,
-          k.get(),
-          O.getHermesValue());
-      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      accumulator = *callRes;
-    }
-    k = HermesValue::encodeDoubleValue(k->getDouble() + increment);
-  }
-
-  return accumulator.get();
-}
-
-CallResult<HermesValue>
-arrayPrototypeReduce(void *, Runtime *runtime, NativeArgs args) {
-  return reduceHelper(runtime, args, false);
-}
-
-CallResult<HermesValue>
-arrayPrototypeReduceRight(void *, Runtime *runtime, NativeArgs args) {
-  return reduceHelper(runtime, args, true);
-}
-
 CallResult<HermesValue>
 arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
@@ -2968,6 +2830,65 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
+arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope(runtime);
+  auto objRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
+  // Get the length.
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double len = *lenRes;
+  // Get the value to be filled.
+  MutableHandle<> value(runtime, args.getArg(0));
+  // Get the relative start and end.
+  auto intRes = toInteger(runtime, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double relativeStart = intRes->getNumber();
+  // Index to start the deletion/insertion at.
+  double actualStart = relativeStart < 0 ? std::max(len + relativeStart, 0.0)
+                                         : std::min(relativeStart, len);
+  double relativeEnd;
+  if (args.getArg(2).isUndefined()) {
+    relativeEnd = len;
+  } else {
+    if (LLVM_UNLIKELY(
+            (intRes = toInteger(runtime, args.getArgHandle(2))) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    relativeEnd = intRes->getNumber();
+  }
+  // Actual end index.
+  double actualEnd = relativeEnd < 0 ? std::max(len + relativeEnd, 0.0)
+                                     : std::min(relativeEnd, len);
+  MutableHandle<> k(runtime, HermesValue::encodeDoubleValue(actualStart));
+  auto marker = gcScope.createMarker();
+  while (k->getDouble() < actualEnd) {
+    if (LLVM_UNLIKELY(
+            JSObject::putComputed_RJS(
+                O, runtime, k, value, PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    k.set(HermesValue::encodeDoubleValue(k->getDouble() + 1));
+    gcScope.flushToMarker(marker);
+  }
+  return O.getHermesValue();
+}
+
+CallResult<HermesValue>
 arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
   bool findIndex = ctx != nullptr;
@@ -3033,63 +2954,142 @@ arrayPrototypeFind(void *ctx, Runtime *runtime, NativeArgs args) {
                    : HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeFill(void *, Runtime *runtime, NativeArgs args) {
+/// Helper for reduce and reduceRight.
+/// \param reverse set to true to reduceRight, false to reduce from the left.
+static inline CallResult<HermesValue>
+reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
-  // Get the length.
+
   auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double len = *lenRes;
-  // Get the value to be filled.
-  MutableHandle<> value(runtime, args.getArg(0));
-  // Get the relative start and end.
-  auto intRes = toInteger(runtime, args.getArgHandle(1));
+  auto intRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double relativeStart = intRes->getNumber();
-  // Index to start the deletion/insertion at.
-  double actualStart = relativeStart < 0 ? std::max(len + relativeStart, 0.0)
-                                         : std::min(relativeStart, len);
-  double relativeEnd;
-  if (args.getArg(2).isUndefined()) {
-    relativeEnd = len;
-  } else {
-    if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(2))) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    relativeEnd = intRes->getNumber();
+  double len = *intRes;
+
+  size_t argCount = args.getArgCount();
+
+  auto callbackFn = args.dyncastArg<Callable>(0);
+  if (!callbackFn) {
+    return runtime->raiseTypeError(
+        "Array.prototype.reduce() requires a callable argument");
   }
-  // Actual end index.
-  double actualEnd = relativeEnd < 0 ? std::max(len + relativeEnd, 0.0)
-                                     : std::min(relativeEnd, len);
-  MutableHandle<> k(runtime, HermesValue::encodeDoubleValue(actualStart));
+
+  // Can't reduce an empty array without an initial value.
+  if (len == 0 && argCount < 2) {
+    return runtime->raiseTypeError(
+        "Array.prototype.reduce() requires an intial value with empty array");
+  }
+
+  // Current index in the reduction iteration.
+  MutableHandle<> k{runtime,
+                    HermesValue::encodeDoubleValue(reverse ? len - 1 : 0)};
+  MutableHandle<JSObject> kDescObjHandle{runtime};
+
+  MutableHandle<> accumulator{runtime};
+
   auto marker = gcScope.createMarker();
-  while (k->getDouble() < actualEnd) {
-    if (LLVM_UNLIKELY(
-            JSObject::putComputed_RJS(
-                O, runtime, k, value, PropOpFlags().plusThrowOnError()) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
+
+  // How much to increment k by each iteration of a loop.
+  double increment = reverse ? -1 : 1;
+
+  // Initialize the accumulator to either the intialValue arg or the first value
+  // of the array.
+  if (argCount >= 2) {
+    accumulator = args.getArg(1);
+  } else {
+    bool kPresent = false;
+    while (!kPresent) {
+      gcScope.flushToMarker(marker);
+      if (!reverse) {
+        if (k->getDouble() >= len) {
+          break;
+        }
+      } else {
+        if (k->getDouble() < 0) {
+          break;
+        }
+      }
+      ComputedPropertyDescriptor kDesc;
+      JSObject::getComputedPrimitiveDescriptor(
+          O, runtime, k, kDescObjHandle, kDesc);
+      kPresent = !!kDescObjHandle;
+      if (kPresent) {
+        if ((propRes = JSObject::getComputedPropertyValue(
+                 O, runtime, kDescObjHandle, kDesc)) ==
+            ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        accumulator = propRes.getValue();
+      }
+      k = HermesValue::encodeDoubleValue(k->getDouble() + increment);
     }
-    k.set(HermesValue::encodeDoubleValue(k->getDouble() + 1));
-    gcScope.flushToMarker(marker);
+    if (!kPresent) {
+      return runtime->raiseTypeError(
+          "Array.prototype.reduce() requires an intial value with empty array");
+    }
   }
-  return O.getHermesValue();
+
+  // Perform the reduce.
+  while (true) {
+    gcScope.flushToMarker(marker);
+    if (!reverse) {
+      if (k->getDouble() >= len) {
+        break;
+      }
+    } else {
+      if (k->getDouble() < 0) {
+        break;
+      }
+    }
+
+    ComputedPropertyDescriptor kDesc;
+    JSObject::getComputedPrimitiveDescriptor(
+        O, runtime, k, kDescObjHandle, kDesc);
+    if (kDescObjHandle) {
+      // kPresent is true, run the accumulation step.
+      if ((propRes = JSObject::getComputedPropertyValue(
+               O, runtime, kDescObjHandle, kDesc)) ==
+          ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto kValue = propRes.getValue();
+      auto callRes = Callable::executeCall4(
+          callbackFn,
+          runtime,
+          Runtime::getUndefinedValue(),
+          accumulator.get(),
+          kValue,
+          k.get(),
+          O.getHermesValue());
+      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      accumulator = *callRes;
+    }
+    k = HermesValue::encodeDoubleValue(k->getDouble() + increment);
+  }
+
+  return accumulator.get();
+}
+
+CallResult<HermesValue>
+arrayPrototypeReduce(void *, Runtime *runtime, NativeArgs args) {
+  return reduceHelper(runtime, args, false);
+}
+
+CallResult<HermesValue>
+arrayPrototypeReduceRight(void *, Runtime *runtime, NativeArgs args) {
+  return reduceHelper(runtime, args, true);
 }
 
 /// ES10.0 22.1.3.23.
