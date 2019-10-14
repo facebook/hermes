@@ -636,7 +636,6 @@ BLACK_LIST = [
     "mjsunit/es6/spread-call-new.js",
     "mjsunit/es6/spread-call-super-property.js",
     "mjsunit/es6/spread-call.js",
-    "test262/test/language/expressions/array/spread-",
     "test262/test/language/expressions/call/spread-",
     "test262/test/language/expressions/call/trailing-comma.js",
     "test262/test/language/expressions/new/spread-",

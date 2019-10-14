@@ -416,6 +416,7 @@ EXPECT("throwTypeError")
 EXPECT("generatorSetDelegated")
 EXPECT("copyDataProperties")
 EXPECT("copyRestArgs")
+EXPECT("arraySpread")
 EXPECT("exportAll")
 EXPECT("exponentiationOperator")
 

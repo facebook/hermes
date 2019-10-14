@@ -394,6 +394,7 @@ STR(throwTypeError, "throwTypeError")
 STR(generatorSetDelegated, "generatorSetDelegated")
 STR(copyDataProperties, "copyDataProperties")
 STR(copyRestArgs, "copyRestArgs")
+STR(arraySpread, "arraySpread")
 STR(exportAll, "exportAll")
 STR(exponentiationOperator, "exponentiationOperator")
 

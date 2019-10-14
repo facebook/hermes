@@ -729,6 +729,70 @@ hermesInternalCopyRestArgs(void *, Runtime *runtime, NativeArgs args) {
   return array.getHermesValue();
 }
 
+/// \code
+///   HermesInternal.arraySpread = function(target, source, nextIndex) {}
+/// /endcode
+/// ES9.0 12.2.5.2
+/// Iterate the iterable source (as if using a for-of) and copy the values from
+/// the spread source into the target array, starting at `nextIndex`.
+/// \return the next empty index in the array to use for additional properties.
+CallResult<HermesValue>
+hermesInternalArraySpread(void *, Runtime *runtime, NativeArgs args) {
+  Handle<JSArray> target = args.dyncastArg<JSArray>(0);
+  // To be safe, check for non-arrays.
+  if (!target) {
+    return runtime->raiseTypeError(
+        "HermesInternal.arraySpread requires an array target");
+  }
+
+  // 3. Let iteratorRecord be ? GetIterator(spreadObj).
+  auto iteratorRecordRes = getIterator(runtime, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(iteratorRecordRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  IteratorRecord iteratorRecord = *iteratorRecordRes;
+
+  MutableHandle<> nextValue{runtime};
+  MutableHandle<> nextIndex{runtime, args.getArg(2)};
+
+  // 4. Repeat,
+  // TODO: Add a fast path when the source is an array.
+  for (GCScopeMarkerRAII marker{runtime}; /* nothing */; marker.flush()) {
+    // a. Let next be ? IteratorStep(iteratorRecord).
+    auto nextRes = iteratorStep(runtime, iteratorRecord);
+    if (LLVM_UNLIKELY(nextRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    Handle<JSObject> next = *nextRes;
+
+    // b. If next is false, return nextIndex.
+    if (!next) {
+      return nextIndex.getHermesValue();
+    }
+    // c. Let nextValue be ? IteratorValue(next).
+    auto nextItemRes = JSObject::getNamed_RJS(
+        next, runtime, Predefined::getSymbolID(Predefined::value));
+    if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    nextValue = *nextItemRes;
+
+    // d. Let status be CreateDataProperty(array,
+    //    ToString(ToUint32(nextIndex)), nextValue).
+    // e. Assert: status is true.
+    if (LLVM_UNLIKELY(
+            JSArray::putComputed_RJS(target, runtime, nextIndex, nextValue) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // f. Let nextIndex be nextIndex + 1.
+    nextIndex = HermesValue::encodeNumberValue(nextIndex->getNumber() + 1);
+  }
+
+  return nextIndex.getHermesValue();
+}
+
 #ifdef HERMESVM_PLATFORM_LOGGING
 static void logGCStats(Runtime *runtime, const char *msg) {
   // The GC stats can exceed the android logcat length limit, of
@@ -975,6 +1039,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(
       P::copyDataProperties, hermesInternalCopyDataProperties, 3);
   defineInternMethod(P::copyRestArgs, hermesInternalCopyRestArgs, 1);
+  defineInternMethod(P::arraySpread, hermesInternalArraySpread, 2);
   defineInternMethod(P::ttiReached, hermesInternalTTIReached);
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
   defineInternMethod(P::exportAll, hermesInternalExportAll);

@@ -210,29 +210,73 @@ Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
   LLVM_DEBUG(dbgs() << "Initializing a new array\n");
   AllocArrayInst::ArrayValueList elements;
 
+  // Precalculate the minimum number of elements in case we need to call
+  // AllocArrayInst at some point, as well as find out whether we have a spread
+  // element (which will result in the final array having variable length).
+  unsigned minElements = 0;
+  bool variableLength = false;
+  for (auto &E : Expr->_elements) {
+    if (isa<ESTree::SpreadElementNode>(&E)) {
+      variableLength = true;
+      continue;
+    }
+    ++minElements;
+  }
+
   // We store consecutive elements until we encounter elision,
   // or we enounter a non-literal in limited-register mode.
   // The rest of them has to be initialized through property sets.
+
+  // If we have a variable length array, then we store the next index in
+  // a stack location `nextIndex`, to be updated when we encounter spread
+  // elements. Otherwise, we simply count them in `count`.
   unsigned count = 0;
+  AllocStackInst *nextIndex = nullptr;
+  if (variableLength) {
+    // Avoid emitting the extra instructions unless we actually need to,
+    // to simplify tests and because it's easy.
+    nextIndex = Builder.createAllocStackInst("nextIndex");
+    Builder.createStoreStackInst(Builder.getLiteralPositiveZero(), nextIndex);
+  }
+
   bool consecutive = true;
   auto codeGenOpts = Mod->getContext().getCodeGenerationSettings();
   AllocArrayInst *allocArrayInst = nullptr;
   for (auto &E : Expr->_elements) {
     Value *value{nullptr};
+    bool isSpread = false;
     if (!isa<ESTree::EmptyNode>(&E)) {
-      value = genExpression(&E);
+      if (auto *spread = dyn_cast<ESTree::SpreadElementNode>(&E)) {
+        isSpread = true;
+        value = genExpression(spread->_argument);
+      } else {
+        value = genExpression(&E);
+      }
     }
-    if (!value || (!isa<Literal>(value) && !codeGenOpts.unlimitedRegisters)) {
+    if (!value || (!isa<Literal>(value) && !codeGenOpts.unlimitedRegisters) ||
+        isSpread) {
       // This is either an elision,
-      // or a non-literal in limited-register mode.
+      // or a non-literal in limited-register mode,
+      // or a spread element.
       if (consecutive) {
         // So far we have been storing elements consecutively,
         // but not anymore, time to create the array.
-        allocArrayInst =
-            Builder.createAllocArrayInst(elements, Expr->_elements.size());
+        allocArrayInst = Builder.createAllocArrayInst(elements, minElements);
         consecutive = false;
       }
     }
+    if (isSpread) {
+      // Spread the SpreadElement argument into the array.
+      // HermesInternal.arraySpread returns the new value of nextIndex,
+      // so update nextIndex accordingly and finish this iteration of the loop.
+      auto *newNextIndex = genHermesInternalCall(
+          "arraySpread",
+          Builder.getLiteralUndefined(),
+          {allocArrayInst, value, Builder.createLoadStackInst(nextIndex)});
+      Builder.createStoreStackInst(newNextIndex, nextIndex);
+      continue;
+    }
+    // The element is not a spread element, so perform the store here.
     if (value) {
       if (consecutive) {
         elements.push_back(value);
@@ -240,14 +284,32 @@ Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
         Builder.createStoreOwnPropertyInst(
             value,
             allocArrayInst,
-            Builder.getLiteralNumber(count),
+            variableLength ? cast<Value>(Builder.createLoadStackInst(nextIndex))
+                           : cast<Value>(Builder.getLiteralNumber(count)),
             IRBuilder::PropEnumerable::Yes);
       }
     }
-    count++;
+    // Update the next index or the count depending on if it's a variable length
+    // array.
+    if (variableLength) {
+      // We perform this update on any leading elements before the first spread
+      // element as well, but the optimizer will eliminate the extra adds
+      // because we know the initial value (0) and how incrementing works.
+      Builder.createStoreStackInst(
+          Builder.createBinaryOperatorInst(
+              Builder.createLoadStackInst(nextIndex),
+              Builder.getLiteralNumber(1),
+              BinaryOperatorInst::OpKind::AddKind),
+          nextIndex);
+    } else {
+      count++;
+    }
   }
 
   if (!allocArrayInst) {
+    assert(
+        !variableLength &&
+        "variable length arrays must allocate their own arrays");
     allocArrayInst =
         Builder.createAllocArrayInst(elements, Expr->_elements.size());
   }
