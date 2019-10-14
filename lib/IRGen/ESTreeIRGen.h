@@ -496,6 +496,7 @@ class ESTreeIRGen {
   Value *genConditionalExpr(ESTree::ConditionalExpressionNode *C);
   Value *genSequenceExpr(ESTree::SequenceExpressionNode *Sq);
   Value *genYieldExpr(ESTree::YieldExpressionNode *Y);
+  Value *genYieldStarExpr(ESTree::YieldExpressionNode *Y);
   Value *genUnaryExpression(ESTree::UnaryExpressionNode *U);
   Value *genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr);
   Value *genLogicalExpression(ESTree::LogicalExpressionNode *logical);
@@ -531,10 +532,13 @@ class ESTreeIRGen {
   /// \param isReturn the slot indicating whether the user requested a return.
   /// \param nextBB the next BasicBlock to run if the user did not request a
   ///   return.
+  /// \param received if non-null, the stack location at which to store the
+  ///   value received from the user as the arg to next(), throw(), or return().
   Value *genResumeGenerator(
       ESTree::YieldExpressionNode *yield,
       AllocStackInst *isReturn,
-      BasicBlock *nextBB);
+      BasicBlock *nextBB,
+      AllocStackInst *received = nullptr);
 
   /// @}
 

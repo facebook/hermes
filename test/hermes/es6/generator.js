@@ -143,3 +143,164 @@ show(it.next());
 // CHECK-NEXT: 0 | false
 show(it.next());
 // CHECK-NEXT: undefined | true
+
+function *simpleDelegate() {
+  yield* [1,2,3];
+}
+
+var it = simpleDelegate();
+show(it.next());
+// CHECK-NEXT: 1 | false
+show(it.next());
+// CHECK-NEXT: 2 | false
+show(it.next());
+// CHECK-NEXT: 3 | false
+show(it.next());
+// CHECK-NEXT: undefined | true
+
+function *tryCatchDelegate() {
+  function *gen() {
+    try {
+      yield 1;
+      yield 2;
+      yield 3;
+    } catch (e) {
+      print('gen caught', e);
+      return 292;
+    } finally {
+      print('gen finally');
+    }
+  }
+
+  try {
+    var x = yield* gen();
+  } catch (e) {
+    print('outer caught', e);
+    return 193;
+  } finally {
+    print('outer finally');
+  }
+  print('out of the try', x);
+  return 1092;
+}
+
+var it = tryCatchDelegate()
+show(it.next('a'));
+// CHECK-NEXT: 1 | false
+show(it.next('b'));
+// CHECK-NEXT: 2 | false
+show(it.return('c'));
+// CHECK-NEXT: gen finally
+// CHECK-NEXT: outer finally
+// CHECK-NEXT: c | true
+
+var it = tryCatchDelegate()
+show(it.next('a'));
+// CHECK-NEXT: 1 | false
+show(it.next('b'));
+// CHECK-NEXT: 2 | false
+show(it.throw('c'));
+// CHECK-NEXT: gen caught c
+// CHECK-NEXT: gen finally
+// CHECK-NEXT: outer finally
+// CHECK-NEXT: out of the try 292
+// CHECK-NEXT: 1092 | true
+
+function *complexDelegate() {
+  function *gen() {
+    try {
+      yield 1;
+      yield 2;
+      yield 3;
+    } catch (e) {
+      print('gen caught', e);
+      return 292;
+    } finally {
+      print('gen finally');
+      yield 919;
+      return 100;
+    }
+  }
+
+  try {
+    var x = yield* gen();
+  } catch (e) {
+    print('outer caught', e);
+    return 193;
+  } finally {
+    print('outer finally');
+    return 101;
+  }
+  print(x);
+}
+
+var it = complexDelegate();
+show(it.next('a'));
+// CHECK-NEXT: 1 | false
+show(it.next('b'));
+// CHECK-NEXT: 2 | false
+show(it.return('c'));
+// CHECK-NEXT: gen finally
+// CHECK-NEXT: 919 | false
+show(it.next('d'));
+// CHECK-NEXT: outer finally
+// CHECK-NEXT: 101 | true
+show(it.next('e'));
+// CHECK-NEXT: undefined | true
+
+var it = complexDelegate();
+show(it.next('a'));
+// CHECK-NEXT: 1 | false
+show(it.next('b'));
+// CHECK-NEXT: 2 | false
+show(it.throw('c'));
+// CHECK-NEXT: gen caught c
+// CHECK-NEXT: gen finally
+// CHECK-NEXT: 919 | false
+show(it.next('d'));
+// CHECK-NEXT: outer finally
+// CHECK-NEXT: 101 | true
+show(it.next('e'));
+// CHECK-NEXT: undefined | true
+
+// Ensure that we don't unwrap/rewrap the value/done properties
+// of the results of .next(), and make sure that abrupt .return() works.
+function *iterDelegateWithSecret() {
+  var count = 0;
+  var iterable = {};
+  iterable[Symbol.iterator] = function() {
+    return {
+      next(x) {
+        print('from inside:', x, arguments.length);
+        count++;
+        return { value: count, done: count > 1, SECRET: 42 };
+      },
+      return() {
+        print('closing iterator');
+        return {};
+      }
+    }
+  }
+  yield* iterable;
+}
+
+var it = iterDelegateWithSecret();
+var result = it.next(1234);
+// CHECK-NEXT: from inside: undefined 1
+show(result);
+// CHECK-NEXT: 1 | false
+print(result.SECRET);
+// CHECK-NEXT: 42
+show(it.next(1234));
+// CHECK-NEXT: from inside: 1234 1
+// CHECK-NEXT: undefined | true
+show(it.next());
+// CHECK-NEXT: undefined | true
+
+var it = iterDelegateWithSecret();
+show(it.next());
+// CHECK-NEXT: from inside: undefined 1
+// CHECK-NEXT: 1 | false
+try { it.throw() } catch(e) { print(e.name, e.message) }
+// CHECK-NEXT: closing iterator
+// CHECK-NEXT: TypeError yield* delegate must have a .throw() method

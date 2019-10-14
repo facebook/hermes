@@ -138,6 +138,7 @@ BLACK_LIST = [
     "test262/test/language/statements/function/S13_A11_T1.js",
     "test262/test/language/statements/function/S13_A15_T4.js",
     "test262/test/language/statements/function/S13_A15_T5.js",
+    "test262/test/language/expressions/yield/formal-parameters-after-reassignment-non-strict.js",
     "test262/test/language/arguments-object/non-strict-arguments-object-is-immutable.js",
     "test262/test/built-ins/ThrowTypeError/extensible.js",
     # arguments.caller, arguments.callee must throw
@@ -1485,7 +1486,6 @@ UNSUPPORTED_FEATURES = [
     "default-parameters",
     "destructuring-binding",
     "for-of",
-    "generator",
     "generators",
     "let",
     "new.target",

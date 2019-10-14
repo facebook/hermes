@@ -155,7 +155,7 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
   }
 
   if (auto *Y = dyn_cast<ESTree::YieldExpressionNode>(expr)) {
-    return genYieldExpr(Y);
+    return Y->_delegate ? genYieldStarExpr(Y) : genYieldExpr(Y);
   }
 
   Builder.getModule()->getContext().getSourceErrorManager().error(
@@ -651,6 +651,8 @@ Value *ESTreeIRGen::genSequenceExpr(ESTree::SequenceExpressionNode *Sq) {
 }
 
 Value *ESTreeIRGen::genYieldExpr(ESTree::YieldExpressionNode *Y) {
+  assert(!Y->_delegate && "must use genYieldStarExpr for yield*");
+
   auto *bb = Builder.getInsertionBlock();
   auto *next = Builder.createBasicBlock(bb->getParent());
   Value *value = Y->_argument ? genExpression(Y->_argument)
@@ -665,19 +667,274 @@ Value *ESTreeIRGen::genYieldExpr(ESTree::YieldExpressionNode *Y) {
       Y, resumeIsReturn, Builder.createBasicBlock(bb->getParent()));
 }
 
+/// Generate the code for `yield* value`.
+/// We use some stack locations to store state while iterating:
+/// - received (the value passed by the user to .next(), etc)
+/// - result (the final result of the yield* expression)
+///
+/// iteratorRecord stores the iterator which we are iterating over.
+///
+/// Final IR has the following basic blocks for normal control flow:
+///
+/// getNext: Get the next value from the iterator.
+/// - Call next() on the iteratorRecord and stores to `result`
+/// - If done, go to exit
+/// - Otherwise, go to body
+///
+/// resume: Runs the ResumeGenerator instruction.
+/// - Code for `finally` is also emitted here.
+///
+/// body: Yield the result of the next() call
+/// - Calls HermesInternal.generatorSetDelegated so that the result is not
+///   wrapped by the VM in an IterResult object.
+///
+/// exit: Returns `result` which should have the final results stored in it.
+///
+/// When the user calls `.return`, the finalizer is executed to call
+/// `iteratorRecord.return` if it exists. The code for that is contained within
+/// the SurroundingTry. If the .return function is defined, it is called and the
+/// 'done' property of the result of the call is used to either branch back to
+/// the 'resume' block or to propagate the return.
+///
+/// When the user calls '.throw', the code in emitHandler is executed. All
+/// generators used as delegates must have a .throw() method, so that is checked
+/// for and called. The result is then used to either resume if not done, or to
+/// return immediately by branching to the 'exit' block.
+Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
+  assert(Y->_delegate && "must use genYieldExpr for yield");
+  auto *function = Builder.getInsertionBlock()->getParent();
+  auto *getNextBlock = Builder.createBasicBlock(function);
+  auto *bodyBlock = Builder.createBasicBlock(function);
+  auto *exitBlock = Builder.createBasicBlock(function);
+
+  // Calls ResumeGenerator and returns or throws if requested.
+  auto *resumeBB = Builder.createBasicBlock(function);
+
+  auto *exprValue = genExpression(Y->_argument);
+  auto iteratorRecord = emitGetIterator(exprValue);
+
+  // The "received" value when the user resumes the generator.
+  // Initialized to undefined on the first run, then stored to immediately
+  // following any genResumeGenerator.
+  auto *received =
+      Builder.createAllocStackInst(genAnonymousLabelName("received"));
+  Builder.createStoreStackInst(Builder.getLiteralUndefined(), received);
+
+  // The "isReturn" value when the user resumes the generator.
+  // Stored to immediately following any genResumeGenerator.
+  auto *resumeIsReturn =
+      Builder.createAllocStackInst(genAnonymousLabelName("isReturn"));
+
+  // The final result of the `yield*` expression.
+  // This can be set from either the body or the handler, so it is placed
+  // in the stack to allow populating it from anywhere.
+  auto *result = Builder.createAllocStackInst(genAnonymousLabelName("result"));
+
+  Builder.createBranchInst(getNextBlock);
+
+  // 7.a.i.  Let innerResult be ? Call(
+  //   iteratorRecord.[[NextMethod]],
+  //   iteratorRecord.[[Iterator]],
+  //   <received.[[Value]]>
+  // )
+  // Avoid using emitIteratorNext here because the spec does not.
+  Builder.setInsertionBlock(getNextBlock);
+  auto *nextResult = Builder.createCallInst(
+      iteratorRecord.nextMethod,
+      iteratorRecord.iterator,
+      {Builder.createLoadStackInst(received)});
+  emitEnsureObject(nextResult, "iterator.next() did not return an object");
+
+  Builder.createStoreStackInst(nextResult, result);
+  auto *done = emitIteratorComplete(nextResult);
+  Builder.createCondBranchInst(done, exitBlock, bodyBlock);
+
+  Builder.setInsertionBlock(bodyBlock);
+
+  emitTryCatchScaffolding(
+      getNextBlock,
+      // emitBody.
+      [this,
+       Y,
+       resumeIsReturn,
+       getNextBlock,
+       resumeBB,
+       nextResult,
+       received,
+       &iteratorRecord]() {
+        // Generate IR for the body of Try
+        SurroundingTry thisTry{
+            curFunction(),
+            Y,
+            {},
+            [this, resumeBB, received, &iteratorRecord](
+                ESTree::Node *, ControlFlowChange cfc) {
+              if (cfc == ControlFlowChange::Break) {
+                // This finalizer block is executed upon early return during
+                // the yield*, which happens when the user requests a .return().
+                auto *function = Builder.getFunction();
+                auto *haveReturnBB = Builder.createBasicBlock(function);
+                auto *noReturnBB = Builder.createBasicBlock(function);
+                auto *isDoneBB = Builder.createBasicBlock(function);
+                auto *isNotDoneBB = Builder.createBasicBlock(function);
+
+                // Check if "returnMethod" is undefined.
+                auto *returnMethod = Builder.createLoadPropertyInst(
+                    iteratorRecord.iterator, "return");
+                Builder.createCompareBranchInst(
+                    returnMethod,
+                    Builder.getLiteralUndefined(),
+                    BinaryOperatorInst::OpKind::StrictlyEqualKind,
+                    noReturnBB,
+                    haveReturnBB);
+
+                Builder.setInsertionBlock(haveReturnBB);
+                // iv. Let innerReturnResult be
+                // ? Call(return, iterator, received.[[Value]]).
+                auto *innerReturnResult = Builder.createCallInst(
+                    returnMethod,
+                    iteratorRecord.iterator,
+                    {Builder.createLoadStackInst(received)});
+                // vi. If Type(innerReturnResult) is not Object,
+                // throw a TypeError exception.
+                emitEnsureObject(
+                    innerReturnResult,
+                    "iterator.close() did not return an object");
+                // vii. Let done be ? IteratorComplete(innerReturnResult).
+                auto *done = emitIteratorComplete(innerReturnResult);
+                Builder.createCondBranchInst(done, isDoneBB, isNotDoneBB);
+
+                Builder.setInsertionBlock(isDoneBB);
+                // viii. 1. Let value be ? IteratorValue(innerReturnResult).
+                auto *value = emitIteratorValue(innerReturnResult);
+                genFinallyBeforeControlChange(
+                    curFunction()->surroundingTry,
+                    nullptr,
+                    ControlFlowChange::Break);
+                // viii. 2. Return Completion
+                // { [[Type]]: return, [[Value]]: value, [[Target]]: empty }.
+                Builder.createReturnInst(value);
+
+                // x. Else, set received to GeneratorYield(innerReturnResult).
+                Builder.setInsertionBlock(isNotDoneBB);
+                genHermesInternalCall(
+                    "generatorSetDelegated", Builder.getLiteralUndefined(), {});
+                Builder.createSaveAndYieldInst(innerReturnResult, resumeBB);
+
+                // If return is undefined, return Completion(received).
+                Builder.setInsertionBlock(noReturnBB);
+              }
+            }};
+
+        // The primary call path for yielding the next result.
+        genHermesInternalCall(
+            "generatorSetDelegated", Builder.getLiteralUndefined(), {});
+        Builder.createSaveAndYieldInst(nextResult, resumeBB);
+
+        // Note that resumeBB was created above to allow all SaveAndYield insts
+        // to have the same resume point (including SaveAndYield in the catch
+        // handler), but we must populate it inside the scaffolding so that the
+        // SurroundingTry is correct for the genFinallyBeforeControlChange
+        // call emitted by genResumeGenerator.
+        Builder.setInsertionBlock(resumeBB);
+        genResumeGenerator(Y, resumeIsReturn, getNextBlock, received);
+
+        // SaveAndYieldInst is a Terminator, but emitTryCatchScaffolding
+        // needs a block from which to Branch to the TryEnd instruction.
+        // Make a dummy block which can do that.
+        Builder.setInsertionBlock(
+            Builder.createBasicBlock(Builder.getFunction()));
+      },
+      // emitNormalCleanup.
+      []() {},
+      // emitHandler.
+      [this, resumeBB, exitBlock, result, &iteratorRecord](
+          BasicBlock *getNextBlock) {
+        auto *catchReg = Builder.createCatchInst();
+
+        auto *function = Builder.getFunction();
+        auto *hasThrowMethodBB = Builder.createBasicBlock(function);
+        auto *noThrowMethodBB = Builder.createBasicBlock(function);
+        auto *isDoneBB = Builder.createBasicBlock(function);
+        auto *isNotDoneBB = Builder.createBasicBlock(function);
+
+        // b.i. Let throw be ? GetMethod(iterator, "throw").
+        auto *throwMethod =
+            Builder.createLoadPropertyInst(iteratorRecord.iterator, "throw");
+        Builder.createCompareBranchInst(
+            throwMethod,
+            Builder.getLiteralUndefined(),
+            BinaryOperatorInst::OpKind::StrictlyEqualKind,
+            noThrowMethodBB,
+            hasThrowMethodBB);
+
+        // ii. If throw is not undefined, then
+        Builder.setInsertionBlock(hasThrowMethodBB);
+        // ii. 1. Let innerResult be
+        //        ? Call(throw, iterator, « received.[[Value]] »).
+        // ii. 3. NOTE: Exceptions from the inner iterator throw method are
+        // propagated. Normal completions from an inner throw method are
+        // processed similarly to an inner next.
+        auto *innerResult = Builder.createCallInst(
+            throwMethod, iteratorRecord.iterator, {catchReg});
+        // ii. 4. If Type(innerResult) is not Object,
+        //        throw a TypeError exception.
+        emitEnsureObject(
+            innerResult, "iterator.throw() did not return an object");
+        // ii. 5. Let done be ? IteratorComplete(innerResult).
+        auto *done = emitIteratorComplete(innerResult);
+        Builder.createCondBranchInst(done, isDoneBB, isNotDoneBB);
+
+        // ii. 6. If done is true, then return ? IteratorValue(innerResult).
+        Builder.setInsertionBlock(isDoneBB);
+        Builder.createStoreStackInst(innerResult, result);
+        Builder.createBranchInst(exitBlock);
+
+        // ii. 8. Else, set received to GeneratorYield(innerResult).
+        Builder.setInsertionBlock(isNotDoneBB);
+        genHermesInternalCall(
+            "generatorSetDelegated", Builder.getLiteralUndefined(), {});
+        Builder.createSaveAndYieldInst(innerResult, resumeBB);
+
+        // NOTE: If iterator does not have a throw method, this throw is
+        // going to terminate the yield* loop. But first we need to give
+        // iterator a chance to clean up.
+        Builder.setInsertionBlock(noThrowMethodBB);
+        emitIteratorClose(iteratorRecord, false);
+        genHermesInternalCall(
+            "throwTypeError",
+            Builder.getLiteralUndefined(),
+            {Builder.getLiteralString(
+                "yield* delegate must have a .throw() method")});
+        // HermesInternal.throwTypeError will necessarily throw, but we need to
+        // have a terminator on this BB to allow proper optimization.
+        Builder.createReturnInst(Builder.getLiteralUndefined());
+      });
+
+  Builder.setInsertionBlock(exitBlock);
+
+  return emitIteratorValue(Builder.createLoadStackInst(result));
+}
+
 Value *ESTreeIRGen::genResumeGenerator(
     ESTree::YieldExpressionNode *yield,
     AllocStackInst *isReturn,
-    BasicBlock *nextBB) {
+    BasicBlock *nextBB,
+    AllocStackInst *received) {
   auto *resume = Builder.createResumeGeneratorInst(isReturn);
-  auto *function = Builder.getInsertionBlock()->getParent();
-
-  auto *retBB = Builder.createBasicBlock(function);
+  if (received) {
+    Builder.createStoreStackInst(resume, received);
+  }
+  auto *retBB =
+      Builder.createBasicBlock(Builder.getInsertionBlock()->getParent());
 
   Builder.createCondBranchInst(
       Builder.createLoadStackInst(isReturn), retBB, nextBB);
 
   Builder.setInsertionBlock(retBB);
+  if (received) {
+    Builder.createStoreStackInst(resume, received);
+  }
   if (yield) {
     genFinallyBeforeControlChange(
         curFunction()->surroundingTry, nullptr, ControlFlowChange::Break);
