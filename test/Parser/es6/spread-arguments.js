@@ -3,7 +3,7 @@
 // This source code is licensed under the MIT license found in the LICENSE
 // file in the root directory of this source tree.
 //
-// RUN: (! %hermesc -dump-ast -pretty-json %s 2>/dev/null ) | %FileCheck %s --match-full-lines
+// RUN: %hermesc -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK: {
 // CHECK-NEXT:   "type": "Program",

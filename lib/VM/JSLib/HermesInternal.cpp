@@ -793,6 +793,54 @@ hermesInternalArraySpread(void *, Runtime *runtime, NativeArgs args) {
   return nextIndex.getHermesValue();
 }
 
+/// \code
+///   HermesInternal.apply = function(fn, argArray, thisVal(opt)) {}
+/// /endcode
+/// Faster version of Function.prototype.apply which does not use its `this`
+/// argument.
+/// `argArray` must be a JSArray with no getters.
+/// Equivalent to fn.apply(thisVal, argArray) if thisVal is provided.
+/// If thisVal is not provided, equivalent to running `new fn` and passing the
+/// arguments in argArray.
+CallResult<HermesValue>
+hermesInternalApply(void *, Runtime *runtime, NativeArgs args) {
+  GCScopeMarkerRAII marker{runtime};
+
+  Handle<Callable> fn = args.dyncastArg<Callable>(0);
+  if (LLVM_UNLIKELY(!fn)) {
+    return runtime->raiseTypeErrorForValue(
+        args.getArgHandle(0), " is not a function");
+  }
+
+  Handle<JSArray> argArray = args.dyncastArg<JSArray>(1);
+  if (LLVM_UNLIKELY(!argArray)) {
+    return runtime->raiseTypeError("args must be an array");
+  }
+
+  uint32_t len = JSArray::getLength(*argArray);
+
+  bool isConstructor = args.getArgCount() == 2;
+
+  MutableHandle<> thisVal{runtime};
+  if (isConstructor) {
+    auto thisValRes = Callable::createThisForConstruct(fn, runtime);
+    if (LLVM_UNLIKELY(thisValRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    thisVal = *thisValRes;
+  } else {
+    thisVal = args.getArg(2);
+  }
+
+  ScopedNativeCallFrame newFrame{
+      runtime, len, *fn, isConstructor, thisVal.getHermesValue()};
+  for (uint32_t i = 0; i < len; ++i) {
+    newFrame->getArgRef(i) = argArray->at(runtime, i);
+  }
+  return isConstructor ? Callable::construct(fn, runtime, thisVal)
+                       : Callable::call(fn, runtime);
+}
+
 #ifdef HERMESVM_PLATFORM_LOGGING
 static void logGCStats(Runtime *runtime, const char *msg) {
   // The GC stats can exceed the android logcat length limit, of
@@ -1040,6 +1088,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
       P::copyDataProperties, hermesInternalCopyDataProperties, 3);
   defineInternMethod(P::copyRestArgs, hermesInternalCopyRestArgs, 1);
   defineInternMethod(P::arraySpread, hermesInternalArraySpread, 2);
+  defineInternMethod(P::apply, hermesInternalApply, 2);
   defineInternMethod(P::ttiReached, hermesInternalTTIReached);
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
   defineInternMethod(P::exportAll, hermesInternalExportAll);

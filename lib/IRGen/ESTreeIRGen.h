@@ -483,6 +483,11 @@ class ESTreeIRGen {
       BasicBlock *onTrue,
       BasicBlock *onFalse);
 
+  /// Convert the \p input into an array, spreading SpreadElements
+  /// using for-or iteration semantics.
+  /// Allows sharing spread code between genArrayExpr and genCallExpr.
+  Value *genArrayFromElements(ESTree::NodeList &list);
+
   Value *genObjectExpr(ESTree::ObjectExpressionNode *Expr);
   Value *genArrayExpr(ESTree::ArrayExpressionNode *Expr);
   Value *genCallExpr(ESTree::CallExpressionNode *call);

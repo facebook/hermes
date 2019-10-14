@@ -206,7 +206,7 @@ void ESTreeIRGen::genExpressionBranch(
   Builder.createCondBranchInst(condVal, onTrue, onFalse);
 }
 
-Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
+Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
   LLVM_DEBUG(dbgs() << "Initializing a new array\n");
   AllocArrayInst::ArrayValueList elements;
 
@@ -215,7 +215,7 @@ Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
   // element (which will result in the final array having variable length).
   unsigned minElements = 0;
   bool variableLength = false;
-  for (auto &E : Expr->_elements) {
+  for (auto &E : list) {
     if (isa<ESTree::SpreadElementNode>(&E)) {
       variableLength = true;
       continue;
@@ -242,7 +242,7 @@ Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
   bool consecutive = true;
   auto codeGenOpts = Mod->getContext().getCodeGenerationSettings();
   AllocArrayInst *allocArrayInst = nullptr;
-  for (auto &E : Expr->_elements) {
+  for (auto &E : list) {
     Value *value{nullptr};
     bool isSpread = false;
     if (!isa<ESTree::EmptyNode>(&E)) {
@@ -310,16 +310,19 @@ Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
     assert(
         !variableLength &&
         "variable length arrays must allocate their own arrays");
-    allocArrayInst =
-        Builder.createAllocArrayInst(elements, Expr->_elements.size());
+    allocArrayInst = Builder.createAllocArrayInst(elements, list.size());
   }
-  if (count > 0 && isa<ESTree::EmptyNode>(&Expr->_elements.back())) {
+  if (count > 0 && isa<ESTree::EmptyNode>(&list.back())) {
     // Last element is an elision, VM cannot derive the length properly.
     // We have to explicitly set it.
     Builder.createStorePropertyInst(
         Builder.getLiteralNumber(count), allocArrayInst, StringRef("length"));
   }
   return allocArrayInst;
+}
+
+Value *ESTreeIRGen::genArrayExpr(ESTree::ArrayExpressionNode *Expr) {
+  return genArrayFromElements(Expr->_elements);
 }
 
 Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
@@ -350,12 +353,29 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     callee = genExpression(call->_callee);
   }
 
-  CallInst::ArgumentList args;
+  bool hasSpread = false;
   for (auto &arg : call->_arguments) {
-    args.push_back(genExpression(&arg));
+    if (isa<ESTree::SpreadElementNode>(&arg)) {
+      hasSpread = true;
+    }
   }
 
-  return Builder.createCallInst(callee, thisVal, args);
+  if (!hasSpread) {
+    CallInst::ArgumentList args;
+    for (auto &arg : call->_arguments) {
+      args.push_back(genExpression(&arg));
+    }
+
+    return Builder.createCallInst(callee, thisVal, args);
+  }
+
+  // Otherwise, there exists a spread argument, so the number of arguments
+  // is variable.
+  // Generate IR for this by creating an array and populating it with the
+  // arguments, then calling HermesInternal.apply.
+  auto *args = genArrayFromElements(call->_arguments);
+  return genHermesInternalCall(
+      "apply", Builder.getLiteralUndefined(), {callee, args, thisVal});
 }
 
 Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
@@ -1246,17 +1266,32 @@ Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
 Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
   LLVM_DEBUG(dbgs() << "IRGen 'new' statement/expression.\n");
 
-  // Implement the new operator.
-  // http://www.ecma-international.org/ecma-262/7.0/index.html#sec-new-operator
-
   Value *callee = genExpression(N->_callee);
 
-  ConstructInst::ArgumentList args;
+  bool hasSpread = false;
   for (auto &arg : N->_arguments) {
-    args.push_back(genExpression(&arg));
+    if (isa<ESTree::SpreadElementNode>(&arg)) {
+      hasSpread = true;
+    }
   }
 
-  return Builder.createConstructInst(callee, args);
+  if (!hasSpread) {
+    ConstructInst::ArgumentList args;
+    for (auto &arg : N->_arguments) {
+      args.push_back(genExpression(&arg));
+    }
+
+    return Builder.createConstructInst(callee, args);
+  }
+
+  // Otherwise, there exists a spread argument, so the number of arguments
+  // is variable.
+  // Generate IR for this by creating an array and populating it with the
+  // arguments, then calling HermesInternal.apply.
+  auto *args = genArrayFromElements(N->_arguments);
+
+  return genHermesInternalCall(
+      "apply", Builder.getLiteralUndefined(), {callee, args});
 }
 
 Value *ESTreeIRGen::genLogicalExpression(

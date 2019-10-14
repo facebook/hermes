@@ -255,6 +255,18 @@ class Callable : public JSObject {
     return selfHandle->getVT()->call(selfHandle, runtime);
   }
 
+  /// Call the callable in contruct mode with arguments already on the stack.
+  /// Checks the return value of the called function. If it is an object, then
+  /// it is returned, else the `this` value is returned.
+  static CallResult<HermesValue>
+  construct(Handle<Callable> selfHandle, Runtime *runtime, Handle<> thisVal) {
+    auto result = call(selfHandle, runtime);
+    if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return result->isObject() ? result : thisVal.getHermesValue();
+  }
+
   /// Create a new object and construct the new object of the given type
   /// by invoking \p selfHandle with construct=true.
   /// \param selfHandle the Callable from which to construct the new object.
@@ -283,6 +295,16 @@ class Callable : public JSObject {
   /// creation has been delayed by lazy objects.
   static void defineLazyProperties(Handle<Callable> fn, Runtime *runtime);
 
+  /// Create an object by calling newObject on \p selfHandle.
+  /// The object can then be used as the "this" argument when calling
+  /// \p selfHandle to construct an object.
+  /// Retrieves the "prototype" property from \p selfHandle,
+  /// and calls newObject() on it if it's an object,
+  /// else calls newObject() on the built-in Object prototype object.
+  static CallResult<HermesValue> createThisForConstruct(
+      Handle<Callable> selfHandle,
+      Runtime *runtime);
+
  protected:
   Callable(
       Runtime *runtime,
@@ -307,17 +329,6 @@ class Callable : public JSObject {
       Handle<Callable> selfHandle,
       Runtime *runtime,
       Handle<JSObject> parentHandle);
-
- private:
-  /// Create an object by calling newObject on \p selfHandle.
-  /// The object can then be used as the "this" argument when calling
-  /// \p selfHandle to construct an object.
-  /// Retrieves the "prototype" property from \p selfHandle,
-  /// and calls newObject() on it if it's an object,
-  /// else calls newObject() on the built-in Object prototype object.
-  static CallResult<HermesValue> createThisForConstruct(
-      Handle<Callable> selfHandle,
-      Runtime *runtime);
 };
 
 /// A function produced by Function.prototype.bind(). It packages a function

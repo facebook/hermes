@@ -45,6 +45,7 @@ BUILTIN_METHOD(HermesInternal, generatorSetDelegated)
 BUILTIN_METHOD(HermesInternal, copyDataProperties)
 BUILTIN_METHOD(HermesInternal, copyRestArgs)
 BUILTIN_METHOD(HermesInternal, arraySpread)
+BUILTIN_METHOD(HermesInternal, apply)
 BUILTIN_METHOD(HermesInternal, exportAll)
 BUILTIN_METHOD(HermesInternal, exponentiationOperator)
 

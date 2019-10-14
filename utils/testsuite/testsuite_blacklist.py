@@ -632,13 +632,6 @@ BLACK_LIST = [
     "mjsunit/es6/regress/regress-4298.js",
     "mjsunit/es6/regress/regress-4417.js",
     "mjsunit/es6/spread-array.js",
-    "mjsunit/es6/spread-call-new-class.js",
-    "mjsunit/es6/spread-call-new.js",
-    "mjsunit/es6/spread-call-super-property.js",
-    "mjsunit/es6/spread-call.js",
-    "test262/test/language/expressions/call/spread-",
-    "test262/test/language/expressions/call/trailing-comma.js",
-    "test262/test/language/expressions/new/spread-",
     # arrow funs
     "mjsunit/array-indexing-receiver.js",
     "mjsunit/array-sort.js",
@@ -749,6 +742,8 @@ BLACK_LIST = [
     "test262/test/built-ins/Object/prototype/toLocaleString/primitive_this_value.js",
     "test262/test/built-ins/Object/prototype/toLocaleString/primitive_this_value_getter.js",
     # eval changes
+    "mjsunit/es6/spread-call-new-class.js",
+    "mjsunit/es6/spread-call-super-property.js",
     "test262/test/language/global-code/script-decl-var.js",
     "test262/test/language/global-code/script-decl-func-err-non-configurable.js",
     # TypedArray changes
