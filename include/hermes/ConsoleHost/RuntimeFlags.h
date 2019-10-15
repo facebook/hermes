@@ -151,7 +151,7 @@ static opt<bool> TrackBytecodeIO(
         "Track bytecode I/O when executing bytecode. Only works with bytecode mode"));
 
 static opt<bool> StableInstructionCount(
-    "stable-instruction-count",
+    "Xstable-instruction-count",
     init(false),
     Hidden,
     desc("For CPU instructions debugging: fix random seed, silence logging"));
