@@ -217,11 +217,6 @@ TEST_F(HiddenClassTest, SmokeTest) {
   ASSERT_EQ(*y1, *y3);
 
   // Turn x into a dictionary by erasing x.a
-  // We need to allocate fake property storage.
-  auto arrRes =
-      runtime->ignoreAllocationFailure(PropStorage::create(runtime, 10));
-  auto xStorage = runtime->makeHandle<PropStorage>(arrRes);
-  PropStorage::resizeWithinCapacity(xStorage, runtime, x->getNumProperties());
 
   {
     auto found = HiddenClass::findProperty(
