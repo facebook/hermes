@@ -774,6 +774,10 @@ def testLoop(calls, jobs, fail_fast, num_slowest_tests):
                 and hermesStatus != TestFlag.TEST_PERMANENTLY_SKIPPED
             ):
                 break
+    # Filter out missing test names in case there were fewer tests run than the top slowest tests.
+    slowest_tests = [
+        (testName, duration) for testName, duration in slowest_tests if testName
+    ]
     return results, resultsHist, slowest_tests
 
 
@@ -978,9 +982,9 @@ def run(
         if errString:
             print("{}".format(textwrap.indent(errString, "\t")))
 
-    if num_slowest_tests:
+    if slowest_tests:
         print()
-        print("Top {:d} slowest tests".format(num_slowest_tests))
+        print("Top {:d} slowest tests".format(len(slowest_tests)))
         maxNameWidth = 0
         maxNumWidth = 0
         for testName, duration in slowest_tests:
