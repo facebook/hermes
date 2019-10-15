@@ -46,6 +46,8 @@ class PerfSection {
   const char *name_;
   const char *category_;
 #endif
+  /// Whether any tracing output is enabled.
+  bool enabled_{false};
 
  private:
   /// We want ArgValue to be able to hold arguments of various types,

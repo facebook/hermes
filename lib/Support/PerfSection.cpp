@@ -32,8 +32,10 @@ PerfSection::PerfSection(const char *name, const char *category)
       name_(name),
       category_(category),
 #endif
+      enabled_(false),
       argValues_(0) {
 #ifdef HERMESVM_PLATFORM_LOGGING
+  enabled_ = true;
   if (category_) {
     hermesLog("Hermes", "%s[%s] BEGIN.", name_, category_);
   } else {
@@ -41,11 +43,16 @@ PerfSection::PerfSection(const char *name, const char *category)
   }
 #endif
 #if defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS)
-  fbsystrace_begin_section(TRACE_TAG_JS_VM, name);
+  if (fbsystrace_is_tracing(TRACE_TAG_JS_VM)) {
+    enabled_ = true;
+    fbsystrace_begin_section(TRACE_TAG_JS_VM, name);
+  }
 #endif
 }
 
 void PerfSection::addArg(const char *argName, size_t value) {
+  if (!enabled_)
+    return;
   // Note that if the argument has already been set, we overwrite it.
   freeDataIfExists(argName);
   auto &val = argValues_[argName];
@@ -54,6 +61,8 @@ void PerfSection::addArg(const char *argName, size_t value) {
 }
 
 void PerfSection::addArgD(const char *argName, double d) {
+  if (!enabled_)
+    return;
   // Note that if the argument has already been set, we overwrite it.
   freeDataIfExists(argName);
   auto &val = argValues_[argName];
@@ -65,6 +74,8 @@ void PerfSection::addArg(
     const char *argName,
     const llvm::StringRef value,
     bool doCopy) {
+  if (!enabled_)
+    return;
   freeDataIfExists(argName);
   auto &val = argValues_[argName];
   val.type = ArgType::STRINGREF;
@@ -81,6 +92,8 @@ void PerfSection::addArg(
 }
 
 PerfSection::~PerfSection() {
+  if (!enabled_)
+    return;
   if (argValues_.empty()) {
 #if defined(HERMES_FACEBOOK_BUILD) && !defined(_WINDOWS)
     fbsystrace_end_section(TRACE_TAG_JS_VM);
