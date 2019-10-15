@@ -123,13 +123,11 @@ OrderedHashMap::OrderedHashMap(
     Runtime *runtime,
     Handle<ArrayStorage> hashTableStorage)
     : GCCell(&runtime->getHeap(), &vt),
-      hashTable_(runtime, hashTableStorage.get(), &runtime->getHeap()) {
-  ArrayStorage::resizeWithinCapacity(
-      hashTableStorage, runtime, INITIAL_CAPACITY);
-}
+      hashTable_(runtime, hashTableStorage.get(), &runtime->getHeap()) {}
 
 CallResult<HermesValue> OrderedHashMap::create(Runtime *runtime) {
-  auto arrRes = ArrayStorage::create(runtime, INITIAL_CAPACITY);
+  auto arrRes =
+      ArrayStorage::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

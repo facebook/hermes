@@ -998,7 +998,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
 
     operationJOK_ = vmcast<JSArray>(stackJO_->at(stackJO_->size() - 1));
     assert(stackJO_->size() && "Cannot pop from an empty stack");
-    PropStorage::resizeWithinCapacity(stackJO_, runtime_, stackJO_->size() - 1);
+    stackJO_->pop_back();
 
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1053,8 +1053,7 @@ CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
 
 void JSONStringifyer::popValueFromStack() {
   assert(stackValue_->size() && "Cannot pop from an empty stack");
-  PropStorage::resizeWithinCapacity(
-      stackValue_, runtime_, stackValue_->size() - 1);
+  stackValue_->pop_back();
 }
 
 void JSONStringifyer::appendToOutput(SymbolID identifierID) {
