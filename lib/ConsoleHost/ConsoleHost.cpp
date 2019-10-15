@@ -331,6 +331,14 @@ bool executeHBCBytecodeImpl(
 #endif
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
+  if (options.stabilizeInstructionCount) {
+    // Try to limit features that can introduce unpredictable CPU instruction
+    // behavior. Date is a potential cause, but is not handled currently.
+    vm::MockedEnvironment env;
+    env.mathRandomSeed = 0;
+    env.stabilizeInstructionCount = true;
+    runtime->setMockedEnvironment(env);
+  }
 
   if (options.timeLimit > 0) {
     vm::TimeLimitMonitor::getInstance().watchRuntime(

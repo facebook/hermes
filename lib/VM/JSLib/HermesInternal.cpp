@@ -122,6 +122,9 @@ CallResult<HermesValue>
 hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   auto resultHandle = toHandle(runtime, JSObject::create(runtime));
+  // Printing the values would be unstable, so prevent that.
+  if (runtime->shouldStabilizeInstructionCount())
+    return resultHandle.getHermesValue();
   MutableHandle<> tmpHandle{runtime};
 
   namespace P = Predefined;

@@ -554,7 +554,11 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     std::unique_ptr<jsi::Runtime> rt;
     std::unique_ptr<HermesRuntime> hermesRuntime = makeHermesRuntime(rtConfig);
     // Set up the mocks for environment-dependent JS behavior
-    hermesRuntime->setMockedEnvironment(std::get<2>(traceAndConfigAndEnv));
+    {
+      auto env = std::get<2>(traceAndConfigAndEnv);
+      env.stabilizeInstructionCount = options.stabilizeInstructionCount;
+      hermesRuntime->setMockedEnvironment(env);
+    }
     if (outTrace) {
       rt = makeTracingHermesRuntime(std::move(hermesRuntime), rtConfig);
     } else {

@@ -547,6 +547,9 @@ void Runtime::printRuntimeGCStats(llvm::raw_ostream &os) const {
 }
 
 void Runtime::printHeapStats(llvm::raw_ostream &os) {
+  // Printing the timings is unstable.
+  if (shouldStabilizeInstructionCount())
+    return;
   getHeap().printAllCollectedStats(os);
   for (auto &module : getRuntimeModules()) {
     auto tracker = module.getBytecode()->getPageAccessTracker();
@@ -587,6 +590,11 @@ void Runtime::potentiallyMoveHeap() {
   FillerCell::create(this, sizeof(FillerCell));
 }
 #endif
+
+bool Runtime::shouldStabilizeInstructionCount() {
+  return getCommonStorage()->env &&
+      getCommonStorage()->env->stabilizeInstructionCount;
+}
 
 void Runtime::setMockedEnvironment(const MockedEnvironment &env) {
   getCommonStorage()->env = env;

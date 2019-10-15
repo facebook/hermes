@@ -89,6 +89,8 @@ static opt<unsigned> ExecutionTimeLimit(
 static int executeHBCBytecodeFromCL(
     std::unique_ptr<hbc::BCProvider> bytecode,
     const driver::BytecodeBufferInfo &info) {
+  auto recStats =
+      (cl::GCPrintStats || cl::GCBeforeStats) && !cl::StableInstructionCount;
   ExecuteOptions options;
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
@@ -104,7 +106,7 @@ static int executeHBCBytecodeFromCL(
                           .withRandomSeed(cl::GCSanitizeRandomSeed)
                           .build())
                   .withShouldRandomizeAllocSpace(cl::GCRandomizeAllocSpace)
-                  .withShouldRecordStats(cl::GCPrintStats || cl::GCBeforeStats)
+                  .withShouldRecordStats(recStats)
                   .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                   .withAllocInYoung(cl::GCAllocYoung)
                   .withRevertToYGAtTTI(cl::GCRevertToYGAtTTI)
@@ -131,6 +133,7 @@ static int executeHBCBytecodeFromCL(
   options.jitCrashOnError = cl::JITCrashOnError;
   options.stopAfterInit = cl::StopAfterInit;
   options.forceGCBeforeStats = cl::GCBeforeStats;
+  options.stabilizeInstructionCount = cl::StableInstructionCount;
 #ifdef HERMESVM_SERIALIZE
   options.SerializeAfterInitFile = cl::SerializeAfterInitFile;
   options.DeserializeFile = cl::DeserializeFile;

@@ -149,6 +149,12 @@ static opt<bool> TrackBytecodeIO(
     desc(
         "Track bytecode I/O when executing bytecode. Only works with bytecode mode"));
 
+static opt<bool> StableInstructionCount(
+    "stable-instruction-count",
+    init(false),
+    Hidden,
+    desc("For CPU instructions debugging: fix random seed, silence logging"));
+
 static opt<uint32_t> VMExperimentFlags(
     "Xvm-experiment-flags",
     llvm::cl::desc("VM experiment flags."),

@@ -114,7 +114,8 @@ int main(int argc, char **argv) {
                           .withRandomSeed(cl::GCSanitizeRandomSeed)
                           .build())
                   .withShouldRandomizeAllocSpace(cl::GCRandomizeAllocSpace)
-                  .withShouldRecordStats(GCPrintStats)
+                  .withShouldRecordStats(
+                      GCPrintStats && !cl::StableInstructionCount)
                   .withShouldReleaseUnused(vm::kReleaseUnusedNone)
                   .withName("hvm")
                   .build())
@@ -122,6 +123,7 @@ int main(int argc, char **argv) {
           .withTrackIO(cl::TrackBytecodeIO)
           .build();
 
+  options.stabilizeInstructionCount = cl::StableInstructionCount;
   options.stopAfterInit = cl::StopAfterInit;
 #ifdef HERMESVM_PROFILER_EXTERN
   options.patchProfilerSymbols = cl::PatchProfilerSymbols;

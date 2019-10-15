@@ -695,6 +695,8 @@ class Runtime : public HandleRootOwner,
     return builtinsFrozen_;
   }
 
+  bool shouldStabilizeInstructionCount();
+
   experiments::VMExperimentFlags getVMExperimentFlags() const {
     return vmExperimentFlags_;
   }

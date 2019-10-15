@@ -26,6 +26,10 @@ struct MockedEnvironment final {
   std::deque<uint64_t> callsToNewDate;
   std::deque<std::string> callsToDateAsFunction;
 
+  /// True if we should try to execute the same number of CPU instructions
+  /// across repeated invocations of the same JS.
+  bool stabilizeInstructionCount{false};
+
   MockedEnvironment() = default;
   explicit MockedEnvironment(
       std::minstd_rand::result_type mathRandomSeed,

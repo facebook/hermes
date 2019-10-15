@@ -145,7 +145,9 @@ int main(int argc, char **argv) {
     options.allocInYoung = cl::GCAllocYoung;
     options.revertToYGAtTTI = cl::GCRevertToYGAtTTI;
     options.forceGCBeforeStats = cl::GCBeforeStats;
-    options.shouldPrintGCStats = cl::GCPrintStats || cl::GCBeforeStats;
+    options.shouldPrintGCStats =
+        (cl::GCPrintStats || cl::GCBeforeStats) && !cl::StableInstructionCount;
+    options.stabilizeInstructionCount = cl::StableInstructionCount;
     options.shouldTrackIO = cl::TrackBytecodeIO;
     options.bytecodeWarmupPercent = cl::BytecodeWarmupPercent;
     options.sanitizeRate = cl::GCSanitizeRate;

@@ -110,6 +110,7 @@ class TraceInterpreter final {
     bool revertToYGAtTTI{true};
     bool forceGCBeforeStats{false};
     bool shouldPrintGCStats{false};
+    bool stabilizeInstructionCount{false};
     bool shouldTrackIO{false};
     uint8_t bytecodeWarmupPercent{0};
     double sanitizeRate{0.0};
