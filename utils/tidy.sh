@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
-# This source code is licensed under the MIT license found in the LICENSE
-# file in the root directory of this source tree.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 if [ $(which clang-tidy) ]; then
   FILES=`find lib include tools unittests -name \*.h -print -o -name \*.cpp -print`
