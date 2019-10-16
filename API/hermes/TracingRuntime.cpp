@@ -8,6 +8,7 @@
 #include "TracingRuntime.h"
 
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/SHA1.h"
 
 namespace facebook {
 namespace hermes {
@@ -23,7 +24,16 @@ TracingRuntime::TracingRuntime(
 jsi::Value TracingRuntime::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
-  trace_.emplace_back<SynthTrace::BeginExecJSRecord>(getTimeSinceStart());
+  ::hermes::SHA1 sourceHash{};
+  if (HermesRuntime::isHermesBytecode(buffer->data(), buffer->size())) {
+    sourceHash = ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
+        llvm::makeArrayRef(buffer->data(), buffer->size()));
+  } else {
+    sourceHash =
+        llvm::SHA1::hash(llvm::makeArrayRef(buffer->data(), buffer->size()));
+  }
+  trace_.emplace_back<SynthTrace::BeginExecJSRecord>(
+      getTimeSinceStart(), sourceHash);
   auto res = RD::evaluateJavaScript(buffer, sourceURL);
   trace_.emplace_back<SynthTrace::EndExecJSRecord>(
       getTimeSinceStart(), toTraceValue(res));
@@ -381,11 +391,6 @@ void TracingHermesRuntime::writeBridgeTrafficTraceToFile(
 jsi::Value TracingHermesRuntime::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
-  if (HermesRuntime::isHermesBytecode(buffer->data(), buffer->size())) {
-    trace().setSourceHash(
-        ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
-            llvm::makeArrayRef(buffer->data(), buffer->size())));
-  }
   return TracingRuntime::evaluateJavaScript(buffer, sourceURL);
 }
 

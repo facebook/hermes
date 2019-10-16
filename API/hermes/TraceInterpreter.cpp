@@ -507,14 +507,6 @@ std::string TraceInterpreter::execFromMemoryBuffer(
       bufConvert(std::move(codeBuf));
   const bool isBytecode = HermesRuntime::isHermesBytecode(
       codeFileBuffer->data(), codeFileBuffer->size());
-  if (isBytecode) {
-    // Only verify the source hash if running from bytecode.
-    verifyHash(
-        trace.sourceHash(),
-        ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
-            llvm::makeArrayRef(
-                codeFileBuffer->data(), codeFileBuffer->size())));
-  }
   auto &rtConfig = std::get<1>(traceAndConfigAndEnv);
   ::hermes::vm::RuntimeConfig::Builder rtConfigBuilder = rtConfig.rebuild();
   rtConfigBuilder.withBytecodeWarmupPercent(options.bytecodeWarmupPercent);
@@ -582,11 +574,6 @@ std::string TraceInterpreter::exec(
     const SynthTrace &trace,
     std::unique_ptr<const jsi::Buffer> bundle,
     llvm::raw_ostream *outTrace) {
-  if (!HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
-    llvm::errs()
-        << "Note: You are running from source code, not HBC bytecode.\n"
-        << "      This run will reflect dev performance, not production.\n";
-  }
   // Partition the records into each call.
   auto funcCallsAndObjectCalls = getCalls(setupFuncID, trace.records());
   auto &hostFuncs = funcCallsAndObjectCalls.first;
@@ -785,11 +772,27 @@ Value TraceInterpreter::execFunction(
     for (const SynthTrace::Record *rec : piece.records) {
       try {
         switch (rec->getType()) {
-          case RecordType::BeginExecJS:
+          case RecordType::BeginExecJS: {
+            const auto &bejsr =
+                dynamic_cast<const SynthTrace::BeginExecJSRecord &>(*rec);
+            if (!HermesRuntime::isHermesBytecode(
+                    bundle->data(), bundle->size())) {
+              llvm::errs()
+                  << "Note: You are running from source code, not HBC bytecode.\n"
+                  << "      This run will reflect dev performance, not production.\n";
+            } else {
+              // Only verify the source hash if running from bytecode.
+              verifyHash(
+                  bejsr.sourceHash(),
+                  ::hermes::hbc::BCProviderFromBuffer::
+                      getSourceHashFromBytecode(
+                          llvm::makeArrayRef(bundle->data(), bundle->size())));
+            }
             // Since this is bytecode, there's no sourceURL to pass.
             // overallRetval is to be consumed when we get an EndExecJS record.
             overallRetval = rt.evaluateJavaScript(std::move(bundle), "");
             break;
+          }
           case RecordType::EndExecJS: {
             const auto &eejsr =
                 dynamic_cast<const SynthTrace::EndExecJSRecord &>(*rec);

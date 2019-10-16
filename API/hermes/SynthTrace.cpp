@@ -368,6 +368,13 @@ void SynthTrace::CallRecord::toJSONInternal(
   json.closeArray();
 }
 
+void SynthTrace::BeginExecJSRecord::toJSONInternal(
+    ::hermes::JSONEmitter &json,
+    const SynthTrace &trace) const {
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("sourceHash", ::hermes::hashAsString(sourceHash_));
+}
+
 void SynthTrace::ReturnMixin::toJSONInternal(
     JSONEmitter &json,
     const SynthTrace &trace) const {
@@ -461,8 +468,6 @@ llvm::raw_ostream &operator<<(
     json.openDict();
     json.emitKeyValue("version", tracePrinter.trace.synthVersion());
     json.emitKeyValue("globalObjID", tracePrinter.trace.globalObjID());
-    json.emitKeyValue(
-        "sourceHash", ::hermes::hashAsString(tracePrinter.trace.sourceHash()));
 
     // RuntimeConfig section.
     {

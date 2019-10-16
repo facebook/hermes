@@ -20,7 +20,7 @@ using namespace ::hermes::parser;
 namespace {
 
 ::hermes::SHA1 parseHashStrAsNumber(llvm::StringRef hashStr) {
-  ::hermes::SHA1 sourceHash;
+  ::hermes::SHA1 sourceHash{};
   // Each byte is 2 characters.
   if (hashStr.size() != 2 * sourceHash.size()) {
     throw std::runtime_error("sourceHash is not the right length");
@@ -186,13 +186,9 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
       mathRandomSeed, callsToDateNow, callsToNewDate, callsToDateAsFunction};
 }
 
-SynthTrace getTrace(
-    JSONArray *array,
-    SynthTrace::ObjectID globalObjID,
-    const ::hermes::SHA1 &sourceHash) {
+SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
   using RecordType = SynthTrace::RecordType;
   SynthTrace trace(globalObjID);
-  trace.setSourceHash(sourceHash);
   auto getListOfTraceValues =
       [](JSONArray *array,
          SynthTrace &trace) -> std::vector<SynthTrace::TraceValue> {
@@ -230,9 +226,16 @@ SynthTrace getTrace(
     auto *thisArg = llvm::dyn_cast_or_null<JSONString>(obj->get("thisArg"));
     auto *retval = llvm::dyn_cast_or_null<JSONString>(obj->get("retval"));
     switch (kind) {
-      case RecordType::BeginExecJS:
-        trace.emplace_back<SynthTrace::BeginExecJSRecord>(timeFromStart);
+      case RecordType::BeginExecJS: {
+        ::hermes::SHA1 hash{};
+        if (JSONString *sourceHash =
+                llvm::dyn_cast_or_null<JSONString>(obj->get("sourceHash"))) {
+          hash = parseHashStrAsNumber(sourceHash->str());
+        }
+        trace.emplace_back<SynthTrace::BeginExecJSRecord>(
+            timeFromStart, std::move(hash));
         break;
+      }
       case RecordType::EndExecJS:
         trace.emplace_back<SynthTrace::EndExecJSRecord>(
             timeFromStart, trace.decode(retval->c_str()));
@@ -391,18 +394,11 @@ parseSynthTrace(std::unique_ptr<llvm::MemoryBuffer> trace) {
   // Else, for backwards compatibility, allow no version to be specified, which
   // will imply "latest version".
 
-  ::hermes::SHA1 hash{};
-  if (auto *sourceHashAsStr =
-          llvm::dyn_cast_or_null<JSONString>(root->get("sourceHash"))) {
-    llvm::StringRef hashStr = sourceHashAsStr->str();
-    hash = parseHashStrAsNumber(hashStr);
-  }
-
   auto globalObjID =
       getNumberAs<SynthTrace::ObjectID>(root->get("globalObjID"));
   // Get and parse the records list.
   return std::make_tuple(
-      getTrace(llvm::cast<JSONArray>(root->at("trace")), globalObjID, hash),
+      getTrace(llvm::cast<JSONArray>(root->at("trace")), globalObjID),
       getRuntimeConfig(root),
       getMockedEnvironment(llvm::cast<JSONObject>(root->at("env"))));
 }

@@ -139,8 +139,7 @@ class SynthTrace {
         const SynthTrace &trace) const;
   };
 
-  explicit SynthTrace(ObjectID globalObjID)
-      : globalObjID_(globalObjID), sourceHash_() {}
+  explicit SynthTrace(ObjectID globalObjID) : globalObjID_(globalObjID) {}
 
   template <typename T, typename... Args>
   void emplace_back(Args &&... args) {
@@ -153,14 +152,6 @@ class SynthTrace {
 
   ObjectID globalObjID() const {
     return globalObjID_;
-  }
-
-  const ::hermes::SHA1 &sourceHash() const {
-    return sourceHash_;
-  }
-
-  void setSourceHash(const ::hermes::SHA1 &sourceHash) {
-    sourceHash_ = sourceHash;
   }
 
   /// Given a trace value, turn it into its typed string.
@@ -204,8 +195,6 @@ class SynthTrace {
   std::vector<std::unique_ptr<Record>> records_;
   /// The id of the global object.
   const ObjectID globalObjID_;
-  /// A hash of the source that was executed in this trace.
-  ::hermes::SHA1 sourceHash_;
   /// A table of strings to avoid repeated strings taking up memory. Similar to
   /// the IdentifierTable, except it doesn't need to be collected (it stores
   /// strings forever).
@@ -239,10 +228,25 @@ class SynthTrace {
   /// inject values into the VM before any source code is run.
   struct BeginExecJSRecord final : public Record {
     static constexpr RecordType type{RecordType::BeginExecJS};
-    using Record::Record;
+    explicit BeginExecJSRecord(TimeSinceStart time, ::hermes::SHA1 sourceHash)
+        : Record(time), sourceHash_(std::move(sourceHash)) {}
+
     RecordType getType() const override {
       return type;
     }
+
+    const ::hermes::SHA1 &sourceHash() const {
+      return sourceHash_;
+    }
+
+   private:
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
+        const override;
+
+    /// A hash of the source that was executed. The source hash must match up
+    /// when the file is replayed.
+    /// The hash is optional, and will be all zeros if not provided.
+    ::hermes::SHA1 sourceHash_;
   };
 
   struct ReturnMixin {
