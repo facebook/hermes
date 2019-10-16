@@ -12,6 +12,8 @@
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 
 #include <iostream>
 #include <tuple>
@@ -123,6 +125,11 @@ static opt<::hermes::vm::ReleaseUnused> ShouldReleaseUnused(
 } // namespace cl
 
 int main(int argc, char **argv) {
+  // Print a stack trace if we signal out.
+  llvm::sys::PrintStackTraceOnErrorSignal("Hermes synth");
+  llvm::PrettyStackTraceProgram X(argc, argv);
+  // Call llvm_shutdown() on exit to print stats and free memory.
+  llvm::llvm_shutdown_obj Y;
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes synth trace driver\n");
 
   using namespace facebook::hermes::tracing;
