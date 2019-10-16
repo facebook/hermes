@@ -133,6 +133,19 @@ enum class PauseOnThrowMode {
   All, /// Pause any time an exception is thrown.
 };
 
+/// When requesting an async break, this specifies whether it was an implicit
+/// break from the inspector or a user-requested explicit break.
+enum class AsyncPauseKind {
+  /// Implicit pause to allow movement of jsi::Value types between threads.
+  /// The user will not be running commands and the inspector will immediately
+  /// request a Continue.
+  Implicit,
+
+  /// Explicit pause requested by the user.
+  /// Clears any stepping state and allows the user to run their own commands.
+  Explicit,
+};
+
 /// A type representing depth in a lexical scope chain.
 using ScopeDepth = uint32_t;
 

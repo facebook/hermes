@@ -1030,6 +1030,20 @@ tailCall:
 
 #endif // HERMESVM_INDIRECT_THREADING
 
+#define RUN_DEBUGGER_ASYNC_BREAK(flags)                                      \
+  do {                                                                       \
+    if (runDebuggerUpdatingState(                                            \
+            (uint8_t)(flags) &                                               \
+                    (uint8_t)Runtime::AsyncBreakReasonBits::DebuggerExplicit \
+                ? Debugger::RunReason::AsyncBreakExplicit                    \
+                : Debugger::RunReason::AsyncBreakImplicit,                   \
+            runtime,                                                         \
+            curCodeBlock,                                                    \
+            ip,                                                              \
+            frameRegs) == ExecutionStatus::EXCEPTION)                        \
+      goto exception;                                                        \
+  } while (0)
+
   for (;;) {
     BEFORE_OP_CODE;
 
@@ -1483,14 +1497,9 @@ tailCall:
     doCall : {
 #ifdef HERMES_ENABLE_DEBUGGER
       // Check for an async debugger request.
-      if (LLVM_UNLIKELY(runtime->testAndClearDebuggerAsyncBreakRequest())) {
-        if (runDebuggerUpdatingState(
-                Debugger::RunReason::AsyncBreak,
-                runtime,
-                curCodeBlock,
-                ip,
-                frameRegs) == ExecutionStatus::EXCEPTION)
-          goto exception;
+      if (uint8_t asyncFlags =
+              runtime->testAndClearDebuggerAsyncBreakRequest()) {
+        RUN_DEBUGGER_ASYNC_BREAK(asyncFlags);
         gcScope.flushToSmallCount(KEEP_HANDLES);
         DISPATCH;
       }
@@ -1560,14 +1569,9 @@ tailCall:
       CASE(CallDirectLongIndex) {
 #ifdef HERMES_ENABLE_DEBUGGER
         // Check for an async debugger request.
-        if (LLVM_UNLIKELY(runtime->testAndClearDebuggerAsyncBreakRequest())) {
-          if (runDebuggerUpdatingState(
-                  Debugger::RunReason::AsyncBreak,
-                  runtime,
-                  curCodeBlock,
-                  ip,
-                  frameRegs) == ExecutionStatus::EXCEPTION)
-            goto exception;
+        if (uint8_t asyncFlags =
+                runtime->testAndClearDebuggerAsyncBreakRequest()) {
+          RUN_DEBUGGER_ASYNC_BREAK(asyncFlags);
           gcScope.flushToSmallCount(KEEP_HANDLES);
           DISPATCH;
         }
@@ -1715,14 +1719,9 @@ tailCall:
       CASE(Ret) {
 #ifdef HERMES_ENABLE_DEBUGGER
         // Check for an async debugger request.
-        if (LLVM_UNLIKELY(runtime->testAndClearDebuggerAsyncBreakRequest())) {
-          if (runDebuggerUpdatingState(
-                  Debugger::RunReason::AsyncBreak,
-                  runtime,
-                  curCodeBlock,
-                  ip,
-                  frameRegs) == ExecutionStatus::EXCEPTION)
-            goto exception;
+        if (uint8_t asyncFlags =
+                runtime->testAndClearDebuggerAsyncBreakRequest()) {
+          RUN_DEBUGGER_ASYNC_BREAK(asyncFlags);
           gcScope.flushToSmallCount(KEEP_HANDLES);
           DISPATCH;
         }
@@ -1859,14 +1858,9 @@ tailCall:
       CASE(AsyncBreakCheck) {
         if (LLVM_UNLIKELY(runtime->hasAsyncBreak())) {
 #ifdef HERMES_ENABLE_DEBUGGER
-          if (runtime->testAndClearDebuggerAsyncBreakRequest()) {
-            if (runDebuggerUpdatingState(
-                    Debugger::RunReason::AsyncBreak,
-                    runtime,
-                    curCodeBlock,
-                    ip,
-                    frameRegs) == ExecutionStatus::EXCEPTION)
-              goto exception;
+          if (uint8_t asyncFlags =
+                  runtime->testAndClearDebuggerAsyncBreakRequest()) {
+            RUN_DEBUGGER_ASYNC_BREAK(asyncFlags);
           }
 #endif
           if (runtime->testAndClearTimeoutAsyncBreakRequest()) {

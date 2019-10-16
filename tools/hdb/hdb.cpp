@@ -194,7 +194,7 @@ debugger::Debugger *volatile gDebugger = nullptr;
 // A signal handler that triggers an async pause in the debugger.
 void triggerAsyncPause(int sig) {
   if (gDebugger)
-    gDebugger->triggerAsyncPause();
+    gDebugger->triggerAsyncPause(debugger::AsyncPauseKind::Explicit);
 }
 
 /// Control whether a SIGINT (aka control-C) should result in an async pause
@@ -208,11 +208,11 @@ void setSIGINTShouldPause(bool flag) {
 void schedulePause(double delaySecs) {
   assert(delaySecs >= 0 && std::isfinite(delaySecs) && "Invalid delay");
   if (delaySecs == 0) {
-    gDebugger->triggerAsyncPause();
+    gDebugger->triggerAsyncPause(debugger::AsyncPauseKind::Explicit);
   } else {
     std::thread t([=] {
       std::this_thread::sleep_for(std::chrono::duration<double>(delaySecs));
-      gDebugger->triggerAsyncPause();
+      gDebugger->triggerAsyncPause(debugger::AsyncPauseKind::Explicit);
     });
     t.detach();
   }

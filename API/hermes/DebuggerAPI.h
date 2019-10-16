@@ -195,7 +195,7 @@ class Debugger {
   /// is inherently racey and the exact point at which the program pauses is not
   /// guaranteed. You can discover when the program has paused through the event
   /// observer.
-  void triggerAsyncPause();
+  void triggerAsyncPause(AsyncPauseKind kind);
 
   /// \return the ProgramState representing the state of the paused program.
   /// This may only be invoked when the program is paused.

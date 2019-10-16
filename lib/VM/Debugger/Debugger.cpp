@@ -87,8 +87,8 @@ static llvm::Optional<ScopeChain> scopeChainForBlock(
   return {std::move(scopeChain)};
 }
 
-void Debugger::triggerAsyncPause() {
-  runtime_->triggerDebuggerAsyncBreak();
+void Debugger::triggerAsyncPause(AsyncPauseKind kind) {
+  runtime_->triggerDebuggerAsyncBreak(kind);
 }
 
 void Debugger::breakAtJumpTarget(InterpreterState &state) {
@@ -157,7 +157,21 @@ ExecutionStatus Debugger::runDebugger(
     isUnwindingException_ = true;
     clearTempBreakpoints();
     pauseReason = PauseReason::Exception;
-  } else if (runReason == RunReason::AsyncBreak) {
+  } else if (runReason == RunReason::AsyncBreakImplicit) {
+    if (curStepMode_.hasValue()) {
+      // Avoid draining the queue or corrupting step state.
+      isDebugging_ = false;
+      return ExecutionStatus::RETURNED;
+    }
+    pauseReason = PauseReason::AsyncTrigger;
+  } else if (runReason == RunReason::AsyncBreakExplicit) {
+    // The user requested an async break, so we can clear stepping state
+    // with the knowledge that the inspector isn't sending an immediate
+    // continue.
+    if (curStepMode_) {
+      clearTempBreakpoints();
+      curStepMode_ = llvm::None;
+    }
     pauseReason = PauseReason::AsyncTrigger;
   } else {
     assert(runReason == RunReason::Opcode && "Unknown run reason");

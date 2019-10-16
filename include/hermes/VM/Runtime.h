@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_RUNTIME_H
 #define HERMES_VM_RUNTIME_H
 
+#include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
@@ -475,8 +476,12 @@ class Runtime : public HandleRootOwner,
   /// Request the interpreter loop to take an asynchronous break at a convenient
   /// point due to debugger UI request. This may be called from any thread, or a
   /// signal handler.
-  void triggerDebuggerAsyncBreak() {
-    triggerAsyncBreak(AsyncBreakReasonBits::Debugger);
+  void triggerDebuggerAsyncBreak(
+      ::facebook::hermes::debugger::AsyncPauseKind kind) {
+    triggerAsyncBreak(
+        kind == ::facebook::hermes::debugger::AsyncPauseKind::Explicit
+            ? AsyncBreakReasonBits::DebuggerExplicit
+            : AsyncBreakReasonBits::DebuggerImplicit);
   }
 #endif
 
@@ -1060,8 +1065,9 @@ class Runtime : public HandleRootOwner,
 
   /// Bit flags for async break request reasons.
   enum class AsyncBreakReasonBits : uint8_t {
-    Debugger = 0x1,
-    Timeout = 0x2,
+    DebuggerExplicit = 0x1,
+    DebuggerImplicit = 0x2,
+    Timeout = 0x4,
   };
 
   /// An atomic flag set when an async pause is requested.
@@ -1071,10 +1077,13 @@ class Runtime : public HandleRootOwner,
   std::atomic<uint8_t> asyncBreakRequestFlag_{0};
 
 #if defined(HERMES_ENABLE_DEBUGGER)
-  /// \return zero if no debugger async pause was requested, nonzero if an async
-  /// pause was requested. If nonzero is returned, the flag is reset to 0.
-  bool testAndClearDebuggerAsyncBreakRequest() {
-    return testAndClearAsyncBreakRequest(AsyncBreakReasonBits::Debugger);
+  /// \return zero if no debugger async pause was requested, the old nonzero
+  /// async flags if an async pause was requested. If nonzero is returned, the
+  /// flag is reset to 0.
+  uint8_t testAndClearDebuggerAsyncBreakRequest() {
+    return testAndClearAsyncBreakRequest(
+        (uint8_t)AsyncBreakReasonBits::DebuggerExplicit |
+        (uint8_t)AsyncBreakReasonBits::DebuggerImplicit);
   }
 
   Debugger debugger_{this};
@@ -1085,29 +1094,29 @@ class Runtime : public HandleRootOwner,
     return asyncBreakRequestFlag_.load(std::memory_order_relaxed) != 0;
   }
 
-  /// \return whether async break was requested or not for \p reasonBit. Clear
+  /// \return whether async break was requested or not for \p reasonBits. Clear
   /// \p reasonBit request bit afterward.
-  bool testAndClearAsyncBreakRequest(AsyncBreakReasonBits reasonBit) {
+  uint8_t testAndClearAsyncBreakRequest(uint8_t reasonBits) {
     /// Note that while the triggerTimeoutAsyncBreak() function may be called
     /// from any thread, this one may only be called from within the Interpreter
     /// loop.
     uint8_t flag = asyncBreakRequestFlag_.load(std::memory_order_relaxed);
-    if (LLVM_LIKELY((flag & (uint8_t)reasonBit) == 0)) {
+    if (LLVM_LIKELY((flag & (uint8_t)reasonBits) == 0)) {
       // Fast path.
       return false;
     }
     // Clear the flag using CAS.
     uint8_t oldFlag = asyncBreakRequestFlag_.fetch_and(
-        ~(uint8_t)reasonBit, std::memory_order_relaxed);
+        ~(uint8_t)reasonBits, std::memory_order_relaxed);
     assert(oldFlag != 0 && "Why is oldFlag zero?");
-    (void)oldFlag;
-    return true;
+    return oldFlag;
   }
 
   /// \return whether timeout async break was requsted or not. Clear the
   /// timeout request bit afterward.
   bool testAndClearTimeoutAsyncBreakRequest() {
-    return testAndClearAsyncBreakRequest(AsyncBreakReasonBits::Timeout);
+    return testAndClearAsyncBreakRequest(
+        (uint8_t)AsyncBreakReasonBits::Timeout);
   }
 
   /// Request the interpreter loop to take an asynchronous break

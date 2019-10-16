@@ -63,6 +63,7 @@ class Debugger {
   using String = ::facebook::hermes::debugger::String;
   using LexicalInfo = ::facebook::hermes::debugger::LexicalInfo;
   using ScriptID = ::facebook::hermes::debugger::ScriptID;
+  using AsyncPauseKind = ::facebook::hermes::debugger::AsyncPauseKind;
 
   Runtime *const runtime_;
 
@@ -199,8 +200,14 @@ class Debugger {
     /// The Interpreter hit an exception.
     Exception,
 
-    /// The Interpreter is reacting to an async break request.
-    AsyncBreak,
+    /// The Interpreter is reacting to an async break request from the user.
+    /// Any current stepping state should be cleared.
+    AsyncBreakExplicit,
+
+    /// The Interpreter is reacting to an async break request from the
+    /// inspector.
+    /// Any current stepping state should be *preserved*.
+    AsyncBreakImplicit,
   };
 
   /// An EvalResultMetadata is a subset of EvalResult in DebuggerAPI.h, lacking
@@ -283,7 +290,7 @@ class Debugger {
 
   /// Request an async pause. This may be called from any thread, or a signal
   /// handler.
-  void triggerAsyncPause();
+  void triggerAsyncPause(AsyncPauseKind kind);
 
   /// Creates a user breakpoint given filename, line, and column.
   /// \param loc the location to set the breakpoint.

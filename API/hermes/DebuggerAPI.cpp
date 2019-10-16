@@ -146,8 +146,8 @@ PauseOnThrowMode Debugger::getPauseOnThrowMode() const {
   return impl_->getPauseOnThrowMode();
 }
 
-void Debugger::triggerAsyncPause() {
-  return impl_->triggerAsyncPause();
+void Debugger::triggerAsyncPause(AsyncPauseKind kind) {
+  return impl_->triggerAsyncPause(kind);
 }
 
 void Debugger::setIsDebuggerAttached(bool isAttached) {
