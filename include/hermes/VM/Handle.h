@@ -434,7 +434,7 @@ class PseudoHandle {
   }
 
   value_type get() const {
-    return traits_type::decode(getHermesValue());
+    return value_;
   }
 
   arrow_type operator->() const {
