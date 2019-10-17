@@ -103,6 +103,7 @@ class TraceInterpreter final {
     int warmupReps{0};
     int reps{1};
     ::hermes::vm::gcheapsize_t minHeapSize{0};
+    ::hermes::vm::gcheapsize_t initHeapSize{0};
     ::hermes::vm::gcheapsize_t maxHeapSize{0};
     double occupancyTarget{::hermes::vm::GCConfig::getDefaultOccupancyTarget()};
     ::hermes::vm::ReleaseUnused shouldReleaseUnused{

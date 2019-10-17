@@ -522,6 +522,9 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   if (options.minHeapSize != 0) {
     gcConfigBuilder.withMinHeapSize(options.minHeapSize);
   }
+  if (options.initHeapSize != 0) {
+    gcConfigBuilder.withMinHeapSize(options.initHeapSize);
+  }
   if (options.maxHeapSize != 0) {
     gcConfigBuilder.withMaxHeapSize(options.maxHeapSize);
   }

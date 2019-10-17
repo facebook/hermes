@@ -147,6 +147,7 @@ int main(int argc, char **argv) {
     }
     options.reps = cl::Reps;
     options.minHeapSize = cl::MinHeapSize.bytes;
+    options.initHeapSize = cl::InitHeapSize.bytes;
     options.maxHeapSize = cl::MaxHeapSize.bytes;
     options.occupancyTarget = cl::OccupancyTarget;
     options.shouldReleaseUnused = cl::ShouldReleaseUnused;
