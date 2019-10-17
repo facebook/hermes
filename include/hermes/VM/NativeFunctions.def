@@ -51,7 +51,6 @@ NATIVE_FUNCTION(arrayPrototypeSort)
 NATIVE_FUNCTION(arrayPrototypeSplice)
 NATIVE_FUNCTION(arrayPrototypeToLocaleString)
 NATIVE_FUNCTION(arrayPrototypeToString)
-NATIVE_FUNCTION(arrayPrototypeUnshift)
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 NATIVE_FUNCTION(arrayPrototypeEvery)
@@ -67,6 +66,7 @@ NATIVE_FUNCTION(arrayPrototypeReduceRight)
 NATIVE_FUNCTION(arrayPrototypeReverse)
 NATIVE_FUNCTION(arrayPrototypeShift)
 NATIVE_FUNCTION(arrayPrototypeSome)
+NATIVE_FUNCTION(arrayPrototypeUnshift)
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
 NATIVE_FUNCTION(booleanConstructor)
