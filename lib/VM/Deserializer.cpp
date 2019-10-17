@@ -227,16 +227,15 @@ void Deserializer::updateAddress(
   switch (kind) {
     case RelocationKind::NativePointer:
       *(void **)address = ptrVal;
-      break;
+      return;
     case RelocationKind::GCPointer:
       ((GCPointerBase *)address)->set(runtime_, ptrVal, &runtime_->getHeap());
-      break;
+      return;
     case RelocationKind::HermesValue:
       ((HermesValue *)address)->unsafeUpdatePointer(ptrVal);
-      break;
-    default:
-      llvm_unreachable("Invalid relocation kind");
+      return;
   }
+  llvm_unreachable("Invalid relocation kind");
 }
 
 } // namespace vm

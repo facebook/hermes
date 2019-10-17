@@ -78,25 +78,25 @@ void IdentifierTable::LookupEntry::deserialize(Deserializer &d) {
       num_ = d.readInt<uint32_t>();
       asciiPtr_ = d.readCharStr();
       isUTF16_ = false;
-      break;
+      return;
     }
     case EntryKind::UFT16: {
       num_ = d.readInt<uint32_t>();
       utf16Ptr_ = d.readChar16Str();
       isUTF16_ = true;
-      break;
+      return;
     }
     case EntryKind::StrPrim: {
       num_ = d.readInt<uint32_t>();
       d.readRelocation(&strPrim_, RelocationKind::NativePointer);
-      break;
+      return;
     }
     case EntryKind::Free: {
       num_ = d.readInt<uint32_t>();
+      return;
     }
-    default:
-      llvm_unreachable("wrong EntryKind");
   }
+  llvm_unreachable("wrong EntryKind");
 }
 #endif
 

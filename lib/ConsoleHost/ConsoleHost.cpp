@@ -128,7 +128,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     const auto *fileName = reinterpret_cast<std::string *>(ctx);
     std::error_code EC;
     serializeStream =
-        std::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(*fileName), EC);
+        llvm::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(*fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
@@ -153,7 +153,7 @@ serializeVM(void *ctx, vm::Runtime *runtime, vm::NativeArgs args) {
     }
     std::error_code EC;
     serializeStream =
-        std::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(fileName), EC);
+        llvm::make_unique<llvm::raw_fd_ostream>(llvm::StringRef(fileName), EC);
     if (EC) {
       return runtime->raiseTypeError(
           TwineChar16("Could not write to file located at ") +
