@@ -32,7 +32,7 @@ using llvm::ArrayRef;
 using llvm::StringRef;
 using SLP = SerializedLiteralParser;
 
-#ifndef NDEBUG
+#ifdef HERMES_SLOW_DEBUG
 
 static void validateInstructions(ArrayRef<uint8_t> list, unsigned frameSize) {
   const OperandAddr32 listSize = (OperandAddr32)list.size();
@@ -128,7 +128,7 @@ CodeBlock *CodeBlock::createCodeBlock(
     hbc::RuntimeFunctionHeader header,
     const uint8_t *bytecode,
     uint32_t functionID) {
-#ifndef NDEBUG
+#ifdef HERMES_SLOW_DEBUG
   validateInstructions(
       {bytecode, header.bytecodeSizeInBytes()}, header.frameSize());
 #endif
