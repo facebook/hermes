@@ -290,6 +290,10 @@ static bool executeCommand(
         os << "Error: cannot parse func_id as integer.\n";
         return false;
       }
+      if (funcId >= disassembler.getFunctionCount()) {
+        os << "Error: no function with id: " << funcId << " exists.\n";
+        return false;
+      }
       disassembler.disassembleFunction(funcId, os);
     } else {
       printHelp(command);

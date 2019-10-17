@@ -339,6 +339,10 @@ class BytecodeDisassembler {
   /// Print the content of the bytecode list into the output stream \p OS.
   void disassemble(raw_ostream &OS);
 
+  uint32_t getFunctionCount() const {
+    return bcProvider_->getFunctionCount();
+  }
+
   /// Hash a function's bytecode in a way that ignores details like table
   /// indices that are easily disturbed by other functions being added/removed.
   uint32_t fuzzyHashBytecode(
