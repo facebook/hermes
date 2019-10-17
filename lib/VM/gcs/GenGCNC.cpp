@@ -755,8 +755,13 @@ void GenGC::growTo(size_t hint) {
   // Generation satisfies this because it aligns up to a multiple of the Young
   // Generation's alignment boundary.
   const auto sizes = generationSizes_.adjustSize(hint);
-  youngGen_.growTo(sizes.first);
-  oldGen_.growTo(sizes.second);
+
+  const auto ygSize = sizes.first;
+  // Ensure old gen fits.
+  const auto ogSize = oldGen_.adjustSize(sizes.second);
+
+  youngGen_.growTo(ygSize);
+  oldGen_.growTo(ogSize);
 }
 
 void GenGC::shrinkTo(size_t hint) {
