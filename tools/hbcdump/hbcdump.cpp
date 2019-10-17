@@ -142,6 +142,11 @@ static void printHelp(llvm::Optional<llvm::StringRef> command = llvm::None) {
        "Help instructions for hbcdump tool commands.\n\n"
        "USAGE: help <COMMAND>\n"
        "       h <COMMAND>\n"},
+      {"offsets",
+       "Display offset, virtual offset, and the size of the function(s)\n\n"
+       "USAGE: offsets [-json]\n"
+       "       offsets <FUNC_ID> [-json]\n"
+       "NOTE: Virtual offset is the offset from the beginning of the segment\n"},
   };
 
   if (command.hasValue() && !command->empty()) {
@@ -318,7 +323,8 @@ static bool executeCommand(
       }
       analyzer.dumpFunctionOffsets(funcId, *printer);
     } else {
-      os << "Usage: offsets [funcId]\n";
+      printHelp(command);
+      return false;
     }
   } else if (command == "io") {
     analyzer.dumpIO();
