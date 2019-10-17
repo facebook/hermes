@@ -8,6 +8,8 @@
 #ifndef HERMES_SYNTHTRACE_H
 #define HERMES_SYNTHTRACE_H
 
+#ifdef HERMESVM_API_TRACE
+
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/StringSetVector.h"
@@ -763,4 +765,6 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type);
 } // namespace hermes
 } // namespace facebook
 
-#endif
+#endif // HERMESVM_API_TRACE
+
+#endif // HERMES_SYNTHTRACE_H

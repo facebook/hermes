@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#ifdef HERMESVM_API_TRACE
 #include "TracingRuntime.h"
 
 #include "llvm/Support/FileSystem.h"
@@ -440,3 +441,5 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
+
+#endif

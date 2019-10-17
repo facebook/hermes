@@ -7,6 +7,8 @@
 
 #pragma once
 
+#ifdef HERMESVM_API_TRACE
+
 #include <hermes/Public/RuntimeConfig.h>
 #include <hermes/SynthTrace.h>
 
@@ -246,3 +248,5 @@ class TraceInterpreter final {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
+
+#endif

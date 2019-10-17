@@ -66,6 +66,9 @@ set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
 set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
   "Enable compressed pointers. If this is on and the target is a 64-bit build, compressed pointers will be used.")
 
+set(HERMESVM_API_TRACE OFF CACHE BOOL
+  "Enable tracing interactions via the API")
+
 # Hermes VM Handle sanitization (moving the heap after every alloc)
 set(HERMESVM_SANITIZE_HANDLES OFF CACHE BOOL
   "Enable Handle sanitization")
@@ -224,6 +227,9 @@ if(HERMESVM_INDIRECT_THREADING)
 endif()
 if(HERMESVM_ALLOW_COMPRESSED_POINTERS)
     add_definitions(-DHERMESVM_ALLOW_COMPRESSED_POINTERS)
+endif()
+if(HERMESVM_API_TRACE)
+    add_definitions(-DHERMESVM_API_TRACE)
 endif()
 if(HERMESVM_SANITIZE_HANDLES)
     add_definitions(-DHERMESVM_SANITIZE_HANDLES)
