@@ -31,6 +31,13 @@ public:
   size_t getDirectCapacity() const;
 };
 
+class JByteOrder : public JavaClass<JByteOrder> {
+ public:
+    constexpr static const char* kJavaDescriptor = "Ljava/nio/ByteOrder;";
+
+    static local_ref<JByteOrder> nativeOrder();
+};
+
 // JNI's NIO support has some awkward preconditions and error reporting. This
 // class provides much more user-friendly access.
 class JByteBuffer : public JavaClass<JByteBuffer, JBuffer> {
@@ -39,6 +46,8 @@ class JByteBuffer : public JavaClass<JByteBuffer, JBuffer> {
 
   static local_ref<JByteBuffer> wrapBytes(uint8_t* data, size_t size);
   static local_ref<JByteBuffer> allocateDirect(jint size);
+
+  local_ref<JByteBuffer> order(alias_ref<JByteOrder>);
 
   uint8_t* getDirectBytes() const {
     return static_cast<uint8_t*>(getDirectAddress());

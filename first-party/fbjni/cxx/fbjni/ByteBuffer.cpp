@@ -61,6 +61,13 @@ bool JBuffer::isDirect() const {
   return meth(self());
 }
 
+local_ref<JByteOrder> JByteOrder::nativeOrder() {
+  static auto meth = JByteOrder::javaClassStatic()->getStaticMethod<
+      local_ref<JByteOrder>()>
+      ("nativeOrder");
+  return meth(JByteOrder::javaClassStatic());
+}
+
 local_ref<JByteBuffer> JByteBuffer::wrapBytes(uint8_t* data, size_t size) {
   // env->NewDirectByteBuffer requires that size is positive. Android's
   // dalvik returns an invalid result and Android's art aborts if size == 0.
@@ -80,6 +87,13 @@ local_ref<JByteBuffer> JByteBuffer::allocateDirect(jint size) {
   static auto cls = JByteBuffer::javaClassStatic();
   static auto meth = cls->getStaticMethod<JByteBuffer::javaobject(int)>("allocateDirect");
   return meth(cls, size);
+}
+
+local_ref<JByteBuffer> JByteBuffer::order(alias_ref<JByteOrder> order) {
+  static auto meth = JByteBuffer::javaClassStatic()->getMethod<
+      local_ref<JByteBuffer>(alias_ref<JByteOrder>)>
+      ("order");
+  return meth(self(), order);
 }
 
 }}

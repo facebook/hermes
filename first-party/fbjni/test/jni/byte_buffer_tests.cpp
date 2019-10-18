@@ -11,6 +11,8 @@ using namespace facebook::jni;
 
 namespace {
 
+std::vector<uint8_t> vec{1, 0, 0, 0};
+
 size_t ByteBufferCapacity(alias_ref<JByteBuffer> buffer) {
   static auto meth = JByteBuffer::javaClassStatic()->getMethod<int()>("capacity");
   return meth(buffer);
@@ -86,6 +88,10 @@ jboolean testFloatBuffer(alias_ref<jobject> self, alias_ref<facebook::jni::JBuff
   return JNI_TRUE;
 }
 
+local_ref<JByteBuffer> nativeByteBufferOrder(alias_ref<jobject> self) {
+  auto nbb = JByteBuffer::wrapBytes(vec.data(), vec.size());
+  return nbb->order(JByteOrder::nativeOrder());
+}
 
 }
 
@@ -96,5 +102,6 @@ void RegisterByteBufferTests() {
     makeNativeMethod("nativeTestRewindBuffer", testRewindBuffer),
     makeNativeMethod("nativeAllocateDirect", nativeAllocateDirect),
     makeNativeMethod("nativeTestFloatBuffer", testFloatBuffer),
+    makeNativeMethod("nativeByteBufferOrder", nativeByteBufferOrder),
   });
 }

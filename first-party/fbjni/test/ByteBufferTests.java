@@ -63,4 +63,12 @@ public class ByteBufferTests extends BaseFBJniTests {
   }
 
   public native boolean nativeTestFloatBuffer(Buffer buffer);
+
+  @Test
+  public void testByteBufferOrder() {
+    ByteBuffer buffer = nativeByteBufferOrder();
+    assertThat(buffer.getInt()).isEqualTo(1);
+  }
+
+  public native ByteBuffer nativeByteBufferOrder();
 }
