@@ -37,7 +37,7 @@ Make sure the `node`, `yarn`, and `gradle` binaries are available in your system
 
 ### Package build
 
-To make a Hermes npm package, first follow the instructions on [building Hermes](doc/BuildingAndRunning.md) to create a **release** version of Hermes. This will be the source of CLI binaries for use in the npm.
+To make a Hermes npm package, first follow the instructions on [building Hermes](BuildingAndRunning.md) to create a **release** version of Hermes. This will be the source of CLI binaries for use in the npm.
 
 Next, we need to cross-compile LLVM for various different Android targets. This step only needs to be run once, and may take quite some time:
 
