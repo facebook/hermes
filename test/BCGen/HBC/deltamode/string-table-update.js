@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -O -emit-binary -target=HBC -out=%t %S/string-table-base.js && %hermes -target=HBC -dump-bytecode -pretty-disassemble=false -O -base-bytecode %t %s | %FileCheck --match-full-lines %s
 
 // Compile with delta optimizing mode so the string table should contain all

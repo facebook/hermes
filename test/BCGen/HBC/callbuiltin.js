@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermesc -O -fstatic-builtins -target=HBC -dump-ra %s | %FileCheck --match-full-lines --check-prefix=CHKRA %s
 // RUN: %hermesc -O -fstatic-builtins -target=HBC -dump-bytecode %s | %FileCheck --match-full-lines --check-prefix=CHKBC %s
 // RUN: %hermes -O -fstatic-builtins -target=HBC %s | %FileCheck --match-full-lines %s

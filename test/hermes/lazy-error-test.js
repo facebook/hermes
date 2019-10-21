@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
 
 function foo() {
@@ -29,7 +31,7 @@ try {
 } catch(e) {
     print("caught", e);
 }
-// CHECK-NEXT: caught SyntaxError: 9:4:'break' not within a loop or a switch
+// CHECK-NEXT: caught SyntaxError: 11:4:'break' not within a loop or a switch
 
 print("end");
 // CHECK-NEXT: end

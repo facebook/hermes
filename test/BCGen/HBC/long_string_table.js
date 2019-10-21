@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -target=HBC -gc-sanitize-handles=0 -O %s | %hermes -target=HBC -gc-sanitize-handles=0 -O | %FileCheck --match-full-lines %s
 
 // This test is meant to make sure that Hermes generates long instructions for

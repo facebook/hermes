@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -O -gc-alloc-young=false -gc-revert-to-yg-at-tti=true -gc-init-heap=12M %s
 
 var rootArray = [];

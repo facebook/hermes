@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -O %s
 
 // Check that WeakMap doesn't crash due to a bug which caused it to write to

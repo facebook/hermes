@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 
 // Check iterator closing in array destructoring with exceptions.
@@ -15,7 +17,7 @@ var throwInNext = false;
 var throwInReturn = false;
 var returnNonObject = false;
 
-o[Symbol.iterator] = function() { 
+o[Symbol.iterator] = function() {
     var cnt = 0;
     var iter = {
         next: (arg) => {

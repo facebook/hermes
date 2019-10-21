@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -O -commonjs -fstatic-require -fstatic-builtins %S/update/ -emit-binary -out %T/test.hbc && %hermes -O -commonjs -fstatic-require -fstatic-builtins %S/update/ -base-bytecode %T/ -dump-bytecode | %FileCheck --match-full-lines %s -check-prefix BC-NO-CHANGE
 // RUN: %hermes -O -commonjs -fstatic-require -fstatic-builtins %S/base/ -emit-binary -out %T/test.hbc && %hermes -O -commonjs -fstatic-require -fstatic-builtins %S/update/ -base-bytecode %T/ -dump-bytecode | %FileCheck --match-full-lines %s -check-prefix BC-DELTA
 

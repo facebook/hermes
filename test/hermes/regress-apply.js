@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes %s
 
 // Check that Function.prototype.apply() doesn't crash because it
@@ -22,8 +24,8 @@ var p = {
     length: 10,
     // Force a GC when returning argument 0.
     get 0 () {
-        gc(); 
-        return 10; 
+        gc();
+        return 10;
     }
 }
 

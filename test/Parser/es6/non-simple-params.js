@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermesc --dump-ast --pretty-json %s | %FileCheck --match-full-lines %s
 
 function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}

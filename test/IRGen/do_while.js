@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -hermes-parser -dump-ir %s | %FileCheck %s --match-full-lines
 // RUN: %hermes -hermes-parser -dump-ir %s -O
 
@@ -138,7 +140,7 @@ function for_while_do_mixed_test(cond) {
         continue;
       } while (cond);
       break;
-    }  
+    }
   }
 }
 
