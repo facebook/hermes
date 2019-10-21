@@ -363,8 +363,8 @@ class JString : public JavaClass<JString, JObject, jstring> {
 
 /// Convenience functions to convert a const char*, std::string, or std::u16string
 /// into a @ref local_ref to a jstring.
-local_ref<JString> make_jstring(const char* modifiedUtf8);
-local_ref<JString> make_jstring(const std::string& modifiedUtf8);
+local_ref<JString> make_jstring(const char* utf8);
+local_ref<JString> make_jstring(const std::string& utf8);
 local_ref<JString> make_jstring(const std::u16string& utf16);
 
 namespace detail {

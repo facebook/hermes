@@ -330,8 +330,8 @@ inline void registerNatives(const char* name, std::initializer_list<NativeMethod
 
 // jstring /////////////////////////////////////////////////////////////////////////////////////////
 
-inline local_ref<JString> make_jstring(const std::string& modifiedUtf8) {
-  return make_jstring(modifiedUtf8.c_str());
+inline local_ref<JString> make_jstring(const std::string& utf8) {
+  return make_jstring(utf8.c_str());
 }
 
 namespace detail {
