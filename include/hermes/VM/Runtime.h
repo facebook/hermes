@@ -883,9 +883,7 @@ class Runtime : public HandleRootOwner,
   }
 
   /// Remove a \c RuntimeModule \p rm from the runtime module list.
-  void removeRuntimeModule(RuntimeModule *rm) {
-    runtimeModuleList_.remove(*rm);
-  }
+  void removeRuntimeModule(RuntimeModule *rm);
 
   /// Called by CrashManager on the event of a crash to produce a stream of data
   /// to crash log. Output should be a JSON object. This is the central point

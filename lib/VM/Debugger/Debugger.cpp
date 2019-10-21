@@ -452,6 +452,47 @@ void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {
   setOnLoadBreakpoint(globalCode, 0);
 }
 
+void Debugger::willUnloadModule(RuntimeModule *module) {
+  if (tempBreakpoints_.size() == 0 && userBreakpoints_.size() == 0) {
+    return;
+  }
+
+  llvm::DenseSet<CodeBlock *> unloadingBlocks;
+  for (auto *block : module->getFunctionMap()) {
+    if (block) {
+      unloadingBlocks.insert(block);
+    }
+  }
+
+  for (auto &bp : userBreakpoints_) {
+    if (unloadingBlocks.count(bp.second.codeBlock)) {
+      unresolveBreakpointLocation(bp.second);
+    }
+  }
+
+  auto cleanTempBreakpoint = [&](Breakpoint &bp) {
+    if (!unloadingBlocks.count(bp.codeBlock))
+      return false;
+
+    auto *ptr = bp.codeBlock->getOffsetPtr(bp.offset);
+    auto it = breakpointLocations_.find(ptr);
+    if (it != breakpointLocations_.end()) {
+      auto &location = it->second;
+      assert(!location.user.hasValue() && "Unexpected user breakpoint");
+      bp.codeBlock->uninstallBreakpointAtOffset(bp.offset, location.opCode);
+      breakpointLocations_.erase(it);
+    }
+    return true;
+  };
+
+  tempBreakpoints_.erase(
+      std::remove_if(
+          tempBreakpoints_.begin(),
+          tempBreakpoints_.end(),
+          cleanTempBreakpoint),
+      tempBreakpoints_.end());
+}
+
 void Debugger::resolveBreakpoints(CodeBlock *codeBlock) {
   for (auto &it : userBreakpoints_) {
     auto &breakpoint = it.second;
@@ -1170,6 +1211,16 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   }
 
   return false;
+}
+
+void Debugger::unresolveBreakpointLocation(Breakpoint &breakpoint) {
+  assert(breakpoint.isResolved() && "Breakpoint already unresolved");
+  if (breakpoint.enabled) {
+    unsetUserBreakpoint(breakpoint);
+  }
+  breakpoint.resolvedLocation.reset();
+  breakpoint.codeBlock = nullptr;
+  breakpoint.offset = -1;
 }
 
 auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {

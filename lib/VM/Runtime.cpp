@@ -561,6 +561,13 @@ void Runtime::printHeapStats(llvm::raw_ostream &os) {
   }
 }
 
+void Runtime::removeRuntimeModule(RuntimeModule *rm) {
+#ifdef HERMES_ENABLE_DEBUGGER
+  debugger_.willUnloadModule(rm);
+#endif
+  runtimeModuleList_.remove(*rm);
+}
+
 unsigned Runtime::getSymbolsEnd() const {
   return identifierTable_.getSymbolsEnd();
 }

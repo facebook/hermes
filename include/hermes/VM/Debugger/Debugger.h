@@ -368,6 +368,10 @@ class Debugger {
   /// module. The debugger may propagate a pause to the client.
   void willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock);
 
+  /// Report to the debugger that the runtime will unload a RuntimeModule.
+  /// The debugger should unresolve breakpoints in that module.
+  void willUnloadModule(RuntimeModule *module);
+
   /// Report to the debugger that the runtime will execute a codeBlock given by
   /// \p codeBlock.
   /// For example, this is used to set up the codeBlock while stepping.
@@ -532,6 +536,9 @@ class Debugger {
   /// Requires that \p breakpoint is not yet resolved.
   /// \return true if the breakpoint is successfully resolved.
   bool resolveBreakpointLocation(Breakpoint &breakpoint) const;
+
+  /// Unresolves the breakpoint.
+  void unresolveBreakpointLocation(Breakpoint &breakpoint);
 
   /// Attempt to resolve the \p filenameId to a script ID based on the table.
   /// \return the ScriptID of the given filenameId.
