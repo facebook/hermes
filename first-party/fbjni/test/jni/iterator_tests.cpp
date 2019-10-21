@@ -22,7 +22,7 @@ struct JHashMap : public JavaClass<JHashMap<K,V>, JMap<K,V>> {
 
 jboolean nativeTestListIterator(
     alias_ref<jclass>,
-    alias_ref<JList<jstring>::javaobject> jlist) {
+    alias_ref<JList<jstring>> jlist) {
   EXPECT(jlist);
 
   EXPECT(jlist->size() == 3);
@@ -62,7 +62,7 @@ jboolean nativeTestListIterator(
 
 jboolean nativeTestMapIterator(
     alias_ref<jclass>,
-    alias_ref<JMap<jstring, JInteger::javaobject>::javaobject> jmap) {
+    alias_ref<JMap<jstring, JInteger::javaobject>> jmap) {
   EXPECT(jmap);
 
   EXPECT(jmap->size() == 3);
@@ -98,7 +98,7 @@ jboolean nativeTestMapIterator(
 
 jboolean nativeTestIterateWrongType(
     alias_ref<jclass>,
-    alias_ref<JMap<jstring, JInteger::javaobject>::javaobject> jmap) {
+    alias_ref<JMap<jstring, JInteger::javaobject>> jmap) {
   EXPECT(jmap);
 
   EXPECT(jmap->size() == 3);
@@ -115,7 +115,7 @@ jboolean nativeTestIterateWrongType(
 
 jboolean nativeTestIterateNullKey(
     alias_ref<jclass>,
-    alias_ref<JMap<jstring, JInteger::javaobject>::javaobject> jmap) {
+    alias_ref<JMap<jstring, JInteger::javaobject>> jmap) {
   EXPECT(jmap);
 
   EXPECT(jmap->size() == 3);
@@ -144,7 +144,7 @@ jboolean nativeTestIterateNullKey(
 
 jboolean nativeTestLargeMapIteration(
     alias_ref<jclass>,
-    alias_ref<JMap<jstring, jstring>::javaobject> jmap) {
+    alias_ref<JMap<jstring, jstring>> jmap) {
   EXPECT(jmap);
   EXPECT(jmap->size() == 3000);
 

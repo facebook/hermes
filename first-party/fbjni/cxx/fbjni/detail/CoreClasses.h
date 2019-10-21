@@ -75,8 +75,8 @@ bool isSameObject(alias_ref<JObject> lhs, alias_ref<JObject> rhs) noexcept;
 //   constexpr static auto kJavaDescriptor = "Lcom/example/package/MyClass;";
 // };
 //
-// Then, an alias_ref<MyClass::javaobject> will be backed by an instance of
-// MyClass. JavaClass provides a convenient way to add functionality to these
+// Then, an alias_ref<MyClass> will be backed by an instance of MyClass.
+// JavaClass provides a convenient way to add functionality to these
 // smart references.
 //
 // For example:
@@ -197,7 +197,7 @@ struct JTypeFor<T, Base, void> {
 //   static constexpr auto kJavaDescriptor = "Lcom/example/package/Foo;";
 // };
 // fbjni can determine the java type/method signatures for Foo::javaobject and
-// smart refs (like alias_ref<Foo::javaobject>) will hold an instance of Foo
+// smart refs (like alias_ref<Foo>) will hold an instance of Foo
 // and provide access to it through the -> and * operators.
 //
 // The "Base" template argument can be used to specify the JavaClass superclass

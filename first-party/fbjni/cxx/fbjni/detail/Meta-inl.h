@@ -48,7 +48,7 @@ struct ArgsArraySetter;
 
 template <int idx, typename Arg, typename... Args>
 struct ArgsArraySetter<idx, Arg, Args...> {
-  static void set(alias_ref<JArrayClass<jobject>::javaobject> array, Arg arg0, Args... args) {
+  static void set(alias_ref<JArrayClass<jobject>> array, Arg arg0, Args... args) {
     // TODO(xxxxxxxx): Use Convert<Args>... to do conversions like the fast path.
     (*array)[idx] = autobox(arg0);
     ArgsArraySetter<idx + 1, Args...>::set(array, args...);
@@ -57,13 +57,13 @@ struct ArgsArraySetter<idx, Arg, Args...> {
 
 template <int idx>
 struct ArgsArraySetter<idx> {
-  static void set(alias_ref<JArrayClass<jobject>::javaobject> array) {
+  static void set(alias_ref<JArrayClass<jobject>> array) {
     (void)array;
   }
 };
 
 template <typename... Args>
-local_ref<JArrayClass<jobject>::javaobject> makeArgsArray(Args... args) {
+local_ref<JArrayClass<jobject>> makeArgsArray(Args... args) {
   auto arr = JArrayClass<jobject>::newArray(sizeof...(args));
   ArgsArraySetter<0, Args...>::set(arr, args...);
   return arr;

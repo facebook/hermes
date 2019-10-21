@@ -120,7 +120,7 @@ class Iterator {
     return ret;
   }
 
-  global_ref<typename T::javaobject> helper_;
+  global_ref<T> helper_;
   // set to -1 at end
   std::ptrdiff_t i_;
   value_type entry_;

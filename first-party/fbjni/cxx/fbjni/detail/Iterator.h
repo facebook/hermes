@@ -27,9 +27,9 @@ namespace jni {
  * underlying collection.  The class has a template parameter for the element
  * type, which defaults to jobject.  For example:
  *
- * alias_ref<JIterator<jstring>::javaobject> my_iter = ...;
+ * alias_ref<JIterator<jstring>> my_iter = ...;
  *
- * In the simplest case, it can be used just as alias_ref<JIterator<>::javaobject>,
+ * In the simplest case, it can be used just as alias_ref<JIterator<>>,
  * for example in a method declaration.
  */
 template <typename E = jobject>
@@ -114,9 +114,9 @@ struct JSet : JavaClass<JSet<E>, JCollection<E>> {
  * C++-style iteration over the Java Map.  The class has template parameters
  * for the key and value types, which default to jobject.  For example:
  *
- * alias_ref<JMap<jstring, MyJClass::javaobject>::javaobject> my_map = ...;
+ * alias_ref<JMap<jstring, MyJClass>> my_map = ...;
  *
- * In the simplest case, it can be used just as alias_ref<JMap<>::javaobject>,
+ * In the simplest case, it can be used just as alias_ref<JMap<>>,
  * for example in a method declaration.
  */
 template <typename K = jobject, typename V = jobject>

@@ -27,12 +27,12 @@ class AContext : public JavaClass<AContext> {
   static constexpr const char* kJavaDescriptor = "Landroid/content/Context;";
 
   // Define a method that calls into the represented Java class
-  local_ref<JFile::javaobject> getCacheDir() {
+  local_ref<JFile> getCacheDir() {
     static const auto method = getClass()->getMethod<JFile::javaobject()>("getCacheDir");
     return method(self());
   }
 
-  local_ref<JFile::javaobject> getFilesDir() {
+  local_ref<JFile> getFilesDir() {
     static const auto method = getClass()->getMethod<JFile::javaobject()>("getFilesDir");
     return method(self());
   }
