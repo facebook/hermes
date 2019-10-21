@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hdb --lazy %s < %s.debug | %FileCheck --match-full-lines %s
 // REQUIRES: debugger
 
@@ -39,14 +41,14 @@ function foo() {
 debugger;
 foo();
 
-// CHECK: Break on 'debugger' statement in global: {{.*}}:39:1
-// CHECK-NEXT: Set breakpoint 1 at {{.*}}:18:5
-// CHECK-NEXT: Set breakpoint 2 at {{.*}}:27:5
+// CHECK: Break on 'debugger' statement in global: {{.*}}:41:1
+// CHECK-NEXT: Set breakpoint 1 at {{.*}}:20:5
+// CHECK-NEXT: Set breakpoint 2 at {{.*}}:29:5
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: foo called
-// CHECK-NEXT: Break on breakpoint 1 in bar: {{.*}}lazy-break-nested.js[{{[0-9]+}}]:18:5
+// CHECK-NEXT: Break on breakpoint 1 in bar: {{.*}}lazy-break-nested.js[{{[0-9]+}}]:20:5
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: bar called
-// CHECK-NEXT: Break on breakpoint 2 in baz: {{.*}}lazy-break-nested.js[{{[0-9]+}}]:27:5
+// CHECK-NEXT: Break on breakpoint 2 in baz: {{.*}}lazy-break-nested.js[{{[0-9]+}}]:29:5
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: baz called

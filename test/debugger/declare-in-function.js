@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hdb %s < %s.debug | %FileCheck --match-full-lines %s
 // REQUIRES: debugger
 // Ensure that "exec var" in a function doesn't create a global property.
@@ -19,7 +21,7 @@ print('prop =', this.prop);
 print('end');
 
 //CHECK:start
-//CHECK-NEXT:Break on 'debugger' statement in foo: {{.*}}declare-in-function.js[{{[0-9]+}}]:12:3
+//CHECK-NEXT:Break on 'debugger' statement in foo: {{.*}}declare-in-function.js[{{[0-9]+}}]:14:3
 //CHECK-NEXT:10
 //CHECK-NEXT:11
 //CHECK-NEXT:undefined

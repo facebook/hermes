@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hdb %s < %s.debug | %FileCheck --match-full-lines %s
 // REQUIRES: debugger
 
@@ -36,7 +38,7 @@ function func2() { // frame 1
 
 func1(func2, "tau")
 
-// CHECK: Break on 'debugger' statement in func2b: {{.*}}:30:9
+// CHECK: Break on 'debugger' statement in func2b: {{.*}}:32:9
 // CHECK-NEXT: Checking literals
 // CHECK-NEXT: { a: bc }
 // CHECK-NEXT: {

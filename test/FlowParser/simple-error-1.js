@@ -9,6 +9,6 @@
 // REQUIRES: flowparser
 
 print("hello"+;)
-//CHECK: {{.*}}simple-error-1.js:9:14: error: Unexpected token ;
+//CHECK: {{.*}}simple-error-1.js:11:14: error: Unexpected token ;
 //CHECK-NEXT: print("hello"+;)
 //CHECK-NEXT:              ^

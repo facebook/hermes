@@ -1,8 +1,10 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the LICENSE
-// file in the root directory of this source tree.
-//
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 // RUN: %hermes -O -target=HBC -fno-inline %s | %FileCheck --match-full-lines %s
 
 function foo() {
@@ -25,10 +27,10 @@ try {
   print(e.stack);
 }
 //CHECK-LABEL: Error: helloworld
-//CHECK-NEXT:     at anonVar ({{.*}}stacktrace.js:11:22)
-//CHECK-NEXT:     at bar ({{.*}}stacktrace.js:13:12)
-//CHECK-NEXT:     at foo ({{.*}}stacktrace.js:15:6)
-//CHECK-NEXT:     at global ({{.*}}stacktrace.js:20:8)
+//CHECK-NEXT:     at anonVar ({{.*}}stacktrace.js:13:22)
+//CHECK-NEXT:     at bar ({{.*}}stacktrace.js:15:12)
+//CHECK-NEXT:     at foo ({{.*}}stacktrace.js:17:6)
+//CHECK-NEXT:     at global ({{.*}}stacktrace.js:22:8)
 
 try {
   Object.a();
@@ -36,7 +38,7 @@ try {
   print(e.stack);
 }
 //CHECK-LABEL: TypeError: undefined is not a function
-//CHECK-NEXT:     at global ({{.*}}stacktrace.js:34:11)
+//CHECK-NEXT:     at global ({{.*}}stacktrace.js:36:11)
 
 function throwit() { throw new Error("EvalTest"); }
 try {
@@ -45,7 +47,7 @@ try {
   print(e.stack);
 }
 //CHECK-LABEL: Error: EvalTest
-//CHECK-NEXT:    at throwit ({{.*}}stacktrace.js:41:37)
+//CHECK-NEXT:    at throwit ({{.*}}stacktrace.js:43:37)
 //CHECK-NEXT:    at eval (JavaScript:1:8)
 //CHECK-NEXT:    at global (native)
 

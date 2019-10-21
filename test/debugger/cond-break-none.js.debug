@@ -1,4 +1,4 @@
-break 13 if throw new Error()
-break 14 if 1 +
-break 15 if undefined
+break 15 if throw new Error()
+break 16 if 1 +
+break 17 if undefined
 continue
