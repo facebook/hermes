@@ -390,10 +390,14 @@ class IdentifierTable {
     assert(id < lookupVector_.size() && "Identifier ID out of bound");
     return lookupVector_[id];
   }
+
+  /// Create or lookup a SymbolID from a string \str. If \p primHandle is not
+  /// null, it is assumed to be backing str.
+  /// \param str Required. The string to to use.
+  /// \param primHandle optional StringPrimitive. If this is specified, then
+  ///     \p str must refer to its contents.
   /// \param hash the hash of the string \p str.
-  /// \return SymbolID from a string \str. If \p prim is not null, the
-  /// primitive is assumed to be backing str, and is saved into a Handle and
-  /// reloaded across allocation.
+  /// \return the SymbolID.
   template <typename T>
   CallResult<SymbolID> getOrCreateIdentifier(
       Runtime *runtime,
@@ -429,14 +433,17 @@ class IdentifierTable {
 
   /// Allocates a copy of the StringPrimitive \p prim or \p str, depending on
   /// whether \p primHandle is available, assigning it the given \p strId.
-  /// \p Unique indicates that this string should be uniqued.
+  /// If \p primHandle is not null, it is assumed to be backing str.
+  /// \param Unique indicates that this string should be uniqued.
+  /// \param str Required. The string to to use.
+  /// \param primHandle optional StringPrimitive. If this is specified, then
+  ///     \p str must refer to its contents.
   /// \return the new allocated string.
   template <typename T, bool Unique = true>
   CallResult<PseudoHandle<StringPrimitive>> allocateDynamicString(
       Runtime *runtime,
       llvm::ArrayRef<T> str,
-      Handle<StringPrimitive> primHandle,
-      SymbolID strId);
+      Handle<StringPrimitive> primHandle);
 
   /// Turn an existing lazy identifier into a StringPrimitive.
   StringPrimitive *materializeLazyIdentifier(Runtime *runtime, SymbolID id);

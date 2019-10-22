@@ -259,8 +259,7 @@ CallResult<PseudoHandle<StringPrimitive>>
 IdentifierTable::allocateDynamicString(
     Runtime *runtime,
     llvm::ArrayRef<T> str,
-    Handle<StringPrimitive> primHandle,
-    SymbolID strId) {
+    Handle<StringPrimitive> primHandle) {
   size_t length = str.size();
 
   assert(
@@ -275,7 +274,7 @@ IdentifierTable::allocateDynamicString(
     }
     std::basic_string<T> stdString(str.begin(), str.end());
     auto cr = ExternalStringPrimitive<T>::createLongLived(
-        runtime, std::move(stdString), Unique ? strId : SymbolID::empty());
+        runtime, std::move(stdString));
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -289,8 +288,7 @@ IdentifierTable::allocateDynamicString(
     if (primHandle) {
       str = primHandle->getStringRef<T>();
     }
-    auto *tmp =
-        new (mem) DynamicStringPrimitive<T, Unique>(runtime, length, strId);
+    auto *tmp = new (mem) DynamicStringPrimitive<T, Unique>(runtime, length);
     std::copy(str.begin(), str.end(), tmp->getRawPointerForWrite());
     result = createPseudoHandle<StringPrimitive>(tmp);
   }
@@ -304,7 +302,7 @@ uint32_t IdentifierTable::allocIDAndInsert(
   uint32_t nextId = allocNextID();
   SymbolID symbolId = SymbolID::unsafeCreate(nextId);
   assert(lookupVector_[nextId].isFreeSlot() && "Allocated a non-free slot");
-  strPrim->updateUniqueID(symbolId);
+  strPrim->convertToUniqued(symbolId);
 
   // We must assign strPrim to the lookupVector before inserting to
   // hashTable_, because inserting to hashTable_ could trigger a grow/rehash,
@@ -338,8 +336,8 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
     return SymbolID::unsafeCreate(hashTable_.get(idx));
   }
 
-  CallResult<PseudoHandle<StringPrimitive>> cr = allocateDynamicString(
-      runtime, str, maybeIncomingPrimHandle, SymbolID::empty());
+  CallResult<PseudoHandle<StringPrimitive>> cr =
+      allocateDynamicString(runtime, str, maybeIncomingPrimHandle);
   if (cr == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -394,13 +392,13 @@ StringPrimitive *IdentifierTable::materializeLazyIdentifier(
       entry.isLazyASCII() ? allocateDynamicString(
                                 runtime,
                                 entry.getLazyASCIIRef(),
-                                Runtime::makeNullHandle<StringPrimitive>(),
-                                id)
+                                Runtime::makeNullHandle<StringPrimitive>())
                           : allocateDynamicString(
                                 runtime,
                                 entry.getLazyUTF16Ref(),
-                                Runtime::makeNullHandle<StringPrimitive>(),
-                                id));
+                                Runtime::makeNullHandle<StringPrimitive>()));
+  if (id.isUniqued())
+    strPrim->convertToUniqued(id);
   LLVM_DEBUG(llvm::dbgs() << "Materializing lazy identifier " << id << "\n");
   entry.materialize(strPrim.get());
   return strPrim.get();
@@ -484,9 +482,9 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
     // Need to reallocate in the old gen if the description is in the young gen.
     CallResult<PseudoHandle<StringPrimitive>> longLivedStr = desc->isASCII()
         ? allocateDynamicString<char, /* Unique */ false>(
-              runtime, desc->castToASCIIRef(), desc, SymbolID::empty())
+              runtime, desc->castToASCIIRef(), desc)
         : allocateDynamicString<char16_t, /* Unique */ false>(
-              runtime, desc->castToUTF16Ref(), desc, SymbolID::empty());
+              runtime, desc->castToUTF16Ref(), desc);
     // Since we keep a raw pointer to mem, no more JS heap allocations after
     // this point.
     NoAllocScope _(runtime);

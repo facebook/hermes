@@ -73,25 +73,37 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   }
 
  protected:
+  /// Flag set in the \c length field to indicate that this string was
+  /// "uniqued", that is, inserted into the identifier hash table and the
+  /// associated SymbolID was stored in the string.
+  /// Not all StringPrimitive subclasses support this and it usually happens on
+  /// construction.
+  static constexpr uint32_t LENGTH_FLAG_UNIQUED = uint32_t(1) << 31;
+
   /// Length of the string in 16-bit characters. The highest bit is set to 1
   /// if the string has been uniqued.
-  uint32_t const length;
+  uint32_t lengthAndUniquedFlag_;
 
   /// Super constructor to set the length properly.
   explicit StringPrimitive(
       Runtime *runtime,
       const VTable *vt,
       uint32_t cellSize,
-      uint32_t length,
-      bool uniqued)
+      uint32_t length)
       : VariableSizeRuntimeCell(&runtime->getHeap(), vt, cellSize),
-        length(length | (uniqued ? (1u << 31) : 0)) {}
+        lengthAndUniquedFlag_(length) {}
 
   /// Returns true if a string of the given \p length should be allocated as an
   /// external string, outside the JS heap. Note that some external strings may
   /// be shorter than this length.
   static bool isExternalLength(uint32_t length) {
     return length >= EXTERNAL_STRING_THRESHOLD;
+  }
+
+  /// Returns true if a string is safe to allocate externally (strings that are
+  /// too small are not safe).
+  static bool isSafeExternalLength(uint32_t length) {
+    return length >= EXTERNAL_STRING_MIN_SIZE;
   }
 
  public:
@@ -180,12 +192,12 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
   /// \return the length of string in 16-bit characters.
   uint32_t getStringLength() const {
-    return length & ~(1u << 31);
+    return lengthAndUniquedFlag_ & ~LENGTH_FLAG_UNIQUED;
   }
 
   /// \return whether the string is uniqued.
   bool isUniqued() const {
-    return (length & (1u << 31)) != 0;
+    return (lengthAndUniquedFlag_ & LENGTH_FLAG_UNIQUED) != 0;
   }
 
   /// Compare a part of this string to \p other for equality.
@@ -308,13 +320,23 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   static StringView createStringViewMustBeFlat(Handle<StringPrimitive> self);
 
  protected:
-  /// Set the unique id. This should normally only be done immediately after
-  /// construction. This requires and asserts that the string is uniqued.
-  void updateUniqueID(SymbolID id);
+  /// \return whether the StringPrimitive can be converted from non-uniqued to
+  /// uniqued without reallocating.
+  inline bool canBeUniqued() const;
+
+  /// Convert a non-uniqued StringPrimitive to a unique one.
+  /// \pre \c canBeUniqued() returns \c true.
+  inline void convertToUniqued(SymbolID uniqueID);
 
   /// \return the unique id.
   /// This requires and asserts that the string is uniqued.
   SymbolID getUniqueID() const;
+
+  /// Mark this string as not uniqued. This is used by IdentifierTable when
+  /// the associated SymbolID is garbage collected.
+  void clearUniquedBit() {
+    lengthAndUniquedFlag_ &= ~LENGTH_FLAG_UNIQUED;
+  }
 
   static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
 };
@@ -346,6 +368,9 @@ class SymbolStringPrimitive : public StringPrimitive {
         CellKind::DynamicUniquedUTF16StringPrimitiveKind,
         CellKind::ExternalASCIIStringPrimitiveKind);
   }
+
+ protected:
+  friend class StringPrimitive;
 
   /// Set the unique id. This should normally only be done immediately after
   /// construction.
@@ -409,24 +434,13 @@ class DynamicStringPrimitive final
 
   /// Construct from a DynamicStringPrimitive, perhaps with a SymbolID.
   /// If a non-empty SymbolID is provided, we must be a Uniqued string.
-  explicit DynamicStringPrimitive(
-      Runtime *runtime,
-      uint32_t length,
-      SymbolID id = {})
+  explicit DynamicStringPrimitive(Runtime *runtime, uint32_t length)
       : OptSymbolStringPrimitive<Uniqued>(
             runtime,
             &vt,
             allocationSize(length),
-            length,
-            Uniqued) {
+            length) {
     assert(!isExternalLength(length) && "length should not be external");
-    if (Uniqued) {
-      this->updateUniqueID(id);
-    } else {
-      assert(
-          id == SymbolID::empty() &&
-          "Non-Uniqued string passed a valid SymbolID");
-    }
   }
 
   explicit DynamicStringPrimitive(Runtime *runtime, Ref src);
@@ -517,30 +531,8 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   }
 
   /// Construct an ExternalStringPrimitive from the given string \p contents,
-  /// optionally uniqued according to \p uniqued.
-  ExternalStringPrimitive(Runtime *runtime, StdString &&contents, bool uniqued)
-      : SymbolStringPrimitive(
-            runtime,
-            &vt,
-            sizeof(ExternalStringPrimitive<T>),
-            contents.size(),
-            uniqued),
-        contents_(std::move(contents)) {
-    assert(
-        getStringLength() >= EXTERNAL_STRING_MIN_SIZE &&
-        "ExternalStringPrimitive length must be at least EXTERNAL_STRING_MIN_SIZE");
-  }
-
-  /// Construct an ExternalStringPrimitive from the given string \p contents,
   /// non-uniqued.
   ExternalStringPrimitive(Runtime *runtime, StdString &&contents);
-
-  /// Construct an ExternalStringPrimitive from the given string \p contents,
-  /// uniqued via the given symbol \p uniqueID.
-  ExternalStringPrimitive(
-      Runtime *runtime,
-      StdString &&contents,
-      SymbolID uniqueID);
 
   /// Destructor deallocates the contents_ string.
   ~ExternalStringPrimitive() = default;
@@ -555,8 +547,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// allocated outside the JS heap in either case.
   static CallResult<HermesValue> createLongLived(
       Runtime *runtime,
-      StdString &&str,
-      SymbolID uniqueID = SymbolID::empty());
+      StdString &&str);
 
   /// Create a StringPrim object with a specified capacity \p length in
   /// 16-bit characters. Throw \c RangeError if the string is longer than
@@ -746,6 +737,20 @@ inline CallResult<HermesValue> StringPrimitive::createLongLived(
   }
 }
 
+inline bool StringPrimitive::canBeUniqued() const {
+  return isa<SymbolStringPrimitive>(this);
+}
+
+inline void StringPrimitive::convertToUniqued(hermes::vm::SymbolID uniqueID) {
+  assert(canBeUniqued() && "StringPrimitive cannot be uniqued");
+  assert(!isUniqued() && "StringPrimitive is already uniqued");
+  assert(
+      uniqueID.isValid() && uniqueID.isUniqued() &&
+      "uniqueID SymbolID is not valid and uniqued");
+  this->lengthAndUniquedFlag_ |= LENGTH_FLAG_UNIQUED;
+  vmcast<SymbolStringPrimitive>(this)->updateUniqueID(uniqueID);
+}
+
 inline const char *StringPrimitive::castToASCIIPointer() const {
   if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalASCIIStringPrimitive>(this)->getRawPointer();
@@ -791,11 +796,6 @@ inline char16_t *StringPrimitive::castToUTF16PointerForWrite() {
 inline SymbolID StringPrimitive::getUniqueID() const {
   assert(this->isUniqued() && "StringPrimitive is not uniqued");
   return vmcast<SymbolStringPrimitive>(this)->getUniqueID();
-}
-
-inline void StringPrimitive::updateUniqueID(SymbolID id) {
-  assert(this->isUniqued() && "String is not uniqued");
-  vmcast<SymbolStringPrimitive>(this)->updateUniqueID(id);
 }
 
 inline char16_t StringPrimitive::at(uint32_t index) const {

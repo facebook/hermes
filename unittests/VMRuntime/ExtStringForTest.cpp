@@ -38,7 +38,7 @@ ExtStringForTest *ExtStringForTest::create(
     unsigned length) {
   static_assert(
       offsetof(ExtStringForTest, length) ==
-          offsetof(ExternalStringPrimitive<char>, length),
+          offsetof(ExternalStringPrimitive<char>, lengthAndUniquedFlag_),
       "Length offsets must agree, for ExtStringForTest to masquerade "
       "as ExternalStringPrimitive");
   auto res = new (runtime.allocWithFinalizer(sizeof(ExtStringForTest)))
@@ -53,7 +53,7 @@ ExtStringForTest *ExtStringForTest::createLongLived(
     unsigned length) {
   static_assert(
       offsetof(ExtStringForTest, length) ==
-          offsetof(ExternalStringPrimitive<char>, length),
+          offsetof(ExternalStringPrimitive<char>, lengthAndUniquedFlag_),
       "Length offsets must agree, for ExtStringForTest to masquerade "
       "as ExternalStringPrimitive");
   auto res =

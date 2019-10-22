@@ -30,10 +30,12 @@ template <typename T, bool Uniqued>
 void serializeDynamicStringImpl(Serializer &s, const GCCell *cell) {
   const auto *self = vmcast<const DynamicStringPrimitive<T, Uniqued>>(cell);
   // Write string length.
-  s.writeInt<uint32_t>(self->getStringLength());
+  s.writeInt<uint32_t>(self->lengthAndUniquedFlag_);
   if (Uniqued) {
     // If isUniqued, also writes SymbolID.
-    s.writeInt<uint32_t>(self->getUniqueID().unsafeGetRaw());
+    s.writeInt<uint32_t>(
+        (self->isUniqued() ? self->getUniqueID() : SymbolID::empty())
+            .unsafeGetRaw());
   }
   // Writes the actual string.
   s.writeData(self->getRawPointer(), self->getStringLength() * sizeof(T));
@@ -42,17 +44,22 @@ void serializeDynamicStringImpl(Serializer &s, const GCCell *cell) {
 
 template <typename T, bool Uniqued>
 void deserializeDynamicStringImpl(Deserializer &d) {
-  uint32_t length = d.readInt<uint32_t>();
+  uint32_t lengthAndUniquedFlag = d.readInt<uint32_t>();
+  uint32_t length = lengthAndUniquedFlag &
+      ~DynamicStringPrimitive<T, Uniqued>::LENGTH_FLAG_UNIQUED;
+  bool uniqued = lengthAndUniquedFlag &
+      DynamicStringPrimitive<T, Uniqued>::LENGTH_FLAG_UNIQUED;
   SymbolID uniqueID{};
   if (Uniqued) {
-    auto rawUniqueID = d.readInt<uint32_t>();
-    uniqueID = SymbolID::unsafeCreate(rawUniqueID);
+    uniqueID = SymbolID::unsafeCreate(d.readInt<uint32_t>());
   }
 
   void *mem = d.getRuntime()->alloc</*fixedSize*/ false>(
       DynamicStringPrimitive<T, Uniqued>::allocationSize(length));
-  auto *cell = new (mem)
-      DynamicStringPrimitive<T, Uniqued>(d.getRuntime(), length, uniqueID);
+  auto *cell =
+      new (mem) DynamicStringPrimitive<T, Uniqued>(d.getRuntime(), length);
+  if (uniqued)
+    cell->convertToUniqued(uniqueID);
   d.readData(cell->getRawPointerForWrite(), length * sizeof(T));
 
   d.endObject(cell);
@@ -147,12 +154,10 @@ void ExternalUTF16StringPrimitiveBuildMeta(
 template <typename T>
 void serializeExternalStringImpl(Serializer &s, const GCCell *cell) {
   const auto *self = vmcast<const ExternalStringPrimitive<T>>(cell);
-  s.writeInt<uint32_t>(self->getStringLength());
-  s.writeInt<uint8_t>(self->isUniqued());
-  if (self->isUniqued()) {
-    // If isUniqued, also writes SymbolID.
-    s.writeInt<uint32_t>(self->getUniqueID().unsafeGetRaw());
-  }
+  s.writeInt<uint32_t>(self->lengthAndUniquedFlag_);
+  s.writeInt<uint32_t>(
+      (self->isUniqued() ? self->getUniqueID() : SymbolID::empty())
+          .unsafeGetRaw());
   // Writes the actual string.
   s.writeData(self->getRawPointer(), self->getStringLength() * sizeof(T));
   // contents_.data() is tracked by IDTracker for heapsnapshot. We should do
@@ -165,9 +170,12 @@ void serializeExternalStringImpl(Serializer &s, const GCCell *cell) {
 template <typename T>
 void deserializeExternalStringImpl(Deserializer &d) {
   // Deserialize the data.
-  uint32_t length = d.readInt<uint32_t>();
+  uint32_t lengthAndUniquedFlag = d.readInt<uint32_t>();
+  uint32_t length =
+      lengthAndUniquedFlag & ~ExternalStringPrimitive<T>::LENGTH_FLAG_UNIQUED;
+  bool uniqued = length & ExternalStringPrimitive<T>::LENGTH_FLAG_UNIQUED;
   assert(
-      ExternalStringPrimitive<T>::isExternalLength(length) &&
+      ExternalStringPrimitive<T>::isSafeExternalLength(length) &&
       "length should be external");
   if (LLVM_UNLIKELY(length > ExternalStringPrimitive<T>::MAX_STRING_LENGTH))
     hermes_fatal("String length exceeds limit");
@@ -177,20 +185,17 @@ void deserializeExternalStringImpl(Deserializer &d) {
     hermes_fatal("Cannot allocate an external string primitive.");
   }
 
-  bool uniqued = d.readInt<uint8_t>();
-  SymbolID uniqueID{};
-  if (uniqued) {
-    auto rawUniqueID = d.readInt<uint32_t>();
-    uniqueID = SymbolID::unsafeCreate(rawUniqueID);
-  }
+  auto uniqueID = SymbolID::unsafeCreate(d.readInt<uint32_t>());
   std::basic_string<T> contents(length, '\0');
   d.readData(&contents[0], length * sizeof(T));
 
   // Construct an ExternalStringPrimitive from what we deserialized.
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       sizeof(ExternalStringPrimitive<T>));
-  auto *cell = new (mem)
-      ExternalStringPrimitive<T>(d.getRuntime(), std::move(contents), uniqued);
+  auto *cell =
+      new (mem) ExternalStringPrimitive<T>(d.getRuntime(), std::move(contents));
+  if (uniqued)
+    cell->convertToUniqued(uniqueID);
 
   // contents_.data() is tracked by IDTracker for heapsnapshot. We should do
   // relocation for it.
@@ -518,21 +523,15 @@ template <typename T>
 ExternalStringPrimitive<T>::ExternalStringPrimitive(
     Runtime *runtime,
     StdString &&contents)
-    : ExternalStringPrimitive(
+    : SymbolStringPrimitive(
           runtime,
-          std::move(contents),
-          false /* not uniqued */) {}
-
-template <typename T>
-ExternalStringPrimitive<T>::ExternalStringPrimitive(
-    Runtime *runtime,
-    StdString &&contents,
-    SymbolID uniqueID)
-    : ExternalStringPrimitive(
-          runtime,
-          std::move(contents),
-          true /* uniqued */) {
-  updateUniqueID(uniqueID);
+          &vt,
+          sizeof(ExternalStringPrimitive<T>),
+          contents.size()),
+      contents_(std::move(contents)) {
+  assert(
+      getStringLength() >= EXTERNAL_STRING_MIN_SIZE &&
+      "ExternalStringPrimitive length must be at least EXTERNAL_STRING_MIN_SIZE");
 }
 
 template <typename T>
@@ -553,8 +552,7 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
 template <typename T>
 CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
     Runtime *runtime,
-    StdString &&str,
-    SymbolID uniqueID) {
+    StdString &&str) {
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
   uint32_t allocSize = str.size() * sizeof(T);
@@ -564,8 +562,8 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
   }
   void *mem = runtime->allocLongLived<HasFinalizer::Yes>(
       sizeof(ExternalStringPrimitive<T>));
-  auto res = HermesValue::encodeStringValue((
-      new (mem) ExternalStringPrimitive<T>(runtime, std::move(str), uniqueID)));
+  auto res = HermesValue::encodeStringValue(
+      (new (mem) ExternalStringPrimitive<T>(runtime, std::move(str))));
   runtime->getHeap().creditExternalMemory(res.getString(), allocSize);
   return res;
 }
