@@ -186,7 +186,7 @@ void deserializeExternalStringImpl(Deserializer &d) {
   d.endObject((void *)cell->contents_.data());
 
   d.getRuntime()->getHeap().creditExternalMemory(
-      cell, cell->getStringLength() * sizeof(T));
+      cell, cell->calcExternalMemorySize());
   d.endObject(cell);
 }
 
@@ -524,12 +524,12 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
     StdString &&str) {
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
-  uint32_t allocSize = str.size() * sizeof(T);
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       sizeof(ExternalStringPrimitive<T>));
-  auto res = HermesValue::encodeStringValue(
-      (new (mem) ExternalStringPrimitive<T>(runtime, std::move(str))));
-  runtime->getHeap().creditExternalMemory(res.getString(), allocSize);
+  auto *extStr = new (mem) ExternalStringPrimitive<T>(runtime, std::move(str));
+  runtime->getHeap().creditExternalMemory(
+      extStr, extStr->calcExternalMemorySize());
+  auto res = HermesValue::encodeStringValue(extStr);
   return res;
 }
 
@@ -539,17 +539,17 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
     StdString &&str) {
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
-  uint32_t allocSize = str.size() * sizeof(T);
-  if (LLVM_UNLIKELY(!runtime->getHeap().canAllocExternalMemory(allocSize))) {
+  if (LLVM_UNLIKELY(!runtime->getHeap().canAllocExternalMemory(
+          str.capacity() * sizeof(T)))) {
     return runtime->raiseRangeError(
         "Cannot allocate an external string primitive.");
   }
   void *mem = runtime->allocLongLived<HasFinalizer::Yes>(
       sizeof(ExternalStringPrimitive<T>));
-  auto res = HermesValue::encodeStringValue(
-      (new (mem) ExternalStringPrimitive<T>(runtime, std::move(str))));
-  runtime->getHeap().creditExternalMemory(res.getString(), allocSize);
-  return res;
+  auto *extStr = new (mem) ExternalStringPrimitive<T>(runtime, std::move(str));
+  runtime->getHeap().creditExternalMemory(
+      extStr, extStr->calcExternalMemorySize());
+  return HermesValue::encodeStringValue(extStr);
 }
 
 template <typename T>
@@ -573,21 +573,21 @@ void ExternalStringPrimitive<T>::_finalizeImpl(GCCell *cell, GC *gc) {
   // Remove the external string from the snapshot tracking system if it's being
   // tracked.
   gc->getIDTracker().untrackNative(self->contents_.data());
-  gc->debitExternalMemory(self, self->getStringByteSize());
+  gc->debitExternalMemory(self, self->calcExternalMemorySize());
   self->~ExternalStringPrimitive<T>();
 }
 
 template <typename T>
 size_t ExternalStringPrimitive<T>::_mallocSizeImpl(GCCell *cell) {
   ExternalStringPrimitive<T> *self = vmcast<ExternalStringPrimitive<T>>(cell);
-  return self->getStringByteSize();
+  return self->calcExternalMemorySize();
 }
 
 template <typename T>
 gcheapsize_t ExternalStringPrimitive<T>::_externalMemorySizeImpl(
     hermes::vm::GCCell const *cell) {
   auto *self = vmcast<ExternalStringPrimitive<T>>(cell);
-  return self->getStringByteSize();
+  return self->calcExternalMemorySize();
 }
 
 template <typename T>

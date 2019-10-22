@@ -531,8 +531,8 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
  private:
   static const VTable vt;
 
-  size_t getStringByteSize() const {
-    return getStringLength() * sizeof(T);
+  size_t calcExternalMemorySize() const {
+    return contents_.capacity() * sizeof(T);
   }
 
   /// Construct an ExternalStringPrimitive from the given string \p contents,
