@@ -118,37 +118,21 @@ void DynamicUniquedUTF16StringPrimitiveDeserialize(
 }
 #endif
 
-/// There is no SymbolStringPrimitiveCellKind, but we factor this into a
-/// function so that the subclasses can share it and so only one friend
-/// declaration is required.
-void symbolStringPrimitiveBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const SymbolStringPrimitive *>(cell);
-  mb.addField("uniqueID", &self->uniqueID_);
-}
-
 void DynamicUniquedASCIIStringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {
-  symbolStringPrimitiveBuildMeta(cell, mb);
-}
+    Metadata::Builder &mb) {}
 
 void DynamicUniquedUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {
-  symbolStringPrimitiveBuildMeta(cell, mb);
-}
+    Metadata::Builder &mb) {}
 
 void ExternalASCIIStringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {
-  symbolStringPrimitiveBuildMeta(cell, mb);
-}
+    Metadata::Builder &mb) {}
 
 void ExternalUTF16StringPrimitiveBuildMeta(
     const GCCell *cell,
-    Metadata::Builder &mb) {
-  symbolStringPrimitiveBuildMeta(cell, mb);
-}
+    Metadata::Builder &mb) {}
 
 #ifdef HERMESVM_SERIALIZE
 template <typename T>

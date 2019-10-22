@@ -78,6 +78,8 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// associated SymbolID was stored in the string.
   /// Not all StringPrimitive subclasses support this and it usually happens on
   /// construction.
+  /// This flag is automatically cleared by the identifier table when the
+  /// associated SymbolID is garbage collected.
   static constexpr uint32_t LENGTH_FLAG_UNIQUED = uint32_t(1) << 31;
 
   /// Length of the string in 16-bit characters. The highest bit is set to 1
@@ -346,11 +348,15 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 /// All ExternalStringPrimitives store a Symbol, but only those marked as
 /// uniqued will use it.
 class SymbolStringPrimitive : public StringPrimitive {
-  SymbolID uniqueID_{};
-
-  friend void symbolStringPrimitiveBuildMeta(
-      const GCCell *cell,
-      Metadata::Builder &mb);
+  /// The SymbolID that was assigned to this StringPrimitive when it was
+  /// "uniqued" - inserted into the identifier table.
+  /// This field is *only* valid if \c isUniqued() returns \c true. Otherwise
+  /// its value must be ignored (even though the field itself might not be
+  /// cleared).
+  /// If the associated SymbolID is garbage collected, the uniqued flag will
+  /// be cleared and this field becomes invalid (but won't actually be cleared,
+  /// for performance reasons).
+  SymbolID weakUniqueID_{};
 
  public:
   using StringPrimitive::StringPrimitive;
@@ -376,13 +382,13 @@ class SymbolStringPrimitive : public StringPrimitive {
   /// construction.
   void updateUniqueID(SymbolID id) {
     assert(isUniqued() && "StringPrimitive is not uniqued");
-    uniqueID_ = id;
+    weakUniqueID_ = id;
   }
 
   /// \return the unique id.
   SymbolID getUniqueID() const {
     assert(isUniqued() && "StringPrimitive is not uniqued");
-    return uniqueID_;
+    return weakUniqueID_;
   }
 };
 

@@ -336,6 +336,14 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
     return SymbolID::unsafeCreate(hashTable_.get(idx));
   }
 
+  // If the incoming StringPrimitive can be uniqued, use it instead of
+  // allocating a new one.
+  if (maybeIncomingPrimHandle &&
+      LLVM_UNLIKELY(maybeIncomingPrimHandle->canBeUniqued())) {
+    return SymbolID::unsafeCreate(
+        allocIDAndInsert(idx, maybeIncomingPrimHandle.get()));
+  }
+
   CallResult<PseudoHandle<StringPrimitive>> cr =
       allocateDynamicString(runtime, str, maybeIncomingPrimHandle);
   if (cr == ExecutionStatus::EXCEPTION) {
@@ -415,7 +423,10 @@ void IdentifierTable::freeSymbol(uint32_t index) {
                    << lookupVector_[index].getStringPrim() << "'\n");
 
   if (LLVM_LIKELY(!lookupVector_[index].isNotUniqued())) {
-    hashTable_.remove(lookupVector_[index].getStringPrim());
+    auto *strPrim =
+        const_cast<StringPrimitive *>(lookupVector_[index].getStringPrim());
+    strPrim->clearUniquedBit();
+    hashTable_.remove(strPrim);
   }
   freeID(index);
 }
