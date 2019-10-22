@@ -204,6 +204,9 @@ jobs:
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - checkout
       - run:
@@ -253,6 +256,9 @@ jobs:
     environment:
       - HERMES_WS_DIR: /tmp/hermes
       - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
       - checkout
       - run:
