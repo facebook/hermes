@@ -749,7 +749,7 @@ inline CallResult<HermesValue> StringPrimitive::createLongLived(
 inline const char *StringPrimitive::castToASCIIPointer() const {
   if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalASCIIStringPrimitive>(this)->getRawPointer();
-  } else if (isUniqued()) {
+  } else if (isa<DynamicUniquedASCIIStringPrimitive>(this)) {
     return vmcast<DynamicUniquedASCIIStringPrimitive>(this)->getRawPointer();
   } else {
     return vmcast<DynamicASCIIStringPrimitive>(this)->getRawPointer();
@@ -759,7 +759,7 @@ inline const char *StringPrimitive::castToASCIIPointer() const {
 inline const char16_t *StringPrimitive::castToUTF16Pointer() const {
   if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalUTF16StringPrimitive>(this)->getRawPointer();
-  } else if (isUniqued()) {
+  } else if (isa<DynamicUniquedUTF16StringPrimitive>(this)) {
     return vmcast<DynamicUniquedUTF16StringPrimitive>(this)->getRawPointer();
   } else {
     return vmcast<DynamicUTF16StringPrimitive>(this)->getRawPointer();
@@ -769,7 +769,7 @@ inline const char16_t *StringPrimitive::castToUTF16Pointer() const {
 inline char *StringPrimitive::castToASCIIPointerForWrite() {
   if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalASCIIStringPrimitive>(this)->getRawPointerForWrite();
-  } else if (isUniqued()) {
+  } else if (isa<DynamicUniquedASCIIStringPrimitive>(this)) {
     return vmcast<DynamicUniquedASCIIStringPrimitive>(this)
         ->getRawPointerForWrite();
   } else {
@@ -780,7 +780,7 @@ inline char *StringPrimitive::castToASCIIPointerForWrite() {
 inline char16_t *StringPrimitive::castToUTF16PointerForWrite() {
   if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalUTF16StringPrimitive>(this)->getRawPointerForWrite();
-  } else if (isUniqued()) {
+  } else if (isa<DynamicUniquedUTF16StringPrimitive>(this)) {
     return vmcast<DynamicUniquedUTF16StringPrimitive>(this)
         ->getRawPointerForWrite();
   } else {
@@ -848,7 +848,7 @@ template <typename T>
 inline ArrayRef<T> StringPrimitive::getStringRef() const {
   if (isExternal()) {
     return vmcast<ExternalStringPrimitive<T>>(this)->getStringRef();
-  } else if (isUniqued()) {
+  } else if (isa<DynamicStringPrimitive<T, true /* Uniqued */>>(this)) {
     return vmcast<DynamicStringPrimitive<T, true /* Uniqued */>>(this)
         ->getStringRef();
   } else {
