@@ -5,6 +5,8 @@
 
 enable_testing()
 include(GoogleTest)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 
 set(TEST_COMPILE_OPTIONS
   "${FBJNI_COMPILE_OPTIONS}"
@@ -64,6 +66,7 @@ target_compile_options(modified_utf8_test PRIVATE ${TEST_COMPILE_OPTIONS})
 target_link_libraries(modified_utf8_test
   fbjni
   gtest
+  Threads::Threads
   dl
 )
 gtest_add_tests(TARGET modified_utf8_test)
@@ -75,6 +78,7 @@ target_compile_options(utf16toUTF8_test PRIVATE ${TEST_COMPILE_OPTIONS})
 target_link_libraries(utf16toUTF8_test
   fbjni
   gtest
+  Threads::Threads
   dl
 )
 gtest_add_tests(TARGET utf16toUTF8_test)
