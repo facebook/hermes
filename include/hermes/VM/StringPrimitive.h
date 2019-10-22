@@ -275,7 +275,9 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Get a StringRef of T. T must be char or char16_t corresponding to whether
   /// this string is ASCII or UTF-16.
   template <typename T>
-  inline ArrayRef<T> getStringRef() const;
+  ArrayRef<T> getStringRef() const {
+    return ArrayRef<T>{castToPointer<T>(), getStringLength()};
+  }
 
   /// If the given cell has is an ExternalStringPrimitive, returns the
   /// size of its associated external memory (in bytes), else zero.
@@ -292,6 +294,11 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
   /// Get a read-only raw char16_t pointer, assert that this is UTF16 string.
   const char16_t *castToUTF16Pointer() const;
+
+  /// Get a read-only pointer to char or char16_t. Assert this is a string of
+  /// the correct type.
+  template <typename T>
+  inline const T *castToPointer() const;
 
   /// Get a writable raw char pointer, assert that this is ASCII string.
   char *castToASCIIPointerForWrite();
@@ -483,10 +490,6 @@ class DynamicStringPrimitive final
   T *getRawPointerForWrite() {
     return this->template getTrailingObjects<T>();
   }
-
-  Ref getStringRef() const {
-    return Ref(getRawPointer(), getStringLength());
-  }
 };
 
 /// An immutable JavaScript primitive string consisting of length and a pointer
@@ -573,10 +576,6 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   T *getRawPointerForWrite() {
     // C++11 defines this to be valid even if the string is empty.
     return &contents_[0];
-  }
-
-  Ref getStringRef() const {
-    return Ref(getRawPointer(), getStringLength());
   }
 
   // Finalizer to clean up the malloc'ed string.
@@ -757,6 +756,15 @@ inline void StringPrimitive::convertToUniqued(hermes::vm::SymbolID uniqueID) {
   vmcast<SymbolStringPrimitive>(this)->updateUniqueID(uniqueID);
 }
 
+template <>
+inline const char *StringPrimitive::castToPointer<char>() const {
+  return castToASCIIPointer();
+}
+template <>
+inline const char16_t *StringPrimitive::castToPointer<char16_t>() const {
+  return castToUTF16Pointer();
+}
+
 inline const char *StringPrimitive::castToASCIIPointer() const {
   if (LLVM_UNLIKELY(isExternal())) {
     return vmcast<ExternalASCIIStringPrimitive>(this)->getRawPointer();
@@ -848,19 +856,6 @@ inline bool StringPrimitive::isExternal() const {
           CellKind::ExternalASCIIStringPrimitiveKind),
       "Cell kinds in unexpected order");
   return getKind() >= CellKind::ExternalUTF16StringPrimitiveKind;
-}
-
-template <typename T>
-inline ArrayRef<T> StringPrimitive::getStringRef() const {
-  if (isExternal()) {
-    return vmcast<ExternalStringPrimitive<T>>(this)->getStringRef();
-  } else if (isa<DynamicStringPrimitive<T, true /* Uniqued */>>(this)) {
-    return vmcast<DynamicStringPrimitive<T, true /* Uniqued */>>(this)
-        ->getStringRef();
-  } else {
-    return vmcast<DynamicStringPrimitive<T, false /* not Uniqued */>>(this)
-        ->getStringRef();
-  }
 }
 
 /*static*/
