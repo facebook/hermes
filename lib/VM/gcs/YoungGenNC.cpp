@@ -20,7 +20,6 @@
 #include "hermes/VM/FillerCell.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
-#include "hermes/VM/GCCell-inline.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"

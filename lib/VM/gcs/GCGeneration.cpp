@@ -8,7 +8,8 @@
 #include "hermes/VM/GCGeneration.h"
 
 #include "hermes/Public/GCConfig.h"
-#include "hermes/VM/GCCell-inline.h"
+#include "hermes/VM/GC.h"
+#include "hermes/VM/HiddenClass.h"
 
 #include <memory>
 

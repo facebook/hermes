@@ -27,6 +27,7 @@ ObjectVTable JSArrayBuffer::vt{
         _mallocSizeImpl,
         nullptr,
         nullptr,
+        _externalMemorySizeImpl, // externalMemorySize
         VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                      nullptr,
                                      _snapshotAddEdgesImpl,
@@ -180,7 +181,13 @@ void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC *gc) {
 }
 
 size_t JSArrayBuffer::_mallocSizeImpl(GCCell *cell) {
-  const auto *buffer = static_cast<JSArrayBuffer *>(cell);
+  const auto *buffer = vmcast<JSArrayBuffer>(cell);
+  return buffer->size_;
+}
+
+gcheapsize_t JSArrayBuffer::_externalMemorySizeImpl(
+    hermes::vm::GCCell const *cell) {
+  const auto *buffer = vmcast<JSArrayBuffer>(cell);
   return buffer->size_;
 }
 

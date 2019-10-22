@@ -205,7 +205,9 @@ class GCCell {
 
   /// If the cell has any associated external memory, return the size (in bytes)
   /// of that external memory, else zero.
-  inline uint32_t externalMemorySize() const;
+  inline gcheapsize_t externalMemorySize() const {
+    return getVT()->externalMemorySize(this);
+  }
 
  protected:
   /// Emit allocation event to memory profiler if it is enabled.

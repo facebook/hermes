@@ -30,6 +30,7 @@ ObjectVTable JSObject::vt{
         nullptr,
         nullptr,
         nullptr,
+        nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                      JSObject::_snapshotNameImpl,
                                      JSObject::_snapshotAddEdgesImpl,

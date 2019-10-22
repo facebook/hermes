@@ -364,6 +364,7 @@ ObjectVTable Arguments::vt{
         nullptr,
         nullptr,
         nullptr,
+        nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                      nullptr,
                                      Arguments::_snapshotAddEdgesImpl,
@@ -496,6 +497,7 @@ ObjectVTable JSArray::vt{
         nullptr,
         nullptr,
         nullptr,
+        nullptr, // externalMemorySize
         VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                      nullptr,
                                      JSArray::_snapshotAddEdgesImpl,

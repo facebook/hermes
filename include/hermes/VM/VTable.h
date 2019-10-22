@@ -112,6 +112,10 @@ struct VTable {
   /// Trim the cell, decreasing any size-related fields inside the cell.
   using TrimCallback = void(GCCell *);
   TrimCallback *const trim_;
+  /// Calculate the external memory size.
+  using ExternalMemorySize = gcheapsize_t(const GCCell *);
+  ExternalMemorySize *const externalMemorySize_;
+
   /// Any metadata associated with heap snapshots.
   const HeapSnapshotMetadata snapshotMetaData;
 
@@ -123,6 +127,7 @@ struct VTable {
       MallocSizeCallback *mallocSize = nullptr,
       TrimSizeCallback *trimSize = nullptr,
       TrimCallback *trim = nullptr,
+      ExternalMemorySize *externalMemorySize = nullptr,
       HeapSnapshotMetadata snapshotMetaData =
           HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                nullptr,
@@ -135,6 +140,7 @@ struct VTable {
         mallocSize_(mallocSize),
         trimSize_(trimSize),
         trim_(trim),
+        externalMemorySize_(externalMemorySize),
         snapshotMetaData(snapshotMetaData) {}
 
   bool isVariableSize() const {
@@ -183,6 +189,12 @@ struct VTable {
   void trim(GCCell *cell) const {
     assert(isValid());
     trim_(cell);
+  }
+
+  /// If the cell has any associated external memory, return the size (in bytes)
+  /// of that external memory, else zero.
+  gcheapsize_t externalMemorySize(const GCCell *cell) const {
+    return externalMemorySize_ ? (*externalMemorySize_)(cell) : 0;
   }
 
   /// \return true iff this VTable is valid.

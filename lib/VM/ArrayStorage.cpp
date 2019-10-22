@@ -23,6 +23,7 @@ VTable ArrayStorage::vt(
     nullptr,
     _trimSizeCallback,
     _trimCallback,
+    nullptr,
     VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
                                  nullptr,
                                  nullptr,

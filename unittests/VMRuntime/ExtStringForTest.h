@@ -18,12 +18,7 @@ struct DummyRuntime;
 
 /// This is a testing version of ExternalStringPrimitive<char>.
 /// The GC will test whether these cells have this type, so this must have the
-/// same cell kind, and the MetadataTable must cover that kind.  The GC will
-/// test whether instances successfully
-/// dyn_vmcast<ExternalASCIIStringPrimitive>(cell); if they do, it will invoke
-/// the asExtAscii-getStringLength() method, which accesses the length field of
-/// the instance, so that must be at the same offset it is in
-/// ExternalASCIIStringPrimitive.
+/// same cell kind, and the MetadataTable must cover that kind.
 class ExtStringForTest final : public VariableSizeRuntimeCell {
  public:
   static const VTable vt;
@@ -52,6 +47,7 @@ class ExtStringForTest final : public VariableSizeRuntimeCell {
 
  private:
   static void _finalizeImpl(GCCell *cell, GC *);
+  static gcheapsize_t _externalMemorySizeImpl(const GCCell *cell);
 };
 
 void ExtStringForTestBuildMeta(const GCCell *cell, Metadata::Builder &mb);

@@ -425,6 +425,7 @@ CallableVTable BoundFunction::vt{
             nullptr,
             nullptr,
             nullptr,
+            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Closure,
                                          BoundFunction::_snapshotNameImpl,
                                          BoundFunction::_snapshotAddEdgesImpl,
@@ -831,6 +832,7 @@ CallableVTable NativeFunction::vt{
             nullptr,
             nullptr,
             nullptr,
+            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Closure,
                                          NativeFunction::_snapshotNameImpl,
                                          NativeFunction::_snapshotAddEdgesImpl,
@@ -999,6 +1001,7 @@ const CallableVTable NativeConstructor::vt{
             nullptr,
             nullptr,
             nullptr,
+            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 NativeConstructor::_snapshotNameImpl,
@@ -1109,6 +1112,7 @@ CallableVTable JSFunction::vt{
             nullptr,
             nullptr,
             nullptr,
+            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Closure,
                                          JSFunction::_snapshotNameImpl,
                                          JSFunction::_snapshotAddEdgesImpl,
@@ -1198,6 +1202,7 @@ CallableVTable JSGeneratorFunction::vt{
             nullptr,
             nullptr,
             nullptr,
+            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 JSGeneratorFunction::_snapshotNameImpl,
@@ -1270,6 +1275,7 @@ CallableVTable GeneratorInnerFunction::vt{
             nullptr,
             nullptr,
             nullptr,
+            nullptr, // externalMemorySize
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
                 GeneratorInnerFunction::_snapshotNameImpl,

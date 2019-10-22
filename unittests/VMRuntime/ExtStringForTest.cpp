@@ -17,14 +17,25 @@
 namespace hermes {
 namespace vm {
 
-const VTable ExtStringForTest::vt{ExternalStringPrimitive<char>::getCellKind(),
-                                  heapAlignSize(sizeof(ExtStringForTest)),
-                                  ExtStringForTest::_finalizeImpl};
+const VTable ExtStringForTest::vt{
+    ExternalStringPrimitive<char>::getCellKind(),
+    heapAlignSize(sizeof(ExtStringForTest)),
+    ExtStringForTest::_finalizeImpl,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr,
+    _externalMemorySizeImpl,
+};
 
 void ExtStringForTest::_finalizeImpl(GCCell *cell, GC *gc) {
   ExtStringForTest *self = vmcast<ExtStringForTest>(cell);
   gc->debitExternalMemory(self, self->length);
   self->~ExtStringForTest();
+}
+gcheapsize_t ExtStringForTest::_externalMemorySizeImpl(const GCCell *cell) {
+  auto *self = vmcast<ExtStringForTest>(cell);
+  return self->length;
 }
 
 void ExtStringForTest::releaseMem(GC *gc) {
@@ -36,11 +47,6 @@ void ExtStringForTest::releaseMem(GC *gc) {
 ExtStringForTest *ExtStringForTest::create(
     DummyRuntime &runtime,
     unsigned length) {
-  static_assert(
-      offsetof(ExtStringForTest, length) ==
-          offsetof(ExternalStringPrimitive<char>, lengthAndUniquedFlag_),
-      "Length offsets must agree, for ExtStringForTest to masquerade "
-      "as ExternalStringPrimitive");
   auto res = new (runtime.allocWithFinalizer(sizeof(ExtStringForTest)))
       ExtStringForTest(&runtime.getHeap(), length);
   runtime.gc.creditExternalMemory(res, length);
@@ -51,11 +57,6 @@ ExtStringForTest *ExtStringForTest::create(
 ExtStringForTest *ExtStringForTest::createLongLived(
     DummyRuntime &runtime,
     unsigned length) {
-  static_assert(
-      offsetof(ExtStringForTest, length) ==
-          offsetof(ExternalStringPrimitive<char>, lengthAndUniquedFlag_),
-      "Length offsets must agree, for ExtStringForTest to masquerade "
-      "as ExternalStringPrimitive");
   auto res =
       new (runtime.allocLongLived<HasFinalizer::Yes>(sizeof(ExtStringForTest)))
           ExtStringForTest(&runtime.getHeap(), length);

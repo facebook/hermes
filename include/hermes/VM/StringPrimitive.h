@@ -279,10 +279,6 @@ class StringPrimitive : public VariableSizeRuntimeCell {
     return ArrayRef<T>{castToPointer<T>(), getStringLength()};
   }
 
-  /// If the given cell has is an ExternalStringPrimitive, returns the
-  /// size of its associated external memory (in bytes), else zero.
-  inline static uint32_t externalMemorySize(const GCCell *cell);
-
  private:
   /// Similar to copyUTF16String(SmallVectorImpl), copy the string into
   /// a raw pointer \p ptr. Since there is no size check, this function should
@@ -585,6 +581,9 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
   /// assumed to be an ExternalStringPrimitive.
   static size_t _mallocSizeImpl(GCCell *cell);
 
+  /// \return the size of the external memory credited to the cell.
+  static gcheapsize_t _externalMemorySizeImpl(const GCCell *cell);
+
   static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
@@ -597,6 +596,7 @@ template <typename T, bool Uniqued>
 const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     DynamicStringPrimitive<T, Uniqued>::getCellKind(),
     0,
+    nullptr,
     nullptr,
     nullptr,
     nullptr,
@@ -626,6 +626,7 @@ const VTable ExternalStringPrimitive<T>::vt = VTable(
     ExternalStringPrimitive<T>::_mallocSizeImpl,
     nullptr,
     nullptr,
+    ExternalStringPrimitive<T>::_externalMemorySizeImpl,
     VTable::HeapSnapshotMetadata{
         HeapSnapshot::NodeType::String,
         ExternalStringPrimitive<T>::_snapshotNameImpl,
@@ -856,20 +857,6 @@ inline bool StringPrimitive::isExternal() const {
           CellKind::ExternalASCIIStringPrimitiveKind),
       "Cell kinds in unexpected order");
   return getKind() >= CellKind::ExternalUTF16StringPrimitiveKind;
-}
-
-/*static*/
-inline uint32_t StringPrimitive::externalMemorySize(const GCCell *cell) {
-  // TODO (T27363944): a more general way of doing this, if we ever have more
-  // gc kinds with external memory charges.
-  if (const auto asExtAscii = dyn_vmcast<ExternalASCIIStringPrimitive>(cell)) {
-    return asExtAscii->getStringByteSize();
-  } else if (
-      const auto asExtUTF16 = dyn_vmcast<ExternalUTF16StringPrimitive>(cell)) {
-    return asExtUTF16->getStringByteSize();
-  } else {
-    return 0;
-  }
 }
 
 } // namespace vm

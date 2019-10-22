@@ -584,6 +584,13 @@ size_t ExternalStringPrimitive<T>::_mallocSizeImpl(GCCell *cell) {
 }
 
 template <typename T>
+gcheapsize_t ExternalStringPrimitive<T>::_externalMemorySizeImpl(
+    hermes::vm::GCCell const *cell) {
+  auto *self = vmcast<ExternalStringPrimitive<T>>(cell);
+  return self->getStringByteSize();
+}
+
+template <typename T>
 void ExternalStringPrimitive<T>::_snapshotAddEdgesImpl(
     GCCell *cell,
     GC *gc,

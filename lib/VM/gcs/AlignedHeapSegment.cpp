@@ -17,7 +17,6 @@
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCBase.h"
-#include "hermes/VM/GCCell-inline.h"
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/GCGeneration.h"
 #include "hermes/VM/HiddenClass.h"

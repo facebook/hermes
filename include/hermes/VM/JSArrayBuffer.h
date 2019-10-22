@@ -87,13 +87,10 @@ class JSArrayBuffer final : public JSObject {
   /// the GC to be informed of this external memory deletion.
   void detach(GC *gc);
 
-  /// If the given cell is a JSArrayBuffer, returns the size of its
-  /// associated external memory (in bytes), else zero.
-  inline static uint32_t externalMemorySize(const GCCell *cell);
-
  protected:
   static void _finalizeImpl(GCCell *cell, GC *gc);
   static size_t _mallocSizeImpl(GCCell *cell);
+  static gcheapsize_t _externalMemorySizeImpl(const GCCell *cell);
   static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
@@ -113,17 +110,6 @@ class JSArrayBuffer final : public JSObject {
 
   ~JSArrayBuffer();
 };
-
-/*static*/
-inline uint32_t JSArrayBuffer::externalMemorySize(const GCCell *cell) {
-  // TODO (T27363944): a more general way of doing this, if we ever have more
-  // gc kinds with external memory charges.
-  if (const auto asJSArrayBuffer = dyn_vmcast<JSArrayBuffer>(cell)) {
-    return asJSArrayBuffer->size();
-  } else {
-    return 0;
-  }
-}
 
 } // namespace vm
 } // namespace hermes
