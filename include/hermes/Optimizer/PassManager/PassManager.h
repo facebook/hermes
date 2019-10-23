@@ -105,7 +105,7 @@ class PassManager {
     llvm::SmallVector<Timer, 32> timers;
     std::unique_ptr<TimerGroup> timerGroup{nullptr};
     if (AreStatisticsEnabled()) {
-      timerGroup.reset(new TimerGroup("PassManager Timers", ""));
+      timerGroup.reset(new TimerGroup("", "PassManager Timers"));
     }
 
     // Optionally dump the IR after every pass if the flag is set.
@@ -129,7 +129,7 @@ class PassManager {
       dumpLastPass(P);
 
       TimeRegion timeRegion(
-          timerGroup ? timers.emplace_back(P->getName(), "", *timerGroup),
+          timerGroup ? timers.emplace_back("", P->getName(), *timerGroup),
           &timers.back()
                      : nullptr);
 

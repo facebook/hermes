@@ -621,10 +621,10 @@ class StringTableBuilder {
       std::vector<char16_t> *u16Storage,
       bool optimize) {
     NamedRegionTimer timer(
+        "",
         optimize ? "optimizingPackStrings" : "fastPackStrings",
         "",
         StringTableTimersName,
-        "",
         AreStatisticsEnabled());
     // Note these assignments use efficient move-assignment, not copying.
     if (optimize) {
