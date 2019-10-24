@@ -918,6 +918,9 @@ void OldGen::didFinishGC() {
 void OldGen::updateCrashManagerHeapExtents(
     const std::string &runtimeName,
     CrashManager *crashMgr) {
+  if (!crashMgr) {
+    return;
+  }
   /// The number of segments we describe with a single key.
   constexpr unsigned kSegmentsPerKey = 10;
   constexpr unsigned N = 1000;

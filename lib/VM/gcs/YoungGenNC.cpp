@@ -574,6 +574,9 @@ void YoungGen::didFinishGC() {
 void YoungGen::updateCrashManagerHeapExtents(
     const std::string &runtimeName,
     CrashManager *crashMgr) {
+  if (!crashMgr) {
+    return;
+  }
   if (crashMgrRecordedSegments_ == 1) {
     return;
   }
