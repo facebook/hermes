@@ -988,6 +988,15 @@ hermesInternalExecuteCall(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// \code
+///   HermesInternal.isConstructor = function (func) {}
+/// \encode
+/// Returns true if func is a valid constructor, false otherwise.
+CallResult<HermesValue>
+hermesInternalIsConstructor(void *, Runtime *runtime, NativeArgs args) {
+  return HermesValue::encodeBoolValue(isConstructor(runtime, args.getArg(0)));
+}
+
+/// \code
 ///   HermesInternal.jsArraySetElementAt = function (array, index, val) {}
 /// \encode
 /// Set array[index] to val without triggering the setter.
@@ -1099,6 +1108,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(P::exponentiationOperator, mathPow);
 #ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineInternMethodAndSymbol("executeCall", hermesInternalExecuteCall);
+  defineInternMethodAndSymbol("isConstructor", hermesInternalIsConstructor);
   defineInternMethodAndSymbol(
       "jsArraySetElementAt", hermesInternalJSArraySetElementAt);
   defineInternMethodAndSymbol("toInteger", hermesInternalToInteger);

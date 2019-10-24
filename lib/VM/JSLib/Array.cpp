@@ -119,6 +119,50 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       (void *)IterationKind::Entry,
       arrayPrototypeIterator,
       0);
+
+  auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
+      arrayPrototype, runtime, Predefined::getSymbolID(Predefined::values)));
+  runtime->arrayPrototypeValues = propValue;
+
+  DefinePropertyFlags dpf{};
+  dpf.setEnumerable = 1;
+  dpf.setWritable = 1;
+  dpf.setConfigurable = 1;
+  dpf.setValue = 1;
+  dpf.enumerable = 0;
+  dpf.writable = 1;
+  dpf.configurable = 1;
+
+  runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
+      arrayPrototype,
+      runtime,
+      Predefined::getSymbolID(Predefined::SymbolIterator),
+      dpf,
+      Handle<>(&runtime->arrayPrototypeValues)));
+
+  auto cons = defineSystemConstructor<JSArray>(
+      runtime,
+      Predefined::getSymbolID(Predefined::Array),
+      arrayConstructor,
+      arrayPrototype,
+      1,
+      CellKind::ArrayKind);
+
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::isArray),
+      nullptr,
+      arrayIsArray,
+      1);
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::of),
+      nullptr,
+      arrayOf,
+      0);
+
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineMethod(
       runtime,
@@ -233,50 +277,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       nullptr,
       arrayPrototypeIncludes,
       1);
-#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
-
-  auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
-      arrayPrototype, runtime, Predefined::getSymbolID(Predefined::values)));
-  runtime->arrayPrototypeValues = propValue;
-
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.setValue = 1;
-  dpf.enumerable = 0;
-  dpf.writable = 1;
-  dpf.configurable = 1;
-
-  runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
-      arrayPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::SymbolIterator),
-      dpf,
-      Handle<>(&runtime->arrayPrototypeValues)));
-
-  auto cons = defineSystemConstructor<JSArray>(
-      runtime,
-      Predefined::getSymbolID(Predefined::Array),
-      arrayConstructor,
-      arrayPrototype,
-      1,
-      CellKind::ArrayKind);
-
-  defineMethod(
-      runtime,
-      cons,
-      Predefined::getSymbolID(Predefined::isArray),
-      nullptr,
-      arrayIsArray,
-      1);
-  defineMethod(
-      runtime,
-      cons,
-      Predefined::getSymbolID(Predefined::of),
-      nullptr,
-      arrayOf,
-      0);
 
   if (runtime->hasES6Symbol()) {
     defineMethod(
@@ -287,6 +287,7 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
         arrayFrom,
         1);
   }
+#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
   return cons;
 }
@@ -1861,254 +1862,6 @@ arrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
   return JSArrayIterator::create(runtime, obj, kind);
 }
 
-/// ES6.0 22.1.2.1 Array.from ( items [ , mapfn [ , thisArg ] ] )
-CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
-  GCScopeMarkerRAII gcScope{runtime};
-  auto itemsHandle = args.getArgHandle(0);
-  // 1. Let C be the this value.
-  auto C = args.getThisHandle();
-  // 2. If mapfn is undefined, let mapping be false.
-  // 3. else
-  MutableHandle<Callable> mapfn{runtime};
-  MutableHandle<> T{runtime, HermesValue::encodeUndefinedValue()};
-  if (!args.getArg(1).isUndefined()) {
-    mapfn = dyn_vmcast<Callable>(args.getArg(1));
-    // a. If IsCallable(mapfn) is false, throw a TypeError exception.
-    if (LLVM_UNLIKELY(!mapfn)) {
-      return runtime->raiseTypeError("Mapping function is not callable.");
-    }
-    // b. If thisArg was supplied, let T be thisArg; else let T be undefined.
-    if (args.getArgCount() >= 3) {
-      T = args.getArg(2);
-    }
-    // c. Let mapping be true
-  }
-  // 4. Let usingIterator be GetMethod(items, @@iterator).
-  // 5. ReturnIfAbrupt(usingIterator).
-  auto methodRes = getMethod(
-      runtime,
-      itemsHandle,
-      runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolIterator)));
-  if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto usingIterator = runtime->makeHandle(methodRes->getHermesValue());
-
-  MutableHandle<JSObject> A{runtime};
-  // 6. If usingIterator is not undefined, then
-  if (!usingIterator->isUndefined()) {
-    // a. If IsConstructor(C) is true, then
-    if (isConstructor(runtime, *C)) {
-      // i. Let A be Construct(C).
-      auto callRes =
-          Callable::executeConstruct0(Handle<Callable>::vmcast(C), runtime);
-      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      A = vmcast<JSObject>(callRes.getValue());
-    } else {
-      // b. Else,
-      //  i. Let A be ArrayCreate(0).
-      auto arrRes = JSArray::create(runtime, 0, 0);
-      if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      A = arrRes->get();
-    }
-    // c. ReturnIfAbrupt(A).
-    // d. Let iterator be GetIterator(items, usingIterator).
-    // Assert we can cast usingIterator to a Callable otherwise getMethod would
-    // have thrown.
-    // e. ReturnIfAbrupt(iterator).
-    auto iterRes = getIterator(
-        runtime, args.getArgHandle(0), Handle<Callable>::vmcast(usingIterator));
-    if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto iteratorRecord = *iterRes;
-    // f. Let k be 0.
-    MutableHandle<> k{runtime, HermesValue::encodeNumberValue(0)};
-    // g. Repeat
-    MutableHandle<> mappedValue{runtime};
-    while (true) {
-      GCScopeMarkerRAII marker1{runtime};
-      // i. Let Pk be ToString(k).
-      auto pkRes = valueToSymbolID(runtime, k);
-      if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      auto pkHandle = pkRes.getValue();
-      // ii. Let next be IteratorStep(iteratorRecord).
-      // iii. ReturnIfAbrupt(next).
-      auto next = iteratorStep(runtime, iteratorRecord);
-      if (LLVM_UNLIKELY(next == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      // iv. If next is false, then
-      if (!next.getValue()) {
-        // 1. Let setStatus be Set(A, "length", k, true).
-        // 2. ReturnIfAbrupt(setStatus).
-        // 3. Return A.
-        auto setStatus = JSObject::putNamed_RJS(
-            A,
-            runtime,
-            Predefined::getSymbolID(Predefined::length),
-            k,
-            PropOpFlags().plusThrowOnError());
-        if (LLVM_UNLIKELY(setStatus == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        return A.getHermesValue();
-      }
-      // v. Let nextValue be IteratorValue(next).
-      // vi. ReturnIfAbrupt(nextValue).
-      auto propRes = JSObject::getNamed_RJS(
-          *next, runtime, Predefined::getSymbolID(Predefined::value));
-      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      auto nextValue = runtime->makeHandle(propRes.getValue());
-      // vii. If mapping is true, then
-      if (mapfn) {
-        // 1. Let mappedValue be Call(mapfn, T, «nextValue, k»).
-        auto callRes = Callable::executeCall2(
-            mapfn, runtime, T, nextValue.getHermesValue(), k.getHermesValue());
-        // 2. If mappedValue is an abrupt completion, return
-        // IteratorClose(iterator, mappedValue).
-        if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
-          return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
-        }
-        // 3. Let mappedValue be mappedValue.[[value]].
-        mappedValue = callRes.getValue();
-      } else {
-        // viii. Else, let mappedValue be nextValue.
-        mappedValue = nextValue.getHermesValue();
-      }
-      // ix. Let defineStatus be CreateDataPropertyOrThrow(A, Pk, mappedValue).
-      // x. If defineStatus is an abrupt completion, return
-      // IteratorClose(iterator, defineStatus).
-      if (LLVM_UNLIKELY(
-              JSObject::defineOwnProperty(
-                  A,
-                  runtime,
-                  *pkHandle,
-                  DefinePropertyFlags::getDefaultNewPropertyFlags(),
-                  mappedValue,
-                  PropOpFlags().plusThrowOnError()) ==
-              ExecutionStatus::EXCEPTION)) {
-        return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
-      }
-      // xi. Increase k by 1.
-      k = HermesValue::encodeNumberValue(k->getNumber() + 1);
-    }
-  }
-  // 7. Assert: items is not an Iterable so assume it is an array-like object.
-  // 8. Let arrayLike be ToObject(items).
-  auto objRes = toObject(runtime, itemsHandle);
-  // 9. ReturnIfAbrupt(arrayLike).
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto arrayLike = runtime->makeHandle<JSObject>(objRes.getValue());
-  // 10. Let len be ToLength(Get(arrayLike, "length")).
-  // 11. ReturnIfAbrupt(len).
-  auto propRes = JSObject::getNamed_RJS(
-      arrayLike, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto lengthRes = toLength(runtime, runtime->makeHandle(propRes.getValue()));
-  if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  uint64_t len = lengthRes->getNumberAs<uint64_t>();
-  // 12. If IsConstructor(C) is true, then
-  if (isConstructor(runtime, *C)) {
-    // a. Let A be Construct(C, «len»).
-    auto callRes = Callable::executeConstruct1(
-        Handle<Callable>::vmcast(C),
-        runtime,
-        runtime->makeHandle(lengthRes.getValue()));
-    if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    A = vmcast<JSObject>(callRes.getValue());
-  } else {
-    // 13. Else,
-    //  a. Let A be ArrayCreate(len).
-    if (LLVM_UNLIKELY(len > JSArray::StorageType::maxElements())) {
-      return runtime->raiseRangeError("Out of memory for array elements.");
-    }
-    auto arrRes = JSArray::create(runtime, len, len);
-    if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    A = arrRes->get();
-  }
-  // 14. ReturnIfAbrupt(A).
-  // 15. Let k be 0.
-  MutableHandle<> k{runtime, HermesValue::encodeNumberValue(0)};
-  // 16. Repeat, while k < len
-  MutableHandle<> mappedValue{runtime};
-  while (k->getNumberAs<uint32_t>() < len) {
-    GCScopeMarkerRAII marker2{runtime};
-    // a. Let Pk be ToString(k).
-    auto pkRes = valueToSymbolID(runtime, k);
-    if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto pkHandle = pkRes.getValue();
-    // b. Let kValue be Get(arrayLike, Pk).
-    propRes = JSObject::getComputed_RJS(arrayLike, runtime, k);
-    // c. ReturnIfAbrupt(kValue).
-    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    // d. If mapping is true, then
-    if (mapfn) {
-      // i. Let mappedValue be Call(mapfn, T, «kValue, k»).
-      // ii. ReturnIfAbrupt(mappedValue).
-      auto callRes = Callable::executeCall2(
-          mapfn, runtime, T, propRes.getValue(), k.getHermesValue());
-      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      mappedValue = callRes.getValue();
-    } else {
-      // e. Else, let mappedValue be kValue.
-      mappedValue = propRes.getValue();
-    }
-    // f. Let defineStatus be CreateDataPropertyOrThrow(A, Pk, mappedValue).
-    // g. ReturnIfAbrupt(defineStatus).
-    if (LLVM_UNLIKELY(
-            JSObject::defineOwnProperty(
-                A,
-                runtime,
-                *pkHandle,
-                DefinePropertyFlags::getDefaultNewPropertyFlags(),
-                mappedValue,
-                PropOpFlags().plusThrowOnError()) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    // h. Increase k by 1.
-    k = HermesValue::encodeNumberValue(k->getNumber() + 1);
-  }
-  // 17. Let setStatus be Set(A, "length", len, true).
-  auto setStatus = JSObject::putNamed_RJS(
-      A,
-      runtime,
-      Predefined::getSymbolID(Predefined::length),
-      k,
-      PropOpFlags().plusThrowOnError());
-  // 18. ReturnIfAbrupt(setStatus).
-  if (LLVM_UNLIKELY(setStatus == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  // 19. Return A.
-  return A.getHermesValue();
-}
-
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 CallResult<HermesValue>
 arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
@@ -3216,6 +2969,254 @@ arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
 
   // 8. Return false.
   return HermesValue::encodeBoolValue(false);
+}
+
+/// ES6.0 22.1.2.1 Array.from ( items [ , mapfn [ , thisArg ] ] )
+CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
+  GCScopeMarkerRAII gcScope{runtime};
+  auto itemsHandle = args.getArgHandle(0);
+  // 1. Let C be the this value.
+  auto C = args.getThisHandle();
+  // 2. If mapfn is undefined, let mapping be false.
+  // 3. else
+  MutableHandle<Callable> mapfn{runtime};
+  MutableHandle<> T{runtime, HermesValue::encodeUndefinedValue()};
+  if (!args.getArg(1).isUndefined()) {
+    mapfn = dyn_vmcast<Callable>(args.getArg(1));
+    // a. If IsCallable(mapfn) is false, throw a TypeError exception.
+    if (LLVM_UNLIKELY(!mapfn)) {
+      return runtime->raiseTypeError("Mapping function is not callable.");
+    }
+    // b. If thisArg was supplied, let T be thisArg; else let T be undefined.
+    if (args.getArgCount() >= 3) {
+      T = args.getArg(2);
+    }
+    // c. Let mapping be true
+  }
+  // 4. Let usingIterator be GetMethod(items, @@iterator).
+  // 5. ReturnIfAbrupt(usingIterator).
+  auto methodRes = getMethod(
+      runtime,
+      itemsHandle,
+      runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolIterator)));
+  if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto usingIterator = runtime->makeHandle(methodRes->getHermesValue());
+
+  MutableHandle<JSObject> A{runtime};
+  // 6. If usingIterator is not undefined, then
+  if (!usingIterator->isUndefined()) {
+    // a. If IsConstructor(C) is true, then
+    if (isConstructor(runtime, *C)) {
+      // i. Let A be Construct(C).
+      auto callRes =
+          Callable::executeConstruct0(Handle<Callable>::vmcast(C), runtime);
+      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      A = vmcast<JSObject>(callRes.getValue());
+    } else {
+      // b. Else,
+      //  i. Let A be ArrayCreate(0).
+      auto arrRes = JSArray::create(runtime, 0, 0);
+      if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      A = arrRes->get();
+    }
+    // c. ReturnIfAbrupt(A).
+    // d. Let iterator be GetIterator(items, usingIterator).
+    // Assert we can cast usingIterator to a Callable otherwise getMethod would
+    // have thrown.
+    // e. ReturnIfAbrupt(iterator).
+    auto iterRes = getIterator(
+        runtime, args.getArgHandle(0), Handle<Callable>::vmcast(usingIterator));
+    if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto iteratorRecord = *iterRes;
+    // f. Let k be 0.
+    MutableHandle<> k{runtime, HermesValue::encodeNumberValue(0)};
+    // g. Repeat
+    MutableHandle<> mappedValue{runtime};
+    while (true) {
+      GCScopeMarkerRAII marker1{runtime};
+      // i. Let Pk be ToString(k).
+      auto pkRes = valueToSymbolID(runtime, k);
+      if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto pkHandle = pkRes.getValue();
+      // ii. Let next be IteratorStep(iteratorRecord).
+      // iii. ReturnIfAbrupt(next).
+      auto next = iteratorStep(runtime, iteratorRecord);
+      if (LLVM_UNLIKELY(next == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      // iv. If next is false, then
+      if (!next.getValue()) {
+        // 1. Let setStatus be Set(A, "length", k, true).
+        // 2. ReturnIfAbrupt(setStatus).
+        // 3. Return A.
+        auto setStatus = JSObject::putNamed_RJS(
+            A,
+            runtime,
+            Predefined::getSymbolID(Predefined::length),
+            k,
+            PropOpFlags().plusThrowOnError());
+        if (LLVM_UNLIKELY(setStatus == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        return A.getHermesValue();
+      }
+      // v. Let nextValue be IteratorValue(next).
+      // vi. ReturnIfAbrupt(nextValue).
+      auto propRes = JSObject::getNamed_RJS(
+          *next, runtime, Predefined::getSymbolID(Predefined::value));
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto nextValue = runtime->makeHandle(propRes.getValue());
+      // vii. If mapping is true, then
+      if (mapfn) {
+        // 1. Let mappedValue be Call(mapfn, T, «nextValue, k»).
+        auto callRes = Callable::executeCall2(
+            mapfn, runtime, T, nextValue.getHermesValue(), k.getHermesValue());
+        // 2. If mappedValue is an abrupt completion, return
+        // IteratorClose(iterator, mappedValue).
+        if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+          return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+        }
+        // 3. Let mappedValue be mappedValue.[[value]].
+        mappedValue = callRes.getValue();
+      } else {
+        // viii. Else, let mappedValue be nextValue.
+        mappedValue = nextValue.getHermesValue();
+      }
+      // ix. Let defineStatus be CreateDataPropertyOrThrow(A, Pk, mappedValue).
+      // x. If defineStatus is an abrupt completion, return
+      // IteratorClose(iterator, defineStatus).
+      if (LLVM_UNLIKELY(
+              JSObject::defineOwnProperty(
+                  A,
+                  runtime,
+                  *pkHandle,
+                  DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                  mappedValue,
+                  PropOpFlags().plusThrowOnError()) ==
+              ExecutionStatus::EXCEPTION)) {
+        return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+      }
+      // xi. Increase k by 1.
+      k = HermesValue::encodeNumberValue(k->getNumber() + 1);
+    }
+  }
+  // 7. Assert: items is not an Iterable so assume it is an array-like object.
+  // 8. Let arrayLike be ToObject(items).
+  auto objRes = toObject(runtime, itemsHandle);
+  // 9. ReturnIfAbrupt(arrayLike).
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto arrayLike = runtime->makeHandle<JSObject>(objRes.getValue());
+  // 10. Let len be ToLength(Get(arrayLike, "length")).
+  // 11. ReturnIfAbrupt(len).
+  auto propRes = JSObject::getNamed_RJS(
+      arrayLike, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto lengthRes = toLength(runtime, runtime->makeHandle(propRes.getValue()));
+  if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint64_t len = lengthRes->getNumberAs<uint64_t>();
+  // 12. If IsConstructor(C) is true, then
+  if (isConstructor(runtime, *C)) {
+    // a. Let A be Construct(C, «len»).
+    auto callRes = Callable::executeConstruct1(
+        Handle<Callable>::vmcast(C),
+        runtime,
+        runtime->makeHandle(lengthRes.getValue()));
+    if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    A = vmcast<JSObject>(callRes.getValue());
+  } else {
+    // 13. Else,
+    //  a. Let A be ArrayCreate(len).
+    if (LLVM_UNLIKELY(len > JSArray::StorageType::maxElements())) {
+      return runtime->raiseRangeError("Out of memory for array elements.");
+    }
+    auto arrRes = JSArray::create(runtime, len, len);
+    if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    A = arrRes->get();
+  }
+  // 14. ReturnIfAbrupt(A).
+  // 15. Let k be 0.
+  MutableHandle<> k{runtime, HermesValue::encodeNumberValue(0)};
+  // 16. Repeat, while k < len
+  MutableHandle<> mappedValue{runtime};
+  while (k->getNumberAs<uint32_t>() < len) {
+    GCScopeMarkerRAII marker2{runtime};
+    // a. Let Pk be ToString(k).
+    auto pkRes = valueToSymbolID(runtime, k);
+    if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto pkHandle = pkRes.getValue();
+    // b. Let kValue be Get(arrayLike, Pk).
+    propRes = JSObject::getComputed_RJS(arrayLike, runtime, k);
+    // c. ReturnIfAbrupt(kValue).
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // d. If mapping is true, then
+    if (mapfn) {
+      // i. Let mappedValue be Call(mapfn, T, «kValue, k»).
+      // ii. ReturnIfAbrupt(mappedValue).
+      auto callRes = Callable::executeCall2(
+          mapfn, runtime, T, propRes.getValue(), k.getHermesValue());
+      if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      mappedValue = callRes.getValue();
+    } else {
+      // e. Else, let mappedValue be kValue.
+      mappedValue = propRes.getValue();
+    }
+    // f. Let defineStatus be CreateDataPropertyOrThrow(A, Pk, mappedValue).
+    // g. ReturnIfAbrupt(defineStatus).
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnProperty(
+                A,
+                runtime,
+                *pkHandle,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                mappedValue,
+                PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // h. Increase k by 1.
+    k = HermesValue::encodeNumberValue(k->getNumber() + 1);
+  }
+  // 17. Let setStatus be Set(A, "length", len, true).
+  auto setStatus = JSObject::putNamed_RJS(
+      A,
+      runtime,
+      Predefined::getSymbolID(Predefined::length),
+      k,
+      PropOpFlags().plusThrowOnError());
+  // 18. ReturnIfAbrupt(setStatus).
+  if (LLVM_UNLIKELY(setStatus == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 19. Return A.
+  return A.getHermesValue();
 }
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
