@@ -68,6 +68,14 @@ target_link_libraries(fbjni-tests
   no_rtti
 )
 
+add_library(doc_tests SHARED
+  doc_tests.cpp
+)
+target_compile_options(doc_tests PRIVATE ${TEST_COMPILE_OPTIONS})
+target_link_libraries(doc_tests
+  fbjni
+)
+
 add_executable(modified_utf8_test
   modified_utf8_test.cpp
 )
