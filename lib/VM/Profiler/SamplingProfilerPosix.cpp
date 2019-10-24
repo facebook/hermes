@@ -11,6 +11,7 @@
 
 #include "hermes/Support/ThreadLocal.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/HostModel.h"
 #include "hermes/VM/Profiler/ChromeTraceSerializerPosix.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -226,9 +227,10 @@ uint32_t SamplingProfiler::walkRuntimeStack(
     } else {
       if (auto *nativeFunction =
               dyn_vmcast_or_null<NativeFunction>(frame.getCalleeClosure())) {
-        frameStorage.kind = StackFrame::FrameKind::NativeFunction;
-        frameStorage.nativeFrame =
-            reinterpret_cast<uintptr_t>(nativeFunction->getFunctionPtr());
+        frameStorage.kind = vmisa<FinalizableNativeFunction>(nativeFunction)
+            ? StackFrame::FrameKind::FinalizableNativeFunction
+            : StackFrame::FrameKind::NativeFunction;
+        frameStorage.nativeFrame = nativeFunction->getFunctionPtr();
       } else {
         // TODO: handle BoundFunction.
         capturedFrame = false;
@@ -343,9 +345,13 @@ void SamplingProfiler::dumpSampledStack(llvm::raw_ostream &OS) {
          ++iter) {
       const StackFrame &frame = *iter;
       if (frame.kind == StackFrame::FrameKind::JSFunction) {
-        OS << "[JS]" << frame.jsFrame.functionId << ":" << frame.jsFrame.offset;
+        OS << "[JS] " << frame.jsFrame.functionId << ":"
+           << frame.jsFrame.offset;
       } else if (frame.kind == StackFrame::FrameKind::NativeFunction) {
-        OS << "[Native]" << frame.nativeFrame;
+        OS << "[Native] " << reinterpret_cast<uintptr_t>(frame.nativeFrame);
+      } else if (
+          frame.kind == StackFrame::FrameKind::FinalizableNativeFunction) {
+        OS << "[HostFunction]";
       } else {
         llvm_unreachable("Unknown frame kind");
       }
@@ -422,6 +428,10 @@ bool operator==(
   } else if (
       left.kind == SamplingProfiler::StackFrame::FrameKind::NativeFunction) {
     return left.nativeFrame == right.nativeFrame;
+  } else if (
+      left.kind ==
+      SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction) {
+    return left.finalizableNativeFrame == right.finalizableNativeFrame;
   } else {
     llvm_unreachable("Unknown frame kind");
   }

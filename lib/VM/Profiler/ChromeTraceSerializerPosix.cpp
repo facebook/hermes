@@ -8,6 +8,8 @@
 #ifndef _WINDOWS
 #include "hermes/VM/Profiler/ChromeTraceSerializerPosix.h"
 
+#include "hermes/VM/JSNativeFunctions.h"
+
 namespace hermes {
 namespace vm {
 
@@ -179,7 +181,8 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
       json.emitKey(oscompat::to_string(node.getId()));
       json.openDict();
 
-      auto getFunctionName = [](hbc::BCProvider *bcProvider, uint32_t funcId) {
+      auto getJSFunctionName = [](hbc::BCProvider *bcProvider,
+                                  uint32_t funcId) {
         hbc::RuntimeFunctionHeader functionHeader =
             bcProvider->getFunctionHeader(funcId);
         return bcProvider->getStringRefFromID(functionHeader.functionName())
@@ -202,59 +205,72 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
 
       std::string frameName, categoryName;
       const auto &frame = node.getFrameInfo();
-      if (frame.kind == SamplingProfiler::StackFrame::FrameKind::JSFunction) {
-        RuntimeModule *module = frame.jsFrame.module;
-        hbc::BCProvider *bcProvider = module->getBytecode();
+      switch (frame.kind) {
+        case SamplingProfiler::StackFrame::FrameKind::JSFunction: {
+          RuntimeModule *module = frame.jsFrame.module;
+          hbc::BCProvider *bcProvider = module->getBytecode();
 
-        llvm::raw_string_ostream os(frameName);
-        os << getFunctionName(bcProvider, frame.jsFrame.functionId);
-        categoryName = "JavaScript";
+          llvm::raw_string_ostream os(frameName);
+          os << getJSFunctionName(bcProvider, frame.jsFrame.functionId);
+          categoryName = "JavaScript";
 
-        OptValue<hbc::DebugSourceLocation> sourceLocOpt = getSourceLocation(
-            bcProvider, frame.jsFrame.functionId, frame.jsFrame.offset);
-        if (sourceLocOpt.hasValue()) {
-          // Bundle has debug info.
-          std::string fileNameStr = bcProvider->getDebugInfo()->getFilenameByID(
-              sourceLocOpt.getValue().filenameId);
+          OptValue<hbc::DebugSourceLocation> sourceLocOpt = getSourceLocation(
+              bcProvider, frame.jsFrame.functionId, frame.jsFrame.offset);
+          if (sourceLocOpt.hasValue()) {
+            // Bundle has debug info.
+            std::string fileNameStr =
+                bcProvider->getDebugInfo()->getFilenameByID(
+                    sourceLocOpt.getValue().filenameId);
 
-          uint32_t line = sourceLocOpt.getValue().line;
-          uint32_t column = sourceLocOpt.getValue().column;
-          // format: frame_name(file:line:column)
-          os << "(" << fileNameStr << ":" << line << ":" << column << ")";
-          // Still emit line/column entries for babel/metro/prepack
-          // source map symbolication.
-          json.emitKeyValue("line", oscompat::to_string(line));
-          json.emitKeyValue("column", oscompat::to_string(column));
+            uint32_t line = sourceLocOpt.getValue().line;
+            uint32_t column = sourceLocOpt.getValue().column;
+            // format: frame_name(file:line:column)
+            os << "(" << fileNameStr << ":" << line << ":" << column << ")";
+            // Still emit line/column entries for babel/metro/prepack
+            // source map symbolication.
+            json.emitKeyValue("line", oscompat::to_string(line));
+            json.emitKeyValue("column", oscompat::to_string(column));
 
-          // Emit function's start line/column so that can we symbolicate
-          // name correctly.
-          OptValue<hbc::DebugSourceLocation> funcStartSourceLocOpt =
-              getSourceLocation(bcProvider, frame.jsFrame.functionId, 0);
-          if (funcStartSourceLocOpt.hasValue()) {
+            // Emit function's start line/column so that can we symbolicate
+            // name correctly.
+            OptValue<hbc::DebugSourceLocation> funcStartSourceLocOpt =
+                getSourceLocation(bcProvider, frame.jsFrame.functionId, 0);
+            if (funcStartSourceLocOpt.hasValue()) {
+              json.emitKeyValue(
+                  "funcLine",
+                  oscompat::to_string(funcStartSourceLocOpt.getValue().line));
+              json.emitKeyValue(
+                  "funcColumn",
+                  oscompat::to_string(funcStartSourceLocOpt.getValue().column));
+            }
+          } else {
+            // Without debug info, emit virtual address for source map
+            // symbolication.
+            uint32_t funcVirtAddr = bcProvider->getVirtualOffsetForFunction(
+                frame.jsFrame.functionId);
             json.emitKeyValue(
-                "funcLine",
-                oscompat::to_string(funcStartSourceLocOpt.getValue().line));
+                "funcVirtAddr", oscompat::to_string(funcVirtAddr));
             json.emitKeyValue(
-                "funcColumn",
-                oscompat::to_string(funcStartSourceLocOpt.getValue().column));
+                "offset", oscompat::to_string(frame.jsFrame.offset));
           }
-        } else {
-          // Without debug info, emit virtual address for source map
-          // symbolication.
-          uint32_t funcVirtAddr =
-              bcProvider->getVirtualOffsetForFunction(frame.jsFrame.functionId);
-          json.emitKeyValue("funcVirtAddr", oscompat::to_string(funcVirtAddr));
-          json.emitKeyValue(
-              "offset", oscompat::to_string(frame.jsFrame.offset));
-        }
-      } else if (
-          frame.kind ==
-          SamplingProfiler::StackFrame::FrameKind::NativeFunction) {
-        frameName = "[Native]";
-        frameName += oscompat::to_string(frame.nativeFrame);
-        categoryName = "Native";
-      } else {
-        llvm_unreachable("Unknown frame kind");
+        } break;
+
+        case SamplingProfiler::StackFrame::FrameKind::NativeFunction: {
+          frameName =
+              std::string("[Native] ") + getFunctionName(frame.nativeFrame);
+          categoryName = "Native";
+        } break;
+
+        case SamplingProfiler::StackFrame::FrameKind::
+            FinalizableNativeFunction: {
+          // TODO: find a way to get host function name out of
+          // FinalizableNativeFunction.
+          frameName = "[HostFunction]";
+          categoryName = "Native";
+        } break;
+
+        default:
+          llvm_unreachable("Unknown frame kind");
       }
 
       json.emitKeyValue("name", frameName);

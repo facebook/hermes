@@ -10,6 +10,7 @@
 
 #include "hermes/Support/Semaphore.h"
 #include "hermes/Support/ThreadLocal.h"
+#include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -54,7 +55,9 @@ class SamplingProfiler {
     uint32_t offset;
   };
   /// Captured NativeFunction frame information for symbolication.
-  using NativeFunctionFrameInfo = uintptr_t;
+  using NativeFunctionFrameInfo = NativeFunctionPtr;
+  /// Captured FinalizableNativeFunction frame information for symbolication.
+  using FinalizableNativeFunctionFrameInfo = NativeFunctionPtr;
 
   // This will break with more than one RuntimeModule(like FB4a, eval() call or
   // lazy compilation etc...). It is simply a temporary thing to get started.
@@ -64,6 +67,7 @@ class SamplingProfiler {
     enum class FrameKind {
       JSFunction,
       NativeFunction,
+      FinalizableNativeFunction,
     };
 
     // TODO: figure out how to store BoundFunction.
@@ -73,6 +77,7 @@ class SamplingProfiler {
       JSFunctionFrameInfo jsFrame;
       // Native function frame info.
       NativeFunctionFrameInfo nativeFrame;
+      FinalizableNativeFunctionFrameInfo finalizableNativeFrame;
     };
     FrameKind kind;
   };
