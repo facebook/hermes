@@ -97,13 +97,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       nullptr,
       arrayPrototypeForEach,
       1);
-  defineMethod(
-      runtime,
-      arrayPrototype,
-      Predefined::getSymbolID(Predefined::includes),
-      nullptr,
-      arrayPrototypeIncludes,
-      1);
 
   defineMethod(
       runtime,
@@ -233,6 +226,13 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       nullptr,
       arrayPrototypeReverse,
       0);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::includes),
+      nullptr,
+      arrayPrototypeIncludes,
+      1);
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
   auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
@@ -1848,85 +1848,6 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
-  GCScope gcScope{runtime};
-
-  // 1. Let O be ? ToObject(this value).
-  auto oRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto O = runtime->makeHandle<JSObject>(*oRes);
-
-  // 2. Let len be ? ToLength(? Get(O, "length")).
-  auto lenPropRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(lenPropRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*lenPropRes));
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double len = *lenRes;
-
-  // 3. If len is 0, return false.
-  if (len == 0) {
-    return HermesValue::encodeBoolValue(false);
-  }
-
-  // 4. Let n be ? ToInteger(fromIndex).
-  // (If fromIndex is undefined, this step produces the value 0.)
-  auto nRes = toInteger(runtime, args.getArgHandle(1));
-  if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  // Use double here, because ToInteger may return Infinity.
-  double n = nRes->getNumber();
-
-  double k;
-  if (n >= 0) {
-    // 5. If n ≥ 0, then
-    // 5a. Let k be n.
-    k = n;
-  } else {
-    // 6. Else n < 0,
-    // 6a. Let k be len + n.
-    k = len + n;
-    // 6b. If k < 0, let k be 0.
-    if (k < 0) {
-      k = 0;
-    }
-  }
-
-  MutableHandle<> kHandle{runtime};
-
-  // 7. Repeat, while k < len
-  auto marker = gcScope.createMarker();
-  while (k < len) {
-    gcScope.flushToMarker(marker);
-
-    // 7a. Let elementK be the result of ? Get(O, ! ToString(k)).
-    kHandle = HermesValue::encodeNumberValue(k);
-    auto elementKRes = JSObject::getComputed_RJS(O, runtime, kHandle);
-    if (LLVM_UNLIKELY(elementKRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
-    // 7b. If SameValueZero(searchElement, elementK) is true, return true.
-    if (isSameValueZero(args.getArg(0), *elementKRes)) {
-      return HermesValue::encodeBoolValue(true);
-    }
-
-    // 7c. Increase k by 1.
-    ++k;
-  }
-
-  // 8. Return false.
-  return HermesValue::encodeBoolValue(false);
-}
-
-CallResult<HermesValue>
 arrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
   IterationKind kind = *reinterpret_cast<IterationKind *>(&ctx);
   assert(
@@ -3216,6 +3137,85 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
   }
 
   return O.getHermesValue();
+}
+
+CallResult<HermesValue>
+arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let O be ? ToObject(this value).
+  auto oRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(*oRes);
+
+  // 2. Let len be ? ToLength(? Get(O, "length")).
+  auto lenPropRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(lenPropRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*lenPropRes));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double len = *lenRes;
+
+  // 3. If len is 0, return false.
+  if (len == 0) {
+    return HermesValue::encodeBoolValue(false);
+  }
+
+  // 4. Let n be ? ToInteger(fromIndex).
+  // (If fromIndex is undefined, this step produces the value 0.)
+  auto nRes = toInteger(runtime, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Use double here, because ToInteger may return Infinity.
+  double n = nRes->getNumber();
+
+  double k;
+  if (n >= 0) {
+    // 5. If n ≥ 0, then
+    // 5a. Let k be n.
+    k = n;
+  } else {
+    // 6. Else n < 0,
+    // 6a. Let k be len + n.
+    k = len + n;
+    // 6b. If k < 0, let k be 0.
+    if (k < 0) {
+      k = 0;
+    }
+  }
+
+  MutableHandle<> kHandle{runtime};
+
+  // 7. Repeat, while k < len
+  auto marker = gcScope.createMarker();
+  while (k < len) {
+    gcScope.flushToMarker(marker);
+
+    // 7a. Let elementK be the result of ? Get(O, ! ToString(k)).
+    kHandle = HermesValue::encodeNumberValue(k);
+    auto elementKRes = JSObject::getComputed_RJS(O, runtime, kHandle);
+    if (LLVM_UNLIKELY(elementKRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // 7b. If SameValueZero(searchElement, elementK) is true, return true.
+    if (isSameValueZero(args.getArg(0), *elementKRes)) {
+      return HermesValue::encodeBoolValue(true);
+    }
+
+    // 7c. Increase k by 1.
+    ++k;
+  }
+
+  // 8. Return false.
+  return HermesValue::encodeBoolValue(false);
 }
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
