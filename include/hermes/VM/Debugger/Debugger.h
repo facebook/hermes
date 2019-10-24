@@ -550,9 +550,8 @@ class Debugger {
   CallFrameInfo getCallFrameInfo(const CodeBlock *codeBlock, uint32_t offset)
       const;
 
-  /// If the current instruction is a jump instruction, set a breakpoint at
-  /// the jump target.
-  void breakAtJumpTarget(InterpreterState &state);
+  /// Get the jump target for an instruction (if it is a jump).
+  llvm::Optional<uint32_t> findJumpTarget(CodeBlock *block, uint32_t offset);
 
   /// Set breakpoints at all possible next instructions after the current one.
   void breakAtPossibleNextInstructions(InterpreterState &state);

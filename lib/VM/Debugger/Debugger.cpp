@@ -91,29 +91,23 @@ void Debugger::triggerAsyncPause(AsyncPauseKind kind) {
   runtime_->triggerDebuggerAsyncBreak(kind);
 }
 
-void Debugger::breakAtJumpTarget(InterpreterState &state) {
-  const Inst *ip = state.codeBlock->getOffsetPtr(state.offset);
+llvm::Optional<uint32_t> Debugger::findJumpTarget(
+    CodeBlock *block,
+    uint32_t offset) {
+  const Inst *ip = block->getOffsetPtr(offset);
 
 #define DEFINE_JUMP_LONG_VARIANT(name, nameLong) \
   case OpCode::name: {                           \
-    setStepBreakpoint(                           \
-        state.codeBlock,                         \
-        state.offset + ip->i##name.op1,          \
-        runtime_->getCurrentFrameOffset());      \
-    return;                                      \
+    return offset + ip->i##name.op1;             \
   }                                              \
   case OpCode::nameLong: {                       \
-    setStepBreakpoint(                           \
-        state.codeBlock,                         \
-        state.offset + ip->i##nameLong.op1,      \
-        runtime_->getCurrentFrameOffset());      \
-    return;                                      \
+    return offset + ip->i##nameLong.op1;         \
   }
 
   switch (ip->opCode) {
 #include "hermes/BCGen/HBC/BytecodeList.def"
     default:
-      return;
+      return llvm::None;
   }
 #undef DEFINE_JUMP_LONG_VARIANT
 }
@@ -129,8 +123,18 @@ void Debugger::breakAtPossibleNextInstructions(InterpreterState &state) {
   // If the instruction is a jump, set a break point at the possible
   // jump target; otherwise, only break at the next instruction.
   // This instruction could jump to itself, so this step should be after the
-  // previous step.
-  breakAtJumpTarget(state);
+  // previous step (otherwise the Jmp will have been overwritten by a Debugger
+  // inst, and we won't be able to find the target).
+  //
+  // Since we've already set a breakpoint on the next instruction, we can
+  // skip the case where that is also the jump target.
+  auto jumpTarget = findJumpTarget(state.codeBlock, state.offset);
+  if (jumpTarget.hasValue() && jumpTarget.getValue() != nextOffset) {
+    setStepBreakpoint(
+        state.codeBlock,
+        jumpTarget.getValue(),
+        runtime_->getCurrentFrameOffset());
+  }
 }
 
 ExecutionStatus Debugger::runDebugger(
