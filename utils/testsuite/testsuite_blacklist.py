@@ -568,7 +568,6 @@ BLACK_LIST = [
     "test262/test/language/statements/try/scope-catch-param-lex-open.js",
     # trailing comma
     re.compile("test262/.*args-trailing-comma-.*.js"),
-    "test262/test/language/expressions/function/dflt-params-trailing-comma.js",
     # classes and methods
     "mjsunit/accessors-no-prototype.js",
     "mjsunit/array-functions-prototype-misc.js",
@@ -660,8 +659,6 @@ BLACK_LIST = [
     "test262/test/harness/verifyProperty-restore-accessor.js",
     "test262/test/harness/detachArrayBuffer-host-detachArrayBuffer.js",
     "test262/test/harness/assert-throws-early-incorrect-ctor.js",
-    "test262/test/built-ins/TypedArrays/buffer-arg-detachedbuffer.js",
-    "test262/test/built-ins/TypedArrays/buffer-arg-byteoffset-to-number-detachbuffer.js",
     # Reflect
     "test262/test/language/expressions/typeof/built-in-ordinary-objects-no-call.js",
     "test262/test/built-ins/TypedArrays/buffer-arg-use-default-proto-if-custom-proto-is-not-object.js",
@@ -773,6 +770,8 @@ BLACK_LIST = [
     "test262/test/built-ins/TypedArrays/internals/GetOwnProperty/detached-buffer.js",
     "test262/test/built-ins/TypedArray/prototype/find/predicate-may-detach-buffer.js",
     "test262/test/built-ins/TypedArray/prototype/findIndex/predicate-may-detach-buffer.js",
+    "test262/test/built-ins/TypedArrays/buffer-arg-detachedbuffer.js",
+    "test262/test/built-ins/TypedArrays/buffer-arg-byteoffset-to-number-detachbuffer.js",
     # Float32 TypedArray failure
     "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/conversion-operation-consistent-nan.js",
     # TypedArray accessors
