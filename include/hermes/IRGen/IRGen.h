@@ -65,9 +65,12 @@ bool generateIRFromESTree(
 
 /// Lowers an ESTree program into Hermes IR in \p M without a top-level
 /// function, so that it can be used as a CommonJS module.
+/// \param id the ID assigned to the CommonJS module when added to the IR
+///           (index when reading filenames for the first time)
 /// \param filename the relative filename to the CommonJS module.
 void generateIRForCJSModule(
     ESTree::FunctionExpressionNode *node,
+    uint32_t id,
     llvm::StringRef filename,
     Module *M,
     Function *topLevelFunction,

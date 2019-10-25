@@ -261,6 +261,7 @@ void ESTreeIRGen::doIt() {
 void ESTreeIRGen::doCJSModule(
     Function *topLevelFunction,
     sem::FunctionInfo *semInfo,
+    uint32_t id,
     llvm::StringRef filename) {
   assert(Root && "no root in ESTreeIRGen");
   auto *func = cast<ESTree::FunctionExpressionNode>(Root);
@@ -283,7 +284,7 @@ void ESTreeIRGen::doCJSModule(
   Function *newFunc = genES5Function(functionName, nullptr, func);
 
   Builder.getModule()->addCJSModule(
-      Builder.createIdentifier(filename), newFunc);
+      id, Builder.createIdentifier(filename), newFunc);
 }
 
 Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {

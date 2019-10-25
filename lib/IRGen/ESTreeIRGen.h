@@ -387,6 +387,7 @@ class ESTreeIRGen {
   void doCJSModule(
       Function *topLevelFunction,
       sem::FunctionInfo *semInfo,
+      uint32_t id,
       llvm::StringRef filename);
 
   /// Perform IR generation for a lazy function.

@@ -447,7 +447,10 @@ static opt<unsigned> PadFunctionBodiesPercent(
 
 namespace {
 
-struct FileAndSourceMap {
+struct ModuleInSegment {
+  /// Index of the module, to be used as the ID when generating IR.
+  uint32_t id;
+
   /// Input source file. May be a JavaScript source file or an HBC file.
   std::unique_ptr<llvm::MemoryBuffer> file;
 
@@ -456,7 +459,7 @@ struct FileAndSourceMap {
 };
 
 /// Encodes a list of files that are part of a given segment.
-using SegmentTableEntry = std::vector<FileAndSourceMap>;
+using SegmentTableEntry = std::vector<ModuleInSegment>;
 
 /// Mapping from segment index to the file buffers in that segment.
 /// For a given table, table[i][j] is the j-indexed file in segment i.
@@ -995,8 +998,6 @@ std::unique_ptr<llvm::MemoryBuffer> getFileFromDirectoryOrZip(
     }
 
     range.first = moduleIdx;
-    range.last = moduleIdx + segment->size() - 1;
-    moduleIdx += segment->size();
 
     SegmentTableEntry segmentBufs{};
     for (auto val : *segment) {
@@ -1012,8 +1013,12 @@ std::unique_ptr<llvm::MemoryBuffer> getFileFromDirectoryOrZip(
       auto mapBuf = getFileFromDirectoryOrZip(
           zip, inputPath, llvm::Twine(relPath->str(), ".map"), true);
       // mapBuf is optional, so simply pass it through if it's null.
-      segmentBufs.push_back({std::move(fileBuf), std::move(mapBuf)});
+      segmentBufs.push_back(
+          {moduleIdx++, std::move(fileBuf), std::move(mapBuf)});
     }
+
+    range.last = moduleIdx - 1;
+
     auto emplaceRes = fileBufs.emplace(range.segment, std::move(segmentBufs));
     if (!emplaceRes.second) {
       llvm::errs() << "Duplicate segment entry in metadata: " << range.segment
@@ -1247,8 +1252,8 @@ bool generateIRForSourcesAsCJSModules(
 
   Function *topLevelFunction = M.getTopLevelFunction();
   for (auto &entry : fileBufs) {
-    for (auto &fileBufAndMap : entry.second) {
-      auto &fileBuf = fileBufAndMap.file;
+    for (ModuleInSegment &moduleInSegment : entry.second) {
+      auto &fileBuf = moduleInSegment.file;
       llvm::SmallString<64> filename{fileBuf->getBufferIdentifier()};
       if (sourceMapGen) {
         sources.push_back(fileBuf->getBufferIdentifier());
@@ -1268,12 +1273,13 @@ bool generateIRForSourcesAsCJSModules(
       }
       generateIRForCJSModule(
           cast<ESTree::FunctionExpressionNode>(ast),
+          moduleInSegment.id,
           llvm::sys::path::remove_leading_dotslash(filename),
           &M,
           topLevelFunction,
           declFileList);
-      if (fileBufAndMap.sourceMap) {
-        auto inputMap = SourceMapParser::parse(*fileBufAndMap.sourceMap);
+      if (moduleInSegment.sourceMap) {
+        auto inputMap = SourceMapParser::parse(*moduleInSegment.sourceMap);
         if (!inputMap) {
           // parse() returns nullptr on failure and reports its own errors.
           return false;
@@ -1796,12 +1802,13 @@ CompileResult compileFromCommandLineOptions() {
     range.segment = 0;
     segmentRanges.push_back(std::move(range));
 
+    uint32_t id = 0;
     SegmentTableEntry entry{};
     for (const std::string &filename : cl::InputFilenames) {
       auto fileBuf = memoryBufferFromFile(filename, true);
       if (!fileBuf)
         return InputFileError;
-      entry.push_back({std::move(fileBuf), nullptr});
+      entry.push_back({id++, std::move(fileBuf), nullptr});
     }
 
     // Read input source map if available.

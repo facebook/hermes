@@ -32,13 +32,15 @@ bool generateIRFromESTree(
 
 void generateIRForCJSModule(
     ESTree::FunctionExpressionNode *node,
+    uint32_t id,
     llvm::StringRef filename,
     Module *M,
     Function *topLevelFunction,
     const DeclarationFileListTy &declFileList) {
   // Generate IR into the module M.
   ESTreeIRGen generator(node, declFileList, M, {});
-  return generator.doCJSModule(topLevelFunction, node->getSemInfo(), filename);
+  return generator.doCJSModule(
+      topLevelFunction, node->getSemInfo(), id, filename);
 }
 
 Function *generateLazyFunctionIR(

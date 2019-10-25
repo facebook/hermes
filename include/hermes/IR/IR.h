@@ -1855,10 +1855,15 @@ class Module : public Value {
   }
 
   /// Add a new CJS module entry, given the function representing the module.
-  void addCJSModule(Identifier name, Function *function) {
-    uint32_t id = cjsModules_.size();
-    cjsModules_.push_back(CJSModule{id, name, function});
-    auto &module = cjsModules_.back();
+  void addCJSModule(uint32_t id, Identifier name, Function *function) {
+    if (cjsModules_.size() <= id) {
+      cjsModules_.resize(id + 1);
+    }
+    CJSModule &module = cjsModules_[id];
+    assert(module.function == nullptr && "duplicate IDs in addCJSModule");
+    module.id = id;
+    module.filename = name;
+    module.function = function;
     {
       auto result = cjsModuleFilenameMap_.try_emplace(name, &module);
       (void)result;
