@@ -41,8 +41,11 @@ public class DocTests extends BaseFBJniTests {
 
   // SECTION basic_methods
   native void nativeVoidMethod();
+
   static native void staticNativeVoidMethod();
+
   void voidMethod() {}
+
   static void staticVoidMethod() {}
   // END
 
@@ -54,7 +57,10 @@ public class DocTests extends BaseFBJniTests {
 
   // SECTION primitives
   static native long addSomeNumbers(byte b, short s, int i);
-  static long doubler(int i) { return i + i; }
+
+  static long doubler(int i) {
+    return i + i;
+  }
   // END
 
   @Test
@@ -65,8 +71,12 @@ public class DocTests extends BaseFBJniTests {
   // SECTION strings
   // Java methods used by the C++ code below.
   static native String fancyCat(String s1, String s2);
+
   static native String getCString();
-  static String doubler(String s) { return s + s; }
+
+  static String doubler(String s) {
+    return s + s;
+  }
   // END
 
   @Test
@@ -177,18 +187,19 @@ public class DocTests extends BaseFBJniTests {
     } catch (RuntimeException e) {
       assertThat(e)
           .hasMessageStartingWith("Caught 'java.lang.NoSuchMethodError:")
-          .hasMessageContaining("doesNotExist")
-          ;
+          .hasMessageContaining("doesNotExist");
     }
   }
 
   // SECTION byte_buffer
   static native ByteBuffer transformBuffer(ByteBuffer data);
+
   static void receiveBuffer(ByteBuffer buffer) {
     assertThat(buffer.capacity()).isEqualTo(2);
-    assertThat(buffer.get(0)).isEqualTo((byte)2);
-    assertThat(buffer.get(1)).isEqualTo((byte)3);
+    assertThat(buffer.get(0)).isEqualTo((byte) 2);
+    assertThat(buffer.get(1)).isEqualTo((byte) 3);
   }
+
   @Test
   public void testByteBuffers() {
     ByteBuffer data = ByteBuffer.allocateDirect(2);
@@ -201,6 +212,7 @@ public class DocTests extends BaseFBJniTests {
 
 // SECTION inheritance
 class MyBaseClass {}
+
 class MyDerivedClass extends MyBaseClass {}
 // END
 
@@ -214,10 +226,12 @@ class Outer {
 class DataHolder {
   int i;
   String s;
+
   DataHolder(int i, String s) {
     this.i = i;
     this.s = s;
   }
+
   static DataHolder someInstance;
 }
 // END
