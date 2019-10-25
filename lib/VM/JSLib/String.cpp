@@ -164,20 +164,6 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       stringPrototype,
-      Predefined::getSymbolID(Predefined::trimLeft),
-      ctx,
-      stringPrototypeTrimLeft,
-      0);
-  defineMethod(
-      runtime,
-      stringPrototype,
-      Predefined::getSymbolID(Predefined::trimRight),
-      ctx,
-      stringPrototypeTrimRight,
-      0);
-  defineMethod(
-      runtime,
-      stringPrototype,
       Predefined::getSymbolID(Predefined::includes),
       (void *)false,
       stringPrototypeIncludesOrStartsWith,
@@ -260,8 +246,37 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       stringPrototypeIncludesOrStartsWith,
       1);
 
-  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-  dpf.enumerable = 0;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
+  auto trimStartRes = runtime->makeHandle<Callable>(
+      runtime->ignoreAllocationFailure(defineMethod(
+          runtime,
+          stringPrototype,
+          Predefined::getSymbolID(Predefined::trimStart),
+          ctx,
+          stringPrototypeTrimStart,
+          0,
+          dpf)));
+  auto trimEndRes = runtime->makeHandle<Callable>(
+      runtime->ignoreAllocationFailure(defineMethod(
+          runtime,
+          stringPrototype,
+          Predefined::getSymbolID(Predefined::trimEnd),
+          ctx,
+          stringPrototypeTrimEnd,
+          0,
+          dpf)));
+
+  defineProperty(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::trimLeft),
+      trimStartRes);
+  defineProperty(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::trimRight),
+      trimEndRes);
+
   (void)defineMethod(
       runtime,
       stringPrototype,
@@ -1263,7 +1278,7 @@ stringPrototypeSubstr(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// \return the number of characters to trim from the begin iterator.
-static size_t trimLeft(
+static size_t trimStart(
     StringView::const_iterator begin,
     StringView::const_iterator end) {
   size_t toTrim = 0;
@@ -1276,7 +1291,7 @@ static size_t trimLeft(
 }
 
 /// \return the number of characters to trim from the end iterator.
-static size_t trimRight(
+static size_t trimEnd(
     StringView::const_iterator begin,
     StringView::const_iterator end) {
   size_t toTrim = 0;
@@ -1307,16 +1322,16 @@ stringPrototypeTrim(void *, Runtime *runtime, NativeArgs args) {
     auto str = StringPrimitive::createStringView(runtime, S);
     auto begin = str.begin();
     auto end = str.end();
-    beginIdx = trimLeft(begin, end);
+    beginIdx = trimStart(begin, end);
     begin += beginIdx;
-    endIdx -= trimRight(begin, end);
+    endIdx -= trimEnd(begin, end);
   }
 
   return StringPrimitive::slice(runtime, S, beginIdx, endIdx - beginIdx);
 }
 
 CallResult<HermesValue>
-stringPrototypeTrimLeft(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeTrimStart(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1334,7 +1349,7 @@ stringPrototypeTrimLeft(void *, Runtime *runtime, NativeArgs args) {
     auto str = StringPrimitive::createStringView(runtime, S);
     auto begin = str.begin();
     auto end = str.end();
-    beginIdx = trimLeft(begin, end);
+    beginIdx = trimStart(begin, end);
   }
 
   return StringPrimitive::slice(
@@ -1342,7 +1357,7 @@ stringPrototypeTrimLeft(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeTrimRight(void *, Runtime *runtime, NativeArgs args) {
+stringPrototypeTrimEnd(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1360,7 +1375,7 @@ stringPrototypeTrimRight(void *, Runtime *runtime, NativeArgs args) {
     auto str = StringPrimitive::createStringView(runtime, S);
     auto begin = str.begin();
     auto end = str.end();
-    endIdx -= trimRight(begin, end);
+    endIdx -= trimEnd(begin, end);
   }
 
   return StringPrimitive::slice(runtime, S, 0, endIdx);

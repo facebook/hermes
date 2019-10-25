@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// NATIVE_FUNCTION_VERSION = 2. Updated Oct 07, 2019
+// NATIVE_FUNCTION_VERSION = 3. Updated Oct 18, 2019
 // Bump this version in SerializeHeader.h whenever we change this file.
 
 #ifndef NATIVE_FUNCTION
@@ -303,8 +303,8 @@ NATIVE_FUNCTION(stringPrototypeToLowerCase)
 NATIVE_FUNCTION(stringPrototypeToString)
 NATIVE_FUNCTION(stringPrototypeToUpperCase)
 NATIVE_FUNCTION(stringPrototypeTrim)
-NATIVE_FUNCTION(stringPrototypeTrimLeft)
-NATIVE_FUNCTION(stringPrototypeTrimRight)
+NATIVE_FUNCTION(stringPrototypeTrimEnd)
+NATIVE_FUNCTION(stringPrototypeTrimStart)
 NATIVE_FUNCTION(stringRaw)
 NATIVE_FUNCTION(symbolConstructor)
 NATIVE_FUNCTION(symbolFor)

@@ -114,6 +114,8 @@ EXPECT("repeat")
 EXPECT("replace")
 EXPECT("search")
 EXPECT("split")
+EXPECT("trimStart")
+EXPECT("trimEnd")
 
 EXPECT("Function")
 EXPECT("callee")

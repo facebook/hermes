@@ -118,6 +118,8 @@ STR(repeat, "repeat")
 STR(replace, "replace")
 STR(search, "search")
 STR(split, "split")
+STR(trimStart, "trimStart")
+STR(trimEnd, "trimEnd")
 
 STR(Function, "Function")
 STR(callee, "callee")

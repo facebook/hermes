@@ -409,37 +409,41 @@ for (var i = 0; i < 10; ++i) {
 print(s.trim());
 // CHECK-NEXT: aaaaaaaaaa
 
-print('trimLeft');
-// CHECK-LABEL: trimLeft
-print(String.prototype.trimLeft.length);
+print('trimStart');
+// CHECK-LABEL: trimStart
+print(String.prototype.trimStart.length);
 // CHECK-NEXT: 0
-print('abc'.trimLeft());
+print('abc'.trimStart());
 // CHECK-NEXT: abc
-var res = ' abc '.trimLeft();
+var res = ' abc '.trimStart();
 print(res, res.length);
 // CHECK-NEXT: abc  4
-var res = '\ufeff\n abc '.trimLeft();
+var res = '\ufeff\n abc '.trimStart();
 print(res, res.length);
 // CHECK-NEXT: abc  4
-var res = '  '.trimLeft();
+var res = '  '.trimStart();
 print('empty', res, res.length);
 // CHECK-NEXT: empty  0
+print(String.prototype.trimStart === String.prototype.trimLeft);
+// CHECK-NEXT: true
 
-print('trimRight');
-// CHECK-LABEL: trimRight
-print(String.prototype.trimRight.length);
+print('trimEnd');
+// CHECK-LABEL: trimEnd
+print(String.prototype.trimEnd.length);
 // CHECK-NEXT: 0
-print('abc'.trimRight());
+print('abc'.trimEnd());
 // CHECK-NEXT: abc
-var res = ' abc '.trimRight();
+var res = ' abc '.trimEnd();
 print(res, res.length);
 // CHECK-NEXT: abc  4
-var res = ' abc \n\ufeff'.trimRight();
+var res = ' abc \n\ufeff'.trimEnd();
 print(res, res.length);
 // CHECK-NEXT:  abc 4
-var res = '  '.trimRight();
+var res = '  '.trimEnd();
 print('empty', res, res.length);
 // CHECK-NEXT: empty  0
+print(String.prototype.trimEnd === String.prototype.trimRight);
+// CHECK-NEXT: true
 
 print('indexOf');
 // CHECK-LABEL: indexOf
