@@ -31,6 +31,6 @@ SYM_TRACE="$TMPDIR/symbolicated_trace.txt"
 
 cat "$SYM_TRACE"
 # CHECK: Error: ERROR_FOR_TESTING
-# CHECK:     at mod2fun ({{.*}}cjs-subdir-2.js:8:13)
-# CHECK:     at run ({{.*}}cjs-subdir-unminified.js:9:20)
-# CHECK:     at cjs_module ({{.*}}cjs-subdir-main.js:8:7)
+# CHECK:     at mod2fun ({{.*}}cjs-subdir-2.js:10:13)
+# CHECK:     at run ({{.*}}cjs-subdir-unminified.js:11:20)
+# CHECK:     at cjs_module ({{.*}}cjs-subdir-main.js:10:7)
