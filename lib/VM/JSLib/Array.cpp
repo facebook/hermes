@@ -51,13 +51,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      Predefined::getSymbolID(Predefined::copyWithin),
-      nullptr,
-      arrayPrototypeCopyWithin,
-      2);
-  defineMethod(
-      runtime,
-      arrayPrototype,
       Predefined::getSymbolID(Predefined::join),
       nullptr,
       arrayPrototypeJoin,
@@ -164,6 +157,13 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       0);
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::copyWithin),
+      nullptr,
+      arrayPrototypeCopyWithin,
+      2);
   defineMethod(
       runtime,
       arrayPrototype,
@@ -792,168 +792,6 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
       "Setting length of new array should never fail");
   (void)res;
   return A.getHermesValue();
-}
-
-CallResult<HermesValue>
-arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
-  GCScope gcScope{runtime};
-
-  // 1. Let O be ToObject(this value).
-  // 2. ReturnIfAbrupt(O).
-  auto oRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto O = runtime->makeHandle<JSObject>(*oRes);
-
-  // 3. Let len be ToLength(Get(O, "length")).
-  // 4. ReturnIfAbrupt(len).
-  // Use doubles for all lengths and indices to allow for proper Infinity
-  // handling, because ToInteger may return Infinity and we must do double
-  // arithmetic.
-  auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double len = *lenRes;
-
-  // 5. Let relativeTarget be ToInteger(target).
-  // 6. ReturnIfAbrupt(relativeTarget).
-  auto relativeTargetRes = toInteger(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(relativeTargetRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double relativeTarget = relativeTargetRes->getNumber();
-
-  // 7. If relativeTarget < 0, let to be max((len + relativeTarget),0); else let
-  // to be min(relativeTarget, len).
-  double to = relativeTarget < 0 ? std::max((len + relativeTarget), (double)0)
-                                 : std::min(relativeTarget, len);
-
-  // 8. Let relativeStart be ToInteger(start).
-  // 9. ReturnIfAbrupt(relativeStart).
-  auto relativeStartRes = toInteger(runtime, args.getArgHandle(1));
-  if (LLVM_UNLIKELY(relativeStartRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double relativeStart = relativeStartRes->getNumber();
-
-  // 10. If relativeStart < 0, let from be max((len + relativeStart),0); else
-  // let from be min(relativeStart, len).
-  double from = relativeStart < 0 ? std::max((len + relativeStart), (double)0)
-                                  : std::min(relativeStart, len);
-
-  // 11. If end is undefined, let relativeEnd be len; else let relativeEnd be
-  // ToInteger(end).
-  // 12. ReturnIfAbrupt(relativeEnd).
-  double relativeEnd;
-  if (args.getArg(2).isUndefined()) {
-    relativeEnd = len;
-  } else {
-    auto relativeEndRes = toInteger(runtime, args.getArgHandle(2));
-    if (LLVM_UNLIKELY(relativeEndRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    relativeEnd = relativeEndRes->getNumber();
-  }
-
-  // 13. If relativeEnd < 0, let final be max((len + relativeEnd),0); else let
-  // final be min(relativeEnd, len).
-  double fin = relativeEnd < 0 ? std::max((len + relativeEnd), (double)0)
-                               : std::min(relativeEnd, len);
-
-  // 14. Let count be min(final-from, len-to).
-  double count = std::min(fin - from, len - to);
-
-  int direction;
-  if (from < to && to < from + count) {
-    // 15. If from<to and to<from+count
-    // a. Let direction be -1.
-    direction = -1;
-    // b. Let from be from + count -1.
-    from = from + count - 1;
-    // c. Let to be to + count -1.
-    to = to + count - 1;
-  } else {
-    // 16. Else,
-    // a. Let direction = 1.
-    direction = 1;
-  }
-
-  MutableHandle<> fromHandle{runtime, HermesValue::encodeNumberValue(from)};
-  MutableHandle<> toHandle{runtime, HermesValue::encodeNumberValue(to)};
-
-  MutableHandle<JSObject> fromObj{runtime};
-  MutableHandle<> fromVal{runtime};
-
-  GCScopeMarkerRAII marker{gcScope};
-  for (; count > 0; marker.flush()) {
-    // 17. Repeat, while count > 0
-    // a. Let fromKey be ToString(from).
-    // b. Let toKey be ToString(to).
-
-    // c. Let fromPresent be HasProperty(O, fromKey).
-    // d. ReturnIfAbrupt(fromPresent).
-    ComputedPropertyDescriptor fromDesc;
-    if (LLVM_UNLIKELY(
-            JSObject::getComputedDescriptor(
-                O, runtime, fromHandle, fromObj, fromDesc) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
-    // e. If fromPresent is true, then
-    if (LLVM_LIKELY(fromObj)) {
-      // i. Let fromVal be Get(O, fromKey).
-      // ii. ReturnIfAbrupt(fromVal).
-      auto fromValRes =
-          JSObject::getComputedPropertyValue(O, runtime, fromObj, fromDesc);
-      if (LLVM_UNLIKELY(fromValRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      fromVal = *fromValRes;
-
-      // iii. Let setStatus be Set(O, toKey, fromVal, true).
-      // iv. ReturnIfAbrupt(setStatus).
-      if (LLVM_UNLIKELY(
-              JSObject::putComputed_RJS(
-                  O,
-                  runtime,
-                  toHandle,
-                  fromVal,
-                  PropOpFlags().plusThrowOnError()) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-    } else {
-      // f. Else fromPresent is false,
-      // i. Let deleteStatus be DeletePropertyOrThrow(O, toKey).
-      // ii. ReturnIfAbrupt(deleteStatus).
-      if (LLVM_UNLIKELY(
-              JSObject::deleteComputed(
-                  O, runtime, toHandle, PropOpFlags().plusThrowOnError()) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-    }
-
-    // g. Let from be from + direction.
-    fromHandle =
-        HermesValue::encodeNumberValue(fromHandle->getNumber() + direction);
-    // h. Let to be to + direction.
-    toHandle =
-        HermesValue::encodeNumberValue(toHandle->getNumber() + direction);
-
-    // i. Let count be count − 1.
-    --count;
-  }
-  // 18. Return O.
-  return O.getHermesValue();
 }
 
 /// ES5.1 15.4.4.5.
@@ -1863,6 +1701,168 @@ arrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+CallResult<HermesValue>
+arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let O be ToObject(this value).
+  // 2. ReturnIfAbrupt(O).
+  auto oRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(*oRes);
+
+  // 3. Let len be ToLength(Get(O, "length")).
+  // 4. ReturnIfAbrupt(len).
+  // Use doubles for all lengths and indices to allow for proper Infinity
+  // handling, because ToInteger may return Infinity and we must do double
+  // arithmetic.
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double len = *lenRes;
+
+  // 5. Let relativeTarget be ToInteger(target).
+  // 6. ReturnIfAbrupt(relativeTarget).
+  auto relativeTargetRes = toInteger(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(relativeTargetRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double relativeTarget = relativeTargetRes->getNumber();
+
+  // 7. If relativeTarget < 0, let to be max((len + relativeTarget),0); else let
+  // to be min(relativeTarget, len).
+  double to = relativeTarget < 0 ? std::max((len + relativeTarget), (double)0)
+                                 : std::min(relativeTarget, len);
+
+  // 8. Let relativeStart be ToInteger(start).
+  // 9. ReturnIfAbrupt(relativeStart).
+  auto relativeStartRes = toInteger(runtime, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(relativeStartRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double relativeStart = relativeStartRes->getNumber();
+
+  // 10. If relativeStart < 0, let from be max((len + relativeStart),0); else
+  // let from be min(relativeStart, len).
+  double from = relativeStart < 0 ? std::max((len + relativeStart), (double)0)
+                                  : std::min(relativeStart, len);
+
+  // 11. If end is undefined, let relativeEnd be len; else let relativeEnd be
+  // ToInteger(end).
+  // 12. ReturnIfAbrupt(relativeEnd).
+  double relativeEnd;
+  if (args.getArg(2).isUndefined()) {
+    relativeEnd = len;
+  } else {
+    auto relativeEndRes = toInteger(runtime, args.getArgHandle(2));
+    if (LLVM_UNLIKELY(relativeEndRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    relativeEnd = relativeEndRes->getNumber();
+  }
+
+  // 13. If relativeEnd < 0, let final be max((len + relativeEnd),0); else let
+  // final be min(relativeEnd, len).
+  double fin = relativeEnd < 0 ? std::max((len + relativeEnd), (double)0)
+                               : std::min(relativeEnd, len);
+
+  // 14. Let count be min(final-from, len-to).
+  double count = std::min(fin - from, len - to);
+
+  int direction;
+  if (from < to && to < from + count) {
+    // 15. If from<to and to<from+count
+    // a. Let direction be -1.
+    direction = -1;
+    // b. Let from be from + count -1.
+    from = from + count - 1;
+    // c. Let to be to + count -1.
+    to = to + count - 1;
+  } else {
+    // 16. Else,
+    // a. Let direction = 1.
+    direction = 1;
+  }
+
+  MutableHandle<> fromHandle{runtime, HermesValue::encodeNumberValue(from)};
+  MutableHandle<> toHandle{runtime, HermesValue::encodeNumberValue(to)};
+
+  MutableHandle<JSObject> fromObj{runtime};
+  MutableHandle<> fromVal{runtime};
+
+  GCScopeMarkerRAII marker{gcScope};
+  for (; count > 0; marker.flush()) {
+    // 17. Repeat, while count > 0
+    // a. Let fromKey be ToString(from).
+    // b. Let toKey be ToString(to).
+
+    // c. Let fromPresent be HasProperty(O, fromKey).
+    // d. ReturnIfAbrupt(fromPresent).
+    ComputedPropertyDescriptor fromDesc;
+    if (LLVM_UNLIKELY(
+            JSObject::getComputedDescriptor(
+                O, runtime, fromHandle, fromObj, fromDesc) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // e. If fromPresent is true, then
+    if (LLVM_LIKELY(fromObj)) {
+      // i. Let fromVal be Get(O, fromKey).
+      // ii. ReturnIfAbrupt(fromVal).
+      auto fromValRes =
+          JSObject::getComputedPropertyValue(O, runtime, fromObj, fromDesc);
+      if (LLVM_UNLIKELY(fromValRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      fromVal = *fromValRes;
+
+      // iii. Let setStatus be Set(O, toKey, fromVal, true).
+      // iv. ReturnIfAbrupt(setStatus).
+      if (LLVM_UNLIKELY(
+              JSObject::putComputed_RJS(
+                  O,
+                  runtime,
+                  toHandle,
+                  fromVal,
+                  PropOpFlags().plusThrowOnError()) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    } else {
+      // f. Else fromPresent is false,
+      // i. Let deleteStatus be DeletePropertyOrThrow(O, toKey).
+      // ii. ReturnIfAbrupt(deleteStatus).
+      if (LLVM_UNLIKELY(
+              JSObject::deleteComputed(
+                  O, runtime, toHandle, PropOpFlags().plusThrowOnError()) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    }
+
+    // g. Let from be from + direction.
+    fromHandle =
+        HermesValue::encodeNumberValue(fromHandle->getNumber() + direction);
+    // h. Let to be to + direction.
+    toHandle =
+        HermesValue::encodeNumberValue(toHandle->getNumber() + direction);
+
+    // i. Let count be count − 1.
+    --count;
+  }
+  // 18. Return O.
+  return O.getHermesValue();
+}
+
 CallResult<HermesValue>
 arrayPrototypePop(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
