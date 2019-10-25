@@ -37,11 +37,11 @@ print(require('./cjs-subdir-2.js').alpha);
 // BC-NEXT: s1[ASCII, 10..15]: global
 // BC-NEXT: s2[ASCII, 19..31]: main: foo.x =
 // BC-NEXT: s3[ASCII, 32..41]: main: init
-// BC-NEXT: i4[ASCII, 14..18] #95E1416B: alpha
-// BC-NEXT: i5[ASCII, 42..52] #EB25E158: loadSegment
-// BC-NEXT: i6[ASCII, 58..58] #0001E7F9: x
-// BC-NEXT: p7[ASCII, 53..59] @392: context
-// BC-NEXT: p8[ASCII, 60..64] @30: print
+// BC-NEXT: i4[ASCII, 14..18] #{{.*}}: alpha
+// BC-NEXT: i5[ASCII, 42..52] #{{.*}}: loadSegment
+// BC-NEXT: i6[ASCII, 58..58] #{{.*}}: x
+// BC-NEXT: p7[ASCII, 53..59] @{{.*}}: context
+// BC-NEXT: p8[ASCII, 60..64] @{{.*}}: print
 
 // BC10-LABEL: CommonJS Modules (Static):
 // BC10-NEXT: Module index 0 -> function ID 1
