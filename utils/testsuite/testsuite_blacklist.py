@@ -135,6 +135,10 @@ BLACK_LIST = [
     "test262/test/built-ins/Object/defineProperty/15.2.3.6-4-295-1.js",
     "test262/test/built-ins/Object/defineProperty/15.2.3.6-4-296-1.js",
     "test262/test/language/expressions/delete/11.4.1-4.a-16.js",
+    "test262/test/language/expressions/postfix-decrement/arguments-nostrict.js",
+    "test262/test/language/expressions/postfix-increment/arguments-nostrict.js",
+    "test262/test/language/expressions/prefix-decrement/arguments-nostrict.js",
+    "test262/test/language/expressions/prefix-increment/arguments-nostrict.js",
     "test262/test/language/statements/function/S13_A11_T1.js",
     "test262/test/language/statements/function/S13_A15_T4.js",
     "test262/test/language/statements/function/S13_A15_T5.js",
@@ -209,11 +213,14 @@ BLACK_LIST = [
     "test262/test/language/computed-property-names/",
     "test262/test/language/destructuring/",
     "test262/test/language/expressions/arrow-function/",
+    "test262/test/language/expressions/assignment/destructuring/",
     "test262/test/language/expressions/async-arrow-function/",
     "test262/test/language/expressions/async-function/",
+    "test262/test/language/expressions/async-generator/",
     "test262/test/language/expressions/await/",
     "test262/test/language/expressions/class/",
-    "test262/test/language/expressions/assignment/destructuring/",
+    "test262/test/language/expressions/dynamic-import/",
+    "test262/test/language/expressions/import.meta/",
     "test262/test/language/expressions/new.target/",
     "test262/test/language/expressions/object/method-definition/",
     "test262/test/language/expressions/super/",
@@ -222,6 +229,7 @@ BLACK_LIST = [
     "test262/test/language/module-code/",
     "test262/test/language/rest-parameters/",
     "test262/test/language/statements/async-function/",
+    "test262/test/language/statements/async-generator/",
     "test262/test/language/statements/class/",
     "test262/test/language/statements/labeled/",
     "test262/test/language/statements/let/",
@@ -347,9 +355,11 @@ BLACK_LIST = [
     "test262/test/language/statements/for-in/head-let-fresh-binding-per-iteration.js",
     "test262/test/language/statements/for/head-let-destructuring.js",
     "test262/test/language/statements/for-of/head-let-",
+    "test262/test/language/statements/try/early-catch-function.js",
     "test262/test/language/statements/switch/syntax/redeclaration/",
     "test262/test/language/global-code/block-decl-strict.js",
     "test262/test/language/function-code/block-decl-strict.js",
+    "test262/test/language/function-code/block-decl-onlystrict.js",
     # let/const temporarily disabled
     "test262/test/language/future-reserved-words/let-strict.js",
     "test262/test/language/statements/for-in/head-let-bound-names-in-stmt.js",
@@ -435,6 +445,11 @@ BLACK_LIST = [
     "test262/test/language/expressions/function/name.js",
     # accessors in JSLib
     # Escaped identifiers
+    "test262/test/language/expressions/assignment/dstr/syntax-error-ident-ref-",
+    "test262/test/language/identifiers/other_id_continue-escaped.js",
+    "test262/test/language/identifiers/other_id_continue.js",
+    "test262/test/language/identifiers/other_id_start-escaped.js",
+    "test262/test/language/identifiers/other_id_start.js",
     "test262/test/language/identifiers/part-digits-via-escape-hex.js",
     "test262/test/language/identifiers/val-dollar-sign-via-escape-hex.js",
     "test262/test/language/identifiers/val-underscore-via-escape-hex.js",
@@ -442,6 +457,10 @@ BLACK_LIST = [
     "test262/test/language/identifiers/vals-eng-alpha-upper-via-escape-hex.js",
     "test262/test/language/identifiers/vals-rus-alpha-lower-via-escape-hex.js",
     "test262/test/language/identifiers/vals-rus-alpha-upper-via-escape-hex.js",
+    "test262/test/language/identifiers/vertical-tilde-continue-escaped.js",
+    "test262/test/language/identifiers/vertical-tilde-continue.js",
+    "test262/test/language/identifiers/vertical-tilde-start-escaped.js",
+    "test262/test/language/identifiers/vertical-tilde-start.js",
     # Reserved words should fail when escaped
     "test262/test/language/identifiers/val-yield-strict.js",
     "test262/test/language/identifiers/val-catch-via-escape-hex4.js",
@@ -567,7 +586,7 @@ BLACK_LIST = [
     "test262/test/language/statements/try/catch-parameter-boundnames-restriction-arguments-negative-early.js",
     "test262/test/language/statements/try/scope-catch-param-lex-open.js",
     # trailing comma
-    re.compile("test262/.*args-trailing-comma-.*.js"),
+    "test262/test/language/expressions/function/dflt-params-trailing-comma.js",
     # classes and methods
     "mjsunit/accessors-no-prototype.js",
     "mjsunit/array-functions-prototype-misc.js",
@@ -625,12 +644,25 @@ BLACK_LIST = [
     "test262/test/language/expressions/object/getter-super-prop.js",
     "test262/test/language/expressions/object/setter-super-prop.js",
     "test262/test/language/global-code/decl-lex-configurable-global.js",
+    "test262/test/language/arguments-object/cls-decl-",
+    "test262/test/language/arguments-object/cls-expr-",
     # T34396912 .prototype property on getter/setter
     "test262/test/built-ins/Function/prototype/Symbol.hasInstance/this-val-poisoned-prototype.js",
     # spread operator
     "mjsunit/es6/regress/regress-4298.js",
     "mjsunit/es6/regress/regress-4417.js",
     "mjsunit/es6/spread-array.js",
+    "mjsunit/es6/spread-call-new-class.js",
+    "mjsunit/es6/spread-call-new.js",
+    "mjsunit/es6/spread-call-super-property.js",
+    "mjsunit/es6/spread-call.js",
+    "test262/test/language/expressions/array/spread-",
+    "test262/test/language/expressions/call/spread-",
+    "test262/test/language/expressions/call/trailing-comma.js",
+    "test262/test/language/expressions/new/spread-",
+    "test262/test/language/arguments-object/meth-args-trailing-comma-spread-operator.js",
+    "test262/test/language/arguments-object/func-expr-args-trailing-comma-spread-operator.js",
+    "test262/test/language/arguments-object/func-decl-args-trailing-comma-spread-operator.js",
     # arrow funs
     "mjsunit/array-indexing-receiver.js",
     "mjsunit/array-sort.js",
@@ -670,6 +702,8 @@ BLACK_LIST = [
     "test262/test/built-ins/Object/internals/DefineOwnProperty/consistent-value-function-caller.js",
     "test262/test/built-ins/Object/internals/DefineOwnProperty/consistent-value-regexp-$1.js",
     "test262/test/built-ins/Object/internals/DefineOwnProperty/consistent-writable-regexp-$1.js",
+    "test262/test/built-ins/Object/internals/DefineOwnProperty/consistent-value-regexp-dollar1.js",
+    "test262/test/built-ins/Object/internals/DefineOwnProperty/consistent-writable-regexp-dollar1.js",
     # Realm
     "mjsunit/regress/regress-crbug-501711.js",
     # leaking arguments
@@ -693,7 +727,10 @@ BLACK_LIST = [
     "test262/test/language/statements/switch/syntax/redeclaration/var-declaration-attempt-to-redeclare-with-function-declaration.js",
     # Template cache in Hermes is per-module, not per-realm.
     "test262/test/language/expressions/tagged-template/cache-differing-expressions-new-function.js",
+    "test262/test/language/expressions/tagged-template/cache-identical-source.js",
     "test262/test/language/expressions/tagged-template/cache-identical-source-new-function.js",
+    "test262/test/language/expressions/tagged-template/cache-differing-expressions.js",
+    "test262/test/language/expressions/tagged-template/template-object-template-map.js",
     # ToLength changes after ES5.1
     "test262/test/built-ins/TypedArray/prototype/byteLength/detached-buffer.js",
     "test262/test/built-ins/TypedArray/prototype/every/callbackfn-detachbuffer.js",
@@ -705,6 +742,11 @@ BLACK_LIST = [
     # RegExp changes
     # regexp-flags appears to loop forever even in d8.
     "mjsunit/es6/regexp-flags.js",
+    # Invalid lookbehinds
+    "test262/test/language/literals/regexp/invalid-range-lookbehind.js",
+    "test262/test/language/literals/regexp/invalid-optional-lookbehind.js",
+    "test262/test/language/literals/regexp/invalid-optional-negative-lookbehind.js",
+    "test262/test/language/literals/regexp/invalid-range-negative-lookbehind.js",
     # unicode-regexp-ignore-case-noi18n is an incorrect test: it falsely
     # asserts that U+212B (Angstrom Sign) and U+00E5 (A with ring) are not
     # equal under case folding.
@@ -739,8 +781,6 @@ BLACK_LIST = [
     "test262/test/built-ins/Object/prototype/toLocaleString/primitive_this_value.js",
     "test262/test/built-ins/Object/prototype/toLocaleString/primitive_this_value_getter.js",
     # eval changes
-    "mjsunit/es6/spread-call-new-class.js",
-    "mjsunit/es6/spread-call-super-property.js",
     "test262/test/language/global-code/script-decl-var.js",
     "test262/test/language/global-code/script-decl-func-err-non-configurable.js",
     # TypedArray changes
@@ -751,7 +791,25 @@ BLACK_LIST = [
     "test262/test/built-ins/TypedArrays/buffer-arg-defined-negative-length.js",
     "test262/test/built-ins/TypedArrays/typedarray-arg-other-ctor-buffer-ctor-not-object-throws.js",
     "test262/test/built-ins/TypedArrays/typedarray-arg-same-ctor-buffer-ctor-value-not-obj-throws.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/length-arg/use-default-proto-if-custom-proto-is-not-object.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/use-default-proto-if-custom-proto-is-not-object.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/defined-negative-length.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/iterator-throws.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/use-default-proto-if-custom-proto-is-not-object.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/typedarray-arg/use-default-proto-if-custom-proto-is-not-object.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/typedarray-arg/other-ctor-buffer-ctor-not-object-throws.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/typedarray-arg/same-ctor-buffer-ctor-value-not-obj-throws.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/typedarray-arg/same-ctor-buffer-ctor-access-throws.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/typedarray-arg/other-ctor-buffer-ctor-access-throws.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/no-args/use-default-proto-if-custom-proto-is-not-object.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Get/key-is-not-minus-zero.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Get/key-is-not-integer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Get/key-is-out-of-bounds.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/GetOwnProperty/index-prop-desc.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Set/tonumber-value-throws.js",
     # TypedArray ES7 iterators
+    "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/iterator-not-callable-throws.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/as-generator-iterable-returns.js",
     "test262/test/built-ins/TypedArrays/object-arg-iterator-not-callable-throws.js",
     "test262/test/built-ins/TypedArrays/from/iter-invoke-error.js",
     "test262/test/built-ins/TypedArrays/from/iter-access-error.js",
@@ -761,6 +819,10 @@ BLACK_LIST = [
     "test262/test/built-ins/TypedArray/from/iter-next-error.js",
     "test262/test/built-ins/TypedArray/from/iter-next-value-error.js",
     "test262/test/built-ins/TypedArray/from/iter-access-error.js",
+    "test262/test/built-ins/TypedArrayConstructors/from/iter-invoke-error.js",
+    "test262/test/built-ins/TypedArrayConstructors/from/iter-access-error.js",
+    "test262/test/built-ins/TypedArrayConstructors/from/iter-next-value-error.js",
+    "test262/test/built-ins/TypedArrayConstructors/from/iter-next-error.js",
     # TypedArray detaching buffer
     "test262/test/built-ins/ArrayBuffer/prototype/byteLength/detached-buffer.js",
     "test262/test/built-ins/DataView/detached-buffer.js",
@@ -772,6 +834,14 @@ BLACK_LIST = [
     "test262/test/built-ins/TypedArray/prototype/findIndex/predicate-may-detach-buffer.js",
     "test262/test/built-ins/TypedArrays/buffer-arg-detachedbuffer.js",
     "test262/test/built-ins/TypedArrays/buffer-arg-byteoffset-to-number-detachbuffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/length-to-number-detachbuffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/byteoffset-to-number-detachbuffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/detachedbuffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Get/detached-buffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Get/infinity-detached-buffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/GetOwnProperty/detached-buffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/GetOwnProperty/enumerate-detached-buffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Set/detached-buffer.js",
     # Float32 TypedArray failure
     "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/conversion-operation-consistent-nan.js",
     # TypedArray accessors
@@ -795,11 +865,16 @@ BLACK_LIST = [
     "test262/test/harness/assert-throws-early-referenceerror.js",
     # SpeciesConstructor
     "test262/test/built-ins/ArrayBuffer/prototype/slice/species-constructor-is-not-object.js",
+    "test262/test/built-ins/TypedArray/prototype/map/speciesctor-get-ctor-abrupt.js",
     # t19359477
     "mjsunit/regress/regress-3976.js",
     "mjsunit/string-replace-gc.js",
     # T54585052
     "test262/test/built-ins/DataView/length.js",
+    # T56360814 Symbol primitives in iteration order
+    "test262/test/built-ins/Object/assign/strings-and-symbol-order.js",
+    # T56360975 Labeled continue should close iterator
+    "test262/test/language/statements/for-of/iterator-close-via-continue.js",
     # Time out. # T20489563
     "mjsunit/regress/regress-crbug-482998.js",
     # Different time out: # T23228706
@@ -1434,14 +1509,25 @@ PERMANENT_BLACK_LIST = [
     "test262/test/annexB/language/comments/single-line-html-open.js",
     "test262/test/annexB/language/expressions/template-literal/legacy-octal-escape-sequence-non-strict.js",
     "test262/test/language/literals/string/legacy-non-octal-escape-sequence-strict.js",
+    "test262/test/language/literals/string/legacy-octal-escape-sequence-prologue-strict.js",
     "test262/test/annexB/language/expressions/object/__proto__-duplicate-computed.js",
     "test262/test/annexB/language/literals/numeric/non-octal-decimal-integer.js",
     "test262/test/annexB/language/literals/regexp/class-escape.js",
+    "test262/test/language/function-code/block-decl-onlystrict.js",
+    "test262/test/language/function-code/switch-case-decl-onlystrict.js",
     "test262/test/language/function-code/switch-case-decl-strict.js",
+    "test262/test/language/function-code/switch-dflt-decl-onlystrict.js",
     "test262/test/language/function-code/switch-dflt-decl-strict.js",
     "test262/test/language/global-code/switch-case-decl-strict.js",
     "test262/test/language/global-code/switch-dflt-decl-strict.js",
     "test262/test/annexB/language/statements/labeled/function-declaration.js",
+    "test262/test/annexB/built-ins/Function/createdynfn-html-close-comment-body.js",
+    "test262/test/annexB/built-ins/Function/createdynfn-html-close-comment-params.js",
+    "test262/test/annexB/built-ins/Function/createdynfn-html-open-comment-body.js",
+    "test262/test/annexB/built-ins/Function/createdynfn-html-open-comment-params.js",
+    "test262/test/annexB/built-ins/RegExp/prototype/Symbol.split/toint32-limit-recompiles-source.js",
+    "test262/test/annexB/built-ins/RegExp/prototype/Symbol.split/Symbol.match-getter-recompiles-source.js",
+    "test262/test/annexB/language/comments/single-line-html-close-unicode-separators.js",
     # Testing whole feature sets that Hermes doesn't support.
     "test262/test/built-ins/Atomics/",
     "test262/test/built-ins/Proxy/",
@@ -1452,10 +1538,14 @@ PERMANENT_BLACK_LIST = [
     "test262/test/intl402/Date/",
     "test262/test/intl402/DateTimeFormat/",
     "test262/test/intl402/Intl/",
+    "test262/test/intl402/ListFormat/",
+    "test262/test/intl402/Locale/",
     "test262/test/intl402/Number/",
     "test262/test/intl402/NumberFormat/",
     "test262/test/intl402/PluralRules/",
+    "test262/test/intl402/Segmenter/",
     "test262/test/intl402/String/",
+    "test262/test/intl402/RelativeTimeFormat/",
     "mjsunit/asm/",
     "mjsunit/regress/wasm/",
     "mjsunit/wasm/",
@@ -1466,9 +1556,15 @@ PERMANENT_BLACK_LIST = [
 ]
 
 UNSUPPORTED_FEATURES = [
+    "Array.prototype.flatMap",
+    "Array.prototype.flat",
+    "Object.fromEntries",
     "Promise.prototype.finally",
+    "String.prototype.matchAll",
     "Symbol.asyncIterator",
+    "Symbol.matchAll",
     "Symbol.species",
+    "Symbol.prototype.description",
     "Symbol.unscopables",
     "arrow-function",
     "async",
@@ -1482,18 +1578,26 @@ UNSUPPORTED_FEATURES = [
     "default-arg",
     "default-parameters",
     "destructuring-binding",
+    "dynamic-import",
+    "FinalizationGroup",
     "generators",
+    "hashbang",
+    "json-superset",
     "let",
     "new.target",
     "object-rest",
     "object-spread",
+    "numeric-separator-literal",
     "optional-catch-binding",
     "regexp-dotall",
     "regexp-named-groups",
     "regexp-unicode-property-escapes",
+    "string-trimming",
     "super",
     "tail-call-optimization",
+    "well-formed-json-stringify",
     "u180e",
+    "WeakRef",
 ]
 
 PERMANENT_UNSUPPORTED_FEATURES = [
