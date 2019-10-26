@@ -14,6 +14,7 @@ RUN: TZ=EST+5 %hermes -O -target=HBC %s \
 RUN:            | %FileCheck --match-full-lines -check-prefix NO %s
 TODO(T53144040) Fix LIT tests on Windows
 XFAIL: windows
+UNSUPPORTED: ubsan
 */
 "use strict";
 

@@ -540,6 +540,8 @@ set(HERMES_LIT_TEST_PARAMS
   serialize_enabled=${HERMESVM_SERIALIZE}
   profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
   use_js_library_implementation=${HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION}
+  # TODO: Figure out how to tell if CMake is doing a UBSAN build.
+  ubsan=OFF
   )
 
 set(LLVM_LIT_ARGS "-sv")
