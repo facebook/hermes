@@ -298,6 +298,12 @@ void GenGC::collect(bool canEffectiveOOM) {
   assert(!allocContext_.activeSegment);
 
 #ifdef HERMES_EXTRA_DEBUG
+  /// Check the old-gen vtable summary, to detect possible mutator writes.
+  /// TODO(T56364255): remove these when the problem is diagnosed.
+  oldGen_.checkSummarizedOldGenVTables(fullCollectionCumStats_.numCollections);
+#endif
+
+#ifdef HERMES_EXTRA_DEBUG
   /// Unprotect the card table boundary table, so we can update it.
   /// TODO(T48709128): remove these when the problem is diagnosed.
   oldGen_.unprotectCardTableBoundaries();
@@ -396,6 +402,12 @@ void GenGC::collect(bool canEffectiveOOM) {
   checkTripwire(usedAfter, steady_clock::now());
 #ifdef HERMESVM_SIZE_DIAGNOSTIC
   sizeDiagnosticCensus();
+#endif
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// Summarize the old gen vtables to detect possible mutator writes.
+  /// TODO(T56364255): remove these when the problem is diagnosed.
+  oldGen_.summarizeOldGenVTables();
 #endif
 
 #ifdef HERMES_EXTRA_DEBUG

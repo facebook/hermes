@@ -367,6 +367,21 @@ class AlignedHeapSegment final {
   void checkWellFormed(const GC *gc, uint64_t *externalMemory = nullptr) const;
 #endif
 
+#ifdef HERMES_EXTRA_DEBUG
+  /// Extra debugging: at the end of GC we "summarize" the vtable pointers of
+  /// old-gen objects.  Conceptually, this means treat them as if they
+  /// were concatenated, and take the hash of a string form.
+  /// TODO(T56364255): remove these when the problem is diagnosed.
+
+  /// Summarize the vtables of objects in the segment, and record the results
+  /// (including the address after the last object summarized).
+  void summarizeVTables();
+
+  /// Resummarize the vtables of the old-gen objects, and return whether the
+  /// result is the same as the last summary.
+  bool checkSummarizedVTables() const;
+#endif
+
  private:
   /// Return a pointer to the contents of the memory region managed by this
   /// segment.
@@ -374,6 +389,14 @@ class AlignedHeapSegment final {
 
   void deleteDeadObjectIDs(GC *gc);
   void updateObjectIDs(GC *gc, SweepResult::VTablesRemaining &vTables);
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// TODO(T56364255): remove these when the problem is diagnosed.
+
+  /// Summarize the vtables of objects in the segment, up to but not
+  /// including \p level.
+  size_t summarizeVTablesWork(const char *level) const;
+#endif
 
   AlignedStorage storage_;
 
@@ -390,6 +413,17 @@ class AlignedHeapSegment final {
 
   /// Pointer to the generation that owns this segment.
   GCGeneration *generation_{nullptr};
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// Support summarization of the vtables in the segment.
+  /// TODO(T56364255): remove this when the problem is diagnosed.
+
+  /// The level at the time we last summarized, or start(), if we
+  /// haven't previously summarized.
+  char *lastVTableSummaryLevel_{start()};
+  /// The value of the last summary, or else 0 if there has been no summary.
+  size_t lastVTableSummary_{0};
+#endif
 };
 
 AllocResult AlignedHeapSegment::alloc(uint32_t size) {

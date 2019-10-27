@@ -911,6 +911,37 @@ void OldGen::unprotectActiveSegCardTableBoundaries() {
 }
 #endif
 
+#ifdef HERMES_EXTRA_DEBUG
+void OldGen::summarizeOldGenVTables() {
+  forUsedSegments(
+      [](AlignedHeapSegment &segment) { segment.summarizeVTables(); });
+}
+
+void OldGen::checkSummarizedOldGenVTables(unsigned fullGCNum) {
+  forUsedSegments([this, fullGCNum](const AlignedHeapSegment &segment) {
+    if (!segment.checkSummarizedVTables()) {
+      numVTableSummaryErrors_++;
+      char detailBuffer[100];
+      snprintf(
+          detailBuffer,
+          sizeof(detailBuffer),
+          "VTable summary changed since last GC for "
+          "[%p, %p).  (Full GC %d; last of %d errors)",
+          segment.lowLim(),
+          segment.hiLim(),
+          fullGCNum,
+          numVTableSummaryErrors_);
+      hermesLog("HermesGC", "Error: %s.", detailBuffer);
+      // Record the OOM custom data with the crash manager.
+      if (gc_->crashMgr_) {
+        gc_->crashMgr_->setCustomData(
+            "HermesVTableSummaryErrors", detailBuffer);
+      }
+    }
+  });
+}
+#endif
+
 void OldGen::didFinishGC() {
   levelAtEndOfLastGC_ = levelDirect();
 }

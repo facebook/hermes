@@ -82,6 +82,10 @@ template void AlignedHeapSegment::setLevel<AdviseUnused::No>(char *lvl);
 template <AdviseUnused MU>
 void AlignedHeapSegment::resetLevel() {
   setLevel<MU>(start());
+#ifdef HERMES_EXTRA_DEBUG
+  lastVTableSummaryLevel_ = start();
+  lastVTableSummary_ = 0;
+#endif
 }
 
 /// Explicit template instantiations for resetLevel
@@ -456,6 +460,27 @@ void AlignedHeapSegment::recreateCardTableBoundaries() {
     ptr = nextPtr;
   }
 }
+
+#ifdef HERMES_EXTRA_DEBUG
+size_t AlignedHeapSegment::summarizeVTablesWork(const char *level) const {
+  std::hash<const void *> hash;
+  size_t res = 0;
+  forObjsInRange(
+      [&res, hash](const GCCell *cell) { res += hash(cell->getVT()); },
+      start(),
+      level);
+  return res;
+}
+
+void AlignedHeapSegment::summarizeVTables() {
+  lastVTableSummary_ = summarizeVTablesWork(level());
+  lastVTableSummaryLevel_ = level();
+}
+
+bool AlignedHeapSegment::checkSummarizedVTables() const {
+  return lastVTableSummary_ == summarizeVTablesWork(lastVTableSummaryLevel_);
+}
+#endif
 
 #ifndef NDEBUG
 bool AlignedHeapSegment::dbgContainsLevel(const void *lvl) const {

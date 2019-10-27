@@ -172,6 +172,23 @@ class OldGen : public GCGeneration {
   void forObjsAllocatedSinceGC(const std::function<void(GCCell *)> &callback);
 #endif
 
+#ifdef HERMES_EXTRA_DEBUG
+  /// Extra debugging: at the end of GC we "summarize" the vtable pointers of
+  /// old-gen objects.  Conceptually, this means treat them as if they
+  /// were concatenated, and take the has of a string form.
+  /// TODO(T56364255): remove these when the problem is diagnosed.
+
+  /// Summarize the vtables of old-gen objects, and record the results
+  /// (including the last object summarized).
+  void summarizeOldGenVTables();
+
+  /// Resummarize the vtables of the old-gen objects, and check whether the
+  /// result is the same as the last summary.  Does logging and/or adds
+  /// CrashManager custom breakpad data, if it is not.  The \p fullGCNum is
+  /// the ordinal number of the full GC that is doing the check (at its start).
+  void checkSummarizedOldGenVTables(unsigned fullGCNum);
+#endif
+
   /// @}
 
   /// Assumes the generation owns its allocation context.  Attempts to allocate
@@ -441,6 +458,12 @@ class OldGen : public GCGeneration {
   /// protected.
   /// TODO(T48709128): remove this when the problem is diagnosed.
   llvm::DenseSet<void *> protectedCardTables_;
+#endif
+
+#ifdef HERMES_EXTRA_DEBUG
+  /// The number of vtable summary errors detected so far.
+  /// TODO(T56364255): remove these when the problem is diagnosed.
+  unsigned numVTableSummaryErrors_{0};
 #endif
 };
 
