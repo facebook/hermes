@@ -397,7 +397,7 @@ void AlignedHeapSegment::compact(SweepResult::VTablesRemaining &vTables) {
 void AlignedHeapSegment::forObjsInRange(
     const std::function<void(GCCell *)> &callback,
     char *low,
-    char *high) {
+    const char *high) {
   assert(low >= start());
   assert(high <= effectiveEnd());
   char *ptr = low;
@@ -408,8 +408,27 @@ void AlignedHeapSegment::forObjsInRange(
   }
 }
 
+void AlignedHeapSegment::forObjsInRange(
+    const std::function<void(const GCCell *)> &callback,
+    const char *low,
+    const char *high) const {
+  assert(low >= start());
+  assert(high <= effectiveEnd());
+  const char *ptr = low;
+  while (ptr < high) {
+    const GCCell *cell = reinterpret_cast<const GCCell *>(ptr);
+    callback(cell);
+    ptr += cell->getAllocatedSize();
+  }
+}
+
 void AlignedHeapSegment::forAllObjs(
     const std::function<void(GCCell *)> &callback) {
+  forObjsInRange(callback, start(), level());
+}
+
+void AlignedHeapSegment::forAllObjs(
+    const std::function<void(const GCCell *)> &callback) const {
   forObjsInRange(callback, start(), level());
 }
 

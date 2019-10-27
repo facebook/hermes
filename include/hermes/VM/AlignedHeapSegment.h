@@ -325,10 +325,15 @@ class AlignedHeapSegment final {
   void forObjsInRange(
       const std::function<void(GCCell *)> &callback,
       char *low,
-      char *high);
+      const char *high);
+  void forObjsInRange(
+      const std::function<void(const GCCell *)> &callback,
+      const char *low,
+      const char *high) const;
 
   /// Call \p callback on every cell allocated in this segment.
   void forAllObjs(const std::function<void(GCCell *)> &callback);
+  void forAllObjs(const std::function<void(const GCCell *)> &callback) const;
 
   /// Adds a representation of segments address range to *\p buf,
   /// ensuring that we don't write more than \p sz characters.  Writes
