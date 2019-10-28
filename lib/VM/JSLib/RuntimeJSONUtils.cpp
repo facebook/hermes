@@ -8,6 +8,7 @@
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
 
 #include "hermes/Support/JSON.h"
+#include "hermes/Support/UTF16Stream.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
@@ -51,10 +52,10 @@ class RuntimeJSONParser {
  public:
   explicit RuntimeJSONParser(
       Runtime *runtime,
-      UTF16Ref jsonString,
+      UTF16Stream &&jsonString,
       Handle<Callable> reviver)
       : runtime_(runtime),
-        lexer_(runtime, jsonString),
+        lexer_(runtime, std::move(jsonString)),
         reviver_(reviver),
         tmpHandle_(runtime) {}
 
@@ -249,7 +250,7 @@ CallResult<HermesValue> RuntimeJSONParser::parse() {
   // Make sure the next token must be EOF.
   if (LLVM_UNLIKELY(lexer_.getCurToken()->getKind() != JSONTokenKind::Eof)) {
     return lexer_.errorWithChar(
-        "Unexpected token: ", *lexer_.getCurToken()->getLoc());
+        "Unexpected token: ", lexer_.getCurToken()->getFirstChar());
   }
 
   if (reviver_.get()) {
@@ -307,7 +308,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
         return lexer_.error("Unexpected end of input");
       }
       return lexer_.errorWithChar(
-          "Unexpected token: ", *lexer_.getCurToken()->getLoc());
+          "Unexpected token: ", lexer_.getCurToken()->getFirstChar());
   }
 
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
@@ -548,12 +549,16 @@ CallResult<HermesValue> runtimeJSONParse(
         .copyUTF16String(storage);
     ref = storage;
   }
-  RuntimeJSONParser parser{runtime, ref, reviver};
+
+  RuntimeJSONParser parser{runtime, UTF16Stream(ref), reviver};
   return parser.parse();
 }
 
-CallResult<HermesValue> runtimeJSONParseRef(Runtime *runtime, UTF16Ref ref) {
-  RuntimeJSONParser parser{runtime, ref, Runtime::makeNullHandle<Callable>()};
+CallResult<HermesValue> runtimeJSONParseRef(
+    Runtime *runtime,
+    UTF16Stream &&stream) {
+  RuntimeJSONParser parser{
+      runtime, std::move(stream), Runtime::makeNullHandle<Callable>()};
   return parser.parse();
 }
 

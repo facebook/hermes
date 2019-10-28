@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_JSLIB_RUNTIMEJSONPARSER_H
 #define HERMES_VM_JSLIB_RUNTIMEJSONPARSER_H
 
+#include "hermes/Support/UTF16Stream.h"
 #include "hermes/VM/Runtime.h"
 
 namespace hermes {
@@ -20,7 +21,7 @@ CallResult<HermesValue> runtimeJSONParse(
     Handle<Callable> reviver);
 
 /// Alternative interface to runtimeJSONParse for strings outside the JS heap.
-CallResult<HermesValue> runtimeJSONParseRef(Runtime *runtime, UTF16Ref ref);
+CallResult<HermesValue> runtimeJSONParseRef(Runtime *runtime, UTF16Stream &&s);
 
 /// Returns a String in JSON format representing an ECMAScript value,
 /// according to 15.12.3.

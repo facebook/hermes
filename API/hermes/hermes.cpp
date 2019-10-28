@@ -25,6 +25,7 @@
 #include "hermes/Platform/Logging.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/Algorithms.h"
+#include "hermes/Support/UTF16Stream.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/Debugger/Debugger.h"
@@ -1449,11 +1450,9 @@ jsi::Value HermesRuntimeImpl::createValueFromJsonUtf8(
     size_t length) {
   return maybeRethrow([&] {
     vm::GCScope gcScope(&runtime_);
-
-    std::u16string out;
-    convertUtf8ToUtf16(json, length, out);
-    auto res = runtimeJSONParseRef(
-        &runtime_, llvm::ArrayRef<char16_t>(out.data(), out.size()));
+    llvm::ArrayRef<uint8_t> ref(json, length);
+    vm::CallResult<vm::HermesValue> res =
+        runtimeJSONParseRef(&runtime_, ::hermes::UTF16Stream(ref));
     checkStatus(res.getStatus());
     return valueFromHermesValue(*res);
   });
