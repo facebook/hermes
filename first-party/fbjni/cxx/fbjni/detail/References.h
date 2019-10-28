@@ -135,6 +135,11 @@ class JClass;
 
 namespace detail {
 
+template<typename T>
+constexpr bool IsJavaClassType() {
+  return std::is_base_of<JObject, T>::value;
+}
+
 template <typename T, typename Enable = void>
 struct HasJniRefRepr : std::false_type {};
 
@@ -146,16 +151,16 @@ struct HasJniRefRepr<T, typename std::enable_if<!std::is_same<typename T::JniRef
 template <typename T>
 struct RefReprType<T*> {
   using type = typename std::conditional<HasJniRefRepr<T>::value, typename HasJniRefRepr<T>::type, JObjectWrapper<T*>>::type;
-  static_assert(std::is_base_of<JObject, type>::value,
+  static_assert(IsJavaClassType<type>(),
       "Repr type missing JObject base.");
   static_assert(std::is_same<type, typename RefReprType<type>::type>::value,
       "RefReprType<T> not idempotent");
 };
 
 template <typename T>
-struct RefReprType<T, typename std::enable_if<std::is_base_of<JObject, T>::value, void>::type> {
+struct RefReprType<T, typename std::enable_if<IsJavaClassType<T>(), void>::type> {
   using type = T;
-  static_assert(std::is_base_of<JObject, type>::value,
+  static_assert(IsJavaClassType<type>(),
       "Repr type missing JObject base.");
   static_assert(std::is_same<type, typename RefReprType<type>::type>::value,
       "RefReprType<T> not idempotent");
