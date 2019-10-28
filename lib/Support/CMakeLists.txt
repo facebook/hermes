@@ -33,6 +33,7 @@ add_llvm_library(hermesSupport
         StringKind.cpp
         StringTable.cpp
         UTF8.cpp
+        UTF16Stream.cpp
         LEB128.cpp
         LINK_LIBS ${link_libs}
 )
