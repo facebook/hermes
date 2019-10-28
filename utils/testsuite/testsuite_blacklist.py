@@ -1566,7 +1566,6 @@ UNSUPPORTED_FEATURES = [
     "Symbol.species",
     "Symbol.prototype.description",
     "Symbol.unscopables",
-    "arrow-function",
     "async",
     "async-functions",
     "async-iteration",
