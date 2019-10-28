@@ -503,30 +503,43 @@ template class DynamicStringPrimitive<char, true /* Uniqued */>;
 template class DynamicStringPrimitive<char16_t, false /* not Uniqued */>;
 template class DynamicStringPrimitive<char, false /* not Uniqued */>;
 
+// NOTE: this is a template method in a template class, thus the two separate
+// template<> lines.
 template <typename T>
+template <class BasicString>
 ExternalStringPrimitive<T>::ExternalStringPrimitive(
     Runtime *runtime,
-    StdString &&contents)
+    BasicString &&contents)
     : SymbolStringPrimitive(
           runtime,
           &vt,
           sizeof(ExternalStringPrimitive<T>),
           contents.size()),
-      contents_(std::move(contents)) {
+      contents_(std::forward<BasicString>(contents)) {
+  static_assert(
+      std::is_same<T, typename BasicString::value_type>::value,
+      "ExternalStringPrimitive mismatched char type");
   assert(
       getStringLength() >= EXTERNAL_STRING_MIN_SIZE &&
       "ExternalStringPrimitive length must be at least EXTERNAL_STRING_MIN_SIZE");
 }
 
+// NOTE: this is a template method in a template class, thus the two separate
+// template<> lines.
 template <typename T>
+template <class BasicString>
 CallResult<HermesValue> ExternalStringPrimitive<T>::create(
     Runtime *runtime,
-    StdString &&str) {
+    BasicString &&str) {
+  static_assert(
+      std::is_same<T, typename BasicString::value_type>::value,
+      "ExternalStringPrimitive mismatched char type");
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       sizeof(ExternalStringPrimitive<T>));
-  auto *extStr = new (mem) ExternalStringPrimitive<T>(runtime, std::move(str));
+  auto *extStr = new (mem)
+      ExternalStringPrimitive<T>(runtime, std::forward<BasicString>(str));
   runtime->getHeap().creditExternalMemory(
       extStr, extStr->calcExternalMemorySize());
   auto res = HermesValue::encodeStringValue(extStr);

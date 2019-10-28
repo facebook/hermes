@@ -208,4 +208,26 @@ TEST_F(StringPrimTest, StringsAreMemcpySafe) {
   }
 }
 
+/// Containers (including strings) are not memcpy-safe in Microsoft STL in debug
+/// mode, because they contain a pointer to a "container proxy", which in turn
+/// points back to the container. memcpy() of the container leaves the proxy
+/// pointing to garbage.
+/// We statically detect and work around this in our CopyableBasicString. The
+/// purpose of this test is to crash if we detected wrong.
+TEST_F(StringPrimTest, StringsAreMemcpySafeMicrosoftSTL) {
+  using Str = CopyableBasicString<char>;
+  Str *orig = new (::malloc(sizeof(Str))) Str(100, 'a');
+  Str *copy = (Str *)::malloc(sizeof(Str));
+  ::memcpy(copy, orig, sizeof(Str));
+  ::memset(orig, 0xAA, sizeof(Str));
+  ::free(orig);
+
+  ASSERT_EQ(100, copy->size());
+  // This should crash.
+  copy->append(&copy->data()[0], &copy->data()[50]);
+
+  copy->~Str();
+  ::free(copy);
+}
+
 } // namespace

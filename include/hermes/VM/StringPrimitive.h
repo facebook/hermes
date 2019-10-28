@@ -10,6 +10,7 @@
 
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/VM/CopyableBasicString.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/Runtime.h"
@@ -117,14 +118,15 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   // strings smaller than this length.
   static constexpr uint32_t EXTERNAL_STRING_THRESHOLD = 64 * 1024;
 
-  // Strings whose length is smaller than this will never be externally
-  // allocated. This is to protect against a small string optimization which may
-  // use interior pointers, which would break when memcpy'd by the GC.
-  // This is also the size at which StringPrimitive will acquire an std::string
-  // via ownership transfer. This is advantageous in that it reduces the amount
-  // of copying from the malloc heap to the GC heap. However it should not be
-  // too small, because the std::string itself imposes a space overhead.
-  static constexpr uint32_t EXTERNAL_STRING_MIN_SIZE = 128;
+  /// Strings whose length is smaller than this will never be externally
+  /// allocated. This is to protect against a small string optimization which
+  /// may use interior pointers, which would break when memcpy'd by the GC. This
+  /// is also the size at which StringPrimitive will acquire an std::string via
+  /// ownership transfer. This is advantageous in that it reduces the amount of
+  /// copying from the malloc heap to the GC heap. However it should not be too
+  /// small, because the std::string itself imposes a space overhead.
+  static constexpr uint32_t EXTERNAL_STRING_MIN_SIZE =
+      COPYABLE_BASIC_STRING_MIN_LENGTH;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -507,6 +509,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
 
   using Ref = llvm::ArrayRef<T>;
   using StdString = std::basic_string<T>;
+  using CopyableStdString = CopyableBasicString<T>;
 
   /// \return the cell kind for this string.
   static constexpr CellKind getCellKind() {
@@ -537,14 +540,16 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
 
   /// Construct an ExternalStringPrimitive from the given string \p contents,
   /// non-uniqued.
-  ExternalStringPrimitive(Runtime *runtime, StdString &&contents);
+  template <class BasicString>
+  ExternalStringPrimitive(Runtime *runtime, BasicString &&contents);
 
   /// Destructor deallocates the contents_ string.
   ~ExternalStringPrimitive() = default;
 
   /// Transfer ownership of an std::string into a new StringPrim. Throw \c
   /// RangeError if the string is longer than \c MAX_STRING_LENGTH characters.
-  static CallResult<HermesValue> create(Runtime *runtime, StdString &&str);
+  template <class BasicString>
+  static CallResult<HermesValue> create(Runtime *runtime, BasicString &&str);
 
   /// Like the above, but the created StringPrimitive will be allocated in a
   /// "long-lived" area of the heap (if the GC supports that concept).  Note
@@ -589,7 +594,7 @@ class ExternalStringPrimitive final : public SymbolStringPrimitive {
 
   /// The backing storage of this string. Note that the string's length is fixed
   /// and must always be equal to StringPrimitive::getStringLength().
-  StdString contents_{};
+  CopyableStdString contents_{};
 };
 
 template <typename T, bool Uniqued>
