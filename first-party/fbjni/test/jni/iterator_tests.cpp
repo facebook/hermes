@@ -62,7 +62,7 @@ jboolean nativeTestListIterator(
   EXPECT(vs1 == vs3);
 
   static auto iteratorMethod =
-    JIterable<jstring>::javaClassStatic()->getMethod<JIterator<jstring>::javaobject()>("iterator");
+    JIterable<jstring>::javaClassStatic()->getMethod<JIterator<jstring>()>("iterator");
   auto iter = iteratorMethod(jlist);
 
   EXPECT(std::equal(iter->begin(), iter->end(), jlist->begin()));

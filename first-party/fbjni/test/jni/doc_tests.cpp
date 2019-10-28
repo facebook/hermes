@@ -176,7 +176,7 @@ struct DocTests : JavaClass<DocTests> {
     // Convert JString to std::string.
     std::string result = s1->toStdString();
     // Java methods can receive and return JString ...
-    static const auto doubler_java = clazz->getStaticMethod<local_ref<JString>(JString)>("doubler");
+    static const auto doubler_java = clazz->getStaticMethod<JString(JString)>("doubler");
     result += doubler_java(clazz, *s1)->toStdString();
     // and also std::string (converted from real UTF-8).
     static const auto doubler_std = clazz->getStaticMethod<std::string(std::string)>("doubler");

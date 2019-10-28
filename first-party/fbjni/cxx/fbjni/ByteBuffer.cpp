@@ -85,7 +85,7 @@ local_ref<JByteBuffer> JByteBuffer::wrapBytes(uint8_t* data, size_t size) {
 
 local_ref<JByteBuffer> JByteBuffer::allocateDirect(jint size) {
   static auto cls = JByteBuffer::javaClassStatic();
-  static auto meth = cls->getStaticMethod<JByteBuffer::javaobject(int)>("allocateDirect");
+  static auto meth = cls->getStaticMethod<JByteBuffer(int)>("allocateDirect");
   return meth(cls, size);
 }
 

@@ -111,7 +111,9 @@ class JMethod<R(Args...)> : public JMethodBase {
  public:
    // TODO: static_assert is jobject-derived or local_ref jobject
   using JniRet = typename detail::Convert<typename std::decay<R>::type>::jniType;
-  static_assert(IsPlainJniReference<JniRet>(), "JniRet must be a JNI reference");
+  static_assert(
+      IsPlainJniReference<JniRet>() || detail::IsJavaClassType<JniRet>(),
+      "Return type must be a JNI reference or JavaClass type.");
   using JMethodBase::JMethodBase;
   JMethod() noexcept {};
   JMethod(const JMethod& other) noexcept = default;
@@ -130,7 +132,7 @@ inline auto JMethod<R(Args...)>::operator()(alias_ref<jobject> self, Args... arg
       getId(),
       detail::callToJni(detail::Convert<typename std::decay<Args>::type>::toCall(args))...);
   FACEBOOK_JNI_THROW_PENDING_EXCEPTION();
-  return adopt_local(static_cast<JniRet>(result));
+  return adopt_local(static_cast<JniType<JniRet>>(result));
 }
 
 template<typename... Args>
@@ -173,7 +175,9 @@ class JStaticMethod<R(Args...)> : public JMethodBase {
 
  public:
   using JniRet = typename detail::Convert<typename std::decay<R>::type>::jniType;
-  static_assert(IsPlainJniReference<JniRet>(), "T* must be a JNI reference");
+  static_assert(
+      IsPlainJniReference<JniRet>() || detail::IsJavaClassType<JniRet>(),
+      "Return type must be a JNI reference or JavaClass type.");
   using JMethodBase::JMethodBase;
   JStaticMethod() noexcept {};
   JStaticMethod(const JStaticMethod& other) noexcept = default;
@@ -186,7 +190,7 @@ class JStaticMethod<R(Args...)> : public JMethodBase {
           getId(),
           detail::callToJni(detail::Convert<typename std::decay<Args>::type>::toCall(args))...);
     FACEBOOK_JNI_THROW_PENDING_EXCEPTION();
-    return adopt_local(static_cast<JniRet>(result));
+    return adopt_local(static_cast<JniType<JniRet>>(result));
   }
 
   friend class JClass;
@@ -235,7 +239,9 @@ template<typename R, typename... Args>
 class JNonvirtualMethod<R(Args...)> : public JMethodBase {
  public:
   using JniRet = typename detail::Convert<typename std::decay<R>::type>::jniType;
-  static_assert(IsPlainJniReference<JniRet>(), "T* must be a JNI reference");
+  static_assert(
+      IsPlainJniReference<JniRet>() || detail::IsJavaClassType<JniRet>(),
+      "Return type must be a JNI reference or JavaClass type.");
   using JMethodBase::JMethodBase;
   JNonvirtualMethod() noexcept {};
   JNonvirtualMethod(const JNonvirtualMethod& other) noexcept = default;
@@ -249,7 +255,7 @@ class JNonvirtualMethod<R(Args...)> : public JMethodBase {
           getId(),
           detail::callToJni(detail::Convert<typename std::decay<Args>::type>::toCall(args))...);
     FACEBOOK_JNI_THROW_PENDING_EXCEPTION();
-    return adopt_local(static_cast<JniRet>(result));
+    return adopt_local(static_cast<JniType<JniRet>>(result));
   }
 
   friend class JClass;

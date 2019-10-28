@@ -28,12 +28,12 @@ class AContext : public JavaClass<AContext> {
 
   // Define a method that calls into the represented Java class
   local_ref<JFile> getCacheDir() {
-    static const auto method = getClass()->getMethod<JFile::javaobject()>("getCacheDir");
+    static const auto method = getClass()->getMethod<JFile()>("getCacheDir");
     return method(self());
   }
 
   local_ref<JFile> getFilesDir() {
-    static const auto method = getClass()->getMethod<JFile::javaobject()>("getFilesDir");
+    static const auto method = getClass()->getMethod<JFile()>("getFilesDir");
     return method(self());
   }
 };
