@@ -277,8 +277,8 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       specialCodeBlockRuntimeModule_->getCodeBlockMayAllocate(1);
 
   // Initialize the root hidden class.
-  rootClazz_ = ignoreAllocationFailure(HiddenClass::createRoot(this));
-  rootClazzRawPtr_ = vmcast<HiddenClass>(rootClazz_);
+  rootClazzRawPtr_ = vmcast<HiddenClass>(
+      ignoreAllocationFailure(HiddenClass::createRoot(this)));
 
   // Initialize the global object.
 
@@ -873,16 +873,6 @@ void Runtime::printException(llvm::raw_ostream &os, Handle<> valueHandle) {
   }
   str->copyUTF16String(tmp);
   os << tmp << "\n";
-}
-
-Handle<HiddenClass> Runtime::getHiddenClassForPrototype(
-    Handle<JSObject> proto) {
-  return Handle<HiddenClass>::vmcast(&rootClazz_);
-}
-
-Handle<HiddenClass> Runtime::getHiddenClassForPrototype(
-    PinnedHermesValue *proto) {
-  return getHiddenClassForPrototype(Handle<JSObject>::vmcast(proto));
 }
 
 Handle<JSObject> Runtime::getGlobal() {
@@ -1756,6 +1746,9 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
   /// are deserialized, they will add themselves to this list.
   s.writeRelocation(specialCodeBlockRuntimeModule_);
 
+  // Field rootClazzRawPtr_;
+  s.writeRelocation(rootClazzRawPtr_);
+
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.
   // TODO: come back later.
@@ -1837,6 +1830,9 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
   d.readRelocation(
       &specialCodeBlockRuntimeModule_, RelocationKind::NativePointer);
 
+  // Field rootClazzRawPtr_;
+  d.readRelocation(&rootClazzRawPtr_, RelocationKind::NativePointer);
+
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.
   // TODO: come back later.
@@ -1917,8 +1913,6 @@ void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
   arrayPrototypeRawPtr = vmcast<JSObject>(arrayPrototype);
   // HiddenClass *arrayClassRawPtr{};
   arrayClassRawPtr = vmcast<HiddenClass>(arrayClass);
-  // HiddenClass *rootClazzRawPtr_{};
-  rootClazzRawPtr_ = vmcast<HiddenClass>(rootClazz_);
 
   LLVM_DEBUG(llvm::dbgs() << "Finish deserializing\n");
 

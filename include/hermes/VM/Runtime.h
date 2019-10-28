@@ -434,20 +434,11 @@ class Runtime : public HandleRootOwner,
   void clearThrownValue();
 
   /// Return a hidden class corresponding to the specified prototype object.
-  /// For now we always return the same one.
-  Handle<HiddenClass> getHiddenClassForPrototype(Handle<JSObject> proto);
-
-  /// Return a hidden class corresponding to the specified prototype object.
   /// For now we always return the same one.  This version takes and
   /// returns raw pointers: standard warnings apply!
   inline HiddenClass *getHiddenClassForPrototypeRaw(JSObject *proto) {
     return rootClazzRawPtr_;
   }
-
-  /// Return a hidden class corresponding to the specified prototype object.
-  /// For now we always return the same one.
-  /// This is a convenience wrapper that casts the PinnedHermesValue.
-  Handle<HiddenClass> getHiddenClassForPrototype(PinnedHermesValue *proto);
 
   /// Return the global object.
   Handle<JSObject> getGlobal();
@@ -1022,11 +1013,6 @@ class Runtime : public HandleRootOwner,
   static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH = 384;
 
   /// Raw pointer to the root of all hidden classes.
-  /// TODO: the intention is to get to a state in which we only have
-  /// raw-pointer versions of this.
-  /// It's both more specific -- this only holds a pointer value, not
-  /// arbitrary JS values -- and more efficient, since no translation
-  /// from the encoded form is required when accessing their value.
   HiddenClass *rootClazzRawPtr_{};
 
   /// Cache for property lookups in non-JS code.

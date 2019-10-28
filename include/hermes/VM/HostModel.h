@@ -49,16 +49,16 @@ class FinalizableNativeFunction final : public NativeFunction {
  protected:
   FinalizableNativeFunction(
       Runtime *runtime,
-      Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
+      PseudoHandle<JSObject> parent,
+      PseudoHandle<HiddenClass> clazz,
       void *context,
       NativeFunctionPtr functionPtr,
       FinalizeNativeFunctionPtr finalizePtr)
       : NativeFunction(
             runtime,
             &vt.base.base,
-            *parent,
-            *clazz,
+            parent.get(),
+            clazz.get(),
             context,
             functionPtr),
         finalizePtr_(finalizePtr) {}

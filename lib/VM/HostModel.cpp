@@ -67,7 +67,7 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
   auto selfHandle = runtime->makeHandle(new (mem) FinalizableNativeFunction(
       runtime,
       parentHandle,
-      runtime->getHiddenClassForPrototype(parentHandle),
+      createPseudoHandle(runtime->getHiddenClassForPrototypeRaw(*parentHandle)),
       context,
       functionPtr,
       finalizePtr));
