@@ -91,6 +91,12 @@ struct JDataHolder : JavaClass<JDataHolder> {
     }
   }
   // END
+
+  local_ref<JString> getStr() {
+    static const auto cls = javaClassStatic();
+    static const auto sField = cls->getField<JString>("s");
+    return getFieldValue(sField);
+  }
 };
 
 
@@ -218,6 +224,20 @@ struct DocTests : JavaClass<DocTests> {
     // (Data can also be assigned by writing to a pin.)
     auto ret = JArrayInt::newArray(size + 1);
     ret->setRegion(0, size + 1, buffer.data());
+    return ret;
+  }
+  // END
+
+  // SECTION class_arrays
+  static local_ref<JArrayClass<JString>> classArrays(
+      alias_ref<JClass> clazz,
+      alias_ref<JArrayClass<JDataHolder>> arr) {
+    size_t size = arr->size();
+    local_ref<JArrayClass<JString>> ret = JArrayClass<JString>::newArray(size);
+    for (int i = 0; i < size; ++i) {
+      local_ref<JString> str = arr->getElement(i)->getStr();
+      ret->setElement(i, *str);
+    }
     return ret;
   }
   // END

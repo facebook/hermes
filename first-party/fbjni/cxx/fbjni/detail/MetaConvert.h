@@ -40,6 +40,16 @@ inline JniType<T> callToJni(local_ref<T>&& sref) {
   return sref.get();
 }
 
+template<typename T>
+enable_if_t<IsPlainJniReference<T>(), T> toPlainJniReference(T obj) {
+  return obj;
+}
+
+template<typename T>
+enable_if_t<IsJavaClassType<T>(), JniType<T>> toPlainJniReference(T repr) {
+  return ReprAccess<T>::get(repr);
+}
+
 // Normally, pass through types unmolested.
 template <typename T, typename Enabled = void>
 struct Convert {

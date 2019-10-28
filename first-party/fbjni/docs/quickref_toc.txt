@@ -4,6 +4,7 @@ basic_methods Basic method usage (Java to C++ and C++ to Java)
 primitives Methods using Java primitives
 strings Methods using Java Strings
 primitive_arrays Working with arrays of primitives
+class_arrays Working with arrays of objects
 references References
 nested_class Defining a nested class
 inheritance Defining a child class

@@ -436,16 +436,16 @@ auto JArrayClass<T>::newArray(size_t size) -> local_ref<javaobject> {
 }
 
 template<typename T>
-inline void JArrayClass<T>::setElement(size_t idx, const T& value) {
+inline void JArrayClass<T>::setElement(size_t idx, T value) {
   const auto env = Environment::current();
-  env->SetObjectArrayElement(this->self(), idx, value);
+  env->SetObjectArrayElement(this->self(), idx, detail::toPlainJniReference(value));
 }
 
 template<typename T>
 inline local_ref<T> JArrayClass<T>::getElement(size_t idx) {
   const auto env = Environment::current();
   auto rawElement = env->GetObjectArrayElement(this->self(), idx);
-  return adopt_local(static_cast<T>(rawElement));
+  return adopt_local(static_cast<JniType<T>>(rawElement));
 }
 
 template<typename T>

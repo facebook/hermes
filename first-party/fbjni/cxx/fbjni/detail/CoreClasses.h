@@ -415,8 +415,10 @@ class JTypeArray : public JavaClass<JTypeArray, JArray, jobjectArray> {
 template<typename T>
 class JArrayClass : public JavaClass<JArrayClass<T>, detail::JTypeArray> {
  public:
-  static_assert(is_plain_jni_reference<T>(), "");
-  // javaentry is the jni type of an entry in the array (i.e. jint).
+  static_assert(
+      IsPlainJniReference<JniType<T>>(),
+      "Element type must be a JNI reference or JavaClass type.");
+  // javaentry is the jni type of an entry in the array (i.e. JObject).
   using javaentry = T;
   // javaobject is the jni type of the array.
   using javaobject = typename JavaClass<JArrayClass<T>, detail::JTypeArray>::javaobject;
@@ -431,7 +433,7 @@ class JArrayClass : public JavaClass<JArrayClass<T>, detail::JTypeArray> {
 
   /// Assign an object to the array.
   /// Typically you will use the shorthand (*ref)[idx]=value;
-  void setElement(size_t idx, const T& value);
+  void setElement(size_t idx, T value);
 
   /// Read an object from the array.
   /// Typically you will use the shorthand
