@@ -351,6 +351,15 @@ CallResult<HermesValue>
 stringFromCharCode(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
   uint32_t n = args.getArgCount();
+  if (LLVM_LIKELY(n == 1)) {
+    // Fast path for when only one argument is provided.
+    auto res = toUInt16(runtime, args.getArgHandle(0));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    char16_t ch = res->getNumber();
+    return runtime->getCharacterString(ch).getHermesValue();
+  }
   auto builder = StringBuilder::createStringBuilder(runtime, SafeUInt32{n});
   if (builder == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;

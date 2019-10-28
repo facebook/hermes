@@ -33,6 +33,10 @@ print('fromCharCode');
 // CHECK-LABEL: fromCharCode
 print('empty', String.fromCharCode());
 // CHECK-NEXT: empty
+print(String.fromCharCode(97));
+// CHECK-NEXT: a
+print(String.fromCharCode(0xff0041));
+// CHECK-NEXT: A
 print(String.fromCharCode(0xff0048, 0xe8, 114, 109, 101, 115));
 // CHECK-NEXT: Hèrmes
 
