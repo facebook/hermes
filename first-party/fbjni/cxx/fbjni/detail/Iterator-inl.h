@@ -42,7 +42,7 @@ struct IteratorHelper : public JavaClass<IteratorHelper<E>> {
   value_type next() {
     static auto elementField =
       JavaBase_::javaClassStatic()->template getField<jobject>("mElement");
-    return dynamic_ref_cast<JniType<E>>(JavaBase_::getFieldValue(elementField));
+    return dynamic_ref_cast<E>(JavaBase_::getFieldValue(elementField));
   }
 
   static void reset(value_type& v) {

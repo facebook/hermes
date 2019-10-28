@@ -491,32 +491,32 @@ inline void swap(alias_ref<T>& a, alias_ref<T>& b) noexcept {
 // template argument.  I'm not sure whether that would make the code
 // more maintainable (DRY), or less (too clever/confusing.).
 template<typename T, typename U>
-enable_if_t<IsPlainJniReference<T>(), local_ref<T>>
+enable_if_t<IsPlainJniReference<JniType<T>>(), local_ref<T>>
 static_ref_cast(const local_ref<U>& ref) noexcept
 {
-  T p = static_cast<T>(ref.get());
+  JniType<T> p = static_cast<JniType<T>>(ref.get());
   return make_local(p);
 }
 
 template<typename T, typename U>
-enable_if_t<IsPlainJniReference<T>(), global_ref<T>>
+enable_if_t<IsPlainJniReference<JniType<T>>(), global_ref<T>>
 static_ref_cast(const global_ref<U>& ref) noexcept
 {
-  T p = static_cast<T>(ref.get());
+  JniType<T> p = static_cast<JniType<T>>(ref.get());
   return make_global(p);
 }
 
 template<typename T, typename U>
-enable_if_t<IsPlainJniReference<T>(), alias_ref<T>>
+enable_if_t<IsPlainJniReference<JniType<T>>(), alias_ref<T>>
 static_ref_cast(const alias_ref<U>& ref) noexcept
 {
-  T p = static_cast<T>(ref.get());
+  JniType<T> p = static_cast<JniType<T>>(ref.get());
   return wrap_alias(p);
 }
 
 template<typename T, typename RefType>
 auto dynamic_ref_cast(const RefType& ref) ->
-enable_if_t<IsPlainJniReference<T>(), decltype(static_ref_cast<T>(ref))>
+enable_if_t<IsPlainJniReference<JniType<T>>(), decltype(static_ref_cast<T>(ref))>
 {
   if (!ref) {
     return decltype(static_ref_cast<T>(ref))();

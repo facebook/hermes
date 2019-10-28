@@ -76,7 +76,7 @@ jboolean nativeTestListIterator(
 
 jboolean nativeTestMapIterator(
     alias_ref<jclass>,
-    alias_ref<JMap<jstring, JInteger::javaobject>> jmap) {
+    alias_ref<JMap<jstring, JInteger>> jmap) {
   EXPECT(jmap);
 
   EXPECT(jmap->size() == 3);
@@ -129,7 +129,7 @@ jboolean nativeTestIterateWrongType(
 
 jboolean nativeTestIterateNullKey(
     alias_ref<jclass>,
-    alias_ref<JMap<jstring, JInteger::javaobject>> jmap) {
+    alias_ref<JMap<jstring, JInteger>> jmap) {
   EXPECT(jmap);
 
   EXPECT(jmap->size() == 3);

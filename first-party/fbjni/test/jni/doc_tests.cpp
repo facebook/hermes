@@ -260,11 +260,11 @@ struct DocTests : JavaClass<DocTests> {
     // Just like raw pointers, upcasting is implicit.
     alias_ref<JObject> obj = base;
     // static_ref_cast is like C++ static_cast.  No runtime checking is done.
-    alias_ref<JMyDerivedClass> derived_1 = static_ref_cast<JMyDerivedClass::javaobject>(base);
+    alias_ref<JMyDerivedClass> derived_1 = static_ref_cast<JMyDerivedClass>(base);
     // dynamic_ref_cast is like C++ dynamic_cast.
     // It will check that the runtime Java type is actually derived from the target type.
     try {
-      alias_ref<JMyDerivedClass> derived_2 = dynamic_ref_cast<JMyDerivedClass::javaobject>(base);
+      alias_ref<JMyDerivedClass> derived_2 = dynamic_ref_cast<JMyDerivedClass>(base);
       (void)derived_2;
     } catch (const JniException& exn) {
       // Throws ClassCastException if the cast fails.
@@ -346,7 +346,7 @@ struct DocTests : JavaClass<DocTests> {
       alias_ref<JClass> clazz,
       // Note that generic types are *not* checked against Java declarations.
       alias_ref<JList<JInteger>> values,
-      alias_ref<JMap<JString::javaobject, JInteger::javaobject>> names) {
+      alias_ref<JMap<JString, JInteger>> names) {
     int sum = 0;
     std::string ret;
     // Iterator and Iterable support C++ iteration.

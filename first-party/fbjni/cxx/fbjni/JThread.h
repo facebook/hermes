@@ -38,12 +38,12 @@ class JThread : public JavaClass<JThread> {
 
   static local_ref<JThread> create(std::function<void()>&& runnable) {
     auto jrunnable = JNativeRunnable::newObjectCxxArgs(std::move(runnable));
-    return newInstance(static_ref_cast<JRunnable::javaobject>(jrunnable));
+    return newInstance(static_ref_cast<JRunnable>(jrunnable));
   }
 
   static local_ref<JThread> create(std::function<void()>&& runnable, std::string&& name) {
     auto jrunnable = JNativeRunnable::newObjectCxxArgs(std::move(runnable));
-    return newInstance(static_ref_cast<JRunnable::javaobject>(jrunnable), make_jstring(std::move(name)));
+    return newInstance(static_ref_cast<JRunnable>(jrunnable), make_jstring(std::move(name)));
   }
 
   static local_ref<JThread> getCurrent() {
