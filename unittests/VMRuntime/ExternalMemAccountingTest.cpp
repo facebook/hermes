@@ -23,11 +23,26 @@ using namespace hermes::vm;
 namespace {
 
 MetadataTableForTests getMetadataTable() {
+  static_assert(
+      cellKindsContiguousAscending(
+          CellKind::UninitializedKind,
+          CellKind::FillerCellKind,
+          CellKind::DynamicUTF16StringPrimitiveKind,
+          CellKind::DynamicASCIIStringPrimitiveKind,
+          CellKind::BufferedUTF16StringPrimitiveKind,
+          CellKind::BufferedASCIIStringPrimitiveKind,
+          CellKind::DynamicUniquedUTF16StringPrimitiveKind,
+          CellKind::DynamicUniquedASCIIStringPrimitiveKind,
+          CellKind::ExternalUTF16StringPrimitiveKind,
+          CellKind::ExternalASCIIStringPrimitiveKind),
+      "Cell kinds in unexpected order");
   static const Metadata storage[] = {
       Metadata(), // Uninitialized
       Metadata(), // FillerCell
       Metadata(), // DynamicUTF16StringPrimitive
       Metadata(), // DynamicASCIIStringPrimitive
+      Metadata(), // BufferedUTF16StringPrimitive
+      Metadata(), // BufferedASCIIStringPrimitive
       Metadata(), // DynamicUniquedUTF16StringPrimitive
       Metadata(), // DynamicUniquedASCIIStringPrimitive
       Metadata(), // ExternalUTF16StringPrimitive

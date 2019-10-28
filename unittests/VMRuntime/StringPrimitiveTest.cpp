@@ -230,4 +230,98 @@ TEST_F(StringPrimTest, StringsAreMemcpySafeMicrosoftSTL) {
   ::free(copy);
 }
 
+TEST_F(StringPrimTest, FastConcatTest) {
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  std::string bigStrA(300, 'a');
+  std::string strB("small");
+
+  //=======================================
+  // ASCII + ASCII
+  auto a = StringPrimitive::createNoThrow(runtime, bigStrA);
+  auto b = StringPrimitive::createNoThrow(runtime, strB);
+  cr = StringPrimitive::concat(runtime, a, b);
+  ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
+  auto resASCII_1 = runtime->makeHandle<BufferedASCIIStringPrimitive>(*cr);
+
+  std::string asciiStr1 = bigStrA + strB;
+  auto asciiRef = resASCII_1->getStringRef<char>();
+  EXPECT_TRUE(asciiRef.size() == asciiStr1.size());
+  EXPECT_TRUE(std::equal(asciiStr1.begin(), asciiStr1.end(), asciiRef.begin()));
+
+  //=======================================
+  // Add more ASCII
+  cr = StringPrimitive::concat(runtime, resASCII_1, b);
+  ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
+  auto resASCII_2 = runtime->makeHandle<BufferedASCIIStringPrimitive>(*cr);
+
+  // The same buffer must have been reused.
+  EXPECT_TRUE(
+      resASCII_1->testGetConcatBuffer() == resASCII_2->testGetConcatBuffer());
+
+  std::string asciiStr2 = asciiStr1 + strB;
+  asciiRef = resASCII_2->getStringRef<char>();
+  EXPECT_TRUE(asciiRef.size() == asciiStr2.size());
+  EXPECT_TRUE(std::equal(asciiStr2.begin(), asciiStr2.end(), asciiRef.begin()));
+
+  //=======================================
+  // Append some the first result again.
+  cr = StringPrimitive::concat(runtime, resASCII_1, b);
+  ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
+  auto resASCII_3 = runtime->makeHandle<BufferedASCIIStringPrimitive>(*cr);
+
+  // The buffer cannot be reused.
+  EXPECT_TRUE(
+      resASCII_3->testGetConcatBuffer() != resASCII_1->testGetConcatBuffer());
+
+  std::string asciiStr3 = asciiStr1 + strB;
+  asciiRef = resASCII_3->getStringRef<char>();
+  EXPECT_TRUE(asciiRef.size() == asciiStr3.size());
+  EXPECT_TRUE(std::equal(asciiStr3.begin(), asciiStr3.end(), asciiRef.begin()));
+
+  //=======================================
+  // ASCII + UTF16
+  std::u16string strC(u"utf16\u1234");
+  b = StringPrimitive::createNoThrow(
+      runtime, UTF16Ref(strC.data(), strC.size()));
+  cr = StringPrimitive::concat(runtime, resASCII_2, b);
+  ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
+  auto resUTF_1 = runtime->makeHandle<BufferedUTF16StringPrimitive>(*cr);
+
+  std::u16string utfStr1;
+  utfStr1.append(asciiStr2.begin(), asciiStr2.end());
+  utfStr1.append(strC);
+  auto utf16Ref = resUTF_1->getStringRef<char16_t>();
+  EXPECT_TRUE(utf16Ref.size() == utfStr1.size());
+  EXPECT_TRUE(std::equal(utfStr1.begin(), utfStr1.end(), utf16Ref.begin()));
+
+  //=======================================
+  // UTF16 + ASCII
+  cr = StringPrimitive::concat(runtime, resUTF_1, b);
+  ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
+  auto resUTF_2 = runtime->makeHandle<BufferedUTF16StringPrimitive>(*cr);
+
+  // The same buffer must have been reused.
+  EXPECT_TRUE(
+      resUTF_1->testGetConcatBuffer() == resUTF_2->testGetConcatBuffer());
+
+  std::u16string utfStr2 = utfStr1 + strC;
+  utf16Ref = resUTF_2->getStringRef<char16_t>();
+  EXPECT_TRUE(utf16Ref.size() == utfStr2.size());
+  EXPECT_TRUE(std::equal(utfStr2.begin(), utfStr2.end(), utf16Ref.begin()));
+
+  //=======================================
+  // Add some more UTF16 to resUTF_1
+  cr = StringPrimitive::concat(runtime, resUTF_1, b);
+  ASSERT_NE(ExecutionStatus::EXCEPTION, cr);
+  auto resUTF_3 = runtime->makeHandle<BufferedUTF16StringPrimitive>(*cr);
+
+  // The buffer cannot be reused.
+  EXPECT_TRUE(
+      resUTF_1->testGetConcatBuffer() != resUTF_3->testGetConcatBuffer());
+
+  std::u16string utfStr3 = utfStr1 + strC;
+  utf16Ref = resUTF_3->getStringRef<char16_t>();
+  EXPECT_TRUE(utf16Ref.size() == utfStr3.size());
+  EXPECT_TRUE(std::equal(utfStr3.begin(), utfStr3.end(), utf16Ref.begin()));
+}
 } // namespace

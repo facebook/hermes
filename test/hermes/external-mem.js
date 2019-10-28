@@ -33,8 +33,10 @@ a = null;
 print('ExternalStringPrimitive')
 // CHECK-LABEL: ExternalStringPrimitive
 
+// Note: use Array.join() instead of string concatenation to avoid the relative
+// unpredictability of fast buffered concatenation.
 var s10 = 'aaaaaaaaaa';
-var s100 = s10 + s10 + s10 + s10 + s10 + s10 + s10 + s10 + s10 + s10;
+var s100 = [s10, s10, s10, s10, s10, s10, s10, s10, s10, s10].join("")
 
 function strOfSize(n) {
     if (n < 100) {
@@ -45,10 +47,10 @@ function strOfSize(n) {
         // Don't allocate a string for rightSize -- that would mean exponential work,
         // and live memory proportional to n before the final allocation.
         if (leftSize * 2 == n) {
-            return left + left;
+            return [left, left].join("");
         } else {
             // n == 2 * leftSize + 1:
-            return left + left + 'a';
+            return [left, left, 'a'].join("");
         }
     }
 }

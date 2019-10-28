@@ -11,6 +11,8 @@
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/FillerCell.h"
+#include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
@@ -352,8 +354,11 @@ CallResult<HermesValue> StringPrimitive::concat(
     Runtime *runtime,
     Handle<StringPrimitive> xHandle,
     Handle<StringPrimitive> yHandle) {
-  auto xLen = xHandle->getStringLength();
-  auto yLen = yHandle->getStringLength();
+  auto *xPtr = xHandle.get();
+  auto *yPtr = yHandle.get();
+
+  auto xLen = xPtr->getStringLength();
+  auto yLen = yPtr->getStringLength();
   if (!xLen) {
     // x is the empty string, just return y.
     return yHandle.getHermesValue();
@@ -365,9 +370,23 @@ CallResult<HermesValue> StringPrimitive::concat(
 
   SafeUInt32 xyLen(xLen);
   xyLen.add(yLen);
+  if (xyLen.isOverflowed() || xyLen.get() > MAX_STRING_LENGTH) {
+    return runtime->raiseRangeError("String length exceeds limit");
+  }
+
+  if (xyLen.get() >= CONCAT_STRING_MIN_SIZE ||
+      isBufferedStringPrimitive(xPtr)) {
+    if (LLVM_UNLIKELY(
+            !runtime->getHeap().canAllocExternalMemory(xyLen.get()))) {
+      return runtime->raiseRangeError(
+          "Cannot allocate an external string primitive.");
+    }
+    return internalConcatStringPrimitives(runtime, xHandle, yHandle)
+        .getHermesValue();
+  }
 
   auto builder = StringBuilder::createStringBuilder(
-      runtime, xyLen, xHandle->isASCII() && yHandle->isASCII());
+      runtime, xyLen, xPtr->isASCII() && yPtr->isASCII());
   if (builder == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -632,5 +651,201 @@ void ExternalStringPrimitive<T>::_snapshotAddNodesImpl(
 template class ExternalStringPrimitive<char16_t>;
 template class ExternalStringPrimitive<char>;
 
+//===----------------------------------------------------------------------===//
+// BufferedStringPrimitive<T>
+
+void BufferedASCIIStringPrimitiveBuildMeta(
+    const GCCell *cell,
+    Metadata::Builder &mb) {
+  const auto *self = static_cast<const BufferedASCIIStringPrimitive *>(cell);
+  mb.addField("storage", &self->concatBufferHV_);
+}
+void BufferedUTF16StringPrimitiveBuildMeta(
+    const GCCell *cell,
+    Metadata::Builder &mb) {
+  const auto *self = static_cast<const BufferedUTF16StringPrimitive *>(cell);
+  mb.addField("storage", &self->concatBufferHV_);
+}
+
+template <typename T>
+PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
+    Runtime *runtime,
+    uint32_t length,
+    Handle<ExternalStringPrimitive<T>> storage) {
+  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::No>(
+      sizeof(BufferedStringPrimitive<T>));
+  return createPseudoHandle<StringPrimitive>(
+      new (mem) BufferedStringPrimitive<T>(runtime, length, storage.get()));
+}
+
+#ifndef NDEBUG
+/// Assert the the combined length of the two strings is valid.
+static void assertValidLength(StringPrimitive *a, StringPrimitive *b) {
+  SafeUInt32 len(a->getStringLength());
+  len.add(b->getStringLength());
+  assert(
+      !len.isOverflowed() && len.get() <= StringPrimitive::MAX_STRING_LENGTH &&
+      "length must have been validated");
+}
+#else
+static inline void assertValidLength(StringPrimitive *a, StringPrimitive *b) {}
+#endif
+
+template <>
+void BufferedStringPrimitive<char>::appendToCopyableString(
+    CopyableBasicString<char> &res,
+    const StringPrimitive *str) {
+  auto it = str->castToASCIIPointer();
+  res.append(it, it + str->getStringLength());
+}
+template <>
+void BufferedStringPrimitive<char16_t>::appendToCopyableString(
+    CopyableBasicString<char16_t> &res,
+    const StringPrimitive *str) {
+  if (str->isASCII()) {
+    auto it = (const uint8_t *)str->castToASCIIPointer();
+    res.append(it, it + str->getStringLength());
+  } else {
+    auto it = str->castToUTF16Pointer();
+    res.append(it, it + str->getStringLength());
+  }
+}
+
+template <typename T>
+PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
+    Runtime *runtime,
+    Handle<StringPrimitive> leftHnd,
+    Handle<StringPrimitive> rightHnd) {
+  typename ExternalStringPrimitive<T>::CopyableStdString contents{};
+  uint32_t len;
+
+  {
+    NoAllocScope noAlloc{runtime};
+    auto *left = leftHnd.get();
+    auto *right = rightHnd.get();
+
+    assertValidLength(left, right);
+    len = left->getStringLength() + right->getStringLength();
+
+    contents.reserve(len);
+    appendToCopyableString(contents, left);
+    appendToCopyableString(contents, right);
+  }
+
+  auto storageHnd = runtime->makeHandle<ExternalStringPrimitive<T>>(
+      runtime->ignoreAllocationFailure(
+          ExternalStringPrimitive<T>::create(runtime, std::move(contents))));
+
+  return create(runtime, len, storageHnd);
+}
+
+template <typename T>
+PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::append(
+    Handle<BufferedStringPrimitive<T>> selfHnd,
+    Runtime *runtime,
+    Handle<StringPrimitive> rightHnd) {
+  NoAllocScope noAlloc{runtime};
+  auto *self = selfHnd.get();
+  auto *right = rightHnd.get();
+  ExternalStringPrimitive<T> *storage = self->getConcatBuffer();
+
+  assertValidLength(self, right);
+  assert(
+      (std::is_same<T, char16_t>::value || right->isASCII()) &&
+      "cannot append UTF16 to ASCII");
+
+  // Can't append if this is not the end of the string.
+  if (self->getStringLength() != storage->contents_.size()) {
+    noAlloc.release();
+    return BufferedStringPrimitive<T>::create(runtime, selfHnd, rightHnd);
+  }
+
+  auto oldExternalMem = storage->calcExternalMemorySize();
+  appendToCopyableString(storage->contents_, right);
+  runtime->getHeap().creditExternalMemory(
+      storage, storage->calcExternalMemorySize() - oldExternalMem);
+
+  noAlloc.release();
+  return BufferedStringPrimitive<T>::create(
+      runtime, storage->contents_.size(), runtime->makeHandle(storage));
+}
+
+PseudoHandle<StringPrimitive> internalConcatStringPrimitives(
+    Runtime *runtime,
+    Handle<StringPrimitive> leftHnd,
+    Handle<StringPrimitive> rightHnd) {
+  auto *left = leftHnd.get();
+  auto *right = rightHnd.get();
+
+  assertValidLength(left, right);
+
+  if (left->isASCII() && right->isASCII()) {
+    if (auto *bufLeft = dyn_vmcast<BufferedASCIIStringPrimitive>(left)) {
+      if (bufLeft->getStringLength() ==
+          bufLeft->getConcatBuffer()->contents_.size())
+        return BufferedASCIIStringPrimitive::append(
+            Handle<BufferedASCIIStringPrimitive>::vmcast(leftHnd),
+            runtime,
+            rightHnd);
+    }
+    return BufferedASCIIStringPrimitive::create(runtime, leftHnd, rightHnd);
+  } else {
+    if (auto *bufLeft = dyn_vmcast<BufferedUTF16StringPrimitive>(left)) {
+      if (bufLeft->getStringLength() ==
+          bufLeft->getConcatBuffer()->contents_.size()) {
+        return BufferedUTF16StringPrimitive::append(
+            Handle<BufferedUTF16StringPrimitive>::vmcast(leftHnd),
+            runtime,
+            rightHnd);
+      }
+    }
+    return BufferedUTF16StringPrimitive::create(runtime, leftHnd, rightHnd);
+  }
+}
+
+#ifdef HERMESVM_SERIALIZE
+template <typename T>
+void serializeConcatStringImpl(Serializer &s, const GCCell *cell) {}
+
+template <typename T>
+void deserializeConcatStringImpl(Deserializer &d) {}
+
+void BufferedASCIIStringPrimitiveSerialize(Serializer &s, const GCCell *cell) {
+  serializeConcatStringImpl<char>(s, cell);
+}
+
+void BufferedUTF16StringPrimitiveSerialize(Serializer &s, const GCCell *cell) {
+  serializeConcatStringImpl<char16_t>(s, cell);
+}
+
+void BufferedASCIIStringPrimitiveDeserialize(Deserializer &d, CellKind kind) {
+  assert(
+      kind == CellKind::BufferedASCIIStringPrimitiveKind &&
+      "Expected BufferedASCIIStringPrimitive");
+  deserializeConcatStringImpl<char>(d);
+}
+
+void BufferedUTF16StringPrimitiveDeserialize(Deserializer &d, CellKind kind) {
+  assert(
+      kind == CellKind::BufferedUTF16StringPrimitiveKind &&
+      "Expected BufferedUTF16StringPrimitive");
+  deserializeConcatStringImpl<char16_t>(d);
+}
+#endif
+
+template <typename T>
+void BufferedStringPrimitive<T>::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {}
+
+template <typename T>
+void BufferedStringPrimitive<T>::_snapshotAddNodesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {}
+
+template class BufferedStringPrimitive<char16_t>;
+template class BufferedStringPrimitive<char>;
 } // namespace vm
 } // namespace hermes

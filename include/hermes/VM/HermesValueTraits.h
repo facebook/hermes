@@ -95,6 +95,14 @@ class DynamicStringPrimitive;
 template <typename T, bool Uniqued>
 struct IsGCObject<DynamicStringPrimitive<T, Uniqued>> : public std::true_type {
 };
+template <typename T>
+class ExternalStringPrimitive;
+template <typename T>
+struct IsGCObject<ExternalStringPrimitive<T>> : public std::true_type {};
+template <typename T>
+class BufferedStringPrimitive;
+template <typename T>
+struct IsGCObject<BufferedStringPrimitive<T>> : public std::true_type {};
 
 template <typename T, bool isGCObject = IsGCObject<T>::value>
 struct HermesValueTraits;
@@ -146,20 +154,20 @@ struct HermesValueTraits<SymbolID> {
   }
 };
 
-template <>
-struct HermesValueTraits<StringPrimitive, true> {
-  using value_type = StringPrimitive *;
+template <class T>
+struct StringTraitsImpl {
+  using value_type = T *;
   using arrow_type = value_type;
   static constexpr bool is_cell = true;
 
   static constexpr value_type defaultValue() {
     return value_type{};
   }
-  static HermesValue encode(StringPrimitive *value) {
+  static HermesValue encode(T *value) {
     return HermesValue::encodeStringValue(value);
   }
-  static StringPrimitive *decode(HermesValue value) {
-    return value.getString();
+  static T *decode(HermesValue value) {
+    return (T *)value.getString();
   }
   static arrow_type arrow(const HermesValue &value) {
     auto *res = decode(value);
@@ -171,6 +179,16 @@ struct HermesValueTraits<StringPrimitive, true> {
     return ptr;
   }
 };
+
+template <>
+struct HermesValueTraits<StringPrimitive, true>
+    : public StringTraitsImpl<StringPrimitive> {};
+template <>
+struct HermesValueTraits<BufferedStringPrimitive<char>, true>
+    : public StringTraitsImpl<BufferedStringPrimitive<char>> {};
+template <>
+struct HermesValueTraits<BufferedStringPrimitive<char16_t>, true>
+    : public StringTraitsImpl<BufferedStringPrimitive<char16_t>> {};
 
 template <class T>
 struct HermesValueTraits<T, true> {
