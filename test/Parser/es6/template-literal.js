@@ -362,6 +362,32 @@ tag`\unicode`;
 // CHECK-NEXT:          }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "directive": null
+// CHECK-NEXT:      },
+
+tag`脸\书𐀀\𐀁`;
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "type": "ExpressionStatement",
+// CHECK-NEXT:        "expression": {
+// CHECK-NEXT:          "type": "TaggedTemplateExpression",
+// CHECK-NEXT:          "tag": {
+// CHECK-NEXT:            "type": "Identifier",
+// CHECK-NEXT:            "name": "tag",
+// CHECK-NEXT:            "typeAnnotation": null
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "quasi": {
+// CHECK-NEXT:            "type": "TemplateLiteral",
+// CHECK-NEXT:            "quasis": [
+// CHECK-NEXT:              {
+// CHECK-NEXT:                "type": "TemplateElement",
+// CHECK-NEXT:                "tail": true,
+// CHECK-NEXT:                "cooked": "\u8138\u4e66\ud800\udc00\ud800\udc01",
+// CHECK-NEXT:                "raw": "\u8138\\\u4e66\ud800\udc00\\\ud800\udc01"
+// CHECK-NEXT:              }
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "expressions": []
+// CHECK-NEXT:          }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "directive": null
 // CHECK-NEXT:      }
 
 // CHECK-NEXT:    ]

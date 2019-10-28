@@ -1513,10 +1513,13 @@ void JSLexer::scanTemplateLiteral() {
 
         default:
           if (LLVM_UNLIKELY(isUTF8Start(*curCharPtr_))) {
-            const char *start = curCharPtr_ + 1;
             uint32_t codepoint = _decodeUTF8SlowPath(curCharPtr_);
             appendUnicodeToStorage(codepoint);
-            rawStorage_.append({start, (size_t)(curCharPtr_ - start)});
+            // Remove the last byte from rawStorage_ and then append the
+            // unicode codepoint to it. The already inserted byte will change
+            // if this codepoint is in Supplementary Planes.
+            rawStorage_.pop_back();
+            appendUnicodeToStorage(codepoint, rawStorage_);
           } else {
             // The TV of EscapeSequence is the SV of EscapeSequence.
             tmpStorage_.push_back((unsigned char)*curCharPtr_++);
