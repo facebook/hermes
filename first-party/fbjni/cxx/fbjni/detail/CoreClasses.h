@@ -288,19 +288,19 @@ class JClass : public JavaClass<JClass, JObject, jclass> {
 
   /// Lookup the field with the given name and deduced descriptor
   template<typename T>
-  JField<enable_if_t<IsJniScalar<T>(), T>> getField(const char* name) const;
+  JField<PrimitiveOrJniType<T>> getField(const char* name) const;
 
   /// Lookup the field with the given name and descriptor
   template<typename T>
-  JField<enable_if_t<IsJniScalar<T>(), T>> getField(const char* name, const char* descriptor) const;
+  JField<PrimitiveOrJniType<T>> getField(const char* name, const char* descriptor) const;
 
   /// Lookup the static field with the given name and deduced descriptor
   template<typename T>
-  JStaticField<enable_if_t<IsJniScalar<T>(), T>> getStaticField(const char* name) const;
+  JStaticField<PrimitiveOrJniType<T>> getStaticField(const char* name) const;
 
   /// Lookup the static field with the given name and descriptor
   template<typename T>
-  JStaticField<enable_if_t<IsJniScalar<T>(), T>> getStaticField(
+  JStaticField<PrimitiveOrJniType<T>> getStaticField(
       const char* name,
       const char* descriptor) const;
 

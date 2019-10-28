@@ -1433,6 +1433,12 @@ void RegisterFbjniTests() {
   StaticAssertSame<JniType<jFakeClass>, jFakeClass>();
   StaticAssertSame<JniType<JObjectWrapper<jFakeClass>>, jFakeClass>();
 
+  StaticAssertSame<PrimitiveOrJniType<JObject>, jobject>();
+  StaticAssertSame<PrimitiveOrJniType<JClass>, jclass>();
+  StaticAssertSame<PrimitiveOrJniType<JArrayInt>, jintArray>();
+  StaticAssertSame<PrimitiveOrJniType<jint>, jint>();
+  StaticAssertSame<PrimitiveOrJniType<TestThing>, TestThing::javaobject>();
+
   registerNatives(jaccess_class_name, {
       makeNativeMethod("nativeTestClassResolution", TestClassResolution),
       makeNativeMethod("nativeTestLazyClassResolution", TestLazyClassResolution),

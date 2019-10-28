@@ -193,6 +193,33 @@ struct JavaObjectType<T*> {
       "JavaObjectType<T> not idempotent");
 };
 
+template <typename T>
+struct PrimitiveOrJavaObjectType<T, enable_if_t<IsJniPrimitive<T>(), void>> {
+  using type = T;
+  static_assert(IsJniPrimitive<type>(),
+      "PrimitiveOrJavaObjectType<T> not a jni primitive");
+  static_assert(std::is_same<type, typename PrimitiveOrJavaObjectType<type>::type>::value,
+      "PrimitiveOrJavaObjectType<T> not idempotent");
+};
+
+template <typename T>
+struct PrimitiveOrJavaObjectType<T, enable_if_t<IsPlainJniReference<T>(), void>> {
+  using type = T;
+  static_assert(IsPlainJniReference<type>(),
+      "PrimitiveOrJavaObjectType<T> not a plain jni reference");
+  static_assert(std::is_same<type, typename PrimitiveOrJavaObjectType<type>::type>::value,
+      "PrimitiveOrJavaObjectType<T> not idempotent");
+};
+
+template <typename T>
+struct PrimitiveOrJavaObjectType<T, enable_if_t<IsJavaClassType<T>(), void>> {
+  using type = JniType<T>;
+  static_assert(IsPlainJniReference<type>(),
+      "PrimitiveOrJavaObjectType<T> not a plain jni reference");
+  static_assert(std::is_same<type, typename PrimitiveOrJavaObjectType<type>::type>::value,
+      "PrimitiveOrJavaObjectType<T> not idempotent");
+};
+
 template <typename Repr>
 struct ReprStorage {
   explicit ReprStorage(JniType<Repr> obj) noexcept;

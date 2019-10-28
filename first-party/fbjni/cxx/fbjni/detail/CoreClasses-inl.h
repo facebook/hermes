@@ -256,35 +256,35 @@ inline JNonvirtualMethod<F> JClass::getNonvirtualMethod(
 }
 
 template<typename T>
-inline JField<enable_if_t<IsJniScalar<T>(), T>>
+inline JField<PrimitiveOrJniType<T>>
 JClass::getField(const char* name) const {
   return getField<T>(name, jtype_traits<T>::descriptor().c_str());
 }
 
 template<typename T>
-inline JField<enable_if_t<IsJniScalar<T>(), T>> JClass::getField(
+inline JField<PrimitiveOrJniType<T>> JClass::getField(
     const char* name,
     const char* descriptor) const {
   const auto env = Environment::current();
   auto field = env->GetFieldID(self(), name, descriptor);
   FACEBOOK_JNI_THROW_EXCEPTION_IF(!field);
-  return JField<T>{field};
+  return JField<PrimitiveOrJniType<T>>{field};
 }
 
 template<typename T>
-inline JStaticField<enable_if_t<IsJniScalar<T>(), T>> JClass::getStaticField(
+inline JStaticField<PrimitiveOrJniType<T>> JClass::getStaticField(
     const char* name) const {
   return getStaticField<T>(name, jtype_traits<T>::descriptor().c_str());
 }
 
 template<typename T>
-inline JStaticField<enable_if_t<IsJniScalar<T>(), T>> JClass::getStaticField(
+inline JStaticField<PrimitiveOrJniType<T>> JClass::getStaticField(
     const char* name,
     const char* descriptor) const {
   const auto env = Environment::current();
   auto field = env->GetStaticFieldID(self(), name, descriptor);
   FACEBOOK_JNI_THROW_EXCEPTION_IF(!field);
-  return JStaticField<T>{field};
+  return JStaticField<PrimitiveOrJniType<T>>{field};
 }
 
 template<typename T>

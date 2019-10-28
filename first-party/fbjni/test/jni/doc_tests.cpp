@@ -76,14 +76,14 @@ struct JDataHolder : JavaClass<JDataHolder> {
     jint i = this->getFieldValue(iField);
     this->setFieldValue(iField, i + 1);
     // Object fields work for standard classes and your own JavaObject classes.
-    static const auto sField = cls->getField<JString::javaobject>("s");
+    static const auto sField = cls->getField<JString>("s");
     // Object are returned as local refs ...
     local_ref<JString> s = this->getFieldValue(sField);
     // and can be set from any ref.
     this->setFieldValue(sField, make_jstring(s->toStdString() + "1").get());
     // Static fields work the same, but getStaticField, getStaticFieldValue,
     // and setStaticFieldValue must all be called on the class object.
-    static const auto someInstanceField = cls->getStaticField<JDataHolder::javaobject>("someInstance");
+    static const auto someInstanceField = cls->getStaticField<JDataHolder>("someInstance");
     auto inst = cls->getStaticFieldValue(someInstanceField);
     if (!inst) {
       // NOTE: Can't use cls here because it is declared const.
