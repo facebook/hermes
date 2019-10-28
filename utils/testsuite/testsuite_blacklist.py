@@ -1584,8 +1584,6 @@ UNSUPPORTED_FEATURES = [
     "json-superset",
     "let",
     "new.target",
-    "object-rest",
-    "object-spread",
     "numeric-separator-literal",
     "optional-catch-binding",
     "regexp-dotall",
