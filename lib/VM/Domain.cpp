@@ -19,7 +19,7 @@ namespace hermes {
 namespace vm {
 
 VTable Domain::vt{CellKind::DomainKind,
-                  sizeof(Domain),
+                  cellSize<Domain>(),
                   _finalizeImpl,
                   _markWeakImpl,
                   _mallocSizeImpl};
@@ -94,7 +94,7 @@ void DomainSerialize(Serializer &s, const GCCell *cell) {
 void DomainDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DomainKind && "Expected Domain");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(Domain));
+      cellSize<Domain>());
   auto *cell = new (mem) Domain(d);
   auto &samplingProfiler = SamplingProfiler::getInstance();
   samplingProfiler->increaseDomainCount();
@@ -139,7 +139,7 @@ ArrayStorage *Domain::deserializeArrayStorage(Deserializer &d) {
 
 PseudoHandle<Domain> Domain::create(Runtime *runtime) {
   void *mem =
-      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(Domain));
+      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(cellSize<Domain>());
   auto self = createPseudoHandle(new (mem) Domain(runtime));
   auto &samplingProfiler = SamplingProfiler::getInstance();
   samplingProfiler->increaseDomainCount();
@@ -300,7 +300,7 @@ ExecutionStatus Domain::importCJSModuleTable(
 }
 
 ObjectVTable RequireContext::vt{
-    VTable(CellKind::RequireContextKind, sizeof(RequireContext)),
+    VTable(CellKind::RequireContextKind, cellSize<RequireContext>()),
     RequireContext::_getOwnIndexedRangeImpl,
     RequireContext::_haveOwnIndexedImpl,
     RequireContext::_getOwnIndexedPropertyFlagsImpl,
@@ -325,7 +325,7 @@ void RequireContextSerialize(Serializer &s, const GCCell *cell) {
 void RequireContextDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::RequireContextKind && "Expected RequireContext");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::No>(
-      sizeof(RequireContext));
+      cellSize<RequireContext>());
   auto *cell = new (mem) RequireContext(d);
   d.endObject(cell);
 }
@@ -336,7 +336,7 @@ Handle<RequireContext> RequireContext::create(
     Handle<Domain> domain,
     Handle<StringPrimitive> dirname) {
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::No>(
-      sizeof(RequireContext));
+      cellSize<RequireContext>());
   auto self = runtime->makeHandle(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) RequireContext(

@@ -19,7 +19,7 @@ namespace vm {
 // class JSDate
 
 ObjectVTable JSDate::vt{
-    VTable(CellKind::DateKind, sizeof(JSDate)),
+    VTable(CellKind::DateKind, cellSize<JSDate>()),
     JSDate::_getOwnIndexedRangeImpl,
     JSDate::_haveOwnIndexedImpl,
     JSDate::_getOwnIndexedPropertyFlagsImpl,
@@ -43,7 +43,7 @@ void DateSerialize(Serializer &s, const GCCell *cell) {
 
 void DateDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DateKind && "Expected Date");
-  void *mem = d.getRuntime()->alloc(sizeof(JSDate));
+  void *mem = d.getRuntime()->alloc(cellSize<JSDate>());
   auto *cell = new (mem) JSDate(d);
   d.endObject(cell);
 }
@@ -51,7 +51,7 @@ void DateDeserialize(Deserializer &d, CellKind kind) {
 
 CallResult<HermesValue>
 JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(sizeof(JSDate));
+  void *mem = runtime->alloc(cellSize<JSDate>());
   auto selfHandle = runtime->makeHandle(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) JSDate(

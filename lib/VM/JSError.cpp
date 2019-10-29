@@ -23,7 +23,7 @@ namespace vm {
 ObjectVTable JSError::vt{
     VTable(
         CellKind::ErrorKind,
-        sizeof(JSError),
+        cellSize<JSError>(),
         JSError::_finalizeImpl,
         nullptr,
         JSError::_mallocSizeImpl),
@@ -73,7 +73,7 @@ void ErrorSerialize(Serializer &s, const GCCell *cell) {
 void ErrorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ErrorKind && "Expected JSError");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(JSError));
+      cellSize<JSError>());
 
   auto *cell = new (mem) JSError(d);
   d.endObject(cell);
@@ -202,8 +202,8 @@ CallResult<HermesValue> JSError::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle,
     bool catchable) {
-  void *mem =
-      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(JSError));
+  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      cellSize<JSError>());
   return HermesValue::encodeObjectValue(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) JSError(

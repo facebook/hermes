@@ -815,7 +815,7 @@ using DynamicUniquedASCIIStringPrimitive =
 template <typename T>
 const VTable ExternalStringPrimitive<T>::vt = VTable(
     ExternalStringPrimitive<T>::getCellKind(),
-    sizeof(ExternalStringPrimitive<T>),
+    cellSize<ExternalStringPrimitive<T>>(),
     ExternalStringPrimitive<T>::_finalizeImpl,
     nullptr, // markWeak.
     ExternalStringPrimitive<T>::_mallocSizeImpl,

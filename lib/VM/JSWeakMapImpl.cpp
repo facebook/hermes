@@ -278,7 +278,7 @@ JSWeakMapImpl<C>::JSWeakMapImpl(Deserializer &d)
 void WeakMapDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::WeakMapKind && "Expected WeakMap.");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(JSWeakMap));
+      cellSize<JSWeakMap>());
   auto *cell = new (mem) JSWeakMap(d);
   d.endObject(cell);
 }
@@ -286,7 +286,7 @@ void WeakMapDeserialize(Deserializer &d, CellKind kind) {
 void WeakSetDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::WeakSetKind && "Expected WeakSet.");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(JSWeakSet));
+      cellSize<JSWeakSet>());
   auto *cell = new (mem) JSWeakSet(d);
   d.endObject(cell);
 }
@@ -296,7 +296,7 @@ template <CellKind C>
 const ObjectVTable JSWeakMapImpl<C>::vt{
     VTable(
         C,
-        sizeof(JSWeakMapImpl),
+        cellSize<JSWeakMapImpl>(),
         JSWeakMapImpl::_finalizeImpl,
         JSWeakMapImpl::_markWeakImpl,
         JSWeakMapImpl::_mallocSizeImpl),
@@ -320,7 +320,7 @@ CallResult<HermesValue> JSWeakMapImpl<C>::create(
   auto valueStorage = runtime->makeHandle<BigStorage>(*valueRes);
 
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(JSWeakMapImpl<C>));
+      cellSize<JSWeakMapImpl<C>>());
   return HermesValue::encodeObjectValue(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) JSWeakMapImpl<C>(

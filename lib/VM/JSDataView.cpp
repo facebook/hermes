@@ -16,7 +16,7 @@ namespace hermes {
 namespace vm {
 
 ObjectVTable JSDataView::vt{
-    VTable(CellKind::DataViewKind, sizeof(JSDataView)),
+    VTable(CellKind::DataViewKind, cellSize<JSDataView>()),
     JSDataView::_getOwnIndexedRangeImpl,
     JSDataView::_haveOwnIndexedImpl,
     JSDataView::_getOwnIndexedPropertyFlagsImpl,
@@ -51,7 +51,7 @@ void DataViewSerialize(Serializer &s, const GCCell *cell) {
 
 void DataViewDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::DataViewKind && "Expected DataView");
-  void *mem = d.getRuntime()->alloc(sizeof(JSDataView));
+  void *mem = d.getRuntime()->alloc(cellSize<JSDataView>());
   auto *cell = new (mem) JSDataView(d);
   d.endObject(cell);
 }
@@ -60,7 +60,7 @@ void DataViewDeserialize(Deserializer &d, CellKind kind) {
 CallResult<HermesValue> JSDataView::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
-  void *mem = runtime->alloc(sizeof(JSDataView));
+  void *mem = runtime->alloc(cellSize<JSDataView>());
   return HermesValue::encodeObjectValue(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) JSDataView(

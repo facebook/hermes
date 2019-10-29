@@ -20,7 +20,7 @@ namespace vm {
 // class JSString
 
 ObjectVTable JSString::vt{
-    VTable(CellKind::StringObjectKind, sizeof(JSString)),
+    VTable(CellKind::StringObjectKind, cellSize<JSString>()),
     JSString::_getOwnIndexedRangeImpl,
     JSString::_haveOwnIndexedImpl,
     JSString::_getOwnIndexedPropertyFlagsImpl,
@@ -47,7 +47,7 @@ void StringObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void StringObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::StringObjectKind && "Expected StringObject");
-  void *mem = d.getRuntime()->alloc(sizeof(JSString));
+  void *mem = d.getRuntime()->alloc(cellSize<JSString>());
   auto *cell = new (mem) JSString(d, &JSString::vt.base);
 
   d.endObject(cell);
@@ -58,7 +58,7 @@ CallResult<HermesValue> JSString::create(
     Runtime *runtime,
     Handle<StringPrimitive> value,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(sizeof(JSString));
+  void *mem = runtime->alloc(cellSize<JSString>());
   auto selfHandle = runtime->makeHandle(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) JSString(
@@ -191,7 +191,7 @@ bool JSString::_deleteOwnIndexedImpl(
 // class JSStringIterator
 
 ObjectVTable JSStringIterator::vt{
-    VTable(CellKind::StringIteratorKind, sizeof(JSStringIterator)),
+    VTable(CellKind::StringIteratorKind, cellSize<JSStringIterator>()),
     JSStringIterator::_getOwnIndexedRangeImpl,
     JSStringIterator::_haveOwnIndexedImpl,
     JSStringIterator::_getOwnIndexedPropertyFlagsImpl,
@@ -223,7 +223,7 @@ void StringIteratorSerialize(Serializer &s, const GCCell *cell) {
 
 void StringIteratorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::StringIteratorKind && "Expected StringIterator");
-  void *mem = d.getRuntime()->alloc(sizeof(JSStringIterator));
+  void *mem = d.getRuntime()->alloc(cellSize<JSStringIterator>());
   auto *cell = new (mem) JSStringIterator(d);
   d.endObject(cell);
 }
@@ -234,7 +234,7 @@ CallResult<HermesValue> JSStringIterator::create(
     Handle<StringPrimitive> string) {
   auto proto = Handle<JSObject>::vmcast(&runtime->stringIteratorPrototype);
 
-  void *mem = runtime->alloc(sizeof(JSStringIterator));
+  void *mem = runtime->alloc(cellSize<JSStringIterator>());
   auto *self = JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
       new (mem) JSStringIterator(
           runtime,
@@ -309,7 +309,7 @@ CallResult<HermesValue> JSStringIterator::nextElement(
 // class JSNumber
 
 ObjectVTable JSNumber::vt{
-    VTable(CellKind::NumberObjectKind, sizeof(JSNumber)),
+    VTable(CellKind::NumberObjectKind, cellSize<JSNumber>()),
     JSNumber::_getOwnIndexedRangeImpl,
     JSNumber::_haveOwnIndexedImpl,
     JSNumber::_getOwnIndexedPropertyFlagsImpl,
@@ -333,7 +333,7 @@ void NumberObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void NumberObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::NumberObjectKind && "Expected NumberObject");
-  void *mem = d.getRuntime()->alloc(sizeof(JSNumber));
+  void *mem = d.getRuntime()->alloc(cellSize<JSNumber>());
   auto *cell = new (mem) JSNumber(d, &JSNumber::vt.base);
   d.endObject(cell);
 }
@@ -343,7 +343,7 @@ CallResult<HermesValue> JSNumber::create(
     Runtime *runtime,
     double value,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(sizeof(JSNumber));
+  void *mem = runtime->alloc(cellSize<JSNumber>());
   auto selfHandle = runtime->makeHandle(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) JSNumber(
@@ -364,7 +364,7 @@ CallResult<HermesValue> JSNumber::create(
 // class JSBoolean
 
 ObjectVTable JSBoolean::vt{
-    VTable(CellKind::BooleanObjectKind, sizeof(JSBoolean)),
+    VTable(CellKind::BooleanObjectKind, cellSize<JSBoolean>()),
     JSBoolean::_getOwnIndexedRangeImpl,
     JSBoolean::_haveOwnIndexedImpl,
     JSBoolean::_getOwnIndexedPropertyFlagsImpl,
@@ -388,7 +388,7 @@ void BooleanObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void BooleanObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::BooleanObjectKind && "Expected BooleanObject");
-  void *mem = d.getRuntime()->alloc(sizeof(JSBoolean));
+  void *mem = d.getRuntime()->alloc(cellSize<JSBoolean>());
   auto *cell = new (mem) JSBoolean(d, &JSBoolean::vt.base);
   d.endObject(cell);
 }
@@ -396,7 +396,7 @@ void BooleanObjectDeserialize(Deserializer &d, CellKind kind) {
 
 CallResult<HermesValue>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(sizeof(JSBoolean));
+  void *mem = runtime->alloc(cellSize<JSBoolean>());
   auto selfHandle = runtime->makeHandle(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) JSBoolean(
@@ -413,7 +413,7 @@ JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
 // class JSSymbol
 
 ObjectVTable JSSymbol::vt{
-    VTable(CellKind::SymbolObjectKind, sizeof(JSSymbol)),
+    VTable(CellKind::SymbolObjectKind, cellSize<JSSymbol>()),
     _getOwnIndexedRangeImpl,
     _haveOwnIndexedImpl,
     _getOwnIndexedPropertyFlagsImpl,
@@ -437,7 +437,7 @@ void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void SymbolObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::SymbolObjectKind && "Expected SymbolObject");
-  void *mem = d.getRuntime()->alloc(sizeof(JSSymbol));
+  void *mem = d.getRuntime()->alloc(cellSize<JSSymbol>());
   auto *cell = new (mem) JSSymbol(d);
   d.endObject(cell);
 }
@@ -447,7 +447,7 @@ CallResult<HermesValue> JSSymbol::create(
     Runtime *runtime,
     SymbolID value,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(sizeof(JSSymbol));
+  void *mem = runtime->alloc(cellSize<JSSymbol>());
   auto selfHandle = runtime->makeHandle(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) JSSymbol(

@@ -419,7 +419,7 @@ CallableVTable BoundFunction::vt{
     {
         VTable(
             CellKind::BoundFunctionKind,
-            sizeof(BoundFunction),
+            cellSize<BoundFunction>(),
             nullptr,
             nullptr,
             nullptr,
@@ -475,7 +475,7 @@ void BoundFunctionSerialize(Serializer &s, const GCCell *cell) {
 
 void BoundFunctionDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::BoundFunctionKind && "Expected BoundFunction");
-  void *mem = d.getRuntime()->alloc(sizeof(BoundFunction));
+  void *mem = d.getRuntime()->alloc(cellSize<BoundFunction>());
   void *cell = new (mem) BoundFunction(d);
 
   d.endObject(cell);
@@ -495,7 +495,7 @@ CallResult<HermesValue> BoundFunction::create(
   }
   auto argStorageHandle = runtime->makeHandle<ArrayStorage>(*arrRes);
 
-  void *mem = runtime->alloc(sizeof(BoundFunction));
+  void *mem = runtime->alloc(cellSize<BoundFunction>());
   auto selfHandle = runtime->makeHandle(new (mem) BoundFunction(
       runtime,
       runtime->functionPrototypeRawPtr,
@@ -826,7 +826,7 @@ CallableVTable NativeFunction::vt{
     {
         VTable(
             CellKind::NativeFunctionKind,
-            sizeof(NativeFunction),
+            cellSize<NativeFunction>(),
             nullptr,
             nullptr,
             nullptr,
@@ -889,7 +889,7 @@ void NativeFunctionDeserialize(Deserializer &d, CellKind kind) {
   void *context = (void *)d.readInt<uint64_t>();
   void *functionPtr = d.ptrRelocationOrNull(d.readInt<uint32_t>());
   assert(functionPtr && "functionPtr not in relocation map");
-  void *mem = d.getRuntime()->alloc(sizeof(NativeFunction));
+  void *mem = d.getRuntime()->alloc(cellSize<NativeFunction>());
   auto *cell = new (mem) NativeFunction(
       d,
       &NativeFunction::vt.base.base,
@@ -916,7 +916,7 @@ Handle<NativeFunction> NativeFunction::create(
     SymbolID name,
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle) {
-  void *mem = runtime->alloc(sizeof(NativeFunction));
+  void *mem = runtime->alloc(cellSize<NativeFunction>());
   auto selfHandle = runtime->makeHandle(new (mem) NativeFunction(
       runtime,
       &vt.base.base,
@@ -949,7 +949,7 @@ Handle<NativeFunction> NativeFunction::create(
     SymbolID name,
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle) {
-  void *mem = runtime->alloc(sizeof(NativeFunction));
+  void *mem = runtime->alloc(cellSize<NativeFunction>());
   auto selfHandle = runtime->makeHandle(new (mem) NativeFunction(
       runtime,
       &vt.base.base,
@@ -995,7 +995,7 @@ const CallableVTable NativeConstructor::vt{
     {
         VTable(
             CellKind::NativeConstructorKind,
-            sizeof(NativeConstructor),
+            cellSize<NativeConstructor>(),
             nullptr,
             nullptr,
             nullptr,
@@ -1071,7 +1071,7 @@ void NativeConstructorDeserialize(Deserializer &d, CellKind kind) {
 #endif
   void *creatorPtr = d.ptrRelocationOrNull(d.readInt<uint32_t>());
   assert(creatorPtr && "funtion pointer must have been mapped already");
-  void *mem = d.getRuntime()->alloc(sizeof(NativeConstructor));
+  void *mem = d.getRuntime()->alloc(cellSize<NativeConstructor>());
   auto *cell = new (mem) NativeConstructor(
       d,
       context,
@@ -1106,7 +1106,7 @@ CallableVTable JSFunction::vt{
     {
         VTable(
             CellKind::FunctionKind,
-            sizeof(JSFunction),
+            cellSize<JSFunction>(),
             nullptr,
             nullptr,
             nullptr,
@@ -1155,7 +1155,7 @@ void FunctionSerialize(Serializer &s, const GCCell *cell) {
 void FunctionDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::FunctionKind && "Expected Function");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::No>(
-      sizeof(JSFunction));
+      cellSize<JSFunction>());
   auto *cell = new (mem) JSFunction(d, &JSFunction::vt.base.base);
   d.endObject(cell);
 }
@@ -1168,7 +1168,7 @@ CallResult<HermesValue> JSFunction::create(
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
   void *mem =
-      runtime->alloc</*fixedSize*/ true, kHasFinalizer>(sizeof(JSFunction));
+      runtime->alloc</*fixedSize*/ true, kHasFinalizer>(cellSize<JSFunction>());
   auto *self = new (mem) JSFunction(
       runtime,
       *domain,
@@ -1196,7 +1196,7 @@ CallableVTable JSGeneratorFunction::vt{
     {
         VTable(
             CellKind::GeneratorFunctionKind,
-            sizeof(JSGeneratorFunction),
+            cellSize<JSGeneratorFunction>(),
             nullptr,
             nullptr,
             nullptr,
@@ -1237,7 +1237,7 @@ void GeneratorFunctionDeserialize(Deserializer &d, CellKind kind) {
   assert(
       kind == CellKind::GeneratorFunctionKind && "Expected GeneratorFunction");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::No>(
-      sizeof(JSFunction));
+      cellSize<JSFunction>());
   auto *cell = new (mem) JSGeneratorFunction(d);
   d.endObject(cell);
 }
@@ -1250,7 +1250,7 @@ CallResult<HermesValue> JSGeneratorFunction::create(
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
   void *mem =
-      runtime->alloc</*fixedSize*/ true, kHasFinalizer>(sizeof(JSFunction));
+      runtime->alloc</*fixedSize*/ true, kHasFinalizer>(cellSize<JSFunction>());
   auto *self = new (mem) JSGeneratorFunction(
       runtime,
       *domain,
@@ -1269,7 +1269,7 @@ CallableVTable GeneratorInnerFunction::vt{
     {
         VTable(
             CellKind::GeneratorInnerFunctionKind,
-            sizeof(GeneratorInnerFunction),
+            cellSize<GeneratorInnerFunction>(),
             nullptr,
             nullptr,
             nullptr,
@@ -1338,7 +1338,7 @@ void GeneratorInnerFunctionDeserialize(Deserializer &d, CellKind kind) {
   assert(
       kind == CellKind::GeneratorInnerFunctionKind &&
       "Expected GeneratorInnerFunction");
-  void *mem = d.getRuntime()->alloc(sizeof(GeneratorInnerFunction));
+  void *mem = d.getRuntime()->alloc(cellSize<GeneratorInnerFunction>());
   auto *cell = new (mem) GeneratorInnerFunction(d);
   d.endObject(cell);
 }
@@ -1351,7 +1351,7 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
     Handle<Environment> envHandle,
     CodeBlock *codeBlock,
     NativeArgs args) {
-  void *mem = runtime->alloc(sizeof(GeneratorInnerFunction));
+  void *mem = runtime->alloc(cellSize<GeneratorInnerFunction>());
   auto self = runtime->makeHandle(new (mem) GeneratorInnerFunction(
       runtime,
       *domain,

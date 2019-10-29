@@ -35,7 +35,7 @@ void JSONSerialize(Serializer &s, const GCCell *cell) {
 
 void JSONDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::JSONKind && "Expected JSON");
-  void *mem = d.getRuntime()->alloc(sizeof(JSJSON));
+  void *mem = d.getRuntime()->alloc(cellSize<JSJSON>());
   auto *cell = new (mem) JSJSON(d, &JSJSON::vt.base);
 
   d.endObject(cell);
@@ -43,7 +43,7 @@ void JSONDeserialize(Deserializer &d, CellKind kind) {
 
 void MathDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::MathKind && "Expected Math");
-  void *mem = d.getRuntime()->alloc(sizeof(JSMath));
+  void *mem = d.getRuntime()->alloc(cellSize<JSMath>());
   auto *cell = new (mem) JSMath(d, &JSMath::vt.base);
   d.endObject(cell);
 }

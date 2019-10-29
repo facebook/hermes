@@ -21,7 +21,7 @@ namespace vm {
 ObjectVTable JSArrayBuffer::vt{
     VTable(
         CellKind::ArrayBufferKind,
-        sizeof(JSArrayBuffer),
+        cellSize<JSArrayBuffer>(),
         _finalizeImpl,
         nullptr,
         _mallocSizeImpl,
@@ -86,7 +86,7 @@ void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
 
 void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(JSArrayBuffer));
+      cellSize<JSArrayBuffer>());
   auto *cell = new (mem) JSArrayBuffer(d);
   d.endObject(cell);
 }
@@ -96,7 +96,7 @@ CallResult<HermesValue> JSArrayBuffer::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(JSArrayBuffer));
+      cellSize<JSArrayBuffer>());
   auto *self = new (mem) JSArrayBuffer(
       runtime,
       *parentHandle,

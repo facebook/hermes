@@ -24,7 +24,7 @@ namespace vm {
 ObjectVTable JSObject::vt{
     VTable(
         CellKind::ObjectKind,
-        sizeof(JSObject),
+        cellSize<JSObject>(),
         nullptr,
         nullptr,
         nullptr,
@@ -115,7 +115,7 @@ void ObjectSerialize(Serializer &s, const GCCell *cell) {
 
 void ObjectDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ObjectKind && "Expected JSObject");
-  void *mem = d.getRuntime()->alloc</*fixedSize*/ true>(sizeof(JSObject));
+  void *mem = d.getRuntime()->alloc</*fixedSize*/ true>(cellSize<JSObject>());
   auto *obj = new (mem) JSObject(d, &JSObject::vt.base);
 
   d.endObject(obj);
@@ -142,7 +142,7 @@ JSObject::JSObject(Deserializer &d, const VTable *vtp)
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc</*fixedSize*/ true>(sizeof(JSObject));
+  void *mem = runtime->alloc</*fixedSize*/ true>(cellSize<JSObject>());
   return createPseudoHandle(new (mem) JSObject(
       runtime,
       &vt.base,
@@ -152,7 +152,7 @@ PseudoHandle<JSObject> JSObject::create(
 }
 
 PseudoHandle<JSObject> JSObject::create(Runtime *runtime) {
-  void *mem = runtime->alloc</*fixedSize*/ true>(sizeof(JSObject));
+  void *mem = runtime->alloc</*fixedSize*/ true>(cellSize<JSObject>());
   JSObject *objProto = runtime->objectPrototypeRawPtr;
   return createPseudoHandle(new (mem) JSObject(
       runtime,
@@ -165,7 +165,7 @@ PseudoHandle<JSObject> JSObject::create(Runtime *runtime) {
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     unsigned propertyCount) {
-  void *mem = runtime->alloc</*fixedSize*/ true>(sizeof(JSObject));
+  void *mem = runtime->alloc</*fixedSize*/ true>(cellSize<JSObject>());
   JSObject *objProto = runtime->objectPrototypeRawPtr;
   return runtime->ignoreAllocationFailure(JSObject::allocatePropStorage(
       createPseudoHandle(new (mem) JSObject(
@@ -2693,7 +2693,7 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
 // class PropertyAccessor
 
 VTable PropertyAccessor::vt{CellKind::PropertyAccessorKind,
-                            sizeof(PropertyAccessor)};
+                            cellSize<PropertyAccessor>()};
 
 void PropertyAccessorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const PropertyAccessor *>(cell);
@@ -2717,7 +2717,7 @@ void PropertyAccessorSerialize(Serializer &s, const GCCell *cell) {
 
 void PropertyAccessorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::PropertyAccessorKind && "Expected PropertyAccessor");
-  void *mem = d.getRuntime()->alloc(sizeof(PropertyAccessor));
+  void *mem = d.getRuntime()->alloc(cellSize<PropertyAccessor>());
   auto *cell = new (mem) PropertyAccessor(d);
   d.endObject(cell);
 }
@@ -2727,7 +2727,7 @@ CallResult<HermesValue> PropertyAccessor::create(
     Runtime *runtime,
     Handle<Callable> getter,
     Handle<Callable> setter) {
-  void *mem = runtime->alloc(sizeof(PropertyAccessor));
+  void *mem = runtime->alloc(cellSize<PropertyAccessor>());
   return HermesValue::encodeObjectValue(
       new (mem) PropertyAccessor(runtime, *getter, *setter));
 }

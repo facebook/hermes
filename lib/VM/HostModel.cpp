@@ -22,7 +22,7 @@ CallableVTable FinalizableNativeFunction::vt{
     {
         VTable(
             CellKind::FinalizableNativeFunctionKind,
-            sizeof(FinalizableNativeFunction),
+            cellSize<FinalizableNativeFunction>(),
             FinalizableNativeFunction::_finalizeImpl),
         FinalizableNativeFunction::_getOwnIndexedRangeImpl,
         FinalizableNativeFunction::_haveOwnIndexedImpl,
@@ -63,7 +63,7 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
   auto parentHandle = Handle<JSObject>::vmcast(&runtime->functionPrototype);
 
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(FinalizableNativeFunction));
+      cellSize<FinalizableNativeFunction>());
   auto selfHandle = runtime->makeHandle(new (mem) FinalizableNativeFunction(
       runtime,
       parentHandle,
@@ -94,7 +94,7 @@ HostObjectProxy::~HostObjectProxy() {}
 ObjectVTable HostObject::vt{
     VTable(
         CellKind::HostObjectKind,
-        sizeof(HostObject),
+        cellSize<HostObject>(),
         HostObject::_finalizeImpl),
     HostObject::_getOwnIndexedRangeImpl,
     HostObject::_haveOwnIndexedImpl,
@@ -126,8 +126,8 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
     std::shared_ptr<HostObjectProxy> proxy) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime->objectPrototype);
 
-  void *mem =
-      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(HostObject));
+  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      cellSize<HostObject>());
   HostObject *hostObj = new (mem) HostObject(
       runtime,
       *parentHandle,

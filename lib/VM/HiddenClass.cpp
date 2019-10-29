@@ -55,7 +55,7 @@ void TransitionMap::uncleanMakeLarge() {
 } // namespace detail
 
 VTable HiddenClass::vt{CellKind::HiddenClassKind,
-                       sizeof(HiddenClass),
+                       cellSize<HiddenClass>(),
                        _finalizeImpl,
                        _markWeakImpl,
                        _mallocSizeImpl};
@@ -114,7 +114,7 @@ void HiddenClassDeserialize(Deserializer &d, CellKind kind) {
   unsigned numProperties = d.readInt<uint32_t>();
 
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(HiddenClass));
+      cellSize<HiddenClass>());
   auto *cell = new (mem) HiddenClass(
       d.getRuntime(),
       classFlags,
@@ -188,7 +188,8 @@ CallResult<HermesValue> HiddenClass::create(
   assert(
       (flags.dictionaryMode || numProperties == 0 || *parent) &&
       "non-empty non-dictionary orphan");
-  void *mem = runtime->allocLongLived<HasFinalizer::Yes>(sizeof(HiddenClass));
+  void *mem =
+      runtime->allocLongLived<HasFinalizer::Yes>(cellSize<HiddenClass>());
   return HermesValue::encodeObjectValue(new (mem) HiddenClass(
       runtime, flags, parent, symbolID, propertyFlags, numProperties));
 }

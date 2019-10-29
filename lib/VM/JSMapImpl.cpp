@@ -61,14 +61,14 @@ void SetSerialize(Serializer &s, const GCCell *cell) {
 
 void MapDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::MapKind && "Expected Map");
-  void *mem = d.getRuntime()->alloc(sizeof(JSMap));
+  void *mem = d.getRuntime()->alloc(cellSize<JSMap>());
   auto *cell = new (mem) JSMap(d, &JSMap::vt.base);
   d.endObject(cell);
 }
 
 void SetDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::SetKind && "Expected Set");
-  void *mem = d.getRuntime()->alloc(sizeof(JSSet));
+  void *mem = d.getRuntime()->alloc(cellSize<JSSet>());
   auto *cell = new (mem) JSSet(d, &JSSet::vt.base);
   d.endObject(cell);
 }
@@ -76,7 +76,7 @@ void SetDeserialize(Deserializer &d, CellKind kind) {
 
 template <CellKind C>
 const ObjectVTable JSMapImpl<C>::vt{
-    VTable(C, sizeof(JSMapImpl<C>)),
+    VTable(C, cellSize<JSMapImpl<C>>()),
     JSMapImpl::_getOwnIndexedRangeImpl,
     JSMapImpl::_haveOwnIndexedImpl,
     JSMapImpl::_getOwnIndexedPropertyFlagsImpl,
@@ -90,7 +90,7 @@ template <CellKind C>
 CallResult<HermesValue> JSMapImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(sizeof(JSMapImpl));
+  void *mem = runtime->alloc(cellSize<JSMapImpl>());
   return HermesValue::encodeObjectValue(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) JSMapImpl(
@@ -156,13 +156,13 @@ void SetIteratorSerialize(Serializer &s, const GCCell *cell) {
 }
 
 void MapIteratorDeserialize(Deserializer &d, CellKind kind) {
-  void *mem = d.getRuntime()->alloc(sizeof(JSMapIterator));
+  void *mem = d.getRuntime()->alloc(cellSize<JSMapIterator>());
   auto *cell = new (mem) JSMapIterator(d);
   d.endObject(cell);
 }
 
 void SetIteratorDeserialize(Deserializer &d, CellKind kind) {
-  void *mem = d.getRuntime()->alloc(sizeof(JSSetIterator));
+  void *mem = d.getRuntime()->alloc(cellSize<JSSetIterator>());
   auto *cell = new (mem) JSSetIterator(d);
   d.endObject(cell);
 }
@@ -170,7 +170,7 @@ void SetIteratorDeserialize(Deserializer &d, CellKind kind) {
 
 template <CellKind C>
 const ObjectVTable JSMapIteratorImpl<C>::vt = {
-    VTable(C, sizeof(JSMapIteratorImpl<C>)),
+    VTable(C, cellSize<JSMapIteratorImpl<C>>()),
     JSMapIteratorImpl::_getOwnIndexedRangeImpl,
     JSMapIteratorImpl::_haveOwnIndexedImpl,
     JSMapIteratorImpl::_getOwnIndexedPropertyFlagsImpl,
@@ -184,7 +184,7 @@ template <CellKind C>
 CallResult<HermesValue> JSMapIteratorImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
-  void *mem = runtime->alloc(sizeof(JSMapIteratorImpl<C>));
+  void *mem = runtime->alloc(cellSize<JSMapIteratorImpl<C>>());
   return HermesValue::encodeObjectValue(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) JSMapIteratorImpl<C>(

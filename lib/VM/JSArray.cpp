@@ -358,7 +358,7 @@ bool ArrayImpl::_checkAllOwnIndexedImpl(
 ObjectVTable Arguments::vt{
     VTable(
         CellKind::ArgumentsKind,
-        sizeof(Arguments),
+        cellSize<Arguments>(),
         nullptr,
         nullptr,
         nullptr,
@@ -392,7 +392,7 @@ void ArgumentsSerialize(Serializer &s, const GCCell *cell) {
 
 void ArgumentsDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArgumentsKind && "Expected Arguments");
-  void *mem = d.getRuntime()->alloc(sizeof(Arguments));
+  void *mem = d.getRuntime()->alloc(cellSize<Arguments>());
   auto *cell = new (mem) Arguments(d);
   d.endObject(cell);
 }
@@ -411,7 +411,7 @@ CallResult<HermesValue> Arguments::create(
   }
   auto indexedStorage = runtime->makeHandle<StorageType>(*arrRes);
 
-  void *mem = runtime->alloc(sizeof(Arguments));
+  void *mem = runtime->alloc(cellSize<Arguments>());
   auto selfHandle = runtime->makeHandle(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) Arguments(
@@ -491,7 +491,7 @@ CallResult<HermesValue> Arguments::create(
 ObjectVTable JSArray::vt{
     VTable(
         CellKind::ArrayKind,
-        sizeof(JSArray),
+        cellSize<JSArray>(),
         nullptr,
         nullptr,
         nullptr,
@@ -529,7 +529,7 @@ void ArraySerialize(Serializer &s, const GCCell *cell) {
 
 void ArrayDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArrayKind && "Expected Array");
-  void *mem = d.getRuntime()->alloc(sizeof(JSArray));
+  void *mem = d.getRuntime()->alloc(cellSize<JSArray>());
   auto *cell = new (mem) JSArray(d, &JSArray::vt.base);
   d.endObject(cell);
 }
@@ -589,7 +589,7 @@ CallResult<HermesValue> JSArray::create(
     indexedStorage = vmcast<StorageType>(*arrRes);
   }
 
-  void *mem = runtime->alloc(sizeof(JSArray));
+  void *mem = runtime->alloc(cellSize<JSArray>());
   JSArray *self = JSObject::allocateSmallPropStorage<JSArrayPropertyCount>(
       new (mem) JSArray(
           runtime,
@@ -760,7 +760,7 @@ CallResult<bool> JSArray::setLength(
 // class JSArrayIterator
 
 ObjectVTable JSArrayIterator::vt{
-    VTable(CellKind::ArrayIteratorKind, sizeof(JSArrayIterator)),
+    VTable(CellKind::ArrayIteratorKind, cellSize<JSArrayIterator>()),
     JSArrayIterator::_getOwnIndexedRangeImpl,
     JSArrayIterator::_haveOwnIndexedImpl,
     JSArrayIterator::_getOwnIndexedPropertyFlagsImpl,
@@ -794,7 +794,7 @@ void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {
 
 void ArrayIteratorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::ArrayIteratorKind && "Expected ArrayIterator");
-  void *mem = d.getRuntime()->alloc(sizeof(JSArrayIterator));
+  void *mem = d.getRuntime()->alloc(cellSize<JSArrayIterator>());
   auto *cell = new (mem) JSArrayIterator(d);
   d.endObject(cell);
 }
@@ -806,7 +806,7 @@ CallResult<HermesValue> JSArrayIterator::create(
     IterationKind iterationKind) {
   auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
 
-  void *mem = runtime->alloc(sizeof(JSArrayIterator));
+  void *mem = runtime->alloc(cellSize<JSArrayIterator>());
   auto *self = JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
       new (mem) JSArrayIterator(
           runtime,

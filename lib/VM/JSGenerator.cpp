@@ -19,7 +19,7 @@ namespace vm {
 // class JSGenerator
 
 const ObjectVTable JSGenerator::vt{
-    VTable(CellKind::GeneratorKind, sizeof(JSGenerator)),
+    VTable(CellKind::GeneratorKind, cellSize<JSGenerator>()),
     JSGenerator::_getOwnIndexedRangeImpl,
     JSGenerator::_haveOwnIndexedImpl,
     JSGenerator::_getOwnIndexedPropertyFlagsImpl,
@@ -49,7 +49,7 @@ void GeneratorSerialize(Serializer &s, const GCCell *cell) {
 
 void GeneratorDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::GeneratorKind && "Expected Generator");
-  void *mem = d.getRuntime()->alloc(sizeof(JSGenerator));
+  void *mem = d.getRuntime()->alloc(cellSize<JSGenerator>());
   auto *cell = new (mem) JSGenerator(d);
   d.endObject(cell);
 }
@@ -59,7 +59,7 @@ CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
     Runtime *runtime,
     Handle<GeneratorInnerFunction> innerFunction,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(sizeof(JSGenerator));
+  void *mem = runtime->alloc(cellSize<JSGenerator>());
   auto *self = JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
       new (mem) JSGenerator(
           runtime,

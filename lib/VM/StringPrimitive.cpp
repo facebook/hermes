@@ -177,7 +177,7 @@ void deserializeExternalStringImpl(Deserializer &d) {
 
   // Construct an ExternalStringPrimitive from what we deserialized.
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(ExternalStringPrimitive<T>));
+      cellSize<ExternalStringPrimitive<T>>());
   auto *cell =
       new (mem) ExternalStringPrimitive<T>(d.getRuntime(), std::move(contents));
   if (uniqued)
@@ -532,7 +532,7 @@ ExternalStringPrimitive<T>::ExternalStringPrimitive(
     : SymbolStringPrimitive(
           runtime,
           &vt,
-          sizeof(ExternalStringPrimitive<T>),
+          cellSize<ExternalStringPrimitive<T>>(),
           contents.size()),
       contents_(std::forward<BasicString>(contents)) {
   static_assert(
@@ -556,7 +556,7 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::create(
   if (LLVM_UNLIKELY(str.size() > MAX_STRING_LENGTH))
     return runtime->raiseRangeError("String length exceeds limit");
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(ExternalStringPrimitive<T>));
+      cellSize<ExternalStringPrimitive<T>>());
   auto *extStr = new (mem)
       ExternalStringPrimitive<T>(runtime, std::forward<BasicString>(str));
   runtime->getHeap().creditExternalMemory(
@@ -577,7 +577,7 @@ CallResult<HermesValue> ExternalStringPrimitive<T>::createLongLived(
         "Cannot allocate an external string primitive.");
   }
   void *mem = runtime->allocLongLived<HasFinalizer::Yes>(
-      sizeof(ExternalStringPrimitive<T>));
+      cellSize<ExternalStringPrimitive<T>>());
   auto *extStr = new (mem) ExternalStringPrimitive<T>(runtime, std::move(str));
   runtime->getHeap().creditExternalMemory(
       extStr, extStr->calcExternalMemorySize());

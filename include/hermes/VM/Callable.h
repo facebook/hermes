@@ -682,7 +682,7 @@ class NativeConstructor final : public NativeFunction {
       unsigned paramCount,
       CreatorFunction *creator,
       CellKind targetKind) {
-    void *mem = runtime->alloc(sizeof(NativeConstructor));
+    void *mem = runtime->alloc(cellSize<NativeConstructor>());
     return createPseudoHandle(new (mem) NativeConstructor(
         runtime,
         *parentHandle,
@@ -706,7 +706,7 @@ class NativeConstructor final : public NativeFunction {
       NativeFunctionPtr functionPtr,
       CreatorFunction *creator,
       CellKind targetKind) {
-    void *mem = runtime->alloc(sizeof(NativeConstructor));
+    void *mem = runtime->alloc(cellSize<NativeConstructor>());
     return createPseudoHandle(new (mem) NativeConstructor(
         runtime,
         *parentHandle,

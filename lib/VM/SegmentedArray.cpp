@@ -18,7 +18,7 @@ namespace vm {
 
 VTable SegmentedArray::Segment::vt(
     CellKind::SegmentKind,
-    sizeof(SegmentedArray::Segment),
+    cellSize<SegmentedArray::Segment>(),
     nullptr,
     nullptr,
     nullptr,
@@ -56,7 +56,7 @@ void SegmentSerialize(Serializer &s, const GCCell *cell) {
 
 void SegmentDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::SegmentKind && "Expected Segment");
-  void *mem = d.getRuntime()->alloc(sizeof(SegmentedArray::Segment));
+  void *mem = d.getRuntime()->alloc(cellSize<SegmentedArray::Segment>());
   auto *cell = new (mem) SegmentedArray::Segment(d);
   d.endObject(cell);
 }
@@ -67,7 +67,7 @@ PseudoHandle<SegmentedArray::Segment> SegmentedArray::Segment::create(
   // NOTE: This needs to live in the cpp file instead of the header because it
   // uses PseudoHandle, which requires a specialization of IsGCObject for the
   // type it constructs.
-  return createPseudoHandle(new (runtime->alloc(sizeof(Segment)))
+  return createPseudoHandle(new (runtime->alloc(cellSize<Segment>()))
                                 Segment(runtime));
 }
 

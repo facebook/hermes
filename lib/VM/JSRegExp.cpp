@@ -28,7 +28,7 @@ namespace vm {
 ObjectVTable JSRegExp::vt{
     VTable(
         CellKind::RegExpKind,
-        sizeof(JSRegExp),
+        cellSize<JSRegExp>(),
         JSRegExp::_finalizeImpl,
         nullptr,
         JSRegExp::_mallocSizeImpl,
@@ -80,7 +80,7 @@ void RegExpSerialize(Serializer &s, const GCCell *cell) {
 void RegExpDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::RegExpKind && "Expected RegExp");
   void *mem = d.getRuntime()->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      sizeof(JSRegExp));
+      cellSize<JSRegExp>());
   auto *cell = new (mem) JSRegExp(d);
   d.endObject(cell);
 }
@@ -89,8 +89,8 @@ void RegExpDeserialize(Deserializer &d, CellKind kind) {
 CallResult<HermesValue> JSRegExp::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem =
-      runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(sizeof(JSRegExp));
+  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      cellSize<JSRegExp>());
   auto selfHandle = runtime->makeHandle(
       JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
           new (mem) JSRegExp(

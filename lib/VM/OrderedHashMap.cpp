@@ -20,7 +20,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class HashMapEntry
 
-VTable HashMapEntry::vt{CellKind::HashMapEntryKind, sizeof(HashMapEntry)};
+VTable HashMapEntry::vt{CellKind::HashMapEntryKind, cellSize<HashMapEntry>()};
 
 void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HashMapEntry *>(cell);
@@ -53,21 +53,22 @@ void HashMapEntrySerialize(Serializer &s, const GCCell *cell) {
 
 void HashMapEntryDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::HashMapEntryKind && "Expected HashMapEntry");
-  void *mem = d.getRuntime()->alloc(sizeof(HashMapEntry));
+  void *mem = d.getRuntime()->alloc(cellSize<HashMapEntry>());
   auto *cell = new (mem) HashMapEntry(d);
   d.endObject(cell);
 }
 #endif
 
 CallResult<HermesValue> HashMapEntry::create(Runtime *runtime) {
-  void *mem = runtime->alloc(sizeof(HashMapEntry));
+  void *mem = runtime->alloc(cellSize<HashMapEntry>());
   return HermesValue::encodeObjectValue(new (mem) HashMapEntry(runtime));
 }
 
 //===----------------------------------------------------------------------===//
 // class OrderedHashMap
 
-VTable OrderedHashMap::vt{CellKind::OrderedHashMapKind, sizeof(OrderedHashMap)};
+VTable OrderedHashMap::vt{CellKind::OrderedHashMapKind,
+                          cellSize<OrderedHashMap>()};
 
 void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const OrderedHashMap *>(cell);
@@ -113,7 +114,7 @@ void OrderedHashMapSerialize(Serializer &s, const GCCell *cell) {
 
 void OrderedHashMapDeserialize(Deserializer &d, CellKind kind) {
   assert(kind == CellKind::OrderedHashMapKind && "ExpectedOrderedHashMap");
-  void *mem = d.getRuntime()->alloc(sizeof(OrderedHashMap));
+  void *mem = d.getRuntime()->alloc(cellSize<OrderedHashMap>());
   auto *cell = new (mem) OrderedHashMap(d);
 
   d.endObject(cell);
@@ -134,7 +135,7 @@ CallResult<HermesValue> OrderedHashMap::create(Runtime *runtime) {
   }
   auto hashTableStorage = runtime->makeHandle<ArrayStorage>(*arrRes);
 
-  void *mem = runtime->alloc(sizeof(OrderedHashMap));
+  void *mem = runtime->alloc(cellSize<OrderedHashMap>());
   return HermesValue::encodeObjectValue(
       new (mem) OrderedHashMap(runtime, hashTableStorage));
 }

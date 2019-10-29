@@ -32,7 +32,7 @@ class SingleObject final : public JSObject {
   static CallResult<HermesValue> create(
       Runtime *runtime,
       Handle<JSObject> parentHandle) {
-    void *mem = runtime->alloc(sizeof(SingleObject));
+    void *mem = runtime->alloc(cellSize<SingleObject>());
     return HermesValue::encodeObjectValue(
         JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
             new (mem) SingleObject(
@@ -53,7 +53,7 @@ struct IsGCObject<SingleObject<kind>> {
 
 template <CellKind kind>
 const ObjectVTable SingleObject<kind>::vt = {
-    VTable(kind, sizeof(SingleObject<kind>), nullptr, nullptr),
+    VTable(kind, cellSize<SingleObject<kind>>(), nullptr, nullptr),
     SingleObject::_getOwnIndexedRangeImpl,
     SingleObject::_haveOwnIndexedImpl,
     SingleObject::_getOwnIndexedPropertyFlagsImpl,
