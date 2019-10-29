@@ -87,8 +87,10 @@ VTable SegmentedArray::vt(
     nullptr,
     nullptr,
     nullptr,
-    _trimSizeCallback,
-    _trimCallback,
+    // TODO(T43077289): if we rehabilitate SegmentedArray trimming, reenable
+    // this code.
+    /* _trimSizeCallback */ nullptr,
+    /* _trimCallback */ nullptr,
     nullptr, // externalMemorySize
     VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
                                  nullptr,
