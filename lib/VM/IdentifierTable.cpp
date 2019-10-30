@@ -336,13 +336,19 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
     return SymbolID::unsafeCreate(hashTable_.get(idx));
   }
 
-  // If the incoming StringPrimitive can be uniqued, use it instead of
-  // allocating a new one.
-  if (maybeIncomingPrimHandle &&
-      LLVM_UNLIKELY(maybeIncomingPrimHandle->canBeUniqued())) {
-    return SymbolID::unsafeCreate(
-        allocIDAndInsert(idx, maybeIncomingPrimHandle.get()));
-  }
+  // It is tempting here to check whether the incoming StringPrimitive can be
+  // uniqued, and use it instead of allocating a new one. The problem is that
+  // identifiers must always be allocated in "long-lived" memory, but we don't
+  // (yet) have a way of checking whether that is the case. If in the future we
+  // did get that GC API, the check would look something like this:
+  // \code
+  // if (maybeIncomingPrimHandle &&
+  //     LLVM_UNLIKELY(maybeIncomingPrimHandle->canBeUniqued()) &&
+  //     runtime->getHeap().isLongLived(*maybeIncomingPrimHandle)) {
+  //   return SymbolID::unsafeCreate(
+  //       allocIDAndInsert(idx, maybeIncomingPrimHandle.get()));
+  // }
+  // \endcode
 
   CallResult<PseudoHandle<StringPrimitive>> cr =
       allocateDynamicString(runtime, str, maybeIncomingPrimHandle);
