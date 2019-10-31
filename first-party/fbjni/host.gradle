@@ -16,6 +16,8 @@
 
 plugins {
     id 'java-library'
+    id 'com.github.dcendents.android-maven' version '2.1'
+    id 'com.jfrog.bintray' version '1.8.4'
 }
 
 repositories {
@@ -39,3 +41,9 @@ dependencies {
     testImplementation 'org.easytesting:fest-assert-core:2.0M10'
     testImplementation 'org.mockito:mockito-core:2.28.2'
 }
+
+// Overriding the artifacts name globally defined in gradle.properties
+POM_PACKAGING = 'jar'
+POM_ARTIFACT_ID = 'fbjni-java-only'
+
+apply from: rootProject.file('gradle/release.gradle')
