@@ -492,14 +492,14 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
-  bool createSnapshotToFile(const std::string &path, bool compact) override {
-    return runtime_.getHeap().createSnapshotToFile(path, compact);
+  bool createSnapshotToFile(const std::string &path) override {
+    return runtime_.getHeap().createSnapshotToFile(path);
   }
 
   // Overridden from jsi::Instrumentation
-  bool createSnapshotToStream(std::ostream &os, bool compact) override {
+  bool createSnapshotToStream(std::ostream &os) override {
     llvm::raw_os_ostream ros(os);
-    runtime_.getHeap().createSnapshot(ros, compact);
+    runtime_.getHeap().createSnapshot(ros);
     return !os;
   }
 

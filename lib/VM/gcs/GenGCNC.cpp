@@ -1431,7 +1431,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
 
 } // namespace
 
-void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
+void GenGC::createSnapshot(llvm::raw_ostream &os) {
   // We need to yield/claim at outer scope, to cover the calls to
   // forUsedSegments below.
   AllocContextYieldThenClaim yielder(this);
@@ -1443,7 +1443,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
   checkWellFormedHeap();
 #endif
 
-  JSONEmitter json(os, !compact);
+  JSONEmitter json(os);
   HeapSnapshot snap(json);
 
   const auto rootScan = [this, &snap]() {

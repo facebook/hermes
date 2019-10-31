@@ -688,7 +688,7 @@ std::string TraceInterpreter::execEntryFunction(
     // Take a snapshot at the end if requested.
     if (HermesRuntime *hermesRT = dynamic_cast<HermesRuntime *>(&rt)) {
       hermesRT->instrumentation().createSnapshotToFile(
-          options.snapshotMarkerFileName, true);
+          options.snapshotMarkerFileName);
     } else {
       llvm::errs() << "Heap snapshot requested from non-Hermes runtime\n";
     }
@@ -834,7 +834,7 @@ Value TraceInterpreter::execFunction(
               if (HermesRuntime *hermesRT =
                       dynamic_cast<HermesRuntime *>(&rt)) {
                 hermesRT->instrumentation().createSnapshotToFile(
-                    options.snapshotMarkerFileName, true);
+                    options.snapshotMarkerFileName);
               } else {
                 llvm::errs()
                     << "Heap snapshot requested from non-Hermes runtime\n";

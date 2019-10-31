@@ -59,8 +59,7 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
   } else if (!llvm::StringRef{fileName}.endswith(".heapsnapshot")) {
     return runtime->raiseTypeError("Filename must end in .heapsnapshot");
   }
-  bool compact = args.getArgCount() >= 2 ? toBoolean(args.getArg(1)) : true;
-  if (!runtime->getHeap().createSnapshotToFile(fileName, compact)) {
+  if (!runtime->getHeap().createSnapshotToFile(fileName)) {
     // This isn't a TypeError, but no other built-in can express file errors,
     // so this will have to do.
     return runtime->raiseTypeError(
@@ -228,7 +227,7 @@ void installConsoleBindings(
       vm::Predefined::getSymbolID(vm::Predefined::createHeapSnapshot),
       createHeapSnapshot,
       nullptr,
-      2);
+      1);
 #ifdef HERMESVM_SERIALIZE
   defineGlobalFunc(
       runtime

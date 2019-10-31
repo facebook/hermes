@@ -212,7 +212,7 @@ class MallocGC final : public GCBase {
 #endif
 
   /// Same as in superclass GCBase.
-  virtual void createSnapshot(llvm::raw_ostream &os, bool compact) override;
+  virtual void createSnapshot(llvm::raw_ostream &os) override;
 
 #ifdef HERMESVM_SERIALIZE
   /// Same as in superclass GCBase.

@@ -22,10 +22,8 @@ class GCTripwireContext {
   ///
   /// \param path to save the heap capture
   ///
-  /// \param compact Whether the JSON should be compact or pretty
-  ///
   /// \return true iff the heap capture succeeded
-  virtual bool createSnapshotToFile(const std::string &path, bool compact) = 0;
+  virtual bool createSnapshotToFile(const std::string &path) = 0;
 };
 
 } // namespace vm

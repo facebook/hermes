@@ -268,7 +268,7 @@ TEST(HeapSnapshotTest, SnapshotTest) {
   std::string result("");
   llvm::raw_string_ostream str(result);
   gc.collect();
-  gc.createSnapshot(str, true);
+  gc.createSnapshot(str);
   str.flush();
 
   ASSERT_FALSE(result.empty());

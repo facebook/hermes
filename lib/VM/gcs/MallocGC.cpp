@@ -482,7 +482,7 @@ bool MallocGC::isMostRecentFinalizableObj(const GCCell *cell) const {
 }
 #endif
 
-void MallocGC::createSnapshot(llvm::raw_ostream &os, bool compact) {
+void MallocGC::createSnapshot(llvm::raw_ostream &os) {
   hermes_fatal("No snapshots allowed with MallocGC");
 }
 

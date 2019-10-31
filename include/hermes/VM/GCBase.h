@@ -484,10 +484,10 @@ class GCBase {
   /// \p compact whether to write a compact version or a pretty human-readable
   ///   version.
   /// \return true on success, false on failure.
-  bool createSnapshotToFile(const std::string &fileName, bool compact);
+  bool createSnapshotToFile(const std::string &fileName);
   /// Creates a snapshot of the heap, which includes information about what
   /// objects exist, their sizes, and what they point to.
-  virtual void createSnapshot(llvm::raw_ostream &os, bool compact) = 0;
+  virtual void createSnapshot(llvm::raw_ostream &os) = 0;
 
 #ifdef HERMESVM_SERIALIZE
   /// Serialize WeakRefs.
