@@ -204,6 +204,42 @@
 // CHECK-NEXT:             "computed": false
 // CHECK-NEXT:           },
 
+  set mySetter(x = 10) {},
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "Property",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "mySetter",
+// CHECK-NEXT:               "typeAnnotation": null
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "value": {
+// CHECK-NEXT:               "type": "FunctionExpression",
+// CHECK-NEXT:               "id": null,
+// CHECK-NEXT:               "params": [
+// CHECK-NEXT:                 {
+// CHECK-NEXT:                   "type": "AssignmentPattern",
+// CHECK-NEXT:                   "left": {
+// CHECK-NEXT:                     "type": "Identifier",
+// CHECK-NEXT:                     "name": "x",
+// CHECK-NEXT:                     "typeAnnotation": null
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "right": {
+// CHECK-NEXT:                     "type": "NumericLiteral",
+// CHECK-NEXT:                     "value": 10,
+// CHECK-NEXT:                     "raw": "10"
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               ],
+// CHECK-NEXT:               "body": {
+// CHECK-NEXT:                 "type": "BlockStatement",
+// CHECK-NEXT:                 "body": []
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "kind": "set",
+// CHECK-NEXT:             "computed": false
+// CHECK-NEXT:           },
+
   rest(a, ...b) {},
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Property",

@@ -2238,19 +2238,11 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           "start of setter declaration",
           startLoc);
 
-      if (!need(
-              TokenKind::identifier,
-              "in setter parameter list",
-              "start of setter declaration",
-              startLoc))
+      // PropertySetParameterList -> FormalParameter -> BindingElement
+      auto optParam = parseBindingElement(Param{});
+      if (!optParam)
         return None;
-      auto *param = setLocation(
-          tok_,
-          tok_,
-          new (context_)
-              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr));
-      params.push_back(*param);
-      advance();
+      params.push_back(**optParam);
 
       if (!eat(
               TokenKind::r_paren,
