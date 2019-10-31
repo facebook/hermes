@@ -145,13 +145,6 @@ static constexpr unsigned kMaxNumRegisters =
     (512 * 1024 - sizeof(::hermes::vm::Runtime) - 4096 * 8) /
     sizeof(::hermes::vm::PinnedHermesValue);
 
-// The minimum code size in bytes before enabling lazy compilation.
-// Lazy compilation has significant per-module overhead, and is best applied
-// to large bundles with a lot of unused code. Eager compilation is more
-// efficient when compiling many small bundles with little unused code, such as
-// when the API user loads smaller chunks of JS code on demand.
-static constexpr unsigned kMinimumLazySize = 1 << 16;
-
 void raw_ostream_append(llvm::raw_ostream &os) {}
 
 template <typename Arg0, typename... Args>
@@ -1217,7 +1210,9 @@ HermesRuntimeImpl::prepareJavaScript(
     bcErr = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
         std::move(buffer));
   } else {
-    compileFlags_.lazy = (buffer->size() >= kMinimumLazySize);
+    compileFlags_.lazy =
+        (buffer->size() >=
+         ::hermes::hbc::kDefaultSizeThresholdForLazyCompilation);
 #if defined(HERMESVM_LEAN)
     bcErr.second = "prepareJavaScript source compilation not supported";
 #else

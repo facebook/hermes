@@ -31,7 +31,7 @@ try {
 } catch(e) {
     print("caught", e);
 }
-// CHECK-NEXT: caught SyntaxError: 11:4:'break' not within a loop or a switch
+// CHECK-NEXT: caught SyntaxError: 11:5:'break' not within a loop or a switch
 
 print("end");
 // CHECK-NEXT: end

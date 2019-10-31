@@ -28,7 +28,7 @@ void SimpleDiagHandler::handler(const llvm::SMDiagnostic &msg, void *ctx) {
 
 std::string SimpleDiagHandler::getErrorString() const {
   const auto &msg = getFirstMessage();
-  return (Twine(msg.getLineNo()) + ":" + Twine(msg.getColumnNo()) + ":" +
+  return (Twine(msg.getLineNo()) + ":" + Twine(msg.getColumnNo() + 1) + ":" +
           msg.getMessage())
       .str();
 }
