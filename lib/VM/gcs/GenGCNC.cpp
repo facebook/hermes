@@ -525,6 +525,11 @@ void GenGC::markPhase() {
       if (ptr) {
         assert(gc.dbgContains(ptr));
         GCCell *cell = reinterpret_cast<GCCell *>(ptr);
+#ifdef HERMES_EXTRA_DEBUG
+        if (!cell->isValid()) {
+          hermes_fatal("HermesGC: marking pointer to invalid object.");
+        }
+#endif
         AlignedHeapSegment::setCellMarkBit(cell);
       }
     }
@@ -534,6 +539,11 @@ void GenGC::markPhase() {
         if (ptr) {
           assert(gc.dbgContains(ptr));
           GCCell *cell = reinterpret_cast<GCCell *>(ptr);
+#ifdef HERMES_EXTRA_DEBUG
+          if (!cell->isValid()) {
+            hermes_fatal("HermesGC: marking pointer to invalid object.");
+          }
+#endif
           AlignedHeapSegment::setCellMarkBit(cell);
         }
       } else if (hv.isSymbol()) {

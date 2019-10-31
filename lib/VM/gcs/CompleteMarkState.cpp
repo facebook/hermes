@@ -29,6 +29,12 @@ void CompleteMarkState::markTransitive(void *ptr) {
     return;
   }
 
+#ifdef HERMES_EXTRA_DEBUG
+  if (!reinterpret_cast<GCCell *>(ptr)->isValid()) {
+    hermes_fatal("HermesGC: marking pointer to invalid object.");
+  }
+#endif
+
   // Setting the mark bit, with the assumption that if overflow
   // occurs, the "cursor" in the higher-level process that's calling
   // this to reach transitive closure will be reset, and the
