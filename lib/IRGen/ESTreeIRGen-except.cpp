@@ -32,7 +32,7 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
               curFunction(),
               tryStmt,
               tryStmt->_finalizer->getDebugLoc(),
-              [this](ESTree::Node *node, ControlFlowChange) {
+              [this](ESTree::Node *node, ControlFlowChange, BasicBlock *) {
                 genStatement(cast<ESTree::TryStatementNode>(node)->_finalizer);
               });
         } else {
@@ -126,7 +126,11 @@ CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
 void ESTreeIRGen::genFinallyBeforeControlChange(
     SurroundingTry *sourceTry,
     SurroundingTry *targetTry,
-    ControlFlowChange cfc) {
+    ControlFlowChange cfc,
+    BasicBlock *continueTarget) {
+  assert(
+      (cfc == ControlFlowChange::Break || continueTarget != nullptr) &&
+      "Continue ControlFlowChange must have a target");
   // We walk the nested try statements starting from the source, until we reach
   // the target, generating the finally statements on the way.
   for (; sourceTry != targetTry; sourceTry = sourceTry->outer) {
@@ -150,7 +154,7 @@ void ESTreeIRGen::genFinallyBeforeControlChange(
       // Recreate the state of the try stack on entrance to the finally block.
       llvm::SaveAndRestore<SurroundingTry *> sr{curFunction()->surroundingTry,
                                                 sourceTry->outer};
-      sourceTry->genFinalizer(sourceTry->node, cfc);
+      sourceTry->genFinalizer(sourceTry->node, cfc, continueTarget);
     }
   }
 }

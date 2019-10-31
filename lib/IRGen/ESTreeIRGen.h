@@ -208,8 +208,11 @@ class SurroundingTry {
   /// Optional debug location to be used for the TryEnd instruction.
   SMLoc const tryEndLoc{};
 
-  using GenFinalizerCB =
-      std::function<void(ESTree::Node *, ControlFlowChange cfc)>;
+  /// \param continueTarget if cfc is Continue, then the target of that
+  /// continue, which is used to determine whether to emit 'finally' code in
+  /// certain cases such as for-of.
+  using GenFinalizerCB = std::function<
+      void(ESTree::Node *, ControlFlowChange cfc, BasicBlock *continueTarget)>;
 
   /// An optional callback that will be invoked to generate the code for the
   /// finalizer.
@@ -589,10 +592,13 @@ class ESTreeIRGen {
   ///   the goto (break, continue, return)
   /// \param targetTry  the try statement surrounding the AST node of the label.
   /// \param cfc indicates whether this is "continue" or "break".
+  /// \param continueTarget when cfc == Continue, the target of the branch of
+  /// the continue.
   void genFinallyBeforeControlChange(
       SurroundingTry *sourceTry,
       SurroundingTry *targetTry,
-      ControlFlowChange cfc);
+      ControlFlowChange cfc,
+      BasicBlock *continueTarget = nullptr);
 
   /// @}
 

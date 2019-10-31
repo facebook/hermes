@@ -873,8 +873,6 @@ BLACK_LIST = [
     "test262/test/built-ins/DataView/length.js",
     # T56360814 Symbol primitives in iteration order
     "test262/test/built-ins/Object/assign/strings-and-symbol-order.js",
-    # T56360975 Labeled continue should close iterator
-    "test262/test/language/statements/for-of/iterator-close-via-continue.js",
     # T42569352 TDZ for parameters used in initializer expressions.
     "test262/test/language/expressions/function/dflt-params-ref-later.js",
     "test262/test/language/expressions/function/dflt-params-ref-self.js",

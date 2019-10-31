@@ -242,3 +242,23 @@ try {
 //CHECK-NEXT: next() called
 //CHECK-NEXT: 14
 //CHECK-NEXT: next() called
+
+// Check that continue with label works fine.
+throwInNext = false;
+print("\ntest10");
+try {
+  LABEL: do {
+      for(let i of o) {
+          print(i);
+          if (i & 1)
+              continue LABEL;
+      }
+  } while (false);
+} catch (e) {
+  print("caught", e);
+}
+//CHECK-LABEL: test10
+//CHECK-NEXT: next() called
+//CHECK-NEXT: 11
+//CHECK-NEXT: return() called
+//CHECK-NEXT: caught TypeError: iterator.close() did not return an object

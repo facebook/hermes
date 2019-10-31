@@ -851,7 +851,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
             Y,
             {},
             [this, resumeBB, received, &iteratorRecord](
-                ESTree::Node *, ControlFlowChange cfc) {
+                ESTree::Node *, ControlFlowChange cfc, BasicBlock *) {
               if (cfc == ControlFlowChange::Break) {
                 // This finalizer block is executed upon early return during
                 // the yield*, which happens when the user requests a .return().
