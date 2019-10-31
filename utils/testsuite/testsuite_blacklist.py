@@ -875,6 +875,11 @@ BLACK_LIST = [
     "test262/test/built-ins/Object/assign/strings-and-symbol-order.js",
     # T56360975 Labeled continue should close iterator
     "test262/test/language/statements/for-of/iterator-close-via-continue.js",
+    # T42569352 TDZ for parameters used in initializer expressions.
+    "test262/test/language/expressions/function/dflt-params-ref-later.js",
+    "test262/test/language/expressions/function/dflt-params-ref-self.js",
+    "test262/test/language/statements/function/dflt-params-ref-later.js",
+    "test262/test/language/statements/function/dflt-params-ref-self.js",
     # Time out. # T20489563
     "mjsunit/regress/regress-crbug-482998.js",
     # Different time out: # T23228706
@@ -1574,8 +1579,6 @@ UNSUPPORTED_FEATURES = [
     "class-fields",
     "computed-property-names",
     "const",
-    "default-arg",
-    "default-parameters",
     "destructuring-binding",
     "dynamic-import",
     "FinalizationGroup",
