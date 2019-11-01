@@ -134,13 +134,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       nullptr,
       arrayIsArray,
       1);
-  defineMethod(
-      runtime,
-      cons,
-      Predefined::getSymbolID(Predefined::of),
-      nullptr,
-      arrayOf,
-      0);
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineMethod(
@@ -278,6 +271,13 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       arrayPrototypeIncludes,
       1);
 
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::of),
+      nullptr,
+      arrayOf,
+      0);
   if (runtime->hasES6Symbol()) {
     defineMethod(
         runtime,
@@ -348,87 +348,6 @@ arrayConstructor(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue> arrayIsArray(void *, Runtime *, NativeArgs args) {
   return HermesValue::encodeBoolValue(vmisa<JSArray>(args.getArg(0)));
-}
-
-CallResult<HermesValue> arrayOf(void *, Runtime *runtime, NativeArgs args) {
-  GCScope gcScope{runtime};
-
-  // 1. Let len be the actual number of arguments passed to this function.
-  uint32_t len = args.getArgCount();
-  // 2. Let items be the List of arguments passed to this function.
-  // 3. Let C be the this value.
-  auto C = args.getThisHandle();
-
-  MutableHandle<JSObject> A{runtime};
-  // 4. If IsConstructor(C) is true, then
-  if (isConstructor(runtime, *C)) {
-    // a. Let A be Construct(C, «len»).
-    auto aRes = Callable::executeConstruct1(
-        Handle<Callable>::vmcast(C),
-        runtime,
-        runtime->makeHandle(HermesValue::encodeNumberValue(len)));
-    if (LLVM_UNLIKELY(aRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    A = vmcast<JSObject>(*aRes);
-  } else {
-    // 5. Else,
-    // a. Let A be ArrayCreate(len).
-    auto aRes = JSArray::create(runtime, len, len);
-    if (LLVM_UNLIKELY(aRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    A = vmcast<JSObject>(aRes->getHermesValue());
-  }
-  // 7. Let k be 0.
-  MutableHandle<> k{runtime, HermesValue::encodeNumberValue(0)};
-  MutableHandle<> kValue{runtime};
-  MutableHandle<SymbolID> pk{runtime};
-
-  GCScopeMarkerRAII marker{gcScope};
-  // 8. Repeat, while k < len
-  for (; k->getNumberAs<uint32_t>() < len; marker.flush()) {
-    // a. Let kValue be items[k].
-    kValue = args.getArg(k->getNumber());
-
-    // b. Let Pk be ToString(k).
-    auto pkRes = valueToSymbolID(runtime, k);
-    if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    pk = pkRes->get();
-
-    // c. Let defineStatus be CreateDataPropertyOrThrow(A,Pk, kValue).
-    if (LLVM_UNLIKELY(
-            JSObject::defineOwnProperty(
-                A,
-                runtime,
-                *pk,
-                DefinePropertyFlags::getDefaultNewPropertyFlags(),
-                kValue,
-                PropOpFlags().plusThrowOnError()) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
-    // e. Increase k by 1.
-    k = HermesValue::encodeNumberValue(k->getNumber() + 1);
-  }
-
-  // 9. Let setStatus be Set(A, "length", len, true).
-  // 10. ReturnIfAbrupt(setStatus).
-  auto setStatus = JSObject::putNamed_RJS(
-      A,
-      runtime,
-      Predefined::getSymbolID(Predefined::length),
-      runtime->makeHandle(HermesValue::encodeNumberValue(len)),
-      PropOpFlags().plusThrowOnError());
-  if (LLVM_UNLIKELY(setStatus == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  // 11. Return A.
-  return A.getHermesValue();
 }
 
 namespace {
@@ -2969,6 +2888,87 @@ arrayPrototypeIncludes(void *, Runtime *runtime, NativeArgs args) {
 
   // 8. Return false.
   return HermesValue::encodeBoolValue(false);
+}
+
+CallResult<HermesValue> arrayOf(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let len be the actual number of arguments passed to this function.
+  uint32_t len = args.getArgCount();
+  // 2. Let items be the List of arguments passed to this function.
+  // 3. Let C be the this value.
+  auto C = args.getThisHandle();
+
+  MutableHandle<JSObject> A{runtime};
+  // 4. If IsConstructor(C) is true, then
+  if (isConstructor(runtime, *C)) {
+    // a. Let A be Construct(C, «len»).
+    auto aRes = Callable::executeConstruct1(
+        Handle<Callable>::vmcast(C),
+        runtime,
+        runtime->makeHandle(HermesValue::encodeNumberValue(len)));
+    if (LLVM_UNLIKELY(aRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    A = vmcast<JSObject>(*aRes);
+  } else {
+    // 5. Else,
+    // a. Let A be ArrayCreate(len).
+    auto aRes = JSArray::create(runtime, len, len);
+    if (LLVM_UNLIKELY(aRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    A = vmcast<JSObject>(aRes->getHermesValue());
+  }
+  // 7. Let k be 0.
+  MutableHandle<> k{runtime, HermesValue::encodeNumberValue(0)};
+  MutableHandle<> kValue{runtime};
+  MutableHandle<SymbolID> pk{runtime};
+
+  GCScopeMarkerRAII marker{gcScope};
+  // 8. Repeat, while k < len
+  for (; k->getNumberAs<uint32_t>() < len; marker.flush()) {
+    // a. Let kValue be items[k].
+    kValue = args.getArg(k->getNumber());
+
+    // b. Let Pk be ToString(k).
+    auto pkRes = valueToSymbolID(runtime, k);
+    if (LLVM_UNLIKELY(pkRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    pk = pkRes->get();
+
+    // c. Let defineStatus be CreateDataPropertyOrThrow(A,Pk, kValue).
+    if (LLVM_UNLIKELY(
+            JSObject::defineOwnProperty(
+                A,
+                runtime,
+                *pk,
+                DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                kValue,
+                PropOpFlags().plusThrowOnError()) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // e. Increase k by 1.
+    k = HermesValue::encodeNumberValue(k->getNumber() + 1);
+  }
+
+  // 9. Let setStatus be Set(A, "length", len, true).
+  // 10. ReturnIfAbrupt(setStatus).
+  auto setStatus = JSObject::putNamed_RJS(
+      A,
+      runtime,
+      Predefined::getSymbolID(Predefined::length),
+      runtime->makeHandle(HermesValue::encodeNumberValue(len)),
+      PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(setStatus == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 11. Return A.
+  return A.getHermesValue();
 }
 
 /// ES6.0 22.1.2.1 Array.from ( items [ , mapfn [ , thisArg ] ] )
