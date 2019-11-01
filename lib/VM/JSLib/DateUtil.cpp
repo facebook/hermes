@@ -990,12 +990,10 @@ static double parseESDate(StringView str) {
       return nan;
     if (!tok.equals(llvm::arrayRefFromStringRef("GMT")))
       return nan;
-  }
-
-  // Support to parse no timezone date
-  if (it == end) {
-    adjustTZ = true;
-    goto complete;
+    // Still paring, use default value tzh=0 & tzm=0
+    if (it == end) {
+      goto complete;
+    }
   }
 
   // Sign of the timezone adjustment.
