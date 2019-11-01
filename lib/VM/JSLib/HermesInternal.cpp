@@ -16,6 +16,7 @@
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StackFrame-inline.h"
+#include "hermes/VM/StringView.h"
 
 #include <random>
 
@@ -695,7 +696,7 @@ hermesInternalCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
 
 /// \code
 ///   HermesInternal.copyRestArgs = function (from) {}
-/// \encode
+/// \endcode
 /// Copy the callers parameters starting from index \c from (where the first
 /// parameter is index 0) into a JSArray.
 CallResult<HermesValue>
@@ -961,7 +962,7 @@ hermesInternalGetCallStack(void *, Runtime *runtime, NativeArgs args) {
 #ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 /// \code
 ///   HermesInternal.executeCall = function (func, thisArg, ...params) {}
-/// \encode
+/// \endcode
 /// Invoke func with `this` context set to thisArg, and parameters param1,
 /// param2, and param3
 CallResult<HermesValue>
@@ -989,7 +990,7 @@ hermesInternalExecuteCall(void *, Runtime *runtime, NativeArgs args) {
 
 /// \code
 ///   HermesInternal.isConstructor = function (func) {}
-/// \encode
+/// \endcode
 /// Returns true if func is a valid constructor, false otherwise.
 CallResult<HermesValue>
 hermesInternalIsConstructor(void *, Runtime *runtime, NativeArgs args) {
@@ -998,7 +999,7 @@ hermesInternalIsConstructor(void *, Runtime *runtime, NativeArgs args) {
 
 /// \code
 ///   HermesInternal.jsArraySetElementAt = function (array, index, val) {}
-/// \encode
+/// \endcode
 /// Set array[index] to val without triggering the setter.
 CallResult<HermesValue>
 hermesInternalJSArraySetElementAt(void *, Runtime *runtime, NativeArgs args) {
@@ -1012,7 +1013,7 @@ hermesInternalJSArraySetElementAt(void *, Runtime *runtime, NativeArgs args) {
 
 /// \code
 ///   HermesInternal.toInteger = function (arg) {}
-/// \encode
+/// \endcode
 /// Converts arg to an integer
 CallResult<HermesValue>
 hermesInternalToInteger(void *, Runtime *runtime, NativeArgs args) {
@@ -1021,7 +1022,7 @@ hermesInternalToInteger(void *, Runtime *runtime, NativeArgs args) {
 
 /// \code
 ///   HermesInternal.toLength function (arg) {}
-/// \encode
+/// \endcode
 /// Converts arg to an integer suitable for use as the length of an array-like
 /// object. Return value is an an integer in the range[0, 2^53 - 1].
 CallResult<HermesValue>
@@ -1031,12 +1032,26 @@ hermesInternalToLength(void *, Runtime *runtime, NativeArgs args) {
 
 /// \code
 ///   HermesInternal.toObject function (arg) {}
-/// \encode
+/// \endcode
 /// Converts arg to an object if possible.
 /// TypeError if arg is null or undefined.
 CallResult<HermesValue>
 hermesInternalToObject(void *, Runtime *runtime, NativeArgs args) {
   return toObject(runtime, args.getArgHandle(0));
+}
+
+/// \code
+///   HermesInternal.toObject function (arg) {}
+/// \endcode
+/// Converts arg to a string if possible.
+/// TypeError if arg is a symbol.
+CallResult<HermesValue>
+hermesInternalToString(void *, Runtime *runtime, NativeArgs args) {
+  auto res = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getHermesValue();
 }
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
@@ -1114,6 +1129,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethodAndSymbol("toInteger", hermesInternalToInteger);
   defineInternMethodAndSymbol("toLength", hermesInternalToLength);
   defineInternMethodAndSymbol("toObject", hermesInternalToObject);
+  defineInternMethodAndSymbol("toString", hermesInternalToString);
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 #ifdef HERMESVM_EXCEPTION_ON_OOM
   defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);

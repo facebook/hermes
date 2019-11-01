@@ -66,13 +66,6 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       stringPrototype,
-      Predefined::getSymbolID(Predefined::charAt),
-      ctx,
-      stringPrototypeCharAt,
-      1);
-  defineMethod(
-      runtime,
-      stringPrototype,
       Predefined::getSymbolID(Predefined::charCodeAt),
       ctx,
       stringPrototypeCharCodeAt,
@@ -309,6 +302,16 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       ctx,
       stringRaw,
       1);
+
+#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::charAt),
+      ctx,
+      stringPrototypeCharAt,
+      1);
+#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
   return cons;
 }
@@ -564,36 +567,6 @@ stringPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   }
   return runtime->raiseTypeError(
       "String.prototype.toString() called on non-string object");
-}
-
-CallResult<HermesValue>
-stringPrototypeCharAt(void *, Runtime *runtime, NativeArgs args) {
-  Handle<> thisValue{&args.getThisArg()};
-  // Call a function that may throw, let the runtime record it.
-  if (LLVM_UNLIKELY(
-          checkObjectCoercible(runtime, thisValue) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto strRes = toString_RJS(runtime, thisValue);
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto S = toHandle(runtime, std::move(*strRes));
-
-  auto intRes = toInteger(runtime, runtime->makeHandle(args.getArg(0)));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto position = intRes->getNumber();
-  auto size = S->getStringLength();
-  if (position < 0 || position >= size) {
-    return HermesValue::encodeStringValue(
-        runtime->getPredefinedString(Predefined::emptyString));
-  }
-  auto result = runtime->getCharacterString(
-      StringPrimitive::createStringView(runtime, S)[position]);
-  return HermesValue::encodeStringValue(result.get());
 }
 
 CallResult<HermesValue>
@@ -2183,6 +2156,38 @@ stringPrototypeSymbolIterator(void *, Runtime *runtime, NativeArgs args) {
 
   return JSStringIterator::create(runtime, string);
 }
+
+#ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+CallResult<HermesValue>
+stringPrototypeCharAt(void *, Runtime *runtime, NativeArgs args) {
+  Handle<> thisValue{&args.getThisArg()};
+  // Call a function that may throw, let the runtime record it.
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, thisValue) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto strRes = toString_RJS(runtime, thisValue);
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = toHandle(runtime, std::move(*strRes));
+
+  auto intRes = toInteger(runtime, runtime->makeHandle(args.getArg(0)));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto position = intRes->getNumber();
+  auto size = S->getStringLength();
+  if (position < 0 || position >= size) {
+    return HermesValue::encodeStringValue(
+        runtime->getPredefinedString(Predefined::emptyString));
+  }
+  auto result = runtime->getCharacterString(
+      StringPrimitive::createStringView(runtime, S)[position]);
+  return HermesValue::encodeStringValue(result.get());
+}
+#endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
 } // namespace vm
 } // namespace hermes
