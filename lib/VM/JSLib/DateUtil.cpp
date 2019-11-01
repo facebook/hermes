@@ -994,6 +994,10 @@ static double parseESDate(StringView str) {
     if (it == end) {
       goto complete;
     }
+  } else if (it == end) {
+    // Still paring, use local timezone
+    adjustTZ = true;
+    goto complete;
   }
 
   // Sign of the timezone adjustment.
