@@ -718,7 +718,7 @@ static inline bool isDigit(char16_t c) {
 template <class InputIter>
 static bool scanInt(InputIter &it, const InputIter end, int32_t &x) {
   llvm::SmallString<16> str{};
-  if (it == end) {
+  if (it >= end) {
     return false;
   }
   for (; it != end && isDigit(*it); ++it) {
@@ -742,6 +742,9 @@ static double parseISODate(StringView u16str) {
   // Initialize these fields to their defaults.
   int32_t y, m{1}, d{1}, h{0}, min{0}, s{0}, ms{0}, tzh{0}, tzm{0};
 
+  // See if need to adjust timezone
+  bool adjustTZ = false;
+
   auto consume = [&](char16_t ch) {
     if (it != end && *it == ch) {
       ++it;
@@ -761,12 +764,19 @@ static double parseISODate(StringView u16str) {
     return nan;
   }
   y *= sign;
-  if (consume(u'-')) {
+
+  // Assign separator character value, default '-'
+  char16_t sepChr = u'-';
+  if (*it == u'/') {
+    sepChr = u'/';
+  }
+
+  if (consume(sepChr)) {
     // Try to read the month.
     if (!scanInt(it, end, m)) {
       return nan;
     }
-    if (consume(u'-')) {
+    if (consume(sepChr)) {
       // Try to read the date.
       if (!scanInt(it, end, d)) {
         return nan;
@@ -775,7 +785,7 @@ static double parseISODate(StringView u16str) {
   }
 
   // See if there's a time.
-  if (consume(u'T') || consume(u' ')) {
+  if (consume(u'T') || consume(u' ') || (sepChr == '/' && consume(sepChr))) {
     // Hours and minutes must exist.
     if (!scanInt(it, end, h)) {
       return nan;
@@ -823,17 +833,23 @@ static double parseISODate(StringView u16str) {
         // Need a + or a -.
         return nan;
       }
-      if (!scanInt(it, end, tzh)) {
+      // Hour and minute of timezone adjustment.
+      if (it > end - 2 || !scanInt(it, it + 2, tzh)) {
         return nan;
       }
       tzh *= sign;
-      if (!consume(u':')) {
+      if (it < end && *it == ':') {
+        consume(u':');
+      }
+      if (it != end && (it > end - 2 || !scanInt(it, it + 2, tzm))) {
         return nan;
       }
-      if (!scanInt(it, end, tzm)) {
-        return nan;
-      }
+      tzm *= sign;
+    } else if (it == end) {
+      adjustTZ = true;
     }
+  } else {
+    adjustTZ = true;
   }
 
   if (it != end) {
@@ -842,7 +858,7 @@ static double parseISODate(StringView u16str) {
   }
 
   // Account for the fact that m was 1-indexed and the timezone offset.
-  return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms));
+  return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms)) - (adjustTZ ? localTZA() : 0);
 }
 
 static double parseESDate(StringView str) {
@@ -852,6 +868,9 @@ static double parseESDate(StringView str) {
   // Initialize these fields to their defaults.
   int32_t y, m{1}, d{1}, h{0}, min{0}, s{0}, ms{0}, tzh{0}, tzm{0};
   double sign = 1;
+
+  // See if need to adjust timezone
+  bool adjustTZ = false;
 
   // Example strings to parse:
   // Mon Jul 15 2019 14:33:22 GMT-0700 (PDT)
@@ -935,6 +954,12 @@ static double parseESDate(StringView str) {
   if (!scanInt(it, end, y))
     return nan;
 
+  // Support to parse no HMS and timezone date
+  if (it == end) {
+    adjustTZ = true;
+    goto complete;
+  }  
+
   if (!consume(' '))
     return nan;
 
@@ -950,6 +975,12 @@ static double parseESDate(StringView str) {
   if (!scanInt(it, end, s))
     return nan;
 
+  // Support to parse no timezone date
+  if (it == end) {
+    adjustTZ = true;
+    goto complete;
+  }  
+
   // Space and "GMT".
   if (!consume(' '))
     return nan;
@@ -961,8 +992,11 @@ static double parseESDate(StringView str) {
       return nan;
   }
 
-  if (it == end)
+  // Support to parse no timezone date
+  if (it == end) {
+    adjustTZ = true;
     goto complete;
+  }
 
   // Sign of the timezone adjustment.
   if (consume('+'))
@@ -973,13 +1007,16 @@ static double parseESDate(StringView str) {
     return nan;
 
   // Hour and minute of timezone adjustment.
-  if (it > end - 4)
+  if (it > end - 2 || !scanInt(it, it + 2, tzh)) {
     return nan;
-  if (!scanInt(it, it + 2, tzh))
-    return nan;
+  }
   tzh *= sign;
-  if (!scanInt(it, it + 2, tzm))
+  if (it < end && *it == ':') {
+    consume(u':');
+  }
+  if (it != end && (it > end - 2 || !scanInt(it, it + 2, tzm))) {
     return nan;
+  }
   tzm *= sign;
 
   if (it != end) {
@@ -999,7 +1036,7 @@ static double parseESDate(StringView str) {
 
 complete:
   // Account for the fact that m was 1-indexed and the timezone offset.
-  return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms));
+  return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms)) - (adjustTZ ? localTZA() : 0);
 }
 
 double parseDate(StringView str) {
