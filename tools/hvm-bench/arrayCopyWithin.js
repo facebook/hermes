@@ -7,15 +7,17 @@
  * @format
  */
 
-var numIter = 10000;
-var len = 12000;
-var a = Array(len);
-for (var i = 0; i < len; i++) {
-  a[i] = i;
-}
+(function() {
+  var numIter = 10000;
+  var len = 12000;
+  var a = Array(len);
+  for (var i = 0; i < len; i++) {
+    a[i] = i;
+  }
 
-for (var i = 0; i < numIter; i++) {
-  a.copyWithin(i, len - i);
-}
+  for (var i = 0; i < numIter; i++) {
+    a.copyWithin(i, len - i);
+  }
 
-print('done');
+  print('done');
+})();

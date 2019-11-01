@@ -7,11 +7,13 @@
  * @format
  */
 
-var len = 10000;
+(function() {
+  var len = 10000;
 
-var a = [];
-for (var j = 0; j < len; j++) {
-  a.unshift(j);
-}
+  var a = [];
+  for (var j = 0; j < len; j++) {
+    a.unshift(j);
+  }
 
-print('done');
+  print('done');
+})();

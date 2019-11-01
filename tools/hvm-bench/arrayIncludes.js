@@ -7,17 +7,19 @@
  * @format
  */
 
-var numIter = 20000;
-var len = 100;
-var a = Array(len);
-for (var i = 0; i < len; i++) {
-  a[i] = i;
-}
-
-for (var i = 0; i < numIter; i++) {
-  for (var j = 0; j < len; j++) {
-    a.includes(j);
+(function() {
+  var numIter = 20000;
+  var len = 100;
+  var a = Array(len);
+  for (var i = 0; i < len; i++) {
+    a[i] = i;
   }
-}
 
-print('done');
+  for (var i = 0; i < numIter; i++) {
+    for (var j = 0; j < len; j++) {
+      a.includes(j);
+    }
+  }
+
+  print('done');
+})();
