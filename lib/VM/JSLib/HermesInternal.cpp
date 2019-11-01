@@ -1012,6 +1012,19 @@ hermesInternalJSArraySetElementAt(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// \code
+///   HermesInternal.regExpCreate = function (pattern, flags) {}
+/// \endcode
+/// Create and return a RegExp object based on the given pattern and flags
+CallResult<HermesValue>
+hermesInternalRegExpCreate(void *, Runtime *runtime, NativeArgs args) {
+  auto res = regExpCreate(runtime, args.getArgHandle(0), args.getArgHandle(1));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getHermesValue();
+}
+
+/// \code
 ///   HermesInternal.toInteger = function (arg) {}
 /// \endcode
 /// Converts arg to an integer
@@ -1126,6 +1139,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethodAndSymbol("isConstructor", hermesInternalIsConstructor);
   defineInternMethodAndSymbol(
       "jsArraySetElementAt", hermesInternalJSArraySetElementAt);
+  defineInternMethodAndSymbol("regExpCreate", hermesInternalRegExpCreate);
   defineInternMethodAndSymbol("toInteger", hermesInternalToInteger);
   defineInternMethodAndSymbol("toLength", hermesInternalToLength);
   defineInternMethodAndSymbol("toObject", hermesInternalToObject);

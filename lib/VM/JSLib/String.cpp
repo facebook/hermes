@@ -185,13 +185,6 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       stringPrototype,
-      Predefined::getSymbolID(Predefined::match),
-      ctx,
-      stringPrototypeMatch,
-      1);
-  defineMethod(
-      runtime,
-      stringPrototype,
       Predefined::getSymbolID(Predefined::normalize),
       ctx,
       stringPrototypeNormalize,
@@ -224,13 +217,6 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       ctx,
       stringPrototypeReplace,
       2);
-  defineMethod(
-      runtime,
-      stringPrototype,
-      Predefined::getSymbolID(Predefined::search),
-      ctx,
-      stringPrototypeSearch,
-      1);
   defineMethod(
       runtime,
       stringPrototype,
@@ -304,6 +290,20 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       1);
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::match),
+      ctx,
+      stringPrototypeMatch,
+      1);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::search),
+      ctx,
+      stringPrototypeSearch,
+      1);
   defineMethod(
       runtime,
       stringPrototype,
@@ -1495,67 +1495,6 @@ stringPrototypeLocaleCompare(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
-  // 1. Let O be RequireObjectCoercible(this value).
-  // 2. ReturnIfAbrupt(O).
-  auto O = args.getThisHandle();
-  if (LLVM_UNLIKELY(
-          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  // 3. If regexp is neither undefined nor null, then
-  auto regexp = args.getArgHandle(0);
-  if (!regexp->isUndefined() && !regexp->isNull()) {
-    // a. Let matcher be GetMethod(regexp, @@match).
-    auto methodRes = getMethod(
-        runtime,
-        regexp,
-        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolMatch)));
-    // b. ReturnIfAbrupt(matcher).
-    if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    // c. If matcher is not undefined, then
-    //   i. Return Call(matcher, regexp, «‍O»).
-    if (!methodRes->getHermesValue().isUndefined()) {
-      Handle<Callable> matcher =
-          Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
-      return Callable::executeCall1(
-          matcher, runtime, regexp, O.getHermesValue());
-    }
-  }
-  // 4. Let S be ToString(O).
-  auto strRes = toString_RJS(runtime, O);
-  // 5. ReturnIfAbrupt(S).
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto S = toHandle(runtime, std::move(*strRes));
-
-  // 6. Let rx be RegExpCreate(regexp, undefined) (see 21.2.3.2.3).
-  // 7. ReturnIfAbrupt(rx).
-  auto regRes = regExpCreate(runtime, regexp, Runtime::getUndefinedValue());
-  if (regRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  Handle<JSRegExp> rx = regRes.getValue();
-
-  // 8. Return Invoke(rx, @@match, «‍S»).
-  auto propRes = JSObject::getNamed_RJS(
-      rx, runtime, Predefined::getSymbolID(Predefined::SymbolMatch));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto func = dyn_vmcast<Callable>(propRes.getValue());
-  if (LLVM_UNLIKELY(!func)) {
-    return runtime->raiseTypeError(
-        "RegExp.prototype[@@match] must be callable.");
-  }
-  return Callable::executeCall1(
-      runtime->makeHandle(func), runtime, rx, S.getHermesValue());
-}
-
-CallResult<HermesValue>
 stringPrototypeNormalize(void *, Runtime *runtime, NativeArgs args) {
   using platform_unicode::NormalizationForm;
 
@@ -1923,67 +1862,6 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
-  // 1. Let O be RequireObjectCoercible(this value).
-  // 2. ReturnIfAbrupt(O).
-  auto O = args.getThisHandle();
-  if (LLVM_UNLIKELY(
-          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  // 3. If regexp is neither undefined nor null, then
-  auto regexp = args.getArgHandle(0);
-  if (!regexp->isUndefined() && !regexp->isNull()) {
-    // a. Let searcher be GetMethod(regexp, @@search).
-    auto methodRes = getMethod(
-        runtime,
-        regexp,
-        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSearch)));
-    // b. ReturnIfAbrupt(searcher).
-    if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    // c. If searcher is not undefined, then
-    //   i. Return Call(searcher, regexp, «‍O»).
-    if (!methodRes->getHermesValue().isUndefined()) {
-      // If methodRes is not Callable, step 3a would have thrown a TypeError.
-      Handle<Callable> searcher =
-          Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
-      return Callable::executeCall1(
-          searcher, runtime, regexp, O.getHermesValue());
-    }
-  }
-  // 4. Let string be ToString(O).
-  // 5. ReturnIfAbrupt(string).
-  auto strRes = toString_RJS(runtime, O);
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto string = toHandle(runtime, std::move(*strRes));
-
-  // 6. Let rx be RegExpCreate(regexp, undefined) (see 21.2.3.2.3).
-  // 7. ReturnIfAbrupt(rx).
-  auto regRes = regExpCreate(runtime, regexp, Runtime::getUndefinedValue());
-  if (regRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  Handle<JSRegExp> rx = *regRes;
-
-  // 8. Return Invoke(rx, @@search, «string»).
-  auto propRes = JSObject::getNamed_RJS(
-      rx, runtime, Predefined::getSymbolID(Predefined::SymbolSearch));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  if (LLVM_UNLIKELY(!vmisa<Callable>(propRes.getValue()))) {
-    return runtime->raiseTypeError(
-        "RegExp.prototype[@@search] must be callable.");
-  }
-  auto func = Handle<Callable>::vmcast(runtime, *propRes);
-  return Callable::executeCall1(func, runtime, rx, string.getHermesValue());
-}
-
-CallResult<HermesValue>
 stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
   // 1. Let O be RequireObjectCoercible(this value).
   if (LLVM_UNLIKELY(
@@ -2158,6 +2036,128 @@ stringPrototypeSymbolIterator(void *, Runtime *runtime, NativeArgs args) {
 }
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+CallResult<HermesValue>
+stringPrototypeMatch(void *, Runtime *runtime, NativeArgs args) {
+  // 1. Let O be RequireObjectCoercible(this value).
+  // 2. ReturnIfAbrupt(O).
+  auto O = args.getThisHandle();
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 3. If regexp is neither undefined nor null, then
+  auto regexp = args.getArgHandle(0);
+  if (!regexp->isUndefined() && !regexp->isNull()) {
+    // a. Let matcher be GetMethod(regexp, @@match).
+    auto methodRes = getMethod(
+        runtime,
+        regexp,
+        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolMatch)));
+    // b. ReturnIfAbrupt(matcher).
+    if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // c. If matcher is not undefined, then
+    //   i. Return Call(matcher, regexp, «‍O»).
+    if (!methodRes->getHermesValue().isUndefined()) {
+      Handle<Callable> matcher =
+          Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
+      return Callable::executeCall1(
+          matcher, runtime, regexp, O.getHermesValue());
+    }
+  }
+  // 4. Let S be ToString(O).
+  auto strRes = toString_RJS(runtime, O);
+  // 5. ReturnIfAbrupt(S).
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = toHandle(runtime, std::move(*strRes));
+
+  // 6. Let rx be RegExpCreate(regexp, undefined) (see 21.2.3.2.3).
+  // 7. ReturnIfAbrupt(rx).
+  auto regRes = regExpCreate(runtime, regexp, Runtime::getUndefinedValue());
+  if (regRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<JSRegExp> rx = regRes.getValue();
+
+  // 8. Return Invoke(rx, @@match, «‍S»).
+  auto propRes = JSObject::getNamed_RJS(
+      rx, runtime, Predefined::getSymbolID(Predefined::SymbolMatch));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto func = dyn_vmcast<Callable>(propRes.getValue());
+  if (LLVM_UNLIKELY(!func)) {
+    return runtime->raiseTypeError(
+        "RegExp.prototype[@@match] must be callable.");
+  }
+  return Callable::executeCall1(
+      runtime->makeHandle(func), runtime, rx, S.getHermesValue());
+}
+
+CallResult<HermesValue>
+stringPrototypeSearch(void *, Runtime *runtime, NativeArgs args) {
+  // 1. Let O be RequireObjectCoercible(this value).
+  // 2. ReturnIfAbrupt(O).
+  auto O = args.getThisHandle();
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 3. If regexp is neither undefined nor null, then
+  auto regexp = args.getArgHandle(0);
+  if (!regexp->isUndefined() && !regexp->isNull()) {
+    // a. Let searcher be GetMethod(regexp, @@search).
+    auto methodRes = getMethod(
+        runtime,
+        regexp,
+        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSearch)));
+    // b. ReturnIfAbrupt(searcher).
+    if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // c. If searcher is not undefined, then
+    //   i. Return Call(searcher, regexp, «‍O»).
+    if (!methodRes->getHermesValue().isUndefined()) {
+      // If methodRes is not Callable, step 3a would have thrown a TypeError.
+      Handle<Callable> searcher =
+          Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
+      return Callable::executeCall1(
+          searcher, runtime, regexp, O.getHermesValue());
+    }
+  }
+  // 4. Let string be ToString(O).
+  // 5. ReturnIfAbrupt(string).
+  auto strRes = toString_RJS(runtime, O);
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto string = toHandle(runtime, std::move(*strRes));
+
+  // 6. Let rx be RegExpCreate(regexp, undefined) (see 21.2.3.2.3).
+  // 7. ReturnIfAbrupt(rx).
+  auto regRes = regExpCreate(runtime, regexp, Runtime::getUndefinedValue());
+  if (regRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<JSRegExp> rx = *regRes;
+
+  // 8. Return Invoke(rx, @@search, «string»).
+  auto propRes = JSObject::getNamed_RJS(
+      rx, runtime, Predefined::getSymbolID(Predefined::SymbolSearch));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(!vmisa<Callable>(propRes.getValue()))) {
+    return runtime->raiseTypeError(
+        "RegExp.prototype[@@search] must be callable.");
+  }
+  auto func = Handle<Callable>::vmcast(runtime, *propRes);
+  return Callable::executeCall1(func, runtime, rx, string.getHermesValue());
+}
+
 CallResult<HermesValue>
 stringPrototypeCharAt(void *, Runtime *runtime, NativeArgs args) {
   Handle<> thisValue{&args.getThisArg()};
