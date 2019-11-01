@@ -140,9 +140,9 @@ TEST(JSLexerTest, NumberTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;
 
-#define _GEN_TESTS(flt, dec)                                            \
-  flt(0) dec(0x10) flt(1.2) dec(055) flt(.1) flt(1.) flt(1e2) flt(5e+3) \
-      flt(4e-3) flt(.1e-3) flt(12.34e+5)
+#define _GEN_TESTS(flt, dec)                                              \
+  flt(1235) flt(1234567890123) flt(0) dec(0x10) flt(1.2) dec(055) flt(.1) \
+      flt(1.) flt(1e2) flt(5e+3) flt(4e-3) flt(.1e-3) flt(12.34e+5)
 
 #define _MK_STR(num) " " #num
 

@@ -1052,6 +1052,13 @@ end:
   if (!ok) {
     error(token_.getSourceRange(), "invalid numeric literal");
     val = std::numeric_limits<double>::quiet_NaN();
+  } else if (!real && radix == 10 && curCharPtr_ - start <= 9) {
+    // If this is a decimal integer of at most 9 digits (log10(2**31-1), it can
+    // fit in a 32-bit integer. Use a faster conversion.
+    int32_t ival = *start - '0';
+    while (++start != curCharPtr_)
+      ival = ival * 10 + (*start - '0');
+    val = ival;
   } else if (real || radix == 10) {
     // We need a zero-terminated buffer for hermes_g_strtod().
     llvm::SmallString<32> buf;
