@@ -65,13 +65,6 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       arrayPrototype,
-      Predefined::getSymbolID(Predefined::slice),
-      nullptr,
-      arrayPrototypeSlice,
-      2);
-  defineMethod(
-      runtime,
-      arrayPrototype,
       Predefined::getSymbolID(Predefined::sort),
       nullptr,
       arrayPrototypeSort,
@@ -157,6 +150,13 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       0);
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::slice),
+      nullptr,
+      arrayPrototypeSlice,
+      2);
   defineMethod(
       runtime,
       arrayPrototype,
@@ -988,102 +988,6 @@ arrayPrototypePush(void *, Runtime *runtime, NativeArgs args) {
   return len.get();
 }
 
-CallResult<HermesValue>
-arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
-  GCScope gcScope(runtime);
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
-
-  auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double len = *lenRes;
-
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  // Start index. If negative, then offset from the right side of the array.
-  double relativeStart = intRes->getNumber();
-  // Index that we're currently copying from.
-  // Starts at the actual start value, computed from relativeStart.
-  MutableHandle<> k{runtime,
-                    HermesValue::encodeDoubleValue(
-                        relativeStart < 0 ? std::max(len + relativeStart, 0.0)
-                                          : std::min(relativeStart, len))};
-
-  // End index. If negative, then offset from the right side of the array.
-  double relativeEnd;
-  if (args.getArg(1).isUndefined()) {
-    relativeEnd = len;
-  } else {
-    if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    relativeEnd = intRes->getNumber();
-  }
-  // Actual end index.
-  double fin = relativeEnd < 0 ? std::max(len + relativeEnd, 0.0)
-                               : std::min(relativeEnd, len);
-
-  // Create the result array.
-  double count = std::max(fin - k->getNumber(), 0.0);
-  if (LLVM_UNLIKELY(count > JSArray::StorageType::maxElements())) {
-    return runtime->raiseRangeError("Out of memory for array elements.");
-  }
-  auto arrRes = JSArray::create(runtime, count, count);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto A = toHandle(runtime, std::move(*arrRes));
-
-  // Next index in A to write to.
-  uint32_t n = 0;
-
-  MutableHandle<JSObject> descObjHandle{runtime};
-  MutableHandle<> kValue{runtime};
-  auto marker = gcScope.createMarker();
-
-  // Copy the elements between the actual start and end indices into A.
-  // TODO: Implement a fast path for actual arrays.
-  while (k->getNumber() < fin) {
-    ComputedPropertyDescriptor desc;
-    JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, desc);
-    if (descObjHandle) {
-      // kPresent is true, so copy the element over.
-      if ((propRes = JSObject::getComputedPropertyValue(
-               O, runtime, descObjHandle, desc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      kValue = propRes.getValue();
-      JSArray::setElementAt(A, runtime, n, kValue);
-    }
-    k = HermesValue::encodeDoubleValue(k->getNumber() + 1);
-    ++n;
-
-    gcScope.flushToMarker(marker);
-  }
-
-  if (LLVM_UNLIKELY(
-          JSArray::setLengthProperty(A, runtime, n) ==
-          ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-  return A.getHermesValue();
-}
-
 namespace {
 /// General object sorting model used by custom sorting routines.
 /// Provides a model by which to less and swap elements, using the [[Get]],
@@ -1701,6 +1605,102 @@ arrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
 }
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+CallResult<HermesValue>
+arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope(runtime);
+  auto objRes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(objRes.getValue());
+
+  auto propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto lenRes = toLengthU64(runtime, runtime->makeHandle(*propRes));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double len = *lenRes;
+
+  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Start index. If negative, then offset from the right side of the array.
+  double relativeStart = intRes->getNumber();
+  // Index that we're currently copying from.
+  // Starts at the actual start value, computed from relativeStart.
+  MutableHandle<> k{runtime,
+                    HermesValue::encodeDoubleValue(
+                        relativeStart < 0 ? std::max(len + relativeStart, 0.0)
+                                          : std::min(relativeStart, len))};
+
+  // End index. If negative, then offset from the right side of the array.
+  double relativeEnd;
+  if (args.getArg(1).isUndefined()) {
+    relativeEnd = len;
+  } else {
+    if (LLVM_UNLIKELY(
+            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    relativeEnd = intRes->getNumber();
+  }
+  // Actual end index.
+  double fin = relativeEnd < 0 ? std::max(len + relativeEnd, 0.0)
+                               : std::min(relativeEnd, len);
+
+  // Create the result array.
+  double count = std::max(fin - k->getNumber(), 0.0);
+  if (LLVM_UNLIKELY(count > JSArray::StorageType::maxElements())) {
+    return runtime->raiseRangeError("Out of memory for array elements.");
+  }
+  auto arrRes = JSArray::create(runtime, count, count);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = toHandle(runtime, std::move(*arrRes));
+
+  // Next index in A to write to.
+  uint32_t n = 0;
+
+  MutableHandle<JSObject> descObjHandle{runtime};
+  MutableHandle<> kValue{runtime};
+  auto marker = gcScope.createMarker();
+
+  // Copy the elements between the actual start and end indices into A.
+  // TODO: Implement a fast path for actual arrays.
+  while (k->getNumber() < fin) {
+    ComputedPropertyDescriptor desc;
+    JSObject::getComputedPrimitiveDescriptor(
+        O, runtime, k, descObjHandle, desc);
+    if (descObjHandle) {
+      // kPresent is true, so copy the element over.
+      if ((propRes = JSObject::getComputedPropertyValue(
+               O, runtime, descObjHandle, desc)) ==
+          ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      kValue = propRes.getValue();
+      JSArray::setElementAt(A, runtime, n, kValue);
+    }
+    k = HermesValue::encodeDoubleValue(k->getNumber() + 1);
+    ++n;
+
+    gcScope.flushToMarker(marker);
+  }
+
+  if (LLVM_UNLIKELY(
+          JSArray::setLengthProperty(A, runtime, n) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  return A.getHermesValue();
+}
+
 CallResult<HermesValue>
 arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
