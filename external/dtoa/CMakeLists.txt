@@ -12,6 +12,5 @@ endif()
 
 add_llvm_library(dtoa STATIC
         dtoa.c
-        dtoa_fixedpoint.c
         g_fmt.c
         locks.cpp)

@@ -425,7 +425,7 @@ numberPrototypeToFixed(void *, Runtime *runtime, NativeArgs args) {
   // Use mode=3 and precision=f for the dtoa call (fixed precision dtoa).
   char *s = ::dtoa_fixedpoint(x, 3, f, &decPt, &sign, &sEnd);
   llvm::SmallString<32> n{s, sEnd};
-  ::freedtoa_fixedpoint(s);
+  ::g_freedtoa(s);
 
   // Minimum number of digits required by the specified fixed-point length.
   size_t minNLen = decPt + f;
@@ -556,7 +556,7 @@ numberPrototypeToExponential(void *, Runtime *runtime, NativeArgs args) {
       // Precision is f+1 to account for digit in front of the decimal point.
       char *s = ::dtoa_fixedpoint(x, 2, f + 1, &decPt, &sign, &sEnd);
       n.append(s, sEnd);
-      ::freedtoa_fixedpoint(s);
+      ::g_freedtoa(s);
 
       // Minimum length of the string should be enough to account for
       // f digits after the decimal point, and 1 digit before it.
@@ -684,7 +684,7 @@ numberPrototypeToPrecision(void *, Runtime *runtime, NativeArgs args) {
     // Use mode=2 and precision=p for the dtoa call (precision dtoa).
     char *s = ::dtoa_fixedpoint(x, 2, p, &decPt, &sign, &sEnd);
     n.append(s, sEnd);
-    ::freedtoa_fixedpoint(s);
+    ::g_freedtoa(s);
 
     // Minimum length of the string should be enough to account for
     // p significant digits.
