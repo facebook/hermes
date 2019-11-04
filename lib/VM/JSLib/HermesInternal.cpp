@@ -997,6 +997,18 @@ hermesInternalIsConstructor(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(isConstructor(runtime, args.getArg(0)));
 }
 
+///   HermesInternal.isRegExp = function (pattern) {}
+/// \encode
+/// Returns true if pattern is a valid RegExp, false otherwise.
+CallResult<HermesValue>
+hermesInternalIsRegExp(void *, Runtime *runtime, NativeArgs args) {
+  auto boolRes = isRegExp(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(boolRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return HermesValue::encodeBoolValue(boolRes.getValue());
+}
+
 /// \code
 ///   HermesInternal.jsArraySetElementAt = function (array, index, val) {}
 /// \endcode
@@ -1022,6 +1034,64 @@ hermesInternalRegExpCreate(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return res->getHermesValue();
+}
+
+/// \code
+///   HermesInternal.searchString =
+///     function (source, substr, reverse, startOffset, endOffset) {}
+/// \endcode
+/// Search for the first (or last if reverse is true) occurrence of substr
+/// inside of source from the given offsets. Return the starting index of the
+/// first (or last is reverse is true) match or -1 if there is no match.
+/// TypeError if either argument is not a string.
+CallResult<HermesValue>
+hermesInternalSearchString(void *, Runtime *runtime, NativeArgs args) {
+  auto source = args.dyncastArg<StringPrimitive>(0);
+  auto substr = args.dyncastArg<StringPrimitive>(1);
+  if (!source || !substr) {
+    return runtime->raiseTypeError("Non-string value passed to searchString");
+  }
+
+  bool reverse = false;
+  if (args.getArg(2).isBool()) {
+    reverse = args.getArg(2).getBool();
+  }
+
+  uint32_t startOffset = 0;
+  if (args.getArg(3).isNumber()) {
+    startOffset = args.getArg(3).getNumberAs<uint32_t>();
+  }
+  uint32_t endOffset = 0;
+  if (args.getArg(4).isNumber()) {
+    endOffset = args.getArg(4).getNumberAs<uint32_t>();
+  }
+
+  auto sourceView = StringPrimitive::createStringView(runtime, source);
+  auto substrView = StringPrimitive::createStringView(runtime, substr);
+  double ret = -1;
+
+  if (!reverse) {
+    auto endIter = sourceView.end() - endOffset;
+    auto foundIter = std::search(
+        sourceView.begin() + startOffset,
+        endIter,
+        substrView.begin(),
+        substrView.end());
+    if (foundIter != endIter || substrView.empty()) {
+      ret = foundIter - sourceView.begin();
+    }
+  } else {
+    auto endIter = sourceView.rend() - endOffset;
+    auto foundIter = std::search(
+        sourceView.rbegin() + startOffset,
+        endIter,
+        substrView.rbegin(),
+        substrView.rend());
+    if (foundIter != endIter || substrView.empty()) {
+      ret = sourceView.rend() - foundIter;
+    }
+  }
+  return HermesValue::encodeDoubleValue(ret);
 }
 
 /// \code
@@ -1137,9 +1207,11 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
 #ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineInternMethodAndSymbol("executeCall", hermesInternalExecuteCall);
   defineInternMethodAndSymbol("isConstructor", hermesInternalIsConstructor);
+  defineInternMethodAndSymbol("isRegExp", hermesInternalIsRegExp);
   defineInternMethodAndSymbol(
       "jsArraySetElementAt", hermesInternalJSArraySetElementAt);
   defineInternMethodAndSymbol("regExpCreate", hermesInternalRegExpCreate);
+  defineInternMethodAndSymbol("searchString", hermesInternalSearchString);
   defineInternMethodAndSymbol("toInteger", hermesInternalToInteger);
   defineInternMethodAndSymbol("toLength", hermesInternalToLength);
   defineInternMethodAndSymbol("toObject", hermesInternalToObject);
