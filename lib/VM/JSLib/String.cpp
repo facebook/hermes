@@ -94,13 +94,6 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       stringPrototype,
-      Predefined::getSymbolID(Predefined::split),
-      ctx,
-      stringPrototypeSplit,
-      2);
-  defineMethod(
-      runtime,
-      stringPrototype,
       Predefined::getSymbolID(Predefined::substring),
       ctx,
       stringPrototypeSubstring,
@@ -283,6 +276,13 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       ctx,
       stringPrototypeEndsWith,
       1);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::split),
+      ctx,
+      stringPrototypeSplit,
+      2);
   defineMethod(
       runtime,
       stringPrototype,
@@ -994,43 +994,6 @@ CallResult<HermesValue> splitInternal(
           ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   return A.getHermesValue();
-}
-
-CallResult<HermesValue>
-stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
-  // 1. Let O be RequireObjectCoercible(this value).
-  // 2. ReturnIfAbrupt(O).
-  auto O = args.getThisHandle();
-  if (LLVM_UNLIKELY(
-          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  // 3. If separator is neither undefined nor null, then
-  auto separator = args.getArgHandle(0);
-  if (!separator->isUndefined() && !separator->isNull()) {
-    // a. Let splitter be GetMethod(separator, @@split).
-    auto methodRes = getMethod(
-        runtime,
-        separator,
-        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSplit)));
-    // b. ReturnIfAbrupt(splitter).
-    if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    // c. If splitter is not undefined, then
-    //   i. Return Call(splitter, separator, «‍O, limit»).
-    if (!methodRes->getHermesValue().isUndefined()) {
-      Handle<Callable> splitter =
-          Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
-      return Callable::executeCall2(
-          splitter, runtime, separator, O.getHermesValue(), args.getArg(1));
-    }
-  }
-  return splitInternal(
-      runtime,
-      args.getThisHandle(),
-      args.getArgHandle(1),
-      args.getArgHandle(0));
 }
 
 CallResult<HermesValue>
@@ -2001,6 +1964,43 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
   // 17. Otherwise, return false.
   return HermesValue::encodeBoolValue(
       S->sliceEquals(start, searchLength, *searchStr));
+}
+
+CallResult<HermesValue>
+stringPrototypeSplit(void *, Runtime *runtime, NativeArgs args) {
+  // 1. Let O be RequireObjectCoercible(this value).
+  // 2. ReturnIfAbrupt(O).
+  auto O = args.getThisHandle();
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 3. If separator is neither undefined nor null, then
+  auto separator = args.getArgHandle(0);
+  if (!separator->isUndefined() && !separator->isNull()) {
+    // a. Let splitter be GetMethod(separator, @@split).
+    auto methodRes = getMethod(
+        runtime,
+        separator,
+        runtime->makeHandle(Predefined::getSymbolID(Predefined::SymbolSplit)));
+    // b. ReturnIfAbrupt(splitter).
+    if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // c. If splitter is not undefined, then
+    //   i. Return Call(splitter, separator, «‍O, limit»).
+    if (!methodRes->getHermesValue().isUndefined()) {
+      Handle<Callable> splitter =
+          Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
+      return Callable::executeCall2(
+          splitter, runtime, separator, O.getHermesValue(), args.getArg(1));
+    }
+  }
+  return splitInternal(
+      runtime,
+      args.getThisHandle(),
+      args.getArgHandle(1),
+      args.getArgHandle(0));
 }
 
 CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
