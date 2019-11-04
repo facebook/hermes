@@ -150,13 +150,6 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       stringPrototype,
-      Predefined::getSymbolID(Predefined::includes),
-      (void *)false,
-      stringPrototypeIncludesOrStartsWith,
-      1);
-  defineMethod(
-      runtime,
-      stringPrototype,
       Predefined::getSymbolID(Predefined::indexOf),
       ctx,
       stringPrototypeIndexOf,
@@ -303,6 +296,13 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::endsWith),
       ctx,
       stringPrototypeEndsWith,
+      1);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::includes),
+      (void *)false,
+      stringPrototypeIncludesOrStartsWith,
       1);
   defineMethod(
       runtime,
@@ -1861,91 +1861,6 @@ stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
   return StringPrimitive::create(runtime, newString);
 }
 
-CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
-    void *ctx,
-    Runtime *runtime,
-    NativeArgs args) {
-  // If true, perform the startsWith operation.
-  // Else, do the standard "includes" operation.
-  bool startsWith = static_cast<bool>(ctx);
-
-  // 1. Let O be RequireObjectCoercible(this value).
-  if (LLVM_UNLIKELY(
-          checkObjectCoercible(runtime, args.getThisHandle()) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  // 2. Let S be ToString(O).
-  auto strRes = toString_RJS(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto S = toHandle(runtime, std::move(*strRes));
-
-  // 4. Let isRegExp be IsRegExp(searchString).
-  // 6. If isRegExp is true, throw a TypeError exception.
-  auto isRegExpRes = isRegExp(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(isRegExpRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  if (LLVM_UNLIKELY(*isRegExpRes)) {
-    return runtime->raiseTypeError(
-        "First argument to startsWith and includes must not be a RegExp");
-  }
-
-  // 7. Let searchStr be ToString(searchString).
-  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(searchStrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto searchStr = toHandle(runtime, std::move(*searchStrRes));
-
-  // 9. Let pos be ToInteger(position).
-  // (If position is undefined, this step produces the value 0).
-  auto posRes = toInteger(runtime, args.getArgHandle(1));
-  if (LLVM_UNLIKELY(posRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double pos = posRes->getNumber();
-
-  // 11. Let len be the number of elements in S.
-  double len = S->getStringLength();
-
-  // 12. Let start be min(max(pos, 0), len).
-  double start = std::min(std::max(pos, 0.0), len);
-
-  // 13. Let searchLength be the number of elements in searchStr.
-  double searchLength = searchStr->getStringLength();
-
-  if (startsWith) {
-    // Perform the startsWith operation instead of includes.
-    // 14. If searchLength+start is greater than len, return false.
-    if (searchLength + start > len) {
-      return HermesValue::encodeBoolValue(false);
-    }
-    // 15. If the sequence of elements of S starting at start of length
-    // searchLength is the same as the full element sequence of searchStr,
-    // return true.
-    // 16. Otherwise, return false.
-    return HermesValue::encodeBoolValue(
-        S->sliceEquals(start, searchLength, *searchStr));
-  }
-
-  // 14. If there exists any integer k not smaller than start such that k +
-  // searchLen is not greater than len, and for all nonnegative integers j less
-  // than searchLen, the code unit at index k+j of S is the same as the code
-  // unit at index j of searchStr, return true; but if there is no such integer
-  // k, return false.
-  for (double k = start; k + searchLength <= len; ++k) {
-    if (S->sliceEquals(k, searchLength, *searchStr)) {
-      return HermesValue::encodeBoolValue(true);
-    }
-  }
-  return HermesValue::encodeBoolValue(false);
-}
-
 CallResult<HermesValue>
 stringPrototypeSymbolIterator(void *, Runtime *runtime, NativeArgs args) {
   auto thisValue = args.getThisHandle();
@@ -2187,6 +2102,92 @@ stringPrototypeEndsWith(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(
       S->sliceEquals(start, searchLength, *searchStr));
 }
+
+CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
+    void *ctx,
+    Runtime *runtime,
+    NativeArgs args) {
+  // If true, perform the startsWith operation.
+  // Else, do the standard "includes" operation.
+  bool startsWith = static_cast<bool>(ctx);
+
+  // 1. Let O be RequireObjectCoercible(this value).
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, args.getThisHandle()) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 2. Let S be ToString(O).
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = toHandle(runtime, std::move(*strRes));
+
+  // 4. Let isRegExp be IsRegExp(searchString).
+  // 6. If isRegExp is true, throw a TypeError exception.
+  auto isRegExpRes = isRegExp(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(isRegExpRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  if (LLVM_UNLIKELY(*isRegExpRes)) {
+    return runtime->raiseTypeError(
+        "First argument to startsWith and includes must not be a RegExp");
+  }
+
+  // 7. Let searchStr be ToString(searchString).
+  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(searchStrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto searchStr = toHandle(runtime, std::move(*searchStrRes));
+
+  // 9. Let pos be ToInteger(position).
+  // (If position is undefined, this step produces the value 0).
+  auto posRes = toInteger(runtime, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(posRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double pos = posRes->getNumber();
+
+  // 11. Let len be the number of elements in S.
+  double len = S->getStringLength();
+
+  // 12. Let start be min(max(pos, 0), len).
+  double start = std::min(std::max(pos, 0.0), len);
+
+  // 13. Let searchLength be the number of elements in searchStr.
+  double searchLength = searchStr->getStringLength();
+
+  if (startsWith) {
+    // Perform the startsWith operation instead of includes.
+    // 14. If searchLength+start is greater than len, return false.
+    if (searchLength + start > len) {
+      return HermesValue::encodeBoolValue(false);
+    }
+    // 15. If the sequence of elements of S starting at start of length
+    // searchLength is the same as the full element sequence of searchStr,
+    // return true.
+    // 16. Otherwise, return false.
+    return HermesValue::encodeBoolValue(
+        S->sliceEquals(start, searchLength, *searchStr));
+  }
+
+  // 14. If there exists any integer k not smaller than start such that k +
+  // searchLen is not greater than len, and for all nonnegative integers j less
+  // than searchLen, the code unit at index k+j of S is the same as the code
+  // unit at index j of searchStr, return true; but if there is no such integer
+  // k, return false.
+  for (double k = start; k + searchLength <= len; ++k) {
+    if (S->sliceEquals(k, searchLength, *searchStr)) {
+      return HermesValue::encodeBoolValue(true);
+    }
+  }
+  return HermesValue::encodeBoolValue(false);
+}
+
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
 } // namespace vm
