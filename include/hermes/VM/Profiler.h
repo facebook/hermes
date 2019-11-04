@@ -76,12 +76,12 @@ constexpr ProfilerID NO_PROFILER_ID = UINT32_MAX;
 /// thus we store the ID to calculate the offset at symbol dump time.
 struct ProfilerFunctionInfo {
   ProfilerID profilerId;
-  SymbolID functionName;
+  std::string functionName;
   uint32_t functionID;
   std::shared_ptr<hbc::BCProvider> bytecode;
   ProfilerFunctionInfo(
       ProfilerID id,
-      SymbolID name,
+      std::string name,
       uint32_t fid,
       std::shared_ptr<hbc::BCProvider> bc)
       : profilerId(id),

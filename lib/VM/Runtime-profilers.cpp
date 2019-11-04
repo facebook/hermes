@@ -77,10 +77,14 @@ std::atomic<ProfilerID> Runtime::nextProfilerId;
 ProfilerID Runtime::getProfilerID(CodeBlock *block) {
   auto &profilerID = block->profilerID;
   if (profilerID == NO_PROFILER_ID) {
+    std::string name;
+    if (!block->getNameString(this, name)) {
+      name = "(non-ASCII)";
+    }
     profilerID = nextProfilerId.fetch_add(1, std::memory_order_relaxed);
     functionInfo.emplace_back(
         profilerID,
-        block->getNameMayAllocate(),
+        name,
         block->getFunctionID(),
         block->getRuntimeModule()->getBytecodeSharedPtr());
   }
@@ -169,7 +173,6 @@ void Runtime::dumpJSFunctionStats(ProfileType type) {
   }
   llvm::outs() << (opcodes ? "==Opcode Profile==\n" : " ==Time Profile==\n");
   GCScope gcScope{this};
-  SmallU16String<16> str;
   for (const auto &kv : funcTimeSpent) {
     gcScope.clearAllHandles();
 
@@ -183,13 +186,7 @@ void Runtime::dumpJSFunctionStats(ProfileType type) {
       isFirst = false;
       const auto *info = getProfilerInfo(profID);
       assert(info);
-      llvm::outs() << "[" << profID << "]";
-      str.clear();
-      vm::operator<<(
-          llvm::outs(),
-          getIdentifierTable()
-              .getStringView(this, info->functionName)
-              .getUTF16Ref(str));
+      llvm::outs() << "[" << profID << "]" << info->functionName;
     }
     llvm::outs() << " " << kv.second << "\n";
   }
