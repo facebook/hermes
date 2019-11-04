@@ -150,20 +150,6 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       stringPrototype,
-      Predefined::getSymbolID(Predefined::indexOf),
-      ctx,
-      stringPrototypeIndexOf,
-      1);
-  defineMethod(
-      runtime,
-      stringPrototype,
-      Predefined::getSymbolID(Predefined::lastIndexOf),
-      ctx,
-      stringPrototypeLastIndexOf,
-      1);
-  defineMethod(
-      runtime,
-      stringPrototype,
       Predefined::getSymbolID(Predefined::localeCompare),
       ctx,
       stringPrototypeLocaleCompare,
@@ -303,6 +289,20 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::includes),
       (void *)false,
       stringPrototypeIncludesOrStartsWith,
+      1);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::indexOf),
+      ctx,
+      stringPrototypeIndexOf,
+      1);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::lastIndexOf),
+      ctx,
+      stringPrototypeLastIndexOf,
       1);
   defineMethod(
       runtime,
@@ -1363,106 +1363,6 @@ stringPrototypeTrimEnd(void *, Runtime *runtime, NativeArgs args) {
   return StringPrimitive::slice(runtime, S, 0, endIdx);
 }
 
-/// Shared implementation of string.indexOf and string.lastIndexOf
-/// Given a haystack ('this'), needle, and position, return the index
-/// of the first (reverse=false) or last (reverse=true) substring match of
-/// needle within haystack that is not smaller (normal) or larger (reverse) than
-/// position.
-/// This provides an implementation of ES5.1 15.5.4.7 (reverse=false),
-/// and ES5.1 15.5.4.8 (reverse=true)
-/// \param runtime  the runtime to use for argument coercions
-/// \param args     the arguments passed to indexOf / lastIndexOf
-/// \param reverse  whether we are running lastIndexOf (true) or indexOf (false)
-/// \returns        Hermes-encoded index of the substring match, or -1 on
-///                 failure
-static CallResult<HermesValue>
-stringDirectedIndexOf(Runtime *runtime, NativeArgs args, bool reverse) {
-  auto thisValue = args.getThisHandle();
-  // Call a function that may throw, let the runtime record it.
-  if (LLVM_UNLIKELY(
-          checkObjectCoercible(runtime, thisValue) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto strRes = toString_RJS(runtime, thisValue);
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto S = toHandle(runtime, std::move(*strRes));
-
-  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(0));
-  if (searchStrRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto searchStr = toHandle(runtime, std::move(*searchStrRes));
-
-  double pos;
-  if (reverse) {
-    auto intRes = toNumber_RJS(runtime, runtime->makeHandle(args.getArg(1)));
-    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    Handle<> numPos = runtime->makeHandle(intRes.getValue());
-    if (std::isnan(numPos->getNumber())) {
-      pos = std::numeric_limits<double>::infinity();
-    } else {
-      if (LLVM_UNLIKELY(
-              (intRes = toInteger(runtime, numPos)) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      pos = intRes->getNumber();
-    }
-  } else {
-    auto intRes = toInteger(runtime, runtime->makeHandle(args.getArg(1)));
-    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    pos = intRes->getNumber();
-  }
-
-  double len = S->getStringLength();
-  uint32_t start = static_cast<uint32_t>(std::min(std::max(pos, 0.), len));
-
-  // TODO: good candidate for Boyer-Moore on large needles/haystacks
-  // TODO: good candidate for memchr on length-1 needles
-  auto SView = StringPrimitive::createStringView(runtime, S);
-  auto searchStrView = StringPrimitive::createStringView(runtime, searchStr);
-  double ret = -1;
-  if (reverse) {
-    uint32_t lastPossibleMatchEnd =
-        std::min(SView.length(), start + searchStrView.length());
-    auto foundIter = std::search(
-        SView.rbegin() + (SView.length() - lastPossibleMatchEnd),
-        SView.rend(),
-        searchStrView.rbegin(),
-        searchStrView.rend());
-    if (foundIter != SView.rend() || searchStrView.empty()) {
-      ret = SView.rend() - foundIter - searchStrView.length();
-    }
-  } else {
-    auto foundIter = std::search(
-        SView.begin() + start,
-        SView.end(),
-        searchStrView.begin(),
-        searchStrView.end());
-    if (foundIter != SView.end() || searchStrView.empty()) {
-      ret = foundIter - SView.begin();
-    }
-  }
-  return HermesValue::encodeDoubleValue(ret);
-}
-
-CallResult<HermesValue>
-stringPrototypeIndexOf(void *, Runtime *runtime, NativeArgs args) {
-  return stringDirectedIndexOf(runtime, args, false);
-}
-
-CallResult<HermesValue>
-stringPrototypeLastIndexOf(void *, Runtime *runtime, NativeArgs args) {
-  return stringDirectedIndexOf(runtime, args, true);
-}
-
 CallResult<HermesValue>
 stringPrototypeLocaleCompare(void *, Runtime *runtime, NativeArgs args) {
   auto thisValue = args.getThisHandle();
@@ -2188,6 +2088,105 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
   return HermesValue::encodeBoolValue(false);
 }
 
+/// Shared implementation of string.indexOf and string.lastIndexOf
+/// Given a haystack ('this'), needle, and position, return the index
+/// of the first (reverse=false) or last (reverse=true) substring match of
+/// needle within haystack that is not smaller (normal) or larger (reverse) than
+/// position.
+/// This provides an implementation of ES5.1 15.5.4.7 (reverse=false),
+/// and ES5.1 15.5.4.8 (reverse=true)
+/// \param runtime  the runtime to use for argument coercions
+/// \param args     the arguments passed to indexOf / lastIndexOf
+/// \param reverse  whether we are running lastIndexOf (true) or indexOf (false)
+/// \returns        Hermes-encoded index of the substring match, or -1 on
+///                 failure
+static CallResult<HermesValue>
+stringDirectedIndexOf(Runtime *runtime, NativeArgs args, bool reverse) {
+  auto thisValue = args.getThisHandle();
+  // Call a function that may throw, let the runtime record it.
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, thisValue) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto strRes = toString_RJS(runtime, thisValue);
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = toHandle(runtime, std::move(*strRes));
+
+  auto searchStrRes = toString_RJS(runtime, args.getArgHandle(0));
+  if (searchStrRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto searchStr = toHandle(runtime, std::move(*searchStrRes));
+
+  double pos;
+  if (reverse) {
+    auto intRes = toNumber_RJS(runtime, runtime->makeHandle(args.getArg(1)));
+    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    Handle<> numPos = runtime->makeHandle(intRes.getValue());
+    if (std::isnan(numPos->getNumber())) {
+      pos = std::numeric_limits<double>::infinity();
+    } else {
+      if (LLVM_UNLIKELY(
+              (intRes = toInteger(runtime, numPos)) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      pos = intRes->getNumber();
+    }
+  } else {
+    auto intRes = toInteger(runtime, runtime->makeHandle(args.getArg(1)));
+    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    pos = intRes->getNumber();
+  }
+
+  double len = S->getStringLength();
+  uint32_t start = static_cast<uint32_t>(std::min(std::max(pos, 0.), len));
+
+  // TODO: good candidate for Boyer-Moore on large needles/haystacks
+  // TODO: good candidate for memchr on length-1 needles
+  auto SView = StringPrimitive::createStringView(runtime, S);
+  auto searchStrView = StringPrimitive::createStringView(runtime, searchStr);
+  double ret = -1;
+  if (reverse) {
+    uint32_t lastPossibleMatchEnd =
+        std::min(SView.length(), start + searchStrView.length());
+    auto foundIter = std::search(
+        SView.rbegin() + (SView.length() - lastPossibleMatchEnd),
+        SView.rend(),
+        searchStrView.rbegin(),
+        searchStrView.rend());
+    if (foundIter != SView.rend() || searchStrView.empty()) {
+      ret = SView.rend() - foundIter - searchStrView.length();
+    }
+  } else {
+    auto foundIter = std::search(
+        SView.begin() + start,
+        SView.end(),
+        searchStrView.begin(),
+        searchStrView.end());
+    if (foundIter != SView.end() || searchStrView.empty()) {
+      ret = foundIter - SView.begin();
+    }
+  }
+  return HermesValue::encodeDoubleValue(ret);
+}
+
+CallResult<HermesValue>
+stringPrototypeIndexOf(void *, Runtime *runtime, NativeArgs args) {
+  return stringDirectedIndexOf(runtime, args, false);
+}
+
+CallResult<HermesValue>
+stringPrototypeLastIndexOf(void *, Runtime *runtime, NativeArgs args) {
+  return stringDirectedIndexOf(runtime, args, true);
+}
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
 } // namespace vm
