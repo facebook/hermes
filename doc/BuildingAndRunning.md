@@ -15,6 +15,10 @@ To install dependencies on Ubuntu:
 
     apt install cmake git ninja-build libicu-dev python zip libreadline-dev
 
+On Arch Linux:
+
+    pacman -S cmake git ninja icu python zip readline
+
 On Mac via Homebrew:
 
     brew install cmake git ninja
