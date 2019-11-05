@@ -69,7 +69,7 @@ print(new Date(-1, 2, 15, 15, 1, 37, 243).toString());
 print(new Date(NaN, 2, 15, 15, 1, 37, 243).toString());
 // CHECK-NEXT: Invalid Date
 print(new Date('2016T12:30').toString());
-// CHECK-NEXT: Fri Jan 01 2016 05:30:00 GMT-0700
+// CHECK-NEXT: Fri Jan 01 2016 12:30:00 GMT-0700
 
 print('@@toPrimitive');
 // CHECK-LABEL: @@toPrimitive
@@ -109,7 +109,7 @@ print(new Date(-1, 0, 0, 0, 0, 0).toUTCString());
 print('toJSON');
 // CHECK-LABEL: toJSON
 print(new Date('2016T12:30').toJSON());
-// CHECK-NEXT: 2016-01-01T12:30:00.000Z
+// CHECK-NEXT: 2016-01-01T19:30:00.000Z
 print(Date.prototype.toJSON.call({valueOf: function() {return Infinity;}}));
 // CHECK-NEXT: null
 try {
@@ -174,6 +174,8 @@ print(Date.parse('2016T12:30asdf'));
 // CHECK-NEXT: NaN
 print(Date.parse('2016T12:30Z-07:00'));
 // CHECK-NEXT: NaN
+print(Date.parse('2016T12:30Z-0700'));
+// CHECK-NEXT: NaN
 print(Date.parse('2016-+01T12:30Z'));
 // CHECK-NEXT: NaN
 print(Date.parse('2016T12:30:00.000-07:00asdf'));
@@ -191,7 +193,7 @@ print(Date.parse('2016T12:30:00.000Z'));
 print(Date.parse('2016'));
 // CHECK-NEXT: 1451606400000
 print(Date.parse('2016T12:30'));
-// CHECK-NEXT: 1451651400000
+// CHECK-NEXT: 1451676600000
 print(Date.parse('2016T12:30:00.000-07:00'));
 // CHECK-NEXT: 1451676600000
 print(Date.parse('2016T12:30:47.1-07:00'));
@@ -204,13 +206,43 @@ print(Date.parse('2016T12:30:47.1234-07:00'));
 // CHECK-NEXT: 1451676647123
 print(Date.parse('2016T12:30:47.760738998-07:00'));
 // CHECK-NEXT: 1451676647760
+print(Date.parse('2016T12:30:47.760738998-0700'));
+// CHECK-NEXT: 1451676647760
 print(Date.parse('2016T12:30:47.760-07:00') === Date.parse('2016T12:30:47.760738998-07:00'));
-+// CHECK-NEXT: true
+// CHECK-NEXT: true
+
+print(Date.parse('2016/01T12:30Z'));
+// CHECK-NEXT: 1451651400000
+print(Date.parse('2016/01/01T12:30Z'));
+// CHECK-NEXT: 1451651400000
+print((new Date('2017/02/15 15:01:37.243')).getTime());
+// CHECK-NEXT: 1487196097243
+print((new Date('2017/02/15 15:01:37.243')).getTime());
+// CHECK-NEXT: 1487196097243
+print((new Date('2017/02/15/15:01:37.243')).getTime());
+// CHECK-NEXT: 1487196097243
+print((new Date('2017/02/15T15:01:37.243')).getTime());
+// CHECK-NEXT: 1487196097243
+print((new Date('2017/02/15 15:01:37.243-0700')).getTime());
+// CHECK-NEXT: 1487196097243
+print((new Date('2017/02/15 15:01:37.243-07:00')).getTime());
+// CHECK-NEXT: 1487196097243
+print((new Date('2017/02/15 15:01:37.243-0700')).getHours());
+// CHECK-NEXT: 15
+print((new Date('2017/02/15 15:01:37.243-0700')).getMinutes());
+// CHECK-NEXT: 1
+print((new Date('2017/02/15 15:01:37.243-0700')).getSeconds());
+// CHECK-NEXT: 37
+print((new Date('2017/02/15/15/01:37.243-07:00')).getTime());
+// CHECK-NEXT: NaN
+
 print(Date.parse('Tue Jul 16 2019 13:15:25 GMT-0700 (Pacific Daylight Time)'));
 // CHECK-NEXT: 1563308125000
 print(Date.parse('Tue Jul 16 2019 13:15:25 GMT-0700'));
 // CHECK-NEXT: 1563308125000
 print(Date.parse('Tue Jul 16 2019 13:15:25 -0700'));
+// CHECK-NEXT: 1563308125000
+print(Date.parse('Tue Jul 16 2019 13:15:25 -07:00'));
 // CHECK-NEXT: 1563308125000
 print(Date.parse('Tue Jul 16 2019 13:15:25 GMT'));
 // CHECK-NEXT: 1563282925000
@@ -226,6 +258,8 @@ print(Date.parse('Mon Jul 16 2019 13:1525 GMT-0700'));
 // CHECK-NEXT: NaN
 print(Date.parse('Mon Jul 16 2019 13:1525 GMT'));
 // CHECK-NEXT: NaN
+print(Date.parse('Tue Jul 16 2019 13:15:25'));
+// CHECK-NEXT: 1563308125000
 
 // Quick check that getters work; internal functions are unit tested instead.
 print('getters');
