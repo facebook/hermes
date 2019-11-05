@@ -464,7 +464,7 @@ llvm::raw_ostream &operator<<(
   // Don't need to emit start time, since each time is output with respect to
   // the start time.
 
-  JSONEmitter json{os};
+  JSONEmitter json{os, /*pretty*/ true};
   {
     // Global section.
     json.openDict();
