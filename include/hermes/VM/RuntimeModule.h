@@ -402,11 +402,6 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   SymbolID
   mapStringMayAllocate(llvm::ArrayRef<T> str, StringID stringID, uint32_t hash);
 
-  /// Map the string at id \p stringID in the bytecode to \p rawSymbolID -- the
-  /// ID for a predefined string.  If the symbol ID does not correspond to a
-  /// predefined string, an assertion will be triggered (if they are enabled).
-  SymbolID mapPredefined(StringID stringID, uint32_t rawSymbolID);
-
   /// Create a symbol from a given \p stringID, which is an index to the
   /// string table, corresponding to the entry \p entry. If \p mhash is not
   /// None, use it as the hash; otherwise compute the hash from the string

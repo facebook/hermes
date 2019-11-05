@@ -16,10 +16,10 @@
 // BC-NO-CHANGE-NEXT:   s3[ASCII, {{.*}}]: main: foo.x =
 // BC-NO-CHANGE-NEXT:   s4[ASCII, {{.*}}]: main: init
 // BC-NO-CHANGE-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: alpha
-// BC-NO-CHANGE-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: loadSegment
+// BC-NO-CHANGE-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: context
 // BC-NO-CHANGE-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: x
-// BC-NO-CHANGE-NEXT:   p8[ASCII, {{.*}}] @{{.*}}: context
-// BC-NO-CHANGE-NEXT:   p9[ASCII, {{.*}}] @{{.*}}: print
+// BC-NO-CHANGE-NEXT:   i8[ASCII, {{.*}}] #{{.*}}: loadSegment
+// BC-NO-CHANGE-NEXT:   i9[ASCII, {{.*}}] #{{.*}}: print
 
 // BC-NO-CHANGE-LABEL: String count: 8
 // BC-NO-CHANGE-LABEL: Global String Table:
@@ -28,9 +28,9 @@
 // BC-NO-CHANGE-NEXT:   s2[ASCII, {{.*}}]: foo: bar.y =
 // BC-NO-CHANGE-NEXT:   s3[ASCII, {{.*}}]: foo: init
 // BC-NO-CHANGE-NEXT:   s4[ASCII, {{.*}}]: global
-// BC-NO-CHANGE-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: x
-// BC-NO-CHANGE-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: y
-// BC-NO-CHANGE-NEXT:   p7[ASCII, {{.*}}] @{{.*}}: print
+// BC-NO-CHANGE-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: print
+// BC-NO-CHANGE-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: x
+// BC-NO-CHANGE-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: y
 
 // BC-DELTA-LABEL: String count: 11
 // BC-DELTA-LABEL: Global String Table:
@@ -40,10 +40,10 @@
 // BC-DELTA-NEXT:   s3[ASCII, {{.*}}]: main: init
 // BC-DELTA-NEXT:   s4[ASCII, {{.*}}]: main_base: foo.x =
 // BC-DELTA-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: alpha
-// BC-DELTA-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: loadSegment
+// BC-DELTA-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: context
 // BC-DELTA-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: x
-// BC-DELTA-NEXT:   p8[ASCII, {{.*}}] @{{.*}}: context
-// BC-DELTA-NEXT:   p9[ASCII, {{.*}}] @{{.*}}: print
+// BC-DELTA-NEXT:   i8[ASCII, {{.*}}] #{{.*}}: loadSegment
+// BC-DELTA-NEXT:   i9[ASCII, {{.*}}] #{{.*}}: print
 // BC-DELTA-NEXT:   s10[ASCII, {{.*}}]: main: foo.x =
 
 // BC-DELTA-LABEL: String count: 9
@@ -53,8 +53,7 @@
 // BC-DELTA-NEXT:   s2[ASCII, {{.*}}]: foo: init
 // BC-DELTA-NEXT:   s3[ASCII, {{.*}}]: foo_base: bar.y =
 // BC-DELTA-NEXT:   s4[ASCII, {{.*}}]: global
-// BC-DELTA-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: x
-// BC-DELTA-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: y
-// BC-DELTA-NEXT:   p7[ASCII, {{.*}}] @{{.*}}: print
+// BC-DELTA-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: print
+// BC-DELTA-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: x
+// BC-DELTA-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: y
 // BC-DELTA-NEXT:   s8[ASCII, {{.*}}]: foo: bar.y =
-

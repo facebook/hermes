@@ -15,10 +15,11 @@ var z = [{}];
 //CHECK-NEXT:  s0[ASCII, {{[0-9]+\.\.[0-9]+}}]: bar
 //CHECK-NEXT:  s1[ASCII, {{[0-9]+\.\.[0-9]+}}]: foo
 //CHECK-NEXT:  s2[ASCII, {{[0-9]+\.\.[0-9]+}}]: global
-//CHECK-NEXT:  i3[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: x
-//CHECK-NEXT:  i4[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: y
-//CHECK-NEXT:  i5[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: z
-//CHECK-NEXT:  p6[ASCII, {{[0-9]+\.\.[0-9]+}}] @{{[0-9]+}}: length
+//CHECK-NEXT:  i3[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: length
+//CHECK-NEXT:  i4[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: x
+//CHECK-NEXT:  i5[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: y
+//CHECK-NEXT:  i6[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-Z]+}}: z
+
 
 //CHECK-LABEL:Array Buffer:
 //CHECK-NEXT:true

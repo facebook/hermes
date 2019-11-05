@@ -39,6 +39,7 @@ set(source_files
   LogFailStorageProvider.cpp
   HostModel.cpp
   Operations.cpp
+  PredefinedStringIDs.cpp
   PrimitiveBox.cpp
   Profiler.cpp
   Runtime.cpp Runtime-profilers.cpp

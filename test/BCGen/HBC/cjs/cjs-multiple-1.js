@@ -33,7 +33,7 @@ print('module 1');
 // STATIC-NEXT: s1[ASCII, {{.*}}]: module 1
 // STATIC-NEXT: s2[ASCII, {{.*}}]: global
 // STATIC-NEXT: s3[ASCII, {{.*}}]: module 2
-// STATIC-NEXT: p4[ASCII, {{.*}}] @{{[0-9]+}}: print
+// STATIC-NEXT: i4[ASCII, {{.*}}] #{{[0-9A-F]+}}: print
 // STATIC-NOT: cjs-multiple-1
 // STATIC: CommonJS Modules (Static):
 // STATIC-NEXT:  Module index 0 -> function ID 1

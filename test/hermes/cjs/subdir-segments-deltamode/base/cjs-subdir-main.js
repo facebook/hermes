@@ -25,10 +25,10 @@ print('main_base: foo.x =', foo.x);
 // BC-NEXT:   s3[ASCII, {{.*}}]: main: init
 // BC-NEXT:   s4[ASCII, {{.*}}]: main_base: foo.x =
 // BC-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: alpha
-// BC-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: loadSegment
+// BC-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: context
 // BC-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: x
-// BC-NEXT:   p8[ASCII, {{.*}}] @{{.*}}: context
-// BC-NEXT:   p9[ASCII, {{.*}}] @{{.*}}: print
+// BC-NEXT:   i8[ASCII, {{.*}}] #{{.*}}: loadSegment
+// BC-NEXT:   i9[ASCII, {{.*}}] #{{.*}}: print
 
 // BC-LABEL: String count: 8
 // BC-LABEL: Global String Table:
@@ -37,7 +37,6 @@ print('main_base: foo.x =', foo.x);
 // BC-NEXT:   s2[ASCII, {{.*}}]: foo: init
 // BC-NEXT:   s3[ASCII, {{.*}}]: foo_base: bar.y =
 // BC-NEXT:   s4[ASCII, {{.*}}]: global
-// BC-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: x
-// BC-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: y
-// BC-NEXT:   p7[ASCII, {{.*}}] @{{.*}}: print
-
+// BC-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: print
+// BC-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: x
+// BC-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: y

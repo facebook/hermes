@@ -13,7 +13,6 @@
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/HBC.h"
-#include "hermes/BCGen/HBC/PredefinedStringIDs.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IRGen/IRGen.h"
@@ -38,6 +37,7 @@
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PointerBase.h"
+#include "hermes/VM/PredefinedStringIDs.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -1129,9 +1129,9 @@ std::unique_ptr<Buffer> Runtime::generateSpecialRuntimeBytecode() {
 void Runtime::initPredefinedStrings() {
   assert(!getTopGCScope() && "There shouldn't be any handles allocated yet");
 
-  auto buffer = hermes::hbc::predefStringAndSymbolChars;
-  auto strLengths = hermes::hbc::predefStringLengths;
-  auto symLengths = hermes::hbc::predefSymbolLengths;
+  auto buffer = predefStringAndSymbolChars;
+  auto strLengths = predefStringLengths;
+  auto symLengths = predefSymbolLengths;
 
   static const uint32_t hashes[] = {
 #define STR(name, string) constexprHashString(string),

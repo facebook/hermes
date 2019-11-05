@@ -15,7 +15,7 @@ function foo(x) {
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:{{.*}} GetGlobalObject 0<Reg8>
 //CHECK-NEXT:{{.*}} GetByIdShort 2<Reg8>, 0<Reg8>, 1<UInt8>, 2<UInt8>
-//CHECK-NEXT:{{.*}} GetByIdShort 0<Reg8>, 2<Reg8>, 2<UInt8>, 4<UInt8>
+//CHECK-NEXT:{{.*}} GetByIdShort 0<Reg8>, 2<Reg8>, 2<UInt8>, 3<UInt8>
 //CHECK-NEXT:{{.*}} CreateThis 1<Reg8>, 0<Reg8>, 2<Reg8>
 //CHECK-NEXT:{{.*}} LoadConstUInt8 3<Reg8>, 1<UInt8>
 //CHECK-NEXT:{{.*}} Mov 4<Reg8>, 1<Reg8>

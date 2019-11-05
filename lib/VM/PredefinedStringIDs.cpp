@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/BCGen/HBC/PredefinedStringIDs.h"
+#include "hermes/VM/PredefinedStringIDs.h"
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/SymbolID.h"
 
@@ -21,7 +21,7 @@ using StringIDMap = llvm::DenseMap<llvm::StringRef, SymbolID>;
 
 StringIDMap createPredefinedStringSet() {
   namespace P = Predefined;
-  auto lengths = hermes::hbc::predefStringLengths;
+  auto lengths = predefStringLengths;
   const size_t NumPredefStrings = P::NumStrings;
 
   static const Predefined::Str ids[] = {
@@ -34,7 +34,7 @@ StringIDMap createPredefinedStringSet() {
   assert(
       NumPredefStrings == sizeof(ids) / sizeof(Predefined::Str) &&
       "Mismatched count of predefined strings.");
-  const char *chars = hermes::hbc::predefStringAndSymbolChars.begin();
+  const char *chars = predefStringAndSymbolChars.begin();
   for (uint32_t i = 0; i < NumPredefStrings; chars += lengths[i++]) {
     auto res = predefined.try_emplace(
         {chars, lengths[i]}, Predefined::getSymbolID(ids[i]));
@@ -48,7 +48,7 @@ StringIDMap createPredefinedStringSet() {
 } // namespace
 
 namespace hermes {
-namespace hbc {
+namespace vm {
 
 llvm::Optional<SymbolID> getPredefinedStringID(llvm::StringRef str) {
   static const auto predefined = createPredefinedStringSet();
@@ -84,5 +84,5 @@ const llvm::ArrayRef<char> predefStringAndSymbolChars =
 #include "hermes/VM/PredefinedSymbols.def"
     ;
 
-} // namespace hbc
+} // namespace vm
 } // namespace hermes

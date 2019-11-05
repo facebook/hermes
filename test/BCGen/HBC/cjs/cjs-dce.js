@@ -27,7 +27,7 @@ foo();
 // CHECK-NEXT:   s2[ASCII, {{.*}}]: cjs-dce.js
 // CHECK-NEXT:   s3[ASCII, {{.*}}]: cjs_module
 // CHECK-NEXT:   s4[ASCII, {{.*}}]: global
-// CHECK-NEXT:   p5[ASCII, {{.*}}] @{{[0-9]+}}: encodeURIComponent
+// CHECK-NEXT:   i5[ASCII, {{.*}}] #{{[0-9A-F]+}}: encodeURIComponent
 
 // CHECK: CommonJS Modules:
 // CHECK-NEXT:   File ID 2 -> function ID 1

@@ -105,8 +105,6 @@ const char *stringKindTag(StringKind::Kind kind) {
       return "s";
     case StringKind::Identifier:
       return "i";
-    case StringKind::Predefined:
-      return "p";
   }
 
   llvm_unreachable("Unrecognised String Kind.");
@@ -178,9 +176,6 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
           OS << " #"
              << llvm::format_hex_no_prefix(
                     translations[trnID++], 8, /* Upper */ true);
-          break;
-        case StringKind::Predefined:
-          OS << " @" << translations[trnID++];
           break;
 
         default:

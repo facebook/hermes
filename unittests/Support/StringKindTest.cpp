@@ -19,13 +19,11 @@ TEST(StringKindTest, Accumulator) {
   acc.push_back(StringKind::String);
   acc.push_back(StringKind::String);
   acc.push_back(StringKind::String);
-  acc.push_back(StringKind::Predefined);
   acc.push_back(StringKind::Identifier);
   acc.push_back(StringKind::Identifier);
 
   std::vector<StringKind::Entry> expected{
       {StringKind::String, 3},
-      {StringKind::Predefined, 1},
       {StringKind::Identifier, 2},
   };
 

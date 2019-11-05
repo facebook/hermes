@@ -261,12 +261,6 @@ void RuntimeModule::importStringIDMapMayAllocate() {
                 translations[trnID]);
           }
           break;
-
-        case StringKind::Predefined:
-          for (uint32_t i = 0; i < entry.count(); ++i, ++strID, ++trnID) {
-            mapPredefined(strID, translations[trnID]);
-          }
-          break;
       }
     }
 
@@ -360,14 +354,6 @@ SymbolID RuntimeModule::mapStringMayAllocate(
     id = *runtime_->ignoreAllocationFailure(
         runtime_->getIdentifierTable().getSymbolHandle(runtime_, str, hash));
   }
-  stringIDMap_[stringID] = id;
-  return id;
-}
-
-SymbolID RuntimeModule::mapPredefined(StringID stringID, uint32_t rawSymbolID) {
-  SymbolID id = SymbolID::unsafeCreate(rawSymbolID);
-  assert(Predefined::isPredefined(id));
-
   stringIDMap_[stringID] = id;
   return id;
 }

@@ -6,7 +6,6 @@
  */
 
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
-#include "hermes/BCGen/HBC/PredefinedStringIDs.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/RegExpSerialization.h"
@@ -644,16 +643,6 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
   }
 }
 
-TEST(PredefinedStringIDTest, NonExistent) {
-  EXPECT_FALSE(hbc::getPredefinedStringID("not_a_predefined_string"));
-}
-
-TEST(PredefinedStringIDTest, ObjectString) {
-  EXPECT_EQ(
-      vm::Predefined::getSymbolID(vm::Predefined::Object),
-      hbc::getPredefinedStringID("Object"));
-}
-
 TEST(StringAccumulatorTest, Ordering) {
   // When outputing a string storage instance, the accumulator sorts its index
   // entries.  First strings get grouped into "frequency classes".  The first
@@ -664,8 +653,7 @@ TEST(StringAccumulatorTest, Ordering) {
   // the given order):
   //
   // - Strings that are not identifiers.
-  // - Strings that are identifiers but are not predefined.
-  // - Strings that are both identifiers and predefined.
+  // - Strings that are identifiers.
   //
   // Finally, within each category, strings are sorted first by the offset of
   // their character buffer in the string storage, and then by their size.
@@ -674,41 +662,28 @@ TEST(StringAccumulatorTest, Ordering) {
 
   hbc::UniquingStringLiteralAccumulator USLA;
 
-  // Make sure we have some predefined strings to play with.
-  ASSERT_TRUE(hbc::getPredefinedStringID("Object"));
-  ASSERT_TRUE(hbc::getPredefinedStringID("Function"));
-  ASSERT_TRUE(hbc::getPredefinedStringID("String"));
-
-  // ...And some not predefined strings too.
-  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefStr0"));
-  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefStr1"));
-  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefStr2"));
-  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefId0"));
-  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefId1"));
-  ASSERT_FALSE(hbc::getPredefinedStringID("NoPredefId2"));
-
   USLA.addString("Object", /* isIdentifier */ true);
   USLA.addString("String", /* isIdentifier */ false);
-  USLA.addString("NoPredefId0", /* isIdentifier */ true);
-  USLA.addString("NoPredefStr0", /* isIdentifier */ false);
-  USLA.addString("NoPredefStr1", /* isIdentifier */ false);
-  USLA.addString("NoPredefId1", /* isIdentifier */ true);
+  USLA.addString("Id0", /* isIdentifier */ true);
+  USLA.addString("Str0", /* isIdentifier */ false);
+  USLA.addString("Str1", /* isIdentifier */ false);
+  USLA.addString("Id1", /* isIdentifier */ true);
   USLA.addString("Function", /* isIdentifier */ true);
-  USLA.addString("NoPredefStr2", /* isIdentifier */ false);
-  USLA.addString("NoPredefId2", /* isIdentifier */ true);
+  USLA.addString("Str2", /* isIdentifier */ false);
+  USLA.addString("Id2", /* isIdentifier */ true);
 
   auto SLT = hbc::UniquingStringLiteralAccumulator::toTable(
       std::move(USLA), /* optimize */ false);
 
   std::vector<llvm::StringRef> expectedStrings{
-      "NoPredefStr0",
-      "NoPredefStr1",
-      "NoPredefStr2",
+      "Str0",
+      "Str1",
+      "Str2",
       "String",
-      "NoPredefId0",
-      "NoPredefId1",
-      "NoPredefId2",
       "Function",
+      "Id0",
+      "Id1",
+      "Id2",
       "Object",
   };
 
@@ -718,8 +693,7 @@ TEST(StringAccumulatorTest, Ordering) {
 
   std::vector<StringKind::Entry> expectedKinds{
       {StringKind::String, 4},
-      {StringKind::Identifier, 3},
-      {StringKind::Predefined, 2},
+      {StringKind::Identifier, 5},
   };
 
   auto actualKinds = SLT.getStringKinds();

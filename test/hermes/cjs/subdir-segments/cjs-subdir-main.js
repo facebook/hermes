@@ -33,15 +33,16 @@ print(require('./cjs-subdir-2.js').alpha);
 
 // BC-LABEL: String count: 9
 // BC-LABEL: Global String Table:
-// BC-NEXT: s0[ASCII, 0..9]: cjs_module
-// BC-NEXT: s1[ASCII, 10..15]: global
-// BC-NEXT: s2[ASCII, 19..31]: main: foo.x =
-// BC-NEXT: s3[ASCII, 32..41]: main: init
-// BC-NEXT: i4[ASCII, 14..18] #{{.*}}: alpha
-// BC-NEXT: i5[ASCII, 42..52] #{{.*}}: loadSegment
-// BC-NEXT: i6[ASCII, 58..58] #{{.*}}: x
-// BC-NEXT: p7[ASCII, 53..59] @{{.*}}: context
-// BC-NEXT: p8[ASCII, 60..64] @{{.*}}: print
+
+// BC-NEXT:   s0[ASCII, {{.*}}]: cjs_module
+// BC-NEXT:   s1[ASCII, {{.*}}]: global
+// BC-NEXT:   s2[ASCII, {{.*}}]: main: foo.x =
+// BC-NEXT:   s3[ASCII, {{.*}}]: main: init
+// BC-NEXT:   i4[ASCII, {{.*}}] #{{.*}}: alpha
+// BC-NEXT:   i5[ASCII, {{.*}}] #{{.*}}: context
+// BC-NEXT:   i6[ASCII, {{.*}}] #{{.*}}: x
+// BC-NEXT:   i7[ASCII, {{.*}}] #{{.*}}: loadSegment
+// BC-NEXT:   i8[ASCII, {{.*}}] #{{.*}}: print
 
 // BC10-LABEL: CommonJS Modules (Static):
 // BC10-NEXT: Module index 0 -> function ID 1

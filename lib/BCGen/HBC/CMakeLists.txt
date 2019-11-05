@@ -18,7 +18,6 @@ add_llvm_library(hermesHBCBackend
   ConsecutiveStringStorage.cpp
   DebugInfo.cpp
   Passes.cpp
-  PredefinedStringIDs.cpp
   SerializedLiteralGenerator.cpp
   SerializedLiteralParserBase.cpp
   SimpleBytecodeBuilder.cpp

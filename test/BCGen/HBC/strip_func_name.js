@@ -11,9 +11,9 @@
 //CHECK-NEXT: s0[ASCII, {{[0-9]+\.\.[0-9]+}}]: Done
 //CHECK-NEXT: s1[ASCII, {{[0-9]+\.\.[0-9]+}}]: abc
 //CHECK-NEXT: s2[ASCII, {{[0-9]+\.\.[0-9]+}}]: function-name-stripped
-//CHECK-NEXT: p3[ASCII, {{[0-9]+\.\.[0-9]+}}] @{{[0-9]+}}: length
-//CHECK-NEXT: p4[ASCII, {{[0-9]+\.\.[0-9]+}}] @{{[0-9]+}}: print
-//CHECK-NEXT: p5[ASCII, {{[0-9]+\.\.[0-9]+}}] @{{[0-9]+}}: substring
+//CHECK-NEXT: i3[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-F]+}}: length
+//CHECK-NEXT: i4[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-F]+}}: print
+//CHECK-NEXT: i5[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-F]+}}: substring
 
 //CHECK-LABEL:Function<function-name-stripped>{{.*}}:
 //CHECK-NOT:{{.*}}global{{.*}}

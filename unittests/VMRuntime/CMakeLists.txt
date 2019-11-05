@@ -54,7 +54,6 @@ set(RTSources
   ObjectBufferTest.cpp
   ObjectModelTest.cpp
   OperationsTest.cpp
-  PredefinedStrings.lock
   PredefinedStringsTest.cpp
   HandleTest.cpp
   RuntimeConfigTest.cpp
