@@ -33,6 +33,7 @@ class VariableSizeRuntimeCell;
 ///   ...
 template <class C>
 static constexpr uint32_t cellSize() {
+  static_assert(HeapAlign % alignof(C) == 0, "insufficient heap alignment");
   return C::template cellSizeImpl<C>();
 }
 
