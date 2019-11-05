@@ -22,6 +22,7 @@ namespace vm {
 /// passed into the Runtime so it returns the same sequence of values for the
 /// specified calls.
 struct MockedEnvironment final {
+  // Zero is assumed to be an invalid random seed in several places.
   std::minstd_rand::result_type mathRandomSeed{0};
   std::deque<uint64_t> callsToDateNow;
   std::deque<uint64_t> callsToNewDate;

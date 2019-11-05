@@ -418,7 +418,11 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
     double finalDate;
 
     if (argCount == 0) {
-      if (storage->env && !storage->env->callsToNewDate.empty()) {
+      if (storage->env) {
+        if (storage->env->callsToNewDate.empty()) {
+          return runtime->raiseTypeError(
+              "Replay of new Date() ran out of traced values");
+        }
         finalDate = storage->env->callsToNewDate.front();
         storage->env->callsToNewDate.pop_front();
       } else {
@@ -473,7 +477,11 @@ dateConstructor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   llvm::SmallString<32> str{};
-  if (storage->env && !storage->env->callsToDateAsFunction.empty()) {
+  if (storage->env) {
+    if (storage->env->callsToDateAsFunction.empty()) {
+      return runtime->raiseTypeError(
+          "Replay of Date() ran out of traced values");
+    }
     str = storage->env->callsToDateAsFunction.front();
     storage->env->callsToDateAsFunction.pop_front();
   } else {
@@ -525,7 +533,11 @@ CallResult<HermesValue> dateUTC(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue> dateNow(void *, Runtime *runtime, NativeArgs args) {
   double t = curTime();
   auto *const storage = runtime->getCommonStorage();
-  if (storage->env && !storage->env->callsToDateNow.empty()) {
+  if (storage->env) {
+    if (storage->env->callsToDateNow.empty()) {
+      return runtime->raiseTypeError(
+          "Replay of Date.now() ran out of traced values");
+    }
     t = storage->env->callsToDateNow.front();
     storage->env->callsToDateNow.pop_front();
   }

@@ -1013,13 +1013,6 @@ TEST_F(JSLibMockedEnvironmentTest, MockedEnvironment) {
     ASSERT_NE(val, ExecutionStatus::EXCEPTION)
         << "Exception executing the call on Date.now()";
     EXPECT_EQ(val.getValue().getNumberAs<uint64_t>(), dateNow);
-    // Call a second time, which will fall back to the original implementation.
-    val =
-        Callable::executeCall0(nowFunc, runtime, Runtime::getUndefinedValue());
-    ASSERT_NE(val, ExecutionStatus::EXCEPTION)
-        << "Exception executing the call on Date.now()";
-    // Store that in the calls list for a comparison.
-    dateNowColl.push_back(val.getValue().getNumberAs<uint64_t>());
 
     // Call new Date()
     val = Callable::executeConstruct0(dateFunc, runtime);
