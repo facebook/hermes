@@ -245,8 +245,6 @@ class MallocGC final : public GCBase {
   /// \pre \p init should not be empty or a native value.
   WeakRefSlot *allocWeakSlot(HermesValue init);
 
-  /// Marks a weak reference as being in use.
-  void markWeakRef(WeakRefBase &wr);
 #ifndef NDEBUG
   /// \return Number of weak ref slots currently in use.
   /// Inefficient. For testing/debugging.

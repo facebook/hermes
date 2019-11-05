@@ -118,7 +118,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   }
 
   void accept(WeakRefBase &wr) override {
-    gc.markWeakRef(wr);
+    wr.unsafeGetSlot()->mark();
   }
 };
 
@@ -454,10 +454,6 @@ void MallocGC::updateWeakReferences() {
 WeakRefSlot *MallocGC::allocWeakSlot(HermesValue init) {
   weakPointers_.push_back({init});
   return &weakPointers_.back();
-}
-
-void MallocGC::markWeakRef(WeakRefBase &wr) {
-  wr.unsafeGetSlot()->mark();
 }
 
 void MallocGC::freeWeakSlot(WeakRefSlot *slot) {

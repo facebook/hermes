@@ -726,13 +726,6 @@ void GenGC::markSymbol(SymbolID symbolID) {
 #endif
 }
 
-void GenGC::markWeakRef(WeakRefBase &wr) {
-  assert(
-      wr.unsafeGetSlot()->state() != WeakSlotState::Free &&
-      "marking a freed weak ref slot");
-  wr.unsafeGetSlot()->mark();
-}
-
 #ifdef HERMES_SLOW_DEBUG
 void GenGC::checkWellFormedHeap() const {
   segmentIndex_.checkConsistency();

@@ -291,8 +291,6 @@ class GenGC final : public GCBase {
   /// The largest the size of this heap could ever grow to.
   inline size_t maxSize() const;
 
-  /// Mark a weak reference as being used.
-  void markWeakRef(WeakRefBase &wr);
 #ifndef NDEBUG
   /// \return Number of weak ref slots currently in use.
   /// Inefficient. For testing/debugging.
