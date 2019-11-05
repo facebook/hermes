@@ -381,7 +381,11 @@ void TracingHermesRuntime::writeTrace(llvm::raw_ostream &os) const {
 void TracingHermesRuntime::writeBridgeTrafficTraceToFile(
     const std::string &fileName) const {
   std::error_code ec;
-  llvm::raw_fd_ostream fs{fileName.c_str(), ec, llvm::sys::fs::F_Text};
+  llvm::raw_fd_ostream fs{fileName.c_str(),
+                          ec,
+                          llvm::sys::fs::CD_CreateAlways,
+                          llvm::sys::fs::FA_Write,
+                          llvm::sys::fs::OF_Text};
   if (ec) {
     throw std::system_error(ec);
   }

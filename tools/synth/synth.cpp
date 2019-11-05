@@ -171,7 +171,11 @@ int main(int argc, char **argv) {
       options.shouldPrintGCStats = false;
       options.shouldTrackIO = false;
       std::error_code ec;
-      llvm::raw_fd_ostream os(cl::Trace.c_str(), ec, llvm::sys::fs::F_Text);
+      llvm::raw_fd_ostream os{cl::Trace.c_str(),
+                              ec,
+                              llvm::sys::fs::CD_CreateAlways,
+                              llvm::sys::fs::FA_Write,
+                              llvm::sys::fs::OF_Text};
       if (ec) {
         throw std::system_error(ec);
       }
