@@ -744,6 +744,7 @@ static double parseISODate(StringView u16str) {
 
   // See if need to adjust timezone
   bool adjustTZ = false;
+  bool onlyYear = false;
 
   auto consume = [&](char16_t ch) {
     if (it != end && *it == ch) {
@@ -764,6 +765,12 @@ static double parseISODate(StringView u16str) {
     return nan;
   }
   y *= sign;
+
+  if (it == end) {
+    onlyYear = true;
+  } else if (consume(' ')) {
+    onlyYear = false;
+  }
 
   // Assign separator character value, default '-'
   char16_t sepChr = u'-';
@@ -848,7 +855,7 @@ static double parseISODate(StringView u16str) {
     } else if (it == end) {
       adjustTZ = true;
     }
-  } else {
+  } else if (!onlyYear) {
     adjustTZ = true;
   }
 

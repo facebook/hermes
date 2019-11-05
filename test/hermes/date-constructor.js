@@ -192,6 +192,8 @@ print(Date.parse('2016T12:30:00.000Z'));
 // CHECK-NEXT: 1451651400000
 print(Date.parse('2016'));
 // CHECK-NEXT: 1451606400000
+print(Date.parse('2016 '));
+// CHECK-NEXT: 1451631600000
 print(Date.parse('2016T12:30'));
 // CHECK-NEXT: 1451676600000
 print(Date.parse('2016T12:30:00.000-07:00'));
