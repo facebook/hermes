@@ -288,6 +288,11 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime);
 CallResult<Handle<JSRegExp>>
 regExpCreate(Runtime *runtime, Handle<> P, Handle<> F);
 
+/// ES6.0 21.2.5.2.1
+/// Implemented in RegExp.cpp
+CallResult<HermesValue>
+regExpExec(Runtime *runtime, Handle<JSObject> R, Handle<StringPrimitive> S);
+
 /// Runs the RegExp.prototype.exec() function (ES5.1 15.10.6.2)
 /// with a this value of \p regexp, with the argument \p S.
 /// \return a new array as the result, null pointer if there were no matches.

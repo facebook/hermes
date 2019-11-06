@@ -1037,6 +1037,21 @@ hermesInternalRegExpCreate(void *, Runtime *runtime, NativeArgs args) {
 }
 
 /// \code
+///   HermesInternal.regExpExec = function (regexp, str) {}
+/// \encode
+/// Returns the result of executing RegExp object regexp on string str.
+CallResult<HermesValue>
+hermesInternalRegExpExec(void *, Runtime *runtime, NativeArgs args) {
+  auto regexp = args.dyncastArg<JSObject>(0);
+  auto str = args.dyncastArg<StringPrimitive>(1);
+  if (!regexp || !str) {
+    return runtime->raiseTypeError(
+        "Arguments of regExpExec should be an Object and a String");
+  }
+  return regExpExec(runtime, regexp, str);
+}
+
+/// \code
 ///   HermesInternal.searchString =
 ///     function (source, substr, reverse, startOffset, endOffset) {}
 /// \endcode
@@ -1211,6 +1226,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethodAndSymbol(
       "jsArraySetElementAt", hermesInternalJSArraySetElementAt);
   defineInternMethodAndSymbol("regExpCreate", hermesInternalRegExpCreate);
+  defineInternMethodAndSymbol("regExpExec", hermesInternalRegExpExec);
   defineInternMethodAndSymbol("searchString", hermesInternalSearchString);
   defineInternMethodAndSymbol("toInteger", hermesInternalToInteger);
   defineInternMethodAndSymbol("toLength", hermesInternalToLength);

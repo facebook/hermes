@@ -40,6 +40,7 @@ set(js_lib_sources
   Number.js
   Array.js
   String.js
+  RegExp.js
   footer.js
 )
 
