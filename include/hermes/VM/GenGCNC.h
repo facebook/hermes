@@ -119,6 +119,8 @@ class GenGC final : public GCBase {
       std::shared_ptr<CrashManager> crashMgr,
       StorageProvider *provider);
 
+  ~GenGC();
+
   /// Allocate a new cell of the specified size \p size.
   /// If necessary perform a GC cycle, which may potentially move allocated
   /// objects.
@@ -859,6 +861,12 @@ class GenGC final : public GCBase {
   /// full collections.
   gcheapsize_t cumPreBytes_ = 0;
   gcheapsize_t cumPostBytes_ = 0;
+
+#ifdef HERMES_SLOW_DEBUG
+  /// We increment this on every (SLOW_DEBUG) allocation.  The purpose is to
+  // double-check our more-efficient (per YG GC) allocated bytes calculation.
+  uint64_t totalAllocatedBytesDebug_ = 0;
+#endif
 };
 
 // A special vmcast implementation used during GC.  At some points
@@ -877,6 +885,9 @@ ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
 
 template <bool fixedSize, HasFinalizer hasFinalizer>
 inline void *GenGC::alloc(uint32_t sz) {
+#ifdef HERMES_SLOW_DEBUG
+  totalAllocatedBytesDebug_ += heapAlignSize(sz);
+#endif
   if (shouldSanitizeHandles()) {
     // In order to get the maximum benefit of sanitization, the entire heap
     // should be moved and poisoned with ASAN to force errors to occur.
@@ -909,6 +920,9 @@ inline void *GenGC::alloc(uint32_t sz) {
 
 template <HasFinalizer hasFinalizer>
 inline void *GenGC::allocLongLived(uint32_t size) {
+#ifdef HERMES_SLOW_DEBUG
+  totalAllocatedBytesDebug_ += heapAlignSize(size);
+#endif
   if (shouldSanitizeHandles()) {
     // In order to get the maximum benefit of sanitization, the entire heap
     // should be moved and poisoned with ASAN to force errors to occur.

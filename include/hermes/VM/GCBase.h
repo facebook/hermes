@@ -258,7 +258,7 @@ class GCBase {
     /// Number of garbage collections (of any kind) since creation.
     unsigned numCollections{0};
     /// Total (cumulative) bytes allocated within the JS heap since creation.
-    unsigned totalAllocatedBytes{0};
+    uint64_t totalAllocatedBytes{0};
     /// Number of currently allocated bytes within the JS heap. Some may be
     /// in unreachable objects (unless a full collection just occurred).
     gcheapsize_t allocatedBytes{0};

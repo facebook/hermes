@@ -120,6 +120,17 @@ GenGC::GenGC(
   updateCrashManagerHeapExtents();
 }
 
+GenGC::~GenGC() {
+#ifdef HERMES_SLOW_DEBUG
+  // Verify that the efficient method of counting allocated bytes
+  // (updating at YG collections) matches a dead-simple per-allocation
+  // counter.
+  HeapInfo info;
+  getHeapInfo(info);
+  assert(info.totalAllocatedBytes == totalAllocatedBytesDebug_);
+#endif
+}
+
 #ifndef NDEBUG
 AllocResult
 GenGC::debugAlloc(uint32_t sz, HasFinalizer hasFinalizer, bool fixedSize) {
