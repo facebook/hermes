@@ -54,11 +54,11 @@ void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 #ifdef HERMESVM_SERIALIZE
 JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
-  size_t size = d.readInt<size_t>();
-  bytecode_ = d.readArrayRef<uint8_t>(size);
-  // bytecode_.begin() is tracked by IDTracker for heapsnapshot. We should do
+  uint32_t size = d.readInt<uint32_t>();
+  initializeBytecode(d.readArrayRef<uint8_t>(size), d.getRuntime());
+  // bytecode_ is tracked by IDTracker for heapsnapshot. We should do
   // relocation for it.
-  d.endObject(bytecode_.begin());
+  d.endObject(bytecode_);
 
   d.readData(&flagBits_, sizeof(flagBits_));
 }
@@ -66,11 +66,11 @@ JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
 void RegExpSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSRegExp>(cell);
   JSObject::serializeObjectImpl(s, cell);
-  s.writeInt<size_t>(self->bytecode_.size());
-  s.writeData(self->bytecode_.begin(), self->bytecode_.size());
-  // bytecode_.begin() is tracked by IDTracker for heapsnapshot. We should do
+  s.writeInt<uint32_t>(self->bytecodeSize_);
+  s.writeData(self->bytecode_, self->bytecodeSize_);
+  // bytecode_ is tracked by IDTracker for heapsnapshot. We should do
   // relocation for it.
-  s.endObject(self->bytecode_.begin());
+  s.endObject(self->bytecode_);
 
   s.writeData(&self->flagBits_, sizeof(self->flagBits_));
 
@@ -153,7 +153,7 @@ ExecutionStatus JSRegExp::initialize(
       "defineOwnProperty() failed");
 
   if (bytecode) {
-    selfHandle->bytecode_ = *bytecode;
+    return selfHandle->initializeBytecode(*bytecode, runtime);
   } else {
     regex::constants::SyntaxFlags nativeFlags = {};
     if (fbits->ignoreCase)
@@ -178,9 +178,22 @@ ExecutionStatus JSRegExp::initialize(
       return ExecutionStatus::EXCEPTION;
     }
     // The regex is valid. Compile and store its bytecode.
-    selfHandle->bytecode_ = llvm::makeArrayRef(regex.compile());
+    auto bytecode = regex.compile();
+    return selfHandle->initializeBytecode(bytecode, runtime);
   }
+}
 
+ExecutionStatus JSRegExp::initializeBytecode(
+    llvm::ArrayRef<uint8_t> bytecode,
+    Runtime *runtime) {
+  size_t sz = bytecode.size();
+  if (sz > std::numeric_limits<decltype(bytecodeSize_)>::max()) {
+    runtime->raiseRangeError("RegExp size overflow");
+    return ExecutionStatus::EXCEPTION;
+  }
+  bytecodeSize_ = sz;
+  bytecode_ = (uint8_t *)checkedMalloc(sz);
+  memcpy(bytecode_, bytecode.data(), sz);
   return ExecutionStatus::RETURNED;
 }
 
@@ -276,7 +289,7 @@ CallResult<RegExpMatch> JSRegExp::search(
     Runtime *runtime,
     Handle<StringPrimitive> strHandle,
     uint32_t searchStartOffset) {
-  assert(!selfHandle->bytecode_.empty() && "Missing bytecode");
+  assert(selfHandle->bytecode_ && "Missing bytecode");
   auto input = StringPrimitive::createStringView(runtime, strHandle);
 
   // Note we may still have a match if searchStartOffset == str.size(),
@@ -298,7 +311,7 @@ CallResult<RegExpMatch> JSRegExp::search(
     matchFlags |= regex::constants::matchInputAllAscii;
     matchResult = performSearch<char, regex::ASCIIRegexTraits>(
         runtime,
-        selfHandle->bytecode_,
+        llvm::makeArrayRef(selfHandle->bytecode_, selfHandle->bytecodeSize_),
         input.castToCharPtr(),
         input.length(),
         searchStartOffset,
@@ -306,7 +319,7 @@ CallResult<RegExpMatch> JSRegExp::search(
   } else {
     matchResult = performSearch<char16_t, regex::UTF16RegexTraits>(
         runtime,
-        selfHandle->bytecode_,
+        llvm::makeArrayRef(selfHandle->bytecode_, selfHandle->bytecodeSize_),
         input.castToChar16Ptr(),
         input.length(),
         searchStartOffset,
@@ -324,6 +337,10 @@ CallResult<RegExpMatch> JSRegExp::search(
   return matchResult;
 }
 
+JSRegExp::~JSRegExp() {
+  free(bytecode_);
+}
+
 void JSRegExp::_finalizeImpl(GCCell *cell, GC *) {
   JSRegExp *self = vmcast<JSRegExp>(cell);
   self->~JSRegExp();
@@ -331,7 +348,7 @@ void JSRegExp::_finalizeImpl(GCCell *cell, GC *) {
 
 size_t JSRegExp::_mallocSizeImpl(GCCell *cell) {
   auto *self = vmcast<JSRegExp>(cell);
-  return self->bytecode_.capacity_in_bytes();
+  return self->bytecodeSize_;
 }
 
 std::string JSRegExp::_snapshotNameImpl(GCCell *cell, GC *gc) {
@@ -343,26 +360,25 @@ void JSRegExp::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
   auto *const self = vmcast<JSRegExp>(cell);
   // Call the super type to add any other custom edges.
   JSObject::_snapshotAddEdgesImpl(self, gc, snap);
-  if (!self->bytecode_.empty()) {
+  if (self->bytecode_) {
     snap.addNamedEdge(
         HeapSnapshot::EdgeType::Internal,
         "bytecode",
-        gc->getNativeID(self->bytecode_.begin()));
+        gc->getNativeID(self->bytecode_));
   }
 }
 
 void JSRegExp::_snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
   auto *const self = vmcast<JSRegExp>(cell);
-  if (!self->bytecode_.empty()) {
+  if (self->bytecode_) {
     // Add a native node for regex bytecode, to account for native size directly
     // owned by the regex.
     snap.beginNode();
     snap.endNode(
         HeapSnapshot::NodeType::Native,
         "RegExpBytecode",
-        // begin is the internal pointer stored by CopyableVector.
-        gc->getNativeID(self->bytecode_.begin()),
-        self->bytecode_.capacity() * sizeof(uint8_t));
+        gc->getNativeID(self->bytecode_),
+        self->bytecodeSize_);
   }
 }
 

@@ -8,7 +8,6 @@
 #ifndef HERMES_VM_JSREGEXP_H
 #define HERMES_VM_JSREGEXP_H
 
-#include "hermes/VM/CopyableVector.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/RegExpMatch.h"
 #include "hermes/VM/SmallXString.h"
@@ -123,7 +122,15 @@ class JSRegExp final : public JSObject {
   JSRegExp(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
       : JSObject(runtime, &vt.base, parent, clazz) {}
 
-  CopyableVector<uint8_t> bytecode_;
+  ~JSRegExp();
+
+  /// Store a copy of the \p bytecode array.
+  ExecutionStatus initializeBytecode(
+      llvm::ArrayRef<uint8_t> bytecode,
+      Runtime *runtime);
+
+  uint8_t *bytecode_{};
+  uint32_t bytecodeSize_{0};
 
   FlagBits flagBits_ = {};
 
