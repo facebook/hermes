@@ -8,12 +8,12 @@
 #ifndef HERMES_VM_IDENTIFIERHASHTABLE_H
 #define HERMES_VM_IDENTIFIERHASHTABLE_H
 
-#include "hermes/Support/CompactArray.h"
+#include "hermes/ADT/CompactArray.h"
+#include "hermes/ADT/PtrOrInt.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/SymbolID.h"
 
-#include "hermes/ADT/PtrOrInt.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace hermes {

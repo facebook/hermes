@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include "hermes/Support/CompactArray.h"
+#include "hermes/ADT/CompactArray.h"
 
 namespace {
 

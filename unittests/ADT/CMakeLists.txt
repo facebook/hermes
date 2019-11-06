@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 set(ADTSources
+  CompactArrayTest.cpp
   ScopedHashTable.cpp
   WordBitSet.cpp
   )
@@ -12,3 +13,6 @@ add_hermes_unittest(HermesADTTests
   ${ADTSources}
   )
 
+target_link_libraries(HermesADTTests
+  hermesADT
+  )

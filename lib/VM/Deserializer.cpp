@@ -6,8 +6,9 @@
  */
 
 #ifdef HERMESVM_SERIALIZE
+#include "hermes/ADT/CompactArray.h"
+
 #include "hermes/VM/Deserializer.h"
-#include "hermes/Support/CompactArray.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/JSArrayBuffer.h"

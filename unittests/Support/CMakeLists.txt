@@ -7,7 +7,6 @@ set(SupportSources
   Algorithms.cpp
   AllocatorTest.cpp
   CheckedMalloc.cpp
-  CompactArrayTest.cpp
   ConsumableRangeTest.cpp
   ConversionsTest.cpp
   CtorConfigTest.cpp

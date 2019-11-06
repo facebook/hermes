@@ -9,6 +9,7 @@ set(source_files
 
 add_llvm_library(hermesCompilerDriver STATIC ${source_files}
   LINK_LIBS
+  hermesADT
   hermesAST
   hermesInst
   hermesHBCBackend

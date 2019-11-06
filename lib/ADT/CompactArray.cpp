@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Support/CompactArray.h"
+#include "hermes/ADT/CompactArray.h"
 
 namespace hermes {
 

@@ -166,6 +166,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
 endif()
 
 set(link_libs
+  hermesADT
   hermesInst
   hermesSupport
   hermesParser

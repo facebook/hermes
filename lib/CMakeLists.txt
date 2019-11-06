@@ -51,6 +51,7 @@ add_llvm_library(hermesFrontend
 add_subdirectory(VM)
 add_subdirectory(Inst)
 add_subdirectory(CompilerDriver)
+add_subdirectory(ADT)
 add_subdirectory(AST)
 add_subdirectory(FlowParser)
 add_subdirectory(Parser)
