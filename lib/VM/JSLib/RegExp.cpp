@@ -91,16 +91,6 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   (void)defineMethod(
       runtime,
       proto,
-      Predefined::getSymbolID(Predefined::SymbolSearch),
-      Predefined::getSymbolID(Predefined::squareSymbolSearch),
-      nullptr,
-      regExpPrototypeSymbolSearch,
-      1,
-      dpf);
-
-  (void)defineMethod(
-      runtime,
-      proto,
       Predefined::getSymbolID(Predefined::SymbolReplace),
       Predefined::getSymbolID(Predefined::squareSymbolReplace),
       nullptr,
@@ -172,6 +162,15 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::squareSymbolMatch),
       nullptr,
       regExpPrototypeSymbolMatch,
+      1,
+      dpf);
+  (void)defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::SymbolSearch),
+      Predefined::getSymbolID(Predefined::squareSymbolSearch),
+      nullptr,
+      regExpPrototypeSymbolSearch,
       1,
       dpf);
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
@@ -916,62 +915,6 @@ regExpLastParenGetter(void *ctx, Runtime *runtime, NativeArgs args) {
 
   return HermesValue::encodeStringValue(
       runtime->getPredefinedString(Predefined::emptyString));
-} /// ES6.0 21.2.5.9
-CallResult<HermesValue>
-regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
-  GCScope gcScope{runtime};
-
-  // 1. Let rx be the this value.
-  // 2. If Type(rx) is not Object, throw a TypeError exception.
-  Handle<JSObject> rx = args.dyncastThis<JSObject>();
-  if (!rx) {
-    return runtime->raiseTypeError(
-        "Calling regExp.prototype[@@search] on a non-object.");
-  }
-  // 3. Let S be ToString(string).
-  // 4. ReturnIfAbrupt(S).
-  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto S = toHandle(runtime, std::move(*strRes));
-  // 5. Let previousLastIndex be Get(rx, "lastIndex").
-  // 6. ReturnIfAbrupt(previousLastIndex).
-  auto propRes = runtime->getNamed(rx, PropCacheID::RegExpLastIndex);
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  Handle<> previousLastIndex = runtime->makeHandle(propRes.getValue());
-  // 7. Let status be Set(rx, "lastIndex", 0, true).
-  auto status = setLastIndex(rx, runtime, 0);
-  // 8. ReturnIfAbrupt(status).
-  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  // 9. Let result be RegExpExec(rx, S).
-  // 10. ReturnIfAbrupt(result).
-  auto execRes = regExpExec(runtime, rx, S);
-  if (LLVM_UNLIKELY(execRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  Handle<> result = runtime->makeHandle(execRes.getValue());
-  // 11. Let status be Set(rx, "lastIndex", previousLastIndex, true).
-  status = setLastIndex(rx, runtime, *previousLastIndex);
-  // 12. ReturnIfAbrupt(status).
-  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  // 13. If result is null, return –1.
-  if (result->isNull()) {
-    return HermesValue::encodeNumberValue(-1);
-  }
-  // 14. Return Get(result, "index").
-  auto resultObj = Handle<JSObject>::dyn_vmcast(result);
-  if (LLVM_UNLIKELY(!resultObj)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  return JSObject::getNamed_RJS(
-      resultObj, runtime, Predefined::getSymbolID(Predefined::index));
 }
 
 /// ES6.0 21.1.3.14.1
@@ -1598,6 +1541,64 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   }
   llvm_unreachable(
       "RegExp.prototype[@@match] must stop when all matched results are returned.");
+}
+
+/// ES6.0 21.2.5.9
+CallResult<HermesValue>
+regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope{runtime};
+
+  // 1. Let rx be the this value.
+  // 2. If Type(rx) is not Object, throw a TypeError exception.
+  Handle<JSObject> rx = args.dyncastThis<JSObject>();
+  if (!rx) {
+    return runtime->raiseTypeError(
+        "Calling regExp.prototype[@@search] on a non-object.");
+  }
+  // 3. Let S be ToString(string).
+  // 4. ReturnIfAbrupt(S).
+  auto strRes = toString_RJS(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = toHandle(runtime, std::move(*strRes));
+  // 5. Let previousLastIndex be Get(rx, "lastIndex").
+  // 6. ReturnIfAbrupt(previousLastIndex).
+  auto propRes = runtime->getNamed(rx, PropCacheID::RegExpLastIndex);
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<> previousLastIndex = runtime->makeHandle(propRes.getValue());
+  // 7. Let status be Set(rx, "lastIndex", 0, true).
+  auto status = setLastIndex(rx, runtime, 0);
+  // 8. ReturnIfAbrupt(status).
+  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 9. Let result be RegExpExec(rx, S).
+  // 10. ReturnIfAbrupt(result).
+  auto execRes = regExpExec(runtime, rx, S);
+  if (LLVM_UNLIKELY(execRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<> result = runtime->makeHandle(execRes.getValue());
+  // 11. Let status be Set(rx, "lastIndex", previousLastIndex, true).
+  status = setLastIndex(rx, runtime, *previousLastIndex);
+  // 12. ReturnIfAbrupt(status).
+  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 13. If result is null, return –1.
+  if (result->isNull()) {
+    return HermesValue::encodeNumberValue(-1);
+  }
+  // 14. Return Get(result, "index").
+  auto resultObj = Handle<JSObject>::dyn_vmcast(result);
+  if (LLVM_UNLIKELY(!resultObj)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return JSObject::getNamed_RJS(
+      resultObj, runtime, Predefined::getSymbolID(Predefined::index));
 }
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 

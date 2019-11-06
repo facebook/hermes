@@ -256,7 +256,6 @@ NATIVE_FUNCTION(regExpLastParenGetter)
 NATIVE_FUNCTION(regExpLeftContextGetter)
 NATIVE_FUNCTION(regExpPrototypeExec)
 NATIVE_FUNCTION(regExpPrototypeSymbolReplace)
-NATIVE_FUNCTION(regExpPrototypeSymbolSearch)
 NATIVE_FUNCTION(regExpPrototypeSymbolSplit)
 NATIVE_FUNCTION(regExpPrototypeTest)
 NATIVE_FUNCTION(regExpPrototypeToString)
@@ -265,6 +264,7 @@ NATIVE_FUNCTION(regExpSourceGetter)
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 NATIVE_FUNCTION(regExpPrototypeSymbolMatch)
+NATIVE_FUNCTION(regExpPrototypeSymbolSearch)
 #endif
 
 NATIVE_FUNCTION(require)
