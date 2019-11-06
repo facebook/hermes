@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_GCSEGMENTRANGE_H
 #define HERMES_VM_GCSEGMENTRANGE_H
 
-#include "hermes/Support/ConsumableRange.h"
+#include "hermes/ADT/ConsumableRange.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"

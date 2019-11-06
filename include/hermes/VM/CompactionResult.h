@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_COMPACTIONRESULT_H
 #define HERMES_VM_COMPACTIONRESULT_H
 
-#include "hermes/Support/ConsumableRange.h"
+#include "hermes/ADT/ConsumableRange.h"
 #include "hermes/VM/AdviseUnused.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CardTableNC.h"

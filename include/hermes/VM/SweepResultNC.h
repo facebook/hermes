@@ -8,7 +8,7 @@
 #ifndef HERMES_VM_SWEEPRESULTNC_H
 #define HERMES_VM_SWEEPRESULTNC_H
 
-#include "hermes/Support/ConsumableRange.h"
+#include "hermes/ADT/ConsumableRange.h"
 #include "hermes/VM/CompactionResult.h"
 #include "hermes/VM/VTable.h"
 

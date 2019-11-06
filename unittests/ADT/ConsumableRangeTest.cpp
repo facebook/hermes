@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Support/ConsumableRange.h"
+#include "hermes/ADT/ConsumableRange.h"
 
 #include <vector>
 

@@ -5,6 +5,7 @@
 
 set(ADTSources
   CompactArrayTest.cpp
+  ConsumableRangeTest.cpp
   ScopedHashTable.cpp
   WordBitSet.cpp
   )
