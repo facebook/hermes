@@ -87,13 +87,6 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       stringPrototype,
-      Predefined::getSymbolID(Predefined::slice),
-      ctx,
-      stringPrototypeSlice,
-      2);
-  defineMethod(
-      runtime,
-      stringPrototype,
       Predefined::getSymbolID(Predefined::substring),
       ctx,
       stringPrototypeSubstring,
@@ -276,6 +269,13 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       ctx,
       stringPrototypeEndsWith,
       1);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::slice),
+      ctx,
+      stringPrototypeSlice,
+      2);
   defineMethod(
       runtime,
       stringPrototype,
@@ -714,47 +714,6 @@ stringPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
     builder->appendStringPrim(element);
   }
   return builder->getStringPrimitive().getHermesValue();
-}
-
-CallResult<HermesValue>
-stringPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
-  if (LLVM_UNLIKELY(
-          checkObjectCoercible(runtime, args.getThisHandle()) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto strRes = toString_RJS(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto S = toHandle(runtime, std::move(*strRes));
-  double len = S->getStringLength();
-
-  auto intRes = toInteger(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double intStart = intRes->getNumber();
-
-  double intEnd;
-  if (args.getArg(1).isUndefined()) {
-    intEnd = len;
-  } else {
-    if (LLVM_UNLIKELY(
-            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    intEnd = intRes->getNumber();
-  }
-
-  size_t from =
-      intStart < 0 ? std::max(len + intStart, 0.0) : std::min(intStart, len);
-  size_t to = intEnd < 0 ? std::max(len + intEnd, 0.0) : std::min(intEnd, len);
-  size_t span = to > from ? to - from : 0;
-  assert(from + span <= len && "invalid index computed in slice");
-
-  return StringPrimitive::slice(runtime, S, from, span);
 }
 
 /// Works slightly differently from the given implementation in the spec.
@@ -1892,6 +1851,47 @@ stringPrototypeCharAt(void *, Runtime *runtime, NativeArgs args) {
   auto result = runtime->getCharacterString(
       StringPrimitive::createStringView(runtime, S)[position]);
   return HermesValue::encodeStringValue(result.get());
+}
+
+CallResult<HermesValue>
+stringPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, args.getThisHandle()) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto S = toHandle(runtime, std::move(*strRes));
+  double len = S->getStringLength();
+
+  auto intRes = toInteger(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  double intStart = intRes->getNumber();
+
+  double intEnd;
+  if (args.getArg(1).isUndefined()) {
+    intEnd = len;
+  } else {
+    if (LLVM_UNLIKELY(
+            (intRes = toInteger(runtime, args.getArgHandle(1))) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    intEnd = intRes->getNumber();
+  }
+
+  size_t from =
+      intStart < 0 ? std::max(len + intStart, 0.0) : std::min(intStart, len);
+  size_t to = intEnd < 0 ? std::max(len + intEnd, 0.0) : std::min(intEnd, len);
+  size_t span = to > from ? to - from : 0;
+  assert(from + span <= len && "invalid index computed in slice");
+
+  return StringPrimitive::slice(runtime, S, from, span);
 }
 
 CallResult<HermesValue>
