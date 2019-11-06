@@ -7,6 +7,7 @@
 
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/Support/SlowAssert.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
@@ -45,7 +46,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
       return;
     }
     GCCell *&cell = reinterpret_cast<GCCell *&>(ptr);
-    assert(
+    HERMES_SLOW_ASSERT(
         gc.validPointer(cell) &&
         "Marked a pointer that the GC didn't allocate");
     CellHeader *header = CellHeader::from(cell);
@@ -65,7 +66,9 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
       header->markWithForwardingPointer(newLocation);
       worklist_.push_back(newLocation);
       gc.newPointers_.insert(newLocation);
-      gc.idTracker_.moveObject(cell, newLocation->data());
+      if (gc.idTracker_.isTrackingIDs()) {
+        gc.idTracker_.moveObject(cell, newLocation->data());
+      }
       cell = newLocation->data();
     }
 #else
@@ -277,7 +280,9 @@ void MallocGC::collect() {
         }
 #endif
       }
-      idTracker_.untrackObject(cell);
+      if (idTracker_.isTrackingIDs()) {
+        idTracker_.untrackObject(cell);
+      }
 #ifndef NDEBUG
       // Before free'ing, fill with a dead value for debugging
       std::fill_n(reinterpret_cast<char *>(cell), freedSize, kInvalidHeapValue);
@@ -428,7 +433,7 @@ void MallocGC::updateWeakReferences() {
           break;
         }
         auto *cell = reinterpret_cast<GCCell *>(slot.getPointer());
-        assert(
+        HERMES_SLOW_ASSERT(
             validPointer(cell) &&
             "Got a pointer out of a weak reference slot that is not owned by "
             "the GC");
@@ -440,7 +445,7 @@ void MallocGC::updateWeakReferences() {
 #ifdef HERMESVM_SANITIZE_HANDLES
           // Update the value to point to the new location
           GCCell *nextCell = header->getForwardingPointer()->data();
-          assert(
+          HERMES_SLOW_ASSERT(
               validPointer(cell) &&
               "Forwarding weak ref must be to a valid cell");
           slot.setPointer(nextCell);
