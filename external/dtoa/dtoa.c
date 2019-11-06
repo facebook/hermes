@@ -17,6 +17,8 @@
  *
  ***************************************************************/
 
+#include "dtoa.h"
+
 /* Please send bug reports to David M. Gay (dmg at acm dot org,
  * with " at " changed at "@" and " dot " changed to ".").	*/
 
@@ -116,17 +118,6 @@
  *	name of the alternate routine.  (FREE or free is only called in
  *	pathological cases, e.g., in a dtoa call after a dtoa return in
  *	mode 3 with thousands of digits requested.)
- * #define Omit_Private_Memory to omit logic (added Jan. 1998) for making
- *	memory allocations from a private pool of memory when possible.
- *	When used, the private pool is PRIVATE_MEM bytes long:  2304 bytes,
- *	unless #defined to be a different length.  This default length
- *	suffices to get rid of MALLOC calls except for unusual cases,
- *	such as decimal-to-binary conversion of a very long string of
- *	digits.  The longest string dtoa can return is about 751 bytes
- *	long.  For conversions by strtod of strings of 800 digits and
- *	all dtoa conversions in single-threaded executions with 8-byte
- *	pointers, PRIVATE_MEM >= 7400 appears to suffice; with 4-byte
- *	pointers, PRIVATE_MEM >= 7112 appears adequate.
  * #define NO_INFNAN_CHECK if you do not wish to have INFNAN_CHECK
  *	#defined automatically on IEEE systems.  On such systems,
  *	when INFNAN_CHECK is #defined, strtod checks
@@ -200,6 +191,7 @@ typedef unsigned Long ULong;
 
 #include "stdlib.h"
 #include "string.h"
+#include "assert.h"
 
 #ifdef USE_LOCALE
 #include "locale.h"
@@ -221,13 +213,10 @@ extern void *MALLOC(size_t);
 #define MALLOC malloc
 #endif
 
-#ifndef Omit_Private_Memory
 #ifndef PRIVATE_MEM
 #define PRIVATE_MEM 2304
 #endif
 #define PRIVATE_mem ((PRIVATE_MEM+sizeof(double)-1)/sizeof(double))
-static double private_mem[PRIVATE_mem], *pmem_next = private_mem;
-#endif
 
 #undef IEEE_Arith
 #undef Avoid_Underflow
@@ -507,7 +496,7 @@ BCinfo { int dp0, dp1, dplen, dsign, e0, inexact, nd, nd0, rounding, scale, uflc
  * slower.  Hence the default is now to store 32 bits per Long.
  */
 #endif
-#else	/* long long available */
+#else  /* long long available */
 #ifndef Llong
 #define Llong long long
 #endif
@@ -541,45 +530,93 @@ Bigint {
 
  typedef struct Bigint Bigint;
 
- static Bigint *freelist[Kmax+1];
+struct dtoa_alloc {
+	int pmem_len;	/* length of private_mem in doubles */
+	int used_heap;	/* heap allocation was performed */
+	double *pmem_next;
+	Bigint *freelist[Kmax+1];
+	double private_mem[1];
+};
+typedef struct dtoa_alloc dtoa_alloc;
 
- static Bigint *
+#define DECL_DALLOC(name, len) \
+	struct { \
+		dtoa_alloc h; \
+		double mem[(len)-1]; \
+	} name
+
+static void dalloc_init(dtoa_alloc *dalloc, int pmem_len) {
+	memset(dalloc, 0, sizeof(dtoa_alloc));
+	dalloc->pmem_len = pmem_len;
+	dalloc->pmem_next = dalloc->private_mem;
+}
+
+static void dalloc_done(dtoa_alloc *dalloc) {
+	char *pmem, *pmem_end;
+
+	if (!dalloc->used_heap)
+		return;
+
+	pmem = (char *)dalloc->private_mem;
+	pmem_end = (char *)(dalloc->private_mem + dalloc->pmem_len);
+
+	for(int i = 0; i < Kmax+1; ++i) {
+		Bigint *p = dalloc->freelist[i];
+		while (p) {
+			char *tf = (char *)p;
+			p = p->next;
+			if (tf >= pmem && tf < pmem_end)
+				continue;
+#ifdef FREE
+			FREE((void*)tf);
+#else
+			free((void*)tf);
+#endif
+		}
+	}
+}
+
+dtoa_alloc *dtoa_alloc_init(void *mem, int bytelen) {
+	dtoa_alloc *dalloc = (dtoa_alloc *)mem;
+	int pmem_len = (bytelen - sizeof(dtoa_alloc)) / sizeof(double) + 1;
+	assert(pmem_len > 0 && "dtoa_alloc_init bytelen is too small");
+	dalloc_init(dalloc, pmem_len);
+	return dalloc;
+}
+
+void dtoa_alloc_done(dtoa_alloc *dalloc) {
+	dalloc_done(dalloc);
+}
+
+static Bigint *
 Balloc
 #ifdef KR_headers
-	(k) int k;
+	(dalloc, k) dtoa_alloc *dalloc; int k;
 #else
-	(int k)
+	(dtoa_alloc *dalloc, int k)
 #endif
 {
 	int x;
 	Bigint *rv;
-#ifndef Omit_Private_Memory
 	unsigned int len;
-#endif
 
-	ACQUIRE_DTOA_LOCK(0);
-	/* The k > Kmax case does not need ACQUIRE_DTOA_LOCK(0), */
-	/* but this case seems very unlikely. */
-	if (k <= Kmax && (rv = freelist[k]))
-		freelist[k] = rv->next;
+	if (k <= Kmax && (rv = dalloc->freelist[k]))
+		dalloc->freelist[k] = rv->next;
 	else {
 		x = 1 << k;
-#ifdef Omit_Private_Memory
-		rv = (Bigint *)MALLOC(sizeof(Bigint) + (x-1)*sizeof(ULong));
-#else
 		len = (sizeof(Bigint) + (x-1)*sizeof(ULong) + sizeof(double) - 1)
 			/sizeof(double);
-		if (k <= Kmax && pmem_next - private_mem + len <= PRIVATE_mem) {
-			rv = (Bigint*)pmem_next;
-			pmem_next += len;
+		if (k <= Kmax && dalloc->pmem_next - dalloc->private_mem + len <= dalloc->pmem_len) {
+			rv = (Bigint*)dalloc->pmem_next;
+			dalloc->pmem_next += len;
 			}
-		else
+		else {
 			rv = (Bigint*)MALLOC(len*sizeof(double));
-#endif
+			dalloc->used_heap = 1;
+						}
 		rv->k = k;
 		rv->maxwds = x;
 		}
-	FREE_DTOA_LOCK(0);
 	rv->sign = rv->wds = 0;
 	return rv;
 	}
@@ -587,9 +624,9 @@ Balloc
  static void
 Bfree
 #ifdef KR_headers
-	(v) Bigint *v;
+	(dalloc, v) dtoa_alloc *dalloc; Bigint *v;
 #else
-	(Bigint *v)
+	(dtoa_alloc *dalloc, Bigint *v)
 #endif
 {
 	if (v) {
@@ -600,10 +637,8 @@ Bfree
 			free((void*)v);
 #endif
 		else {
-			ACQUIRE_DTOA_LOCK(0);
-			v->next = freelist[v->k];
-			freelist[v->k] = v;
-			FREE_DTOA_LOCK(0);
+			v->next = dalloc->freelist[v->k];
+			dalloc->freelist[v->k] = v;
 			}
 		}
 	}
@@ -614,9 +649,9 @@ y->wds*sizeof(Long) + 2*sizeof(int))
  static Bigint *
 multadd
 #ifdef KR_headers
-	(b, m, a) Bigint *b; int m, a;
+	(dalloc, b, m, a) dtoa_alloc *dalloc; Bigint *b; int m, a;
 #else
-	(Bigint *b, int m, int a)	/* multiply by m and add a */
+	(dtoa_alloc *dalloc, Bigint *b, int m, int a)	/* multiply by m and add a */
 #endif
 {
 	int i, wds;
@@ -657,9 +692,9 @@ multadd
 		while(++i < wds);
 	if (carry) {
 		if (wds >= b->maxwds) {
-			b1 = Balloc(b->k+1);
+			b1 = Balloc(dalloc, b->k+1);
 			Bcopy(b1, b);
-			Bfree(b);
+			Bfree(dalloc, b);
 			b = b1;
 			}
 		b->x[wds++] = carry;
@@ -671,9 +706,9 @@ multadd
  static Bigint *
 s2b
 #ifdef KR_headers
-	(s, nd0, nd, y9, dplen) CONST char *s; int nd0, nd, dplen; ULong y9;
+	(dalloc, s, nd0, nd, y9, dplen) dtoa_alloc *dalloc; CONST char *s; int nd0, nd, dplen; ULong y9;
 #else
-	(const char *s, int nd0, int nd, ULong y9, int dplen)
+	(dtoa_alloc *dalloc, const char *s, int nd0, int nd, ULong y9, int dplen)
 #endif
 {
 	Bigint *b;
@@ -683,7 +718,7 @@ s2b
 	x = (nd + 8) / 9;
 	for(k = 0, y = 1; x > y; y <<= 1, k++) ;
 #ifdef Pack_32
-	b = Balloc(k);
+	b = Balloc(dalloc, k);
 	b->x[0] = y9;
 	b->wds = 1;
 #else
@@ -695,14 +730,14 @@ s2b
 	i = 9;
 	if (9 < nd0) {
 		s += 9;
-		do b = multadd(b, 10, *s++ - '0');
+		do b = multadd(dalloc, b, 10, *s++ - '0');
 			while(++i < nd0);
 		s += dplen;
 		}
 	else
 		s += dplen + 9;
 	for(; i < nd; i++)
-		b = multadd(b, 10, *s++ - '0');
+		b = multadd(dalloc, b, 10, *s++ - '0');
 	return b;
 	}
 
@@ -791,14 +826,14 @@ lo0bits
  static Bigint *
 i2b
 #ifdef KR_headers
-	(i) int i;
+	(dalloc, i) dtoa_alloc *dalloc; int i;
 #else
-	(int i)
+	(dtoa_alloc *dalloc, int i)
 #endif
 {
 	Bigint *b;
 
-	b = Balloc(1);
+	b = Balloc(dalloc, 1);
 	b->x[0] = i;
 	b->wds = 1;
 	return b;
@@ -807,9 +842,9 @@ i2b
  static Bigint *
 mult
 #ifdef KR_headers
-	(a, b) Bigint *a, *b;
+	(dalloc, a, b) dtoa_alloc *dalloc; Bigint *a, *b;
 #else
-	(Bigint *a, Bigint *b)
+	(dtoa_alloc *dalloc, Bigint *a, Bigint *b)
 #endif
 {
 	Bigint *c;
@@ -836,7 +871,7 @@ mult
 	wc = wa + wb;
 	if (wc > a->maxwds)
 		k++;
-	c = Balloc(k);
+	c = Balloc(dalloc, k);
 	for(x = c->x, xa = x + wc; x < xa; x++)
 		*x = 0;
 	xa = a->x;
@@ -914,14 +949,16 @@ mult
 	return c;
 	}
 
- static Bigint *p5s;
+/* used only for static cahing of powers of 5 */
+static DECL_DALLOC(cache, PRIVATE_mem);
+static Bigint *p5s;
 
  static Bigint *
 pow5mult
 #ifdef KR_headers
-	(b, k) Bigint *b; int k;
+	(dalloc, b, k) dtoa_alloc *dalloc; Bigint *b; int k;
 #else
-	(Bigint *b, int k)
+	(dtoa_alloc *dalloc, Bigint *b, int k)
 #endif
 {
 	Bigint *b1, *p5, *p51;
@@ -929,7 +966,7 @@ pow5mult
 	static int p05[3] = { 5, 25, 125 };
 
 	if ((i = k & 3))
-		b = multadd(b, p05[i-1], 0);
+		b = multadd(dalloc, b, p05[i-1], 0);
 
 	if (!(k >>= 2))
 		return b;
@@ -938,19 +975,21 @@ pow5mult
 #ifdef MULTIPLE_THREADS
 		ACQUIRE_DTOA_LOCK(1);
 		if (!(p5 = p5s)) {
-			p5 = p5s = i2b(625);
+			dalloc_init(&cache.h, PRIVATE_MEM);
+			p5 = p5s = i2b(&cache.h, 625);
 			p5->next = 0;
 			}
 		FREE_DTOA_LOCK(1);
 #else
-		p5 = p5s = i2b(625);
+		dalloc_init(&cache.h, PRIVATE_MEM);
+		p5 = p5s = i2b(&cache.h, 625);
 		p5->next = 0;
 #endif
 		}
 	for(;;) {
 		if (k & 1) {
-			b1 = mult(b, p5);
-			Bfree(b);
+			b1 = mult(dalloc, b, p5);
+			Bfree(dalloc, b);
 			b = b1;
 			}
 		if (!(k >>= 1))
@@ -959,12 +998,12 @@ pow5mult
 #ifdef MULTIPLE_THREADS
 			ACQUIRE_DTOA_LOCK(1);
 			if (!(p51 = p5->next)) {
-				p51 = p5->next = mult(p5,p5);
+				p51 = p5->next = mult(&cache.h,p5,p5);
 				p51->next = 0;
 				}
 			FREE_DTOA_LOCK(1);
 #else
-			p51 = p5->next = mult(p5,p5);
+			p51 = p5->next = mult(&cache.h,p5,p5);
 			p51->next = 0;
 #endif
 			}
@@ -976,9 +1015,9 @@ pow5mult
  static Bigint *
 lshift
 #ifdef KR_headers
-	(b, k) Bigint *b; int k;
+	(dalloc, b, k) dtoa_alloc *dalloc; Bigint *b; int k;
 #else
-	(Bigint *b, int k)
+	(dtoa_alloc *dalloc, Bigint *b, int k)
 #endif
 {
 	int i, k1, n, n1;
@@ -994,7 +1033,7 @@ lshift
 	n1 = n + b->wds + 1;
 	for(i = b->maxwds; n1 > i; i <<= 1)
 		k1++;
-	b1 = Balloc(k1);
+	b1 = Balloc(dalloc, k1);
 	x1 = b1->x;
 	for(i = 0; i < n; i++)
 		*x1++ = 0;
@@ -1029,7 +1068,7 @@ lshift
 		*x1++ = *x++;
 		while(x < xe);
 	b1->wds = n1 - 1;
-	Bfree(b);
+	Bfree(dalloc, b);
 	return b1;
 	}
 
@@ -1070,9 +1109,9 @@ cmp
  static Bigint *
 diff
 #ifdef KR_headers
-	(a, b) Bigint *a, *b;
+	(dalloc, a, b) dtoa_alloc *dalloc; Bigint *a, *b;
 #else
-	(Bigint *a, Bigint *b)
+	(dtoa_alloc *dalloc, Bigint *a, Bigint *b)
 #endif
 {
 	Bigint *c;
@@ -1089,7 +1128,7 @@ diff
 
 	i = cmp(a,b);
 	if (!i) {
-		c = Balloc(0);
+		c = Balloc(dalloc, 0);
 		c->wds = 1;
 		c->x[0] = 0;
 		return c;
@@ -1102,7 +1141,7 @@ diff
 		}
 	else
 		i = 0;
-	c = Balloc(a->k);
+	c = Balloc(dalloc, a->k);
 	c->sign = i;
 	wa = a->wds;
 	xa = a->x;
@@ -1276,9 +1315,9 @@ b2d
  static Bigint *
 d2b
 #ifdef KR_headers
-	(d, e, bits) U *d; int *e, *bits;
+	(dalloc, d, e, bits) dtoa_alloc *dalloc; U *d; int *e, *bits;
 #else
-	(U *d, int *e, int *bits)
+	(dtoa_alloc *dalloc, U *d, int *e, int *bits)
 #endif
 {
 	Bigint *b;
@@ -1297,9 +1336,9 @@ d2b
 #endif
 
 #ifdef Pack_32
-	b = Balloc(1);
+	b = Balloc(dalloc, 1);
 #else
-	b = Balloc(2);
+	b = Balloc(dalloc, 2);
 #endif
 	x = b->x;
 
@@ -1333,7 +1372,7 @@ d2b
 #ifndef Sudden_Underflow
 		i =
 #endif
-		    b->wds = 1;
+			b->wds = 1;
 		k += 32;
 		}
 #else
@@ -2282,10 +2321,10 @@ sulp
  static void
 bigcomp
 #ifdef KR_headers
-	(rv, s0, bc)
-	U *rv; CONST char *s0; BCinfo *bc;
+	(dalloc, rv, s0, bc)
+	dtoa_alloc *stat; U *rv; CONST char *s0; BCinfo *bc;
 #else
-	(U *rv, const char *s0, BCinfo *bc)
+	(dtoa_alloc *dalloc, U *rv, const char *s0, BCinfo *bc)
 #endif
 {
 	Bigint *b, *d;
@@ -2299,7 +2338,7 @@ bigcomp
 #ifndef Sudden_Underflow
 	if (rv->d == 0.) {	/* special case: value near underflow-to-zero */
 				/* threshold was rounded to zero */
-		b = i2b(1);
+		b = i2b(dalloc, 1);
 		p2 = Emin - P + 1;
 		bbits = 1;
 #ifdef Avoid_Underflow
@@ -2320,7 +2359,7 @@ bigcomp
 		}
 	else
 #endif
-		b = d2b(rv, &p2, &bbits);
+		b = d2b(dalloc, rv, &p2, &bbits);
 #ifdef Avoid_Underflow
 	p2 -= bc->scale;
 #endif
@@ -2353,21 +2392,21 @@ bigcomp
 	else
 #endif
 		{
-		b = lshift(b, ++i);
+		b = lshift(dalloc, b, ++i);
 		b->x[0] |= 1;
 		}
 #ifndef Sudden_Underflow
  have_i:
 #endif
 	p2 -= p5 + i;
-	d = i2b(1);
+	d = i2b(dalloc, 1);
 	/* Arrange for convenient computation of quotients:
 	 * shift left if necessary so divisor has 4 leading 0 bits.
 	 */
 	if (p5 > 0)
-		d = pow5mult(d, p5);
+		d = pow5mult(dalloc, d, p5);
 	else if (p5 < 0)
-		b = pow5mult(b, -p5);
+		b = pow5mult(dalloc, b, -p5);
 	if (p2 > 0) {
 		b2 = p2;
 		d2 = 0;
@@ -2378,15 +2417,15 @@ bigcomp
 		}
 	i = dshift(d, d2);
 	if ((b2 += i) > 0)
-		b = lshift(b, b2);
+		b = lshift(dalloc, b, b2);
 	if ((d2 += i) > 0)
-		d = lshift(d, d2);
+		d = lshift(dalloc, d, d2);
 
 	/* Now b/d = exactly half-way between the two floating-point values */
 	/* on either side of the input string.  Compute first digit of b/d. */
 
 	if (!(dig = quorem(b,d))) {
-		b = multadd(b, 10, 0);	/* very unlikely */
+		b = multadd(dalloc, b, 10, 0);	/* very unlikely */
 		dig = quorem(b,d);
 		}
 
@@ -2400,7 +2439,7 @@ bigcomp
 				dd = 1;
 			goto ret;
 			}
-		b = multadd(b, 10, 0);
+		b = multadd(dalloc, b, 10, 0);
 		dig = quorem(b,d);
 		}
 	for(j = bc->dp1; i++ < nd;) {
@@ -2411,14 +2450,14 @@ bigcomp
 				dd = 1;
 			goto ret;
 			}
-		b = multadd(b, 10, 0);
+		b = multadd(dalloc, b, 10, 0);
 		dig = quorem(b,d);
 		}
 	if (dig > 0 || b->x[0] || b->wds > 1)
 		dd = -1;
  ret:
-	Bfree(b);
-	Bfree(d);
+	Bfree(dalloc, b);
+	Bfree(dalloc, d);
 #ifdef Honor_FLT_ROUNDS
 	if (bc->rounding != 1) {
 		if (dd < 0) {
@@ -2488,12 +2527,12 @@ retlow1:
 	}
 #endif /* NO_STRTOD_BIGCOMP */
 
- double
-hermes_g_strtod
+static double
+_hermes_g_strtod
 #ifdef KR_headers
-	(s00, se) CONST char *s00; char **se;
+	(dalloc, s00, se) dtoa_alloc *dalloc; CONST char *s00; char **se;
 #else
-	(const char *s00, char **se)
+	(dtoa_alloc *dalloc, const char *s00, char **se)
 #endif
 {
 	int bb2, bb5, bbe, bd2, bd5, bbbits, bs2, c, e, e1;
@@ -2860,11 +2899,11 @@ hermes_g_strtod
 #endif /*IEEE_Arith*/
  range_err:
 				if (bd0) {
-					Bfree(bb);
-					Bfree(bd);
-					Bfree(bs);
-					Bfree(bd0);
-					Bfree(delta);
+					Bfree(dalloc, bb);
+					Bfree(dalloc, bd);
+					Bfree(dalloc, bs);
+					Bfree(dalloc, bd0);
+					Bfree(dalloc, delta);
 					}
 #ifndef NO_ERRNO
 				errno = ERANGE;
@@ -2982,13 +3021,13 @@ hermes_g_strtod
 			}
 		}
 #endif
-	bd0 = s2b(s0, nd0, nd, y, bc.dplen);
+	bd0 = s2b(dalloc, s0, nd0, nd, y, bc.dplen);
 
 	for(;;) {
-		bd = Balloc(bd0->k);
+		bd = Balloc(dalloc, bd0->k);
 		Bcopy(bd, bd0);
-		bb = d2b(&rv, &bbe, &bbbits);	/* rv = bb * 2^bbe */
-		bs = i2b(1);
+		bb = d2b(dalloc, &rv, &bbe, &bbbits);	/* rv = bb * 2^bbe */
+		bs = i2b(dalloc, 1);
 
 		if (e >= 0) {
 			bb2 = bb5 = 0;
@@ -3053,20 +3092,20 @@ hermes_g_strtod
 			bs2 -= i;
 			}
 		if (bb5 > 0) {
-			bs = pow5mult(bs, bb5);
-			bb1 = mult(bs, bb);
-			Bfree(bb);
+			bs = pow5mult(dalloc, bs, bb5);
+			bb1 = mult(dalloc, bs, bb);
+			Bfree(dalloc, bb);
 			bb = bb1;
 			}
 		if (bb2 > 0)
-			bb = lshift(bb, bb2);
+			bb = lshift(dalloc, bb, bb2);
 		if (bd5 > 0)
-			bd = pow5mult(bd, bd5);
+			bd = pow5mult(dalloc, bd, bd5);
 		if (bd2 > 0)
-			bd = lshift(bd, bd2);
+			bd = lshift(dalloc, bd, bd2);
 		if (bs2 > 0)
-			bs = lshift(bs, bs2);
-		delta = diff(bb, bd);
+			bs = lshift(dalloc, bs, bs2);
+		delta = diff(dalloc, bb, bd);
 		bc.dsign = delta->sign;
 		delta->sign = 0;
 		i = cmp(delta, bs);
@@ -3209,7 +3248,7 @@ hermes_g_strtod
 #endif
 				break;
 				}
-			delta = lshift(delta,Log2P);
+			delta = lshift(dalloc,delta,Log2P);
 			if (cmp(delta, bs) > 0)
 				goto drop_down;
 			break;
@@ -3499,21 +3538,21 @@ hermes_g_strtod
 		}
 #endif
  cont:
-		Bfree(bb);
-		Bfree(bd);
-		Bfree(bs);
-		Bfree(delta);
+		Bfree(dalloc, bb);
+		Bfree(dalloc, bd);
+		Bfree(dalloc, bs);
+		Bfree(dalloc, delta);
 		}
-	Bfree(bb);
-	Bfree(bd);
-	Bfree(bs);
-	Bfree(bd0);
-	Bfree(delta);
+	Bfree(dalloc, bb);
+	Bfree(dalloc, bd);
+	Bfree(dalloc, bs);
+	Bfree(dalloc, bd0);
+	Bfree(dalloc, delta);
 #ifndef NO_STRTOD_BIGCOMP
 	if (req_bigcomp) {
 		bd0 = 0;
 		bc.e0 += nz1;
-		bigcomp(&rv, s0, &bc);
+		bigcomp(dalloc, &rv, s0, &bc);
 		y = word0(&rv) & Exp_mask;
 		if (y == Exp_mask)
 			goto ovfl;
@@ -3561,15 +3600,30 @@ hermes_g_strtod
 	return sign ? -dval(&rv) : dval(&rv);
 	}
 
+ double
+hermes_g_strtod
+#ifdef KR_headers
+	(s00, se) CONST char *s00; char **se;
+#else
+	(const char *s00, char **se)
+#endif
+{
+	DECL_DALLOC(dalloc, PRIVATE_mem);
+	dalloc_init(&dalloc.h, PRIVATE_mem);
+	double res = _hermes_g_strtod(&dalloc.h, s00, se);
+	dalloc_done(&dalloc.h);
+	return res;
+}
+
 #ifndef MULTIPLE_THREADS
  static char *dtoa_result;
 #endif
 
  static char *
 #ifdef KR_headers
-rv_alloc(i) int i;
+rv_alloc(dalloc, i) dtoa_alloc *dalloc; int i;
 #else
-rv_alloc(int i)
+rv_alloc(dtoa_alloc *dalloc, int i)
 #endif
 {
 	int j, k, *r;
@@ -3579,7 +3633,7 @@ rv_alloc(int i)
 		sizeof(Bigint) - sizeof(ULong) - sizeof(int) + j <= i;
 		j <<= 1)
 			k++;
-	r = (int*)Balloc(k);
+	r = (int*)Balloc(dalloc, k);
 	*r = k;
 	return
 #ifndef MULTIPLE_THREADS
@@ -3590,14 +3644,14 @@ rv_alloc(int i)
 
  static char *
 #ifdef KR_headers
-nrv_alloc(s, rve, n) char *s, **rve; int n;
+nrv_alloc(dalloc, s, rve, n) dtoa_alloc *dalloc; char *s, **rve; int n;
 #else
-nrv_alloc(const char *s, char **rve, int n)
+nrv_alloc(dtoa_alloc *dalloc, const char *s, char **rve, int n)
 #endif
 {
 	char *rv, *t;
 
-	t = rv = rv_alloc(n);
+	t = rv = rv_alloc(dalloc, n);
 	while((*t = *s++)) t++;
 	if (rve)
 		*rve = t;
@@ -3612,14 +3666,14 @@ nrv_alloc(const char *s, char **rve, int n)
 
  void
 #ifdef KR_headers
-g_freedtoa(s) char *s;
+g_freedtoa(dalloc, s) dtoa_alloc *dalloc; char *s;
 #else
-g_freedtoa(char *s)
+g_freedtoa(dtoa_alloc *dalloc, char *s)
 #endif
 {
 	Bigint *b = (Bigint *)((int *)s - 1);
 	b->maxwds = 1 << (b->k = *(int*)b);
-	Bfree(b);
+	Bfree(dalloc, b);
 #ifndef MULTIPLE_THREADS
 	if (s == dtoa_result)
 		dtoa_result = 0;

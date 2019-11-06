@@ -35,10 +35,10 @@
  char *
 g_dtoa
 #ifdef KR_headers
-	(dd, mode, ndigits, decpt, sign, rve)
-	double dd; int mode, ndigits, *decpt, *sign; char **rve;
+	(dalloc, dd, mode, ndigits, decpt, sign, rve)
+	dtoa_alloc *dalloc; double dd; int mode, ndigits, *decpt, *sign; char **rve;
 #else
-	(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve)
+	(dtoa_alloc *dalloc, double dd, int mode, int ndigits, int *decpt, int *sign, char **rve)
 #endif
 {
  /*	Arguments ndigits, decpt, sign are similar to those
@@ -136,9 +136,9 @@ g_dtoa
 		*decpt = 9999;
 #ifdef IEEE_Arith
 		if (!word1(&u) && !(word0(&u) & 0xfffff))
-			return nrv_alloc("Infinity", rve, 8);
+			return nrv_alloc(dalloc, "Infinity", rve, 8);
 #endif
-		return nrv_alloc("NaN", rve, 3);
+		return nrv_alloc(dalloc, "NaN", rve, 3);
 		}
 #endif
 #ifdef IBM
@@ -146,7 +146,7 @@ g_dtoa
 #endif
 	if (!dval(&u)) {
 		*decpt = 1;
-		return nrv_alloc("0", rve, 1);
+		return nrv_alloc(dalloc, "0", rve, 1);
 		}
 
 #ifdef SET_INEXACT
@@ -163,7 +163,7 @@ g_dtoa
 		}
 #endif
 
-	b = d2b(&u, &be, &bbits);
+	b = d2b(dalloc, &u, &be, &bbits);
 #ifdef Sudden_Underflow
 	i = (int)(word0(&u) >> Exp_shift1 & (Exp_mask>>Exp_shift1));
 #else
@@ -290,7 +290,7 @@ g_dtoa
 			if (i <= 0)
 				i = 1;
 		}
-	s = s0 = rv_alloc(i);
+	s = s0 = rv_alloc(dalloc, i);
 
 #ifdef Honor_FLT_ROUNDS
 	if (mode > 1 && Rounding != 1)
@@ -484,7 +484,7 @@ g_dtoa
 #endif
 		b2 += i;
 		s2 += i;
-		mhi = i2b(1);
+		mhi = i2b(dalloc, 1);
 		}
 	if (m2 > 0 && s2 > 0) {
 		i = m2 < s2 ? m2 : s2;
@@ -495,20 +495,20 @@ g_dtoa
 	if (b5 > 0) {
 		if (leftright) {
 			if (m5 > 0) {
-				mhi = pow5mult(mhi, m5);
-				b1 = mult(mhi, b);
-				Bfree(b);
+				mhi = pow5mult(dalloc, mhi, m5);
+				b1 = mult(dalloc, mhi, b);
+				Bfree(dalloc, b);
 				b = b1;
 				}
 			if ((j = b5 - m5))
-				b = pow5mult(b, j);
+				b = pow5mult(dalloc, b, j);
 			}
 		else
-			b = pow5mult(b, b5);
+			b = pow5mult(dalloc, b, b5);
 		}
-	S = i2b(1);
+	S = i2b(dalloc, 1);
 	if (s5 > 0)
-		S = pow5mult(S, s5);
+		S = pow5mult(dalloc, S, s5);
 
 	/* Check for special case that d is a normalized power of 2. */
 
@@ -542,27 +542,27 @@ g_dtoa
 	m2 += i;
 	s2 += i;
 	if (b2 > 0)
-		b = lshift(b, b2);
+		b = lshift(dalloc, b, b2);
 	if (s2 > 0)
-		S = lshift(S, s2);
+		S = lshift(dalloc, S, s2);
 	if (k_check) {
 		if (cmp(b,S) < 0) {
 			k--;
-			b = multadd(b, 10, 0);	/* we botched the k estimate */
+			b = multadd(dalloc, b, 10, 0);	/* we botched the k estimate */
 			if (leftright)
-				mhi = multadd(mhi, 10, 0);
+				mhi = multadd(dalloc, mhi, 10, 0);
 			ilim = ilim1;
 			}
 		}
 	if (ilim <= 0 && (mode == 3 || mode == 5)) {
 #ifndef HERMES_FIXEDPOINT_HACK
-		if (ilim < 0 || cmp(b,S = multadd(S,5,0)) <= 0) {
+		if (ilim < 0 || cmp(b,S = multadd(dalloc, S,5,0)) <= 0) {
 #else
                 /// NOTE: The original line here checks that the cmp result is <= 0.
                 /// This only works for IEEE-754 unbiased rounding, which would
                 /// make 0.5 round to 0. However, for fixed-point rounding in
                 /// ES5.1, we need 0.5 to round to 1. JSC modifies the check the same way.
-		if (ilim < 0 || cmp(b,S = multadd(S,5,0)) < 0) {
+		if (ilim < 0 || cmp(b,S = multadd(dalloc, S,5,0)) < 0) {
 #endif
 			/* no digits, fcvt style */
  no_digits:
@@ -576,7 +576,7 @@ g_dtoa
 		}
 	if (leftright) {
 		if (m2 > 0)
-			mhi = lshift(mhi, m2);
+			mhi = lshift(dalloc, mhi, m2);
 
 		/* Compute mlo -- check for special case
 		 * that d is a normalized power of 2.
@@ -584,9 +584,9 @@ g_dtoa
 
 		mlo = mhi;
 		if (spec_case) {
-			mhi = Balloc(mhi->k);
+			mhi = Balloc(dalloc, mhi->k);
 			Bcopy(mhi, mlo);
-			mhi = lshift(mhi, Log2P);
+			mhi = lshift(dalloc, mhi, Log2P);
 			}
 
 		for(i = 1;;i++) {
@@ -595,9 +595,9 @@ g_dtoa
 			 * that will round to d?
 			 */
 			j = cmp(b, mlo);
-			delta = diff(S, mhi);
+			delta = diff(dalloc, S, mhi);
 			j1 = delta->sign ? 1 : cmp(b, delta);
-			Bfree(delta);
+			Bfree(dalloc, delta);
 #ifndef ROUND_BIASED
 			if (j1 == 0 && mode != 1 && !(word1(&u) & 1)
 #ifdef Honor_FLT_ROUNDS
@@ -635,7 +635,7 @@ g_dtoa
 				  }
 #endif /*Honor_FLT_ROUNDS*/
 				if (j1 > 0) {
-					b = lshift(b, 1);
+					b = lshift(dalloc, b, 1);
 					j1 = cmp(b, S);
 #ifdef ROUND_BIASED
 					if (j1 >= 0 /*)*/
@@ -668,12 +668,12 @@ g_dtoa
 			*s++ = dig;
 			if (i == ilim)
 				break;
-			b = multadd(b, 10, 0);
+			b = multadd(dalloc, b, 10, 0);
 			if (mlo == mhi)
-				mlo = mhi = multadd(mhi, 10, 0);
+				mlo = mhi = multadd(dalloc, mhi, 10, 0);
 			else {
-				mlo = multadd(mlo, 10, 0);
-				mhi = multadd(mhi, 10, 0);
+				mlo = multadd(dalloc, mlo, 10, 0);
+				mhi = multadd(dalloc, mhi, 10, 0);
 				}
 			}
 		}
@@ -688,7 +688,7 @@ g_dtoa
 				}
 			if (i >= ilim)
 				break;
-			b = multadd(b, 10, 0);
+			b = multadd(dalloc, b, 10, 0);
 			}
 
 	/* Round off last digit */
@@ -699,7 +699,7 @@ g_dtoa
 	  case 2: goto roundoff;
 	  }
 #endif
-	b = lshift(b, 1);
+	b = lshift(dalloc, b, 1);
 	j = cmp(b, S);
 #ifdef ROUND_BIASED
 	if (j >= 0)
@@ -724,11 +724,11 @@ g_dtoa
 		s++;
 		}
  ret:
-	Bfree(S);
+	Bfree(dalloc, S);
 	if (mhi) {
 		if (mlo && mlo != mhi)
-			Bfree(mlo);
-		Bfree(mhi);
+			Bfree(dalloc, mlo);
+		Bfree(dalloc, mhi);
 		}
  ret1:
 #ifdef SET_INEXACT
@@ -742,7 +742,7 @@ g_dtoa
 	else if (!oldinexact)
 		clear_inexact();
 #endif
-	Bfree(b);
+	Bfree(dalloc, b);
 	*s = 0;
 	*decpt = k + 1;
 	if (rve)

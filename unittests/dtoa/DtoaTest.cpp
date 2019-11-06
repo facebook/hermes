@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/dtoa/dtoa.h"
+#include "dtoa/dtoa.h"
 
 #include "gtest/gtest.h"
 
@@ -15,6 +15,7 @@ TEST(DtoaTest, SmokeTest) {
   char buf[32];
   g_fmt(buf, 3.14);
   EXPECT_STREQ("3.14", buf);
+  DtoaAllocator<> dalloc{};
 
   char *se;
   double val = hermes_g_strtod(buf, &se);
@@ -26,16 +27,16 @@ TEST(DtoaTest, SmokeTest) {
   ASSERT_EQ(inv, se);
   ASSERT_EQ(0, val);
 
-#define DtoaDecimalTest(M, N, K, S, SIGN)            \
-  {                                                  \
-    int n, sign;                                     \
-    char *s = ::g_dtoa(M, 0, 0, &n, &sign, nullptr); \
-    int k = ::strlen(s);                             \
-    EXPECT_EQ(N, n);                                 \
-    EXPECT_EQ(K, k);                                 \
-    EXPECT_EQ(SIGN, sign);                           \
-    EXPECT_STREQ(S, s);                              \
-    g_freedtoa(s);                                   \
+#define DtoaDecimalTest(M, N, K, S, SIGN)                    \
+  {                                                          \
+    int n, sign;                                             \
+    char *s = ::g_dtoa(dalloc, M, 0, 0, &n, &sign, nullptr); \
+    int k = ::strlen(s);                                     \
+    EXPECT_EQ(N, n);                                         \
+    EXPECT_EQ(K, k);                                         \
+    EXPECT_EQ(SIGN, sign);                                   \
+    EXPECT_STREQ(S, s);                                      \
+    g_freedtoa(dalloc, s);                                   \
   }
 
   DtoaDecimalTest(2.123, 1, 4, "2123", 0);

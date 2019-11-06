@@ -6,8 +6,10 @@
  */
 
 #include "hermes/Support/Conversions.h"
+
+#include "dtoa/dtoa.h"
+
 #include <cmath>
-#include "hermes/dtoa/dtoa.h"
 
 namespace hermes {
 
@@ -57,6 +59,7 @@ int32_t truncateToInt32SlowPath(double d) {
 size_t numberToString(double m, char *dest, size_t destSize) {
   assert(destSize >= NUMBER_TO_STRING_BUF_SIZE);
   (void)destSize;
+  DtoaAllocator<> dalloc{};
 
   if (std::isnan(m)) {
     strcpy(dest, "NaN");
@@ -93,7 +96,7 @@ size_t numberToString(double m, char *dest, size_t destSize) {
   // Points to the end of the string s after it's populated.
   char *sEnd;
 
-  char *s = ::g_dtoa(m, 0, 0, &n, &sign, &sEnd);
+  char *s = ::g_dtoa(dalloc, m, 0, 0, &n, &sign, &sEnd);
 
   if (sign)
     *destPtr++ = '-';
@@ -160,7 +163,7 @@ size_t numberToString(double m, char *dest, size_t destSize) {
   *destPtr++ = '\0';
   assert(static_cast<size_t>(destPtr - dest) < NUMBER_TO_STRING_BUF_SIZE);
 
-  g_freedtoa(s);
+  g_freedtoa(dalloc, s);
   return destPtr - dest - 1;
 }
 } // namespace hermes

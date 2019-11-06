@@ -16,21 +16,12 @@
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  *
  ***************************************************************/
+#include "dtoa.h"
 
 /* g_fmt(buf,x) stores the closest decimal approximation to x in buf;
  * it suffices to declare buf
  *	char buf[32];
  */
-
-#ifdef __cplusplus
-extern "C" {
-#endif
- extern char *g_dtoa(double, int, int, int *, int *, char **);
- extern char *g_fmt(char *, double);
- extern void g_freedtoa(char*);
-#ifdef __cplusplus
-	}
-#endif
 
  char *
 g_fmt(register char *b, double x)
@@ -39,6 +30,8 @@ g_fmt(register char *b, double x)
 	register char *s;
 	int decpt, j, sign;
 	char *b0, *s0, *se;
+	DECL_DTOA_ALLOC_MEM(mem, DTOA_ALLOC_DEFAULT_SIZE);
+	dtoa_alloc *dalloc = dtoa_alloc_init(&mem, DTOA_ALLOC_DEFAULT_SIZE);
 
 	b0 = b;
 #ifdef IGNORE_ZERO_SIGN
@@ -48,7 +41,7 @@ g_fmt(register char *b, double x)
 		goto done;
 		}
 #endif
-	s = s0 = g_dtoa(x, 0, 0, &decpt, &sign, &se);
+	s = s0 = g_dtoa(dalloc, x, 0, 0, &decpt, &sign, &se);
 	if (sign)
 		*b++ = '-';
 	if (decpt == 9999) /* Infinity or Nan */ {
@@ -98,7 +91,8 @@ g_fmt(register char *b, double x)
 		*b = 0;
 		}
  done0:
-	g_freedtoa(s0);
+	g_freedtoa(dalloc, s0);
  done:
+	dtoa_alloc_done(dalloc);
 	return b0;
 	}

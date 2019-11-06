@@ -7,8 +7,8 @@
 
 #include "hermes/Parser/JSLexer.h"
 
+#include "dtoa/dtoa.h"
 #include "hermes/Support/Conversions.h"
-#include "hermes/dtoa/dtoa.h"
 
 #include "llvm/ADT/StringSwitch.h"
 

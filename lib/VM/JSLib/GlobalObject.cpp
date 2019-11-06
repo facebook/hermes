@@ -16,7 +16,8 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/StringView.h"
-#include "hermes/dtoa/dtoa.h"
+
+#include "dtoa/dtoa.h"
 
 #include "JSLibInternal.h"
 

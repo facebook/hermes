@@ -8,7 +8,8 @@
 #include "JSONLexer.h"
 
 #include "hermes/VM/StringPrimitive.h"
-#include "hermes/dtoa/dtoa.h"
+
+#include "dtoa/dtoa.h"
 
 namespace hermes {
 namespace vm {

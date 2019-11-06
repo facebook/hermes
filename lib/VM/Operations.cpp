@@ -21,7 +21,8 @@
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
-#include "hermes/dtoa/dtoa.h"
+
+#include "dtoa/dtoa.h"
 
 #include "llvm/ADT/SmallString.h"
 
