@@ -845,9 +845,16 @@ static double parseISODate(StringView u16str) {
         // Need a + or a -.
         return nan;
       }
+      // Timezone MUST be set.
+      if (it == end) {
+        return nan;
+      }
       // Hour and minute of timezone adjustment.
-      // See if timezone seperated by ':'.
-      if ((it + 1 <= end && *(it + 1) == u':') || (it + 2 <= end && *(it + 2) == u':')) {
+      if (consume(u':') && it == end) {
+        // See if timezone is '-:' or '+:'
+        adjustTZ = true;
+      } else if ((it + 1 < end && *(it + 1) == u':') || (it + 2 < end && *(it + 2) == u':')) {
+        // See if timezone seperated by ':', is like '07:00' or '7:0' or '7:00' or '07:' or '7:'
         if (!scanInt(it, end, tzh)) {
           return nan;
         }
@@ -855,20 +862,24 @@ static double parseISODate(StringView u16str) {
         if (!consume(u':')) {
           return nan;
         }
-        if (!scanInt(it, end, tzm)) {
-          return nan;
+        if (scanInt(it, end, tzm)) {
+          tzm *= sign;
         }
-        tzm *= sign;
       } else {
-        // Support if timezone didn't seperate by ':'.
-        if (it > end - 2 || !scanInt(it, it + 2, tzh)) {
+        // See if timezone didn't seperate by ':'
+        if (it < end - 2) {
+          // See if timezone is like '0700' or '070'
+          if (!scanInt(it, it + 2, tzh)) {
+            return nan;
+          }
+          // See if timezone is like '07' or '7'
+        } else if (!scanInt(it, end, tzh)) {
           return nan;
         }
         tzh *= sign;
-        if (it != end && (it > end - 2 || !scanInt(it, it + 2, tzm))) {
-          return nan;
+        if (scanInt(it, end, tzm)) {
+          tzm *= sign;
         }
-        tzm *= sign;
       }
     } else if (it == end) {
       adjustTZ = true;
@@ -1034,9 +1045,16 @@ static double parseESDate(StringView str) {
   else
     return nan;
 
+  // Timezone MUST be set.
+  if (it == end) {
+    return nan;
+  }
   // Hour and minute of timezone adjustment.
-  // See if timezone seperated by ':'.
-  if ((it + 1 <= end && *(it + 1) == u':') || (it + 2 <= end && *(it + 2) == u':')) {
+  if (consume(u':') && it == end) {
+    // See if timezone is '-:' or '+:'
+    adjustTZ = true;
+  } else if ((it + 1 < end && *(it + 1) == u':') || (it + 2 < end && *(it + 2) == u':')) {
+    // See if timezone seperated by ':', is like '-07:00' or '-7:0' or '-7:00' or '-07:' or '-7:'
     if (!scanInt(it, end, tzh)) {
       return nan;
     }
@@ -1044,20 +1062,24 @@ static double parseESDate(StringView str) {
     if (!consume(u':')) {
       return nan;
     }
-    if (!scanInt(it, end, tzm)) {
-      return nan;
+    if (scanInt(it, end, tzm)) {
+      tzm *= sign;
     }
-    tzm *= sign;
   } else {
-    // Support if timezone didn't seperate by ':'.
-    if (it > end - 2 || !scanInt(it, it + 2, tzh)) {
+    // See if timezone didn't seperate by ':'
+    if (it < end - 2) {
+      // See if timezone is like '0700' or '070'
+      if (!scanInt(it, it + 2, tzh)) {
+        return nan;
+      }
+      // See if timezone is like '07' or '7'
+    } else if (!scanInt(it, end, tzh)) {
       return nan;
     }
     tzh *= sign;
-    if (it != end && (it > end - 2 || !scanInt(it, it + 2, tzm))) {
-      return nan;
+    if (scanInt(it, end, tzm)) {
+      tzm *= sign;
     }
-    tzm *= sign;
   }
 
   if (it != end) {

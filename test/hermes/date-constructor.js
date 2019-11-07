@@ -243,6 +243,20 @@ print((new Date('2017/02/15 15:01:37.243-0700')).getSeconds());
 // CHECK-NEXT: 37
 print((new Date('2017/02/15/15/01:37.243-07:00')).getTime());
 // CHECK-NEXT: NaN
+print((new Date('2017/02/15 15:01:37.243-07')).getTime());
+// CHECK-NEXT: 1487196097243
+print((new Date('2017/02/15 15:01:37.243-7')).getTime());
+// CHECK-NEXT: 1487196097243
+print((new Date('2017/02/15 15:01:37.243-7:')).getTime());
+// CHECK-NEXT: 1487196097243
+print((new Date('2017/02/15 15:01:37.243-07:')).getTime());
+// CHECK-NEXT: 1487196097243
+print((new Date('2017/02/15 15:01:37.243-070')).getTime());
+// CHECK-NEXT: 1487175097243
+print((new Date('2017/02/15 15:01:37.243-07:01')).getTime());
+// CHECK-NEXT: 1487196157243
+print((new Date('2017/02/15 15:01:37.243-07:1')).getTime());
+// CHECK-NEXT: 1487196157243
 
 print(Date.parse('Tue Jul 16 2019 13:15:25 GMT-0700 (Pacific Daylight Time)'));
 // CHECK-NEXT: 1563308125000
