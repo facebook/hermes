@@ -252,7 +252,7 @@ print((new Date('2017/02/15 15:01:37.243-7:')).getTime());
 print((new Date('2017/02/15 15:01:37.243-07:')).getTime());
 // CHECK-NEXT: 1487196097243
 print((new Date('2017/02/15 15:01:37.243-070')).getTime());
-// CHECK-NEXT: 1487175097243
+// CHECK-NEXT: 1487196097243
 print((new Date('2017/02/15 15:01:37.243-07:01')).getTime());
 // CHECK-NEXT: 1487196157243
 print((new Date('2017/02/15 15:01:37.243-07:1')).getTime());
