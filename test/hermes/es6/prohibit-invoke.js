@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xflow-parser -O %s | %FileCheck --match-full-lines %s
-// REQUIRES: flowparser
+// RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 
 var arrow1 = () => { print("in arrow"); }
 
