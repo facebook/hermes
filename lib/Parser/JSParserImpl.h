@@ -392,6 +392,18 @@ class JSParserImpl {
 
   /// Check whether the recursion depth has been exceeded, and if so generate
   /// and error and return true.
+  /// If the depth has not been exceeded return false.
+  /// NOTE: This is intended to stay inline to avoid a function call unless the
+  /// depth was actually exceeded.
+  inline bool recursionDepthCheck() {
+    if (LLVM_LIKELY(recursionDepth_ < MAX_RECURSION_DEPTH)) {
+      return false;
+    }
+    return recursionDepthExceeded();
+  }
+
+  /// Assert that the recursion depth has been exceeded, generate an error
+  /// and return true.
   bool recursionDepthExceeded();
 
   // Parser functions. All of these correspond more or less directly to grammar

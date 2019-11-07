@@ -28,7 +28,7 @@ static const int PreemptiveCompilationThresholdBytes = 160;
 /// llvm::Optional<>.
 #define CHECK_RECURSION                \
   TrackRecursion trackRecursion{this}; \
-  if (recursionDepthExceeded())        \
+  if (recursionDepthCheck())           \
     return llvm::None;
 
 JSParserImpl::JSParserImpl(
@@ -249,8 +249,9 @@ void JSParserImpl::processDirective(UniqueString *directive) {
 }
 
 bool JSParserImpl::recursionDepthExceeded() {
-  if (recursionDepth_ < MAX_RECURSION_DEPTH)
-    return false;
+  assert(
+      recursionDepth_ >= MAX_RECURSION_DEPTH &&
+      "recursionDepthExceeded called without recursionDepthCheck");
   lexer_.error(
       tok_->getStartLoc(),
       "Too many nested expressions/statements/declarations");
@@ -2948,6 +2949,7 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
         break;
       }
       topExpr = newBinNode(stack.back().first, stack.back().second, topExpr);
+      recursionDepth_--;
       stack.pop_back();
     }
 
@@ -2957,6 +2959,10 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     //                     ^
     //                 We are here
     // Push topExpr and the '*', so we can parse rightExpr.
+    ++recursionDepth_;
+    if (LLVM_UNLIKELY(recursionDepthCheck())) {
+      return None;
+    }
     stack.emplace_back(topExpr, tok_->getKind());
     advance();
 
@@ -2970,6 +2976,7 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   // We have consumed all binary operators. Pop the stack, creating expressions.
   while (!stack.empty()) {
     topExpr = newBinNode(stack.back().first, stack.back().second, topExpr);
+    --recursionDepth_;
     stack.pop_back();
   }
 
