@@ -2918,16 +2918,12 @@ inline unsigned getPrecedenceExcept(TokenKind kind, TokenKind except) {
 
 Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   // The stack can never go deeper than the number of precedence levels,
-  // and we have 10.
-  static const unsigned STACK_SIZE = 16;
+  // unless we have a right-associative operator.
+  // We have 10 precedence levels.
+  constexpr unsigned STACK_SIZE = 16;
 
   // Operator and value stack.
-  ESTree::NodePtr valueStack[STACK_SIZE];
-  TokenKind opStack[STACK_SIZE];
-
-  // The stack grows down, because it is more natural to point one past the end
-  // of an array, rather than one before.
-  unsigned sp = STACK_SIZE;
+  llvm::SmallVector<std::pair<ESTree::NodePtr, TokenKind>, STACK_SIZE> stack{};
 
   // Decide whether to recognize "in" as a binary operator.
   const TokenKind exceptKind =
@@ -2943,16 +2939,16 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
              getPrecedenceExcept(tok_->getKind(), exceptKind)) {
     // If the next operator has no greater precedence than the operator on the
     // stack, pop the stack, creating a new binary expression.
-    while (sp != STACK_SIZE && precedence <= getPrecedence(opStack[sp])) {
-      if (precedence == getPrecedence(opStack[sp]) &&
-          !isLeftAssoc(opStack[sp])) {
+    while (!stack.empty() && precedence <= getPrecedence(stack.back().second)) {
+      if (precedence == getPrecedence(stack.back().second) &&
+          !isLeftAssoc(stack.back().second)) {
         // If the precedences are equal, then we avoid popping for
         // right-associative operators to allow for the entire right-associative
         // expression to be built from the right.
         break;
       }
-      topExpr = newBinNode(valueStack[sp], opStack[sp], topExpr);
-      ++sp;
+      topExpr = newBinNode(stack.back().first, stack.back().second, topExpr);
+      stack.pop_back();
     }
 
     // The next operator has a higher precedence than the previous one (or there
@@ -2961,25 +2957,25 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
     //                     ^
     //                 We are here
     // Push topExpr and the '*', so we can parse rightExpr.
-    --sp;
-    opStack[sp] = tok_->getKind();
+    stack.emplace_back(topExpr, tok_->getKind());
     advance();
 
     auto optRightExpr = parseUnaryExpression();
     if (!optRightExpr)
       return None;
 
-    valueStack[sp] = topExpr;
     topExpr = optRightExpr.getValue();
   }
 
   // We have consumed all binary operators. Pop the stack, creating expressions.
-  while (sp != STACK_SIZE) {
-    topExpr = newBinNode(valueStack[sp], opStack[sp], topExpr);
-    ++sp;
+  while (!stack.empty()) {
+    topExpr = newBinNode(stack.back().first, stack.back().second, topExpr);
+    stack.pop_back();
   }
 
-  assert(sp == STACK_SIZE);
+  assert(
+      stack.empty() &&
+      "Stack must be empty when done parsing binary expression");
   return topExpr;
 }
 
