@@ -186,6 +186,8 @@ print(Date.parse('2016-01T12:30Z'));
 // CHECK-NEXT: 1451651400000
 print(Date.parse('2016-01-01T12:30Z'));
 // CHECK-NEXT: 1451651400000
+print(Date.parse('2016-01-01-12:30:00'));
+// CHECK-NEXT: NaN
 print(Date.parse('2016T12:30:00Z'));
 // CHECK-NEXT: 1451651400000
 print(Date.parse('2016T12:30:00.000Z'));
@@ -193,6 +195,8 @@ print(Date.parse('2016T12:30:00.000Z'));
 print(Date.parse('2016'));
 // CHECK-NEXT: 1451606400000
 print(Date.parse('2016 '));
+// CHECK-NEXT: 1451631600000
+print(Date.parse('2016 00:00:00'));
 // CHECK-NEXT: 1451631600000
 print(Date.parse('2016T12:30'));
 // CHECK-NEXT: 1451676600000
@@ -228,6 +232,8 @@ print((new Date('2017/02/15T15:01:37.243')).getTime());
 print((new Date('2017/02/15 15:01:37.243-0700')).getTime());
 // CHECK-NEXT: 1487196097243
 print((new Date('2017/02/15 15:01:37.243-07:00')).getTime());
+// CHECK-NEXT: 1487196097243
+print((new Date('2017/02/15 15:01:37.243-7:0')).getTime());
 // CHECK-NEXT: 1487196097243
 print((new Date('2017/02/15 15:01:37.243-0700')).getHours());
 // CHECK-NEXT: 15

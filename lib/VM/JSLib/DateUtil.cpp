@@ -742,8 +742,13 @@ static double parseISODate(StringView u16str) {
   // Initialize these fields to their defaults.
   int32_t y, m{1}, d{1}, h{0}, min{0}, s{0}, ms{0}, tzh{0}, tzm{0};
 
+  // Assign separator character value, default '-'
+  char16_t sepChr = u'-';
+
   // See if need to adjust timezone
   bool adjustTZ = false;
+
+  // See if only year is set
   bool onlyYear = false;
 
   auto consume = [&](char16_t ch) {
@@ -767,15 +772,14 @@ static double parseISODate(StringView u16str) {
   y *= sign;
 
   if (it == end) {
+    // Only year is set
     onlyYear = true;
-  } else if (consume(' ')) {
-    onlyYear = false;
-  }
-
-  // Assign separator character value, default '-'
-  char16_t sepChr = u'-';
-  if (*it == u'/') {
+  } else if (*it == u'/') {
+    // Assign separator character to '/'
     sepChr = u'/';
+  } else if (*it == u' ' && it + 1 == end) {
+    // Only year and one blank character
+    consume(u' ');
   }
 
   if (consume(sepChr)) {
@@ -791,8 +795,9 @@ static double parseISODate(StringView u16str) {
     }
   }
 
-  // See if there's a time.
-  if (consume(u'T') || consume(u' ') || (sepChr == '/' && consume(sepChr))) {
+  // See if there's a time
+  // or see if separated day and time by '/' like '2016/01/01/00:00:00'.
+  if (consume(u'T') || consume(u' ') || (sepChr == u'/' && consume(sepChr))) {
     // Hours and minutes must exist.
     if (!scanInt(it, end, h)) {
       return nan;
@@ -841,22 +846,36 @@ static double parseISODate(StringView u16str) {
         return nan;
       }
       // Hour and minute of timezone adjustment.
-      if (it > end - 2 || !scanInt(it, it + 2, tzh)) {
-        return nan;
+      // See if timezone seperated by ':'.
+      if ((it + 1 <= end && *(it + 1) == u':') || (it + 2 <= end && *(it + 2) == u':')) {
+        if (!scanInt(it, end, tzh)) {
+          return nan;
+        }
+        tzh *= sign;
+        if (!consume(u':')) {
+          return nan;
+        }
+        if (!scanInt(it, end, tzm)) {
+          return nan;
+        }
+        tzm *= sign;
+      } else {
+        // Support if timezone didn't seperate by ':'.
+        if (it > end - 2 || !scanInt(it, it + 2, tzh)) {
+          return nan;
+        }
+        tzh *= sign;
+        if (it != end && (it > end - 2 || !scanInt(it, it + 2, tzm))) {
+          return nan;
+        }
+        tzm *= sign;
       }
-      tzh *= sign;
-      if (it < end && *it == ':') {
-        consume(u':');
-      }
-      if (it != end && (it > end - 2 || !scanInt(it, it + 2, tzm))) {
-        return nan;
-      }
-      tzm *= sign;
     } else if (it == end) {
       adjustTZ = true;
     }
-  } else if (!onlyYear) {
-    adjustTZ = true;
+  } else {
+    // If only year is set, don't need to adjust timezone.
+    adjustTZ = !onlyYear;
   }
 
   if (it != end) {
@@ -997,12 +1016,12 @@ static double parseESDate(StringView str) {
       return nan;
     if (!tok.equals(llvm::arrayRefFromStringRef("GMT")))
       return nan;
-    // Still paring, use default value tzh=0 & tzm=0
+    // Still parsing, use default value tzh=0 & tzm=0
     if (it == end) {
       goto complete;
     }
   } else if (it == end) {
-    // Still paring, use local timezone
+    // Still parsing, use local timezone
     adjustTZ = true;
     goto complete;
   }
@@ -1016,17 +1035,30 @@ static double parseESDate(StringView str) {
     return nan;
 
   // Hour and minute of timezone adjustment.
-  if (it > end - 2 || !scanInt(it, it + 2, tzh)) {
-    return nan;
+  // See if timezone seperated by ':'.
+  if ((it + 1 <= end && *(it + 1) == u':') || (it + 2 <= end && *(it + 2) == u':')) {
+    if (!scanInt(it, end, tzh)) {
+      return nan;
+    }
+    tzh *= sign;
+    if (!consume(u':')) {
+      return nan;
+    }
+    if (!scanInt(it, end, tzm)) {
+      return nan;
+    }
+    tzm *= sign;
+  } else {
+    // Support if timezone didn't seperate by ':'.
+    if (it > end - 2 || !scanInt(it, it + 2, tzh)) {
+      return nan;
+    }
+    tzh *= sign;
+    if (it != end && (it > end - 2 || !scanInt(it, it + 2, tzm))) {
+      return nan;
+    }
+    tzm *= sign;
   }
-  tzh *= sign;
-  if (it < end && *it == ':') {
-    consume(u':');
-  }
-  if (it != end && (it > end - 2 || !scanInt(it, it + 2, tzm))) {
-    return nan;
-  }
-  tzm *= sign;
 
   if (it != end) {
     // Optional parenthesized description of timezone (must be at the end).
