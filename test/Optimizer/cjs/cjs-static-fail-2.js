@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O -fstatic-require -commonjs -emit-binary %s 2>&1 > /dev/null | %FileCheck --match-full-lines %s
-// TODO(T53144040) Fix LIT tests on Windows
-// XFAIL: windows
+// RUN: %hermesc -O -fstatic-require -commonjs -emit-binary %s 2>&1 > %t | %FileCheck --match-full-lines %s
+
+
 
 foo(require);
 //CHECK: {{.*}}cjs-static-fail-2.js:12:4: warning: 'require' used as function call argument

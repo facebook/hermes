@@ -5,9 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -emit-binary -O %s > /dev/null
-// TODO(T53144040) Fix LIT tests on Windows
-// XFAIL: windows
+// RUN: %hermes -target=HBC -emit-binary -O %s > %t
 
 function days_of_the_w_ek(x) {
   switch (1) {
