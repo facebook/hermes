@@ -77,14 +77,6 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
       regExpPrototypeTest,
       1);
 
-  defineMethod(
-      runtime,
-      proto,
-      Predefined::getSymbolID(Predefined::toString),
-      nullptr,
-      regExpPrototypeToString,
-      0);
-
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
 
@@ -155,6 +147,14 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   defineGetter(cons, Predefined::lastParen, regExpLastParenGetter);
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+  defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::toString),
+      nullptr,
+      regExpPrototypeToString,
+      0);
+
   (void)defineMethod(
       runtime,
       proto,
@@ -650,52 +650,6 @@ regExpPrototypeTest(void *context, Runtime *runtime, NativeArgs args) {
 
   return HermesValue::encodeBoolValue(
       !runtime->makeHandle(res.getValue())->isNull());
-}
-
-// ES6 21.2.5.14
-// Note there is no requirement that 'this' be a RegExp object.
-CallResult<HermesValue>
-regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
-  Handle<JSObject> regexp = args.dyncastThis<JSObject>();
-  if (!regexp) {
-    return runtime->raiseTypeError(
-        "RegExp.prototype.toString() called on non-object");
-  }
-
-  // Let pattern be ToString(Get(R, "source"))
-  auto source = JSObject::getNamed_RJS(
-      regexp, runtime, Predefined::getSymbolID(Predefined::source));
-  if (LLVM_UNLIKELY(source == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto patternRes = toString_RJS(runtime, runtime->makeHandle(*source));
-  if (LLVM_UNLIKELY(patternRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  Handle<StringPrimitive> pattern = toHandle(runtime, std::move(*patternRes));
-
-  // Let flags be ToString(Get(R, "flags"))
-  auto flagsObj = JSObject::getNamed_RJS(
-      regexp, runtime, Predefined::getSymbolID(Predefined::flags));
-  if (LLVM_UNLIKELY(flagsObj == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto flagsRes = toString_RJS(runtime, runtime->makeHandle(*flagsObj));
-  if (LLVM_UNLIKELY(flagsRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  Handle<StringPrimitive> flags = toHandle(runtime, std::move(*flagsRes));
-
-  // 'Let result be the String value formed by concatenating "/", pattern, and
-  // "/", and flags.' We expect 2 slashes plus at most 5 flags.
-  SmallU16String<32> result;
-  result.reserve(pattern->getStringLength() + 2 + 5);
-
-  result.push_back(u'/');
-  pattern->copyUTF16String(result);
-  result.push_back(u'/');
-  flags->copyUTF16String(result);
-  return StringPrimitive::create(runtime, result);
 }
 
 /// Return the ith capture group in the most recent succesful RegExp search.
@@ -1410,6 +1364,52 @@ regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
 }
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+// ES6 21.2.5.14
+// Note there is no requirement that 'this' be a RegExp object.
+CallResult<HermesValue>
+regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
+  Handle<JSObject> regexp = args.dyncastThis<JSObject>();
+  if (!regexp) {
+    return runtime->raiseTypeError(
+        "RegExp.prototype.toString() called on non-object");
+  }
+
+  // Let pattern be ToString(Get(R, "source"))
+  auto source = JSObject::getNamed_RJS(
+      regexp, runtime, Predefined::getSymbolID(Predefined::source));
+  if (LLVM_UNLIKELY(source == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto patternRes = toString_RJS(runtime, runtime->makeHandle(*source));
+  if (LLVM_UNLIKELY(patternRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<StringPrimitive> pattern = toHandle(runtime, std::move(*patternRes));
+
+  // Let flags be ToString(Get(R, "flags"))
+  auto flagsObj = JSObject::getNamed_RJS(
+      regexp, runtime, Predefined::getSymbolID(Predefined::flags));
+  if (LLVM_UNLIKELY(flagsObj == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto flagsRes = toString_RJS(runtime, runtime->makeHandle(*flagsObj));
+  if (LLVM_UNLIKELY(flagsRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<StringPrimitive> flags = toHandle(runtime, std::move(*flagsRes));
+
+  // 'Let result be the String value formed by concatenating "/", pattern, and
+  // "/", and flags.' We expect 2 slashes plus at most 5 flags.
+  SmallU16String<32> result;
+  result.reserve(pattern->getStringLength() + 2 + 5);
+
+  result.push_back(u'/');
+  pattern->copyUTF16String(result);
+  result.push_back(u'/');
+  flags->copyUTF16String(result);
+  return StringPrimitive::create(runtime, result);
+}
+
 // TODO: consider writing this in JS.
 /// ES6.0 21.2.5.6
 CallResult<HermesValue>
