@@ -1054,7 +1054,7 @@ static double parseESDate(StringView str) {
     // See if timezone is '-:' or '+:'
     adjustTZ = true;
   } else if ((it + 1 < end && *(it + 1) == u':') || (it + 2 < end && *(it + 2) == u':')) {
-    // See if timezone seperated by ':', is like '-07:00' or '-7:0' or '-7:00' or '-07:' or '-7:'
+    // See if timezone separated by ':', is like '-07:00' or '-7:0' or '-7:00' or '-07:' or '-7:'
     if (!scanInt(it, end, tzh)) {
       return nan;
     }
