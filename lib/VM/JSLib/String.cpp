@@ -154,13 +154,6 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       ctx,
       stringPrototypeRepeat,
       1);
-  defineMethod(
-      runtime,
-      stringPrototype,
-      Predefined::getSymbolID(Predefined::replace),
-      ctx,
-      stringPrototypeReplace,
-      2);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   auto trimStartRes = runtime->makeHandle<Callable>(
@@ -248,6 +241,13 @@ Handle<JSObject> createStringConstructor(Runtime *runtime) {
       (void *)true,
       stringPrototypePad,
       1);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::replace),
+      ctx,
+      stringPrototypeReplace,
+      2);
   defineMethod(
       runtime,
       stringPrototype,
@@ -1439,143 +1439,6 @@ stringPrototypeRepeat(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
-  // 1. Let O be RequireObjectCoercible(this value).
-  // 2. ReturnIfAbrupt(O).
-  auto O = args.getThisHandle();
-  if (LLVM_UNLIKELY(
-          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  // 3. If searchValue is neither undefined nor null, then
-  auto searchValue = args.getArgHandle(0);
-  auto replaceValue = args.getArgHandle(1);
-  if (!searchValue->isUndefined() && !searchValue->isNull()) {
-    // a. Let replacer be GetMethod(searchValue, @@replace).
-    auto methodRes = getMethod(
-        runtime,
-        searchValue,
-        runtime->makeHandle(
-            Predefined::getSymbolID(Predefined::SymbolReplace)));
-    // b. ReturnIfAbrupt(replacer).
-    if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    // c. If replacer is not undefined, then
-    //   i. Return Call(replacer, searchValue, «‍O, replaceValue»).
-    if (!methodRes->getHermesValue().isUndefined()) {
-      // If methodRes is not Callable, step 3a would have thrown a TypeError.
-      Handle<Callable> replacer =
-          Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
-      return Callable::executeCall2(
-          replacer,
-          runtime,
-          searchValue,
-          O.getHermesValue(),
-          replaceValue.getHermesValue());
-    }
-  }
-  // 4. Let string be ToString(O).
-  // 5. ReturnIfAbrupt(string).
-  auto stringRes = toString_RJS(runtime, O);
-  if (LLVM_UNLIKELY(stringRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto string = toHandle(runtime, std::move(*stringRes));
-  // 6. Let searchString be ToString(searchValue).
-  auto searchStringRes = toString_RJS(runtime, searchValue);
-  // 7. ReturnIfAbrupt(searchString).
-  if (LLVM_UNLIKELY(searchStringRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto searchString = toHandle(runtime, std::move(*searchStringRes));
-  // 8. Let functionalReplace be IsCallable(replaceValue).
-  auto replaceFn = Handle<Callable>::dyn_vmcast(replaceValue);
-  MutableHandle<StringPrimitive> replaceValueStr{runtime};
-  bool functionalReplace = !!replaceFn;
-  // 9. If functionalReplace is false, then
-  if (!functionalReplace) {
-    // a. Let replaceValue be ToString(replaceValue).
-    // b. ReturnIfAbrupt(replaceValue).
-    auto replaceValueStrRes = toString_RJS(runtime, replaceValue);
-    if (LLVM_UNLIKELY(replaceValueStrRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    replaceValueStr = replaceValueStrRes->get();
-  }
-  // 10. Search string for the first occurrence of searchString and let pos be
-  // the index within string of the first code unit of the matched substring and
-  // let matched be searchString. If no occurrences of searchString were found,
-  // return string.
-  // Special case: if they're both empty then the match is at position 0.
-  uint32_t pos = 0;
-  auto strView = StringPrimitive::createStringView(runtime, string);
-  if (!strView.empty()) {
-    auto searchView = StringPrimitive::createStringView(runtime, searchString);
-    auto searchResult = std::search(
-        strView.begin(), strView.end(), searchView.begin(), searchView.end());
-
-    if (searchResult != strView.end()) {
-      pos = searchResult - strView.begin();
-    } else {
-      return string.getHermesValue();
-    }
-  } else if (searchString->getStringLength() != 0) {
-    // If string is empty and search is not empty, there is no match.
-    return string.getHermesValue();
-  }
-  MutableHandle<StringPrimitive> replStr{runtime};
-  // 11. If functionalReplace is true, then
-  if (functionalReplace) {
-    // a. Let replValue be Call(replaceValue, undefined, «matched, pos, and
-    // string»).
-    auto callRes = Callable::executeCall3(
-        replaceFn,
-        runtime,
-        Runtime::getUndefinedValue(),
-        searchString.getHermesValue(),
-        HermesValue::encodeNumberValue(pos),
-        string.getHermesValue());
-    if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    // b. Let replStr be ToString(replValue).
-    auto replStrRes =
-        toString_RJS(runtime, runtime->makeHandle(callRes.getValue()));
-    // c. ReturnIfAbrupt(replStr).
-    if (LLVM_UNLIKELY(replStrRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    replStr = replStrRes->get();
-  } else {
-    // 12. Else,
-    // a. Let captures be an empty List.
-    auto nullHandle = Runtime::makeNullHandle<ArrayStorage>();
-    // b. Let replStr be GetSubstitution(matched, string, pos, captures,
-    // replaceValue).
-    auto callRes = getSubstitution(
-        runtime, searchString, string, pos, nullHandle, replaceValueStr);
-    if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    replStr = vmcast<StringPrimitive>(callRes.getValue());
-  }
-  // 13. Let tailPos be pos + the number of code units in matched.
-  uint32_t tailPos = pos + searchString->getStringLength();
-  // 14. Let newString be the String formed by concatenating the first pos code
-  // units of string, replStr, and the trailing substring of string starting at
-  // index tailPos. If pos is 0, the first element of the concatenation will be
-  // the empty String.
-  SmallU16String<32> newString{};
-  strView.slice(0, pos).copyUTF16String(newString);
-  StringPrimitive::createStringView(runtime, replStr)
-      .copyUTF16String(newString);
-  strView.slice(tailPos).copyUTF16String(newString);
-  // 15. Return newString.
-  return StringPrimitive::create(runtime, newString);
-}
-
-CallResult<HermesValue>
 stringPrototypeSymbolIterator(void *, Runtime *runtime, NativeArgs args) {
   auto thisValue = args.getThisHandle();
   if (LLVM_UNLIKELY(
@@ -1760,6 +1623,143 @@ stringPrototypePad(void *ctx, Runtime *runtime, NativeArgs args) {
   }
 
   return builderRes->getStringPrimitive().getHermesValue();
+}
+
+CallResult<HermesValue>
+stringPrototypeReplace(void *, Runtime *runtime, NativeArgs args) {
+  // 1. Let O be RequireObjectCoercible(this value).
+  // 2. ReturnIfAbrupt(O).
+  auto O = args.getThisHandle();
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, O) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 3. If searchValue is neither undefined nor null, then
+  auto searchValue = args.getArgHandle(0);
+  auto replaceValue = args.getArgHandle(1);
+  if (!searchValue->isUndefined() && !searchValue->isNull()) {
+    // a. Let replacer be GetMethod(searchValue, @@replace).
+    auto methodRes = getMethod(
+        runtime,
+        searchValue,
+        runtime->makeHandle(
+            Predefined::getSymbolID(Predefined::SymbolReplace)));
+    // b. ReturnIfAbrupt(replacer).
+    if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // c. If replacer is not undefined, then
+    //   i. Return Call(replacer, searchValue, «‍O, replaceValue»).
+    if (!methodRes->getHermesValue().isUndefined()) {
+      // If methodRes is not Callable, step 3a would have thrown a TypeError.
+      Handle<Callable> replacer =
+          Handle<Callable>::vmcast(runtime, methodRes->getHermesValue());
+      return Callable::executeCall2(
+          replacer,
+          runtime,
+          searchValue,
+          O.getHermesValue(),
+          replaceValue.getHermesValue());
+    }
+  }
+  // 4. Let string be ToString(O).
+  // 5. ReturnIfAbrupt(string).
+  auto stringRes = toString_RJS(runtime, O);
+  if (LLVM_UNLIKELY(stringRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto string = toHandle(runtime, std::move(*stringRes));
+  // 6. Let searchString be ToString(searchValue).
+  auto searchStringRes = toString_RJS(runtime, searchValue);
+  // 7. ReturnIfAbrupt(searchString).
+  if (LLVM_UNLIKELY(searchStringRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto searchString = toHandle(runtime, std::move(*searchStringRes));
+  // 8. Let functionalReplace be IsCallable(replaceValue).
+  auto replaceFn = Handle<Callable>::dyn_vmcast(replaceValue);
+  MutableHandle<StringPrimitive> replaceValueStr{runtime};
+  bool functionalReplace = !!replaceFn;
+  // 9. If functionalReplace is false, then
+  if (!functionalReplace) {
+    // a. Let replaceValue be ToString(replaceValue).
+    // b. ReturnIfAbrupt(replaceValue).
+    auto replaceValueStrRes = toString_RJS(runtime, replaceValue);
+    if (LLVM_UNLIKELY(replaceValueStrRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    replaceValueStr = replaceValueStrRes->get();
+  }
+  // 10. Search string for the first occurrence of searchString and let pos be
+  // the index within string of the first code unit of the matched substring and
+  // let matched be searchString. If no occurrences of searchString were found,
+  // return string.
+  // Special case: if they're both empty then the match is at position 0.
+  uint32_t pos = 0;
+  auto strView = StringPrimitive::createStringView(runtime, string);
+  if (!strView.empty()) {
+    auto searchView = StringPrimitive::createStringView(runtime, searchString);
+    auto searchResult = std::search(
+        strView.begin(), strView.end(), searchView.begin(), searchView.end());
+
+    if (searchResult != strView.end()) {
+      pos = searchResult - strView.begin();
+    } else {
+      return string.getHermesValue();
+    }
+  } else if (searchString->getStringLength() != 0) {
+    // If string is empty and search is not empty, there is no match.
+    return string.getHermesValue();
+  }
+  MutableHandle<StringPrimitive> replStr{runtime};
+  // 11. If functionalReplace is true, then
+  if (functionalReplace) {
+    // a. Let replValue be Call(replaceValue, undefined, «matched, pos, and
+    // string»).
+    auto callRes = Callable::executeCall3(
+        replaceFn,
+        runtime,
+        Runtime::getUndefinedValue(),
+        searchString.getHermesValue(),
+        HermesValue::encodeNumberValue(pos),
+        string.getHermesValue());
+    if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // b. Let replStr be ToString(replValue).
+    auto replStrRes =
+        toString_RJS(runtime, runtime->makeHandle(callRes.getValue()));
+    // c. ReturnIfAbrupt(replStr).
+    if (LLVM_UNLIKELY(replStrRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    replStr = replStrRes->get();
+  } else {
+    // 12. Else,
+    // a. Let captures be an empty List.
+    auto nullHandle = Runtime::makeNullHandle<ArrayStorage>();
+    // b. Let replStr be GetSubstitution(matched, string, pos, captures,
+    // replaceValue).
+    auto callRes = getSubstitution(
+        runtime, searchString, string, pos, nullHandle, replaceValueStr);
+    if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    replStr = vmcast<StringPrimitive>(callRes.getValue());
+  }
+  // 13. Let tailPos be pos + the number of code units in matched.
+  uint32_t tailPos = pos + searchString->getStringLength();
+  // 14. Let newString be the String formed by concatenating the first pos code
+  // units of string, replStr, and the trailing substring of string starting at
+  // index tailPos. If pos is 0, the first element of the concatenation will be
+  // the empty String.
+  SmallU16String<32> newString{};
+  strView.slice(0, pos).copyUTF16String(newString);
+  StringPrimitive::createStringView(runtime, replStr)
+      .copyUTF16String(newString);
+  strView.slice(tailPos).copyUTF16String(newString);
+  // 15. Return newString.
+  return StringPrimitive::create(runtime, newString);
 }
 
 CallResult<HermesValue>

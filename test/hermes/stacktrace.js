@@ -76,7 +76,7 @@ runAndPrint(function() {
 })
 //CHECK-LABEL: Error: matchme
 //CHECK-NEXT:     at thrower ({{.*}})
-//CHECK-NEXT:     at replace (native)
+//CHECK-NEXT:     at replace ({{.*}})
 //CHECK-NEXT:     at anonymous ({{.*}})
 
 runAndPrint(function() {

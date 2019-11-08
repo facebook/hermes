@@ -988,6 +988,49 @@ hermesInternalExecuteCall(void *, Runtime *runtime, NativeArgs args) {
   return Callable::call(func, runtime);
 }
 
+///   HermesInternal.getSubstitution
+///     = function (matched,str, position, captures, replacement) {}
+/// \encode
+/// Returns true if func is a valid constructor, false otherwise.
+CallResult<HermesValue>
+hermesInternalGetSubstitution(void *, Runtime *runtime, NativeArgs args) {
+  auto matched = args.dyncastArg<StringPrimitive>(0);
+  auto str = args.dyncastArg<StringPrimitive>(1);
+  auto replacement = args.dyncastArg<StringPrimitive>(4);
+  if (!matched || !str || !replacement) {
+    return runtime->raiseTypeError(
+        "First, second, and fifth arguments should be strings");
+  }
+
+  auto posArg = args.getArg(2);
+  if (!posArg.isNumber()) {
+    return runtime->raiseTypeError("Third argument should be a number");
+  }
+  uint32_t position = posArg.getNumberAs<uint32_t>();
+
+  Handle<JSArray> capturesArg = args.dyncastArg<JSArray>(3);
+  if (!capturesArg) {
+    return runtime->raiseTypeError("Fourth argument should be an array");
+  }
+
+  uint32_t capturesLen = JSArray::getLength(*capturesArg);
+  auto arrRes = ArrayStorage::create(runtime, capturesLen /* capacity */);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  MutableHandle<ArrayStorage> captures{runtime,
+                                       vmcast<ArrayStorage>(arrRes.getValue())};
+
+  for (uint i = 0; i < capturesLen; ++i) {
+    GCScopeMarkerRAII marker{runtime};
+    ArrayStorage::push_back(
+        captures, runtime, capturesArg->handleAt(runtime, i));
+  }
+
+  return getSubstitution(
+      runtime, matched, str, position, captures, replacement);
+}
+
 /// \code
 ///   HermesInternal.isConstructor = function (func) {}
 /// \endcode
@@ -1221,6 +1264,7 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
   defineInternMethod(P::exponentiationOperator, mathPow);
 #ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineInternMethodAndSymbol("executeCall", hermesInternalExecuteCall);
+  defineInternMethodAndSymbol("getSubstitution", hermesInternalGetSubstitution);
   defineInternMethodAndSymbol("isConstructor", hermesInternalIsConstructor);
   defineInternMethodAndSymbol("isRegExp", hermesInternalIsRegExp);
   defineInternMethodAndSymbol(
