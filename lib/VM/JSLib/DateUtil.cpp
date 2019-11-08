@@ -1066,7 +1066,7 @@ static double parseESDate(StringView str) {
       tzm *= sign;
     }
   } else {
-    // See if timezone didn't seperate by ':'
+    // If timezone adjustment isn't separated by ':'.
     if (it < end - 2) {
       // See if timezone is like '0700' or '070'
       if (!scanInt(it, it + 2, tzh)) {
