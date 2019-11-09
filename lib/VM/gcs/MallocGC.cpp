@@ -411,6 +411,12 @@ size_t MallocGC::countUsedWeakRefs() const {
 }
 #endif
 
+void MallocGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
+  for (auto *ptr : pointers_) {
+    callback(ptr->data());
+  }
+}
+
 void MallocGC::resetWeakReferences() {
   for (auto &slot : weakPointers_) {
     // Set all allocated slots to unmarked.

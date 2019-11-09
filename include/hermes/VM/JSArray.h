@@ -118,6 +118,11 @@ class ArrayImpl : public JSObject {
   Handle<> handleAt(Runtime *runtime, size_type index) const {
     return runtime->makeHandle(at(runtime, index));
   }
+
+  const GCPointer<StorageType> &getIndexedStorage() const {
+    return indexedStorage_;
+  }
+
   /// @}
 
  protected:

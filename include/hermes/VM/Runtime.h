@@ -458,6 +458,11 @@ class Runtime : public HandleRootOwner,
   /// Print the heap and other misc. stats to the given stream.
   void printHeapStats(llvm::raw_ostream &os);
 
+#ifndef NDEBUG
+  /// Iterate over all arrays in the heap and print their sizes and capacities.
+  void printArrayCensus(llvm::raw_ostream &os);
+#endif
+
   /// Returns the common storage object.
   RuntimeCommonStorage *getCommonStorage() {
     return commonStorage_.get();

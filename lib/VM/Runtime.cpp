@@ -32,6 +32,7 @@
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/FillerCell.h"
 #include "hermes/VM/IdentifierTable.h"
+#include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
@@ -552,6 +553,9 @@ void Runtime::printHeapStats(llvm::raw_ostream &os) {
   if (shouldStabilizeInstructionCount())
     return;
   getHeap().printAllCollectedStats(os);
+#ifndef NDEBUG
+  printArrayCensus(llvm::outs());
+#endif
   for (auto &module : getRuntimeModules()) {
     auto tracker = module.getBytecode()->getPageAccessTracker();
     if (tracker) {
@@ -567,6 +571,133 @@ void Runtime::removeRuntimeModule(RuntimeModule *rm) {
 #endif
   runtimeModuleList_.remove(*rm);
 }
+
+#ifndef NDEBUG
+void Runtime::printArrayCensus(llvm::raw_ostream &os) {
+  // Do array capacity histogram.
+  // Map from array size to number of arrays that are that size.
+  // Arrays includes ArrayStorage and SegmentedArray.
+  std::map<std::pair<size_t, size_t>, std::pair<size_t, size_t>>
+      arraySizeToCountAndWastedSlots;
+  auto printTable = [&os](const std::map<
+                          std::pair<size_t, size_t>,
+                          std::pair<size_t, size_t>>
+                              &arraySizeToCountAndWastedSlots) {
+    os << llvm::format(
+        "%8s %8s %8s %10s %15s %15s %15s %20s %25s\n",
+        (const char *)"Capacity",
+        (const char *)"Sizeof",
+        (const char *)"Count",
+        (const char *)"Count %",
+        (const char *)"Cum Count %",
+        (const char *)"Bytes %",
+        (const char *)"Cum Bytes %",
+        (const char *)"Wasted Slots %",
+        (const char *)"Cum Wasted Slots %");
+    size_t totalBytes = 0;
+    size_t totalCount = 0;
+    size_t totalWastedSlots = 0;
+    for (const auto &p : arraySizeToCountAndWastedSlots) {
+      totalBytes += p.first.second * p.second.first;
+      totalCount += p.second.first;
+      totalWastedSlots += p.second.second;
+    }
+    size_t cumulativeBytes = 0;
+    size_t cumulativeCount = 0;
+    size_t cumulativeWastedSlots = 0;
+    for (const auto &p : arraySizeToCountAndWastedSlots) {
+      cumulativeBytes += p.first.second * p.second.first;
+      cumulativeCount += p.second.first;
+      cumulativeWastedSlots += p.second.second;
+      os << llvm::format(
+          "%8d %8d %8d %9.2f%% %14.2f%% %14.2f%% %14.2f%% %19.2f%% %24.2f%%\n",
+          p.first.first,
+          p.first.second,
+          p.second.first,
+          p.second.first * 100.0 / totalCount,
+          cumulativeCount * 100.0 / totalCount,
+          p.first.second * p.second.first * 100.0 / totalBytes,
+          cumulativeBytes * 100.0 / totalBytes,
+          totalWastedSlots ? p.second.second * 100.0 / totalWastedSlots : 100.0,
+          totalWastedSlots ? cumulativeWastedSlots * 100.0 / totalWastedSlots
+                           : 100.0);
+    }
+    os << "\n";
+  };
+
+  os << "Array Census for ArrayStorage:\n";
+  getHeap().forAllObjs([&arraySizeToCountAndWastedSlots](GCCell *cell) {
+    if (cell->getKind() == CellKind::ArrayStorageKind) {
+      ArrayStorage *arr = vmcast<ArrayStorage>(cell);
+      const auto key = std::make_pair(arr->capacity(), arr->getAllocatedSize());
+      arraySizeToCountAndWastedSlots[key].first++;
+      arraySizeToCountAndWastedSlots[key].second +=
+          arr->capacity() - arr->size();
+    }
+  });
+  if (arraySizeToCountAndWastedSlots.empty()) {
+    os << "\tNo ArrayStorages\n\n";
+  } else {
+    printTable(arraySizeToCountAndWastedSlots);
+  }
+
+  os << "Array Census for SegmentedArray:\n";
+  arraySizeToCountAndWastedSlots.clear();
+  getHeap().forAllObjs([&arraySizeToCountAndWastedSlots](GCCell *cell) {
+    if (cell->getKind() == CellKind::SegmentedArrayKind) {
+      SegmentedArray *arr = vmcast<SegmentedArray>(cell);
+      const auto key = std::make_pair(arr->capacity(), arr->getAllocatedSize());
+      arraySizeToCountAndWastedSlots[key].first++;
+      arraySizeToCountAndWastedSlots[key].second +=
+          arr->capacity() - arr->size();
+    }
+  });
+  if (arraySizeToCountAndWastedSlots.empty()) {
+    os << "\tNo SegmentedArrays\n\n";
+  } else {
+    printTable(arraySizeToCountAndWastedSlots);
+  }
+
+  os << "Array Census for Segment:\n";
+  arraySizeToCountAndWastedSlots.clear();
+  getHeap().forAllObjs([&arraySizeToCountAndWastedSlots](GCCell *cell) {
+    if (cell->getKind() == CellKind::SegmentKind) {
+      SegmentedArray::Segment *seg = vmcast<SegmentedArray::Segment>(cell);
+      const auto key = std::make_pair(seg->length(), seg->getAllocatedSize());
+      arraySizeToCountAndWastedSlots[key].first++;
+      arraySizeToCountAndWastedSlots[key].second +=
+          SegmentedArray::Segment::kMaxLength - seg->length();
+    }
+  });
+  if (arraySizeToCountAndWastedSlots.empty()) {
+    os << "\tNo Segments\n\n";
+  } else {
+    printTable(arraySizeToCountAndWastedSlots);
+  }
+
+  os << "Array Census for JSArray:\n";
+  arraySizeToCountAndWastedSlots.clear();
+  getHeap().forAllObjs([&arraySizeToCountAndWastedSlots, this](GCCell *cell) {
+    if (cell->getKind() == CellKind::ArrayKind) {
+      JSArray *arr = vmcast<JSArray>(cell);
+      JSArray::StorageType *storage =
+          arr->getIndexedStorage().get(getHeap().getPointerBase());
+      const auto capacity = storage ? storage->capacity() : 0;
+      const auto sz = storage ? storage->size() : 0;
+      const auto key = std::make_pair(capacity, arr->getAllocatedSize());
+      arraySizeToCountAndWastedSlots[key].first++;
+      arraySizeToCountAndWastedSlots[key].second += capacity - sz;
+    }
+  });
+  if (arraySizeToCountAndWastedSlots.empty()) {
+    os << "\tNo JSArrays\n\n";
+  } else {
+    printTable(arraySizeToCountAndWastedSlots);
+  }
+
+  os << "\n";
+}
+#endif
 
 unsigned Runtime::getSymbolsEnd() const {
   return identifierTable_.getSymbolsEnd();

@@ -256,6 +256,9 @@ class MallocGC final : public GCBase {
     return maxSize_;
   }
 
+  /// For testing purposes the ability to iterate over all objects in the heap.
+  void forAllObjs(const std::function<void(GCCell *)> &callback);
+
   /// @}
 
  private:

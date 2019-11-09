@@ -43,6 +43,7 @@ namespace vm {
 class SegmentedArray final
     : public VariableSizeRuntimeCell,
       private llvm::TrailingObjects<SegmentedArray, GCHermesValue> {
+ public:
   /// A segment is just a blob of raw memory with a fixed size.
   class Segment final : public GCCell {
    public:
@@ -107,7 +108,6 @@ class SegmentedArray final
         : GCCell(&runtime->getHeap(), &vt), length_(0) {}
   };
 
- public:
   using size_type = uint32_t;
 
   /// The threshold at which the storage changes from values to pointers to
