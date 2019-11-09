@@ -451,8 +451,6 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
 #undef RUNTIME_HV_FIELD_PROTOTYPE
     acceptor.acceptPtr(objectPrototypeRawPtr, "objectPrototype");
     acceptor.acceptPtr(functionPrototypeRawPtr, "functionPrototype");
-    acceptor.acceptPtr(arrayPrototypeRawPtr, "arrayPrototype");
-    acceptor.acceptPtr(arrayClassRawPtr, "arrayClass");
 #undef MARK
     acceptor.endRootSection();
   }
@@ -2040,10 +2038,6 @@ void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
   objectPrototypeRawPtr = vmcast<JSObject>(objectPrototype);
   // JSObject *functionPrototypeRawPtr{};
   functionPrototypeRawPtr = vmcast<NativeFunction>(functionPrototype);
-  // JSObject *arrayPrototypeRawPtr{};
-  arrayPrototypeRawPtr = vmcast<JSObject>(arrayPrototype);
-  // HiddenClass *arrayClassRawPtr{};
-  arrayClassRawPtr = vmcast<HiddenClass>(arrayClass);
 
   LLVM_DEBUG(llvm::dbgs() << "Finish deserializing\n");
 

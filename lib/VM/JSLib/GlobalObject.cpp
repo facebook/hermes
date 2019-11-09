@@ -437,14 +437,12 @@ void initGlobalObject(Runtime *runtime) {
       0,
       0));
   runtime->arrayPrototype = arrRes;
-  runtime->arrayPrototypeRawPtr = vmcast<JSObject>(runtime->arrayPrototype);
 
   // Declare the array class.
   runtime->arrayClass =
       JSArray::createClass(
           runtime, Handle<JSObject>::vmcast(&runtime->arrayPrototype))
           .getHermesValue();
-  runtime->arrayClassRawPtr = vmcast<HiddenClass>(runtime->arrayClass);
 
   // "Forward declaration" of ArrayBuffer.prototype. Its properties will be
   // populated later.

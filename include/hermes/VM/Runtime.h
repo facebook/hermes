@@ -618,11 +618,7 @@ class Runtime : public HandleRootOwner,
 
   JSObject *functionPrototypeRawPtr{};
 
-  JSObject *arrayPrototypeRawPtr{};
-
   RegExpMatch regExpLastMatch{};
-
-  HiddenClass *arrayClassRawPtr{};
 
   /// Whether to allow eval and Function ctor.
   const bool enableEval;
