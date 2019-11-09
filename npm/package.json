@@ -21,7 +21,7 @@
     "linux64-bin/hermes-repl",
     "win64-bin/hermes.exe",
     "win64-bin/hermes-repl.exe",
-    "win64-bin/icu*.dll"
+    "win64-bin/*.dll"
   ],
   "devDependencies": {
     "request": "^2.88.0",
