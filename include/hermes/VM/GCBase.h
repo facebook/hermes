@@ -375,6 +375,13 @@ class GCBase {
     llvm::DenseMap<const void *, HeapSnapshot::NodeID> objectIDMap_;
   };
 
+#ifndef NDEBUG
+  /// Whether the last allocation was fixed size.  For long-lived
+  /// allocations, we do not declare whether they are fixed size;
+  /// Unknown is used in that case.
+  enum class FixedSizeValue { Yes, No, Unknown };
+#endif
+
   GCBase(
       MetadataTable metaTable,
       GCCallbacks *gcCallbacks,
@@ -400,6 +407,17 @@ class GCBase {
   bool shouldRandomizeAllocSpace() const {
     return randomizeAllocSpace_;
   }
+
+#ifndef NDEBUG
+  /// Returns whether the most-recently allocated object was specified as
+  /// fixed-size in the the allocation.  (FixedSizeValue is a trinary type,
+  /// defined above: Yes, No, or Unknown.)
+  virtual FixedSizeValue lastAllocationWasFixedSize() const {
+    // The default implementation returns Unknown.  This makes sense for GC
+    // implementations that don't care about FixedSize.
+    return FixedSizeValue::Unknown;
+  }
+#endif
 
   /// Name to indentify this heap in logs.
   const std::string &getName() const {

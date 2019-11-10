@@ -37,7 +37,7 @@ static constexpr size_t kCellSize = 64 * 1024;
 /// an OOM
 TEST(GCOOMFixedSizeDeathTest, Test) {
   const size_t kHeapSizeHint = kCellSize * GC::kYoungGenFractionDenom / 2;
-  using FixedCell = EmptyCell<kCellSize, /* FixedSize */ true>;
+  using FixedCell = EmptyCell<kCellSize>;
 
   auto runtime = DummyRuntime::create(
       getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));
@@ -58,7 +58,7 @@ TEST(GCOOMFixedSizeDeathTest, Test) {
 // in the old gen) should be fine.
 TEST(GCOOMVarSizeTest, Test) {
   const size_t kHeapSizeHint = kCellSize * GC::kYoungGenFractionDenom / 2;
-  using VarCell = EmptyCell<kCellSize, /* FixedSize */ false>;
+  using VarCell = VarSizedEmptyCell<kCellSize>;
 
   auto runtime = DummyRuntime::create(
       getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));
@@ -81,8 +81,7 @@ TEST(GCOOMFragmentationDeathTest, Test) {
       AlignedHeapSegment::maxSize() * GC::kYoungGenFractionDenom;
   // Only one of these cells will fit into a segment, with the maximum amount of
   // space wasted in the segment.
-  using AwkwardCell =
-      EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1, /* FixedSize */ false>;
+  using AwkwardCell = EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1>;
 
   auto runtime = DummyRuntime::create(
       getMetadataTable(), TestGCConfigFixedSize(kHeapSizeHint));

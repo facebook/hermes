@@ -24,7 +24,7 @@ using namespace hermes::unittest;
 namespace {
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
-using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize(), true>;
+using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 #endif
 
 struct Dummy final : public GCCell {

@@ -21,7 +21,7 @@ namespace vm {
 /// functions to simulate allocating a variabled size cell, even though this
 /// cell is not a subclass of \c VariableSizeRuntimeCell and so each template
 /// instantiation has a statically determined size.
-template <size_t Size, bool FixedSize = false>
+template <size_t Size>
 struct EmptyCell final : public GCCell {
   static const VTable vt;
   static constexpr size_t size() {
@@ -29,7 +29,8 @@ struct EmptyCell final : public GCCell {
   }
 
   static EmptyCell *create(DummyRuntime &runtime) {
-    return new (runtime.alloc<FixedSize>(size())) EmptyCell(&runtime.getHeap());
+    return new (runtime.alloc</*FixedSize*/ true>(size()))
+        EmptyCell(&runtime.getHeap());
   }
 
   static EmptyCell *createLongLived(DummyRuntime &runtime) {
@@ -45,11 +46,40 @@ struct EmptyCell final : public GCCell {
   inline size_t touch();
 };
 
-template <size_t Size, bool FixedSize>
-const VTable EmptyCell<Size, FixedSize>::vt{CellKind::UninitializedKind, Size};
+template <size_t Size>
+const VTable EmptyCell<Size>::vt{CellKind::UninitializedKind, Size};
 
-template <size_t Size, bool FixedSize>
-size_t EmptyCell<Size, FixedSize>::touch() {
+template <size_t Size>
+struct VarSizedEmptyCell final : public VariableSizeRuntimeCell {
+  static const VTable vt;
+  static constexpr size_t size() {
+    return Size;
+  }
+
+  static VarSizedEmptyCell *create(DummyRuntime &runtime) {
+    return new (runtime.alloc</*FixedSize*/ false>(size()))
+        VarSizedEmptyCell(&runtime.getHeap());
+  }
+
+  static VarSizedEmptyCell *createLongLived(DummyRuntime &runtime) {
+    return new (runtime.allocLongLived(size()))
+        VarSizedEmptyCell(&runtime.getHeap());
+  }
+
+  VarSizedEmptyCell(GC *gc) : VariableSizeRuntimeCell(gc, &vt, Size) {}
+
+  /// Touch bytes in the cell from the end of its header until the end of its
+  /// memory region, at page sized intervals.
+  ///
+  /// \return The number of pages touched.
+  inline size_t touch();
+};
+
+template <size_t Size>
+const VTable VarSizedEmptyCell<Size>::vt{CellKind::UninitializedKind, 0};
+
+template <size_t Size>
+size_t EmptyCell<Size>::touch() {
   const auto PS = hermes::oscompat::page_size();
 
   volatile char *begin = reinterpret_cast<char *>(this);

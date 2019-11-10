@@ -271,6 +271,12 @@ class GenGC final : public GCBase {
 
   /// Returns true if \p cell is the most-recently allocated finalizable object.
   bool isMostRecentFinalizableObj(const GCCell *cell) const;
+
+  /// Whether the last allocation was fixed size.  Used to check that the
+  /// FixedSize parameter used in allocation matches the fixed-size attribute of
+  /// the object constructed on the allocated memory.  For long-lived
+  /// allocations, we do not declare whether they are fixed size.
+  inline FixedSizeValue lastAllocationWasFixedSize() const override;
 #endif
 
   /// \return true if \p is in the young generation.
@@ -867,6 +873,14 @@ class GenGC final : public GCBase {
   // double-check our more-efficient (per YG GC) allocated bytes calculation.
   uint64_t totalAllocatedBytesDebug_ = 0;
 #endif
+#ifndef NDEBUG
+  /// Whether the last allocation was fixed size (if we know).  Used
+  /// to check that the FixedSize parameter used in allocation matches
+  /// the fixed-size attribute of the object constructed on the
+  /// allocated memory.  (Initial value doesn't matter, since it
+  /// should not be referenced before being set explicitly.)
+  FixedSizeValue lastAllocWasFixedSize_;
+#endif
 };
 
 // A special vmcast implementation used during GC.  At some points
@@ -887,6 +901,9 @@ template <bool fixedSize, HasFinalizer hasFinalizer>
 inline void *GenGC::alloc(uint32_t sz) {
 #ifdef HERMES_SLOW_DEBUG
   totalAllocatedBytesDebug_ += heapAlignSize(sz);
+#endif
+#ifndef NDEBUG
+  lastAllocWasFixedSize_ = fixedSize ? FixedSizeValue::Yes : FixedSizeValue::No;
 #endif
   if (shouldSanitizeHandles()) {
     // In order to get the maximum benefit of sanitization, the entire heap
@@ -922,6 +939,9 @@ template <HasFinalizer hasFinalizer>
 inline void *GenGC::allocLongLived(uint32_t size) {
 #ifdef HERMES_SLOW_DEBUG
   totalAllocatedBytesDebug_ += heapAlignSize(size);
+#endif
+#ifndef NDEBUG
+  lastAllocWasFixedSize_ = FixedSizeValue::Unknown;
 #endif
   if (shouldSanitizeHandles()) {
     // In order to get the maximum benefit of sanitization, the entire heap
@@ -987,6 +1007,12 @@ inline size_t GenGC::numFullGCs() const {
 inline size_t GenGC::numFailedSegmentMaterializations() const {
   return storageProvider_.numFailedAllocs();
 }
+
+#ifndef NDEBUG
+inline GenGC::FixedSizeValue GenGC::lastAllocationWasFixedSize() const {
+  return lastAllocWasFixedSize_;
+}
+#endif
 
 #ifdef UNIT_TEST
 const GCSegmentAddressIndex &GenGC::segmentIndex() const {

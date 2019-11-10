@@ -25,6 +25,17 @@ GCCell::GCCell(GC *gc, const VTable *vtp, AllocEventOption doNotEmit)
       (vtp->finalize_ == nullptr || gc->isMostRecentFinalizableObj(this)) &&
       "If the vtp has a finalizer, then the obj should be on the "
       "finalizer list");
+#ifndef NDEBUG
+  if (gc->lastAllocationWasFixedSize() == GCBase::FixedSizeValue::Yes) {
+    assert(
+        vtp->size > 0 &&
+        "Fixed size allocation must specify object size in vtable.");
+  } else if (gc->lastAllocationWasFixedSize() == GCBase::FixedSizeValue::No) {
+    assert(
+        vtp->size == 0 &&
+        "Variable size allocation must have object size = 0 in vtable.");
+  }
+#endif
   assert(
       (!vtp->mallocSize_ || vtp->finalize_) &&
       "If a cell uses malloc, then it needs a finalizer");

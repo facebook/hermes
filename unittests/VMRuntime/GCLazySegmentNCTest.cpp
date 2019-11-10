@@ -63,9 +63,7 @@ constexpr size_t kHeapVA =
 
 constexpr size_t kHeapVALimited = kHeapVA / 2 + AlignedStorage::size() - 1;
 
-using SegmentCell = EmptyCell<
-    AlignedHeapSegment::maxSize(),
-    /* FixedSize */ true>;
+using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 
 /// We are able to materialize every segment.
 TEST_F(GCLazySegmentNCTest, MaterializeAll) {

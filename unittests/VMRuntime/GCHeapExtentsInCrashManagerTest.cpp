@@ -41,9 +41,7 @@ const MetadataTableForTests getMetadataTable() {
 }
 
 // We make this not FixedSize, to allow direct allocation in the old generation.
-using SegmentCell = EmptyCell<
-    AlignedHeapSegment::maxSize(),
-    /* FixedSize */ false>;
+using SegmentCell = VarSizedEmptyCell<AlignedHeapSegment::maxSize()>;
 
 class TestCrashManager : public CrashManager {
  public:
