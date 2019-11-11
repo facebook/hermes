@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -dump-bytecode %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -O0 -dump-bytecode %s | %FileCheck %s --match-full-lines
 
 function *loop(x) {
   var i = 0;

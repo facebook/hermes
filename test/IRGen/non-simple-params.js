@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ir %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -O0 -dump-ir %s | %FileCheck %s --match-full-lines
 
 function foo(a, b = a) {
     return a + b;

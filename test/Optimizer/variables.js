@@ -6,7 +6,7 @@
  */
 
 // RUN: %hermes -hermes-parser -dump-ir %s     -O  | %FileCheck %s --match-full-lines --check-prefix=OPT-CHECK
-// RUN: %hermes -hermes-parser -dump-ir %s         | %FileCheck %s --match-full-lines
+// RUN: %hermes -hermes-parser -dump-ir %s     -O0 | %FileCheck %s --match-full-lines
 
 
 // Unoptimized:

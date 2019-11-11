@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ir -strict -Wno-undefined-variable %s 2>&1 | %FileCheck %s --match-full-lines
+// RUN: %hermes -O0 -dump-ir -strict -Wno-undefined-variable %s 2>&1 | %FileCheck %s --match-full-lines
 
 var x = y;
 //CHECK: function global()

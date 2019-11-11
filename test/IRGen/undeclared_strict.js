@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ir -strict %s 2>&1 | %FileCheck %s --match-full-lines
+// RUN: %hermes -O0 -dump-ir -strict %s 2>&1 | %FileCheck %s --match-full-lines
 
 var x = y;
 //CHECK: {{.*}}undeclared_strict.js:10:9: warning: the variable "y" was not declared in function "global"

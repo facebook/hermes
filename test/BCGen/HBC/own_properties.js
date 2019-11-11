@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -dump-lir %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O0 -target=HBC -dump-lir %s | %FileCheck --match-full-lines %s
 
 // Test that StoreNewOwnPropertyInst is lowered to StoreOwnPropertyInst when
 // the property name is a valid array index.

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir -include-globals %s.d %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -hermes-parser -dump-ir -include-globals %s.d %s -O0 | %FileCheck %s --match-full-lines
 // RUN: %hermes -hermes-parser -dump-ir -include-globals %s.d %s -O
 
 var x = CustomGlobalProperty;

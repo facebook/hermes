@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -dump-ir %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -O0 -dump-ir %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: function global()
 // CHECK-NEXT: frame = [], globals = [b, rest, d]

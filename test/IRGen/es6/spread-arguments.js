@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ir %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -dump-ir -O0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -dump-ir -O %s | %FileCheck --match-full-lines -check-prefix=OPT %s
 
 function foo(fn, x) {

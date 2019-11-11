@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ir %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -dump-ir %s -O0 | %FileCheck %s --match-full-lines
 // RUN: %hermes -dump-ir %s -O
 
 function condExpr(a,b,c,d) {

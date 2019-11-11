@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -dump-ir %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O0 -dump-ir %s | %FileCheck --match-full-lines %s
 // RUN: %hermesc -custom-opt=tdzdedup -dump-ir %s | %FileCheck --match-full-lines --check-prefix=CHKOPT %s
 
 function check_after_store(p) {

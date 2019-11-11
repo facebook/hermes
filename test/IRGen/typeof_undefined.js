@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir -strict %s 2>&1 | %FileCheck %s --match-full-lines
+// RUN: %hermes -O0 -hermes-parser -dump-ir -strict %s 2>&1 | %FileCheck %s --match-full-lines
 
 var x = typeof foo;
 

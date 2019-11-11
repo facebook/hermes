@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -dump-bytecode %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O0 -dump-bytecode %s | %FileCheck --match-full-lines %s
 // RUN: %hermesc -O -dump-bytecode %s | %FileCheck --match-full-lines  --check-prefix=CHKOPT %s
 
 // Check that literals are uniqued when optimizations is disabled, but aren't

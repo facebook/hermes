@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-bytecode -target=HBC -g %s | %FileCheck %s --match-full-lines
-// RUN: cp %s %T/debug_info_à.js && %hermes -dump-bytecode -target=HBC -g %T/debug_info_à.js | %FileCheck %s --match-full-lines --check-prefix=UNICODE
+// RUN: %hermes -O0 -dump-bytecode -target=HBC -g %s | %FileCheck %s --match-full-lines
+// RUN: cp %s %T/debug_info_à.js && %hermes -O0 -dump-bytecode -target=HBC -g %T/debug_info_à.js | %FileCheck %s --match-full-lines --check-prefix=UNICODE
 
 var v1g = "global";
 

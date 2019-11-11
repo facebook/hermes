@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-source-location -dump-ir < %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O0 -dump-source-location -dump-ir < %s | %FileCheck --match-full-lines %s
 
 function foo(a,b) {
     if (a > b) {

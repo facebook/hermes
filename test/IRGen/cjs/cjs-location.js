@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -commonjs -dump-ir -dump-source-location < %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O0 -commonjs -dump-ir -dump-source-location < %s | %FileCheck --match-full-lines %s
 
 x = 10;
 

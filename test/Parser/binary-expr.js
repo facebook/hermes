@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -O0 -hermes-parser -dump-ir %s | %FileCheck %s --match-full-lines
 
 var r, a, b, c, d, e;
 //CHECK-LABEL:function global()

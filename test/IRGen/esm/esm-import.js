@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -commonjs -dump-ir %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O0 -commonjs -dump-ir %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL: function cjs_module(exports, require, module)
 // CHECK-NEXT: frame = [Foo, defaultFoo, x, z, exports, require, module]

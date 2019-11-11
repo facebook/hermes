@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -dump-ir %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -dump-ir %s -O0 | %FileCheck %s --match-full-lines
 // RUN: %hermesc -dump-ir %s -O
 
 function foo(obj) {
