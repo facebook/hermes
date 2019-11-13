@@ -1182,6 +1182,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       for (const auto &region : fileRegions) {
         if (resolveScriptId(&runtimeModule, region.filenameId) ==
             breakpoint.requestedLocation.fileId) {
+          resolvedFileId = region.filenameId;
           resolvedFileName =
               getFileNameAsUTF8(runtime_, &runtimeModule, resolvedFileId);
           break;
