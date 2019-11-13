@@ -22,6 +22,8 @@ namespace cl {
 
 using llvm::cl::desc;
 using llvm::cl::init;
+using llvm::cl::list;
+using llvm::cl::OneOrMore;
 using llvm::cl::opt;
 using llvm::cl::Positional;
 using llvm::cl::Required;
@@ -32,8 +34,8 @@ using llvm::cl::Required;
 static opt<std::string>
     TraceFile(desc("input trace file"), Positional, Required);
 
-static opt<std::string>
-    BytecodeFile(desc("input bytecode file"), Positional, Required);
+static list<std::string>
+    BytecodeFiles(desc("input bytecode files"), Positional, OneOrMore);
 
 static opt<std::string> Marker("marker", desc("marker to stop at"), init(""));
 static llvm::cl::alias
@@ -166,6 +168,8 @@ int main(int argc, char **argv) {
       llvm::EnableStatistics();
 #endif
 
+    std::vector<std::string> bytecodeFiles{cl::BytecodeFiles.begin(),
+                                           cl::BytecodeFiles.end()};
     if (!cl::Trace.empty()) {
       // If this is tracing mode, get the trace instead of the stats.
       options.shouldPrintGCStats = false;
@@ -179,12 +183,11 @@ int main(int argc, char **argv) {
       if (ec) {
         throw std::system_error(ec);
       }
-      TraceInterpreter::execAndTrace(
-          cl::TraceFile, cl::BytecodeFile, options, os);
+      TraceInterpreter::execAndTrace(cl::TraceFile, bytecodeFiles, options, os);
       llvm::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
     } else {
       llvm::outs() << TraceInterpreter::execAndGetStats(
-                          cl::TraceFile, cl::BytecodeFile, options)
+                          cl::TraceFile, bytecodeFiles, options)
                    << "\n";
     }
 

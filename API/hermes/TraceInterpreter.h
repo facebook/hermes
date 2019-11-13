@@ -10,12 +10,14 @@
 #ifdef HERMESVM_API_TRACE
 
 #include <hermes/Public/RuntimeConfig.h>
+#include <hermes/Support/SHA1.h>
 #include <hermes/SynthTrace.h>
 
 #include <jsi/jsi.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <map>
 #include <unordered_map>
 #include <vector>
 
@@ -125,7 +127,8 @@ class TraceInterpreter final {
   jsi::Runtime &rt;
   ExecuteOptions options;
   llvm::raw_ostream *outTrace;
-  std::unique_ptr<const jsi::Buffer> bundle;
+  // Map from source hash to source file to run.
+  std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles;
   const SynthTrace &trace;
   const std::unordered_map<SynthTrace::ObjectID, DefAndUse> &globalDefsAndUses;
   const HostFunctionToCalls &hostFunctionCalls;
@@ -156,14 +159,14 @@ class TraceInterpreter final {
   /// the bundle given by \p bytecodeFile.
   static void exec(
       const std::string &traceFile,
-      const std::string &bytecodeFile,
+      const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options);
 
   /// Same as exec, except it prints out the stats of a run.
   /// \return The stats collected by the runtime about times and memory usage.
   static std::string execAndGetStats(
       const std::string &traceFile,
-      const std::string &bytecodeFile,
+      const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options);
 
   /// Same as exec, except it additionally traces the execution of the
@@ -171,7 +174,7 @@ class TraceInterpreter final {
   /// correctness issues.
   static void execAndTrace(
       const std::string &traceFile,
-      const std::string &bytecodeFile,
+      const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options,
       llvm::raw_ostream &outTrace);
 
@@ -179,7 +182,7 @@ class TraceInterpreter final {
   /// stream.
   static std::string execFromMemoryBuffer(
       std::unique_ptr<llvm::MemoryBuffer> traceBuf,
-      std::unique_ptr<llvm::MemoryBuffer> codeBuf,
+      std::vector<std::unique_ptr<llvm::MemoryBuffer>> codeBufs,
       const ExecuteOptions &options,
       llvm::raw_ostream *outTrace);
 
@@ -189,7 +192,7 @@ class TraceInterpreter final {
       const ExecuteOptions &options,
       llvm::raw_ostream *outTrace,
       const SynthTrace &trace,
-      std::unique_ptr<const jsi::Buffer> bundle,
+      std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles,
       const std::unordered_map<SynthTrace::ObjectID, DefAndUse>
           &globalDefsAndUses,
       const HostFunctionToCalls &hostFunctionCalls,
@@ -197,7 +200,7 @@ class TraceInterpreter final {
 
   static std::string execFromFileNames(
       const std::string &traceFile,
-      const std::string &bytecodeFile,
+      const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options,
       llvm::raw_ostream *outTrace);
 
@@ -205,7 +208,7 @@ class TraceInterpreter final {
       jsi::Runtime &rt,
       const ExecuteOptions &options,
       const SynthTrace &trace,
-      std::unique_ptr<const jsi::Buffer> bundle,
+      std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles,
       llvm::raw_ostream *outTrace);
 
   jsi::Function createHostFunction(

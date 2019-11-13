@@ -9,7 +9,6 @@
 
 #include <hermes/TraceInterpreter.h>
 
-#include <hermes/Support/SHA1.h>
 #include <hermes/SynthTraceParser.h>
 #include <hermes/TracingRuntime.h>
 #include <hermes/VM/instrumentation/PerfEvents.h>
@@ -359,39 +358,50 @@ std::unique_ptr<const jsi::Buffer> bufConvert(
   return llvm::make_unique<const OwnedMemoryBuffer>(std::move(buf));
 }
 
-/// Returns a new object that views, but doesn't own, the data of \p buffer,
-/// which must therefore outlive the returned object.
-///
-/// (This is used to make repeated calls to APIs that takes a unique_ptr.)
-static std::unique_ptr<const jsi::Buffer> bufView(const jsi::Buffer *buffer) {
-  class NonOwnedMemoryBuffer : public jsi::Buffer {
-   public:
-    NonOwnedMemoryBuffer(const jsi::Buffer *buffer) : buf_(buffer) {}
-    size_t size() const override {
-      return buf_->size();
+static bool isAllZeroSourceHash(const ::hermes::SHA1 sourceHash) {
+  for (auto byte : sourceHash) {
+    if (byte) {
+      return false;
     }
-    const uint8_t *data() const override {
-      return buf_->data();
-    }
-
-   private:
-    const jsi::Buffer *buf_;
-  };
-
-  return llvm::make_unique<const NonOwnedMemoryBuffer>(buffer);
+  }
+  return true;
 }
 
-void verifyHash(
-    const ::hermes::SHA1 &expectedHash,
-    const ::hermes::SHA1 &actualHash) {
-  if (!std::equal(actualHash.begin(), actualHash.end(), expectedHash.begin())) {
-    // Bytecode hash doesn't match, issue a warning.
-    llvm::errs()
-        << "Warning: bytecode doesn't match, this execution will probably fail\n"
-        << "Expected: " << ::hermes::hashAsString(expectedHash)
-        << "\n"
-        // Give extra space so the hashes line up
-        << "Actual:   " << ::hermes::hashAsString(actualHash) << "\n";
+static void verifyBundlesExist(
+    const std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> &bundles,
+    const SynthTrace &trace) {
+  std::vector<::hermes::SHA1> missingSourceHashes;
+  for (const auto &rec : trace.records()) {
+    if (rec->getType() == SynthTrace::RecordType::BeginExecJS) {
+      const auto &bejsr =
+          dynamic_cast<const SynthTrace::BeginExecJSRecord &>(*rec);
+
+      if (bundles.count(bejsr.sourceHash()) == 0 &&
+          !isAllZeroSourceHash(bejsr.sourceHash())) {
+        missingSourceHashes.emplace_back(bejsr.sourceHash());
+      }
+    }
+  }
+  if (!missingSourceHashes.empty()) {
+    std::string msg = "Missing bundles with the following source hashes: ";
+    bool first = true;
+    for (const auto &hash : missingSourceHashes) {
+      if (!first) {
+        msg += ", ";
+      }
+      msg += ::hermes::hashAsString(hash);
+      first = false;
+    }
+    msg += "\nProvided source hashes: ";
+    first = true;
+    for (const auto &p : bundles) {
+      if (!first) {
+        msg += ", ";
+      }
+      msg += ::hermes::hashAsString(p.first);
+      first = false;
+    }
+    throw std::invalid_argument(msg);
   }
 }
 
@@ -425,7 +435,7 @@ TraceInterpreter::TraceInterpreter(
     const ExecuteOptions &options,
     llvm::raw_ostream *outTrace,
     const SynthTrace &trace,
-    std::unique_ptr<const Buffer> bundle,
+    std::map<::hermes::SHA1, std::shared_ptr<const Buffer>> bundles,
     const std::unordered_map<ObjectID, TraceInterpreter::DefAndUse>
         &globalDefsAndUses,
     const HostFunctionToCalls &hostFunctionCalls,
@@ -433,7 +443,7 @@ TraceInterpreter::TraceInterpreter(
     : rt(rt),
       options(options),
       outTrace(outTrace),
-      bundle(std::move(bundle)),
+      bundles(std::move(bundles)),
       trace(trace),
       globalDefsAndUses(globalDefsAndUses),
       hostFunctionCalls(hostFunctionCalls),
@@ -450,34 +460,34 @@ TraceInterpreter::TraceInterpreter(
 /* static */
 void TraceInterpreter::exec(
     const std::string &traceFile,
-    const std::string &bytecodeFile,
+    const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options) {
   // If there is a trace, don't write it out, not used here.
-  execFromFileNames(traceFile, bytecodeFile, options, nullptr);
+  execFromFileNames(traceFile, bytecodeFiles, options, nullptr);
 }
 
 /* static */
 std::string TraceInterpreter::execAndGetStats(
     const std::string &traceFile,
-    const std::string &bytecodeFile,
+    const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options) {
   // If there is a trace, don't write it out, not used here.
-  return execFromFileNames(traceFile, bytecodeFile, options, nullptr);
+  return execFromFileNames(traceFile, bytecodeFiles, options, nullptr);
 }
 
 /* static */
 void TraceInterpreter::execAndTrace(
     const std::string &traceFile,
-    const std::string &bytecodeFile,
+    const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options,
     llvm::raw_ostream &outTrace) {
-  execFromFileNames(traceFile, bytecodeFile, options, &outTrace);
+  execFromFileNames(traceFile, bytecodeFiles, options, &outTrace);
 }
 
 /* static */
 std::string TraceInterpreter::execFromFileNames(
     const std::string &traceFile,
-    const std::string &bytecodeFile,
+    const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options,
     llvm::raw_ostream *outTrace) {
   auto errorOrFile = llvm::MemoryBuffer::getFile(traceFile);
@@ -485,30 +495,48 @@ std::string TraceInterpreter::execFromFileNames(
     throw std::system_error(errorOrFile.getError());
   }
   std::unique_ptr<llvm::MemoryBuffer> traceBuf = std::move(errorOrFile.get());
-  errorOrFile = llvm::MemoryBuffer::getFile(bytecodeFile);
-  if (!errorOrFile) {
-    throw std::system_error(errorOrFile.getError());
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> bytecodeBuffers;
+  for (const std::string &bytecode : bytecodeFiles) {
+    errorOrFile = llvm::MemoryBuffer::getFile(bytecode);
+    if (!errorOrFile) {
+      throw std::system_error(errorOrFile.getError());
+    }
+    bytecodeBuffers.emplace_back(std::move(errorOrFile.get()));
   }
-  std::unique_ptr<llvm::MemoryBuffer> bytecodeBuf =
-      std::move(errorOrFile.get());
   return execFromMemoryBuffer(
-      std::move(traceBuf), std::move(bytecodeBuf), options, outTrace);
+      std::move(traceBuf), std::move(bytecodeBuffers), options, outTrace);
 }
 
 /* static */
 std::string TraceInterpreter::execFromMemoryBuffer(
     std::unique_ptr<llvm::MemoryBuffer> traceBuf,
-    std::unique_ptr<llvm::MemoryBuffer> codeBuf,
+    std::vector<std::unique_ptr<llvm::MemoryBuffer>> codeBufs,
     const ExecuteOptions &options,
     llvm::raw_ostream *outTrace) {
   auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
   const auto &trace = std::get<0>(traceAndConfigAndEnv);
-  const bool codeIsMmapped =
-      codeBuf->getBufferKind() == llvm::MemoryBuffer::MemoryBuffer_MMap;
-  std::unique_ptr<const jsi::Buffer> codeFileBuffer =
-      bufConvert(std::move(codeBuf));
-  const bool isBytecode = HermesRuntime::isHermesBytecode(
-      codeFileBuffer->data(), codeFileBuffer->size());
+  bool codeIsMmapped = true;
+  for (const auto &buf : codeBufs) {
+    if (buf->getBufferKind() != llvm::MemoryBuffer::MemoryBuffer_MMap) {
+      // If any of the buffers aren't mmapped, don't turn on I/O tracking.
+      codeIsMmapped = false;
+      break;
+    }
+  }
+  std::vector<std::unique_ptr<const jsi::Buffer>> bundles;
+  for (auto &buf : codeBufs) {
+    bundles.emplace_back(bufConvert(std::move(buf)));
+  }
+
+  bool isBytecode = true;
+  for (const auto &bundle : bundles) {
+    if (HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
+      // If any of the buffers are source code, don't turn on I/O tracking.
+      isBytecode = false;
+      break;
+    }
+  }
+
   auto &rtConfig = std::get<1>(traceAndConfigAndEnv);
   ::hermes::vm::RuntimeConfig::Builder rtConfigBuilder = rtConfig.rebuild();
   rtConfigBuilder.withBytecodeWarmupPercent(options.bytecodeWarmupPercent);
@@ -546,6 +574,28 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   }
   rtConfig = rtConfigBuilder.withGCConfig(gcConfigBuilder.build()).build();
 
+  // Map source hashes of files to their memory buffer.
+  std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
+      sourceHashToBundle;
+  for (auto &bundle : bundles) {
+    ::hermes::SHA1 sourceHash{};
+    if (HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
+      sourceHash =
+          ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
+              llvm::makeArrayRef(bundle->data(), bundle->size()));
+    } else {
+      sourceHash =
+          llvm::SHA1::hash(llvm::makeArrayRef(bundle->data(), bundle->size()));
+    }
+    auto inserted = sourceHashToBundle.insert({sourceHash, std::move(bundle)});
+    assert(
+        inserted.second &&
+        "Duplicate source hash detected, files only need to be supplied once");
+    (void)inserted;
+  }
+
+  verifyBundlesExist(sourceHashToBundle, trace);
+
   std::vector<std::string> repGCStats(options.reps);
   for (int rep = -options.warmupReps; rep < options.reps; ++rep) {
     ::hermes::vm::instrumentation::PerfEvents::begin();
@@ -562,8 +612,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     } else {
       rt = std::move(hermesRuntime);
     }
-    auto stats =
-        exec(*rt, options, trace, bufView(codeFileBuffer.get()), outTrace);
+    auto stats = exec(*rt, options, trace, sourceHashToBundle, outTrace);
     // If we're not warming up, save the stats.
     if (rep >= 0) {
       repGCStats[rep] = stats;
@@ -577,7 +626,7 @@ std::string TraceInterpreter::exec(
     jsi::Runtime &rt,
     const ExecuteOptions &options,
     const SynthTrace &trace,
-    std::unique_ptr<const jsi::Buffer> bundle,
+    std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles,
     llvm::raw_ostream *outTrace) {
   // Partition the records into each call.
   auto funcCallsAndObjectCalls = getCalls(setupFuncID, trace.records());
@@ -598,7 +647,7 @@ std::string TraceInterpreter::exec(
       options,
       outTrace,
       trace,
-      std::move(bundle),
+      std::move(bundles),
       globalDefsAndUses,
       hostFuncs,
       hostObjs);
@@ -780,18 +829,31 @@ Value TraceInterpreter::execFunction(
           case RecordType::BeginExecJS: {
             const auto &bejsr =
                 dynamic_cast<const SynthTrace::BeginExecJSRecord &>(*rec);
+            auto it = bundles.find(bejsr.sourceHash());
+            if (it == bundles.end()) {
+              if (isAllZeroSourceHash(bejsr.sourceHash()) &&
+                  bundles.size() == 1) {
+                // Normally, if a bundle's source hash doesn't match, it would
+                // be an error. However, for convenience and backwards
+                // compatibility, allow an all-zero hash to automatically assume
+                // a bundle if that was the only bundle supplied.
+                it = bundles.begin();
+              } else {
+                throw std::invalid_argument(
+                    "Trace expected the source hash " +
+                    ::hermes::hashAsString(bejsr.sourceHash()) +
+                    ", that wasn't provided as a file");
+              }
+            }
+
+            // Copy the shared pointer to the buffer in case this file is
+            // executed multiple times.
+            auto bundle = it->second;
             if (!HermesRuntime::isHermesBytecode(
                     bundle->data(), bundle->size())) {
               llvm::errs()
                   << "Note: You are running from source code, not HBC bytecode.\n"
                   << "      This run will reflect dev performance, not production.\n";
-            } else {
-              // Only verify the source hash if running from bytecode.
-              verifyHash(
-                  bejsr.sourceHash(),
-                  ::hermes::hbc::BCProviderFromBuffer::
-                      getSourceHashFromBytecode(
-                          llvm::makeArrayRef(bundle->data(), bundle->size())));
             }
             // Since this is bytecode, there's no sourceURL to pass.
             // overallRetval is to be consumed when we get an EndExecJS record.

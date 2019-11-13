@@ -14,6 +14,7 @@
 
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/SHA1.h>
 
 #include <memory>
 #include <string>
@@ -54,14 +55,80 @@ TEST_P(SynthBenchmarkTestFixture, CanRunWithoutException) {
   // Use options from the trace.
   options.minHeapSize = 0;
   options.maxHeapSize = 0;
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> sources;
+  sources.emplace_back(llvm::MemoryBuffer::getMemBuffer(source_));
   EXPECT_NO_THROW({
     tracing::TraceInterpreter::execFromMemoryBuffer(
         llvm::MemoryBuffer::getMemBuffer(trace_),
-        llvm::MemoryBuffer::getMemBuffer(source_),
+        std::move(sources),
         options,
         nullptr);
   }) << "Failed on test: "
      << testName_;
+}
+
+TEST(SynthBenchmark, RunMultipleSourceFiles) {
+  tracing::TraceInterpreter::ExecuteOptions options;
+  const char *const traceFmt = R"(
+    {
+      "globalObjID": 1,
+      "env": {
+        "mathRandomSeed": 0,
+        "callsToDateNow": [],
+        "callsToNewDate": [],
+        "callsToDateAsFunction": []
+      },
+      "trace": [
+        {
+          "type": "BeginExecJSRecord",
+          "time": 0,
+          "sourceHash": "%s"
+        },
+        {
+          "type": "EndExecJSRecord",
+          "retval": "string:hello",
+          "time": 0
+        },
+        {
+          "type": "BeginExecJSRecord",
+          "time": 0,
+          "sourceHash": "%s"
+        },
+        {
+          "type": "EndExecJSRecord",
+          "retval": "string:goodbye",
+          "time": 0
+        }
+      ]
+    })";
+  std::string source1 = R"("hello";)";
+  std::string source2 = R"("goodbye";)";
+  std::string trace;
+  {
+    auto hash1 = llvm::SHA1::hash(llvm::makeArrayRef(
+        reinterpret_cast<const uint8_t *>(source1.c_str()), source1.length()));
+    auto hash2 = llvm::SHA1::hash(llvm::makeArrayRef(
+        reinterpret_cast<const uint8_t *>(source2.c_str()), source2.length()));
+    std::string hash1AsStr = ::hermes::hashAsString(hash1);
+    std::string hash2AsStr = ::hermes::hashAsString(hash2);
+    int numChars =
+        snprintf(nullptr, 0, traceFmt, hash1AsStr.c_str(), hash2AsStr.c_str());
+    char *buf = new char[numChars + 1];
+    snprintf(
+        buf, numChars + 1, traceFmt, hash1AsStr.c_str(), hash2AsStr.c_str());
+    trace = std::string(buf);
+    delete[] buf;
+  }
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> sources;
+  sources.emplace_back(llvm::MemoryBuffer::getMemBuffer(source1));
+  sources.emplace_back(llvm::MemoryBuffer::getMemBuffer(source2));
+  EXPECT_NO_THROW({
+    tracing::TraceInterpreter::execFromMemoryBuffer(
+        llvm::MemoryBuffer::getMemBuffer(trace),
+        std::move(sources),
+        options,
+        nullptr);
+  });
 }
 
 std::vector<ParamType> testGenerator() {
