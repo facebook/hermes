@@ -2080,12 +2080,17 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
   // than searchLen, the code unit at index k+j of S is the same as the code
   // unit at index j of searchStr, return true; but if there is no such integer
   // k, return false.
-  for (double k = start; k + searchLength <= len; ++k) {
-    if (S->sliceEquals(k, searchLength, *searchStr)) {
-      return HermesValue::encodeBoolValue(true);
-    }
-  }
-  return HermesValue::encodeBoolValue(false);
+  auto SView = StringPrimitive::createStringView(runtime, S);
+  auto searchStrView = StringPrimitive::createStringView(runtime, searchStr);
+  auto foundIter = std::search(
+      SView.begin() + start,
+      SView.end(),
+      searchStrView.begin(),
+      searchStrView.end());
+  // Note: searchStrView.empty check is needed in the special case that S is
+  // empty, searchStr is empty, and start = 0
+  return HermesValue::encodeBoolValue(
+      foundIter != SView.end() || searchStrView.empty());
 }
 
 /// Shared implementation of string.indexOf and string.lastIndexOf
