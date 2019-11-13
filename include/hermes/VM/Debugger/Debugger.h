@@ -18,6 +18,7 @@
 #include "hermes/VM/Debugger/DebugCommand.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/InterpreterState.h"
+#include "hermes/VM/RuntimeModule.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 
@@ -26,11 +27,14 @@
 
 namespace hermes {
 namespace vm {
-
 class HermesValue;
 class CodeBlock;
 class Runtime;
-class RuntimeModule;
+} // namespace vm
+} // namespace hermes
+
+namespace hermes {
+namespace vm {
 
 /// Main debugger object that receives commands from an external source,
 /// and passes them back to the interpreter loop, which handles them.
@@ -67,8 +71,8 @@ class Debugger {
 
   Runtime *const runtime_;
 
-  /// Table to keep track of IDs for given file names.
-  llvm::StringMap<ScriptID> scriptTable_{};
+  /// Table to keep track of the ScriptID for a given RuntimeModule.
+  llvm::DenseMap<const RuntimeModule *, ScriptID> scriptTable_{};
   ScriptID nextScriptId_{1};
 
   /// Function handling pauses.

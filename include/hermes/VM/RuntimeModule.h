@@ -123,6 +123,8 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
       RuntimeModuleFlags flags,
       llvm::StringRef sourceURL);
 
+  CodeBlock *getCodeBlockSlowPath(unsigned index);
+
 #ifdef HERMESVM_SERIALIZE
   /// Constructor used when deserializing.
   /// Note that this function does NOT add the new RumtimeModule to Domain's
@@ -134,7 +136,11 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   explicit RuntimeModule(Runtime *runtime, WeakRefSlot *domainRef);
 #endif
 
-  CodeBlock *getCodeBlockSlowPath(unsigned index);
+#ifndef HERMESVM_LEAN
+  /// For a lazy module, this is the RuntimeModule that ultimately spawned it
+  // (the global function of the loaded file).
+  RuntimeModule *lazyRoot_;
+#endif
 
  public:
   ~RuntimeModule();
@@ -193,6 +199,18 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// \param bytecode the bytecode data to initialize it with.
   void initializeLazyMayAllocate(std::unique_ptr<hbc::BCProvider> bytecode);
 #endif
+
+  /// If this function was lazily compiled, return the RuntimeModule with the
+  /// file's global function (i.e. the first RM created when we started
+  /// interpreting and lazily compiling the source code). For other RMs,
+  /// e.g. those loaded from precompiled bytecode, this is just itself.
+  RuntimeModule *getLazyRootModule() {
+#ifdef HERMESVM_LEAN
+    return this;
+#else
+    return lazyRoot_;
+#endif
+  }
 
   /// Initialize modules created with \p createUninitialized,
   /// but do not import the CJS module table, allowing us to always succeed.

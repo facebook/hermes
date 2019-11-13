@@ -15,6 +15,7 @@
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
+#include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule.h"

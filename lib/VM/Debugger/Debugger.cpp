@@ -436,12 +436,17 @@ ExecutionStatus Debugger::debuggerLoop(
 }
 
 void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {
+  // This function should only be called on the main RuntimeModule and not on
+  // any "child" RuntimeModules it may create through lazy compilation.
+  assert(
+      module == module->getLazyRootModule() &&
+      "Expected to only run on lazy root module");
+
   auto locationOpt = getSourceLocation(codeBlock, 0);
   if (locationOpt) {
-    std::string fileName =
-        getFileNameAsUTF8(runtime_, module, locationOpt->filenameId);
     ScriptID result = nextScriptId_;
-    auto isNewFile = scriptTable_.try_emplace(fileName, result).second;
+    auto isNewFile = scriptTable_.try_emplace(module, result).second;
+
     if (isNewFile) {
       ++nextScriptId_;
     }
@@ -495,6 +500,8 @@ void Debugger::willUnloadModule(RuntimeModule *module) {
           tempBreakpoints_.end(),
           cleanTempBreakpoint),
       tempBreakpoints_.end());
+
+  scriptTable_.erase(module);
 }
 
 void Debugger::resolveBreakpoints(CodeBlock *codeBlock) {
@@ -1257,9 +1264,14 @@ auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
 auto Debugger::resolveScriptId(
     RuntimeModule *runtimeModule,
     uint32_t filenameId) const -> ScriptID {
-  std::string storage = getFileNameAsUTF8(runtime_, runtimeModule, filenameId);
-  auto it = scriptTable_.find(storage);
-  assert(it != scriptTable_.end() && "unknown file name");
+  // We don't yet have a convincing story for debugging CommonJS, so for
+  // now just assert that we're still living in the one-file-per-RM world.
+  assert(filenameId == 0 && "Unexpected multiple filenames per RM");
+  auto it = scriptTable_.find(runtimeModule->getLazyRootModule());
+  if (it == scriptTable_.end()) {
+    assert(false && "unknown RuntimeModule");
+    return fhd::kInvalidLocation;
+  }
   return it->second;
 }
 

@@ -13,7 +13,6 @@
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Support/SourceErrorManager.h"
-#include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/Profiler.h"

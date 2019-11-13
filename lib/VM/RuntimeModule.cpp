@@ -34,6 +34,9 @@ RuntimeModule::RuntimeModule(
       "initialized with invalid domain");
   runtime_->addRuntimeModule(this);
   Domain::addRuntimeModule(domain, runtime, this);
+#ifndef HERMESVM_LEAN
+  lazyRoot_ = this;
+#endif
 }
 
 SymbolID RuntimeModule::createSymbolFromStringIDMayAllocate(
@@ -136,6 +139,8 @@ RuntimeModule *RuntimeModule::createLazyModule(
     RuntimeModule *parent,
     uint32_t functionID) {
   auto RM = createUninitialized(runtime, domain);
+  RM->lazyRoot_ = parent->lazyRoot_;
+
   // Set the bcProvider's BytecodeModule to point to the parent's.
   assert(parent->isInitialized() && "Parent module must have been initialized");
 
