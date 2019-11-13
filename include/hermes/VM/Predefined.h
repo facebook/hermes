@@ -17,6 +17,7 @@ namespace Predefined {
 
 enum IProp {
 #define PROP(i) InternalProperty##i,
+#define NAMED_PROP(name) InternalProperty##name,
 #include "InternalProperties.def"
   _IPROP_AFTER_LAST
 };

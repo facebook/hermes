@@ -14,12 +14,21 @@
 namespace hermes {
 namespace vm {
 
-/// Anonymous internal propertes. Not part of the object map.
+/// Named or anonymous internal properties. These are filtered so the user never
+/// sees them.
 namespace InternalProperty {
 
 /// Number of InternalPropertyX symbols defined.
 #define PROP(i) +1
+#define NAMED_PROP(name) +1
 constexpr unsigned NumInternalProperties = 0
+#include "hermes/VM/InternalProperties.def"
+    ;
+
+/// Number of anonymous InternalPropertyX symbols defined.
+#define PROP(i) +1
+#define NAMED_PROP(name) +0
+constexpr unsigned NumAnonymousInternalProperties = 0
 #include "hermes/VM/InternalProperties.def"
     ;
 

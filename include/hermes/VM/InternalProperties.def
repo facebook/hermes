@@ -9,10 +9,19 @@
 #define PROP(i)
 #endif
 
-/// Anonymous internal propertes. Not part of the object map.
+#ifndef NAMED_PROP
+#define NAMED_PROP(name)
+#endif
+
+/// Anonymous internal properties
 PROP(0)
 PROP(1)
 PROP(2)
 PROP(3)
 
+/// Named internal properties
+/// NOTE: All named properties must be defined after all anonymous properties.
+NAMED_PROP(NamedPropForUnitTestOnly)
+
 #undef PROP
+#undef NAMED_PROP

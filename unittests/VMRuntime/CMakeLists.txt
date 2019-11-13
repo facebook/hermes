@@ -44,6 +44,7 @@ set(RTSources
   HiddenClassTest.cpp
   IdentifierTableTest.cpp
   InstrumentationAPITest.cpp
+  InternalPropertiesTest.cpp
   InterpreterTest.cpp
   JSLibTest.cpp
   LogSuccessStorageProvider.cpp

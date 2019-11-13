@@ -297,7 +297,7 @@ SlotIndex JSObject::addInternalProperty(
     unsigned index,
     Handle<> valueHandle) {
   assert(
-      index < InternalProperty::NumInternalProperties &&
+      index < InternalProperty::NumAnonymousInternalProperties &&
       "Internal property index is too large");
   assert(
       !selfHandle->clazz_.get(runtime)->isDictionary() &&
