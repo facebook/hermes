@@ -80,16 +80,6 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
 
-  (void)defineMethod(
-      runtime,
-      proto,
-      Predefined::getSymbolID(Predefined::SymbolSplit),
-      Predefined::getSymbolID(Predefined::squareSymbolSplit),
-      nullptr,
-      regExpPrototypeSymbolSplit,
-      2,
-      dpf);
-
   // The RegExp prototype and constructors have a variety of getters defined on
   // it; use this helper to define them. Note the context is passed as an
   // intptr_t which we convert to void*.
@@ -169,6 +159,15 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::squareSymbolReplace),
       nullptr,
       regExpPrototypeSymbolReplace,
+      2,
+      dpf);
+  (void)defineMethod(
+      runtime,
+      proto,
+      Predefined::getSymbolID(Predefined::SymbolSplit),
+      Predefined::getSymbolID(Predefined::squareSymbolSplit),
+      nullptr,
+      regExpPrototypeSymbolSplit,
       2,
       dpf);
 
@@ -967,30 +966,6 @@ CallResult<HermesValue> getSubstitution(
   return StringPrimitive::create(runtime, result);
 }
 
-/// ES6.0 21.2.5.11
-/// Note: this implementation does not fully observe ES6 spec behaviors because
-/// of lack of support for species constructors.
-// TODO(T35212035): make this ES6 compliant once we support species constructor.
-CallResult<HermesValue>
-regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
-  // 2. If Type(rx) is not Object, throw a TypeError exception.
-  if (LLVM_UNLIKELY(!vmisa<JSObject>(args.getThisArg()))) {
-    return runtime->raiseTypeError(
-        "Cannot call RegExp.protoype[Symbol.split] on a non-object.");
-  }
-  // We currently cannot support calling this method on a non-RegExp object, so
-  // throw a TypeError in this case.
-  if (LLVM_UNLIKELY(!vmisa<JSRegExp>(args.getThisArg()))) {
-    return runtime->raiseTypeError(
-        "Calling RegExp.protoype[Symbol.split] on a non-RegExp object is not supported yet.");
-  }
-  return splitInternal(
-      runtime,
-      args.getArgHandle(0),
-      args.getArgHandle(1),
-      args.getThisHandle());
-}
-
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 // ES6 21.2.5.14
 // Note there is no requirement that 'this' be a RegExp object.
@@ -1563,6 +1538,30 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   // (inclusive).
   stringView.slice(nextSourcePosition).copyUTF16String(accumulatedResult);
   return StringPrimitive::createEfficient(runtime, accumulatedResult);
+}
+
+/// ES6.0 21.2.5.11
+/// Note: this implementation does not fully observe ES6 spec behaviors because
+/// of lack of support for species constructors.
+// TODO(T35212035): make this ES6 compliant once we support species constructor.
+CallResult<HermesValue>
+regExpPrototypeSymbolSplit(void *, Runtime *runtime, NativeArgs args) {
+  // 2. If Type(rx) is not Object, throw a TypeError exception.
+  if (LLVM_UNLIKELY(!vmisa<JSObject>(args.getThisArg()))) {
+    return runtime->raiseTypeError(
+        "Cannot call RegExp.protoype[Symbol.split] on a non-object.");
+  }
+  // We currently cannot support calling this method on a non-RegExp object, so
+  // throw a TypeError in this case.
+  if (LLVM_UNLIKELY(!vmisa<JSRegExp>(args.getThisArg()))) {
+    return runtime->raiseTypeError(
+        "Calling RegExp.protoype[Symbol.split] on a non-RegExp object is not supported yet.");
+  }
+  return splitInternal(
+      runtime,
+      args.getArgHandle(0),
+      args.getArgHandle(1),
+      args.getThisHandle());
 }
 
 // ES9 21.2.5.4
