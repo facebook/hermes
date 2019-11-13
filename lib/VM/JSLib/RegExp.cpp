@@ -109,7 +109,6 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   };
 
   defineGetter(proto, Predefined::source, regExpSourceGetter);
-  defineGetter(proto, Predefined::flags, regExpFlagsGetter);
   defineGetter(proto, Predefined::multiline, regExpFlagPropertyGetter, 'm');
   defineGetter(proto, Predefined::ignoreCase, regExpFlagPropertyGetter, 'i');
   defineGetter(proto, Predefined::global, regExpFlagPropertyGetter, 'g');
@@ -172,6 +171,8 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
       regExpPrototypeSymbolReplace,
       2,
       dpf);
+
+  defineGetter(proto, Predefined::flags, regExpFlagsGetter);
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
   return cons;
@@ -708,42 +709,6 @@ regExpSourceGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   // Beacuse we do not yet support Unicode regexps we can omit the flags.
   return JSRegExp::escapePattern(
       toHandle(runtime, JSRegExp::getPattern(R.get(), runtime)), runtime);
-}
-
-// ES9 21.2.5.4
-// Note that we don't yet support unicode.
-CallResult<HermesValue>
-regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
-  // Let R be the this value.
-  // If Type(R) is not Object, throw a TypeError exception
-  Handle<JSObject> R = args.dyncastThis<JSObject>();
-  if (!R) {
-    return runtime->raiseTypeError(
-        "RegExp.prototype.flags getter called on non-object");
-  }
-
-  llvm::SmallString<5> result;
-  static const struct FlagProp {
-    char flagChar;
-    Predefined::Str name;
-  } flagProps[] = {
-      {'g', Predefined::global},
-      {'i', Predefined::ignoreCase},
-      {'m', Predefined::multiline},
-      {'u', Predefined::unicode},
-      {'y', Predefined::sticky},
-  };
-  for (FlagProp f : flagProps) {
-    auto flagVal =
-        JSObject::getNamed_RJS(R, runtime, Predefined::getSymbolID(f.name));
-    if (LLVM_UNLIKELY(flagVal == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if (toBoolean(*flagVal)) {
-      result.push_back(f.flagChar);
-    }
-  }
-  return StringPrimitive::create(runtime, result);
 }
 
 // ES8 21.2.5.4, 21.2.5.5, 21.2.5.7
@@ -1598,6 +1563,42 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   // (inclusive).
   stringView.slice(nextSourcePosition).copyUTF16String(accumulatedResult);
   return StringPrimitive::createEfficient(runtime, accumulatedResult);
+}
+
+// ES9 21.2.5.4
+// Note that we don't yet support unicode.
+CallResult<HermesValue>
+regExpFlagsGetter(void *ctx, Runtime *runtime, NativeArgs args) {
+  // Let R be the this value.
+  // If Type(R) is not Object, throw a TypeError exception
+  Handle<JSObject> R = args.dyncastThis<JSObject>();
+  if (!R) {
+    return runtime->raiseTypeError(
+        "RegExp.prototype.flags getter called on non-object");
+  }
+
+  llvm::SmallString<5> result;
+  static const struct FlagProp {
+    char flagChar;
+    Predefined::Str name;
+  } flagProps[] = {
+      {'g', Predefined::global},
+      {'i', Predefined::ignoreCase},
+      {'m', Predefined::multiline},
+      {'u', Predefined::unicode},
+      {'y', Predefined::sticky},
+  };
+  for (FlagProp f : flagProps) {
+    auto flagVal =
+        JSObject::getNamed_RJS(R, runtime, Predefined::getSymbolID(f.name));
+    if (LLVM_UNLIKELY(flagVal == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (toBoolean(*flagVal)) {
+      result.push_back(f.flagChar);
+    }
+  }
+  return StringPrimitive::create(runtime, result);
 }
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
