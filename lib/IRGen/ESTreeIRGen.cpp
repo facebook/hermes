@@ -977,6 +977,42 @@ void ESTreeIRGen::emitDestructuringObject(
   // Keep track of which keys have been destructured.
   llvm::SmallVector<Value *, 4> excludedItems{};
 
+  if (target->_properties.empty() ||
+      isa<ESTree::RestElementNode>(target->_properties.front())) {
+    // ES10.0 13.3.3.5
+    // 1. Perform ? RequireObjectCoercible(value).
+
+    // The extremely unlikely case that the user is attempting to destructure
+    // into {} or {...rest}. Any other object destructuring will fail upon
+    // attempting to retrieve a real property from `source`.
+    // We must check that the source can be destructured,
+    // and the only time this will throw is if source is undefined or null.
+    auto *throwBB = Builder.createBasicBlock(Builder.getFunction());
+    auto *doneBB = Builder.createBasicBlock(Builder.getFunction());
+
+    // Use == instead of === to account for both undefined and null.
+    Builder.createCondBranchInst(
+        Builder.createBinaryOperatorInst(
+            source,
+            Builder.getLiteralNull(),
+            BinaryOperatorInst::OpKind::EqualKind),
+        throwBB,
+        doneBB);
+
+    Builder.setInsertionBlock(throwBB);
+    genHermesInternalCall(
+        "throwTypeError",
+        Builder.getLiteralUndefined(),
+        {source,
+         Builder.getLiteralString(
+             "Cannot destructure 'undefined' or 'null'.")});
+    // throwTypeError will always throw.
+    // This return is here to ensure well-formed IR, and will not run.
+    Builder.createReturnInst(Builder.getLiteralUndefined());
+
+    Builder.setInsertionBlock(doneBB);
+  }
+
   for (auto &elem : target->_properties) {
     if (auto *rest = dyn_cast<ESTree::RestElementNode>(&elem)) {
       emitRestProperty(declInit, rest, excludedItems, source);

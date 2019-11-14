@@ -45,6 +45,17 @@ var {[foo()]: b, c: d, ...rest} = x;
 // CHECK-NEXT:   %26 = CallInst %25, undefined : undefined, %23 : object, %14, %21 : object
 // CHECK-NEXT:   %27 = StorePropertyInst %26, globalObject : object, "rest" : string
 
-// CHECK-NEXT:   %28 = LoadStackInst %0
-// CHECK-NEXT:   %29 = ReturnInst %28
+var {} = x;
+// CHECK-NEXT:   %28 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
+// CHECK-NEXT:   %29 = BinaryOperatorInst '==', %28, null : null
+// CHECK-NEXT:   %30 = CondBranchInst %29, %BB1, %BB2
+// CHECK-NEXT: %BB1:
+// CHECK-NEXT:   %31 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+// CHECK-NEXT:   %32 = LoadPropertyInst %31, "throwTypeError" : string
+// CHECK-NEXT:   %33 = CallInst %32, undefined : undefined, %28, "Cannot destructure 'undefined' or 'null'." : string
+// CHECK-NEXT:   %34 = ReturnInst undefined : undefined
+
+// CHECK-NEXT: %BB2:
+// CHECK-NEXT:   %35 = LoadStackInst %0
+// CHECK-NEXT:   %36 = ReturnInst %35
 // CHECK-NEXT: function_end

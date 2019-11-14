@@ -17,15 +17,23 @@ function f1(t) {
 //CHECK-NEXT:   %0 = StoreFrameInst undefined : undefined, [a]
 //CHECK-NEXT:   %1 = StoreFrameInst %t, [t]
 //CHECK-NEXT:   %2 = LoadFrameInst [t]
-//CHECK-NEXT:   %3 = AllocObjectInst 0 : number, empty
-//CHECK-NEXT:   %4 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-//CHECK-NEXT:   %5 = LoadPropertyInst %4, "copyDataProperties" : string
-//CHECK-NEXT:   %6 = CallInst %5, undefined : undefined, %3 : object, %2, undefined : undefined
-//CHECK-NEXT:   %7 = StoreFrameInst %6, [a]
-//CHECK-NEXT:   %8 = LoadFrameInst [a]
-//CHECK-NEXT:   %9 = ReturnInst %8
+//CHECK-NEXT:   %3 = BinaryOperatorInst '==', %2, null : null
+//CHECK-NEXT:   %4 = CondBranchInst %3, %BB1, %BB2
 //CHECK-NEXT: %BB1:
-//CHECK-NEXT:   %10 = ReturnInst undefined : undefined
+//CHECK-NEXT:   %5 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+//CHECK-NEXT:   %6 = LoadPropertyInst %5, "throwTypeError" : string
+//CHECK-NEXT:   %7 = CallInst %6, undefined : undefined, %2, "Cannot destructure 'undefined' or 'null'." : string
+//CHECK-NEXT:   %8 = ReturnInst undefined : undefined
+//CHECK-NEXT: %BB2:
+//CHECK-NEXT:   %9 = AllocObjectInst 0 : number, empty
+//CHECK-NEXT:   %10 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
+//CHECK-NEXT:   %11 = LoadPropertyInst %10, "copyDataProperties" : string
+//CHECK-NEXT:   %12 = CallInst %11, undefined : undefined, %9 : object, %2, undefined : undefined
+//CHECK-NEXT:   %13 = StoreFrameInst %12, [a]
+//CHECK-NEXT:   %14 = LoadFrameInst [a]
+//CHECK-NEXT:   %15 = ReturnInst %14
+//CHECK-NEXT: %BB3:
+//CHECK-NEXT:   %16 = ReturnInst undefined : undefined
 //CHECK-NEXT: function_end
 
 function f2(t) {

@@ -31,3 +31,17 @@ print(Object.getOwnPropertyNames(rest));
 // CHECK-NEXT: x,y
 print(b, rest.x, rest.y);
 // CHECK-NEXT: 242 9778 37
+
+try {
+  var {} = undefined;
+} catch(e) {
+  print('caught', e.name);
+}
+// CHECK-NEXT: caught TypeError
+
+try {
+  var {...rest} = undefined;
+} catch(e) {
+  print('caught', e.name);
+}
+// CHECK-NEXT: caught TypeError

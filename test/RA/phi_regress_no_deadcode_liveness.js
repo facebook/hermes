@@ -13,9 +13,9 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 //CHKRA-NEXT:frame = []
 //CHKRA-LABEL:%BB1:
 //CHKRA-NEXT:  {{.*}}  %20 = ReturnInst %1 : undefined
-//CHKRA-LABEL:%BB86:
-//CHKRA-NEXT:  {{.*}}  %256 = LoadPropertyInst %11, "return" : string
-//CHKRA-NEXT:  {{.*}}  %257 = CompareBranchInst '===', %256, %1 : undefined, %BB1, %BB87
+//CHKRA-LABEL:%BB88:
+//CHKRA-NEXT:  {{.*}}  %265 = LoadPropertyInst %11, "return" : string
+//CHKRA-NEXT:  {{.*}}  %266 = CompareBranchInst '===', %265, %1 : undefined, %BB1, %BB89
 //CHKRA-LABEL:%BB7:
-//CHKRA-NEXT:  {{.*}}  %262 = LoadPropertyInst %11, "return" : string
-//CHKRA-NEXT:  {{.*}}  %263 = CompareBranchInst '===', %262, %1 : undefined, %BB6, %BB88
+//CHKRA-NEXT:  {{.*}}  %271 = LoadPropertyInst %11, "return" : string
+//CHKRA-NEXT:  {{.*}}  %272 = CompareBranchInst '===', %271, %1 : undefined, %BB6, %BB90
