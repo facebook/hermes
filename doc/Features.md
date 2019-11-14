@@ -34,6 +34,7 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - `/u` (Unicode) and `/y` (sticky) flags in `RegExp`
 - `Intl` API
 - `Symbol.species` and its interactions with JS library functions
+- use of `constructor` property when creating new Arrays in Array.prototype methods
 - `Symbol.unscopables` (Hermes does not support `with`)
 - Other features added to ECMAScript after ES6 not listed under "Supported"
 
