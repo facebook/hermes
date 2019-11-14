@@ -208,7 +208,6 @@ BLACK_LIST = [
     "test262/test/built-ins/Function/prototype/toString/",
     "test262/test/built-ins/Object/getOwnPropertyDescriptors/",
     "test262/test/built-ins/Promise/",
-    "test262/test/built-ins/String/raw/",
     "test262/test/language/block-scope/",
     "test262/test/language/computed-property-names/",
     "test262/test/language/destructuring/",
