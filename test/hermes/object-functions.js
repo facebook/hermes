@@ -130,6 +130,12 @@ print([1, 2].hasOwnProperty(0));
 print([1, 2].hasOwnProperty(2));
 //CHECK: false
 
+var child = Object.create(obj);
+print(child.hasOwnProperty('newprop'));
+//CHECK: false
+print(child.hasOwnProperty(5));
+//CHECK: false
+
 print('defineProperties');
 // CHECK-LABEL: defineProperties
 var a = [];
