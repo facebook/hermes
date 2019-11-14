@@ -188,7 +188,7 @@ C_STRING((function() {
         elements.push(prettyPrintProp(value, prop, visited));
       }
     }
-    if (value.constructor.name && value.constructor.name !== "Object") {
+    if (value.constructor && value.constructor.name && value.constructor.name !== "Object") {
       return value.constructor.name + ' { ' + elements.join(', ') + ' }';
     } else {
       return '{ ' + elements.join(', ') + ' }';

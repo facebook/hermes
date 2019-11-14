@@ -115,6 +115,9 @@ obj[Symbol('xyz')] = 5
 obj
 // CHECK-NEXT: { Symbol(abc): 3, Symbol(def): 4, Symbol(xyz): 5 }
 
+obj = Object.create(null)
+// CHECK-NEXT: {  }
+
 a = {}
 // CHECK-NEXT: { }
 Object.defineProperty(a, 'x', {
