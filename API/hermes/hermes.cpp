@@ -1805,11 +1805,6 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
     // 13.2.2.5:
     //    Let proto be the value of calling the [[Get]] internal property of
     //    F with argument "prototype"
-    auto protoRes = vm::JSObject::getNamed_RJS(
-        funcHandle,
-        &runtime_,
-        vm::Predefined::getSymbolID(vm::Predefined::prototype));
-    checkStatus(protoRes.getStatus());
     // 13.2.2.6:
     //    If Type(proto) is Object, set the [[Prototype]] internal property
     //    of obj to proto
@@ -1819,12 +1814,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
     //    in 15.2.4
     //
     // Note that 13.2.2.1-4 are also handled by the call to newObject.
-    auto protoValue = protoRes.getValue();
-    auto protoHandle = protoValue.isObject()
-        ? vm::Handle<vm::JSObject>::vmcast(&runtime_, protoValue)
-        : vm::Handle<vm::JSObject>::vmcast(&runtime_.objectPrototype);
-    auto thisRes = vm::Callable::newObject(funcHandle, &runtime_, protoHandle);
-    checkStatus(thisRes.getStatus());
+    auto thisRes = vm::Callable::createThisForConstruct(funcHandle, &runtime_);
     // We need to capture this in case the ctor doesn't return an object,
     // we need to return this object.
     auto objHandle = runtime_.makeHandle<vm::JSObject>(*thisRes);
