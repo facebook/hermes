@@ -987,7 +987,10 @@ objectSetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
   }
   // 5. Let status be O.[[SetPrototypeOf]](proto).
   auto status = JSObject::setParent(
-      vmcast<JSObject>(*O), runtime, dyn_vmcast<JSObject>(*proto));
+      vmcast<JSObject>(*O),
+      runtime,
+      dyn_vmcast<JSObject>(*proto),
+      PropOpFlags().plusThrowOnError());
   // 7. If status is false, throw a TypeError exception.
   // Note that JSObject::setParent throws instead of returning false.
   if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
@@ -1224,8 +1227,10 @@ objectPrototypeProto_setter(void *, Runtime *runtime, NativeArgs args) {
 
   if (LLVM_UNLIKELY(
           JSObject::setParent(
-              vmcast<JSObject>(args.getThisArg()), runtime, protoPtr) ==
-          ExecutionStatus::EXCEPTION))
+              vmcast<JSObject>(args.getThisArg()),
+              runtime,
+              protoPtr,
+              PropOpFlags().plusThrowOnError()) == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   return HermesValue::encodeUndefinedValue();
 }

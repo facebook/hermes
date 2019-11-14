@@ -439,13 +439,20 @@ class JSObject : public GCCell {
   /// by the identity of its hidden class.
   inline bool shouldCacheForIn(Runtime *runtime) const;
 
-  /// Sets the internal prototype property. This corresponds to ES6 9.1.2
-  /// [[SetPrototypeOf]].
+  /// Sets the internal prototype property. This corresponds to ES9 9.1.2.1
+  /// OrdinarySetPrototypeOf.
   /// - Does nothing if the value doesn't change.
   /// - Fails if the object isn't extensible
   /// - Fails if it detects a prototype cycle.
-  static ExecutionStatus
-  setParent(JSObject *self, Runtime *runtime, JSObject *parent);
+  /// If opFlags.getThrowOnError() is true, then this will throw an appropriate
+  /// TypeError for the above failures.  If false, then it will just return
+  /// false. If \c self is a Proxy with a trap, and the trap throws an
+  /// exception, that exception will be propagated regardless.
+  static CallResult<bool> setParent(
+      JSObject *self,
+      Runtime *runtime,
+      JSObject *parent,
+      PropOpFlags opFlags = PropOpFlags());
 
   /// Allocate an internal property. This simply allocates a new property with
   /// SymbolID InternalProperty::getSymbolID(index) and returns the allocated

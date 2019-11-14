@@ -93,7 +93,7 @@ silentObjectSetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
   else
     return HermesValue::encodeUndefinedValue();
 
-  JSObject::setParent(O, runtime, parent);
+  (void)JSObject::setParent(O, runtime, parent);
 
   // Ignore exceptions.
   runtime->clearThrownValue();
