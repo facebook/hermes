@@ -352,6 +352,14 @@ CallResult<HermesValue> createDynamicFunction(
   // If at least two arguments to the function (3 in total), there's a comma.
   SafeUInt32 size{paramCount > 0 ? paramCount - 1 : 0};
 
+  // Use the parent of the 'this' value passed by the caller as the
+  // parent.  This will usually be the functionPrototype, but if this
+  // is called from reflectConstruct, it might be something else.
+  Handle<JSObject> parent = vmisa<JSObject>(args.getThisArg())
+      ? runtime->makeHandle(
+            vmcast<JSObject>(args.getThisArg())->getParent(runtime))
+      : Handle<JSObject>::vmcast(&runtime->functionPrototype);
+
   if (argCount == 0) {
     // No arguments, just set body to be the empty string.
     body = runtime->getPredefinedString(Predefined::emptyString);
@@ -453,6 +461,17 @@ CallResult<HermesValue> createDynamicFunction(
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  // Set the parent.  This could be done by threading the argument
+  // through to Runtime::runBytecode where the object is actually
+  // created, but this is the only place we need to do this so it
+  // keeps the code simpler.
+  CallResult<bool> parentRes = JSObject::setParent(*function, runtime, *parent);
+  if (LLVM_UNLIKELY(parentRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  assert(
+      *parentRes && "Setting prototype on new dynamic function returned false");
 
   return function.getHermesValue();
 }
