@@ -839,9 +839,13 @@ void ESTreeIRGen::emitDestructuringArray(
           storeBlock,
           getDefaultBlock);
 
+      Identifier nameHint = isa<ESTree::IdentifierNode>(target)
+          ? getNameFieldFromID(target)
+          : Identifier{};
+
       // getDefaultBlock:
       Builder.setInsertionBlock(getDefaultBlock);
-      Builder.createStoreStackInst(genExpression(init), value);
+      Builder.createStoreStackInst(genExpression(init, nameHint), value);
       Builder.createBranchInst(storeBlock);
 
       // storeBlock:
@@ -989,18 +993,22 @@ void ESTreeIRGen::emitDestructuringObject(
       init = assign->_right;
     }
 
+    Identifier nameHint = isa<ESTree::IdentifierNode>(valueNode)
+        ? getNameFieldFromID(valueNode)
+        : Identifier{};
+
     if (isa<ESTree::IdentifierNode>(propNode->_key) && !propNode->_computed) {
       Identifier key = getNameFieldFromID(propNode->_key);
       excludedItems.push_back(Builder.getLiteralString(key));
       auto *loadedValue = Builder.createLoadPropertyInst(source, key);
       createLRef(valueNode, declInit)
-          .emitStore(emitOptionalInitialization(loadedValue, init));
+          .emitStore(emitOptionalInitialization(loadedValue, init, nameHint));
     } else {
       Value *key = genExpression(propNode->_key);
       excludedItems.push_back(key);
       auto *loadedValue = Builder.createLoadPropertyInst(source, key);
       createLRef(valueNode, declInit)
-          .emitStore(emitOptionalInitialization(loadedValue, init));
+          .emitStore(emitOptionalInitialization(loadedValue, init, nameHint));
     }
   }
 }
@@ -1054,7 +1062,8 @@ void ESTreeIRGen::emitRestProperty(
 
 Value *ESTreeIRGen::emitOptionalInitialization(
     Value *value,
-    ESTree::Node *init) {
+    ESTree::Node *init,
+    Identifier nameHint) {
   if (!init)
     return value;
 
@@ -1075,7 +1084,7 @@ Value *ESTreeIRGen::emitOptionalInitialization(
 
   // getDefaultBlock:
   Builder.setInsertionBlock(getDefaultBlock);
-  auto *defaultValue = genExpression(init);
+  auto *defaultValue = genExpression(init, nameHint);
   auto *defaultResultBlock = Builder.getInsertionBlock();
   Builder.createBranchInst(storeBlock);
 

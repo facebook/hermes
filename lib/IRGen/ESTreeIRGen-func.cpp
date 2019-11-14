@@ -414,7 +414,8 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
 
     auto *formalParam = Builder.createParameter(newFunc, formalParamName);
     createLRef(param, true)
-        .emitStore(emitOptionalInitialization(formalParam, init));
+        .emitStore(
+            emitOptionalInitialization(formalParam, init, formalParamName));
   }
 
   newFunc->setExpectedParamCountIncludingThis(

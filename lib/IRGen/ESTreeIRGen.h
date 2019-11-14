@@ -865,7 +865,11 @@ class ESTreeIRGen {
   /// If the initializer \p init is nullptr, just return \p value.
   /// Otherwise emit code to check whether \p value equals \c undefined, and
   /// evaluate and return the initializer in that case.
-  Value *emitOptionalInitialization(Value *value, ESTree::Node *init);
+  /// \param nameHint used to provide names for anonymous functions.
+  Value *emitOptionalInitialization(
+      Value *value,
+      ESTree::Node *init,
+      Identifier nameHint);
 
  private:
   /// "Converts" a ScopeChain into a SerializedScope by resolving the
