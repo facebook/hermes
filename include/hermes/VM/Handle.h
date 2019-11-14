@@ -434,6 +434,7 @@ class PseudoHandle {
   }
 
   value_type get() const {
+    assert(valid_ && "Pseudo handle has been invalidated");
     return value_;
   }
 
