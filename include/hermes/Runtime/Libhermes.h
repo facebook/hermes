@@ -31,6 +31,7 @@ const char libhermes[] =
 ""
 "var Infinity;"
 "var NaN;"
+"var globalThis;"
 "var undefined;"
 ""
 "function Error() {}"
