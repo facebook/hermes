@@ -1571,5 +1571,165 @@ CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value) {
   return vmisa<JSArray>(*O);
 }
 
+ExecutionStatus toPropertyDescriptor(
+    Handle<> obj,
+    Runtime *runtime,
+    DefinePropertyFlags &flags,
+    MutableHandle<> &valueOrAccessor) {
+  GCScopeMarkerRAII gcMarker{runtime};
+
+  // Verify that the attributes argument is also an object.
+  auto attributes = Handle<JSObject>::dyn_vmcast(obj);
+  if (!attributes) {
+    return runtime->raiseTypeError(
+        "Object.defineProperty() Attributes argument is not an object");
+  }
+
+  NamedPropertyDescriptor desc;
+
+  // Get enumerable property of the attributes.
+  if (JSObject::getNamedDescriptor(
+          attributes,
+          runtime,
+          Predefined::getSymbolID(Predefined::enumerable),
+          desc)) {
+    auto propRes = JSObject::getNamed_RJS(
+        attributes,
+        runtime,
+        Predefined::getSymbolID(Predefined::enumerable),
+        PropOpFlags().plusThrowOnError());
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    flags.enumerable = toBoolean(*propRes);
+    flags.setEnumerable = true;
+  }
+
+  // Get configurable property of the attributes.
+  if (JSObject::getNamedDescriptor(
+          attributes,
+          runtime,
+          Predefined::getSymbolID(Predefined::configurable),
+          desc)) {
+    auto propRes = JSObject::getNamed_RJS(
+        attributes,
+        runtime,
+        Predefined::getSymbolID(Predefined::configurable),
+        PropOpFlags().plusThrowOnError());
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    flags.configurable = toBoolean(*propRes);
+    flags.setConfigurable = true;
+  }
+
+  // Get value property of the attributes.
+  if (JSObject::getNamedDescriptor(
+          attributes,
+          runtime,
+          Predefined::getSymbolID(Predefined::value),
+          desc)) {
+    auto propRes = JSObject::getNamed_RJS(
+        attributes,
+        runtime,
+        Predefined::getSymbolID(Predefined::value),
+        PropOpFlags().plusThrowOnError());
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    valueOrAccessor = *propRes;
+    flags.setValue = true;
+  }
+
+  // Get writable property of the attributes.
+  if (JSObject::getNamedDescriptor(
+          attributes,
+          runtime,
+          Predefined::getSymbolID(Predefined::writable),
+          desc)) {
+    auto propRes = JSObject::getNamed_RJS(
+        attributes,
+        runtime,
+        Predefined::getSymbolID(Predefined::writable),
+        PropOpFlags().plusThrowOnError());
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    flags.writable = toBoolean(*propRes);
+    flags.setWritable = true;
+  }
+
+  // Get getter property of the attributes.
+  MutableHandle<Callable> getterPtr{runtime};
+  if (JSObject::getNamedDescriptor(
+          attributes,
+          runtime,
+          Predefined::getSymbolID(Predefined::get),
+          desc)) {
+    auto propRes = JSObject::getNamed_RJS(
+        attributes,
+        runtime,
+        Predefined::getSymbolID(Predefined::get),
+        PropOpFlags().plusThrowOnError());
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    flags.setGetter = true;
+    auto getter = *propRes;
+    if (LLVM_LIKELY(!getter.isUndefined())) {
+      getterPtr = dyn_vmcast<Callable>(getter);
+      if (LLVM_UNLIKELY(!getterPtr)) {
+        return runtime->raiseTypeError(
+            "Invalid property descriptor. Getter must be a function.");
+      }
+    }
+  }
+
+  // Get setter property of the attributes.
+  MutableHandle<Callable> setterPtr{runtime};
+  if (JSObject::getNamedDescriptor(
+          attributes,
+          runtime,
+          Predefined::getSymbolID(Predefined::set),
+          desc)) {
+    auto propRes = JSObject::getNamed_RJS(
+        attributes,
+        runtime,
+        Predefined::getSymbolID(Predefined::set),
+        PropOpFlags().plusThrowOnError());
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    flags.setSetter = true;
+    auto setter = *propRes;
+    if (LLVM_LIKELY(!setter.isUndefined())) {
+      setterPtr = dyn_vmcast<Callable>(setter);
+      if (LLVM_UNLIKELY(!setterPtr)) {
+        return runtime->raiseTypeError(
+            "Invalid property descriptor. Setter must be a function.");
+      }
+    }
+  }
+
+  // Construct property accessor if getter/setter is set.
+  if (flags.setSetter || flags.setGetter) {
+    if (flags.setValue) {
+      return runtime->raiseTypeError(
+          "Invalid property descriptor. Can't set both accessor and value.");
+    }
+    if (flags.setWritable) {
+      return runtime->raiseTypeError(
+          "Invalid property descriptor. Can't set both accessor and writable.");
+    }
+    auto crtRes = PropertyAccessor::create(runtime, getterPtr, setterPtr);
+    if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    valueOrAccessor = *crtRes;
+  }
+
+  return ExecutionStatus::RETURNED;
+}
+
 } // namespace vm
 } // namespace hermes

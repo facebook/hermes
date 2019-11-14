@@ -18,6 +18,7 @@
 namespace hermes {
 namespace vm {
 
+union DefinePropertyFlags;
 class Runtime;
 
 /// ES6.0 7.1.1
@@ -399,6 +400,14 @@ constexpr bool isSymbolPrimitive(SymbolID id) {
 constexpr bool isPropertyNamePrimitive(SymbolID id) {
   return id.isUniqued();
 }
+
+/// ES5.1 8.10.5. Object.toPropertyDescriptor(O). The result is written into
+/// \p flags and \p valueOrAccessor together to represent a descriptor.
+ExecutionStatus toPropertyDescriptor(
+    Handle<> obj,
+    Runtime *runtime,
+    DefinePropertyFlags &flags,
+    MutableHandle<> &valueOrAccessor);
 
 } // namespace vm
 } // namespace hermes
