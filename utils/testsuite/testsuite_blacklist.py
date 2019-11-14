@@ -655,10 +655,6 @@ BLACK_LIST = [
     "mjsunit/es6/spread-call-new.js",
     "mjsunit/es6/spread-call-super-property.js",
     "mjsunit/es6/spread-call.js",
-    "test262/test/language/expressions/array/spread-",
-    "test262/test/language/expressions/call/spread-",
-    "test262/test/language/expressions/call/trailing-comma.js",
-    "test262/test/language/expressions/new/spread-",
     "test262/test/language/arguments-object/meth-args-trailing-comma-spread-operator.js",
     "test262/test/language/arguments-object/func-expr-args-trailing-comma-spread-operator.js",
     "test262/test/language/arguments-object/func-decl-args-trailing-comma-spread-operator.js",
@@ -872,6 +868,9 @@ BLACK_LIST = [
     "test262/test/built-ins/DataView/length.js",
     # T56360814 Symbol primitives in iteration order
     "test262/test/built-ins/Object/assign/strings-and-symbol-order.js",
+    "test262/test/language/expressions/array/spread-obj-spread-order.js",
+    "test262/test/language/expressions/call/spread-obj-spread-order.js",
+    "test262/test/language/expressions/new/spread-obj-spread-order.js",
     # T42569352 TDZ for parameters used in initializer expressions.
     "test262/test/language/expressions/function/dflt-params-ref-later.js",
     "test262/test/language/expressions/function/dflt-params-ref-self.js",
