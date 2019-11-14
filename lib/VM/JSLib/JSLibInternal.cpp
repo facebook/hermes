@@ -390,7 +390,7 @@ CallResult<HermesValue> createDynamicFunction(
       return JSFunction::create(
           runtime,
           toHandle(runtime, Domain::create(runtime)),
-          Handle<JSObject>(runtime, nullptr),
+          parent,
           Handle<Environment>(runtime, nullptr),
           runtime->getReturnThisCodeBlock());
     }

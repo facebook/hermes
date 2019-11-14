@@ -134,6 +134,8 @@ print(Function("return this;")());
 // CHECK-NEXT: [object global]
 print(Function("return\nthis")());
 // CHECK-NEXT: undefined
+print(Function("return this").__proto__ === Function.prototype);
+// CHECK-NEXT: true
 try {Function('a)', 'print(1);')} catch (e) {print('caught', e.name, e.message)}
 // CHECK-NEXT: caught SyntaxError {{.*}}
 try {Function('});print(1);({')} catch (e) {print('caught', e.name, e.message)}
