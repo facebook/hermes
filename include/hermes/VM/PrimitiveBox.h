@@ -91,7 +91,7 @@ class JSString final : public PrimitiveBox {
 
   /// Set the [[PrimitiveValue]] internal property from a string.
   static void setPrimitiveString(
-      Handle<JSObject> selfHandle,
+      Handle<JSString> selfHandle,
       Runtime *runtime,
       Handle<StringPrimitive> string);
 

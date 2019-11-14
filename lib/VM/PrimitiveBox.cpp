@@ -88,7 +88,7 @@ CallResult<HermesValue> JSString::create(
 }
 
 void JSString::setPrimitiveString(
-    Handle<JSObject> selfHandle,
+    Handle<JSString> selfHandle,
     Runtime *runtime,
     Handle<StringPrimitive> string) {
   NamedPropertyDescriptor desc;
