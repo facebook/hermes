@@ -1523,7 +1523,9 @@ bool HermesRuntimeImpl::hasProperty(
   vm::GCScope gcScope(&runtime_);
   auto h = handle(obj);
   vm::SymbolID nameID = phv(name).getSymbol();
-  return h->hasNamedOrIndexed(h, &runtime_, nameID);
+  auto result = h->hasNamedOrIndexed(h, &runtime_, nameID);
+  checkStatus(result.getStatus());
+  return result.getValue();
 }
 
 void HermesRuntimeImpl::setPropertyValue(

@@ -774,30 +774,30 @@ TEST_F(ObjectModelTest, HasProperty) {
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexIDNum));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexID2Num));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *indexID));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
-  ASSERT_FALSE(JSObject::hasNamed(self, runtime, *nonIndexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
+  ASSERT_FALSE(*JSObject::hasNamed(self, runtime, *nonIndexID));
 
   ASSERT_TRUE(*JSObject::putNamedOrIndexed(self, runtime, *nonIndexID, self));
 
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexIDNum));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexID2Num));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *indexID));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
-  ASSERT_TRUE(JSObject::hasNamed(self, runtime, *nonIndexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
+  ASSERT_TRUE(*JSObject::hasNamed(self, runtime, *nonIndexID));
 
   ASSERT_TRUE(*JSObject::putNamedOrIndexed(self, runtime, *indexID, self));
 
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, indexIDNum));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexID2Num));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *indexID));
-  ASSERT_FALSE(JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
-  ASSERT_TRUE(JSObject::hasNamed(self, runtime, *nonIndexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID));
+  ASSERT_FALSE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
+  ASSERT_TRUE(*JSObject::hasNamed(self, runtime, *nonIndexID));
 
   DefinePropertyFlags dpf{};
   ASSERT_TRUE(*JSObject::defineOwnProperty(
@@ -806,10 +806,10 @@ TEST_F(ObjectModelTest, HasProperty) {
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, indexIDNum));
   ASSERT_TRUE(*JSObject::hasComputed(self, runtime, indexID2Num));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *indexID));
-  ASSERT_TRUE(JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
-  ASSERT_TRUE(JSObject::hasNamed(self, runtime, *nonIndexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *nonIndexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID));
+  ASSERT_TRUE(*JSObject::hasNamedOrIndexed(self, runtime, *indexID2));
+  ASSERT_TRUE(*JSObject::hasNamed(self, runtime, *nonIndexID));
 }
 
 TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {

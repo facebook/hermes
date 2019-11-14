@@ -1027,7 +1027,7 @@ CallResult<HermesValue> JSObject::getComputed_RJS(
   }
 }
 
-bool JSObject::hasNamed(
+CallResult<bool> JSObject::hasNamed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name) {
@@ -1036,7 +1036,7 @@ bool JSObject::hasNamed(
   return propObj ? true : false;
 }
 
-bool JSObject::hasNamedOrIndexed(
+CallResult<bool> JSObject::hasNamedOrIndexed(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name) {

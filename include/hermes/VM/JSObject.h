@@ -734,12 +734,12 @@ class JSObject : public GCCell {
   /// hasNamed is an optimized path for checking existence of a property
   /// for SymbolID when it is statically known that the SymbolIDs is not
   /// index-like.
-  static bool
+  static CallResult<bool>
   hasNamed(Handle<JSObject> selfHandle, Runtime *runtime, SymbolID name);
 
   /// hasNamedOrIndexed checks existence of a property for a SymbolID which may
   /// be index-like.
-  static bool hasNamedOrIndexed(
+  static CallResult<bool> hasNamedOrIndexed(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       SymbolID name);

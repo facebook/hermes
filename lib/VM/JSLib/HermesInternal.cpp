@@ -663,9 +663,14 @@ hermesInternalCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
           return true;
 
         // Skip excluded items.
-        if (excludedItems &&
-            JSObject::hasNamedOrIndexed(excludedItems, runtime, sym)) {
-          return true;
+        if (excludedItems) {
+          auto cr = JSObject::hasNamedOrIndexed(excludedItems, runtime, sym);
+          assert(
+              cr != ExecutionStatus::EXCEPTION &&
+              "hasNamedOrIndex failed, which can only happen with a proxy, "
+              "but excludedItems should never be a proxy");
+          if (*cr)
+            return true;
         }
 
         auto cr =
