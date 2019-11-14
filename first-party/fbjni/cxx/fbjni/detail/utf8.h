@@ -72,7 +72,7 @@ public:
     }
   }
 
-  const jsize length() const {
+  jsize length() const {
     return length_;
   }
 
