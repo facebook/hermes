@@ -864,8 +864,6 @@ BLACK_LIST = [
     # t19359477
     "mjsunit/regress/regress-3976.js",
     "mjsunit/string-replace-gc.js",
-    # T54585052
-    "test262/test/built-ins/DataView/length.js",
     # T56360814 Symbol primitives in iteration order
     "test262/test/built-ins/Object/assign/strings-and-symbol-order.js",
     "test262/test/language/expressions/array/spread-obj-spread-order.js",
