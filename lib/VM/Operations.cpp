@@ -1366,22 +1366,25 @@ CallResult<Handle<Callable>> speciesConstructor(
   return defaultConstructor;
 }
 
-bool isConstructor(Runtime *runtime, HermesValue x) {
+bool isConstructor(Runtime *runtime, HermesValue value) {
+  return isConstructor(runtime, dyn_vmcast<Callable>(value));
+}
+
+bool isConstructor(Runtime *runtime, Callable *callable) {
   // This is not a complete definition, since ES6 and later define member
   // functions of objects to not be constructors; however, Hermes does not have
   // ES6 classes implemented yet, so we cannot check for that case.
-  Callable *c = dyn_vmcast<Callable>(x);
-  if (!c) {
+  if (!callable) {
     return false;
   }
 
   // We traverse the BoundFunction target chain to find the eventual target.
-  while (BoundFunction *b = dyn_vmcast<BoundFunction>(c)) {
-    c = b->getTarget(runtime);
+  while (BoundFunction *b = dyn_vmcast<BoundFunction>(callable)) {
+    callable = b->getTarget(runtime);
   }
 
   // If it is a bytecode function, check the flags.
-  if (auto *func = dyn_cast<JSFunction>(c)) {
+  if (auto *func = dyn_cast<JSFunction>(callable)) {
     auto *cb = func->getCodeBlock();
     // Even though it doesn't make sense logically, we need to compile the
     // function in order to access it flags.
@@ -1391,7 +1394,11 @@ bool isConstructor(Runtime *runtime, HermesValue x) {
 
   // We check for NativeFunction since those are defined to not be
   // constructible, with the exception of NativeConstructor.
-  return !vmisa<NativeFunction>(c) || vmisa<NativeConstructor>(c);
+  if (!vmisa<NativeFunction>(callable) || vmisa<NativeConstructor>(callable)) {
+    return true;
+  }
+
+  return false;
 }
 
 CallResult<bool>
