@@ -46,7 +46,7 @@ struct ReprAccess {
     repr.JObjectBase::set(obj);
   }
   static javaobject get(const Repr& repr) {
-    return static_cast<javaobject>(repr.JObject::get());
+    return static_cast<javaobject>(repr.JObjectBase::get());
   }
 };
 
