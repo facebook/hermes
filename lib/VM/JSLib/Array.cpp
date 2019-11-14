@@ -2973,7 +2973,7 @@ CallResult<HermesValue> arrayOf(void *, Runtime *runtime, NativeArgs args) {
 
 /// ES6.0 22.1.2.1 Array.from ( items [ , mapfn [ , thisArg ] ] )
 CallResult<HermesValue> arrayFrom(void *, Runtime *runtime, NativeArgs args) {
-  GCScopeMarkerRAII gcScope{runtime};
+  GCScope gcScope{runtime};
   auto itemsHandle = args.getArgHandle(0);
   // 1. Let C be the this value.
   auto C = args.getThisHandle();
