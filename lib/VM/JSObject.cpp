@@ -346,7 +346,7 @@ void JSObject::addInternalProperties(
   }
 }
 
-CallResult<HermesValue> JSObject::getNamedPropertyValue(
+CallResult<HermesValue> JSObject::getNamedPropertyValue_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<JSObject> propObj,
@@ -364,7 +364,7 @@ CallResult<HermesValue> JSObject::getNamedPropertyValue(
       runtime->makeHandle(accessor->getter), runtime, selfHandle);
 }
 
-CallResult<HermesValue> JSObject::getComputedPropertyValue(
+CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<JSObject> propObj,

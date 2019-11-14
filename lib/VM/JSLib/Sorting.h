@@ -21,8 +21,11 @@
 namespace hermes {
 namespace vm {
 
-/// Abstraction to define a comparison-based sorting routine.
-/// The SortModel has two operations: swap and compare.
+/// Abstraction to define a comparison-based sorting routine.  The
+/// SortModel has two operations: swap and compare.  Note that some
+/// implementation of \c swap and \c less can call property accessors
+/// which evaluate JavaScript.  For now, we don't rename these
+/// methods.
 class SortModel {
  public:
   // Swap elements at indices a and b.

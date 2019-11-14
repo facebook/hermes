@@ -38,20 +38,21 @@ TEST_F(ArrayTest, CppAPITest) {
       array->getComputed_RJS(array, runtime, runtime->makeHandle(100.0_hd)));
 
 // Obtain the value a couple of different ways and check its value.
-#define EXPECT_INDEX_VALUE(value, array, index)                               \
-  EXPECT_EQ(value, array->at(runtime, index));                                \
-  ASSERT_TRUE(*array->getOwnComputedDescriptor(                               \
-      array,                                                                  \
-      runtime,                                                                \
-      runtime->makeHandle(HermesValue::encodeDoubleValue(index)),             \
-      desc));                                                                 \
-  EXPECT_CALLRESULT_VALUE(                                                    \
-      value, JSArray::getComputedPropertyValue(array, runtime, array, desc)); \
-  EXPECT_CALLRESULT_VALUE(                                                    \
-      value,                                                                  \
-      array->getComputed_RJS(                                                 \
-          array,                                                              \
-          runtime,                                                            \
+#define EXPECT_INDEX_VALUE(value, array, index)                            \
+  EXPECT_EQ(value, array->at(runtime, index));                             \
+  ASSERT_TRUE(*array->getOwnComputedDescriptor(                            \
+      array,                                                               \
+      runtime,                                                             \
+      runtime->makeHandle(HermesValue::encodeDoubleValue(index)),          \
+      desc));                                                              \
+  EXPECT_CALLRESULT_VALUE(                                                 \
+      value,                                                               \
+      JSArray::getComputedPropertyValue_RJS(array, runtime, array, desc)); \
+  EXPECT_CALLRESULT_VALUE(                                                 \
+      value,                                                               \
+      array->getComputed_RJS(                                              \
+          array,                                                           \
+          runtime,                                                         \
           runtime->makeHandle(HermesValue::encodeDoubleValue(index))));
 
   // array[100] = 50. This will case a reallocation.

@@ -122,7 +122,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   strBuf.append('(');
 
   // Extract ".length".
-  auto lengthProp = Callable::extractOwnLengthProperty(func, runtime);
+  auto lengthProp = Callable::extractOwnLengthProperty_RJS(func, runtime);
   if (lengthProp == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
 

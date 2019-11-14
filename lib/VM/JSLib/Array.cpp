@@ -648,7 +648,7 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
               objHandle, runtime, kHandle, propObj, desc);
           if (propObj.get()) {
             // 7.d.v.4. If exists is true, then
-            auto propRes = JSObject::getComputedPropertyValue(
+            auto propRes = JSObject::getComputedPropertyValue_RJS(
                 objHandle, runtime, propObj, desc);
             if (propRes == ExecutionStatus::EXCEPTION) {
               return ExecutionStatus::EXCEPTION;
@@ -987,7 +987,7 @@ class StandardSortModel : public SortModel {
         obj_, runtime_, bHandle_, bDescObjHandle_, bDesc);
 
     if (aDescObjHandle_) {
-      auto res = JSObject::getComputedPropertyValue(
+      auto res = JSObject::getComputedPropertyValue_RJS(
           obj_, runtime_, aDescObjHandle_, aDesc);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -995,7 +995,7 @@ class StandardSortModel : public SortModel {
       aValue_ = res.getValue();
     }
     if (bDescObjHandle_) {
-      auto res = JSObject::getComputedPropertyValue(
+      auto res = JSObject::getComputedPropertyValue_RJS(
           obj_, runtime_, bDescObjHandle_, bDesc);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -1063,7 +1063,7 @@ class StandardSortModel : public SortModel {
       return false;
     }
 
-    auto propRes = JSObject::getComputedPropertyValue(
+    auto propRes = JSObject::getComputedPropertyValue_RJS(
         obj_, runtime_, aDescObjHandle_, aDesc);
     if (propRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -1079,7 +1079,7 @@ class StandardSortModel : public SortModel {
       return true;
     }
 
-    if ((propRes = JSObject::getComputedPropertyValue(
+    if ((propRes = JSObject::getComputedPropertyValue_RJS(
              obj_, runtime_, bDescObjHandle_, bDesc)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -1212,7 +1212,7 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
 
     if (descObjHandle) {
       // kPresent is true, execute callback.
-      if ((propRes = JSObject::getComputedPropertyValue(
+      if ((propRes = JSObject::getComputedPropertyValue_RJS(
                O, runtime, descObjHandle, desc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -1326,7 +1326,7 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
         O, runtime, k, descObjHandle, desc);
     if (descObjHandle) {
       // kPresent is true, so copy the element over.
-      if ((propRes = JSObject::getComputedPropertyValue(
+      if ((propRes = JSObject::getComputedPropertyValue_RJS(
                O, runtime, descObjHandle, desc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -1447,7 +1447,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
           O, runtime, from, fromDescObjHandle, fromDesc);
 
       if (fromDescObjHandle) {
-        if ((propRes = JSObject::getComputedPropertyValue(
+        if ((propRes = JSObject::getComputedPropertyValue_RJS(
                  O, runtime, fromDescObjHandle, fromDesc)) ==
             ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
@@ -1495,7 +1495,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
           O, runtime, from, fromDescObjHandle, fromDesc);
       if (fromDescObjHandle) {
         // fromPresent is true
-        if ((propRes = JSObject::getComputedPropertyValue(
+        if ((propRes = JSObject::getComputedPropertyValue_RJS(
                  O, runtime, fromDescObjHandle, fromDesc)) ==
             ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
@@ -1555,7 +1555,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
 
       if (fromDescObjHandle) {
         // fromPresent is true
-        if ((propRes = JSObject::getComputedPropertyValue(
+        if ((propRes = JSObject::getComputedPropertyValue_RJS(
                  O, runtime, fromDescObjHandle, fromDesc)) ==
             ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
@@ -1738,7 +1738,7 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
       // i. Let fromVal be Get(O, fromKey).
       // ii. ReturnIfAbrupt(fromVal).
       auto fromValRes =
-          JSObject::getComputedPropertyValue(O, runtime, fromObj, fromDesc);
+          JSObject::getComputedPropertyValue_RJS(O, runtime, fromObj, fromDesc);
       if (LLVM_UNLIKELY(fromValRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1900,7 +1900,7 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
 
     if (fromDescObjHandle) {
       // fromPresent is true, so read fromVal and set the "to" index.
-      if ((propRes = JSObject::getComputedPropertyValue(
+      if ((propRes = JSObject::getComputedPropertyValue_RJS(
                O, runtime, fromDescObjHandle, fromDesc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -2025,7 +2025,7 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
         O, runtime, k, descObjHandle, desc);
     if (descObjHandle) {
       // kPresent is true, see if it's the element we're looking for.
-      if ((propRes = JSObject::getComputedPropertyValue(
+      if ((propRes = JSObject::getComputedPropertyValue_RJS(
                O, runtime, descObjHandle, desc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -2098,7 +2098,7 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
 
       if (fromDescObjHandle) {
         // fromPresent is true
-        if ((propRes = JSObject::getComputedPropertyValue(
+        if ((propRes = JSObject::getComputedPropertyValue_RJS(
                  O, runtime, fromDescObjHandle, fromDesc)) ==
             ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
@@ -2208,7 +2208,7 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
 
     if (descObjHandle) {
       // kPresent is true, call the callback on the kth element.
-      if ((propRes = JSObject::getComputedPropertyValue(
+      if ((propRes = JSObject::getComputedPropertyValue_RJS(
                O, runtime, descObjHandle, desc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -2309,7 +2309,7 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
 
     if (descObjHandle) {
       // kPresent is true, execute callback and store result in A[k].
-      if ((propRes = JSObject::getComputedPropertyValue(
+      if ((propRes = JSObject::getComputedPropertyValue_RJS(
                O, runtime, descObjHandle, desc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -2389,7 +2389,7 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
 
     if (descObjHandle) {
       // kPresent is true
-      if ((propRes = JSObject::getComputedPropertyValue(
+      if ((propRes = JSObject::getComputedPropertyValue_RJS(
                O, runtime, descObjHandle, desc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -2618,7 +2618,7 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
           O, runtime, k, kDescObjHandle, kDesc);
       kPresent = !!kDescObjHandle;
       if (kPresent) {
-        if ((propRes = JSObject::getComputedPropertyValue(
+        if ((propRes = JSObject::getComputedPropertyValue_RJS(
                  O, runtime, kDescObjHandle, kDesc)) ==
             ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
@@ -2651,7 +2651,7 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
         O, runtime, k, kDescObjHandle, kDesc);
     if (kDescObjHandle) {
       // kPresent is true, run the accumulation step.
-      if ((propRes = JSObject::getComputedPropertyValue(
+      if ((propRes = JSObject::getComputedPropertyValue_RJS(
                O, runtime, kDescObjHandle, kDesc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -2727,7 +2727,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, lower, lowerDescObjHandle, lowerDesc);
     if (lowerDescObjHandle) {
-      if ((propRes = JSObject::getComputedPropertyValue(
+      if ((propRes = JSObject::getComputedPropertyValue_RJS(
                O, runtime, lowerDescObjHandle, lowerDesc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
@@ -2739,7 +2739,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, upper, upperDescObjHandle, upperDesc);
     if (upperDescObjHandle) {
-      if ((propRes = JSObject::getComputedPropertyValue(
+      if ((propRes = JSObject::getComputedPropertyValue_RJS(
                O, runtime, upperDescObjHandle, upperDesc)) ==
           ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;

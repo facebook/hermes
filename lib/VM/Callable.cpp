@@ -382,7 +382,7 @@ CallResult<HermesValue> Callable::createThisForConstruct(
   return Callable::newObject(selfHandle, runtime, prototype);
 }
 
-CallResult<double> Callable::extractOwnLengthProperty(
+CallResult<double> Callable::extractOwnLengthProperty_RJS(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
   NamedPropertyDescriptor desc;
@@ -394,8 +394,8 @@ CallResult<double> Callable::extractOwnLengthProperty(
     return 0.0;
   }
 
-  auto propRes =
-      JSObject::getNamedPropertyValue(selfHandle, runtime, selfHandle, desc);
+  auto propRes = JSObject::getNamedPropertyValue_RJS(
+      selfHandle, runtime, selfHandle, desc);
   if (propRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -547,7 +547,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
   }
 
   // Extract target.length.
-  auto targetLength = Callable::extractOwnLengthProperty(target, runtime);
+  auto targetLength = Callable::extractOwnLengthProperty_RJS(target, runtime);
   if (targetLength == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
 

@@ -915,7 +915,7 @@ enum class EnumerableOwnPropertiesKind {
 
 /// ES8.0 7.3.21.
 /// EnumerableOwnProperties gets the requested properties based on \p kind.
-static CallResult<HermesValue> enumerableOwnProperties(
+static CallResult<HermesValue> enumerableOwnProperties_RJS(
     Runtime *runtime,
     NativeArgs args,
     EnumerableOwnPropertiesKind kind) {
@@ -973,8 +973,8 @@ static CallResult<HermesValue> enumerableOwnProperties(
       continue;
     }
 
-    auto valueRes =
-        JSObject::getComputedPropertyValue(objHandle, runtime, propObj, desc);
+    auto valueRes = JSObject::getComputedPropertyValue_RJS(
+        objHandle, runtime, propObj, desc);
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1012,19 +1012,19 @@ static CallResult<HermesValue> enumerableOwnProperties(
 }
 
 CallResult<HermesValue> objectKeys(void *, Runtime *runtime, NativeArgs args) {
-  return enumerableOwnProperties(
+  return enumerableOwnProperties_RJS(
       runtime, args, EnumerableOwnPropertiesKind::Key);
 }
 
 CallResult<HermesValue>
 objectValues(void *, Runtime *runtime, NativeArgs args) {
-  return enumerableOwnProperties(
+  return enumerableOwnProperties_RJS(
       runtime, args, EnumerableOwnPropertiesKind::Value);
 }
 
 CallResult<HermesValue>
 objectEntries(void *, Runtime *runtime, NativeArgs args) {
-  return enumerableOwnProperties(
+  return enumerableOwnProperties_RJS(
       runtime, args, EnumerableOwnPropertiesKind::KeyValue);
 }
 
@@ -1102,7 +1102,7 @@ objectAssign(void *, Runtime *runtime, NativeArgs args) {
       }
 
       // 5.c.iii.1. Let propValue be Get(from, nextKey).
-      auto propRes = JSObject::getComputedPropertyValue(
+      auto propRes = JSObject::getComputedPropertyValue_RJS(
           fromHandle, runtime, fromHandle, desc);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         // 5.c.iii.2. ReturnIfAbrupt(propValue).

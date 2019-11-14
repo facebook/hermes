@@ -669,7 +669,7 @@ hermesInternalCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
         }
 
         auto cr =
-            JSObject::getNamedPropertyValue(source, runtime, source, desc);
+            JSObject::getNamedPropertyValue_RJS(source, runtime, source, desc);
         if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
           return false;
 

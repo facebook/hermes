@@ -288,7 +288,7 @@ class Callable : public JSObject {
   /// integer and return it. Otherwise return 0. Note that it is not guaranteed
   /// to be non-negative.
   /// Follows ES2018 19.2.3.2 5 and 6.
-  static CallResult<double> extractOwnLengthProperty(
+  static CallResult<double> extractOwnLengthProperty_RJS(
       Handle<Callable> selfHandle,
       Runtime *runtime);
 

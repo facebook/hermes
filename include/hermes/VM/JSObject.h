@@ -559,7 +559,7 @@ class JSObject : public GCCell {
   /// \param propObj the object where the property was found (it could be
   ///   anywhere along the prototype chain).
   /// \param desc the property descriptor.
-  static CallResult<HermesValue> getNamedPropertyValue(
+  static CallResult<HermesValue> getNamedPropertyValue_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<JSObject> propObj,
@@ -592,7 +592,7 @@ class JSObject : public GCCell {
   /// \param propObj the object where the property was found (it could be
   ///   anywhere along the prototype chain).
   /// \param desc the property descriptor.
-  static CallResult<HermesValue> getComputedPropertyValue(
+  static CallResult<HermesValue> getComputedPropertyValue_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<JSObject> propObj,
