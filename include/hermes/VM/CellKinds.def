@@ -47,8 +47,7 @@ CELL_KIND(Environment)
 CELL_KIND(HashMapEntry)
 CELL_KIND(OrderedHashMap)
 
-CELL_JS_NAME(Object, "Object")
-CELL_KIND(Object)
+CELL_CLASS(Object, "Object")
 CELL_KIND(HostObject)
 
 CELL_CLASS(Error, "Error")
@@ -77,14 +76,13 @@ CELL_CLASS(RegExp, "RegExp")
 CELL_CLASS(RequireContext, "RequireContext")
 CELL_CLASS(Generator, "Generator")
 
-CELL_JS_NAME(Function, "Function")
 CELL_KIND(BoundFunction)
 CELL_KIND(NativeFunction)
 CELL_KIND(NativeConstructor)
 CELL_KIND(FinalizableNativeFunction)
 CELL_KIND(GeneratorFunction)
 CELL_KIND(GeneratorInnerFunction)
-CELL_KIND(Function)
+CELL_CLASS(Function, "Function")
 
 // Update AllCells, below, if new CellKinds are added.
 // (AllCells is useful for checking that a CellKind is valid.)
