@@ -570,6 +570,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
           "copyDataProperties",
           Builder.getLiteralUndefined(),
           {Obj, genExpression(spread->_argument)});
+      haveSeenComputedProp = true;
       continue;
     }
 
