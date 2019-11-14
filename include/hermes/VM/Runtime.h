@@ -529,9 +529,20 @@ class Runtime : public HandleRootOwner,
   ExecutionStatus raiseTypeError(const TwineChar16 &msg);
 
   /// Flag the interpreter that a type error must be thrown when execution
-  /// resumes. The string thrown concatenates the type of \p value with \p msg.
+  /// resumes. The string thrown concatenates a description of \p value
+  /// with \p msg.
   /// \return ExecutionResult::EXCEPTION
-  ExecutionStatus raiseTypeErrorForValue(Handle<> value, llvm::StringRef msg);
+  ExecutionStatus raiseTypeErrorForValue(Handle<> value, llvm::StringRef msg) {
+    return raiseTypeErrorForValue("", value, msg);
+  }
+
+  /// Flag the interpreter that a type error must be thrown when execution
+  /// resumes. The string thrown concatenates \p msg1, a description of \p
+  /// value, and \p msg2. \return ExecutionResult::EXCEPTION
+  ExecutionStatus raiseTypeErrorForValue(
+      llvm::StringRef msg1,
+      Handle<> value,
+      llvm::StringRef msg2);
 
   /// Flag the interpreter that a syntax error must be thrown.
   /// \return ExecutionStatus::EXCEPTION
