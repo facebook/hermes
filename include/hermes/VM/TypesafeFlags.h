@@ -32,12 +32,12 @@ construction and offers the following methods for every flag:
 
 \code
  bool getFLAGNAME() const;
- void setFLAGNAME(bool);
+ ClassName setFLAGNAME(bool);
  ClassName plusFLAGNAME();
  ClassName minusFLAGNAME();
 \endcode
 
-The last two methods implement a "fluent" API where they return a new
+The modifier methods implement a "fluent" API where they return a new
 instance of the class with the corresponding flag set or cleared. This
 pattern is especially convenient when constructing combinations of flags to
 pass to functions.
@@ -67,8 +67,10 @@ functionCall(flagsA.plusFlag2().minusFlag1().plusFlag3());
     r.f##name##_ = false;           \
     return r;                       \
   }                                 \
-  void set##name(bool v) {          \
-    f##name##_ = v;                 \
+  Self set##name(bool v) {          \
+    auto r(*this);                  \
+    r.f##name##_ = v;               \
+    return r;                       \
   }                                 \
   bool get##name() const {          \
     return f##name##_;              \
