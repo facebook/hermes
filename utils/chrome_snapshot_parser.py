@@ -41,6 +41,7 @@ NODE_TYPES = [
     "symbol",
     "bigint",
 ]
+LOCATION_FIELDS = ["object_index", "script_id", "line", "column"]
 
 
 def main():
@@ -86,6 +87,21 @@ def main():
             }
         )
         curr_node += len(NODE_FIELDS)
+
+    # Iterate through locations and add the location resolution to nodes
+    curr_loc = 0
+    while curr_loc < len(root["locations"]):
+        object_index, script_id, line, column = root["locations"][
+            curr_loc : curr_loc + len(LOCATION_FIELDS)
+        ]
+        nodes[object_index // len(NODE_FIELDS)]["location"] = {
+            "script_id": script_id,
+            # Line numbers and column numbers are 0-based internally,
+            # but 1-based when viewed.
+            "line": line + 1,
+            "column": column + 1,
+        }
+        curr_loc += len(LOCATION_FIELDS)
 
     with open(args.out, "w") as f:
         json.dump(nodes, f, indent=2)
