@@ -86,6 +86,32 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
     Runtime *runtime,
     Handle<> valueHandle);
 
+/// ES9 7.2.7
+inline bool isPropertyKey(Handle<> valueHandle) {
+  return valueHandle->isString() || valueHandle->isSymbol();
+}
+
+/// ES9 7.1.14
+inline CallResult<Handle<>> toPropertyKey(
+    Runtime *runtime,
+    Handle<> valueHandle) {
+  CallResult<HermesValue> primRes =
+      toPrimitive_RJS(runtime, valueHandle, PreferredType::STRING);
+  if (LLVM_UNLIKELY(primRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<> prim = runtime->makeHandle(*primRes);
+  if (prim->isSymbol()) {
+    return prim;
+  }
+  CallResult<PseudoHandle<StringPrimitive>> strRes =
+      toString_RJS(runtime, prim);
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return Handle<>::vmcast(toHandle(runtime, std::move(*strRes)));
+}
+
 /// This function is used to convert a property to property key if it's an
 /// object. Check if \p nameValHandle is an object, if so, convert it to a
 /// key which may have side-effects. Otherwise just return the original
@@ -96,19 +122,7 @@ inline CallResult<Handle<>> toPropertyKeyIfObject(
     Runtime *runtime,
     Handle<> valueHandle) {
   if (LLVM_UNLIKELY(valueHandle->isObject())) {
-    auto primRes = toPrimitive_RJS(runtime, valueHandle, PreferredType::STRING);
-    if (LLVM_UNLIKELY(primRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto prim = runtime->makeHandle(*primRes);
-    if (prim->isSymbol()) {
-      return prim;
-    }
-    auto res = toString_RJS(runtime, prim);
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return Handle<>::vmcast(toHandle(runtime, std::move(*res)));
+    return toPropertyKey(runtime, valueHandle);
   }
   return valueHandle;
 }
@@ -401,7 +415,7 @@ constexpr bool isPropertyNamePrimitive(SymbolID id) {
   return id.isUniqued();
 }
 
-/// ES5.1 8.10.5. Object.toPropertyDescriptor(O). The result is written into
+/// ES5.1 8.10.5. toPropertyDescriptor(O). The result is written into
 /// \p flags and \p valueOrAccessor together to represent a descriptor.
 ExecutionStatus toPropertyDescriptor(
     Handle<> obj,
