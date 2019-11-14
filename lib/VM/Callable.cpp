@@ -860,7 +860,9 @@ NativeFunction::NativeFunction(
     NativeFunctionPtr functionPtr)
     : Callable(d, vt), context_(context), functionPtr_(functionPtr) {}
 
-static void serializeNativeFunctionImpl(Serializer &s, const GCCell *cell) {
+void NativeFunction::serializeNativeFunctionImpl(
+    Serializer &s,
+    const GCCell *cell) {
   serializeCallableImpl(s, cell);
 }
 
@@ -880,7 +882,7 @@ void NativeFunctionSerialize(Serializer &s, const GCCell *cell) {
       "functionPtr not in relocation map");
   s.writeRelocation((const void *)self->functionPtr_);
 
-  serializeNativeFunctionImpl(s, cell);
+  NativeFunction::serializeNativeFunctionImpl(s, cell);
   s.endObject(cell);
 }
 
@@ -1053,7 +1055,7 @@ void NativeConstructorSerialize(Serializer &s, const GCCell *cell) {
       s.objectInTable((void *)self->creator_) &&
       "creator funtion not in relocation table");
   s.writeRelocation((void *)self->creator_);
-  serializeNativeFunctionImpl(s, cell);
+  NativeFunction::serializeNativeFunctionImpl(s, cell);
   s.endObject(cell);
 }
 

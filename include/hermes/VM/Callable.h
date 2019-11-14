@@ -456,6 +456,7 @@ class NativeFunction : public Callable {
       void *context,
       NativeFunctionPtr functionPtr);
 
+  static void serializeNativeFunctionImpl(Serializer &s, const GCCell *cell);
   friend void NativeFunctionSerialize(Serializer &s, const GCCell *cell);
 #endif
 
