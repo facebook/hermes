@@ -590,23 +590,15 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     return ExecutionStatus::RETURNED;
   // replacer is arrayish
 
-  // Get all properties from replacer.
-  auto cr = JSObject::getOwnPropertyNames(replacerArray, runtime_, false);
-  if (cr == ExecutionStatus::EXCEPTION) {
+  CallResult<uint64_t> lenRes = getArrayLikeLength(replacerArray, runtime_);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto arrayProperties = *cr;
-  // We need to get all index-like properties in ascending order.
-  // getOwnPropertyNames will do that for us.
-  llvm::SmallVector<uint32_t, 16> indexes;
-  for (uint32_t i = 0, e = arrayProperties->getEndIndex(); i < e; ++i) {
-    auto index = arrayProperties->at(runtime_, i);
-    if (index.isNumber()) {
-      indexes.push_back(static_cast<uint32_t>(index.getNumber()));
-    }
+  if (*lenRes > UINT32_MAX) {
+    return runtime_->raiseRangeError("replacer array is too large");
   }
-
-  auto arrRes = JSArray::create(runtime_, 4, 0);
+  uint32_t len = static_cast<uint32_t>(*lenRes);
+  auto arrRes = JSArray::create(runtime_, len, 0);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -615,11 +607,11 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
   // Iterate through all indexes, in ascending order.
   GCScope gcScope{runtime_};
   auto marker = gcScope.createMarker();
-  for (uint32_t index : indexes) {
+  for (uint64_t i = 0, e = *lenRes; i < e; ++i) {
     gcScope.flushToMarker(marker);
 
     // Get the property value.
-    tmpHandle_ = HermesValue::encodeDoubleValue(index);
+    tmpHandle_ = HermesValue::encodeDoubleValue(i);
     auto propRes =
         JSObject::getComputed_RJS(replacerArray, runtime_, tmpHandle_);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
