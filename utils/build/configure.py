@@ -10,7 +10,14 @@ import os
 import platform
 import subprocess
 
-from common import build_dir_suffix, get_parser, is_visual_studio, run_command, which
+from common import (
+    build_dir_suffix,
+    common_cmake_flags,
+    get_parser,
+    is_visual_studio,
+    run_command,
+    which,
+)
 
 
 def parse_args():
@@ -68,11 +75,15 @@ def main():
         # It's alright if the file already exists.
         pass
 
-    cmake_flags = args.cmake_flags.split() + [
-        "-DLLVM_BUILD_DIR=" + args.llvm_build_dir,
-        "-DLLVM_SRC_DIR=" + args.llvm_src_dir,
-        "-DCMAKE_BUILD_TYPE=" + args.build_type,
-    ]
+    cmake_flags = (
+        args.cmake_flags.split()
+        + common_cmake_flags()
+        + [
+            "-DLLVM_BUILD_DIR=" + args.llvm_build_dir,
+            "-DLLVM_SRC_DIR=" + args.llvm_src_dir,
+            "-DCMAKE_BUILD_TYPE=" + args.build_type,
+        ]
+    )
     if args.is_32_bit:
         cmake_flags += ["-DLLVM_BUILD_32_BITS=On"]
 

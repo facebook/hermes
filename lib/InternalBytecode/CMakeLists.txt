@@ -65,7 +65,7 @@ add_custom_command(
 
 add_custom_command(
   OUTPUT InternalBytecode.inc
-  COMMAND python3 xxd.py ${CMAKE_CURRENT_BINARY_DIR}/JSLib.hbc > ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.inc
+  COMMAND ${PYTHON_EXECUTABLE} xxd.py ${CMAKE_CURRENT_BINARY_DIR}/JSLib.hbc > ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.inc
   DEPENDS xxd.py JSLib.hbc
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM

@@ -11,7 +11,14 @@ import platform
 import subprocess
 import sys
 
-from common import build_dir_suffix, get_parser, is_visual_studio, run_command, which
+from common import (
+    build_dir_suffix,
+    common_cmake_flags,
+    get_parser,
+    is_visual_studio,
+    run_command,
+    which,
+)
 
 
 # It references the commit day so we can shallow clone
@@ -113,10 +120,11 @@ def main():
 
     clone_and_patch_llvm(args)
 
-    cmake_flags = args.cmake_flags.split() + [
-        "-DLLVM_TARGETS_TO_BUILD=",
-        "-DCMAKE_BUILD_TYPE={}".format(args.build_type),
-    ]
+    cmake_flags = (
+        args.cmake_flags.split()
+        + common_cmake_flags()
+        + ["-DLLVM_TARGETS_TO_BUILD=", "-DCMAKE_BUILD_TYPE={}".format(args.build_type)]
+    )
     if args.is_32_bit:
         cmake_flags += ["-DLLVM_BUILD_32_BITS=On"]
     if platform.system() == "Windows":
@@ -156,8 +164,6 @@ def main():
             "-DCMAKE_C_FLAGS=-mmacosx-version-min=10.9",
             "-DCMAKE_CXX_FLAGS=-mmacosx-version-min=10.9",
         ]
-
-    cmake_flags += ["-DPYTHON_EXECUTABLE={}".format(sys.executable or which("python"))]
 
     try:
         os.mkdir(args.llvm_build_dir)

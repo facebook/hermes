@@ -12,6 +12,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import warnings
 
 
 def get_parser():
@@ -110,3 +111,12 @@ def build_dir_suffix(args):
     if args.is_32_bit:
         build_dir_suffix += "_32"
     return build_dir_suffix
+
+
+def common_cmake_flags():
+    if sys.executable and sys.version_info.major < 3:
+        warnings.warn(
+            "Configuring CMake with Python2. "
+            "Python3 is recommended for the configuration of the Hermes build"
+        )
+    return ["-DPYTHON_EXECUTABLE={}".format(sys.executable or which("python"))]
