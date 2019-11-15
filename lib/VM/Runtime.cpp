@@ -1691,12 +1691,7 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   for (auto frame : getStackFrames()) {
     auto codeBlock = frame->getCalleeCodeBlock();
     if (codeBlock) {
-      std::string funcName;
-      if (codeBlock->getNameString(this, funcName)) {
-        res += funcName;
-      } else {
-        res += "<UTF16 string>";
-      }
+      res += codeBlock->getNameString(this);
       if (ip != nullptr) {
         auto bytecodeOffs = codeBlock->getOffsetOf(ip);
         auto blockSourceCode = codeBlock->getDebugSourceLocationsOffset();

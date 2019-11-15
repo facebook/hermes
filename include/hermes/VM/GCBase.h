@@ -432,6 +432,10 @@ class GCBase {
     return pointerBase_;
   }
 
+  GCCallbacks *getCallbacks() const {
+    return gcCallbacks_;
+  }
+
   /// Forwards to the GC callback \p convertSymbolToUTF8, see documentation
   /// for that function.
   std::string convertSymbolToUTF8(SymbolID id) {

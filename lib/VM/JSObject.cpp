@@ -2033,7 +2033,7 @@ std::string JSObject::getHeuristicTypeName(GC *gc) {
     }
   }
 
-  std::string name = cellKindStr(getKind());
+  std::string name = getVT()->base.snapshotMetaData.defaultNameForNode(this);
   // A constructor's name was not found, check if the object is in dictionary
   // mode.
   if (getClass(base)->isDictionary()) {

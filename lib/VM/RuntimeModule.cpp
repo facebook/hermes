@@ -173,21 +173,6 @@ SymbolID RuntimeModule::getLazyName() {
   return this->stringIDMap_[0];
 }
 
-bool RuntimeModule::getLazyNameString(Runtime *runtime, std::string &res)
-    const {
-  assert(functionMap_.size() == 1 && "Not a lazy module?");
-  assert(stringIDMap_.size() == 1 && "Missing lazy function name symbol");
-  assert(this->stringIDMap_[0].isValid() && "Invalid function name symbol");
-  StringView strView = runtime->getIdentifierTable().getStringView(
-      runtime, this->stringIDMap_[0]);
-  if (strView.isASCII()) {
-    res = std::string(strView.begin(), strView.end());
-    return true;
-  } else {
-    return false;
-  }
-}
-
 void RuntimeModule::initializeLazyMayAllocate(
     std::unique_ptr<hbc::BCProvider> bytecode) {
   // Clear the old data provider first.
@@ -316,16 +301,19 @@ StringPrimitive *RuntimeModule::getStringPrimFromStringIDMayAllocate(
       getSymbolIDFromStringIDMayAllocate(stringID));
 }
 
-bool RuntimeModule::getStringFromStringID(StringID stringID, std::string &res) {
+std::string RuntimeModule::getStringFromStringID(StringID stringID) {
   auto entry = bcProvider_->getStringTableEntry(stringID);
+  auto strStorage = bcProvider_->getStringStorage();
   if (entry.isUTF16()) {
-    return false;
+    const char16_t *s =
+        (const char16_t *)(strStorage.begin() + entry.getOffset());
+    std::string out;
+    convertUTF16ToUTF8WithReplacements(out, UTF16Ref{s, entry.getLength()});
+    return out;
   } else {
     // ASCII.
-    auto strStorage = bcProvider_->getStringStorage();
     const char *s = strStorage.begin() + entry.getOffset();
-    res = std::string{s, entry.getLength()};
-    return true;
+    return std::string{s, entry.getLength()};
   }
 }
 

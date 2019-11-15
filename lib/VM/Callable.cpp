@@ -86,11 +86,7 @@ void serializeCallableImpl(Serializer &s, const GCCell *cell) {
 
 std::string Callable::_snapshotNameImpl(GCCell *cell, GC *gc) {
   auto *const self = reinterpret_cast<Callable *>(cell);
-  std::string funcName = self->getNameIfExists(gc->getPointerBase());
-  if (!funcName.empty()) {
-    return funcName;
-  }
-  return cellKindStr(self->getKind());
+  return self->getNameIfExists(gc->getPointerBase());
 }
 
 CallResult<HermesValue> Callable::_newObjectImpl(
@@ -903,11 +899,7 @@ void NativeFunctionDeserialize(Deserializer &d, CellKind kind) {
 
 std::string NativeFunction::_snapshotNameImpl(GCCell *cell, GC *gc) {
   auto *const self = reinterpret_cast<NativeFunction *>(cell);
-  std::string funcName = getFunctionName(self->functionPtr_);
-  if (!funcName.empty()) {
-    return funcName;
-  }
-  return cellKindStr(self->getKind());
+  return getFunctionName(self->functionPtr_);
 }
 
 Handle<NativeFunction> NativeFunction::create(
@@ -1189,6 +1181,15 @@ CallResult<HermesValue> JSFunction::_callImpl(
   if (auto *jitPtr = self->getCodeBlock()->getJITCompiled())
     return (*jitPtr)(runtime);
   return runtime->interpretFunction(self->getCodeBlock());
+}
+
+std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC *gc) {
+  auto *const self = vmcast<JSFunction>(cell);
+  std::string funcName = Callable::_snapshotNameImpl(self, gc);
+  if (!funcName.empty()) {
+    return funcName;
+  }
+  return self->codeBlock_->getNameString(gc->getCallbacks());
 }
 
 //===----------------------------------------------------------------------===//

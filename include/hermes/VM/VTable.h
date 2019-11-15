@@ -60,6 +60,8 @@ struct VTable {
       return nodeType_;
     }
     std::string nameForNode(GCCell *cell, GC *gc) const;
+    /// Get the default name for the node, without any custom behavior.
+    std::string defaultNameForNode(GCCell *cell) const;
     void addEdges(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
     void addNodes(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
 

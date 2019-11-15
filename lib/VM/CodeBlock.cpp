@@ -193,14 +193,13 @@ SymbolID CodeBlock::getNameMayAllocate() const {
       functionHeader_.functionName());
 }
 
-bool CodeBlock::getNameString(Runtime *runtime, std::string &res) const {
+std::string CodeBlock::getNameString(GCBase::GCCallbacks *runtime) const {
 #ifndef HERMESVM_LEAN
   if (isLazy()) {
-    return runtimeModule_->getLazyNameString(runtime, res);
+    return runtime->convertSymbolToUTF8(runtimeModule_->getLazyName());
   }
 #endif
-  return runtimeModule_->getStringFromStringID(
-      functionHeader_.functionName(), res);
+  return runtimeModule_->getStringFromStringID(functionHeader_.functionName());
 }
 
 OptValue<uint32_t> CodeBlock::getDebugSourceLocationsOffset() const {

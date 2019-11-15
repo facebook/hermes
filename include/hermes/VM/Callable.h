@@ -906,6 +906,8 @@ class JSFunction : public Callable {
   static CallResult<HermesValue> _callImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime);
+
+  static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
 };
 
 /// A function which interprets code and returns a Generator when called.

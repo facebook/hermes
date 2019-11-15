@@ -14,9 +14,18 @@ namespace vm {
 
 std::string VTable::HeapSnapshotMetadata::nameForNode(GCCell *cell, GC *gc)
     const {
+  std::string name;
   if (name_) {
-    return name_(cell, gc);
+    name = name_(cell, gc);
   }
+  if (!name.empty()) {
+    return name;
+  }
+  return defaultNameForNode(cell);
+}
+
+std::string VTable::HeapSnapshotMetadata::defaultNameForNode(
+    GCCell *cell) const {
   return cellKindStr(cell->getKind());
 }
 
