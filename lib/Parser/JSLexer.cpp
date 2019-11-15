@@ -757,16 +757,20 @@ llvm::Optional<uint32_t> JSLexer::consumeHex(
     bool errorOnFail) {
   uint32_t cp = 0;
   for (unsigned i = 0; i != requiredLen; ++i) {
-    int ch = *curCharPtr_ | 32;
-    if (ch >= '0' && ch <= '9')
+    unsigned ch = *curCharPtr_;
+    if (ch >= '0' && ch <= '9') {
       ch -= '0';
-    else if (ch >= 'a' && ch <= 'f')
-      ch -= 'a' - 10;
-    else {
-      if (errorOnFail) {
-        error(SMLoc::getFromPointer(curCharPtr_), "invalid hex number");
+    } else {
+      // Now that we know it is not a digit, it is safe to lowercase.
+      ch |= 32;
+      if (ch >= 'a' && ch <= 'f') {
+        ch -= 'a' - 10;
+      } else {
+        if (errorOnFail) {
+          error(SMLoc::getFromPointer(curCharPtr_), "invalid hex number");
+        }
+        return llvm::None;
       }
-      return llvm::None;
     }
     cp = (cp << 4) + ch;
     ++curCharPtr_;

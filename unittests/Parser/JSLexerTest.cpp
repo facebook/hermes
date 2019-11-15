@@ -761,4 +761,23 @@ TEST(JSLexerTest, SourceMappingUrl) {
   }
 }
 
+TEST(JSLexerTest, RegressConsumeBadHexTest) {
+  JSLexer::Allocator alloc;
+  SourceErrorManager sm;
+  DiagContext diag(sm);
+
+  // Test a hex escape where the two following characters are ('5' & ~32).
+  // This catches a bug where we were or-ing 32 before checking whether the
+  // character is a digit.
+  JSLexer lex("'\\x\x15\x15'", sm, alloc);
+
+  ASSERT_EQ(TokenKind::string_literal, lex.advance()->getKind());
+  ASSERT_EQ(1, diag.getErrCountClear());
+
+  ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
+  ASSERT_FALSE(lex.isNewLineBeforeCurrentToken());
+
+  ASSERT_EQ(0, diag.getErrCountClear());
+}
+
 } // namespace
