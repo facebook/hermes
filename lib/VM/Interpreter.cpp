@@ -3006,18 +3006,14 @@ tailCall:
             runtime->raiseTypeError("right operand of 'in' is not an object");
             goto exception;
           }
-          MutableHandle<JSObject> inObject{runtime};
-          ComputedPropertyDescriptor desc;
-          if (JSObject::getComputedDescriptor(
-                  Handle<JSObject>::vmcast(&O3REG(IsIn)),
-                  runtime,
-                  Handle<>(&O2REG(IsIn)),
-                  inObject,
-                  desc) == ExecutionStatus::EXCEPTION) {
+          auto cr = JSObject::hasComputed(
+              Handle<JSObject>::vmcast(&O3REG(IsIn)),
+              runtime,
+              Handle<>(&O2REG(IsIn)));
+          if (cr == ExecutionStatus::EXCEPTION) {
             goto exception;
           }
-
-          O1REG(IsIn) = HermesValue::encodeBoolValue(!!inObject);
+          O1REG(IsIn) = HermesValue::encodeBoolValue(*cr);
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(IsIn);

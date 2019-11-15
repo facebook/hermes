@@ -815,18 +815,14 @@ CallResult<HermesValue> externIsIn(
     return runtime->raiseTypeError("right operand of 'in' is not an object");
   }
 
-  MutableHandle<JSObject> inObject{runtime};
-  ComputedPropertyDescriptor desc;
-  if (JSObject::getComputedDescriptor(
-          Handle<JSObject>::vmcast(obj),
-          runtime,
-          Handle<>(propName),
-          inObject,
-          desc) == ExecutionStatus::EXCEPTION) {
+  CallResult<bool> resultRes = JSObject::hasComputed(
+      Handle<JSObject>::vmcast(obj), runtime, Handle<>(propName));
+
+  if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return HermesValue::encodeBoolValue(!!inObject);
+  return HermesValue::encodeBoolValue(*resultRes);
 }
 
 CallResult<HermesValue> externInstanceOf(
