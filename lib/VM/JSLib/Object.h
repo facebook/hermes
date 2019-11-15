@@ -20,7 +20,7 @@ namespace vm {
 // This file declares some functions in Object which are also used by
 // Reflect.
 
-CallResult<HermesValue>
+CallResult<bool>
 defineProperty(Runtime *runtime, NativeArgs args, PropOpFlags opFlags);
 
 CallResult<HermesValue> getOwnPropertyDescriptor(

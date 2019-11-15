@@ -421,14 +421,14 @@ objectGetOwnPropertySymbols(void *, Runtime *runtime, NativeArgs args) {
   return cr->getHermesValue();
 }
 
-CallResult<HermesValue>
+CallResult<bool>
 defineProperty(Runtime *runtime, NativeArgs args, PropOpFlags opFlags) {
   // ES9 19.1.2.4 (throwOnError == true) or 26.1.3 (throwOnError == false)
   auto O = args.dyncastArg<JSObject>(0);
   // 1. If Type(O) is not Object, throw a TypeError exception.
   if (!O) {
     return runtime->raiseTypeError(
-        "Object.defineProperty() argument is not an object");
+        "Object.defineProperty() called on non-object");
   }
 
   // 2. Let key be ? ToPropertyKey(P).
@@ -453,17 +453,21 @@ defineProperty(Runtime *runtime, NativeArgs args, PropOpFlags opFlags) {
 
   // 4[throwOnError]. Perform ? DefinePropertyOrThrow(O, key, desc).
   // 4[!throwOnError]. Return ? O.[[DefineOwnProperty]](key, desc).
-  CallResult<bool> res = JSObject::defineOwnComputed(
+  return JSObject::defineOwnComputedPrimitive(
       O, runtime, *keyRes, descFlags, descValueOrAccessor, opFlags);
-  if (res == ExecutionStatus::EXCEPTION)
-    return ExecutionStatus::EXCEPTION;
-  // 5. Return O.
-  return O.getHermesValue();
 }
 
 CallResult<HermesValue>
 objectDefineProperty(void *, Runtime *runtime, NativeArgs args) {
-  return defineProperty(runtime, args, PropOpFlags().plusThrowOnError());
+  // ES9 19.1.2.4
+  CallResult<bool> res =
+      defineProperty(runtime, args, PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  assert(*res && "defineProperty with throwOnError == true returned false");
+  // 5. Return O.
+  return args.getArg(0);
 }
 
 static CallResult<HermesValue>
@@ -472,7 +476,7 @@ objectDefinePropertiesInternal(Runtime *runtime, Handle<> obj, Handle<> props) {
   auto *objPtr = dyn_vmcast<JSObject>(obj.get());
   if (!objPtr) {
     return runtime->raiseTypeError(
-        "Object.defineProperties() argument is not an object");
+        "Object.defineProperties() called on non-object");
   }
   auto objHandle = runtime->makeHandle(objPtr);
 
