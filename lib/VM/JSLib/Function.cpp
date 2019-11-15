@@ -13,6 +13,7 @@
 
 #include "hermes/Regex/Executor.h"
 #include "hermes/Regex/RegexTraits.h"
+#include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringBuilder.h"
@@ -176,17 +177,14 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
         "Can't apply() with non-object arguments list");
   }
 
-  auto propRes = JSObject::getNamed_RJS(
-      argObj, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+  CallResult<uint64_t> nRes = getArrayLikeLength(argObj, runtime);
+  if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toUInt32_RJS(runtime, runtime->makeHandle(*propRes));
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (*nRes > UINT32_MAX) {
+    runtime->raiseRangeError("Too many arguments for apply");
   }
-  uint32_t n = intRes->getNumber();
-
+  uint32_t n = static_cast<uint32_t>(*nRes);
   ScopedNativeCallFrame newFrame{runtime, n, *func, false, args.getArg(0)};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
@@ -196,45 +194,18 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
   // TODO: look into doing this lazily.
   newFrame.fillArguments(n, HermesValue::encodeUndefinedValue());
 
-  Handle<ArrayImpl> argArray = Handle<ArrayImpl>::dyn_vmcast(argObj);
-  MutableHandle<> iHandle{runtime, HermesValue::encodeNumberValue(0)};
-  auto marker = gcScope.createMarker();
-  if (LLVM_LIKELY(argArray)) {
-    // Fast path: we already have an array, so try and bypass the getComputed
-    // checks and the handle loads & stores. Directly call ArrayImpl::at,
-    // and only call getComputed if the element is empty.
-    for (uint32_t argIdx = 0; argIdx < n; ++argIdx) {
-      HermesValue arg = argArray->at(runtime, argIdx);
-      if (LLVM_LIKELY(!arg.isEmpty())) {
-        newFrame->getArgRef(argIdx) = arg;
-        continue;
-      }
-      // Slow path fallback: the actual getComputed on this,
-      // because the real value could be up the prototype chain.
-      iHandle = HermesValue::encodeDoubleValue(argIdx);
-      gcScope.flushToMarker(marker);
-      if (LLVM_UNLIKELY(
-              (propRes = JSObject::getComputed_RJS(argObj, runtime, iHandle)) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      newFrame->getArgRef(argIdx) = *propRes;
-    }
-  } else {
-    // Not an array. Use this slow path.
-    for (uint32_t argIdx = 0; argIdx < n; ++argIdx) {
-      iHandle = HermesValue::encodeNumberValue(argIdx);
-      gcScope.flushToMarker(marker);
-      if (LLVM_UNLIKELY(
-              (propRes = JSObject::getComputed_RJS(argObj, runtime, iHandle)) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      newFrame->getArgRef(argIdx) = *propRes;
-    }
+  if (LLVM_UNLIKELY(
+          createListFromArrayLike(
+              argObj,
+              runtime,
+              n,
+              [&](Runtime *, uint64_t index, PseudoHandle<> value) {
+                newFrame->getArgRef(index) = value.getHermesValue();
+                return ExecutionStatus::RETURNED;
+              }) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
   }
 
-  gcScope.flushToMarker(marker);
   return Callable::call(func, runtime);
 }
 
