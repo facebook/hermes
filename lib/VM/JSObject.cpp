@@ -934,14 +934,14 @@ ExecutionStatus JSObject::getComputedDescriptor(
   return ExecutionStatus::RETURNED;
 }
 
-CallResult<HermesValue> JSObject::getNamed_RJS(
+CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
+    Handle<> receiver,
     PropOpFlags opFlags,
     PropertyCacheEntry *cacheEntry) {
   NamedPropertyDescriptor desc;
-
   // Locate the descriptor. propObj contains the object which may be anywhere
   // along the prototype chain.
   JSObject *propObj = getNamedDescriptor(selfHandle, runtime, name, desc);
@@ -972,7 +972,7 @@ CallResult<HermesValue> JSObject::getNamed_RJS(
 
     // Execute the accessor on this object.
     return Callable::executeCall0(
-        runtime->makeHandle(accessor->getter), runtime, selfHandle);
+        runtime->makeHandle(accessor->getter), runtime, receiver);
   } else {
     assert(desc.flags.hostObject && "descriptor flags are impossible");
     return vmcast<HostObject>(propObj)->get(name);
@@ -1001,10 +1001,11 @@ CallResult<HermesValue> JSObject::getNamedOrIndexed(
   return getNamed_RJS(selfHandle, runtime, name, opFlags);
 }
 
-CallResult<HermesValue> JSObject::getComputed_RJS(
+CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
-    Handle<> nameValHandle) {
+    Handle<> nameValHandle,
+    Handle<> receiver) {
   // Try the fast-path first: no "index-like" properties and the "name" already
   // is a valid integer index.
   if (selfHandle->flags_.fastIndexProperties) {
@@ -1048,7 +1049,7 @@ CallResult<HermesValue> JSObject::getComputed_RJS(
 
     // Execute the accessor on this object.
     return accessor->getter.get(runtime)->executeCall0(
-        runtime->makeHandle(accessor->getter), runtime, selfHandle);
+        runtime->makeHandle(accessor->getter), runtime, receiver);
   } else {
     assert(desc.flags.hostObject && "descriptor flags are impossible");
     MutableHandle<StringPrimitive> strPrim{runtime};
@@ -1148,11 +1149,12 @@ static ExecutionStatus raiseErrorForOverridingStaticBuiltin(
       TwineChar16(objName) + "." + TwineChar16(methodNameHnd.get()) + "'");
 }
 
-CallResult<bool> JSObject::putNamed_RJS(
+CallResult<bool> JSObject::putNamedWithReceiver_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     SymbolID name,
     Handle<> valueHandle,
+    Handle<> receiver,
     PropOpFlags opFlags) {
   NamedPropertyDescriptor desc;
 
@@ -1164,7 +1166,7 @@ CallResult<bool> JSObject::putNamed_RJS(
       PropertyFlags::defaultNewNamedPropertyFlags(),
       desc);
 
-  // If the property exists.
+  // If the property exists
   if (propObj) {
     if (LLVM_UNLIKELY(desc.flags.accessor)) {
       auto *accessor =
@@ -1184,10 +1186,25 @@ CallResult<bool> JSObject::putNamed_RJS(
       if (accessor->setter.get(runtime)->executeCall1(
               runtime->makeHandle(accessor->setter),
               runtime,
-              selfHandle,
+              receiver,
               *valueHandle) == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
+      return true;
+    }
+
+    // Get the simple case out of the way: If the property already
+    // exists on selfHandle, selfHandle and receiver are the same,
+    // selfHandle is not a host object/internal setter, and the
+    // property is writable, just write into the same slot.
+
+    if (LLVM_LIKELY(
+            *selfHandle == propObj &&
+            selfHandle.getHermesValue().getRaw() == receiver->getRaw() &&
+            !desc.flags.internalSetter && !desc.flags.hostObject &&
+            desc.flags.writable)) {
+      setNamedSlotValue(
+          *selfHandle, runtime, desc, valueHandle.getHermesValue());
       return true;
     }
 
@@ -1204,29 +1221,57 @@ CallResult<bool> JSObject::putNamed_RJS(
       return false;
     }
 
-    // If it is a property in this object.
-    if (propObj == *selfHandle) {
-      if (LLVM_LIKELY(!desc.flags.internalSetter && !desc.flags.hostObject)) {
-        setNamedSlotValue(*selfHandle, runtime, desc, *valueHandle);
-        return true;
-      }
-      if (desc.flags.internalSetter) {
-        // NOTE: this check slows down property writes up to 3%, because even
-        // though it is predicted as not-taken, it occurs on every single
-        // property write. Combining it with the accessor check above
-        // (LLVM_UNLIKELY(desc.flags.accessor || desc.flags.internalSetter))
-        // and moving the other checks in the accessor branch, brings the
-        // slow-down to about 2%. (Similarly in setNamedPropertyValue()).
-        return internalSetter(
-            selfHandle, runtime, name, desc, valueHandle, opFlags);
-      } else {
-        assert(desc.flags.hostObject && "descriptor flags are impossible");
-        return vmcast<HostObject>(selfHandle.get())->set(name, *valueHandle);
-      }
+    if (*selfHandle == propObj && desc.flags.internalSetter) {
+      return internalSetter(
+          selfHandle, runtime, name, desc, valueHandle, opFlags);
     }
   }
 
-  // The property doesn't exist in this object.
+  // The property does not exist as an conventional own property on
+  // this object.
+
+  MutableHandle<JSObject> receiverHandle{runtime, *selfHandle};
+  if (selfHandle.getHermesValue().getRaw() != receiver->getRaw() ||
+      receiverHandle->isHostObject()) {
+    if (selfHandle.getHermesValue().getRaw() != receiver->getRaw()) {
+      receiverHandle = dyn_vmcast<JSObject>(*receiver);
+    }
+    if (!receiverHandle) {
+      return false;
+    }
+
+    if (getOwnNamedDescriptor(receiverHandle, runtime, name, desc)) {
+      if (LLVM_UNLIKELY(desc.flags.accessor || !desc.flags.writable)) {
+        return false;
+      }
+
+      assert(
+          !receiverHandle->isHostObject() &&
+          "getOwnNamedDescriptor never sets hostObject flag");
+
+      setNamedSlotValue(
+          *receiverHandle, runtime, desc, valueHandle.getHermesValue());
+      return true;
+    }
+
+    // Now deal with host case.  We need to call
+    // getOwnComputedPrimitiveDescriptor because it knows how to call
+    // the proxy [[GetOwnComputed]] if necessary.
+    assert(desc.flags.hostObject && "descriptor flags are impossible");
+    ComputedPropertyDescriptor desc;
+    CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
+        receiverHandle,
+        runtime,
+        name.isUniqued() ? runtime->makeHandle(HermesValue::encodeStringValue(
+                               runtime->getStringPrimFromSymbolID(name)))
+                         : runtime->makeHandle(name),
+        desc);
+    if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    return vmcast<HostObject>(receiverHandle.get())->set(name, *valueHandle);
+  }
 
   // Does the caller require it to exist?
   if (LLVM_UNLIKELY(opFlags.getMustExist())) {
@@ -1239,7 +1284,7 @@ CallResult<bool> JSObject::putNamed_RJS(
   // Add a new property.
 
   return addOwnProperty(
-      selfHandle,
+      receiverHandle,
       runtime,
       name,
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
@@ -1272,32 +1317,37 @@ CallResult<bool> JSObject::putNamedOrIndexed(
   return putNamed_RJS(selfHandle, runtime, name, valueHandle, opFlags);
 }
 
-CallResult<bool> JSObject::putComputed_RJS(
+CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle,
     Handle<> valueHandle,
+    Handle<> receiver,
     PropOpFlags opFlags) {
   assert(
       !opFlags.getMustExist() &&
       "mustExist flag cannot be used with computed properties");
 
-  // Try the fast-path first: no "index-like" properties, the "name" already
-  // is a valid integer index, and it is present in storage.
+  // Try the fast-path first: has "index-like" properties, the "name"
+  // already is a valid integer index, selfHandle and receiver are the
+  // same, and it is present in storage.
   if (selfHandle->flags_.fastIndexProperties) {
     if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
-      if (haveOwnIndexed(selfHandle.get(), runtime, *arrayIndex)) {
-        auto result =
-            setOwnIndexed(selfHandle, runtime, *arrayIndex, valueHandle);
-        if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
-          return ExecutionStatus::EXCEPTION;
-        if (LLVM_LIKELY(*result))
-          return true;
-        if (opFlags.getThrowOnError()) {
-          // TODO: better message.
-          return runtime->raiseTypeError("Cannot assign to read-only property");
+      if (selfHandle.getHermesValue().getRaw() == receiver->getRaw()) {
+        if (haveOwnIndexed(selfHandle.get(), runtime, *arrayIndex)) {
+          auto result =
+              setOwnIndexed(selfHandle, runtime, *arrayIndex, valueHandle);
+          if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+            return ExecutionStatus::EXCEPTION;
+          if (LLVM_LIKELY(*result))
+            return true;
+          if (opFlags.getThrowOnError()) {
+            // TODO: better message.
+            return runtime->raiseTypeError(
+                "Cannot assign to read-only property");
+          }
+          return false;
         }
-        return false;
       }
     }
   }
@@ -1338,8 +1388,26 @@ CallResult<bool> JSObject::putComputed_RJS(
       if (accessor->setter.get(runtime)->executeCall1(
               runtime->makeHandle(accessor->setter),
               runtime,
-              selfHandle,
+              receiver,
               valueHandle.get()) == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return true;
+    }
+
+    // Get the simple case out of the way: If the property already
+    // exists on selfHandle, selfHandle and receiver are the same,
+    // selfHandle is not a host object/internal setter, and the
+    // property is writable, just write into the same slot.
+
+    if (LLVM_LIKELY(
+            selfHandle == propObj &&
+            selfHandle.getHermesValue().getRaw() == receiver->getRaw() &&
+            !desc.flags.internalSetter && !desc.flags.hostObject &&
+            desc.flags.writable)) {
+      if (LLVM_UNLIKELY(
+              setComputedSlotValue(selfHandle, runtime, desc, valueHandle) ==
+              ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       return true;
@@ -1360,24 +1428,62 @@ CallResult<bool> JSObject::putComputed_RJS(
       return false;
     }
 
-    // If it is a property in this object.
-    if (propObj == selfHandle) {
-      if (LLVM_LIKELY(!desc.flags.internalSetter && !desc.flags.hostObject)) {
+    if (selfHandle == propObj && desc.flags.internalSetter) {
+      MutableHandle<StringPrimitive> strPrim{runtime};
+      SymbolID id{};
+      LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
+      return internalSetter(
+          selfHandle,
+          runtime,
+          id,
+          desc.castToNamedPropertyDescriptorRef(),
+          valueHandle,
+          opFlags);
+    }
+  }
+
+  // The property does not exist as an conventional own property on
+  // this object.
+
+  MutableHandle<JSObject> receiverHandle{runtime, *selfHandle};
+  if (selfHandle.getHermesValue().getRaw() != receiver->getRaw() ||
+      receiverHandle->isHostObject()) {
+    if (selfHandle.getHermesValue().getRaw() != receiver->getRaw()) {
+      receiverHandle = dyn_vmcast<JSObject>(*receiver);
+    }
+    if (!receiverHandle) {
+      return false;
+    }
+    CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
+        receiverHandle, runtime, nameValPrimitiveHandle, desc);
+    if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (*descDefinedRes) {
+      if (LLVM_UNLIKELY(desc.flags.accessor || !desc.flags.writable)) {
+        return false;
+      }
+
+      if (LLVM_LIKELY(
+              !desc.flags.internalSetter && !receiverHandle->isHostObject())) {
         if (LLVM_UNLIKELY(
-                setComputedSlotValue(selfHandle, runtime, desc, valueHandle) ==
+                setComputedSlotValue(
+                    receiverHandle, runtime, desc, valueHandle) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
         return true;
       }
+    }
 
+    if (LLVM_UNLIKELY(
+            desc.flags.internalSetter || receiverHandle->isHostObject())) {
       MutableHandle<StringPrimitive> strPrim{runtime};
       SymbolID id{};
       LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
-
       if (desc.flags.internalSetter) {
         return internalSetter(
-            selfHandle,
+            receiverHandle,
             runtime,
             id,
             desc.castToNamedPropertyDescriptorRef(),
@@ -1385,15 +1491,13 @@ CallResult<bool> JSObject::putComputed_RJS(
             opFlags);
       } else {
         assert(desc.flags.hostObject && "descriptor flags are impossible");
-        return vmcast<HostObject>(selfHandle.get())->set(id, *valueHandle);
+        return vmcast<HostObject>(receiverHandle.get())->set(id, *valueHandle);
       }
     }
   }
 
-  // A named property doesn't exist in this object.
-
   /// Can we add more properties?
-  if (!selfHandle->isExtensible()) {
+  if (LLVM_UNLIKELY(!receiverHandle->isExtensible())) {
     if (opFlags.getThrowOnError()) {
       return runtime->raiseTypeError(
           "cannot add a new property"); // TODO: better message.
@@ -1406,15 +1510,15 @@ CallResult<bool> JSObject::putComputed_RJS(
 
   // If we have indexed storage we must check whether the property is an index,
   // and if it is, store it in indexed storage.
-  if (selfHandle->flags_.indexedStorage) {
+  if (receiverHandle->flags_.indexedStorage) {
     OptValue<uint32_t> arrayIndex;
     TO_ARRAY_INDEX(runtime, nameValPrimitiveHandle, strPrim, arrayIndex);
     if (arrayIndex) {
       // Check whether we need to update array's ".length" property.
-      if (auto *array = dyn_vmcast<JSArray>(selfHandle.get())) {
+      if (auto *array = dyn_vmcast<JSArray>(receiverHandle.get())) {
         if (LLVM_UNLIKELY(*arrayIndex >= JSArray::getLength(array))) {
           auto cr = putNamed_RJS(
-              selfHandle,
+              receiverHandle,
               runtime,
               Predefined::getSymbolID(Predefined::length),
               runtime->makeHandle(
@@ -1428,7 +1532,7 @@ CallResult<bool> JSObject::putComputed_RJS(
       }
 
       auto result =
-          setOwnIndexed(selfHandle, runtime, *arrayIndex, valueHandle);
+          setOwnIndexed(receiverHandle, runtime, *arrayIndex, valueHandle);
       if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
       if (LLVM_LIKELY(*result))
@@ -1446,7 +1550,7 @@ CallResult<bool> JSObject::putComputed_RJS(
 
   // Add a new named property.
   return addOwnProperty(
-      selfHandle,
+      receiverHandle,
       runtime,
       id,
       DefinePropertyFlags::getDefaultNewPropertyFlags(),

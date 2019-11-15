@@ -733,6 +733,20 @@ class JSObject : public GCCell {
       PropOpFlags opFlags = PropOpFlags(),
       PropertyCacheEntry *cacheEntry = nullptr);
 
+  /// Like getNamed, but with a \c receiver.  The receiver is
+  /// generally only relevant when JavaScript code is executed.  If an
+  /// accessor is used, \c receiver is used as the \c this for the
+  /// function call.  If a proxy trap is called, \c receiver is passed
+  /// to the trap function.  Normally, \c receiver is the same as \c
+  /// selfHandle, but it can be different when using \c Reflect.
+  static CallResult<HermesValue> getNamedWithReceiver_RJS(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      SymbolID name,
+      Handle<> receiver,
+      PropOpFlags opFlags = PropOpFlags(),
+      PropertyCacheEntry *cacheEntry = nullptr);
+
   // getNamedOrIndexed accesses a property with a SymbolIDs which may be
   // index-like.
   static CallResult<HermesValue> getNamedOrIndexed(
@@ -747,6 +761,14 @@ class JSObject : public GCCell {
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle);
+
+  /// getComputed accesses a property with an arbitrary object key and
+  /// receiver value.
+  static CallResult<HermesValue> getComputedWithReceiver_RJS(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      Handle<> nameValHandle,
+      Handle<> receiver);
 
   /// The following three methods implement ES5.1 8.12.6
   /// hasNamed is an optimized path for checking existence of a property
@@ -768,7 +790,7 @@ class JSObject : public GCCell {
       Runtime *runtime,
       Handle<> nameValHandle);
 
-  /// The following three methods implement ES5.1 8.12.5.
+  /// The following five methods implement ES5.1 8.12.5.
   /// putNamed is an optimized path for setting a property with a SymbolID when
   /// it is statically known that the SymbolID is not index-like.
   static CallResult<bool> putNamed_RJS(
@@ -776,6 +798,15 @@ class JSObject : public GCCell {
       Runtime *runtime,
       SymbolID name,
       Handle<> valueHandle,
+      PropOpFlags opFlags = PropOpFlags());
+
+  /// like putNamed, but with a receiver
+  static CallResult<bool> putNamedWithReceiver_RJS(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      SymbolID name,
+      Handle<> valueHandle,
+      Handle<> receiver,
       PropOpFlags opFlags = PropOpFlags());
 
   /// putNamedOrIndexed sets a property with a SymbolID which may be index-like.
@@ -792,6 +823,16 @@ class JSObject : public GCCell {
       Runtime *runtime,
       Handle<> nameValHandle,
       Handle<> valueHandle,
+      PropOpFlags opFlags = PropOpFlags());
+
+  /// putComputed sets a property with an arbitrary object key and receiver
+  /// value
+  static CallResult<bool> putComputedWithReceiver_RJS(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      Handle<> nameValHandle,
+      Handle<> valueHandle,
+      Handle<> receiver,
       PropOpFlags opFlags = PropOpFlags());
 
   /// ES5.1 8.12.7.
@@ -1389,6 +1430,44 @@ inline JSObject *JSObject::getNamedDescriptor(
     NamedPropertyDescriptor &desc) {
   return getNamedDescriptor(
       selfHandle, runtime, name, PropertyFlags::invalid(), desc);
+}
+
+inline CallResult<HermesValue> JSObject::getNamed_RJS(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    SymbolID name,
+    PropOpFlags opFlags,
+    PropertyCacheEntry *cacheEntry) {
+  return getNamedWithReceiver_RJS(
+      selfHandle, runtime, name, selfHandle, opFlags, cacheEntry);
+}
+
+inline CallResult<HermesValue> JSObject::getComputed_RJS(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    Handle<> nameValHandle) {
+  return getComputedWithReceiver_RJS(
+      selfHandle, runtime, nameValHandle, selfHandle);
+}
+
+inline CallResult<bool> JSObject::putNamed_RJS(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    SymbolID name,
+    Handle<> valueHandle,
+    PropOpFlags opFlags) {
+  return putNamedWithReceiver_RJS(
+      selfHandle, runtime, name, valueHandle, selfHandle, opFlags);
+}
+
+inline CallResult<bool> JSObject::putComputed_RJS(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    Handle<> nameValHandle,
+    Handle<> valueHandle,
+    PropOpFlags opFlags) {
+  return putComputedWithReceiver_RJS(
+      selfHandle, runtime, nameValHandle, valueHandle, selfHandle, opFlags);
 }
 
 inline std::pair<uint32_t, uint32_t> JSObject::getOwnIndexedRange(
