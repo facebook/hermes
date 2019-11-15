@@ -9,6 +9,7 @@
 /// \file
 /// ES5.1 15.2 Initialize the Object constructor.
 //===----------------------------------------------------------------------===//
+#include "Object.h"
 #include "JSLibInternal.h"
 
 #include "hermes/VM/HermesValueTraits.h"
@@ -290,14 +291,7 @@ objectConstructor(void *, Runtime *runtime, NativeArgs args) {
   return objectInitInstance(thisHandle, runtime);
 }
 
-CallResult<HermesValue>
-objectGetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toObject(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  Handle<JSObject> obj = runtime->makeHandle<JSObject>(res.getValue());
-
+CallResult<HermesValue> getPrototypeOf(Runtime *runtime, Handle<JSObject> obj) {
   // Note that we must return 'null' if there is no prototype.
   JSObject *parent = obj->getParent(runtime);
   return parent ? HermesValue::encodeObjectValue(parent)
@@ -305,23 +299,29 @@ objectGetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
-  auto objRes = toObject(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+objectGetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
+  auto res = toObject(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> O = runtime->makeHandle<JSObject>(objRes.getValue());
 
+  return getPrototypeOf(runtime, runtime->makeHandle(vmcast<JSObject>(*res)));
+}
+
+CallResult<HermesValue> getOwnPropertyDescriptor(
+    Runtime *runtime,
+    Handle<JSObject> object,
+    Handle<> key) {
   ComputedPropertyDescriptor desc;
   MutableHandle<> valueOrAccessor{runtime};
   {
     auto result = JSObject::getOwnComputedDescriptor(
-        O, runtime, args.getArgHandle(1), desc, valueOrAccessor);
+        object, runtime, key, desc, valueOrAccessor);
     if (result == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     if (!*result) {
-      if (LLVM_LIKELY(!O->isHostObject()))
+      if (LLVM_LIKELY(!object->isHostObject()))
         return HermesValue::encodeUndefinedValue();
       // For compatibility with polyfills we want to pretend that all HostObject
       // properties are "own" properties in hasOwnProperty() and in
@@ -334,7 +334,7 @@ objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   if (LLVM_UNLIKELY(!desc.flags.accessor && desc.flags.hostObject)) {
-    auto propRes = JSObject::getComputed_RJS(O, runtime, args.getArgHandle(1));
+    auto propRes = JSObject::getComputed_RJS(object, runtime, key);
     if (propRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -342,6 +342,17 @@ objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
   }
 
   return objectFromPropertyDescriptor(runtime, desc, valueOrAccessor);
+}
+
+CallResult<HermesValue>
+objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
+  auto objRes = toObject(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  Handle<JSObject> O = runtime->makeHandle<JSObject>(objRes.getValue());
+
+  return getOwnPropertyDescriptor(runtime, O, args.getArgHandle(1));
 }
 
 /// Return a list of property names belonging to this object. All
@@ -411,7 +422,7 @@ objectGetOwnPropertySymbols(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-objectDefineProperty(void *, Runtime *runtime, NativeArgs args) {
+defineProperty(Runtime *runtime, NativeArgs args, PropOpFlags opFlags) {
   auto O = args.dyncastArg<JSObject>(0);
   // Verify this method is called on an object.
   if (!O) {
@@ -434,15 +445,15 @@ objectDefineProperty(void *, Runtime *runtime, NativeArgs args) {
   // We should handle the exception here instead of depending on runtime to do
   // it.
   CallResult<bool> res = JSObject::defineOwnComputed(
-      O,
-      runtime,
-      nameValHandle,
-      flags,
-      valueOrAccessor,
-      PropOpFlags().plusThrowOnError());
+      O, runtime, nameValHandle, flags, valueOrAccessor, opFlags);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   return O.getHermesValue();
+}
+
+CallResult<HermesValue>
+objectDefineProperty(void *, Runtime *runtime, NativeArgs args) {
+  return defineProperty(runtime, args, PropOpFlags().plusThrowOnError());
 }
 
 static CallResult<HermesValue>
@@ -626,29 +637,13 @@ objectIsExtensible(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(obj->isExtensible());
 }
 
-namespace {
-/// "Kind" provided to enumerableOwnProperties to request different
-/// representation of the properties in the object.
-enum class EnumerableOwnPropertiesKind {
-  Key,
-  Value,
-  KeyValue,
-};
-} // namespace
-
 /// ES8.0 7.3.21.
 /// EnumerableOwnProperties gets the requested properties based on \p kind.
-static CallResult<HermesValue> enumerableOwnProperties_RJS(
+CallResult<HermesValue> enumerableOwnProperties_RJS(
     Runtime *runtime,
-    NativeArgs args,
+    Handle<JSObject> objHandle,
     EnumerableOwnPropertiesKind kind) {
   GCScope gcScope{runtime};
-
-  auto objRes = toObject(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto objHandle = runtime->makeHandle<JSObject>(objRes.getValue());
 
   auto namesRes =
       getOwnPropertyNamesAsStrings(objHandle, runtime, true /*onlyEnumerable*/);
@@ -735,20 +730,41 @@ static CallResult<HermesValue> enumerableOwnProperties_RJS(
 }
 
 CallResult<HermesValue> objectKeys(void *, Runtime *runtime, NativeArgs args) {
+  auto objRes = toObject(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   return enumerableOwnProperties_RJS(
-      runtime, args, EnumerableOwnPropertiesKind::Key);
+      runtime,
+      runtime->makeHandle<JSObject>(*objRes),
+      EnumerableOwnPropertiesKind::Key);
 }
 
 CallResult<HermesValue>
 objectValues(void *, Runtime *runtime, NativeArgs args) {
+  auto objRes = toObject(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   return enumerableOwnProperties_RJS(
-      runtime, args, EnumerableOwnPropertiesKind::Value);
+      runtime,
+      runtime->makeHandle<JSObject>(*objRes),
+      EnumerableOwnPropertiesKind::Value);
 }
 
 CallResult<HermesValue>
 objectEntries(void *, Runtime *runtime, NativeArgs args) {
+  auto objRes = toObject(runtime, args.getArgHandle(0));
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   return enumerableOwnProperties_RJS(
-      runtime, args, EnumerableOwnPropertiesKind::KeyValue);
+      runtime,
+      runtime->makeHandle<JSObject>(*objRes),
+      EnumerableOwnPropertiesKind::KeyValue);
 }
 
 CallResult<HermesValue>
