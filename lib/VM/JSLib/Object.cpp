@@ -423,31 +423,41 @@ objectGetOwnPropertySymbols(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 defineProperty(Runtime *runtime, NativeArgs args, PropOpFlags opFlags) {
+  // ES9 19.1.2.4 (throwOnError == true) or 26.1.3 (throwOnError == false)
   auto O = args.dyncastArg<JSObject>(0);
-  // Verify this method is called on an object.
+  // 1. If Type(O) is not Object, throw a TypeError exception.
   if (!O) {
     return runtime->raiseTypeError(
         "Object.defineProperty() argument is not an object");
   }
 
-  // Convert the property name to string if it's an object.
-  auto nameValHandle = args.getArgHandle(1);
+  // 2. Let key be ? ToPropertyKey(P).
+  // Convert the property name to string if it's an object.  This is
+  // done explicitly instead of calling defineOwnComputed so that
+  // converting the key argument to a primitive happens before
+  // toPropertyDescriptor (which can fail, so the order is
+  // observable).
+  CallResult<Handle<>> keyRes =
+      toPropertyKeyIfObject(runtime, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
 
-  DefinePropertyFlags flags;
-  MutableHandle<> valueOrAccessor{runtime};
+  // 3. Let desc be ? ToPropertyDescriptor(Attributes).
+  DefinePropertyFlags descFlags;
+  MutableHandle<> descValueOrAccessor{runtime};
   if (toPropertyDescriptor(
-          args.getArgHandle(2), runtime, flags, valueOrAccessor) ==
+          args.getArgHandle(2), runtime, descFlags, descValueOrAccessor) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  // Define the property.
-  // We should handle the exception here instead of depending on runtime to do
-  // it.
+  // 4[throwOnError]. Perform ? DefinePropertyOrThrow(O, key, desc).
+  // 4[!throwOnError]. Return ? O.[[DefineOwnProperty]](key, desc).
   CallResult<bool> res = JSObject::defineOwnComputed(
-      O, runtime, nameValHandle, flags, valueOrAccessor, opFlags);
+      O, runtime, *keyRes, descFlags, descValueOrAccessor, opFlags);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
+  // 5. Return O.
   return O.getHermesValue();
 }
 
