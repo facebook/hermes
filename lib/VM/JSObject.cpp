@@ -2343,7 +2343,6 @@ JSObject::checkPropertyUpdate(
   // TODO: this would probably be much more efficient with bitmasks.
   if ((!dpFlags.setEnumerable ||
        dpFlags.enumerable == currentFlags.enumerable) &&
-      (!dpFlags.setWritable || dpFlags.writable == currentFlags.writable) &&
       (!dpFlags.setConfigurable ||
        dpFlags.configurable == currentFlags.configurable)) {
     if (dpFlags.isAccessor()) {
@@ -2358,11 +2357,13 @@ JSObject::checkPropertyUpdate(
           return std::make_pair(PropertyUpdateStatus::done, currentFlags);
         }
       }
-    } else if (dpFlags.setValue) {
-      if (isSameValue(curValueOrAccessor, valueOrAccessor.get()))
-        return std::make_pair(PropertyUpdateStatus::done, currentFlags);
     } else {
-      return std::make_pair(PropertyUpdateStatus::done, currentFlags);
+      if (!currentFlags.accessor &&
+          (!dpFlags.setValue ||
+           isSameValue(curValueOrAccessor, valueOrAccessor.get())) &&
+          (!dpFlags.setWritable || dpFlags.writable == currentFlags.writable)) {
+        return std::make_pair(PropertyUpdateStatus::done, currentFlags);
+      }
     }
   }
 

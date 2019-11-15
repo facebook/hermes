@@ -78,6 +78,10 @@ Object.defineProperty(obj, "prop", {
 });
 print(obj.prop);
 //CHECK: undefined
+obj = { get x() { return 87; } };
+Object.defineProperty(obj, "x", { writable: false });
+print(obj.x);
+//CHECK: undefined
 
 print('getOwnPropertyDescriptor');
 // CHECK-LABEL: getOwnPropertyDescriptor
