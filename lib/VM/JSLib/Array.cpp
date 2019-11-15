@@ -346,8 +346,13 @@ arrayConstructor(void *, Runtime *runtime, NativeArgs args) {
   return selfHandle.getHermesValue();
 }
 
-CallResult<HermesValue> arrayIsArray(void *, Runtime *, NativeArgs args) {
-  return HermesValue::encodeBoolValue(vmisa<JSArray>(args.getArg(0)));
+CallResult<HermesValue>
+arrayIsArray(void *, Runtime *runtime, NativeArgs args) {
+  CallResult<bool> res = isArray(runtime, dyn_vmcast<JSObject>(args.getArg(0)));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return HermesValue::encodeBoolValue(*res);
 }
 
 namespace {

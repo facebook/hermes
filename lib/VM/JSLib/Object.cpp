@@ -929,7 +929,11 @@ CallResult<HermesValue> directObjectPrototypeToString(
     }
 
     // 18. If Type(tag) is not String, let tag be builtinTag.
-    if (vmisa<JSArray>(O.getHermesValue())) {
+    CallResult<bool> isArrayRes = isArray(runtime, *O);
+    if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (*isArrayRes) {
       // 6. If isArray is true, let builtinTag be "Array".
       str = runtime->getPredefinedString(Predefined::squareObject_Array);
     } else if (vmisa<JSString>(O.getHermesValue())) {

@@ -407,6 +407,9 @@ CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
     Runtime *runtime,
     Handle<SymbolID> sym);
 
+/// ES9 7.2.2
+CallResult<bool> isArray(Runtime *runtime, JSObject *obj);
+
 /// ES6.0 22.1.3.1.1
 CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value);
 

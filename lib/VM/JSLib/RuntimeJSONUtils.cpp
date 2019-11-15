@@ -9,6 +9,7 @@
 
 #include "hermes/Support/JSON.h"
 #include "hermes/Support/UTF16Stream.h"
+#include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
@@ -468,16 +469,24 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto valHandle = runtime_->makeHandle(*propRes);
   MutableHandle<> tmpHandle{runtime_};
-  if (auto scopedArray = Handle<JSArray>::dyn_vmcast(valHandle)) {
-    for (uint32_t index = 0, e = JSArray::getLength(scopedArray.get());
-         index < e;
-         ++index) {
+  CallResult<bool> isArrayRes =
+      isArray(runtime_, dyn_vmcast<JSObject>(*propRes));
+  if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto valHandle = runtime_->makeHandle(*propRes);
+  if (*isArrayRes) {
+    Handle<JSObject> objHandle = Handle<JSObject>::vmcast(valHandle);
+    CallResult<uint64_t> lenRes = getArrayLikeLength(objHandle, runtime_);
+    if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    for (uint64_t index = 0, e = *lenRes; index < e; ++index) {
       tmpHandle = HermesValue::encodeDoubleValue(index);
       // Note that deleting elements doesn't affect array length.
       if (LLVM_UNLIKELY(
-              filter(scopedArray, tmpHandle) == ExecutionStatus::EXCEPTION)) {
+              filter(objHandle, tmpHandle) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
     }
@@ -571,10 +580,15 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     return ExecutionStatus::RETURNED;
   // replacer is not a callable.
 
-  auto replacerArray = Handle<JSArray>::dyn_vmcast(replacer);
-  if (!replacerArray)
+  auto replacerArray = Handle<JSObject>::dyn_vmcast(replacer);
+  CallResult<bool> isArrayRes =
+      isArray(runtime_, dyn_vmcast<JSObject>(*replacerArray));
+  if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!*isArrayRes)
     return ExecutionStatus::RETURNED;
-  // replacer is an array.
+  // replacer is arrayish
 
   // Get all properties from replacer.
   auto cr = JSObject::getOwnPropertyNames(replacerArray, runtime_, false);
@@ -831,7 +845,6 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
   // Str.10.
   if (vmisa<JSObject>(*operationStrValue_) &&
       !vmisa<Callable>(*operationStrValue_)) {
-    ExecutionStatus status;
     auto cr = pushValueToStack(*operationStrValue_);
 
     if (cr == ExecutionStatus::EXCEPTION) {
@@ -843,11 +856,12 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     // Flush just before the recursive call (pushValueToStack can create
     // handles).
     marker.flush();
-    if (vmisa<JSArray>(*operationStrValue_)) {
-      status = operationJA();
-    } else {
-      status = operationJO();
+    CallResult<bool> isArrayRes =
+        isArray(runtime_, vmcast<JSObject>(*operationStrValue_));
+    if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
     }
+    ExecutionStatus status = *isArrayRes ? operationJA() : operationJO();
     popValueFromStack();
     if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -871,14 +885,19 @@ ExecutionStatus JSONStringifyer::operationJA() {
   // JA.4.
   indentGapCount_++;
   output_.push_back(u'[');
-  uint32_t len = JSArray::getLength(
-      vmcast<JSArray>(stackValue_->at(stackValue_->size() - 1)));
-  if (len > 0) {
+  CallResult<uint64_t> lenRes = getArrayLikeLength(
+      runtime_->makeHandle(
+          vmcast<JSObject>(stackValue_->at(stackValue_->size() - 1))),
+      runtime_);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (*lenRes > 0) {
     // If array is not empty, we need to lead with an indent.
     indent();
   }
   // JA.5, 6, 7, 8.
-  for (uint32_t index = 0; index < len; ++index) {
+  for (uint64_t index = 0; index < *lenRes; ++index) {
     if (index > 0) {
       // JA.10.
       output_.push_back(u',');
@@ -900,7 +919,7 @@ ExecutionStatus JSONStringifyer::operationJA() {
   }
   indentGapCount_ = stepBack;
 
-  if (len > 0) {
+  if (*lenRes > 0) {
     indent();
   }
   output_.push_back(u']');

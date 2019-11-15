@@ -1557,6 +1557,15 @@ CallResult<Handle<StringPrimitive>> symbolDescriptiveString(
   return builder->getStringPrimitive();
 }
 
+CallResult<bool> isArray(Runtime *runtime, JSObject *obj) {
+  if (!obj) {
+    return false;
+  }
+  if (vmisa<JSArray>(obj)) {
+    return true;
+  }
+  return false;
+}
 CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value) {
   auto O = Handle<JSObject>::dyn_vmcast(value);
   if (!O) {
@@ -1575,7 +1584,7 @@ CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value) {
     return toBoolean(*spreadable);
   }
 
-  return vmisa<JSArray>(*O);
+  return isArray(runtime, *O);
 }
 
 ExecutionStatus toPropertyDescriptor(
