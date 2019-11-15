@@ -430,6 +430,12 @@ ExecutionStatus toPropertyDescriptor(
     DefinePropertyFlags &flags,
     MutableHandle<> &valueOrAccessor);
 
+/// ES9 6.2.5.4 FromPropertyDescriptor
+CallResult<HermesValue> objectFromPropertyDescriptor(
+    Runtime *runtime,
+    ComputedPropertyDescriptor desc,
+    Handle<> valueOrAccessor);
+
 } // namespace vm
 } // namespace hermes
 

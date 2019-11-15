@@ -1738,5 +1738,123 @@ ExecutionStatus toPropertyDescriptor(
   return ExecutionStatus::RETURNED;
 }
 
+CallResult<HermesValue> objectFromPropertyDescriptor(
+    Runtime *runtime,
+    ComputedPropertyDescriptor desc,
+    Handle<> valueOrAccessor) {
+  Handle<JSObject> obj = toHandle(runtime, JSObject::create(runtime));
+
+  DefinePropertyFlags dpf{};
+  dpf.setValue = 1;
+  dpf.setWritable = 1;
+  dpf.setEnumerable = 1;
+  dpf.setConfigurable = 1;
+  dpf.writable = 1;
+  dpf.enumerable = 1;
+  dpf.configurable = 1;
+
+  if (!desc.flags.accessor) {
+    // Data Descriptor
+    auto result = JSObject::defineOwnProperty(
+        obj,
+        runtime,
+        Predefined::getSymbolID(Predefined::value),
+        dpf,
+        valueOrAccessor,
+        PropOpFlags().plusThrowOnError());
+    assert(
+        result != ExecutionStatus::EXCEPTION &&
+        "defineOwnProperty() failed on a new object");
+    if (result == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    result = JSObject::defineOwnProperty(
+        obj,
+        runtime,
+        Predefined::getSymbolID(Predefined::writable),
+        dpf,
+        Runtime::getBoolValue(desc.flags.writable),
+        PropOpFlags().plusThrowOnError());
+    assert(
+        result != ExecutionStatus::EXCEPTION &&
+        "defineOwnProperty() failed on a new object");
+    if (result == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    // Accessor
+    auto *accessor = vmcast<PropertyAccessor>(valueOrAccessor.get());
+
+    auto getter = runtime->makeHandle(
+        accessor->getter
+            ? HermesValue::encodeObjectValue(accessor->getter.get(runtime))
+            : HermesValue::encodeUndefinedValue());
+
+    auto setter = runtime->makeHandle(
+        accessor->setter
+            ? HermesValue::encodeObjectValue(accessor->setter.get(runtime))
+            : HermesValue::encodeUndefinedValue());
+
+    auto result = JSObject::defineOwnProperty(
+        obj,
+        runtime,
+        Predefined::getSymbolID(Predefined::get),
+        dpf,
+        getter,
+        PropOpFlags().plusThrowOnError());
+    assert(
+        result != ExecutionStatus::EXCEPTION &&
+        "defineOwnProperty() failed on a new object");
+    if (result == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    result = JSObject::defineOwnProperty(
+        obj,
+        runtime,
+        Predefined::getSymbolID(Predefined::set),
+        dpf,
+        setter,
+        PropOpFlags().plusThrowOnError());
+    assert(
+        result != ExecutionStatus::EXCEPTION &&
+        "defineOwnProperty() failed on a new object");
+    if (result == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+
+  auto result = JSObject::defineOwnProperty(
+      obj,
+      runtime,
+      Predefined::getSymbolID(Predefined::enumerable),
+      dpf,
+      Runtime::getBoolValue(desc.flags.enumerable),
+      PropOpFlags().plusThrowOnError());
+  assert(
+      result != ExecutionStatus::EXCEPTION &&
+      "defineOwnProperty() failed on a new object");
+  if (result == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  result = JSObject::defineOwnProperty(
+      obj,
+      runtime,
+      Predefined::getSymbolID(Predefined::configurable),
+      dpf,
+      Runtime::getBoolValue(desc.flags.configurable),
+      PropOpFlags().plusThrowOnError());
+  assert(
+      result != ExecutionStatus::EXCEPTION &&
+      "defineOwnProperty() failed on a new object");
+  if (result == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return obj.getHermesValue();
+}
+
 } // namespace vm
 } // namespace hermes
