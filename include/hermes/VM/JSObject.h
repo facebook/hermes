@@ -642,16 +642,27 @@ class JSObject : public GCCell {
       Handle<> nameValHandle,
       ComputedPropertyDescriptor &desc);
 
-  /// A wrapper to getOwnComputedPrimitiveDescriptor() in the case when
-  /// \p nameValHandle may be an object.
-  /// We will need to call toString() on the object first before we invoke
-  /// getOwnComputedPrimitiveDescriptor(), to ensure the side-effect only
-  /// happens once.
+  /// Provides the functionality of ES9 [[GetOwnProperty]] on selfHandle.  It
+  /// calls getOwnComputedPrimitiveDescriptor() in the case when \p
+  /// nameValHandle may be an object.  We will need to call toString() on the
+  /// object first before we invoke getOwnComputedPrimitiveDescriptor(), to
+  /// ensure the side-effect only happens once.  If selfHandle is a proxy, this
+  /// will fill \p desc with the descriptor as specified in ES9 9.5.5, and
+  /// return true if the descriptor is defined.
   static CallResult<bool> getOwnComputedDescriptor(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle,
       ComputedPropertyDescriptor &desc);
+
+  /// Like the other overload, except valueOrAccessor will be set to a value or
+  /// PropertyAccessor corresponding to \p desc.flags.
+  static CallResult<bool> getOwnComputedDescriptor(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      Handle<> nameValHandle,
+      ComputedPropertyDescriptor &desc,
+      MutableHandle<> &valueOrAccessor);
 
   /// ES5.1 8.12.2.
   /// Extract a descriptor \p desc of a named property \p name in this object

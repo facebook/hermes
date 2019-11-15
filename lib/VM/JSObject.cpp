@@ -796,6 +796,28 @@ CallResult<bool> JSObject::getOwnComputedDescriptor(
       selfHandle, runtime, *converted, desc);
 }
 
+CallResult<bool> JSObject::getOwnComputedDescriptor(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    Handle<> nameValHandle,
+    ComputedPropertyDescriptor &desc,
+    MutableHandle<> &valueOrAccessor) {
+  auto converted = toPropertyKeyIfObject(runtime, nameValHandle);
+  if (LLVM_UNLIKELY(converted == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  CallResult<bool> res = JSObject::getOwnComputedPrimitiveDescriptor(
+      selfHandle, runtime, *converted, desc);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!*res) {
+    return false;
+  }
+  valueOrAccessor = getComputedSlotValue(selfHandle.get(), runtime, desc);
+  return true;
+}
+
 JSObject *JSObject::getNamedDescriptor(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
