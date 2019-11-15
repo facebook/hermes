@@ -2701,6 +2701,15 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
   }
   auto O = runtime->makeHandle<JSObject>(objRes.getValue());
 
+  MutableHandle<> lower{runtime, HermesValue::encodeDoubleValue(0)};
+  MutableHandle<> upper{runtime};
+
+  // The values at the lower and upper indices.
+  MutableHandle<> lowerValue{runtime};
+  MutableHandle<> upperValue{runtime};
+
+  auto marker = gcScope.createMarker();
+
   auto propRes = JSObject::getNamed_RJS(
       O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -2714,46 +2723,41 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
 
   // Indices used in the reversal process.
   uint64_t middle = len / 2;
-  MutableHandle<> lower{runtime, HermesValue::encodeDoubleValue(0)};
-  MutableHandle<> upper{runtime};
 
-  // The values at the lower and upper indices.
-  MutableHandle<JSObject> lowerDescObjHandle{runtime};
-  MutableHandle<> lowerValue{runtime};
-  MutableHandle<JSObject> upperDescObjHandle{runtime};
-  MutableHandle<> upperValue{runtime};
-
-  auto marker = gcScope.createMarker();
   while (lower->getDouble() != middle) {
     gcScope.flushToMarker(marker);
     upper = HermesValue::encodeDoubleValue(len - lower->getNumber() - 1);
 
-    ComputedPropertyDescriptor lowerDesc;
-    JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, lower, lowerDescObjHandle, lowerDesc);
-    if (lowerDescObjHandle) {
-      if ((propRes = JSObject::getComputedPropertyValue_RJS(
-               O, runtime, lowerDescObjHandle, lowerDesc)) ==
-          ExecutionStatus::EXCEPTION) {
+    CallResult<bool> lowerExistsRes = JSObject::hasComputed(O, runtime, lower);
+    if (LLVM_UNLIKELY(lowerExistsRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (*lowerExistsRes) {
+      CallResult<HermesValue> lowerValueRes =
+          JSObject::getComputed_RJS(O, runtime, lower);
+      if (LLVM_UNLIKELY(lowerValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      lowerValue = propRes.getValue();
+      lowerValue = *lowerValueRes;
+      gcScope.flushToMarker(marker);
     }
 
-    ComputedPropertyDescriptor upperDesc;
-    JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, upper, upperDescObjHandle, upperDesc);
-    if (upperDescObjHandle) {
-      if ((propRes = JSObject::getComputedPropertyValue_RJS(
-               O, runtime, upperDescObjHandle, upperDesc)) ==
-          ExecutionStatus::EXCEPTION) {
+    CallResult<bool> upperExistsRes = JSObject::hasComputed(O, runtime, upper);
+    if (LLVM_UNLIKELY(upperExistsRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (*upperExistsRes) {
+      CallResult<HermesValue> upperValueRes =
+          JSObject::getComputed_RJS(O, runtime, upper);
+      if (LLVM_UNLIKELY(upperValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      upperValue = propRes.getValue();
+      upperValue = *upperValueRes;
+      gcScope.flushToMarker(marker);
     }
 
     // Handle cases in which lower/upper do/don't exist.
-    if (lowerDescObjHandle && upperDescObjHandle) {
+    if (*lowerExistsRes && *upperExistsRes) {
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
                   O,
@@ -2774,7 +2778,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-    } else if (upperDescObjHandle) {
+    } else if (*upperExistsRes) {
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
                   O,
@@ -2791,7 +2795,7 @@ arrayPrototypeReverse(void *, Runtime *runtime, NativeArgs args) {
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-    } else if (lowerDescObjHandle) {
+    } else if (*lowerExistsRes) {
       if (LLVM_UNLIKELY(
               JSObject::deleteComputed(
                   O, runtime, lower, PropOpFlags().plusThrowOnError()) ==
