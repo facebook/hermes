@@ -442,14 +442,12 @@ void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {
       module == module->getLazyRootModule() &&
       "Expected to only run on lazy root module");
 
-  auto locationOpt = getSourceLocation(codeBlock, 0);
-  if (locationOpt) {
-    ScriptID result = nextScriptId_;
-    auto isNewFile = scriptTable_.try_emplace(module, result).second;
+  ScriptID result = nextScriptId_;
+  auto isNewFile =
+      scriptTable_.try_emplace(module->getLazyRootModule(), result).second;
 
-    if (isNewFile) {
-      ++nextScriptId_;
-    }
+  if (isNewFile) {
+    ++nextScriptId_;
   }
 
   if (!getShouldPauseOnScriptLoad())
