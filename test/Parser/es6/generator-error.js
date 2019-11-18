@@ -26,3 +26,10 @@ function *g() { void yield }
 // CHECK:{{.*}}:25:22: error: Unexpected usage of 'yield' as an identifier reference
 // CHECK-NEXT:function *g() { void yield }
 // CHECK-NEXT:                     ^~~~~
+
+function *h() {
+  for (yield x in y;;) {}
+}
+// CHECK:{{.*}}:31:20: error: ')' expected after 'for(... in/of ...'
+// CHECK-NEXT:for (yield x in y;;) {}
+// CHECK-NEXT:    ~~~~~~~~~~~~~^

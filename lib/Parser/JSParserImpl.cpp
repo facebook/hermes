@@ -3036,7 +3036,7 @@ Optional<ESTree::YieldExpressionNode *> JSParserImpl::parseYieldExpression(
 
   bool delegate = checkAndEat(TokenKind::star);
 
-  auto optArg = parseAssignmentExpression();
+  auto optArg = parseAssignmentExpression(param.get(ParamIn));
   if (!optArg)
     return None;
 
@@ -3696,7 +3696,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
   // mode.
   if (paramYield_ && check(TokenKind::rw_yield, TokenKind::identifier) &&
       tok_->getResWordOrIdentifier() == yieldIdent_) {
-    auto optYieldExpr = parseYieldExpression();
+    auto optYieldExpr = parseYieldExpression(param.get(ParamIn));
     if (!optYieldExpr)
       return None;
     assert(
