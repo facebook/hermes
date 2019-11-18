@@ -319,7 +319,7 @@ function createNested(n) {
 }
 
 // Deeply nested object
-print(JSON.stringify(createNested(1000)));
+print(JSON.stringify(createNested(250)));
 //CHECK-NEXT: {{.+}}
 
 function createWide(n) {

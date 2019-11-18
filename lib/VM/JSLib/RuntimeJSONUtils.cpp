@@ -29,6 +29,9 @@ namespace {
 /// a VM runtime value. It expects a UTF8 string as input, and returns a
 /// HermesValue when parse is called.
 class RuntimeJSONParser {
+ public:
+  static constexpr int32_t MAX_RECURSION_DEPTH = 512;
+
  private:
   /// The VM runtime.
   Runtime *runtime_;
@@ -48,7 +51,7 @@ class RuntimeJSONParser {
   /// Decremented every time a nested level is started,
   /// and incremented again when leaving the nest.
   /// If it drops below 0 while parsing, raise a stack overflow.
-  int32_t remainingDepth_{512};
+  int32_t remainingDepth_{MAX_RECURSION_DEPTH};
 
  public:
   explicit RuntimeJSONParser(
@@ -141,9 +144,15 @@ class JSONStringifyer {
   /// each time we are calling operationStr.
   MutableHandle<JSObject> operationStrHolder_;
 
-  /// The current indent, used at runtime by operationJA and operationJO for
-  /// recursions. We track it using the number of gaps in the indent.
-  uint32_t indentGapCount_{0};
+  /// The current depth of recursion, used at runtime by operationJA and
+  /// operationJO. This is used as a stack overflow guard in stringifying. It
+  /// also doubles as an indent counter for prettified JS.
+  uint32_t depthCount_{0};
+
+  /// The max amount that depthCount_ is allowed to reach. Once it's reached, an
+  /// exception will be thrown.
+  static constexpr uint32_t MAX_RECURSION_DEPTH{
+      RuntimeJSONParser::MAX_RECURSION_DEPTH};
 
   /// The output buffer. The serialization process will append into it.
   llvm::SmallVector<char16_t, 32> output_{};
@@ -218,7 +227,7 @@ class JSONStringifyer {
   ExecutionStatus operationJO();
 
   /// Append '\n' and indent to output_.
-  /// The indent is constructed according to indentGapCount_.
+  /// The indent is constructed according to depthCount_.
   void indent();
 
   /// Push a value to stack when traversing the object recursively.
@@ -873,9 +882,13 @@ ExecutionStatus JSONStringifyer::operationJA() {
   GCScopeMarkerRAII marker{runtime_};
 
   // JA.3.
-  auto stepBack = indentGapCount_;
+  auto stepBack = depthCount_;
   // JA.4.
-  indentGapCount_++;
+  if (depthCount_ + 1 >= MAX_RECURSION_DEPTH) {
+    return runtime_->raiseStackOverflow(
+        Runtime::StackOverflowKind::JSONStringify);
+  }
+  depthCount_++;
   output_.push_back(u'[');
   CallResult<uint64_t> lenRes = getArrayLikeLength(
       runtime_->makeHandle(
@@ -909,7 +922,7 @@ ExecutionStatus JSONStringifyer::operationJA() {
       appendToOutput(Predefined::getSymbolID(Predefined::null));
     }
   }
-  indentGapCount_ = stepBack;
+  depthCount_ = stepBack;
 
   if (*lenRes > 0) {
     indent();
@@ -935,9 +948,13 @@ ExecutionStatus JSONStringifyer::operationJO() {
   GCScopeMarkerRAII marker{runtime_};
 
   // JO.3.
-  auto stepBack = indentGapCount_;
+  auto stepBack = depthCount_;
   // JO.4.
-  indentGapCount_++;
+  if (depthCount_ + 1 >= MAX_RECURSION_DEPTH) {
+    return runtime_->raiseStackOverflow(
+        Runtime::StackOverflowKind::JSONStringify);
+  }
+  depthCount_++;
   output_.push_back(u'{');
   auto beginningLoc = output_.size();
   indent();
@@ -1028,9 +1045,9 @@ ExecutionStatus JSONStringifyer::operationJO() {
       hasElement = true;
     }
   }
-  // It's important to reset indentGapCount_ first, because the last
+  // It's important to reset depthCount_ first, because the last
   // indent before } should be the old indent.
-  indentGapCount_ = stepBack;
+  depthCount_ = stepBack;
 
   if (hasElement) {
     indent();
@@ -1045,7 +1062,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
 void JSONStringifyer::indent() {
   if (gap_.get()) {
     output_.push_back(u'\n');
-    for (uint32_t i = 0; i < indentGapCount_; ++i) {
+    for (uint32_t i = 0; i < depthCount_; ++i) {
       appendToOutput(gap_.get());
     }
   }

@@ -1181,6 +1181,9 @@ ExecutionStatus Runtime::raiseStackOverflow(StackOverflowKind kind) {
     case StackOverflowKind::JSONParser:
       msg = "Maximum nesting level in JSON parser exceeded";
       break;
+    case StackOverflowKind::JSONStringify:
+      msg = "Maximum nesting level in JSON stringifyer exceeded";
+      break;
   }
   return raisePlaceholder(
       this, Handle<JSObject>::vmcast(&RangeErrorPrototype), msg);

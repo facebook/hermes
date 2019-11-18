@@ -577,6 +577,8 @@ class Runtime : public HandleRootOwner,
     // RuntimeJSONParser has a maximum number of "nesting levels", and
     // calls raiseStackOverflow if that is exceeded.
     JSONParser,
+    // JSONStringifyer has the same limit as JSONParser.
+    JSONStringify,
   };
   ExecutionStatus raiseStackOverflow(StackOverflowKind kind);
 
