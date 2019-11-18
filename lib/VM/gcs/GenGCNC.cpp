@@ -1394,6 +1394,9 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
         // size (it describes them as living in the heap).
         0);
     currentSection_ = Section::InvalidSection;
+    // Reset the edge counter, so each root section's unnamed edges start at
+    // zero.
+    nextEdge_ = 0;
   }
 
  private:
