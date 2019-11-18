@@ -32,6 +32,14 @@ print(3, f instanceof GeneratorFunction);
 print(4, Object.getPrototypeOf(Generator) === Function.prototype);
 // CHECK-NEXT: 4 true
 
+var instance = GeneratorFunction();
+print(5, typeof instance.prototype);
+// CHECK-NEXT: 5 object
+print(6,
+  Object.getPrototypeOf(instance.prototype) ===
+  Object.getPrototypeOf(instance).prototype);
+// CHECK-NEXT: 6 true
+
 var GeneratorPrototype = Object.getPrototypeOf(
   Object.getPrototypeOf(f())
 );

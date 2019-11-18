@@ -352,13 +352,15 @@ CallResult<HermesValue> createDynamicFunction(
   // If at least two arguments to the function (3 in total), there's a comma.
   SafeUInt32 size{paramCount > 0 ? paramCount - 1 : 0};
 
-  // Use the parent of the 'this' value passed by the caller as the
-  // parent.  This will usually be the functionPrototype, but if this
-  // is called from reflectConstruct, it might be something else.
+  // Use the parent of the 'this' value passed by the caller as the parent.
+  // This will usually be the functionPrototype or generatorFunctionPrototype,
+  // but if this is called from reflectConstruct, it might be something else.
   Handle<JSObject> parent = vmisa<JSObject>(args.getThisArg())
       ? runtime->makeHandle(
             vmcast<JSObject>(args.getThisArg())->getParent(runtime))
-      : Handle<JSObject>::vmcast(&runtime->functionPrototype);
+      : (isGeneratorFunction
+             ? Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype)
+             : Handle<JSObject>::vmcast(&runtime->functionPrototype));
 
   if (argCount == 0) {
     // No arguments, just set body to be the empty string.
