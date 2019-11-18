@@ -24,6 +24,39 @@ namespace vm {
 
 namespace detail {
 
+void TransitionMap::snapshotAddNodes(GC *gc, HeapSnapshot &snap) {
+  if (!isLarge()) {
+    return;
+  }
+  // Make one node that is the sum of the sizes of the WeakValueMap and the
+  // llvm::DenseMap to which it points.
+  // This is based on the assumption that the WeakValueMap uniquely owns that
+  // DenseMap.
+  snap.beginNode();
+  snap.endNode(
+      HeapSnapshot::NodeType::Native,
+      "WeakValueMap",
+      gc->getNativeID(large()),
+      getMemorySize());
+}
+
+void TransitionMap::snapshotAddEdges(GC *gc, HeapSnapshot &snap) {
+  if (!isLarge()) {
+    return;
+  }
+  snap.addNamedEdge(
+      HeapSnapshot::EdgeType::Internal,
+      "transitionMap",
+      gc->getNativeID(large()));
+}
+
+void TransitionMap::snapshotUntrackMemory(GC *gc) {
+  // Untrack the memory ID in case one was created.
+  if (isLarge()) {
+    gc->getIDTracker().untrackNative(large());
+  }
+}
+
 void TransitionMap::insertUnsafe(const Transition &key, WeakRefSlot *ptr) {
   if (isClean()) {
     smallKey_ = key;
@@ -54,11 +87,19 @@ void TransitionMap::uncleanMakeLarge() {
 
 } // namespace detail
 
-VTable HiddenClass::vt{CellKind::HiddenClassKind,
-                       cellSize<HiddenClass>(),
-                       _finalizeImpl,
-                       _markWeakImpl,
-                       _mallocSizeImpl};
+VTable HiddenClass::vt{
+    CellKind::HiddenClassKind,
+    cellSize<HiddenClass>(),
+    _finalizeImpl,
+    _markWeakImpl,
+    _mallocSizeImpl,
+    nullptr,
+    nullptr,
+    nullptr,
+    VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
+                                 HiddenClass::_snapshotNameImpl,
+                                 HiddenClass::_snapshotAddEdgesImpl,
+                                 HiddenClass::_snapshotAddNodesImpl}};
 
 void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HiddenClass *>(cell);
@@ -149,8 +190,9 @@ void HiddenClass::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   self->transitionMap_.markWeakRefs(acceptor);
 }
 
-void HiddenClass::_finalizeImpl(GCCell *cell, GC *) {
+void HiddenClass::_finalizeImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast<HiddenClass>(cell);
+  self->transitionMap_.snapshotUntrackMemory(gc);
   self->~HiddenClass();
 }
 
@@ -166,6 +208,22 @@ std::string HiddenClass::_snapshotNameImpl(GCCell *cell, GC *gc) {
     return name + "(Dictionary)";
   }
   return name;
+}
+
+void HiddenClass::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<HiddenClass>(cell);
+  self->transitionMap_.snapshotAddEdges(gc, snap);
+}
+
+void HiddenClass::_snapshotAddNodesImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<HiddenClass>(cell);
+  self->transitionMap_.snapshotAddNodes(gc, snap);
 }
 
 CallResult<HermesValue> HiddenClass::createRoot(Runtime *runtime) {

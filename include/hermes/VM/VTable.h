@@ -45,7 +45,13 @@ struct VTable {
     ///   based on the cell kind will be used instead.
     /// \param addEdges Adds any non-internal edges to this node. Can be used to
     ///   add custom edges that aren't well-represented by internal pointers, or
-    ///   should be user-visible.
+    ///   should be user-visible. Can also point to nodes created via the \p
+    ///   addNodes parameter.
+    /// \param addNodes Adds any nodes that are pointed to by this GCCell. Can
+    ///   be used to add nodes for memory that isn't on the JS heap.
+    ///   NOTE: Despite the name, edges sometimes also need to be added in
+    ///   this callback (for example, if a native node points to another native
+    ///   node).
     constexpr explicit HeapSnapshotMetadata(
         HeapSnapshot::NodeType nodeType,
         NameCallback *name,

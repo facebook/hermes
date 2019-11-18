@@ -336,7 +336,9 @@ class GCBase {
     inline void untrackObject(const void *cell);
 
     /// Remove the native memory from being tracked. This should be done to keep
-    /// the tracking working set small.
+    /// the tracking working set small. It is also required to be done when
+    /// malloc'ed memory is freed, since addresses can be re-used by future
+    /// allocations.
     inline void untrackNative(const void *mem);
 
 #ifdef HERMESVM_SERIALIZE

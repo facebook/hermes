@@ -223,6 +223,10 @@ class TransitionMap {
     }
   }
 
+  void snapshotAddNodes(GC *gc, HeapSnapshot &snap);
+  void snapshotAddEdges(GC *gc, HeapSnapshot &snap);
+  void snapshotUntrackMemory(GC *gc);
+
  private:
   /// Clean = no transition has been inserted since construction.
   bool isClean() const {
@@ -542,6 +546,8 @@ class HiddenClass final : public GCCell {
   static size_t _mallocSizeImpl(GCCell *cell);
 
   static std::string _snapshotNameImpl(GCCell *cell, GC *gc);
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+  static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
 #ifdef HERMESVM_SERIALIZE
   friend void HiddenClassSerialize(Serializer &s, const GCCell *cell);
