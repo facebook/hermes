@@ -492,10 +492,15 @@ class JSParserImpl {
   /// Can be used to validate identifiers after we've passed lexing them.
   /// The caller must report any errors if this function returns false.
   /// \param param [Yield]
+  /// \param range the source range of the identifier to validate.
   /// \param id the string to be validated.
   /// \param kind the TokenKind provided when the string was lexed.
   /// \return true if \param id is a valid binding identifier.
-  bool validateBindingIdentifier(Param param, UniqueString *id, TokenKind kind);
+  bool validateBindingIdentifier(
+      Param param,
+      SMRange range,
+      UniqueString *id,
+      TokenKind kind);
 
   /// ES 2015 12.1
   /// Does not generate an error. It is expected that the caller will do it.

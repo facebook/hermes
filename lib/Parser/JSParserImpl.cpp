@@ -673,15 +673,14 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseBlock(
 
 bool JSParserImpl::validateBindingIdentifier(
     Param param,
+    SMRange range,
     UniqueString *id,
     TokenKind kind) {
   if (id == yieldIdent_) {
     // yield is permitted as BindingIdentifier in the grammar,
     // and prohibited with static semantics.
     if (isStrictMode() || paramYield_) {
-      lexer_.error(
-          tok_->getSourceRange(),
-          "Unexpected usage of 'yield' as an identifier");
+      lexer_.error(range, "Unexpected usage of 'yield' as an identifier");
     }
   }
 
@@ -696,7 +695,7 @@ bool JSParserImpl::validateBindingIdentifier(
     // NOTE: All except 'let' are scanned as reserved words instead of
     // identifiers, so we only check for `let` here.
     lexer_.error(
-        tok_->getSourceRange(),
+        range,
         "Invalid use of strict mode reserved word as binding identifier");
   }
 
@@ -713,7 +712,7 @@ Optional<ESTree::IdentifierNode *> JSParserImpl::parseBindingIdentifier(
   // and pass it to the validateBindingIdentifier function.
   UniqueString *id = tok_->getResWordOrIdentifier();
   TokenKind kind = tok_->getKind();
-  if (!validateBindingIdentifier(param, id, kind)) {
+  if (!validateBindingIdentifier(param, tok_->getSourceRange(), id, kind)) {
     return None;
   }
 
@@ -1063,7 +1062,10 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
     auto *ident = dyn_cast<ESTree::IdentifierNode>(key);
     if (!ident ||
         !validateBindingIdentifier(
-            Param{}, ident->_name, TokenKind::identifier)) {
+            Param{},
+            ident->getSourceRange(),
+            ident->_name,
+            TokenKind::identifier)) {
       lexer_.error(startLoc, "identifier expected in object binding pattern");
       return None;
     }
@@ -3645,6 +3647,16 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
         continue;
       }
 
+      if (auto *key = dyn_cast<ESTree::IdentifierNode>(propNode->_key)) {
+        if (!validateBindingIdentifier(
+                Param{},
+                key->getSourceRange(),
+                key->_name,
+                TokenKind::identifier)) {
+          return None;
+        }
+      }
+
       ESTree::Node *value = propNode->_value;
       ESTree::Node *init = nullptr;
 
@@ -4046,7 +4058,8 @@ Optional<ESTree::ImportSpecifierNode *> JSParserImpl::parseImportSpecifier(
   // We need to check for 'as' before knowing what the local name is.
   // Thus, we need to validate the binding identifier for the local name
   // after the fact.
-  if (!validateBindingIdentifier(Param{}, local->_name, localKind)) {
+  if (!validateBindingIdentifier(
+          Param{}, local->getSourceRange(), local->_name, localKind)) {
     sm_.error(local->getSourceRange(), "Invalid local name for import");
   }
 
