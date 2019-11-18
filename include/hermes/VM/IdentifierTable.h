@@ -139,10 +139,8 @@ class IdentifierTable {
         hashTable_.additionalMemorySize();
   }
 
-  /// Mark all identifiers with the garbage collector \p gc.
-  /// This is only supported in debug mode; in release mode identifiers are
-  /// never allocated from the GC heap.
-  void markIdentifiers(SlotAcceptorWithNames &acceptor, GC *gc);
+  /// Mark all identifiers for the garbage collector.
+  void markIdentifiers(SlotAcceptor &acceptor, GC *gc);
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for

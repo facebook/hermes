@@ -213,7 +213,7 @@ std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
   return "";
 }
 
-void IdentifierTable::markIdentifiers(SlotAcceptorWithNames &acceptor, GC *gc) {
+void IdentifierTable::markIdentifiers(SlotAcceptor &acceptor, GC *gc) {
   for (auto &vectorEntry : lookupVector_) {
     if (!vectorEntry.isFreeSlot() && vectorEntry.isStringPrim()) {
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
@@ -222,8 +222,7 @@ void IdentifierTable::markIdentifiers(SlotAcceptorWithNames &acceptor, GC *gc) {
           "Identifiers must be allocated in the old gen");
 #endif
       acceptor.accept(
-          reinterpret_cast<void *&>(vectorEntry.getStringPrimRef()),
-          "IdentifierTable_Normal_Identifier");
+          reinterpret_cast<void *&>(vectorEntry.getStringPrimRef()));
     }
   }
 }
