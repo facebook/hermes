@@ -454,7 +454,6 @@ void SemanticValidator::visit(UnaryExpressionNode *unaryExpr) {
 }
 
 void SemanticValidator::visit(ArrayPatternNode *AP) {
-  collapseNestedAP(AP->_elements);
   visitESTreeChildren(*this, AP);
 }
 
@@ -635,8 +634,6 @@ void SemanticValidator::visitFunction(
       }
     }
   }
-
-  collapseNestedAP(params);
 
   visitParamsAndBody(node);
 }
@@ -861,26 +858,6 @@ LabelDecorationBase *SemanticValidator::getLabelDecorationBase(
     return LabS;
   llvm_unreachable("invalid node type");
   return nullptr;
-}
-
-/// Collapse array pattern rest elements into their parent:
-/// [a, ...[b, c]] => [a, b, c].
-void SemanticValidator::collapseNestedAP(NodeList &elements) {
-  if (elements.empty())
-    return;
-  auto *restElement = dyn_cast<RestElementNode>(&elements.back());
-  if (!restElement)
-    return;
-  auto *nestedAP = dyn_cast<ArrayPatternNode>(restElement->_argument);
-  if (!nestedAP)
-    return;
-
-  elements.pop_back();
-  while (!nestedAP->_elements.empty()) {
-    auto *elem = &nestedAP->_elements.front();
-    nestedAP->_elements.pop_front();
-    elements.push_back(*elem);
-  }
 }
 
 //===----------------------------------------------------------------------===//

@@ -28,14 +28,22 @@ function foo(a, ...[b, c]) {}
 //CHECK-NEXT:             "typeAnnotation": null
 //CHECK-NEXT:           },
 //CHECK-NEXT:           {
-//CHECK-NEXT:             "type": "Identifier",
-//CHECK-NEXT:             "name": "b",
-//CHECK-NEXT:             "typeAnnotation": null
-//CHECK-NEXT:           },
-//CHECK-NEXT:           {
-//CHECK-NEXT:             "type": "Identifier",
-//CHECK-NEXT:             "name": "c",
-//CHECK-NEXT:             "typeAnnotation": null
+//CHECK-NEXT:             "type": "RestElement",
+//CHECK-NEXT:             "argument": {
+//CHECK-NEXT:               "type": "ArrayPattern",
+//CHECK-NEXT:               "elements": [
+//CHECK-NEXT:                 {
+//CHECK-NEXT:                   "type": "Identifier",
+//CHECK-NEXT:                   "name": "b",
+//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                 },
+//CHECK-NEXT:                 {
+//CHECK-NEXT:                   "type": "Identifier",
+//CHECK-NEXT:                   "name": "c",
+//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                 }
+//CHECK-NEXT:               ]
+//CHECK-NEXT:             }
 //CHECK-NEXT:           }
 //CHECK-NEXT:         ],
 //CHECK-NEXT:         "body": {

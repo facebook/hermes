@@ -33,16 +33,24 @@
 //CHECK-NEXT:                 "typeAnnotation": null
 //CHECK-NEXT:               },
 //CHECK-NEXT:               {
-//CHECK-NEXT:                 "type": "Identifier",
-//CHECK-NEXT:                 "name": "c",
-//CHECK-NEXT:                 "typeAnnotation": null
-//CHECK-NEXT:               },
-//CHECK-NEXT:               {
 //CHECK-NEXT:                 "type": "RestElement",
 //CHECK-NEXT:                 "argument": {
-//CHECK-NEXT:                   "type": "Identifier",
-//CHECK-NEXT:                   "name": "d",
-//CHECK-NEXT:                   "typeAnnotation": null
+//CHECK-NEXT:                   "type": "ArrayPattern",
+//CHECK-NEXT:                   "elements": [
+//CHECK-NEXT:                     {
+//CHECK-NEXT:                       "type": "Identifier",
+//CHECK-NEXT:                       "name": "c",
+//CHECK-NEXT:                       "typeAnnotation": null
+//CHECK-NEXT:                     },
+//CHECK-NEXT:                     {
+//CHECK-NEXT:                       "type": "RestElement",
+//CHECK-NEXT:                       "argument": {
+//CHECK-NEXT:                         "type": "Identifier",
+//CHECK-NEXT:                         "name": "d",
+//CHECK-NEXT:                         "typeAnnotation": null
+//CHECK-NEXT:                       }
+//CHECK-NEXT:                     }
+//CHECK-NEXT:                   ]
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               }
 //CHECK-NEXT:             ]
