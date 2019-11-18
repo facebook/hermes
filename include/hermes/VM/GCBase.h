@@ -341,6 +341,12 @@ class GCBase {
     /// allocations.
     inline void untrackNative(const void *mem);
 
+    /// Execute a callback on each pair of pointer and ID.
+    /// \param callback A function whose signature should be
+    ///   void(const void *, HeapSnapshot::NodeID).
+    template <typename F>
+    inline void forEachID(F callback);
+
 #ifdef HERMESVM_SERIALIZE
     /// Serialize this IDTracker to the output stream.
     void serialize(Serializer &s) const;
@@ -1236,6 +1242,13 @@ inline void GCBase::IDTracker::untrackNative(const void *mem) {
   // Since native memory and heap memory share the same map, this is the same
   // as untracking an object.
   untrackObject(mem);
+}
+
+template <typename F>
+inline void GCBase::IDTracker::forEachID(F callback) {
+  for (auto &p : objectIDMap_) {
+    callback(p.first, p.second);
+  }
 }
 
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextObjectID() {

@@ -341,8 +341,11 @@ JSRegExp::~JSRegExp() {
   free(bytecode_);
 }
 
-void JSRegExp::_finalizeImpl(GCCell *cell, GC *) {
+void JSRegExp::_finalizeImpl(GCCell *cell, GC *gc) {
   JSRegExp *self = vmcast<JSRegExp>(cell);
+  if (self->bytecode_) {
+    gc->getIDTracker().untrackNative(self->bytecode_);
+  }
   self->~JSRegExp();
 }
 
