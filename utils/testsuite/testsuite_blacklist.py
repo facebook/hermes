@@ -65,6 +65,8 @@ BLACK_LIST = [
     "mjsunit/regress/regress-3985.js",
     "mjsunit/regress/regress-crbug-601617.js",
     "test262/test/language/statements/function/13.2-30-s.js",
+    "test262/test/language/statements/generators/restricted-properties.js",
+    "test262/test/built-ins/GeneratorFunction/instance-restricted-properties.js",
     # Expects that Object.prototype.__defineGetter__() doesn't throw on error.
     "mjsunit/regress/regress-1240.js",
     # test262 tests relying on regexp changes in es6
@@ -128,6 +130,7 @@ BLACK_LIST = [
     "test262/test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-3.js",
     "test262/test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-strict-delete-4.js",
     "test262/test/language/arguments-object/mapped/mapped-arguments-nonconfigurable-3.js",
+    "test262/test/language/expressions/generators/arguments-with-arguments-lex.js",
     "test262/test/built-ins/Object/defineProperty/15.2.3.6-4-293-2.js",
     "test262/test/built-ins/Object/defineProperty/15.2.3.6-4-294-1.js",
     "test262/test/built-ins/Object/defineProperty/15.2.3.6-4-293-3.js",
@@ -310,6 +313,7 @@ BLACK_LIST = [
     "mjsunit/es7/array-includes.js",
     # Promise
     "mjsunit/es6/microtask-delivery.js",
+    "test262/test/built-ins/Object/prototype/toString/symbol-tag-non-str-builtin.js",
     # Should early error
     "test262/test/language/statements/for-in/decl-fun.js",
     "test262/test/language/statements/for/decl-fun.js",
@@ -359,6 +363,13 @@ BLACK_LIST = [
     "test262/test/language/global-code/block-decl-strict.js",
     "test262/test/language/function-code/block-decl-strict.js",
     "test262/test/language/function-code/block-decl-onlystrict.js",
+    "test262/test/language/expressions/generators/arguments-with-arguments-fn.js",
+    "test262/test/language/expressions/generators/scope-name-var-open-non-strict.js",
+    "test262/test/language/expressions/object/scope-gen-meth-paramsbody-var-open.js",
+    "test262/test/language/statements/generators/arguments-with-arguments-fn.js",
+    "test262/test/language/statements/generators/arguments-with-arguments-lex.js",
+    "test262/test/language/statements/generators/scope-name-var-open-non-strict.js",
+    "test262/test/language/statements/generators/scope-paramsbody-var-open.js",
     # let/const temporarily disabled
     "test262/test/language/future-reserved-words/let-strict.js",
     "test262/test/language/statements/for-in/head-let-bound-names-in-stmt.js",
@@ -442,6 +453,7 @@ BLACK_LIST = [
     "mjsunit/es6/regress/regress-2243.js",
     # function name is configurable
     "test262/test/language/expressions/function/name.js",
+    "test262/test/language/expressions/generators/name.js",
     # accessors in JSLib
     # Escaped identifiers
     "test262/test/language/expressions/assignment/dstr/syntax-error-ident-ref-",
@@ -579,6 +591,9 @@ BLACK_LIST = [
     "test262/test/language/expressions/function/scope-name-var-open-non-strict.js",
     "test262/test/language/expressions/function/scope-name-var-open-strict.js",
     "test262/test/language/expressions/function/scope-paramsbody-var-open.js",
+    "test262/test/language/expressions/generators/scope-paramsbody-var-open.js",
+    "test262/test/language/expressions/generators/scope-name-var-open-strict.js",
+    "test262/test/language/expressions/generators/dflt-params-trailing-comma.js",
     "test262/test/language/statements/function/arguments-with-arguments-fn.js",
     "test262/test/language/statements/function/arguments-with-arguments-lex.js",
     "test262/test/language/statements/function/scope-paramsbody-var-open.js",
@@ -633,6 +648,7 @@ BLACK_LIST = [
     "test262/test/language/expressions/object/accessor-name-literal-string-line-continuation.js",
     "test262/test/language/expressions/object/accessor-name-literal-string-single-quote.js",
     "test262/test/language/expressions/object/accessor-name-literal-string-unicode-escape.js",
+    "test262/test/language/expressions/object/concise-generator.js",
     "test262/test/language/expressions/object/method.js",
     "test262/test/language/expressions/object/scope-meth-paramsbody-var-close.js",
     "test262/test/language/expressions/object/scope-meth-paramsbody-var-open.js",
@@ -803,6 +819,7 @@ BLACK_LIST = [
     "test262/test/built-ins/TypedArrayConstructors/internals/GetOwnProperty/index-prop-desc.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/Set/tonumber-value-throws.js",
     # TypedArray ES7 iterators
+    "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/iterating-throws.js",
     "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/iterator-not-callable-throws.js",
     "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/as-generator-iterable-returns.js",
     "test262/test/built-ins/TypedArrays/object-arg-iterator-not-callable-throws.js",
@@ -864,6 +881,8 @@ BLACK_LIST = [
     # t19359477
     "mjsunit/regress/regress-3976.js",
     "mjsunit/string-replace-gc.js",
+    # T46136220 Names on anonymous functions with computed property names
+    "test262/test/language/expressions/object/fn-name-gen.js",
     # T56360814 Symbol primitives in iteration order
     "test262/test/built-ins/Object/assign/strings-and-symbol-order.js",
     "test262/test/language/expressions/array/spread-obj-spread-order.js",
@@ -872,8 +891,12 @@ BLACK_LIST = [
     # T42569352 TDZ for parameters used in initializer expressions.
     "test262/test/language/expressions/function/dflt-params-ref-later.js",
     "test262/test/language/expressions/function/dflt-params-ref-self.js",
+    "test262/test/language/expressions/generators/dflt-params-ref-later.js",
+    "test262/test/language/expressions/generators/dflt-params-ref-self.js",
     "test262/test/language/statements/function/dflt-params-ref-later.js",
     "test262/test/language/statements/function/dflt-params-ref-self.js",
+    "test262/test/language/statements/generators/dflt-params-ref-later.js",
+    "test262/test/language/statements/generators/dflt-params-ref-self.js",
     # Time out. # T20489563
     "mjsunit/regress/regress-crbug-482998.js",
     # Different time out: # T23228706
@@ -1526,6 +1549,8 @@ PERMANENT_BLACK_LIST = [
     "test262/test/annexB/built-ins/Function/createdynfn-html-open-comment-params.js",
     "test262/test/annexB/built-ins/RegExp/prototype/Symbol.split/toint32-limit-recompiles-source.js",
     "test262/test/annexB/built-ins/RegExp/prototype/Symbol.split/Symbol.match-getter-recompiles-source.js",
+    "test262/test/annexB/built-ins/RegExp/RegExp-control-escape-russian-letter.js",
+    "test262/test/annexB/built-ins/RegExp/RegExp-invalid-control-escape-character-class.js",
     "test262/test/annexB/language/comments/single-line-html-close-unicode-separators.js",
     # Testing whole feature sets that Hermes doesn't support.
     "test262/test/built-ins/Atomics/",
@@ -1576,7 +1601,6 @@ UNSUPPORTED_FEATURES = [
     "destructuring-binding",
     "dynamic-import",
     "FinalizationGroup",
-    "generators",
     "hashbang",
     "json-superset",
     "let",
