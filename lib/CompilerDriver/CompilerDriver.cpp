@@ -142,7 +142,7 @@ enum class OptLevel {
 
 cl::opt<OptLevel> OptimizationLevel(
     cl::desc("Choose optimization level:"),
-    cl::init(OptLevel::Og),
+    cl::init(OptLevel::OMax),
     cl::values(
         clEnumValN(OptLevel::O0, "O0", "No optimizations"),
         clEnumValN(OptLevel::Og, "Og", "Optimizations suitable for debugging"),
@@ -742,6 +742,10 @@ void setFlagDefaults() {
   if (!cl::BytecodeMode && cl::InputFilenames.size() == 1 &&
       llvm::sys::path::extension(cl::InputFilenames[0]) == ".hbc") {
     cl::BytecodeMode = true;
+  }
+
+  if (cl::LazyCompilation && cl::OptimizationLevel > cl::OptLevel::Og) {
+    cl::OptimizationLevel = cl::OptLevel::Og;
   }
 }
 
