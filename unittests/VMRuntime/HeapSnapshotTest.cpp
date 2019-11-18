@@ -297,12 +297,13 @@ TEST(HeapSnapshotTest, SnapshotTest) {
       llvm::cast<JSONArray>(meta->at("trace_function_info_fields"))->size(), 0);
   EXPECT_EQ(llvm::cast<JSONArray>(meta->at("trace_node_fields"))->size(), 0);
   EXPECT_EQ(llvm::cast<JSONArray>(meta->at("sample_fields"))->size(), 0);
-  EXPECT_EQ(llvm::cast<JSONArray>(meta->at("location_fields"))->size(), 0);
 
   JSONArray &nodeFields = *llvm::cast<JSONArray>(meta->at("node_fields"));
   JSONArray &nodeTypes = *llvm::cast<JSONArray>(meta->at("node_types"));
   JSONArray &edgeFields = *llvm::cast<JSONArray>(meta->at("edge_fields"));
   JSONArray &edgeTypes = *llvm::cast<JSONArray>(meta->at("edge_types"));
+  JSONArray &locationFields =
+      *llvm::cast<JSONArray>(meta->at("location_fields"));
 
   // Check that node_fields/types are correct.
   EXPECT_TRUE(testListOfStrings(
@@ -344,6 +345,8 @@ TEST(HeapSnapshotTest, SnapshotTest) {
        "weak"}));
   EXPECT_TRUE(testListOfStrings(
       edgeTypes.begin() + 1, edgeTypes.end(), {"string_or_number", "node"}));
+  EXPECT_TRUE(testListOfStrings(
+      locationFields, {"object_index", "script_id", "line", "column"}));
 
   // Check the nodes and edges.
   JSONArray &nodes = *llvm::cast<JSONArray>(root->at("nodes"));

@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_HEAPSNAPSHOT_H
 #define HERMES_VM_HEAPSNAPSHOT_H
 
+#include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Public/GCConfig.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/StringSetVector.h"
@@ -114,6 +115,23 @@ class HeapSnapshot {
 
   void addNamedEdge(EdgeType type, llvm::StringRef name, NodeID toNode);
   void addIndexedEdge(EdgeType type, EdgeIndex index, NodeID toNode);
+
+  /// Adds a location for the given node. This will identify a source location
+  /// for a node when it is viewed in a heap snapshot visualizer.
+  /// This is not a stack trace where the object was allocated, but a static
+  /// location. For example, functions use their source location as their
+  /// location. User-defined objects have the constructor function.
+  /// NOTE: If a script ID is not available (for example if the debugger isn't
+  ///   on), don't call this function.
+  /// \param id The object to attach a location to.
+  /// \param script The ID of the script in which this location resides.
+  /// \param line The 1-based line in \p script.
+  /// \param column The 1-based column in \p script.
+  void addLocation(
+      NodeID id,
+      ::facebook::hermes::debugger::ScriptID script,
+      uint32_t line,
+      uint32_t column);
 
  private:
   void emitMeta();

@@ -161,6 +161,28 @@ void HeapSnapshot::addIndexedEdge(
   json_.emitValue(nodeIt->second * V8_SNAPSHOT_NODE_FIELD_COUNT);
 }
 
+void HeapSnapshot::addLocation(
+    NodeID id,
+    ::facebook::hermes::debugger::ScriptID script,
+    uint32_t line,
+    uint32_t column) {
+  assert(
+      nextSection_ == Section::Locations && sectionOpened_ &&
+      "Shouldn't be emitting locations until the location section starts");
+  auto nodeIt = nodeToIndex_.find(id);
+  assert(
+      nodeIt != nodeToIndex_.end() &&
+      "Couldn't add a location for an object that doesn't exist");
+  json_.emitValue(nodeIt->second * V8_SNAPSHOT_NODE_FIELD_COUNT);
+  json_.emitValue(script);
+  // The serialized format uses 0-based indexing for line and column, but the
+  // parameters are 1-based.
+  assert(line != 0 && "Line should be 1-based");
+  assert(column != 0 && "Column should be 1-based");
+  json_.emitValue(line - 1);
+  json_.emitValue(column - 1);
+}
+
 void HeapSnapshot::emitMeta() {
   json_.emitKey("snapshot");
   json_.openDict();
@@ -231,7 +253,10 @@ void HeapSnapshot::emitMeta() {
 
   json_.emitKey("location_fields");
   json_.openArray();
-  // TODO: Possibly populate this if Chrome complains
+  json_.emitValues({
+#define V8_LOCATION_FIELD(label) #label,
+#include "hermes/VM/HeapSnapshot.def"
+  });
   json_.closeArray(); // location_fields
 
   json_.closeDict(); // "meta"

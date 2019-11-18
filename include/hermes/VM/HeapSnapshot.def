@@ -27,6 +27,11 @@
 #define V8_EDGE_FIELD(label, type)
 #endif
 
+#ifndef V8_LOCATION_FIELD
+#define V8_LOCATION_FIELD(label)
+#endif
+
+
 /// V8 Heap Snapshots look like JSON, but the parser expects fields in a
 /// specific order.  They are also all expected to exist, whether not they
 /// contain useful information.  The sections are given below in their expected
@@ -86,8 +91,16 @@ V8_EDGE_TYPE(Weak, "weak")
 V8_EDGE_FIELD(name_or_index, string_or_number)
 V8_EDGE_FIELD(to_node, node)
 
+// Fields associated with a location record. Locations don't have an associated
+// type.
+V8_LOCATION_FIELD(object_index)
+V8_LOCATION_FIELD(script_id)
+V8_LOCATION_FIELD(line)
+V8_LOCATION_FIELD(column)
+
 #undef V8_SNAPSHOT_SECTION
 #undef V8_NODE_TYPE
 #undef V8_NODE_FIELD
 #undef V8_EDGE_TYPE
 #undef V8_EDGE_FIELD
+#undef V8_LOCATION_FIELD

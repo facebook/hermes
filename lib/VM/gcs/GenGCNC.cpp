@@ -1498,6 +1498,9 @@ void GenGC::createSnapshot(llvm::raw_ostream &os) {
   forAllObjs(snapshotForObject);
   snap.endSection(HeapSnapshot::Section::Edges);
 
+  snap.beginSection(HeapSnapshot::Section::Locations);
+  snap.endSection(HeapSnapshot::Section::Locations);
+
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormedHeap();
 #endif
