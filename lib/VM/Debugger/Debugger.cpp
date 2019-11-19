@@ -1009,6 +1009,11 @@ HermesValue Debugger::evalInFrame(
     return HermesValue::encodeUndefinedValue();
   }
 
+  // Interpreting code requires that the `thrownValue_` is empty.
+  // Save it temporarily so we can restore it after the evalInEnvironment.
+  Handle<> savedThrownValue = runtime_->makeHandle(runtime_->getThrownValue());
+  runtime_->clearThrownValue();
+
   CallResult<HermesValue> result = evalInEnvironment(
       runtime_,
       src,
@@ -1024,6 +1029,7 @@ HermesValue Debugger::evalInFrame(
       !result->isEmpty() &&
       "eval result should not be empty unless exception was thrown");
 
+  runtime_->setThrownValue(savedThrownValue.getHermesValue());
   resultHandle = *result;
   return *resultHandle;
 }

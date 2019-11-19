@@ -1,0 +1,4 @@
+set pauseOnThrow on
+continue
+exec 1
+continue
