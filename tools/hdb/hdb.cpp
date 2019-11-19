@@ -56,7 +56,7 @@ static const std::map<std::string, std::string> commandToHelpText = {
      "<line> <column>\n\t"
      "<filename> <line> <column>\n"
      "Optionally a conditional breakpoint can be specified as: if <condition>\n\n"
-     "USAGE: break <filename> <line> <column> <condition>\n"},
+     "USAGE: break <filename> <line> [<column>] [if <condition>]\n"},
     {"delete",
      "Deletes all or specified breakpoints.\n\n"
      "USAGE: delete [all/<breakpoint_id>]\n"},
@@ -102,7 +102,7 @@ static const std::string topLevelHelpText =
     "Type `help name' to find out more about the function `name'.\n\n"
     "frame [frame_id]\n"
     "set pauseOnThrow [on/uncaught/off]\n"
-    "break <filename> <line> <column> <condition>\n"
+    "break <filename> <line> [<column>] [if <condition>]\n"
     "delete [all/<breakpoint_id>]\n"
     "enable <breakpoint_id>\n"
     "disable <breakpoint_id>\n"
