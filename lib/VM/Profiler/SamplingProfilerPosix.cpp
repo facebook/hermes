@@ -288,7 +288,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
   //   1. Most significant bit of 64bits address is set for native frame.
   //   2. JS frame: module id in high 32 bits, address virtual offset in lower
   //   32 bits, with MSB unset.
-  //   3. Native frame: address returned with MSB set.
+  //   3. Native/Finalizable frame: address returned with MSB set.
   // TODO: enhance this when supporting more frame types.
   sampledStackDepth = std::min(sampledStackDepth, (uint32_t)max_depth);
   for (uint32_t i = 0; i < sampledStackDepth; ++i) {
@@ -308,8 +308,12 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       frames[i] = frameAddress;
     } else if (stackFrame.kind == StackFrame::FrameKind::NativeFunction) {
       frames[i] = ((uint64_t)stackFrame.nativeFrame | kNativeFrameMask);
+    } else if (
+        stackFrame.kind == StackFrame::FrameKind::FinalizableNativeFunction) {
+      frames[i] =
+          ((uint64_t)stackFrame.finalizableNativeFrame | kNativeFrameMask);
     } else {
-      llvm_unreachable("Unknown frame kind");
+      llvm_unreachable("Loom: unknown frame kind");
     }
   }
   *depth = sampledStackDepth;
