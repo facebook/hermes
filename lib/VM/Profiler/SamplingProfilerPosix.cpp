@@ -294,26 +294,33 @@ uint32_t SamplingProfiler::walkRuntimeStack(
   for (uint32_t i = 0; i < sampledStackDepth; ++i) {
     constexpr uint64_t kNativeFrameMask = ((uint64_t)1 << 63);
     const StackFrame &stackFrame = profilerInstance->sampleStorage_.stack[i];
-    if (stackFrame.kind == StackFrame::FrameKind::JSFunction) {
-      auto *bcProvider = stackFrame.jsFrame.module->getBytecode();
-      uint32_t virtualOffset = bcProvider->getVirtualOffsetForFunction(
-                                   stackFrame.jsFrame.functionId) +
-          stackFrame.jsFrame.offset;
+    switch (stackFrame.kind) {
+      case StackFrame::FrameKind::JSFunction: {
+        auto *bcProvider = stackFrame.jsFrame.module->getBytecode();
+        uint32_t virtualOffset = bcProvider->getVirtualOffsetForFunction(
+                                     stackFrame.jsFrame.functionId) +
+            stackFrame.jsFrame.offset;
 
-      uint32_t moduleId = bcProvider->getCJSModuleOffset();
-      uint64_t frameAddress = ((uint64_t)moduleId << 32) + virtualOffset;
-      assert(
-          (frameAddress & kNativeFrameMask) == 0 &&
-          "Module id should take less than 32 bits");
-      frames[i] = frameAddress;
-    } else if (stackFrame.kind == StackFrame::FrameKind::NativeFunction) {
-      frames[i] = ((uint64_t)stackFrame.nativeFrame | kNativeFrameMask);
-    } else if (
-        stackFrame.kind == StackFrame::FrameKind::FinalizableNativeFunction) {
-      frames[i] =
-          ((uint64_t)stackFrame.finalizableNativeFrame | kNativeFrameMask);
-    } else {
-      llvm_unreachable("Loom: unknown frame kind");
+        uint32_t moduleId = bcProvider->getCJSModuleOffset();
+        uint64_t frameAddress = ((uint64_t)moduleId << 32) + virtualOffset;
+        assert(
+            (frameAddress & kNativeFrameMask) == 0 &&
+            "Module id should take less than 32 bits");
+        frames[i] = frameAddress;
+        break;
+      }
+
+      case StackFrame::FrameKind::NativeFunction:
+        frames[i] = ((uint64_t)stackFrame.nativeFrame | kNativeFrameMask);
+        break;
+
+      case StackFrame::FrameKind::FinalizableNativeFunction:
+        frames[i] =
+            ((uint64_t)stackFrame.finalizableNativeFrame | kNativeFrameMask);
+        break;
+
+      default:
+        llvm_unreachable("Loom: unknown frame kind");
     }
   }
   *depth = sampledStackDepth;
@@ -348,16 +355,22 @@ void SamplingProfiler::dumpSampledStack(llvm::raw_ostream &OS) {
     for (auto iter = sample.stack.rbegin(); iter != sample.stack.rend();
          ++iter) {
       const StackFrame &frame = *iter;
-      if (frame.kind == StackFrame::FrameKind::JSFunction) {
-        OS << "[JS] " << frame.jsFrame.functionId << ":"
-           << frame.jsFrame.offset;
-      } else if (frame.kind == StackFrame::FrameKind::NativeFunction) {
-        OS << "[Native] " << reinterpret_cast<uintptr_t>(frame.nativeFrame);
-      } else if (
-          frame.kind == StackFrame::FrameKind::FinalizableNativeFunction) {
-        OS << "[HostFunction]";
-      } else {
-        llvm_unreachable("Unknown frame kind");
+      switch (frame.kind) {
+        case StackFrame::FrameKind::JSFunction:
+          OS << "[JS] " << frame.jsFrame.functionId << ":"
+             << frame.jsFrame.offset;
+          break;
+
+        case StackFrame::FrameKind::NativeFunction:
+          OS << "[Native] " << reinterpret_cast<uintptr_t>(frame.nativeFrame);
+          break;
+
+        case StackFrame::FrameKind::FinalizableNativeFunction:
+          OS << "[HostFunction]";
+          break;
+
+        default:
+          llvm_unreachable("Unknown frame kind");
       }
       OS << " => ";
     }
@@ -426,18 +439,19 @@ bool operator==(
   if (left.kind != right.kind) {
     return false;
   }
-  if (left.kind == SamplingProfiler::StackFrame::FrameKind::JSFunction) {
-    return left.jsFrame.functionId == right.jsFrame.functionId &&
-        left.jsFrame.offset == right.jsFrame.offset;
-  } else if (
-      left.kind == SamplingProfiler::StackFrame::FrameKind::NativeFunction) {
-    return left.nativeFrame == right.nativeFrame;
-  } else if (
-      left.kind ==
-      SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction) {
-    return left.finalizableNativeFrame == right.finalizableNativeFrame;
-  } else {
-    llvm_unreachable("Unknown frame kind");
+  switch (left.kind) {
+    case SamplingProfiler::StackFrame::FrameKind::JSFunction:
+      return left.jsFrame.functionId == right.jsFrame.functionId &&
+          left.jsFrame.offset == right.jsFrame.offset;
+
+    case SamplingProfiler::StackFrame::FrameKind::NativeFunction:
+      return left.nativeFrame == right.nativeFrame;
+
+    case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction:
+      return left.finalizableNativeFrame == right.finalizableNativeFrame;
+
+    default:
+      llvm_unreachable("Unknown frame kind");
   }
 }
 

@@ -253,13 +253,15 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
             json.emitKeyValue(
                 "offset", oscompat::to_string(frame.jsFrame.offset));
           }
-        } break;
+          break;
+        }
 
         case SamplingProfiler::StackFrame::FrameKind::NativeFunction: {
           frameName =
               std::string("[Native] ") + getFunctionName(frame.nativeFrame);
           categoryName = "Native";
-        } break;
+          break;
+        }
 
         case SamplingProfiler::StackFrame::FrameKind::
             FinalizableNativeFunction: {
@@ -267,7 +269,8 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
           // FinalizableNativeFunction.
           frameName = "[HostFunction]";
           categoryName = "Native";
-        } break;
+          break;
+        }
 
         default:
           llvm_unreachable("Unknown frame kind");
