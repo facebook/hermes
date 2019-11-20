@@ -44,8 +44,8 @@ class SamplingProfiler {
       llvm::DenseMap<SamplingProfiler::ThreadId, std::string>;
 
   /// Captured JSFunction stack frame information for symbolication.
-  // TODO: consolidate the stack frame struct with other function/extern
-  // profilers.
+  /// TODO: consolidate the stack frame struct with other function/extern
+  /// profilers.
   struct JSFunctionFrameInfo {
     // RuntimeModule this function is associated with.
     RuntimeModule *module;
@@ -77,6 +77,7 @@ class SamplingProfiler {
       JSFunctionFrameInfo jsFrame;
       // Native function frame info.
       NativeFunctionFrameInfo nativeFrame;
+      // Host function frame info.
       FinalizableNativeFunctionFrameInfo finalizableNativeFrame;
     };
     FrameKind kind;
