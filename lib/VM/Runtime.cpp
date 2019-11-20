@@ -1262,13 +1262,13 @@ std::unique_ptr<Buffer> Runtime::generateSpecialRuntimeBytecode() {
     hbc::BytecodeInstructionGenerator bcGen;
     bcGen.emitLoadConstUndefined(0);
     bcGen.emitRet(0);
-    builder.addFunction(1, bcGen.acquireBytecode());
+    builder.addFunction(1, 1, bcGen.acquireBytecode());
   }
   {
     hbc::BytecodeInstructionGenerator bcGen;
     bcGen.emitGetGlobalObject(0);
     bcGen.emitRet(0);
-    builder.addFunction(1, bcGen.acquireBytecode());
+    builder.addFunction(1, 1, bcGen.acquireBytecode());
   }
   auto buffer = builder.generateBytecodeBuffer();
   assert(buffer->size() < MIN_IO_TRACKING_SIZE);

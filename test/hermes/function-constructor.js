@@ -128,6 +128,8 @@ print((Function('a,b', 'if (a) {return b} else {return 0}'))(true, 3));
 // CHECK-NEXT: 3
 print((Function('a,b', 'if (a) {return b} else {return 0}'))(false, 3));
 // CHECK-NEXT: 0
+print(Function("return this").length);
+// CHECK-NEXT: 0
 print(Function("return this")());
 // CHECK-NEXT: [object global]
 print(Function("return this;")());

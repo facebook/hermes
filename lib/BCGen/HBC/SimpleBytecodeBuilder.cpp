@@ -77,8 +77,13 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
   // Write all function headers to the buffer.
   for (uint32_t i = 0; i < functionCount; ++i) {
     uint32_t opcodeSize = functions_[i].opcodes.size();
-    FunctionHeader funcHeader{
-        opcodeSize, 0, functions_[i].frameSize, 0, 0, 0, 0};
+    FunctionHeader funcHeader{opcodeSize,
+                              functions_[i].paramCount,
+                              functions_[i].frameSize,
+                              0,
+                              0,
+                              0,
+                              0};
     funcHeader.offset = functions_[i].offset;
     funcHeader.flags.strictMode = true;
     SmallFuncHeader small(funcHeader);

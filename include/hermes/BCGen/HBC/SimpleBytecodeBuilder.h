@@ -27,13 +27,22 @@ class SimpleBytecodeBuilder {
     /// Offset of the bytecode. This will be populated later during buffer
     /// generation.
     uint32_t offset{};
+    /// Number of parameters including "this".
+    uint32_t paramCount;
     /// Size of the frame.
     uint32_t frameSize;
     /// The opcodes.
     std::vector<opcode_atom_t> opcodes;
 
-    SimpleFunction(uint32_t frameSize, std::vector<opcode_atom_t> &&opcodes)
-        : frameSize(frameSize), opcodes(std::move(opcodes)) {}
+    SimpleFunction(
+        uint32_t paramCount,
+        uint32_t frameSize,
+        std::vector<opcode_atom_t> &&opcodes)
+        : paramCount(paramCount),
+          frameSize(frameSize),
+          opcodes(std::move(opcodes)) {
+      assert(paramCount > 0 && "paramCount must include 'this'");
+    }
   };
 
   /// List of functions in the builder to be concatenated into the final
@@ -43,8 +52,11 @@ class SimpleBytecodeBuilder {
  public:
   /// Add a function to the builder. We only need the \p frameSize and
   /// \p opcodes.
-  void addFunction(uint32_t frameSize, std::vector<opcode_atom_t> &&opcodes) {
-    functions_.emplace_back(frameSize, std::move(opcodes));
+  void addFunction(
+      uint32_t paramCount,
+      uint32_t frameSize,
+      std::vector<opcode_atom_t> &&opcodes) {
+    functions_.emplace_back(paramCount, frameSize, std::move(opcodes));
   }
 
   /// Generate the bytecode buffer given the list of functions in the builder.
