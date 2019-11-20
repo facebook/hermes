@@ -899,9 +899,6 @@ ToType *vmcast_during_gc(GCCell *cell, GC *gc) {
 
 template <bool fixedSize, HasFinalizer hasFinalizer>
 inline void *GenGC::alloc(uint32_t sz) {
-#ifdef HERMES_SLOW_DEBUG
-  totalAllocatedBytesDebug_ += heapAlignSize(sz);
-#endif
 #ifndef NDEBUG
   lastAllocWasFixedSize_ = fixedSize ? FixedSizeValue::Yes : FixedSizeValue::No;
 #endif
@@ -917,11 +914,17 @@ inline void *GenGC::alloc(uint32_t sz) {
 #ifdef HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT
   AllocResult res = oldGen_.alloc(sz, hasFinalizer);
   assert(res.success && "Should never fail to allocate at the top level");
+#ifdef HERMES_SLOW_DEBUG
+  totalAllocatedBytesDebug_ += heapAlignSize(sz);
+#endif
   return res.ptr;
 #else
 #ifndef NDEBUG
   AllocResult res = debugAlloc(sz, hasFinalizer, fixedSize);
   assert(res.success && "Should never fail to allocate at the top level");
+#ifdef HERMES_SLOW_DEBUG
+  totalAllocatedBytesDebug_ += heapAlignSize(sz);
+#endif
   return res.ptr;
 #else
   // We repeat this in opt, to ensure that the AllocResult is only
@@ -931,15 +934,13 @@ inline void *GenGC::alloc(uint32_t sz) {
     return res.ptr;
   }
   return allocSlow(sz, fixedSize, hasFinalizer);
+
 #endif // NDEBUG
 #endif // HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT
 }
 
 template <HasFinalizer hasFinalizer>
 inline void *GenGC::allocLongLived(uint32_t size) {
-#ifdef HERMES_SLOW_DEBUG
-  totalAllocatedBytesDebug_ += heapAlignSize(size);
-#endif
 #ifndef NDEBUG
   lastAllocWasFixedSize_ = FixedSizeValue::Unknown;
 #endif
@@ -955,15 +956,24 @@ inline void *GenGC::allocLongLived(uint32_t size) {
   if (allocContextFromYG_) {
     res = oldGen_.alloc(size, hasFinalizer);
     assert(res.success && "Should never fail to allocate at the top level");
+#ifdef HERMES_SLOW_DEBUG
+    totalAllocatedBytesDebug_ += heapAlignSize(size);
+#endif
     return res.ptr;
   } else {
     res = allocContext_.alloc(size, hasFinalizer);
     if (LLVM_LIKELY(res.success)) {
+#ifdef HERMES_SLOW_DEBUG
+      totalAllocatedBytesDebug_ += heapAlignSize(size);
+#endif
       return res.ptr;
     } else {
       AllocContextYieldThenClaim yielder(this);
       res = oldGen_.alloc(size, hasFinalizer);
       assert(res.success && "Should never fail to allocate at the top level");
+#ifdef HERMES_SLOW_DEBUG
+      totalAllocatedBytesDebug_ += heapAlignSize(size);
+#endif
       return res.ptr;
     }
   }
