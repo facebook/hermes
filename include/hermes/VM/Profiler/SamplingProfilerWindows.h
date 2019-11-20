@@ -54,6 +54,9 @@ class SamplingProfiler {
   bool disable() {
     return true;
   }
+
+  /// Called for various GC events.
+  void onGCEvent(Runtime *runtime, GCBase::GCCallbacks::GCEventKind kind) {}
 };
 
 } // namespace vm

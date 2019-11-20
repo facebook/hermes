@@ -1734,7 +1734,9 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
 }
 
 void Runtime::onGCEvent(GCBase::GCCallbacks::GCEventKind kind) {
-  // TODO: notify sampling profiler.
+  if (samplingProfiler_ != nullptr) {
+    samplingProfiler_->onGCEvent(this, kind);
+  }
 }
 
 #ifdef HERMESVM_PROFILER_BB

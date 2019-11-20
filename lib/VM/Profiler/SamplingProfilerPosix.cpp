@@ -137,15 +137,22 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
   }
   // Sampling stack will touch GC objects(like closure) so
   // only do so if heap is valid.
-  if (!curThreadRuntime->getHeap().inGC()) {
+  if (LLVM_LIKELY(!curThreadRuntime->getHeap().inGC())) {
     assert(
         profilerInstance != nullptr &&
         "Why is sProfilerInstance_ not initialized yet?");
     profilerInstance->sampledStackDepth_ = profilerInstance->walkRuntimeStack(
         curThreadRuntime, profilerInstance->sampleStorage_);
   } else {
-    // TODO: log "GC in process" meta event.
-    profilerInstance->sampledStackDepth_ = 0;
+    // GC in process. Copy pre-captured stack instead.
+    if (profilerInstance->preGCStackDepth_ > 0) {
+      profilerInstance->sampleStorage_ = profilerInstance->preGCStackStorage_;
+      profilerInstance->sampledStackDepth_ = profilerInstance->preGCStackDepth_;
+    } else {
+      // This GC (like mallocGC) did not record JS stack.
+      // TODO: fix this for all GCs.
+      profilerInstance->sampledStackDepth_ = 0;
+    }
   }
   if (!profilerInstance->samplingDoneSem_.notifyOne()) {
     abort(); // Something is wrong.
@@ -203,8 +210,9 @@ void SamplingProfiler::timerLoop() {
 
 uint32_t SamplingProfiler::walkRuntimeStack(
     const Runtime *runtime,
-    StackTrace &sampleStorage) {
-  unsigned count = 0;
+    StackTrace &sampleStorage,
+    uint32_t startIndex) {
+  unsigned count = startIndex;
 
   // TODO: capture leaf frame IP.
   const Inst *ip = nullptr;
@@ -433,6 +441,38 @@ void SamplingProfiler::clear() {
   threadNames_.clear();
 }
 
+void SamplingProfiler::onGCEvent(
+    Runtime *runtime,
+    GCBase::GCCallbacks::GCEventKind kind) {
+  switch (kind) {
+    case GCBase::GCCallbacks::GCEventKind::CollectionStart: {
+      assert(
+          preGCStackDepth_ == 0 && "preGCStackDepth_ is not reset after GC?");
+      std::lock_guard<std::mutex> lockGuard(profilerLock_);
+      if (LLVM_LIKELY(!enabled_)) {
+        return;
+      }
+      recordPreGCStack(runtime);
+      break;
+    }
+
+    case GCBase::GCCallbacks::GCEventKind::CollectionEnd:
+      preGCStackDepth_ = 0;
+      break;
+
+    default:
+      llvm_unreachable("Unknown GC event");
+  }
+}
+
+void SamplingProfiler::recordPreGCStack(Runtime *runtime) {
+  auto &leafFrame = preGCStackStorage_.stack[0];
+  leafFrame.kind = StackFrame::FrameKind::Metadata;
+  leafFrame.metadataFrame = MetadataFrameKind::GCEvent;
+  // Leaf frame slot has been used, filling from index 1.
+  preGCStackDepth_ = walkRuntimeStack(runtime, preGCStackStorage_, 1);
+}
+
 bool operator==(
     const SamplingProfiler::StackFrame &left,
     const SamplingProfiler::StackFrame &right) {
@@ -449,6 +489,9 @@ bool operator==(
 
     case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction:
       return left.finalizableNativeFrame == right.finalizableNativeFrame;
+
+    case SamplingProfiler::StackFrame::FrameKind::Metadata:
+      return left.metadataFrame == right.metadataFrame;
 
     default:
       llvm_unreachable("Unknown frame kind");

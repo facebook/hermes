@@ -54,10 +54,16 @@ class SamplingProfiler {
     // IP offset within the function.
     uint32_t offset;
   };
+  /// Detailed kind for sampled metadata frame.
+  enum class MetadataFrameKind {
+    GCEvent,
+  };
   /// Captured NativeFunction frame information for symbolication.
   using NativeFunctionFrameInfo = NativeFunctionPtr;
   /// Captured FinalizableNativeFunction frame information for symbolication.
   using FinalizableNativeFunctionFrameInfo = NativeFunctionPtr;
+  /// Metadata frame info.
+  using MetadataFrameInfo = MetadataFrameKind;
 
   // This will break with more than one RuntimeModule(like FB4a, eval() call or
   // lazy compilation etc...). It is simply a temporary thing to get started.
@@ -68,6 +74,7 @@ class SamplingProfiler {
       JSFunction,
       NativeFunction,
       FinalizableNativeFunction,
+      Metadata,
     };
 
     // TODO: figure out how to store BoundFunction.
@@ -79,6 +86,8 @@ class SamplingProfiler {
       NativeFunctionFrameInfo nativeFrame;
       // Host function frame info.
       FinalizableNativeFunctionFrameInfo finalizableNativeFrame;
+      // Metadata frame info.
+      MetadataFrameInfo metadataFrame;
     };
     FrameKind kind;
   };
@@ -142,6 +151,15 @@ class SamplingProfiler {
   /// it is serialized by samplingDoneSem_.
   StackTrace sampleStorage_{kMaxStackDepth};
 
+  /// Threading: preGCStackDepth_/preGCStackStorage_ are only accessed from
+  /// interpreter thread.
+  /// The actual sampled stack depth in \p preGCStackStorage_.
+  /// It resets to zero at the end of young and full GCs so that we can verify
+  /// that there aren't two nesting preGC stack walking.
+  uint32_t preGCStackDepth_{0};
+  /// JS stack captured at time of GC.
+  StackTrace preGCStackStorage_{kMaxStackDepth};
+
   /// Prellocated map that contains thread names mapping.
   ThreadNamesMap threadNames_;
 
@@ -188,7 +206,16 @@ class SamplingProfiler {
   /// Walk runtime stack frames and store in \p sampleStorage.
   /// This function is called from signal handler so should obey all
   /// rules of signal handler(no lock, no memory allocation etc...)
-  uint32_t walkRuntimeStack(const Runtime *runtime, StackTrace &sampleStorage);
+  /// \param startIndex specifies the start index in \p sampleStorage to fill.
+  /// \return total number of stack frames captured in \p sampleStorage
+  /// including existing frames before \p startIndex.
+  uint32_t walkRuntimeStack(
+      const Runtime *runtime,
+      StackTrace &sampleStorage,
+      uint32_t startIndex = 0);
+
+  /// Record JS stack at time of the GC.
+  void recordPreGCStack(Runtime *runtime);
 
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
   /// Registered loom callback for collecting stack frames.
@@ -238,6 +265,9 @@ class SamplingProfiler {
 
   /// Disable and stop profiling.
   bool disable();
+
+  /// Called for various GC events.
+  void onGCEvent(Runtime *runtime, GCBase::GCCallbacks::GCEventKind kind);
 };
 
 bool operator==(
