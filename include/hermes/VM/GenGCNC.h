@@ -569,7 +569,10 @@ class GenGC final : public GCBase {
   /// RAII class managing the actions that need to be performed immediately
   /// before and immediately after every garbage collection.
   struct CollectionSection : public PerfSection {
-    CollectionSection(GenGC *gc, const char *name);
+    CollectionSection(
+        GenGC *gc,
+        const char *name,
+        OptValue<GCCallbacks *> gcCallbacksOpt = llvm::None);
     ~CollectionSection();
 
     /// Update the cumulative GC statistics held for all GCs, and the statistics

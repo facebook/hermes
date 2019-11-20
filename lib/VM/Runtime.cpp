@@ -1733,6 +1733,10 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   return res;
 }
 
+void Runtime::onGCEvent(GCBase::GCCallbacks::GCEventKind kind) {
+  // TODO: notify sampling profiler.
+}
+
 #ifdef HERMESVM_PROFILER_BB
 
 llvm::Optional<std::tuple<std::string, uint32_t, uint32_t>>

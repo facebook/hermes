@@ -175,6 +175,11 @@ class GCBase {
   /// An interface enabling the garbage collector to mark roots and free
   /// symbols.
   struct GCCallbacks {
+    enum class GCEventKind {
+      CollectionStart,
+      CollectionEnd,
+    };
+
     /// Virtual destructor to avoid warnings.
     virtual ~GCCallbacks() = 0;
 
@@ -226,6 +231,10 @@ class GCBase {
     /// Returns the current stack as a string. This function will not cause
     /// any allocs in the GC.
     virtual std::string getCallStackNoAlloc() = 0;
+
+    /// This is called with CollectionStart at the start of each GC, and with
+    /// CollectionEnd at the end.
+    virtual void onGCEvent(GCEventKind kind) = 0;
   };
 
   /// Struct that keeps a reference to a GC.  Useful, for example, as a base
@@ -668,11 +677,12 @@ class GCBase {
   /// active.
   class GCCycle final {
    public:
-    GCCycle(GCBase *gc);
+    GCCycle(GCBase *gc, OptValue<GCCallbacks *> gcCallbacksOpt = llvm::None);
     ~GCCycle();
 
    private:
     GCBase *const gc_;
+    OptValue<GCCallbacks *> gcCallbacksOpt_;
   };
 
   /// Returns the number of bytes allocated allocated since the last GC.

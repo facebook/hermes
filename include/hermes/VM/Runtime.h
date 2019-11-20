@@ -728,6 +728,9 @@ class Runtime : public HandleRootOwner,
     return getCallStackNoAlloc(nullptr);
   }
 
+  /// Called when various GC events(e.g. collection start/end) happen.
+  void onGCEvent(GCBase::GCCallbacks::GCEventKind kind) override;
+
 #ifdef HERMESVM_SERIALIZE
   /// Fill the header with current Runtime config
   void populateHeaderRuntimeConfig(SerializeHeader &header);

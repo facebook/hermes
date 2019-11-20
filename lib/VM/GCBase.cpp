@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-
 #define DEBUG_TYPE "gc"
 #include "hermes/VM/GC.h"
 
@@ -92,11 +91,20 @@ GCBase::GCBase(
 #endif
 }
 
-GCBase::GCCycle::GCCycle(GCBase *gc) : gc_(gc) {
+GCBase::GCCycle::GCCycle(GCBase *gc, OptValue<GCCallbacks *> gcCallbacksOpt)
+    : gc_(gc), gcCallbacksOpt_(gcCallbacksOpt) {
   gc_->inGC_ = true;
+  if (gcCallbacksOpt_.hasValue()) {
+    gcCallbacksOpt_.getValue()->onGCEvent(
+        GCCallbacks::GCEventKind::CollectionStart);
+  }
 }
 
 GCBase::GCCycle::~GCCycle() {
+  if (gcCallbacksOpt_.hasValue()) {
+    gcCallbacksOpt_.getValue()->onGCEvent(
+        GCCallbacks::GCEventKind::CollectionEnd);
+  }
   gc_->inGC_ = false;
 }
 

@@ -295,6 +295,8 @@ struct DummyRuntime final : public HandleRootOwner,
     return "<dummy runtime has no call stack>";
   }
 
+  void onGCEvent(GCEventKind kind) override {}
+
   /// It's a unit test, it doesn't care about reporting how much memory it uses.
   size_t mallocSize() const override {
     return 0;

@@ -340,7 +340,7 @@ void GenGC::collect(bool canEffectiveOOM) {
              << ") garbage collection # " << numGCs() << "\n");
 
   {
-    CollectionSection fullCollection(this, "Full collection");
+    CollectionSection fullCollection(this, "Full collection", gcCallbacks_);
 
     fullCollection.addArg("fullGCUsedBefore", usedBefore);
     fullCollection.addArg("fullGCSizeBefore", sizeBefore);
@@ -1705,10 +1705,13 @@ void GenGC::printFullCollectionStats(llvm::raw_ostream &os, bool trailingComma)
   os << "\n";
 }
 
-GenGC::CollectionSection::CollectionSection(GenGC *gc, const char *name)
+GenGC::CollectionSection::CollectionSection(
+    GenGC *gc,
+    const char *name,
+    OptValue<GCCallbacks *> gcCallbacksOpt)
     : PerfSection(name, gc->getName().c_str()),
       gc_(gc),
-      cycle_(gc),
+      cycle_(gc, gcCallbacksOpt),
       wallStart_(steady_clock::now()),
       cpuStart_(oscompat::thread_cpu_time()),
       gcUsedBefore_(gc->usedDirect()),
