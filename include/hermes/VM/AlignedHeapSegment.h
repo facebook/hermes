@@ -90,9 +90,16 @@ class AlignedHeapSegment final {
     CardTable cardTable_;
     MarkBitArrayNC markBitArray_;
 
+    /// Memory made inaccessible through protectGuardPage, for security and
+    /// earlier detection of corruption.
+    char guardPage_[pagesize::kExpectedPageSize];
+
     /// The first byte of the allocation region, which extends past the "end" of
     /// the struct, to the end of the memory region that contains it.
     char allocRegion_[1];
+
+    /// Set the protection mode of guardPage_ (if system page size allows it).
+    void protectGuardPage(oscompat::ProtectMode mode);
   };
 
   /// The offset from the beginning of a segment of the allocatable region.
@@ -101,6 +108,10 @@ class AlignedHeapSegment final {
   static_assert(
       isSizeHeapAligned(offsetOfAllocRegion),
       "Allocation region must start at a heap aligned offset");
+
+  static_assert(
+      offsetof(Contents, guardPage_) % sizeof(Contents::guardPage_) == 0,
+      "Guard page must be aligned to likely page size");
 
   /// Attempt an allocation of the given size in the segment.  If there is
   /// sufficent space, cast the space as a GCCell, and returns an uninitialized

@@ -65,7 +65,6 @@ TEST(GCReturnUnusedMemoryNCTest, CollectReturnsFreeMemory) {
   auto &gc = rt.gc;
 
   using HalfCell = EmptyCell<AlignedHeapSegment::maxSize() / 2>;
-  ASSERT_EQ(0, HalfCell::size() % kPageSize);
 
   // Allocate cells directly in the old generation.
   auto *cell1 = HalfCell::createLongLived(rt);

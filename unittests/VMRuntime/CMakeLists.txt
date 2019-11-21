@@ -28,6 +28,7 @@ set(RTSources
   GCBasicsTest.cpp
   GCFinalizerTest.cpp
   GCFragmentationNCTest.cpp
+  GCGuardPageNCTest.cpp
   GCInitTest.cpp
   GCLazySegmentNCTest.cpp
   GCHeapExtentsInCrashManagerTest.cpp

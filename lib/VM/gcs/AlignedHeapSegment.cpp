@@ -32,6 +32,17 @@ using namespace hermes;
 namespace hermes {
 namespace vm {
 
+void AlignedHeapSegment::Contents::protectGuardPage(
+    oscompat::ProtectMode mode) {
+  char *begin = guardPage_;
+  size_t size = sizeof(guardPage_);
+  size_t PS = oscompat::page_size();
+  // Only protect if the actual system page size matches expectations.
+  if (reinterpret_cast<uintptr_t>(begin) % PS == 0 && PS <= size) {
+    oscompat::vm_protect(begin, PS, mode);
+  }
+}
+
 AlignedHeapSegment::AlignedHeapSegment(
     AlignedStorage &&storage,
     GCGeneration *owner)
@@ -42,6 +53,7 @@ AlignedHeapSegment::AlignedHeapSegment(
       "storage end must be page-aligned");
   if (*this) {
     new (contents()) Contents();
+    contents()->protectGuardPage(oscompat::ProtectMode::None);
   }
 }
 
@@ -49,7 +61,7 @@ AlignedHeapSegment::~AlignedHeapSegment() {
   if (lowLim() == nullptr) {
     return;
   }
-
+  contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
   contents()->~Contents();
   __asan_unpoison_memory_region(start(), end() - start());
 }
@@ -68,7 +80,12 @@ void AlignedHeapSegment::setLevel(char *lvl) {
       auto nextPageBefore = reinterpret_cast<char *>(
           llvm::alignTo(reinterpret_cast<uintptr_t>(level_), PS));
 
+      // Some kernels seems to require all pages in the mapping to have the same
+      // permissions for the advise to "take", so suspend guard page protection
+      // temporarily.
+      contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
       storage_.markUnused(nextPageAfter, nextPageBefore);
+      contents()->protectGuardPage(oscompat::ProtectMode::None);
     }
 #endif
   }
