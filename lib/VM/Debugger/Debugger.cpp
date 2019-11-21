@@ -1023,14 +1023,16 @@ HermesValue Debugger::evalInFrame(
       singleFunction);
 
   // Check if an exception was thrown.
-  if (result.getStatus() == ExecutionStatus::EXCEPTION)
-    return getExceptionAsEvalResult(outMetadata);
-  assert(
-      !result->isEmpty() &&
-      "eval result should not be empty unless exception was thrown");
+  if (result.getStatus() == ExecutionStatus::EXCEPTION) {
+    resultHandle = getExceptionAsEvalResult(outMetadata);
+  } else {
+    assert(
+        !result->isEmpty() &&
+        "eval result should not be empty unless exception was thrown");
+    resultHandle = *result;
+  }
 
   runtime_->setThrownValue(savedThrownValue.getHermesValue());
-  resultHandle = *result;
   return *resultHandle;
 }
 
