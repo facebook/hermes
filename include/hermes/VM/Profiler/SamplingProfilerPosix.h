@@ -101,8 +101,8 @@ class SamplingProfiler {
     /// Captured stack frames.
     std::vector<StackFrame> stack;
 
-    StackTrace(uint32_t preallocatedSize) : stack(preallocatedSize) {}
-    StackTrace(
+    explicit StackTrace(uint32_t preallocatedSize) : stack(preallocatedSize) {}
+    explicit StackTrace(
         ThreadId tid,
         TimeStampType ts,
         const std::vector<StackFrame>::iterator stackStart,
@@ -175,7 +175,7 @@ class SamplingProfiler {
   std::vector<Domain *> domains_;
 
  private:
-  SamplingProfiler();
+  explicit SamplingProfiler();
 
   /// invoke sigaction() posix API to register \p handler.
   /// \return what sigaction() returns: 0 to indicate success.

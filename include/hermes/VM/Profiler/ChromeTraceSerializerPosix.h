@@ -64,7 +64,7 @@ class ChromeStackFrameNode {
   }
 
  public:
-  ChromeStackFrameNode(
+  explicit ChromeStackFrameNode(
       uint32_t nextFrameId,
       const SamplingProfiler::StackFrame &frame)
       : id_(nextFrameId), frameInfo_(frame) {}
@@ -103,7 +103,7 @@ class ChromeSampleEvent {
   std::shared_ptr<ChromeStackFrameNode> leafNode_;
 
  public:
-  ChromeSampleEvent(
+  explicit ChromeSampleEvent(
       SamplingProfiler::ThreadId tid,
       SamplingProfiler::TimeStampType timeStamp,
       std::shared_ptr<ChromeStackFrameNode> leaf)
@@ -151,7 +151,7 @@ class ChromeTraceFormat {
   std::vector<ChromeSampleEvent> sampleEvents_;
 
  private:
-  ChromeTraceFormat(
+  explicit ChromeTraceFormat(
       uint32_t pid,
       const SamplingProfiler::ThreadNamesMap &threadNames)
       : pid_(pid), threadNames_(threadNames) {}
