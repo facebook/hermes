@@ -1276,7 +1276,11 @@ std::string TraceInterpreter::printStats() {
   stats += "\n";
   std::string opcodeOutput;
   llvm::raw_string_ostream os{opcodeOutput};
-  rt.dumpOpcodeStats(os);
+  if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt)) {
+    hermesRuntime->dumpOpcodeStats(os);
+  } else {
+    throw std::runtime_error("Unable to cast runtime into HermesRuntime");
+  }
   os.flush();
   stats += opcodeOutput;
   stats += "\n";
