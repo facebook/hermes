@@ -2722,6 +2722,32 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
   return expr;
 }
 
+//  Parsing NewExpression, MemberExpression and CallExpression is tricky.
+//
+//  The key realizations are that NewExpression can be one or more
+//  constructor calls without arguments (the s-expressions below represent
+//  productions that have been recursively matched, not AST nodes):
+//
+//       new foo ->
+//           (NewExpression (MemberExpression))
+//       new new foo ->
+//           (NewExpression (NewExpression (MemberExpression)))
+//
+//  MemberExpression can be one or more constructor calls with arguments:
+//
+//       new foo() ->
+//           (MemberExpression (MemberExpression))
+//       new new foo()()
+//           (MemberExpression (MemberExpression (MemberExpression))
+//
+//  Call expression are formed from arguments that don't match up with a `new`:
+//
+//       foo() ->
+//           (CallExpression (MemberExpression))
+//       new foo()()
+//           (CallExpression (MemberExpression (MemberExpression)))
+
+
 Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrMemberExpression() {
   if (!check(TokenKind::rw_new))
     return parseMemberExpressionExceptNew();
