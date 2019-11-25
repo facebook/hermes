@@ -257,7 +257,7 @@ throwTypeError(void *ctx, Runtime *runtime, NativeArgs) {
 
 // NOTE: when declaring more global symbols, don't forget to update
 // "Libhermes.h".
-void initGlobalObject(Runtime *runtime) {
+void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
   GCScope gcScope{runtime, "initGlobalObject", 256};
 
   // Not enumerable, not writable, not configurable.
@@ -634,7 +634,7 @@ void initGlobalObject(Runtime *runtime) {
       runtime,
       Predefined::getSymbolID(Predefined::HermesInternal),
       constantDPF,
-      createHermesInternalObject(runtime)));
+      createHermesInternalObject(runtime, jsLibFlags)));
 
 #ifdef HERMES_ENABLE_DEBUGGER
 

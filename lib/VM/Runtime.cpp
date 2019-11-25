@@ -286,7 +286,11 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
   global_ =
       JSObject::create(this, Handle<JSObject>(this, nullptr)).getHermesValue();
 
-  initGlobalObject(this);
+  JSLibFlags jsLibFlags{};
+  jsLibFlags.enableHermesInternal = runtimeConfig.getEnableHermesInternal();
+  jsLibFlags.enableHermesInternalTestMethods =
+      runtimeConfig.getEnableHermesInternalTestMethods();
+  initGlobalObject(this, jsLibFlags);
 
   // Once the global object has been initialized, populate the builtins table.
   initBuiltinTable();

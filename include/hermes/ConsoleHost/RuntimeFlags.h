@@ -177,6 +177,16 @@ static opt<uint32_t> VMExperimentFlags(
     llvm::cl::Hidden,
     cat(RuntimeCategory));
 
+static opt<bool> EnableHermesInternal(
+    "enable-hermes-internal",
+    llvm::cl::desc("Enable the HermesInternal object."),
+    llvm::cl::init(RuntimeConfig::getDefaultEnableHermesInternal()));
+static opt<bool> EnableHermesInternalTestMethods(
+    "Xhermes-internal-test-methods",
+    llvm::cl::desc("Enable the HermesInternal test methods."),
+    llvm::cl::init(RuntimeConfig::getDefaultEnableHermesInternalTestMethods()),
+    llvm::cl::Hidden);
+
 } // namespace cl
 
 #endif // HERMES_VM_RUNTIMEFLAGS_H

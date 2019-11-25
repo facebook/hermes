@@ -272,6 +272,8 @@ int main(int argc, char **argv) {
                             .withShouldRecordStats(GCPrintStats)
                             .build())
           .withES6Symbol(cl::ES6Symbol)
+          .withEnableHermesInternal(true)
+          .withEnableHermesInternalTestMethods(true)
           .build());
 
   vm::GCScope gcScope(runtime.get());

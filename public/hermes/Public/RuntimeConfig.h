@@ -75,6 +75,12 @@ class Deserializer;
   /* all bytecode buffers > 64 kB passed to Hermes must be mmap:ed. */ \
   F(constexpr, bool, TrackIO, false)                                   \
                                                                        \
+  /* Enable contents of HermesInternal */                              \
+  F(constexpr, bool, EnableHermesInternal, true)                       \
+                                                                       \
+  /* Enable methods exposed to JS for testing */                       \
+  F(constexpr, bool, EnableHermesInternalTestMethods, false)           \
+                                                                       \
   /* An interface for managing crashes. */                             \
   F(HERMES_NON_CONSTEXPR,                                              \
     std::shared_ptr<CrashManager>,                                     \

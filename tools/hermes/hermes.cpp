@@ -120,6 +120,9 @@ static int executeHBCBytecodeFromCL(
           .withEnableSampleProfiling(cl::SampleProfiling)
           .withRandomizeMemoryLayout(cl::RandomizeMemoryLayout)
           .withTrackIO(cl::TrackBytecodeIO)
+          .withEnableHermesInternal(cl::EnableHermesInternal)
+          .withEnableHermesInternalTestMethods(
+              cl::EnableHermesInternalTestMethods)
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;

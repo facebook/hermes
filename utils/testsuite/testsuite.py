@@ -354,6 +354,7 @@ def showStatus(filename):
 
 
 es6_args = ["-Xes6-symbol"]
+extra_run_args = ["-Xhermes-internal-test-methods"]
 
 extra_compile_flags = ["-fno-static-builtins"]
 
@@ -653,7 +654,11 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                 try:
                     printVerbose("Running with HBC VM: {}".format(filename))
                     # Run the hermes vm.
-                    args = [os.path.join(binary_path, hvm), binfile.name] + es6_args
+                    args = (
+                        [os.path.join(binary_path, hvm), binfile.name]
+                        + es6_args
+                        + extra_run_args
+                    )
                     env = {"LC_ALL": "en_US.UTF-8"}
                     if sys.platform == "linux":
                         env["ICU_DATA"] = binary_path

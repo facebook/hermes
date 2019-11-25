@@ -12,6 +12,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
+#include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Operations.h"
@@ -1201,8 +1202,14 @@ hermesInternalToString(void *, Runtime *runtime, NativeArgs args) {
 }
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
-Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
+Handle<JSObject> createHermesInternalObject(
+    Runtime *runtime,
+    const JSLibFlags &flags) {
   Handle<JSObject> intern = toHandle(runtime, JSObject::create(runtime));
+  if (!flags.enableHermesInternal) {
+    JSObject::preventExtensions(*intern);
+    return intern;
+  }
 
   DefinePropertyFlags constantDPF{};
   constantDPF.setEnumerable = 1;
@@ -1245,10 +1252,13 @@ Handle<JSObject> createHermesInternalObject(Runtime *runtime) {
 
   // HermesInternal function properties
   namespace P = Predefined;
-  defineInternMethod(P::detachArrayBuffer, hermesInternalDetachArrayBuffer, 1);
+  if (flags.enableHermesInternalTestMethods) {
+    defineInternMethod(
+        P::detachArrayBuffer, hermesInternalDetachArrayBuffer, 1);
+    defineInternMethod(P::getWeakSize, hermesInternalGetWeakSize);
+  }
   defineInternMethod(P::getEpilogues, hermesInternalGetEpilogues);
   defineInternMethod(P::silentSetPrototypeOf, silentObjectSetPrototypeOf, 2);
-  defineInternMethod(P::getWeakSize, hermesInternalGetWeakSize);
   defineInternMethod(
       P::getInstrumentedStats, hermesInternalGetInstrumentedStats);
   defineInternMethod(

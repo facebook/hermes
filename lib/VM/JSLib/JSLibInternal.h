@@ -262,9 +262,14 @@ Handle<JSObject> createDateConstructor(Runtime *runtime);
 /// and function properties.
 Handle<JSObject> createMathObject(Runtime *runtime);
 
+// Forward declaration.
+class JSLibFlags;
+
 /// Create and initialize the global %HermesInternal object, populating its
 /// value and function properties.
-Handle<JSObject> createHermesInternalObject(Runtime *runtime);
+Handle<JSObject> createHermesInternalObject(
+    Runtime *runtime,
+    const JSLibFlags &jsLibFlags);
 
 #ifdef HERMES_ENABLE_DEBUGGER
 

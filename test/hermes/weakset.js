@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -emit-binary -out %t.hbc %s && %hermes -Xhermes-internal-test-methods %t.hbc | %FileCheck --match-full-lines %s
 
 print("WeakSet");
 // CHECK-LABEL: WeakSet

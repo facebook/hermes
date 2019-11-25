@@ -5,9 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -O -gc-sanitize-handles=0 %s
+// RUN: %hermes -Xhermes-internal-test-methods -O -gc-sanitize-handles=0 %s | %FileCheck %s
 
 'use strict';
+
+print("START");
+//CHECK:START
 
 function isLittleEndian() {
   var uint16 = new Uint16Array(1);
@@ -1355,3 +1358,6 @@ assert.throws(function() {
 }, ReferenceError);
 
 /// @}
+
+print("OK");
+//CHECK-NEXT:OK

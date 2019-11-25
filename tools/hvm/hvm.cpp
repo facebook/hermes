@@ -122,6 +122,9 @@ int main(int argc, char **argv) {
                   .build())
           .withES6Symbol(cl::ES6Symbol)
           .withTrackIO(cl::TrackBytecodeIO)
+          .withEnableHermesInternal(cl::EnableHermesInternal)
+          .withEnableHermesInternalTestMethods(
+              cl::EnableHermesInternalTestMethods)
           .build();
 
   options.stabilizeInstructionCount = cl::StableInstructionCount;

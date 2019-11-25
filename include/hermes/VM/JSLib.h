@@ -27,7 +27,16 @@ namespace vm {
 class Runtime;
 struct RuntimeCommonStorage;
 
-void initGlobalObject(Runtime *runtime);
+/// Flags controlling the initialization of the global object.
+class JSLibFlags {
+ public:
+  /// If true, the HermesInternal object will be populated, otherwise it will be
+  /// empty.
+  bool enableHermesInternal = true;
+  bool enableHermesInternalTestMethods = false;
+};
+
+void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags);
 
 std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage(
     bool shouldTrace);
