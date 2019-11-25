@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O -fno-inline | %FileCheck %s
+// RUN: %hermes -dump-ir %s -O -fno-inline | %FileCheck %s
 
 "use strict";
 
@@ -85,3 +85,23 @@ function test_unused_and_duplicate_params() {
   }
   return [bar1, bar2]
 }
+
+// Usage of rest arguments should disable signature optimization.
+function test_rest_arguments() {
+  function baz(...rest) { return rest; }
+  return baz(100);
+}
+//CHECK-LABEL:function test_rest_arguments()
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = CreateFunctionInst %baz()
+//CHECK-NEXT:  %1 = CallInst %0 : closure, undefined : undefined, 100 : number
+//CHECK-NEXT:  %2 = ReturnInst %1
+//CHECK-NEXT:function_end
+
+//CHECK-LABEL:function baz()
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, 0 : number
+//CHECK-NEXT:  %1 = ReturnInst %0
+//CHECK-NEXT:function_end

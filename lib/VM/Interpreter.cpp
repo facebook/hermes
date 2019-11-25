@@ -727,7 +727,8 @@ static void dumpCallArguments(
   OS << "  " << 0 << " " << DumpHermesValue(calleeFrame.getThisArgRef())
      << "\n";
   for (unsigned i = 0; i < calleeFrame.getArgCount(); ++i) {
-    OS << "  " << i << " " << DumpHermesValue(calleeFrame.getArgRef(i)) << "\n";
+    OS << "  " << (i + 1) << " " << DumpHermesValue(calleeFrame.getArgRef(i))
+       << "\n";
   }
 }
 
@@ -954,7 +955,7 @@ tailCall:
                << "\n");
     for (uint32_t i = 0; i != runtime->getCurrentFrame()->getArgCount(); ++i) {
       LLVM_DEBUG(
-          dbgs() << " " << llvm::format_decimal(i, 4) << " "
+          dbgs() << "   " << llvm::format_decimal(i, 4) << " "
                  << DumpHermesValue(runtime->getCurrentFrame().getArgRef(i))
                  << "\n");
     }

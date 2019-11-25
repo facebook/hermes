@@ -68,6 +68,12 @@ static bool canBeInlined(Function *F, Function *intoFunction) {
         case ValueKind::CreateGeneratorInstKind:
           // Fail.
           return false;
+        case ValueKind::CallBuiltinInstKind:
+          if (cast<CallBuiltinInst>(&I)->getBuiltinIndex() ==
+              BuiltinMethod::HermesBuiltin_copyRestArgs) {
+            return false;
+          }
+          break;
         default:
           break;
       }
