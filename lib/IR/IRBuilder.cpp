@@ -819,7 +819,7 @@ HBCProfilePointInst *IRBuilder::createHBCProfilePointInst(uint16_t pointIndex) {
 }
 
 CallBuiltinInst *IRBuilder::createCallBuiltinInst(
-    int builtinIndex,
+    BuiltinMethod::Enum builtinIndex,
     ArrayRef<Value *> arguments) {
   auto *inst = new CallBuiltinInst(
       getLiteralNumber(builtinIndex), getLiteralUndefined(), arguments);

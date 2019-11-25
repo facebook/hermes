@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include "hermes/AST/Context.h"
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
 
@@ -481,7 +482,7 @@ class IRBuilder {
   HBCProfilePointInst *createHBCProfilePointInst(uint16_t pointIndex);
 
   CallBuiltinInst *createCallBuiltinInst(
-      int builtinIndex,
+      BuiltinMethod::Enum builtinIndex,
       ArrayRef<Value *> arguments);
   HBCCallDirectInst *createHBCCallDirectInst(
       Function *callee,

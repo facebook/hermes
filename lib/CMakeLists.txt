@@ -45,11 +45,12 @@ add_llvm_library(hermesFrontend
   IR/IRVerifier.cpp
   IR/Instrs.cpp
   Utils/Dumper.cpp
-  LINK_LIBS hermesSupport hermesInst hermesAST
+  LINK_LIBS hermesSupport hermesFrontEndDefs hermesAST
 )
 
 add_subdirectory(VM)
 add_subdirectory(Inst)
+add_subdirectory(FrontEndDefs)
 add_subdirectory(CompilerDriver)
 add_subdirectory(ADT)
 add_subdirectory(AST)

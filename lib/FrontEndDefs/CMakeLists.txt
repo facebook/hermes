@@ -4,12 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 set(source_files
-  InstDecode.cpp
-  InstDecode2.cpp
+  Builtins.cpp
 )
 
-add_llvm_library(hermesInst STATIC ${source_files}
-  LINK_LIBS
-  hermesSupport
-  hermesFrontEndDefs
-)
+add_llvm_library(hermesFrontEndDefs STATIC ${source_files})

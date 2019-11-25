@@ -14,9 +14,9 @@
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IRGen/IRGen.h"
-#include "hermes/Inst/Builtins.h"
 #include "hermes/InternalBytecode/InternalBytecode.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Platform/Logging.h"
@@ -1378,12 +1378,11 @@ static const struct {
   {(uint16_t)Predefined::object, (uint16_t)Predefined::method},
 #endif
 } builtinMethods[] = {
-#include "hermes/Inst/Builtins.def"
+#include "hermes/FrontEndDefs/Builtins.def"
 };
 
 static_assert(
-    sizeof(builtinMethods) / sizeof(builtinMethods[0]) ==
-        inst::BuiltinMethod::_count,
+    sizeof(builtinMethods) / sizeof(builtinMethods[0]) == BuiltinMethod::_count,
     "builtin method table mismatch");
 
 ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
@@ -1394,7 +1393,7 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
   MutableHandle<JSObject> lastObject{this};
   Predefined::Str lastObjectName = Predefined::_STRING_AFTER_LAST;
 
-  for (unsigned methodIndex = 0; methodIndex < inst::BuiltinMethod::_count;
+  for (unsigned methodIndex = 0; methodIndex < BuiltinMethod::_count;
        ++methodIndex) {
     GCScopeMarkerRAII marker{this};
     LLVM_DEBUG(llvm::dbgs() << builtinMethods[methodIndex].name << "\n");
@@ -1430,7 +1429,7 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
 void Runtime::initBuiltinTable() {
   GCScopeMarkerRAII gcScope{this};
 
-  builtins_.resize(inst::BuiltinMethod::_count);
+  builtins_.resize(BuiltinMethod::_count);
 
   (void)forEachBuiltin([this](
                            unsigned methodIndex,
@@ -1497,7 +1496,7 @@ void Runtime::freezeBuiltins() {
                            SymbolID methodID) {
     methodList.push_back(methodID);
     // This is the last method on current object.
-    if (methodIndex + 1 == inst::BuiltinMethod::_count ||
+    if (methodIndex + 1 == BuiltinMethod::_count ||
         objectName != builtinMethods[methodIndex + 1].object) {
       // Store the object id in the object set.
       SymbolID objectID = Predefined::getSymbolID(objectName);

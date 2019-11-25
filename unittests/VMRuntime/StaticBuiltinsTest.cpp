@@ -55,7 +55,7 @@ static void verifyAllBuiltinsFrozen(Runtime *runtime) {
     auto methodID = Predefined::getSymbolID(Predefined::method);      \
     EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(objHandle, methodID); \
   }
-#include "hermes/Inst/Builtins.def"
+#include "hermes/FrontEndDefs/Builtins.def"
 }
 
 class StaticBuiltinsTest : public RuntimeTestFixture {

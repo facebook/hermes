@@ -5,16 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Inst/Builtins.h"
+#include "hermes/FrontEndDefs/Builtins.h"
 
 #include <cassert>
 
 namespace hermes {
-namespace inst {
 
 static const char *builtinName[] = {
 #define BUILTIN_METHOD(object, name) #object "." #name,
-#include "hermes/Inst/Builtins.def"
+#include "hermes/FrontEndDefs/Builtins.def"
 };
 
 const char *getBuiltinMethodName(int method) {
@@ -24,5 +23,4 @@ const char *getBuiltinMethodName(int method) {
   return builtinName[method];
 }
 
-} // namespace inst
 } // namespace hermes

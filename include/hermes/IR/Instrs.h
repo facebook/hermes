@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -746,14 +747,17 @@ class CallBuiltinInst : public CallInst {
     assert(
         getNumArguments() <= MAX_ARGUMENTS &&
         "Too many arguments to CallBuiltin");
+    assert(
+        callee->getValue() == (int)callee->getValue() &&
+        callee->getValue() < BuiltinMethod::_count && "invalid builtin call");
   }
   explicit CallBuiltinInst(
       const CallBuiltinInst *src,
       llvm::ArrayRef<Value *> operands)
       : CallInst(src, operands) {}
 
-  int getBuiltinIndex() const {
-    return cast<LiteralNumber>(getCallee())->asInt32();
+  BuiltinMethod::Enum getBuiltinIndex() const {
+    return (BuiltinMethod::Enum)cast<LiteralNumber>(getCallee())->asInt32();
   }
 
   bool canSetOperandImpl(ValueKind kind, unsigned index) const {

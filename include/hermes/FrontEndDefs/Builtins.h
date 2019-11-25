@@ -9,7 +9,6 @@
 #define HERMES_INST_BUILTINS_H
 
 namespace hermes {
-namespace inst {
 
 namespace BuiltinMethod {
 enum Enum : unsigned char {
@@ -25,7 +24,6 @@ static_assert(BuiltinMethod::_count <= 256, "More than 256 builtin methods");
 /// Return a string representation of the builtin method name.
 const char *getBuiltinMethodName(int method);
 
-} // namespace inst
 } // namespace hermes
 
 #endif // HERMES_BCGEN_HBC_BUILTINS_H

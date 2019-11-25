@@ -8,7 +8,7 @@
 #include "hermes/BCGen/HBC/BytecodeGenerator.h"
 
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
-#include "hermes/Inst/Builtins.h"
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/UTF8.h"
 
