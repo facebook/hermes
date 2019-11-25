@@ -38,6 +38,12 @@ class JSLibFlags {
 
 void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags);
 
+/// Populate the builtin function entries in \b builtins using the corresponding
+/// \c BuiltinMethod::xxx index.
+void createHermesBuiltins(
+    Runtime *runtime,
+    llvm::MutableArrayRef<NativeFunction *> builtins);
+
 std::shared_ptr<RuntimeCommonStorage> createRuntimeCommonStorage(
     bool shouldTrace);
 

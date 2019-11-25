@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O0 %s | %FileCheck --match-full-lines %s
 
 print("START");
 //CHECK: START
@@ -14,23 +14,17 @@ function doit(from) {
     print("from=", from, "rest=", HermesInternal.copyRestArgs(from));
 }
 
-doit(0);
+(function(...rest) { print("from=", 0, "rest=", rest); })(0);
 //CHECK-NEXT: from= 0 rest= 0
 
-doit(100);
-//CHECK-NEXT: from= 100 rest=
+(function(a, b, c, d, ...rest) { print("from=", 5, "rest=", rest); })(0);
+//CHECK-NEXT: from= 5 rest=
 
-doit("aaa");
-//CHECK-NEXT: from= aaa rest= undefined
-
-doit(0, 10, "a", "b");
+(function(...rest) { print("from=", 0, "rest=", rest); })(0, 10, "a", "b");
 //CHECK-NEXT: from= 0 rest= 0,10,a,b
 
-doit(1, 10, "a", "b");
+(function(a, ...rest) { print("from=", 1, "rest=", rest); })(0, 10, "a", "b");
 //CHECK-NEXT: from= 1 rest= 10,a,b
 
-doit(3, 10, "a", "b");
+(function(a, b, c, ...rest) { print("from=", 3, "rest=", rest); })(3, 10, "a", "b");
 //CHECK-NEXT: from= 3 rest= b
-
-doit(-1, 10, "a", "b");
-//CHECK-NEXT: from= -1 rest=

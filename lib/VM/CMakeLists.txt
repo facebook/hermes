@@ -77,6 +77,7 @@ set(source_files
   JSLib/GlobalObject.cpp
   JSLib/IteratorPrototype.cpp
   JSLib/HermesInternal.cpp
+  JSLib/HermesBuiltin.cpp
   JSLib/JSLibInternal.cpp JSLib/JSLibInternal.h
   JSLib/RuntimeCommonStorage.cpp
   JSLib/Map.cpp

@@ -72,7 +72,5 @@ function protoIsDynamic(func, getParent) {
 //CHECK-NEXT:  %6 = StoreNewOwnPropertyInst 10 : number, %2 : object, "b" : string, true : boolean
 //CHECK-NEXT:  %7 = LoadFrameInst [getParent]
 //CHECK-NEXT:  %8 = CallInst %7, undefined : undefined
-//CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-//CHECK-NEXT:  %10 = LoadPropertyInst %9, "silentSetPrototypeOf" : string
-//CHECK-NEXT:  %11 = CallInst %10, undefined : undefined, %2 : object, %8
-//CHECK-NEXT:  %12 = ReturnInst %2 : object
+//CHECK-NEXT:  %9 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, %2 : object, %8
+//CHECK-NEXT:  %10 = ReturnInst %2 : object

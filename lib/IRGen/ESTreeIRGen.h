@@ -751,11 +751,16 @@ class ESTreeIRGen {
   ///     omitted.
   LReference createLRef(ESTree::Node *node, bool declInit);
 
-  /// Generate a call to a method of HermesInterna with the specified name \p
+  /// Generate a call to a method of HermesInternal with the specified name \p
   /// name.
   Value *genHermesInternalCall(
       StringRef name,
       Value *thisValue,
+      ArrayRef<Value *> args);
+
+  /// Generate a builtin call.
+  Value *genBuiltinCall(
+      BuiltinMethod::Enum builtinIndex,
       ArrayRef<Value *> args);
 
   /// Generate code to ensure that \p value is an object and it it isn't, throw

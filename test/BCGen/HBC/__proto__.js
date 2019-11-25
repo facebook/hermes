@@ -38,5 +38,5 @@ function dynamicProto(func, getProto) {
 //CHECK-NEXT:    LoadParam         r1, 2
 //CHECK-NEXT:    Call1             r3, r1, r2
 //CHECK-NEXT:    Mov               r4, r0
-//CHECK-NEXT:    CallBuiltin       r1, "HermesInternal.silentSetPrototypeOf", 3
+//CHECK-NEXT:    CallBuiltin       r1, "HermesBuiltin.silentSetPrototypeOf", 3
 //CHECK-NEXT:    Ret               r0

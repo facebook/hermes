@@ -885,8 +885,7 @@ void ESTreeIRGen::genExportAllDeclaration(
       Builder.getLiteralUndefined(),
       {genExpression(exportDecl->_source)});
   // Copy all the re-exported properties from the source to the exports object.
-  genHermesInternalCall(
-      "exportAll", Builder.getLiteralUndefined(), {exports, source});
+  genBuiltinCall(BuiltinMethod::HermesBuiltin_exportAll, {exports, source});
 }
 
 } // namespace irgen

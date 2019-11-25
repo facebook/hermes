@@ -13,8 +13,12 @@ namespace hermes {
 namespace BuiltinMethod {
 enum Enum : unsigned char {
 #define BUILTIN_METHOD(object, name) object##_##name,
+#define PRIVATE_BUILTIN(name) BUILTIN_METHOD(HermesBuiltin, name)
+#define MARK_FIRST_PRIVATE_BUILTIN(name) _firstPrivate = PRIVATE_BUILTIN(name)
 #include "Builtins.def"
-  _count
+  _count,
+  _publicCount = _firstPrivate,
+  _privateCount = _count - _firstPrivate,
 };
 
 }; // namespace BuiltinMethod

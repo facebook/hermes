@@ -13,6 +13,7 @@ namespace hermes {
 
 static const char *builtinName[] = {
 #define BUILTIN_METHOD(object, name) #object "." #name,
+#define PRIVATE_BUILTIN(name) BUILTIN_METHOD(HermesBuiltin, name)
 #include "hermes/FrontEndDefs/Builtins.def"
 };
 

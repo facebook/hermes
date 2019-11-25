@@ -1381,12 +1381,14 @@ static const struct {
 #define BUILTIN_METHOD(object, method) \
   {(uint16_t)Predefined::object, (uint16_t)Predefined::method},
 #endif
+#define PRIVATE_BUILTIN(name)
 } builtinMethods[] = {
 #include "hermes/FrontEndDefs/Builtins.def"
 };
 
 static_assert(
-    sizeof(builtinMethods) / sizeof(builtinMethods[0]) == BuiltinMethod::_count,
+    sizeof(builtinMethods) / sizeof(builtinMethods[0]) ==
+        BuiltinMethod::_firstPrivate,
     "builtin method table mismatch");
 
 ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
@@ -1397,7 +1399,7 @@ ExecutionStatus Runtime::forEachBuiltin(const std::function<ExecutionStatus(
   MutableHandle<JSObject> lastObject{this};
   Predefined::Str lastObjectName = Predefined::_STRING_AFTER_LAST;
 
-  for (unsigned methodIndex = 0; methodIndex < BuiltinMethod::_count;
+  for (unsigned methodIndex = 0; methodIndex < BuiltinMethod::_firstPrivate;
        ++methodIndex) {
     GCScopeMarkerRAII marker{this};
     LLVM_DEBUG(llvm::dbgs() << builtinMethods[methodIndex].name << "\n");
@@ -1450,6 +1452,15 @@ void Runtime::initBuiltinTable() {
     builtins_[methodIndex] = vmcast<NativeFunction>(cr.getValue());
     return ExecutionStatus::RETURNED;
   });
+
+  // Now add the private builtins.
+  createHermesBuiltins(this, builtins_);
+#ifndef NDEBUG
+  // Make sure they are all defined.
+  for (unsigned i = 0; i < BuiltinMethod::_count; ++i) {
+    assert(builtins_[i] && "builtin not initialized");
+  }
+#endif
 }
 
 ExecutionStatus Runtime::assertBuiltinsUnmodified() {
@@ -1500,7 +1511,7 @@ void Runtime::freezeBuiltins() {
                            SymbolID methodID) {
     methodList.push_back(methodID);
     // This is the last method on current object.
-    if (methodIndex + 1 == BuiltinMethod::_count ||
+    if (methodIndex + 1 == BuiltinMethod::_publicCount ||
         objectName != builtinMethods[methodIndex + 1].object) {
       // Store the object id in the object set.
       SymbolID objectID = Predefined::getSymbolID(objectName);

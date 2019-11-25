@@ -105,35 +105,15 @@ bool ResolveStaticRequireImpl::run() {
   if (!canResolve_)
     return false;
 
-  // Find or add the HermesInternal global property.
-  auto hermesInternalID = builder_.createIdentifier("HermesInternal");
-  GlobalObjectProperty *hermesInternal =
-      M_->findGlobalProperty(hermesInternalID);
-  // If not found, declare it.
-  if (!hermesInternal) {
-    hermesInternal =
-        builder_.createGlobalObjectProperty(hermesInternalID, true);
-  }
-
-  auto requireFastID = builder_.createIdentifier("requireFast");
-
   // Replace all resolved calls with calls to HermesInternal.requireFast().
   for (const auto &RR : resolvedRequireCalls_) {
     builder_.setInsertionPointAfter(RR.call);
 
     builder_.setLocation(RR.call->getLocation());
 
-    /// (Call
-    ///   (LoadProperty (LoadProperty global, "HermesInternal") "requireFast")
-    ///   undefined
-    ///   resolvedTarget)
-    auto *callHI = builder_.createCallInst(
-        builder_.createLoadPropertyInst(
-            builder_.createLoadPropertyInst(
-                builder_.getGlobalObject(), hermesInternalID),
-            requireFastID),
-        builder_.getLiteralUndefined(),
-        RR.resolvedTarget);
+    /// (CallBuiltin "requireFast", resolvedTarget)
+    auto callHI = builder_.createCallBuiltinInst(
+        BuiltinMethod::HermesBuiltin_requireFast, RR.resolvedTarget);
 
     RR.call->replaceAllUsesWith(callHI);
     RR.call->eraseFromParent();

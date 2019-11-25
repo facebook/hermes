@@ -21,7 +21,7 @@ exports.bar = bar;
 //CHKOPT-LABEL:Function<cjs_module>(4 params, 10 registers, 0 symbols):
 //CHKOPT-NEXT:Offset in debug table: {{.*}}
 //CHKOPT-NEXT:    LoadConstUInt8    r2, 1
-//CHKOPT-NEXT:    CallBuiltin       r1, "HermesInternal.requireFast", 2
+//CHKOPT-NEXT:    CallBuiltin       r1, "HermesBuiltin.requireFast", 2
 //CHKOPT-NEXT:    GetByIdShort      r0, r1, 1, "foo"
 //CHKOPT-NEXT:    Call1             r0, r0, r1
 //CHKOPT-NEXT:    CreateEnvironment r0
@@ -34,7 +34,7 @@ exports.bar = bar;
 //CHKOPT-LABEL:Function<bar>(1 params, 10 registers, 0 symbols):
 //CHKOPT-NEXT:Offset in debug table: {{.*}}
 //CHKOPT-NEXT:    LoadConstUInt8    r2, 2
-//CHKOPT-NEXT:    CallBuiltin       r1, "HermesInternal.requireFast", 2
+//CHKOPT-NEXT:    CallBuiltin       r1, "HermesBuiltin.requireFast", 2
 //CHKOPT-NEXT:    GetByIdShort      r0, r1, 1, "baz"
 //CHKOPT-NEXT:    Call1             r0, r0, r1
 //CHKOPT-NEXT:    LoadConstUndefined r0
@@ -56,7 +56,7 @@ exports.bar = bar;
 //CHKDBG-NEXT:     StoreToEnvironment r0, 1, r6
 //CHKDBG-NEXT:     LoadFromEnvironment r7, r0, 3
 //CHKDBG-NEXT:     Mov               r13, r5
-//CHKDBG-NEXT:     CallBuiltin       r7, "HermesInternal.requireFast", 2
+//CHKDBG-NEXT:     CallBuiltin       r7, "HermesBuiltin.requireFast", 2
 //CHKDBG-NEXT:     StoreToEnvironment r0, 0, r7
 //CHKDBG-NEXT:     LoadFromEnvironment r8, r0, 0
 //CHKDBG-NEXT:     GetByIdShort      r9, r8, 1, "foo"
@@ -76,7 +76,7 @@ exports.bar = bar;
 //CHKDBG-NEXT:     GetEnvironment    r3, 0
 //CHKDBG-NEXT:     LoadFromEnvironment r4, r3, 3
 //CHKDBG-NEXT:     Mov               r8, r2
-//CHKDBG-NEXT:     CallBuiltin       r4, "HermesInternal.requireFast", 2
+//CHKDBG-NEXT:     CallBuiltin       r4, "HermesBuiltin.requireFast", 2
 //CHKDBG-NEXT:     StoreToEnvironment r0, 0, r4
 //CHKDBG-NEXT:     LoadFromEnvironment r5, r0, 0
 //CHKDBG-NEXT:     GetByIdShort      r6, r5, 1, "baz"

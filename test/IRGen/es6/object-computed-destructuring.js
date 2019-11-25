@@ -24,38 +24,31 @@ var {['a']: b, ...rest} = x;
 // CHECK-NEXT:   %7 = StorePropertyInst %6, globalObject : object, "b" : string
 // CHECK-NEXT:   %8 = HBCAllocObjectFromBufferInst 1 : number, "a" : string, 0 : number
 // CHECK-NEXT:   %9 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:   %10 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-// CHECK-NEXT:   %11 = LoadPropertyInst %10, "copyDataProperties" : string
-// CHECK-NEXT:   %12 = CallInst %11, undefined : undefined, %9 : object, %5, %8 : object
-// CHECK-NEXT:   %13 = StorePropertyInst %12, globalObject : object, "rest" : string
+// CHECK-NEXT:   %10 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %9 : object, %5, %8 : object
+// CHECK-NEXT:   %11 = StorePropertyInst %10, globalObject : object, "rest" : string
 
 var {[foo()]: b, c: d, ...rest} = x;
-// CHECK-NEXT:   %14 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
-// CHECK-NEXT:   %15 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:   %16 = CallInst %15, undefined : undefined
-// CHECK-NEXT:   %17 = LoadPropertyInst %14, %16
-// CHECK-NEXT:   %18 = StorePropertyInst %17, globalObject : object, "b" : string
-// CHECK-NEXT:   %19 = LoadPropertyInst %14, "c" : string
-// CHECK-NEXT:   %20 = StorePropertyInst %19, globalObject : object, "d" : string
-// CHECK-NEXT:   %21 = HBCAllocObjectFromBufferInst 2 : number, "c" : string, 0 : number
-// CHECK-NEXT:   %22 = StorePropertyInst 0 : number, %21 : object, %16
-// CHECK-NEXT:   %23 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:   %24 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-// CHECK-NEXT:   %25 = LoadPropertyInst %24, "copyDataProperties" : string
-// CHECK-NEXT:   %26 = CallInst %25, undefined : undefined, %23 : object, %14, %21 : object
-// CHECK-NEXT:   %27 = StorePropertyInst %26, globalObject : object, "rest" : string
+// CHECK-NEXT:   %12 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
+// CHECK-NEXT:   %13 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
+// CHECK-NEXT:   %14 = CallInst %13, undefined : undefined
+// CHECK-NEXT:   %15 = LoadPropertyInst %12, %14
+// CHECK-NEXT:   %16 = StorePropertyInst %15, globalObject : object, "b" : string
+// CHECK-NEXT:   %17 = LoadPropertyInst %12, "c" : string
+// CHECK-NEXT:   %18 = StorePropertyInst %17, globalObject : object, "d" : string
+// CHECK-NEXT:   %19 = HBCAllocObjectFromBufferInst 2 : number, "c" : string, 0 : number
+// CHECK-NEXT:   %20 = StorePropertyInst 0 : number, %19 : object, %14
+// CHECK-NEXT:   %21 = AllocObjectInst 0 : number, empty
+// CHECK-NEXT:   %22 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %21 : object, %12, %19 : object
+// CHECK-NEXT:   %23 = StorePropertyInst %22, globalObject : object, "rest" : string
 
 var {} = x;
-// CHECK-NEXT:   %28 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
-// CHECK-NEXT:   %29 = BinaryOperatorInst '==', %28, null : null
-// CHECK-NEXT:   %30 = CondBranchInst %29, %BB1, %BB2
+// CHECK-NEXT:   %24 = TryLoadGlobalPropertyInst globalObject : object, "x" : string
+// CHECK-NEXT:   %25 = BinaryOperatorInst '==', %24, null : null
+// CHECK-NEXT:   %26 = CondBranchInst %25, %BB1, %BB2
 // CHECK-NEXT: %BB1:
-// CHECK-NEXT:   %31 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-// CHECK-NEXT:   %32 = LoadPropertyInst %31, "throwTypeError" : string
-// CHECK-NEXT:   %33 = CallInst %32, undefined : undefined, %28, "Cannot destructure 'undefined' or 'null'." : string
-// CHECK-NEXT:   %34 = ReturnInst undefined : undefined
-
+// CHECK-NEXT:   %27 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, %24, "Cannot destructure 'undefined' or 'null'." : string
+// CHECK-NEXT:   %28 = ReturnInst undefined : undefined
 // CHECK-NEXT: %BB2:
-// CHECK-NEXT:   %35 = LoadStackInst %0
-// CHECK-NEXT:   %36 = ReturnInst %35
+// CHECK-NEXT:   %29 = LoadStackInst %0
+// CHECK-NEXT:   %30 = ReturnInst %29
 // CHECK-NEXT: function_end

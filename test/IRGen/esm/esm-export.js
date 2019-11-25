@@ -53,10 +53,8 @@ export { a, longVariableName as b }
 
 export * from 'foo.js';
 // CHECK-NEXT:   %27 = CallInst %require, undefined : undefined, "foo.js" : string
-// CHECK-NEXT:   %28 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-// CHECK-NEXT:   %29 = LoadPropertyInst %28, "exportAll" : string
-// CHECK-NEXT:   %30 = CallInst %29, undefined : undefined, %exports, %27
-// CHECK-NEXT:   %31 = ReturnInst undefined : undefined
+// CHECK-NEXT:   %28 = CallBuiltinInst [HermesBuiltin.exportAll] : number, undefined : undefined, %exports, %27
+// CHECK-NEXT:   %29 = ReturnInst undefined : undefined
 // CHECK-NEXT: function_end
 
 // CHECK-LABEL: function myFun()

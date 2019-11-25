@@ -594,11 +594,16 @@ Value *ESTreeIRGen::genHermesInternalCall(
       args);
 }
 
+Value *ESTreeIRGen::genBuiltinCall(
+    hermes::BuiltinMethod::Enum builtinIndex,
+    ArrayRef<Value *> args) {
+  return Builder.createCallBuiltinInst(builtinIndex, args);
+}
+
 void ESTreeIRGen::emitEnsureObject(Value *value, StringRef message) {
-  // TODO: use "thisArg" when builts get fixed to support it.
-  genHermesInternalCall(
-      "ensureObject",
-      Builder.getLiteralUndefined(),
+  // TODO: use "thisArg" when builtins get fixed to support it.
+  genBuiltinCall(
+      BuiltinMethod::HermesBuiltin_ensureObject,
       {value, Builder.getLiteralString(message)});
 }
 
@@ -1000,9 +1005,8 @@ void ESTreeIRGen::emitDestructuringObject(
         doneBB);
 
     Builder.setInsertionBlock(throwBB);
-    genHermesInternalCall(
-        "throwTypeError",
-        Builder.getLiteralUndefined(),
+    genBuiltinCall(
+        BuiltinMethod::HermesBuiltin_throwTypeError,
         {source,
          Builder.getLiteralString(
              "Cannot destructure 'undefined' or 'null'.")});
@@ -1088,9 +1092,8 @@ void ESTreeIRGen::emitRestProperty(
     }
   }
 
-  auto *restValue = genHermesInternalCall(
-      "copyDataProperties",
-      Builder.getLiteralUndefined(),
+  auto *restValue = genBuiltinCall(
+      BuiltinMethod::HermesBuiltin_copyDataProperties,
       {Builder.createAllocObjectInst(0), source, excludedObj});
 
   lref.emitStore(restValue);

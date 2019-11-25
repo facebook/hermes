@@ -5,14 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -fstatic-builtins -Xvm-experiment-flags=1 -target=HBC %s | %FileCheck --match-full-lines %s
-
-try {
-  HermesInternal.getEpilogues = 1;
-} catch (e) {
-  print(e.toString());
-}
-// CHECK: TypeError: Attempting to override read-only builtin method 'getEpilogues'
+// RUN: %hermes -O -fstatic-builtins %s | %FileCheck --match-full-lines %s
 
 try {
   Math.sin = 2;

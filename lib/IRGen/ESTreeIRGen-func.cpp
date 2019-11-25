@@ -395,9 +395,8 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
 
     if (auto *rest = dyn_cast<ESTree::RestElementNode>(param)) {
       createLRef(rest->_argument, true)
-          .emitStore(genHermesInternalCall(
-              "copyRestArgs",
-              Builder.getLiteralUndefined(),
+          .emitStore(genBuiltinCall(
+              BuiltinMethod::HermesBuiltin_copyRestArgs,
               Builder.getLiteralNumber(paramIndex)));
       break;
     }

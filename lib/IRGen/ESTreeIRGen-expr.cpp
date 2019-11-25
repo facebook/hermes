@@ -270,9 +270,8 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
       // Spread the SpreadElement argument into the array.
       // HermesInternal.arraySpread returns the new value of nextIndex,
       // so update nextIndex accordingly and finish this iteration of the loop.
-      auto *newNextIndex = genHermesInternalCall(
-          "arraySpread",
-          Builder.getLiteralUndefined(),
+      auto *newNextIndex = genBuiltinCall(
+          BuiltinMethod::HermesBuiltin_arraySpread,
           {allocArrayInst, value, Builder.createLoadStackInst(nextIndex)});
       Builder.createStoreStackInst(newNextIndex, nextIndex);
       continue;
@@ -375,8 +374,8 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
   // Generate IR for this by creating an array and populating it with the
   // arguments, then calling HermesInternal.apply.
   auto *args = genArrayFromElements(call->_arguments);
-  return genHermesInternalCall(
-      "apply", Builder.getLiteralUndefined(), {callee, args, thisVal});
+  return genBuiltinCall(
+      BuiltinMethod::HermesBuiltin_apply, {callee, args, thisVal});
 }
 
 Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
@@ -566,9 +565,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   // has no side effects.
   for (auto &P : Expr->_properties) {
     if (auto *spread = dyn_cast<ESTree::SpreadElementNode>(&P)) {
-      genHermesInternalCall(
-          "copyDataProperties",
-          Builder.getLiteralUndefined(),
+      genBuiltinCall(
+          BuiltinMethod::HermesBuiltin_copyDataProperties,
           {Obj, genExpression(spread->_argument)});
       haveSeenComputedProp = true;
       continue;
@@ -673,9 +671,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             IRBuilder::SaveRestore saveState{Builder};
             Builder.setLocation(prop->_key->getDebugLoc());
 
-            genHermesInternalCall(
-                "silentSetPrototypeOf",
-                Builder.getLiteralUndefined(),
+            genBuiltinCall(
+                BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
                 {Obj, parent});
           }
         } else {
@@ -901,8 +898,8 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
 
                 // x. Else, set received to GeneratorYield(innerReturnResult).
                 Builder.setInsertionBlock(isNotDoneBB);
-                genHermesInternalCall(
-                    "generatorSetDelegated", Builder.getLiteralUndefined(), {});
+                genBuiltinCall(
+                    BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
                 Builder.createSaveAndYieldInst(innerReturnResult, resumeBB);
 
                 // If return is undefined, return Completion(received).
@@ -911,8 +908,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
             }};
 
         // The primary call path for yielding the next result.
-        genHermesInternalCall(
-            "generatorSetDelegated", Builder.getLiteralUndefined(), {});
+        genBuiltinCall(BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
         Builder.createSaveAndYieldInst(nextResult, resumeBB);
 
         // Note that resumeBB was created above to allow all SaveAndYield insts
@@ -976,8 +972,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
 
         // ii. 8. Else, set received to GeneratorYield(innerResult).
         Builder.setInsertionBlock(isNotDoneBB);
-        genHermesInternalCall(
-            "generatorSetDelegated", Builder.getLiteralUndefined(), {});
+        genBuiltinCall(BuiltinMethod::HermesBuiltin_generatorSetDelegated, {});
         Builder.createSaveAndYieldInst(innerResult, resumeBB);
 
         // NOTE: If iterator does not have a throw method, this throw is
@@ -985,9 +980,8 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         // iterator a chance to clean up.
         Builder.setInsertionBlock(noThrowMethodBB);
         emitIteratorClose(iteratorRecord, false);
-        genHermesInternalCall(
-            "throwTypeError",
-            Builder.getLiteralUndefined(),
+        genBuiltinCall(
+            BuiltinMethod::HermesBuiltin_throwTypeError,
             {Builder.getLiteralString(
                 "yield* delegate must have a .throw() method")});
         // HermesInternal.throwTypeError will necessarily throw, but we need to
@@ -1292,8 +1286,7 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
   // arguments, then calling HermesInternal.apply.
   auto *args = genArrayFromElements(N->_arguments);
 
-  return genHermesInternalCall(
-      "apply", Builder.getLiteralUndefined(), {callee, args});
+  return genBuiltinCall(BuiltinMethod::HermesBuiltin_apply, {callee, args});
 }
 
 Value *ESTreeIRGen::genLogicalExpression(
@@ -1469,8 +1462,8 @@ Value *ESTreeIRGen::genTaggedTemplateExpr(
 
   // Generate a function call to HermesInternal.getTemplateObject() with these
   // arguments.
-  auto *templateObj = genHermesInternalCall(
-      "getTemplateObject", Builder.getLiteralUndefined() /* this */, argList);
+  auto *templateObj =
+      genBuiltinCall(BuiltinMethod::HermesBuiltin_getTemplateObject, argList);
 
   // Step 2: call the tag function, passing the template object followed by a
   // list of substitutions as arguments.

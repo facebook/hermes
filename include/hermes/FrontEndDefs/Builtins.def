@@ -22,6 +22,12 @@
 #ifndef BUILTIN_METHOD
 #define BUILTIN_METHOD(object, name)
 #endif
+#ifndef PRIVATE_BUILTIN
+#define PRIVATE_BUILTIN(name)
+#endif
+#ifndef MARK_FIRST_PRIVATE_BUILTIN
+#define MARK_FIRST_PRIVATE_BUILTIN(name)
+#endif
 
 BUILTIN_OBJECT(Array)
 // BUILTIN_METHOD(Array, from)
@@ -35,20 +41,8 @@ BUILTIN_METHOD(Date, UTC)
 BUILTIN_METHOD(Date, now)
 BUILTIN_METHOD(Date, parse)
 
-BUILTIN_OBJECT(HermesInternal)
-BUILTIN_METHOD(HermesInternal, getEpilogues)
-BUILTIN_METHOD(HermesInternal, silentSetPrototypeOf)
-BUILTIN_METHOD(HermesInternal, requireFast)
-BUILTIN_METHOD(HermesInternal, getTemplateObject)
-BUILTIN_METHOD(HermesInternal, ensureObject)
-BUILTIN_METHOD(HermesInternal, throwTypeError)
-BUILTIN_METHOD(HermesInternal, generatorSetDelegated)
-BUILTIN_METHOD(HermesInternal, copyDataProperties)
-BUILTIN_METHOD(HermesInternal, copyRestArgs)
-BUILTIN_METHOD(HermesInternal, arraySpread)
-BUILTIN_METHOD(HermesInternal, apply)
-BUILTIN_METHOD(HermesInternal, exportAll)
-BUILTIN_METHOD(HermesInternal, exponentiationOperator)
+// BUILTIN_OBJECT(HermesInternal)
+// BUILTIN_METHOD(HermesInternal, getEpilogues)
 
 BUILTIN_OBJECT(JSON)
 BUILTIN_METHOD(JSON, parse)
@@ -100,5 +94,21 @@ BUILTIN_METHOD(Object, seal)
 BUILTIN_OBJECT(String)
 BUILTIN_METHOD(String, fromCharCode)
 
+PRIVATE_BUILTIN(silentSetPrototypeOf)
+MARK_FIRST_PRIVATE_BUILTIN(silentSetPrototypeOf)
+PRIVATE_BUILTIN(requireFast)
+PRIVATE_BUILTIN(getTemplateObject)
+PRIVATE_BUILTIN(ensureObject)
+PRIVATE_BUILTIN(throwTypeError)
+PRIVATE_BUILTIN(generatorSetDelegated)
+PRIVATE_BUILTIN(copyDataProperties)
+PRIVATE_BUILTIN(copyRestArgs)
+PRIVATE_BUILTIN(arraySpread)
+PRIVATE_BUILTIN(apply)
+PRIVATE_BUILTIN(exportAll)
+PRIVATE_BUILTIN(exponentiationOperator)
+
 #undef BUILTIN_OBJECT
 #undef BUILTIN_METHOD
+#undef PRIVATE_BUILTIN
+#undef MARK_FIRST_PRIVATE_BUILTIN

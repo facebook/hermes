@@ -712,11 +712,8 @@ bool LowerExponentiationOperator::lowerExponentiationOperator(
       "lowerExponentiationOperator must take a ** operator");
   // Replace a ** b with HermesInternal.exponentiationOperator(a, b)
   builder.setInsertionPoint(binOp);
-  auto *result = builder.createCallInst(
-      builder.createLoadPropertyInst(
-          builder.createTryLoadGlobalPropertyInst("HermesInternal"),
-          "exponentiationOperator"),
-      builder.getLiteralUndefined(),
+  auto *result = builder.createCallBuiltinInst(
+      BuiltinMethod::HermesBuiltin_exponentiationOperator,
       {binOp->getLeftHandSide(), binOp->getRightHandSide()});
   binOp->replaceAllUsesWith(result);
   binOp->eraseFromParent();
