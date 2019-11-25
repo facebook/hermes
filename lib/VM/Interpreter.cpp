@@ -1640,7 +1640,8 @@ tailCall:
             (uint32_t)ip->iCallBuiltin.op3 - 1,
             nf,
             false);
-        (void)newFrame;
+        // "thisArg" is implicitly assumed to "undefined".
+        newFrame.getThisArgRef() = HermesValue::encodeUndefinedValue();
 
         SLOW_DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));
 

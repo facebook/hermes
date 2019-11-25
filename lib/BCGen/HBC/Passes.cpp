@@ -585,17 +585,14 @@ bool LowerCalls::runOnFunction(Function *F) {
           HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
 
       for (int i = 0, e = call->getNumArguments(); i < e; i++, --reg) {
-        // If this is a CallBuiltin, we don't want to load the "this" register.
-        // explicitly. It is always undefined.
-        if (i == 0 && isa<CallBuiltinInst>(call))
-          continue;
-
         // If this is a Call instruction, emit explicit Movs to the argument
         // registers. If this is a CallN instruction, emit ImplicitMovs
         // instead, to express that these registers get written to by the CallN,
         // even though they are not the destination.
+        // Lastly, if this is argument 0 of CallBuiltinInst, emit ImplicitMov
+        // to encode that the "this" register is implicitly set to undefined.
         Value *arg = call->getArgument(i);
-        if (isa<HBCCallNInst>(call)) {
+        if (isa<HBCCallNInst>(call) || (i == 0 && isa<CallBuiltinInst>(call))) {
           auto *imov = builder.createImplicitMovInst(arg);
           RA_.updateRegister(imov, Register(reg));
         } else {
