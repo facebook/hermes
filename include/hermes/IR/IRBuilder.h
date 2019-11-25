@@ -480,7 +480,7 @@ class IRBuilder {
       HBCConstructInst *constructorReturnValue);
   HBCProfilePointInst *createHBCProfilePointInst(uint16_t pointIndex);
 
-  HBCCallBuiltinInst *createHBCCallBuiltinInst(
+  CallBuiltinInst *createCallBuiltinInst(
       int builtinIndex,
       ArrayRef<Value *> arguments);
   HBCCallDirectInst *createHBCCallDirectInst(

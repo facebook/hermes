@@ -351,6 +351,16 @@ Arguments | %constructor is the constructor function to execute. #undefined is n
 Semantics | The instruction performs the steps defined in ES5.1 sec-11.2.2 and sec-13.2.2. It allocates the object and calls the constructor function with the new object and the supplied arguments.
 Effects | May read and write memory.
 
+### CallBuiltinInst
+
+CallBuiltinInst | _
+--- | --- |
+Description | Calls a builtin function passing "undefined" for this  
+Example | %0 = CallBuiltinInst %builtinNumber, %undefined, %arg0, %arg1, %arg2, ...
+Arguments | %builtinNumber is the builtin to execute. Arguments %arg0 ... %argN are the arguments passed to the function.
+Semantics | The instruction passes the control to the builtin in a VM-specific way. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
+Effects | May read and write memory.
+
 ### LoadPropertyInst
 
 LoadPropertyInst | _
@@ -705,17 +715,6 @@ Example |  %0 = HBCAllocObjectFromBufferInst %value0, %value1, ...
 Arguments | The values are all literal values, with alternating keys and values. Non-literal values will be inserted into the array separately.
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
 Effects | Does not read or write to memory.
-
-### HBCCallBuiltinInst
-
-HBCCallBuiltinInst | _
---- | --- |
-Description | Calls a builtin function passing "undefined" for this  
-Example | %0 = HBCCallBuiltinInst %builtinNumber, %undefined, %arg0, %arg1, %arg2, ...
-Arguments | %builtinNumber is the builtin to execute. Arguments %arg0 ... %argN are the arguments passed to the function.
-Semantics | The instruction passes the control to the builtin in a VM-specific way. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
-Effects | May read and write memory.
-
 
 ### HBCCallNInst
 

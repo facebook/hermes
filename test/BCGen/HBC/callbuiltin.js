@@ -17,7 +17,7 @@ function foo(x) {
 //CHKRA-NEXT:frame = []
 //CHKRA-NEXT:%BB0:
 //CHKRA-NEXT:{{.*}} %0 = HBCLoadParamInst 1 : number
-//CHKRA-NEXT:{{.*}} %1 = HBCCallBuiltinInst [Object.keys] : number, undefined : undefined, %0
+//CHKRA-NEXT:{{.*}} %1 = CallBuiltinInst [Object.keys] : number, undefined : undefined, %0
 //CHKRA-NEXT:{{.*}} %2 = ReturnInst %1
 //CHKRA-NEXT:function_end
 

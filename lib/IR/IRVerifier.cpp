@@ -440,10 +440,10 @@ void Verifier::visitHBCCallNInst(const HBCCallNInst &Inst) {
       "CallNInst has too many args");
 }
 
-void Verifier::visitHBCCallBuiltinInst(HBCCallBuiltinInst const &Inst) {
+void Verifier::visitCallBuiltinInst(CallBuiltinInst const &Inst) {
   Assert(
-      Inst.getNumArguments() <= HBCCallBuiltinInst::MAX_ARGUMENTS,
-      "HBCCallBuiltin too many arguments");
+      Inst.getNumArguments() <= CallBuiltinInst::MAX_ARGUMENTS,
+      "CallBuiltin too many arguments");
   visitCallInst(Inst);
 }
 void Verifier::visitHBCCallDirectInst(HBCCallDirectInst const &Inst) {
@@ -451,8 +451,8 @@ void Verifier::visitHBCCallDirectInst(HBCCallDirectInst const &Inst) {
       isa<Function>(Inst.getCallee()),
       "HBCCallDirect callee must be a Function");
   Assert(
-      Inst.getNumArguments() <= HBCCallBuiltinInst::MAX_ARGUMENTS,
-      "HBCCallBuiltin too many arguments");
+      Inst.getNumArguments() <= CallBuiltinInst::MAX_ARGUMENTS,
+      "CallBuiltin too many arguments");
   visitCallInst(Inst);
 }
 

@@ -136,7 +136,7 @@ static bool run(Function *F) {
       if (!builtinIndex)
         continue;
       // Too many arguments?
-      if (callInst->getNumArguments() > HBCCallBuiltinInst::MAX_ARGUMENTS)
+      if (callInst->getNumArguments() > CallBuiltinInst::MAX_ARGUMENTS)
         continue;
 
       LLVM_DEBUG(
@@ -160,7 +160,7 @@ static bool run(Function *F) {
       for (unsigned i = 0; i < numArgsExcludingThis; ++i)
         args.push_back(callInst->getArgument(i + 1));
 
-      auto *callBuiltin = builder.createHBCCallBuiltinInst(*builtinIndex, args);
+      auto *callBuiltin = builder.createCallBuiltinInst(*builtinIndex, args);
       callInst->replaceAllUsesWith(callBuiltin);
       callInst->eraseFromParent();
 

@@ -183,9 +183,9 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
 
   /// CallBuiltin's callee and "this" should always be literals.
-  if (isa<HBCCallBuiltinInst>(Inst) &&
-      (opIndex == HBCCallBuiltinInst::CalleeIdx ||
-       opIndex == HBCCallBuiltinInst::ThisIdx))
+  if (isa<CallBuiltinInst>(Inst) &&
+      (opIndex == CallBuiltinInst::CalleeIdx ||
+       opIndex == CallBuiltinInst::ThisIdx))
     return true;
 
   return false;
@@ -587,7 +587,7 @@ bool LowerCalls::runOnFunction(Function *F) {
       for (int i = 0, e = call->getNumArguments(); i < e; i++, --reg) {
         // If this is a CallBuiltin, we don't want to load the "this" register.
         // explicitly. It is always undefined.
-        if (i == 0 && isa<HBCCallBuiltinInst>(call))
+        if (i == 0 && isa<CallBuiltinInst>(call))
           continue;
 
         // If this is a Call instruction, emit explicit Movs to the argument
@@ -755,8 +755,8 @@ bool SpillRegisters::requiresShortOperand(Instruction *I, int op) {
       return false;
     case ValueKind::CallInstKind:
     case ValueKind::ConstructInstKind:
+    case ValueKind::CallBuiltinInstKind:
     case ValueKind::HBCConstructInstKind:
-    case ValueKind::HBCCallBuiltinInstKind:
     case ValueKind::HBCCallDirectInstKind:
       return op == 0;
     default:

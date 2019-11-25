@@ -103,10 +103,10 @@ void IRPrinter::printTypeLabel(Type T) {
 
 void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   auto &ctx = I->getContext();
-  if (isa<HBCCallBuiltinInst>(I) && opIndex == 0) {
+  if (isa<CallBuiltinInst>(I) && opIndex == 0) {
     os << "["
        << inst::getBuiltinMethodName(
-              cast<HBCCallBuiltinInst>(I)->getBuiltinIndex())
+              cast<CallBuiltinInst>(I)->getBuiltinIndex())
        << "]";
   } else if (auto LS = dyn_cast<LiteralString>(V)) {
     os << escapeStr(ctx.toString(LS->getValue()));

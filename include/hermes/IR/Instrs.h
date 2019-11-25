@@ -729,6 +729,49 @@ class ConstructInst : public CallInst {
   }
 };
 
+/// Call a VM builtin with the specified number and undefined as the "this"
+/// parameter.
+class CallBuiltinInst : public CallInst {
+  CallBuiltinInst(const CallBuiltinInst &) = delete;
+  void operator=(const CallBuiltinInst &) = delete;
+
+ public:
+  static constexpr unsigned MAX_ARGUMENTS = UINT8_MAX;
+
+  explicit CallBuiltinInst(
+      LiteralNumber *callee,
+      LiteralUndefined *thisValue,
+      ArrayRef<Value *> args)
+      : CallInst(ValueKind::CallBuiltinInstKind, callee, thisValue, args) {
+    assert(
+        getNumArguments() <= MAX_ARGUMENTS &&
+        "Too many arguments to CallBuiltin");
+  }
+  explicit CallBuiltinInst(
+      const CallBuiltinInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : CallInst(src, operands) {}
+
+  int getBuiltinIndex() const {
+    return cast<LiteralNumber>(getCallee())->asInt32();
+  }
+
+  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
+    switch (index) {
+      case CallInst::CalleeIdx:
+        return kindIsA(kind, ValueKind::LiteralNumberKind);
+      case CallInst::ThisIdx:
+        return kindIsA(kind, ValueKind::LiteralUndefinedKind);
+      default:
+        return index < CallInst::ThisIdx + MAX_ARGUMENTS;
+    }
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::CallBuiltinInstKind);
+  }
+};
+
 class HBCCallNInst : public CallInst {
  public:
   /// The minimum number of args supported by a CallN instruction, including
@@ -3150,49 +3193,6 @@ class HBCGetConstructedObjectInst : public Instruction {
 
   static bool classof(const Value *V) {
     return kindIsA(V->getKind(), ValueKind::HBCGetConstructedObjectInstKind);
-  }
-};
-
-/// Call a VM builtin with the specified number and undefined as the "this"
-/// parameter.
-class HBCCallBuiltinInst : public CallInst {
-  HBCCallBuiltinInst(const HBCCallBuiltinInst &) = delete;
-  void operator=(const HBCCallBuiltinInst &) = delete;
-
- public:
-  static constexpr unsigned MAX_ARGUMENTS = UINT8_MAX;
-
-  explicit HBCCallBuiltinInst(
-      LiteralNumber *callee,
-      LiteralUndefined *thisValue,
-      ArrayRef<Value *> args)
-      : CallInst(ValueKind::HBCCallBuiltinInstKind, callee, thisValue, args) {
-    assert(
-        getNumArguments() <= MAX_ARGUMENTS &&
-        "Too many arguments to HBCCallBuiltin");
-  }
-  explicit HBCCallBuiltinInst(
-      const HBCCallBuiltinInst *src,
-      llvm::ArrayRef<Value *> operands)
-      : CallInst(src, operands) {}
-
-  int getBuiltinIndex() const {
-    return cast<LiteralNumber>(getCallee())->asInt32();
-  }
-
-  bool canSetOperandImpl(ValueKind kind, unsigned index) const {
-    switch (index) {
-      case CallInst::CalleeIdx:
-        return kindIsA(kind, ValueKind::LiteralNumberKind);
-      case CallInst::ThisIdx:
-        return kindIsA(kind, ValueKind::LiteralUndefinedKind);
-      default:
-        return index < CallInst::ThisIdx + MAX_ARGUMENTS;
-    }
-  }
-
-  static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::HBCCallBuiltinInstKind);
   }
 };
 

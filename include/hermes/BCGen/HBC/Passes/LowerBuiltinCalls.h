@@ -14,7 +14,7 @@ namespace hermes {
 namespace hbc {
 
 /// Detect calls to builtin methods like `Object.keys()` and replace them with
-/// HBCCallBuiltinInst.
+/// CallBuiltinInst.
 class LowerBuiltinCalls : public FunctionPass {
  public:
   explicit LowerBuiltinCalls() : FunctionPass("LowerBuiltinCalls") {}

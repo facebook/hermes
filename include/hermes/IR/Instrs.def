@@ -109,9 +109,9 @@ MARK_LAST(TerminatorInst)
 MARK_FIRST(CallInst)
 DEF_VALUE(CallInst, Instruction)
 DEF_VALUE(ConstructInst, CallInst)
+DEF_VALUE(CallBuiltinInst, CallInst)
 #ifdef INCLUDE_HBC_BACKEND
 DEF_VALUE(HBCConstructInst, CallInst)
-DEF_VALUE(HBCCallBuiltinInst, CallInst)
 DEF_VALUE(HBCCallDirectInst, CallInst)
 DEF_VALUE(HBCCallNInst, CallInst)
 #endif

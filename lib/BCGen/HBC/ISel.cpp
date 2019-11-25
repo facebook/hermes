@@ -356,7 +356,7 @@ void HBCISel::verifyCall(CallInst *Inst) {
   const auto lastArgReg = RA_.getLastRegister().getIndex() -
       HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
 
-  const bool isBuiltin = isa<HBCCallBuiltinInst>(Inst);
+  const bool isBuiltin = isa<CallBuiltinInst>(Inst);
   const bool isCallN = isa<HBCCallNInst>(Inst);
 
   for (unsigned i = 0, max = Inst->getNumArguments(); i < max; i++) {
@@ -1178,9 +1178,7 @@ void HBCISel::generateConstructInst(ConstructInst *Inst, BasicBlock *next) {
   llvm_unreachable("ConstructInst should have been lowered");
 }
 
-void HBCISel::generateHBCCallBuiltinInst(
-    HBCCallBuiltinInst *Inst,
-    BasicBlock *next) {
+void HBCISel::generateCallBuiltinInst(CallBuiltinInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   verifyCall(Inst);
 
