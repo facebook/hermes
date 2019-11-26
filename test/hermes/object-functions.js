@@ -422,6 +422,28 @@ function testObjectAssignPrimitives() {
 testObjectAssignPrimitives()
 //CHECK-NEXT: {"0":"g","1":"r","2":"e","3":"n","4":"d","5":"e","6":"l"}
 
+function testObjectSymbolKeys() {
+  var obj = Object.assign({}, {[Symbol.for('akey')]:'avalue'});
+  // Define a props object with a single non-enumerable property whose
+  // key is a symbol and value is not a valid properties object.
+  var props = Object.create({}, {
+    [Symbol.for('bkey')]: {
+      value: "bvalue",
+      writable: false,
+      enumerable: false,
+      configurable: true,
+    },
+  });
+  // Should include non-enumerable symbol key
+  print (Object.getOwnPropertySymbols(props).length)
+  // Now, assign those properties to obj.  This should be a noop, as there
+  // are no enumerable properties in props.
+  Object.defineProperties(obj, props);
+  print (Object.getOwnPropertySymbols(obj).length);
+}
+testObjectSymbolKeys()
+//CHECK-NEXT: 1
+//CHECK-NEXT: 1
 
 function testObjectAssignExceptions() {
     var obj = Object.defineProperty({}, 'whytho', {

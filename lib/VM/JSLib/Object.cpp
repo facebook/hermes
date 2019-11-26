@@ -488,7 +488,10 @@ objectDefinePropertiesInternal(Runtime *runtime, Handle<> obj, Handle<> props) {
   auto propsHandle = runtime->makeHandle<JSObject>(objRes.getValue());
 
   // Get the list of identifiers in props.
-  auto cr = JSObject::getOwnPropertyNames(propsHandle, runtime, true);
+  auto cr = JSObject::getOwnPropertyKeys(
+      propsHandle,
+      runtime,
+      OwnKeysFlags().plusIncludeSymbols().plusIncludeNonSymbols());
   if (cr == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -826,7 +829,10 @@ objectAssign(void *, Runtime *runtime, NativeArgs args) {
     fromHandle = vmcast<JSObject>(objRes.getValue());
 
     // 5.b.ii. Let keys be from.[[OwnPropertyKeys]]().
-    auto cr = JSObject::getOwnPropertyNames(fromHandle, runtime, true);
+    auto cr = JSObject::getOwnPropertyKeys(
+        fromHandle,
+        runtime,
+        OwnKeysFlags().plusIncludeSymbols().plusIncludeNonSymbols());
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
       // 5.c.ii. ReturnIfAbrupt(keys).
       return ExecutionStatus::EXCEPTION;
