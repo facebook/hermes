@@ -658,6 +658,18 @@ class JSObject : public GCCell {
       Handle<JSObject> propObj,
       ComputedPropertyDescriptor desc);
 
+  /// This adds some functionality to the other overload.  If propObj
+  /// is empty, then this returns an empty HermesValue.  If propObj is
+  /// a normal object, this behaves just like the other overload.
+  /// (TODO: Document how this is to be used when it's fully baked,
+  /// which it isn't yet.)
+  static CallResult<HermesValue> getComputedPropertyValue_RJS(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      Handle<JSObject> propObj,
+      ComputedPropertyDescriptor desc,
+      Handle<> nameValHandle);
+
   /// ES5.1 8.12.1.
   /// Extract a descriptor \p desc of an own named property \p name.
   static bool getOwnNamedDescriptor(

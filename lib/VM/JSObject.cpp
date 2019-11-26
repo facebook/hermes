@@ -394,6 +394,20 @@ CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
       runtime->makeHandle(accessor->getter), runtime, selfHandle);
 }
 
+CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    Handle<JSObject> propObj,
+    ComputedPropertyDescriptor desc,
+    Handle<> nameValHandle) {
+  if (!propObj) {
+    return HermesValue::encodeEmptyValue();
+  }
+
+  return JSObject::getComputedPropertyValue_RJS(
+      selfHandle, runtime, propObj, desc);
+}
+
 CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
@@ -1167,6 +1181,22 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
 
   // If the property exists
   if (propObj) {
+    // Get the simple case out of the way: If the property already
+    // exists on selfHandle, is not an accessor, selfHandle and
+    // receiver are the same, selfHandle is not a host
+    // object/proxy/internal setter, and the property is writable,
+    // just write into the same slot.
+
+    if (LLVM_LIKELY(
+            *selfHandle == propObj &&
+            selfHandle.getHermesValue().getRaw() == receiver->getRaw() &&
+            !desc.flags.accessor && !desc.flags.internalSetter &&
+            !desc.flags.hostObject && desc.flags.writable)) {
+      setNamedSlotValue(
+          *selfHandle, runtime, desc, valueHandle.getHermesValue());
+      return true;
+    }
+
     if (LLVM_UNLIKELY(desc.flags.accessor)) {
       auto *accessor =
           vmcast<PropertyAccessor>(getNamedSlotValue(propObj, runtime, desc));
@@ -1189,21 +1219,6 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
               *valueHandle) == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      return true;
-    }
-
-    // Get the simple case out of the way: If the property already
-    // exists on selfHandle, selfHandle and receiver are the same,
-    // selfHandle is not a host object/internal setter, and the
-    // property is writable, just write into the same slot.
-
-    if (LLVM_LIKELY(
-            *selfHandle == propObj &&
-            selfHandle.getHermesValue().getRaw() == receiver->getRaw() &&
-            !desc.flags.internalSetter && !desc.flags.hostObject &&
-            desc.flags.writable)) {
-      setNamedSlotValue(
-          *selfHandle, runtime, desc, valueHandle.getHermesValue());
       return true;
     }
 
@@ -1373,6 +1388,25 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
 
   // If the property exists.
   if (propObj) {
+    // Get the simple case out of the way: If the property already
+    // exists on selfHandle, is not an accessor, selfHandle and
+    // receiver are the same, selfHandle is not a host
+    // object/proxy/internal setter, and the property is writable,
+    // just write into the same slot.
+
+    if (LLVM_LIKELY(
+            selfHandle == propObj &&
+            selfHandle.getHermesValue().getRaw() == receiver->getRaw() &&
+            !desc.flags.accessor && !desc.flags.internalSetter &&
+            !desc.flags.hostObject && desc.flags.writable)) {
+      if (LLVM_UNLIKELY(
+              setComputedSlotValue(selfHandle, runtime, desc, valueHandle) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return true;
+    }
+
     // Is it an accessor?
     if (LLVM_UNLIKELY(desc.flags.accessor)) {
       auto *accessor = vmcast<PropertyAccessor>(
@@ -1393,24 +1427,6 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
               runtime,
               receiver,
               valueHandle.get()) == ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      return true;
-    }
-
-    // Get the simple case out of the way: If the property already
-    // exists on selfHandle, selfHandle and receiver are the same,
-    // selfHandle is not a host object/internal setter, and the
-    // property is writable, just write into the same slot.
-
-    if (LLVM_LIKELY(
-            selfHandle == propObj &&
-            selfHandle.getHermesValue().getRaw() == receiver->getRaw() &&
-            !desc.flags.internalSetter && !desc.flags.hostObject &&
-            desc.flags.writable)) {
-      if (LLVM_UNLIKELY(
-              setComputedSlotValue(selfHandle, runtime, desc, valueHandle) ==
-              ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       return true;
