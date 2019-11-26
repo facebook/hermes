@@ -1847,7 +1847,7 @@ void GenGC::printCensusByKindStatsWork(
      << "Total objs: " << llvm::format("%14lld", totAllocs)
      << ", bytes = " << llvm::format("%14lld", totBytes) << ".\n\n"
      << llvm::format(
-            "%30s%14s%8s%14s%8s\n",
+            "%35s%14s%8s%14s%8s\n",
             static_cast<const char *>("kind"),
             static_cast<const char *>("objects"),
             static_cast<const char *>("(%)"),
@@ -1864,7 +1864,7 @@ void GenGC::printCensusByKindStatsWork(
       continue;
     }
     os << llvm::format(
-        "%30s%14lld%7.2f%%%14lld%7.2f%%\n",
+        "%35s%14lld%7.2f%%%14lld%7.2f%%\n",
         cellKindStr(static_cast<CellKind>(std::get<0>(elem))),
         std::get<1>(elem),
         100.0 * static_cast<double>(std::get<1>(elem)) / totAllocsD,
