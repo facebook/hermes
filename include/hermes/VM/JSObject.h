@@ -417,6 +417,7 @@ class JSObject : public GCCell {
   template <PropStorage::size_type size, typename T>
   static inline T *allocateSmallPropStorage(T *self);
 
+  /// ES9 9.1 O.[[Extensible]] internal slot
   bool isExtensible() const {
     return !flags_.noExtend;
   }
@@ -1015,16 +1016,30 @@ class JSObject : public GCCell {
   /// ES5.1 15.2.3.8.
   /// Make all own properties non-configurable.
   /// Set [[Extensible]] to false.
-  static void seal(Handle<JSObject> selfHandle, Runtime *runtime);
+  static ExecutionStatus seal(Handle<JSObject> selfHandle, Runtime *runtime);
   /// ES5.1 15.2.3.9.
   /// Make all own properties non-configurable.
   /// Make all own data properties (not accessors) non-writable.
   /// Set [[Extensible]] to false.
-  static void freeze(Handle<JSObject> selfHandle, Runtime *runtime);
+  static ExecutionStatus freeze(Handle<JSObject> selfHandle, Runtime *runtime);
   /// ES5.1 15.2.3.10.
-  /// Set [[Extensible]] to false, preventing adding more properties.
+  /// Set [[Extensible]] slot on an ordinary object to false, preventing adding
+  /// more properties.
   static void preventExtensions(JSObject *self);
+  /// ES9 [[PreventExtensons]] internal method.  This works on Proxy
+  /// objects and ordinary objects. If opFlags.getThrowOnError() is
+  /// true, then this will throw an appropriate TypeError if the
+  /// method would have returned false.
+  static CallResult<bool> preventExtensions(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      PropOpFlags opFlags = PropOpFlags());
 
+  /// ES9 9.1.3 [[IsExtensible]] internal method
+  /// No properties are can be added.  This also handles the Proxy case.
+  static CallResult<bool> isExtensible(
+      PseudoHandle<JSObject> self,
+      Runtime *runtime);
   /// ES5.1 15.2.3.11.
   /// No properties are configurable.
   /// [[Extensible]] is false.

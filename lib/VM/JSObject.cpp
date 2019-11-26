@@ -2221,23 +2221,51 @@ void JSObject::preventExtensions(JSObject *self) {
   self->flags_.noExtend = true;
 }
 
-void JSObject::seal(Handle<JSObject> selfHandle, Runtime *runtime) {
+CallResult<bool> JSObject::preventExtensions(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    PropOpFlags opFlags) {
+  JSObject::preventExtensions(*selfHandle);
+  return true;
+}
+
+ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime *runtime) {
+  CallResult<bool> statusRes = JSObject::preventExtensions(
+      selfHandle, runtime, PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  assert(
+      *statusRes && "seal preventExtensions with ThrowOnError returned false");
+
   // Already sealed?
   if (selfHandle->flags_.sealed)
-    return;
+    return ExecutionStatus::RETURNED;
 
   auto newClazz = HiddenClass::makeAllNonConfigurable(
       runtime->makeHandle(selfHandle->clazz_), runtime);
   selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
 
   selfHandle->flags_.sealed = true;
-  selfHandle->flags_.noExtend = true;
+
+  return ExecutionStatus::RETURNED;
 }
 
-void JSObject::freeze(Handle<JSObject> selfHandle, Runtime *runtime) {
+ExecutionStatus JSObject::freeze(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime) {
+  CallResult<bool> statusRes = JSObject::preventExtensions(
+      selfHandle, runtime, PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  assert(
+      *statusRes &&
+      "freeze preventExtensions with ThrowOnError returned false");
+
   // Already frozen?
   if (selfHandle->flags_.frozen)
-    return;
+    return ExecutionStatus::RETURNED;
 
   auto newClazz = HiddenClass::makeAllReadOnly(
       runtime->makeHandle(selfHandle->clazz_), runtime);
@@ -2245,7 +2273,8 @@ void JSObject::freeze(Handle<JSObject> selfHandle, Runtime *runtime) {
 
   selfHandle->flags_.frozen = true;
   selfHandle->flags_.sealed = true;
-  selfHandle->flags_.noExtend = true;
+
+  return ExecutionStatus::RETURNED;
 }
 
 void JSObject::updatePropertyFlagsWithoutTransitions(
@@ -2261,6 +2290,12 @@ void JSObject::updatePropertyFlagsWithoutTransitions(
       flagsToSet,
       props);
   selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+}
+
+CallResult<bool> JSObject::isExtensible(
+    PseudoHandle<JSObject> self,
+    Runtime *runtime) {
+  return self->isExtensible();
 }
 
 bool JSObject::isSealed(PseudoHandle<JSObject> self, Runtime *runtime) {

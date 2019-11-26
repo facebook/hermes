@@ -585,7 +585,10 @@ CallResult<HermesValue> objectSeal(void *, Runtime *runtime, NativeArgs args) {
     return args.getArg(0);
   }
 
-  JSObject::seal(objHandle, runtime);
+  if (LLVM_UNLIKELY(
+          JSObject::seal(objHandle, runtime) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   return objHandle.getHermesValue();
 }
 
@@ -597,19 +600,29 @@ objectFreeze(void *, Runtime *runtime, NativeArgs args) {
     return args.getArg(0);
   }
 
-  JSObject::freeze(objHandle, runtime);
+  if (LLVM_UNLIKELY(
+          JSObject::freeze(objHandle, runtime) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   return objHandle.getHermesValue();
 }
 
 CallResult<HermesValue>
 objectPreventExtensions(void *, Runtime *runtime, NativeArgs args) {
-  auto *obj = dyn_vmcast<JSObject>(args.getArg(0));
+  Handle<JSObject> obj = args.dyncastArg<JSObject>(0);
 
   if (!obj) {
     return args.getArg(0);
   }
 
-  JSObject::preventExtensions(obj);
+  CallResult<bool> statusRes = JSObject::preventExtensions(
+      obj, runtime, PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(statusRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  assert(
+      *statusRes &&
+      "Object.preventExtensions with ThrowOnError returned false");
   return args.getArg(0);
 }
 
@@ -644,14 +657,19 @@ objectIsFrozen(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 objectIsExtensible(void *, Runtime *runtime, NativeArgs args) {
-  auto *obj = dyn_vmcast<JSObject>(args.getArg(0));
+  PseudoHandle<JSObject> obj =
+      createPseudoHandle(dyn_vmcast<JSObject>(args.getArg(0)));
 
   if (!obj) {
     // ES6.0 19.1.2.11: If Type(O) is not Object, return false.
     return HermesValue::encodeBoolValue(false);
   }
 
-  return HermesValue::encodeBoolValue(obj->isExtensible());
+  CallResult<bool> extRes = JSObject::isExtensible(std::move(obj), runtime);
+  if (LLVM_UNLIKELY(extRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return HermesValue::encodeBoolValue(*extRes);
 }
 
 /// ES8.0 7.3.21.
