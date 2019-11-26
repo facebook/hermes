@@ -925,9 +925,8 @@ ExecutionStatus JSObject::getComputedDescriptor(
   if (LLVM_UNLIKELY(converted == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  getComputedPrimitiveDescriptor(
+  return getComputedPrimitiveDescriptor(
       selfHandle, runtime, *converted, propObj, desc);
-  return ExecutionStatus::RETURNED;
 }
 
 CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
@@ -1028,8 +1027,12 @@ CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
   // Locate the descriptor. propObj contains the object which may be anywhere
   // along the prototype chain.
   MutableHandle<JSObject> propObj{runtime};
-  getComputedPrimitiveDescriptor(
-      selfHandle, runtime, nameValPrimitiveHandle, propObj, desc);
+  if (LLVM_UNLIKELY(
+          getComputedPrimitiveDescriptor(
+              selfHandle, runtime, nameValPrimitiveHandle, propObj, desc) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
   if (!propObj)
     return HermesValue::encodeUndefinedValue();
@@ -1361,8 +1364,12 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
 
   // Look for the property in this object or along the prototype chain.
   MutableHandle<JSObject> propObj{runtime};
-  getComputedPrimitiveDescriptor(
-      selfHandle, runtime, nameValPrimitiveHandle, propObj, desc);
+  if (LLVM_UNLIKELY(
+          getComputedPrimitiveDescriptor(
+              selfHandle, runtime, nameValPrimitiveHandle, propObj, desc) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
   // If the property exists.
   if (propObj) {
