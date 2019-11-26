@@ -7,6 +7,7 @@
 
 #include "hermes/VM/Callable.h"
 
+#include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/JSNativeFunctions.h"
 #include "hermes/VM/SmallXString.h"
@@ -331,6 +332,45 @@ CallResult<HermesValue> Callable::executeCall4(
   newFrame->getArgRef(2) = param3;
   newFrame->getArgRef(3) = param4;
   return call(selfHandle, runtime);
+}
+
+CallResult<HermesValue> Callable::executeCall(
+    Handle<Callable> selfHandle,
+    Runtime *runtime,
+    Handle<> thisHandle,
+    Handle<JSObject> arrayLike,
+    bool construct) {
+  CallResult<uint64_t> nRes = getArrayLikeLength(arrayLike, runtime);
+  if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (*nRes > UINT32_MAX) {
+    runtime->raiseRangeError("Too many arguments for apply");
+  }
+  uint32_t n = static_cast<uint32_t>(*nRes);
+  ScopedNativeCallFrame newFrame{
+      runtime, n, *selfHandle, construct, *thisHandle};
+  if (LLVM_UNLIKELY(newFrame.overflowed()))
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+
+  // Initialize the arguments to undefined because we might allocate and cause
+  // a gc while populating them.
+  // TODO: look into doing this lazily.
+  newFrame.fillArguments(n, HermesValue::encodeUndefinedValue());
+
+  if (LLVM_UNLIKELY(
+          createListFromArrayLike(
+              arrayLike,
+              runtime,
+              n,
+              [&newFrame](Runtime *, uint64_t index, PseudoHandle<> value) {
+                newFrame->getArgRef(index) = value.getHermesValue();
+                return ExecutionStatus::RETURNED;
+              }) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return Callable::call(selfHandle, runtime);
 }
 
 CallResult<HermesValue> Callable::executeConstruct0(

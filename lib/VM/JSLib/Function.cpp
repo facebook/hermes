@@ -177,36 +177,7 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
         "Can't apply() with non-object arguments list");
   }
 
-  CallResult<uint64_t> nRes = getArrayLikeLength(argObj, runtime);
-  if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  if (*nRes > UINT32_MAX) {
-    runtime->raiseRangeError("Too many arguments for apply");
-  }
-  uint32_t n = static_cast<uint32_t>(*nRes);
-  ScopedNativeCallFrame newFrame{runtime, n, *func, false, args.getArg(0)};
-  if (LLVM_UNLIKELY(newFrame.overflowed()))
-    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
-
-  // Initialize the arguments to undefined because we might allocate and cause
-  // a gc while populating them.
-  // TODO: look into doing this lazily.
-  newFrame.fillArguments(n, HermesValue::encodeUndefinedValue());
-
-  if (LLVM_UNLIKELY(
-          createListFromArrayLike(
-              argObj,
-              runtime,
-              n,
-              [&](Runtime *, uint64_t index, PseudoHandle<> value) {
-                newFrame->getArgRef(index) = value.getHermesValue();
-                return ExecutionStatus::RETURNED;
-              }) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  return Callable::call(func, runtime);
+  return Callable::executeCall(func, runtime, args.getArgHandle(0), argObj);
 }
 
 CallResult<HermesValue>
