@@ -237,15 +237,15 @@ class Callable : public JSObject {
       HermesValue param4,
       bool construct = false);
 
-  /// Execute this function with given this, and a variable number of
-  /// arguments taken from arrayLike.  This invokes the interpreter
-  /// recursively
+  /// Execute this function with given this and newTarget, and a
+  /// variable number of arguments taken from arrayLike.  This invokes
+  /// the interpreter recursively.
   static CallResult<HermesValue> executeCall(
       Handle<Callable> selfHandle,
       Runtime *runtime,
-      Handle<> thisHandle,
-      Handle<JSObject> arrayLike,
-      bool construct = false);
+      Handle<> newTarget,
+      Handle<> thisArgument,
+      Handle<JSObject> arrayLike);
 
   /// Calls CallableVTable::newObject.
   static CallResult<HermesValue> newObject(

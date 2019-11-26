@@ -337,9 +337,9 @@ CallResult<HermesValue> Callable::executeCall4(
 CallResult<HermesValue> Callable::executeCall(
     Handle<Callable> selfHandle,
     Runtime *runtime,
-    Handle<> thisHandle,
-    Handle<JSObject> arrayLike,
-    bool construct) {
+    Handle<> newTarget,
+    Handle<> thisArgument,
+    Handle<JSObject> arrayLike) {
   CallResult<uint64_t> nRes = getArrayLikeLength(arrayLike, runtime);
   if (LLVM_UNLIKELY(nRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -349,7 +349,7 @@ CallResult<HermesValue> Callable::executeCall(
   }
   uint32_t n = static_cast<uint32_t>(*nRes);
   ScopedNativeCallFrame newFrame{
-      runtime, n, *selfHandle, construct, *thisHandle};
+      runtime, n, selfHandle.getHermesValue(), *newTarget, *thisArgument};
   if (LLVM_UNLIKELY(newFrame.overflowed()))
     return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
 

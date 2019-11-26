@@ -177,7 +177,12 @@ functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {
         "Can't apply() with non-object arguments list");
   }
 
-  return Callable::executeCall(func, runtime, args.getArgHandle(0), argObj);
+  return Callable::executeCall(
+      func,
+      runtime,
+      Runtime::getUndefinedValue(),
+      args.getArgHandle(0),
+      argObj);
 }
 
 CallResult<HermesValue>
