@@ -162,6 +162,35 @@ static_assert(
 
 HERMES_VM__DECLARE_FLAGS_CLASS(PropOpFlags, HERMES_VM__LIST_PropOpFlags);
 
+/// \name OwnKeysFlags
+/// @{
+/// Flags used when performing getOwnPropertyKeys operations.
+///
+/// \name IncludeSymbols
+/// Include in the result keys which are formally (and in the implementation)
+/// Symbols.
+///
+/// \name IncludeNonSymbols
+/// Include in the result keys which are formally Strings.  In the
+/// implementation, these may actually be numbers or other non-String primitive
+/// types.
+///
+/// \name IncludeNonEnumerable
+/// Normally only enumerable keys are included in the result.  If this is set,
+/// include non-enumerable keys, too.  The keys included will only be of the
+/// types specified by the above flags.
+///
+/// Either or both of IncludeSymbols and IncludeNonSymbols may be
+/// specified.  If neither is specified, this may cause an assertion
+/// failure if assertions are enabled.
+/// @}
+#define HERMES_VM__LIST_OwnKeysFlags(FLAG) \
+  FLAG(IncludeSymbols)                     \
+  FLAG(IncludeNonSymbols)                  \
+  FLAG(IncludeNonEnumerable)
+
+HERMES_VM__DECLARE_FLAGS_CLASS(OwnKeysFlags, HERMES_VM__LIST_OwnKeysFlags);
+
 // Any method that could potentially invoke the garbage collector, directly or
 // in-directly, cannot use a direct 'self' pointer and must instead use
 // Handle<JSObject>.
@@ -494,6 +523,19 @@ class JSObject : public GCCell {
         self, runtime, index, value);
   }
 
+  /// By default, returns a list of enumerable property names and symbols
+  /// belonging to this object. Indexed property names will be represented as
+  /// numbers for efficiency. The order of properties follows ES2015 - first
+  /// properties whose string names look like indexes, in numeric order, then
+  /// strings, in insertion order, then symbols, in insertion order.  \p
+  /// okFlags can be used to exclude names and/or symbols, or include
+  /// non-enumerable properties.
+  /// \returns a JSArray containing the names.
+  static CallResult<Handle<JSArray>> getOwnPropertyKeys(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      OwnKeysFlags okFlags);
+
   /// Return a list of property names belonging to this object. Indexed property
   /// names will be represented as numbers for efficiency. The order of
   /// properties follows ES2015 - first properties whose string names look like
@@ -504,14 +546,25 @@ class JSObject : public GCCell {
   static CallResult<Handle<JSArray>> getOwnPropertyNames(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
-      bool onlyEnumerable);
+      bool onlyEnumerable) {
+    return getOwnPropertyKeys(
+        selfHandle,
+        runtime,
+        OwnKeysFlags().plusIncludeNonSymbols().setIncludeNonEnumerable(
+            !onlyEnumerable));
+  }
 
   /// Return a list of property symbols keys belonging to this object.
   /// The order of properties follows ES2015 - insertion order.
   /// \returns a JSArray containing the symbols.
   static CallResult<Handle<JSArray>> getOwnPropertySymbols(
       Handle<JSObject> selfHandle,
-      Runtime *runtime);
+      Runtime *runtime) {
+    return getOwnPropertyKeys(
+        selfHandle,
+        runtime,
+        OwnKeysFlags().plusIncludeSymbols().plusIncludeNonEnumerable());
+  }
 
   /// Return a reference to a slot in the "named value" storage space by
   /// \p index.
