@@ -358,14 +358,12 @@ objectGetOwnPropertyDescriptor(void *, Runtime *runtime, NativeArgs args) {
 /// Return a list of property names belonging to this object. All
 /// properties are converted into strings. The order of
 /// properties will remain the same as Object::getOwnPropertyNames.
-/// \param onlyEnumerable if true, only enumerable properties will be
-///   returned.
 /// \returns a JSArray containing the names, encoded in HermesValue.
-static CallResult<HermesValue> getOwnPropertyNamesAsStrings(
+CallResult<HermesValue> getOwnPropertyKeysAsStrings(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
-    bool onlyEnumerable) {
-  auto cr = JSObject::getOwnPropertyNames(selfHandle, runtime, onlyEnumerable);
+    OwnKeysFlags okFlags) {
+  auto cr = JSObject::getOwnPropertyKeys(selfHandle, runtime, okFlags);
   if (cr == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -376,8 +374,8 @@ static CallResult<HermesValue> getOwnPropertyNamesAsStrings(
   for (unsigned i = 0, e = array->getEndIndex(); i < e; ++i) {
     gcScope.flushToMarker(marker);
     prop = array->at(runtime, i);
-    if (prop->isString()) {
-      // Nothing to do if it's already a string.
+    if (prop->isString() || prop->isSymbol()) {
+      // Nothing to do if it's already a string or symbol.
       continue;
     }
     assert(prop->isNumber() && "Property name is either string or number");
@@ -399,8 +397,10 @@ objectGetOwnPropertyNames(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto objHandle = runtime->makeHandle<JSObject>(objRes.getValue());
-  auto cr = getOwnPropertyNamesAsStrings(
-      objHandle, runtime, false /*onlyEnumerable*/);
+  auto cr = getOwnPropertyKeysAsStrings(
+      objHandle,
+      runtime,
+      OwnKeysFlags().plusIncludeNonSymbols().plusIncludeNonEnumerable());
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -662,8 +662,8 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
     EnumerableOwnPropertiesKind kind) {
   GCScope gcScope{runtime};
 
-  auto namesRes =
-      getOwnPropertyNamesAsStrings(objHandle, runtime, true /*onlyEnumerable*/);
+  auto namesRes = getOwnPropertyKeysAsStrings(
+      objHandle, runtime, OwnKeysFlags().plusIncludeNonSymbols());
   if (namesRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

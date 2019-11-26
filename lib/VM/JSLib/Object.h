@@ -30,6 +30,11 @@ CallResult<HermesValue> getOwnPropertyDescriptor(
 
 CallResult<HermesValue> getPrototypeOf(Runtime *runtime, Handle<JSObject> obj);
 
+CallResult<HermesValue> getOwnPropertyKeysAsStrings(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    OwnKeysFlags okFlags);
+
 /// "Kind" provided to enumerableOwnProperties to request different
 /// representation of the properties in the object.
 enum class EnumerableOwnPropertiesKind {
