@@ -182,12 +182,12 @@ compiler.
 ### BranchInst
 
 BranchInst | _
----------- | ------- |
-| Description  | Jumps to a different basic block.
-| Example |  %0 = BranchInst %BB1
-| Arguments | A single operand which is the target basic block.
-| Semantics | Terminates a basic block and 'jumps' to a different basic block.
-| Effects | Does not read or write from memory.
+--- | --- |
+Description  | Jumps to a different basic block.
+Example |  %0 = BranchInst %BB1
+Arguments | A single operand which is the target basic block.
+Semantics | Terminates a basic block and 'jumps' to a different basic block.
+Effects | Does not read or write from memory.
 
 ### ReturnInst
 
@@ -502,6 +502,7 @@ Effects | May read and write memory.
 ### GetNextPNameInst
 
 GetNextPNameInst | _
+--- | --- |
 Description | Loads the next property from the object property enumerator.
 Example |  %0 = GetNextPNameInst %propertyAddr, %baseAddr, %indexAddr, %sizeAddr, %iteratorAddr, %onLast, %onSome
 Arguments | The first argument is the destination where the name of the property is written into. The next 4 arguments are the state of the property enumerator. The last two arguments are the destination blocks for: no next property, or some property available.
@@ -561,6 +562,7 @@ Effects | Technically this instruction itself does not touch memory, however we 
 ### PhiInst
 
 PhiInst | _
+--- | --- |
 Description | This is a Phi node instruction.
 Example |  %0 = PhiInst %value0, %block0, [%value1, %block1]
 Arguments | A list of pairs of value and incoming basic block.
@@ -570,6 +572,7 @@ Effects | Does not read or write memory.
 ### MovInst
 
 MovInst | _
+--- | --- |
 Description | The MOV inst represents a low-level operation of moving one register to another.
 Example |  %0 = MovInst %value0
 Arguments | Any value.
@@ -579,6 +582,7 @@ Effects | Does not read or write memory.
 ### ImplicitMovInst
 
 ImplicitMovInst | _
+--- | --- |
 Description | The ImplicitMov inst represents moving one register to another, except the mov will be performed implicitly by an immediately-subsequent instruction. This is used to express to the optimizer instructions which modify registers other than their destination.
 Example |  %0 = ImplicitMovInst %value0
 Arguments | Any value.
@@ -599,6 +603,7 @@ Effects | Does not read or write to memory.
 ### GetNewTargetInst
 
 GetNewTargetInst | _
+--- | --- |
 Description | Obtains the value of `new.target` in the current function or constructor.
 Example |  %0 = GetNewTargetInst
 Arguments | None
@@ -608,6 +613,7 @@ Effects | Does not read or write memory
 ### ThrowIfUndefinedInst
 
 ThrowIfUndefinedInst | _
+--- | --- |
 Description | Check whether the value is undefined, and if it is, throw ReferenceError.
 Example |  %_ = ThrowIfUndefinedInst %value
 Arguments | The value to check.
@@ -617,6 +623,7 @@ Effects | Potentially throws an exception. Has no other side effects.
 ### CoerceThisNS
 
 CoerceThisNS | _
+--- | --- |
 Description | Coerces its argument using the rules of "this" coercion to object in non-strict mode.
 Example |  %0 = CoerceThisNS %value0
 Arguments | Any value.
@@ -626,6 +633,7 @@ Effects | Does not read or write memory (it potentially creates a new object)
 ### CreateGenerator
 
 CreateGenerator | _
+--- | --- |
 Description | Constructs a new GeneratorInnerFunction from its code representation, and wraps it in a Generator object.
 Example | %0 = CreateGenerator %function,
 Arguments | %function is the function that represents the code of the generator's inner function.
@@ -635,6 +643,7 @@ Effects | Does not read or write to memory (creates a new object).
 ### StartGenerator
 
 StartGenerator | _
+--- | --- |
 Description | Jump to the proper first instruction to execute in a GeneratorInnerFunction
 Example |  %0 = StartGenerator
 Arguments | None
@@ -644,6 +653,7 @@ Effects | Reads and writes memory. Restores the stack based on saved state, and 
 ### SaveAndYield
 
 SaveAndYield | _
+--- | --- |
 Description | Saves information needed to resume generator execution and yield.
 Example |  %0 = SaveAndYield %value, %next
 Arguments | %value is the value to yield, %next is the next BasicBlock to execute upon resuming, which must begin with a ResumeGeneratorInst (generated alongside SaveAndYield).
@@ -653,6 +663,7 @@ Effects | Reads and writes to memory, may throw or execute.
 ### ResumeGenerator
 
 ResumeGenerator | _
+--- | --- |
 Description | Perform the user-requested action on resuming a generator.
 Example |  %0 = ResumeGenerator %isReturn
 Arguments | %isReturn is an output argument set to true if the user requested a return, false otherwise.
@@ -662,6 +673,7 @@ Effects | May read and write memory. (may throw)
 ### UnreachableInst
 
 UnreachableInst | _
+--- | --- |
 Description | Crashes the VM (ifndef NDEBUG).
 Example |  %0 = UnreachableInst
 Arguments | None.
@@ -723,6 +735,5 @@ HBCCallNInst | _
 Description | Calls a function with a fixed number of arguments (from 1 to 4, inclusive).
 Example | %0 = HBCCallNInst %callee, %this, %arg0, %arg1, %arg2
 Arguments | %callee is the function to execute. %this is a reference to the 'this' value. Arguments %arg0 ... %argN are the arguments passed to the function.
-Semantics | The instruction copies its arguments (starting from this) into the parameter-passing registers at the end of the frame, and passes the control to the callee, which must be of closure type.
-The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
+Semantics | The instruction copies its arguments (starting from this) into the parameter-passing registers at the end of the frame, and passes the control to the callee, which must be of closure type. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.
