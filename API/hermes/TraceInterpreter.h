@@ -124,35 +124,35 @@ class TraceInterpreter final {
   };
 
  private:
-  jsi::Runtime &rt;
-  ExecuteOptions options;
-  llvm::raw_ostream *outTrace;
+  jsi::Runtime &rt_;
+  ExecuteOptions options_;
+  llvm::raw_ostream *outTrace_;
   // Map from source hash to source file to run.
-  std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles;
-  const SynthTrace &trace;
-  const std::unordered_map<SynthTrace::ObjectID, DefAndUse> &globalDefsAndUses;
-  const HostFunctionToCalls &hostFunctionCalls;
-  const HostObjectToCalls &hostObjectCalls;
-  std::unordered_map<SynthTrace::ObjectID, jsi::Function> hostFunctions;
-  std::unordered_map<SynthTrace::ObjectID, uint64_t> hostFunctionsCallCount;
+  std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles_;
+  const SynthTrace &trace_;
+  const std::unordered_map<SynthTrace::ObjectID, DefAndUse> &globalDefsAndUses_;
+  const HostFunctionToCalls &hostFunctionCalls_;
+  const HostObjectToCalls &hostObjectCalls_;
+  std::unordered_map<SynthTrace::ObjectID, jsi::Function> hostFunctions_;
+  std::unordered_map<SynthTrace::ObjectID, uint64_t> hostFunctionsCallCount_;
   // NOTE: Theoretically a host object property can have both a getter and a
   // setter. Since this doesn't occur in practice currently, this
   // implementation will ignore it. If it does happen, the value of the
   // interior map should turn into a pair of functions, and a pair of function
   // counts.
-  std::unordered_map<SynthTrace::ObjectID, jsi::Object> hostObjects;
+  std::unordered_map<SynthTrace::ObjectID, jsi::Object> hostObjects_;
   std::unordered_map<
       SynthTrace::ObjectID,
       std::unordered_map<std::string, uint64_t>>
-      hostObjectsCallCount;
-  std::unordered_map<SynthTrace::ObjectID, jsi::Object> gom;
-  std::string stats;
+      hostObjectsCallCount_;
+  std::unordered_map<SynthTrace::ObjectID, jsi::Object> gom_;
+  std::string stats_;
   /// Whether the marker was reached.
-  bool markerFound{false};
+  bool markerFound_{false};
   /// Whether the snapshot marker was reached.
-  bool snapshotMarkerFound{false};
+  bool snapshotMarkerFound_{false};
   /// Depth in the execution stack. Zero is the outermost function.
-  uint64_t depth{0};
+  uint64_t depth_{0};
 
  public:
   /// Execute the trace given by \p traceFile, that was the trace of executing
