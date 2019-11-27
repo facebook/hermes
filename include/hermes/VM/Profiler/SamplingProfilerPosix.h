@@ -24,6 +24,7 @@
 #include <chrono>
 #include <mutex>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
@@ -54,16 +55,13 @@ class SamplingProfiler {
     // IP offset within the function.
     uint32_t offset;
   };
-  /// Detailed kind for sampled metadata frame.
-  enum class MetadataFrameKind {
-    GCEvent,
-  };
   /// Captured NativeFunction frame information for symbolication.
   using NativeFunctionFrameInfo = NativeFunctionPtr;
   /// Captured FinalizableNativeFunction frame information for symbolication.
   using FinalizableNativeFunctionFrameInfo = NativeFunctionPtr;
-  /// Metadata frame info.
-  using MetadataFrameInfo = MetadataFrameKind;
+  /// GC frame info. Pointing to string in gcEventExtraInfoSet_.
+  /// gcEventExtraInfoSet_ is structured to never invalidate this pointer.
+  using GCFrameInfo = const std::string *;
 
   // This will break with more than one RuntimeModule(like FB4a, eval() call or
   // lazy compilation etc...). It is simply a temporary thing to get started.
@@ -74,20 +72,24 @@ class SamplingProfiler {
       JSFunction,
       NativeFunction,
       FinalizableNativeFunction,
-      Metadata,
+      GCFrame,
     };
 
     // TODO: figure out how to store BoundFunction.
     // TODO: Should we do something special for NativeConstructor?
     union {
-      // Pure JS function frame info.
+      /// Pure JS function frame info.
       JSFunctionFrameInfo jsFrame;
-      // Native function frame info.
+      /// Native function frame info.
       NativeFunctionFrameInfo nativeFrame;
-      // Host function frame info.
+      /// Host function frame info.
       FinalizableNativeFunctionFrameInfo finalizableNativeFrame;
-      // Metadata frame info.
-      MetadataFrameInfo metadataFrame;
+      /// GC frame info. Pointing to string
+      /// in gcEventExtraInfoSet_; it is optionally and
+      /// can be null to indicate no extra info.
+      /// We can't directly use std::string here because it is
+      /// inside a union.
+      GCFrameInfo gcFrame;
     };
     FrameKind kind;
   };
@@ -163,6 +165,11 @@ class SamplingProfiler {
   /// Prellocated map that contains thread names mapping.
   ThreadNamesMap threadNames_;
 
+  /// Unique GC event extra info strings container.
+  /// GCFrameInfo pointer to item in this container will always be valid
+  /// because this container never rehashes.
+  std::unordered_set<std::string> gcEventExtraInfoSet_;
+
   /// Domains to be kept alive for sampled RuntimeModules.
   /// Its storage size is increased/decreased by
   /// increaseDomainCount/decreaseDomainCount outside signal handler.
@@ -215,7 +222,7 @@ class SamplingProfiler {
       uint32_t startIndex = 0);
 
   /// Record JS stack at time of the GC.
-  void recordPreGCStack(Runtime *runtime);
+  void recordPreGCStack(Runtime *runtime, const std::string &extraInfo);
 
 #if defined(__ANDROID__) && defined(HERMES_FACEBOOK_BUILD)
   /// Registered loom callback for collecting stack frames.
@@ -267,7 +274,10 @@ class SamplingProfiler {
   bool disable();
 
   /// Called for various GC events.
-  void onGCEvent(Runtime *runtime, GCBase::GCCallbacks::GCEventKind kind);
+  void onGCEvent(
+      Runtime *runtime,
+      GCBase::GCCallbacks::GCEventKind kind,
+      const std::string &extraInfo);
 };
 
 bool operator==(

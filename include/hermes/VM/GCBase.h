@@ -234,7 +234,8 @@ class GCBase {
 
     /// This is called with CollectionStart at the start of each GC, and with
     /// CollectionEnd at the end.
-    virtual void onGCEvent(GCEventKind kind) = 0;
+    /// \param extraInfo contains more detailed extra info for specific GC.
+    virtual void onGCEvent(GCEventKind kind, const std::string &extraInfo) = 0;
   };
 
   /// Struct that keeps a reference to a GC.  Useful, for example, as a base
@@ -490,6 +491,10 @@ class GCBase {
     return cumStats_.gcCPUTime.sum();
   }
 
+  GCCallbacks *getGCCallbacks() const {
+    return gcCallbacks_;
+  }
+
   /// Cumulative stats over time so far.
   virtual size_t getPeakAllocatedBytes() const {
     return cumStats_.usedBefore.max();
@@ -677,12 +682,16 @@ class GCBase {
   /// active.
   class GCCycle final {
    public:
-    GCCycle(GCBase *gc, OptValue<GCCallbacks *> gcCallbacksOpt = llvm::None);
+    GCCycle(
+        GCBase *gc,
+        OptValue<GCCallbacks *> gcCallbacksOpt = llvm::None,
+        std::string extraInfo = "");
     ~GCCycle();
 
    private:
     GCBase *const gc_;
     OptValue<GCCallbacks *> gcCallbacksOpt_;
+    std::string extraInfo_;
   };
 
   /// Returns the number of bytes allocated allocated since the last GC.

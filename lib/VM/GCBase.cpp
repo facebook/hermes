@@ -91,19 +91,24 @@ GCBase::GCBase(
 #endif
 }
 
-GCBase::GCCycle::GCCycle(GCBase *gc, OptValue<GCCallbacks *> gcCallbacksOpt)
-    : gc_(gc), gcCallbacksOpt_(gcCallbacksOpt) {
+GCBase::GCCycle::GCCycle(
+    GCBase *gc,
+    OptValue<GCCallbacks *> gcCallbacksOpt,
+    std::string extraInfo)
+    : gc_(gc),
+      gcCallbacksOpt_(gcCallbacksOpt),
+      extraInfo_(std::move(extraInfo)) {
   gc_->inGC_ = true;
   if (gcCallbacksOpt_.hasValue()) {
     gcCallbacksOpt_.getValue()->onGCEvent(
-        GCCallbacks::GCEventKind::CollectionStart);
+        GCCallbacks::GCEventKind::CollectionStart, extraInfo_);
   }
 }
 
 GCBase::GCCycle::~GCCycle() {
   if (gcCallbacksOpt_.hasValue()) {
     gcCallbacksOpt_.getValue()->onGCEvent(
-        GCCallbacks::GCEventKind::CollectionEnd);
+        GCCallbacks::GCEventKind::CollectionEnd, extraInfo_);
   }
   gc_->inGC_ = false;
 }

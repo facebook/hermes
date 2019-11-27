@@ -1711,7 +1711,7 @@ GenGC::CollectionSection::CollectionSection(
     OptValue<GCCallbacks *> gcCallbacksOpt)
     : PerfSection(name, gc->getName().c_str()),
       gc_(gc),
-      cycle_(gc, gcCallbacksOpt),
+      cycle_(gc, gcCallbacksOpt, name),
       wallStart_(steady_clock::now()),
       cpuStart_(oscompat::thread_cpu_time()),
       gcUsedBefore_(gc->usedDirect()),

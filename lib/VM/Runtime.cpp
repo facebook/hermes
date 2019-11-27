@@ -1747,9 +1747,11 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   return res;
 }
 
-void Runtime::onGCEvent(GCBase::GCCallbacks::GCEventKind kind) {
+void Runtime::onGCEvent(
+    GCBase::GCCallbacks::GCEventKind kind,
+    const std::string &extraInfo) {
   if (samplingProfiler_ != nullptr) {
-    samplingProfiler_->onGCEvent(this, kind);
+    samplingProfiler_->onGCEvent(this, kind, extraInfo);
   }
 }
 

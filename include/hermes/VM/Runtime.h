@@ -729,7 +729,9 @@ class Runtime : public HandleRootOwner,
   }
 
   /// Called when various GC events(e.g. collection start/end) happen.
-  void onGCEvent(GCBase::GCCallbacks::GCEventKind kind) override;
+  void onGCEvent(
+      GCBase::GCCallbacks::GCEventKind kind,
+      const std::string &extraInfo) override;
 
 #ifdef HERMESVM_SERIALIZE
   /// Fill the header with current Runtime config

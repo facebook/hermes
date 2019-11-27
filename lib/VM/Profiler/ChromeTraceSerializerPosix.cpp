@@ -272,17 +272,15 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
           break;
         }
 
-        case SamplingProfiler::StackFrame::FrameKind::Metadata:
-          switch (frame.metadataFrame) {
-            case SamplingProfiler::MetadataFrameKind::GCEvent:
-              frameName = "[Garbage Collection]";
-              categoryName = "Metadata";
-              break;
-
-            default:
-              llvm_unreachable("Unknown metadata frame kind");
+        case SamplingProfiler::StackFrame::FrameKind::GCFrame: {
+          if (frame.gcFrame != nullptr) {
+            frameName = std::string("[GC ") + *frame.gcFrame + "]";
+          } else {
+            frameName = "[GC]";
           }
+          categoryName = "Metadata";
           break;
+        }
 
         default:
           llvm_unreachable("Unknown frame kind");

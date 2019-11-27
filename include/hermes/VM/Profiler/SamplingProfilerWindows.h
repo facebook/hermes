@@ -56,7 +56,10 @@ class SamplingProfiler {
   }
 
   /// Called for various GC events.
-  void onGCEvent(Runtime *runtime, GCBase::GCCallbacks::GCEventKind kind) {}
+  void onGCEvent(
+      Runtime *runtime,
+      GCBase::GCCallbacks::GCEventKind kind,
+      const std::string &extraInfo) {}
 };
 
 } // namespace vm
