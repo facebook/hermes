@@ -195,4 +195,18 @@ TEST(JSONEmitterTest, NonFinite) {
   const char *expected = R"#([null,null,null])#";
   EXPECT_EQ(OS.str(), expected);
 }
+
+TEST(JSONEmitterTest, EmitGroupsOfForwardSlashes) {
+  std::string storage;
+  llvm::raw_string_ostream OS(storage);
+  JSONEmitter json(OS);
+
+  json.openDict();
+  json.emitKeyValue("url", "http://www.example.com");
+  json.closeDict();
+
+  // Expect escaped forward slashes.
+  const char *expected = R"#({"url":"http:\/\/www.example.com"})#";
+  EXPECT_EQ(OS.str(), expected);
+}
 }; // anonymous namespace

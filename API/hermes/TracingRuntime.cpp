@@ -34,7 +34,7 @@ jsi::Value TracingRuntime::evaluateJavaScript(
         llvm::SHA1::hash(llvm::makeArrayRef(buffer->data(), buffer->size()));
   }
   trace_.emplace_back<SynthTrace::BeginExecJSRecord>(
-      getTimeSinceStart(), sourceHash);
+      getTimeSinceStart(), sourceURL, sourceHash);
   auto res = RD::evaluateJavaScript(buffer, sourceURL);
   trace_.emplace_back<SynthTrace::EndExecJSRecord>(
       getTimeSinceStart(), toTraceValue(res));

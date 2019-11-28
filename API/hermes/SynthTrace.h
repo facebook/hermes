@@ -230,11 +230,20 @@ class SynthTrace {
   /// inject values into the VM before any source code is run.
   struct BeginExecJSRecord final : public Record {
     static constexpr RecordType type{RecordType::BeginExecJS};
-    explicit BeginExecJSRecord(TimeSinceStart time, ::hermes::SHA1 sourceHash)
-        : Record(time), sourceHash_(std::move(sourceHash)) {}
+    explicit BeginExecJSRecord(
+        TimeSinceStart time,
+        std::string sourceURL,
+        ::hermes::SHA1 sourceHash)
+        : Record(time),
+          sourceURL_(std::move(sourceURL)),
+          sourceHash_(std::move(sourceHash)) {}
 
     RecordType getType() const override {
       return type;
+    }
+
+    const std::string &sourceURL() const {
+      return sourceURL_;
     }
 
     const ::hermes::SHA1 &sourceHash() const {
@@ -244,6 +253,10 @@ class SynthTrace {
    private:
     void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
+
+    /// The URL providing the source file mapping for the file being executed.
+    /// Can be empty.
+    std::string sourceURL_;
 
     /// A hash of the source that was executed. The source hash must match up
     /// when the file is replayed.

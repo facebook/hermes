@@ -855,9 +855,9 @@ Value TraceInterpreter::execFunction(
                   << "Note: You are running from source code, not HBC bytecode.\n"
                   << "      This run will reflect dev performance, not production.\n";
             }
-            // Since this is bytecode, there's no sourceURL to pass.
             // overallRetval is to be consumed when we get an EndExecJS record.
-            overallRetval = rt_.evaluateJavaScript(std::move(bundle), "");
+            overallRetval =
+                rt_.evaluateJavaScript(std::move(bundle), bejsr.sourceURL());
             break;
           }
           case RecordType::EndExecJS: {

@@ -374,6 +374,7 @@ void SynthTrace::BeginExecJSRecord::toJSONInternal(
     ::hermes::JSONEmitter &json,
     const SynthTrace &trace) const {
   Record::toJSONInternal(json, trace);
+  json.emitKeyValue("sourceURL", sourceURL_);
   json.emitKeyValue("sourceHash", ::hermes::hashAsString(sourceHash_));
 }
 

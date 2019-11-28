@@ -229,13 +229,18 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
     auto *retval = llvm::dyn_cast_or_null<JSONString>(obj->get("retval"));
     switch (kind) {
       case RecordType::BeginExecJS: {
+        std::string sourceURL;
         ::hermes::SHA1 hash{};
+        if (JSONString *sourceURLJSON =
+                llvm::dyn_cast_or_null<JSONString>(obj->get("sourceURL"))) {
+          sourceURL = sourceURLJSON->str();
+        }
         if (JSONString *sourceHash =
                 llvm::dyn_cast_or_null<JSONString>(obj->get("sourceHash"))) {
           hash = parseHashStrAsNumber(sourceHash->str());
         }
         trace.emplace_back<SynthTrace::BeginExecJSRecord>(
-            timeFromStart, std::move(hash));
+            timeFromStart, std::move(sourceURL), std::move(hash));
         break;
       }
       case RecordType::EndExecJS:
