@@ -207,6 +207,11 @@ class CodeBlock final
 
   OptValue<uint32_t> getDebugSourceLocationsOffset() const;
 
+  /// \return the source location of the given instruction offset \p offset in
+  /// the code block \p codeBlock.
+  OptValue<hbc::DebugSourceLocation> getSourceLocation(
+      uint32_t offset = 0) const;
+
   OptValue<uint32_t> getDebugLexicalDataOffset() const;
 
   const inst::Inst *getOffsetPtr(uint32_t offset) const {

@@ -213,6 +213,19 @@ OptValue<uint32_t> CodeBlock::getDebugSourceLocationsOffset() const {
   return ret;
 }
 
+OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
+    uint32_t offset) const {
+  auto debugLocsOffset = getDebugSourceLocationsOffset();
+  if (!debugLocsOffset) {
+    return llvm::None;
+  }
+
+  return getRuntimeModule()
+      ->getBytecode()
+      ->getDebugInfo()
+      ->getLocationForAddress(*debugLocsOffset, offset);
+}
+
 OptValue<uint32_t> CodeBlock::getDebugLexicalDataOffset() const {
   auto *debugOffsets =
       runtimeModule_->getBytecode()->getDebugOffsets(functionID_);

@@ -399,6 +399,11 @@ class Debugger {
   llvm::Optional<std::pair<InterpreterState, uint32_t>> findCatchTarget(
       const InterpreterState &state) const;
 
+  /// Attempt to resolve the \p filenameId to a script ID based on the table.
+  /// \return the ScriptID of the given filenameId.
+  ScriptID resolveScriptId(RuntimeModule *runtimeModule, uint32_t filenameId)
+      const;
+
  private:
   /// The primary debugger command loop.
   ExecutionStatus debuggerLoop(
@@ -526,14 +531,8 @@ class Debugger {
 
   OptValue<hbc::DebugSourceLocation> getLocationForState(
       const InterpreterState &state) const {
-    return getSourceLocation(state.codeBlock, state.offset);
+    return state.codeBlock->getSourceLocation(state.offset);
   }
-
-  /// \return the source location of the given instruction offset \p offset in
-  /// the code block \p codeBlock.
-  OptValue<hbc::DebugSourceLocation> getSourceLocation(
-      const CodeBlock *codeBlock,
-      uint32_t offset) const;
 
   /// Attempt to resolve the requestedLocation in \p breakpoint.
   /// If successful, sets breakpoint.resolvedLocation to the resolved location.
@@ -543,11 +542,6 @@ class Debugger {
 
   /// Unresolves the breakpoint.
   void unresolveBreakpointLocation(Breakpoint &breakpoint);
-
-  /// Attempt to resolve the \p filenameId to a script ID based on the table.
-  /// \return the ScriptID of the given filenameId.
-  ScriptID resolveScriptId(RuntimeModule *runtimeModule, uint32_t filenameId)
-      const;
 
   /// \return a CallFrameInfo for a given code block \p codeBlock and IP offset
   /// into it \p ipOffset.

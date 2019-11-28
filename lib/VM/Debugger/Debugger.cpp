@@ -532,7 +532,7 @@ auto Debugger::getCallFrameInfo(const CodeBlock *codeBlock, uint32_t ipOffset)
     UTF16Ref functionName =
         getFunctionName(runtime_, codeBlock).getUTF16Ref(storage);
     convertUTF16ToUTF8WithReplacements(frameInfo.functionName, functionName);
-    auto locationOpt = getSourceLocation(codeBlock, ipOffset);
+    auto locationOpt = codeBlock->getSourceLocation(ipOffset);
     if (locationOpt) {
       frameInfo.location.line = locationOpt->line;
       frameInfo.location.column = locationOpt->column;
@@ -1056,21 +1056,6 @@ llvm::Optional<std::pair<InterpreterState, uint32_t>> Debugger::findCatchTarget(
     }
   }
   return llvm::None;
-}
-
-OptValue<hbc::DebugSourceLocation> Debugger::getSourceLocation(
-    const CodeBlock *codeBlock,
-    uint32_t offset) const {
-  assert(codeBlock && "Null code block");
-  auto debugLocsOffset = codeBlock->getDebugSourceLocationsOffset();
-  if (!debugLocsOffset) {
-    return llvm::None;
-  }
-
-  return codeBlock->getRuntimeModule()
-      ->getBytecode()
-      ->getDebugInfo()
-      ->getLocationForAddress(*debugLocsOffset, offset);
 }
 
 bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
