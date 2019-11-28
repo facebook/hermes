@@ -410,7 +410,7 @@ void GenGC::collect(bool canEffectiveOOM) {
   /// Update the heap's segments extents in the crash manager data.
   updateCrashManagerHeapExtents();
 
-  checkTripwire(usedAfter, steady_clock::now());
+  checkTripwire(usedAfter);
 #ifdef HERMESVM_SIZE_DIAGNOSTIC
   sizeDiagnosticCensus();
 #endif

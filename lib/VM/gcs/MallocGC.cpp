@@ -339,7 +339,7 @@ void MallocGC::collect() {
       allocatedBytes_,
       allocatedBefore,
       allocatedBytes_);
-  checkTripwire(allocatedBytes_, wallEnd);
+  checkTripwire(allocatedBytes_);
 }
 
 void MallocGC::finalizeAll() {

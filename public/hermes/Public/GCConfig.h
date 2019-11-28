@@ -34,9 +34,6 @@ using gcheapsize_t = uint32_t;
 /// surpasses a given threshold after collections.  Check documentation in
 /// README.md
 #define GC_TRIPWIRE_FIELDS(F)                                                  \
-  /* Minimum time to wait between tripwire trigger events. */                  \
-  F(constexpr, std::chrono::hours, Cooldown, 24)                               \
-                                                                               \
   /* If the heap size is above this threshold after a collection, the tripwire \
    * is triggered. */                                                          \
   F(constexpr, gcheapsize_t, Limit, std::numeric_limits<gcheapsize_t>::max())  \

@@ -52,8 +52,7 @@ GCBase::GCBase(
       memEventTracker_(gcConfig.getMemEventTracker()),
 #endif
       tripwireCallback_(gcConfig.getTripwireConfig().getCallback()),
-      tripwireLimit_(gcConfig.getTripwireConfig().getLimit()),
-      tripwireCooldown_(gcConfig.getTripwireConfig().getCooldown())
+      tripwireLimit_(gcConfig.getTripwireConfig().getLimit())
 #ifdef HERMESVM_SANITIZE_HANDLES
       ,
       sanitizeRate_(gcConfig.getSanitizeConfig().getSanitizeRate())
@@ -69,8 +68,7 @@ GCBase::GCBase(
       "Initialisation (Init: %dMB, Max: %dMB, Tripwire: %dMB/%" PRId64 "h)",
       gcConfig.getInitHeapSize() >> 20,
       gcConfig.getMaxHeapSize() >> 20,
-      gcConfig.getTripwireConfig().getLimit() >> 20,
-      static_cast<int64_t>(gcConfig.getTripwireConfig().getCooldown().count()));
+      gcConfig.getTripwireConfig().getLimit() >> 20));
 #endif // HERMESVM_PLATFORM_LOGGING
 #ifdef HERMESVM_SANITIZE_HANDLES
   const std::minstd_rand::result_type seed =
@@ -132,12 +130,9 @@ bool GCBase::createSnapshotToFile(const std::string &fileName) {
   return true;
 }
 
-void GCBase::checkTripwire(
-    size_t dataSize,
-    std::chrono::time_point<std::chrono::steady_clock> now) {
+void GCBase::checkTripwire(size_t dataSize) {
   if (LLVM_LIKELY(!tripwireCallback_) ||
-      LLVM_LIKELY(dataSize < tripwireLimit_) ||
-      LLVM_LIKELY(now < nextTripwireMinTime_)) {
+      LLVM_LIKELY(dataSize < tripwireLimit_) || tripwireCalled_) {
     return;
   }
 
@@ -153,9 +148,8 @@ void GCBase::checkTripwire(
     GCBase *gc_;
   } ctx(this);
 
-  nextTripwireMinTime_ = std::chrono::steady_clock::time_point::max();
+  tripwireCalled_ = true;
   tripwireCallback_(ctx);
-  nextTripwireMinTime_ = now + tripwireCooldown_;
 }
 
 void GCBase::printAllCollectedStats(llvm::raw_ostream &os) {

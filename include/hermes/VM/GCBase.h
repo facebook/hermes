@@ -671,9 +671,7 @@ class GCBase {
   /// function checks these parameters against the limits set at initialisation.
   /// If the conditions are met, the tripwire is triggered and tripwireCallback_
   /// is called.
-  void checkTripwire(
-      size_t dataSize,
-      std::chrono::time_point<std::chrono::steady_clock> now);
+  void checkTripwire(size_t dataSize);
 
   // Visibility here is public for unit_tests and protected otherwise
 
@@ -870,23 +868,14 @@ class GCBase {
   std::shared_ptr<MemoryEventTracker> memEventTracker_;
 #endif
 
-  /// Callback called if it's not null when the Live Data Tripwire is triggered
+  /// Callback called if it's not null when the Live Data Tripwire is triggered.
   std::function<void(GCTripwireContext &)> tripwireCallback_;
 
-  /// Maximum size limit before the heap size tripwire will trigger
+  /// Maximum size limit before the heap size tripwire will trigger.
   gcheapsize_t tripwireLimit_;
 
-  /// Time in hours before the tripwire can trigger again after it is
-  /// triggered
-  std::chrono::hours tripwireCooldown_;
-
-  /// Time when the tripwire can be activated again
-  std::chrono::time_point<std::chrono::steady_clock> nextTripwireMinTime_{
-      std::chrono::steady_clock::now()};
-
-  /// Variable that saves whether the callback for the live data tripwire is
-  /// already running
-  bool liveDataTripwireCallbackRunning_{false};
+  /// True if the tripwire has already been called on this heap.
+  bool tripwireCalled_{false};
 
 #ifdef HERMESVM_SANITIZE_HANDLES
   /// Whether to keep moving the heap around to detect unsanitary GC handles.

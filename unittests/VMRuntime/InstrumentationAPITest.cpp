@@ -44,7 +44,6 @@ TEST(InstrumentationAPITest, RunCallbackWhenCollecting) {
           .withTripwireConfig(
               GCTripwireConfig::Builder()
                   .withLimit(0)
-                  .withCooldown(std::chrono::hours(0))
                   .withCallback([&triggeredTripwire](GCTripwireContext &) {
                     triggeredTripwire = true;
                   })
@@ -63,7 +62,6 @@ TEST(InstrumentationAPITest, DontRunCallbackWhenCollecting_underSizeLimit) {
           .withTripwireConfig(
               GCTripwireConfig::Builder()
                   .withLimit(100)
-                  .withCooldown(std::chrono::hours(0))
                   .withCallback([&triggeredTripwire](GCTripwireContext &) {
                     triggeredTripwire = true;
                   })
@@ -74,26 +72,6 @@ TEST(InstrumentationAPITest, DontRunCallbackWhenCollecting_underSizeLimit) {
   EXPECT_FALSE(triggeredTripwire);
 }
 
-TEST(InstrumentationAPITest, RunCallbackTwice) {
-  int timesTriggeredTripwire = 0;
-  auto rt = DummyRuntime::create(
-      getMetadataTable(),
-      kTestGCConfigSmall.rebuild()
-          .withTripwireConfig(
-              GCTripwireConfig::Builder()
-                  .withLimit(0)
-                  .withCooldown(std::chrono::hours(0))
-                  .withCallback([&timesTriggeredTripwire](GCTripwireContext &) {
-                    timesTriggeredTripwire++;
-                  })
-                  .build())
-          .build());
-  DummyRuntime &runtime = *rt;
-  runtime.gc.collect();
-  runtime.gc.collect();
-  EXPECT_EQ(timesTriggeredTripwire, 2);
-}
-
 TEST(InstrumentationAPITest, RunCallbackOnlyOnce_UnderCooldownTime) {
   int timesTriggeredTripwire = 0;
   auto rt = DummyRuntime::create(
@@ -102,7 +80,6 @@ TEST(InstrumentationAPITest, RunCallbackOnlyOnce_UnderCooldownTime) {
           .withTripwireConfig(
               GCTripwireConfig::Builder()
                   .withLimit(0)
-                  .withCooldown(std::chrono::hours(1))
                   .withCallback([&timesTriggeredTripwire](GCTripwireContext &) {
                     timesTriggeredTripwire++;
                   })
@@ -110,9 +87,8 @@ TEST(InstrumentationAPITest, RunCallbackOnlyOnce_UnderCooldownTime) {
           .build());
   DummyRuntime &runtime = *rt;
 
-  auto now = std::chrono::steady_clock::now();
-  runtime.gc.checkTripwire(100, now);
-  runtime.gc.checkTripwire(100, now + std::chrono::seconds(2));
+  runtime.gc.checkTripwire(100);
+  runtime.gc.checkTripwire(100);
   EXPECT_EQ(timesTriggeredTripwire, 1);
 }
 
@@ -124,7 +100,6 @@ TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
           .withTripwireConfig(
               GCTripwireConfig::Builder()
                   .withLimit(32)
-                  .withCooldown(std::chrono::hours(0))
                   .withCallback([&triggeredTripwire](GCTripwireContext &) {
                     triggeredTripwire = true;
                   })
@@ -147,7 +122,6 @@ TEST(InstrumentationAPITest, DontRunCallbackAfterAllocatingMemoryUnderLimit) {
           .withTripwireConfig(
               GCTripwireConfig::Builder()
                   .withLimit(256)
-                  .withCooldown(std::chrono::hours(0))
                   .withCallback([&triggeredTripwire](GCTripwireContext &) {
                     triggeredTripwire = true;
                   })
