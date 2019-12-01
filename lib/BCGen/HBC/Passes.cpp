@@ -259,7 +259,7 @@ bool LoadParameters::runOnFunction(Function *F) {
 
   // Lower accesses to "this".
   auto *thisParam = F->getThisParameter();
-  if (thisParam->hasUsers()) {
+  if (thisParam && thisParam->hasUsers()) {
     // In strict mode just use param 0 directly. In non-strict, we must coerce
     // it to an object.
     Value *getThisInst = F->isStrictMode()

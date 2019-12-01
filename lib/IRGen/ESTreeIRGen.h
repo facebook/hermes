@@ -394,8 +394,9 @@ class ESTreeIRGen {
       llvm::StringRef filename);
 
   /// Perform IR generation for a lazy function.
-  /// \return the newly allocated generated Function IR.
-  Function *doLazyFunction(hbc::LazyCompilationData *lazyData);
+  /// \return the newly allocated generated Function IR and lexical root
+  std::pair<Function *, Function *> doLazyFunction(
+      hbc::LazyCompilationData *lazyData);
 
   /// Generate a function which immediately throws the specified SyntaxError
   /// message.
@@ -887,6 +888,12 @@ class ESTreeIRGen {
       Function *wrapperFunction,
       const std::shared_ptr<const SerializedScope> &scope,
       int depth);
+
+  /// Add dummy functions for lexical scope debug info
+  void addLexicalDebugInfo(
+      Function *child,
+      Function *global,
+      const std::shared_ptr<const SerializedScope> &scope);
 
   /// Save all variables currently in scope, for lazy compilation.
   std::shared_ptr<SerializedScope> saveCurrentScope();

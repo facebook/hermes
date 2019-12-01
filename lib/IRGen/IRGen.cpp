@@ -43,7 +43,7 @@ void generateIRForCJSModule(
       topLevelFunction, node->getSemInfo(), id, filename);
 }
 
-Function *generateLazyFunctionIR(
+std::pair<Function *, Function *> generateLazyFunctionIR(
     hbc::LazyCompilationData *lazyData,
     Module *M) {
   auto &context = M->getContext();
@@ -62,18 +62,21 @@ Function *generateLazyFunctionIR(
   auto parsed = parser.parseLazyFunction(
       (ESTree::NodeKind)lazyData->nodeKind, lazyData->span.Start);
 
-  // In case of error, generate a function just throws a SyntaxError.
+  // In case of error, generate a function that just throws a SyntaxError.
   if (!parsed ||
       !sem::validateFunctionAST(
           context, semCtx, *parsed, lazyData->strictMode)) {
     LLVM_DEBUG(
         llvm::dbgs() << "Lazy AST parsing/validation failed with error: "
                      << diagHandler.getErrorString());
-    return ESTreeIRGen::genSyntaxErrorFunction(
+
+    auto *error = ESTreeIRGen::genSyntaxErrorFunction(
         M,
         lazyData->originalName,
         lazyData->span,
         diagHandler.getErrorString());
+
+    return {error, error};
   }
 
   ESTreeIRGen generator{parsed.getValue(), {}, M, {}};

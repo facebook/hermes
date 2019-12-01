@@ -154,7 +154,6 @@ bool VariableScope::isGlobalScope() const {
 
 ExternalScope::ExternalScope(Function *function, int32_t depth)
     : VariableScope(ValueKind::ExternalScopeKind, function), depth_(depth) {
-  assert(depth < 0 && "Invalid external scope depth");
   function->addExternalScope(this);
 }
 

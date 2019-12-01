@@ -7,6 +7,7 @@
 
 #include "ESTreeIRGen.h"
 
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 namespace hermes {
@@ -201,7 +202,7 @@ void ESTreeIRGen::doIt() {
     genDummyFunction(wrapperFunction);
 
     // Restore the previously saved parent scopes.
-    materializeScopesInChain(wrapperFunction, lexicalScopeChain, 1);
+    materializeScopesInChain(wrapperFunction, lexicalScopeChain, -1);
 
     // Finally create the function which will actually be executed.
     topLevelFunction = Builder.createFunction(
@@ -287,11 +288,22 @@ void ESTreeIRGen::doCJSModule(
       id, Builder.createIdentifier(filename), newFunc);
 }
 
-Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
-  // Create a dummy top level function so IRGen doesn't think our lazyFunction
-  // is in global scope.
+static int getDepth(const std::shared_ptr<SerializedScope> chain) {
+  int depth = 0;
+  const SerializedScope *current = chain.get();
+  while (current) {
+    depth += 1;
+    current = current->parentScope.get();
+  }
+  return depth;
+}
+
+std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
+    hbc::LazyCompilationData *lazyData) {
+  // Create a top level function that will never be executed, because:
+  // 1. IRGen assumes the first function always has global scope
+  // 2. It serves as the root for dummy functions for lexical data
   Function *topLevel = Builder.createTopLevelFunction(lazyData->strictMode, {});
-  genDummyFunction(topLevel);
 
   FunctionContext topLevelFunctionContext{this, topLevel, nullptr};
 
@@ -302,9 +314,16 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
 
   auto *node = cast<ESTree::FunctionLikeNode>(Root);
 
-  // Restore the previously saved parent scopes.
+  // We restore scoping information in two separate ways:
+  // 1. By adding them to ExternalScopes for resolution here
+  // 2. By adding dummy functions for lexical scoping debug info later
+  //
+  // Instruction selection determines the delta between the ExternalScope
+  // and the dummy function chain, so we add the ExternalScopes with
+  // positive depth.
   lexicalScopeChain = lazyData->parentScope;
-  materializeScopesInChain(topLevel, lexicalScopeChain, 1);
+  materializeScopesInChain(
+      topLevel, lexicalScopeChain, getDepth(lexicalScopeChain) - 1);
 
   // If lazyData->closureAlias is specified, we must create an alias binding
   // between originalName (which must be valid) and the variable identified by
@@ -327,7 +346,9 @@ Function *ESTreeIRGen::doLazyFunction(hbc::LazyCompilationData *lazyData) {
       !isa<ESTree::ArrowFunctionExpressionNode>(node) &&
       "lazy compilation not supported for arrow functions");
 
-  return genES5Function(lazyData->originalName, parentVar, node);
+  auto *func = genES5Function(lazyData->originalName, parentVar, node);
+  addLexicalDebugInfo(func, topLevel, lexicalScopeChain);
+  return {func, topLevel};
 }
 
 std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
@@ -1159,7 +1180,7 @@ void ESTreeIRGen::materializeScopesInChain(
   assert(depth < 1000 && "Excessive scope depth");
 
   // First materialize parent scopes.
-  materializeScopesInChain(wrapperFunction, scope->parentScope, depth + 1);
+  materializeScopesInChain(wrapperFunction, scope->parentScope, depth - 1);
 
   // If scope->closureAlias is specified, we must create an alias binding
   // between originalName (which must be valid) and the variable identified by
@@ -1182,12 +1203,56 @@ void ESTreeIRGen::materializeScopesInChain(
   }
 
   // Create an external scope.
-  ExternalScope *ES = Builder.createExternalScope(wrapperFunction, -depth);
+  ExternalScope *ES = Builder.createExternalScope(wrapperFunction, depth);
   for (auto variableId : scope->variables) {
     auto *variable =
         Builder.createVariable(ES, Variable::DeclKind::Var, variableId);
     nameTable_.insert(variableId, variable);
   }
+}
+
+namespace {
+void buildDummyLexicalParent(
+    IRBuilder &builder,
+    Function *parent,
+    Function *child) {
+  // FunctionScopeAnalysis works through CreateFunctionInsts, so we have to add
+  // that even though these functions are never invoked.
+  auto *block = builder.createBasicBlock(parent);
+  builder.setInsertionBlock(block);
+  builder.createUnreachableInst();
+  auto *inst = builder.createCreateFunctionInst(child);
+  builder.createReturnInst(inst);
+}
+} // namespace
+
+/// Add dummy functions for lexical scope debug info.
+// They are never executed and serve no purpose other than filling in debug
+// info. This is currently necessary because we can't rely on parent bytecode
+// modules for lexical scoping data.
+void ESTreeIRGen::addLexicalDebugInfo(
+    Function *child,
+    Function *global,
+    const std::shared_ptr<const SerializedScope> &scope) {
+  if (!scope || !scope->parentScope) {
+    buildDummyLexicalParent(Builder, global, child);
+    return;
+  }
+
+  auto *current = Builder.createFunction(
+      scope->originalName,
+      Function::DefinitionKind::ES5Function,
+      false,
+      {},
+      false);
+
+  for (auto &var : scope->variables) {
+    Builder.createVariable(
+        current->getFunctionScope(), Variable::DeclKind::Var, var);
+  }
+
+  buildDummyLexicalParent(Builder, current, child);
+  addLexicalDebugInfo(current, global, scope->parentScope);
 }
 
 #ifndef HERMESVM_LEAN

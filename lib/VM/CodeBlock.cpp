@@ -261,10 +261,12 @@ std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
                    << "\n");
 
   Module M{lazyData->context};
-  Function *entryPoint = hermes::generateLazyFunctionIR(lazyData, &M);
+  auto pair = hermes::generateLazyFunctionIR(lazyData, &M);
+  Function *entryPoint = pair.first;
+  Function *lexicalRoot = pair.second;
 
   auto bytecodeModule = hbc::generateBytecodeModule(
-      &M, entryPoint, BytecodeGenerationOptions::defaults());
+      &M, lexicalRoot, entryPoint, BytecodeGenerationOptions::defaults());
 
   return bytecodeModule;
 }

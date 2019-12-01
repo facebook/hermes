@@ -91,7 +91,6 @@ GeneratorInnerFunction *IRBuilder::createGeneratorInnerFunction(
 ExternalScope *IRBuilder::createExternalScope(
     Function *function,
     int32_t depth) {
-  assert(depth < 0 && "Invalid external scope depth");
   return new ExternalScope(function, depth);
 }
 

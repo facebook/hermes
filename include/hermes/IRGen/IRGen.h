@@ -79,8 +79,10 @@ void generateIRForCJSModule(
 /// Generate IR from the AST of a previously pre-parsed "lazy" function by
 /// parsing it again and validating it. On error, a stub function which throws
 /// a SyntaxError will be emitted instead.
-/// \return the newly generated function IR
-Function *generateLazyFunctionIR(hbc::LazyCompilationData *lazyData, Module *M);
+/// \return the newly generated function IR and lexical scope root
+std::pair<Function *, Function *> generateLazyFunctionIR(
+    hbc::LazyCompilationData *lazyData,
+    Module *M);
 
 } // namespace hermes
 

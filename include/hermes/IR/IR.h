@@ -1249,15 +1249,14 @@ class VariableScope : public Value {
 /// i.e. upvars from an enclosing scope. These variables are stored at a given
 /// depth in the scope chain.
 class ExternalScope : public VariableScope {
-  /// The scope depth represented by this external scope, a negative value.
+  /// The scope depth represented by this external scope
   const int32_t depth_ = 0;
 
  public:
   ExternalScope(Function *function, int32_t depth);
 
-  /// \return the scope depth, a negative value.
+  /// \return the scope depth
   int32_t getDepth() const {
-    assert(depth_ < 0 && "Invalid scope depth");
     return depth_;
   }
 
