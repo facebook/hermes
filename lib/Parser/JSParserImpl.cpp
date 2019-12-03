@@ -2525,14 +2525,12 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberExpressionExceptNew() {
   SMLoc startLoc = tok_->getStartLoc();
 
   ESTree::NodePtr expr;
-  bool allowTemplateLiteral = true;
 
   if (check(TokenKind::rw_super)) {
     // SuperProperty can be used the same way as PrimaryExpression, but
     // must not have a TemplateLiteral immediately after the `super` keyword.
     expr = setLocation(tok_, tok_, new (context_) ESTree::SuperNode());
     advance();
-    allowTemplateLiteral = false;
   } else {
     auto primExpr = parsePrimaryExpression();
     if (!primExpr)
@@ -2554,7 +2552,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberExpressionExceptNew() {
       expr = msel.getValue();
     } else {
       assert(checkTemplateLiteral());
-      if (!allowTemplateLiteral) {
+      if (isa<ESTree::SuperNode>(expr)) {
         sm_.error(
             expr->getSourceRange(),
             "invalid use of 'super' as a template literal tag");
@@ -2571,7 +2569,6 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberExpressionExceptNew() {
               expr, optTemplate.getValue()));
       objectLoc = nextObjectLoc;
     }
-    allowTemplateLiteral = true;
   }
 
   return expr;
