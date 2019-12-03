@@ -56,11 +56,20 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
       cell = header->getForwardingPointer()->data();
     } else {
       // It hasn't been seen before, move it.
+      // At this point, also trim the object.
+      const bool canBeTrimmed = cell->getVT()->canBeTrimmed();
+      const gcheapsize_t trimmedSize =
+          cell->getVT()->getTrimmedSize(cell, cell->getAllocatedSize());
       auto *newLocation =
-          new (checkedMalloc(cell->getAllocatedSize() + sizeof(CellHeader)))
-              CellHeader();
+          new (checkedMalloc(trimmedSize + sizeof(CellHeader))) CellHeader();
       newLocation->mark();
-      memcpy(newLocation->data(), cell, cell->getAllocatedSize());
+      memcpy(newLocation->data(), cell, trimmedSize);
+      if (canBeTrimmed) {
+        auto *newCell =
+            reinterpret_cast<VariableSizeRuntimeCell *>(newLocation->data());
+        newCell->setSizeDuringGCCompaction(trimmedSize);
+        newCell->getVT()->trim(newCell);
+      }
       // Make sure to put an element on the worklist that is at the updated
       // location. Don't update the stale address that is about to be free'd.
       header->markWithForwardingPointer(newLocation);
@@ -75,6 +84,11 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
     if (!header->isMarked()) {
       // Only add to the worklist if it hasn't been marked yet.
       header->mark();
+      // Trim the cell. This is fine to do with malloc'ed memory because the
+      // original size is retained by malloc.
+      if (cell->getVT()->canBeTrimmed()) {
+        cell->getVT()->trim(cell);
+      }
       worklist_.push_back(header);
       // Move the pointer from the old pointers to the new pointers.
       gc.pointers_.erase(header);
