@@ -27,7 +27,8 @@
   F(hostGlobalObject)                \
   F(mathRandom)                      \
   F(nativeSetsConstant)              \
-  F(parseGCConfig)
+  F(parseGCConfig)                   \
+  F(surrogatePairString)
 
 #define TEST_FUNC_FORWARD_DECL(name) \
   const char *name##Trace();         \

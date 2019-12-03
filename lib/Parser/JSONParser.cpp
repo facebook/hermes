@@ -179,14 +179,16 @@ bool JSONFactory::LessHiddenClassKey::operator()(
 JSONParser::JSONParser(
     JSONFactory &factory,
     std::unique_ptr<llvm::MemoryBuffer> input,
-    SourceErrorManager &sm)
+    SourceErrorManager &sm,
+    bool convertSurrogates)
     : factory_(factory),
       lexer_(
           std::move(input),
           sm,
           factory_.getAllocator(),
           &factory_.getStringTable(),
-          true) {}
+          true,
+          convertSurrogates) {}
 
 llvm::Optional<JSONValue *> JSONParser::parse() {
   lexer_.advance();

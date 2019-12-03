@@ -240,6 +240,11 @@ class JSLexer {
 
   bool strictMode_;
 
+  /// If true, when a surrogate pair sequence is encountered in a string literal
+  /// in the source, convert that string literal to its canonical UTF-8
+  /// sequence.
+  bool convertSurrogates_;
+
   Token token_;
 
   const char *bufferStart_;
@@ -264,45 +269,55 @@ class JSLexer {
   }
 
  public:
+  /// \param convertSurrogates See member variable \p convertSurrogates_.
   explicit JSLexer(
       std::unique_ptr<llvm::MemoryBuffer> input,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
-      bool strictMode = true);
+      bool strictMode = true,
+      bool convertSurrogates = false);
 
+  /// \param convertSurrogates See member variable \p convertSurrogates_.
   explicit JSLexer(
       uint32_t bufId,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
-      bool strictMode = true);
+      bool strictMode = true,
+      bool convertSurrogates = false);
 
+  /// \param convertSurrogates See member variable \p convertSurrogates_.
   JSLexer(
       StringRef input,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
-      bool strictMode = true)
+      bool strictMode = true,
+      bool convertSurrogates = false)
       : JSLexer(
             llvm::MemoryBuffer::getMemBuffer(input, "JavaScript"),
             sm,
             allocator,
             strTab,
-            strictMode) {}
+            strictMode,
+            convertSurrogates) {}
 
+  /// \param convertSurrogates See member variable \p convertSurrogates_.
   JSLexer(
       llvm::MemoryBufferRef input,
       SourceErrorManager &sm,
       Allocator &allocator,
       StringTable *strTab = nullptr,
-      bool strictMode = true)
+      bool strictMode = true,
+      bool convertSurrogates = false)
       : JSLexer(
             llvm::MemoryBuffer::getMemBuffer(input),
             sm,
             allocator,
             strTab,
-            strictMode) {}
+            strictMode,
+            convertSurrogates) {}
 
   SourceErrorManager &getSourceMgr() {
     return sm_;
@@ -398,6 +413,9 @@ class JSLexer {
   }
 
   UniqueString *getStringLiteral(StringRef str) {
+    if (LLVM_UNLIKELY(convertSurrogates_)) {
+      return convertSurrogatesInString(str);
+    }
     return strTab_.getString(str);
   }
 
@@ -554,6 +572,10 @@ class JSLexer {
 
   /// Attempt to scan a template literal starting at ` or at }.
   void scanTemplateLiteral();
+
+  /// Convert the surrogates into \p str into a valid UTF-8 sequence, and unique
+  /// it into the string table.
+  UniqueString *convertSurrogatesInString(StringRef str);
 
   /// Initialize the parser for a given source buffer id.
   void initializeWithBufferId(uint32_t bufId);

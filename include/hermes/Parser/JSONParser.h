@@ -630,19 +630,26 @@ class JSONParser {
   JSONParser(
       JSONFactory &factory,
       std::unique_ptr<llvm::MemoryBuffer> input,
-      SourceErrorManager &sm);
+      SourceErrorManager &sm,
+      bool convertSurrogates = false);
 
-  JSONParser(JSONFactory &factory, StringRef input, SourceErrorManager &sm)
+  JSONParser(
+      JSONFactory &factory,
+      StringRef input,
+      SourceErrorManager &sm,
+      bool convertSurrogates = false)
       : JSONParser(
             factory,
             llvm::MemoryBuffer::getMemBuffer(input, "json"),
-            sm) {}
+            sm,
+            convertSurrogates) {}
 
   JSONParser(
       JSONFactory &factory,
       llvm::MemoryBufferRef input,
       SourceErrorManager &sm,
-      bool showColors = true)
+      bool showColors = true,
+      bool convertSurrogates = false)
       : JSONParser(factory, llvm::MemoryBuffer::getMemBuffer(input), sm) {}
 
   /// Parse the supplied input. On error the result will be empty and the error

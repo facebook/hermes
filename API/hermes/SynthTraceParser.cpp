@@ -39,7 +39,8 @@ JSONObject *parseJSON(
     std::unique_ptr<llvm::MemoryBuffer> stream) {
   JSONFactory factory(alloc);
   ::hermes::SourceErrorManager sm;
-  JSONParser parser(factory, std::move(stream), sm);
+  // Convert surrogates, since JSI deals in UTF-8.
+  JSONParser parser(factory, std::move(stream), sm, /*convertSurrogates*/ true);
   auto rootObj = parser.parse();
   if (!rootObj) {
     // The source error manager will print to stderr.

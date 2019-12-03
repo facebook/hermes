@@ -53,12 +53,14 @@ JSLexer::JSLexer(
     SourceErrorManager &sm,
     Allocator &allocator,
     StringTable *strTab,
-    bool strictMode)
+    bool strictMode,
+    bool convertSurrogates)
     : sm_(sm),
       allocator_(allocator),
       ownStrTab_(strTab ? nullptr : new StringTable(allocator_)),
       strTab_(strTab ? *strTab : *ownStrTab_),
-      strictMode_(strictMode) {
+      strictMode_(strictMode),
+      convertSurrogates_(convertSurrogates) {
   initializeWithBufferId(bufId);
   initializeReservedIdentifiers();
 }
@@ -68,12 +70,14 @@ JSLexer::JSLexer(
     SourceErrorManager &sm,
     Allocator &allocator,
     StringTable *strTab,
-    bool strictMode)
+    bool strictMode,
+    bool convertSurrogates)
     : sm_(sm),
       allocator_(allocator),
       ownStrTab_(strTab ? nullptr : new StringTable(allocator_)),
       strTab_(strTab ? *strTab : *ownStrTab_),
-      strictMode_(strictMode) {
+      strictMode_(strictMode),
+      convertSurrogates_(convertSurrogates) {
   auto bufId = sm_.addNewSourceBuffer(std::move(input));
   initializeWithBufferId(bufId);
   initializeReservedIdentifiers();
@@ -1715,6 +1719,17 @@ exitLoop:
 
   token_.setRegExpLiteral(new (allocator_.Allocate<RegExpLiteral>(1))
                               RegExpLiteral(body, flags));
+}
+
+UniqueString *JSLexer::convertSurrogatesInString(StringRef str) {
+  llvm::SmallVector<char16_t, 8> ustr;
+  ustr.reserve(str.size());
+  char16_t *ustrEnd =
+      convertUTF8WithSurrogatesToUTF16(ustr.data(), str.begin(), str.end());
+  std::string output;
+  convertUTF16ToUTF8WithReplacements(
+      output, llvm::makeArrayRef(ustr.data(), ustrEnd));
+  return strTab_.getString(output);
 }
 
 bool JSLexer::error(llvm::SMLoc loc, const llvm::Twine &msg) {
