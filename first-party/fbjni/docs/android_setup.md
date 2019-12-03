@@ -10,8 +10,7 @@ In your app-specific `build.gradle`:
 ```groovy
 repositories {
   maven {
-    // In the future, we will be included in JCenter.
-    url 'https://dl.bintray.com/facebook/maven/'
+    jcenter()
   }
 }
 
