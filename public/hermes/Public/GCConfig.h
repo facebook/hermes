@@ -71,6 +71,11 @@ enum ReleaseUnused {
   kReleaseUnusedYoungAlways /// Also young gen, also on young gen collections.
 };
 
+enum class GCEventKind {
+  CollectionStart,
+  CollectionEnd,
+};
+
 /// Parameters for GC Initialisation.  Check documentation in README.md
 /// constexpr indicates that the default value is constexpr.
 #define GC_FIELDS(F)                                                      \
@@ -124,6 +129,14 @@ enum ReleaseUnused {
   F(HERMES_NON_CONSTEXPR,                                                 \
     std::shared_ptr<MemoryEventTracker>,                                  \
     MemEventTracker,                                                      \
+    nullptr)                                                              \
+                                                                          \
+  /* Called at GC events (see GCEventKind enum for the list). The */      \
+  /* second argument contains human-readable details about the event. */  \
+  /* NOTE: The function MUST NOT invoke any methods on the Runtime. */    \
+  F(HERMES_NON_CONSTEXPR,                                                 \
+    std::function<void(GCEventKind, const char *)>,                       \
+    Callback,                                                             \
     nullptr)                                                              \
   /* GC_FIELDS END */
 

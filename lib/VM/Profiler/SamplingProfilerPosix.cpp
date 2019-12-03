@@ -448,10 +448,10 @@ void SamplingProfiler::clear() {
 
 void SamplingProfiler::onGCEvent(
     Runtime *runtime,
-    GCBase::GCCallbacks::GCEventKind kind,
+    GCEventKind kind,
     const std::string &extraInfo) {
   switch (kind) {
-    case GCBase::GCCallbacks::GCEventKind::CollectionStart: {
+    case GCEventKind::CollectionStart: {
       assert(
           preGCStackDepth_ == 0 && "preGCStackDepth_ is not reset after GC?");
       std::lock_guard<std::mutex> lockGuard(profilerLock_);
@@ -462,7 +462,7 @@ void SamplingProfiler::onGCEvent(
       break;
     }
 
-    case GCBase::GCCallbacks::GCEventKind::CollectionEnd:
+    case GCEventKind::CollectionEnd:
       preGCStackDepth_ = 0;
       break;
 

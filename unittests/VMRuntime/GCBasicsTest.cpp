@@ -458,6 +458,18 @@ TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
   EXPECT_EQ(idBefore, idAfter);
 }
 
+TEST(GCCallbackTest, TestCallbackInvoked) {
+  std::vector<GCEventKind> ev;
+  auto cb = [&ev](GCEventKind kind, const char *) { ev.push_back(kind); };
+  GCConfig config = GCConfig::Builder().withCallback(cb).build();
+  auto rt =
+      Runtime::create(RuntimeConfig::Builder().withGCConfig(config).build());
+  rt->collect();
+  EXPECT_EQ(2, ev.size());
+  EXPECT_EQ(GCEventKind::CollectionStart, ev[0]);
+  EXPECT_EQ(GCEventKind::CollectionEnd, ev[1]);
+}
+
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   constexpr size_t kHeapSizeHint =

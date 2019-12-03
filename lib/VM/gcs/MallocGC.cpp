@@ -247,7 +247,7 @@ void MallocGC::collect() {
 
   // Begin the collection phases.
   {
-    GCCycle cycle{this};
+    GCCycle cycle{this, gcCallbacks_, "Full collection"};
     MarkingAcceptor acceptor(*this);
     DroppingAcceptor<MarkingAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, true);

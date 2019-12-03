@@ -175,11 +175,6 @@ class GCBase {
   /// An interface enabling the garbage collector to mark roots and free
   /// symbols.
   struct GCCallbacks {
-    enum class GCEventKind {
-      CollectionStart,
-      CollectionEnd,
-    };
-
     /// Virtual destructor to avoid warnings.
     virtual ~GCCallbacks() = 0;
 

@@ -183,7 +183,8 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
       stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
       crashCallbackKey_(
-          crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })) {
+          crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
+      gcEventCallback_(runtimeConfig.getGCConfig().getCallback()) {
   assert(
       (void *)this == (void *)(HandleRootOwner *)this &&
       "cast to HandleRootOwner should be no-op");
@@ -1747,11 +1748,12 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   return res;
 }
 
-void Runtime::onGCEvent(
-    GCBase::GCCallbacks::GCEventKind kind,
-    const std::string &extraInfo) {
+void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
   if (samplingProfiler_ != nullptr) {
     samplingProfiler_->onGCEvent(this, kind, extraInfo);
+  }
+  if (gcEventCallback_) {
+    gcEventCallback_(kind, extraInfo.c_str());
   }
 }
 

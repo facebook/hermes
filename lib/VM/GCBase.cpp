@@ -99,14 +99,14 @@ GCBase::GCCycle::GCCycle(
   gc_->inGC_ = true;
   if (gcCallbacksOpt_.hasValue()) {
     gcCallbacksOpt_.getValue()->onGCEvent(
-        GCCallbacks::GCEventKind::CollectionStart, extraInfo_);
+        GCEventKind::CollectionStart, extraInfo_);
   }
 }
 
 GCBase::GCCycle::~GCCycle() {
   if (gcCallbacksOpt_.hasValue()) {
     gcCallbacksOpt_.getValue()->onGCEvent(
-        GCCallbacks::GCEventKind::CollectionEnd, extraInfo_);
+        GCEventKind::CollectionEnd, extraInfo_);
   }
   gc_->inGC_ = false;
 }

@@ -729,9 +729,7 @@ class Runtime : public HandleRootOwner,
   }
 
   /// Called when various GC events(e.g. collection start/end) happen.
-  void onGCEvent(
-      GCBase::GCCallbacks::GCEventKind kind,
-      const std::string &extraInfo) override;
+  void onGCEvent(GCEventKind kind, const std::string &extraInfo) override;
 
 #ifdef HERMESVM_SERIALIZE
   /// Fill the header with current Runtime config
@@ -1135,6 +1133,9 @@ class Runtime : public HandleRootOwner,
   /// Runtime. This is needed because the identifier table may contain pointers
   /// into bytecode, and so memory backing these must be preserved.
   std::vector<std::shared_ptr<hbc::BCProvider>> persistentBCProviders_;
+
+  /// Config-provided callback for GC events.
+  std::function<void(GCEventKind, const char *)> gcEventCallback_;
 
 #ifdef HERMES_ENABLE_DEBUGGER
  private:
