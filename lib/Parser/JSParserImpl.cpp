@@ -3006,7 +3006,7 @@ inline unsigned getPrecedence(TokenKind kind) {
 #define RESWORD(name)                                       \
   (TokenKind::rw_##name == TokenKind::rw_in ||              \
            TokenKind::rw_##name == TokenKind::rw_instanceof \
-       ? 7                                                  \
+       ? 8                                                  \
        : 0),
 #include "hermes/Parser/TokenKinds.def"
   };
@@ -3035,23 +3035,45 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   // Operator and value stack.
   llvm::SmallVector<std::pair<ESTree::NodePtr, TokenKind>, STACK_SIZE> stack{};
 
+  // True upon encountering a '??' operator.
+  bool hasNullish = false;
+  // True upon encountering a '&&' or '||' operator.
+  bool hasBoolean = false;
+
   /// Allocate a binary expression node with the specified children and
   /// operator.
-  const auto newBinNode = [this](
+  const auto newBinNode = [this, &hasNullish, &hasBoolean](
                               ESTree::NodePtr left,
                               TokenKind opKind,
                               ESTree::NodePtr right) -> ESTree::NodePtr {
     UniqueString *opIdent = getTokenIdent(opKind);
-    if (opKind == TokenKind::ampamp || opKind == TokenKind::pipepipe)
+    if (opKind == TokenKind::ampamp || opKind == TokenKind::pipepipe ||
+        opKind == TokenKind::questionquestion) {
+      if ((hasNullish && opKind != TokenKind::questionquestion) ||
+          (hasBoolean && opKind == TokenKind::questionquestion)) {
+        // This error doesn't prevent parsing the rest of the binary expression,
+        // because it's only there to avoid confusion from the JS author's
+        // perspective. Report the error but continue parsing.
+        // The question marks are escaped to avoid triggering a trigraph.
+        lexer_.error(
+            {left->getStartLoc(), right->getEndLoc()},
+            "Mixing '\?\?' with '&&' or '||' requires parentheses");
+      }
+      if (opKind == TokenKind::questionquestion) {
+        hasNullish = true;
+      } else {
+        hasBoolean = true;
+      }
       return setLocation(
           left,
           right,
           new (context_) ESTree::LogicalExpressionNode(left, right, opIdent));
-    else
+    } else {
       return setLocation(
           left,
           right,
           new (context_) ESTree::BinaryExpressionNode(left, right, opIdent));
+    }
   };
 
   // Decide whether to recognize "in" as a binary operator.

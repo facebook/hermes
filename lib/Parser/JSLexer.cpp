@@ -207,7 +207,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       PUNC_L2_3('&', TokenKind::amp,   '&', TokenKind::ampamp,     '=', TokenKind::ampequal);
       PUNC_L2_3('|', TokenKind::pipe,  '|', TokenKind::pipepipe,   '=', TokenKind::pipeequal);
 
-      // ? ?.
+      // ? ?? ?.
       case '?':
         token_.setStart(curCharPtr_);
         if (curCharPtr_[1] == '.' && !isdigit(curCharPtr_[2])) {
@@ -216,6 +216,9 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
           // This is done to prevent `x?.3:y` from being recognized
           // as `x ?. 3 : y` instead of `x ? .3 : y`.
           token_.setPunctuator(TokenKind::questiondot);
+          curCharPtr_ += 2;
+        } else if (curCharPtr_[1] == '?') {
+          token_.setPunctuator(TokenKind::questionquestion);
           curCharPtr_ += 2;
         } else {
           token_.setPunctuator(TokenKind::question);
@@ -391,7 +394,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         }
         break;
 
-      // clang-format off
+        // clang-format off
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9':
         // clang-format on
@@ -399,7 +402,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         scanNumber();
         break;
 
-      // clang-format off
+        // clang-format off
       case '_': case '$':
       case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g':
       case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':

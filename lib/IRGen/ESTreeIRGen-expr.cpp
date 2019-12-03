@@ -1488,13 +1488,20 @@ Value *ESTreeIRGen::genLogicalExpression(
   auto opStr = logical->_operator->str();
   LLVM_DEBUG(dbgs() << "IRGen of short circuiting: " << opStr << ".\n");
 
-  // True if the operand is And (&&) or False if the operand is Or (||).
-  bool isAnd = false;
+  enum class Kind {
+    And, // &&
+    Or, // ||
+    Coalesce, // ??
+  };
+
+  Kind kind;
 
   if (opStr == "&&") {
-    isAnd = true;
+    kind = Kind::And;
   } else if (opStr == "||") {
-    isAnd = false;
+    kind = Kind::Or;
+  } else if (opStr == "??") {
+    kind = Kind::Coalesce;
   } else {
     llvm_unreachable("Invalid update operator");
   }
@@ -1510,18 +1517,34 @@ Value *ESTreeIRGen::genLogicalExpression(
   auto LHS = genExpression(logical->_left);
 
   // Store the LHS value of the expression in preparation for the case where we
-  // won't need to evaluate the RHS side of the expression.
+  // won't need to evaluate the RHS side of the expression. In that case, we
+  // jump to continueBlock, which returns tempVar.
   Builder.createStoreStackInst(LHS, tempVar);
 
-  // Don't continue if the value is evaluated to true for '&&' or false for
-  // '||'. Notice that instead of negating the condition we swap the operands of
-  // the branch.
-  BasicBlock *T = continueBlock;
-  BasicBlock *F = evalRHSBlock;
-  if (isAnd) {
-    std::swap(T, F);
+  // Notice that instead of negating the condition we swap the operands of the
+  // branch.
+  switch (kind) {
+    case Kind::And:
+      // Evaluate RHS only when the LHS is true.
+      Builder.createCondBranchInst(LHS, evalRHSBlock, continueBlock);
+      break;
+    case Kind::Or:
+      // Evaluate RHS only when the LHS is false.
+      Builder.createCondBranchInst(LHS, continueBlock, evalRHSBlock);
+      break;
+    case Kind::Coalesce:
+      // Evaluate RHS only if the value is undefined or null.
+      // Use == instead of === to account for both values at once.
+      Builder.createCondBranchInst(
+          Builder.createBinaryOperatorInst(
+              LHS,
+              Builder.getLiteralNull(),
+              BinaryOperatorInst::OpKind::EqualKind),
+          evalRHSBlock,
+          continueBlock);
+
+      break;
   }
-  Builder.createCondBranchInst(LHS, T, F);
 
   // Continue the evaluation of the right-hand-side of the expression.
   Builder.setInsertionBlock(evalRHSBlock);

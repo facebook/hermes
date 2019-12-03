@@ -60,6 +60,18 @@ r = a * b + c - d;
 //CHECK-NEXT:  %38 = StorePropertyInst %37, globalObject : object, "r" : string
 //CHECK-NEXT:  %39 = StoreStackInst %37, %0
 
-//CHECK-NEXT:  %40 = LoadStackInst %0
-//CHECK-NEXT:  %41 = ReturnInst %40
+// 'in' precedence is handled separately from TokenKinds.def and easy to miss.
+r = a in b !== c in d;
+//CHECK-NEXT:  %40 = LoadPropertyInst globalObject : object, "a" : string
+//CHECK-NEXT:  %41 = LoadPropertyInst globalObject : object, "b" : string
+//CHECK-NEXT:  %42 = BinaryOperatorInst 'in', %40, %41
+//CHECK-NEXT:  %43 = LoadPropertyInst globalObject : object, "c" : string
+//CHECK-NEXT:  %44 = LoadPropertyInst globalObject : object, "d" : string
+//CHECK-NEXT:  %45 = BinaryOperatorInst 'in', %43, %44
+//CHECK-NEXT:  %46 = BinaryOperatorInst '!==', %42, %45
+//CHECK-NEXT:  %47 = StorePropertyInst %46, globalObject : object, "r" : string
+//CHECK-NEXT:  %48 = StoreStackInst %46, %0
+
+//CHECK-NEXT:  %49 = LoadStackInst %0
+//CHECK-NEXT:  %50 = ReturnInst %49
 //CHECK-NEXT:function_end
