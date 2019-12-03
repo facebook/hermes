@@ -226,15 +226,18 @@ ESTREE_NODE_2_ARGS(
     NodePtr, argument, true,
     NodeBoolean, delegate, true)
 
+ESTREE_FIRST(CallExpressionLike, Base)
 ESTREE_NODE_2_ARGS(
-    CallExpression,
-    Base,
-    NodePtr,
-    callee,
-    false,
-    NodeList,
-    arguments,
-    false)
+    CallExpression, CallExpressionLike,
+    NodePtr, callee, false,
+    NodeList, arguments, false)
+
+ESTREE_NODE_3_ARGS(
+    OptionalCallExpression, CallExpressionLike,
+    NodePtr, callee, false,
+    NodeList, arguments, false,
+    NodeBoolean, optional, false)
+ESTREE_LAST(CallExpressionLike)
 
 ESTREE_NODE_3_ARGS(
     AssignmentExpression,
@@ -275,18 +278,20 @@ ESTREE_NODE_3_ARGS(
     prefix,
     false)
 
+ESTREE_FIRST(MemberExpressionLike, Base)
 ESTREE_NODE_3_ARGS(
-    MemberExpression,
-    Base,
-    NodePtr,
-    object,
-    false,
-    NodePtr,
-    property,
-    false,
-    NodeBoolean,
-    computed,
-    false)
+    MemberExpression, MemberExpressionLike,
+    NodePtr, object, false,
+    NodePtr, property, false,
+    NodeBoolean, computed, false)
+
+ESTREE_NODE_4_ARGS(
+    OptionalMemberExpression, MemberExpressionLike,
+    NodePtr, object, false,
+    NodePtr, property, false,
+    NodeBoolean, computed, false,
+    NodeBoolean, optional, false)
+ESTREE_LAST(MemberExpressionLike)
 
 ESTREE_NODE_3_ARGS(
     LogicalExpression,

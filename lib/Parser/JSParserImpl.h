@@ -593,8 +593,14 @@ class JSParserImpl {
   Optional<ESTree::FunctionExpressionNode *> parseFunctionExpression(
       bool forceEagerly = false);
 
-  /// Parse MemberExpression except the production starting with "new".
-  Optional<ESTree::Node *> parseMemberExpressionExceptNew();
+  /// Indicates whether certain functions should recognize `?.` as a chaining
+  /// operator. `?.` is not allowed in a NewExpression, for example.
+  enum class IsConstructorCall { No, Yes };
+
+  /// Parse OptionalExpression except the MemberExpression production starting
+  /// with "new".
+  Optional<ESTree::Node *> parseOptionalExpressionExceptNew(
+      IsConstructorCall isConstructorCall);
 
   /// Returns a dummy Optional<> just to indicate success or failure like all
   /// other functions.
@@ -604,17 +610,25 @@ class JSParserImpl {
 
   /// \param objectLoc the location of the object part of the expression and is
   ///     used for error display.
+  /// \param seenOptionalChain true if there was a ?. leading up to the
+  ///     member select (set by parseOptionalExpressionExceptNew)
   Optional<ESTree::Node *> parseMemberSelect(
       SMLoc objectLoc,
-      ESTree::NodePtr expr);
+      ESTree::NodePtr expr,
+      bool seenOptionalChain);
 
   /// \param startLoc the start location of the expression, used for error
   ///     display.
+  /// \param seenOptionalChain true when `?.` is used in the chain leading
+  ///     to this call expression
+  /// \param true when `?.` is used immediately prior to the Arguments.
   Optional<ESTree::Node *> parseCallExpression(
       SMLoc startLoc,
-      ESTree::NodePtr expr);
+      ESTree::NodePtr expr,
+      bool seenOptionalChain,
+      bool optional);
 
-  /// Parse a \c NewExpression or a \c MemberExpression.
+  /// Parse a \c NewExpression or a \c OptionalExpression.
   /// After we have recognized "new", there is an apparent ambiguity in the
   /// grammar between \c NewExpression and \c MemberExpression:
   ///
@@ -629,7 +643,12 @@ class JSParserImpl {
   ///
   /// The difference is that in the first case there are no arguments to the
   /// constructor.
-  Optional<ESTree::Node *> parseNewExpressionOrMemberExpression();
+  /// \param isConstructorCall is Yes when we have already recognized a "new".
+  ///     This is used because we must disallow the ?. token before the
+  ///     arguments to a constructor call only when "new" is used. For example,
+  ///     the code `new a?.b()` is not valid.
+  Optional<ESTree::Node *> parseNewExpressionOrOptionalExpression(
+      IsConstructorCall isConstructorCall);
   Optional<ESTree::Node *> parseLeftHandSideExpression();
   Optional<ESTree::Node *> parsePostfixExpression();
   Optional<ESTree::Node *> parseUnaryExpression();

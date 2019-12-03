@@ -175,7 +175,6 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       PUNC_L1_1(';', TokenKind::semi);
       PUNC_L1_1(',', TokenKind::comma);
       PUNC_L1_1('~', TokenKind::tilde);
-      PUNC_L1_1('?', TokenKind::question);
       PUNC_L1_1(':', TokenKind::colon);
 
       // = => == ===
@@ -207,6 +206,22 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       PUNC_L2_3('-', TokenKind::minus, '-', TokenKind::minusminus, '=', TokenKind::minusequal);
       PUNC_L2_3('&', TokenKind::amp,   '&', TokenKind::ampamp,     '=', TokenKind::ampequal);
       PUNC_L2_3('|', TokenKind::pipe,  '|', TokenKind::pipepipe,   '=', TokenKind::pipeequal);
+
+      // ? ?.
+      case '?':
+        token_.setStart(curCharPtr_);
+        if (curCharPtr_[1] == '.' && !isdigit(curCharPtr_[2])) {
+          // OptionalChainingPunctuator ::
+          // ?. [lookahead does not contain DecimalDigit]
+          // This is done to prevent `x?.3:y` from being recognized
+          // as `x ?. 3 : y` instead of `x ? .3 : y`.
+          token_.setPunctuator(TokenKind::questiondot);
+          curCharPtr_ += 2;
+        } else {
+          token_.setPunctuator(TokenKind::question);
+          curCharPtr_ += 1;
+        }
+        break;
 
       // * *= ** **=
       case '*':

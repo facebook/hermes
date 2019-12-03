@@ -48,5 +48,65 @@ BlockStatementNode *getBlockStatement(FunctionLikeNode *node) {
   }
 }
 
+Node *getObject(MemberExpressionLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::MemberExpression:
+      return cast<MemberExpressionNode>(node)->_object;
+    case NodeKind::OptionalMemberExpression:
+      return cast<OptionalMemberExpressionNode>(node)->_object;
+    default:
+      break;
+  }
+  llvm_unreachable("invalid MemberExpressionLikeNode");
+}
+
+Node *getProperty(MemberExpressionLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::MemberExpression:
+      return cast<MemberExpressionNode>(node)->_property;
+    case NodeKind::OptionalMemberExpression:
+      return cast<OptionalMemberExpressionNode>(node)->_property;
+    default:
+      break;
+  }
+  llvm_unreachable("invalid MemberExpressionLikeNode");
+}
+
+NodeBoolean getComputed(MemberExpressionLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::MemberExpression:
+      return cast<MemberExpressionNode>(node)->_computed;
+    case NodeKind::OptionalMemberExpression:
+      return cast<OptionalMemberExpressionNode>(node)->_computed;
+    default:
+      break;
+  }
+  llvm_unreachable("invalid MemberExpressionLikeNode");
+}
+
+Node *getCallee(CallExpressionLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::CallExpression:
+      return cast<CallExpressionNode>(node)->_callee;
+    case NodeKind::OptionalCallExpression:
+      return cast<OptionalCallExpressionNode>(node)->_callee;
+    default:
+      break;
+  }
+  llvm_unreachable("invalid CallExpressionLikeNode");
+}
+
+NodeList &getArguments(CallExpressionLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::CallExpression:
+      return cast<CallExpressionNode>(node)->_arguments;
+    case NodeKind::OptionalCallExpression:
+      return cast<OptionalCallExpressionNode>(node)->_arguments;
+    default:
+      break;
+  }
+  llvm_unreachable("invalid CallExpressionLikeNode");
+}
+
 } // namespace ESTree
 } // namespace hermes

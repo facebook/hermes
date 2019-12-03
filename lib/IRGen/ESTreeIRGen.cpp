@@ -513,7 +513,7 @@ Value *ESTreeIRGen::ensureVariableExists(ESTree::IdentifierNode *id) {
 }
 
 Value *ESTreeIRGen::genMemberExpressionProperty(
-    ESTree::MemberExpressionNode *Mem) {
+    ESTree::MemberExpressionLikeNode *Mem) {
   // If computed is true, the node corresponds to a computed (a[b]) member
   // lookup and '_property' is an Expression. Otherwise, the node
   // corresponds to a static (a.b) member lookup and '_property' is an
@@ -521,17 +521,17 @@ Value *ESTreeIRGen::genMemberExpressionProperty(
   // Details of the computed field are available here:
   // https://github.com/estree/estree/blob/master/spec.md#memberexpression
 
-  if (Mem->_computed) {
-    return genExpression(Mem->_property);
+  if (getComputed(Mem)) {
+    return genExpression(getProperty(Mem));
   }
 
   // Arrays and objects may be accessed with integer indices.
-  if (auto N = dyn_cast<ESTree::NumericLiteralNode>(Mem->_property)) {
+  if (auto N = dyn_cast<ESTree::NumericLiteralNode>(getProperty(Mem))) {
     return Builder.getLiteralNumber(N->_value);
   }
 
   // ESTree encodes property access as MemberExpression -> Identifier.
-  auto Id = cast<ESTree::IdentifierNode>(Mem->_property);
+  auto Id = cast<ESTree::IdentifierNode>(getProperty(Mem));
 
   Identifier fieldName = getNameFieldFromID(Id);
   LLVM_DEBUG(

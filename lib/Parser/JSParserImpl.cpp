@@ -2521,10 +2521,12 @@ JSParserImpl::parseFunctionExpression(bool forceEagerly) {
   return cast<ESTree::FunctionExpressionNode>(*optRes);
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseMemberExpressionExceptNew() {
+Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew(
+    IsConstructorCall isConstructorCall) {
   SMLoc startLoc = tok_->getStartLoc();
 
   ESTree::NodePtr expr;
+  bool seenOptionalChain = false;
 
   if (check(TokenKind::rw_super)) {
     // SuperProperty can be used the same way as PrimaryExpression, but
@@ -2539,13 +2541,26 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberExpressionExceptNew() {
   }
 
   SMLoc objectLoc = startLoc;
-  while (check(TokenKind::l_square, TokenKind::period) ||
-         checkTemplateLiteral()) {
+  while (
+      checkN(TokenKind::l_square, TokenKind::period, TokenKind::questiondot) ||
+      checkTemplateLiteral()) {
     SMLoc nextObjectLoc = tok_->getStartLoc();
-    if (check(TokenKind::l_square, TokenKind::period)) {
+    if (checkN(
+            TokenKind::l_square, TokenKind::period, TokenKind::questiondot)) {
+      if (check(TokenKind::questiondot)) {
+        seenOptionalChain = true;
+        if (isConstructorCall == IsConstructorCall::Yes) {
+          // Report the error here, but continue on because we can still parse
+          // the rest of the file.
+          lexer_.error(
+              tok_->getSourceRange(),
+              "Constructor calls may not contain an optional chain");
+        }
+      }
       // MemberExpression [ Expression ]
       // MemberExpression . IdentifierName
-      auto msel = parseMemberSelect(objectLoc, expr);
+      // MemberExpression OptionalChain
+      auto msel = parseMemberSelect(objectLoc, expr, seenOptionalChain);
       if (!msel)
         return None;
       objectLoc = nextObjectLoc;
@@ -2557,6 +2572,18 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberExpressionExceptNew() {
             expr->getSourceRange(),
             "invalid use of 'super' as a template literal tag");
         return None;
+      }
+      if (seenOptionalChain) {
+        // This construction is allowed by the grammar but accounted for by
+        // static semantics in order to prevent ASI from being used like this:
+        // \code
+        // a?.b
+        // `abc`;
+        // \endcode
+        sm_.error(
+            tok_->getSourceRange(),
+            "invalid use of tagged template literal in optional chain");
+        sm_.note(expr->getSourceRange(), "location of optional chain");
       }
       // MemberExpression TemplateLiteral
       auto optTemplate = parseTemplateLiteral(ParamTagged);
@@ -2619,9 +2646,12 @@ Optional<const char *> JSParserImpl::parseArguments(
 
 Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
     SMLoc objectLoc,
-    ESTree::NodePtr expr) {
-  assert(check(TokenKind::l_square, TokenKind::period));
+    ESTree::NodePtr expr,
+    bool seenOptionalChain) {
+  assert(
+      checkN(TokenKind::l_square, TokenKind::period, TokenKind::questiondot));
   SMLoc startLoc = tok_->getStartLoc();
+  bool optional = checkAndEat(TokenKind::questiondot);
   if (checkAndEat(TokenKind::l_square)) {
     auto propExpr = parseExpression();
     if (!propExpr)
@@ -2635,18 +2665,28 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
             startLoc))
       return None;
 
+    if (optional || seenOptionalChain) {
+      return setLocation(
+          expr,
+          endLoc,
+          startLoc,
+          new (context_) ESTree::OptionalMemberExpressionNode(
+              expr, propExpr.getValue(), true, optional));
+    }
     return setLocation(
         expr,
         endLoc,
         startLoc,
         new (context_)
             ESTree::MemberExpressionNode(expr, propExpr.getValue(), true));
-  } else if (checkAndEat(TokenKind::period)) {
+  } else if (
+      checkAndEat(TokenKind::period) ||
+      (optional && !check(TokenKind::l_paren))) {
     if (tok_->getKind() != TokenKind::identifier && !tok_->isResWord()) {
       // Just use the pattern here, even though we know it will fail.
       if (!need(
               TokenKind::identifier,
-              "after '.' in member expression",
+              "after '.' or '?.' in member expression",
               "start of member expression",
               objectLoc))
         return None;
@@ -2659,20 +2699,47 @@ Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(
             ESTree::IdentifierNode(tok_->getResWordOrIdentifier(), nullptr));
     advance(JSLexer::AllowDiv);
 
+    if (optional || seenOptionalChain) {
+      return setLocation(
+          expr,
+          id,
+          startLoc,
+          new (context_)
+              ESTree::OptionalMemberExpressionNode(expr, id, false, optional));
+    }
     return setLocation(
         expr,
         id,
         startLoc,
         new (context_) ESTree::MemberExpressionNode(expr, id, false));
   } else {
-    assert(false);
-    return None;
+    assert(
+        optional && check(TokenKind::l_paren) && "must be ?.() at this point");
+    // ?. Arguments :
+    // ?. ( ArgumentList )
+    //      ^
+    auto debugLoc = tok_->getStartLoc();
+    ESTree::NodeList argList;
+    SMLoc endLoc;
+    if (!parseArguments(argList, endLoc))
+      return None;
+
+    return setLocation(
+        expr,
+        endLoc,
+        debugLoc,
+        new (context_)
+            ESTree::OptionalCallExpressionNode(expr, std::move(argList), true));
   }
+
+  llvm_unreachable("Invalid token in parseMemberSelect");
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
     SMLoc startLoc,
-    ESTree::NodePtr expr) {
+    ESTree::NodePtr expr,
+    bool seenOptionalChain,
+    bool optional) {
   assert(checkN(
       TokenKind::l_paren,
       TokenKind::no_substitution_template,
@@ -2686,14 +2753,24 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
       if (!parseArguments(argList, endLoc))
         return None;
 
-      expr = setLocation(
-          expr,
-          endLoc,
-          debugLoc,
-          new (context_) ESTree::CallExpressionNode(expr, std::move(argList)));
+      if (seenOptionalChain) {
+        expr = setLocation(
+            expr,
+            endLoc,
+            debugLoc,
+            new (context_) ESTree::OptionalCallExpressionNode(
+                expr, std::move(argList), optional));
+      } else {
+        expr = setLocation(
+            expr,
+            endLoc,
+            debugLoc,
+            new (context_)
+                ESTree::CallExpressionNode(expr, std::move(argList)));
+      }
     } else if (check(TokenKind::l_square, TokenKind::period)) {
       SMLoc nextStartLoc = tok_->getStartLoc();
-      auto msel = parseMemberSelect(startLoc, expr);
+      auto msel = parseMemberSelect(startLoc, expr, seenOptionalChain);
       if (!msel)
         return None;
       startLoc = nextStartLoc;
@@ -2744,10 +2821,10 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
 //       new foo()()
 //           (CallExpression (MemberExpression (MemberExpression)))
 
-
-Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrMemberExpression() {
+Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
+    IsConstructorCall isConstructorCall) {
   if (!check(TokenKind::rw_new))
-    return parseMemberExpressionExceptNew();
+    return parseOptionalExpressionExceptNew(isConstructorCall);
 
   SMRange newRange = advance();
 
@@ -2773,7 +2850,7 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrMemberExpression() {
         meta, prop, new (context_) ESTree::MetaPropertyNode(meta, prop));
   }
 
-  auto optExpr = parseNewExpressionOrMemberExpression();
+  auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::Yes);
   if (!optExpr)
     return None;
   ESTree::NodePtr expr = optExpr.getValue();
@@ -2800,9 +2877,10 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrMemberExpression() {
       new (context_) ESTree::NewExpressionNode(expr, std::move(argList)));
 
   SMLoc objectLoc = newRange.Start;
-  while (check(TokenKind::l_square, TokenKind::period)) {
+  while (
+      checkN(TokenKind::l_square, TokenKind::period, TokenKind::questiondot)) {
     SMLoc nextObjectLoc = tok_->getStartLoc();
-    auto optMSel = parseMemberSelect(objectLoc, expr);
+    auto optMSel = parseMemberSelect(objectLoc, expr, false);
     if (!optMSel)
       return None;
     objectLoc = nextObjectLoc;
@@ -2815,17 +2893,23 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrMemberExpression() {
 Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
   SMLoc startLoc = tok_->getStartLoc();
 
-  auto optExpr = parseNewExpressionOrMemberExpression();
+  auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::No);
   if (!optExpr)
     return None;
   auto *expr = optExpr.getValue();
+
+  bool optional = checkAndEat(TokenKind::questiondot);
+  bool seenOptionalChain = optional ||
+      llvm::isa<ESTree::OptionalMemberExpressionNode>(expr) ||
+      llvm::isa<ESTree::OptionalCallExpressionNode>(expr);
 
   // Is this a CallExpression?
   if (checkN(
           TokenKind::l_paren,
           TokenKind::no_substitution_template,
           TokenKind::template_head)) {
-    auto optCallExpr = parseCallExpression(startLoc, expr);
+    auto optCallExpr =
+        parseCallExpression(startLoc, expr, seenOptionalChain, optional);
     if (!optCallExpr)
       return None;
     expr = optCallExpr.getValue();

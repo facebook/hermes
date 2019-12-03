@@ -498,6 +498,42 @@ class ESTreeIRGen {
   Value *genArrayExpr(ESTree::ArrayExpressionNode *Expr);
   Value *genCallExpr(ESTree::CallExpressionNode *call);
 
+  /// Generates a call expression in an optional chain.
+  /// \param shortCircuitBB the block to jump to upon short circuiting,
+  ///    when the `?.` operator is used. If null, this is the outermost
+  ///    optional expression in the chain, and will create its own
+  ///    shortCircuitBB.
+  Value *genOptionalCallExpr(
+      ESTree::OptionalCallExpressionNode *call,
+      BasicBlock *shortCircuitBB);
+
+  /// Emits the actual call for \p call, and is used as a helper function for
+  /// genCallExpr and genOptionalCallExpr.
+  /// \return the result value of the call.
+  Value *
+  emitCall(ESTree::CallExpressionLikeNode *call, Value *callee, Value *thisVal);
+
+  struct MemberExpressionResult {
+    /// Value of the looked up property.
+    Value *result;
+    /// Object the property is being looked up on.
+    Value *base;
+  };
+
+  /// Generate IR for a member expression.
+  /// \return both the result and the base object.
+  MemberExpressionResult genMemberExpression(ESTree::MemberExpressionNode *Mem);
+
+  /// Generate IR for a member expression in the middle of an optional chain.
+  /// \param shortCircuitBB the block to jump to upon short circuiting,
+  ///    when the `?.` operator is used. If null, this is the outermost
+  ///    optional expression in the chain, and will create its own
+  ///    shortCircuitBB.
+  /// \return both the result and the base object.
+  MemberExpressionResult genOptionalMemberExpression(
+      ESTree::OptionalMemberExpressionNode *mem,
+      BasicBlock *shortCircuitBB);
+
   /// Generate IR for a direct call to eval(). This is invoked from
   /// genCallExpr().
   Value *genCallEvalExpr(ESTree::CallExpressionNode *call);
@@ -737,7 +773,7 @@ class ESTreeIRGen {
 
   /// Generate the IR for the property field of the MemberExpressionNode.
   /// The property field may be a string literal or some computed expression.
-  Value *genMemberExpressionProperty(ESTree::MemberExpressionNode *Mem);
+  Value *genMemberExpressionProperty(ESTree::MemberExpressionLikeNode *Mem);
 
   /// Check whether we know that an LReference to the specified AST node can
   /// be created without any side effects, including throwing. This is not

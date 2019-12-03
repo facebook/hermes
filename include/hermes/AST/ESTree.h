@@ -310,6 +310,9 @@ class BlockStatementDecoration {
 class PatternDecoration {};
 class CoverDecoration {};
 
+class CallExpressionLikeDecoration {};
+class MemberExpressionLikeDecoration {};
+
 namespace detail {
 /// We need to to be able customize some ESTree types when passing them through
 /// a constructor, so we create a simple template type mapper. Specifically, a
@@ -638,6 +641,21 @@ NodeList &getParams(FunctionLikeNode *node);
 /// ProgramNode doesn't have a block statement body, as well as some arrow
 /// functions.
 BlockStatementNode *getBlockStatement(FunctionLikeNode *node);
+
+/// \return the object of the member expression node.
+Node *getObject(MemberExpressionLikeNode *node);
+
+/// \return the property of the member expression node.
+Node *getProperty(MemberExpressionLikeNode *node);
+
+/// \return whether the member expression node is computed.
+NodeBoolean getComputed(MemberExpressionLikeNode *node);
+
+/// \return the callee of the call.
+Node *getCallee(CallExpressionLikeNode *node);
+
+/// \return the arguments list of the call.
+NodeList &getArguments(CallExpressionLikeNode *node);
 
 } // namespace ESTree
 } // namespace hermes

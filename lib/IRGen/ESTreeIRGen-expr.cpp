@@ -69,6 +69,11 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
     return genCallExpr(call);
   }
 
+  // Handle Call expressions.
+  if (auto *call = dyn_cast<ESTree::OptionalCallExpressionNode>(expr)) {
+    return genOptionalCallExpr(call, nullptr);
+  }
+
   // Handle the 'new' expressions.
   if (auto *newExp = dyn_cast<ESTree::NewExpressionNode>(expr)) {
     return genNewExpr(newExp);
@@ -76,8 +81,12 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
 
   // Handle MemberExpression expressions for access property.
   if (auto *Mem = dyn_cast<ESTree::MemberExpressionNode>(expr)) {
-    LReference lref = createLRef(Mem, false);
-    return lref.emitLoad();
+    return genMemberExpression(Mem).result;
+  }
+
+  // Handle MemberExpression expressions for access property.
+  if (auto *mem = dyn_cast<ESTree::OptionalMemberExpressionNode>(expr)) {
+    return genOptionalMemberExpression(mem, nullptr).result;
   }
 
   // Handle Array expressions (syntax: [1,2,3]).
@@ -342,19 +351,123 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
 
   // Handle MemberExpression expression calls that sets the 'this' property.
   if (auto *Mem = dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
-    Value *obj = genExpression(Mem->_object);
-    Value *prop = genMemberExpressionProperty(Mem);
+    MemberExpressionResult memResult = genMemberExpression(Mem);
 
     // Call the callee with obj as the 'this' pointer.
-    thisVal = obj;
-    callee = Builder.createLoadPropertyInst(obj, prop);
+    thisVal = memResult.base;
+    callee = memResult.result;
+  } else if (
+      auto *Mem =
+          dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
+    MemberExpressionResult memResult =
+        genOptionalMemberExpression(Mem, nullptr);
+
+    // Call the callee with obj as the 'this' pointer.
+    thisVal = memResult.base;
+    callee = memResult.result;
   } else {
     thisVal = Builder.getLiteralUndefined();
     callee = genExpression(call->_callee);
   }
 
+  return emitCall(call, callee, thisVal);
+}
+
+Value *ESTreeIRGen::genOptionalCallExpr(
+    ESTree::OptionalCallExpressionNode *call,
+    BasicBlock *shortCircuitBB) {
+  PhiInst::ValueListType values;
+  PhiInst::BasicBlockListType blocks;
+
+  // true when this is the genOptionalCallExpr call containing
+  // the logic for shortCircuitBB.
+  bool isFirstOptional = shortCircuitBB == nullptr;
+
+  // If isFirstOptional, the final result will be computed in continueBB and
+  // returned.
+  BasicBlock *continueBB = nullptr;
+
+  if (!shortCircuitBB) {
+    // If shortCircuitBB is null, then this is the outermost in the optional
+    // chain, so we must create it here and pass it through to every other
+    // OptionalCallExpression and OptionalMemberExpression in the chain.
+    continueBB = Builder.createBasicBlock(Builder.getFunction());
+    auto *insertionBB = Builder.getInsertionBlock();
+    shortCircuitBB = Builder.createBasicBlock(Builder.getFunction());
+    Builder.setInsertionBlock(shortCircuitBB);
+    values.push_back(Builder.getLiteralUndefined());
+    blocks.push_back(shortCircuitBB);
+    Builder.createBranchInst(continueBB);
+    Builder.setInsertionBlock(insertionBB);
+  }
+
+  Value *thisVal;
+  Value *callee;
+
+  // Handle MemberExpression expression calls that sets the 'this' property.
+  if (auto *me = dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
+    MemberExpressionResult memResult = genMemberExpression(me);
+
+    // Call the callee with obj as the 'this' pointer.
+    thisVal = memResult.base;
+    callee = memResult.result;
+  } else if (
+      auto *ome =
+          dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
+    MemberExpressionResult memResult =
+        genOptionalMemberExpression(ome, shortCircuitBB);
+
+    // Call the callee with obj as the 'this' pointer.
+    thisVal = memResult.base;
+    callee = memResult.result;
+  } else if (
+      auto *oce = dyn_cast<ESTree::OptionalCallExpressionNode>(call->_callee)) {
+    thisVal = Builder.getLiteralUndefined();
+    callee = genOptionalCallExpr(oce, shortCircuitBB);
+  } else {
+    thisVal = Builder.getLiteralUndefined();
+    callee = genExpression(getCallee(call));
+  }
+
+  if (call->_optional) {
+    BasicBlock *evalRHSBB = Builder.createBasicBlock(Builder.getFunction());
+
+    // If callee is undefined or null, then return undefined.
+    // NOTE: We use `obj == null` to account for both null and undefined.
+    Builder.createCondBranchInst(
+        Builder.createBinaryOperatorInst(
+            callee,
+            Builder.getLiteralNull(),
+            BinaryOperatorInst::OpKind::EqualKind),
+        shortCircuitBB,
+        evalRHSBB);
+
+    // baseValue is not undefined or null.
+    Builder.setInsertionBlock(evalRHSBB);
+  }
+
+  Value *callResult = emitCall(call, callee, thisVal);
+
+  if (isFirstOptional) {
+    values.push_back(callResult);
+    blocks.push_back(Builder.getInsertionBlock());
+    Builder.createBranchInst(continueBB);
+
+    Builder.setInsertionBlock(continueBB);
+    return Builder.createPhiInst(values, blocks);
+  }
+
+  // If this isn't the first optional, no Phi needed, just return the
+  // callResult.
+  return callResult;
+}
+
+Value *ESTreeIRGen::emitCall(
+    ESTree::CallExpressionLikeNode *call,
+    Value *callee,
+    Value *thisVal) {
   bool hasSpread = false;
-  for (auto &arg : call->_arguments) {
+  for (auto &arg : getArguments(call)) {
     if (isa<ESTree::SpreadElementNode>(&arg)) {
       hasSpread = true;
     }
@@ -362,7 +475,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
 
   if (!hasSpread) {
     CallInst::ArgumentList args;
-    for (auto &arg : call->_arguments) {
+    for (auto &arg : getArguments(call)) {
       args.push_back(genExpression(&arg));
     }
 
@@ -373,9 +486,90 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
   // is variable.
   // Generate IR for this by creating an array and populating it with the
   // arguments, then calling HermesInternal.apply.
-  auto *args = genArrayFromElements(call->_arguments);
+  auto *args = genArrayFromElements(getArguments(call));
   return genBuiltinCall(
       BuiltinMethod::HermesBuiltin_apply, {callee, args, thisVal});
+}
+
+ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
+    ESTree::MemberExpressionNode *mem) {
+  Value *baseValue = genExpression(mem->_object);
+  Value *prop = genMemberExpressionProperty(mem);
+  return MemberExpressionResult{Builder.createLoadPropertyInst(baseValue, prop),
+                                baseValue};
+}
+
+ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
+    ESTree::OptionalMemberExpressionNode *mem,
+    BasicBlock *shortCircuitBB) {
+  PhiInst::ValueListType values;
+  PhiInst::BasicBlockListType blocks;
+
+  // true when this is the genOptionalMemberExpression call containing
+  // the logic for shortCircuitBB.
+  bool isFirstOptional = shortCircuitBB == nullptr;
+
+  // If isFirstOptional, the final result will be computed in continueBB and
+  // returned.
+  BasicBlock *continueBB = nullptr;
+
+  if (isFirstOptional) {
+    // If shortCircuitBB is null, then this is the outermost in the optional
+    // chain, so we must create it here and pass it through to every other
+    // OptionalCallExpression and OptionalMemberExpression in the chain.
+    continueBB = Builder.createBasicBlock(Builder.getFunction());
+    auto *insertionBB = Builder.getInsertionBlock();
+    shortCircuitBB = Builder.createBasicBlock(Builder.getFunction());
+    Builder.setInsertionBlock(shortCircuitBB);
+    values.push_back(Builder.getLiteralUndefined());
+    blocks.push_back(shortCircuitBB);
+    Builder.createBranchInst(continueBB);
+    Builder.setInsertionBlock(insertionBB);
+  }
+
+  Value *baseValue = nullptr;
+  if (ESTree::OptionalMemberExpressionNode *ome =
+          dyn_cast<ESTree::OptionalMemberExpressionNode>(mem->_object)) {
+    baseValue = genOptionalMemberExpression(ome, shortCircuitBB).result;
+  } else if (
+      ESTree::OptionalCallExpressionNode *oce =
+          dyn_cast<ESTree::OptionalCallExpressionNode>(mem->_object)) {
+    baseValue = genOptionalCallExpr(oce, shortCircuitBB);
+  } else {
+    baseValue = genExpression(mem->_object);
+  }
+
+  if (mem->_optional) {
+    BasicBlock *evalRHSBB = Builder.createBasicBlock(Builder.getFunction());
+
+    // If baseValue is undefined or null, then return undefined.
+    // NOTE: We use `obj == null` to account for both null and undefined.
+    Builder.createCondBranchInst(
+        Builder.createBinaryOperatorInst(
+            baseValue,
+            Builder.getLiteralNull(),
+            BinaryOperatorInst::OpKind::EqualKind),
+        shortCircuitBB,
+        evalRHSBB);
+
+    // baseValue is not undefined, look up the property properly.
+    Builder.setInsertionBlock(evalRHSBB);
+  }
+
+  Value *prop = genMemberExpressionProperty(mem);
+  Value *result = Builder.createLoadPropertyInst(baseValue, prop);
+
+  if (isFirstOptional) {
+    values.push_back(result);
+    blocks.push_back(Builder.getInsertionBlock());
+    Builder.createBranchInst(continueBB);
+
+    Builder.setInsertionBlock(continueBB);
+    return {Builder.createPhiInst(values, blocks), baseValue};
+  }
+
+  // If this isn't the first optional, no Phi needed, just return the result.
+  return {result, baseValue};
 }
 
 Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
