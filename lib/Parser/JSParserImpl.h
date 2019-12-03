@@ -738,23 +738,6 @@ class JSParserImpl {
   ///    null if it isn't.
   ESTree::ExpressionStatementNode *parseDirective();
 
-  /// Allocate a binary expression node with the specified children and
-  /// operator.
-  inline ESTree::NodePtr
-  newBinNode(ESTree::NodePtr left, TokenKind opKind, ESTree::NodePtr right) {
-    UniqueString *opIdent = getTokenIdent(opKind);
-    if (opKind == TokenKind::ampamp || opKind == TokenKind::pipepipe)
-      return setLocation(
-          left,
-          right,
-          new (context_) ESTree::LogicalExpressionNode(left, right, opIdent));
-    else
-      return setLocation(
-          left,
-          right,
-          new (context_) ESTree::BinaryExpressionNode(left, right, opIdent));
-  }
-
   /// RAII to save and restore the current setting of "strict mode".
   class SaveStrictMode {
     JSParserImpl *const parser_;

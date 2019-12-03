@@ -3035,6 +3035,25 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
   // Operator and value stack.
   llvm::SmallVector<std::pair<ESTree::NodePtr, TokenKind>, STACK_SIZE> stack{};
 
+  /// Allocate a binary expression node with the specified children and
+  /// operator.
+  const auto newBinNode = [this](
+                              ESTree::NodePtr left,
+                              TokenKind opKind,
+                              ESTree::NodePtr right) -> ESTree::NodePtr {
+    UniqueString *opIdent = getTokenIdent(opKind);
+    if (opKind == TokenKind::ampamp || opKind == TokenKind::pipepipe)
+      return setLocation(
+          left,
+          right,
+          new (context_) ESTree::LogicalExpressionNode(left, right, opIdent));
+    else
+      return setLocation(
+          left,
+          right,
+          new (context_) ESTree::BinaryExpressionNode(left, right, opIdent));
+  };
+
   // Decide whether to recognize "in" as a binary operator.
   const TokenKind exceptKind =
       !param.has(ParamIn) ? TokenKind::rw_in : TokenKind::none;
