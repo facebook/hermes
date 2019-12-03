@@ -412,6 +412,12 @@ class GCScope : public GCScopeDebugBase {
     assert(
         getHandleCountDbg() < handlesLimit_ &&
         "Too many handles allocated in GCScope");
+    // We currently only allocate handles in the top scope, although there is no
+    // current design constraint why we must. This assert serves to detect bugs
+    // early, and can be removed if we ever want to violate this invariant.
+    assert(
+        runtime_->getTopGCScope() == this &&
+        "Expect allocation only in top scope");
 
     setHandleCountDbg(getHandleCountDbg() + 1);
 #ifdef HERMESVM_DEBUG_TRACK_GCSCOPE_HANDLES
