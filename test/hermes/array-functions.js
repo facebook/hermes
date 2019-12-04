@@ -9,6 +9,25 @@
 // RUN: %hermes -target=HBC -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 "use strict";
 
+// Performs a nested array comparison between the two arrays.
+function arrayEquals(a, b) {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (var i = 0; i < a.length; ++i) {
+    if (Array.isArray(a[i]) && Array.isArray(b[i])) {
+      if (!arrayEquals(a[i], b[i])) {
+        return false;
+      }
+    } else {
+      if (a[i] !== b[i]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 print('toString');
 // CHECK-LABEL: toString
 print(Array(1,2,3).toString());
@@ -937,4 +956,46 @@ print(Array.prototype.includes.call({length: 3, 0: 'a', 1: 'b', 2: 'c'}, 'a'));
 // CHECK-NEXT: true
 var o = {};
 print([,,,o,,,].includes(o));
+// CHECK-NEXT: true
+
+print('flat');
+// CHECK-LABEL: flat
+print([].flat().length);
+// CHECK-NEXT: 0
+print(arrayEquals([1,2,3].flat(), [1,2,3]));
+// CHECK-NEXT: true
+print(arrayEquals([1,[2,3]].flat(), [1,2,3]));
+// CHECK-NEXT: true
+print(arrayEquals([1,[2,[3]]].flat(), [1,2,[3]]));
+// CHECK-NEXT: true
+print(arrayEquals([1,[2,[3,[4]]]].flat(0), [1,[2,[3,[4]]]]));
+// CHECK-NEXT: true
+print(arrayEquals([1,[2,[3,[4]]]].flat(), [1,2,[3,[4]]]));
+// CHECK-NEXT: true
+print(arrayEquals([1,[2,[3,[4]]]].flat(1), [1,2,[3,[4]]]));
+// CHECK-NEXT: true
+print(arrayEquals([1,[2,[3,[4]]]].flat(2), [1,2,3,[4]]));
+// CHECK-NEXT: true
+print(arrayEquals([1,[2,[3,[4]]]].flat(Infinity), [1,2,3,4]));
+// CHECK-NEXT: true
+var a = [1];
+for (var i = 0; i < 1000; ++i) {
+  a = [a];
+}
+try { a.flat(Infinity); } catch(e) { print('caught', e.name) }
+// CHECK-NEXT: caught RangeError
+
+print('flatMap');
+// CHECK-LABEL: flatMap
+print([].flatMap(() => { throw Error('fail') }).length);
+// CHECK-NEXT: 0
+print(arrayEquals([1,2,3].flatMap(x => x+1), [2,3,4]));
+// CHECK-NEXT: true
+print(arrayEquals([1,2,3].flatMap(function(x) {
+  return x + this;
+}, 100), [101, 102, 103]));
+// CHECK-NEXT: true
+print(arrayEquals([1,2,3].flatMap(function(x) {
+  return [x, x+this];
+}, 100), [1,101,2,102,3,103]));
 // CHECK-NEXT: true

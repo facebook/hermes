@@ -12,6 +12,7 @@
 #include "JSLibInternal.h"
 #include "Sorting.h"
 
+#include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringRefUtils.h"
@@ -75,6 +76,20 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       Predefined::getSymbolID(Predefined::forEach),
       nullptr,
       arrayPrototypeForEach,
+      1);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::flat),
+      nullptr,
+      arrayPrototypeFlat,
+      0);
+  defineMethod(
+      runtime,
+      arrayPrototype,
+      Predefined::getSymbolID(Predefined::flatMap),
+      nullptr,
+      arrayPrototypeFlatMap,
       1);
 
   defineMethod(
@@ -1239,6 +1254,269 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
   }
 
   return HermesValue::encodeUndefinedValue();
+}
+
+/// ES10 22.1.3.10.1 FlattenIntoArray
+/// mapperFunction may be null to signify its absence.
+/// If mapperFunction is null, thisArg is ignored.
+static CallResult<uint64_t> flattenIntoArray(
+    Runtime *runtime,
+    Handle<JSArray> target,
+    Handle<JSObject> source,
+    uint64_t sourceLen,
+    uint64_t start,
+    double depth,
+    Handle<Callable> mapperFunction,
+    Handle<> thisArg) {
+  ScopedNativeDepthTracker depthTracker{runtime};
+  if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
+
+  if (!mapperFunction) {
+    assert(
+        thisArg->isUndefined() &&
+        "thisArg must be undefined if there is no mapper");
+  }
+
+  GCScope gcScope{runtime};
+  // 1. Let targetIndex be start.
+  uint64_t targetIndex = start;
+  // 2. Let sourceIndex be 0.
+  uint64_t sourceIndex = 0;
+
+  // Temporary storage for sourceIndex and targetIndex.
+  MutableHandle<> indexHandle{runtime};
+  MutableHandle<JSObject> propObj{runtime};
+  MutableHandle<> element{runtime};
+  MutableHandle<> lenResHandle{runtime};
+
+  auto marker = gcScope.createMarker();
+
+  // 3. Repeat, while sourceIndex < sourceLen
+  while (sourceIndex < sourceLen) {
+    gcScope.flushToMarker(marker);
+
+    // a. Let P be ! ToString(sourceIndex).
+    // b. Let exists be ? HasProperty(source, P).
+    ComputedPropertyDescriptor desc{};
+    indexHandle = HermesValue::encodeNumberValue(sourceIndex);
+    if (LLVM_UNLIKELY(
+            JSObject::getComputedDescriptor(
+                source, runtime, indexHandle, propObj, desc) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    if (propObj) {
+      // c. If exists is true, then
+      // i. Let element be ? Get(source, P).
+      auto elementRes = JSObject::getComputedPropertyValue_RJS(
+          source, runtime, propObj, desc, indexHandle);
+      if (LLVM_UNLIKELY(elementRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      element = *elementRes;
+
+      // ii. If mapperFunction is present, then
+      if (mapperFunction) {
+        // 1. Assert: thisArg is present.
+        assert(!thisArg->isEmpty() && "mapperFunction requires a thisArg");
+        // 2. Set element to ? Call(mapperFunction, thisArg , « element,
+        // sourceIndex, source »).
+        elementRes = Callable::executeCall3(
+            mapperFunction,
+            runtime,
+            thisArg,
+            element.getHermesValue(),
+            HermesValue::encodeNumberValue(sourceIndex),
+            source.getHermesValue());
+        if (LLVM_UNLIKELY(elementRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        element = *elementRes;
+      }
+      // iii. Let shouldFlatten be false.
+      bool shouldFlatten = false;
+      if (depth > 0) {
+        // iv. If depth > 0, then
+        // 1. Set shouldFlatten to ? IsArray(element).
+        // NOTE: isArray accepts nullptr for the obj argument.
+        CallResult<bool> shouldFlattenRes =
+            isArray(runtime, dyn_vmcast<JSObject>(element.get()));
+        if (LLVM_UNLIKELY(shouldFlattenRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        shouldFlatten = *shouldFlattenRes;
+      }
+      if (shouldFlatten) {
+        // It is valid to cast `element` to JSObject because shouldFlatten is
+        // only true when `isArray(element)` is true.
+        // v. If shouldFlatten is true, then
+        // 1. Let elementLen be ? ToLength(? Get(element, "length")).
+        CallResult<HermesValue> lenRes = JSObject::getNamed_RJS(
+            Handle<JSObject>::vmcast(element),
+            runtime,
+            Predefined::getSymbolID(Predefined::length));
+        if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        lenResHandle = *lenRes;
+        CallResult<uint64_t> elementLenRes = toLengthU64(runtime, lenResHandle);
+        if (LLVM_UNLIKELY(elementLenRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        uint64_t elementLen = *elementLenRes;
+        // 2. Set targetIndex to ? FlattenIntoArray(target, element, elementLen,
+        // targetIndex, depth - 1).
+        CallResult<uint64_t> targetIndexRes = flattenIntoArray(
+            runtime,
+            target,
+            Handle<JSObject>::vmcast(element),
+            elementLen,
+            targetIndex,
+            depth - 1,
+            runtime->makeNullHandle<Callable>(),
+            runtime->getUndefinedValue());
+        if (LLVM_UNLIKELY(targetIndexRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        targetIndex = *targetIndexRes;
+      } else {
+        // vi. Else,
+        // 1. If targetIndex ≥ 2**53-1, throw a TypeError exception.
+        if (targetIndex >= ((uint64_t)1 << 53) - 1) {
+          return runtime->raiseTypeError(
+              "flattened array exceeds length limit");
+        }
+        // 2. Perform ? CreateDataPropertyOrThrow(
+        //                target, !ToString(targetIndex), element).
+        indexHandle = HermesValue::encodeNumberValue(targetIndex);
+        if (LLVM_UNLIKELY(
+                JSObject::defineOwnComputed(
+                    target,
+                    runtime,
+                    indexHandle,
+                    DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                    element,
+                    PropOpFlags().plusThrowOnError()) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+
+        // 3. Increase targetIndex by 1.
+        ++targetIndex;
+      }
+    }
+    // d. Increase sourceIndex by 1.
+    ++sourceIndex;
+  }
+  // 4. Return targetIndex.
+  return targetIndex;
+}
+
+CallResult<HermesValue>
+arrayPrototypeFlat(void *ctx, Runtime *runtime, NativeArgs args) {
+  // 1. Let O be ? ToObject(this value).
+  CallResult<HermesValue> ORes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(ORes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(*ORes);
+
+  // 2. Let sourceLen be ? ToLength(? Get(O, "length")).
+  CallResult<HermesValue> lenRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  CallResult<uint64_t> sourceLenRes =
+      toLengthU64(runtime, runtime->makeHandle(*lenRes));
+  if (LLVM_UNLIKELY(sourceLenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint64_t sourceLen = *sourceLenRes;
+
+  // 3. Let depthNum be 1.
+  double depthNum = 1;
+  if (!args.getArg(0).isUndefined()) {
+    // 4. If depth is not undefined, then
+    // a.     Set depthNum to ? ToInteger(depth).
+    auto depthNumRes = toInteger(runtime, args.getArgHandle(0));
+    if (LLVM_UNLIKELY(depthNumRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    depthNum = depthNumRes->getNumber();
+  }
+  // 5. Let A be ? ArraySpeciesCreate(O, 0).
+  auto ARes = JSArray::create(runtime, 0, 0);
+  if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = toHandle(runtime, std::move(*ARes));
+
+  // 6. Perform ? FlattenIntoArray(A, O, sourceLen, 0, depthNum).
+  if (LLVM_UNLIKELY(
+          flattenIntoArray(
+              runtime,
+              A,
+              O,
+              sourceLen,
+              0,
+              depthNum,
+              runtime->makeNullHandle<Callable>(),
+              runtime->getUndefinedValue()) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 7. Return A.
+  return A.getHermesValue();
+}
+
+CallResult<HermesValue>
+arrayPrototypeFlatMap(void *ctx, Runtime *runtime, NativeArgs args) {
+  // 1. Let O be ? ToObject(this value).
+  CallResult<HermesValue> ORes = toObject(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(ORes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto O = runtime->makeHandle<JSObject>(*ORes);
+
+  // 2. Let sourceLen be ? ToLength(? Get(O, "length")).
+  CallResult<HermesValue> lenRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  CallResult<uint64_t> sourceLenRes =
+      toLengthU64(runtime, runtime->makeHandle(*lenRes));
+  if (LLVM_UNLIKELY(sourceLenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint64_t sourceLen = *sourceLenRes;
+
+  // 3. If IsCallable(mapperFunction) is false, throw a TypeError exception.
+  Handle<Callable> mapperFunction = args.dyncastArg<Callable>(0);
+  if (!mapperFunction) {
+    return runtime->raiseTypeError("flatMap mapper must be callable");
+  }
+  // 4. If thisArg is present, let T be thisArg; else let T be undefined.
+  auto T = args.getArgHandle(1);
+  // 5. Let A be ? ArraySpeciesCreate(O, 0).
+  auto ARes = JSArray::create(runtime, 0, 0);
+  if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto A = toHandle(runtime, std::move(*ARes));
+
+  // 6. Perform ? FlattenIntoArray(A, O, sourceLen, 0, 1, mapperFunction, T).
+  if (LLVM_UNLIKELY(
+          flattenIntoArray(runtime, A, O, sourceLen, 0, 1, mapperFunction, T) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 7. Return A.
+  return A.getHermesValue();
 }
 
 CallResult<HermesValue>

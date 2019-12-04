@@ -431,6 +431,8 @@ BLACK_LIST = [
     "test262/test/built-ins/Array/prototype/map/create-ctor-non-object.js",
     "test262/test/built-ins/Array/prototype/slice/create-ctor-non-object.js",
     "test262/test/built-ins/Array/prototype/splice/create-ctor-non-object.js",
+    "test262/test/built-ins/Array/prototype/flat/non-object-ctor-throws.js",
+    "test262/test/built-ins/Array/prototype/flatMap/this-value-ctor-non-object.js",
     # Enumerable attributes shadowing in the prototype chain.
     # T23621872
     "test262/test/language/statements/for-in/12.6.4-2.js",
@@ -1580,8 +1582,6 @@ PERMANENT_BLACK_LIST = [
 ]
 
 UNSUPPORTED_FEATURES = [
-    "Array.prototype.flatMap",
-    "Array.prototype.flat",
     "Object.fromEntries",
     "Promise.prototype.finally",
     "String.prototype.matchAll",

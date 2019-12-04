@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// NATIVE_FUNCTION_VERSION = 3. Updated Oct 18, 2019
+// NATIVE_FUNCTION_VERSION = 4. Updated Nov 21, 2019
 // Bump this version in SerializeHeader.h whenever we change this file.
 
 #ifndef NATIVE_FUNCTION
@@ -43,6 +43,8 @@ NATIVE_FUNCTION(arrayPrototypeIterator)
 NATIVE_FUNCTION(arrayPrototypeJoin)
 NATIVE_FUNCTION(arrayPrototypePush)
 NATIVE_FUNCTION(arrayPrototypeSort)
+NATIVE_FUNCTION(arrayPrototypeFlat)
+NATIVE_FUNCTION(arrayPrototypeFlatMap)
 NATIVE_FUNCTION(arrayPrototypeToLocaleString)
 NATIVE_FUNCTION(arrayPrototypeToString)
 
