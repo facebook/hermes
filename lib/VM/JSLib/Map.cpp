@@ -171,64 +171,19 @@ mapConstructor(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError("Property 'set' for Map is not callable");
   }
 
-  auto iterRes = getIterator(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto iteratorRecord = *iterRes;
-
-  MutableHandle<JSObject> pairHandle{runtime};
-  MutableHandle<> keyHandle{runtime};
-  MutableHandle<> valueHandle{runtime};
-  Handle<> zero{runtime, HermesValue::encodeNumberValue(0)};
-  Handle<> one{runtime, HermesValue::encodeNumberValue(1)};
-  auto marker = gcScope.createMarker();
-
-  // Check the length of the array after every iteration,
-  // to allow for the fact that the length could be modified during iteration.
-  for (;;) {
-    gcScope.flushToMarker(marker);
-    auto nextRes = iteratorStep(runtime, iteratorRecord);
-    if (LLVM_UNLIKELY(nextRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if (!*nextRes) {
-      // Done with iteration.
-      return selfHandle.getHermesValue();
-    }
-    pairHandle = vmcast<JSObject>(nextRes->getHermesValue());
-    auto nextItemRes = JSObject::getNamed_RJS(
-        pairHandle, runtime, Predefined::getSymbolID(Predefined::value));
-    if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if (!vmisa<JSObject>(*nextItemRes)) {
-      runtime->raiseTypeError("Iterator value must be an object");
-      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
-    }
-    pairHandle = vmcast<JSObject>(*nextItemRes);
-    auto keyRes = JSObject::getComputed_RJS(pairHandle, runtime, zero);
-    if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
-      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
-    }
-    keyHandle = *keyRes;
-    auto valueRes = JSObject::getComputed_RJS(pairHandle, runtime, one);
-    if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
-      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
-    }
-    valueHandle = *valueRes;
-    if (LLVM_UNLIKELY(
-            Callable::executeCall2(
-                adder,
-                runtime,
-                selfHandle,
-                keyHandle.getHermesValue(),
-                valueHandle.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
-      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
-    }
-  }
-
-  return selfHandle.getHermesValue();
+  return addEntriesFromIterable(
+      runtime,
+      selfHandle,
+      args.getArgHandle(0),
+      [runtime, selfHandle, adder](Runtime *, Handle<> key, Handle<> value) {
+        return Callable::executeCall2(
+                   adder,
+                   runtime,
+                   selfHandle,
+                   key.getHermesValue(),
+                   value.getHermesValue())
+            .getStatus();
+      });
 }
 
 CallResult<HermesValue>

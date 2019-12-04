@@ -399,6 +399,96 @@ CallResult<HermesValue> directEval(
     const ScopeChain &scopeChain,
     bool singleFunction = false);
 
+/// ES10 23.1.1.2 AddEntriesFromIterable
+/// Calls a callback with each pair of [key, value] from an iterable.
+/// \param target the object to which to add the entries
+/// \param iterable iterable which contains pairs of [key, value].
+///     Must not be undefined or null.
+/// \param adder the callback for actually adding properties, with signature:
+///     ExecutionStatus adder(Runtime *runtime, Handle<> key, Handle<> value);
+template <typename AdderCB>
+CallResult<HermesValue> addEntriesFromIterable(
+    Runtime *runtime,
+    Handle<JSObject> target,
+    Handle<> iterable,
+    AdderCB adder) {
+  GCScope gcScope{runtime};
+  // 2. Assert: iterable is present, and is neither undefined nor null.
+  assert(
+      !iterable->isUndefined() && !iterable->isNull() &&
+      "iterable cannot be undefined or null");
+  // 3. Let iteratorRecord be ? GetIterator(iterable).
+  CallResult<IteratorRecord> iterRes = getIterator(runtime, iterable);
+  if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto iteratorRecord = *iterRes;
+
+  MutableHandle<JSObject> nextItem{runtime};
+  MutableHandle<> key{runtime};
+  MutableHandle<> value{runtime};
+  Handle<> zero{runtime, HermesValue::encodeNumberValue(0)};
+  Handle<> one{runtime, HermesValue::encodeNumberValue(1)};
+  auto marker = gcScope.createMarker();
+
+  // 4. Repeat,
+  for (;; gcScope.flushToMarker(marker)) {
+    // a. Let next be ? IteratorStep(iteratorRecord).
+    auto nextRes = iteratorStep(runtime, iteratorRecord);
+    if (LLVM_UNLIKELY(nextRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!*nextRes) {
+      // b. If next is false, return target.
+      return target.getHermesValue();
+    }
+    // c. Let nextItem be ? IteratorValue(next).
+    nextItem = vmcast<JSObject>(nextRes->getHermesValue());
+    auto nextItemRes = JSObject::getNamed_RJS(
+        nextItem, runtime, Predefined::getSymbolID(Predefined::value));
+    if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!vmisa<JSObject>(*nextItemRes)) {
+      // d. If Type(nextItem) is not Object, then
+      // i.     Let error be ThrowCompletion(a newly created TypeError object).
+      // ii.     Return ? IteratorClose(iteratorRecord, error).
+      runtime->raiseTypeError("Iterator value must be an object");
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+    nextItem = vmcast<JSObject>(*nextItemRes);
+
+    // e. Let k be Get(nextItem, "0").
+    auto keyRes = JSObject::getComputed_RJS(nextItem, runtime, zero);
+    if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
+      // f. If k is an abrupt completion,
+      //    return ? IteratorClose(iteratorRecord, k).
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+    key = *keyRes;
+
+    // g. Let v be Get(nextItem, "1").
+    auto valueRes = JSObject::getComputed_RJS(nextItem, runtime, one);
+    if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+      // h. If v is an abrupt completion,
+      //    return ? IteratorClose(iteratorRecord, v).
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+    value = *valueRes;
+
+    // i. Let status be Call(adder, target, « k.[[Value]], v.[[Value]] »).
+    if (LLVM_UNLIKELY(
+            adder(runtime, key, value) == ExecutionStatus::EXCEPTION)) {
+      // j. If status is an abrupt completion,
+      //    return ? IteratorClose(iteratorRecord, status).
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+  }
+
+  llvm_unreachable(
+      "loop must terminate with 'return' when iteration is complete");
+}
+
 } // namespace vm
 } // namespace hermes
 
