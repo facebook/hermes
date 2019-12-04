@@ -201,3 +201,25 @@ function f8(a) {
 // CHECK-NEXT: %BB6:
 // CHECK-NEXT:   %15 = ReturnInst undefined : undefined
 // CHECK-NEXT: function_end
+
+function f9(a) {
+  return delete a?.b;
+}
+// CHECK-LABEL: function f9(a)
+// CHECK-NEXT: frame = [a]
+// CHECK-NEXT: %BB0:
+// CHECK-NEXT:   %0 = StoreFrameInst %a, [a]
+// CHECK-NEXT:   %1 = LoadFrameInst [a]
+// CHECK-NEXT:   %2 = BinaryOperatorInst '==', %1, null : null
+// CHECK-NEXT:   %3 = CondBranchInst %2, %BB1, %BB2
+// CHECK-NEXT: %BB3:
+// CHECK-NEXT:   %4 = PhiInst undefined : undefined, %BB1, %7, %BB2
+// CHECK-NEXT:   %5 = ReturnInst %4
+// CHECK-NEXT: %BB1:
+// CHECK-NEXT:   %6 = BranchInst %BB3
+// CHECK-NEXT: %BB2:
+// CHECK-NEXT:   %7 = DeletePropertyInst %1, "b" : string
+// CHECK-NEXT:   %8 = BranchInst %BB3
+// CHECK-NEXT: %BB4:
+// CHECK-NEXT:   %9 = ReturnInst undefined : undefined
+// CHECK-NEXT: function_end

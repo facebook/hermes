@@ -65,3 +65,25 @@ print(b?.z?.(42));
 // CHECK-NEXT: undefined
 print(b?.getThis?.(42) === b);
 // CHECK-NEXT: true
+print((b.getThis)?.(42) === b);
+// CHECK-NEXT: true
+print((b?.getThis)?.(42) === b);
+// CHECK-NEXT: true
+
+var obj = {
+  a: {b: 3}
+};
+print(obj?.a?.b);
+// CHECK-NEXT: 3
+print(delete obj?.a?.b);
+// CHECK-NEXT: true
+print(obj?.a?.b);
+// CHECK-NEXT: undefined
+print(delete obj?.a?.b);
+// CHECK-NEXT: true
+print(obj?.a?.b);
+// CHECK-NEXT: undefined
+print(delete obj?.a);
+// CHECK-NEXT: true
+print(obj?.a?.b);
+// CHECK-NEXT: undefined

@@ -81,12 +81,14 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
 
   // Handle MemberExpression expressions for access property.
   if (auto *Mem = dyn_cast<ESTree::MemberExpressionNode>(expr)) {
-    return genMemberExpression(Mem).result;
+    return genMemberExpression(Mem, MemberExpressionOperation::Load).result;
   }
 
   // Handle MemberExpression expressions for access property.
   if (auto *mem = dyn_cast<ESTree::OptionalMemberExpressionNode>(expr)) {
-    return genOptionalMemberExpression(mem, nullptr).result;
+    return genOptionalMemberExpression(
+               mem, nullptr, MemberExpressionOperation::Load)
+        .result;
   }
 
   // Handle Array expressions (syntax: [1,2,3]).
@@ -351,7 +353,8 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
 
   // Handle MemberExpression expression calls that sets the 'this' property.
   if (auto *Mem = dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
-    MemberExpressionResult memResult = genMemberExpression(Mem);
+    MemberExpressionResult memResult =
+        genMemberExpression(Mem, MemberExpressionOperation::Load);
 
     // Call the callee with obj as the 'this' pointer.
     thisVal = memResult.base;
@@ -359,8 +362,8 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
   } else if (
       auto *Mem =
           dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
-    MemberExpressionResult memResult =
-        genOptionalMemberExpression(Mem, nullptr);
+    MemberExpressionResult memResult = genOptionalMemberExpression(
+        Mem, nullptr, MemberExpressionOperation::Load);
 
     // Call the callee with obj as the 'this' pointer.
     thisVal = memResult.base;
@@ -406,7 +409,8 @@ Value *ESTreeIRGen::genOptionalCallExpr(
 
   // Handle MemberExpression expression calls that sets the 'this' property.
   if (auto *me = dyn_cast<ESTree::MemberExpressionNode>(call->_callee)) {
-    MemberExpressionResult memResult = genMemberExpression(me);
+    MemberExpressionResult memResult =
+        genMemberExpression(me, MemberExpressionOperation::Load);
 
     // Call the callee with obj as the 'this' pointer.
     thisVal = memResult.base;
@@ -414,8 +418,8 @@ Value *ESTreeIRGen::genOptionalCallExpr(
   } else if (
       auto *ome =
           dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
-    MemberExpressionResult memResult =
-        genOptionalMemberExpression(ome, shortCircuitBB);
+    MemberExpressionResult memResult = genOptionalMemberExpression(
+        ome, shortCircuitBB, MemberExpressionOperation::Load);
 
     // Call the callee with obj as the 'this' pointer.
     thisVal = memResult.base;
@@ -492,16 +496,24 @@ Value *ESTreeIRGen::emitCall(
 }
 
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
-    ESTree::MemberExpressionNode *mem) {
+    ESTree::MemberExpressionNode *mem,
+    MemberExpressionOperation op) {
   Value *baseValue = genExpression(mem->_object);
   Value *prop = genMemberExpressionProperty(mem);
-  return MemberExpressionResult{Builder.createLoadPropertyInst(baseValue, prop),
-                                baseValue};
+  switch (op) {
+    case MemberExpressionOperation::Load:
+      return MemberExpressionResult{
+          Builder.createLoadPropertyInst(baseValue, prop), baseValue};
+    case MemberExpressionOperation::Delete:
+      return MemberExpressionResult{
+          Builder.createDeletePropertyInst(baseValue, prop), baseValue};
+  }
 }
 
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
     ESTree::OptionalMemberExpressionNode *mem,
-    BasicBlock *shortCircuitBB) {
+    BasicBlock *shortCircuitBB,
+    MemberExpressionOperation op) {
   PhiInst::ValueListType values;
   PhiInst::BasicBlockListType blocks;
 
@@ -530,7 +542,9 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
   Value *baseValue = nullptr;
   if (ESTree::OptionalMemberExpressionNode *ome =
           dyn_cast<ESTree::OptionalMemberExpressionNode>(mem->_object)) {
-    baseValue = genOptionalMemberExpression(ome, shortCircuitBB).result;
+    baseValue = genOptionalMemberExpression(
+                    ome, shortCircuitBB, MemberExpressionOperation::Load)
+                    .result;
   } else if (
       ESTree::OptionalCallExpressionNode *oce =
           dyn_cast<ESTree::OptionalCallExpressionNode>(mem->_object)) {
@@ -557,7 +571,16 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
   }
 
   Value *prop = genMemberExpressionProperty(mem);
-  Value *result = Builder.createLoadPropertyInst(baseValue, prop);
+  Value *result = nullptr;
+  switch (op) {
+    case MemberExpressionOperation::Load:
+      result = Builder.createLoadPropertyInst(baseValue, prop);
+      break;
+    case MemberExpressionOperation::Delete:
+      result = Builder.createDeletePropertyInst(baseValue, prop);
+      break;
+  }
+  assert(result && "result must be set");
 
   if (isFirstOptional) {
     values.push_back(result);
@@ -1226,12 +1249,17 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
             dyn_cast<ESTree::MemberExpressionNode>(U->_argument)) {
       LLVM_DEBUG(dbgs() << "IRGen delete member expression.\n");
 
-      Value *obj = genExpression(memberExpr->_object);
-      Value *prop = genMemberExpressionProperty(memberExpr);
+      return genMemberExpression(memberExpr, MemberExpressionOperation::Delete)
+          .result;
+    }
 
-      // If this assignment is not the identity assignment ('=') then emit a
-      // load-operation-store sequence.
-      return Builder.createDeletePropertyInst(obj, prop);
+    if (auto *memberExpr =
+            dyn_cast<ESTree::OptionalMemberExpressionNode>(U->_argument)) {
+      LLVM_DEBUG(dbgs() << "IRGen delete optional member expression.\n");
+
+      return genOptionalMemberExpression(
+                 memberExpr, nullptr, MemberExpressionOperation::Delete)
+          .result;
     }
 
     // Check for "delete identifier". Note that deleting unqualified identifiers

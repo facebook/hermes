@@ -520,19 +520,33 @@ class ESTreeIRGen {
     Value *base;
   };
 
+  enum class MemberExpressionOperation {
+    Load,
+    Delete,
+  };
+
   /// Generate IR for a member expression.
+  /// \param op the operation to perform on the property if it exists.
+  ///    If Load, the result is set to the value of the property.
+  ///    If Delete, the result is the result of DeletePropertyInst.
   /// \return both the result and the base object.
-  MemberExpressionResult genMemberExpression(ESTree::MemberExpressionNode *Mem);
+  MemberExpressionResult genMemberExpression(
+      ESTree::MemberExpressionNode *Mem,
+      MemberExpressionOperation op);
 
   /// Generate IR for a member expression in the middle of an optional chain.
   /// \param shortCircuitBB the block to jump to upon short circuiting,
   ///    when the `?.` operator is used. If null, this is the outermost
   ///    optional expression in the chain, and will create its own
   ///    shortCircuitBB.
+  /// \param op the operation to perform on the property if it exists.
+  ///    If Load, the result is set to the value of the property.
+  ///    If Delete, the result is the result of DeletePropertyInst.
   /// \return both the result and the base object.
   MemberExpressionResult genOptionalMemberExpression(
       ESTree::OptionalMemberExpressionNode *mem,
-      BasicBlock *shortCircuitBB);
+      BasicBlock *shortCircuitBB,
+      MemberExpressionOperation op);
 
   /// Generate IR for a direct call to eval(). This is invoked from
   /// genCallExpr().
