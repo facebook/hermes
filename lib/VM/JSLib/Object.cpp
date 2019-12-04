@@ -172,6 +172,13 @@ Handle<JSObject> createObjectConstructor(Runtime *runtime) {
   defineMethod(
       runtime,
       cons,
+      Predefined::getSymbolID(Predefined::fromEntries),
+      ctx,
+      objectFromEntries,
+      1);
+  defineMethod(
+      runtime,
+      cons,
       Predefined::getSymbolID(Predefined::preventExtensions),
       ctx,
       objectPreventExtensions,
@@ -800,6 +807,40 @@ objectEntries(void *, Runtime *runtime, NativeArgs args) {
       runtime,
       runtime->makeHandle<JSObject>(*objRes),
       EnumerableOwnPropertiesKind::KeyValue);
+}
+
+/// ES10 19.1.2.7 Object.fromEntries(iterable)
+/// Creates an object from an iterable of [key, value] pairs.
+CallResult<HermesValue>
+objectFromEntries(void *, Runtime *runtime, NativeArgs args) {
+  // 1. Perform ? RequireObjectCoercible(iterable).
+  if (args.getArg(0).isNull() || args.getArg(0).isUndefined()) {
+    return runtime->raiseTypeError(
+        "fromEntries argument is not coercible to Object");
+  }
+
+  GCScopeMarkerRAII marker{runtime};
+
+  // 2. Let obj be ObjectCreate(%ObjectPrototype%).
+  Handle<JSObject> obj = toHandle(runtime, JSObject::create(runtime));
+  // 3. Assert: obj is an extensible ordinary object with no own properties.
+
+  // 4. Let stepsDefine be the algorithm steps defined in
+  //    CreateDataPropertyOnObject Functions.
+  // 5. Let adder be CreateBuiltinFunction(stepsDefine, « »).
+  // NOTE: We avoid actually creating the NativeFunction here by simply putting
+  // the DefineProperty code in the callback.
+  // 6. Return ? AddEntriesFromIterable(obj, iterable, adder).
+  return addEntriesFromIterable(
+      runtime,
+      obj,
+      args.getArgHandle(0),
+      [obj, runtime](Runtime *, Handle<> key, Handle<> value) {
+        const DefinePropertyFlags dpf =
+            DefinePropertyFlags::getDefaultNewPropertyFlags();
+        return JSObject::defineOwnComputed(
+            obj, runtime, key, dpf, value, PropOpFlags().plusThrowOnError());
+      });
 }
 
 CallResult<HermesValue>

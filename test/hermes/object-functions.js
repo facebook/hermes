@@ -202,6 +202,30 @@ print(e.length)
 print(e[0], e[1]);
 // CHECK-NEXT: a,1 c,3
 
+print('fromEntries');
+// CHECK-LABEL: fromEntries
+try {
+  Object.fromEntries(null);
+} catch(e) {
+  print('caught', e.name);
+}
+// CHECK-NEXT: caught TypeError
+var obj = Object.fromEntries([['a', 1], ['b', 2]]);
+print(Object.entries(obj));
+// CHECK-NEXT: a,1,b,2
+var desc = Object.getOwnPropertyDescriptor(obj, 'a');
+print(desc.enumerable, desc.configurable, desc.writable);
+// CHECK-NEXT: true true true
+function* gen(x) {
+  yield ['a', x];
+  yield {0: 'b', 1: x+10};
+}
+var obj = Object.fromEntries(gen(4));
+print(Object.entries(obj));
+// CHECK-NEXT: a,4,b,14
+print(Object.entries(Object.fromEntries([])).length);
+// CHECK-NEXT: 0
+
 function testGetOwnPropertyNames() {
   var obj = {a: 0, b: 1};
   Object.defineProperty(obj, 'c', {value: 2, enumerable: false});

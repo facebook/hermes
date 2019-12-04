@@ -1582,7 +1582,6 @@ PERMANENT_BLACK_LIST = [
 ]
 
 UNSUPPORTED_FEATURES = [
-    "Object.fromEntries",
     "Promise.prototype.finally",
     "String.prototype.matchAll",
     "Symbol.asyncIterator",

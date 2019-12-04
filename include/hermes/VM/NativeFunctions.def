@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// NATIVE_FUNCTION_VERSION = 4. Updated Nov 21, 2019
+// NATIVE_FUNCTION_VERSION = 5. Updated Nov 22, 2019
 // Bump this version in SerializeHeader.h whenever we change this file.
 
 #ifndef NATIVE_FUNCTION
@@ -221,6 +221,7 @@ NATIVE_FUNCTION(objectDefineProperties)
 NATIVE_FUNCTION(objectDefineProperty)
 NATIVE_FUNCTION(objectEntries)
 NATIVE_FUNCTION(objectFreeze)
+NATIVE_FUNCTION(objectFromEntries)
 NATIVE_FUNCTION(objectGetOwnPropertyDescriptor)
 NATIVE_FUNCTION(objectGetOwnPropertyNames)
 NATIVE_FUNCTION(objectGetOwnPropertySymbols)
