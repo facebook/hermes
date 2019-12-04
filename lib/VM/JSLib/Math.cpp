@@ -369,14 +369,13 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
   constantDPF.writable = 0;
   constantDPF.configurable = 0;
 
+  MutableHandle<> numberHandle{runtime};
+
   // ES5.1 15.8.1, Math value properties
   auto setMathValueProperty = [&](SymbolID name, double value) {
+    numberHandle = HermesValue::encodeNumberValue(value);
     auto result = JSObject::defineOwnProperty(
-        math,
-        runtime,
-        name,
-        constantDPF,
-        runtime->makeHandle(HermesValue::encodeDoubleValue(value)));
+        math, runtime, name, constantDPF, numberHandle);
     assert(
         result != ExecutionStatus::EXCEPTION &&
         "defineOwnProperty() failed on a new object");
