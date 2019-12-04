@@ -1373,8 +1373,8 @@ void Node::reverseNodeList(NodeList &nodes) {
 #ifndef NDEBUG
   for (const auto &node : nodes) {
     assert(
-        !node->isGoal() ||
-        (node == nodes.back()) && "Goal node should only be at end");
+        (!node->isGoal() || (node == nodes.back())) &&
+        "Goal node should only be at end");
   }
 #endif
 
