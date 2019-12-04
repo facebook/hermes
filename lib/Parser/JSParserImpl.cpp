@@ -2768,7 +2768,10 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
             new (context_)
                 ESTree::CallExpressionNode(expr, std::move(argList)));
       }
-    } else if (check(TokenKind::l_square, TokenKind::period)) {
+    } else if (checkN(
+                   TokenKind::l_square,
+                   TokenKind::period,
+                   TokenKind::questiondot)) {
       SMLoc nextStartLoc = tok_->getStartLoc();
       auto msel = parseMemberSelect(startLoc, expr, seenOptionalChain);
       if (!msel)

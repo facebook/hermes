@@ -375,6 +375,31 @@ new a().b?.c;
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
 
+a()?.b;
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "OptionalMemberExpression",
+// CHECK-NEXT:         "object": {
+// CHECK-NEXT:           "type": "CallExpression",
+// CHECK-NEXT:           "callee": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "a",
+// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "arguments": []
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "property": {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "b",
+// CHECK-NEXT:           "typeAnnotation": null
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "computed": false,
+// CHECK-NEXT:         "optional": true
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
 // Ensure we don't do optional chaining when it should be a conditional.
 x ? .3 : .4;
 // CHECK-NEXT:     {
