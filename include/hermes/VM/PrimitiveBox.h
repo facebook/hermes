@@ -23,8 +23,8 @@ class PrimitiveBox : public JSObject {
 #endif
 
   // We need one slot for the boxed value.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
+      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -67,8 +67,8 @@ class JSString final : public PrimitiveBox {
 #endif
 
   // We need one more slot for the length property.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 1;
   static ObjectVTable vt;
 
   static bool classof(const GCCell *cell) {
@@ -165,10 +165,6 @@ class JSStringIterator : public JSObject {
 
  public:
   static ObjectVTable vt;
-
-  // We need one more slot for the [[IteratedString]] property.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::StringIteratorKind;

@@ -254,9 +254,9 @@ class RequireContext final : public JSObject {
       Metadata::Builder &mb);
 
  public:
-  // We need two slots for the domain and dirname.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 2;
+  // We need two anonymous slots for the domain and dirname.
+  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
+      Super::ANONYMOUS_PROPERTY_SLOTS + 2;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::RequireContextKind;

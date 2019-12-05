@@ -247,8 +247,8 @@ class Arguments final : public ArrayImpl {
   static ObjectVTable vt;
 
   // We need one more slot for the '.length' property.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::ArgumentsKind;
@@ -290,8 +290,8 @@ class JSArray final : public ArrayImpl {
   static ObjectVTable vt;
 
   // We need one more slot for the '.length' property.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 1;
 
   /// Construct an instance of the hidden class describing the layout of JSArray
   /// instances.

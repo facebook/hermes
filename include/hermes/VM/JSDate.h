@@ -20,11 +20,9 @@ class JSDate final : public JSObject {
  public:
   static ObjectVTable vt;
 
-  /// Number of property slots the class reserves for itself. Child classes
-  /// should override this value by adding to it and defining a constant with
-  /// the same name.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  /// Need one anonymous slot for the [[PrimitiveValue]] internal property.
+  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
+      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::DateKind;

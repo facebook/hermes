@@ -98,9 +98,6 @@ class HostObject final : public JSObject {
  public:
   static ObjectVTable vt;
 
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      JSObject::NEEDED_PROPERTY_SLOTS;
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::HostObjectKind;
   }

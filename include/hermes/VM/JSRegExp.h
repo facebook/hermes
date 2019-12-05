@@ -147,8 +147,13 @@ class JSRegExp final : public JSObject {
   static constexpr SlotIndex sourceValueIndex = 0;
 
  public:
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + RegExpSlotIndexes::COUNT;
+  // pattern
+  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
+      Super::ANONYMOUS_PROPERTY_SLOTS + 1;
+
+  // lastIndex
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 1;
 };
 
 } // namespace vm

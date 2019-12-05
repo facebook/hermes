@@ -54,8 +54,8 @@ class JSError final : public JSObject {
     return cell->getKind() == CellKind::ErrorKind;
   }
 
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 1;
 
   /// Create an Error Object.
   static CallResult<HermesValue> create(

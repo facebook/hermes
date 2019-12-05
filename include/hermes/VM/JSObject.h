@@ -348,10 +348,15 @@ class JSObject : public GCCell {
   /// Default capacity of indirect property storage.
   static const PropStorage::size_type DEFAULT_PROPERTY_CAPACITY = 4;
 
-  /// Number of property slots the class reserves for itself. Child classes
-  /// should override this value by adding to it and defining a constant with
-  /// the same name.
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS = 0;
+  /// Number of property slots used by the implementation that are unnamed,
+  /// meaning they are invisible to user code. Child classes should override
+  /// this value by adding to it and defining a constant with the same name.
+  static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS = 0;
+
+  /// Number of property slots used by the implementation that are named,
+  /// meaning they are also visible to user code. Child classes should override
+  /// this value by adding to it and defining a constant with the same name.
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS = 0;
 
   /// Number of property slots allocated directly inside the object.
   static const PropStorage::size_type DIRECT_PROPERTY_SLOTS = 4;
@@ -411,8 +416,8 @@ class JSObject : public GCCell {
       Runtime *runtime,
       PropStorage::size_type size);
 
-  /// Allocate an instance of property storage with a capacity of at least
-  /// T::NEEDED_PROPERTY_SLOTS, which must fit inside the direct property slots.
+  /// Allocate an instance of property storage that can hold all internal
+  /// properties, which must fit inside the direct property slots.
   /// \return a copy of self for convenience.
   template <typename T>
   static inline T *allocateSmallPropStorage(T *self);
@@ -1406,8 +1411,9 @@ inline CallResult<PseudoHandle<JSObject>> JSObject::allocatePropStorage(
 
 template <typename T>
 inline T *JSObject::allocateSmallPropStorage(T *self) {
+  constexpr auto count = T::ANONYMOUS_PROPERTY_SLOTS + T::NAMED_PROPERTY_SLOTS;
   static_assert(
-      T::NEEDED_PROPERTY_SLOTS <= DIRECT_PROPERTY_SLOTS,
+      count <= DIRECT_PROPERTY_SLOTS,
       "smallPropStorage size must fit in direct properties");
   return self;
 }

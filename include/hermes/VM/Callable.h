@@ -358,8 +358,8 @@ class BoundFunction final : public Callable {
   static CallableVTable vt;
 
   // We need one more slot for '.length'
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 1;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::BoundFunctionKind;
@@ -474,8 +474,8 @@ class NativeFunction : public Callable {
   static CallableVTable vt;
 
   // We need two more slot for '.length' and '.prototype'
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 2;
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 2;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -858,8 +858,8 @@ class JSFunction : public Callable {
   static CallableVTable vt;
 
   // We need two more slot for '.length' and '.prototype'
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 2;
+  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
+      Super::NAMED_PROPERTY_SLOTS + 2;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -1009,9 +1009,6 @@ class GeneratorInnerFunction final : public JSFunction {
 
  public:
   static CallableVTable vt;
-
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS;
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::GeneratorInnerFunctionKind;
