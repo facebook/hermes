@@ -320,10 +320,12 @@ endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
     "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
-  # Superss warnings about unknown warnings
+  # Supress warnings about unknown warnings
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-warning-option")
   # Suppress an uninteresting warning about C++17 name mangling changes.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-noexcept-type")
+  # Suppress uninteresting warnings about initializing ArrayRef from initializer lists.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-init-list-lifetime")
   # Don't export symbols unless we explicitly say so
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")

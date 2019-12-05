@@ -226,7 +226,9 @@ CallResult<HermesValue> mathRandom(void *, Runtime *runtime, NativeArgs) {
 }
 
 CallResult<HermesValue> mathFround(void *, Runtime *runtime, NativeArgs args)
-    LLVM_NO_SANITIZE("float-cast-overflow") {
+    LLVM_NO_SANITIZE("float-cast-overflow");
+
+CallResult<HermesValue> mathFround(void *, Runtime *runtime, NativeArgs args) {
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

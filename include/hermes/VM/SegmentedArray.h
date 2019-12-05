@@ -169,6 +169,8 @@ class SegmentedArray final
           "Cannot make an iterator that points outside of the storage");
     }
 
+    iterator(const iterator &) = default;
+
     iterator &operator=(const iterator &that) {
       assert(
           owner_ == that.owner_ &&

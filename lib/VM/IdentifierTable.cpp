@@ -292,7 +292,7 @@ IdentifierTable::allocateDynamicString(
     result = createPseudoHandle<StringPrimitive>(tmp);
   }
 
-  return std::move(result);
+  return result;
 }
 
 uint32_t IdentifierTable::allocIDAndInsert(

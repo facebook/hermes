@@ -1480,11 +1480,11 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
       ? runtime->getCurrentFrame().ptr()
       : runtime->getCurrentFrame().ptr() - frameSize;
   assert(
-      (StackFrameLayout::StackIncrement > 0 &&
-       dst + frameSize <= runtime->getStackPointer()) ||
-      (StackFrameLayout::StackIncrement < 0 &&
-       dst >= runtime->getStackPointer()) &&
-          "reading off the end of the stack");
+      ((StackFrameLayout::StackIncrement > 0 &&
+        dst + frameSize <= runtime->getStackPointer()) ||
+       (StackFrameLayout::StackIncrement < 0 &&
+        dst >= runtime->getStackPointer())) &&
+      "reading off the end of the stack");
   const GCHermesValue *src = &savedContext_.get(runtime)->at(frameOffset);
   std::memcpy(dst, src, frameSize * sizeof(PinnedHermesValue));
 }
@@ -1497,11 +1497,11 @@ void GeneratorInnerFunction::saveStack(Runtime *runtime) {
       ? runtime->getCurrentFrame().ptr()
       : runtime->getCurrentFrame().ptr() - frameSize;
   assert(
-      (StackFrameLayout::StackIncrement > 0 &&
-       first + frameSize <= runtime->getStackPointer()) ||
-      (StackFrameLayout::StackIncrement < 0 &&
-       first >= runtime->getStackPointer()) &&
-          "reading off the end of the stack");
+      ((StackFrameLayout::StackIncrement > 0 &&
+        first + frameSize <= runtime->getStackPointer()) ||
+       (StackFrameLayout::StackIncrement < 0 &&
+        first >= runtime->getStackPointer())) &&
+      "reading off the end of the stack");
   // Use GCHermesValue::copy to ensure write barriers are executed.
   GCHermesValue::copy(
       first,

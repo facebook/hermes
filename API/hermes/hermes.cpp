@@ -2015,7 +2015,7 @@ std::unique_ptr<HermesRuntime> makeHermesRuntime(
       new debugger::Debugger(ret.get(), &(ret->runtime_.getDebugger()))));
 #endif
 
-  return std::move(ret);
+  return ret;
 }
 
 std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
@@ -2045,7 +2045,7 @@ std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
       new debugger::Debugger(&hermesRt, &(hermesRt.runtime_.getDebugger()))));
 #endif
 
-  return std::move(ret);
+  return ret;
 }
 
 #ifdef HERMES_ENABLE_DEBUGGER
