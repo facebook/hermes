@@ -221,6 +221,17 @@ class StringView {
       new (strPrim_.buffer) Handle<StringPrimitive>(other.strPrim());
   }
 
+  StringView &operator=(const StringView &other) {
+    if (this != &other) {
+      if (isHandle_)
+        strPrim().~Handle<StringPrimitive>();
+      ::memcpy(this, &other, sizeof(*this));
+      if (isHandle_)
+        new (strPrim_.buffer) Handle<StringPrimitive>(other.strPrim());
+    }
+    return *this;
+  }
+
   ~StringView() {
     if (isHandle_)
       strPrim().~Handle<StringPrimitive>();
