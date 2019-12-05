@@ -205,12 +205,11 @@ CallResult<HermesValue> JSError::create(
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       cellSize<JSError>());
   return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSError(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle),
-              catchable)));
+      JSObject::allocateSmallPropStorage(new (mem) JSError(
+          runtime,
+          *parentHandle,
+          runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+          catchable)));
 }
 
 ExecutionStatus JSError::setupStack(

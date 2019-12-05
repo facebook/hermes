@@ -92,11 +92,10 @@ CallResult<HermesValue> JSMapImpl<C>::create(
     Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc(cellSize<JSMapImpl>());
   return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSMapImpl(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+      JSObject::allocateSmallPropStorage(new (mem) JSMapImpl(
+          runtime,
+          *parentHandle,
+          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 }
 
 template class JSMapImpl<CellKind::SetKind>;
@@ -186,11 +185,10 @@ CallResult<HermesValue> JSMapIteratorImpl<C>::create(
     Handle<JSObject> prototype) {
   void *mem = runtime->alloc(cellSize<JSMapIteratorImpl<C>>());
   return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSMapIteratorImpl<C>(
-              runtime,
-              *prototype,
-              runtime->getHiddenClassForPrototypeRaw(*prototype))));
+      JSObject::allocateSmallPropStorage(new (mem) JSMapIteratorImpl<C>(
+          runtime,
+          *prototype,
+          runtime->getHiddenClassForPrototypeRaw(*prototype))));
 }
 
 template class JSMapIteratorImpl<CellKind::MapIteratorKind>;

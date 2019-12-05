@@ -253,11 +253,11 @@ class RequireContext final : public JSObject {
       const GCCell *cell,
       Metadata::Builder &mb);
 
+ public:
   // We need two slots for the domain and dirname.
   static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
       Super::NEEDED_PROPERTY_SLOTS + 2;
 
- public:
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::RequireContextKind;
   }

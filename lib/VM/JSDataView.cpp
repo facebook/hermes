@@ -62,11 +62,10 @@ CallResult<HermesValue> JSDataView::create(
     Handle<JSObject> prototype) {
   void *mem = runtime->alloc(cellSize<JSDataView>());
   return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSDataView(
-              runtime,
-              *prototype,
-              runtime->getHiddenClassForPrototypeRaw(*prototype))));
+      JSObject::allocateSmallPropStorage(new (mem) JSDataView(
+          runtime,
+          *prototype,
+          runtime->getHiddenClassForPrototypeRaw(*prototype))));
 }
 
 JSDataView::JSDataView(Runtime *runtime, JSObject *parent, HiddenClass *clazz)

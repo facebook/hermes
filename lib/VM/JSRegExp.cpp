@@ -91,12 +91,11 @@ CallResult<HermesValue> JSRegExp::create(
     Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       cellSize<JSRegExp>());
-  auto selfHandle = runtime->makeHandle(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSRegExp(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+  auto selfHandle =
+      runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSRegExp(
+          runtime,
+          *parentHandle,
+          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 
   Handle<> emptyString = runtime->makeHandle(HermesValue::encodeStringValue(
       runtime->getPredefinedString(Predefined::emptyString)));

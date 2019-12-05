@@ -145,6 +145,8 @@ class JSRegExp final : public JSObject {
   // Property storage slots.
   enum RegExpSlotIndexes { pattern, lastIndex, COUNT };
   static constexpr SlotIndex sourceValueIndex = 0;
+
+ public:
   static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
       Super::NEEDED_PROPERTY_SLOTS + RegExpSlotIndexes::COUNT;
 };

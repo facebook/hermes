@@ -34,11 +34,10 @@ class SingleObject final : public JSObject {
       Handle<JSObject> parentHandle) {
     void *mem = runtime->alloc(cellSize<SingleObject>());
     return HermesValue::encodeObjectValue(
-        JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-            new (mem) SingleObject(
-                runtime,
-                *parentHandle,
-                runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+        JSObject::allocateSmallPropStorage(new (mem) SingleObject(
+            runtime,
+            *parentHandle,
+            runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
   }
 
  protected:

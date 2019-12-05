@@ -366,11 +366,10 @@ CallResult<HermesValue> JSTypedArray<T, C>::create(
     Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc(cellSize<JSTypedArray<T, C>>());
   return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSTypedArray<T, C>(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+      JSObject::allocateSmallPropStorage(new (mem) JSTypedArray<T, C>(
+          runtime,
+          *parentHandle,
+          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 }
 
 /// @name Specializations for specific types

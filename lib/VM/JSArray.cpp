@@ -413,13 +413,12 @@ CallResult<HermesValue> Arguments::create(
 
   void *mem = runtime->alloc(cellSize<Arguments>());
   auto selfHandle = runtime->makeHandle(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) Arguments(
-              runtime,
-              runtime->objectPrototypeRawPtr,
-              runtime->getHiddenClassForPrototypeRaw(
-                  runtime->objectPrototypeRawPtr),
-              *indexedStorage)));
+      JSObject::allocateSmallPropStorage(new (mem) Arguments(
+          runtime,
+          runtime->objectPrototypeRawPtr,
+          runtime->getHiddenClassForPrototypeRaw(
+              runtime->objectPrototypeRawPtr),
+          *indexedStorage)));
 
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
 
@@ -590,13 +589,12 @@ CallResult<HermesValue> JSArray::create(
   }
 
   void *mem = runtime->alloc(cellSize<JSArray>());
-  JSArray *self = JSObject::allocateSmallPropStorage<JSArrayPropertyCount>(
-      new (mem) JSArray(
-          runtime,
-          *prototypeHandle,
-          *classHandle,
-          *indexedStorage,
-          GCPointerBase::NoBarriers()));
+  JSArray *self = JSObject::allocateSmallPropStorage(new (mem) JSArray(
+      runtime,
+      *prototypeHandle,
+      *classHandle,
+      *indexedStorage,
+      GCPointerBase::NoBarriers()));
 
   putLength(self, runtime, length);
 
@@ -807,13 +805,12 @@ CallResult<HermesValue> JSArrayIterator::create(
   auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
 
   void *mem = runtime->alloc(cellSize<JSArrayIterator>());
-  auto *self = JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-      new (mem) JSArrayIterator(
-          runtime,
-          *proto,
-          runtime->getHiddenClassForPrototypeRaw(*proto),
-          *array,
-          iterationKind));
+  auto *self = JSObject::allocateSmallPropStorage(new (mem) JSArrayIterator(
+      runtime,
+      *proto,
+      runtime->getHiddenClassForPrototypeRaw(*proto),
+      *array,
+      iterationKind));
   return HermesValue::encodeObjectValue(self);
 }
 

@@ -411,10 +411,10 @@ class JSObject : public GCCell {
       Runtime *runtime,
       PropStorage::size_type size);
 
-  /// Allocate an instance of property storage with the specified capacity,
-  /// which must fit inside the direct property slots.
+  /// Allocate an instance of property storage with a capacity of at least
+  /// T::NEEDED_PROPERTY_SLOTS, which must fit inside the direct property slots.
   /// \return a copy of self for convenience.
-  template <PropStorage::size_type size, typename T>
+  template <typename T>
   static inline T *allocateSmallPropStorage(T *self);
 
   /// ES9 9.1 O.[[Extensible]] internal slot
@@ -1404,10 +1404,10 @@ inline CallResult<PseudoHandle<JSObject>> JSObject::allocatePropStorage(
   return PseudoHandle<JSObject>(selfHandle);
 }
 
-template <PropStorage::size_type size, typename T>
+template <typename T>
 inline T *JSObject::allocateSmallPropStorage(T *self) {
   static_assert(
-      size <= DIRECT_PROPERTY_SLOTS,
+      T::NEEDED_PROPERTY_SLOTS <= DIRECT_PROPERTY_SLOTS,
       "smallPropStorage size must fit in direct properties");
   return self;
 }

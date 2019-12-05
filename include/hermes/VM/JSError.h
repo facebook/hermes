@@ -54,6 +54,9 @@ class JSError final : public JSObject {
     return cell->getKind() == CellKind::ErrorKind;
   }
 
+  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
+      Super::NEEDED_PROPERTY_SLOTS + 1;
+
   /// Create an Error Object.
   static CallResult<HermesValue> create(
       Runtime *runtime,
@@ -124,9 +127,6 @@ class JSError final : public JSObject {
       : JSObject(runtime, &vt.base, parent, clazz), catchable_{catchable} {}
 
  private:
-  static const PropStorage::size_type NEEDED_PROPERTY_SLOTS =
-      Super::NEEDED_PROPERTY_SLOTS + 1;
-
   friend void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   static void _finalizeImpl(GCCell *cell, GC *gc);
   static size_t _mallocSizeImpl(GCCell *cell);

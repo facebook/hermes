@@ -102,7 +102,7 @@ CallResult<HermesValue> JSArrayBuffer::create(
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(*parentHandle));
   return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(self));
+      JSObject::allocateSmallPropStorage(self));
 }
 
 CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(

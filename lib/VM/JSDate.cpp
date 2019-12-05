@@ -52,12 +52,11 @@ void DateDeserialize(Deserializer &d, CellKind kind) {
 CallResult<HermesValue>
 JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc(cellSize<JSDate>());
-  auto selfHandle = runtime->makeHandle(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSDate(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+  auto selfHandle =
+      runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSDate(
+          runtime,
+          *parentHandle,
+          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
   JSObject::addInternalProperties(
       selfHandle,
       runtime,

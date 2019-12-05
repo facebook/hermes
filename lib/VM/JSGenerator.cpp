@@ -60,11 +60,10 @@ CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
     Handle<GeneratorInnerFunction> innerFunction,
     Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc(cellSize<JSGenerator>());
-  auto *self = JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-      new (mem) JSGenerator(
-          runtime,
-          *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(*parentHandle)));
+  auto *self = JSObject::allocateSmallPropStorage(new (mem) JSGenerator(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(*parentHandle)));
   self->innerFunction_.set(runtime, *innerFunction, &runtime->getHeap());
   return createPseudoHandle(self);
 }

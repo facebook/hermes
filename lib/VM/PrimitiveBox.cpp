@@ -59,12 +59,11 @@ CallResult<HermesValue> JSString::create(
     Handle<StringPrimitive> value,
     Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc(cellSize<JSString>());
-  auto selfHandle = runtime->makeHandle(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSString(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+  auto selfHandle =
+      runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSString(
+          runtime,
+          *parentHandle,
+          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 
   JSObject::addInternalProperties(selfHandle, runtime, 1, value);
 
@@ -235,12 +234,11 @@ CallResult<HermesValue> JSStringIterator::create(
   auto proto = Handle<JSObject>::vmcast(&runtime->stringIteratorPrototype);
 
   void *mem = runtime->alloc(cellSize<JSStringIterator>());
-  auto *self = JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-      new (mem) JSStringIterator(
-          runtime,
-          *proto,
-          runtime->getHiddenClassForPrototypeRaw(*proto),
-          *string));
+  auto *self = JSObject::allocateSmallPropStorage(new (mem) JSStringIterator(
+      runtime,
+      *proto,
+      runtime->getHiddenClassForPrototypeRaw(*proto),
+      *string));
   return HermesValue::encodeObjectValue(self);
 }
 
@@ -344,12 +342,11 @@ CallResult<HermesValue> JSNumber::create(
     double value,
     Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc(cellSize<JSNumber>());
-  auto selfHandle = runtime->makeHandle(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSNumber(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+  auto selfHandle =
+      runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSNumber(
+          runtime,
+          *parentHandle,
+          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 
   JSObject::addInternalProperties(
       selfHandle,
@@ -398,11 +395,10 @@ CallResult<HermesValue>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc(cellSize<JSBoolean>());
   auto selfHandle = runtime->makeHandle(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSBoolean(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+      JSObject::allocateSmallPropStorage(new (mem) JSBoolean(
+          runtime,
+          *parentHandle,
+          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 
   JSObject::addInternalProperties(
       selfHandle, runtime, 1, Runtime::getBoolValue(value));
@@ -448,12 +444,11 @@ CallResult<HermesValue> JSSymbol::create(
     SymbolID value,
     Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc(cellSize<JSSymbol>());
-  auto selfHandle = runtime->makeHandle(
-      JSObject::allocateSmallPropStorage<NEEDED_PROPERTY_SLOTS>(
-          new (mem) JSSymbol(
-              runtime,
-              *parentHandle,
-              runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+  auto selfHandle =
+      runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSSymbol(
+          runtime,
+          *parentHandle,
+          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
 
   JSObject::addInternalProperties(
       selfHandle, runtime, 1, runtime->makeHandle(value));
