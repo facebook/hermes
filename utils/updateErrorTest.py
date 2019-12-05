@@ -34,7 +34,7 @@ def parseSource(lines):
     i = 0
     # Collect the commented out lines at the beginning.
     while i < len(lines):
-        if not re.match(r"^\s*//", lines[i]):
+        if not re.match(r"^\s*//|^$|^\/\*|^ \*", lines[i]):
             break
         headingLines.append(lines[i])
         i += 1
@@ -100,9 +100,10 @@ def generateOutput(f):
         while toLine > fromLine and not sourceLines.get(toLine, ""):
             toLine -= 1
 
-        # Output a separator line.
-        print("", file=f)
-        lineNo += 1
+        # Output a separator line, but not the first time.
+        if errorIndex:
+            print("", file=f)
+            lineNo += 1
 
         # Output the source lines.
         for i in range(fromLine, toLine + 1):
