@@ -143,7 +143,8 @@ weakSetPrototypeAdd(void *, Runtime *runtime, NativeArgs args) {
   }
 
   if (LLVM_UNLIKELY(
-          JSWeakSet::setValue(M, runtime, key, args.getArgHandle(1)) ==
+          JSWeakSet::setValue(
+              M, runtime, key, HandleRootOwner::getUndefinedValue()) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
