@@ -31,16 +31,6 @@ using namespace detail;
 namespace {
 std::terminate_handler gTerminateHandler;
 
-const ExceptionTraceHolder* getExceptionTraceHolder(std::exception_ptr ptr) {
-  try {
-    std::rethrow_exception(ptr);
-  } catch (const ExceptionTraceHolder& holder) {
-    return &holder;
-  } catch (...) {
-    return nullptr;
-  }
-}
-
 void logExceptionAndAbort() {
   if (auto ptr = std::current_exception()) {
     FBJNI_LOGE("Uncaught exception: %s", toString(ptr).c_str());

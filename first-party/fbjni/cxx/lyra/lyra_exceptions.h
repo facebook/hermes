@@ -44,6 +44,8 @@ namespace detail {
   struct Holder<E, true> : E {
     Holder(E&& e) : E{std::forward<E>(e)} {}
   };
+
+  const ExceptionTraceHolder* getExceptionTraceHolder(std::exception_ptr ptr);
 }
 
 /**
