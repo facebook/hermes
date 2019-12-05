@@ -67,7 +67,8 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
   auto selfHandle = runtime->makeHandle(new (mem) FinalizableNativeFunction(
       runtime,
       parentHandle,
-      createPseudoHandle(runtime->getHiddenClassForPrototypeRaw(*parentHandle)),
+      createPseudoHandle(runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS)),
       context,
       functionPtr,
       finalizePtr));
@@ -131,7 +132,8 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
   HostObject *hostObj = new (mem) HostObject(
       runtime,
       *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       proxy);
 
   hostObj->flags_.hostObject = true;

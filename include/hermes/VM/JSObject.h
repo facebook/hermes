@@ -489,26 +489,6 @@ class JSObject : public GCCell {
       JSObject *parent,
       PropOpFlags opFlags = PropOpFlags());
 
-  /// Allocate an internal property. This simply allocates a new property with
-  /// SymbolID InternalProperty::getSymbolID(index) and returns the allocated
-  /// slot. The returned values should be anticipated statically and are only
-  /// for debuggong.
-  static SlotIndex addInternalProperty(
-      Handle<JSObject> selfHandle,
-      Runtime *runtime,
-      unsigned index,
-      Handle<> valueHandle);
-
-  /// Allocate internal properties - it reserves \p count slots, starting from
-  /// index 0, which are not accessible by name. This method can be called
-  /// exactly once per object, before any other properties have been added.
-  /// The new properties are initialized to \p valueHandle.
-  static void addInternalProperties(
-      Handle<JSObject> selfHandle,
-      Runtime *runtime,
-      unsigned count,
-      Handle<> valueHandle);
-
   /// Return a reference to an internal property slot.
   static GCHermesValue &
   internalPropertyRef(JSObject *self, PointerBase *runtime, SlotIndex index) {

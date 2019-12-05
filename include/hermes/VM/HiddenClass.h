@@ -465,6 +465,15 @@ class HiddenClass final : public GCCell {
       PropertyFlags flagsToSet,
       OptValue<llvm::ArrayRef<SymbolID>> props);
 
+  /// Create a new class where the next slot is reserved, by calling addProperty
+  /// with an internal property name. Only slots with index less than
+  /// InternalProperty::NumInternalProperties can be reserved.
+  /// \param selfHandle must not be in dictionary mode.
+  /// \return the resulting new class and the index of the reserved slot.
+  static CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> reserveSlot(
+      Handle<HiddenClass> selfHandle,
+      Runtime *runtime);
+
   /// \return true if all properties are non-configurable
   static bool areAllNonConfigurable(
       Handle<HiddenClass> selfHandle,

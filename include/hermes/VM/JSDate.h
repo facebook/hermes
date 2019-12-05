@@ -61,7 +61,7 @@ class JSDate final : public JSObject {
       : JSObject(runtime, &vt.base, parent, clazz) {}
 
  protected:
-  static const SlotIndex primitiveValueIndex = 0;
+  static const SlotIndex primitiveValueIndex = ANONYMOUS_PROPERTY_SLOTS - 1;
 };
 
 } // namespace vm

@@ -56,12 +56,8 @@ JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
       runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSDate(
           runtime,
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
-  JSObject::addInternalProperties(
-      selfHandle,
-      runtime,
-      1,
-      runtime->makeHandle(HermesValue::encodeDoubleValue(value)));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
   return selfHandle.getHermesValue();
 }
 

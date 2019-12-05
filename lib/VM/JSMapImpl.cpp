@@ -95,7 +95,8 @@ CallResult<HermesValue> JSMapImpl<C>::create(
       JSObject::allocateSmallPropStorage(new (mem) JSMapImpl(
           runtime,
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 }
 
 template class JSMapImpl<CellKind::SetKind>;
@@ -188,7 +189,8 @@ CallResult<HermesValue> JSMapIteratorImpl<C>::create(
       JSObject::allocateSmallPropStorage(new (mem) JSMapIteratorImpl<C>(
           runtime,
           *prototype,
-          runtime->getHiddenClassForPrototypeRaw(*prototype))));
+          runtime->getHiddenClassForPrototypeRaw(
+              *prototype, ANONYMOUS_PROPERTY_SLOTS))));
 }
 
 template class JSMapIteratorImpl<CellKind::MapIteratorKind>;

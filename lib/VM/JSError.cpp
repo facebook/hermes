@@ -208,7 +208,8 @@ CallResult<HermesValue> JSError::create(
       JSObject::allocateSmallPropStorage(new (mem) JSError(
           runtime,
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
           catchable)));
 }
 

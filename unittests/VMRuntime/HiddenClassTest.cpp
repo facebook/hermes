@@ -449,4 +449,19 @@ TEST_F(HiddenClassTest, ForEachProperty) {
   EXPECT_EQ(expectedProperties, propertiesNoAlloc);
 }
 
+TEST_F(HiddenClassTest, ReservedSlots) {
+  auto aHnd = *runtime->getIdentifierTable().getSymbolHandle(
+      runtime, createUTF16Ref(u"a"));
+  for (unsigned i = 0; i <= InternalProperty::NumInternalProperties; ++i) {
+    Handle<HiddenClass> clazz{
+        runtime,
+        runtime->getHiddenClassForPrototypeRaw(*runtime->getGlobal(), i)};
+    EXPECT_FALSE(clazz->isDictionary());
+    auto addRes = HiddenClass::addProperty(
+        clazz, runtime, *aHnd, PropertyFlags::defaultNewNamedPropertyFlags());
+    ASSERT_RETURNED(addRes);
+    EXPECT_EQ(i, addRes->second);
+  }
+}
+
 } // namespace

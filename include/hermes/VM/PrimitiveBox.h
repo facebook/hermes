@@ -54,7 +54,7 @@ class PrimitiveBox : public JSObject {
       HiddenClass *clazz)
       : JSObject(runtime, vt, parent, clazz) {}
 
-  static const SlotIndex primitiveValueIndex = 0;
+  static const SlotIndex primitiveValueIndex = ANONYMOUS_PROPERTY_SLOTS - 1;
 };
 
 /// String object.

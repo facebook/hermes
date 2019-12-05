@@ -24,6 +24,7 @@
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/HasFinalizer.h"
 #include "hermes/VM/IdentifierTable.h"
+#include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/InterpreterState.h"
 #include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/MockedEnvironment.h"
@@ -433,11 +434,18 @@ class Runtime : public HandleRootOwner,
   /// Set `thrownValue` to empty.
   void clearThrownValue();
 
-  /// Return a hidden class corresponding to the specified prototype object.
-  /// For now we always return the same one.  This version takes and
-  /// returns raw pointers: standard warnings apply!
-  inline HiddenClass *getHiddenClassForPrototypeRaw(JSObject *proto) {
-    return rootClazzRawPtr_;
+  /// Return a hidden class corresponding to the specified prototype object
+  /// and number of reserved slots. For now we only use the latter.
+  /// Takes and returns raw pointers: standard warnings apply!
+  inline HiddenClass *getHiddenClassForPrototypeRaw(
+      JSObject *proto,
+      unsigned reservedSlots) {
+    assert(
+        reservedSlots <= InternalProperty::NumInternalProperties &&
+        "out of bounds");
+    auto *clazz = rootClazzRawPtr_[reservedSlots];
+    assert(clazz && "must initialize root classes before use");
+    return clazz;
   }
 
   /// Return the global object.
@@ -1029,8 +1037,10 @@ class Runtime : public HandleRootOwner,
   /// that this limit should still insulate us from native stack overflow.)
   static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH = 384;
 
-  /// Raw pointer to the root of all hidden classes.
-  HiddenClass *rootClazzRawPtr_{};
+  /// rootClazzRawPtr_[i] is a raw pointer to a hidden class with its i first
+  /// slots pre-reserved.
+  HiddenClass *rootClazzRawPtr_[InternalProperty::NumInternalProperties + 1] = {
+      nullptr};
 
   /// Cache for property lookups in non-JS code.
   PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];

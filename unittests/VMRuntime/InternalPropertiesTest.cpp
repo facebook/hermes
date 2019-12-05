@@ -72,34 +72,4 @@ TEST_F(InternalPropertiesTest, NamedInternalPropertyTest) {
   ASSERT_EQ(JSArray::getLength(**propSymbols), 0);
 }
 
-TEST_F(InternalPropertiesTest, AnonymousInternalPropertyTest) {
-  CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
-
-  Handle<JSObject> nullObj(runtime, nullptr);
-  auto obj = toHandle(runtime, JSObject::create(runtime, nullObj));
-
-  unsigned propIndex = 0;
-  auto propID = InternalProperty::getSymbolID(propIndex);
-
-  ASSERT_EQ(
-      JSObject::addInternalProperty(
-          obj,
-          runtime,
-          propIndex,
-          runtime->makeHandle(HermesValue::encodeDoubleValue(10.0))),
-      propIndex);
-
-  EXPECT_CALLRESULT_DOUBLE(10.0, JSObject::getNamed_RJS(obj, runtime, propID));
-
-  // Internal properties are not exposed to the user in any way.
-  auto propNames =
-      JSObject::getOwnPropertyNames(obj, runtime, false /* onlyEnumerable */);
-  ASSERT_RETURNED(propNames);
-  ASSERT_EQ(JSArray::getLength(**propNames), 0);
-
-  auto propSymbols = JSObject::getOwnPropertySymbols(obj, runtime);
-  ASSERT_RETURNED(propSymbols);
-  ASSERT_EQ(JSArray::getLength(**propSymbols), 0);
-}
-
 } // anonymous namespace

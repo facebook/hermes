@@ -144,7 +144,6 @@ class JSRegExp final : public JSObject {
 
   // Property storage slots.
   enum RegExpSlotIndexes { pattern, lastIndex, COUNT };
-  static constexpr SlotIndex sourceValueIndex = 0;
 
  public:
   // pattern

@@ -697,7 +697,8 @@ class NativeConstructor final : public NativeFunction {
     return createPseudoHandle(new (mem) NativeConstructor(
         runtime,
         *parentHandle,
-        runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+        runtime->getHiddenClassForPrototypeRaw(
+            *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
         context,
         functionPtr,
         creator,
@@ -721,7 +722,8 @@ class NativeConstructor final : public NativeFunction {
     return createPseudoHandle(new (mem) NativeConstructor(
         runtime,
         *parentHandle,
-        runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+        runtime->getHiddenClassForPrototypeRaw(
+            *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
         parentEnvHandle,
         context,
         functionPtr,

@@ -63,9 +63,14 @@ CallResult<HermesValue> JSString::create(
       runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSString(
           runtime,
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
-  JSObject::addInternalProperties(selfHandle, runtime, 1, value);
+  JSObject::setInternalProperty(
+      *selfHandle,
+      runtime,
+      PrimitiveBox::primitiveValueIndex,
+      value.getHermesValue());
 
   PropertyFlags pf;
   pf.writable = 0;
@@ -237,7 +242,7 @@ CallResult<HermesValue> JSStringIterator::create(
   auto *self = JSObject::allocateSmallPropStorage(new (mem) JSStringIterator(
       runtime,
       *proto,
-      runtime->getHiddenClassForPrototypeRaw(*proto),
+      runtime->getHiddenClassForPrototypeRaw(*proto, ANONYMOUS_PROPERTY_SLOTS),
       *string));
   return HermesValue::encodeObjectValue(self);
 }
@@ -346,13 +351,14 @@ CallResult<HermesValue> JSNumber::create(
       runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSNumber(
           runtime,
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
-  JSObject::addInternalProperties(
-      selfHandle,
+  JSObject::setInternalProperty(
+      *selfHandle,
       runtime,
-      1,
-      runtime->makeHandle(HermesValue::encodeDoubleValue(value)));
+      PrimitiveBox::primitiveValueIndex,
+      HermesValue::encodeDoubleValue(value));
 
   return selfHandle.getHermesValue();
 }
@@ -398,10 +404,14 @@ JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
       JSObject::allocateSmallPropStorage(new (mem) JSBoolean(
           runtime,
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
-  JSObject::addInternalProperties(
-      selfHandle, runtime, 1, Runtime::getBoolValue(value));
+  JSObject::setInternalProperty(
+      *selfHandle,
+      runtime,
+      PrimitiveBox::primitiveValueIndex,
+      *Runtime::getBoolValue(value));
   return selfHandle.getHermesValue();
 }
 
@@ -448,10 +458,14 @@ CallResult<HermesValue> JSSymbol::create(
       runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSSymbol(
           runtime,
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
-  JSObject::addInternalProperties(
-      selfHandle, runtime, 1, runtime->makeHandle(value));
+  JSObject::setInternalProperty(
+      *selfHandle,
+      runtime,
+      PrimitiveBox::primitiveValueIndex,
+      HermesValue::encodeSymbolValue(value));
 
   return selfHandle.getHermesValue();
 }

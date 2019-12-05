@@ -342,9 +342,10 @@ Handle<RequireContext> RequireContext::create(
           runtime,
           vmcast<JSObject>(runtime->objectPrototype),
           runtime->getHiddenClassForPrototypeRaw(
-              vmcast<JSObject>(runtime->objectPrototype)))));
+              vmcast<JSObject>(runtime->objectPrototype),
+              ANONYMOUS_PROPERTY_SLOTS))));
 
-  JSObject::addInternalProperties(self, runtime, 2, domain);
+  JSObject::setInternalProperty(*self, runtime, 0, domain.getHermesValue());
   JSObject::setInternalProperty(*self, runtime, 1, dirname.getHermesValue());
 
   return self;

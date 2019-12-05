@@ -63,7 +63,8 @@ CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
   auto *self = JSObject::allocateSmallPropStorage(new (mem) JSGenerator(
       runtime,
       *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle)));
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS)));
   self->innerFunction_.set(runtime, *innerFunction, &runtime->getHeap());
   return createPseudoHandle(self);
 }

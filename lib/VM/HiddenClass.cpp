@@ -841,6 +841,24 @@ Handle<HiddenClass> HiddenClass::updatePropertyFlagsWithoutTransitions(
   return std::move(classHandle);
 }
 
+CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::reserveSlot(
+    Handle<HiddenClass> selfHandle,
+    Runtime *runtime) {
+  assert(
+      !selfHandle->isDictionary() &&
+      "Reserved slots can only be added in class mode");
+  SlotIndex index = selfHandle->numProperties_;
+  assert(
+      index < InternalProperty::NumInternalProperties &&
+      "Reserved slot index is too large");
+
+  return HiddenClass::addProperty(
+      selfHandle,
+      runtime,
+      InternalProperty::getSymbolID(index),
+      PropertyFlags{});
+}
+
 bool HiddenClass::areAllNonConfigurable(
     Handle<HiddenClass> selfHandle,
     Runtime *runtime) {

@@ -417,7 +417,7 @@ CallResult<HermesValue> Arguments::create(
           runtime,
           runtime->objectPrototypeRawPtr,
           runtime->getHiddenClassForPrototypeRaw(
-              runtime->objectPrototypeRawPtr),
+              runtime->objectPrototypeRawPtr, ANONYMOUS_PROPERTY_SLOTS),
           *indexedStorage)));
 
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
@@ -538,7 +538,9 @@ Handle<HiddenClass> JSArray::createClass(
     Runtime *runtime,
     Handle<JSObject> prototypeHandle) {
   Handle<HiddenClass> classHandle{
-      runtime, runtime->getHiddenClassForPrototypeRaw(*prototypeHandle)};
+      runtime,
+      runtime->getHiddenClassForPrototypeRaw(
+          *prototypeHandle, ANONYMOUS_PROPERTY_SLOTS)};
 
   PropertyFlags pf{};
   pf.enumerable = 0;
@@ -808,7 +810,7 @@ CallResult<HermesValue> JSArrayIterator::create(
   auto *self = JSObject::allocateSmallPropStorage(new (mem) JSArrayIterator(
       runtime,
       *proto,
-      runtime->getHiddenClassForPrototypeRaw(*proto),
+      runtime->getHiddenClassForPrototypeRaw(*proto, ANONYMOUS_PROPERTY_SLOTS),
       *array,
       iterationKind));
   return HermesValue::encodeObjectValue(self);

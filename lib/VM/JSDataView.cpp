@@ -65,7 +65,8 @@ CallResult<HermesValue> JSDataView::create(
       JSObject::allocateSmallPropStorage(new (mem) JSDataView(
           runtime,
           *prototype,
-          runtime->getHiddenClassForPrototypeRaw(*prototype))));
+          runtime->getHiddenClassForPrototypeRaw(
+              *prototype, ANONYMOUS_PROPERTY_SLOTS))));
 }
 
 JSDataView::JSDataView(Runtime *runtime, JSObject *parent, HiddenClass *clazz)

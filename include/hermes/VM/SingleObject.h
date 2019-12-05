@@ -37,7 +37,8 @@ class SingleObject final : public JSObject {
         JSObject::allocateSmallPropStorage(new (mem) SingleObject(
             runtime,
             *parentHandle,
-            runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+            runtime->getHiddenClassForPrototypeRaw(
+                *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
   }
 
  protected:

@@ -147,7 +147,8 @@ PseudoHandle<JSObject> JSObject::create(
       runtime,
       &vt.base,
       *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       GCPointerBase::NoBarriers()));
 }
 
@@ -158,7 +159,8 @@ PseudoHandle<JSObject> JSObject::create(Runtime *runtime) {
       runtime,
       &vt.base,
       objProto,
-      runtime->getHiddenClassForPrototypeRaw(objProto),
+      runtime->getHiddenClassForPrototypeRaw(
+          objProto, ANONYMOUS_PROPERTY_SLOTS),
       GCPointerBase::NoBarriers()));
 }
 
@@ -172,7 +174,8 @@ PseudoHandle<JSObject> JSObject::create(
           runtime,
           &vt.base,
           objProto,
-          runtime->getHiddenClassForPrototypeRaw(objProto),
+          runtime->getHiddenClassForPrototypeRaw(
+              objProto, ANONYMOUS_PROPERTY_SLOTS),
           GCPointerBase::NoBarriers())),
       runtime,
       propertyCount));
@@ -301,61 +304,6 @@ void JSObject::allocateNewSlotStorage(
   selfHandle->propStorage_.get(runtime)
       ->at(newSlotIndex)
       .set(*valueHandle, &runtime->getHeap());
-}
-
-SlotIndex JSObject::addInternalProperty(
-    Handle<JSObject> selfHandle,
-    Runtime *runtime,
-    unsigned index,
-    Handle<> valueHandle) {
-  assert(
-      index < InternalProperty::NumAnonymousInternalProperties &&
-      "Internal property index is too large");
-  assert(
-      !selfHandle->clazz_.get(runtime)->isDictionary() &&
-      "Internal properties can only be added in class mode");
-
-  auto addResult = HiddenClass::addProperty(
-      runtime->makeHandle(selfHandle->clazz_),
-      runtime,
-      InternalProperty::getSymbolID(index),
-      PropertyFlags{});
-  assert(
-      addResult != ExecutionStatus::EXCEPTION &&
-      "Could not possibly grow larger than the limit");
-  selfHandle->clazz_.set(runtime, *addResult->first, &runtime->getHeap());
-
-  allocateNewSlotStorage(selfHandle, runtime, addResult->second, valueHandle);
-
-  return addResult->second;
-}
-
-void JSObject::addInternalProperties(
-    Handle<JSObject> selfHandle,
-    Runtime *runtime,
-    unsigned count,
-    Handle<> valueHandle) {
-  assert(count != 0 && "Cannot add 0 internal properties");
-  assert(
-      count <= InternalProperty::NumInternalProperties &&
-      "Too many internal properties");
-  assert(
-      !selfHandle->clazz_.get(runtime)->isDictionary() &&
-      "Internal properties can only be added in class mode");
-  assert(
-      selfHandle->clazz_.get(runtime)->getNumProperties() == 0 &&
-      "Internal properties must be added first");
-  assert(
-      count <= DIRECT_PROPERTY_SLOTS &&
-      "We shouldn't add internal properties to indirect storage");
-
-  for (unsigned i = 0; i != count; ++i) {
-    auto slotIndex = addInternalProperty(selfHandle, runtime, i, valueHandle);
-    (void)slotIndex;
-    assert(
-        slotIndex == i &&
-        "bulk added internal property slot should match its index");
-  }
 }
 
 CallResult<HermesValue> JSObject::getNamedPropertyValue_RJS(

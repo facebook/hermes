@@ -369,7 +369,8 @@ CallResult<HermesValue> JSTypedArray<T, C>::create(
       JSObject::allocateSmallPropStorage(new (mem) JSTypedArray<T, C>(
           runtime,
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 }
 
 /// @name Specializations for specific types

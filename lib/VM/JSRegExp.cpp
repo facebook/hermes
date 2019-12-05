@@ -95,13 +95,18 @@ CallResult<HermesValue> JSRegExp::create(
       runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSRegExp(
           runtime,
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(*parentHandle))));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
-  Handle<> emptyString = runtime->makeHandle(HermesValue::encodeStringValue(
-      runtime->getPredefinedString(Predefined::emptyString)));
-
-  JSObject::addInternalProperties(selfHandle, runtime, 1, emptyString);
-  static_assert(pattern == 0, "internal property 'pattern' must be first");
+  JSObject::setInternalProperty(
+      *selfHandle,
+      runtime,
+      pattern,
+      HermesValue::encodeStringValue(
+          runtime->getPredefinedString(Predefined::emptyString)));
+  static_assert(
+      pattern == 0 && ANONYMOUS_PROPERTY_SLOTS == 1,
+      "internal property 'pattern' must be first");
 
   return selfHandle.getHermesValue();
 }

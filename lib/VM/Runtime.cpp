@@ -278,11 +278,22 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
   returnThisCodeBlock_ =
       specialCodeBlockRuntimeModule_->getCodeBlockMayAllocate(1);
 
-  // Initialize the root hidden class.
-  rootClazzRawPtr_ = vmcast<HiddenClass>(
-      ignoreAllocationFailure(HiddenClass::createRoot(this)));
-
-  // Initialize the global object.
+  // Initialize the root hidden class and its variants.
+  {
+    MutableHandle<HiddenClass> clazz(
+        this,
+        vmcast<HiddenClass>(
+            ignoreAllocationFailure(HiddenClass::createRoot(this))));
+    rootClazzRawPtr_[0] = *clazz;
+    for (unsigned i = 1; i <= InternalProperty::NumInternalProperties; ++i) {
+      auto addResult = HiddenClass::reserveSlot(clazz, this);
+      assert(
+          addResult != ExecutionStatus::EXCEPTION &&
+          "Could not possibly grow larger than the limit");
+      clazz = *addResult->first;
+      rootClazzRawPtr_[i] = *clazz;
+    }
+  }
 
   global_ =
       JSObject::create(this, Handle<JSObject>(this, nullptr)).getHermesValue();
@@ -418,7 +429,8 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
     MarkRootsPhaseTimer timer(this, RootAcceptor::Section::RuntimeInstanceVars);
     acceptor.beginRootSection(RootAcceptor::Section::RuntimeInstanceVars);
     acceptor.accept(nullPointer_, "nullPointer");
-    acceptor.acceptPtr(rootClazzRawPtr_, "rootClass");
+    for (auto &clazz : rootClazzRawPtr_)
+      acceptor.acceptPtr(clazz, "rootClass");
 #define RUNTIME_HV_FIELD_INSTANCE(name) acceptor.accept((name), #name);
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD_INSTANCE
@@ -1914,8 +1926,9 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
   /// are deserialized, they will add themselves to this list.
   s.writeRelocation(specialCodeBlockRuntimeModule_);
 
-  // Field rootClazzRawPtr_;
-  s.writeRelocation(rootClazzRawPtr_);
+  // Field rootClazzRawPtr_[];
+  for (auto clazz : rootClazzRawPtr_)
+    s.writeRelocation(clazz);
 
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.
@@ -1998,8 +2011,9 @@ void Runtime::deserializeRuntimeFields(Deserializer &d) {
   d.readRelocation(
       &specialCodeBlockRuntimeModule_, RelocationKind::NativePointer);
 
-  // Field rootClazzRawPtr_;
-  d.readRelocation(&rootClazzRawPtr_, RelocationKind::NativePointer);
+  // Field rootClazzRawPtr_[];
+  for (auto &clazz : rootClazzRawPtr_)
+    d.readRelocation(&clazz, RelocationKind::NativePointer);
 
   // Field PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
   // Ignore for now.

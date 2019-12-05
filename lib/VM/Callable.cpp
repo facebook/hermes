@@ -535,7 +535,8 @@ CallResult<HermesValue> BoundFunction::create(
   auto selfHandle = runtime->makeHandle(new (mem) BoundFunction(
       runtime,
       runtime->functionPrototypeRawPtr,
-      runtime->getHiddenClassForPrototypeRaw(runtime->functionPrototypeRawPtr),
+      runtime->getHiddenClassForPrototypeRaw(
+          runtime->functionPrototypeRawPtr, ANONYMOUS_PROPERTY_SLOTS),
       target,
       argStorageHandle));
 
@@ -955,7 +956,8 @@ Handle<NativeFunction> NativeFunction::create(
       runtime,
       &vt.base.base,
       *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       context,
       functionPtr));
 
@@ -988,7 +990,8 @@ Handle<NativeFunction> NativeFunction::create(
       runtime,
       &vt.base.base,
       *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       parentEnvHandle,
       context,
       functionPtr));
@@ -1207,7 +1210,8 @@ CallResult<HermesValue> JSFunction::create(
       runtime,
       *domain,
       *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       envHandle,
       codeBlock);
   self->flags_.lazyObject = 1;
@@ -1298,7 +1302,8 @@ CallResult<HermesValue> JSGeneratorFunction::create(
       runtime,
       *domain,
       *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       envHandle,
       codeBlock);
   self->flags_.lazyObject = 1;
@@ -1399,7 +1404,8 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
       runtime,
       *domain,
       *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       envHandle,
       codeBlock,
       args.getArgCount()));

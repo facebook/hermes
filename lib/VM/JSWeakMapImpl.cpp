@@ -325,7 +325,8 @@ CallResult<HermesValue> JSWeakMapImpl<C>::create(
       JSObject::allocateSmallPropStorage(new (mem) JSWeakMapImpl<C>(
           runtime,
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(*parentHandle),
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
           *valueStorage)));
 }
 
