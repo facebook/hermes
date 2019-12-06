@@ -25,6 +25,7 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue-inline.h"
+#include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Serializer.h"
 #include "hermes/VM/SlotAcceptorDefault-inline.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -630,7 +631,100 @@ void GenGC::completeMarking() {
       if (markState_.markStackOverflow_)
         break;
     }
+    // The marking loop above will have accumulated WeakMaps;
+    // find things reachable from values of reachable keys.
+    // (Note that this can also set markStackOverflow_).
+    completeWeakMapMarking();
   } while (markState_.markStackOverflow_);
+}
+
+/// For all reachable keys in \p weakMap, mark from the corresponding value
+/// using \p markState and the given \p acceptor, reaching a
+/// transitive closure (or setting \p markState.markStackOverflow_).
+/// Returns whether any previously-unmarked values were marked.
+static bool markFromReachableWeakMapKeys(
+    GC *gc,
+    JSWeakMap *weakMap,
+    CompleteMarkState *markState,
+    CompleteMarkState::FullMSCMarkTransitiveAcceptor &acceptor) {
+  bool newlyMarkedValue = false;
+  for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
+       iter != end;
+       iter++) {
+    GCCell *cell = iter->getObject(gc);
+    if (!cell || !AlignedHeapSegment::getCellMarkBit(cell)) {
+      continue;
+    }
+    HermesValue val = weakMap->getValueDirect(gc, *iter);
+    if (val.isPointer()) {
+      GCCell *valCell = reinterpret_cast<GCCell *>(val.getPointer());
+      if (!AlignedHeapSegment::getCellMarkBit(valCell)) {
+        AlignedHeapSegment::setCellMarkBit(valCell);
+        markState->pushCell(valCell);
+        markState->drainMarkStack(gc, acceptor);
+        newlyMarkedValue = true;
+      }
+    }
+  }
+  return newlyMarkedValue;
+}
+
+/// For all non-null keys in \p weakMap that are unreachable, clear
+/// the key (clear the pointer in the WeakRefSlot) and value (set it
+/// to undefined).
+static void clearEntriesWithUnreachableKeys(GenGC *gc, JSWeakMap *weakMap) {
+  for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
+       iter != end;
+       iter++) {
+    JSObject *keyObj = iter->getObject(gc);
+    if (keyObj && !AlignedHeapSegment::getCellMarkBit(keyObj)) {
+      weakMap->clearEntryDirect(gc, *iter);
+    }
+  }
+}
+
+void GenGC::completeWeakMapMarking() {
+  CompleteMarkState::FullMSCMarkTransitiveAcceptor acceptor(*this, &markState_);
+
+  // Set the currentParPointer to a maximal value, so all pointers scanned
+  // will be pushed on the mark stack.
+  markState_.currentParPointer =
+      reinterpret_cast<GCCell *>(static_cast<intptr_t>(-1));
+  // Must declare this outside the loop, but the initial value doesn't matter:
+  // we make it false at the start of each loop iteration.
+  bool newReachableValueFound = true;
+  do {
+    newReachableValueFound = false;
+    // Note that new reachable weak maps may be discovered during the loop, so
+    // markState_.reachableWeakMaps_.size() may increase during the loop.
+    for (unsigned i = 0; i < markState_.reachableWeakMaps_.size(); i++) {
+      JSWeakMap *weakMap = markState_.reachableWeakMaps_[i];
+      if (markFromReachableWeakMapKeys(this, weakMap, &markState_, acceptor)) {
+        newReachableValueFound = true;
+      }
+    }
+  } while (newReachableValueFound);
+  for (auto *weakMap : markState_.reachableWeakMaps_) {
+    clearEntriesWithUnreachableKeys(this, weakMap);
+    // The argument for why this works is delicate.  We need to call
+    // markCell, because it marks fields of the WeakMap that are not
+    // part of the table -- in particular, the pointer to the
+    // valueStorage_ array.  There would be a problem, however, if
+    // this markCell/drain pair could cause any keys of any WeakMaps
+    // to become newly reachable.  If so, we'd need to scan their
+    // corresponding values.  This cannot happen, however.  The
+    // marking loop above ensured that all values in the valueStorage_
+    // corresponding to reachable keys have been marked.  The call
+    // just above ensures that values corresponding to unreachable
+    // keys have been cleared.  So we'll mark *only* the valueStorage_
+    // array; the drainMarkStack call should not do any work.  Perhaps
+    // we should assert this.
+    GCBase::markCell(weakMap, this, acceptor);
+    markState_.drainMarkStack(this, acceptor);
+  }
+
+  markState_.currentParPointer = nullptr;
+  markState_.reachableWeakMaps_.clear();
 }
 
 void GenGC::finalizeUnreachableObjects() {

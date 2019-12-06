@@ -76,6 +76,29 @@ bool JSWeakMapImplBase::deleteValue(
   return true;
 }
 
+// Only during GC.
+bool JSWeakMapImplBase::clearEntryDirect(GC *gc, const WeakRefKey &key) {
+  assert(gc->inGC() && "Should only be used by the GC implementation.");
+  DenseMapT::iterator it = map_.find(key);
+  if (it == map_.end()) {
+    return false;
+  }
+  it->first.ref.clear();
+  valueStorage_.get(gc->getPointerBase())
+      ->at(it->second)
+      .setNonPtr(HermesValue::encodeEmptyValue());
+  return true;
+}
+
+HermesValue JSWeakMapImplBase::getValueDirect(GC *gc, const WeakRefKey &key) {
+  assert(gc->inGC() && "Should only be used by the GC implementation.");
+  DenseMapT::iterator it = map_.find(key);
+  if (it == map_.end()) {
+    return HermesValue::encodeEmptyValue();
+  }
+  return valueStorage_.get(gc->getPointerBase())->at(it->second);
+}
+
 /// \return true if the \p key exists in the map.
 bool JSWeakMapImplBase::hasValue(
     Handle<JSWeakMapImplBase> self,
@@ -109,6 +132,23 @@ uint32_t JSWeakMapImplBase::debugFreeSlotsAndGetSize(
     self->findAndDeleteFreeSlots(base);
   }
   return self->map_.size();
+}
+
+JSWeakMapImplBase::KeyIterator JSWeakMapImplBase::keys_begin() {
+  return KeyIterator{map_.begin()};
+}
+
+JSWeakMapImplBase::KeyIterator JSWeakMapImplBase::keys_end() {
+  return KeyIterator{map_.end()};
+}
+
+JSObject *detail::WeakRefKey::getObject(GC *gc) const {
+  assert(gc->inGC() && "Should only be used by the GC implementation.");
+  if (auto val = ref.unsafeGetOptional()) {
+    return *val;
+  } else {
+    return nullptr;
+  }
 }
 
 void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
@@ -145,7 +185,7 @@ void JSWeakMapImplBase::deleteInternal(
     PointerBase *base,
     JSWeakMapImplBase::DenseMapT::iterator it) {
   assert(it != map_.end() && "Invalid iterator to deleteInternal");
-  valueStorage_.get(base)
+  valueStorage_.getNonNull(base)
       ->at(it->second)
       .setNonPtr(HermesValue::encodeNativeUInt32(freeListHead_));
   freeListHead_ = it->second;

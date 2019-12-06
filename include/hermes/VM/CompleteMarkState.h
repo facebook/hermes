@@ -17,7 +17,12 @@
 namespace hermes {
 namespace vm {
 
+/// Forward declartions.
 struct FullMSCUpdateAcceptor;
+
+template <CellKind>
+class JSWeakMapImpl;
+using JSWeakMap = JSWeakMapImpl<CellKind::WeakMapKind>;
 
 /// Intermediate state from marking.
 struct CompleteMarkState {
@@ -31,6 +36,10 @@ struct CompleteMarkState {
   /// is not guaranteed to be visited on the current mark bit array
   /// traversal).
   void markTransitive(void *ptr);
+
+  /// The pointer \p cell is assumed to point to a reachable object.
+  /// Push it on the appropriate markStack.
+  void pushCell(GCCell *cell);
 
   /// Continually pops elements from the mark stack and scans their pointer
   /// fields.  If such a field points to an unmarked object, mark it and push it
@@ -82,6 +91,9 @@ struct CompleteMarkState {
   /// Stores the current object whose fields are being scanned
   /// to be marked if needed.
   GCCell *currentParPointer = nullptr;
+
+  /// The WeakMap objects that have been discovered to be reachable.
+  std::vector<JSWeakMap *> reachableWeakMaps_;
 };
 
 /// Returns a heap acceptor for mark-sweep-compact pointer update.

@@ -6,9 +6,11 @@
  */
 
 #include "hermes/VM/CompleteMarkState.h"
+#include "hermes/VM/Casting.h"
 #include "hermes/VM/CompleteMarkState-inline.h"
 #include "hermes/VM/GCBase-inline.h"
 #include "hermes/VM/GCBase.h"
+#include "hermes/VM/JSWeakMapImpl.h"
 
 namespace hermes {
 namespace vm {
@@ -48,16 +50,22 @@ void CompleteMarkState::markTransitive(void *ptr) {
   // wouldn't make it past the earlier check for a false value if the
   // indices were equal.
   if (ptr < reinterpret_cast<void *>(currentParPointer)) {
-    GCCell *cell = reinterpret_cast<GCCell *>(ptr);
-    // Push cell to the correct mark stack.
-    std::vector<GCCell *> *stack =
-        (cell->isVariableSize() ? &varSizeMarkStack_ : &markStack_);
-    if (stack->size() == kMarkStackLimit) {
-      markStackOverflow_ = true;
-    } else {
-      stack->push_back(cell);
-      numPtrsPushedByParent++;
-    }
+    pushCell(reinterpret_cast<GCCell *>(ptr));
+  }
+}
+
+void CompleteMarkState::pushCell(GCCell *cell) {
+  // Push cell to the correct mark stack.
+#ifdef HERMES_SLOW_DEBUG
+  assert(cell->isValid());
+#endif
+  std::vector<GCCell *> *stack =
+      (cell->isVariableSize() ? &varSizeMarkStack_ : &markStack_);
+  if (stack->size() == kMarkStackLimit) {
+    markStackOverflow_ = true;
+  } else {
+    stack->push_back(cell);
+    numPtrsPushedByParent++;
   }
 }
 
@@ -78,7 +86,15 @@ void CompleteMarkState::drainMarkStack(
     // skipped for fixed sized cells.
     numPtrsPushedByParent = 0;
 
-    GCBase::markCell(cell, gc, acceptor);
+    // Don't mark through JSWeakMaps.  (Presently, this check is very
+    // specific.  If there are ever other cell kinds that need special
+    // weak marking handling, we could put a boolean in the vtable or
+    // metadata table).
+    if (cell->getKind() == CellKind::WeakMapKind) {
+      reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
+    } else {
+      GCBase::markCell(cell, gc, acceptor);
+    }
 
     // All fields of a fixed-sized cell should be marked by this point, but var
     // sized GCCells may not. Pop if the last round of marking pushed nothing,

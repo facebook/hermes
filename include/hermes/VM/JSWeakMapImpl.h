@@ -30,6 +30,11 @@ struct WeakRefKey {
   uint32_t hash;
 
   WeakRefKey(WeakRef<JSObject> ref, uint32_t hash) : ref(ref), hash(hash) {}
+
+  /// Returns the object reference of ref; returns null if ref is not valid.
+  /// Should only be called during GC; the \param gc argument is used only to
+  /// verify this.
+  JSObject *getObject(GC *gc) const;
 };
 
 /// Enable using WeakRef<JSObject> in DenseMap.
@@ -158,6 +163,48 @@ class JSWeakMapImplBase : public JSObject {
   static uint32_t debugFreeSlotsAndGetSize(
       PointerBase *base,
       JSWeakMapImplBase *self);
+
+  /// An iterator over the keys of the map.
+  struct KeyIterator {
+    DenseMapT::iterator mapIter;
+
+    KeyIterator &operator++(int /*dummy*/) {
+      mapIter++;
+      return *this;
+    }
+
+    WeakRefKey &operator*() {
+      return mapIter->first;
+    }
+
+    WeakRefKey *operator->() {
+      return &mapIter->first;
+    }
+
+    bool operator!=(const KeyIterator &other) {
+      return mapIter != other.mapIter;
+    }
+  };
+
+  // Return begin and end iterators for the keys of the map.
+  KeyIterator keys_begin();
+  KeyIterator keys_end();
+
+  /// Returns the value corresponding to the given \p key.  Returns
+  /// the empty HermesValue if \p key is not in the map.  May only be
+  /// called during GC.
+  /// \param gc Used to verify that the call is during GC, and provides
+  /// a PointerBase.
+  HermesValue getValueDirect(GC *gc, const WeakRefKey &key);
+
+  /// If the given \p key is in the map, clears the entry
+  /// corresponding to \p key -- clears the slot of the WeakRef in
+  /// key, and sets the value to the empty HermesValue.  May only be
+  /// called during GC.
+  /// \param gc Used to verify that the call is during GC, and provides
+  /// a PointerBase.
+  /// \return whether the key was in the map.
+  bool clearEntryDirect(GC *gc, const WeakRefKey &key);
 
  protected:
   static void _finalizeImpl(GCCell *cell, GC *gc) {
