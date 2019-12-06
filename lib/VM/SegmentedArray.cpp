@@ -144,6 +144,10 @@ CallResult<HermesValue> SegmentedArray::create(
   }
   // Leave the segments as null. Whenever the size is changed, the segments will
   // be allocated.
+  // Note that this means the capacity argument won't be reflected in capacity()
+  // if it is larger than the inline storage space. That is in order to avoid
+  // having an extra field to track, and the upper bound of "size" can be used
+  // instead.
   return HermesValue::encodeObjectValue(new (
       runtime->alloc<false /*fixedSize*/>(allocationSizeForCapacity(capacity)))
                                             SegmentedArray(runtime, capacity));
@@ -172,6 +176,28 @@ SegmentedArray::create(Runtime *runtime, size_type capacity, size_type size) {
   // storage and the segments separately.
   self = increaseSize</*Fill*/ true>(runtime, std::move(self), size);
   return self.getHermesValue();
+}
+
+SegmentedArray::size_type SegmentedArray::capacity() const {
+  if (numSlotsUsed_ <= kValueToSegmentThreshold) {
+    // In the case where the size is less than the number of inline elements,
+    // the capacity is at most slotCapacity, or the segment threshold if slot
+    // capacity goes beyond that.
+    return std::min(slotCapacity_, size_type{kValueToSegmentThreshold});
+  } else {
+    // Any slot after numSlotsUsed_ is guaranteed to be null.
+    return kValueToSegmentThreshold +
+        (numSlotsUsed_ - kValueToSegmentThreshold) * Segment::kMaxLength;
+  }
+}
+
+SegmentedArray::size_type SegmentedArray::totalCapacityOfSpine() const {
+  if (slotCapacity_ <= kValueToSegmentThreshold) {
+    return slotCapacity_;
+  } else {
+    return kValueToSegmentThreshold +
+        (slotCapacity_ - kValueToSegmentThreshold) * Segment::kMaxLength;
+  }
 }
 
 ExecutionStatus SegmentedArray::push_back(
@@ -214,15 +240,14 @@ ExecutionStatus SegmentedArray::resizeLeft(
 }
 
 void SegmentedArray::resizeWithinCapacity(
-    PseudoHandle<SegmentedArray> self,
-    Runtime *runtime,
+    SegmentedArray *self,
     size_type newSize) {
   const size_type currSize = self->size();
   assert(
       newSize <= self->capacity() &&
       "Cannot resizeWithinCapacity to a size not within capacity");
   if (newSize > currSize) {
-    growRightWithinCapacity(runtime, std::move(self), newSize - currSize);
+    self->increaseSizeWithinCapacity(newSize - currSize, /* Fill */ true);
   } else if (newSize < currSize) {
     self->shrinkRight(currSize - newSize);
   }
@@ -256,8 +281,8 @@ ExecutionStatus SegmentedArray::growRight(
     MutableHandle<SegmentedArray> &self,
     Runtime *runtime,
     size_type amount) {
-  if (self->size() + amount <= self->capacity()) {
-    SegmentedArray::growRightWithinCapacity(runtime, self, amount);
+  if (self->size() + amount <= self->totalCapacityOfSpine()) {
+    increaseSize</* Fill */ true>(runtime, self, amount);
     return ExecutionStatus::RETURNED;
   }
   const auto newSize = self->size() + amount;
@@ -287,7 +312,7 @@ ExecutionStatus SegmentedArray::growLeft(
     MutableHandle<SegmentedArray> &self,
     Runtime *runtime,
     size_type amount) {
-  if (self->size() + amount < self->capacity()) {
+  if (self->size() + amount <= self->totalCapacityOfSpine()) {
     growLeftWithinCapacity(runtime, self, amount);
     return ExecutionStatus::RETURNED;
   }
@@ -318,22 +343,12 @@ ExecutionStatus SegmentedArray::growLeft(
   return ExecutionStatus::RETURNED;
 }
 
-void SegmentedArray::growRightWithinCapacity(
-    Runtime *runtime,
-    PseudoHandle<SegmentedArray> self,
-    size_type amount) {
-  assert(
-      self->size() + amount <= self->capacity() &&
-      "Cannot grow higher than capacity");
-  increaseSize</*Fill*/ true>(runtime, std::move(self), amount);
-}
-
 void SegmentedArray::growLeftWithinCapacity(
     Runtime *runtime,
     PseudoHandle<SegmentedArray> self,
     size_type amount) {
   assert(
-      self->size() + amount <= self->capacity() &&
+      self->size() + amount <= self->totalCapacityOfSpine() &&
       "Cannot grow higher than capacity");
   // Don't fill with empty values since we will overwrite the end anyway.
   self = increaseSize</*Fill*/ false>(runtime, std::move(self), amount);
@@ -356,6 +371,44 @@ void SegmentedArray::shrinkLeft(Runtime *runtime, size_type amount) {
   decreaseSize(amount);
 }
 
+void SegmentedArray::increaseSizeWithinCapacity(size_type amount, bool fill) {
+  // This function has the same logic as increaseSize, but removes some
+  // complexity from avoiding dealing with alllocations.
+  const auto empty = HermesValue::encodeEmptyValue();
+  const auto currSize = size();
+  const auto finalSize = currSize + amount;
+  assert(
+      finalSize <= capacity() &&
+      "Cannot use increaseSizeWithinCapacity without checking for capacity first");
+
+  if (finalSize <= kValueToSegmentThreshold) {
+    // currSize and finalSize are inside inline storage, bump and fill.
+    if (fill) {
+      GCHermesValue::fill(
+          inlineStorage() + currSize, inlineStorage() + finalSize, empty);
+    }
+    // Set the final size.
+    numSlotsUsed_ = finalSize;
+    return;
+  }
+  // Since this change is within capacity, it is at most filling up a single
+  // segment.
+  const SegmentNumber segment = toSegment(finalSize - 1);
+  const auto segmentLength = toInterior(finalSize - 1) + 1;
+  if (fill) {
+    // Fill the inline slots if necessary, and the single segment.
+    if (currSize < kValueToSegmentThreshold) {
+      GCHermesValue::fill(
+          inlineStorage() + currSize,
+          inlineStorage() + kValueToSegmentThreshold,
+          empty);
+    }
+    segmentAt(segment)->setLength(segmentLength);
+  } else {
+    segmentAt(segment)->setLengthWithoutFilling(segmentLength);
+  }
+}
+
 template <bool Fill>
 PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
     Runtime *runtime,
@@ -364,6 +417,11 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   const auto empty = HermesValue::encodeEmptyValue();
   const auto currSize = self->size();
   const auto finalSize = currSize + amount;
+
+  if (finalSize <= self->capacity()) {
+    self->increaseSizeWithinCapacity(amount, Fill);
+    return self;
+  }
 
   if (currSize <= kValueToSegmentThreshold &&
       finalSize <= kValueToSegmentThreshold) {

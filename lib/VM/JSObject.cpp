@@ -291,19 +291,18 @@ void JSObject::allocateNewSlotStorage(
     selfHandle->propStorage_.set(runtime, *hnd, &runtime->getHeap());
   }
 
-  if (newSlotIndex >= selfHandle->propStorage_.get(runtime)->size()) {
-    assert(
-        newSlotIndex == selfHandle->propStorage_.get(runtime)->size() &&
-        "allocated slot must be at end");
-    PropStorage::resizeWithinCapacity(
-        createPseudoHandle(selfHandle->propStorage_.get(runtime)),
-        runtime,
-        newSlotIndex + 1);
+  {
+    NoAllocScope scope{runtime};
+    auto *const propStorage = selfHandle->propStorage_.getNonNull(runtime);
+    if (newSlotIndex >= propStorage->size()) {
+      assert(
+          newSlotIndex == propStorage->size() &&
+          "allocated slot must be at end");
+      PropStorage::resizeWithinCapacity(propStorage, newSlotIndex + 1);
+    }
+    // If we don't need to resize, just store it directly.
+    propStorage->at(newSlotIndex).set(*valueHandle, &runtime->getHeap());
   }
-  // If we don't need to resize, just store it directly.
-  selfHandle->propStorage_.get(runtime)
-      ->at(newSlotIndex)
-      .set(*valueHandle, &runtime->getHeap());
 }
 
 CallResult<HermesValue> JSObject::getNamedPropertyValue_RJS(

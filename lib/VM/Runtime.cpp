@@ -675,10 +675,11 @@ void Runtime::printArrayCensus(llvm::raw_ostream &os) {
   getHeap().forAllObjs([&arraySizeToCountAndWastedSlots](GCCell *cell) {
     if (cell->getKind() == CellKind::SegmentedArrayKind) {
       SegmentedArray *arr = vmcast<SegmentedArray>(cell);
-      const auto key = std::make_pair(arr->capacity(), arr->getAllocatedSize());
+      const auto key =
+          std::make_pair(arr->totalCapacityOfSpine(), arr->getAllocatedSize());
       arraySizeToCountAndWastedSlots[key].first++;
       arraySizeToCountAndWastedSlots[key].second +=
-          arr->capacity() - arr->size();
+          arr->totalCapacityOfSpine() - arr->size();
     }
   });
   if (arraySizeToCountAndWastedSlots.empty()) {
@@ -711,7 +712,7 @@ void Runtime::printArrayCensus(llvm::raw_ostream &os) {
       JSArray *arr = vmcast<JSArray>(cell);
       JSArray::StorageType *storage =
           arr->getIndexedStorage().get(getHeap().getPointerBase());
-      const auto capacity = storage ? storage->capacity() : 0;
+      const auto capacity = storage ? storage->totalCapacityOfSpine() : 0;
       const auto sz = storage ? storage->size() : 0;
       const auto key = std::make_pair(capacity, arr->getAllocatedSize());
       arraySizeToCountAndWastedSlots[key].first++;

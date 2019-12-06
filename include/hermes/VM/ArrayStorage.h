@@ -94,8 +94,7 @@ class ArrayStorage final
       return ExecutionStatus::EXCEPTION;
     }
 
-    ArrayStorage::resizeWithinCapacity(
-        createPseudoHandle(vmcast<ArrayStorage>(*arrRes)), runtime, size);
+    ArrayStorage::resizeWithinCapacity(vmcast<ArrayStorage>(*arrRes), size);
     return arrRes;
   }
 
@@ -185,22 +184,7 @@ class ArrayStorage final
   /// Set the size to a value <= the capacity. This is a special
   /// case of resize() but has a simpler interface since we know that it doesn't
   /// need to reallocate.
-  static void resizeWithinCapacity(
-      PseudoHandle<ArrayStorage> self,
-      Runtime *,
-      size_type newSize) {
-    assert(
-        newSize <= self->capacity_ &&
-        "newSize must be <= capacity in resizeWithinCapacity()");
-    // If enlarging, clear the new elements.
-    if (newSize > self->size_) {
-      GCHermesValue::fill(
-          self->data() + self->size_,
-          self->data() + newSize,
-          HermesValue::encodeEmptyValue());
-    }
-    self->size_ = newSize;
-  }
+  static void resizeWithinCapacity(ArrayStorage *self, size_type newSize);
 
  private:
   /// The capacity is the maximum number of elements this array can ever

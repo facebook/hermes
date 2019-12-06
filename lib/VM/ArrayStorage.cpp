@@ -147,6 +147,20 @@ ExecutionStatus ArrayStorage::reallocateToLarger(
   return ExecutionStatus::RETURNED;
 }
 
+void ArrayStorage::resizeWithinCapacity(ArrayStorage *self, size_type newSize) {
+  assert(
+      newSize <= self->capacity_ &&
+      "newSize must be <= capacity in resizeWithinCapacity()");
+  // If enlarging, clear the new elements.
+  if (newSize > self->size_) {
+    GCHermesValue::fill(
+        self->data() + self->size_,
+        self->data() + newSize,
+        HermesValue::encodeEmptyValue());
+  }
+  self->size_ = newSize;
+}
+
 ExecutionStatus ArrayStorage::shift(
     MutableHandle<ArrayStorage> &selfHandle,
     Runtime *runtime,

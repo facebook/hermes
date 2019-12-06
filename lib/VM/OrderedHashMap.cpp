@@ -430,7 +430,7 @@ void OrderedHashMap::clear(Runtime *runtime) {
   }
   // Resize the hash table to the initial size.
   ArrayStorage::resizeWithinCapacity(
-      createPseudoHandle(hashTable_.get(runtime)), runtime, INITIAL_CAPACITY);
+      hashTable_.getNonNull(runtime), INITIAL_CAPACITY);
   capacity_ = INITIAL_CAPACITY;
 
   // After clearing, we will still keep the last deleted entry

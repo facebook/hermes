@@ -156,35 +156,31 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
 
   auto beginIndex = self->beginIndex_;
 
-  /// resizeWithinCapacity can allocate, wrap the indexedStorage in a handle.
-  auto indexedStorage =
-      createPseudoHandle(selfHandle->indexedStorage_.getNonNull(runtime));
+  {
+    NoAllocScope scope{runtime};
+    auto *const indexedStorage = self->indexedStorage_.getNonNull(runtime);
 
-  if (newLength < beginIndex) {
-    // the new length is prior to beginIndex, clearing the storage.
-    selfHandle->endIndex_ = beginIndex;
-    StorageType::resizeWithinCapacity(std::move(indexedStorage), runtime, 0);
-    return ExecutionStatus::RETURNED;
-  } else if (
-      newLength - beginIndex <=
-      self->indexedStorage_.getNonNull(runtime)->capacity()) {
-    selfHandle->endIndex_ = newLength;
-    StorageType::resizeWithinCapacity(
-        std::move(indexedStorage), runtime, newLength - beginIndex);
-    return ExecutionStatus::RETURNED;
+    if (newLength < beginIndex) {
+      // the new length is prior to beginIndex, clearing the storage.
+      selfHandle->endIndex_ = beginIndex;
+      StorageType::resizeWithinCapacity(indexedStorage, 0);
+      return ExecutionStatus::RETURNED;
+    } else if (newLength - beginIndex <= indexedStorage->capacity()) {
+      selfHandle->endIndex_ = newLength;
+      StorageType::resizeWithinCapacity(indexedStorage, newLength - beginIndex);
+      return ExecutionStatus::RETURNED;
+    }
   }
 
-  auto indexedStorageHandle =
-      runtime->makeMutableHandle(selfHandle->indexedStorage_);
+  auto indexedStorage = runtime->makeMutableHandle(selfHandle->indexedStorage_);
 
-  if (StorageType::resize(
-          indexedStorageHandle, runtime, newLength - beginIndex) ==
+  if (StorageType::resize(indexedStorage, runtime, newLength - beginIndex) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   selfHandle->endIndex_ = newLength;
   selfHandle->indexedStorage_.set(
-      runtime, indexedStorageHandle.get(), &runtime->getHeap());
+      runtime, indexedStorage.get(), &runtime->getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -226,20 +222,19 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     return true;
   }
 
-  auto indexedStorage =
-      createPseudoHandle(self->indexedStorage_.getNonNull(runtime));
+  {
+    NoAllocScope scope{runtime};
+    auto *const indexedStorage = self->indexedStorage_.getNonNull(runtime);
 
-  // Can we do it without reallocation for sure?
-  if (index >= endIndex && index - beginIndex < indexedStorage->capacity()) {
-    self->endIndex_ = index + 1;
-    StorageType::resizeWithinCapacity(
-        std::move(indexedStorage), runtime, index - beginIndex + 1);
-    // Go from selfHandle because the indexedStorage may have changed.
-    self = vmcast<ArrayImpl>(selfHandle.get());
-    self->indexedStorage_.getNonNull(runtime)
-        ->at(index - beginIndex)
-        .set(value.get(), &runtime->getHeap());
-    return true;
+    // Can we do it without reallocation for sure?
+    if (index >= endIndex && index - beginIndex < indexedStorage->capacity()) {
+      self->endIndex_ = index + 1;
+      StorageType::resizeWithinCapacity(indexedStorage, index - beginIndex + 1);
+      // self shouldn't have moved since there haven't been any allocations.
+      indexedStorage->at(index - beginIndex)
+          .set(value.get(), &runtime->getHeap());
+      return true;
+    }
   }
 
   auto indexedStorageHandle = runtime->makeMutableHandle(self->indexedStorage_);
