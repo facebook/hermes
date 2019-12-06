@@ -12,6 +12,7 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/MarkBitArrayNC.h"
 
+#include <list>
 #include <vector>
 
 namespace hermes {

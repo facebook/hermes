@@ -638,34 +638,74 @@ void GenGC::completeMarking() {
   } while (markState_.markStackOverflow_);
 }
 
+/// \return a list of pointers to all the WeakRefKeys in \p weakMap.
+/// The \p gc argument is passed to methods that verify they're only
+/// called during GC.
+static std::list<detail::WeakRefKey *> buildKeyList(
+    GC *gc,
+    JSWeakMap *weakMap) {
+  std::list<detail::WeakRefKey *> res;
+  for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
+       iter != end;
+       iter++) {
+    if (iter->getObject(gc)) {
+      res.push_back(&(*iter));
+    }
+  }
+  return res;
+}
+
 /// For all reachable keys in \p weakMap, mark from the corresponding value
 /// using \p markState and the given \p acceptor, reaching a
 /// transitive closure (or setting \p markState.markStackOverflow_).
-/// Returns whether any previously-unmarked values were marked.
+/// If the \p unreachableKeys map has an entry for \p weakMap, assumes
+/// the list of WeakRefKeys contains all possibly-unreachable keys; any other
+/// keys are assumed to have already been found reachable.  Ensures that
+/// \p unreachableKeys has an accurate value for \p weakMap before return.
+/// \return whether any previously-unmarked values were marked.
 static bool markFromReachableWeakMapKeys(
     GC *gc,
     JSWeakMap *weakMap,
     CompleteMarkState *markState,
+    std::unordered_map<JSWeakMap *, std::list<detail::WeakRefKey *>>
+        *unreachableKeys,
     CompleteMarkState::FullMSCMarkTransitiveAcceptor &acceptor) {
-  bool newlyMarkedValue = false;
-  for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
-       iter != end;
-       iter++) {
-    GCCell *cell = iter->getObject(gc);
-    if (!cell || !AlignedHeapSegment::getCellMarkBit(cell)) {
-      continue;
-    }
-    HermesValue val = weakMap->getValueDirect(gc, *iter);
-    if (val.isPointer()) {
-      GCCell *valCell = reinterpret_cast<GCCell *>(val.getPointer());
-      if (!AlignedHeapSegment::getCellMarkBit(valCell)) {
-        AlignedHeapSegment::setCellMarkBit(valCell);
-        markState->pushCell(valCell);
-        markState->drainMarkStack(gc, acceptor);
-        newlyMarkedValue = true;
-      }
-    }
+  std::list<detail::WeakRefKey *> *keyList = nullptr;
+  auto keyListIter = unreachableKeys->find(weakMap);
+  if (keyListIter == unreachableKeys->end()) {
+    (*unreachableKeys)[weakMap] = buildKeyList(gc, weakMap);
+    keyList = &(*unreachableKeys)[weakMap];
+  } else {
+    keyList = &keyListIter->second;
   }
+  bool newlyMarkedValue = false;
+  // Find any reachable keys, mark from the corresponding value, and
+  // remove them from the list.  (This removal is why we use a
+  // std::list for the keys -- this function is linear.)
+  keyList->remove_if([weakMap, gc, markState, &acceptor, &newlyMarkedValue](
+                         detail::WeakRefKey *key) {
+    GCCell *cell = key->getObject(gc);
+    if (!cell) {
+      // Remove key from list.
+      return true;
+    }
+    if (AlignedHeapSegment::getCellMarkBit(cell)) {
+      HermesValue val = weakMap->getValueDirect(gc, *key);
+      if (val.isPointer()) {
+        GCCell *valCell = reinterpret_cast<GCCell *>(val.getPointer());
+        if (!AlignedHeapSegment::getCellMarkBit(valCell)) {
+          AlignedHeapSegment::setCellMarkBit(valCell);
+          markState->pushCell(valCell);
+          markState->drainMarkStack(gc, acceptor);
+          newlyMarkedValue = true;
+        }
+      }
+      // Key was reachable; remove from list.
+      return true;
+    }
+    // Key was unreachable; do not remove from list.
+    return false;
+  });
   return newlyMarkedValue;
 }
 
@@ -690,6 +730,13 @@ void GenGC::completeWeakMapMarking() {
   // will be pushed on the mark stack.
   markState_.currentParPointer =
       reinterpret_cast<GCCell *>(static_cast<intptr_t>(-1));
+
+  // If a weakMap is present as a key in this map, the corresponding list
+  // is a superset of the unreachable keys in the weakMap.  (The set last
+  // found to be unreachable, some of which may now be reachable.)
+  std::unordered_map<JSWeakMap *, std::list<detail::WeakRefKey *>>
+      unreachableKeys;
+
   // Must declare this outside the loop, but the initial value doesn't matter:
   // we make it false at the start of each loop iteration.
   bool newReachableValueFound = true;
@@ -699,7 +746,8 @@ void GenGC::completeWeakMapMarking() {
     // markState_.reachableWeakMaps_.size() may increase during the loop.
     for (unsigned i = 0; i < markState_.reachableWeakMaps_.size(); i++) {
       JSWeakMap *weakMap = markState_.reachableWeakMaps_[i];
-      if (markFromReachableWeakMapKeys(this, weakMap, &markState_, acceptor)) {
+      if (markFromReachableWeakMapKeys(
+              this, weakMap, &markState_, &unreachableKeys, acceptor)) {
         newReachableValueFound = true;
       }
     }
