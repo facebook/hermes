@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <map>
 #include <utility>
+#include <vector>
 
 namespace hermes {
 namespace vm {
@@ -134,6 +135,11 @@ struct Metadata final {
     std::map<offset_t, std::pair<const char *, size_t>> pointers_;
     std::map<offset_t, std::pair<const char *, size_t>> values_;
     std::map<offset_t, std::pair<const char *, size_t>> symbols_;
+#ifndef NDEBUG
+    /// True if [offset, offset + size) overlaps any previously added field.
+    bool fieldConflicts(offset_t offset, size_t size);
+    std::vector<bool> coveredOffsets_;
+#endif
     /// An optional array for an object to contain.
     OptValue<ArrayData> array_;
 

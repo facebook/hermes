@@ -59,8 +59,10 @@ void Metadata::Builder::addField(const GCPointerBase *fieldLocation) {
 void Metadata::Builder::addField(
     const char *name,
     const GCPointerBase *fieldLocation) {
-  pointers_[reinterpret_cast<const char *>(fieldLocation) - base_] =
-      std::make_pair(name, sizeof(GCPointerBase));
+  offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
+  size_t size = sizeof(GCPointerBase);
+  assert(!fieldConflicts(offset, size) && "fields should not overlap");
+  pointers_[offset] = std::make_pair(name, size);
 }
 
 void Metadata::Builder::addField(const GCHermesValue *fieldLocation) {
@@ -70,8 +72,10 @@ void Metadata::Builder::addField(const GCHermesValue *fieldLocation) {
 void Metadata::Builder::addField(
     const char *name,
     const GCHermesValue *fieldLocation) {
-  values_[reinterpret_cast<const char *>(fieldLocation) - base_] =
-      std::make_pair(name, sizeof(GCHermesValue));
+  offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
+  size_t size = sizeof(GCHermesValue);
+  assert(!fieldConflicts(offset, size) && "fields should not overlap");
+  values_[offset] = std::make_pair(name, size);
 }
 
 void Metadata::Builder::addField(const SymbolID *fieldLocation) {
@@ -81,13 +85,28 @@ void Metadata::Builder::addField(const SymbolID *fieldLocation) {
 void Metadata::Builder::addField(
     const char *name,
     const SymbolID *fieldLocation) {
-  symbols_[reinterpret_cast<const char *>(fieldLocation) - base_] =
-      std::make_pair(name, sizeof(SymbolID));
+  offset_t offset = reinterpret_cast<const char *>(fieldLocation) - base_;
+  size_t size = sizeof(SymbolID);
+  assert(!fieldConflicts(offset, size) && "fields should not overlap");
+  symbols_[offset] = std::make_pair(name, size);
 }
 
 Metadata Metadata::Builder::build() {
   return Metadata(std::move(*this));
 }
+
+#ifndef NDEBUG
+bool Metadata::Builder::fieldConflicts(offset_t offset, size_t size) {
+  size_t end = offset + size;
+  coveredOffsets_.resize(std::max(coveredOffsets_.size(), end));
+  for (offset_t i = offset; i < end; ++i) {
+    if (coveredOffsets_[i])
+      return true;
+    coveredOffsets_[i] = true;
+  }
+  return false;
+}
+#endif
 
 /// @name Formatters
 /// @{
