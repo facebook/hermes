@@ -88,6 +88,7 @@ endif()
 set_target_properties(libhermes PROPERTIES
   COMPILE_FLAGS "${compile_flags}"
   LINK_FLAGS "${link_flags}"
+  INTERFACE_COMPILE_DEFINITIONS "${HERMES_EXPORTED_COMPILE_DEFS}"
   # Declare our dependency on std::make_unique
   CXX_STANDARD 14
   CXX_STANDARD_REQUIRED 14

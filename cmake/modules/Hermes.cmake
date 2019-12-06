@@ -122,7 +122,10 @@ function(add_hermes_library name)
   cmake_parse_arguments(ARG "" "" "LINK_LIBS" ${ARGN})
   add_library(${name} STATIC ${ARG_UNPARSED_ARGUMENTS})
   target_link_libraries(${name} ${ARG_LINK_LIBS} ${HERMES_LINK_COMPONENTS})
-  set_property(TARGET ${name} PROPERTY POSITION_INDEPENDENT_CODE ON)
+  set_target_properties(${name} PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    INTERFACE_COMPILE_DEFINITIONS "${HERMES_EXPORTED_COMPILE_DEFS}"
+  )
   hermes_update_compile_flags(${name})
 endfunction(add_hermes_library)
 
