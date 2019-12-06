@@ -107,6 +107,26 @@ TEST_F(ArrayStorageTest, PushBackTest) {
   ASSERT_EQ(5.0_hd, st->at(4));
 }
 
+TEST_F(ArrayStorageTest, AllowTrimming) {
+  MutableHandle<ArrayStorage> st(runtime);
+  constexpr ArrayStorage::size_type originalCapacity = 4;
+  // Create an array and put in an element so its size is 1 and its capacity
+  // is 4.
+  st = vmcast<ArrayStorage>(*ArrayStorage::create(runtime, originalCapacity));
+  EXPECT_LE(st->capacity(), originalCapacity);
+  ASSERT_RETURNED(
+      ArrayStorage::push_back(st, runtime, runtime->makeHandle(0.0_hd)));
+  EXPECT_EQ(1, st->size());
+
+  // Now force some GCs to happen.
+  for (auto i = 0; i < 2; i++) {
+    runtime->collect();
+  }
+
+  // The array should be trimmed.
+  EXPECT_EQ(st->size(), st->capacity());
+}
+
 using ArrayStorageBigHeapTest = LargeHeapRuntimeTestFixture;
 
 #ifdef HERMESVM_GC_NONCONTIG_GENERATIONAL

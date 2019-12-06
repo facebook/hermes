@@ -21,10 +21,8 @@ VTable ArrayStorage::vt(
     nullptr,
     nullptr,
     nullptr,
-    // TODO(T43077289): if we rehabilitate ArrayStorage trimming, reenable
-    // this code.
-    /* _trimSizeCallback */ nullptr,
-    /* _trimCallback */ nullptr,
+    _trimSizeCallback,
+    _trimCallback,
     nullptr,
     VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
                                  nullptr,
