@@ -119,11 +119,9 @@ m.set(a, 10);
 print(m.get(a));
 // CHECK-NEXT: 10
 gc();
-m.set({}, 10);
 print(m.get(a));
 // CHECK-NEXT: 10
 gc();
-m.set({}, 10);
 print(m.get(a));
 // CHECK-NEXT: 10
 

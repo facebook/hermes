@@ -100,6 +100,17 @@ HermesValue JSWeakMapImplBase::getValue(
   return self->valueStorage_.get(runtime)->at(it->second);
 }
 
+uint32_t JSWeakMapImplBase::debugFreeSlotsAndGetSize(
+    PointerBase *base,
+    JSWeakMapImplBase *self) {
+  /// Free up any freeable slots, so the count is more accurate.
+  if (self->hasFreeableSlots_) {
+    // There are freeable slots: find and delete them.
+    self->findAndDeleteFreeSlots(base);
+  }
+  return self->map_.size();
+}
+
 void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   auto *self = reinterpret_cast<JSWeakMapImplBase *>(cell);
   for (auto it = self->map_.begin(); it != self->map_.end(); ++it) {

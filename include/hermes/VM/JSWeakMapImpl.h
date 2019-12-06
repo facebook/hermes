@@ -153,12 +153,11 @@ class JSWeakMapImplBase : public JSObject {
       Runtime *runtime,
       Handle<JSObject> key);
 
-  /// \return the size of the internal map.
+  /// \return the size of the internal map, after freeing any freeable slots.
   /// Used for testing purposes.
-  /// Note: the returned value may differ from the number of reachable keys.
-  static uint32_t debugGetSize(JSWeakMapImplBase *self) {
-    return self->map_.size();
-  }
+  static uint32_t debugFreeSlotsAndGetSize(
+      PointerBase *base,
+      JSWeakMapImplBase *self);
 
  protected:
   static void _finalizeImpl(GCCell *cell, GC *gc) {

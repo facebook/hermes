@@ -98,8 +98,5 @@ gc();
 print(m.has(a));
 // CHECK-NEXT: true
 
-// Add element to clean up internal DenseMap.
-m.add(c);
-
 print(HermesInternal.getWeakSize(m));
-// CHECK-NEXT: 2
+// CHECK-NEXT: 1

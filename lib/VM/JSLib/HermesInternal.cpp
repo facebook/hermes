@@ -84,12 +84,14 @@ CallResult<HermesValue>
 hermesInternalGetWeakSize(void *, Runtime *runtime, NativeArgs args) {
   auto M = args.dyncastArg<JSWeakMap>(0);
   if (M) {
-    return HermesValue::encodeNumberValue(JSWeakMap::debugGetSize(*M));
+    return HermesValue::encodeNumberValue(
+        JSWeakMap::debugFreeSlotsAndGetSize(runtime, *M));
   }
 
   auto S = args.dyncastArg<JSWeakSet>(0);
   if (S) {
-    return HermesValue::encodeNumberValue(JSWeakSet::debugGetSize(*S));
+    return HermesValue::encodeNumberValue(
+        JSWeakSet::debugFreeSlotsAndGetSize(runtime, *S));
   }
 
   return runtime->raiseTypeError(
