@@ -13,3 +13,9 @@ hermes/facebook/llvm/llvm_build*
 buck-out
 .buckd
 .buckconfig.local
+
+# Python
+*.pyc
+
+# Mac
+.DS_Store
