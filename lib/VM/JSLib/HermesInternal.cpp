@@ -672,6 +672,142 @@ hermesInternalToString(void *, Runtime *runtime, NativeArgs args) {
 }
 #endif // HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 
+/// \return the code block associated with \p callableHandle if it is a
+/// (possibly bound) JS function, or nullptr otherwise.
+static const CodeBlock *getLeafCodeBlock(
+    Handle<Callable> callableHandle,
+    Runtime *runtime) {
+  const Callable *callable = callableHandle.get();
+  while (auto *bound = dyn_vmcast<BoundFunction>(callable)) {
+    callable = bound->getTarget(runtime);
+  }
+  if (auto *asFunction = dyn_vmcast<const JSFunction>(callable)) {
+    return asFunction->getCodeBlock();
+  }
+  return nullptr;
+}
+
+/// \return the file name associated with \p codeBlock, if any.
+/// This mirrors the way we print file names for code blocks in JSError.
+static CallResult<HermesValue> getCodeBlockFileName(
+    Runtime *runtime,
+    const CodeBlock *codeBlock,
+    OptValue<hbc::DebugSourceLocation> location) {
+  RuntimeModule *runtimeModule = codeBlock->getRuntimeModule();
+  if (location) {
+    auto debugInfo = runtimeModule->getBytecode()->getDebugInfo();
+    return StringPrimitive::createEfficient(
+        runtime, debugInfo->getFilenameByID(location->filenameId));
+  } else {
+    llvm::StringRef sourceURL = runtimeModule->getSourceURL();
+    if (!sourceURL.empty()) {
+      return StringPrimitive::createEfficient(runtime, sourceURL);
+    }
+  }
+  return HermesValue::encodeUndefinedValue();
+}
+
+/// \code
+///   HermesInternal.getFunctionLocation function (func) {}
+/// \endcode
+/// Returns an object describing the source location of func.
+/// The following properties may be present:
+/// * fileName (string)
+/// * lineNumber (number) - 1 based
+/// * columnNumber (number) - 1 based
+/// * cjsModuleOffset (number) - 0 based
+/// * virtualOffset (number) - 0 based
+/// * isNative (boolean)
+/// TypeError if func is not a function.
+CallResult<HermesValue>
+hermesInternalGetFunctionLocation(void *, Runtime *runtime, NativeArgs args) {
+  GCScope gcScope(runtime);
+
+  auto callable = args.dyncastArg<Callable>(0);
+  if (!callable) {
+    return runtime->raiseTypeError(
+        "Argument to HermesInternal.getFunctionLocation must be callable");
+  }
+  auto resultHandle = toHandle(runtime, JSObject::create(runtime));
+  MutableHandle<> tmpHandle{runtime};
+
+  auto codeBlock = getLeafCodeBlock(callable, runtime);
+  bool isNative = !codeBlock;
+  auto res = JSObject::defineOwnProperty(
+      resultHandle,
+      runtime,
+      Predefined::getSymbolID(Predefined::isNative),
+      DefinePropertyFlags::getDefaultNewPropertyFlags(),
+      runtime->getBoolValue(isNative));
+  assert(res != ExecutionStatus::EXCEPTION && "Failed to set isNative");
+  (void)res;
+
+  if (codeBlock) {
+    OptValue<hbc::DebugSourceLocation> location =
+        codeBlock->getSourceLocation();
+    if (location) {
+      tmpHandle = HermesValue::encodeNumberValue(location->line);
+      res = JSObject::defineOwnProperty(
+          resultHandle,
+          runtime,
+          Predefined::getSymbolID(Predefined::lineNumber),
+          DefinePropertyFlags::getDefaultNewPropertyFlags(),
+          tmpHandle);
+      assert(res != ExecutionStatus::EXCEPTION && "Failed to set lineNumber");
+      (void)res;
+
+      tmpHandle = HermesValue::encodeNumberValue(location->column);
+      res = JSObject::defineOwnProperty(
+          resultHandle,
+          runtime,
+          Predefined::getSymbolID(Predefined::columnNumber),
+          DefinePropertyFlags::getDefaultNewPropertyFlags(),
+          tmpHandle);
+      assert(res != ExecutionStatus::EXCEPTION && "Failed to set columnNumber");
+      (void)res;
+    } else {
+      tmpHandle = HermesValue::encodeNumberValue(
+          codeBlock->getRuntimeModule()->getBytecode()->getCJSModuleOffset());
+      res = JSObject::defineOwnProperty(
+          resultHandle,
+          runtime,
+          Predefined::getSymbolID(Predefined::cjsModuleOffset),
+          DefinePropertyFlags::getDefaultNewPropertyFlags(),
+          tmpHandle);
+      assert(
+          res != ExecutionStatus::EXCEPTION && "Failed to set cjsModuleOffset");
+      (void)res;
+
+      tmpHandle = HermesValue::encodeNumberValue(codeBlock->getVirtualOffset());
+      res = JSObject::defineOwnProperty(
+          resultHandle,
+          runtime,
+          Predefined::getSymbolID(Predefined::virtualOffset),
+          DefinePropertyFlags::getDefaultNewPropertyFlags(),
+          tmpHandle);
+      assert(
+          res != ExecutionStatus::EXCEPTION && "Failed to set virtualOffset");
+      (void)res;
+    }
+
+    auto fileNameRes = getCodeBlockFileName(runtime, codeBlock, location);
+    if (LLVM_UNLIKELY(fileNameRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    tmpHandle = *fileNameRes;
+    res = JSObject::defineOwnProperty(
+        resultHandle,
+        runtime,
+        Predefined::getSymbolID(Predefined::fileName),
+        DefinePropertyFlags::getDefaultNewPropertyFlags(),
+        tmpHandle);
+    assert(res != ExecutionStatus::EXCEPTION && "Failed to set fileName");
+    (void)res;
+  }
+  JSObject::preventExtensions(*resultHandle);
+  return resultHandle.getHermesValue();
+}
+
 Handle<JSObject> createHermesInternalObject(
     Runtime *runtime,
     const JSLibFlags &flags) {
@@ -736,6 +872,8 @@ Handle<JSObject> createHermesInternalObject(
       P::getRuntimeProperties, hermesInternalGetRuntimeProperties);
   defineInternMethod(P::ttiReached, hermesInternalTTIReached);
   defineInternMethod(P::ttrcReached, hermesInternalTTRCReached);
+  defineInternMethod(P::getFunctionLocation, hermesInternalGetFunctionLocation);
+
 #ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
   defineInternMethodAndSymbol("executeCall", hermesInternalExecuteCall);
   defineInternMethodAndSymbol("getSubstitution", hermesInternalGetSubstitution);

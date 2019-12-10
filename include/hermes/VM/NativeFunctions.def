@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// NATIVE_FUNCTION_VERSION = 5. Updated Nov 22, 2019
+// NATIVE_FUNCTION_VERSION = 6. Updated Dec 6, 2019
 // Bump this version in SerializeHeader.h whenever we change this file.
 
 #ifndef NATIVE_FUNCTION
@@ -169,6 +169,8 @@ NATIVE_FUNCTION(hermesInternalToString)
 
 NATIVE_FUNCTION(hermesInternalTTIReached)
 NATIVE_FUNCTION(hermesInternalTTRCReached)
+
+NATIVE_FUNCTION(hermesInternalGetFunctionLocation)
 
 #ifdef HERMES_ENABLE_DEBUGGER
 NATIVE_FUNCTION(isDebuggerAttached)
