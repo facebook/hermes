@@ -246,6 +246,10 @@ class TraceInterpreter final {
       std::unordered_map<SynthTrace::ObjectID, jsi::Object> &locals);
 
   std::string printStats();
+
+  LLVM_ATTRIBUTE_NORETURN void crashOnException(
+      const std::exception &e,
+      ::hermes::OptValue<uint64_t> globalRecordNum);
 };
 
 } // namespace tracing

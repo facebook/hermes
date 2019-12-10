@@ -668,8 +668,15 @@ Function TraceInterpreter::createHostFunction(
       [this, funcID, &calls](
           Runtime &, const Value &thisVal, const Value *args, size_t count)
           -> Value {
-        return execFunction(
-            calls.at(hostFunctionsCallCount_[funcID]++), thisVal, args, count);
+        try {
+          return execFunction(
+              calls.at(hostFunctionsCallCount_[funcID]++),
+              thisVal,
+              args,
+              count);
+        } catch (const std::exception &e) {
+          crashOnException(e, llvm::None);
+        }
       });
 }
 
@@ -686,27 +693,35 @@ Object TraceInterpreter::createHostObject(
         std::unordered_map<std::string, uint64_t> &callCounts)
         : interpreter(interpreter), props(props), callCounts(callCounts) {}
     Value get(Runtime &rt, const PropNameID &name) override {
-      const std::string propName = name.utf8(rt);
-      // There are no arguments to pass to a get call.
-      return interpreter.execFunction(
-          props.at(propName).at(callCounts[propName]++),
-          // This is undefined since there's no way to access the host object
-          // as a JS value normally from this position.
-          Value::undefined(),
-          nullptr,
-          0);
+      try {
+        const std::string propName = name.utf8(rt);
+        // There are no arguments to pass to a get call.
+        return interpreter.execFunction(
+            props.at(propName).at(callCounts[propName]++),
+            // This is undefined since there's no way to access the host object
+            // as a JS value normally from this position.
+            Value::undefined(),
+            nullptr,
+            0);
+      } catch (const std::exception &e) {
+        interpreter.crashOnException(e, llvm::None);
+      }
     }
     void set(Runtime &rt, const PropNameID &name, const Value &value) override {
-      const std::string propName = name.utf8(rt);
-      const Value args[] = {Value(rt, value)};
-      // There is exactly one argument to pass to a set call.
-      interpreter.execFunction(
-          props.at(propName).at(callCounts[propName]++),
-          // This is undefined since there's no way to access the host object
-          // as a JS value normally from this position.
-          Value::undefined(),
-          args,
-          1);
+      try {
+        const std::string propName = name.utf8(rt);
+        const Value args[] = {Value(rt, value)};
+        // There is exactly one argument to pass to a set call.
+        interpreter.execFunction(
+            props.at(propName).at(callCounts[propName]++),
+            // This is undefined since there's no way to access the host object
+            // as a JS value normally from this position.
+            Value::undefined(),
+            args,
+            1);
+      } catch (const std::exception &e) {
+        interpreter.crashOnException(e, llvm::None);
+      }
     }
     std::vector<PropNameID> getPropertyNames(Runtime &rt) override {
       // TODO T31386973: Add trace tracking to getPropertyNames
@@ -1191,26 +1206,8 @@ Value TraceInterpreter::execFunction(
             break;
           }
         }
-      } catch (const jsi::JSIException &e) {
-        // If an exception occurs, write out the trace.
-        llvm::errs()
-            << "An exception occurred while running the benchmark:\nAt record number "
-            << globalRecordNum << ":\n"
-            << e.what() << "\n";
-        if (outTrace_) {
-          llvm::errs() << "Writing out the trace\n";
-          dynamic_cast<TracingRuntime &>(rt_).writeTrace(*outTrace_);
-          llvm::errs() << "\n";
-        } else {
-          llvm::errs() << "Pass --trace to get a trace for comparison\n";
-        }
-        // Do not re-throw, since that will pass back and forth between JS and
-        // Native, causing more perturbations to the state of this interpreter,
-        // which will cause an assertion to fire.
-        // Instead, crash here so that it's clear where the error actually
-        // occurred.
-        llvm::errs() << "Crashing now\n";
-        std::abort();
+      } catch (const std::exception &e) {
+        crashOnException(e, globalRecordNum);
       }
       // If the top of the stack is reached after a marker flushed the stats,
       // exit early.
@@ -1295,6 +1292,30 @@ std::string TraceInterpreter::printStats() {
   stats += "\n";
 #endif
   return stats;
+}
+
+LLVM_ATTRIBUTE_NORETURN void TraceInterpreter::crashOnException(
+    const std::exception &e,
+    ::hermes::OptValue<uint64_t> globalRecordNum) {
+  llvm::errs() << "An exception occurred while running the benchmark:\n";
+  if (globalRecordNum) {
+    llvm::errs() << "At record number " << globalRecordNum.getValue() << ":\n";
+  }
+  llvm::errs() << e.what() << "\n";
+  if (outTrace_) {
+    llvm::errs() << "Writing out the trace\n";
+    dynamic_cast<TracingRuntime &>(rt_).writeTrace(*outTrace_);
+    llvm::errs() << "\n";
+  } else {
+    llvm::errs() << "Pass --trace to get a trace for comparison\n";
+  }
+  // Do not re-throw, since that will pass back and forth between JS and
+  // Native, causing more perturbations to the state of this interpreter,
+  // which will cause an assertion to fire.
+  // Instead, crash here so that it's clear where the error actually
+  // occurred.
+  llvm::errs() << "Crashing now\n";
+  std::abort();
 }
 
 } // namespace tracing
