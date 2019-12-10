@@ -157,7 +157,11 @@ static ExecutionStatus diffFiles(
   for (uint32_t j = 0; j < sectionNames.size(); ++j) {
     llvm::outs() << sectionNames[j] << ": ";
     printBytes(fileSizes[1][j] - fileSizes[0][j], llvm::outs(), humanize);
-    llvm::outs() << '\n';
+    llvm::outs() << "  (";
+    printBytes(fileSizes[0][j], llvm::outs(), humanize);
+    llvm::outs() << " -> ";
+    printBytes(fileSizes[0][j], llvm::outs(), humanize);
+    llvm::outs() << ")\n";
   }
 
   auto &before = funcHashToSize[0];
