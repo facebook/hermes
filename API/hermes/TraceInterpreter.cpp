@@ -905,10 +905,14 @@ Value TraceInterpreter::execFunction(
               snapshotMarkerFound_ = true;
             }
             if (auto *tracingRT = dynamic_cast<TracingRuntime *>(&rt_)) {
-              // If tracing is on, re-emit the marker into the result stream.
-              // This way, the trace emitted from replay will be the same as the
-              // trace input.
-              tracingRT->addMarker(mr.tag_);
+              if (rec->getType() != RecordType::EndExecJS) {
+                // If tracing is on, re-emit the marker into the result stream.
+                // This way, the trace emitted from replay will be the same as
+                // the trace input. Don't do this for EndExecJSRecord, since
+                // that falls through to here, and it already emits a marker
+                // automatically.
+                tracingRT->addMarker(mr.tag_);
+              }
             }
             break;
           }
