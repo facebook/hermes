@@ -29,10 +29,7 @@ workflows:
             - windows
       - test-linux
       - test-macos
-      - test-react-native-linux:
-          requires:
-            - npm
-      - test-react-native-windows:
+      - test-e2e:
           requires:
             - npm
 
@@ -459,86 +456,67 @@ jobs:
           root: /tmp/hermes/output
           paths:
             - .
-
-  test-react-native-linux:
-    docker:
-      - image: circleci/android:api-28-ndk
+  test-e2e:
+    # For now we run E2E tests on MacOS as running an Android emulator on Linux is
+    # not supported with Circle CI:
+    # https://support.circleci.com/hc/en-us/articles/360000028928-Testing-with-Android-emulator-on-CircleCI-2-0
+    # Windows is another option, but I came across a convenient Mac OS example first:
+    # https://gist.github.com/DoguD/58b4b86a5d892130af84074078581b87
+    macos:
+      xcode: "10.0.0"
     environment:
       - TERM: dumb
+      # Homebrew currently breaks while updating:
+      # https://discuss.circleci.com/t/brew-install-fails-while-updating/32992
+      - HOMEBREW_NO_AUTO_UPDATE: 1
+      - JVM_OPTS: -Xmx3200m
+      - ANDROID_HOME: /usr/local/share/android-sdk
+      - ANDROID_SDK_HOME: /usr/local/share/android-sdk
+      - ANDROID_SDK_ROOT: /usr/local/share/android-sdk
+      - QEMU_AUDIO_DRV: none
+      - JAVA_HOME: /Library/Java/Home
     steps:
       - run:
-          name: Set up workspace and install dependencies
+          name: Setup dependencies
           command: |
-            yes | sdkmanager "ndk-bundle"  &
-            sudo apt-get update
-            sudo apt-get install -y nodejs npm rsync
-            wait
-
+            # Node some version greater than 11 is needed by one of the app dependencies
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.1/install.sh | bash
+            NVM_DIR="$HOME/.nvm"
+            . "$NVM_DIR/nvm.sh"
+            echo 'export NVM_DIR="$HOME/.nvm"' >> $BASH_ENV
+            echo '. "$NVM_DIR/nvm.sh"' >> $BASH_ENV
+            nvm install 12
+            nvm use 12
+            brew install gnu-sed
+            brew install md5sha1sum
+            brew tap homebrew/cask
+            brew cask install android-sdk
+            echo 'export PATH="/usr/local/share/android-sdk/platform-tools:/usr/local/share/android-sdk/tools/bin:$PATH"' >> $BASH_ENV
+      - run:
+          name: Install emulator dependencies
+          command: (yes | sdkmanager "platform-tools" "platforms;android-26" "extras;intel;Hardware_Accelerated_Execution_Manager" "build-tools;26.0.0" "system-images;android-26;google_apis;x86" "emulator" --verbose) || true
+      - run:
+          name: Create emulator definition
+          command: |
+            avdmanager create avd -n Pixel_2_API_26 -k "system-images;android-26;google_apis;x86" -g google_apis -d "Nexus 5"
+      - run:
+          name: Run emulator in background
+          command: /usr/local/share/android-sdk/emulator/emulator @Pixel_2_API_26 -memory 2048 -noaudio
+          background: true
+      - checkout
       - attach_workspace:
           at: /tmp/hermes/input
-
       - run:
-          name: Check out React Native tree
+          # For now we're not testing with RN from master because it's broken.
+          # If RN master + Hermes becoms stable we can pass --react-native-master to
+          # run.sh, or run it again as another step/job.
+          name: Run E2E test with master Hermes and Release React Native
           command: |
-            git clone https://github.com/facebook/react-native .
-
-      - run:
-          name: Install NPMs including new hermes-engine
-          command: |
-            npm install
-            npm install /tmp/hermes/input/hermes-engine-*.tgz
-
-      # Optimally we'd run the RN E2E tests, but they've been disabled for a
-      # while and have bitrotted. RNTester Release is the only thing that is
-      # continuously built for Android, so that's really the only thing we can
-      # reliably build at this time.
-      - run:
-          name: Build RNTester with Hermes in Release mode
-          command: |
-            # See top comment
-            ./gradlew -Pjobs=4 --max-workers=1 ":RNTester:android:app:assembleHermesRelease"
-
-
-  test-react-native-windows:
-    executor:
-      name: win/preview-default
-      shell: powershell.exe
-    environment:
-      - TERM: dumb
-    steps:
-      - run:
-          name: Set up workspace and install dependencies
-          command: |
-            # Install node 10 because 12.11.1 triggers a bug:
-            # https://github.com/facebook/react-native/issues/26598
-            choco install nodejs-lts
-            # The jdk11 choco package is broken as of 2019-10-02
-            choco install jdk8
-            choco install android-sdk
-            choco install python3
-            choco install vcredist2015
-            refreshenv
-            sdkmanager "ndk-bundle"
-
-      - attach_workspace:
-          at: c:\tmp\hermes\input
-
-      - run:
-          name: Check out React Native tree
-          command: |
-            git clone https://github.com/facebook/react-native .
-
-      - run:
-          name: Install NPMs including new hermes-engine
-          command: |
-            npm install
-            npm install (Get-Item c:\tmp\hermes\input\hermes-engine-*.tgz)
-
-      # RN e2e tests didn't run on Windows even when they worked, so just make
-      # sure we can build RNTester and invoke the Windows cli compiler.
-      - run:
-          name: Build RNTester with Hermes in Release mode
-          command: |
-            # Run without daemon, since it'll keep the job alive
-            .\gradlew --no-daemon ":RNTester:android:app:assembleHermesRelease"
-            if (-not $?) { throw "Failed to build RNTester" }
+            cd test/circleci-e2e
+            ./run.sh --hermes-npm-package /tmp/hermes/input/hermes-engine-*.tgz
+          # The react-native setup tool takes AGES "Installing CocoaPods dependencies"
+          no_output_timeout: 45m
+      - store_artifacts:
+          path: /tmp/screencap.mp4
+      - store_artifacts:
+          path: /tmp/app-release.apk
