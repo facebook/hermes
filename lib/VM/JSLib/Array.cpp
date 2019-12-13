@@ -118,14 +118,7 @@ Handle<JSObject> createArrayConstructor(Runtime *runtime) {
       arrayPrototype, runtime, Predefined::getSymbolID(Predefined::values)));
   runtime->arrayPrototypeValues = propValue;
 
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.setValue = 1;
-  dpf.enumerable = 0;
-  dpf.writable = 1;
-  dpf.configurable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       arrayPrototype,

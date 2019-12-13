@@ -1791,14 +1791,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
       typedArrayPrototypeIterator,
       0);
 
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.enumerable = 0;
-  dpf.writable = 1;
-  dpf.configurable = 1;
-  dpf.setValue = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for Symbol.iterator.
   {
@@ -1868,14 +1861,10 @@ Handle<JSObject> createTypedArrayConstructor(Runtime *runtime) {
       TA::create,
       C);
 
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
-  dpf.setConfigurable = 1;
   dpf.configurable = 0;
-  dpf.setWritable = 1;
   dpf.writable = 0;
-  dpf.setValue = 1;
 
   auto bytesPerElement =
       runtime->makeHandle(HermesValue::encodeNumberValue(sizeof(T)));

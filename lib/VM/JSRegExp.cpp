@@ -136,14 +136,9 @@ ExecutionStatus JSRegExp::initialize(
       RegExpSlotIndexes::pattern,
       pattern.getHermesValue());
 
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
-  dpf.setWritable = 1;
-  dpf.writable = 1;
-  dpf.setConfigurable = 1;
   dpf.configurable = 0;
-  dpf.setValue = 1;
 
   auto res = JSObject::defineOwnProperty(
       selfHandle,

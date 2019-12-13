@@ -186,14 +186,8 @@ void installConsoleBindings(
     const std::string *serializePath,
 #endif
     const std::string *filename) {
-  vm::DefinePropertyFlags normalDPF{};
-  normalDPF.setEnumerable = 1;
-  normalDPF.setWritable = 1;
-  normalDPF.setConfigurable = 1;
-  normalDPF.setValue = 1;
-  normalDPF.enumerable = 0;
-  normalDPF.writable = 1;
-  normalDPF.configurable = 1;
+  vm::DefinePropertyFlags normalDPF =
+      vm::DefinePropertyFlags::getNewNonEnumerableFlags();
 
 #if defined HERMESVM_SERIALIZE && !defined NDEBUG
   // Verify that all native pointers can be captured by getNativeFunctionPtrs.

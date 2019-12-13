@@ -50,15 +50,7 @@ Handle<NativeConstructor> defineSystemConstructor(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
 
   // Define the global.
-  DefinePropertyFlags dpf{};
-
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.setValue = 1;
-  dpf.enumerable = 0;
-  dpf.writable = 1;
-  dpf.configurable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   auto res = JSObject::defineOwnProperty(
       runtime->getGlobal(), runtime, name, dpf, constructor);
@@ -126,14 +118,7 @@ void defineMethod(
     void *context,
     NativeFunctionPtr nativeFunctionPtr,
     unsigned paramCount) {
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.setValue = 1;
-  dpf.enumerable = 0;
-  dpf.writable = 1;
-  dpf.configurable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   (void)defineMethod(
       runtime, objectHandle, name, context, nativeFunctionPtr, paramCount, dpf);
 }
@@ -255,14 +240,7 @@ void defineProperty(
     Handle<JSObject> objectHandle,
     SymbolID name,
     Handle<> value) {
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.enumerable = 0;
-  dpf.setConfigurable = 1;
-  dpf.configurable = 1;
-  dpf.setWritable = 1;
-  dpf.writable = 1;
-  dpf.setValue = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   return defineProperty(runtime, objectHandle, name, value, dpf);
 }
@@ -442,15 +420,9 @@ CallResult<HermesValue> createDynamicFunction(
   Handle<JSFunction> function =
       runtime->makeHandle(vmcast<JSFunction>(evalRes.getValue()));
 
-  DefinePropertyFlags dpf{};
-  dpf.clear();
-  dpf.setValue = 1;
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
   dpf.writable = 0;
-  dpf.configurable = 1;
 
   // Define the `name` correctly.
   if (JSObject::defineOwnProperty(

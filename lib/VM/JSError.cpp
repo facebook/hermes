@@ -141,9 +141,7 @@ errorStackGetter(void *, Runtime *runtime, NativeArgs args) {
     stacktraceStr = *strRes;
   }
 
-  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-  dpf.setEnumerable = 1;
-  dpf.enumerable = 0;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   if (JSObject::defineOwnProperty(
           selfHandle,
           runtime,
@@ -171,9 +169,7 @@ errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
   auto selfHandle = runtime->makeHandle<JSObject>(res.getValue());
 
   // Redefines the stack property to a regular property.
-  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-  dpf.setEnumerable = 1;
-  dpf.enumerable = 0;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   if (JSObject::defineOwnProperty(
           selfHandle,
           runtime,
@@ -285,9 +281,7 @@ ExecutionStatus JSError::setMessage(
     stringMessage = toHandle(runtime, std::move(*strRes));
   }
 
-  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-  dpf.setEnumerable = 1;
-  dpf.enumerable = 0;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   return JSObject::defineOwnProperty(
              selfHandle,
              runtime,

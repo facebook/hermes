@@ -77,9 +77,6 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
       regExpPrototypeTest,
       1);
 
-  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
-  dpf.enumerable = 0;
-
   // The RegExp prototype and constructors have a variety of getters defined on
   // it; use this helper to define them. Note the context is passed as an
   // intptr_t which we convert to void*.
@@ -126,6 +123,8 @@ Handle<JSObject> createRegExpConstructor(Runtime *runtime) {
   defineGetter(cons, Predefined::lastParen, regExpLastParenGetter);
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
+
   defineMethod(
       runtime,
       proto,

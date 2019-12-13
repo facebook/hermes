@@ -87,14 +87,7 @@ Handle<JSObject> createSetConstructor(Runtime *runtime) {
       setPrototypeValues,
       0);
 
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.setValue = 1;
-  dpf.enumerable = 0;
-  dpf.writable = 1;
-  dpf.configurable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for both keys() and values().
   auto propValue = runtime->makeHandle<NativeFunction>(

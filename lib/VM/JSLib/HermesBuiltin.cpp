@@ -103,14 +103,9 @@ hermesBuiltinGetTemplateObject(void *, Runtime *runtime, NativeArgs args) {
 
   // Set cooked and raw strings as elements in template object and raw object,
   // respectively.
-  DefinePropertyFlags dpf{};
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.setEnumerable = 1;
-  dpf.setValue = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
   dpf.configurable = 0;
-  dpf.enumerable = 1;
   MutableHandle<> idx{runtime};
   MutableHandle<> rawValue{runtime};
   MutableHandle<> cookedValue{runtime};

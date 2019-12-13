@@ -2079,12 +2079,8 @@ tailCall:
       }
 
       CASE(DeclareGlobalVar) {
-        DefinePropertyFlags dpf{};
-        dpf.setWritable = 1;
-        dpf.setConfigurable = 1;
-        dpf.setEnumerable = 1;
-        dpf.writable = 1;
-        dpf.enumerable = 1;
+        DefinePropertyFlags dpf =
+            DefinePropertyFlags::getDefaultNewPropertyFlags();
         dpf.configurable = 0;
 
         if (JSObject::defineOwnProperty(

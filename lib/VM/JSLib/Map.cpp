@@ -103,14 +103,7 @@ Handle<JSObject> createMapConstructor(Runtime *runtime) {
       mapPrototypeValues,
       0);
 
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.setWritable = 1;
-  dpf.setConfigurable = 1;
-  dpf.setValue = 1;
-  dpf.enumerable = 0;
-  dpf.writable = 1;
-  dpf.configurable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   auto propValue = runtime->ignoreAllocationFailure(JSObject::getNamed_RJS(
       mapPrototype, runtime, Predefined::getSymbolID(Predefined::entries)));

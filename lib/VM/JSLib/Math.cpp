@@ -362,11 +362,8 @@ Handle<JSObject> createMathObject(Runtime *runtime) {
   assert(objRes != ExecutionStatus::EXCEPTION && "unable to define Math");
   auto math = runtime->makeHandle<JSMath>(*objRes);
 
-  DefinePropertyFlags constantDPF{};
-  constantDPF.setEnumerable = 1;
-  constantDPF.setWritable = 1;
-  constantDPF.setConfigurable = 1;
-  constantDPF.setValue = 1;
+  DefinePropertyFlags constantDPF =
+      DefinePropertyFlags::getDefaultNewPropertyFlags();
   constantDPF.enumerable = 0;
   constantDPF.writable = 0;
   constantDPF.configurable = 0;

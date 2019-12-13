@@ -629,14 +629,9 @@ ExecutionStatus BoundFunction::initializeLengthAndName(
   }
   Handle<StringPrimitive> boundNameHandle(
       runtime, identifierTable.getStringPrim(runtime, **boundNameSym));
-  DefinePropertyFlags dpf{};
-  dpf.setWritable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
-  dpf.setEnumerable = 1;
   dpf.enumerable = 0;
-  dpf.setConfigurable = 1;
-  dpf.configurable = 1;
-  dpf.setValue = 1;
 
   if (LLVM_UNLIKELY(
           JSObject::defineOwnProperty(

@@ -1752,14 +1752,7 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
     Handle<> valueOrAccessor) {
   Handle<JSObject> obj = toHandle(runtime, JSObject::create(runtime));
 
-  DefinePropertyFlags dpf{};
-  dpf.setValue = 1;
-  dpf.setWritable = 1;
-  dpf.setEnumerable = 1;
-  dpf.setConfigurable = 1;
-  dpf.writable = 1;
-  dpf.enumerable = 1;
-  dpf.configurable = 1;
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
 
   if (!desc.flags.accessor) {
     // Data Descriptor

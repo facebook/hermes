@@ -261,24 +261,15 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
   GCScope gcScope{runtime, "initGlobalObject", 256};
 
   // Not enumerable, not writable, not configurable.
-  DefinePropertyFlags constantDPF{};
-  constantDPF.setEnumerable = 1;
-  constantDPF.setWritable = 1;
-  constantDPF.setConfigurable = 1;
-  constantDPF.setValue = 1;
+  DefinePropertyFlags constantDPF =
+      DefinePropertyFlags::getDefaultNewPropertyFlags();
   constantDPF.enumerable = 0;
   constantDPF.writable = 0;
   constantDPF.configurable = 0;
 
   // Not enumerable, but writable and configurable.
-  DefinePropertyFlags normalDPF{};
-  normalDPF.setEnumerable = 1;
-  normalDPF.setWritable = 1;
-  normalDPF.setConfigurable = 1;
-  normalDPF.setValue = 1;
-  normalDPF.enumerable = 0;
-  normalDPF.writable = 1;
-  normalDPF.configurable = 1;
+  DefinePropertyFlags normalDPF =
+      DefinePropertyFlags::getNewNonEnumerableFlags();
 
   /// Clear the configurable flag.
   DefinePropertyFlags clearConfigurableDPF{};
