@@ -30,6 +30,8 @@
 
 #include <jni.h>
 
+#include <fbjni/detail/SimpleFixedString.h>
+
 namespace facebook {
 namespace jni {
 
@@ -113,8 +115,8 @@ class JObject : detail::JObjectBase {
 public:
   static constexpr auto kJavaDescriptor = "Ljava/lang/Object;";
 
-  static constexpr const char* get_instantiated_java_descriptor() { return nullptr; }
-  static constexpr const char* get_instantiated_base_name() { return nullptr; }
+  static constexpr detail::SimpleFixedString<0> get_instantiated_java_descriptor() { return ""; }
+  static constexpr detail::SimpleFixedString<0> get_instantiated_base_name() { return ""; }
 
   /// Get a @ref local_ref of the object's class
   local_ref<JClass> getClass() const noexcept;
@@ -423,8 +425,13 @@ class JArrayClass : public JavaClass<JArrayClass<T>, detail::JTypeArray> {
   // javaobject is the jni type of the array.
   using javaobject = typename JavaClass<JArrayClass<T>, detail::JTypeArray>::javaobject;
   static constexpr const char* kJavaDescriptor = nullptr;
-  static std::string get_instantiated_java_descriptor();
-  static std::string get_instantiated_base_name();
+  static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_java_descriptor() {
+    return "[" + jtype_traits<T>::kDescriptor;
+  }
+
+  static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_base_name() {
+    return get_instantiated_java_descriptor();
+  }
 
   /// Allocate a new array from Java heap, for passing as a JNI parameter or return value.
   /// NOTE: if using as a return value, you want to call release() instead of get() on the
@@ -480,8 +487,12 @@ class JPrimitiveArray :
   static_assert(is_jni_primitive_array<JArrayType>(), "");
  public:
   static constexpr const char* kJavaDescriptor = nullptr;
-  static std::string get_instantiated_java_descriptor();
-  static std::string get_instantiated_base_name();
+  static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_java_descriptor() {
+    return jtype_traits<JArrayType>::kDescriptor;
+  }
+  static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_base_name() {
+    return JPrimitiveArray::get_instantiated_java_descriptor();
+  }
 
   using T = typename jtype_traits<JArrayType>::entry_type;
 

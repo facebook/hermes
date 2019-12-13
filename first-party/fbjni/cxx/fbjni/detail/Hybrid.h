@@ -19,6 +19,8 @@
 #include <memory>
 #include <type_traits>
 
+#include <fbjni/detail/SimpleFixedString.h>
+
 #include "CoreClasses.h"
 
 namespace facebook {
@@ -136,8 +138,8 @@ public:
     // T::kJavaDescriptor directly. jtype_traits support this escape hatch for
     // such a case.
     static constexpr const char* kJavaDescriptor = nullptr;
-    static std::string get_instantiated_java_descriptor();
-    static std::string get_instantiated_base_name();
+    static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_java_descriptor();
+    static constexpr auto /* detail::SimpleFixedString<_> */ get_instantiated_base_name();
 
     using HybridType = T;
 
@@ -271,14 +273,15 @@ inline T* HybridClass<T, B>::JavaPart::cthis() const {
 };
 
 template <typename T, typename B>
-/* static */ inline std::string HybridClass<T, B>::JavaPart::get_instantiated_java_descriptor() {
-  return T::kJavaDescriptor;
+constexpr auto /* detail::SimpleFixedString<_> */ HybridClass<T, B>::JavaPart::get_instantiated_java_descriptor() {
+  constexpr auto len = detail::constexpr_strlen(T::kJavaDescriptor);
+  return detail::SimpleFixedString<len>(T::kJavaDescriptor, len);
 }
 
 template <typename T, typename B>
-/* static */ inline std::string HybridClass<T, B>::JavaPart::get_instantiated_base_name() {
-  auto name = get_instantiated_java_descriptor();
-  return name.substr(1, name.size() - 2);
+/* static */ constexpr auto /* detail::SimpleFixedString<_> */ HybridClass<T, B>::JavaPart::get_instantiated_base_name() {
+  constexpr auto len = detail::constexpr_strlen(T::kJavaDescriptor);
+  return detail::SimpleFixedString<len>(T::kJavaDescriptor + 1, len - 2);
 }
 
 // Given a *_ref object which refers to a hybrid class, this will reach inside

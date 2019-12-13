@@ -18,6 +18,8 @@
 
 #include <jni.h>
 
+#include <fbjni/detail/SimpleFixedString.h>
+
 #include "Common.h"
 #include "Exceptions.h"
 #include "MetaConvert.h"
@@ -387,35 +389,24 @@ inline void JStaticField<T>::set(jclass jcls, T value) noexcept {
 namespace internal {
 
 template<typename Head>
-inline std::string JavaDescriptor() {
-  return jtype_traits<Head>::descriptor();
+constexpr auto /* detail::SimpleFixedString<_> */ JavaDescriptor() {
+  return jtype_traits<Head>::kDescriptor;
 }
 
 template<typename Head, typename Elem, typename... Tail>
-inline std::string JavaDescriptor() {
+constexpr auto /* detail::SimpleFixedString<_> */ JavaDescriptor() {
   return JavaDescriptor<Head>() + JavaDescriptor<Elem, Tail...>();
 }
 
 template<typename R, typename Arg1, typename... Args>
-inline std::string JMethodDescriptor() {
+constexpr auto /* detail::SimpleFixedString<_> */ JMethodDescriptor() {
   return "(" + JavaDescriptor<Arg1, Args...>() + ")" + JavaDescriptor<R>();
 }
 
 template<typename R>
-inline std::string JMethodDescriptor() {
+constexpr auto /* detail::SimpleFixedString<_> */  JMethodDescriptor() {
   return "()" + JavaDescriptor<R>();
 }
 
 } // internal
-
-template<typename R, typename... Args>
-inline std::string jmethod_traits<R(Args...)>::descriptor() {
-  return internal::JMethodDescriptor<R, Args...>();
-}
-
-template<typename R, typename... Args>
-inline std::string jmethod_traits<R(Args...)>::constructor_descriptor() {
-  return internal::JMethodDescriptor<void, Args...>();
-}
-
 }}

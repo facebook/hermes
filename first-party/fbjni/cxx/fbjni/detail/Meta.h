@@ -26,6 +26,7 @@
 
 #include <jni.h>
 
+#include <fbjni/detail/SimpleFixedString.h>
 #include "References-forward.h"
 
 #ifdef __ANDROID__
@@ -266,65 +267,69 @@ class JStaticField {
 };
 
 
-/// Template magic to provide @ref jmethod_traits
-template<typename R, typename... Args>
-struct jmethod_traits<R(Args...)> {
-  static std::string descriptor();
-  static std::string constructor_descriptor();
-};
-
-
 // jtype_traits ////////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
 struct jtype_traits {
 private:
   using Repr = ReprType<T>;
-public:
+  static constexpr auto /* detail::SimpleFixedString<_> */ descriptor() {
+    constexpr auto len = Repr::kJavaDescriptor
+      ? detail::constexpr_strlen(Repr::kJavaDescriptor)
+      : Repr::get_instantiated_java_descriptor().size();
+    if (Repr::kJavaDescriptor) {
+      return detail::SimpleFixedString<len>(Repr::kJavaDescriptor, len);
+    } else {
+      return detail::SimpleFixedString<len>(Repr::get_instantiated_java_descriptor());
+    }
+  }
+  static constexpr auto /* detail::SimpleFixedString<_> */ base_name() {
+    constexpr auto len = Repr::kJavaDescriptor ? detail::constexpr_strlen(Repr::kJavaDescriptor) - 2 : Repr::get_instantiated_base_name().size();
+    if (Repr::kJavaDescriptor) {
+      detail::SimpleFixedString<len + 2> result(Repr::kJavaDescriptor, len + 2);
+      return detail::SimpleFixedString<len>(result.substr(1, result.size() - 2));
+    }
+    return detail::SimpleFixedString<len>(Repr::get_instantiated_base_name());
+  }
+ public:
   // The jni type signature (described at
   // http://docs.oracle.com/javase/1.5.0/docs/guide/jni/spec/types.html).
-  static std::string descriptor() {
-    std::string descriptor;
-    if (Repr::kJavaDescriptor == nullptr) {
-      descriptor = Repr::get_instantiated_java_descriptor();
-    } else {
-      descriptor = Repr::kJavaDescriptor;
-    }
-    return descriptor;
-  }
+  static constexpr decltype(descriptor()) /* detail::SimpleFixedString<_> */ kDescriptor = descriptor();
 
   // The signature used for class lookups. See
   // http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html#getName().
-  static std::string base_name() {
-    if (Repr::kJavaDescriptor != nullptr) {
-      std::string base_name = Repr::kJavaDescriptor;
-      return base_name.substr(1, base_name.size() - 2);
-    }
-    return Repr::get_instantiated_base_name();
-  }
+  static constexpr decltype(base_name()) /* detail::SimpleFixedString<_> */ kBaseName = base_name();
 };
+
+template <typename T>
+constexpr decltype(jtype_traits<T>::descriptor()) jtype_traits<T>::kDescriptor;
+template <typename T>
+constexpr decltype(jtype_traits<T>::base_name())jtype_traits<T>::kBaseName;
 
 #pragma push_macro("DEFINE_FIELD_AND_ARRAY_TRAIT")
 #undef DEFINE_FIELD_AND_ARRAY_TRAIT
 
-#define DEFINE_FIELD_AND_ARRAY_TRAIT(TYPE, DSC)                     \
-template<>                                                          \
-struct jtype_traits<TYPE> {                                         \
-  static std::string descriptor() { return std::string{#DSC}; }     \
-  static std::string base_name() { return descriptor(); }           \
-  using array_type = TYPE ## Array;                                 \
-};                                                                  \
-template<>                                                          \
-struct jtype_traits<TYPE ## Array> {                                \
-  static std::string descriptor() { return std::string{"[" #DSC}; } \
-  static std::string base_name() { return descriptor(); }           \
-  using entry_type = TYPE;                                          \
+// NOTE: When updating this definition, see also DEFINE_CONSTANTS_FOR_FIELD_AND_ARRAY_TRAIT in Meta.cpp.
+#define DEFINE_FIELD_AND_ARRAY_TRAIT(TYPE, DSC)                         \
+  template<>                                                            \
+struct jtype_traits<TYPE> {                                             \
+  static constexpr decltype(detail::makeSimpleFixedString(#DSC)) kDescriptor = detail::makeSimpleFixedString(#DSC); \
+  static constexpr decltype(kDescriptor) kBaseName = kDescriptor;       \
+  using array_type = TYPE ## Array;                                     \
+};                                                                      \
+                                                                        \
+template<>                                                              \
+struct jtype_traits<TYPE ## Array> {                                    \
+  static constexpr decltype(detail::makeSimpleFixedString("[" #DSC)) kDescriptor = detail::makeSimpleFixedString("[" #DSC); \
+  static constexpr decltype(jtype_traits<TYPE ## Array>::kDescriptor) kBaseName = kDescriptor; \
+  using entry_type = TYPE;                                              \
 };
+
 
 // There is no voidArray, handle that without the macro.
 template<>
 struct jtype_traits<void> {
-  static std::string descriptor() { return std::string{"V"}; };
+  static constexpr detail::SimpleFixedString<1> kDescriptor = detail::makeSimpleFixedString("V");
 };
 
 DEFINE_FIELD_AND_ARRAY_TRAIT(jboolean, Z)
@@ -345,3 +350,20 @@ struct jmethod_traits_from_cxx;
 }}
 
 #include "Meta-inl.h"
+
+namespace facebook {
+namespace jni {
+/// Template magic to provide @ref jmethod_traits
+template<typename R, typename... Args>
+struct jmethod_traits<R(Args...)> {
+  static constexpr decltype(internal::JMethodDescriptor<R, Args...>()) /* detail::SimpleFixedString */ kDescriptor = internal::JMethodDescriptor<R, Args...>();
+  static constexpr decltype(internal::JMethodDescriptor<void, Args...>()) /* detail::SimpleFixedString */ kConstructorDescriptor = internal::JMethodDescriptor<void, Args...>();
+};
+
+template<typename R, typename...Args>
+/*static*/ constexpr decltype(internal::JMethodDescriptor<R, Args...>()) /* detail::SimpleFixedString */ jmethod_traits<R(Args...)>::kDescriptor;
+
+template<typename R, typename...Args>
+/*static*/ constexpr decltype(internal::JMethodDescriptor<void, Args...>()) /* detail::SimpleFixedString */ jmethod_traits<R(Args...)>::kConstructorDescriptor;
+
+}}

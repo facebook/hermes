@@ -201,7 +201,7 @@ inline bool JClass::isAssignableFrom(alias_ref<JClass> other) const noexcept {
 
 template<typename F>
 inline JConstructor<F> JClass::getConstructor() const {
-  return getConstructor<F>(jmethod_traits_from_cxx<F>::constructor_descriptor().c_str());
+  return getConstructor<F>(jmethod_traits_from_cxx<F>::kConstructorDescriptor.c_str());
 }
 
 template<typename F>
@@ -212,7 +212,7 @@ inline JConstructor<F> JClass::getConstructor(const char* descriptor) const {
 
 template<typename F>
 inline JMethod<F> JClass::getMethod(const char* name) const {
-  return getMethod<F>(name, jmethod_traits_from_cxx<F>::descriptor().c_str());
+  return getMethod<F>(name, jmethod_traits_from_cxx<F>::kDescriptor.c_str());
 }
 
 template<typename F>
@@ -227,7 +227,7 @@ inline JMethod<F> JClass::getMethod(
 
 template<typename F>
 inline JStaticMethod<F> JClass::getStaticMethod(const char* name) const {
-  return getStaticMethod<F>(name, jmethod_traits_from_cxx<F>::descriptor().c_str());
+  return getStaticMethod<F>(name, jmethod_traits_from_cxx<F>::kDescriptor.c_str());
 }
 
 template<typename F>
@@ -242,7 +242,7 @@ inline JStaticMethod<F> JClass::getStaticMethod(
 
 template<typename F>
 inline JNonvirtualMethod<F> JClass::getNonvirtualMethod(const char* name) const {
-  return getNonvirtualMethod<F>(name, jmethod_traits_from_cxx<F>::descriptor().c_str());
+  return getNonvirtualMethod<F>(name, jmethod_traits_from_cxx<F>::kDescriptor.c_str());
 }
 
 template<typename F>
@@ -258,7 +258,7 @@ inline JNonvirtualMethod<F> JClass::getNonvirtualMethod(
 template<typename T>
 inline JField<PrimitiveOrJniType<T>>
 JClass::getField(const char* name) const {
-  return getField<T>(name, jtype_traits<T>::descriptor().c_str());
+  return getField<T>(name, jtype_traits<T>::kDescriptor.c_str());
 }
 
 template<typename T>
@@ -274,7 +274,7 @@ inline JField<PrimitiveOrJniType<T>> JClass::getField(
 template<typename T>
 inline JStaticField<PrimitiveOrJniType<T>> JClass::getStaticField(
     const char* name) const {
-  return getStaticField<T>(name, jtype_traits<T>::descriptor().c_str());
+  return getStaticField<T>(name, jtype_traits<T>::kDescriptor.c_str());
 }
 
 template<typename T>
@@ -416,19 +416,9 @@ inline ElementProxy<Target>::ElementProxy::operator local_ref<T> () {
 }
 }
 
-template <typename T>
-std::string JArrayClass<T>::get_instantiated_java_descriptor() {
-  return "[" + jtype_traits<T>::descriptor();
-};
-
-template <typename T>
-std::string JArrayClass<T>::get_instantiated_base_name() {
-  return get_instantiated_java_descriptor();
-};
-
 template<typename T>
 auto JArrayClass<T>::newArray(size_t size) -> local_ref<javaobject> {
-  static const auto elementClass = findClassStatic(jtype_traits<T>::base_name().c_str());
+  static const auto elementClass = findClassStatic(jtype_traits<T>::kBaseName.c_str());
   const auto env = Environment::current();
   auto rawArray = env->NewObjectArray(size, elementClass.get(), nullptr);
   FACEBOOK_JNI_THROW_EXCEPTION_IF(!rawArray);
@@ -466,15 +456,6 @@ auto JPrimitiveArray<JArrayType>::getRegion(jsize start, jsize length)
   auto buf = std::unique_ptr<T[]>{new T[length]};
   getRegion(start, length, buf.get());
   return buf;
-}
-
-template <typename JArrayType>
-std::string JPrimitiveArray<JArrayType>::get_instantiated_java_descriptor() {
-  return jtype_traits<JArrayType>::descriptor();
-}
-template <typename JArrayType>
-std::string JPrimitiveArray<JArrayType>::get_instantiated_base_name() {
-  return JPrimitiveArray::get_instantiated_java_descriptor();
 }
 
 template <typename JArrayType>
@@ -674,13 +655,13 @@ inline PinnedPrimitiveArray<T, Alloc>::PinnedPrimitiveArray(alias_ref<typename j
 
 template<typename T, typename Base, typename JType>
 inline alias_ref<JClass> JavaClass<T, Base, JType>::javaClassStatic() {
-  static auto cls = findClassStatic(jtype_traits<typename T::javaobject>::base_name().c_str());
+  static auto cls = findClassStatic(jtype_traits<typename T::javaobject>::kBaseName.c_str());
   return cls;
 }
 
 template<typename T, typename Base, typename JType>
 inline local_ref<JClass> JavaClass<T, Base, JType>::javaClassLocal() {
-  std::string className(jtype_traits<typename T::javaobject>::base_name().c_str());
+  std::string className(jtype_traits<typename T::javaobject>::kBaseName.c_str());
   return findClassLocal(className.c_str());
 }
 

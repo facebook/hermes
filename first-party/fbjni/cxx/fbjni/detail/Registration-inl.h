@@ -139,17 +139,17 @@ inline NativeMethodWrapper* exceptionWrapJNIMethod(R (C::*method0)(Args... args)
 
 template<typename R, typename C, typename... Args>
 inline std::string makeDescriptor(R (*)(JNIEnv*, C, Args... args)) {
-  return jmethod_traits<R(Args...)>::descriptor();
+  return jmethod_traits<R(Args...)>::kDescriptor;
 }
 
 template<typename R, typename C, typename... Args>
 inline std::string makeDescriptor(R (*)(alias_ref<C>, Args... args)) {
-  return jmethod_traits_from_cxx<R(Args...)>::descriptor();
+  return jmethod_traits_from_cxx<R(Args...)>::kDescriptor;
 }
 
 template<typename R, typename C, typename... Args>
 inline std::string makeDescriptor(R (C::*)(Args... args)) {
-  return jmethod_traits_from_cxx<R(Args...)>::descriptor();
+  return jmethod_traits_from_cxx<R(Args...)>::kDescriptor;
 }
 
 template<typename R, typename ...Args>

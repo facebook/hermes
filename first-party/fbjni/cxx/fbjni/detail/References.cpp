@@ -47,7 +47,7 @@ int32_t getAndroidApiLevel() {
   JNIEnv* env = Environment::current();
   jclass cls = detail::findClass(env, "android/os/Build$VERSION");
   jfieldID field = env->GetStaticFieldID(cls, "SDK_INT",
-                                         jtype_traits<jint>::descriptor().c_str());
+                                         jtype_traits<jint>::kDescriptor.c_str());
   if (!field) {
     env->DeleteLocalRef(cls);
   }

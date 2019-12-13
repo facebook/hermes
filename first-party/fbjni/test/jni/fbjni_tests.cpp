@@ -76,32 +76,35 @@ jobject TestCreateInstanceOf(JNIEnv* env, jobject self, jstring class_name) {
 }
 
 jboolean TestTypeDescriptors(JNIEnv* env, jobject self) {
-  EXPECT(jtype_traits<jboolean>::descriptor() == "Z");
-  EXPECT(jtype_traits<jbyte>::descriptor() == "B");
-  EXPECT(jtype_traits<jchar>::descriptor() == "C");
-  EXPECT(jtype_traits<jdouble>::descriptor() == "D");
-  EXPECT(jtype_traits<jfloat>::descriptor() == "F");
-  EXPECT(jtype_traits<jint>::descriptor() == "I");
-  EXPECT(jtype_traits<jlong>::descriptor() == "J");
-  EXPECT(jtype_traits<jshort>::descriptor() == "S");
+#define FIXED_STRING_EXPECT_EQ(actual, expected)                        \
+  static_assert((actual) == (expected), "descriptor mismatch")
 
-  EXPECT(jtype_traits<jstring>::descriptor() == "Ljava/lang/String;");
-  EXPECT(jtype_traits<jobject>::descriptor() == "Ljava/lang/Object;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jboolean>::kDescriptor, "Z");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jbyte>::kDescriptor, "B");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jchar>::kDescriptor, "C");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jdouble>::kDescriptor, "D");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jfloat>::kDescriptor, "F");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jint>::kDescriptor, "I");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jlong>::kDescriptor, "J");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jshort>::kDescriptor, "S");
 
-  EXPECT(jtype_traits<jintArray>::descriptor() == "[I");
-  EXPECT(jtype_traits<jtypeArray<jstring>>::descriptor() == "[Ljava/lang/String;");
-  EXPECT(jtype_traits<jtypeArray<jtypeArray<jstring>>>::descriptor()
-      == "[[Ljava/lang/String;");
-  EXPECT(jtype_traits<jtypeArray<jintArray>>::descriptor() == "[[I");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jstring>::kDescriptor, "Ljava/lang/String;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jobject>::kDescriptor, "Ljava/lang/Object;");
+
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jintArray>::kDescriptor, "[I");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jstring>>::kDescriptor, "[Ljava/lang/String;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jtypeArray<jstring>>>::kDescriptor
+     , "[[Ljava/lang/String;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jintArray>>::kDescriptor, "[[I");
 
   // base_name() is meaningless for primitive types.
-  EXPECT(jtype_traits<jstring>::base_name() == "java/lang/String");
-  EXPECT(jtype_traits<jobject>::base_name() == "java/lang/Object");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jstring>::kBaseName, "java/lang/String");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jobject>::kBaseName, "java/lang/Object");
 
-  EXPECT(jtype_traits<jintArray>::base_name() == "[I");
-  EXPECT(jtype_traits<jtypeArray<jstring>>::base_name() == "[Ljava/lang/String;");
-  EXPECT(jtype_traits<jtypeArray<jtypeArray<jstring>>>::base_name() == "[[Ljava/lang/String;");
-  EXPECT(jtype_traits<jtypeArray<jintArray>>::base_name() == "[[I");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jintArray>::kBaseName, "[I");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jstring>>::kBaseName, "[Ljava/lang/String;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jtypeArray<jstring>>>::kBaseName, "[[Ljava/lang/String;");
+  FIXED_STRING_EXPECT_EQ(jtype_traits<jtypeArray<jintArray>>::kBaseName, "[[I");
 
   return JNI_TRUE;
 }
