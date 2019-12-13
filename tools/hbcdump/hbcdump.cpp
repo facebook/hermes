@@ -110,10 +110,11 @@ static void printHelp(llvm::Optional<llvm::StringRef> command = llvm::None) {
       {"function",
        "'function': Compute the runtime instruction frequency "
        "for each function and display in desceding order."
-       "Each function name is displayed together with its source code line number .\n"
+       "Each function name is displayed together with its source code line number.\n\n"
        "'function <FUNC_ID>': Dump basic block stats for function with id <FUNC_ID>.\n\n"
-       "USAGE: function <FUNC_ID>\n"
-       "       func <FUNC_ID>\n"},
+       "'function -used': List all invoked function IDs, one per line.\n\n"
+       "USAGE: function [<FUNC_ID> | -used]\n"
+       "       fun [<FUNC_ID> | -used]\n"},
       {"instruction",
        "Computes the runtime instruction frequency for each instruction"
        "and displays it in descending order.\n\n"
@@ -256,7 +257,9 @@ static bool executeCommand(
 
   const llvm::StringRef command = commandTokens[0];
   if (command == "function" || command == "fun") {
-    if (commandTokens.size() == 1) {
+    if (findAndRemoveOne(commandTokens, "-used")) {
+      analyzer.dumpUsedFunctionIDs();
+    } else if (commandTokens.size() == 1) {
       analyzer.dumpFunctionStats();
     } else if (commandTokens.size() == 2) {
       uint32_t funcId;

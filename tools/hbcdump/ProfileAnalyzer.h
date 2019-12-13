@@ -130,6 +130,8 @@ class ProfileAnalyzer {
   void dumpBasicBlockStats();
   // Print top K functions' runtime statistics.
   void dumpFunctionStats();
+  // Print all used function IDs, one per line.
+  void dumpUsedFunctionIDs();
   // Print a single function's detailed basic block view for \p funcId.
   void dumpFunctionBasicBlockStat(unsigned funcId);
   // Print page I/O access information.

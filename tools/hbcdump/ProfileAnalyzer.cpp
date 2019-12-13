@@ -267,7 +267,7 @@ class InstructionSummaryVisitor : public hermes::hbc::BytecodeVisitor {
 
 void ProfileAnalyzer::dumpInstructionStats() {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
 
@@ -311,7 +311,7 @@ void ProfileAnalyzer::reportUnmatchedChecksums() {
 
 void ProfileAnalyzer::dumpFunctionStats() {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
   buildFunctionRuntimeStatisticsMapIfNeeded();
@@ -389,6 +389,19 @@ void ProfileAnalyzer::dumpFunctionStats() {
       os_ << formatString("%s(%d)", funcNameStr.c_str(), funcId);
     }
     os_ << "\n";
+  }
+}
+
+void ProfileAnalyzer::dumpUsedFunctionIDs() {
+  if (!profileDataOpt_.hasValue()) {
+    os_ << "This command requires trace profile to run (-profile-file).\n";
+    return;
+  }
+  buildFunctionRuntimeStatisticsMapIfNeeded();
+  reportUnmatchedChecksums();
+
+  for (const auto &entry : funcRuntimeStats_) {
+    os_ << entry.first << "\n";
   }
 }
 
@@ -488,7 +501,7 @@ class FunctionBasicBlockStatsVisitor : public hbc::PrettyDisassembleVisitor {
 
 void ProfileAnalyzer::dumpFunctionBasicBlockStat(unsigned funcId) {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
   assertTraceAvailable();
@@ -523,7 +536,7 @@ void ProfileAnalyzer::dumpFunctionBasicBlockStat(unsigned funcId) {
 
 void ProfileAnalyzer::dumpBasicBlockStats() {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
   struct BasicBlockRuntimeStatistics {
@@ -632,7 +645,7 @@ void ProfileAnalyzer::dumpBasicBlockStats() {
 
 void ProfileAnalyzer::dumpIO() {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
   uint32_t pageSize = profileDataOpt_.getValue().pageSize;
@@ -705,7 +718,7 @@ void ProfileAnalyzer::dumpEpilogue() {
 
 void ProfileAnalyzer::dumpSummary() {
   if (!profileDataOpt_.hasValue()) {
-    os_ << "This command requires trace profile to run.\n";
+    os_ << "This command requires trace profile to run (-profile-file).\n";
     return;
   }
 
