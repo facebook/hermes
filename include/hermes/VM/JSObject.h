@@ -491,13 +491,19 @@ class JSObject : public GCCell {
 
   /// Return a reference to an internal property slot.
   static GCHermesValue &
-  internalPropertyRef(JSObject *self, PointerBase *runtime, SlotIndex index) {
-    return namedSlotRef<PropStorage::Inline::Yes>(self, runtime, index);
+  internalPropertyRef(JSObject *self, PointerBase *base, SlotIndex index) {
+    assert(
+        HiddenClass::debugIsPropertyDefined(
+            self->clazz_.get(base),
+            base,
+            InternalProperty::getSymbolID(index)) &&
+        "internal slot must be reserved");
+    return namedSlotRef<PropStorage::Inline::Yes>(self, base, index);
   }
 
   static HermesValue
-  getInternalProperty(JSObject *self, PointerBase *runtime, SlotIndex index) {
-    return internalPropertyRef(self, runtime, index);
+  getInternalProperty(JSObject *self, PointerBase *base, SlotIndex index) {
+    return internalPropertyRef(self, base, index);
   }
 
   static void setInternalProperty(
@@ -505,6 +511,12 @@ class JSObject : public GCCell {
       Runtime *runtime,
       SlotIndex index,
       HermesValue value) {
+    assert(
+        HiddenClass::debugIsPropertyDefined(
+            self->clazz_.get(runtime),
+            runtime,
+            InternalProperty::getSymbolID(index)) &&
+        "internal slot must be reserved");
     return setNamedSlotValue<PropStorage::Inline::Yes>(
         self, runtime, index, value);
   }

@@ -403,17 +403,17 @@ llvm::Optional<NamedPropertyDescriptor> HiddenClass::findPropertyNoAlloc(
 
 bool HiddenClass::debugIsPropertyDefined(
     HiddenClass *self,
-    Runtime *runtime,
+    PointerBase *base,
     SymbolID name) {
   do {
     // If we happen to have a property map, use it.
     if (self->propertyMap_)
-      return DictPropertyMap::find(self->propertyMap_.get(runtime), name)
+      return DictPropertyMap::find(self->propertyMap_.get(base), name)
           .hasValue();
     // Is the property defined in this class?
     if (self->symbolID_ == name)
       return true;
-    self = self->parent_.get(runtime);
+    self = self->parent_.get(base);
   } while (self);
   return false;
 }

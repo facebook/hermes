@@ -409,7 +409,7 @@ class HiddenClass final : public GCCell {
   /// map because doing so would change the behavior.
   /// \return true if the property is defined, false otherwise.
   static bool
-  debugIsPropertyDefined(HiddenClass *self, Runtime *runtime, SymbolID name);
+  debugIsPropertyDefined(HiddenClass *self, PointerBase *base, SymbolID name);
 
   /// Delete a property which we found earlier using \c findProperty.
   /// \return the resulting new class.
