@@ -160,10 +160,11 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
     NoAllocScope scope{runtime};
     auto *const indexedStorage = self->indexedStorage_.getNonNull(runtime);
 
-    if (newLength < beginIndex) {
+    if (newLength <= beginIndex) {
       // the new length is prior to beginIndex, clearing the storage.
       selfHandle->endIndex_ = beginIndex;
-      StorageType::resizeWithinCapacity(indexedStorage, 0);
+      // Remove the storage. If this array grows again it can be re-allocated.
+      self->indexedStorage_ = nullptr;
       return ExecutionStatus::RETURNED;
     } else if (newLength - beginIndex <= indexedStorage->capacity()) {
       selfHandle->endIndex_ = newLength;
