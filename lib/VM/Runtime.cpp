@@ -1734,20 +1734,21 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
     auto codeBlock = frame->getCalleeCodeBlock();
     if (codeBlock) {
       res += codeBlock->getNameString(this);
-      if (ip != nullptr) {
-        auto bytecodeOffs = codeBlock->getOffsetOf(ip);
-        auto blockSourceCode = codeBlock->getDebugSourceLocationsOffset();
-        if (blockSourceCode.hasValue()) {
-          auto debugInfo =
-              codeBlock->getRuntimeModule()->getBytecode()->getDebugInfo();
-          auto sourceLocation = debugInfo->getLocationForAddress(
-              blockSourceCode.getValue(), bytecodeOffs);
-          if (sourceLocation) {
-            auto file = debugInfo->getFilenameByID(sourceLocation->filenameId);
-            res += ": " + file + ":" +
-                oscompat::to_string(sourceLocation->line) + ":" +
-                oscompat::to_string(sourceLocation->column);
-          }
+      // Default to the function entrypoint, this
+      // ensures source location is provided for leaf frame even
+      // if ip is not available.
+      const uint32_t bytecodeOffs =
+          ip != nullptr ? codeBlock->getOffsetOf(ip) : 0;
+      auto blockSourceCode = codeBlock->getDebugSourceLocationsOffset();
+      if (blockSourceCode.hasValue()) {
+        auto debugInfo =
+            codeBlock->getRuntimeModule()->getBytecode()->getDebugInfo();
+        auto sourceLocation = debugInfo->getLocationForAddress(
+            blockSourceCode.getValue(), bytecodeOffs);
+        if (sourceLocation) {
+          auto file = debugInfo->getFilenameByID(sourceLocation->filenameId);
+          res += ": " + file + ":" + oscompat::to_string(sourceLocation->line) +
+              ":" + oscompat::to_string(sourceLocation->column);
         }
       }
       res += "\n";
