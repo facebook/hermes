@@ -53,6 +53,10 @@
 #error "LLVM_PTR_SIZE needs to be defined"
 #endif
 
+#if defined(HERMES_UBSAN) || LLVM_ADDRESS_SANITIZER_BUILD
+#define HERMES_LIMIT_STACK_DEPTH
+#endif
+
 namespace hermes {
 
 /// Some compiler versions don't support \c std::is_trivially_copyable<>, so

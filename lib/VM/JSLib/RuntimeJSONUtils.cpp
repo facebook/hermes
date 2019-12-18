@@ -7,6 +7,7 @@
 
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
 
+#include "hermes/Support/Compiler.h"
 #include "hermes/Support/JSON.h"
 #include "hermes/Support/UTF16Stream.h"
 #include "hermes/VM/ArrayLike.h"
@@ -30,7 +31,13 @@ namespace {
 /// HermesValue when parse is called.
 class RuntimeJSONParser {
  public:
-  static constexpr int32_t MAX_RECURSION_DEPTH = 512;
+  static constexpr int32_t MAX_RECURSION_DEPTH =
+#ifndef HERMES_LIMIT_STACK_DEPTH
+      512
+#else
+      100
+#endif
+      ;
 
  private:
   /// The VM runtime.

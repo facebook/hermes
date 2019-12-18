@@ -12,10 +12,6 @@ using namespace hermes::vm;
 
 namespace {
 
-// This value matches the same field in Runtime, but we don't wish to make it
-// public in Runtime.
-constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH = 384;
-
 // Count the number of native stack frames we can make before it reports
 // overflow. Also verify that our stack descends down.
 static unsigned makeFramesUntilOverflow(
@@ -33,7 +29,10 @@ using NativeFrameTest = RuntimeTestFixture;
 
 TEST_F(NativeFrameTest, OverflowTest) {
   unsigned maxDepth = makeFramesUntilOverflow(runtime, nullptr);
-  EXPECT_EQ(maxDepth, MAX_NATIVE_CALL_FRAME_DEPTH);
+  // Save into a local variable in order to avoid linker errors when passed
+  // to gtest.
+  auto expectedMaxDepth = Runtime::MAX_NATIVE_CALL_FRAME_DEPTH;
+  EXPECT_EQ(maxDepth, expectedMaxDepth);
 }
 
 #if HERMES_SLOW_DEBUG

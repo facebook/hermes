@@ -918,6 +918,8 @@ BLACK_LIST = [
     "mjsunit/regress/regress-opt-after-debug-deopt.js",
     "mjsunit/regress/regress-embedded-cons-string.js",
     "mjsunit/regress/regress-prepare-break-while-recompile.js",
+    # Fails when ASAN/UBSAN are limiting the max native stack depth.
+    "mjsunit/compiler/regress-lazy-deopt.js",
     # Uncategorized mjsunit failures
     "mjsunit/accessor-map-sharing.js",
     "mjsunit/accessors-on-global-object.js",

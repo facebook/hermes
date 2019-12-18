@@ -1030,12 +1030,21 @@ class Runtime : public HandleRootOwner,
   /// calls.
   unsigned nativeCallFrameDepth_{0};
 
+ public:
   /// A stack overflow exception is thrown when \c nativeCallFrameDepth_ exceeds
   /// this threshold.  (This depth limit was originally 256, and we
   /// increased when an app violated it.  The new depth is 128
   /// larger.  See T46966147 for measurements/calculations indicating
   /// that this limit should still insulate us from native stack overflow.)
-  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH = 384;
+  static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH =
+#ifndef HERMES_LIMIT_STACK_DEPTH
+      384
+#else
+      // UBSAN builds will hit a native stack overflow much earlier, so make
+      // this limit dramatically lower.
+      30
+#endif
+      ;
 
   /// rootClazzRawPtr_[i] is a raw pointer to a hidden class with its i first
   /// slots pre-reserved.

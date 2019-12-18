@@ -13,6 +13,7 @@
 #include "hermes/Parser/JSLexer.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Parser/PreParser.h"
+#include "hermes/Support/Compiler.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -170,7 +171,13 @@ class JSParserImpl {
   unsigned recursionDepth_{0};
 
   /// Self-explanatory: the maximum depth of parser recursion.
-  static constexpr unsigned MAX_RECURSION_DEPTH = 1024;
+  static constexpr unsigned MAX_RECURSION_DEPTH =
+#ifndef HERMES_LIMIT_STACK_DEPTH
+      1024
+#else
+      128
+#endif
+      ;
 
   /// Set when the parser sees the 'use static builtin' directive in any scope.
   bool useStaticBuiltin_{false};
