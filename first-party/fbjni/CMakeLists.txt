@@ -13,6 +13,7 @@ set(fbjni_SOURCES
   ${FBJNI_PATH}/cxx/fbjni/detail/Environment.cpp
   ${FBJNI_PATH}/cxx/fbjni/detail/Exceptions.cpp
   ${FBJNI_PATH}/cxx/fbjni/detail/Hybrid.cpp
+  ${FBJNI_PATH}/cxx/fbjni/detail/Meta.cpp
   ${FBJNI_PATH}/cxx/fbjni/detail/References.cpp
   ${FBJNI_PATH}/cxx/fbjni/detail/utf8.cpp
   ${FBJNI_PATH}/cxx/lyra/cxa_throw.cpp
@@ -30,7 +31,7 @@ target_compile_options(hermesfbjni PRIVATE
   -fexceptions
   -O3
   -Wall
-  -std=c++11
+  -std=c++14
   -frtti
   -ffunction-sections
   -DDISABLE_CPUCAP

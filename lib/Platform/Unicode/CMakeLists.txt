@@ -17,7 +17,7 @@ if(HERMES_IS_ANDROID)
       ${CORE_FOUNDATION}
   )
   set_source_files_properties(PlatformUnicodeJava.cpp PROPERTIES
-      COMPILE_FLAGS "-frtti -fexceptions")
+      COMPILE_FLAGS "-frtti -fexceptions -std=c++14")
 else()
   add_llvm_library(hermesPlatformUnicode STATIC ${source_files}
       LINK_LIBS
