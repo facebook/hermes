@@ -12,6 +12,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import time
 import warnings
 
 
@@ -73,7 +74,21 @@ def is_visual_studio(build_system):
 
 def run_command(cmd, **kwargs):
     print("+ " + " ".join(cmd))
-    return subprocess.check_call(cmd, stdout=sys.stdout, stderr=sys.stderr, **kwargs)
+    retries = kwargs.pop("retries", 0)
+    seconds_between_retries = kwargs.pop("seconds_between_retries", 10)
+
+    while True:
+        try:
+            return subprocess.check_call(
+                cmd, stdout=sys.stdout, stderr=sys.stderr, **kwargs
+            )
+        except subprocess.CalledProcessError as e:
+            if retries == 0:
+                raise
+            retries -= 1
+            print("Command failed, retrying soon: " + str(e))
+            time.sleep(seconds_between_retries)
+            print("Retrying...")
 
 
 def which(cmd):

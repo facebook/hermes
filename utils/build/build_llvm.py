@@ -66,7 +66,8 @@ def clone_and_patch_llvm(args):
                 _LLVM_REV_DATE,
                 "https://github.com/llvm-mirror/llvm.git",
                 args.llvm_src_dir,
-            ]
+            ],
+            retries=3,
         )
 
     # Checkout a specific revision in LLVM.
