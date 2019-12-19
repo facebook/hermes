@@ -22,6 +22,7 @@ PinnedHermesValue HandleRootOwner::nullPointer_{
 PinnedHermesValue HandleRootOwner::undefinedValue_{
     HermesValue::encodeUndefinedValue()};
 PinnedHermesValue HandleRootOwner::nullValue_{HermesValue::encodeNullValue()};
+PinnedHermesValue HandleRootOwner::emptyValue_{HermesValue::encodeEmptyValue()};
 PinnedHermesValue HandleRootOwner::trueValue_{
     HermesValue::encodeBoolValue(true)};
 PinnedHermesValue HandleRootOwner::falseValue_{

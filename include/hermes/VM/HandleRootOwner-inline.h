@@ -50,6 +50,10 @@ inline Handle<HermesValue> HandleRootOwner::getNullValue() {
   return Handle<HermesValue>(&nullValue_);
 }
 
+inline Handle<HermesValue> HandleRootOwner::getEmptyValue() {
+  return Handle<HermesValue>(&emptyValue_);
+}
+
 inline Handle<HermesValue> HandleRootOwner::getBoolValue(bool b) {
   return Handle<HermesValue>(b ? &trueValue_ : &falseValue_);
 }

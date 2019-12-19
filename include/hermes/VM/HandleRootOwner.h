@@ -85,6 +85,9 @@ class HandleRootOwner {
   /// An efficient way to pass null to a function accepting Handle.
   static Handle<HermesValue> getNullValue();
 
+  /// An efficient way to pass empty to a function accepting Handle.
+  static Handle<HermesValue> getEmptyValue();
+
   /// An efficient way to pass bools to a function accepting Handle.
   static Handle<HermesValue> getBoolValue(bool b);
 
@@ -114,6 +117,8 @@ class HandleRootOwner {
   static PinnedHermesValue undefinedValue_;
   /// Used for efficient construction of Handle(null).
   static PinnedHermesValue nullValue_;
+  /// Used for efficient construction of Handle(empty).
+  static PinnedHermesValue emptyValue_;
   /// Used for efficient construction of Handle(bool).
   static PinnedHermesValue trueValue_;
   static PinnedHermesValue falseValue_;
