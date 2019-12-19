@@ -867,6 +867,47 @@ class ESTreeIRGen {
       IteratorRecord iteratorRecord,
       bool ignoreInnerException);
 
+  /// Used as the stack storages needed for fast iteration.
+  struct IteratorRecordFast {
+    /// Storage for the iterator or the index.
+    /// Set to undefined if iteration is complete.
+    AllocStackInst *iterStorage;
+    /// If this is an array being iterated by index, stores the source.
+    /// Otherwise, stores the `iterator.next` method.
+    AllocStackInst *sourceOrNext;
+  };
+
+  /// Emit the IteratorBeginInst for \p obj, which allows us to iterate arrays
+  /// efficiently.
+  IteratorRecordFast emitGetIteratorFast(Value *obj);
+
+  /// Emit the IteratorNextInst for \p iteratorRecord, which may alter the
+  /// iteratorRecord to indicate completion.
+  Value *emitIteratorNextFast(IteratorRecordFast iteratorRecord) {
+    return Builder.createIteratorNextInst(
+        iteratorRecord.iterStorage, iteratorRecord.sourceOrNext);
+  }
+
+  /// If iteratorRecord.iterStorage is undefined, then iteration is complete
+  /// and the user of the iterator may want to branch to an exit code path.
+  /// \return iteratorRecord.iterStorage === undefined
+  Value *emitIteratorCompleteFast(IteratorRecordFast iteratorRecord) {
+    return Builder.createBinaryOperatorInst(
+        Builder.createLoadStackInst(iteratorRecord.iterStorage),
+        Builder.getLiteralUndefined(),
+        BinaryOperatorInst::OpKind::StrictlyEqualKind);
+  }
+
+  /// Emit the IteratorCloseInst, which will close the iterator if it was
+  /// opened by IteratorBeginInst.
+  /// \param ignoreInnerException ignore any exceptions thrown by `.return()`.
+  Value *emitIteratorCloseFast(
+      IteratorRecordFast iteratorRecord,
+      bool ignoreInnerException) {
+    return Builder.createIteratorCloseInst(
+        iteratorRecord.iterStorage, ignoreInnerException);
+  }
+
   /// Generate code for destructuring assignment to ArrayPattern or
   /// ObjectPattern.
   void emitDestructuringAssignment(

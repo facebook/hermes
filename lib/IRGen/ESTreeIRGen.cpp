@@ -701,6 +701,18 @@ void ESTreeIRGen::emitIteratorClose(
   Builder.setInsertionBlock(noReturn);
 }
 
+ESTreeIRGen::IteratorRecordFast ESTreeIRGen::emitGetIteratorFast(Value *obj) {
+  // Each of these will be modified by "next", so we use a stack storage.
+  auto *iterStorage =
+      Builder.createAllocStackInst(genAnonymousLabelName("iter"));
+  auto *sourceOrNext =
+      Builder.createAllocStackInst(genAnonymousLabelName("sourceOrNext"));
+  Builder.createStoreStackInst(obj, sourceOrNext);
+  auto *iter = Builder.createIteratorBeginInst(sourceOrNext);
+  Builder.createStoreStackInst(iter, iterStorage);
+  return IteratorRecordFast{iterStorage, sourceOrNext};
+}
+
 void ESTreeIRGen::emitDestructuringAssignment(
     bool declInit,
     ESTree::PatternNode *target,
