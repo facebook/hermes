@@ -878,6 +878,30 @@ CompareBranchInst *IRBuilder::createCompareBranchInst(
   return inst;
 }
 
+IteratorBeginInst *IRBuilder::createIteratorBeginInst(
+    AllocStackInst *sourceOrNext) {
+  auto *I = new IteratorBeginInst(sourceOrNext);
+  insert(I);
+  return I;
+}
+
+IteratorNextInst *IRBuilder::createIteratorNextInst(
+    AllocStackInst *iterator,
+    AllocStackInst *sourceOrNext) {
+  auto *I = new IteratorNextInst(iterator, sourceOrNext);
+  insert(I);
+  return I;
+}
+
+IteratorCloseInst *IRBuilder::createIteratorCloseInst(
+    AllocStackInst *iterator,
+    bool ignoreInnerException) {
+  auto *I =
+      new IteratorCloseInst(iterator, getLiteralBool(ignoreInnerException));
+  insert(I);
+  return I;
+}
+
 UnreachableInst *IRBuilder::createUnreachableInst() {
   auto *I = new UnreachableInst();
   insert(I);

@@ -670,6 +670,51 @@ Arguments | %isReturn is an output argument set to true if the user requested a 
 Semantics | If the user requested next(), continue on. If the user requested throw(), throw. If the user requested return(), set %isReturn to true and continue. Subsequent instructions will check %isReturn and execute any `finally` handlers, for example, before returning.
 Effects | May read and write memory. (may throw)
 
+### IteratorBegin
+
+IteratorBegin | _
+Description | Begins array destructuring on a given iterable source.
+Example |  %0 = IteratorBegin %sourceOrNext
+Arguments | %sourceOrNext[in/out] is the stack location for source to destructure from. Is set to source if performing array iteration, else set to the `.next()` method of the iterator.
+Semantics | If %sourceOrNext is an Array then it remains unmodified and the instruction returns `0`, but if it is not, it is replaced with the 'next' method so that it can be called on each step of the iteration and the instruction returns the iterator object. If the `[Symbol.iterator]` function throws, this instruction will throw.
+Effects | May read and write memory, may throw or execute.
+
+### IteratorNext
+
+IteratorNext | _
+Description | Destructures the next value from a given iterator.
+Example |  %0 = IteratorNext %iterator %sourceOrNext
+Arguments | %iterator is the index or the iterator. %sourceOrNext is the input stack location (source to destructure from) or the next method.
+Semantics | If %iterator is an index: if %iterator is less than `%sourceOrNext.length`, reads the value from %sourceOrNext and increments the index, else sets %iterator to undefined and returns undefined. If %iterator is an actual iterator, calls %sourceOrNext as a next method and evaluates to the result value. When iteration is complete, sets %iterator to undefined as a signal that we're done.
+```
+if (typeof %iterator === 'undefined') {
+  return undefined;
+}
+if (typeof %iterator === 'number') {
+  if (%iterator >= %sourceOrNext.length) {
+    %iterator = undefined;
+    return undefined;
+  }
+  return %sourceOrNext[%iterator];
+}
+var iterResult = %sourceOrNext();
+if (iterResult.done) {
+  %iterator = undefined;
+  return undefined;
+}
+return iterResult.value;
+```
+Effects | May read and write memory, may throw or execute.
+
+### IteratorClose
+
+IteratorClose | _
+Description | Closes an iterator if it exists.
+Example |  %0 = IteratorClose %iterator %ignoreInnerException
+Arguments | %iterator is the index or the iterator. %ignoreInnerException is a boolean literal.
+Semantics | If %iterator is an iterator, calls `.return()` on it to close it. Otherwise, this is a no-op. If `.return()` throws, the exception is ignored when %ignoreInnerException is true.
+Effects | May read and write memory, may throw or execute.
+
 ### UnreachableInst
 
 UnreachableInst | _

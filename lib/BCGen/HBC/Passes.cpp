@@ -188,6 +188,11 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
        opIndex == CallBuiltinInst::ThisIdx))
     return true;
 
+  if (isa<IteratorCloseInst>(Inst) &&
+      opIndex == IteratorCloseInst::IgnoreInnerExceptionIdx) {
+    return true;
+  }
+
   return false;
 }
 

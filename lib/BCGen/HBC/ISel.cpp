@@ -1429,6 +1429,31 @@ void HBCISel::generateUnreachableInst(
   emitUnreachableIfDebug();
 }
 
+void HBCISel::generateIteratorBeginInst(
+    hermes::IteratorBeginInst *Inst,
+    hermes::BasicBlock *next) {
+  auto iter = encodeValue(Inst);
+  auto src = encodeValue(Inst->getSourceOrNext());
+  BCFGen_->emitIteratorBegin(iter, src);
+}
+
+void HBCISel::generateIteratorNextInst(
+    hermes::IteratorNextInst *Inst,
+    hermes::BasicBlock *next) {
+  auto dst = encodeValue(Inst);
+  auto iter = encodeValue(Inst->getIterator());
+  auto src = encodeValue(Inst->getSourceOrNext());
+  BCFGen_->emitIteratorNext(dst, iter, src);
+}
+
+void HBCISel::generateIteratorCloseInst(
+    hermes::IteratorCloseInst *Inst,
+    hermes::BasicBlock *next) {
+  auto iter = encodeValue(Inst->getIterator());
+  bool ignoreInnerException = Inst->getIgnoreInnerException();
+  BCFGen_->emitIteratorClose(iter, ignoreInnerException);
+}
+
 void HBCISel::generateSwitchImmInst(
     hermes::SwitchImmInst *Inst,
     hermes::BasicBlock *next) {

@@ -509,6 +509,16 @@ class IRBuilder {
       BasicBlock *trueBlock,
       BasicBlock *falseBlock);
 
+  IteratorBeginInst *createIteratorBeginInst(AllocStackInst *sourceOrNext);
+
+  IteratorNextInst *createIteratorNextInst(
+      AllocStackInst *iterator,
+      AllocStackInst *sourceOrNext);
+
+  IteratorCloseInst *createIteratorCloseInst(
+      AllocStackInst *iterator,
+      bool ignoreInnerException);
+
   UnreachableInst *createUnreachableInst();
 
   /// This is an RAII object that saves and restores the source location of the

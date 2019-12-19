@@ -3005,6 +3005,120 @@ class ResumeGeneratorInst : public Instruction {
   }
 };
 
+class IteratorBeginInst : public Instruction {
+  IteratorBeginInst(const IteratorBeginInst &) = delete;
+  void operator=(const IteratorBeginInst &) = delete;
+
+ public:
+  enum { SourceOrNextIdx };
+
+  explicit IteratorBeginInst(AllocStackInst *sourceOrNext)
+      : Instruction(ValueKind::IteratorBeginInstKind) {
+    pushOperand(sourceOrNext);
+  }
+  explicit IteratorBeginInst(
+      const IteratorBeginInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() const {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return WordBitSet<>{}.set(SourceOrNextIdx);
+  }
+
+  Value *getSourceOrNext() const {
+    return getOperand(SourceOrNextIdx);
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::IteratorBeginInstKind);
+  }
+};
+
+class IteratorNextInst : public Instruction {
+  IteratorNextInst(const IteratorNextInst &) = delete;
+  void operator=(const IteratorNextInst &) = delete;
+
+ public:
+  enum { IteratorIdx, SourceOrNextIdx };
+
+  explicit IteratorNextInst(
+      AllocStackInst *iterator,
+      AllocStackInst *sourceOrNext)
+      : Instruction(ValueKind::IteratorNextInstKind) {
+    pushOperand(iterator);
+    pushOperand(sourceOrNext);
+  }
+  explicit IteratorNextInst(
+      const IteratorNextInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() const {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return WordBitSet<>{}.set(IteratorIdx);
+  }
+
+  Value *getIterator() const {
+    return getOperand(IteratorIdx);
+  }
+  Value *getSourceOrNext() const {
+    return getOperand(SourceOrNextIdx);
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::IteratorNextInstKind);
+  }
+};
+
+class IteratorCloseInst : public Instruction {
+  IteratorCloseInst(const IteratorCloseInst &) = delete;
+  void operator=(const IteratorCloseInst &) = delete;
+
+ public:
+  enum { IteratorIdx, IgnoreInnerExceptionIdx };
+
+  using TargetList = llvm::SmallVector<Value *, 2>;
+
+  explicit IteratorCloseInst(
+      AllocStackInst *iterator,
+      LiteralBool *ignoreInnerException)
+      : Instruction(ValueKind::IteratorCloseInstKind) {
+    pushOperand(iterator);
+    pushOperand(ignoreInnerException);
+  }
+  explicit IteratorCloseInst(
+      const IteratorCloseInst *src,
+      llvm::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  SideEffectKind getSideEffect() const {
+    return SideEffectKind::Unknown;
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  Value *getIterator() const {
+    return getOperand(IteratorIdx);
+  }
+
+  bool getIgnoreInnerException() const {
+    return cast<LiteralBool>(getOperand(IgnoreInnerExceptionIdx))->getValue();
+  }
+
+  static bool classof(const Value *V) {
+    return kindIsA(V->getKind(), ValueKind::IteratorCloseInstKind);
+  }
+};
+
 /// A bytecode version of llvm_unreachable, for use in stubs and similar.
 class UnreachableInst : public Instruction {
   UnreachableInst(const UnreachableInst &) = delete;

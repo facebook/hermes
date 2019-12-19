@@ -206,6 +206,15 @@ class Interpreter {
       Runtime *runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
+
+  static ExecutionStatus caseIteratorBegin(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+  static ExecutionStatus caseIteratorNext(
+      Runtime *runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
 };
 
 } // namespace vm

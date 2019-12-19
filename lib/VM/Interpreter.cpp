@@ -15,6 +15,7 @@
 #include "hermes/Support/Statistic.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
@@ -3273,6 +3274,33 @@ tailCall:
       CASE_OUTOFLINE(PutOwnByVal);
       CASE_OUTOFLINE(PutOwnGetterSetterByVal);
       CASE_OUTOFLINE(DirectEval);
+
+      CASE_OUTOFLINE(IteratorBegin);
+      CASE_OUTOFLINE(IteratorNext);
+      CASE(IteratorClose) {
+        if (LLVM_UNLIKELY(O1REG(IteratorClose).isObject())) {
+          // The iterator must be closed if it's still an object.
+          // That means it was never an index and is not done iterating (a state
+          // which is indicated by `undefined`).
+          if (LLVM_UNLIKELY(
+                  iteratorClose(
+                      runtime,
+                      Handle<JSObject>::vmcast(&O1REG(IteratorClose)),
+                      Runtime::getEmptyValue()) ==
+                  ExecutionStatus::EXCEPTION)) {
+            if (ip->iIteratorClose.op2 &&
+                !isUncatchableError(runtime->thrownValue_)) {
+              // Ignore inner exception.
+              runtime->clearThrownValue();
+            } else {
+              goto exception;
+            }
+          }
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+        }
+        ip = NEXTINST(IteratorClose);
+        DISPATCH;
+      }
 
       CASE(_last) {
         llvm_unreachable("Invalid opcode _last");

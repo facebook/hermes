@@ -657,6 +657,35 @@ DEFINE_OPCODE_0(CompleteGenerator)
 DEFINE_OPCODE_3(CreateGenerator, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateGeneratorLongIndex, Reg8, Reg8, UInt32)
 
+/// Arg1 [out] is the result iterator or index.
+/// Arg2 [in/out] is the source. Output for either the source or next method.
+/// If source is an array with an unmodified [Symbol.iterator], the result is
+/// 0. Else the result is source[Symbol.iterator] and the output is the .next()
+/// method on the iterator.
+/// See IR.md for IteratorBeginInst.
+DEFINE_OPCODE_2(IteratorBegin, Reg8, Reg8)
+
+/// Arg1 [out] is the result, or undefined if done.
+/// Arg2 [in/out] is the iterator or index.
+/// Arg2 [in] is the source or the next method.
+/// If iterator is undefined, result = undefined.
+/// If iterator is a number:
+///   If iterator is less than source.length, return source[iterator++]
+///   Else iterator = undefined and result = undefined
+/// Else:
+///   n = iterator.next()
+///   If n.done, iterator = undefined and result = undefined.
+///   Else result = n.value
+/// See IR.md for IteratorNextInst.
+DEFINE_OPCODE_3(IteratorNext, Reg8, Reg8, Reg8)
+
+/// Arg1 [in] is the iterator or array index.
+/// Arg2 is a bool indicating whether to ignore the inner exception.
+/// If the iterator is an object, call iterator.return().
+/// If Arg2 is true, ignore exceptions which are thrown by iterator.return().
+/// See IR.md for IteratorCloseInst.
+DEFINE_OPCODE_2(IteratorClose, Reg8, UInt8)
+
 // Jump instructions must be defined through the following DEFINE_JUMP macros.
 // The numeric suffix indicates number of operands the instruction takes.
 // The macros will automatically generate two opcodes for each definition,
