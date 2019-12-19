@@ -65,10 +65,10 @@ GCBase::GCBase(
 #ifdef HERMESVM_PLATFORM_LOGGING
   hermesLog(
       "HermesGC",
-      "Initialisation (Init: %dMB, Max: %dMB, Tripwire: %dMB/%" PRId64 "h)",
+      "Initialisation (Init: %dMB, Max: %dMB, Tripwire: %dMB)",
       gcConfig.getInitHeapSize() >> 20,
       gcConfig.getMaxHeapSize() >> 20,
-      gcConfig.getTripwireConfig().getLimit() >> 20));
+      gcConfig.getTripwireConfig().getLimit() >> 20);
 #endif // HERMESVM_PLATFORM_LOGGING
 #ifdef HERMESVM_SANITIZE_HANDLES
   const std::minstd_rand::result_type seed =
