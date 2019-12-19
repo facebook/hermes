@@ -14,6 +14,7 @@
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"
+#include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/SlotAcceptorDefault.h"
 
 #include "llvm/Support/Debug.h"
@@ -28,6 +29,9 @@ namespace vm {
 struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
                                          public WeakRootAcceptor {
   std::vector<CellHeader *> worklist_;
+
+  /// The WeakMap objects that have been discovered to be reachable.
+  std::vector<JSWeakMap *> reachableWeakMaps_;
 
   /// markedSymbols_ represents which symbols have been proven live so far in
   /// a collection. True means that it is live, false means that it could
@@ -51,6 +55,12 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
         "Marked a pointer that the GC didn't allocate");
     CellHeader *header = CellHeader::from(cell);
 #ifdef HERMESVM_SANITIZE_HANDLES
+    /// Make the acceptor idempotent: allow it to be called multiple
+    /// times on the same slot during a collection.  Do this by
+    /// recognizing when the pointer is already a "new" pointer.
+    if (gc.newPointers_.count(header)) {
+      return;
+    }
     // With handle-san on, handle moving pointers here.
     if (header->isMarked()) {
       cell = header->getForwardingPointer()->data();
@@ -65,15 +75,20 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
       newLocation->mark();
       memcpy(newLocation->data(), cell, trimmedSize);
       if (canBeTrimmed) {
-        auto *newCell =
+        auto *newVarCell =
             reinterpret_cast<VariableSizeRuntimeCell *>(newLocation->data());
-        newCell->setSizeDuringGCCompaction(trimmedSize);
-        newCell->getVT()->trim(newCell);
+        newVarCell->setSizeDuringGCCompaction(trimmedSize);
+        newVarCell->getVT()->trim(newVarCell);
       }
       // Make sure to put an element on the worklist that is at the updated
       // location. Don't update the stale address that is about to be free'd.
       header->markWithForwardingPointer(newLocation);
-      worklist_.push_back(newLocation);
+      auto *newCell = newLocation->data();
+      if (newCell->getKind() == CellKind::WeakMapKind) {
+        reachableWeakMaps_.push_back(vmcast<JSWeakMap>(newCell));
+      } else {
+        worklist_.push_back(newLocation);
+      }
       gc.newPointers_.insert(newLocation);
       if (gc.idTracker_.isTrackingIDs()) {
         gc.idTracker_.moveObject(cell, newLocation->data());
@@ -89,7 +104,11 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
       if (cell->getVT()->canBeTrimmed()) {
         cell->getVT()->trim(cell);
       }
-      worklist_.push_back(header);
+      if (cell->getKind() == CellKind::WeakMapKind) {
+        reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
+      } else {
+        worklist_.push_back(header);
+      }
       // Move the pointer from the old pointers to the new pointers.
       gc.pointers_.erase(header);
       gc.newPointers_.insert(header);
@@ -254,16 +273,11 @@ void MallocGC::collect() {
 #ifdef HERMES_SLOW_DEBUG
     clearUnmarkedPropertyMaps();
 #endif
-    while (!acceptor.worklist_.empty()) {
-      CellHeader *header = acceptor.worklist_.back();
-      acceptor.worklist_.pop_back();
-      assert(header->isMarked() && "Pointer on the worklist isn't marked");
-      GCCell *cell = header->data();
-      // Since `markCell` adds onto worklist_, this cannot be expressed as a
-      // normal loop.
-      GCBase::markCell(cell, this, acceptor);
-      allocatedBytes_ += cell->getAllocatedSize();
-    }
+    drainMarkStack(acceptor);
+
+    // The marking loop above will have accumulated WeakMaps;
+    // find things reachable from values of reachable keys.
+    completeWeakMapMarking(acceptor);
 
     // Update weak roots references.
     markWeakRoots(acceptor);
@@ -354,6 +368,50 @@ void MallocGC::collect() {
       allocatedBefore,
       allocatedBytes_);
   checkTripwire(allocatedBytes_);
+}
+
+void MallocGC::drainMarkStack(MarkingAcceptor &acceptor) {
+  while (!acceptor.worklist_.empty()) {
+    CellHeader *header = acceptor.worklist_.back();
+    acceptor.worklist_.pop_back();
+    assert(header->isMarked() && "Pointer on the worklist isn't marked");
+    GCCell *cell = header->data();
+    GCBase::markCell(cell, this, acceptor);
+    allocatedBytes_ += cell->getAllocatedSize();
+  }
+}
+
+void MallocGC::completeWeakMapMarking(MarkingAcceptor &acceptor) {
+  gcheapsize_t weakMapAllocBytes = GCBase::completeWeakMapMarking(
+      this,
+      acceptor,
+      acceptor.reachableWeakMaps_,
+      /*objIsMarked*/
+      [](GCCell *cell) { return CellHeader::from(cell)->isMarked(); },
+      /*markFromVal*/
+      [this, &acceptor](GCCell *valCell, HermesValue &valRef) {
+        CellHeader *valHeader = CellHeader::from(valCell);
+        if (valHeader->isMarked()) {
+#ifdef HERMESVM_SANITIZE_HANDLES
+          valRef.setInGC(
+              HermesValue::encodeObjectValue(
+                  valHeader->getForwardingPointer()->data()),
+              this);
+#endif
+          return false;
+        }
+        acceptor.accept(valRef);
+        drainMarkStack(acceptor);
+        return true;
+      },
+      /*drainMarkStack*/
+      [this](MarkingAcceptor &acceptor) { drainMarkStack(acceptor); });
+
+  acceptor.reachableWeakMaps_.clear();
+  // drainMarkStack will have added the size of every object popped
+  // from the mark stack.  WeakMaps are never pushed on that stack,
+  // but the call above returns their total size.  So add that.
+  allocatedBytes_ += weakMapAllocBytes;
 }
 
 void MallocGC::finalizeAll() {

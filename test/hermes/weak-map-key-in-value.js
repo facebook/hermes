@@ -10,7 +10,6 @@
 // Currently, only gengc has the finer-grained marking that this test tests.
 // TODO(T57727796): leaving that task open for removing the "REQUIRES" below when
 // that is implemented for GenGC as well.
-// REQUIRES: gengc
 
 "use strict"
 
@@ -152,3 +151,23 @@ outerMap = foo5b();
 gc();
 // CHECK-NEXT: 0
 print(HermesInternal.getWeakSize(outerMap));
+
+// This tests the case where a key is reachable only as a property of another
+// WeakMap.
+function foo6() {
+  var key0 = {};
+  var key1 = {};
+  var map0 = new WeakMap();
+  var map1 = new WeakMap();
+  map0.set(key0, key1);
+  map0.set(key1, {y: 17});
+  map1.set({}, {});
+  // Make key0 reachable, which should make key1 reachable in map0.
+  map1.prop = key0;
+  // This order was important to triggering a bug in a previous implementation.
+  return [map1, map0];
+}
+var pair6 = foo6();
+gc();
+// CHECK-NEXT: 2
+print(HermesInternal.getWeakSize(pair6[1]));

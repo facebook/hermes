@@ -13,6 +13,7 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/VTable.h"
 
@@ -363,6 +364,21 @@ bool GCBase::shouldSanitizeHandles() {
   return dist(randomEngine_) < sanitizeRate_;
 }
 #endif
+
+/*static*/
+std::list<detail::WeakRefKey *> GCBase::buildKeyList(
+    GC *gc,
+    JSWeakMap *weakMap) {
+  std::list<detail::WeakRefKey *> res;
+  for (auto iter = weakMap->keys_begin(), end = weakMap->keys_end();
+       iter != end;
+       iter++) {
+    if (iter->getObject(gc)) {
+      res.push_back(&(*iter));
+    }
+  }
+  return res;
+}
 
 /*static*/
 double GCBase::clockDiffSeconds(TimePoint start, TimePoint end) {

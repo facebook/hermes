@@ -10,6 +10,7 @@
 
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/CellKind.h"
+#include "hermes/VM/GCPointer.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/WeakRef.h"
@@ -190,12 +191,20 @@ class JSWeakMapImplBase : public JSObject {
   KeyIterator keys_begin();
   KeyIterator keys_end();
 
-  /// Returns the value corresponding to the given \p key.  Returns
-  /// the empty HermesValue if \p key is not in the map.  May only be
-  /// called during GC.
+  /// Returns a pointer to the HermesValue corresponding to the given \p key.
+  /// Returns nullptr if \p key is not in the map.  May only be
+  /// called during GC.  Note that this returns a pointer into the interior
+  /// of an object; must not be used in contexts where the object might move.
   /// \param gc Used to verify that the call is during GC, and provides
   /// a PointerBase.
-  HermesValue getValueDirect(GC *gc, const WeakRefKey &key);
+  GCHermesValue *getValueDirect(GC *gc, const WeakRefKey &key);
+
+  /// Return a reference to the slot that contains the pointer to the storage
+  /// for the values of the weak map.  Note that this returns a pointer into the
+  /// interior of an object; must not be used in contexts where the object might
+  /// move.
+  /// \param gc Used to verify that the call is during GC.
+  GCPointerBase::StorageType &getValueStorageRef(GC *GC);
 
   /// If the given \p key is in the map, clears the entry
   /// corresponding to \p key -- clears the slot of the WeakRef in

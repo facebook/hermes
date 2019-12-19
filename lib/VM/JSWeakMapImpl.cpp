@@ -7,6 +7,7 @@
 
 #include "hermes/VM/JSWeakMapImpl.h"
 
+#include "hermes/VM/Casting.h"
 #include "hermes/VM/WeakRefHolder.h"
 
 #include "llvm/Support/Debug.h"
@@ -90,13 +91,20 @@ bool JSWeakMapImplBase::clearEntryDirect(GC *gc, const WeakRefKey &key) {
   return true;
 }
 
-HermesValue JSWeakMapImplBase::getValueDirect(GC *gc, const WeakRefKey &key) {
+GCHermesValue *JSWeakMapImplBase::getValueDirect(
+    GC *gc,
+    const WeakRefKey &key) {
   assert(gc->inGC() && "Should only be used by the GC implementation.");
   DenseMapT::iterator it = map_.find(key);
   if (it == map_.end()) {
-    return HermesValue::encodeEmptyValue();
+    return nullptr;
   }
-  return valueStorage_.get(gc->getPointerBase())->at(it->second);
+  return &valueStorage_.get(gc->getPointerBase())->at(it->second);
+}
+
+GCPointerBase::StorageType &JSWeakMapImplBase::getValueStorageRef(GC *gc) {
+  assert(gc->inGC() && "Should only be used by the GC implementation.");
+  return valueStorage_.getLoc(gc);
 }
 
 /// \return true if the \p key exists in the map.
@@ -144,11 +152,8 @@ JSWeakMapImplBase::KeyIterator JSWeakMapImplBase::keys_end() {
 
 JSObject *detail::WeakRefKey::getObject(GC *gc) const {
   assert(gc->inGC() && "Should only be used by the GC implementation.");
-  if (auto val = ref.unsafeGetOptional()) {
-    return *val;
-  } else {
-    return nullptr;
-  }
+  return vmcast_or_null<JSObject>(
+      reinterpret_cast<GCCell *>(ref.unsafeGetSlot()->getPointer()));
 }
 
 void JSWeakMapImplBase::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
