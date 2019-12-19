@@ -237,7 +237,7 @@ var yieldStar = function*() {
 //CHECK-NEXT:%BB14:
 //CHECK-NEXT:  %43 = LoadStackInst %13
 //CHECK-NEXT:  %44 = CallInst %41, %10, %43
-//CHECK-NEXT:  %45 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %44, "iterator.close() did not return an object" : string
+//CHECK-NEXT:  %45 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %44, "iterator.return() did not return an object" : string
 //CHECK-NEXT:  %46 = LoadPropertyInst %44, "done" : string
 //CHECK-NEXT:  %47 = CondBranchInst %46, %BB15, %BB16
 //CHECK-NEXT:%BB13:
@@ -269,7 +269,7 @@ var yieldStar = function*() {
 //CHECK-NEXT:  %65 = SaveAndYieldInst %56, %BB8
 //CHECK-NEXT:%BB22:
 //CHECK-NEXT:  %66 = CallInst %60, %10
-//CHECK-NEXT:  %67 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %66, "iterator.close() did not return an object" : string
+//CHECK-NEXT:  %67 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %66, "iterator.return() did not return an object" : string
 //CHECK-NEXT:  %68 = BranchInst %BB21
 //CHECK-NEXT:%BB21:
 //CHECK-NEXT:  %69 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, "yield* delegate must have a .throw() method" : string

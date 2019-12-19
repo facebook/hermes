@@ -203,7 +203,7 @@ function f2(t) {
 //CHECK-NEXT:  %89 = BranchInst %BB28
 //CHECK-NEXT:%BB27:
 //CHECK-NEXT:  %90 = CallInst %87, %54
-//CHECK-NEXT:  %91 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %90, "iterator.close() did not return an object" : string
+//CHECK-NEXT:  %91 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %90, "iterator.return() did not return an object" : string
 //CHECK-NEXT:  %92 = BranchInst %BB26
 //CHECK-NEXT:%BB26:
 //CHECK-NEXT:  %93 = BranchInst %BB24
@@ -467,7 +467,7 @@ function f4(t) {
 //CHECK-NEXT:  %106 = BranchInst %BB39
 //CHECK-NEXT:%BB38:
 //CHECK-NEXT:  %107 = CallInst %104, %66
-//CHECK-NEXT:  %108 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %107, "iterator.close() did not return an object" : string
+//CHECK-NEXT:  %108 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %107, "iterator.return() did not return an object" : string
 //CHECK-NEXT:  %109 = BranchInst %BB37
 //CHECK-NEXT:%BB37:
 //CHECK-NEXT:  %110 = BranchInst %BB34

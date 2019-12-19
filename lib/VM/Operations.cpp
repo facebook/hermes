@@ -1192,7 +1192,7 @@ CallResult<IteratorRecord> getIterator(
       return ExecutionStatus::EXCEPTION;
     }
     if (!vmisa<Callable>(methodRes->getHermesValue())) {
-      return runtime->raiseTypeError("Iterator method must be callable");
+      return runtime->raiseTypeError("iterator method is not callable");
     }
     method = vmcast<Callable>(methodRes->getHermesValue());
   } else {
@@ -1203,7 +1203,7 @@ CallResult<IteratorRecord> getIterator(
     return ExecutionStatus::EXCEPTION;
   }
   if (LLVM_UNLIKELY(!iteratorRes->isObject())) {
-    return runtime->raiseTypeError("Iterators must be objects");
+    return runtime->raiseTypeError("iterator is not an object");
   }
   auto iterator = runtime->makeHandle<JSObject>(*iteratorRes);
 
@@ -1242,8 +1242,7 @@ CallResult<PseudoHandle<JSObject>> iteratorNext(
     return ExecutionStatus::EXCEPTION;
   }
   if (LLVM_UNLIKELY(!resultRes->isObject())) {
-    return runtime->raiseTypeError(
-        "Iterator .next() method must return an object");
+    return runtime->raiseTypeError("iterator.next() did not return an object");
   }
   return PseudoHandle<JSObject>::create(vmcast<JSObject>(*resultRes));
 }
@@ -1304,7 +1303,8 @@ ExecutionStatus iteratorClose(
     return ExecutionStatus::EXCEPTION;
   }
   if (!innerResultRes->isObject()) {
-    return runtime->raiseTypeError("Iterator result must be an object");
+    return runtime->raiseTypeError(
+        "iterator.return() did not return an object");
   }
   return ExecutionStatus::RETURNED;
 }

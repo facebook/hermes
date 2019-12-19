@@ -191,7 +191,7 @@ var [a, [b = 1, c] = [,2]] = x;
 //CHECK-NEXT:  %133 = BranchInst %BB52
 //CHECK-NEXT:%BB51:
 //CHECK-NEXT:  %134 = CallInst %131, %69
-//CHECK-NEXT:  %135 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %134, "iterator.close() did not return an object" : string
+//CHECK-NEXT:  %135 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %134, "iterator.return() did not return an object" : string
 //CHECK-NEXT:  %136 = BranchInst %BB50
 //CHECK-NEXT:%BB50:
 //CHECK-NEXT:  %137 = BranchInst %BB47
@@ -225,7 +225,7 @@ var [a, [b = 1, c] = [,2]] = x;
 //CHECK-NEXT:  %155 = ReturnInst %154
 //CHECK-NEXT:%BB59:
 //CHECK-NEXT:  %156 = CallInst %152, %6
-//CHECK-NEXT:  %157 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %156, "iterator.close() did not return an object" : string
+//CHECK-NEXT:  %157 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %156, "iterator.return() did not return an object" : string
 //CHECK-NEXT:  %158 = BranchInst %BB58
 //CHECK-NEXT:%BB58:
 //CHECK-NEXT:  %159 = BranchInst %BB23

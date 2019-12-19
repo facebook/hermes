@@ -190,7 +190,7 @@ function forof_break(seq) {
 //CHECK-NEXT:  %36 = CompareBranchInst '===', %35, undefined : undefined, %BB13, %BB14
 //CHECK-NEXT:%BB14:
 //CHECK-NEXT:  %37 = CallInst %35, %8
-//CHECK-NEXT:  %38 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %37, "iterator.close() did not return an object" : string
+//CHECK-NEXT:  %38 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %37, "iterator.return() did not return an object" : string
 //CHECK-NEXT:  %39 = BranchInst %BB13
 //CHECK-NEXT:%BB13:
 //CHECK-NEXT:  %40 = BranchInst %BB2

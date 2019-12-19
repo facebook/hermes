@@ -148,7 +148,7 @@ var {a: [b = 1, e] = g} = x;
 //CHECK-NEXT:  %98 = ReturnInst %97
 //CHECK-NEXT:%BB31:
 //CHECK-NEXT:  %99 = CallInst %95, %33
-//CHECK-NEXT:  %100 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %99, "iterator.close() did not return an object" : string
+//CHECK-NEXT:  %100 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, %99, "iterator.return() did not return an object" : string
 //CHECK-NEXT:  %101 = BranchInst %BB30
 //CHECK-NEXT:%BB30:
 //CHECK-NEXT:  %102 = BranchInst %BB27

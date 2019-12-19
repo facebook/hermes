@@ -1097,7 +1097,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
                 // throw a TypeError exception.
                 emitEnsureObject(
                     innerReturnResult,
-                    "iterator.close() did not return an object");
+                    "iterator.return() did not return an object");
                 // vii. Let done be ? IteratorComplete(innerReturnResult).
                 auto *done = emitIteratorComplete(innerReturnResult);
                 Builder.createCondBranchInst(done, isDoneBB, isNotDoneBB);

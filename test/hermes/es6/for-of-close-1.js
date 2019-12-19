@@ -103,7 +103,7 @@ try {
 //CHECK-NEXT: next() called
 //CHECK-NEXT: 12
 //CHECK-NEXT: return() called
-//CHECK-NEXT: caught TypeError: iterator.close() did not return an object
+//CHECK-NEXT: caught TypeError: iterator.return() did not return an object
 
 
 // Try leaving the loop with an exception.
@@ -261,4 +261,4 @@ try {
 //CHECK-NEXT: next() called
 //CHECK-NEXT: 11
 //CHECK-NEXT: return() called
-//CHECK-NEXT: caught TypeError: iterator.close() did not return an object
+//CHECK-NEXT: caught TypeError: iterator.return() did not return an object

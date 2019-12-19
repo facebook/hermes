@@ -694,7 +694,7 @@ void ESTreeIRGen::emitIteratorClose(
   } else {
     auto *innerResult =
         Builder.createCallInst(returnMethod, iteratorRecord.iterator, {});
-    emitEnsureObject(innerResult, "iterator.close() did not return an object");
+    emitEnsureObject(innerResult, "iterator.return() did not return an object");
     Builder.createBranchInst(noReturn);
   }
 
