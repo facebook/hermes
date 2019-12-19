@@ -36,6 +36,30 @@ function forof_args() {
 print(forof_args(5,6,7));
 //CHECK-NEXT: 5,6,7
 
+function forof_proto() {
+  var arr = [1,,3];
+  arr.__proto__[1] = 'in proto';
+  for(var i of arr) print(i)
+}
+forof_proto();
+// CHECK-NEXT: 1
+// CHECK-NEXT: in proto
+// CHECK-NEXT: 3
+
+function forof_getter() {
+  var arr = [1,,3];
+  Object.defineProperty(arr, '1', {
+    get: function() {
+      return 'in getter';
+    }
+  });
+  for(var i of arr) print(i)
+}
+forof_getter();
+// CHECK-NEXT: 1
+// CHECK-NEXT: in getter
+// CHECK-NEXT: 3
+
 /// Since we can't rely on computer properties yet, this convenience function
 /// initializes obj[@@iterator].
 function iterable(obj) {
@@ -60,14 +84,14 @@ function catcher(target) {
 }
 
 catcher(iterable_to_array, {});
-//CHECK-NEXT: caught: undefined is not a function
+//CHECK-NEXT: caught: iterator method is not callable
 
 // obj[@@iterator] is not a function.
 var obj = {}
 obj[Symbol.iterator] = {}
 
 catcher(iterable_to_array, obj);
-//CHECK-NEXT: caught: Object is not a function
+//CHECK-NEXT: caught: Could not get callable method from object
 
 // obj[@@iterator] doesn't return an object.
 obj[Symbol.iterator] = function() { return 10; }

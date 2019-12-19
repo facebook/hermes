@@ -467,18 +467,19 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   curFunction()->initLabel(forOfStmt, exitBlock, getNextBlock);
 
   auto *exprValue = genExpression(forOfStmt->_right);
-  auto iteratorRecord = emitGetIterator(exprValue);
+  const IteratorRecordFast iteratorRecord = emitGetIteratorFast(exprValue);
 
   Builder.createBranchInst(getNextBlock);
 
+  // Attempt to retrieve the next value. If iteration is complete, finish the
+  // loop. This stays outside the SurroundingTry below because exceptions in
+  // `.next()` should not call `.return()` on the iterator.
   Builder.setInsertionBlock(getNextBlock);
-  auto *nextResult = emitIteratorNext(iteratorRecord);
-  auto *done = emitIteratorComplete(nextResult);
+  auto *nextValue = emitIteratorNextFast(iteratorRecord);
+  auto *done = emitIteratorCompleteFast(iteratorRecord);
   Builder.createCondBranchInst(done, exitBlock, bodyBlock);
 
   Builder.setInsertionBlock(bodyBlock);
-
-  auto *nextValue = emitIteratorValue(nextResult);
 
   emitTryCatchScaffolding(
       getNextBlock,
@@ -499,10 +500,10 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
                                  // the iterator.
                                  if (cfc == ControlFlowChange::Break ||
                                      continueTarget != getNextBlock)
-                                   emitIteratorClose(iteratorRecord, false);
+                                   emitIteratorCloseFast(iteratorRecord, false);
                                }};
 
-        // Note: obtaing the value is not protected, but storing it is.
+        // Note: obtaining the value is not protected, but storing it is.
         createLRef(forOfStmt->_left, false).emitStore(nextValue);
 
         genStatement(forOfStmt->_body);
@@ -514,7 +515,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
       // emitHandler.
       [this, &iteratorRecord](BasicBlock *) {
         auto *catchReg = Builder.createCatchInst();
-        emitIteratorClose(iteratorRecord, true);
+        emitIteratorCloseFast(iteratorRecord, true);
         Builder.createThrowInst(catchReg);
       });
 
