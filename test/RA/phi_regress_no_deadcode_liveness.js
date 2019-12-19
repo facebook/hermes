@@ -12,10 +12,10 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 //CHKRA-LABEL:function b(d) : undefined
 //CHKRA-NEXT:frame = []
 //CHKRA-LABEL:%BB1:
-//CHKRA-NEXT:  {{.*}}  %20 = ReturnInst %1 : undefined
-//CHKRA-LABEL:%BB88:
-//CHKRA-NEXT:  {{.*}}  %265 = LoadPropertyInst %11, "return" : string
-//CHKRA-NEXT:  {{.*}}  %266 = CompareBranchInst '===', %265, %1 : undefined, %BB1, %BB89
+//CHKRA-NEXT:  {{.*}}  %17 = ReturnInst %1 : undefined
+//CHKRA-LABEL:%BB68:
+//CHKRA-NEXT:  $Reg16 @148 [empty]   %208 = IteratorCloseInst %5, false : boolean
+//CHKRA-NEXT:  $Reg16 @149 [empty]   %209 = BranchInst %BB1
 //CHKRA-LABEL:%BB7:
-//CHKRA-NEXT:  {{.*}}  %271 = LoadPropertyInst %11, "return" : string
-//CHKRA-NEXT:  {{.*}}  %272 = CompareBranchInst '===', %271, %1 : undefined, %BB6, %BB90
+//CHKRA-NEXT:  $Reg2 @209 [empty]    %210 = IteratorCloseInst %5, true : boolean
+//CHKRA-NEXT:  $Reg2 @210 [empty]    %211 = BranchInst %BB6

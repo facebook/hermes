@@ -731,7 +731,7 @@ void ESTreeIRGen::emitDestructuringArray(
     bool declInit,
     ESTree::ArrayPatternNode *targetPat,
     Value *source) {
-  auto iteratorRecord = emitGetIterator(source);
+  const IteratorRecordFast iteratorRecord = emitGetIteratorFast(source);
 
   /// iteratorDone = undefined.
   auto *iteratorDone =
@@ -848,15 +848,14 @@ void ESTreeIRGen::emitDestructuringArray(
 
     // notDoneBlock:
     Builder.setInsertionBlock(notDoneBlock);
-    auto *stepResult = emitIteratorNext(iteratorRecord);
-    auto *stepDone = emitIteratorComplete(stepResult);
+    auto *stepValue = emitIteratorNextFast(iteratorRecord);
+    auto *stepDone = emitIteratorCompleteFast(iteratorRecord);
     Builder.createStoreStackInst(stepDone, iteratorDone);
     Builder.createCondBranchInst(
         stepDone, init ? getDefaultBlock : nextBlock, newValueBlock);
 
     // newValueBlock:
     Builder.setInsertionBlock(newValueBlock);
-    auto *stepValue = emitIteratorValue(stepResult);
     Builder.createStoreStackInst(stepValue, value);
     Builder.createBranchInst(nextBlock);
 
@@ -903,7 +902,7 @@ void ESTreeIRGen::emitDestructuringArray(
         Builder.createLoadStackInst(iteratorDone), doneBlock, notDoneBlock);
 
     Builder.setInsertionBlock(notDoneBlock);
-    emitIteratorClose(iteratorRecord, false);
+    emitIteratorCloseFast(iteratorRecord, false);
     Builder.createBranchInst(doneBlock);
 
     Builder.setInsertionBlock(doneBlock);
@@ -921,7 +920,7 @@ void ESTreeIRGen::emitDestructuringArray(
         Builder.createLoadStackInst(iteratorDone), doneBlock, notDoneBlock);
 
     Builder.setInsertionBlock(notDoneBlock);
-    emitIteratorClose(iteratorRecord, true);
+    emitIteratorCloseFast(iteratorRecord, true);
     Builder.createBranchInst(doneBlock);
 
     Builder.setInsertionBlock(doneBlock);
@@ -944,7 +943,7 @@ void ESTreeIRGen::emitDestructuringArray(
 void ESTreeIRGen::emitRestElement(
     bool declInit,
     ESTree::RestElementNode *rest,
-    hermes::irgen::ESTreeIRGen::IteratorRecord iteratorRecord,
+    hermes::irgen::ESTreeIRGen::IteratorRecordFast iteratorRecord,
     hermes::AllocStackInst *iteratorDone,
     SharedExceptionHandler *handler) {
   // 13.3.3.8 BindingRestElement:...BindingIdentifier
@@ -973,14 +972,13 @@ void ESTreeIRGen::emitRestElement(
 
   // notDoneBlock:
   Builder.setInsertionBlock(notDoneBlock);
-  auto *stepResult = emitIteratorNext(iteratorRecord);
-  auto *stepDone = emitIteratorComplete(stepResult);
+  auto *stepValue = emitIteratorNextFast(iteratorRecord);
+  auto *stepDone = emitIteratorCompleteFast(iteratorRecord);
   Builder.createStoreStackInst(stepDone, iteratorDone);
   Builder.createCondBranchInst(stepDone, doneBlock, newValueBlock);
 
   // newValueBlock:
   Builder.setInsertionBlock(newValueBlock);
-  auto *stepValue = emitIteratorValue(stepResult);
   auto *nVal = Builder.createLoadStackInst(n);
   nVal->setType(Type::createNumber());
   // A[n] = stepValue;

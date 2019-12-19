@@ -936,7 +936,7 @@ class ESTreeIRGen {
   void emitRestElement(
       bool declInit,
       ESTree::RestElementNode *rest,
-      IteratorRecord iteratorRecord,
+      IteratorRecordFast iteratorRecord,
       AllocStackInst *iteratorDone,
       SharedExceptionHandler *handler);
 
