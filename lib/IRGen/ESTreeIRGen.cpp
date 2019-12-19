@@ -635,7 +635,7 @@ Value *ESTreeIRGen::emitIterarorSymbol() {
       Builder.createTryLoadGlobalPropertyInst("Symbol"), "iterator");
 }
 
-ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIterator(Value *obj) {
+ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetIteratorSlow(Value *obj) {
   auto *method = Builder.createLoadPropertyInst(obj, emitIterarorSymbol());
   auto *iterator = Builder.createCallInst(method, obj, {});
 
@@ -645,23 +645,23 @@ ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIterator(Value *obj) {
   return {iterator, nextMethod};
 }
 
-Value *ESTreeIRGen::emitIteratorNext(IteratorRecord iteratorRecord) {
+Value *ESTreeIRGen::emitIteratorNextSlow(IteratorRecordSlow iteratorRecord) {
   auto *nextResult = Builder.createCallInst(
       iteratorRecord.nextMethod, iteratorRecord.iterator, {});
   emitEnsureObject(nextResult, "iterator.next() did not return an object");
   return nextResult;
 }
 
-Value *ESTreeIRGen::emitIteratorComplete(Value *iterResult) {
+Value *ESTreeIRGen::emitIteratorCompleteSlow(Value *iterResult) {
   return Builder.createLoadPropertyInst(iterResult, "done");
 }
 
-Value *ESTreeIRGen::emitIteratorValue(Value *iterResult) {
+Value *ESTreeIRGen::emitIteratorValueSlow(Value *iterResult) {
   return Builder.createLoadPropertyInst(iterResult, "value");
 }
 
-void ESTreeIRGen::emitIteratorClose(
-    hermes::irgen::ESTreeIRGen::IteratorRecord iteratorRecord,
+void ESTreeIRGen::emitIteratorCloseSlow(
+    hermes::irgen::ESTreeIRGen::IteratorRecordSlow iteratorRecord,
     bool ignoreInnerException) {
   auto *haveReturn = Builder.createBasicBlock(Builder.getFunction());
   auto *noReturn = Builder.createBasicBlock(Builder.getFunction());
@@ -701,7 +701,7 @@ void ESTreeIRGen::emitIteratorClose(
   Builder.setInsertionBlock(noReturn);
 }
 
-ESTreeIRGen::IteratorRecordFast ESTreeIRGen::emitGetIteratorFast(Value *obj) {
+ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIterator(Value *obj) {
   // Each of these will be modified by "next", so we use a stack storage.
   auto *iterStorage =
       Builder.createAllocStackInst(genAnonymousLabelName("iter"));
@@ -710,7 +710,7 @@ ESTreeIRGen::IteratorRecordFast ESTreeIRGen::emitGetIteratorFast(Value *obj) {
   Builder.createStoreStackInst(obj, sourceOrNext);
   auto *iter = Builder.createIteratorBeginInst(sourceOrNext);
   Builder.createStoreStackInst(iter, iterStorage);
-  return IteratorRecordFast{iterStorage, sourceOrNext};
+  return IteratorRecord{iterStorage, sourceOrNext};
 }
 
 void ESTreeIRGen::emitDestructuringAssignment(
@@ -731,7 +731,7 @@ void ESTreeIRGen::emitDestructuringArray(
     bool declInit,
     ESTree::ArrayPatternNode *targetPat,
     Value *source) {
-  const IteratorRecordFast iteratorRecord = emitGetIteratorFast(source);
+  const IteratorRecord iteratorRecord = emitGetIterator(source);
 
   /// iteratorDone = undefined.
   auto *iteratorDone =
@@ -848,8 +848,8 @@ void ESTreeIRGen::emitDestructuringArray(
 
     // notDoneBlock:
     Builder.setInsertionBlock(notDoneBlock);
-    auto *stepValue = emitIteratorNextFast(iteratorRecord);
-    auto *stepDone = emitIteratorCompleteFast(iteratorRecord);
+    auto *stepValue = emitIteratorNext(iteratorRecord);
+    auto *stepDone = emitIteratorComplete(iteratorRecord);
     Builder.createStoreStackInst(stepDone, iteratorDone);
     Builder.createCondBranchInst(
         stepDone, init ? getDefaultBlock : nextBlock, newValueBlock);
@@ -902,7 +902,7 @@ void ESTreeIRGen::emitDestructuringArray(
         Builder.createLoadStackInst(iteratorDone), doneBlock, notDoneBlock);
 
     Builder.setInsertionBlock(notDoneBlock);
-    emitIteratorCloseFast(iteratorRecord, false);
+    emitIteratorClose(iteratorRecord, false);
     Builder.createBranchInst(doneBlock);
 
     Builder.setInsertionBlock(doneBlock);
@@ -920,7 +920,7 @@ void ESTreeIRGen::emitDestructuringArray(
         Builder.createLoadStackInst(iteratorDone), doneBlock, notDoneBlock);
 
     Builder.setInsertionBlock(notDoneBlock);
-    emitIteratorCloseFast(iteratorRecord, true);
+    emitIteratorClose(iteratorRecord, true);
     Builder.createBranchInst(doneBlock);
 
     Builder.setInsertionBlock(doneBlock);
@@ -943,7 +943,7 @@ void ESTreeIRGen::emitDestructuringArray(
 void ESTreeIRGen::emitRestElement(
     bool declInit,
     ESTree::RestElementNode *rest,
-    hermes::irgen::ESTreeIRGen::IteratorRecordFast iteratorRecord,
+    hermes::irgen::ESTreeIRGen::IteratorRecord iteratorRecord,
     hermes::AllocStackInst *iteratorDone,
     SharedExceptionHandler *handler) {
   // 13.3.3.8 BindingRestElement:...BindingIdentifier
@@ -972,8 +972,8 @@ void ESTreeIRGen::emitRestElement(
 
   // notDoneBlock:
   Builder.setInsertionBlock(notDoneBlock);
-  auto *stepValue = emitIteratorNextFast(iteratorRecord);
-  auto *stepDone = emitIteratorCompleteFast(iteratorRecord);
+  auto *stepValue = emitIteratorNext(iteratorRecord);
+  auto *stepDone = emitIteratorComplete(iteratorRecord);
   Builder.createStoreStackInst(stepDone, iteratorDone);
   Builder.createCondBranchInst(stepDone, doneBlock, newValueBlock);
 

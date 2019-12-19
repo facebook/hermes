@@ -822,7 +822,7 @@ class ESTreeIRGen {
   Value *emitIterarorSymbol();
 
   /// IteratorRecord as defined in ES2018 7.4.1 GetIterator
-  struct IteratorRecord {
+  struct IteratorRecordSlow {
     Value *iterator;
     Value *nextMethod;
   };
@@ -833,8 +833,11 @@ class ESTreeIRGen {
   /// Call obj[@@iterator], which should return an iterator, and return the
   /// iterator itself and its \c next() method.
   ///
+  /// NOTE: This API is slow and should only be used if it is necessary to
+  /// provide a value to the `next()` method on the iterator.
+  ///
   /// \return (iterator, nextMethod)
-  IteratorRecord emitGetIterator(Value *obj);
+  IteratorRecordSlow emitGetIteratorSlow(Value *obj);
 
   /// ES2018 7.4.2 IteratorNext
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratornext
@@ -843,19 +846,19 @@ class ESTreeIRGen {
   /// object.
   ///
   /// \return the result object.
-  Value *emitIteratorNext(IteratorRecord iteratorRecord);
+  Value *emitIteratorNextSlow(IteratorRecordSlow iteratorRecord);
 
   /// ES2018 7.4.3 IteratorComplete
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratorcomplete
   ///
   /// \return \c iterResult.done
-  Value *emitIteratorComplete(Value *iterResult);
+  Value *emitIteratorCompleteSlow(Value *iterResult);
 
   /// ES2018 7.4.4 IteratorValue
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratorvalue
   ///
   /// \return \c iterResult.value
-  Value *emitIteratorValue(Value *iterResult);
+  Value *emitIteratorValueSlow(Value *iterResult);
 
   /// ES2018 7.4.6 IteratorClose
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratorclose
@@ -863,12 +866,12 @@ class ESTreeIRGen {
   /// \param ignoreInnerException if set, exceptions thrown by the \c
   ///     iterator.return() method will be ignored and its result will not be
   ///     checked whether it is an object.
-  void emitIteratorClose(
-      IteratorRecord iteratorRecord,
+  void emitIteratorCloseSlow(
+      IteratorRecordSlow iteratorRecord,
       bool ignoreInnerException);
 
   /// Used as the stack storages needed for fast iteration.
-  struct IteratorRecordFast {
+  struct IteratorRecord {
     /// Storage for the iterator or the index.
     /// Set to undefined if iteration is complete.
     AllocStackInst *iterStorage;
@@ -879,11 +882,11 @@ class ESTreeIRGen {
 
   /// Emit the IteratorBeginInst for \p obj, which allows us to iterate arrays
   /// efficiently.
-  IteratorRecordFast emitGetIteratorFast(Value *obj);
+  IteratorRecord emitGetIterator(Value *obj);
 
   /// Emit the IteratorNextInst for \p iteratorRecord, which may alter the
   /// iteratorRecord to indicate completion.
-  Value *emitIteratorNextFast(IteratorRecordFast iteratorRecord) {
+  Value *emitIteratorNext(IteratorRecord iteratorRecord) {
     return Builder.createIteratorNextInst(
         iteratorRecord.iterStorage, iteratorRecord.sourceOrNext);
   }
@@ -891,7 +894,7 @@ class ESTreeIRGen {
   /// If iteratorRecord.iterStorage is undefined, then iteration is complete
   /// and the user of the iterator may want to branch to an exit code path.
   /// \return iteratorRecord.iterStorage === undefined
-  Value *emitIteratorCompleteFast(IteratorRecordFast iteratorRecord) {
+  Value *emitIteratorComplete(IteratorRecord iteratorRecord) {
     return Builder.createBinaryOperatorInst(
         Builder.createLoadStackInst(iteratorRecord.iterStorage),
         Builder.getLiteralUndefined(),
@@ -901,8 +904,8 @@ class ESTreeIRGen {
   /// Emit the IteratorCloseInst, which will close the iterator if it was
   /// opened by IteratorBeginInst.
   /// \param ignoreInnerException ignore any exceptions thrown by `.return()`.
-  Value *emitIteratorCloseFast(
-      IteratorRecordFast iteratorRecord,
+  Value *emitIteratorClose(
+      IteratorRecord iteratorRecord,
       bool ignoreInnerException) {
     return Builder.createIteratorCloseInst(
         iteratorRecord.iterStorage, ignoreInnerException);
@@ -936,7 +939,7 @@ class ESTreeIRGen {
   void emitRestElement(
       bool declInit,
       ESTree::RestElementNode *rest,
-      IteratorRecordFast iteratorRecord,
+      IteratorRecord iteratorRecord,
       AllocStackInst *iteratorDone,
       SharedExceptionHandler *handler);
 

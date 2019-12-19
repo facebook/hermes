@@ -467,7 +467,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   curFunction()->initLabel(forOfStmt, exitBlock, getNextBlock);
 
   auto *exprValue = genExpression(forOfStmt->_right);
-  const IteratorRecordFast iteratorRecord = emitGetIteratorFast(exprValue);
+  const IteratorRecord iteratorRecord = emitGetIterator(exprValue);
 
   Builder.createBranchInst(getNextBlock);
 
@@ -475,8 +475,8 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   // loop. This stays outside the SurroundingTry below because exceptions in
   // `.next()` should not call `.return()` on the iterator.
   Builder.setInsertionBlock(getNextBlock);
-  auto *nextValue = emitIteratorNextFast(iteratorRecord);
-  auto *done = emitIteratorCompleteFast(iteratorRecord);
+  auto *nextValue = emitIteratorNext(iteratorRecord);
+  auto *done = emitIteratorComplete(iteratorRecord);
   Builder.createCondBranchInst(done, exitBlock, bodyBlock);
 
   Builder.setInsertionBlock(bodyBlock);
@@ -500,7 +500,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
                                  // the iterator.
                                  if (cfc == ControlFlowChange::Break ||
                                      continueTarget != getNextBlock)
-                                   emitIteratorCloseFast(iteratorRecord, false);
+                                   emitIteratorClose(iteratorRecord, false);
                                }};
 
         // Note: obtaining the value is not protected, but storing it is.
@@ -515,7 +515,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
       // emitHandler.
       [this, &iteratorRecord](BasicBlock *) {
         auto *catchReg = Builder.createCatchInst();
-        emitIteratorCloseFast(iteratorRecord, true);
+        emitIteratorClose(iteratorRecord, true);
         Builder.createThrowInst(catchReg);
       });
 

@@ -1009,7 +1009,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
   auto *resumeBB = Builder.createBasicBlock(function);
 
   auto *exprValue = genExpression(Y->_argument);
-  auto iteratorRecord = emitGetIterator(exprValue);
+  IteratorRecordSlow iteratorRecord = emitGetIteratorSlow(exprValue);
 
   // The "received" value when the user resumes the generator.
   // Initialized to undefined on the first run, then stored to immediately
@@ -1044,7 +1044,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
   emitEnsureObject(nextResult, "iterator.next() did not return an object");
 
   Builder.createStoreStackInst(nextResult, result);
-  auto *done = emitIteratorComplete(nextResult);
+  auto *done = emitIteratorCompleteSlow(nextResult);
   Builder.createCondBranchInst(done, exitBlock, bodyBlock);
 
   Builder.setInsertionBlock(bodyBlock);
@@ -1099,12 +1099,12 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
                     innerReturnResult,
                     "iterator.return() did not return an object");
                 // vii. Let done be ? IteratorComplete(innerReturnResult).
-                auto *done = emitIteratorComplete(innerReturnResult);
+                auto *done = emitIteratorCompleteSlow(innerReturnResult);
                 Builder.createCondBranchInst(done, isDoneBB, isNotDoneBB);
 
                 Builder.setInsertionBlock(isDoneBB);
                 // viii. 1. Let value be ? IteratorValue(innerReturnResult).
-                auto *value = emitIteratorValue(innerReturnResult);
+                auto *value = emitIteratorValueSlow(innerReturnResult);
                 genFinallyBeforeControlChange(
                     curFunction()->surroundingTry,
                     nullptr,
@@ -1179,7 +1179,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         emitEnsureObject(
             innerResult, "iterator.throw() did not return an object");
         // ii. 5. Let done be ? IteratorComplete(innerResult).
-        auto *done = emitIteratorComplete(innerResult);
+        auto *done = emitIteratorCompleteSlow(innerResult);
         Builder.createCondBranchInst(done, isDoneBB, isNotDoneBB);
 
         // ii. 6. If done is true, then return ? IteratorValue(innerResult).
@@ -1196,7 +1196,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         // going to terminate the yield* loop. But first we need to give
         // iterator a chance to clean up.
         Builder.setInsertionBlock(noThrowMethodBB);
-        emitIteratorClose(iteratorRecord, false);
+        emitIteratorCloseSlow(iteratorRecord, false);
         genBuiltinCall(
             BuiltinMethod::HermesBuiltin_throwTypeError,
             {Builder.getLiteralString(
@@ -1208,7 +1208,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
 
   Builder.setInsertionBlock(exitBlock);
 
-  return emitIteratorValue(Builder.createLoadStackInst(result));
+  return emitIteratorValueSlow(Builder.createLoadStackInst(result));
 }
 
 Value *ESTreeIRGen::genResumeGenerator(
