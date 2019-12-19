@@ -819,7 +819,7 @@ class ESTreeIRGen {
   void emitEnsureObject(Value *value, StringRef message);
 
   /// \return the internal value @@iterator
-  Value *emitIterarorSymbol();
+  Value *emitIteratorSymbol();
 
   /// IteratorRecord as defined in ES2018 7.4.1 GetIterator
   struct IteratorRecordSlow {

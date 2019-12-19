@@ -628,15 +628,15 @@ void ESTreeIRGen::emitEnsureObject(Value *value, StringRef message) {
       {value, Builder.getLiteralString(message)});
 }
 
-Value *ESTreeIRGen::emitIterarorSymbol() {
-  // FIXME: use the builtin value of @@iteraror. Symbol could have been
+Value *ESTreeIRGen::emitIteratorSymbol() {
+  // FIXME: use the builtin value of @@iterator. Symbol could have been
   // overridden.
   return Builder.createLoadPropertyInst(
       Builder.createTryLoadGlobalPropertyInst("Symbol"), "iterator");
 }
 
 ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetIteratorSlow(Value *obj) {
-  auto *method = Builder.createLoadPropertyInst(obj, emitIterarorSymbol());
+  auto *method = Builder.createLoadPropertyInst(obj, emitIteratorSymbol());
   auto *iterator = Builder.createCallInst(method, obj, {});
 
   emitEnsureObject(iterator, "iterator is not an object");
