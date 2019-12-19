@@ -28,6 +28,7 @@ VTable SegmentedArray::Segment::vt(
     VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
                                  nullptr,
                                  nullptr,
+                                 nullptr,
                                  nullptr});
 
 void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
@@ -91,6 +92,7 @@ VTable SegmentedArray::vt(
     _trimCallback,
     nullptr, // externalMemorySize
     VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
+                                 nullptr,
                                  nullptr,
                                  nullptr,
                                  nullptr});

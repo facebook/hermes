@@ -35,6 +35,7 @@ struct VTable {
     using NameCallback = std::string(GCCell *, GC *);
     using AddEdgesCallback = void(GCCell *, GC *, HeapSnapshot &);
     using AddNodesCallback = void(GCCell *, GC *, HeapSnapshot &);
+    using AddLocationsCallback = void(GCCell *, GC *, HeapSnapshot &);
 
    public:
     /// Construct a HeapSnapshotMetadata, that is used by the GC to decide how
@@ -56,11 +57,13 @@ struct VTable {
         HeapSnapshot::NodeType nodeType,
         NameCallback *name,
         AddEdgesCallback *addEdges,
-        AddNodesCallback *addNodes)
+        AddNodesCallback *addNodes,
+        AddLocationsCallback *addLocations)
         : nodeType_(nodeType),
           name_(name),
           addEdges_(addEdges),
-          addNodes_(addNodes) {}
+          addNodes_(addNodes),
+          addLocations_(addLocations) {}
 
     HeapSnapshot::NodeType nodeType() const {
       return nodeType_;
@@ -70,12 +73,14 @@ struct VTable {
     std::string defaultNameForNode(GCCell *cell) const;
     void addEdges(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
     void addNodes(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
+    void addLocations(GCCell *cell, GC *gc, HeapSnapshot &snap) const;
 
    private:
     const HeapSnapshot::NodeType nodeType_;
     NameCallback *const name_;
     AddEdgesCallback *const addEdges_;
     AddNodesCallback *const addNodes_;
+    AddLocationsCallback *const addLocations_;
   };
 
   // Value is 64 bits to make sure it can be used as a pointer in both 32 and
@@ -138,6 +143,7 @@ struct VTable {
       ExternalMemorySize *externalMemorySize = nullptr,
       HeapSnapshotMetadata snapshotMetaData =
           HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
+                               nullptr,
                                nullptr,
                                nullptr,
                                nullptr})

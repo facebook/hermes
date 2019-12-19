@@ -34,6 +34,7 @@ ObjectVTable JSObject::vt{
         VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                      JSObject::_snapshotNameImpl,
                                      JSObject::_snapshotAddEdgesImpl,
+                                     nullptr,
                                      nullptr}),
     JSObject::_getOwnIndexedRangeImpl,
     JSObject::_haveOwnIndexedImpl,

@@ -99,7 +99,8 @@ VTable HiddenClass::vt{
     VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Object,
                                  HiddenClass::_snapshotNameImpl,
                                  HiddenClass::_snapshotAddEdgesImpl,
-                                 HiddenClass::_snapshotAddNodesImpl}};
+                                 HiddenClass::_snapshotAddNodesImpl,
+                                 nullptr}};
 
 void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const HiddenClass *>(cell);

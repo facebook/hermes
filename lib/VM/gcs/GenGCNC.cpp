@@ -1543,6 +1543,9 @@ void GenGC::createSnapshot(llvm::raw_ostream &os) {
   snap.endSection(HeapSnapshot::Section::Edges);
 
   snap.beginSection(HeapSnapshot::Section::Locations);
+  forAllObjs([&snap, this](GCCell *cell) {
+    cell->getVT()->snapshotMetaData.addLocations(cell, this, snap);
+  });
   snap.endSection(HeapSnapshot::Section::Locations);
 
 #ifdef HERMES_SLOW_DEBUG

@@ -801,6 +801,7 @@ const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
         HeapSnapshot::NodeType::String,
         DynamicStringPrimitive<T, Uniqued>::_snapshotNameImpl,
         nullptr,
+        nullptr,
         nullptr});
 
 using DynamicUTF16StringPrimitive =
@@ -826,7 +827,8 @@ const VTable ExternalStringPrimitive<T>::vt = VTable(
         HeapSnapshot::NodeType::String,
         ExternalStringPrimitive<T>::_snapshotNameImpl,
         ExternalStringPrimitive<T>::_snapshotAddEdgesImpl,
-        ExternalStringPrimitive<T>::_snapshotAddNodesImpl});
+        ExternalStringPrimitive<T>::_snapshotAddNodesImpl,
+        nullptr});
 
 using ExternalUTF16StringPrimitive = ExternalStringPrimitive<char16_t>;
 using ExternalASCIIStringPrimitive = ExternalStringPrimitive<char>;
@@ -845,7 +847,8 @@ const VTable BufferedStringPrimitive<T>::vt = VTable(
         HeapSnapshot::NodeType::String,
         BufferedStringPrimitive<T>::_snapshotNameImpl,
         BufferedStringPrimitive<T>::_snapshotAddEdgesImpl,
-        BufferedStringPrimitive<T>::_snapshotAddNodesImpl});
+        BufferedStringPrimitive<T>::_snapshotAddNodesImpl,
+        nullptr});
 
 using BufferedUTF16StringPrimitive = BufferedStringPrimitive<char16_t>;
 using BufferedASCIIStringPrimitive = BufferedStringPrimitive<char>;

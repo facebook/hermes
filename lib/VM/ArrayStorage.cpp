@@ -27,6 +27,7 @@ VTable ArrayStorage::vt(
     VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Array,
                                  nullptr,
                                  nullptr,
+                                 nullptr,
                                  nullptr});
 
 void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
