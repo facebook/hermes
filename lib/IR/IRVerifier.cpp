@@ -249,7 +249,6 @@ void Verifier::beforeVisitInstruction(const Instruction &Inst) {
   for (unsigned i = 0; i < Inst.getNumOperands(); i++) {
     auto Operand = Inst.getOperand(i);
     Assert(Operand != nullptr, "Invalid operand");
-    Assert(Inst.canSetOperand(Operand->getKind(), i), "Invalid operand kind");
     Assert(
         getUsersSetForValue(Operand).count(&Inst) == 1,
         "This instruction is not in the User list of the operand");

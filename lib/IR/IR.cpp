@@ -253,17 +253,6 @@ void Instruction::pushOperand(Value *Val) {
   setOperand(Val, getNumOperands() - 1);
 }
 
-bool Instruction::canSetOperand(ValueKind kind, unsigned index) const {
-  switch (getKind()) {
-    default:
-      llvm_unreachable("Invalid kind");
-#define DEF_VALUE(XX, PARENT) \
-  case ValueKind::XX##Kind:   \
-    return cast<XX>(this)->canSetOperandImpl(kind, index);
-#include "hermes/IR/Instrs.def"
-  }
-}
-
 void Instruction::setOperand(Value *Val, unsigned Index) {
   assert(Index < Operands.size() && "Not all operands have been pushed!");
 
@@ -282,7 +271,6 @@ void Instruction::setOperand(Value *Val, unsigned Index) {
 
   // Register this instruction as a user of the new value and set the operand.
   if (Val) {
-    assert(canSetOperand(Val->getKind(), Index) && "Unsupported operand kind!");
     Operands[Index] = Val->addUser(this);
   } else {
     Operands[Index] = {nullptr, 0};

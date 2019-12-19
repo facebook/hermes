@@ -920,18 +920,6 @@ class Instruction : public ilist_node_with_parent<Instruction, BasicBlock>,
   unsigned getNumOperands() const;
   void removeOperand(unsigned index);
 
-  /// Check if setOperand(val, index) is valid where val->getKind() == kind.
-  /// \param kind ValueKind of the new value.
-  /// \param index Index of the operand to replace.
-  /// \return True if \p index is in range and \p kind is valid for that index.
-  ///
-  /// NOTE: When defining canSetOperandImpl in derived classes, keep in mind
-  /// that the restrictions it imposes must be respected *everywhere* in the
-  /// lowering/optimization pipeline. For example, an operand should never be
-  /// restricted to a specific kind of instruction because the SpillRegisters
-  /// pass could change it.
-  bool canSetOperand(ValueKind kind, unsigned index) const;
-
   /// Returns a vector of flags indicating which operands the instruction writes
   /// to.
   WordBitSet<> getChangedOperands();
