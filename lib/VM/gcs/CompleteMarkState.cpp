@@ -86,6 +86,8 @@ void CompleteMarkState::drainMarkStack(
     // skipped for fixed sized cells.
     numPtrsPushedByParent = 0;
 
+    // "Proper" WeakMap marking provoked a bug.  Disabling temporarily:
+#if 0
     // Don't mark through JSWeakMaps.  (Presently, this check is very
     // specific.  If there are ever other cell kinds that need special
     // weak marking handling, we could put a boolean in the vtable or
@@ -95,6 +97,9 @@ void CompleteMarkState::drainMarkStack(
     } else {
       GCBase::markCell(cell, gc, acceptor);
     }
+#else
+    GCBase::markCell(cell, gc, acceptor);
+#endif
 
     // All fields of a fixed-sized cell should be marked by this point, but var
     // sized GCCells may not. Pop if the last round of marking pushed nothing,
