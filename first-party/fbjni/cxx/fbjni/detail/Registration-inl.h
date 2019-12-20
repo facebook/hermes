@@ -119,22 +119,22 @@ struct MethodWrapper {
 };
 
 template<typename F, F func, typename C, typename R, typename... Args>
-inline NativeMethodWrapper* exceptionWrapJNIMethod(R (*)(JNIEnv*, C, Args... args)) {
+constexpr inline void* exceptionWrapJNIMethod(R (*)(JNIEnv*, C, Args... args)) {
   // This intentionally erases the real type; JNI will do it anyway
-  return reinterpret_cast<NativeMethodWrapper*>(&(BareJniWrapper<F, func, C, R, Args...>::call));
+  return (void*)(&(BareJniWrapper<F, func, C, R, Args...>::call));
 }
 
 template<typename F, F func, typename C, typename R, typename... Args>
-inline NativeMethodWrapper* exceptionWrapJNIMethod(R (*)(alias_ref<C>, Args... args)) {
+constexpr inline void* exceptionWrapJNIMethod(R (*)(alias_ref<C>, Args... args)) {
   // This intentionally erases the real type; JNI will do it anyway
-  return reinterpret_cast<NativeMethodWrapper*>(&(FunctionWrapper<F, func, C, R, Args...>::call));
+  return (void*)(&(FunctionWrapper<F, func, C, R, Args...>::call));
 }
 
 template<typename M, M method, typename C, typename R, typename... Args>
-inline NativeMethodWrapper* exceptionWrapJNIMethod(R (C::*method0)(Args... args)) {
+constexpr inline void* exceptionWrapJNIMethod(R (C::*method0)(Args... args)) {
   (void)method0;
   // This intentionally erases the real type; JNI will do it anyway
-  return reinterpret_cast<NativeMethodWrapper*>(&(MethodWrapper<M, method, C, R, Args...>::call));
+  return (void*)(&(MethodWrapper<M, method, C, R, Args...>::call));
 }
 
 template<typename R, typename C, typename... Args>

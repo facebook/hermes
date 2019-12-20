@@ -154,18 +154,11 @@ auto JavaClass<T, B, J>::self() const noexcept -> javaobject {
 
 // jclass //////////////////////////////////////////////////////////////////////////////////////////
 
-namespace detail {
-
-// This is not a real type.  It is used so people won't accidentally
-// use a void* to initialize a NativeMethod.
-struct NativeMethodWrapper;
-
-}
 
 struct NativeMethod {
   const char* name;
   const char* descriptor;
-  detail::NativeMethodWrapper* wrapper;
+  void* wrapper;
 };
 
 inline local_ref<JClass> JClass::getSuperclass() const noexcept {
