@@ -329,7 +329,7 @@ class GCBase {
       FirstNonReservedID,
     };
 
-    explicit IDTracker() = default;
+    explicit IDTracker();
 
     /// Return true if IDs are being tracked.
     inline bool isTrackingIDs() const;
@@ -376,18 +376,17 @@ class GCBase {
     /// Get the next unique native ID for a chunk of native memory.
     inline HeapSnapshot::NodeID nextNativeID();
 
-    /// JS heap nodes are represented by even-numbered IDs, while native nodes
-    /// are represented with odd-numbered IDs. This is not a guarantee of the
-    /// system, but an implementation detail.
+    /// JS heap nodes are represented by odd-numbered IDs, while native nodes
+    /// are represented with even-numbered IDs. This requirement is enforced by
+    /// the Chrome snapshot viewer.
     static constexpr HeapSnapshot::NodeID kIDStep = 2;
 
     /// The next available ID to assign to an object. Object IDs are not
     /// recycled so that snapshots don't confuse two objects with each other.
-    /// NOTE: Need to ensure that this starts on an even number, so check if
-    /// the first non-reserved ID is even, if not add one.
+    /// NOTE: Need to ensure that this starts on an odd number, so check if
+    /// the first non-reserved ID is odd, if not add one.
     uint64_t nextID_{
-        static_cast<uint64_t>(ReservedObjectID::FirstNonReservedID) +
-        static_cast<uint64_t>(ReservedObjectID::FirstNonReservedID) % 2};
+        static_cast<uint64_t>(ReservedObjectID::FirstNonReservedID) | 1};
     /// The next available native ID to assign to a chunk of native memory.
     HeapSnapshot::NodeID nextNativeID_{nextID_ + 1};
 

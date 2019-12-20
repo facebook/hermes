@@ -426,6 +426,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const SizeFormatObj &sfo) {
 
 GCBase::GCCallbacks::~GCCallbacks() {}
 
+GCBase::IDTracker::IDTracker() {
+  assert(nextID_ % 2 == 1 && "First JS object ID isn't odd");
+  assert(nextNativeID_ % 2 == 0 && "First native object ID isn't even");
+}
+
 #ifdef HERMESVM_SERIALIZE
 void GCBase::IDTracker::serialize(Serializer &s) const {
   s.writeInt<HeapSnapshot::NodeID>(nextID_);
