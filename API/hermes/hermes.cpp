@@ -21,7 +21,6 @@
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/DebuggerAPI.h"
-#include "hermes/Instrumentation/PerfMarkers.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/Algorithms.h"
@@ -1248,7 +1247,6 @@ jsi::Value HermesRuntimeImpl::evaluatePreparedJavaScript(
     assert(
         dynamic_cast<const HermesPreparedJavaScript *>(js.get()) &&
         "js must be an instance of HermesPreparedJavaScript");
-    ::hermes::instrumentation::HighFreqPerfMarker m("jsi-hermes-evaluate");
     auto &stats = runtime_.getRuntimeStats();
     const vm::instrumentation::RAIITimer timer{
         "Evaluate JS", stats, stats.evaluateJS};
@@ -1498,7 +1496,6 @@ jsi::Value HermesRuntimeImpl::getProperty(
     const jsi::Object &obj,
     const jsi::String &name) {
   return maybeRethrow([&] {
-    ::hermes::instrumentation::PerfMarker m("jsi-hermes-getProperty-string");
     vm::GCScope gcScope(&runtime_);
     auto h = handle(obj);
     auto res = h->getComputed_RJS(h, &runtime_, stringHandle(name));
@@ -1511,8 +1508,6 @@ jsi::Value HermesRuntimeImpl::getProperty(
     const jsi::Object &obj,
     const jsi::PropNameID &name) {
   return maybeRethrow([&] {
-    ::hermes::instrumentation::LowFreqPerfMarker m(
-        "jsi-hermes-getProperty-nameid");
     vm::GCScope gcScope(&runtime_);
     auto h = handle(obj);
     vm::SymbolID nameID = phv(name).getSymbol();
@@ -1761,7 +1756,6 @@ jsi::Value HermesRuntimeImpl::call(
     const jsi::Value *args,
     size_t count) {
   return maybeRethrow([&] {
-    ::hermes::instrumentation::PerfMarker m("jsi-hermes-call");
     vm::GCScope gcScope(&runtime_);
     vm::Handle<vm::Callable> handle =
         vm::Handle<vm::Callable>::vmcast(&phv(func));
@@ -1799,7 +1793,6 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
     const jsi::Value *args,
     size_t count) {
   return maybeRethrow([&] {
-    ::hermes::instrumentation::PerfMarker m("jsi-hermes-callAsConstructor");
     vm::GCScope gcScope(&runtime_);
     vm::Handle<vm::Callable> funcHandle =
         vm::Handle<vm::Callable>::vmcast(&phv(func));
