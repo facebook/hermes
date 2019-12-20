@@ -138,17 +138,17 @@ inline NativeMethodWrapper* exceptionWrapJNIMethod(R (C::*method0)(Args... args)
 }
 
 template<typename R, typename C, typename... Args>
-inline std::string makeDescriptor(R (*)(JNIEnv*, C, Args... args)) {
+inline constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (*)(JNIEnv*, C, Args... args)) {
   return jmethod_traits<R(Args...)>::kDescriptor;
 }
 
 template<typename R, typename C, typename... Args>
-inline std::string makeDescriptor(R (*)(alias_ref<C>, Args... args)) {
+inline constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (*)(alias_ref<C>, Args... args)) {
   return jmethod_traits_from_cxx<R(Args...)>::kDescriptor;
 }
 
 template<typename R, typename C, typename... Args>
-inline std::string makeDescriptor(R (C::*)(Args... args)) {
+inline constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (C::*)(Args... args)) {
   return jmethod_traits_from_cxx<R(Args...)>::kDescriptor;
 }
 
@@ -167,7 +167,7 @@ JNI_ENTRY_POINT R CriticalMethod<R(*)(Args...)>::call(alias_ref<jclass>, Args...
 
 template<typename R, typename ...Args>
 template<R(*func)(Args...)>
-inline std::string CriticalMethod<R(*)(Args...)>::desc() {
+inline constexpr auto CriticalMethod<R(*)(Args...)>::desc() {
   return makeDescriptor(call<func>);
 }
 

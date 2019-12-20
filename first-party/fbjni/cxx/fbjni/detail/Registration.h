@@ -40,18 +40,22 @@ NativeMethodWrapper* exceptionWrapJNIMethod(R (C::*method0)(Args... args));
 
 // This uses deduction to figure out the descriptor name if the types
 // are primitive or have JObjectWrapper specializations.
+//
+// Subtlety: must return a reference to the underlying constant global
+// or the call in makeNativeMethod2 is using a pointer to a subobject
+// of a temporary!
 template<typename R, typename C, typename... Args>
-std::string makeDescriptor(R (*func)(JNIEnv*, C, Args... args));
+constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (*func)(JNIEnv*, C, Args... args));
 
 // This uses deduction to figure out the descriptor name if the types
 // are primitive or have JObjectWrapper specializations.
 template<typename R, typename C, typename... Args>
-std::string makeDescriptor(R (*func)(alias_ref<C>, Args... args));
+constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (*func)(alias_ref<C>, Args... args));
 
 // This uses deduction to figure out the descriptor name if the types
 // are primitive or have JObjectWrapper specializations.
 template<typename R, typename C, typename... Args>
-std::string makeDescriptor(R (C::*method0)(Args... args));
+constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (C::*method0)(Args... args));
 
 template<typename F>
 struct CriticalMethod;
@@ -62,7 +66,7 @@ struct CriticalMethod<R(*)(Args...)> {
   static R call(alias_ref<jclass>, Args... args) noexcept;
 
   template<R(*func)(Args...)>
-  inline static std::string desc();
+  inline static constexpr auto /* detail::SimpleFixedString<_> */ desc();
 };
 
 }
@@ -75,7 +79,7 @@ struct CriticalMethod<R(*)(Args...)> {
 // is always a string literal (because that syntax is only
 // valid when name is a string literal).
 #define makeNativeMethod2(name, func)                                   \
-  { name "", ::facebook::jni::detail::makeDescriptor(&func),            \
+  { name "", ::facebook::jni::detail::makeDescriptor(&func).c_str(),    \
       ::facebook::jni::detail::exceptionWrapJNIMethod<decltype(&func), &func>(&func) }
 
 #define makeNativeMethod3(name, desc, func)                             \
@@ -145,16 +149,19 @@ struct CriticalMethod<R(*)(Args...)> {
 
 // prefixes a JNI method signature as android "fast call".
 #if defined(__ANDROID__) && defined(FBJNI_WITH_FAST_CALLS)
-#define FBJNI_PREFIX_FAST_CALL(desc) (std::string{"!"} + desc)
+#define FBJNI_PREFIX_FAST_CALL(desc) ("!" + desc)
 #else
 #define FBJNI_PREFIX_FAST_CALL(desc) (desc)
 #endif
 
-#define makeCriticalNativeMethod3(name, desc, func) \
-  makeNativeMethod3(                                \
-    name,                                           \
-    FBJNI_PREFIX_FAST_CALL(desc),                   \
-    ::facebook::jni::detail::CriticalMethod<decltype(&func)>::call<&func>)
+#define makeCriticalNativeMethod3(name, desc, func) (                   \
+    []() -> ::facebook::jni::NativeMethod {                             \
+      static constexpr auto descString = FBJNI_PREFIX_FAST_CALL(desc);  \
+      return makeNativeMethod3(                                         \
+        name,                                                           \
+        descString.c_str(),                                             \
+        ::facebook::jni::detail::CriticalMethod<decltype(&func)>::call<&func>); \
+        }())
 
 #define makeCriticalNativeMethod2(name, func)                                \
   makeCriticalNativeMethod3(                                                 \

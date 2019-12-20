@@ -164,7 +164,7 @@ struct NativeMethodWrapper;
 
 struct NativeMethod {
   const char* name;
-  std::string descriptor;
+  const char* descriptor;
   detail::NativeMethodWrapper* wrapper;
 };
 
@@ -180,7 +180,7 @@ inline void JClass::registerNatives(std::initializer_list<NativeMethod> methods)
   for (auto it = methods.begin(); it < methods.end(); ++it, ++i) {
     // The JNI struct members are unnecessarily non-const.
     jnimethods[i].name = const_cast<char*>(it->name);
-    jnimethods[i].signature = const_cast<char*>(it->descriptor.c_str());
+    jnimethods[i].signature = const_cast<char*>(it->descriptor);
     jnimethods[i].fnPtr = reinterpret_cast<void*>(it->wrapper);
   }
 
