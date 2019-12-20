@@ -393,13 +393,17 @@ static void verifyBundlesExist(
       first = false;
     }
     msg += "\nProvided source hashes: ";
-    first = true;
-    for (const auto &p : bundles) {
-      if (!first) {
-        msg += ", ";
+    if (bundles.empty()) {
+      msg += "(no sources provided)";
+    } else {
+      first = true;
+      for (const auto &p : bundles) {
+        if (!first) {
+          msg += ", ";
+        }
+        msg += ::hermes::hashAsString(p.first);
+        first = false;
       }
-      msg += ::hermes::hashAsString(p.first);
-      first = false;
     }
     throw std::invalid_argument(msg);
   }
