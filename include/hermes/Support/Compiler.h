@@ -53,7 +53,11 @@
 #error "LLVM_PTR_SIZE needs to be defined"
 #endif
 
-#if defined(HERMES_UBSAN) || LLVM_ADDRESS_SANITIZER_BUILD
+// In fbcode we might have bigger code samples during development due to
+// integration testing. However, we're also at liberty to increase stack
+// size at the application level and for things like HaaS we do this.
+#if !defined(HERMES_FBCODE_BUILD) && \
+    (defined(HERMES_UBSAN) || LLVM_ADDRESS_SANITIZER_BUILD)
 #define HERMES_LIMIT_STACK_DEPTH
 #endif
 
