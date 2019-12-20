@@ -31,6 +31,7 @@
 #include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/HostModel.h"
+#include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSError.h"
@@ -766,18 +767,25 @@ class HermesRuntimeImpl final : public HermesRuntime,
       } catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
-        return rt_.runtime_.setThrownValue(
-            hvFromValue(rt_.global()
-                            .getPropertyAsFunction(rt_, "Error")
-                            .call(
-                                rt_,
-                                std::string("Exception in HostObject::get: ") +
-                                    ex.what())));
+        return rt_.runtime_.setThrownValue(hvFromValue(
+            rt_.global()
+                .getPropertyAsFunction(rt_, "Error")
+                .call(
+                    rt_,
+                    "Exception in HostObject::get for prop '" +
+                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
+                            id) +
+                        "': " + ex.what())));
       } catch (...) {
         return rt_.runtime_.setThrownValue(hvFromValue(
             rt_.global()
                 .getPropertyAsFunction(rt_, "Error")
-                .call(rt_, "Exception in HostObject::get: <unknown>")));
+                .call(
+                    rt_,
+                    "Exception in HostObject::get: for prop '" +
+                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
+                            id) +
+                        "': <unknown exception>")));
       }
 
       return hvFromValue(ret);
@@ -794,18 +802,25 @@ class HermesRuntimeImpl final : public HermesRuntime,
       } catch (const jsi::JSError &error) {
         return rt_.runtime_.setThrownValue(hvFromValue(error.value()));
       } catch (const std::exception &ex) {
-        return rt_.runtime_.setThrownValue(
-            hvFromValue(rt_.global()
-                            .getPropertyAsFunction(rt_, "Error")
-                            .call(
-                                rt_,
-                                std::string("Exception in HostObject::set: ") +
-                                    ex.what())));
+        return rt_.runtime_.setThrownValue(hvFromValue(
+            rt_.global()
+                .getPropertyAsFunction(rt_, "Error")
+                .call(
+                    rt_,
+                    "Exception in HostObject::set for prop '" +
+                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
+                            id) +
+                        "': " + ex.what())));
       } catch (...) {
         return rt_.runtime_.setThrownValue(hvFromValue(
             rt_.global()
                 .getPropertyAsFunction(rt_, "Error")
-                .call(rt_, "Exception in HostObject::set: <unknown>")));
+                .call(
+                    rt_,
+                    "Exception in HostObject::set: for prop '" +
+                        rt_.runtime_.getIdentifierTable().convertSymbolToUTF8(
+                            id) +
+                        "': <unknown exception>")));
       }
       return true;
     }
