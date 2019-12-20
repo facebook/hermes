@@ -68,6 +68,50 @@ TEST_F(StringViewTest, Comparison) {
   auto view5 = StringPrimitive::createStringView(runtime, strPrim5);
   EXPECT_TRUE(view1.equals(view5));
   EXPECT_TRUE(view1.equals(view5));
+
+  // Test copy ctor and operator=.
+  StringView tmp = view1;
+  EXPECT_TRUE(tmp.equals(view1));
+  tmp = view2;
+  EXPECT_FALSE(tmp.equals(view1));
+  tmp = view1;
+  EXPECT_TRUE(tmp.equals(view1));
+}
+
+TEST_F(StringViewTest, HandleHandling) {
+  // StringView conditionally holds onto a handle.
+  // This verifies that we correctly perform handle book-keeping in ctors and
+  // operator=. It has no assertions; it relies on GCScope to check its handle
+  // count in its dtor.
+  GCScope scope1{runtime, "StringViewTest.HandleHandling1"};
+
+  auto strPrim1 = StringPrimitive::createNoThrow(
+      runtime, createUTF16Ref(u"I have a handle"));
+  StringView scope1View1 = StringPrimitive::createStringView(runtime, strPrim1);
+  StringView scope1View2 = StringPrimitive::createStringView(runtime, strPrim1);
+  StringView scope1View3 = StringPrimitive::createStringView(runtime, strPrim1);
+  (void)scope1View3;
+
+  GCScope scope2{runtime, "StringViewTest.HandleHandling2"};
+  auto strPrim2 = StringPrimitive::createNoThrow(
+      runtime, createUTF16Ref(u"I also have a handle"));
+  StringView scope2View1 = StringPrimitive::createStringView(runtime, strPrim2);
+
+  // This assignment requires us to change the GCScope associated with the
+  // handle in scope1.
+  StringView tmp1 = scope2View1;
+  tmp1 = scope1View1;
+
+  // This ctor ensures we bump the handle count in scope1 and decrement it
+  // scope2.
+  StringView tmp2 = scope1View1;
+  (void)tmp2;
+
+  // Same but with moves ctor and operator=.
+  StringView tmp3 = std::move(scope1View2);
+  (void)tmp3;
+  StringView tmp4 = scope2View1;
+  tmp4 = std::move(scope1View2);
 }
 
 TEST_F(StringViewTest, Iteration) {
