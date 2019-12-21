@@ -945,12 +945,21 @@ class GCBase {
   /// Whether or not a GC cycle is currently occurring.
   bool inGC_;
 
+  /// The block of fields below records values of various metrics at
+  /// the start of execution, so that we can get the values at the end
+  /// and subtract.  The "runtimeWillExecute" method is called at
+  /// first bytecode execution, but also when executing the bodies of
+  /// other bundles.  We want to record these at the first such call.
+  /// This field tells whether these values have been recorded yet.
+  bool execStartTimeRecorded_{false};
+
   /// Time at which execution of the Hermes VM began.
   std::chrono::time_point<std::chrono::steady_clock> execStartTime_;
   std::chrono::microseconds execStartCPUTime_;
   /// Number of context switches before execution of the Hermes VM began.
   long startNumVoluntaryContextSwitches_{0};
   long startNumInvoluntaryContextSwitches_{0};
+
   // The cumulative GC stats.
   CumulativeHeapStats cumStats_;
 

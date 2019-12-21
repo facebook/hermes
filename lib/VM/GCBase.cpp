@@ -113,11 +113,12 @@ GCBase::GCCycle::~GCCycle() {
 }
 
 void GCBase::runtimeWillExecute() {
-  if (recordGcStats_) {
+  if (recordGcStats_ && !execStartTimeRecorded_) {
     execStartTime_ = std::chrono::steady_clock::now();
     execStartCPUTime_ = oscompat::thread_cpu_time();
     oscompat::num_context_switches(
         startNumVoluntaryContextSwitches_, startNumInvoluntaryContextSwitches_);
+    execStartTimeRecorded_ = true;
   }
 }
 
