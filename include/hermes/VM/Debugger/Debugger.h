@@ -71,10 +71,6 @@ class Debugger {
 
   Runtime *const runtime_;
 
-  /// Table to keep track of the ScriptID for a given RuntimeModule.
-  llvm::DenseMap<const RuntimeModule *, ScriptID> scriptTable_{};
-  ScriptID nextScriptId_{1};
-
   /// Function handling pauses.
   DidPauseCallback didPauseCallback_;
 

@@ -24,11 +24,13 @@ RuntimeModule::RuntimeModule(
     Runtime *runtime,
     Handle<Domain> domain,
     RuntimeModuleFlags flags,
-    llvm::StringRef sourceURL)
+    llvm::StringRef sourceURL,
+    facebook::hermes::debugger::ScriptID scriptID)
     : runtime_(runtime),
       domain_(&runtime->getHeap(), domain),
       flags_(flags),
-      sourceURL_(sourceURL) {
+      sourceURL_(sourceURL),
+      scriptID_(scriptID) {
   assert(
       domain_.isValid() && vmisa<Domain>(domain_.unsafeGetHermesValue()) &&
       "initialized with invalid domain");
@@ -85,10 +87,11 @@ void RuntimeModule::prepareForRuntimeShutdown() {
 CallResult<RuntimeModule *> RuntimeModule::create(
     Runtime *runtime,
     Handle<Domain> domain,
+    facebook::hermes::debugger::ScriptID scriptID,
     std::shared_ptr<hbc::BCProvider> &&bytecode,
     RuntimeModuleFlags flags,
     llvm::StringRef sourceURL) {
-  auto *result = new RuntimeModule(runtime, domain, flags, sourceURL);
+  auto *result = new RuntimeModule(runtime, domain, flags, sourceURL, scriptID);
   if (bytecode) {
     if (result->initializeMayAllocate(std::move(bytecode)) ==
         ExecutionStatus::EXCEPTION) {
@@ -140,6 +143,8 @@ RuntimeModule *RuntimeModule::createLazyModule(
     uint32_t functionID) {
   auto RM = createUninitialized(runtime, domain);
   RM->lazyRoot_ = parent->lazyRoot_;
+  // Copy the lazy root's script ID for lazy modules.
+  RM->scriptID_ = RM->lazyRoot_->scriptID_;
 
   // Set the bcProvider's BytecodeModule to point to the parent's.
   assert(parent->isInitialized() && "Parent module must have been initialized");

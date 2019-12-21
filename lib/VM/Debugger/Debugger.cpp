@@ -442,14 +442,6 @@ void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {
       module == module->getLazyRootModule() &&
       "Expected to only run on lazy root module");
 
-  ScriptID result = nextScriptId_;
-  auto isNewFile =
-      scriptTable_.try_emplace(module->getLazyRootModule(), result).second;
-
-  if (isNewFile) {
-    ++nextScriptId_;
-  }
-
   if (!getShouldPauseOnScriptLoad())
     return;
   // We want to pause on the first instruction of this module.
@@ -498,8 +490,6 @@ void Debugger::willUnloadModule(RuntimeModule *module) {
           tempBreakpoints_.end(),
           cleanTempBreakpoint),
       tempBreakpoints_.end());
-
-  scriptTable_.erase(module);
 }
 
 void Debugger::resolveBreakpoints(CodeBlock *codeBlock) {
@@ -1259,12 +1249,7 @@ auto Debugger::resolveScriptId(
   // We don't yet have a convincing story for debugging CommonJS, so for
   // now just assert that we're still living in the one-file-per-RM world.
   assert(filenameId == 0 && "Unexpected multiple filenames per RM");
-  auto it = scriptTable_.find(runtimeModule->getLazyRootModule());
-  if (it == scriptTable_.end()) {
-    assert(false && "unknown RuntimeModule");
-    return fhd::kInvalidLocation;
-  }
-  return it->second;
+  return runtimeModule->getScriptID();
 }
 
 } // namespace vm

@@ -361,8 +361,11 @@ bool executeHBCBytecodeImpl(
         vm::toHandle(runtime.get(), vm::Domain::create(runtime.get()));
     if (LLVM_UNLIKELY(
             vm::RuntimeModule::create(
-                runtime.get(), domain, std::move(bytecode), flags) ==
-            vm::ExecutionStatus::EXCEPTION)) {
+                runtime.get(),
+                domain,
+                facebook::hermes::debugger::kInvalidLocation,
+                std::move(bytecode),
+                flags) == vm::ExecutionStatus::EXCEPTION)) {
       llvm::errs() << "Failed to initialize main RuntimeModule\n";
       return false;
     }

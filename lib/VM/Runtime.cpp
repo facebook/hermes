@@ -897,7 +897,7 @@ CallResult<HermesValue> Runtime::runBytecode(
   Handle<Domain> domain = toHandle(this, Domain::create(this));
 
   auto runtimeModuleRes = RuntimeModule::create(
-      this, domain, std::move(bytecode), flags, sourceURL);
+      this, domain, nextScriptId_++, std::move(bytecode), flags, sourceURL);
   if (LLVM_UNLIKELY(runtimeModuleRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -953,7 +953,8 @@ ExecutionStatus Runtime::loadSegment(
   auto domain = makeHandle(RequireContext::getDomain(this, *requireContext));
 
   if (LLVM_UNLIKELY(
-          RuntimeModule::create(this, domain, std::move(bytecode), flags, "") ==
+          RuntimeModule::create(
+              this, domain, nextScriptId_++, std::move(bytecode), flags, "") ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -1072,6 +1072,9 @@ class Runtime : public HandleRootOwner,
   InlineCacheProfiler inlineCacheProfiler_;
 #endif
 
+  /// ScriptIDs to use for new RuntimeModules coming in.
+  facebook::hermes::debugger::ScriptID nextScriptId_{1};
+
   /// Store a key for the function that is executed if a crash occurs.
   /// This key will be unregistered in the destructor.
   const CrashManager::CallbackKey crashCallbackKey_;

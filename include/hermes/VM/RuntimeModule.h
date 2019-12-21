@@ -9,6 +9,7 @@
 #define HERMES_VM_RUNTIMEMODULE_H
 
 #include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/IdentifierTable.h"
@@ -104,6 +105,11 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// The sourceURL set explicitly for the module, or empty if none.
   std::string sourceURL_{};
 
+  /// The scriptID assigned to this RuntimeModule.
+  /// If this RuntimeModule is lazy, its scriptID matches its lazy root's
+  /// scriptID.
+  facebook::hermes::debugger::ScriptID scriptID_;
+
   /// A map from NewObjectWithBuffer's <keyBufferIndex, numLiterals> tuple to
   /// its shared hidden class.
   /// During hashing, keyBufferIndex takes the top 24bits while numLiterals
@@ -121,7 +127,8 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
       Runtime *runtime,
       Handle<Domain> domain,
       RuntimeModuleFlags flags,
-      llvm::StringRef sourceURL);
+      llvm::StringRef sourceURL,
+      facebook::hermes::debugger::ScriptID scriptID);
 
   CodeBlock *getCodeBlockSlowPath(unsigned index);
 
@@ -154,6 +161,7 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   static CallResult<RuntimeModule *> create(
       Runtime *runtime,
       Handle<Domain> domain,
+      facebook::hermes::debugger::ScriptID scriptID,
       std::shared_ptr<hbc::BCProvider> &&bytecode = nullptr,
       RuntimeModuleFlags flags = {},
       llvm::StringRef sourceURL = {});
@@ -165,8 +173,10 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   static RuntimeModule *createUninitialized(
       Runtime *runtime,
       Handle<Domain> domain,
-      RuntimeModuleFlags flags = {}) {
-    return new RuntimeModule(runtime, domain, flags, "");
+      RuntimeModuleFlags flags = {},
+      facebook::hermes::debugger::ScriptID scriptID =
+          facebook::hermes::debugger::kInvalidLocation) {
+    return new RuntimeModule(runtime, domain, flags, "", scriptID);
   }
 
 #ifndef HERMESVM_LEAN
@@ -328,6 +338,10 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// \return any trailing data after the real bytecode.
   llvm::ArrayRef<uint8_t> getEpilogue() const {
     return bcProvider_->getEpilogue();
+  }
+
+  facebook::hermes::debugger::ScriptID getScriptID() const {
+    return scriptID_;
   }
 
   /// Mark the non-weak roots owned by this RuntimeModule.
