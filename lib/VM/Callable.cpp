@@ -1148,11 +1148,12 @@ CallableVTable JSFunction::vt{
             nullptr,
             nullptr,
             nullptr, // externalMemorySize
-            VTable::HeapSnapshotMetadata{HeapSnapshot::NodeType::Closure,
-                                         JSFunction::_snapshotNameImpl,
-                                         JSFunction::_snapshotAddEdgesImpl,
-                                         nullptr,
-                                         nullptr}),
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                JSFunction::_snapshotNameImpl,
+                JSFunction::_snapshotAddEdgesImpl,
+                nullptr,
+                JSFunction::_snapshotAddLocationsImpl}),
         JSFunction::_getOwnIndexedRangeImpl,
         JSFunction::_haveOwnIndexedImpl,
         JSFunction::_getOwnIndexedPropertyFlagsImpl,
@@ -1233,6 +1234,20 @@ std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC *gc) {
     return funcName;
   }
   return self->codeBlock_->getNameString(gc->getCallbacks());
+}
+
+void JSFunction::_snapshotAddLocationsImpl(
+    GCCell *cell,
+    GC *gc,
+    HeapSnapshot &snap) {
+  auto *const self = vmcast<JSFunction>(cell);
+  if (auto location = self->codeBlock_->getSourceLocation()) {
+    snap.addLocation(
+        gc->getObjectID(self),
+        self->codeBlock_->getRuntimeModule()->getScriptID(),
+        location->line,
+        location->column);
+  }
 }
 
 //===----------------------------------------------------------------------===//
