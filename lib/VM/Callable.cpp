@@ -1218,6 +1218,18 @@ CallResult<HermesValue> JSFunction::create(
   return HermesValue::encodeObjectValue(self);
 }
 
+void JSFunction::addLocationToSnapshot(
+    HeapSnapshot &snap,
+    HeapSnapshot::NodeID id) const {
+  if (auto location = codeBlock_->getSourceLocation()) {
+    snap.addLocation(
+        id,
+        codeBlock_->getRuntimeModule()->getScriptID(),
+        location->line,
+        location->column);
+  }
+}
+
 CallResult<HermesValue> JSFunction::_callImpl(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
@@ -1241,13 +1253,7 @@ void JSFunction::_snapshotAddLocationsImpl(
     GC *gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSFunction>(cell);
-  if (auto location = self->codeBlock_->getSourceLocation()) {
-    snap.addLocation(
-        gc->getObjectID(self),
-        self->codeBlock_->getRuntimeModule()->getScriptID(),
-        location->line,
-        location->column);
-  }
+  self->addLocationToSnapshot(snap, gc->getObjectID(self));
 }
 
 //===----------------------------------------------------------------------===//

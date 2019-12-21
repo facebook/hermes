@@ -1105,6 +1105,10 @@ class JSObject : public GCCell {
   /// Add user-visible property names to a snapshot.
   static void _snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
+  /// Add the location of the constructor for this object to the heap snapshot.
+  static void
+  _snapshotAddLocationsImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
+
   /// \return the range of indexes (end-exclusive) stored in indexed storage.
   static std::pair<uint32_t, uint32_t> _getOwnIndexedRangeImpl(
       JSObject *self,

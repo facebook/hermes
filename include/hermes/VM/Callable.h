@@ -912,6 +912,11 @@ class JSFunction : public Callable {
     return codeBlock_->getRuntimeModule();
   }
 
+  /// Add a source location for a function in a heap snapshot.
+  /// \param snap The snapshot to add a location to.
+  /// \param id The object id to annotate with the location.
+  void addLocationToSnapshot(HeapSnapshot &snap, HeapSnapshot::NodeID id) const;
+
  protected:
   /// Call the JavaScript function with arguments already on the stack.
   /// \param construct true if this is a constructor call.
