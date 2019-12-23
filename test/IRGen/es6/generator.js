@@ -21,7 +21,7 @@ function* simple() {
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StartGeneratorInst
-//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn
+//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
 //CHECK-NEXT:  %2 = ResumeGeneratorInst %1
 //CHECK-NEXT:  %3 = LoadStackInst %1
 //CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
@@ -55,7 +55,7 @@ function *useResult() {
 //CHECK-NEXT:frame = [x]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StartGeneratorInst
-//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn
+//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
 //CHECK-NEXT:  %2 = ResumeGeneratorInst %1
 //CHECK-NEXT:  %3 = LoadStackInst %1
 //CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
@@ -82,20 +82,19 @@ function *loop(x) {
     yield x[i++];
   }
 }
-//CHECK-LABEL:function loop(x)
-//CHECK-NEXT:frame = [i, x]
+//CHECK-LABEL:function loop()
+//CHECK-NEXT:frame = [i]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [i]
-//CHECK-NEXT:  %1 = StoreFrameInst %x, [x]
-//CHECK-NEXT:  %2 = CreateGeneratorInst %?anon_2_loop()
-//CHECK-NEXT:  %3 = ReturnInst %2 : object
+//CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_2_loop()
+//CHECK-NEXT:  %2 = ReturnInst %1 : object
 //CHECK-NEXT:function_end
 
 //CHECK-LABEL:function ?anon_2_loop(x)
 //CHECK-NEXT:frame = [i, x]
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StartGeneratorInst
-//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn
+//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
 //CHECK-NEXT:  %2 = ResumeGeneratorInst %1
 //CHECK-NEXT:  %3 = LoadStackInst %1
 //CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
@@ -148,7 +147,7 @@ var simple2 = function*() {
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StartGeneratorInst
-//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn
+//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
 //CHECK-NEXT:  %2 = ResumeGeneratorInst %1
 //CHECK-NEXT:  %3 = LoadStackInst %1
 //CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
@@ -167,7 +166,6 @@ var simple2 = function*() {
 //CHECK-NEXT:  %12 = ReturnInst %8
 //CHECK-NEXT:function_end
 
-
 var yieldStar = function*() {
   yield* foo();
 }
@@ -182,7 +180,7 @@ var yieldStar = function*() {
 //CHECK-NEXT:frame = []
 //CHECK-NEXT:%BB0:
 //CHECK-NEXT:  %0 = StartGeneratorInst
-//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn
+//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
 //CHECK-NEXT:  %2 = ResumeGeneratorInst %1
 //CHECK-NEXT:  %3 = LoadStackInst %1
 //CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
@@ -274,4 +272,132 @@ var yieldStar = function*() {
 //CHECK-NEXT:%BB21:
 //CHECK-NEXT:  %69 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, "yield* delegate must have a .throw() method" : string
 //CHECK-NEXT:  %70 = ReturnInst undefined : undefined
+//CHECK-NEXT:function_end
+
+var destr = function*([x]) {
+  yield x;
+}
+
+//CHECK-LABEL:function destr()
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_6_destr()
+//CHECK-NEXT:  %1 = LoadPropertyInst %0 : object, "next" : string
+//CHECK-NEXT:  %2 = CallInst %1, %0 : object
+//CHECK-NEXT:  %3 = ReturnInst %0 : object
+//CHECK-NEXT:function_end
+
+//CHECK-LABEL:function ?anon_6_destr(?anon_2_param)
+//CHECK-NEXT:frame = [x]
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StartGeneratorInst
+//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
+//CHECK-NEXT:  %2 = ResumeGeneratorInst %1
+//CHECK-NEXT:  %3 = LoadStackInst %1
+//CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+//CHECK-NEXT:%BB2:
+//CHECK-NEXT:  %5 = AllocStackInst $?anon_1_isReturn_entry
+//CHECK-NEXT:  %6 = AllocStackInst $?anon_3_iter
+//CHECK-NEXT:  %7 = AllocStackInst $?anon_4_sourceOrNext
+//CHECK-NEXT:  %8 = StoreStackInst %?anon_2_param, %7
+//CHECK-NEXT:  %9 = IteratorBeginInst %7
+//CHECK-NEXT:  %10 = StoreStackInst %9, %6
+//CHECK-NEXT:  %11 = AllocStackInst $?anon_5_iterDone
+//CHECK-NEXT:  %12 = StoreStackInst undefined : undefined, %11
+//CHECK-NEXT:  %13 = AllocStackInst $?anon_6_iterValue
+//CHECK-NEXT:  %14 = StoreStackInst undefined : undefined, %13
+//CHECK-NEXT:  %15 = BranchInst %BB3
+//CHECK-NEXT:%BB1:
+//CHECK-NEXT:  %16 = ReturnInst %2
+//CHECK-NEXT:%BB4:
+//CHECK-NEXT:  %17 = ResumeGeneratorInst %5
+//CHECK-NEXT:  %18 = LoadStackInst %5
+//CHECK-NEXT:  %19 = CondBranchInst %18, %BB5, %BB6
+//CHECK-NEXT:%BB3:
+//CHECK-NEXT:  %20 = IteratorNextInst %6, %7
+//CHECK-NEXT:  %21 = LoadStackInst %6
+//CHECK-NEXT:  %22 = BinaryOperatorInst '===', %21, undefined : undefined
+//CHECK-NEXT:  %23 = StoreStackInst %22, %11
+//CHECK-NEXT:  %24 = CondBranchInst %22, %BB7, %BB8
+//CHECK-NEXT:%BB8:
+//CHECK-NEXT:  %25 = StoreStackInst %20, %13
+//CHECK-NEXT:  %26 = BranchInst %BB7
+//CHECK-NEXT:%BB7:
+//CHECK-NEXT:  %27 = LoadStackInst %13
+//CHECK-NEXT:  %28 = StoreFrameInst %27, [x]
+//CHECK-NEXT:  %29 = LoadStackInst %11
+//CHECK-NEXT:  %30 = CondBranchInst %29, %BB9, %BB10
+//CHECK-NEXT:%BB10:
+//CHECK-NEXT:  %31 = IteratorCloseInst %6, false : boolean
+//CHECK-NEXT:  %32 = BranchInst %BB9
+//CHECK-NEXT:%BB9:
+//CHECK-NEXT:  %33 = SaveAndYieldInst undefined : undefined, %BB4
+//CHECK-NEXT:%BB6:
+//CHECK-NEXT:  %34 = LoadFrameInst [x]
+//CHECK-NEXT:  %35 = AllocStackInst $?anon_8_isReturn
+//CHECK-NEXT:  %36 = SaveAndYieldInst %34, %BB11
+//CHECK-NEXT:%BB5:
+//CHECK-NEXT:  %37 = ReturnInst %17
+//CHECK-NEXT:%BB11:
+//CHECK-NEXT:  %38 = ResumeGeneratorInst %35
+//CHECK-NEXT:  %39 = LoadStackInst %35
+//CHECK-NEXT:  %40 = CondBranchInst %39, %BB12, %BB13
+//CHECK-NEXT:%BB13:
+//CHECK-NEXT:  %41 = ReturnInst undefined : undefined
+//CHECK-NEXT:%BB12:
+//CHECK-NEXT:  %42 = ReturnInst %38
+//CHECK-NEXT:function_end
+
+var initializer = function*(x = foo()) {
+  yield 1;
+}
+
+//CHECK-LABEL:function initializer()
+//CHECK-NEXT:frame = []
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = CreateGeneratorInst %?anon_7_initializer()
+//CHECK-NEXT:  %1 = LoadPropertyInst %0 : object, "next" : string
+//CHECK-NEXT:  %2 = CallInst %1, %0 : object
+//CHECK-NEXT:  %3 = ReturnInst %0 : object
+//CHECK-NEXT:function_end
+
+//CHECK-LABEL:function ?anon_7_initializer(x)
+//CHECK-NEXT:frame = [x]
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StartGeneratorInst
+//CHECK-NEXT:  %1 = AllocStackInst $?anon_0_isReturn_prologue
+//CHECK-NEXT:  %2 = ResumeGeneratorInst %1
+//CHECK-NEXT:  %3 = LoadStackInst %1
+//CHECK-NEXT:  %4 = CondBranchInst %3, %BB1, %BB2
+//CHECK-NEXT:%BB2:
+//CHECK-NEXT:  %5 = AllocStackInst $?anon_1_isReturn_entry
+//CHECK-NEXT:  %6 = BinaryOperatorInst '!==', %x, undefined : undefined
+//CHECK-NEXT:  %7 = CondBranchInst %6, %BB3, %BB4
+//CHECK-NEXT:%BB1:
+//CHECK-NEXT:  %8 = ReturnInst %2
+//CHECK-NEXT:%BB5:
+//CHECK-NEXT:  %9 = ResumeGeneratorInst %5
+//CHECK-NEXT:  %10 = LoadStackInst %5
+//CHECK-NEXT:  %11 = CondBranchInst %10, %BB6, %BB7
+//CHECK-NEXT:%BB4:
+//CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
+//CHECK-NEXT:  %13 = CallInst %12, undefined : undefined
+//CHECK-NEXT:  %14 = BranchInst %BB3
+//CHECK-NEXT:%BB3:
+//CHECK-NEXT:  %15 = PhiInst %x, %BB2, %13, %BB4
+//CHECK-NEXT:  %16 = StoreFrameInst %15, [x]
+//CHECK-NEXT:  %17 = SaveAndYieldInst undefined : undefined, %BB5
+//CHECK-NEXT:%BB7:
+//CHECK-NEXT:  %18 = AllocStackInst $?anon_2_isReturn
+//CHECK-NEXT:  %19 = SaveAndYieldInst 1 : number, %BB8
+//CHECK-NEXT:%BB6:
+//CHECK-NEXT:  %20 = ReturnInst %9
+//CHECK-NEXT:%BB8:
+//CHECK-NEXT:  %21 = ResumeGeneratorInst %18
+//CHECK-NEXT:  %22 = LoadStackInst %18
+//CHECK-NEXT:  %23 = CondBranchInst %22, %BB9, %BB10
+//CHECK-NEXT:%BB10:
+//CHECK-NEXT:  %24 = ReturnInst undefined : undefined
+//CHECK-NEXT:%BB9:
+//CHECK-NEXT:  %25 = ReturnInst %21
 //CHECK-NEXT:function_end

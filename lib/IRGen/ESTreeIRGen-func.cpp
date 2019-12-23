@@ -138,7 +138,10 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
     curFunction()->capturedArguments = prev->capturedArguments;
 
     emitFunctionPrologue(
-        AF, Builder.createBasicBlock(newFunc), InitES5CaptureState::No);
+        AF,
+        Builder.createBasicBlock(newFunc),
+        InitES5CaptureState::No,
+        DoEmitParameters::Yes);
 
     genStatement(AF->_body);
     emitFunctionEpilogue(Builder.getLiteralUndefined());
@@ -213,16 +216,51 @@ Function *ESTreeIRGen::genES5Function(
     auto *initGenBB = Builder.createBasicBlock(newFunction);
     Builder.setInsertionBlock(initGenBB);
     Builder.createStartGeneratorInst();
-    auto *resumeIsReturn =
-        Builder.createAllocStackInst(genAnonymousLabelName("isReturn"));
-    auto *entryPoint = Builder.createBasicBlock(newFunction);
-    genResumeGenerator(nullptr, resumeIsReturn, entryPoint);
-    emitFunctionPrologue(functionNode, entryPoint, InitES5CaptureState::Yes);
+    auto *prologueBB = Builder.createBasicBlock(newFunction);
+    auto *prologueResumeIsReturn = Builder.createAllocStackInst(
+        genAnonymousLabelName("isReturn_prologue"));
+    genResumeGenerator(nullptr, prologueResumeIsReturn, prologueBB);
+
+    if (hasSimpleParams(functionNode)) {
+      // If there are simple params, then we don't need an extra yield/resume.
+      // They can simply be initialized on the first call to `.next`.
+      Builder.setInsertionBlock(prologueBB);
+      emitFunctionPrologue(
+          functionNode,
+          prologueBB,
+          InitES5CaptureState::Yes,
+          DoEmitParameters::Yes);
+    } else {
+      // If there are non-simple params, then we must add a new yield/resume.
+      // The `.next()` call will occur once in the outer function, before
+      // the iterator is returned to the caller of the `function*`.
+      auto *entryPointBB = Builder.createBasicBlock(newFunction);
+      auto *entryPointResumeIsReturn =
+          Builder.createAllocStackInst(genAnonymousLabelName("isReturn_entry"));
+
+      // Initialize parameters.
+      Builder.setInsertionBlock(prologueBB);
+      emitFunctionPrologue(
+          functionNode,
+          prologueBB,
+          InitES5CaptureState::Yes,
+          DoEmitParameters::Yes);
+      Builder.createSaveAndYieldInst(
+          Builder.getLiteralUndefined(), entryPointBB);
+
+      // Actual entry point of function from the caller's perspective.
+      Builder.setInsertionBlock(entryPointBB);
+      genResumeGenerator(
+          nullptr,
+          entryPointResumeIsReturn,
+          Builder.createBasicBlock(newFunction));
+    }
   } else {
     emitFunctionPrologue(
         functionNode,
         Builder.createBasicBlock(newFunction),
-        InitES5CaptureState::Yes);
+        InitES5CaptureState::Yes,
+        DoEmitParameters::Yes);
   }
 
   genStatement(body);
@@ -257,10 +295,18 @@ Function *ESTreeIRGen::genGeneratorFunction(
     emitFunctionPrologue(
         functionNode,
         Builder.createBasicBlock(outerFn),
-        InitES5CaptureState::Yes);
+        InitES5CaptureState::Yes,
+        DoEmitParameters::No);
 
     // Create a generator function, which will store the arguments.
     auto *gen = Builder.createCreateGeneratorInst(innerFn);
+
+    if (!hasSimpleParams(functionNode)) {
+      // If there are non-simple params, step the inner function once to
+      // initialize them.
+      Value *next = Builder.createLoadPropertyInst(gen, "next");
+      Builder.createCallInst(next, gen, {});
+    }
 
     emitFunctionEpilogue(gen);
   }
@@ -308,7 +354,8 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
 void ESTreeIRGen::emitFunctionPrologue(
     ESTree::FunctionLikeNode *funcNode,
     BasicBlock *entry,
-    InitES5CaptureState doInitES5CaptureState) {
+    InitES5CaptureState doInitES5CaptureState,
+    DoEmitParameters doEmitParameters) {
   auto *newFunc = curFunction()->function;
   auto *semInfo = curFunction()->getSemInfo();
   LLVM_DEBUG(
@@ -356,7 +403,12 @@ void ESTreeIRGen::emitFunctionPrologue(
 
   // Construct the parameter list. Create function parameters and register
   // them in the scope.
-  emitParameters(funcNode);
+  if (doEmitParameters == DoEmitParameters::Yes) {
+    emitParameters(funcNode);
+  } else {
+    newFunc->setExpectedParamCountIncludingThis(
+        countExpectedArgumentsIncludingThis(funcNode));
+  }
 
   // Generate the code for import declarations before generating the rest of the
   // body.

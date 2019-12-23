@@ -29,7 +29,7 @@ function *foo() {
 // CHECK-NEXT: %0 = StartGeneratorInst
 // CHECK-NEXT: %1 = AllocStackInst $count
 // CHECK-NEXT: %2 = StoreStackInst undefined : undefined, %1 : undefined|number
-// CHECK-NEXT: %3 = AllocStackInst $?anon_0_isReturn
+// CHECK-NEXT: %3 = AllocStackInst $?anon_0_isReturn_prologue
 // CHECK-NEXT: %4 = ResumeGeneratorInst %3
 // CHECK-NEXT: %5 = LoadStackInst %3
 // CHECK-NEXT: %6 = CondBranchInst %5, %BB1, %BB2

@@ -306,3 +306,27 @@ show(it.next());
 try { it.throw() } catch(e) { print(e.name, e.message) }
 // CHECK-NEXT: closing iterator
 // CHECK-NEXT: TypeError yield* delegate must have a .throw() method
+
+var iter = {
+  [Symbol.iterator]: function() {
+    print('OPEN')
+    return {
+      next: function() {
+        return { value: 42, done: false };
+      }
+    };
+  }
+};
+
+var callCount = 0;
+var f = function*([x]) {
+  print('START', x)
+  return 5;
+};
+print(f.length);
+// CHECK-NEXT: 1
+var it = f(iter);
+// CHECK-NEXT: OPEN
+show(it.next())
+// CHECK-NEXT: START 42
+// CHECK-NEXT: 5 | true

@@ -657,6 +657,10 @@ Node *getCallee(CallExpressionLikeNode *node);
 /// \return the arguments list of the call.
 NodeList &getArguments(CallExpressionLikeNode *node);
 
+/// \return true when \p node has simple params, i.e. no destructuring and no
+/// initializers.
+bool hasSimpleParams(FunctionLikeNode *node);
+
 } // namespace ESTree
 } // namespace hermes
 

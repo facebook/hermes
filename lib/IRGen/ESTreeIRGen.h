@@ -713,6 +713,8 @@ class ESTreeIRGen {
 
   enum class InitES5CaptureState { No, Yes };
 
+  enum class DoEmitParameters { No, Yes };
+
   /// Emit the function prologue for the current function, consisting of the
   /// following things:
   /// - a next block, so we can append instructions to it to generate the actual
@@ -726,10 +728,14 @@ class ESTreeIRGen {
   /// \param entry the unpopulated entry block for the function
   /// \param doInitES5CaptureState initialize the capture state for ES5
   ///     functions.
+  /// \param doEmitParameters run code to initialize parameters in the function.
+  ///     When "No", only set the .length of the resultant function.
+  ///     Used for the outer function of generator functions, e.g.
   void emitFunctionPrologue(
       ESTree::FunctionLikeNode *funcNode,
       BasicBlock *entry,
-      InitES5CaptureState doInitES5CaptureState);
+      InitES5CaptureState doInitES5CaptureState,
+      DoEmitParameters doEmitParameters);
 
   /// Emit the loading and initialization of parameters in the function
   /// prologue.

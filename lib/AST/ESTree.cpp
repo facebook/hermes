@@ -10,6 +10,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using llvm::dyn_cast;
+using llvm::isa;
 
 namespace hermes {
 namespace ESTree {
@@ -106,6 +107,14 @@ NodeList &getArguments(CallExpressionLikeNode *node) {
       break;
   }
   llvm_unreachable("invalid CallExpressionLikeNode");
+}
+
+bool hasSimpleParams(FunctionLikeNode *node) {
+  for (Node &param : getParams(node)) {
+    if (isa<PatternNode>(param))
+      return false;
+  }
+  return true;
 }
 
 } // namespace ESTree
