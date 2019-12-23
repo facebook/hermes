@@ -43,6 +43,7 @@ ObjectVTable JSArrayBuffer::vt{
 };
 
 void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayBuffer>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -71,7 +72,8 @@ JSArrayBuffer::JSArrayBuffer(Deserializer &d)
 
 void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSArrayBuffer>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<JSArrayBuffer>());
   s.writeInt<JSArrayBuffer::size_type>(self->size_);
   s.writeInt<uint8_t>((uint8_t)self->attached_);
   // Only serialize data_ when attached_.

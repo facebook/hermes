@@ -24,7 +24,8 @@ class ArrayImpl : public JSObject {
 #ifdef HERMESVM_SERIALIZE
   ArrayImpl(Deserializer &d, const VTable *vt);
 
-  friend void serializeArrayImpl(Serializer &s, const GCCell *cell);
+  friend void
+  serializeArrayImpl(Serializer &s, const GCCell *cell, unsigned overlapSlots);
 #endif
 
   static bool classof(const GCCell *cell) {

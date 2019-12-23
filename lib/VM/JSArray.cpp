@@ -23,6 +23,7 @@ namespace vm {
 // class ArrayImpl
 
 void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<ArrayImpl>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const ArrayImpl *>(cell);
   // This edge has to be called "elements" in order for Chrome to attribute
@@ -62,9 +63,12 @@ ArrayImpl::ArrayImpl(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
   d.readRelocation(&indexedStorage_, RelocationKind::GCPointer);
 }
 
-void serializeArrayImpl(Serializer &s, const GCCell *cell) {
+void serializeArrayImpl(
+    Serializer &s,
+    const GCCell *cell,
+    unsigned overlapSlots) {
   auto *self = vmcast<const ArrayImpl>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(s, cell, overlapSlots);
   s.writeInt<uint32_t>(self->beginIndex_);
   s.writeInt<uint32_t>(self->endIndex_);
   s.writeRelocation(self->indexedStorage_.get(s.getRuntime()));
@@ -376,6 +380,7 @@ ObjectVTable Arguments::vt{
 };
 
 void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<Arguments>());
   ArrayImplBuildMeta(cell, mb);
 }
 
@@ -383,7 +388,7 @@ void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 Arguments::Arguments(Deserializer &d) : ArrayImpl(d, &vt.base) {}
 
 void ArgumentsSerialize(Serializer &s, const GCCell *cell) {
-  serializeArrayImpl(s, cell);
+  serializeArrayImpl(s, cell, JSObject::numOverlapSlots<Arguments>());
   s.endObject(cell);
 }
 
@@ -510,6 +515,7 @@ ObjectVTable JSArray::vt{
 };
 
 void ArrayBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArray>());
   ArrayImplBuildMeta(cell, mb);
 }
 
@@ -520,7 +526,7 @@ JSArray::JSArray(Deserializer &d, const VTable *vt) : ArrayImpl(d, vt) {
 
 void ArraySerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSArray>(cell);
-  serializeArrayImpl(s, cell);
+  serializeArrayImpl(s, cell, JSObject::numOverlapSlots<JSArray>());
   s.writeInt<uint32_t>(self->shadowLength_);
   s.endObject(cell);
 }
@@ -771,6 +777,7 @@ ObjectVTable JSArrayIterator::vt{
 };
 
 void ArrayIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayIterator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSArrayIterator *>(cell);
   mb.addField("iteratedObject", &self->iteratedObject_);
@@ -785,7 +792,8 @@ JSArrayIterator::JSArrayIterator(Deserializer &d) : JSObject(d, &vt.base) {
 
 void ArrayIteratorSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSArrayIterator>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<JSArrayIterator>());
   s.writeRelocation(self->iteratedObject_.get(s.getRuntime()));
   s.writeInt<uint64_t>(self->nextIndex_);
   s.writeInt<uint8_t>((uint8_t)self->iterationKind_);

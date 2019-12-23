@@ -323,7 +323,9 @@ class JSObject : public GCCell {
       : GCCell(&runtime->getHeap(), vtp),
         parent_(runtime, parent, &runtime->getHeap(), needsBarriers),
         clazz_(runtime, clazz, &runtime->getHeap(), needsBarriers),
-        propStorage_(runtime, nullptr, &runtime->getHeap(), needsBarriers) {}
+        propStorage_(runtime, nullptr, &runtime->getHeap(), needsBarriers) {
+    // Direct property slots are initialized by allocateSmallPropStorage.
+  }
 
   /// Until we apply the NeedsBarriers pattern to all subtypes of JSObject, we
   /// will need versions that do not take the extra NeedsBarrier argument
@@ -333,14 +335,17 @@ class JSObject : public GCCell {
       const VTable *vtp,
       JSObject *parent,
       HiddenClass *clazz)
-      : JSObject(runtime, vtp, parent, clazz, GCPointerBase::NoBarriers()) {}
+      : JSObject(runtime, vtp, parent, clazz, GCPointerBase::NoBarriers()) {
+    // Direct property slots are initialized by allocateSmallPropStorage.
+  }
 
  public:
 #ifdef HERMESVM_SERIALIZE
   /// A constructor used by deserializeion which performs no GC allocation.
   JSObject(Deserializer &d, const VTable *vtp);
 
-  static void serializeObjectImpl(Serializer &s, const GCCell *cell);
+  static void
+  serializeObjectImpl(Serializer &s, const GCCell *cell, unsigned overlapSlots);
 #endif
 
   static ObjectVTable vt;
@@ -401,23 +406,10 @@ class JSObject : public GCCell {
 
   ~JSObject() = default;
 
-  /// Allocate an instance of property storage with the specified size.
-  static inline ExecutionStatus allocatePropStorage(
-      Handle<JSObject> selfHandle,
-      Runtime *runtime,
-      PropStorage::size_type size);
-
-  /// Allocate an instance of property storage with the specified size.
-  /// If an allocation is required, a handle is allocated internally and the
-  /// updated self value is returned. This means that the return value MUST
-  /// be used by the caller.
-  static inline CallResult<PseudoHandle<JSObject>> allocatePropStorage(
-      PseudoHandle<JSObject> self,
-      Runtime *runtime,
-      PropStorage::size_type size);
-
-  /// Allocate an instance of property storage that can hold all internal
-  /// properties, which must fit inside the direct property slots.
+  /// Must be called immediately after the construction of any JSObject.
+  /// Asserts that the direct property storage is large enough to hold
+  /// all internal properties, and initializes all non-overlapping
+  /// direct property slots.
   /// \return a copy of self for convenience.
   template <typename T>
   static inline T *allocateSmallPropStorage(T *self);
@@ -1171,6 +1163,21 @@ class JSObject : public GCCell {
     return reinterpret_cast<const ObjectVTable *>(GCCell::getVT());
   }
 
+  /// Allocate an instance of property storage with the specified size.
+  static inline ExecutionStatus allocatePropStorage(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      PropStorage::size_type size);
+
+  /// Allocate an instance of property storage with the specified size.
+  /// If an allocation is required, a handle is allocated internally and the
+  /// updated self value is returned. This means that the return value MUST
+  /// be used by the caller.
+  static inline CallResult<PseudoHandle<JSObject>> allocatePropStorage(
+      PseudoHandle<JSObject> self,
+      Runtime *runtime,
+      PropStorage::size_type size);
+
   /// Allocate storage for a new slot after the slot index itself has been
   /// allocated by the hidden class.
   /// Note that slot storage is never truly released once allocated. Released
@@ -1303,13 +1310,12 @@ class JSObject : public GCCell {
   GCPointer<PropStorage> propStorage_{};
 
   /// Storage for direct property slots.
-  GCHermesValue directProps_[DIRECT_PROPERTY_SLOTS];
+  inline GCHermesValue *directProps();
+  inline const GCHermesValue *directProps() const;
 
  private:
   /// Byte offset to the first direct property slot in a JSObject.
-  static constexpr size_t directPropsOffset() {
-    return llvm::alignTo<sizeof(GCHermesValue)>(sizeof(JSObject));
-  }
+  static inline constexpr size_t directPropsOffset();
 
   /// The number of direct property slots that would be unused due to overlap
   /// with C++ fields in a subclass of size \p sizeofDerived, if the number
@@ -1321,7 +1327,19 @@ class JSObject : public GCCell {
             sizeof(GCHermesValue);
   }
 
+  /// The allocation size needed for a plain JSObject instance (including its
+  /// direct property slots).
+  static inline constexpr size_t cellSizeJSObject();
+
  public:
+  // Implementation of cellSize. Do not use this directly.
+  template <class C>
+  static constexpr uint32_t cellSizeImpl() {
+    static_assert(
+        std::is_convertible<C *, JSObject *>::value, "must be a JSObject");
+    return sizeof(C) < cellSizeJSObject() ? cellSizeJSObject() : sizeof(C);
+  }
+
   /// The number of direct property slots that are unused due to overlap with
   /// C++ fields in the class Derived.
   ///
@@ -1339,6 +1357,32 @@ class JSObject : public GCCell {
         : uncappedOverlapSlots(sizeof(Derived));
   }
 };
+
+/// Convenience class for accessing the direct property slots of a JSObject.
+class JSObjectAndDirectProps : public JSObject {
+ public:
+  GCHermesValue directProps_[DIRECT_PROPERTY_SLOTS];
+};
+
+GCHermesValue *JSObject::directProps() {
+  return static_cast<JSObjectAndDirectProps *>(this)->directProps_;
+}
+
+const GCHermesValue *JSObject::directProps() const {
+  return static_cast<const JSObjectAndDirectProps *>(this)->directProps_;
+}
+
+constexpr size_t JSObject::directPropsOffset() {
+  return llvm::alignTo<alignof(GCHermesValue)>(sizeof(JSObject));
+}
+
+constexpr size_t JSObject::cellSizeJSObject() {
+  static_assert(
+      sizeof(JSObjectAndDirectProps) ==
+          directPropsOffset() + sizeof(GCHermesValue) * DIRECT_PROPERTY_SLOTS,
+      "unexpected padding");
+  return sizeof(JSObjectAndDirectProps);
+}
 
 /// \return an array that contains all enumerable properties of obj (including
 /// those of its prototype etc.) at the indices [beginIndex, endIndex) (any
@@ -1441,10 +1485,15 @@ inline CallResult<PseudoHandle<JSObject>> JSObject::allocatePropStorage(
 
 template <typename T>
 inline T *JSObject::allocateSmallPropStorage(T *self) {
-  constexpr auto count = T::ANONYMOUS_PROPERTY_SLOTS + T::NAMED_PROPERTY_SLOTS;
+  constexpr auto count = numOverlapSlots<T>() + T::ANONYMOUS_PROPERTY_SLOTS +
+      T::NAMED_PROPERTY_SLOTS;
   static_assert(
       count <= DIRECT_PROPERTY_SLOTS,
       "smallPropStorage size must fit in direct properties");
+  GCHermesValue::fill(
+      self->directProps() + numOverlapSlots<T>(),
+      self->directProps() + DIRECT_PROPERTY_SLOTS,
+      GCHermesValue());
   return self;
 }
 
@@ -1452,7 +1501,7 @@ template <PropStorage::Inline inl>
 inline GCHermesValue &
 JSObject::namedSlotRef(JSObject *self, PointerBase *runtime, SlotIndex index) {
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
-    return self->directProps_[index];
+    return self->directProps()[index];
 
   return self->propStorage_.getNonNull(runtime)->at<inl>(
       index - DIRECT_PROPERTY_SLOTS);
@@ -1468,7 +1517,7 @@ inline void JSObject::setNamedSlotValue(
   // to namedSlotRef(), it is a slight performance regression, which is not
   // entirely unexpected.
   if (LLVM_LIKELY(index < DIRECT_PROPERTY_SLOTS))
-    return self->directProps_[index].set(value, &runtime->getHeap());
+    return self->directProps()[index].set(value, &runtime->getHeap());
 
   self->propStorage_.get(runtime)
       ->at<inl>(index - DIRECT_PROPERTY_SLOTS)

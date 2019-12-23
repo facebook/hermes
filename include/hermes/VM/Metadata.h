@@ -125,6 +125,27 @@ struct Metadata final {
         const SizeType *lengthLocation,
         std::size_t stride);
 
+    /// Should be called first when building metadata for a JSObject subclass.
+    /// Records how many property slots are unused due to overlap.
+    void addJSObjectOverlapSlots(unsigned num) {
+      if (!jsObjectOverlapSlots_) {
+        jsObjectOverlapSlots_ = num;
+      } else {
+        // Subsequent calls do nothing but assert that order of calls is sane.
+        assert(
+            num <= *jsObjectOverlapSlots_ &&
+            "most derived class should call this method first");
+      }
+    }
+
+    /// The number of initial direct property slots to exclude in the metadata
+    /// for a JSObject subclass.
+    unsigned getJSObjectOverlapSlots() const {
+      assert(
+          jsObjectOverlapSlots_ && "missing call to addJSObjectOverlapSlots");
+      return *jsObjectOverlapSlots_;
+    }
+
     /// Build creates a Metadata, and destroys this builder.
     Metadata build();
 
@@ -142,6 +163,9 @@ struct Metadata final {
 #endif
     /// An optional array for an object to contain.
     OptValue<ArrayData> array_;
+
+    /// For subclasses of JSObject, the number of unused direct property slots.
+    OptValue<unsigned> jsObjectOverlapSlots_;
 
     friend Metadata;
   };

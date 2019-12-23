@@ -141,7 +141,10 @@ class Callable : public JSObject {
   /// Fast constructor used by deserializer.
   Callable(Deserializer &d, const VTable *vt);
 
-  friend void serializeCallableImpl(Serializer &s, const GCCell *cell);
+  friend void serializeCallableImpl(
+      Serializer &s,
+      const GCCell *cell,
+      unsigned overlapSlots);
 #endif
 
   static bool classof(const GCCell *cell) {
@@ -357,10 +360,6 @@ class BoundFunction final : public Callable {
   using Super = Callable;
   static CallableVTable vt;
 
-  // We need one more slot for '.length'
-  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
-      Super::NAMED_PROPERTY_SLOTS + 1;
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::BoundFunctionKind;
   }
@@ -466,16 +465,15 @@ class NativeFunction : public Callable {
       void *context,
       NativeFunctionPtr functionPtr);
 
-  static void serializeNativeFunctionImpl(Serializer &s, const GCCell *cell);
+  static void serializeNativeFunctionImpl(
+      Serializer &s,
+      const GCCell *cell,
+      unsigned overlapSlots);
   friend void NativeFunctionSerialize(Serializer &s, const GCCell *cell);
 #endif
 
   using Super = Callable;
   static CallableVTable vt;
-
-  // We need two more slot for '.length' and '.prototype'
-  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
-      Super::NAMED_PROPERTY_SLOTS + 2;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -822,7 +820,10 @@ class JSFunction : public Callable {
 #ifdef HERMESVM_SERIALIZE
   JSFunction(Deserializer &d, const VTable *vt);
 
-  friend void serializeFunctionImpl(Serializer &s, const GCCell *cell);
+  friend void serializeFunctionImpl(
+      Serializer &s,
+      const GCCell *cell,
+      unsigned overlapSlots);
   friend void FunctionDeserialize(Deserializer &d, CellKind kind);
 #endif
 
@@ -860,10 +861,6 @@ class JSFunction : public Callable {
 
  public:
   static CallableVTable vt;
-
-  // We need two more slot for '.length' and '.prototype'
-  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
-      Super::NAMED_PROPERTY_SLOTS + 2;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(

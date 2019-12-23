@@ -38,6 +38,8 @@ CallableVTable FinalizableNativeFunction::vt{
 void FinalizableNativeFunctionBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(
+      JSObject::numOverlapSlots<FinalizableNativeFunction>());
   NativeFunctionBuildMeta(cell, mb);
 }
 
@@ -109,6 +111,7 @@ ObjectVTable HostObject::vt{
 };
 
 void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<HostObject>());
   ObjectBuildMeta(cell, mb);
 }
 

@@ -45,52 +45,30 @@ ObjectVTable JSObject::vt{
     JSObject::_checkAllOwnIndexedImpl,
 };
 
-// We need a way to generate the names of the direct properties in the data
-// segment.
-namespace {
-
-/// Add \p N fields to the metadata builder \p mb starting from offset
-/// \p props and using the name "directPropX".
-template <int N>
-void addDirectPropertyFields(
-    const GCHermesValue *props,
-    Metadata::Builder &mb) {
-  // Make sure the property number fits in a single ASCII digit.
-  static_assert(N <= 10, "only up to 10 direct properties are supported");
-  static const char propName[] = {'d',
-                                  'i',
-                                  'r',
-                                  'e',
-                                  'c',
-                                  't',
-                                  'P',
-                                  'r',
-                                  'o',
-                                  'p',
-                                  (char)(N - 1 + '0'),
-                                  '\0'};
-  addDirectPropertyFields<N - 1>(props, mb);
-  mb.addField(propName, props + N - 1);
-}
-
-template <>
-void addDirectPropertyFields<0>(const GCHermesValue *, Metadata::Builder &) {}
-
-} // anonymous namespace.
-
 void ObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  // This call is just for debugging and consistency purposes.
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSObject>());
+
   const auto *self = static_cast<const JSObject *>(cell);
   mb.addField("parent", &self->parent_);
   mb.addField("class", &self->clazz_);
   mb.addField("propStorage", &self->propStorage_);
 
   // Declare the direct properties.
-  addDirectPropertyFields<JSObject::DIRECT_PROPERTY_SLOTS>(
-      self->directProps_, mb);
+  static const char *directPropName[JSObject::DIRECT_PROPERTY_SLOTS] = {
+      "directProp0", "directProp1", "directProp2", "directProp3"};
+  for (unsigned i = mb.getJSObjectOverlapSlots();
+       i < JSObject::DIRECT_PROPERTY_SLOTS;
+       ++i) {
+    mb.addField(directPropName[i], self->directProps() + i);
+  }
 }
 
 #ifdef HERMESVM_SERIALIZE
-void JSObject::serializeObjectImpl(Serializer &s, const GCCell *cell) {
+void JSObject::serializeObjectImpl(
+    Serializer &s,
+    const GCCell *cell,
+    unsigned overlapSlots) {
   auto *self = vmcast<const JSObject>(cell);
   s.writeData(&self->flags_, sizeof(ObjectFlags));
   s.writeRelocation(self->parent_.get(s.getRuntime()));
@@ -104,13 +82,16 @@ void JSObject::serializeObjectImpl(Serializer &s, const GCCell *cell) {
         s, self->propStorage_.get(s.getRuntime()));
   }
 
-  for (size_t i = 0; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
-    s.writeHermesValue(self->directProps_[i]);
+  // Record the number of overlap slots, so that the deserialization code
+  // doesn't need to keep track of it.
+  s.writeInt<uint8_t>(overlapSlots);
+  for (size_t i = overlapSlots; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
+    s.writeHermesValue(self->directProps()[i]);
   }
 }
 
 void ObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSObject>());
   s.endObject(cell);
 }
 
@@ -134,8 +115,9 @@ JSObject::JSObject(Deserializer &d, const VTable *vtp)
         &d.getRuntime()->getHeap());
   }
 
-  for (size_t i = 0; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
-    d.readHermesValue(&directProps_[i]);
+  auto overlapSlots = d.readInt<uint8_t>();
+  for (size_t i = overlapSlots; i < JSObject::DIRECT_PROPERTY_SLOTS; i++) {
+    d.readHermesValue(&directProps()[i]);
   }
 }
 #endif
@@ -144,26 +126,28 @@ PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   void *mem = runtime->alloc</*fixedSize*/ true>(cellSize<JSObject>());
-  return createPseudoHandle(new (mem) JSObject(
-      runtime,
-      &vt.base,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+  return createPseudoHandle(
+      JSObject::allocateSmallPropStorage(new (mem) JSObject(
+          runtime,
+          &vt.base,
           *parentHandle,
-          numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      GCPointerBase::NoBarriers()));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle,
+              numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
+          GCPointerBase::NoBarriers())));
 }
 
 PseudoHandle<JSObject> JSObject::create(Runtime *runtime) {
   void *mem = runtime->alloc</*fixedSize*/ true>(cellSize<JSObject>());
   JSObject *objProto = runtime->objectPrototypeRawPtr;
-  return createPseudoHandle(new (mem) JSObject(
-      runtime,
-      &vt.base,
-      objProto,
-      runtime->getHiddenClassForPrototypeRaw(
-          objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      GCPointerBase::NoBarriers()));
+  return createPseudoHandle(
+      JSObject::allocateSmallPropStorage(new (mem) JSObject(
+          runtime,
+          &vt.base,
+          objProto,
+          runtime->getHiddenClassForPrototypeRaw(
+              objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
+          GCPointerBase::NoBarriers())));
 }
 
 PseudoHandle<JSObject> JSObject::create(
@@ -172,13 +156,13 @@ PseudoHandle<JSObject> JSObject::create(
   void *mem = runtime->alloc</*fixedSize*/ true>(cellSize<JSObject>());
   JSObject *objProto = runtime->objectPrototypeRawPtr;
   return runtime->ignoreAllocationFailure(JSObject::allocatePropStorage(
-      createPseudoHandle(new (mem) JSObject(
+      createPseudoHandle(JSObject::allocateSmallPropStorage(new (mem) JSObject(
           runtime,
           &vt.base,
           objProto,
           runtime->getHiddenClassForPrototypeRaw(
               objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-          GCPointerBase::NoBarriers())),
+          GCPointerBase::NoBarriers()))),
       runtime,
       propertyCount));
 }
@@ -265,7 +249,7 @@ void JSObject::allocateNewSlotStorage(
     Handle<> valueHandle) {
   // If it is a direct property, just store the value and we are done.
   if (LLVM_LIKELY(newSlotIndex < DIRECT_PROPERTY_SLOTS)) {
-    selfHandle->directProps_[newSlotIndex].set(
+    selfHandle->directProps()[newSlotIndex].set(
         *valueHandle, &runtime->getHeap());
     return;
   }

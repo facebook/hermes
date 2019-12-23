@@ -311,6 +311,7 @@ ObjectVTable RequireContext::vt{
 };
 
 void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<RequireContext>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -318,7 +319,8 @@ void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 RequireContext::RequireContext(Deserializer &d) : JSObject(d, &vt.base) {}
 
 void RequireContextSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<RequireContext>());
   s.endObject(cell);
 }
 
