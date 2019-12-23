@@ -68,6 +68,17 @@ static const RuntimeConfig kTestRTConfig =
 static const RuntimeConfig kTestRTConfigLargeHeap =
     RuntimeConfig::Builder().withGCConfig(kTestGCConfigLarge).build();
 
+template <typename T>
+::testing::AssertionResult isException(
+    Runtime *runtime,
+    const CallResult<T> &res) {
+  return isException(runtime, res.getStatus());
+}
+
+::testing::AssertionResult isException(
+    Runtime *runtime,
+    ExecutionStatus status);
+
 /// A RuntimeTestFixture should be used by any test that requires a Runtime.
 /// For different heap sizes, use the different subclasses.
 class RuntimeTestFixtureBase : public ::testing::Test {
@@ -89,6 +100,15 @@ class RuntimeTestFixtureBase : public ::testing::Test {
 
   /// Can't copy due to internal pointer.
   RuntimeTestFixtureBase(const RuntimeTestFixtureBase &) = delete;
+
+  template <typename T>
+  ::testing::AssertionResult isException(const CallResult<T> &res) {
+    return isException(res.getStatus());
+  }
+
+  ::testing::AssertionResult isException(ExecutionStatus status) {
+    return ::hermes::vm::isException(runtime, status);
+  }
 };
 
 class RuntimeTestFixture : public RuntimeTestFixtureBase {

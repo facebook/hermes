@@ -26,7 +26,7 @@ TEST_F(DictPropertyMapTest, SmokeTest) {
   NamedPropertyDescriptor desc1{};
 
   auto res = DictPropertyMap::create(runtime, 2);
-  ASSERT_RETURNED(res);
+  ASSERT_FALSE(isException(res));
   MutableHandle<DictPropertyMap> map{runtime, res->get()};
   auto saveMap = map.get();
 

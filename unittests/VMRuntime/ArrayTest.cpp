@@ -22,7 +22,7 @@ TEST_F(ArrayTest, CppAPITest) {
   GCScope scope(runtime, "ArrayTest.CppAPITest", 128);
 
   CallResult<PseudoHandle<JSArray>> arrayRes = JSArray::create(runtime, 1, 0);
-  ASSERT_EQ(arrayRes.getStatus(), ExecutionStatus::RETURNED);
+  ASSERT_FALSE(isException(arrayRes));
   auto array = toHandle(runtime, std::move(*arrayRes));
 
   // Make sure the beginning is at 0.
@@ -127,7 +127,7 @@ TEST_F(ArrayTest, CppAPITest) {
 TEST_F(ArrayTest, TestLength) {
   auto lengthID = Predefined::getSymbolID(Predefined::length);
   auto arrayRes = JSArray::create(runtime, 10, 10);
-  ASSERT_EQ(arrayRes.getStatus(), ExecutionStatus::RETURNED);
+  ASSERT_FALSE(isException(arrayRes));
   auto array = toHandle(runtime, std::move(*arrayRes));
 
   // Make sure the length is 10.
@@ -146,7 +146,7 @@ TEST_F(ArrayTest, TestLength) {
   {
     auto res = JSObject::putNamed_RJS(
         array, runtime, lengthID, runtime->makeHandle(5.1_hd));
-    ASSERT_TRUE(res == ExecutionStatus::EXCEPTION);
+    ASSERT_TRUE(isException(res));
     runtime->clearThrownValue();
   }
 

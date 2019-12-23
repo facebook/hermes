@@ -12,6 +12,19 @@
 namespace hermes {
 namespace vm {
 
+::testing::AssertionResult isException(
+    Runtime *runtime,
+    ExecutionStatus status) {
+  if (status == ExecutionStatus::EXCEPTION) {
+    std::string s;
+    llvm::raw_string_ostream os(s);
+    runtime->printException(os, runtime->makeHandle(runtime->getThrownValue()));
+    os.flush();
+    return ::testing::AssertionSuccess() << "An exception occurred: " << s;
+  }
+  return ::testing::AssertionFailure();
+}
+
 DummyRuntime::DummyRuntime(
     MetadataTableForTests metaTable,
     const GCConfig &gcConfig,
