@@ -436,6 +436,7 @@ BLACK_LIST = [
     # Enumerable attributes shadowing in the prototype chain.
     # T23621872
     "test262/test/language/statements/for-in/12.6.4-2.js",
+    "test262/test/language/statements/for-in/order-enumerable-shadowed.js",
     # Multiple evaluation
     # T23622428
     "test262/test/language/expressions/prefix-decrement/S11.4.5_A5_T5.js",
@@ -601,6 +602,8 @@ BLACK_LIST = [
     "test262/test/language/statements/function/scope-paramsbody-var-open.js",
     "test262/test/language/statements/try/catch-parameter-boundnames-restriction-arguments-negative-early.js",
     "test262/test/language/statements/try/scope-catch-param-lex-open.js",
+    "test262/test/language/statements/generators/generator-created-after-decl-inst.js",
+    "test262/test/language/expressions/generators/generator-created-after-decl-inst.js",
     # trailing comma
     "test262/test/language/expressions/function/dflt-params-trailing-comma.js",
     # classes and methods
@@ -635,6 +638,8 @@ BLACK_LIST = [
     "test262/test/built-ins/TypedArrays/of/argument-number-value-throws.js",
     "test262/test/built-ins/TypedArrays/of/this-is-not-constructor.js",
     "test262/test/built-ins/TypedArrays/typedarray-arg-other-ctor-buffer-ctor-access-throws.js",
+    "test262/test/language/computed-property-names/class/",
+    "test262/test/language/computed-property-names/to-name-side-effects/numbers-class.js",
     "test262/test/language/expressions/assignment/destructuring/keyed-destructuring-property-reference-target-evaluation-order.js",
     "test262/test/language/expressions/object/accessor-name-literal-numeric-binary.js",
     "test262/test/language/expressions/object/accessor-name-literal-numeric-exponent.js",
@@ -663,6 +668,40 @@ BLACK_LIST = [
     "test262/test/language/global-code/decl-lex-configurable-global.js",
     "test262/test/language/arguments-object/cls-decl-",
     "test262/test/language/arguments-object/cls-expr-",
+    "test262/test/language/expressions/function/dstr/ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/expressions/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/expressions/function/dstr/dflt-obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/expressions/function/dstr/obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/expressions/generators/dstr/ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/expressions/generators/dstr/dflt-ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/expressions/generators/dstr/dflt-obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/expressions/generators/dstr/obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/expressions/object/dstr/gen-meth-ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/expressions/object/dstr/gen-meth-dflt-ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/expressions/object/dstr/gen-meth-dflt-obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/expressions/object/dstr/gen-meth-obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/expressions/object/dstr/meth-ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/expressions/object/dstr/meth-dflt-ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/expressions/object/dstr/meth-dflt-obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/expressions/object/dstr/meth-obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/statements/for-of/dstr/let-obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/statements/for-of/dstr/var-ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/statements/for-of/dstr/array-elem-target-simple-no-strict.js",
+    "test262/test/language/statements/for-of/dstr/let-ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/statements/for-of/dstr/obj-id-init-simple-no-strict.js",
+    "test262/test/language/statements/for-of/dstr/obj-id-simple-no-strict.js",
+    "test262/test/language/statements/for-of/dstr/var-obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/statements/for-of/dstr/array-elem-init-simple-no-strict.js",
+    "test262/test/language/statements/variable/dstr/ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/statements/variable/dstr/obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/statements/function/dstr/ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/statements/function/dstr/obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/statements/function/dstr/dflt-obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/statements/function/dstr/dflt-ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/statements/for/dstr/let-obj-ptrn-id-init-fn-name-class.js",
+    "test262/test/language/statements/for/dstr/var-ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/statements/for/dstr/let-ary-ptrn-elem-id-init-fn-name-class.js",
+    "test262/test/language/statements/for/dstr/var-obj-ptrn-id-init-fn-name-class.js",
     # T34396912 .prototype property on getter/setter
     "test262/test/built-ins/Function/prototype/Symbol.hasInstance/this-val-poisoned-prototype.js",
     # spread operator
@@ -895,6 +934,8 @@ BLACK_LIST = [
     "test262/test/language/statements/function/dflt-params-ref-self.js",
     "test262/test/language/statements/generators/dflt-params-ref-later.js",
     "test262/test/language/statements/generators/dflt-params-ref-self.js",
+    # Nullish coalescing in ternary operator.
+    "test262/test/language/expressions/conditional/coalesce-expr-ternary.js",
     # Time out. # T20489563
     "mjsunit/regress/regress-crbug-482998.js",
     # Different time out: # T23228706
@@ -1561,6 +1602,7 @@ PERMANENT_BLACK_LIST = [
     "test262/test/intl402/Collator/",
     "test262/test/intl402/Date/",
     "test262/test/intl402/DateTimeFormat/",
+    "test262/test/intl402/DisplayNames/",
     "test262/test/intl402/Intl/",
     "test262/test/intl402/ListFormat/",
     "test262/test/intl402/Locale/",
@@ -1580,8 +1622,10 @@ PERMANENT_BLACK_LIST = [
 ]
 
 UNSUPPORTED_FEATURES = [
+    "AggregateError",
     "Promise.prototype.finally",
     "String.prototype.matchAll",
+    "String.prototype.replaceAll",
     "Symbol.asyncIterator",
     "Symbol.matchAll",
     "Symbol.species",
@@ -1605,6 +1649,7 @@ UNSUPPORTED_FEATURES = [
     "numeric-separator-literal",
     "optional-catch-binding",
     "regexp-dotall",
+    "regexp-match-indices",
     "regexp-named-groups",
     "regexp-unicode-property-escapes",
     "string-trimming",
