@@ -36,14 +36,14 @@ class PrimitiveBox : public JSObject {
   /// \return the [[PrimitiveValue]] internal property.
   static HermesValue getPrimitiveValue(JSObject *self, Runtime *runtime) {
     return JSObject::getInternalProperty(
-        self, runtime, PrimitiveBox::primitiveValueIndex);
+        self, runtime, PrimitiveBox::primitiveValuePropIndex());
   }
 
   /// Set the [[PrimitiveValue]] internal property.
   static void
   setPrimitiveValue(JSObject *self, Runtime *runtime, HermesValue value) {
     return JSObject::setInternalProperty(
-        self, runtime, PrimitiveBox::primitiveValueIndex, value);
+        self, runtime, PrimitiveBox::primitiveValuePropIndex(), value);
   }
 
  protected:
@@ -54,7 +54,9 @@ class PrimitiveBox : public JSObject {
       HiddenClass *clazz)
       : JSObject(runtime, vt, parent, clazz) {}
 
-  static const SlotIndex primitiveValueIndex = ANONYMOUS_PROPERTY_SLOTS - 1;
+  static constexpr SlotIndex primitiveValuePropIndex() {
+    return numOverlapSlots<PrimitiveBox>() + ANONYMOUS_PROPERTY_SLOTS - 1;
+  }
 };
 
 /// String object.

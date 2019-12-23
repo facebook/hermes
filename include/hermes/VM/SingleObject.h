@@ -38,7 +38,8 @@ class SingleObject final : public JSObject {
             runtime,
             *parentHandle,
             runtime->getHiddenClassForPrototypeRaw(
-                *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
+                *parentHandle,
+                numOverlapSlots<SingleObject>() + ANONYMOUS_PROPERTY_SLOTS))));
   }
 
  protected:
