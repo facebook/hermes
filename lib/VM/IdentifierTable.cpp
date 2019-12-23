@@ -189,6 +189,23 @@ StringView IdentifierTable::getStringView(Runtime *runtime, SymbolID id) const {
   return StringView(entry.getLazyUTF16Ref());
 }
 
+StringView IdentifierTable::getStringViewForDev(Runtime *runtime, SymbolID id)
+    const {
+  if (id == SymbolID::empty()) {
+    assert(false && "getStringViewForDev on empty SymbolID");
+    return "<<empty>>";
+  }
+  if (id == SymbolID::deleted()) {
+    assert(false && "getStringViewForDev on deleted SymbolID");
+    return "<<deleted>>";
+  }
+  if (id.isInvalid()) {
+    assert(false && "getStringViewForDev on invalid SymbolID");
+    return "<<invalid>>";
+  }
+  return getStringView(runtime, id);
+}
+
 std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
   auto &vectorEntry = getLookupTableEntry(id);
   if (vectorEntry.isStringPrim()) {

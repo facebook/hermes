@@ -121,6 +121,9 @@ class IdentifierTable {
   /// that getIdentifier(str) == id.
   StringView getStringView(Runtime *runtime, SymbolID id) const;
 
+  /// Like \c getStringView but also shows some special SymbolIDs for debugging.
+  StringView getStringViewForDev(Runtime *runtime, SymbolID id) const;
+
   /// Convert a SymbolID into the name it represents, encoded as UTF-8.
   /// This function does not perform any GC operations, such as allocations,
   /// mutating the heap, or making handles.

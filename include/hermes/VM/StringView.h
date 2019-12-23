@@ -241,6 +241,8 @@ class StringView {
   ~StringView() = default;
 #endif
 
+  StringView(const char *ptr) : StringView(ASCIIRef(ptr, strlen(ptr))) {}
+
   /// \return an iterator pointing at the beginning of the string.
   const_iterator begin() const {
     if (isASCII()) {

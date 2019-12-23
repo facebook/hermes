@@ -906,7 +906,7 @@ CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
     if (LLVM_UNLIKELY(opFlags.getMustExist())) {
       return runtime->raiseReferenceError(
           TwineChar16("Property '") +
-          runtime->getIdentifierTable().getStringView(runtime, name) +
+          runtime->getIdentifierTable().getStringViewForDev(runtime, name) +
           "' doesn't exist");
     }
     return HermesValue::encodeUndefinedValue();
@@ -1154,7 +1154,8 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
         if (opFlags.getThrowOnError()) {
           return runtime->raiseTypeError(
               TwineChar16("Cannot assign to read-only property '") +
-              runtime->getIdentifierTable().getStringView(runtime, name) + "'");
+              runtime->getIdentifierTable().getStringViewForDev(runtime, name) +
+              "'");
         }
         return false;
       }
@@ -1178,7 +1179,8 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       if (opFlags.getThrowOnError()) {
         return runtime->raiseTypeError(
             TwineChar16("Cannot assign to read-only property '") +
-            runtime->getIdentifierTable().getStringView(runtime, name) + "'");
+            runtime->getIdentifierTable().getStringViewForDev(runtime, name) +
+            "'");
       }
       return false;
     }
@@ -1239,7 +1241,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
   if (LLVM_UNLIKELY(opFlags.getMustExist())) {
     return runtime->raiseReferenceError(
         TwineChar16("Property '") +
-        runtime->getIdentifierTable().getStringView(runtime, name) +
+        runtime->getIdentifierTable().getStringViewForDev(runtime, name) +
         "' doesn't exist");
   }
 
@@ -1554,7 +1556,7 @@ CallResult<bool> JSObject::deleteNamed(
     if (opFlags.getThrowOnError()) {
       return runtime->raiseTypeError(
           TwineChar16("Property '") +
-          runtime->getIdentifierTable().getStringView(runtime, name) +
+          runtime->getIdentifierTable().getStringViewForDev(runtime, name) +
           "' is not configurable");
     }
     return false;
@@ -2327,7 +2329,8 @@ CallResult<bool> JSObject::addOwnProperty(
     if (opFlags.getThrowOnError()) {
       return runtime->raiseTypeError(
           TwineChar16("Cannot add new property '") +
-          runtime->getIdentifierTable().getStringView(runtime, name) + "'");
+          runtime->getIdentifierTable().getStringViewForDev(runtime, name) +
+          "'");
     }
     return false;
   }
