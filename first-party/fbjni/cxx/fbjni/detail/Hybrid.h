@@ -172,7 +172,7 @@ protected:
   // own public ctor, or change the accessibility of this to public.
   using detail::HybridTraits<Base>::CxxBase::CxxBase;
 
-  static void registerHybrid(std::initializer_list<NativeMethod> methods) {
+  static void registerHybrid(std::initializer_list<JNINativeMethod> methods) {
     javaClassLocal()->registerNatives(methods);
   }
 

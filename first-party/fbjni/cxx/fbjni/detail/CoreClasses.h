@@ -235,8 +235,6 @@ protected:
 };
 
 /// Wrapper to provide functionality to jclass references
-struct NativeMethod;
-
 class JClass : public JavaClass<JClass, JObject, jclass> {
  public:
   /// Java type descriptor
@@ -265,7 +263,7 @@ class JClass : public JavaClass<JClass, JObject, jclass> {
   /// exception is crashing out of the JNI method, declare the method noexcept.
   /// This does NOT apply to critical native methods, where exceptions causes
   /// a crash.
-  void registerNatives(std::initializer_list<NativeMethod> methods);
+  void registerNatives(std::initializer_list<JNINativeMethod> methods);
 
   /// Check to see if the class is assignable from another class
   /// @pre cls != nullptr
@@ -348,7 +346,7 @@ private:
 
 // Convenience method to register methods on a class without holding
 // onto the class object.
-void registerNatives(const char* name, std::initializer_list<NativeMethod> methods);
+void registerNatives(const char* name, std::initializer_list<JNINativeMethod> methods);
 
 /// Wrapper to provide functionality to jstring references
 class JString : public JavaClass<JString, JObject, jstring> {

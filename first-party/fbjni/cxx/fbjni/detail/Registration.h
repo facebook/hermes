@@ -78,12 +78,15 @@ struct CriticalMethod<R(*)(Args...)> {
 // The empty string in the macros below ensures that name
 // is always a string literal (because that syntax is only
 // valid when name is a string literal).
+//
+// We need to const_cast because non-Android platforms have
+// unnecessarily non-const members in JNINativeMethod.
 #define makeNativeMethod2(name, func)                                   \
-  { name "", ::facebook::jni::detail::makeDescriptor(&func).c_str(),    \
+  { const_cast<char*>(name ""), const_cast<char*>(::facebook::jni::detail::makeDescriptor(&func).c_str()), \
       ::facebook::jni::detail::exceptionWrapJNIMethod<decltype(&func), &func>(&func) }
 
 #define makeNativeMethod3(name, desc, func)                             \
-  { name "", desc,                                                      \
+  { const_cast<char*>(name ""), const_cast<char*>(desc),                \
       ::facebook::jni::detail::exceptionWrapJNIMethod<decltype(&func), &func>(&func) }
 
 // Variadic template hacks to get macros with different numbers of
@@ -155,7 +158,7 @@ struct CriticalMethod<R(*)(Args...)> {
 #endif
 
 #define makeCriticalNativeMethod3(name, desc, func) (                   \
-    []() -> ::facebook::jni::NativeMethod {                             \
+    []() -> JNINativeMethod {                                           \
       static constexpr auto descString = FBJNI_PREFIX_FAST_CALL(desc);  \
       return makeNativeMethod3(                                         \
         name,                                                           \

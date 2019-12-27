@@ -155,29 +155,13 @@ auto JavaClass<T, B, J>::self() const noexcept -> javaobject {
 // jclass //////////////////////////////////////////////////////////////////////////////////////////
 
 
-struct NativeMethod {
-  const char* name;
-  const char* descriptor;
-  void* wrapper;
-};
-
 inline local_ref<JClass> JClass::getSuperclass() const noexcept {
   return adopt_local(Environment::current()->GetSuperclass(self()));
 }
 
-inline void JClass::registerNatives(std::initializer_list<NativeMethod> methods) {
+inline void JClass::registerNatives(std::initializer_list<JNINativeMethod> methods) {
   const auto env = Environment::current();
-
-  JNINativeMethod jnimethods[methods.size()];
-  size_t i = 0;
-  for (auto it = methods.begin(); it < methods.end(); ++it, ++i) {
-    // The JNI struct members are unnecessarily non-const.
-    jnimethods[i].name = const_cast<char*>(it->name);
-    jnimethods[i].signature = const_cast<char*>(it->descriptor);
-    jnimethods[i].fnPtr = reinterpret_cast<void*>(it->wrapper);
-  }
-
-  auto result = env->RegisterNatives(self(), jnimethods, static_cast<int>(methods.size()));
+  auto result = env->RegisterNatives(self(), methods.begin(), static_cast<int>(methods.size()));
   FACEBOOK_JNI_THROW_EXCEPTION_IF(result != JNI_OK);
 }
 
@@ -316,7 +300,7 @@ inline jclass JClass::self() const noexcept {
   return static_cast<jclass>(JObject::self());
 }
 
-inline void registerNatives(const char* name, std::initializer_list<NativeMethod> methods) {
+inline void registerNatives(const char* name, std::initializer_list<JNINativeMethod> methods) {
   findClassLocal(name)->registerNatives(methods);
 }
 
