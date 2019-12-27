@@ -19,9 +19,16 @@
 #pragma once
 
 #include <cassert>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 #include <utility>
+
+#if defined(__has_feature)
+#define FBJNI_HAS_FEATURE(...) __has_feature(__VA_ARGS__)
+#else
+#define FBJNI_HAS_FEATURE(...) 0
+#endif
 
 namespace facebook {
 namespace jni {
@@ -50,7 +57,7 @@ static_assert(
     "Someone appears to have broken constexpr_strlen...");
 
 constexpr size_t constexpr_strlen(const char* s) {
-#if defined(__has_feature) && __has_feature(cxx_constexpr_string_builtins)
+#if FBJNI_HAS_FEATURE(cxx_constexpr_string_builtins)
   // clang provides a constexpr builtin
   return __builtin_strlen(s);
 #elif defined(__GNUC__) && !defined(__clang__)

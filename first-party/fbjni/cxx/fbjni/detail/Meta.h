@@ -294,11 +294,11 @@ private:
  public:
   // The jni type signature (described at
   // http://docs.oracle.com/javase/1.5.0/docs/guide/jni/spec/types.html).
-  static constexpr decltype(descriptor()) /* detail::SimpleFixedString<_> */ kDescriptor = descriptor();
+  static constexpr decltype(jtype_traits<T>::descriptor()) /* detail::SimpleFixedString<_> */ kDescriptor = descriptor();
 
   // The signature used for class lookups. See
   // http://docs.oracle.com/javase/6/docs/api/java/lang/Class.html#getName().
-  static constexpr decltype(base_name()) /* detail::SimpleFixedString<_> */ kBaseName = base_name();
+  static constexpr decltype(jtype_traits<T>::base_name()) /* detail::SimpleFixedString<_> */ kBaseName = base_name();
 };
 
 template <typename T>
