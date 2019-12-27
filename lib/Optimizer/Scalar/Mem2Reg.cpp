@@ -156,6 +156,16 @@ static bool promoteLoads(BasicBlock *BB) {
       continue;
     }
 
+    // If the instructions writes to memory and one of its operands is
+    // an alloca (any alloca), remove that alloca from the known stack
+    // values.
+    if (II->mayWriteMemory()) {
+      for (unsigned i = 0, e = II->getNumOperands(); i != e; ++i) {
+        if (auto *ASI = dyn_cast<AllocStackInst>(II->getOperand(i)))
+          knownStackValues.erase(ASI);
+      }
+    }
+
     // Try to replace the LoadStack with a recently saved value.
     if (auto *LS = dyn_cast<LoadStackInst>(II)) {
       AllocStackInst *dest = LS->getPtr();
