@@ -48,17 +48,47 @@ class HybridDestructor : public JavaClass<HybridDestructor> {
 };
 
 template<typename T>
-detail::BaseHybridClass* getNativePointer(T t) {
+detail::BaseHybridClass* getNativePointer(const T* t) {
   return getHolder(t)->getNativePointer();
 }
 
+// Save space: delgate to pointer implementation.
+template<typename T, typename Alloc>
+detail::BaseHybridClass* getNativePointer(basic_strong_ref<T, Alloc> t) {
+  return getNativePointer(&*t);
+}
+
+// Save space: delgate to pointer implementation.
 template<typename T>
-void setNativePointer(T t, std::unique_ptr<detail::BaseHybridClass> new_value) {
-  getHolder(t)->setNativePointer(std::move(new_value));
+detail::BaseHybridClass* getNativePointer(alias_ref<T> t) {
+  return getNativePointer(&*t);
+}
+
+// Save space: delgate to pointer implementation.
+template<typename T>
+detail::BaseHybridClass* getNativePointer(T* t) {
+  return getNativePointer((const T*)t);
 }
 
 template<typename T>
-local_ref<HybridDestructor> getHolder(T t) {
+void setNativePointer(const T* t, std::unique_ptr<detail::BaseHybridClass> new_value) {
+  getHolder(t)->setNativePointer(std::move(new_value));
+}
+
+// Save space: use unified getHolder implementation.
+template<typename T, typename Alloc>
+void setNativePointer(basic_strong_ref<T, Alloc> t, std::unique_ptr<detail::BaseHybridClass> new_value) {
+  getHolder(&*t)->setNativePointer(std::move(new_value));
+}
+
+// Save space: use unified getHolder implementation.
+template<typename T>
+void setNativePointer(alias_ref<T> t, std::unique_ptr<detail::BaseHybridClass> new_value) {
+  getHolder(&*t)->setNativePointer(std::move(new_value));
+}
+
+template<typename T>
+local_ref<HybridDestructor> getHolder(const T* t) {
   static auto holderField = t->getClass()->template getField<HybridDestructor::javaobject>("mDestructor");
   return t->getFieldValue(holderField);
 }
