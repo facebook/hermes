@@ -413,6 +413,10 @@ class weak_ref : public base_owned_ref<T, WeakGlobalReferenceAllocator> {
   weak_ref(weak_ref&& other) noexcept
     : base_owned_ref<T, Allocator>{std::move(other)} {}
 
+  // Move from ref to compatible type.
+  template<typename U>
+  weak_ref(weak_ref<U>&& other)
+      : base_owned_ref<T, Allocator>{std::move(other)} {}
 
   /// Assignment operator (note creates a new reference)
   weak_ref& operator=(const weak_ref& other);

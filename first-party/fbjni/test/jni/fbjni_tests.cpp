@@ -1193,7 +1193,7 @@ jboolean testAssignmentAndCopyCrossTypes(JNIEnv*, jobject self) {
     locals += 1;
     locals += 4;
     globals += 4;
-    weaks += 6;
+    weaks += 4;
     VERIFY_REFERENCE_STATS();
 
     auto global = make_global(local);
