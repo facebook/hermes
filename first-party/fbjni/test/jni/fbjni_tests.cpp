@@ -1163,44 +1163,65 @@ jboolean testAssignmentAndCopyCrossTypes(JNIEnv*, jobject self) {
 
   size_t locals = 0, globals = 0, weaks = 0;
   g_reference_stats.reset();
+#define VERIFY_REFERENCE_STATS() do {                                   \
+    bool referenceStatsMatch = g_reference_stats.locals_deleted == locals && \
+      g_reference_stats.globals_deleted == globals &&                   \
+      g_reference_stats.weaks_deleted == weaks;                         \
+    if (!referenceStatsMatch) {                                         \
+      FBJNI_LOGE("locals: %d, expected: %zd", g_reference_stats.locals_deleted.load(), locals); \
+      FBJNI_LOGE("globals: %d, expected: %zd", g_reference_stats.globals_deleted.load(), globals); \
+      FBJNI_LOGE("weaks: %d, expected: %zd", g_reference_stats.weaks_deleted.load(), weaks); \
+    }                                                                   \
+    EXPECT(referenceStatsMatch);                                        \
+  } while (0)
+
   {
+    VERIFY_REFERENCE_STATS();
+
     auto local = adopt_local(self);
-    locals += 1;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(copyAndVerifyCross<local_ref>(local));
     locals += 2;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(assignAndVerifyCross<local_ref>(local));
     locals += 2;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(verifyMakeCross<local_ref>(local));
     locals += 1;
     locals += 6;
     globals += 6;
     weaks += 6;
+    VERIFY_REFERENCE_STATS();
 
     auto global = make_global(local);
-    globals += 1;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(copyAndVerifyCross<global_ref>(global));
     globals += 2;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(assignAndVerifyCross<global_ref>(global));
     globals += 2;
+    VERIFY_REFERENCE_STATS();
 
     auto weak = make_weak(local);
-    weaks += 1;
+    VERIFY_REFERENCE_STATS();
 
     weak_ref<JObject> weakCopy{weak};
-    weaks += 1;
+    VERIFY_REFERENCE_STATS();
 
     EXPECT(weak.lockGlobal() == weakCopy.lockGlobal());
     globals += 3; // One extra required as the two globals are different types.
+    VERIFY_REFERENCE_STATS();
 
     weakCopy = weak;
     weaks += 1;
     EXPECT(weak.lockGlobal() == weakCopy.lockGlobal());
     globals += 3; // One extra required as the two globals are different types.
+    VERIFY_REFERENCE_STATS();
 
     auto alias = alias_ref<jobject>{local};
     alias_ref<JObject>{local};
@@ -1215,15 +1236,14 @@ jboolean testAssignmentAndCopyCrossTypes(JNIEnv*, jobject self) {
     alias = self;
     alias = global;
     // alias = weak; // Should not compile
+
+    weaks += 1;   // `weakCopy` going out of scope
+    weaks += 1;   // `weak` going out of scope
+    globals += 1; // `global` going out of scope
+    locals += 1;  // `local` going out of scope
   }
 
-  FBJNI_LOGE("locals: %d, expected: %zd", g_reference_stats.locals_deleted.load(), locals);
-  FBJNI_LOGE("globals: %d, expected: %zd", g_reference_stats.globals_deleted.load(), globals);
-  FBJNI_LOGE("weaks: %d, expected: %zd", g_reference_stats.weaks_deleted.load(), weaks);
-
-  EXPECT(g_reference_stats.locals_deleted == locals &&
-        g_reference_stats.globals_deleted == globals &&
-        g_reference_stats.weaks_deleted == weaks);
+  VERIFY_REFERENCE_STATS();
 
   return JNI_TRUE;
 
