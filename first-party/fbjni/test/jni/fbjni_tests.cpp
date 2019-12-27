@@ -1191,8 +1191,8 @@ jboolean testAssignmentAndCopyCrossTypes(JNIEnv*, jobject self) {
 
     EXPECT(verifyMakeCross<local_ref>(local));
     locals += 1;
-    locals += 6;
-    globals += 6;
+    locals += 4;
+    globals += 4;
     weaks += 6;
     VERIFY_REFERENCE_STATS();
 
@@ -1214,13 +1214,13 @@ jboolean testAssignmentAndCopyCrossTypes(JNIEnv*, jobject self) {
     VERIFY_REFERENCE_STATS();
 
     EXPECT(weak.lockGlobal() == weakCopy.lockGlobal());
-    globals += 3; // One extra required as the two globals are different types.
+    globals += 2;
     VERIFY_REFERENCE_STATS();
 
     weakCopy = weak;
     weaks += 1;
     EXPECT(weak.lockGlobal() == weakCopy.lockGlobal());
-    globals += 3; // One extra required as the two globals are different types.
+    globals += 2;
     VERIFY_REFERENCE_STATS();
 
     auto alias = alias_ref<jobject>{local};

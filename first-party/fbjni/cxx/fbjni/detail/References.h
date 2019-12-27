@@ -478,6 +478,11 @@ class basic_strong_ref : public base_owned_ref<T, Alloc> {
   basic_strong_ref(const basic_strong_ref<U, Alloc>& other)
     : base_owned_ref<T, Alloc>{other} {}
 
+  // Move from ref to compatible type.
+  template<typename U>
+  basic_strong_ref(basic_strong_ref<U, Alloc>&& other)
+    : base_owned_ref<T, Alloc>{std::move(other)} {}
+
   /// Transfers ownership of an underlying reference from one unique reference to another
   basic_strong_ref(basic_strong_ref&& other) noexcept
     : base_owned_ref<T, Alloc>{std::move(other)} {}
