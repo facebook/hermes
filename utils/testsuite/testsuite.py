@@ -17,6 +17,7 @@ from collections import namedtuple
 from multiprocessing import Pool, Value
 from os.path import basename, isdir, isfile, join, splitext
 
+
 try:
     from testsuite.testsuite_blacklist import (
         BLACK_LIST,
@@ -332,7 +333,7 @@ def printVerbose(s):
 
 
 istty = sys.stdout.isatty()
-completed = Value('i', 0)
+completed = Value("i", 0)
 ttyWidth = os.get_terminal_size().columns if istty else 0
 
 
@@ -602,7 +603,11 @@ def runTest(filename, test_blacklist, keep_tmp, binary_path, hvm, esprima_runner
                 )
                 if optEnabled:
                     args.append("-O")
-                if not strictEnabled:
+                else:
+                    args.append("-O0")
+                if strictEnabled:
+                    args.append("-strict")
+                else:
                     args.append("-non-strict")
                 subprocess.check_output(
                     args, timeout=TIMEOUT_COMPILER, stderr=subprocess.STDOUT
@@ -731,8 +736,10 @@ def makeCalls(params, onlyfiles, rangeLeft, rangeRight):
         calls.append((f,) + params)
     return calls
 
+
 def calcParams(params):
     return (params[0], runTest(*params))
+
 
 def testLoop(calls, jobs, fail_fast, num_slowest_tests):
     results = []
