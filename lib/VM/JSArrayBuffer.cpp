@@ -102,8 +102,7 @@ CallResult<HermesValue> JSArrayBuffer::create(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS));
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS));
   return HermesValue::encodeObjectValue(
       JSObject::allocateSmallPropStorage(self));
 }

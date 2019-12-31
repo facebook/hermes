@@ -96,8 +96,7 @@ CallResult<HermesValue> JSMapImpl<C>::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSMapImpl>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 }
 
 template class JSMapImpl<CellKind::SetKind>;
@@ -191,9 +190,7 @@ CallResult<HermesValue> JSMapIteratorImpl<C>::create(
           runtime,
           *prototype,
           runtime->getHiddenClassForPrototypeRaw(
-              *prototype,
-              numOverlapSlots<JSMapIteratorImpl>() +
-                  ANONYMOUS_PROPERTY_SLOTS))));
+              *prototype, ANONYMOUS_PROPERTY_SLOTS))));
 }
 
 template class JSMapIteratorImpl<CellKind::MapIteratorKind>;

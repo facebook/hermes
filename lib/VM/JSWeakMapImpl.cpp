@@ -382,8 +382,7 @@ CallResult<HermesValue> JSWeakMapImpl<C>::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSWeakMapImpl>() + ANONYMOUS_PROPERTY_SLOTS),
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
           *valueStorage)));
 }
 

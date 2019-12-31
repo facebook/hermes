@@ -258,14 +258,6 @@ class RequireContext final : public JSObject {
   static const PropStorage::size_type ANONYMOUS_PROPERTY_SLOTS =
       Super::ANONYMOUS_PROPERTY_SLOTS + 2;
 
-  static constexpr SlotIndex domainPropIndex() {
-    return numOverlapSlots<RequireContext>() + ANONYMOUS_PROPERTY_SLOTS - 2;
-  }
-
-  static constexpr SlotIndex dirnamePropIndex() {
-    return numOverlapSlots<RequireContext>() + ANONYMOUS_PROPERTY_SLOTS - 1;
-  }
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::RequireContextKind;
   }
@@ -278,14 +270,13 @@ class RequireContext final : public JSObject {
 
   /// \return the domain for this require context.
   static Domain *getDomain(Runtime *runtime, RequireContext *self) {
-    return vmcast<Domain>(
-        JSObject::getInternalProperty(self, runtime, domainPropIndex()));
+    return vmcast<Domain>(JSObject::getInternalProperty(self, runtime, 0));
   }
 
   /// \return the current dirname for this require context.
   static StringPrimitive *getDirname(Runtime *runtime, RequireContext *self) {
     return vmcast<StringPrimitive>(
-        JSObject::getInternalProperty(self, runtime, dirnamePropIndex()));
+        JSObject::getInternalProperty(self, runtime, 1));
   }
 
  private:

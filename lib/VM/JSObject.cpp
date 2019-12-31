@@ -149,8 +149,7 @@ PseudoHandle<JSObject> JSObject::create(
       &vt.base,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       GCPointerBase::NoBarriers()));
 }
 
@@ -162,7 +161,7 @@ PseudoHandle<JSObject> JSObject::create(Runtime *runtime) {
       &vt.base,
       objProto,
       runtime->getHiddenClassForPrototypeRaw(
-          objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
+          objProto, ANONYMOUS_PROPERTY_SLOTS),
       GCPointerBase::NoBarriers()));
 }
 
@@ -177,7 +176,7 @@ PseudoHandle<JSObject> JSObject::create(
           &vt.base,
           objProto,
           runtime->getHiddenClassForPrototypeRaw(
-              objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
+              objProto, ANONYMOUS_PROPERTY_SLOTS),
           GCPointerBase::NoBarriers())),
       runtime,
       propertyCount));

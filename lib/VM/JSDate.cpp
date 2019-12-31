@@ -57,8 +57,7 @@ JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
   return selfHandle.getHermesValue();
 }
 

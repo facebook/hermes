@@ -698,8 +698,7 @@ class NativeConstructor final : public NativeFunction {
         runtime,
         *parentHandle,
         runtime->getHiddenClassForPrototypeRaw(
-            *parentHandle,
-            numOverlapSlots<NativeConstructor>() + ANONYMOUS_PROPERTY_SLOTS),
+            *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
         context,
         functionPtr,
         creator,
@@ -724,8 +723,7 @@ class NativeConstructor final : public NativeFunction {
         runtime,
         *parentHandle,
         runtime->getHiddenClassForPrototypeRaw(
-            *parentHandle,
-            numOverlapSlots<NativeConstructor>() + ANONYMOUS_PROPERTY_SLOTS),
+            *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
         parentEnvHandle,
         context,
         functionPtr,

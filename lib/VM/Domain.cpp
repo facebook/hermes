@@ -345,10 +345,8 @@ Handle<RequireContext> RequireContext::create(
               vmcast<JSObject>(runtime->objectPrototype),
               ANONYMOUS_PROPERTY_SLOTS))));
 
-  JSObject::setInternalProperty(
-      *self, runtime, domainPropIndex(), domain.getHermesValue());
-  JSObject::setInternalProperty(
-      *self, runtime, dirnamePropIndex(), dirname.getHermesValue());
+  JSObject::setInternalProperty(*self, runtime, 0, domain.getHermesValue());
+  JSObject::setInternalProperty(*self, runtime, 1, dirname.getHermesValue());
 
   return self;
 }

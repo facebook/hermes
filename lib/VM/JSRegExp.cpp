@@ -97,15 +97,17 @@ CallResult<HermesValue> JSRegExp::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
   JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      patternPropIndex(),
+      pattern,
       HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::emptyString)));
+  static_assert(
+      pattern == 0 && ANONYMOUS_PROPERTY_SLOTS == 1,
+      "internal property 'pattern' must be first");
 
   return selfHandle.getHermesValue();
 }
@@ -130,7 +132,10 @@ ExecutionStatus JSRegExp::initialize(
   selfHandle->flagBits_ = *fbits;
 
   JSObject::setInternalProperty(
-      selfHandle.get(), runtime, patternPropIndex(), pattern.getHermesValue());
+      selfHandle.get(),
+      runtime,
+      RegExpSlotIndexes::pattern,
+      pattern.getHermesValue());
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
@@ -234,7 +239,7 @@ PseudoHandle<StringPrimitive> JSRegExp::getPattern(
     JSRegExp *self,
     PointerBase *base) {
   return createPseudoHandle(
-      JSObject::getInternalProperty(self, base, patternPropIndex())
+      JSObject::getInternalProperty(self, base, RegExpSlotIndexes::pattern)
           .getString());
 }
 

@@ -64,8 +64,7 @@ CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<JSGenerator>() + ANONYMOUS_PROPERTY_SLOTS)));
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS)));
   self->innerFunction_.set(runtime, *innerFunction, &runtime->getHeap());
   return createPseudoHandle(self);
 }

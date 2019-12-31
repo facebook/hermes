@@ -143,9 +143,7 @@ class JSRegExp final : public JSObject {
   static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
   // Property storage slots.
-  static constexpr inline SlotIndex patternPropIndex() {
-    return numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS - 1;
-  }
+  enum RegExpSlotIndexes { pattern, lastIndex, COUNT };
 
  public:
   // pattern

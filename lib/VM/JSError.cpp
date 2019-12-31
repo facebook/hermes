@@ -205,8 +205,7 @@ CallResult<HermesValue> JSError::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSError>() + ANONYMOUS_PROPERTY_SLOTS),
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
           catchable)));
 }
 

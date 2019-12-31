@@ -1304,40 +1304,6 @@ class JSObject : public GCCell {
 
   /// Storage for direct property slots.
   GCHermesValue directProps_[DIRECT_PROPERTY_SLOTS];
-
- private:
-  /// Byte offset to the first direct property slot in a JSObject.
-  static constexpr size_t directPropsOffset() {
-    return llvm::alignTo<sizeof(GCHermesValue)>(sizeof(JSObject));
-  }
-
-  /// The number of direct property slots that would be unused due to overlap
-  /// with C++ fields in a subclass of size \p sizeofDerived, if the number
-  /// of direct properties in JSObject were unlimited.
-  static constexpr size_t uncappedOverlapSlots(size_t sizeofDerived) {
-    return sizeofDerived <= directPropsOffset()
-        ? 0
-        : (sizeofDerived - directPropsOffset() + sizeof(GCHermesValue) - 1) /
-            sizeof(GCHermesValue);
-  }
-
- public:
-  /// The number of direct property slots that are unused due to overlap with
-  /// C++ fields in the class Derived.
-  ///
-  /// Example layouts ([0-3] = direct props, [A-Z] = other fields):
-  ///   JSObject: ABCD0123
-  ///   Derived0: ABCDEF23  (2 overlap slots)
-  ///   Derived1: ABCDEFGHI (4 overlap slots)
-  template <typename Derived>
-  static constexpr unsigned numOverlapSlots() {
-    static_assert(
-        std::is_convertible<Derived *, JSObject *>::value, "must be subclass");
-    return uncappedOverlapSlots(sizeof(Derived)) >
-            (size_t)JSObject::DIRECT_PROPERTY_SLOTS
-        ? (size_t)JSObject::DIRECT_PROPERTY_SLOTS
-        : uncappedOverlapSlots(sizeof(Derived));
-  }
 };
 
 /// \return an array that contains all enumerable properties of obj (including

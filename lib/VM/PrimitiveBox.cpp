@@ -64,13 +64,12 @@ CallResult<HermesValue> JSString::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSString>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
   JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
+      PrimitiveBox::primitiveValueIndex,
       value.getHermesValue());
 
   PropertyFlags pf;
@@ -110,7 +109,7 @@ void JSString::setPrimitiveString(
   return JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
+      PrimitiveBox::primitiveValueIndex,
       string.getHermesValue());
 }
 
@@ -243,9 +242,7 @@ CallResult<HermesValue> JSStringIterator::create(
   auto *self = JSObject::allocateSmallPropStorage(new (mem) JSStringIterator(
       runtime,
       *proto,
-      runtime->getHiddenClassForPrototypeRaw(
-          *proto,
-          numOverlapSlots<JSStringIterator>() + ANONYMOUS_PROPERTY_SLOTS),
+      runtime->getHiddenClassForPrototypeRaw(*proto, ANONYMOUS_PROPERTY_SLOTS),
       *string));
   return HermesValue::encodeObjectValue(self);
 }
@@ -355,13 +352,12 @@ CallResult<HermesValue> JSNumber::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSNumber>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
   JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
+      PrimitiveBox::primitiveValueIndex,
       HermesValue::encodeDoubleValue(value));
 
   return selfHandle.getHermesValue();
@@ -409,13 +405,12 @@ JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSBoolean>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
   JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
+      PrimitiveBox::primitiveValueIndex,
       *Runtime::getBoolValue(value));
   return selfHandle.getHermesValue();
 }
@@ -464,13 +459,12 @@ CallResult<HermesValue> JSSymbol::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSSymbol>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
   JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
+      PrimitiveBox::primitiveValueIndex,
       HermesValue::encodeSymbolValue(value));
 
   return selfHandle.getHermesValue();

@@ -40,14 +40,14 @@ class JSDate final : public JSObject {
   /// \return the [[PrimitiveValue]] internal property.
   static HermesValue getPrimitiveValue(JSObject *self, Runtime *runtime) {
     return JSObject::getInternalProperty(
-        self, runtime, JSDate::primitiveValuePropIndex());
+        self, runtime, JSDate::primitiveValueIndex);
   }
 
   /// Set the [[PrimitiveValue]] internal property.
   static void
   setPrimitiveValue(JSObject *self, Runtime *runtime, HermesValue value) {
     return JSObject::setInternalProperty(
-        self, runtime, JSDate::primitiveValuePropIndex(), value);
+        self, runtime, JSDate::primitiveValueIndex, value);
   }
 
  protected:
@@ -61,9 +61,7 @@ class JSDate final : public JSObject {
       : JSObject(runtime, &vt.base, parent, clazz) {}
 
  protected:
-  static constexpr SlotIndex primitiveValuePropIndex() {
-    return numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS - 1;
-  }
+  static const SlotIndex primitiveValueIndex = ANONYMOUS_PROPERTY_SLOTS - 1;
 };
 
 } // namespace vm

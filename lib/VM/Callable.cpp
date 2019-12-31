@@ -537,8 +537,7 @@ CallResult<HermesValue> BoundFunction::create(
       runtime,
       runtime->functionPrototypeRawPtr,
       runtime->getHiddenClassForPrototypeRaw(
-          runtime->functionPrototypeRawPtr,
-          numOverlapSlots<BoundFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          runtime->functionPrototypeRawPtr, ANONYMOUS_PROPERTY_SLOTS),
       target,
       argStorageHandle));
 
@@ -955,8 +954,7 @@ Handle<NativeFunction> NativeFunction::create(
       &vt.base.base,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       context,
       functionPtr));
 
@@ -990,8 +988,7 @@ Handle<NativeFunction> NativeFunction::create(
       &vt.base.base,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       parentEnvHandle,
       context,
       functionPtr));
@@ -1214,8 +1211,7 @@ CallResult<HermesValue> JSFunction::create(
       *domain,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<JSFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       envHandle,
       codeBlock);
   self->flags_.lazyObject = 1;
@@ -1328,8 +1324,7 @@ CallResult<HermesValue> JSGeneratorFunction::create(
       *domain,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<JSGeneratorFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       envHandle,
       codeBlock);
   self->flags_.lazyObject = 1;
@@ -1432,8 +1427,7 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
       *domain,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<GeneratorInnerFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
       envHandle,
       codeBlock,
       args.getArgCount()));

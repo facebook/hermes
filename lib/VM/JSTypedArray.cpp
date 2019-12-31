@@ -370,8 +370,7 @@ CallResult<HermesValue> JSTypedArray<T, C>::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSTypedArray>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 }
 
 /// @name Specializations for specific types

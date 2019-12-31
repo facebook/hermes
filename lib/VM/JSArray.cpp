@@ -414,8 +414,7 @@ CallResult<HermesValue> Arguments::create(
           runtime,
           runtime->objectPrototypeRawPtr,
           runtime->getHiddenClassForPrototypeRaw(
-              runtime->objectPrototypeRawPtr,
-              numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS),
+              runtime->objectPrototypeRawPtr, ANONYMOUS_PROPERTY_SLOTS),
           *indexedStorage)));
 
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
@@ -539,8 +538,7 @@ Handle<HiddenClass> JSArray::createClass(
   Handle<HiddenClass> classHandle{
       runtime,
       runtime->getHiddenClassForPrototypeRaw(
-          *prototypeHandle,
-          numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS)};
+          *prototypeHandle, ANONYMOUS_PROPERTY_SLOTS)};
 
   PropertyFlags pf{};
   pf.enumerable = 0;
@@ -554,11 +552,11 @@ Handle<HiddenClass> JSArray::createClass(
       added != ExecutionStatus::EXCEPTION &&
       "Adding the first properties shouldn't cause overflow");
   assert(
-      added->second == lengthPropIndex() && "JSArray.length has invalid index");
+      added->second == LengthPropIndex && "JSArray.length has invalid index");
   classHandle = added->first;
 
   assert(
-      classHandle->getNumProperties() == jsArrayPropertyCount() &&
+      classHandle->getNumProperties() == JSArrayPropertyCount &&
       "JSArray class defined with incorrect number of properties");
 
   return classHandle;
@@ -575,7 +573,7 @@ CallResult<HermesValue> JSArray::create(
   // Allocate property storage with size corresponding to number of properties
   // in the hidden class.
   assert(
-      classHandle->getNumProperties() == jsArrayPropertyCount() &&
+      classHandle->getNumProperties() == JSArrayPropertyCount &&
       "invalid number of properties in JSArray hidden class");
 
   // Only allocate the storage if capacity is not zero.
@@ -810,9 +808,7 @@ CallResult<HermesValue> JSArrayIterator::create(
   auto *self = JSObject::allocateSmallPropStorage(new (mem) JSArrayIterator(
       runtime,
       *proto,
-      runtime->getHiddenClassForPrototypeRaw(
-          *proto,
-          numOverlapSlots<JSArrayIterator>() + ANONYMOUS_PROPERTY_SLOTS),
+      runtime->getHiddenClassForPrototypeRaw(*proto, ANONYMOUS_PROPERTY_SLOTS),
       *array,
       iterationKind));
   return HermesValue::encodeObjectValue(self);

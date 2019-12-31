@@ -66,8 +66,7 @@ CallResult<HermesValue> JSDataView::create(
           runtime,
           *prototype,
           runtime->getHiddenClassForPrototypeRaw(
-              *prototype,
-              numOverlapSlots<JSDataView>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *prototype, ANONYMOUS_PROPERTY_SLOTS))));
 }
 
 JSDataView::JSDataView(Runtime *runtime, JSObject *parent, HiddenClass *clazz)
