@@ -30,7 +30,6 @@ const ObjectVTable JSGenerator::vt{
 };
 
 void GeneratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGenerator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSGenerator *>(cell);
   mb.addField("innerFunction", &self->innerFunction_);
@@ -43,8 +42,7 @@ JSGenerator::JSGenerator(Deserializer &d) : JSObject(d, &vt.base) {
 
 void GeneratorSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSGenerator>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSGenerator>());
+  JSObject::serializeObjectImpl(s, cell);
   s.writeRelocation(self->innerFunction_.get(s.getRuntime()));
   s.endObject(cell);
 }

@@ -50,7 +50,6 @@ ObjectVTable JSRegExp::vt{
 };
 
 void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSRegExp>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -67,7 +66,7 @@ JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
 
 void RegExpSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSRegExp>(cell);
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSRegExp>());
+  JSObject::serializeObjectImpl(s, cell);
   s.writeInt<uint32_t>(self->bytecodeSize_);
   s.writeData(self->bytecode_, self->bytecodeSize_);
   // bytecode_ is tracked by IDTracker for heapsnapshot. We should do

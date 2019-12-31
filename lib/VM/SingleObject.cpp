@@ -11,14 +11,10 @@
 namespace hermes {
 namespace vm {
 void MathBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(
-      JSObject::numOverlapSlots<SingleObject<CellKind::MathKind>>());
   ObjectBuildMeta(cell, mb);
 }
 
 void JSONBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(
-      JSObject::numOverlapSlots<SingleObject<CellKind::JSONKind>>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -28,14 +24,12 @@ SingleObject<kind>::SingleObject(Deserializer &d, const VTable *vt)
     : JSObject(d, vt) {}
 
 void MathSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<SingleObject<CellKind::MathKind>>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 
 void JSONSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<SingleObject<CellKind::JSONKind>>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 

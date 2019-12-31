@@ -23,7 +23,6 @@ template <CellKind C>
 void JSMapImpl<C>::MapOrSetBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSMapImpl<C>>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSMapImpl<C> *>(cell);
   mb.addField("storage", &self->storage_);
@@ -41,8 +40,7 @@ void SetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 template <CellKind C>
 void JSMapImpl<C>::serializeMapOrSetImpl(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSMapImpl<C>>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSMapImpl<C>>());
+  JSObject::serializeObjectImpl(s, cell);
   s.writeRelocation(self->storage_.get(s.getRuntime()));
 }
 
@@ -112,7 +110,6 @@ template <CellKind C>
 void JSMapIteratorImpl<C>::MapOrSetIteratorBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSMapIteratorImpl<C>>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSMapIteratorImpl<C> *>(cell);
   mb.addField("data", &self->data_);
@@ -133,8 +130,7 @@ void SetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 template <CellKind C>
 void serializeMapOrSetIteratorImpl(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSMapIteratorImpl<C>>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSMapIteratorImpl<C>>());
+  JSObject::serializeObjectImpl(s, cell);
   s.writeRelocation(self->data_.get(s.getRuntime()));
   s.writeRelocation(self->itr_.get(s.getRuntime()));
   s.writeInt<uint8_t>((uint8_t)self->iterationKind_);

@@ -31,7 +31,6 @@ ObjectVTable JSString::vt{
 };
 
 void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSString>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -42,7 +41,7 @@ PrimitiveBox::PrimitiveBox(Deserializer &d, const VTable *vt)
 JSString::JSString(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
 
 void StringObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSString>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 
@@ -208,7 +207,6 @@ ObjectVTable JSStringIterator::vt{
 };
 
 void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSStringIterator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSStringIterator *>(cell);
   mb.addField("iteratedString", &self->iteratedString_);
@@ -222,8 +220,7 @@ JSStringIterator::JSStringIterator(Deserializer &d) : JSObject(d, &vt.base) {
 
 void StringIteratorSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSStringIterator>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSStringIterator>());
+  JSObject::serializeObjectImpl(s, cell);
   s.writeRelocation(self->iteratedString_.get(s.getRuntime()));
   s.writeInt<uint32_t>(self->nextIndex_);
   s.endObject(cell);
@@ -329,7 +326,6 @@ ObjectVTable JSNumber::vt{
 };
 
 void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSNumber>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -337,7 +333,7 @@ void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 JSNumber::JSNumber(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
 
 void NumberObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSNumber>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 
@@ -386,7 +382,6 @@ ObjectVTable JSBoolean::vt{
 };
 
 void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSBoolean>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -394,8 +389,7 @@ void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 JSBoolean::JSBoolean(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
 
 void BooleanObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSBoolean>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 
@@ -441,7 +435,6 @@ ObjectVTable JSSymbol::vt{
 };
 
 void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSSymbol>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -449,7 +442,7 @@ void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 JSSymbol::JSSymbol(Deserializer &d) : PrimitiveBox(d, &vt.base) {}
 
 void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSSymbol>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 
