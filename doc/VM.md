@@ -22,6 +22,10 @@ tagged `NaN` values can hold non-`double` types.
 `StringPrimitive` is used to store immutable UTF16 encoded strings,
 and `StringPrimitive *` can be stored in `HermesValue` to make JS String values.
 
+Internally, `StringPrimitive` can be
+- `DynamicStringPrimitive` (stored in the GC heap)
+- `ExternalStringPrimitive` (stored as a pointer outside the VM, such as into a bytecode file)
+
 ## Runtime
 
 The `Runtime` class is the primary driver of the VM.
@@ -31,31 +35,41 @@ which are constructed from `BytecodeModule`s using `Runtime::runModule()`.
 
 ### Runtime Module
 
-TODO: Explain the ownership model of the RuntimeModule here.
+A `RuntimeModule` is the VM representation into a bytecode file.
+`RuntimeModule`s are stored outside the GC heap and are constructed via `new`.
+
+To allow for segmentation of bytecode files and `require`ing modules between
+separate segments, we collect `RuntimeModule`s in a class called `Domain`.
+You may think of the `Domain` as the collection of bytecode files which were
+all compiled in the same invocation of the compiler.
+
+Every `JSFunction` shares ownership of a `Domain`, and the `Domain` owns
+the `RuntimeModule`s which provide those functions. In this way, when all
+`JSFunction`s which require the files in a `Domain` are collected,
+the `Domain` and the `RuntimeModule`s are also collected.
 
 ### Runtime Identifiers
 
 The `Runtime` contains an `IdentifierTable`,
 which is used for getting unique IDs for strings.
-The table is used to go from `StringPrimitive` to `IdentifierID` and back.
+The table is used to go from `StringPrimitive` to `SymbolID` and back.
 It's prepopulated with some "predefined strings",
 the set of strings that are required by built in functions,
 which can be seen in `PredefinedStrings.def`.
 
 ### Garbage Collection
 
-Currently, the VM uses `SemiSpaceGC` for its garbage collection needs.
-The garbage collector allocates two sections of memory;
-on collection, it moves all live cells from one section to another,
-with the exception of values stored as `PinnedHermesValue`
-(mainly used for global objects stored in the `Runtime` itself).
+Currently, the VM uses `GenGCNC` (generational non-contiguous GC).
+The collector allows non-contiguous heap allocation.
+This avoids preallocating too much memory, as well as returning memory to the OS.
 The garbage collector is precise
 (it knows what `HermesValue`s are valid pointers to objects in the JS heap).
 
 TODO: Elaborate on the garbage collector requirements and future plans.
 
 The garbage collector moves objects to different place on the heap,
-invalidating `HermesValue`s, so there are a couple "scoped" value classes.
+invalidating `HermesValue`s,
+so there are a couple classes which allow updating them automatically.
 `Handle<>` and `Handle<T>` are garbage collector-aware handles;
 they are moved if a collection occurs in between two successive accesses.
 So, to ensure correctness in the VM,
@@ -69,11 +83,20 @@ and when it is destroyed (falls out of scope) it frees any chunks it allocated.
 The `GCScope` is used to internally generate `PinnedHermesValue`s,
 which are then stored in `Handle<>` and `Handle<T>`.
 
+We also provide `PseudoHandle<T>` classes which are explicitly *not* handles.
+These are used to be explicit about storage of raw pointers and `HermesValue`.
+`PseudoHandle` should be used as an argument in place of a raw pointer to
+functions which may want to turn that argument into a `Handle`,
+but in which it's not necessary to *always* incur the cost of handle allocation.
+`PseudoHandle` also does not have a copy constructor,
+and moving out of one invalidates it.
+This prevents the reuse of `PseudoHandle` after an allocating function call.
+
 #### Rules for using handles
 
 1. A function that can perform an allocation (even if it doesn't do it every
    time) or calls a function that does, must accept and return only handles
-   (for GC-managed objects).
+   (for GC-managed objects). It must also take a `Runtime*` as an argument.
 2. A function that accepts or returns handles is allowed (and can be assumed
    to) allocate more handles, but the upper bound of allocated handles must be
    static.
@@ -97,7 +120,7 @@ case of a loop, there are a couple of possibilities:
 Currently the object model is a VTable-based scheme,
 in which all possible JS values inherit from a base garbage collector VTable.
 These are called "cells", and all the cells are defined in `CellKinds.def`.
-Objects have a special `ObjectVTable`.
+Objects have a special `ObjectVTable`, Callables have a `CallableVTable`, etc.
 
 ### Objects
 
