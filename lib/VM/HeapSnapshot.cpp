@@ -183,6 +183,28 @@ void HeapSnapshot::addLocation(
   json_.emitValue(column - 1);
 }
 
+const char *HeapSnapshot::nodeTypeToName(NodeType type) {
+  switch (type) {
+#define V8_NODE_TYPE(enumerand, label) \
+  case NodeType::enumerand:            \
+    return #label;
+#include "hermes/VM/HeapSnapshot.def"
+  }
+  assert(false && "Invalid NodeType");
+  return "";
+}
+
+const char *HeapSnapshot::edgeTypeToName(EdgeType type) {
+  switch (type) {
+#define V8_EDGE_TYPE(enumerand, label) \
+  case EdgeType::enumerand:            \
+    return #label;
+#include "hermes/VM/HeapSnapshot.def"
+  }
+  assert(false && "Invalid EdgeType");
+  return "";
+}
+
 void HeapSnapshot::emitMeta() {
   json_.emitKey("snapshot");
   json_.openDict();

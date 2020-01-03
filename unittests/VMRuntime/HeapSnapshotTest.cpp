@@ -97,6 +97,154 @@ static MetadataTableForTests getMetadataTable() {
   return MetadataTableForTests(storage);
 }
 
+struct Node {
+  HeapSnapshot::NodeType type;
+  std::string name;
+  HeapSnapshot::NodeID id;
+  size_t selfSize;
+  size_t edgeCount;
+  size_t traceNodeID;
+
+  Node() = default;
+
+  explicit Node(
+      HeapSnapshot::NodeType type,
+      std::string name,
+      HeapSnapshot::NodeID id,
+      size_t selfSize,
+      size_t edgeCount,
+      size_t traceNodeID = 0)
+      : type{type},
+        name{std::move(name)},
+        id{id},
+        selfSize{selfSize},
+        edgeCount{edgeCount},
+        traceNodeID{traceNodeID} {}
+
+  static Node parse(JSONArray::iterator nodes, JSONArray &strings) {
+    // Need two levels of cast for enums because Windows complains about casting
+    // doubles to enums.
+    auto type = static_cast<HeapSnapshot::NodeType>(
+        static_cast<unsigned>(llvm::cast<JSONNumber>(*nodes)->getValue()));
+    nodes++;
+
+    std::string name = llvm::cast<JSONString>(
+                           strings[llvm::cast<JSONNumber>(*nodes)->getValue()])
+                           ->str();
+    nodes++;
+
+    auto id = static_cast<HeapSnapshot::NodeID>(
+        llvm::cast<JSONNumber>(*nodes)->getValue());
+    nodes++;
+
+    auto selfSize =
+        static_cast<size_t>(llvm::cast<JSONNumber>(*nodes)->getValue());
+    nodes++;
+
+    auto edgeCount =
+        static_cast<size_t>(llvm::cast<JSONNumber>(*nodes)->getValue());
+    nodes++;
+
+    auto traceNodeID =
+        static_cast<size_t>(llvm::cast<JSONNumber>(*nodes)->getValue());
+
+    return Node{type, std::move(name), id, selfSize, edgeCount, traceNodeID};
+  }
+
+  bool operator==(const Node &that) const {
+    return type == that.type && name == that.name && id == that.id &&
+        selfSize == that.selfSize && edgeCount == that.edgeCount &&
+        traceNodeID == that.traceNodeID;
+  }
+};
+
+std::ostream &operator<<(std::ostream &os, const Node &node);
+
+std::ostream &operator<<(std::ostream &os, const Node &node) {
+  return os << "Node{type=" << HeapSnapshot::nodeTypeToName(node.type)
+            << ", name=" << node.name << ", id=" << node.id
+            << ", selfSize=" << node.selfSize
+            << ", edgeCount=" << node.edgeCount
+            << ", traceNodeID=" << node.traceNodeID << "}";
+}
+
+struct Edge {
+  HeapSnapshot::EdgeType type;
+  bool isNamed;
+  std::string name;
+  int index;
+  // Not an object ID, but instead an index into a nodes array.
+  size_t toNode;
+
+  Edge() = default;
+
+  explicit Edge(HeapSnapshot::EdgeType type, std::string name, size_t toNode)
+      : type{type},
+        isNamed{true},
+        name{std::move(name)},
+        index{-1},
+        toNode{toNode} {}
+
+  explicit Edge(HeapSnapshot::EdgeType type, int index, size_t toNode)
+      : type{type}, isNamed{false}, name{}, index{index}, toNode{toNode} {}
+
+  static Edge parse(JSONArray::iterator edges, JSONArray &strings) {
+    Edge edge;
+    // Need two levels of cast for enums because Windows complains about casting
+    // doubles to enums.
+    edge.type = static_cast<HeapSnapshot::EdgeType>(
+        static_cast<unsigned>(llvm::cast<JSONNumber>(*edges)->getValue()));
+    ++edges;
+    switch (edge.type) {
+      case HeapSnapshot::EdgeType::Internal:
+        edge.isNamed = true;
+        edge.name = llvm::cast<JSONString>(
+                        strings[llvm::cast<JSONNumber>(*edges)->getValue()])
+                        ->str();
+        edge.index = -1;
+        break;
+      default:
+        edge.isNamed = false;
+        // Leave name as the empty string.
+        edge.index = llvm::cast<JSONNumber>(*edges)->getValue();
+        break;
+    }
+    ++edges;
+
+    uint32_t toNode = llvm::cast<JSONNumber>(*edges)->getValue();
+    assert(
+        toNode % HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT == 0 &&
+        "Invalid to node pointer");
+    toNode /= HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+    edge.toNode = toNode;
+    return edge;
+  }
+
+  Node getToNode(JSONArray &nodes, JSONArray &strings) const {
+    return Node::parse(
+        nodes.begin() + toNode * HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT,
+        strings);
+  }
+
+  bool operator==(const Edge &that) const {
+    return type == that.type && isNamed == that.isNamed && name == that.name &&
+        index == that.index && toNode == that.toNode;
+  }
+};
+
+std::ostream &operator<<(std::ostream &os, const Edge &edge);
+
+std::ostream &operator<<(std::ostream &os, const Edge &edge) {
+  std::ios_base::fmtflags f(os.flags());
+  os << std::boolalpha
+     << "Edge{type=" << HeapSnapshot::edgeTypeToName(edge.type)
+     << ", isNamed=" << edge.isNamed << ", name=" << edge.name
+     << ", index=" << edge.index << ", toNode=" << edge.toNode << "}";
+  // Reset original flags to remove the boolalpha.
+  os.flags(f);
+  return os;
+}
+
 static ::testing::AssertionResult testListOfStrings(
     JSONArray::iterator begin,
     JSONArray::iterator end,
@@ -116,141 +264,40 @@ static ::testing::AssertionResult testListOfStrings(
   return testListOfStrings(arr.begin(), arr.end(), strs);
 }
 
-static void testNode(
-    JSONArray::iterator nodes,
-    JSONArray &strings,
-    HeapSnapshot::NodeType type,
-    llvm::StringRef name,
-    HeapSnapshot::NodeID id,
-    size_t selfSize,
-    size_t edgeCount,
-    size_t traceNodeID,
-    const char *file,
-    int line) {
-  // Need two levels of cast for enums because Windows complains about casting
-  // doubles to enums.
-  auto actualType = static_cast<HeapSnapshot::NodeType>(
-      static_cast<unsigned>(llvm::cast<JSONNumber>(*nodes)->getValue()));
-  if (actualType != type) {
-    ADD_FAILURE_AT(file, line)
-        << "\tExpected type: " << ::testing::PrintToString(type)
-        << "\n\t  Actual type: " << ::testing::PrintToString(actualType);
-  }
-  nodes++;
+static JSONObject *
+takeSnapshot(GC &gc, JSONFactory &factory, const char *file, int line) {
+  std::string result("");
+  llvm::raw_string_ostream str(result);
+  gc.collect();
+  gc.createSnapshot(str);
+  str.flush();
 
-  auto actualName = llvm::cast<JSONString>(
-                        strings[llvm::cast<JSONNumber>(*nodes)->getValue()])
-                        ->str();
-  if (actualName != name) {
-    ADD_FAILURE_AT(file, line)
-        << "\tExpected name: " << ::testing::PrintToString(name)
-        << "\n\t  Actual name: " << ::testing::PrintToString(actualName);
+  if (result.empty()) {
+    ADD_FAILURE_AT(file, line) << "Snapshot wasn't written out";
+    return nullptr;
   }
-  nodes++;
 
-  auto actualID = static_cast<HeapSnapshot::NodeID>(
-      llvm::cast<JSONNumber>(*nodes)->getValue());
-  if (actualID != id) {
-    ADD_FAILURE_AT(file, line)
-        << "\tExpected ID: " << ::testing::PrintToString(id)
-        << "\n\t  Actual ID: " << ::testing::PrintToString(actualID);
+  SourceErrorManager sm;
+  JSONParser parser{factory, result, sm};
+  auto optSnapshot = parser.parse();
+  if (!optSnapshot) {
+    ADD_FAILURE_AT(file, line) << "Snapshot isn't valid JSON";
+    return nullptr;
   }
-  nodes++;
+  JSONValue *root = optSnapshot.getValue();
+  if (!llvm::isa<JSONObject>(root)) {
+    ADD_FAILURE_AT(file, line) << "Snapshot isn't a JSON object";
+    return nullptr;
+  }
 
-  auto actualSelfSize =
-      static_cast<size_t>(llvm::cast<JSONNumber>(*nodes)->getValue());
-  if (actualSelfSize != selfSize) {
-    ADD_FAILURE_AT(file, line)
-        << "\tExpected self size: " << ::testing::PrintToString(selfSize)
-        << "\n\t  Actual self size: "
-        << ::testing::PrintToString(actualSelfSize);
-  }
-  nodes++;
-
-  auto actualEdgeCount =
-      static_cast<size_t>(llvm::cast<JSONNumber>(*nodes)->getValue());
-  if (actualEdgeCount != edgeCount) {
-    ADD_FAILURE_AT(file, line)
-        << "\tExpected edge count: " << ::testing::PrintToString(edgeCount)
-        << "\n\t  Actual edge count: "
-        << ::testing::PrintToString(actualEdgeCount);
-  }
-  nodes++;
-
-  auto actualTraceNodeID =
-      static_cast<size_t>(llvm::cast<JSONNumber>(*nodes)->getValue());
-  if (actualTraceNodeID != traceNodeID) {
-    ADD_FAILURE_AT(file, line)
-        << "\tExpected trace node ID: " << ::testing::PrintToString(traceNodeID)
-        << "\n\t  Actual trace node ID: "
-        << ::testing::PrintToString(actualTraceNodeID);
-  }
-  nodes++;
+  return llvm::cast<JSONObject>(root);
 }
 
-#define TEST_NODE(...) testNode(__VA_ARGS__, __FILE__, __LINE__)
+#define TAKE_SNAPSHOT(...) takeSnapshot(__VA_ARGS__, __FILE__, __LINE__)
 
-static ::testing::AssertionResult testEdge(
-    JSONArray::iterator edges,
-    JSONArray &nodes,
-    JSONArray &strings,
-    HeapSnapshot::EdgeType type,
-    llvm::StringRef name,
-    size_t index,
-    size_t toNode,
-    const char *file,
-    int line) {
-  // Need two levels of cast for enums because Windows complains about casting
-  // doubles to enums.
-  auto actualType = static_cast<HeapSnapshot::EdgeType>(
-      static_cast<unsigned>(llvm::cast<JSONNumber>(*edges)->getValue()));
-  if (actualType != type) {
-    ADD_FAILURE_AT(file, line)
-        << "\tExpected type: " << ::testing::PrintToString(type)
-        << "\n\t  Actual type: " << ::testing::PrintToString(actualType);
-  }
-  edges++;
-  switch (actualType) {
-    case HeapSnapshot::EdgeType::Internal: {
-      auto actualName = llvm::cast<JSONString>(
-                            strings[llvm::cast<JSONNumber>(*edges)->getValue()])
-                            ->str();
-      if (actualName != name) {
-        ADD_FAILURE_AT(file, line)
-            << "\tExpected name: " << ::testing::PrintToString(name)
-            << "\n\t  Actual name: " << ::testing::PrintToString(actualName);
-      }
-      edges++;
-      break;
-    }
-    default: {
-      auto actualIndex = llvm::cast<JSONNumber>(*edges)->getValue();
-      if (actualIndex != index) {
-        ADD_FAILURE_AT(file, line)
-            << "\tExpected index: " << ::testing::PrintToString(index)
-            << "\n\t  Actual index: " << ::testing::PrintToString(actualIndex);
-      }
-      edges++;
-      break;
-    }
-  }
-  uint32_t actualToNode = llvm::cast<JSONNumber>(*edges)->getValue();
-  assert(
-      actualToNode % HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT == 0 &&
-      "Invalid to node pointer");
-  actualToNode /= HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
-  if (actualToNode != toNode) {
-    ADD_FAILURE_AT(file, line)
-        << "\tExpected node: " << ::testing::PrintToString(toNode)
-        << "\n\t  Actual node: " << ::testing::PrintToString(actualToNode);
-  }
-  edges++;
-  return ::testing::AssertionSuccess();
-}
-
-#define TEST_EDGE(...) testEdge(__VA_ARGS__, __FILE__, __LINE__)
-
-TEST(HeapSnapshotTest, SnapshotTest) {
+TEST(HeapSnapshotTest, HeaderTest) {
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
   auto runtime = DummyRuntime::create(
       getMetadataTable(),
       GCConfig::Builder()
@@ -259,31 +306,10 @@ TEST(HeapSnapshotTest, SnapshotTest) {
           .build());
   DummyRuntime &rt = *runtime;
   auto &gc = rt.gc;
-  GCScope gcScope(&rt);
 
-  auto dummy = rt.makeHandle(DummyObject::create(rt));
-  auto *dummy2 = DummyObject::create(rt);
-  dummy->setPointer(rt, dummy2);
+  JSONObject *root = TAKE_SNAPSHOT(gc, jsonFactory);
+  ASSERT_NE(root, nullptr);
 
-  std::string result("");
-  llvm::raw_string_ostream str(result);
-  gc.collect();
-  gc.createSnapshot(str);
-  str.flush();
-
-  ASSERT_FALSE(result.empty());
-
-  const auto blockSize = dummy->getAllocatedSize();
-
-  JSONFactory::Allocator alloc;
-  JSONFactory jsonFactory{alloc};
-  SourceErrorManager sm;
-  JSONParser parser{jsonFactory, result, sm};
-  auto optSnapshot = parser.parse();
-  ASSERT_TRUE(optSnapshot) << "Heap snapshot is not valid JSON";
-
-  // Too verbose to check every key, so let llvm::cast do the checks.
-  JSONObject *root = llvm::cast<JSONObject>(optSnapshot.getValue());
   JSONObject *snapshot = llvm::cast<JSONObject>(root->at("snapshot"));
 
   EXPECT_EQ(llvm::cast<JSONNumber>(snapshot->at("node_count"))->getValue(), 0);
@@ -347,6 +373,28 @@ TEST(HeapSnapshotTest, SnapshotTest) {
       edgeTypes.begin() + 1, edgeTypes.end(), {"string_or_number", "node"}));
   EXPECT_TRUE(testListOfStrings(
       locationFields, {"object_index", "script_id", "line", "column"}));
+}
+
+TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  auto runtime = DummyRuntime::create(
+      getMetadataTable(),
+      GCConfig::Builder()
+          .withInitHeapSize(1024)
+          .withMaxHeapSize(1024 * 100)
+          .build());
+  DummyRuntime &rt = *runtime;
+  auto &gc = rt.gc;
+  GCScope gcScope(&rt);
+
+  auto dummy = rt.makeHandle(DummyObject::create(rt));
+  auto *dummy2 = DummyObject::create(rt);
+  dummy->setPointer(rt, dummy2);
+  const auto blockSize = dummy->getAllocatedSize();
+
+  JSONObject *root = TAKE_SNAPSHOT(gc, jsonFactory);
+  ASSERT_NE(root, nullptr);
 
   // Check the nodes and edges.
   JSONArray &nodes = *llvm::cast<JSONArray>(root->at("nodes"));
@@ -360,77 +408,65 @@ TEST(HeapSnapshotTest, SnapshotTest) {
 
   // First node is the roots object.
   auto nextNode = nodes.begin();
-  TEST_NODE(
-      nextNode,
-      strings,
-      HeapSnapshot::NodeType::Synthetic,
-      "(GC Roots)",
-      static_cast<HeapSnapshot::NodeID>(GC::IDTracker::ReservedObjectID::Root),
-      0,
-      1,
-      0);
+  EXPECT_EQ(
+      Node::parse(nextNode, strings),
+      Node(
+          HeapSnapshot::NodeType::Synthetic,
+          "(GC Roots)",
+          static_cast<HeapSnapshot::NodeID>(
+              GC::IDTracker::ReservedObjectID::Root),
+          0,
+          1));
   nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
   // Next node is the custom root section.
-  TEST_NODE(
-      nextNode,
-      strings,
-      HeapSnapshot::NodeType::Synthetic,
-      "(Custom)",
-      static_cast<HeapSnapshot::NodeID>(
-          GC::IDTracker::ReservedObjectID::Custom),
-      0,
-      1,
-      0);
+  EXPECT_EQ(
+      Node::parse(nextNode, strings),
+      Node(
+          HeapSnapshot::NodeType::Synthetic,
+          "(Custom)",
+          static_cast<HeapSnapshot::NodeID>(
+              GC::IDTracker::ReservedObjectID::Custom),
+          0,
+          1));
   nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
   // Next node is the first dummy object.
-  TEST_NODE(
-      nextNode,
-      strings,
-      HeapSnapshot::NodeType::Object,
-      cellKindStr(dummy->getKind()),
-      gc.getObjectID(dummy.get()),
-      blockSize,
-      1,
-      0);
+  EXPECT_EQ(
+      Node::parse(nextNode, strings),
+      Node(
+          HeapSnapshot::NodeType::Object,
+          cellKindStr(dummy->getKind()),
+          gc.getObjectID(dummy.get()),
+          blockSize,
+          1));
   nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
   // Next node is the second dummy, which is only reachable via the first
   // dummy.
-  TEST_NODE(
-      nextNode,
-      strings,
-      HeapSnapshot::NodeType::Object,
-      cellKindStr(dummy->getKind()),
-      gc.getObjectID(dummy->other),
-      blockSize,
-      0,
-      0);
+  EXPECT_EQ(
+      Node::parse(nextNode, strings),
+      Node(
+          HeapSnapshot::NodeType::Object,
+          cellKindStr(dummy->getKind()),
+          gc.getObjectID(dummy->other),
+          blockSize,
+          0));
   nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
   EXPECT_EQ(nextNode, nodes.end());
 
   auto nextEdge = edges.begin();
   // Pointer from root to root section.
-  TEST_EDGE(
-      nextEdge,
-      nodes,
-      strings,
-      HeapSnapshot::EdgeType::Element,
-      "(Custom)",
-      1,
-      1);
+  EXPECT_EQ(
+      Edge::parse(nextEdge, strings),
+      Edge(HeapSnapshot::EdgeType::Element, 1, 1));
   nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
   // Pointer from root section to first dummy.
-  TEST_EDGE(
-      nextEdge, nodes, strings, HeapSnapshot::EdgeType::Element, "", 0, 2);
+  EXPECT_EQ(
+      Edge::parse(nextEdge, strings),
+      Edge(HeapSnapshot::EdgeType::Element, 0, 2));
   nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
   // Pointer from first dummy to second dummy.
-  TEST_EDGE(
-      nextEdge,
-      nodes,
-      strings,
-      HeapSnapshot::EdgeType::Internal,
-      "other",
-      1,
-      3);
+  EXPECT_EQ(
+      Edge::parse(nextEdge, strings),
+      Edge(HeapSnapshot::EdgeType::Internal, "other", 3));
   nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
   EXPECT_EQ(nextEdge, edges.end());
 
