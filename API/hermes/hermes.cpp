@@ -188,7 +188,7 @@ class InstallHermesFatalErrorHandler {
 class StackRuntime {
  public:
   StackRuntime(const vm::RuntimeConfig &runtimeConfig)
-      : thread_(runtimeMemoryThread, this, runtimeConfig.getGCConfig()) {
+      : thread_(runtimeMemoryThread, this) {
     startup_.get_future().wait();
     runtime_->emplace(
         provider_.get(),
@@ -214,7 +214,7 @@ class StackRuntime {
   }
 
  private:
-  static void runtimeMemoryThread(StackRuntime *stack, vm::GCConfig config) {
+  static void runtimeMemoryThread(StackRuntime *stack) {
 #if defined(__APPLE__)
     // Capture the thread name in case if something was already set, so that we
     // can restore it later when we're potentially returning the thread back
