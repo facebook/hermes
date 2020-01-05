@@ -708,6 +708,9 @@ class GCBase {
   ///    Ensures that the mark stack used by the collector is empty;
   ///    the transitive closure of the original contents is marked.
   ///
+  ///  * checkMarkStackOverflow: () ==> bool
+  ///    Returns whether mark stack overflow has occurred.
+  ///
   /// Some collectors compute the allocated bytes during GC.  If this
   /// is done in \p drainMarkStack, that will cover all objects except
   /// WeakWaps, which are never pushed on the mark stack.  Thus:
@@ -716,14 +719,16 @@ class GCBase {
       typename Acceptor,
       typename ObjIsMarkedFunc,
       typename MarkFromValFunc,
-      typename DrainMarkStackFunc>
+      typename DrainMarkStackFunc,
+      typename CheckMarkStackOverflowFunc>
   static gcheapsize_t completeWeakMapMarking(
       GC *gc,
       Acceptor &acceptor,
       std::vector<JSWeakMap *> &reachableWeakMaps,
       ObjIsMarkedFunc objIsMarked,
       MarkFromValFunc markFromVal,
-      DrainMarkStackFunc drainMarkStack);
+      DrainMarkStackFunc drainMarkStack,
+      CheckMarkStackOverflowFunc checkMarkStackOverflow);
 
   /// @}
 

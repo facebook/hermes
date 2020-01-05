@@ -128,7 +128,7 @@ enum class GCEventKind {
   /* Whether to enable "proper" (spec-compliant) WeakMap marking.         \
      (There have been bugs, and perf issues, so we want to be able        \
      to revert to the previous, non-spec-compliant, behavior.) */         \
-  F(constexpr, bool, ProperWeakMapMarking, false)                         \
+  F(constexpr, bool, ProperWeakMapMarking, true)                          \
                                                                           \
   /* Pointer to the memory profiler (Memory Event Tracker). */            \
   F(HERMES_NON_CONSTEXPR,                                                 \

@@ -144,14 +144,16 @@ template <
     typename Acceptor,
     typename ObjIsMarkedFunc,
     typename MarkFromValFunc,
-    typename DrainMarkStackFunc>
+    typename DrainMarkStackFunc,
+    typename CheckMarkStackOverflowFunc>
 gcheapsize_t GCBase::completeWeakMapMarking(
     GC *gc,
     Acceptor &acceptor,
     std::vector<JSWeakMap *> &reachableWeakMaps,
     ObjIsMarkedFunc objIsMarked,
     MarkFromValFunc markFromVal,
-    DrainMarkStackFunc drainMarkStack) {
+    DrainMarkStackFunc drainMarkStack,
+    CheckMarkStackOverflowFunc checkMarkStackOverflow) {
   // If a WeakMap is present as a key in this map, the corresponding list
   // is a superset of the unreachable keys in the WeakMap.  (The set last
   // found to be unreachable, some of which may now be reachable.)
@@ -217,6 +219,14 @@ gcheapsize_t GCBase::completeWeakMapMarking(
     }
   } while (newReachableValueFound);
 
+  // If mark stack overflow occurred, terminate.
+  if (checkMarkStackOverflow()) {
+    // We return 0 in this case; the reachable WeakMaps will be
+    // discovered again, and we'll compute their total size in the iteration
+    // that eventually succeeds.
+    return 0;
+  }
+
   for (auto *weakMap : reachableWeakMaps) {
     clearEntriesWithUnreachableKeys(gc, weakMap, objIsMarked);
     // Previously we scanned the weak map while its value storage was
@@ -234,6 +244,9 @@ gcheapsize_t GCBase::completeWeakMapMarking(
     GCBase::markCell(weakMap, gc, acceptor);
     drainMarkStack(acceptor);
   }
+  // Because of the limited nature of the marking done above, we can
+  // assert that overflow did not occur.
+  assert(!checkMarkStackOverflow());
 
   return weakMapAllocBytes;
 }

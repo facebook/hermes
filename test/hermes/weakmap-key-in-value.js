@@ -5,11 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes -Xhermes-internal-test-methods %t.hbc | %FileCheck --match-full-lines %s
-// Currently, only gengc has the finer-grained marking that this test tests.
-// TODO(T57727796): leaving that task open for removing the "REQUIRES" below when
-// that is implemented for GenGC as well.
+// RUN: %hermes -gc-init-heap=4M -O -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes -gc-init-heap=4M -Xhermes-internal-test-methods %t.hbc | %FileCheck --match-full-lines %s
 
 "use strict"
 

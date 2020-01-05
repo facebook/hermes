@@ -669,7 +669,9 @@ void GenGC::completeWeakMapMarking() {
       /*drainMarkStack*/
       [this](CompleteMarkState::FullMSCMarkTransitiveAcceptor &acceptor) {
         markState_.drainMarkStack(this, acceptor);
-      });
+      },
+      /*checkMarkStackOverflow*/
+      [this]() { return markState_.markStackOverflow_; });
 
   markState_.currentParPointer = nullptr;
   markState_.reachableWeakMaps_.clear();

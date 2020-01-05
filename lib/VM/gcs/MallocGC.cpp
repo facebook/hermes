@@ -405,7 +405,9 @@ void MallocGC::completeWeakMapMarking(MarkingAcceptor &acceptor) {
         return true;
       },
       /*drainMarkStack*/
-      [this](MarkingAcceptor &acceptor) { drainMarkStack(acceptor); });
+      [this](MarkingAcceptor &acceptor) { drainMarkStack(acceptor); },
+      /*checkMarkStackOverflow (MallocGC does not have mark stack overflow)*/
+      []() { return false; });
 
   acceptor.reachableWeakMaps_.clear();
   // drainMarkStack will have added the size of every object popped
