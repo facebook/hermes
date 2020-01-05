@@ -1161,8 +1161,9 @@ void GenGC::getHeapInfo(HeapInfo &info) {
   info.heapSize = sizeDirect();
   info.totalAllocatedBytes = totalAllocatedBytes_ + bytesAllocatedSinceLastGC();
   info.va = segmentIndex_.size() * AlignedStorage::size();
-  info.fullStats = fullCollectionCumStats_;
   info.youngGenStats = youngGenCollectionCumStats_;
+  info.fullStats = fullCollectionCumStats_;
+  info.numMarkStackOverflows = markState_.numMarkStackOverflows_;
 }
 
 void GenGC::getCrashManagerHeapInfo(CrashManager::HeapInformation &info) {

@@ -65,7 +65,10 @@ void CompleteMarkState::pushCell(GCCell *cell) {
   std::vector<GCCell *> *stack =
       (cell->isVariableSize() ? &varSizeMarkStack_ : &markStack_);
   if (stack->size() == kMarkStackLimit) {
-    markStackOverflow_ = true;
+    if (!markStackOverflow_) {
+      markStackOverflow_ = true;
+      numMarkStackOverflows_++;
+    }
   } else {
     stack->push_back(cell);
     numPtrsPushedByParent++;

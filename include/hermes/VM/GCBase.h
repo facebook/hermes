@@ -285,6 +285,9 @@ class GCBase {
     unsigned mallocSizeEstimate{0};
     /// The total amount of Virtual Address space (VA) that the GC is using.
     uint64_t va{0};
+    /// Cumulative number of mark stack overflows in full collections
+    /// (zero if non-generational GC).
+    unsigned numMarkStackOverflows{0};
     /// Stats for full collections (zeroes if non-generational GC).
     CumulativeHeapStats fullStats;
     /// Stats for collections in the young generation (zeroes if

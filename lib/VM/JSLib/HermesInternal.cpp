@@ -215,6 +215,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     SET_PROP_NEW("js_heapSize", info.heapSize);
     SET_PROP_NEW("js_mallocSizeEstimate", info.mallocSizeEstimate);
     SET_PROP_NEW("js_vaSize", info.va);
+    SET_PROP_NEW("js_markStackOverflows", info.numMarkStackOverflows);
   }
 
   if (stats.shouldSample) {

@@ -102,6 +102,9 @@ struct CompleteMarkState {
   /// previous, non-spec-compliant, behavior.
   bool properWeakMapMarking_;
 
+  /// The total number of mark stack overflows that have occurred.
+  unsigned numMarkStackOverflows_{0};
+
   /// Stores the current object whose fields are being scanned
   /// to be marked if needed.
   GCCell *currentParPointer = nullptr;
