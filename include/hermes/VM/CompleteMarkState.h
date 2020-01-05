@@ -30,6 +30,11 @@ struct CompleteMarkState {
   /// Forward declaration of the Acceptor used to mark fields of marked objects.
   struct FullMSCMarkTransitiveAcceptor;
 
+  /// Initialize the CompleteMarkState.  The argument controls whether
+  /// "proper" weak map marking (or else the previous,
+  /// non-spec-compliant, marking behavior) is performed.
+  explicit CompleteMarkState(bool properWeakMapMarking);
+
   /// The mark behavior used during completeMarking:
   /// \pre The object at ptr has been found to be reachable.
   /// \post Its mark bit is set.  If it had been unmarked before, the
@@ -88,6 +93,14 @@ struct CompleteMarkState {
   /// Whether one of the mark stacks has overflowed since the current
   /// mark-bit-map traversal was started.
   bool markStackOverflow_ = false;
+
+  /// Whether to do "proper" weak map marking: accumulate WeakMaps,
+  /// and do a special, "careful" marking of them, to only mark values
+  /// corresponding to reachable keys.  Under control of this boolean
+  /// because there have been bugs, so we want, at least for a while,
+  /// to be able to turn this off with a GK, reverting to the
+  /// previous, non-spec-compliant, behavior.
+  bool properWeakMapMarking_;
 
   /// Stores the current object whose fields are being scanned
   /// to be marked if needed.
