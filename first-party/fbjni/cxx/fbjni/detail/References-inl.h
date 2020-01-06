@@ -85,7 +85,6 @@ const Repr& ReprStorage<Repr>::get() const noexcept {
 
 template <typename Repr>
 JniType<Repr> ReprStorage<Repr>::jobj() const noexcept {
-  ReprAccess<Repr>::get(get());
   return ReprAccess<Repr>::get(get());
 }
 
