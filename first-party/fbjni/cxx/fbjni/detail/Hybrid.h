@@ -87,9 +87,16 @@ void setNativePointer(alias_ref<T> t, std::unique_ptr<detail::BaseHybridClass> n
   getHolder(&*t)->setNativePointer(std::move(new_value));
 }
 
+// Inline rather than in cpp file so that consumers can call into
+// their own copy directly rather than into the DSO containing fbjni,
+// saving space for the symbol table.
+inline JField<PrimitiveOrJniType<HybridDestructor::javaobject>> getDestructorField(const local_ref<JClass>& c) {
+  return c->template getField<HybridDestructor::javaobject>("mDestructor");
+}
+
 template<typename T>
 local_ref<HybridDestructor> getHolder(const T* t) {
-  static auto holderField = t->getClass()->template getField<HybridDestructor::javaobject>("mDestructor");
+  static auto holderField = getDestructorField(t->getClass());
   return t->getFieldValue(holderField);
 }
 
