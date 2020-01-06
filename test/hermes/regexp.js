@@ -216,6 +216,7 @@ var globalGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'global').g
 var ignoreCaseGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'ignoreCase').get;
 var multilineGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'multiline').get;
 var stickyGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'sticky').get;
+var dotAllGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'dotAll').get;
 print(globalGetter.call(/abc/g), globalGetter.call(/abc/), globalGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 print(ignoreCaseGetter.call(/abc/i), ignoreCaseGetter.call(/abc/), ignoreCaseGetter.call(RegExp.prototype));
@@ -223,6 +224,8 @@ print(ignoreCaseGetter.call(/abc/i), ignoreCaseGetter.call(/abc/), ignoreCaseGet
 print(multilineGetter.call(/abc/m), multilineGetter.call(/abc/), multilineGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 print(stickyGetter.call(/abc/y), stickyGetter.call(/abc/), stickyGetter.call(RegExp.prototype));
+// CHECK-NEXT: true false undefined
+print(dotAllGetter.call(/abc/s), dotAllGetter.call(/abc/), dotAllGetter.call(RegExp.prototype));
 // CHECK-NEXT: true false undefined
 try { multilineGetter.call({}); } catch (err) { print(err.name); }
 // CHECK-NEXT: TypeError
@@ -233,8 +236,10 @@ try { multilineGetter.call(undefined); } catch (err) { print(err.name); }
 // Flags accessor support
 print(/aaa/.flags.length);
 // CHECK-NEXT: 0
-print(/aaa/mi.flags, /aaa/im.flags, /aaa/ig.flags, /aaa/gi.flags, /aaa/gim.flags, /aaa/mgi.flags, /aaa/m.flags, /aaa/g.flags, /aaa/i.flags, /aaa/y.flags);
-// CHECK-NEXT: im im gi gi gim gim m g i y
+print(/aaa/mi.flags, /aaa/im.flags, /aaa/ig.flags, /aaa/gi.flags, /aaa/gim.flags, /aaa/mgi.flags, /aaa/m.flags, /aaa/g.flags, /aaa/i.flags, /aaa/y.flags, /aaa/s.flags);
+// CHECK-NEXT: im im gi gi gim gim m g i y s
+print(/aaa/igsmyu.flags);
+// CHECK-NEXT: gimsuy
 
 var flagsGetter = Object.getOwnPropertyDescriptor(RegExp.prototype, 'flags').get;
 print(flagsGetter.call({multiline: 1, global: 0, ignoreCase: "yep"}));
@@ -340,6 +345,16 @@ print(/abc/y.exec("abc"));
 // CHECK-NEXT: abc
 print(/abc/y.exec("dabc"));
 // CHECK-NEXT: null
+
+// dotAll support
+print(/.*/.exec("abc\ndef")[0], "DONE");
+// CHECK-NEXT: abc DONE
+print(/.*/s.exec("abc\ndef")[0], "DONE");
+// CHECK-NEXT: abc
+// CHECK-NEXT: def DONE
+print(/.*/su.exec("abc\ndef")[0], "DONE");
+// CHECK-NEXT: abc
+// CHECK-NEXT: def DONE
 
 print((new RegExp("5{").exec("abc5{,}def")));
 // CHECK-NEXT: 5{

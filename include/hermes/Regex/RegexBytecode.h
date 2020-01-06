@@ -43,6 +43,8 @@ struct Insn {
 struct GoalInsn : public Insn {};
 struct LeftAnchorInsn : public Insn {};
 struct RightAnchorInsn : public Insn {};
+struct MatchAnyInsn : public Insn {};
+struct U16MatchAnyInsn : public Insn {};
 struct MatchAnyButNewlineInsn : public Insn {};
 struct U16MatchAnyButNewlineInsn : public Insn {};
 struct MatchChar8Insn : public Insn {

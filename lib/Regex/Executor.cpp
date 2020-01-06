@@ -38,6 +38,7 @@ enum class Width1Opcode : uint8_t {
   MatchChar16 = (uint8_t)Opcode::MatchChar16,
   MatchCharICase8 = (uint8_t)Opcode::MatchCharICase8,
   MatchCharICase16 = (uint8_t)Opcode::MatchCharICase16,
+  MatchAny = (uint8_t)Opcode::MatchAny,
   MatchAnyButNewline = (uint8_t)Opcode::MatchAnyButNewline,
   Bracket = (uint8_t)Opcode::Bracket,
 };
@@ -763,6 +764,9 @@ bool Context<Traits>::matchWidth1(const Insn *base, CodeUnit c) const {
               c, syntaxFlags_ & constants::unicode) == (char32_t)insn->c;
     }
 
+    case Width1Opcode::MatchAny:
+      return true;
+
     case Width1Opcode::MatchAnyButNewline:
       return !isLineTerminator(c);
 
@@ -827,6 +831,9 @@ bool Context<Traits>::matchWidth1Loop(
       break;
     case W1::MatchCharICase16:
       matched = matchWidth1LoopBody<W1::MatchCharICase16>(body, c, maxMatch);
+      break;
+    case W1::MatchAny:
+      matched = matchWidth1LoopBody<W1::MatchAny>(body, c, maxMatch);
       break;
     case W1::MatchAnyButNewline:
       matched = matchWidth1LoopBody<W1::MatchAnyButNewline>(body, c, maxMatch);
@@ -959,6 +966,20 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           if (!matchesRightAnchor(*this, *s))
             BACKTRACK();
           s->ip_ += sizeof(RightAnchorInsn);
+          break;
+
+        case Opcode::MatchAny:
+          if (c.atEnd() ||
+              !matchWidth1<Width1Opcode::MatchAny>(base, c.consume()))
+            BACKTRACK();
+          s->ip_ += sizeof(MatchAnyInsn);
+          break;
+
+        case Opcode::U16MatchAny:
+          if (c.atEnd())
+            BACKTRACK();
+          c.consumeUTF16();
+          s->ip_ += sizeof(U16MatchAnyInsn);
           break;
 
         case Opcode::MatchAnyButNewline:

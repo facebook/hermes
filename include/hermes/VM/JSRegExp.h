@@ -33,6 +33,7 @@ class JSRegExp final : public JSObject {
     uint8_t global : 1;
     uint8_t sticky : 1;
     uint8_t unicode : 1;
+    uint8_t dotAll : 1;
 
     /// \return a string representing the flags
     /// The characters are returned in the order given in ES 6 21.2.5.3
@@ -50,6 +51,8 @@ class JSRegExp final : public JSObject {
         result.push_back('u');
       if (sticky)
         result.push_back('y');
+      if (dotAll)
+        result.push_back('s');
       return result;
     }
 

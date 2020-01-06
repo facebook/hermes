@@ -228,6 +228,11 @@ OptValue<JSRegExp::FlagBits> JSRegExp::FlagBits::fromString(StringView str) {
           return error;
         ret.sticky = 1;
         break;
+      case u's':
+        if (ret.dotAll)
+          return error;
+        ret.dotAll = 1;
+        break;
       default:
         return error;
     }

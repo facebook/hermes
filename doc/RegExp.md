@@ -11,19 +11,18 @@ The Hermes regexp engine is a traditional engine using a backtracking stack. It 
 The regexp engine proceeds as follows:
 
 1. *Parse phase.* The regexp parser emits a tree of nodes, effectively an IR.
-2. *Optimization phase.* The node tree is traversed and optimized in various ways.
-3. *Emitting phase.* The node tree is travered and emits regexp bytecode.
-4. *Execution phase.* The bytecode is executed against an input string.
+1. *Optimization phase.* The node tree is traversed and optimized in various ways.
+1. *Emitting phase.* The node tree is travered and emits regexp bytecode.
+1. *Execution phase.* The bytecode is executed against an input string.
 
 ## Supported Syntax
 
 As of this writing, Hermes regexp supports
 
 1. All of ES6, including global, case-insensitive, multiline, sticky, and Unicode (and legacy).
-2. ES9 lookbehinds.
+1. ES9 lookbehinds.
 
 Missing features from ES9 include:
 
-1. `dotAll` flag.
-2. Named capture groups.
-3. Unicode property escapes.
+1. Named capture groups.
+1. Unicode property escapes.

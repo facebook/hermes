@@ -347,6 +347,8 @@ llvm::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
     sflags |= multiline;
   if (flags.contains('u'))
     sflags |= unicode;
+  if (flags.contains('s'))
+    sflags |= dotAll;
 
   // Build and compile the regexp.
   auto re =

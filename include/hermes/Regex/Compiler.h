@@ -49,6 +49,7 @@ enum SyntaxFlags : uint8_t {
   icase = 1 << 0,
   multiline = 1 << 2,
   unicode = 1 << 3,
+  dotAll = 1 << 4,
 };
 
 inline constexpr SyntaxFlags operator~(SyntaxFlags x) {
@@ -648,14 +649,18 @@ class RightAnchorNode : public Node {
   }
 };
 
-/// MatchAnyButNewlineNode is a .: matches any character except a newline.
-class MatchAnyButNewlineNode final : public Node {
+/// MatchAny is a .: matches any character (including newlines iff the dotAll
+/// flag is set).
+class MatchAnyNode final : public Node {
   using Super = Node;
 
  public:
-  /// Construct a MatchAnyButNewLine. If \p unicode is set, emit bytecode that
-  /// treats surrogate pairs as a single character.
-  explicit MatchAnyButNewlineNode(bool unicode) : unicode_(unicode) {}
+  /// Construct a MatchAny.
+  /// If \p unicode is set, emit bytecode that treats surrogate pairs as a
+  /// single character.
+  /// If \p dotAll is set, match newlines. Otherwise, don't match newlines.
+  explicit MatchAnyNode(bool unicode, bool dotAll)
+      : unicode_(unicode), dotAll_(dotAll) {}
 
   virtual MatchConstraintSet matchConstraints() const override {
     return MatchConstraintNonEmpty | Super::matchConstraints();
@@ -663,9 +668,17 @@ class MatchAnyButNewlineNode final : public Node {
 
   void emit(RegexBytecodeStream &bcs) const override {
     if (unicode_) {
-      bcs.emit<U16MatchAnyButNewlineInsn>();
+      if (dotAll_) {
+        bcs.emit<U16MatchAnyInsn>();
+      } else {
+        bcs.emit<U16MatchAnyButNewlineInsn>();
+      }
     } else {
-      bcs.emit<MatchAnyButNewlineInsn>();
+      if (dotAll_) {
+        bcs.emit<MatchAnyInsn>();
+      } else {
+        bcs.emit<MatchAnyButNewlineInsn>();
+      }
     }
   }
 
@@ -676,6 +689,7 @@ class MatchAnyButNewlineNode final : public Node {
 
  private:
   bool unicode_;
+  bool dotAll_;
 };
 
 /// MatchChar matches one or more characters, specified as a parameter to the
@@ -1114,7 +1128,7 @@ class Regex {
       uint32_t *outMaxBackRef);
   void pushLeftAnchor();
   void pushRightAnchor();
-  void pushMatchAnyButNewline();
+  void pushMatchAny();
   void pushLoop(
       uint32_t min,
       uint32_t max,
@@ -1330,8 +1344,9 @@ void Regex<Traits>::pushRightAnchor() {
 }
 
 template <class Traits>
-void Regex<Traits>::pushMatchAnyButNewline() {
-  appendNode<MatchAnyButNewlineNode>(flags_ & constants::unicode);
+void Regex<Traits>::pushMatchAny() {
+  appendNode<MatchAnyNode>(
+      flags_ & constants::unicode, flags_ & constants::dotAll);
 }
 
 template <class Traits>

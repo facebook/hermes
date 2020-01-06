@@ -12,6 +12,8 @@
 REOP(Goal)
 REOP(LeftAnchor)
 REOP(RightAnchor)
+REOP(MatchAny)
+REOP(U16MatchAny)
 REOP(MatchAnyButNewline)
 REOP(U16MatchAnyButNewline)
 REOP(MatchChar8)

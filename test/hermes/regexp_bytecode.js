@@ -227,3 +227,27 @@ print(/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 // CHECK-NEXT:   0000  MatchNCharICase8: {{'A{255}'}}
 // CHECK-NEXT:   0101  MatchNCharICase8: 'OVERFLOW'
 // CHECK-NEXT:   010b  Goal
+
+print(/./);
+// CHECK-LABEL: 22: /./
+// CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 0 constraints: 4
+// CHECK-NEXT:   0000  MatchAnyButNewline
+// CHECK-NEXT:   0001  Goal
+
+print(/./u);
+// CHECK-LABEL: 23: /./u
+// CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 8 constraints: 4
+// CHECK-NEXT:   0000  U16MatchAnyButNewline
+// CHECK-NEXT:   0001  Goal
+
+print(/./s);
+// CHECK-LABEL: 24: /./s
+// CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 16 constraints: 4
+// CHECK-NEXT:   0000  MatchAny
+// CHECK-NEXT:   0001  Goal
+
+print(/./us);
+// CHECK-LABEL: 25: /./us
+// CHECK-NEXT:   Header: marked: 0 loops: 0 flags: 24 constraints: 4
+// CHECK-NEXT:   0000  U16MatchAny
+// CHECK-NEXT:   0001  Goal

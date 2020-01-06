@@ -192,7 +192,7 @@ class Parser {
 
         case '.': {
           consume('.');
-          re_->pushMatchAnyButNewline();
+          re_->pushMatchAny();
           break;
         }
 
