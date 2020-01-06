@@ -969,9 +969,8 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
           break;
 
         case Opcode::U16MatchAnyButNewline:
-          if (c.atEnd())
+          if (c.atEnd() || isLineTerminator(c.consumeUTF16()))
             BACKTRACK();
-          c.consumeUTF16();
           s->ip_ += sizeof(U16MatchAnyButNewlineInsn);
           break;
 

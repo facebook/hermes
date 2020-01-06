@@ -79,6 +79,12 @@ print(!! /^..$/u.exec("\u{1F600}"));
 print(!! /^.$/u.exec("\u{1F600}"));
 // CHECK-NEXT: true
 
+// Ensure that we don't match newlines with the dot.
+print(/.*/u.exec("abc\ndef"), "DONE");
+// CHECK-NEXT: abc DONE
+print(/.*/u.exec("\u0101bc\ndef")[0].length);
+// CHECK-NEXT: 3
+
 // Test advanceStringIndex.
 // We should not match a low surrogate in a Unicode regexp.
 print(!! /\uDE42/u.exec("\uD83D\uDE42ZZZ"));
