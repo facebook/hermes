@@ -10,7 +10,7 @@ import classnames from 'classnames';
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import withBaseUrl from '@docusaurus/withBaseUrl';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from './styles.module.css';
 
 const features = [
@@ -85,7 +85,7 @@ function Home() {
                       <div className="text--center margin-bottom--lg">
                         <img
                           className={styles.featureImage}
-                          src={withBaseUrl(imageUrl)}
+                          src={useBaseUrl(imageUrl)}
                           alt={title}
                         />
                       </div>
