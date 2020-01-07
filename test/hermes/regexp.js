@@ -128,16 +128,6 @@ print(RegExp(123).exec('789123456'));
 print(JSON.stringify(/[\3]/.exec("abc\3def")));
 // CHECK-NEXT: ["\u0003"]
 
-// Verify that an extremely long (but flat) regexp can be parsed and match.
-var longString = "x";
-for (var i=0; i < 22; i++) longString += longString;
-print(RegExp(longString).test(longString));
-// CHECK-NEXT: true
-
-// Verify that extremely long ranges can be parsed.
-print(RegExp("[" + longString + "]").exec("x"));
-// CHECK-NEXT: x
-
 // Check lastIndex handling
 var re = RegExp("a", "g");
 print(re.lastIndex);
@@ -457,12 +447,6 @@ try { new RegExp("["); } catch (e) { print(e.message); }
 // CHECK-NEXT: Invalid RegExp pattern: Character class not closed
 try { new RegExp("\\"); } catch (e) { print(e.message); }
 // CHECK-NEXT: Invalid RegExp pattern: Incomplete escape
-try {
-  var r = /(?:(?:\\2|\\3*)*|(?=\\B)+|.(?:$)){68719476736}/g;
-  var s = "";
-  print(r.test(s));
-} catch (e) { print(e.message); }
-// CHECK-NEXT: Maximum regex stack depth reached
 
 print("RegExp.prototype[Symbol.match]");
 // CHECK-LABEL: RegExp.prototype[Symbol.match]
