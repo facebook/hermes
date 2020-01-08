@@ -1000,23 +1000,71 @@ class StandardSortModel : public SortModel {
         obj_, runtime_, bHandle_, bDescObjHandle_, bDesc);
 
     if (aDescObjHandle_) {
-      auto res = JSObject::getComputedPropertyValue_RJS(
-          obj_, runtime_, aDescObjHandle_, aDesc, aDescObjHandle_);
-      if (res == ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      if (LLVM_LIKELY(!res->isEmpty())) {
-        aValue_ = *res;
+      if (LLVM_LIKELY(!aDesc.flags.proxyObject)) {
+        auto res = JSObject::getComputedPropertyValue_RJS(
+            obj_, runtime_, aDescObjHandle_, aDesc, aDescObjHandle_);
+        if (res == ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        if (LLVM_LIKELY(!res->isEmpty())) {
+          aValue_ = *res;
+        }
+      } else {
+        auto keyRes = toPropertyKey(runtime_, aHandle_);
+        if (keyRes == ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        aHandle_ = keyRes->get();
+        CallResult<bool> hasPropRes =
+            JSProxy::getOwnProperty(obj_, runtime_, aHandle_, aDesc, nullptr);
+        if (hasPropRes == ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        if (*hasPropRes) {
+          auto res = JSProxy::getComputed(obj_, runtime_, aHandle_, obj_);
+          if (res == ExecutionStatus::EXCEPTION) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          aValue_ = *res;
+          // signal later code
+          aDescObjHandle_ = *obj_;
+        } else {
+          aDescObjHandle_ = nullptr;
+        }
       }
     }
     if (bDescObjHandle_) {
-      auto res = JSObject::getComputedPropertyValue_RJS(
-          obj_, runtime_, bDescObjHandle_, bDesc, bDescObjHandle_);
-      if (res == ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      if (LLVM_LIKELY(!res->isEmpty())) {
-        bValue_ = *res;
+      if (LLVM_LIKELY(!bDesc.flags.proxyObject)) {
+        auto res = JSObject::getComputedPropertyValue_RJS(
+            obj_, runtime_, bDescObjHandle_, bDesc, bDescObjHandle_);
+        if (res == ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        if (LLVM_LIKELY(!res->isEmpty())) {
+          bValue_ = *res;
+        }
+      } else {
+        auto keyRes = toPropertyKey(runtime_, bHandle_);
+        if (keyRes == ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        bHandle_ = keyRes->get();
+        CallResult<bool> hasPropRes =
+            JSProxy::getOwnProperty(obj_, runtime_, bHandle_, bDesc, nullptr);
+        if (hasPropRes == ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        if (*hasPropRes) {
+          auto res = JSProxy::getComputed(obj_, runtime_, bHandle_, obj_);
+          if (res == ExecutionStatus::EXCEPTION) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          bValue_ = *res;
+          // signal later code
+          bDescObjHandle_ = *obj_;
+        } else {
+          bDescObjHandle_ = nullptr;
+        }
       }
     }
 
