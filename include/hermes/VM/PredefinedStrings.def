@@ -367,6 +367,8 @@ STR(throwStr, "throw")
 
 STR(GeneratorFunction, "GeneratorFunction")
 
+STR(Proxy, "Proxy")
+
 STR(HermesInternal, "HermesInternal")
 STR(detachArrayBuffer, "detachArrayBuffer")
 STR(createHeapSnapshot, "createHeapSnapshot")

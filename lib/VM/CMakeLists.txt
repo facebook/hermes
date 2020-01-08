@@ -30,6 +30,7 @@ set(source_files
   JSError.cpp
   JSGenerator.cpp
   JSObject.cpp
+  JSProxy.cpp
   JSRegExp.cpp
   JSMapImpl.cpp
   JSNativeFunctions.cpp
@@ -86,6 +87,7 @@ set(source_files
   JSLib/RuntimeJSONUtils.cpp
   JSLib/JSONLexer.cpp
   JSLib/Object.cpp
+  JSLib/Proxy.cpp
   JSLib/Set.cpp
   JSLib/String.cpp
   JSLib/StringIterator.cpp

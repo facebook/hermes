@@ -13,6 +13,7 @@
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSMapImpl.h"
 #include "hermes/VM/JSNativeFunctions.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/JSRegExp.h"
 
 namespace hermes {
@@ -261,6 +262,10 @@ Handle<JSObject> createDateConstructor(Runtime *runtime);
 /// Create and initialize the global Math object, populating its value
 /// and function properties.
 Handle<JSObject> createMathObject(Runtime *runtime);
+
+/// Create and initialize the global Proxy constructor, populating its methods.
+/// \return the global Proxy constructor.
+Handle<JSObject> createProxyConstructor(Runtime *runtime);
 
 // Forward declaration.
 class JSLibFlags;
