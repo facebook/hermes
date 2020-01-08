@@ -12,6 +12,7 @@
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSMapImpl.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"

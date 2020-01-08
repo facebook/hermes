@@ -122,7 +122,10 @@ struct ObjectFlags {
   /// used. Note that lazy objects must have no properties defined on them,
   uint32_t lazyObject : 1;
 
-  static constexpr unsigned kHashWidth = 25;
+  /// This flag indicates this is a proxy exotic Object
+  uint32_t proxyObject : 1;
+
+  static constexpr unsigned kHashWidth = 24;
   /// A non-zero object id value, assigned lazily. It is 0 before it is
   /// assigned. If an object started out as lazy, the objectID is the lazy
   /// object index used to identify when it gets initialized.
@@ -435,6 +438,11 @@ class JSObject : public GCCell {
   /// \return true if this is a HostObject.
   bool isHostObject() const {
     return flags_.hostObject;
+  }
+
+  /// \return true if this is a proxy exotic object.
+  bool isProxyObject() const {
+    return flags_.proxyObject;
   }
 
   /// \return the `__proto__` internal property, which may be nullptr.

@@ -25,6 +25,7 @@ set(source_files
   Interpreter.cpp InstLayout.inc Interpreter-slowpaths.cpp
   JSArray.cpp
   JSArrayBuffer.cpp
+  JSCallableProxy.cpp
   JSDataView.cpp
   JSDate.cpp
   JSError.cpp

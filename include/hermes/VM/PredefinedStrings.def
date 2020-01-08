@@ -368,6 +368,12 @@ STR(throwStr, "throw")
 STR(GeneratorFunction, "GeneratorFunction")
 
 STR(Proxy, "Proxy")
+STR(revocable, "revocable")
+STR(proxy, "proxy")
+STR(revoke, "revoke")
+STR(deleteProperty, "deleteProperty")
+STR(ownKeys, "ownKeys")
+STR(construct, "construct")
 
 STR(HermesInternal, "HermesInternal")
 STR(detachArrayBuffer, "detachArrayBuffer")
