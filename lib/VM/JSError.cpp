@@ -328,8 +328,12 @@ static Handle<PropStorage> getCallStackFunctionNames(
           runtime,
           Predefined::getSymbolID(Predefined::name),
           desc);
-      if (propObj && !desc.flags.accessor)
+      if (propObj && !desc.flags.accessor && !desc.flags.proxyObject) {
         name = JSObject::getNamedSlotValue(propObj, runtime, desc);
+      } else if (desc.flags.proxyObject) {
+        name = HermesValue::encodeStringValue(
+            runtime->getPredefinedString(Predefined::proxyTrap));
+      }
     } else if (cf.getCalleeClosureOrCBRef().isNativeValue()) {
       auto *cb =
           cf.getCalleeClosureOrCBRef().getNativePointer<const CodeBlock>();
