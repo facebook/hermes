@@ -224,6 +224,12 @@ ObjectID JSObject::getObjectID(JSObject *self, Runtime *runtime) {
   return self->flags_.objectID;
 }
 
+CallResult<PseudoHandle<JSObject>> JSObject::getPrototypeOf(
+    PseudoHandle<JSObject> selfHandle,
+    Runtime *runtime) {
+  return createPseudoHandle(selfHandle->getParent(runtime));
+}
+
 CallResult<bool> JSObject::setParent(
     JSObject *self,
     Runtime *runtime,
@@ -870,10 +876,11 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
       desc.flags.writable = true;
       return ExecutionStatus::RETURNED;
     }
+    propObj = propObj->getParent(runtime);
     // Flush at the end of the loop to allow first iteration to be as fast as
     // possible.
     marker.flush();
-  } while ((propObj = propObj->parent_.get(runtime)));
+  } while (propObj);
   return ExecutionStatus::RETURNED;
 }
 
@@ -2719,7 +2726,12 @@ CallResult<uint32_t> appendAllPropertyNames(
       }
     }
     // Continue to follow the prototype chain.
-    head = head->getParent(runtime);
+    CallResult<PseudoHandle<JSObject>> parentRes =
+        JSObject::getPrototypeOf(head, runtime);
+    if (LLVM_UNLIKELY(parentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    head = parentRes->get();
     needDedup = true;
   }
   return size;

@@ -521,6 +521,13 @@ class JSObject : public GCCell {
         self, runtime, index, value);
   }
 
+  /// This is the proxy-aware version of getParent.  It has to
+  /// allocate handles, so it's neither as simple or efficient as
+  /// getParent, but it's needed.
+  static CallResult<PseudoHandle<JSObject>> getPrototypeOf(
+      PseudoHandle<JSObject> selfHandle,
+      Runtime *runtime);
+
   /// By default, returns a list of enumerable property names and symbols
   /// belonging to this object. Indexed property names will be represented as
   /// numbers for efficiency. The order of properties follows ES2015 - first

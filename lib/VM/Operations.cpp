@@ -1439,26 +1439,35 @@ ordinaryHasInstance(Runtime *runtime, Handle<> constructor, Handle<> object) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  // 6. If Type(P) is not Object, throw a TypeError exception.
-  auto ctorPrototype = dyn_vmcast<JSObject>(*propRes);
+  // 5. If Type(P) is not Object, throw a TypeError exception.
+  Handle<JSObject> ctorPrototype =
+      runtime->makeHandle(dyn_vmcast<JSObject>(*propRes));
   if (LLVM_UNLIKELY(!ctorPrototype)) {
     return runtime->raiseTypeError(
         "function's '.prototype' is not an object in 'instanceof'");
   }
 
-  auto *obj = vmcast<JSObject>(object.get());
-
-  // 7. Repeat
-  // 7a. Let O be O.[[GetPrototypeOf]]().
-  while ((obj = obj->getParent(runtime)) != nullptr) {
-    if (obj == ctorPrototype) {
-      // 7c. If SameValue(P, O) is true, return true.
+  MutableHandle<JSObject> head{runtime, vmcast<JSObject>(object.get())};
+  GCScopeMarkerRAII gcScope{runtime};
+  // 6. Repeat
+  while (true) {
+    // 6a. Let O be O.[[GetPrototypeOf]]().
+    CallResult<PseudoHandle<JSObject>> parentRes =
+        JSObject::getPrototypeOf(head, runtime);
+    if (LLVM_UNLIKELY(parentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // 6b. If O is null, return false.
+    if (!*parentRes) {
+      return false;
+    }
+    // 6c. If SameValue(P, O) is true, return true.
+    if (parentRes->get() == ctorPrototype.get()) {
       return true;
     }
+    head = parentRes->get();
+    gcScope.flush();
   }
-
-  // 7b. If O is null, return false.
-  return false;
 }
 
 CallResult<bool> instanceOfOperator_RJS(

@@ -299,15 +299,21 @@ objectConstructor(void *, Runtime *runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue> getPrototypeOf(Runtime *runtime, Handle<JSObject> obj) {
+  CallResult<PseudoHandle<JSObject>> protoRes =
+      JSObject::getPrototypeOf(obj, runtime);
+  if (LLVM_UNLIKELY(protoRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   // Note that we must return 'null' if there is no prototype.
-  JSObject *parent = obj->getParent(runtime);
-  return parent ? HermesValue::encodeObjectValue(parent)
-                : HermesValue::encodeNullValue();
+  if (!*protoRes) {
+    return HermesValue::encodeNullValue();
+  }
+  return protoRes->getHermesValue();
 }
 
 CallResult<HermesValue>
 objectGetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toObject(runtime, args.getArgHandle(0));
+  CallResult<HermesValue> res = toObject(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1177,16 +1183,11 @@ objectPrototypePropertyIsEnumerable(void *, Runtime *runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 objectPrototypeProto_getter(void *, Runtime *runtime, NativeArgs args) {
-  // thisArg = toObject(thisArg).
-  auto res = toObject(runtime, args.getThisHandle());
+  CallResult<HermesValue> res = toObject(runtime, args.getThisHandle());
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-
-  // Note that we must return 'null' if there is no prototype.
-  JSObject *parent = vmcast<JSObject>(res.getValue())->getParent(runtime);
-  return parent ? HermesValue::encodeObjectValue(parent)
-                : HermesValue::encodeNullValue();
+  return getPrototypeOf(runtime, runtime->makeHandle(vmcast<JSObject>(*res)));
 }
 
 CallResult<HermesValue>
