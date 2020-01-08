@@ -89,6 +89,7 @@ set(source_files
   JSLib/JSONLexer.cpp
   JSLib/Object.cpp
   JSLib/Proxy.cpp
+  JSLib/Reflect.cpp
   JSLib/Set.cpp
   JSLib/String.cpp
   JSLib/StringIterator.cpp

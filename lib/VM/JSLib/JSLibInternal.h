@@ -288,6 +288,10 @@ Handle<JSObject> createDebuggerInternalObject(Runtime *runtime);
 /// and function properties.
 Handle<JSObject> createJSONObject(Runtime *runtime);
 
+/// Create and initialize the global Reflect object, populating its value
+/// and function properties.
+Handle<JSObject> createReflectObject(Runtime *runtime);
+
 /// Create and initialize the global RegExp constructor. Populate the methods
 /// of RegExp and RegExp.prototype.
 /// \return the global RegExp constructor.

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xhermes-internal-test-methods -O -gc-sanitize-handles=0 %s | %FileCheck %s
+// RUN: %hermes -Xhermes-internal-test-methods -Xes6-proxy -O -gc-sanitize-handles=0 %s | %FileCheck %s
 
 'use strict';
 
@@ -426,6 +426,11 @@ cons.forEach(function(TA) {
   assert.throws(_ => delete ta[0], TypeError);
   assert.throws(_ => delete ta[4], TypeError);
   assert.equal(true, delete ta[5]);
+
+  assert.equal(true, Reflect.deleteProperty(ta, -1));
+  assert.equal(false, Reflect.deleteProperty(ta, 0));
+  assert.equal(false, Reflect.deleteProperty(ta, 4));
+  assert.equal(true, Reflect.deleteProperty(ta, 5));
 });
 /// @}
 

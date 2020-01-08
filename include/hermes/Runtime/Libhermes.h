@@ -23,6 +23,7 @@ const char libhermes[] =
 "var Number;"
 "var Object;"
 "var Proxy;"
+"var Reflect;"
 "var RegExp;"
 "var Set;"
 "var String;"

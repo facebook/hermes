@@ -624,6 +624,16 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
       normalDPF,
       createJSONObject(runtime)));
 
+  if (LLVM_UNLIKELY(runtime->hasES6Proxy())) {
+    // Define the global Reflect object
+    runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
+        runtime->getGlobal(),
+        runtime,
+        Predefined::getSymbolID(Predefined::Reflect),
+        normalDPF,
+        createReflectObject(runtime)));
+  }
+
   // Define the global %HermesInternal object.
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),
