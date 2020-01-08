@@ -1302,62 +1302,71 @@ objectPrototypeDefineSetter(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-objectPrototypeLookupGetter(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toObject(runtime, args.getThisHandle());
+namespace {
+
+/// Helper function for objectPrototypeLookup{Get,Set}ter.  Returns a
+/// pointer to the cell which contains the actual accessors, or
+/// nullptr if there aren't any.  This iterates internally because the
+/// functions in JSObject are structured in such a way that for
+/// complex proxy/target/prototype chains, the accessor is called in a
+/// deeply nested place.  To expose it, we need to do the chaining
+/// explicitly.
+CallResult<PropertyAccessor *> lookupAccessor(
+    Runtime *runtime,
+    NativeArgs args) {
+  CallResult<HermesValue> res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime->makeHandle<JSObject>(res.getValue());
+  MutableHandle<JSObject> O =
+      runtime->makeMutableHandle(vmcast<JSObject>(*res));
+  Handle<> key = args.getArgHandle(0);
+  MutableHandle<> valueOrAccessor{runtime};
+  do {
+    ComputedPropertyDescriptor desc;
+    CallResult<bool> definedRes = JSObject::getOwnComputedDescriptor(
+        O, runtime, key, desc, valueOrAccessor);
+    if (LLVM_UNLIKELY(definedRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (*definedRes) {
+      if (!desc.flags.accessor) {
+        break;
+      }
+      return vmcast<PropertyAccessor>(valueOrAccessor.get());
+    }
+    CallResult<PseudoHandle<JSObject>> protoRes =
+        JSObject::getPrototypeOf(O, runtime);
+    if (LLVM_UNLIKELY(protoRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    O = protoRes->get();
+  } while (O);
+  return nullptr;
+}
 
-  auto key = args.getArgHandle(0);
+} // namespace
 
-  ComputedPropertyDescriptor desc;
-  MutableHandle<JSObject> propObj{runtime};
-  if (JSObject::getComputedDescriptor(O, runtime, key, propObj, desc) ==
-      ExecutionStatus::EXCEPTION) {
+CallResult<HermesValue>
+objectPrototypeLookupGetter(void *, Runtime *runtime, NativeArgs args) {
+  CallResult<PropertyAccessor *> accessorRes = lookupAccessor(runtime, args);
+  if (LLVM_UNLIKELY(accessorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-
-  // The spec loops through prototypes in this function.
-  // Do that internally in getComputedSlotValue.
-  if (propObj && desc.flags.accessor) {
-    auto *accessor = vmcast<PropertyAccessor>(
-        JSObject::getComputedSlotValue(propObj.get(), runtime, desc));
-    if (accessor->getter) {
-      return HermesValue::encodeObjectValue(accessor->getter.get(runtime));
-    }
-  }
-  return HermesValue::encodeUndefinedValue();
+  return (*accessorRes && (*accessorRes)->getter)
+      ? HermesValue::encodeObjectValue((*accessorRes)->getter.get(runtime))
+      : HermesValue::encodeUndefinedValue();
 }
 
 CallResult<HermesValue>
 objectPrototypeLookupSetter(void *, Runtime *runtime, NativeArgs args) {
-  auto res = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+  CallResult<PropertyAccessor *> accessorRes = lookupAccessor(runtime, args);
+  if (LLVM_UNLIKELY(accessorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime->makeHandle<JSObject>(res.getValue());
-
-  auto key = args.getArgHandle(0);
-
-  ComputedPropertyDescriptor desc;
-  MutableHandle<JSObject> propObj{runtime};
-  if (JSObject::getComputedDescriptor(O, runtime, key, propObj, desc) ==
-      ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  // The spec loops through prototypes in this function.
-  // Do that internally in getComputedSlotValue.
-  if (propObj && desc.flags.accessor) {
-    auto *accessor = vmcast<PropertyAccessor>(
-        JSObject::getComputedSlotValue(propObj.get(), runtime, desc));
-    if (accessor->setter) {
-      return HermesValue::encodeObjectValue(accessor->setter.get(runtime));
-    }
-  }
-  return HermesValue::encodeUndefinedValue();
+  return (*accessorRes && (*accessorRes)->setter)
+      ? HermesValue::encodeObjectValue((*accessorRes)->setter.get(runtime))
+      : HermesValue::encodeUndefinedValue();
 }
 
 } // namespace vm
