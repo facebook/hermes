@@ -258,7 +258,7 @@ throwTypeError(void *ctx, Runtime *runtime, NativeArgs) {
 // NOTE: when declaring more global symbols, don't forget to update
 // "Libhermes.h".
 void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
-  GCScope gcScope{runtime, "initGlobalObject", 256};
+  GCScope gcScope{runtime, "initGlobalObject", 288};
 
   // Not enumerable, not writable, not configurable.
   DefinePropertyFlags constantDPF =
