@@ -926,8 +926,15 @@ objectAssign(void *, Runtime *runtime, NativeArgs args) {
       }
 
       // 5.c.iii.1. Let propValue be Get(from, nextKey).
-      auto propRes = JSObject::getComputedPropertyValue_RJS(
-          fromHandle, runtime, fromHandle, desc);
+
+      // getComputed_RJS would work here in all cases.  But, just
+      // changing it to make proxy work is is a surprisingly large
+      // regression if used always, even with no Proxy objects.  So we
+      // check if we can use getComputedPropertyValue_RJS and do so.
+      CallResult<HermesValue> propRes = fromHandle->isProxyObject()
+          ? JSObject::getComputed_RJS(fromHandle, runtime, nextKeyHandle)
+          : JSObject::getComputedPropertyValue_RJS(
+                fromHandle, runtime, fromHandle, desc);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         // 5.c.iii.2. ReturnIfAbrupt(propValue).
         return ExecutionStatus::EXCEPTION;
