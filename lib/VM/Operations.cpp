@@ -12,6 +12,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSGenerator.h"
 #include "hermes/VM/JSObject.h"
@@ -1397,6 +1398,12 @@ bool isConstructor(Runtime *runtime, Callable *callable) {
     return true;
   }
 
+  // JSCallableProxy is a NativeFunction, but may or may not be a
+  // constructor, so we ask it.
+  if (auto *cproxy = dyn_vmcast<JSCallableProxy>(callable)) {
+    return cproxy->isConstructor(runtime);
+  }
+
   return false;
 }
 
@@ -1569,11 +1576,21 @@ CallResult<bool> isArray(Runtime *runtime, JSObject *obj) {
   if (!obj) {
     return false;
   }
-  if (vmisa<JSArray>(obj)) {
-    return true;
+  while (true) {
+    if (vmisa<JSArray>(obj)) {
+      return true;
+    }
+    if (LLVM_LIKELY(!obj->isProxyObject())) {
+      return false;
+    }
+    if (JSProxy::isRevoked(obj, runtime)) {
+      return runtime->raiseTypeError("Proxy has been revoked");
+    }
+    obj = JSProxy::getTarget(obj, runtime).get();
+    assert(obj && "target of non-revoked Proxy is null");
   }
-  return false;
 }
+
 CallResult<bool> isConcatSpreadable(Runtime *runtime, Handle<> value) {
   auto O = Handle<JSObject>::dyn_vmcast(value);
   if (!O) {
