@@ -698,7 +698,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   if (namesRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (kind == EnumerableOwnPropertiesKind::Key) {
+  if (kind == EnumerableOwnPropertiesKind::Key && !objHandle->isProxyObject()) {
     return *namesRes;
   }
   auto names = runtime->makeHandle<JSArray>(*namesRes);
@@ -711,7 +711,6 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   auto properties = toHandle(runtime, std::move(*propertiesRes));
 
   MutableHandle<StringPrimitive> name{runtime};
-  MutableHandle<JSObject> propObj{runtime};
   MutableHandle<> value{runtime};
   MutableHandle<> entry{runtime};
 
@@ -726,25 +725,48 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
     gcScope.flushToMarker(marker);
 
     name = names->at(runtime, i).getString();
+    // By calling getString, name is guaranteed to be primitive.
     ComputedPropertyDescriptor desc;
-    if (LLVM_UNLIKELY(
-            JSObject::getComputedDescriptor(
-                objHandle, runtime, name, propObj, desc) ==
-            ExecutionStatus::EXCEPTION)) {
+    CallResult<bool> descRes = JSObject::getOwnComputedPrimitiveDescriptor(
+        objHandle, runtime, name, JSObject::IgnoreProxy::Yes, desc);
+    if (LLVM_UNLIKELY(descRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (!propObj || !desc.flags.enumerable) {
+    if (LLVM_LIKELY(*descRes && desc.flags.enumerable)) {
       // Ensure that the property is still there and that it is enumerable,
       // as descriptors can be modified by a getter at any point.
-      continue;
-    }
 
-    auto valueRes = JSObject::getComputedPropertyValue_RJS(
-        objHandle, runtime, propObj, desc);
-    if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
+      auto valueRes = JSObject::getComputedPropertyValue_RJS(
+          objHandle, runtime, objHandle, desc);
+      if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      value = *valueRes;
+    } else if (!objHandle->isProxyObject()) {
+      continue;
+    } else {
+      // This is a proxy, so we need to call getOwnProperty() to see
+      // if the value exists and is enumerable on the proxy.
+      descRes =
+          JSProxy::getOwnProperty(objHandle, runtime, name, desc, nullptr);
+      if (LLVM_UNLIKELY(descRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (!*descRes || !desc.flags.enumerable) {
+        // And skip the property if not.
+        continue;
+      }
+      // And if the caller needs the value, we need to fetch that,
+      // too.
+      if (kind != EnumerableOwnPropertiesKind::Key) {
+        auto valueRes =
+            JSProxy::getComputed(objHandle, runtime, name, objHandle);
+        if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        value = *valueRes;
+      }
     }
-    value = *valueRes;
 
     if (kind == EnumerableOwnPropertiesKind::KeyValue) {
       auto entryRes = JSArray::create(runtime, 2, 2);
@@ -754,11 +776,13 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
       entry = entryRes->getHermesValue();
       JSArray::setElementAt(Handle<JSArray>::vmcast(entry), runtime, 0, name);
       JSArray::setElementAt(Handle<JSArray>::vmcast(entry), runtime, 1, value);
+    } else if (kind == EnumerableOwnPropertiesKind::Value) {
+      entry = value.getHermesValue();
     } else {
       assert(
-          kind == EnumerableOwnPropertiesKind::Value &&
-          "Name kind should have returned early");
-      entry = value.getHermesValue();
+          objHandle->isProxyObject() &&
+          "Key kind did not return early but not proxy");
+      entry = names->at(runtime, i);
     }
 
     // The element must exist because we just read it.
