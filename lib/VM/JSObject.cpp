@@ -692,24 +692,18 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
 
 /// Convert a value to an identifier unless already converted
 /// \param nameValHandle [Handle<>] the value to convert
-/// \param str [MutableHandle<StringPrimitive>] the string is stored
-///   there. Must be initialized to null initially.
 /// \param id [SymbolID] the identifier is stored there. Must be initialized
 ///   to INVALID_IDENTIFIER_ID initially.
-#define LAZY_TO_IDENTIFIER(runtime, nameValHandle, str, id)           \
-  do {                                                                \
-    if (id.isInvalid()) {                                             \
-      CallResult<Handle<SymbolID>> idRes{ExecutionStatus::EXCEPTION}; \
-      if (str) {                                                      \
-        idRes = stringToSymbolID(runtime, str);                       \
-      } else {                                                        \
-        idRes = valueToSymbolID(runtime, nameValHandle);              \
-      }                                                               \
-      if (LLVM_UNLIKELY(idRes == ExecutionStatus::EXCEPTION)) {       \
-        return ExecutionStatus::EXCEPTION;                            \
-      }                                                               \
-      id = **idRes;                                                   \
-    }                                                                 \
+#define LAZY_TO_IDENTIFIER(runtime, nameValHandle, id)          \
+  do {                                                          \
+    if (id.isInvalid()) {                                       \
+      CallResult<Handle<SymbolID>> idRes =                      \
+          valueToSymbolID(runtime, nameValHandle);              \
+      if (LLVM_UNLIKELY(idRes == ExecutionStatus::EXCEPTION)) { \
+        return ExecutionStatus::EXCEPTION;                      \
+      }                                                         \
+      id = **idRes;                                             \
+    }                                                           \
   } while (0)
 
 /// Convert a value to array index, if possible.
@@ -736,11 +730,43 @@ static bool canNewPropertyBeIndexed(DefinePropertyFlags dpf) {
       !dpf.setSetter && !dpf.setGetter;
 }
 
-CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
+struct JSObject::Helper {
+ public:
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  static ObjectFlags &flags(JSObject *self) {
+    return self->flags_;
+  }
+
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  static OptValue<PropertyFlags>
+  getOwnIndexedPropertyFlags(JSObject *self, Runtime *runtime, uint32_t index) {
+    return JSObject::getOwnIndexedPropertyFlags(self, runtime, index);
+  }
+
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  static NamedPropertyDescriptor &castToNamedPropertyDescriptorRef(
+      ComputedPropertyDescriptor &desc) {
+    return desc.castToNamedPropertyDescriptorRef();
+  }
+};
+
+namespace {
+
+/// ES5.1 8.12.1.
+
+/// A helper which takes a SymbolID which caches the conversion of
+/// nameValHandle if it's needed.  It should be default constructed,
+/// and may or may not be set.  This has been measured to be a useful
+/// perf win.  Note that always_inline seems to be ignored on static
+/// methods, so this function has to be local to the cpp file in order
+/// to be inlined for the perf win.
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle,
     JSObject::IgnoreProxy ignoreProxy,
+    SymbolID &id,
     ComputedPropertyDescriptor &desc) {
   assert(
       !nameValHandle->isObject() &&
@@ -748,15 +774,12 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
       "getOwnComputedPrimitiveDescriptor "
       "cannot be an object");
 
-  MutableHandle<StringPrimitive> strPrim{runtime};
-  SymbolID id{};
-
   // Try the fast paths first if we have "fast" index properties and the
   // property name is an obvious index.
   if (auto arrayIndex = toArrayIndexFastPath(*nameValHandle)) {
-    if (selfHandle->flags_.fastIndexProperties) {
-      auto res =
-          getOwnIndexedPropertyFlags(selfHandle.get(), runtime, *arrayIndex);
+    if (JSObject::Helper::flags(*selfHandle).fastIndexProperties) {
+      auto res = JSObject::Helper::getOwnIndexedPropertyFlags(
+          selfHandle.get(), runtime, *arrayIndex);
       if (res) {
         // This a valid array index, residing in our indexed storage.
         desc.flags = *res;
@@ -771,8 +794,8 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
     }
 
     if (!selfHandle->getClass(runtime)->getHasIndexLikeProperties() &&
-        !selfHandle->flags_.hostObject && !selfHandle->flags_.lazyObject &&
-        !selfHandle->flags_.proxyObject) {
+        !selfHandle->isHostObject() && !selfHandle->isLazy() &&
+        !selfHandle->isProxyObject()) {
       // Early return to handle the case where an object definitely has no
       // index-like properties. This avoids allocating a new StringPrimitive and
       // uniquing it below.
@@ -780,18 +803,28 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
     }
   }
 
-  // Convert the string to an SymbolID;
-  LAZY_TO_IDENTIFIER(runtime, nameValHandle, strPrim, id);
+  // Convert the string to a SymbolID
+  LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
 
   // Look for a named property with this name.
   if (JSObject::getOwnNamedDescriptor(
-          selfHandle, runtime, id, desc.castToNamedPropertyDescriptorRef())) {
+          selfHandle,
+          runtime,
+          id,
+          JSObject::Helper::castToNamedPropertyDescriptorRef(desc))) {
     return true;
   }
 
+  if (LLVM_LIKELY(
+          !JSObject::Helper::flags(*selfHandle).indexedStorage &&
+          !selfHandle->isLazy() && !selfHandle->isProxyObject())) {
+    return false;
+  }
+  MutableHandle<StringPrimitive> strPrim{runtime};
+
   // If we have indexed storage, perform potentially expensive conversions
   // to array index and check it.
-  if (selfHandle->flags_.indexedStorage) {
+  if (JSObject::Helper::flags(*selfHandle).indexedStorage) {
     // If the name is a valid integer array index, store it here.
     OptValue<uint32_t> arrayIndex;
 
@@ -799,8 +832,8 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
     TO_ARRAY_INDEX(runtime, nameValHandle, strPrim, arrayIndex);
 
     if (arrayIndex) {
-      auto res =
-          getOwnIndexedPropertyFlags(selfHandle.get(), runtime, *arrayIndex);
+      auto res = JSObject::Helper::getOwnIndexedPropertyFlags(
+          selfHandle.get(), runtime, *arrayIndex);
       if (res) {
         desc.flags = *res;
         desc.flags.indexed = 1;
@@ -808,23 +841,35 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
         return true;
       }
     }
-  }
-
-  if (LLVM_LIKELY(
-          !selfHandle->flags_.lazyObject && !selfHandle->flags_.proxyObject)) {
     return false;
   }
-  if (selfHandle->flags_.lazyObject) {
+
+  if (selfHandle->isLazy()) {
     JSObject::initializeLazyObject(runtime, selfHandle);
-    return getOwnComputedPrimitiveDescriptor(
+    return JSObject::getOwnComputedPrimitiveDescriptor(
         selfHandle, runtime, nameValHandle, ignoreProxy, desc);
   }
-  assert(selfHandle->flags_.proxyObject && "descriptor flags are impossible");
-  if (ignoreProxy == IgnoreProxy::No) {
-    return JSProxy::getOwnProperty(
-        selfHandle, runtime, nameValHandle, desc, nullptr);
+
+  assert(selfHandle->isProxyObject() && "descriptor flags are impossible");
+  if (ignoreProxy == JSObject::IgnoreProxy::Yes) {
+    return false;
   }
-  return false;
+  return JSProxy::getOwnProperty(
+      selfHandle, runtime, nameValHandle, desc, nullptr);
+}
+
+} // namespace
+
+CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    Handle<> nameValHandle,
+    JSObject::IgnoreProxy ignoreProxy,
+    ComputedPropertyDescriptor &desc) {
+  SymbolID id{};
+
+  return getOwnComputedPrimitiveDescriptorImpl(
+      selfHandle, runtime, nameValHandle, ignoreProxy, id, desc);
 }
 
 CallResult<bool> JSObject::getOwnComputedDescriptor(
@@ -964,17 +1009,21 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
 
   propObj = selfHandle.get();
 
+  SymbolID id{};
+
   GCScopeMarkerRAII marker{runtime};
   do {
     // A proxy is ignored here so we can check the bit later and
     // return it back to the caller for additional processing.
 
-    auto cr = getOwnComputedPrimitiveDescriptor(
-        propObj, runtime, nameValHandle, IgnoreProxy::Yes, desc);
-    if (cr == ExecutionStatus::EXCEPTION) {
+    Handle<JSObject> loopHandle = propObj;
+
+    CallResult<bool> res = getOwnComputedPrimitiveDescriptorImpl(
+        loopHandle, runtime, nameValHandle, IgnoreProxy::Yes, id, desc);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (*cr) {
+    if (*res) {
       return ExecutionStatus::RETURNED;
     }
 
@@ -1139,9 +1188,8 @@ CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
     return accessor->getter.get(runtime)->executeCall0(
         runtime->makeHandle(accessor->getter), runtime, receiver);
   } else if (desc.flags.hostObject) {
-    MutableHandle<StringPrimitive> strPrim{runtime};
     SymbolID id{};
-    LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
+    LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
     auto propRes = vmcast<HostObject>(selfHandle.get())->get(id);
     if (propRes == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
@@ -1610,9 +1658,8 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
 
     if (LLVM_UNLIKELY(!desc.flags.writable)) {
       if (desc.flags.staticBuiltin) {
-        MutableHandle<StringPrimitive> strPrim{runtime};
         SymbolID id{};
-        LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
+        LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
         return raiseErrorForOverridingStaticBuiltin(
             selfHandle, runtime, runtime->makeHandle(id));
       }
@@ -1624,9 +1671,8 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     }
 
     if (selfHandle == propObj && desc.flags.internalSetter) {
-      MutableHandle<StringPrimitive> strPrim{runtime};
       SymbolID id{};
-      LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
+      LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
       return internalSetter(
           selfHandle,
           runtime,
@@ -1676,9 +1722,8 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     if (LLVM_UNLIKELY(
             desc.flags.internalSetter || receiverHandle->isHostObject() ||
             receiverHandle->isProxyObject())) {
-      MutableHandle<StringPrimitive> strPrim{runtime};
       SymbolID id{};
-      LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
+      LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
       if (desc.flags.internalSetter) {
         return internalSetter(
             receiverHandle,
@@ -1711,13 +1756,11 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     return false;
   }
 
-  MutableHandle<StringPrimitive> strPrim{runtime};
-  SymbolID id{};
-
   // If we have indexed storage we must check whether the property is an index,
   // and if it is, store it in indexed storage.
   if (receiverHandle->flags_.indexedStorage) {
     OptValue<uint32_t> arrayIndex;
+    MutableHandle<StringPrimitive> strPrim{runtime};
     TO_ARRAY_INDEX(runtime, nameValPrimitiveHandle, strPrim, arrayIndex);
     if (arrayIndex) {
       // Check whether we need to update array's ".length" property.
@@ -1752,7 +1795,8 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     }
   }
 
-  LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
+  SymbolID id{};
+  LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
 
   // Add a new named property.
   return addOwnProperty(
@@ -1838,15 +1882,15 @@ CallResult<bool> JSObject::deleteComputed(
 
   auto nameValPrimitiveHandle = *converted;
 
-  MutableHandle<StringPrimitive> strPrim{runtime};
-  SymbolID id;
   // If the name is a valid integer array index, store it here.
   OptValue<uint32_t> arrayIndex;
 
   // If we have indexed storage, we must attempt to convert the name to array
   // index, even if the conversion is expensive.
-  if (selfHandle->flags_.indexedStorage)
+  if (selfHandle->flags_.indexedStorage) {
+    MutableHandle<StringPrimitive> strPrim{runtime};
     TO_ARRAY_INDEX(runtime, nameValPrimitiveHandle, strPrim, arrayIndex);
+  }
 
   // Try the fast-path first: the "name" is a valid array index and we don't
   // have "index-like" named properties.
@@ -1871,7 +1915,8 @@ CallResult<bool> JSObject::deleteComputed(
   }
 
   // Convert the string to an SymbolID;
-  LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
+  SymbolID id;
+  LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, id);
 
   // Find the property by name.
   NamedPropertyDescriptor desc;
@@ -2046,20 +2091,22 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   }
 #endif
 
-  MutableHandle<StringPrimitive> strPrim{runtime};
-  SymbolID id{};
   // If the name is a valid integer array index, store it here.
   OptValue<uint32_t> arrayIndex;
 
   // If we have indexed storage, we must attempt to convert the name to array
   // index, even if the conversion is expensive.
-  if (selfHandle->flags_.indexedStorage)
+  if (selfHandle->flags_.indexedStorage) {
+    MutableHandle<StringPrimitive> strPrim{runtime};
     TO_ARRAY_INDEX(runtime, nameValHandle, strPrim, arrayIndex);
+  }
+
+  SymbolID id{};
 
   // If not storing a property with an array index name, or if we don't have
   // indexed storage, just pass to the named routine.
   if (!arrayIndex) {
-    LAZY_TO_IDENTIFIER(runtime, nameValHandle, strPrim, id);
+    LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
     return defineOwnProperty(
         selfHandle, runtime, id, dpFlags, valueOrAccessor, opFlags);
   }
@@ -2069,7 +2116,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
 
   // First check if a named property with the same name exists.
   if (selfHandle->clazz_.get(runtime)->getHasIndexLikeProperties()) {
-    LAZY_TO_IDENTIFIER(runtime, nameValHandle, strPrim, id);
+    LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
 
     NamedPropertyDescriptor desc;
     auto pos = findProperty(selfHandle, runtime, id, desc);
@@ -2161,7 +2208,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
     }
 
     // Add the new named property.
-    LAZY_TO_IDENTIFIER(runtime, nameValHandle, strPrim, id);
+    LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
     return addOwnProperty(selfHandle, runtime, id, dpFlags, value, opFlags);
   }
 
@@ -2233,7 +2280,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
     return true;
 
   // We are adding a new property with an index-like name.
-  LAZY_TO_IDENTIFIER(runtime, nameValHandle, strPrim, id);
+  LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
   return addOwnProperty(
       selfHandle, runtime, id, dpFlags, valueOrAccessor, opFlags);
 }

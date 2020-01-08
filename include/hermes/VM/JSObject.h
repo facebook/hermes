@@ -339,6 +339,13 @@ class JSObject : public GCCell {
       : JSObject(runtime, vtp, parent, clazz, GCPointerBase::NoBarriers()) {}
 
  public:
+  // This exists so some inlined anonymous namespace methods in the
+  // impl .cpp file can have private access to JSObject.  The natural
+  // approach of making those methods private inline methods of
+  // JSObject results in them not actually being inlined.  Measurement
+  // has justified doing this.
+  struct Helper;
+
 #ifdef HERMESVM_SERIALIZE
   /// A constructor used by deserializeion which performs no GC allocation.
   JSObject(Deserializer &d, const VTable *vtp);
