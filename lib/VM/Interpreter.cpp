@@ -334,19 +334,20 @@ CallResult<HermesValue> Interpreter::getByIdTransient_RJS(
     Runtime *runtime,
     Handle<> base,
     SymbolID id) {
-  // ES5.1 8.7.1 special [[Get]] internal method.
+  // This is similar to what ES5.1 8.7.1 special [[Get]] internal
+  // method did, but that section doesn't exist in ES9 anymore.
+  // Instead, the [[Get]] Receiver argument serves a similar purpose.
 
-  // Spec steps #1 and #2 are optimized with fast path below.
-
-  // Fast path #1: try to get primitive own property directly first.
+  // Fast path: try to get primitive own property directly first.
   OptValue<HermesValue> valOpt =
       tryGetPrimitiveOwnPropertyById(runtime, base, id);
   if (valOpt.hasValue()) {
     return valOpt.getValue();
   }
 
-  // Fast path #2: get the property descriptor from primitive prototype
-  // without boxing with vm::toObject().
+  // get the property descriptor from primitive prototype without
+  // boxing with vm::toObject().  This is where any properties will
+  // be.
   CallResult<Handle<JSObject>> primitivePrototypeResult =
       getPrimitivePrototype(runtime, base);
   if (primitivePrototypeResult == ExecutionStatus::EXCEPTION) {
@@ -356,31 +357,8 @@ CallResult<HermesValue> Interpreter::getByIdTransient_RJS(
     return amendPropAccessErrorMsgWithPropName(runtime, base, "read", id);
   }
 
-  NamedPropertyDescriptor desc;
-  JSObject *propObj = JSObject::getNamedDescriptor(
-      primitivePrototypeResult.getValue(), runtime, id, desc);
-
-  // 3. If desc is undefined, return undefined.
-  if (!propObj)
-    return HermesValue::encodeUndefinedValue();
-
-  HermesValue slotValue = JSObject::getNamedSlotValue(propObj, runtime, desc);
-
-  // 4. If IsDataDescriptor(desc) is true, return desc.[[Value]].
-  if (LLVM_LIKELY(!desc.flags.accessor))
-    return slotValue;
-
-  // 5. Otherwise, IsAccessorDescriptor(desc) must be true so, let getter be
-  //  desc.[[Get]] (see 8.10).
-  // 6. If getter is undefined, return undefined.
-  auto *accessor = vmcast<PropertyAccessor>(slotValue);
-  if (!accessor->getter)
-    return HermesValue::encodeUndefinedValue();
-
-  // 7. Return the result calling the [[Call]] internal method of getter
-  //  providing base as the this value and providing no arguments.
-  return accessor->getter.get(runtime)->executeCall0(
-      runtime->makeHandle(accessor->getter), runtime, base);
+  return JSObject::getNamedWithReceiver_RJS(
+      *primitivePrototypeResult, runtime, id, base);
 }
 
 OptValue<HermesValue> Interpreter::getByValTransientFast(
@@ -411,7 +389,9 @@ CallResult<HermesValue> Interpreter::getByValTransient_RJS(
     Runtime *runtime,
     Handle<> base,
     Handle<> name) {
-  // ES5.1 8.7.1 special [[Get]] internal method.
+  // This is similar to what ES5.1 8.7.1 special [[Get]] internal
+  // method did, but that section doesn't exist in ES9 anymore.
+  // Instead, the [[Get]] Receiver argument serves a similar purpose.
 
   // Optimization: check fast path first.
   OptValue<HermesValue> fastRes = getByValTransientFast(runtime, base, name);
@@ -419,44 +399,12 @@ CallResult<HermesValue> Interpreter::getByValTransient_RJS(
     return fastRes.getValue();
   }
 
-  // 1. Let O be ToObject(base)
   auto res = toObject(runtime, base);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
 
-  auto O = runtime->makeHandle<JSObject>(res.getValue());
-
-  // 2. Let desc be the result of calling the [[GetProperty]] internal method of
-  //  O with property name P.
-  ComputedPropertyDescriptor desc;
-  MutableHandle<JSObject> propObj{runtime};
-  if (JSObject::getComputedDescriptor(O, runtime, name, propObj, desc) ==
-      ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  // 3. If desc is undefined, return undefined.
-  if (!propObj)
-    return HermesValue::encodeUndefinedValue();
-
-  HermesValue slotValue =
-      JSObject::getComputedSlotValue(propObj.get(), runtime, desc);
-
-  // 4. If IsDataDescriptor(desc) is true, return desc.[[Value]].
-  if (LLVM_LIKELY(!desc.flags.accessor))
-    return slotValue;
-
-  // 5. Otherwise, IsAccessorDescriptor(desc) must be true so, let getter be
-  //  desc.[[Get]] (see 8.10).
-  // 6. If getter is undefined, return undefined.
-  auto *accessor = vmcast<PropertyAccessor>(slotValue);
-  if (!accessor->getter)
-    return HermesValue::encodeUndefinedValue();
-
-  // 7. Return the result calling the [[Call]] internal method of getter
-  //  providing base as the this value and providing no arguments.
-  return accessor->getter.get(runtime)->executeCall0(
-      runtime->makeHandle(accessor->getter), runtime, base);
+  return JSObject::getComputedWithReceiver_RJS(
+      runtime->makeHandle<JSObject>(res.getValue()), runtime, name, base);
 }
 
 ExecutionStatus Interpreter::putByIdTransient_RJS(
