@@ -1218,10 +1218,20 @@ objectPrototypeIsPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto *obj = vmcast<JSObject>(res.getValue());
-  auto *parent = vmcast<JSObject>(args.getArg(0));
-  while ((parent = parent->getParent(runtime))) {
-    if (parent == obj) {
+  Handle<JSObject> objHandle = runtime->makeHandle<JSObject>(*res);
+  PseudoHandle<JSObject> parent =
+      createPseudoHandle(vmcast<JSObject>(args.getArg(0)));
+  while (true) {
+    CallResult<PseudoHandle<JSObject>> protoRes =
+        JSObject::getPrototypeOf(std::move(parent), runtime);
+    if (LLVM_UNLIKELY(protoRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!*protoRes) {
+      break;
+    }
+    parent = std::move(*protoRes);
+    if (parent.get() == objHandle.get()) {
       return HermesValue::encodeBoolValue(true);
     }
   }
