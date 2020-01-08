@@ -7,6 +7,8 @@
 
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
 
+#include "Object.h"
+
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/JSON.h"
 #include "hermes/Support/UTF16Stream.h"
@@ -14,6 +16,7 @@
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/PrimitiveBox.h"
 
 #include "JSONLexer.h"
@@ -972,12 +975,27 @@ ExecutionStatus JSONStringifyer::operationJO() {
   } else {
     // JO.6.
     tmpHandle_ = stackValue_->at(stackValue_->size() - 1);
-    auto cr = JSObject::getOwnPropertyNames(
-        Handle<JSObject>::vmcast(tmpHandle_), runtime_, true);
-    if (cr == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
+    if (LLVM_LIKELY(!Handle<JSObject>::vmcast(tmpHandle_)->isProxyObject())) {
+      // enumerableOwnProperties_RJS is the spec definition, and is
+      // used below on proxies so the correct traps get called.  In
+      // the common case of a non-proxy object, we can do less work by
+      // calling getOwnPropertyNames.
+      auto cr = JSObject::getOwnPropertyNames(
+          Handle<JSObject>::vmcast(tmpHandle_), runtime_, true);
+      if (cr == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      operationJOK_ = **cr;
+    } else {
+      CallResult<HermesValue> ownPropRes = enumerableOwnProperties_RJS(
+          runtime_,
+          Handle<JSObject>::vmcast(tmpHandle_),
+          EnumerableOwnPropertiesKind::Key);
+      if (ownPropRes == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      operationJOK_ = vmcast<JSArray>(*ownPropRes);
     }
-    operationJOK_ = **cr;
   }
 
   marker.flush();
