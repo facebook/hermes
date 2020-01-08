@@ -178,17 +178,22 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
 void ESTreeIRGen::genExpressionBranch(
     ESTree::Node *expr,
     BasicBlock *onTrue,
-    BasicBlock *onFalse) {
+    BasicBlock *onFalse,
+    BasicBlock *onNullish) {
   switch (expr->getKind()) {
     case ESTree::NodeKind::LogicalExpression:
       return genLogicalExpressionBranch(
-          cast<ESTree::LogicalExpressionNode>(expr), onTrue, onFalse);
+          cast<ESTree::LogicalExpressionNode>(expr),
+          onTrue,
+          onFalse,
+          onNullish);
 
     case ESTree::NodeKind::UnaryExpression: {
       auto *e = cast<ESTree::UnaryExpressionNode>(expr);
       switch (UnaryOperatorInst::parseOperator(e->_operator->str())) {
         case UnaryOperatorInst::OpKind::BangKind:
-          return genExpressionBranch(e->_argument, onFalse, onTrue);
+          // Do not propagate onNullish here because !expr cannot be nullish.
+          return genExpressionBranch(e->_argument, onFalse, onTrue, nullptr);
         default:
           break;
       }
@@ -206,7 +211,7 @@ void ESTreeIRGen::genExpressionBranch(
         last = &ex;
       }
       if (last)
-        genExpressionBranch(last, onTrue, onFalse);
+        genExpressionBranch(last, onTrue, onFalse, onNullish);
       return;
     }
 
@@ -215,6 +220,15 @@ void ESTreeIRGen::genExpressionBranch(
   }
 
   Value *condVal = genExpression(expr);
+  if (onNullish) {
+    Value *isNullish = Builder.createBinaryOperatorInst(
+        condVal,
+        Builder.getLiteralNull(),
+        BinaryOperatorInst::OpKind::EqualKind);
+    BasicBlock *notNullishBB = Builder.createBasicBlock(Builder.getFunction());
+    Builder.createCondBranchInst(isNullish, onNullish, notNullishBB);
+    Builder.setInsertionBlock(notNullishBB);
+  }
   Builder.createCondBranchInst(condVal, onTrue, onFalse);
 }
 
@@ -1393,7 +1407,7 @@ Value *ESTreeIRGen::genConditionalExpr(ESTree::ConditionalExpressionNode *C) {
 
   // Implement the ternary operator using control flow. We must use control
   // flow because the expressions may have side effects.
-  genExpressionBranch(C->_test, consequentBlock, alternateBlock);
+  genExpressionBranch(C->_test, consequentBlock, alternateBlock, nullptr);
 
   // The 'then' side:
   Builder.setInsertionBlock(consequentBlock);
@@ -1592,23 +1606,25 @@ Value *ESTreeIRGen::genLogicalExpression(
 void ESTreeIRGen::genLogicalExpressionBranch(
     ESTree::LogicalExpressionNode *logical,
     BasicBlock *onTrue,
-    BasicBlock *onFalse) {
+    BasicBlock *onFalse,
+    BasicBlock *onNullish) {
   auto opStr = logical->_operator->str();
   LLVM_DEBUG(dbgs() << "IRGen of short circuiting: " << opStr << " branch.\n");
 
   auto parentFunc = Builder.getInsertionBlock()->getParent();
-  auto block = Builder.createBasicBlock(parentFunc);
+  auto *block = Builder.createBasicBlock(parentFunc);
 
   if (opStr == "&&") {
-    genExpressionBranch(logical->_left, block, onFalse);
+    genExpressionBranch(logical->_left, block, onFalse, onNullish);
   } else if (opStr == "||") {
-    genExpressionBranch(logical->_left, onTrue, block);
+    genExpressionBranch(logical->_left, onTrue, block, onNullish);
   } else {
-    llvm_unreachable("Invalid update operator");
+    assert(opStr == "??" && "invalid logical operator");
+    genExpressionBranch(logical->_left, onTrue, onFalse, block);
   }
 
   Builder.setInsertionBlock(block);
-  genExpressionBranch(logical->_right, onTrue, onFalse);
+  genExpressionBranch(logical->_right, onTrue, onFalse, onNullish);
 }
 
 Value *ESTreeIRGen::genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr) {

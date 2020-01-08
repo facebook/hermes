@@ -483,11 +483,16 @@ class ESTreeIRGen {
   Value *genExpression(ESTree::Node *expr, Identifier nameHint = Identifier{});
 
   /// Generate an expression and perform a conditional branch depending on
-  /// whether the expression evaluates to true or false.
+  /// whether it evaluates to true or false (or optionally, nullish).
+  /// \param onNullish when not nullptr, the block to branch to if expr
+  ///   is nullish (undefined or null). Note that this supersedes `onFalse` when
+  ///   provided. If onNullish is nullptr, then `onFalse` will be branched to
+  ///   when expr is nullish, by virtue of boolean coercion.
   void genExpressionBranch(
       ESTree::Node *expr,
       BasicBlock *onTrue,
-      BasicBlock *onFalse);
+      BasicBlock *onFalse,
+      BasicBlock *onNullish);
 
   /// Convert the \p input into an array, spreading SpreadElements
   /// using for-or iteration semantics.
@@ -567,7 +572,8 @@ class ESTreeIRGen {
   void genLogicalExpressionBranch(
       ESTree::LogicalExpressionNode *logical,
       BasicBlock *onTrue,
-      BasicBlock *onFalse);
+      BasicBlock *onFalse,
+      BasicBlock *onNullish);
 
   /// Generate IR for the identifier expression.
   /// We need to know whether it's after typeof (\p afterTypeOf),

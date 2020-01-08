@@ -247,7 +247,7 @@ void ESTreeIRGen::genIfStatement(ESTree::IfStatementNode *IfStmt) {
   auto ElseBlock = Builder.createBasicBlock(Parent);
   auto ContinueBlock = Builder.createBasicBlock(Parent);
 
-  genExpressionBranch(IfStmt->_test, ThenBlock, ElseBlock);
+  genExpressionBranch(IfStmt->_test, ThenBlock, ElseBlock, nullptr);
 
   // IRGen the Then:
   Builder.setInsertionBlock(ThenBlock);
@@ -317,7 +317,7 @@ void ESTreeIRGen::genForWhileLoops(
 
   // Branch out of the loop if the condition is false.
   if (preTest)
-    genExpressionBranch(preTest, bodyBlock, exitBlock);
+    genExpressionBranch(preTest, bodyBlock, exitBlock, nullptr);
   else
     Builder.createBranchInst(bodyBlock);
 
@@ -333,7 +333,7 @@ void ESTreeIRGen::genForWhileLoops(
 
   // Branch out of the loop if the condition is false.
   if (postTest)
-    genExpressionBranch(postTest, bodyBlock, exitBlock);
+    genExpressionBranch(postTest, bodyBlock, exitBlock, nullptr);
   else
     Builder.createBranchInst(bodyBlock);
 

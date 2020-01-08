@@ -931,8 +931,6 @@ BLACK_LIST = [
     "test262/test/language/statements/function/dflt-params-ref-self.js",
     "test262/test/language/statements/generators/dflt-params-ref-later.js",
     "test262/test/language/statements/generators/dflt-params-ref-self.js",
-    # Nullish coalescing in ternary operator.
-    "test262/test/language/expressions/conditional/coalesce-expr-ternary.js",
     # Time out. # T20489563
     "mjsunit/regress/regress-crbug-482998.js",
     # Different time out: # T23228706
