@@ -951,14 +951,15 @@ Handle<NativeFunction> NativeFunction::create(
     NativeFunctionPtr functionPtr,
     SymbolID name,
     unsigned paramCount,
-    Handle<JSObject> prototypeObjectHandle) {
+    Handle<JSObject> prototypeObjectHandle,
+    unsigned additionalSlotCount) {
   void *mem = runtime->alloc(cellSize<NativeFunction>());
   auto selfHandle = runtime->makeHandle(new (mem) NativeFunction(
       runtime,
       &vt.base.base,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS + additionalSlotCount),
       context,
       functionPtr));
 
@@ -985,14 +986,15 @@ Handle<NativeFunction> NativeFunction::create(
     NativeFunctionPtr functionPtr,
     SymbolID name,
     unsigned paramCount,
-    Handle<JSObject> prototypeObjectHandle) {
+    Handle<JSObject> prototypeObjectHandle,
+    unsigned additionalSlotCount) {
   void *mem = runtime->alloc(cellSize<NativeFunction>());
   auto selfHandle = runtime->makeHandle(new (mem) NativeFunction(
       runtime,
       &vt.base.base,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS + additionalSlotCount),
       parentEnvHandle,
       context,
       functionPtr));
