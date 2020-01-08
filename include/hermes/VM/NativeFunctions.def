@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// NATIVE_FUNCTION_VERSION = 6. Updated Dec 6, 2019
-// Bump this version in SerializeHeader.h whenever we change this file.
+// Updated Dec 13, 2019
+#define NATIVE_FUNCTION_VERSION_VALUE 7
 
 #ifndef NATIVE_FUNCTION
 #define NATIVE_FUNCTION(func)
