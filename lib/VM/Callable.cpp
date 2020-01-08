@@ -10,6 +10,7 @@
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/JSNativeFunctions.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -430,6 +431,24 @@ CallResult<double> Callable::extractOwnLengthProperty_RJS(
           desc)) {
     propRes = JSObject::getNamedPropertyValue_RJS(
         selfHandle, runtime, selfHandle, desc);
+  } else if (selfHandle->isProxyObject()) {
+    ComputedPropertyDescriptor desc;
+    CallResult<bool> hasLength = JSProxy::getOwnProperty(
+        selfHandle,
+        runtime,
+        runtime->getPredefinedStringHandle(Predefined::length),
+        desc,
+        nullptr);
+    if (LLVM_UNLIKELY(hasLength == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (*hasLength) {
+      propRes = JSProxy::getNamed(
+          selfHandle,
+          runtime,
+          Predefined::getSymbolID(Predefined::length),
+          selfHandle);
+    }
   }
 
   {
