@@ -21,7 +21,7 @@ enum class RelocationKind { NativePointer, GCPointer, HermesValue };
 
 constexpr uint32_t SD_MAGIC = 0xad082463;
 
-constexpr uint32_t SD_HEADER_VERSION = 1;
+constexpr uint32_t SD_HEADER_VERSION = 2;
 
 constexpr uint32_t NATIVE_FUNCTION_VERSION = NATIVE_FUNCTION_VERSION_VALUE;
 
@@ -42,6 +42,7 @@ struct SerializeHeader {
   /// Runtime has the same runtime config as the Deserialize system. Write those
   /// flags that affects S/D in the header so we can check them too.
   bool enableEval;
+  bool hasES6Proxy;
   bool hasES6Symbol;
   uint8_t bytecodeWarmupPercent;
   bool trackIO;

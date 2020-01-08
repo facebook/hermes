@@ -271,6 +271,7 @@ int main(int argc, char **argv) {
                                     .build())
                             .withShouldRecordStats(GCPrintStats)
                             .build())
+          .withES6Proxy(cl::ES6Proxy)
           .withES6Symbol(cl::ES6Symbol)
           .withEnableHermesInternal(true)
           .withEnableHermesInternalTestMethods(true)

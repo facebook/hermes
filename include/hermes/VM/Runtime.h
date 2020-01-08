@@ -706,6 +706,10 @@ class Runtime : public HandleRootOwner,
     return runtimeModuleList_;
   }
 
+  bool hasES6Proxy() const {
+    return hasES6Proxy_;
+  }
+
   bool hasES6Symbol() const {
     return hasES6Symbol_;
   }
@@ -935,6 +939,9 @@ class Runtime : public HandleRootOwner,
 
   /// All state related to JIT compilation.
   JITContext jitContext_;
+
+  /// Set to true if we should enable ES6 Proxy.
+  const bool hasES6Proxy_;
 
   /// Set to true if we should enable ES6 Symbol.
   const bool hasES6Symbol_;

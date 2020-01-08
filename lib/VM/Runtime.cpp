@@ -172,6 +172,7 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
           runtimeConfig.getCrashMgr(),
           provider),
       jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 8, (1 << 20) * 32),
+      hasES6Proxy_(runtimeConfig.getES6Proxy()),
       hasES6Symbol_(runtimeConfig.getES6Symbol()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
@@ -2106,6 +2107,7 @@ void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
 
 void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
   header.enableEval = enableEval;
+  header.hasES6Proxy = hasES6Proxy_;
   header.hasES6Symbol = hasES6Symbol_;
   header.bytecodeWarmupPercent = bytecodeWarmupPercent_;
   header.trackIO = trackIO_;
@@ -2113,16 +2115,23 @@ void Runtime::populateHeaderRuntimeConfig(SerializeHeader &header) {
 
 void Runtime::checkHeaderRuntimeConfig(SerializeHeader &header) const {
   if (header.enableEval != enableEval) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+    hermes_fatal(
+        "serialize/deserialize Runtime Configs don't match (enableEval)");
+  }
+  if (header.hasES6Proxy != hasES6Proxy_) {
+    hermes_fatal(
+        "serialize/deserialize Runtime Configs don't match (es6Proxy)");
   }
   if (header.hasES6Symbol != hasES6Symbol_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+    hermes_fatal(
+        "serialize/deserialize Runtime Configs don't match (es6Symbol)");
   }
   if (header.bytecodeWarmupPercent != bytecodeWarmupPercent_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+    hermes_fatal(
+        "serialize/deserialize Runtime Configs don't match (bytecodeWarmupPercent)");
   }
   if (header.trackIO != trackIO_) {
-    hermes_fatal("serialize/deserialize Runtime Configs don't match");
+    hermes_fatal("serialize/deserialize Runtime Configs don't match (trackIO)");
   }
 }
 #endif

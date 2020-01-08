@@ -603,6 +603,11 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
   // %GeneratorPrototype%.
   populateGeneratorPrototype(runtime);
 
+  // Proxy constructor.
+  if (LLVM_UNLIKELY(runtime->hasES6Proxy())) {
+    createProxyConstructor(runtime);
+  }
+
   // Define the global Math object
   runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime->getGlobal(),

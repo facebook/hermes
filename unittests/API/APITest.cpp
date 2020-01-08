@@ -30,7 +30,10 @@ namespace {
 
 class HermesRuntimeTest : public ::testing::Test {
  public:
-  HermesRuntimeTest() : rt(makeHermesRuntime()) {}
+  HermesRuntimeTest()
+      : rt(makeHermesRuntime(::hermes::vm::RuntimeConfig::Builder()
+                                 .withES6Proxy(true)
+                                 .build())) {}
 
  protected:
   Value eval(const char *code) {

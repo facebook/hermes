@@ -352,7 +352,7 @@ def showStatus(filename):
         print("Testing " + filename)
 
 
-es6_args = ["-Xes6-symbol"]
+es6_args = ["-Xes6-proxy", "-Xes6-symbol"]
 extra_run_args = ["-Xhermes-internal-test-methods"]
 
 extra_compile_flags = ["-fno-static-builtins"]

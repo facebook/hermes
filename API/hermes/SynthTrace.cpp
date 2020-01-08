@@ -505,6 +505,7 @@ llvm::raw_ostream &operator<<(
       }
       json.emitKeyValue(
           "maxNumRegisters", tracePrinter.conf.getMaxNumRegisters());
+      json.emitKeyValue("ES6Proxy", tracePrinter.conf.getES6Proxy());
       json.emitKeyValue("ES6Symbol", tracePrinter.conf.getES6Symbol());
       json.emitKeyValue(
           "enableSampledStats", tracePrinter.conf.getEnableSampledStats());

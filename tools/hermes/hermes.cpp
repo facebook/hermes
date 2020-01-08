@@ -116,6 +116,7 @@ static int executeHBCBytecodeFromCL(
           .withEnableEval(cl::EnableEval)
           .withVerifyEvalIR(cl::VerifyIR)
           .withVMExperimentFlags(cl::VMExperimentFlags)
+          .withES6Proxy(cl::ES6Proxy)
           .withES6Symbol(cl::ES6Symbol)
           .withEnableSampleProfiling(cl::SampleProfiling)
           .withRandomizeMemoryLayout(cl::RandomizeMemoryLayout)
