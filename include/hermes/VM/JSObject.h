@@ -447,6 +447,8 @@ class JSObject : public GCCell {
 
   /// \return the `__proto__` internal property, which may be nullptr.
   JSObject *getParent(Runtime *runtime) const {
+    assert(
+        !flags_.proxyObject && "getParent cannot be used with proxy objects");
     return parent_.get(runtime);
   }
 
@@ -531,7 +533,8 @@ class JSObject : public GCCell {
 
   /// This is the proxy-aware version of getParent.  It has to
   /// allocate handles, so it's neither as simple or efficient as
-  /// getParent, but it's needed.
+  /// getParent, but it's needed.  If selfHandle has no parent, this
+  /// will return a null JSObject (not a null value).
   static CallResult<PseudoHandle<JSObject>> getPrototypeOf(
       PseudoHandle<JSObject> selfHandle,
       Runtime *runtime);
@@ -602,6 +605,7 @@ class JSObject : public GCCell {
       JSObject *self,
       PointerBase *runtime,
       NamedPropertyDescriptor desc) {
+    assert(!self->flags_.proxyObject && "getNamedSlotValue called on a Proxy");
     return getNamedSlotValue(self, runtime, desc.slot);
   }
 
@@ -622,6 +626,7 @@ class JSObject : public GCCell {
       Runtime *runtime,
       NamedPropertyDescriptor desc,
       HermesValue value) {
+    assert(!self->flags_.proxyObject && "setNamedSlotValue called on a Proxy");
     setNamedSlotValue(self, runtime, desc.slot, value);
   }
 
@@ -685,6 +690,7 @@ class JSObject : public GCCell {
 
   /// ES5.1 8.12.1.
   /// Extract a descriptor \p desc of an own named property \p name.
+  /// This will return false if the object is a proxy.
   static bool getOwnNamedDescriptor(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
@@ -712,12 +718,22 @@ class JSObject : public GCCell {
   static OptValue<HermesValue>
   tryGetNamedNoAlloc(JSObject *self, PointerBase *base, SymbolID name);
 
+  /// Parameter to getOwnComputedPrimitiveDescriptor
+  enum class IgnoreProxy { No, Yes };
+
   /// ES5.1 8.12.1.
   /// \param nameValHandle the name of the property. It must be a primitive.
+  /// If selfHandle refers to a proxy and \param ignoreProxy is Yes, desc
+  /// will be untouched and false will be returned.  If selfHandle refers to a
+  /// proxy, and \param ignoreProxy is No, then if [[GetOwnProperty]] on the
+  /// proxy is undefined, then false will be returned, otherwise, desc will be
+  /// filled in with the result, and true will be returned.  If selfHandle is
+  /// not a proxy, then the flag is irrelevant.
   static CallResult<bool> getOwnComputedPrimitiveDescriptor(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
       Handle<> nameValHandle,
+      IgnoreProxy ignoreProxy,
       ComputedPropertyDescriptor &desc);
 
   /// Provides the functionality of ES9 [[GetOwnProperty]] on selfHandle.  It
@@ -1460,6 +1476,7 @@ inline HermesValue JSObject::getComputedSlotValue(
     JSObject *self,
     Runtime *runtime,
     ComputedPropertyDescriptor desc) {
+  assert(!self->flags_.proxyObject && "getComputedSlotValue called on a Proxy");
   if (LLVM_LIKELY(desc.flags.indexed)) {
     assert(
         self->flags_.indexedStorage &&
@@ -1475,6 +1492,8 @@ inline ExecutionStatus JSObject::setComputedSlotValue(
     Runtime *runtime,
     ComputedPropertyDescriptor desc,
     Handle<> value) {
+  assert(
+      !selfHandle->isProxyObject() && "setComputedSlotValue called on a Proxy");
   if (LLVM_LIKELY(desc.flags.indexed)) {
     assert(
         selfHandle->flags_.indexedStorage &&
@@ -1600,17 +1619,21 @@ inline OptValue<HiddenClass::PropertyPos> JSObject::findProperty(
     SymbolID name,
     PropertyFlags expectedFlags,
     NamedPropertyDescriptor &desc) {
-  return HiddenClass::findProperty(
+  auto ret = HiddenClass::findProperty(
       createPseudoHandle(selfHandle->clazz_.getNonNull(runtime)),
       runtime,
       name,
       expectedFlags,
       desc);
+  assert(
+      !(selfHandle->flags_.proxyObject && ret) &&
+      "Proxy objects should never have own properties");
+  return ret;
 }
 
 inline bool JSObject::shouldCacheForIn(Runtime *runtime) const {
   return !clazz_.get(runtime)->isDictionary() && !flags_.indexedStorage &&
-      !flags_.hostObject;
+      !flags_.hostObject && !flags_.proxyObject;
 }
 
 } // namespace vm

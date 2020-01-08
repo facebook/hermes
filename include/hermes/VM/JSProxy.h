@@ -160,6 +160,10 @@ class JSProxy : public JSObject {
       Runtime *runtime,
       Handle<> nameValHandle);
 
+  // If okflags.getIncludeNonEnumerable() is not true, this call needs to
+  // call getOwnProperty traps in order to discover if each property is
+  // enumerable.  Thus, unlike most JSProxy functions, this function can
+  // call multiple traps.
   static CallResult<PseudoHandle<JSArray>> ownPropertyKeys(
       Handle<JSObject> selfHandle,
       Runtime *runtime,

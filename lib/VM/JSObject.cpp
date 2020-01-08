@@ -13,6 +13,7 @@
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSDate.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringView.h"
 
@@ -227,14 +228,45 @@ ObjectID JSObject::getObjectID(JSObject *self, Runtime *runtime) {
 CallResult<PseudoHandle<JSObject>> JSObject::getPrototypeOf(
     PseudoHandle<JSObject> selfHandle,
     Runtime *runtime) {
-  return createPseudoHandle(selfHandle->getParent(runtime));
+  if (LLVM_LIKELY(!selfHandle->isProxyObject())) {
+    return createPseudoHandle(selfHandle->getParent(runtime));
+  }
+
+  return JSProxy::getPrototypeOf(
+      toHandle(runtime, std::move(selfHandle)), runtime);
 }
+
+namespace {
+
+CallResult<bool> proxyOpFlags(
+    Runtime *runtime,
+    PropOpFlags opFlags,
+    const char *msg,
+    CallResult<bool> res) {
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!*res && opFlags.getThrowOnError()) {
+    return runtime->raiseTypeError(msg);
+  }
+  return res;
+}
+
+} // namespace
 
 CallResult<bool> JSObject::setParent(
     JSObject *self,
     Runtime *runtime,
     JSObject *parent,
     PropOpFlags opFlags) {
+  if (LLVM_UNLIKELY(self->isProxyObject())) {
+    return proxyOpFlags(
+        runtime,
+        opFlags,
+        "Object is not extensible.",
+        JSProxy::setPrototypeOf(
+            runtime->makeHandle(self), runtime, runtime->makeHandle(parent)));
+  }
   // ES9 9.1.2
   // 4.
   if (self->parent_.get(runtime) == parent)
@@ -242,7 +274,7 @@ CallResult<bool> JSObject::setParent(
   // 5.
   if (!self->isExtensible()) {
     if (opFlags.getThrowOnError()) {
-      return runtime->raiseTypeError("JSObject is not extensible.");
+      return runtime->raiseTypeError("Object is not extensible.");
     } else {
       return false;
     }
@@ -255,6 +287,10 @@ CallResult<bool> JSObject::setParent(
       } else {
         return false;
       }
+    } else if (LLVM_UNLIKELY(cur->isProxyObject())) {
+      // TODO this branch should also be used for module namespace and
+      // immutable prototype exotic objects.
+      break;
     }
   }
   // 9.
@@ -317,6 +353,10 @@ CallResult<HermesValue> JSObject::getNamedPropertyValue_RJS(
     Runtime *runtime,
     Handle<JSObject> propObj,
     NamedPropertyDescriptor desc) {
+  assert(
+      !selfHandle->flags_.proxyObject && !propObj->flags_.proxyObject &&
+      "getNamedPropertyValue_RJS cannot be used with proxy objects");
+
   if (LLVM_LIKELY(!desc.flags.accessor))
     return getNamedSlotValue(propObj.get(), runtime, desc);
 
@@ -335,6 +375,10 @@ CallResult<HermesValue> JSObject::getComputedPropertyValue_RJS(
     Runtime *runtime,
     Handle<JSObject> propObj,
     ComputedPropertyDescriptor desc) {
+  assert(
+      !selfHandle->flags_.proxyObject && !propObj->flags_.proxyObject &&
+      "getComputedPropertyValue_RJS cannot be used with proxy objects");
+
   if (LLVM_LIKELY(!desc.flags.accessor))
     return getComputedSlotValue(propObj.get(), runtime, desc);
 
@@ -369,7 +413,17 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   assert(
       (okFlags.getIncludeNonSymbols() || okFlags.getIncludeSymbols()) &&
       "Can't exclude symbols and strings");
-  if (LLVM_UNLIKELY(selfHandle->flags_.lazyObject)) {
+  if (LLVM_UNLIKELY(
+          selfHandle->flags_.lazyObject || selfHandle->flags_.proxyObject)) {
+    if (selfHandle->flags_.proxyObject) {
+      CallResult<PseudoHandle<JSArray>> proxyRes =
+          JSProxy::ownPropertyKeys(selfHandle, runtime, okFlags);
+      if (LLVM_UNLIKELY(proxyRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return toHandle(runtime, std::move(*proxyRes));
+    }
+    assert(selfHandle->flags_.lazyObject && "descriptor flags are impossible");
     initializeLazyObject(runtime, selfHandle);
   }
 
@@ -671,6 +725,7 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     Handle<> nameValHandle,
+    JSObject::IgnoreProxy ignoreProxy,
     ComputedPropertyDescriptor &desc) {
   assert(
       !nameValHandle->isObject() &&
@@ -701,7 +756,8 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
     }
 
     if (!selfHandle->getClass(runtime)->getHasIndexLikeProperties() &&
-        !selfHandle->flags_.hostObject && !selfHandle->flags_.lazyObject) {
+        !selfHandle->flags_.hostObject && !selfHandle->flags_.lazyObject &&
+        !selfHandle->flags_.proxyObject) {
       // Early return to handle the case where an object definitely has no
       // index-like properties. This avoids allocating a new StringPrimitive and
       // uniquing it below.
@@ -739,10 +795,19 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
     }
   }
 
-  if (LLVM_UNLIKELY(selfHandle->flags_.lazyObject)) {
+  if (LLVM_LIKELY(
+          !selfHandle->flags_.lazyObject && !selfHandle->flags_.proxyObject)) {
+    return false;
+  }
+  if (selfHandle->flags_.lazyObject) {
     JSObject::initializeLazyObject(runtime, selfHandle);
     return getOwnComputedPrimitiveDescriptor(
-        selfHandle, runtime, nameValHandle, desc);
+        selfHandle, runtime, nameValHandle, ignoreProxy, desc);
+  }
+  assert(selfHandle->flags_.proxyObject && "descriptor flags are impossible");
+  if (ignoreProxy == IgnoreProxy::No) {
+    return JSProxy::getOwnProperty(
+        selfHandle, runtime, nameValHandle, desc, nullptr);
   }
   return false;
 }
@@ -757,7 +822,7 @@ CallResult<bool> JSObject::getOwnComputedDescriptor(
     return ExecutionStatus::EXCEPTION;
   }
   return JSObject::getOwnComputedPrimitiveDescriptor(
-      selfHandle, runtime, *converted, desc);
+      selfHandle, runtime, *converted, IgnoreProxy::No, desc);
 }
 
 CallResult<bool> JSObject::getOwnComputedDescriptor(
@@ -770,16 +835,24 @@ CallResult<bool> JSObject::getOwnComputedDescriptor(
   if (LLVM_UNLIKELY(converted == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+  // The proxy is ignored here so we can avoid calling
+  // JSProxy::getOwnProperty twice on proxies, since
+  // getOwnComputedPrimitiveDescriptor doesn't pass back the
+  // valueOrAccessor.
   CallResult<bool> res = JSObject::getOwnComputedPrimitiveDescriptor(
-      selfHandle, runtime, *converted, desc);
+      selfHandle, runtime, *converted, IgnoreProxy::Yes, desc);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (!*res) {
-    return false;
+  if (*res) {
+    valueOrAccessor = getComputedSlotValue(selfHandle.get(), runtime, desc);
+    return true;
   }
-  valueOrAccessor = getComputedSlotValue(selfHandle.get(), runtime, desc);
-  return true;
+  if (LLVM_UNLIKELY(selfHandle->isProxyObject())) {
+    return JSProxy::getOwnProperty(
+        selfHandle, runtime, nameValHandle, desc, &valueOrAccessor);
+  }
+  return false;
 }
 
 JSObject *JSObject::getNamedDescriptor(
@@ -805,12 +878,21 @@ JSObject *JSObject::getNamedDescriptor(
   }
 
   if (LLVM_UNLIKELY(selfHandle->flags_.lazyObject)) {
+    assert(
+        !selfHandle->flags_.proxyObject &&
+        "Proxy objects should never be lazy");
     // Initialize the object and perform the lookup again.
     JSObject::initializeLazyObject(runtime, selfHandle);
 
     if (findProperty(selfHandle, runtime, name, expectedFlags, desc))
       return *selfHandle;
   }
+
+  if (LLVM_UNLIKELY(selfHandle->flags_.proxyObject)) {
+    desc.flags.proxyObject = true;
+    return *selfHandle;
+  }
+
   if (selfHandle->parent_) {
     MutableHandle<JSObject> mutableSelfHandle{
         runtime, selfHandle->parent_.getNonNull(runtime)};
@@ -819,7 +901,8 @@ JSObject *JSObject::getNamedDescriptor(
       // Check the most common case first, at the cost of some code duplication.
       if (LLVM_LIKELY(
               !mutableSelfHandle->flags_.lazyObject &&
-              !mutableSelfHandle->flags_.hostObject)) {
+              !mutableSelfHandle->flags_.hostObject &&
+              !mutableSelfHandle->flags_.proxyObject)) {
       findProp:
         if (findProperty(
                 mutableSelfHandle,
@@ -827,17 +910,23 @@ JSObject *JSObject::getNamedDescriptor(
                 name,
                 PropertyFlags::invalid(),
                 desc)) {
+          assert(
+              !selfHandle->flags_.proxyObject &&
+              "Proxy object parents should never have own properties");
           return *mutableSelfHandle;
         }
       } else if (LLVM_UNLIKELY(mutableSelfHandle->flags_.lazyObject)) {
         JSObject::initializeLazyObject(runtime, mutableSelfHandle);
         goto findProp;
-      } else {
-        assert(
-            mutableSelfHandle->flags_.hostObject &&
-            "descriptor flags are impossible");
+      } else if (LLVM_UNLIKELY(mutableSelfHandle->flags_.hostObject)) {
         desc.flags.hostObject = true;
         desc.flags.writable = true;
+        return *mutableSelfHandle;
+      } else {
+        assert(
+            mutableSelfHandle->flags_.proxyObject &&
+            "descriptor flags are impossible");
+        desc.flags.proxyObject = true;
         return *mutableSelfHandle;
       }
     } while ((mutableSelfHandle = mutableSelfHandle->parent_.get(runtime)));
@@ -862,8 +951,11 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
 
   GCScopeMarkerRAII marker{runtime};
   do {
+    // A proxy is ignored here so we can check the bit later and
+    // return it back to the caller for additional processing.
+
     auto cr = getOwnComputedPrimitiveDescriptor(
-        propObj, runtime, nameValHandle, desc);
+        propObj, runtime, nameValHandle, IgnoreProxy::Yes, desc);
     if (cr == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -876,6 +968,12 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
       desc.flags.writable = true;
       return ExecutionStatus::RETURNED;
     }
+    if (LLVM_UNLIKELY(propObj->flags_.proxyObject)) {
+      desc.flags.proxyObject = true;
+      return ExecutionStatus::RETURNED;
+    }
+    // This isn't a proxy, so use the faster getParent() instead of
+    // getPrototypeOf.
     propObj = propObj->getParent(runtime);
     // Flush at the end of the loop to allow first iteration to be as fast as
     // possible.
@@ -919,7 +1017,9 @@ CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
     return HermesValue::encodeUndefinedValue();
   }
 
-  if (LLVM_LIKELY(!desc.flags.accessor && !desc.flags.hostObject)) {
+  if (LLVM_LIKELY(
+          !desc.flags.accessor && !desc.flags.hostObject &&
+          !desc.flags.proxyObject)) {
     // Populate the cache if requested.
     if (cacheEntry && !propObj->getClass(runtime)->isDictionaryNoCache()) {
       cacheEntry->clazz = propObj->getClassGCPtr().getStorageType();
@@ -937,9 +1037,12 @@ CallResult<HermesValue> JSObject::getNamedWithReceiver_RJS(
     // Execute the accessor on this object.
     return Callable::executeCall0(
         runtime->makeHandle(accessor->getter), runtime, receiver);
-  } else {
-    assert(desc.flags.hostObject && "descriptor flags are impossible");
+  } else if (desc.flags.hostObject) {
     return vmcast<HostObject>(propObj)->get(name);
+  } else {
+    assert(desc.flags.proxyObject && "descriptor flags are impossible");
+    return JSProxy::getNamed(
+        runtime->makeHandle(propObj), runtime, name, receiver);
   }
 }
 
@@ -1006,7 +1109,9 @@ CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
   if (!propObj)
     return HermesValue::encodeUndefinedValue();
 
-  if (LLVM_LIKELY(!desc.flags.accessor && !desc.flags.hostObject))
+  if (LLVM_LIKELY(
+          !desc.flags.accessor && !desc.flags.hostObject &&
+          !desc.flags.proxyObject))
     return getComputedSlotValue(propObj.get(), runtime, desc);
 
   if (desc.flags.accessor) {
@@ -1018,8 +1123,7 @@ CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
     // Execute the accessor on this object.
     return accessor->getter.get(runtime)->executeCall0(
         runtime->makeHandle(accessor->getter), runtime, receiver);
-  } else {
-    assert(desc.flags.hostObject && "descriptor flags are impossible");
+  } else if (desc.flags.hostObject) {
     MutableHandle<StringPrimitive> strPrim{runtime};
     SymbolID id{};
     LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
@@ -1027,6 +1131,12 @@ CallResult<HermesValue> JSObject::getComputedWithReceiver_RJS(
     if (propRes == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
     return propRes;
+  } else {
+    assert(desc.flags.proxyObject && "descriptor flags are impossible");
+    CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
+    if (key == ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+    return JSProxy::getComputed(propObj, runtime, *key, receiver);
   }
 }
 
@@ -1036,7 +1146,13 @@ CallResult<bool> JSObject::hasNamed(
     SymbolID name) {
   NamedPropertyDescriptor desc;
   JSObject *propObj = getNamedDescriptor(selfHandle, runtime, name, desc);
-  return propObj ? true : false;
+  if (propObj == nullptr) {
+    return false;
+  }
+  if (LLVM_UNLIKELY(desc.flags.proxyObject)) {
+    return JSProxy::hasNamed(runtime->makeHandle(propObj), runtime, name);
+  }
+  return true;
 }
 
 CallResult<bool> JSObject::hasNamedOrIndexed(
@@ -1076,14 +1192,41 @@ CallResult<bool> JSObject::hasComputed(
     }
   }
 
+  // If nameValHandle is an object, we should convert it to string now,
+  // because toString may have side-effect, and we want to do this only
+  // once.
+  auto converted = toPropertyKeyIfObject(runtime, nameValHandle);
+  if (LLVM_UNLIKELY(converted == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto nameValPrimitiveHandle = *converted;
+
   ComputedPropertyDescriptor desc;
   MutableHandle<JSObject> propObj{runtime};
-  if (getComputedDescriptor(
-          selfHandle, runtime, nameValHandle, propObj, desc) ==
+  if (getComputedPrimitiveDescriptor(
+          selfHandle, runtime, nameValPrimitiveHandle, propObj, desc) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return !!propObj;
+  if (!propObj) {
+    return false;
+  }
+  if (LLVM_UNLIKELY(desc.flags.proxyObject)) {
+    CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
+    if (key == ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+    return JSProxy::hasComputed(propObj, runtime, *key);
+  }
+  // For compatibility with polyfills we want to pretend that all HostObject
+  // properties are "own" properties in 'in'. Since there is no way to check for
+  // a HostObject property, we must always assume success. In practice the
+  // property name would have been obtained from enumerating the properties in
+  // JS code that looks something like this:
+  //    for(key in hostObj) {
+  //      if (key in hostObj)
+  //        ...
+  //    }
+  return true;
 }
 
 static ExecutionStatus raiseErrorForOverridingStaticBuiltin(
@@ -1097,6 +1240,10 @@ static ExecutionStatus raiseErrorForOverridingStaticBuiltin(
   NamedPropertyDescriptor desc;
   auto *obj = JSObject::getNamedDescriptor(
       selfHandle, runtime, Predefined::getSymbolID(Predefined::name), desc);
+  assert(
+      !selfHandle->isProxyObject() &&
+      "raiseErrorForOverridingStaticBuiltin cannot be used with proxy objects");
+
   if (!obj || desc.flags.accessor) {
     return runtime->raiseTypeError(
         TwineChar16("Attempting to override read-only builtin method '") +
@@ -1134,7 +1281,8 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       PropertyFlags::defaultNewNamedPropertyFlags(),
       desc);
 
-  // If the property exists
+  // If the property exists (or, we hit a proxy/hostobject on the way
+  // up the chain)
   if (propObj) {
     // Get the simple case out of the way: If the property already
     // exists on selfHandle, is not an accessor, selfHandle and
@@ -1146,7 +1294,8 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
             *selfHandle == propObj &&
             selfHandle.getHermesValue().getRaw() == receiver->getRaw() &&
             !desc.flags.accessor && !desc.flags.internalSetter &&
-            !desc.flags.hostObject && desc.flags.writable)) {
+            !desc.flags.hostObject && !desc.flags.proxyObject &&
+            desc.flags.writable)) {
       setNamedSlotValue(
           *selfHandle, runtime, desc, valueHandle.getHermesValue());
       return true;
@@ -1160,9 +1309,9 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       if (!accessor->setter) {
         if (opFlags.getThrowOnError()) {
           return runtime->raiseTypeError(
-              TwineChar16("Cannot assign to read-only property '") +
+              TwineChar16("Cannot assign to property '") +
               runtime->getIdentifierTable().getStringViewForDev(runtime, name) +
-              "'");
+              "' which has only a getter");
         }
         return false;
       }
@@ -1176,6 +1325,23 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
         return ExecutionStatus::EXCEPTION;
       }
       return true;
+    }
+
+    if (LLVM_UNLIKELY(desc.flags.proxyObject)) {
+      assert(
+          !opFlags.getMustExist() &&
+          "MustExist cannot be used with Proxy objects");
+      CallResult<bool> setRes = JSProxy::setNamed(
+          runtime->makeHandle(propObj), runtime, name, valueHandle, receiver);
+      if (LLVM_UNLIKELY(setRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (!*setRes && opFlags.getThrowOnError()) {
+        return runtime->raiseTypeError(
+            TwineChar16("Proxy set returned false for property '") +
+            runtime->getIdentifierTable().getStringView(runtime, name) + "'");
+      }
+      return setRes;
     }
 
     if (LLVM_UNLIKELY(!desc.flags.writable)) {
@@ -1203,7 +1369,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
 
   MutableHandle<JSObject> receiverHandle{runtime, *selfHandle};
   if (selfHandle.getHermesValue().getRaw() != receiver->getRaw() ||
-      receiverHandle->isHostObject()) {
+      receiverHandle->isHostObject() || receiverHandle->isProxyObject()) {
     if (selfHandle.getHermesValue().getRaw() != receiver->getRaw()) {
       receiverHandle = dyn_vmcast<JSObject>(*receiver);
     }
@@ -1217,31 +1383,45 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       }
 
       assert(
-          !receiverHandle->isHostObject() &&
-          "getOwnNamedDescriptor never sets hostObject flag");
+          !receiverHandle->isHostObject() && !receiverHandle->isProxyObject() &&
+          "getOwnNamedDescriptor never sets hostObject or proxyObject flags");
 
       setNamedSlotValue(
           *receiverHandle, runtime, desc, valueHandle.getHermesValue());
       return true;
     }
 
-    // Now deal with host case.  We need to call
+    // Now deal with host and proxy object cases.  We need to call
     // getOwnComputedPrimitiveDescriptor because it knows how to call
-    // the proxy [[GetOwnComputed]] if necessary.
-    assert(desc.flags.hostObject && "descriptor flags are impossible");
-    ComputedPropertyDescriptor desc;
-    CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
-        receiverHandle,
-        runtime,
-        name.isUniqued() ? runtime->makeHandle(HermesValue::encodeStringValue(
-                               runtime->getStringPrimFromSymbolID(name)))
-                         : runtime->makeHandle(name),
-        desc);
-    if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
+    // the [[getOwnProperty]] Proxy impl if needed.
+    if (LLVM_UNLIKELY(
+            receiverHandle->isHostObject() ||
+            receiverHandle->isProxyObject())) {
+      if (receiverHandle->isHostObject()) {
+        return vmcast<HostObject>(receiverHandle.get())
+            ->set(name, *valueHandle);
+      }
+      ComputedPropertyDescriptor desc;
+      CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
+          receiverHandle,
+          runtime,
+          name.isUniqued() ? runtime->makeHandle(HermesValue::encodeStringValue(
+                                 runtime->getStringPrimFromSymbolID(name)))
+                           : runtime->makeHandle(name),
+          IgnoreProxy::No,
+          desc);
+      if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      DefinePropertyFlags dpf;
+      if (*descDefinedRes) {
+        dpf.setValue = 1;
+      } else {
+        dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+      }
+      return JSProxy::defineOwnProperty(
+          receiverHandle, runtime, name, dpf, valueHandle, opFlags);
     }
-
-    return vmcast<HostObject>(receiverHandle.get())->set(name, *valueHandle);
   }
 
   // Does the caller require it to exist?
@@ -1343,7 +1523,8 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     return ExecutionStatus::EXCEPTION;
   }
 
-  // If the property exists.
+  // If the property exists (or, we hit a proxy/hostobject on the way
+  // up the chain)
   if (propObj) {
     // Get the simple case out of the way: If the property already
     // exists on selfHandle, is not an accessor, selfHandle and
@@ -1355,7 +1536,8 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
             selfHandle == propObj &&
             selfHandle.getHermesValue().getRaw() == receiver->getRaw() &&
             !desc.flags.accessor && !desc.flags.internalSetter &&
-            !desc.flags.hostObject && desc.flags.writable)) {
+            !desc.flags.hostObject && !desc.flags.proxyObject &&
+            desc.flags.writable)) {
       if (LLVM_UNLIKELY(
               setComputedSlotValue(selfHandle, runtime, desc, valueHandle) ==
               ExecutionStatus::EXCEPTION)) {
@@ -1372,8 +1554,10 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
       // If it is a read-only accessor, fail.
       if (!accessor->setter) {
         if (opFlags.getThrowOnError()) {
-          // TODO: better message.
-          return runtime->raiseTypeError("Cannot assign to read-only property");
+          return runtime->raiseTypeErrorForValue(
+              "Cannot assign to property ",
+              nameValPrimitiveHandle,
+              " which has only a getter");
         }
         return false;
       }
@@ -1389,6 +1573,26 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
       return true;
     }
 
+    if (LLVM_UNLIKELY(desc.flags.proxyObject)) {
+      assert(
+          !opFlags.getMustExist() &&
+          "MustExist cannot be used with Proxy objects");
+      CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
+      if (key == ExecutionStatus::EXCEPTION)
+        return ExecutionStatus::EXCEPTION;
+      CallResult<bool> setRes =
+          JSProxy::setComputed(propObj, runtime, *key, valueHandle, receiver);
+      if (LLVM_UNLIKELY(setRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (!*setRes && opFlags.getThrowOnError()) {
+        // TODO: better message.
+        return runtime->raiseTypeError(
+            TwineChar16("Proxy trap returned false for property"));
+      }
+      return setRes;
+    }
+
     if (LLVM_UNLIKELY(!desc.flags.writable)) {
       if (desc.flags.staticBuiltin) {
         MutableHandle<StringPrimitive> strPrim{runtime};
@@ -1398,8 +1602,8 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
             selfHandle, runtime, runtime->makeHandle(id));
       }
       if (opFlags.getThrowOnError()) {
-        // TODO: better message.
-        return runtime->raiseTypeError("Cannot assign to read-only property");
+        return runtime->raiseTypeErrorForValue(
+            "Cannot assign to read-only property ", nameValPrimitiveHandle, "");
       }
       return false;
     }
@@ -1423,7 +1627,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
 
   MutableHandle<JSObject> receiverHandle{runtime, *selfHandle};
   if (selfHandle.getHermesValue().getRaw() != receiver->getRaw() ||
-      receiverHandle->isHostObject()) {
+      receiverHandle->isHostObject() || receiverHandle->isProxyObject()) {
     if (selfHandle.getHermesValue().getRaw() != receiver->getRaw()) {
       receiverHandle = dyn_vmcast<JSObject>(*receiver);
     }
@@ -1431,17 +1635,19 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
       return false;
     }
     CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
-        receiverHandle, runtime, nameValPrimitiveHandle, desc);
+        receiverHandle, runtime, nameValPrimitiveHandle, IgnoreProxy::No, desc);
     if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
+    DefinePropertyFlags dpf;
     if (*descDefinedRes) {
       if (LLVM_UNLIKELY(desc.flags.accessor || !desc.flags.writable)) {
         return false;
       }
 
       if (LLVM_LIKELY(
-              !desc.flags.internalSetter && !receiverHandle->isHostObject())) {
+              !desc.flags.internalSetter && !receiverHandle->isHostObject() &&
+              !receiverHandle->isProxyObject())) {
         if (LLVM_UNLIKELY(
                 setComputedSlotValue(
                     receiverHandle, runtime, desc, valueHandle) ==
@@ -1453,7 +1659,8 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     }
 
     if (LLVM_UNLIKELY(
-            desc.flags.internalSetter || receiverHandle->isHostObject())) {
+            desc.flags.internalSetter || receiverHandle->isHostObject() ||
+            receiverHandle->isProxyObject())) {
       MutableHandle<StringPrimitive> strPrim{runtime};
       SymbolID id{};
       LAZY_TO_IDENTIFIER(runtime, nameValPrimitiveHandle, strPrim, id);
@@ -1465,10 +1672,18 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
             desc.castToNamedPropertyDescriptorRef(),
             valueHandle,
             opFlags);
-      } else {
-        assert(desc.flags.hostObject && "descriptor flags are impossible");
+      } else if (receiverHandle->isHostObject()) {
         return vmcast<HostObject>(receiverHandle.get())->set(id, *valueHandle);
       }
+      assert(
+          receiverHandle->isProxyObject() && "descriptor flags are impossible");
+      if (*descDefinedRes) {
+        dpf.setValue = 1;
+      } else {
+        dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+      }
+      return JSProxy::defineOwnProperty(
+          receiverHandle, runtime, id, dpf, valueHandle, opFlags);
     }
   }
 
@@ -1548,14 +1763,23 @@ CallResult<bool> JSObject::deleteNamed(
 
   // If the property doesn't exist in this object, return success.
   if (!pos) {
-    if (LLVM_UNLIKELY(selfHandle->flags_.lazyObject)) {
+    if (LLVM_LIKELY(
+            !selfHandle->flags_.lazyObject &&
+            !selfHandle->flags_.proxyObject)) {
+      return true;
+    } else if (selfHandle->flags_.lazyObject) {
       // object is lazy, initialize and read again.
       initializeLazyObject(runtime, selfHandle);
       pos = findProperty(selfHandle, runtime, name, desc);
       if (!pos) // still not there, return true.
         return true;
     } else {
-      return true;
+      assert(selfHandle->flags_.proxyObject && "object flags are impossible");
+      return proxyOpFlags(
+          runtime,
+          opFlags,
+          "Proxy delete returned false",
+          JSProxy::deleteNamed(selfHandle, runtime, name));
     }
   }
   // If the property isn't configurable, fail.
@@ -1651,7 +1875,7 @@ CallResult<bool> JSObject::deleteComputed(
   }
 
   // At this point we know that the named property either doesn't exist, or
-  // is configurable and so can be deleted.
+  // is configurable and so can be deleted, or the object is a Proxy.
 
   // If it is an "index-like" property, we must also delete the "shadow" indexed
   // property in order to keep Array.length correct.
@@ -1666,8 +1890,8 @@ CallResult<bool> JSObject::deleteComputed(
     }
   }
 
-  // Finally delete the named property (if it exists).
   if (pos) {
+    // delete the named property (if it exists).
     // Clear the deleted property value to prevent memory leaks.
     setNamedSlotValue(
         *selfHandle, runtime, desc, HermesValue::encodeEmptyValue());
@@ -1676,7 +1900,17 @@ CallResult<bool> JSObject::deleteComputed(
     auto newClazz = HiddenClass::deleteProperty(
         runtime->makeHandle(selfHandle->clazz_), runtime, *pos);
     selfHandle->clazz_.set(runtime, *newClazz, &runtime->getHeap());
+  } else if (LLVM_UNLIKELY(selfHandle->flags_.proxyObject)) {
+    CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
+    if (key == ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+    return proxyOpFlags(
+        runtime,
+        opFlags,
+        "Proxy delete returned false",
+        JSProxy::deleteComputed(selfHandle, runtime, *key));
   }
+
   return true;
 }
 
@@ -1721,9 +1955,15 @@ CallResult<bool> JSObject::defineOwnProperty(
         opFlags);
   }
 
-  // if the property was not found and the object is lazy we need to initialize
-  // it and try again.
-  if (LLVM_UNLIKELY(selfHandle->flags_.lazyObject)) {
+  if (LLVM_UNLIKELY(
+          selfHandle->flags_.lazyObject || selfHandle->flags_.proxyObject)) {
+    if (selfHandle->flags_.proxyObject) {
+      return JSProxy::defineOwnProperty(
+          selfHandle, runtime, name, dpFlags, valueOrAccessor, opFlags);
+    }
+    assert(selfHandle->flags_.lazyObject && "descriptor flags are impossible");
+    // if the property was not found and the object is lazy we need to
+    // initialize it and try again.
     JSObject::initializeLazyObject(runtime, selfHandle);
     return defineOwnProperty(
         selfHandle, runtime, name, dpFlags, valueOrAccessor, opFlags);
@@ -1739,6 +1979,9 @@ ExecutionStatus JSObject::defineNewOwnProperty(
     SymbolID name,
     PropertyFlags propertyFlags,
     Handle<> valueOrAccessor) {
+  assert(
+      !selfHandle->flags_.proxyObject &&
+      "definedNewOwnProperty cannot be used with proxy objects");
   assert(
       !(propertyFlags.accessor && !valueOrAccessor.get().isPointer()) &&
       "accessor must be non-empty");
@@ -2193,6 +2436,9 @@ bool JSObject::_checkAllOwnIndexedImpl(
 }
 
 void JSObject::preventExtensions(JSObject *self) {
+  assert(
+      !self->flags_.proxyObject &&
+      "[[Extensible]] slot cannot be set directly on Proxy objects");
   self->flags_.noExtend = true;
 }
 
@@ -2200,6 +2446,9 @@ CallResult<bool> JSObject::preventExtensions(
     Handle<JSObject> selfHandle,
     Runtime *runtime,
     PropOpFlags opFlags) {
+  if (LLVM_UNLIKELY(selfHandle->isProxyObject())) {
+    return JSProxy::preventExtensions(selfHandle, runtime, opFlags);
+  }
   JSObject::preventExtensions(*selfHandle);
   return true;
 }
@@ -2270,6 +2519,9 @@ void JSObject::updatePropertyFlagsWithoutTransitions(
 CallResult<bool> JSObject::isExtensible(
     PseudoHandle<JSObject> self,
     Runtime *runtime) {
+  if (LLVM_UNLIKELY(self->isProxyObject())) {
+    return JSProxy::isExtensible(toHandle(runtime, std::move(self)), runtime);
+  }
   return self->isExtensible();
 }
 
@@ -2375,6 +2627,9 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
     SymbolID name,
     PropertyFlags propertyFlags,
     Handle<> valueOrAccessor) {
+  assert(
+      !selfHandle->flags_.proxyObject &&
+      "Internal properties cannot be added to Proxy objects");
   // Add a new property to the class.
   // TODO: if we check for OOM here in the future, we must undo the slot
   // allocation.
@@ -2666,6 +2921,11 @@ CallResult<uint32_t> appendAllPropertyNames(
     GCScope gcScope(runtime);
 
     // enumerableProps will contain all enumerable own properties from obj.
+    // Impl note: this is the only place where getOwnPropertyKeys will be
+    // called without IncludeNonEnumerable on a Proxy.  Everywhere else,
+    // trap ordering is specified but ES9 13.7.5.15 says "The mechanics and
+    // order of enumerating the properties is not specified", which is
+    // unusual.
     auto cr =
         JSObject::getOwnPropertyNames(head, runtime, true /* onlyEnumerable */);
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
@@ -2673,7 +2933,6 @@ CallResult<uint32_t> appendAllPropertyNames(
     }
     auto enumerableProps = *cr;
     auto marker = gcScope.createMarker();
-
     for (unsigned i = 0, e = enumerableProps->getEndIndex(); i < e; ++i) {
       gcScope.flushToMarker(marker);
       prop = enumerableProps->at(runtime, i);
@@ -2791,7 +3050,8 @@ uint32_t matchesProtoClasses(
   uint32_t i = 0;
   while (head.get()) {
     HermesValue protoCls = arr->at(i++);
-    if (protoCls.isNull() || protoCls.getObject() != head->getClass(runtime)) {
+    if (protoCls.isNull() || protoCls.getObject() != head->getClass(runtime) ||
+        head->isProxyObject()) {
       return 0;
     }
     head = head->getParent(runtime);

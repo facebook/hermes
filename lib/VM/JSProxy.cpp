@@ -1211,12 +1211,11 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
     Runtime *runtime,
     OwnKeysFlags okFlags) {
   assert(
-      okFlags.getIncludeNonEnumerable() && "Don't filter on enumerable here");
-  assert(
       (okFlags.getIncludeNonSymbols() || okFlags.getIncludeSymbols()) &&
       "Can't exclude symbols and strings");
   // If nothing is excluded, just return the array as-is.
-  if (okFlags.getIncludeNonSymbols() && okFlags.getIncludeSymbols()) {
+  if (okFlags.getIncludeNonSymbols() && okFlags.getIncludeSymbols() &&
+      okFlags.getIncludeNonEnumerable()) {
     return createPseudoHandle(*keys);
   }
   // Count number of matching elements by type.
@@ -1238,7 +1237,7 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
   }
   // If everything in the array matches the filter by type, return
   // the list as-is.
-  if (len == count) {
+  if (len == count && okFlags.getIncludeNonEnumerable()) {
     return createPseudoHandle(*keys);
   }
   // Filter the desired elements we want into the result
@@ -1253,13 +1252,32 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
   for (uint32_t i = 0; i < len; ++i) {
     marker.flush();
     HermesValue elem = keys->at(runtime, i);
-    if (elem.isSymbol() ? okFlags.getIncludeSymbols()
-                        : okFlags.getIncludeNonSymbols()) {
-      elemHandle = elem;
-      JSArray::setElementAt(resultHandle, runtime, resultIndex++, elemHandle);
+    if (elem.isSymbol() ? !okFlags.getIncludeSymbols()
+                        : !okFlags.getIncludeNonSymbols()) {
+      continue;
     }
+    elemHandle = elem;
+    if (!okFlags.getIncludeNonEnumerable()) {
+      ComputedPropertyDescriptor desc;
+      CallResult<bool> propRes = JSProxy::getOwnProperty(
+          selfHandle, runtime, elemHandle, desc, nullptr);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (!*propRes || !desc.flags.enumerable) {
+        continue;
+      }
+    }
+    JSArray::setElementAt(resultHandle, runtime, resultIndex++, elemHandle);
   }
-  assert(resultIndex == count && "Expected count was not correct");
+  assert(
+      (!okFlags.getIncludeNonEnumerable() || resultIndex == count) &&
+      "Expected count was not correct");
+  CallResult<bool> setLenRes =
+      JSArray::setLengthProperty(resultHandle, runtime, resultIndex);
+  if (LLVM_UNLIKELY(setLenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   return createPseudoHandle(*resultHandle);
 }
 

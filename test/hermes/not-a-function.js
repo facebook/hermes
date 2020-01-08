@@ -26,4 +26,4 @@ try { false() } catch(e) { print(e.name, e.message) }
 try { Object()() } catch(e) { print(e.name, e.message) }
 // CHECK-NEXT: TypeError Object is not a function
 try { "asdf"() } catch(e) { print(e.name, e.message) }
-// CHECK-NEXT: TypeError "asdf" is not a function
+// CHECK-NEXT: TypeError 'asdf' is not a function

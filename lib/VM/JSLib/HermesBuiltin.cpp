@@ -276,7 +276,11 @@ hermesBuiltinCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
         if (excludedItems) {
           ComputedPropertyDescriptor xdesc;
           auto cr = JSObject::getOwnComputedPrimitiveDescriptor(
-              excludedItems, runtime, nameHandle, xdesc);
+              excludedItems,
+              runtime,
+              nameHandle,
+              JSObject::IgnoreProxy::Yes,
+              xdesc);
           if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
             return false;
           if (*cr)

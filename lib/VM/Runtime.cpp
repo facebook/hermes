@@ -1150,7 +1150,7 @@ ExecutionStatus Runtime::raiseTypeErrorForValue(
       return raiseTypeError(msg1 + TwineChar16("Object") + msg2);
     case StrTag:
       return raiseTypeError(
-          msg1 + TwineChar16("\"") + vmcast<StringPrimitive>(*value) + "\"" +
+          msg1 + TwineChar16("'") + vmcast<StringPrimitive>(*value) + "'" +
           msg2);
     case BoolTag:
       if (value->getBool()) {

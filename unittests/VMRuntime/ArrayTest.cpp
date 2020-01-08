@@ -33,7 +33,11 @@ TEST_F(ArrayTest, CppAPITest) {
   // Call haveOwnIndexed() and getOwnIndexed() on a element not in the array.
   ComputedPropertyDescriptor desc;
   ASSERT_FALSE(*array->getOwnComputedPrimitiveDescriptor(
-      array, runtime, runtime->makeHandle(100.0_hd), desc));
+      array,
+      runtime,
+      runtime->makeHandle(100.0_hd),
+      JSObject::IgnoreProxy::No,
+      desc));
   EXPECT_CALLRESULT_UNDEFINED(
       array->getComputed_RJS(array, runtime, runtime->makeHandle(100.0_hd)));
 
@@ -98,7 +102,11 @@ TEST_F(ArrayTest, CppAPITest) {
   EXPECT_INDEX_VALUE(51.0_hd, array, 100);
   EXPECT_INDEX_VALUE(60.0_hd, array, 105);
   ASSERT_FALSE(*array->getOwnComputedPrimitiveDescriptor(
-      array, runtime, runtime->makeHandle(106.0_hd), desc));
+      array,
+      runtime,
+      runtime->makeHandle(106.0_hd),
+      JSObject::IgnoreProxy::No,
+      desc));
   EXPECT_CALLRESULT_UNDEFINED(
       array->getComputed_RJS(array, runtime, runtime->makeHandle(106.0_hd)));
 
@@ -109,7 +117,11 @@ TEST_F(ArrayTest, CppAPITest) {
   EXPECT_INDEX_VALUE(51.0_hd, array, 100);
   EXPECT_INDEX_VALUE(60.0_hd, array, 105);
   ASSERT_FALSE(*array->getOwnComputedPrimitiveDescriptor(
-      array, runtime, runtime->makeHandle(106.0_hd), desc));
+      array,
+      runtime,
+      runtime->makeHandle(106.0_hd),
+      JSObject::IgnoreProxy::No,
+      desc));
   EXPECT_CALLRESULT_UNDEFINED(
       array->getComputed_RJS(array, runtime, runtime->makeHandle(106.0_hd)));
 

@@ -8,11 +8,32 @@
 // RUN: %hermes -target=HBC %s | %FileCheck --match-full-lines %s
 "use strict";
 
+function putnamed() {
+  try {
+    a.mypropname = 42;
+  } catch(e) {
+    print('caught named', e.name, e.message);
+  }
+}
+
+var mypropname = "mypropname";
+function putcomputed() {
+  try {
+    a[mypropname] = 42;
+  } catch(e) {
+    print('caught computed', e.name, e.message);
+  }
+}
+
 var a = {}
 Object.defineProperty(a, 'mypropname', { writable: false });
-try {
-  a.mypropname = 42;
-} catch(e) {
-  print('caught', e.name, e.message);
-}
-// CHECK: caught TypeError Cannot assign to read-only property 'mypropname'
+putnamed();
+// CHECK: caught named TypeError Cannot assign to read-only property 'mypropname'
+putcomputed();
+// CHECK: caught computed TypeError Cannot assign to read-only property 'mypropname'
+
+a = {get mypropname() { return 42; }};
+putnamed();
+// CHECK: caught named TypeError Cannot assign to property 'mypropname' which has only a getter
+putcomputed();
+// CHECK: caught computed TypeError Cannot assign to property 'mypropname' which has only a getter
