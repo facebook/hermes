@@ -208,6 +208,7 @@ BLACK_LIST = [
     "mjsunit/arguments.js",
     "mjsunit/es6/array-copywithin.js",
     "mjsunit/es6/array-from.js",
+    "mjsunit/es6/instanceof-proxies.js",
     "mjsunit/es6/math-cbrt.js",
     "mjsunit/es6/math-expm1.js",
     "mjsunit/es6/math-log1p.js",
@@ -230,6 +231,7 @@ BLACK_LIST = [
     "mjsunit/tools/",
     # Use of V8 intrinsics that Hermes doesn't have.
     "mjsunit/es6/math-log2-log10.js",
+    "mjsunit/es6/reflect-prevent-extensions.js",
     "mjsunit/smi-mul.js",
     "mjsunit/array-construct-transition.js",
     "mjsunit/array-literal-feedback.js",
@@ -253,6 +255,7 @@ BLACK_LIST = [
     "mjsunit/d8-worker-sharedarraybuffer.js",
     "mjsunit/d8-worker.js",
     # Sparse arrays
+    "mjsunit/array-join.js",
     "mjsunit/sparse-array-reverse.js",
     # Overly large typed array (uses v8 flag --mock-arraybuffer-allocator)
     "mjsunit/regress/regress-crbug-380671.js",
@@ -266,8 +269,6 @@ BLACK_LIST = [
     "mjsunit/es6/typedarray-species.js",
     "mjsunit/es6/typedarray-sort.js",
     # Symbol
-    "mjsunit/es6/array-concat-revoked-proxy-1.js",
-    "mjsunit/es6/array-concat-revoked-proxy-2.js",
     "mjsunit/es6/array-species-neg-zero.js",
     "mjsunit/es6/collections.js",
     "mjsunit/es6/instanceof.js",
@@ -283,6 +284,7 @@ BLACK_LIST = [
     # Promise
     "mjsunit/es6/microtask-delivery.js",
     "test262/test/built-ins/Object/prototype/toString/symbol-tag-non-str-builtin.js",
+    "mjsunit/es6/reflect-get-prototype-of.js",
     # Should early error
     "test262/test/language/statements/for-in/decl-fun.js",
     "test262/test/language/statements/for/decl-fun.js",
@@ -371,11 +373,14 @@ BLACK_LIST = [
     "test262/test/language/expressions/object/fn-name-fn.js",
     # Proxy
     "mjsunit/array-isarray.js",
-    "mjsunit/array-join.js",
-    "mjsunit/es6/instanceof-proxies.js",
     "mjsunit/es6/classof-proxy.js",
     "test262/test/language/statements/for-of/iterator-next-result-type.js",
     "test262/test/annexB/built-ins/Object/prototype/__proto__/set-cycle-shadowed.js",
+    # These test proxy validations which don't exist in the ES10 spec or
+    # or any spec I can find.
+    "test262/test/built-ins/Proxy/getOwnPropertyDescriptor/resultdesc-is-not-configurable-not-writable-targetdesc-is-writable.js",
+    "test262/test/built-ins/Proxy/deleteProperty/targetdesc-is-configurable-target-is-not-extensible.js",
+    "test262/test/built-ins/Proxy/defineProperty/targetdesc-not-configurable-writable-desc-not-writable.js",
     # Use of "constructor" property
     "test262/test/built-ins/Array/prototype/concat/create-ctor-poisoned.js",
     "test262/test/built-ins/Array/prototype/filter/create-ctor-poisoned.js",
@@ -534,6 +539,14 @@ BLACK_LIST = [
     "test262/test/language/expressions/new.target/escaped-new.js",
     "test262/test/language/future-reserved-words/interface-strict-escaped.js",
     "test262/test/language/statements/try/catch-parameter-boundnames-restriction-eval-negative-early.js",
+    # exp operator
+    "test262/test/built-ins/Array/prototype/reverse/length-exceeding-integer-limit-with-object.js",
+    "test262/test/built-ins/Array/prototype/splice/clamps-length-to-integer-limit.js",
+    "test262/test/built-ins/Array/prototype/splice/length-exceeding-integer-limit-shrink-array.js",
+    "test262/test/built-ins/Array/prototype/splice/throws-if-integer-limit-exceeded.js",
+    "test262/test/built-ins/Array/prototype/splice/length-and-deleteCount-exceeding-integer-limit.js",
+    "test262/test/built-ins/Array/prototype/splice/length-near-integer-limit-grow-array.js",
+    "test262/test/built-ins/Array/prototype/slice/length-exceeding-integer-limit.js",
     # very large arrays
     "test262/test/built-ins/Array/prototype/reverse/length-exceeding-integer-limit-with-proxy.js",
     "test262/test/built-ins/Array/prototype/slice/length-exceeding-integer-limit-proxied-array.js",
@@ -572,7 +585,6 @@ BLACK_LIST = [
     "mjsunit/es6/classes-derived-return-type.js",
     "mjsunit/es6/classes-experimental.js",
     "mjsunit/es6/classes-maps.js",
-    "mjsunit/es6/classes-proxy.js",
     "mjsunit/es6/classes-subclass-arrays.js",
     "mjsunit/es6/classes-subclass-builtins.js",
     "mjsunit/es6/classes-super.js",
@@ -799,6 +811,7 @@ BLACK_LIST = [
     "test262/test/built-ins/TypedArrayConstructors/internals/Get/key-is-not-integer.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/Get/key-is-out-of-bounds.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/GetOwnProperty/index-prop-desc.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/HasProperty/abrupt-from-ordinary-has-parent-hasproperty.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/Set/tonumber-value-throws.js",
     # TypedArray ES7 iterators
     "test262/test/built-ins/TypedArrayConstructors/ctors/object-arg/iterating-throws.js",
@@ -819,23 +832,31 @@ BLACK_LIST = [
     "test262/test/built-ins/TypedArrayConstructors/from/iter-next-error.js",
     # TypedArray detaching buffer
     "test262/test/built-ins/ArrayBuffer/prototype/byteLength/detached-buffer.js",
+    "test262/test/built-ins/DataView/custom-proto-access-detaches-buffer.js",
     "test262/test/built-ins/DataView/detached-buffer.js",
     "test262/test/built-ins/DataView/prototype/byteLength/detached-buffer.js",
     "test262/test/built-ins/DataView/prototype/byteOffset/detached-buffer.js",
-    "test262/test/built-ins/TypedArray/prototype/some/callbackfn-detachbuffer.js",
-    "test262/test/built-ins/TypedArrays/internals/GetOwnProperty/detached-buffer.js",
     "test262/test/built-ins/TypedArray/prototype/find/predicate-may-detach-buffer.js",
     "test262/test/built-ins/TypedArray/prototype/findIndex/predicate-may-detach-buffer.js",
-    "test262/test/built-ins/TypedArrays/buffer-arg-detachedbuffer.js",
-    "test262/test/built-ins/TypedArrays/buffer-arg-byteoffset-to-number-detachbuffer.js",
-    "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/length-to-number-detachbuffer.js",
+    "test262/test/built-ins/TypedArray/prototype/some/callbackfn-detachbuffer.js",
     "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/byteoffset-to-number-detachbuffer.js",
     "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/detachedbuffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/ctors/buffer-arg/length-to-number-detachbuffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/DefineOwnProperty/detached-buffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/DefineOwnProperty/tonumber-value-detached-buffer.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/Get/detached-buffer.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/Get/infinity-detached-buffer.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/GetOwnProperty/detached-buffer.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/GetOwnProperty/enumerate-detached-buffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/HasProperty/detached-buffer.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/Set/detached-buffer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Set/tonumber-value-detached-buffer.js",
+    "test262/test/built-ins/TypedArrays/buffer-arg-byteoffset-to-number-detachbuffer.js",
+    "test262/test/built-ins/TypedArrays/buffer-arg-detachedbuffer.js",
+    "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/detached-buffer.js",
+    "test262/test/built-ins/TypedArrays/internals/GetOwnProperty/detached-buffer.js",
+    "test262/test/built-ins/TypedArrays/internals/HasProperty/detached-buffer.js",
+    "test262/test/built-ins/TypedArrays/internals/Set/tonumber-value-detached-buffer.js",
     # Float32 TypedArray failure
     "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/conversion-operation-consistent-nan.js",
     # TypedArray accessors
@@ -845,6 +866,37 @@ BLACK_LIST = [
     "test262/test/built-ins/TypedArrays/internals/Get/key-is-not-minus-zero.js",
     "test262/test/built-ins/TypedArrays/internals/Set/tonumber-value-throws.js",
     "test262/test/built-ins/TypedArrays/internals/Set/detached-buffer.js",
+    # TypedArray numeric index checks are not up to spec.  Example: Object.defineProperty(new Float64Array([42, 43]), 2, {value:10})
+    "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/key-is-greater-than-last-index.js",
+    "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/tonumber-value-detached-buffer.js",
+    "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/key-is-minus-zero.js",
+    "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/key-is-not-integer.js",
+    "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/key-is-numericindex-desc-configurable.js",
+    "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/key-is-lower-than-zero.js",
+    "test262/test/built-ins/TypedArrays/internals/DefineOwnProperty/key-is-numericindex.js",
+    "test262/test/built-ins/TypedArrays/internals/HasProperty/key-is-lower-than-zero.js",
+    "test262/test/built-ins/TypedArrays/internals/Set/key-is-not-integer.js",
+    "test262/test/built-ins/TypedArrays/internals/Set/key-is-out-of-bounds.js",
+    "test262/test/built-ins/TypedArrays/internals/HasProperty/inherited-property.js",
+    "test262/test/built-ins/TypedArrays/internals/Set/key-is-minus-zero.js",
+    "test262/test/built-ins/TypedArrays/internals/HasProperty/key-is-not-integer.js",
+    "test262/test/built-ins/TypedArrays/internals/HasProperty/abrupt-from-ordinary-has-parent-hasproperty.js",
+    "test262/test/built-ins/TypedArrays/internals/HasProperty/key-is-minus-zero.js",
+    "test262/test/built-ins/TypedArrays/internals/HasProperty/key-is-greater-than-last-index.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/DefineOwnProperty/key-is-greater-than-last-index.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/DefineOwnProperty/key-is-numericindex.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/DefineOwnProperty/key-is-lower-than-zero.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/DefineOwnProperty/key-is-not-integer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/DefineOwnProperty/key-is-minus-zero.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/DefineOwnProperty/key-is-numericindex-desc-configurable.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Set/key-is-not-integer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Set/key-is-out-of-bounds.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/Set/key-is-minus-zero.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/HasProperty/inherited-property.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/HasProperty/key-is-greater-than-last-index.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/HasProperty/key-is-not-integer.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/HasProperty/key-is-lower-than-zero.js",
+    "test262/test/built-ins/TypedArrayConstructors/internals/HasProperty/key-is-minus-zero.js",
     # SharedArrayBuffer
     "test262/test/built-ins/ArrayBuffer/prototype/byteLength/this-is-sharedarraybuffer.js",
     "test262/test/built-ins/ArrayBuffer/prototype/slice/this-is-sharedarraybuffer.js",
@@ -1283,7 +1335,6 @@ BLACK_LIST = [
     "mjsunit/regress/regress-crbug-573858.js",
     "mjsunit/regress/regress-crbug-575080.js",
     "mjsunit/regress/regress-crbug-575314.js",
-    "mjsunit/regress/regress-crbug-578039-Proxy_construct_prototype_change.js",
     "mjsunit/regress/regress-crbug-580506.js",
     "mjsunit/regress/regress-crbug-582048.js",
     "mjsunit/regress/regress-crbug-582703.js",
@@ -1541,8 +1592,6 @@ PERMANENT_BLACK_LIST = [
     "test262/test/annexB/language/comments/single-line-html-close-unicode-separators.js",
     # Testing whole feature sets that Hermes doesn't support.
     "test262/test/built-ins/Atomics/",
-    "test262/test/built-ins/Proxy/",
-    "test262/test/built-ins/Reflect/",
     "test262/test/built-ins/SharedArrayBuffer/",
     "test262/test/built-ins/intl402/",
     "test262/test/intl402/Collator/",
@@ -1563,8 +1612,6 @@ PERMANENT_BLACK_LIST = [
     "mjsunit/wasm/",
     "mjsunit/es6/proxies-",
     "mjsunit/es6/proxies.js",
-    "mjsunit/es6/reflect-",
-    "mjsunit/es6/reflect.js",
 ]
 
 UNSUPPORTED_FEATURES = [
@@ -1606,11 +1653,6 @@ UNSUPPORTED_FEATURES = [
 ]
 
 PERMANENT_UNSUPPORTED_FEATURES = [
-    "Proxy",
-    "Reflect",
-    "Reflect.construct",
-    "Reflect.set",
-    "Reflect.setPrototypeOf",
     "Atomics",
     "BigInt",
     "IsHTMLDDA",
