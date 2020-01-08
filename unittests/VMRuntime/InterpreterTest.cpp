@@ -187,7 +187,11 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
 
   auto printFn = runtime->makeHandle<NativeFunction>(
       *NativeFunction::createWithoutPrototype(
-          runtime, nullptr, print, SymbolID{}, 0));
+          runtime,
+          nullptr,
+          print,
+          Predefined::getSymbolID(Predefined::emptyString),
+          0));
 
   // Define the 'print' function.
   (void)JSObject::putNamed_RJS(
@@ -456,7 +460,11 @@ TEST_F(InterpreterTest, FrameSizeTest) {
 
   auto getSPFn = runtime->makeHandle<NativeFunction>(
       *NativeFunction::createWithoutPrototype(
-          runtime, nullptr, getSP, SymbolID{}, 0));
+          runtime,
+          nullptr,
+          getSP,
+          Predefined::getSymbolID(Predefined::emptyString),
+          0));
 
   // Define the 'getSP' function.
   (void)JSObject::putNamed_RJS(

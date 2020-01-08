@@ -343,7 +343,7 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
       Handle<JSObject>::vmcast(&runtime->objectPrototype),
       nullptr,
       emptyFunction,
-      SymbolID{},
+      Predefined::getSymbolID(Predefined::emptyString),
       0,
       Runtime::makeNullHandle<JSObject>());
   runtime->functionPrototype = funcRes.getHermesValue();

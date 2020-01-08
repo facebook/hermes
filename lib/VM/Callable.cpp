@@ -166,11 +166,11 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     }                                                                      \
   } while (false)
 
-  // Define the name.
-  auto nameHandle = name.isValid()
-      ? runtime->makeHandle(runtime->getStringPrimFromSymbolID(name))
-      : runtime->getPredefinedStringHandle(Predefined::emptyString);
+  assert(name.isValid() && "A name must always be provided");
 
+  // Define the name.
+  auto nameHandle =
+      runtime->makeHandle(runtime->getStringPrimFromSymbolID(name));
   DEFINE_PROP(selfHandle, P::name, nameHandle);
 
   // Length is the number of formal arguments.

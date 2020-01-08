@@ -473,7 +473,7 @@ class NativeFunction : public Callable {
   using Super = Callable;
   static CallableVTable vt;
 
-  // We need two more slot for '.length' and '.prototype'
+  // We need two more slots for '.name' and '.length'
   static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
       Super::NAMED_PROPERTY_SLOTS + 2;
 
@@ -548,6 +548,7 @@ class NativeFunction : public Callable {
   /// \param parentHandle object to use as [[Prototype]].
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
+  /// \param name the name property of the function.
   /// \param paramCount number of parameters (excluding `this`)
   /// \param prototypeObjectHandle if non-null, set as prototype property.
   static Handle<NativeFunction> create(
@@ -564,6 +565,7 @@ class NativeFunction : public Callable {
   /// \param parentEnvHandle the parent environment
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
+  /// \param name the name property of the function.
   /// \param paramCount number of parameters (excluding `this`)
   /// \param prototypeObjectHandle if non-null, set as prototype property.
   static Handle<NativeFunction> create(
@@ -581,6 +583,7 @@ class NativeFunction : public Callable {
   /// \param parentHandle object to use as [[Prototype]].
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
+  /// \param name the name property of the function.
   /// \param paramCount number of parameters (excluding `this`)
   static Handle<NativeFunction> createWithoutPrototype(
       Runtime *runtime,
@@ -604,6 +607,7 @@ class NativeFunction : public Callable {
   /// The prototype property wil be null;
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
+  /// \param name the name property of the function.
   /// \param paramCount number of parameters (excluding `this`)
   static Handle<NativeFunction> createWithoutPrototype(
       Runtime *runtime,

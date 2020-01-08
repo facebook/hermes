@@ -223,7 +223,7 @@ ExecutionStatus JSError::setupStack(
         Handle<JSObject>::vmcast(&runtime->functionPrototype),
         nullptr,
         errorStackGetter,
-        SymbolID{},
+        Predefined::getSymbolID(Predefined::emptyString),
         0,
         Runtime::makeNullHandle<JSObject>());
 
@@ -232,7 +232,7 @@ ExecutionStatus JSError::setupStack(
         Handle<JSObject>::vmcast(&runtime->functionPrototype),
         nullptr,
         errorStackSetter,
-        SymbolID{},
+        Predefined::getSymbolID(Predefined::emptyString),
         1,
         Runtime::makeNullHandle<JSObject>());
 
