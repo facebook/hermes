@@ -1300,15 +1300,14 @@ static CallResult<uint64_t> flattenIntoArray(
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-
-    if (propObj) {
-      // c. If exists is true, then
-      // i. Let element be ? Get(source, P).
-      auto elementRes = JSObject::getComputedPropertyValue_RJS(
-          source, runtime, propObj, desc, indexHandle);
-      if (LLVM_UNLIKELY(elementRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
+    // c. If exists is true, then
+    // i. Let element be ? Get(source, P).
+    CallResult<HermesValue> elementRes = JSObject::getComputedPropertyValue_RJS(
+        source, runtime, propObj, desc, indexHandle);
+    if (LLVM_UNLIKELY(elementRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (LLVM_LIKELY(!elementRes->isEmpty())) {
       element = *elementRes;
 
       // ii. If mapperFunction is present, then

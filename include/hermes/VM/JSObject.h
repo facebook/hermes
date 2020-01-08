@@ -665,7 +665,8 @@ class JSObject : public GCCell {
 
   /// Load a value using a computed descriptor. Read the value either from
   /// named storage or indexed storage depending on the presence of the
-  /// "Indexed" flag. Call the getter function if it's defined.
+  /// "Indexed" flag. Call the getter function if it's defined. If
+  /// selfHandle is a proxy, this asserts.
   /// \param selfHandle the object we are loading the property from
   /// \param propObj the object where the property was found (it could be
   ///   anywhere along the prototype chain).
@@ -677,10 +678,12 @@ class JSObject : public GCCell {
       ComputedPropertyDescriptor desc);
 
   /// This adds some functionality to the other overload.  If propObj
-  /// is empty, then this returns an empty HermesValue.  If propObj is
-  /// a normal object, this behaves just like the other overload.
-  /// (TODO: Document how this is to be used when it's fully baked,
-  /// which it isn't yet.)
+  /// normal object, this behaves just like the other overload.  This
+  /// is safe to use with proxies: if the desc has the proxyObject
+  /// flag set, then \c nameValHandle is used to call the proxy has
+  /// trap.  If the has trap returns false, then this returns an empty
+  /// HermesValue, otherwise, the get trap is called (also using \c
+  /// nameValHandle) and its result is returned.
   static CallResult<HermesValue> getComputedPropertyValue_RJS(
       Handle<JSObject> selfHandle,
       Runtime *runtime,
