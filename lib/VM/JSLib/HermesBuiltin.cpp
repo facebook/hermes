@@ -230,6 +230,92 @@ hermesBuiltinGeneratorSetDelegated(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+namespace {
+
+CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
+    Runtime *runtime,
+    Handle<JSObject> target,
+    Handle<JSObject> from,
+    Handle<JSObject> excludedItems) {
+  assert(
+      from->isProxyObject() &&
+      "copyDataPropertiesSlowPath_RJS is only for Proxy");
+
+  // 5. Let keys be ? from.[[OwnPropertyKeys]]().
+  auto cr = JSProxy::getOwnPropertyKeys(
+      from,
+      runtime,
+      OwnKeysFlags()
+          .plusIncludeSymbols()
+          .plusIncludeNonSymbols()
+          .plusIncludeNonEnumerable());
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto keys = *cr;
+
+  MutableHandle<> nextKeyHandle{runtime};
+  MutableHandle<> propValueHandle{runtime};
+  GCScopeMarkerRAII marker{runtime};
+  // 6. For each element nextKey of keys in List order, do
+  for (uint32_t nextKeyIdx = 0, endIdx = keys->getEndIndex();
+       nextKeyIdx < endIdx;
+       ++nextKeyIdx) {
+    marker.flush();
+    nextKeyHandle = keys->at(runtime, nextKeyIdx);
+    // b. For each element e of excludedItems in List order, do
+    //   i. If SameValue(e, nextKey) is true, then
+    //     1. Set excluded to true.
+    if (excludedItems) {
+      assert(
+          !excludedItems->isProxyObject() &&
+          "internal excludedItems object is a proxy");
+      ComputedPropertyDescriptor desc;
+      CallResult<bool> cr = JSObject::getOwnComputedPrimitiveDescriptor(
+          excludedItems,
+          runtime,
+          nextKeyHandle,
+          JSObject::IgnoreProxy::Yes,
+          desc);
+      if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      if (*cr)
+        continue;
+    }
+
+    //   i. Let desc be ? from.[[GetOwnProperty]](nextKey).
+    ComputedPropertyDescriptor desc;
+    CallResult<bool> crb =
+        JSProxy::getOwnProperty(from, runtime, nextKeyHandle, desc, nullptr);
+    if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    //   ii. If desc is not undefined and desc.[[Enumerable]] is true, then
+    if (*crb && desc.flags.enumerable) {
+      //     1. Let propValue be ? Get(from, nextKey).
+      CallResult<HermesValue> crv =
+          JSProxy::getComputed(from, runtime, nextKeyHandle, from);
+      if (LLVM_UNLIKELY(crv == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      propValueHandle = *crv;
+      //     2. Perform ! CreateDataProperty(target, nextKey, propValue).
+      crb = JSObject::defineOwnComputed(
+          target,
+          runtime,
+          nextKeyHandle,
+          DefinePropertyFlags::getDefaultNewPropertyFlags(),
+          propValueHandle);
+      if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      assert(
+          crb != ExecutionStatus::EXCEPTION && *crb &&
+          "CreateDataProperty failed");
+    }
+  }
+  return target.getHermesValue();
+}
+
+} // namespace
+
 /// \code
 ///   HermesBuiltin.copyDataProperties =
 ///         function (target, source, excludedItems) {}
@@ -243,20 +329,36 @@ CallResult<HermesValue>
 hermesBuiltinCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
+  // 1. Assert: Type(target) is Object.
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   // To be safe, ignore non-objects.
   if (!target)
     return HermesValue::encodeUndefinedValue();
 
+  // 3. If source is undefined or null, return target.
   Handle<> untypedSource = args.getArgHandle(1);
   if (untypedSource->isNull() || untypedSource->isUndefined())
     return target.getHermesValue();
 
+  // 4. Let from be ! ToObject(source).
   Handle<JSObject> source = untypedSource->isObject()
       ? Handle<JSObject>::vmcast(untypedSource)
       : Handle<JSObject>::vmcast(
             runtime->makeHandle(*toObject(runtime, untypedSource)));
+
+  // 2. Assert: excludedItems is a List of property keys.
+  // In Hermes, excludedItems is represented as a JSObject, created by
+  // bytecode emitted by the compiler, whose keys are the excluded
+  // propertyKyes
   Handle<JSObject> excludedItems = args.dyncastArg<JSObject>(2);
+  assert(
+      (!excludedItems || !excludedItems->isProxyObject()) &&
+      "excludedItems internal List is a Proxy");
+
+  if (source->isProxyObject()) {
+    return copyDataPropertiesSlowPath_RJS(
+        runtime, target, source, excludedItems);
+  }
 
   MutableHandle<> nameHandle{runtime};
   MutableHandle<> valueHandle{runtime};
@@ -274,6 +376,9 @@ hermesBuiltinCopyDataProperties(void *, Runtime *runtime, NativeArgs args) {
         nameHandle = HermesValue::encodeNumberValue(index);
 
         if (excludedItems) {
+          assert(
+              !excludedItems->isProxyObject() &&
+              "internal excludedItems object is a proxy");
           ComputedPropertyDescriptor xdesc;
           auto cr = JSObject::getOwnComputedPrimitiveDescriptor(
               excludedItems,

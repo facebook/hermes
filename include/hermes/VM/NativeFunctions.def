@@ -148,9 +148,13 @@ NATIVE_FUNCTION(hermesInternalGetCallStack)
 
 NATIVE_FUNCTION(hermesInternalDetachArrayBuffer)
 NATIVE_FUNCTION(hermesInternalGetEpilogues)
+NATIVE_FUNCTION(hermesInternalGetFunctionLocation)
 NATIVE_FUNCTION(hermesInternalGetInstrumentedStats)
 NATIVE_FUNCTION(hermesInternalGetRuntimeProperties)
 NATIVE_FUNCTION(hermesInternalGetWeakSize)
+NATIVE_FUNCTION(hermesInternalIsProxy)
+NATIVE_FUNCTION(hermesInternalTTIReached)
+NATIVE_FUNCTION(hermesInternalTTRCReached)
 
 #ifdef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION
 NATIVE_FUNCTION(hermesInternalExecuteCall)
@@ -166,11 +170,6 @@ NATIVE_FUNCTION(hermesInternalToLength)
 NATIVE_FUNCTION(hermesInternalToObject)
 NATIVE_FUNCTION(hermesInternalToString)
 #endif
-
-NATIVE_FUNCTION(hermesInternalTTIReached)
-NATIVE_FUNCTION(hermesInternalTTRCReached)
-
-NATIVE_FUNCTION(hermesInternalGetFunctionLocation)
 
 #ifdef HERMES_ENABLE_DEBUGGER
 NATIVE_FUNCTION(isDebuggerAttached)

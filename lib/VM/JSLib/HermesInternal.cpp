@@ -426,6 +426,12 @@ hermesInternalTTRCReached(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+CallResult<HermesValue>
+hermesInternalIsProxy(void *, Runtime *runtime, NativeArgs args) {
+  Handle<JSObject> obj = args.dyncastArg<JSObject>(0);
+  return HermesValue::encodeBoolValue(obj && obj->isProxyObject());
+}
+
 #ifdef HERMESVM_EXCEPTION_ON_OOM
 /// Gets the current call stack as a JS String value.  Intended (only)
 /// to allow testing of Runtime::callStack() from JS code.
@@ -862,6 +868,7 @@ Handle<JSObject> createHermesInternalObject(
     defineInternMethod(P::getWeakSize, hermesInternalGetWeakSize);
     defineInternMethod(
         P::copyDataProperties, hermesBuiltinCopyDataProperties, 3);
+    defineInternMethodAndSymbol("isProxy", hermesInternalIsProxy);
   }
   defineInternMethod(P::getEpilogues, hermesInternalGetEpilogues);
   defineInternMethod(
