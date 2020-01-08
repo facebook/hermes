@@ -421,23 +421,27 @@ CallResult<HermesValue> Callable::createThisForConstruct(
 CallResult<double> Callable::extractOwnLengthProperty_RJS(
     Handle<Callable> selfHandle,
     Runtime *runtime) {
+  CallResult<HermesValue> propRes{HermesValue::encodeUndefinedValue()};
   NamedPropertyDescriptor desc;
-  if (!JSObject::getOwnNamedDescriptor(
+  if (JSObject::getOwnNamedDescriptor(
           selfHandle,
           runtime,
           Predefined::getSymbolID(Predefined::length),
           desc)) {
-    return 0.0;
+    propRes = JSObject::getNamedPropertyValue_RJS(
+        selfHandle, runtime, selfHandle, desc);
   }
 
-  auto propRes = JSObject::getNamedPropertyValue_RJS(
-      selfHandle, runtime, selfHandle, desc);
-  if (propRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
+  {
+    NoAllocScope naScope{runtime};
 
-  if (!propRes->isNumber()) {
-    return 0.0;
+    if (propRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    if (!propRes->isNumber()) {
+      return 0.0;
+    }
   }
 
   auto intRes = toInteger(runtime, runtime->makeHandle(propRes.getValue()));
