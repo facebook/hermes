@@ -504,26 +504,55 @@ objectDefinePropertiesInternal(Runtime *runtime, Handle<> obj, Handle<> props) {
   auto cr = JSObject::getOwnPropertyKeys(
       propsHandle,
       runtime,
-      OwnKeysFlags().plusIncludeSymbols().plusIncludeNonSymbols());
+      OwnKeysFlags()
+          .plusIncludeSymbols()
+          .plusIncludeNonSymbols()
+          // setIncludeNonEnumerable for proxies is necessary to get the right
+          // traps in the right order.  The non-enumerable props will be
+          // filtered out below.
+          .setIncludeNonEnumerable(propsHandle->isProxyObject()));
   if (cr == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto enumerablePropNames = *cr;
+  auto propNames = *cr;
 
   // This function may create an unbounded number of GC handles.
   GCScope scope{runtime, "objectDefinePropertiesInternal", UINT_MAX};
 
-  // We store each enumerable property name here. This is hoisted out of the
-  // loop to avoid allocating a handler per property.
+  // Iterate through every identifier, get the property descriptor
+  // object, and store it in a list, according to Step 5.  What the
+  // spec describes is a pair is represented in NewProps, which has
+  // three arguments because the spec descriptor is represented here
+  // by flags and a handle.
+  struct NewProps {
+    unsigned propNameIndex;
+    DefinePropertyFlags flags;
+    MutableHandle<> valueOrAccessor;
+
+    NewProps(unsigned i, DefinePropertyFlags f, MutableHandle<> voa)
+        : propNameIndex(i), flags(f), valueOrAccessor(std::move(voa)) {}
+  };
+  llvm::SmallVector<NewProps, 4> newProps;
+
+  // We store each property name here. This is hoisted out of the loop
+  // to avoid allocating a handle per property.
   MutableHandle<> propName{runtime};
 
-  // Iterate through every identifier, get the property descriptor object,
-  // and store it in a list, according to Step 5.
-  llvm::SmallVector<std::pair<DefinePropertyFlags, MutableHandle<>>, 4>
-      descriptors;
-  for (unsigned i = 0, e = enumerablePropNames->getEndIndex(); i < e; ++i) {
-    propName = enumerablePropNames->at(runtime, i);
-    auto propRes = JSObject::getComputed_RJS(propsHandle, runtime, propName);
+  for (unsigned i = 0, e = propNames->getEndIndex(); i < e; ++i) {
+    propName = propNames->at(runtime, i);
+    ComputedPropertyDescriptor desc;
+    CallResult<bool> descRes = JSObject::getOwnComputedDescriptor(
+        propsHandle, runtime, propName, desc);
+    if (LLVM_UNLIKELY(descRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (LLVM_UNLIKELY(!*descRes || !desc.flags.enumerable)) {
+      continue;
+    }
+    CallResult<HermesValue> propRes = propsHandle->isProxyObject()
+        ? JSObject::getComputed_RJS(propsHandle, runtime, propName)
+        : JSObject::getComputedPropertyValue_RJS(
+              propsHandle, runtime, propsHandle, desc);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -537,18 +566,18 @@ objectDefinePropertiesInternal(Runtime *runtime, Handle<> obj, Handle<> props) {
                 valueOrAccessor) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    descriptors.push_back(std::make_pair(flags, std::move(valueOrAccessor)));
+    newProps.emplace_back(i, flags, std::move(valueOrAccessor));
   }
 
   // For each descriptor in the list, add it to the object.
-  for (unsigned i = 0, e = descriptors.size(); i < e; ++i) {
-    propName = enumerablePropNames->at(runtime, i);
+  for (const auto &newProp : newProps) {
+    propName = propNames->at(runtime, newProp.propNameIndex);
     auto result = JSObject::defineOwnComputedPrimitive(
         objHandle,
         runtime,
         propName,
-        descriptors[i].first,
-        descriptors[i].second,
+        newProp.flags,
+        newProp.valueOrAccessor,
         PropOpFlags().plusThrowOnError());
     if (result == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -694,7 +723,10 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   GCScope gcScope{runtime};
 
   auto namesRes = getOwnPropertyKeysAsStrings(
-      objHandle, runtime, OwnKeysFlags().plusIncludeNonSymbols());
+      objHandle,
+      runtime,
+      OwnKeysFlags().plusIncludeNonSymbols().setIncludeNonEnumerable(
+          objHandle->isProxyObject()));
   if (namesRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -921,7 +953,10 @@ objectAssign(void *, Runtime *runtime, NativeArgs args) {
     auto cr = JSObject::getOwnPropertyKeys(
         fromHandle,
         runtime,
-        OwnKeysFlags().plusIncludeSymbols().plusIncludeNonSymbols());
+        OwnKeysFlags()
+            .plusIncludeSymbols()
+            .plusIncludeNonSymbols()
+            .setIncludeNonEnumerable(fromHandle->isProxyObject()));
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
       // 5.c.ii. ReturnIfAbrupt(keys).
       return ExecutionStatus::EXCEPTION;
