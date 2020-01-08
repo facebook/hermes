@@ -67,7 +67,7 @@ functionCall(flagsA.plusFlag2().minusFlag1().plusFlag3());
     r.f##name##_ = false;           \
     return r;                       \
   }                                 \
-  Self set##name(bool v) {          \
+  Self set##name(bool v) const {    \
     auto r(*this);                  \
     r.f##name##_ = v;               \
     return r;                       \
