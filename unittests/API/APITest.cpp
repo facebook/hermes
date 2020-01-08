@@ -373,6 +373,32 @@ TEST_F(HermesRuntimeTest, HostObjectAsParentTest) {
       eval("var subClass = {__proto__: ho}; subClass.prop1 == 10;").getBool());
 }
 
+TEST_F(HermesRuntimeTest, HasComputedTest) {
+  // The only use of JSObject::hasComputed() is in HermesRuntimeImpl,
+  // so we test its Proxy support here, instead of from JS.
+
+  EXPECT_FALSE(eval("'prop' in new Proxy({}, {})").getBool());
+  EXPECT_TRUE(eval("'prop' in new Proxy({prop:1}, {})").getBool());
+  EXPECT_FALSE(
+      eval("'prop' in new Proxy({}, {has() { return false; }})").getBool());
+  EXPECT_TRUE(
+      eval("'prop' in new Proxy({}, {has() { return true; }})").getBool());
+
+  // While we're here, test that a HostFunction can be used as a proxy
+  // trap.  This could be very powerful in the right hands.
+  Function returnTrue = Function::createFromHostFunction(
+      *rt,
+      PropNameID::forAscii(*rt, "returnTrue"),
+      0,
+      [](Runtime &rt, const Value &, const Value *args, size_t count) {
+        EXPECT_EQ(count, 2);
+        EXPECT_EQ(args[1].toString(rt).utf8(rt), "prop");
+        return true;
+      });
+  rt->global().setProperty(*rt, "returnTrue", returnTrue);
+  EXPECT_TRUE(eval("'prop' in new Proxy({}, {has: returnTrue})").getBool());
+}
+
 TEST_F(HermesRuntimeTest, GlobalObjectTest) {
   rt->global().setProperty(*rt, "a", 5);
   eval("f = function(b) { return a + b; }");
