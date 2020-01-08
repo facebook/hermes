@@ -20,6 +20,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSGenerator.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler.h"
@@ -433,7 +434,9 @@ ExecutionStatus Interpreter::putByIdTransient_RJS(
   // Is this a missing property, or a data property defined in the prototype
   // chain? In both cases we would need to create an own property on the
   // transient object, which is prohibited.
-  if (!propObj || (!desc.flags.accessor && propObj != O.get())) {
+  if (!propObj ||
+      (propObj != O.get() &&
+       (!desc.flags.accessor && !desc.flags.proxyObject))) {
     if (strictMode) {
       return runtime->raiseTypeError(
           "Cannot create a new property on a transient object");
@@ -442,7 +445,7 @@ ExecutionStatus Interpreter::putByIdTransient_RJS(
   }
 
   // Modifying an own data property in a transient object is prohibited.
-  if (!desc.flags.accessor) {
+  if (!desc.flags.accessor && !desc.flags.proxyObject) {
     if (strictMode) {
       return runtime->raiseTypeError(
           "Cannot modify a property in a transient object");
@@ -450,24 +453,37 @@ ExecutionStatus Interpreter::putByIdTransient_RJS(
     return ExecutionStatus::RETURNED;
   }
 
-  // This is an accessor.
-  auto *accessor = vmcast<PropertyAccessor>(
-      JSObject::getNamedSlotValue(propObj, runtime, desc));
+  if (desc.flags.accessor) {
+    // This is an accessor.
+    auto *accessor = vmcast<PropertyAccessor>(
+        JSObject::getNamedSlotValue(propObj, runtime, desc));
 
-  // It needs to have a setter.
-  if (!accessor->setter) {
-    if (strictMode) {
-      return runtime->raiseTypeError("Cannot modify a read-only accessor");
+    // It needs to have a setter.
+    if (!accessor->setter) {
+      if (strictMode) {
+        return runtime->raiseTypeError("Cannot modify a read-only accessor");
+      }
+      return ExecutionStatus::RETURNED;
     }
-    return ExecutionStatus::RETURNED;
-  }
 
-  // PutById only needs an ExecutionStatus but not a CallResult<HermesValue> as
-  // return value
-  return accessor->setter.get(runtime)
-      ->executeCall1(
-          runtime->makeHandle(accessor->setter), runtime, base, *value)
-      .getStatus();
+    CallResult<HermesValue> setRes =
+        accessor->setter.get(runtime)->executeCall1(
+            runtime->makeHandle(accessor->setter), runtime, base, *value);
+    if (setRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    assert(desc.flags.proxyObject && "descriptor flags are impossible");
+    CallResult<bool> setRes = JSProxy::setNamed(
+        runtime->makeHandle(propObj), runtime, id, value, base);
+    if (setRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!*setRes && strictMode) {
+      return runtime->raiseTypeError("transient proxy set returned false");
+    }
+  }
+  return ExecutionStatus::RETURNED;
 }
 
 ExecutionStatus Interpreter::putByValTransient_RJS(
@@ -2040,6 +2056,9 @@ tailCall:
                 Runtime::getUndefinedValue(),
                 PropOpFlags().plusThrowOnError()) ==
             ExecutionStatus::EXCEPTION) {
+          assert(
+              !runtime->getGlobal()->isProxyObject() &&
+              "global can't be a proxy object");
           // If the property already exists, this should be a noop.
           // Instead of incurring the cost to check every time, do it
           // only if an exception is thrown, and swallow the exception
@@ -2163,7 +2182,8 @@ tailCall:
         // The cache may also be populated via the prototype of the object.
         // This value is only reliable if the fast path was a definite
         // not-found.
-        if (fastPathResult.hasValue() && !fastPathResult.getValue()) {
+        if (fastPathResult.hasValue() && !fastPathResult.getValue() &&
+            !obj->isProxyObject()) {
           JSObject *parent = obj->getParent(runtime);
           // TODO: This isLazy check is because a lazy object is reported as
           // having no properties and therefore cannot contain the property.

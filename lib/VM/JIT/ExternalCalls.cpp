@@ -195,7 +195,8 @@ CallResult<HermesValue> externGetById(
     // The cache may also be populated via the prototype of the object.
     // This value is only reliable if the fast path was a definite
     // not-found.
-    if (fastPathResult.hasValue() && !fastPathResult.getValue()) {
+    if (fastPathResult.hasValue() && !fastPathResult.getValue() &&
+        !obj->isProxyObject()) {
       JSObject *parent = obj->getParent(runtime);
       // TODO: This isLazy check is because a lazy object is reported as
       // having no properties and therefore cannot contain the property.
