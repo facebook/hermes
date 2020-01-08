@@ -226,7 +226,10 @@ class JSTypedArrayBase : public JSObject {
       JSObject *selfObj,
       Runtime *runtime,
       uint32_t index);
-
+  static bool _deleteOwnIndexedImpl(
+      Handle<JSObject> selfHandle,
+      Runtime *runtime,
+      uint32_t index);
   /// Check whether all indexed properties satisfy the requirement specified by
   /// \p mode. Either whether they are all non-configurable, or whether they are
   /// all both non-configurable and non-writable.

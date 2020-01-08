@@ -413,6 +413,22 @@ cons.forEach(function(TypedArray) {
   assert.equal(1 / a[0], -Infinity);
 })();
 
+/// @name %TypedArray% in and delete
+/// @{
+cons.forEach(function(TA) {
+  var ta = new TA([1,2,3,4,5]);
+  assert.equal(false, -1 in ta);
+  assert.equal(true, 0 in ta);
+  assert.equal(true, 4 in ta);
+  assert.equal(false, 5 in ta);
+
+  assert.equal(true, delete ta[-1]);
+  assert.throws(_ => delete ta[0], TypeError);
+  assert.throws(_ => delete ta[4], TypeError);
+  assert.equal(true, delete ta[5]);
+});
+/// @}
+
 /// @name %TypedArray%.prototype.buffer
 /// @{
 cons.forEach(function(TypedArray) {

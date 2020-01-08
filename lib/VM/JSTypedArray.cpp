@@ -65,8 +65,13 @@ void serializeTypedArrayBase(Serializer &s, const GCCell *cell) {
 }
 #endif
 
-bool JSTypedArrayBase::_haveOwnIndexedImpl(JSObject *, Runtime *, uint32_t) {
-  return true;
+bool JSTypedArrayBase::_haveOwnIndexedImpl(
+    JSObject *selfObj,
+    Runtime *,
+    uint32_t index) {
+  auto *self = vmcast<JSTypedArrayBase>(selfObj);
+  // Check whether the index is within the storage.
+  return index < self->getLength();
 }
 
 OptValue<PropertyFlags> JSTypedArrayBase::_getOwnIndexedPropertyFlagsImpl(
@@ -90,6 +95,18 @@ OptValue<PropertyFlags> JSTypedArrayBase::_getOwnIndexedPropertyFlagsImpl(
   }
 
   return indexedElementFlags;
+}
+
+bool JSTypedArrayBase::_deleteOwnIndexedImpl(
+    Handle<JSObject> selfHandle,
+    Runtime *runtime,
+    uint32_t index) {
+  // Opposite of _haveOwnIndexedImpl.  This is not specified as such,
+  // but is a consequence of 9.1.10.1 OrdinaryDelete on TypedArrays.
+  // Informally, because elements of typed arrays are
+  // non-configurable, delete never changes anything, and returns true
+  // if the element does not exist, and false if it does.
+  return !_haveOwnIndexedImpl(*selfHandle, runtime, index);
 }
 
 bool JSTypedArrayBase::_checkAllOwnIndexedImpl(
