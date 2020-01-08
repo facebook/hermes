@@ -659,14 +659,14 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
           kHandle = HermesValue::encodeDoubleValue(k);
           JSObject::getComputedPrimitiveDescriptor(
               objHandle, runtime, kHandle, propObj, desc);
-          if (propObj.get()) {
-            // 7.d.v.4. If exists is true, then
-            auto propRes = JSObject::getComputedPropertyValue_RJS(
-                objHandle, runtime, propObj, desc);
-            if (propRes == ExecutionStatus::EXCEPTION) {
-              return ExecutionStatus::EXCEPTION;
-            }
-            tmpHandle = propRes.getValue();
+          CallResult<HermesValue> propRes =
+              JSObject::getComputedPropertyValue_RJS(
+                  objHandle, runtime, propObj, desc, kHandle);
+          if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          if (LLVM_LIKELY(!propRes->isEmpty())) {
+            tmpHandle = *propRes;
             nHandle = HermesValue::encodeDoubleValue(n);
             auto cr = valueToSymbolID(runtime, nHandle);
             if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
@@ -1001,19 +1001,23 @@ class StandardSortModel : public SortModel {
 
     if (aDescObjHandle_) {
       auto res = JSObject::getComputedPropertyValue_RJS(
-          obj_, runtime_, aDescObjHandle_, aDesc);
+          obj_, runtime_, aDescObjHandle_, aDesc, aDescObjHandle_);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      aValue_ = res.getValue();
+      if (LLVM_LIKELY(!res->isEmpty())) {
+        aValue_ = *res;
+      }
     }
     if (bDescObjHandle_) {
       auto res = JSObject::getComputedPropertyValue_RJS(
-          obj_, runtime_, bDescObjHandle_, bDesc);
+          obj_, runtime_, bDescObjHandle_, bDesc, bDescObjHandle_);
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      bValue_ = res.getValue();
+      if (LLVM_LIKELY(!res->isEmpty())) {
+        bValue_ = *res;
+      }
     }
 
     if (bDescObjHandle_) {
@@ -1071,33 +1075,31 @@ class StandardSortModel : public SortModel {
     ComputedPropertyDescriptor aDesc;
     JSObject::getComputedPrimitiveDescriptor(
         obj_, runtime_, aHandle_, aDescObjHandle_, aDesc);
-    if (!aDescObjHandle_) {
-      // Spec defines empty as greater than everything.
-      return false;
-    }
-
     auto propRes = JSObject::getComputedPropertyValue_RJS(
-        obj_, runtime_, aDescObjHandle_, aDesc);
+        obj_, runtime_, aDescObjHandle_, aDesc, aHandle_);
     if (propRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    aValue_ = propRes.getValue();
+    if (propRes->isEmpty()) {
+      // Spec defines empty as greater than everything.
+      return false;
+    }
+    aValue_ = *propRes;
     assert(!aValue_->isEmpty());
 
     ComputedPropertyDescriptor bDesc;
     JSObject::getComputedPrimitiveDescriptor(
         obj_, runtime_, bHandle_, bDescObjHandle_, bDesc);
-    if (!bDescObjHandle_) {
-      // Spec defines empty as greater than everything.
-      return true;
-    }
-
     if ((propRes = JSObject::getComputedPropertyValue_RJS(
-             obj_, runtime_, bDescObjHandle_, bDesc)) ==
+             obj_, runtime_, bDescObjHandle_, bDesc, bHandle_)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    bValue_ = propRes.getValue();
+    if (propRes->isEmpty()) {
+      // Spec defines empty as greater than everything.
+      return true;
+    }
+    bValue_ = *propRes;
     assert(!bValue_->isEmpty());
 
     if (aValue_->isUndefined()) {
@@ -1222,15 +1224,13 @@ arrayPrototypeForEach(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-
-    if (descObjHandle) {
-      // kPresent is true, execute callback.
-      if ((propRes = JSObject::getComputedPropertyValue_RJS(
-               O, runtime, descObjHandle, desc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      auto kValue = propRes.getValue();
+    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+        O, runtime, descObjHandle, desc, k);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (LLVM_LIKELY(!propRes->isEmpty())) {
+      auto kValue = *propRes;
       if (LLVM_UNLIKELY(
               Callable::executeCall3(
                   callbackFn,
@@ -1600,14 +1600,13 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-    if (descObjHandle) {
-      // kPresent is true, so copy the element over.
-      if ((propRes = JSObject::getComputedPropertyValue_RJS(
-               O, runtime, descObjHandle, desc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      kValue = propRes.getValue();
+    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+        O, runtime, descObjHandle, desc, k);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (LLVM_LIKELY(!propRes->isEmpty())) {
+      kValue = *propRes;
       JSArray::setElementAt(A, runtime, n, kValue);
     }
     k = HermesValue::encodeDoubleValue(k->getNumber() + 1);
@@ -1721,14 +1720,13 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
           O, runtime, from, fromDescObjHandle, fromDesc);
-
-      if (fromDescObjHandle) {
-        if ((propRes = JSObject::getComputedPropertyValue_RJS(
-                 O, runtime, fromDescObjHandle, fromDesc)) ==
-            ExecutionStatus::EXCEPTION) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        fromValue = propRes.getValue();
+      CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+          O, runtime, fromDescObjHandle, fromDesc, from);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (LLVM_LIKELY(!propRes->isEmpty())) {
+        fromValue = *propRes;
         JSArray::setElementAt(A, runtime, j, fromValue);
       }
 
@@ -1769,14 +1767,13 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
           O, runtime, from, fromDescObjHandle, fromDesc);
-      if (fromDescObjHandle) {
-        // fromPresent is true
-        if ((propRes = JSObject::getComputedPropertyValue_RJS(
-                 O, runtime, fromDescObjHandle, fromDesc)) ==
-            ExecutionStatus::EXCEPTION) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        fromValue = propRes.getValue();
+      CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+          O, runtime, fromDescObjHandle, fromDesc, from);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (LLVM_LIKELY(!propRes->isEmpty())) {
+        fromValue = *propRes;
         if (LLVM_UNLIKELY(
                 JSObject::putComputed_RJS(
                     O,
@@ -1788,7 +1785,6 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
           return ExecutionStatus::EXCEPTION;
         }
       } else {
-        // fromPresent is false
         if (LLVM_UNLIKELY(
                 JSObject::deleteComputed(
                     O, runtime, to, PropOpFlags().plusThrowOnError()) ==
@@ -1828,15 +1824,13 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
           O, runtime, from, fromDescObjHandle, fromDesc);
-
-      if (fromDescObjHandle) {
-        // fromPresent is true
-        if ((propRes = JSObject::getComputedPropertyValue_RJS(
-                 O, runtime, fromDescObjHandle, fromDesc)) ==
-            ExecutionStatus::EXCEPTION) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        fromValue = propRes.getValue();
+      CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+          O, runtime, fromDescObjHandle, fromDesc, from);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (LLVM_LIKELY(!propRes->isEmpty())) {
+        fromValue = *propRes;
         if (LLVM_UNLIKELY(
                 JSObject::putComputed_RJS(
                     O,
@@ -2008,16 +2002,15 @@ arrayPrototypeCopyWithin(void *, Runtime *runtime, NativeArgs args) {
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-
+    CallResult<HermesValue> fromValRes = JSObject::getComputedPropertyValue_RJS(
+        O, runtime, fromObj, fromDesc, fromHandle);
+    if (LLVM_UNLIKELY(fromValRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
     // e. If fromPresent is true, then
-    if (LLVM_LIKELY(fromObj)) {
+    if (LLVM_LIKELY(!fromValRes->isEmpty())) {
       // i. Let fromVal be Get(O, fromKey).
       // ii. ReturnIfAbrupt(fromVal).
-      auto fromValRes =
-          JSObject::getComputedPropertyValue_RJS(O, runtime, fromObj, fromDesc);
-      if (LLVM_UNLIKELY(fromValRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
       fromVal = *fromValRes;
 
       // iii. Let setStatus be Set(O, toKey, fromVal, true).
@@ -2173,15 +2166,15 @@ arrayPrototypeShift(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor fromDesc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, from, fromDescObjHandle, fromDesc);
+    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+        O, runtime, fromDescObjHandle, fromDesc, from);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
 
-    if (fromDescObjHandle) {
+    if (LLVM_LIKELY(!propRes->isEmpty())) {
       // fromPresent is true, so read fromVal and set the "to" index.
-      if ((propRes = JSObject::getComputedPropertyValue_RJS(
-               O, runtime, fromDescObjHandle, fromDesc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      fromVal = propRes.getValue();
+      fromVal = *propRes;
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
                   O, runtime, to, fromVal, PropOpFlags().plusThrowOnError()) ==
@@ -2299,17 +2292,14 @@ indexOfHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-    if (descObjHandle) {
-      // kPresent is true, see if it's the element we're looking for.
-      if ((propRes = JSObject::getComputedPropertyValue_RJS(
-               O, runtime, descObjHandle, desc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      auto elementK = propRes.getValue();
-      if (strictEqualityTest(searchElement.get(), elementK)) {
-        return k.get();
-      }
+    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+        O, runtime, descObjHandle, desc, k);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!propRes->isEmpty() &&
+        strictEqualityTest(searchElement.get(), *propRes)) {
+      return k.get();
     }
     // Update the index based on the direction of the search.
     k = HermesValue::encodeDoubleValue(k->getDouble() + (reverse ? -1 : 1));
@@ -2371,15 +2361,14 @@ arrayPrototypeUnshift(void *, Runtime *runtime, NativeArgs args) {
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
           O, runtime, from, fromDescObjHandle, fromDesc);
+      CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+          O, runtime, fromDescObjHandle, fromDesc, from);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
 
-      if (fromDescObjHandle) {
-        // fromPresent is true
-        if ((propRes = JSObject::getComputedPropertyValue_RJS(
-                 O, runtime, fromDescObjHandle, fromDesc)) ==
-            ExecutionStatus::EXCEPTION) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        fromValue = propRes.getValue();
+      if (LLVM_LIKELY(!propRes->isEmpty())) {
+        fromValue = *propRes;
         if (LLVM_UNLIKELY(
                 JSObject::putComputed_RJS(
                     O,
@@ -2481,15 +2470,14 @@ everySomeHelper(Runtime *runtime, NativeArgs args, const bool every) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-
-    if (descObjHandle) {
+    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+        O, runtime, descObjHandle, desc, k);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (LLVM_LIKELY(!propRes->isEmpty())) {
       // kPresent is true, call the callback on the kth element.
-      if ((propRes = JSObject::getComputedPropertyValue_RJS(
-               O, runtime, descObjHandle, desc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      kValue = propRes.getValue();
+      kValue = *propRes;
       auto callRes = Callable::executeCall3(
           callbackFn,
           runtime,
@@ -2582,15 +2570,14 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-
-    if (descObjHandle) {
+    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+        O, runtime, descObjHandle, desc, k);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (LLVM_LIKELY(!propRes->isEmpty())) {
       // kPresent is true, execute callback and store result in A[k].
-      if ((propRes = JSObject::getComputedPropertyValue_RJS(
-               O, runtime, descObjHandle, desc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      auto kValue = propRes.getValue();
+      auto kValue = *propRes;
       auto callRes = Callable::executeCall3(
           callbackFn,
           runtime,
@@ -2662,15 +2649,13 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, descObjHandle, desc);
-
-    if (descObjHandle) {
-      // kPresent is true
-      if ((propRes = JSObject::getComputedPropertyValue_RJS(
-               O, runtime, descObjHandle, desc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      kValue = propRes.getValue();
+    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+        O, runtime, descObjHandle, desc, k);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (LLVM_LIKELY(!propRes->isEmpty())) {
+      kValue = *propRes;
       // Call the callback.
       auto callRes = Callable::executeCall3(
           callbackFn,
@@ -2857,7 +2842,7 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
   // Can't reduce an empty array without an initial value.
   if (len == 0 && argCount < 2) {
     return runtime->raiseTypeError(
-        "Array.prototype.reduce() requires an intial value with empty array");
+        "Array.prototype.reduce() requires an initial value with empty array");
   }
 
   // Current index in the reduction iteration.
@@ -2892,14 +2877,14 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
       ComputedPropertyDescriptor kDesc;
       JSObject::getComputedPrimitiveDescriptor(
           O, runtime, k, kDescObjHandle, kDesc);
-      kPresent = !!kDescObjHandle;
-      if (kPresent) {
-        if ((propRes = JSObject::getComputedPropertyValue_RJS(
-                 O, runtime, kDescObjHandle, kDesc)) ==
-            ExecutionStatus::EXCEPTION) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        accumulator = propRes.getValue();
+      CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+          O, runtime, kDescObjHandle, kDesc, k);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (LLVM_LIKELY(!propRes->isEmpty())) {
+        kPresent = true;
+        accumulator = *propRes;
       }
       k = HermesValue::encodeDoubleValue(k->getDouble() + increment);
     }
@@ -2925,14 +2910,14 @@ reduceHelper(Runtime *runtime, NativeArgs args, const bool reverse) {
     ComputedPropertyDescriptor kDesc;
     JSObject::getComputedPrimitiveDescriptor(
         O, runtime, k, kDescObjHandle, kDesc);
-    if (kDescObjHandle) {
+    CallResult<HermesValue> propRes = JSObject::getComputedPropertyValue_RJS(
+        O, runtime, kDescObjHandle, kDesc, k);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (LLVM_LIKELY(!propRes->isEmpty())) {
       // kPresent is true, run the accumulation step.
-      if ((propRes = JSObject::getComputedPropertyValue_RJS(
-               O, runtime, kDescObjHandle, kDesc)) ==
-          ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      auto kValue = propRes.getValue();
+      auto kValue = *propRes;
       auto callRes = Callable::executeCall4(
           callbackFn,
           runtime,
