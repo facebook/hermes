@@ -8,7 +8,7 @@
 #include "hermes/VM/instrumentation/PerfEvents.h"
 
 #if defined(__linux__) && \
-    (!defined(__ANDROID__) || defined(ANDROID_LINUX_PERF_PATH))
+    (!defined(__ANDROID__) || defined(HERMES_ANDROID_PERF_EVENTS))
 #include "llvm/Support/raw_ostream.h"
 
 #include <stdio.h>
