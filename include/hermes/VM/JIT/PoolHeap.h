@@ -27,8 +27,8 @@ class PoolHeap {
   PoolHeap(const PoolHeap &) = delete;
   PoolHeap &operator=(const PoolHeap &) = delete;
 
-  PoolHeap(PoolHeap &&) = default;
-  PoolHeap &operator=(PoolHeap &&) = default;
+  PoolHeap(PoolHeap &&) = delete;
+  PoolHeap &operator=(PoolHeap &&) = delete;
 
   /// \return true if the heap doesn't contain any allocated blocks.
   bool isEntirelyFree() const {
