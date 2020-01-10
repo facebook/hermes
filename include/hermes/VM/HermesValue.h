@@ -178,14 +178,6 @@ class HermesValue {
     return RV;
   }
 
-  inline static HermesValue encodeNativeValue(int64_t val) {
-    HermesValue RV(((uint64_t)val) & kDataMask, NativeValueTag);
-    assert(
-        RV.isNativeValue() && RV.getNativeValue() == val &&
-        "native value doesn't fit");
-    return RV;
-  }
-
   inline static HermesValue encodeNativeUInt32(uint32_t val) {
     HermesValue RV(val, NativeValueTag);
     assert(

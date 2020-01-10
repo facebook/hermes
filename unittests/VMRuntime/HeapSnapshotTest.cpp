@@ -59,7 +59,7 @@ struct DummyObject final : public GCCell {
   DummyObject(GC *gc) : GCCell(gc, &vt), other(), x(1), y(2) {
     hvBool.setNonPtr(HermesValue::encodeBoolValue(true));
     hvDouble.setNonPtr(HermesValue::encodeNumberValue(3.14));
-    hvNative.setNonPtr(HermesValue::encodeNativeValue(0xE));
+    hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE));
     hvUndefined.setNonPtr(HermesValue::encodeUndefinedValue());
     hvEmpty.setNonPtr(HermesValue::encodeEmptyValue());
     hvNull.setNonPtr(HermesValue::encodeNullValue());

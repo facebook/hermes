@@ -259,7 +259,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
                                 private InstallHermesFatalErrorHandler,
                                 private jsi::Instrumentation {
  public:
-  static constexpr int64_t kSentinelNativeValue = 0x6ef71fe1;
+  static constexpr uint32_t kSentinelNativeValue = 0x6ef71fe1;
 
   HermesRuntimeImpl(const vm::RuntimeConfig &runtimeConfig)
       :
@@ -1891,14 +1891,14 @@ bool HermesRuntimeImpl::instanceOf(
 
 jsi::Runtime::ScopeState *HermesRuntimeImpl::pushScope() {
   hermesValues_->emplace_front(
-      vm::HermesValue::encodeNativeValue(kSentinelNativeValue));
+      vm::HermesValue::encodeNativeUInt32(kSentinelNativeValue));
   return reinterpret_cast<ScopeState *>(&hermesValues_->front());
 }
 
 void HermesRuntimeImpl::popScope(ScopeState *prv) {
   HermesPointerValue *sentinel = reinterpret_cast<HermesPointerValue *>(prv);
   assert(sentinel->phv.isNativeValue());
-  assert(sentinel->phv.getNativeValue() == kSentinelNativeValue);
+  assert(sentinel->phv.getNativeUInt32() == kSentinelNativeValue);
 
   for (auto it = hermesValues_->begin(); it != hermesValues_->end();) {
     auto &value = *it;
