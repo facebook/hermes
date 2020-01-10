@@ -55,7 +55,7 @@ namespace hbc {
 ///
 /// Each function is responsible for allocating enough space in its own frame by
 /// manipulating the stack pointer. So, to make a call, the caller must have
-/// ensured enough registers at the top of its frame for the for the metadata
+/// ensured enough registers at the top of its frame for the metadata
 /// [previousFrame..calleeClosureOrCB] and the arguments [this, arg0..argN].
 ///
 /// This is the sequence of events when performing a call:
