@@ -215,6 +215,33 @@ OptValue<uint32_t> CodeBlock::getDebugSourceLocationsOffset() const {
 
 OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
     uint32_t offset) const {
+#ifndef HERMESVM_LEAN
+  if (LLVM_UNLIKELY(isLazy())) {
+    assert(offset == 0 && "Function is lazy, but debug offset >0 specified");
+
+    hbc::BCProviderLazy *provider =
+        (hbc::BCProviderLazy *)getRuntimeModule()->getBytecode();
+    hbc::BytecodeFunction *func = provider->getBytecodeFunction();
+    hbc::LazyCompilationData *data = func->getLazyCompilationData();
+    SMLoc sourceLoc = data->span.Start;
+
+    SourceErrorManager::SourceCoords coords;
+    if (!data->context->getSourceErrorManager().findBufferLineAndLoc(
+            sourceLoc, coords)) {
+      return llvm::None;
+    }
+
+    hbc::DebugSourceLocation location;
+    location.line = coords.line;
+    location.column = coords.col;
+    // We don't actually have a filename table, so we can't really provide
+    // this. Fortunately the location of uncompiled codeblocks is primarily
+    // used by heap snapshots, which substitutes it for the SourceID anyways.
+    location.filenameId = facebook::hermes::debugger::kInvalidLocation;
+    return location;
+  }
+#endif
+
   auto debugLocsOffset = getDebugSourceLocationsOffset();
   if (!debugLocsOffset) {
     return llvm::None;

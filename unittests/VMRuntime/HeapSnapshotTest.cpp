@@ -473,6 +473,29 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   // String table is checked by the nodes and edges checks.
 }
 
+using HeapSnapshotRuntimeTest = RuntimeTestFixture;
+
+TEST_F(HeapSnapshotRuntimeTest, SnapshotLazyCodeDoesNotAssert) {
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+
+  hbc::CompileFlags flags;
+  flags.debug = true;
+  flags.lazy = true;
+
+  // Build a function that will be lazily compiled.
+  std::string source = "function myGlobal() { ";
+  for (int i = 0; i < 100; i++)
+    source += " Math.random(); ";
+  source += "};\n";
+
+  CallResult<HermesValue> res = runtime->run(source, "file:///fake.js", flags);
+  ASSERT_FALSE(isException(res));
+
+  // Make sure we can capture a snapshot without asserting.
+  TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
+}
+
 } // namespace heapsnapshottest
 } // namespace unittest
 } // namespace hermes
