@@ -422,7 +422,7 @@ class BoundFunction final : public Callable {
 
   /// Return a pointer to the stored arguments, including \c this. \c this is
   /// at index 0, followed by the rest.
-  HermesValue *getArgsWithThis(Runtime *runtime) {
+  GCHermesValue *getArgsWithThis(Runtime *runtime) {
     return argStorage_.get(runtime)->begin();
   }
 

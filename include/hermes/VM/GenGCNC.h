@@ -223,15 +223,17 @@ class GenGC final : public GCBase {
   ///
   /// \pre The range described must be wholly contained within one segment of
   ///     the heap.
-  void writeBarrierRange(HermesValue *start, uint32_t numHVs);
+  void writeBarrierRange(GCHermesValue *start, uint32_t numHVs);
 
   /// We filled numHVs slots starting at start with the given value.
   /// Do any necessary barriers.
   ///
   /// \pre The range described must be wholly contained within one segment of
   ///     the heap.
-  void
-  writeBarrierRangeFill(HermesValue *start, uint32_t numHVs, HermesValue value);
+  void writeBarrierRangeFill(
+      GCHermesValue *start,
+      uint32_t numHVs,
+      HermesValue value);
 
   /// Inform the GC that TTI has been reached.
   void ttiReached();

@@ -1107,7 +1107,7 @@ void GenGC::writeBarrier(void *loc, void *value) {
   writeBarrierImpl(loc, value, /*hv*/ false);
 }
 
-void GenGC::writeBarrierRange(HermesValue *start, uint32_t numHVs) {
+void GenGC::writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {
   countRangeWriteBarrier();
 
   // For now, in this case, we'll just dirty the cards in the range.  We could
@@ -1129,7 +1129,7 @@ void GenGC::writeBarrierRange(HermesValue *start, uint32_t numHVs) {
 }
 
 void GenGC::writeBarrierRangeFill(
-    HermesValue *start,
+    GCHermesValue *start,
     uint32_t numHVs,
     HermesValue value) {
   countRangeFillWriteBarrier();

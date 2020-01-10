@@ -148,11 +148,11 @@ class Deserializer;
 ///   We copied HermesValues into the given region.  Note that \p numHVs is
 ///   the number of HermesValues in the the range, not the char length.
 ///   Do any necessary barriers.
-///      void writeBarrierRange(HermesValue* start, uint32_t numHVs);
+///      void writeBarrierRange(GCHermesValue* start, uint32_t numHVs);
 ///
 ///   We filled numHVs slots starting at start with the given value.
 ///   Do any necessary barriers.
-///      void writeBarrierRangeFill(HermesValue* start, uint32_t numHVs,
+///      void writeBarrierRangeFill(GCHermesValue* start, uint32_t numHVs,
 ///                                 HermesValue value);
 ///
 ///   In debug builds: is a write barrier necessary for a write of the given
@@ -569,9 +569,9 @@ class GCBase {
   /// Default implementations for write barriers: do nothing.
   inline void writeBarrier(void *loc, HermesValue value) {}
   inline void writeBarrier(void *loc, void *value) {}
-  inline void writeBarrierRange(HermesValue *start, uint32_t numHVs) {}
+  inline void writeBarrierRange(GCHermesValue *start, uint32_t numHVs) {}
   inline void writeBarrierRangeFill(
-      HermesValue *start,
+      GCHermesValue *start,
       uint32_t numHVs,
       HermesValue value) {}
 #ifndef NDEBUG

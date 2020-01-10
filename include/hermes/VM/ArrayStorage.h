@@ -69,8 +69,8 @@ class ArrayStorage final
       return throwExcessiveCapacityError(runtime, capacity);
     }
     void *mem = runtime->alloc</*fixedSize*/ false>(allocationSize(capacity));
-    return GCHermesValue::encodeObjectValue(
-        new (mem) ArrayStorage(runtime, capacity));
+    return HermesValue::encodeObjectValue(new (mem)
+                                              ArrayStorage(runtime, capacity));
   }
 
   /// Create a new long-lived instance with specified capacity.
@@ -81,8 +81,8 @@ class ArrayStorage final
       return throwExcessiveCapacityError(runtime, capacity);
     }
     void *mem = runtime->allocLongLived(allocationSize(capacity));
-    return GCHermesValue::encodeObjectValue(
-        new (mem) ArrayStorage(runtime, capacity));
+    return HermesValue::encodeObjectValue(new (mem)
+                                              ArrayStorage(runtime, capacity));
   }
 
   /// Create a new instance with specified capacity and size.
