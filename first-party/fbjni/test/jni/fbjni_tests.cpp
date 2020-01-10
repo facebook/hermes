@@ -1440,21 +1440,8 @@ void StaticAssertSame() {
 
 } // namespace
 
-namespace facebook {
-namespace jni {
-template<>
-class JObjectWrapper<jFakeClass> : public JObjectWrapper<jobject> {
-  static alias_ref<jFakeClass> create(local_ref<jFakeClass>) {
-    return alias_ref<jFakeClass>(nullptr);
-  }
-};
-}}
-
 void RegisterFbjniTests() {
-  StaticAssertSame<ReprType<jFakeClass>, JObjectWrapper<jFakeClass>>();
-  StaticAssertSame<ReprType<jFakeClass>, JObjectWrapper<jFakeClass>>();
   StaticAssertSame<JniType<jFakeClass>, jFakeClass>();
-  StaticAssertSame<JniType<JObjectWrapper<jFakeClass>>, jFakeClass>();
 
   StaticAssertSame<PrimitiveOrJniType<JObject>, jobject>();
   StaticAssertSame<PrimitiveOrJniType<JClass>, jclass>();

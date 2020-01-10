@@ -156,18 +156,7 @@ private:
   friend struct detail::ReprAccess;
   template<typename, typename, typename>
   friend class JavaClass;
-
-  template <typename, typename>
-  friend class JObjectWrapper;
 };
-
-// This is only to maintain backwards compatibility with things that are
-// already providing a specialization of JObjectWrapper. Any such instances
-// should be updated to use a JavaClass.
-template<>
-class JObjectWrapper<jobject> : public JObject {
-};
-
 
 namespace detail {
 template <typename, typename Base, typename JType>

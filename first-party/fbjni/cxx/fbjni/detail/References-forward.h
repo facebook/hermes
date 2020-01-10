@@ -21,9 +21,6 @@
 namespace facebook {
 namespace jni {
 
-template<typename T, typename Enable = void>
-class JObjectWrapper;
-
 namespace detail {
 struct JObjectBase {
   jobject get() const noexcept;

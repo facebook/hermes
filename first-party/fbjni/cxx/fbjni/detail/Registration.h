@@ -39,7 +39,7 @@ template<typename M, M method, typename C, typename R, typename... Args>
 constexpr void* exceptionWrapJNIMethod(R (C::*method0)(Args... args));
 
 // This uses deduction to figure out the descriptor name if the types
-// are primitive or have JObjectWrapper specializations.
+// are primitive.
 //
 // Subtlety: must return a reference to the underlying constant global
 // or the call in makeNativeMethod2 is using a pointer to a subobject
@@ -48,12 +48,12 @@ template<typename R, typename C, typename... Args>
 constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (*func)(JNIEnv*, C, Args... args));
 
 // This uses deduction to figure out the descriptor name if the types
-// are primitive or have JObjectWrapper specializations.
+// are primitive.
 template<typename R, typename C, typename... Args>
 constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (*func)(alias_ref<C>, Args... args));
 
 // This uses deduction to figure out the descriptor name if the types
-// are primitive or have JObjectWrapper specializations.
+// are primitive.
 template<typename R, typename C, typename... Args>
 constexpr const auto& /* detail::SimpleFixedString<_> */ makeDescriptor(R (C::*method0)(Args... args));
 
