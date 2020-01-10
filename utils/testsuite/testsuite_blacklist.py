@@ -1448,6 +1448,11 @@ BLACK_LIST = [
     "esprima/test_fixtures/invalid-syntax/migrated_0139.js",
     "esprima/test_fixtures/invalid-syntax/migrated_0232.js",
     "esprima/test_fixtures/invalid-syntax/migrated_0140.js",
+    "esprima/test_fixtures/ES6/for-of/invalid-strict-for-of-let.js",
+    "esprima/test_fixtures/ES6/lexical-declaration/let_member.js",
+    "esprima/test_fixtures/ES6/lexical-declaration/let_identifier.js",
+    "esprima/test_fixtures/ES6/lexical-declaration/for_let_in.js",
+    "esprima/test_fixtures/ES6/lexical-declaration/let_assign.js",
     ## ES6 end ##
     # Hermes parser does not output tokens.
     "esprima/test_fixtures/tokenize/",
