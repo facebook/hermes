@@ -8,6 +8,10 @@
 // RUN: %hermes -gc-init-heap=4M -O -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes -gc-init-heap=4M -Xhermes-internal-test-methods %t.hbc | %FileCheck --match-full-lines %s
 
+// This should fail until we re-enable proper Weakmap marking as the default
+// in GCConfig.h.
+// XFAIL: *
+
 "use strict"
 
 // When a key object is only reachable through a value of a WeakMap, it should

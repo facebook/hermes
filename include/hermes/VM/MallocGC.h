@@ -124,6 +124,14 @@ class MallocGC final : public GCBase {
   /// allocatedBytes_ is the current amount of memory stored in the heap.
   gcheapsize_t allocatedBytes_{0};
 
+  /// Whether to do "proper" weak map marking: accumulate WeakMaps,
+  /// and do a special, "careful" marking of them, to only mark values
+  /// corresponding to reachable keys.  Under control of this boolean
+  /// because there have been bugs, so we want, at least for a while,
+  /// to be able to turn this off with a GK, reverting to the
+  /// previous, non-spec-compliant, behavior.
+  bool properWeakMapMarking_;
+
  public:
   /// See comment in GCBase.
   class Size final {
