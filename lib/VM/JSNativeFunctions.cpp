@@ -46,7 +46,7 @@ constexpr static int numFuncNames() {
 #define NATIVE_CONSTRUCTOR_TYPED_STR(classname, type, type2, func) \
 #classname "<" #type ", " #type2 ">::" #func
 
-static llvm::DenseMap<void *, const char *> funcNames() {
+static llvm::DenseMap<const void *, const char *> funcNames() {
   constexpr int numNames = numFuncNames();
 
   // Can we store all the lengths in uint8_t safely?
@@ -105,7 +105,7 @@ static llvm::DenseMap<void *, const char *> funcNames() {
 #undef NATIVE_CONSTRUCTOR_TYPED
   };
 
-  static constexpr void *functionPointers[numNames] = {
+  static const void *const functionPointers[numNames] = {
 #define NATIVE_FUNCTION(func) (void *)func,
 #define NATIVE_FUNCTION_TYPED(func, type) (void *)func<type>,
 #define NATIVE_FUNCTION_TYPED_2(func, type, type2) (void *)func<type, type2>,
@@ -122,7 +122,7 @@ static llvm::DenseMap<void *, const char *> funcNames() {
 #undef NATIVE_CONSTRUCTOR
 #undef NATIVE_CONSTRUCTOR_TYPED
   };
-  llvm::DenseMap<void *, const char *> map(numNames);
+  llvm::DenseMap<const void *, const char *> map(numNames);
   const char *curStr = names;
   for (int i = 0; i < numNames; ++i) {
     map[functionPointers[i]] = curStr;
