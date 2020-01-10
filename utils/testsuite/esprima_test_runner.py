@@ -38,6 +38,9 @@ ESPRIMA_OMITTED_KEYS_COMMON = {"loc", "range", "errors"}
 HERMES_OMITTED_KEYS = {
     "FunctionDeclaration": {"returnType"},
     "ArrayExpression": {"trailingComma"},
+    # Some literals support "raw" and others don't.
+    # ESPrima doesn't distinguish.
+    "Literal": {"raw"},
 }
 ESPRIMA_OMITTED_KEYS = {
     "Program": {"tokens", "sourceType", "comments"},
