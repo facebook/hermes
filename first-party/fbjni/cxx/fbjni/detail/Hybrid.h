@@ -309,6 +309,14 @@ inline JField<detail::HybridData::javaobject> detectHybrid(alias_ref<jclass> jcl
   }
 }
 
+inline detail::BaseHybridClass* getHybridDataFromField(const JObject* self, const JField<detail::HybridData::javaobject>& field) {
+  auto hybridData = self->getFieldValue(field);
+  if (!hybridData) {
+    throwNPE();
+  }
+  return getNativePointer(hybridData);
+}
+
 template <typename T, typename B>
 inline T* HybridClass<T, B>::JavaPart::cthis() const {
   detail::BaseHybridClass* result = 0;
@@ -317,12 +325,7 @@ inline T* HybridClass<T, B>::JavaPart::cthis() const {
   if (isHybrid) {
     result = getNativePointer(this);
   } else {
-    auto hybridData = this->getFieldValue(hybridDataField);
-    if (!hybridData) {
-      throwNPE();
-    }
-
-    result = getNativePointer(hybridData);
+    result = getHybridDataFromField(this, hybridDataField);
   }
 
   // I'd like to use dynamic_cast here, but -fno-rtti is the default.
