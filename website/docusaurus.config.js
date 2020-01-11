@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+const path = require('path');
+
 module.exports = {
   title: 'Hermes',
   tagline: 'JavaScript engine optimized for React Native',
@@ -21,6 +23,7 @@ module.exports = {
         src: 'img/logo.svg',
       },
       links: [
+        { to: 'playground/', label: 'Playground', position: 'right' },
         {
           href: 'https://github.com/facebook/hermes',
           label: 'GitHub',
@@ -74,4 +77,5 @@ module.exports = {
       },
     ],
   ],
+  plugins: [path.join(__dirname, '/plugins/monaco-editor')],
 };

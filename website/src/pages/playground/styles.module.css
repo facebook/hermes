@@ -1,0 +1,74 @@
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * CSS files with the .module.css suffix will be treated as CSS modules
+ * and scoped locally.
+ */
+
+.argsInputContainer {
+  display: flex;
+  width: 100%;
+  margin: 15px;
+  height: 30px;
+}
+
+.argsInputField {
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  width: 300px;
+  padding: 10px;
+  outline: none;
+}
+
+.argsIconContainer {
+  padding-top: 4px;
+  margin-left: 0;
+  background-color: white;
+  border: 1px solid #d9d9d9;
+  border-left: white;
+  border-radius: 4px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  color: var(--ifm-color-primary);
+  min-width: 50px;
+  text-align: center;
+}
+
+.argsIconContainer:hover {
+  cursor: pointer;
+  background-color: var(--ifm-color-primary);
+  color: white;
+}
+
+.spinner {
+  animation: rotate 1.5s linear infinite;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+}
+
+.ellapsed {
+  align-self: center;
+  margin-left: 10px;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .argsInputContainer {
+    width: 100%;
+  }
+}
