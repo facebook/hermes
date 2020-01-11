@@ -80,18 +80,31 @@ struct BareJniWrapper {
 };
 
 // registration wrappers for functions, with autoconversion of arguments.
-template<typename F, F func, typename C, typename R, typename... Args>
+template<typename F, typename C, typename R, typename... Args>
 struct FunctionWrapper {
   using jniRet = typename Converter<R>::jniType;
-  JNI_ENTRY_POINT static jniRet call(JNIEnv* env, jobject obj, typename Converter<Args>::jniType... args) {
+  static jniRet call(JNIEnv* env, jobject obj, typename Converter<Args>::jniType... args, F funcPtr) {
     detail::JniEnvCacher jec(env);
     try {
       return WrapForVoidReturn<F, R, JniType<C>, Args...>::call(
-          static_cast<JniType<C>>(obj), Converter<Args>::fromJni(args)..., func);
+          static_cast<JniType<C>>(obj), Converter<Args>::fromJni(args)..., funcPtr);
     } catch (...) {
       translatePendingCppExceptionToJavaException();
       return CreateDefault<jniRet>::create();
     }
+  }
+};
+
+// registration wrappers for functions, with autoconversion of arguments.
+// This is a separate class from FunctionWrapper because
+// MethodWrapper::call does not want FunctionWrapper::call to be a
+// JNI_ENTRY_POINT and thus not inlinable. However, we still want a
+// JNI_ENTRY_POINT for top-level functions.
+template<typename F, F func, typename C, typename R, typename... Args>
+struct FunctionWrapperWithJniEntryPoint {
+  using jniRet = typename FunctionWrapper<F, C, R, Args...>::jniRet;
+  JNI_ENTRY_POINT static jniRet call(JNIEnv* env, jobject obj, typename Converter<Args>::jniType... args) {
+    return FunctionWrapper<F, C, R, Args...>::call(env, obj, args..., func);
   }
 };
 
@@ -114,7 +127,7 @@ struct MethodWrapper {
 
   JNI_ENTRY_POINT static typename Converter<R>::jniType call(
       JNIEnv* env, jobject obj, typename Converter<Args>::jniType... args) {
-    return FunctionWrapper<R(*)(alias_ref<jhybrid>, Args&&...), dispatch, jhybrid, R, Args...>::call(env, obj, args...);
+    return FunctionWrapper<R(*)(alias_ref<jhybrid>, Args&&...), jhybrid, R, Args...>::call(env, obj, args..., dispatch);
   }
 };
 
@@ -127,7 +140,7 @@ constexpr inline void* exceptionWrapJNIMethod(R (*)(JNIEnv*, C, Args... args)) {
 template<typename F, F func, typename C, typename R, typename... Args>
 constexpr inline void* exceptionWrapJNIMethod(R (*)(alias_ref<C>, Args... args)) {
   // This intentionally erases the real type; JNI will do it anyway
-  return (void*)(&(FunctionWrapper<F, func, C, R, Args...>::call));
+  return (void*)(&(FunctionWrapperWithJniEntryPoint<F, func, C, R, Args...>::call));
 }
 
 template<typename M, M method, typename C, typename R, typename... Args>
