@@ -288,18 +288,38 @@ public:
   }
 };
 
+[[noreturn]] inline void throwNPE() {
+  throwNewJavaException("java/lang/NullPointerException", "java.lang.NullPointerException");
+}
+
+// Detect whether the given class is a hybrid. If not, grab its
+// mHybridData field.
+// Returns a null field if the class is a hybrid, the ID of the mHybridData field if not.
+template<typename T, typename B>
+inline JField<detail::HybridData::javaobject> detectHybrid(alias_ref<jclass> jclass) {
+  bool isHybrid = detail::HybridClassBase::isHybridClassBase(jclass);
+  if (isHybrid) {
+    return JField<detail::HybridData::javaobject>(nullptr);
+  } else {
+    auto result = HybridClass<T, B>::JavaPart::javaClassStatic()->template getField<detail::HybridData::javaobject>("mHybridData");
+    if (!result) {
+      throwNPE();
+    }
+    return result;
+  }
+}
+
 template <typename T, typename B>
 inline T* HybridClass<T, B>::JavaPart::cthis() const {
   detail::BaseHybridClass* result = 0;
-  static bool isHybrid = detail::HybridClassBase::isHybridClassBase(this->getClass());
+  static const auto hybridDataField = detectHybrid<T, B>(this->getClass());
+  const bool isHybrid = !hybridDataField;
   if (isHybrid) {
     result = getNativePointer(this);
   } else {
-    static auto field =
-      HybridClass<T, B>::JavaPart::javaClassStatic()->template getField<detail::HybridData::javaobject>("mHybridData");
-    auto hybridData = this->getFieldValue(field);
+    auto hybridData = this->getFieldValue(hybridDataField);
     if (!hybridData) {
-      throwNewJavaException("java/lang/NullPointerException", "java.lang.NullPointerException");
+      throwNPE();
     }
 
     result = getNativePointer(hybridData);
