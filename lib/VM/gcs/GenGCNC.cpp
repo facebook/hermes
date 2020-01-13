@@ -1319,6 +1319,35 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   }
 
   void writeAllNodes() {
+    // Always write out the nodes for singletons.
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "undefined",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::Undefined),
+        0);
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "null",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::Null),
+        0);
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "true",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::True),
+        0);
+    snap_.beginNode();
+    snap_.endNode(
+        HeapSnapshot::NodeType::Object,
+        "false",
+        static_cast<HeapSnapshot::NodeID>(
+            GCBase::IDTracker::ReservedObjectID::False),
+        0);
     for (double num : seenNumbers_) {
       // A number never has any edges, so just make a node for it.
       snap_.beginNode();

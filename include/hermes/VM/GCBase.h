@@ -329,6 +329,10 @@ class GCBase {
       Root,
 #define ROOT_SECTION(name) name,
 #include "hermes/VM/RootSections.def"
+      Undefined,
+      Null,
+      True,
+      False,
       FirstNonReservedID,
     };
 

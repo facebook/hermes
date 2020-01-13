@@ -471,9 +471,22 @@ HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
 
 llvm::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
   if (val.isPointer() && val.getPointer()) {
-    return getObjectID(val.getPointer());
+    // Make nullptr HermesValue look like a JS null.
+    // This should be rare, but is occasionally used by some parts of the VM.
+    return val.getPointer()
+        ? getObjectID(val.getPointer())
+        : static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Null);
   } else if (val.isNumber()) {
     return idTracker_.getNumberID(val.getNumber());
+  } else if (val.isUndefined()) {
+    return static_cast<HeapSnapshot::NodeID>(
+        IDTracker::ReservedObjectID::Undefined);
+  } else if (val.isNull()) {
+    return static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Null);
+  } else if (val.isBool()) {
+    return static_cast<HeapSnapshot::NodeID>(
+        val.getBool() ? IDTracker::ReservedObjectID::True
+                      : IDTracker::ReservedObjectID::False);
   } else {
     return llvm::None;
   }

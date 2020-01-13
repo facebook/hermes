@@ -437,8 +437,8 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
           cellKindStr(dummy->getKind()),
           gc.getObjectID(dummy.get()),
           blockSize,
-          // One edge to the second dummy, one to the number pseudo-node.
-          2));
+          // One edge to the second dummy, 4 for primitive singletons.
+          5));
   nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
   // Next node is the second dummy, which is only reachable via the first
   // dummy.
@@ -449,7 +449,52 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
           cellKindStr(dummy->getKind()),
           gc.getObjectID(dummy->other),
           blockSize,
-          1));
+          // No edges except for the primitive singletons.
+          4));
+  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  // Next node is the undefined singleton.
+  EXPECT_EQ(
+      Node::parse(nextNode, strings),
+      Node(
+          HeapSnapshot::NodeType::Object,
+          "undefined",
+          static_cast<HeapSnapshot::NodeID>(
+              GCBase::IDTracker::ReservedObjectID::Undefined),
+          0,
+          0));
+  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  // Next node is the null singleton.
+  EXPECT_EQ(
+      Node::parse(nextNode, strings),
+      Node(
+          HeapSnapshot::NodeType::Object,
+          "null",
+          static_cast<HeapSnapshot::NodeID>(
+              GCBase::IDTracker::ReservedObjectID::Null),
+          0,
+          0));
+  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  // Next node is the true singleton.
+  EXPECT_EQ(
+      Node::parse(nextNode, strings),
+      Node(
+          HeapSnapshot::NodeType::Object,
+          "true",
+          static_cast<HeapSnapshot::NodeID>(
+              GCBase::IDTracker::ReservedObjectID::True),
+          0,
+          0));
+  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  // Next node is the false singleton.
+  EXPECT_EQ(
+      Node::parse(nextNode, strings),
+      Node(
+          HeapSnapshot::NodeType::Object,
+          "false",
+          static_cast<HeapSnapshot::NodeID>(
+              GCBase::IDTracker::ReservedObjectID::False),
+          0,
+          0));
   nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
   // Next node is the first number.
   EXPECT_EQ(
@@ -463,31 +508,53 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
   EXPECT_EQ(nextNode, nodes.end());
 
+  Edge trueEdge = Edge(HeapSnapshot::EdgeType::Internal, "HermesBool", 6);
+  Edge numberEdge = Edge(HeapSnapshot::EdgeType::Internal, "HermesDouble", 8);
+  Edge undefinedEdge =
+      Edge(HeapSnapshot::EdgeType::Internal, "HermesUndefined", 4);
+  Edge nullEdge = Edge(HeapSnapshot::EdgeType::Internal, "HermesNull", 5);
   auto nextEdge = edges.begin();
   // Pointer from root to root section.
   EXPECT_EQ(
       Edge::parse(nextEdge, strings),
       Edge(HeapSnapshot::EdgeType::Element, 1, 1));
   nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+
   // Pointer from root section to first dummy.
   EXPECT_EQ(
       Edge::parse(nextEdge, strings),
       Edge(HeapSnapshot::EdgeType::Element, 0, 2));
   nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+
   // Pointer from first dummy to second dummy.
   EXPECT_EQ(
       Edge::parse(nextEdge, strings),
       Edge(HeapSnapshot::EdgeType::Internal, "other", 3));
   nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  // Pointer from first dummy to its bool field.
+  EXPECT_EQ(Edge::parse(nextEdge, strings), trueEdge);
+  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
   // Pointer from first dummy to its number field.
-  EXPECT_EQ(
-      Edge::parse(nextEdge, strings),
-      Edge(HeapSnapshot::EdgeType::Internal, "HermesDouble", 4));
+  EXPECT_EQ(Edge::parse(nextEdge, strings), numberEdge);
+  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  // Pointer from first dummy to its undefined field.
+  EXPECT_EQ(Edge::parse(nextEdge, strings), undefinedEdge);
+  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  // Pointer from first dummy to its null field.
+  EXPECT_EQ(Edge::parse(nextEdge, strings), nullEdge);
+  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+
+  // Pointer from second dummy to its bool field.
+  EXPECT_EQ(Edge::parse(nextEdge, strings), trueEdge);
   nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
   // Pointer from second dummy to its number field.
-  EXPECT_EQ(
-      Edge::parse(nextEdge, strings),
-      Edge(HeapSnapshot::EdgeType::Internal, "HermesDouble", 4));
+  EXPECT_EQ(Edge::parse(nextEdge, strings), numberEdge);
+  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  // Pointer from second dummy to its undefined field.
+  EXPECT_EQ(Edge::parse(nextEdge, strings), undefinedEdge);
+  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  // Pointer from second dummy to its null field.
+  EXPECT_EQ(Edge::parse(nextEdge, strings), nullEdge);
   nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
   EXPECT_EQ(nextEdge, edges.end());
 
