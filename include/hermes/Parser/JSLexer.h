@@ -644,7 +644,7 @@ inline bool JSLexer::isUnicodeIdentifierPart(uint32_t ch) {
       ch == UNICODE_ZWNJ || ch == UNICODE_ZWJ;
 }
 
-}; // namespace parser
-}; // namespace hermes
+} // namespace parser
+} // namespace hermes
 
 #endif // HERMES_PARSER_JSLEXER_H

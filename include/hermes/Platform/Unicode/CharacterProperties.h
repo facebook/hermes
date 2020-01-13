@@ -86,6 +86,6 @@ uint32_t canonicalize(uint32_t cp, bool unicode);
 class CodePointSet;
 CodePointSet makeCanonicallyEquivalent(const CodePointSet &set, bool unicode);
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_PLATFORMUNICODE_CHARACTERPROPERTIES_H

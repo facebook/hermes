@@ -210,4 +210,4 @@ uint32_t canonicalize(uint32_t cp, bool unicode) {
   }
 }
 
-}; // namespace hermes
+} // namespace hermes

@@ -21,7 +21,7 @@ enum Enum : unsigned char {
   _privateCount = _count - _firstPrivate,
 };
 
-}; // namespace BuiltinMethod
+} // namespace BuiltinMethod
 
 static_assert(BuiltinMethod::_count <= 256, "More than 256 builtin methods");
 

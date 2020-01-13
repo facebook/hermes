@@ -219,5 +219,5 @@ ExecutionStatus JSONLexer::scanWord(const char *word, JSONTokenKind kind) {
   return ExecutionStatus::RETURNED;
 }
 
-}; // namespace vm
-}; // namespace hermes
+} // namespace vm
+} // namespace hermes

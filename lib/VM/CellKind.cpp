@@ -25,5 +25,5 @@ const char *cellKindStr(CellKind kind) {
   return cellKinds[static_cast<size_t>(kind)];
 }
 
-}; // namespace vm
+} // namespace vm
 } // namespace hermes

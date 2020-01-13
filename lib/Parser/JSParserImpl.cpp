@@ -4522,6 +4522,6 @@ Optional<ESTree::NodePtr> JSParserImpl::parseLazyFunction(
       llvm_unreachable("Asked to parse unexpected node type");
   }
 }
-}; // namespace detail
-}; // namespace parser
-}; // namespace hermes
+} // namespace detail
+} // namespace parser
+} // namespace hermes

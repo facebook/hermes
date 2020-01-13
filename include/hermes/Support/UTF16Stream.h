@@ -76,6 +76,6 @@ class UTF16Stream {
   OwningArray<char16_t> storage_;
 };
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_SUPPORT_UTF16STREAM_H

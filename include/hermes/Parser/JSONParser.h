@@ -686,7 +686,7 @@ class JSONSharedValue {
   }
 };
 
-}; // namespace parser
-}; // namespace hermes
+} // namespace parser
+} // namespace hermes
 
 #endif // HERMES_PARSER_JSONPARSER_H

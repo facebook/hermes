@@ -17,7 +17,7 @@ namespace hermes {
 
 namespace hbc {
 class BackendContext;
-};
+}
 
 /// Choices for bundling format, applicable to cross module opts
 enum class BundlerKind { none, metromin };
@@ -336,6 +336,6 @@ class Context {
   }
 };
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_AST_CONTEXT_H

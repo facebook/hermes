@@ -211,7 +211,7 @@ class Handle : public HandleBase {
   Handle<T> &operator=(const Handle<U> &other) {
     HandleBase::operator=(other);
     return *this;
-  };
+  }
 
 #ifndef NDEBUG
   Handle<T> &operator=(const Handle<T> &other) {

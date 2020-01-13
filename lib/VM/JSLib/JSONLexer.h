@@ -153,7 +153,7 @@ class JSONLexer {
   CallResult<char16_t> consumeUnicode();
 };
 
-}; // namespace vm
-}; // namespace hermes
+} // namespace vm
+} // namespace hermes
 
 #endif // HERMES_PARSER_JSONLEXER_H

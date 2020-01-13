@@ -60,6 +60,6 @@ HERMES_DECLARE_PARTIAL_ITERATOR(First, first);
 /// PairSecondIterator: iterate over pair::second.
 HERMES_DECLARE_PARTIAL_ITERATOR(Second, second);
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_ADT_HALFPAIRITERATOR_H

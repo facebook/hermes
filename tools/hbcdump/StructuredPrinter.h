@@ -100,6 +100,6 @@ class StructuredPrinter {
   void operator=(StructuredPrinter &&) = delete;
 };
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_TOOLS_HBCDUMP_STRUCTUREDPRINTER_H

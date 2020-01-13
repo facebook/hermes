@@ -1759,5 +1759,5 @@ bool JSLexer::error(
   return false;
 }
 
-}; // namespace parser
-}; // namespace hermes
+} // namespace parser
+} // namespace hermes
