@@ -174,7 +174,7 @@ struct SlotVisitor final : BaseVisitor {
   /// find the fields, and calls \c acceptor_.accept() on them.
   void visitFields(char *base, const Metadata &meta) {
     visitSlots<GCPointerBase>(base, meta.pointers_.offsets);
-    visitSlots<HermesValue>(base, meta.values_.offsets);
+    visitSlots<GCHermesValue>(base, meta.values_.offsets);
     visitSlots<SymbolID>(base, meta.symbols_.offsets);
   }
 
@@ -187,7 +187,8 @@ struct SlotVisitor final : BaseVisitor {
       const char *end) {
     visitSlotsWithinRange<GCPointerBase>(
         base, meta.pointers_.offsets, begin, end);
-    visitSlotsWithinRange<HermesValue>(base, meta.values_.offsets, begin, end);
+    visitSlotsWithinRange<GCHermesValue>(
+        base, meta.values_.offsets, begin, end);
     visitSlotsWithinRange<SymbolID>(base, meta.symbols_.offsets, begin, end);
   }
 
@@ -264,7 +265,7 @@ struct SlotVisitorWithNames final : BaseVisitor {
     // sizes.
     visitSlots<GCPointerBase>(
         base, meta.pointers_.offsets, meta.pointers_.names);
-    visitSlots<HermesValue>(base, meta.values_.offsets, meta.values_.names);
+    visitSlots<GCHermesValue>(base, meta.values_.offsets, meta.values_.names);
     visitSlots<SymbolID>(base, meta.symbols_.offsets, meta.symbols_.names);
   }
 
