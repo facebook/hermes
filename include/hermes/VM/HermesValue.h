@@ -486,6 +486,12 @@ class GCHermesValue : public HermesValue {
   template <typename InputIt, typename OutputIt>
   static inline OutputIt
   copy_backward(InputIt first, InputIt last, OutputIt result, GC *gc);
+
+  /// Copies a range of values to a non-heap location, e.g., the JS stack.
+  static inline void copyToPinned(
+      const GCHermesValue *first,
+      const GCHermesValue *last,
+      PinnedHermesValue *result);
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HermesValue hv);

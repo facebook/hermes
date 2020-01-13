@@ -101,6 +101,21 @@ inline OutputIt GCHermesValue::copy_backward(
   return result;
 }
 
+inline void GCHermesValue::copyToPinned(
+    const GCHermesValue *first,
+    const GCHermesValue *last,
+    PinnedHermesValue *result) {
+  // memcpy for performance. Only safe if the types have the same layout.
+  static_assert(
+      std::is_convertible<PinnedHermesValue *, HermesValue *>::value &&
+          std::is_convertible<GCHermesValue *, HermesValue *>::value &&
+          sizeof(PinnedHermesValue) == sizeof(HermesValue) &&
+          sizeof(GCHermesValue) == sizeof(HermesValue) &&
+          sizeof(HermesValue) == 8,
+      "memcpy between different layouts");
+  std::memcpy(result, first, (last - first) * sizeof(PinnedHermesValue));
+}
+
 } // namespace vm
 } // namespace hermes
 

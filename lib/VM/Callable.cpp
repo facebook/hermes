@@ -1533,7 +1533,7 @@ void GeneratorInnerFunction::restoreStack(Runtime *runtime) {
         dst >= runtime->getStackPointer())) &&
       "reading off the end of the stack");
   const GCHermesValue *src = &savedContext_.get(runtime)->at(frameOffset);
-  std::memcpy(dst, src, frameSize * sizeof(PinnedHermesValue));
+  GCHermesValue::copyToPinned(src, src + frameSize, dst);
 }
 
 void GeneratorInnerFunction::saveStack(Runtime *runtime) {
