@@ -459,5 +459,25 @@ void GCBase::IDTracker::deserialize(Deserializer &d) {
 }
 #endif
 
+HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
+  auto &numberRef = numberIDMap_[num];
+  // If the entry didn't exist, the value was initialized to 0.
+  if (numberRef != 0) {
+    return numberRef;
+  }
+  // Else, it is a number that hasn't been seen before.
+  return numberRef = nextNumberID();
+}
+
+llvm::Optional<HeapSnapshot::NodeID> GCBase::getSnapshotID(HermesValue val) {
+  if (val.isPointer() && val.getPointer()) {
+    return getObjectID(val.getPointer());
+  } else if (val.isNumber()) {
+    return idTracker_.getNumberID(val.getNumber());
+  } else {
+    return llvm::None;
+  }
+}
+
 } // namespace vm
 } // namespace hermes

@@ -332,6 +332,34 @@ class GCBase {
       FirstNonReservedID,
     };
 
+    /// A comparator for doubles that allows NaN.
+    struct DoubleComparator {
+      static double getEmptyKey() {
+        // Use a non-canonical NaN value as an empty value, which should never
+        // occur naturally.
+        // NOTE: HermesValue uses NaN tagging internally so we can use that to
+        // get the encoding.
+        return ::hermes::safeTypeCast<uint64_t, double>(
+            HermesValue::encodeUndefinedValue().getRaw());
+      }
+      static double getTombstoneKey() {
+        // Use a non-canonical NaN value as the tombstone, which should never
+        // occur naturally.
+        // NOTE: HermesValue uses NaN tagging internally so we can use that to
+        // get the encoding.
+        return ::hermes::safeTypeCast<uint64_t, double>(
+            HermesValue::encodeNullValue().getRaw());
+      }
+      static unsigned getHashValue(double val) {
+        return std::hash<uint64_t>{}(
+            ::hermes::safeTypeCast<double, uint64_t>(val));
+      }
+      static bool isEqual(double LHS, double RHS) {
+        return ::hermes::safeTypeCast<double, uint64_t>(LHS) ==
+            ::hermes::safeTypeCast<double, uint64_t>(RHS);
+      }
+    };
+
     explicit IDTracker();
 
     /// Return true if IDs are being tracked.
@@ -340,9 +368,14 @@ class GCBase {
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getObjectID(const void *cell);
+
     /// Get the unique object id of the given native memory (non-JS-heap).
     /// If one does not yet exist, start tracking it.
     inline HeapSnapshot::NodeID getNativeID(const void *mem);
+
+    /// Assign a unique ID to a literal number value that occurs in the heap.
+    /// Can be used to make fake nodes that will display their numeric value.
+    HeapSnapshot::NodeID getNumberID(double num);
 
     /// Tell the tracker that an object has moved locations.
     /// This must be called in a safe order, if A moves to B, and C moves to A,
@@ -378,6 +411,8 @@ class GCBase {
     inline HeapSnapshot::NodeID nextObjectID();
     /// Get the next unique native ID for a chunk of native memory.
     inline HeapSnapshot::NodeID nextNativeID();
+    /// Get the next unique number ID for a number.
+    inline HeapSnapshot::NodeID nextNumberID();
 
     /// JS heap nodes are represented by odd-numbered IDs, while native nodes
     /// are represented with even-numbered IDs. This requirement is enforced by
@@ -398,6 +433,10 @@ class GCBase {
     /// on.
     /// NOTE: The same map is used for both JS heap and native heap IDs.
     llvm::DenseMap<const void *, HeapSnapshot::NodeID> objectIDMap_;
+
+    /// Map of numeric values to IDs. Used to give numbers in the heap a unique
+    /// node.
+    llvm::DenseMap<double, HeapSnapshot::NodeID, DoubleComparator> numberIDMap_;
   };
 
 #ifndef NDEBUG
@@ -743,6 +782,9 @@ class GCBase {
   inline HeapSnapshot::NodeID getObjectID(const void *cell);
   inline HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
   inline HeapSnapshot::NodeID getNativeID(const void *mem);
+  /// \return The ID for the given value. If the value cannot be represented
+  ///   with an ID, returns None.
+  llvm::Optional<HeapSnapshot::NodeID> getSnapshotID(HermesValue val);
 
 #ifndef NDEBUG
   /// \return The next debug allocation ID for embedding directly into a GCCell.
@@ -1400,6 +1442,11 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
     hermes_fatal("Ran out of native IDs");
   }
   return nextNativeID_ += kIDStep;
+}
+
+inline HeapSnapshot::NodeID GCBase::IDTracker::nextNumberID() {
+  // Numbers will all be considered JS memory, not native memory.
+  return nextObjectID();
 }
 
 } // namespace vm

@@ -437,7 +437,8 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
           cellKindStr(dummy->getKind()),
           gc.getObjectID(dummy.get()),
           blockSize,
-          1));
+          // One edge to the second dummy, one to the number pseudo-node.
+          2));
   nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
   // Next node is the second dummy, which is only reachable via the first
   // dummy.
@@ -448,6 +449,16 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
           cellKindStr(dummy->getKind()),
           gc.getObjectID(dummy->other),
           blockSize,
+          1));
+  nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  // Next node is the first number.
+  EXPECT_EQ(
+      Node::parse(nextNode, strings),
+      Node(
+          HeapSnapshot::NodeType::Number,
+          "3.14",
+          gc.getIDTracker().getNumberID(dummy->hvDouble.getNumber()),
+          0,
           0));
   nextNode += HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
   EXPECT_EQ(nextNode, nodes.end());
@@ -467,6 +478,16 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   EXPECT_EQ(
       Edge::parse(nextEdge, strings),
       Edge(HeapSnapshot::EdgeType::Internal, "other", 3));
+  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  // Pointer from first dummy to its number field.
+  EXPECT_EQ(
+      Edge::parse(nextEdge, strings),
+      Edge(HeapSnapshot::EdgeType::Internal, "HermesDouble", 4));
+  nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
+  // Pointer from second dummy to its number field.
+  EXPECT_EQ(
+      Edge::parse(nextEdge, strings),
+      Edge(HeapSnapshot::EdgeType::Internal, "HermesDouble", 4));
   nextEdge += HeapSnapshot::V8_SNAPSHOT_EDGE_FIELD_COUNT;
   EXPECT_EQ(nextEdge, edges.end());
 

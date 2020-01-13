@@ -45,13 +45,11 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   const auto len = self->endIndex_ - self->beginIndex_;
   for (uint32_t i = 0; i < len; i++) {
     const auto &elem = indexedStorage->at(i);
-    if (!elem.isPointer()) {
+    const llvm::Optional<HeapSnapshot::NodeID> elemID = gc->getSnapshotID(elem);
+    if (!elemID) {
       continue;
     }
-    if (auto *p = elem.getPointer()) {
-      snap.addIndexedEdge(
-          HeapSnapshot::EdgeType::Element, i, gc->getObjectID(p));
-    }
+    snap.addIndexedEdge(HeapSnapshot::EdgeType::Element, i, elemID.getValue());
   }
 }
 

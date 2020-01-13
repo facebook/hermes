@@ -2421,23 +2421,24 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap) {
         // Else, it's a user-visible property.
         GCHermesValue &prop =
             namedSlotRef(self, gc->getPointerBase(), desc.slot);
-        if (prop.isPointer()) {
-          std::string propName = gc->convertSymbolToUTF8(id);
-          // If the property name is a valid array index, display it as an
-          // "element" instead of a "property". This will put square brackets
-          // around the number and sort it numerically rather than
-          // alphabetically.
-          if (auto index = ::hermes::toArrayIndex(propName)) {
-            snap.addIndexedEdge(
-                HeapSnapshot::EdgeType::Element,
-                index.getValue(),
-                gc->getObjectID(prop.getPointer()));
-          } else {
-            snap.addNamedEdge(
-                HeapSnapshot::EdgeType::Property,
-                propName,
-                gc->getObjectID(prop.getPointer()));
-          }
+        const llvm::Optional<HeapSnapshot::NodeID> idForProp =
+            gc->getSnapshotID(prop);
+        if (!idForProp) {
+          return;
+        }
+        std::string propName = gc->convertSymbolToUTF8(id);
+        // If the property name is a valid array index, display it as an
+        // "element" instead of a "property". This will put square brackets
+        // around the number and sort it numerically rather than
+        // alphabetically.
+        if (auto index = ::hermes::toArrayIndex(propName)) {
+          snap.addIndexedEdge(
+              HeapSnapshot::EdgeType::Element,
+              index.getValue(),
+              idForProp.getValue());
+        } else {
+          snap.addNamedEdge(
+              HeapSnapshot::EdgeType::Property, propName, idForProp.getValue());
         }
       });
 }
