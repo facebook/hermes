@@ -158,7 +158,8 @@ endif()
 #
 file(TO_CMAKE_PATH "${LLVM_BUILD_DIR}" LLVM_BUILD_DIR)
 file(TO_CMAKE_PATH "${LLVM_SRC_DIR}" LLVM_SRC_DIR)
-list(APPEND CMAKE_MODULE_PATH "${LLVM_BUILD_DIR}/lib/cmake/llvm/")
+list(APPEND CMAKE_MODULE_PATH "${LLVM_SRC_DIR}/cmake/modules/" "${LLVM_BUILD_DIR}/lib/cmake/llvm/")
+add_subdirectory(${LLVM_SRC_DIR} ${LLVM_BUILD_DIR})
 
 # Enable debug mode by default
 if ((NOT GENERATOR_IS_MULTI_CONFIG) AND CMAKE_BUILD_TYPE STREQUAL "")
@@ -349,6 +350,11 @@ set(LLVM_MAIN_SRC_DIR ${LLVM_SRC_DIR})
 include(LLVMConfig)
 include(AddLLVM)
 include(HandleLLVMOptions)
+
+# Certain Hermes header files pull in LLVM generated headers.
+# Mark that all Hermes things depend on these headers.
+# TODO: this should be done properly with an include target.
+list(APPEND LLVM_COMMON_DEPENDS llvm-headers)
 
 include_directories("${LLVM_SRC_DIR}/include"
                     "${LLVM_BUILD_DIR}/include")

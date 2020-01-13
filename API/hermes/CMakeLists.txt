@@ -22,6 +22,7 @@ set(api_sources
   )
 
 add_llvm_library(hermesapi
+        BUILDTREE_ONLY
         ${api_sources}
         LINK_LIBS jsi hermesVMRuntime)
 

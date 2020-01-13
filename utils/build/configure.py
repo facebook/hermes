@@ -82,6 +82,7 @@ def main():
             "-DLLVM_BUILD_DIR=" + args.llvm_build_dir,
             "-DLLVM_SRC_DIR=" + args.llvm_src_dir,
             "-DCMAKE_BUILD_TYPE=" + args.build_type,
+            "-DLLVM_TARGETS_TO_BUILD=",
         ]
     )
     if args.is_32_bit:
