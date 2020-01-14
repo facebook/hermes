@@ -311,7 +311,6 @@ ObjectVTable RequireContext::vt{
 };
 
 void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<RequireContext>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -319,8 +318,7 @@ void RequireContextBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 RequireContext::RequireContext(Deserializer &d) : JSObject(d, &vt.base) {}
 
 void RequireContextSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<RequireContext>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 
@@ -347,10 +345,8 @@ Handle<RequireContext> RequireContext::create(
               vmcast<JSObject>(runtime->objectPrototype),
               ANONYMOUS_PROPERTY_SLOTS))));
 
-  JSObject::setInternalProperty(
-      *self, runtime, domainPropIndex(), domain.getHermesValue());
-  JSObject::setInternalProperty(
-      *self, runtime, dirnamePropIndex(), dirname.getHermesValue());
+  JSObject::setInternalProperty(*self, runtime, 0, domain.getHermesValue());
+  JSObject::setInternalProperty(*self, runtime, 1, dirname.getHermesValue());
 
   return self;
 }

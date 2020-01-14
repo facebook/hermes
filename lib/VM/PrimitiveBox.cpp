@@ -31,7 +31,6 @@ ObjectVTable JSString::vt{
 };
 
 void StringObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSString>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -42,7 +41,7 @@ PrimitiveBox::PrimitiveBox(Deserializer &d, const VTable *vt)
 JSString::JSString(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
 
 void StringObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSString>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 
@@ -65,13 +64,12 @@ CallResult<HermesValue> JSString::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSString>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
   JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
+      PrimitiveBox::primitiveValueIndex,
       value.getHermesValue());
 
   PropertyFlags pf;
@@ -111,7 +109,7 @@ void JSString::setPrimitiveString(
   return JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
+      PrimitiveBox::primitiveValueIndex,
       string.getHermesValue());
 }
 
@@ -208,7 +206,6 @@ ObjectVTable JSStringIterator::vt{
 };
 
 void StringIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSStringIterator>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSStringIterator *>(cell);
   mb.addField("iteratedString", &self->iteratedString_);
@@ -222,8 +219,7 @@ JSStringIterator::JSStringIterator(Deserializer &d) : JSObject(d, &vt.base) {
 
 void StringIteratorSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSStringIterator>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSStringIterator>());
+  JSObject::serializeObjectImpl(s, cell);
   s.writeRelocation(self->iteratedString_.get(s.getRuntime()));
   s.writeInt<uint32_t>(self->nextIndex_);
   s.endObject(cell);
@@ -246,9 +242,7 @@ CallResult<HermesValue> JSStringIterator::create(
   auto *self = JSObject::allocateSmallPropStorage(new (mem) JSStringIterator(
       runtime,
       *proto,
-      runtime->getHiddenClassForPrototypeRaw(
-          *proto,
-          numOverlapSlots<JSStringIterator>() + ANONYMOUS_PROPERTY_SLOTS),
+      runtime->getHiddenClassForPrototypeRaw(*proto, ANONYMOUS_PROPERTY_SLOTS),
       *string));
   return HermesValue::encodeObjectValue(self);
 }
@@ -329,7 +323,6 @@ ObjectVTable JSNumber::vt{
 };
 
 void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSNumber>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -337,7 +330,7 @@ void NumberObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 JSNumber::JSNumber(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
 
 void NumberObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSNumber>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 
@@ -359,13 +352,12 @@ CallResult<HermesValue> JSNumber::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSNumber>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
   JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
+      PrimitiveBox::primitiveValueIndex,
       HermesValue::encodeDoubleValue(value));
 
   return selfHandle.getHermesValue();
@@ -386,7 +378,6 @@ ObjectVTable JSBoolean::vt{
 };
 
 void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSBoolean>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -394,8 +385,7 @@ void BooleanObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 JSBoolean::JSBoolean(Deserializer &d, const VTable *vt) : PrimitiveBox(d, vt) {}
 
 void BooleanObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSBoolean>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 
@@ -415,13 +405,12 @@ JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSBoolean>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
   JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
+      PrimitiveBox::primitiveValueIndex,
       *Runtime::getBoolValue(value));
   return selfHandle.getHermesValue();
 }
@@ -441,7 +430,6 @@ ObjectVTable JSSymbol::vt{
 };
 
 void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSSymbol>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -449,7 +437,7 @@ void SymbolObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 JSSymbol::JSSymbol(Deserializer &d) : PrimitiveBox(d, &vt.base) {}
 
 void SymbolObjectSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSSymbol>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 
@@ -471,13 +459,12 @@ CallResult<HermesValue> JSSymbol::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSSymbol>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
 
   JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      PrimitiveBox::primitiveValuePropIndex(),
+      PrimitiveBox::primitiveValueIndex,
       HermesValue::encodeSymbolValue(value));
 
   return selfHandle.getHermesValue();

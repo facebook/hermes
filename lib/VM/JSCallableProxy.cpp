@@ -31,7 +31,6 @@ const CallableVTable JSCallableProxy::vt{
 };
 
 void CallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSCallableProxy>());
   NativeFunctionBuildMeta(cell, mb);
   const auto *self = static_cast<const JSCallableProxy *>(cell);
   mb.addField("@target", &self->slots_.target);
@@ -50,8 +49,7 @@ JSCallableProxy::JSCallableProxy(Deserializer &d)
 }
 
 void CallableProxySerialize(Serializer &s, const GCCell *cell) {
-  NativeFunction::serializeNativeFunctionImpl(
-      s, cell, JSObject::numOverlapSlots<JSCallableProxy>());
+  NativeFunction::serializeNativeFunctionImpl(s, cell);
   auto *self = vmcast<const JSCallableProxy>(cell);
   s.writeRelocation(self->slots_.target.get(s.getRuntime()));
   s.writeRelocation(self->slots_.handler.get(s.getRuntime()));
@@ -73,9 +71,7 @@ PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime *runtime) {
           runtime,
           runtime->objectPrototypeRawPtr,
           runtime->getHiddenClassForPrototypeRaw(
-              runtime->objectPrototypeRawPtr,
-              JSObject::numOverlapSlots<JSCallableProxy>() +
-                  ANONYMOUS_PROPERTY_SLOTS)));
+              runtime->objectPrototypeRawPtr, ANONYMOUS_PROPERTY_SLOTS)));
 
   cproxy->flags_.proxyObject = true;
 

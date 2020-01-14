@@ -30,7 +30,6 @@ ObjectVTable JSDate::vt{
 };
 
 void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDate>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -38,7 +37,7 @@ void DateBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 JSDate::JSDate(Deserializer &d) : JSObject(d, &vt.base) {}
 
 void DateSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSDate>());
+  JSObject::serializeObjectImpl(s, cell);
   s.endObject(cell);
 }
 
@@ -58,8 +57,7 @@ JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
   return selfHandle.getHermesValue();
 }
 

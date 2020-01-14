@@ -27,7 +27,6 @@ ObjectVTable JSDataView::vt{
 };
 
 void DataViewBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDataView>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSDataView *>(cell);
   mb.addField("buffer", &self->buffer_);
@@ -42,8 +41,7 @@ JSDataView::JSDataView(Deserializer &d) : JSObject(d, &vt.base) {
 
 void DataViewSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSDataView>(cell);
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSDataView>());
+  JSObject::serializeObjectImpl(s, cell);
   s.writeRelocation(self->buffer_.get(s.getRuntime()));
   s.writeInt<JSDataView::size_type>(self->offset_);
   s.writeInt<JSDataView::size_type>(self->length_);
@@ -68,8 +66,7 @@ CallResult<HermesValue> JSDataView::create(
           runtime,
           *prototype,
           runtime->getHiddenClassForPrototypeRaw(
-              *prototype,
-              numOverlapSlots<JSDataView>() + ANONYMOUS_PROPERTY_SLOTS))));
+              *prototype, ANONYMOUS_PROPERTY_SLOTS))));
 }
 
 JSDataView::JSDataView(Runtime *runtime, JSObject *parent, HiddenClass *clazz)

@@ -19,7 +19,6 @@ namespace vm {
 void JSWeakMapImplBase::WeakMapImplBaseBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSWeakMapImplBase>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSWeakMapImplBase *>(cell);
   mb.addField("valueStorage", &self->valueStorage_);
@@ -256,7 +255,6 @@ template <CellKind C>
 void JSWeakMapImpl<C>::WeakMapOrSetBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSWeakMapImpl<C>>());
   WeakMapImplBaseBuildMeta(cell, mb);
 }
 
@@ -270,8 +268,7 @@ void WeakSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 #ifdef HERMESVM_SERIALIZE
 void serializeJSWeakMapBase(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(
-      s, cell, JSObject::numOverlapSlots<JSWeakMapImplBase>());
+  JSObject::serializeObjectImpl(s, cell);
   auto *self = vmcast<const JSWeakMapImplBase>(cell);
   // Serialize llvm::DenseMap<WeakRefKey, uint32_t, detail::WeakRefInfo> map_.
   // We write all entries in Densemap. It's OK for us to serialize/deserialize
@@ -385,8 +382,7 @@ CallResult<HermesValue> JSWeakMapImpl<C>::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSWeakMapImpl>() + ANONYMOUS_PROPERTY_SLOTS),
+              *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
           *valueStorage)));
 }
 

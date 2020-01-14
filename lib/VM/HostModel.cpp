@@ -38,8 +38,6 @@ CallableVTable FinalizableNativeFunction::vt{
 void FinalizableNativeFunctionBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(
-      JSObject::numOverlapSlots<FinalizableNativeFunction>());
   NativeFunctionBuildMeta(cell, mb);
 }
 
@@ -66,17 +64,14 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
 
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       cellSize<FinalizableNativeFunction>());
-  auto selfHandle = runtime->makeHandle(
-      allocateSmallPropStorage(new (mem) FinalizableNativeFunction(
-          runtime,
-          parentHandle,
-          createPseudoHandle(runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<FinalizableNativeFunction>() +
-                  ANONYMOUS_PROPERTY_SLOTS)),
-          context,
-          functionPtr,
-          finalizePtr)));
+  auto selfHandle = runtime->makeHandle(new (mem) FinalizableNativeFunction(
+      runtime,
+      parentHandle,
+      createPseudoHandle(runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS)),
+      context,
+      functionPtr,
+      finalizePtr));
 
   auto prototypeObjectHandle = Handle<JSObject>(runtime);
 
@@ -112,7 +107,6 @@ ObjectVTable HostObject::vt{
 };
 
 void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<HostObject>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -135,13 +129,12 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
 
   void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
       cellSize<HostObject>());
-  HostObject *hostObj = JSObject::allocateSmallPropStorage(new (mem) HostObject(
+  HostObject *hostObj = new (mem) HostObject(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle,
-          numOverlapSlots<HostObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      proxy));
+          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
+      proxy);
 
   hostObj->flags_.hostObject = true;
 
