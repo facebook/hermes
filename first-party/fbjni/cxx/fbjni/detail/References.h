@@ -223,13 +223,14 @@ struct ReprStorage {
   JniType<Repr> jobj() const noexcept;
 
   void swap(ReprStorage& other) noexcept;
- private:
+
   ReprStorage() = delete;
   ReprStorage(const ReprStorage&) = delete;
   ReprStorage(ReprStorage&&) = delete;
   ReprStorage& operator=(const ReprStorage&) = delete;
   ReprStorage& operator=(ReprStorage&&) = delete;
 
+ private:
   using Storage = typename std::aligned_storage<sizeof(JObjectBase), alignof(JObjectBase)>::type;
   Storage storage_;
 };
