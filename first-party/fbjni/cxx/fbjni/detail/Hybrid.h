@@ -319,7 +319,7 @@ inline detail::BaseHybridClass* getHybridDataFromField(const JObject* self, cons
 
 template <typename T, typename B>
 inline T* HybridClass<T, B>::JavaPart::cthis() const {
-  detail::BaseHybridClass* result = 0;
+  detail::BaseHybridClass* result = nullptr;
   static const auto hybridDataField = detectHybrid<T, B>(this->getClass());
   const bool isHybrid = !hybridDataField;
   if (isHybrid) {
