@@ -57,10 +57,10 @@ jobs:
             printf '%s\n' '#!/bin/sh' 'ninja.real -j4 "$@" || ninja.real -j1 "$@"' | sudo tee /usr/bin/ninja
             ln -sf /usr/bin/ninja /opt/android/sdk/cmake/3.6.4111459/bin/ninja
       - run:
-          name: Build LLVM
+          name: Fetch LLVM
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/build_llvm.py llvm llvm_build
+            hermes/utils/build/fetch_llvm.py llvm
       - run:
           name: Crosscompile LLVM
           command: |
@@ -128,7 +128,7 @@ jobs:
           name: Build LLVM
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/build_llvm.py --distribute llvm llvm_build
+            hermes/utils/build/fetch_llvm.py llvm
       - run:
           name: Build Hermes for Linux
           command: |
@@ -186,7 +186,7 @@ jobs:
           name: Build LLVM in debug mode
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/build_llvm.py llvm llvm_build
+            hermes/utils/build/fetch_llvm.py llvm
       - run:
           name: Run Hermes regression tests
           command: |
@@ -219,7 +219,7 @@ jobs:
           name: Build LLVM
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/build_llvm.py --distribute llvm llvm_build
+            hermes/utils/build/fetch_llvm.py llvm
       - run:
           name: Build Hermes for macOS
           command: |
@@ -271,7 +271,7 @@ jobs:
           name: Build LLVM in debug mode
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/build_llvm.py llvm llvm_build
+            hermes/utils/build/fetch_llvm.py llvm
       - run:
           name: Run MacOS regression tests in debug mode
           command: |
@@ -340,12 +340,12 @@ jobs:
             if (-not $?) { throw "Failed to install visualstudio2019-workload-vctools" }
 
       - run:
-          name: Build LLVM
+          name: Fetch LLVM
           command: |
             $Env:PATH += ";$Env:CMAKE_DIR;$Env:MSBUILD_DIR"
             cd $Env:HERMES_WS_DIR
-            hermes\utils\build\build_llvm.py --build-system='Visual Studio 16 2019' --distribute llvm llvm_build
-            if (-not $?) { throw "Failed to build LLVM" }
+            hermes\utils\build\fetch_llvm.py llvm
+            if (-not $?) { throw "Failed to fetch LLVM" }
 
       - run:
           name: Assemble Windows runtime dependencies

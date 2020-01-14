@@ -22,7 +22,6 @@ cd "$HERMES_WS_DIR"
 
 [ -d "hermes/" ]     || die "Can't find hermes/ in $PWD"
 [ -d "llvm/" ]       || die "Can't find llvm/ in $PWD"
-[ -d "llvm_build/" ] || die "Can't find llvm_build. Did you build_llvm.py?"
 
 if [ ! -e 'llvm/hermes' ]
 then
@@ -32,6 +31,13 @@ then
     echo "Patched by $0" > hermes
   )
 fi
+
+# Build tblgen in host architecture.
+(
+  mkdir -p llvm-tblgen && cd llvm-tblgen
+  cmake -G Ninja ../llvm && cmake --build . --target llvm-tblgen
+)
+LLVM_TBLGEN="$HERMES_WS_DIR/llvm-tblgen/bin/llvm-tblgen"
 
 for abi in "armeabi-v7a" "arm64-v8a" "x86_64" "x86"
 do
@@ -51,7 +57,7 @@ do
           -DLLVM_TARGETS_TO_BUILD=
           -DCMAKE_BUILD_TYPE=MinSizeRel
           -DLLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO=Off
-          -DLLVM_TABLEGEN="$HERMES_WS_DIR/llvm_build/bin/llvm-tblgen"
+          -DLLVM_TABLEGEN="$LLVM_TBLGEN"
           )
 
       printf '%q ' "${cmd[@]}"
