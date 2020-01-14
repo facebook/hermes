@@ -22,20 +22,13 @@
 namespace hermes {
 namespace vm {
 
-constexpr static int numFuncNames() {
-  return 0
-#define NATIVE_FUNCTION(func) +1
-#define NATIVE_FUNCTION_TYPED(func, type) +1
-#define NATIVE_FUNCTION_TYPED_2(func, type, type2) +1
-#define NATIVE_CONSTRUCTOR(func) +1
-#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func) +1
-#include "hermes/VM/NativeFunctions.def"
-#undef NATIVE_FUNCTION
-#undef NATIVE_FUNCTION_TYPED
-#undef NATIVE_FUNCTION_TYPED_2
-#undef NATIVE_CONSTRUCTOR
-#undef NATIVE_CONSTRUCTOR_TYPED
-      ;
+// A helper function to get the length of a string literal while ensuring it
+// fits in a uint8.
+// \return the length of the string including the terminating nul.
+template <size_t N>
+constexpr uint8_t u8sizeof(const char (&str)[N]) {
+  static_assert(N <= std::numeric_limits<uint8_t>::max(), "overflowed uint8_t");
+  return N;
 }
 
 #define NATIVE_FUNCTION_STR(func) #func
@@ -46,40 +39,16 @@ constexpr static int numFuncNames() {
 #define NATIVE_CONSTRUCTOR_TYPED_STR(classname, type, type2, func) \
 #classname "<" #type ", " #type2 ">::" #func
 
-static llvm::DenseMap<void *, const char *> funcNames() {
-  constexpr int numNames = numFuncNames();
-
-  // Can we store all the lengths in uint8_t safely?
-#define CHECK_OVERFLOW(len) \
-  static_assert(            \
-      (len) <= std::numeric_limits<uint8_t>::max(), "overflowed uint8_t");
-#define NATIVE_FUNCTION(func) CHECK_OVERFLOW(sizeof(NATIVE_FUNCTION_STR(func)))
+static llvm::DenseMap<const void *, const char *> funcNames() {
+  static constexpr uint8_t nameLengths[] = {
+#define NATIVE_FUNCTION(func) u8sizeof(NATIVE_FUNCTION_STR(func)),
 #define NATIVE_FUNCTION_TYPED(func, type) \
-  CHECK_OVERFLOW(sizeof(NATIVE_FUNCTION_TYPED_STR(func, type)))
+  u8sizeof(NATIVE_FUNCTION_TYPED_STR(func, type)),
 #define NATIVE_FUNCTION_TYPED_2(func, type, type2) \
-  CHECK_OVERFLOW(sizeof(NATIVE_FUNCTION_TYPED_2_STR(func, type, type2)))
-#define NATIVE_CONSTRUCTOR(func) \
-  CHECK_OVERFLOW(sizeof(NATIVE_CONSTRUCTOR_STR(func)))
+  u8sizeof(NATIVE_FUNCTION_TYPED_2_STR(func, type, type2)),
+#define NATIVE_CONSTRUCTOR(func) u8sizeof(NATIVE_CONSTRUCTOR_STR(func)),
 #define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func) \
-  CHECK_OVERFLOW(                                              \
-      sizeof(NATIVE_CONSTRUCTOR_TYPED_STR(classname, type, type2, func)))
-#include "hermes/VM/NativeFunctions.def"
-#undef NATIVE_FUNCTION
-#undef NATIVE_FUNCTION_TYPED
-#undef NATIVE_FUNCTION_TYPED_2
-#undef NATIVE_CONSTRUCTOR
-#undef NATIVE_CONSTRUCTOR_TYPED
-
-  // Great, store them in uint8_t.
-  static constexpr uint8_t nameLengths[numNames] = {
-#define NATIVE_FUNCTION(func) sizeof(NATIVE_FUNCTION_STR(func)),
-#define NATIVE_FUNCTION_TYPED(func, type) \
-  sizeof(NATIVE_FUNCTION_TYPED_STR(func, type)),
-#define NATIVE_FUNCTION_TYPED_2(func, type, type2) \
-  sizeof(NATIVE_FUNCTION_TYPED_2_STR(func, type, type2)),
-#define NATIVE_CONSTRUCTOR(func) sizeof(NATIVE_CONSTRUCTOR_STR(func)),
-#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func) \
-  sizeof(NATIVE_CONSTRUCTOR_TYPED_STR(classname, type, type2, func)),
+  u8sizeof(NATIVE_CONSTRUCTOR_TYPED_STR(classname, type, type2, func)),
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_FUNCTION
 #undef NATIVE_FUNCTION_TYPED
@@ -105,12 +74,12 @@ static llvm::DenseMap<void *, const char *> funcNames() {
 #undef NATIVE_CONSTRUCTOR_TYPED
   };
 
-  static constexpr void *functionPointers[numNames] = {
+  static const void *const functionPointers[] = {
 #define NATIVE_FUNCTION(func) (void *)func,
 #define NATIVE_FUNCTION_TYPED(func, type) (void *)func<type>,
 #define NATIVE_FUNCTION_TYPED_2(func, type, type2) (void *)func<type, type2>,
 
-  // Creator functions are overloaded, we have to cast them to CreatorFunciton *
+  // Creator functions are overloaded, we have to cast them to CreatorFunction *
   // first.
 #define NATIVE_CONSTRUCTOR(func) (void *)(CreatorFunction *) func,
 #define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func) \
@@ -122,13 +91,15 @@ static llvm::DenseMap<void *, const char *> funcNames() {
 #undef NATIVE_CONSTRUCTOR
 #undef NATIVE_CONSTRUCTOR_TYPED
   };
-  llvm::DenseMap<void *, const char *> map(numNames);
+
+  size_t numFuncs = sizeof functionPointers / sizeof *functionPointers;
+  llvm::DenseMap<const void *, const char *> map(numFuncs);
   const char *curStr = names;
-  for (int i = 0; i < numNames; ++i) {
+  for (size_t i = 0; i < numFuncs; ++i) {
     map[functionPointers[i]] = curStr;
     curStr += nameLengths[i];
   }
-  assert(map.size() == numNames && "A function should only be mapped once");
+  assert(map.size() == numFuncs && "A function should only be mapped once");
   return map;
 }
 
