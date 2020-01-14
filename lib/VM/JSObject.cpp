@@ -126,44 +126,46 @@ JSObject::JSObject(Deserializer &d, const VTable *vtp)
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSObject> mem{runtime};
-  return mem.initToPseudoHandle(new (mem) JSObject(
-      runtime,
-      &vt.base,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+  void *mem = runtime->alloc</*fixedSize*/ true>(cellSize<JSObject>());
+  return createPseudoHandle(
+      JSObject::allocateSmallPropStorage(new (mem) JSObject(
+          runtime,
+          &vt.base,
           *parentHandle,
-          numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      GCPointerBase::NoBarriers()));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle,
+              numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
+          GCPointerBase::NoBarriers())));
 }
 
 PseudoHandle<JSObject> JSObject::create(Runtime *runtime) {
-  JSObjectAlloc<JSObject> mem{runtime};
+  void *mem = runtime->alloc</*fixedSize*/ true>(cellSize<JSObject>());
   JSObject *objProto = runtime->objectPrototypeRawPtr;
-  return mem.initToPseudoHandle(new (mem) JSObject(
-      runtime,
-      &vt.base,
-      objProto,
-      runtime->getHiddenClassForPrototypeRaw(
-          objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      GCPointerBase::NoBarriers()));
+  return createPseudoHandle(
+      JSObject::allocateSmallPropStorage(new (mem) JSObject(
+          runtime,
+          &vt.base,
+          objProto,
+          runtime->getHiddenClassForPrototypeRaw(
+              objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
+          GCPointerBase::NoBarriers())));
 }
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime *runtime,
     unsigned propertyCount) {
-  JSObjectAlloc<JSObject> mem{runtime};
+  void *mem = runtime->alloc</*fixedSize*/ true>(cellSize<JSObject>());
   JSObject *objProto = runtime->objectPrototypeRawPtr;
-  auto self = mem.initToPseudoHandle(new (mem) JSObject(
+  return runtime->ignoreAllocationFailure(JSObject::allocatePropStorage(
+      createPseudoHandle(JSObject::allocateSmallPropStorage(new (mem) JSObject(
+          runtime,
+          &vt.base,
+          objProto,
+          runtime->getHiddenClassForPrototypeRaw(
+              objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
+          GCPointerBase::NoBarriers()))),
       runtime,
-      &vt.base,
-      objProto,
-      runtime->getHiddenClassForPrototypeRaw(
-          objProto, numOverlapSlots<JSObject>() + ANONYMOUS_PROPERTY_SLOTS),
-      GCPointerBase::NoBarriers()));
-
-  return runtime->ignoreAllocationFailure(
-      JSObject::allocatePropStorage(std::move(self), runtime, propertyCount));
+      propertyCount));
 }
 
 PseudoHandle<JSObject> JSObject::create(

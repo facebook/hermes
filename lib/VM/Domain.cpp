@@ -337,13 +337,15 @@ Handle<RequireContext> RequireContext::create(
     Runtime *runtime,
     Handle<Domain> domain,
     Handle<StringPrimitive> dirname) {
-  JSObjectAlloc<RequireContext> mem{runtime};
-  auto self = mem.initToHandle(new (mem) RequireContext(
-      runtime,
-      vmcast<JSObject>(runtime->objectPrototype),
-      runtime->getHiddenClassForPrototypeRaw(
+  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::No>(
+      cellSize<RequireContext>());
+  auto self = runtime->makeHandle(
+      JSObject::allocateSmallPropStorage(new (mem) RequireContext(
+          runtime,
           vmcast<JSObject>(runtime->objectPrototype),
-          ANONYMOUS_PROPERTY_SLOTS)));
+          runtime->getHiddenClassForPrototypeRaw(
+              vmcast<JSObject>(runtime->objectPrototype),
+              ANONYMOUS_PROPERTY_SLOTS))));
 
   JSObject::setInternalProperty(
       *self, runtime, domainPropIndex(), domain.getHermesValue());

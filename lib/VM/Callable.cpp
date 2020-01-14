@@ -560,15 +560,16 @@ CallResult<HermesValue> BoundFunction::create(
   }
   auto argStorageHandle = runtime->makeHandle<ArrayStorage>(*arrRes);
 
-  JSObjectAlloc<BoundFunction> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) BoundFunction(
-      runtime,
-      runtime->functionPrototypeRawPtr,
-      runtime->getHiddenClassForPrototypeRaw(
+  void *mem = runtime->alloc(cellSize<BoundFunction>());
+  auto selfHandle =
+      runtime->makeHandle(allocateSmallPropStorage(new (mem) BoundFunction(
+          runtime,
           runtime->functionPrototypeRawPtr,
-          numOverlapSlots<BoundFunction>() + ANONYMOUS_PROPERTY_SLOTS),
-      target,
-      argStorageHandle));
+          runtime->getHiddenClassForPrototypeRaw(
+              runtime->functionPrototypeRawPtr,
+              numOverlapSlots<BoundFunction>() + ANONYMOUS_PROPERTY_SLOTS),
+          target,
+          argStorageHandle)));
 
   // Copy the arguments. If we don't have any, we must at least initialize
   // 'this' to 'undefined'.
@@ -981,17 +982,18 @@ Handle<NativeFunction> NativeFunction::create(
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
     unsigned additionalSlotCount) {
-  JSObjectAlloc<NativeFunction> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) NativeFunction(
-      runtime,
-      &vt.base.base,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+  void *mem = runtime->alloc(cellSize<NativeFunction>());
+  auto selfHandle =
+      runtime->makeHandle(allocateSmallPropStorage(new (mem) NativeFunction(
+          runtime,
+          &vt.base.base,
           *parentHandle,
-          numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS +
-              additionalSlotCount),
-      context,
-      functionPtr));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle,
+              numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS +
+                  additionalSlotCount),
+          context,
+          functionPtr)));
 
   auto st = defineNameLengthAndPrototype(
       selfHandle,
@@ -1018,18 +1020,19 @@ Handle<NativeFunction> NativeFunction::create(
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
     unsigned additionalSlotCount) {
-  JSObjectAlloc<NativeFunction> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) NativeFunction(
-      runtime,
-      &vt.base.base,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+  void *mem = runtime->alloc(cellSize<NativeFunction>());
+  auto selfHandle =
+      runtime->makeHandle(allocateSmallPropStorage(new (mem) NativeFunction(
+          runtime,
+          &vt.base.base,
           *parentHandle,
-          numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS +
-              additionalSlotCount),
-      parentEnvHandle,
-      context,
-      functionPtr));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle,
+              numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS +
+                  additionalSlotCount),
+          parentEnvHandle,
+          context,
+          functionPtr)));
 
   auto st = defineNameLengthAndPrototype(
       selfHandle,
@@ -1248,8 +1251,9 @@ CallResult<HermesValue> JSFunction::create(
     Handle<JSObject> parentHandle,
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
-  JSObjectAlloc<JSFunction, kHasFinalizer> mem{runtime};
-  auto self = mem.initToPseudoHandle(new (mem) JSFunction(
+  void *mem =
+      runtime->alloc</*fixedSize*/ true, kHasFinalizer>(cellSize<JSFunction>());
+  auto *self = allocateSmallPropStorage(new (mem) JSFunction(
       runtime,
       *domain,
       *parentHandle,
@@ -1259,7 +1263,7 @@ CallResult<HermesValue> JSFunction::create(
       envHandle,
       codeBlock));
   self->flags_.lazyObject = 1;
-  return self.getHermesValue();
+  return HermesValue::encodeObjectValue(self);
 }
 
 void JSFunction::addLocationToSnapshot(
@@ -1363,8 +1367,9 @@ CallResult<HermesValue> JSGeneratorFunction::create(
     Handle<JSObject> parentHandle,
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
-  JSObjectAlloc<JSGeneratorFunction, kHasFinalizer> mem{runtime};
-  auto self = mem.initToPseudoHandle(new (mem) JSGeneratorFunction(
+  void *mem = runtime->alloc</*fixedSize*/ true, kHasFinalizer>(
+      cellSize<JSGeneratorFunction>());
+  auto *self = allocateSmallPropStorage(new (mem) JSGeneratorFunction(
       runtime,
       *domain,
       *parentHandle,
@@ -1374,7 +1379,7 @@ CallResult<HermesValue> JSGeneratorFunction::create(
       envHandle,
       codeBlock));
   self->flags_.lazyObject = 1;
-  return self.getHermesValue();
+  return HermesValue::encodeObjectValue(self);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1470,17 +1475,19 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
     Handle<Environment> envHandle,
     CodeBlock *codeBlock,
     NativeArgs args) {
-  JSObjectAlloc<GeneratorInnerFunction> mem{runtime};
-  auto self = mem.initToHandle(new (mem) GeneratorInnerFunction(
-      runtime,
-      *domain,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+  void *mem = runtime->alloc(cellSize<GeneratorInnerFunction>());
+  auto self = runtime->makeHandle(
+      allocateSmallPropStorage(new (mem) GeneratorInnerFunction(
+          runtime,
+          *domain,
           *parentHandle,
-          numOverlapSlots<GeneratorInnerFunction>() + ANONYMOUS_PROPERTY_SLOTS),
-      envHandle,
-      codeBlock,
-      args.getArgCount()));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle,
+              numOverlapSlots<GeneratorInnerFunction>() +
+                  ANONYMOUS_PROPERTY_SLOTS),
+          envHandle,
+          codeBlock,
+          args.getArgCount())));
 
   // We must store the entire frame, including the extra registers the callee
   // had to allocate at the start.

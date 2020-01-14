@@ -52,13 +52,15 @@ void DateDeserialize(Deserializer &d, CellKind kind) {
 
 CallResult<HermesValue>
 JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSDate> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSDate(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+  void *mem = runtime->alloc(cellSize<JSDate>());
+  auto selfHandle =
+      runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSDate(
+          runtime,
           *parentHandle,
-          numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS)));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle,
+              numOverlapSlots<JSDate>() + ANONYMOUS_PROPERTY_SLOTS))));
+  return selfHandle.getHermesValue();
 }
 
 } // namespace vm

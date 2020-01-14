@@ -106,17 +106,17 @@ void ProxyDeserialize(Deserializer &d, CellKind kind) {
 #endif
 
 PseudoHandle<JSProxy> JSProxy::create(Runtime *runtime) {
-  JSObjectAlloc<JSProxy> mem{runtime};
-  JSProxy *proxy = new (mem) JSProxy(
+  void *mem = runtime->alloc(cellSize<JSProxy>());
+  JSProxy *proxy = JSObject::allocateSmallPropStorage(new (mem) JSProxy(
       runtime,
       runtime->objectPrototypeRawPtr,
       runtime->getHiddenClassForPrototypeRaw(
           runtime->objectPrototypeRawPtr,
-          JSObject::numOverlapSlots<JSProxy>() + ANONYMOUS_PROPERTY_SLOTS));
+          JSObject::numOverlapSlots<JSProxy>() + ANONYMOUS_PROPERTY_SLOTS)));
 
   proxy->flags_.proxyObject = true;
 
-  return mem.initToPseudoHandle(proxy);
+  return createPseudoHandle(proxy);
 }
 
 CallResult<HermesValue> JSProxy::create(

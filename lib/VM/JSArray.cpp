@@ -411,14 +411,15 @@ CallResult<HermesValue> Arguments::create(
   }
   auto indexedStorage = runtime->makeHandle<StorageType>(*arrRes);
 
-  JSObjectAlloc<Arguments> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) Arguments(
-      runtime,
-      runtime->objectPrototypeRawPtr,
-      runtime->getHiddenClassForPrototypeRaw(
+  void *mem = runtime->alloc(cellSize<Arguments>());
+  auto selfHandle = runtime->makeHandle(
+      JSObject::allocateSmallPropStorage(new (mem) Arguments(
+          runtime,
           runtime->objectPrototypeRawPtr,
-          numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS),
-      *indexedStorage));
+          runtime->getHiddenClassForPrototypeRaw(
+              runtime->objectPrototypeRawPtr,
+              numOverlapSlots<Arguments>() + ANONYMOUS_PROPERTY_SLOTS),
+          *indexedStorage)));
 
   Arguments::setStorageEndIndex(selfHandle, runtime, length);
 
@@ -593,16 +594,17 @@ CallResult<HermesValue> JSArray::create(
     indexedStorage = vmcast<StorageType>(*arrRes);
   }
 
-  JSObjectAlloc<JSArray> mem{runtime};
-  auto self = mem.initToPseudoHandle(new (mem) JSArray(
+  void *mem = runtime->alloc(cellSize<JSArray>());
+  JSArray *self = JSObject::allocateSmallPropStorage(new (mem) JSArray(
       runtime,
       *prototypeHandle,
       *classHandle,
       *indexedStorage,
       GCPointerBase::NoBarriers()));
-  putLength(self.get(), runtime, length);
 
-  return self.getHermesValue();
+  putLength(self, runtime, length);
+
+  return HermesValue::encodeObjectValue(self);
 }
 
 CallResult<PseudoHandle<JSArray>>
@@ -810,8 +812,8 @@ CallResult<HermesValue> JSArrayIterator::create(
     IterationKind iterationKind) {
   auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
 
-  JSObjectAlloc<JSArrayIterator> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSArrayIterator(
+  void *mem = runtime->alloc(cellSize<JSArrayIterator>());
+  auto *self = JSObject::allocateSmallPropStorage(new (mem) JSArrayIterator(
       runtime,
       *proto,
       runtime->getHiddenClassForPrototypeRaw(
@@ -819,6 +821,7 @@ CallResult<HermesValue> JSArrayIterator::create(
           numOverlapSlots<JSArrayIterator>() + ANONYMOUS_PROPERTY_SLOTS),
       *array,
       iterationKind));
+  return HermesValue::encodeObjectValue(self);
 }
 
 /// Iterate to the next element and return.

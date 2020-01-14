@@ -91,13 +91,15 @@ void RegExpDeserialize(Deserializer &d, CellKind kind) {
 CallResult<HermesValue> JSRegExp::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  JSObjectAlloc<JSRegExp, HasFinalizer::Yes> mem{runtime};
-  auto selfHandle = mem.initToHandle(new (mem) JSRegExp(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      cellSize<JSRegExp>());
+  auto selfHandle =
+      runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSRegExp(
+          runtime,
           *parentHandle,
-          numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS)));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle,
+              numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS))));
 
   JSObject::setInternalProperty(
       *selfHandle,

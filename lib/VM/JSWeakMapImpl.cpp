@@ -378,14 +378,16 @@ CallResult<HermesValue> JSWeakMapImpl<C>::create(
   }
   auto valueStorage = runtime->makeHandle<BigStorage>(*valueRes);
 
-  JSObjectAlloc<JSWeakMapImpl<C>, HasFinalizer::Yes> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSWeakMapImpl<C>(
-      runtime,
-      *parentHandle,
-      runtime->getHiddenClassForPrototypeRaw(
+  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
+      cellSize<JSWeakMapImpl<C>>());
+  return HermesValue::encodeObjectValue(
+      JSObject::allocateSmallPropStorage(new (mem) JSWeakMapImpl<C>(
+          runtime,
           *parentHandle,
-          numOverlapSlots<JSWeakMapImpl>() + ANONYMOUS_PROPERTY_SLOTS),
-      *valueStorage));
+          runtime->getHiddenClassForPrototypeRaw(
+              *parentHandle,
+              numOverlapSlots<JSWeakMapImpl>() + ANONYMOUS_PROPERTY_SLOTS),
+          *valueStorage)));
 }
 
 template class JSWeakMapImpl<CellKind::WeakMapKind>;
