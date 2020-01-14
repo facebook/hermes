@@ -24,7 +24,8 @@ class ArrayImpl : public JSObject {
 #ifdef HERMESVM_SERIALIZE
   ArrayImpl(Deserializer &d, const VTable *vt);
 
-  friend void serializeArrayImpl(Serializer &s, const GCCell *cell);
+  friend void
+  serializeArrayImpl(Serializer &s, const GCCell *cell, unsigned overlapSlots);
 #endif
 
   static bool classof(const GCCell *cell) {
@@ -363,7 +364,14 @@ class JSArray final : public ArrayImpl {
   // Object needs to be able to call setLength.
   friend class JSObject;
 
-  enum : SlotIndex { LengthPropIndex = 0, JSArrayPropertyCount = 1 };
+  static constexpr SlotIndex jsArrayPropertyCount() {
+    return numOverlapSlots<JSArray>() + ANONYMOUS_PROPERTY_SLOTS +
+        NAMED_PROPERTY_SLOTS;
+  }
+
+  static constexpr inline SlotIndex lengthPropIndex() {
+    return jsArrayPropertyCount() - 1;
+  }
 
   /// A copy of the ".length" property. We compare every putComputed()
   /// index against ".length", and extracting it from property storage every
@@ -389,7 +397,7 @@ class JSArray final : public ArrayImpl {
   static void putLength(JSArray *self, Runtime *runtime, uint32_t newLength) {
     self->shadowLength_ = newLength;
 
-    namedSlotRef(self, runtime, LengthPropIndex)
+    namedSlotRef(self, runtime, lengthPropIndex())
         .setNonPtr(HermesValue::encodeNumberValue(newLength));
   }
 

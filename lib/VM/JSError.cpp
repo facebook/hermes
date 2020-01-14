@@ -37,6 +37,7 @@ ObjectVTable JSError::vt{
 };
 
 void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSError>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSError *>(cell);
   mb.addField("funcNames", &self->funcNames_);
@@ -45,7 +46,7 @@ void ErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 #ifdef HERMESVM_SERIALIZE
 void ErrorSerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSError>());
   // TODO: Finish serialize/deserialize stacktrace if we want to
   // serialize/deserialize after user code.
 
@@ -205,7 +206,8 @@ CallResult<HermesValue> JSError::create(
           runtime,
           *parentHandle,
           runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
+              *parentHandle,
+              numOverlapSlots<JSError>() + ANONYMOUS_PROPERTY_SLOTS),
           catchable)));
 }
 

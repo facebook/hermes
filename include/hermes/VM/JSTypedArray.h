@@ -315,6 +315,9 @@ class JSTypedArray final : public JSTypedArrayBase {
       Handle<> value);
 
  private:
+  // NOTE: If any fields are ever added beyond the base class, then the
+  // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
+
 #ifdef HERMESVM_SERIALIZE
   explicit JSTypedArray(Deserializer &d);
 
