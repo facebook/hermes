@@ -23,6 +23,7 @@ template <CellKind C>
 void JSMapImpl<C>::MapOrSetBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSMapImpl<C>>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSMapImpl<C> *>(cell);
   mb.addField("storage", &self->storage_);
@@ -40,7 +41,8 @@ void SetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 template <CellKind C>
 void JSMapImpl<C>::serializeMapOrSetImpl(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSMapImpl<C>>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<JSMapImpl<C>>());
   s.writeRelocation(self->storage_.get(s.getRuntime()));
 }
 
@@ -90,13 +92,13 @@ template <CellKind C>
 CallResult<HermesValue> JSMapImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(cellSize<JSMapImpl>());
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage(new (mem) JSMapImpl(
-          runtime,
+  JSObjectAlloc<JSMapImpl> mem{runtime};
+  return mem.initToHermesValue(new (mem) JSMapImpl(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSMapImpl>() + ANONYMOUS_PROPERTY_SLOTS)));
 }
 
 template class JSMapImpl<CellKind::SetKind>;
@@ -109,6 +111,7 @@ template <CellKind C>
 void JSMapIteratorImpl<C>::MapOrSetIteratorBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSMapIteratorImpl<C>>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSMapIteratorImpl<C> *>(cell);
   mb.addField("data", &self->data_);
@@ -129,7 +132,8 @@ void SetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 template <CellKind C>
 void serializeMapOrSetIteratorImpl(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSMapIteratorImpl<C>>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<JSMapIteratorImpl<C>>());
   s.writeRelocation(self->data_.get(s.getRuntime()));
   s.writeRelocation(self->itr_.get(s.getRuntime()));
   s.writeInt<uint8_t>((uint8_t)self->iterationKind_);
@@ -184,13 +188,13 @@ template <CellKind C>
 CallResult<HermesValue> JSMapIteratorImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
-  void *mem = runtime->alloc(cellSize<JSMapIteratorImpl<C>>());
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage(new (mem) JSMapIteratorImpl<C>(
-          runtime,
+  JSObjectAlloc<JSMapIteratorImpl<C>> mem{runtime};
+  return mem.initToHermesValue(new (mem) JSMapIteratorImpl<C>(
+      runtime,
+      *prototype,
+      runtime->getHiddenClassForPrototypeRaw(
           *prototype,
-          runtime->getHiddenClassForPrototypeRaw(
-              *prototype, ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSMapIteratorImpl>() + ANONYMOUS_PROPERTY_SLOTS)));
 }
 
 template class JSMapIteratorImpl<CellKind::MapIteratorKind>;

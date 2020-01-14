@@ -141,7 +141,10 @@ class Callable : public JSObject {
   /// Fast constructor used by deserializer.
   Callable(Deserializer &d, const VTable *vt);
 
-  friend void serializeCallableImpl(Serializer &s, const GCCell *cell);
+  friend void serializeCallableImpl(
+      Serializer &s,
+      const GCCell *cell,
+      unsigned overlapSlots);
 #endif
 
   static bool classof(const GCCell *cell) {
@@ -357,10 +360,6 @@ class BoundFunction final : public Callable {
   using Super = Callable;
   static CallableVTable vt;
 
-  // We need one more slot for '.length'
-  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
-      Super::NAMED_PROPERTY_SLOTS + 1;
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::BoundFunctionKind;
   }
@@ -466,16 +465,15 @@ class NativeFunction : public Callable {
       void *context,
       NativeFunctionPtr functionPtr);
 
-  static void serializeNativeFunctionImpl(Serializer &s, const GCCell *cell);
+  static void serializeNativeFunctionImpl(
+      Serializer &s,
+      const GCCell *cell,
+      unsigned overlapSlots);
   friend void NativeFunctionSerialize(Serializer &s, const GCCell *cell);
 #endif
 
   using Super = Callable;
   static CallableVTable vt;
-
-  // We need two more slots for '.name' and '.length'
-  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
-      Super::NAMED_PROPERTY_SLOTS + 2;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(
@@ -646,7 +644,9 @@ class NativeFunction : public Callable {
       Runtime *runtime,
       unsigned index) {
     return JSObject::getInternalProperty(
-        self, runtime, ANONYMOUS_PROPERTY_SLOTS + index);
+        self,
+        runtime,
+        numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS + index);
   }
 
   /// Set the value in an additional slot.
@@ -658,7 +658,10 @@ class NativeFunction : public Callable {
       unsigned index,
       HermesValue value) {
     return JSObject::setInternalProperty(
-        self, runtime, ANONYMOUS_PROPERTY_SLOTS + index, value);
+        self,
+        runtime,
+        numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS + index,
+        value);
   }
 
  protected:
@@ -739,7 +742,8 @@ class NativeConstructor final : public NativeFunction {
         runtime,
         *parentHandle,
         runtime->getHiddenClassForPrototypeRaw(
-            *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
+            *parentHandle,
+            numOverlapSlots<NativeConstructor>() + ANONYMOUS_PROPERTY_SLOTS),
         context,
         functionPtr,
         creator,
@@ -764,7 +768,8 @@ class NativeConstructor final : public NativeFunction {
         runtime,
         *parentHandle,
         runtime->getHiddenClassForPrototypeRaw(
-            *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
+            *parentHandle,
+            numOverlapSlots<NativeConstructor>() + ANONYMOUS_PROPERTY_SLOTS),
         parentEnvHandle,
         context,
         functionPtr,
@@ -861,7 +866,10 @@ class JSFunction : public Callable {
 #ifdef HERMESVM_SERIALIZE
   JSFunction(Deserializer &d, const VTable *vt);
 
-  friend void serializeFunctionImpl(Serializer &s, const GCCell *cell);
+  friend void serializeFunctionImpl(
+      Serializer &s,
+      const GCCell *cell,
+      unsigned overlapSlots);
   friend void FunctionDeserialize(Deserializer &d, CellKind kind);
 #endif
 
@@ -899,10 +907,6 @@ class JSFunction : public Callable {
 
  public:
   static CallableVTable vt;
-
-  // We need two more slot for '.length' and '.prototype'
-  static const PropStorage::size_type NAMED_PROPERTY_SLOTS =
-      Super::NAMED_PROPERTY_SLOTS + 2;
 
   static bool classof(const GCCell *cell) {
     return kindInRange(

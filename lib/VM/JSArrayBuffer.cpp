@@ -43,6 +43,7 @@ ObjectVTable JSArrayBuffer::vt{
 };
 
 void ArrayBufferBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSArrayBuffer>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -71,7 +72,8 @@ JSArrayBuffer::JSArrayBuffer(Deserializer &d)
 
 void ArrayBufferSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSArrayBuffer>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<JSArrayBuffer>());
   s.writeInt<JSArrayBuffer::size_type>(self->size_);
   s.writeInt<uint8_t>((uint8_t)self->attached_);
   // Only serialize data_ when attached_.
@@ -96,15 +98,13 @@ void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
 CallResult<HermesValue> JSArrayBuffer::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSArrayBuffer>());
-  auto *self = new (mem) JSArrayBuffer(
+  JSObjectAlloc<JSArrayBuffer, HasFinalizer::Yes> mem{runtime};
+  return mem.initToHermesValue(new (mem) JSArrayBuffer(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle, ANONYMOUS_PROPERTY_SLOTS));
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage(self));
+          *parentHandle,
+          numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS)));
 }
 
 CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(

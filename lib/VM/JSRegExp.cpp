@@ -50,6 +50,7 @@ ObjectVTable JSRegExp::vt{
 };
 
 void RegExpBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSRegExp>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -66,7 +67,7 @@ JSRegExp::JSRegExp(Deserializer &d) : JSObject(d, &vt.base) {
 
 void RegExpSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSRegExp>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSRegExp>());
   s.writeInt<uint32_t>(self->bytecodeSize_);
   s.writeData(self->bytecode_, self->bytecodeSize_);
   // bytecode_ is tracked by IDTracker for heapsnapshot. We should do
@@ -90,24 +91,20 @@ void RegExpDeserialize(Deserializer &d, CellKind kind) {
 CallResult<HermesValue> JSRegExp::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSRegExp>());
-  auto selfHandle =
-      runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSRegExp(
-          runtime,
+  JSObjectAlloc<JSRegExp, HasFinalizer::Yes> mem{runtime};
+  auto selfHandle = mem.initToHandle(new (mem) JSRegExp(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSRegExp>() + ANONYMOUS_PROPERTY_SLOTS)));
 
   JSObject::setInternalProperty(
       *selfHandle,
       runtime,
-      pattern,
+      patternPropIndex(),
       HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::emptyString)));
-  static_assert(
-      pattern == 0 && ANONYMOUS_PROPERTY_SLOTS == 1,
-      "internal property 'pattern' must be first");
 
   return selfHandle.getHermesValue();
 }
@@ -132,10 +129,7 @@ ExecutionStatus JSRegExp::initialize(
   selfHandle->flagBits_ = *fbits;
 
   JSObject::setInternalProperty(
-      selfHandle.get(),
-      runtime,
-      RegExpSlotIndexes::pattern,
-      pattern.getHermesValue());
+      selfHandle.get(), runtime, patternPropIndex(), pattern.getHermesValue());
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
@@ -244,7 +238,7 @@ PseudoHandle<StringPrimitive> JSRegExp::getPattern(
     JSRegExp *self,
     PointerBase *base) {
   return createPseudoHandle(
-      JSObject::getInternalProperty(self, base, RegExpSlotIndexes::pattern)
+      JSObject::getInternalProperty(self, base, patternPropIndex())
           .getString());
 }
 

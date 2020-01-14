@@ -68,6 +68,7 @@ void EnvironmentDeserialize(Deserializer &d, CellKind kind) {
 // class Callable
 
 void CallableBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<Callable>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const Callable *>(cell);
   mb.addField("environment", &self->environment_);
@@ -79,8 +80,11 @@ Callable::Callable(Deserializer &d, const VTable *vt) : JSObject(d, vt) {
   d.readRelocation(&environment_, RelocationKind::GCPointer);
 }
 
-void serializeCallableImpl(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell);
+void serializeCallableImpl(
+    Serializer &s,
+    const GCCell *cell,
+    unsigned overlapSlots) {
+  JSObject::serializeObjectImpl(s, cell, overlapSlots);
   auto *self = vmcast<const Callable>(cell);
   s.writeRelocation(self->environment_.get(s.getRuntime()));
 }
@@ -502,6 +506,7 @@ CallableVTable BoundFunction::vt{
     BoundFunction::_callImpl};
 
 void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<BoundFunction>());
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const BoundFunction *>(cell);
   mb.addField("target", &self->target_);
@@ -521,7 +526,7 @@ BoundFunction::BoundFunction(Deserializer &d) : Callable(d, &vt.base.base) {
 
 void BoundFunctionSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<BoundFunction>(cell);
-  serializeCallableImpl(s, cell);
+  serializeCallableImpl(s, cell, JSObject::numOverlapSlots<BoundFunction>());
   s.writeRelocation(self->target_.get(s.getRuntime()));
   bool hasArray = (bool)self->argStorage_;
   s.writeInt<uint8_t>(hasArray);
@@ -555,12 +560,13 @@ CallResult<HermesValue> BoundFunction::create(
   }
   auto argStorageHandle = runtime->makeHandle<ArrayStorage>(*arrRes);
 
-  void *mem = runtime->alloc(cellSize<BoundFunction>());
-  auto selfHandle = runtime->makeHandle(new (mem) BoundFunction(
+  JSObjectAlloc<BoundFunction> mem{runtime};
+  auto selfHandle = mem.initToHandle(new (mem) BoundFunction(
       runtime,
       runtime->functionPrototypeRawPtr,
       runtime->getHiddenClassForPrototypeRaw(
-          runtime->functionPrototypeRawPtr, ANONYMOUS_PROPERTY_SLOTS),
+          runtime->functionPrototypeRawPtr,
+          numOverlapSlots<BoundFunction>() + ANONYMOUS_PROPERTY_SLOTS),
       target,
       argStorageHandle));
 
@@ -906,6 +912,7 @@ CallableVTable NativeFunction::vt{
     NativeFunction::_callImpl};
 
 void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeFunction>());
   CallableBuildMeta(cell, mb);
 }
 
@@ -919,8 +926,9 @@ NativeFunction::NativeFunction(
 
 void NativeFunction::serializeNativeFunctionImpl(
     Serializer &s,
-    const GCCell *cell) {
-  serializeCallableImpl(s, cell);
+    const GCCell *cell,
+    unsigned overlapSlots) {
+  serializeCallableImpl(s, cell, overlapSlots);
 }
 
 void NativeFunctionSerialize(Serializer &s, const GCCell *cell) {
@@ -939,7 +947,8 @@ void NativeFunctionSerialize(Serializer &s, const GCCell *cell) {
       "functionPtr not in relocation map");
   s.writeRelocation((const void *)self->functionPtr_);
 
-  NativeFunction::serializeNativeFunctionImpl(s, cell);
+  NativeFunction::serializeNativeFunctionImpl(
+      s, cell, JSObject::numOverlapSlots<NativeFunction>());
   s.endObject(cell);
 }
 
@@ -972,13 +981,15 @@ Handle<NativeFunction> NativeFunction::create(
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
     unsigned additionalSlotCount) {
-  void *mem = runtime->alloc(cellSize<NativeFunction>());
-  auto selfHandle = runtime->makeHandle(new (mem) NativeFunction(
+  JSObjectAlloc<NativeFunction> mem{runtime};
+  auto selfHandle = mem.initToHandle(new (mem) NativeFunction(
       runtime,
       &vt.base.base,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle, ANONYMOUS_PROPERTY_SLOTS + additionalSlotCount),
+          *parentHandle,
+          numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS +
+              additionalSlotCount),
       context,
       functionPtr));
 
@@ -1007,13 +1018,15 @@ Handle<NativeFunction> NativeFunction::create(
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
     unsigned additionalSlotCount) {
-  void *mem = runtime->alloc(cellSize<NativeFunction>());
-  auto selfHandle = runtime->makeHandle(new (mem) NativeFunction(
+  JSObjectAlloc<NativeFunction> mem{runtime};
+  auto selfHandle = mem.initToHandle(new (mem) NativeFunction(
       runtime,
       &vt.base.base,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle, ANONYMOUS_PROPERTY_SLOTS + additionalSlotCount),
+          *parentHandle,
+          numOverlapSlots<NativeFunction>() + ANONYMOUS_PROPERTY_SLOTS +
+              additionalSlotCount),
       parentEnvHandle,
       context,
       functionPtr));
@@ -1079,6 +1092,7 @@ const CallableVTable NativeConstructor::vt{
     NativeConstructor::_callImpl};
 
 void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeConstructor>());
   NativeFunctionBuildMeta(cell, mb);
 }
 
@@ -1113,7 +1127,8 @@ void NativeConstructorSerialize(Serializer &s, const GCCell *cell) {
       s.objectInTable((void *)self->creator_) &&
       "creator funtion not in relocation table");
   s.writeRelocation((void *)self->creator_);
-  NativeFunction::serializeNativeFunctionImpl(s, cell);
+  NativeFunction::serializeNativeFunctionImpl(
+      s, cell, JSObject::numOverlapSlots<NativeConstructor>());
   s.endObject(cell);
 }
 
@@ -1191,15 +1206,19 @@ CallableVTable JSFunction::vt{
     JSFunction::_callImpl};
 
 void FunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSFunction>());
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const JSFunction *>(cell);
   mb.addField("domain", &self->domain_);
 }
 
 #ifdef HERMESVM_SERIALIZE
-void serializeFunctionImpl(Serializer &s, const GCCell *cell) {
+void serializeFunctionImpl(
+    Serializer &s,
+    const GCCell *cell,
+    unsigned overlapSlots) {
   auto *self = vmcast<const JSFunction>(cell);
-  serializeCallableImpl(s, cell);
+  serializeCallableImpl(s, cell, overlapSlots);
   s.writeRelocation(self->codeBlock_);
   s.writeRelocation(self->domain_.get(s.getRuntime()));
 }
@@ -1210,7 +1229,7 @@ JSFunction::JSFunction(Deserializer &d, const VTable *vt) : Callable(d, vt) {
 }
 
 void FunctionSerialize(Serializer &s, const GCCell *cell) {
-  serializeFunctionImpl(s, cell);
+  serializeFunctionImpl(s, cell, JSObject::numOverlapSlots<JSFunction>());
   s.endObject(cell);
 }
 
@@ -1229,18 +1248,18 @@ CallResult<HermesValue> JSFunction::create(
     Handle<JSObject> parentHandle,
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
-  void *mem =
-      runtime->alloc</*fixedSize*/ true, kHasFinalizer>(cellSize<JSFunction>());
-  auto *self = new (mem) JSFunction(
+  JSObjectAlloc<JSFunction, kHasFinalizer> mem{runtime};
+  auto self = mem.initToPseudoHandle(new (mem) JSFunction(
       runtime,
       *domain,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle,
+          numOverlapSlots<JSFunction>() + ANONYMOUS_PROPERTY_SLOTS),
       envHandle,
-      codeBlock);
+      codeBlock));
   self->flags_.lazyObject = 1;
-  return HermesValue::encodeObjectValue(self);
+  return self.getHermesValue();
 }
 
 void JSFunction::addLocationToSnapshot(
@@ -1313,6 +1332,7 @@ CallableVTable JSGeneratorFunction::vt{
     JSGeneratorFunction::_callImpl};
 
 void GeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGeneratorFunction>());
   FunctionBuildMeta(cell, mb);
 }
 
@@ -1322,7 +1342,8 @@ JSGeneratorFunction::JSGeneratorFunction(Deserializer &d)
 
 void GeneratorFunctionSerialize(Serializer &s, const GCCell *cell) {
   // No additional fields compared to JSFunction.
-  serializeFunctionImpl(s, cell);
+  serializeFunctionImpl(
+      s, cell, JSObject::numOverlapSlots<JSGeneratorFunction>());
   s.endObject(cell);
 }
 
@@ -1342,18 +1363,18 @@ CallResult<HermesValue> JSGeneratorFunction::create(
     Handle<JSObject> parentHandle,
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
-  void *mem =
-      runtime->alloc</*fixedSize*/ true, kHasFinalizer>(cellSize<JSFunction>());
-  auto *self = new (mem) JSGeneratorFunction(
+  JSObjectAlloc<JSGeneratorFunction, kHasFinalizer> mem{runtime};
+  auto self = mem.initToPseudoHandle(new (mem) JSGeneratorFunction(
       runtime,
       *domain,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle,
+          numOverlapSlots<JSGeneratorFunction>() + ANONYMOUS_PROPERTY_SLOTS),
       envHandle,
-      codeBlock);
+      codeBlock));
   self->flags_.lazyObject = 1;
-  return HermesValue::encodeObjectValue(self);
+  return self.getHermesValue();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1390,6 +1411,8 @@ CallableVTable GeneratorInnerFunction::vt{
 void GeneratorInnerFunctionBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(
+      JSObject::numOverlapSlots<GeneratorInnerFunction>());
   FunctionBuildMeta(cell, mb);
   const auto *self = static_cast<const GeneratorInnerFunction *>(cell);
   mb.addField("savedContext", &self->savedContext_);
@@ -1414,7 +1437,8 @@ GeneratorInnerFunction::GeneratorInnerFunction(Deserializer &d)
 
 void GeneratorInnerFunctionSerialize(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const GeneratorInnerFunction>(cell);
-  serializeFunctionImpl(s, cell);
+  serializeFunctionImpl(
+      s, cell, JSObject::numOverlapSlots<GeneratorInnerFunction>());
   s.writeInt<uint8_t>((uint8_t)self->state_);
   s.writeInt<uint32_t>(self->argCount_);
   bool hasArray = (bool)self->savedContext_;
@@ -1446,13 +1470,14 @@ CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
     Handle<Environment> envHandle,
     CodeBlock *codeBlock,
     NativeArgs args) {
-  void *mem = runtime->alloc(cellSize<GeneratorInnerFunction>());
-  auto self = runtime->makeHandle(new (mem) GeneratorInnerFunction(
+  JSObjectAlloc<GeneratorInnerFunction> mem{runtime};
+  auto self = mem.initToHandle(new (mem) GeneratorInnerFunction(
       runtime,
       *domain,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle,
+          numOverlapSlots<GeneratorInnerFunction>() + ANONYMOUS_PROPERTY_SLOTS),
       envHandle,
       codeBlock,
       args.getArgCount()));

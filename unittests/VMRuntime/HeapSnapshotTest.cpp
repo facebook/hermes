@@ -689,7 +689,7 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
                 "foo",
                 funcID,
                 func->getAllocatedSize(),
-                9};
+                6};
   EXPECT_EQ(node, expected);
   // Edges aren't tested in this test.
 

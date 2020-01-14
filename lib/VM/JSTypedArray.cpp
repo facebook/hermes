@@ -34,6 +34,7 @@ JSTypedArrayBase::JSTypedArrayBase(
 }
 
 void TypedArrayBaseBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSTypedArrayBase>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSTypedArrayBase *>(cell);
   mb.addField("buffer", &self->buffer_);
@@ -57,7 +58,8 @@ JSTypedArrayBase::JSTypedArrayBase(Deserializer &d, const VTable *vt)
 
 void serializeTypedArrayBase(Serializer &s, const GCCell *cell) {
   auto *self = vmcast<const JSTypedArrayBase>(cell);
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(
+      s, cell, JSObject::numOverlapSlots<JSTypedArrayBase>());
   s.writeRelocation(self->buffer_.get(s.getRuntime()));
   s.writeInt<JSTypedArrayBase::size_type>(self->length_);
   s.writeInt<uint8_t>(self->byteWidth_);
@@ -381,13 +383,18 @@ template <typename T, CellKind C>
 CallResult<HermesValue> JSTypedArray<T, C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(cellSize<JSTypedArray<T, C>>());
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage(new (mem) JSTypedArray<T, C>(
-          runtime,
+  JSObjectAlloc<JSTypedArray<T, C>> mem{runtime};
+  return mem.initToHermesValue(new (mem) JSTypedArray<T, C>(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle, ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSTypedArray>() + ANONYMOUS_PROPERTY_SLOTS)));
+  // NOTE: If any fields are ever added beyond the base class, then the
+  // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
+  static_assert(
+      sizeof(JSTypedArray<T, C>) == sizeof(JSTypedArrayBase),
+      "must update BuildMeta");
 }
 
 /// @name Specializations for specific types

@@ -76,6 +76,7 @@ const ObjectVTable JSProxy::vt{
 };
 
 void ProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSProxy>());
   ObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSProxy *>(cell);
   mb.addField("@target", &self->slots_.target);
@@ -89,7 +90,7 @@ JSProxy::JSProxy(Deserializer &d) : JSObject(d, &vt.base) {
 }
 
 void ProxySerialize(Serializer &s, const GCCell *cell) {
-  JSObject::serializeObjectImpl(s, cell);
+  JSObject::serializeObjectImpl(s, cell, JSObject::numOverlapSlots<JSProxy>());
   auto *self = vmcast<const JSProxy>(cell);
   s.writeRelocation(self->slots_.target.get(s.getRuntime()));
   s.writeRelocation(self->slots_.handler.get(s.getRuntime()));
@@ -105,16 +106,17 @@ void ProxyDeserialize(Deserializer &d, CellKind kind) {
 #endif
 
 PseudoHandle<JSProxy> JSProxy::create(Runtime *runtime) {
-  void *mem = runtime->alloc(cellSize<JSProxy>());
-  JSProxy *proxy = JSObject::allocateSmallPropStorage(new (mem) JSProxy(
+  JSObjectAlloc<JSProxy> mem{runtime};
+  JSProxy *proxy = new (mem) JSProxy(
       runtime,
       runtime->objectPrototypeRawPtr,
       runtime->getHiddenClassForPrototypeRaw(
-          runtime->objectPrototypeRawPtr, ANONYMOUS_PROPERTY_SLOTS)));
+          runtime->objectPrototypeRawPtr,
+          JSObject::numOverlapSlots<JSProxy>() + ANONYMOUS_PROPERTY_SLOTS));
 
   proxy->flags_.proxyObject = true;
 
-  return createPseudoHandle(proxy);
+  return mem.initToPseudoHandle(proxy);
 }
 
 CallResult<HermesValue> JSProxy::create(

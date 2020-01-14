@@ -38,6 +38,8 @@ CallableVTable FinalizableNativeFunction::vt{
 void FinalizableNativeFunctionBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(
+      JSObject::numOverlapSlots<FinalizableNativeFunction>());
   NativeFunctionBuildMeta(cell, mb);
 }
 
@@ -62,13 +64,14 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
     unsigned paramCount) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime->functionPrototype);
 
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<FinalizableNativeFunction>());
-  auto selfHandle = runtime->makeHandle(new (mem) FinalizableNativeFunction(
+  JSObjectAlloc<FinalizableNativeFunction, HasFinalizer::Yes> mem{runtime};
+  auto selfHandle = mem.initToHandle(new (mem) FinalizableNativeFunction(
       runtime,
       parentHandle,
       createPseudoHandle(runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle, ANONYMOUS_PROPERTY_SLOTS)),
+          *parentHandle,
+          numOverlapSlots<FinalizableNativeFunction>() +
+              ANONYMOUS_PROPERTY_SLOTS)),
       context,
       functionPtr,
       finalizePtr));
@@ -107,6 +110,7 @@ ObjectVTable HostObject::vt{
 };
 
 void HostObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<HostObject>());
   ObjectBuildMeta(cell, mb);
 }
 
@@ -127,18 +131,18 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
     std::shared_ptr<HostObjectProxy> proxy) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime->objectPrototype);
 
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<HostObject>());
+  JSObjectAlloc<HostObject, HasFinalizer::Yes> mem{runtime};
   HostObject *hostObj = new (mem) HostObject(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
-          *parentHandle, ANONYMOUS_PROPERTY_SLOTS),
+          *parentHandle,
+          numOverlapSlots<HostObject>() + ANONYMOUS_PROPERTY_SLOTS),
       proxy);
 
   hostObj->flags_.hostObject = true;
 
-  return HermesValue::encodeObjectValue(hostObj);
+  return mem.initToHermesValue(hostObj);
 }
 
 void HostObject::_finalizeImpl(GCCell *cell, GC *) {
