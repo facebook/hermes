@@ -23,10 +23,10 @@ from common import (
 
 # It references the commit day so we can shallow clone
 # and still manage to checkout this specific revision.
-# NOTE: The revision date must be the day before the
-# actual commit date.
+# NOTE: The revision date must be before the actual
+# commit date.
 _LLVM_REV = "c179d7b006348005d2da228aed4c3c251590baa3"
-_LLVM_REV_DATE = "2018-10-08"
+_LLVM_REV_DATE = "2018-10-07"
 
 
 def parse_args():
