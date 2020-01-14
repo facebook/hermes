@@ -61,15 +61,15 @@ CallResult<PseudoHandle<JSGenerator>> JSGenerator::create(
     Runtime *runtime,
     Handle<GeneratorInnerFunction> innerFunction,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(cellSize<JSGenerator>());
-  auto *self = JSObject::allocateSmallPropStorage(new (mem) JSGenerator(
+  JSObjectAlloc<JSGenerator> mem{runtime};
+  auto self = new (mem) JSGenerator(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          numOverlapSlots<JSGenerator>() + ANONYMOUS_PROPERTY_SLOTS)));
+          numOverlapSlots<JSGenerator>() + ANONYMOUS_PROPERTY_SLOTS));
   self->innerFunction_.set(runtime, *innerFunction, &runtime->getHeap());
-  return createPseudoHandle(self);
+  return mem.initToPseudoHandle(self);
 }
 
 } // namespace vm

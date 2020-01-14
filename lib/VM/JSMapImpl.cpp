@@ -92,14 +92,13 @@ template <CellKind C>
 CallResult<HermesValue> JSMapImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(cellSize<JSMapImpl>());
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage(new (mem) JSMapImpl(
-          runtime,
+  JSObjectAlloc<JSMapImpl> mem{runtime};
+  return mem.initToHermesValue(new (mem) JSMapImpl(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSMapImpl>() + ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSMapImpl>() + ANONYMOUS_PROPERTY_SLOTS)));
 }
 
 template class JSMapImpl<CellKind::SetKind>;
@@ -189,15 +188,13 @@ template <CellKind C>
 CallResult<HermesValue> JSMapIteratorImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
-  void *mem = runtime->alloc(cellSize<JSMapIteratorImpl<C>>());
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage(new (mem) JSMapIteratorImpl<C>(
-          runtime,
+  JSObjectAlloc<JSMapIteratorImpl<C>> mem{runtime};
+  return mem.initToHermesValue(new (mem) JSMapIteratorImpl<C>(
+      runtime,
+      *prototype,
+      runtime->getHiddenClassForPrototypeRaw(
           *prototype,
-          runtime->getHiddenClassForPrototypeRaw(
-              *prototype,
-              numOverlapSlots<JSMapIteratorImpl>() +
-                  ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSMapIteratorImpl>() + ANONYMOUS_PROPERTY_SLOTS)));
 }
 
 template class JSMapIteratorImpl<CellKind::MapIteratorKind>;

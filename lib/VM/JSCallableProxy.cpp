@@ -67,19 +67,18 @@ void CallableProxyDeserialize(Deserializer &d, CellKind kind) {
 #endif
 
 PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime *runtime) {
-  void *mem = runtime->alloc(cellSize<JSCallableProxy>());
-  JSCallableProxy *cproxy =
-      JSObject::allocateSmallPropStorage(new (mem) JSCallableProxy(
-          runtime,
+  JSObjectAlloc<JSCallableProxy> mem{runtime};
+  JSCallableProxy *cproxy = new (mem) JSCallableProxy(
+      runtime,
+      runtime->objectPrototypeRawPtr,
+      runtime->getHiddenClassForPrototypeRaw(
           runtime->objectPrototypeRawPtr,
-          runtime->getHiddenClassForPrototypeRaw(
-              runtime->objectPrototypeRawPtr,
-              JSObject::numOverlapSlots<JSCallableProxy>() +
-                  ANONYMOUS_PROPERTY_SLOTS)));
+          JSObject::numOverlapSlots<JSCallableProxy>() +
+              ANONYMOUS_PROPERTY_SLOTS));
 
   cproxy->flags_.proxyObject = true;
 
-  return createPseudoHandle(cproxy);
+  return mem.initToPseudoHandle(cproxy);
 }
 
 CallResult<HermesValue> JSCallableProxy::create(

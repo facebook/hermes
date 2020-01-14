@@ -383,14 +383,13 @@ template <typename T, CellKind C>
 CallResult<HermesValue> JSTypedArray<T, C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(cellSize<JSTypedArray<T, C>>());
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage(new (mem) JSTypedArray<T, C>(
-          runtime,
+  JSObjectAlloc<JSTypedArray<T, C>> mem{runtime};
+  return mem.initToHermesValue(new (mem) JSTypedArray<T, C>(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSTypedArray>() + ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSTypedArray>() + ANONYMOUS_PROPERTY_SLOTS)));
   // NOTE: If any fields are ever added beyond the base class, then the
   // *BuildMeta functions must be updated to call addJSObjectOverlapSlots.
   static_assert(

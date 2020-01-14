@@ -199,16 +199,13 @@ CallResult<HermesValue> JSError::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle,
     bool catchable) {
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSError>());
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage(new (mem) JSError(
-          runtime,
-          *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSError>() + ANONYMOUS_PROPERTY_SLOTS),
-          catchable)));
+  JSObjectAlloc<JSError, HasFinalizer::Yes> mem{runtime};
+  return mem.initToHermesValue(new (mem) JSError(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
+          *parentHandle, numOverlapSlots<JSError>() + ANONYMOUS_PROPERTY_SLOTS),
+      catchable));
 }
 
 ExecutionStatus JSError::setupStack(

@@ -62,14 +62,13 @@ void DataViewDeserialize(Deserializer &d, CellKind kind) {
 CallResult<HermesValue> JSDataView::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
-  void *mem = runtime->alloc(cellSize<JSDataView>());
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage(new (mem) JSDataView(
-          runtime,
+  JSObjectAlloc<JSDataView> mem{runtime};
+  return mem.initToHermesValue(new (mem) JSDataView(
+      runtime,
+      *prototype,
+      runtime->getHiddenClassForPrototypeRaw(
           *prototype,
-          runtime->getHiddenClassForPrototypeRaw(
-              *prototype,
-              numOverlapSlots<JSDataView>() + ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSDataView>() + ANONYMOUS_PROPERTY_SLOTS)));
 }
 
 JSDataView::JSDataView(Runtime *runtime, JSObject *parent, HiddenClass *clazz)

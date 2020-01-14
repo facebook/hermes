@@ -59,14 +59,13 @@ CallResult<HermesValue> JSString::create(
     Runtime *runtime,
     Handle<StringPrimitive> value,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(cellSize<JSString>());
-  auto selfHandle =
-      runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSString(
-          runtime,
+  JSObjectAlloc<JSString> mem{runtime};
+  auto selfHandle = mem.initToHandle(new (mem) JSString(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSString>() + ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSString>() + ANONYMOUS_PROPERTY_SLOTS)));
 
   JSObject::setInternalProperty(
       *selfHandle,
@@ -242,15 +241,14 @@ CallResult<HermesValue> JSStringIterator::create(
     Handle<StringPrimitive> string) {
   auto proto = Handle<JSObject>::vmcast(&runtime->stringIteratorPrototype);
 
-  void *mem = runtime->alloc(cellSize<JSStringIterator>());
-  auto *self = JSObject::allocateSmallPropStorage(new (mem) JSStringIterator(
+  JSObjectAlloc<JSStringIterator> mem{runtime};
+  return mem.initToHermesValue(new (mem) JSStringIterator(
       runtime,
       *proto,
       runtime->getHiddenClassForPrototypeRaw(
           *proto,
           numOverlapSlots<JSStringIterator>() + ANONYMOUS_PROPERTY_SLOTS),
       *string));
-  return HermesValue::encodeObjectValue(self);
 }
 
 CallResult<HermesValue> JSStringIterator::nextElement(
@@ -353,14 +351,13 @@ CallResult<HermesValue> JSNumber::create(
     Runtime *runtime,
     double value,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(cellSize<JSNumber>());
-  auto selfHandle =
-      runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSNumber(
-          runtime,
+  JSObjectAlloc<JSNumber> mem{runtime};
+  auto selfHandle = mem.initToHandle(new (mem) JSNumber(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSNumber>() + ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSNumber>() + ANONYMOUS_PROPERTY_SLOTS)));
 
   JSObject::setInternalProperty(
       *selfHandle,
@@ -409,14 +406,13 @@ void BooleanObjectDeserialize(Deserializer &d, CellKind kind) {
 
 CallResult<HermesValue>
 JSBoolean::create(Runtime *runtime, bool value, Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(cellSize<JSBoolean>());
-  auto selfHandle = runtime->makeHandle(
-      JSObject::allocateSmallPropStorage(new (mem) JSBoolean(
-          runtime,
+  JSObjectAlloc<JSBoolean> mem{runtime};
+  auto selfHandle = mem.initToHandle(new (mem) JSBoolean(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSBoolean>() + ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSBoolean>() + ANONYMOUS_PROPERTY_SLOTS)));
 
   JSObject::setInternalProperty(
       *selfHandle,
@@ -465,14 +461,13 @@ CallResult<HermesValue> JSSymbol::create(
     Runtime *runtime,
     SymbolID value,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc(cellSize<JSSymbol>());
-  auto selfHandle =
-      runtime->makeHandle(JSObject::allocateSmallPropStorage(new (mem) JSSymbol(
-          runtime,
+  JSObjectAlloc<JSSymbol> mem{runtime};
+  auto selfHandle = mem.initToHandle(new (mem) JSSymbol(
+      runtime,
+      *parentHandle,
+      runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          runtime->getHiddenClassForPrototypeRaw(
-              *parentHandle,
-              numOverlapSlots<JSSymbol>() + ANONYMOUS_PROPERTY_SLOTS))));
+          numOverlapSlots<JSSymbol>() + ANONYMOUS_PROPERTY_SLOTS)));
 
   JSObject::setInternalProperty(
       *selfHandle,

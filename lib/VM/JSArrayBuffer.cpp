@@ -98,16 +98,13 @@ void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
 CallResult<HermesValue> JSArrayBuffer::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
-  void *mem = runtime->alloc</*fixedSize*/ true, HasFinalizer::Yes>(
-      cellSize<JSArrayBuffer>());
-  auto *self = new (mem) JSArrayBuffer(
+  JSObjectAlloc<JSArrayBuffer, HasFinalizer::Yes> mem{runtime};
+  return mem.initToHermesValue(new (mem) JSArrayBuffer(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
           *parentHandle,
-          numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS));
-  return HermesValue::encodeObjectValue(
-      JSObject::allocateSmallPropStorage(self));
+          numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS)));
 }
 
 CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(

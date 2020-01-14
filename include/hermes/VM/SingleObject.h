@@ -32,14 +32,13 @@ class SingleObject final : public JSObject {
   static CallResult<HermesValue> create(
       Runtime *runtime,
       Handle<JSObject> parentHandle) {
-    void *mem = runtime->alloc(cellSize<SingleObject>());
-    return HermesValue::encodeObjectValue(
-        JSObject::allocateSmallPropStorage(new (mem) SingleObject(
-            runtime,
+    JSObjectAlloc<SingleObject> mem{runtime};
+    return mem.initToHermesValue(new (mem) SingleObject(
+        runtime,
+        *parentHandle,
+        runtime->getHiddenClassForPrototypeRaw(
             *parentHandle,
-            runtime->getHiddenClassForPrototypeRaw(
-                *parentHandle,
-                numOverlapSlots<SingleObject>() + ANONYMOUS_PROPERTY_SLOTS))));
+            numOverlapSlots<SingleObject>() + ANONYMOUS_PROPERTY_SLOTS)));
   }
 
  protected:

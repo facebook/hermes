@@ -327,7 +327,7 @@ class JSObject : public GCCell {
         parent_(runtime, parent, &runtime->getHeap(), needsBarriers),
         clazz_(runtime, clazz, &runtime->getHeap(), needsBarriers),
         propStorage_(runtime, nullptr, &runtime->getHeap(), needsBarriers) {
-    // Direct property slots are initialized by allocateSmallPropStorage.
+    // Direct property slots are initialized by initDirectPropStorage.
   }
 
   /// Until we apply the NeedsBarriers pattern to all subtypes of JSObject, we
@@ -339,7 +339,7 @@ class JSObject : public GCCell {
       JSObject *parent,
       HiddenClass *clazz)
       : JSObject(runtime, vtp, parent, clazz, GCPointerBase::NoBarriers()) {
-    // Direct property slots are initialized by allocateSmallPropStorage.
+    // Direct property slots are initialized by initDirectPropStorage.
   }
 
  public:
@@ -422,7 +422,7 @@ class JSObject : public GCCell {
   /// direct property slots.
   /// \return a copy of self for convenience.
   template <typename T>
-  static inline T *allocateSmallPropStorage(T *self);
+  static inline T *initDirectPropStorage(T *self);
 
   /// ES9 9.1 O.[[Extensible]] internal slot
   bool isExtensible() const {
@@ -1464,6 +1464,71 @@ class PropertyAccessor final : public GCCell {
   create(Runtime *runtime, Handle<Callable> getter, Handle<Callable> setter);
 };
 
+/// Allocation utility for JSObject and its subclasses. Ensures direct property
+/// slots are initialized and that no allocation happens during construction.
+/// Should be used in a placement new expression, whose result is passed through
+/// one of the init* methods:
+///
+///   JSObjectAlloc<MyObjectType, HasFinalizer::Yes> mem{runtime};
+///   return mem.initToHandle(new (mem) MyObjectType(foo(), bar(), baz()));
+///
+template <typename JSObjectType, HasFinalizer hasFinalizer = HasFinalizer::No>
+class JSObjectAlloc {
+ public:
+  /// Allocate memory that can hold an instance of JSObjectType.
+  JSObjectAlloc(Runtime *runtime)
+      : runtime_(runtime),
+        mem_(runtime->alloc</*fixedSize*/ true, hasFinalizer>(
+            cellSize<JSObjectType>())),
+        noAlloc_(runtime) {}
+
+  /// Provides access to the allocated memory for a "placement new" expression.
+  operator void *() {
+    return mem_;
+  }
+
+  /// Initialize direct properties of obj and return it in a handle.
+  Handle<JSObjectType> initToHandle(JSObjectType *obj) {
+    noAlloc_.release();
+    return runtime_->makeHandle(init(obj));
+  }
+
+  /// Initialize direct properties of obj and return it in a pseudo-handle.
+  PseudoHandle<JSObjectType> initToPseudoHandle(JSObjectType *obj) {
+    noAlloc_.release();
+    return createPseudoHandle(init(obj));
+  }
+
+  /// Initialize direct properties of obj and return it as a raw HermesValue.
+  HermesValue initToHermesValue(JSObjectType *obj) {
+    return HermesValue::encodeObjectValue(init(obj));
+  }
+
+  ~JSObjectAlloc() {
+    assert(!mem_ && "Must call init* at least once");
+  }
+
+ private:
+  JSObjectType *init(JSObjectType *obj) {
+    assert(obj == mem_ && "Must call init* no more than once");
+
+    // Check that the object looks well-formed.
+    assert(JSObjectType::classof(obj) && "Mismatched CellKind");
+
+    mem_ = nullptr;
+    return JSObjectType::initDirectPropStorage(obj);
+  }
+
+  /// Runtime used for heap and handle allocation.
+  Runtime *runtime_;
+
+  /// Allocated memory for the object.
+  void *mem_;
+
+  /// Asserts no additional allocation happens until the object is constructed.
+  NoAllocScope noAlloc_;
+};
+
 //===----------------------------------------------------------------------===//
 // Object inline methods.
 
@@ -1525,7 +1590,7 @@ inline CallResult<PseudoHandle<JSObject>> JSObject::allocatePropStorage(
 }
 
 template <typename T>
-inline T *JSObject::allocateSmallPropStorage(T *self) {
+inline T *JSObject::initDirectPropStorage(T *self) {
   constexpr auto count = numOverlapSlots<T>() + T::ANONYMOUS_PROPERTY_SLOTS +
       T::NAMED_PROPERTY_SLOTS;
   static_assert(
