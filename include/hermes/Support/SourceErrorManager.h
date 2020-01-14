@@ -475,6 +475,6 @@ class SourceErrorManager {
   void doPrintMessage(DiagKind dk, SMLoc loc, SMRange sm, const Twine &msg);
 };
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_SUPPORT_SOURCEERRORMANAGER_H

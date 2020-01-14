@@ -27,7 +27,7 @@ constexpr JenkinsHash jenkinsMix1(JenkinsHash hash) {
 constexpr JenkinsHash jenkinsMix2(JenkinsHash hash) {
   return hash ^ (hash >> 6);
 }
-}; // namespace jenkins_details
+} // namespace jenkins_details
 
 /// Incorporates the character \p c to the given \p hash, using the classic
 /// Jenkins algorithm.

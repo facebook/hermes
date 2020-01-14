@@ -50,7 +50,7 @@ struct Pack {
   }
 };
 
-}; // namespace parser
-}; // namespace hermes
+} // namespace parser
+} // namespace hermes
 
 #endif // HERMES_PARSER_PACK_H

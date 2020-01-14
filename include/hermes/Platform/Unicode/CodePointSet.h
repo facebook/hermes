@@ -126,6 +126,6 @@ class CodePointSet {
   llvm::SmallVector<CodePointRange, 4> ranges_;
 };
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_PLATFORMUNICODE_CODEPOINTSET_H

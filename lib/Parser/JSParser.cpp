@@ -62,5 +62,5 @@ llvm::Optional<ESTree::NodePtr> JSParser::parseLazyFunction(
   return impl_->parseLazyFunction(kind, start);
 }
 
-}; // namespace parser
-}; // namespace hermes
+} // namespace parser
+} // namespace hermes

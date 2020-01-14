@@ -169,4 +169,4 @@ bool isAllASCII(const uint8_t *start, const uint8_t *end) {
   return true;
 }
 
-}; // namespace hermes
+} // namespace hermes

@@ -202,6 +202,6 @@ class JSONEmitter {
   uint32_t indent_{0};
 };
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_SUPPORT_JSONEMITTER_H

@@ -117,7 +117,7 @@ template <typename T, typename U>
 bool operator!=(const OptValue<T> &a, const OptValue<U> &b) {
   return !(a == b);
 }
-}; // namespace hermes
+} // namespace hermes
 
 namespace llvm {
 template <typename T>

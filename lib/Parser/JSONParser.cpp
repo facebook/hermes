@@ -312,5 +312,5 @@ llvm::Optional<JSONValue *> JSONParser::parseObject() {
   return factory_.newObject(pairs.begin(), pairs.end(), true);
 }
 
-}; // namespace parser
-}; // namespace hermes
+} // namespace parser
+} // namespace hermes

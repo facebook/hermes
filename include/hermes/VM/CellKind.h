@@ -43,7 +43,7 @@ cellKindsContiguousAscending(CellKind v1, CellKind v2, T... rest) {
 
 const char *cellKindStr(CellKind kind);
 
-}; // namespace vm
+} // namespace vm
 } // namespace hermes
 
 #endif // HERMES_VM_CELLKIND_H

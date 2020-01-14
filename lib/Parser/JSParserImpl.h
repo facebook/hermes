@@ -772,8 +772,8 @@ class JSParserImpl {
   };
 };
 
-}; // namespace detail
-}; // namespace parser
-}; // namespace hermes
+} // namespace detail
+} // namespace parser
+} // namespace hermes
 
 #endif // HERMES_PARSER_JSPARSERIMPL_H

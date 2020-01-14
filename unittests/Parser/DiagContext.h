@@ -55,7 +55,7 @@ class DiagContext {
   }
 };
 
-}; // namespace parser
-}; // namespace hermes
+} // namespace parser
+} // namespace hermes
 
 #endif // HERMES_TEST_PARSER_DIAGCONTEXT_H

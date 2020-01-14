@@ -234,6 +234,6 @@ bool convertUTF16ToUTF8WithReplacements(
     llvm::ArrayRef<char16_t> input,
     size_t maxCharacters = 0);
 
-}; // namespace hermes
+} // namespace hermes
 
 #endif // HERMES_SUPPORT_UTF8_H
