@@ -998,9 +998,21 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
 
     auto *funcDebugOffsets = bcProvider_->getDebugOffsets(funcId);
     if (functionHeader.flags().hasDebugInfo && funcDebugOffsets != nullptr) {
-      OS << "Offset in debug table: src "
-         << llvm::format_hex(funcDebugOffsets->sourceLocations, 2) << ", vars "
-         << llvm::format_hex(funcDebugOffsets->lexicalData, 2) << '\n';
+      OS << "Offset in debug table: src ";
+      uint32_t debugSourceOffset = funcDebugOffsets->sourceLocations;
+      if (debugSourceOffset == DebugOffsets::NO_OFFSET) {
+        OS << "none";
+      } else {
+        OS << llvm::format_hex(debugSourceOffset, 2);
+      }
+      OS << ", vars ";
+      uint32_t debugLexicalOffset = funcDebugOffsets->lexicalData;
+      if (debugLexicalOffset == DebugOffsets::NO_OFFSET) {
+        OS << "none";
+      } else {
+        OS << llvm::format_hex(debugLexicalOffset, 2);
+      }
+      OS << '\n';
     }
     disassembleFunction(funcId, OS);
   }

@@ -345,9 +345,10 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
   // so require that statement = 0 for the start debug value.
   assert(start.statement == 0 && "function must start at statement 0");
 
+  if (offsets.empty()) {
+    return DebugOffsets::NO_OFFSET;
+  }
   const uint32_t startOffset = sourcesData_.size();
-  if (offsets.empty())
-    return startOffset;
 
   if (!files_.size() || files_.back().filenameId != start.filenameId) {
     files_.push_back(DebugFileRegion{
@@ -393,7 +394,7 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
 DebugInfoGenerator::DebugInfoGenerator(UniquingFilenameTable &&filenameTable)
     : filenameStrings_(
           UniquingFilenameTable::toStorage(std::move(filenameTable))) {
-  // Initialize the empty lexical data.
+  // Initialize the empty data entry in debug lexical table.
   assert(
       lexicalData_.size() == kEmptyLexicalDataOffset &&
       "Lexical data should initially be kEmptyLexicalDataOffset");

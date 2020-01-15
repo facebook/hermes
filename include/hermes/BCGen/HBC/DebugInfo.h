@@ -256,8 +256,15 @@ class DebugInfo {
 
 class DebugInfoGenerator {
  private:
-  /// A lexical data offset indicating empty lexical data (distinct from missing
-  /// lexical data).
+  /// An offset into Debug Lexical Table pointing to a special entry,
+  /// representing the most common value in the Debug Lexical Table
+  /// (vars count: 0, lexical parent: none). When compiled without -g,
+  /// this common value applies to all functions without local variables.
+  /// This optimization reduces hbc bundle size.
+  ///
+  /// When compiled with -g, the lexical parent is none for the global
+  /// function, but not any other functions. As a result, this optimization
+  /// does not provide value.
   static constexpr uint32_t kEmptyLexicalDataOffset = 0;
 
   bool validData{true};
