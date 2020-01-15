@@ -171,7 +171,7 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
           runtimeConfig.getGCConfig(),
           runtimeConfig.getCrashMgr(),
           provider),
-      jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 8, (1 << 20) * 32),
+      jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 16, (1 << 20) * 32),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
       hasES6Symbol_(runtimeConfig.getES6Symbol()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
