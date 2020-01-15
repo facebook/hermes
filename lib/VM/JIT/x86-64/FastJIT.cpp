@@ -473,6 +473,10 @@ Emitters FastJIT::compileBB(Emitters emit) {
       CASE(TryGetByIdLong);
       CASE(DelById);
       CASE(DelByIdLong);
+      CASE(Call1);
+      CASE(Call2);
+      CASE(Call3);
+      CASE(Call4);
       CASE(Call);
       CASE(CallLong);
       CASE(Construct);
@@ -836,6 +840,57 @@ Emitters FastJIT::callHelper(
   return emit;
 }
 
+inline Emitter FastJIT::movHermesRegToCalleeArg(
+    Emitter emit,
+    OperandReg32 hermesReg,
+    int32_t argIndex) {
+  const auto RegTemp = Reg::rcx;
+  emit = movHermesRegToNativeReg(emit, hermesReg, RegTemp);
+
+  // Load runtime->stackPointer_ into StackPointerReg.
+  // Since callee frame is not setup yet caller's stackPointer_ is
+  // used to represent callee frame pointer.
+  const auto StackPointerReg = Reg::rax;
+  emit.movRMToReg<S::Q>(
+      RegRuntime, Reg::NoIndex, RuntimeOffsets::stackPointer, StackPointerReg);
+
+  emit.movRegToRM<S::Q>(
+      RegTemp, StackPointerReg, Reg::NoIndex, hermesArgByteOffset(argIndex));
+  return emit;
+}
+
+Emitters FastJIT::compileCall1(Emitters emit, const Inst *ip) {
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall1.op3, /*argIndex*/ -1);
+  return callHelper(emit, ip, 1, false);
+}
+Emitters FastJIT::compileCall2(Emitters emit, const Inst *ip) {
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall2.op3, /*argIndex*/ -1);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall2.op4, /*argIndex*/ 0);
+  return callHelper(emit, ip, 2, false);
+}
+Emitters FastJIT::compileCall3(Emitters emit, const Inst *ip) {
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall3.op3, /*argIndex*/ -1);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall3.op4, /*argIndex*/ 0);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall3.op5, /*argIndex*/ 1);
+  return callHelper(emit, ip, 3, false);
+}
+Emitters FastJIT::compileCall4(Emitters emit, const Inst *ip) {
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall4.op3, /*argIndex*/ -1);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall4.op4, /*argIndex*/ 0);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall4.op5, /*argIndex*/ 1);
+  emit.fast =
+      movHermesRegToCalleeArg(emit.fast, ip->iCall4.op6, /*argIndex*/ 2);
+  return callHelper(emit, ip, 4, false);
+}
 Emitters FastJIT::compileCall(Emitters emit, const Inst *ip) {
   return callHelper(emit, ip, ip->iCall.op3, false);
 }

@@ -128,6 +128,14 @@ class FastJIT {
     return sizeof(HermesValue) * StackFrameLayout::localOffset(regIndex);
   }
 
+  /// \return the offset in bytes from Frame to access the specified
+  ///   Hermes argument by \p argIndex.
+  /// \param argIndex 0-based index into the arguments region in
+  /// StackFrameLayout.h. "this" argument has the index -1.
+  static inline int32_t hermesArgByteOffset(int32_t argIndex) {
+    return sizeof(HermesValue) * StackFrameLayout::argOffset(argIndex);
+  }
+
 #ifndef NDEBUG
   /// Add a descriptor for the last emitted section in the slow path, so it
   /// can be disassembled correctly.
@@ -207,6 +215,15 @@ class FastJIT {
   template <bool fp = false>
   Emitter
   movHermesRegToNativeReg(Emitter emit, OperandReg32 hermesReg, Reg nativeReg);
+
+  /// Used by CallN instruction to move the specified hermes register \p
+  /// hermesReg to callee's arguments slot in \p argIndex.
+  /// \param argIndex 0-based index into the arguments region in
+  /// StackFrameLayout.h. "this" argument has the index -1.
+  Emitter movHermesRegToCalleeArg(
+      Emitter emit,
+      OperandReg32 hermesReg,
+      int32_t argIndex);
 
   /// Move hermes reg \p src to hermes reg \p dst.
   Emitter
@@ -369,6 +386,11 @@ class FastJIT {
 
   Emitters compileDelById(Emitters emit, const Inst *ip);
   Emitters compileDelByIdLong(Emitters emit, const Inst *ip);
+
+  Emitters compileCall1(Emitters emit, const Inst *ip);
+  Emitters compileCall2(Emitters emit, const Inst *ip);
+  Emitters compileCall3(Emitters emit, const Inst *ip);
+  Emitters compileCall4(Emitters emit, const Inst *ip);
 
   Emitters compileCall(Emitters emit, const Inst *ip);
   Emitters compileCallLong(Emitters emit, const Inst *ip);
