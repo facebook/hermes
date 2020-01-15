@@ -178,13 +178,13 @@ Function *ESTreeIRGen::genES5Function(
             originalName,
             Function::DefinitionKind::ES5Function,
             ESTree::isStrict(functionNode->strictness),
-            body->getSourceRange(),
+            functionNode->getSourceRange(),
             /* insertBefore */ nullptr)
       : Builder.createFunction(
             originalName,
             Function::DefinitionKind::ES5Function,
             ESTree::isStrict(functionNode->strictness),
-            body->getSourceRange(),
+            functionNode->getSourceRange(),
             /* isGlobal */ false,
             /* insertBefore */ nullptr);
 

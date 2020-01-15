@@ -37,11 +37,11 @@ function foo(a,b) {
 
 //CHECK-LABEL: function foo(a, b)
 //CHECK-NEXT: frame = [a, b]
-//CHECK-NEXT: source location: [<stdin>:10:19 ... <stdin>:18:2)
+//CHECK-NEXT: source location: [<stdin>:10:1 ... <stdin>:18:2)
 //CHECK-NEXT: %BB0:
-//CHECK-NEXT: ; <stdin>:10:19
+//CHECK-NEXT: ; <stdin>:10:1
 //CHECK-NEXT:   %0 = StoreFrameInst %a, [a]
-//CHECK-NEXT: ; <stdin>:10:19
+//CHECK-NEXT: ; <stdin>:10:1
 //CHECK-NEXT:   %1 = StoreFrameInst %b, [b]
 //CHECK-NEXT: ; <stdin>:11:9
 //CHECK-NEXT:   %2 = LoadFrameInst [a]

@@ -49,8 +49,8 @@ x.forEach(function(i) {
 // CHECK-NEXT: Stepped to global: {{.*}}:43:9
 // CHECK-NEXT: Stepped to global: {{.*}}:44:1
 // CHECK-NEXT: Stepped to anonymous: {{.*}}:45:3
-// CHECK-NEXT: Stepped to anonymous: {{.*}}:44:23
+// CHECK-NEXT: Stepped to anonymous: {{.*}}:44:11
 // CHECK-NEXT: Stepped to anonymous: {{.*}}:45:3
-// CHECK-NEXT: Stepped to anonymous: {{.*}}:44:23
+// CHECK-NEXT: Stepped to anonymous: {{.*}}:44:11
 // CHECK-NEXT: Stepped to anonymous: {{.*}}:45:3
 // CHECK-NEXT: Continuing execution

@@ -643,7 +643,8 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
 
 using HeapSnapshotRuntimeTest = RuntimeTestFixture;
 
-TEST_F(HeapSnapshotRuntimeTest, SnapshotLazyCodeDoesNotAssert) {
+TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
+  // Similar test to the above, but for lazy-compiled source.
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
 
@@ -652,16 +653,41 @@ TEST_F(HeapSnapshotRuntimeTest, SnapshotLazyCodeDoesNotAssert) {
   flags.lazy = true;
 
   // Build a function that will be lazily compiled.
-  std::string source = "function myGlobal() { ";
+  std::string source = "    function myGlobal() { ";
   for (int i = 0; i < 100; i++)
     source += " Math.random(); ";
-  source += "};\n";
+  source += "};\nmyGlobal;";
 
   CallResult<HermesValue> res = runtime->run(source, "file:///fake.js", flags);
   ASSERT_FALSE(isException(res));
+  Handle<JSFunction> func = runtime->makeHandle(vmcast<JSFunction>(*res));
+  const auto funcID = runtime->getHeap().getObjectID(func.get());
 
-  // Make sure we can capture a snapshot without asserting.
-  TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
+  JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
+  ASSERT_NE(root, nullptr);
+
+  const JSONArray &nodes = *llvm::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &strings = *llvm::cast<JSONArray>(root->at("strings"));
+
+  // This test requires a location to be emitted.
+  auto node = FIND_NODE_FOR_ID(funcID, nodes, strings);
+  Node expected{HeapSnapshot::NodeType::Closure,
+                "myGlobal",
+                funcID,
+                func->getAllocatedSize(),
+                6};
+  EXPECT_EQ(node, expected);
+  // Edges aren't tested in this test.
+
+#ifdef HERMES_ENABLE_DEBUGGER
+  // The location isn't emitted in fully optimized builds.
+  const JSONArray &locations = *llvm::cast<JSONArray>(root->at("locations"));
+  Location loc = FIND_LOCATION_FOR_ID(funcID, locations, nodes, strings);
+  // The location should be the first file, at line 1 column 5 with indenting
+  EXPECT_EQ(loc, Location(expected, 1, 1, 5));
+#else
+  (void)findLocationForID;
+#endif
 }
 
 TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
@@ -671,8 +697,9 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
   // Make sure that debug info is emitted for this source file when it's
   // compiled.
   flags.debug = true;
+  // Indent the function slightly to test that the source location is correct
   CallResult<HermesValue> res =
-      runtime->run("function foo() {}; foo;", "file:///fake.js", flags);
+      runtime->run("\n  function foo() {}; foo;", "file:///fake.js", flags);
   ASSERT_FALSE(isException(res));
   Handle<JSFunction> func = runtime->makeHandle(vmcast<JSFunction>(*res));
   const auto funcID = runtime->getHeap().getObjectID(func.get());
@@ -697,9 +724,8 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
   // The location isn't emitted in fully optimized builds.
   const JSONArray &locations = *llvm::cast<JSONArray>(root->at("locations"));
   Location loc = FIND_LOCATION_FOR_ID(funcID, locations, nodes, strings);
-  // The location should be the first file, at line 1 column 16 where the
-  // function's opening curly brace is.
-  EXPECT_EQ(loc, Location(expected, 1, 1, 16));
+  // The location should be the first file, second line, third column
+  EXPECT_EQ(loc, Location(expected, 1, 2, 3));
 #else
   (void)findLocationForID;
 #endif

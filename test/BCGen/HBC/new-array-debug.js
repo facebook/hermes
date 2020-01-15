@@ -24,5 +24,5 @@ function foo() {
 //CHECK-NEXT:[@ 28] Ret 0<Reg8>
 
 //CHECK-LABEL:Debug source table:
-//CHECK:  0x{{[0-9a-f]+}}  function idx 1, starts at line 11 col 16
+//CHECK:  0x{{[0-9a-f]+}}  function idx 1, starts at line 11 col 1
 //CHECK:  0x{{[0-9a-f]+}}  end of debug source table

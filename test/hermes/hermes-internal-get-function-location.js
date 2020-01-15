@@ -20,7 +20,7 @@ print(loc(fn1).lineNumber);
 // JS: [[@LINE-5]]
 // BC: undefined
 print(loc(fn1).columnNumber);
-// JS-NEXT: 16
+// JS-NEXT: 1
 // BC-NEXT: undefined
 print(loc(fn1).cjsModuleOffset);
 // JS-NEXT: undefined
@@ -40,7 +40,7 @@ print(loc(fn1Bound).lineNumber);
 // JS: [[@LINE-25]]
 // BC-NEXT: undefined
 print(loc(fn1Bound).columnNumber);
-// JS-NEXT: 16
+// JS-NEXT: 1
 // BC-NEXT: undefined
 print(loc(fn1Bound).cjsModuleOffset);
 // JS-NEXT: undefined
