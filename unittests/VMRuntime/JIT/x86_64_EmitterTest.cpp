@@ -337,6 +337,18 @@ TEST(x86_64_EmitterTest, Test) {
   CHECK("41 31 c0                      xorl %eax, %r8d");
   emitter.xorRegToReg<S::Q>(Reg::rax, Reg::rbx);
   CHECK("48 31 c3                      xorq %rax, %rbx");
+  emitter.orRegToReg<S::Q>(Reg::rax, Reg::rbx);
+  CHECK("48 09 c3                      orq %rax, %rbx");
+  emitter.orRmToReg<S::Q, 2>(Reg::rax, Reg::rdx, 10, Reg::rbx);
+  CHECK("48 0b 5c 50 0a                orq 10(%rax,%rdx,2), %rbx");
+  emitter.andRegToReg<S::Q>(Reg::rax, Reg::rbx);
+  CHECK("48 21 c3                      andq %rax, %rbx");
+  emitter.andRmToReg<S::Q, 2>(Reg::rax, Reg::rdx, 10, Reg::rbx);
+  CHECK("48 23 5c 50 0a                andq 10(%rax,%rdx,2), %rbx");
+  emitter.cmpRegToReg<S::Q>(Reg::rax, Reg::rbx);
+  CHECK("48 3b d8                      cmpq %rax, %rbx");
+  emitter.cmpRmToReg<S::Q, 2>(Reg::rax, Reg::rdx, 10, Reg::rbx);
+  CHECK("48 3b 5c 50 0a                cmpq 10(%rax,%rdx,2), %rbx");
 
   emitter.leaRMToReg<S::Q>(Reg::rax, Reg::NoIndex, 10, Reg::rdx);
   CHECK("48 8d 50 0a                   leaq 10(%rax), %rdx");
