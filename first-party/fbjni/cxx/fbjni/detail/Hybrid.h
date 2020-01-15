@@ -52,24 +52,6 @@ detail::BaseHybridClass* getNativePointer(const T* t) {
   return getHolder(t)->getNativePointer();
 }
 
-// Save space: delgate to pointer implementation.
-template<typename T, typename Alloc>
-detail::BaseHybridClass* getNativePointer(basic_strong_ref<T, Alloc> t) {
-  return getNativePointer(&*t);
-}
-
-// Save space: delgate to pointer implementation.
-template<typename T>
-detail::BaseHybridClass* getNativePointer(alias_ref<T> t) {
-  return getNativePointer(&*t);
-}
-
-// Save space: delgate to pointer implementation.
-template<typename T>
-detail::BaseHybridClass* getNativePointer(T* t) {
-  return getNativePointer((const T*)t);
-}
-
 template<typename T>
 void setNativePointer(const T* t, std::unique_ptr<detail::BaseHybridClass> new_value) {
   getHolder(t)->setNativePointer(std::move(new_value));
@@ -310,23 +292,23 @@ inline JField<detail::HybridData::javaobject> detectHybrid(alias_ref<jclass> jcl
 }
 
 inline detail::BaseHybridClass* getHybridDataFromField(const JObject* self, const JField<detail::HybridData::javaobject>& field) {
-  auto hybridData = self->getFieldValue(field);
-  if (!hybridData) {
-    throwNPE();
+  const bool isHybrid = !field;
+  if (isHybrid) {
+    return getNativePointer(self);
+  } else {
+    auto hybridData = self->getFieldValue(field);
+    if (!hybridData) {
+      throwNPE();
+    }
+    return getNativePointer(&*hybridData);
   }
-  return getNativePointer(hybridData);
 }
 
 template <typename T, typename B>
 inline T* HybridClass<T, B>::JavaPart::cthis() const {
   detail::BaseHybridClass* result = nullptr;
   static const auto hybridDataField = detectHybrid<T, B>(this->getClass());
-  const bool isHybrid = !hybridDataField;
-  if (isHybrid) {
-    result = getNativePointer(this);
-  } else {
-    result = getHybridDataFromField(this, hybridDataField);
-  }
+  result = getHybridDataFromField(this, hybridDataField);
 
   // I'd like to use dynamic_cast here, but -fno-rtti is the default.
   return static_cast<T*>(result);
