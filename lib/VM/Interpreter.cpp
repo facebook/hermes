@@ -66,6 +66,12 @@ HERMES_SLOW_STATISTIC(
 HERMES_SLOW_STATISTIC(
     NumGetByIdTransient,
     "NumGetByIdTransient: Number of property 'read by id' of non-objects");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdDict,
+    "NumGetByIdDict: Number of property 'read by id' of dictionaries");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdSlow,
+    "NumGetByIdSlow: Number of property 'read by id' slow path");
 
 HERMES_SLOW_STATISTIC(
     NumPutById,
@@ -2138,6 +2144,13 @@ tailCall:
         gcScope.flushToSmallCount(KEEP_HANDLES);
 #endif
         auto clazzGCPtr = obj->getClassGCPtr();
+#ifndef NDEBUG
+        if (clazzGCPtr.get(runtime)->isDictionary())
+          ++NumGetByIdDict;
+#else
+        (void)NumGetByIdDict;
+#endif
+
         // If we have a cache hit, reuse the cached offset and immediately
         // return the property.
         if (LLVM_LIKELY(cacheEntry->clazz == clazzGCPtr.getStorageType())) {
@@ -2216,6 +2229,12 @@ tailCall:
         (void)NumGetByIdProto;
         (void)NumGetByIdNotFound;
 #endif
+#ifdef HERMES_SLOW_DEBUG
+        auto savedClass = cacheIdx != hbc::PROPERTY_CACHING_DISABLED
+            ? cacheEntry->clazz
+            : GCPointer<HiddenClass>::StorageType{};
+#endif
+        ++NumGetByIdSlow;
         runtime->storeCallerIP(ip);
         propRes = JSObject::getNamed_RJS(
             Handle<JSObject>::vmcast(&O2REG(GetById)),
@@ -2227,6 +2246,12 @@ tailCall:
         if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
+#ifdef HERMES_SLOW_DEBUG
+        if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED && savedClass &&
+            cacheEntry->clazz != savedClass) {
+          ++NumGetByIdCacheEvicts;
+        }
+#endif
       } else {
         ++NumGetByIdTransient;
         assert(!tryProp && "TryGetById can only be used on the global object");
