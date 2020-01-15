@@ -282,11 +282,6 @@ void HBCISel::addDebugLexicalInfo() {
   if (F_->getContext().getDebugInfoSetting() != DebugInfoSetting::ALL)
     return;
 
-  // Don't emit variables for top level function, its variables are all global.
-  // Also don't set a lexical parent for it since it has none.
-  if (F_->isGlobalScope())
-    return;
-
   // Set the lexical parent.
   Function *parent = scopeAnalysis_.getLexicalParent(F_);
   if (parent)

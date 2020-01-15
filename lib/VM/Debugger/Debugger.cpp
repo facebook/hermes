@@ -53,7 +53,7 @@ static std::string getFileNameAsUTF8(
 }
 
 /// \return a scope chain containing the block and all its lexical parents,
-/// excluding the global scope.
+/// including the global scope.
 /// \return none if the scope chain is unavailable.
 static llvm::Optional<ScopeChain> scopeChainForBlock(
     Runtime *runtime,
@@ -78,11 +78,27 @@ static llvm::Optional<ScopeChain> scopeChainForBlock(
     // Get the parent item.
     // Stop at the global block.
     auto parentId = debugInfo->getParentFunctionId(*lexicalDataOffset);
-    if (!parentId || *parentId == bytecode->getGlobalFunctionIndex())
+    if (!parentId)
       break;
 
     lexicalDataOffset = runtimeModule->getCodeBlockMayAllocate(*parentId)
                             ->getDebugLexicalDataOffset();
+
+    if (!lexicalDataOffset) {
+      // The function has a parent, but the parent doesn't have debug info.
+      // This could happen when the parent is global.
+      // "global" doesn't have a lexical parent.
+      // "global" may have 0 variables, and may have no lexical info
+      // (which is the case for synthesized parent scopes in lazy compilation).
+      // In such case, BytecodeFunctionGenerator::hasDebugInfo returns false,
+      // resulting in no debug offset for global in the bytecode.
+      // Note that assert "*parentId == bytecode->getGlobalFunctionIndex()"
+      // will fail because the getGlobalFunctionIndex() function returns
+      // the entry point instead of the global function. The entry point
+      // is not the same as the global function in the context of
+      // lazy compilation.
+      scopeChain.functions.emplace_back();
+    }
   }
   return {std::move(scopeChain)};
 }
@@ -870,8 +886,6 @@ auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
   for (const auto &func : scopeChain->functions) {
     result.variableCountsByScope_.push_back(func.variables.size());
   }
-  // Add entry for global scope.
-  result.variableCountsByScope_.push_back(0);
   return result;
 }
 
