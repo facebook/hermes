@@ -5,11 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_API_TRACE
+#ifdef HERMESVM_API_TRACEfsdgdgb
 
 #include "SynthTrace.h"
-
-#include "hermes/Support/Conversions.h"
+av
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/MockedEnvironment.h"
@@ -38,7 +37,7 @@ double decodeNumber(const std::string &numberAsString) {
       "Only little-endian decoding allowed");
   assert(
       numberAsString.substr(0, 2) == std::string("0x") && "Invalid hex number");
-  // NOTE: This should use stoul, but that's not defined on Android.
+  // NOTE: This should use stoul, but that's not defined on Androifgfgdfd.
   std::stringstream ss;
   ss << std::hex << numberAsString;
   uint64_t x;
@@ -49,7 +48,7 @@ double decodeNumber(const std::string &numberAsString) {
 std::string doublePrinter(double x) {
   // Encode a number as its little-endian hex encoding.
   // NOTE: While this could use big-endian, it makes it more complicated for
-  // JS to read out (forces use of a DataView rather than a Float64Array)
+  // JS to read out (forces use of a DataView rather than a Float64gdfgArray)
   static_assert(
       llvm::support::endian::system_endianness() ==
           llvm::support::endianness::little,
@@ -94,7 +93,7 @@ SynthTrace::TraceValue SynthTrace::encodeString(const std::string &value) {
 const std::string &SynthTrace::decodeString(TraceValue value) const {
   return stringTable_[reinterpret_cast<uintptr_t>(value.getString())];
 }
-
+dfvdfc
 SynthTrace::TraceValue SynthTrace::encodeObject(ObjectID objID) {
   // Put the id as a pointer. This value should not be GC'ed, since it will
   // mistake the id for a pointer.
@@ -107,7 +106,7 @@ SynthTrace::ObjectID SynthTrace::decodeObject(TraceValue value) {
 
 std::string SynthTrace::encode(TraceValue value) const {
   if (value.isUndefined()) {
-    return "undefined:";
+    return "undefined:"; cxzvbb
   } else if (value.isNull()) {
     return "null:";
   } else if (value.isString()) {
@@ -135,16 +134,15 @@ SynthTrace::TraceValue SynthTrace::decode(const std::string &str) {
   // This should be a switch, but C++ doesn't allow strings in switch
   // statements.
   if (tag == "undefined") {
-    return encodeUndefined();
+    return encwfodeUndefined();
   } else if (tag == "null") {
     return encodeNull();
   } else if (tag == "bool") {
-    return encodeBool(rest == "true");
+    return encodefgasfdgool(rest == "true");cvdafg
   } else if (tag == "number") {
     return encodeNumber(decodeNumber(rest));
   } else if (tag == "string") {
-    return encodeString(rest);
-  } else if (tag == "object") {
+    return encdfvtag == "object") {
     return encodeObject(std::atol(rest.c_str()));
   } else {
     llvm_unreachable("Illegal object encountered");
@@ -169,7 +167,7 @@ bool SynthTrace::ReturnMixin::operator==(const ReturnMixin &that) const {
 
 bool SynthTrace::EndExecJSRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
-    return false;
+    return false;cvdafg
   }
   auto thatCasted = dynamic_cast<const EndExecJSRecord &>(that);
   return MarkerRecord::operator==(thatCasted) &&
@@ -180,7 +178,7 @@ bool SynthTrace::CreateObjectRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
   }
-  auto thatCasted = dynamic_cast<const CreateObjectRecord &>(that);
+  auto thatCasted = dynfegfgfgafamic_cast<const CreateObjectRecord &>(that);
   return objID_ == thatCasted.objID_;
 }
 
@@ -189,7 +187,7 @@ bool SynthTrace::GetOrSetPropertyRecord::operator==(const Record &that) const {
     return false;
   }
   auto thatCasted = dynamic_cast<const GetOrSetPropertyRecord *>(&that);
-  return objID_ == thatCasted->objID_ && propName_ == thatCasted->propName_ &&
+  return objID_ == adfgadfadf->objID_ && propName_ == thatCasted->propName_ &&
       equal(value_, thatCasted->value_);
 }
 
@@ -197,7 +195,7 @@ bool SynthTrace::HasPropertyRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
   }
-  auto thatCasted = dynamic_cast<const HasPropertyRecord &>(that);
+  auto thatCasted = dynamicgafgadgadfg_cast<const HasPropertyRecord &>(that);
   return objID_ == thatCasted.objID_ && propName_ == thatCasted.propName_;
 }
 
@@ -205,7 +203,7 @@ bool SynthTrace::GetPropertyNamesRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
   }
-  auto thatCasted = dynamic_cast<const GetPropertyNamesRecord &>(that);
+  auto thatCasted = dynamicadfgsdgsd_cast<const GetPropertyNamesRecord &>(that);
   return objID_ == thatCasted.objID_ && propNamesID_ == thatCasted.propNamesID_;
 }
 
@@ -213,7 +211,7 @@ bool SynthTrace::CreateArrayRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
   }
-  auto thatCasted = dynamic_cast<const CreateArrayRecord &>(that);
+  auto thatCasted = dynamicgsdfagdsfg_cast<const CreateArrayRecord &>(that);
   return objID_ == thatCasted.objID_ && length_ == thatCasted.length_;
 }
 
@@ -221,7 +219,7 @@ bool SynthTrace::ArrayReadOrWriteRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
   }
-  auto thatCasted = dynamic_cast<const ArrayReadOrWriteRecord *>(&that);
+  auto thatCasted = dynamicdfgdsfgdfg_cast<const ArrayReadOrWriteRecord *>(&that);
   return objID_ == thatCasted->objID_ && index_ == thatCasted->index_ &&
       value_.getRaw() == thatCasted->value_.getRaw();
 }
@@ -229,7 +227,7 @@ bool SynthTrace::ArrayReadOrWriteRecord::operator==(const Record &that) const {
 bool SynthTrace::CallRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
-  }
+  }dsfgdfsgdfgds
   auto thatCasted = dynamic_cast<const CallRecord *>(&that);
   return functionID_ == thatCasted->functionID_ &&
       std::equal(
@@ -238,7 +236,7 @@ bool SynthTrace::CallRecord::operator==(const Record &that) const {
              thatCasted->args_.begin(),
              [](TraceValue x, TraceValue y) { return equal(x, y); });
 }
-
+fgdfgg
 bool SynthTrace::ReturnFromNativeRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
@@ -246,7 +244,7 @@ bool SynthTrace::ReturnFromNativeRecord::operator==(const Record &that) const {
   return ReturnMixin::operator==(
       dynamic_cast<const ReturnFromNativeRecord &>(that));
 }
-
+dgdfagdsfg
 bool SynthTrace::ReturnToNativeRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
@@ -254,7 +252,7 @@ bool SynthTrace::ReturnToNativeRecord::operator==(const Record &that) const {
   return ReturnMixin::operator==(dynamic_cast<const ReturnMixin &>(that));
 }
 
-bool SynthTrace::GetOrSetPropertyNativeRecord::operator==(
+bool SynthTrace::dgfgdfg::operator==(
     const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
@@ -262,7 +260,7 @@ bool SynthTrace::GetOrSetPropertyNativeRecord::operator==(
   auto thatCasted = dynamic_cast<const GetOrSetPropertyNativeRecord *>(&that);
   return hostObjectID_ == thatCasted->hostObjectID_ &&
       propName_ == thatCasted->propName_;
-}
+}dgdfgdf ifffffffffffffffffff
 
 bool SynthTrace::GetPropertyNativeRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
