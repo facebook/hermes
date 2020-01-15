@@ -761,9 +761,10 @@ HermesValue externGetNextPName(
     PinnedHermesValue *sizeReg) {
   GCScopeMarkerRAII marker{runtime};
 
-  assert(vmisa<JSArray>(*arrReg) && "GetNextPName's second op must be JSArray");
+  assert(
+      vmisa<BigStorage>(*arrReg) && "GetNextPName's second op must be JSArray");
   auto obj = Handle<JSObject>::vmcast(objReg);
-  auto arr = Handle<JSArray>::vmcast(arrReg);
+  auto arr = Handle<BigStorage>::vmcast(arrReg);
   uint32_t idx = iterReg->getNumber();
   uint32_t size = sizeReg->getNumber();
   PinnedHermesValue *scratch = &runtime->getCurrentFrame().getScratchRef();
@@ -771,7 +772,7 @@ HermesValue externGetNextPName(
 
   // Loop until we find a property which is present.
   while (idx < size) {
-    *scratch = arr->at(runtime, idx);
+    *scratch = arr->at(idx);
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
         obj, runtime, Handle<>(scratch), propObj, desc);
