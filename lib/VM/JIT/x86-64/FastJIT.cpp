@@ -471,6 +471,8 @@ Emitters FastJIT::compileBB(Emitters emit) {
       CASE(GetByIdShort);
       CASE(TryGetById);
       CASE(TryGetByIdLong);
+      CASE(DelById);
+      CASE(DelByIdLong);
       CASE(Call);
       CASE(CallLong);
       CASE(Construct);
@@ -977,6 +979,46 @@ Emitters FastJIT::compileTryGetById(Emitters emit, const Inst *ip) {
 }
 Emitters FastJIT::compileTryGetByIdLong(Emitters emit, const Inst *ip) {
   return getByIdHelper(emit, ip, true, ip->iTryGetByIdLong.op4);
+}
+
+Emitters FastJIT::delByIdHelper(
+    hermes::vm::x86_64::Emitters emit,
+    const Inst *ip,
+    uint32_t idVal) {
+  // PropOpFlags -> arg4
+  auto defaultPropOpFlags = codeBlock_->isStrictMode()
+      ? PropOpFlags().plusThrowOnError()
+      : PropOpFlags();
+  emit.fast.movImmToReg<S::L>(defaultPropOpFlags.getRaw(), Reg::ecx);
+
+  // target -> arg2
+  emit.fast = leaHermesReg(emit.fast, ip->iDelById.op2, Reg::rsi);
+  // IdentifierID (uint32_t) -> arg3
+  // The symbol must already exist in the string id map, so we could just pass
+  // the IdentifierID
+  emit.fast.movImmToReg<S::L>(
+      codeBlock_->getRuntimeModule()
+          ->getSymbolIDMustExist(idVal)
+          .unsafeGetIndex(),
+      Reg::edx);
+
+  uint8_t *constAddr;
+  emit.slow = getConstant(emit.slow, (void *)externDelById, constAddr);
+  emit.fast = callExternal(emit.fast, constAddr, ip->iDelById.op1, ip);
+
+  return emit;
+}
+
+Emitters FastJIT::compileDelById(
+    hermes::vm::x86_64::Emitters emit,
+    const Inst *ip) {
+  return delByIdHelper(emit, ip, ip->iDelById.op3);
+}
+
+Emitters FastJIT::compileDelByIdLong(
+    hermes::vm::x86_64::Emitters emit,
+    const Inst *ip) {
+  return delByIdHelper(emit, ip, ip->iDelByIdLong.op3);
 }
 
 inline Emitters FastJIT::putByIdHelper(

@@ -294,6 +294,7 @@ class FastJIT {
   getByIdHelper(Emitters emit, const Inst *ip, bool tryProp, uint32_t idVal);
   Emitters
   putByIdHelper(Emitters emit, const Inst *ip, bool tryProp, uint32_t idVal);
+  Emitters delByIdHelper(Emitters emit, const Inst *ip, uint32_t idVal);
   Emitters callHelper(
       Emitters emit,
       const Inst *ip,
@@ -365,6 +366,9 @@ class FastJIT {
   Emitters compilePutByIdLong(Emitters emit, const Inst *ip);
   Emitters compileTryPutById(Emitters emit, const Inst *ip);
   Emitters compileTryPutByIdLong(Emitters emit, const Inst *ip);
+
+  Emitters compileDelById(Emitters emit, const Inst *ip);
+  Emitters compileDelByIdLong(Emitters emit, const Inst *ip);
 
   Emitters compileCall(Emitters emit, const Inst *ip);
   Emitters compileCallLong(Emitters emit, const Inst *ip);

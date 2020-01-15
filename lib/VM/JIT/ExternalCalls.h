@@ -244,6 +244,12 @@ CallResult<HermesValue> externDelByVal(
     PinnedHermesValue *nameVal,
     PropOpFlags flags);
 
+CallResult<HermesValue> externDelById(
+    Runtime *runtime,
+    PinnedHermesValue *target,
+    uint32_t sid,
+    PropOpFlags flags);
+
 /// An external call invoked by JIT compiled code to store a value \p val to an
 /// environment \p env, by the index slot number \p idx
 void externStoreToEnvironment(

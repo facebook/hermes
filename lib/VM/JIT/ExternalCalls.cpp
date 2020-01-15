@@ -534,10 +534,54 @@ CallResult<HermesValue> externDelByVal(
     scratch = res.getValue();
     auto delRes = JSObject::deleteComputed(
         Handle<JSObject>::vmcast(&scratch), runtime, Handle<>(nameVal), flags);
+    scratch = HermesValue::encodeUndefinedValue();
     if (LLVM_UNLIKELY(delRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     return HermesValue::encodeBoolValue(*delRes);
+  }
+}
+
+CallResult<HermesValue> externDelById(
+    Runtime *runtime,
+    PinnedHermesValue *target,
+    uint32_t sid,
+    PropOpFlags flags) {
+  GCScopeMarkerRAII marker{runtime};
+
+  if (LLVM_LIKELY(target->isObject())) {
+    auto status = JSObject::deleteNamed(
+        Handle<JSObject>::vmcast(target),
+        runtime,
+        SymbolID::unsafeCreate(sid),
+        flags);
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return HermesValue::encodeBoolValue(*status);
+  } else {
+    // This is the "slow path".
+    auto res = toObject(runtime, Handle<>(target));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      // If an exception is thrown, likely we are trying to convert
+      // undefined/null to an object. Passing over the name of the property
+      // so that we could emit more meaningful error messages.
+      (void)amendPropAccessErrorMsgWithPropName(
+          runtime, Handle<>(target), "delete", SymbolID::unsafeCreate(sid));
+      return ExecutionStatus::EXCEPTION;
+    }
+    PinnedHermesValue &scratch = runtime->getCurrentFrame().getScratchRef();
+    scratch = res.getValue();
+    auto status = JSObject::deleteNamed(
+        Handle<JSObject>::vmcast(&scratch),
+        runtime,
+        SymbolID::unsafeCreate(sid),
+        flags);
+    scratch = HermesValue::encodeUndefinedValue();
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return HermesValue::encodeBoolValue(status.getValue());
   }
 }
 
