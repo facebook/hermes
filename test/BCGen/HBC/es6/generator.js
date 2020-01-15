@@ -23,7 +23,7 @@ function *loop(x) {
 // CHECK-NEXT:     Ret               r2
 
 // CHECK-LABEL: Function<?anon_0_loop>(2 params, 15 registers, 2 symbols):
-// CHECK-NEXT: Offset in debug table: src 0xa, vars 0x0
+// CHECK-NEXT: Offset in debug table: source 0x{{.*}}, lexical 0x0000
 // CHECK-NEXT:     StartGenerator
 // CHECK-NEXT:     CreateEnvironment r0
 // CHECK-NEXT:     LoadParam         r1, 1
@@ -75,7 +75,7 @@ function *args() {
 // CHECK-NEXT:     Ret               r1
 
 // CHECK-LABEL: Function<?anon_1_args>(1 params, 7 registers, 0 symbols):
-// CHECK-NEXT: Offset in debug table: src 0x20, vars 0x0
+// CHECK-NEXT: Offset in debug table: source 0x{{.*}}, lexical 0x0000
 // CHECK-NEXT:     StartGenerator
 // CHECK-NEXT:     CreateEnvironment r0
 // CHECK-NEXT:     LoadConstUndefined r0

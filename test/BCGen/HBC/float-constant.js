@@ -13,7 +13,7 @@ var y = 12345670.89;
 var z = 0.0;
 
 //CHECK-LABEL:Function<global>{{.*}}:
-//CHECK-NEXT:Offset in debug table: src 0x0, vars 0x0
+//CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 //CHECK-NEXT:    DeclareGlobalVar  "w"
 //CHECK-NEXT:    DeclareGlobalVar  "x"
 //CHECK-NEXT:    DeclareGlobalVar  "y"

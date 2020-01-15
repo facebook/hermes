@@ -49,47 +49,49 @@ function Fc() {
 // UNICODE-NEXT:   0: {{.*}}/debug_info_à.js
 
 // CHECK:      Debug file table:
-// CHECK-NEXT:   Debug offset 0: string id 0
+// CHECK-NEXT:   source table offset 0x0000: filename id 0
 // UNICODE:      Debug file table:
-// UNICODE-NEXT:   Debug offset 0: string id 0
+// UNICODE-NEXT:   source table offset 0x0000: filename id 0
 
-// We expect 5 DebugOffset lines since we have 4 functions plus the global.
-// CHECK:      Debug data table:
-// CHECK-NEXT:   DebugOffset {{.*}}
-// CHECK-NEXT:   DebugOffset {{.*}}
-// CHECK-NEXT:   DebugOffset {{.*}}
-// CHECK-NEXT:   DebugOffset {{.*}}
-// CHECK-NEXT:   DebugOffset {{.*}}
-// CHECK-NEXT:   Debug table ends at debugOffset {{.*}}
-// CHECK-NEXT: Debug variables table:
-// CHECK-NEXT:   Offset: 0x0, vars count: 0, lexical parent: none
-// CHECK-NEXT:   Offset: 0x2, vars count: 2, lexical parent: 0
-// CHECK-NEXT:     0x0004: "v1a"
-// CHECK-NEXT:     0x0008: "v2a"
-// CHECK-NEXT:   Offset: 0xc, vars count: 1, lexical parent: 0
-// CHECK-NEXT:     0x000e: "v1b"
-// CHECK-NEXT:   Offset: 0x12, vars count: 2, lexical parent: 0
-// CHECK-NEXT:     0x0014: "v1c"
-// CHECK-NEXT:     0x0018: "Fcc"
-// CHECK-NEXT:   Offset: 0x1c, vars count: 1, lexical parent: 3
-// CHECK-NEXT:     0x001e: "v1cc"
+// We expect 5 "function idx" lines since we have 4 functions plus the global.
+// CHECK:      Debug source table:
+// CHECK-NEXT:   0x{{[0-9a-f]+}}  function idx 0, {{.*}}
+// CHECK:   0x{{[0-9a-f]+}}  function idx 1, {{.*}}
+// CHECK:   0x{{[0-9a-f]+}}  function idx 2, {{.*}}
+// CHECK:   0x{{[0-9a-f]+}}  function idx 3, {{.*}}
+// CHECK:   0x{{[0-9a-f]+}}  function idx 4, {{.*}}
+// CHECK:   0x{{[0-9a-f]+}}  end of debug source table
+// CHECK: Debug lexical table:
+// CHECK-NEXT:   0x0000  lexical parent: none, variable count: 0
+// CHECK-NEXT:   0x0002  lexical parent: 0, variable count: 2
+// CHECK-NEXT:     "v1a"
+// CHECK-NEXT:     "v2a"
+// CHECK-NEXT:   0x000c  lexical parent: 0, variable count: 1
+// CHECK-NEXT:     "v1b"
+// CHECK-NEXT:   0x0012  lexical parent: 0, variable count: 2
+// CHECK-NEXT:     "v1c"
+// CHECK-NEXT:     "Fcc"
+// CHECK-NEXT:   0x001c  lexical parent: 3, variable count: 1
+// CHECK-NEXT:     "v1cc"
+// CHECK-NEXT:   0x0023  end of debug lexical table
 
-// UNICODE:      Debug data table:
-// UNICODE-NEXT:   DebugOffset {{.*}}
-// UNICODE-NEXT:   DebugOffset {{.*}}
-// UNICODE-NEXT:   DebugOffset {{.*}}
-// UNICODE-NEXT:   DebugOffset {{.*}}
-// UNICODE-NEXT:   DebugOffset {{.*}}
-// UNICODE-NEXT:   Debug table ends at debugOffset {{.*}}
-// UNICODE-NEXT: Debug variables table:
-// UNICODE-NEXT:   Offset: 0x0, vars count: 0, lexical parent: none
-// UNICODE-NEXT:   Offset: 0x2, vars count: 2, lexical parent: 0
-// UNICODE-NEXT:     0x0004: "v1a"
-// UNICODE-NEXT:     0x0008: "v2a"
-// UNICODE-NEXT:   Offset: 0xc, vars count: 1, lexical parent: 0
-// UNICODE-NEXT:     0x000e: "v1b"
-// UNICODE-NEXT:   Offset: 0x12, vars count: 2, lexical parent: 0
-// UNICODE-NEXT:     0x0014: "v1c"
-// UNICODE-NEXT:     0x0018: "Fcc"
-// UNICODE-NEXT:   Offset: 0x1c, vars count: 1, lexical parent: 3
-// UNICODE-NEXT:     0x001e: "v1cc"
+// UNICODE:      Debug source table:
+// UNICODE-NEXT:   0x{{[0-9a-f]+}}  function idx 0, {{.*}}
+// UNICODE:   0x{{[0-9a-f]+}}  function idx 1, {{.*}}
+// UNICODE:   0x{{[0-9a-f]+}}  function idx 2, {{.*}}
+// UNICODE:   0x{{[0-9a-f]+}}  function idx 3, {{.*}}
+// UNICODE:   0x{{[0-9a-f]+}}  function idx 4, {{.*}}
+// UNICODE:   0x{{[0-9a-f]+}}  end of debug source table
+// UNICODE: Debug lexical table:
+// UNICODE-NEXT:   0x0000  lexical parent: none, variable count: 0
+// UNICODE-NEXT:   0x0002  lexical parent: 0, variable count: 2
+// UNICODE-NEXT:     "v1a"
+// UNICODE-NEXT:     "v2a"
+// UNICODE-NEXT:   0x000c  lexical parent: 0, variable count: 1
+// UNICODE-NEXT:     "v1b"
+// UNICODE-NEXT:   0x0012  lexical parent: 0, variable count: 2
+// UNICODE-NEXT:     "v1c"
+// UNICODE-NEXT:     "Fcc"
+// UNICODE-NEXT:   0x001c  lexical parent: 3, variable count: 1
+// UNICODE-NEXT:     "v1cc"
+// UNICODE-NEXT:   0x0023  end of debug lexical table

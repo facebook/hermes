@@ -23,6 +23,6 @@ function foo() {
 //CHECK-NEXT:[@ 24] PutOwnByIndex 0<Reg8>, 1<Reg8>, 2<UInt8>
 //CHECK-NEXT:[@ 28] Ret 0<Reg8>
 
-//CHECK-LABEL:Debug data table:
-//CHECK:  DebugOffset 0x{{[0-9a-f]+}} for function at 1 starts at line=11, col=16 and emits locations for 8 16 24  (3 in total).
-//CHECK-NEXT:  Debug table ends at debugOffset {{.*}}
+//CHECK-LABEL:Debug source table:
+//CHECK:  0x{{[0-9a-f]+}}  function idx 1, starts at line 11 col 16
+//CHECK:  0x{{[0-9a-f]+}}  end of debug source table
