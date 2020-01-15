@@ -2024,16 +2024,18 @@ inline Emitters FastJIT::encodeBoolHVInNativeReg(Emitters emit, Reg nativeReg) {
 Emitters FastJIT::compileGetEnvironment(Emitters emit, const Inst *ip) {
   // TODO: emit sequential inline code when levels are small, e.g. 1-3;
   // TODO: otherwise emit a compact loop instead of external call
-  emit.fast.movRegToReg<S::Q>(RegFrame, Reg::rdi);
-  emit.fast.movImmToReg<S::L>(ip->iGetEnvironment.op2, Reg::rsi);
 
   uint8_t *constAddr;
   emit.slow = getConstant(emit.slow, (void *)externGetEnvironment, constAddr);
-  emit.fast.callRM<ScaleRIPAddr32>(Reg::none, Reg::NoIndex, 0);
-  applyRIP32Offset(emit.fast.current(), constAddr);
 
-  emit.fast =
-      movNativeRegToHermesReg(emit.fast, Reg::rax, ip->iGetEnvironment.op1);
+  // frame -> arg2
+  emit.fast.movRegToReg<S::Q>(RegFrame, Reg::rsi);
+  // numLevel -> arg3
+  emit.fast.movImmToReg<S::L>(ip->iGetEnvironment.op2, Reg::rdx);
+
+  emit.fast = callExternalWithReturnedVal(
+      emit.fast, constAddr, ip->iGetEnvironment.op1);
+
   return emit;
 }
 
