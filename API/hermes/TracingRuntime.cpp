@@ -277,10 +277,11 @@ jsi::Function TracingRuntime::createFunctionFromHostFunction(
   auto tracer = TracingHostFunction(*this, func);
   auto tfunc =
       RD::createFunctionFromHostFunction(name, paramCount, std::move(tracer));
+  const auto funcID = getUniqueID(tfunc);
   RD::getHostFunction(tfunc).target<TracingHostFunction>()->setFunctionID(
-      getUniqueID(tfunc));
+      funcID);
   trace_.emplace_back<SynthTrace::CreateHostFunctionRecord>(
-      getTimeSinceStart(), getUniqueID(tfunc));
+      getTimeSinceStart(), funcID, name.utf8(*this), paramCount);
   return tfunc;
 }
 

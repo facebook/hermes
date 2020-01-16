@@ -22,6 +22,7 @@
   F(hostFunctionCreatesObjects)      \
   F(hostFunctionMutatesGlobalObject) \
   F(hostFunctionMutatesObject)       \
+  F(hostFunctionNameAndParams)       \
   F(hostFunctionReturn)              \
   F(hostFunctionReturnArgument)      \
   F(hostGlobalObject)                \

@@ -260,10 +260,21 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         trace.emplace_back<SynthTrace::CreateHostObjectRecord>(
             timeFromStart, objID->getValue());
         break;
-      case RecordType::CreateHostFunction:
+      case RecordType::CreateHostFunction: {
+        std::string functionName;
+        unsigned paramCount = 0;
+        if (JSONString *jsonFunctionName =
+                llvm::dyn_cast_or_null<JSONString>(obj->get("functionName"))) {
+          functionName = jsonFunctionName->str();
+        }
+        if (JSONNumber *jsonParamCount = llvm::dyn_cast_or_null<JSONNumber>(
+                obj->get("parameterCount"))) {
+          paramCount = jsonParamCount->getValue();
+        }
         trace.emplace_back<SynthTrace::CreateHostFunctionRecord>(
-            timeFromStart, objID->getValue());
+            timeFromStart, objID->getValue(), functionName, paramCount);
         break;
+      }
       case RecordType::GetProperty:
         trace.emplace_back<SynthTrace::GetPropertyRecord>(
             timeFromStart,

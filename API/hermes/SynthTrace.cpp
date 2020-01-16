@@ -184,6 +184,16 @@ bool SynthTrace::CreateObjectRecord::operator==(const Record &that) const {
   return objID_ == thatCasted.objID_;
 }
 
+bool SynthTrace::CreateHostFunctionRecord::operator==(
+    const Record &that) const {
+  if (!CreateObjectRecord::operator==(that)) {
+    return false;
+  }
+  auto thatCasted = dynamic_cast<const CreateHostFunctionRecord &>(that);
+  return functionName_ == thatCasted.functionName_ &&
+      paramCount_ == thatCasted.paramCount_;
+}
+
 bool SynthTrace::GetOrSetPropertyRecord::operator==(const Record &that) const {
   if (!Record::operator==(that)) {
     return false;
@@ -313,6 +323,14 @@ void SynthTrace::CreateObjectRecord::toJSONInternal(
     const SynthTrace &trace) const {
   Record::toJSONInternal(json, trace);
   json.emitKeyValue("objID", objID_);
+}
+
+void SynthTrace::CreateHostFunctionRecord::toJSONInternal(
+    JSONEmitter &json,
+    const SynthTrace &trace) const {
+  CreateObjectRecord::toJSONInternal(json, trace);
+  json.emitKeyValue("functionName", functionName_);
+  json.emitKeyValue("parameterCount", paramCount_);
 }
 
 void SynthTrace::GetOrSetPropertyRecord::toJSONInternal(

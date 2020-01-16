@@ -310,7 +310,7 @@ class SynthTrace {
     explicit CreateObjectRecord(TimeSinceStart time, ObjectID objID)
         : Record(time), objID_(objID) {}
 
-    bool operator==(const Record &that) const final;
+    bool operator==(const Record &that) const override;
 
     void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
         const override;
@@ -337,7 +337,23 @@ class SynthTrace {
 
   struct CreateHostFunctionRecord final : public CreateObjectRecord {
     static constexpr RecordType type{RecordType::CreateHostFunction};
-    using CreateObjectRecord::CreateObjectRecord;
+    const std::string functionName_;
+    const unsigned paramCount_;
+
+    CreateHostFunctionRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        std::string functionName,
+        unsigned paramCount)
+        : CreateObjectRecord(time, objID),
+          functionName_(std::move(functionName)),
+          paramCount_(paramCount) {}
+
+    bool operator==(const Record &that) const override;
+
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
+        const override;
+
     RecordType getType() const override {
       return type;
     }

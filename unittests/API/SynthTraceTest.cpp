@@ -125,7 +125,7 @@ TEST_F(SynthTraceTest, CallToNative) {
       return jsi::Value(rt, args[0].asNumber() + 100);
     };
     auto func = jsi::Function::createFromHostFunction(
-        *rt, jsi::PropNameID::forAscii(*rt, "foo"), 0, undefined);
+        *rt, jsi::PropNameID::forAscii(*rt, "foo"), 1, undefined);
     functionID = rt->getUniqueID(func);
     auto ret = func.call(*rt, {jsi::Value(arg)});
     ASSERT_EQ(arg + 100, ret.asNumber());
@@ -135,7 +135,7 @@ TEST_F(SynthTraceTest, CallToNative) {
   // The function is called from native, and is defined in native, so it
   // trampolines through the VM.
   EXPECT_EQ_RECORD(
-      SynthTrace::CreateHostFunctionRecord(dummyTime, functionID),
+      SynthTrace::CreateHostFunctionRecord(dummyTime, functionID, "foo", 1),
       *records.at(0));
   EXPECT_EQ_RECORD(
       SynthTrace::CallFromNativeRecord(
@@ -293,7 +293,8 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
   EXPECT_EQ(7, records.size());
   // The function was called with one argument, the object.
   EXPECT_EQ_RECORD(
-      SynthTrace::CreateHostFunctionRecord(dummyTime, functionID),
+      SynthTrace::CreateHostFunctionRecord(
+          dummyTime, functionID, "getObjectProp", 1),
       *records.at(0));
   EXPECT_EQ_RECORD(
       SynthTrace::CreateObjectRecord(dummyTime, objID), *records.at(1));

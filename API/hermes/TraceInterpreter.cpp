@@ -659,16 +659,13 @@ std::string TraceInterpreter::exec(
 }
 
 Function TraceInterpreter::createHostFunction(
-    ObjectID funcID,
-    const std::vector<TraceInterpreter::Call> &calls) {
+    const SynthTrace::CreateHostFunctionRecord &rec) {
+  const auto funcID = rec.objID_;
+  const auto &calls = hostFunctionCalls_.at(funcID);
   return Function::createFromHostFunction(
       rt_,
-      PropNameID::forAscii(
-          rt_,
-          std::string("fakeHostFunction") +
-              ::hermes::oscompat::to_string(funcID)),
-      // Length is irrelevant for host functions.
-      0,
+      PropNameID::forAscii(rt_, rec.functionName_),
+      rec.paramCount_,
       [this, funcID, &calls](
           Runtime &, const Value &thisVal, const Value *args, size_t count)
           -> Value {
@@ -963,16 +960,14 @@ Value TraceInterpreter::execFunction(
           case RecordType::CreateHostFunction: {
             const auto &chfr =
                 static_cast<const SynthTrace::CreateHostFunctionRecord &>(*rec);
-            const ObjectID funcID = chfr.objID_;
-            auto iterAndDidCreate = hostFunctions_.emplace(
-                funcID,
-                createHostFunction(funcID, hostFunctionCalls_.at(funcID)));
+            auto iterAndDidCreate =
+                hostFunctions_.emplace(chfr.objID_, createHostFunction(chfr));
             assert(
                 iterAndDidCreate.second &&
                 "This should always be creating a new host function");
             addObjectToDefs(
                 call,
-                funcID,
+                chfr.objID_,
                 globalRecordNum,
                 iterAndDidCreate.first->second,
                 locals);

@@ -212,8 +212,7 @@ class TraceInterpreter final {
       llvm::raw_ostream *outTrace);
 
   jsi::Function createHostFunction(
-      SynthTrace::ObjectID funcID,
-      const std::vector<Call> &calls);
+      const SynthTrace::CreateHostFunctionRecord &rec);
 
   jsi::Object createHostObject(
       SynthTrace::ObjectID objID,
