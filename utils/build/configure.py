@@ -110,10 +110,10 @@ def main():
 
     if args.icu_root:
         cmake_flags += ["-DICU_ROOT=" + args.icu_root]
-    elif (
-        os.environ.get("SANDCASTLE")
-        and platform.system() != "macos"
-        and platform.system() != "Windows"
+    elif os.environ.get("SANDCASTLE") and platform.system() not in (
+        "macos",
+        "Darwin",
+        "Windows",
     ):
         raise Exception("No ICU path provided on sandcastle")
 
