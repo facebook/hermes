@@ -97,16 +97,13 @@ reflectConstruct(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  Handle<> thisVal = runtime->makeHandle(*thisValRes);
   CallResult<HermesValue> objRes = Callable::executeCall(
-      target,
-      runtime,
-      newTarget ? newTarget : target,
-      runtime->makeHandle(*thisValRes),
-      arguments);
+      target, runtime, newTarget ? newTarget : target, thisVal, arguments);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return objRes->isObject() ? objRes : *thisValRes;
+  return objRes->isObject() ? objRes : *thisVal;
 }
 
 namespace {
