@@ -300,6 +300,25 @@ bool SynthTrace::SetPropertyNativeRecord::operator==(const Record &that) const {
       propName_ == thatCasted.propName_ && equal(value_, thatCasted.value_);
 }
 
+bool SynthTrace::GetNativePropertyNamesRecord::operator==(
+    const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto &thatCasted = dynamic_cast<const GetNativePropertyNamesRecord &>(that);
+  return hostObjectID_ == thatCasted.hostObjectID_;
+}
+
+bool SynthTrace::GetNativePropertyNamesReturnRecord::operator==(
+    const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto &thatCasted =
+      dynamic_cast<const GetNativePropertyNamesReturnRecord &>(that);
+  return propNames_ == thatCasted.propNames_;
+}
+
 void SynthTrace::Record::toJSONInternal(JSONEmitter &json, const SynthTrace &)
     const {
   std::string storage;
@@ -443,6 +462,25 @@ void SynthTrace::SetPropertyNativeRecord::toJSONInternal(
     const SynthTrace &trace) const {
   GetOrSetPropertyNativeRecord::toJSONInternal(json, trace);
   json.emitKeyValue("value", trace.encode(value_));
+}
+
+void SynthTrace::GetNativePropertyNamesRecord::toJSONInternal(
+    JSONEmitter &json,
+    const SynthTrace &trace) const {
+  Record::toJSONInternal(json, trace);
+  json.emitKeyValue("hostObjectID", hostObjectID_);
+}
+
+void SynthTrace::GetNativePropertyNamesReturnRecord::toJSONInternal(
+    JSONEmitter &json,
+    const SynthTrace &trace) const {
+  Record::toJSONInternal(json, trace);
+  json.emitKey("properties");
+  json.openArray();
+  for (const auto &prop : propNames_) {
+    json.emitValue(prop);
+  }
+  json.closeArray();
 }
 
 const char *SynthTrace::Printable::nameFromReleaseUnused(
@@ -608,6 +646,8 @@ llvm::raw_ostream &operator<<(
     CASE(GetPropertyNativeReturn);
     CASE(SetPropertyNative);
     CASE(SetPropertyNativeReturn);
+    CASE(GetNativePropertyNames);
+    CASE(GetNativePropertyNamesReturn);
   }
 #undef CASE
   // This only exists to appease gcc.
@@ -646,6 +686,8 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
   CASE(GetPropertyNativeReturn)
   CASE(SetPropertyNative)
   CASE(SetPropertyNativeReturn)
+  CASE(GetNativePropertyNames)
+  CASE(GetNativePropertyNamesReturn)
 #undef CASE
   return is;
 }

@@ -67,6 +67,10 @@ getCalls(
     HostObject(ObjectID hostObjID, const std::string &propName)
         : StackValue(), objID(hostObjID), propName(propName) {}
   };
+  struct HostObjectPropNames final : public StackValue {
+    ObjectID objID;
+    HostObjectPropNames(ObjectID hostObjID) : StackValue(), objID(hostObjID) {}
+  };
   TraceInterpreter::HostFunctionToCalls funcIDToRecords;
   // A mapping from a host object id to a map from property name to
   // list of records
@@ -91,8 +95,13 @@ getCalls(
     } else if (
         const auto *hostObj = dynamic_cast<const HostObject *>(&stackObj)) {
       // Host object is a combination of the object id and property
-      // name
-      return hostObjIDToNameToRecords[hostObj->objID][hostObj->propName];
+      // name.
+      return hostObjIDToNameToRecords[hostObj->objID]
+          .propNameToCalls[hostObj->propName];
+    } else if (
+        const auto *hostObj =
+            dynamic_cast<const HostObjectPropNames *>(&stackObj)) {
+      return hostObjIDToNameToRecords[hostObj->objID].callsToGetPropertyNames;
     } else {
       llvm_unreachable("Shouldn't be any other subclasses of StackValue");
     }
@@ -119,7 +128,7 @@ getCalls(
       // Insert an entry so that this host object is in the map, even if nothing
       // uses it.
       hostObjIDToNameToRecords.emplace(
-          createHORec.objID_, TraceInterpreter::PropNameToCalls());
+          createHORec.objID_, TraceInterpreter::HostObjectInfo{});
     } else if (rec->getType() == RecordType::CallToNative) {
       // JS will cause a call to native code. Add a new call on the stack, and
       // add a call with an empty piece to the function it is calling.
@@ -142,10 +151,30 @@ getCalls(
       stack.emplace_back(new HostObject(
           nativeAccessRec.hostObjectID_, nativeAccessRec.propName_));
       hostObjIDToNameToRecords[nativeAccessRec.hostObjectID_]
-                              [nativeAccessRec.propName_]
-                                  .emplace_back(TraceInterpreter::Call(
-                                      TraceInterpreter::Call::Piece(
-                                          recordNum)));
+          .propNameToCalls[nativeAccessRec.propName_]
+          .emplace_back(
+              TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
+    } else if (rec->getType() == RecordType::GetNativePropertyNames) {
+      const auto &nativePropNamesRec =
+          static_cast<const SynthTrace::GetNativePropertyNamesRecord &>(*rec);
+      // JS asked for all properties on a host object. Add a new call on the
+      // stack, and add a call with an empty piece to the object it is calling.
+      stack.emplace_back(
+          new HostObjectPropNames(nativePropNamesRec.hostObjectID_));
+      hostObjIDToNameToRecords[nativePropNamesRec.hostObjectID_]
+          .callsToGetPropertyNames.emplace_back(
+              TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
+    } else if (rec->getType() == RecordType::GetNativePropertyNamesReturn) {
+      // Set the vector of strings that were returned from the original call.
+      const auto &nativePropNamesRec =
+          static_cast<const SynthTrace::GetNativePropertyNamesReturnRecord &>(
+              *rec);
+      // The stack object must be a HostObjectPropNames in order for this to be
+      // a return from there.
+      hostObjIDToNameToRecords
+          [dynamic_cast<const HostObjectPropNames &>(*stack.back()).objID]
+              .resultsOfGetPropertyNames.emplace_back(
+                  nativePropNamesRec.propNames_);
     }
     auto &calls = getCallsFromStack(*stack.back());
     assert(!calls.empty() && "There should always be at least one call");
@@ -159,6 +188,7 @@ getCalls(
     piece.records.emplace_back(&*rec);
     if (rec->getType() == RecordType::GetPropertyNativeReturn ||
         rec->getType() == RecordType::SetPropertyNativeReturn ||
+        rec->getType() == RecordType::GetNativePropertyNamesReturn ||
         rec->getType() == RecordType::ReturnFromNative) {
       stack.pop_back();
     }
@@ -224,10 +254,13 @@ std::unordered_map<ObjectID, TraceInterpreter::DefAndUse> createGlobalMap(
     }
   }
   for (const auto &p : objCallStacks) {
-    for (const auto &x : p.second) {
+    for (const auto &x : p.second.propNameToCalls) {
       for (const auto &call : x.second) {
         calls.push_back(&call);
       }
+    }
+    for (const auto &call : p.second.callsToGetPropertyNames) {
+      calls.push_back(&call);
     }
   }
   for (const auto *call : calls) {
@@ -303,10 +336,13 @@ void createCallMetadataForHostFunctions(
 void createCallMetadataForHostObjects(
     TraceInterpreter::HostObjectToCalls *objCallStacks) {
   for (auto &p : *objCallStacks) {
-    for (auto &x : p.second) {
+    for (auto &x : p.second.propNameToCalls) {
       for (TraceInterpreter::Call &call : x.second) {
         createCallMetadata(&call);
       }
+    }
+    for (auto &call : p.second.callsToGetPropertyNames) {
+      createCallMetadata(&call);
     }
   }
 }
@@ -456,6 +492,7 @@ TraceInterpreter::TraceInterpreter(
       hostFunctionsCallCount_(),
       hostObjects_(),
       hostObjectsCallCount_(),
+      hostObjectsPropertyNamesCallCount_(),
       gom_() {
   // Add the global object to the global object map
   gom_.emplace(trace.globalObjID(), rt.global());
@@ -661,7 +698,8 @@ std::string TraceInterpreter::exec(
 Function TraceInterpreter::createHostFunction(
     const SynthTrace::CreateHostFunctionRecord &rec) {
   const auto funcID = rec.objID_;
-  const auto &calls = hostFunctionCalls_.at(funcID);
+  const std::vector<TraceInterpreter::Call> &calls =
+      hostFunctionCalls_.at(funcID);
   return Function::createFromHostFunction(
       rt_,
       PropNameID::forAscii(rt_, rec.functionName_),
@@ -681,24 +719,30 @@ Function TraceInterpreter::createHostFunction(
       });
 }
 
-Object TraceInterpreter::createHostObject(
-    ObjectID objID,
-    const PropNameToCalls &props) {
+Object TraceInterpreter::createHostObject(ObjectID objID) {
   struct FakeHostObject : public HostObject {
     TraceInterpreter &interpreter;
-    const PropNameToCalls &props;
+    const HostObjectInfo &hostObjectInfo;
     std::unordered_map<std::string, uint64_t> &callCounts;
+    uint64_t &propertyNamesCallCounts;
+
     FakeHostObject(
         TraceInterpreter &interpreter,
-        const PropNameToCalls &props,
-        std::unordered_map<std::string, uint64_t> &callCounts)
-        : interpreter(interpreter), props(props), callCounts(callCounts) {}
+        const HostObjectInfo &hostObjectInfo,
+        std::unordered_map<std::string, uint64_t> &callCounts,
+        uint64_t &propertyNamesCallCounts)
+        : interpreter(interpreter),
+          hostObjectInfo(hostObjectInfo),
+          callCounts(callCounts),
+          propertyNamesCallCounts(propertyNamesCallCounts) {}
+
     Value get(Runtime &rt, const PropNameID &name) override {
       try {
         const std::string propName = name.utf8(rt);
         // There are no arguments to pass to a get call.
         return interpreter.execFunction(
-            props.at(propName).at(callCounts[propName]++),
+            hostObjectInfo.propNameToCalls.at(propName).at(
+                callCounts[propName]++),
             // This is undefined since there's no way to access the host object
             // as a JS value normally from this position.
             Value::undefined(),
@@ -708,13 +752,15 @@ Object TraceInterpreter::createHostObject(
         interpreter.crashOnException(e, llvm::None);
       }
     }
+
     void set(Runtime &rt, const PropNameID &name, const Value &value) override {
       try {
         const std::string propName = name.utf8(rt);
         const Value args[] = {Value(rt, value)};
         // There is exactly one argument to pass to a set call.
         interpreter.execFunction(
-            props.at(propName).at(callCounts[propName]++),
+            hostObjectInfo.propNameToCalls.at(propName).at(
+                callCounts[propName]++),
             // This is undefined since there's no way to access the host object
             // as a JS value normally from this position.
             Value::undefined(),
@@ -724,15 +770,37 @@ Object TraceInterpreter::createHostObject(
         interpreter.crashOnException(e, llvm::None);
       }
     }
+
     std::vector<PropNameID> getPropertyNames(Runtime &rt) override {
-      // TODO T31386973: Add trace tracking to getPropertyNames
-      return {};
+      try {
+        const auto callCount = propertyNamesCallCounts++;
+        interpreter.execFunction(
+            hostObjectInfo.callsToGetPropertyNames.at(callCount),
+            // This is undefined since there's no way to access the host object
+            // as a JS value normally from this position.
+            Value::undefined(),
+            nullptr,
+            0);
+        const std::vector<std::string> &names =
+            hostObjectInfo.resultsOfGetPropertyNames.at(callCount);
+        std::vector<PropNameID> props;
+        for (const std::string &name : names) {
+          props.emplace_back(PropNameID::forUtf8(rt, name));
+        }
+        return props;
+      } catch (const std::exception &e) {
+        interpreter.crashOnException(e, llvm::None);
+      }
     }
   };
+
   return Object::createFromHostObject(
       rt_,
       std::make_shared<FakeHostObject>(
-          *this, props, hostObjectsCallCount_[objID]));
+          *this,
+          hostObjectCalls_.at(objID),
+          hostObjectsCallCount_[objID],
+          hostObjectsPropertyNamesCallCount_[objID]));
 }
 
 std::string TraceInterpreter::execEntryFunction(
@@ -797,6 +865,7 @@ Value TraceInterpreter::execFunction(
     RecordType firstRecType = call.pieces.front().records.front()->getType();
     assert(
         (firstRecType == RecordType::CallToNative ||
+         firstRecType == RecordType::GetNativePropertyNames ||
          firstRecType == RecordType::GetPropertyNative ||
          firstRecType == RecordType::SetPropertyNative) &&
         "Illegal starting record");
@@ -944,8 +1013,8 @@ Value TraceInterpreter::execFunction(
             const auto &chor =
                 static_cast<const SynthTrace::CreateHostObjectRecord &>(*rec);
             const ObjectID objID = chor.objID_;
-            auto iterAndDidCreate = hostObjects_.emplace(
-                objID, createHostObject(objID, hostObjectCalls_.at(objID)));
+            auto iterAndDidCreate =
+                hostObjects_.emplace(objID, createHostObject(objID));
             assert(
                 iterAndDidCreate.second &&
                 "This should always be creating a new host object");
@@ -1201,6 +1270,18 @@ Value TraceInterpreter::execFunction(
           case RecordType::SetPropertyNativeReturn: {
             // Since a SetPropertyNative does not have a return value, return
             // undefined.
+            return Value::undefined();
+            break;
+          }
+          case RecordType::GetNativePropertyNames: {
+            // Nothing actually needs to happen here, as no defs are provided to
+            // the local function. The HostObject already handles accessing the
+            // property names.
+            break;
+          }
+          case RecordType::GetNativePropertyNamesReturn: {
+            // Accessing the list of property names on a host object doesn't
+            // return a JS value.
             return Value::undefined();
             break;
           }

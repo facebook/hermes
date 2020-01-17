@@ -75,15 +75,25 @@ class TraceInterpreter final {
   /// ordered by invocation (the 0th element is the 1st call).
   using HostFunctionToCalls =
       std::unordered_map<SynthTrace::ObjectID, std::vector<Call>>;
+
   /// A PropNameToCalls is a mapping from property names to a list of
   /// calls on that property. The calls are ordered by invocation (the 0th
   /// element is the 1st call).
   using PropNameToCalls = std::unordered_map<std::string, std::vector<Call>>;
+
+  struct HostObjectInfo final {
+    explicit HostObjectInfo() = default;
+
+    PropNameToCalls propNameToCalls;
+    std::vector<Call> callsToGetPropertyNames;
+    std::vector<std::vector<std::string>> resultsOfGetPropertyNames;
+  };
+
   /// A HostObjectToCalls is a mapping from a host object id to the
   /// mapping of property names to calls associated with accessing properties of
-  /// that host object.
+  /// that host object and the list of calls associated with getPropertyNames.
   using HostObjectToCalls =
-      std::unordered_map<SynthTrace::ObjectID, PropNameToCalls>;
+      std::unordered_map<SynthTrace::ObjectID, HostObjectInfo>;
 
   /// Options for executing the trace.
   /// \param snapshotMarker If the given marker is seen, take a heap snapshot.
@@ -145,6 +155,8 @@ class TraceInterpreter final {
       SynthTrace::ObjectID,
       std::unordered_map<std::string, uint64_t>>
       hostObjectsCallCount_;
+  std::unordered_map<SynthTrace::ObjectID, uint64_t>
+      hostObjectsPropertyNamesCallCount_;
   std::unordered_map<SynthTrace::ObjectID, jsi::Object> gom_;
   std::string stats_;
   /// Whether the marker was reached.
@@ -214,9 +226,7 @@ class TraceInterpreter final {
   jsi::Function createHostFunction(
       const SynthTrace::CreateHostFunctionRecord &rec);
 
-  jsi::Object createHostObject(
-      SynthTrace::ObjectID objID,
-      const PropNameToCalls &propToCalls);
+  jsi::Object createHostObject(SynthTrace::ObjectID objID);
 
   std::string execEntryFunction(const Call &entryFunc);
 

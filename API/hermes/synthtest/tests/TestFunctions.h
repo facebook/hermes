@@ -27,6 +27,7 @@
   F(hostFunctionReturnArgument)      \
   F(hostGlobalObject)                \
   F(mathRandom)                      \
+  F(nativePropertyNames)             \
   F(nativeSetsConstant)              \
   F(parseGCConfig)                   \
   F(surrogatePairString)

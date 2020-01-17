@@ -91,6 +91,8 @@ class SynthTrace {
     GetPropertyNativeReturn,
     SetPropertyNative,
     SetPropertyNativeReturn,
+    GetNativePropertyNames,
+    GetNativePropertyNamesReturn,
   };
 
   /// A Record is one element of a trace.
@@ -774,6 +776,53 @@ class SynthTrace {
       // Since there are no fields to compare, any two will always be the same.
       return Record::operator==(that);
     }
+  };
+
+  /// A GetNativePropertyNamesRecord records an event where JS asked for a list
+  /// of property names available on a host object. It records the object, and
+  /// the returned list of property names.
+  struct GetNativePropertyNamesRecord : public Record {
+    static constexpr RecordType type{RecordType::GetNativePropertyNames};
+    const ObjectID hostObjectID_;
+
+    explicit GetNativePropertyNamesRecord(
+        TimeSinceStart time,
+        ObjectID hostObjectID)
+        : Record(time), hostObjectID_(hostObjectID) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
+        const override;
+
+    std::vector<ObjectID> uses() const override {
+      return {hostObjectID_};
+    }
+
+    bool operator==(const Record &that) const override;
+  };
+
+  /// A GetNativePropertyNamesReturnRecord records what property names were
+  /// returned by the GetNativePropertyNames query.
+  struct GetNativePropertyNamesReturnRecord final : public Record {
+    static constexpr RecordType type{RecordType::GetNativePropertyNamesReturn};
+    const std::vector<std::string> propNames_;
+
+    explicit GetNativePropertyNamesReturnRecord(
+        TimeSinceStart time,
+        const std::vector<std::string> &propNames)
+        : Record(time), propNames_(propNames) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json, const SynthTrace &trace)
+        const override;
+
+    bool operator==(const Record &that) const override;
   };
 
   /// @}

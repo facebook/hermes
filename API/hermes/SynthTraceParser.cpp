@@ -149,6 +149,23 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
   return conf.build();
 }
 
+template <template <typename, typename> class Collection>
+Collection<std::string, std::allocator<std::string>> getListOfStrings(
+    JSONArray *array) {
+  Collection<std::string, std::allocator<std::string>> strings;
+  std::transform(
+      array->begin(),
+      array->end(),
+      std::back_inserter(strings),
+      [](const JSONValue *value) -> std::string {
+        if (value->getKind() != JSONKind::String) {
+          throw std::invalid_argument("Array should contain only strings");
+        }
+        return std::string(llvm::cast<JSONString>(value)->c_str());
+      });
+  return strings;
+}
+
 ::hermes::vm::MockedEnvironment getMockedEnvironment(JSONObject *env) {
   auto getListOfNumbers = [](JSONArray *array) -> std::deque<uint64_t> {
     std::deque<uint64_t> calls;
@@ -157,20 +174,6 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
         array->end(),
         std::back_inserter(calls),
         [](const JSONValue *value) { return getNumberAs<uint64_t>(value); });
-    return calls;
-  };
-  auto getListOfStrings = [](JSONArray *array) -> std::deque<std::string> {
-    std::deque<std::string> calls;
-    std::transform(
-        array->begin(),
-        array->end(),
-        std::back_inserter(calls),
-        [](const JSONValue *value) -> std::string {
-          if (value->getKind() != JSONKind::String) {
-            throw std::invalid_argument("Array should contain only strings");
-          }
-          return std::string(llvm::cast<JSONString>(value)->c_str());
-        });
     return calls;
   };
 
@@ -183,8 +186,8 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
       getListOfNumbers(llvm::cast<JSONArray>(env->at("callsToDateNow")));
   auto callsToNewDate =
       getListOfNumbers(llvm::cast<JSONArray>(env->at("callsToNewDate")));
-  auto callsToDateAsFunction =
-      getListOfStrings(llvm::cast<JSONArray>(env->at("callsToDateAsFunction")));
+  auto callsToDateAsFunction = getListOfStrings<std::deque>(
+      llvm::cast<JSONArray>(env->at("callsToDateAsFunction")));
   return ::hermes::vm::MockedEnvironment{
       mathRandomSeed, callsToDateNow, callsToNewDate, callsToDateAsFunction};
 }
@@ -367,8 +370,16 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         trace.emplace_back<SynthTrace::SetPropertyNativeReturnRecord>(
             timeFromStart);
         break;
-      default:
-        llvm_unreachable("Not a valid record type");
+      case RecordType::GetNativePropertyNames:
+        trace.emplace_back<SynthTrace::GetNativePropertyNamesRecord>(
+            timeFromStart, hostObjID->getValue());
+        break;
+      case RecordType::GetNativePropertyNamesReturn:
+        trace.emplace_back<SynthTrace::GetNativePropertyNamesReturnRecord>(
+            timeFromStart,
+            getListOfStrings<std::vector>(
+                llvm::cast<JSONArray>(obj->get("properties"))));
+        break;
     }
   }
   return trace;

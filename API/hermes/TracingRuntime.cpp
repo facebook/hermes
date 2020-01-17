@@ -99,7 +99,29 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
           trt.getTimeSinceStart());
     }
 
-    // TODO(T31386973): getPropertyNames() is not implemented.
+    std::vector<jsi::PropNameID> getPropertyNames(jsi::Runtime &rt) override {
+      TracingRuntime &trt = static_cast<TracingRuntime &>(rt);
+      trt.trace_.emplace_back<SynthTrace::GetNativePropertyNamesRecord>(
+          trt.getTimeSinceStart(), objID_);
+      std::vector<jsi::PropNameID> props;
+      try {
+        props = DecoratedHostObject::getPropertyNames(rt);
+      } catch (...) {
+        // TODO(T28293178): The trace currently has no way to model
+        // exceptions thrown from C++ code.
+        ::hermes::hermes_fatal(
+            "Exception happened in native code during trace");
+      }
+      std::vector<std::string> names;
+      names.reserve(props.size());
+      for (const jsi::PropNameID &prop : props) {
+        names.emplace_back(prop.utf8(rt));
+      }
+
+      trt.trace_.emplace_back<SynthTrace::GetNativePropertyNamesReturnRecord>(
+          trt.getTimeSinceStart(), names);
+      return props;
+    }
 
     void setObjectID(SynthTrace::ObjectID id) {
       objID_ = id;
