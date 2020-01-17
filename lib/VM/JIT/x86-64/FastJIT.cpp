@@ -1919,7 +1919,7 @@ Emitters FastJIT::compileThrow(Emitters emit, const Inst *ip) {
 
   // return exception
   emit.fast.xorRegToReg<S::L>(Reg::eax, Reg::eax);
-  emit.fast = jmpToBytecodeBB(emit.fast, bcBasicBlocks_.size() - 1);
+  emit.fast = jmpToBytecodeBB(emit.fast, getCatchHandlerBBIndex(ip));
   return emit;
 }
 
