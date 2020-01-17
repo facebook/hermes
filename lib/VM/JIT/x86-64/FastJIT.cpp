@@ -497,6 +497,7 @@ Emitters FastJIT::compileBB(Emitters emit) {
       CASE(Mov);
       CASE(MovLong);
       CASE(ToNumber);
+      CASE(ToInt32);
       CASE(AddEmptyString);
       CASE(Ret);
 
@@ -1518,6 +1519,16 @@ Emitters FastJIT::compileToNumber(Emitters emit, const Inst *ip) {
 
   describeSlowPathSection(emit.slow, false);
 
+  return emit;
+}
+
+Emitters FastJIT::compileToInt32(Emitters emit, const Inst *ip) {
+  // arg2
+  emit.fast = leaHermesReg(emit.fast, ip->iToInt32.op2, Reg::rsi);
+
+  uint8_t *externConstAddr;
+  emit.slow = getConstant(emit.slow, (void *)externToInt32, externConstAddr);
+  emit.fast = callExternal(emit.fast, externConstAddr, ip->iToInt32.op1, ip);
   return emit;
 }
 

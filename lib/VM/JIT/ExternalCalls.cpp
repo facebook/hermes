@@ -23,6 +23,13 @@ CallResult<HermesValue> slowPathToNumber(
   return toNumber_RJS(runtime, Handle<>(src));
 }
 
+CallResult<HermesValue> externToInt32(
+    Runtime *runtime,
+    PinnedHermesValue *val) {
+  GCScopeMarkerRAII marker{runtime};
+  return toInt32_RJS(runtime, Handle<>(val));
+}
+
 CallResult<HermesValue> slowPathAddEmptyString(
     Runtime *runtime,
     PinnedHermesValue *src) {

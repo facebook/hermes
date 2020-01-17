@@ -444,6 +444,7 @@ class FastJIT {
   Emitters compileMov(Emitters emit, const Inst *ip);
   Emitters compileMovLong(Emitters emit, const Inst *ip);
   Emitters compileToNumber(Emitters emit, const Inst *ip);
+  Emitters compileToInt32(Emitters emit, const Inst *ip);
   Emitters compileAddEmptyString(Emitters emit, const Inst *ip);
   Emitters compileRet(Emitters emit, const Inst *ip);
   Emitters compileCondJumpN(

@@ -26,6 +26,10 @@ CallResult<HermesValue> slowPathAddEmptyString(
     Runtime *runtime,
     PinnedHermesValue *src);
 
+/// An external call invoked by JIT compiled code to convert \p val to a 32-bit
+/// signed integer.
+CallResult<HermesValue> externToInt32(Runtime *runtime, PinnedHermesValue *val);
+
 /// An external call invoked by JIT compiled code to declare a global variable
 /// by string table index.
 /// \param stringID string table index of this global variable
