@@ -30,6 +30,27 @@ var arr = ['a','b',...[1,2,3],'c',...[4,5,6],'d'];
 print(arr, arr.length);
 // CHECK-NEXT: a,b,1,2,3,c,4,5,6,d 10
 
+var arr0 = [1,,3];
+var arr = [...arr0];
+print(arr);
+// CHECK-NEXT: 1,,3
+
+var arr0 = [];
+arr0[Symbol.iterator] = function*() {
+  yield 1;
+  yield 2;
+}
+var arr = [...arr0];
+print(arr);
+// CHECK-NEXT: 1,2
+
+var arr0 = [1,,3];
+arr0.__proto__[1] = 'in_proto';
+var arr = [...arr0];
+print(arr);
+// CHECK-NEXT: 1,in_proto,3
+delete arr0.__proto__[1];
+
 var count = 4;
 var iterator = {
   [Symbol.iterator]() {

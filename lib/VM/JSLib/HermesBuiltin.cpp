@@ -507,6 +507,65 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
         "HermesBuiltin.arraySpread requires an array target");
   }
 
+  MutableHandle<> nextValue{runtime};
+
+  Handle<JSArray> arr = args.dyncastArg<JSArray>(1);
+  if (arr) {
+    // Copying from an array, first check and make sure that
+    // `arr[Symbol.iterator]` hasn't been changed by the user.
+    NamedPropertyDescriptor desc;
+    PseudoHandle<JSObject> propObj =
+        createPseudoHandle(JSObject::getNamedDescriptor(
+            arr,
+            runtime,
+            Predefined::getSymbolID(Predefined::SymbolIterator),
+            desc));
+    if (LLVM_LIKELY(propObj) && LLVM_LIKELY(!desc.flags.proxyObject)) {
+      PseudoHandle<> slotValue = createPseudoHandle(
+          JSObject::getNamedSlotValue(propObj.get(), runtime, desc));
+      propObj.invalidate();
+      if (LLVM_LIKELY(
+              slotValue->getRaw() == runtime->arrayPrototypeValues.getRaw())) {
+        slotValue.invalidate();
+        auto nextIndex = args.getArg(2).getNumberAs<JSArray::size_type>();
+        MutableHandle<> idxHandle{runtime};
+        for (JSArray::size_type i = 0; i < JSArray::getLength(*arr); ++i) {
+          // Fast path: look up the property in indexed storage.
+          nextValue = arr->at(runtime, i);
+          if (LLVM_UNLIKELY(nextValue->isEmpty())) {
+            // Slow path, just run the full getComputed_RJS path.
+            // Runs when there is a hole, accessor, non-regular property, etc.
+            GCScopeMarkerRAII marker{runtime};
+            idxHandle = HermesValue::encodeNumberValue(i);
+            CallResult<HermesValue> valueRes =
+                JSObject::getComputed_RJS(arr, runtime, idxHandle);
+            if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+              return ExecutionStatus::EXCEPTION;
+            }
+            nextValue = *valueRes;
+          }
+          // It is valid to use setElementAt here because we know that
+          // `target` was created immediately prior to running the spread
+          // and no non-standard properties were added to it,
+          // because the only actions that can be performed between array
+          // creation and running this spread are DefineOwnProperty calls with
+          // standard flags (as well as other spread operations, which do the
+          // same thing).
+          JSArray::setElementAt(target, runtime, nextIndex, nextValue);
+          ++nextIndex;
+        }
+
+        if (LLVM_UNLIKELY(
+                JSArray::setLengthProperty(target, runtime, nextIndex) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+
+        return HermesValue::encodeNumberValue(nextIndex);
+      }
+    }
+  }
+
   // 3. Let iteratorRecord be ? GetIterator(spreadObj).
   auto iteratorRecordRes = getIterator(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(iteratorRecordRes == ExecutionStatus::EXCEPTION)) {
@@ -514,11 +573,9 @@ hermesBuiltinArraySpread(void *, Runtime *runtime, NativeArgs args) {
   }
   IteratorRecord iteratorRecord = *iteratorRecordRes;
 
-  MutableHandle<> nextValue{runtime};
   MutableHandle<> nextIndex{runtime, args.getArg(2)};
 
   // 4. Repeat,
-  // TODO: Add a fast path when the source is an array.
   for (GCScopeMarkerRAII marker{runtime}; /* nothing */; marker.flush()) {
     // a. Let next be ? IteratorStep(iteratorRecord).
     auto nextRes = iteratorStep(runtime, iteratorRecord);

@@ -1628,6 +1628,37 @@ multiTests(
     'get:1',
     'get:2']));
 
+multiTests(
+  sourceArray,
+  source => [...source],
+  checkArray([10,20,30]),
+  checkArray([
+    "get:Symbol(Symbol.iterator)",
+    "get:length",
+    "get:0",
+    "get:length",
+    "get:1",
+    "get:length",
+    "get:2",
+    "get:length",
+  ]));
+
+// Spreading when [Symbol.iterator] is a proxy.
+var spreadSource = [10,20,30];
+multiTests(
+  {},
+  proto => {
+    spreadSource.__proto__ = proto;
+    try {
+      return [...spreadSource];
+    } catch (e) {
+      return e.name;
+    }
+  },
+  checkValue("TypeError"),
+  checkArray(["get:Symbol(Symbol.iterator)"])
+);
+
 print('Array.prototype');
 // CHECK-LABEL: Array.prototype
 
