@@ -12,6 +12,10 @@ enable this command by default in lldb.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 
+def _raise_eval_failure(expression, error):
+    raise Exception("Fail to evaluate {}: {}".format(expression, error.GetCString()))
+
+
 def __lldb_init_module(debugger, _):
     """Installs a new debugger command for dumping hermes js stack"""
     debugger.HandleCommand("command script add -f Stack.dump_js_stack jsbt")
@@ -22,15 +26,60 @@ def _evaluate_expression(frame, expression):
     and throw error if evaluation failed. The evaluated SBValue is returned.
     """
     result_value = frame.EvaluateExpression(expression)
-    if result_value is None or (
-        result_value.GetError() and result_value.GetError().Fail()
-    ):
-        raise Exception(
-            "Fail to evaluate {}: {}".format(
-                expression, result_value.GetError().GetCString()
-            )
-        )
+    if _is_eval_failed(result_value):
+        _raise_eval_failure(expression, result_value.GetError())
+
     return result_value
+
+
+def _is_eval_failed(evaluation_result):
+    return evaluation_result is None or (
+        evaluation_result.GetError() and evaluation_result.GetError().Fail()
+    )
+
+
+def _get_raw_ptr_from_shared_ptr(shared_ptr):
+    """ Decode raw pointer from shared_ptr"""
+    return shared_ptr.GetChildAtIndex(0)
+
+
+def _get_profiler_instance_expr(frame):
+    """Return the evaluation expression for getting SamplingProfiler instance"""
+    expression = "::hermes::vm::SamplingProfiler::getInstance()"
+    profiler_sharedptr_value = _evaluate_expression(frame, expression)
+
+    # Currently lldb segfault while evaluating std::shared_ptr<T>::get() for GNU C++.
+    # To workaround this issue we manually decode the shared_ptr raw pointer.
+    profiler_raw_ptr = _get_raw_ptr_from_shared_ptr(profiler_sharedptr_value)
+    return (
+        "((::hermes::vm::SamplingProfiler *)%u)" % profiler_raw_ptr.GetValueAsUnsigned()
+    )
+
+
+def _get_hermes_runtime_expr(frame):
+    """Return the evaluation expression for getting Hermes runtime"""
+    return _get_profiler_instance_expr(frame) + "->threadLocalRuntime_.get()"
+
+
+def _get_stdstring_summary(str_val):
+    """
+    Get std::string summary out of SBValue. This helper
+    method is needed because lldb std::string type summary
+    failed to work on GNU libraries.
+    """
+    str_summary = str_val.GetSummary()
+    if str_summary is not None:
+        return str_summary
+    # Does not have summary, assume it is GNU std::string
+    # and manually decode two nested levels "._M_dataplus._M_p"
+    return str_val.GetChildAtIndex(0).GetChildAtIndex(0).GetSummary()
+
+
+def _format_and_print_stack(stack_str_summary):
+    # TODO: Verify the result is string type.
+    value_str = stack_str_summary.strip('"')
+    for frame in value_str.split("\\n"):
+        print(frame)
 
 
 def dump_js_stack(debugger, command, result, internal_dict):
@@ -38,14 +87,8 @@ def dump_js_stack(debugger, command, result, internal_dict):
     thread = debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
     leaf_frame = thread.GetFrameAtIndex(0)
 
-    # SamplingProfiler stores current thread's Runtime in thread local variable.
-    expression = (
-        "::hermes::vm::SamplingProfiler::getInstance()"
-        "->threadLocalRuntime_.get()->getCallStackNoAlloc()"
-    )
-    result_value = _evaluate_expression(leaf_frame, expression)
+    expression = _get_hermes_runtime_expr(leaf_frame) + "->getCallStackNoAlloc()"
+    result_str_value = _evaluate_expression(leaf_frame, expression)
 
-    # TODO: Verify the result is string type.
-    value_str = result_value.GetSummary().strip('"')
-    for frame in value_str.split("\\n"):
-        print(frame)
+    str_summary = _get_stdstring_summary(result_str_value)
+    _format_and_print_stack(str_summary)
