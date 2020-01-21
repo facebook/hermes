@@ -8,6 +8,7 @@
 #ifndef _WINDOWS
 #include "hermes/VM/instrumentation/ProcessStats.h"
 
+#include "hermes/Support/Compiler.h"
 #include "hermes/Support/OSCompat.h"
 
 #include "gtest/gtest.h"
@@ -77,6 +78,7 @@ TEST(ProcessStatsTest, Test) {
 }
 
 void ProcessStatsTest(InfoAssertion assertionImpl) {
+#if !LLVM_ADDRESS_SANITIZER_BUILD
   const size_t PS = hermes::oscompat::page_size();
   const size_t PSkB = PS / 1024;
 
@@ -160,6 +162,11 @@ void ProcessStatsTest(InfoAssertion assertionImpl) {
   EXPECT_INFO_DELTA(afterUnmap, afterNoop2, 0, 0);
 
 #undef EXPECT_INFO_DELTA
+#else
+  // Otherwise unused functions.
+  (void)flushRSSEvents;
+  (void)touchPages;
+#endif
 }
 
 void infoAssertionImpl(
