@@ -551,6 +551,11 @@ BLACK_LIST = [
     "test262/test/built-ins/Array/prototype/reverse/length-exceeding-integer-limit-with-proxy.js",
     "test262/test/built-ins/Array/prototype/slice/length-exceeding-integer-limit-proxied-array.js",
     "test262/test/built-ins/Array/prototype/unshift/length-near-integer-limit.js",
+    # Very slow tests on some builds of Hermes. Handle-SAN, ASAN, and MallocGC
+    # make these very slow.
+    # TODO(T60938585): Make these conditional on the choice of build.
+    "test262/test/built-ins/decodeURI/S15.1.3.1_A2.5_T1.js",
+    "test262/test/built-ins/decodeURIComponent/S15.1.3.2_A2.5_T1.js",
     # number literals
     "test262/test/built-ins/Number/string-binary-literal.js",
     "test262/test/built-ins/Number/string-octal-literal.js",
