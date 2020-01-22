@@ -504,6 +504,10 @@ add_subdirectory(unittests)
 add_subdirectory(${HERMES_JSI_DIR}/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
 add_subdirectory(API)
 
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)
+    add_subdirectory(facebook)
+endif()
+
 # Configure the test suites
 #
 list(APPEND HERMES_TEST_DEPS
