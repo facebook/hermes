@@ -47,6 +47,10 @@ CallResult<HermesValue> evalInEnvironment(
   compileFlags.includeLibHermes = false;
   compileFlags.lazy =
       utf8code.size() >= hbc::kDefaultSizeThresholdForLazyCompilation;
+#ifdef HERMES_ENABLE_DEBUGGER
+  // Required to allow stepping and examining local variables in eval'd code
+  compileFlags.debug = true;
+#endif
 
   std::unique_ptr<hbc::BCProviderFromSrc> bytecode;
   {
