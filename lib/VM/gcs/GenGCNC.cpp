@@ -1020,6 +1020,7 @@ void GenGC::updateCrashManagerHeapExtents() {
 }
 
 void GenGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
+  AllocContextYieldThenClaim yielder(this);
   youngGen_.forAllObjs(callback);
   oldGen_.forAllObjs(callback);
 }
