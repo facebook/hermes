@@ -105,13 +105,13 @@ TEST_F(AlignedStorageTest, AdviseUnused) {
 // Skip this test in Windows because vm_unused has a no-op implementation.
 #ifndef _WINDOWS
   const size_t FAILED = SIZE_MAX;
-  const size_t PAGE_SIZE = oscompat::page_size();
+  const size_t PG_SIZE = oscompat::page_size();
 
   AlignedStorage storage{
       std::move(AlignedStorage::create(provider.get()).get())};
-  ASSERT_EQ(0, storage.size() % PAGE_SIZE);
+  ASSERT_EQ(0, storage.size() % PG_SIZE);
 
-  const size_t TOTAL_PAGES = storage.size() / PAGE_SIZE;
+  const size_t TOTAL_PAGES = storage.size() / PG_SIZE;
   const size_t FREED_PAGES = TOTAL_PAGES / 2;
 
   char *start = storage.lowLim();
@@ -123,13 +123,13 @@ TEST_F(AlignedStorageTest, AdviseUnused) {
   size_t initial = regionFootprint(start, end);
   ASSERT_NE(initial, FAILED);
 
-  for (volatile char *p = start; p < end; p += PAGE_SIZE)
+  for (volatile char *p = start; p < end; p += PG_SIZE)
     *p = 1;
 
   size_t touched = regionFootprint(start, end);
   ASSERT_NE(touched, FAILED);
 
-  storage.markUnused(start, start + FREED_PAGES * PAGE_SIZE);
+  storage.markUnused(start, start + FREED_PAGES * PG_SIZE);
 
   size_t marked = regionFootprint(start, end);
   ASSERT_NE(marked, FAILED);
