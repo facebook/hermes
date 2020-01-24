@@ -249,7 +249,8 @@ TEST_F(GCSegmentAddressIndexDeathTest, RemoveUnsorted) {
   std::sort(del.begin(), del.end());
   std::reverse(del.begin(), del.end());
 
-  EXPECT_DEATH({ index.remove(del.begin(), del.end()); }, "Assertion");
+  EXPECT_DEATH_IF_SUPPORTED(
+      { index.remove(del.begin(), del.end()); }, "Assertion");
 }
 #endif // !NDEBUG
 
@@ -269,7 +270,7 @@ TEST_F(GCSegmentAddressIndexDeathTest, Consistency) {
   // the entry for address \c v.lowLim() still points to t, rather than v.  In
   // debug modes this should cause an assertion failure when we iterate over the
   // segments in the index.
-  EXPECT_DEATH(
+  EXPECT_DEATH_IF_SUPPORTED(
       {
         for (auto segment : index)
           (void)segment;

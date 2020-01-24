@@ -122,7 +122,7 @@ TEST_F(IdentifierTableTest, LazyExternalSymbolTooBig) {
 
   SymbolID symbol = idTable.registerLazyIdentifier(ref);
 
-  EXPECT_DEATH(
+  EXPECT_DEATH_IF_SUPPORTED(
       { idTable.getStringPrim(runtime, symbol); },
       "Unhandled out of memory exception");
 }

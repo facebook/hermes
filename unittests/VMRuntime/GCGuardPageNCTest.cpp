@@ -42,7 +42,7 @@ TEST(GCGuardPageNCTest, ObjectUnderflow) {
   char *raw = reinterpret_cast<char *>(cell);
   // On Windows, this throws an exception instead of dying.
 #ifndef _WINDOWS
-  EXPECT_DEATH({ raw[-1] = '\0'; }, "");
+  EXPECT_DEATH_IF_SUPPORTED({ raw[-1] = '\0'; }, "");
 #endif
 }
 

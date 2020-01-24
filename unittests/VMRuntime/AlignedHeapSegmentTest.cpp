@@ -183,13 +183,14 @@ using AlignedHeapSegmentDeathTest = AlignedHeapSegmentTest;
 TEST_F(AlignedHeapSegmentDeathTest, NullAlloc) {
   AlignedHeapSegment s;
   constexpr uint32_t SIZE = heapAlignSize(sizeof(GCCell));
-  EXPECT_DEATH({ s.alloc(SIZE); }, "null segment");
+  EXPECT_DEATH_IF_SUPPORTED({ s.alloc(SIZE); }, "null segment");
 }
 
 TEST_F(AlignedHeapSegmentDeathTest, GrowToTooBig) {
   const size_t PS = oscompat::page_size();
 
-  EXPECT_DEATH({ s.growTo(AlignedHeapSegment::maxSize() + PS); }, "max size");
+  EXPECT_DEATH_IF_SUPPORTED(
+      { s.growTo(AlignedHeapSegment::maxSize() + PS); }, "max size");
 }
 #endif // !NDEBUG
 

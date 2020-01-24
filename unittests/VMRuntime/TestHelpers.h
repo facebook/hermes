@@ -209,7 +209,7 @@ inline const GCConfig TestGCConfigFixedSize(
     EXPECT_TRUE(exThrown);                  \
   }
 #else
-#define EXPECT_OOM(exp) EXPECT_DEATH({ exp; }, "OOM")
+#define EXPECT_OOM(exp) EXPECT_DEATH_IF_SUPPORTED({ exp; }, "OOM")
 #endif
 
 /// Get a named value from an object.
