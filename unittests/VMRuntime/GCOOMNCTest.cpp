@@ -206,7 +206,7 @@ TEST(GCOOMVALimitFullGCTest, Test) {
 
   // Only space for two segments.
   auto provider = llvm::make_unique<LimitedStorageProvider>(
-      DummyRuntime::defaultProvider(config),
+      DummyRuntime::defaultProvider(),
       AlignedStorage::size() * (2 + kExtraSegments));
 
   auto runtime =

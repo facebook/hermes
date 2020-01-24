@@ -63,28 +63,11 @@ std::shared_ptr<DummyRuntime> DummyRuntime::create(
 std::shared_ptr<DummyRuntime> DummyRuntime::create(
     MetadataTableForTests metaTable,
     const GCConfig &gcConfig) {
-  return create(metaTable, gcConfig, defaultProvider(gcConfig));
+  return create(metaTable, gcConfig, defaultProvider());
 }
 
-std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider(
-    const GCConfig &gcConfig) {
-  const GC::Size gcSize{gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()};
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  auto result = StorageProvider::preAllocatedProvider(
-      gcSize.storageFootprint(),
-      gcSize.minStorageFootprint(),
-      sizeof(DummyRuntime));
-  if (!result) {
-    hermes_fatal((llvm::Twine("Could not allocate provider: ") +
-                  convert_error_to_message(result.getError()))
-                     .str());
-  }
-  return std::move(result.get());
-#else
-  // Sizes aren't necessary without compressed pointers.
-  (void)gcSize;
+std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider() {
   return StorageProvider::mmapProvider();
-#endif
 }
 
 void DummyRuntime::markRoots(RootAcceptor &acceptor, bool) {

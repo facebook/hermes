@@ -83,7 +83,7 @@ TEST_F(GCLazySegmentNCTest, MaterializeAll) {
 /// enough segments for the used portion of the heap.
 TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
   auto provider = llvm::make_unique<LimitedStorageProvider>(
-      DummyRuntime::defaultProvider(kGCConfig), kHeapVALimited);
+      DummyRuntime::defaultProvider(), kHeapVALimited);
   auto runtime =
       DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
@@ -102,7 +102,7 @@ TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
 /// collection instead.
 TEST_F(GCLazySegmentNCTest, YoungGenNoMaterialize) {
   auto provider = llvm::make_unique<LimitedStorageProvider>(
-      DummyRuntime::defaultProvider(kGCConfig), kHeapVALimited);
+      DummyRuntime::defaultProvider(), kHeapVALimited);
   auto runtime =
       DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
@@ -144,7 +144,7 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
                               .withMaxHeapSize(kHeapSizeHint * 2)
                               .build();
   auto provider = std::make_shared<LogSuccessStorageProvider>(
-      DummyRuntime::defaultProvider(config));
+      DummyRuntime::defaultProvider());
   auto &counter = *provider;
   auto runtime = DummyRuntime::create(getMetadataTable(), config, provider);
   DummyRuntime &rt = *runtime;
@@ -173,7 +173,7 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
 /// We failed to materialize a segment that we needed to allocate in.
 TEST_F(GCLazySegmentNCDeathTest, FailToMaterialize) {
   auto provider = llvm::make_unique<LimitedStorageProvider>(
-      DummyRuntime::defaultProvider(kGCConfig), kHeapVALimited);
+      DummyRuntime::defaultProvider(), kHeapVALimited);
   auto runtime =
       DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
@@ -191,7 +191,7 @@ TEST_F(GCLazySegmentNCDeathTest, FailToMaterialize) {
 
 TEST_F(GCLazySegmentNCDeathTest, FailToMaterializeContinue) {
   auto provider = llvm::make_unique<LimitedStorageProvider>(
-      DummyRuntime::defaultProvider(kGCConfig), kHeapVALimited);
+      DummyRuntime::defaultProvider(), kHeapVALimited);
   auto runtime =
       DummyRuntime::create(getMetadataTable(), kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;

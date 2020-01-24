@@ -83,8 +83,6 @@ static const Predefined::Str fixedPropCacheNames[(size_t)PropCacheID::_COUNT] =
 
 /* static */
 std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
-  const GCConfig &gcConfig = runtimeConfig.getGCConfig();
-  GC::Size sz{gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()};
   // TODO(T31421960): This can become a unique_ptr with C++14 lambda
   // initializers.
   std::shared_ptr<StorageProvider> provider{StorageProvider::mmapProvider()};

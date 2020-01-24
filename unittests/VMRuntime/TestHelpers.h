@@ -267,8 +267,7 @@ struct DummyRuntime final : public HandleRootOwner,
   /// Provide the correct storage provider based on build modes.
   /// All decorator StorageProviders must wrap the one returned from this
   /// function.
-  static std::unique_ptr<StorageProvider> defaultProvider(
-      const GCConfig &gcConfig);
+  static std::unique_ptr<StorageProvider> defaultProvider();
 
   ~DummyRuntime() override {
     gc.finalizeAll();

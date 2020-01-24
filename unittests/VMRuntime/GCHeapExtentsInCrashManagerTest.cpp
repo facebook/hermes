@@ -80,7 +80,7 @@ TEST(GCHeapExtentsInCrashManagerTest, HeapExtentsCorrect) {
   auto runtime = DummyRuntime::create(
       getMetadataTable(),
       gcConfig,
-      DummyRuntime::defaultProvider(gcConfig),
+      DummyRuntime::defaultProvider(),
       testCrashMgr);
   DummyRuntime &rt = *runtime;
 
