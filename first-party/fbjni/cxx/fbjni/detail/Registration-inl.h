@@ -51,17 +51,17 @@ struct CreateDefault<void> {
 template <typename R>
 using Converter = Convert<typename std::decay<R>::type>;
 
-template <typename F, typename R, typename... Args>
-struct WrapForVoidReturn {
-  static typename Converter<R>::jniType call(Args&&... args, F func) {
-    return Converter<R>::toJniRet(func(std::forward<Args>(args)...));
+template <typename F, typename R, typename C, typename... Args>
+struct CallWithJniConversions {
+  static typename Converter<R>::jniType call(JniType<C> obj, typename Converter<Args>::jniType... args, F func) {
+    return Converter<R>::toJniRet(func(obj, Converter<Args>::fromJni(args)...));
   }
 };
 
-template <typename F, typename... Args>
-struct WrapForVoidReturn<F, void, Args...> {
-  static void call(Args&&... args, F func) {
-    func(std::forward<Args>(args)...);
+template <typename F, typename C, typename... Args>
+struct CallWithJniConversions<F, void, C, Args...> {
+  static void call(JniType<C> obj, typename Converter<Args>::jniType... args, F func) {
+    func(obj, Converter<Args>::fromJni(args)...);
   }
 };
 
@@ -86,8 +86,8 @@ struct FunctionWrapper {
   static jniRet call(JNIEnv* env, jobject obj, typename Converter<Args>::jniType... args, F funcPtr) {
     detail::JniEnvCacher jec(env);
     try {
-      return WrapForVoidReturn<F, R, JniType<C>, Args...>::call(
-          static_cast<JniType<C>>(obj), Converter<Args>::fromJni(args)..., funcPtr);
+      return CallWithJniConversions<F, R, JniType<C>, Args...>::call(
+          static_cast<JniType<C>>(obj), args..., funcPtr);
     } catch (...) {
       translatePendingCppExceptionToJavaException();
       return CreateDefault<jniRet>::create();
