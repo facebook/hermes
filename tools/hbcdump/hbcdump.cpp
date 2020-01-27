@@ -23,10 +23,6 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
-#ifdef HERMES_HAS_JSBIGSTRING
-#include <cxxreact/JSBigString.h>
-#endif
-
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -388,17 +384,8 @@ int main(int argc, char **argv) {
   llvm::llvm_shutdown_obj Y;
   llvm::cl::ParseCommandLineOptions(argc, argv, "Hermes bytecode dump tool\n");
 
-#ifdef HERMES_HAS_JSBIGSTRING
-  auto jsBFS = facebook::react::JSBigFileString::fromPath(InputFilename);
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileBufOrErr =
-      llvm::MemoryBuffer::getMemBuffer(
-          llvm::StringRef(jsBFS->c_str(), jsBFS->size()),
-          "",
-          /* RequiresNullTerminator = */ false);
-#else
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileBufOrErr =
       llvm::MemoryBuffer::getFile(InputFilename);
-#endif // HERMES_HAS_JSBIGSTRING
 
   if (!fileBufOrErr) {
     llvm::errs() << "Error: fail to open file: " << InputFilename << ": "
