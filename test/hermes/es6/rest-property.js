@@ -17,3 +17,15 @@ print(a, c, Object.entries(rest));
 var {...rest} = {x: 10, y: 20};
 print(Object.entries(rest));
 //CHECK-NEXT: x,10,y,20
+
+// These two tests for duplicate identifiers were motivated by the use of
+// 'copyDataProperties' internally. This process creates a dummy object with
+// properties to ignore when creating the "rest" object in destructuring. This
+// must not be created with duplicate properties or an assertion may be thrown.
+var {a, a, ...b} = {a: 42, c: 69};
+print(a, Object.entries(b));
+//CHECK-NEXT: 42 c,69
+
+var {['a']: b, ['a']: b, ...c} = {a: 43, d: 70};
+print(b, Object.entries(c));
+//CHECK-NEXT: 43 d,70

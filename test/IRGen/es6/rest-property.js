@@ -98,3 +98,26 @@ function f4(o, t) {
 //CHECK-NEXT:  %10 = StorePropertyInst %9, %6, "rest" : string
 //CHECK-NEXT:  %11 = ReturnInst undefined : undefined
 //CHECK-NEXT:function_end
+
+function f5(o) {
+    var a, rest;
+    ({a, a,  ...rest} = o);
+}
+//CHECK-LABEL:function f5(o)
+//CHECK-NEXT:frame = [a, rest, o]
+//CHECK-NEXT:%BB0:
+//CHECK-NEXT:  %0 = StoreFrameInst undefined : undefined, [a]
+//CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [rest]
+//CHECK-NEXT:  %2 = StoreFrameInst %o, [o]
+//CHECK-NEXT:  %3 = LoadFrameInst [o]
+//CHECK-NEXT:  %4 = LoadPropertyInst %3, "a" : string
+//CHECK-NEXT:  %5 = StoreFrameInst %4, [a]
+//CHECK-NEXT:  %6 = LoadPropertyInst %3, "a" : string
+//CHECK-NEXT:  %7 = StoreFrameInst %6, [a]
+//CHECK-NEXT:  %8 = HBCAllocObjectFromBufferInst 1 : number, "a" : string, 0 : number
+//CHECK-NEXT:  %9 = AllocObjectInst 0 : number, empty
+//CHECK-NEXT:  %10 = CallBuiltinInst [HermesBuiltin.copyDataProperties] : number, undefined : undefined, %9 : object, %3, %8 : object
+//CHECK-NEXT:  %11 = StoreFrameInst %10, [rest]
+//CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+//CHECK-NEXT:function_end
+
