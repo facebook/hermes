@@ -1219,16 +1219,20 @@ ExecutionStatus Runtime::raiseStackOverflow(StackOverflowKind kind) {
 }
 
 ExecutionStatus Runtime::raiseQuitError() {
-  return raiseUncatchableError("Quit");
+  return raiseUncatchableError(
+      Handle<JSObject>::vmcast(&QuitErrorPrototype), "Quit");
 }
 
 ExecutionStatus Runtime::raiseTimeoutError() {
-  return raiseUncatchableError("Javascript execution has timed out.");
+  return raiseUncatchableError(
+      Handle<JSObject>::vmcast(&TimeoutErrorPrototype),
+      "Javascript execution has timed out.");
 }
 
-ExecutionStatus Runtime::raiseUncatchableError(llvm::StringRef errMessage) {
-  auto res = JSError::createUncatchable(
-      this, Handle<JSObject>::vmcast(&ErrorPrototype));
+ExecutionStatus Runtime::raiseUncatchableError(
+    Handle<JSObject> prototype,
+    llvm::StringRef errMessage) {
+  auto res = JSError::createUncatchable(this, prototype);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

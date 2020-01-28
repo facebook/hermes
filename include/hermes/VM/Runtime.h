@@ -597,7 +597,9 @@ class Runtime : public HandleRootOwner,
   ExecutionStatus raiseTimeoutError();
 
   /// Utility function to raise a catchable JS error with \p errMessage.
-  ExecutionStatus raiseUncatchableError(llvm::StringRef errMessage);
+  ExecutionStatus raiseUncatchableError(
+      Handle<JSObject> prototype,
+      llvm::StringRef errMessage);
 
   /// Interpret the current function until it returns or throws and return
   /// CallResult<HermesValue> or the thrown object in 'thrownObject'.

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes -O -target=HBC %s 2>&1 ) | %FileCheck %s
-// RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && (! %hermes %t.hbc 2>&1 ) | %FileCheck %s
+// RUN: (! %hermes -O -target=HBC %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && (! %hermes %t.hbc 2>&1 ) | %FileCheck --match-full-lines %s
 
 print("Start");
 // CHECK-LABEL: Start
@@ -21,5 +21,5 @@ try {
 
 // QuitError should be uncatchable, and should not run catch or finally blocks.
 
-// CHECK-NEXT: Error: Quit
+// CHECK-NEXT: QuitError: Quit
 // CHECK-NEXT:     at quit (native)
