@@ -9,10 +9,20 @@ import React, { useEffect, useState, useReducer } from 'react';
 import classnames from 'classnames';
 import MonacoEditor from 'react-monaco-editor';
 import Layout from '@theme/Layout';
+import useTheme from './useTheme';
 import Worker from 'worker-loader!./worker.js';
 import styles from './styles.module.css';
 import RunIcon from './runIcon';
 import useWindowSize from './useWindowSize';
+
+const vsDarkTheme = {
+  base: 'vs-dark',
+  inherit: true,
+  rules: [{ background: '121212' }],
+  colors: {
+    'editor.background': '#121212',
+  },
+};
 
 const worker = new Worker();
 
@@ -50,6 +60,33 @@ function Playground() {
   const [input, setInput] = useState('const a = 1; \nprint(a);');
   const [args, setArgs] = useState('-help');
   const windowSize = useWindowSize();
+  const theme = useTheme();
+
+  const headerLayout = {
+    height: 100,
+  };
+
+  const editorLayout = {
+    xs: {
+      width: windowSize.width,
+      height: 200,
+    },
+    lg: {
+      width: (1 / 3) * windowSize.width,
+      height: windowSize.height - headerLayout.height,
+    },
+  };
+
+  const outputLayout = {
+    xs: {
+      width: windowSize.width,
+      height: windowSize.height - headerLayout.height - editorLayout.xs.height,
+    },
+    lg: {
+      width: (2 / 3) * windowSize.width,
+      height: windowSize.height,
+    },
+  };
 
   useEffect(() => {
     worker.onmessage = function(e) {
@@ -86,8 +123,12 @@ function Playground() {
     setArgs(evt.target.value);
   }
 
+  function onEditorWillMount(monaco) {
+    monaco.editor.defineTheme('vs-dark', vsDarkTheme);
+  }
+
   return (
-    <Layout title="Hermes" description="Hermes Playground">
+    <Layout title="Hermes" description="Hermes Playground" noFooter={true}>
       <form
         onSubmit={handleSubmit}
         className={classnames(styles.argsInputContainer)}
@@ -108,20 +149,25 @@ function Playground() {
 
       <div className={styles.row}>
         <MonacoEditor
-          width={windowSize.width / 2}
-          height={windowSize.height - 300}
+          {...(windowSize.width > 600 ? editorLayout.lg : editorLayout.xs)}
           language="javascript"
-          theme="vs-light"
+          theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
           value={input}
           onChange={setInput}
+          options={{ minimap: { enabled: false }, wordWrap: 'on' }}
+          editorWillMount={onEditorWillMount}
         />
         <MonacoEditor
-          width={windowSize.width / 2}
-          height={windowSize.height - 300}
+          {...(windowSize.width > 600 ? outputLayout.lg : outputLayout.xs)}
           language="json"
-          theme="vs-light"
+          theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
           value={output}
-          options={{ readOnly: true }}
+          options={{
+            readOnly: true,
+            minimap: { enabled: false },
+            wordWrap: 'on',
+          }}
+          editorWillMount={onEditorWillMount}
         />
       </div>
     </Layout>
