@@ -14,9 +14,9 @@ try {
   print('caught');
 }
 
-// CHECK: Break on script load in global: {{.*}}[1]:11:1
+// CHECK: Break on script load in global: {{.*}}[{{[0-9]+}}]:11:1
 // CHECK-NEXT: Set pauseOnThrow: all errors
 // CHECK-NEXT: Continuing execution
-// CHECK-NEXT: Break on exception in global: {{.*}}[1]:12:3
+// CHECK-NEXT: Break on exception in global: {{.*}}[{{[0-9]+}}]:12:3
 // CHECK-NEXT: 1
 // CHECK-NEXT: Continuing execution

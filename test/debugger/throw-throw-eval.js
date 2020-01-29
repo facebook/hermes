@@ -16,10 +16,10 @@ try {
   print("Message: " + e.message);
 }
 
-// CHECK: Break on script load in global: {{.*}}[1]:13:1
+// CHECK: Break on script load in global: {{.*}}[{{[0-9]+}}]:13:1
 // CHECK-NEXT: Set pauseOnThrow: all errors
 // CHECK-NEXT: Continuing execution
-// CHECK-NEXT: Break on exception in global: {{.*}}[1]:14:3
+// CHECK-NEXT: Break on exception in global: {{.*}}[{{[0-9]+}}]:14:3
 // CHECK-NEXT: Exception: Error: Bar
 // CHECK-NEXT:   0: eval: {{.*}}
 // CHECK-NEXT:   1: (native)

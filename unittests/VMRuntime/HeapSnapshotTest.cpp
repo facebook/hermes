@@ -683,8 +683,9 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationForLazyCode) {
   // The location isn't emitted in fully optimized builds.
   const JSONArray &locations = *llvm::cast<JSONArray>(root->at("locations"));
   Location loc = FIND_LOCATION_FOR_ID(funcID, locations, nodes, strings);
-  // The location should be the first file, at line 1 column 5 with indenting
-  EXPECT_EQ(loc, Location(expected, 1, 1, 5));
+  // The location should be the given file, at line 1 column 5 with indenting
+  auto scriptId = func->getRuntimeModule()->getScriptID();
+  EXPECT_EQ(loc, Location(expected, scriptId, 1, 5));
 #else
   (void)findLocationForID;
 #endif
@@ -724,8 +725,9 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
   // The location isn't emitted in fully optimized builds.
   const JSONArray &locations = *llvm::cast<JSONArray>(root->at("locations"));
   Location loc = FIND_LOCATION_FOR_ID(funcID, locations, nodes, strings);
-  // The location should be the first file, second line, third column
-  EXPECT_EQ(loc, Location(expected, 1, 2, 3));
+  // The location should be the given file, second line, third column
+  auto scriptId = func->getRuntimeModule()->getScriptID();
+  EXPECT_EQ(loc, Location(expected, scriptId, 2, 3));
 #else
   (void)findLocationForID;
 #endif
