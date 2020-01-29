@@ -438,7 +438,7 @@ jobs:
             cp hermes-engine-*.tgz /tmp/hermes/output
             # Also copy the other packages for the sole purpose of not having
             # to visit multiple jobs pages to download all release artifacts
-            cp hermes-cli-*.tar.gz /tmp/hermes/output
+            cp /tmp/hermes/input/*.tar.gz /tmp/hermes/output
 
       - run:
           name: Checksum artifacts
