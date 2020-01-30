@@ -415,7 +415,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
 }
 
 // These tests fail on Windows.
-#if defined(EXPECT_DEATH) && !defined(_WINDOWS)
+#if defined(EXPECT_DEATH_IF_SUPPORTED) && !defined(_WINDOWS)
 TEST_F(SynthTraceTest, HostFunctionThrowsExceptionFails) {
   // TODO (T28293178) Remove this once exceptions are supported.
   jsi::Function throwingFunc = jsi::Function::createFromHostFunction(
@@ -428,7 +428,7 @@ TEST_F(SynthTraceTest, HostFunctionThrowsExceptionFails) {
          size_t count) -> jsi::Value {
         throw std::runtime_error("Cannot call");
       });
-  EXPECT_DEATH({ throwingFunc.call(*rt); }, "");
+  EXPECT_DEATH_IF_SUPPORTED({ throwingFunc.call(*rt); }, "");
 }
 
 TEST_F(SynthTraceTest, HostObjectThrowsExceptionFails) {
@@ -449,8 +449,9 @@ TEST_F(SynthTraceTest, HostObjectThrowsExceptionFails) {
   jsi::Object thro = jsi::Object::createFromHostObject(
       *rt, std::make_shared<ThrowingHostObject>());
   ASSERT_TRUE(thro.isHostObject(*rt));
-  EXPECT_DEATH({ thro.getProperty(*rt, "foo"); }, "");
-  EXPECT_DEATH({ thro.setProperty(*rt, "foo", jsi::Value::undefined()); }, "");
+  EXPECT_DEATH_IF_SUPPORTED({ thro.getProperty(*rt, "foo"); }, "");
+  EXPECT_DEATH_IF_SUPPORTED(
+      { thro.setProperty(*rt, "foo", jsi::Value::undefined()); }, "");
 }
 #endif
 

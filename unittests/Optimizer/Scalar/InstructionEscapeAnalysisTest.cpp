@@ -290,11 +290,11 @@ TEST_F(InstructionEscapeAnalysisTest, AddRemoveInverseTest) {
 using InstructionEscapeAnalysisDeathTest = InstructionEscapeAnalysisTest;
 
 TEST_F(InstructionEscapeAnalysisDeathTest, CannotAnalyzeEmptyRangeTest) {
-  EXPECT_DEATH(addRange(), "Assertion.*nonempty");
+  EXPECT_DEATH_IF_SUPPORTED(addRange(), "Assertion.*nonempty");
 }
 
 TEST_F(InstructionEscapeAnalysisDeathTest, CannotRemoveBeforeAddTest) {
-  EXPECT_DEATH(removeLastRange(), "Assertion.*add");
+  EXPECT_DEATH_IF_SUPPORTED(removeLastRange(), "Assertion.*add");
 }
 
 TEST_F(InstructionEscapeAnalysisDeathTest, CannotRemoveTwiceInARowTest) {
@@ -302,11 +302,11 @@ TEST_F(InstructionEscapeAnalysisDeathTest, CannotRemoveTwiceInARowTest) {
   addRange();
   addRange();
   removeLastRange();
-  EXPECT_DEATH(removeLastRange(), "Assertion.*once");
+  EXPECT_DEATH_IF_SUPPORTED(removeLastRange(), "Assertion.*once");
 }
 
 TEST_F(InstructionEscapeAnalysisDeathTest, CannotGetPrefixBeforeAddRangeTest) {
-  EXPECT_DEATH(longestPrefix(), "Assertion.*add");
+  EXPECT_DEATH_IF_SUPPORTED(longestPrefix(), "Assertion.*add");
 }
 
 #endif // !NDEBUG
