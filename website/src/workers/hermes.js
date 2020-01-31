@@ -44,15 +44,11 @@ function reset() {
 }
 
 function preheat() {
-  postMessage(['log', { log: 'Preheating Hermes...\n' }]);
-
   app.FS.writeFile(fileName, 'var x = 10;');
   app.callMain(['-O', fileName]);
 
-  postMessage(['log', { log: 'Hermes is preheated\n' }]);
-
   preheated = true;
-  reset();
+  resetApp();
 }
 
 function handleStdout(txt) {

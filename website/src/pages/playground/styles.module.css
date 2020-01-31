@@ -14,11 +14,17 @@ body > div {
   overflow: hidden;
 }
 
+.headerContainer {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: 10px;
+  padding: 10px;
+}
+
 .argsInputContainer {
   display: flex;
-  width: 100%;
-  margin: 15px;
   height: 30px;
+  margin-right: 10px;
 }
 
 .argsInputField {
@@ -61,8 +67,27 @@ html[data-theme='dark'] .argsIconContainer {
   color: white;
 }
 
-.spinner {
-  animation: rotate 1.5s linear infinite;
+.helperButton {
+  margin-right: 10px;
+  height: 30px;
+  padding-top: 4px;
+  background-color: var(--ifm-navbar-search-input-background-color);
+  border: 1px solid var(--ifm-color-emphasis-500);
+  border-radius: 4px;
+  color: var(--ifm-color-primary);
+  text-align: center;
+  font-size: var(--ifm-font-size-base);
+  padding: 0px 12px;
+}
+
+.helperButton:hover {
+  cursor: pointer;
+  background-color: var(--ifm-color-primary);
+  color: white;
+}
+
+html[data-theme='dark'] .helperButton {
+  border: 1px solid var(--ifm-color-emphasis-100);
 }
 
 .row {
@@ -71,19 +96,12 @@ html[data-theme='dark'] .argsIconContainer {
   flex-wrap: wrap;
 }
 
-.ellapsed {
-  align-self: center;
-  margin-left: 10px;
+.spinner {
+  animation: rotate 1.5s linear infinite;
 }
 
 @keyframes rotate {
   100% {
     transform: rotate(360deg);
-  }
-}
-
-@media screen and (max-width: 600px) {
-  .argsInputContainer {
-    width: 100%;
   }
 }
