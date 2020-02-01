@@ -710,7 +710,7 @@ static inline bool isDigit(char16_t c) {
 
 /// Read a number from the iterator at \p it into \p x.
 /// Can read integers that consist entirely of digits.
-/// \param[in][out] is modified to the new start point of the scan if
+/// \param[in,out] it is modified to the new start point of the scan if
 /// successful.
 /// \param end the end of the string.
 /// \param[out] x modified to contain the scanned integer.
@@ -863,8 +863,8 @@ static double parseESDate(StringView str) {
   auto end = str.end();
 
   /// Read a string starting at `it` into `tok`.
-  /// \param len the number of characters to scan in the string.
-  /// \return true if successful, false if failed.
+  /// \p len the number of characters to scan in the string.
+  /// Return true if successful, false if failed.
   auto scanStr = [&str, &tok, &it](int32_t len) -> bool {
     if (it + len > str.end()) {
       return false;

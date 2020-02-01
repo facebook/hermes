@@ -125,9 +125,9 @@ class GenGC;
 ///   void shrinkTo(size_t size);
 ///
 /// Ensure that the generation has enough available space to accommodate an \p
-/// amount byte allocation, by potentially increasing its size. \return true if
+/// amount byte allocation, by potentially increasing its size. return true if
 /// and only if a call to this->allocRaw(amount) will succeed immediately
-/// following this call, and \return false whilst leaving the bounds of the
+/// following this call, and return false whilst leaving the bounds of the
 /// generation unchanged otherwise.
 ///   bool growToFit(size_t amount);
 ///

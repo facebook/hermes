@@ -627,7 +627,7 @@ class ESTreeIRGen {
   ///     normally (neither through an exception nor break/return/continue). It
   ///     executes outside of the exception scope (exceptions here will not be
   ///     caught by the handler).
-  /// \param emitHandler(BasicBlock *nextBlock) emits the code to execute when
+  /// \param emitHandler emits the code to execute when
   ///     the exception is caught. It must emit a CatchInstu to clear the active
   ///     exception, even if it ignores it. \p nextBlock is passed as a
   ///     parameter.
@@ -809,7 +809,7 @@ class ESTreeIRGen {
 
   /// Generates a left hand side reference from valid estree nodes
   /// that can be translated to lref.
-  /// \param init indicates whether this reference is a declaration
+  /// \param declInit indicates whether this reference is a declaration
   ///     initialization, in which case the TDZ check on store should be
   ///     omitted.
   LReference createLRef(ESTree::Node *node, bool declInit);

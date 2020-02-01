@@ -35,7 +35,7 @@ class NativeArgs final {
     return thisArg_ + index + 1;
   }
 
-  /// \param points to "this", "arg0", ... "argN").
+  /// \param thisArg points to ("this", "arg0", ... "argN").
   /// \param argCount number of JavaScript arguments excluding 'this'
   /// \param newTarget points to the value of \c new.target in the stack.
   NativeArgs(

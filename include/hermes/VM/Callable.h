@@ -187,7 +187,7 @@ class Callable : public JSObject {
       SymbolID name,
       unsigned paramCount,
       Handle<JSObject> prototypeObjectHandle,
-      WritablePrototype writeablePrototype,
+      WritablePrototype writablePrototype,
       bool strictMode);
 
   /// Execute this function with no arguments. This is just a convenience
@@ -964,7 +964,6 @@ class JSFunction : public Callable {
 
  protected:
   /// Call the JavaScript function with arguments already on the stack.
-  /// \param construct true if this is a constructor call.
   static CallResult<HermesValue> _callImpl(
       Handle<Callable> selfHandle,
       Runtime *runtime);

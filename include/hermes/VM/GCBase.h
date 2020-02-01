@@ -130,8 +130,8 @@ class Deserializer;
 /// Mark a GCPointer<T>, which must be within the heap.
 ///   void mark(GCPointer<T> &ptr, Name name);
 ///
-/// \return true if a GC cycle is currently in progress.
-/// \post If false, all objects in the heap have a valid VTable.
+/// Return true if a GC cycle is currently in progress.
+/// If false, all objects in the heap have a valid VTable.
 ///   bool inGC() const;
 ///
 /// Various forms of write barriers: these can have empty implementations

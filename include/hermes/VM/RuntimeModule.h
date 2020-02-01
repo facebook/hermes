@@ -120,8 +120,8 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
   /// A map from template object ids to template objects.
   llvm::DenseMap<uint32_t, JSObject *> templateMap_;
 
-  /// Registers the created RuntimeModule with \param domain, resulting in
-  /// \param domain owning it. The RuntimeModule will be freed when the
+  /// Registers the created RuntimeModule with \p domain, resulting in
+  /// \p domain owning it. The RuntimeModule will be freed when the
   /// domain is collected..
   explicit RuntimeModule(
       Runtime *runtime,
@@ -453,8 +453,6 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
 
   /// \return whether tuple <keyBufferIndex, numLiterals> can generate a
   /// hidden class literal cache hash key or not.
-  /// \param keyBufferIndex value of NewObjectWithBuffer instruction; it must
-  /// be less than 2^24 to be used as a cache key.
   /// \param keyBufferIndex value of NewObjectWithBuffer instruction. it must
   /// be less than 256 to be used as a cache key.
   static bool canGenerateLiteralHiddenClassCacheKey(

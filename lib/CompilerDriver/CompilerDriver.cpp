@@ -1022,7 +1022,7 @@ std::unique_ptr<llvm::MemoryBuffer> getFileFromDirectoryOrZip(
 /// In case of failure, ensure fileBufs is empty.
 /// \param inputPath the path to the directory or zip file containing metadata
 /// and files.
-/// \param fileBufs[out] table of file buffers.
+/// \param[out] fileBufs table of file buffers.
 /// \param alloc the allocator to use for JSON parsing of metadata.
 /// \return a pointer to the metadata JSON object, nullptr on failure.
 ::hermes::parser::JSONObject *readInputFilenamesFromDirectoryOrZip(
@@ -1299,7 +1299,7 @@ std::unique_ptr<Context::ResolutionTable> readResolutionTable(
 
 /// Generate IR for CJS modules into the Module \p M for the source files in
 /// \p fileBufs. Treat the first element in fileBufs as the entry point.
-/// \param inputSourceMaps the parsed versions of the input source maps,
+/// \param sourceMapGen the parsed versions of the input source maps,
 /// in the order in which the files were compiled.
 /// \return true on success, false on error, in which case an error will be
 /// printed.

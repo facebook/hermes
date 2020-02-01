@@ -27,8 +27,7 @@ using Allocator = llvm::BumpPtrAllocator;
 
 /// Deserialize the ESTree from the input JSON. Reports an error and fails the
 /// Optional result on error.
-/// \param allocator used to allocate the ESTree nodes
-/// \param sm        used to report errors
+/// \param context   used to allocate the ESTree nodes
 /// \param node      the JSON tree to deserialize from.
 /// \param jsSource  an optional buffer containing the input JavaScript source
 ///     for the ESTree. It is used for correlating source locations.

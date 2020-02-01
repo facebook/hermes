@@ -84,8 +84,8 @@ class PageAccessTracker {
   /// Create a new PageAccessTracker, mark the whole address range unreadable.
   /// Note if the beginning or end of the buffer is not on the page boundary,
   /// the first page or last page the buffer actually covers won't be tracked.
-  /// \param bufStart, pointer to the start of the buffer.
-  /// \param bufSize, the size of the buffer.
+  /// \param bufStart pointer to the start of the buffer.
+  /// \param bufSize the size of the buffer.
   /// \return The new object, or nullptr if creation failed.
   static std::unique_ptr<volatile PageAccessTracker> create(
       void *bufStart,

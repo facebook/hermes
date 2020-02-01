@@ -435,7 +435,7 @@ class IdentifierTable {
   /// Allocates a copy of the StringPrimitive \p prim or \p str, depending on
   /// whether \p primHandle is available, assigning it the given \p strId.
   /// If \p primHandle is not null, it is assumed to be backing str.
-  /// \param Unique indicates that this string should be uniqued.
+  /// \tparam Unique indicates that this string should be uniqued.
   /// \param str Required. The string to to use.
   /// \param primHandle optional StringPrimitive. If this is specified, then
   ///     \p str must refer to its contents.

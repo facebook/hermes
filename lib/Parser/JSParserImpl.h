@@ -502,7 +502,7 @@ class JSParserImpl {
   /// \param range the source range of the identifier to validate.
   /// \param id the string to be validated.
   /// \param kind the TokenKind provided when the string was lexed.
-  /// \return true if \param id is a valid binding identifier.
+  /// \return true if \p id is a valid binding identifier.
   bool validateBindingIdentifier(
       Param param,
       SMRange range,
@@ -515,12 +515,10 @@ class JSParserImpl {
   Optional<ESTree::IdentifierNode *> parseBindingIdentifier(Param param);
   /// Parse a VariableStatement or LexicalDeclaration.
   /// \param param [In, Yield]
-  /// \param declLoc the location of the let/const for error messages.
   Optional<ESTree::VariableDeclarationNode *> parseLexicalDeclaration(
       Param param);
   /// Parse a VariableStatement or LexicalDeclaration.
   /// \param param [Yield]
-  /// \param declLoc the location of the let/const for error messages.
   Optional<ESTree::VariableDeclarationNode *> parseVariableStatement(
       Param param);
 
@@ -628,7 +626,7 @@ class JSParserImpl {
   ///     display.
   /// \param seenOptionalChain true when `?.` is used in the chain leading
   ///     to this call expression
-  /// \param true when `?.` is used immediately prior to the Arguments.
+  /// \param optional true when `?.` is used immediately prior to the Arguments.
   Optional<ESTree::Node *> parseCallExpression(
       SMLoc startLoc,
       ESTree::NodePtr expr,

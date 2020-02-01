@@ -199,7 +199,7 @@ class Type {
 #undef BIT_TO_VAL
 #undef IS_VAL
 
-  /// \returns true if this type is a subset of \param t.
+  /// \returns true if this type is a subset of \p t.
   constexpr bool isSubsetOf(Type t) const {
     return !(bitmask_ & ~t.bitmask_);
   }
@@ -256,7 +256,7 @@ class Type {
     return canBeType(Type::createRegExp());
   }
 
-  /// Return true if this type is a proper subset of \param t. A "proper subset"
+  /// Return true if this type is a proper subset of \p t. A "proper subset"
   /// means that it is a subset bit is not equal.
   constexpr bool isProperSubsetOf(Type t) const {
     return bitmask_ != t.bitmask_ && !(bitmask_ & ~t.bitmask_);

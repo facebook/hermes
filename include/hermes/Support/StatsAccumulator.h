@@ -23,7 +23,7 @@ class StatsAccumulator {
  public:
   StatsAccumulator() = default;
 
-  /// Update the summary stats with the addition of a new \param value.
+  /// Update the summary stats with the addition of a new \p value.
   inline void record(T value) {
     if (n_ == 0) {
       min_ = value;

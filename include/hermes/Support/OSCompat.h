@@ -101,9 +101,10 @@ enum class ProtectMode { ReadWrite, None };
 /// false on error.
 bool vm_protect(void *p, size_t sz, ProtectMode mode);
 
+enum class MAdvice { Random, Sequential };
+
 /// Issue an madvise() call.
 /// \return true on success, false on error.
-enum class MAdvice { Random, Sequential };
 bool vm_madvise(void *p, size_t sz, MAdvice advice);
 
 /// Return the number of pages in the given region that are currently in RAM.

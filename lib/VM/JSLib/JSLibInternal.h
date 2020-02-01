@@ -134,7 +134,6 @@ inline CallResult<HermesValue> defineMethod(
 /// \param context the context to pass to the native function.
 /// \param nativeFunctionPtr the native function implementing the method.
 /// \param paramCount the number of declared method parameters
-///  \return the new NativeFunction.
 void defineMethod(
     Runtime *runtime,
     Handle<JSObject> objectHandle,

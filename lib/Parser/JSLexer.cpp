@@ -1388,7 +1388,7 @@ void JSLexer::scanTemplateLiteral() {
   // Store the Template Raw Value (TRV) in the rawStorage_.
   rawStorage_.clear();
 
-  /// \return the Template Raw Value (TRV) of character \p c.
+  /// Return the Template Raw Value (TRV) of character \p c.
   /// The only time the TRV is different from c is when c is a <CR>.
   /// In that case, this function will return 0x0a (LINE FEED).
   const auto trv = [](char c) -> char {

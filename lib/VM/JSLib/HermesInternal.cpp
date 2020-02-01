@@ -339,7 +339,7 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
   MutableHandle<> tmpHandle{runtime};
 
   /// Add a property \p value keyed under \p key to resultHandle.
-  /// \return an ExecutionStatus.
+  /// Return an ExecutionStatus.
   auto addProperty = [&](Handle<> value, const char *key) {
     auto keySym = symbolForCStr(runtime, key);
     if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) {

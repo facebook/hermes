@@ -725,9 +725,9 @@ class JSObject : public GCCell {
 
   /// ES5.1 8.12.1.
   /// \param nameValHandle the name of the property. It must be a primitive.
-  /// If selfHandle refers to a proxy and \param ignoreProxy is Yes, desc
+  /// If selfHandle refers to a proxy and \p ignoreProxy is Yes, desc
   /// will be untouched and false will be returned.  If selfHandle refers to a
-  /// proxy, and \param ignoreProxy is No, then if [[GetOwnProperty]] on the
+  /// proxy, and \p ignoreProxy is No, then if [[GetOwnProperty]] on the
   /// proxy is undefined, then false will be returned, otherwise, desc will be
   /// filled in with the result, and true will be returned.  If selfHandle is
   /// not a proxy, then the flag is irrelevant.

@@ -81,9 +81,9 @@ bool isUnicodeConnectorPunctuation(uint32_t cp);
 /// \return the canonicalized value of \p cp, following ES9 21.2.2.8.2.
 uint32_t canonicalize(uint32_t cp, bool unicode);
 
+class CodePointSet;
 /// \return a set containing all characters which are canonically equivalent to
 /// any character in \p set, following ES9 21.2.2.8.2.
-class CodePointSet;
 CodePointSet makeCanonicallyEquivalent(const CodePointSet &set, bool unicode);
 
 } // namespace hermes

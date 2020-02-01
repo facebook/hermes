@@ -527,8 +527,9 @@ class JSLexer {
 
   /// Scan a hex number after the first character has been recognized but not
   /// consumed.
-  /// \param requireLen is the number of digits in the hex literal.
-  /// \param err if true, report an error on failing to recognize a hex number.
+  /// \param requiredLen is the number of digits in the hex literal.
+  /// \param errorOnFail if true, report an error on failing to recognize a hex
+  ///   number.
   llvm::Optional<uint32_t> consumeHex(
       unsigned requiredLen,
       bool errorOnFail = true);

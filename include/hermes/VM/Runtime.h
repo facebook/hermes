@@ -384,7 +384,6 @@ class Runtime : public HandleRootOwner,
   ///   stackPointer_, but it is more efficient to pass it in if it already
   ///   is in a register. It also provides some additional error checking in
   ///   debug builds, ensuring that the stack hasn't changed unexpectedly.
-  /// \return the new value of the current frame pointer.
   inline void setCurrentFrameToTopOfStack(StackFramePtr topFrame);
 
   /// Set the current frame pointer to the current top of the stack and return
@@ -571,10 +570,6 @@ class Runtime : public HandleRootOwner,
   /// \return ExecutionStatus::EXCEPTION
   ExecutionStatus raiseURIError(const TwineChar16 &msg);
 
-  /// Raise a stack overflow exception. This is special because constructing
-  /// the object must not execute any custom or JavaScript code.  The
-  /// argument influences the exception's message, to aid debugging.
-  /// \return ExecutionStatus::EXCEPTION
   enum class StackOverflowKind {
     // The JS register stack was exhausted.
     JSRegisterStack,
@@ -588,6 +583,11 @@ class Runtime : public HandleRootOwner,
     // JSONStringifyer has the same limit as JSONParser.
     JSONStringify,
   };
+
+  /// Raise a stack overflow exception. This is special because constructing
+  /// the object must not execute any custom or JavaScript code.  The
+  /// argument influences the exception's message, to aid debugging.
+  /// \return ExecutionStatus::EXCEPTION
   ExecutionStatus raiseStackOverflow(StackOverflowKind kind);
 
   /// Raise an error for the quit function. This error is not catchable.
@@ -867,20 +867,22 @@ class Runtime : public HandleRootOwner,
   /// character.
   void initCharacterStrings();
 
-  /// Enumerate the builtin methods, and invoke the callback on each method.
-  /// The parameters for the callback are:
   /// \param methodIndex is the index of the method in the table that lists
-  /// all the builtin methods, which is what we are iterating over.
+  ///   all the builtin methods, which is what we are iterating over.
   /// \param objectName is the id for the name of the object in the list of the
-  /// predefined strings.
+  ///   predefined strings.
   /// \param object is the object where the builtin method is defined as a
-  /// property.
+  ///   property.
   /// \param methodID is the SymbolID for the name of the method.
-  ExecutionStatus forEachBuiltin(const std::function<ExecutionStatus(
-                                     unsigned methodIndex,
-                                     Predefined::Str objectName,
-                                     Handle<JSObject> &object,
-                                     SymbolID methodID)> &callback);
+  using ForEachBuiltinCallback = ExecutionStatus(
+      unsigned methodIndex,
+      Predefined::Str objectName,
+      Handle<JSObject> &object,
+      SymbolID methodID);
+
+  /// Enumerate the builtin methods, and invoke the callback on each method.
+  ExecutionStatus forEachBuiltin(
+      const std::function<ForEachBuiltinCallback> &callback);
 
   /// Populate the builtins table by extracting the values from the global
   /// object.

@@ -311,7 +311,7 @@ class Debugger {
 
   /// Enables/disables the breakpoint given.
   /// \param id the id of the breakpoint to edit.
-  /// \param enabled if true, enable breakpoint \p id.
+  /// \param enable if true, enable breakpoint \p id.
   void setBreakpointEnabled(BreakpointID id, bool enable);
 
   /// \return the breakpoint information for breakpoint \p id.

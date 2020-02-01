@@ -35,7 +35,7 @@ class JITContext {
   /// \param enable whether JIT is enabled.
   /// \param blockSize the size of individual blocks of executable memory to be
   ///     allocated.
-  /// \param maximum amount of executable memory that can be allocated by the
+  /// \param maxMemory amount of executable memory that can be allocated by the
   ///     JIT.
   JITContext(bool enable, size_t blockSize, size_t maxMemory) {}
   ~JITContext() = default;
