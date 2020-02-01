@@ -513,6 +513,41 @@ std::string thread_name() {
   return threadName;
 }
 
+#ifdef __linux__
+std::vector<bool> sched_getaffinity() {
+  std::vector<bool> v;
+  cpu_set_t mask;
+  CPU_ZERO(&mask);
+  int status = ::sched_getaffinity(0, sizeof(mask), &mask);
+  if (status != 0) {
+    return v;
+  }
+  int lastSet = -1;
+  for (int cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
+    v.push_back(CPU_ISSET(cpu, &mask));
+    if (v.back())
+      lastSet = cpu;
+  }
+  // Trim trailing zeroes.
+  v.resize(lastSet + 1);
+  return v;
+}
+
+int sched_getcpu() {
+  return ::sched_getcpu();
+}
+#else
+std::vector<bool> sched_getaffinity() {
+  // Not yet supported.
+  return std::vector<bool>();
+}
+
+int sched_getcpu() {
+  // Not yet supported.
+  return -1;
+}
+#endif
+
 bool set_env(const char *name, const char *value) {
   // Enforce the contract of this function that value must not be empty
   assert(*value != '\0' && "value cannot be empty string");

@@ -50,4 +50,22 @@ TEST(OSCompatTest, CurrentRSS) {
   // isn't tracked with fine granularity.
   EXPECT_GE(oscompat::current_rss(), beginRSS);
 }
+
+#ifdef __linux__
+TEST(OSCompatTest, Scheduling) {
+  // At least one CPU should be set.
+  std::vector<bool> mask = oscompat::sched_getaffinity();
+  EXPECT_GE(mask.size(), 1u);
+  unsigned count = 0;
+  for (auto b : mask)
+    if (b)
+      ++count;
+  EXPECT_GE(count, 1u);
+
+  int cpu = oscompat::sched_getcpu();
+  ASSERT_GE(cpu, 0);
+  ASSERT_LE(cpu, (int)mask.size());
+  EXPECT_TRUE(mask[cpu]);
+}
+#endif
 } // namespace

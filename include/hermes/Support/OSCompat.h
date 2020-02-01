@@ -28,6 +28,7 @@
 #include <sstream>
 #include <string>
 #include <system_error>
+#include <vector>
 
 // This file defines cross-os APIs for functionality provided by our target
 // operating systems.
@@ -150,6 +151,14 @@ bool thread_page_fault_count(int64_t *outMinorFaults, int64_t *outMajorFaults);
 
 /// \return name of current thread.
 std::string thread_name();
+
+/// \return mask of all CPU cores on which this thread may be scheduled,
+/// or an empty vector on error.
+std::vector<bool> sched_getaffinity();
+
+/// \return the CPU core where this thread is currently scheduled,
+/// or -1 on error.
+int sched_getcpu();
 
 /// Converts a value to its string representation.  Only works for
 /// numeric values, e.g. 0 becomes "0", not '\0'.

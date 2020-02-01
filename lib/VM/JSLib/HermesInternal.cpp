@@ -261,6 +261,13 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
   } while (false)
 
   if (runtime->getRuntimeStats().shouldSample) {
+    // Build a string showing the set of cores on which we may run.
+    std::string mask;
+    for (auto b : oscompat::sched_getaffinity())
+      mask += b ? '1' : '0';
+    SET_PROP_STR("js_threadAffinityMask", ASCIIRef(mask.data(), mask.size()));
+    SET_PROP_NEW("js_threadCPU", oscompat::sched_getcpu());
+
     size_t bytecodePagesResident = 0;
     size_t bytecodePagesResidentRuns = 0;
     for (auto &module : runtime->getRuntimeModules()) {

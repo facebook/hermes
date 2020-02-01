@@ -386,6 +386,16 @@ std::string thread_name() {
   return "";
 }
 
+std::vector<bool> sched_getaffinity() {
+  // Not yet supported.
+  return std::vector<bool>();
+}
+
+int sched_getcpu() {
+  // Not yet supported.
+  return -1;
+}
+
 bool set_env(const char *name, const char *value) {
   // Setting an env var to empty requires a lot of hacks on Windows
   assert(*value != '\0' && "value cannot be empty string");
