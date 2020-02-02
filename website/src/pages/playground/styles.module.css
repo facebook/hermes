@@ -105,3 +105,9 @@ html[data-theme='dark'] .helperButton {
     transform: rotate(360deg);
   }
 }
+
+@media screen and (max-width: 600px) {
+  .argsInputField {
+    width: 100%;
+  }
+}
