@@ -20,6 +20,7 @@
 #include <new>
 #include <atomic>
 
+#include <fbjni/detail/FbjniApi.h>
 #include "Environment.h"
 
 namespace facebook {
@@ -36,7 +37,7 @@ struct ReferenceStats {
   void reset() noexcept;
 };
 
-extern ReferenceStats g_reference_stats;
+extern FBJNI_API ReferenceStats g_reference_stats;
 }
 /// @endcond
 

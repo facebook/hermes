@@ -26,6 +26,7 @@
 
 #include <jni.h>
 
+#include <fbjni/detail/FbjniApi.h>
 #include <fbjni/detail/SimpleFixedString.h>
 #include "References-forward.h"
 
@@ -316,14 +317,14 @@ static_assert(
 // NOTE: When updating this definition, see also DEFINE_CONSTANTS_FOR_FIELD_AND_ARRAY_TRAIT in Meta.cpp.
 #define DEFINE_FIELD_AND_ARRAY_TRAIT(TYPE, DSC)                         \
   template<>                                                            \
-struct jtype_traits<TYPE> {                                             \
+struct FBJNI_API jtype_traits<TYPE> {                                             \
   static constexpr decltype(detail::makeSimpleFixedString(#DSC)) kDescriptor = detail::makeSimpleFixedString(#DSC); \
   static constexpr decltype(kDescriptor) kBaseName = kDescriptor;       \
   using array_type = TYPE ## Array;                                     \
 };                                                                      \
                                                                         \
 template<>                                                              \
-struct jtype_traits<TYPE ## Array> {                                    \
+struct FBJNI_API jtype_traits<TYPE ## Array> {                                    \
   static constexpr decltype(detail::makeSimpleFixedString("[" #DSC)) kDescriptor = detail::makeSimpleFixedString("[" #DSC); \
   static constexpr decltype(jtype_traits<TYPE ## Array>::kDescriptor) kBaseName = kDescriptor; \
   using entry_type = TYPE;                                              \
@@ -332,7 +333,7 @@ struct jtype_traits<TYPE ## Array> {                                    \
 
 // There is no voidArray, handle that without the macro.
 template<>
-struct jtype_traits<void> {
+struct FBJNI_API jtype_traits<void> {
   static constexpr detail::SimpleFixedString<1> kDescriptor = detail::makeSimpleFixedString("V");
 };
 
