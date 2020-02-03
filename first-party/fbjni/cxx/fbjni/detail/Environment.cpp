@@ -17,7 +17,11 @@
 #include <fbjni/fbjni.h>
 
 #include <functional>
+#ifndef _WIN32
 #include <pthread.h>
+#else
+#include <windows.h>
+#endif
 
 namespace facebook {
 namespace jni {
@@ -80,14 +84,25 @@ void Environment::initialize(JavaVM* vm) {
 
 namespace {
 
+#ifndef _WIN32
 typedef pthread_key_t tls_key_t;
+#else
+typedef DWORD tls_key_t;
+#endif
 
 tls_key_t makeKey() {
   tls_key_t key;
+#ifndef _WIN32
   int ret = pthread_key_create(&key, nullptr);
   if (ret != 0) {
     FBJNI_LOGF("pthread_key_create failed: %d", ret);
   }
+#else
+  key = TlsAlloc();
+  if (key == TLS_OUT_OF_INDEXES) {
+    FBJNI_LOGF("TlsAlloc failed");
+  }
+#endif
   return key;
 }
 
@@ -97,15 +112,28 @@ tls_key_t getTLKey() {
 }
 
 inline detail::TLData* getTLData(tls_key_t key) {
-  return reinterpret_cast<detail::TLData*>(pthread_getspecific(key));
+#ifndef _WIN32
+  void* raw_data = pthread_getspecific(key);
+#else
+  LPVOID raw_data = TlsGetValue(key);
+  // TODO: Maybe check for errors here?
+#endif
+  return reinterpret_cast<detail::TLData*>(raw_data);
 }
 
 inline void setTLData(tls_key_t key, detail::TLData* data) {
+#ifndef _WIN32
   int ret = pthread_setspecific(key, data);
   if (ret != 0) {
     (void) ret;
     FBJNI_LOGF("pthread_setspecific failed: %d", ret);
   }
+#else
+  BOOL ret = TlsSetValue(key, data);
+  if (!ret) {
+    FBJNI_LOGF("TlsSetValue failed: %d", GetLastError());
+  }
+#endif
 }
 
 // This returns non-nullptr iff the env was cached from java.  So it
