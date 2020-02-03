@@ -27,7 +27,6 @@
 
 #pragma once
 
-#include <alloca.h>
 #include <stdexcept>
 #include <string>
 
@@ -110,9 +109,7 @@ static const int kMaxExceptionMessageBufferSize = 512;
 // thrown to the java caller.
 template<typename... Args>
 [[noreturn]] void throwNewJavaException(const char* throwableName, const char* fmt, Args... args) {
-  int msgSize = snprintf(nullptr, 0, fmt, args...);
-
-  char *msg = (char*) alloca(msgSize + 1);
+  char msg[kMaxExceptionMessageBufferSize];
   snprintf(msg, kMaxExceptionMessageBufferSize, fmt, args...);
   throwNewJavaException(throwableName, msg);
 }

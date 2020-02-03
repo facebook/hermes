@@ -22,7 +22,6 @@
 #include <lyra/lyra_exceptions.h>
 #endif
 
-#include <alloca.h>
 #include <cstdlib>
 #include <ios>
 #include <stdexcept>
