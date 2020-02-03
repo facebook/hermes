@@ -306,6 +306,10 @@ constexpr decltype(jtype_traits<T>::descriptor()) jtype_traits<T>::kDescriptor;
 template <typename T>
 constexpr decltype(jtype_traits<T>::base_name())jtype_traits<T>::kBaseName;
 
+static_assert(
+  std::is_same<jint, int>::value,
+  "jint must be int.  On Windows, try using Android's jni.h.");
+
 #pragma push_macro("DEFINE_FIELD_AND_ARRAY_TRAIT")
 #undef DEFINE_FIELD_AND_ARRAY_TRAIT
 
