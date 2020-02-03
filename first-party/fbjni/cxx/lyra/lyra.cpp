@@ -23,7 +23,9 @@
 #include <memory>
 #include <vector>
 
+#ifndef _WIN32
 #include <dlfcn.h>
+#endif
 #include <unwind.h>
 
 #include <fbjni/detail/Log.h>
@@ -80,7 +82,9 @@ void captureBacktrace(size_t skip, vector<InstructionPointer>& stackTrace) {
   // newer versions of gcc. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=56846
   // TODO(t10738439): Investigate workaround for the stack trace bug
   BacktraceState state = {skip, stackTrace};
+#ifndef _WIN32
   _Unwind_Backtrace(unwindCallback, &state);
+#endif
 }
 
 // this is a pointer to a function
@@ -116,6 +120,7 @@ void getStackTraceSymbols(vector<StackTraceElement>& symbols,
   symbols.clear();
   symbols.reserve(trace.size());
 
+#ifndef _WIN32
   for (size_t i = 0; i < trace.size(); ++i) {
     Dl_info info;
     if (dladdr(trace[i], &info)) {
@@ -124,6 +129,7 @@ void getStackTraceSymbols(vector<StackTraceElement>& symbols,
                            info.dli_sname ? info.dli_sname : "");
     }
   }
+#endif
 }
 
 ostream& operator<<(ostream& out, const StackTraceElement& elm) {

@@ -20,7 +20,9 @@
 #include <unordered_map>
 #include <cassert>
 #include <unwind.h>
+#ifndef _WIN32
 #include <cxxabi.h>
+#endif
 
 #include <lyra/lyra_exceptions.h>
 
@@ -159,7 +161,7 @@ const ExceptionTraceHolder* detail::getExceptionTraceHolder(
   // the exception (to support e.g. fbthrow).
   return getExceptionTraceHolderInException(ptr);
 }
-#else
+#elif !defined(_WIN32)
 
 namespace {
 
@@ -232,7 +234,7 @@ const ExceptionTraceHolder* detail::getExceptionTraceHolder(
   return getExceptionTraceHolderInException(ptr);
 }
 
-#endif // libc++
+#endif // libc++/Windows
 
 } // namespace lyra
 } // namespace facebook
