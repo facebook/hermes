@@ -18,9 +18,9 @@
 #include <mutex>
 #include <stdexcept>
 #include <unordered_map>
-#include <cxxabi.h>
-#include <unwind.h>
 #include <cassert>
+#include <unwind.h>
+#include <cxxabi.h>
 
 #include <lyra/lyra_exceptions.h>
 
