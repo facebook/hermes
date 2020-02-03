@@ -80,8 +80,10 @@ void Environment::initialize(JavaVM* vm) {
 
 namespace {
 
-pthread_key_t makeKey() {
-  pthread_key_t key;
+typedef pthread_key_t tls_key_t;
+
+tls_key_t makeKey() {
+  tls_key_t key;
   int ret = pthread_key_create(&key, nullptr);
   if (ret != 0) {
     FBJNI_LOGF("pthread_key_create failed: %d", ret);
@@ -89,16 +91,16 @@ pthread_key_t makeKey() {
   return key;
 }
 
-pthread_key_t getTLKey() {
-  static pthread_key_t key = makeKey();
+tls_key_t getTLKey() {
+  static tls_key_t key = makeKey();
   return key;
 }
 
-inline detail::TLData* getTLData(pthread_key_t key) {
+inline detail::TLData* getTLData(tls_key_t key) {
   return reinterpret_cast<detail::TLData*>(pthread_getspecific(key));
 }
 
-inline void setTLData(pthread_key_t key, detail::TLData* data) {
+inline void setTLData(tls_key_t key, detail::TLData* data) {
   int ret = pthread_setspecific(key, data);
   if (ret != 0) {
     (void) ret;
@@ -154,7 +156,7 @@ JniEnvCacher::JniEnvCacher(JNIEnv* env)
 {
   FBJNI_ASSERT(env);
 
-  pthread_key_t key = getTLKey();
+  tls_key_t key = getTLKey();
   detail::TLData* pdata = getTLData(key);
   if (pdata && pdata->env) {
     return;
@@ -178,7 +180,7 @@ JniEnvCacher::~JniEnvCacher() {
     return;
   }
 
-  pthread_key_t key = getTLKey();
+  tls_key_t key = getTLKey();
   TLData* pdata = getTLData(key);
   FBJNI_ASSERT(pdata);
   FBJNI_ASSERT(pdata->env != nullptr);
@@ -209,7 +211,7 @@ ThreadScope::ThreadScope()
   // cached, or we would have returned already.  So there better not
   // be TLData.
 
-  pthread_key_t key = getTLKey();
+  tls_key_t key = getTLKey();
   detail::TLData* pdata = getTLData(key);
   FBJNI_ASSERT(pdata == nullptr);
   setTLData(key, &data_);
@@ -227,7 +229,7 @@ ThreadScope::~ThreadScope() {
     return;
   }
 
-  pthread_key_t key = getTLKey();
+  tls_key_t key = getTLKey();
   detail::TLData* pdata = getTLData(key);
   FBJNI_ASSERT(pdata);
   FBJNI_ASSERT(pdata->env == nullptr);
