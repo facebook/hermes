@@ -47,19 +47,8 @@ constexpr size_t kHeapSizeHint =
 
 const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
 
-constexpr size_t kExtraSegments =
-#ifdef HERMESVM_COMPRESSED_POINTERS
-    // Allow one extra segment for compressed pointers cases.
-    // This is a hack, LimitedStorageProvider doesn't know if its underlying
-    // StorageProvider needs some excess storage for the runtime.
-    1
-#else
-    0
-#endif
-    ;
-
 constexpr size_t kHeapVA =
-    AlignedStorage::size() * (GC::kYoungGenFractionDenom + kExtraSegments);
+    AlignedStorage::size() * (GC::kYoungGenFractionDenom);
 
 constexpr size_t kHeapVALimited = kHeapVA / 2 + AlignedStorage::size() - 1;
 
@@ -159,7 +148,7 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
     rt.pointerRoots.push_back(&roots.back());
   }
 
-  ASSERT_EQ(N + 1 + kExtraSegments, counter.numAllocated());
+  ASSERT_EQ(N + 1, counter.numAllocated());
   ASSERT_EQ(0, rt.gc.numFullGCs());
 
   // Trigger a full collection, resize and one new segment to be materialised.
@@ -167,7 +156,7 @@ TEST_F(GCLazySegmentNCTest, OldGenAllocMaterialize) {
   rt.pointerRoots.push_back(&roots.back());
 
   EXPECT_EQ(1, rt.gc.numFullGCs());
-  EXPECT_EQ(N + 2 + kExtraSegments, counter.numAllocated());
+  EXPECT_EQ(N + 2, counter.numAllocated());
 }
 
 /// We failed to materialize a segment that we needed to allocate in.

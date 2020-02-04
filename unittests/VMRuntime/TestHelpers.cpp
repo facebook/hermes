@@ -37,27 +37,9 @@ std::shared_ptr<DummyRuntime> DummyRuntime::create(
     const GCConfig &gcConfig,
     std::shared_ptr<StorageProvider> provider,
     std::shared_ptr<CrashManager> crashMgr) {
-  // This should mimic the structure of Runtime::create if compressed pointers
-  // are active.
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  auto storage = provider->newStorage();
-  if (LLVM_UNLIKELY(!storage)) {
-    hermes_fatal(
-        (llvm::Twine("Could not allocate initial storage for Runtime: ") +
-         convert_error_to_message(storage.getError()))
-            .str());
-  }
-  DummyRuntime *rt =
-      new (storage.get()) DummyRuntime(metaTable, gcConfig, provider, crashMgr);
-  return std::shared_ptr<DummyRuntime>{rt, [provider](DummyRuntime *dr) {
-                                         dr->~DummyRuntime();
-                                         provider->deleteStorage(dr);
-                                       }};
-#else
   DummyRuntime *rt = new DummyRuntime(metaTable, gcConfig, provider, crashMgr);
   return std::shared_ptr<DummyRuntime>{
       rt, [provider](DummyRuntime *runtime) { delete runtime; }};
-#endif
 }
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(

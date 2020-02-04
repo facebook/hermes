@@ -193,21 +193,9 @@ TEST(GCOOMVALimitFullGCTest, Test) {
 
   const GCConfig config = TestGCConfigFixedSize(kHeapSizeHint);
 
-  constexpr size_t kExtraSegments =
-#ifdef HERMESVM_COMPRESSED_POINTERS
-      // Allow one extra segment for compressed pointers cases.
-      // This is a hack, LimitedStorageProvider doesn't know if its underlying
-      // StorageProvider needs some excess storage for the runtime.
-      1
-#else
-      0
-#endif
-      ;
-
   // Only space for two segments.
   auto provider = llvm::make_unique<LimitedStorageProvider>(
-      DummyRuntime::defaultProvider(),
-      AlignedStorage::size() * (2 + kExtraSegments));
+      DummyRuntime::defaultProvider(), AlignedStorage::size() * 2);
 
   auto runtime =
       DummyRuntime::create(getMetadataTable(), config, std::move(provider));
