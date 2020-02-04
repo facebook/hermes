@@ -131,11 +131,14 @@ void trace_destructor(void* exception_obj) {
 
 [[noreturn]] void
 cxa_throw(void* obj, const std::type_info* type, destructor_type destructor) {
+  // TODO(T61689492): Re-enable Lyra stack traces for libc++ arm64
+#if !defined(__aarch64__)
   if (enableBacktraces.load(std::memory_order_relaxed)) {
     std::lock_guard<std::mutex> lock(*get_exception_state_map_mutex());
     get_exception_state_map()->emplace(
         obj, ExceptionState{ExceptionTraceHolder(), destructor});
   }
+#endif
 
   original_cxa_throw(obj, type, trace_destructor);
 }
