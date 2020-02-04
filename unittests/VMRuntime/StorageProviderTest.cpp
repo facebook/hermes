@@ -194,18 +194,6 @@ class StorageGuard final {
   void *storage_;
 };
 
-TEST(StorageProviderTest, WithExcess) {
-  auto result = StorageProvider::preAllocatedProvider(0, 0, 100);
-  ASSERT_TRUE(result);
-  std::shared_ptr<StorageProvider> provider{std::move(result.get())};
-  // This should succeed even though the maxAmount is 0.
-  // The excess bytes requested should be rounded up to give an extra storage
-  // allocation.
-  StorageGuard storage{provider, provider->newStorage().get()};
-  EXPECT_TRUE(storage.raw());
-  // A request for a second storage *can* fail, but is not required to.
-}
-
 #ifndef NDEBUG
 
 class SetVALimit final {

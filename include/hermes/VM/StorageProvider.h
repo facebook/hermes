@@ -26,17 +26,6 @@ class StorageProvider {
   /// @name Factories
   /// @{
 
-  /// Provide storage from a pre-allocated \p amount.
-  /// \param amount Desired number of bytes in the reserve pool.
-  /// \param minAmount Minimum number of bytes that must be in the reserve pool.
-  /// \param excess An excess amount of bytes that should be allowed to be
-  ///   allocated.
-  /// \pre excess <= AlignedStorage::size().
-  /// \post The returned StorageProvider will be able to allocate at most 1
-  ///   extra storage for the excess amount specified.
-  static llvm::ErrorOr<std::unique_ptr<StorageProvider>>
-  preAllocatedProvider(size_t amount, size_t minAmount, size_t excess);
-
   /// Provide storage from mmap'ed separate regions.
   static std::unique_ptr<StorageProvider> mmapProvider();
 
