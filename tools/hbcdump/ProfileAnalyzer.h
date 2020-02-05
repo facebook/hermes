@@ -11,6 +11,8 @@
 #include "HBCParser.h"
 #include "StructuredPrinter.h"
 
+#include "hermes/SourceMap/SourceMapParser.h"
+
 #include "llvm/Support/raw_ostream.h"
 
 #include <numeric>
@@ -55,6 +57,7 @@ class ProfileAnalyzer {
   std::unordered_map<unsigned, FunctionRuntimeStatistics> funcRuntimeStats_;
   // Caches any unused function checksums in profile trace.
   std::unordered_set<std::string> unusedChecksumsInTrace_;
+  std::unique_ptr<SourceMap> sourceMap_;
 
   ProfileData deserializeTrace(
       std::unique_ptr<llvm::MemoryBuffer> profileBuffer);
@@ -115,8 +118,11 @@ class ProfileAnalyzer {
   ProfileAnalyzer(
       llvm::raw_ostream &os,
       std::shared_ptr<hbc::BCProvider> bcProvider,
-      llvm::Optional<std::unique_ptr<llvm::MemoryBuffer>> profileBufferOpt)
-      : os_(os), hbcParser_(std::move(bcProvider)) {
+      llvm::Optional<std::unique_ptr<llvm::MemoryBuffer>> profileBufferOpt,
+      std::unique_ptr<SourceMap> &&sourceMap)
+      : os_(os),
+        hbcParser_(std::move(bcProvider)),
+        sourceMap_(std::move(sourceMap)) {
     if (profileBufferOpt.hasValue()) {
       profileDataOpt_ =
           deserializeTrace(std::move(profileBufferOpt.getValue()));
@@ -150,15 +156,15 @@ class ProfileAnalyzer {
   void dumpEpilogue();
   // Print a high-level summary for the profile trace.
   void dumpSummary();
-  // Print offsets of a function.
-  void dumpFunctionOffsets(uint32_t funcId, StructuredPrinter &printer);
-  // Print offsets for all functions in bundle.
-  void dumpAllFunctionOffsets(StructuredPrinter &printer) {
+  // Print meta-data for functions e.g. offset, source-location, etc.
+  void dumpFunctionInfo(uint32_t funcId, StructuredPrinter &printer);
+  // Print meta-data for all functions in bundle.
+  void dumpAllFunctionInfo(StructuredPrinter &printer) {
     printer.openArray();
     for (uint32_t i = 0, e = hbcParser_.getBCProvider()->getFunctionCount();
          i < e;
          i++) {
-      dumpFunctionOffsets(i, printer);
+      dumpFunctionInfo(i, printer);
     }
     printer.closeArray();
   }

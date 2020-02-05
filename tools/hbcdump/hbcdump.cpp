@@ -11,7 +11,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/Public/Buffer.h"
-#include "hermes/SourceMap/SourceMapGenerator.h"
+#include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/MemoryBuffer.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -40,6 +40,10 @@ static llvm::cl::opt<std::string> InputFilename(
 static llvm::cl::opt<std::string> DumpOutputFilename(
     "out",
     llvm::cl::desc("Output file name"));
+
+static llvm::cl::opt<std::string> SourceMapFilename(
+    "source-map",
+    llvm::cl::desc("Optional source-map file name, used by function-info"));
 
 static llvm::cl::opt<std::string> StartupCommands(
     "c",
@@ -134,15 +138,14 @@ static void printHelp(llvm::Optional<llvm::StringRef> command = llvm::None) {
        "USAGE: block\n"},
       {"at-virtual",
        "Display information about the function at a given virtual offset.\n\n"
-       "USAGE: at-virtual <OFFSET> [-json]\n"},
+       "USAGE: at-virtual <OFFSET>\n"},
       {"help",
        "Help instructions for hbcdump tool commands.\n\n"
        "USAGE: help <COMMAND>\n"
        "       h <COMMAND>\n"},
-      {"offsets",
-       "Display offset, virtual offset, and the size of the function(s)\n\n"
-       "USAGE: offsets [-json]\n"
-       "       offsets <FUNC_ID> [-json]\n"
+      {"function-info",
+       "Display info about a specific function, or all functions\n\n"
+       "USAGE: function-info [<FUNC_ID>]\n"
        "NOTE: Virtual offset is the offset from the beginning of the segment\n"},
   };
 
@@ -169,6 +172,7 @@ static void enterCommandLoop(
     llvm::raw_ostream &os,
     std::shared_ptr<hbc::BCProvider> bcProvider,
     llvm::Optional<std::unique_ptr<llvm::MemoryBuffer>> profileBufferOpt,
+    std::unique_ptr<SourceMap> &&sourceMap,
     const std::vector<std::string> &startupCommands) {
   BytecodeDisassembler disassembler(bcProvider);
 
@@ -185,7 +189,8 @@ static void enterCommandLoop(
       profileBufferOpt.hasValue()
           ? llvm::Optional<std::unique_ptr<llvm::MemoryBuffer>>(
                 std::move(profileBufferOpt.getValue()))
-          : llvm::None);
+          : llvm::None,
+      std::move(sourceMap));
 
   // Process startup commands.
   bool terminateLoop = false;
@@ -312,19 +317,18 @@ static bool executeCommand(
       return false;
     }
     analyzer.dumpFileName(filenameId);
-  } else if (command == "offset" || command == "offsets") {
-    bool json = findAndRemoveOne(commandTokens, "-json");
+  } else if (command == "function-info") {
     std::unique_ptr<StructuredPrinter> printer =
-        StructuredPrinter::create(os, json);
+        StructuredPrinter::create(os, true);
     if (commandTokens.size() == 1) {
-      analyzer.dumpAllFunctionOffsets(*printer);
+      analyzer.dumpAllFunctionInfo(*printer);
     } else if (commandTokens.size() == 2) {
       uint32_t funcId;
       if (commandTokens[1].getAsInteger(0, funcId)) {
         os << "Error: cannot parse func_id as integer.\n";
         return false;
       }
-      analyzer.dumpFunctionOffsets(funcId, *printer);
+      analyzer.dumpFunctionInfo(funcId, *printer);
     } else {
       printHelp(command);
       return false;
@@ -336,9 +340,8 @@ static bool executeCommand(
   } else if (command == "block") {
     analyzer.dumpBasicBlockStats();
   } else if (command == "at_virtual" || command == "at-virtual") {
-    bool json = findAndRemoveOne(commandTokens, "-json");
     std::unique_ptr<StructuredPrinter> printer =
-        StructuredPrinter::create(os, json);
+        StructuredPrinter::create(os, /* json */ true);
     if (commandTokens.size() == 2) {
       uint32_t virtualOffset;
       if (commandTokens[1].getAsInteger(0, virtualOffset)) {
@@ -347,7 +350,7 @@ static bool executeCommand(
       }
       auto funcId = analyzer.getFunctionFromVirtualOffset(virtualOffset);
       if (funcId.hasValue()) {
-        analyzer.dumpFunctionOffsets(*funcId, *printer);
+        analyzer.dumpFunctionInfo(*funcId, *printer);
       } else {
         os << "Virtual offset " << virtualOffset << " is invalid.\n";
       }
@@ -425,13 +428,33 @@ int main(int argc, char **argv) {
   }
   auto &output = fileOS ? *fileOS : llvm::outs();
 
+  std::unique_ptr<SourceMap> sourceMap;
+  if (!SourceMapFilename.empty()) {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> sourceMapBufOrErr =
+        llvm::MemoryBuffer::getFile(SourceMapFilename);
+    if (!sourceMapBufOrErr) {
+      llvm::errs() << "Error: fail to open file: " << SourceMapFilename << ": "
+                   << sourceMapBufOrErr.getError().message() << "\n";
+      return -1;
+    }
+    sourceMap = SourceMapParser::parse(*sourceMapBufOrErr.get().get());
+    if (!sourceMap) {
+      llvm::errs() << "Error loading source map: " << SourceMapFilename << "\n";
+      return -1;
+    }
+  }
+
   if (ProfileFile.empty()) {
     if (ShowSectionRanges) {
       BytecodeSectionWalker walker(bytecodeStart, std::move(ret.first), output);
       walker.printSectionRanges(HumanizeSectionRanges);
     } else {
       enterCommandLoop(
-          output, std::move(ret.first), llvm::None, startupCommands);
+          output,
+          std::move(ret.first),
+          llvm::None,
+          std::move(sourceMap),
+          startupCommands);
     }
   } else {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> profileBuffer =
@@ -445,6 +468,7 @@ int main(int argc, char **argv) {
         output,
         std::move(ret.first),
         std::move(profileBuffer.get()),
+        std::move(sourceMap),
         startupCommands);
   }
 

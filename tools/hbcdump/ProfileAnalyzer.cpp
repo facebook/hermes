@@ -835,7 +835,7 @@ void ProfileAnalyzer::dumpSummary() {
       << "\n";
 }
 
-void ProfileAnalyzer::dumpFunctionOffsets(
+void ProfileAnalyzer::dumpFunctionInfo(
     uint32_t funcId,
     StructuredPrinter &printer) {
   auto bcProvider = hbcParser_.getBCProvider();
@@ -852,6 +852,8 @@ void ProfileAnalyzer::dumpFunctionOffsets(
   printer.emitKeyValue(
       "VirtualOffset", bcProvider->getVirtualOffsetForFunction(funcId));
   printer.emitKeyValue("Size", header.bytecodeSizeInBytes());
+  printer.emitKeyValue(
+      "Name", bcProvider->getStringRefFromID(header.functionName()));
 
   auto dbg = bcProvider->getDebugOffsets(funcId);
   if (dbg) {
@@ -860,6 +862,29 @@ void ProfileAnalyzer::dumpFunctionOffsets(
     }
     if (dbg->lexicalData != DebugOffsets::NO_OFFSET) {
       printer.emitKeyValue("DebugLexicalData: ", dbg->lexicalData);
+    }
+  }
+
+  llvm::Optional<SourceMapTextLocation> sourceLocOpt =
+      bcProvider->getLocationForAddress(funcId, /* offsetInFunction */ 0);
+  if (sourceLocOpt.hasValue()) {
+    printer.emitKey("FinalSourceLocation");
+    printer.openDict();
+    printer.emitKeyValue("Source", sourceLocOpt->fileName);
+    printer.emitKeyValue("Line", sourceLocOpt->line);
+    printer.emitKeyValue("Column", sourceLocOpt->column);
+    printer.closeDict();
+    if (sourceMap_) {
+      auto originalSourceLoc = sourceMap_->getLocationForAddress(
+          sourceLocOpt->line, sourceLocOpt->column);
+      if (originalSourceLoc.hasValue()) {
+        printer.emitKey("OriginalSourceLocation");
+        printer.openDict();
+        printer.emitKeyValue("Source", originalSourceLoc->fileName);
+        printer.emitKeyValue("Line", originalSourceLoc->line);
+        printer.emitKeyValue("Column", originalSourceLoc->column);
+        printer.closeDict();
+      }
     }
   }
 
