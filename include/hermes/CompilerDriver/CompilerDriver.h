@@ -69,10 +69,6 @@ struct CompileResult {
   /// loaded from a file, that is, bytecodeProvider is a BCProviderFromBuffer.
   BytecodeBufferInfo bytecodeBufferInfo{};
 
-  /// The Context associated with compilation, if lazy compilation is enabled.
-  /// This field has no purpose except to extend the lifetime of Context.
-  std::shared_ptr<Context> context{};
-
   /* implicit */ CompileResult(CompileStatus status) : status(status) {}
 };
 

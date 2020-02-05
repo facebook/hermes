@@ -1453,9 +1453,6 @@ CompileResult generateBytecodeForExecution(
   std::shared_ptr<Context> context = M.shareContext();
   CompileResult result{Success};
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
-    // Lazy compilation requires that the context stay alive.
-    if (context->isLazyCompilation())
-      result.context = context;
     result.bytecodeProvider = hbc::BCProviderFromSrc::createBCProviderFromSrc(
         hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), genOptions));
 
