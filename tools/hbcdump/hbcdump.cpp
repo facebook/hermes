@@ -7,7 +7,6 @@
 
 #include "HBCParser.h"
 #include "ProfileAnalyzer.h"
-#include "StructuredPrinter.h"
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/Public/Buffer.h"
@@ -318,17 +317,16 @@ static bool executeCommand(
     }
     analyzer.dumpFileName(filenameId);
   } else if (command == "function-info") {
-    std::unique_ptr<StructuredPrinter> printer =
-        StructuredPrinter::create(os, true);
+    JSONEmitter json(os, /* pretty */ true);
     if (commandTokens.size() == 1) {
-      analyzer.dumpAllFunctionInfo(*printer);
+      analyzer.dumpAllFunctionInfo(json);
     } else if (commandTokens.size() == 2) {
       uint32_t funcId;
       if (commandTokens[1].getAsInteger(0, funcId)) {
         os << "Error: cannot parse func_id as integer.\n";
         return false;
       }
-      analyzer.dumpFunctionInfo(funcId, *printer);
+      analyzer.dumpFunctionInfo(funcId, json);
     } else {
       printHelp(command);
       return false;
@@ -340,8 +338,7 @@ static bool executeCommand(
   } else if (command == "block") {
     analyzer.dumpBasicBlockStats();
   } else if (command == "at_virtual" || command == "at-virtual") {
-    std::unique_ptr<StructuredPrinter> printer =
-        StructuredPrinter::create(os, /* json */ true);
+    JSONEmitter json(os, /* pretty */ true);
     if (commandTokens.size() == 2) {
       uint32_t virtualOffset;
       if (commandTokens[1].getAsInteger(0, virtualOffset)) {
@@ -350,7 +347,7 @@ static bool executeCommand(
       }
       auto funcId = analyzer.getFunctionFromVirtualOffset(virtualOffset);
       if (funcId.hasValue()) {
-        analyzer.dumpFunctionInfo(*funcId, *printer);
+        analyzer.dumpFunctionInfo(*funcId, json);
       } else {
         os << "Virtual offset " << virtualOffset << " is invalid.\n";
       }

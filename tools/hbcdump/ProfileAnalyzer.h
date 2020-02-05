@@ -9,7 +9,6 @@
 #define HERMES_TOOLS_HBCDUMP_PROFILEANALYZER_H
 
 #include "HBCParser.h"
-#include "StructuredPrinter.h"
 
 #include "hermes/SourceMap/SourceMapParser.h"
 
@@ -157,16 +156,16 @@ class ProfileAnalyzer {
   // Print a high-level summary for the profile trace.
   void dumpSummary();
   // Print meta-data for functions e.g. offset, source-location, etc.
-  void dumpFunctionInfo(uint32_t funcId, StructuredPrinter &printer);
+  void dumpFunctionInfo(uint32_t funcId, JSONEmitter &json);
   // Print meta-data for all functions in bundle.
-  void dumpAllFunctionInfo(StructuredPrinter &printer) {
-    printer.openArray();
+  void dumpAllFunctionInfo(JSONEmitter &json) {
+    json.openArray();
     for (uint32_t i = 0, e = hbcParser_.getBCProvider()->getFunctionCount();
          i < e;
          i++) {
-      dumpFunctionInfo(i, printer);
+      dumpFunctionInfo(i, json);
     }
-    printer.closeArray();
+    json.closeArray();
   }
   // Return the ID of the function, if any, found at a given virtual offset.
   llvm::Optional<uint32_t> getFunctionFromVirtualOffset(uint32_t virtualOffset);

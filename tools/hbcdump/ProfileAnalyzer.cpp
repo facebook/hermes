@@ -835,60 +835,58 @@ void ProfileAnalyzer::dumpSummary() {
       << "\n";
 }
 
-void ProfileAnalyzer::dumpFunctionInfo(
-    uint32_t funcId,
-    StructuredPrinter &printer) {
+void ProfileAnalyzer::dumpFunctionInfo(uint32_t funcId, JSONEmitter &json) {
   auto bcProvider = hbcParser_.getBCProvider();
   if (funcId >= bcProvider->getFunctionCount()) {
     os_ << "FunctionID " << funcId << " is invalid.\n";
     return;
   }
 
-  printer.openDict();
+  json.openDict();
 
   auto header = bcProvider->getFunctionHeader(funcId);
-  printer.emitKeyValue("FunctionID", funcId);
-  printer.emitKeyValue("Offset", header.offset());
-  printer.emitKeyValue(
+  json.emitKeyValue("FunctionID", funcId);
+  json.emitKeyValue("Offset", header.offset());
+  json.emitKeyValue(
       "VirtualOffset", bcProvider->getVirtualOffsetForFunction(funcId));
-  printer.emitKeyValue("Size", header.bytecodeSizeInBytes());
-  printer.emitKeyValue(
+  json.emitKeyValue("Size", header.bytecodeSizeInBytes());
+  json.emitKeyValue(
       "Name", bcProvider->getStringRefFromID(header.functionName()));
 
   auto dbg = bcProvider->getDebugOffsets(funcId);
   if (dbg) {
     if (dbg->sourceLocations != DebugOffsets::NO_OFFSET) {
-      printer.emitKeyValue("DebugSourceLocation: ", dbg->sourceLocations);
+      json.emitKeyValue("DebugSourceLocation: ", dbg->sourceLocations);
     }
     if (dbg->lexicalData != DebugOffsets::NO_OFFSET) {
-      printer.emitKeyValue("DebugLexicalData: ", dbg->lexicalData);
+      json.emitKeyValue("DebugLexicalData: ", dbg->lexicalData);
     }
   }
 
   llvm::Optional<SourceMapTextLocation> sourceLocOpt =
       bcProvider->getLocationForAddress(funcId, /* offsetInFunction */ 0);
   if (sourceLocOpt.hasValue()) {
-    printer.emitKey("FinalSourceLocation");
-    printer.openDict();
-    printer.emitKeyValue("Source", sourceLocOpt->fileName);
-    printer.emitKeyValue("Line", sourceLocOpt->line);
-    printer.emitKeyValue("Column", sourceLocOpt->column);
-    printer.closeDict();
+    json.emitKey("FinalSourceLocation");
+    json.openDict();
+    json.emitKeyValue("Source", sourceLocOpt->fileName);
+    json.emitKeyValue("Line", sourceLocOpt->line);
+    json.emitKeyValue("Column", sourceLocOpt->column);
+    json.closeDict();
     if (sourceMap_) {
       auto originalSourceLoc = sourceMap_->getLocationForAddress(
           sourceLocOpt->line, sourceLocOpt->column);
       if (originalSourceLoc.hasValue()) {
-        printer.emitKey("OriginalSourceLocation");
-        printer.openDict();
-        printer.emitKeyValue("Source", originalSourceLoc->fileName);
-        printer.emitKeyValue("Line", originalSourceLoc->line);
-        printer.emitKeyValue("Column", originalSourceLoc->column);
-        printer.closeDict();
+        json.emitKey("OriginalSourceLocation");
+        json.openDict();
+        json.emitKeyValue("Source", originalSourceLoc->fileName);
+        json.emitKeyValue("Line", originalSourceLoc->line);
+        json.emitKeyValue("Column", originalSourceLoc->column);
+        json.closeDict();
       }
     }
   }
 
-  printer.closeDict();
+  json.closeDict();
 }
 
 llvm::Optional<uint32_t> ProfileAnalyzer::getFunctionFromVirtualOffset(
