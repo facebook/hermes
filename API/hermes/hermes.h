@@ -103,6 +103,11 @@ class HermesRuntime : public jsi::Runtime {
   /// behavior.
   void setMockedEnvironment(const ::hermes::vm::MockedEnvironment &env);
 
+  /// Get IO tracking (aka HBC page access) info as a JSON string.
+  /// See hermes::vm::Runtime::getIOTrackingInfoJSON() for conditions
+  /// needed for there to be useful output.
+  std::string getIOTrackingInfoJSON();
+
 #ifdef HERMESVM_PROFILER_BB
   /// Write the trace to the given stream.
   void dumpBasicBlockProfileTrace(llvm::raw_ostream &os) const;

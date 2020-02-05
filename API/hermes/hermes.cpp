@@ -1114,6 +1114,15 @@ void HermesRuntime::setMockedEnvironment(
   static_cast<HermesRuntimeImpl *>(this)->runtime_.setMockedEnvironment(env);
 }
 
+std::string HermesRuntime::getIOTrackingInfoJSON() {
+  std::string buf;
+  llvm::raw_string_ostream strstrm(buf);
+  static_cast<HermesRuntimeImpl *>(this)->runtime_.getIOTrackingInfoJSON(
+      strstrm);
+  strstrm.flush();
+  return buf;
+}
+
 #ifdef HERMESVM_PROFILER_BB
 void HermesRuntime::dumpBasicBlockProfileTrace(llvm::raw_ostream &os) const {
   static_cast<const HermesRuntimeImpl *>(this)

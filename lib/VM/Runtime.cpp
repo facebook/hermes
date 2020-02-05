@@ -584,13 +584,22 @@ void Runtime::printHeapStats(llvm::raw_ostream &os) {
 #ifndef NDEBUG
   printArrayCensus(llvm::outs());
 #endif
+}
+
+void Runtime::getIOTrackingInfoJSON(llvm::raw_ostream &os) {
+  JSONEmitter json(os);
+  json.openArray();
   for (auto &module : getRuntimeModules()) {
     auto tracker = module.getBytecode()->getPageAccessTracker();
     if (tracker) {
-      tracker->printStats(os, true);
-      os << "\n";
+      json.openDict();
+      json.emitKeyValue("url", module.getSourceURL());
+      json.emitKey("tracking_info");
+      tracker->getJSONStats(json);
+      json.closeDict();
     }
   }
+  json.closeArray();
 }
 
 void Runtime::removeRuntimeModule(RuntimeModule *rm) {

@@ -17,6 +17,7 @@ set(LLVM_OPTIONAL_SOURCES
   SegmentTestCompile.cpp
   SynthTraceTest.cpp
   SynthTraceParserTest.cpp
+  TrackIOTest.cpp
   )
 
 set(LLVM_LINK_COMPONENTS
@@ -40,6 +41,7 @@ add_hermes_unittest(APITests
   APILeanTest.cpp
   DebuggerTest.cpp
   SegmentTest.cpp
+  TrackIOTest.cpp
 )
 
 include_directories(${HERMES_SOURCE_DIR}/API)

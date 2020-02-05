@@ -465,6 +465,13 @@ class Runtime : public HandleRootOwner,
   /// Print the heap and other misc. stats to the given stream.
   void printHeapStats(llvm::raw_ostream &os);
 
+  /// Write IO tracking (aka HBC page access) info to the supplied
+  /// stream as JSON. There will only be useful data for RuntimeModules
+  /// backed by mmap'ed bytecode, and there will only be any data at all if
+  /// RuntimeConfig::withTrackIO() has been set, and IO tracking is available on
+  /// the current platform.
+  void getIOTrackingInfoJSON(llvm::raw_ostream &os);
+
 #ifndef NDEBUG
   /// Iterate over all arrays in the heap and print their sizes and capacities.
   void printArrayCensus(llvm::raw_ostream &os);

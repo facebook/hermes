@@ -6,6 +6,7 @@
  */
 
 #if defined(HERMES_FACEBOOK_BUILD) && defined(__linux__)
+#define HERMES_HAS_REAL_PAGE_TRACKER
 #include "hermes/Support/PageAccessTrackerPosix.h"
 #else
 #include "hermes/Support/PageAccessTrackerEmpty.h"

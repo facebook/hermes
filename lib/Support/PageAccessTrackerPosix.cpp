@@ -9,8 +9,6 @@
 
 #include "hermes/Support/PageAccessTracker.h"
 
-#include "hermes/Support/JSONEmitter.h"
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -175,6 +173,10 @@ void PageAccessTracker::printStats(llvm::raw_ostream &OS) {
 
 void PageAccessTracker::printStatsJSON(llvm::raw_ostream &OS) {
   JSONEmitter json(OS);
+  getJSONStats(json);
+}
+
+void PageAccessTracker::getJSONStats(JSONEmitter &json) {
   json.openDict();
   json.emitKeyValue("page_size", pageSize_);
   json.emitKeyValue("total_pages", totalPages_);
@@ -240,6 +242,12 @@ bool PageAccessTracker::printStats(llvm::raw_ostream &OS, bool json) volatile {
   }
   tracker->install();
   return true;
+}
+
+void PageAccessTracker::getJSONStats(JSONEmitter &json) volatile {
+  auto tracker = uninstall();
+  tracker->getJSONStats(json);
+  tracker->install();
 }
 
 bool PageAccessTracker::printPageAccessedOrder(

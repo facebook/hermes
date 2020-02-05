@@ -15,6 +15,8 @@
 
 #include "llvm/Support/raw_ostream.h"
 
+#include "hermes/Support/JSONEmitter.h"
+
 namespace hermes {
 
 /// Track paging behavior over a mmapped address range.
@@ -61,6 +63,11 @@ class PageAccessTracker {
   void printStats(llvm::raw_ostream &OS);
   void printStatsJSON(llvm::raw_ostream &OS);
 
+  /// Get the tracked stats, including page size, total number of pages,
+  /// number of pages accessed, page ids in the accessed order, and microseconds
+  /// needed to access.
+  void getJSONStats(JSONEmitter &json);
+
   /// Print only the page ids in the accessed order.
   void printPageAccessedOrder(llvm::raw_ostream &OS);
   void printPageAccessedOrderJSON(llvm::raw_ostream &OS);
@@ -103,6 +110,9 @@ class PageAccessTracker {
   /// format.
   /// \return true if function completed successfully, false on failure.
   bool printStats(llvm::raw_ostream &OS, bool json) volatile;
+
+  /// Public wrapper around the non-volatile version of this method.
+  void getJSONStats(JSONEmitter &json) volatile;
 
   /// Print only the page ids in the accessed order.
   /// \param json If true, print in json format, otherwise in a more readable
