@@ -146,6 +146,15 @@ static void printHelp(llvm::Optional<llvm::StringRef> command = llvm::None) {
        "Display info about a specific function, or all functions\n\n"
        "USAGE: function-info [<FUNC_ID>]\n"
        "NOTE: Virtual offset is the offset from the beginning of the segment\n"},
+      {"string",
+       "Display string for ID\n\n"
+       "USAGE: string <STRING_ID>\n"},
+      {"filename",
+       "Display file name for ID\n\n"
+       "USAGE: filename <FILENAME_ID>\n"},
+      {"epilogue",
+       "Dump the epilogue.\n\n"
+       "USAGE: epilogue\n"},
   };
 
   if (command.hasValue() && !command->empty()) {
@@ -303,6 +312,10 @@ static bool executeCommand(
       return false;
     }
   } else if (command == "string" || command == "str") {
+    if (commandTokens.size() != 2) {
+      printHelp(command);
+      return false;
+    }
     uint32_t stringId;
     if (commandTokens[1].getAsInteger(0, stringId)) {
       os << "Error: cannot parse string_id as integer.\n";
@@ -310,6 +323,10 @@ static bool executeCommand(
     }
     analyzer.dumpString(stringId);
   } else if (command == "filename") {
+    if (commandTokens.size() != 2) {
+      printHelp(command);
+      return false;
+    }
     uint32_t filenameId;
     if (commandTokens[1].getAsInteger(0, filenameId)) {
       os << "Error: cannot parse filename_id as integer.\n";
