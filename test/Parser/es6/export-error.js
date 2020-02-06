@@ -26,3 +26,8 @@ export { let };
 // CHECK: {{.*}}/export-error.js:25:10: error: Invalid exported name
 // CHECK-NEXT: export { let };
 // CHECK-NEXT:          ^~~
+
+export{ '' };
+// CHECK: {{.*}}/export-error.js:30:9: error: 'identifier' expected in export clause
+// CHECK-NEXT: export{ '' };
+// CHECK-NEXT:       ~~^

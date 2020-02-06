@@ -4395,6 +4395,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportSpecifier(
         "in export clause",
         "location of export clause",
         exportLoc);
+    return None;
   }
 
   // ES9.0 15.2.3.1 Early errors for ReferencedBindings in ExportClause.
