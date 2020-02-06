@@ -114,8 +114,7 @@ GenGC::GenGC(
       revertToYGAtTTI_(gcConfig.getRevertToYGAtTTI()),
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       oomThreshold_(gcConfig.getEffectiveOOMThreshold()),
-      weightedUsed_(static_cast<double>(gcConfig.getInitHeapSize())),
-      markState_(gcConfig.getProperWeakMapMarking()) {
+      weightedUsed_(static_cast<double>(gcConfig.getInitHeapSize())) {
   growTo(gcConfig.getInitHeapSize());
   claimAllocContext();
   updateCrashManagerHeapExtents();

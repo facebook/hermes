@@ -39,17 +39,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
   /// the falses are garbage.
   std::vector<bool> markedSymbols_;
 
-  /// Whether to do "proper" weak map marking: accumulate WeakMaps,
-  /// and do a special, "careful" marking of them, to only mark values
-  /// corresponding to reachable keys.  Under control of this boolean
-  /// because there have been bugs, so we want, at least for a while,
-  /// to be able to turn this off with a GK, reverting to the
-  /// previous, non-spec-compliant, behavior.
-  bool properWeakMapMarking_;
-
-  MarkingAcceptor(GC &gc)
-      : SlotAcceptorDefault(gc),
-        properWeakMapMarking_(gc.properWeakMapMarking_) {
+  MarkingAcceptor(GC &gc) : SlotAcceptorDefault(gc) {
     markedSymbols_.resize(gc.gcCallbacks_->getSymbolsEnd(), false);
   }
 
@@ -94,8 +84,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
       // location. Don't update the stale address that is about to be free'd.
       header->markWithForwardingPointer(newLocation);
       auto *newCell = newLocation->data();
-      if (newCell->getKind() == CellKind::WeakMapKind &&
-          properWeakMapMarking_) {
+      if (newCell->getKind() == CellKind::WeakMapKind) {
         reachableWeakMaps_.push_back(vmcast<JSWeakMap>(newCell));
       } else {
         worklist_.push_back(newLocation);
@@ -115,7 +104,7 @@ struct MallocGC::MarkingAcceptor final : public SlotAcceptorDefault,
       if (cell->getVT()->canBeTrimmed()) {
         cell->getVT()->trim(cell);
       }
-      if (cell->getKind() == CellKind::WeakMapKind && properWeakMapMarking_) {
+      if (cell->getKind() == CellKind::WeakMapKind) {
         reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
       } else {
         worklist_.push_back(header);
@@ -196,8 +185,7 @@ MallocGC::MallocGC(
       pointers_(),
       weakPointers_(),
       maxSize_(Size(gcConfig).max()),
-      sizeLimit_(gcConfig.getInitHeapSize()),
-      properWeakMapMarking_(gcConfig.getProperWeakMapMarking()) {}
+      sizeLimit_(gcConfig.getInitHeapSize()) {}
 
 MallocGC::~MallocGC() {
   for (CellHeader *header : pointers_) {

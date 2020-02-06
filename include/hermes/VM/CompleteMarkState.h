@@ -30,11 +30,6 @@ struct CompleteMarkState {
   /// Forward declaration of the Acceptor used to mark fields of marked objects.
   struct FullMSCMarkTransitiveAcceptor;
 
-  /// Initialize the CompleteMarkState.  The argument controls whether
-  /// "proper" weak map marking (or else the previous,
-  /// non-spec-compliant, marking behavior) is performed.
-  explicit CompleteMarkState(bool properWeakMapMarking);
-
   /// The mark behavior used during completeMarking:
   /// \pre The object at ptr has been found to be reachable.
   /// \post Its mark bit is set.  If it had been unmarked before, the

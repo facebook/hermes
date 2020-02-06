@@ -15,9 +15,6 @@
 namespace hermes {
 namespace vm {
 
-CompleteMarkState::CompleteMarkState(bool properWeakMapMarking)
-    : properWeakMapMarking_(properWeakMapMarking) {}
-
 void CompleteMarkState::markTransitive(void *ptr) {
   if (markingVarSizeCell &&
       numPtrsPushedByParent == kMaxPtrsPushedByVarParent) {
@@ -96,9 +93,7 @@ void CompleteMarkState::drainMarkStack(
     // specific.  If there are ever other cell kinds that need special
     // weak marking handling, we could put a boolean in the vtable or
     // metadata table).
-    // "Proper" WeakMap marking provoked a bug.  So keeping this under control
-    // of a config flag, linked to a GK, until we're sure it works.
-    if (cell->getKind() == CellKind::WeakMapKind && properWeakMapMarking_) {
+    if (cell->getKind() == CellKind::WeakMapKind) {
       reachableWeakMaps_.push_back(vmcast<JSWeakMap>(cell));
     } else {
       GCBase::markCell(cell, gc, acceptor);
