@@ -292,6 +292,10 @@
 /* Linker version detected at compile time. */
 #cmakedefine HOST_LINK_VERSION "${HOST_LINK_VERSION}"
 
+/* Target triple LLVM will generate code for by default */
+/* Doesn't use `cmakedefine` because it is allowed to be empty. */
+#define LLVM_DEFAULT_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}"
+
 /* Define if zlib compression is available */
 #cmakedefine01 LLVM_ENABLE_ZLIB
 

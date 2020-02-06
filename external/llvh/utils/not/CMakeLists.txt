@@ -1,5 +1,5 @@
-add_llvm_utility(not
+add_hermes_tool(not
   not.cpp
   )
 
-target_link_libraries(not PRIVATE LLVMSupport)
+target_link_libraries(not PRIVATE LLVHSupport)

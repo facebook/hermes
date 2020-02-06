@@ -15,71 +15,71 @@
 #define LLVM_CONFIG_H
 
 /* Define if LLVM_ENABLE_DUMP is enabled */
-/* #undef LLVM_ENABLE_DUMP */
+#cmakedefine LLVM_ENABLE_DUMP
 
 /* Define if we link Polly to the tools */
-/* #undef LINK_POLLY_INTO_TOOLS */
+#cmakedefine LINK_POLLY_INTO_TOOLS
 
 /* Target triple LLVM will generate code for by default */
-#define LLVM_DEFAULT_TARGET_TRIPLE "x86_64-apple-darwin18.6.0"
+#cmakedefine LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}"
 
 /* Define if threads enabled */
-#define LLVM_ENABLE_THREADS 1
+#cmakedefine01 LLVM_ENABLE_THREADS
 
 /* Has gcc/MSVC atomic intrinsics */
-#define LLVM_HAS_ATOMICS 1
+#cmakedefine01 LLVM_HAS_ATOMICS
 
 /* Host triple LLVM will be executed on */
-#define LLVM_HOST_TRIPLE "x86_64-apple-darwin18.6.0"
+#cmakedefine LLVM_HOST_TRIPLE "${LLVM_HOST_TRIPLE}"
 
 /* LLVM architecture name for the native architecture, if available */
-#define LLVM_NATIVE_ARCH X86
+#cmakedefine LLVM_NATIVE_ARCH ${LLVM_NATIVE_ARCH}
 
 /* LLVM name for the native AsmParser init function, if available */
-#define LLVM_NATIVE_ASMPARSER LLVMInitializeX86AsmParser
+#cmakedefine LLVM_NATIVE_ASMPARSER LLVMInitialize${LLVM_NATIVE_ARCH}AsmParser
 
 /* LLVM name for the native AsmPrinter init function, if available */
-#define LLVM_NATIVE_ASMPRINTER LLVMInitializeX86AsmPrinter
+#cmakedefine LLVM_NATIVE_ASMPRINTER LLVMInitialize${LLVM_NATIVE_ARCH}AsmPrinter
 
 /* LLVM name for the native Disassembler init function, if available */
-#define LLVM_NATIVE_DISASSEMBLER LLVMInitializeX86Disassembler
+#cmakedefine LLVM_NATIVE_DISASSEMBLER LLVMInitialize${LLVM_NATIVE_ARCH}Disassembler
 
 /* LLVM name for the native Target init function, if available */
-#define LLVM_NATIVE_TARGET LLVMInitializeX86Target
+#cmakedefine LLVM_NATIVE_TARGET LLVMInitialize${LLVM_NATIVE_ARCH}Target
 
 /* LLVM name for the native TargetInfo init function, if available */
-#define LLVM_NATIVE_TARGETINFO LLVMInitializeX86TargetInfo
+#cmakedefine LLVM_NATIVE_TARGETINFO LLVMInitialize${LLVM_NATIVE_ARCH}TargetInfo
 
 /* LLVM name for the native target MC init function, if available */
-#define LLVM_NATIVE_TARGETMC LLVMInitializeX86TargetMC
+#cmakedefine LLVM_NATIVE_TARGETMC LLVMInitialize${LLVM_NATIVE_ARCH}TargetMC
 
 /* Define if this is Unixish platform */
-#define LLVM_ON_UNIX 1
+#cmakedefine LLVM_ON_UNIX ${LLVM_ON_UNIX}
 
 /* Define if we have the Intel JIT API runtime support library */
-#define LLVM_USE_INTEL_JITEVENTS 0
+#cmakedefine01 LLVM_USE_INTEL_JITEVENTS
 
 /* Define if we have the oprofile JIT-support library */
-#define LLVM_USE_OPROFILE 0
+#cmakedefine01 LLVM_USE_OPROFILE
 
 /* Define if we have the perf JIT-support library */
-#define LLVM_USE_PERF 0
+#cmakedefine01 LLVM_USE_PERF
 
 /* Major version of the LLVM API */
-#define LLVM_VERSION_MAJOR 8
+#define LLVM_VERSION_MAJOR ${LLVM_VERSION_MAJOR}
 
 /* Minor version of the LLVM API */
-#define LLVM_VERSION_MINOR 0
+#define LLVM_VERSION_MINOR ${LLVM_VERSION_MINOR}
 
 /* Patch version of the LLVM API */
-#define LLVM_VERSION_PATCH 0
+#define LLVM_VERSION_PATCH ${LLVM_VERSION_PATCH}
 
 /* LLVM version string */
-#define LLVM_VERSION_STRING "8.0.0svn"
+#define LLVM_VERSION_STRING "${PACKAGE_VERSION}"
 
 /* Whether LLVM records statistics for use with GetStatistics(),
  * PrintStatistics() or PrintStatisticsJSON()
  */
-#define LLVM_FORCE_ENABLE_STATS 0
+#cmakedefine01 LLVM_FORCE_ENABLE_STATS
 
 #endif

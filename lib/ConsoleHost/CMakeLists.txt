@@ -9,6 +9,6 @@ set(source_files
   RandomSeedParser.cpp
 )
 
-add_llvm_library(hermesConsoleHost STATIC ${source_files}
+add_hermes_library(hermesConsoleHost STATIC ${source_files}
   LINK_LIBS hermesVMRuntime hermesInstrumentation
 )

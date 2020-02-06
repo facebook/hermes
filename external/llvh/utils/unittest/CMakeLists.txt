@@ -38,7 +38,7 @@ if(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG)
   add_definitions("-Wno-covered-switch-default")
 endif()
 
-set(LLVM_REQUIRES_RTTI 1)
+set(HERMES_ENABLE_RTTI 1)
 add_definitions( -DGTEST_HAS_RTTI=0 )
 
 if (NOT LLVM_ENABLE_THREADS)
@@ -50,18 +50,13 @@ if (LLVM_PTHREAD_LIBRARY_PATH)
   list(APPEND LIBS pthread)
 endif()
 
-add_llvm_library(gtest
+add_hermes_library(gtest
   googletest/src/gtest-all.cc
   googlemock/src/gmock-all.cc
 
   LINK_LIBS
   ${LIBS}
-
-  LINK_COMPONENTS
-  Support # Depends on llvm::raw_ostream
-
-  # This is a library meant only for the build tree.
-  BUILDTREE_ONLY
+  LLVHSupport # Depends on llvm::raw_ostream
 )
 
 add_subdirectory(UnitTestMain)

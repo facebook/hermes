@@ -7,7 +7,7 @@ set(source_files
   CompilerDriver.cpp
 )
 
-add_llvm_library(hermesCompilerDriver STATIC ${source_files}
+add_hermes_library(hermesCompilerDriver STATIC ${source_files}
   LINK_LIBS
   hermesADT
   hermesAST

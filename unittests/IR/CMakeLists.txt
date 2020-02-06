@@ -3,11 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  Core
-  Support
-  )
+set(HERMES_LINK_COMPONENTS LLVHSupport)
 
 set(IRSources
   BasicBlockTest.cpp

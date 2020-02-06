@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # When compiling multiple libraries, put this here so that we can use a file in
 # not all the libraries.
-set(LLVM_OPTIONAL_SOURCES
+set(HERMES_OPTIONAL_SOURCES
   APITest.cpp
   APITestFactory.cpp
   APILeanTest.cpp
@@ -20,17 +20,14 @@ set(LLVM_OPTIONAL_SOURCES
   TrackIOTest.cpp
   )
 
-set(LLVM_LINK_COMPONENTS
-  Core
-  Support
-  )
+set(HERMES_LINK_COMPONENTS LLVHSupport)
 
 # Build SegmentTestCompile without EH and RTTI
-add_llvm_library(SegmentTestCompile STATIC SegmentTestCompile.cpp)
+add_hermes_library(SegmentTestCompile STATIC SegmentTestCompile.cpp)
 
 # Turn on EH and RTTI for APITests
-set(LLVM_REQUIRES_EH ON)
-set(LLVM_REQUIRES_RTTI ON)
+set(HERMES_ENABLE_EH ON)
+set(HERMES_ENABLE_RTTI ON)
 # For some reason (bug?) add_unittest() is clearing LLVM_REQUIRES_RTTI, so
 # we need to set this one.
 set(LLVM_ENABLE_RTTI ON)

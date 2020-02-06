@@ -10,7 +10,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
                 "${CMAKE_C_FLAGS} -Wno-parentheses -Wno-unused-label -Wno-sign-compare -Wno-implicit-fallthrough")
 endif()
 
-add_llvm_library(dtoa STATIC
+add_hermes_library(dtoa STATIC
         dtoa.c
         g_fmt.c
         locks.cpp)

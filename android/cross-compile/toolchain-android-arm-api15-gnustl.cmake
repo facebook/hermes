@@ -4,10 +4,10 @@
 # LICENSE file in the root directory of this source tree.
 
 SET(CMAKE_SYSTEM_NAME Android)
-SET(CMAKE_SYSTEM_VERSION 13)
+SET(CMAKE_SYSTEM_VERSION 15)
 
 SET(CMAKE_ANDROID_ARCH_ABI armeabi-v7a)
-SET(CMAKE_ANDROID_NDK /opt/android_ndk/android-ndk-r13b)
+SET(CMAKE_ANDROID_NDK /opt/android_ndk/android-ndk-r15c)
 SET(CMAKE_ANDROID_STL_TYPE gnustl_shared)
 SET(CMAKE_ANDROID_NDK_TOOLCHAIN_VERSION clang)
 

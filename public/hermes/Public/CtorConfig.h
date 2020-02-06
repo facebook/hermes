@@ -30,14 +30,14 @@
 ///
 ///   We can do so with the following declaration:
 ///
-///       #define FIELDS(F)                     \
-///         F(int, A)                           \
-///         F(int, B, 42)                       \
-///         F(std::string, C, "hello")
-///
-///       _HERMES_CTORCONFIG_STRUCT(Foo, FIELDS, {
-///           A_ = std::min(A_, C_.length());
-///         });
+///   "    #define FIELDS(F)                     \  "
+///   "      F(int, A)                           \  "
+///   "      F(int, B, 42)                       \  "
+///   "      F(std::string, C, "hello")             "
+///   "                                             "
+///   "    _HERMES_CTORCONFIG_STRUCT(Foo, FIELDS, { "
+///   "        A_ = std::min(A_, C_.length());      "
+///   "      });                                    "
 ///
 ///   N.B.
 ///     - The definition of A does not mention any value -- meaning it is

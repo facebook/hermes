@@ -5,9 +5,9 @@
 
 include_directories(${HERMES_SOURCE_DIR}/API)
 include_directories(${HERMES_JSI_DIR})
-set(LLVM_REQUIRES_EH ON)
-set(LLVM_REQUIRES_RTTI ON)
-add_llvm_tool(hdb
+set(HERMES_ENABLE_EH ON)
+set(HERMES_ENABLE_RTTI ON)
+add_hermes_tool(hdb
   hdb.cpp
   ${ALL_HEADER_FILES}
   )

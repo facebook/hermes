@@ -12,7 +12,7 @@ if (ANDROID)
   list(APPEND link_libs log)
 endif()
 
-add_llvm_library(hermesSupport
+add_hermes_library(hermesSupport
         Allocator.cpp
         Base64vlq.cpp
         CheckedMalloc.cpp

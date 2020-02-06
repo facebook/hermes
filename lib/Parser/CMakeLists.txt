@@ -3,9 +3,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(LLVM_LINK_COMPONENTS support)
+set(HERMES_LINK_COMPONENTS LLVHSupport)
 
-add_llvm_library(hermesParser
+add_hermes_library(hermesParser
         JSLexer.cpp
         JSONParser.cpp
         JSParser.cpp

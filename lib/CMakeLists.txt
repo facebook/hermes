@@ -3,9 +3,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(LLVM_LINK_COMPONENTS support)
+set(HERMES_LINK_COMPONENTS LLVHSupport)
 
-add_llvm_library(hermesOptimizer
+add_hermes_library(hermesOptimizer
   STATIC
   Optimizer/PassManager/Pipeline.cpp
   Optimizer/Scalar/SimplifyCFG.cpp
@@ -31,7 +31,7 @@ add_llvm_library(hermesOptimizer
   IR/IREval.cpp
 )
 
-add_llvm_library(hermesFrontend
+add_hermes_library(hermesFrontend
   STATIC
   IRGen/IRGen.cpp
   IRGen/ESTreeIRGen.cpp IRGen/ESTreeIRGen.h
@@ -62,6 +62,6 @@ add_subdirectory(BCGen)
 add_subdirectory(ConsoleHost)
 add_subdirectory(Regex)
 add_subdirectory(Platform)
-if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
-  add_subdirectory(InternalBytecode)
-endif()
+#if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
+#  add_subdirectory(InternalBytecode)
+#endif()

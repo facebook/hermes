@@ -8,7 +8,7 @@ set(source_files
   Executor.cpp
 )
 
-add_llvm_library(hermesRegex
+add_hermes_library(hermesRegex
     STATIC ${source_files}
     LINK_LIBS hermesPlatformUnicode
 )

@@ -79,13 +79,14 @@ def main():
         args.cmake_flags.split()
         + common_cmake_flags()
         + [
-            "-DLLVM_BUILD_DIR=" + args.llvm_build_dir,
-            "-DLLVM_SRC_DIR=" + args.llvm_src_dir,
-            "-DCMAKE_BUILD_TYPE=" + args.build_type,
+            #            "-DLLVM_BUILD_DIR=" + args.llvm_build_dir,
+            #            "-DLLVM_SRC_DIR=" + args.llvm_src_dir,
+            "-DCMAKE_BUILD_TYPE="
+            + args.build_type
         ]
     )
-    if args.is_32_bit:
-        cmake_flags += ["-DLLVM_BUILD_32_BITS=On"]
+    #    if args.is_32_bit:
+    #        cmake_flags += ["-DLLVM_BUILD_32_BITS=On"]
 
     if (
         platform.system() == "Windows"
@@ -93,10 +94,10 @@ def main():
         and is_visual_studio(args.build_system)
     ):
         cmake_flags += ["-Thost=x64"]
-    if not args.distribute:
-        cmake_flags += ["-DLLVM_ENABLE_ASSERTIONS=On"]
-    if args.enable_asan:
-        cmake_flags += ["-DLLVM_USE_SANITIZER=Address"]
+    #    if not args.distribute:
+    #        cmake_flags += ["-DLLVM_ENABLE_ASSERTIONS=On"]
+    #    if args.enable_asan:
+    #        cmake_flags += ["-DLLVM_USE_SANITIZER=Address"]
     if args.opcode_stats:
         cmake_flags += ["-DHERMESVM_PROFILER_OPCODE=On"]
     if args.basic_block_profiler:

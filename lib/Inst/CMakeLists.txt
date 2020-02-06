@@ -8,7 +8,7 @@ set(source_files
   InstDecode2.cpp
 )
 
-add_llvm_library(hermesInst STATIC ${source_files}
+add_hermes_library(hermesInst STATIC ${source_files}
   LINK_LIBS
   hermesSupport
   hermesFrontEndDefs

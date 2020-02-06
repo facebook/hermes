@@ -1,3 +1,3 @@
-add_llvm_utility(count
+add_hermes_tool(count
   count.c
   )

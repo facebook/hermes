@@ -3,7 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-add_llvm_library(hermesBackend
+add_hermes_library(hermesBackend
   STATIC
   RegAlloc.cpp
   BCOpt.cpp

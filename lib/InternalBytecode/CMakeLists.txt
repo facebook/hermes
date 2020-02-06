@@ -14,7 +14,7 @@ else()
   set(hermesc_EXE hermesc)
 endif()
 
-add_llvm_library(hermesInternalBytecode
+add_hermes_library(hermesInternalBytecode
     InternalBytecode.cpp
 )
 

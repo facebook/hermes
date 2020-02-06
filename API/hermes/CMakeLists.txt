@@ -3,7 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(LLVM_OPTIONAL_SOURCES
+set(HERMES_OPTIONAL_SOURCES
   hermes.cpp
   hermes_tracing.cpp
   hermes_tracing_compat.cpp
@@ -21,7 +21,7 @@ set(api_sources
   hermes_tracing_compat.cpp
   )
 
-add_llvm_library(hermesapi
+add_hermes_library(hermesapi
         ${api_sources}
         LINK_LIBS jsi hermesVMRuntime)
 
@@ -38,22 +38,19 @@ set_property(TARGET hermesapi APPEND_STRING PROPERTY
 set_property(TARGET hermesapi APPEND_STRING PROPERTY
   COMPILE_DEFINITIONS "JSI_CREATE_SHARED_LIBRARY")
 
-set(LLVM_LINK_COMPONENTS
-  Core
-  Support
-  )
+set(HERMES_LINK_COMPONENTS LLVHSupport)
 
 # Disable EH and RTTI for compileJS
-set(LLVM_REQUIRES_EH OFF)
-set(LLVM_REQUIRES_RTTI OFF)
+set(HERMES_ENABLE_EH OFF)
+set(HERMES_ENABLE_RTTI OFF)
 
-add_llvm_library(compileJS STATIC CompileJS.cpp)
+add_hermes_library(compileJS STATIC CompileJS.cpp)
 
 # Restore EH and RTTI (Note: At the time of writing, there is no usage of
-# add_llvm_library either after this line in this file or in a sub directory.
+# add_hermes_library either after this line in this file or in a sub directory.
 # However, the values are restored anyways for the sake of sanity.)
-set(LLVM_REQUIRES_EH ON)
-set(LLVM_REQUIRES_RTTI ON)
+set(HERMES_ENABLE_EH ON)
+set(HERMES_ENABLE_RTTI ON)
 
 add_library(libhermes SHARED ${api_sources})
 target_link_libraries(libhermes

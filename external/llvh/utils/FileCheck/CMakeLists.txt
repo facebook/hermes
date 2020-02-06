@@ -1,5 +1,5 @@
-add_llvm_utility(FileCheck
+add_hermes_tool(FileCheck
   FileCheck.cpp
   )
 
-target_link_libraries(FileCheck PRIVATE LLVMSupport)
+target_link_libraries(FileCheck PRIVATE LLVHSupport)

@@ -15,13 +15,9 @@ configure_file(ReplConfig.h.in ${CMAKE_CURRENT_BINARY_DIR}/ReplConfig.h
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-set(LLVM_LINK_COMPONENTS
-  Analysis
-  Core
-  Support
-  )
+set(HERMES_LINK_COMPONENTS LLVHSupport)
 
-add_llvm_tool(hermes-repl
+add_hermes_tool(hermes-repl
   repl.cpp
   ${ALL_HEADER_FILES}
   )

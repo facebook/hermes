@@ -11,7 +11,7 @@ set(source_files
 )
 
 if(HERMES_IS_ANDROID)
-  add_llvm_library(hermesPlatformUnicode STATIC ${source_files}
+  add_hermes_library(hermesPlatformUnicode STATIC ${source_files}
       LINK_LIBS
       hermesfbjni
       ${CORE_FOUNDATION}
@@ -19,7 +19,7 @@ if(HERMES_IS_ANDROID)
   set_source_files_properties(PlatformUnicodeJava.cpp PROPERTIES
       COMPILE_FLAGS "-frtti -fexceptions -std=c++14")
 else()
-  add_llvm_library(hermesPlatformUnicode STATIC ${source_files}
+  add_hermes_library(hermesPlatformUnicode STATIC ${source_files}
       LINK_LIBS
       ${CORE_FOUNDATION}
   )

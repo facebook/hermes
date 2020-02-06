@@ -5,6 +5,9 @@
 
 project(hermesfbjni CXX)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(fbjni_SOURCES
   ${FBJNI_PATH}/cxx/fbjni/ByteBuffer.cpp
   ${FBJNI_PATH}/cxx/fbjni/OnLoad.cpp
@@ -31,7 +34,6 @@ target_compile_options(hermesfbjni PRIVATE
   -fexceptions
   -O3
   -Wall
-  -std=c++14
   -frtti
   -ffunction-sections
   -DDISABLE_CPUCAP

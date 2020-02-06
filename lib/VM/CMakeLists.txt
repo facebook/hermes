@@ -120,7 +120,7 @@ set(jit_files
   JIT/ExternalCalls.cpp JIT/ExternalCalls.h
   )
 
-set(LLVM_OPTIONAL_SOURCES
+set(HERMES_OPTIONAL_SOURCES
   gcs/FillerCell.cpp
   gcs/GenGC.cpp
   gcs/MallocGC.cpp
@@ -199,7 +199,7 @@ if(HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION)
   list(APPEND link_libs hermesInternalBytecode)
 endif()
 
-add_llvm_library(hermesVMRuntime STATIC ${source_files}
+add_hermes_library(hermesVMRuntime STATIC ${source_files}
     LINK_LIBS
     ${link_libs}
 )
