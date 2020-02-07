@@ -25,13 +25,12 @@ On Mac via Homebrew:
 
 ## Building on Linux and macOS
 
-Hermes will place its build files in the current directory by default. Note that Hermes will download and build LLVM as part of its own build.
+Hermes will place its build files in the current directory by default. 
 You can also give explicit source and build directories, use `--help` on the build scripts to see how.
 
-Create a base directory to work in, e.g. ~/workspace, and cd into it. Follow the steps below to build LLVM and generate the Hermes build system:
+Create a base directory to work in, e.g. ~/workspace, and cd into it. Follow the steps below to generate the Hermes build system:
 
     git clone https://github.com/facebook/hermes.git
-    hermes/utils/build/build_llvm.py
     hermes/utils/build/configure.py
 
 The build system has now been generated in the `build` directory. To perform the build:
@@ -43,8 +42,7 @@ The build system has now been generated in the `build` directory. To perform the
 The Windows build depends on which particular combination of GitBash/Cygwin/WSL and Visual Studio is used.
 
     git -c core.autocrlf=false clone https://github.com/facebook/hermes.git
-    hermes/utils/build/build_llvm.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64' --distribute
-    hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64 -DLLVM_ENABLE_LTO=OFF' --distribute
+    hermes/utils/build/configure.py --build-system='Visual Studio 16 2019' --cmake-flags='-A x64 --distribute
     cd build_release && MSBuild.exe ALL_BUILD.vcxproj /p:Configuration=Release
 
 ## Running Hermes
@@ -72,7 +70,6 @@ To run the Hermes test suite:
 
 The above instructions create an unoptimized debug build. The `--distribute` flag will enable a release build, in the `build_release` directory. Example:
 
-    hermes/utils/build/build_llvm.py --distribute
     hermes/utils/build/configure.py --distribute
     cd build_release && ninja
 
