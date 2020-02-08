@@ -589,7 +589,9 @@ class GenGC final : public GCBase {
     void recordGCStats(
         size_t regionSize,
         size_t usedBefore,
+        size_t sizeBefore,
         size_t usedAfter,
+        size_t sizeAfter,
         CumulativeHeapStats *regionStats);
 
    private:
@@ -598,6 +600,10 @@ class GenGC final : public GCBase {
     TimePoint wallStart_;
     std::chrono::microseconds cpuStart_;
     size_t gcUsedBefore_;
+    size_t usedBefore_;
+    size_t sizeBefore_;
+    size_t usedAfter_;
+    size_t sizeAfter_;
     // Initial value indicates unset.
     double wallElapsedSecs_{-1.0};
     double cpuElapsedSecs_{-1.0};

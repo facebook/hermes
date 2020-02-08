@@ -45,6 +45,7 @@ GCBase::GCBase(
       gcCallbacks_(gcCallbacks),
       pointerBase_(pointerBase),
       crashMgr_(crashMgr),
+      analyticsCallback_(gcConfig.getAnalyticsCallback()),
       recordGcStats_(gcConfig.getShouldRecordStats()),
       // Start off not in GC.
       inGC_(false),

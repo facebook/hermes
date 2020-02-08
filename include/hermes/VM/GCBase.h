@@ -846,6 +846,10 @@ class GCBase {
         std::string extraInfo = "");
     ~GCCycle();
 
+    const std::string &extraInfo() {
+      return extraInfo_;
+    }
+
    private:
     GCBase *const gc_;
     OptValue<GCCallbacks *> gcCallbacksOpt_;
@@ -992,6 +996,10 @@ class GCBase {
 
   /// A place to log crash data if a crash is about to occur.
   std::shared_ptr<CrashManager> crashMgr_;
+
+  /// Callback called once for each GC event that wants to be logged. Can be
+  /// null if no analytics are requested.
+  std::function<void(const GCAnalyticsEvent &)> analyticsCallback_;
 
   /// Whether to output GC statistics at the end of execution.
   bool recordGcStats_{false};

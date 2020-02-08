@@ -30,6 +30,19 @@ namespace vm {
 /// it 32-bit).
 using gcheapsize_t = uint32_t;
 
+struct GCAnalyticsEvent {
+  std::string runtimeDescription;
+  std::string gcKind;
+  std::string collectionType;
+  std::chrono::milliseconds duration;
+  std::chrono::milliseconds cpuDuration;
+  uint64_t preAllocated;
+  uint64_t preSize;
+  uint64_t postAllocated;
+  uint64_t postSize;
+  double survivalRatio;
+};
+
 /// Parameters to control a tripwire function called when the live set size
 /// surpasses a given threshold after collections.  Check documentation in
 /// README.md
@@ -129,6 +142,12 @@ enum class GCEventKind {
   F(HERMES_NON_CONSTEXPR,                                                 \
     std::shared_ptr<MemoryEventTracker>,                                  \
     MemEventTracker,                                                      \
+    nullptr)                                                              \
+                                                                          \
+  /* Callout for an analytics event. */                                   \
+  F(HERMES_NON_CONSTEXPR,                                                 \
+    std::function<void(const GCAnalyticsEvent &)>,                        \
+    AnalyticsCallback,                                                    \
     nullptr)                                                              \
                                                                           \
   /* Called at GC events (see GCEventKind enum for the list). The */      \

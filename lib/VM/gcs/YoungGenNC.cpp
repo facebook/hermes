@@ -310,7 +310,8 @@ void YoungGen::collect() {
   unsigned numAllocatedObjectsBefore = gc_->computeNumAllocatedObjects();
 #endif
   // Track the sum of the total pre-collection sizes of the young gens.
-  size_t youngGenUsedBefore = usedDirect();
+  const size_t youngGenUsedBefore = usedDirect();
+  const size_t youngGenSizeBefore = sizeDirect();
   ygCollection.addArg("ygUsedBefore", youngGenUsedBefore);
   ygCollection.addArg("ogUsedBefore", nextGen_->used());
   ygCollection.addArg("ogSize", nextGen_->size());
@@ -319,7 +320,7 @@ void YoungGen::collect() {
   cumPreBytes_ += youngGenUsedBefore;
 
   LLVM_DEBUG(
-      dbgs() << "\nStarting (young-gen, " << formatSize(sizeDirect())
+      dbgs() << "\nStarting (young-gen, " << formatSize(youngGenSizeBefore)
              << ") garbage collection; collection # " << gc_->numGCs() << "\n");
 
   // Remember the point in the older generation into which we started
@@ -410,10 +411,25 @@ void YoungGen::collect() {
   resetNumAllHiddenClasses();
 #endif // !NDEBUG
 
+  // Track the bytes of promoted objects.
+  const size_t promotedBytes = (nextGen_->used() - oldGenUsedBefore);
+  assert(
+      promotedBytes <= youngGenUsedBefore &&
+      "Can't have promoted more bytes than existed in the young gen before "
+      "the collection");
+  cumPromotedBytes_ += promotedBytes;
+
   ygCollection.recordGCStats(
       sizeDirect(),
       youngGenUsedBefore,
-      usedDirect(),
+      youngGenSizeBefore,
+      // Post-allocated has an ambiguous meaning for a young-gen GC, since the
+      // young gen must be completely evacuated. Since zeros aren't really
+      // useful here, instead put the number of bytes that were promoted into
+      // old gen, which is the amount that survived the collection.
+      promotedBytes,
+      // In young-gen collections, the size never changes.
+      youngGenSizeBefore,
       &gc_->youngGenCollectionCumStats_);
 
   markOldToYoungSecs_ +=
@@ -425,9 +441,6 @@ void YoungGen::collect() {
   updateWeakRefsSecs_ +=
       GCBase::clockDiffSeconds(updateWeakRefsStart, finalizersStart);
   finalizersSecs_ += GCBase::clockDiffSeconds(finalizersStart, finalizersEnd);
-  // Track the bytes of promoted objects.
-  size_t promotedBytes = (nextGen_->used() - oldGenUsedBefore);
-  cumPromotedBytes_ += promotedBytes;
   ygCollection.addArg("ygPromoted", promotedBytes);
   ygCollection.addArg("ogUsedAfter", nextGen_->used());
   ygCollection.addArg(
