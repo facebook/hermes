@@ -11,14 +11,30 @@ enable this command by default in lldb.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-
-def _raise_eval_failure(expression, error):
-    raise Exception("Fail to evaluate {}: {}".format(expression, error.GetCString()))
+import shlex
 
 
 def __lldb_init_module(debugger, _):
     """Installs a new debugger command for dumping hermes js stack"""
     debugger.HandleCommand("command script add -f Stack.dump_js_stack jsbt")
+
+
+def _raise_failure(msg):
+    raise Exception(msg)
+
+
+def _raise_eval_failure(expression, error):
+    _raise_failure(
+        "Fail to evaluate {}: \n{}".format(
+            expression, "<N/A>" if error is None else error.GetCString()
+        )
+    )
+
+
+def _is_eval_failed(evaluation_result):
+    return evaluation_result is None or (
+        evaluation_result.GetError() and evaluation_result.GetError().Fail()
+    )
 
 
 def _evaluate_expression(frame, expression):
@@ -30,12 +46,6 @@ def _evaluate_expression(frame, expression):
         _raise_eval_failure(expression, result_value.GetError())
 
     return result_value
-
-
-def _is_eval_failed(evaluation_result):
-    return evaluation_result is None or (
-        evaluation_result.GetError() and evaluation_result.GetError().Fail()
-    )
 
 
 def _get_raw_ptr_from_shared_ptr(shared_ptr):
@@ -84,10 +94,21 @@ def _format_and_print_stack(stack_str_summary):
 
 def dump_js_stack(debugger, command, result, internal_dict):
     """Dump hermes js stack in string format"""
+    # Use the Shell Lexer to properly parse up command options just
+    # like a shell would.
+    command_args = shlex.split(command)
+    if len(command_args) > 1:
+        print("Usage: jsbt [ip]\n")
+        return
+
+    ip = int(command_args[0], 0) if len(command_args) == 1 else 0
+
     thread = debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
     leaf_frame = thread.GetFrameAtIndex(0)
 
-    expression = _get_hermes_runtime_expr(leaf_frame) + "->getCallStackNoAlloc()"
+    expression = _get_hermes_runtime_expr(
+        leaf_frame
+    ) + "->getCallStackNoAlloc((const hermes::inst::Inst *){})".format(ip)
     result_str_value = _evaluate_expression(leaf_frame, expression)
 
     str_summary = _get_stdstring_summary(result_str_value)
