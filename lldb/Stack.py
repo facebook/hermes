@@ -92,6 +92,18 @@ def _format_and_print_stack(stack_str_summary):
         print(frame)
 
 
+def _heuristic_search_ip_in_stack(leaf_frame):
+    """Heuristically unwind native stack frames to search for local variable ip if available"""
+    frame = leaf_frame
+    while frame is not None:
+        ip = frame.FindVariable("ip")
+        if ip is not None:
+            return ip.GetValueAsUnsigned()
+        frame = frame.get_parent_frame()
+
+    return 0
+
+
 def dump_js_stack(debugger, command, result, internal_dict):
     """Dump hermes js stack in string format"""
     # Use the Shell Lexer to properly parse up command options just
@@ -101,11 +113,14 @@ def dump_js_stack(debugger, command, result, internal_dict):
         print("Usage: jsbt [ip]\n")
         return
 
-    ip = int(command_args[0], 0) if len(command_args) == 1 else 0
-
     thread = debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
     leaf_frame = thread.GetFrameAtIndex(0)
 
+    ip = (
+        int(command_args[0], 0)
+        if len(command_args) == 1
+        else _heuristic_search_ip_in_stack(leaf_frame)
+    )
     expression = _get_hermes_runtime_expr(
         leaf_frame
     ) + "->getCallStackNoAlloc((const hermes::inst::Inst *){})".format(ip)
