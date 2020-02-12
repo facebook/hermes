@@ -67,7 +67,7 @@ public class HybridData {
   public static class Destructor extends DestructorThread.Destructor {
 
     // Private C++ instance
-    @DoNotStrip private long mNativePointer;
+    @DoNotStrip private volatile long mNativePointer;
 
     Destructor(Object referent) {
       super(referent);
