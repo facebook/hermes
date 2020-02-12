@@ -950,19 +950,51 @@ static double parseESDate(StringView str) {
   if (!scanInt(it, end, s))
     return nan;
 
-  // Space and "GMT".
+  // Space and time zone.
+  if (it == end)
+    goto complete;
   if (!consume(' '))
     return nan;
-  if (*it == 'G') {
-    // "GMT" is optional, but if there is a G, it is the only option.
+  if (it == end)
+    goto complete;
+
+  struct KnownTZ {
+    const char *tz;
+    int32_t tzh;
+  };
+
+  // Known time zones per RFC 2822.
+  // All other obsolete time zones that aren't in this array treated as +00:00.
+  static constexpr KnownTZ knownTZs[] = {
+      {"GMT", 0},
+      {"EDT", -4},
+      {"EST", -5},
+      {"CDT", -5},
+      {"CST", -6},
+      {"MDT", -6},
+      {"MST", -7},
+      {"PDT", -7},
+      {"PST", -8},
+  };
+
+  // TZ name is optional, but if there is a letter, it is the only option.
+  if ('A' <= *it && *it <= 'Z') {
     if (!scanStr(3))
       return nan;
-    if (!tok.equals(llvm::arrayRefFromStringRef("GMT")))
-      return nan;
+    for (const KnownTZ &knownTZ : knownTZs) {
+      if (tok.equals(llvm::arrayRefFromStringRef(knownTZ.tz))) {
+        tzh = knownTZ.tzh;
+        break;
+      }
+    }
   }
 
   if (it == end)
     goto complete;
+
+  // Prevent "CDT+0700", for example.
+  if (tzh != 0 && it != end)
+    return nan;
 
   // Sign of the timezone adjustment.
   if (consume('+'))

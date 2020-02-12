@@ -210,6 +210,24 @@ print(Date.parse('Tue Jul 16 2019 13:15:25 GMT-0700 (Pacific Daylight Time)'));
 // CHECK-NEXT: 1563308125000
 print(Date.parse('Tue Jul 16 2019 13:15:25 GMT-0700'));
 // CHECK-NEXT: 1563308125000
+print(Date.parse('Tue Jul 16 2019 13:15:25 PDT'));
+// CHECK-NEXT: 1563308125000
+print(Date.parse('Tue Jul 16 2019 13:15:25 PST'));
+// CHECK-NEXT: 1563311725000
+print(Date.parse('Tue Jul 16 2019 13:15:25 MDT'));
+// CHECK-NEXT: 1563304525000
+print(Date.parse('Tue Jul 16 2019 13:15:25 MST'));
+// CHECK-NEXT: 1563308125000
+print(Date.parse('Tue Jul 16 2019 13:15:25 CDT'));
+// CHECK-NEXT: 1563300925000
+print(Date.parse('Tue Jul 16 2019 13:15:25 CST'));
+// CHECK-NEXT: 1563304525000
+print(Date.parse('Tue Jul 16 2019 13:15:25 EDT'));
+// CHECK-NEXT: 1563297325000
+print(Date.parse('Tue Jul 16 2019 13:15:25 EST'));
+// CHECK-NEXT: 1563300925000
+print(Date.parse('Tue Jul 16 2019 13:15:25 EST+0700'));
+// CHECK-NEXT: NaN
 print(Date.parse('Tue Jul 16 2019 13:15:25 -0700'));
 // CHECK-NEXT: 1563308125000
 print(Date.parse('Tue Jul 16 2019 13:15:25 GMT'));
