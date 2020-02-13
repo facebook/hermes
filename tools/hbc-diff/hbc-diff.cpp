@@ -160,7 +160,7 @@ static ExecutionStatus diffFiles(
     llvm::outs() << "  (";
     printBytes(fileSizes[0][j], llvm::outs(), humanize);
     llvm::outs() << " -> ";
-    printBytes(fileSizes[0][j], llvm::outs(), humanize);
+    printBytes(fileSizes[1][j], llvm::outs(), humanize);
     llvm::outs() << ")\n";
   }
 
