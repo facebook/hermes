@@ -48,7 +48,7 @@ bool UTF16Stream::refill() {
       &utf8Begin_,
       utf8End_,
       (llvm::UTF16 **)&out,
-      (llvm::UTF16 *)end_,
+      (llvm::UTF16 *)const_cast<char16_t *>(end_),
       llvm::lenientConversion);
 
   if (cRes != llvm::ConversionResult::targetExhausted) {
