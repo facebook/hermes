@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef _WINDOWS
-
 #include "hermes/VM/Profiler/SamplingProfiler.h"
+
+#ifdef HERMESVM_SAMPLING_PROFILER_STUB
 
 namespace hermes {
 namespace vm {
@@ -23,4 +23,4 @@ namespace vm {
 } // namespace vm
 } // namespace hermes
 
-#endif // _WINDOWS
+#endif // HERMESVM_SAMPLING_PROFILER_STUB

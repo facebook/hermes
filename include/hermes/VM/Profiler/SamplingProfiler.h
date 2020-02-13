@@ -5,8 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// If nothing is defined then pick a sensible default
+#if !defined(HERMESVM_SAMPLING_PROFILER_STUB) && \
+    !defined(HERMESVM_SAMPLING_PROFILER_POSIX)
 #ifdef _WINDOWS
-#include "hermes/VM/Profiler/SamplingProfilerWindows.h"
+#define HERMESVM_SAMPLING_PROFILER_STUB
 #else
+#define HERMESVM_SAMPLING_PROFILER_POSIX
+#endif
+#endif
+
+#if defined(HERMESVM_SAMPLING_PROFILER_STUB)
+#include "hermes/VM/Profiler/SamplingProfilerStub.h"
+#elif defined(HERMESVM_SAMPLING_PROFILER_POSIX)
 #include "hermes/VM/Profiler/SamplingProfilerPosix.h"
+#else
+#error "No sampling profiler implementation defined"
 #endif

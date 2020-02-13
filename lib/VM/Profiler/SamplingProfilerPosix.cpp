@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef _WINDOWS
-
 #include "hermes/VM/Profiler/SamplingProfiler.h"
+
+#ifdef HERMESVM_SAMPLING_PROFILER_POSIX
 
 #include "hermes/Support/ThreadLocal.h"
 #include "hermes/VM/Callable.h"
@@ -523,4 +523,4 @@ bool operator==(
 } // namespace vm
 } // namespace hermes
 
-#endif // not _WINDOWS
+#endif // HERMESVM_SAMPLING_PROFILER_POSIX

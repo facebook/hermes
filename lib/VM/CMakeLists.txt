@@ -49,7 +49,7 @@ set(source_files
   RuntimeStats.cpp
   Profiler/ChromeTraceSerializerPosix.cpp
   Profiler/InlineCacheProfiler.cpp
-  Profiler/SamplingProfilerWindows.cpp
+  Profiler/SamplingProfilerStub.cpp
   Profiler/SamplingProfilerPosix.cpp
   Serializer.cpp
   SegmentedArray.cpp
