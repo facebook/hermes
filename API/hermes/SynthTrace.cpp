@@ -30,6 +30,9 @@ namespace {
 
 using RecordType = SynthTrace::RecordType;
 using JSONEmitter = ::hermes::JSONEmitter;
+using ::hermes::parser::JSONArray;
+using ::hermes::parser::JSONObject;
+using ::hermes::parser::JSONValue;
 
 double decodeNumber(const std::string &numberAsString) {
   // Assume the original platform and the current platform are both little
@@ -110,8 +113,10 @@ SynthTrace::SynthTrace(
     json_->emitKeyValue("vmExperimentFlags", conf.getVMExperimentFlags());
     json_->closeDict();
 
-    // The top-level dict remains open, and is added to during execution.
-    // It is closed by flushAndDisable.
+    // Both the top-level dict and the trace array remain open.  The latter is
+    // added to during execution.  Both are closed by flushAndDisable.
+    json_->emitKey("trace");
+    json_->openArray();
   }
 }
 
@@ -562,10 +567,28 @@ const char *SynthTrace::nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru) {
   throw std::invalid_argument("Name for RelaseUnused not recognized");
 }
 
+void SynthTrace::flushRecordsIfNecessary() {
+  if (!json_ || records_.size() < kTraceRecordsToFlush) {
+    return;
+  }
+  flushRecords();
+}
+
+void SynthTrace::flushRecords() {
+  for (const std::unique_ptr<SynthTrace::Record> &rec : records_) {
+    rec->toJSON(*json_, *this);
+  }
+  records_.clear();
+}
+
 void SynthTrace::flushAndDisable(const ::hermes::vm::MockedEnvironment &env) {
   if (!json_) {
     return;
   }
+
+  // First, flush any buffered records, and close the still-open "trace" array.
+  flushRecords();
+  json_->closeArray();
 
   // Env section.
   json_->emitKey("env");
@@ -609,16 +632,7 @@ void SynthTrace::flushAndDisable(const ::hermes::vm::MockedEnvironment &env) {
     json_->closeDict();
   }
   json_->closeArray();
-
   json_->closeDict();
-
-  // Records section.
-  json_->emitKey("trace");
-  json_->openArray();
-  for (const std::unique_ptr<SynthTrace::Record> &rec : records_) {
-    rec->toJSON(*json_, *this);
-  }
-  json_->closeArray();
 
   // Close the top level dictionary (the one opened in the ctor).
   json_->closeDict();

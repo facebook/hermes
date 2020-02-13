@@ -399,6 +399,11 @@ TracingHermesRuntime::TracingHermesRuntime(
           std::move(traceStream),
           traceFilename) {}
 
+TracingHermesRuntime::~TracingHermesRuntime() {
+  // Make sure the trace is flushed.
+  flushAndDisableTrace();
+}
+
 TracingHermesRuntime::TracingHermesRuntime(
     std::unique_ptr<HermesRuntime> &runtime,
     uint64_t globalID,

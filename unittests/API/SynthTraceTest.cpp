@@ -10,6 +10,7 @@
 #include <hermes/SynthTrace.h>
 #include <hermes/Parser/JSONParser.h>
 #include <hermes/Support/Algorithms.h>
+#include <hermes/SynthTraceParser.h>
 #include <hermes/TracingRuntime.h>
 
 #include <gmock/gmock.h>

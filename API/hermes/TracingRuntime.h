@@ -132,6 +132,8 @@ class TracingHermesRuntime final : public TracingRuntime {
       std::unique_ptr<llvm::raw_ostream> traceStream,
       const std::string &traceFilename);
 
+  ~TracingHermesRuntime();
+
   SynthTrace::ObjectID getUniqueID(const jsi::Object &o) override {
     return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(o));
   }

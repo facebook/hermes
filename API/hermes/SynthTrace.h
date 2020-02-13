@@ -138,6 +138,7 @@ class SynthTrace {
   template <typename T, typename... Args>
   void emplace_back(Args &&... args) {
     records_.emplace_back(new T(std::forward<Args>(args)...));
+    flushRecordsIfNecessary();
   }
 
   const std::vector<std::unique_ptr<Record>> &records() const {
@@ -193,13 +194,27 @@ class SynthTrace {
     return (*traceStream_);
   }
 
+  /// If we're tracing to a file, and the number of accumulated
+  /// records has reached the limit kTraceRecordsToFlush, below,
+  /// flush the records to the file, and reset the accumulated records
+  /// to be empty.
+  void flushRecordsIfNecessary();
+
+  /// Assumes we're tracing to a file; flush accumulated records to
+  /// the file, and reset the accumulated records to be empty.
+  void flushRecords();
+
+  static constexpr unsigned kTraceRecordsToFlush = 100;
+
   /// If we're tracing to a file, pointer to a stream onto
   /// traceFilename_.  Null otherwise.
   std::unique_ptr<llvm::raw_ostream> traceStream_;
   /// If we're tracing to a file, pointer to a JSONEmitter writting
   /// into *traceStream_.  Null otherwise.
   std::unique_ptr<::hermes::JSONEmitter> json_;
-  /// The records currently being accumulated in the trace.
+  /// The records currently being accumulated in the trace.  If we are
+  /// tracing to a file, these will be only the records not yet
+  /// written to the file.
   std::vector<std::unique_ptr<Record>> records_;
   /// The id of the global object.
   const ObjectID globalObjID_;
