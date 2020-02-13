@@ -19,7 +19,8 @@ const char *dateNowTrace() {
     "mathRandomSeed": 0,
     "callsToDateNow": [1, 2, 3],
     "callsToNewDate": [],
-    "callsToDateAsFunction": []
+    "callsToDateAsFunction": [],
+    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": [
     {

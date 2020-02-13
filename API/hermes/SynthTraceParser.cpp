@@ -166,6 +166,48 @@ Collection<std::string, std::allocator<std::string>> getListOfStrings(
   return strings;
 }
 
+template <template <typename, typename> class Collection>
+Collection<
+    ::hermes::vm::MockedEnvironment::StatsTable,
+    std::allocator<::hermes::vm::MockedEnvironment::StatsTable>>
+getListOfStatsTable(JSONArray *array) {
+  Collection<
+      ::hermes::vm::MockedEnvironment::StatsTable,
+      std::allocator<::hermes::vm::MockedEnvironment::StatsTable>>
+      calls;
+  if (!array) {
+    return calls;
+  }
+  std::transform(
+      array->begin(),
+      array->end(),
+      std::back_inserter(calls),
+      [](const JSONValue *value)
+          -> ::hermes::vm::MockedEnvironment::StatsTable {
+        if (value->getKind() != JSONKind::Object) {
+          throw std::invalid_argument("Stats table JSON rep is not object");
+        }
+        const JSONObject *obj = llvm::cast<JSONObject>(value);
+        ::hermes::vm::MockedEnvironment::StatsTable result;
+        for (auto name : *obj->getHiddenClass()) {
+          auto valForName = obj->at(name->str());
+          if (valForName->getKind() == JSONKind::Number) {
+            result.try_emplace(
+                name->str(), llvm::cast<JSONNumber>(valForName)->getValue());
+          } else if (valForName->getKind() == JSONKind::String) {
+            result.try_emplace(
+                name->str(),
+                std::string(llvm::cast<JSONString>(valForName)->c_str()));
+          } else {
+            throw std::invalid_argument(
+                "Stats table kind is not num or string.");
+          }
+        }
+        return result;
+      });
+  return calls;
+}
+
 ::hermes::vm::MockedEnvironment getMockedEnvironment(JSONObject *env) {
   auto getListOfNumbers = [](JSONArray *array) -> std::deque<uint64_t> {
     std::deque<uint64_t> calls;
@@ -188,8 +230,15 @@ Collection<std::string, std::allocator<std::string>> getListOfStrings(
       getListOfNumbers(llvm::cast<JSONArray>(env->at("callsToNewDate")));
   auto callsToDateAsFunction = getListOfStrings<std::deque>(
       llvm::cast<JSONArray>(env->at("callsToDateAsFunction")));
+  auto callsToHermesInternalGetInstrumentedStats =
+      getListOfStatsTable<std::deque>(llvm::cast_or_null<JSONArray>(
+          env->get("callsToHermesInternalGetInstrumentedStats")));
   return ::hermes::vm::MockedEnvironment{
-      mathRandomSeed, callsToDateNow, callsToNewDate, callsToDateAsFunction};
+      mathRandomSeed,
+      callsToDateNow,
+      callsToNewDate,
+      callsToDateAsFunction,
+      callsToHermesInternalGetInstrumentedStats};
 }
 
 SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {

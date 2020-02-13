@@ -19,7 +19,8 @@ const char *globalReturnObjectTrace() {
     "mathRandomSeed": 0,
     "callsToDateNow": [],
     "callsToNewDate": [],
-    "callsToDateAsFunction": []
+    "callsToDateAsFunction": [],
+    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": [
     {

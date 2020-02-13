@@ -13,6 +13,8 @@
   F(dateAsFunction)                  \
   F(dateAsNew)                       \
   F(dateNow)                         \
+  F(getInstrumentedStats)            \
+  F(getInstrumentedStatsAllowsEmpty) \
   F(globalReturnObject)              \
   F(getPropertyNames)                \
   F(hostCallsJS)                     \

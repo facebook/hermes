@@ -19,7 +19,8 @@ const char *mathRandomTrace() {
     "mathRandomSeed": 10,
     "callsToDateNow": [],
     "callsToNewDate": [],
-    "callsToDateAsFunction": []
+    "callsToDateAsFunction": [],
+    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": [
     {

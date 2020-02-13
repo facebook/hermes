@@ -8,6 +8,8 @@
 #ifndef HERMES_PUBLIC_MOCKEDENVIRONMENT_H
 #define HERMES_PUBLIC_MOCKEDENVIRONMENT_H
 
+#include <llvm/ADT/StringMap.h>
+
 #include <cstdint>
 #include <deque>
 #include <random>
@@ -22,11 +24,42 @@ namespace vm {
 /// passed into the Runtime so it returns the same sequence of values for the
 /// specified calls.
 struct MockedEnvironment final {
+  /// The tagged union for the values in a StatsTable (below).
+  class StatsTableValue {
+   public:
+    // Need a default.
+    StatsTableValue() : isNum_(true), numVal_(0.0) {}
+    StatsTableValue(double val) : isNum_(true), numVal_(val) {}
+    StatsTableValue(const std::string &val) : isNum_(false), strVal_(val) {}
+
+    bool isNum() const {
+      return isNum_;
+    }
+
+    double num() const {
+      assert(isNum_);
+      return numVal_;
+    }
+
+    std::string str() const {
+      assert(!isNum_);
+      return strVal_;
+    }
+
+   private:
+    // Conceptually a union; can't actually be one because needs copy ctor.
+    bool isNum_;
+    double numVal_;
+    std::string strVal_;
+  };
+  using StatsTable = llvm::StringMap<StatsTableValue>;
+
   // Zero is assumed to be an invalid random seed in several places.
   std::minstd_rand::result_type mathRandomSeed{0};
   std::deque<uint64_t> callsToDateNow;
   std::deque<uint64_t> callsToNewDate;
   std::deque<std::string> callsToDateAsFunction;
+  std::deque<StatsTable> callsToHermesInternalGetInstrumentedStats;
 
   /// True if we should try to execute the same number of CPU instructions
   /// across repeated invocations of the same JS.
@@ -37,11 +70,14 @@ struct MockedEnvironment final {
       std::minstd_rand::result_type mathRandomSeed,
       const std::deque<uint64_t> &callsToDateNow,
       const std::deque<uint64_t> &callsToNewDate,
-      const std::deque<std::string> &callsToDateAsFunction)
+      const std::deque<std::string> &callsToDateAsFunction,
+      const std::deque<StatsTable> &callsToHermesInternalGetInstrumentedStats)
       : mathRandomSeed(mathRandomSeed),
         callsToDateNow(callsToDateNow),
         callsToNewDate(callsToNewDate),
-        callsToDateAsFunction(callsToDateAsFunction) {}
+        callsToDateAsFunction(callsToDateAsFunction),
+        callsToHermesInternalGetInstrumentedStats(
+            callsToHermesInternalGetInstrumentedStats) {}
 };
 
 } // namespace vm

@@ -22,7 +22,8 @@ const char *dateAsFunctionTrace() {
     "callsToDateAsFunction": [
       "Thu Feb 28 2019 13:48:22 GMT-0800 (Pacific Standard Time)",
       "hello"
-    ]
+    ],
+    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": [
     {

@@ -19,7 +19,8 @@ const char *hostFunctionMutatesObjectTrace() {
     "mathRandomSeed": 0,
     "callsToDateNow": [],
     "callsToNewDate": [],
-    "callsToDateAsFunction": []
+    "callsToDateAsFunction": [],
+    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": [
     {

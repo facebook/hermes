@@ -598,6 +598,23 @@ llvm::raw_ostream &operator<<(
       }
       json.closeArray();
 
+      json.emitKey("callsToHermesInternalGetInstrumentedStats");
+      json.openArray();
+      for (const ::hermes::vm::MockedEnvironment::StatsTable &call :
+           tracePrinter.env.callsToHermesInternalGetInstrumentedStats) {
+        json.openDict();
+        for (const auto &key : call.keys()) {
+          auto val = call.lookup(key);
+          if (val.isNum()) {
+            json.emitKeyValue(key, val.num());
+          } else {
+            json.emitKeyValue(key, val.str());
+          }
+        }
+        json.closeDict();
+      }
+      json.closeArray();
+
       json.closeDict();
     }
 

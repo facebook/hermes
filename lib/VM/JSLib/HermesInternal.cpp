@@ -9,10 +9,12 @@
 
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/Support/Base64vlq.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib.h"
+#include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Operations.h"
@@ -113,22 +115,51 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 /// Predefined enum value, and its value is rooted in \p VALUE.  If property
 /// definition fails, the exceptional execution status will be propogated to the
 /// outer function.
-#define SET_PROP(KEY, VALUE)                                   \
-  do {                                                         \
-    GCScopeMarkerRAII marker{gcScope};                         \
-    tmpHandle = HermesValue::encodeDoubleValue(VALUE);         \
-    auto status = JSObject::defineNewOwnProperty(              \
-        resultHandle,                                          \
-        runtime,                                               \
-        Predefined::getSymbolID(KEY),                          \
-        PropertyFlags::defaultNewNamedPropertyFlags(),         \
-        tmpHandle);                                            \
-    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) { \
-      return ExecutionStatus::EXCEPTION;                       \
-    }                                                          \
+#define SET_PROP(KEY, VALUE)                                             \
+  do {                                                                   \
+    GCScopeMarkerRAII marker{gcScope};                                   \
+    double val = VALUE;                                                  \
+    if (statsTable) {                                                    \
+      std::string key = oscompat::to_string(static_cast<unsigned>(KEY)); \
+      if (statsTable->count(key.c_str())) {                              \
+        val = (*statsTable)[StringRef(key.c_str(), key.size())].num();   \
+      }                                                                  \
+    }                                                                    \
+    tmpHandle = HermesValue::encodeDoubleValue(val);                     \
+    auto status = JSObject::defineNewOwnProperty(                        \
+        resultHandle,                                                    \
+        runtime,                                                         \
+        Predefined::getSymbolID(KEY),                                    \
+        PropertyFlags::defaultNewNamedPropertyFlags(),                   \
+        tmpHandle);                                                      \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {           \
+      return ExecutionStatus::EXCEPTION;                                 \
+    }                                                                    \
+    if (newStatsTable) {                                                 \
+      std::string key = oscompat::to_string(static_cast<unsigned>(KEY)); \
+      newStatsTable->try_emplace(key, val);                              \
+    }                                                                    \
   } while (false)
 
   auto &stats = runtime->getRuntimeStats();
+  MockedEnvironment::StatsTable *statsTable = nullptr;
+  auto *const storage = runtime->getCommonStorage();
+  if (storage->env) {
+    // For now, we'll allow replay to exhaust the recorded getInstrumentedStats
+    // calls, and allow further calls to take values from the replay execution.
+    // This allows backwards compatibility with existing traces that do not
+    // record getInstrumentedStats.  In the future, we might wish to disallow
+    // this, and throw an exception.
+    if (!storage->env->callsToHermesInternalGetInstrumentedStats.empty()) {
+      statsTable =
+          &storage->env->callsToHermesInternalGetInstrumentedStats.front();
+    }
+  }
+
+  std::unique_ptr<MockedEnvironment::StatsTable> newStatsTable;
+  if (storage->shouldTrace) {
+    newStatsTable.reset(new MockedEnvironment::StatsTable());
+  }
 
   // Ensure that the timers measuring the current execution are up to date.
   stats.flushPendingTimers();
@@ -195,7 +226,11 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) { \
       return ExecutionStatus::EXCEPTION;                       \
     }                                                          \
-    tmpHandle = HermesValue::encodeDoubleValue(VALUE);         \
+    double val = VALUE;                                        \
+    if (statsTable && statsTable->count(KEY)) {                \
+      val = (*statsTable)[KEY].num();                          \
+    }                                                          \
+    tmpHandle = HermesValue::encodeDoubleValue(val);           \
     auto status = JSObject::defineNewOwnProperty(              \
         resultHandle,                                          \
         runtime,                                               \
@@ -204,6 +239,9 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
         tmpHandle);                                            \
     if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) { \
       return ExecutionStatus::EXCEPTION;                       \
+    }                                                          \
+    if (newStatsTable) {                                       \
+      newStatsTable->try_emplace(KEY, val);                    \
     }                                                          \
   } while (false)
 
@@ -244,7 +282,13 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) { \
       return ExecutionStatus::EXCEPTION;                       \
     }                                                          \
-    auto valStr = StringPrimitive::create(runtime, VALUE);     \
+    ASCIIRef val = VALUE;                                      \
+    std::string valStdStr(val.data(), val.size());             \
+    if (statsTable && statsTable->count(KEY)) {                \
+      valStdStr = (*statsTable)[std::string(KEY)].str();       \
+    }                                                          \
+    val = ASCIIRef(valStdStr.c_str(), valStdStr.size());       \
+    auto valStr = StringPrimitive::create(runtime, val);       \
     if (LLVM_UNLIKELY(valStr == ExecutionStatus::EXCEPTION)) { \
       return ExecutionStatus::EXCEPTION;                       \
     }                                                          \
@@ -257,6 +301,9 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
         tmpHandle);                                            \
     if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) { \
       return ExecutionStatus::EXCEPTION;                       \
+    }                                                          \
+    if (newStatsTable) {                                       \
+      newStatsTable->try_emplace(KEY, valStdStr);              \
     }                                                          \
   } while (false)
 
@@ -322,6 +369,11 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
         }
       }
     }
+    // If we have are replaying a trace, override the value.
+    if (statsTable) {
+      bytecodePagesAccessed = (*statsTable)["js_bytecodePagesAccessed"].num();
+    }
+
     if (bytecodePagesAccessed) {
       SET_PROP_NEW("js_bytecodePagesAccessed", bytecodePagesAccessed);
       SET_PROP_NEW("js_bytecodeSize", bytecodeSize);
@@ -331,6 +383,14 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
           "js_bytecodePagesTraceSample",
           ASCIIRef(sample.data(), sample.size()));
     }
+  }
+
+  if (storage->env && statsTable) {
+    storage->env->callsToHermesInternalGetInstrumentedStats.pop_front();
+  }
+  if (LLVM_UNLIKELY(storage->shouldTrace)) {
+    storage->tracedEnv.callsToHermesInternalGetInstrumentedStats.push_back(
+        *newStatsTable);
   }
 
   return resultHandle.getHermesValue();

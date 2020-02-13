@@ -48,6 +48,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
     "callsToDateNow": [],
     "callsToNewDate": [],
     "callsToDateAsFunction": [],
+    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": []
 }
@@ -92,6 +93,7 @@ TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
     "callsToDateNow": [],
     "callsToNewDate": [],
     "callsToDateAsFunction": [],
+    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": []
 }
@@ -121,6 +123,7 @@ TEST_F(SynthTraceParserTest, SynthVersionMismatch) {
     "callsToDateNow": [],
     "callsToNewDate": [],
     "callsToDateAsFunction": [],
+    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": []
 }
@@ -144,6 +147,7 @@ TEST_F(SynthTraceParserTest, SynthVersionInvalidKind) {
     "callsToDateNow": [],
     "callsToNewDate": [],
     "callsToDateAsFunction": [],
+    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": []
 }
@@ -162,6 +166,7 @@ TEST_F(SynthTraceParserTest, SynthMissingVersion) {
     "callsToDateNow": [],
     "callsToNewDate": [],
     "callsToDateAsFunction": [],
+    "callsToHermesInternalGetInstrumentedStats": [],
   },
   "trace": []
 }
