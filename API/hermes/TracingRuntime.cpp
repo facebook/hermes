@@ -21,10 +21,11 @@ namespace tracing {
 TracingRuntime::TracingRuntime(
     std::unique_ptr<jsi::Runtime> runtime,
     uint64_t globalID,
+    const ::hermes::vm::RuntimeConfig &conf,
     std::unique_ptr<llvm::raw_ostream> traceStream)
     : RuntimeDecorator<jsi::Runtime>(*runtime),
       runtime_(std::move(runtime)),
-      trace_(globalID, std::move(traceStream)) {}
+      trace_(globalID, conf, std::move(traceStream)) {}
 
 jsi::Value TracingRuntime::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
@@ -404,7 +405,11 @@ TracingHermesRuntime::TracingHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvm::raw_ostream> traceStream,
     const std::string &traceFilename)
-    : TracingRuntime(std::move(runtime), globalID, std::move(traceStream)),
+    : TracingRuntime(
+          std::move(runtime),
+          globalID,
+          runtimeConfig,
+          std::move(traceStream)),
       conf_(runtimeConfig),
       traceFilename_(traceFilename) {}
 
@@ -413,7 +418,7 @@ void TracingHermesRuntime::flushAndDisableTrace() {
 }
 
 std::string TracingHermesRuntime::flushAndDisableBridgeTrafficTrace() {
-  trace().flushAndDisable(hermesRuntime().getMockedEnvironment(), conf_);
+  trace().flushAndDisable(hermesRuntime().getMockedEnvironment());
   return traceFilename_;
 }
 

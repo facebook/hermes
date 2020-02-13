@@ -27,6 +27,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   TracingRuntime(
       std::unique_ptr<jsi::Runtime> runtime,
       uint64_t globalID,
+      const ::hermes::vm::RuntimeConfig &conf,
       std::unique_ptr<llvm::raw_ostream> traceStream);
 
   virtual SynthTrace::ObjectID getUniqueID(const jsi::Object &o) = 0;

@@ -71,6 +71,7 @@ std::string doublePrinter(double x) {
 
 SynthTrace::SynthTrace(
     ObjectID globalObjID,
+    const ::hermes::vm::RuntimeConfig &conf,
     std::unique_ptr<llvm::raw_ostream> traceStream)
     : traceStream_(std::move(traceStream)), globalObjID_(globalObjID) {
   if (traceStream_) {
@@ -78,6 +79,37 @@ SynthTrace::SynthTrace(
     json_->openDict();
     json_->emitKeyValue("version", synthVersion());
     json_->emitKeyValue("globalObjID", globalObjID_);
+
+    // RuntimeConfig section.
+    json_->emitKey("runtimeConfig");
+    json_->openDict();
+    {
+      json_->emitKey("gcConfig");
+      json_->openDict();
+      json_->emitKeyValue("minHeapSize", conf.getGCConfig().getMinHeapSize());
+      json_->emitKeyValue("initHeapSize", conf.getGCConfig().getInitHeapSize());
+      json_->emitKeyValue("maxHeapSize", conf.getGCConfig().getMaxHeapSize());
+      json_->emitKeyValue(
+          "occupancyTarget", conf.getGCConfig().getOccupancyTarget());
+      json_->emitKeyValue(
+          "effectiveOOMThreshold",
+          conf.getGCConfig().getEffectiveOOMThreshold());
+      json_->emitKeyValue(
+          "shouldReleaseUnused",
+          nameFromReleaseUnused(conf.getGCConfig().getShouldReleaseUnused()));
+      json_->emitKeyValue("name", conf.getGCConfig().getName());
+      json_->emitKeyValue("allocInYoung", conf.getGCConfig().getAllocInYoung());
+      json_->emitKeyValue(
+          "revertToYGAtTTI", conf.getGCConfig().getRevertToYGAtTTI());
+      json_->closeDict();
+    }
+    json_->emitKeyValue("maxNumRegisters", conf.getMaxNumRegisters());
+    json_->emitKeyValue("ES6Proxy", conf.getES6Proxy());
+    json_->emitKeyValue("ES6Symbol", conf.getES6Symbol());
+    json_->emitKeyValue("enableSampledStats", conf.getEnableSampledStats());
+    json_->emitKeyValue("vmExperimentFlags", conf.getVMExperimentFlags());
+    json_->closeDict();
+
     // The top-level dict remains open, and is added to during execution.
     // It is closed by flushAndDisable.
   }
@@ -530,41 +562,10 @@ const char *SynthTrace::nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru) {
   throw std::invalid_argument("Name for RelaseUnused not recognized");
 }
 
-void SynthTrace::flushAndDisable(
-    const ::hermes::vm::MockedEnvironment &env,
-    const ::hermes::vm::RuntimeConfig &conf) {
+void SynthTrace::flushAndDisable(const ::hermes::vm::MockedEnvironment &env) {
   if (!json_) {
     return;
   }
-
-  // RuntimeConfig section.
-  json_->emitKey("runtimeConfig");
-  json_->openDict();
-  {
-    json_->emitKey("gcConfig");
-    json_->openDict();
-    json_->emitKeyValue("minHeapSize", conf.getGCConfig().getMinHeapSize());
-    json_->emitKeyValue("initHeapSize", conf.getGCConfig().getInitHeapSize());
-    json_->emitKeyValue("maxHeapSize", conf.getGCConfig().getMaxHeapSize());
-    json_->emitKeyValue(
-        "occupancyTarget", conf.getGCConfig().getOccupancyTarget());
-    json_->emitKeyValue(
-        "effectiveOOMThreshold", conf.getGCConfig().getEffectiveOOMThreshold());
-    json_->emitKeyValue(
-        "shouldReleaseUnused",
-        nameFromReleaseUnused(conf.getGCConfig().getShouldReleaseUnused()));
-    json_->emitKeyValue("name", conf.getGCConfig().getName());
-    json_->emitKeyValue("allocInYoung", conf.getGCConfig().getAllocInYoung());
-    json_->emitKeyValue(
-        "revertToYGAtTTI", conf.getGCConfig().getRevertToYGAtTTI());
-    json_->closeDict();
-  }
-  json_->emitKeyValue("maxNumRegisters", conf.getMaxNumRegisters());
-  json_->emitKeyValue("ES6Proxy", conf.getES6Proxy());
-  json_->emitKeyValue("ES6Symbol", conf.getES6Symbol());
-  json_->emitKeyValue("enableSampledStats", conf.getEnableSampledStats());
-  json_->emitKeyValue("vmExperimentFlags", conf.getVMExperimentFlags());
-  json_->closeDict();
 
   // Env section.
   json_->emitKey("env");

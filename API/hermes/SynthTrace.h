@@ -132,6 +132,7 @@ class SynthTrace {
   /// stream.  Otherwise, no trace is written.
   explicit SynthTrace(
       ObjectID globalObjID,
+      const ::hermes::vm::RuntimeConfig &conf,
       std::unique_ptr<llvm::raw_ostream> traceStream = nullptr);
 
   template <typename T, typename... Args>
@@ -831,9 +832,7 @@ class SynthTrace {
   /// Completes writing of the trace to the trace stream.  If writing
   /// to a file, disables further writing to the file, or accumulation
   /// of data.
-  void flushAndDisable(
-      const ::hermes::vm::MockedEnvironment &env,
-      const ::hermes::vm::RuntimeConfig &conf);
+  void flushAndDisable(const ::hermes::vm::MockedEnvironment &env);
 };
 
 llvm::raw_ostream &operator<<(

@@ -243,7 +243,7 @@ getListOfStatsTable(JSONArray *array) {
 
 SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
   using RecordType = SynthTrace::RecordType;
-  SynthTrace trace(globalObjID);
+  SynthTrace trace(globalObjID, ::hermes::vm::RuntimeConfig());
   auto getListOfTraceValues =
       [](JSONArray *array,
          SynthTrace &trace) -> std::vector<SynthTrace::TraceValue> {

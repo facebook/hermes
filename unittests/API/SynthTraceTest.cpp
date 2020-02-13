@@ -463,7 +463,7 @@ TEST_F(SynthTraceTest, HostObjectThrowsExceptionFails) {
 
 class SynthTraceSerializationTest : public ::testing::Test {
  protected:
-  SynthTrace trace{0};
+  SynthTrace trace{0, ::hermes::vm::RuntimeConfig()};
   SynthTrace::TimeSinceStart dummyTime{SynthTrace::TimeSinceStart::zero()};
 
   std::string to_string(const SynthTrace::Record &rec) {
