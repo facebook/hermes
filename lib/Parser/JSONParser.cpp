@@ -201,14 +201,24 @@ llvm::Optional<JSONValue *> JSONParser::parse() {
 }
 
 llvm::Optional<JSONValue *> JSONParser::parseValue() {
+  bool needsNegation = false;
   switch (lexer_.getCurToken()->getKind()) {
     case TokenKind::string_literal: {
       auto res = factory_.getString(lexer_.getCurToken()->getStringLiteral());
       lexer_.advance();
       return res;
     }
+    case TokenKind::minus:
+      needsNegation = true;
+      lexer_.advance();
+      if (lexer_.getCurToken()->getKind() != TokenKind::numeric_literal) {
+        lexer_.error("No numeric literal following minus (-) token in value");
+        return llvm::None;
+      }
     case TokenKind::numeric_literal: {
-      auto res = factory_.getNumber(lexer_.getCurToken()->getNumericLiteral());
+      auto numericValue = lexer_.getCurToken()->getNumericLiteral();
+      auto res =
+          factory_.getNumber(needsNegation ? -numericValue : numericValue);
       lexer_.advance();
       return res;
     }

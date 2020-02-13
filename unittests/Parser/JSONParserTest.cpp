@@ -132,6 +132,32 @@ TEST(JSONParserTest, SmokeTest2) {
   ASSERT_EQ(a1->end(), it3);
 }
 
+TEST(JSONParserTest, NegativeNumbers) {
+  JSLexer::Allocator alloc;
+  JSONFactory factory(alloc);
+  SourceErrorManager sm;
+  const std::vector<double> expectedValues{-1.0, -1.0, -0.0};
+  JSONParser parser(factory, "[-1.0, -1, -0]", sm);
+  auto t1 = parser.parse();
+  ASSERT_TRUE(t1.hasValue());
+  auto a1 = llvm::dyn_cast<JSONArray>(*t1);
+  ASSERT_NE(nullptr, a1);
+  ASSERT_EQ(a1->size(), expectedValues.size());
+
+  auto it = a1->begin();
+  for (double expected : expectedValues) {
+    auto actual = llvm::dyn_cast<JSONNumber>(*it++);
+    ASSERT_NE(nullptr, actual);
+    ASSERT_EQ(actual->getValue(), expected);
+  }
+
+  SourceErrorManager sm1;
+  JSONParser parser1(factory, "-", sm1);
+  auto t2 = parser1.parse();
+  ASSERT_FALSE(t2.hasValue());
+  ASSERT_EQ(sm1.getErrorCount(), 1);
+}
+
 TEST(JSONParserTest, HiddenClassTest) {
   JSLexer::Allocator alloc;
   JSONFactory factory(alloc);
