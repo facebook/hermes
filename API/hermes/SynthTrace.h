@@ -18,6 +18,7 @@
 #include "hermes/VM/Operations.h"
 
 #include <chrono>
+#include <cstdlib>
 #include <memory>
 #include <string>
 #include <vector>
@@ -36,22 +37,6 @@ namespace tracing {
 /// It can be serialized into JSON and written to a llvm::raw_ostream.
 class SynthTrace {
  public:
-  struct Printable final {
-    const SynthTrace &trace;
-    /// References to the vectors stored by the Runtime.
-    const ::hermes::vm::MockedEnvironment &env;
-    const ::hermes::vm::RuntimeConfig &conf;
-
-    Printable(
-        const SynthTrace &trace,
-        const ::hermes::vm::MockedEnvironment &env,
-        const ::hermes::vm::RuntimeConfig &conf)
-        : trace(trace), env(env), conf(conf) {}
-
-    static const char *nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru);
-    static ::hermes::vm::ReleaseUnused releaseUnusedFromName(const char *name);
-  };
-
   using ObjectID = uint64_t;
   /// A tagged union representing different types available in the trace.
   /// HermesValue doesn't have to be used, but it is an efficient way
@@ -143,7 +128,11 @@ class SynthTrace {
         const SynthTrace &trace) const;
   };
 
-  explicit SynthTrace(ObjectID globalObjID) : globalObjID_(globalObjID) {}
+  /// If \p traceStream is non-null, the trace will be written to that
+  /// stream.  Otherwise, no trace is written.
+  explicit SynthTrace(
+      ObjectID globalObjID,
+      std::unique_ptr<llvm::raw_ostream> traceStream = nullptr);
 
   template <typename T, typename... Args>
   void emplace_back(Args &&... args) {
@@ -195,7 +184,21 @@ class SynthTrace {
     return 2;
   }
 
+  static const char *nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru);
+  static ::hermes::vm::ReleaseUnused releaseUnusedFromName(const char *name);
+
  private:
+  llvm::raw_ostream &os() const {
+    return (*traceStream_);
+  }
+
+  /// If we're tracing to a file, pointer to a stream onto
+  /// traceFilename_.  Null otherwise.
+  std::unique_ptr<llvm::raw_ostream> traceStream_;
+  /// If we're tracing to a file, pointer to a JSONEmitter writting
+  /// into *traceStream_.  Null otherwise.
+  std::unique_ptr<::hermes::JSONEmitter> json_;
+  /// The records currently being accumulated in the trace.
   std::vector<std::unique_ptr<Record>> records_;
   /// The id of the global object.
   const ObjectID globalObjID_;
@@ -825,15 +828,14 @@ class SynthTrace {
     bool operator==(const Record &that) const override;
   };
 
-  /// @}
-  friend llvm::raw_ostream &operator<<(
-      llvm::raw_ostream &os,
-      const SynthTrace::Printable &trace);
+  /// Completes writing of the trace to the trace stream.  If writing
+  /// to a file, disables further writing to the file, or accumulation
+  /// of data.
+  void flushAndDisable(
+      const ::hermes::vm::MockedEnvironment &env,
+      const ::hermes::vm::RuntimeConfig &conf);
 };
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
-    const SynthTrace::Printable &trace);
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os,
     SynthTrace::RecordType type);

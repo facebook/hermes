@@ -9,6 +9,7 @@
 
 #include <hermes/SynthTrace.h>
 #include <hermes/Parser/JSONParser.h>
+#include <hermes/Support/Algorithms.h>
 #include <hermes/TracingRuntime.h>
 
 #include <gmock/gmock.h>
@@ -460,7 +461,8 @@ TEST_F(SynthTraceTest, HostObjectThrowsExceptionFails) {
 /// @name Serialization tests
 /// @{
 
-struct SynthTraceSerializationTest : public ::testing::Test {
+class SynthTraceSerializationTest : public ::testing::Test {
+ protected:
   SynthTrace trace{0};
   SynthTrace::TimeSinceStart dummyTime{SynthTrace::TimeSinceStart::zero()};
 
@@ -472,6 +474,9 @@ struct SynthTraceSerializationTest : public ::testing::Test {
     resultStream.flush();
     return result;
   }
+
+ private:
+  std::string traceFilename_;
 };
 
 TEST_F(SynthTraceSerializationTest, EncodeNumber) {
@@ -648,16 +653,15 @@ TEST_F(SynthTraceSerializationTest, EndExecHasRetval) {
 }
 
 TEST_F(SynthTraceSerializationTest, TraceHeader) {
+  std::string result;
+  auto resultStream = ::hermes::make_unique<llvm::raw_string_ostream>(result);
   const ::hermes::vm::RuntimeConfig conf;
-  std::unique_ptr<TracingHermesRuntime> rt(
-      makeTracingHermesRuntime(makeHermesRuntime(conf), conf));
+  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
+      makeHermesRuntime(conf), conf, std::move(resultStream)));
 
   SynthTrace::ObjectID globalObjID = rt->getUniqueID(rt->global());
 
-  std::string result;
-  llvm::raw_string_ostream resultStream{result};
-  rt->writeTrace(resultStream);
-  resultStream.flush();
+  rt->flushAndDisableTrace();
 
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
@@ -694,7 +698,7 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
           ->getValue());
   EXPECT_EQ(
       conf.getGCConfig().getShouldReleaseUnused(),
-      SynthTrace::Printable::releaseUnusedFromName(
+      SynthTrace::releaseUnusedFromName(
           llvm::cast<JSONString>(gcConfig->at("shouldReleaseUnused"))
               ->c_str()));
   EXPECT_EQ(
@@ -722,9 +726,11 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
 }
 
 TEST_F(SynthTraceSerializationTest, FullTrace) {
+  std::string result;
+  auto resultStream = ::hermes::make_unique<llvm::raw_string_ostream>(result);
   const ::hermes::vm::RuntimeConfig conf;
-  std::unique_ptr<TracingHermesRuntime> rt(
-      makeTracingHermesRuntime(makeHermesRuntime(conf), conf));
+  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
+      makeHermesRuntime(conf), conf, std::move(resultStream)));
 
   SynthTrace::ObjectID objID;
   {
@@ -736,10 +742,7 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
     ASSERT_TRUE(value.isUndefined());
   }
 
-  std::string result;
-  llvm::raw_string_ostream resultStream{result};
-  rt->writeTrace(resultStream);
-  resultStream.flush();
+  rt->flushAndDisableTrace();
 
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
@@ -783,8 +786,10 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
       ::hermes::vm::RuntimeConfig::Builder()
           .withTraceEnvironmentInteractions(true)
           .build();
-  std::unique_ptr<TracingHermesRuntime> rt(
-      makeTracingHermesRuntime(makeHermesRuntime(conf), conf));
+  std::string result;
+  auto resultStream = ::hermes::make_unique<llvm::raw_string_ostream>(result);
+  std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
+      makeHermesRuntime(conf), conf, std::move(resultStream)));
 
   uint64_t dateNow = 0;
   uint64_t newDate = 0;
@@ -803,10 +808,7 @@ TEST_F(SynthTraceSerializationTest, FullTraceWithDateAndMath) {
     dateAsFunc = dateFunc.call(*rt).asString(*rt).utf8(*rt);
   }
 
-  std::string result;
-  llvm::raw_string_ostream resultStream{result};
-  rt->writeTrace(resultStream);
-  resultStream.flush();
+  rt->flushAndDisableTrace();
 
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};

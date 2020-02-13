@@ -136,7 +136,7 @@ class TraceInterpreter final {
  private:
   jsi::Runtime &rt_;
   ExecuteOptions options_;
-  llvm::raw_ostream *outTrace_;
+  llvm::raw_ostream *traceStream_;
   // Map from source hash to source file to run.
   std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles_;
   const SynthTrace &trace_;
@@ -182,27 +182,27 @@ class TraceInterpreter final {
       const ExecuteOptions &options);
 
   /// Same as exec, except it additionally traces the execution of the
-  /// interpreter. This trace can be compared to the original to detect
+  /// interpreter, to \p *traceStream.  (Requires \p traceStream to be
+  /// non-null.)  This trace can be compared to the original to detect
   /// correctness issues.
   static void execAndTrace(
       const std::string &traceFile,
       const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options,
-      llvm::raw_ostream &outTrace);
+      std::unique_ptr<llvm::raw_ostream> traceStream);
 
-  /// \param outTrace If non-null, write a trace of the execution into this
+  /// \param traceStream If non-null, write a trace of the execution into this
   /// stream.
   static std::string execFromMemoryBuffer(
       std::unique_ptr<llvm::MemoryBuffer> traceBuf,
       std::vector<std::unique_ptr<llvm::MemoryBuffer>> codeBufs,
       const ExecuteOptions &options,
-      llvm::raw_ostream *outTrace);
+      std::unique_ptr<llvm::raw_ostream> traceStream);
 
  private:
   TraceInterpreter(
       jsi::Runtime &rt,
       const ExecuteOptions &options,
-      llvm::raw_ostream *outTrace,
       const SynthTrace &trace,
       std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles,
       const std::unordered_map<SynthTrace::ObjectID, DefAndUse>
@@ -214,14 +214,13 @@ class TraceInterpreter final {
       const std::string &traceFile,
       const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options,
-      llvm::raw_ostream *outTrace);
+      std::unique_ptr<llvm::raw_ostream> traceStream);
 
   static std::string exec(
       jsi::Runtime &rt,
       const ExecuteOptions &options,
       const SynthTrace &trace,
-      std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles,
-      llvm::raw_ostream *outTrace);
+      std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles);
 
   jsi::Function createHostFunction(
       const SynthTrace::CreateHostFunctionRecord &rec);

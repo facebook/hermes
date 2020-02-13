@@ -9,8 +9,10 @@
 
 #include "SynthTrace.h"
 
+#include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/JSONEmitter.h"
+#include "hermes/Support/OSCompat.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/MockedEnvironment.h"
 
@@ -66,6 +68,20 @@ std::string doublePrinter(double x) {
 }
 
 } // namespace
+
+SynthTrace::SynthTrace(
+    ObjectID globalObjID,
+    std::unique_ptr<llvm::raw_ostream> traceStream)
+    : traceStream_(std::move(traceStream)), globalObjID_(globalObjID) {
+  if (traceStream_) {
+    json_ = std::make_unique<JSONEmitter>(*traceStream_, /*pretty*/ true);
+    json_->openDict();
+    json_->emitKeyValue("version", synthVersion());
+    json_->emitKeyValue("globalObjID", globalObjID_);
+    // The top-level dict remains open, and is added to during execution.
+    // It is closed by flushAndDisable.
+  }
+}
 
 SynthTrace::TraceValue SynthTrace::encodeUndefined() {
   return TraceValue::encodeUndefinedValue();
@@ -483,8 +499,7 @@ void SynthTrace::GetNativePropertyNamesReturnRecord::toJSONInternal(
   json.closeArray();
 }
 
-const char *SynthTrace::Printable::nameFromReleaseUnused(
-    ::hermes::vm::ReleaseUnused ru) {
+const char *SynthTrace::nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru) {
   switch (ru) {
     case ::hermes::vm::ReleaseUnused::kReleaseUnusedNone:
       return "none";
@@ -497,7 +512,7 @@ const char *SynthTrace::Printable::nameFromReleaseUnused(
   }
 }
 
-::hermes::vm::ReleaseUnused SynthTrace::Printable::releaseUnusedFromName(
+::hermes::vm::ReleaseUnused SynthTrace::releaseUnusedFromName(
     const char *rawName) {
   std::string name{rawName};
   if (name == "none") {
@@ -515,123 +530,103 @@ const char *SynthTrace::Printable::nameFromReleaseUnused(
   throw std::invalid_argument("Name for RelaseUnused not recognized");
 }
 
-llvm::raw_ostream &operator<<(
-    llvm::raw_ostream &os,
-    const SynthTrace::Printable &tracePrinter) {
-  // Don't need to emit start time, since each time is output with respect to
-  // the start time.
-
-  JSONEmitter json{os, /*pretty*/ true};
-  {
-    // Global section.
-    json.openDict();
-    json.emitKeyValue("version", tracePrinter.trace.synthVersion());
-    json.emitKeyValue("globalObjID", tracePrinter.trace.globalObjID());
-
-    // RuntimeConfig section.
-    {
-      json.emitKey("runtimeConfig");
-      json.openDict();
-      {
-        json.emitKey("gcConfig");
-        json.openDict();
-        json.emitKeyValue(
-            "minHeapSize", tracePrinter.conf.getGCConfig().getMinHeapSize());
-        json.emitKeyValue(
-            "initHeapSize", tracePrinter.conf.getGCConfig().getInitHeapSize());
-        json.emitKeyValue(
-            "maxHeapSize", tracePrinter.conf.getGCConfig().getMaxHeapSize());
-        json.emitKeyValue(
-            "occupancyTarget",
-            tracePrinter.conf.getGCConfig().getOccupancyTarget());
-        json.emitKeyValue(
-            "effectiveOOMThreshold",
-            tracePrinter.conf.getGCConfig().getEffectiveOOMThreshold());
-        json.emitKeyValue(
-            "shouldReleaseUnused",
-            SynthTrace::Printable::nameFromReleaseUnused(
-                tracePrinter.conf.getGCConfig().getShouldReleaseUnused()));
-        json.emitKeyValue("name", tracePrinter.conf.getGCConfig().getName());
-        json.emitKeyValue(
-            "allocInYoung", tracePrinter.conf.getGCConfig().getAllocInYoung());
-        json.emitKeyValue(
-            "revertToYGAtTTI",
-            tracePrinter.conf.getGCConfig().getRevertToYGAtTTI());
-        json.closeDict();
-      }
-      json.emitKeyValue(
-          "maxNumRegisters", tracePrinter.conf.getMaxNumRegisters());
-      json.emitKeyValue("ES6Proxy", tracePrinter.conf.getES6Proxy());
-      json.emitKeyValue("ES6Symbol", tracePrinter.conf.getES6Symbol());
-      json.emitKeyValue(
-          "enableSampledStats", tracePrinter.conf.getEnableSampledStats());
-      json.emitKeyValue(
-          "vmExperimentFlags", tracePrinter.conf.getVMExperimentFlags());
-      json.closeDict();
-    }
-
-    {
-      // Environment section.
-      json.emitKey("env");
-      json.openDict();
-      json.emitKeyValue("mathRandomSeed", tracePrinter.env.mathRandomSeed);
-
-      json.emitKey("callsToDateNow");
-      json.openArray();
-      for (uint64_t dateNow : tracePrinter.env.callsToDateNow) {
-        json.emitValue(dateNow);
-      }
-      json.closeArray();
-
-      json.emitKey("callsToNewDate");
-      json.openArray();
-      for (uint64_t newDate : tracePrinter.env.callsToNewDate) {
-        json.emitValue(newDate);
-      }
-      json.closeArray();
-
-      json.emitKey("callsToDateAsFunction");
-      json.openArray();
-      for (const std::string &dateAsFunc :
-           tracePrinter.env.callsToDateAsFunction) {
-        json.emitValue(dateAsFunc);
-      }
-      json.closeArray();
-
-      json.emitKey("callsToHermesInternalGetInstrumentedStats");
-      json.openArray();
-      for (const ::hermes::vm::MockedEnvironment::StatsTable &call :
-           tracePrinter.env.callsToHermesInternalGetInstrumentedStats) {
-        json.openDict();
-        for (const auto &key : call.keys()) {
-          auto val = call.lookup(key);
-          if (val.isNum()) {
-            json.emitKeyValue(key, val.num());
-          } else {
-            json.emitKeyValue(key, val.str());
-          }
-        }
-        json.closeDict();
-      }
-      json.closeArray();
-
-      json.closeDict();
-    }
-
-    {
-      // Records section.
-      json.emitKey("trace");
-      json.openArray();
-      for (const std::unique_ptr<SynthTrace::Record> &rec :
-           tracePrinter.trace.records()) {
-        rec->toJSON(json, tracePrinter.trace);
-      }
-      json.closeArray();
-    }
-
-    json.closeDict();
+void SynthTrace::flushAndDisable(
+    const ::hermes::vm::MockedEnvironment &env,
+    const ::hermes::vm::RuntimeConfig &conf) {
+  if (!json_) {
+    return;
   }
-  return os;
+
+  // RuntimeConfig section.
+  json_->emitKey("runtimeConfig");
+  json_->openDict();
+  {
+    json_->emitKey("gcConfig");
+    json_->openDict();
+    json_->emitKeyValue("minHeapSize", conf.getGCConfig().getMinHeapSize());
+    json_->emitKeyValue("initHeapSize", conf.getGCConfig().getInitHeapSize());
+    json_->emitKeyValue("maxHeapSize", conf.getGCConfig().getMaxHeapSize());
+    json_->emitKeyValue(
+        "occupancyTarget", conf.getGCConfig().getOccupancyTarget());
+    json_->emitKeyValue(
+        "effectiveOOMThreshold", conf.getGCConfig().getEffectiveOOMThreshold());
+    json_->emitKeyValue(
+        "shouldReleaseUnused",
+        nameFromReleaseUnused(conf.getGCConfig().getShouldReleaseUnused()));
+    json_->emitKeyValue("name", conf.getGCConfig().getName());
+    json_->emitKeyValue("allocInYoung", conf.getGCConfig().getAllocInYoung());
+    json_->emitKeyValue(
+        "revertToYGAtTTI", conf.getGCConfig().getRevertToYGAtTTI());
+    json_->closeDict();
+  }
+  json_->emitKeyValue("maxNumRegisters", conf.getMaxNumRegisters());
+  json_->emitKeyValue("ES6Proxy", conf.getES6Proxy());
+  json_->emitKeyValue("ES6Symbol", conf.getES6Symbol());
+  json_->emitKeyValue("enableSampledStats", conf.getEnableSampledStats());
+  json_->emitKeyValue("vmExperimentFlags", conf.getVMExperimentFlags());
+  json_->closeDict();
+
+  // Env section.
+  json_->emitKey("env");
+  json_->openDict();
+  json_->emitKeyValue("mathRandomSeed", env.mathRandomSeed);
+
+  json_->emitKey("callsToDateNow");
+  json_->openArray();
+  for (uint64_t dateNow : env.callsToDateNow) {
+    json_->emitValue(dateNow);
+  }
+  json_->closeArray();
+
+  json_->emitKey("callsToNewDate");
+  json_->openArray();
+  for (uint64_t newDate : env.callsToNewDate) {
+    json_->emitValue(newDate);
+  }
+  json_->closeArray();
+
+  json_->emitKey("callsToDateAsFunction");
+  json_->openArray();
+  for (const std::string &dateAsFunc : env.callsToDateAsFunction) {
+    json_->emitValue(dateAsFunc);
+  }
+  json_->closeArray();
+
+  json_->emitKey("callsToHermesInternalGetInstrumentedStats");
+  json_->openArray();
+  for (const ::hermes::vm::MockedEnvironment::StatsTable &call :
+       env.callsToHermesInternalGetInstrumentedStats) {
+    json_->openDict();
+    for (const auto &key : call.keys()) {
+      auto val = call.lookup(key);
+      if (val.isNum()) {
+        json_->emitKeyValue(key, val.num());
+      } else {
+        json_->emitKeyValue(key, val.str());
+      }
+    }
+    json_->closeDict();
+  }
+  json_->closeArray();
+
+  json_->closeDict();
+
+  // Records section.
+  json_->emitKey("trace");
+  json_->openArray();
+  for (const std::unique_ptr<SynthTrace::Record> &rec : records_) {
+    rec->toJSON(*json_, *this);
+  }
+  json_->closeArray();
+
+  // Close the top level dictionary (the one opened in the ctor).
+  json_->closeDict();
+
+  // Now flush the stream, and reset the fields: further tracing doesn't make
+  // sense.
+  os().flush();
+  json_.reset();
+  traceStream_.reset();
 }
 
 llvm::raw_ostream &operator<<(

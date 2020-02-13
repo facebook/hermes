@@ -509,8 +509,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
-  void writeBridgeTrafficTraceToFile(
-      const std::string &fileName) const override {
+  std::string flushAndDisableBridgeTrafficTrace() override {
     throw std::logic_error(
         "Bridge traffic trace is only supported by TracingRuntime");
   }

@@ -102,7 +102,7 @@ NumericType getNumberAs(const JSONValue *val, NumericType dflt) {
     gcconf.withEffectiveOOMThreshold(getNumberAs<unsigned>(threshold));
   }
   if (auto *shouldRelease = gcConfig->get("shouldReleaseUnused")) {
-    gcconf.withShouldReleaseUnused(SynthTrace::Printable::releaseUnusedFromName(
+    gcconf.withShouldReleaseUnused(SynthTrace::releaseUnusedFromName(
         llvm::cast<JSONString>(shouldRelease)->c_str()));
   }
   if (auto *name = gcConfig->get("name")) {

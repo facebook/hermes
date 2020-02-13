@@ -6,6 +6,7 @@
  */
 
 #include <hermes/ConsoleHost/RuntimeFlags.h>
+#include <hermes/Support/Algorithms.h>
 #include <hermes/Support/MemoryBuffer.h>
 #include <hermes/TraceInterpreter.h>
 #include <hermes/hermes.h>
@@ -175,15 +176,17 @@ int main(int argc, char **argv) {
       options.shouldPrintGCStats = false;
       options.shouldTrackIO = false;
       std::error_code ec;
-      llvm::raw_fd_ostream os{cl::Trace.c_str(),
-                              ec,
-                              llvm::sys::fs::CD_CreateAlways,
-                              llvm::sys::fs::FA_Write,
-                              llvm::sys::fs::OF_Text};
+      auto os = ::hermes::make_unique<llvm::raw_fd_ostream>(
+          cl::Trace.c_str(),
+          ec,
+          llvm::sys::fs::CD_CreateAlways,
+          llvm::sys::fs::FA_Write,
+          llvm::sys::fs::OF_Text);
       if (ec) {
         throw std::system_error(ec);
       }
-      TraceInterpreter::execAndTrace(cl::TraceFile, bytecodeFiles, options, os);
+      TraceInterpreter::execAndTrace(
+          cl::TraceFile, bytecodeFiles, options, std::move(os));
       llvm::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
     } else {
       llvm::outs() << TraceInterpreter::execAndGetStats(

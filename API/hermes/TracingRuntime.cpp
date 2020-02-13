@@ -8,6 +8,9 @@
 #ifdef HERMESVM_API_TRACE
 #include "TracingRuntime.h"
 
+#include <hermes/Support/Algorithms.h>
+
+#include <llvm/Support/raw_ostream.h>
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SHA1.h"
 
@@ -17,10 +20,11 @@ namespace tracing {
 
 TracingRuntime::TracingRuntime(
     std::unique_ptr<jsi::Runtime> runtime,
-    uint64_t globalID)
+    uint64_t globalID,
+    std::unique_ptr<llvm::raw_ostream> traceStream)
     : RuntimeDecorator<jsi::Runtime>(*runtime),
       runtime_(std::move(runtime)),
-      trace_(globalID) {}
+      trace_(globalID, std::move(traceStream)) {}
 
 jsi::Value TracingRuntime::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
@@ -384,36 +388,33 @@ SynthTrace::TimeSinceStart TracingRuntime::getTimeSinceStart() const {
 
 TracingHermesRuntime::TracingHermesRuntime(
     std::unique_ptr<HermesRuntime> runtime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig)
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    std::unique_ptr<llvm::raw_ostream> traceStream,
+    const std::string &traceFilename)
     : TracingHermesRuntime(
           runtime,
           runtime->getUniqueID(runtime->global()),
-          runtimeConfig) {}
+          runtimeConfig,
+          std::move(traceStream),
+          traceFilename) {}
 
 TracingHermesRuntime::TracingHermesRuntime(
     std::unique_ptr<HermesRuntime> &runtime,
     uint64_t globalID,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig)
-    : TracingRuntime(std::move(runtime), globalID), conf_(runtimeConfig) {}
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    std::unique_ptr<llvm::raw_ostream> traceStream,
+    const std::string &traceFilename)
+    : TracingRuntime(std::move(runtime), globalID, std::move(traceStream)),
+      conf_(runtimeConfig),
+      traceFilename_(traceFilename) {}
 
-void TracingHermesRuntime::writeTrace(llvm::raw_ostream &os) const {
-  os << SynthTrace::Printable(
-      trace(), hermesRuntime().getMockedEnvironment(), conf_);
+void TracingHermesRuntime::flushAndDisableTrace() {
+  (void)flushAndDisableBridgeTrafficTrace();
 }
 
-void TracingHermesRuntime::writeBridgeTrafficTraceToFile(
-    const std::string &fileName) const {
-  std::error_code ec;
-  llvm::raw_fd_ostream fs{fileName.c_str(),
-                          ec,
-                          llvm::sys::fs::CD_CreateAlways,
-                          llvm::sys::fs::FA_Write,
-                          llvm::sys::fs::OF_Text};
-  if (ec) {
-    throw std::system_error(ec);
-  }
-
-  writeTrace(fs);
+std::string TracingHermesRuntime::flushAndDisableBridgeTrafficTrace() {
+  trace().flushAndDisable(hermesRuntime().getMockedEnvironment(), conf_);
+  return traceFilename_;
 }
 
 jsi::Value TracingHermesRuntime::evaluateJavaScript(
@@ -458,9 +459,14 @@ void addRecordMarker(TracingRuntime &tracingRuntime) {
 
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig) {
+    const ::hermes::vm::RuntimeConfig &runtimeConfig,
+    std::unique_ptr<llvm::raw_ostream> traceStream,
+    const std::string &traceFilename) {
   auto ret = std::make_unique<TracingHermesRuntime>(
-      std::move(hermesRuntime), runtimeConfig);
+      std::move(hermesRuntime),
+      runtimeConfig,
+      std::move(traceStream),
+      traceFilename);
   addRecordMarker(*ret);
   return ret;
 }

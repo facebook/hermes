@@ -473,7 +473,6 @@ static std::string mergeGCStats(const std::vector<std::string> &repGCStats) {
 TraceInterpreter::TraceInterpreter(
     jsi::Runtime &rt,
     const ExecuteOptions &options,
-    llvm::raw_ostream *outTrace,
     const SynthTrace &trace,
     std::map<::hermes::SHA1, std::shared_ptr<const Buffer>> bundles,
     const std::unordered_map<ObjectID, TraceInterpreter::DefAndUse>
@@ -482,7 +481,6 @@ TraceInterpreter::TraceInterpreter(
     const HostObjectToCalls &hostObjectCalls)
     : rt_(rt),
       options_(options),
-      outTrace_(outTrace),
       bundles_(std::move(bundles)),
       trace_(trace),
       globalDefsAndUses_(globalDefsAndUses),
@@ -521,8 +519,9 @@ void TraceInterpreter::execAndTrace(
     const std::string &traceFile,
     const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options,
-    llvm::raw_ostream &outTrace) {
-  execFromFileNames(traceFile, bytecodeFiles, options, &outTrace);
+    std::unique_ptr<llvm::raw_ostream> traceStream) {
+  assert(traceStream && "traceStream must be provided (precondition)");
+  execFromFileNames(traceFile, bytecodeFiles, options, std::move(traceStream));
 }
 
 /* static */
@@ -530,7 +529,7 @@ std::string TraceInterpreter::execFromFileNames(
     const std::string &traceFile,
     const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options,
-    llvm::raw_ostream *outTrace) {
+    std::unique_ptr<llvm::raw_ostream> traceStream) {
   auto errorOrFile = llvm::MemoryBuffer::getFile(traceFile);
   if (!errorOrFile) {
     throw std::system_error(errorOrFile.getError());
@@ -545,7 +544,10 @@ std::string TraceInterpreter::execFromFileNames(
     bytecodeBuffers.emplace_back(std::move(errorOrFile.get()));
   }
   return execFromMemoryBuffer(
-      std::move(traceBuf), std::move(bytecodeBuffers), options, outTrace);
+      std::move(traceBuf),
+      std::move(bytecodeBuffers),
+      options,
+      std::move(traceStream));
 }
 
 /* static */
@@ -553,7 +555,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     std::unique_ptr<llvm::MemoryBuffer> traceBuf,
     std::vector<std::unique_ptr<llvm::MemoryBuffer>> codeBufs,
     const ExecuteOptions &options,
-    llvm::raw_ostream *outTrace) {
+    std::unique_ptr<llvm::raw_ostream> traceStream) {
   auto traceAndConfigAndEnv = parseSynthTrace(std::move(traceBuf));
   const auto &trace = std::get<0>(traceAndConfigAndEnv);
   bool codeIsMmapped = true;
@@ -583,7 +585,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
   rtConfigBuilder.withBytecodeWarmupPercent(options.bytecodeWarmupPercent);
   rtConfigBuilder.withTrackIO(
       options.shouldTrackIO && isBytecode && codeIsMmapped);
-  if (outTrace) {
+  if (traceStream) {
     // If an out trace is requested, turn on tracing in the VM as well.
     rtConfigBuilder.withTraceEnvironmentInteractions(true);
   }
@@ -648,12 +650,13 @@ std::string TraceInterpreter::execFromMemoryBuffer(
       env.stabilizeInstructionCount = options.stabilizeInstructionCount;
       hermesRuntime->setMockedEnvironment(env);
     }
-    if (outTrace) {
-      rt = makeTracingHermesRuntime(std::move(hermesRuntime), rtConfig);
+    if (traceStream) {
+      rt = makeTracingHermesRuntime(
+          std::move(hermesRuntime), rtConfig, std::move(traceStream));
     } else {
       rt = std::move(hermesRuntime);
     }
-    auto stats = exec(*rt, options, trace, sourceHashToBundle, outTrace);
+    auto stats = exec(*rt, options, trace, sourceHashToBundle);
     // If we're not warming up, save the stats.
     if (rep >= 0) {
       repGCStats[rep] = stats;
@@ -667,8 +670,7 @@ std::string TraceInterpreter::exec(
     jsi::Runtime &rt,
     const ExecuteOptions &options,
     const SynthTrace &trace,
-    std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles,
-    llvm::raw_ostream *outTrace) {
+    std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles) {
   // Partition the records into each call.
   auto funcCallsAndObjectCalls = getCalls(setupFuncID, trace.records());
   auto &hostFuncs = funcCallsAndObjectCalls.first;
@@ -686,7 +688,6 @@ std::string TraceInterpreter::exec(
   TraceInterpreter interpreter(
       rt,
       options,
-      outTrace,
       trace,
       std::move(bundles),
       globalDefsAndUses,
@@ -806,10 +807,6 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
 std::string TraceInterpreter::execEntryFunction(
     const TraceInterpreter::Call &entryFunc) {
   execFunction(entryFunc, Value::undefined(), nullptr, 0);
-  if (outTrace_) {
-    // If tracing is also turned on, write out the trace to the given stream.
-    dynamic_cast<TracingRuntime &>(rt_).writeTrace(*outTrace_);
-  }
 
 #ifdef HERMESVM_PROFILER_BB
   if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
@@ -1382,9 +1379,9 @@ LLVM_ATTRIBUTE_NORETURN void TraceInterpreter::crashOnException(
     llvm::errs() << "At record number " << globalRecordNum.getValue() << ":\n";
   }
   llvm::errs() << e.what() << "\n";
-  if (outTrace_) {
+  if (traceStream_) {
     llvm::errs() << "Writing out the trace\n";
-    dynamic_cast<TracingRuntime &>(rt_).writeTrace(*outTrace_);
+    dynamic_cast<TracingRuntime &>(rt_).flushAndDisableTrace();
     llvm::errs() << "\n";
   } else {
     llvm::errs() << "Pass --trace to get a trace for comparison\n";
