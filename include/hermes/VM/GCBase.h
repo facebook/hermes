@@ -575,10 +575,9 @@ class GCBase {
   LLVM_ATTRIBUTE_NORETURN void oom(std::error_code reason);
 
   /// Creates a snapshot of the heap and writes it to the given \p fileName.
-  /// \p compact whether to write a compact version or a pretty human-readable
-  ///   version.
-  /// \return true on success, false on failure.
-  bool createSnapshotToFile(const std::string &fileName);
+  /// \return An error code on failure, else an empty error code.
+  std::error_code createSnapshotToFile(const std::string &fileName);
+
   /// Creates a snapshot of the heap, which includes information about what
   /// objects exist, their sizes, and what they point to.
   virtual void createSnapshot(llvm::raw_ostream &os) = 0;

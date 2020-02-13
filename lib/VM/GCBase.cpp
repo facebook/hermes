@@ -123,14 +123,14 @@ void GCBase::runtimeWillExecute() {
   }
 }
 
-bool GCBase::createSnapshotToFile(const std::string &fileName) {
+std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
   std::error_code code;
   llvm::raw_fd_ostream os(fileName, code, llvm::sys::fs::FileAccess::FA_Write);
   if (code) {
-    return false;
+    return code;
   }
   createSnapshot(os);
-  return true;
+  return std::error_code{};
 }
 
 void GCBase::checkTripwire(size_t dataSize) {
@@ -143,7 +143,7 @@ void GCBase::checkTripwire(size_t dataSize) {
    public:
     Ctx(GCBase *gc) : gc_(gc) {}
 
-    bool createSnapshotToFile(const std::string &path) override {
+    std::error_code createSnapshotToFile(const std::string &path) override {
       return gc_->createSnapshotToFile(path);
     }
 

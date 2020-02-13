@@ -9,6 +9,7 @@
 #define HERMES_PUBLIC_GCTRIPWIRECONTEXT_H
 
 #include <string>
+#include <system_error>
 
 namespace hermes {
 namespace vm {
@@ -22,8 +23,9 @@ class GCTripwireContext {
   ///
   /// \param path to save the heap capture
   ///
-  /// \return true iff the heap capture succeeded
-  virtual bool createSnapshotToFile(const std::string &path) = 0;
+  /// \return Empty error code if the heap capture succeeded, else a real error
+  ///   code.
+  virtual std::error_code createSnapshotToFile(const std::string &path) = 0;
 };
 
 } // namespace vm

@@ -59,12 +59,13 @@ createHeapSnapshot(void *, vm::Runtime *runtime, vm::NativeArgs args) {
   } else if (!llvm::StringRef{fileName}.endswith(".heapsnapshot")) {
     return runtime->raiseTypeError("Filename must end in .heapsnapshot");
   }
-  if (!runtime->getHeap().createSnapshotToFile(fileName)) {
+  if (auto err = runtime->getHeap().createSnapshotToFile(fileName)) {
     // This isn't a TypeError, but no other built-in can express file errors,
     // so this will have to do.
     return runtime->raiseTypeError(
-        TwineChar16("Could not write out to the file located at ") +
-        llvm::StringRef(fileName));
+        TwineChar16("Could not write out to the file located at \"") +
+        llvm::StringRef(fileName) +
+        "\". System error: " + llvm::StringRef(err.message()));
   }
   return HermesValue::encodeUndefinedValue();
 }
