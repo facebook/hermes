@@ -7,21 +7,11 @@
 
 import React, { useEffect, useState, useReducer } from 'react';
 import classnames from 'classnames';
-import MonacoEditor from 'react-monaco-editor';
 import Layout from '@theme/Layout';
 import Worker from 'worker-loader!@site/src/workers/hermes.js';
-import useTheme from '@site/src/hooks/useTheme';
 import useWindowSize from '@site/src/hooks/useWindowSize';
+import Editor from '@site/src/components/Editor';
 import styles from './styles.module.css';
-
-const vsDarkTheme = {
-  base: 'vs-dark',
-  inherit: true,
-  rules: [{ background: '121212' }],
-  colors: {
-    'editor.background': '#121212',
-  },
-};
 
 const worker = new Worker();
 
@@ -54,7 +44,6 @@ function Playground() {
   const [input, setInput] = useState('const a = 1; \nprint(a);');
   const [args, setArgs] = useState('-O -dump-bytecode');
   const windowSize = useWindowSize();
-  const theme = useTheme();
 
   const headerLayout = {
     height: 100,
@@ -124,10 +113,6 @@ function Playground() {
     run('-help');
   }
 
-  function onEditorWillMount(monaco) {
-    monaco.editor.defineTheme('vs-dark', vsDarkTheme);
-  }
-
   return (
     <Layout title="Hermes" description="Hermes Playground" noFooter={true}>
       <div className={classnames(styles.headerContainer)}>
@@ -163,26 +148,22 @@ function Playground() {
       </div>
 
       <div className={classnames(styles.row)}>
-        <MonacoEditor
+        <Editor
           {...(windowSize.width > 600 ? editorLayout.lg : editorLayout.xs)}
           language="javascript"
-          theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
           value={input}
           onChange={setInput}
           options={{ minimap: { enabled: false }, wordWrap: 'on' }}
-          editorWillMount={onEditorWillMount}
         />
-        <MonacoEditor
+        <Editor
           {...(windowSize.width > 600 ? outputLayout.lg : outputLayout.xs)}
           language="json"
-          theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
           value={output}
           options={{
             readOnly: true,
             minimap: { enabled: false },
             wordWrap: 'on',
           }}
-          editorWillMount={onEditorWillMount}
         />
       </div>
     </Layout>
