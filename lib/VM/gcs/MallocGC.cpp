@@ -174,14 +174,13 @@ MallocGC::MallocGC(
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
-    StorageProvider *provider)
+    std::shared_ptr<StorageProvider> provider)
     : GCBase(
           metaTable,
           gcCallbacks,
           pointerBase,
           gcConfig,
-          std::move(crashMgr),
-          provider),
+          std::move(crashMgr)),
       pointers_(),
       weakPointers_(),
       maxSize_(Size(gcConfig).max()),

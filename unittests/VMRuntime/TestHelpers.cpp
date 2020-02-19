@@ -30,7 +30,12 @@ DummyRuntime::DummyRuntime(
     const GCConfig &gcConfig,
     std::shared_ptr<StorageProvider> storageProvider,
     std::shared_ptr<CrashManager> crashMgr)
-    : gc{metaTable, this, this, gcConfig, crashMgr, storageProvider.get()} {}
+    : gc{metaTable,
+         this,
+         this,
+         gcConfig,
+         crashMgr,
+         std::move(storageProvider)} {}
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(
     MetadataTableForTests metaTable,
@@ -38,8 +43,7 @@ std::shared_ptr<DummyRuntime> DummyRuntime::create(
     std::shared_ptr<StorageProvider> provider,
     std::shared_ptr<CrashManager> crashMgr) {
   DummyRuntime *rt = new DummyRuntime(metaTable, gcConfig, provider, crashMgr);
-  return std::shared_ptr<DummyRuntime>{
-      rt, [provider](DummyRuntime *runtime) { delete runtime; }};
+  return std::shared_ptr<DummyRuntime>{rt};
 }
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(

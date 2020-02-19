@@ -38,9 +38,7 @@ GCBase::GCBase(
     GCCallbacks *gcCallbacks,
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
-    std::shared_ptr<CrashManager> crashMgr,
-    // Do nothing with this in the default case, only NCGen needs this.
-    StorageProvider *)
+    std::shared_ptr<CrashManager> crashMgr)
     : metaTable_(metaTable),
       gcCallbacks_(gcCallbacks),
       pointerBase_(pointerBase),

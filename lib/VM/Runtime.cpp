@@ -83,20 +83,8 @@ static const Predefined::Str fixedPropCacheNames[(size_t)PropCacheID::_COUNT] =
 
 /* static */
 std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
-  // TODO(T31421960): This can become a unique_ptr with C++14 lambda
-  // initializers.
-  std::shared_ptr<StorageProvider> provider{StorageProvider::mmapProvider()};
-  // When not using the flat address space, allocate runtime normally.
-  Runtime *rt = new Runtime(provider.get(), runtimeConfig);
-  // Return a shared pointer with a custom deleter to delete the underlying
-  // storage of the runtime.
-  return std::shared_ptr<Runtime>{rt, [provider](Runtime *runtime) {
-                                    delete runtime;
-                                    // Provider is only captured to keep it
-                                    // alive until after the Runtime is
-                                    // deleted.
-                                    (void)provider;
-                                  }};
+  return std::shared_ptr<Runtime>{
+      new Runtime(StorageProvider::mmapProvider(), runtimeConfig)};
 }
 
 CallResult<HermesValue> Runtime::getNamed(
@@ -158,7 +146,9 @@ ExecutionStatus Runtime::putNamedThrowOnError(
       .getStatus();
 }
 
-Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
+Runtime::Runtime(
+    std::shared_ptr<StorageProvider> provider,
+    const RuntimeConfig &runtimeConfig)
     // The initial heap size can't be larger than the max.
     : enableEval(runtimeConfig.getEnableEval()),
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
@@ -168,7 +158,7 @@ Runtime::Runtime(StorageProvider *provider, const RuntimeConfig &runtimeConfig)
           this,
           runtimeConfig.getGCConfig(),
           runtimeConfig.getCrashMgr(),
-          provider),
+          std::move(provider)),
       jitContext_(runtimeConfig.getEnableJIT(), (1 << 20) * 16, (1 << 20) * 32),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
       hasES6Symbol_(runtimeConfig.getES6Symbol()),
@@ -1632,10 +1622,13 @@ void Runtime::dumpCallFrames() {
   dumpCallFrames(llvm::errs());
 }
 
+StackRuntime::StackRuntime(const RuntimeConfig &config)
+    : StackRuntime(StorageProvider::mmapProvider(), config) {}
+
 StackRuntime::StackRuntime(
-    StorageProvider *provider,
+    std::shared_ptr<StorageProvider> provider,
     const RuntimeConfig &config)
-    : Runtime(provider, config) {}
+    : Runtime(std::move(provider), config) {}
 
 StackRuntime::~StackRuntime() {}
 

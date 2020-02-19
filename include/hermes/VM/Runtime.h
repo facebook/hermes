@@ -805,7 +805,7 @@ class Runtime : public HandleRootOwner,
   /// NOTE: This should only be used by StackRuntime. All other uses should use
   /// Runtime::create.
   explicit Runtime(
-      StorageProvider *provider,
+      std::shared_ptr<StorageProvider> provider,
       const RuntimeConfig &runtimeConfig);
 
 /// @}
@@ -1231,7 +1231,10 @@ class Runtime : public HandleRootOwner,
 /// default creator.
 class StackRuntime final : public Runtime {
  public:
-  StackRuntime(StorageProvider *provider, const RuntimeConfig &config);
+  StackRuntime(const RuntimeConfig &config);
+  StackRuntime(
+      std::shared_ptr<StorageProvider> provider,
+      const RuntimeConfig &config);
 
   // A dummy virtual destructor to avoid problems when StackRuntime is used
   // in compilation units compiled with RTTI.

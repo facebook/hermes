@@ -20,12 +20,12 @@ namespace vm {
 /// times allocation requests to its delegate have failed.  Note that this
 /// adapter does not manage the lifetime of its delegate.
 class LogFailStorageProvider final : public StorageProvider {
-  StorageProvider *delegate_;
+  std::shared_ptr<StorageProvider> delegate_;
   size_t numFailedAllocs_{0};
 
  public:
-  explicit LogFailStorageProvider(StorageProvider *provider)
-      : delegate_(provider) {}
+  explicit LogFailStorageProvider(std::shared_ptr<StorageProvider> provider)
+      : delegate_(std::move(provider)) {}
 
   inline size_t numFailedAllocs() const;
 

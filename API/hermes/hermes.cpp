@@ -190,12 +190,10 @@ class StackRuntime {
   StackRuntime(const vm::RuntimeConfig &runtimeConfig)
       : thread_(runtimeMemoryThread, this) {
     startup_.get_future().wait();
-    runtime_->emplace(
-        provider_.get(),
-        runtimeConfig.rebuild()
-            .withRegisterStack(nullptr)
-            .withMaxNumRegisters(kMaxNumRegisters)
-            .build());
+    runtime_->emplace(runtimeConfig.rebuild()
+                          .withRegisterStack(nullptr)
+                          .withMaxNumRegisters(kMaxNumRegisters)
+                          .build());
   }
 
   ~StackRuntime() {
@@ -227,7 +225,6 @@ class StackRuntime {
 
     llvm::Optional<::hermes::vm::StackRuntime> rt;
 
-    stack->provider_ = vm::StorageProvider::mmapProvider();
     stack->runtime_ = &rt;
     stack->startup_.set_value();
     stack->shutdown_.get_future().wait();
@@ -247,7 +244,6 @@ class StackRuntime {
   // * Initialize provider_ and runtime_ from that thread
   std::promise<void> startup_;
   std::promise<void> shutdown_;
-  std::unique_ptr<::hermes::vm::StorageProvider> provider_;
   llvm::Optional<::hermes::vm::StackRuntime> *runtime_{nullptr};
   std::thread thread_;
 };

@@ -154,7 +154,7 @@ class MallocGC final : public GCBase {
       PointerBase *pointerBase,
       const GCConfig &gcConfig,
       std::shared_ptr<CrashManager> crashMgr,
-      StorageProvider *provider);
+      std::shared_ptr<StorageProvider> provider);
 
   ~MallocGC();
 

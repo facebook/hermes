@@ -85,15 +85,14 @@ GenGC::GenGC(
     PointerBase *pointerBase,
     const GCConfig &gcConfig,
     std::shared_ptr<CrashManager> crashMgr,
-    StorageProvider *provider)
+    std::shared_ptr<StorageProvider> provider)
     : GCBase(
           metaTable,
           gcCallbacks,
           pointerBase,
           gcConfig,
-          std::move(crashMgr),
-          provider),
-      storageProvider_(provider),
+          std::move(crashMgr)),
+      storageProvider_(std::move(provider)),
       generationSizes_(Size(gcConfig)),
       // ExpectedPageSize.h defines a static value for the expected page size,
       // which we use in sizing and aligning the metadata components

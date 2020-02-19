@@ -150,10 +150,11 @@ TEST(StorageProviderTest, LimitedStorageProviderDeleteNull) {
 
 TEST(StorageProviderTest, LogFailStorageProvider) {
   constexpr size_t LIM = 2;
-  LimitedStorageProvider delegate{StorageProvider::mmapProvider(),
-                                  AlignedStorage::size() * LIM};
+  auto delegate =
+      std::unique_ptr<LimitedStorageProvider>{new LimitedStorageProvider{
+          StorageProvider::mmapProvider(), AlignedStorage::size() * LIM}};
 
-  LogFailStorageProvider provider{&delegate};
+  LogFailStorageProvider provider{std::move(delegate)};
 
   constexpr size_t FAILS = 3;
   void *storages[LIM];
