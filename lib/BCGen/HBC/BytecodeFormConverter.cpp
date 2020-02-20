@@ -8,8 +8,10 @@
 #include "hermes/BCGen/HBC/BytecodeFormConverter.h"
 
 #include "hermes/BCGen/HBC/Bytecode.h"
+#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Inst/InstDecode.h"
+#include "hermes/Support/Algorithms.h"
 #include "hermes/Support/MemoryBuffer.h"
 
 using namespace hermes;
@@ -61,6 +63,9 @@ class BytecodeFormConverter {
   /// Fields pointing into the bytecode file contents.
   MutableBytecodeFileFields fields_;
 
+  /// Bytecode provider for the input file.
+  std::unique_ptr<BCProviderFromBuffer> bcProvider_;
+
   /// Relativize fields in the instructions.
   void processInstructions() {
     // We adjust a few instructions; the set of instructions was determined
@@ -73,22 +78,11 @@ class BytecodeFormConverter {
     // We cannot pass references to the fields in instructions as they may be
     // unaligned. Use this macro to avoid having to write each adjuster twice.
 #define ADJUST(adjuster, field) field = (adjuster).apply(field)
-    for (const SmallFuncHeader &sfh : fields_.functionHeaders) {
+    for (uint32_t func = 0; func < bcProvider_->getFunctionCount(); ++func) {
+      RuntimeFunctionHeader header = bcProvider_->getFunctionHeader(func);
       // Find the bytecode start and end for each function.
-      uint8_t *bytecodeStart = nullptr;
-      uint8_t *bytecodeEnd = nullptr;
-      // TODO: this logic of finding overflow headers is duplicated here and in
-      // BytecodeDataProvider.h as well. Consider centralizing this logic in
-      // BytecodeFileFields.
-      if (sfh.flags.overflowed) {
-        const FunctionHeader *fh = reinterpret_cast<FunctionHeader *>(
-            &bytes_[sfh.getLargeHeaderOffset()]);
-        bytecodeStart = &bytes_[fh->offset];
-        bytecodeEnd = bytecodeStart + fh->bytecodeSizeInBytes;
-      } else {
-        bytecodeStart = &bytes_[sfh.offset];
-        bytecodeEnd = bytecodeStart + sfh.bytecodeSizeInBytes;
-      }
+      uint8_t *bytecodeStart = &bytes_[header.offset()];
+      uint8_t *bytecodeEnd = bytecodeStart + header.bytecodeSizeInBytes();
       uint8_t *cursor = bytecodeStart;
       while (cursor < bytecodeEnd) {
         auto *ip = reinterpret_cast<inst::Inst *>(cursor);
@@ -167,8 +161,16 @@ class BytecodeFormConverter {
   /// bytes. The bytes are modified in-place.
   explicit BytecodeFormConverter(
       MutableArrayRef<uint8_t> bytes,
-      MutableBytecodeFileFields &fields)
-      : bytes_(bytes), fields_(fields) {}
+      MutableBytecodeFileFields &fields,
+      BytecodeForm sourceForm)
+      : bytes_(bytes), fields_(fields) {
+    auto res = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+        hermes::make_unique<Buffer>(bytes.data(), bytes.size()), sourceForm);
+    if (!res.first) {
+      hermes_fatal(res.second.c_str());
+    }
+    bcProvider_ = std::move(res.first);
+  }
 
   /// Perform the conversion.
   void perform() {
@@ -210,10 +212,11 @@ bool hermes::hbc::convertBytecodeToForm(
   }
 
   if (targetForm == BytecodeForm::Delta) {
-    BytecodeFormConverter<BytecodeForm::Delta> conv(buffer, fields);
+    BytecodeFormConverter<BytecodeForm::Delta> conv(buffer, fields, sourceForm);
     conv.perform();
   } else {
-    BytecodeFormConverter<BytecodeForm::Execution> conv(buffer, fields);
+    BytecodeFormConverter<BytecodeForm::Execution> conv(
+        buffer, fields, sourceForm);
     conv.perform();
   }
   return true;

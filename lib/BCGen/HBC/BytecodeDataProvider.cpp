@@ -484,10 +484,13 @@ void BCProviderFromBuffer::startPageAccessTracker() {
   }
 }
 
-BCProviderFromBuffer::BCProviderFromBuffer(std::unique_ptr<const Buffer> buffer)
+BCProviderFromBuffer::BCProviderFromBuffer(
+    std::unique_ptr<const Buffer> buffer,
+    BytecodeForm form)
     : buffer_(std::move(buffer)), bufferPtr_(buffer_->data()) {
   ConstBytecodeFileFields fields;
-  if (!fields.populateFromBuffer({bufferPtr_, buffer_->size()}, &errstr_)) {
+  if (!fields.populateFromBuffer(
+          {bufferPtr_, buffer_->size()}, &errstr_, form)) {
     return;
   }
   const auto *fileHeader = fields.header;

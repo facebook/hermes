@@ -346,7 +346,9 @@ class BCProviderFromBuffer final : public BCProviderBase {
   /// Tells any running warmup thread to abort and then joins that thread.
   void stopWarmup();
 
-  explicit BCProviderFromBuffer(std::unique_ptr<const Buffer> buffer);
+  explicit BCProviderFromBuffer(
+      std::unique_ptr<const Buffer> buffer,
+      BytecodeForm form);
 
   void createDebugInfo() override;
 
@@ -360,9 +362,11 @@ class BCProviderFromBuffer final : public BCProviderBase {
 
  public:
   static std::pair<std::unique_ptr<BCProviderFromBuffer>, std::string>
-  createBCProviderFromBuffer(std::unique_ptr<const Buffer> buffer) {
+  createBCProviderFromBuffer(
+      std::unique_ptr<const Buffer> buffer,
+      BytecodeForm form = BytecodeForm::Execution) {
     auto ret = std::unique_ptr<BCProviderFromBuffer>(
-        new BCProviderFromBuffer(std::move(buffer)));
+        new BCProviderFromBuffer(std::move(buffer), form));
     auto errstr = ret->getErrorStr();
     return {errstr.empty() ? std::move(ret) : nullptr, errstr};
   }
