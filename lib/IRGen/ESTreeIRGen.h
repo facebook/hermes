@@ -8,6 +8,7 @@
 #ifndef HERMES_IRGEN_ESTREEIRGEN_H
 #define HERMES_IRGEN_ESTREEIRGEN_H
 
+#include "IRInstrument.h"
 #include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/AST/SemValidate.h"
 #include "hermes/IR/IRBuilder.h"
@@ -337,6 +338,8 @@ class ESTreeIRGen {
   Module *Mod;
   /// The IRBuilder we use to construct the module.
   IRBuilder Builder;
+  /// Optional instrumentation
+  IRInstrument instrumentIR_;
   /// The root of the ESTree.
   ESTree::Node *Root;
   /// This is a list of parsed global property declaration files.

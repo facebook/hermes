@@ -120,6 +120,9 @@ set(HERMES_STATIC_LINK OFF CACHE BOOL
 set(HERMES_ENABLE_DEBUGGER OFF CACHE BOOL
   "Build with debugger support")
 
+set(HERMES_ENABLE_IR_INSTRUMENTATION OFF CACHE BOOL
+    "Build IR instrumentation support")
+
 set(HERMES_FACEBOOK_BUILD OFF CACHE BOOL
     "Build Facebook (rather than open-source) version of Hermes")
 
@@ -217,6 +220,10 @@ endif()
 
 # Make the HERMES_RELEASE_VERSION accessible for version printing in C++.
 add_definitions(-DHERMES_RELEASE_VERSION="${HERMES_RELEASE_VERSION}")
+
+if(HERMES_ENABLE_IR_INSTRUMENTATION)
+    add_definitions(-DHERMES_ENABLE_IR_INSTRUMENTATION)
+endif()
 
 add_definitions(-DHERMESVM_GC_${HERMESVM_GCKIND})
 if(HERMESVM_GC_GENERATIONAL_MARKSWEEPCOMPACT)

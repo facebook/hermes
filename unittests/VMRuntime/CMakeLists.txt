@@ -43,6 +43,7 @@ set(RTSources
   InstrumentationAPITest.cpp
   InternalPropertiesTest.cpp
   InterpreterTest.cpp
+  IRInstrumentationTest.cpp
   JSLibTest.cpp
   LogSuccessStorageProvider.cpp
   NativeFrameTest.cpp

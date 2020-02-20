@@ -497,6 +497,11 @@ CallResult<HermesValue> addEntriesFromIterable(
       "loop must terminate with 'return' when iteration is complete");
 }
 
+#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
+/// Default no-op IR instrumentation hooks (__instrument).
+Handle<JSObject> createInstrumentObject(Runtime *runtime);
+#endif
+
 } // namespace vm
 } // namespace hermes
 

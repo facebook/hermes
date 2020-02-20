@@ -381,6 +381,11 @@ NATIVE_FUNCTION(weakSetPrototypeAdd)
 NATIVE_FUNCTION(weakSetPrototypeDelete)
 NATIVE_FUNCTION(weakSetPrototypeHas)
 
+#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
+NATIVE_FUNCTION(instrumentDoNothing)
+NATIVE_FUNCTION(instrumentReturnNth)
+#endif
+
 #define ALL_ERROR_TYPE(name) NATIVE_FUNCTION(name##Constructor)
 #include "hermes/VM/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE

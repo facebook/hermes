@@ -116,6 +116,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
 
   CodeGenerationSettings codeGenOpts{};
   codeGenOpts.unlimitedRegisters = false;
+  codeGenOpts.instrumentIR = compileFlags.instrumentIR;
 
   OptimizationSettings optSettings;
   // If the optional value is not set, the parser will automatically detect

@@ -36,6 +36,8 @@ struct CompileFlags {
   /// Include libhermes declarations when compiling the file. This is done in
   /// normal compilation, but not for eval().
   bool includeLibHermes{true};
+  /// If set, instrument the IR for dynamic checks.
+  bool instrumentIR{false};
 };
 
 // The minimum code size in bytes before enabling lazy compilation.

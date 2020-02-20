@@ -317,6 +317,9 @@ class SourceErrorManager {
     sourceUrls_[bufId] = url;
   }
 
+  /// Find the bufferId of the specified location \p loc.
+  uint32_t findBufferIdForLoc(SMLoc loc) const;
+
   /// Find the bufferId, line and column of the specified location \p loc.
   /// \return true on success, false if could not be found, in which case
   ///     result.isValid() would also return false.

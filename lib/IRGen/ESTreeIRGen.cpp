@@ -153,6 +153,7 @@ ESTreeIRGen::ESTreeIRGen(
     const ScopeChain &scopeChain)
     : Mod(M),
       Builder(Mod),
+      instrumentIR_(M, Builder),
       Root(root),
       DeclarationFileList(declFileList),
       lexicalScopeChain(resolveScopeIdentifiers(scopeChain)),

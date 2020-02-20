@@ -431,9 +431,13 @@ bool SourceErrorManager::findBufferLineAndLoc(
   return true;
 }
 
+uint32_t SourceErrorManager::findBufferIdForLoc(SMLoc loc) const {
+  return sm_.FindBufferContainingLoc(loc);
+}
+
 const llvm::MemoryBuffer *SourceErrorManager::findBufferForLoc(
     SMLoc loc) const {
-  uint32_t bufID = sm_.FindBufferContainingLoc(loc);
+  uint32_t bufID = findBufferIdForLoc(loc);
   if (bufID == 0) {
     return nullptr;
   }

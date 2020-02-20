@@ -715,6 +715,17 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 
   // Define the 'gc' function.
   defineGlobalFunc(Predefined::getSymbolID(Predefined::gc), gc, 0);
+
+#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
+  // Define the global __instrument object
+  runtime->ignoreAllocationFailure(JSObject::defineOwnProperty(
+      runtime->getGlobal(),
+      runtime,
+      runtime->getIdentifierTable().registerLazyIdentifier(
+          createASCIIRef("__instrument")),
+      normalDPF,
+      createInstrumentObject(runtime)));
+#endif
 }
 
 } // namespace vm

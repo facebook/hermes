@@ -520,6 +520,12 @@ static opt<unsigned> PadFunctionBodiesPercent(
     Hidden,
     cat(CompilerCategory));
 
+static opt<bool> InstrumentIR(
+    "instrument",
+    desc("Instrument code for dynamic analysis"),
+    init(false),
+    Hidden,
+    cat(CompilerCategory));
 } // namespace cl
 
 namespace {
@@ -897,6 +903,13 @@ bool validateFlags() {
     if (cl::DumpTarget != DumpBytecode)
       err("You can only dump bytecode for HBC bytecode file.");
   }
+
+#ifndef HERMES_ENABLE_IR_INSTRUMENTATION
+  if (cl::InstrumentIR) {
+    err("Instrumentation is requested, but support is not compiled in");
+  }
+#endif
+
   return !errored;
 }
 
@@ -914,6 +927,7 @@ std::shared_ptr<Context> createContext(
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
     codeGenOpts.unlimitedRegisters = false;
   }
+  codeGenOpts.instrumentIR = cl::InstrumentIR;
 
   OptimizationSettings optimizationOpts;
   optimizationOpts.constantPropertyOptimizations = cl::EnableCPO;

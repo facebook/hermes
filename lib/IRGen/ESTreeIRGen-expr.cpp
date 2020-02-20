@@ -110,10 +110,13 @@ Value *ESTreeIRGen::genExpression(ESTree::Node *expr, Identifier nameHint) {
   if (auto *Bin = dyn_cast<ESTree::BinaryExpressionNode>(expr)) {
     Value *LHS = genExpression(Bin->_left);
     Value *RHS = genExpression(Bin->_right);
+    auto cookie = instrumentIR_.preBinaryExpression(Bin, LHS, RHS);
 
     auto Kind = BinaryOperatorInst::parseOperator(Bin->_operator->str());
 
-    return Builder.createBinaryOperatorInst(LHS, RHS, Kind);
+    BinaryOperatorInst *result =
+        Builder.createBinaryOperatorInst(LHS, RHS, Kind);
+    return instrumentIR_.postBinaryExpression(Bin, cookie, result, LHS, RHS);
   }
 
   // Handle Unary operator Expressions.
@@ -1316,12 +1319,14 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
 
   // Generate the unary operand:
   Value *argument = genExpression(U->_argument);
+  auto *cookie = instrumentIR_.preUnaryExpression(U, argument);
 
-  if (kind == UnaryOperatorInst::OpKind::PlusKind) {
-    return Builder.createAsNumberInst(argument);
-  }
-
-  return Builder.createUnaryOperatorInst(argument, kind);
+  Value *result;
+  if (kind == UnaryOperatorInst::OpKind::PlusKind)
+    result = Builder.createAsNumberInst(argument);
+  else
+    result = Builder.createUnaryOperatorInst(argument, kind);
+  return instrumentIR_.postUnaryExpression(U, cookie, result, argument);
 }
 
 Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
@@ -1368,7 +1373,6 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
   auto AssignmentKind = BinaryOperatorInst::parseAssignmentOperator(opStr);
 
   LReference lref = createLRef(AE->_left, false);
-  Value *RHS = nullptr;
 
   Identifier nameHint{};
   if (auto *var = lref.castAsVariable()) {
@@ -1377,22 +1381,27 @@ Value *ESTreeIRGen::genAssignmentExpr(ESTree::AssignmentExpressionNode *AE) {
     nameHint = globProp->getName()->getValue();
   }
 
+  Value *result;
   if (AssignmentKind != BinaryOperatorInst::OpKind::IdentityKind) {
     // Section 11.13.1 specifies that we should first load the
     // LHS before materializing the RHS. Unlike in C, this
     // code is well defined: "x+= x++".
     // https://es5.github.io/#x11.13.1
     auto V = lref.emitLoad();
-    RHS = genExpression(AE->_right, nameHint);
-    RHS = Builder.createBinaryOperatorInst(V, RHS, AssignmentKind);
+    auto *RHS = genExpression(AE->_right, nameHint);
+    auto *cookie = instrumentIR_.preAssignment(AE, V, RHS);
+    result = Builder.createBinaryOperatorInst(V, RHS, AssignmentKind);
+    result = instrumentIR_.postAssignment(AE, cookie, result, V, RHS);
   } else {
-    RHS = genExpression(AE->_right, nameHint);
+    auto *RHS = genExpression(AE->_right, nameHint);
+    auto *cookie = instrumentIR_.preAssignment(AE, nullptr, RHS);
+    result = instrumentIR_.postAssignment(AE, cookie, RHS, nullptr, RHS);
   }
 
-  lref.emitStore(RHS);
+  lref.emitStore(result);
 
   // Return the value that we stored as the result of the expression.
-  return RHS;
+  return result;
 }
 
 Value *ESTreeIRGen::genConditionalExpr(ESTree::ConditionalExpressionNode *C) {
