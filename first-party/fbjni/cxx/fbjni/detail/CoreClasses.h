@@ -367,6 +367,8 @@ class ElementProxy {
   using T = typename Target::javaentry;
   ElementProxy(Target* target, size_t idx);
 
+  ElementProxy(const ElementProxy&) noexcept = default;
+
   ElementProxy& operator=(const T& o);
 
   ElementProxy& operator=(alias_ref<T>& o);
