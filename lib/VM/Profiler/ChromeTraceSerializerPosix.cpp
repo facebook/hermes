@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef _WINDOWS
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
 #include "hermes/VM/Profiler/ChromeTraceSerializerPosix.h"
 
 #include "hermes/VM/JSNativeFunctions.h"

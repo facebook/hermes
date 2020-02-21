@@ -8,7 +8,7 @@
 // If nothing is defined then pick a sensible default
 #if !defined(HERMESVM_SAMPLING_PROFILER_STUB) && \
     !defined(HERMESVM_SAMPLING_PROFILER_POSIX)
-#ifdef _WINDOWS
+#if defined(_WINDOWS) || defined(__EMSCRIPTEN__)
 #define HERMESVM_SAMPLING_PROFILER_STUB
 #else
 #define HERMESVM_SAMPLING_PROFILER_POSIX
