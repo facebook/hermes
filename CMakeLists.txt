@@ -347,6 +347,9 @@ if (APPLE)
     icucore
   )
   include_directories(${ICU_INCLUDE_DIRS})
+elseif(EMSCRIPTEN)
+  # Just ignore ICU on Emiscripten. For now.
+  set(ICU_FOUND 1)
 endif()
 
 if (NOT ICU_FOUND)
@@ -395,7 +398,7 @@ endif()
 function(hermes_link_icu target_name)
   get_target_property(target_type ${target_name} TYPE)
   target_link_libraries(${target_name} PRIVATE ${ICU_LIBRARIES})
-  if (HERMES_STATIC_LINK AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
+  if ((NOT EMSCRIPTEN) AND HERMES_STATIC_LINK AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
     target_link_libraries(${target_name} PRIVATE dl pthread)
   endif()
 
