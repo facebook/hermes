@@ -19,6 +19,7 @@ add_hermes_library(hermesSupport
         Conversions.cpp
         ErrorHandling.cpp
         JSONEmitter.cpp
+        OSCompatEmscripten.cpp
         OSCompatPosix.cpp
         OSCompatWindows.cpp
         PageAccessTrackerPosix.cpp
