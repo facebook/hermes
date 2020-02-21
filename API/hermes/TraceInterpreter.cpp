@@ -573,7 +573,7 @@ std::string TraceInterpreter::execFromMemoryBuffer(
 
   bool isBytecode = true;
   for (const auto &bundle : bundles) {
-    if (HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
+    if (!HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
       // If any of the buffers are source code, don't turn on I/O tracking.
       isBytecode = false;
       break;

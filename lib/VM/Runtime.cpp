@@ -574,6 +574,9 @@ void Runtime::printHeapStats(llvm::raw_ostream &os) {
 #ifndef NDEBUG
   printArrayCensus(llvm::outs());
 #endif
+  if (trackIO_) {
+    getIOTrackingInfoJSON(os);
+  }
 }
 
 void Runtime::getIOTrackingInfoJSON(llvm::raw_ostream &os) {
