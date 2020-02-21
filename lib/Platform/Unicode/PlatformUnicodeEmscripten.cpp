@@ -21,8 +21,8 @@ EM_JS(int, js_platform_unicode_localeCompare, (
   function copyStr(p, len) {
     var res = "";
     p >>>= 1;
-    for (; len >= 0; --len, ++p) {
-      res += String.fromCharCode(HEAP16[p])
+    for (; len > 0; --len, ++p) {
+      res += String.fromCharCode(HEAPU16[p])
     }
     return res;
   }
