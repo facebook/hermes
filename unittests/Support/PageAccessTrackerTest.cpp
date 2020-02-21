@@ -16,7 +16,7 @@ using namespace hermes;
 
 namespace {
 
-#ifdef HERMES_FACEBOOK_BUILD
+#ifdef HERMES_HAS_REAL_PAGE_TRACKER
 TEST(PageAccessTrackerTest, Order) {
   const size_t PS = hermes::oscompat::page_size();
   const int numPages = 3;

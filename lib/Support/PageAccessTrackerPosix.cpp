@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#if defined(HERMES_FACEBOOK_BUILD) && defined(__linux__)
-
 #include "hermes/Support/PageAccessTracker.h"
+
+#ifdef HERMES_HAS_REAL_PAGE_TRACKER
 
 #include <stdint.h>
 #include <stdio.h>
@@ -263,4 +263,4 @@ bool PageAccessTracker::printPageAccessedOrder(
   return true;
 }
 
-#endif // HERMES_FACEBOOK_BUILD and __linux__
+#endif // HERMES_HAS_REAL_PAGE_TRACKER
