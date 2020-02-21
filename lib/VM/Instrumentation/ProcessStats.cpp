@@ -67,9 +67,11 @@ ProcessStats::Info getProcessStatSnapshot() {
   const size_t PS = getpagesize();
   rss *= PS / 1024;
   va *= PS / 1024;
+#elif defined(__EMSCRIPTEN__)
+  rss = va = 0;
 #else
 #error "Unsupported platform"
-#endif // __MACH__, __linux__
+#endif
 
   ProcessStats::Info result;
   result.RSSkB = rss;
