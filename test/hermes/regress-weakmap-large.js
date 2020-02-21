@@ -14,6 +14,6 @@
 
 var weak_map = new WeakMap();
 
-for (var i = 0; i < 1000000; ++i) {
+for (var i = 0; i < 100000; ++i) {
   weak_map.set({}, i);
 }
