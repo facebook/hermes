@@ -7,6 +7,7 @@ set(source_files
    PlatformUnicodeJava.cpp
    PlatformUnicodeCF.cpp
    PlatformUnicodeICU.cpp
+   PlatformUnicodeEmscripten.cpp
    CharacterProperties.cpp
 )
 
