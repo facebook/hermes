@@ -21,6 +21,13 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   endif ()
 endif ()
 
+# Emscripten with Fastcomp backend in WASM mode generates trapping conversions
+# from float/double to int. We require non-trapping behavior.
+if (EMSCRIPTEN AND EMSCRIPTEN_FASTCOMP)
+  # Note that this flag only affects Wasm, not Asm.js.
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s BINARYEN_TRAP_MODE=clamp")
+endif()
+
 # For compatibility, CMake adds /EHsc by default for MSVC. We want to set that
 # flag per target, so remove it.
 if (MSVC)
