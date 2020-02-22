@@ -6,6 +6,7 @@
  */
 
 #include "hermes/IRGen/IRGen.h"
+#include "hermes/BCGen/HBC/Bytecode.h"
 
 #include "ESTreeIRGen.h"
 
@@ -44,9 +45,11 @@ void generateIRForCJSModule(
 }
 
 std::pair<Function *, Function *> generateLazyFunctionIR(
-    hbc::LazyCompilationData *lazyData,
-    Module *M) {
+    hbc::BytecodeFunction *bcFunction,
+    Module *M,
+    llvm::SMRange sourceRange) {
   auto &context = M->getContext();
+  auto lazyData = bcFunction->getLazyCompilationData();
   SimpleDiagHandlerRAII diagHandler{context.getSourceErrorManager()};
 
   AllocationScope alloc(context.getAllocator());
@@ -60,7 +63,7 @@ std::pair<Function *, Function *> generateLazyFunctionIR(
   parser.setStrictMode(lazyData->strictMode);
 
   auto parsed = parser.parseLazyFunction(
-      (ESTree::NodeKind)lazyData->nodeKind, lazyData->span.Start);
+      (ESTree::NodeKind)lazyData->nodeKind, sourceRange.Start);
 
   // In case of error, generate a function that just throws a SyntaxError.
   if (!parsed ||
@@ -71,10 +74,7 @@ std::pair<Function *, Function *> generateLazyFunctionIR(
                      << diagHandler.getErrorString());
 
     auto *error = ESTreeIRGen::genSyntaxErrorFunction(
-        M,
-        lazyData->originalName,
-        lazyData->span,
-        diagHandler.getErrorString());
+        M, lazyData->originalName, sourceRange, diagHandler.getErrorString());
 
     return {error, error};
   }

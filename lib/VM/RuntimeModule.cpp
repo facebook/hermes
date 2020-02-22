@@ -149,12 +149,12 @@ RuntimeModule *RuntimeModule::createLazyModule(
   // Set the bcProvider's BytecodeModule to point to the parent's.
   assert(parent->isInitialized() && "Parent module must have been initialized");
 
-  hbc::BytecodeFunction *bcFunction =
-      &((hbc::BCProviderFromSrc *)parent->getBytecode())
-           ->getBytecodeModule()
-           ->getFunction(functionID);
+  auto bcModule =
+      ((hbc::BCProviderFromSrc *)parent->getBytecode())->getBytecodeModule();
+  auto bcFunction = &bcModule->getFunction(functionID);
 
-  RM->bcProvider_ = hbc::BCProviderLazy::createBCProviderLazy(bcFunction);
+  RM->bcProvider_ =
+      hbc::BCProviderLazy::createBCProviderLazy(bcModule, bcFunction);
 
   // We don't know which function index this block will eventually represent,
   // so just add it as 0 to ensure ownership. We'll move it later in

@@ -25,10 +25,9 @@ using DeclarationFileListTy = std::vector<ESTree::ProgramNode *>;
 
 namespace hbc {
 
-struct LazyCompilationData {
-  /// The context used by IRGen.
-  std::shared_ptr<Context> context;
+class BytecodeFunction;
 
+struct LazyCompilationData {
   /// The variables in scope at the point where the function is defined.
   std::shared_ptr<SerializedScope> parentScope;
 
@@ -43,8 +42,7 @@ struct LazyCompilationData {
 
   /// The source buffer ID in which we can find the function source.
   uint32_t bufferId;
-  /// The source span of the function.
-  SMRange span;
+
   /// The type of function, e.g. statement or expression.
   ESTree::NodeKind nodeKind;
 
@@ -81,8 +79,9 @@ void generateIRForCJSModule(
 /// a SyntaxError will be emitted instead.
 /// \return the newly generated function IR and lexical scope root
 std::pair<Function *, Function *> generateLazyFunctionIR(
-    hbc::LazyCompilationData *lazyData,
-    Module *M);
+    hbc::BytecodeFunction *bcFunction,
+    Module *M,
+    llvm::SMRange sourceRange);
 
 } // namespace hermes
 
