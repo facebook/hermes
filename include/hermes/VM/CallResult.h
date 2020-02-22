@@ -291,6 +291,13 @@ class CallResult<PseudoHandle<T>, detail::CallResultSpecialize::PseudoHandle> {
   /* implicit */ CallResult(PseudoHandle<T> &&value)
       : valueOrStatus_(std::move(value)) {}
 
+  template <
+      typename U,
+      typename = typename std::enable_if<
+          std::is_convertible<PseudoHandle<U>, PseudoHandle<T>>::value>::type>
+  /* implicit */ CallResult(CallResult<PseudoHandle<U>> &&other)
+      : valueOrStatus_(std::move(other.unsafeGetValue())) {}
+
   /* implicit */ CallResult(ExecutionStatus status)
       : valueOrStatus_(PseudoHandle<T>::create(reinterpret_cast<T *>(-1))) {
     assert(status != ExecutionStatus::RETURNED);
@@ -311,6 +318,9 @@ class CallResult<PseudoHandle<T>, detail::CallResultSpecialize::PseudoHandle> {
   }
   PseudoHandle<T> &getValue() {
     assert(getStatus() == ExecutionStatus::RETURNED);
+    return valueOrStatus_;
+  }
+  PseudoHandle<T> &unsafeGetValue() {
     return valueOrStatus_;
   }
 } HERMES_ATTRIBUTE_WARN_UNUSED_RESULT_TYPE;

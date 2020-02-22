@@ -380,6 +380,9 @@ class PseudoHandle {
   using value_type = typename traits_type::value_type;
   using arrow_type = typename traits_type::arrow_type;
 
+  template <class U>
+  friend class PseudoHandle;
+
   value_type value_;
 #ifndef NDEBUG
   bool valid_{true};
@@ -425,6 +428,17 @@ class PseudoHandle {
     valid_ = true;
 #endif
     return *this;
+  }
+
+  /// Zero-cost conversion between compatible types.
+  template <
+      typename U,
+      typename = typename std::enable_if<std::is_convertible<
+          typename PseudoHandle<U>::value_type,
+          typename PseudoHandle<T>::value_type>::value>::type>
+  /* implicit */ PseudoHandle(PseudoHandle<U> &&other)
+      : value_(static_cast<value_type>(other.get())) {
+    other.invalidate();
   }
 
   void invalidate() {
