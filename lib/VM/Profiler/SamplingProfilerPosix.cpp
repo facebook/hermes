@@ -162,24 +162,39 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
 }
 
 bool SamplingProfiler::sampleStack() {
-  std::lock_guard<std::mutex> lockGuard(profilerLock_);
+  std::unique_lock<std::mutex> uniqueLock(profilerLock_);
   // Check profiling stopping request.
   if (!enabled_) {
     return false;
   }
 
-  for (const auto &entry : activeRuntimeThreads_) {
+  // Make a copy of activeRuntimeThreads_ because it may be modified by
+  // runtime threads during enumeration.
+  auto activeRuntimeThreadsCopy = activeRuntimeThreads_;
+  for (const auto &entry : activeRuntimeThreadsCopy) {
     auto targetThreadId = entry.second;
     // Signal target runtime thread to sample stack.
     pthread_kill(targetThreadId, SIGPROF);
 
     // Threading: samplingDoneSem_ will synchronize with signal handler to
-    // to make sure there will NOT be two SIGPROF signals sent to the same
+    // to make sure there will NOT be two SIGPROF signals sent to the sameÍ
     // runtime thread at the same time which prevents signal coalescing.
+    // Also, release profilerLock_ before waiting because the runtime thread
+    // we try to signal may be trying to hold profilerLock_. Failing to unlock
+    // profilerLock_ may cause deadlock: timer thread waiting on
+    // samplingDoneSem_ while target runtime thread is waiting on timer thread
+    // to release profilerLock_.
+    uniqueLock.unlock();
     if (!samplingDoneSem_.wait()) {
       return false;
     }
-
+    // Reacquire profilerLock_ to protect the access to fields of
+    // SamplingProfiler.
+    // sampledStacks_/sampledStacks_/sampleStorage_ fields may be
+    // modified during the unlock peroid which is fine because,
+    // unlike activeRuntimeThreads_, their read/write operations
+    // do not overlap each other across unlock/lock boundary.
+    uniqueLock.lock();
     if (sampledStackDepth_ > 0) {
       assert(
           sampledStackDepth_ <= sampleStorage_.stack.size() &&
