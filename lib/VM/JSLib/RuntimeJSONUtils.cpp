@@ -346,7 +346,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseArray() {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto array = toHandle(runtime_, std::move(*arrRes));
+  auto array = runtime_->makeHandle(std::move(*arrRes));
 
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -395,7 +395,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
   assert(
       lexer_.getCurToken()->getKind() == JSONTokenKind::LBrace &&
       "Wrong entrance to parseObject");
-  auto object = toHandle(runtime_, JSObject::create(runtime_));
+  auto object = runtime_->makeHandle(JSObject::create(runtime_));
 
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -457,7 +457,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
 }
 
 CallResult<HermesValue> RuntimeJSONParser::revive(Handle<> value) {
-  auto root = toHandle(runtime_, JSObject::create(runtime_));
+  auto root = runtime_->makeHandle(JSObject::create(runtime_));
   auto status = JSObject::defineOwnProperty(
       root,
       runtime_,

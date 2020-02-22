@@ -473,7 +473,7 @@ PseudoHandle<SegmentedArray> SegmentedArray::increaseSize(
   self->numSlotsUsed_ = newNumSlotsUsed;
 
   // Allocate a handle to track the current array.
-  auto selfHandle = toHandle(runtime, std::move(self));
+  auto selfHandle = runtime->makeHandle(std::move(self));
   // Allocate each segment.
   if (startSegment <= lastSegment &&
       selfHandle->segmentAtPossiblyUnallocated(startSegment)->isEmpty()) {

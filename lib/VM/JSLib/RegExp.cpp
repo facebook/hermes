@@ -623,7 +623,7 @@ regExpPrototypeExec(void *, Runtime *runtime, NativeArgs args) {
   if (strRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<StringPrimitive> S = toHandle(runtime, std::move(*strRes));
+  Handle<StringPrimitive> S = runtime->makeHandle(std::move(*strRes));
   CallResult<Handle<JSArray>> result = directRegExpExec(regexp, runtime, S);
   if (LLVM_UNLIKELY(result.getStatus() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -707,7 +707,7 @@ regExpSourceGetter(void *ctx, Runtime *runtime, NativeArgs args) {
   // however this is only to distinguish a Unicode from a non-Unicode regexp.
   // Beacuse we do not yet support Unicode regexps we can omit the flags.
   return JSRegExp::escapePattern(
-      toHandle(runtime, JSRegExp::getPattern(R.get(), runtime)), runtime);
+      runtime->makeHandle(JSRegExp::getPattern(R.get(), runtime)), runtime);
 }
 
 // ES8 21.2.5.4, 21.2.5.5, 21.2.5.7
@@ -989,7 +989,7 @@ regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(patternRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<StringPrimitive> pattern = toHandle(runtime, std::move(*patternRes));
+  Handle<StringPrimitive> pattern = runtime->makeHandle(std::move(*patternRes));
 
   // Let flags be ToString(Get(R, "flags"))
   auto flagsObj = JSObject::getNamed_RJS(
@@ -1001,7 +1001,7 @@ regExpPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(flagsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<StringPrimitive> flags = toHandle(runtime, std::move(*flagsRes));
+  Handle<StringPrimitive> flags = runtime->makeHandle(std::move(*flagsRes));
 
   // 'Let result be the String value formed by concatenating "/", pattern, and
   // "/", and flags.' We expect 2 slashes plus at most 5 flags.
@@ -1035,7 +1035,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   if (strRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = toHandle(runtime, std::move(*strRes));
+  auto S = runtime->makeHandle(std::move(*strRes));
   // 5. Let global be ToBoolean(Get(rx, "global")).
   // 6. ReturnIfAbrupt(global).
   auto propRes = JSObject::getNamed_RJS(
@@ -1071,7 +1071,7 @@ regExpPrototypeSymbolMatch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = toHandle(runtime, std::move(*arrRes));
+  auto A = runtime->makeHandle(std::move(*arrRes));
   // e. Let n be 0.
   uint32_t n = 0;
 
@@ -1166,7 +1166,7 @@ regExpPrototypeSymbolSearch(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = toHandle(runtime, std::move(*strRes));
+  auto S = runtime->makeHandle(std::move(*strRes));
   // 5. Let previousLastIndex be Get(rx, "lastIndex").
   // 6. ReturnIfAbrupt(previousLastIndex).
   auto propRes = runtime->getNamed(rx, PropCacheID::RegExpLastIndex);
@@ -1224,7 +1224,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = toHandle(runtime, std::move(*strRes));
+  auto S = runtime->makeHandle(std::move(*strRes));
   // 5. Let lengthS be the number of code unit elements in S.
   uint32_t lengthS = S->getStringLength();
   // 6. Let functionalReplace be IsCallable(replaceValue).
@@ -1394,7 +1394,7 @@ regExpPrototypeSymbolReplace(void *, Runtime *runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto matched = toHandle(runtime, std::move(*strRes));
+    auto matched = runtime->makeHandle(std::move(*strRes));
     // f. Let matchLength be the number of code units in matched.
     uint32_t matchLength = matched->getStringLength();
     // g. Let position be ToInteger(Get(result, "index")).

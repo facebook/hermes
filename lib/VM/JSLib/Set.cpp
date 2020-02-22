@@ -340,10 +340,8 @@ setPrototypeValues(void *, Runtime *runtime, NativeArgs args) {
 }
 
 Handle<JSObject> createSetIteratorPrototype(Runtime *runtime) {
-  auto parentHandle = toHandle(
-      runtime,
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype)));
+  auto parentHandle = runtime->makeHandle(JSObject::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->iteratorPrototype)));
   defineMethod(
       runtime,
       parentHandle,

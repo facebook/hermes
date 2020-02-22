@@ -978,13 +978,13 @@ addOp_RJS(Runtime *runtime, Handle<> xHandle, Handle<> yHandle) {
     if (resX == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto xStr = toHandle(runtime, std::move(*resX));
+    auto xStr = runtime->makeHandle(std::move(*resX));
 
     auto resY = toString_RJS(runtime, y);
     if (resY == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto yStr = toHandle(runtime, std::move(*resY));
+    auto yStr = runtime->makeHandle(std::move(*resY));
 
     return StringPrimitive::concat(runtime, xStr, yStr);
   }
@@ -1255,7 +1255,7 @@ CallResult<Handle<JSObject>> iteratorStep(
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> result = toHandle(runtime, std::move(*resultRes));
+  Handle<JSObject> result = runtime->makeHandle(std::move(*resultRes));
   auto completeRes = JSObject::getNamed_RJS(
       result, runtime, Predefined::getSymbolID(Predefined::done));
   if (LLVM_UNLIKELY(completeRes == ExecutionStatus::EXCEPTION)) {
@@ -1319,7 +1319,7 @@ bool isUncatchableError(HermesValue value) {
 
 Handle<JSObject>
 createIterResultObject(Runtime *runtime, Handle<> value, bool done) {
-  auto objHandle = toHandle(runtime, JSObject::create(runtime));
+  auto objHandle = runtime->makeHandle(JSObject::create(runtime));
   auto status = JSObject::defineOwnProperty(
       objHandle,
       runtime,
@@ -1776,7 +1776,7 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
     Runtime *runtime,
     ComputedPropertyDescriptor desc,
     Handle<> valueOrAccessor) {
-  Handle<JSObject> obj = toHandle(runtime, JSObject::create(runtime));
+  Handle<JSObject> obj = runtime->makeHandle(JSObject::create(runtime));
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
 

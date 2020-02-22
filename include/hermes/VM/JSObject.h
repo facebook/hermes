@@ -1579,7 +1579,7 @@ inline CallResult<PseudoHandle<JSObject>> JSObject::allocatePropStorage(
   if (LLVM_LIKELY(size <= DIRECT_PROPERTY_SLOTS))
     return self;
 
-  auto selfHandle = toHandle(runtime, std::move(self));
+  auto selfHandle = runtime->makeHandle(std::move(self));
   if (LLVM_UNLIKELY(
           allocatePropStorage(selfHandle, runtime, size) ==
           ExecutionStatus::EXCEPTION)) {

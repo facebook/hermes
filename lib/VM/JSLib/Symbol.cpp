@@ -190,7 +190,7 @@ CallResult<HermesValue> symbolFor(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto key = toHandle(runtime, std::move(*cr));
+  auto key = runtime->makeHandle(std::move(*cr));
 
   auto symbolRes = runtime->getSymbolRegistry().getSymbolForKey(runtime, key);
   if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION)) {

@@ -225,7 +225,7 @@ ExecutionStatus Interpreter::caseIteratorNext(
   if (LLVM_UNLIKELY(resultObjRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> resultObj = toHandle(runtime, std::move(*resultObjRes));
+  Handle<JSObject> resultObj = runtime->makeHandle(std::move(*resultObjRes));
   CallResult<HermesValue> doneRes = JSObject::getNamed_RJS(
       resultObj, runtime, Predefined::getSymbolID(Predefined::done));
   if (LLVM_UNLIKELY(doneRes == ExecutionStatus::EXCEPTION)) {

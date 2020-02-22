@@ -119,8 +119,8 @@ generatorPrototypeNext(void *, Runtime *runtime, NativeArgs args) {
 
   auto result = generatorResume(
       runtime,
-      toHandle(
-          runtime, JSGenerator::getInnerFunction(runtime, generatorRes->get())),
+      runtime->makeHandle(
+          JSGenerator::getInnerFunction(runtime, generatorRes->get())),
       args.getArgHandle(0));
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -184,8 +184,8 @@ generatorPrototypeReturnOrThrow(void *ctx, Runtime *runtime, NativeArgs args) {
 
   auto result = generatorResumeAbrupt(
       runtime,
-      toHandle(
-          runtime, JSGenerator::getInnerFunction(runtime, generatorRes->get())),
+      runtime->makeHandle(
+          JSGenerator::getInnerFunction(runtime, generatorRes->get())),
       args.getArgHandle(0),
       isThrow);
   if (result == ExecutionStatus::EXCEPTION) {

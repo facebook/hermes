@@ -905,7 +905,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
       if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      Handle<JSArray> result = toHandle(runtime, std::move(*resultRes));
+      Handle<JSArray> result = runtime->makeHandle(std::move(*resultRes));
       JSArray::setElementAt(result, runtime, 0, indexHandle);
       JSArray::setElementAt(result, runtime, 1, valueHandle);
       // 18. Return CreateIterResultObject(result, false).

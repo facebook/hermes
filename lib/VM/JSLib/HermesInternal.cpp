@@ -57,7 +57,7 @@ hermesInternalGetEpilogues(void *, Runtime *runtime, NativeArgs args) {
   if (outerResult == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto outer = toHandle(runtime, std::move(*outerResult));
+  auto outer = runtime->makeHandle(std::move(*outerResult));
   if (outer->setStorageEndIndex(outer, runtime, outerLen) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -104,7 +104,7 @@ hermesInternalGetWeakSize(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
-  auto resultHandle = toHandle(runtime, JSObject::create(runtime));
+  auto resultHandle = runtime->makeHandle(JSObject::create(runtime));
   // Printing the values would be unstable, so prevent that.
   if (runtime->shouldStabilizeInstructionCount())
     return resultHandle.getHermesValue();
@@ -402,7 +402,7 @@ hermesInternalGetInstrumentedStats(void *, Runtime *runtime, NativeArgs args) {
 CallResult<HermesValue>
 hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
   GCScope gcScope(runtime);
-  auto resultHandle = toHandle(runtime, JSObject::create(runtime));
+  auto resultHandle = runtime->makeHandle(JSObject::create(runtime));
   MutableHandle<> tmpHandle{runtime};
 
   /// Add a property \p value keyed under \p key to resultHandle.
@@ -802,7 +802,7 @@ hermesInternalGetFunctionLocation(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Argument to HermesInternal.getFunctionLocation must be callable");
   }
-  auto resultHandle = toHandle(runtime, JSObject::create(runtime));
+  auto resultHandle = runtime->makeHandle(JSObject::create(runtime));
   MutableHandle<> tmpHandle{runtime};
 
   auto codeBlock = getLeafCodeBlock(callable, runtime);
@@ -885,7 +885,7 @@ hermesInternalGetFunctionLocation(void *, Runtime *runtime, NativeArgs args) {
 Handle<JSObject> createHermesInternalObject(
     Runtime *runtime,
     const JSLibFlags &flags) {
-  Handle<JSObject> intern = toHandle(runtime, JSObject::create(runtime));
+  Handle<JSObject> intern = runtime->makeHandle(JSObject::create(runtime));
   if (!flags.enableHermesInternal) {
     JSObject::preventExtensions(*intern);
     return intern;

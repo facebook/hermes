@@ -355,7 +355,7 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
       }
     }
 
-    auto selfHandle = toHandle(runtime, std::move(self));
+    auto selfHandle = runtime->makeHandle(std::move(self));
     initializeMissingPropertyMap(selfHandle, runtime);
     self = selfHandle;
   }

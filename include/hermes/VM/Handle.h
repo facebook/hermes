@@ -370,7 +370,7 @@ static_assert(
 ///   bool checkFlag(PseudoHandle<Foo> foo, Runtime *runtime) {
 ///     if (foo->cheapCheck())
 ///       return true;
-///     auto fooHandle = toHandle(runtime, std::move(foo));
+///     auto fooHandle = runtime->makeHandle(std::move(foo));
 ///     return expensiveCheck(fooHandle, runtime);
 ///  }
 /// \endcode
@@ -465,15 +465,6 @@ class PseudoHandle {
   static PseudoHandle<T> create(value_type value) {
     return PseudoHandle<T>(value);
   }
-
-  /// Create a Handle from a PseudoHandle and destroy the latter.
-  static Handle<T> toHandle(
-      HandleRootOwner *runtime,
-      PseudoHandle<T> &&pseudo) {
-    Handle<T> res{runtime, pseudo.value_};
-    pseudo.invalidate();
-    return res;
-  }
 };
 
 /// Create a \c PseudoHandle from a pointer.
@@ -485,12 +476,6 @@ inline PseudoHandle<T> createPseudoHandle(T *ptr) {
 /// Create a \c PseudoHandle from a HermesValue.
 inline PseudoHandle<> createPseudoHandle(HermesValue value) {
   return PseudoHandle<>::create(value);
-}
-
-/// Create a Handle from a PseudoHandle and destroy the latter.
-template <typename T>
-Handle<T> toHandle(HandleRootOwner *runtime, PseudoHandle<T> &&pseudo) {
-  return PseudoHandle<T>::toHandle(runtime, std::move(pseudo));
 }
 
 } // namespace vm

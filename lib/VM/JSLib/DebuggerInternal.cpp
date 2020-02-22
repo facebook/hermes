@@ -15,7 +15,7 @@ namespace vm {
 #ifdef HERMES_ENABLE_DEBUGGER
 
 Handle<JSObject> createDebuggerInternalObject(Runtime *runtime) {
-  Handle<JSObject> intern = toHandle(runtime, JSObject::create(runtime));
+  Handle<JSObject> intern = runtime->makeHandle(JSObject::create(runtime));
 
   // Configurable property stored in the Debugger
   // To be used when a debugger transitions to an attached state.

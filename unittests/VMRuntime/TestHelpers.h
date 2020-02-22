@@ -96,7 +96,7 @@ class RuntimeTestFixtureBase : public ::testing::Test {
       : rt(Runtime::create(runtimeConfig)),
         runtime(rt.get()),
         gcScope(runtime),
-        domain(toHandle(runtime, Domain::create(runtime))) {}
+        domain(runtime->makeHandle(Domain::create(runtime))) {}
 
   /// Can't copy due to internal pointer.
   RuntimeTestFixtureBase(const RuntimeTestFixtureBase &) = delete;

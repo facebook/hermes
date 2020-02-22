@@ -504,7 +504,7 @@ CallResult<HermesValue> dateParse(void *, Runtime *runtime, NativeArgs args) {
   }
   return HermesValue::encodeDoubleValue(
       parseDate(StringPrimitive::createStringView(
-          runtime, toHandle(runtime, std::move(*res)))));
+          runtime, runtime->makeHandle(std::move(*res)))));
 }
 
 CallResult<HermesValue> dateUTC(void *, Runtime *runtime, NativeArgs args) {

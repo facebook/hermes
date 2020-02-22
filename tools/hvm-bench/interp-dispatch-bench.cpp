@@ -56,7 +56,7 @@ namespace {
 
 Handle<StringPrimitive>
 benchmark(Runtime *runtime, double loopc, double factc) {
-  auto domain = toHandle(runtime, Domain::create(runtime));
+  auto domain = runtime->makeHandle(Domain::create(runtime));
   auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
   std::map<int, int> labels{};

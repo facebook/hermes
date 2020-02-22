@@ -1077,7 +1077,7 @@ typedArrayPrototypeMapFilter(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto values = toHandle(runtime, std::move(*arrRes));
+  auto values = runtime->makeHandle(std::move(*arrRes));
   JSTypedArrayBase::size_type insert = 0;
   CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
   if (map) {
@@ -1142,7 +1142,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto sep = toHandle(runtime, std::move(*res));
+  auto sep = runtime->makeHandle(std::move(*res));
   if (len == 0) {
     // Quick exit for empty arrays to avoid allocations.
     // NOTE: this needs to come after the `toString` call on the separator
@@ -1168,7 +1168,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = toHandle(runtime, std::move(*arrRes));
+  auto strings = runtime->makeHandle(std::move(*arrRes));
 
   // Call toString on all the elements of the array.
   {
@@ -1182,7 +1182,7 @@ typedArrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(res2 == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto S = toHandle(runtime, std::move(*res2));
+      auto S = runtime->makeHandle(std::move(*res2));
       size.add(S->getStringLength());
       JSArray::setElementAt(strings, runtime, i, S);
     }
@@ -1490,7 +1490,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = toHandle(runtime, std::move(*arrRes));
+  auto strings = runtime->makeHandle(std::move(*arrRes));
 
   // Index into the array.
   MutableHandle<> storage(runtime);
@@ -1522,7 +1522,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto elementStr = toHandle(runtime, std::move(*strRes));
+      auto elementStr = runtime->makeHandle(std::move(*strRes));
       JSArray::setElementAt(strings, runtime, i, elementStr);
       size.add(elementStr->getStringLength());
     } else {
@@ -1554,16 +1554,14 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
   // Create NativeConstructor manually to avoid global object assignment.
   // Use NativeConstructor because %TypedArray% is supposed to be
   // a constructor function object, but must not be called directly with "new".
-  auto cons = toHandle(
+  auto cons = runtime->makeHandle(NativeConstructor::create(
       runtime,
-      NativeConstructor::create(
-          runtime,
-          Handle<JSObject>::vmcast(&runtime->functionPrototype),
-          nullptr,
-          typedArrayBaseConstructor,
-          0,
-          JSObject::createWithException,
-          CellKind::ObjectKind));
+      Handle<JSObject>::vmcast(&runtime->functionPrototype),
+      nullptr,
+      typedArrayBaseConstructor,
+      0,
+      JSObject::createWithException,
+      CellKind::ObjectKind));
 
   // Define %TypedArray%.prototype to be proto.
   auto st = Callable::defineNameLengthAndPrototype(

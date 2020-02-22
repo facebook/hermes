@@ -241,7 +241,7 @@ reflectSetPrototypeOf(void *, Runtime *runtime, NativeArgs args) {
 }
 
 Handle<JSObject> createReflectObject(Runtime *runtime) {
-  Handle<JSObject> reflect = toHandle(runtime, JSObject::create(runtime));
+  Handle<JSObject> reflect = runtime->makeHandle(JSObject::create(runtime));
 
   auto defineReflectMethod =
       [&](Predefined::Str symID, NativeFunctionPtr func, uint8_t count) {

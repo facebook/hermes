@@ -227,7 +227,7 @@ CallResult<HermesValue> Interpreter::getArgumentsPropByValSlowPath_RJS(
     auto strRes = toString_RJS(runtime, Handle<>(valueReg));
     if (strRes == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
-    auto strPrim = toHandle(runtime, std::move(*strRes));
+    auto strPrim = runtime->makeHandle(std::move(*strRes));
 
     // Check if the string is a valid argument index.
     if (auto index = toArrayIndex(runtime, strPrim)) {
@@ -518,8 +518,7 @@ CallResult<HermesValue> Interpreter::createObjectFromBuffer(
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  auto obj = toHandle(
-      runtime,
+  auto obj = runtime->makeHandle(
       optCachedHiddenClassHandle.hasValue()
           ? JSObject::create(runtime, optCachedHiddenClassHandle.getValue())
           : JSObject::create(runtime, numLiterals));
@@ -644,7 +643,7 @@ CallResult<HermesValue> Interpreter::createArrayFromBuffer(
     return ExecutionStatus::EXCEPTION;
   }
   // Resize the array storage in advance.
-  auto arr = toHandle(runtime, std::move(*arrRes));
+  auto arr = runtime->makeHandle(std::move(*arrRes));
   JSArray::setStorageEndIndex(arr, runtime, numElements);
 
   auto iter = curCodeBlock->getArrayBufferIter(bufferIndex, numLiterals);

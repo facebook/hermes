@@ -293,7 +293,7 @@ objectConstructor(void *, Runtime *runtime, NativeArgs args) {
 
   // This is a function call that must act as a constructor and create a new
   // object.
-  auto thisHandle = toHandle(runtime, JSObject::create(runtime));
+  auto thisHandle = runtime->makeHandle(JSObject::create(runtime));
 
   return objectInitInstance(thisHandle, runtime);
 }
@@ -398,7 +398,7 @@ CallResult<HermesValue> getOwnPropertyKeysAsStrings(
         status != ExecutionStatus::EXCEPTION &&
         "toString() on property name cannot fail");
     JSArray::setElementAt(
-        array, runtime, i, toHandle(runtime, std::move(*status)));
+        array, runtime, i, runtime->makeHandle(std::move(*status)));
   }
   return array.getHermesValue();
 }
@@ -596,7 +596,7 @@ objectCreate(void *, Runtime *runtime, NativeArgs args) {
   }
 
   auto newObj = objectInitInstance(
-      toHandle(runtime, JSObject::create(runtime, obj)), runtime);
+      runtime->makeHandle(JSObject::create(runtime, obj)), runtime);
   auto arg1 = args.getArgHandle(1);
   if (arg1->isUndefined()) {
     return newObj;
@@ -740,7 +740,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   if (LLVM_UNLIKELY(propertiesRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto properties = toHandle(runtime, std::move(*propertiesRes));
+  auto properties = runtime->makeHandle(std::move(*propertiesRes));
 
   MutableHandle<StringPrimitive> name{runtime};
   MutableHandle<> value{runtime};
@@ -884,7 +884,7 @@ objectFromEntries(void *, Runtime *runtime, NativeArgs args) {
   GCScopeMarkerRAII marker{runtime};
 
   // 2. Let obj be ObjectCreate(%ObjectPrototype%).
-  Handle<JSObject> obj = toHandle(runtime, JSObject::create(runtime));
+  Handle<JSObject> obj = runtime->makeHandle(JSObject::create(runtime));
   // 3. Assert: obj is an extensible ordinary object with no own properties.
 
   // 4. Let stepsDefine be the algorithm steps defined in

@@ -36,15 +36,15 @@ CallResult<HermesValue> runRequireCall(
     assert(module.get() != nullptr);
     // Still initializing, so return the current state of module.exports.
     return JSObject::getNamed_RJS(
-        toHandle(runtime, std::move(module)),
+        runtime->makeHandle(std::move(module)),
         runtime,
         Predefined::getSymbolID(Predefined::exports));
   }
 
   GCScope gcScope{runtime};
   // If not initialized yet, start initializing and set the module object.
-  Handle<JSObject> module = toHandle(runtime, JSObject::create(runtime));
-  Handle<JSObject> exports = toHandle(runtime, JSObject::create(runtime));
+  Handle<JSObject> module = runtime->makeHandle(JSObject::create(runtime));
+  Handle<JSObject> exports = runtime->makeHandle(JSObject::create(runtime));
   if (LLVM_UNLIKELY(
           JSObject::putNamed_RJS(
               module,
@@ -206,7 +206,7 @@ CallResult<HermesValue> require(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(targetRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto target = toHandle(runtime, std::move(*targetRes));
+  auto target = runtime->makeHandle(std::move(*targetRes));
 
   auto canonicalPath = canonicalizePath(runtime, dirname, target);
 

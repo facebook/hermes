@@ -460,7 +460,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = toHandle(runtime, std::move(*arrRes));
+  auto strings = runtime->makeHandle(std::move(*arrRes));
 
   // Index into the array.
   MutableHandle<> i{runtime, HermesValue::encodeNumberValue(0)};
@@ -503,7 +503,7 @@ arrayPrototypeToLocaleString(void *, Runtime *runtime, NativeArgs args) {
         if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
-        auto elementStr = toHandle(runtime, std::move(*strRes));
+        auto elementStr = runtime->makeHandle(std::move(*strRes));
         uint32_t strLength = elementStr->getStringLength();
         // Throw RangeError on overflow.
         size.add(strLength);
@@ -570,7 +570,7 @@ arrayPrototypeConcat(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = toHandle(runtime, std::move(*arrRes));
+  auto A = runtime->makeHandle(std::move(*arrRes));
 
   // Index to insert into A.
   uint64_t n = 0;
@@ -764,7 +764,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto sep = toHandle(runtime, std::move(*strRes));
+  auto sep = runtime->makeHandle(std::move(*strRes));
 
   if (len == 0) {
     return HermesValue::encodeStringValue(
@@ -783,7 +783,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = toHandle(runtime, std::move(*arrRes));
+  auto strings = runtime->makeHandle(std::move(*arrRes));
 
   // Call toString on all the elements of the array.
   for (MutableHandle<> i{runtime, HermesValue::encodeNumberValue(0)};
@@ -810,7 +810,7 @@ arrayPrototypeJoin(void *, Runtime *runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto S = toHandle(runtime, std::move(*strRes));
+      auto S = runtime->makeHandle(std::move(*strRes));
       size.add(S->getStringLength());
       JSArray::setElementAt(strings, runtime, i->getNumber(), S);
     }
@@ -1493,7 +1493,7 @@ arrayPrototypeFlat(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = toHandle(runtime, std::move(*ARes));
+  auto A = runtime->makeHandle(std::move(*ARes));
 
   // 6. Perform ? FlattenIntoArray(A, O, sourceLen, 0, depthNum).
   if (LLVM_UNLIKELY(
@@ -1547,7 +1547,7 @@ arrayPrototypeFlatMap(void *ctx, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = toHandle(runtime, std::move(*ARes));
+  auto A = runtime->makeHandle(std::move(*ARes));
 
   // 6. Perform ? FlattenIntoArray(A, O, sourceLen, 0, 1, mapperFunction, T).
   if (LLVM_UNLIKELY(
@@ -1632,7 +1632,7 @@ arrayPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = toHandle(runtime, std::move(*arrRes));
+  auto A = runtime->makeHandle(std::move(*arrRes));
 
   // Next index in A to write to.
   uint32_t n = 0;
@@ -1743,7 +1743,7 @@ arrayPrototypeSplice(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = toHandle(runtime, std::move(*arrRes));
+  auto A = runtime->makeHandle(std::move(*arrRes));
 
   // Indices used for various copies in loops below.
   MutableHandle<> from{runtime};
@@ -2601,7 +2601,7 @@ arrayPrototypeMap(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = toHandle(runtime, std::move(*arrRes));
+  auto A = runtime->makeHandle(std::move(*arrRes));
 
   // Current index to execute callback on.
   MutableHandle<> k{runtime, HermesValue::encodeDoubleValue(0)};
@@ -2678,7 +2678,7 @@ arrayPrototypeFilter(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = toHandle(runtime, std::move(*arrRes));
+  auto A = runtime->makeHandle(std::move(*arrRes));
 
   // Index in the original array.
   MutableHandle<> k{runtime, HermesValue::encodeDoubleValue(0)};

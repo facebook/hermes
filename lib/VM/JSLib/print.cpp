@@ -31,7 +31,7 @@ CallResult<HermesValue> print(void *, Runtime *runtime, NativeArgs args) {
       llvm::outs() << " ";
     SmallU16String<32> tmp;
     llvm::outs() << StringPrimitive::createStringView(
-                        runtime, toHandle(runtime, std::move(*res)))
+                        runtime, runtime->makeHandle(std::move(*res)))
                         .getUTF16Ref(tmp);
     first = false;
   }

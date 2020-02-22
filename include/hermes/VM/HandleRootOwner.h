@@ -68,6 +68,14 @@ class HandleRootOwner {
   /// Convenience function to create a Handle<SymbolID>.
   Handle<SymbolID> makeHandle(SymbolID value);
 
+  /// Create a Handle from a valid PseudoHandle and invalidate the latter.
+  template <class T>
+  Handle<T> makeHandle(PseudoHandle<T> &&pseudo) {
+    Handle<T> res{this, pseudo.get()};
+    pseudo.invalidate();
+    return res;
+  }
+
   /// Convenience function to create a MutableHandle.
   MutableHandle<HermesValue> makeMutableHandle(HermesValue value);
   /// Convenience function to create a MutableHandle from a pointer.

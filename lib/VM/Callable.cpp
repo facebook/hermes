@@ -111,7 +111,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime *runtime) {
         ? Handle<JSObject>::vmcast(&runtime->generatorPrototype)
         : Handle<JSObject>::vmcast(&runtime->objectPrototype);
     auto prototypeObjectHandle =
-        toHandle(runtime, JSObject::create(runtime, prototypeParent));
+        runtime->makeHandle(JSObject::create(runtime, prototypeParent));
 
     auto cr = Callable::defineNameLengthAndPrototype(
         fn,

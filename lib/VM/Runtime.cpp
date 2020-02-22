@@ -895,7 +895,7 @@ CallResult<HermesValue> Runtime::runBytecode(
 
   GCScope scope(this);
 
-  Handle<Domain> domain = toHandle(this, Domain::create(this));
+  Handle<Domain> domain = makeHandle(Domain::create(this));
 
   auto runtimeModuleRes = RuntimeModule::create(
       this, domain, nextScriptId_++, std::move(bytecode), flags, sourceURL);

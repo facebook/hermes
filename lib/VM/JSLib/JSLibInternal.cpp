@@ -26,16 +26,14 @@ Handle<NativeConstructor> defineSystemConstructor(
     unsigned paramCount,
     NativeConstructor::CreatorFunction *creator,
     CellKind targetKind) {
-  auto constructor = toHandle(
+  auto constructor = runtime->makeHandle(NativeConstructor::create(
       runtime,
-      NativeConstructor::create(
-          runtime,
-          constructorProtoObjectHandle,
-          nullptr,
-          nativeFunctionPtr,
-          paramCount,
-          creator,
-          targetKind));
+      constructorProtoObjectHandle,
+      nullptr,
+      nativeFunctionPtr,
+      paramCount,
+      creator,
+      targetKind));
 
   auto st = Callable::defineNameLengthAndPrototype(
       constructor,
@@ -320,7 +318,7 @@ CallResult<HermesValue> createDynamicFunction(
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto params = toHandle(runtime, std::move(*arrRes));
+  auto params = runtime->makeHandle(std::move(*arrRes));
 
   // Body of the resultant function.
   MutableHandle<StringPrimitive> body{runtime};
@@ -352,7 +350,7 @@ CallResult<HermesValue> createDynamicFunction(
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto param = toHandle(runtime, std::move(*strRes));
+      auto param = runtime->makeHandle(std::move(*strRes));
       JSArray::setElementAt(params, runtime, i, param);
       size.add(param->getStringLength());
     }
@@ -369,7 +367,7 @@ CallResult<HermesValue> createDynamicFunction(
       // If this raises an exception, we still return immediately.
       return JSFunction::create(
           runtime,
-          toHandle(runtime, Domain::create(runtime)),
+          runtime->makeHandle(Domain::create(runtime)),
           parent,
           Handle<Environment>(runtime, nullptr),
           runtime->getReturnThisCodeBlock());

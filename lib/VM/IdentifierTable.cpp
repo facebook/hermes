@@ -150,7 +150,7 @@ CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandleFromPrimitive(
     // If the string was already uniqued, we can return directly.
     return runtime->makeHandle(str->getUniqueID());
   }
-  auto handle = toHandle(runtime, std::move(str));
+  auto handle = runtime->makeHandle(std::move(str));
   // Force the string primitive to flatten if it's a rope.
   handle = StringPrimitive::ensureFlat(runtime, handle);
   auto cr = handle->isASCII()

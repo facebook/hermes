@@ -63,7 +63,7 @@ CallResult<HermesValue> escape(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto string = toHandle(runtime, std::move(*res));
+  auto string = runtime->makeHandle(std::move(*res));
   auto len = string->getStringLength();
   SmallU16String<32> R{};
   R.reserve(len);
@@ -96,7 +96,7 @@ CallResult<HermesValue> unescape(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strPrim = toHandle(runtime, std::move(*res));
+  auto strPrim = runtime->makeHandle(std::move(*res));
   auto len = strPrim->getStringLength();
   SmallU16String<32> R{};
   R.reserve(len);
@@ -232,7 +232,7 @@ CallResult<HermesValue> encodeURI(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto res =
-      encode(runtime, toHandle(runtime, std::move(*strRes)), unescapedURISet);
+      encode(runtime, runtime->makeHandle(std::move(*strRes)), unescapedURISet);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   return res->getHermesValue();
@@ -245,7 +245,7 @@ encodeURIComponent(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto res =
-      encode(runtime, toHandle(runtime, std::move(*strRes)), uriUnescaped);
+      encode(runtime, runtime->makeHandle(std::move(*strRes)), uriUnescaped);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   return res->getHermesValue();
@@ -360,7 +360,7 @@ CallResult<HermesValue> decodeURI(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto res =
-      decode(runtime, toHandle(runtime, std::move(*strRes)), reservedURISet);
+      decode(runtime, runtime->makeHandle(std::move(*strRes)), reservedURISet);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   return res->getHermesValue();
@@ -373,7 +373,7 @@ decodeURIComponent(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto emptySet = [](char16_t) { return false; };
-  auto res = decode(runtime, toHandle(runtime, std::move(*strRes)), emptySet);
+  auto res = decode(runtime, runtime->makeHandle(std::move(*strRes)), emptySet);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   return res->getHermesValue();

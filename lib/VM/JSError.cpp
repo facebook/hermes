@@ -277,7 +277,7 @@ ExecutionStatus JSError::setMessage(
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    stringMessage = toHandle(runtime, std::move(*strRes));
+    stringMessage = runtime->makeHandle(std::move(*strRes));
   }
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();

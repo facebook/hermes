@@ -59,7 +59,7 @@ CallResult<HermesValue> jsonParse(void *, Runtime *runtime, NativeArgs args) {
   }
   return runtimeJSONParse(
       runtime,
-      toHandle(runtime, std::move(*res)),
+      runtime->makeHandle(std::move(*res)),
       Handle<Callable>::dyn_vmcast(args.getArgHandle(1)));
 }
 

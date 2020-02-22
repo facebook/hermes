@@ -359,7 +359,7 @@ bool executeHBCBytecodeImpl(
 
   if (options.stopAfterInit) {
     vm::Handle<vm::Domain> domain =
-        vm::toHandle(runtime.get(), vm::Domain::create(runtime.get()));
+        runtime->makeHandle(vm::Domain::create(runtime.get()));
     if (LLVM_UNLIKELY(
             vm::RuntimeModule::create(
                 runtime.get(),

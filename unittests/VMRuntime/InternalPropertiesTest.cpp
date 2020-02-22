@@ -38,7 +38,7 @@ TEST_F(InternalPropertiesTest, NamedInternalPropertyTest) {
   CallResult<HermesValue> propRes{ExecutionStatus::EXCEPTION};
 
   Handle<JSObject> nullObj(runtime, nullptr);
-  auto obj = toHandle(runtime, JSObject::create(runtime, nullObj));
+  auto obj = runtime->makeHandle(JSObject::create(runtime, nullObj));
 
   // A key feature of named internal properties is that they may be added to
   // any object at any point. Let's put the object in dictionary mode to test

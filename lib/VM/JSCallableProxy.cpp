@@ -151,7 +151,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime *runtime, NativeArgs) {
   if (LLVM_UNLIKELY(argArrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> argArray = toHandle(runtime, std::move(*argArrayRes));
+  Handle<JSArray> argArray = runtime->makeHandle(std::move(*argArrayRes));
   JSArray::setStorageEndIndex(argArray, runtime, callerFrame->getArgCount());
   for (uint32_t i = 0; i < callerFrame->getArgCount(); ++i) {
     JSArray::unsafeSetExistingElementAt(

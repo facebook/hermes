@@ -216,7 +216,7 @@ CallResult<PseudoHandle<JSObject>> JSObject::getPrototypeOf(
   }
 
   return JSProxy::getPrototypeOf(
-      toHandle(runtime, std::move(selfHandle)), runtime);
+      runtime->makeHandle(std::move(selfHandle)), runtime);
 }
 
 namespace {
@@ -419,7 +419,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
       if (LLVM_UNLIKELY(proxyRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      return toHandle(runtime, std::move(*proxyRes));
+      return runtime->makeHandle(std::move(*proxyRes));
     }
     assert(selfHandle->flags_.lazyObject && "descriptor flags are impossible");
     initializeLazyObject(runtime, selfHandle);
@@ -438,7 +438,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto array = toHandle(runtime, std::move(*arrayRes));
+  auto array = runtime->makeHandle(std::move(*arrayRes));
 
   // Optional array of SymbolIDs reported via host object API
   llvm::Optional<Handle<JSArray>> hostObjectSymbols;
@@ -2566,7 +2566,7 @@ CallResult<bool> JSObject::isExtensible(
     PseudoHandle<JSObject> self,
     Runtime *runtime) {
   if (LLVM_UNLIKELY(self->isProxyObject())) {
-    return JSProxy::isExtensible(toHandle(runtime, std::move(self)), runtime);
+    return JSProxy::isExtensible(runtime->makeHandle(std::move(self)), runtime);
   }
   return self->isExtensible();
 }
@@ -2577,7 +2577,7 @@ bool JSObject::isSealed(PseudoHandle<JSObject> self, Runtime *runtime) {
   if (!self->flags_.noExtend)
     return false;
 
-  auto selfHandle = toHandle(runtime, std::move(self));
+  auto selfHandle = runtime->makeHandle(std::move(self));
 
   if (!HiddenClass::areAllNonConfigurable(
           runtime->makeHandle(selfHandle->clazz_), runtime)) {
@@ -2602,7 +2602,7 @@ bool JSObject::isFrozen(PseudoHandle<JSObject> self, Runtime *runtime) {
   if (!self->flags_.noExtend)
     return false;
 
-  auto selfHandle = toHandle(runtime, std::move(self));
+  auto selfHandle = runtime->makeHandle(std::move(self));
 
   if (!HiddenClass::areAllReadOnly(
           runtime->makeHandle(selfHandle->clazz_), runtime)) {

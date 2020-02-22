@@ -80,7 +80,7 @@ print(void *, Runtime *runtime, NativeArgs args) {
       llvm::outs() << " ";
     SmallU16String<32> tmp;
     llvm::outs() << StringPrimitive::createStringView(
-                        runtime, toHandle(runtime, std::move(*res)))
+                        runtime, runtime->makeHandle(std::move(*res)))
                         .getUTF16Ref(tmp);
     first = false;
   }
@@ -102,7 +102,7 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
 
   InterpreterFunctionTest()
       : RuntimeTestFixture(),
-        domain(toHandle(runtime, Domain::create(runtime))),
+        domain(runtime->makeHandle(Domain::create(runtime))),
         runtimeModule(RuntimeModule::createUninitialized(runtime, domain)) {
     BFG = BytecodeFunctionGenerator::create(BMG, 1);
   }

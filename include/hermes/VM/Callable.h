@@ -945,7 +945,7 @@ class JSFunction : public Callable {
       Runtime *runtime,
       Handle<JSObject> protoHandle) {
     return create(
-        runtime, toHandle(runtime, Domain::create(runtime)), protoHandle);
+        runtime, runtime->makeHandle(Domain::create(runtime)), protoHandle);
   }
 
   /// \return the code block containing the function code.

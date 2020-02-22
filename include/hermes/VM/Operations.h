@@ -109,7 +109,7 @@ inline CallResult<Handle<>> toPropertyKey(
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return Handle<>::vmcast(toHandle(runtime, std::move(*strRes)));
+  return Handle<>::vmcast(runtime->makeHandle(std::move(*strRes)));
 }
 
 /// This function is used to convert a property to property key if it's an

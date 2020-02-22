@@ -79,7 +79,7 @@ CallResult<Handle<JSObject>> proxyCreate(
     // We need to throw away the object passed as this, so we can create
     // a CallableProxy instead.  Simply being a CallableProxy has the
     // effect of setting the [[Call]] and [[Construct]] internal methods.
-    proxy = toHandle(runtime, JSCallableProxy::create(runtime));
+    proxy = runtime->makeHandle(JSCallableProxy::create(runtime));
   }
 
   // 8. Set the [[ProxyTarget]] internal slot of P to target.
@@ -146,7 +146,7 @@ proxyRevocable(void *, Runtime *runtime, NativeArgs args) {
       runtime,
       args.dyncastArg<JSObject>(0),
       args.dyncastArg<JSObject>(1),
-      toHandle(runtime, vm::JSProxy::create(runtime)));
+      runtime->makeHandle(vm::JSProxy::create(runtime)));
   if (proxyRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -162,7 +162,7 @@ proxyRevocable(void *, Runtime *runtime, NativeArgs args) {
   // 4. Set revoker.[[RevocableProxy]] to p.
   setRevocableProxySlot(*revoker, runtime, proxyRes->getHermesValue());
   // 5. Let result be ObjectCreate(%ObjectPrototype%).
-  Handle<JSObject> result = toHandle(runtime, JSObject::create(runtime));
+  Handle<JSObject> result = runtime->makeHandle(JSObject::create(runtime));
   // 6. Perform CreateDataProperty(result, "proxy", p).
   auto res1 = JSObject::putNamed_RJS(
       result, runtime, Predefined::getSymbolID(Predefined::proxy), *proxyRes);

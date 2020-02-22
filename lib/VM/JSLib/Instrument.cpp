@@ -55,7 +55,7 @@ static void definePost(
 }
 
 Handle<JSObject> createInstrumentObject(Runtime *runtime) {
-  auto obj = toHandle(runtime, JSObject::create(runtime));
+  auto obj = runtime->makeHandle(JSObject::create(runtime));
   // iid, operator, left, right
   definePre(runtime, obj, "preBinary", 4);
   // iid, cookie, operator, result, left, right

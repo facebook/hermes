@@ -23,7 +23,7 @@ TEST_F(ArrayTest, CppAPITest) {
 
   CallResult<PseudoHandle<JSArray>> arrayRes = JSArray::create(runtime, 1, 0);
   ASSERT_FALSE(isException(arrayRes));
-  auto array = toHandle(runtime, std::move(*arrayRes));
+  auto array = runtime->makeHandle(std::move(*arrayRes));
 
   // Make sure the beginning is at 0.
   ASSERT_EQ(0u, array->getBeginIndex());
@@ -140,7 +140,7 @@ TEST_F(ArrayTest, TestLength) {
   auto lengthID = Predefined::getSymbolID(Predefined::length);
   auto arrayRes = JSArray::create(runtime, 10, 10);
   ASSERT_FALSE(isException(arrayRes));
-  auto array = toHandle(runtime, std::move(*arrayRes));
+  auto array = runtime->makeHandle(std::move(*arrayRes));
 
   // Make sure the length is 10.
   ASSERT_EQ(10u, JSArray::getLength(array.get()));

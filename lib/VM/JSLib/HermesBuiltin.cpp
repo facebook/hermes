@@ -479,7 +479,7 @@ hermesBuiltinCopyRestArgs(void *, Runtime *runtime, NativeArgs args) {
   auto cr = JSArray::create(runtime, length, length);
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  auto array = toHandle(runtime, std::move(*cr));
+  auto array = runtime->makeHandle(std::move(*cr));
   JSArray::setStorageEndIndex(array, runtime, length);
 
   for (uint32_t i = 0; i != length; ++i) {

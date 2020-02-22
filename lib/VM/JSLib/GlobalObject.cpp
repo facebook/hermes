@@ -65,7 +65,7 @@ CallResult<HermesValue> parseInt(void *, Runtime *runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto str = toHandle(runtime, std::move(*strRes));
+  auto str = runtime->makeHandle(std::move(*strRes));
 
   int radix = 10;
   bool stripPrefix = true;
@@ -153,7 +153,7 @@ CallResult<HermesValue> parseFloat(void *, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto strHandle = toHandle(runtime, std::move(*res));
+  auto strHandle = runtime->makeHandle(std::move(*res));
   auto origStr = StringPrimitive::createStringView(runtime, strHandle);
 
   auto &idTable = runtime->getIdentifierTable();
