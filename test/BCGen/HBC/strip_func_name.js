@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -strict -target=HBC -dump-bytecode -fstrip-function-names -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -strict -fno-inline -dump-bytecode -fstrip-function-names -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -strict -fno-inline -fstrip-function-names -O %s | %FileCheck --match-full-lines %s --check-prefix=EXEC
 
 //CHECK-LABEL:Global String Table:
 //CHECK-NEXT: s0[ASCII, {{[0-9]+\.\.[0-9]+}}]: Done
@@ -22,22 +23,21 @@
 //CHECK-LABEL:Function<function-name-stripped>{{.*}}:
 //CHECK-NOT:{{.*}}entryPoint{{.*}}
 function entryPoint() {
-  helper();
+  return helper();
 }
 
 //CHECK-LABEL:Function<function-name-stripped>{{.*}}:
 //CHECK-NOT:{{.*}}helper{{.*}}
 function helper() {
+  // Dummy code.
   var s = "abc";
-  var x = 1;
-  var y;
-  var z = false;
-  for (var i = 0; i < 1000000; ++i) {
-    x = s.length;
-    y = s[i % 3];
-    z = s.substring(0, 1);
-  }
+  var x = s.length;
+  var y = s[1];
+  var z = s.substring(0, 1);
+  return 3;
 }
-entryPoint();
-print("Done");
+var result = entryPoint();
+print("Done", result);
 })();
+
+//EXEC: Done 3
