@@ -164,6 +164,11 @@ class Context {
   /// first time.
   bool lazyCompilation_{false};
 
+  /// Allows Function.toString() to return original source code. As with lazy
+  /// compilation this requires source buffers, and hence this Context instance
+  /// to be retained after compilation.
+  bool allowFunctionToStringWithRuntimeSource_{false};
+
   /// If true, wrap each file in the CommonJS module wrapper function,
   /// and use that for requiring modules.
   bool useCJSModules_{false};
@@ -300,6 +305,14 @@ class Context {
 
   void setLazyCompilation(bool lazyCompilation) {
     lazyCompilation_ = lazyCompilation;
+  }
+
+  bool allowFunctionToStringWithRuntimeSource() const {
+    return allowFunctionToStringWithRuntimeSource_;
+  }
+
+  void setAllowFunctionToStringWithRuntimeSource(bool v) {
+    allowFunctionToStringWithRuntimeSource_ = v;
   }
 
   void setStaticBuiltinOptimization(bool staticBuiltins) {

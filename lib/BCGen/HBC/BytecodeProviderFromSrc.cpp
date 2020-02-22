@@ -136,6 +136,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
   context->setStrictMode(compileFlags.strict);
   context->setEnableEval(true);
   context->setLazyCompilation(compileFlags.lazy);
+  context->setAllowFunctionToStringWithRuntimeSource(
+      compileFlags.allowFunctionToStringWithRuntimeSource);
 #ifdef HERMES_ENABLE_DEBUGGER
   context->setDebugInfoSetting(
       compileFlags.debug ? DebugInfoSetting::ALL : DebugInfoSetting::THROWING);

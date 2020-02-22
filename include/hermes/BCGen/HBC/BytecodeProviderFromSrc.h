@@ -21,6 +21,7 @@ struct CompileFlags {
   bool optimize{false};
   bool debug{false};
   bool lazy{false};
+  bool allowFunctionToStringWithRuntimeSource{false};
   bool strict{false};
   /// The value is optional; when it is set, the optimization setting is based
   /// on the value; when it is unset, it means the parser needs to automatically

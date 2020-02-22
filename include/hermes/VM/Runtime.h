@@ -153,7 +153,7 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> run(
       llvm::StringRef code,
       llvm::StringRef sourceURL,
-      const hbc::CompileFlags &compileFlags);
+      hbc::CompileFlags compileFlags);
 
   /// Runs the given UTF-8 \p code in a new RuntimeModule as top-level code.
   /// \param sourceURL the location of the source that's being run.
@@ -162,7 +162,7 @@ class Runtime : public HandleRootOwner,
   CallResult<HermesValue> run(
       std::unique_ptr<Buffer> code,
       llvm::StringRef sourceURL,
-      const hbc::CompileFlags &compileFlags);
+      hbc::CompileFlags compileFlags);
 
   /// Runs the given \p bytecode with the given \p runtimeModuleFlags. The \p
   /// sourceURL, if not empty, is reported as the file name in backtraces. If \p
@@ -1177,6 +1177,9 @@ class Runtime : public HandleRootOwner,
   /// Config-provided callback for GC events.
   std::function<void(GCEventKind, const char *)> gcEventCallback_;
 
+  /// Set from RuntimeConfig.
+  bool allowFunctionToStringWithRuntimeSource_;
+
 #ifdef HERMES_ENABLE_DEBUGGER
  private:
   /// This is used to store the last IP in the interpreter before making a call.
@@ -1224,6 +1227,13 @@ class Runtime : public HandleRootOwner,
 
   void restoreCallerIPFromStackFrame() {}
 #endif // HERMES_ENABLE_DEBUGGER
+  void setAllowFunctionToStringWithRuntimeSource(bool v) {
+    allowFunctionToStringWithRuntimeSource_ = v;
+  }
+
+  bool getAllowFunctionToStringWithRuntimeSource() const {
+    return allowFunctionToStringWithRuntimeSource_;
+  }
 };
 
 /// StackRuntime is meant to be used whenever a Runtime should be allocated on

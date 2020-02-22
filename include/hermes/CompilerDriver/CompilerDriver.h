@@ -94,5 +94,6 @@ extern llvm::cl::opt<bool> BasicBlockProfiling;
 extern llvm::cl::opt<bool> EnableEval;
 extern llvm::cl::opt<bool> VerifyIR;
 extern llvm::cl::opt<bool> EmitAsyncBreakCheck;
+extern llvm::cl::opt<bool> AllowFunctionToString;
 } // namespace cl
 #endif

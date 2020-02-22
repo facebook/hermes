@@ -258,7 +258,10 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate() {
         functionNameId);
 
 #ifndef HERMESVM_LEAN
-    if (F->isLazy()) {
+    if (F->getParent()
+            ->shareContext()
+            ->allowFunctionToStringWithRuntimeSource() ||
+        F->isLazy()) {
       auto context = F->getParent()->shareContext();
       assert(
           (!contextIfNeeded || contextIfNeeded.get() == context.get()) &&

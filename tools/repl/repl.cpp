@@ -275,6 +275,7 @@ int main(int argc, char **argv) {
           .withES6Symbol(cl::ES6Symbol)
           .withEnableHermesInternal(true)
           .withEnableHermesInternalTestMethods(true)
+          .withAllowFunctionToStringWithRuntimeSource(cl::AllowFunctionToString)
           .build());
 
   vm::GCScope gcScope(runtime.get());

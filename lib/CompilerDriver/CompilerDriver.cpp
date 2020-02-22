@@ -288,6 +288,11 @@ opt<bool> EmitAsyncBreakCheck(
     init(false),
     cat(CompilerCategory));
 
+opt<bool> AllowFunctionToString(
+    "allow-function-to-string",
+    init(false),
+    desc("Enables Function.toString() to return source-code when available"));
+
 static list<std::string> IncludeGlobals(
     "include-globals",
     desc("Include the definitions of global properties (can be "
@@ -1587,6 +1592,10 @@ CompileResult processSourceFiles(
 
   // Enable lazy compilation if requested.
   context->setLazyCompilation(cl::LazyCompilation);
+
+  // Allows Function.toString() to return original source code. As with lazy
+  // compilation this requires source buffers to be retained after compilation.
+  context->setAllowFunctionToStringWithRuntimeSource(cl::AllowFunctionToString);
 
   // Create the source map if requested.
   llvm::Optional<SourceMapGenerator> sourceMapGen{};

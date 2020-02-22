@@ -19,6 +19,8 @@
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
+#include "llvm/Support/ConvertUTF.h"
+
 namespace hermes {
 namespace vm {
 
@@ -100,6 +102,36 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
         "Can't call Function.prototype.toString() on non-callable");
   }
 
+#ifndef HERMESVM_LEAN
+  JSFunction *jsFunc;
+  if (runtime->getAllowFunctionToStringWithRuntimeSource() &&
+      (jsFunc = dyn_vmcast<JSFunction>(*func)) &&
+      jsFunc->getCodeBlock()->hasFunctionSource()) {
+    auto code = jsFunc->getCodeBlock()->getFunctionSource();
+    if (isAllASCII(std::begin(code), std::end(code))) {
+      return vm::StringPrimitive::createEfficient(
+          runtime, llvm::makeArrayRef(std::begin(code), std::end(code)));
+    }
+    std::u16string out;
+    out.resize(code.size());
+    const llvm::UTF8 *sourceStart = (const llvm::UTF8 *)code.data();
+    const llvm::UTF8 *sourceEnd = sourceStart + code.size();
+    llvm::UTF16 *targetStart = (llvm::UTF16 *)&out[0];
+    llvm::UTF16 *targetEnd = targetStart + out.size();
+    auto cRes = ConvertUTF8toUTF16(
+        &sourceStart,
+        sourceEnd,
+        &targetStart,
+        targetEnd,
+        llvm::lenientConversion);
+    (void)cRes;
+    assert(
+        cRes != llvm::ConversionResult::targetExhausted &&
+        "not enough space allocated for UTF16 conversion");
+    return vm::StringPrimitive::createEfficient(runtime, std::move(out));
+  }
+#endif
+
   SmallU16String<64> strBuf{};
   strBuf.append("function ");
 
@@ -153,7 +185,7 @@ functionPrototypeToString(void *, Runtime *runtime, NativeArgs args) {
 
   // Finally allocate a StringPrimitive.
   return StringPrimitive::create(runtime, strBuf);
-}
+} // namespace vm
 
 CallResult<HermesValue>
 functionPrototypeApply(void *, Runtime *runtime, NativeArgs args) {

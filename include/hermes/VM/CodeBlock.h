@@ -387,6 +387,17 @@ class CodeBlock final
   /// \param runtimeModule The RuntimeModule the CodeBlock belongs to.
   static CodeBlock *deserialize(Deserializer &d, RuntimeModule *runtimeModule);
 #endif
+
+#ifndef HERMESVM_LEAN
+  /// Returns true if source code is available for the function backing this
+  /// CodeBlock. This will only be the case if the function is lazily compiled,
+  /// or we've enabled Function.toString() to return source and compilation was
+  /// done at run-time.
+  llvm::StringRef getFunctionSource() const;
+
+  /// Returns true if \c getFunctionSource() above will return function source.
+  bool hasFunctionSource() const;
+#endif
 };
 
 #ifndef HERMESVM_LEAN
