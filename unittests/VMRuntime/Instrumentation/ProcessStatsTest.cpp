@@ -78,7 +78,7 @@ TEST(ProcessStatsTest, Test) {
 }
 
 void ProcessStatsTest(InfoAssertion assertionImpl) {
-#if !LLVM_ADDRESS_SANITIZER_BUILD
+#if !LLVM_ADDRESS_SANITIZER_BUILD && !LLVM_THREAD_SANITIZER_BUILD
   const size_t PS = hermes::oscompat::page_size();
   const size_t PSkB = PS / 1024;
 

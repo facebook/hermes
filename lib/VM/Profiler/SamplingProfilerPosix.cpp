@@ -16,6 +16,8 @@
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 
+#include "llvm/Support/Compiler.h"
+
 #include <assert.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -130,11 +132,15 @@ bool SamplingProfiler::unregisterSignalHandler() {
 }
 
 void SamplingProfiler::profilingSignalHandler(int signo) {
+  // Avoid spoiling errno in a signal handler by storing the old version and
+  // re-assigning it.
+  auto oldErrno = errno;
   // Fetch runtime used by this sampling thread.
   auto profilerInstance = sProfilerInstance_.load();
   Runtime *curThreadRuntime = profilerInstance->threadLocalRuntime_.get();
   if (curThreadRuntime == nullptr) {
     // Runtime may have unregistered itself before signal.
+    errno = oldErrno;
     return;
   }
   // Sampling stack will touch GC objects(like closure) so
@@ -157,8 +163,10 @@ void SamplingProfiler::profilingSignalHandler(int signo) {
     }
   }
   if (!profilerInstance->samplingDoneSem_.notifyOne()) {
+    errno = oldErrno;
     abort(); // Something is wrong.
   }
+  errno = oldErrno;
 }
 
 bool SamplingProfiler::sampleStack() {
