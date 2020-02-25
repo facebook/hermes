@@ -21,3 +21,8 @@ for (;false;) let [x] = 3;
 // CHECK: {{.*}}:20:15: error: ambiguous 'let [': either a 'let' binding or a member expression
 // CHECK: for (;false;) let [x] = 3;
 // CHECK:               ^~~~~
+
+for (;false;) async function foo() {}
+// CHECK: {{.*}}:25:15: error: declaration not allowed as expression statement
+// CHECK: for (;false;) async function foo() {}
+// CHECK:               ^~~~~

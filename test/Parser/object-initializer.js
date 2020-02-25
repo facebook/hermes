@@ -104,3 +104,103 @@ var tmp1 = { d };
 //CHECK-NEXT:            }
 //CHECK-NEXT:          }
 //CHECK-NEXT:        ]
+
+var a1 = { async, x };
+
+// CHECK:       "type": "VariableDeclaration",
+// CHECK-NEXT:       "kind": "var",
+// CHECK-NEXT:       "declarations": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "VariableDeclarator",
+// CHECK-NEXT:           "init": {
+// CHECK-NEXT:             "type": "ObjectExpression",
+// CHECK-NEXT:             "properties": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "Property",
+// CHECK-NEXT:                 "key": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "async",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "value": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "async",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "kind": "init",
+// CHECK-NEXT:                 "computed": false
+// CHECK-NEXT:               },
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "Property",
+// CHECK-NEXT:                 "key": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "x",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "value": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "x",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "kind": "init",
+// CHECK-NEXT:                 "computed": false
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ]
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "a1",
+// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ]
+
+var a2 = { x, async };
+
+// CHECK:       "type": "VariableDeclaration",
+// CHECK-NEXT:       "kind": "var",
+// CHECK-NEXT:       "declarations": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "VariableDeclarator",
+// CHECK-NEXT:           "init": {
+// CHECK-NEXT:             "type": "ObjectExpression",
+// CHECK-NEXT:             "properties": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "Property",
+// CHECK-NEXT:                 "key": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "x",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "value": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "x",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "kind": "init",
+// CHECK-NEXT:                 "computed": false
+// CHECK-NEXT:               },
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "Property",
+// CHECK-NEXT:                 "key": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "async",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "value": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "async",
+// CHECK-NEXT:                   "typeAnnotation": null
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "kind": "init",
+// CHECK-NEXT:                 "computed": false
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ]
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "id": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "a2",
+// CHECK-NEXT:             "typeAnnotation": null
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ]

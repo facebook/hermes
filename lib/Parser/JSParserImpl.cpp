@@ -82,6 +82,7 @@ void JSParserImpl::initializeIdentifiers() {
   yieldIdent_ = lexer_.getIdentifier("yield");
   newIdent_ = lexer_.getIdentifier("new");
   targetIdent_ = lexer_.getIdentifier("target");
+  asyncIdent_ = lexer_.getIdentifier("async");
 
   // Generate the string representation of all tokens.
   for (unsigned i = 0; i != NUM_JS_TOKENS; ++i)
@@ -223,6 +224,20 @@ bool JSParserImpl::checkEndAssignmentExpression() const {
       lexer_.isNewLineBeforeCurrentToken();
 }
 
+bool JSParserImpl::checkAsyncFunction() {
+  // async [no LineTerminator here] function
+  // ^
+  assert(
+      check(asyncIdent_) && "check for async function must occur at 'async'");
+  // Avoid passing TokenKind::rw_function here, because parseFunctionHelper
+  // relies on seeing `async` in order to construct its AST node.
+  // This function must also be idempotent to allow for branching based on its
+  // result in parseStatementListItem without having to store another flag,
+  // for example.
+  OptValue<TokenKind> optNext = lexer_.lookaheadAfterAsync(llvm::None);
+  return optNext.hasValue() && *optNext == TokenKind::rw_function;
+}
+
 bool JSParserImpl::eatSemi(SMLoc &endLoc, bool optional) {
   if (tok_->getKind() == TokenKind::semi) {
     endLoc = tok_->getEndLoc();
@@ -291,9 +306,17 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     Param param,
     bool isDeclaration,
     bool forceEagerly) {
-  // function
-  assert(tok_->getKind() == TokenKind::rw_function);
+  // function or async function
+  assert(check(TokenKind::rw_function) || check(asyncIdent_));
+  bool isAsync = check(asyncIdent_);
+
   SMLoc startLoc = advance().Start;
+
+  if (isAsync) {
+    // async function
+    //       ^
+    advance();
+  }
 
   bool isGenerator = checkAndEat(TokenKind::star);
 
@@ -364,7 +387,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           nullptr,
           nullptr,
           isGenerator,
-          false);
+          isAsync);
       // Initialize the node with a blank body.
       decl->_body = new (context_) ESTree::BlockStatementNode({});
       node = decl;
@@ -374,7 +397,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           std::move(paramList),
           nullptr,
           isGenerator,
-          false);
+          isAsync);
       // Initialize the node with a blank body.
       expr->_body = new (context_) ESTree::BlockStatementNode({});
       node = expr;
@@ -403,7 +426,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         body,
         nullptr,
         isGenerator,
-        false);
+        isAsync);
     decl->strictness = ESTree::makeStrictness(isStrictMode());
     node = decl;
   } else {
@@ -412,7 +435,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         std::move(paramList),
         body,
         isGenerator,
-        false);
+        isAsync);
     expr->strictness = ESTree::makeStrictness(isStrictMode());
     node = expr;
   }
@@ -545,7 +568,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
 
   assert(checkDeclaration() && "invalid start for declaration");
 
-  if (tok_->getKind() == TokenKind::rw_function) {
+  if (check(TokenKind::rw_function) || check(asyncIdent_)) {
     auto fdecl = parseFunctionDeclaration(Param{});
     if (!fdecl)
       return None;
@@ -1154,7 +1177,8 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
   // Allow execution to continue because the expression may be parsed,
   // but report an error because it will be ambiguous whether the parse was
   // correct.
-  if (checkN(TokenKind::l_brace, TokenKind::rw_function, TokenKind::rw_class)) {
+  if (checkN(TokenKind::l_brace, TokenKind::rw_function, TokenKind::rw_class) ||
+      (check(asyncIdent_) && checkAsyncFunction())) {
     // There's no need to stop reporting errors.
     sm_.error(
         tok_->getSourceRange(),
@@ -1911,6 +1935,12 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
               "Unexpected usage of 'yield' as an identifier reference");
         }
       }
+      if (check(asyncIdent_) && checkAsyncFunction()) {
+        auto func = parseFunctionExpression();
+        if (!func)
+          return None;
+        return func.getValue();
+      }
       auto *res = setLocation(
           tok_,
           tok_,
@@ -2170,6 +2200,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 
   bool computed = false;
   bool generator = false;
+  bool async = false;
 
   if (check(getIdent_)) {
     UniqueString *ident = tok_->getResWordOrIdentifier();
@@ -2285,6 +2316,42 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           optKey.getValue(), funcExpr, setIdent_, computed);
       return setLocation(startLoc, block.getValue(), node);
     }
+  } else if (check(asyncIdent_)) {
+    UniqueString *ident = tok_->getResWordOrIdentifier();
+    SMRange identRng = tok_->getSourceRange();
+    advance();
+
+    // This could either be an async function, or a property named 'async'.
+    if (check(TokenKind::colon, TokenKind::l_paren)) {
+      // This is just a property (or method) called 'async'.
+      key = setLocation(
+          identRng,
+          identRng,
+          new (context_) ESTree::IdentifierNode(ident, nullptr));
+    } else if (check(TokenKind::comma, TokenKind::r_brace)) {
+      // If the next token is "," or "}", this is a shorthand property
+      // definition.
+      key = setLocation(
+          identRng,
+          identRng,
+          new (context_) ESTree::IdentifierNode(ident, nullptr));
+      auto *value = setLocation(
+          key, key, new (context_) ESTree::IdentifierNode(ident, nullptr));
+      return setLocation(
+          startLoc,
+          value,
+          new (context_) ESTree::PropertyNode(key, value, initIdent_, false));
+    } else {
+      // This is an async function, parse the key and set `async` to true.
+      async = true;
+      generator = checkAndEat(TokenKind::star);
+      computed = check(TokenKind::l_square);
+      auto optKey = parsePropertyName();
+      if (!optKey)
+        return None;
+
+      key = optKey.getValue();
+    }
   } else if (check(TokenKind::identifier)) {
     auto *ident = tok_->getIdentifier();
     key = setLocation(
@@ -2323,7 +2390,11 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         startLoc,
         *optInit,
         new (context_) ESTree::CoverInitializerNode(*optInit));
-  } else if (check(TokenKind::l_paren)) {
+  } else if (check(TokenKind::l_paren) || async) {
+    // Try this branch when we have '(' to indicate a method
+    // or when we know this is async, because async must also indicate a method,
+    // and we must avoid parsing ordinary properties from ':'.
+
     // Parse the MethodDefinition manually here.
     // Do not use `parseMethodDefinition` because we had to parsePropertyName
     // in this function ourselves and check for SingleNameBindings, which are
@@ -2357,7 +2428,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       return None;
 
     auto *funcExpr = new (context_) ESTree::FunctionExpressionNode(
-        nullptr, std::move(args), optBody.getValue(), generator, false);
+        nullptr, std::move(args), optBody.getValue(), generator, async);
     funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
     funcExpr->isMethodDefinition = true;
     setLocation(startLoc, optBody.getValue(), funcExpr);
@@ -3384,6 +3455,8 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
     Get,
     Set,
     Generator,
+    Async,
+    AsyncGenerator,
   };
 
   // Indicates if this method is out of the ordinary.
@@ -3418,6 +3491,20 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
           range,
           range,
           new (context_) ESTree::IdentifierNode(setIdent_, nullptr));
+      doParsePropertyName = false;
+    }
+  } else if (check(asyncIdent_)) {
+    SMRange range = advance();
+    if (!check(TokenKind::l_paren)) {
+      // If we don't see '(' then this was actually an async method.
+      // These can be either Async or AsyncGenerator, so check for that.
+      special = checkAndEat(TokenKind::star) ? SpecialKind::AsyncGenerator
+                                             : SpecialKind::Async;
+    } else {
+      prop = setLocation(
+          range,
+          range,
+          new (context_) ESTree::IdentifierNode(asyncIdent_, nullptr));
       doParsePropertyName = false;
     }
   } else if (checkAndEat(TokenKind::star)) {
@@ -3463,7 +3550,9 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
   ESTree::NodeList args{};
 
   llvm::SaveAndRestore<bool> saveArgsAndBodyParamYield(
-      paramYield_, special == SpecialKind::Generator);
+      paramYield_,
+      special == SpecialKind::Generator ||
+          special == SpecialKind::AsyncGenerator);
 
   if (!parseFormalParameters(Param{}, args))
     return None;
@@ -3487,8 +3576,10 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
           nullptr,
           std::move(args),
           optBody.getValue(),
-          special == SpecialKind::Generator,
-          false));
+          special == SpecialKind::Generator ||
+              special == SpecialKind::AsyncGenerator,
+          special == SpecialKind::Async ||
+              special == SpecialKind::AsyncGenerator));
   assert(
       isStrictMode() &&
       "parseMethodDefinition should only be used for classes");
@@ -3544,7 +3635,10 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
 
 bool JSParserImpl::reparseArrowParameters(
     ESTree::Node *node,
-    ESTree::NodeList &paramList) {
+    ESTree::NodeList &paramList,
+    bool &reparsedAsync) {
+  reparsedAsync = false;
+
   // Empty argument list "()".
   if (node->getParens() == 0 && isa<ESTree::CoverEmptyArgsNode>(node))
     return true;
@@ -3555,7 +3649,7 @@ bool JSParserImpl::reparseArrowParameters(
     return true;
   }
 
-  if (node->getParens() != 1) {
+  if (node->getParens() != 1 && !isa<ESTree::CallExpressionNode>(node)) {
     sm_.error(node->getSourceRange(), "invalid arrow function parameter list");
     return false;
   }
@@ -3564,6 +3658,12 @@ bool JSParserImpl::reparseArrowParameters(
 
   if (auto *seqNode = dyn_cast<ESTree::SequenceExpressionNode>(node)) {
     nodeList = std::move(seqNode->_expressions);
+  } else if (auto *callNode = dyn_cast<ESTree::CallExpressionNode>(node)) {
+    // Async function parameters look like call expressions. For example:
+    // async(x,y)
+    // Set `reparsedAsync = true` to indicate that this was async.
+    nodeList = std::move(callNode->_arguments);
+    reparsedAsync = true;
   } else {
     node->clearParens();
     nodeList.push_back(*node);
@@ -3592,6 +3692,17 @@ bool JSParserImpl::reparseArrowParameters(
         lexer_.error(expr->getSourceRange(), "rest parameter must be last");
       else
         paramList.push_back(*CRE->_rest);
+      continue;
+    }
+
+    if (auto *spread = dyn_cast<ESTree::SpreadElementNode>(expr)) {
+      // async arrow heads are initially parsed as CallExpression,
+      // which means that Rest elements are parsed as SpreadElement.
+      if (it != e)
+        lexer_.error(expr->getSourceRange(), "rest parameter must be last");
+      else
+        paramList.push_back(*new (context_)
+                                ESTree::RestElementNode(spread->_argument));
       continue;
     }
 
@@ -3634,7 +3745,9 @@ bool JSParserImpl::reparseArrowParameters(
 
 Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     Param param,
-    ESTree::Node *leftExpr) {
+    ESTree::Node *leftExpr,
+    SMLoc startLoc,
+    bool forceAsync) {
   // ArrowFunction : ArrowParameters [no line terminator] => ConciseBody.
   assert(
       check(TokenKind::equalgreater) && !lexer_.isNewLineBeforeCurrentToken() &&
@@ -3643,8 +3756,9 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   // Eat the '=>'.
   advance();
 
+  bool reparsedAsync;
   ESTree::NodeList paramList;
-  if (!reparseArrowParameters(leftExpr, paramList))
+  if (!reparseArrowParameters(leftExpr, paramList, reparsedAsync))
     return None;
 
   SaveStrictMode saveStrictMode{this};
@@ -3667,10 +3781,14 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   }
 
   auto *arrow = new (context_) ESTree::ArrowFunctionExpressionNode(
-      nullptr, std::move(paramList), body, expression, false);
+      nullptr,
+      std::move(paramList),
+      body,
+      expression,
+      forceAsync || reparsedAsync);
 
   arrow->strictness = ESTree::makeStrictness(isStrictMode());
-  return setLocation(leftExpr, body, arrow);
+  return setLocation(startLoc, body, arrow);
 }
 
 Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
@@ -3879,14 +3997,27 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(Param param) {
     return *optYieldExpr;
   }
 
+  SMLoc startLoc = tok_->getStartLoc();
+  bool isAsync = false;
+  if (check(asyncIdent_)) {
+    OptValue<TokenKind> optNext =
+        lexer_.lookaheadAfterAsync(TokenKind::identifier);
+    if (optNext.hasValue() && *optNext == TokenKind::identifier) {
+      isAsync = true;
+    }
+  }
+
   auto optLeftExpr = parseConditionalExpression(param);
   if (!optLeftExpr)
     return None;
 
   // Check for ArrowFunction.
   //   ArrowFunction : ArrowParameters [no line terminator] => ConciseBody.
+  //   AsyncArrowFunction :
+  //   async [no line terminator] ArrowParameters [no line terminator] =>
+  //   ConciseBody.
   if (check(TokenKind::equalgreater) && !lexer_.isNewLineBeforeCurrentToken()) {
-    return parseArrowFunctionExpression(param, *optLeftExpr);
+    return parseArrowFunctionExpression(param, *optLeftExpr, startLoc, isAsync);
   }
 
   if (!checkAssign())
@@ -4253,7 +4384,8 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
         new (context_) ESTree::ExportAllDeclarationNode(*optFromClause));
   } else if (checkAndEat(TokenKind::rw_default)) {
     // export default
-    if (check(TokenKind::rw_function)) {
+    if (check(TokenKind::rw_function) ||
+        (check(asyncIdent_) && checkAsyncFunction())) {
       // export default HoistableDeclaration
       // Currently, the only hoistable declarations are functions.
       auto optFunDecl = parseFunctionDeclaration(ParamDefault);

@@ -607,6 +607,38 @@ const Token *JSLexer::rescanRBraceInTemplateLiteral() {
   return &token_;
 }
 
+OptValue<TokenKind> JSLexer::lookaheadAfterAsync(
+    OptValue<TokenKind> expectedToken) {
+  assert(
+      token_.getKind() == TokenKind::identifier &&
+      token_.getIdentifier()->str() == "async" &&
+      "current token must be 'async'");
+  UniqueString *savedIdent = token_.getIdentifier();
+  SMLoc start = token_.getStartLoc();
+  SMLoc end = token_.getEndLoc();
+  const char *cur = curCharPtr_;
+  SourceErrorManager::SaveAndSuppressMessages suppress(&sm_);
+
+  advance();
+  TokenKind kind = token_.getKind();
+  if (isNewLineBeforeCurrentToken()) {
+    // Disregard anything after LineTerminator.
+    return llvm::None;
+  }
+
+  if (expectedToken.hasValue() && expectedToken.getValue() == kind) {
+    // Do not move the cursor back.
+    return kind;
+  }
+
+  token_.setStart(start.getPointer());
+  token_.setEnd(end.getPointer());
+  token_.setIdentifier(savedIdent);
+  seek(SMLoc::getFromPointer(cur));
+
+  return kind;
+}
+
 uint32_t JSLexer::consumeUnicodeEscape() {
   assert(*curCharPtr_ == '\\');
   ++curCharPtr_;

@@ -9,6 +9,7 @@
 #define HERMES_PARSER_JSLEXER_H
 
 #include "hermes/Support/Allocator.h"
+#include "hermes/Support/OptValue.h"
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/Support/StringTable.h"
 #include "hermes/Support/UTF8.h"
@@ -379,6 +380,23 @@ class JSLexer {
   /// Rescan the } token as a TemplateMiddle or TemplateTail.
   /// Should be called in the middle of parsing a template literal.
   const Token *rescanRBraceInTemplateLiteral();
+
+  /// Skip over any non-line-terminator whitespace and return the kind of
+  /// the next token if there was no LineTerminator before it.
+  /// Does not report any error messages during lookahead.
+  /// For example, this is used to determine whether we're in the
+  ///   async [no LineTerminator here] function
+  ///         ^
+  /// or the
+  ///   async [no LineTerminator here] ArrowFormalParameters
+  ///         ^
+  /// case for parsing async functions and arrow functions.
+  /// \pre the current token must be "async".
+  /// \param expectedToken if not None, then if the next token is expectedToken,
+  ///   the next token is scanned and the curCharPtr_ isn't reset to 'async'.
+  /// \return the kind of next token if there was no LineTerminator,
+  ///   otherwise return None.
+  OptValue<TokenKind> lookaheadAfterAsync(OptValue<TokenKind> expectedToken);
 
   /// Report an error for the range from startLoc to curCharPtr.
   bool errorRange(SMLoc startLoc, const llvm::Twine &msg) {

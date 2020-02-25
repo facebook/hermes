@@ -209,6 +209,7 @@ class JSParserImpl {
   UniqueString *yieldIdent_;
   UniqueString *newIdent_;
   UniqueString *targetIdent_;
+  UniqueString *asyncIdent_;
   /// String representation of all tokens.
   UniqueString *tokenIdent_[NUM_JS_TOKENS];
 
@@ -368,12 +369,13 @@ class JSParserImpl {
   bool checkAssign() const;
 
   /// Check whether the current token begins a Declaration.
-  bool checkDeclaration() const {
+  bool checkDeclaration() {
     return checkN(
-        TokenKind::rw_function,
-        letIdent_,
-        TokenKind::rw_const,
-        TokenKind::rw_class);
+               TokenKind::rw_function,
+               letIdent_,
+               TokenKind::rw_const,
+               TokenKind::rw_class) ||
+        (check(asyncIdent_) && checkAsyncFunction());
   }
 
   /// Check whether the current token begins a template literal.
@@ -384,6 +386,10 @@ class JSParserImpl {
   /// Check whether the current token can be the token after the end of an
   /// AssignmentExpression.
   bool checkEndAssignmentExpression() const;
+
+  /// Check whether we match 'async [no LineTerminator here] function'.
+  /// \pre the current token is 'async'.
+  bool checkAsyncFunction();
 
   /// Performs automatic semicolon insertion and optionally reports an error
   /// if a semicolon is missing and cannot be inserted.
@@ -681,11 +687,21 @@ class JSParserImpl {
   /// Reparse the specified node as arrow function parameter list and store the
   /// parameter list in \p paramList. Print an error and return false on error,
   /// otherwise return true.
-  bool reparseArrowParameters(ESTree::Node *node, ESTree::NodeList &paramList);
+  /// \param[out] reparsedAsync set to true when the params indicate an async
+  /// function, false otherwise.
+  bool reparseArrowParameters(
+      ESTree::Node *node,
+      ESTree::NodeList &paramList,
+      bool &reparsedAsync);
 
+  /// \param forceAsync set to true when it is already known that the arrow
+  ///   function expression is 'async'. This occurs when there are no parens
+  ///   around the argument list.
   Optional<ESTree::Node *> parseArrowFunctionExpression(
       Param param,
-      ESTree::Node *leftExpr);
+      ESTree::Node *leftExpr,
+      SMLoc startLoc,
+      bool forceAsync);
 
   /// Reparse an ArrayExpression into an ArrayPattern.
   /// \param inDecl whether this is a declaration context or assignment.

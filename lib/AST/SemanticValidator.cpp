@@ -129,16 +129,25 @@ void SemanticValidator::visit(IdentifierNode *identifier) {
 
 /// Process a function declaration by creating a new FunctionContext.
 void SemanticValidator::visit(FunctionDeclarationNode *funcDecl) {
+  if (funcDecl->_async) {
+    sm_.error(funcDecl->getStartLoc(), "async functions are unsupported");
+  }
   curFunction()->semInfo->closures.push_back(funcDecl);
   visitFunction(funcDecl, funcDecl->_id, funcDecl->_params, funcDecl->_body);
 }
 
 /// Process a function expression by creating a new FunctionContext.
 void SemanticValidator::visit(FunctionExpressionNode *funcExpr) {
+  if (funcExpr->_async) {
+    sm_.error(funcExpr->getStartLoc(), "async functions are unsupported");
+  }
   visitFunction(funcExpr, funcExpr->_id, funcExpr->_params, funcExpr->_body);
 }
 
 void SemanticValidator::visit(ArrowFunctionExpressionNode *arrowFunc) {
+  if (arrowFunc->_async) {
+    sm_.error(arrowFunc->getStartLoc(), "async functions are unsupported");
+  }
   // Convert expression functions to a full-body to simplify IRGen.
   if (arrowFunc->_expression) {
     auto *retStmt = new (astContext_) ReturnStatementNode(arrowFunc->_body);
