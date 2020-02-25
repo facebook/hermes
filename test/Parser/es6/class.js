@@ -49,7 +49,8 @@
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "constructor",
 // CHECK-NEXT:               "computed": false,
@@ -79,7 +80,8 @@
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -110,7 +112,8 @@
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": true,
@@ -140,7 +143,8 @@
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -170,7 +174,8 @@
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "get",
 // CHECK-NEXT:               "computed": false,
@@ -191,7 +196,8 @@
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": true
+// CHECK-NEXT:                 "generator": true,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -212,7 +218,8 @@
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -247,7 +254,8 @@
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -311,7 +319,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "constructor",
 // CHECK-NEXT:             "computed": false,
@@ -357,7 +366,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "method",
 // CHECK-NEXT:             "computed": false,
@@ -393,7 +403,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "method",
 // CHECK-NEXT:             "computed": false,
@@ -453,7 +464,8 @@ class UseSuperProps {
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": true
+// CHECK-NEXT:                 "generator": true,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -488,7 +500,8 @@ class UseSuperProps {
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                   ]
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": true
+// CHECK-NEXT:                 "generator": true,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -533,7 +546,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "get",
 // CHECK-NEXT:               "computed": true,
@@ -559,7 +573,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "set",
 // CHECK-NEXT:               "computed": true,
@@ -580,7 +595,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -601,7 +617,8 @@ class UseSuperProps {
 // CHECK-NEXT:                   "type": "BlockStatement",
 // CHECK-NEXT:                   "body": []
 // CHECK-NEXT:                 },
-// CHECK-NEXT:                 "generator": false
+// CHECK-NEXT:                 "generator": false,
+// CHECK-NEXT:                 "async": false
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "kind": "method",
 // CHECK-NEXT:               "computed": false,
@@ -644,7 +661,8 @@ class SemiClass {
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "method",
 // CHECK-NEXT:             "computed": false,
@@ -683,7 +701,8 @@ class DeclClass {
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "method",
 // CHECK-NEXT:             "computed": false,

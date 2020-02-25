@@ -163,7 +163,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "get",
 // CHECK-NEXT:             "computed": true
@@ -193,7 +194,8 @@ var {['x']: z} = {x: 3};
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "set",
 // CHECK-NEXT:             "computed": true

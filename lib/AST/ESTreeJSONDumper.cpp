@@ -139,6 +139,7 @@ class ESTreeJSONDumper {
 #define ESTREE_NODE_3_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_4_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_5_ARGS(NAME, ...) VISIT(NAME)
+#define ESTREE_NODE_6_ARGS(NAME, ...) VISIT(NAME)
 
 #include "hermes/AST/ESTree.def"
 
@@ -165,6 +166,7 @@ class ESTreeJSONDumper {
 #define ESTREE_NODE_3_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_4_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_5_ARGS(NAME, ...) VISIT(NAME)
+#define ESTREE_NODE_6_ARGS(NAME, ...) VISIT(NAME)
 
 #include "hermes/AST/ESTree.def"
 
@@ -258,6 +260,35 @@ class ESTreeJSONDumper {
     DUMP_KEY_VALUE_PAIR(#ARG4NM, node->_##ARG4NM) \
   }
 
+#define ESTREE_NODE_6_ARGS(                       \
+    NAME,                                         \
+    BASE,                                         \
+    ARG0TY,                                       \
+    ARG0NM,                                       \
+    ARG0OPT,                                      \
+    ARG1TY,                                       \
+    ARG1NM,                                       \
+    ARG1OPT,                                      \
+    ARG2TY,                                       \
+    ARG2NM,                                       \
+    ARG2OPT,                                      \
+    ARG3TY,                                       \
+    ARG3NM,                                       \
+    ARG3OPT,                                      \
+    ARG4TY,                                       \
+    ARG4NM,                                       \
+    ARG4OPT,                                      \
+    ARG5TY,                                       \
+    ARG5NM,                                       \
+    ARG5OPT)                                      \
+  void visitChildren(NAME##Node *node) {          \
+    DUMP_KEY_VALUE_PAIR(#ARG0NM, node->_##ARG0NM) \
+    DUMP_KEY_VALUE_PAIR(#ARG1NM, node->_##ARG1NM) \
+    DUMP_KEY_VALUE_PAIR(#ARG2NM, node->_##ARG2NM) \
+    DUMP_KEY_VALUE_PAIR(#ARG3NM, node->_##ARG3NM) \
+    DUMP_KEY_VALUE_PAIR(#ARG4NM, node->_##ARG4NM) \
+    DUMP_KEY_VALUE_PAIR(#ARG5NM, node->_##ARG5NM) \
+  }
 #include "hermes/AST/ESTree.def"
 
 #undef DUMP_KEY_VALUE_PAIR

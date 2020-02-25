@@ -54,7 +54,8 @@
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false
@@ -75,7 +76,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": true
@@ -96,7 +98,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false
@@ -118,7 +121,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false
@@ -154,7 +158,8 @@
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                 ]
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": true
+// CHECK-NEXT:               "generator": true,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false
@@ -176,7 +181,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false
@@ -198,7 +204,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false
@@ -234,7 +241,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "set",
 // CHECK-NEXT:             "computed": false
@@ -270,7 +278,8 @@
 // CHECK-NEXT:                 "type": "BlockStatement",
 // CHECK-NEXT:                 "body": []
 // CHECK-NEXT:               },
-// CHECK-NEXT:               "generator": false
+// CHECK-NEXT:               "generator": false,
+// CHECK-NEXT:               "async": false
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "kind": "init",
 // CHECK-NEXT:             "computed": false

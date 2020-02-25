@@ -47,7 +47,8 @@ function foo(
 // CHECK-NEXT:                 }
 // CHECK-NEXT:               ]
 // CHECK-NEXT:             },
-// CHECK-NEXT:             "generator": true
+// CHECK-NEXT:             "generator": true,
+// CHECK-NEXT:             "async": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
@@ -56,7 +57,8 @@ function foo(
 // CHECK-NEXT:         "body": []
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "returnType": null,
-// CHECK-NEXT:       "generator": false
+// CHECK-NEXT:       "generator": false,
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ]
 // CHECK-NEXT: }

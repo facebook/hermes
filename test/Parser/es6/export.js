@@ -45,7 +45,8 @@ export default function myFun() { return 3; }
 // CHECK-NEXT:             ]
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "returnType": null,
-// CHECK-NEXT:           "generator": false
+// CHECK-NEXT:           "generator": false,
+// CHECK-NEXT:           "async": false
 // CHECK-NEXT:         }
 // CHECK-NEXT:       },
 
@@ -91,7 +92,8 @@ export function funDecl() {}
 // CHECK-NEXT:             "body": []
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "returnType": null,
-// CHECK-NEXT:           "generator": false
+// CHECK-NEXT:           "generator": false,
+// CHECK-NEXT:           "async": false
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],
 // CHECK-NEXT:         "source": null

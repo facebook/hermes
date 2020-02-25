@@ -24,7 +24,7 @@ switch (foo()) {
     print(foo());
 }
 
-// CHECK: {"type":"Program","body":[{"type":"FunctionDeclaration","id":{"type":"Identifier","name":"foo","typeAnnotation":null},"params":[],"body":{"type":"BlockStatement","body":[{"type":"ReturnStatement","argument":{"type":"CallExpression","callee":{"type":"MemberExpression","object":{"type":"Identifier","name":"Math","typeAnnotation":null},"property":{"type":"Identifier","name":"random","typeAnnotation":null},"computed":false},"arguments":[]}}]},"returnType":null,"generator":false},{"type":"SwitchStatement","discriminant":{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]},"cases":[{"type":"SwitchCase","test":{"type":"NumericLiteral","value":3,"raw":"3"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"fizz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":{"type":"NumericLiteral","value":5,"raw":"5"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"buzz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":null,"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]}]},"directive":null}]}]}]}
+// CHECK: {"type":"Program","body":[{"type":"FunctionDeclaration","id":{"type":"Identifier","name":"foo","typeAnnotation":null},"params":[],"body":{"type":"BlockStatement","body":[{"type":"ReturnStatement","argument":{"type":"CallExpression","callee":{"type":"MemberExpression","object":{"type":"Identifier","name":"Math","typeAnnotation":null},"property":{"type":"Identifier","name":"random","typeAnnotation":null},"computed":false},"arguments":[]}}]},"returnType":null,"generator":false,"async":false},{"type":"SwitchStatement","discriminant":{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]},"cases":[{"type":"SwitchCase","test":{"type":"NumericLiteral","value":3,"raw":"3"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"fizz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":{"type":"NumericLiteral","value":5,"raw":"5"},"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"StringLiteral","value":"buzz"}]},"directive":null},{"type":"BreakStatement","label":null}]},{"type":"SwitchCase","test":null,"consequent":[{"type":"ExpressionStatement","expression":{"type":"CallExpression","callee":{"type":"Identifier","name":"print","typeAnnotation":null},"arguments":[{"type":"CallExpression","callee":{"type":"Identifier","name":"foo","typeAnnotation":null},"arguments":[]}]},"directive":null}]}]}]}
 
 // CHECK-PRETTY:   {
 // CHECK-PRETTY:     "type": "Program",
@@ -64,7 +64,8 @@ switch (foo()) {
 // CHECK-PRETTY:           ]
 // CHECK-PRETTY:         },
 // CHECK-PRETTY:         "returnType": null,
-// CHECK-PRETTY:         "generator": false
+// CHECK-PRETTY:         "generator": false,
+// CHECK-PRETTY:         "async": false
 // CHECK-PRETTY:       },
 // CHECK-PRETTY:       {
 // CHECK-PRETTY:         "type": "SwitchStatement",
@@ -313,6 +314,7 @@ switch (foo()) {
 // CHECK-SOURCE-LOC:         },
 // CHECK-SOURCE-LOC:         "returnType": null,
 // CHECK-SOURCE-LOC:         "generator": false,
+// CHECK-SOURCE-LOC:         "async": false,
 // CHECK-SOURCE-LOC:         "loc": {
 // CHECK-SOURCE-LOC:           "start": {
 // CHECK-SOURCE-LOC:             "line": 12,

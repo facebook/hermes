@@ -210,5 +210,6 @@ import defaultBar, * as Bar from 'bar.js';
 
 // CHECK-NEXT:     ]
 // CHECK-NEXT:   },
-// CHECK-NEXT:   "generator": false
+// CHECK-NEXT:   "generator": false,
+// CHECK-NEXT:   "async": false
 // CHECK-NEXT: }

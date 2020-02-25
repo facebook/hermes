@@ -36,7 +36,8 @@ const char *SimpleESTreeProgram =
     "            \"type\": \"BlockStatement\","
     "            \"body\": [], "
     "          },  "
-    "          \"generator\": false"
+    "          \"generator\": false,"
+    "          \"async\": false"
     "        }   "
     "      ],  "
     "  }";

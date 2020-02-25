@@ -33,7 +33,8 @@ var t1 = a => 1;
 //CHECK-NEXT:                "value": 1,
 //CHECK-NEXT:                "raw": "1"
 //CHECK-NEXT:              },
-//CHECK-NEXT:              "expression": true
+//CHECK-NEXT:              "expression": true,
+//CHECK-NEXT:              "async": false
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
@@ -66,7 +67,8 @@ var t2 = (a) => 1;
 //CHECK-NEXT:                "value": 1,
 //CHECK-NEXT:                "raw": "1"
 //CHECK-NEXT:              },
-//CHECK-NEXT:              "expression": true
+//CHECK-NEXT:              "expression": true,
+//CHECK-NEXT:              "async": false
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
@@ -107,7 +109,8 @@ var t3 = a => { return 20; }
 //CHECK-NEXT:                  }
 //CHECK-NEXT:                ]
 //CHECK-NEXT:              },
-//CHECK-NEXT:              "expression": false
+//CHECK-NEXT:              "expression": false,
+//CHECK-NEXT:              "async": false
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
@@ -150,7 +153,8 @@ var t4 = (a,b,c) => a;
 //CHECK-NEXT:                "name": "a",
 //CHECK-NEXT:                "typeAnnotation": null
 //CHECK-NEXT:              },
-//CHECK-NEXT:              "expression": true
+//CHECK-NEXT:              "expression": true,
+//CHECK-NEXT:              "async": false
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
@@ -177,7 +181,8 @@ var t5 = () => 3;
 //CHECK-NEXT:                "value": 3,
 //CHECK-NEXT:                "raw": "3"
 //CHECK-NEXT:              },
-//CHECK-NEXT:              "expression": true
+//CHECK-NEXT:              "expression": true,
+//CHECK-NEXT:              "async": false
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",
@@ -210,7 +215,8 @@ var t6 = (a,) => 3;
 //CHECK-NEXT:                "value": 3,
 //CHECK-NEXT:                "raw": "3"
 //CHECK-NEXT:              },
-//CHECK-NEXT:              "expression": true
+//CHECK-NEXT:              "expression": true,
+//CHECK-NEXT:              "async": false
 //CHECK-NEXT:            },
 //CHECK-NEXT:            "id": {
 //CHECK-NEXT:              "type": "Identifier",

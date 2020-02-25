@@ -147,7 +147,8 @@ let foo = (a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) => {}
 //CHECK-NEXT:                 "type": "BlockStatement",
 //CHECK-NEXT:                 "body": []
 //CHECK-NEXT:               },
-//CHECK-NEXT:               "expression": false
+//CHECK-NEXT:               "expression": false,
+//CHECK-NEXT:               "async": false
 //CHECK-NEXT:             },
 //CHECK-NEXT:             "id": {
 //CHECK-NEXT:               "type": "Identifier",
@@ -185,7 +186,8 @@ let bar = ([,,]) => {}
 // CHECK-NEXT:               "type": "BlockStatement",
 // CHECK-NEXT:               "body": []
 // CHECK-NEXT:             },
-// CHECK-NEXT:             "expression": false
+// CHECK-NEXT:             "expression": false,
+// CHECK-NEXT:             "async": false
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "id": {
 // CHECK-NEXT:             "type": "Identifier",

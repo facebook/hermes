@@ -44,7 +44,8 @@ function foo() {
 // CHECK-NEXT:         ]
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "returnType": null,
-// CHECK-NEXT:       "generator": false
+// CHECK-NEXT:       "generator": false,
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

@@ -363,13 +363,18 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           std::move(paramList),
           nullptr,
           nullptr,
-          isGenerator);
+          isGenerator,
+          false);
       // Initialize the node with a blank body.
       decl->_body = new (context_) ESTree::BlockStatementNode({});
       node = decl;
     } else {
       auto *expr = new (context_) ESTree::FunctionExpressionNode(
-          optId ? *optId : nullptr, std::move(paramList), nullptr, isGenerator);
+          optId ? *optId : nullptr,
+          std::move(paramList),
+          nullptr,
+          isGenerator,
+          false);
       // Initialize the node with a blank body.
       expr->_body = new (context_) ESTree::BlockStatementNode({});
       node = expr;
@@ -397,12 +402,17 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
         std::move(paramList),
         body,
         nullptr,
-        isGenerator);
+        isGenerator,
+        false);
     decl->strictness = ESTree::makeStrictness(isStrictMode());
     node = decl;
   } else {
     auto *expr = new (context_) ESTree::FunctionExpressionNode(
-        optId ? *optId : nullptr, std::move(paramList), body, isGenerator);
+        optId ? *optId : nullptr,
+        std::move(paramList),
+        body,
+        isGenerator,
+        false);
     expr->strictness = ESTree::makeStrictness(isStrictMode());
     node = expr;
   }
@@ -2206,7 +2216,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         return None;
 
       auto *funcExpr = new (context_) ESTree::FunctionExpressionNode(
-          nullptr, ESTree::NodeList{}, block.getValue(), false);
+          nullptr, ESTree::NodeList{}, block.getValue(), false, false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
       funcExpr->isMethodDefinition = true;
       setLocation(startLoc, block.getValue(), funcExpr);
@@ -2266,7 +2276,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         return None;
 
       auto *funcExpr = new (context_) ESTree::FunctionExpressionNode(
-          nullptr, std::move(params), block.getValue(), false);
+          nullptr, std::move(params), block.getValue(), false, false);
       funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
       funcExpr->isMethodDefinition = true;
       setLocation(startLoc, block.getValue(), funcExpr);
@@ -2347,7 +2357,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       return None;
 
     auto *funcExpr = new (context_) ESTree::FunctionExpressionNode(
-        nullptr, std::move(args), optBody.getValue(), generator);
+        nullptr, std::move(args), optBody.getValue(), generator, false);
     funcExpr->strictness = ESTree::makeStrictness(isStrictMode());
     funcExpr->isMethodDefinition = true;
     setLocation(startLoc, optBody.getValue(), funcExpr);
@@ -3477,7 +3487,8 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
           nullptr,
           std::move(args),
           optBody.getValue(),
-          special == SpecialKind::Generator));
+          special == SpecialKind::Generator,
+          false));
   assert(
       isStrictMode() &&
       "parseMethodDefinition should only be used for classes");
@@ -3656,7 +3667,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   }
 
   auto *arrow = new (context_) ESTree::ArrowFunctionExpressionNode(
-      nullptr, std::move(paramList), body, expression);
+      nullptr, std::move(paramList), body, expression, false);
 
   arrow->strictness = ESTree::makeStrictness(isStrictMode());
   return setLocation(leftExpr, body, arrow);

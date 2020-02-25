@@ -145,7 +145,8 @@ function foo(a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) {}
 //CHECK-NEXT:           "body": []
 //CHECK-NEXT:         },
 //CHECK-NEXT:         "returnType": null,
-//CHECK-NEXT:         "generator": false
+//CHECK-NEXT:         "generator": false,
+//CHECK-NEXT:         "async": false
 //CHECK-NEXT:       }
 //CHECK-NEXT:     ]
 //CHECK-NEXT:   }

@@ -35,7 +35,8 @@
 //CHECK-NEXT:                 }
 //CHECK-NEXT:               ]
 //CHECK-NEXT:             },
-//CHECK-NEXT:             "generator": false
+//CHECK-NEXT:             "generator": false,
+//CHECK-NEXT:             "async": false
 //CHECK-NEXT:           },
 //CHECK-NEXT:           "right": {
 //CHECK-NEXT:             "type": "ObjectExpression",
