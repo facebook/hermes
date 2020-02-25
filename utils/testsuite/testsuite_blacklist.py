@@ -1442,6 +1442,10 @@ BLACK_LIST = [
     "esprima/test_fixtures/ES6/export-declaration/export-named-keyword-as-specifier.js",
     # ESPrima incorrect handling of invalid class properties.
     "esprima/test_fixtures/ES6/class/migrated_0021.js",
+    # ESPrima has the wrong expected value.
+    "esprima/test_fixtures/es2017/async/methods/class-async-method-computed.js",
+    "esprima/test_fixtures/es2017/async/functions/async-if.js",
+    "esprima/test_fixtures/es2017/async/functions/async-if-await.js",
     # "use strict" inside a function must apply to the name
     "esprima/test_fixtures/ES6/yield/invalid-yield-strict-function-expression.js",
     "esprima/test_fixtures/ES6/yield/invalid-yield-strict-function-declaration.js",
@@ -1471,7 +1475,6 @@ BLACK_LIST = [
     "esprima/test_fixtures/statement/with/",
     # unsupported features
     "esprima/test_fixtures/ES2016/",
-    "esprima/test_fixtures/es2017/",
     "esprima/test_fixtures/es2018/",
     "esprima/test_fixtures/JSX/",
     # not sure why they fail yet
@@ -1598,6 +1601,7 @@ PERMANENT_BLACK_LIST = [
     "test262/test/annexB/built-ins/RegExp/RegExp-control-escape-russian-letter.js",
     "test262/test/annexB/built-ins/RegExp/RegExp-invalid-control-escape-character-class.js",
     "test262/test/annexB/language/comments/single-line-html-close-unicode-separators.js",
+    "esprima/test_fixtures/es2017/async/regular-identifier/label-async.js",
     # Testing whole feature sets that Hermes doesn't support.
     "test262/test/built-ins/Atomics/",
     "test262/test/built-ins/SharedArrayBuffer/",

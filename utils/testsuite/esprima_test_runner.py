@@ -48,9 +48,9 @@ ESPRIMA_OMITTED_KEYS = {
     # ES6+ specific enhancement to the ESTree original definitions that Hermes
     # does not support yet.
     # TODO: remember to update or remove them once we update the parser.
-    "FunctionDeclaration": {"async", "expression"},
-    "FunctionExpression": {"async", "expression"},
-    "ArrowFunctionExpression": {"async", "generator"},
+    "FunctionDeclaration": {"expression"},
+    "FunctionExpression": {"expression"},
+    "ArrowFunctionExpression": {"generator"},
     "Property": {"method", "shorthand"},
     "ForInStatement": {"each"},
 }

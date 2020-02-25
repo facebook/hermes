@@ -186,6 +186,10 @@ class JSParserImpl {
   /// This is used when checking if `yield` is a valid Identifier name.
   bool paramYield_{false};
 
+  /// Set when the parser is inside an async function.
+  /// This is used when checking if `await` is a valid Identifier name.
+  bool paramAwait_{false};
+
   // Certain known identifiers which we need to use when constructing the
   // ESTree or when parsing;
   UniqueString *getIdent_;
@@ -210,6 +214,7 @@ class JSParserImpl {
   UniqueString *newIdent_;
   UniqueString *targetIdent_;
   UniqueString *asyncIdent_;
+  UniqueString *awaitIdent_;
   /// String representation of all tokens.
   UniqueString *tokenIdent_[NUM_JS_TOKENS];
 

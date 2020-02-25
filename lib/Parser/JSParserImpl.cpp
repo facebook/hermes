@@ -83,6 +83,7 @@ void JSParserImpl::initializeIdentifiers() {
   newIdent_ = lexer_.getIdentifier("new");
   targetIdent_ = lexer_.getIdentifier("target");
   asyncIdent_ = lexer_.getIdentifier("async");
+  awaitIdent_ = lexer_.getIdentifier("await");
 
   // Generate the string representation of all tokens.
   for (unsigned i = 0; i != NUM_JS_TOKENS; ++i)
@@ -321,12 +322,18 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
   bool isGenerator = checkAndEat(TokenKind::star);
 
   // newParamYield setting per the grammar:
-  // FunctionDeclaration: BindingIdentifier[?Yield]
-  // FunctionExpression: BindingIdentifier[~Yield]
-  // GeneratorFunctionDeclaration: BindingIdentifier[?Yield]
-  // GeneratorFunctionExpression: BindingIdentifier[+Yield]
+  // FunctionDeclaration: BindingIdentifier[?Yield, ?Await]
+  // FunctionExpression: BindingIdentifier[~Yield, ~Await]
+  // GeneratorFunctionDeclaration: BindingIdentifier[?Yield, ?Await]
+  // GeneratorFunctionExpression: BindingIdentifier[+Yield, ~Await]
+  // AsyncFunctionDeclaration: BindingIdentifier[?Yield, ?Await]
+  // AsyncFunctionExpression: BindingIdentifier[+Yield, +Await]
+  // AsyncGeneratorDeclaration: BindingIdentifier[?Yield, ?Await]
+  // AsyncGeneratorExpression: BindingIdentifier[+Yield, +Await]
   bool nameParamYield = isDeclaration ? paramYield_ : isGenerator;
   llvm::SaveAndRestore<bool> saveNameParamYield(paramYield_, nameParamYield);
+  bool nameParamAwait = isDeclaration ? paramAwait_ : isAsync;
+  llvm::SaveAndRestore<bool> saveNameParamAwait(paramAwait_, nameParamAwait);
 
   // identifier
   auto optId = parseBindingIdentifier(Param{});
@@ -356,6 +363,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
 
   llvm::SaveAndRestore<bool> saveArgsAndBodyParamYield(
       paramYield_, isGenerator);
+  llvm::SaveAndRestore<bool> saveArgsAndBodyParamAwait(paramAwait_, isAsync);
 
   if (!parseFormalParameters(param, paramList))
     return None;
@@ -714,6 +722,14 @@ bool JSParserImpl::validateBindingIdentifier(
     // and prohibited with static semantics.
     if (isStrictMode() || paramYield_) {
       lexer_.error(range, "Unexpected usage of 'yield' as an identifier");
+    }
+  }
+
+  if (id == awaitIdent_) {
+    // await is permitted as BindingIdentifier in the grammar,
+    // and prohibited with static semantics.
+    if (paramAwait_) {
+      lexer_.error(range, "Unexpected usage of 'await' as an identifier");
     }
   }
 
@@ -2403,6 +2419,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
     // PropertyName "(" UniqueFormalParameters ")" "{" FunctionBody "}"
     //               ^
     llvm::SaveAndRestore<bool> oldParamYield(paramYield_, generator);
+    llvm::SaveAndRestore<bool> oldParamAwait(paramAwait_, async);
 
     // (
     if (!need(
@@ -3070,6 +3087,19 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
               ESTree::UpdateExpressionNode(op, expr.getValue(), true));
     }
 
+    case TokenKind::identifier:
+      if (check(awaitIdent_) && paramAwait_) {
+        advance();
+        auto optExpr = parseUnaryExpression();
+        if (!optExpr)
+          return None;
+        return setLocation(
+            startLoc,
+            optExpr.getValue(),
+            new (context_) ESTree::AwaitExpressionNode(optExpr.getValue()));
+      }
+      // Fall-through to default for all other identifiers.
+
     default:
       return parsePostfixExpression();
   }
@@ -3554,6 +3584,10 @@ Optional<ESTree::MethodDefinitionNode *> JSParserImpl::parseMethodDefinition(
       special == SpecialKind::Generator ||
           special == SpecialKind::AsyncGenerator);
 
+  llvm::SaveAndRestore<bool> saveArgsAndBodyParamAwait(
+      paramAwait_,
+      special == SpecialKind::Async || special == SpecialKind::AsyncGenerator);
+
   if (!parseFormalParameters(Param{}, args))
     return None;
 
@@ -3646,7 +3680,11 @@ bool JSParserImpl::reparseArrowParameters(
   // A single identifier without parens.
   if (node->getParens() == 0 && isa<ESTree::IdentifierNode>(node)) {
     paramList.push_back(*node);
-    return true;
+    return validateBindingIdentifier(
+        Param{},
+        node->getSourceRange(),
+        cast<ESTree::IdentifierNode>(node)->_name,
+        TokenKind::identifier);
   }
 
   if (node->getParens() != 1 && !isa<ESTree::CallExpressionNode>(node)) {
@@ -3668,6 +3706,9 @@ bool JSParserImpl::reparseArrowParameters(
     node->clearParens();
     nodeList.push_back(*node);
   }
+
+  llvm::SaveAndRestore<bool> oldParamAwait(
+      paramAwait_, paramAwait_ || reparsedAsync);
 
   // If the node has 0 parentheses, return true, otherwise print an error and
   // return false.
@@ -3737,6 +3778,14 @@ bool JSParserImpl::reparseArrowParameters(
           expr, init, new (context_) ESTree::AssignmentPatternNode(expr, init));
     }
 
+    if (auto *ident = dyn_cast<ESTree::IdentifierNode>(expr)) {
+      validateBindingIdentifier(
+          Param{},
+          ident->getSourceRange(),
+          ident->_name,
+          TokenKind::identifier);
+    }
+
     paramList.push_back(*expr);
   }
 
@@ -3753,6 +3802,8 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
       check(TokenKind::equalgreater) && !lexer_.isNewLineBeforeCurrentToken() &&
       "ArrowFunctionExpression expects [no new line] '=>'");
 
+  llvm::SaveAndRestore<bool> argsParamAwait(paramAwait_, forceAsync);
+
   // Eat the '=>'.
   advance();
 
@@ -3766,6 +3817,8 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   bool expression;
 
   llvm::SaveAndRestore<bool> oldParamYield(paramYield_, false);
+  llvm::SaveAndRestore<bool> bodyParamAwait(
+      paramAwait_, forceAsync || reparsedAsync);
   if (check(TokenKind::l_brace)) {
     auto optBody = parseFunctionBody(Param{}, true, JSLexer::AllowDiv, true);
     if (!optBody)
