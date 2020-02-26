@@ -3137,7 +3137,7 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  arr = vmcast<BigStorage>(*arrRes);
+  arr = std::move(*arrRes);
   if (setProtoClasses(runtime, obj, arr) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }

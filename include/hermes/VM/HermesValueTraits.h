@@ -109,6 +109,10 @@ struct IsGCObject<BufferedStringPrimitive<T>> : public std::true_type {};
 template <typename T, bool isGCObject = IsGCObject<T>::value>
 struct HermesValueTraits;
 
+class SegmentedArray;
+template <>
+struct IsGCObject<SegmentedArray> : public std::true_type {};
+
 template <>
 struct HermesValueTraits<HermesValue> {
   /// The type to be returned by Handle<T>::get().

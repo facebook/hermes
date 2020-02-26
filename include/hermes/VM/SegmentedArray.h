@@ -243,13 +243,15 @@ class SegmentedArray final
 
   /// Creates a new SegmentedArray that has space for at least the requested \p
   /// capacity number of elements, and has size 0.
-  static CallResult<HermesValue> create(Runtime *runtime, size_type capacity);
-  static CallResult<HermesValue> createLongLived(
+  static CallResult<PseudoHandle<SegmentedArray>> create(
+      Runtime *runtime,
+      size_type capacity);
+  static CallResult<PseudoHandle<SegmentedArray>> createLongLived(
       Runtime *runtime,
       size_type capacity);
   /// Same as \c create(runtime, capacity) except fills in the first \p size
   /// elements with \p fill, and sets the size to \p size.
-  static CallResult<HermesValue>
+  static CallResult<PseudoHandle<SegmentedArray>>
   create(Runtime *runtime, size_type capacity, size_type size);
 
   /// Gets the element located at \p index.
@@ -613,8 +615,6 @@ SegmentedArray::maxNumSegmentsWithoutOverflow() {
       Segment::kMaxLength);
 }
 
-template <>
-struct IsGCObject<SegmentedArray> : public std::true_type {};
 template <>
 struct IsGCObject<SegmentedArray::Segment> : public std::true_type {};
 

@@ -136,7 +136,7 @@ void SegmentedArrayDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-CallResult<HermesValue> SegmentedArray::create(
+CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::create(
     Runtime *runtime,
     size_type capacity) {
   if (LLVM_UNLIKELY(capacity > maxElements())) {
@@ -148,12 +148,11 @@ CallResult<HermesValue> SegmentedArray::create(
   // if it is larger than the inline storage space. That is in order to avoid
   // having an extra field to track, and the upper bound of "size" can be used
   // instead.
-  return HermesValue::encodeObjectValue(new (
-      runtime->alloc<false /*fixedSize*/>(allocationSizeForCapacity(capacity)))
-                                            SegmentedArray(runtime, capacity));
+  return createPseudoHandle(new (runtime->alloc<false /*fixedSize*/>(
+      allocationSizeForCapacity(capacity))) SegmentedArray(runtime, capacity));
 }
 
-CallResult<HermesValue> SegmentedArray::createLongLived(
+CallResult<PseudoHandle<SegmentedArray>> SegmentedArray::createLongLived(
     Runtime *runtime,
     size_type capacity) {
   if (LLVM_UNLIKELY(capacity > maxElements())) {
@@ -161,21 +160,21 @@ CallResult<HermesValue> SegmentedArray::createLongLived(
   }
   // Leave the segments as null. Whenever the size is changed, the segments will
   // be allocated.
-  return HermesValue::encodeObjectValue(new (runtime->allocLongLived(
+  return createPseudoHandle(new (runtime->allocLongLived(
       allocationSizeForCapacity(capacity))) SegmentedArray(runtime, capacity));
 }
 
-CallResult<HermesValue>
+CallResult<PseudoHandle<SegmentedArray>>
 SegmentedArray::create(Runtime *runtime, size_type capacity, size_type size) {
   auto arrRes = create(runtime, capacity);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto self = createPseudoHandle(vmcast<SegmentedArray>(*arrRes));
+  PseudoHandle<SegmentedArray> self = std::move(*arrRes);
   // TODO T25663446: This is potentially optimizable to iterate over the inline
   // storage and the segments separately.
   self = increaseSize</*Fill*/ true>(runtime, std::move(self), size);
-  return self.getHermesValue();
+  return self;
 }
 
 SegmentedArray::size_type SegmentedArray::capacity() const {
@@ -291,7 +290,7 @@ ExecutionStatus SegmentedArray::growRight(
   if (arrRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto newSegmentedArray = createPseudoHandle(vmcast<SegmentedArray>(*arrRes));
+  PseudoHandle<SegmentedArray> newSegmentedArray = std::move(*arrRes);
   // Copy inline storage and segments over.
   // Do this with raw pointers so that the range write barrier occurs.
   GCHermesValue::copy(
@@ -321,7 +320,7 @@ ExecutionStatus SegmentedArray::growLeft(
   if (arrRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto newSegmentedArray = createPseudoHandle(vmcast<SegmentedArray>(*arrRes));
+  PseudoHandle<SegmentedArray> newSegmentedArray = std::move(*arrRes);
   // Don't fill with empty values, most will be copied in.
   newSegmentedArray = increaseSize</*Fill*/ false>(
       runtime, std::move(newSegmentedArray), newSize);

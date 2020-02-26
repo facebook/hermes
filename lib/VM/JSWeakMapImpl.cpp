@@ -376,7 +376,7 @@ CallResult<PseudoHandle<JSWeakMapImpl<C>>> JSWeakMapImpl<C>::create(
   if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto valueStorage = runtime->makeHandle<BigStorage>(*valueRes);
+  auto valueStorage = runtime->makeHandle<BigStorage>(std::move(*valueRes));
 
   JSObjectAlloc<JSWeakMapImpl<C>, HasFinalizer::Yes> mem{runtime};
   return mem.initToPseudoHandle(new (mem) JSWeakMapImpl<C>(

@@ -6,6 +6,8 @@
  */
 
 #include "hermes/VM/SegmentedArray.h"
+#include "hermes/VM/Casting.h"
+#include "hermes/VM/HermesValueTraits.h"
 
 #include "TestHelpers.h"
 
@@ -62,8 +64,7 @@ TEST_F(SegmentedArrayTest, AllowTrimming) {
   constexpr SegmentedArray::size_type originalCapacity = 4;
   // Create an array and put in an element so its size is 1 and its capacity
   // is 4.
-  array = vmcast<SegmentedArray>(
-      *SegmentedArray::create(runtime, originalCapacity));
+  array = std::move(*SegmentedArray::create(runtime, originalCapacity));
   // The capacity is not guaranteed to match the input parameter, it is taken
   // as a hint, so check for <=.
   EXPECT_LE(array->capacity(), originalCapacity);

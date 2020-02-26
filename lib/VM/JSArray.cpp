@@ -148,7 +148,7 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto newStorage = runtime->makeHandle<StorageType>(*arrRes);
+    auto newStorage = runtime->makeHandle<StorageType>(std::move(*arrRes));
     selfHandle->indexedStorage_.set(
         runtime, newStorage.get(), &runtime->getHeap());
     selfHandle->beginIndex_ = 0;
@@ -214,7 +214,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto newStorage = runtime->makeHandle<StorageType>(*arrRes);
+    auto newStorage = runtime->makeHandle<StorageType>(std::move(*arrRes));
 
     self = vmcast<ArrayImpl>(selfHandle.get());
 
@@ -403,13 +403,11 @@ CallResult<Handle<Arguments>> Arguments::create(
     size_type length,
     Handle<Callable> curFunction,
     bool strictMode) {
-  CallResult<HermesValue> arrRes{ExecutionStatus::EXCEPTION};
-  if (LLVM_UNLIKELY(
-          (arrRes = StorageType::create(runtime, length)) ==
-          ExecutionStatus::EXCEPTION)) {
+  auto arrRes = StorageType::create(runtime, length);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto indexedStorage = runtime->makeHandle<StorageType>(*arrRes);
+  auto indexedStorage = runtime->makeHandle<StorageType>(std::move(*arrRes));
 
   JSObjectAlloc<Arguments> mem{runtime};
   auto selfHandle = mem.initToHandle(new (mem) Arguments(
@@ -590,7 +588,7 @@ CallResult<PseudoHandle<JSArray>> JSArray::create(
     if (arrRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    indexedStorage = vmcast<StorageType>(*arrRes);
+    indexedStorage = std::move(*arrRes);
   }
 
   JSObjectAlloc<JSArray> mem{runtime};
