@@ -281,6 +281,12 @@ template <typename T>
 class CallResult<PseudoHandle<T>, detail::CallResultSpecialize::PseudoHandle> {
   PseudoHandle<T> valueOrStatus_;
 
+#ifdef NDEBUG
+  static_assert(
+      hermes::IsTriviallyCopyable<PseudoHandle<T>, true>::value,
+      "PseudoHandle<T> must be trivially copyable");
+#endif
+
  public:
   CallResult(const CallResult &cr) = delete;
   CallResult &operator=(const CallResult &cr) = delete;

@@ -82,7 +82,7 @@ class PseudoHandle {
 
   ~PseudoHandle() = default;
 
-  PseudoHandle() : value_(traits_type::defaultValue()) {}
+  constexpr PseudoHandle() : value_(traits_type::defaultValue()) {}
   PseudoHandle(Handle<T> handle) : value_(*handle) {}
 
   /// Conveniently construct PseudoHandle<HermesValue> from a PinnedHermesValue
