@@ -708,6 +708,18 @@ class NativeConstructor final : public NativeFunction {
  public:
   using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
 
+  /// Unifies signatures of various GCCells so that they may be stored
+  /// in the NativeConstructor.
+  /// Delegates to toCallResultPseudoHandleJSObject to convert various
+  /// types to CallResult<PseudoHandle<JSObject>>.
+  template <class NativeClass>
+  static CallResult<PseudoHandle<JSObject>> creatorFunction(
+      Runtime *runtime,
+      Handle<JSObject> prototype) {
+    return toCallResultPseudoHandleJSObject(
+        NativeClass::create(runtime, prototype));
+  }
+
 #ifdef HERMESVM_SERIALIZE
   NativeConstructor(
       Deserializer &d,
@@ -784,6 +796,7 @@ class NativeConstructor final : public NativeFunction {
 #endif
 
   /// Function used to create new object from this constructor.
+  /// Typically passed by invoking NativeConstructor::creatorFunction<T>.
   CreatorFunction *const creator_;
 
   NativeConstructor(
@@ -847,6 +860,33 @@ class NativeConstructor final : public NativeFunction {
       Handle<Callable> selfHandle,
       Runtime *runtime);
 #endif
+
+  template <class From>
+  static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
+      PseudoHandle<From> &&other) {
+    return PseudoHandle<JSObject>{std::move(other)};
+  }
+
+  template <class From>
+  static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
+      CallResult<PseudoHandle<From>> &&other) {
+    return std::move(other);
+  }
+
+  template <class From>
+  static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
+      CallResult<Handle<From>> other) {
+    if (LLVM_UNLIKELY(other == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return PseudoHandle<JSObject>{*other};
+  }
+
+  template <class From>
+  static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
+      Handle<From> other) {
+    return PseudoHandle<JSObject>{other};
+  }
 };
 
 /// An interpreted callable function with environment.
