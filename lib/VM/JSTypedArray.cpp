@@ -171,12 +171,8 @@ ExecutionStatus JSTypedArrayBase::createBuffer(
     size_type length) {
   assert(runtime && selfObj);
 
-  auto arrRes = JSArrayBuffer::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype));
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto tmpbuf = runtime->makeHandle<JSArrayBuffer>(*arrRes);
+  auto tmpbuf = runtime->makeHandle(JSArrayBuffer::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype)));
 
   auto bufferSize = length * selfObj->getByteWidth();
   if (tmpbuf->createDataBlock(runtime, bufferSize) ==
@@ -340,17 +336,14 @@ template <typename T, CellKind C>
 CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::allocate(
     Runtime *runtime,
     size_type length) {
-  auto arrRes = JSTypedArray<T, C>::create(
-      runtime, JSTypedArray<T, C>::getPrototype(runtime));
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto ta = Handle<JSTypedArrayBase>::vmcast(runtime->makeHandle(*arrRes));
+  Handle<JSTypedArray<T, C>> ta =
+      runtime->makeHandle<JSTypedArray<T, C>>(JSTypedArray<T, C>::create(
+          runtime, JSTypedArray<T, C>::getPrototype(runtime)));
   if (JSTypedArrayBase::createBuffer(runtime, ta, length) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return ta;
+  return Handle<JSTypedArrayBase>::vmcast(ta);
 }
 
 template <typename T, CellKind C>
@@ -380,11 +373,11 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::_allocateSpeciesImpl(
 }
 
 template <typename T, CellKind C>
-CallResult<HermesValue> JSTypedArray<T, C>::create(
+PseudoHandle<JSTypedArray<T, C>> JSTypedArray<T, C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   JSObjectAlloc<JSTypedArray<T, C>> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSTypedArray<T, C>(
+  return mem.initToPseudoHandle(new (mem) JSTypedArray<T, C>(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(

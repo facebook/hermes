@@ -932,18 +932,18 @@ CallResult<HermesValue> Runtime::runBytecode(
     // Note that its handle gets registered in the scope, so we don't need to
     // save it. Also note that environment will often be null here, except if
     // this is local eval.
-    auto funcRes = JSFunction::create(
+    auto func = JSFunction::create(
         this,
         domain,
         Handle<JSObject>::vmcast(&functionPrototype),
         environment,
         globalCode);
 
-    if (funcRes == ExecutionStatus::EXCEPTION)
-      return ExecutionStatus::EXCEPTION;
-
-    ScopedNativeCallFrame newFrame{
-        this, 0, *funcRes, HermesValue::encodeUndefinedValue(), *thisArg};
+    ScopedNativeCallFrame newFrame{this,
+                                   0,
+                                   func.getHermesValue(),
+                                   HermesValue::encodeUndefinedValue(),
+                                   *thisArg};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return raiseStackOverflow(StackOverflowKind::NativeStack);
     return shouldRandomizeMemoryLayout_
@@ -1109,11 +1109,7 @@ static ExecutionStatus raisePlaceholder(
   GCScopeMarkerRAII gcScope{runtime};
 
   // Create the error object, initialize stack property and set message.
-  auto errRes = JSError::create(runtime, prototype);
-  if (LLVM_UNLIKELY(errRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto errorObj = runtime->makeHandle<JSError>(*errRes);
+  auto errorObj = runtime->makeHandle(JSError::create(runtime, prototype));
   return raisePlaceholder(runtime, errorObj, message);
 }
 
@@ -1240,12 +1236,8 @@ ExecutionStatus Runtime::raiseTimeoutError() {
 ExecutionStatus Runtime::raiseUncatchableError(
     Handle<JSObject> prototype,
     llvm::StringRef errMessage) {
-  auto res = JSError::createUncatchable(this, prototype);
-  if (res == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto err = makeHandle<JSError>(*res);
-  res = StringPrimitive::create(
+  Handle<JSError> err = makeHandle(JSError::createUncatchable(this, prototype));
+  auto res = StringPrimitive::create(
       this, llvm::ASCIIRef{errMessage.begin(), errMessage.end()});
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;

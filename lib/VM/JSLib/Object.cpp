@@ -33,13 +33,12 @@ static inline HermesValue objectInitInstance(
 Handle<JSObject> createObjectConstructor(Runtime *runtime) {
   auto objectPrototype = Handle<JSObject>::vmcast(&runtime->objectPrototype);
 
-  auto cons = defineSystemConstructor(
+  auto cons = defineSystemConstructor<JSObject>(
       runtime,
       Predefined::getSymbolID(Predefined::Object),
       objectConstructor,
       Handle<JSObject>::vmcast(&runtime->objectPrototype),
       1,
-      JSObject::createWithException,
       CellKind::ObjectKind);
   void *ctx = nullptr;
 

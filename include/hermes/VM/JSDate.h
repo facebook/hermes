@@ -28,10 +28,10 @@ class JSDate final : public JSObject {
     return cell->getKind() == CellKind::DateKind;
   }
 
-  static CallResult<HermesValue>
+  static PseudoHandle<JSDate>
   create(Runtime *runtime, double value, Handle<JSObject> prototype);
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSDate> create(
       Runtime *runtime,
       Handle<JSObject> prototype) {
     return create(runtime, std::numeric_limits<double>::quiet_NaN(), prototype);

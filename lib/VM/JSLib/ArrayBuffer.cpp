@@ -187,12 +187,8 @@ arrayBufferPrototypeSlice(void *, Runtime *runtime, NativeArgs args) {
   // 15. Let new be Construct(ctor, «newLen»).
   // 16. ReturnIfAbrupt(new).
 
-  auto arrRes = JSArrayBuffer::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype));
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto newBuf = runtime->makeHandle<JSArrayBuffer>(*arrRes);
+  auto newBuf = runtime->makeHandle(JSArrayBuffer::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype)));
 
   if (newBuf->createDataBlock(runtime, newLen_int) ==
       ExecutionStatus::EXCEPTION) {

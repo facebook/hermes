@@ -366,11 +366,12 @@ CallResult<HermesValue> createDynamicFunction(
     if (!isGeneratorFunction && argCount == 1 && isReturnThis(body, runtime)) {
       // If this raises an exception, we still return immediately.
       return JSFunction::create(
-          runtime,
-          runtime->makeHandle(Domain::create(runtime)),
-          parent,
-          Handle<Environment>(runtime, nullptr),
-          runtime->getReturnThisCodeBlock());
+                 runtime,
+                 runtime->makeHandle(Domain::create(runtime)),
+                 parent,
+                 Handle<Environment>(runtime, nullptr),
+                 runtime->getReturnThisCodeBlock())
+          .getHermesValue();
     }
   }
 

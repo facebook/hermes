@@ -72,7 +72,7 @@ Handle<NativeConstructor> defineSystemConstructor(
       nativeFunctionPtr,
       prototypeObjectHandle,
       paramCount,
-      NativeClass::create,
+      NativeConstructor::creatorFunction<NativeClass>,
       targetKind);
 }
 

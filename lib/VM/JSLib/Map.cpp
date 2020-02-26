@@ -220,12 +220,8 @@ mapPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Method Map.prototype.entries called on incompatible receiver");
   }
-  auto mapRes = JSMapIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->mapIteratorPrototype));
-  if (LLVM_UNLIKELY(mapRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto iterator = runtime->makeHandle<JSMapIterator>(*mapRes);
+  auto iterator = runtime->makeHandle(JSMapIterator::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->mapIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Entry);
   return iterator.getHermesValue();
 }
@@ -294,12 +290,8 @@ mapPrototypeKeys(void *, Runtime *runtime, NativeArgs args) {
         "Method Map.prototype.keys called on incompatible receiver");
   }
 
-  auto mapRes = JSMapIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->mapIteratorPrototype));
-  if (LLVM_UNLIKELY(mapRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto iterator = runtime->makeHandle<JSMapIterator>(*mapRes);
+  auto iterator = runtime->makeHandle(JSMapIterator::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->mapIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Key);
   return iterator.getHermesValue();
 }
@@ -345,12 +337,8 @@ mapPrototypeValues(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Method Map.prototype.values called on incompatible receiver");
   }
-  auto mapRes = JSMapIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->mapIteratorPrototype));
-  if (LLVM_UNLIKELY(mapRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto iterator = runtime->makeHandle<JSMapIterator>(*mapRes);
+  auto iterator = runtime->makeHandle(JSMapIterator::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->mapIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Value);
   return iterator.getHermesValue();
 }

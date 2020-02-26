@@ -82,7 +82,7 @@ Handle<JSObject> createErrorConstructor(Runtime *runtime) {
         errorPrototype,                                                      \
         Handle<JSObject>::vmcast(&runtime->errorConstructor),                \
         1,                                                                   \
-        JSError::create,                                                     \
+        NativeConstructor::creatorFunction<JSError>,                         \
         CellKind::ErrorKind);                                                \
   }
 #include "hermes/VM/NativeErrorTypes.def"
@@ -98,11 +98,7 @@ static CallResult<HermesValue> constructErrorObject(
   if (args.isConstructorCall()) {
     selfHandle = vmcast<JSError>(args.getThisArg());
   } else {
-    auto errRes = JSError::create(runtime, prototype);
-    if (LLVM_UNLIKELY(errRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    selfHandle = vmcast<JSError>(*errRes);
+    selfHandle = JSError::create(runtime, prototype).get();
   }
 
   // Record the stack trace, skipping this entry.

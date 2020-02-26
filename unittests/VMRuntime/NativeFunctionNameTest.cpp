@@ -25,14 +25,16 @@ TEST(NativeFunctionNameTest, SmokeTest) {
       "dataViewPrototypeSet<int8_t, CellKind::Int8ArrayKind>",
       getFunctionName(dataViewPrototypeSet<int8_t, CellKind::Int8ArrayKind>));
 
-  using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
-  CreatorFunction *func;
-  func = JSError::create;
-  EXPECT_STREQ("JSError::create", getFunctionName(func));
-
-  func = JSTypedArray<int16_t, CellKind::Int16ArrayKind>::create;
+  using CreatorFunction = NativeConstructor::CreatorFunction;
+  CreatorFunction *func = NativeConstructor::creatorFunction<JSError>;
   EXPECT_STREQ(
-      "JSTypedArray<int16_t, CellKind::Int16ArrayKind>::create",
+      "NativeConstructor::creatorFunction<JSError>", getFunctionName(func));
+
+  func = NativeConstructor::creatorFunction<
+      JSTypedArray<int16_t, CellKind::Int16ArrayKind>>;
+  EXPECT_STREQ(
+      "NativeConstructor::creatorFunction"
+      "<JSTypedArray<int16_t, CellKind::Int16ArrayKind>>",
       getFunctionName(func));
 }
 } // namespace

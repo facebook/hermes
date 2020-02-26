@@ -77,12 +77,12 @@ class JSString final : public PrimitiveBox {
     return cell->getKind() == CellKind::StringObjectKind;
   }
 
-  static CallResult<HermesValue> create(
+  static CallResult<Handle<JSString>> create(
       Runtime *runtime,
       Handle<StringPrimitive> value,
       Handle<JSObject> prototype);
 
-  static CallResult<HermesValue> create(
+  static CallResult<Handle<JSString>> create(
       Runtime *runtime,
       Handle<JSObject> prototype) {
     return create(
@@ -219,10 +219,10 @@ class JSNumber final : public PrimitiveBox {
     return cell->getKind() == CellKind::NumberObjectKind;
   }
 
-  static CallResult<HermesValue>
+  static PseudoHandle<JSNumber>
   create(Runtime *runtime, double value, Handle<JSObject> prototype);
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSNumber> create(
       Runtime *runtime,
       Handle<JSObject> prototype) {
     return create(runtime, 0.0, prototype);
@@ -246,10 +246,10 @@ class JSBoolean final : public PrimitiveBox {
     return cell->getKind() == CellKind::BooleanObjectKind;
   }
 
-  static CallResult<HermesValue>
+  static PseudoHandle<JSBoolean>
   create(Runtime *runtime, bool value, Handle<JSObject> prototype);
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSBoolean> create(
       Runtime *runtime,
       Handle<JSObject> prototype) {
     return create(runtime, false, prototype);
@@ -269,10 +269,10 @@ class JSSymbol final : public PrimitiveBox {
     return cell->getKind() == CellKind::SymbolObjectKind;
   }
 
-  static CallResult<HermesValue>
+  static PseudoHandle<JSSymbol>
   create(Runtime *runtime, SymbolID value, Handle<JSObject> prototype);
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSSymbol> create(
       Runtime *runtime,
       Handle<JSObject> prototype) {
     return create(runtime, SymbolID{}, prototype);

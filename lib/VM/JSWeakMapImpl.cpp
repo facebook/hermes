@@ -369,7 +369,7 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
 };
 
 template <CellKind C>
-CallResult<HermesValue> JSWeakMapImpl<C>::create(
+CallResult<PseudoHandle<JSWeakMapImpl<C>>> JSWeakMapImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   auto valueRes = BigStorage::create(runtime, 1);
@@ -379,7 +379,7 @@ CallResult<HermesValue> JSWeakMapImpl<C>::create(
   auto valueStorage = runtime->makeHandle<BigStorage>(*valueRes);
 
   JSObjectAlloc<JSWeakMapImpl<C>, HasFinalizer::Yes> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSWeakMapImpl<C>(
+  return mem.initToPseudoHandle(new (mem) JSWeakMapImpl<C>(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(

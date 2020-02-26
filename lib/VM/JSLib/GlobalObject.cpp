@@ -324,8 +324,10 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of Error.prototype. Its properties will be populated
   // later.
-  runtime->ErrorPrototype = runtime->ignoreAllocationFailure(JSError::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+  runtime->ErrorPrototype =
+      JSError::create(
+          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype))
+          .getHermesValue();
 
 // "Forward declaration" of the prototype for native error types. Their
 // properties will be populated later.
@@ -388,21 +390,27 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of String.prototype. Its properties will be
   // populated later.
-  runtime->stringPrototype = runtime->ignoreAllocationFailure(JSString::create(
-      runtime,
-      runtime->getPredefinedStringHandle(Predefined::emptyString),
-      Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+  runtime->stringPrototype =
+      runtime
+          ->ignoreAllocationFailure(JSString::create(
+              runtime,
+              runtime->getPredefinedStringHandle(Predefined::emptyString),
+              Handle<JSObject>::vmcast(&runtime->objectPrototype)))
+          .getHermesValue();
 
   // "Forward declaration" of Number.prototype. Its properties will be
   // populated later.
-  runtime->numberPrototype = runtime->ignoreAllocationFailure(JSNumber::create(
-      runtime, +0.0, Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+  runtime->numberPrototype =
+      JSNumber::create(
+          runtime, +0.0, Handle<JSObject>::vmcast(&runtime->objectPrototype))
+          .getHermesValue();
 
   // "Forward declaration" of Boolean.prototype. Its properties will be
   // populated later.
   runtime->booleanPrototype =
-      runtime->ignoreAllocationFailure(JSBoolean::create(
-          runtime, false, Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+      JSBoolean::create(
+          runtime, false, Handle<JSObject>::vmcast(&runtime->objectPrototype))
+          .getHermesValue();
 
   // "Forward declaration" of Symbol.prototype. Its properties will be
   // populated later.
@@ -420,14 +428,16 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of Array.prototype. Its properties will be
   // populated later.
-  auto arrRes = runtime->ignoreAllocationFailure(JSArray::create(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime->objectPrototype),
-      JSArray::createClass(
-          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype)),
-      0,
-      0));
-  runtime->arrayPrototype = arrRes;
+  runtime->arrayPrototype =
+      runtime
+          ->ignoreAllocationFailure(JSArray::create(
+              runtime,
+              Handle<JSObject>::vmcast(&runtime->objectPrototype),
+              JSArray::createClass(
+                  runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype)),
+              0,
+              0))
+          .getHermesValue();
 
   // Declare the array class.
   runtime->arrayClass =
@@ -468,16 +478,20 @@ void initGlobalObject(Runtime *runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of Set.prototype. Its properties will be
   // populated later.
-  runtime->setPrototype = runtime->ignoreAllocationFailure(JSSet::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+  runtime->setPrototype =
+      JSSet::create(
+          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype))
+          .getHermesValue();
 
   runtime->setIteratorPrototype =
       createSetIteratorPrototype(runtime).getHermesValue();
 
   // "Forward declaration" of Map.prototype. Its properties will be
   // populated later.
-  runtime->mapPrototype = runtime->ignoreAllocationFailure(JSMap::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype)));
+  runtime->mapPrototype =
+      JSMap::create(
+          runtime, Handle<JSObject>::vmcast(&runtime->objectPrototype))
+          .getHermesValue();
 
   runtime->mapIteratorPrototype =
       createMapIteratorPrototype(runtime).getHermesValue();

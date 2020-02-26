@@ -11,6 +11,7 @@
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/SymbolID.h"
 
 #include "llvm/ADT/SmallVector.h"

@@ -32,7 +32,7 @@ class JSArrayBuffer final : public JSObject {
     return cell->getKind() == CellKind::ArrayBufferKind;
   }
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSArrayBuffer> create(
       Runtime *runtime,
       Handle<JSObject> prototype);
 

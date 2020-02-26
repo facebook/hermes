@@ -63,9 +63,7 @@ class JSRegExp final : public JSObject {
   };
 
   /// Create a JSRegExp, with the empty string for pattern and flags
-  static CallResult<HermesValue> create(
-      Runtime *runtime,
-      Handle<JSObject> prototype);
+  static Handle<JSRegExp> create(Runtime *runtime, Handle<JSObject> prototype);
 
   /// Perform validation of the pattern and flags and throw \c SyntaxError on
   /// error. If valid, set the source and flags to the given strings, and set

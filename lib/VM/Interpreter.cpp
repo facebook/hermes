@@ -134,11 +134,12 @@ CallResult<HermesValue> Interpreter::createGeneratorClosure(
     unsigned funcIndex,
     Handle<Environment> envHandle) {
   return JSGeneratorFunction::create(
-      runtime,
-      runtimeModule->getDomain(runtime),
-      Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype),
-      envHandle,
-      runtimeModule->getCodeBlockMayAllocate(funcIndex));
+             runtime,
+             runtimeModule->getDomain(runtime),
+             Handle<JSObject>::vmcast(&runtime->generatorFunctionPrototype),
+             envHandle,
+             runtimeModule->getCodeBlockMayAllocate(funcIndex))
+      .getHermesValue();
 }
 
 CallResult<HermesValue> Interpreter::createGenerator_RJS(
@@ -191,15 +192,15 @@ CallResult<HermesValue> Interpreter::reifyArgumentsSlowPath(
   if (LLVM_UNLIKELY(argRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Arguments *args = vmcast<Arguments>(*argRes);
+  Handle<Arguments> args = *argRes;
 
   for (uint32_t argIndex = 0; argIndex < argCount; ++argIndex) {
     Arguments::unsafeSetExistingElementAt(
-        args, runtime, argIndex, frame.getArgRef(argIndex));
+        *args, runtime, argIndex, frame.getArgRef(argIndex));
   }
 
   // The returned value should already be set from the create call.
-  return argRes;
+  return args.getHermesValue();
 }
 
 CallResult<HermesValue> Interpreter::getArgumentsPropByValSlowPath_RJS(
@@ -1874,16 +1875,14 @@ tailCall:
       }
     createClosure : {
       auto *runtimeModule = curCodeBlock->getRuntimeModule();
-      res = JSFunction::create(
-          runtime,
-          runtimeModule->getDomain(runtime),
-          Handle<JSObject>::vmcast(&runtime->functionPrototype),
-          Handle<Environment>::vmcast(&O2REG(CreateClosure)),
-          runtimeModule->getCodeBlockMayAllocate(idVal));
-      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-        goto exception;
-      }
-      O1REG(CreateClosure) = *res;
+      O1REG(CreateClosure) =
+          JSFunction::create(
+              runtime,
+              runtimeModule->getDomain(runtime),
+              Handle<JSObject>::vmcast(&runtime->functionPrototype),
+              Handle<Environment>::vmcast(&O2REG(CreateClosure)),
+              runtimeModule->getCodeBlockMayAllocate(idVal))
+              .getHermesValue();
       gcScope.flushToSmallCount(KEEP_HANDLES);
       ip = nextIP;
       DISPATCH;
@@ -3133,12 +3132,8 @@ tailCall:
       CASE(CreateRegExp) {
         {
           // Create the RegExp object.
-          res = JSRegExp::create(
+          auto re = JSRegExp::create(
               runtime, Handle<JSObject>::vmcast(&runtime->regExpPrototype));
-          if (res == ExecutionStatus::EXCEPTION) {
-            goto exception;
-          }
-          auto re = runtime->makeHandle<JSRegExp>(*res);
           // Initialize the regexp.
           auto pattern =
               runtime->makeHandle(curCodeBlock->getRuntimeModule()

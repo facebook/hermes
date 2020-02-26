@@ -1570,7 +1570,7 @@ arrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto obj = runtime->makeHandle<JSObject>(*objRes);
-  return JSArrayIterator::create(runtime, obj, kind);
+  return JSArrayIterator::create(runtime, obj, kind).getHermesValue();
 }
 
 #ifndef HERMESVM_USE_JS_LIBRARY_IMPLEMENTATION

@@ -32,10 +32,9 @@ TEST_F(WeakValueMapTest, SmokeTest) {
       [&](GC *, WeakRefAcceptor &acceptor) { wvp.markWeakRefs(acceptor); });
 
   auto makeNumber = [&](int n) -> JSNumber * {
-    auto numRes = JSNumber::create(
-        runtime, (double)n, Runtime::makeNullHandle<JSObject>());
-    assert(numRes != ExecutionStatus::EXCEPTION);
-    return (JSNumber *)numRes->getPointer();
+    return JSNumber::create(
+               runtime, (double)n, Runtime::makeNullHandle<JSObject>())
+        .get();
   };
 
   MutableHandle<JSNumber> h1{runtime};

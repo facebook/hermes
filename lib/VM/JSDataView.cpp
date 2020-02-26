@@ -59,11 +59,11 @@ void DataViewDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-CallResult<HermesValue> JSDataView::create(
+PseudoHandle<JSDataView> JSDataView::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
   JSObjectAlloc<JSDataView> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSDataView(
+  return mem.initToPseudoHandle(new (mem) JSDataView(
       runtime,
       *prototype,
       runtime->getHiddenClassForPrototypeRaw(

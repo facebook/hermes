@@ -727,25 +727,33 @@ CallResult<HermesValue> toObject(Runtime *runtime, Handle<> valueHandle) {
       return value;
     case BoolTag:
       return JSBoolean::create(
-          runtime,
-          value.getBool(),
-          Handle<JSObject>::vmcast(&runtime->booleanPrototype));
-    case StrTag:
-      return JSString::create(
+                 runtime,
+                 value.getBool(),
+                 Handle<JSObject>::vmcast(&runtime->booleanPrototype))
+          .getHermesValue();
+    case StrTag: {
+      auto res = JSString::create(
           runtime,
           runtime->makeHandle(value.getString()),
           Handle<JSObject>::vmcast(&runtime->stringPrototype));
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return res->getHermesValue();
+    }
     case SymbolTag:
       return JSSymbol::create(
-          runtime,
-          *Handle<SymbolID>::vmcast(valueHandle),
-          Handle<JSObject>::vmcast(&runtime->symbolPrototype));
+                 runtime,
+                 *Handle<SymbolID>::vmcast(valueHandle),
+                 Handle<JSObject>::vmcast(&runtime->symbolPrototype))
+          .getHermesValue();
     default:
       assert(valueHandle->isNumber() && "Unknown tag in toObject.");
       return JSNumber::create(
-          runtime,
-          value.getNumber(),
-          Handle<JSObject>::vmcast(&runtime->numberPrototype));
+                 runtime,
+                 value.getNumber(),
+                 Handle<JSObject>::vmcast(&runtime->numberPrototype))
+          .getHermesValue();
   }
 }
 

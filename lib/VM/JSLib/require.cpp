@@ -8,6 +8,7 @@
 #include "JSLibInternal.h"
 
 #include "hermes/Support/UTF8.h"
+#include "hermes/VM/Domain.h"
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/Operations.h"
@@ -96,16 +97,12 @@ CallResult<HermesValue> runRequireCall(
                              ->getCodeBlockMayAllocate(domain->getFunctionIndex(
                                  runtime, cjsModuleOffset));
 
-  auto funcRes = JSFunction::create(
+  Handle<JSFunction> func = runtime->makeHandle(JSFunction::create(
       runtime,
       domain,
       Handle<JSObject>::vmcast(&runtime->functionPrototype),
       Runtime::makeNullHandle<Environment>(),
-      codeBlock);
-  if (LLVM_UNLIKELY(funcRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto func = runtime->makeHandle<JSFunction>(*funcRes);
+      codeBlock));
 
   if (LLVM_UNLIKELY(
           JSFunction::executeCall3(

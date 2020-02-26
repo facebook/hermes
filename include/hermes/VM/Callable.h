@@ -10,6 +10,7 @@
 
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Domain.h"
+#include "hermes/VM/Handle.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/NativeArgs.h"
 
@@ -706,7 +707,8 @@ class NativeFunction : public Callable {
 /// Object.
 class NativeConstructor final : public NativeFunction {
  public:
-  using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
+  using CreatorFunction =
+      CallResult<PseudoHandle<JSObject>>(Runtime *, Handle<JSObject>);
 
   /// Unifies signatures of various GCCells so that they may be stored
   /// in the NativeConstructor.
@@ -850,7 +852,11 @@ class NativeConstructor final : public NativeFunction {
       Runtime *runtime,
       Handle<JSObject> parentHandle) {
     auto nativeConsHandle = Handle<NativeConstructor>::vmcast(selfHandle);
-    return nativeConsHandle->creator_(runtime, parentHandle);
+    auto res = nativeConsHandle->creator_(runtime, parentHandle);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return res->getHermesValue();
   }
 
 #ifndef NDEBUG
@@ -956,7 +962,7 @@ class JSFunction : public Callable {
   }
 
   /// Create a Function with the prototype property set to new Object().
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSFunction> create(
       Runtime *runtime,
       Handle<Domain> domain,
       Handle<JSObject> parentHandle,
@@ -965,7 +971,7 @@ class JSFunction : public Callable {
 
   /// Create a Function with no environment and a CodeBlock simply returning
   /// undefined, with the prototype property auto-initialized to new Object().
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSFunction> create(
       Runtime *runtime,
       Handle<Domain> domain,
       Handle<JSObject> parentHandle) {
@@ -979,13 +985,11 @@ class JSFunction : public Callable {
 
   /// Create a Function with no environment and a CodeBlock simply returning
   /// undefined, with the prototype property auto-initialized to new Object().
-  /// This creates a new Domain for the new Function to exist in, because it was
-  /// compiled separately from any currently executing JS code.
-  static CallResult<HermesValue> createWithNewDomain(
+  static PseudoHandle<JSFunction> create(
       Runtime *runtime,
-      Handle<JSObject> protoHandle) {
+      Handle<JSObject> parentHandle) {
     return create(
-        runtime, runtime->makeHandle(Domain::create(runtime)), protoHandle);
+        runtime, runtime->makeHandle(Domain::create(runtime)), parentHandle);
   }
 
   /// \return the code block containing the function code.
@@ -1025,12 +1029,26 @@ class JSGeneratorFunction final : public JSFunction {
   static CallableVTable vt;
 
   /// Create a GeneratorFunction.
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSGeneratorFunction> create(
       Runtime *runtime,
       Handle<Domain> domain,
       Handle<JSObject> parentHandle,
       Handle<Environment> envHandle,
       CodeBlock *codeBlock);
+
+  /// Create a GeneratorFunction with no environment and a CodeBlock simply
+  /// returning undefined, with the prototype property auto-initialized to new
+  /// Object().
+  static PseudoHandle<JSGeneratorFunction> create(
+      Runtime *runtime,
+      Handle<JSObject> parentHandle) {
+    return create(
+        runtime,
+        runtime->makeHandle(Domain::create(runtime)),
+        parentHandle,
+        runtime->makeNullHandle<Environment>(),
+        runtime->getEmptyCodeBlock());
+  }
 
   static bool classof(const GCCell *cell) {
     return cell->getKind() == CellKind::GeneratorFunctionKind;

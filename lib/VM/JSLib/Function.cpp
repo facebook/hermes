@@ -31,13 +31,12 @@ Handle<JSObject> createFunctionConstructor(Runtime *runtime) {
   auto functionPrototype =
       Handle<Callable>::vmcast(&runtime->functionPrototype);
 
-  auto cons = defineSystemConstructor(
+  auto cons = defineSystemConstructor<JSFunction>(
       runtime,
       Predefined::getSymbolID(Predefined::Function),
       functionConstructor,
       functionPrototype,
       1,
-      JSFunction::createWithNewDomain,
       CellKind::FunctionKind);
 
   // Function.prototype.xxx() methods.

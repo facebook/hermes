@@ -30,7 +30,7 @@ class JSDataView final : public JSObject {
     return cell->getKind() == CellKind::DataViewKind;
   }
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSDataView> create(
       Runtime *runtime,
       Handle<JSObject> prototype);
 

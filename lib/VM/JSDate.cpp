@@ -50,10 +50,10 @@ void DateDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-CallResult<HermesValue>
+PseudoHandle<JSDate>
 JSDate::create(Runtime *runtime, double value, Handle<JSObject> parentHandle) {
   JSObjectAlloc<JSDate> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSDate(
+  return mem.initToPseudoHandle(new (mem) JSDate(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(

@@ -37,7 +37,7 @@ constexpr uint8_t u8sizeof(const char (&str)[N]) {
 #func "<" #type ", " #type2 ">"
 #define NATIVE_CONSTRUCTOR_STR(func) #func
 #define NATIVE_CONSTRUCTOR_TYPED_STR(classname, type, type2, func) \
-#classname "<" #type ", " #type2 ">::" #func
+#func "<" #classname "<" #type ", " #type2 ">>"
 
 static llvm::DenseMap<const void *, const char *> funcNames() {
   static constexpr uint8_t nameLengths[] = {
@@ -81,9 +81,10 @@ static llvm::DenseMap<const void *, const char *> funcNames() {
 
   // Creator functions are overloaded, we have to cast them to CreatorFunction *
   // first.
-#define NATIVE_CONSTRUCTOR(func) (void *)(CreatorFunction *) func,
+#define NATIVE_CONSTRUCTOR(func) \
+  (void *)(NativeConstructor::CreatorFunction *) func,
 #define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func) \
-  (void *)(CreatorFunction *) classname<type, type2>::func,
+  (void *)(NativeConstructor::CreatorFunction *) func<classname<type, type2>>,
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_FUNCTION
 #undef NATIVE_FUNCTION_TYPED
@@ -118,7 +119,7 @@ const char *getFunctionName(NativeFunctionPtr func) {
   return getFunctionNameImpl((void *)func);
 }
 
-const char *getFunctionName(CreatorFunction *func) {
+const char *getFunctionName(NativeConstructor::CreatorFunction *func) {
   return getFunctionNameImpl((void *)func);
 }
 

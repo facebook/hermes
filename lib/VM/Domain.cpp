@@ -159,6 +159,11 @@ Domain::~Domain() {
   }
 }
 
+PseudoHandle<NativeFunction> Domain::getThrowingRequire(
+    Runtime *runtime) const {
+  return createPseudoHandle(throwingRequire_.get(runtime));
+}
+
 void Domain::_markWeakImpl(GCCell *cell, WeakRefAcceptor &acceptor) {
   auto *self = reinterpret_cast<Domain *>(cell);
   self->markWeakRefs(acceptor);

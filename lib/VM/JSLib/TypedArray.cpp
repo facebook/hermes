@@ -1052,7 +1052,7 @@ typedArrayPrototypeIterator(void *ctx, Runtime *runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto self = args.vmcastThis<JSTypedArrayBase>();
-  return JSArrayIterator::create(runtime, self, kind);
+  return JSArrayIterator::create(runtime, self, kind).getHermesValue();
 }
 
 CallResult<HermesValue>
@@ -1560,7 +1560,7 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime *runtime) {
       nullptr,
       typedArrayBaseConstructor,
       0,
-      JSObject::createWithException,
+      NativeConstructor::creatorFunction<JSObject>,
       CellKind::ObjectKind));
 
   // Define %TypedArray%.prototype to be proto.
@@ -1856,7 +1856,7 @@ Handle<JSObject> createTypedArrayConstructor(Runtime *runtime) {
       proto,
       Handle<JSObject>::vmcast(&runtime->typedArrayBaseConstructor),
       3,
-      TA::create,
+      NativeConstructor::creatorFunction<TA>,
       C);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();

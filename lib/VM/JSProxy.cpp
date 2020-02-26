@@ -119,13 +119,13 @@ PseudoHandle<JSProxy> JSProxy::create(Runtime *runtime) {
   return mem.initToPseudoHandle(proxy);
 }
 
-CallResult<HermesValue> JSProxy::create(
+PseudoHandle<JSProxy> JSProxy::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
   assert(
       prototype.get() == runtime->objectPrototypeRawPtr &&
       "JSProxy::create() can only be used with object prototype");
-  return create(runtime).getHermesValue();
+  return create(runtime);
 }
 
 void JSProxy::setTargetAndHandler(

@@ -311,7 +311,7 @@ class JSWeakMapImpl final : public JSWeakMapImplBase {
   }
 
   /// Create a new WeakMap with prototype property \p parentHandle.
-  static CallResult<HermesValue> create(
+  static CallResult<PseudoHandle<JSWeakMapImpl<C>>> create(
       Runtime *runtime,
       Handle<JSObject> parentHandle);
 

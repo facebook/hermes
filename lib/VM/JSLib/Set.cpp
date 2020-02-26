@@ -255,12 +255,8 @@ setPrototypeEntries(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Method Set.prototype.entries called on incompatible receiver");
   }
-  auto mapRes = JSSetIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->setIteratorPrototype));
-  if (LLVM_UNLIKELY(mapRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto iterator = runtime->makeHandle<JSSetIterator>(*mapRes);
+  auto iterator = runtime->makeHandle(JSSetIterator::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->setIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Entry);
   return iterator.getHermesValue();
 }
@@ -329,12 +325,8 @@ setPrototypeValues(void *, Runtime *runtime, NativeArgs args) {
     return runtime->raiseTypeError(
         "Method Set.prototype.values called on incompatible receiver");
   }
-  auto mapRes = JSSetIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->setIteratorPrototype));
-  if (LLVM_UNLIKELY(mapRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto iterator = runtime->makeHandle<JSSetIterator>(*mapRes);
+  auto iterator = runtime->makeHandle(JSSetIterator::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->setIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Value);
   return iterator.getHermesValue();
 }

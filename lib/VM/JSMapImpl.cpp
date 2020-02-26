@@ -89,11 +89,11 @@ const ObjectVTable JSMapImpl<C>::vt{
 };
 
 template <CellKind C>
-CallResult<HermesValue> JSMapImpl<C>::create(
+PseudoHandle<JSMapImpl<C>> JSMapImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   JSObjectAlloc<JSMapImpl> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSMapImpl(
+  return mem.initToPseudoHandle(new (mem) JSMapImpl(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
@@ -185,11 +185,11 @@ const ObjectVTable JSMapIteratorImpl<C>::vt = {
 };
 
 template <CellKind C>
-CallResult<HermesValue> JSMapIteratorImpl<C>::create(
+PseudoHandle<JSMapIteratorImpl<C>> JSMapIteratorImpl<C>::create(
     Runtime *runtime,
     Handle<JSObject> prototype) {
   JSObjectAlloc<JSMapIteratorImpl<C>> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSMapIteratorImpl<C>(
+  return mem.initToPseudoHandle(new (mem) JSMapIteratorImpl<C>(
       runtime,
       *prototype,
       runtime->getHiddenClassForPrototypeRaw(

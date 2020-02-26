@@ -26,10 +26,9 @@ namespace vm {
   CallResult<HermesValue> func(void *, Runtime *, NativeArgs);
 #include "hermes/VM/NativeFunctions.def"
 
-using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
 /// Get a human-readable name of a native function.
 const char *getFunctionName(NativeFunctionPtr);
-const char *getFunctionName(CreatorFunction *);
+const char *getFunctionName(NativeConstructor::CreatorFunction *);
 
 } // namespace vm
 } // namespace hermes

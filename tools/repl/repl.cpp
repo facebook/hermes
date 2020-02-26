@@ -21,6 +21,7 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSError.h"
+#include "hermes/VM/JSObject.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/SmallXString.h"

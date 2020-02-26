@@ -136,8 +136,7 @@ void Deserializer::init(
                    << ">, " << ((void *)func<type, type2>) << "\n");         \
   idx++;
 
-  using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
-  CreatorFunction *funcPtr;
+  NativeConstructor::CreatorFunction *funcPtr;
 #define NATIVE_CONSTRUCTOR(func)                                      \
   funcPtr = func;                                                     \
   assert(!objectTable_[idx]);                                         \
@@ -147,14 +146,14 @@ void Deserializer::init(
                    << "\n");                                          \
   idx++;
 
-#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func)            \
-  funcPtr = classname<type, type2>::func;                                 \
-  assert(!objectTable_[idx]);                                             \
-  objectTable_[idx] = (void *)funcPtr;                                    \
-  LLVM_DEBUG(                                                             \
-      llvm::dbgs() << idx << ", " << #classname << "<" << #type << ", "   \
-                   << #type2 << ">::" << #func << ", " << (void *)funcPtr \
-                   << "\n");                                              \
+#define NATIVE_CONSTRUCTOR_TYPED(classname, type, type2, func)         \
+  funcPtr = func<classname<type, type2>>;                              \
+  assert(!objectTable_[idx]);                                          \
+  objectTable_[idx] = (void *)funcPtr;                                 \
+  LLVM_DEBUG(                                                          \
+      llvm::dbgs() << idx << ", " << #func << "<" << #classname << "<" \
+                   << #type << ", " << #type2 << ">>"                  \
+                   << ", " << (void *)funcPtr << "\n");                \
   idx++;
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_CONSTRUCTOR

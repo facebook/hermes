@@ -259,7 +259,7 @@ class JSTypedArray final : public JSTypedArrayBase {
     return cell->getKind() == C;
   }
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSTypedArray<T, C>> create(
       Runtime *runtime,
       Handle<JSObject> prototype);
 

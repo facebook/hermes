@@ -37,7 +37,7 @@ class JSMapImpl final : public JSObject {
     return cell->getKind() == C;
   }
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSMapImpl<C>> create(
       Runtime *runtime,
       Handle<JSObject> parentHandle);
 
@@ -183,7 +183,7 @@ class JSMapIteratorImpl final : public JSObject {
   }
 
   /// Create a handle of JSMapIterator.
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSMapIteratorImpl<C>> create(
       Runtime *runtime,
       Handle<JSObject> prototype);
 

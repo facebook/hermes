@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// Updated Dec 13, 2019
-#define NATIVE_FUNCTION_VERSION_VALUE 7
+// Updated Jan 28, 2019
+#define NATIVE_FUNCTION_VERSION_VALUE 8
 
 #ifndef NATIVE_FUNCTION
 #define NATIVE_FUNCTION(func)
@@ -392,30 +392,32 @@ NATIVE_FUNCTION(instrumentReturnNth)
 
 // NativeConstructor
 
-// creator funcitons
-NATIVE_CONSTRUCTOR(JSObject::createWithException)
-NATIVE_CONSTRUCTOR(JSFunction::createWithNewDomain)
+// Creator functions
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSObject>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSFunction>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSArray>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSArrayBuffer>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSBoolean>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSDataView>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSDate>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSError>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSMap>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSNumber>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSProxy>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSRegExp>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSSet>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSString>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSSymbol>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakMap>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakSet>)
+NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSGeneratorFunction>)
 
-// NativeClass::create
-NATIVE_CONSTRUCTOR(JSArray::create)
-NATIVE_CONSTRUCTOR(JSArrayBuffer::create)
-NATIVE_CONSTRUCTOR(JSBoolean::create)
-NATIVE_CONSTRUCTOR(JSDataView::create)
-NATIVE_CONSTRUCTOR(JSDate::create)
-NATIVE_CONSTRUCTOR(JSError::create)
-NATIVE_CONSTRUCTOR(JSMap::create)
-NATIVE_CONSTRUCTOR(JSNumber::create)
-NATIVE_CONSTRUCTOR(JSProxy::create)
-NATIVE_CONSTRUCTOR(JSRegExp::create)
-NATIVE_CONSTRUCTOR(JSSet::create)
-NATIVE_CONSTRUCTOR(JSString::create)
-NATIVE_CONSTRUCTOR(JSSymbol::create)
-NATIVE_CONSTRUCTOR(JSWeakMap::create)
-NATIVE_CONSTRUCTOR(JSWeakSet::create)
-
-#define TYPED_ARRAY(name, type) \
-  NATIVE_CONSTRUCTOR_TYPED(     \
-      JSTypedArray, type, CellKind::name##ArrayKind, create)
+#define TYPED_ARRAY(name, type)  \
+  NATIVE_CONSTRUCTOR_TYPED(      \
+      JSTypedArray,              \
+      type,                      \
+      CellKind::name##ArrayKind, \
+      NativeConstructor::creatorFunction)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 

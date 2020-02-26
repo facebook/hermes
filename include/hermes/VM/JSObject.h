@@ -407,13 +407,6 @@ class JSObject : public GCCell {
       Runtime *runtime,
       Handle<HiddenClass> clazz);
 
-  /// Attempts to allocate a JSObject and returns whether it succeeded or not.
-  /// NOTE: This function always returns \c ExecutionStatus::RETURNED, it is
-  /// only used in interfaces where other creators may throw a JS exception.
-  static CallResult<HermesValue> createWithException(
-      Runtime *runtime,
-      Handle<JSObject> parentHandle);
-
   ~JSObject() = default;
 
   /// Must be called immediately after the construction of any JSObject.
@@ -1579,14 +1572,14 @@ inline CallResult<PseudoHandle<JSObject>> JSObject::allocatePropStorage(
   if (LLVM_LIKELY(size <= DIRECT_PROPERTY_SLOTS))
     return self;
 
-  auto selfHandle = runtime->makeHandle(std::move(self));
+  Handle<JSObject> selfHandle = runtime->makeHandle(std::move(self));
   if (LLVM_UNLIKELY(
           allocatePropStorage(selfHandle, runtime, size) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return PseudoHandle<JSObject>(selfHandle);
+  return PseudoHandle<JSObject>{selfHandle};
 }
 
 template <typename T>

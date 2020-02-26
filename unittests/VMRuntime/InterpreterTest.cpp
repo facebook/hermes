@@ -335,7 +335,7 @@ L1:
   BFG->bytecodeGenerationComplete();
   auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
 
-  auto factFn = runtime->makeHandle<JSFunction>(*JSFunction::create(
+  Handle<JSFunction> factFn = runtime->makeHandle(JSFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
       Handle<JSObject>(runtime),

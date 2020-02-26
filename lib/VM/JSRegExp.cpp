@@ -88,7 +88,7 @@ void RegExpDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-CallResult<HermesValue> JSRegExp::create(
+Handle<JSRegExp> JSRegExp::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   JSObjectAlloc<JSRegExp, HasFinalizer::Yes> mem{runtime};
@@ -106,7 +106,7 @@ CallResult<HermesValue> JSRegExp::create(
       HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::emptyString)));
 
-  return selfHandle.getHermesValue();
+  return selfHandle;
 }
 
 ExecutionStatus JSRegExp::initialize(

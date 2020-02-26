@@ -38,7 +38,7 @@ static inline Handle<Callable> makeSimpleJSFunction(
     BFG->emitRet(0);
     codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
   }
-  return runtime->makeHandle<JSFunction>(*JSFunction::create(
+  return runtime->makeHandle<JSFunction>(JSFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
       Handle<JSObject>(runtime),
@@ -552,7 +552,8 @@ TEST_F(ObjectModelTest, NativeConstructorTest) {
       nullptr,
       nullptr,
       0,
-      JSDate::create,
+      (NativeConstructor::CreatorFunction *)
+          NativeConstructor::creatorFunction<JSDate>,
       CellKind::FunctionKind));
   auto crtRes = dateCons->newObject(
       dateCons, runtime, Runtime::makeNullHandle<JSObject>());

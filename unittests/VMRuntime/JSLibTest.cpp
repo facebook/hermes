@@ -456,13 +456,13 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     BFG->emitLoadConstDouble(0, 18);
     BFG->emitRet(0);
     auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
-    auto getter = runtime->makeHandle<JSFunction>(*JSFunction::create(
+    auto getter = runtime->makeHandle<JSFunction>(JSFunction::create(
         runtime,
         runtimeModule->getDomain(runtime),
         Handle<JSObject>(runtime),
         Handle<Environment>(runtime),
         codeBlock));
-    auto setter = runtime->makeHandle<JSFunction>(*JSFunction::create(
+    auto setter = runtime->makeHandle<JSFunction>(JSFunction::create(
         runtime,
         runtimeModule->getDomain(runtime),
         Handle<JSObject>(runtime),

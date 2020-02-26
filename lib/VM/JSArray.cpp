@@ -398,7 +398,7 @@ void ArgumentsDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-CallResult<HermesValue> Arguments::create(
+CallResult<Handle<Arguments>> Arguments::create(
     Runtime *runtime,
     size_type length,
     Handle<Callable> curFunction,
@@ -479,7 +479,7 @@ CallResult<HermesValue> Arguments::create(
     DEFINE_PROP(selfHandle, P::callee, curFunction);
   }
 
-  return selfHandle.getHermesValue();
+  return selfHandle;
 
 #undef DEFINE_PROP
 }
@@ -567,7 +567,7 @@ Handle<HiddenClass> JSArray::createClass(
   return classHandle;
 }
 
-CallResult<HermesValue> JSArray::create(
+CallResult<PseudoHandle<JSArray>> JSArray::create(
     Runtime *runtime,
     Handle<JSObject> prototypeHandle,
     Handle<HiddenClass> classHandle,
@@ -602,20 +602,17 @@ CallResult<HermesValue> JSArray::create(
       GCPointerBase::NoBarriers()));
   putLength(self.get(), runtime, length);
 
-  return self.getHermesValue();
+  return self;
 }
 
 CallResult<PseudoHandle<JSArray>>
 JSArray::create(Runtime *runtime, size_type capacity, size_type length) {
-  auto res = JSArray::create(
+  return JSArray::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime->arrayPrototype),
       Handle<HiddenClass>::vmcast(&runtime->arrayClass),
       capacity,
       length);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-  return PseudoHandle<JSArray>::create(vmcast<JSArray>(*res));
 }
 
 CallResult<bool> JSArray::setLength(
@@ -804,14 +801,14 @@ void ArrayIteratorDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-CallResult<HermesValue> JSArrayIterator::create(
+PseudoHandle<JSArrayIterator> JSArrayIterator::create(
     Runtime *runtime,
     Handle<JSObject> array,
     IterationKind iterationKind) {
   auto proto = Handle<JSObject>::vmcast(&runtime->arrayIteratorPrototype);
 
   JSObjectAlloc<JSArrayIterator> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSArrayIterator(
+  return mem.initToPseudoHandle(new (mem) JSArrayIterator(
       runtime,
       *proto,
       runtime->getHiddenClassForPrototypeRaw(

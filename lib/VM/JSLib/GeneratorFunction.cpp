@@ -23,7 +23,7 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime *runtime) {
       nullptr,
       generatorFunctionConstructor,
       1,
-      JSGeneratorFunction::createWithNewDomain,
+      NativeConstructor::creatorFunction<JSGeneratorFunction>,
       CellKind::GeneratorFunctionKind));
 
   auto st = Callable::defineNameLengthAndPrototype(

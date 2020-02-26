@@ -95,11 +95,11 @@ void ArrayBufferDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-CallResult<HermesValue> JSArrayBuffer::create(
+PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   JSObjectAlloc<JSArrayBuffer, HasFinalizer::Yes> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSArrayBuffer(
+  return mem.initToPseudoHandle(new (mem) JSArrayBuffer(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(
@@ -116,12 +116,8 @@ CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
     return runtime->raiseTypeError("Cannot clone from a detached buffer");
   }
 
-  auto arrRes = JSArrayBuffer::create(
-      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype));
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto arr = runtime->makeHandle<JSArrayBuffer>(*arrRes);
+  auto arr = runtime->makeHandle(JSArrayBuffer::create(
+      runtime, Handle<JSObject>::vmcast(&runtime->arrayBufferPrototype)));
 
   // Don't need to zero out the data since we'll be copying into it immediately.
   if (arr->createDataBlock(runtime, srcSize, false) ==

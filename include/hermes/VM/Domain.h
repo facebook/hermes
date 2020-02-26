@@ -215,9 +215,7 @@ class Domain final : public GCCell {
 
   /// \return the throwing require function with require.context bound to a
   /// context for this domain.
-  PseudoHandle<NativeFunction> getThrowingRequire(Runtime *runtime) const {
-    return createPseudoHandle(throwingRequire_.get(runtime));
-  }
+  PseudoHandle<NativeFunction> getThrowingRequire(Runtime *runtime) const;
 
  private:
   /// Create a domain with no associated RuntimeModules.

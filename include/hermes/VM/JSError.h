@@ -55,7 +55,7 @@ class JSError final : public JSObject {
   }
 
   /// Create an Error Object.
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSError> create(
       Runtime *runtime,
       Handle<JSObject> prototype);
   /// Create an uncatchable Error Object. If this object is thrown, no catch
@@ -63,7 +63,7 @@ class JSError final : public JSObject {
   /// NOTE: This should be used only in very specific circumstances where it is
   /// impossible or undesirable to continue running the VM. The error should be
   /// considered a fatal abort, but one that cleans up internal VM resources.
-  static CallResult<HermesValue> createUncatchable(
+  static PseudoHandle<JSError> createUncatchable(
       Runtime *runtime,
       Handle<JSObject> prototype);
 
@@ -128,7 +128,7 @@ class JSError final : public JSObject {
   static void _finalizeImpl(GCCell *cell, GC *gc);
   static size_t _mallocSizeImpl(GCCell *cell);
 
-  static CallResult<HermesValue>
+  static PseudoHandle<JSError>
   create(Runtime *runtime, Handle<JSObject> prototype, bool catchable);
 
   /// A pointer to the stack trace, or nullptr if it has not been set.

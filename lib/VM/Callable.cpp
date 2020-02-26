@@ -1133,7 +1133,6 @@ void NativeConstructorSerialize(Serializer &s, const GCCell *cell) {
 }
 
 void NativeConstructorDeserialize(Deserializer &d, CellKind kind) {
-  using CreatorFunction = CallResult<HermesValue>(Runtime *, Handle<JSObject>);
   assert(
       kind == CellKind::NativeConstructorKind && "Expected NativeConstructor");
   void *context = (void *)d.readInt<uint64_t>();
@@ -1152,7 +1151,7 @@ void NativeConstructorDeserialize(Deserializer &d, CellKind kind) {
       context,
       (NativeFunctionPtr)functionPtr,
       targetKind,
-      (CreatorFunction *)creatorPtr);
+      (NativeConstructor::CreatorFunction *)creatorPtr);
   d.endObject(cell);
 }
 #endif
@@ -1242,7 +1241,7 @@ void FunctionDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-CallResult<HermesValue> JSFunction::create(
+PseudoHandle<JSFunction> JSFunction::create(
     Runtime *runtime,
     Handle<Domain> domain,
     Handle<JSObject> parentHandle,
@@ -1259,7 +1258,7 @@ CallResult<HermesValue> JSFunction::create(
       envHandle,
       codeBlock));
   self->flags_.lazyObject = 1;
-  return self.getHermesValue();
+  return self;
 }
 
 void JSFunction::addLocationToSnapshot(
@@ -1357,7 +1356,7 @@ void GeneratorFunctionDeserialize(Deserializer &d, CellKind kind) {
 }
 #endif
 
-CallResult<HermesValue> JSGeneratorFunction::create(
+PseudoHandle<JSGeneratorFunction> JSGeneratorFunction::create(
     Runtime *runtime,
     Handle<Domain> domain,
     Handle<JSObject> parentHandle,
@@ -1374,7 +1373,7 @@ CallResult<HermesValue> JSGeneratorFunction::create(
       envHandle,
       codeBlock));
   self->flags_.lazyObject = 1;
-  return self.getHermesValue();
+  return self;
 }
 
 //===----------------------------------------------------------------------===//

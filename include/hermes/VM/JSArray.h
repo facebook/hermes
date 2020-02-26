@@ -257,7 +257,7 @@ class Arguments final : public ArrayImpl {
 
   /// Create an instance of Arguments, with size and capacity equal to \p length
   /// and a property "length" initialized to that value.
-  static CallResult<HermesValue> create(
+  static CallResult<Handle<Arguments>> create(
       Runtime *runtime,
       size_type length,
       Handle<Callable> curFunction,
@@ -311,14 +311,14 @@ class JSArray final : public ArrayImpl {
   /// Create an instance of Array, with [[Prototype]] initialized with
   /// \p prototypeHandle, with capacity for \p capacity elements and actual size
   /// \p length.
-  static CallResult<HermesValue> create(
+  static CallResult<PseudoHandle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle,
       Handle<HiddenClass> classHandle,
       size_type capacity = 0,
       size_type length = 0);
 
-  static CallResult<HermesValue> create(
+  static CallResult<PseudoHandle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle,
       size_type capacity,
@@ -332,7 +332,7 @@ class JSArray final : public ArrayImpl {
         capacity,
         length);
   }
-  static CallResult<HermesValue> create(
+  static CallResult<PseudoHandle<JSArray>> create(
       Runtime *runtime,
       Handle<JSObject> prototypeHandle) {
     return create(runtime, prototypeHandle, 0, 0);
@@ -435,7 +435,7 @@ class JSArrayIterator : public JSObject {
     return cell->getKind() == CellKind::ArrayIteratorKind;
   }
 
-  static CallResult<HermesValue>
+  static PseudoHandle<JSArrayIterator>
   create(Runtime *runtime, Handle<JSObject> array, IterationKind iterationKind);
 
   /// Iterate to the next element and return.

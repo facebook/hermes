@@ -178,12 +178,6 @@ PseudoHandle<JSObject> JSObject::create(
   return obj;
 }
 
-CallResult<HermesValue> JSObject::createWithException(
-    Runtime *runtime,
-    Handle<JSObject> parentHandle) {
-  return JSObject::create(runtime, parentHandle).getHermesValue();
-}
-
 void JSObject::initializeLazyObject(
     Runtime *runtime,
     Handle<JSObject> lazyObject) {

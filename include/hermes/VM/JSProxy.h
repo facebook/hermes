@@ -59,7 +59,7 @@ class JSProxy : public JSObject {
 
   static PseudoHandle<JSProxy> create(Runtime *runtime);
 
-  static CallResult<HermesValue> create(
+  static PseudoHandle<JSProxy> create(
       Runtime *runtime,
       Handle<JSObject> prototype);
 

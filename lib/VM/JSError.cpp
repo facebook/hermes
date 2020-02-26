@@ -183,24 +183,24 @@ errorStackSetter(void *, Runtime *runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue> JSError::create(
+PseudoHandle<JSError> JSError::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   return create(runtime, parentHandle, /*catchable*/ true);
 }
 
-CallResult<HermesValue> JSError::createUncatchable(
+PseudoHandle<JSError> JSError::createUncatchable(
     Runtime *runtime,
     Handle<JSObject> parentHandle) {
   return create(runtime, parentHandle, /*catchable*/ false);
 }
 
-CallResult<HermesValue> JSError::create(
+PseudoHandle<JSError> JSError::create(
     Runtime *runtime,
     Handle<JSObject> parentHandle,
     bool catchable) {
   JSObjectAlloc<JSError, HasFinalizer::Yes> mem{runtime};
-  return mem.initToHermesValue(new (mem) JSError(
+  return mem.initToPseudoHandle(new (mem) JSError(
       runtime,
       *parentHandle,
       runtime->getHiddenClassForPrototypeRaw(

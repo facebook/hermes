@@ -93,11 +93,12 @@ CallResult<HermesValue> externCreateClosure(
   GCScopeMarkerRAII marker{runtime};
 
   return JSFunction::create(
-      runtime,
-      codeBlock->getRuntimeModule()->getDomain(runtime),
-      Handle<JSObject>::vmcast(&runtime->functionPrototype),
-      Handle<Environment>::vmcast(env),
-      codeBlock);
+             runtime,
+             codeBlock->getRuntimeModule()->getDomain(runtime),
+             Handle<JSObject>::vmcast(&runtime->functionPrototype),
+             Handle<Environment>::vmcast(env),
+             codeBlock)
+      .getHermesValue();
 }
 
 ExecutionStatus externPutById(
@@ -901,12 +902,8 @@ CallResult<HermesValue> externCreateRegExpMayAllocate(
   GCScopeMarkerRAII marker{runtime};
 
   // Create the RegExp object.
-  auto regRes = JSRegExp::create(
+  Handle<JSRegExp> re = JSRegExp::create(
       runtime, Handle<JSObject>::vmcast(&runtime->regExpPrototype));
-  if (regRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto re = runtime->makeHandle<JSRegExp>(*regRes);
   // Initialize the regexp.
   auto pattern = runtime->makeHandle(
       codeBlock->getRuntimeModule()->getStringPrimFromStringIDMayAllocate(
