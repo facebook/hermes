@@ -385,7 +385,7 @@ ESTREE_NODE_2_ARGS(
     Base,
     NodePtr,
     param,
-    false,
+    true,
     NodePtr,
     body,
     false)

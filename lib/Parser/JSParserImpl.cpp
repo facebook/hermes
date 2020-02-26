@@ -1830,40 +1830,35 @@ Optional<ESTree::TryStatementNode *> JSParserImpl::parseTryStatement(
   // Parse the optional 'catch' handler.
   SMLoc handlerStartLoc = tok_->getStartLoc();
   if (checkAndEat(TokenKind::rw_catch)) {
-    if (!eat(
-            TokenKind::l_paren,
-            JSLexer::AllowRegExp,
-            "after 'catch'",
-            "location of 'catch'",
-            handlerStartLoc))
-      return None;
-
-    ESTree::Node *catchParam;
-    if (check(TokenKind::l_square, TokenKind::l_brace)) {
-      auto optPattern = parseBindingPattern(Param{});
-      if (!optPattern)
-        return None;
-      catchParam = *optPattern;
-    } else {
-      auto optIdent = parseBindingIdentifier(Param{});
-      if (!optIdent) {
-        errorExpected(
-            TokenKind::identifier,
-            "inside catch list",
-            "location of 'catch'",
-            handlerStartLoc);
-        return None;
+    ESTree::Node *catchParam = nullptr;
+    if (checkAndEat(TokenKind::l_paren)) {
+      // CatchClause param is optional.
+      if (check(TokenKind::l_square, TokenKind::l_brace)) {
+        auto optPattern = parseBindingPattern(Param{});
+        if (!optPattern)
+          return None;
+        catchParam = *optPattern;
+      } else {
+        auto optIdent = parseBindingIdentifier(Param{});
+        if (!optIdent) {
+          errorExpected(
+              TokenKind::identifier,
+              "inside catch list",
+              "location of 'catch'",
+              handlerStartLoc);
+          return None;
+        }
+        catchParam = *optIdent;
       }
-      catchParam = *optIdent;
-    }
 
-    if (!eat(
-            TokenKind::r_paren,
-            JSLexer::AllowRegExp,
-            "after 'catch (...'",
-            "location of 'catch'",
-            handlerStartLoc))
-      return None;
+      if (!eat(
+              TokenKind::r_paren,
+              JSLexer::AllowRegExp,
+              "after 'catch (...'",
+              "location of 'catch'",
+              handlerStartLoc))
+        return None;
+    }
 
     if (!need(
             TokenKind::l_brace,

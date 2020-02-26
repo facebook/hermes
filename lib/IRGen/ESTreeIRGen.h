@@ -642,7 +642,9 @@ class ESTreeIRGen {
       EF emitNormalCleanup,
       EH emitHandler);
 
-  /// Generate IR "catch (e)".
+  /// \param catchParam is not null, create the required variable binding
+  ///     for the catch parameter and emit the store.
+  /// \return the CatchInst.
   CatchInst *prepareCatch(ESTree::NodePtr catchParam);
 
   /// When we see a control change such as return, break, continue,

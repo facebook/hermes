@@ -88,7 +88,12 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 }
 
 CatchInst *ESTreeIRGen::prepareCatch(ESTree::NodePtr catchParam) {
-  auto catchInst = Builder.createCatchInst();
+  auto *catchInst = Builder.createCatchInst();
+
+  if (!catchParam) {
+    // Optional catch binding allows us to emit no extra code for the catch.
+    return catchInst;
+  }
 
   if (!isa<ESTree::IdentifierNode>(catchParam)) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
