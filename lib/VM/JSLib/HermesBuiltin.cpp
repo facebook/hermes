@@ -653,6 +653,9 @@ hermesBuiltinApply(void *, Runtime *runtime, NativeArgs args) {
 
   ScopedNativeCallFrame newFrame{
       runtime, len, *fn, isConstructor, thisVal.getHermesValue()};
+  if (LLVM_UNLIKELY(newFrame.overflowed()))
+    return runtime->raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+
   for (uint32_t i = 0; i < len; ++i) {
     newFrame->getArgRef(i) = argArray->at(runtime, i);
   }

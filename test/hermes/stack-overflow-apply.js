@@ -32,3 +32,14 @@ try {
     print("caught:", e.name, e.message);
 }
 //CHECK: caught: RangeError {{.*}}
+
+try {
+  v0 = [1.1];
+  function v1() {
+    v1(...v0);
+  }
+  v1();
+} catch (e) {
+    print("caught:", e.name, e.message);
+}
+//CHECK: caught: RangeError {{.*}}
