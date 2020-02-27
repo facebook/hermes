@@ -287,7 +287,7 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
     ComputedPropertyDescriptor desc;
     CallResult<bool> crb =
         JSProxy::getOwnProperty(from, runtime, nextKeyHandle, desc, nullptr);
-    if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    if (LLVM_UNLIKELY(crb == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     //   ii. If desc is not undefined and desc.[[Enumerable]] is true, then
     if (*crb && desc.flags.enumerable) {
