@@ -117,6 +117,7 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
         HermesValue::encodeNativePointer(codeBlock),
         HermesValue::encodeUndefinedValue(),
         HermesValue::encodeUndefinedValue());
+    assert(!frame.overflowed());
     result = runtime->interpretFunction(codeBlock);
 
     hasRun = true;
@@ -204,6 +205,7 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   {
     ScopedNativeCallFrame frame(
         runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue());
+    ASSERT_FALSE(frame.overflowed());
     status = runtime->interpretFunction(codeBlock);
   }
 
@@ -265,6 +267,7 @@ L2:
   {
     ScopedNativeCallFrame newFrame(
         runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+    ASSERT_FALSE(newFrame.overflowed());
     newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
     status = runtime->interpretFunction(codeBlock);
   }
@@ -354,6 +357,7 @@ L1:
     {
       ScopedNativeCallFrame newFrame(
           runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+      ASSERT_FALSE(newFrame.overflowed());
       newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(2);
       status = runtime->interpretFunction(codeBlock);
     }
@@ -371,6 +375,7 @@ L1:
     {
       ScopedNativeCallFrame newFrame(
           runtime, 1, nullptr, false, HermesValue::encodeUndefinedValue());
+      ASSERT_FALSE(newFrame.overflowed());
       newFrame->getArgRef(0) = HermesValue::encodeDoubleValue(5);
       status = runtime->interpretFunction(codeBlock);
     }
@@ -476,6 +481,7 @@ TEST_F(InterpreterTest, FrameSizeTest) {
 
   ScopedNativeCallFrame frame(
       runtime, 0, nullptr, false, HermesValue::encodeUndefinedValue());
+  ASSERT_FALSE(frame.overflowed());
 
   // Check that inner and outer stack pointer differ by at most a set threshold.
   int dummy;

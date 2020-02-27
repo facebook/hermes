@@ -1292,6 +1292,11 @@ class ScopedNativeCallFrame {
   /// Whether this call frame overflowed.
   bool overflowed_;
 
+#ifndef NDEBUG
+  /// Whether the user has called overflowed() with a false result.
+  mutable bool overflowHasBeenChecked_{false};
+#endif
+
   /// \return whether the runtime can allocate a new frame with the given number
   /// of registers. This may fail if we've overflowed our register stack, or
   /// exceeded the native call frame depth.
@@ -1343,7 +1348,11 @@ class ScopedNativeCallFrame {
 #if HERMES_SLOW_DEBUG
     // Poison the initial arguments to ensure the caller sets all of them before
     // a GC.
+    assert(!overflowed_ && "Overflow should return early");
+    overflowHasBeenChecked_ = true;
     fillArguments(argCount, HermesValue::encodeInvalidValue());
+    // We still want the user to check for overflow.
+    overflowHasBeenChecked_ = false;
 #endif
   }
 
@@ -1380,19 +1389,22 @@ class ScopedNativeCallFrame {
 
   /// Fill \p argCount arguments with the given value \p fillValue.
   void fillArguments(uint32_t argCount, HermesValue fillValue) {
-    assert(!overflowed() && "ScopedNativeCallFrame overflowed");
+    assert(overflowHasBeenChecked_ && "ScopedNativeCallFrame could overflow");
     assert(argCount == frame_.getArgCount() && "Arg count mismatch.");
     std::uninitialized_fill_n(&frame_.getArgRefUnsafe(0), argCount, fillValue);
   }
 
   /// \return whether the stack frame overflowed.
   bool overflowed() const {
+#ifndef NDEBUG
+    overflowHasBeenChecked_ = !overflowed_;
+#endif
     return overflowed_;
   }
 
   /// Access the stack frame contents via ->.
   StackFramePtr operator->() {
-    assert(!overflowed() && "ScopedNativeCallFrame overflowed");
+    assert(overflowHasBeenChecked_ && "ScopedNativeCallFrame could overflow");
     return frame_;
   }
 };
