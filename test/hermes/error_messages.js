@@ -36,3 +36,26 @@ try {
 }
 // CHECK: TypeError: Cannot delete property 'length' of null
 
+(function strict() {
+  'use strict';
+  try {
+    'hello'.x = 2;
+  } catch (e) {
+    print(e);
+  }
+  // CHECK: TypeError: Cannot create property 'x' on string 'hello'
+
+  try {
+    (2).y = 'hello';
+  } catch (e) {
+    print(e);
+  }
+  // CHECK: TypeError: Cannot create property 'y' on number '2'
+
+  try {
+    Symbol.iterator.z = undefined;
+  } catch (e) {
+    print(e);
+  }
+  // CHECK: TypeError: Cannot create property 'z' on symbol 'Symbol(Symbol.iterator)'
+})();
