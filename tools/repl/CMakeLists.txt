@@ -4,10 +4,11 @@
 # LICENSE file in the root directory of this source tree.
 
 find_library(LIBREADLINE_FOUND readline)
+find_library(LIBTINFO_FOUND tinfo)
 
-if(LIBREADLINE_FOUND)
+if(LIBREADLINE_FOUND AND LIBTINFO_FOUND)
   set(HAVE_LIBREADLINE 1)
-  set(LIBREADLINE ${LIBREADLINE_FOUND})
+  set(LIBREADLINE ${LIBREADLINE_FOUND} ${LIBTINFO_FOUND})
 endif()
 
 configure_file(ReplConfig.h.in ${CMAKE_CURRENT_BINARY_DIR}/ReplConfig.h
