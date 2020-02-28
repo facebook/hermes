@@ -23,8 +23,6 @@ from common import (
 def parse_args():
     parser = get_parser()
     parser.add_argument("hermes_build_dir", type=str, nargs="?", default="build")
-    parser.add_argument("llvm_build_dir", type=str, nargs="?", default="llvm_build")
-    parser.add_argument("llvm_src_dir", type=str, nargs="?", default="llvm")
     parser.add_argument("--icu", type=str, dest="icu_root", default="")
     parser.add_argument("--fbsource", type=str, dest="fbsource_dir", default="")
     parser.add_argument("--opcode-stats", dest="opcode_stats", action="store_true")
@@ -37,8 +35,6 @@ def parse_args():
     parser.add_argument("--static-link", dest="static_link", action="store_true")
     args = parser.parse_args()
     args.hermes_build_dir = os.path.realpath(args.hermes_build_dir)
-    args.llvm_build_dir = os.path.realpath(args.llvm_build_dir)
-    args.llvm_src_dir = os.path.realpath(args.llvm_src_dir)
     if args.icu_root:
         args.icu_root = os.path.realpath(args.icu_root)
     if args.fbsource_dir:
@@ -47,7 +43,6 @@ def parse_args():
     args.build_type = args.build_type or ("MinSizeRel" if args.distribute else "Debug")
     suffix = build_dir_suffix(args)
     args.hermes_build_dir += suffix
-    args.llvm_build_dir += suffix
     # Guess the ICU directory based on platform.
     if not args.icu_root and platform.system() == "Linux":
         icu_prefs = [
@@ -78,15 +73,8 @@ def main():
     cmake_flags = (
         args.cmake_flags.split()
         + common_cmake_flags()
-        + [
-            #            "-DLLVM_BUILD_DIR=" + args.llvm_build_dir,
-            #            "-DLLVM_SRC_DIR=" + args.llvm_src_dir,
-            "-DCMAKE_BUILD_TYPE="
-            + args.build_type
-        ]
+        + ["-DCMAKE_BUILD_TYPE=" + args.build_type]
     )
-    #    if args.is_32_bit:
-    #        cmake_flags += ["-DLLVM_BUILD_32_BITS=On"]
 
     if (
         platform.system() == "Windows"
@@ -94,10 +82,6 @@ def main():
         and is_visual_studio(args.build_system)
     ):
         cmake_flags += ["-Thost=x64"]
-    #    if not args.distribute:
-    #        cmake_flags += ["-DLLVM_ENABLE_ASSERTIONS=On"]
-    #    if args.enable_asan:
-    #        cmake_flags += ["-DLLVM_USE_SANITIZER=Address"]
     if args.opcode_stats:
         cmake_flags += ["-DHERMESVM_PROFILER_OPCODE=On"]
     if args.basic_block_profiler:
