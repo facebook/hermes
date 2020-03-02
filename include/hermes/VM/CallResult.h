@@ -281,7 +281,7 @@ template <typename T>
 class CallResult<PseudoHandle<T>, detail::CallResultSpecialize::PseudoHandle> {
   PseudoHandle<T> valueOrStatus_;
 
-#ifdef NDEBUG
+#if defined(NDEBUG) && !defined(_WINDOWS)
   static_assert(
       hermes::IsTriviallyCopyable<PseudoHandle<T>, true>::value,
       "PseudoHandle<T> must be trivially copyable");
