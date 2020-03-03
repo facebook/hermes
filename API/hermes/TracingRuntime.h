@@ -182,15 +182,6 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     std::unique_ptr<llvm::raw_ostream> traceStream = nullptr,
     const std::string &traceFilename = "");
 
-/// Like the method above, except takes a file descriptor instead of
-/// a stream.  If the \p traceFileDescriptor argument is -1, do not write
-/// the trace to a file.
-std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntimeXXX(
-    std::unique_ptr<HermesRuntime> hermesRuntime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    int traceFileDescriptor,
-    const std::string &traceFilename);
-
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
