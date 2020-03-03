@@ -16,6 +16,9 @@
 namespace facebook {
 namespace hermes {
 
+#ifdef HERMESVM_API_TRACE
+namespace {
+
 std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
@@ -33,6 +36,9 @@ std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
   return hermesRuntime;
 }
 
+} // namespace
+#endif // HERMESVM_API_TRACE
+
 std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
@@ -45,7 +51,7 @@ std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
       traceStream = ::hermes::make_unique<llvm::raw_fd_ostream>(
           traceFileDescriptor, /*shouldClose*/ true);
     }
-    return tracing::makeTracingHermesRuntime(
+    return makeTracingHermesRuntime(
         std::move(hermesRuntime),
         runtimeConfig,
         std::move(traceStream),
