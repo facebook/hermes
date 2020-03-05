@@ -38,6 +38,7 @@
 #include "hermes/VM/JSLib/RuntimeCommonStorage.h"
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -50,6 +51,7 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_os_ostream.h"
 
+#include <algorithm>
 #include <atomic>
 #include <limits>
 #include <list>
@@ -1053,6 +1055,20 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
     throw std::system_error(ec);
   }
   ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(os);
+}
+
+std::vector<int64_t> HermesRuntime::getExecutedFunctions() {
+  std::vector<::hermes::vm::CodeCoverageProfiler::FuncInfo> executedFuncs =
+      ::hermes::vm::CodeCoverageProfiler::getInstance()->getExecutedFunctions();
+  std::vector<int64_t> res;
+  std::transform(
+      executedFuncs.begin(),
+      executedFuncs.end(),
+      std::back_inserter(res),
+      [](const ::hermes::vm::CodeCoverageProfiler::FuncInfo &entry) {
+        return ((int64_t)entry.moduleId << 32) + entry.funcVirtualOffset;
+      });
+  return res;
 }
 
 void HermesRuntime::setFatalHandler(void (*handler)(const std::string &)) {

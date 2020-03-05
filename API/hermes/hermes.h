@@ -78,6 +78,11 @@ class HermesRuntime : public jsi::Runtime {
   /// Dump sampled stack trace to the given file name.
   static void dumpSampledTraceToFile(const std::string &fileName);
 
+  /// Return the executed JavaScript function info.
+  /// Each function info is a 64bit integer with the module id encoded in
+  /// upper 32bit and function virtual offset in lower 32bit.
+  static std::vector<int64_t> getExecutedFunctions();
+
   // The base class declares most of the interesting methods.  This
   // just declares new methods which are specific to HermesRuntime.
   // The actual implementations of the pure virtual methods are
