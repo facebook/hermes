@@ -83,6 +83,12 @@ class HermesRuntime : public jsi::Runtime {
   /// upper 32bit and function virtual offset in lower 32bit.
   static std::vector<int64_t> getExecutedFunctions();
 
+  /// Enable code coverage profiler.
+  static void enableCodeCoverageProfiler();
+
+  /// Disable code coverage profiler.
+  static void disableCodeCoverageProfiler();
+
   // The base class declares most of the interesting methods.  This
   // just declares new methods which are specific to HermesRuntime.
   // The actual implementations of the pure virtual methods are

@@ -1057,7 +1057,7 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
   ::hermes::vm::SamplingProfiler::getInstance()->dumpChromeTrace(os);
 }
 
-std::vector<int64_t> HermesRuntime::getExecutedFunctions() {
+/*static*/ std::vector<int64_t> HermesRuntime::getExecutedFunctions() {
   std::vector<::hermes::vm::CodeCoverageProfiler::FuncInfo> executedFuncs =
       ::hermes::vm::CodeCoverageProfiler::getInstance()->getExecutedFunctions();
   std::vector<int64_t> res;
@@ -1069,6 +1069,14 @@ std::vector<int64_t> HermesRuntime::getExecutedFunctions() {
         return ((int64_t)entry.moduleId << 32) + entry.funcVirtualOffset;
       });
   return res;
+}
+
+/*static*/ void HermesRuntime::enableCodeCoverageProfiler() {
+  ::hermes::vm::CodeCoverageProfiler::getInstance()->enable();
+}
+
+/*static*/ void HermesRuntime::disableCodeCoverageProfiler() {
+  ::hermes::vm::CodeCoverageProfiler::getInstance()->disable();
 }
 
 void HermesRuntime::setFatalHandler(void (*handler)(const std::string &)) {
