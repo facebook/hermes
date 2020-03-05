@@ -13,6 +13,7 @@
 #include "hermes/Support/HashString.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/IdentifierTable.h"
+
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/WeakRef.h"
 
@@ -318,6 +319,11 @@ class RuntimeModule final : public llvm::ilist_node<RuntimeModule> {
 
   /// \return a raw pointer to the domain which owns this RuntimeModule.
   inline Domain *getDomainUnsafe();
+
+  /// \return the Runtime of this module.
+  Runtime *getRuntime() {
+    return runtime_;
+  }
 
   /// \return a constant reference to the function map.
   const std::vector<CodeBlock *> &getFunctionMap() {

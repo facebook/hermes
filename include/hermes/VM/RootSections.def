@@ -22,6 +22,7 @@ ROOT_SECTION(GCScopes)
 ROOT_SECTION(WeakRefs)
 ROOT_SECTION(SymbolRegistry)
 ROOT_SECTION(SamplingProfiler)
+ROOT_SECTION(CodeCoverageProfiler)
 ROOT_SECTION(Custom)
 
 #undef ROOT_SECTION

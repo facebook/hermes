@@ -39,6 +39,7 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PointerBase.h"
 #include "hermes/VM/PredefinedStringIDs.h"
+#include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -173,6 +174,7 @@ Runtime::Runtime(
       crashMgr_(runtimeConfig.getCrashMgr()),
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
+      codeCoverageProfiler_(CodeCoverageProfiler::getInstance()),
       gcEventCallback_(runtimeConfig.getGCConfig().getCallback()),
       allowFunctionToStringWithRuntimeSource_(
           runtimeConfig.getAllowFunctionToStringWithRuntimeSource()) {
@@ -339,7 +341,12 @@ Runtime::Runtime(
 }
 
 Runtime::~Runtime() {
-  samplingProfiler_->unregisterRuntime(this);
+  if (samplingProfiler_) {
+    samplingProfiler_->unregisterRuntime(this);
+  }
+  if (codeCoverageProfiler_) {
+    codeCoverageProfiler_->clear(this);
+  }
 
   heap_.finalizeAll();
 #ifndef NDEBUG
@@ -512,6 +519,16 @@ void Runtime::markRoots(RootAcceptor &acceptor, bool markLongLived) {
       acceptor.acceptPtr(hiddenClassArray);
     }
 #endif
+    acceptor.endRootSection();
+  }
+
+  {
+    MarkRootsPhaseTimer timer(
+        this, RootAcceptor::Section::CodeCoverageProfiler);
+    acceptor.beginRootSection(RootAcceptor::Section::CodeCoverageProfiler);
+    if (codeCoverageProfiler_) {
+      codeCoverageProfiler_->markRoots(this, acceptor);
+    }
     acceptor.endRootSection();
   }
 
@@ -1895,14 +1912,13 @@ void Runtime::serializeIdentifierTable(Serializer &s) {
 }
 
 void Runtime::serializeRuntimeFields(Serializer &s) {
-  // Serialize all HermesValue
+// Serialize all HermesValue
 #define RUNTIME_HV_FIELD(name) s.writeHermesValue(name);
 #define RUNTIME_HV_FIELD_PROTOTYPE(name) RUNTIME_HV_FIELD(name)
 #define RUNTIME_HV_FIELD_INSTANCE(name) RUNTIME_HV_FIELD(name)
 #define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
-
   // stringCycleCheckVisited_ owns an ArrayStorage. This is managed via a RAII
   // so it will never be cleared when deserialized if we serialize it. We will
   // not serialize the contents of this storage but only do relocation for the
@@ -1981,14 +1997,13 @@ void Runtime::serializeRuntimeFields(Serializer &s) {
 }
 
 void Runtime::deserializeRuntimeFields(Deserializer &d) {
-  // Deserialize all HermesValue
+// Deserialize all HermesValue
 #define RUNTIME_HV_FIELD(name) d.readHermesValue(&name);
 #define RUNTIME_HV_FIELD_PROTOTYPE(name) RUNTIME_HV_FIELD(name)
 #define RUNTIME_HV_FIELD_INSTANCE(name) RUNTIME_HV_FIELD(name)
 #define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
-
   // stringCycleCheckVisited_ owns an ArrayStorage. It is managed via a RAII so
   // we don't serialize the contents of the storage. Create an empty
   // ArrayStorage here if needed to handle relocation.

@@ -24,6 +24,7 @@
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler.h"
+#include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 #include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -934,6 +935,8 @@ tailCall:
 #ifdef HERMES_ENABLE_DEBUGGER
   runtime->getDebugger().willEnterCodeBlock(curCodeBlock);
 #endif
+
+  runtime->getCodeCoverageProfiler()->markExecuted(curCodeBlock);
 
   // Update function executionCount_ count
   curCodeBlock->incrementExecutionCount();

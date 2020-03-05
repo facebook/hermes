@@ -15,6 +15,7 @@ set(RTSources
   CardObjectBoundaryNCTest.cpp
   CardTableNCTest.cpp
   CastingTest.cpp
+  CodeCoverageProfilerTest.cpp
   CopyableVectorTest.cpp
   DateUtilTest.cpp
   DictPropertyMapTest.cpp
