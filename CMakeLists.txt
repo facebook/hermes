@@ -144,6 +144,9 @@ set(HERMESVM_JIT_DISASSEMBLER OFF CACHE BOOL
 set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
   "Use libflowparser for parsing es6")
 
+set(HERMES_IS_MOBILE_BUILD OFF CACHE BOOL
+  "Building for a mobile device")
+
 set(HERMES_IS_ANDROID OFF CACHE BOOL
   "Building for Android")
 
@@ -167,6 +170,8 @@ set(EMSCRIPTEN_FASTCOMP ON CACHE BOOL
   "Emscripten is using the fastcomp backend instead of the LLVM one")
 
 if (HERMES_IS_ANDROID)
+  set(HERMES_IS_MOBILE_BUILD TRUE)
+
   add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
 
   # The toolchain passes -Wa,--noexecstack which is valid for compiling
@@ -185,6 +190,10 @@ if (HERMES_IS_ANDROID)
     # https://github.com/android-ndk/ndk/issues/242
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fuse-ld=gold")
   endif()
+endif()
+
+if (HERMES_IS_MOBILE_BUILD)
+  add_definitions(-DHERMES_IS_MOBILE_BUILD)
 endif()
 
 # Enable debug mode by default
