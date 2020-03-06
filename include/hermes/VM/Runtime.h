@@ -701,8 +701,8 @@ class Runtime : public HandleRootOwner,
   void dumpBasicBlockProfileTrace(llvm::raw_ostream &OS);
 #endif
 
-  std::shared_ptr<CodeCoverageProfiler> getCodeCoverageProfiler() {
-    return codeCoverageProfiler_;
+  CodeCoverageProfiler &getCodeCoverageProfiler() {
+    return *codeCoverageProfiler_;
   }
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
