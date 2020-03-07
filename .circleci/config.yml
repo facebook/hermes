@@ -117,7 +117,7 @@ jobs:
           name: Build Hermes for Linux
           command: |
             cd "$HERMES_WS_DIR"
-            hermes/utils/build/configure.py --static-link --distribute
+            hermes/utils/build/configure.py --static-link --distribute --cmake-flags="-DCMAKE_CXX_FLAGS=-s"
             cd build_release
             ninja github-cli-release
       - run:
