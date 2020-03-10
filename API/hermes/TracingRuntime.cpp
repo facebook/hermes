@@ -137,8 +137,16 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
     SynthTrace::ObjectID objID_;
   };
 
+  // These next two lines are very similar to the body of
+  // RD::createObject:
+  // return plain_.createObject(
+  //     std::make_shared<DecoratedHostObject>(*this, std::move(ho)));
+  // but (a) using the TracingHostObject subtype of
+  // DecoratedHostObject, and (b) using createFromHostObject, because
+  // createObject is protected, and is thus inaccessible here.
   auto tracer = std::make_shared<TracingHostObject>(*this, ho);
-  auto obj = RD::createObject(tracer);
+  auto obj = jsi::Object::createFromHostObject(plain(), tracer);
+
   tracer->setObjectID(getUniqueID(obj));
   trace_.emplace_back<SynthTrace::CreateHostObjectRecord>(
       getTimeSinceStart(), getUniqueID(obj));

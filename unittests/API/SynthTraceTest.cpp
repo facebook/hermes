@@ -331,6 +331,8 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
       *records.at(6));
 }
 
+// Re-enabled in a later diff in the stack.
+#if 0
 TEST_F(SynthTraceTest, HostObjectProxy) {
   SynthTrace::ObjectID objID;
   auto insertValue = 5;
@@ -415,6 +417,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
           dummyTime, objID, "x", SynthTrace::encodeNumber(insertValue)),
       *records.at(9));
 }
+#endif
 
 // These tests fail on Windows.
 #if defined(EXPECT_DEATH_IF_SUPPORTED) && !defined(_WINDOWS)
