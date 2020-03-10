@@ -436,8 +436,9 @@ class SynthTrace {
     }
   };
 
-  /// A HasPropertyRecord is an event where native code queries is a property
-  /// exists on an object.
+  /// A HasPropertyRecord is an event where native code queries whether a
+  /// property exists on an object.  (We don't care about the result because
+  /// it cannot influence the trace.)
   struct HasPropertyRecord final : public Record {
     static constexpr RecordType type{RecordType::HasProperty};
     const ObjectID objID_;

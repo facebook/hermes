@@ -418,6 +418,7 @@ void SynthTrace::HasPropertyRecord::toJSONInternal(
     JSONEmitter &json,
     const SynthTrace &trace) const {
   Record::toJSONInternal(json, trace);
+  json.emitKeyValue("objID", objID_);
   json.emitKeyValue("propName", propName_);
 }
 

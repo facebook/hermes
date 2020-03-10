@@ -607,6 +607,12 @@ TEST_F(SynthTraceSerializationTest, SetProperty) {
           dummyTime, 1, "a", trace.encodeString("b"))));
 }
 
+TEST_F(SynthTraceSerializationTest, HasProperty) {
+  EXPECT_EQ(
+      R"({"type":"HasPropertyRecord","time":0,"objID":1,"propName":"a"})",
+      to_string(SynthTrace::HasPropertyRecord(dummyTime, 1, "a")));
+}
+
 TEST_F(SynthTraceSerializationTest, GetPropertyNames) {
   EXPECT_EQ(
       R"({"type":"GetPropertyNamesRecord","time":0,"objID":1,"propNamesID":2})",
