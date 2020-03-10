@@ -53,8 +53,6 @@ class SynthBenchmarkTestFixture : public ::testing::TestWithParam<ParamType> {
 TEST_P(SynthBenchmarkTestFixture, CanRunWithoutException) {
   tracing::TraceInterpreter::ExecuteOptions options;
   // Use options from the trace.
-  options.minHeapSize = 0;
-  options.maxHeapSize = 0;
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> sources;
   sources.emplace_back(llvm::MemoryBuffer::getMemBuffer(source_));
   EXPECT_NO_THROW({

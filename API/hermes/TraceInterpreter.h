@@ -96,6 +96,9 @@ class TraceInterpreter final {
       std::unordered_map<SynthTrace::ObjectID, HostObjectInfo>;
 
   /// Options for executing the trace.
+  /// \param useTraceConfig If true, command-line options override the
+  /// config options recorded in the trace.  If false, start from the default
+  /// config.
   /// \param snapshotMarker If the given marker is seen, take a heap snapshot.
   /// \param snapshotMarkerFileName If the marker given in snapshotMarker
   ///   is seen, write the heap snapshot out to this file.
@@ -111,26 +114,31 @@ class TraceInterpreter final {
   /// \param revertToYGAtTTI: if true, and if the GC was not allocating in the
   ///   young generation, change back to young-gen allocation at TTI.
   struct ExecuteOptions {
+    // These are not config params.
+    bool useTraceConfig{false};
+    int warmupReps{0};
+    int reps{1};
+    bool forceGCBeforeStats{false};
+    bool stabilizeInstructionCount{false};
     std::string marker;
     std::string snapshotMarker;
     std::string snapshotMarkerFileName;
-    int warmupReps{0};
-    int reps{1};
-    ::hermes::vm::gcheapsize_t minHeapSize{0};
-    ::hermes::vm::gcheapsize_t initHeapSize{0};
-    ::hermes::vm::gcheapsize_t maxHeapSize{0};
-    double occupancyTarget{::hermes::vm::GCConfig::getDefaultOccupancyTarget()};
-    ::hermes::vm::ReleaseUnused shouldReleaseUnused{
-        ::hermes::vm::GCConfig::getDefaultShouldReleaseUnused()};
-    bool allocInYoung{true};
-    bool revertToYGAtTTI{true};
-    bool forceGCBeforeStats{false};
-    bool shouldPrintGCStats{false};
-    bool stabilizeInstructionCount{false};
-    bool shouldTrackIO{false};
-    uint8_t bytecodeWarmupPercent{0};
-    double sanitizeRate{0.0};
-    int64_t sanitizeRandomSeed{-1};
+
+    // These are the config parameters.  We wrap them in llvm::Optional
+    // to indicate whether the corresponding command line flag was set
+    // explicitly.  We override the trace's config only when that is true.
+    llvm::Optional<bool> shouldPrintGCStats;
+    llvm::Optional<::hermes::vm::gcheapsize_t> minHeapSize;
+    llvm::Optional<::hermes::vm::gcheapsize_t> initHeapSize;
+    llvm::Optional<::hermes::vm::gcheapsize_t> maxHeapSize;
+    llvm::Optional<double> occupancyTarget;
+    llvm::Optional<::hermes::vm::ReleaseUnused> shouldReleaseUnused;
+    llvm::Optional<bool> allocInYoung;
+    llvm::Optional<bool> revertToYGAtTTI;
+    llvm::Optional<bool> shouldTrackIO;
+    llvm::Optional<unsigned> bytecodeWarmupPercent;
+    llvm::Optional<double> sanitizeRate;
+    llvm::Optional<int64_t> sanitizeRandomSeed;
   };
 
  private:

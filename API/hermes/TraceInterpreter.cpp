@@ -580,42 +580,79 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     }
   }
 
-  auto &rtConfig = std::get<1>(traceAndConfigAndEnv);
-  ::hermes::vm::RuntimeConfig::Builder rtConfigBuilder = rtConfig.rebuild();
-  rtConfigBuilder.withBytecodeWarmupPercent(options.bytecodeWarmupPercent);
-  rtConfigBuilder.withTrackIO(
-      options.shouldTrackIO && isBytecode && codeIsMmapped);
-  if (traceStream) {
-    // If an out trace is requested, turn on tracing in the VM as well.
-    rtConfigBuilder.withTraceEnvironmentInteractions(true);
+  ::hermes::vm::RuntimeConfig defaultConfig;
+  // Some portions of even the default config must agree with the trace config,
+  // because the contents of the trace assume a given shape for runtime data
+  // structures during replay.  So far, we know of only one such parameter:
+  defaultConfig =
+      defaultConfig.rebuild()
+          .withEnableSampledStats(
+              std::get<1>(traceAndConfigAndEnv).getEnableSampledStats())
+          .build();
+
+  ::hermes::vm::RuntimeConfig *rtConfigBase;
+  if (options.useTraceConfig) {
+    rtConfigBase = &std::get<1>(traceAndConfigAndEnv);
+  } else {
+    rtConfigBase = &defaultConfig;
   }
+  ::hermes::vm::RuntimeConfig::Builder rtConfigBuilder =
+      rtConfigBase->rebuild();
   ::hermes::vm::GCConfig::Builder gcConfigBuilder =
-      rtConfig.getGCConfig().rebuild();
-  gcConfigBuilder.withShouldRecordStats(options.shouldPrintGCStats);
-  if (options.minHeapSize != 0) {
-    gcConfigBuilder.withMinHeapSize(options.minHeapSize);
+      rtConfigBase->getGCConfig().rebuild();
+  if (options.bytecodeWarmupPercent) {
+    rtConfigBuilder.withBytecodeWarmupPercent(*options.bytecodeWarmupPercent);
   }
-  if (options.initHeapSize != 0) {
-    gcConfigBuilder.withMinHeapSize(options.initHeapSize);
+  if (options.shouldTrackIO) {
+    rtConfigBuilder.withTrackIO(
+        *options.shouldTrackIO && isBytecode && codeIsMmapped);
   }
-  if (options.maxHeapSize != 0) {
-    gcConfigBuilder.withMaxHeapSize(options.maxHeapSize);
+  if (options.shouldPrintGCStats) {
+    gcConfigBuilder.withShouldRecordStats(*options.shouldPrintGCStats);
   }
-  gcConfigBuilder.withOccupancyTarget(options.occupancyTarget);
-  gcConfigBuilder.withShouldReleaseUnused(options.shouldReleaseUnused);
-  gcConfigBuilder.withAllocInYoung(options.allocInYoung);
-  gcConfigBuilder.withRevertToYGAtTTI(options.revertToYGAtTTI);
-  gcConfigBuilder.withSanitizeConfig(
-      ::hermes::vm::GCSanitizeConfig::Builder()
-          .withSanitizeRate(options.sanitizeRate)
-          .withRandomSeed(options.sanitizeRandomSeed)
-          .build());
+  if (options.minHeapSize) {
+    gcConfigBuilder.withMinHeapSize(*options.minHeapSize);
+  }
+  if (options.initHeapSize) {
+    gcConfigBuilder.withMinHeapSize(*options.initHeapSize);
+  }
+  if (options.maxHeapSize) {
+    gcConfigBuilder.withMaxHeapSize(*options.maxHeapSize);
+  }
+  if (options.occupancyTarget) {
+    gcConfigBuilder.withOccupancyTarget(*options.occupancyTarget);
+  }
+  if (options.shouldReleaseUnused) {
+    gcConfigBuilder.withShouldReleaseUnused(*options.shouldReleaseUnused);
+  }
+  if (options.allocInYoung) {
+    gcConfigBuilder.withAllocInYoung(*options.allocInYoung);
+  }
+  if (options.revertToYGAtTTI) {
+    gcConfigBuilder.withRevertToYGAtTTI(*options.revertToYGAtTTI);
+  }
+  if (options.sanitizeRate || options.sanitizeRandomSeed) {
+    auto sanitizeConfigBuilder = ::hermes::vm::GCSanitizeConfig::Builder();
+    if (options.sanitizeRate) {
+      sanitizeConfigBuilder.withSanitizeRate(*options.sanitizeRate);
+    }
+    if (options.sanitizeRandomSeed) {
+      sanitizeConfigBuilder.withRandomSeed(*options.sanitizeRandomSeed);
+    }
+    gcConfigBuilder.withSanitizeConfig(sanitizeConfigBuilder.build());
+  }
+
+  // If (and only if) an out trace is requested, turn on tracing in the VM
+  // as well.
+  rtConfigBuilder.withTraceEnvironmentInteractions(traceStream != nullptr);
+
   // If aggregating multiple reps, randomize the placement of some data
   // structures in each rep, for a more robust time metric.
   if (options.reps > 1) {
     rtConfigBuilder.withRandomizeMemoryLayout(true);
   }
-  rtConfig = rtConfigBuilder.withGCConfig(gcConfigBuilder.build()).build();
+  auto &rtConfig =
+      rtConfigBuilder.withGCConfig(gcConfigBuilder.build()).build();
 
   // Map source hashes of files to their memory buffer.
   std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
@@ -666,7 +703,9 @@ std::string TraceInterpreter::execFromMemoryBuffer(
       repGCStats[rep] = stats;
     }
   }
-  return options.shouldPrintGCStats ? mergeGCStats(repGCStats) : "";
+  return (options.shouldPrintGCStats && *options.shouldPrintGCStats)
+      ? mergeGCStats(repGCStats)
+      : "";
 }
 
 /* static */

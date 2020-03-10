@@ -47,6 +47,13 @@ static opt<std::string> SnapshotMarker(
     desc("Take a snapshot at the given marker"),
     init(""));
 
+static opt<bool> UseTraceConfig(
+    "use-trace-config",
+    desc("Controls what RuntimeConfig as the default that the various config "
+         "modify.  True says to use the recorded config of the trace, false "
+         "means start from the default config."),
+    init(false));
+
 static opt<std::string> Trace(
     "trace",
     desc(
@@ -127,6 +134,26 @@ static opt<::hermes::vm::ReleaseUnused> ShouldReleaseUnused(
 
 } // namespace cl
 
+// Helper functions.
+template <typename T>
+static llvm::Optional<T> execOption(const cl::opt<T> &clOpt) {
+  if (clOpt.getNumOccurrences() > 0) {
+    return static_cast<T>(clOpt);
+  } else {
+    return llvm::None;
+  }
+}
+
+// Must do this special case explicitly, because of the MemorySizeParser.
+static llvm::Optional<::hermes::vm::gcheapsize_t> execOption(
+    const cl::opt<cl::MemorySize, false, cl::MemorySizeParser> &clOpt) {
+  if (clOpt.getNumOccurrences() > 0) {
+    return clOpt.bytes;
+  } else {
+    return llvm::None;
+  }
+}
+
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   llvm::sys::PrintStackTraceOnErrorSignal("Hermes synth");
@@ -138,6 +165,11 @@ int main(int argc, char **argv) {
   using namespace facebook::hermes::tracing;
   try {
     TraceInterpreter::ExecuteOptions options;
+
+    // These are not config parameters: just set them according to the
+    // runtime flag.
+    options.useTraceConfig = cl::UseTraceConfig;
+    options.reps = cl::Reps;
     options.marker = cl::Marker;
     std::string snapshotMarkerFileName;
     if (!cl::SnapshotMarker.empty()) {
@@ -148,22 +180,38 @@ int main(int argc, char **argv) {
       options.snapshotMarker = cl::SnapshotMarker;
       options.snapshotMarkerFileName = snapshotMarkerFileName;
     }
-    options.reps = cl::Reps;
-    options.minHeapSize = cl::MinHeapSize.bytes;
-    options.initHeapSize = cl::InitHeapSize.bytes;
-    options.maxHeapSize = cl::MaxHeapSize.bytes;
-    options.occupancyTarget = cl::OccupancyTarget;
-    options.shouldReleaseUnused = cl::ShouldReleaseUnused;
-    options.allocInYoung = cl::GCAllocYoung;
-    options.revertToYGAtTTI = cl::GCRevertToYGAtTTI;
     options.forceGCBeforeStats = cl::GCBeforeStats;
-    options.shouldPrintGCStats =
-        (cl::GCPrintStats || cl::GCBeforeStats) && !cl::StableInstructionCount;
     options.stabilizeInstructionCount = cl::StableInstructionCount;
-    options.shouldTrackIO = cl::TrackBytecodeIO;
-    options.bytecodeWarmupPercent = cl::BytecodeWarmupPercent;
-    options.sanitizeRate = cl::GCSanitizeRate;
-    options.sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
+
+    // These are the config parameters.
+
+    // We want to print the GC stats by default.  We won't print them
+    // if -gc-print-stats is specified false explicitly, and
+    // -gc-before-stats is also false, or if we're trying to get
+    // a stable instruction count.
+    options.shouldPrintGCStats = true;
+    if (cl::GCPrintStats.getNumOccurrences() > 0) {
+      options.shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats) &&
+          !cl::StableInstructionCount;
+    }
+    options.shouldPrintGCStats =
+        options.shouldPrintGCStats && !cl::StableInstructionCount;
+
+    options.minHeapSize = execOption(cl::MinHeapSize);
+    options.initHeapSize = execOption(cl::InitHeapSize);
+    options.maxHeapSize = execOption(cl::MaxHeapSize);
+    options.occupancyTarget = execOption(cl::OccupancyTarget);
+    options.shouldReleaseUnused = execOption(cl::ShouldReleaseUnused);
+    options.allocInYoung = execOption(cl::GCAllocYoung);
+    options.revertToYGAtTTI = execOption(cl::GCRevertToYGAtTTI);
+    options.shouldTrackIO = execOption(cl::TrackBytecodeIO);
+    options.bytecodeWarmupPercent = execOption(cl::BytecodeWarmupPercent);
+    options.sanitizeRate = execOption(cl::GCSanitizeRate);
+    // The type of this case is complicated, so just do it explicitly.
+    if (cl::GCSanitizeRandomSeed) {
+      options.sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
+    }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
     if (cl::PrintStats)
       llvm::EnableStatistics();
