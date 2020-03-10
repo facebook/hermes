@@ -8,6 +8,7 @@
 #ifdef HERMESVM_API_TRACE
 #include "TracingRuntime.h"
 
+#include <hermes/Platform/Logging.h>
 #include <hermes/Support/Algorithms.h>
 
 #include <llvm/Support/raw_ostream.h>
@@ -493,6 +494,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvm::raw_ostream> traceStream,
     const std::string &traceFilename) {
+  ::hermes::hermesLog("Hermes", "Creating TracingHermesRuntime.");
   auto ret = std::make_unique<TracingHermesRuntime>(
       std::move(hermesRuntime),
       runtimeConfig,
