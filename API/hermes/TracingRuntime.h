@@ -176,11 +176,14 @@ class TracingHermesRuntime final : public TracingRuntime {
 /// Creates and returns a HermesRuntime that traces JSI interactions.
 /// If \p traceStream is non-null, writes the trace to \p traceStream.
 /// If non-empty, \p traceFilename is the file to which \p traceStream writes.
+/// The \p forReplay parameter indicates whether the runtime is being used
+/// in trace replay.  (Its behavior can differ slightly in that case.)
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvm::raw_ostream> traceStream = nullptr,
-    const std::string &traceFilename = "");
+    const std::string &traceFilename = "",
+    bool forReplay = false);
 
 } // namespace tracing
 } // namespace hermes

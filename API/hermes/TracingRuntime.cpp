@@ -460,17 +460,17 @@ namespace {
 void addRecordMarker(TracingRuntime &tracingRuntime) {
   jsi::Runtime &rt = tracingRuntime.plain();
   const char *funcName = "__nativeRecordTraceMarker";
-  if (rt.global().hasProperty(rt, funcName)) {
+  if (tracingRuntime.global().hasProperty(tracingRuntime, funcName)) {
     // If this function is already defined, throw.
     throw jsi::JSINativeException(
         std::string("global.") + funcName +
         " already exists, won't overwrite it");
   }
   rt.global().setProperty(
-      rt,
+      tracingRuntime,
       funcName,
       jsi::Function::createFromHostFunction(
-          rt,
+          tracingRuntime,
           jsi::PropNameID::forAscii(rt, funcName),
           0,
           [funcName, &tracingRuntime](
@@ -493,14 +493,19 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
     std::unique_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvm::raw_ostream> traceStream,
-    const std::string &traceFilename) {
+    const std::string &traceFilename,
+    bool forReplay) {
   ::hermes::hermesLog("Hermes", "Creating TracingHermesRuntime.");
   auto ret = std::make_unique<TracingHermesRuntime>(
       std::move(hermesRuntime),
       runtimeConfig,
       std::move(traceStream),
       traceFilename);
-  addRecordMarker(*ret);
+  // In non-replay executions, add the __nativeRecordTraceMarker function.
+  // In replay executions, this will be simulated from the trace.
+  if (!forReplay) {
+    addRecordMarker(*ret);
+  }
   return ret;
 }
 

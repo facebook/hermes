@@ -652,7 +652,11 @@ std::string TraceInterpreter::execFromMemoryBuffer(
     }
     if (traceStream) {
       rt = makeTracingHermesRuntime(
-          std::move(hermesRuntime), rtConfig, std::move(traceStream));
+          std::move(hermesRuntime),
+          rtConfig,
+          std::move(traceStream),
+          /* traceFilename */ "",
+          /* forReplay */ true);
     } else {
       rt = std::move(hermesRuntime);
     }

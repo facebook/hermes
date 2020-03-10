@@ -37,7 +37,15 @@ struct SynthTraceTest : public ::testing::Test {
   SynthTrace::TimeSinceStart dummyTime{SynthTrace::TimeSinceStart::zero()};
 
   SynthTraceTest()
-      : rt(makeTracingHermesRuntime(makeHermesRuntime(config), config)) {}
+      // We pass "forReplay = true" below, to prevent the TracingHermesRuntime
+      // from interactions it does automatically on non-replay runs.
+      // We don't need those for these tests.
+      : rt(makeTracingHermesRuntime(
+            makeHermesRuntime(config),
+            config,
+            /* traceStream */ nullptr,
+            /* traceFilename */ "",
+            /* forReplay */ true)) {}
 
   template <typename T>
   void expectEqual(
@@ -757,7 +765,11 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   auto resultStream = ::hermes::make_unique<llvm::raw_string_ostream>(result);
   const ::hermes::vm::RuntimeConfig conf;
   std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
-      makeHermesRuntime(conf), conf, std::move(resultStream)));
+      makeHermesRuntime(conf),
+      conf,
+      std::move(resultStream),
+      /* traceFilename */ "",
+      /* forReplay */ true));
 
   SynthTrace::ObjectID objID;
   {
