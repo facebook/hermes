@@ -16,6 +16,10 @@
 
 #include <fbjni/fbjni.h>
 
+#ifdef __ANDROID__
+#include <sys/prctl.h>
+#endif // __ANDROID__
+
 #include <functional>
 #ifndef _WIN32
 #include <pthread.h>
@@ -65,8 +69,33 @@ struct AttachTraits<jint(JavaVM::*)(void**, void*)> {
   using EnvType = void*;
 };
 
+std::string getThreadName() {
+#ifdef _WIN32
+  return "";
+#else // _WIN32
+  constexpr int kMaxThreadNameSize = 100;
+  int ret = 0;
+  char threadName[kMaxThreadNameSize];
+#ifdef __ANDROID__
+  ret = prctl(PR_GET_NAME, threadName);
+#else
+  ret = pthread_getname_np(pthread_self(), threadName, sizeof(threadName));
+#endif
+  if (ret != 0) {
+    return "";
+  }
+  return threadName;
+#endif // _WIN32
+}
+
 JNIEnv* attachCurrentThread() {
   JavaVMAttachArgs args{JNI_VERSION_1_6, nullptr, nullptr};
+
+  const auto threadName = getThreadName();
+  if (threadName.size()) {
+    args.name = threadName.c_str();
+  }
+
   using AttachEnvType =
       typename AttachTraits<decltype(&JavaVM::AttachCurrentThread)>::EnvType;
   AttachEnvType env;
