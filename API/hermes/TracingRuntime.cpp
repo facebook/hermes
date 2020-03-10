@@ -59,12 +59,14 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
     using jsi::DecoratedHostObject::DecoratedHostObject;
 
     jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
-      TracingRuntime &trt = static_cast<TracingRuntime &>(rt);
-
+      TracingRuntime &trt = tracingRuntime();
       trt.trace_.emplace_back<SynthTrace::GetPropertyNativeRecord>(
           trt.getTimeSinceStart(), objID_, name.utf8(rt));
 
       try {
+        // Note that this ignores the "rt" argument, passing the
+        // DHO's cached decoratedRuntime() to the underlying HostObject's get.
+        // In this case, that will be a TracingRuntime.
         auto ret = DecoratedHostObject::get(rt, name);
 
         trt.trace_.emplace_back<SynthTrace::GetPropertyNativeReturnRecord>(
@@ -83,8 +85,7 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
         jsi::Runtime &rt,
         const jsi::PropNameID &name,
         const jsi::Value &value) override {
-      TracingRuntime &trt = static_cast<TracingRuntime &>(rt);
-
+      TracingRuntime &trt = tracingRuntime();
       trt.trace_.emplace_back<SynthTrace::SetPropertyNativeRecord>(
           trt.getTimeSinceStart(),
           objID_,
@@ -92,6 +93,9 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
           trt.toTraceValue(value));
 
       try {
+        // Note that this ignores the "rt" argument, passing the
+        // DHO's cached decoratedRuntime() to the underlying HostObject's set.
+        // In this case, that will be a TracingRuntime.
         DecoratedHostObject::set(rt, name, value);
       } catch (...) {
         // TODO(T28293178): The trace currently has no way to model
@@ -105,11 +109,14 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
     }
 
     std::vector<jsi::PropNameID> getPropertyNames(jsi::Runtime &rt) override {
-      TracingRuntime &trt = static_cast<TracingRuntime &>(rt);
+      TracingRuntime &trt = tracingRuntime();
       trt.trace_.emplace_back<SynthTrace::GetNativePropertyNamesRecord>(
           trt.getTimeSinceStart(), objID_);
       std::vector<jsi::PropNameID> props;
       try {
+        // Note that this ignores the "rt" argument, passing the
+        // DHO's cached decoratedRuntime() to the underlying HostObject's
+        // getProprtyNames.  In this case, that will be a TracingRuntime.
         props = DecoratedHostObject::getPropertyNames(rt);
       } catch (...) {
         // TODO(T28293178): The trace currently has no way to model
@@ -133,6 +140,12 @@ jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
     }
 
    private:
+    /// The TracingRuntime used when the TracingHostObject was created.
+    TracingRuntime &tracingRuntime() {
+      // A TracingHostObject is always created with a TracingRuntime,
+      // so this cast is safe.
+      return static_cast<TracingRuntime &>(decoratedRuntime());
+    }
     /// The object id of the host object that this is attached to.
     SynthTrace::ObjectID objID_;
   };

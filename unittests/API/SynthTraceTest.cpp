@@ -331,8 +331,6 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
       *records.at(6));
 }
 
-// Re-enabled in a later diff in the stack.
-#if 0
 TEST_F(SynthTraceTest, HostObjectProxy) {
   SynthTrace::ObjectID objID;
   auto insertValue = 5;
@@ -345,6 +343,8 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       TestHostObject(jsi::Runtime &rt)
           : x(0.0), propName(jsi::PropNameID::forAscii(rt, "x")) {}
       jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
+        // Do an operation with the runtime, to ensure that it is traced.
+        rt.global().setProperty(rt, "getHappened", jsi::Value(true));
         if (jsi::PropNameID::compare(rt, name, propName)) {
           return jsi::Value(x);
         } else {
@@ -355,11 +355,16 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
           jsi::Runtime &rt,
           const jsi::PropNameID &name,
           const jsi::Value &value) override {
+        // Do an operation with the runtime, to ensure that it is traced.
+        rt.global().setProperty(rt, "setHappened", jsi::Value(true));
         if (jsi::PropNameID::compare(rt, name, propName)) {
           x = value.asNumber();
         }
       }
       std::vector<jsi::PropNameID> getPropertyNames(jsi::Runtime &rt) override {
+        // Do an operation with the runtime, to ensure that it is traced.
+        rt.global().setProperty(
+            rt, "getPropertyNamesHappened", jsi::Value(true));
         // Can't re-use propName due to deleted copy constructor.
         return jsi::PropNameID::names(rt, "x");
       }
@@ -376,7 +381,8 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
     ASSERT_EQ(insertValue, ho.getProperty(*rt, "x").asNumber());
   }
   const auto &records = rt->trace().records();
-  EXPECT_EQ(10, records.size());
+  auto globID = rt->getUniqueID(rt->global());
+  EXPECT_EQ(13, records.size());
   // Created a proxy host object.
   EXPECT_EQ_RECORD(
       SynthTrace::CreateHostObjectRecord(dummyTime, objID), *records.at(0));
@@ -386,38 +392,49 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       SynthTrace::GetPropertyNativeRecord(dummyTime, objID, "x"),
       *records.at(1));
   EXPECT_EQ_RECORD(
+      SynthTrace::SetPropertyRecord(
+          dummyTime, globID, "getHappened", SynthTrace::encodeBool(true)),
+      *records.at(2));
+  EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeReturnRecord(
           dummyTime, SynthTrace::encodeNumber(0)),
-      *records.at(2));
+      *records.at(3));
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyRecord(
           dummyTime, objID, "x", SynthTrace::encodeNumber(0)),
-      *records.at(3));
+      *records.at(4));
   // Called setProperty on the proxy.
   EXPECT_EQ_RECORD(
       SynthTrace::SetPropertyRecord(
           dummyTime, objID, "x", SynthTrace::encodeNumber(insertValue)),
-      *records.at(4));
+      *records.at(5));
   EXPECT_EQ_RECORD(
       SynthTrace::SetPropertyNativeRecord(
           dummyTime, objID, "x", SynthTrace::encodeNumber(insertValue)),
-      *records.at(5));
+      *records.at(6));
   EXPECT_EQ_RECORD(
-      SynthTrace::SetPropertyNativeReturnRecord(dummyTime), *records.at(6));
+      SynthTrace::SetPropertyRecord(
+          dummyTime, globID, "setHappened", SynthTrace::encodeBool(true)),
+      *records.at(7));
+  EXPECT_EQ_RECORD(
+      SynthTrace::SetPropertyNativeReturnRecord(dummyTime), *records.at(8));
   // Called getProperty one last time.
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeRecord(dummyTime, objID, "x"),
-      *records.at(7));
+      *records.at(9));
+  EXPECT_EQ_RECORD(
+      SynthTrace::SetPropertyRecord(
+          dummyTime, globID, "getHappened", SynthTrace::encodeBool(true)),
+      *records.at(10));
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeReturnRecord(
           dummyTime, SynthTrace::encodeNumber(insertValue)),
-      *records.at(8));
+      *records.at(11));
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyRecord(
           dummyTime, objID, "x", SynthTrace::encodeNumber(insertValue)),
-      *records.at(9));
+      *records.at(12));
 }
-#endif
 
 // These tests fail on Windows.
 #if defined(EXPECT_DEATH_IF_SUPPORTED) && !defined(_WINDOWS)
