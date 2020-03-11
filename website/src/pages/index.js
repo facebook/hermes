@@ -61,10 +61,10 @@ function Home() {
           <div className={styles.buttons}>
             <Link
               className={classnames(
-                "button button--secondary button--lg",
-                styles.getStarted
+                'button button--secondary button--lg',
+                styles.getStarted,
               )}
-              to={"https://reactnative.dev/docs/hermes"}
+              to={'https://reactnative.dev/docs/hermes'}
             >
               Start Using Hermes
             </Link>
@@ -79,7 +79,7 @@ function Home() {
                 {features.map(({ imageUrl, title, description }, idx) => (
                   <div
                     key={idx}
-                    className={classnames("col col--4", styles.feature)}
+                    className={classnames('col col--4', styles.feature)}
                   >
                     {imageUrl && (
                       <div className="text--center margin-bottom--lg">
