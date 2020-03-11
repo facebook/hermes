@@ -3,7 +3,7 @@ id: building-and-running
 title: Building and Running Hermes
 ---
 
-This document describes how to build and run Hermes as a standalone compiler and VM. To use Hermes in the context of a React Native app, see the [React Native](https://facebook.github.io/react-native/docs/getting-started) documentation.
+This document describes how to build and run Hermes as a standalone compiler and VM. To use Hermes in the context of a React Native app, see the [React Native](https://reactnative.dev/docs/getting-started) documentation.
 
 ## Dependencies
 

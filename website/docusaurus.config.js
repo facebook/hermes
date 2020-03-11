@@ -36,7 +36,7 @@ module.exports = {
           items: [
             {
               label: 'Using Hermes in a React Native app',
-              to: 'https://facebook.github.io/react-native/docs/hermes',
+              to: 'https://reactnative.dev/docs/hermes',
             },
             {
               label: 'Hermes Development',
