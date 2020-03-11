@@ -47,7 +47,7 @@ run_1_test() {
   # 2. Ignore column number: Uglifyjs generated source map does not have full fidelity range mapping
   #   for every single tokens so if a generated line/column is in the middle of a mapping range the symbolicated
   #   trace will report the beginning of the range in original source most likely diff in column numbers.
-  python "$SRCDIR/stacktrace_diff.py" "$ORIG_TRACE" "$SYM_TRACE"
+  python3 "$SRCDIR/stacktrace_diff.py" "$ORIG_TRACE" "$SYM_TRACE"
 }
 
 # -gc-sanitize-handles=0 because ASAN build is far too slow without it.
