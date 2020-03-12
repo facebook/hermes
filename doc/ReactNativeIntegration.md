@@ -60,7 +60,7 @@ The final `yarn link` command in this sequence registers your custom build of He
 
 ## Linking Hermes into a React Native app
 
-To use your custom Hermes npm package in an app, first make sure the app works with a normal release of Hermes by following [instructions in the React Native docs](https://facebook.github.io/react-native/docs/hermes).
+To use your custom Hermes npm package in an app, first make sure the app works with a normal release of Hermes by following [instructions in the React Native docs](https://reactnative.dev/docs/hermes).
 
 Next, link the Hermes npm package into the React Native package in your app. For example, assuming your project is in the directory `$AWESOME_PROJECT` you would run this command:
 

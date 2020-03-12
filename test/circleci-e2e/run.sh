@@ -52,7 +52,7 @@ function sed_op() {
 npx react-native init "$project_dir"
 
 # Enable Hermes
-# https://facebook.github.io/react-native/docs/hermes
+# https://reactnative.dev/docs/hermes
 sed_op 's/enableHermes: false/enableHermes: true/' "$project_dir"/android/app/build.gradle
 
 # Patch in master React Native checkout.
