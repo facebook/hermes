@@ -31,7 +31,7 @@ MetadataTableForTests getMetadataTable() {
 /// requirements on the size of the GC's young generation. So that when we try
 /// and request the young gen be half the size of this cell, we have a
 /// reasonably good chance that the the young gen ends up smaller than the cell.
-static constexpr size_t kCellSize = 64 * 1024;
+static constexpr size_t kCellSize = 256 * 1024;
 
 /// Allocating a fixed size cell that is too big for the young gen should cause
 /// an OOM
