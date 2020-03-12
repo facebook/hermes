@@ -64,7 +64,7 @@ function Home() {
                 'button button--secondary button--lg',
                 styles.getStarted,
               )}
-              to={'https://reactnative.dev/docs/hermes'}
+              to={'https://facebook.github.io/react-native/docs/hermes'}
             >
               Start Using Hermes
             </Link>
