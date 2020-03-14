@@ -1060,12 +1060,16 @@ class Runtime : public HandleRootOwner,
   /// larger.  See T46966147 for measurements/calculations indicating
   /// that this limit should still insulate us from native stack overflow.)
   static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH =
-#ifndef HERMES_LIMIT_STACK_DEPTH
-      384
-#else
+#ifdef HERMES_LIMIT_STACK_DEPTH
       // UBSAN builds will hit a native stack overflow much earlier, so make
       // this limit dramatically lower.
       30
+#elif defined(_WINDOWS) && defined(HERMES_SLOW_DEBUG)
+      // On windows in dbg mode builds, stack frames are bigger, and a depth
+      // limit of 384 results in a C++ stack overflow in testing.
+      192
+#else
+      384
 #endif
       ;
 
