@@ -1961,6 +1961,7 @@ void HermesRuntimeImpl::checkStatus(vm::ExecutionStatus status) {
   if (LLVM_UNLIKELY(status == vm::ExecutionStatus::EXCEPTION)) {
     jsi::Value exception = valueFromHermesValue(runtime_.getThrownValue());
     runtime_.clearThrownValue();
+    vm::ScopedNativeDepthReducer reducer(&runtime_);
     throw jsi::JSError(*this, std::move(exception));
   }
 }

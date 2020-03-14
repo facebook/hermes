@@ -77,6 +77,7 @@ class JSObject;
 class PropertyAccessor;
 struct RuntimeCommonStorage;
 struct RuntimeOffsets;
+class ScopedNativeDepthReducer;
 class ScopedNativeDepthTracker;
 class ScopedNativeCallFrame;
 class SamplingProfiler;
@@ -986,6 +987,7 @@ class Runtime : public HandleRootOwner,
   friend class MarkRootsPhaseTimer;
   friend struct RuntimeOffsets;
   friend class JITContext;
+  friend class ScopedNativeDepthReducer;
   friend class ScopedNativeDepthTracker;
   friend class ScopedNativeCallFrame;
 
@@ -1279,6 +1281,30 @@ class ScopedNativeDepthTracker {
   bool overflowed() const {
     return runtime_->nativeCallFrameDepth_ >
         Runtime::MAX_NATIVE_CALL_FRAME_DEPTH;
+  }
+};
+
+/// An RAII class which creates a little headroom in the native depth
+/// tracking.  This is used when calling into JSError to extract the
+/// stack, as the error may represent an overflow.  Without this, a
+/// cascade of exceptions could occur, overflowing the C++ stack.
+class ScopedNativeDepthReducer {
+  Runtime *const runtime_;
+  bool undo = false;
+  // This is empirically good enough.
+  static constexpr int kDepthAdjustment = 2;
+
+ public:
+  explicit ScopedNativeDepthReducer(Runtime *runtime) : runtime_(runtime) {
+    if (runtime->nativeCallFrameDepth_ >= kDepthAdjustment) {
+      runtime->nativeCallFrameDepth_ -= kDepthAdjustment;
+      undo = true;
+    }
+  }
+  ~ScopedNativeDepthReducer() {
+    if (undo) {
+      runtime_->nativeCallFrameDepth_ += kDepthAdjustment;
+    }
   }
 };
 
