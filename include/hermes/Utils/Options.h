@@ -11,7 +11,6 @@
 namespace hermes {
 
 enum OutputFormatKind {
-  None = 0,
   DumpAST,
   DumpTransformedAST,
   ViewCFG,
@@ -21,13 +20,14 @@ enum OutputFormatKind {
   DumpLRA,
   DumpPostRA,
   DumpBytecode,
-  EmitBundle
+  EmitBundle,
+  Execute,
 };
 
 /// Options controlling the type of output to generate.
 struct BytecodeGenerationOptions {
   /// The format of the output.
-  OutputFormatKind format = None;
+  OutputFormatKind format = Execute;
 
   /// Whether optimizations are enabled.
   bool optimizationEnabled = false;
@@ -58,7 +58,7 @@ struct BytecodeGenerationOptions {
       : format(format) {}
 
   static BytecodeGenerationOptions defaults() {
-    return {None};
+    return {Execute};
   }
 };
 

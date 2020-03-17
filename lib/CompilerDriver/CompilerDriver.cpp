@@ -191,9 +191,9 @@ static list<std::string> CustomOptimize(
 
 static opt<OutputFormatKind> DumpTarget(
     desc("Choose output:"),
-    init(None),
+    init(Execute),
     values(
-        clEnumValN(None, "no-dump", "Parse only, no output (default)"),
+        clEnumValN(Execute, "exec", "Execute the provided script (default)"),
         clEnumValN(DumpAST, "dump-ast", "Dump the AST as text in JSON"),
         clEnumValN(
             DumpTransformedAST,
@@ -902,7 +902,7 @@ bool validateFlags() {
   }
 
   // Validate bytecode dumping flags.
-  if (cl::BytecodeMode && cl::DumpTarget != None) {
+  if (cl::BytecodeMode && cl::DumpTarget != Execute) {
     if (cl::BytecodeFormat != cl::BytecodeFormatKind::HBC)
       err("Only Hermes bytecode files may be dumped");
     if (cl::DumpTarget != DumpBytecode)
@@ -1448,7 +1448,7 @@ CompileResult processBytecodeFile(std::unique_ptr<llvm::MemoryBuffer> fileBuf) {
     return InputFileError;
   }
   bytecode = std::move(ret.first);
-  if (cl::DumpTarget != None) {
+  if (cl::DumpTarget != Execute) {
     assert(
         cl::DumpTarget == DumpBytecode &&
         "validateFlags() should enforce bytecode files "
@@ -1717,7 +1717,7 @@ CompileResult processSourceFiles(
   genOptions.stripFunctionNames = cl::StripFunctionNames;
 
   // If the dump target is None, return bytecode in an executable form.
-  if (cl::DumpTarget == None) {
+  if (cl::DumpTarget == Execute) {
     assert(
         !sourceMapGen &&
         "validateFlags() should enforce no source map output for execution");

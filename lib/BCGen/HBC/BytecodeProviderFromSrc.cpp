@@ -210,7 +210,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   }
 #endif
 
-  BytecodeGenerationOptions opts{OutputFormatKind::None};
+  BytecodeGenerationOptions opts{OutputFormatKind::Execute};
   opts.optimizationEnabled = compileFlags.optimize;
   opts.staticBuiltinsEnabled =
       context->getOptimizationSettings().staticBuiltins;
