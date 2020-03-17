@@ -1646,6 +1646,9 @@ CompileResult processSourceFiles(
     if (!ast) {
       return ParsingFailed;
     }
+    if (cl::DumpTarget < DumpIR) {
+      return Success;
+    }
     generateIRFromESTree(ast, &M, declFileList, {});
   }
 
