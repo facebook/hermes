@@ -26,7 +26,7 @@ void hermesLog(const char *componentName, const char *fmt, ...) {
 #ifdef __ANDROID__
   __android_log_vprint(ANDROID_LOG_INFO, componentName, fmt, args);
 #elif defined(__APPLE__)
-  static os_log_t hermesLogger = os_log_create("com.hermes", "Default");
+  static os_log_t hermesLogger = os_log_create("dev.hermesengine", "Default");
   // Need to make a copy in order to do the vsprintf trick.
   va_list argsCopy;
   va_copy(argsCopy, args);
