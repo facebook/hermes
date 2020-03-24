@@ -1057,10 +1057,7 @@ class Runtime : public HandleRootOwner,
 
  public:
   /// A stack overflow exception is thrown when \c nativeCallFrameDepth_ exceeds
-  /// this threshold.  (This depth limit was originally 256, and we
-  /// increased when an app violated it.  The new depth is 128
-  /// larger.  See T46966147 for measurements/calculations indicating
-  /// that this limit should still insulate us from native stack overflow.)
+  /// this threshold.
   static constexpr unsigned MAX_NATIVE_CALL_FRAME_DEPTH =
 #ifdef HERMES_LIMIT_STACK_DEPTH
       // UBSAN builds will hit a native stack overflow much earlier, so make
@@ -1069,8 +1066,14 @@ class Runtime : public HandleRootOwner,
 #elif defined(_WINDOWS) && defined(HERMES_SLOW_DEBUG)
       // On windows in dbg mode builds, stack frames are bigger, and a depth
       // limit of 384 results in a C++ stack overflow in testing.
+      128
+#elif defined(_WINDOWS) && !NDEBUG
       192
 #else
+      /// This depth limit was originally 256, and we
+      /// increased when an app violated it.  The new depth is 128
+      /// larger.  See T46966147 for measurements/calculations indicating
+      /// that this limit should still insulate us from native stack overflow.)
       384
 #endif
       ;

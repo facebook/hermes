@@ -172,10 +172,14 @@ class JSParserImpl {
 
   /// Self-explanatory: the maximum depth of parser recursion.
   static constexpr unsigned MAX_RECURSION_DEPTH =
-#ifndef HERMES_LIMIT_STACK_DEPTH
-      1024
-#else
+#ifdef HERMES_LIMIT_STACK_DEPTH
       128
+#elif defined(_WINDOWS) && defined(HERMES_SLOW_DEBUG)
+      256
+#elif defined(_WINDOWS)
+      512
+#else
+      1024
 #endif
       ;
 
