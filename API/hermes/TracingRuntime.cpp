@@ -10,6 +10,7 @@
 
 #include <hermes/Platform/Logging.h>
 #include <hermes/Support/Algorithms.h>
+#include <hermes/Support/JSONEmitter.h>
 
 #include <llvm/Support/raw_ostream.h>
 #include "llvm/Support/FileSystem.h"
@@ -422,6 +423,9 @@ TracingHermesRuntime::TracingHermesRuntime(
           traceFilename) {}
 
 TracingHermesRuntime::~TracingHermesRuntime() {
+  if (crashCallbackKey_) {
+    conf_.getCrashMgr()->unregisterCallback(*crashCallbackKey_);
+  }
   // Make sure the trace is flushed.
   flushAndDisableTrace();
 }
@@ -438,7 +442,13 @@ TracingHermesRuntime::TracingHermesRuntime(
           runtimeConfig,
           std::move(traceStream)),
       conf_(runtimeConfig),
-      traceFilename_(traceFilename) {}
+      traceFilename_(traceFilename),
+      crashCallbackKey_(
+          conf_.getCrashMgr()
+              ? llvm::Optional<::hermes::vm::CrashManager::CallbackKey>(
+                    conf_.getCrashMgr()->registerCallback(
+                        [this](int fd) { crashCallback(fd); }))
+              : llvm::None) {}
 
 void TracingHermesRuntime::flushAndDisableTrace() {
   (void)flushAndDisableBridgeTrafficTrace();
@@ -453,6 +463,23 @@ jsi::Value TracingHermesRuntime::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
   return TracingRuntime::evaluateJavaScript(buffer, sourceURL);
+}
+
+void TracingHermesRuntime::crashCallback(int fd) {
+  llvm::raw_fd_ostream jsonStream(fd, false);
+  ::hermes::JSONEmitter json(jsonStream);
+  json.openDict();
+  json.emitKeyValue("type", "tracing");
+  json.emitKeyValue("fileName", traceFilename_);
+  try {
+    flushAndDisableBridgeTrafficTrace();
+    json.emitKeyValue("completed", true);
+    json.closeDict();
+  } catch (...) {
+    json.emitKeyValue("completed", false);
+    json.closeDict();
+    throw;
+  }
 }
 
 namespace {

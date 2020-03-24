@@ -169,8 +169,12 @@ class TracingHermesRuntime final : public TracingRuntime {
       std::unique_ptr<llvm::raw_ostream> traceStream,
       const std::string &traceFilename);
 
+  void crashCallback(int fd);
+
   const ::hermes::vm::RuntimeConfig conf_;
   const std::string traceFilename_;
+  const llvm::Optional<::hermes::vm::CrashManager::CallbackKey>
+      crashCallbackKey_;
 };
 
 /// Creates and returns a HermesRuntime that traces JSI interactions.
