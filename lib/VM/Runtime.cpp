@@ -60,6 +60,8 @@
 #include "llvm/ADT/DenseMap.h"
 #endif
 
+#include <cstring>
+
 namespace hermes {
 namespace vm {
 
@@ -181,6 +183,10 @@ Runtime::Runtime(
   assert(
       (void *)this == (void *)(HandleRootOwner *)this &&
       "cast to HandleRootOwner should be no-op");
+#ifdef HERMES_FACEBOOK_BUILD
+  const bool isSnapshot = std::strstr(__FILE__, "hermes-snapshot");
+  crashMgr_->setCustomData("HermesIsSnapshot", isSnapshot ? "true" : "false");
+#endif
   auto maxNumRegisters = runtimeConfig.getMaxNumRegisters();
   if (LLVM_UNLIKELY(maxNumRegisters > kMaxSupportedNumRegisters)) {
     hermes_fatal("RuntimeConfig maxNumRegisters too big");

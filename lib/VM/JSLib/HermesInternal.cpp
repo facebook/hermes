@@ -21,6 +21,7 @@
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
 
+#include <cstring>
 #include <random>
 
 namespace hermes {
@@ -419,6 +420,16 @@ hermesInternalGetRuntimeProperties(void *, Runtime *runtime, NativeArgs args) {
         PropertyFlags::defaultNewNamedPropertyFlags(),
         value);
   };
+
+#ifdef HERMES_FACEBOOK_BUILD
+  tmpHandle =
+      HermesValue::encodeBoolValue(std::strstr(__FILE__, "hermes-snapshot"));
+  if (LLVM_UNLIKELY(
+          addProperty(tmpHandle, "Snapshot VM") ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+#endif
 
   tmpHandle = HermesValue::encodeDoubleValue(::hermes::hbc::BYTECODE_VERSION);
   if (LLVM_UNLIKELY(
