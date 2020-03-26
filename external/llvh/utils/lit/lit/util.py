@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import errno
 import itertools
 import math
@@ -100,6 +102,20 @@ def to_string(b):
         raise TypeError('not sure how to convert %s to %s' % (type(b), str))
 
 
+def to_unicode(s):
+    """Return the parameter as type which supports unicode, possibly decoding
+    it.
+
+    In Python2, this is the unicode type. In Python3 it's the str type.
+
+    """
+    if isinstance(s, bytes):
+        # In Python2, this branch is taken for both 'str' and 'bytes'.
+        # In Python3, this branch is taken only for 'bytes'.
+        return s.decode('utf-8')
+    return s
+
+
 def detectCPUs():
     """Detects the number of CPUs on a system.
 
@@ -126,6 +142,25 @@ def detectCPUs():
     return 1  # Default
 
 
+def mkdir(path):
+    try:
+        if platform.system() == 'Windows':
+            from ctypes import windll
+            from ctypes import GetLastError, WinError
+
+            path = os.path.abspath(path)
+            NTPath = to_unicode(r'\\?\%s' % path)
+            if not windll.kernel32.CreateDirectoryW(NTPath, None):
+                raise WinError(GetLastError())
+        else:
+            os.mkdir(path)
+    except OSError:
+        e = sys.exc_info()[1]
+        # ignore EEXIST, which may occur during a race condition
+        if e.errno != errno.EEXIST:
+            raise
+
+
 def mkdir_p(path):
     """mkdir_p(path) - Make the "path" directory, if it does not exist; this
     will also make directories for any missing parent directories."""
@@ -136,13 +171,7 @@ def mkdir_p(path):
     if parent != path:
         mkdir_p(parent)
 
-    try:
-        os.mkdir(path)
-    except OSError:
-        e = sys.exc_info()[1]
-        # Ignore EEXIST, which may occur during a race condition.
-        if e.errno != errno.EEXIST:
-            raise
+    mkdir(path)
 
 
 def listdir_files(dirname, suffixes=None, exclude_filenames=None):
@@ -195,7 +224,7 @@ def which(command, paths=None):
 
     # Check for absolute match first.
     if os.path.isabs(command) and os.path.isfile(command):
-        return os.path.normpath(command)
+        return os.path.normcase(os.path.normpath(command))
 
     # Would be nice if Python had a lib function for this.
     if not paths:
@@ -213,7 +242,7 @@ def which(command, paths=None):
         for ext in pathext:
             p = os.path.join(path, command + ext)
             if os.path.exists(p) and not os.path.isdir(p):
-                return os.path.normpath(p)
+                return os.path.normcase(os.path.normpath(p))
 
     return None
 
@@ -375,7 +404,7 @@ def usePlatformSdkOnDarwin(config, lit_config):
         except OSError:
             res = -1
         if res == 0 and out:
-            sdk_path = out
+            sdk_path = out.decode()
             lit_config.note('using SDKROOT: %r' % sdk_path)
             config.environment['SDKROOT'] = sdk_path
 
@@ -391,7 +420,7 @@ def findPlatformSdkVersionOnMacOS(config, lit_config):
         except OSError:
             res = -1
         if res == 0 and out:
-            return out
+            return out.decode()
     return None
 
 
@@ -422,3 +451,17 @@ def killProcessAndChildren(pid):
         psutilProc.kill()
     except psutil.NoSuchProcess:
         pass
+
+
+try:
+    import win32api
+except ImportError:
+    win32api = None
+
+def abort_now():
+    """Abort the current process without doing any exception teardown"""
+    sys.stdout.flush()
+    if win32api:
+        win32api.TerminateProcess(win32api.GetCurrentProcess(), 3)
+    else:
+        os.kill(0, 9)

@@ -21,7 +21,7 @@ class LitConfig(object):
 
     def __init__(self, progname, path, quiet,
                  useValgrind, valgrindLeakCheck, valgrindArgs,
-                 noExecute, debug, isWindows, singleProcess,
+                 noExecute, debug, isWindows,
                  params, config_prefix = None,
                  maxIndividualTestTime = 0,
                  maxFailures = None,
@@ -37,7 +37,6 @@ class LitConfig(object):
         self.valgrindUserArgs = list(valgrindArgs)
         self.noExecute = noExecute
         self.debug = debug
-        self.singleProcess = singleProcess
         self.isWindows = bool(isWindows)
         self.params = dict(params)
         self.bashPath = None
@@ -119,6 +118,22 @@ class LitConfig(object):
 
         if self.bashPath is None:
             self.bashPath = ''
+
+        # Check whether the found version of bash is able to cope with paths in
+        # the host path format. If not, don't return it as it can't be used to
+        # run scripts. For example, WSL's bash.exe requires '/mnt/c/foo' rather
+        # than 'C:\\foo' or 'C:/foo'.
+        if self.isWindows and self.bashPath:
+            command = [self.bashPath, '-c',
+                       '[[ -f "%s" ]]' % self.bashPath.replace('\\', '\\\\')]
+            _, _, exitCode = lit.util.executeCommand(command)
+            if exitCode:
+                self.note('bash command failed: %s' % (
+                    ' '.join('"%s"' % c for c in command)))
+                self.bashPath = ''
+
+        if not self.bashPath:
+            self.warning('Unable to find a usable version of bash.')
 
         return self.bashPath
 

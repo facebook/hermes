@@ -23,7 +23,7 @@ from lit.ShCommands import GlobItem
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
-from lit.util import to_bytes, to_string
+from lit.util import to_bytes, to_string, to_unicode
 from lit.BooleanExpression import BooleanExpression
 
 class InternalShellError(Exception):
@@ -49,7 +49,7 @@ kDevNull = "/dev/null"
 # This regex captures ARG.  ARG must not contain a right parenthesis, which
 # terminates %dbg.  ARG must not contain quotes, in which ARG might be enclosed
 # during expansion.
-kPdbgRegex = '%dbg\(([^)\'"]*)\)'
+kPdbgRegex = '%dbg\\(([^)\'"]*)\\)'
 
 class ShellEnvironment(object):
 
@@ -344,13 +344,16 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
     stderr = StringIO()
     exitCode = 0
     for dir in args:
+        cwd = cmd_shenv.cwd
+        dir = to_unicode(dir) if kIsWindows else to_bytes(dir)
+        cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(dir):
-            dir = os.path.realpath(os.path.join(cmd_shenv.cwd, dir))
+            dir = os.path.realpath(os.path.join(cwd, dir))
         if parent:
             lit.util.mkdir_p(dir)
         else:
             try:
-                os.mkdir(dir)
+                lit.util.mkdir(dir)
             except OSError as err:
                 stderr.write("Error: 'mkdir' command failed, %s\n" % str(err))
                 exitCode = 1
@@ -598,8 +601,11 @@ def executeBuiltinRm(cmd, cmd_shenv):
     stderr = StringIO()
     exitCode = 0
     for path in args:
+        cwd = cmd_shenv.cwd
+        path = to_unicode(path) if kIsWindows else to_bytes(path)
+        cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(path):
-            path = os.path.realpath(os.path.join(cmd_shenv.cwd, path))
+            path = os.path.realpath(os.path.join(cwd, path))
         if force and not os.path.exists(path):
             continue
         try:
@@ -607,7 +613,51 @@ def executeBuiltinRm(cmd, cmd_shenv):
                 if not recursive:
                     stderr.write("Error: %s is a directory\n" % path)
                     exitCode = 1
-                shutil.rmtree(path, onerror = on_rm_error if force else None)
+                if platform.system() == 'Windows':
+                    # NOTE: use ctypes to access `SHFileOperationsW` on Windows to
+                    # use the NT style path to get access to long file paths which
+                    # cannot be removed otherwise.
+                    from ctypes.wintypes import BOOL, HWND, LPCWSTR, UINT, WORD
+                    from ctypes import addressof, byref, c_void_p, create_unicode_buffer
+                    from ctypes import Structure
+                    from ctypes import windll, WinError, POINTER
+
+                    class SHFILEOPSTRUCTW(Structure):
+                        _fields_ = [
+                                ('hWnd', HWND),
+                                ('wFunc', UINT),
+                                ('pFrom', LPCWSTR),
+                                ('pTo', LPCWSTR),
+                                ('fFlags', WORD),
+                                ('fAnyOperationsAborted', BOOL),
+                                ('hNameMappings', c_void_p),
+                                ('lpszProgressTitle', LPCWSTR),
+                        ]
+
+                    FO_MOVE, FO_COPY, FO_DELETE, FO_RENAME = range(1, 5)
+
+                    FOF_SILENT = 4
+                    FOF_NOCONFIRMATION = 16
+                    FOF_NOCONFIRMMKDIR = 512
+                    FOF_NOERRORUI = 1024
+
+                    FOF_NO_UI = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR
+
+                    SHFileOperationW = windll.shell32.SHFileOperationW
+                    SHFileOperationW.argtypes = [POINTER(SHFILEOPSTRUCTW)]
+
+                    path = os.path.abspath(path)
+
+                    pFrom = create_unicode_buffer(path, len(path) + 2)
+                    pFrom[len(path)] = pFrom[len(path) + 1] = '\0'
+                    operation = SHFILEOPSTRUCTW(wFunc=UINT(FO_DELETE),
+                                                pFrom=LPCWSTR(addressof(pFrom)),
+                                                fFlags=FOF_NO_UI)
+                    result = SHFileOperationW(byref(operation))
+                    if result:
+                        raise WinError(result)
+                else:
+                    shutil.rmtree(path, onerror = on_rm_error if force else None)
             else:
                 if force and not os.access(path, os.W_OK):
                     os.chmod(path,
@@ -695,6 +745,8 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         else:
             # Make sure relative paths are relative to the cwd.
             redir_filename = os.path.join(cmd_shenv.cwd, name)
+            redir_filename = to_unicode(redir_filename) \
+                    if kIsWindows else to_bytes(redir_filename)
             fd = open(redir_filename, mode)
         # Workaround a Win32 and/or subprocess bug when appending.
         #
@@ -939,6 +991,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     for i,f in stderrTempFiles:
         f.seek(0, 0)
         procData[i] = (procData[i][0], f.read())
+        f.close()
 
     exitCode = None
     for i,(out,err) in enumerate(procData):
@@ -1066,7 +1119,7 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
                 codeStr = str(result.exitCode)
             out += "error: command failed with exit status: %s\n" % (
                 codeStr,)
-        if litConfig.maxIndividualTestTime > 0:
+        if litConfig.maxIndividualTestTime > 0 and result.timeoutReached:
             out += 'error: command reached timeout: %s\n' % (
                 str(result.timeoutReached),)
 
@@ -1081,9 +1134,12 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
 
     # Write script file
     mode = 'w'
+    open_kwargs = {}
     if litConfig.isWindows and not isWin32CMDEXE:
-      mode += 'b'  # Avoid CRLFs when writing bash scripts.
-    f = open(script, mode)
+        mode += 'b'  # Avoid CRLFs when writing bash scripts.
+    elif sys.version_info > (3,0):
+        open_kwargs['encoding'] = 'utf-8'
+    f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
         for i, ln in enumerate(commands):
             commands[i] = re.sub(kPdbgRegex, "echo '\\1' > nul && ", ln)
@@ -1096,11 +1152,14 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
         for i, ln in enumerate(commands):
             commands[i] = re.sub(kPdbgRegex, ": '\\1'; ", ln)
         if test.config.pipefail:
-            f.write('set -o pipefail;')
+            f.write(b'set -o pipefail;' if mode == 'wb' else 'set -o pipefail;')
         if litConfig.echo_all_commands:
-            f.write('set -x;')
-        f.write('{ ' + '; } &&\n{ '.join(commands) + '; }')
-    f.write('\n')
+            f.write(b'set -x;' if mode == 'wb' else 'set -x;')
+        if sys.version_info > (3,0) and mode == 'wb':
+            f.write(bytes('{ ' + '; } &&\n{ '.join(commands) + '; }', 'utf-8'))
+        else:
+            f.write('{ ' + '; } &&\n{ '.join(commands) + '; }')
+    f.write(b'\n' if mode == 'wb' else '\n')
     f.close()
 
     if isWin32CMDEXE:
@@ -1365,14 +1424,14 @@ class IntegratedTestKeywordParser(object):
         # Trim trailing whitespace.
         line = line.rstrip()
         # Substitute line number expressions
-        line = re.sub('%\(line\)', str(line_number), line)
+        line = re.sub(r'%\(line\)', str(line_number), line)
 
         def replace_line_number(match):
             if match.group(1) == '+':
                 return str(line_number + int(match.group(2)))
             if match.group(1) == '-':
                 return str(line_number - int(match.group(2)))
-        line = re.sub('%\(line *([\+-]) *(\d+)\)', replace_line_number, line)
+        line = re.sub(r'%\(line *([\+-]) *(\d+)\)', replace_line_number, line)
         # Collapse lines with trailing '\\'.
         if output and output[-1][-1] == '\\':
             output[-1] = output[-1][:-1] + line
@@ -1401,13 +1460,17 @@ class IntegratedTestKeywordParser(object):
     @staticmethod
     def _handleBooleanExpr(line_number, line, output):
         """A parser for BOOLEAN_EXPR type keywords"""
+        parts = [s.strip() for s in line.split(',') if s.strip() != '']
+        if output and output[-1][-1] == '\\':
+            output[-1] = output[-1][:-1] + parts[0]
+            del parts[0]
         if output is None:
             output = []
-        output.extend([s.strip() for s in line.split(',')])
+        output.extend(parts)
         # Evaluate each expression to verify syntax.
         # We don't want any results, just the raised ValueError.
         for s in output:
-            if s != '*':
+            if s != '*' and not s.endswith('\\'):
                 BooleanExpression.evaluate(s, [])
         return output
 
@@ -1485,6 +1548,15 @@ def parseIntegratedTestScript(test, additional_parsers=[],
     if script and script[-1][-1] == '\\':
         return lit.Test.Result(Test.UNRESOLVED,
                                "Test has unterminated run lines (with '\\')")
+
+    # Check boolean expressions for unterminated lines.
+    for key in keyword_parsers:
+        kp = keyword_parsers[key]
+        if kp.kind != ParserKind.BOOLEAN_EXPR:
+            continue
+        value = kp.getValue()
+        if value and value[-1][-1] == '\\':
+            raise ValueError("Test has unterminated %s lines (with '\\')" % key)
 
     # Enforce REQUIRES:
     missing_required_features = test.getMissingRequiredFeatures()
