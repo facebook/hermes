@@ -16,7 +16,7 @@ namespace hermes {
 namespace vm {
 
 CompleteMarkState::CompleteMarkState(bool properWeakMapMarking)
-    : properWeakMapMarking_(properWeakMapMarking) {}
+    : properWeakMapMarking_(true) {}
 
 void CompleteMarkState::markTransitive(void *ptr) {
   if (markingVarSizeCell &&
