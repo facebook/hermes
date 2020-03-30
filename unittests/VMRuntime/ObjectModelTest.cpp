@@ -546,14 +546,21 @@ TEST_F(ObjectModelTest, EnvironmentSmokeTest) {
 }
 
 TEST_F(ObjectModelTest, NativeConstructorTest) {
+  static char sContext{0};
+
+  auto creator = [](Runtime *runtime, Handle<JSObject> proto, void *context) {
+    // Verify the specified context is passed.
+    EXPECT_EQ(&sContext, context);
+    return NativeConstructor::creatorFunction<JSDate>(runtime, proto, context);
+  };
+
   auto dateCons = runtime->makeHandle(NativeConstructor::create(
       runtime,
       Runtime::makeNullHandle<JSObject>(),
-      nullptr,
+      &sContext,
       nullptr,
       0,
-      (NativeConstructor::CreatorFunction *)
-          NativeConstructor::creatorFunction<JSDate>,
+      creator,
       CellKind::FunctionKind));
   auto crtRes = dateCons->newObject(
       dateCons, runtime, Runtime::makeNullHandle<JSObject>());

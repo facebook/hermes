@@ -709,17 +709,20 @@ class NativeConstructor final : public NativeFunction {
   /// constructor function sees.
   /// \p proto is the '.prototype' property of the constructor and should be set
   /// as the __proto__ for the nascent object.
-  using CreatorFunction =
-      CallResult<PseudoHandle<JSObject>>(Runtime *, Handle<JSObject> proto);
+  /// \p context is the context pointer provided to the NativeConstructor.
+  using CreatorFunction = CallResult<PseudoHandle<JSObject>>(
+      Runtime *,
+      Handle<JSObject> proto,
+      void *context);
 
   /// Unifies signatures of various GCCells so that they may be stored
   /// in the NativeConstructor.
   /// Delegates to toCallResultPseudoHandleJSObject to convert various
   /// types to CallResult<PseudoHandle<JSObject>>.
   template <class NativeClass>
-  static CallResult<PseudoHandle<JSObject>> creatorFunction(
-      Runtime *runtime,
-      Handle<JSObject> prototype) {
+  static CallResult<PseudoHandle<JSObject>>
+  creatorFunction(Runtime *runtime, Handle<JSObject> prototype, void *context) {
+    (void)context;
     return toCallResultPseudoHandleJSObject(
         NativeClass::create(runtime, prototype));
   }
@@ -860,7 +863,8 @@ class NativeConstructor final : public NativeFunction {
       Runtime *runtime,
       Handle<JSObject> parentHandle) {
     auto nativeConsHandle = Handle<NativeConstructor>::vmcast(selfHandle);
-    auto res = nativeConsHandle->creator_(runtime, parentHandle);
+    auto res = nativeConsHandle->creator_(
+        runtime, parentHandle, nativeConsHandle->getContext());
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
