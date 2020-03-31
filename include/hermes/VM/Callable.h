@@ -537,8 +537,6 @@ class NativeFunction : public Callable {
     self->callDuration_ = HERMESVM_RDTSC() - t1;
     ++self->callCount_;
 #endif
-
-    runtime->restoreCallerIPFromStackFrame();
     runtime->restoreStackAndPreviousFrame(newFrame);
     return res;
   }

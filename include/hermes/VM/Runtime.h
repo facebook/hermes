@@ -1197,24 +1197,27 @@ class Runtime : public HandleRootOwner,
   /// Set from RuntimeConfig.
   bool allowFunctionToStringWithRuntimeSource_;
 
-#ifdef HERMES_ENABLE_DEBUGGER
  private:
-  /// This is used to store the last IP in the interpreter before making a call.
-  const inst::Inst *savedIP_{nullptr};
+  /// See \c ::setCurrentIP() and \c ::getCurrentIP() .
+  const inst::Inst *currentIP_{nullptr};
 
  public:
-  /// Store the caller's IP before (possibly) making a call.
-  /// This should be called at every place that we could make a call.
-  void storeCallerIP(const inst::Inst *ip) {
-    savedIP_ = ip;
+  /// Set the value of the current Instruction Pointer (IP). Generally this is
+  /// called by the interpeter before it makes any major calls out of its main
+  /// loop. However, the interpeter also reads the value held here back after
+  /// major calls return so this can also be called by other code which wants to
+  /// return to the interpreter at a different IP. This allows things external
+  /// to the interpreter loop to affect the flow of bytecode execution.
+  inline void setCurrentIP(const inst::Inst *ip) {
+    currentIP_ = ip;
   }
 
-  /// Clear the caller's return address. This needs to be called after
-  /// returning a call.
-  void clearCallerIP() {
-#ifndef NDEBUG
-    savedIP_ = nullptr;
-#endif
+  /// Get the current Instruction Pointer (IP). This can be used to find out
+  /// the last bytecode executed if we're currently in the interpeter loop. If
+  /// we are not in the interpeter loop (i.e. we've made it into the VM
+  /// internals via a native call), this this will return nullptr.
+  inline const inst::Inst *getCurrentIP() const {
+    return currentIP_;
   }
 
   /// Save the return address in the caller in the stack frame.
@@ -1223,27 +1226,12 @@ class Runtime : public HandleRootOwner,
   void saveCallerIPInStackFrame() {
     assert(
         !currentFrame_.getSavedIP() ||
-        currentFrame_.getSavedIP() == savedIP_ &&
+        currentFrame_.getSavedIP() == currentIP_ &&
             "The ip should either be null or already have the expected value");
-    currentFrame_.getSavedIPRef() = HermesValue::encodeNativePointer(savedIP_);
-    savedIP_ = nullptr;
+    currentFrame_.getSavedIPRef() =
+        HermesValue::encodeNativePointer(currentIP_);
   }
 
-  /// Restore the caller's IP from the stack frame to savedIP_.
-  /// This needs to be called when a function returns.
-  void restoreCallerIPFromStackFrame() {
-    savedIP_ = getCurrentFrame().getSavedIP();
-  }
-#else
- public:
-  void storeCallerIP(const inst::Inst *ip) {}
-
-  void clearCallerIP() {}
-
-  void saveCallerIPInStackFrame() {}
-
-  void restoreCallerIPFromStackFrame() {}
-#endif // HERMES_ENABLE_DEBUGGER
   void setAllowFunctionToStringWithRuntimeSource(bool v) {
     allowFunctionToStringWithRuntimeSource_ = v;
   }

@@ -782,10 +782,12 @@ void Debugger::breakpointCaller() {
   // If the ip was saved in the stack frame, the caller is the function
   // that we want to return to. The code block might not be saved in this
   // frame, so we need to find that in the frame below.
-  frameIt++;
-  assert(
-      frameIt != callFrames.end() &&
-      "The frame that has saved ip cannot be the bottom frame");
+  do {
+    frameIt++;
+    assert(
+        frameIt != callFrames.end() &&
+        "The frame that has saved ip cannot be the bottom frame");
+  } while (!frameIt->getCalleeCodeBlock());
   // In the frame below, the 'calleeClosureORCB' register contains
   // the code block we need.
   CodeBlock *codeBlock = frameIt->getCalleeCodeBlock();
