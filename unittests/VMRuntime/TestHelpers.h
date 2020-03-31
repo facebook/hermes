@@ -36,22 +36,25 @@ static constexpr uint32_t kMaxHeapSize = 1 << 19;
 static constexpr uint32_t kInitHeapLarge = 1 << 20;
 static constexpr uint32_t kMaxHeapLarge = 1 << 24;
 
-static const GCConfig::Builder kTestGCConfigBuilder =
+static const GCConfig::Builder kTestGCConfigBaseBuilder =
     GCConfig::Builder()
         .withSanitizeConfig(
             vm::GCSanitizeConfig::Builder().withSanitizeRate(0.0).build())
         .withShouldRandomizeAllocSpace(false);
 
 static const GCConfig kTestGCConfigSmall =
-    GCConfig::Builder(kTestGCConfigBuilder)
+    GCConfig::Builder(kTestGCConfigBaseBuilder)
         .withInitHeapSize(kInitHeapSmall)
         .withMaxHeapSize(kMaxHeapSmall)
         .build();
 
-static const GCConfig kTestGCConfig = GCConfig::Builder(kTestGCConfigBuilder)
-                                          .withInitHeapSize(kInitHeapSize)
-                                          .withMaxHeapSize(kMaxHeapSize)
-                                          .build();
+static const GCConfig::Builder kTestGCConfigBuilder =
+    GCConfig::Builder(kTestGCConfigBaseBuilder)
+        .withInitHeapSize(kInitHeapSize)
+        .withMaxHeapSize(kMaxHeapSize);
+
+static const GCConfig kTestGCConfig =
+    GCConfig::Builder(kTestGCConfigBuilder).build();
 
 static const GCConfig kTestGCConfigLarge =
     GCConfig::Builder(kTestGCConfigBuilder)
@@ -62,8 +65,11 @@ static const GCConfig kTestGCConfigLarge =
 static const RuntimeConfig kTestRTConfigSmallHeap =
     RuntimeConfig::Builder().withGCConfig(kTestGCConfigSmall).build();
 
+static const RuntimeConfig::Builder kTestRTConfigBuilder =
+    RuntimeConfig::Builder().withGCConfig(kTestGCConfig);
+
 static const RuntimeConfig kTestRTConfig =
-    RuntimeConfig::Builder().withGCConfig(kTestGCConfig).build();
+    RuntimeConfig::Builder(kTestRTConfigBuilder).build();
 
 static const RuntimeConfig kTestRTConfigLargeHeap =
     RuntimeConfig::Builder().withGCConfig(kTestGCConfigLarge).build();
@@ -319,6 +325,19 @@ struct DummyRuntime final : public HandleRootOwner,
   /// It's a unit test, it doesn't care about reporting how much memory it uses.
   size_t mallocSize() const override {
     return 0;
+  }
+
+  const inst::Inst *getCurrentIPSlow() const override {
+    return nullptr;
+  }
+
+  StackTracesTreeNode *getCurrentStackTracesTreeNode(
+      const inst::Inst *ip) override {
+    return nullptr;
+  }
+
+  StackTracesTree *getStackTracesTree() override {
+    return nullptr;
   }
 
  private:

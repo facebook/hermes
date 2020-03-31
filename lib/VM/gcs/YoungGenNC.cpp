@@ -351,8 +351,14 @@ void YoungGen::collect() {
   }
 
   if (gc_->getIDTracker().isTrackingIDs()) {
-    PerfSection fixupTrackedObjectsSystraceRegion("fixupTrackedObjects");
-    fixupTrackedObjects();
+    PerfSection fixupTrackedObjectsSystraceRegion("updateIDTracker");
+    updateIDTracker();
+  }
+
+  if (gc_->getAllocationLocationTracker().isEnabled()) {
+    PerfSection updateAllocationLocationTrackerSystraceRegion(
+        "updateAllocationLocationTracker");
+    updateAllocationLocationTracker();
   }
 
   // We've now determined reachability; find weak refs to young-gen
@@ -541,18 +547,37 @@ GCCell *YoungGen::forwardPointer(GCCell *ptr) {
   return newCell;
 }
 
-void YoungGen::fixupTrackedObjects() {
+void YoungGen::updateIDTracker() {
+  updateTrackers</* idTracker */ true, /* allocationLocationTracker */ false>();
+}
+
+void YoungGen::updateAllocationLocationTracker() {
+  updateTrackers</* idTracker */ false, /* allocationLocationTracker */ true>();
+}
+
+template <bool idTracker, bool allocationLocationTracker>
+void YoungGen::updateTrackers() {
   char *ptr = activeSegment().start();
   char *lvl = activeSegment().level();
   while (ptr < lvl) {
     GCCell *cell = reinterpret_cast<GCCell *>(ptr);
     if (cell->hasMarkedForwardingPointer()) {
       auto *fptr = cell->getMarkedForwardingPointer();
-      gc_->getIDTracker().moveObject(cell, fptr);
+      if (idTracker) {
+        gc_->getIDTracker().moveObject(cell, fptr);
+      }
+      if (allocationLocationTracker) {
+        gc_->getAllocationLocationTracker().moveAlloc(cell, fptr);
+      }
       ptr += reinterpret_cast<GCCell *>(fptr)->getAllocatedSize();
     } else {
       ptr += cell->getAllocatedSize();
-      gc_->getIDTracker().untrackObject(cell);
+      if (idTracker) {
+        gc_->getIDTracker().untrackObject(cell);
+      }
+      if (allocationLocationTracker) {
+        gc_->getAllocationLocationTracker().freeAlloc(cell);
+      }
     }
   }
 }

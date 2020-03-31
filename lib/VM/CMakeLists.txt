@@ -57,6 +57,7 @@ set(source_files
   SerializedLiteralParser.cpp
   SingleObject.cpp
   StackFrame.cpp
+  StackTracesTree.cpp
   StorageProvider.cpp
   StringPrimitive.cpp
   StringView.cpp

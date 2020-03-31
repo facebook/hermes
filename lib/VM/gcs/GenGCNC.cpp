@@ -1609,6 +1609,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os) {
   // Add a node for each object in the heap.
   const auto snapshotForObject =
       [&snap, &primitiveVisitor, this](GCCell *cell) {
+        auto &allocationLocationTracker = getAllocationLocationTracker();
         // First add primitive nodes.
         GCBase::markCellWithNames(primitiveVisitor, cell, this);
         EdgeAddingAcceptor acceptor(*this, snap);
@@ -1620,11 +1621,14 @@ void GenGC::createSnapshot(llvm::raw_ostream &os) {
         GCBase::markCellWithNames(visitor, cell, this);
         // Allow nodes to add custom edges not represented by metadata.
         cell->getVT()->snapshotMetaData.addEdges(cell, this, snap);
+        auto stackTracesTreeNode =
+            allocationLocationTracker.getStackTracesTreeNodeForAlloc(cell);
         snap.endNode(
             cell->getVT()->snapshotMetaData.nodeType(),
             cell->getVT()->snapshotMetaData.nameForNode(cell, this),
             getObjectID(cell),
-            cell->getAllocatedSize());
+            cell->getAllocatedSize(),
+            stackTracesTreeNode ? stackTracesTreeNode->id : 0);
       };
   forAllObjs(snapshotForObject);
   // Write the singleton number nodes into the snapshot.

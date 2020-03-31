@@ -48,6 +48,7 @@ GCBase::GCBase(
       // Start off not in GC.
       inGC_(false),
       name_(gcConfig.getName()),
+      allocationLocationTracker_(this),
 #ifdef HERMESVM_MEMORY_PROFILER
       memEventTracker_(gcConfig.getMemEventTracker()),
 #endif
@@ -432,6 +433,20 @@ GCBase::IDTracker::IDTracker() {
 }
 
 #ifdef HERMESVM_SERIALIZE
+void GCBase::AllocationLocationTracker::serialize(Serializer &s) const {
+  if (enabled_) {
+    hermes_fatal(
+        "Serialization not supported when AllocationLocationTracker enabled");
+  }
+}
+
+void GCBase::AllocationLocationTracker::deserialize(Deserializer &d) {
+  if (enabled_) {
+    hermes_fatal(
+        "Deserialization not supported when AllocationLocationTracker enabled");
+  }
+}
+
 void GCBase::IDTracker::serialize(Serializer &s) const {
   s.writeInt<HeapSnapshot::NodeID>(nextID_);
   s.writeInt<HeapSnapshot::NodeID>(nextNativeID_);

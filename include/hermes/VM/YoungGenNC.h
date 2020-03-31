@@ -175,8 +175,14 @@ class YoungGen : public GCGeneration {
   void printStats(llvm::raw_ostream &os, bool trailingComma) const;
 
   /// Fixup the tracked IDs of objects that were moved or deleted.
-  void fixupTrackedObjects();
+  void updateIDTracker();
+  void updateAllocationLocationTracker();
 
+ private:
+  template <bool updateIDTracker, bool updateAllocationLocationTracker>
+  void updateTrackers();
+
+ public:
   /// Finalizes all unreachable cells with finalizers. If the cell was moved to
   /// the old generation, moves a reference to the cell from a list containing
   /// references to cells with finalizers in the young gen to a list containing

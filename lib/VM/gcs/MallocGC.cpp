@@ -310,6 +310,9 @@ void MallocGC::collect() {
       if (idTracker_.isTrackingIDs()) {
         idTracker_.untrackObject(cell);
       }
+      if (allocationLocationTracker_.isEnabled()) {
+        allocationLocationTracker_.freeAlloc(cell);
+      }
 #ifndef NDEBUG
       // Before free'ing, fill with a dead value for debugging
       std::fill_n(reinterpret_cast<char *>(cell), freedSize, kInvalidHeapValue);

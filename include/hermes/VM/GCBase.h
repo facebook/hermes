@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_GCBASE_H
 #define HERMES_VM_GCBASE_H
 
+#include "hermes/Inst/Inst.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Public/CrashManager.h"
 #include "hermes/Public/GCConfig.h"
@@ -27,6 +28,7 @@
 #include "hermes/VM/SerializeHeader.h"
 #include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/SlotVisitor.h"
+#include "hermes/VM/StackTracesTree-NoRuntime.h"
 #include "hermes/VM/StorageProvider.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/VTable.h"
@@ -241,6 +243,19 @@ class GCBase {
     /// CollectionEnd at the end.
     /// \param extraInfo contains more detailed extra info for specific GC.
     virtual void onGCEvent(GCEventKind kind, const std::string &extraInfo) = 0;
+
+    /// Return the current VM instruction pointer which can be used to derive
+    /// the current VM stack-trace. It's "slow" because it's virtual.
+    virtual const inst::Inst *getCurrentIPSlow() const = 0;
+
+    /// Return a \c StackTracesTreeNode representing the current VM stack-trace
+    /// at this point.
+    virtual StackTracesTreeNode *getCurrentStackTracesTreeNode(
+        const inst::Inst *ip) = 0;
+
+    /// Get a StackTraceTree which can be used to recover stack-traces from \c
+    /// StackTraceTreeNode() as returned by \c getCurrentStackTracesTreeNode() .
+    virtual StackTracesTree *getStackTracesTree() = 0;
   };
 
   /// Struct that keeps a reference to a GC.  Useful, for example, as a base
@@ -318,6 +333,48 @@ class GCBase {
     void assertInvariants() const;
   };
 #endif
+
+  /// When enabled, the AllocationLocationTracker attaches a stack-trace to
+  /// every allocation. When disabled old allocations continue to be tracked but
+  /// no new allocations get a stack-trace.
+  struct AllocationLocationTracker final {
+    explicit inline AllocationLocationTracker(GCBase *gc);
+
+    /// Returns true if tracking is enabled for new allocations.
+    inline bool isEnabled() const;
+    /// Must be called by GC implementations whenever a new allocation is made.
+    inline void newAlloc(const void *ptr);
+    /// Must be called by GC implementations whenever an allocation is moved.
+    inline void moveAlloc(const void *oldPtr, const void *newPtr);
+    /// Must be called by GC implementations whenever an allocation is freed.
+    inline void freeAlloc(const void *ptr);
+    /// Returns data needed to reconstruct the JS stack used to create the
+    /// specified allocation.
+    inline StackTracesTreeNode *getStackTracesTreeNodeForAlloc(
+        const void *ptr) const;
+
+    /// Enable location tracking.
+    inline void enable();
+
+    /// Disable location tracking - turns \c newAlloc() into a no-op. Existing
+    /// allocations continue to be tracked.
+    inline void disable();
+
+#ifdef HERMESVM_SERIALIZE
+    void serialize(Serializer &s) const;
+    void deserialize(Deserializer &d);
+#endif
+
+   private:
+    /// Associates allocations at their current location with their stack trace
+    /// data.
+    llvm::DenseMap<const void *, StackTracesTreeNode *> stackMap_;
+    /// We need access to the GCBase to collect the current stack when nodes are
+    /// allocated.
+    const GCBase *gc_;
+    /// Indicates if tracking of new allocations is enabled.
+    bool enabled_{false};
+  };
 
   class IDTracker final {
    public:
@@ -781,6 +838,10 @@ class GCBase {
     return idTracker_;
   }
 
+  AllocationLocationTracker &getAllocationLocationTracker() {
+    return allocationLocationTracker_;
+  }
+
   inline HeapSnapshot::NodeID getObjectID(const void *cell);
   inline HeapSnapshot::NodeID getObjectID(const GCPointerBase &cell);
   inline HeapSnapshot::NodeID getNativeID(const void *mem);
@@ -1030,8 +1091,12 @@ class GCBase {
   /// snapshots and the memory profiler.
   IDTracker idTracker_;
 
+  /// Attaches stack-traces to objects when enabled.
+  AllocationLocationTracker allocationLocationTracker_;
+
 #ifndef NDEBUG
-  /// The number of reasons why no allocation is allowed in this heap right now.
+  /// The number of reasons why no allocation is allowed in this heap right
+  /// now.
   uint32_t noAllocLevel_{0};
 
   friend class NoAllocScope;
@@ -1457,6 +1522,64 @@ inline HeapSnapshot::NodeID GCBase::IDTracker::nextNativeID() {
 inline HeapSnapshot::NodeID GCBase::IDTracker::nextNumberID() {
   // Numbers will all be considered JS memory, not native memory.
   return nextObjectID();
+}
+
+GCBase::AllocationLocationTracker::AllocationLocationTracker(GCBase *gc)
+    : gc_(gc) {}
+
+inline bool GCBase::AllocationLocationTracker::isEnabled() const {
+  return enabled_;
+}
+
+inline void GCBase::AllocationLocationTracker::newAlloc(const void *ptr) {
+  // Note we always get the current IP even if allocation tracking is not
+  // enabled as it allows us to assert this feature works across many tests.
+  // Note it's not very slow, it's slower than the non-virtual version
+  // in Runtime though.
+  const auto *ip = gc_->gcCallbacks_->getCurrentIPSlow();
+  if (enabled_) {
+    if (auto node = gc_->gcCallbacks_->getCurrentStackTracesTreeNode(ip)) {
+      stackMap_.try_emplace(ptr, node);
+    }
+  }
+}
+
+inline void GCBase::AllocationLocationTracker::moveAlloc(
+    const void *oldPtr,
+    const void *newPtr) {
+  if (oldPtr == newPtr) {
+    // This can happen in old generations when compacting to the same location.
+    return;
+  }
+  auto oldIt = stackMap_.find(oldPtr);
+  if (oldIt == stackMap_.end()) {
+    return;
+  }
+  const auto oldStackTracesTreeNode = oldIt->second;
+  assert(
+      stackMap_.count(newPtr) == 0 &&
+      "Moving to a location that is already tracked");
+  stackMap_.erase(oldIt);
+  stackMap_[newPtr] = oldStackTracesTreeNode;
+}
+
+inline void GCBase::AllocationLocationTracker::freeAlloc(const void *ptr) {
+  stackMap_.erase(ptr);
+}
+
+inline StackTracesTreeNode *
+GCBase::AllocationLocationTracker::getStackTracesTreeNodeForAlloc(
+    const void *ptr) const {
+  auto mapIt = stackMap_.find(ptr);
+  return mapIt == stackMap_.end() ? nullptr : mapIt->second;
+}
+
+inline void GCBase::AllocationLocationTracker::enable() {
+  enabled_ = true;
+}
+
+inline void GCBase::AllocationLocationTracker::disable() {
+  enabled_ = false;
 }
 
 } // namespace vm

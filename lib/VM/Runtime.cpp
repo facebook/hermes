@@ -43,6 +43,7 @@
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
+#include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/StringView.h"
 
 #ifndef HERMESVM_LEAN
@@ -292,6 +293,10 @@ Runtime::Runtime(
       clazz = *addResult->first;
       rootClazzRawPtr_[i] = *clazz;
     }
+  }
+
+  if (runtimeConfig.getGCConfig().getAllocationLocationTrackerFromStart()) {
+    enableAllocationLocationTracker();
   }
 
   global_ =
@@ -1906,6 +1911,9 @@ void Runtime::serialize(Serializer &s) {
   s.writeCurrentOffset();
   heap_.getIDTracker().serialize(s);
 
+  s.writeCurrentOffset();
+  heap_.getAllocationLocationTracker().serialize(s);
+
   // In the end record the size of the object table and flush the string
   // buffers, so the deserializer can read it. TODO: perhaps seek to the
   // beginning and record there.
@@ -2114,6 +2122,9 @@ void Runtime::deserializeImpl(Deserializer &d, bool currentlyInYoung) {
   heap_.getIDTracker().deserialize(d);
 
   d.readAndCheckOffset();
+  heap_.getAllocationLocationTracker().deserialize(d);
+
+  d.readAndCheckOffset();
   d.flushRelocationQueue();
 
   // Now update the runtime pointer to prototypes.
@@ -2166,6 +2177,89 @@ ExecutionStatus Runtime::notifyTimeout() {
   // TODO: allow a vector of callbacks.
   return raiseTimeoutError();
 }
+
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+
+std::pair<const CodeBlock *, const inst::Inst *>
+Runtime::getCurrentInterpreterLocation(const inst::Inst *ip) const {
+  assert(ip && "IP being null implies we're not currently in the interpreter.");
+  auto callFrames = getStackFrames();
+  const CodeBlock *codeBlock = nullptr;
+  for (auto frameIt = callFrames.begin(); frameIt != callFrames.end();
+       ++frameIt) {
+    codeBlock = frameIt->getCalleeCodeBlock();
+    if (codeBlock) {
+      break;
+    } else {
+      ip = frameIt->getSavedIP();
+    }
+  }
+  assert(codeBlock && "Could not find CodeBlock.");
+  return {codeBlock, ip};
+}
+
+StackTracesTreeNode *Runtime::getCurrentStackTracesTreeNode(
+    const inst::Inst *ip) {
+  assert(stackTracesTree_ && "Runtime not configured to track alloc stacks");
+  assert(
+      heap_.getAllocationLocationTracker().isEnabled() &&
+      "AllocationLocationTracker not enabled");
+  if (!ip) {
+    return nullptr;
+  }
+  const CodeBlock *codeBlock;
+  std::tie(codeBlock, ip) = getCurrentInterpreterLocation(ip);
+  return stackTracesTree_->getStackTrace(this, codeBlock, ip);
+}
+
+void Runtime::enableAllocationLocationTracker() {
+  if (!stackTracesTree_) {
+    stackTracesTree_ = make_unique<StackTracesTree>();
+  }
+  stackTracesTree_->syncWithRuntimeStack(this);
+  heap_.getAllocationLocationTracker().enable();
+}
+
+void Runtime::disableAllocationLocationTracker(bool clearExistingTree) {
+  heap_.getAllocationLocationTracker().disable();
+  if (clearExistingTree) {
+    stackTracesTree_.reset();
+  }
+}
+
+void Runtime::popCallStackImpl() {
+  assert(stackTracesTree_ && "Runtime not configured to track alloc stacks");
+  stackTracesTree_->popCallStack();
+}
+
+void Runtime::pushCallStackImpl(
+    const CodeBlock *codeBlock,
+    const inst::Inst *ip) {
+  assert(stackTracesTree_ && "Runtime not configured to track alloc stacks");
+  stackTracesTree_->pushCallStack(this, codeBlock, ip);
+}
+
+#else // !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES)
+
+std::pair<const CodeBlock *, const inst::Inst *>
+Runtime::getCurrentInterpreterLocation(const inst::Inst *ip) const {
+  return {nullptr, nullptr};
+}
+
+StackTracesTreeNode *Runtime::getCurrentStackTracesTreeNode(
+    const inst::Inst *ip) {
+  return nullptr;
+}
+
+void Runtime::enableAllocationLocationTracker() {}
+
+void Runtime::disableAllocationLocationTracker(bool) {}
+
+void Runtime::popCallStackImpl() {}
+
+void Runtime::pushCallStackImpl(const CodeBlock *, const inst::Inst *) {}
+
+#endif // !defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES)
 
 } // namespace vm
 } // namespace hermes

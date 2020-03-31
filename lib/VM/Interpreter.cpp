@@ -828,6 +828,36 @@ static inline const Inst *nextInstCall(const Inst *ip) {
 
 CallResult<HermesValue> Runtime::interpretFunctionImpl(
     CodeBlock *newCodeBlock) {
+  newCodeBlock->lazyCompile(this);
+
+#if defined(HERMES_ENABLE_ALLOCATION_LOCATION_TRACES) || !defined(NDEBUG)
+  // We always call getCurrentIP() in a debug build as this has the effect
+  // of asserting the IP is correctly set (not invalidated) at this point.
+  // This allows us to leverage our whole test-suite to find missing cases
+  // of CAPTURE_IP* macros in the interpreter loop.
+  const inst::Inst *ip = getCurrentIP();
+  (void)ip;
+#endif
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+  if (ip) {
+    const CodeBlock *codeBlock;
+    std::tie(codeBlock, ip) = getCurrentInterpreterLocation(ip);
+    // All functions end in a Ret so we must match this with a pushCallStack()
+    // before executing.
+    if (codeBlock) {
+      // Push a call entry at the last location we were executing bytecode.
+      // This will correctly attribute things like eval().
+      pushCallStack(codeBlock, ip);
+    } else {
+      // Push a call entry at the entry at the top of interpreted code.
+      pushCallStack(newCodeBlock, (const Inst *)newCodeBlock->begin());
+    }
+  } else {
+    // Push a call entry at the entry at the top of interpreted code.
+    pushCallStack(newCodeBlock, (const Inst *)newCodeBlock->begin());
+  }
+#endif
+
   InterpreterState state{newCodeBlock, 0};
   return Interpreter::interpretFunction<false>(this, state);
 }
@@ -926,21 +956,50 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   // Default flags when accessing properties.
   PropOpFlags defaultPropOpFlags;
 
-// These two macros should wrap around any major calls out of the interpeter
-// loop. They stash and retrieve the IP via the current Runtime allowing the IP
-// to be externally observed and even altered to change the flow of execution.
-// Explicitly saving/restoring the IP from the Runtime in this way means the
-// C++ compiler will keep IP in a register within the rest of the interpeter
-// loop.
+// These CAPTURE_IP* macros should wrap around any major calls out of the
+// interpeter loop. They stash and retrieve the IP via the current Runtime
+// allowing the IP to be externally observed and even altered to change the flow
+// of execution. Explicitly saving AND restoring the IP from the Runtime in this
+// way means the C++ compiler will keep IP in a register within the rest of the
+// interpeter loop.
+//
+// When assertions are enabled we take the extra step of "invalidating" the IP
+// between captures so we can detect if it's erroneously accessed.
+//
+// In some cases we explicitly don't want to invalidate the IP and instead want
+// it to stay set. For this we use the *NO_INVALIDATE variants. This comes up
+// when we're performing a call operation which may re-enter the interpeter
+// loop, and so need the IP available for the saveCallerIPInStackFrame() call
+// when we next enter.
+#define CAPTURE_IP_ASSIGN_NO_INVALIDATE(dst, expr) \
+  runtime->setCurrentIP(ip);                       \
+  dst = expr;                                      \
+  ip = runtime->getCurrentIP();
+
+#ifdef NDEBUG
+
 #define CAPTURE_IP(expr)     \
   runtime->setCurrentIP(ip); \
   (void)expr;                \
   ip = runtime->getCurrentIP();
 
+#define CAPTURE_IP_ASSIGN(dst, expr) CAPTURE_IP_ASSIGN_NO_INVALIDATE(dst, expr)
+
+#else // !NDEBUG
+
+#define CAPTURE_IP(expr)        \
+  runtime->setCurrentIP(ip);    \
+  (void)expr;                   \
+  ip = runtime->getCurrentIP(); \
+  runtime->invalidateCurrentIP();
+
 #define CAPTURE_IP_ASSIGN(dst, expr) \
   runtime->setCurrentIP(ip);         \
   dst = expr;                        \
-  ip = runtime->getCurrentIP();
+  ip = runtime->getCurrentIP();      \
+  runtime->invalidateCurrentIP();
+
+#endif // NDEBUG
 
   LLVM_DEBUG(dbgs() << "interpretFunction() called\n");
 
@@ -950,9 +1009,9 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   }
 
   if (!SingleStep) {
-    curCodeBlock->lazyCompile(runtime);
-    if (auto jitPtr = runtime->jitContext_.compile(runtime, curCodeBlock))
+    if (auto jitPtr = runtime->jitContext_.compile(runtime, curCodeBlock)) {
       return (*jitPtr)(runtime);
+    }
   }
 
   GCScope gcScope(runtime);
@@ -987,6 +1046,9 @@ tailCall:
   if (!SingleStep) {
     auto newFrame = runtime->setCurrentFrameToTopOfStack();
     runtime->saveCallerIPInStackFrame();
+#ifndef NDEBUG
+    runtime->invalidateCurrentIP();
+#endif
 
     // Point frameRegs to the first register in the new frame. Note that at this
     // moment technically it points above the top of the stack, but we are never
@@ -1561,7 +1623,7 @@ tailCall:
 
       // Subtract 1 from callArgCount as 'this' is considered an argument in the
       // instruction, but not in the frame.
-      CAPTURE_IP_ASSIGN(
+      CAPTURE_IP_ASSIGN_NO_INVALIDATE(
           auto newFrame,
           StackFramePtr::initFrame(
               runtime->stackPointer_,
@@ -1578,10 +1640,15 @@ tailCall:
       if (auto *func = dyn_vmcast<JSFunction>(O2REG(Call))) {
         assert(!SingleStep && "can't single-step a call");
 
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+        runtime->pushCallStack(curCodeBlock, ip);
+#endif
+
         CodeBlock *calleeBlock = func->getCodeBlock();
         calleeBlock->lazyCompile(runtime);
 #if defined(HERMESVM_PROFILER_EXTERN)
-        CAPTURE_IP_ASSIGN(res, runtime->interpretFunction(calleeBlock));
+        CAPTURE_IP_ASSIGN_NO_INVALIDATE(
+            res, runtime->interpretFunction(calleeBlock));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
@@ -1606,7 +1673,7 @@ tailCall:
         goto tailCall;
 #endif
       }
-      CAPTURE_IP_ASSIGN(
+      CAPTURE_IP_ASSIGN_NO_INVALIDATE(
           res, Interpreter::handleCallSlowPath(runtime, &O2REG(Call)));
       if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
         goto exception;
@@ -1640,7 +1707,7 @@ tailCall:
                 : curCodeBlock->getRuntimeModule()->getCodeBlockMayAllocate(
                       ip->iCallDirectLongIndex.op3));
 
-        CAPTURE_IP_ASSIGN(
+        CAPTURE_IP_ASSIGN_NO_INVALIDATE(
             auto newFrame,
             StackFramePtr::initFrame(
                 runtime->stackPointer_,
@@ -1658,7 +1725,8 @@ tailCall:
 
         calleeBlock->lazyCompile(runtime);
 #if defined(HERMESVM_PROFILER_EXTERN)
-        CAPTURE_IP_ASSIGN(res, runtime->interpretFunction(calleeBlock));
+        CAPTURE_IP_ASSIGN_NO_INVALIDATE(
+            res, runtime->interpretFunction(calleeBlock));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
@@ -1787,6 +1855,10 @@ tailCall:
 #endif
 
         PROFILER_EXIT_FUNCTION(curCodeBlock);
+
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+        runtime->popCallStack();
+#endif
 
         // Store the return value.
         res = O1REG(Ret);
@@ -3536,6 +3608,10 @@ tailCall:
             -1) ||
            !catchable) {
       PROFILER_EXIT_FUNCTION(curCodeBlock);
+
+#ifdef HERMES_ENABLE_ALLOCATION_LOCATION_TRACES
+      runtime->popCallStack();
+#endif
 
       // Restore the code block and IP.
       curCodeBlock = FRAME.getSavedCodeBlock();

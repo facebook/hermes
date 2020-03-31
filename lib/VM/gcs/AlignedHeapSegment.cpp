@@ -287,14 +287,18 @@ void AlignedHeapSegment::sweepAndInstallForwardingPointers(
 }
 
 void AlignedHeapSegment::deleteDeadObjectIDs(GC *gc) {
-  GCBase::IDTracker &tracker = gc->getIDTracker();
-  if (tracker.isTrackingIDs()) {
+  GCBase::IDTracker &idTracker = gc->getIDTracker();
+  GCBase::AllocationLocationTracker &allocationLocationTracker =
+      gc->getAllocationLocationTracker();
+  if (idTracker.isTrackingIDs() || allocationLocationTracker.isEnabled()) {
     MarkBitArrayNC &markBits = markBitArray();
     // Separate out the delete tracking into a different loop in order to keep
     // the normal case fast.
-    forAllObjs([&markBits, &tracker](const GCCell *cell) {
+    forAllObjs([&markBits, &idTracker, &allocationLocationTracker](
+                   const GCCell *cell) {
       if (!markBits.at(markBits.addressToIndex(cell))) {
-        tracker.untrackObject(cell);
+        idTracker.untrackObject(cell);
+        allocationLocationTracker.freeAlloc(cell);
       }
     });
   }
@@ -303,8 +307,10 @@ void AlignedHeapSegment::deleteDeadObjectIDs(GC *gc) {
 void AlignedHeapSegment::updateObjectIDs(
     GC *gc,
     SweepResult::VTablesRemaining &vTables) {
-  GCBase::IDTracker &tracker = gc->getIDTracker();
-  if (!tracker.isTrackingIDs()) {
+  GCBase::IDTracker &idTracker = gc->getIDTracker();
+  GCBase::AllocationLocationTracker &allocationLocationTracker =
+      gc->getAllocationLocationTracker();
+  if (!idTracker.isTrackingIDs() && !allocationLocationTracker.isEnabled()) {
     // If ID tracking isn't on, there's nothing to do here.
     return;
   }
@@ -316,7 +322,8 @@ void AlignedHeapSegment::updateObjectIDs(
   while (ptr < level()) {
     if (markBits.at(ind)) {
       auto *cell = reinterpret_cast<GCCell *>(ptr);
-      tracker.moveObject(cell, cell->getForwardingPointer());
+      idTracker.moveObject(cell, cell->getForwardingPointer());
+      allocationLocationTracker.moveAlloc(cell, cell->getForwardingPointer());
       const VTable *vtp = vTablesCopy.next();
       auto cellSize = cell->getAllocatedSize(vtp);
       ptr += cellSize;

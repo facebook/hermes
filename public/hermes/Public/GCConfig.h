@@ -138,6 +138,9 @@ enum class GCEventKind {
   /* Whether to use mprotect on GC metadata between GCs. */               \
   F(constexpr, bool, ProtectMetadata, false)                              \
                                                                           \
+  /* Whether to track allocation traces starting in the Runtime ctor. */  \
+  F(constexpr, bool, AllocationLocationTrackerFromStart, false)           \
+                                                                          \
   /* Pointer to the memory profiler (Memory Event Tracker). */            \
   F(HERMES_NON_CONSTEXPR,                                                 \
     std::shared_ptr<MemoryEventTracker>,                                  \
