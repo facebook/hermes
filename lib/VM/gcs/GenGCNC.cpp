@@ -1330,6 +1330,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
         "undefined",
         static_cast<HeapSnapshot::NodeID>(
             GCBase::IDTracker::ReservedObjectID::Undefined),
+        0,
         0);
     snap_.beginNode();
     snap_.endNode(
@@ -1337,6 +1338,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
         "null",
         static_cast<HeapSnapshot::NodeID>(
             GCBase::IDTracker::ReservedObjectID::Null),
+        0,
         0);
     snap_.beginNode();
     snap_.endNode(
@@ -1344,6 +1346,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
         "true",
         static_cast<HeapSnapshot::NodeID>(
             GCBase::IDTracker::ReservedObjectID::True),
+        0,
         0);
     snap_.beginNode();
     snap_.endNode(
@@ -1351,6 +1354,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
         "false",
         static_cast<HeapSnapshot::NodeID>(
             GCBase::IDTracker::ReservedObjectID::False),
+        0,
         0);
     for (double num : seenNumbers_) {
       // A number never has any edges, so just make a node for it.
@@ -1364,6 +1368,7 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
           llvm::StringRef{buf, len},
           gc.getIDTracker().getNumberID(num),
           // Numbers are zero-sized in the heap because they're stored inline.
+          0,
           0);
     }
   }
@@ -1515,6 +1520,7 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
             objectIDForRootSection(currentSection_)),
         // The heap visualizer doesn't like it when these synthetic nodes have a
         // size (it describes them as living in the heap).
+        0,
         0);
     currentSection_ = Section::InvalidSection;
     // Reset the edge counter, so each root section's unnamed edges start at
@@ -1573,7 +1579,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os) {
 #endif
 
   JSONEmitter json(os);
-  HeapSnapshot snap(json);
+  HeapSnapshot snap(json, gcCallbacks_->getStackTracesTree());
 
   const auto rootScan = [this, &snap]() {
     // Make the super root node and add edges to each root section.
@@ -1585,6 +1591,7 @@ void GenGC::createSnapshot(llvm::raw_ostream &os) {
         HeapSnapshot::NodeType::Synthetic,
         "(GC Roots)",
         static_cast<HeapSnapshot::NodeID>(IDTracker::ReservedObjectID::Root),
+        0,
         0);
     // Make a node for each root section and add edges into the actual heap.
     // Within a root section, there might be duplicates. The root acceptor
@@ -1641,6 +1648,8 @@ void GenGC::createSnapshot(llvm::raw_ostream &os) {
   // Add edges between objects in the heap.
   forAllObjs(snapshotForObject);
   snap.endSection(HeapSnapshot::Section::Edges);
+
+  snap.emitAllocationTraceInfo();
 
   snap.beginSection(HeapSnapshot::Section::Locations);
   forAllObjs([&snap, this](GCCell *cell) {

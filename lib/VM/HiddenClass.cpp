@@ -33,11 +33,16 @@ void TransitionMap::snapshotAddNodes(GC *gc, HeapSnapshot &snap) {
   // This is based on the assumption that the WeakValueMap uniquely owns that
   // DenseMap.
   snap.beginNode();
+  auto &allocationLocationTracker = gc->getAllocationLocationTracker();
+  auto *stackTraceNode = allocationLocationTracker.isEnabled()
+      ? allocationLocationTracker.getStackTracesTreeNodeForAlloc(large())
+      : nullptr;
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "WeakValueMap",
       gc->getNativeID(large()),
-      getMemorySize());
+      getMemorySize(),
+      stackTraceNode ? stackTraceNode->id : 0);
 }
 
 void TransitionMap::snapshotAddEdges(GC *gc, HeapSnapshot &snap) {

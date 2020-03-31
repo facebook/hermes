@@ -407,15 +407,16 @@ TEST(HeapSnapshotTest, HeaderTest) {
       0);
 
   JSONObject *meta = llvm::cast<JSONObject>(snapshot->at("meta"));
-  EXPECT_EQ(
-      llvm::cast<JSONArray>(meta->at("trace_function_info_fields"))->size(), 0);
-  EXPECT_EQ(llvm::cast<JSONArray>(meta->at("trace_node_fields"))->size(), 0);
   EXPECT_EQ(llvm::cast<JSONArray>(meta->at("sample_fields"))->size(), 0);
 
   JSONArray &nodeFields = *llvm::cast<JSONArray>(meta->at("node_fields"));
   JSONArray &nodeTypes = *llvm::cast<JSONArray>(meta->at("node_types"));
   JSONArray &edgeFields = *llvm::cast<JSONArray>(meta->at("edge_fields"));
   JSONArray &edgeTypes = *llvm::cast<JSONArray>(meta->at("edge_types"));
+  JSONArray &traceFunctionInfoFields =
+      *llvm::cast<JSONArray>(meta->at("trace_function_info_fields"));
+  JSONArray &traceNodeFields =
+      *llvm::cast<JSONArray>(meta->at("trace_node_fields"));
   JSONArray &locationFields =
       *llvm::cast<JSONArray>(meta->at("location_fields"));
 
@@ -459,6 +460,12 @@ TEST(HeapSnapshotTest, HeaderTest) {
        "weak"}));
   EXPECT_TRUE(testListOfStrings(
       edgeTypes.begin() + 1, edgeTypes.end(), {"string_or_number", "node"}));
+  EXPECT_TRUE(testListOfStrings(
+      traceFunctionInfoFields,
+      {"function_id", "name", "script_name", "script_id", "line", "column"}));
+  EXPECT_TRUE(testListOfStrings(
+      traceNodeFields,
+      {"id", "function_info_index", "count", "size", "children"}));
   EXPECT_TRUE(testListOfStrings(
       locationFields, {"object_index", "script_id", "line", "column"}));
 }
@@ -732,6 +739,159 @@ TEST_F(HeapSnapshotRuntimeTest, FunctionLocationAndNameTest) {
   (void)findLocationForID;
 #endif
 }
+
+#ifdef HERMES_ENABLE_DEBUGGER
+
+static std::string functionInfoToString(
+    int idx,
+    const JSONArray &traceFunctionInfos,
+    const JSONArray &strings) {
+  auto base = idx * 6;
+  auto functionID =
+      llvm::cast<JSONNumber>(traceFunctionInfos[base])->getValue();
+
+  auto name = llvm::cast<JSONString>(
+                  strings[llvm::cast<JSONNumber>(traceFunctionInfos[base + 1])
+                              ->getValue()])
+                  ->str();
+
+  auto scriptName =
+      llvm::cast<JSONString>(
+          strings[llvm::cast<JSONNumber>(traceFunctionInfos[base + 2])
+                      ->getValue()])
+          ->str();
+
+  auto scriptID =
+      llvm::cast<JSONNumber>(traceFunctionInfos[base + 3])->getValue();
+  auto line = llvm::cast<JSONNumber>(traceFunctionInfos[base + 4])->getValue();
+  auto col = llvm::cast<JSONNumber>(traceFunctionInfos[base + 5])->getValue();
+
+  return std::string(name) + "(" + oscompat::to_string((int)functionID) +
+      ") @ " + std::string(scriptName) + "(" +
+      oscompat::to_string((int)scriptID) +
+      "):" + oscompat::to_string((int)line) + ":" +
+      oscompat::to_string((int)col);
+}
+
+struct ChromeStackTreeNode {
+  ChromeStackTreeNode(ChromeStackTreeNode *parent, int traceFunctionInfosId)
+      : parent_(parent), traceFunctionInfosId_(traceFunctionInfosId) {}
+
+  static std::vector<std::unique_ptr<ChromeStackTreeNode>> parse(
+      const JSONArray &traceNodes,
+      ChromeStackTreeNode *parent,
+      std::map<int, ChromeStackTreeNode *> &idNodeMap) {
+    std::vector<std::unique_ptr<ChromeStackTreeNode>> res;
+    for (size_t i = 0; i < traceNodes.size(); i += 5) {
+      auto id = llvm::cast<JSONNumber>(traceNodes[i])->getValue();
+      auto functionInfoIndex =
+          llvm::cast<JSONNumber>(traceNodes[i + 1])->getValue();
+      auto children = llvm::cast<JSONArray>(traceNodes[i + 4]);
+      auto treeNode =
+          std::make_unique<ChromeStackTreeNode>(parent, functionInfoIndex);
+      idNodeMap.emplace(id, treeNode.get());
+      treeNode->children_ = parse(*children, treeNode.get(), idNodeMap);
+      res.emplace_back(std::move(treeNode));
+    }
+    return res;
+  };
+
+  std::string buildStackTrace(
+      const JSONArray &traceFunctionInfos,
+      const JSONArray &strings) {
+    std::string res =
+        parent_ ? parent_->buildStackTrace(traceFunctionInfos, strings) : "";
+    res += "\n" +
+        functionInfoToString(
+               traceFunctionInfosId_, traceFunctionInfos, strings);
+    return res;
+  };
+
+ private:
+  ChromeStackTreeNode *parent_;
+  int traceFunctionInfosId_;
+  std::vector<std::unique_ptr<ChromeStackTreeNode>> children_;
+};
+
+TEST_F(HeapSnapshotRuntimeTest, AllocationTraces) {
+  runtime->enableAllocationLocationTracker();
+  JSONFactory::Allocator alloc;
+  JSONFactory jsonFactory{alloc};
+  hbc::CompileFlags flags;
+  CallResult<HermesValue> res = runtime->run(
+      R"#(
+function foo() {
+  return new Object();
+}
+function bar() {
+  return new Object();
+}
+function baz() {
+  return {foo: foo(), bar: bar()};
+}
+baz();
+      )#",
+      "test.js",
+      flags);
+  ASSERT_FALSE(isException(res));
+  ASSERT_TRUE(res->isObject());
+  Handle<JSObject> resObj = runtime->makeHandle(vmcast<JSObject>(*res));
+  SymbolID fooSym, barSym;
+  {
+    vm::GCScope gcScope(runtime);
+    fooSym = vm::stringToSymbolID(
+                 runtime, vm::StringPrimitive::createNoThrow(runtime, "foo"))
+                 ->getHermesValue()
+                 .getSymbol();
+    barSym = vm::stringToSymbolID(
+                 runtime, vm::StringPrimitive::createNoThrow(runtime, "bar"))
+                 ->getHermesValue()
+                 .getSymbol();
+  }
+  auto fooObj = JSObject::getNamed_RJS(resObj, runtime, fooSym);
+  auto barObj = JSObject::getNamed_RJS(resObj, runtime, barSym);
+  auto fooObjID = runtime->getHeap().getObjectID(fooObj->getPointer());
+  auto barObjID = runtime->getHeap().getObjectID(barObj->getPointer());
+
+  JSONObject *root = TAKE_SNAPSHOT(runtime->getHeap(), jsonFactory);
+  ASSERT_NE(root, nullptr);
+
+  const JSONArray &nodes = *llvm::cast<JSONArray>(root->at("nodes"));
+  const JSONArray &strings = *llvm::cast<JSONArray>(root->at("strings"));
+  const JSONArray &traceFunctionInfos =
+      *llvm::cast<JSONArray>(root->at("trace_function_infos"));
+
+  std::map<int, ChromeStackTreeNode *> idNodeMap;
+  auto roots = ChromeStackTreeNode::parse(
+      *llvm::cast<JSONArray>(root->at("trace_tree")), nullptr, idNodeMap);
+
+  auto fooAllocNode = FIND_NODE_FOR_ID(fooObjID, nodes, strings);
+  auto fooStackTreeNode = idNodeMap.find(fooAllocNode.traceNodeID);
+  ASSERT_NE(fooStackTreeNode, idNodeMap.end());
+  auto fooStackStr =
+      fooStackTreeNode->second->buildStackTrace(traceFunctionInfos, strings);
+  EXPECT_STREQ(
+      fooStackStr.c_str(),
+      R"#(
+global(1) @ test.js(4):2:1
+global(2) @ test.js(4):11:4
+baz(3) @ test.js(4):9:19
+foo(4) @ test.js(4):3:20)#");
+
+  auto barAllocNode = FIND_NODE_FOR_ID(barObjID, nodes, strings);
+  auto barStackTreeNode = idNodeMap.find(barAllocNode.traceNodeID);
+  ASSERT_NE(barStackTreeNode, idNodeMap.end());
+  auto barStackStr =
+      barStackTreeNode->second->buildStackTrace(traceFunctionInfos, strings);
+  ASSERT_STREQ(
+      barStackStr.c_str(),
+      R"#(
+global(1) @ test.js(4):2:1
+global(2) @ test.js(4):11:4
+foo(1) @ test.js(4):2:1
+baz(5) @ test.js(4):9:31)#");
+}
+#endif // HERMES_ENABLE_DEBUGGER
 
 } // namespace heapsnapshottest
 } // namespace unittest

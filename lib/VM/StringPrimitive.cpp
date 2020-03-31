@@ -641,11 +641,17 @@ void ExternalStringPrimitive<T>::_snapshotAddNodesImpl(
     HeapSnapshot &snap) {
   auto *const self = vmcast<ExternalStringPrimitive<T>>(cell);
   snap.beginNode();
+  auto &allocationLocationTracker = gc->getAllocationLocationTracker();
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "ExternalStringPrimitive",
       gc->getNativeID(self->contents_.data()),
-      self->contents_.size());
+      self->contents_.size(),
+      allocationLocationTracker.isEnabled()
+          ? allocationLocationTracker
+                .getStackTracesTreeNodeForAlloc(self->contents_.data())
+                ->id
+          : 0);
 }
 
 template class ExternalStringPrimitive<char16_t>;

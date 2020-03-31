@@ -149,7 +149,7 @@ struct StackTracesTree {
     return false;
   }
 };
-#endif
+#endif // HERMES_ENABLE_ALLOCATION_TRACES_OR_ASSERTIONS
 
 } // namespace vm
 } // namespace hermes
