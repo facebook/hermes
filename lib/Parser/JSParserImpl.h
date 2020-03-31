@@ -622,6 +622,15 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseOptionalExpressionExceptNew(
       IsConstructorCall isConstructorCall);
 
+  /// The "tail" of \c parseOptionalExpressionExceptNew(). It parses the
+  /// optional MemberExpression following the base PrimaryExpression. It is
+  /// ordinarily called by \c parseOptionalExpressionExceptNew(), but we need
+  /// to call it explicitly after parsing "new.target".
+  Optional<ESTree::Node *> parseOptionalExpressionExceptNew_tail(
+      IsConstructorCall isConstructorCall,
+      SMLoc objectLoc,
+      ESTree::Node *expr);
+
   /// Returns a dummy Optional<> just to indicate success or failure like all
   /// other functions.
   Optional<const char *> parseArguments(
