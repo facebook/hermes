@@ -491,6 +491,16 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
+  void startTrackingHeapObjectStackTraces() override {
+    runtime_.enableAllocationLocationTracker();
+  }
+
+  // Overridden from jsi::Instrumentation
+  void stopTrackingHeapObjectStackTraces() override {
+    runtime_.disableAllocationLocationTracker();
+  }
+
+  // Overridden from jsi::Instrumentation
   void createSnapshotToFile(const std::string &path) override {
     std::error_code code;
     llvm::raw_fd_ostream os(path, code, llvm::sys::fs::FileAccess::FA_Write);
@@ -932,7 +942,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   template <typename T>
   struct ManagedValues {
 #ifdef ASSERT_ON_DANGLING_VM_REFS
-    // If we have active HermesValuePointers whhen deconstructing, these will
+    // If we have active HermesValuePointers when deconstructing, these will
     // now be dangling. We deliberately allocate and immediately leak heap
     // memory to hold the internal list. This keeps alive memory holding the
     // ref-count of the now dangling references, allowing them to detect the
