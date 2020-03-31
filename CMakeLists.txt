@@ -25,13 +25,15 @@ endif()
 # This must be consistent with the release_version in
 # android/build.gradle and npm/package.json
 project(Hermes
-        VERSION 0.4.1
+        VERSION 0.4.2
         LANGUAGES C CXX)
+# Optional suffix like "-rc3"
+set(VERSION_SUFFIX "-rc1")
 
 include(CheckCXXCompilerFlag)
 include(CheckCXXSourceCompiles)
 
-set(HERMES_RELEASE_VERSION ${PROJECT_VERSION})
+set(HERMES_RELEASE_VERSION ${PROJECT_VERSION}${VERSION_SUFFIX})
 
 # Project options.
 set(HERMESVM_GCKIND NONCONTIG_GENERATIONAL
