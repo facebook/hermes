@@ -78,8 +78,7 @@ TEST(ProcessStatsTest, Test) {
 }
 
 void ProcessStatsTest(InfoAssertion assertionImpl) {
-  // TODO(T64777632): Re-enable.
-#if 0
+#if !LLVM_ADDRESS_SANITIZER_BUILD && !LLVM_THREAD_SANITIZER_BUILD
   const size_t PS = hermes::oscompat::page_size();
   const size_t PSkB = PS / 1024;
 
