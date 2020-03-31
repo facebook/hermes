@@ -1189,10 +1189,11 @@ ExecutionStatus Runtime::raiseTypeErrorForValue(
       } else {
         return raiseTypeError(msg1 + TwineChar16("false") + msg2);
       }
-    case NullTag:
-      return raiseTypeError(msg1 + TwineChar16("null") + msg2);
-    case UndefinedTag:
-      return raiseTypeError(msg1 + TwineChar16("undefined") + msg2);
+    case UndefinedNullTag:
+      if (value->isUndefined())
+        return raiseTypeError(msg1 + TwineChar16("undefined") + msg2);
+      else
+        return raiseTypeError(msg1 + TwineChar16("null") + msg2);
     default:
       if (value->isNumber()) {
         char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];

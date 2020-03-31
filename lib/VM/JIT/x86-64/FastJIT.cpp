@@ -19,25 +19,6 @@ namespace hermes {
 namespace vm {
 namespace x86_64 {
 using hermes::inst::Inst;
-/// The original HermesValue tag is on the lower 17 bits of
-/// HermesValue::TagKind; while the tag here is on the higher 17 bits of a
-/// uint32_t in order to be compared directly with the higher 32 bits of a
-/// HermesValue
-/// e.g FirstTag is 0xfff88000 >> 15, while FirstTagHW is 0xfff88000.
-/// Only non-pointer HW could be compared with higher 32 bits of a HermesValue
-/// directly, since pointer HermesValue would have set some value to the non-tag
-/// 15 bits.
-/// Note that FirstTagHW could also be used to compare with a number
-/// HermesValue, because a number requires it's less than 0xfff88000 00000000,
-/// which equals to requiring its higher 32 bits are less than 0xfff88000
-static constexpr uint32_t FirstTagHW =
-    ((uint32_t)FirstTag << (HermesValue::kNumDataBits - 32));
-static constexpr uint32_t UndefinedTagHW =
-    ((uint32_t)UndefinedTag << (HermesValue::kNumDataBits - 32));
-static constexpr uint32_t NullTagHW =
-    ((uint32_t)NullTag << (HermesValue::kNumDataBits - 32));
-static constexpr uint32_t BoolTagHW =
-    ((uint32_t)BoolTag << (HermesValue::kNumDataBits - 32));
 
 FastJIT::FastJIT(JITContext *context, CodeBlock *codeBlock)
     : context_(context), codeBlock_(codeBlock) {}
@@ -1310,7 +1291,7 @@ Emitters FastJIT::compileBoolJmp(
   uint8_t *slowPathAddr = emit.slow.current();
 
   // Fast path: the operand is a boolean
-  emit.fast = cmpSomeNPTag(emit.fast, regIdx, BoolTagHW);
+  emit.fast = cmpSomeNPTag<BoolTag>(emit.fast, regIdx);
   emit.fast.cjump<CCode::NE, OffsetType::Int32>(slowPathAddr);
 
   emit.fast.cmpImmToRM<S::B>(
@@ -1333,13 +1314,26 @@ Emitters FastJIT::compileBoolJmp(
   return emit;
 }
 
-inline Emitter
-FastJIT::cmpSomeNPTag(Emitter emit, uint32_t regIndex, uint32_t tag) {
-  assert(
-      tag <= (FirstPointerTag << (HermesValue::kNumDataBits - 32)) &&
+template <TagKind tag>
+inline Emitter FastJIT::cmpSomeNPTag(Emitter emit, uint32_t regIndex) {
+  static_assert(
+      tag < FirstPointerTag,
       "String or object tag could not be compared directly with a HermesValue's higher 32 bits.");
   emit.cmpImmToRM<S::L>(
-      tag,
+      tag << (32 - HermesValue::kTagWidth),
+      RegFrame,
+      Reg::NoIndex,
+      // Compare the higher 32 bits (tag) of the HermesValue
+      localHermesRegByteOffset(regIndex) + 4);
+  return emit;
+}
+template <ETag etag>
+inline Emitter FastJIT::cmpSomeNPETag(Emitter emit, uint32_t regIndex) {
+  static_assert(
+      etag < ETag::FirstPointer,
+      "String or object tag could not be compared directly with a HermesValue's higher 32 bits.");
+  emit.cmpImmToRM<S::L>(
+      (uint32_t)etag << (32 - HermesValue::kETagWidth),
       RegFrame,
       Reg::NoIndex,
       // Compare the higher 32 bits (tag) of the HermesValue
@@ -1351,7 +1345,7 @@ inline Emitters FastJIT::jmpUndefinedHelper(
     const Inst *ip,
     uint32_t ipOffset,
     uint32_t regIndex) {
-  emit.fast = cmpSomeNPTag(emit.fast, regIndex, UndefinedTagHW);
+  emit.fast = cmpSomeNPETag<ETag::Undefined>(emit.fast, regIndex);
   emit.fast = cjmpToBytecodeBB(
       emit.fast, CJumpOp<CCode::E>::OP, getBBIndex(ip, ipOffset));
   return emit;
@@ -1453,7 +1447,7 @@ Emitters FastJIT::compileDivN(Emitters emit, const Inst *ip) {
 
 Emitter FastJIT::isNumber(Emitter emit, uint32_t regIndex, uint8_t *callStub) {
   emit.cmpImmToRM<S::L>(
-      FirstTagHW,
+      FirstTag << (32 - HermesValue::kTagWidth),
       RegFrame,
       Reg::NoIndex,
       // Compare the higher 32 bits (tag) of the HermesValue
@@ -1781,15 +1775,8 @@ Emitters FastJIT::compileCoerceThisNS(Emitters emit, const Inst *ip) {
   return coerceThisHelper(emit, ip, ip->iCoerceThisNS.op2);
 }
 
-Emitter FastJIT::cmpNullOrUndefinedTag(Emitter emit, uint32_t regIdx) {
-  constexpr uint16_t undefinedOrNullTag =
-      (uint16_t)((UndefinedTagHW & NullTagHW) >> 16);
-  emit.cmpImmToRM<S::W>(
-      undefinedOrNullTag,
-      RegFrame,
-      Reg::NoIndex,
-      localHermesRegByteOffset(regIdx) + 6);
-  return emit;
+inline Emitter FastJIT::cmpNullOrUndefinedTag(Emitter emit, uint32_t regIdx) {
+  return cmpSomeNPTag<UndefinedNullTag>(emit, regIdx);
 }
 
 Emitters
@@ -2074,7 +2061,7 @@ Emitters FastJIT::compileNot(Emitters emit, const Inst *ip) {
   uint8_t *slowPathAddr = emit.slow.current();
 
   // Fast Path: check if op2 is a bool
-  emit.fast = cmpSomeNPTag(emit.fast, ip->iNot.op2, BoolTagHW);
+  emit.fast = cmpSomeNPTag<BoolTag>(emit.fast, ip->iNot.op2);
   emit.fast.cjump<CCode::NE, OffsetType::Int32>(slowPathAddr);
   uint8_t *jmpBacktoFp;
 
@@ -2221,7 +2208,8 @@ Emitters FastJIT::compileReifyArguments(Emitters emit, const Inst *ip) {
       emit.slow, (void *)externSlowPathReifyArguments, externConstAddr);
   uint8_t *slowPathAddr = emit.slow.current();
 
-  emit.fast = cmpSomeNPTag(emit.fast, ip->iReifyArguments.op1, UndefinedTagHW);
+  emit.fast =
+      cmpSomeNPETag<ETag::Undefined>(emit.fast, ip->iReifyArguments.op1);
   emit.fast.cjump<CCode::E, OffsetType::Int32>(slowPathAddr);
   // Fast path: if the arguments object was already created, do nothing.
 
@@ -2290,7 +2278,7 @@ Emitters FastJIT::compileGetArgumentsLength(Emitters emit, const Inst *ip) {
 
   // Fast path: when op2 is undefined
   emit.fast =
-      cmpSomeNPTag(emit.fast, ip->iGetArgumentsLength.op2, UndefinedTagHW);
+      cmpSomeNPETag<ETag::Undefined>(emit.fast, ip->iGetArgumentsLength.op2);
   emit.fast.cjump<CCode::NE, OffsetType::Int32>(slowPathAddr);
   // We only load the lower 32 bits value which are the real arg count, while
   // the higher 32 bits are the native tag

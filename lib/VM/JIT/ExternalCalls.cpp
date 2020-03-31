@@ -322,12 +322,11 @@ HermesValue externLoadConstStringMayAllocate(
 
 HermesValue externTypeOf(Runtime *runtime, PinnedHermesValue *src) {
   switch (src->getTag()) {
-    case UndefinedTag:
+    case UndefinedNullTag:
       return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::undefined));
-    case NullTag:
-      return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::object));
+          src->isUndefined()
+              ? runtime->getPredefinedString(Predefined::undefined)
+              : runtime->getPredefinedString(Predefined::object));
     case StrTag:
       return HermesValue::encodeStringValue(
           runtime->getPredefinedString(Predefined::string));

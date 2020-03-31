@@ -57,11 +57,13 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HermesValue hv) {
                 << ' ' << hv.getSymbol().unsafeGetIndex() << "]";
     case BoolTag:
       return OS << (hv.getBool() ? "true" : "false");
-    case NullTag:
-      return OS << "null";
-    case UndefinedTag:
-      return OS << "undefined";
-    case EmptyTag:
+    case UndefinedNullTag:
+      return OS << (hv.isNull() ? "null" : "undefined");
+    case EmptyInvalidTag:
+#ifdef HERMES_SLOW_DEBUG
+      if (hv.isInvalid())
+        return OS << "invalid";
+#endif
       return OS << "empty";
     default:
       double num = hv.getDouble();

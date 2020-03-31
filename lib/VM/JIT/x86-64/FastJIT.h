@@ -409,7 +409,16 @@ class FastJIT {
   /// register \p regIndex and the given \p tag. The given \p tag could only be
   /// a non-pointer tag. The comparison instruction will set the flag registers
   /// based on the result, and the caller could then perform accordingly.
-  Emitter cmpSomeNPTag(Emitter emit, uint32_t regIndex, uint32_t tag);
+  template <TagKind tag>
+  Emitter cmpSomeNPTag(Emitter emit, uint32_t regIndex);
+
+  /// Emit a comparison between the higher 32 bits of the value in the Hermes
+  /// register \p regIndex and the given \p etag. The given \p etag could only
+  /// be a non-pointer tag. The comparison instruction will set the flag
+  /// registers based on the result, and the caller could then perform
+  /// accordingly.
+  template <ETag etag>
+  Emitter cmpSomeNPETag(Emitter emit, uint32_t regIndex);
 
   /// Load the HermesValue in \p regIndex to a temporary register i.e. %rax,
   /// right shift %rax by HermesValue::kNumDataBits bits, then emit a comparison

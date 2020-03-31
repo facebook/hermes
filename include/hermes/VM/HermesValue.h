@@ -35,32 +35,44 @@
 /// \endpre
 ///
 /// Note that the sign bit can have any value.
-/// We have chosen to set the sign bit as 1 and encode out 4-bit type tag in
-/// bits 50-47. The type tag cannot be zero because it's reserved for the
+/// We have chosen to set the sign bit as 1 and encode out 3-bit type tag in
+/// bits 50-48. The type tag cannot be zero because it's reserved for the
 /// "canonical quiet NaN". Thus our type tags range between:
 /// \pre
-/// 1   1111111,1111 1111,1xxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx
+/// 1   1111111,1111 1111,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx
 ///   and
-/// 1   1111111,1111 1000,1xxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx
+/// 1   1111111,1111 1001,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx
 /// \endpre
 ///
-/// Masking only the top 17 bits, our tag range is [0xffff8 .. 0xfff88].
-/// Anything lower than 0xfff88 represents a real number,
-/// specifically 0xfff80 covers the "canonical quiet NaN".
+/// Masking only the top 16 bits, our tag range is [0xffff .. 0xfff9].
+/// Anything lower than 0xfff8 represents a real number, specifically 0xfff8
+/// covers the "canonical quiet NaN".
 ///
+/// Extended Tags
+/// =============
+/// This leaves us with 48 data bits and only 7 tags. In some cases we don't
+/// need the full 48 bits, allowing us to extend the width of the tag. We have
+/// chosen to reserve the last 3 tags (0xfffd, 0xfffe, 0xffff) for full width
+/// 48-bit data, and to extend the first 4 tags with one bit to the right.
+/// We call the resulting 4-bit tag an "extended tag".
+///
+/// Pointer Encoding
+/// ================
 /// On 32-bit platforms clearly we have enough bits to encode any pointer in
 /// the low word.
 ///
-/// On 64-bit platforms, we could always arrange our own heap to fit within the
-/// available 47-bits. In practice however that is not necessary (yet) because
-/// current 64-bit platforms use at most than 48 bits of virtual address
-/// space (Linux x86-64 uses 48, Linux ARM64 uses 40). Additionally, the highest
-/// representative bit (bit 47 or 39) is "sign-extended" to the higher bits.
-/// Negative values are used for kernel addresses (top bit 1).
+/// On 64-bit platforms, we could theoretically arrange our own heap to fit
+/// within the available 48-bits. In practice however that is not necessary
+/// (yet) because current 64-bit platforms use at most 48 bits of virtual
+/// address space. x86-64 requires bit 47 to be sign extended into the top 16
+/// bits (leaving effectively 47 address bits), while Linux ARM64 simply
+/// requires the top N bits (depending on configuration, but at least 16) be all
+/// 0 or all 1. In both cases negative values are used for kernel addresses
+/// (top bit 1).
 ///
 /// Since in our case we never need to represent a kernel address - all
 /// addresses are within our own heap - we know that the top bit is 0 and we
-/// don't need to store it leaving us with exactly 47-bits.
+/// don't need to store it leaving us with exactly 48-bits.
 ///
 /// Should the OS requirements change in the distant future, we can "squeeze" 3
 /// more bits by relying on the 8-byte alignment of all our allocations and
@@ -88,49 +100,70 @@ namespace vm {
 
 class StringPrimitive;
 
-// Tags are defined as 17-bit values positioned at the high bits of a 64-bit
+// Tags are defined as 16-bit values positioned at the high bits of a 64-bit
 // word.
 
 using TagKind = uint32_t;
 
 /// If tag < FirstTag, the encoded value is a double.
-static constexpr TagKind FirstTag = 0xfff88000 >> 15;
-static constexpr TagKind LastTag = 0xffff8000 >> 15;
+static constexpr TagKind FirstTag = 0xfff9;
+static constexpr TagKind LastTag = 0xffff;
 
-static constexpr TagKind EmptyTag = FirstTag + 0;
-static constexpr TagKind UndefinedTag = FirstTag + 1;
-static constexpr TagKind NullTag = FirstTag + 2;
-static constexpr TagKind BoolTag = FirstTag + 3;
+static constexpr TagKind EmptyInvalidTag = FirstTag;
+static constexpr TagKind UndefinedNullTag = FirstTag + 1;
+static constexpr TagKind BoolTag = FirstTag + 2;
+static constexpr TagKind SymbolTag = FirstTag + 3;
+
+// Tags with 48-bit data start here.
 static constexpr TagKind NativeValueTag = FirstTag + 4;
-static constexpr TagKind SymbolTag = FirstTag + 5;
-
-#ifdef HERMES_SLOW_DEBUG
-/// An invalid hermes value is one that should never exist in normal operation,
-/// it can be used as a sigil to indicate a programming failure.
-static constexpr TagKind InvalidTag = FirstTag + 6;
-#endif
 
 // Pointer tags start here.
-static constexpr TagKind StrTag = FirstTag + 13;
-static constexpr TagKind ObjectTag = FirstTag + 14;
-static_assert(ObjectTag == LastTag, "Mis-configured tags");
+static constexpr TagKind StrTag = FirstTag + 5;
+static constexpr TagKind ObjectTag = FirstTag + 6;
+
+static_assert(ObjectTag == LastTag, "Tags mismatch");
 
 /// Only values in the range [FirstPointerTag..LastTag] are pointers.
 static constexpr TagKind FirstPointerTag = StrTag;
+
+/// An "extended tag", occupying one extra bit.
+enum class ETag : uint32_t {
+  Empty = EmptyInvalidTag * 2,
+#ifdef HERMES_SLOW_DEBUG
+  /// An invalid hermes value is one that should never exist in normal
+  /// operation, it can be used as a sigil to indicate a programming failure.
+  Invalid = EmptyInvalidTag * 2 + 1,
+#endif
+  Undefined = UndefinedNullTag * 2,
+  Null = UndefinedNullTag * 2 + 1,
+  Bool = BoolTag * 2,
+  Symbol = SymbolTag * 2,
+  Native1 = NativeValueTag * 2,
+  Native2 = NativeValueTag * 2 + 1,
+  Str1 = StrTag * 2,
+  Str2 = StrTag * 2 + 1,
+  Object1 = ObjectTag * 2,
+  Object2 = ObjectTag * 2 + 1,
+
+  FirstPointer = Str1,
+};
 
 /// A NaN-box encoded value.
 class HermesValue {
  public:
   /// Number of bits used in the high part to encode the sign, exponent and tag.
-  static constexpr unsigned kNumTagExpBits = 17;
+  static constexpr unsigned kNumTagExpBits = 16;
   /// Number of bits available for data storage.
   static constexpr unsigned kNumDataBits = (64 - kNumTagExpBits);
 
   /// Width of a tag in bits. The tag is aligned to the right of the top bits.
-  static constexpr unsigned kTagWidth = 5;
+  static constexpr unsigned kTagWidth = 4;
   static constexpr unsigned kTagMask = (1 << kTagWidth) - 1;
   /// Mask to extract the data from the whole 64-bit word.
   static constexpr uint64_t kDataMask = (1ull << kNumDataBits) - 1;
+
+  static constexpr unsigned kETagWidth = 5;
+  static constexpr unsigned kETagMask = (1 << kTagWidth) - 1;
 
   /// Assert that the pointer can be encoded in \c kNumDataBits.
   static void validatePointer(const void *ptr) {
@@ -155,8 +188,11 @@ class HermesValue {
   inline TagKind getTag() const {
     return (TagKind)(raw_ >> kNumDataBits);
   }
+  inline ETag getETag() const {
+    return (ETag)(raw_ >> (kNumDataBits - 1));
+  }
 
-  /// Combine two tags into a 10-bit value.
+  /// Combine two tags into an 8-bit value.
   inline static constexpr unsigned combineTags(TagKind a, TagKind b) {
     return ((a & kTagMask) << kTagWidth) | (b & kTagMask);
   }
@@ -208,20 +244,20 @@ class HermesValue {
   }
 
   inline static constexpr HermesValue encodeNullValue() {
-    return HermesValue(0, NullTag);
+    return HermesValue(0, ETag::Null);
   }
 
   inline static constexpr HermesValue encodeUndefinedValue() {
-    return HermesValue(0, UndefinedTag);
+    return HermesValue(0, ETag::Undefined);
   }
 
   inline static constexpr HermesValue encodeEmptyValue() {
-    return HermesValue(0, EmptyTag);
+    return HermesValue(0, ETag::Empty);
   }
 
 #ifdef HERMES_SLOW_DEBUG
   inline static constexpr HermesValue encodeInvalidValue() {
-    return HermesValue(0, InvalidTag);
+    return HermesValue(0, ETag::Invalid);
   }
 #endif
 
@@ -279,17 +315,17 @@ class HermesValue {
   }
 
   inline bool isNull() const {
-    return getTag() == NullTag;
+    return getETag() == ETag::Null;
   }
   inline bool isUndefined() const {
-    return getTag() == UndefinedTag;
+    return getETag() == ETag::Undefined;
   }
   inline bool isEmpty() const {
-    return getTag() == EmptyTag;
+    return getETag() == ETag::Empty;
   }
 #ifdef HERMES_SLOW_DEBUG
   inline bool isInvalid() const {
-    return getTag() == InvalidTag;
+    return getETag() == ETag::Invalid;
   }
 #endif
   inline bool isNativeValue() const {
@@ -424,6 +460,8 @@ class HermesValue {
   constexpr explicit HermesValue(uint64_t val) : raw_(val) {}
   constexpr explicit HermesValue(uint64_t val, TagKind tag)
       : raw_(val | ((uint64_t)tag << kNumDataBits)) {}
+  constexpr explicit HermesValue(uint64_t val, ETag etag)
+      : raw_(val | ((uint64_t)etag << (kNumDataBits - 1))) {}
 
   // 64 raw bits stored and reinterpreted as necessary.
   uint64_t raw_;

@@ -58,13 +58,10 @@ CallResult<Handle<SymbolID>> valueToSymbolID(
 
 HermesValue typeOf(Runtime *runtime, Handle<> valueHandle) {
   switch (valueHandle->getTag()) {
-    case UndefinedTag:
-      return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::undefined));
-      break;
-    case NullTag:
-      return HermesValue::encodeStringValue(
-          runtime->getPredefinedString(Predefined::object));
+    case UndefinedNullTag:
+      return HermesValue::encodeStringValue(runtime->getPredefinedString(
+          valueHandle->isUndefined() ? Predefined::undefined
+                                     : Predefined::object));
       break;
     case StrTag:
       return HermesValue::encodeStringValue(
@@ -120,22 +117,13 @@ bool isSameValue(HermesValue x, HermesValue y) {
   assert(
       !x.isEmpty() && !x.isNativeValue() &&
       "Empty and Native Value cannot be compared");
+
+  // Strings are the only type that requires deep comparison.
   if (x.isString()) {
     // For strings, we compare each character in sequence.
     return x.getString()->equals(y.getString());
   }
-  if (x.isNumber()) {
-    // Numbers requires special care due to NaN and +/- 0s.
-    auto xNum = x.getNumber();
-    auto yNum = y.getNumber();
-    if (std::isnan(xNum) && std::isnan(yNum)) {
-      return true;
-    }
-    if (std::signbit(xNum) != std::signbit(yNum)) {
-      return false;
-    }
-    return xNum == yNum;
-  }
+
   // Otherwise they are identical if the raw bits are the same.
   return x.getRaw() == y.getRaw();
 }
@@ -149,21 +137,9 @@ bool isSameValueZero(HermesValue x, HermesValue y) {
 }
 
 bool isPrimitive(HermesValue val) {
-  switch (val.getTag()) {
-    case EmptyTag:
-      llvm_unreachable("empty value");
-    case NativeValueTag:
-      llvm_unreachable("native value");
-    case ObjectTag:
-      return false;
-    case StrTag:
-    case BoolTag:
-    case NullTag:
-    case UndefinedTag:
-    case SymbolTag:
-    default:
-      return true;
-  }
+  assert(val.getTag() != EmptyInvalidTag && "empty value encountered");
+  assert(val.getTag() != NativeValueTag && "native value encountered");
+  return !val.isObject();
 }
 
 CallResult<HermesValue> ordinaryToPrimitive(
@@ -220,69 +196,61 @@ CallResult<HermesValue> ordinaryToPrimitive(
 /// ES5.1 9.1
 CallResult<HermesValue>
 toPrimitive_RJS(Runtime *runtime, Handle<> valueHandle, PreferredType hint) {
-  switch (valueHandle->getTag()) {
-    case EmptyTag:
-      llvm_unreachable("empty value");
-    case NativeValueTag:
-      llvm_unreachable("native value");
-    case ObjectTag: {
-      // 4. Let exoticToPrim be GetMethod(input, @@toPrimitive).
-      auto exoticToPrim = getMethod(
-          runtime,
-          valueHandle,
-          runtime->makeHandle(
-              Predefined::getSymbolID(Predefined::SymbolToPrimitive)));
-      if (LLVM_UNLIKELY(exoticToPrim == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      // 6. If exoticToPrim is not undefined, then
-      if (vmisa<Callable>(exoticToPrim->getHermesValue())) {
-        auto callable = runtime->makeHandle<Callable>(
-            dyn_vmcast<Callable>(exoticToPrim->getHermesValue()));
-        CallResult<HermesValue> resultRes = Callable::executeCall1(
-            callable,
-            runtime,
-            valueHandle,
-            HermesValue::encodeStringValue(runtime->getPredefinedString(
-                hint == PreferredType::NONE
-                    ? Predefined::defaultStr
-                    : hint == PreferredType::STRING ? Predefined::string
-                                                    : Predefined::number)));
-        if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        if (!resultRes->isObject()) {
-          return *resultRes;
-        }
-        return runtime->raiseTypeError(
-            "Symbol.toPrimitive function must return a primitive");
-      }
+  assert(
+      valueHandle->getTag() != EmptyInvalidTag && "empty value is not allowed");
+  assert(
+      valueHandle->getTag() != NativeValueTag && "native value is not allowed");
 
-      // 7. If hint is "default", let hint be "number".
-      // 8. Return OrdinaryToPrimitive(input,hint).
-      return ordinaryToPrimitive(
-          Handle<JSObject>::vmcast(valueHandle),
-          runtime,
-          hint == PreferredType::NONE ? PreferredType::NUMBER : hint);
-    }
-    case StrTag:
-    case BoolTag:
-    case NullTag:
-    case UndefinedTag:
-    case SymbolTag:
-    default:
-      return *valueHandle;
+  if (valueHandle->getTag() != ObjectTag)
+    return *valueHandle;
+
+  // 4. Let exoticToPrim be GetMethod(input, @@toPrimitive).
+  auto exoticToPrim = getMethod(
+      runtime,
+      valueHandle,
+      runtime->makeHandle(
+          Predefined::getSymbolID(Predefined::SymbolToPrimitive)));
+  if (LLVM_UNLIKELY(exoticToPrim == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
   }
+  // 6. If exoticToPrim is not undefined, then
+  if (vmisa<Callable>(exoticToPrim->getHermesValue())) {
+    auto callable = runtime->makeHandle<Callable>(
+        dyn_vmcast<Callable>(exoticToPrim->getHermesValue()));
+    CallResult<HermesValue> resultRes = Callable::executeCall1(
+        callable,
+        runtime,
+        valueHandle,
+        HermesValue::encodeStringValue(runtime->getPredefinedString(
+            hint == PreferredType::NONE
+                ? Predefined::defaultStr
+                : hint == PreferredType::STRING ? Predefined::string
+                                                : Predefined::number)));
+    if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!resultRes->isObject()) {
+      return *resultRes;
+    }
+    return runtime->raiseTypeError(
+        "Symbol.toPrimitive function must return a primitive");
+  }
+
+  // 7. If hint is "default", let hint be "number".
+  // 8. Return OrdinaryToPrimitive(input,hint).
+  return ordinaryToPrimitive(
+      Handle<JSObject>::vmcast(valueHandle),
+      runtime,
+      hint == PreferredType::NONE ? PreferredType::NUMBER : hint);
 }
 
 bool toBoolean(HermesValue value) {
   switch (value.getTag()) {
-    case EmptyTag:
+    case EmptyInvalidTag:
       llvm_unreachable("empty value");
     case NativeValueTag:
       llvm_unreachable("native value");
-    case NullTag:
-    case UndefinedTag:
+    case UndefinedNullTag:
       return false;
     case BoolTag:
       return value.getBool();
@@ -355,18 +323,16 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
   HermesValue value = valueHandle.get();
   StringPrimitive *result;
   switch (value.getTag()) {
-    case EmptyTag:
+    case EmptyInvalidTag:
       llvm_unreachable("empty value");
     case NativeValueTag:
       llvm_unreachable("native value");
     case StrTag:
       result = vmcast<StringPrimitive>(value);
       break;
-    case NullTag:
-      result = runtime->getPredefinedString(Predefined::null);
-      break;
-    case UndefinedTag:
-      result = runtime->getPredefinedString(Predefined::undefined);
+    case UndefinedNullTag:
+      result = runtime->getPredefinedString(
+          value.isUndefined() ? Predefined::undefined : Predefined::null);
       break;
     case BoolTag:
       result = value.getBool()
@@ -498,7 +464,7 @@ CallResult<HermesValue> toNumber_RJS(Runtime *runtime, Handle<> valueHandle) {
   auto value = valueHandle.get();
   double result;
   switch (value.getTag()) {
-    case EmptyTag:
+    case EmptyInvalidTag:
       llvm_unreachable("empty value");
     case NativeValueTag:
       llvm_unreachable("native value");
@@ -513,11 +479,9 @@ CallResult<HermesValue> toNumber_RJS(Runtime *runtime, Handle<> valueHandle) {
       result =
           stringToNumber(runtime, Handle<StringPrimitive>::vmcast(valueHandle));
       break;
-    case NullTag:
-      result = +0.0;
-      break;
-    case UndefinedTag:
-      result = std::numeric_limits<double>::quiet_NaN();
+    case UndefinedNullTag:
+      result =
+          value.isUndefined() ? std::numeric_limits<double>::quiet_NaN() : +0.0;
       break;
     case BoolTag:
       result = value.getBool();
@@ -688,17 +652,16 @@ CallResult<Handle<JSObject>> getPrimitivePrototype(
     Runtime *runtime,
     Handle<> base) {
   switch (base->getTag()) {
-    case EmptyTag:
+    case EmptyInvalidTag:
       llvm_unreachable("empty value");
     case NativeValueTag:
       llvm_unreachable("native value");
     case ObjectTag:
       llvm_unreachable("object value");
-    case NullTag:
-      return runtime->raiseTypeError("Cannot convert null value to object");
-    case UndefinedTag:
+    case UndefinedNullTag:
       return runtime->raiseTypeError(
-          "Cannot convert undefined value to object");
+          base->isUndefined() ? "Cannot convert undefined value to object"
+                              : "Cannot convert null value to object");
     case StrTag:
       return Handle<JSObject>::vmcast(&runtime->stringPrototype);
     case BoolTag:
@@ -714,15 +677,14 @@ CallResult<Handle<JSObject>> getPrimitivePrototype(
 CallResult<HermesValue> toObject(Runtime *runtime, Handle<> valueHandle) {
   auto value = valueHandle.get();
   switch (value.getTag()) {
-    case EmptyTag:
+    case EmptyInvalidTag:
       llvm_unreachable("empty value");
     case NativeValueTag:
       llvm_unreachable("native value");
-    case NullTag:
-      return runtime->raiseTypeError("Cannot convert null value to object");
-    case UndefinedTag:
+    case UndefinedNullTag:
       return runtime->raiseTypeError(
-          "Cannot convert undefined value to object");
+          value.isUndefined() ? "Cannot convert undefined value to object"
+                              : "Cannot convert null value to object");
     case ObjectTag:
       return value;
     case BoolTag:
@@ -830,12 +792,11 @@ abstractEqualityTailCall:
   if (x->getTag() == y->getTag() || (x->isNumber() && y->isNumber())) {
     bool result;
     switch (x->getTag()) {
-      case EmptyTag:
+      case EmptyInvalidTag:
         llvm_unreachable("can't compare empties");
       case NativeValueTag:
         llvm_unreachable("native value");
-      case UndefinedTag:
-      case NullTag:
+      case UndefinedNullTag:
         result = true;
         break;
       case StrTag:
@@ -873,8 +834,7 @@ abstractEqualityTailCall:
   TagKind yType = y->isNumber() ? NumberTag : y->getTag();
 
   switch (HermesValue::combineTags(xType, yType)) {
-    case HermesValue::combineTags(NullTag, UndefinedTag):
-    case HermesValue::combineTags(UndefinedTag, NullTag):
+    case HermesValue::combineTags(UndefinedNullTag, UndefinedNullTag):
       return HermesValue::encodeBoolValue(true);
 
     case HermesValue::combineTags(NumberTag, StrTag):
@@ -936,34 +896,18 @@ abstractEqualityTailCall:
 } // namespace hermes
 
 bool strictEqualityTest(HermesValue x, HermesValue y) {
-  if ((x.getTag() != y.getTag()) && !(x.isNumber() && y.isNumber())) {
-    // x and y can be equal with different tags only if they're both numbers.
-    // If tags are different and both x and y aren't numbers, we're done.
+  // Numbers are special because they can have different tags and they don't
+  // obey bit-exact equality (because of NaN).
+  if (x.isNumber())
+    return y.isNumber() && x.getNumber() == y.getNumber();
+  // If they are not numbers and are bit exact, they must be the same.
+  if (x.getRaw() == y.getRaw())
+    return true;
+  // All the rest of the cases need to have the same tags.
+  if (x.getTag() != y.getTag())
     return false;
-  }
-  switch (x.getTag()) {
-    case UndefinedTag:
-    case NullTag:
-      return true;
-    case StrTag:
-      return x.getString()->equals(y.getString());
-    case ObjectTag:
-      // Return true if x and y refer to the same object.
-      return x.getPointer() == y.getPointer();
-    case BoolTag:
-      return x.getBool() == y.getBool();
-    case SymbolTag:
-      return x.getSymbol() == y.getSymbol();
-    case EmptyTag:
-      llvm_unreachable("can't compare empties");
-    case NativeValueTag:
-      llvm_unreachable("can't compare native values");
-    default:
-      assert(x.isNumber() && y.isNumber());
-      // Know they're both doubles here, so do standard comparison.
-      return x.getNumber() == y.getNumber();
-  }
-  return false;
+  // The only remaining case is string, which needs a deep comparison.
+  return x.isString() && x.getString()->equals(y.getString());
 }
 
 CallResult<HermesValue>
