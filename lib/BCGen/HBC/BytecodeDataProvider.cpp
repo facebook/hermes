@@ -69,6 +69,12 @@ static bool sanityCheck(
     }
     return false;
   }
+  if (aref.size() < header->fileLength) {
+    if (errorMessage) {
+      *errorMessage = "Buffer too small";
+    }
+    return false;
+  }
   return true;
 }
 
