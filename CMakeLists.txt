@@ -608,3 +608,5 @@ add_custom_command(
 add_custom_target(
   github-cli-release
   DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})
+
+# Test commit
