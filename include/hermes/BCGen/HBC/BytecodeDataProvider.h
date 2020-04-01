@@ -353,6 +353,9 @@ class BCProviderFromBuffer final : public BCProviderBase {
 
   std::unique_ptr<volatile PageAccessTracker> tracker_;
 
+  /// End of the bytecode file.
+  const uint8_t *end_;
+
   /// Tells any running warmup thread to abort and then joins that thread.
   void stopWarmup();
 
