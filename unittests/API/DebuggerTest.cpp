@@ -17,9 +17,11 @@ using namespace facebook::hermes::debugger;
 
 struct TestEventObserver : public debugger::EventObserver {
   std::vector<PauseReason> pauseReasons;
+  std::vector<StackTrace> stackTraces;
 
   Command didPause(Debugger &debugger) override {
     pauseReasons.push_back(debugger.getProgramState().getPauseReason());
+    stackTraces.push_back(debugger.getProgramState().getStackTrace());
     return Command::continueExecution();
   }
 };
@@ -49,6 +51,71 @@ TEST_F(DebuggerAPITest, BasicPauseTest) {
       std::vector<PauseReason>(
           {PauseReason::DebuggerStatement, PauseReason::DebuggerStatement}),
       observer.pauseReasons);
+}
+
+TEST_F(DebuggerAPITest, SingleFrameStackTraceTest) {
+  using namespace facebook;
+
+  rt->getDebugger().setPauseOnThrowMode(PauseOnThrowMode::All);
+
+  jsi::Function nativeThrower = jsi::Function::createFromHostFunction(
+      *rt,
+      jsi::PropNameID::forAscii(*rt, "nativeThrower"),
+      0,
+      [](jsi::Runtime &rt,
+         const jsi::Value &thisVal,
+         const jsi::Value *args,
+         size_t count) -> jsi::Value {
+        throw jsi::JSINativeException("NativeException");
+      });
+  rt->global().setProperty(*rt, "nativeThrower", nativeThrower);
+
+  jsi::Function caller = jsi::Function::createFromHostFunction(
+      *rt,
+      jsi::PropNameID::forAscii(*rt, "caller"),
+      0,
+      [](jsi::Runtime &rt,
+         const jsi::Value &thisVal,
+         const jsi::Value *args,
+         size_t count) -> jsi::Value {
+        jsi::Function jsThrower =
+            rt.global().getPropertyAsFunction(rt, "jsThrower");
+        return jsThrower.call(rt);
+      });
+  rt->global().setProperty(*rt, "caller", caller);
+
+  eval(
+      "globalThis.jsThrower = function jsThrower() { throw 1; };\n"
+      "globalThis.tester = function tester() {"
+      "  try { throw 2; }"
+      "  catch (e) { caller(); } };"
+      "");
+
+  jsi::Function tester =
+      rt->global().getProperty(*rt, "tester").asObject(*rt).asFunction(*rt);
+  try {
+    tester.call(*rt);
+  } catch (jsi::JSIException &) {
+    try {
+      tester.call(*rt);
+    } catch (jsi::JSError &err) {
+      EXPECT_EQ(1, err.value().getNumber());
+    }
+  }
+
+  ASSERT_EQ(
+      std::vector<PauseReason>({PauseReason::Exception,
+                                PauseReason::Exception,
+                                PauseReason::Exception}),
+      observer.pauseReasons);
+
+  ASSERT_EQ(3, observer.stackTraces[2].callFrameCount());
+  ASSERT_EQ(
+      "jsThrower", observer.stackTraces[2].callFrameForIndex(0).functionName);
+  ASSERT_EQ(
+      "(native)", observer.stackTraces[2].callFrameForIndex(1).functionName);
+  ASSERT_EQ(
+      "tester", observer.stackTraces[2].callFrameForIndex(2).functionName);
 }
 
 #endif
