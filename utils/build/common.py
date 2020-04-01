@@ -118,14 +118,16 @@ def which(cmd):
 
 
 def build_dir_suffix(args):
-    build_dir_suffix = ""
+    suffices = []
     if args.enable_asan:
-        build_dir_suffix += "_asan"
+        suffices += ["asan"]
     if args.distribute:
-        build_dir_suffix += "_release"
+        suffices += ["release"]
     if args.is_32_bit:
-        build_dir_suffix += "_32"
-    return build_dir_suffix
+        suffices += ["32"]
+    if args.wasm:
+        suffices += ["wasm", args.emscripten_platform]
+    return ("_" + "_".join(suffices)) if suffices else ""
 
 
 def common_cmake_flags():

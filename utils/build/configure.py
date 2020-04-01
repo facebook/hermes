@@ -33,16 +33,49 @@ def parse_args():
         "--warnings-as-errors", dest="warnings_as_errors", action="store_true"
     )
     parser.add_argument("--static-link", dest="static_link", action="store_true")
+    parser.add_argument(
+        "--wasm",
+        action="store_true",
+        help="Build Hermes as WebAssembly instead of a native binary",
+    )
+    parser.add_argument(
+        "--emscripten-root",
+        dest="emscripten_root",
+        help="Path to the root of emscripten. Use emsdk to download",
+    )
+    parser.add_argument(
+        "--emscripten-platform",
+        dest="emscripten_platform",
+        choices=("upstream", "fastcomp"),
+        default="fastcomp",
+        help="Use either the upstream emscripten backend based on LLVM or the "
+        "fastcomp backend",
+    )
     args = parser.parse_args()
     args.hermes_build_dir = os.path.realpath(args.hermes_build_dir)
     if args.icu_root:
         args.icu_root = os.path.realpath(args.icu_root)
     if args.fbsource_dir:
         args.fbsource_dir = os.path.realpath(args.fbsource_dir)
+    if args.emscripten_root:
+        args.emscripten_root = os.path.realpath(args.emscripten_root)
+    if args.wasm:
+        # Check that if wasm is specified, that emscripten_root is also specified.
+        if not args.emscripten_root:
+            raise ValueError("WASM build requested, but emscripten-root not given")
+        if not os.path.exists(args.emscripten_root):
+            raise ValueError(
+                "WASM build requested, but emscripten-root doesn't exist: "
+                + args.emscripten_root
+            )
 
-    args.build_type = args.build_type or ("MinSizeRel" if args.distribute else "Debug")
-    suffix = build_dir_suffix(args)
-    args.hermes_build_dir += suffix
+    if not args.build_type:
+        if args.distribute:
+            # WASM doesn't need to be built to be small.
+            args.build_type = "Release" if args.wasm else "MinSizeRel"
+        else:
+            args.build_type = "Debug"
+    args.hermes_build_dir += build_dir_suffix(args)
     # Guess the ICU directory based on platform.
     if not args.icu_root and platform.system() == "Linux":
         icu_prefs = [
@@ -92,6 +125,22 @@ def main():
         cmake_flags += ["-DHERMES_STATIC_LINK=On"]
     if args.fbsource_dir:
         cmake_flags += ["-DFBSOURCE_DIR=" + args.fbsource_dir]
+    if args.wasm:
+        cmake_flags += [
+            "-DCMAKE_TOOLCHAIN_FILE={}".format(
+                os.path.join(
+                    args.emscripten_root,
+                    "cmake",
+                    "Modules",
+                    "Platform",
+                    "Emscripten.cmake",
+                )
+            ),
+            "-DCMAKE_EXE_LINKER_FLAGS="
+            "-s NODERAWFS=1 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1",
+        ]
+        if args.emscripten_platform == "fastcomp":
+            cmake_flags += ["-DEMSCRIPTEN_FASTCOMP=1"]
 
     if args.icu_root:
         cmake_flags += ["-DICU_ROOT=" + args.icu_root]
