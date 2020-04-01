@@ -13,8 +13,6 @@ import useWindowSize from '@site/src/hooks/useWindowSize';
 import Editor from '@site/src/components/Editor';
 import styles from './styles.module.css';
 
-const worker = new Worker();
-
 function reducer(state, action) {
   switch (action.type) {
     case 'request':
@@ -37,6 +35,12 @@ const initialState = {
 };
 
 function Playground() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const worker = new Worker();
+
   const [{ loading, ellapsed, output }, dispatch] = useReducer(
     reducer,
     initialState

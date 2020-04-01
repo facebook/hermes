@@ -1,8 +1,9 @@
-import React from 'react';
-import MonacoEditor from 'react-monaco-editor';
+import React, {Suspense, lazy} from 'react';
 import useThemeContext from '@theme/hooks/useThemeContext';
 
-function Editor(props) {
+const MonacoEditor = lazy(() => import('react-monaco-editor'));
+
+function Editor(props) {  
   const { isDarkTheme } = useThemeContext();
 
   function onEditorWillMount(monaco) {
@@ -23,11 +24,13 @@ function Editor(props) {
   }
 
   return (
-    <MonacoEditor
-      {...props}
-      editorWillMount={onEditorWillMount}
-      theme={isDarkTheme ? 'vs-dark' : 'vs-light'}
-    />
+    <Suspense fallback={<div>Loading</div>}>
+      <MonacoEditor
+        {...props}
+        editorWillMount={onEditorWillMount}
+        theme={isDarkTheme ? 'vs-dark' : 'vs-light'}
+      />
+    </Suspense>
   );
 }
 
