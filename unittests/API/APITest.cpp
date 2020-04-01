@@ -71,6 +71,19 @@ TEST_F(HermesRuntimeTest, StrictHostFunctionBindTest) {
                   .getBool());
 }
 
+TEST_F(HermesRuntimeTest, DescriptionTest) {
+  // Minimally, if the description doesn't include "Hermes", something
+  // is wrong.
+  EXPECT_NE(rt->description().find("Hermes"), std::string::npos);
+
+  std::shared_ptr<facebook::jsi::Runtime> rt2 = makeHermesRuntime(
+      ::hermes::vm::RuntimeConfig::Builder()
+          .withGCConfig(
+              ::hermes::vm::GCConfig::Builder().withName("ForTesting").build())
+          .build());
+  EXPECT_NE(rt2->description().find("Hermes"), std::string::npos);
+}
+
 TEST_F(HermesRuntimeTest, ArrayBufferTest) {
   eval(
       "var buffer = new ArrayBuffer(16);\

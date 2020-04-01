@@ -123,7 +123,7 @@ enum class GCEventKind {
   F(constexpr, ReleaseUnused, ShouldReleaseUnused, kReleaseUnusedOld)     \
                                                                           \
   /* Name for this heap in logs. */                                       \
-  F(HERMES_NON_CONSTEXPR, std::string, Name, "HermesRuntime")             \
+  F(HERMES_NON_CONSTEXPR, std::string, Name, "")                          \
                                                                           \
   /* Configuration for the Heap Tripwire. */                              \
   F(HERMES_NON_CONSTEXPR, GCTripwireConfig, TripwireConfig)               \

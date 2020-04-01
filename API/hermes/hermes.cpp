@@ -1317,7 +1317,12 @@ jsi::Object HermesRuntimeImpl::global() {
 }
 
 std::string HermesRuntimeImpl::description() {
-  return runtime_.getHeap().getName();
+  std::string gcName = runtime_.getHeap().getName();
+  if (gcName.empty()) {
+    return "HermesRuntime";
+  } else {
+    return "HermesRuntime[" + gcName + "]";
+  }
 }
 
 bool HermesRuntimeImpl::isInspectable() {
